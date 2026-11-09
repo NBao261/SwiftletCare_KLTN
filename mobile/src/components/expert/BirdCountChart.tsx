@@ -1,10 +1,9 @@
-import React, { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { BarGroup, CartesianChart } from 'victory-native'
-import { useFont } from '@shopify/react-native-skia'
+import React, { useMemo, useState } from 'react'
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native'
+import { BarChart, type barDataItem } from 'react-native-gifted-charts'
 import { Bird } from 'phosphor-react-native'
 import { Text } from '@/components/ui/text'
-import { Radius, Spacing } from '@/constants/theme'
+import { Radius, Spacing, Typography } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { BirdCountBucket } from '@/types'
 import { t } from '@/utils/i18n.utils'
@@ -17,21 +16,24 @@ interface BirdCountChartProps {
 }
 
 type ChartItem = {
-  [key: string]: unknown
   index: number
   time: string
   entry_count: number
   exit_count: number
 }
 
+const Y_AXIS_WIDTH = 36
+const PAIR_GAP = 2
+const MAX_X_LABELS = 5
+
 /**
  * Biểu đồ cột đếm chim 5 phút ±30 phút (ALERT-FR-014).
- * Phân biệt lưu lượng chim Vào (Entry) và Ra (Exit) theo từng bucket 5 phút.
+ * Phân biệt lưu lượng chim Vào (Entry) và Ra (Exit) theo từng bucket 5 phút bằng react-native-gifted-charts.
  * Hiển thị thông báo khi trạng thái missing (không vẽ số 0).
  */
 export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
   const palette = usePalette()
-  const font = useFont(require('@/assets/fonts/PlusJakartaSans-Medium.ttf'), 10)
+  const [chartWidth, setChartWidth] = useState(280)
 
   const isMissing = !birdCounts || birdCounts.status === 'missing' || !birdCounts.buckets || birdCounts.buckets.length === 0
 
@@ -62,6 +64,11 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
     )
   }, [chartData, isMissing])
 
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const measured = Math.floor(event.nativeEvent.layout.width)
+    if (measured > 60) setChartWidth(measured)
+  }
+
   if (isMissing) {
     return (
       <View style={[styles.missingBox, { backgroundColor: palette.surfaceStrong }]}>
@@ -72,6 +79,30 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
       </View>
     )
   }
+
+  const plotWidth = Math.max(chartWidth - Y_AXIS_WIDTH - Spacing.sm, 100)
+  const slotWidth = plotWidth / Math.max(chartData.length, 1)
+  const barWidth = Math.max(3, Math.min(12, (slotWidth - PAIR_GAP) * 0.35))
+  const groupSpacing = Math.max(4, slotWidth - barWidth * 2 - PAIR_GAP)
+  const labelEvery = Math.max(1, Math.ceil(chartData.length / MAX_X_LABELS))
+  const maxValue = Math.max(...chartData.map(item => Math.max(item.entry_count, item.exit_count)), 10)
+  const axisTextStyle = [styles.axisText, { color: palette.textSecondary }]
+
+  const barData: barDataItem[] = chartData.flatMap((row, idx) => [
+    {
+      value: row.entry_count,
+      frontColor: palette.houseHealthy,
+      spacing: PAIR_GAP,
+      label: idx % labelEvery === 0 ? row.time : '',
+      labelWidth: barWidth * 2 + PAIR_GAP + groupSpacing,
+      labelTextStyle: axisTextStyle,
+    },
+    {
+      value: row.exit_count,
+      frontColor: palette.text,
+      spacing: groupSpacing,
+    },
+  ])
 
   return (
     <View style={[styles.container, { backgroundColor: palette.surfaceStrong }]}>
@@ -100,37 +131,29 @@ export function BirdCountChart({ birdCounts }: BirdCountChartProps) {
         </View>
       </View>
 
-      {/* Biểu đồ CartesianChart với BarGroup */}
-      <View style={styles.chartWrapper}>
-        <CartesianChart<ChartItem, 'index', 'entry_count' | 'exit_count'>
-          data={chartData}
-          xKey="index"
-          yKeys={['entry_count', 'exit_count']}
-          domainPadding={{ left: 20, right: 20, top: 16, bottom: 10 }}
-          axisOptions={{
-            font: font ?? undefined,
-            tickCount: { x: Math.min(5, Math.max(2, chartData.length)), y: 4 },
-            lineColor: palette.divider,
-            labelColor: palette.textSecondary,
-            formatXLabel: val => {
-              const idx = Math.round(Number(val))
-              return chartData[idx]?.time ?? ''
-            },
-            formatYLabel: val => `${Math.round(Number(val))}`,
-          }}
-        >
-          {({ points, chartBounds }) => (
-            <BarGroup
-              chartBounds={chartBounds}
-              betweenGroupPadding={0.3}
-              withinGroupPadding={0.1}
-              roundedCorners={{ topLeft: 4, topRight: 4 }}
-            >
-              <BarGroup.Bar points={points.entry_count} color={palette.houseHealthy} />
-              <BarGroup.Bar points={points.exit_count} color={palette.text} />
-            </BarGroup>
-          )}
-        </CartesianChart>
+      {/* Biểu đồ BarChart từ react-native-gifted-charts */}
+      <View style={styles.chartWrapper} onLayout={handleLayout}>
+        <BarChart
+          data={barData}
+          width={plotWidth}
+          height={128}
+          barWidth={barWidth}
+          initialSpacing={groupSpacing / 2}
+          endSpacing={0}
+          maxValue={maxValue}
+          noOfSections={3}
+          formatYLabel={label => `${Math.round(Number(label))}`}
+          yAxisLabelWidth={Y_AXIS_WIDTH}
+          yAxisThickness={0}
+          yAxisColor="transparent"
+          xAxisColor={palette.border}
+          xAxisThickness={1}
+          rulesColor={palette.divider}
+          rulesType="solid"
+          yAxisTextStyle={axisTextStyle}
+          disableScroll
+          isAnimated={false}
+        />
       </View>
     </View>
   )
@@ -184,5 +207,9 @@ const styles = StyleSheet.create({
   chartWrapper: {
     height: 160,
     width: '100%',
+  },
+  axisText: {
+    fontFamily: Typography.small.fontFamily,
+    fontSize: Typography.small.fontSize,
   },
 })

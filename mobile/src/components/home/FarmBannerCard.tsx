@@ -62,7 +62,7 @@ export function FarmBannerCard({ farm, width }: FarmBannerCardProps) {
         </Text>
         <PressableScale
           style={[styles.arrowButton, { backgroundColor: palette.primary }]}
-          onPress={() => router.push({ pathname: '/farm/[farmId]', params: { farmId: farm._id } })}
+          onPress={() => router.navigate({ pathname: '/(tabs)/farms', params: { farmId: farm._id } })}
           accessibilityRole="button"
           accessibilityLabel={t('Xem chi tiết {name}', { name: farm.name })}
         >

@@ -19,7 +19,7 @@ export interface ExpertVerdict {
   at: string
 }
 
-export interface InferredAlert extends Alert {
+export interface InferredAlert extends Omit<Alert, 'expert_verdict'> {
   expert_verdict?: ExpertVerdict
   previous_status?: AlertStatus
   house_id?: string

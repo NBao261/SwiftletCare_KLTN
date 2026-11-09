@@ -13,18 +13,30 @@ export const ENDPOINTS = {
   AUTH_FORGOT_PASSWORD: '/auth/forgot-password',
   AUTH_RESET_PASSWORD: '/auth/reset-password',
   AUTH_CHANGE_PASSWORD: '/auth/password',
+  AUTH_NOTIFICATION_PREFERENCES: '/auth/notification-preferences',
+  AUTH_TELEGRAM_LINK: '/auth/telegram/link',
+  // Yêu cầu xoá tài khoản và dữ liệu cá nhân (AUTH-FR-012)
+  AUTH_DELETE_REQUEST: '/auth/delete-request',
 
   // Trang trại (FARM-FR-*)
   FARMS: '/farms',
   FARM_DETAIL: (farmId: string) => `/farms/${farmId}`,
   FARM_HOUSES: (farmId: string) => `/farms/${farmId}/houses`,
+  // Mời và gỡ thành viên farm — chỉ Primary Owner (AUTH-FR-005, EXPERT-FR-001)
+  FARM_MEMBERS: (farmId: string) => `/farms/${farmId}/members`,
+  FARM_MEMBER: (farmId: string, userId: string) => `/farms/${farmId}/members/${userId}`,
   HOUSE_ZONES: (houseId: string) => `/farms/houses/${houseId}/zones`,
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
+  ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
+  ZONE_FUZZY_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning`,
+  ZONE_DETECTION_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning`,
+  HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
 
   // Thiết bị
   SENSOR_NODES: '/devices/sensor-nodes',
   CAMERA_NODES: '/devices/camera-nodes',
-  DEVICE_REGISTER: '/devices/sensor-nodes/register',
+  SENSOR_NODE_REGISTER: '/devices/sensor-nodes/register',
+  CAMERA_NODE_REGISTER: '/devices/camera-nodes/register',
   RELAY_CONTROL: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay`,
   RELAY_OVERRIDE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-override`,
   RELAY_OVERRIDES: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-overrides`,
@@ -38,16 +50,24 @@ export const ENDPOINTS = {
   ALERTS: '/alerts',
   ALERT_DETAIL: (alertId: string) => `/alerts/${alertId}`,
   ALERT_ACKNOWLEDGE: (alertId: string) => `/alerts/${alertId}/acknowledge`,
+  ALERT_VERDICT: (alertId: string) => `/alerts/${alertId}/verdict`,
 
   // Phân tích (ANALYTICS-FR-*)
   BIRD_COUNT_DAILY: '/analytics/bird-count/daily',
   BIRD_COUNT_TRENDS: '/analytics/bird-count/trends',
   BIRD_COUNT_CURRENT: '/analytics/bird-count/current',
+  BIRD_COUNT_BUCKETS: '/analytics/bird-count/buckets',
+  ENV_SUMMARY: '/analytics/env/summary',
+  CONTROL_PERFORMANCE: '/analytics/control/performance',
+  CONTROL_SUGGESTION: '/analytics/control/suggestion',
+  AUTONOMY: '/analytics/autonomy',
+  FORECAST: '/analytics/forecast',
   ENVIRONMENT_CORRELATION: '/analytics/correlation',
 
   // Thông báo trong ứng dụng (EXPERT-FR-006/007)
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
+  NOTIFICATIONS_READ_ALL: '/notifications/read-all',
 
   // Báo cáo sức khoẻ (EXPERT-FR-005/006/013)
   HEALTH_REPORTS: '/health-reports',
@@ -57,17 +77,15 @@ export const ENDPOINTS = {
   HEALTH_REPORT_PDF: (reportId: string) => `/health-reports/${reportId}/pdf`,
   HEALTH_REPORT_DAILY_CSV: '/health-reports/daily-csv',
 
+  // Thu hoạch (HARVEST-FR-001…005) — danh sách đợt thu của farm
+  HARVESTS: '/harvests',
+
   // Nghiệp vụ Chuyên gia (Domain Expert: EXPERT-FR-*)
-  ALERT_VERDICT: (alertId: string) => `/alerts/${alertId}/verdict`,
   ALERT_VERDICT_STATS: '/alerts/verdict-stats',
   ALERT_EVIDENCE: (alertId: string) => `/alerts/${alertId}/evidence`,
 
-  // Tinh chỉnh cấu hình Zone & House (EXPERT-FR-004, EXPERT-FR-008, ENV-FR-006)
+  // Tinh chỉnh cấu hình Zone & House bổ sung (EXPERT-FR-004, EXPERT-FR-012)
   ZONE_DETAIL: (zoneId: string) => `/farms/zones/${zoneId}`,
-  ZONE_FUZZY_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning`,
-  ZONE_DETECTION_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning`,
-  ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
-  HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
   HOUSE_DAILY_RATING: (houseId: string) => `/farms/houses/${houseId}/daily-rating`,
 
   // Gợi ý mờ & Phân tích chuyên gia (ANALYTICS-FR-*)

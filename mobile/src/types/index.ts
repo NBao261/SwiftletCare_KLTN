@@ -10,4 +10,26 @@ export * from './socket.types'
 export * from './navigation.types'
 export * from './notification.types'
 export * from './healthReport.types'
-export * from './expert.types'
+export * from './harvest.types'
+export * from './analytics.types'
+export * from './account.types'
+export type {
+  InferredAlertType,
+  VerdictResult,
+  ExpertVerdict,
+  InferredAlert,
+  TelemetrySample,
+  AlertEvidence,
+  ReviewItemStatus,
+  CoefficientProposal,
+  DailyHealthStatus,
+  DayRating,
+  ExpertActionType,
+  ExpertActivityEntry,
+  ExpertVerdictStats,
+  ExpertThresholds,
+  ExpertFuzzyTuning,
+  ExpertDetectionTuning,
+  FuzzySuggestionResponse,
+  ZoneHealthReportItem,
+} from './expert.types'

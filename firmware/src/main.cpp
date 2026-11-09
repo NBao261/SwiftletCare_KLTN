@@ -374,20 +374,20 @@ void pidTask(void *pvParameters) {
     bool haveThreats = false;
 
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      // Check manual override expiry (ENV-FR-018, BR-20): trước mọi relay để relay vừa hết
+      // hạn về AUTO ngay trong chu kỳ này. Chạy MỌI chu kỳ, kể cả khi mất nhiệt độ/độ ẩm
+      // (THREAT-FR-013): trước đây cả khối nằm trong if (data.isValid) nên cảm biến chết
+      // thì relay kẹt ở trạng thái cũ, override không hết hạn và chính cảnh báo lỗi cảm
+      // biến cũng không được phát.
+      PIDController::checkOverrideExpiry(relayState);
+
       // Loa ru (ENV-FR-013b/013c) – luôn cập nhật lịch + lệnh nghe thử cho
       // DFPlayer, nhưng chỉ áp ra Relay IN2 khi không Manual Override
       bool shouldPlay = AudioManager::updateSchedule();
-      if (!relayState.speakerOverride) {
+      if (!relayState.overrides.active(RELAY_SPEAKER)) {
         relayState.speaker = shouldPlay;
         relayState.applyRelay(PIN_RELAY_SPEAKER, shouldPlay);
       }
-
-      // Chạy MỌI chu kỳ, kể cả khi mất nhiệt độ/độ ẩm (THREAT-FR-013): trước đây
-      // cả khối nằm trong if (data.isValid) nên cảm biến chết thì relay kẹt ở
-      // trạng thái cũ, override không hết hạn và chính cảnh báo lỗi cảm biến
-      // cũng không được phát.
-      // Check manual override expiry (ENV-FR-018)
-      PIDController::checkOverrideExpiry(relayState);
 
       // Closed-loop control (ENV-FR-010/011): phun sương + quạt theo logic mờ;
       // đầu vào NAN → nhu cầu 0 → relay TẮT (trạng thái an toàn)
@@ -492,7 +492,7 @@ void mqttTask(void *pvParameters) {
     if (!MQTTManager::isConnected()) {
       lastRelayJson = ""; // kết nối lại → gửi ngay trạng thái hiện tại
     } else if (haveSnapshot) {
-      String relayJson = relaySnapshot.toJson();
+      String relayJson = relaySnapshot.toJson(false);
       if (relayJson != lastRelayJson ||
           millis() - lastRelayPublish > MQTT_HEARTBEAT_MS) {
         if (MQTTManager::publishRelayState(relaySnapshot)) {

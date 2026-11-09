@@ -1,120 +1,108 @@
-"""Build registration form v3 from the v2 Word file.
+"""Build registration form v3 (Word) from registration-v3.md, using the v2 Word file as the template.
 
-The v2 file holds the members' phone numbers, so it stays outside the repository and the
-phone cells of the output are emptied; add them to the copy that is submitted.
+The Markdown is the only source of the text: sections A–E, 3.2 and 4 of the v2 file are replaced
+by the paragraphs of the Markdown, each cloned from the v2 paragraph of the same kind so the
+form keeps its layout. The v2 file holds the members' phone numbers, so it stays outside the
+repository and the phone cells of the output are emptied; add them to the copy that is submitted.
 
 Usage: python3 docs/reports/tools/make_registration_v3.py <v2.docx> <out.docx>
 """
-import copy, re, sys, docx
-SRC=sys.argv[1]
-OUT=sys.argv[2]
-d=docx.Document(SRC)
-P=d.paragraphs
+import copy, os, re, sys, docx
+SRC, OUT = sys.argv[1], sys.argv[2]
+MD = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'registration-v3.md')
+d = docx.Document(SRC)
+P = d.paragraphs
 
-def set1(i, text):
-    p=P[i]; p.runs[0].text=text
-    for r in p.runs[1:]: r.text=''
-def set2(i, label, body):
-    p=P[i]; p.runs[0].text=label; p.runs[1].text=' '+body
-    for r in p.runs[2:]: r.text=''
-inserts=[]  # (after_index, label or None, body)
-def after(i, label, body): inserts.append((i,label,body))
+# template paragraphs of the v2 form, by kind (indices of the v2 file)
+T = {k: copy.deepcopy(P[i]._p) for k, i in {
+    'head': 18,      # "A. Context:"                      Heading 3, one run
+    'plain': 19,     # body text of A and B               Heading 3, one run
+    'numhead': 24,   # "Autonomous Micro-Climate Control:" numbered, one run
+    'sub': 31,       # "1. System (...)"                  Heading 3, one run
+    'numlabel': 32,  # "Label: body" in C                 numbered, two runs
+    'label': 55,     # "Flow 1: ...: body" in D and E     two runs
+    'sec32': 71,     # "3.2. Main proposal content ..."
+    'bold': 72,      # "a) Theory and practice (document):"
+    'list': 73,      # bullet of 3.2
+    'normal': 85,    # "Task n: ..."
+    'sec4': 91,      # paragraph of section 4
+}.items()}
+START, SEC4, END = P[17], P[90], 101   # body = 18..89, section 4 body = 91..END
 
-# B. Proposed solutions
-set1(22,'We propose SwiftletCare, an automated control and monitoring system consisting of an edge controller with industrial sensors, actuators and load-current sensing in each zone of the house, an AI camera pipeline that reads the camera at the bird entrance and runs on a desktop PC, and a cloud backend with web and mobile applications.')
-plain_after=[(22,"One installation of SwiftletCare serves one owner of swiftlet houses (a person or a business) and the farms of that owner. Accounts are created by the installation's Administrator or by invitation; there is no public sign-up. SwiftletCare does not connect buyers and sellers, dispatch technical services, handle payments or host third parties: every function serves the operation of the owner's houses.")]
-set1(25, P[25].runs[0].text+' Current sensing on the pump and fan circuits lets the controller check that each load actually runs when its relay is on.')
-set1(27,'A lightweight detection and tracking pipeline (YOLO + ByteTrack) processes the video of the bird entrance, counts birds leaving in the morning and returning in the evening by their crossings of a closed ring drawn around the entrance hole, and computes the daily return rate of the house. The video is streamed live with a bounding box drawn on every tracked bird, so that the count can be verified visually.')
-set1(29,"The system combines three sources of evidence (environmental sensors, noise level, and flock movement from the camera) to assess the condition of the house and of its own equipment: faulty or drifting sensors, misting that does not raise the humidity (dry pump, empty tank, clogged nozzle), a pump or fan that draws no current, speaker failure, device offline, abnormal noise, threshold and forecast breaches and drops in the return rate. Each day the system gives every house one health status that combines the sources by agreement between them, with its reasons and with the day's weather from a public weather service as context; daily, weekly and monthly reports can be downloaded as PDF or CSV. The status comes from transparent rules and is an indicator for people to act on, not a diagnosis: a human Domain Expert reviews the system's assessments, confirms or rejects its inferred alerts, and adjusts thresholds and control coefficients. The Farm Owner and the Domain Expert rate each day from their own observation, and the agreement between the system and these ratings is measured.")
-# C.1
-set2(34,'Self-Protection & Self-Diagnosis:',"Detect sensor faults and RS485 bus failure, implausible sensor behaviour (stuck values, impossible jumps, drift between devices), misting that does not raise the humidity, a pump or fan that does not draw current as commanded, speaker failure, an unexpected restart and device offline; move the affected actuator to a safe state where applicable and raise an alert. These checks monitor the equipment; the electrical protection of the loads (breaker, thermal relay, float switch) stays in the house's own panel.")
-set2(37,'Health Assessment & Alerts:','Classify alerts by severity, merge repeated occurrences of the same incident, close them automatically when conditions recover; give each house one daily health status combining environment, air quality, return rate and abnormal noise by agreement, with its reasons and the weather of the day, and produce daily, weekly and monthly health reports exportable to PDF and CSV.')
-# C.2
-after(39,'Device Setup:','Add a controller to a zone in the mobile app by scanning the QR code on its label (device ID and activation key) and the QR code of the floor; only the Wi-Fi network is entered on the device. Move a controller to another floor or remove it the same way, and follow the setup until the configuration is applied.')
-after(41,'Daily Health & Reports:','See the daily health status of each house with its reasons, read and download the daily, weekly and monthly reports, and rate each day from own observation before the status is shown.')
-set2(42,'Alerts:','Receive real-time alerts in the web and mobile applications, and on the phone through both mobile push notifications and a Telegram bot; acknowledge them with a note.')
-# C.3
-set2(47,'Review:','Access the environmental data, control performance, flock trends, daily health statuses and health reports of the farms the expert is invited to.')
-set2(49,'Tuning:','Approve or adjust environmental thresholds and fuzzy-control coefficients, including those suggested by the system, and tune the detection parameters of the alerts (abnormal-noise margin, misting-check and speaker-failure criteria, return-rate drop); every change is recorded with its author and time.')
-after(49,'Rating:','Rate each day of the house from own observation before the system status is shown, so that the agreement between the system and the practitioners can be measured.')
-# C.4
-set2(53,'Administrator:',"Technical administrator of the installation: create the Farm Owner's account, lock accounts and handle data-deletion requests, keep the device stock with its printed labels, the system-wide default thresholds and the audit log, see every device with its device alerts, diagnose it remotely and send restarts, configuration pushes and firmware updates; no relay control and no access to the environmental data. The Administrator does not create or manage farms.")
-# D: six main flows (paragraphs 55-60), the old flows 7-9 removed, supporting flows in paragraph 64
-set2(55,'Flow 1: Automatic Micro-Climate Control:','Sensors are read every second. Every 10 seconds the fuzzy controller converts humidity and temperature into a power level for misting and ventilation, applied over a time window; as conditions return to range, the output decreases gradually. Readings and actuator state are reported to the cloud and shown on the dashboard. When the internet connection is lost, the controller keeps regulating with its stored configuration and buffers telemetry in flash memory, uploaded when the connection returns; if the controller hangs, the hardware watchdog restarts it. The Farm Owner may switch an actuator from the application for a limited duration (the pump for at most 30 minutes, and only after confirming any open sensor or misting alert); the controller reports manual mode and returns to automatic control when the duration expires. If the controller itself fails, the existing electrical switches of the house, outside the system, remain the manual fallback.')
-set2(56,'Flow 2: Incident Handling:','An incident raises one alert with its severity and details: a reading outside its threshold for its dwell time; NH3 or CO2 above the alert limit set by the Domain Expert (no established limits exist for swiftlet houses, so these readings never drive the fan); misting that does not raise the humidity within an accumulated 5 minutes (automatic misting then stops for that session and the alert asks to check the water, the nozzles, the pump and the doors); a sensor that stops responding or returns implausible values (excluded from control, the loop holds a safe state); a speaker whose sound stays far below its baseline; a pump or fan that does not draw current as commanded; an unexpected restart; a device offline; a pump or fan past its service limit; or a forecast that a value still in range will cross its threshold within 60 minutes, with the expected time. The alert reaches the Farm Owner in the applications and on the phone through both mobile push and a Telegram bot, is sent again while nobody acknowledges it, is acknowledged with a note and closes when the condition recovers. The Administrator sees the device alerts of every farm.')
-set2(57,'Flow 3: Bird Counting Session:',"During the morning exit and evening return sessions, the AI pipeline detects and tracks birds at the entrance, counts their crossings of the ring around the entrance hole in each direction and publishes the counts of the house, while the live stream shows a box on each tracked bird. At the end of the day the return rate is computed; a drop of more than the house's threshold (default 20%) against the average of the previous 7 days raises an alert.")
-set2(58,'Flow 4: Expert Validation of Inferred Alerts:','Some alerts are inferred rather than measured: abnormal noise (noise sustained well above the baseline the controller learned for that hour while the speaker is off), implausible sensor behaviour and early warnings. They are never treated as conclusions on their own: each is presented with the readings and the bird counts of the same period as evidence, and the Domain Expert confirms or rejects it with a note; a rejected alert is dismissed. The Farm Owner is informed of every verdict; on a farm without a Domain Expert, the Farm Owner records it.')
-set2(59,'Flow 5: Control-Parameter Tuning:','The Farm Owner may change the thresholds and control coefficients of a zone; the change applies at once and opens a review item that the Domain Expert accepts, adjusts or reverts. When enough data is available the system suggests a set of control coefficients; the Farm Owner may submit it, and only the Domain Expert approves or rejects it. The Domain Expert also tunes the detection parameters, the counting ring and the counting schedule. Every applied change is sent to the controllers as a new configuration version, the application shows when it is applied, its effect is visible in the control-performance chart, and the Farm Owner is informed of every expert decision.')
-set2(60,'Flow 6: Daily Health Assessment & Periodic Reports:',"After the evening session, the system rates the environment, air quality, return rate and abnormal noise of each house against the house's levels, combines them by agreement into one daily status (good, watch, action or insufficient data) with its reasons and the weather of the day, and notifies the Farm Owner and the Domain Expert. Each of them rates the day from their own observation before the status is shown. Weekly and monthly reports aggregate the days, the Domain Expert writes a conclusion on them, and every report can be downloaded as PDF or CSV.")
-set2(64,'Supporting flows:',"Device setup by the Farm Owner: the Administrator adds the device to the stock and prints its label; the Farm Owner scans the label and the QR code of the floor in the mobile app and enters only the Wi-Fi network on the device; the backend links the device to that zone and sends it that zone's configuration, and the application shows when it is applied. Remote device maintenance by the Administrator, account and access management, and harvest logging also support the main flows; there are no maintenance tickets.")
-drop_pars=[52,61,62,63]
-# E
-set2(69,'Accuracy & Evidence:','Counting accuracy is evaluated against manual counts on recorded video under different lighting conditions (Precision, Recall, counting error); the forecast error is reported as mean absolute error; the agreement between the daily health status and the practitioners\' independent ratings is reported.')
-# 3.2
-set1(75,'AI / Computer Vision: OpenCV, YOLO (nano/lightweight; the version is declared in the design document), ByteTrack (Object tracking), ONNX Runtime.')
-set1(76,'Backend: NodeJS / Express (TypeScript), MongoDB, MQTT Broker (EMQX), Socket.io, MinIO (file storage); a public weather API (Open-Meteo) for weather context.')
-set1(79,'An operational IoT Hardware Controller Prototype (ESP32 with RS485 sensors, relay module, load-current sensing and attractant speaker) performing autonomous micro-climate control, and an AI Camera Node for the bird entrance (IP camera and a desktop PC running the pipeline).')
-set1(81,'A fully functional Web & Mobile Application for monitoring environmental data, viewing swiftlet count analytics and the annotated live stream, receiving alerts, manual override, device setup by QR code, daily health status and reports with PDF/CSV export, harvest logging, and expert validation and tuning.')
-set1(82,'A scalable Cloud Backend handling real-time time-series telemetry, swiftlet counting logs, alert dispatching, forecasting, daily health assessment and periodic reports.')
-set1(83,'An evaluation report: control performance (time in range, relay switching), counting accuracy, response latency, the results of the offline-recovery and fault scenarios, and the agreement between the daily health status and the practitioners\' ratings.')
-set1(85,'Task 1: Design circuit schematics (controller board with load-current sensing), assemble the prototype (sensors, relays, speaker), and code ESP32 firmware for sensor reading and filtering, fuzzy control, fault detection, offline buffering, and MQTT communication.')
-set1(87,'Task 3: Build Backend API (NodeJS/Express), set up MQTT Broker, design database schemas (MongoDB) for sensor telemetry, count logs, alerts, harvests and daily health statuses, and implement the alert engine, forecasting, daily health assessment, periodic reports and WebSocket channels.')
-set1(88,'Task 4: Build Web Dashboard (React.js) and Mobile App (React Native) for the Farm Owner and the Domain Expert: monitoring, swiftlet counting analytics and live stream, real-time alert notifications, manual override, device setup by QR code, daily health status, reports and ratings, harvest logging, and expert validation and tuning.')
-set1(89,'Task 5: Define the automation scenarios, deploy empirical system runs in a simulated/real swiftlet environment, measure control performance, counting accuracy (Precision/Recall), response latency and the agreement of the daily health status with the practitioners\' ratings, review the related literature, obtain validation from a swiftlet-farming practitioner, test, and write the thesis/scientific paper.')
-# Review 1 items kept from v2, (7) without the Technician
-set1(98,'(4) Predator detection by camera is removed; the camera pipeline detects one class (swiftlet) for counting.')
-set1(100,'(6) Notifications are delivered in the applications and on the phone through both a Telegram bot and mobile push notifications; Zalo and SMS channels are out of scope.')
-set1(101,'(7) Administrator functions are supporting features outside the main flow; online trading of nests is out of scope and only harvest logging is included.')
-# 4
-set1(91,'The hardware prototype will be built with fail-safe hardware watchdogs and load-current sensing on the pump and fan. The test house is borrowed and its electrical installation cannot be modified, so no bypass switch is added: if the controller fails, the house\'s existing switches remain the manual fallback.')
-rv=[
- 'Scope adjustments at Review 2 (version 3, see the Record of Changes BM03):',
- '(8) The detection model is named "YOLO" without a version (declared in the design document), and birds are counted by crossings of a closed ring around the entrance hole instead of a virtual line.',
- '(9) Device setup by the Farm Owner becomes a supporting flow done with two QR scans in the mobile app (the device label and the floor code), instead of an installation by a Technician.',
- '(10) The health assessment becomes a daily status per house combining the sources by agreement, with daily, weekly and monthly reports exportable to PDF and CSV, rated by the Farm Owner and the Domain Expert (Flow 6).',
- '(11) Weather data from a public weather API is used as context for the health assessment, never to drive the actuators.',
- '(12) The controller board measures the current of the pump and the fan to detect a load that does not run as commanded.',
- '(13) Bypass switches are removed: the test house is borrowed and cannot be rewired; its existing switches remain the manual fallback.',
- '(14) Both mobile push notifications and a Telegram bot are committed, and predator detection is removed from the possible extensions.',
- '(15) Maintenance tickets, service levels (SLA), Technician regions and ticket statistics are removed; faults reach the Farm Owner as alerts that are sent again until acknowledged, and pump or fan wear raises a maintenance alert.',
- "(16) One installation serves one owner of swiftlet houses and that owner's farms: the Administrator creates the Farm Owner's account, co-owners and the Domain Expert join by invitation, and there is no public sign-up. The health status is described as a rule-based indicator, not as an automatic expert.",
- "(17) The main flows are grouped by business process, one outcome each: offline operation and manual override become paths of the automatic control (Flow 1); air-quality limits, equipment faults and early warnings become one incident-handling flow (Flow 2); the expert's verdicts on inferred alerts (Flow 4) and the review of control parameters (Flow 5) are separate flows.",
- '(18) The Technician role is removed: one installation serves one owner, so device setup stays with the Farm Owner, and remote restarts, configuration pushes and firmware updates move to the Administrator, who already keeps the device stock; the Farm Owner may restart a controller of the farm.',
-]
-# apply inserts from the bottom up so indices stay valid
-def clone_after(src_par, ref_par):
-    new=copy.deepcopy(src_par._p); ref_par._p.addnext(new)
-    return docx.text.paragraph.Paragraph(new, ref_par._parent)
-ref=P[101]
-for t in rv:
-    np_=clone_after(P[101], ref); np_.runs[0].text=t
-    for r in np_.runs[1:]: r.text=''
-    ref=np_
-# group inserts by index, keep order: for the same index the later one goes after the earlier
-from collections import defaultdict
-g=defaultdict(list)
-for i,l,b in inserts: g[i].append((l,b))
-for i in sorted(g, reverse=True):
-    ref=P[i]
-    for l,b in g[i]:
-        np_=clone_after(P[i], ref); np_.runs[0].text=l; np_.runs[1].text=' '+b
-        for r in np_.runs[2:]: r.text=''
-        ref=np_
-for i,t in plain_after:
-    np_=clone_after(P[i], P[i]); np_.runs[0].text=t
-    for r in np_.runs[1:]: r.text=''
+
+def clean(t):
+    return re.sub(r'\*\*|`', '', t).strip()
+
+
+def parse(md):
+    """(kind, label, text) for every paragraph of sections A–E, 3.2 and 4."""
+    body, sec4, part, sect = [], [], None, ''
+    for line in md.splitlines():
+        s = line.strip()
+        if s.startswith('### A. Context'):
+            part = body
+        if part is None or not s:
+            continue
+        if s.startswith('## 4.'):
+            part = sec4
+            continue
+        if s.startswith('### 3.2.'):
+            sect = '3.2'; part.append(('sec32', None, '    ' + s[4:])); continue
+        if s.startswith('### '):
+            sect = s[4]; part.append(('head', None, s[4:] + ':')); continue
+        if s.startswith('#### '):
+            t = s[5:]; part.append(('sub', None, t if t.endswith(':') else t + ':')); continue
+        if part is sec4:
+            part.append(('sec4', None, clean(s))); continue
+        m = re.fullmatch(r'\*\*(.+?:)\*\*(.*)', s)
+        if sect == '3.2':
+            if m and not m.group(2).strip():
+                part.append(('bold', None, m.group(1)))
+            elif s.startswith('- '):
+                part.append(('list', None, clean(s[2:])))
+            else:
+                part.append(('normal', None, clean(s)))
+        elif m and not m.group(2).strip():
+            part.append(('numhead', None, m.group(1)))
+        elif m:
+            part.append(('numlabel' if sect == 'C' else 'label', m.group(1), clean(m.group(2))))
+        else:
+            part.append(('plain', None, clean(s)))
+    return body, sec4
+
+
+def insert_after(ref, items):
+    for kind, label, text in items:
+        el = copy.deepcopy(T[kind]); ref._p.addnext(el)
+        ref = docx.text.paragraph.Paragraph(el, ref._parent)
+        runs = ref.runs
+        if label is None:
+            runs[0].text = text
+            for r in runs[1:]: r.text = ''
+        else:
+            runs[0].text = label; runs[1].text = ' ' + text
+            for r in runs[2:]: r.text = ''
+    return ref
+
+
+body, sec4 = parse(open(MD, encoding='utf-8').read())
+old = P[18:90] + P[91:END + 1]
+insert_after(START, body)
+insert_after(SEC4, sec4)
+for p in old:
+    p._p.getparent().remove(p._p)
+
 # number the students 1..n (the v2 file has gaps in this column)
-for n,row in enumerate(d.tables[1].rows[1:],1):
-    c=row.cells[0]; p_=c.paragraphs[0]
-    (p_.runs[0] if p_.runs else p_.add_run()).text=str(n)
-    for r in p_.runs[1:]: r.text=''
+for n, row in enumerate(d.tables[1].rows[1:], 1):
+    p_ = row.cells[0].paragraphs[0]
+    (p_.runs[0] if p_.runs else p_.add_run()).text = str(n)
+    for r in p_.runs[1:]: r.text = ''
 # drop phone numbers (personal data stays out of the repository)
 for t in d.tables:
     for row in t.rows:
         for c in row.cells:
             for p in c.paragraphs:
                 if re.fullmatch(r'\s*0\d{9}\s*', p.text):
-                    for r in p.runs: r.text=''
-for i in drop_pars:
-    P[i]._p.getparent().remove(P[i]._p)
+                    for r in p.runs: r.text = ''
 d.save(OUT)
+print(len(body), 'paragraphs in sections A–3.2,', len(sec4), 'in section 4')

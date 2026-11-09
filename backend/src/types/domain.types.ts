@@ -155,6 +155,8 @@ export interface RelayStatusPayload {
   relay_states: RelayStates
   control_mode: ControlMode
   override_expiry?: number
+  /** Firmware ≥ 1.6.0 (BR-20): chế độ và thời gian còn lại của từng relay */
+  relays?: Partial<Record<keyof RelayStates, { mode: ControlMode; remaining_ms?: number }>>
 }
 
 /**

@@ -5,12 +5,12 @@
 | Field | Value |
 | --- | --- |
 | Project code | FA26SE158 |
-| Course | SWP490 – Capstone Project, FA26 |
+| Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Duration | July 2026 – December 2026 |
-| Document version | 1.0.0 (Review 2) |
-| Date | 03/11/2026 |
+| Document version | 1.2.0 (Review 2, final scope) |
+| Date | 09/11/2026 |
 | Scope baseline | Registration form v3 (`docs/reports/registration-v3.md`) with Record of Changes (`bm03-record-of-changes.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -32,9 +32,9 @@
 | --- | --- | --- |
 | Nguyễn Chí Bảo | SE183383 | Leader; firmware, AI pipeline, backend core; documents |
 | Trần Minh Kiệt | SE182180 | Backend (devices, accounts, alerts, expert module, daily health); firmware self-diagnosis |
-| Nguyễn Vũ Len | SE182055 | Mobile application – Farm Owner |
-| Nguyễn Thị Yến Nhi | SE184223 | Web application – Farm Owner (with analytics, daily health and reports) and Administrator |
-| Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert; Administrator device console |
+| Nguyễn Vũ Len | SE182055 | Mobile application – Farm Owner and Farm Technician |
+| Nguyễn Thị Yến Nhi | SE184223 | Web application – Farm Owner (analytics, daily health, reports, farm overview, house comparison, Work Orders, decisions on recommendations, harvest cycles) and Administrator |
+| Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert (verdicts, profiles, recommendation rules, season conclusions); Administrator device console |
 
 Responsibilities in detail are in Report 2, Section 4, and in the Ownership Map of the Design Brief.
 
@@ -77,8 +77,9 @@ Users and what they do (Report 3, Section 2.3):
 
 | User | Main goals |
 | --- | --- |
-| Farm Owner | Watch the houses live, receive alerts by push and Telegram, override an actuator for a limited time, set up devices by scanning QR codes, read the daily status and reports, rate each day, record harvests |
-| Domain Expert | Review data and reports, confirm or reject inferred alerts, tune thresholds, coefficients, detection parameters and the counting ring, write conclusions, rate each day |
+| Farm Owner | Watch and compare the houses, receive escalated and critical alerts, approve Work Orders and plan maintenance, accept or reject recommendations, apply configuration profiles, override an actuator for a limited time, set up devices by scanning QR codes, read the daily status and reports, rate each day, confirm harvests and compare seasons |
+| Farm Technician | The owner's staff on site, assigned to houses: receive their alerts first, record the cause found, carry out Work Orders, inspections and calibration, check inferred alerts on site, override an actuator, restart a controller or draw the counting ring there, rate each day, enter harvests |
+| Domain Expert | Review data and reports, confirm or reject inferred alerts, tune thresholds, coefficients, detection parameters, the counting ring and the weather compensation, prepare configuration profiles, write recommendation rules, conclusions and season conclusions, review the days where a rating and the status disagree |
 | Administrator (supporting) | Manage accounts, the device stock and its labels, system-wide defaults and the audit log; see every device with its device alerts, diagnose it remotely and send restarts, configuration pushes and firmware updates; no relay control, no environmental data, no farm management |
 
 ## 6. Project Scope and Limitations
@@ -89,18 +90,20 @@ The main flows of the registration form v3 (Report 3, Section 2.2):
 
 | ID | Flow | In one sentence |
 | --- | --- | --- |
-| MF-01 | Automatic micro-climate control | Every 10 s a fuzzy controller on each floor sets misting and fan power from humidity and temperature; it keeps doing so without Internet, and the owner can take one relay by hand for a limited time before it returns to automatic |
-| MF-02 | Incident handling | A threshold or NH3/CO2 breach, an equipment fault, a restart, a device offline or a forecast crossing raises one alert that reaches the owner by push and Telegram, is repeated until acknowledged and closes on recovery |
+| MF-01 | Automatic micro-climate control | Every 10 s a fuzzy controller on each floor sets misting and fan power from humidity and temperature, with a small expert-approved weather offset on misting; it keeps doing so without Internet, and the owner or the technician can take one relay by hand for a limited time before it returns to automatic |
+| MF-02 | Incident handling | A threshold or NH3/CO2 breach, an equipment fault, a restart, a device offline or a forecast crossing raises one alert that reaches the house's technician first and the owner when it is critical or not acknowledged in time; a fault that needs a visit becomes a Work Order closed only when the data confirm recovery |
 | MF-03 | Bird counting session | Birds crossing a ring around the entrance hole are counted per session; the return rate is computed; the annotated video is streamed |
-| MF-04 | Expert validation of inferred alerts | Abnormal noise, implausible readings and early warnings are shown with their evidence and confirmed or rejected by the expert |
+| MF-04 | Expert validation of inferred alerts | Abnormal noise, implausible readings, early warnings and return-rate drops are shown with their evidence; the house's technician checks each one on site, then the expert confirms or rejects it |
 | MF-05 | Control-parameter tuning | The expert reviews the owner's changes and approves coefficient suggestions; the new configuration reaches the controllers and is confirmed applied |
-| MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV and independent ratings |
+| MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV, independent ratings, a farm overview and a comparison of houses |
+| MF-07 | Preventive maintenance | Plans by run hours or calendar make preventive Work Orders due for the technician, with checklists; overdue plans escalate |
+| MF-08 | Recommendation loop | The expert's rules turn patterns in the data into recommendations that the owner accepts or rejects; their effect is measured after 7 days |
 
-Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Administrator (SF-02), accounts and access (SF-03), harvest logging (SF-04). There are no maintenance tickets: faults reach the Farm Owner as alerts that are sent again until acknowledged (MF-04).
+Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Administrator (SF-02), accounts and access with technician assignment (SF-03), notification settings (SF-04), system administration (SF-05), harvest recording with a season summary (SF-06), which happens only a few times a year. Maintenance stays inside the owner's organisation: there are no external service providers, regions or queues.
 
 ### 6.2 Limitations and Exclusions
 
-- Out of scope (Report 3, Section 8): predator detection, bird-call classification, heating and light control, fan control from NH3, CO2 or weather, marketplace and buyer role, Zalo and SMS, bypass switches, store publication, commercial 24/7 operation.
+- Out of scope (Report 3, Section 8): predator detection, bird-call classification, heating and light control, fan control from NH3, CO2 or weather, marketplace and buyer role, external service providers and payroll, yield prediction, Zalo and SMS, bypass switches, store publication, commercial 24/7 operation.
 - The daily health status is an indicator, not a diagnosis: it lists its reasons and the expert concludes (Report 3, Section 8.1).
 - Weather comes from a regional model for the farm's coordinates, not a measurement at the house; it is context only (C-6).
 - The system is evaluated in one borrowed test house; results are reported for that house and its season.
@@ -121,6 +124,8 @@ Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remo
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.2.0 | 09/11/2026 | Eight main flows; harvest recording and season summary is supporting flow SF-06; on-site check by the technician in MF-04 |
+| 1.1.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0, BM03 rows 13–19): Farm Technician; nine main flows with preventive maintenance, recommendation loop and harvest season assessment; five supporting flows; team roles of the new work packages |
 | 1.0.3 | 03/11/2026 | Technician role removed (BM03 row 13): remote maintenance by the Administrator. Six business main flows (SRS 3.2.0); device setup is supporting flow SF-01 |
 | 1.0.2 | 03/11/2026 | Farm Owner screens split by platform: Len the mobile app, Nhi the web with the Administrator web |
 | 1.0.1 | 27/10/2026 | Team roles re-split: backend and firmware for Bảo and Kiệt, web and mobile per role for Len, Nhi and Tuấn |

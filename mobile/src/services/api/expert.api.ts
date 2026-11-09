@@ -1,8 +1,8 @@
 import { ENDPOINTS } from '@/constants/apiEndpoints'
 import { apiClient } from '@/services/api/apiClient'
+import type { ApiResponse } from '@/types'
 import type {
   AlertEvidence,
-  ApiResponse,
   CoefficientProposal,
   DayRating,
   DailyHealthStatus,
@@ -18,7 +18,7 @@ import type {
   ReviewItemStatus,
   VerdictResult,
   ZoneHealthReportItem,
-} from '@/types'
+} from '@/types/expert.types'
 
 // Tham số lọc danh sách cảnh báo suy luận
 export interface InferredAlertsQueryParams {

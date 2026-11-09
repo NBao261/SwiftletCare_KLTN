@@ -1,10 +1,9 @@
-import React, { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { CartesianChart, Line as VictoryLine } from 'victory-native'
-import { DashPathEffect, Line as SkiaLine, useFont, vec } from '@shopify/react-native-skia'
+import React, { useMemo, useState } from 'react'
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native'
+import { LineChart, type DataSet, type lineDataItem } from 'react-native-gifted-charts'
 import { Waveform } from 'phosphor-react-native'
 import { Text } from '@/components/ui/text'
-import { Radius, Spacing } from '@/constants/theme'
+import { Radius, Spacing, Typography } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { TelemetrySample } from '@/types'
 import { t } from '@/utils/i18n.utils'
@@ -19,7 +18,6 @@ interface EvidenceChartProps {
 }
 
 type ChartItem = {
-  [key: string]: unknown
   index: number
   time: string
   temperature: number | null
@@ -28,14 +26,17 @@ type ChartItem = {
   timestamp: string
 }
 
+const Y_AXIS_WIDTH = 36
+const MAX_X_LABELS = 5
+
 /**
  * Biểu đồ viễn trắc môi trường ±30 phút (ALERT-FR-014).
- * Sử dụng CartesianChart (Victory Native v42) và Shopify Skia 2.14.
- * Tuân thủ quy tắc: Không vẽ số 0 khi thiếu dữ liệu, hiển thị vạch dóng đứt đoạn tại thời điểm T.
+ * Sử dụng LineChart (react-native-gifted-charts) đồng bộ hệ thống.
+ * Tuân thủ quy tắc: Không vẽ số 0 khi thiếu dữ liệu, hiển thị vạch dóng tại thời điểm T.
  */
 export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChartProps) {
   const palette = usePalette()
-  const font = useFont(require('@/assets/fonts/PlusJakartaSans-Medium.ttf'), 10)
+  const [chartWidth, setChartWidth] = useState(280)
 
   const isMissing = !telemetry || telemetry.status === 'missing' || !telemetry.samples || telemetry.samples.length === 0
 
@@ -80,9 +81,10 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
 
   const hasSoundData = alertType === 'NOISE_ANOMALY' && chartData.some(d => d.sound_db !== null)
 
-  const yKeys: ('temperature' | 'humidity' | 'sound_db')[] = useMemo(() => {
-    return hasSoundData ? ['temperature', 'humidity', 'sound_db'] : ['temperature', 'humidity']
-  }, [hasSoundData])
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const measured = Math.floor(event.nativeEvent.layout.width)
+    if (measured > 60) setChartWidth(measured)
+  }
 
   if (isMissing) {
     return (
@@ -93,6 +95,50 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
         </Text>
       </View>
     )
+  }
+
+  const plotWidth = Math.max(chartWidth - Y_AXIS_WIDTH - Spacing.sm, 100)
+  const spacing = plotWidth / Math.max(chartData.length - 1, 1)
+  const labelEvery = Math.max(1, Math.ceil(chartData.length / MAX_X_LABELS))
+  const xLabels = chartData.map((item, idx) => (idx % labelEvery === 0 ? item.time : ''))
+  const axisTextStyle = [styles.axisText, { color: palette.textSecondary }]
+
+  const getMarker = (index: number): Partial<lineDataItem> =>
+    index === alertIndex
+      ? { showVerticalLine: true, verticalLineColor: palette.alert, verticalLineThickness: 1.5 }
+      : {}
+
+  const toLineData = (getter: (item: ChartItem) => number | null): lineDataItem[] =>
+    chartData.map((item, index) => {
+      const val = getter(item)
+      if (val === null) {
+        return { value: undefined, hideDataPoint: true, ...getMarker(index) }
+      }
+      return { value: val, hideDataPoint: true, ...getMarker(index) }
+    })
+
+  const dataSet: DataSet[] = [
+    {
+      data: toLineData(item => item.temperature),
+      color: palette.alert,
+      thickness: 2,
+      curved: true,
+    },
+    {
+      data: toLineData(item => item.humidity),
+      color: palette.houseHealthy,
+      thickness: 2,
+      curved: true,
+    },
+  ]
+
+  if (hasSoundData) {
+    dataSet.push({
+      data: toLineData(item => item.sound_db),
+      color: palette.textSecondary,
+      thickness: 1.5,
+      curved: true,
+    })
   }
 
   return (
@@ -130,73 +176,33 @@ export function EvidenceChart({ telemetry, alertTime, alertType }: EvidenceChart
         </View>
       </View>
 
-      {/* Biểu đồ CartesianChart */}
-      <View style={styles.chartWrapper}>
-        <CartesianChart<ChartItem, 'index', 'temperature' | 'humidity' | 'sound_db'>
-          data={chartData}
-          xKey="index"
-          yKeys={yKeys}
-          domainPadding={{ left: 20, right: 20, top: 16, bottom: 10 }}
-          axisOptions={{
-            font: font ?? undefined,
-            tickCount: { x: Math.min(5, Math.max(2, chartData.length)), y: 4 },
-            lineColor: palette.divider,
-            labelColor: palette.textSecondary,
-            formatXLabel: val => {
-              const idx = Math.round(Number(val))
-              return chartData[idx]?.time ?? ''
-            },
-            formatYLabel: val => `${Math.round(Number(val))}`,
-          }}
-        >
-          {({ points, chartBounds }) => {
-            const alertX =
-              alertIndex >= 0 && points.temperature?.[alertIndex]?.x != null
-                ? points.temperature[alertIndex].x
-                : alertIndex >= 0 && points.humidity?.[alertIndex]?.x != null
-                  ? points.humidity[alertIndex].x
-                  : null
-
-            return (
-              <>
-                <VictoryLine
-                  points={points.temperature}
-                  color={palette.alert}
-                  strokeWidth={2}
-                  curveType="monotoneX"
-                  connectMissingData
-                />
-                <VictoryLine
-                  points={points.humidity}
-                  color={palette.houseHealthy}
-                  strokeWidth={2}
-                  curveType="monotoneX"
-                  connectMissingData
-                />
-                {hasSoundData && points.sound_db && (
-                  <VictoryLine
-                    points={points.sound_db}
-                    color={palette.textSecondary}
-                    strokeWidth={1.5}
-                    curveType="monotoneX"
-                    connectMissingData
-                  />
-                )}
-                {/* Vạch dóng dọc nét đứt tại thời điểm T */}
-                {alertX !== null && (
-                  <SkiaLine
-                    p1={vec(alertX, chartBounds.top)}
-                    p2={vec(alertX, chartBounds.bottom)}
-                    color={palette.alert}
-                    strokeWidth={1.5}
-                  >
-                    <DashPathEffect intervals={[4, 4]} />
-                  </SkiaLine>
-                )}
-              </>
-            )
-          }}
-        </CartesianChart>
+      {/* Biểu đồ LineChart từ react-native-gifted-charts */}
+      <View style={styles.chartWrapper} onLayout={handleLayout}>
+        <LineChart
+          dataSet={dataSet}
+          curved
+          width={plotWidth}
+          height={148}
+          spacing={spacing}
+          initialSpacing={0}
+          endSpacing={0}
+          maxValue={100}
+          noOfSections={4}
+          formatYLabel={label => `${Math.round(Number(label))}`}
+          yAxisLabelWidth={Y_AXIS_WIDTH}
+          yAxisThickness={0}
+          yAxisColor="transparent"
+          xAxisColor={palette.border}
+          xAxisThickness={1}
+          rulesColor={palette.divider}
+          rulesType="solid"
+          yAxisTextStyle={axisTextStyle}
+          xAxisLabelTexts={xLabels}
+          xAxisLabelTextStyle={axisTextStyle}
+          interpolateMissingValues={false}
+          disableScroll
+          isAnimated={false}
+        />
       </View>
     </View>
   )
@@ -246,5 +252,9 @@ const styles = StyleSheet.create({
   chartWrapper: {
     height: 180,
     width: '100%',
+  },
+  axisText: {
+    fontFamily: Typography.small.fontFamily,
+    fontSize: Typography.small.fontSize,
   },
 })

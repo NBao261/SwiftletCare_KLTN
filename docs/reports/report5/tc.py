@@ -5,7 +5,7 @@
 J='jest'; P='pio'; Y='pytest'; T='todo-auto'; M='manual'
 I='tests/integration/'
 # Features of supporting flow SF-01 (device setup): built and tested, not counted in the committed minimum
-SUPPORTING={'F-18','F-19'}
+SUPPORTING={'F-18','F-19','F-30'}
 # FRs covered by each feature (Report 5, Section 4.1)
 FEATURES=[
 ('F-01','Telemetry, live dashboard','ENV-FR-001, 002, 004, 005, 015, 022, ANALYTICS-FR-001, 005'),
@@ -20,7 +20,7 @@ FEATURES=[
 ('F-10','Counting, return rate','VISION-FR-001…011, 016, 017, 020, THREAT-FR-010, ANALYTICS-FR-002, 003, FARM-FR-004'),
 ('F-11','Annotated live stream','VISION-FR-012, 013, 014'),
 ('F-12','Abnormal noise','THREAT-FR-007'),
-('F-13','Expert verdict','EXPERT-FR-003, 007, ALERT-FR-014'),
+('F-13','On-site check and expert verdict','EXPERT-FR-003, 007, 021, ALERT-FR-014'),
 ('F-14','Tuning, ring, schedule','EXPERT-FR-008, VISION-FR-018, 019'),
 ('F-15','Review and suggestions','EXPERT-FR-010, 011, ANALYTICS-FR-010'),
 ('F-16','Conclusions, owner notice','EXPERT-FR-001, 002, 006, 009'),
@@ -29,7 +29,15 @@ FEATURES=[
 ('F-19','Device lifecycle, diagnostics and setup progress','FARM-FR-005, 006, 007, 007b, 008, 012, ENV-FR-027'),
 ('F-20','Daily health status','ANALYTICS-FR-012, 013'),
 ('F-21','Reports, PDF/CSV','EXPERT-FR-005, 013'),
-('F-22','Independent rating','EXPERT-FR-012, ANALYTICS-FR-014'),
+('F-22','Independent rating and disagreement review','EXPERT-FR-012, 022, ANALYTICS-FR-014'),
+('F-23','Alert routing and escalation','ALERT-FR-005, 009, 017, 018, AUTH-FR-013'),
+('F-24','Work Orders closed by the data','OPS-FR-001, 002, 003, 004, 009'),
+('F-25','Preventive maintenance','OPS-FR-005, 006, 007, 008, ALERT-FR-016'),
+('F-26','Weather compensation','ENV-FR-028, 029, 030'),
+('F-27','Recommendation rules','EXPERT-FR-016, 017, 018, 019'),
+('F-28','Configuration profiles and house stage','EXPERT-FR-014, 015, FARM-FR-014'),
+('F-29','Farm overview and house comparison','ANALYTICS-FR-002, 015, 016, 017'),
+('F-30','Harvest cycles and season conclusion','HARVEST-FR-001, 006, 007, ANALYTICS-FR-004, EXPERT-FR-020'),
 ]
 TC=[
 # F-01
@@ -114,8 +122,8 @@ TC=[
 ('TC-F12-03','F-12','Speaker playing','Feed loud samples','—','Not evaluated and not learned into the baseline',
  (P,'test_noise_anomaly','test_speaker_playing_is_ignored_and_not_learned')),
 # F-13
-('TC-F13-01','F-13','Inferred alert of a farm with an expert','PUT a verdict as the expert, then change it','CONFIRMED, then REJECTED with note','Stored with author, time, note and audit; can be changed',
- (J,I+'alertVerdict.test.ts','chỉ Domain Expert ghi được kết quả')),
+('TC-F13-01','F-13','Inferred alert of a house with a Farm Technician, on a farm with an expert','The technician records the on-site observation; then PUT a verdict as the expert and change it','Observation "speaker cable loose"; CONFIRMED, then REJECTED with note','The technician is asked to check the house; the observation is in the alert evidence with author and time; the verdict is stored with author, time, note and audit and can be changed',
+ [(J,I+'alertVerdict.test.ts','chỉ Domain Expert ghi được kết quả'),(T,'backend jest (G-21): on-site check request and observation in the evidence')]),
 ('TC-F13-02','F-13','A measured (non-inferred) alert; an alert of another farm','PUT a verdict on each','—','Rejected',
  (J,I+'alertVerdict.test.ts','từ chối cảnh báo đo trực tiếp và cảnh báo của farm khác')),
 ('TC-F13-03','F-13','Inferred alert','PUT `REJECTED` without a note; then with a note','—','422 without note; with note the alert becomes `DISMISSED`',
@@ -123,7 +131,7 @@ TC=[
 # F-14
 ('TC-F14-01','F-14','Zone of a farm with an expert','PUT detection tuning as the expert','Five zone parameters','Stored with history and audit; only the five firmware parameters sent to the devices',
  (J,I+'detectionTuning.test.ts','Domain Expert lưu tham số kèm lịch sử + audit')),
-('TC-F14-02','F-14','Camera of the house','PUT a counting ring as the expert','Ring of 6 vertices','Stored with history and audit, sent to the AI node of the house, no RTSP address returned',
+('TC-F14-02','F-14','Camera of the house','PUT a counting ring as the expert, then as the Farm Technician of the house and of another house','Ring of 6 vertices','Stored with history and audit, sent to the AI node of the house, no RTSP address returned; the technician of the house accepted, of another house 403',
  (J,I+'countingRing.test.ts','Domain Expert lưu vòng kèm lịch sử + audit')),
 ('TC-F14-03','F-14','Farm with an expert','PUT detection tuning as the Farm Owner','Valid values','Read allowed, write rejected (403)',
  (J,I+'detectionTuning.test.ts','Farm Owner xem được nhưng không sửa được')),
@@ -144,7 +152,7 @@ TC=[
 ('TC-F17-01','F-17','Pump in AUTO','Override ON; override the same relay again; clear early','—','One log opened; earlier REPLACED; last CLEARED_EARLY',
  (J,I+'relayOverrideLog.test.ts','bật tay mở 1 bản ghi')),
 ('TC-F17-02','F-17','Same device; a `SENSOR_FAULT` open in the zone','POST pump ON for 31 min; pump ON for 10 min without confirmation; then with confirmation','—','422; 409; accepted, and the log records the confirmation',
- (T,'backend jest `relayCommand.test.ts` (G-06)')),
+ (J,I+'relayCommand.test.ts','TC-F17-02: có SENSOR_FAULT')),
 ('TC-F17-03','F-17','Farm with an expert','POST relay, speaker and schedule as the expert','—','403 for each',
  (J,I+'domainExpert.test.ts','không điều khiển relay, loa hay lịch loa')),
 # F-18
@@ -171,12 +179,44 @@ TC=[
 ('TC-F21-02','F-21','Seeded month','GET the CSV of daily indicators','—','One row per house and day with every indicator, level, status and ratings; no internal IDs',(T,'backend jest (G-11)')),
 ('TC-F21-03','F-21','A daily report in the web app','Download the PDF and compare with the screen','—','Same figures; no internal IDs',(M,'web, staging')),
 # F-22
-('TC-F22-01','F-22','Computed day; Farm Owner who has not rated it','GET the day, the daily report and the CSV; then POST a rating','—','No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response',(T,'backend jest (G-11)')),
+('TC-F22-01','F-22','Computed day; Farm Technician of the house who has not rated it','GET the day, the daily report and the CSV; then POST a rating','—','No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response',(T,'backend jest (G-11)')),
 ('TC-F22-02','F-22','Rated day','Ingest a late count that changes the status; then try to change the rating','—','Current status recomputed, snapshot unchanged; rating change rejected, a note accepted',(T,'backend jest (G-11)')),
-('TC-F22-03','F-22','Administrator; a day 8 days ago','Rate as each; rate the old day','—','403; old day rejected',(T,'backend jest (G-11)')),
+('TC-F22-03','F-22','Administrator and Domain Expert; a day 8 days ago; seeded disagreeing days','Rate as each; rate the old day; expert opens the disagreeing days','—','403 for both; old day rejected; the list shows exactly the disagreeing days',(T,'backend jest (G-11)')),
+# F-23
+('TC-F23-01','F-23','House with an assigned Farm Technician; Farm Owners with push and Telegram','Raise a HIGH alert; do not acknowledge for 15 min','—','Delivered to the technician only; after 15 min delivered once to the Farm Owners (ALERT_ESCALATED)',(T,'backend jest (G-21)')),
+('TC-F23-02','F-23','Same house; a second house without a technician','Raise a CRITICAL alert on the first house and a HIGH alert on the second','—','CRITICAL reaches the technician and the Farm Owners at once; the second house\'s alert goes to the Farm Owners',(T,'backend jest (G-21)')),
+('TC-F23-03','F-23','Technician of house A; open MISTING_INEFFECTIVE on house A and an alert on house B','Acknowledge the alert of house B; close the Work Order of house A without a cause; disable every out-of-app channel for CRITICAL','—','403; 422; 400',(T,'backend jest (G-21)')),
+# F-24
+('TC-F24-01','F-24','House with a technician','Ingest MISTING_INEFFECTIVE, then the same incident again','—','One Work Order OPEN assigned to the technician; no second one',(T,'backend jest (G-21)')),
+('TC-F24-02','F-24','Work Order IN_PROGRESS','Technician marks it done with cause WATER; humidity back in range for 10 min; then a new MISTING_INEFFECTIVE during verification of a second Work Order','—','First: VERIFYING then AWAITING_APPROVAL; second: back to IN_PROGRESS',(T,'backend jest (G-21)')),
+('TC-F24-03','F-24','Work Order AWAITING_APPROVAL; another OPEN','Farm Owner approves the first and the second; technician tries to open one','—','First CLOSED with its alert RESOLVED and MTTR recorded; second 409; technician 403',(T,'backend jest (G-21)')),
+# F-25
+('TC-F25-01','F-25','Pump plan every 500 run hours; 499 h counted','Ingest telemetry with the pump running at normal current for 1 h','Current ≥ 50 % of normal','One MAINTENANCE_DUE and one preventive Work Order for the house\'s technician',(T,'backend jest (G-22)')),
+('TC-F25-02','F-25','Plan DUE with its Work Order','Technician records the maintenance; owner creates a plan with interval 0','—','Counter 0, alert RESOLVED, next due point = interval from now; 422 for interval 0',(T,'backend jest (G-22)')),
+('TC-F25-03','F-25','Plan DUE for 7 days; open inspection checklist','Run the due job; answer one checklist item "defect"','—','Farm Owners notified once (OVERDUE); one repair Work Order opened',(T,'backend jest (G-22)')),
+# F-26
+('TC-F26-01','F-26','House rule: +5 % when the forecast reaches 33 °C','Run the compensation job with a forecast of 34 °C within 2 h, then with no active rule','Seeded forecast','Controllers receive +5 % with expiry ≤ 2 h; then 0',(T,'backend jest (G-23)')),
+('TC-F26-02','F-26','Controller with fuzzy misting demand 40 %','Receive +5 %; let it expire; receive +80 % in a forged message','—','45 %; 40 % after expiry; demand clamped to 0–100 % and offset clamped to ±10; ventilation unchanged',(T,'firmware native (G-23)')),
+('TC-F26-03','F-26','Farm with a Domain Expert','Expert saves offset 12 %; expert saves a duration of 3 h; technician saves a rule','—','400; 400; 403',(T,'backend jest (G-23)')),
+# F-27
+('TC-F27-01','F-27','Active rule: NH3 above the limit ≥ 4 h a day for 3 days','Seed 3 such days; run the daily job twice','—','One OPEN recommendation with its evidence; no second one while it is open',(T,'backend jest (G-24)')),
+('TC-F27-02','F-27','OPEN recommendation','Farm Owner accepts; another is rejected without a reason','—','Exactly one Work Order linked; 422',(T,'backend jest (G-24)')),
+('TC-F27-03','F-27','One ACCEPTED 7 days ago; one OPEN for 7 days','Run the effect and expiry jobs','Seeded indicator values','MEASURED with the change equal to after − before; the other EXPIRED',(T,'backend jest (G-24)')),
+# F-28
+('TC-F28-01','F-28','Farm with a Domain Expert','Expert creates and approves a profile; saves one with humidity_min out of range; Farm Owner approves a draft','—','DRAFT then APPROVED; 400; 403',(T,'backend jest (G-24)')),
+('TC-F28-02','F-28','APPROVED profile; DRAFT profile','Farm Owner applies the approved one to two houses; applies the draft','—','Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409',(T,'backend jest (G-24)')),
+('TC-F28-03','F-28','House with a seeded return-rate drop','Set the house ATTRACTING; run the daily assessment; technician sets the stage','—','Flock indicator not assessed, reasons say "attracting stage", no LOW_RETURN_RATE; 403',(T,'backend jest (G-24)')),
+# F-29
+('TC-F29-01','F-29','Seeded farm of 3 houses (2 simulated)','GET the farm overview','—','Each house shows stage, today\'s status, open alerts and Work Orders, latest return rate equal to the seed; simulated houses marked',(T,'backend jest (G-25)')),
+('TC-F29-02','F-29','Same farm; 30 days of seed','GET the comparison; sort by MTTR','—','Each cell equals BR-44; houses ordered by MTTR; no score column',(T,'backend jest (G-25)')),
+('TC-F29-03','F-29','Load drawing 1.0 A at 12 V for 10 h; 8 weeks of counts','GET energy and flock trend','—','0.12 kWh; weekly and monthly mean morning exits equal the seed',(T,'backend jest (G-25)')),
+# F-30
+('TC-F30-01','F-30','Technician of the zone\'s house','Enter a valid harvest; enter one without weight; expert enters one','—','DRAFT batch; 422; 403',(T,'backend jest (G-26)')),
+('TC-F30-02','F-30','DRAFT batch; seeded previous cycle and the cycle of the previous year','Farm Owner confirms it; confirms it again','—','CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409',(T,'backend jest (G-26)')),
+('TC-F30-03','F-30','CLOSED cycle; farm with a Domain Expert','Expert writes the season conclusion; Farm Owner writes one','—','CONCLUDED and one notification per Farm Owner; 403',(T,'backend jest (G-26)')),
 ]
 # Main workflows: end-to-end on staging following the main scenario of the Design Brief
-WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11')]
+WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11'),('WF-07','DS-13'),('WF-08','DS-15')]
 # State transitions (SRS Section 6): (entity, transition, trigger, expected, source)
 ST=[
 ('6.1 Alert','(new) → ACTIVE','Ingest a device alert','One ACTIVE alert in the device\'s farm and zone with the default severity of its type',(J,I+'deviceMqttContract.test.ts','creates an alert in the device farm/zone from the ESP32 payload')),
@@ -192,7 +232,7 @@ ST=[
 ('6.2 ExpertVerdict','pending → CONFIRMED/REJECTED','Expert records a verdict','Verdict stored with author, role and time',(J,I+'alertVerdict.test.ts','chỉ Domain Expert ghi được kết quả')),
 ('6.2 ExpertVerdict','CONFIRMED ↔ REJECTED','Expert changes the verdict','New verdict stored; audit entry for the change',(J,I+'alertVerdict.test.ts','chỉ Domain Expert ghi được kết quả')),
 ('6.3 Controller relay','AUTO → MANUAL','Owner override applied','Relay MANUAL; one override log opened',(J,I+'relayOverrideLog.test.ts','bật tay mở 1 bản ghi')),
-('6.3 Controller relay','MANUAL → MANUAL','Second relay of the controller overridden','The first relay keeps its own expiry',(T,'backend jest + firmware native test (G-06)')),
+('6.3 Controller relay','MANUAL → MANUAL','Second relay of the controller overridden','The first relay keeps its own expiry',[(J,I+'relayCommand.test.ts','MANUAL → MANUAL: bật tay relay thứ hai'),(P,'test_relay_override','test_second_relay_does_not_change_the_first_expiry')]),
 ('6.3 Controller relay','MANUAL → AUTO','Override expires','Relay AUTO; log closed with EXPIRED',(J,I+'relayOverrideLog.test.ts','job hết hạn đóng bản ghi với EXPIRED')),
 ('6.3 Controller relay','AUTO → AUTO (rejected)','Override with an invalid duration','422; relay stays AUTO; no log opened',(J,I+'relayCommand.test.ts','durationMs của lệnh relay phải là số nguyên')),
 ('6.6 Controller/CameraNode','(new) → PENDING','Register from the label','Device PENDING in the scanned zone',(J,I+'deviceOnboarding.test.ts','đúng secretKey → PENDING')),
@@ -222,16 +262,38 @@ ST=[
 ('6.11 CoefficientProposal','PROPOSED → REJECTED','Expert rejects with a note','REJECTED; without a note 422',(J,I+'coefficientProposal.test.ts','từ chối thiếu lý do')),
 ('6.11 CoefficientProposal','PROPOSED → SUPERSEDED','Newer proposal for the zone','Older proposal SUPERSEDED',(J,I+'coefficientProposal.test.ts','gửi lần nữa → đề xuất cũ SUPERSEDED')),
 ('6.11 CoefficientProposal','closed → (rejected)','Approve a closed proposal','409',(J,I+'coefficientProposal.test.ts','đề xuất đã đóng → 409')),
-('6.17 DailyHealthStatus','(new) → COMPUTED','Daily assessment','One day record with current status and reasons; one pending rating per Farm Owner and Domain Expert',(T,'backend jest (G-11)')),
+('6.17 DailyHealthStatus','(new) → COMPUTED','Daily assessment','One day record with current status and reasons; one pending rating per assigned Farm Technician and Farm Owner, none for the Domain Expert',(T,'backend jest (G-11)')),
 ('6.17 DailyHealthStatus','COMPUTED → COMPUTED','Late count arrives after one assessor rated','Current status recomputed; the stored snapshot unchanged',(T,'backend jest (G-11)')),
-('6.18 DailyRating','PENDING → RATED','Farm Owner rates','Rating and snapshot stored in one write; status returned',(T,'backend jest (G-11)')),
-('6.18 DailyRating','PENDING → SKIPPED','Domain Expert skips','Status returned; no rating counted for NFR-14',(T,'backend jest (G-11)')),
-('6.18 DailyRating','PENDING → EXPIRED','7 days pass; the Farm Owner rated, the expert did not','Expert\'s rating EXPIRED and the status shown to the expert; the Farm Owner\'s rating kept',(T,'backend jest (G-11)')),
+('6.18 DailyRating','PENDING → RATED','Farm Technician rates','Rating and snapshot stored in one write; status returned',(T,'backend jest (G-11)')),
+('6.18 DailyRating','PENDING → SKIPPED','Farm Owner not at the house skips','Status returned; no rating counted for NFR-14',(T,'backend jest (G-11)')),
+('6.18 DailyRating','PENDING → EXPIRED','7 days pass; the technician rated, the Farm Owner did not','Farm Owner\'s rating EXPIRED and the status shown to the Farm Owner; the technician\'s rating kept',(T,'backend jest (G-11)')),
 ('6.18 DailyRating','RATED → RATED','Rated assessor adds a note','Note stored; rating unchanged',(T,'backend jest (G-11)')),
 ('6.18 DailyRating','RATED/SKIPPED/EXPIRED → (rejected)','Rate again after rating, skipping or expiry','409; nothing changed',(T,'backend jest (G-11)')),
 ('6.9 HealthReport','(new) → GENERATED','Daily, weekly or monthly report job','One report per house and period, with a section per zone (the current per-zone weekly test does not count)',(T,'backend jest `healthReport.test.ts` (G-11)')),
 ('6.9 HealthReport','GENERATED → CONCLUDED','Expert writes a conclusion','Conclusion stored; Farm Owners notified',(J,I+'healthReport.test.ts','chỉ Domain Expert viết; Farm Owner được báo')),
 ('6.9 HealthReport','CONCLUDED → CONCLUDED','Author edits; another expert edits','Author\'s edit stored with time; the other expert gets 403',(J,I+'healthReport.test.ts','chỉ Domain Expert viết; Farm Owner được báo')),
+
+('6.19 WorkOrder','(new) → OPEN','MISTING_INEFFECTIVE raised on a house with a technician','One OPEN Work Order assigned to the technician',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','OPEN → IN_PROGRESS','Technician starts it','IN_PROGRESS with start time',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','OPEN → CLOSED','Alert recovers for 10 min before the work starts','CLOSED with result SELF_RECOVERED',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','IN_PROGRESS → VERIFYING','Technician marks it done with cause and photo','VERIFYING; cause stored with the alert',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','VERIFYING → AWAITING_APPROVAL','Condition recovered for recovery_verify_min','AWAITING_APPROVAL; Farm Owners notified',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','VERIFYING → IN_PROGRESS','Condition comes back during verification','IN_PROGRESS; technician notified',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','AWAITING_APPROVAL → CLOSED','Farm Owner approves','CLOSED; alert RESOLVED; MTTR recorded',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','AWAITING_APPROVAL → IN_PROGRESS','Farm Owner reopens with a note','IN_PROGRESS with the note',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','OPEN/IN_PROGRESS → CANCELLED','Farm Owner cancels with a reason','CANCELLED; without a reason 422',(T,'backend jest (G-21)')),
+('6.19 WorkOrder','OPEN → OPEN (escalated)','Not started within escalation_min','Farm Owners notified once; still OPEN',(T,'backend jest (G-21)')),
+('6.20 MaintenancePlan','(new) → SCHEDULED','Farm Owner defines a plan','SCHEDULED with its first due point',(T,'backend jest (G-22)')),
+('6.20 MaintenancePlan','SCHEDULED → DUE','Run hours reach the interval','DUE; MAINTENANCE_DUE and a preventive Work Order',(T,'backend jest (G-22)')),
+('6.20 MaintenancePlan','DUE → OVERDUE','7 days without the record','OVERDUE; Farm Owners notified',(T,'backend jest (G-22)')),
+('6.20 MaintenancePlan','DUE/OVERDUE → SCHEDULED','Maintenance recorded','SCHEDULED; counter reset; next due point',(T,'backend jest (G-22)')),
+('6.20 MaintenancePlan','any → RETIRED','Farm Owner deletes the plan','RETIRED; no further due point',(T,'backend jest (G-22)')),
+('6.21 Recommendation','(new) → OPEN','Active rule holds for a house','OPEN with evidence',(T,'backend jest (G-24)')),
+('6.21 Recommendation','OPEN → ACCEPTED','Farm Owner accepts','ACCEPTED; Work Order or review item created',(T,'backend jest (G-24)')),
+('6.21 Recommendation','OPEN → REJECTED','Farm Owner rejects with a reason','REJECTED; reason stored',(T,'backend jest (G-24)')),
+('6.21 Recommendation','OPEN → EXPIRED','7 days without a decision','EXPIRED',(T,'backend jest (G-24)')),
+('6.21 Recommendation','ACCEPTED → MEASURED','7 days after acceptance','Effect stored; rule statistics updated',(T,'backend jest (G-24)')),
+('6.21 Recommendation','closed → (rejected)','Accept a rejected or expired one','409',(T,'backend jest (G-24)')),
 ]
 NFR=[
 ('NFR-01','Script publishes 200 telemetry messages over MQTT on staging with the send time; a Socket.io client records receive times','P95 ≤ 2 s',(M,'script `scripts/nfr01-latency` to write; staging')),
@@ -240,6 +302,7 @@ NFR=[
 ('NFR-09','Test days kept out of training and tuning: detection on ≥ 200 labelled frames per lighting (IoU ≥ 0.5); counting on 20 clips of 5 min (10 daylight, 10 low light) against counts by two members','Precision ≥ 0.80, Recall ≥ 0.80; count error ≤ 10 % per direction; each per lighting',(M,'AI node, evaluation script and `tools/track_clip.py`')),
 ('NFR-13','5 people who have not set up a device before, timed from power-on to "configuration applied"','≤ 10 min in 5/5; two scans + Wi-Fi',(M,'prototype, mobile app')),
 ('NFR-14','Snapshots and independent ratings over ≥ 14 rated days (ANALYTICS-FR-014)','Agreement ≥ 70 % with its 95 % CI; weighted kappa and AC1 reported',(M,'field run, test house')),
+('NFR-15','30 alerts and 10 Work Orders injected with the device simulator on staging; times from the backend log and a Socket.io client','P95 ≤ 60 s after the escalation deadline and after the end of recovery_verify_min',(M,'staging, device simulator')),
 ]
 
 # Requirements verified by committed NFR cases
@@ -259,7 +322,7 @@ VERIFIES={
 'TC-F10-01':'VISION-FR-005','TC-F10-02':'VISION-FR-009, 011','TC-F10-03':'VISION-FR-004, 005',
 'TC-F11-01':'VISION-FR-014','TC-F11-02':'VISION-FR-013','TC-F11-03':'VISION-FR-013',
 'TC-F12-01':'THREAT-FR-007','TC-F12-02':'THREAT-FR-007','TC-F12-03':'THREAT-FR-005, 007',
-'TC-F13-01':'EXPERT-FR-003','TC-F13-02':'EXPERT-FR-003','TC-F13-03':'EXPERT-FR-003',
+'TC-F13-01':'EXPERT-FR-003, 021','TC-F13-02':'EXPERT-FR-003','TC-F13-03':'EXPERT-FR-003',
 'TC-F14-01':'EXPERT-FR-008','TC-F14-02':'VISION-FR-018','TC-F14-03':'EXPERT-FR-008',
 'TC-F15-01':'ANALYTICS-FR-010','TC-F15-02':'EXPERT-FR-010','TC-F15-03':'EXPERT-FR-011',
 'TC-F16-01':'EXPERT-FR-006','TC-F16-02':'EXPERT-FR-007','TC-F16-03':'EXPERT-FR-009',
@@ -268,5 +331,13 @@ VERIFIES={
 'TC-F19-01':'FARM-FR-003c, 012','TC-F19-02':'FARM-FR-005, 006, 012','TC-F19-03':'FARM-FR-007b, ENV-FR-027',
 'TC-F20-01':'ANALYTICS-FR-012','TC-F20-02':'ANALYTICS-FR-012, 013','TC-F20-03':'ANALYTICS-FR-012',
 'TC-F21-01':'EXPERT-FR-005','TC-F21-02':'EXPERT-FR-013','TC-F21-03':'EXPERT-FR-013',
-'TC-F22-01':'EXPERT-FR-012','TC-F22-02':'EXPERT-FR-012','TC-F22-03':'EXPERT-FR-012',
+'TC-F22-01':'EXPERT-FR-012','TC-F22-02':'EXPERT-FR-012','TC-F22-03':'EXPERT-FR-012, 022',
+'TC-F23-01':'ALERT-FR-017','TC-F23-02':'ALERT-FR-017','TC-F23-03':'ALERT-FR-005, 009, 018, AUTH-FR-013',
+'TC-F24-01':'OPS-FR-001','TC-F24-02':'OPS-FR-002, 003','TC-F24-03':'OPS-FR-001, 004, 009',
+'TC-F25-01':'OPS-FR-006, ALERT-FR-016','TC-F25-02':'OPS-FR-005, 008','TC-F25-03':'OPS-FR-006, 007',
+'TC-F26-01':'ENV-FR-028','TC-F26-02':'ENV-FR-029','TC-F26-03':'ENV-FR-030',
+'TC-F27-01':'EXPERT-FR-016, 017','TC-F27-02':'EXPERT-FR-018','TC-F27-03':'EXPERT-FR-017, 019',
+'TC-F28-01':'EXPERT-FR-014','TC-F28-02':'EXPERT-FR-015','TC-F28-03':'FARM-FR-014',
+'TC-F29-01':'ANALYTICS-FR-015','TC-F29-02':'ANALYTICS-FR-016','TC-F29-03':'ANALYTICS-FR-002, 017',
+'TC-F30-01':'HARVEST-FR-001','TC-F30-02':'HARVEST-FR-006, 007, ANALYTICS-FR-004','TC-F30-03':'EXPERT-FR-020',
 }

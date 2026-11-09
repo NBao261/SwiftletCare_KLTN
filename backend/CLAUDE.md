@@ -23,6 +23,7 @@ npm run migrate:scope-v2      # one-off after deploying the SRS v2 backend: FARM
 npm run migrate:bird-count-house  # one-off after SRS v2.1.8: cameras, bird counts, camera alerts and return_rate_drop_pct move from Zone to House (idempotent; prints houses whose zones disagreed for the expert to set)
 npm run migrate:remove-tickets    # one-off after the ticket module was removed (Report 3 §8): drops tickets, ticketmessages, maintenanceschedules and unsets sla_hours / max_open_tickets_per_technician in systemsettings (idempotent)
 npm run migrate:remove-regions    # one-off after Technician regions were removed (FARM-FR-009): unsets users.assigned_regions, farms.region, drops index region_1, lists farms without coordinates (idempotent)
+npm run migrate:relay-overrides   # one-off after deploying G-06 part 2: controllers MANUAL without `relays` get a per-relay expiry from their open override logs, else from the old `override_expiry`, else go back to AUTO (idempotent)
 npm run db:script    # regenerate docs/database/init.mongo.js (collections, $jsonSchema validators, indexes) from the models — run after any model change; tests/unit/utils/dbScript.util.test.ts fails until you do
 npm run mdns         # publish mDNS "swiftletcare-broker.local" for a real ESP32 (run alongside npm run dev)
 ```
@@ -48,7 +49,7 @@ routes/*.route.ts (express-validator + requireRole)
 |---|---|---|
 | `deviceOffline.job.ts` | every 10s | stale heartbeat (>30s) → SensorNode ONLINE→OFFLINE + `NODE_OFFLINE`; CameraNode (AI node) silent >90s → OFFLINE + `EDGE_AI_DEGRADED` (THREAT-FR-010); emits `DEVICE_STATUS_CHANGE` |
 | `activationOverdue.job.ts` | every 1 min | `markOverdueActivations()` — device registered but no first heartbeat after 15 min (Flow 1 case 8a); `markOtaTimeouts()` — OTA unconfirmed after 30 min counts as failed (Flow 15) |
-| `overrideExpiry.job.ts` | every 1 min | reverts relays whose manual override expired back to AUTO |
+| `overrideExpiry.job.ts` | every 1 min | reverts each relay whose manual override expired back to AUTO (BR-20); the other relays keep their expiry |
 | `alertEscalation.job.ts` | every 2 min | `renotifyStaleAlerts()` — sends a CRITICAL/HIGH alert still `ACTIVE` after 15 min (`NODE_OFFLINE`: after 1 h) once more to the Farm Owners, marked by `renotified_at` (ALERT-FR-015); auto-resolves `THRESHOLD_BREACH` not seen for 5 min and episodic device alerts (`NOISE_ANOMALY`, `PUMP_DRY`) not seen for 60 min (firmware re-sends those every 15 min while the incident lasts) |
 
 | `invitationExpiry.job.ts` | hourly | invitations older than 7 days → EXPIRED |
@@ -98,6 +99,7 @@ routes/*.route.ts (express-validator + requireRole)
 
 ### Device, MQTT and control
 - **[Bắt buộc]** A command meant for one device on a zone topic (`relay/command`, `audio/command`, `config/reassign`, a `config/update` carrying speaker settings or RESTART/OTA) carries `deviceId: node.device_id`.
+- **[Bắt buộc]** Relay, audio, RESTART and OTA commands go through `stampCommand()` (`utils/deviceCommand.util.ts`, `commandId` + `issuedAt`, BR-35). Per-relay override state lives in `sensornodes.relays`; `control_mode` and `override_expiry` are its summary, so write them only through `syncOverrideSummary()`/`refreshOverrideSummary()` in `device.service.ts`.
 - **[Bắt buộc]** `utils/fuzzyModel.util.ts` mirrors `firmware/src/pid/FuzzyControl.cpp`; a change to one is made to the other in the same PR, with the shared test cases updated.
 - **[Bắt buộc]** Runtime device parameters (thresholds, fuzzy coefficients, detection tuning) go out through `buildDeviceConfig`/`config/update`, validated against the same ranges the firmware clamps to.
 - **[Bắt buộc]** Inferred alert types stay MEDIUM/LOW, so they are never sent again by ALERT-FR-015; alerts go through `createAlert()`/`ingestDeviceAlert`.

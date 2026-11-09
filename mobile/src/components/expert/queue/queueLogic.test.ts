@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import type { DayRating, ReviewItem, ZoneHealthReportItem } from '@/types'
+import type { DayRating, ReviewItem, ZoneHealthReportItem } from '@/types/expert.types'
 
 describe('Queue business logic & BR-31 guardrails', () => {
   it('Khối 6: Quy tắc mù hai bước BR-31 bảo vệ trạng thái hệ thống khi PENDING', () => {

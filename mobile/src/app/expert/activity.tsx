@@ -17,7 +17,7 @@ import { useExpertActivity } from '@/hooks/expert/useExpertReports'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
-import type { ExpertActionType, ExpertActivityEntry } from '@/types'
+import type { ExpertActivityEntry } from '@/types'
 import { formatDateTime } from '@/utils/date.utils'
 import { t } from '@/utils/i18n.utils'
 

@@ -19,7 +19,7 @@ import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
-import type { ReviewItem } from '@/types'
+import type { ReviewItem } from '@/types/expert.types'
 import { formatTimeAgo } from '@/utils/date.utils'
 import { t } from '@/utils/i18n.utils'
 
