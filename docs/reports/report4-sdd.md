@@ -8,9 +8,9 @@
 | Course | SWP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.0.0 (Review 2, final scope) |
+| Document version | 2.2.0 (Review 2, final scope) |
 | Date | 09/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.0.0 (`docs/reports/report3-srs.md`) |
+| Requirements baseline | Report 3 – SRS 4.2.0 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -251,7 +251,7 @@ FreeRTOS tasks pinned to core 1:
 
 Configuration (`config/Config`) is stored in NVS with its version, and every received value is clamped to the same ranges as the backend validator. Pure C++ parts (fuzzy, filter, noise detector, misting check, current check, command de-duplication, remote command) are unit-tested on the host.
 
-**Additions of SRS 4.0.0.** The controller subscribes to its retained `compensation` topic and adds the offset to the misting demand of the fuzzy output until the expiry, or until 2 h without a broker connection (ENV-FR-029, BR-38); it publishes the relay state and the pump and fan current in every telemetry message, from which the backend counts run hours (BR-45; relay ON time alone on a controller without current sensing).
+**Additions of the final scope.** The controller subscribes to its retained `compensation` topic and adds the offset to the misting demand of the fuzzy output until the expiry, or until 2 h without a broker connection (ENV-FR-029, BR-38); it publishes the relay state and the pump and fan current in every telemetry message, from which the backend counts run hours (BR-45; relay ON time alone on a controller without current sensing).
 
 ### 5.2 AI Pipeline (AI node)
 
@@ -306,7 +306,7 @@ Background jobs:
 | `relayUsage` | hourly | Pump and fan ON time and switch count since the last service → `MAINTENANCE_DUE` (ALERT-FR-016) |
 | `invitationExpiry` | hourly | Invitations older than 7 days → `EXPIRED` |
 
-**Operations and knowledge modules (SRS 4.0.0).** Same layering as above:
+**Operations and knowledge modules (final scope).** Same layering as above:
 
 | Module | Services and jobs | Requirements |
 | --- | --- | --- |
@@ -986,7 +986,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/telemetry` | Latest and history |
 | `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
 | `/analytics` | Charts, comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
-| `/health-reports` | Daily, weekly and monthly reports per house and conclusions; daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (days not yet rated or skipped by the caller are returned without status, BR-31) |
+| `/health-reports` | Daily, weekly and monthly reports per house and conclusions; disagreeing days and house levels (EXPERT-FR-022); daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (days not yet rated or skipped by the caller are returned without status, BR-31) |
 | `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
 | `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
 | `/harvests` | Harvest batches (entry, confirmation), harvest cycles of a zone and the season conclusion |
@@ -1237,7 +1237,7 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING : day computed, one per Farm Owner, Domain Expert and assigned Farm Technician, status hidden (BR-31)
+  [*] --> PENDING : day computed, one per assigned Farm Technician and Farm Owner, status hidden (BR-31)
   PENDING --> RATED : rating + snapshot stored together, status shown (EXPERT-FR-012)
   PENDING --> SKIPPED : status shown, not in NFR-14
   PENDING --> EXPIRED : 7 days without rating
@@ -1495,7 +1495,7 @@ flowchart TB
     E3 --> E4[Tune detection parameters<br/>if needed - MF-05]
   end
   subgraph T[Farm Technician]
-    T1[Check the house on site:<br/>birds, work nearby, rain;<br/>answer with a photo]
+    T1[Check the house on site:<br/>birds, work nearby, rain, sensor;<br/>record with a photo]
   end
   subgraph O[Farm Owner]
     O1[Informed of the verdict,<br/>reads it in the activity history]
@@ -1503,9 +1503,10 @@ flowchart TB
   A5 --> B1
   B01 --> B1
   B03 --> B1
-  B2 --> E0{Evidence enough?}
-  E0 -- yes --> E1
-  E0 -- no --> T1 --> E1
+  B2 --> T0{House has a<br/>technician?}
+  T0 -- yes --> T1 --> E1
+  T0 -- no --> E1
+  T1 -- sensor faulty --> T2[Repair Work Order - MF-02]
   E2 & E3 --> B3 --> O1
 ```
 
@@ -1568,10 +1569,14 @@ flowchart TB
     B12[Weekly / monthly reports]
     B13[Late data or verdict:<br/>recompute current status only]
   end
-  subgraph A[Farm Technician / Farm Owner / Domain Expert]
+  subgraph A[Farm Technician every day / Farm Owner on site]
     A1[Open the day: give own status first] --> A2[See status and reasons;<br/>snapshot stored with the rating]
-    A3[Read reports, download PDF / CSV,<br/>expert writes conclusion]
+    A3[Read reports, download PDF / CSV]
     A4[Farm Owner: farm overview<br/>and house comparison]
+  end
+  subgraph X[Domain Expert]
+    X1[Review days where a rating<br/>and the status disagree;<br/>adjust the house levels]
+    X2[Write report conclusions]
   end
   W1 --> B6
   B3 --> B11
@@ -1580,6 +1585,8 @@ flowchart TB
   B10 --> B11
   B11 --> A1
   B11 --> B12 --> A3
+  A2 --> X1 --> B13
+  B12 --> X2
   B11 --> A4
   B13 --> B11
 ```
@@ -1835,8 +1842,9 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 2.1.0 | 10/11/2026 | Eight main flows (SRS 4.1.0): AD-09 is the diagram of supporting flow SF-06 (harvest recording and season summary); AD-04 adds the on-site check by the Farm Technician (EXPERT-FR-021, `onsite_checks` in `ALERT`); AD-07 without the Domain Expert lane; the weather lane of AD-01 takes its rules from MF-05 |
-| 2.0.1 | 10/11/2026 | Only people are actors in the activity diagrams (Section 9); AD-03 shows the Farm Technician drawing the counting ring; the ring editor is also in the mobile app (Section 5.4) |
+| 2.2.0 | 09/11/2026 | AD-04: every inferred alert of a house with a technician is checked on site first, a faulty sensor opens a Work Order; AD-06: the Farm Technician (daily) and the Farm Owner (on site) rate, the Domain Expert reviews the disagreeing days and adjusts the levels (SRS 4.2.0) |
+| 2.1.0 | 09/11/2026 | Eight main flows (SRS 4.1.0): AD-09 is the diagram of supporting flow SF-06 (harvest recording and season summary); AD-04 adds the on-site check by the Farm Technician (EXPERT-FR-021, `onsite_checks` in `ALERT`); AD-07 without the Domain Expert lane; the weather lane of AD-01 takes its rules from MF-05 |
+| 2.0.1 | 09/11/2026 | Only people are actors in the activity diagrams (Section 9); AD-03 shows the Farm Technician drawing the counting ring; the ring editor is also in the mobile app (Section 5.4) |
 | 2.0.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0, BM03 1.3): D14 rewritten for the Farm Technician; decisions D17 (Work Order closed by the data), D18 (bounded weather compensation), D19 (recommendation rules), D20 (device simulator); data flows DF-12…17; operations and knowledge modules (Section 5.3), technician client (5.4), new constants (5.5); conceptual model and logical ERD with `WORK_ORDER`, `MAINTENANCE_PLAN`, `RECOMMENDATION_RULE`, `RECOMMENDATION`, `CONFIG_PROFILE`, `HARVEST_CYCLE`, technicians and weather rules of the house, run hours and weather offset of the controller, harvest status; six collections; REST routers, MQTT topic `compensation`, socket events; state machines SM-13 updated and SM-19…24; activity diagrams AD-02 and AD-06 updated, AD-07…09 for MF-07…09, supporting flows renumbered AD-10…12, harvest logging diagram replaced by AD-09; technician scope in Section 10; simulator in Section 11 |
 | 1.2.0 | 03/11/2026 | Activity diagrams follow the six business main flows of Report 3 3.2.0 (Section 9): AD-01 joins automatic control, offline operation and manual override; AD-02 joins air-quality, equipment-fault, restart, offline and forecast alerts into one incident lifecycle; AD-04 covers every inferred alert; AD-05 the review of parameters and the configuration version; device setup is supporting flow SF-01 (AD-07); AD-08…10 are the former AD-11…13. Technician role removed (Report 3 3.2.0, BM03 row 13): decision D14, ERD role values, AD-02, AD-08, AD-09 and the OTA lifecycle name the Administrator; the Farm Owner may restart a controller. Staging: Nginx with Certbot replaces Caddy and the separate TLS proxy, one component for HTTPS and the TLS ports of MQTT and the video publish (Sections 3.2, 3.4, 11). Conceptual model added to Section 6.1 with its mapping to the logical entities; state machines named after the conceptual entities (Section 8) |
 | 1.1.0 | 26/10/2026 | SM-17 splits the day status from the rating state of each assessor (`ratingWindow` job and the day's `state` field removed). Harvest requirements referred to as `HARVEST-FR` (Report 3 3.1.0). Camera port restricted to the AI node's static IP by a modem rule (D5, Sections 10, 11). Final design for Review 2 against Report 3 3.1.0: device topics and one broker credential per device with a static authorisation rule, QoS 1 with event and command IDs, retained configuration, `esp-mqtt` on the ESP32, `config/reassign` removed (D3, D9, Sections 2.2, 5.1, 7.2, 10, AD-10); decisions D15 (manual override within limits) and D16 (current status and evaluation snapshot); Logical ERD as the final design: user status, push tokens, per-relay override, telemetry validity, alert event ID and details, house health reports with a unique key per kind and period, notification references, harvest type and photo, audit source, stock credentials, `sla_hours` removed; Section 6.3 data retention (BR-36), Section 6.4 schema migrations, Section 5.5 code location of the engineering constants; mobile scope, HLS stream and FCM token in Section 5.4; state machines and activity diagrams aligned (SM-03, 06, 14, 17; AD-02, 03, 04, 08, 09, 10, 11, 12, 14); 'planned' marks and the former Section 12 removed: implementation gaps are tracked only in Project Tracking. D11: the DC demo loads are measured with shunt resistors instead of current transformers (Section 3 controller board) |

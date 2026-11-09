@@ -8,7 +8,7 @@
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Document version | 1.5.0 (Review 2, final scope) |
-| Date | 10/11/2026 |
+| Date | 09/11/2026 |
 | Scope baseline | Registration form v3 with Record of Changes (BM03) |
 
 Dates after Review 2 are the team's proposal and are fixed in the Review 2 Commitment (BM04). Progress against this plan is kept in Project Tracking (`project-tracking.md`).
@@ -193,7 +193,7 @@ All reports are Markdown files in `docs/reports/`, versioned with the code; diag
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.5.0 | 10/11/2026 | Eight main flows (harvest season summary is supporting flow SF-06): 27 mandatory features and 170 committed test cases |
+| 1.5.0 | 09/11/2026 | Eight main flows (harvest season summary is supporting flow SF-06): 27 mandatory features and 170 committed test cases |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): work packages of the new scope (Kiệt operations backend; Bảo firmware weather offset, knowledge and analytics backend, simulator; Len technician mobile; Tuấn expert web; Nhi owner web), workflows WF-07…09, 28 mandatory features and 186 committed test cases, risk of the larger scope |
 | 1.3.0 | 03/11/2026 | Six business main flows (SRS 3.2.0): workflow owners, Defense 1.1 thresholds and milestones follow MF-01…09; device setup is supporting flow SF-01 |
 | 1.2.0 | 27/10/2026 | Work re-split by role: backend code by Bảo and Kiệt only; web and mobile per role, E2E tests, client-side NFR measurements and dataset labelling by Len, Nhi and Tuấn; WBS owners, RACI (staging and documents shared, led by Bảo; Farm Owner web to Nhi, mobile to Len on 03/11/2026), skills, workflow owners, RK-3 and RK-8 |

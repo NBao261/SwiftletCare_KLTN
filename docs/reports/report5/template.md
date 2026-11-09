@@ -8,8 +8,8 @@
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Document version | 1.5.0 (Review 2, final scope) |
-| Date | 10/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.0.0; Design Brief (BM01) 1.2 sections 6–7 and Appendix A |
+| Date | 09/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.0; Design Brief (BM01) 2.0 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
 
@@ -161,7 +161,7 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.5.0 | 10/11/2026 | Eight main workflows: WF-09 removed, F-30 (harvest cycles) becomes a supporting feature of SF-06, the transitions of HarvestBatch and HarvestCycle leave the committed list; F-13 covers the on-site check (EXPERT-FR-021) |
+| 1.5.0 | 09/11/2026 | Eight main workflows: WF-09 removed, F-30 (harvest cycles) becomes a supporting feature of SF-06, the transitions of HarvestBatch and HarvestCycle leave the committed list; F-13 covers the on-site check (EXPERT-FR-021) |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): features F-23…F-30 (alert routing and escalation, Work Orders closed by the data, preventive maintenance, weather compensation, recommendation rules, profiles and house stage, farm overview and house comparison, harvest cycles), workflows WF-07…09 with demo scenarios DS-13…18, transitions of HarvestBatch, WorkOrder, MaintenancePlan, Recommendation and HarvestCycle, NFR-15. The results of Section 6 are still those of the run on the tag `review-2`; the new cases are written in Iterations 2 and 3 |
 | 1.3.0 | 04/11/2026 | Results of the CI run on the tag `review-2` (Section 6): 83 of the 83 automated cases with a written test pass; the generator reads the PlatformIO JUnit report, whose suite name sits on the test suite |
 | 1.2.0 | 03/11/2026 | Six business main workflows (SRS 3.2.0): WF-01…06 with demo scenarios DS-01…12; device-setup features F-18, F-19 move to supporting flow SF-01 (still tested, not counted) |

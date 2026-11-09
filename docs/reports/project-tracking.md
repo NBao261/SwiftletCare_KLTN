@@ -77,12 +77,12 @@ Results count only when they come from a CI run on the tag being reported (Repor
 
 | Item | Count |
 | --- | --- |
-| Committed test cases | 186 (Report 5 1.4.0, final scope) |
-| Automated, test written | 83 (44 %; Defense 1.1 bar: 50 %, so at least 93 by Defense 1.1) |
-| Automated, to be written with its feature | 84 |
-| Mandatory requirements verified by a committed case | 95 of 137; the other 42 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
-| Manual (staging, prototype, test house) | 19 |
-| Passed on the tag | 83 of 83 written (100 %); 103 not run yet (84 tests to be written, 19 manual) |
+| Committed test cases | 170 (Report 5 1.5.0, final scope) |
+| Automated, test written | 83 (48 %; Defense 1.1 bar: 50 %, so at least 85 by Defense 1.1) |
+| Automated, to be written with its feature | 69 |
+| Mandatory requirements verified by a committed case | 96 of 139; the other 43 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
+| Manual (staging, prototype, test house) | 18 |
+| Passed on the tag | 83 of 83 written (100 %); 87 not run yet (69 tests to be written, 18 manual) |
 
 ## 5. Defect List
 
@@ -135,7 +135,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 
 | Date | Change |
 | --- | --- |
-| 10/11/2026 | Eight main flows: harvest season summary becomes supporting flow SF-06 (F-30 tested, not mandatory); on-site check in MF-04 (EXPERT-FR-021); test counts of Report 5 1.5.0 |
+| 09/11/2026 | Eight main flows: harvest season summary becomes supporting flow SF-06 (F-30 tested, not mandatory); on-site check in MF-04 (EXPERT-FR-021); test counts of Report 5 1.5.0 |
 | 09/11/2026 | Final scope of Review 2 agreed with the supervisor: features F-23…F-30, gaps G-20 rewritten and G-21…G-27 added, test counts of Report 5 1.4.0; owners per work package (Kiệt operations backend, Bảo firmware, knowledge and analytics backend and simulator, Len technician mobile, Tuấn expert web, Nhi owner web) |
 | 23/10/2026 | First tracking sheet for Review 2: milestones, Iteration 1 pull requests, feature status, tests, defects |
 | 23/10/2026 | After PR #93 (Farm Owner web rework): pull-request counts, F-11 and F-17 |

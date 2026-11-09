@@ -11,7 +11,7 @@ Source of form BM01. The Word file `design-brief/SWP490_R2_BM01_Design_Brief_Swi
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
-| Version | 2.0 (registration v3 final, BM03 1.3, SRS 4.0.0, SDD 2.0.0, BM02 1.0) |
+| Version | 2.0 (registration v3 final, BM03 1.3, SRS 4.2.0, SDD 2.2.0, BM02 1.0) |
 | Date | 09/11/2026 |
 
 ## 1. Scope
@@ -96,7 +96,7 @@ Code against SRS and SDD; each gap in Project Tracking §6. In brackets: High fi
 | F-17 | Manual override | FO | Own expiry per relay; pump 31 min 422 | TC-F17 | In progress |
 | F-20 | Daily health status | auto | Flock CLEAR + humidity SLIGHT → ACTION | TC-F20 | Planned |
 | F-21 | Reports, PDF/CSV | FO, DE | Day/week/month per house; files = screen | TC-F21 | In progress |
-| F-22 | Independent rating | FT, FO, DE | Asked before status; snapshot kept | TC-F22 | Planned |
+| F-22 | Rating, disagreements | FT, FO, DE | Rated on site before status; expert reviews disagreements | TC-F22 | Planned |
 | F-23 | Routing, escalation | FT, FO | HIGH to technician, owners after 15 min | TC-F23 | Planned |
 | F-24 | Work Orders | FT, FO | Closes after 10 min recovered + approval | TC-F24 | Planned |
 | F-25 | Preventive maintenance | FT, FO | 500 h plan → due + Work Order; counter reset | TC-F25 | Planned |
@@ -142,7 +142,7 @@ Actors are people only; external services (Telegram, FCM, Open-Meteo) and the co
 | WF-01 | Automatic micro-climate control (MF-01, AD-01) | Farm Owner, Farm Technician | 10-s control cycle; forecast; Internet or power loss; a relay switched by hand | Misting and fan follow humidity and temperature, with the bounded weather offset, also offline; an override lasts a limited time, then automatic | F-01, F-02, F-04, F-17, F-26 | Controller relay: `AUTO` → `MANUAL` → `AUTO`; Controller: `ONLINE` → `OFFLINE` → `ONLINE` | Nguyễn Chí Bảo |
 | WF-02 | Incident handling (MF-02, AD-02) | Farm Technician, Farm Owner | Breach after the dwell time, NH3/CO2 above limit, equipment fault, restart, offline, forecast | Alert to the technician, escalated to the owner; fault repaired as a Work Order closed by the data; loop held safe | F-05…F-09, F-23, F-24 | Alert: `ACTIVE` → `ACKNOWLEDGED` → `RESOLVED`; WorkOrder: `OPEN` → `IN_PROGRESS` → `VERIFYING` → `AWAITING_APPROVAL` → `CLOSED` | Nguyễn Vũ Len |
 | WF-03 | Bird counting session (MF-03, AD-03) | Farm Technician, Domain Expert | Morning and evening sessions; ring drawn on site | Counts and return rate of the house; alert on drop; annotated stream | F-10, F-11, F-14 | CameraNode: `PENDING` → `ONLINE`; Alert `LOW_RETURN_RATE`: `ACTIVE` → `RESOLVED` | Nguyễn Chí Bảo |
-| WF-04 | Expert validation of inferred alerts (MF-04, AD-04) | Domain Expert, Farm Technician (on-site check), Farm Owner (BR-22) | Abnormal noise, implausible readings, early warning | Verdict with evidence; rejected alert dismissed; owner notified | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED`; ExpertVerdict: pending → `REJECTED` | Thái Minh Tuấn |
+| WF-04 | Expert validation of inferred alerts (MF-04, AD-04) | Farm Technician (on-site check), Domain Expert, Farm Owner (BR-22) | Abnormal noise, implausible readings, early warning | Verdict with evidence; rejected alert dismissed; owner notified | F-12, F-13, F-16 | Alert: `ACTIVE` → `DISMISSED`; ExpertVerdict: pending → `REJECTED` | Thái Minh Tuấn |
 | WF-05 | Control-parameter tuning (MF-05, AD-05) | Domain Expert, Farm Owner, Farm Technician | Owner change, coefficient suggestion, profile, detection or ring change | Changes reviewed, suggestion approved, profiles applied, new configuration applied on the controllers, owner notified | F-03, F-14, F-15, F-28 | ReviewItem: `PENDING_REVIEW` → `ADJUSTED`; CoefficientProposal: `PROPOSED` → `APPROVED`; Controller config: `PENDING` → `APPLIED` | Trần Minh Kiệt |
 | WF-06 | Daily health assessment and reports (MF-06, AD-06) | Farm Technician, Farm Owner, Domain Expert | End of day; week; month | Daily status with reasons; day rated independently; reports downloaded and concluded; houses compared | F-20, F-21, F-22, F-29 | DailyHealthStatus: (new) → `COMPUTED`; DailyRating: `PENDING` → `RATED`; HealthReport: `GENERATED` → `CONCLUDED` | Nguyễn Thị Yến Nhi |
 | WF-07 | Preventive maintenance (MF-07, AD-07) | Farm Owner, Farm Technician | Plan due by run hours, switches or date | Preventive Work Order done with its checklist; counter reset; overdue escalated | F-25 | MaintenancePlan: `SCHEDULED` → `DUE` → `SCHEDULED`; WorkOrder: `OPEN` → `CLOSED` | Nguyễn Vũ Len |
@@ -160,11 +160,11 @@ Run on staging (SDD Section 3.4) with data loaded by the demo seed script (`docs
 | DS-04 | WF-02 | Exception | Work Order `VERIFYING` | Misting fails again during verification; technician of another house tries to acknowledge | Work Order back to `IN_PROGRESS`; 403 | Nguyễn Vũ Len |
 | DS-05 | WF-03 | Main | AI node online; seeded 7 days of counts | Play a recorded entrance clip through the AI node during a session window | Counts of the house rise on the page; live stream shows boxes; next return-rate check raises `LOW_RETURN_RATE` for the seeded drop | Nguyễn Chí Bảo |
 | DS-06 | WF-03 | Exception | Session in progress | Stop the AI node | `EDGE_AI_DEGRADED` after 90 s; the day is incomplete and not evaluated | Nguyễn Chí Bảo |
-| DS-07 | WF-04 | Main | Speaker off; seeded hourly baseline | Play loud noise near the sensor for the sustain period | `NOISE_ANOMALY` shown with bird counts; expert rejects with a note; status `DISMISSED`, owner notified | Thái Minh Tuấn |
+| DS-07 | WF-04 | Main | Speaker off; seeded hourly baseline | Play loud noise near the sensor for the sustain period; the technician checks the house on site | `NOISE_ANOMALY` shown with bird counts; technician's observation in the evidence; expert rejects with a note; status `DISMISSED`, owner notified | Thái Minh Tuấn |
 | DS-08 | WF-04 | Exception | Farm with a Domain Expert | Farm Owner tries to record a verdict | 403 | Thái Minh Tuấn |
 | DS-09 | WF-05 | Main | Farm with an expert; pending suggestion | Owner changes a threshold and submits the suggestion; expert adjusts the change and approves the suggestion | Review item `ADJUSTED`, proposal `APPROVED`, configuration applied on the controllers, owner notified of each decision | Trần Minh Kiệt |
 | DS-10 | WF-05 | Exception | Same farm | Owner applies the suggestion directly | 403; coefficients unchanged | Trần Minh Kiệt |
-| DS-11 | WF-06 | Main | Seeded day: return rate `CLEAR`, humidity `SLIGHT` | Run the daily job; owner rates the day; download PDF and CSV | Status `ACTION` with both reasons; rating asked before the status; files show the same figures | Nguyễn Thị Yến Nhi |
+| DS-11 | WF-06 | Main | Seeded day: return rate `CLEAR`, humidity `SLIGHT` | Run the daily job; technician rates the day on site; download PDF and CSV | Status `ACTION` with both reasons; rating asked before the status; files show the same figures | Nguyễn Thị Yến Nhi |
 | DS-12 | WF-06 | Exception | Seeded day with an incomplete evening session | Run the daily job | `INSUFFICIENT_DATA`, never `GOOD`; reason names the missing session | Nguyễn Thị Yến Nhi |
 | DS-13 | WF-07 | Main | Pump plan 500 h; counter seeded at 499 h | Run the pump 1 h; technician follows the checklist and records it | `MAINTENANCE_DUE` and a preventive Work Order; counter reset, next due point shown | Nguyễn Vũ Len |
 | DS-14 | WF-07 | Exception | Plan due for 7 days | Run the due job; answer a checklist item "defect" | Plan `OVERDUE`, owner notified; repair Work Order opened | Nguyễn Vũ Len |
