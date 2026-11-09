@@ -199,7 +199,7 @@ FIXES = [  # id, item, workflow, owner, due  (Review 2 feedback, then BM02 Plann
     ('D-06', 'Unique indexes telemetries(node_id, timestamp) and partial alerts(node_id, event_id) (G-14)', 'WF-01, WF-02', K, '02/12/2026'),
     ('D-07', 'Enumerations aligned with the ERD; TECHNICIAN replaced by FARM_TECHNICIAN (G-14, G-20)', 'WF-02', K, '02/12/2026'),
     ('ST-01', 'Restore transition DECOMMISSIONED → previous state within 24 h in SM-06 (Report 3 §6.6, Report 4 §8.6)', 'SF-02', B, '11/11/2026'),
-    ('ST-02', 'Per-relay mode and expiry; end reasons as in ENV-FR-019 (G-06)', 'WF-01', K, '02/12/2026'),
+    ('ST-02', 'Per-relay mode and expiry; end reasons as in ENV-FR-019 (G-06; backend and firmware 1.6.0 merged by PR #124, mobile and a board trial remain)', 'WF-01', K, '02/12/2026'),
     ('ST-03a', 'SM-12 starts at PENDING; UNKNOWN exits to APPLIED (Report 3 §6.12, Report 4 §8.12)', 'WF-05', B, '11/11/2026'),
     ('ST-03b', 'Configuration version in code (G-08)', 'WF-05', B, '02/12/2026'),
     ('ST-04', 'User status field (G-14)', 'SF-03', K, '02/12/2026'),
@@ -229,7 +229,7 @@ FIXES = [  # id, item, workflow, owner, due  (Review 2 feedback, then BM02 Plann
     ('A-07', 'List expertReview, tuningSuggestion, alertEvidence, storage, deletionRequestReminder in Report 4 §5.3', 'WF-04, WF-05', B, '11/11/2026'),
     ('C-01', 'Device topics, per-device credential, config/reassign removed, identity kept only in the backend (G-07)', 'WF-01, SF-01', B, '02/12/2026'),
     ('C-02', 'FARM_TECHNICIAN on assigned houses replaces TECHNICIAN; remote commands for the Administrator; Administrator creates Farm Owner accounts (G-20, G-02)', 'WF-02, SF-02, SF-03', K, '02/12/2026'),
-    ('C-03', 'Pump limit, confirmation (409), command freshness and the constants of Report 4 §5.5 (G-06)', 'WF-01', K, '02/12/2026'),
+    ('C-03', 'Pump limit, confirmation (409), command freshness and the constants of Report 4 §5.5 (G-06; backend, firmware and web merged by PR #124, mobile remains)', 'WF-01', K, '02/12/2026'),
     ('C-04', 'Daily, weekly and monthly reports per house (EXPERT-FR-005, BR-33; G-11)', 'WF-06', K, '23/12/2026'),
     ('C-05', 'Source required and history of default thresholds (ENV-FR-007; G-18)', 'SF-05', K, '23/12/2026'),
 ]
@@ -362,7 +362,7 @@ fill_table(tb[ti + 1], rows)
 set_kv(tb[ti + 2], {'Number of main workflows': str(len(WORKFLOWS)),
                     'Number of demo scenarios (main / exception)': f'{len(WORKFLOWS)} / {len(WORKFLOWS)}',
                     'Committed functional test cases': f'{TOTAL} (Report 5 1.5.0: {3 * len(FEATURES)} feature, {len(WF)} end-to-end, {len(ST)} state transition, {len(NFR)} NFR)',
-                    'Of which automated in CI': f'{AUTO} designed as automated ({sum(1 for c in CASES if c[4] == "auto")} written and passing on the tag review-2); at least {(TOTAL + 1) // 2} (50 %) by Defense 1.1'})
+                    'Of which automated in CI': f'{AUTO} designed as automated ({sum(1 for c in CASES if c[4] == "auto")} written; the 82 that existed at the tag review-2 pass there); at least {(TOTAL + 1) // 2} (50 %) by Defense 1.1'})
 agreed = {'Main workflows': f'100 % ({len(WORKFLOWS)} of {len(WORKFLOWS)}) run end-to-end on staging',
           'Demo scenarios': f'100 % main ({len(WORKFLOWS)}); ≥ 80 % exception (at least 7 of {len(WORKFLOWS)})',
           'Test case count': f'≥ {TOTAL}', 'Test pass rate': '≥ 90 % overall; 100 % of main-path tests of mandatory features',

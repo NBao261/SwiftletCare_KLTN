@@ -78,11 +78,11 @@ Results count only when they come from a CI run on the tag being reported (Repor
 | Item | Count |
 | --- | --- |
 | Committed test cases | 170 (Report 5 1.5.0, final scope) |
-| Automated, test written | 82 (48 %; Defense 1.1 bar: 50 %, so at least 85 by Defense 1.1) |
-| Automated, to be written with its feature | 70 |
+| Automated, test written | 84 (49 %; Defense 1.1 bar: 50 %, so at least 85 by Defense 1.1); 2 of them (TC-F17-02, TC-ST-14) merged after the tag by PR #124 |
+| Automated, to be written with its feature | 68 |
 | Mandatory requirements verified by a committed case | 97 of 139; the other 42 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
 | Manual (staging, prototype, test house) | 18 |
-| Passed on the tag | 82 of 82 written (100 %); 88 not run yet (70 tests to be written, 18 manual) |
+| Passed on the tag | 82 of the 82 written cases that existed at the tag (100 %); 88 not run on the tag (2 written after it, 68 to be written, 18 manual) |
 
 ## 5. Defect List
 
