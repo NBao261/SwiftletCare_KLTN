@@ -1,6 +1,6 @@
 # SwiftletCare Frontend (Web Dashboard / PWA)
 
-React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md), phân quyền §2.4); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4). Hai Report thắng `SwiftletCare_SRS.md` khi lệch nhau.
+React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md), phân quyền §2.4); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4).
 
 > **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/project-tracking.md` §6, quyền theo màn ở `FE_Design_Claude.md` §12.0):
 >

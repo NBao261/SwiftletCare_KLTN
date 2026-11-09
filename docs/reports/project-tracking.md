@@ -1,6 +1,6 @@
 # Project Tracking
 
-**SwiftletCare** · updated 04/11/2026 (Review 2) · plan: Report 2 · requirements: Report 3 · design: Report 4 · tests: Report 5
+**SwiftletCare** · updated 09/11/2026 (Review 2, final scope) · plan: Report 2 · requirements: Report 3 · design: Report 4 · tests: Report 5
 
 This sheet is the only record of progress. Report 3 and Report 4 describe what the system must do and how it is built, without status; the Design Brief (Section 5) summarises the gaps below. Status values: **Done** (merged into `develop`, its committed tests pass, and it runs end to end from the client), **In progress** (partly merged, or the backend works without its client), **Planned** (not started). Owners follow the Design Brief, Section 8.
 
@@ -13,7 +13,7 @@ This sheet is the only record of progress. Report 3 and Report 4 describe what t
 | Registration v1 | 22/07/2026 | Done | |
 | Review 1 | 30/09/2026 | Done | Registration v2; scope narrowed to the automated system |
 | Iteration 1 | until Review 2 | Done | Pull requests #2…#133 (tag `review-2`, commit `7d5e643b`) |
-| Review 2 | 04/11/2026 | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1; enumeration PR (G-01, #113) and invitation-only accounts (G-02 P0, #116) merged 29/10/2026; tag `review-2` on 04/11/2026, CI run on the tag green (all modules); BM02 1.0: 42 findings (13 High), all High Planned |
+| Review 2 | 04/11/2026 | In progress | Registration v3 + BM03 1.1, Reports 1–5, Design Brief 1.1; enumeration PR (G-01, #113) and invitation-only accounts (G-02 P0, #116) merged 29/10/2026; tag `review-2` on 04/11/2026, CI run on the tag green (all modules); BM02 1.0: 42 findings (13 High), all High Planned; final scope agreed with the supervisor on 09/11/2026 (registration v3 final, BM03 1.3, SRS 4.0.0, SDD 2.0.0, Report 5 1.4.0, Design Brief 2.0); left: BM04 Commitment |
 | Iteration 2 | 05/11–02/12/2026 | Planned | Gaps due "It. 2" in Section 6 |
 | Iteration 3 | 03/12–23/12/2026 | Planned | Gaps due "It. 3" |
 | Defense 1.1 | Per the course schedule | Planned | Thresholds of the guideline §9.4 |
@@ -47,10 +47,10 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-07 | Alert lifecycle | Nguyễn Vũ Len | In progress | #103, #117, #122, #125; TC-F07-01, 02, 03 | Event IDs (G-07); mobile alert screens (G-16) | 2 |
 | F-08 | Push and Telegram | Trần Minh Kiệt | In progress | #59, #103; TC-F08-01, 02 | FCM sending and mobile token (G-10) | 2 |
 | F-09 | Forecast warning | Nguyễn Chí Bảo | Done | #50; TC-F09-01..03 | — | — |
-| F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | #85, #88, #95; TC-F10-01..03 | Trained model; sessions from buckets; incomplete sessions (G-12) | 2 |
+| F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | #85, #88, #95; TC-F10-01..03 | Model v2 and NFR-09 measurement (v1: about 10 % off hand counts); sessions from buckets; incomplete sessions (G-12) | 2 |
 | F-11 | Annotated live stream | Nguyễn Chí Bảo | In progress | #89 (via #95), #93; TC-F11-01..03 | Run against staging (G-17); mobile HLS screen (G-16) | 2 |
 | F-12 | Abnormal noise | Nguyễn Chí Bảo | Done | #50, #59; TC-F12-01..03 | — | — |
-| F-13 | Expert verdict | Thái Minh Tuấn | In progress | #91, #117, #125; TC-F13-01, 02, 03 | Mobile expert screens (G-16) | 2 |
+| F-13 | On-site check and expert verdict | Thái Minh Tuấn | In progress | #91, #117, #125; TC-F13-01, 02, 03 | Mobile expert screens (G-16) | 2 |
 | F-14 | Tuning, ring, schedule | Thái Minh Tuấn | In progress | #91; TC-F14-01..03 | Seasonal schedule; ring editor (G-12) | 2 |
 | F-15 | Review and suggestions | Thái Minh Tuấn | In progress | #119, #125; TC-F15-01, 02, 03 | Mobile expert screens (G-16) | 2 |
 | F-16 | Conclusions, owner notice | Thái Minh Tuấn | In progress | #91, #117, #125; TC-F16-01, 02, 03 | Mobile expert screens (G-16) | 2 |
@@ -60,8 +60,16 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-20 | Daily health status | Nguyễn Thị Yến Nhi | Planned | — | Daily job, levels, weather (G-11) | 2 |
 | F-21 | Reports, PDF/CSV | Nguyễn Thị Yến Nhi | In progress | TC-F21-01 | Reports per house (day/week/month); PDF, CSV (G-11) | 3 |
 | F-22 | Independent rating | Nguyễn Thị Yến Nhi | Planned | — | Rating route, snapshot, screens (G-11) | 2 |
+| F-23 | Alert routing and escalation | Trần Minh Kiệt | Planned | — | Technician role, assignment, routing, escalation job, on-site cause (G-20, G-21); technician screens (G-16) | 2 |
+| F-24 | Work Orders closed by the data | Trần Minh Kiệt | Planned | — | Work Orders, recovery check, approval, MTTA/MTTR (G-21); mobile and web screens (G-16) | 2 |
+| F-25 | Preventive maintenance | Nguyễn Vũ Len | Planned | — | Plans, run hours, checklists, calibration (G-22): backend Kiệt, mobile Len, web Nhi | 2–3 |
+| F-26 | Weather compensation | Nguyễn Chí Bảo | Planned | — | Forecast job, rules, `compensation` topic, firmware offset (G-23); rule screen (Tuấn) | 2 |
+| F-27 | Recommendation rules | Thái Minh Tuấn | Planned | — | Rules, daily evaluation, effect (G-24): backend Bảo, web Tuấn | 2–3 |
+| F-28 | Configuration profiles and house stage | Thái Minh Tuấn | Planned | — | Profiles, apply to houses, house stage (G-24): backend Bảo, web Tuấn | 2 |
+| F-29 | Farm overview and house comparison | Nguyễn Thị Yến Nhi | Planned | — | Overview, comparison, energy, flock trend (G-25): backend Bảo, web Nhi | 3 |
+| F-30 | Harvest cycles and season conclusion (supporting, SF-06) | Nguyễn Thị Yến Nhi | Planned | — | Technician entry, confirmation, cycles, conclusion (G-26): backend Bảo, web Nhi, mobile Len, conclusion Tuấn | 3 |
 
-Summary: 4 Done, 14 In progress, 4 Planned.
+Summary: 4 Done, 14 In progress, 12 Planned (F-23…F-30 added with the final scope of Review 2).
 
 ## 4. Test Progress (Report 5)
 
@@ -69,12 +77,12 @@ Results count only when they come from a CI run on the tag being reported (Repor
 
 | Item | Count |
 | --- | --- |
-| Committed test cases | 125 |
-| Automated, test written | 83 (66 %; Defense 1.1 bar: 50 % automated in CI) |
-| Automated, to be written with its feature | 27 |
-| Mandatory requirements verified by a committed case | 62 of 102; the other 40 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
-| Manual (staging, prototype, test house) | 15 |
-| Passed on the tag | 83 of 83 written (100 %); 42 not run yet (27 tests to be written, 15 manual) |
+| Committed test cases | 170 (Report 5 1.5.0, final scope) |
+| Automated, test written | 84 (49 %; Defense 1.1 bar: 50 %, so at least 85 by Defense 1.1); 2 of them (TC-F17-02, TC-ST-14) merged after the tag by PR #124 |
+| Automated, to be written with its feature | 68 |
+| Mandatory requirements verified by a committed case | 97 of 139; the other 42 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
+| Manual (staging, prototype, test house) | 18 |
+| Passed on the tag | 82 of the 82 written cases that existed at the tag (100 %); 88 not run on the tag (2 written after it, 68 to be written, 18 manual) |
 
 ## 5. Defect List
 
@@ -105,8 +113,8 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 | G-08 | Configuration version and `CONFIG_MISMATCH` | ENV-FR-027, BR-24; SM-12 | firmware, backend | Nguyễn Chí Bảo | It. 2 |
 | G-09 | SF-01 screens: label printing in the stock screen, floor code printing, QR scan, AP-mode guide, setup progress; key re-issue of a released device | FARM-FR-010…012, BR-26; AD-10 | web, mobile, backend | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (labels, floor codes on the web); Nguyễn Vũ Len (QR scan in the mobile app); Thái Minh Tuấn (web setup) | It. 2 |
 | G-10 | FCM sending and push tokens; the mobile app registers an Expo push token instead of the FCM device token of SDD 5.4 (BM02 A-02) | ALERT-FR-002 | backend, mobile | Nguyễn Chí Bảo (backend); Nguyễn Vũ Len (mobile) | It. 2 |
-| G-11 | MF-06: health assessment job, `househealthdays` with current status and rating snapshots, levels per house, house reports (day, week, month), PDF and CSV, weather job, evaluation (agreement, CI, weighted kappa, AC1) | ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, BR-28…31, 33; SM-17, AD-06 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (web); Nguyễn Vũ Len (mobile) | It. 2–3 |
-| G-12 | Counting: trained one-class model; sessions computed by the backend from buckets per the house schedule; incomplete sessions; AI heartbeat with fps; ring editor screen | VISION-FR-003, 008, 016, 018–020, THREAT-FR-010 | AI node, backend, web | Nguyễn Chí Bảo (AI node, backend); Thái Minh Tuấn (ring editor); Len, Tuấn, Nhi (labelling, clip counts) | It. 2 |
+| G-11 | MF-06: health assessment job, `househealthdays` with current status and rating snapshots (Farm Technician daily, Farm Owner on days at the house), expert review of the days that disagree, levels per house, house reports (day, week, month), PDF and CSV, weather job, evaluation (agreement, CI, weighted kappa, AC1) | ANALYTICS-FR-012…014, EXPERT-FR-005, 012, 013, 022, BR-28…31, 33; SM-17, SM-18, AD-06 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Thị Yến Nhi (web); Nguyễn Vũ Len (mobile) | It. 2–3 |
+| G-12 | Counting: model v1 trained (YOLOv8n and YOLO11n, 03/11/2026), about 10 % count error against hand counts on the evaluation clips, so a v2 is retrained on hard frames and measured on the same test days for NFR-09; sessions computed by the backend from buckets per the house schedule; incomplete sessions; AI heartbeat with fps; ring editor screen | VISION-FR-003, 008, 016, 018–020, THREAT-FR-010 | AI node, backend, web, mobile | Nguyễn Chí Bảo (AI node, backend); Thái Minh Tuấn (ring editor on the web); Nguyễn Vũ Len (ring editor on the mobile app for the Farm Technician); Len, Tuấn, Nhi (labelling, clip counts) | It. 2 |
 | G-13 | Actuator current sensing on the team's board | THREAT-FR-014, BR-32 | hardware, firmware, backend | Nguyễn Chí Bảo | It. 3 |
 | G-14 | Data model behind the ERD: user `status`, audit source fields, harvest type and photo, notification references, telemetry validity fields, per-relay state (`relays` holds mode and expiry since G-06; `relay_states`, `control_mode`, `override_expiry` still kept for the screens), alert `metadata` renamed `details` (e.g. `reset_reason`); collections `househealthdays`, `househealthreports`, `weatherobservations` (G-11) and `pushtokens` (G-10) not in the database script yet, `zonehealthreports` migrated (Report 4 §6.4); database script regenerated; unique indexes `telemetries(node_id, timestamp)` and partial `alerts(node_id, event_id)` missing from the database script (BM02 D-06) | SDD 6.1–6.4 | backend | Trần Minh Kiệt | It. 2 |
 | G-15 | Web leftovers: Domain Expert screens on mock fallback and outside the FE_Design folder plan; `/stream/:id` routed to the `FarmOwnerLiveStreamPage` stub (Raspberry Pi wording); "PLC" wording; routes, menu and buttons not per Report 3 §2.4 (`OPS_ROLES` lets Admin into `/devices`, `/alerts`, `/farms`, `/onboarding`, `/ota`, `/stream/:id`; `HARVEST_ROLES` includes Admin) | Report 3 §2.4; FE_Design §7, §12, §13.14 | web | Thái Minh Tuấn (expert, Technician); Nguyễn Thị Yến Nhi (role matrix); Nguyễn Vũ Len ("PLC"); Nguyễn Chí Bảo (`/stream/:id`) | Closed 02/11/2026 by PR #125 (role matrix and "PLC" wording done 01/11/2026 on `feat/g15-expert-technician-ui`: one role group per permission, Admin out of farm pages, Domain Expert reads the Farm Owner pages, `/ota` Technician only, Vitest role → path table; "PLC" done by Nhi for Len; `/stream/:id` route and stub page removed 01/11/2026, live view only on `/vision`, no Raspberry Pi wording left; expert screens and technician flow completed 01/11/2026 on `feat/g15-expert-technician-ui`, DF-5 closed) |
@@ -114,12 +122,22 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 | G-17 | Staging: compose file, Dockerfiles, Nginx with Certbot (HTTPS and the TLS ports of MQTT and video), EMQX authentication and authorisation files, demo seed for every scenario of Appendix A2, backup off the VPS | SDD 3.4, 11 | deploy | Whole team, led by Nguyễn Chí Bảo (Bảo infrastructure, Kiệt backend image, migrations, seed and backup, Nhi web build, Len mobile build, Tuấn E2E runs); scenario conditions and E2E tests by the workflow owners | It. 2 |
 | G-18 | Smaller rules: source required for default thresholds (ENV-FR-007); harvest validation (HARVEST-FR-001); optional ENV-FR-026; optional device ID from the MAC address | ENV-FR-007, 026, HARVEST-FR-001 | backend, firmware | Trần Minh Kiệt | It. 3 |
 | G-19 | Evidence and field work: sources in `docs/evidence-register.md`, practitioner interviews (BR-01, 02, 28–30), field run of ≥ 14 rated days, hardware test record (NFR-05…07), NFR measurements | REF-5, NFR-04…14 | team | Nguyễn Chí Bảo; labelling and clip counts by Len, Tuấn, Nhi; each NFR by its owner (Report 5 §5) | It. 2–3 |
-| G-20 | Technician role still in the code (removed by BM03 row 13): role `TECHNICIAN` in the shared enums, the seed account, `technicianAccess`, the `/ota` and `/onboarding` web routes and the Technician screens; remote commands and OTA are allowed to the Technician only, the Administrator has no device console (every device with its device alerts, restart, configuration push, OTA) and the Farm Owner cannot restart a controller | Report 3 §2.3, §2.4, FARM-FR-006, 009, 013, ENV-FR-013c, AUTH-FR-005c; SDD D14, AD-08 | backend, web, mobile, `docs/api/api-spec.yaml` | Trần Minh Kiệt (backend, API spec); Thái Minh Tuấn (web: Technician screens become the Administrator device console); Nguyễn Vũ Len (mobile enum) | It. 2 |
+| G-20 | Farm Technician role (Report 3 4.0.0, BM03 row 13): the old role `TECHNICIAN` in the shared enums, the seed account, `technicianAccess`, the `/ota` and `/onboarding` web routes and the Technician screens serves every farm with remote commands; it becomes `FARM_TECHNICIAN`, a farm member limited to the houses assigned to it (AUTH-FR-004, 005, 013, 014), and remote commands and OTA move to the Administrator device console (FARM-FR-009, 013) | AUTH-FR-004, 005, 013, 014, FARM-FR-009, 013; SDD D14, 10 | backend, web, mobile | Trần Minh Kiệt (backend, API spec); Thái Minh Tuấn (Administrator device console); Nguyễn Vũ Len (mobile technician sign-in); Nguyễn Thị Yến Nhi (assignment screen) | It. 2 |
+| G-21 | Routing, escalation and Work Orders: recipients by house assignment, escalation job, on-site cause, on-site check of inferred alerts before the verdict, CRITICAL always delivered, Work Orders with recovery check and approval, MTTA/MTTR | ALERT-FR-005, 017, 018, OPS-FR-001…004, 009, EXPERT-FR-021, BR-39…41; SM-19, AD-02, AD-04 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Vũ Len (technician mobile); Nguyễn Thị Yến Nhi (Work Order approval on the web) | It. 2 |
+| G-22 | Preventive maintenance: plans and checklists, run hours from the relay state (confirmed by the load current where measured), due job, records and calibration | OPS-FR-005…008, ALERT-FR-016, BR-45; SM-20, AD-07 | backend, web, mobile | Trần Minh Kiệt (backend); Nguyễn Vũ Len (mobile); Nguyễn Thị Yến Nhi (plans on the web) | It. 2–3 |
+| G-23 | Weather compensation: forecast fetch, rules per house, `compensation` topic, firmware offset with expiry | ENV-FR-028…030, BR-38; SM-24, SDD D18 | firmware, backend, web | Nguyễn Chí Bảo (firmware, backend); Thái Minh Tuấn (rule screen) | It. 2 |
+| G-24 | Knowledge: house stage, configuration profiles, recommendation rules, daily evaluation and effect | FARM-FR-014, EXPERT-FR-014…019, BR-42, 46; SM-21, 23, AD-08 | backend, web | Nguyễn Chí Bảo (backend); Thái Minh Tuấn (expert web: rules, profiles, house stage); Nguyễn Thị Yến Nhi (owner web: accepting or rejecting recommendations) | It. 2–3 |
+| G-25 | Farm overview, house comparison, energy estimate, flock trend, rain on `LOW_RETURN_RATE` | ANALYTICS-FR-002, 015…017, VISION-FR-011, BR-44, 45 | backend, web | Nguyễn Chí Bảo (backend); Nguyễn Thị Yến Nhi (web) | It. 3 |
+| G-26 | Harvest cycles: technician entry, confirmation, cycle closing and comparisons, season conclusion | HARVEST-FR-001…007, ANALYTICS-FR-004, EXPERT-FR-020, BR-43; SM-13, 22, AD-09 | backend, web, mobile | Nguyễn Chí Bảo (backend); Nguyễn Thị Yến Nhi (web); Nguyễn Vũ Len (mobile entry); Thái Minh Tuấn (conclusion) | It. 3 |
+| G-27 | Device simulator for the load tests and the multi-house demonstration | SYSTEM-FR-004, NFR-03, 15; SDD D20 | simulator | Nguyễn Chí Bảo | It. 2 |
 
 ## 7. Change Log
 
 | Date | Change |
 | --- | --- |
+| 09/11/2026 | Counting model: v1 trained (YOLOv8n and YOLO11n, 03/11/2026), about 10 % count error against hand counts on the evaluation clips; v2 retrained on hard frames before the NFR-09 measurement (G-12, F-10, RK-1) |
+| 09/11/2026 | Eight main flows: harvest season summary becomes supporting flow SF-06 (F-30 tested, not mandatory); on-site check in MF-04 (EXPERT-FR-021); test counts of Report 5 1.5.0 |
+| 09/11/2026 | Final scope of Review 2 agreed with the supervisor: features F-23…F-30, gaps G-20 rewritten and G-21…G-27 added, test counts of Report 5 1.4.0; owners per work package (Kiệt operations backend, Bảo firmware, knowledge and analytics backend and simulator, Len technician mobile, Tuấn expert web, Nhi owner web) |
 | 23/10/2026 | First tracking sheet for Review 2: milestones, Iteration 1 pull requests, feature status, tests, defects |
 | 23/10/2026 | After PR #93 (Farm Owner web rework): pull-request counts, F-11 and F-17 |
 | 23/10/2026 | After PR #94 (scope filter by farm, house and zone; support requests opened in place): pull-request counts |

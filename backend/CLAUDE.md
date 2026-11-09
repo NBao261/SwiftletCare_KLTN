@@ -2,7 +2,7 @@
 
 Rules and architecture for `backend/` (Node.js + Express + TypeScript + MongoDB + MQTT/EMQX + Socket.io). This file wins over the root `CLAUDE.md` for backend code; `/review-pr` judges backend changes by it. Rule tags: **[Bắt buộc]** = blocking (review requests changes), **[Nên]** = advisory. Only lines a PR adds or changes are judged; the "Known debt" table lists what is already out of line.
 
-Requirements are Report 3 (`docs/reports/report3-srs.md`) and the design is Report 4 (`docs/reports/report4-sdd.md`); they win over `SwiftletCare_SRS.md` and over this file's description of behaviour. The backend follows the Review 1 scope: roles `ADMIN | FARM_OWNER | DOMAIN_EXPERT | TECHNICIAN`, no Marketplace, no heating relay, NH3/CO2 alert-only, `NOISE_ANOMALY` instead of `BIRD_PANIC`, Telegram and FCM push as the out-of-app channels. Where the code still falls short of Report 3, the gap is in `docs/reports/project-tracking.md` §6 and in Known debt below.
+Requirements are Report 3 (`docs/reports/report3-srs.md`) and the design is Report 4 (`docs/reports/report4-sdd.md`); they win over this file's description of behaviour. The backend follows the Review 1 scope: roles `ADMIN | FARM_OWNER | DOMAIN_EXPERT | TECHNICIAN`, no Marketplace, no heating relay, NH3/CO2 alert-only, `NOISE_ANOMALY` instead of `BIRD_PANIC`, Telegram and FCM push as the out-of-app channels. Where the code still falls short of Report 3, the gap is in `docs/reports/project-tracking.md` §6 and in Known debt below.
 
 ## Commands
 

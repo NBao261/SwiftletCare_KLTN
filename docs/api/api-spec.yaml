@@ -6,13 +6,10 @@ info:
   description: |
     REST API cho hệ thống SwiftletCare (giám sát/điều khiển môi trường nhà yến,
     đếm chim, cảnh báo, kiểm chứng của chuyên gia, ghi nhận thu hoạch).
-    Xem `SwiftletCare_SRS.md` §9.
+    Yêu cầu: Report 3 (`docs/reports/report3-srs.md`); thiết kế: Report 4 §7.1.
 
-    **Lưu ý:** SRS §9.0 quy ước base path `/api/v1`, nhưng code thực tế
-    (`backend/src/config/app.ts`) hiện mount route trực tiếp ở root (vd
-    `/auth/login`, không phải `/api/v1/auth/login`) — file này mô tả đúng
-    path THẬT ĐANG CHẠY, không phải path lý thuyết trong SRS. Khi backend
-    đổi sang có prefix `/api/v1`, cập nhật lại `servers` bên dưới.
+    **Lưu ý:** route mount trực tiếp ở root (vd `/auth/login`), không có
+    tiền tố `/api/v1` (`backend/src/config/app.ts`).
 
     **Response envelope** dùng chung cho mọi endpoint:
     `{ success: boolean, data?, meta?: {page,limit,total}, error?: {code,message} }`.
