@@ -17,11 +17,11 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { ingestTelemetry } from '@/services/telemetry.service'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn() }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(),
@@ -84,7 +84,7 @@ describe('ingestTelemetry — lưu đầu ra bộ điều khiển mờ', () => {
 
 describe('PUT /farms/zones/:zoneId/fuzzy-tuning', () => {
   it('saves the tuning with history, pushes it to the zone devices and audits it', async () => {
-    const { farm, house, zone, token } = await seed()
+    const { zone, node, token } = await seed()
 
     const res = await request(app)
       .put(`/farms/zones/${zone._id}/fuzzy-tuning`)
@@ -96,8 +96,8 @@ describe('PUT /farms/zones/:zoneId/fuzzy-tuning', () => {
     expect(saved.fuzzy_tuning).toEqual({ ...DEFAULT_FUZZY_TUNING, fuzzy_humidity_band: 12, fuzzy_window_sec: 180 })
     expect(saved.fuzzy_tuning_history).toHaveLength(1)
     expect(saved.fuzzy_tuning_history[0].new_values).toEqual({ fuzzy_humidity_band: 12, fuzzy_window_sec: 180 })
-    expect(publishCommand).toHaveBeenCalledWith(String(farm._id), String(house._id), String(zone._id), 'config/update',
-      { ...DEFAULT_FUZZY_TUNING, fuzzy_humidity_band: 12, fuzzy_window_sec: 180 })
+    expect(publishDeviceConfig).toHaveBeenCalledWith(node.device_id,
+      expect.objectContaining({ ...DEFAULT_FUZZY_TUNING, fuzzy_humidity_band: 12, fuzzy_window_sec: 180 }))
     expect(await AuditLog.countDocuments({ action: 'FUZZY_TUNING_UPDATED' })).toBe(1)
   })
 
@@ -111,8 +111,7 @@ describe('PUT /farms/zones/:zoneId/fuzzy-tuning', () => {
     const saved = (await Zone.findById(zone._id))!.toObject()
     expect(saved.fuzzy_tuning.fuzzy_input_filter).toBe(false)
     expect(saved.fuzzy_tuning_history[0].new_values).toEqual({ fuzzy_input_filter: false })
-    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'config/update',
-      expect.objectContaining({ fuzzy_input_filter: false }))
+    expect(publishDeviceConfig).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ fuzzy_input_filter: false }))
   })
 
   it.each([
@@ -129,7 +128,7 @@ describe('PUT /farms/zones/:zoneId/fuzzy-tuning', () => {
     const res = await request(app).put(`/farms/zones/${zone._id}/fuzzy-tuning`).set('Authorization', `Bearer ${token}`).send(body)
 
     expect(res.status).toBe(400)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 })
 

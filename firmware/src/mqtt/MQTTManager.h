@@ -1,10 +1,7 @@
 /**
- * MQTTManager – PubSubClient qua WiFiClient thường (cleartext), dev-only ở
- * port 1883 (xem MQTT_PORT trong Config.h). Lên production cần đổi sang
- * WiFiClientSecure + port 8883 + CA cert thật (SEC-NFR-001) — CHƯA implement;
- * xem cờ SWIFTLETCARE_PRODUCTION_BUILD ở Config.h.
- * Pub/Sub telemetry, commands, heartbeat
- * SRS: ENV-FR-001, ENV-FR-015, §9.2, SEC-NFR-001
+ * MQTTManager – ESP-IDF esp-mqtt, topic và tài khoản riêng từng thiết bị (Report 4 D3, §7.2).
+ * Bản dev nối 1883 không TLS; `esp32prod` nối 8883 với CA ISRG Root X1 (Config.h, MQTT_PORT).
+ * SRS: ENV-FR-001, ENV-FR-015, BR-35, NFR-06 c, NFR-10 d
  */
 #pragma once
 #include "pid/PIDController.h"
@@ -20,25 +17,18 @@ bool isConnected();
 // (giống lúc WiFi fail) cho phép nhập lại IP broker qua điện thoại.
 bool isBrokerUnreachable();
 
-// Publish (topics §9.2: swiftletcare/{farmId}/{houseId}/{zoneId}/...)
+// Xử lý lệnh và cấu hình đang chờ, trong task đang gọi (mqttTask)
+void processInbound();
+
+// Publish (topics Report 4 §7.2: swiftletcare/dev/{deviceId}/...)
 void publishTelemetry(const SensorData &data, const RelayState &relay);
 // publish* trả true khi đã gửi được (false: mất kết nối/buffer đầy) để caller thử lại
 bool publishHeartbeat();
 bool publishRelayState(const RelayState &relay);
-// resetReason: chỉ cho UNEXPECTED_RESTART (THREAT-FR-012) — POWER_ON | WATCHDOG | BROWNOUT | CRASH
+// Vào hàng đợi NVS, gửi QoS 1, xoá khi có PUBACK. resetReason: chỉ cho UNEXPECTED_RESTART
+// (THREAT-FR-012) — POWER_ON | WATCHDOG | BROWNOUT | CRASH
 bool publishAlert(const char *alertType, const char *severity,
                   const char *payload, const char *resetReason = nullptr);
-// Publish 1 dòng JSON telemetry NGUYÊN VĂN (không build lại từ SensorData
-// sống) — dùng làm callback cho StorageManager::flushBuffer() khi re-publish
-// dữ liệu buffer offline (REL-NFR-003). Trả về true nếu publish thành công.
-bool publishRawTelemetryLine(const String &jsonLine);
-
-// Subscribe callbacks
-void onRelayCommand(const char *payload);
-void onConfigUpdate(const char *payload);
-// ENV-FR-013c(c): nghe thử ngay bài trên thẻ SD, bỏ qua lịch
-void onAudioCommand(const char *payload);
-// Flow 21 Nhánh A (FARM-FR-007b): dời thiết bị sang Zone/Farm khác lúc
-// đang ONLINE. Lưu farmId/houseId/zoneId mới vào NVS rồi ESP.restart().
-void onConfigReassign(const char *payload);
+// Gửi 1 dòng telemetry đã buffer, nguyên văn, QoS 1; true khi broker đã xác nhận (ENV-FR-024)
+bool publishBufferedLine(const String &jsonLine);
 } // namespace MQTTManager

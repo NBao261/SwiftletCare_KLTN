@@ -14,6 +14,8 @@ export interface IProvisionedDevice extends Document {
   device_id: string
   kind: ProvisionedDeviceKind
   secret_key_hash: string
+  /** FARM-FR-010 — mật khẩu broker của thiết bị (hash), flash cùng device ID, không in lên nhãn */
+  broker_secret_hash?: string
   /** Lần đầu kích hoạt thành công qua Web Console Onboarding */
   claimed_at?: Date
   /** Admin thu hồi (mất/lộ nhãn, hàng lỗi) — từ đó không kích hoạt được nữa */
@@ -28,6 +30,7 @@ const provisionedDeviceSchema = new Schema<IProvisionedDevice>(
     device_id:       { type: String, required: true, unique: true, trim: true },
     kind:            { type: String, enum: ['SENSOR', 'CAMERA'] satisfies ProvisionedDeviceKind[], required: true },
     secret_key_hash: { type: String, required: true, select: false },
+    broker_secret_hash: { type: String, select: false },
     claimed_at:      { type: Date },
     revoked_at:      { type: Date },
     revoke_reason:   { type: String, trim: true },

@@ -49,7 +49,8 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
 | Nginx | Reverse proxy: phục vụ web đã build; chuyển `/api`, `/socket.io` (WebSocket) vào backend; chuyển trang WHEP sang MediaMTX; chặn `/internal/*`. Module `stream` bọc TLS cho MQTT (8883 → EMQX 1883) và cho luồng đẩy video (8322 → MediaMTX 8554). Một chứng chỉ Let's Encrypt cho mọi tên miền | 80, 443, 8883, 8322 |
 | Certbot | Xin và gia hạn chứng chỉ Let's Encrypt (webroot qua cổng 80); cron nạp lại Nginx sau mỗi lần gia hạn | không |
 | backend | API, Socket.io, job nền; nối EMQX qua `mqtt://emqx:1883` trong mạng Docker | không |
-| EMQX | Broker; bắt buộc mật khẩu (tắt anonymous); dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua Nginx 8883) |
+| EMQX | Broker; xác thực qua `/internal/mqtt-auth`, quyền theo `deploy/emqx/acl.conf`, tắt anonymous; dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua Nginx 8883) |
+| EMQX, biến môi trường | `EMQX_AUTHENTICATION__1__URL=http://backend:3000/internal/mqtt-auth?key=<MQTT_AUTH_KEY>`; `MQTT_USERNAME` của backend phải là `backend-service` như `deploy/emqx/acl.conf` | không |
 | MongoDB, MinIO | Dữ liệu, file âm thanh | không |
 | MediaMTX | Nhận video có khung từ PC cũ (AI node); phát WebRTC; hỏi backend `/internal/stream-auth` ở mỗi lần đẩy hoặc xem | 8189 TCP + UDP (WebRTC tự mã hoá) |
 
@@ -81,7 +82,7 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
   - `stream.py` chạy như một service: Ubuntu dùng `systemd` với `Restart=always`; Windows dùng NSSM hoặc Task Scheduler "At startup".
   - Model ONNX tải về máy, không commit vào repo.
 - **Kết nối lên VPS:**
-  - MQTT TLS tới `mqtt.<tên miền>:8883` (số đếm, số đếm 5 phút, heartbeat). Nhận vòng đếm qua `{house}/config/update`.
+  - MQTT TLS tới `mqtt.<tên miền>:8883` (số đếm, số đếm 5 phút, heartbeat). Nhận vòng đếm qua `config` retained của thiết bị.
   - Đẩy video có khung bằng RTSPS tới `<tên miền>:8322`, xác thực bằng `STREAM_PUBLISH_SECRET`.
 - **Tự chạy lại sau sự cố:**
   - Bật BIOS "Restore on AC power loss = Power On".
@@ -96,9 +97,8 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
 ### 2.4. ESP32
 
 - **Broker:** nhập `mqtt.<tên miền>` vào trang AP-mode, hoặc đặt trong `Secrets.h`. mDNS chỉ dùng trong LAN dev.
-- **Phải có TLS:** firmware hiện **chỉ nối cổng 1883, không TLS** (`MQTTManager.cpp`, `Config.h`). Muốn nối staging qua 8883 thì phải làm theo plan §15.7:
-  - thêm môi trường build `cloud` và nạp CA Let's Encrypt (ISRG Root X1, X2);
-  - chờ NTP đồng bộ trước lần kết nối đầu.
+- **TLS:** build bằng `pio run -e esp32prod` (cổng 8883, CA ISRG Root X1), broker phải là tên miền, không dùng IP.
+- **Tài khoản:** nạp device ID và broker secret bằng `firmware/tools/flash_identity.py`.
 
   Việc này là gap G-07 ở `docs/reports/project-tracking.md` §6.
 
@@ -136,7 +136,6 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 
 | Sự cố | Phương án |
 | --- | --- |
-| Firmware TLS chưa xong | Mở tạm 1883 trên VPS, bắt buộc mật khẩu và ACL theo `deviceId` trên EMQX. Dữ liệu ESP32 đi dạng rõ; ghi vào Report 3 §8.1 và Known Gaps của Design Brief |
 | PC cũ không đạt 25 fps | Demo đếm trên clip quay sẵn bằng `tools/track_clip.py` (cùng `FramePipeline`); báo cáo fps đo được, không sửa ngưỡng âm thầm |
 | Mất mạng hoặc mất điện ở nhà yến hay ở nhà đặt PC lúc demo | Camera demo phát lặp clip (plan §15.8); ESP32 dự phòng đặt tại chỗ demo, nối vào cùng staging |
 | Wi-Fi trường chặn UDP 8189 | MediaMTX có WebRTC qua TCP 8189; dự phòng điện thoại phát 4G |

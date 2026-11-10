@@ -30,24 +30,10 @@ static RemoteCommand invalid(const char *why) {
   return cmd;
 }
 
-RemoteCommand parseRemoteCommand(const char *json, const char *runningVersion) {
-  JsonDocument doc;
-  if (deserializeJson(doc, json)) return invalid("JSON không hợp lệ");
-
-  const char *command = doc["command"] | "";
-  RemoteCommand cmd;
-  if (strlen(command) == 0) return cmd;
-  copyField(cmd.commandId, sizeof cmd.commandId, doc["commandId"] | "");
-  cmd.issuedAt = doc["issuedAt"] | (uint64_t)0;
-  if (strcmp(command, "RESTART") == 0) {
-    cmd.type = RemoteCommand::RESTART;
-    return cmd;
-  }
-  if (strcmp(command, "OTA") != 0) return invalid("lệnh không hỗ trợ");
-
-  const char *version = doc["ota"]["version"] | "";
-  const char *url = doc["ota"]["url"] | "";
-  const char *sha = doc["ota"]["sha256"] | "";
+static RemoteCommand parseOta(JsonVariantConst payload, const char *runningVersion, RemoteCommand cmd) {
+  const char *version = payload["version"] | "";
+  const char *url = payload["url"] | "";
+  const char *sha = payload["sha256"] | "";
   if (strlen(version) == 0 || !copyField(cmd.version, sizeof cmd.version, version))
     return invalid("thiếu hoặc sai version");
   if (strcmp(version, runningVersion) == 0) return invalid("đang chạy đúng bản này");
@@ -58,6 +44,51 @@ RemoteCommand parseRemoteCommand(const char *json, const char *runningVersion) {
   copyField(cmd.sha256, sizeof cmd.sha256, sha);
   cmd.type = RemoteCommand::OTA;
   return cmd;
+}
+
+RemoteCommand parseRemoteCommand(const char *json, const char *runningVersion) {
+  JsonDocument doc;
+  if (deserializeJson(doc, json)) return invalid("JSON không hợp lệ");
+
+  RemoteCommand cmd;
+  const char *commandId = doc["commandId"] | "";
+  cmd.issuedAt = doc["issuedAt"] | (uint64_t)0;
+  if (strlen(commandId) == 0 || !copyField(cmd.commandId, sizeof cmd.commandId, commandId))
+    return invalid("thiếu hoặc sai commandId");
+  if (cmd.issuedAt == 0) return invalid("thiếu issuedAt");
+
+  const char *type = doc["type"] | "";
+  JsonVariantConst payload = doc["payload"];
+  const char *relayName = payload["relayName"] | "";
+
+  if (strcmp(type, "RELAY") == 0) {
+    if (strlen(relayName) == 0 || !copyField(cmd.relayName, sizeof cmd.relayName, relayName))
+      return invalid("thiếu hoặc sai relayName");
+    cmd.state = payload["state"] | false;
+    cmd.durationMs = payload["durationMs"] | (uint32_t)0;
+    cmd.type = RemoteCommand::RELAY;
+    return cmd;
+  }
+  if (strcmp(type, "CLEAR_OVERRIDE") == 0) {
+    if (!copyField(cmd.relayName, sizeof cmd.relayName, relayName)) return invalid("sai relayName");
+    cmd.type = RemoteCommand::CLEAR_OVERRIDE;
+    return cmd;
+  }
+  if (strcmp(type, "AUDIO") == 0) {
+    const char *action = payload["action"] | "";
+    cmd.audioPlay = strcmp(action, "play") == 0;
+    cmd.track = payload["track"] | 0;
+    if (!cmd.audioPlay && strcmp(action, "stop") != 0) return invalid("action phải là play hoặc stop");
+    if (cmd.audioPlay && cmd.track <= 0) return invalid("thiếu track");
+    cmd.type = RemoteCommand::AUDIO;
+    return cmd;
+  }
+  if (strcmp(type, "RESTART") == 0) {
+    cmd.type = RemoteCommand::RESTART;
+    return cmd;
+  }
+  if (strcmp(type, "OTA") == 0) return parseOta(payload, runningVersion, cmd);
+  return invalid("lệnh không hỗ trợ");
 }
 
 bool sha256HexMatches(const char *hex, const uint8_t digest[32]) {

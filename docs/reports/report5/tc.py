@@ -164,7 +164,7 @@ TC=[
  (J,I+'deviceOnboarding.test.ts','thiết bị đã thuộc Farm khác → 409')),
 # F-19
 ('TC-F19-01','F-19','Controller registered to a zone, never connected','Ingest its first heartbeat on its device topics','—','Device `ONLINE`; the zone configuration with its version published retained on `swiftletcare/dev/<id>/config`',
- (T,'backend jest `deviceMqttContract.test.ts` (G-07)')),
+ (J,I+'deviceMqttContract.test.ts','re-sends the full config when the device has just (re)connected')),
 ('TC-F19-02','F-19','Device `PENDING` for 15 min','Run the activation job; then a first heartbeat carrying diagnostics','Firmware 1.4.0 heartbeat','Flagged once; the heartbeat sets `ONLINE`, clears the flag and stores firmware, uptime, RSSI, free memory, reset reason and IP',
  [(J,I+'deviceOnboarding.test.ts','đánh dấu node PENDING quá 15 phút 1 lần'),(J,I+'deviceMqttContract.test.ts','stores the diagnostics of firmware 1.4.0')]),
 ('TC-F19-03','F-19','Offline controller','Move it to another zone; then it reconnects and reports the new version','—','Move accepted while offline; new zone configuration retained; "applied" shown after the heartbeat reports the version',

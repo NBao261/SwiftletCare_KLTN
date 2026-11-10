@@ -28,7 +28,8 @@ struct RelayState {
   bool anyOverride() const; // control_mode MANUAL/AUTO gửi lên backend
   // withRemaining = false: bỏ thời gian còn lại, số này đổi liên tục nên không dùng để phát
   // hiện trạng thái đổi (main.cpp)
-  String toJson(bool withRemaining = true) const;
+  // commandId: lệnh vừa gây ra thay đổi này, nếu có (Report 4 §7.2)
+  String toJson(bool withRemaining = true, const char *commandId = "") const;
 };
 
 /**

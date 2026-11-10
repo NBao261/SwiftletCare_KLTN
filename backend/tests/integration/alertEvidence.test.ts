@@ -19,7 +19,7 @@ import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import type { AlertType, Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitNotificationNew: jest.fn() }))
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
