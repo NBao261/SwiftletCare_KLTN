@@ -1,4 +1,4 @@
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { logAction } from '@/services/auditLog.service'
 import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange } from '@/services/parameterReview.service'
@@ -53,7 +53,7 @@ export async function applyThresholdUpdate(
   if (overflow > 0) zone.threshold_history.splice(0, overflow)
   await zone.save()
 
-  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', zone.thresholds)
+  await publishZoneConfig(zone._id)
   const newValues = zone.toObject().thresholds as Thresholds
   const auditId = await logAction(user._id, 'THRESHOLD_UPDATED', 'zone', String(zone._id), {
     source: params.source, before: oldValues, after: newValues, zone_id: String(zone._id), house_id: String(house._id),

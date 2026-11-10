@@ -3,8 +3,8 @@ SwiftletCare - counting ring sent by the backend (VISION-FR-018)
 
 The Domain Expert draws the ring on the web; the backend publishes
 {deviceId, counting_ring: {points, into_ring_is_exit}} on
-swiftletcare/{farmId}/{houseId}/config/update, and again whenever this node
-reconnects (the message is not retained). The last ring received is kept in a
+swiftletcare/dev/{deviceId}/config, retained by the broker, so this node
+receives it again on every connection. The last ring received is kept in a
 file so a restart without the broker still counts with it; with no file, the
 ring in config.yaml is used.
 
@@ -28,7 +28,7 @@ MAX_POINTS = 12
 
 def parse_ring(message: Any, device_id: str) -> Optional[Ring]:
     """
-    The ring in a config/update message for this camera. None when the message is
+    The ring in the retained config message of this camera. None when the message is
     addressed to another device or carries no ring; ValueError when the ring is malformed.
     """
     if not isinstance(message, dict):
@@ -95,14 +95,13 @@ class RingStore:
         return ring
 
 
-def start_listener(mqtt_cfg: dict, store: RingStore, farm_id: str, house_id: str, device_id: str) -> Any:
-    """Subscribe to the house's config/update in a background thread; reconnects on its own."""
+def start_listener(mqtt_cfg: dict, store: RingStore, device_id: str) -> Any:
+    """Subscribe to this device's retained config in a background thread; reconnects on its own."""
     import paho.mqtt.client as mqtt   # only needed when the node talks to a broker
 
-    topic = f"swiftletcare/{farm_id}/{house_id}/config/update"
+    topic = f"swiftletcare/dev/{device_id}/config"
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"SC-{device_id}-config")
-    if os.environ.get("MQTT_USERNAME"):
-        client.username_pw_set(os.environ["MQTT_USERNAME"], os.environ.get("MQTT_PASSWORD"))
+    client.username_pw_set(device_id, os.environ["MQTT_PASSWORD"])
     if mqtt_cfg.get("tls"):   # deploy mode (SEC-NFR-001): Let's Encrypt cert, the OS's CA store, as stream.Publisher
         client.tls_set()
     # Subscribing in on_connect re-subscribes after every reconnect (clean session)

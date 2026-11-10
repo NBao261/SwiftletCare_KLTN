@@ -83,6 +83,11 @@ export const revokeProvisionedDevice = asyncHandler(async (req: Request, res: Re
   res.json({ success: true, data: device })
 })
 
+/** POST /admin/provisioned-devices/:id/rotate-broker-secret – FARM-FR-010 (mật khẩu mới chỉ trả về 1 lần) */
+export const rotateBrokerSecret = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await provisionedDeviceService.rotateBrokerSecret(req.user._id, req.params.id) })
+})
+
 /** POST /admin/provisioned-devices/:id/rotate-key – FARM-FR-003 (secret_key mới chỉ trả về 1 lần) */
 export const rotateProvisionedKey = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await provisionedDeviceService.rotateProvisionedKey(req.user._id, req.params.id) })

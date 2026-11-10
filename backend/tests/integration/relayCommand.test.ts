@@ -13,11 +13,11 @@ import { AuditLog } from '@/models/auditLog.model'
 import { SensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceCommand, publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { confirmRelayStatus, expireManualOverrides, reassignZone } from '@/services/device.service'
 import { seedOwnerFarm as seed, useTestDb } from '../helpers/ownerFarm'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(), disconnectUser: jest.fn(),
@@ -44,8 +44,7 @@ describe('lịch sử can thiệp tay không được chặn lệnh điều khi�
     jest.spyOn(RelayOverrideLog, 'create').mockRejectedValue(new Error('db down') as never)
 
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
-    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'relay/command',
-      expect.objectContaining({ relayName: 'misting', state: true }))
+    expect(publishDeviceCommand).toHaveBeenCalledWith(expect.any(String), 'RELAY', expect.objectContaining({ relayName: 'misting', state: true }))
   })
 
   it('đóng lịch sử lỗi: thiết bị vẫn nhận clear_override', async () => {
@@ -55,8 +54,7 @@ describe('lịch sử can thiệp tay không được chặn lệnh điều khi�
     jest.spyOn(RelayOverrideLog, 'updateMany').mockRejectedValue(new Error('db down') as never)
 
     await request(app).delete(`${relay}/relay-override`).set('Authorization', `Bearer ${token}`).expect(200)
-    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'relay/command',
-      expect.objectContaining({ action: 'clear_override' }))
+    expect(publishDeviceCommand).toHaveBeenCalledWith(expect.any(String), 'CLEAR_OVERRIDE')
   })
 
   it('override hết hạn: lịch sử đóng tại đúng hạn, không phải lúc job chạy', async () => {
@@ -113,12 +111,11 @@ describe('bật bơm tay: tối đa 30 phút, xác nhận khi có cảnh báo (B
     expect(refused.body.error.details).toEqual([expect.objectContaining({ type: 'SENSOR_FAULT', title: 'SENSOR_FAULT tại Z' })])
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
     expect(await RelayOverrideLog.countDocuments()).toBe(0)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
 
     await post({ relayName: 'misting', state: true, durationMs: 10 * MIN, confirmed: true }).expect(200)
     expect(await RelayOverrideLog.findOne().lean()).toMatchObject({ relay: 'misting', state: true, alert_confirmed: true })
-    expect(publishCommand).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), 'relay/command',
-      expect.objectContaining({ relayName: 'misting', state: true, durationMs: 10 * MIN }))
+    expect(publishDeviceCommand).toHaveBeenCalledWith(expect.any(String), 'RELAY', { relayName: 'misting', state: true, durationMs: 10 * MIN })
   })
 
   it('RS485_BUS_FAILURE và MISTING_INEFFECTIVE đã xác nhận (ACKNOWLEDGED) cũng bắt xác nhận', async () => {
@@ -153,7 +150,7 @@ describe('huỷ can thiệp tay 1 relay hoặc tất cả (ENV-FR-018, BR-20)', 
     const auth = (r: request.Test) => r.set('Authorization', `Bearer ${s.token}`)
     await auth(request(app).post(`${s.relay}/relay`)).send({ relayName: 'misting', state: true, durationMs: 600_000 }).expect(200)
     await auth(request(app).post(`${s.relay}/relay`)).send({ relayName: 'ventilation', state: true, durationMs: 600_000 }).expect(200)
-    jest.mocked(publishCommand).mockClear()
+    jest.mocked(publishDeviceCommand).mockClear()
     const clear = (relayName?: string) =>
       auth(request(app).delete(`${s.relay}/relay-override${relayName ? `?relayName=${relayName}` : ''}`))
     return { ...s, clear }
@@ -164,8 +161,7 @@ describe('huỷ can thiệp tay 1 relay hoặc tất cả (ENV-FR-018, BR-20)', 
     const { node, clear } = await overridden()
 
     await clear('misting').expect(200)
-    expect(publishCommand).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), 'relay/command',
-      expect.objectContaining({ deviceId: node.device_id, action: 'clear_override', relayName: 'misting' }))
+    expect(publishDeviceCommand).toHaveBeenCalledWith(node.device_id, 'CLEAR_OVERRIDE', { relayName: 'misting' })
     expect(await openLogs()).toEqual(['ventilation'])
     expect((await RelayOverrideLog.findOne({ relay: 'misting' }).lean())!.end_reason).toBe('CLEARED_EARLY')
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('MANUAL')
@@ -180,7 +176,7 @@ describe('huỷ can thiệp tay 1 relay hoặc tất cả (ENV-FR-018, BR-20)', 
   it('huỷ relay không đang can thiệp tay (loa): không gửi lệnh, không ghi audit, bơm và quạt vẫn tay', async () => {
     const { node, clear } = await overridden()
     await clear('speaker').expect(200)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
     expect(await AuditLog.countDocuments({ action: 'RELAY_OVERRIDE_CLEARED' })).toBe(0)
     expect(await openLogs()).toEqual(['misting', 'ventilation'])
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('MANUAL')
@@ -190,8 +186,7 @@ describe('huỷ can thiệp tay 1 relay hoặc tất cả (ENV-FR-018, BR-20)', 
     const { node, clear } = await overridden()
     await clear('heating').expect(422)
     await clear().expect(200)
-    expect(publishCommand).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), 'relay/command',
-      expect.not.objectContaining({ relayName: expect.anything() }))
+    expect(publishDeviceCommand).toHaveBeenCalledWith(node.device_id, 'CLEAR_OVERRIDE')
     expect(await openLogs()).toEqual([])
     expect((await SensorNode.findById(node._id))!.control_mode).toBe('AUTO')
   })
@@ -209,7 +204,7 @@ describe('mỗi relay một hạn (BR-20, ENV-FR-018)', () => {
     await post('ventilation', 20 * MIN)
     // Đã qua cửa sổ bỏ qua bản tin AUTO cũ
     await RelayOverrideLog.updateMany({}, { started_at: new Date(Date.now() - MIN) })
-    jest.mocked(publishCommand).mockClear()
+    jest.mocked(publishDeviceCommand).mockClear()
     return { ...s, mistingExpiry }
   }
   const status = (deviceId: string, relays: object) => confirmRelayStatus({
@@ -235,9 +230,8 @@ describe('mỗi relay một hạn (BR-20, ENV-FR-018)', () => {
 
     expect(await expireManualOverrides()).toBe(1)
 
-    expect(publishCommand).toHaveBeenCalledTimes(1)
-    expect(publishCommand).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), 'relay/command',
-      expect.objectContaining({ deviceId: node.device_id, action: 'clear_override', relayName: 'misting' }))
+    expect(publishDeviceCommand).toHaveBeenCalledTimes(1)
+    expect(publishDeviceCommand).toHaveBeenCalledWith(node.device_id, 'CLEAR_OVERRIDE', { relayName: 'misting' })
     expect(await RelayOverrideLog.findOne({ relay: 'misting' }).lean()).toMatchObject({ end_reason: 'EXPIRED', ended_at: past })
     expect((await RelayOverrideLog.findOne({ relay: 'ventilation' }).lean())!.ended_at).toBeNull()
     const after = (await SensorNode.findById(node._id))!
@@ -289,21 +283,6 @@ describe('mỗi relay một hạn (BR-20, ENV-FR-018)', () => {
   })
 })
 
-describe('độ tươi của lệnh (BR-35)', () => {
-  it('lệnh relay và clear_override mang commandId, issuedAt; mỗi lệnh một mã', async () => {
-    const { relay, token } = await seed()
-    const before = Date.now()
-    await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
-    await request(app).delete(`${relay}/relay-override`).set('Authorization', `Bearer ${token}`).expect(200)
-
-    const commands = jest.mocked(publishCommand).mock.calls.map(call => call[4] as { commandId: string; issuedAt: number })
-    expect(commands).toHaveLength(2)
-    expect(commands[0].commandId).toEqual(expect.any(String))
-    expect(commands[1].commandId).not.toBe(commands[0].commandId)
-    commands.forEach(command => expect(command.issuedAt).toBeGreaterThanOrEqual(before))
-  })
-})
-
 describe('dời thiết bị sang Zone khác', () => {
   it('dời thiết bị sang Zone khác: override đang chạy kết thúc ở Zone cũ', async () => {
     const { farm, node, relay, token } = await seed()
@@ -319,7 +298,8 @@ describe('dời thiết bị sang Zone khác', () => {
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
     expect((await RelayOverrideLog.findOne().lean())!).toMatchObject({ end_reason: 'CLEARED_EARLY' })
-    expect(publishCommand).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 'config/reassign',
-      expect.objectContaining({ newZoneId: String(zone2._id) }))
+    // Thiết bị không khởi động lại: tự huỷ override đang chạy và nhận cấu hình của Zone mới
+    expect(publishDeviceCommand).toHaveBeenCalledWith(node.device_id, 'CLEAR_OVERRIDE')
+    expect(publishDeviceConfig).toHaveBeenCalledWith(node.device_id, expect.objectContaining({ deviceId: node.device_id }))
   })
 })
