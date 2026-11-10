@@ -1,7 +1,7 @@
 import type { jsPDF as JsPdf } from 'jspdf';
 
 import {
-  REPORT_STATUSES, incompleteDayCount, reportDayRows, reportPeriod, weatherFacts, zoneFacts,
+  REPORT_STATUSES, incompleteDayCount, reportDayRows, reportPeriod, weatherFacts, zoneFacts, zoneHeader,
   type ReportFact, type ReportFormat,
 } from '@/components/features/farm-owner/health/healthReport.utils';
 import { NO_VALUE } from '@/constants/display';
@@ -11,7 +11,7 @@ import type { HouseHealthReport } from '@/types';
 const FONT = 'PlusJakartaSans';
 const FONT_FILES = { normal: 'PlusJakartaSans-Regular.ttf', bold: 'PlusJakartaSans-Bold.ttf' } as const;
 const MARGIN = 14;
-const ZONE_TABLE_HEIGHT = 72;
+const ZONES_PER_TABLE = 3;
 const CHARCOAL: [number, number, number] = [38, 38, 38];
 const GRAY: [number, number, number] = [120, 120, 120];
 const LINE: [number, number, number] = [220, 220, 220];
@@ -106,7 +106,8 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
   text(t('detail.disclaimer'), { size: 9, color: GRAY });
 
   heading(t('rd.statusCounts'));
-  text(REPORT_STATUSES.map(status => `${t(`status.${status}`)} ${report.status_counts[status] ?? 0}`).join(' · '));
+  // Mỗi trạng thái 1 dòng (bảng 2 cột như Thời tiết) thay vì nối trên 1 dòng chữ
+  factsTable(REPORT_STATUSES.map(status => ({ label: t(`status.${status}`), value: String(report.status_counts[status] ?? 0) })));
   if (report.hidden_days > 0) text(t('rd.hiddenDays', { n: report.hidden_days }), { size: 9, color: GRAY });
 
   heading(t('rd.flock'));
@@ -120,16 +121,14 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
   if (weather) factsTable(weather);
   else text(t('detail.weatherNone'));
 
-  heading(t('rd.zones'));
-  if (report.zone_sections.length === 0) text(t('rd.noZones'));
-  for (const section of report.zone_sections) {
-    // Giữ trọn bảng 1 Zone trên 1 trang (≈ 9 dòng × 7 mm + tên Zone)
-    if (y + ZONE_TABLE_HEIGHT > pageHeight - MARGIN) {
-      doc.addPage();
-      y = MARGIN;
-    }
-    text(`${section.zone_name} · ${t('rd.samples', { n: section.sample_count })}`, { bold: true, gap: 1 });
-    factsTable(zoneFacts(section, format));
+  heading(t('rd.conclusion'));
+  const conclusion = report.expert_conclusion;
+  if (conclusion) {
+    text(conclusion.text);
+    const edited = conclusion.edited_at ? ` · ${t('rd.edited', { time: format.dateTime(conclusion.edited_at) })}` : '';
+    text(`${conclusion.by.full_name ?? NO_VALUE} · ${format.dateTime(conclusion.at)}${edited}`, { size: 9, color: GRAY });
+  } else {
+    text(t('rd.noConclusion'));
   }
 
   heading(t('rd.days'));
@@ -149,14 +148,21 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
   });
   y = (doc as JsPdf & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3;
 
-  heading(t('rd.conclusion'));
-  const conclusion = report.expert_conclusion;
-  if (conclusion) {
-    text(conclusion.text);
-    const edited = conclusion.edited_at ? ` · ${t('rd.edited', { time: format.dateTime(conclusion.edited_at) })}` : '';
-    text(`${conclusion.by.full_name ?? NO_VALUE} · ${format.dateTime(conclusion.at)}${edited}`, { size: 9, color: GRAY });
-  } else {
-    text(t('rd.noConclusion'));
+  // Bảng so sánh như màn hình: hàng = chỉ số, cột = Zone; tối đa 3 Zone/bảng để chữ không bị bóp (A4 dọc), nhiều hơn thì thêm bảng
+  heading(t('rd.zones'));
+  if (report.zone_sections.length === 0) text(t('rd.noZones'));
+  for (let start = 0; start < report.zone_sections.length; start += ZONES_PER_TABLE) {
+    const group = report.zone_sections.slice(start, start + ZONES_PER_TABLE);
+    const facts = group.map(section => zoneFacts(section, format));
+    autoTable(doc, {
+      ...tableStyle,
+      startY: y,
+      head: [[t('rd.indicator'), ...group.map(section => zoneHeader(section, format))]],
+      body: facts[0].map((fact, row) => [fact.label, ...facts.map(zone => zone[row].value)]),
+      columnStyles: { 0: { cellWidth: 55, textColor: GRAY } },
+      theme: 'grid',
+    });
+    y = (doc as JsPdf & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3;
   }
 
   // Số trang ở chân mọi trang

@@ -75,8 +75,9 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
         className={cn('relative w-full rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none', SIZE_CLASS[size], className)}
       >
         {title ? (
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-charcoal">{tr(title)}</h2>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            {/* Tên dài không có khoảng trắng (VD tên nhà) vẫn xuống dòng thay vì tràn khung */}
+            <h2 className="min-w-0 text-lg font-bold text-charcoal [overflow-wrap:anywhere]">{tr(title)}</h2>
             <Button variant="icon" size="sm" onClick={onClose} aria-label={t('Đóng')}>
               <CloseIcon />
             </Button>

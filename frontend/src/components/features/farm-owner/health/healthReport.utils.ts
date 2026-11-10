@@ -1,7 +1,7 @@
 import { formatHealthReason } from '@/components/features/farm-owner/health/healthDay.utils';
 import { NO_VALUE } from '@/constants/display';
 import type { HealthTranslate } from '@/constants/health.i18n';
-import type { HealthReportZoneSection, HealthStatus, HouseHealthReport, HouseHealthReportSummary } from '@/types';
+import type { HealthRatingValue, HealthReportZoneSection, HealthStatus, HouseHealthReport, HouseHealthReportSummary } from '@/types';
 
 // Hàm định dạng truyền từ useTranslation — màn chi tiết và file PDF dùng chung để ra đúng một con số (EXPERT-FR-013)
 export interface ReportFormat {
@@ -21,11 +21,25 @@ export interface ReportFact {
 
 export interface ReportDayRow {
   date: string;
+  // ISO lúc hệ thống tính trạng thái ngày
+  computedAt: string;
   status: HealthStatus | null;
   statusText: string;
   returnRate: string;
   reasons: string[];
+  // Chuỗi 1 dòng mỗi người (PDF)
   ratings: string[];
+  // Cùng nội dung, tách phần để màn hình hiện badge; rating null = đã bỏ qua
+  ratingItems: ReportRatingItem[];
+}
+
+export interface ReportRatingItem {
+  name: string;
+  role: string;
+  rating: HealthRatingValue | null;
+  note: string | null;
+  // ISO lúc đánh giá hoặc bỏ qua
+  at: string;
 }
 
 const percent = (value: number | null, format: ReportFormat): string => (value === null ? NO_VALUE : `${format.number(value)} %`);
@@ -43,15 +57,32 @@ export function reportPeriod(report: HouseHealthReportSummary, format: ReportFor
   return format.t('report.period', { from, to: format.date(end) });
 }
 
-// "Lỗi cảm biến 2 · Thiết bị mất kết nối 1"; loại lạ (enum mới của backend) in nguyên mã thay vì bỏ
-export function countsText(counts: Record<string, number>, format: ReportFormat, emptyText: string): string {
+// Mỗi loại 1 dòng ("Lỗi cảm biến 2\nThiết bị mất kết nối 1"), bỏ loại đếm 0, không có gì thì "—";
+// loại lạ (enum mới của backend) in nguyên mã thay vì bỏ
+export function countsText(counts: Record<string, number>, format: ReportFormat): string {
   const entries = Object.entries(counts).filter(([, count]) => count > 0);
-  if (entries.length === 0) return emptyText;
+  if (entries.length === 0) return NO_VALUE;
   return entries.map(([type, count]) => {
     // Từ điển thiếu khoá thì translate trả undefined
     const label: string | undefined = format.t(`alertType.${type}` as Parameters<HealthTranslate>[0]);
     return `${label ?? type} ${count}`;
-  }).join(' · ');
+  }).join('\n');
+}
+
+// Cảnh báo suy luận theo kết luận của chuyên gia: chỉ phần khác 0, mỗi phần 1 dòng, không có gì thì "—"
+export function inferredText(inferred: HealthReportZoneSection['inferred_alerts'], format: ReportFormat): string {
+  const { t } = format;
+  const parts = [
+    inferred.confirmed > 0 ? t('rd.inferredConfirmed', { n: inferred.confirmed }) : null,
+    inferred.dismissed > 0 ? t('rd.inferredDismissed', { n: inferred.dismissed }) : null,
+    inferred.pending > 0 ? t('rd.inferredPending', { n: inferred.pending }) : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length === 0 ? NO_VALUE : parts.join('\n');
+}
+
+// Tiêu đề cột 1 Zone: "Tầng 1 (288 mẫu)"
+export function zoneHeader(section: HealthReportZoneSection, format: ReportFormat): string {
+  return `${section.zone_name} (${format.t('rd.samples', { n: section.sample_count })})`;
 }
 
 // Số liệu của 1 Zone theo đúng thứ tự EXPERT-FR-005
@@ -64,9 +95,9 @@ export function zoneFacts(section: HealthReportZoneSection, format: ReportFormat
     { label: t('rd.switches'), value: `${section.misting_switches} / ${section.ventilation_switches}` },
     { label: t('rd.nh3'), value: averageMax(section.nh3_avg, section.nh3_max, format, 'ppm') },
     { label: t('rd.co2'), value: averageMax(section.co2_avg, section.co2_max, format, 'ppm') },
-    { label: t('rd.alerts'), value: countsText(section.alerts_by_type, format, t('rd.noAlerts')) },
-    { label: t('rd.inferredLabel'), value: t('rd.inferred', { ...section.inferred_alerts }) },
-    { label: t('rd.faults'), value: countsText(section.device_faults, format, t('rd.noFaults')) },
+    { label: t('rd.alerts'), value: countsText(section.alerts_by_type, format) },
+    { label: t('rd.inferredLabel'), value: inferredText(section.inferred_alerts, format) },
+    { label: t('rd.faults'), value: countsText(section.device_faults, format) },
   ];
 }
 
@@ -102,18 +133,26 @@ export function reportDayRows(report: HouseHealthReport, format: ReportFormat): 
     const returnRate = rate === null
       ? NO_VALUE
       : `${format.number(rate)} %${flock?.complete ? '' : ` (${t('rd.incomplete')})`}`;
-    const ratings = (day.ratings ?? []).map(rating => {
-      const verdict = rating.outcome === 'RATED' && rating.rating ? t(`status.${rating.rating}`) : t('detail.skipped');
-      const note = rating.note ? ` — ${rating.note}` : '';
-      return `${rating.by.full_name ?? NO_VALUE} (${t(`role.${rating.role}`)}): ${verdict}${note}`;
+    const ratingItems: ReportRatingItem[] = (day.ratings ?? []).map(rating => ({
+      name: rating.by.full_name ?? NO_VALUE,
+      role: t(`role.${rating.role}`),
+      rating: rating.outcome === 'RATED' ? rating.rating : null,
+      note: rating.note,
+      at: rating.at,
+    }));
+    const ratings = ratingItems.map(item => {
+      const verdict = item.rating ? t(`status.${item.rating}`) : t('detail.skipped');
+      return `${item.name} (${item.role}): ${verdict}${item.note ? ` — ${item.note}` : ''}`;
     });
     return {
       date: format.date(day.date),
+      computedAt: day.computed_at,
       status: day.current_status ?? null,
       statusText: day.current_status ? t(`status.${day.current_status}`) : t('ratingState.PENDING'),
       returnRate,
       reasons: (day.current_reasons ?? []).map(reason => formatHealthReason(reason, t, format.number)),
       ratings,
+      ratingItems,
     };
   });
 }

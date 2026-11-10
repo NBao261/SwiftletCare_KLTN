@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  countsText, reportDayRows, reportPeriod, reportRangeError, zoneFacts, type ReportFormat,
+  countsText, reportDayRows, reportPeriod, reportRangeError, zoneFacts, zoneHeader, type ReportFormat,
 } from '@/components/features/farm-owner/health/healthReport.utils';
+import { NO_VALUE } from '@/constants/display';
 import { healthDict } from '@/constants/health.i18n';
 import { formatDateTime, formatStandardDate, translate } from '@/lib/i18n';
 import type { HouseHealthDay, HouseHealthReport } from '@/types';
@@ -78,12 +79,12 @@ describe('reportPeriod', () => {
 });
 
 describe('countsText và zoneFacts', () => {
-  it('dịch loại cảnh báo, bỏ loại đếm 0, loại lạ giữ nguyên mã', () => {
-    expect(countsText({ SENSOR_FAULT: 2, NODE_OFFLINE: 0, NEW_TYPE: 1 }, vi, 'trống')).toBe('Lỗi cảm biến 2 · NEW_TYPE 1');
-    expect(countsText({}, vi, 'trống')).toBe('trống');
+  it('dịch loại cảnh báo, mỗi loại 1 dòng, bỏ loại đếm 0, loại lạ giữ nguyên mã, không có gì thì —', () => {
+    expect(countsText({ SENSOR_FAULT: 2, NODE_OFFLINE: 0, NEW_TYPE: 1 }, vi)).toBe('Lỗi cảm biến 2\nNEW_TYPE 1');
+    expect(countsText({}, vi)).toBe(NO_VALUE);
   });
 
-  it('số trống in _, cảnh báo suy luận tách theo kết luận', () => {
+  it('số trống in _, cảnh báo suy luận chỉ ghi phần khác 0', () => {
     const facts = zoneFacts({
       zone_id: 'zone-1', zone_name: 'Tầng 1', sample_count: 10, temp_in_range_pct: null, humidity_in_range_pct: 80,
       auto_mode_pct: 100, misting_switches: 3, ventilation_switches: 1, alerts_by_type: {},
@@ -93,7 +94,9 @@ describe('countsText và zoneFacts', () => {
     const byLabel = new Map(facts.map(fact => [fact.label, fact.value]));
     expect(byLabel.get('Nhiệt độ trong ngưỡng')).toBe('_');
     expect(byLabel.get('NH3 TB / cao nhất')).toBe('5 / 9 ppm');
-    expect(byLabel.get('Cảnh báo suy luận')).toBe('1 xác nhận · 2 bác bỏ · 0 chờ chuyên gia');
+    expect(byLabel.get('Cảnh báo suy luận')).toBe('1 xác nhận\n2 bác bỏ');
+    expect(byLabel.get('Cảnh báo')).toBe(NO_VALUE);
+    expect(zoneHeader({ zone_name: 'Tầng 1', sample_count: 288 } as Parameters<typeof zoneHeader>[0], vi)).toBe('Tầng 1 (288 mẫu)');
   });
 });
 

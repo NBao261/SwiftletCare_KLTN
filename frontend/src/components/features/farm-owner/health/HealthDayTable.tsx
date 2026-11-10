@@ -35,7 +35,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       { key: 'index', header: t('col.index'), className: 'w-16', render: day => <span className="text-sm text-warmGray">{orderById.get(day._id)}</span> },
       // Ngày và nhà là khoá của dòng nên in đậm, như HarvestTable
       { key: 'date', header: t('col.date'), render: day => <span className="text-sm font-semibold text-charcoal">{date(day.date)}</span> },
-      { key: 'house', header: t('col.house'), render: day => <span className="text-sm font-semibold text-charcoal">{day.house_name}</span> },
+      { key: 'house', header: t('col.house'), render: day => <span title={day.house_name} className="block truncate text-sm font-semibold text-charcoal">{day.house_name}</span> },
       {
         key: 'status',
         header: t('col.status'),

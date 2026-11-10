@@ -111,7 +111,7 @@ export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRa
       <Modal open={!isSkipOpen} onClose={close} ariaLabel={t('rate.title', { date: date(day.date), house: day.house_name })} size="lg" closeOnBackdrop>
         <div className="flex flex-col gap-5">
           {/* Tiêu đề in đậm cả dòng; chừa chỗ nút ✕ */}
-          <h2 className="flex min-h-9 items-center pr-12 text-lg font-bold text-charcoal">
+          <h2 className="flex min-h-9 items-center pr-12 text-lg font-bold text-charcoal [overflow-wrap:anywhere]">
             {t('rate.title', { date: date(day.date), house: day.house_name })}
           </h2>
           {/* Thanh ngang ngăn tiêu đề với nội dung (cùng nét ModalHeader của popup người dùng) */}

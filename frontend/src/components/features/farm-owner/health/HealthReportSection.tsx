@@ -1,6 +1,7 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { PlusIcon } from '@phosphor-icons/react';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthReportCreateModal from '@/components/features/farm-owner/health/HealthReportCreateModal';
 import { reportPeriod } from '@/components/features/farm-owner/health/healthReport.utils';
@@ -12,36 +13,12 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseHealthReports } from '@/hooks/shared/useHealthDays';
 import { useHealthReportPdf } from '@/hooks/shared/useHealthReportPdf';
-import { cn } from '@/lib/cn';
 import type { HealthReportKind, HouseHealthReportSummary } from '@/types';
 
 const KINDS: HealthReportKind[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
 // Cùng khung bảng ngày (tab bên cạnh)
 const ROW_COUNT = 10;
 const ROW_HEIGHT = 72;
-
-// Một dòng chữ; chỉ khi dài hơn khung mới mờ dần ở cuối (đo sau khi vẽ), rê chuột xem đủ
-function FadingLine({ text }: { text: string }): JSX.Element {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (element) setIsOverflowing(element.scrollWidth > element.clientWidth);
-  }, [text]);
-  return (
-    <p
-      ref={ref}
-      title={text}
-      className={cn(
-        // Khoảng 25 ký tự ("Ồn do mưa lớn, không phải") rồi mờ dần
-        'w-full max-w-[13rem] overflow-hidden whitespace-nowrap text-sm text-charcoal',
-        isOverflowing && '[mask-image:linear-gradient(to_right,#000_65%,transparent)]',
-      )}
-    >
-      {text}
-    </p>
-  );
-}
 
 interface HealthReportSectionProps {
   // houseId hoặc farmId đang lọc; null = xem nhiều farm (backend cần 1 trong 2)
@@ -68,19 +45,17 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const columns = useMemo<DataTableColumn<HouseHealthReportSummary>[]>(() => [
     { key: 'index', header: t('col.index'), className: 'w-16', render: report => <span className="text-sm text-warmGray">{orderById.get(report._id)}</span> },
     { key: 'period', header: t('col.period'), className: 'w-[18%] whitespace-nowrap', render: report => <span className="text-sm font-semibold text-charcoal">{reportPeriod(report, format)}</span> },
-    { key: 'house', header: t('col.house'), className: 'w-[18%]', render: report => <span className="text-sm font-semibold text-charcoal">{report.house_name}</span> },
+    { key: 'house', header: t('col.house'), className: 'w-[18%]', render: report => <span title={report.house_name} className="block truncate text-sm font-semibold text-charcoal">{report.house_name}</span> },
     { key: 'kind', header: t('col.kind'), className: 'w-[14%] whitespace-nowrap', render: report => <span className="text-sm text-charcoal">{t(`kindLong.${report.kind}`)}</span> },
     { key: 'generatedAt', header: t('col.generatedAt'), className: 'w-[18%] whitespace-nowrap', render: report => <span className="text-sm text-charcoal">{dateTime(report.generated_at)}</span> },
     {
       key: 'conclusion',
       header: t('col.conclusion'),
-      // Một dòng trong khung rộng cố định, chữ dài mờ dần ở cuối; rê chuột xem đủ
+      // Một dòng, chữ dài cắt "…" như cột Nhà yến; rê chuột xem đủ
       // Bảng table-fixed: mọi cột có độ rộng (cộng ~90 %, STT và Thao tác cố định) để khoảng trống chia đều; chữ nằm trong ô và chừa khoảng trống trước cột Thao tác
       className: 'w-[22%] pr-8',
       render: report => (report.expert_conclusion
-        ? (
-          <FadingLine text={report.expert_conclusion.text} />
-        )
+        ? <p title={report.expert_conclusion.text} className="truncate text-sm text-charcoal">{report.expert_conclusion.text}</p>
         : report.has_conclusion
           ? <Badge tone="positive">{t('cell.hasConclusion')}</Badge>
           : <span className="text-sm italic text-warmGray">{t('cell.noConclusion')}</span>),
@@ -112,23 +87,24 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
     <SectionCard
       title={t('report.title')}
       description={t('report.subtitle')}
-      action={
+    >
+      {/* Lọc loại bên trái, nút tạo bên phải (mô tả dài nên không đặt nút ở đầu thẻ — bị đẩy xuống dòng riêng) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <FilterChip active={!kind} label={t('kind.all')} onClick={() => setKind(undefined)} />
+          {KINDS.map(value => (
+            <FilterChip key={value} active={kind === value} label={t(`kind.${value}`)} onClick={() => setKind(value)} />
+          ))}
+        </div>
         <Button
-          variant="secondary"
           size="sm"
           disabled={!house}
           title={house ? undefined : t('create.needHouse')}
           onClick={() => setIsCreateOpen(true)}
         >
+          <PlusIcon size={14} weight="bold" aria-hidden />
           {t('report.create')}
         </Button>
-      }
-    >
-      <div className="flex flex-wrap gap-2">
-        <FilterChip active={!kind} label={t('kind.all')} onClick={() => setKind(undefined)} />
-        {KINDS.map(value => (
-          <FilterChip key={value} active={kind === value} label={t(`kind.${value}`)} onClick={() => setKind(value)} />
-        ))}
       </div>
 
       {!scope ? (
