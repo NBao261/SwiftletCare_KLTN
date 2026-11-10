@@ -48,6 +48,7 @@ const en: Record<string, string> = {
   'Hủy': 'Cancel',
   'Xác nhận': 'Confirm',
   'Đóng': 'Close',
+  'Mở lịch chọn ngày': 'Open calendar',
   'Lưu': 'Save',
   'Hủy lọc': 'Clear filters',
   'Xoá bộ lọc': 'Clear filters',

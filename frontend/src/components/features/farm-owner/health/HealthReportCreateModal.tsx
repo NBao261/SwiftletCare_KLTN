@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
 import { withBold } from '@/components/features/farm-owner/health/HealthRatingModal';
 import { MAX_REPORT_DAYS, reportRangeError } from '@/components/features/farm-owner/health/healthReport.utils';
-import { Button, Input, Modal } from '@/components/ui';
+import { Button, DatePicker, Modal } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -56,8 +56,9 @@ export default function HealthReportCreateModal({ open, onClose, house, onCreate
         <hr className="border-gray-200" />
         <p className="text-sm text-warmGray">{withBold(t('create.intro'))}</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input type="date" label={t('create.from')} value={from} max={today} onChange={event => setFrom(event.target.value)} />
-          <Input type="date" label={t('create.to')} value={to} max={today} onChange={event => setTo(event.target.value)} />
+          {/* Ô ngày dd/mm/yyyy + lịch của web (như form thu hoạch), không dùng lịch tiếng Anh của trình duyệt */}
+          <DatePicker id="report-from" label={t('create.from')} value={from} max={today} onChange={setFrom} />
+          <DatePicker id="report-to" label={t('create.to')} value={to} max={today} onChange={setTo} />
         </div>
         {errorText && <p className="text-sm text-alertRed">{errorText}</p>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
