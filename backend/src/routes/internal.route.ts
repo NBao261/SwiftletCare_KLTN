@@ -1,9 +1,10 @@
 import { Router } from 'express'
 import { body, query } from 'express-validator'
+import { mqttAuth } from '@/controllers/mqttAuth.controller'
 import * as streamController from '@/controllers/stream.controller'
 import { validate } from '@/middlewares/validate.middleware'
 
-// Chỉ cho dịch vụ trong mạng nội bộ (MediaMTX), không có JWT người dùng: bảo vệ bằng STREAM_AUTH_KEY,
+// Chỉ cho dịch vụ trong mạng nội bộ (MediaMTX, EMQX), không có JWT người dùng: bảo vệ bằng STREAM_AUTH_KEY,
 // và reverse proxy chặn /internal từ bên ngoài (docs/bird-counting-plan.md §15.4)
 const router = Router()
 
@@ -13,5 +14,9 @@ router.post('/stream-auth',
   query('key').isString(),
   ...['action', 'path', 'user', 'password', 'token', 'query'].map(optionalString),
   validate, streamController.streamAuth)
+
+router.post('/mqtt-auth',
+  query('key').isString(), body('username').isString(), body('password').isString(),
+  validate, mqttAuth)
 
 export default router

@@ -4,6 +4,7 @@ import * as adminController from '@/controllers/admin.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 import type { Role } from '@/types'
+import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
@@ -57,7 +58,7 @@ router.post('/technicians',
 router.put('/technicians/:id/password', param('id').isMongoId(), validate, adminController.resetTechnicianPassword)
 /** Kho thiết bị xuất xưởng: cấp cặp {device_id, secretKey} để in nhãn – FARM-FR-003, Flow 1 bước 3 */
 router.post('/provisioned-devices',
-  body('device_id').isString().trim().notEmpty(), body('kind').isIn(['SENSOR', 'CAMERA']), validate,
+  body('device_id').isString().trim().matches(DEVICE_ID_PATTERN), body('kind').isIn(['SENSOR', 'CAMERA']), validate,
   adminController.createProvisionedDevice,
 )
 router.get('/provisioned-devices',
@@ -73,5 +74,8 @@ router.put('/provisioned-devices/:id/revoke',
 )
 /** Cấp secretKey mới để in lại nhãn — chỉ thiết bị chưa kích hoạt (key mới trả 1 lần) */
 router.post('/provisioned-devices/:id/rotate-key', param('id').isMongoId(), validate, adminController.rotateProvisionedKey)
+
+/** FARM-FR-010 — cấp mật khẩu broker mới (trả 1 lần, phải flash lại vào thiết bị) */
+router.post('/provisioned-devices/:id/rotate-broker-secret', param('id').isMongoId(), validate, adminController.rotateBrokerSecret)
 
 export default router

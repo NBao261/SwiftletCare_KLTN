@@ -43,6 +43,9 @@ const telemetrySchema = new Schema<ITelemetry>(
 
 // Mọi truy vấn (latest/history/analytics/market) lọc theo zone_id + khoảng thời gian (ANALYTICS-FR-001)
 telemetrySchema.index({ zone_id: 1, timestamp: -1 })
+// ENV-FR-024, Report 4 §7.2 — mẫu buffer QoS 1 giao lại không ghi 2 lần. DB đã có dữ liệu thì chạy
+// `npm run migrate:telemetry-unique` trước, vì index không tạo được khi còn bản trùng.
+telemetrySchema.index({ node_id: 1, timestamp: 1 }, { unique: true })
 // TTL: tự xoá sau 90 ngày (§8.2) — analytics xem tối đa 30 ngày, market lấy 30 ngày
 // trước ngày thu hoạch. Đổi số này phải chạy lại `npm run migrate:retention`
 // (Mongoose không tự sửa TTL của index đã tồn tại).

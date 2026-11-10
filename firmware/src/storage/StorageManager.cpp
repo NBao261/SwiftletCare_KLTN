@@ -126,23 +126,28 @@ bool loadEverConnected() { return prefs.getBool("everConn", false); }
 
 void markEverConnected() { prefs.putBool("everConn", true); }
 
-bool loadIdentity(String &farmId, String &houseId, String &zoneId) {
-  if (!prefs.isKey("idFarmId"))
-    return false; // chưa từng dời Zone — dùng mặc định Secrets.h
-  farmId = prefs.getString("idFarmId", "");
-  houseId = prefs.getString("idHouseId", "");
-  zoneId = prefs.getString("idZoneId", "");
-  return farmId.length() > 0 && houseId.length() > 0 && zoneId.length() > 0;
+bool loadDeviceIdentity(String &deviceId, String &brokerSecret) {
+  Preferences identity;
+  if (!identity.begin("identity", true)) return false;
+  deviceId = identity.getString("device_id", "");
+  brokerSecret = identity.getString("broker_secret", "");
+  identity.end();
+  return deviceId.length() > 0 && brokerSecret.length() > 0;
 }
 
-void saveIdentity(const String &farmId, const String &houseId,
-                  const String &zoneId) {
-  prefs.putString("idFarmId", farmId);
-  prefs.putString("idHouseId", houseId);
-  prefs.putString("idZoneId", zoneId);
-  Serial.println("[Storage] Đã lưu định danh Farm/House/Zone mới vào NVS: " +
-                 farmId + "/" + houseId + "/" + zoneId);
+void saveAlertQueue(const void *data, size_t size) { prefs.putBytes("alertQueue", data, size); }
+
+void loadAlertQueue(void *data, size_t size) {
+  if (prefs.getBytesLength("alertQueue") == size) prefs.getBytes("alertQueue", data, size);
 }
+
+void saveLastRestartCommand(const char *commandId) { prefs.putString("lastRestartCmd", commandId); }
+
+String loadLastRestartCommand() { return prefs.getString("lastRestartCmd", ""); }
+
+uint32_t loadConfigHash() { return prefs.getUInt("configHash", 0); }
+
+void saveConfigHash(uint32_t hash) { prefs.putUInt("configHash", hash); }
 
 void bufferTelemetry(const SensorData &data) {
   // Chỉ gọi từ sensorTask → biến static này không cần khoá

@@ -1,6 +1,6 @@
 /**
  * SwiftletCare – Global Configuration
- * Loaded from NVS on boot. Overridable via MQTT config/update command.
+ * Loaded from NVS on boot. Overridable via the retained MQTT topic …/{deviceId}/config.
  *
  * Hardware BOM: Components Guide v3.3 (RS485 Modbus sensor bus + GPIO relay)
  * SRS: ENV-FR-001, ENV-FR-006, ENV-FR-007, ENV-FR-013b
@@ -37,7 +37,7 @@
 #define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
 
 // ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
-#define FIRMWARE_VERSION "1.6.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP; 1.5.0: tên cảnh báo SRS 3.1.0 (MISTING_INEFFECTIVE, UNEXPECTED_RESTART kèm lý do), báo cả mất điện; 1.6.0: hạn can thiệp tay riêng từng relay (BR-20), lọc lệnh trùng và lệnh trễ (BR-35)
+#define FIRMWARE_VERSION "2.0.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP; 1.5.0: tên cảnh báo SRS 3.1.0 (MISTING_INEFFECTIVE, UNEXPECTED_RESTART kèm lý do), báo cả mất điện; 1.6.0: hạn can thiệp tay riêng từng relay (BR-20), lọc lệnh trùng và lệnh trễ (BR-35); 2.0.0: esp-mqtt, topic và tài khoản riêng từng thiết bị, TLS (G-07), không tương thích backend trước đó
 
 // ── OTA từ xa (TICKET-FR-008, Flow 15) ──────────────────────────────────────
 // Bản vừa OTA phải kết nối được MQTT trong khoảng này, nếu không bootloader quay về
@@ -58,7 +58,7 @@
 #define PID_INTERVAL_MS 10000
 
 // ── Hệ số bộ điều khiển mờ (ENV-FR-010/011/021) ─────────────────────────────
-// Chỉnh lúc chạy qua MQTT config/update (fuzzy_*), lưu NVS; ngoài khoảng MIN/MAX
+// Chỉnh lúc chạy qua topic MQTT `config` (fuzzy_*), lưu NVS; ngoài khoảng MIN/MAX
 // bị kẹp lại. Mặc định cho ra đúng hàm thuộc gốc (xem pid/FuzzyControl.h).
 // Cửa sổ time-proportioning: relay BẬT duty×cửa sổ đầu mỗi cửa sổ; ≥60s để
 // relay cơ/bơm không đóng cắt quá dày, độ phân giải = PID_INTERVAL_MS/cửa sổ.
@@ -70,7 +70,7 @@
 #define DEFAULT_FUZZY_INPUT_FILTER true
 
 // ── Tham số phát hiện chỉnh theo Zone (EXPERT-FR-008) ────────────────────────
-// Domain Expert chỉnh qua web → MQTT config/update → lưu NVS. Mặc định là các
+// Domain Expert chỉnh qua web → topic MQTT `config` → lưu NVS. Mặc định là các
 // hằng số dùng trước v1.3.0; khoảng hợp lệ (kẹp trong Config::update) là giới
 // hạn kỹ thuật, không phải khuyến nghị nuôi yến.
 #define DEFAULT_NOISE_MARGIN_DB 15.0f     // dB trên mức nền của giờ đó, 5..30
@@ -135,53 +135,25 @@
 // lần). RAM: 300 float = 1200 byte, không đáng kể trên ESP32 320KB.
 #define AUDIO_BASELINE_WINDOW_SAMPLES 300
 
-// ── MQTT Broker (§9.2) ───────────────────────────────────────────────────────
-// Dev: cổng 1883 non-TLS — khớp cách backend đang kết nối EMQX (xem
-// backend/.env.example), tránh toàn bộ lớp phức tạp TLS/cert tự ký trên ESP32
-// (đã gặp lỗi "start_ssl_client... Software caused connection abort" ở 8883).
-// Production: đổi lại 8883 (SEC-NFR-001) + nạp CA cert thật, đừng dùng
-// setInsecure().
-#define MQTT_PORT 1883
-
-// Cờ build dành riêng cho 1 build variant "production" trong tương lai — CHƯA
-// tồn tại, không định nghĩa ở đâu trong repo (không có trong platformio.ini).
-// Cố tình làm build fail ngay nếu ai đó bật cờ này trước khi TLS/CA-cert thật
-// được implement trong MQTTManager.cpp, để tránh cảm giác an toàn giả ("đây
-// là bản production") trong khi thực chất vẫn gửi MQTT cleartext qua 1883.
+// ── MQTT Broker (Report 4 §7.2) ─────────────────────────
+// Dev: cổng 1883 không TLS, khớp cách backend nối EMQX. `pio run -e esp32prod`: cổng 8883 và kiểm chứng
+// chỉ broker bằng CA ISRG Root X1 (config/CaCert.h, SEC-NFR-001); broker phải là tên miền, không phải IP.
 #ifdef SWIFTLETCARE_PRODUCTION_BUILD
-#error                                                                         \
-    "SWIFTLETCARE_PRODUCTION_BUILD requires MQTT_PORT=8883 + TLS (WiFiClientSecure + CA cert) -- not implemented in MQTTManager.cpp yet. Remove this flag (stay on dev port 1883), or add real TLS infrastructure first."
+#define MQTT_PORT 8883
+#else
+#define MQTT_PORT 1883
 #endif
 
-// Chỉ còn MQTT_QOS_COMMAND: đây là QoS DUY NHẤT thực sự dùng được, vì
-// PubSubClient::publish() không có tham số QoS (luôn gửi QoS 0) — chỉ
-// subscribe() mới nhận QoS (xem MQTTManager.cpp mqtt.subscribe(...,
-// MQTT_QOS_COMMAND)). MQTT_QOS_TELEMETRY/MQTT_QOS_ALERT trước đây không được
-// dùng ở đâu cả (dead code, dễ gây hiểu lầm là publish có QoS) — đã bỏ.
-#define MQTT_QOS_COMMAND 1
-
 namespace Config {
-// wifiSsid/wifiPassword/mqttBroker/farmId/houseId/zoneId là String (không phải
-// const char*) vì đều có thể bị ghi đè lúc runtime bằng giá trị mới:
-// wifiSsid/wifiPassword qua captive portal (WiFiProvisioner đọc lại từ NVS lúc
-// tryConnect()); mqttBroker qua captive portal (MQTTManager::begin() đọc lại
-// từ NVS); farmId/houseId/zoneId qua lệnh MQTT config/reassign (Flow 21 Nhánh
-// A, FARM-FR-007b — xem MQTTManager::onConfigReassign() + main.cpp setup()
-// StorageManager::loadIdentity()). Việc ghi đè farmId/houseId/zoneId CHỈ xảy
-// ra trong setup() trước khi mqttTask/pidTask được tạo (bằng ESP.restart() sau
-// khi lưu NVS — không hot-swap lúc task đang chạy), nên KHÔNG vi phạm giả định
-// "đọc xuyên core không cần mutex" của mqttTopicBase (xem MQTTManager.cpp).
-// mqttUsername/mqttPassword/deviceId vẫn cố định theo Secrets.h — hệ thống MQTT
-// credential riêng theo thiết bị chưa được implement (ngoài phạm vi Flow 21
-// Nhánh A hiện tại).
+// wifiSsid/wifiPassword/mqttBroker là String (không phải const char*) vì đều có thể bị ghi đè lúc
+// runtime: WiFi qua captive portal, mqttBroker qua captive portal (MQTTManager::begin() đọc lại từ NVS).
+// deviceId/mqttPassword là tài khoản broker của thiết bị, flash vào NVS bằng tools/flash_identity.py
+// (dev: Secrets.h), chỉ gán 1 lần trong setup() trước khi tạo task. Thiết bị không biết farm, house,
+// zone: các giá trị đó nằm ở backend (Report 4 D3).
 extern String wifiSsid;
 extern String wifiPassword;
 extern String mqttBroker;
-extern const char *mqttUsername;
 extern const char *mqttPassword;
-extern String farmId;
-extern String houseId;
-extern String zoneId;
 extern const char *deviceId;
 
 // Runtime config (loaded from NVS). volatile: các field dưới đây được GHI
@@ -219,7 +191,7 @@ extern volatile int pumpDryOnSec;
 extern volatile float pumpDryMinRisePct;
 extern volatile int speakerDropPct;
 
-// Speaker schedule (ENV-FR-013b) – overridable via MQTT config/update
+// Speaker schedule (ENV-FR-013b) – overridable via the MQTT `config` topic
 extern volatile bool speakerScheduleEnabled;
 extern volatile int speakerWindow1StartHour;
 extern volatile int speakerWindow1EndHour;

@@ -22,7 +22,7 @@ import { buildZoneMetrics, generateWeeklyReports } from '@/services/healthReport
 import { notifyUser } from '@/services/notification.service'
 import type { Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitAlertNew: jest.fn(), emitRelayUpdate: jest.fn(), emitTelemetryUpdate: jest.fn(), emitDeviceStatusChange: jest.fn() }))
 jest.mock('@/services/notification.service', () => ({
   ...jest.requireActual('@/services/notification.service'), // findRecipients thật: chọn người nhận báo cáo
