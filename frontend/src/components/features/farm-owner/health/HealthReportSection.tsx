@@ -8,7 +8,6 @@ import { reportPeriod } from '@/components/features/farm-owner/health/healthRepo
 import { ActionsMenu, Badge, Button, EmptyState, FilterChip, SectionCard, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { healthDict } from '@/constants/health.i18n';
-import { keepPreview } from '@/data/healthPreview.data';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseHealthReports } from '@/hooks/shared/useHealthDays';
@@ -34,7 +33,7 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const [kind, setKind] = useState<HealthReportKind | undefined>(undefined);
   // Chi tiết là trang riêng /health/reports/:id (ngăn bên hẹp, khó đọc bảng)
   const navigate = useNavigate();
-  const openReport = useCallback((reportId: string) => navigate(keepPreview(`/health/reports/${reportId}`)), [navigate]);
+  const openReport = useCallback((reportId: string) => navigate(`/health/reports/${reportId}`), [navigate]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { data: reports = [], isLoading, isError, error, refetch } = useHouseHealthReports(scope, kind);
   const { download, downloadingId } = useHealthReportPdf();

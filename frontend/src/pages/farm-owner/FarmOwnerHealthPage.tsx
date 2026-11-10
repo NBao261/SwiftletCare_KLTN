@@ -19,7 +19,6 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useFarm } from '@/hooks/shared/useFarms';
 import { useHealthDays } from '@/hooks/shared/useHealthDays';
-import { isHealthPreview, setPreviewHouses } from '@/data/healthPreview.data';
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
 import type { HouseHealthDay } from '@/types';
@@ -68,16 +67,9 @@ export default function FarmOwnerHealthPage(): JSX.Element {
     return next;
   }, { replace: true });
 
-  // /health?preview: dữ liệu giả (src/data/healthPreview.data.ts) theo nhà thật của tài khoản; chờ tải xong nhà để không lưu cache rỗng
-  const isPreview = isHealthPreview();
-  if (isPreview) setPreviewHouses(scope.houses.map(item => ({ _id: item._id, name: item.name, farm_id: item.farm_id })));
-  const isPreviewWaiting = isPreview && scope.isLoading;
-  const isPreviewNoFarm = isPreview && !scope.isLoading && scope.farms.length === 0;
-
   const to = vietnamDate();
   const from = shiftDate(to, -(rangeDays - 1));
-  const realFarmIds = useMemo(() => (scope.farmId ? [scope.farmId] : scope.farms.map(farm => farm._id)), [scope.farmId, scope.farms]);
-  const farmIds = isPreviewWaiting ? [] : isPreviewNoFarm ? ['preview-farm'] : realFarmIds;
+  const farmIds = useMemo(() => (scope.farmId ? [scope.farmId] : scope.farms.map(farm => farm._id)), [scope.farmId, scope.farms]);
   const { days, isLoading, isError, error, refetch } = useHealthDays({ farmIds, houseId: scope.houseId, from, to });
   const pendingDays = useMemo(() => days.filter(day => day.my_rating_state === 'PENDING'), [days]);
   const shownDays = canRate && isToRateOnly ? pendingDays : days;
@@ -89,11 +81,10 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const canEditLevels = isExpert || !farmHasExpert;
 
   // CSV và báo cáo theo nhà hoặc farm đang lọc; xem tất cả trang trại mà chỉ có 1 farm thì dùng farm đó
-  const csvScope: HealthDayScope | null = isPreviewWaiting ? null
-    : isPreviewNoFarm ? { farmId: 'preview-farm' }
-      : scope.houseId ? { houseId: scope.houseId }
-        : scope.farmId ? { farmId: scope.farmId }
-          : scope.farms.length === 1 ? { farmId: scope.farms[0]._id } : null;
+  let csvScope: HealthDayScope | null = null;
+  if (scope.houseId) csvScope = { houseId: scope.houseId };
+  else if (scope.farmId) csvScope = { farmId: scope.farmId };
+  else if (scope.farms.length === 1) csvScope = { farmId: scope.farms[0]._id };
 
   const openRating = useCallback((day: HouseHealthDay) => setRatingDay(day), []);
   const openView = useCallback((day: HouseHealthDay) => setViewDay(day), []);
@@ -145,7 +136,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
     </div>
   );
 
-  if (scope.farms.length === 0 && !scope.isLoading && !isPreview) {
+  if (scope.farms.length === 0 && !scope.isLoading) {
     return (
       <EmptyState
         title={t('page.noFarmTitle')}
@@ -162,7 +153,6 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   return (
     <div className="flex flex-1 flex-col gap-6">
       {filter}
-      {isPreview && <p className="-mt-4 text-[11px] font-medium italic text-warmGray">This data is FAKE and has not been MOCKAPI</p>}
       {tabs}
 
       {/* Thẻ trắng kéo hết chiều cao còn lại của màn hình */}
