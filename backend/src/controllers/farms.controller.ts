@@ -48,6 +48,12 @@ export const removeMember = asyncHandler(async (req: Request, res: Response) => 
   res.json({ success: true, data: farm })
 })
 
+/** GET /farms/:id/invitations – AUTH-FR-005, 010: lời mời của farm cho Primary Owner, không có token */
+export const listInvitations = asyncHandler(async (req: Request, res: Response) => {
+  const status = req.query.status as farmService.InvitationStatus | undefined
+  res.json({ success: true, data: await farmService.listInvitations(req.params.id, req.user, status) })
+})
+
 /** GET /invitations/:token – xem trước lời mời, không cần đăng nhập */
 export const getInvitation = asyncHandler(async (req: Request, res: Response) => {
   const result = await farmService.getInvitationByToken(req.params.token)

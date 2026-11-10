@@ -22,11 +22,28 @@ import {
 } from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishZoneConfig } from '@/services/deviceConfig.service'
-import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning } from '@/types'
 
 /** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
 const INVITATION_TTL_MS = 7 * 86400_000
+
+/** Report 3 §4.5 — tên farm, nhà, zone tối đa 50 ký tự; nhà có 1–10 tầng (khớp app mobile và web) */
+export const MAX_NAME_LENGTH = 50
+export const MAX_HOUSE_FLOORS = 10
+
+/**
+ * FARM-FR-002 — tên nhà không trùng trong farm, tên zone không trùng trong nhà: bỏ qua hoa thường,
+ * vẫn phân biệt dấu ("Nhà A" trùng "nhà a", không trùng "Nha A"). Không dùng unique index vì dữ liệu
+ * cũ có thể đã trùng; hai request cùng tên đến đồng thời vẫn có thể lọt.
+ */
+async function assertUniqueName(
+  model: typeof House | typeof Zone, scope: Record<string, unknown>, name: string, what: string,
+): Promise<void> {
+  const taken = await (model as typeof House).exists({ ...scope, name: name.trim() })
+    .collation({ locale: 'vi', strength: 2 })
+  if (taken) throw new AppError(409, 'DUPLICATE_NAME', `${what} "${name.trim()}" đã có, hãy đặt tên khác`)
+}
 
 /**
  * FARM-FR-001, FARM-FR-009 — Technician thấy mọi farm (chỉ cấu trúc, để chọn House→Zone khi
@@ -336,6 +353,28 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
   return farm
 }
 
+export type InvitationStatus = IInvitation['status']
+
+/**
+ * AUTH-FR-005, 010 — lời mời của 1 farm cho màn Thành viên, chỉ Primary Owner. PENDING đã quá hạn được
+ * coi là EXPIRED (cùng luật với findPendingInvitationOrThrow) dù job nền chưa kịp đổi. Không trả `token`.
+ */
+export async function listInvitations(farmId: string, user: CurrentUser, status: InvitationStatus = 'PENDING') {
+  const farm = await findFarmOrThrow(farmId)
+  if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới xem được lời mời')
+
+  const now = new Date()
+  const filter: Record<string, unknown> = { farm_id: farm._id }
+  if (status === 'PENDING') Object.assign(filter, { status: 'PENDING', expires_at: { $gt: now } })
+  else if (status === 'EXPIRED') filter.$or = [{ status: 'EXPIRED' }, { status: 'PENDING', expires_at: { $lte: now } }]
+  else filter.status = status
+
+  const invitations = await Invitation.find(filter).select('-token').sort({ created_at: -1 }).lean()
+  return invitations.map(invitation => (
+    invitation.status === 'PENDING' && invitation.expires_at <= now ? { ...invitation, status: 'EXPIRED' as const } : invitation
+  ))
+}
+
 /** Job nền: chuyển Invitation quá hạn sang EXPIRED (AUTH-FR-010, Flow 12 case 3d) */
 export async function expireStaleInvitations(): Promise<number> {
   const result = await Invitation.updateMany(
@@ -353,7 +392,9 @@ export async function createHouse(
 ) {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  return House.create({ farm_id: farm._id, ...input })
+  await assertUniqueName(House, { farm_id: farm._id }, input.name, 'Nhà yến')
+  // Chỉ lấy 3 trường: body thô có thể mang `farm_id` của farm khác
+  return House.create({ farm_id: farm._id, name: input.name, floors: input.floors, description: input.description })
 }
 
 export async function listHouses(farmId: string, user: CurrentUser) {
@@ -368,6 +409,12 @@ export async function createZone(houseId: string, user: CurrentUser, input: { na
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
+  // Zone là một tầng của nhà (FARM-FR-002): không vượt số tầng của House
+  const houseFloors = house.floors ?? 1
+  if ((input.floor ?? 1) > houseFloors) {
+    throw BadRequestError(`Tầng ${input.floor} vượt số tầng của nhà (${houseFloors} tầng)`)
+  }
+  await assertUniqueName(Zone, { house_id: house._id }, input.name, 'Khu vực')
   // Zone mới dùng ngưỡng mặc định hệ thống do Admin cấu hình (ENV-FR-007), cùng
   // nguồn với "Reset về mặc định" — không dùng default cứng trong schema.
   return Zone.create({
