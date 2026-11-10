@@ -3,6 +3,7 @@ import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisionedDevice.model'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
+import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 import { BadRequestError, ConflictError, NotFoundError } from '@/utils/appError.util'
 
 /** Chuẩn hoá hoa/thường + khoảng trắng: Technician gõ tay từ nhãn dán */
@@ -30,6 +31,10 @@ export async function createProvisionedDevice(
   adminId: string, input: { device_id: string; kind: ProvisionedDeviceKind },
 ): Promise<{ device_id: string; kind: ProvisionedDeviceKind; secret_key: string; broker_secret: string }> {
   const deviceId = input.device_id.trim()
+  // Chặn cả ở service (script nhập kho không qua route): ID có `+`, `#`, `/` phá cô lập trên broker
+  if (!DEVICE_ID_PATTERN.test(deviceId)) {
+    throw BadRequestError('device_id chỉ gồm chữ, số, `_`, `-`')
+  }
   if (await ProvisionedDevice.exists({ device_id: deviceId })) {
     throw ConflictError('device_id đã có trong kho thiết bị')
   }

@@ -23,6 +23,7 @@ npm run migrate:scope-v2      # one-off after deploying the SRS v2 backend: FARM
 npm run migrate:bird-count-house  # one-off after SRS v2.1.8: cameras, bird counts, camera alerts and return_rate_drop_pct move from Zone to House (idempotent; prints houses whose zones disagreed for the expert to set)
 npm run migrate:remove-tickets    # one-off after the ticket module was removed (Report 3 §8): drops tickets, ticketmessages, maintenanceschedules and unsets sla_hours / max_open_tickets_per_technician in systemsettings (idempotent)
 npm run migrate:remove-regions    # one-off after Technician regions were removed (FARM-FR-009): unsets users.assigned_regions, farms.region, drops index region_1, lists farms without coordinates (idempotent)
+npm run migrate:telemetry-unique  # one-off before deploying G-07: drops duplicate node_id + timestamp samples (keeps the first), then builds the unique index of ENV-FR-024 (idempotent)
 npm run migrate:relay-overrides   # one-off after deploying G-06 part 2: controllers MANUAL without `relays` get a per-relay expiry from their open override logs, else from the old `override_expiry`, else go back to AUTO (idempotent)
 npm run db:script    # regenerate docs/database/init.mongo.js (collections, $jsonSchema validators, indexes) from the models — run after any model change; tests/unit/utils/dbScript.util.test.ts fails until you do
 npm run mdns         # publish mDNS "swiftletcare-broker.local" for a real ESP32 (run alongside npm run dev)

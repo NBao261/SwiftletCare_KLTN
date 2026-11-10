@@ -23,6 +23,11 @@ const HANDLERS: Record<DeviceUplink, (topicParts: string[], message: Record<stri
 }
 
 export function connectMQTT(): void {
+  // EMQX hỏi /internal/mqtt-auth cho mọi kết nối, kể cả của backend: thiếu khoá thì chỉ thấy 401 lặp mỗi giây
+  if (!process.env.MQTT_AUTH_KEY) {
+    logger.error('Thiếu MQTT_AUTH_KEY: EMQX sẽ từ chối mọi kết nối, kể cả backend (MQTT code 5). '
+      + 'Đặt cùng giá trị với khoá EMQX gửi kèm /internal/mqtt-auth (docker-compose.yml, mặc định CHANGE_ME)')
+  }
   const caPath = process.env.MQTT_CA_CERT_PATH ?? ''
   const options: mqtt.IClientOptions = {
     // Phiên bền: lệnh và tin QoS 1 của thiết bị không mất trong lúc backend khởi động lại

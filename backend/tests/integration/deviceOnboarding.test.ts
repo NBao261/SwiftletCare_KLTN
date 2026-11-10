@@ -112,6 +112,11 @@ describe('kho thiết bị (Admin)', () => {
 
     await request(app).post('/admin/provisioned-devices').set('Authorization', `Bearer ${adminToken}`)
       .send({ device_id: 'node_100', kind: 'SENSOR' }).expect(409)
+    // NFR-10 d — device ID là username và đoạn topic trên broker: ký tự đại diện của MQTT bị chặn ở route
+    for (const device_id of ['+', 'node/#', 'node 7']) {
+      await request(app).post('/admin/provisioned-devices').set('Authorization', `Bearer ${adminToken}`)
+        .send({ device_id, kind: 'SENSOR' }).expect(422)
+    }
   })
 })
 

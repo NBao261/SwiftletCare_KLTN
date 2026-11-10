@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { verifyBrokerCredential } from '@/services/provisionedDevice.service'
 import { UnauthorizedError } from '@/utils/appError.util'
+import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 
 const safeEqual = (a: unknown, b: string | undefined): boolean => {
   if (typeof a !== 'string' || !b) return false
@@ -22,5 +23,7 @@ export async function authorizeBrokerClient(key: unknown, body: MqttAuthRequest)
   if (!safeEqual(key, process.env.MQTT_AUTH_KEY)) throw UnauthorizedError('Sai khóa')
   const { MQTT_USERNAME, MQTT_PASSWORD } = process.env
   if (safeEqual(body.username, MQTT_USERNAME)) return safeEqual(body.password, MQTT_PASSWORD) ? 'allow' : 'deny'
+  // Username có ký tự đại diện của MQTT sẽ mở rộng luật ACL `swiftletcare/dev/${username}/#`: không bao giờ cho vào
+  if (!DEVICE_ID_PATTERN.test(body.username)) return 'deny'
   return (await verifyBrokerCredential(body.username, body.password)) ? 'allow' : 'deny'
 }

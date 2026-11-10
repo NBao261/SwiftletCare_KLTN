@@ -4,6 +4,13 @@ export type DeviceCommandType = 'RELAY' | 'CLEAR_OVERRIDE' | 'AUDIO' | 'RESTART'
 
 export const DEVICE_TOPIC_ROOT = 'swiftletcare/dev'
 
+/**
+ * NFR-10 d — device ID là username trên broker và là 1 đoạn topic: luật ACL `swiftletcare/dev/${username}/#`
+ * (deploy/emqx/acl.conf) chỉ cô lập được thiết bị khi ID không chứa `+`, `#` hay `/` của MQTT: chỉ nhận chữ,
+ * số, `_`, `-`.
+ */
+export const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]+$/
+
 /** Report 4 §7.2 — đường thiết bị gửi lên, dưới `swiftletcare/dev/{deviceId}/` */
 export const DEVICE_UPLINKS = [
   'telemetry', 'telemetry/buffered', 'heartbeat', 'relay/status', 'alert', 'vision/bird-count', 'vision/alert',

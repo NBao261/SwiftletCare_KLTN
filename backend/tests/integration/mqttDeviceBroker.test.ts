@@ -95,6 +95,18 @@ describe('POST /internal/mqtt-auth (NFR-10 d)', () => {
     expect((await auth('backend-service', 'sai').expect(200)).body.result).toBe('deny')
   })
 
+  it('device ID có ký tự đại diện của MQTT không nhập kho được và không bao giờ được vào broker', async () => {
+    // Luật ACL `swiftletcare/dev/${username}/#`: username `+` sẽ chạm được cây topic của mọi thiết bị
+    for (const bad of ['+', '#', 'a/b', 'node 1', '']) {
+      await expect(createProvisionedDevice(adminId, { device_id: bad, kind: 'SENSOR' })).rejects.toMatchObject({ statusCode: 400 })
+    }
+    // Bản ghi lỡ có từ trước (nhập thẳng vào DB) vẫn bị từ chối dù đúng mật khẩu
+    const { broker_secret } = await createProvisionedDevice(adminId, { device_id: 'node_tam', kind: 'SENSOR' })
+    await ProvisionedDevice.updateOne({ device_id: 'node_tam' }, { device_id: '+' })
+    expect((await auth('+', broker_secret).expect(200)).body.result).toBe('deny')
+    expect((await auth('a/#', broker_secret).expect(200)).body.result).toBe('deny')
+  })
+
   it('sai key là bên gọi không phải EMQX: 401', async () => {
     await auth('node_1', 'x', 'sai').expect(401)
     await request(app).post('/internal/mqtt-auth').send({ username: 'a', password: 'b' }).expect(422)
