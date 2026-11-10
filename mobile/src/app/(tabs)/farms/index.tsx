@@ -23,6 +23,7 @@ import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
 import { useFarmHouseCards } from '@/hooks/farm/useFarmHouseCards'
 import { useFarmSummary } from '@/hooks/farm/useFarmSummary'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useNow } from '@/hooks/time/useNow'
 import { useAuthStore } from '@/stores/authStore'
@@ -30,6 +31,7 @@ import { useFarmPrefsStore } from '@/stores/farmPrefsStore'
 import { farmHasExpert } from '@/utils/farm.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_FARMS } from '@/utils/navigation.utils'
 
 // Khung xương: 3 thẻ nhà đúng cỡ thẻ thật
 const SKELETON_CARD_COUNT = 3
@@ -49,6 +51,8 @@ export default function FarmsScreen() {
   const { width: windowWidth } = useWindowDimensions()
   const now = useNow(CLOCK_INTERVAL_MS)
   const { farmId: requestedFarmId } = useLocalSearchParams<{ farmId?: string }>()
+  // Mở từ lối tắt ở Trang chủ thì có nút ‹ quay về, và hiện danh sách thay vì tự mở nhà xem gần nhất
+  const returnBack = useReturnBack()
   const { userId, prefs } = useFarmPrefs()
   const user = useAuthStore(state => state.user)
   const canCreateFarm = canPerform(user, 'createFarm')
@@ -72,7 +76,7 @@ export default function FarmsScreen() {
     farmId,
     houses: housesQuery.houses,
     isReady: !housesQuery.isLoading && !housesQuery.isError,
-    isFarmRequested: Boolean(requestedFarmId),
+    isFarmRequested: Boolean(requestedFarmId) || returnBack !== undefined,
   })
 
   // Farm đang xem thành farm mở mặc định cho lần sau; mở một farm qua link (thẻ farm, Trang chủ) là rời "Tất cả"
@@ -107,8 +111,8 @@ export default function FarmsScreen() {
     router.navigate({
       pathname: '/(tabs)/alerts',
       params: isAllFarms
-        ? { allFarms: '1', farmId: '', houseId: '', zoneId: '' }
-        : { farmId, allFarms: '', houseId: '', zoneId: '' },
+        ? { allFarms: '1', farmId: '', houseId: '', zoneId: '', returnTo: RETURN_TO_FARMS }
+        : { farmId, allFarms: '', houseId: '', zoneId: '', returnTo: RETURN_TO_FARMS },
     })
 
   // Kéo xuống: tải lại mọi khối đang hiện
@@ -180,6 +184,13 @@ export default function FarmsScreen() {
           severityCounts={severityQuery.data ?? null}
           hasExpert={farmHasExpert(farm)}
           isDetailLoading={summaryQuery.isLoading}
+          // Chưa có chuyên gia: mở Thành viên của đúng farm này để mời, ‹ quay về danh sách nhà
+          onInviteExpert={
+            canPerform(user, 'viewFarmMembers')
+              ? () =>
+                  router.push({ pathname: '/(tabs)/profile/members', params: { farmId, returnTo: RETURN_TO_FARMS } })
+              : undefined
+          }
         />
         {/* Cùng thẻ nhà của carousel Trang chủ; ở đây bấm thì mở Màn B của nhà */}
         {housesQuery.cards.map(card => (
@@ -203,7 +214,7 @@ export default function FarmsScreen() {
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader
-        onBack={farmQuery.hasMultipleFarms && !isAllFarms ? showAllFarms : undefined}
+        onBack={returnBack ?? (farmQuery.hasMultipleFarms && !isAllFarms ? showAllFarms : undefined)}
         leading={
           <HeaderPicker
             title={headerTitle}

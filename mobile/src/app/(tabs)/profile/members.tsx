@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { Redirect, router } from 'expo-router'
+import { Alert, ScrollView, StyleSheet, View } from 'react-native'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import { CrownIcon, EnvelopeSimpleIcon, UserIcon, UserMinusIcon, UsersIcon } from 'phosphor-react-native'
 import { MockDataBadge } from '@/components/common/MockDataBadge'
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
@@ -13,6 +13,7 @@ import { ProfileRow } from '@/components/profile/ProfileRow'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
@@ -21,6 +22,7 @@ import { Radius, Spacing } from '@/constants/theme'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
 import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
 import { useRemoveFarmMember } from '@/hooks/farm/useRemoveFarmMember'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePendingInvitations } from '@/hooks/profile/usePendingInvitations'
 import { useNow } from '@/hooks/time/useNow'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -44,8 +46,12 @@ export default function MembersScreen() {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
   const current = useCurrentFarm()
+  // Mở từ nhãn "Chưa có chuyên gia" ở danh sách nhà: farmId của farm đang xem; ‹ quay về đó
+  const { farmId: requestedFarmId } = useLocalSearchParams<{ farmId?: string }>()
+  const returnBack = useReturnBack()
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null)
-  const farmId = selectedFarmId ?? current.farm?._id ?? ''
+  const linkedFarmId = current.farms.some(item => item._id === requestedFarmId) ? requestedFarmId : undefined
+  const farmId = selectedFarmId ?? linkedFarmId ?? current.farm?._id ?? ''
   const detailQuery = useFarmDetail(farmId)
   const invitationsQuery = usePendingInvitations(farmId)
   const removeMember = useRemoveFarmMember(farmId)
@@ -115,15 +121,13 @@ export default function MembersScreen() {
               hasDivider={index < members.length - 1}
               trailing={
                 canRemove ? (
-                  <Pressable
-                    onPress={() => confirmRemove(member)}
-                    disabled={removeMember.isPending}
-                    hitSlop={Spacing.sm}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Gỡ {name}', { name: member.full_name || member.email || '' })}
-                  >
-                    <UserMinusIcon size={20} color={palette.alert} />
-                  </Pressable>
+                  <IconButton
+                    icon={UserMinusIcon}
+                    label={t('Gỡ {name}', { name: member.full_name || member.email || '' })}
+                    color={palette.alert}
+                    // Đang gỡ thì khoá nút (IconButton không có onPress là bị khoá)
+                    onPress={removeMember.isPending ? undefined : () => confirmRemove(member)}
+                  />
                 ) : undefined
               }
             />
@@ -162,7 +166,7 @@ export default function MembersScreen() {
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader
         title={t('Thành viên farm')}
-        onBack={() => router.back()}
+        onBack={returnBack ?? (() => router.back())}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
