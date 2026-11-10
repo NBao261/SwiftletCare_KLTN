@@ -15,7 +15,7 @@
 namespace FuzzyControl {
 
 /**
- * Hệ số chỉnh được lúc chạy qua MQTT config/update (fuzzy_humidity_band,
+ * Hệ số chỉnh được lúc chạy qua topic MQTT `config` (fuzzy_humidity_band,
  * fuzzy_temp_band, fuzzy_fan_dry_level — xem Config.h). Giá trị mặc định cho
  * ra đúng các điểm gãy gốc (−5/+3 %RH, −3/+1 °C, quạt 40%).
  */

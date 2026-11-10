@@ -59,9 +59,9 @@ Từ clip đến file ONNX: `docs/bird-counting-plan.md` mục 7 (tách frame �
 ## MQTT Topics (SRS v2.1.8: theo nhà yến, không có đoạn zone)
 
 ```
-swiftletcare/{farmId}/{houseId}/vision/bird-count   ← số đếm phiên (30 giây/lần) và số đếm 5 phút (kind: BUCKET)
-swiftletcare/{farmId}/{houseId}/heartbeat           ← {deviceId, firmwareVersion}; im 90 giây là EDGE_AI_DEGRADED
-swiftletcare/{farmId}/{houseId}/config/update       → vòng đếm Domain Expert vẽ (VISION-FR-018)
+swiftletcare/dev/{deviceId}/vision/bird-count   ← số đếm phiên (30 giây/lần) và số đếm 5 phút (kind: BUCKET)
+swiftletcare/dev/{deviceId}/heartbeat           ← {deviceId, modelVersion, fps}; im 90 giây là EDGE_AI_DEGRADED
+swiftletcare/dev/{deviceId}/config              → vòng đếm Domain Expert vẽ (VISION-FR-018)
 ```
 
 ## Trạng thái

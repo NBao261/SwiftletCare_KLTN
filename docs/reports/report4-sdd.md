@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.0 (Review 2, final scope) |
-| Date | 09/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.0 (`docs/reports/report3-srs.md`) |
+| Document version | 2.2.1 (Review 2, final scope) |
+| Date | 10/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -94,6 +94,7 @@ flowchart LR
   FCM[[Firebase Cloud<br/>Messaging]]
   NTP[[NTP pool]]
   WX[[Open-Meteo<br/>weather API]]
+  MAIL[[SMTP e-mail<br/>provider]]
   SIM[Device simulator<br/>test tool]
 
   ESP <-- MQTT over TLS<br/>own device topics --> EMQX
@@ -111,6 +112,7 @@ flowchart LR
   MTX -- WebRTC / HLS --> MOB
   API -- alert messages --> TG
   API -- push --> FCM
+  API -- invitations, reset codes,<br/>temporary passwords --> MAIL
   ESP -- time sync --> NTP
   API -- hourly, farm coordinates --> WX
   WX -- weather and forecast --> API
@@ -164,15 +166,15 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 
 | Layer | Technology | Version (from the repository) |
 | --- | --- | --- |
-| Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 1.6.0 |
+| Firmware | ESP32 (ESP32-WROOM-32D), Arduino framework on FreeRTOS, PlatformIO `espressif32` | Arduino-ESP32 core 2.0.17; firmware 2.0.0 |
 | Firmware libraries | ESP-IDF MQTT client `esp-mqtt` (`mqtt_client.h`, shipped with the Arduino-ESP32 core: QoS 1 publish, TLS with a CA certificate, persistent session), ArduinoJson, ModbusMaster, DFRobotDFPlayerMini, ElegantOTA, Adafruit ADS1X15 for the load-current shunts | core 2.0.17, ^7.0, ^2.0.1, ^1.0.6, ^3.1; ADS1X15 pinned when it is added |
 | Controller board | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC reading two 0.1 Ω low-side shunt resistors on the 5 V misting and 12 V fan outputs, which the board switches for the team's DC demo loads (no mains on the board) | Not built yet (gap G-13, Iteration 3); the prototype uses an ESP32-WROOM-32D with a 4-channel relay module (`docs/hardware/BOM.md`) |
 | AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLOv8n or YOLO11n, whichever has the lower counting error at the camera's frame rate on the team's own test days, exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs, firebase-admin (FCM) | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
-| Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `victory-native` | Expo ~53, React Native 0.79.6, React 19.0 |
+| Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `react-native-gifted-charts` | Expo ~58.0, React Native 0.88.0, React 19.3.0, expo-router ~58.0, expo-camera ~58.0, expo-notifications ~58.1, expo-video ~58.0, react-native-mmkv ^4.3, react-native-gifted-charts ^1.4 |
 | Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1, nginx 1.27, certbot latest |
-| Testing | Jest + mongodb-memory-server (backend, mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7, Vitest ^1.6 |
+| Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6 |
 
 ### 3.3 Source Code and DevOps
 
@@ -190,7 +192,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
-| Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA | — |
+| Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA. Development aid only: `npm run mdns` announces the laptop broker as `swiftletcare-broker.local` and a development build of the firmware finds it by mDNS, so a changed laptop IP needs no reflash; staging and production firmware use the broker domain set at flashing (FARM-FR-003c) | — |
 | Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Nginx with a Let's Encrypt certificate renewed by Certbot, serving HTTPS and the TLS ports of MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
 | Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (FARM-FR-013) |
 
@@ -247,7 +249,7 @@ FreeRTOS tasks pinned to core 1:
 | `SensorTask` | 2 | Every 1 s: read the five Modbus sensors (`sensors/SensorManager`), mark stale readings, filter temperature and humidity (`sensors/SignalFilter`: median 5 + scalar Kalman), read the pump and fan currents from the ADS1115, update the hourly noise baseline and detect abnormal noise (`sensors/NoiseAnomalyDetector`); while the broker is unreachable, append the sample to the offline buffer (`storage/StorageManager`, SPIFFS, 1 sample / 10 s, 256 KB) |
 | `PIDTask` | 3 | Every 10 s: speaker schedule (`audio/AudioManager`), the expiry of each overridden relay (BR-20), fuzzy misting and fan demand (`pid/FuzzyControl`) with time-proportioning, misting check (`pid/PumpDryMonitor`, raises `MISTING_INEFFECTIVE`), safe state on missing inputs, actuator current check against the learned normal current (BR-32); applies relays in the precedence of BR-19 and queues device alerts with an event ID |
 | `MQTTTask` | 1 | Wi-Fi and the `esp-mqtt` session over TLS (CA certificate of the broker's issuer, device ID as user name, device credential as password, persistent session); publishes telemetry and heartbeat (QoS 0, heartbeat with diagnostics and the applied configuration version), relay status, device alerts and the offline buffer (QoS 1), deleting an alert or a buffered sample from NVS or flash only on its PUBACK; after an unexpected restart queues one `UNEXPECTED_RESTART` with the reset reason; receives the retained configuration (`…/config`) and commands (`…/cmd`), skipping a command ID already applied and relay, audio or restart commands older than BR-35 (the last RESTART and OTA command IDs are kept in NVS so a redelivery after the restart is ignored); remote RESTART / OTA with SHA-256 check and rollback (`ota/RemoteCommand`, `ota/RemoteOta`, OTA over HTTPS with the CA certificate) |
-| `loop()` | — | Feeds the task watchdog (30 s); serves the Wi-Fi captive portal (`wifi/WiFiProvisioner`) while it is open, and reopens it when the broker stays unreachable so a new broker address can be entered |
+| `loop()` | — | Feeds the task watchdog (30 s); serves the Wi-Fi captive portal (`wifi/WiFiProvisioner`) while it is open, and reopens it when the broker stays unreachable so the Wi-Fi network can be changed (the broker address is flashed, FARM-FR-003c) |
 
 Configuration (`config/Config`) is stored in NVS with its version, and every received value is clamped to the same ranges as the backend validator. Pure C++ parts (fuzzy, filter, noise detector, misting check, current check, command de-duplication, remote command) are unit-tested on the host.
 
@@ -281,12 +283,12 @@ Layer rules: only services query the database, check permissions, publish MQTT a
 | Service group | Services | Requirements |
 | --- | --- | --- |
 | Identity and access | `auth`, `admin`, `farmAccess.util`, `mqttAuth` (broker authentication of devices) | AUTH-FR-002…012, NFR-10, Section 2.4 of Report 3 |
-| Structure and devices | `farm`, `device`, `provisionedDevice`, `configSync`, `audioTrack`, `stream` | FARM-FR-001…013, ENV-FR-016…021, 027, VISION-FR-013, 018 |
+| Structure and devices | `farm`, `device`, `deviceConfig` (full configuration of a device), `provisionedDevice`, `configSync`, `audioTrack`, `stream`, `relayOverrideLog` (override history) | FARM-FR-001…013, ENV-FR-016…021, 027, VISION-FR-013, 018 |
 | Telemetry and control | `telemetry` (with the breach dwell of BR-34), `fuzzyModel.util` | ENV-FR-001…005, ALERT-FR-012, ANALYTICS-FR-008, 010 |
 | Alerts and notifications | `alert`, `sensorAnomaly`, `forecast`, `notification`, `telegram`, `push` (FCM), `relayUsage` | ALERT-FR-001…016, THREAT-FR-009, 010 |
 | Flock | `birdCount` | VISION-FR-006…012, 017 |
-| Analytics and expert | `analytics`, `healthAssessment`, `healthReport`, `weather`, `expertActivity`, `parameterReview`, `coefficientProposal` | ANALYTICS-FR-001…014, EXPERT-FR-001…013 |
-| Supporting | `system`, `harvest` | SYSTEM-FR-001…003, HARVEST-FR-001…005 |
+| Analytics and expert | `analytics`, `healthAssessment`, `healthReport`, `weather`, `expertActivity`, `expertReview` (verdicts and detection tuning), `alertEvidence` (evidence of an inferred alert), `tuningSuggestion` (coefficient suggestion), `parameterReview`, `coefficientProposal` | ANALYTICS-FR-001…014, ALERT-FR-014, EXPERT-FR-001…013 |
+| Supporting | `system`, `auditLog`, `harvest` | SYSTEM-FR-001…003, HARVEST-FR-001…005 |
 
 Background jobs:
 
@@ -305,6 +307,7 @@ Background jobs:
 | `activationOverdue` | every 1 min | Devices not activated in 15 min; OTA unconfirmed after 30 min |
 | `relayUsage` | hourly | Pump and fan ON time and switch count since the last service → `MAINTENANCE_DUE` (ALERT-FR-016) |
 | `invitationExpiry` | hourly | Invitations older than 7 days → `EXPIRED` |
+| `deletionRequestReminder` | daily 08:00 | Deletion requests still open 7 days before their 30-day deadline → one reminder to the Administrator (AUTH-FR-012) |
 
 **Operations and knowledge modules (final scope).** Same layering as above:
 
@@ -356,12 +359,18 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Override duration limits | backend `MIN_OVERRIDE_MS`, `MAX_OVERRIDE_MS`, `MAX_PUMP_ON_OVERRIDE_MS` |
 | Command freshness | firmware `COMMAND_MAX_AGE_MS` |
 | Command IDs remembered | firmware `COMMAND_ID_MEMORY` |
+| Alerts waiting for a broker acknowledgement | firmware `ALERT_QUEUE_SIZE` |
+| Wait for the acknowledgement of a buffered sample | firmware `PUBACK_WAIT_MS` |
+| Broker reconnection and keepalive | firmware `MQTT_RECONNECT_MS`, `MQTT_KEEPALIVE_SEC` |
 | Threshold-breach dwell time | backend `BREACH_DWELL_MS` |
 | AI node silent before it is offline | backend `CAMERA_OFFLINE_THRESHOLD_MS` |
 | AI node frame rate that raises `EDGE_AI_DEGRADED` | AI node `config.yaml`, backend `CAMERA_MIN_FPS` |
 | Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
 | Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
 | One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
+| Points of a telemetry chart | backend `MAX_BUCKETS` (`analytics.service.ts`) |
+| Noise baseline learned | firmware `NoiseAnomalyDetector::READY_SAMPLES` |
+| Restore of a removed device | backend `RESTORE_WINDOW_MS` (`device.service.ts`) |
 | Earlier verdicts shown with an inferred alert | backend `EARLIER_VERDICTS_LIMIT` (`alertEvidence.service.ts`) |
 | Proposal retry on concurrent submission | backend `SUBMIT_ATTEMPTS` (`coefficientProposal.service.ts`) |
 | Live-stream viewing token | backend `STREAM_TOKEN_TTL_SEC` |
@@ -1039,11 +1048,11 @@ stateDiagram-v2
   ACTIVE --> DISMISSED : expert rejects (EXPERT-FR-003)
   ACKNOWLEDGED --> DISMISSED : expert rejects (EXPERT-FR-003)
   DISMISSED --> DISMISSED : same incident again, silent (ALERT-FR-008)
-  DISMISSED --> ACTIVE : verdict changed to CONFIRMED, was ACTIVE
-  DISMISSED --> ACKNOWLEDGED : verdict changed to CONFIRMED, was ACKNOWLEDGED
-  ACTIVE --> RESOLVED : condition recovers, device back, farm deleted (BR-16)
-  ACKNOWLEDGED --> RESOLVED : condition recovers (BR-16)
-  DISMISSED --> RESOLVED : condition recovers (BR-16)
+  DISMISSED --> ACTIVE : verdict changed to CONFIRMED, was ACTIVE (EXPERT-FR-003)
+  DISMISSED --> ACKNOWLEDGED : verdict changed to CONFIRMED, was ACKNOWLEDGED (EXPERT-FR-003)
+  ACTIVE --> RESOLVED : condition recovers, device back, farm deleted (ALERT-FR-008, THREAT-FR-009, FARM-FR-001, BR-16)
+  ACKNOWLEDGED --> RESOLVED : condition recovers (ALERT-FR-008, BR-16)
+  DISMISSED --> RESOLVED : condition recovers (ALERT-FR-008, BR-16)
   RESOLVED --> [*]
 ```
 
@@ -1051,11 +1060,11 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING : inferred alert created
+  [*] --> PENDING : inferred alert created (ALERT-FR-001, EXPERT-FR-003)
   PENDING --> CONFIRMED : expert, or owner without expert (EXPERT-FR-003, BR-22)
-  PENDING --> REJECTED : same, note required
-  CONFIRMED --> REJECTED : verdict changed
-  REJECTED --> CONFIRMED : verdict changed
+  PENDING --> REJECTED : same, note required (EXPERT-FR-003, BR-22)
+  CONFIRMED --> REJECTED : verdict changed (EXPERT-FR-003)
+  REJECTED --> CONFIRMED : verdict changed (EXPERT-FR-003)
 ```
 
 ### 8.3 Controller — relay control mode (SM-03)
@@ -1064,19 +1073,19 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> AUTO
   AUTO --> MANUAL : override applied (ENV-FR-016, 017)
-  AUTO --> AUTO : rejected 403 / 422 / 409, or command older than BR-35
-  MANUAL --> MANUAL : another relay overridden, own expiry kept (BR-20)
-  MANUAL --> AUTO : this relay expires or is cancelled (ENV-FR-018, BR-20)
+  AUTO --> AUTO : rejected 403 / 422 / 409, or command older than BR-35 (ENV-FR-016)
+  MANUAL --> MANUAL : another relay overridden, own expiry kept (ENV-FR-018, BR-20)
+  MANUAL --> AUTO : this relay expires or is cancelled (ENV-FR-018, 019, BR-20)
 ```
 
 ### 8.4 Invitation (SM-04)
 
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING : Primary Owner invites (AUTH-FR-005)
+  [*] --> PENDING : Primary Owner invites (AUTH-FR-005, EXPERT-FR-001)
   PENDING --> ACCEPTED : invitee accepts (AUTH-FR-010)
-  PENDING --> DECLINED : invitee declines
-  PENDING --> EXPIRED : 7 days, farm deleted, inviter deleted
+  PENDING --> DECLINED : invitee declines (AUTH-FR-010)
+  PENDING --> EXPIRED : 7 days, farm deleted, inviter deleted (AUTH-FR-010, FARM-FR-001, AUTH-FR-012)
   ACCEPTED --> [*]
   DECLINED --> [*]
   EXPIRED --> [*]
@@ -1092,15 +1101,17 @@ The number is kept so that SM-06…SM-17 match Report 3, Sections 6.6–6.17.
 stateDiagram-v2
   [*] --> PENDING : registered (FARM-FR-003, 004)
   PENDING --> ONLINE : first heartbeat, configuration sent (FARM-FR-003b, 003c)
-  ONLINE --> OFFLINE : silent beyond BR-10 for its kind
-  OFFLINE --> ONLINE : heartbeat
+  ONLINE --> OFFLINE : silent beyond BR-10 for its kind (FARM-FR-005, THREAT-FR-009, 010)
+  OFFLINE --> ONLINE : heartbeat (FARM-FR-005)
   PENDING --> DECOMMISSIONED : removed (FARM-FR-008)
   ONLINE --> DECOMMISSIONED : removed or replaced (FARM-FR-008)
-  OFFLINE --> DECOMMISSIONED : removed or replaced
-  DECOMMISSIONED --> [*]
+  OFFLINE --> DECOMMISSIONED : removed or replaced (FARM-FR-008)
+  DECOMMISSIONED --> OFFLINE : restored within 24 h, had connected (FARM-FR-008)
+  DECOMMISSIONED --> PENDING : restored within 24 h, never connected (FARM-FR-008)
+  DECOMMISSIONED --> [*] : 24 h passed
 ```
 
-Registration is done by the Farm Owner (SF-01). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
+Registration is done by the Farm Owner (SF-01). A restore is refused (409) when another device replaced it or its ID was registered again (Report 3, Section 6.6). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
 
 ### 8.7 Controller — misting protection (SM-07)
 
@@ -1108,10 +1119,10 @@ Registration is done by the Farm Owner (SF-01). A device still `PENDING` 15 min 
 stateDiagram-v2
   [*] --> IDLE
   IDLE --> MONITORING : misting demand > 0 or manual ON (THREAT-FR-011)
-  MONITORING --> IDLE : demand back to 0
-  MONITORING --> LATCHED : below humidity_min, no rise after pump_dry_on_sec, MISTING_INEFFECTIVE
-  LATCHED --> IDLE : demand back to 0, or auto/manual switch
-  LATCHED --> MONITORING : retry after 30 min (BR-11)
+  MONITORING --> IDLE : demand back to 0 (THREAT-FR-011)
+  MONITORING --> LATCHED : below humidity_min, no rise after pump_dry_on_sec, MISTING_INEFFECTIVE (THREAT-FR-011)
+  LATCHED --> IDLE : demand back to 0, or auto/manual switch (THREAT-FR-011, ENV-FR-016)
+  LATCHED --> MONITORING : retry after 30 min (THREAT-FR-011, BR-11)
 ```
 
 ### 8.8 Controller — noise baseline per hour (SM-08)
@@ -1119,8 +1130,12 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> LEARNING
-  LEARNING --> READY : about 1 h of samples for that hour, speaker off (THREAT-FR-007)
-  READY --> READY : baseline keeps learning while speaker off
+  LEARNING --> READY : 3,600 samples for that hour, speaker off (THREAT-FR-007)
+  READY --> READY : baseline keeps learning while speaker off (THREAT-FR-007)
+  LEARNING --> NOT_EVALUATED : speaker playing or clock not synchronised (THREAT-FR-007)
+  READY --> NOT_EVALUATED : speaker playing or clock not synchronised (THREAT-FR-007)
+  NOT_EVALUATED --> LEARNING : speaker off, clock synchronised, hour not learned (THREAT-FR-007)
+  NOT_EVALUATED --> READY : speaker off, clock synchronised, hour learned (THREAT-FR-007)
 ```
 
 ### 8.9 HealthReport (SM-09)
@@ -1129,7 +1144,7 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> GENERATED : daily, weekly, monthly job or custom period (EXPERT-FR-005)
   GENERATED --> CONCLUDED : expert writes conclusion (EXPERT-FR-006)
-  CONCLUDED --> CONCLUDED : author edits
+  CONCLUDED --> CONCLUDED : author edits (EXPERT-FR-006)
 ```
 
 ### 8.10 ReviewItem (SM-10)
@@ -1137,10 +1152,10 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> PENDING_REVIEW : owner edits or resets on a farm with expert (EXPERT-FR-010)
-  PENDING_REVIEW --> PENDING_REVIEW : owner changes again, original values kept
-  PENDING_REVIEW --> ACCEPTED : expert accepts
-  PENDING_REVIEW --> REVERTED : expert reverts, values restored
-  PENDING_REVIEW --> ADJUSTED : expert saves new values
+  PENDING_REVIEW --> PENDING_REVIEW : owner changes again, original values kept (EXPERT-FR-010)
+  PENDING_REVIEW --> ACCEPTED : expert accepts (EXPERT-FR-010)
+  PENDING_REVIEW --> REVERTED : expert reverts, values restored (EXPERT-FR-010)
+  PENDING_REVIEW --> ADJUSTED : expert saves new values (EXPERT-FR-010, 004)
   ACCEPTED --> [*]
   REVERTED --> [*]
   ADJUSTED --> [*]
@@ -1151,9 +1166,9 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> PROPOSED : owner submits a suggestion (EXPERT-FR-011)
-  PROPOSED --> APPROVED : expert approves, coefficients applied
-  PROPOSED --> REJECTED : expert rejects with note
-  PROPOSED --> SUPERSEDED : newer proposal or any edit
+  PROPOSED --> APPROVED : expert approves, coefficients applied (EXPERT-FR-011)
+  PROPOSED --> REJECTED : expert rejects with note (EXPERT-FR-011)
+  PROPOSED --> SUPERSEDED : newer proposal or any edit (EXPERT-FR-011)
   APPROVED --> [*]
   REJECTED --> [*]
   SUPERSEDED --> [*]
@@ -1163,12 +1178,15 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-  [*] --> APPLIED
+  [*] --> PENDING : controller registered, zone configuration sent (FARM-FR-012, ENV-FR-027)
   APPLIED --> PENDING : new zone configuration saved (ENV-FR-027)
-  PENDING --> APPLIED : heartbeat reports new version
-  PENDING --> MISMATCH : online, 3 heartbeats still old, CONFIG_MISMATCH (BR-24)
-  MISMATCH --> APPLIED : version applied, alert resolved
-  APPLIED --> UNKNOWN : firmware reports no version
+  PENDING --> APPLIED : heartbeat reports new version (ENV-FR-027)
+  PENDING --> MISMATCH : online, 3 heartbeats still old, CONFIG_MISMATCH (ENV-FR-027, BR-24)
+  MISMATCH --> APPLIED : version applied, alert resolved (ENV-FR-027)
+  APPLIED --> UNKNOWN : firmware reports no version (ENV-FR-027)
+  PENDING --> UNKNOWN : firmware reports no version (ENV-FR-027)
+  UNKNOWN --> APPLIED : heartbeat reports the current version (ENV-FR-027)
+  UNKNOWN --> PENDING : heartbeat reports an older version (ENV-FR-027)
 ```
 
 ---
@@ -1178,12 +1196,12 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> DRAFT : technician enters a harvest (HARVEST-FR-001)
-  [*] --> CONFIRMED : owner enters a harvest
+  [*] --> CONFIRMED : owner enters a harvest (HARVEST-FR-001, 006, 007)
   DRAFT --> DRAFT : author or owner edits (HARVEST-FR-005)
   DRAFT --> CONFIRMED : owner confirms, cycle closed (HARVEST-FR-006, 007)
-  CONFIRMED --> CONFIRMED : owner corrects, cycle recomputed
+  CONFIRMED --> CONFIRMED : owner corrects, cycle recomputed (HARVEST-FR-005, 007)
   DRAFT --> DELETED : soft-deleted (HARVEST-FR-005)
-  CONFIRMED --> DELETED : owner soft-deletes
+  CONFIRMED --> DELETED : owner soft-deletes (HARVEST-FR-005)
   DELETED --> [*]
 ```
 
@@ -1193,10 +1211,10 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> ACTIVE : created by the Administrator, or from an invitation link (AUTH-FR-005c, 010)
   ACTIVE --> LOCKED : Administrator locks with reason (AUTH-FR-011)
-  LOCKED --> ACTIVE : Administrator unlocks
+  LOCKED --> ACTIVE : Administrator unlocks (AUTH-FR-011)
   ACTIVE --> DELETION_REQUESTED : user requests deletion (AUTH-FR-012)
-  DELETION_REQUESTED --> ACTIVE : user cancels or Administrator rejects
-  DELETION_REQUESTED --> DELETED : Administrator completes, data anonymised
+  DELETION_REQUESTED --> ACTIVE : user cancels or Administrator rejects (AUTH-FR-012)
+  DELETION_REQUESTED --> DELETED : Administrator completes, data anonymised (AUTH-FR-012)
   DELETED --> [*]
 ```
 
@@ -1206,9 +1224,9 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> NONE
   NONE --> PENDING : Administrator sends OTA, firmware >= 1.4.0 (FARM-FR-013)
-  PENDING --> NONE : heartbeat reports the new version
-  PENDING --> FAILED : no confirmation in 30 min, image discarded or rolled back
-  FAILED --> PENDING : OTA sent again
+  PENDING --> NONE : heartbeat reports the new version (FARM-FR-013)
+  PENDING --> FAILED : no confirmation in 30 min, image discarded or rolled back (FARM-FR-013)
+  FAILED --> PENDING : OTA sent again (FARM-FR-013)
 ```
 
 ### 8.16 DeviceStockItem — label (SM-16)
@@ -1219,10 +1237,10 @@ stateDiagram-v2
   IN_STOCK --> IN_SERVICE : registered from the label (FARM-FR-003, 004)
   IN_SERVICE --> RELEASED : removed or replaced (FARM-FR-008)
   RELEASED --> IN_SERVICE : registered again (BR-26)
-  IN_STOCK --> IN_STOCK : key re-issued
-  RELEASED --> RELEASED : key re-issued, label lost or exposed
-  IN_STOCK --> REVOKED : revoked by Administrator
-  RELEASED --> REVOKED : revoked by Administrator
+  IN_STOCK --> IN_STOCK : key re-issued (FARM-FR-010, BR-26)
+  RELEASED --> RELEASED : key re-issued, label lost or exposed (FARM-FR-010, BR-26)
+  IN_STOCK --> REVOKED : revoked by Administrator (FARM-FR-010)
+  RELEASED --> REVOKED : revoked by Administrator (FARM-FR-010)
   REVOKED --> [*]
 ```
 
@@ -1233,16 +1251,16 @@ The state is derived from `provisioneddevices` (`claimed_at`, `revoked_at`) and 
 ```mermaid
 stateDiagram-v2
   [*] --> COMPUTED : daily assessment (ANALYTICS-FR-012)
-  COMPUTED --> COMPUTED : late data or verdict, current status recomputed, snapshots kept
+  COMPUTED --> COMPUTED : late data or verdict, current status recomputed, snapshots kept (ANALYTICS-FR-012, BR-31)
 ```
 
 ```mermaid
 stateDiagram-v2
   [*] --> PENDING : day computed, one per assigned Farm Technician and Farm Owner, status hidden (BR-31)
   PENDING --> RATED : rating + snapshot stored together, status shown (EXPERT-FR-012)
-  PENDING --> SKIPPED : status shown, not in NFR-14
-  PENDING --> EXPIRED : 7 days without rating
-  RATED --> RATED : note added
+  PENDING --> SKIPPED : status shown, not in NFR-14 (EXPERT-FR-012, BR-31)
+  PENDING --> EXPIRED : 7 days without rating (EXPERT-FR-012)
+  RATED --> RATED : note added (EXPERT-FR-012)
   RATED --> [*]
   SKIPPED --> [*]
   EXPIRED --> [*]
@@ -1260,12 +1278,12 @@ stateDiagram-v2
   OPEN --> CLOSED : alert recovered for 10 min before the work starts, self-recovered (OPS-FR-003)
   IN_PROGRESS --> VERIFYING : technician done, cause and photos (OPS-FR-002, ALERT-FR-018)
   VERIFYING --> AWAITING_APPROVAL : recovered for recovery_verify_min (BR-41)
-  VERIFYING --> IN_PROGRESS : condition comes back
-  AWAITING_APPROVAL --> CLOSED : owner approves, alert resolved (OPS-FR-004)
-  AWAITING_APPROVAL --> IN_PROGRESS : owner reopens
-  OPEN --> CANCELLED : owner cancels with reason
-  IN_PROGRESS --> CANCELLED : owner cancels with reason
-  OPEN --> OPEN : not started in time, escalated (BR-40)
+  VERIFYING --> IN_PROGRESS : condition comes back (OPS-FR-003)
+  AWAITING_APPROVAL --> CLOSED : owner approves, alert resolved (OPS-FR-004, 009)
+  AWAITING_APPROVAL --> IN_PROGRESS : owner reopens (OPS-FR-004)
+  OPEN --> CANCELLED : owner cancels with reason (OPS-FR-004)
+  IN_PROGRESS --> CANCELLED : owner cancels with reason (OPS-FR-004)
+  OPEN --> OPEN : not started in time, escalated (OPS-FR-004, 006, BR-40)
   CLOSED --> [*]
   CANCELLED --> [*]
 ```
@@ -1275,11 +1293,11 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> SCHEDULED : owner defines the plan (OPS-FR-005)
-  SCHEDULED --> DUE : run hours, switches or date reached, MAINTENANCE_DUE and Work Order (OPS-FR-006)
-  DUE --> OVERDUE : still due after maintenance_grace_days, owners notified
+  SCHEDULED --> DUE : run hours, switches or date reached, MAINTENANCE_DUE and Work Order (OPS-FR-006, ALERT-FR-016)
+  DUE --> OVERDUE : still due after maintenance_grace_days, owners notified (OPS-FR-006)
   DUE --> SCHEDULED : maintenance recorded, counter reset (OPS-FR-008)
-  OVERDUE --> SCHEDULED : maintenance recorded
-  SCHEDULED --> RETIRED : owner deletes the plan
+  OVERDUE --> SCHEDULED : maintenance recorded (OPS-FR-008)
+  SCHEDULED --> RETIRED : owner deletes the plan (OPS-FR-005)
   RETIRED --> [*]
 ```
 
@@ -1289,8 +1307,8 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> OPEN : rule holds for the house, none open (EXPERT-FR-017)
   OPEN --> ACCEPTED : owner accepts, Work Order or review item (EXPERT-FR-018)
-  OPEN --> REJECTED : owner rejects with reason
-  OPEN --> EXPIRED : 7 days without decision (BR-42)
+  OPEN --> REJECTED : owner rejects with reason (EXPERT-FR-018)
+  OPEN --> EXPIRED : 7 days without decision (EXPERT-FR-017, BR-42)
   ACCEPTED --> MEASURED : effect computed 7 days after acceptance (EXPERT-FR-019)
   REJECTED --> [*]
   EXPIRED --> [*]
@@ -1302,10 +1320,10 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> OPEN : first controller of the zone, or previous cycle closed (HARVEST-FR-007)
-  OPEN --> CLOSED : harvest confirmed, yield and comparisons computed (BR-43)
-  CLOSED --> CLOSED : closing harvest corrected, figures recomputed
+  OPEN --> CLOSED : harvest confirmed, yield and comparisons computed (HARVEST-FR-006, 007, BR-43)
+  CLOSED --> CLOSED : closing harvest corrected, figures recomputed (HARVEST-FR-005, 007)
   CLOSED --> CONCLUDED : expert writes the season conclusion (EXPERT-FR-020)
-  CONCLUDED --> CONCLUDED : expert edits the conclusion
+  CONCLUDED --> CONCLUDED : expert edits the conclusion (EXPERT-FR-020)
 ```
 
 ### 8.23 ConfigurationProfile (SM-23)
@@ -1313,10 +1331,10 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
   [*] --> DRAFT : expert creates, values in range (EXPERT-FR-014)
-  DRAFT --> DRAFT : expert edits
-  DRAFT --> APPROVED : expert approves
+  DRAFT --> DRAFT : expert edits (EXPERT-FR-014)
+  DRAFT --> APPROVED : expert approves (EXPERT-FR-014)
   APPROVED --> APPROVED : owner applies to houses, new configuration versions (EXPERT-FR-015)
-  APPROVED --> ARCHIVED : expert archives
+  APPROVED --> ARCHIVED : expert archives (EXPERT-FR-014, 015)
   ARCHIVED --> [*]
 ```
 
@@ -1324,10 +1342,10 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-  [*] --> NONE : controller starts, offset 0
+  [*] --> NONE : controller starts, offset 0 (ENV-FR-029)
   NONE --> ACTIVE : non-zero offset with a future expiry (ENV-FR-028, 029)
-  ACTIVE --> ACTIVE : newer offset replaces it
-  ACTIVE --> NONE : expiry passed, offset 0, or 2 h without the broker (BR-38)
+  ACTIVE --> ACTIVE : newer offset replaces it (ENV-FR-028)
+  ACTIVE --> NONE : expiry passed, offset 0, or 2 h without the broker (ENV-FR-029, BR-38)
 ```
 
 ## 9. Activity Diagrams
@@ -1843,6 +1861,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.1 | 10/11/2026 | BM02 items due 11/11/2026: SMTP e-mail provider in the Section 2.1 diagram (A-03); mobile versions and Jest from `mobile/package.json` in Section 3.2 (A-06); mDNS broker discovery named as a development aid in Section 3.4 (A-01); services and the `deletionRequestReminder` job of the code listed in Section 5.3 (A-07); every transition of Section 8 names its requirement (ST-06); SM-06 restore within 24 h (ST-01), SM-08 "not evaluated" (ST-07), SM-12 starts at `PENDING` and leaves `UNKNOWN` (ST-03), following SRS 4.2.1 |
 | 2.2.0 | 09/11/2026 | AD-04: every inferred alert of a house with a technician is checked on site first, a faulty sensor opens a Work Order; AD-06: the Farm Technician (daily) and the Farm Owner (on site) rate, the Domain Expert reviews the disagreeing days and adjusts the levels (SRS 4.2.0) |
 | 2.1.0 | 09/11/2026 | Eight main flows (SRS 4.1.0): AD-09 is the diagram of supporting flow SF-06 (harvest recording and season summary); AD-04 adds the on-site check by the Farm Technician (EXPERT-FR-021, `onsite_checks` in `ALERT`); AD-07 without the Domain Expert lane; the weather lane of AD-01 takes its rules from MF-05 |
 | 2.0.1 | 09/11/2026 | Only people are actors in the activity diagrams (Section 9); AD-03 shows the Farm Technician drawing the counting ring; the ring editor is also in the mobile app (Section 5.4) |

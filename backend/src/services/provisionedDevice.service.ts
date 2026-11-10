@@ -3,6 +3,7 @@ import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisionedDevice.model'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
+import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 import { BadRequestError, ConflictError, NotFoundError } from '@/utils/appError.util'
 
 /** Chuẩn hoá hoa/thường + khoảng trắng: Technician gõ tay từ nhãn dán */
@@ -17,26 +18,37 @@ function generateSecretKey(): string {
   return [0, 4, 8].map(i => chars.slice(i, i + 4).join('')).join('-')
 }
 
+export const hashBrokerSecret = (secret: string) => crypto.createHash('sha256').update(secret).digest()
+
+/** FARM-FR-010 — chuỗi ngẫu nhiên dài, chỉ máy đọc, nên không cần bảng chữ dễ đọc như activation key */
+const generateBrokerSecret = () => crypto.randomBytes(24).toString('base64url')
+
 /**
  * Admin nhập 1 thiết bị mới vào kho (chuẩn bị xuất xưởng). secretKey bản rõ chỉ
  * trả về ở đây, đúng 1 lần, để in nhãn — backend không lưu lại được nữa.
  */
 export async function createProvisionedDevice(
   adminId: string, input: { device_id: string; kind: ProvisionedDeviceKind },
-): Promise<{ device_id: string; kind: ProvisionedDeviceKind; secret_key: string }> {
+): Promise<{ device_id: string; kind: ProvisionedDeviceKind; secret_key: string; broker_secret: string }> {
   const deviceId = input.device_id.trim()
+  // Chặn cả ở service (script nhập kho không qua route): ID có `+`, `#`, `/` phá cô lập trên broker
+  if (!DEVICE_ID_PATTERN.test(deviceId)) {
+    throw BadRequestError('device_id chỉ gồm chữ, số, `_`, `-`')
+  }
   if (await ProvisionedDevice.exists({ device_id: deviceId })) {
     throw ConflictError('device_id đã có trong kho thiết bị')
   }
 
   const secretKey = generateSecretKey()
+  const brokerSecret = generateBrokerSecret()
   const device = await ProvisionedDevice.create({
-    device_id: deviceId, kind: input.kind, secret_key_hash: hashKey(secretKey), created_by: adminId,
+    device_id: deviceId, kind: input.kind, secret_key_hash: hashKey(secretKey),
+    broker_secret_hash: hashBrokerSecret(brokerSecret).toString('hex'), created_by: adminId,
   })
   await logAction(adminId, 'DEVICE_PROVISIONED', 'provisioned_device', String(device._id), {
     deviceId, kind: input.kind,
   })
-  return { device_id: deviceId, kind: input.kind, secret_key: secretKey }
+  return { device_id: deviceId, kind: input.kind, secret_key: secretKey, broker_secret: brokerSecret }
 }
 
 export async function listProvisionedDevices(query: {
@@ -118,6 +130,31 @@ export async function rotateProvisionedKey(adminId: string, id: string) {
   await device.save()
   await logAction(adminId, 'DEVICE_PROVISION_KEY_ROTATED', 'provisioned_device', id, { deviceId: device.device_id })
   return { device_id: device.device_id, kind: device.kind, secret_key: secretKey }
+}
+
+/**
+ * FARM-FR-010 — cấp mật khẩu broker mới (bị lộ, hoặc thiết bị nhập kho trước G-07). Khác activation
+ * key, đổi được cả khi thiết bị đã kích hoạt, nhưng phải flash lại mật khẩu vào thiết bị.
+ * `adminId` rỗng khi chạy từ script dòng lệnh.
+ */
+export async function rotateBrokerSecret(adminId: string | undefined, id: string) {
+  const device = await findProvisionedOrThrow(id)
+  const brokerSecret = generateBrokerSecret()
+  device.broker_secret_hash = hashBrokerSecret(brokerSecret).toString('hex')
+  await device.save()
+  await logAction(adminId, 'DEVICE_BROKER_SECRET_ROTATED', 'provisioned_device', id, { deviceId: device.device_id })
+  return { device_id: device.device_id, kind: device.kind, broker_secret: brokerSecret }
+}
+
+/**
+ * Report 4 §7.2 — EMQX hỏi tài khoản này có được nối không: device ID + broker secret trong kho, chưa thu
+ * hồi. Không phân biệt "không có trong kho" với "sai mật khẩu" (so cả khi thiếu bản ghi, cùng thời gian).
+ */
+export async function verifyBrokerCredential(deviceId: string, secret: string): Promise<boolean> {
+  const device = await ProvisionedDevice.findOne({ device_id: deviceId }).select('+broker_secret_hash').lean()
+  const expected = device?.broker_secret_hash ? Buffer.from(device.broker_secret_hash, 'hex') : hashBrokerSecret('')
+  const matches = crypto.timingSafeEqual(expected, hashBrokerSecret(secret))
+  return matches && !!device?.broker_secret_hash && !device.revoked_at
 }
 
 /** Đánh dấu thiết bị đã được kích hoạt lần đầu (giữ mốc cũ nếu đã có) */

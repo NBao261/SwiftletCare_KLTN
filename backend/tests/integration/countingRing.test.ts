@@ -14,11 +14,11 @@ import { CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
-import { publishHouseCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { recordHeartbeat } from '@/services/device.service'
 import type { Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true), publishHouseCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitHouseDeviceStatusChange: jest.fn() }))
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
@@ -39,7 +39,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  ;(publishHouseCommand as jest.Mock).mockReturnValue(true)
+  ;(publishDeviceConfig as jest.Mock).mockReturnValue(true)
   await Promise.all([AuditLog, CameraNode, Farm, House, User].map(m => (m as typeof User).deleteMany({})))
 })
 
@@ -72,7 +72,7 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
     const res = await put(t.expert, { points: RING, into_ring_is_exit: true, extra: 1 }).expect(200)
     expect(res.body.data.rtsp_url).toBeUndefined()
     expect(res.body.data.ring_delivered).toBe(true)
-    expect(publishHouseCommand).toHaveBeenCalledWith(String(farm._id), String(house._id), 'config/update',
+    expect(publishDeviceConfig).toHaveBeenCalledWith(camera.device_id,
       { deviceId: camera.device_id, counting_ring: { points: RING, into_ring_is_exit: true } })
 
     await put(t.expert, { points: RING.slice(0, 3), into_ring_is_exit: false }).expect(200)
@@ -90,7 +90,7 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
     await put(t.owner, { points: RING, into_ring_is_exit: true }).expect(403)
     const other = await seed()
     await other.put(other.t.expert, { points: RING, into_ring_is_exit: true }, camera._id).expect(403)
-    expect(publishHouseCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -103,12 +103,12 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
   ])('từ chối %s', async (_name, body) => {
     const { put, t } = await seed()
     await put(t.expert, body).expect(422)
-    expect(publishHouseCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 
   it('broker mất kết nối vẫn lưu, báo ring_delivered=false; camera đã gỡ thì 409', async () => {
     const { camera, put, t } = await seed()
-    ;(publishHouseCommand as jest.Mock).mockReturnValue(false)
+    ;(publishDeviceConfig as jest.Mock).mockReturnValue(false)
     const res = await put(t.expert, { points: RING, into_ring_is_exit: true }).expect(200)
     expect(res.body.data.ring_delivered).toBe(false)
     expect((await CameraNode.findById(camera._id))!.counting_ring).toBeDefined()
@@ -125,19 +125,19 @@ describe('gửi lại vòng đếm khi nút AI kết nối lại', () => {
     jest.clearAllMocks()
 
     await recordHeartbeat({ deviceId: camera.device_id } as never)
-    expect(publishHouseCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
 
     await CameraNode.updateOne({ _id: camera._id }, { status: 'OFFLINE' })
     await recordHeartbeat({ deviceId: camera.device_id } as never)
     await recordHeartbeat({ deviceId: camera.device_id, justConnected: true } as never)
-    expect(publishHouseCommand).toHaveBeenCalledTimes(2)
-    expect((publishHouseCommand as jest.Mock).mock.calls[0][3]).toMatchObject({ deviceId: camera.device_id, counting_ring: { points: RING } })
+    expect(publishDeviceConfig).toHaveBeenCalledTimes(2)
+    expect((publishDeviceConfig as jest.Mock).mock.calls[0][1]).toMatchObject({ deviceId: camera.device_id, counting_ring: { points: RING } })
   })
 
   it('camera chưa có vòng do chuyên gia vẽ thì không gửi gì (pipeline dùng config.yaml)', async () => {
     const { camera } = await seed()
     await CameraNode.updateOne({ _id: camera._id }, { status: 'OFFLINE' })
     await recordHeartbeat({ deviceId: camera.device_id, justConnected: true } as never)
-    expect(publishHouseCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 })

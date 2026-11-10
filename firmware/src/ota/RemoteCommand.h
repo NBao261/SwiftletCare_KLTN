@@ -1,28 +1,35 @@
 /**
- * RemoteCommand – đọc lệnh từ xa trong `config/update` (TICKET-FR-008, Flow 15)
+ * RemoteCommand – đọc phong bì lệnh trên topic `cmd` (Report 4 §7.2, BR-35, Flow 15)
  *
  * C++ thuần (không include Arduino) để chạy unit test trên host: pio test -e native
  *
- * Backend (`device.service#sendRemoteCommand`) gửi chung topic `config/update` với gói
- * ngưỡng, phân biệt bằng trường `command`:
- *   {"deviceId":"…","command":"RESTART"}
- *   {"deviceId":"…","command":"OTA","ota":{"version":"1.4.1","url":"https://…","sha256":"<64 hex>"}}
- * Không có `command` = gói cấu hình thường (PUSH_CONFIG, ngưỡng, lịch loa) → NONE.
+ *   {"commandId":"…","type":"RELAY","issuedAt":1770000000000,
+ *    "payload":{"relayName":"misting","state":true,"durationMs":600000}}
+ *
+ * type: RELAY, CLEAR_OVERRIDE (`relayName` tuỳ chọn), AUDIO (`action` play|stop, `track`), RESTART,
+ * OTA (`version`, `url`, `sha256`). Thiếu `commandId` hoặc `issuedAt` là lệnh sai: bỏ.
  */
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
 
 struct RemoteCommand {
-  enum Type { NONE, RESTART, OTA, INVALID };
-  Type type = NONE;
+  enum Type { INVALID, RELAY, CLEAR_OVERRIDE, AUDIO, RESTART, OTA };
+  Type type = INVALID;
+  char commandId[40] = "";
+  uint64_t issuedAt = 0;
+  // RELAY, CLEAR_OVERRIDE
+  char relayName[16] = "";
+  bool state = false;
+  uint32_t durationMs = 0; // 0: lệnh không nêu thời hạn
+  // AUDIO
+  bool audioPlay = false;
+  int track = 0;
+  // OTA
   char version[32] = "";
   char url[256] = "";
   char sha256[65] = "";
   const char *error = ""; // lý do khi INVALID — chỉ để log
-  // BR-35 — xem CommandFilter.h. Trống / 0 khi backend cũ không gửi
-  char commandId[40] = "";
-  uint64_t issuedAt = 0;
 };
 
 /** `runningVersion`: FIRMWARE_VERSION đang chạy — OTA trùng bản bị từ chối như backend */
