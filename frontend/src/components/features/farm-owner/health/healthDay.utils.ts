@@ -1,6 +1,9 @@
 import type { HealthTranslate } from '@/constants/health.i18n';
 import type { HealthReason } from '@/types';
 
+// Nút phụ trắng của trang Sức khỏe (Mức chỉ số, Tải CSV, Đánh giá): rê chuột đổi sang đen chữ trắng
+export const HOVER_DARK_BUTTON = 'hover:border-charcoal hover:bg-charcoal hover:text-white';
+
 // Ngày 'YYYY-MM-DD' theo giờ Việt Nam (backend đánh giá theo ngày giờ VN)
 export function vietnamDate(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(now);

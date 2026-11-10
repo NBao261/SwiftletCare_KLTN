@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
-import { isRatingDeadlineNear, lastRatingDay } from '@/components/features/farm-owner/health/healthDay.utils';
+import { HOVER_DARK_BUTTON, isRatingDeadlineNear, lastRatingDay } from '@/components/features/farm-owner/health/healthDay.utils';
 import { Button, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { NO_VALUE } from '@/constants/display';
@@ -66,7 +66,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
         header: t('col.actions'),
         align: 'right',
         render: day => (day.my_rating_state === 'PENDING'
-          ? <Button size="sm" variant="secondary" onClick={event => { event.stopPropagation(); onRate(day); }}>{t('action.rate')}</Button>
+          ? <Button size="sm" variant="secondary" className={HOVER_DARK_BUTTON} onClick={event => { event.stopPropagation(); onRate(day); }}>{t('action.rate')}</Button>
           : <Button size="sm" variant="secondary" onClick={event => { event.stopPropagation(); onView(day); }}>{t('action.view')}</Button>),
       },
     ];

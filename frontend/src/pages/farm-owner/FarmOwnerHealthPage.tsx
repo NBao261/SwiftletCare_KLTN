@@ -9,7 +9,7 @@ import HealthDayTable from '@/components/features/farm-owner/health/HealthDayTab
 import HealthLevelsModal from '@/components/features/farm-owner/health/HealthLevelsModal';
 import HealthRatingModal from '@/components/features/farm-owner/health/HealthRatingModal';
 import HealthReportSection from '@/components/features/farm-owner/health/HealthReportSection';
-import { shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
+import { HOVER_DARK_BUTTON, shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import { Button, EmptyState, FilterChip, SectionCard } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
@@ -176,13 +176,14 @@ export default function FarmOwnerHealthPage(): JSX.Element {
               <Button
                 variant="secondary"
                 size="sm"
+                className={HOVER_DARK_BUTTON}
                 disabled={!house}
                 title={house ? undefined : t('page.levelsNeedHouse')}
                 onClick={() => setIsLevelsOpen(true)}
               >
                 {t('page.levels')}
               </Button>
-              <Button variant="secondary" size="sm" disabled={!csvScope} loading={isExporting} onClick={() => void handleExport()}>
+              <Button variant="secondary" size="sm" className={HOVER_DARK_BUTTON} disabled={!csvScope} loading={isExporting} onClick={() => void handleExport()}>
                 {t('page.export')}
               </Button>
             </div>
