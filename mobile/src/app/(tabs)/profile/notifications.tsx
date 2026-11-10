@@ -12,16 +12,20 @@ import { Spacing, Radius } from '@/constants/theme'
 import { useMarkAllNotificationsRead } from '@/hooks/notification/useMarkAllNotificationsRead'
 import { useMarkNotificationRead } from '@/hooks/notification/useMarkNotificationRead'
 import { useNotifications } from '@/hooks/notification/useNotifications'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { InAppNotification } from '@/types'
 import { formatTimeAgo } from '@/utils/date.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_NOTIFICATIONS } from '@/utils/navigation.utils'
 
 /** Hộp thông báo trong app (EXPERT-FR-007): mới nhất trước, chạm để đánh dấu đã đọc và mở cảnh báo hoặc báo cáo */
 export default function NotificationsScreen() {
   const palette = usePalette()
+  // Mở từ chuông ở Trang chủ thì ‹ về Trang chủ, không thì về trang Tài khoản
+  const returnBack = useReturnBack()
   const user = useAuthStore(state => state.user)
   const query = useNotifications()
   const markRead = useMarkNotificationRead()
@@ -37,7 +41,10 @@ export default function NotificationsScreen() {
     if (notification.ref?.kind === 'alert') {
       router.push({ pathname: '/alert/[alertId]', params: { alertId: notification.ref.id } })
     } else if (notification.ref?.kind === 'health_report') {
-      router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'reports', reportId: notification.ref.id } })
+      router.navigate({
+        pathname: '/(tabs)/analytics',
+        params: { tab: 'reports', reportId: notification.ref.id, returnTo: RETURN_TO_NOTIFICATIONS },
+      })
     }
   }
 
@@ -102,7 +109,7 @@ export default function NotificationsScreen() {
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader
         title={t('Thông báo')}
-        onBack={() => router.back()}
+        onBack={returnBack ?? (() => router.back())}
         right={
           unreadCount > 0 ? (
             <Button

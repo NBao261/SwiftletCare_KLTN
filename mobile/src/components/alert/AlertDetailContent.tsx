@@ -42,6 +42,8 @@ interface AlertDetailContentProps {
   onLeave?: () => void
   // Thông báo ngắn sau khi xác nhận, phán quyết
   onMessage?: (message: string) => void
+  // Màn tầng / phân tích mở từ đây có nút ‹ quay về đây: route chi tiết hoặc tab Cảnh báo (sheet)
+  returnTo: string
 }
 
 // Nội dung chi tiết một cảnh báo (đặc tả §3), dùng chung cho sheet ở tab Cảnh báo và route alert/[alertId]:
@@ -52,6 +54,7 @@ export function AlertDetailContent({
   isReady,
   onLeave,
   onMessage,
+  returnTo,
 }: AlertDetailContentProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
@@ -89,7 +92,10 @@ export function AlertDetailContent({
     isInferred &&
     alert.status !== 'RESOLVED' &&
     canPerform(user, 'setAlertVerdict', { farmHasExpert: farm ? farmHasExpert(farm) : undefined })
-  const controllers = (sensorNodesQuery.data?.data ?? []).filter(node => node.zone_id === alert.zone_id)
+  // Chỉ controller ONLINE mới nhận được lệnh điều khiển tay
+  const controllers = (sensorNodesQuery.data?.data ?? []).filter(
+    node => node.zone_id === alert.zone_id && node.status === 'ONLINE',
+  )
   const canControl = canPerform(user, 'controlRelay') && isEnvironmentAlert(alert) && controllers.length > 0
   const selectedController = controllers.find(node => node._id === relaySelection?.controllerId) ?? null
   const detailLines = describeAlertDetail(alert)
@@ -101,10 +107,10 @@ export function AlertDetailContent({
     if (!houseId) return
     onLeave?.()
     if (alert.type === 'LOW_RETURN_RATE') {
-      router.navigate({ pathname: '/(tabs)/analytics', params: { houseId, tab: 'birds' } })
+      router.navigate({ pathname: '/(tabs)/analytics', params: { houseId, tab: 'birds', returnTo } })
       return
     }
-    router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId, zoneId: alert.zone_id ?? '' } })
+    router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId, zoneId: alert.zone_id ?? '', returnTo } })
   }
 
   return (

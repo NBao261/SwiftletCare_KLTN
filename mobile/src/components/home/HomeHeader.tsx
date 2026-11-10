@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { getInitials } from '@/utils/name.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 const AVATAR_SIZE = 44
 
@@ -53,7 +54,7 @@ export function HomeHeader() {
             icon={BellIcon}
             label={t('Thông báo')}
             badgeCount={unreadCount}
-            onPress={canPerform(user, 'viewOwnerProfile') ? () => router.push('/(tabs)/profile/notifications') : undefined}
+            onPress={canPerform(user, 'viewOwnerProfile') ? () => router.push({ pathname: '/(tabs)/profile/notifications', params: { returnTo: RETURN_TO_HOME } }) : undefined}
           />
         </View>
       }

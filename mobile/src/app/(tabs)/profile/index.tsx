@@ -57,6 +57,7 @@ import { formatDate } from '@/utils/date.utils'
 import { getRoleLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t, translate } from '@/utils/i18n.utils'
+import { RETURN_TO_PROFILE } from '@/utils/navigation.utils'
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -238,12 +239,15 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
               icon={ChartLineIcon}
               title={t('Báo cáo sức khỏe')}
               caption={t('Ngày, tuần, tháng')}
-              onPress={() => router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'reports' } })}
+              onPress={() => router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'reports', returnTo: RETURN_TO_PROFILE } })}
             />
             <ProfileShortcutCard
               icon={ClipboardTextIcon}
               title={t('Chấm điểm ngày')}
-              caption={t('{count} ngày chờ chấm', { count: pendingDaysQuery.data?.length ?? 0 })}
+              // Chưa có số (đang tải, lỗi) thì không hiện "0 ngày" giả
+              caption={
+                pendingDaysQuery.data ? t('{count} ngày chờ chấm', { count: pendingDaysQuery.data.length }) : '_'
+              }
               onPress={() => router.navigate('/(tabs)/home')}
               isComingSoon={!HAS_PENDING_HEALTH_DAYS_API}
             />
