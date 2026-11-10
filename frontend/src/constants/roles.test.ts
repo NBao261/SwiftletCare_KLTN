@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canAccessPath, getRoleHomePath } from '@/constants/roles'
+import { DEVICE_LIST_ROLES, FARM_STRUCTURE_ROLES, canAccessPath, getRoleHomePath } from '@/constants/roles'
 import type { Role } from '@/types'
 
 const FO: Role = 'FARM_OWNER'
@@ -31,6 +31,13 @@ const MATRIX: Record<string, Role[]> = {
   '/domain-expert/queue': [DE],
   '/settings': ROLES,
 }
+
+describe('nhóm role của route (RequireRole)', () => {
+  it('trang farm, nhà, Zone không có Admin (số liệu môi trường); /devices có Admin', () => {
+    expect(FARM_STRUCTURE_ROLES).not.toContain(ADMIN)
+    expect(DEVICE_LIST_ROLES).toEqual(expect.arrayContaining([ADMIN, FO, DE, FT]))
+  })
+})
 
 describe('canAccessPath — ma trận quyền web (G-20)', () => {
   for (const [path, allowed] of Object.entries(MATRIX)) {

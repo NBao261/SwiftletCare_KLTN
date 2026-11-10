@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
-import { ADMIN_ONLY, ALERT_ROLES, DEVICE_SETUP_ROLES, FARM_STRUCTURE_ROLES } from '@/constants/roles'
+import { ADMIN_ONLY, ALERT_ROLES, DEVICE_LIST_ROLES, DEVICE_SETUP_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
 /**
@@ -34,8 +34,8 @@ export const technicianRoutes = (
     <Route
       path="devices"
       element={
-        // G-20: ADMIN vào được /devices (Console Thiết bị); FARM_STRUCTURE_ROLES = ADMIN | FARM_OWNER | DOMAIN_EXPERT | FARM_TECHNICIAN
-        <RequireRole allow={FARM_STRUCTURE_ROLES}>
+        // G-20: Admin vào /devices (console thiết bị mọi farm) cùng các role trang trại
+        <RequireRole allow={DEVICE_LIST_ROLES}>
           <DevicesIndexRoute />
         </RequireRole>
       }

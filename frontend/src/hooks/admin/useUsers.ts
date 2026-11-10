@@ -121,12 +121,6 @@ export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = 
   return { records, total, truncated: total > records.length, isLoading: result.isLoading }
 }
 
-/**
- * G-20: POST /admin/technicians đã bị xoá khỏi backend (f9d9522).
- * Farm Technician được Farm Owner mời qua POST /farms/:id/members với role FARM_TECHNICIAN.
- * Hook useCreateTechnician() đã được gỡ bỏ.
- */
-
 /** AUTH-FR-011 — PUT /admin/users/:id/status. Khoá cần lý do, mở khoá không. */
 export function useSetUserStatus() {
   const queryClient = useQueryClient()

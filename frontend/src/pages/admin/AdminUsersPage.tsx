@@ -2,8 +2,6 @@
 // Gọi API thật qua hooks/useUsers.ts (/admin/users, /admin/delete-requests...).
 // Trang chính chỉ lo state/layout — cột bảng (columns.tsx), nhãn dùng chung
 // (constants.ts) và từng modal (*Modal.tsx) nằm ở file riêng trong cùng thư mục.
-// G-20: đã gỡ nút "Tạo tài khoản Technician" — POST /admin/technicians đã xoá khỏi backend (f9d9522).
-// Farm Technician được Farm Owner mời qua POST /farms/:id/members với role FARM_TECHNICIAN.
 import { useState } from 'react'
 import { useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
 import { ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
@@ -35,8 +33,9 @@ const DEFAULT_SORT_DIR: SortDirection = 'desc'
  */
 type UserTab = 'staff' | 'customers'
 const TABS: { key: UserTab; label: string; description: string; roles: Role[] }[] = [
-  { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên và kỹ thuật viên nhà yến', roles: ['ADMIN', 'FARM_TECHNICIAN'] },
-  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến và chuyên gia', roles: ['FARM_OWNER', 'DOMAIN_EXPERT'] },
+  // Farm Technician là nhân viên của chủ farm (được mời vào farm), không phải nhân viên hệ thống — G-20
+  { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên', roles: ['ADMIN'] },
+  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến, chuyên gia và kỹ thuật viên nhà yến', roles: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] },
 ]
 
 export default function AdminUsersPage() {
@@ -49,7 +48,6 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<UsersSortKey>(DEFAULT_SORT_BY)
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR)
-  // G-20: đã gỡ nút tạo tài khoản Technician (POST /admin/technicians đã xoá khỏi backend)
   const [viewTarget, setViewTarget] = useState<User | null>(null)
   const [lockTarget, setLockTarget] = useState<User | null>(null)
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
@@ -127,8 +125,7 @@ export default function AdminUsersPage() {
         }
       >
 
-        {/* Hàng 1: tìm kiếm (G-20: đã gỡ nút "+ Tạo tài khoản" vì POST /admin/technicians đã xoá khỏi backend;
-            Farm Technician được Farm Owner mời qua POST /farms/:id/members với role FARM_TECHNICIAN). */}
+        {/* Hàng 1: tìm kiếm. Admin không tạo tài khoản: Farm Owner mời kỹ thuật viên, chuyên gia vào farm (AUTH-FR-010) */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[200px] flex-1">
             <SearchInput
@@ -186,8 +183,6 @@ export default function AdminUsersPage() {
         <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
       </SectionCard>
 
-      {/* G-20: CreateUserModal giữ lại trong file nhưng nút mở đã bị ẩn (POST /admin/technicians đã xoá).
-          Nhi sẽ cập nhật trong PR G-20 nếu muốn thêm modal mời FARM_TECHNICIAN qua API mới. */}
       <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} />
       <LockUserModal user={lockTarget} onClose={() => setLockTarget(null)} />
       <UnlockUserModal user={unlockTarget} onClose={() => setUnlockTarget(null)} />

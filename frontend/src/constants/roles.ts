@@ -16,10 +16,11 @@ export const ROLE_LABEL: Record<Role, string> = translated({
  * (isPrimaryOwner), khác với nhãn chung ở trên — cố ý không dùng lại ROLE_LABEL
  * để tránh nhầm lẫn về quyền sở hữu farm.
  */
-export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>, string> = {
+export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>, string> = {
   // getter: đọc ROLE_LABEL (dịch lúc đọc) mỗi lần dùng — gán giá trị thẳng thì nhãn đóng băng theo ngôn ngữ lúc import
   get FARM_OWNER() { return `${ROLE_LABEL.FARM_OWNER} (${t('thành viên')})` },
   get DOMAIN_EXPERT() { return ROLE_LABEL.DOMAIN_EXPERT },
+  get FARM_TECHNICIAN() { return ROLE_LABEL.FARM_TECHNICIAN },
 }
 
 /*
@@ -44,8 +45,12 @@ export const FARM_SIDE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
 /** Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc — khớp backend harvests (canRead/canWrite). */
 export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
 
-/** Trang trại và Thiết bị: Farm Owner quản lý, Domain Expert chỉ đọc, Farm Technician xem nhà được giao, Admin xem mọi farm qua /devices (G-20). */
-export const FARM_STRUCTURE_ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
+/** Trang trại (/farms, nhà, Zone): Farm Owner quản lý, Domain Expert chỉ đọc, Farm Technician xem nhà được giao.
+ * Không có Admin: trang nhà/Zone có số liệu môi trường, Admin không xem và không quản lý farm (Report 3 §2.4). */
+export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
+
+/** Danh sách thiết bị (/devices): các role trang trại + Admin (console thiết bị mọi farm, chỉ thiết bị và cảnh báo thiết bị — G-20). */
+export const DEVICE_LIST_ROLES: Role[] = ['ADMIN', ...FARM_STRUCTURE_ROLES]
 
 /** Lắp thiết bị (FARM-FR-010/011): chỉ Farm Owner (G-20: FARM_TECHNICIAN và ADMIN gọi API này nhận 403). */
 export const DEVICE_SETUP_ROLES: Role[] = ['FARM_OWNER']
@@ -96,9 +101,9 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },
   { path: '/dashboard',        roles: FARM_SIDE_ROLES },
   { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
-  { path: '/devices',          roles: FARM_STRUCTURE_ROLES },
+  { path: '/devices',          roles: DEVICE_LIST_ROLES },
   { path: '/alerts',           roles: ALERT_ROLES },
-  { path: '/farms',            roles: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] },
+  { path: '/farms',            roles: FARM_STRUCTURE_ROLES },
   { path: '/onboarding',       roles: DEVICE_SETUP_ROLES },
   { path: '/ota',              roles: ADMIN_ONLY },
   { path: '/users',            roles: ADMIN_ONLY },
