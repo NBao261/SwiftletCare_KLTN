@@ -5,6 +5,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { RetryLine } from '@/components/common/RetryLine'
 import { BorderWidth, Spacing } from '@/constants/theme'
 import { useZoneRelayOverrides } from '@/hooks/analytics/useZoneRelayOverrides'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -26,7 +27,7 @@ function getEndReasonLabel(log: RelayOverrideLog): string {
   return t('Đang chạy')
 }
 
-// Một dòng: relay và trạng thái ép, người bật, bắt đầu – kết thúc, lý do kết thúc
+// Một dòng: relay và trạng thái ép, người bật, bắt đầu – kết thúc, lý do kết thúc, có xác nhận cảnh báo không
 function OverrideRow({ log, hasDivider }: { log: RelayOverrideLog; hasDivider: boolean }) {
   const palette = usePalette()
   const endText = log.ended_at ? formatDateTime(log.ended_at) : t('đang chạy')
@@ -43,6 +44,12 @@ function OverrideRow({ log, hasDivider }: { log: RelayOverrideLog; hasDivider: b
       <Text variant="small" color={palette.textSecondary}>
         {`${log.started_by?.full_name ?? '_'} · ${formatDateTime(log.started_at)} – ${endText}`}
       </Text>
+      {/* ENV-FR-019: bật bơm lúc Zone có cảnh báo cảm biến/phun sương, người bật đã xác nhận */}
+      {log.alert_confirmed && (
+        <Text variant="small" weight="semiBold" color={palette.alert}>
+          {t('Đã xác nhận cảnh báo khi bật')}
+        </Text>
+      )}
     </View>
   )
 }
@@ -62,9 +69,7 @@ export function OverrideHistoryCard({ zoneId }: { zoneId: string }) {
       {overridesQuery.isLoading ? (
         <Skeleton width="100%" height={SKELETON_HEIGHT} />
       ) : overridesQuery.isError ? (
-        <Text variant="small" color={palette.textSecondary} onPress={() => overridesQuery.refetch()}>
-          {t('Không tải được. Chạm để thử lại')}
-        </Text>
+        <RetryLine message={t('Không tải được')} onRetry={() => overridesQuery.refetch()} />
       ) : overrides.length === 0 ? (
         <Text variant="small" color={palette.textSecondary}>
           {t('Chưa có lần điều khiển tay nào')}
