@@ -99,7 +99,7 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
   const last = lastPersisted.get(nodeId)
   const persist = isStale || !last || (anomaly && !last.anomaly) || sampleTime - last.at >= TELEMETRY_PERSIST_INTERVAL_MS
   if (persist) {
-    await Telemetry.create({
+    const stored = await Telemetry.create({
       node_id: node._id,
       zone_id: node.zone_id,
       timestamp: new Date(sampleTime),
@@ -114,7 +114,11 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
       misting_on:      payload.relay_states?.misting,
       ventilation_on:  payload.relay_states?.ventilation,
       is_anomaly: anomaly,
+    }).catch((err: { code?: number }) => {
+      if (err.code === 11000) return null // bản QoS 1 giao lại, mẫu đã có
+      throw err
     })
+    if (!stored) return
     if (!isStale) lastPersisted.set(nodeId, { at: sampleTime, anomaly })
   }
 

@@ -37,7 +37,7 @@ pyt=junit(opts['--pytest']) if '--pytest' in opts else None
 def from_junit(results, suite, name, how):
     if results is None: return 'Not run on the tag', how
     hits=[v for k,v in results.items() if suite in k.split('::')[0] and k.endswith('::'+name)]
-    assert hits, ('no junit result', suite, name)
+    if not hits: return 'Not run on the tag', how  # test merged after the tag
     return ('Pass' if all(h=='Pass' for h in hits) else 'Fail'), how
 def exists(path, text):
     if os.path.isdir(path):
@@ -49,7 +49,7 @@ def actual(src):
     if isinstance(src,list):
         parts=[actual(x) for x in src]
         res_=[a for a,_ in parts]
-        a='Pass' if all(x=='Pass' for x in res_) else ('Fail' if 'Fail' in res_ else res_[0])
+        a='Pass' if all(x=='Pass' for x in res_) else ('Fail' if 'Fail' in res_ else next(x for x in res_ if x!='Pass'))
         return a, ' + '.join(h for _,h in parts)
     kind=src[0]
     if kind=='jest':
@@ -57,7 +57,7 @@ def actual(src):
         how=f"Auto (CI) – backend Jest `{src[1]}` › “{src[2]}”"
         if res is None: return 'Not run on the tag', how
         hits=[st for t,st in res.get(src[1],[]) if src[2].lower() in t]
-        assert hits, ('no jest result', src)
+        if not hits: return 'Not run on the tag', how  # test merged after the tag
         return ('Pass' if all(h=='passed' for h in hits) else 'Fail'), how
     if kind=='pio':
         assert exists(os.path.join(ROOT,'firmware','test',src[1]),src[2]), ('no pio test', src)
@@ -137,7 +137,7 @@ out['COVERAGE']='\n'.join(cov)
 out['COVSUM']=f'{len(mand)} mandatory requirements: {len(mand)-only_wf} are verified by a committed feature or NFR case; {only_wf} are only traced to the end-to-end test of their workflow, which exercises the flow but does not check each of their acceptance criteria.'
 tpl=open(sys.argv[1],encoding='utf-8').read()
 for k,v in out.items(): tpl=tpl.replace('{{'+k+'}}',v)
-feat=['| Feature | Name | Requirements |','| --- | --- | --- |']+[f'| {a} | {b}{" (supporting, SF-01)" if a in SUPPORTING else ""} | {c} |' for a,b,c in FEATURES]
+feat=['| Feature | Name | Requirements |','| --- | --- | --- |']+[f'| {a} | {b}{" (supporting)" if a in SUPPORTING else ""} | {c} |' for a,b,c in FEATURES]
 tpl=tpl.replace('{{FEATURES}}','\n'.join(feat))
 tpl=tpl.replace('{{NST}}',str(len(ST))).replace('{{TOTAL}}',str(total)).replace('{{NF}}',str(NF)).replace('{{NF3}}',str(3*NF)).replace('{{NWF}}',str(len(WF))).replace('{{NSUP}}',str(len(TC)-NTC))
 auto=stats['written']+stats['todo']

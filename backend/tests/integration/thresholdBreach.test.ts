@@ -22,7 +22,7 @@ import { ingestTelemetry } from '@/services/telemetry.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import type { Role, TelemetryPayload } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitAlertNew: jest.fn(), emitDeviceStatusChange: jest.fn(), emitNotificationNew: jest.fn(),
 }))

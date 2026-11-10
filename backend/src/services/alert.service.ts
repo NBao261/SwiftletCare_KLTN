@@ -113,6 +113,8 @@ const ALERT_TYPE_ALIAS: Record<string, AlertType> = {
 const MAX_RESET_REASON_LENGTH = 32
 
 export interface CreateAlertInput {
+  /** Report 4 §7.2 — mã sự kiện của thiết bị, chống tính trùng khi QoS 1 giao lại */
+  eventId?: string
   farmId: string
   zoneId?: string
   /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8; không đi kèm zoneId */
@@ -162,6 +164,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     status: { $in: OPEN_STATUSES },
   }).select('_id created_at last_seen_at').lean()
   if (open) {
+    // Giữ `eventId` mới nhất: bản QoS 1 giao lại của lần báo này cũng bị bỏ
+    if (input.eventId) await Alert.updateOne({ _id: open._id }, { $set: { event_id: input.eventId } })
     const lastSeen = (open.last_seen_at ?? open.created_at).getTime()
     if (now.getTime() - lastSeen >= ALERT_SEEN_UPDATE_MS) {
       await Alert.updateOne({ _id: open._id }, {
@@ -186,6 +190,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     snapshot_url: input.snapshotUrl,
     metadata:     input.metadata,
     details:      input.details,
+    event_id:     input.eventId,
     status:       'ACTIVE',
   })
 
@@ -229,7 +234,10 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     throw BadRequestError(`Loại cảnh báo không hợp lệ: "${type}"`)
   }
 
+  // NFR-06 c, Report 4 §7.2 — QoS 1 có thể giao lại: mỗi `eventId` của 1 thiết bị chỉ tính 1 lần
+  const eventId = typeof message.eventId === 'string' && message.eventId ? message.eventId : undefined
   const common = {
+    eventId,
     type:        type as AlertType,
     severity:    message.severity as AlertSeverity | undefined, // createAlert giới hạn mức cho loại không leo thang
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
@@ -240,6 +248,10 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
 
   const node = await SensorNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('zone_id reset_reason').lean()
   if (node) {
+    if (eventId && (await Alert.exists({ node_id: node._id, event_id: eventId }))) {
+      logger.debug('Bỏ cảnh báo giao lại', { deviceId, eventId })
+      return null
+    }
     // THREAT-FR-012 — lý do khởi động lại: lấy trong cảnh báo, firmware không gửi thì lấy
     // từ heartbeat gần nhất (applyDiagnostics lưu `reset_reason` ở mỗi heartbeat)
     if (type === 'UNEXPECTED_RESTART') {

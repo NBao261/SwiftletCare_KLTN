@@ -6,10 +6,10 @@
 import mongoose, { Types } from 'mongoose'
 import { migrateRelayOverrides } from '@/scripts/migrate-relay-overrides.script'
 import { expireManualOverrides } from '@/services/device.service'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceCommand } from '@/mqtt/mqtt.client'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(), disconnectUser: jest.fn(),
@@ -84,9 +84,9 @@ describe('migrateRelayOverrides', () => {
     await migrateRelayOverrides()
     await expect(expireManualOverrides()).resolves.toBe(3)
 
-    const sent = jest.mocked(publishCommand).mock.calls.map(call => call[4] as { action: string; relayName: string })
-    expect(sent.map(c => c.action)).toEqual(['clear_override', 'clear_override', 'clear_override'])
-    expect(sent.map(c => c.relayName).sort()).toEqual(['misting', 'speaker', 'ventilation'])
+    const sent = jest.mocked(publishDeviceCommand).mock.calls
+    expect(sent.map(call => call[1])).toEqual(['CLEAR_OVERRIDE', 'CLEAR_OVERRIDE', 'CLEAR_OVERRIDE'])
+    expect(sent.map(call => (call[2] as { relayName: string }).relayName).sort()).toEqual(['misting', 'speaker', 'ventilation'])
     expect((await nodes().findOne({ _id: node._id }))!.control_mode).toBe('AUTO')
   })
 })

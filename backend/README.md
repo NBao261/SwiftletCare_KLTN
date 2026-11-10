@@ -1,6 +1,6 @@
 # SwiftletCare Backend
 
-Node.js 22 + Express 4 + TypeScript + MongoDB + EMQX (MQTT) + Socket.io. Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md)); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.3, §6–7). Hai Report thắng `SwiftletCare_SRS.md` khi lệch nhau.
+Node.js 22 + Express 4 + TypeScript + MongoDB + EMQX (MQTT) + Socket.io. Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md)); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.3, §6–7).
 
 > **Phạm vi sau Review 1.** Khác so với bản v1.24.0:
 >
@@ -161,7 +161,6 @@ src/
 
 > Bảng này chỉ nêu tổng quan theo module. Muốn biết 1 FR cụ thể còn thiếu gì so với
 > Report 3, tra `docs/reports/project-tracking.md` §6 — bảng dưới đây dễ bị lỗi thời.
-> (Cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật.)
 
 | Module | Trạng thái | Ghi chú |
 | ------ | ---------- | ------- |
