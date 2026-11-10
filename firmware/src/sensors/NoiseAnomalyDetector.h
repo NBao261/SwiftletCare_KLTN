@@ -35,7 +35,7 @@ class NoiseAnomalyDetector {
 public:
   /**
    * Hai tham số Domain Expert chỉnh theo Zone (EXPERT-FR-008), nhận qua MQTT
-   * config/update (noise_margin_db, noise_min_sec — xem Config.h). Mặc định là
+   * topic `config` (noise_margin_db, noise_min_sec — xem Config.h). Mặc định là
    * giá trị chọn theo cảm quan (+15 dB ≈ ồn gấp ~5 lần), chưa có số đo thật.
    */
   struct Tuning {

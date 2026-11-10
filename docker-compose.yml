@@ -35,8 +35,10 @@ services:
     environment:
       EMQX_NAME: swiftletcare
       EMQX_NODE__COOKIE: swiftletcare_secret
-      # Allow anonymous for dev (disable in production)
-      EMQX_AUTH__ANONYMOUS__ALLOW_ANONYMOUS: "true"
+      # Mọi kết nối hỏi backend chạy trên máy host (deploy/emqx/, NFR-10 d). Trùng MQTT_AUTH_KEY trong backend/.env
+      EMQX_AUTHENTICATION__1__URL: "http://host.docker.internal:3000/internal/mqtt-auth?key=${MQTT_AUTH_KEY:-CHANGE_ME}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "1883:1883"    # MQTT (dev only, non-TLS)
       - "8883:8883"    # MQTT over TLS (SEC-NFR-001)
@@ -45,6 +47,8 @@ services:
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
+      - ./deploy/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      - ./deploy/emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
     healthcheck:
       test: ["CMD", "emqx", "ping"]
       interval: 10s

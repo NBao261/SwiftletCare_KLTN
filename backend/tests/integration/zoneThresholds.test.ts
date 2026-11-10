@@ -15,14 +15,14 @@ import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { updateNodeThresholds } from '@/services/device.service'
 import { updateZoneThresholds } from '@/services/farm.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 
 jest.mock('@/mqtt/mqtt.client', () => ({
   ...jest.requireActual('@/mqtt/mqtt.client'),
-  publishCommand: jest.fn(),
+  publishDeviceConfig: jest.fn(),
 }))
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
@@ -76,7 +76,7 @@ describe.each([
     await update(ctx, { temp_max: '33', co2_max: 1800 })
 
     expect(await thresholdsOf(ctx.zone._id)).toEqual({ ...DEFAULT_THRESHOLDS, temp_max: 33, co2_max: 1800 })
-    expect(publishCommand).toHaveBeenCalledTimes(1)
+    expect(publishDeviceConfig).toHaveBeenCalledTimes(1)
     const [audit] = await AuditLog.find({ action: 'THRESHOLD_UPDATED' }).lean()
     expect(audit.metadata).toMatchObject({ source: 'MANUAL', after: { temp_max: 33, co2_max: 1800 } })
   })
@@ -103,7 +103,7 @@ describe.each([
     await expect(update(ctx, body)).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(message) })
 
     expect(await thresholdsOf(ctx.zone._id)).toEqual(DEFAULT_THRESHOLDS)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
     expect(await AuditLog.countDocuments({ action: 'THRESHOLD_UPDATED' })).toBe(0)
   })
 })

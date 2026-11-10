@@ -25,7 +25,7 @@ import { CAMERA_OFFLINE_THRESHOLD_MS, markStaleDevicesOffline, recordHeartbeat }
 import { emitBirdCountUpdate, emitHouseAlertNew, emitHouseDeviceStatusChange } from '@/socket'
 import type { BirdCountPayload } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitBirdCountUpdate: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitHouseDeviceStatusChange: jest.fn(), emitNotificationNew: jest.fn(),
@@ -375,7 +375,7 @@ describe('nút AI: heartbeat, offline, vision/alert (THREAT-FR-010)', () => {
   it('heartbeat đặt ONLINE + model_version; im quá ngưỡng → OFFLINE + EDGE_AI_DEGRADED của nhà; quay lại thì đóng', async () => {
     const { camera, house } = await seed()
     await CameraNode.updateOne({ _id: camera._id }, { status: 'PENDING' })
-    await recordHeartbeat({ deviceId: camera.device_id, firmwareVersion: 'yolo26n-v1' } as never)
+    await recordHeartbeat({ deviceId: camera.device_id, modelVersion: 'yolo26n-v1', fps: 18 } as never)
     expect(await CameraNode.findById(camera._id).lean()).toMatchObject({ status: 'ONLINE', model_version: 'yolo26n-v1' })
     expect(emitHouseDeviceStatusChange).toHaveBeenLastCalledWith(String(house._id), expect.objectContaining({ status: 'ONLINE' }))
 

@@ -1612,7 +1612,7 @@ Kèm theo: cấu hình máy, phiên bản model, mAP50/precision/recall trên t�
 
 Tài liệu cần sửa:
 
-- `SwiftletCare_SRS.md`: phần mô tả đã được cập nhật ở v2.1 (nút AI là PC hoặc máy chủ, 1 class, stream có khung là bắt buộc, VISION-FR-016/017). Còn lại: cập nhật cột trạng thái VISION-FR-001…017 khi từng phần chạy được.
+- SRS nội bộ cũ (`SwiftletCare_SRS.md`, đã xoá 09/11/2026; yêu cầu nay ở Report 3): phần mô tả đã được cập nhật ở v2.1 (nút AI là PC hoặc máy chủ, 1 class, stream có khung là bắt buộc, VISION-FR-016/017). Còn lại: cập nhật cột trạng thái VISION-FR-001…017 khi từng phần chạy được.
 - Ghi rõ các giới hạn bảo mật còn lại của bản demo (mục 15.7) vào phần hạn chế của báo cáo.
 - `CLAUDE.md`: mục AI pipeline và mục trạng thái module.
 - `ai-pipeline/README.md`: cách cài, cấu hình ROI và vạch đếm, cách train lại.

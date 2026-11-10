@@ -59,7 +59,7 @@ router.post  ('/sensor-nodes/:id/audio-tracks/:trackId/play-now', requireRole('F
 router.post  ('/sensor-nodes/:id/audio/stop', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, audioTrackController.stopPlayback)
 router.delete('/sensor-nodes/:id/audio-tracks/:trackId', requireRole('TECHNICIAN'), ...trackParams, validate, audioTrackController.deleteTrack)
 
-// Dời thiết bị sang Zone khác — chỉ khi ONLINE (FARM-FR-007b). Farm Owner (cả Zone nguồn và đích
+// Dời thiết bị sang Zone khác (FARM-FR-007b). Farm Owner (cả Zone nguồn và đích
 // phải thuộc farm của mình, service kiểm) và Technician (MF-10, Report 3 §2.4)
 router.put ('/sensor-nodes/:id/reassign-zone', requireRole('FARM_OWNER','TECHNICIAN'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
 

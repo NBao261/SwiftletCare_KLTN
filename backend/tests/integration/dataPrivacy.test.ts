@@ -13,7 +13,7 @@ import { User } from '@/models/user.model'
 import { completeDeletionRequest } from '@/services/admin.service'
 import { seedOwnerFarm as seed, useTestDb } from '../helpers/ownerFarm'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(), disconnectUser: jest.fn(),

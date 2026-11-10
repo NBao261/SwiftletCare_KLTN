@@ -23,7 +23,7 @@ import * as farmService from '@/services/farm.service'
 import { getTuningSuggestion } from '@/services/tuningSuggestion.service'
 import type { Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true), publishHouseCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitNotificationNew: jest.fn(), emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn() }))
 jest.mock('@/services/telegram.service', () => ({ sendTelegram: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('@/services/tuningSuggestion.service', () => ({ getTuningSuggestion: jest.fn() }))

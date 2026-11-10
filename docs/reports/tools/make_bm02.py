@@ -12,7 +12,7 @@ REPORTS=os.path.dirname(HERE)
 import docx
 from docxfill import *
 from md_tables import tables
-d=docx.Document(os.path.join(REPORTS,'templates','SWP490_R2_BM02_Self_Review_Report.docx'))
+d=docx.Document(os.path.join(REPORTS,'templates','SEP490_R2_BM02_Self_Review_Report.docx'))
 info,findings,top,summary,english=(rows[1:] for _,rows in tables(os.path.join(REPORTS,'bm02-self-review.md')))
 en={r[0]:r[1:] for r in english}
 LOCATION_EN={'Index trong script':'Indexes in the script'}
@@ -43,4 +43,4 @@ for p in [p for p in d.paragraphs if p.text.startswith(('3. ','4. '))]:
     new=p.insert_paragraph_before('')  # a plain body paragraph, moved below the heading
     new.add_run(NOTE if p.text.startswith('3. ') else 'Translated by the team from the AI\'s Vietnamese output (see the note in section 3).')
     p._p.addnext(new._p)
-d.save(os.path.join(REPORTS,'registration','SWP490_R2_BM02_Self_Review_Report_SwiftletCare.docx'))
+d.save(os.path.join(REPORTS,'registration','SEP490_R2_BM02_Self_Review_Report_SwiftletCare.docx'))
