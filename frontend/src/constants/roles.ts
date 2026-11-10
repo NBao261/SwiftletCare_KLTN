@@ -5,7 +5,7 @@ import { t, translated } from '@/i18n'
 export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
-  TECHNICIAN: 'Kỹ thuật viên',
+  FARM_TECHNICIAN: 'Kỹ thuật viên nhà yến',
   DOMAIN_EXPERT: 'Chuyên gia',
 })
 
@@ -23,10 +23,10 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
 }
 
 /*
- * Nhóm role theo Report 3 §2.4. Khai báo một chỗ để bảng route (`routes/`), menu sidebar
+ * Nhóm role theo Report 3 §2.4 & G-20 (backend f9d9522). Khai báo một chỗ để bảng route (`routes/`), menu sidebar
  * (`components/layouts/<Role>Layout.tsx`) và MENU_ACCESS bên dưới không lệch nhau.
- * Admin không thấy farm nào (chỉ /system/*, /users, /account-requests); Technician chỉ thấy
- * cấu trúc và thiết bị của mọi farm, không thấy số liệu môi trường, đàn chim, thu hoạch.
+ * G-20 — ADMIN có Console thiết bị: xem thiết bị mọi farm (/devices), cảnh báo thiết bị (/alerts), gửi lệnh RESTART/PUSH_CONFIG/OTA.
+ * FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể, chỉ xem cấu trúc/thiết bị nhà đó + gửi RESTART.
  */
 
 /** Màn quyết định của Chuyên gia nuôi yến (/domain-expert/*). */
@@ -44,23 +44,26 @@ export const FARM_SIDE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
 /** Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc — khớp backend harvests (canRead/canWrite). */
 export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
 
-/** Trang trại và Thiết bị: Farm Owner quản lý, Domain Expert chỉ đọc, Technician xem mọi farm. */
-export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN']
+/** Trang trại và Thiết bị: Farm Owner quản lý, Domain Expert chỉ đọc, Farm Technician xem nhà được giao, Admin xem mọi farm qua /devices (G-20). */
+export const FARM_STRUCTURE_ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 
-/** Lắp thiết bị (MF-10, FARM-FR-010/011): Farm Owner và Technician. */
-export const DEVICE_SETUP_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN']
+/** Lắp thiết bị (FARM-FR-010/011): chỉ Farm Owner (G-20: FARM_TECHNICIAN và ADMIN gọi API này nhận 403). */
+export const DEVICE_SETUP_ROLES: Role[] = ['FARM_OWNER']
 
-/** Cảnh báo: Farm Owner xem và xác nhận, Technician chỉ cảnh báo thiết bị; Domain Expert dùng hàng đợi kiểm chứng. */
-export const ALERT_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN']
+/** Cảnh báo: Farm Owner xem và xác nhận, Admin xem cảnh báo thiết bị mọi farm, Farm Technician xem nhà được giao; Domain Expert dùng hàng đợi kiểm chứng. */
+export const ALERT_ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN']
 
-/** Lệnh từ xa và OTA (FARM-FR-013). */
-export const TECHNICIAN_ONLY: Role[] = ['TECHNICIAN']
+/** OTA Firmware và PUSH_CONFIG (FARM-FR-013/009): chỉ Admin gửi được (G-20). */
+export const ADMIN_DEVICE_CMD_ROLES: Role[] = ['ADMIN']
+
+/** RESTART từ xa: Admin (mọi farm) + Farm Owner + Farm Technician (nhà được giao). */
+export const DEVICE_RESTART_ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN']
 
 /** Module SYSTEM (mục 5.11) + quản lý tài khoản toàn hệ thống. */
 export const ADMIN_ONLY: Role[] = ['ADMIN']
 
 /** Mọi role đã đăng nhập — mục menu ai cũng thấy (Cài đặt tài khoản). */
-const ALL_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN', 'DOMAIN_EXPERT']
+const ALL_ROLES: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN', 'ADMIN', 'DOMAIN_EXPERT']
 
 /**
  * Trang "nhà" của mỗi role — dùng cho cả `RoleHomeRedirect` (App.tsx, khi vào
@@ -73,7 +76,7 @@ const ALL_ROLES: Role[] = ['FARM_OWNER', 'TECHNICIAN', 'ADMIN', 'DOMAIN_EXPERT']
 const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
-  TECHNICIAN: '/devices',
+  FARM_TECHNICIAN: '/devices',
   DOMAIN_EXPERT: '/domain-expert/queue',
 }
 
@@ -95,9 +98,9 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
   { path: '/devices',          roles: FARM_STRUCTURE_ROLES },
   { path: '/alerts',           roles: ALERT_ROLES },
-  { path: '/farms',            roles: FARM_STRUCTURE_ROLES },
+  { path: '/farms',            roles: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] },
   { path: '/onboarding',       roles: DEVICE_SETUP_ROLES },
-  { path: '/ota',              roles: TECHNICIAN_ONLY },
+  { path: '/ota',              roles: ADMIN_ONLY },
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
   { path: '/harvests',         roles: HARVEST_ROLES },

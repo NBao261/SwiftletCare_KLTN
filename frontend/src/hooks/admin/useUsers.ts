@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminApi, type CreateTechnicianInput } from '@/apis/admin/users.api'
+import { adminApi } from '@/apis/admin/users.api'
 import type { User, Role, UserStatus, SortDirection } from '@/types'
 
 export type UsersSortKey = 'full_name' | 'email' | 'role' | 'status' | 'created_at'
@@ -122,16 +122,10 @@ export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = 
 }
 
 /**
- * AUTH-FR-005c — Admin chỉ tạo tài khoản Technician (POST /admin/technicians). Farm Owner tự đăng ký,
- * chuyên gia do Primary Owner mời (AUTH-FR-010), Admin là tài khoản gốc seed.
+ * G-20: POST /admin/technicians đã bị xoá khỏi backend (f9d9522).
+ * Farm Technician được Farm Owner mời qua POST /farms/:id/members với role FARM_TECHNICIAN.
+ * Hook useCreateTechnician() đã được gỡ bỏ.
  */
-export function useCreateTechnician() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (input: CreateTechnicianInput) => adminApi.createTechnician(input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
-  })
-}
 
 /** AUTH-FR-011 — PUT /admin/users/:id/status. Khoá cần lý do, mở khoá không. */
 export function useSetUserStatus() {

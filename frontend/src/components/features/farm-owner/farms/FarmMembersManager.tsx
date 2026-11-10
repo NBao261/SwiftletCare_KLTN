@@ -22,10 +22,12 @@ const ROLE_LABEL: Record<MemberRoleKey, FarmKey> = {
   PRIMARY: 'members.role.PRIMARY',
   FARM_OWNER: 'members.role.FARM_OWNER',
   DOMAIN_EXPERT: 'members.role.DOMAIN_EXPERT',
+  // G-20: FARM_TECHNICIAN được Farm Owner gán vào nhà (UI gán nhà do Nhi thực hiện)
+  FARM_TECHNICIAN: 'members.role.FARM_TECHNICIAN',
 }
 
-// Vai trò mời được (swagger POST /farms/:id/members: role FARM_OWNER | DOMAIN_EXPERT)
-const INVITE_ROLES: FarmMemberRole[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
+// Vai trò mời được (G-20: thêm FARM_TECHNICIAN — Farm Owner mời thợ vào farm qua POST /farms/:id/members)
+const INVITE_ROLES: FarmMemberRole[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 
 interface MemberRow {
   userId: string

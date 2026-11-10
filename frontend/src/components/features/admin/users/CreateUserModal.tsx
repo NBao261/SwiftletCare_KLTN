@@ -1,28 +1,22 @@
 import { useState, useEffect, FormEvent } from 'react'
-import { useCreateTechnician } from '@/hooks/admin/useUsers'
 import { PASSWORD_MIN, validateNewUser, type Field, type FormState } from '@/validations/admin/user.validation'
 import { Button, Input, Modal, ModalHeader } from '@/components/ui'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 
 const EMPTY_FORM: FormState = { full_name: '', email: '', phone: '', password: '' }
 
 /**
- * AUTH-FR-005c — Admin chỉ tạo tài khoản Kỹ thuật viên (POST /admin/technicians). Technician thấy thiết bị của
- * mọi farm, không gắn farm nào (FARM-FR-009). Farm Owner tự đăng ký, chuyên gia do Primary Owner mời.
- * Admin tự đặt mật khẩu ban đầu (backend không tự sinh/gửi mail).
- * Lỗi chỉ hiện sau khi người dùng rời ô (blur) hoặc đã bấm submit — không đỏ cả form lúc mới mở.
+ * G-20: POST /admin/technicians đã xoá khỏi backend (f9d9522).
+ * Modal này được giữ lại dưới dạng stub để tránh import-error tạm thời.
+ * Nhi sẽ cập nhật thành modal mời FARM_TECHNICIAN qua API mới trong PR G-20.
  */
 export default function CreateUserModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const createTechnician = useCreateTechnician()
   const push = useToastStore(s => s.push)
-
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
 
-  // Modal không unmount giữa các lần mở (chỉ toggle `open`) — reset form mỗi lần mở lại.
   useEffect(() => {
     if (!open) return
     setForm(EMPTY_FORM)
@@ -40,19 +34,9 @@ export default function CreateUserModal({ open, onClose }: { open: boolean; onCl
     e.preventDefault()
     setSubmitted(true)
     if (!isValid) return
-    createTechnician.mutate(
-      {
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        full_name: form.full_name.trim(),
-        phone: form.phone.replace(/[\s.-]/g, '') || undefined,
-      },
-      {
-        onSuccess: () => { push('Đã tạo tài khoản kỹ thuật viên'); onClose() },
-        // 409 "Email đã được đăng ký"... — backend trả message tiếng Việt sẵn
-        onError: (err) => push(getApiErrorMessage(err, 'Tạo tài khoản thất bại'), 'error'),
-      },
-    )
+    // G-20: API đã bỏ — hiển thị thông báo cho người dùng biết
+    push('Chức năng tạo tài khoản Kỹ thuật viên đã thay đổi. Farm Technician được Farm Owner mời qua trang Trang trại.', 'error')
+    onClose()
   }
 
   const title = t('Tạo tài khoản kỹ thuật viên')
@@ -60,7 +44,7 @@ export default function CreateUserModal({ open, onClose }: { open: boolean; onCl
   return (
     <Modal open={open} onClose={onClose} size="lg" ariaLabel={title}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-        <ModalHeader title={title} description="Kỹ thuật viên thấy thiết bị và cảnh báo thiết bị của mọi trang trại" />
+        <ModalHeader title={title} description="G-20: Chức năng này đã thay đổi. Farm Technician được Farm Owner mời qua trang Trang trại (PUT /farms/houses/:houseId/technicians/:userId)." />
 
         <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2">
           <Input
@@ -94,7 +78,6 @@ export default function CreateUserModal({ open, onClose }: { open: boolean; onCl
             error={showError('phone')}
           />
           <Input
-            // Nhãn gọn; yêu cầu độ dài đã nằm ở placeholder và thông báo lỗi
             label="Mật khẩu"
             type="password"
             required
@@ -108,7 +91,7 @@ export default function CreateUserModal({ open, onClose }: { open: boolean; onCl
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" loading={createTechnician.isPending}>Tạo tài khoản</Button>
+          <Button type="submit">Xác nhận</Button>
         </div>
       </form>
     </Modal>

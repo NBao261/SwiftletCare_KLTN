@@ -13,7 +13,7 @@ interface DeviceListRowProps {
   index?: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  /** Không truyền → ẩn nút (role không có quyền gửi lệnh, VD Farm Owner) */
+  /** Không truyền → ẩn nút (role không có quyền gửi lệnh RESTART) */
   onReboot?: () => void;
   /** Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích */
   rebootUnsupported?: boolean;
@@ -21,6 +21,7 @@ interface DeviceListRowProps {
   onOpenReassign: () => void;
   onOpenReplace: () => void;
   onOpenDecommission: () => void;
+  /** G-20: Chỉ FARM_OWNER mới được đăng ký/dời/gỡ/thay thiết bị và quản lý file loa (ADMIN, FARM_TECHNICIAN → 403) */
   canOnboard: boolean;
 }
 
@@ -47,8 +48,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pu
   ONLINE:   { label: "Online",       cls: "bg-success/15 text-charcoal",     dot: "bg-success", pulse: true, accent: "bg-success" },
   OFFLINE:  { label: "Mất kết nối",  cls: "bg-warmGray/15 text-graphite",    dot: "bg-warmGray", accent: "bg-warmGray/60" },
   PENDING:  { label: "Chờ kết nối",  cls: "bg-climateOrange/15 text-charcoal", dot: "bg-climateOrange", pulse: true, accent: "bg-climateOrange/70" },
-  DEGRADED: { label: "Suy giảm",     cls: "bg-climateOrange/15 text-charcoal", dot: "bg-climateOrange", accent: "bg-climateOrange" },
-  ERROR:    { label: "Lỗi",          cls: "bg-alertRed/10 text-alertRed",    dot: "bg-alertRed", blink: true, accent: "bg-alertRed" },
+  // G-01: đã bỏ DEGRADED và ERROR — SRS 3.1.0 chỉ còn ACTIVE | OFFLINE | DECOMMISSIONED; PENDING cho giai đoạn chờ heartbeat đầu
 }
 
 export default function DeviceListRow({
