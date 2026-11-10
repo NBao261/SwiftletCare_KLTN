@@ -14,6 +14,10 @@ export interface ReportFormat {
 
 export const REPORT_STATUSES: HealthStatus[] = ['GOOD', 'WATCH', 'ACTION', 'INSUFFICIENT_DATA'];
 
+// Trang chi tiết 1 báo cáo; id truyền qua history state, không đưa lên URL (FE_Design 13.16 a)
+export const HEALTH_REPORT_PATH = '/health/report';
+export interface HealthReportState { reportId: string }
+
 export interface ReportFact {
   label: string;
   value: string;
@@ -130,7 +134,8 @@ export function reportDayRows(report: HouseHealthReport, format: ReportFormat): 
   return [...report.days].sort((left, right) => left.date.localeCompare(right.date)).map(day => {
     const flock = returnByDate.get(day.date);
     const rate = flock?.return_rate ?? null;
-    const returnRate = rate === null
+    // Ngày người xem chưa đánh giá (không có trạng thái) che luôn tỷ lệ chim về, như mọi chỉ số khác (BR-31)
+    const returnRate = !day.current_status || rate === null
       ? NO_VALUE
       : `${format.number(rate)} %${flock?.complete ? '' : ` (${t('rd.incomplete')})`}`;
     const ratingItems: ReportRatingItem[] = (day.ratings ?? []).map(rating => ({

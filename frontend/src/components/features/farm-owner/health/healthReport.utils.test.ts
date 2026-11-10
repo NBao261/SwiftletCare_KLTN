@@ -48,10 +48,10 @@ const report: HouseHealthReport = {
 };
 
 describe('reportDayRows', () => {
-  it('xếp ngày cũ trước, ngày chưa đánh giá không có trạng thái, lý do, đánh giá', () => {
+  it('xếp ngày cũ trước, ngày chưa đánh giá không có trạng thái, lý do, đánh giá, tỷ lệ chim về (BR-31)', () => {
     const rows = reportDayRows(report, vi);
     expect(rows.map(row => row.date)).toEqual(['26/10/2026', '27/10/2026']);
-    expect(rows[1]).toMatchObject({ status: null, statusText: 'Chưa đánh giá', reasons: [], ratings: [] });
+    expect(rows[1]).toMatchObject({ status: null, statusText: 'Chưa đánh giá', reasons: [], ratings: [], returnRate: NO_VALUE });
   });
 
   it('ghi lý do, đánh giá kèm ghi chú và đánh dấu ngày thiếu phiên đếm', () => {
@@ -60,7 +60,10 @@ describe('reportDayRows', () => {
     expect(first.reasons).toEqual(['Tiếng ồn: 2 đợt ồn bất thường (lệch nhẹ)']);
     expect(first.ratings).toEqual(['Lan (Chủ nhà yến): Tốt — chim về đủ']);
     expect(first.returnRate).toBe('92.5 %');
-    expect(second.returnRate).toBe('60 % (thiếu phiên)');
+    // Ngày 27 khi người xem đã đánh giá: hiện tỷ lệ, kèm dấu thiếu phiên
+    const rated = { ...report, days: [day('2026-10-27', { current_status: 'GOOD' }), report.days[1]] };
+    expect(reportDayRows(rated, vi)[1].returnRate).toBe('60 % (thiếu phiên)');
+    expect(second.status).toBe(null);
   });
 
   it('không in id nội bộ (EXPERT-FR-013)', () => {

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PlusIcon } from '@phosphor-icons/react';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthReportCreateModal from '@/components/features/farm-owner/health/HealthReportCreateModal';
-import { reportPeriod } from '@/components/features/farm-owner/health/healthReport.utils';
+import { HEALTH_REPORT_PATH, reportPeriod, type HealthReportState } from '@/components/features/farm-owner/health/healthReport.utils';
 import { ActionsMenu, Badge, Button, EmptyState, FilterChip, SectionCard, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { healthDict } from '@/constants/health.i18n';
@@ -31,9 +31,9 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const { t, date, dateTime, exact } = useTranslation(healthDict);
   const apiErrorMessage = useApiErrorMessage();
   const [kind, setKind] = useState<HealthReportKind | undefined>(undefined);
-  // Chi tiết là trang riêng /health/reports/:id (ngăn bên hẹp, khó đọc bảng)
+  // Chi tiết là trang riêng, id qua history state
   const navigate = useNavigate();
-  const openReport = useCallback((reportId: string) => navigate(`/health/reports/${reportId}`), [navigate]);
+  const openReport = useCallback((reportId: string) => navigate(HEALTH_REPORT_PATH, { state: { reportId } satisfies HealthReportState }), [navigate]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { data: reports = [], isLoading, isError, error, refetch } = useHouseHealthReports(scope, kind);
   const { download, downloadingId } = useHealthReportPdf();

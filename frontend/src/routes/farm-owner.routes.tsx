@@ -108,7 +108,7 @@ export const farmOwnerRoutes = (
       }
     />
     <Route
-      path="health/reports/:reportId"
+      path="health/report"
       element={
         <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerHealthReportPage />
