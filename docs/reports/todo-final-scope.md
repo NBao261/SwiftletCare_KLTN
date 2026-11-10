@@ -206,10 +206,10 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
   - chuyên gia xem các ngày có điểm chấm khác snapshot, kèm chỉ số và lý do của từng ngày;
   - chuyên gia chỉnh mức chỉ số sức khỏe của nhà (BR-28); thay đổi lưu lịch sử và áp từ lần đánh giá tiếp theo;
   - Farm Owner (ở farm có chuyên gia) hoặc technician vào chức năng này thì 403.
-- [ ] Giao diện:
-  - Len: chấm điểm trên mobile, hiện hướng dẫn chấm (BR-37) trước khi chấm;
-  - Nhi: chấm điểm trên web Owner;
-  - Tuấn: màn ngày lệch và chỉnh mức trên web chuyên gia.
+- [ ] Giao diện *(còn mobile của Len và màn ngày lệch của Tuấn)*:
+  - [ ] Len: chấm điểm trên mobile, hiện hướng dẫn chấm (BR-37) trước khi chấm;
+  - [x] Nhi: chấm điểm trên web Owner; *(Nhi, 11/11: `/health` — Farm Owner chấm hoặc "Bỏ qua" ngày không có mặt ở nhà, hướng dẫn BR-37 trước khi chọn mức (10/11), Domain Expert không còn chấm (10/11))*
+  - [ ] Tuấn: màn ngày lệch và chỉnh mức trên web chuyên gia.
 
 **Test:** TC-F22-01…03; TC-ST-44…53.
 

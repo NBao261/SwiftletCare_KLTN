@@ -368,7 +368,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [ ] Web (Nhi) + mobile (Len): màn chấm điểm hiện hướng dẫn quan sát BR-37 trước khi chọn mức, nhắc "chấm trước khi xem biểu đồ" và có nút "Bỏ qua" cho ngày không ra nhà yến. *(Web: Nhi, 10/11 — popup đánh giá hiện khung "Quan sát tại nhà yến" với 6 nhóm BR-37 (đàn chim, môi trường, không khí, xáo trộn, thiết bị, dấu hiệu nặng), ba mức theo đúng định nghĩa BR-37, câu nhắc đánh giá trước khi xem biểu đồ và "không ra nhà yến thì bỏ qua, đừng đoán". Còn mobile của Len.)*
 - [x] Test phần a: TC-F20-01..03, TC-F21-02, TC-F22-01..03, TC-ST 6.17 và 6.18. *(31/10: `healthAssessment.test.ts`, `healthDays.test.ts`, `weather.test.ts`, `agreement.util.test.ts`; backend 629/629)*
 - [x] Test TC-ST 6.9 (sinh báo cáo theo nhà) và TC-F21-01 (xem báo cáo). *(03/11, `houseHealthReport.test.ts`, backend 660/660)*
-- [ ] Test TC-F21-03 (PDF, thủ công, sau khi có màn báo cáo web). *(Nhi)*
+- [x] Test TC-F21-03 (PDF, thủ công, sau khi có màn báo cáo web). *(Nhi, 11/11: tải PDF báo cáo ngày, so với màn `/health/report` — số liệu khớp, không có id nội bộ. Report 5 vẫn in "Not run" vì `gen_report5.py` chưa nhận kết quả ca thủ công — Bảo)*
 - [ ] Test lại theo người chấm mới: TC-F22 và TC-ST-44…53 (trạng thái ngày 6.17, lượt chấm 6.18, báo cáo 6.9). *(Kiệt, 10/11, `08c5e18`: TC-F22-02, TC-F22-03 và TC-ST 6.18 SKIPPED, RATED → RATED, chặn chấm lại viết bằng jest; TC-F22-01 và TC-ST 6.17 tạo ngày, 6.18 RATED, EXPIRED phần Farm Technician chờ G-20; backend 673/673)*
 
 ### G-12 — Đếm chim (P1) — Bảo (AI, backend), Tuấn (trình vẽ vòng đếm trên web), Len (trình vẽ vòng đếm trên mobile cho Farm Technician), Len, Tuấn, Nhi (gán nhãn, đếm clip)
