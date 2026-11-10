@@ -135,6 +135,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 
 | Date | Change |
 | --- | --- |
+| 10/11/2026 | G-20 backend: role `FARM_TECHNICIAN` (farm member limited to assigned houses, `PUT/DELETE /farms/houses/:houseId/technicians/:userId`), remote commands to the Administrator with RESTART for Farm Owners and technicians, Administrator sees device alerts of every farm, `/admin/technicians` removed, `migrate:farm-technician` (Kiệt); web and mobile enums and screens follow (Tuấn, Len, Nhi) |
 | 09/11/2026 | Counting model: v1 trained (YOLOv8n and YOLO11n, 03/11/2026), about 10 % count error against hand counts on the evaluation clips; v2 retrained on hard frames before the NFR-09 measurement (G-12, F-10, RK-1) |
 | 09/11/2026 | Eight main flows: harvest season summary becomes supporting flow SF-06 (F-30 tested, not mandatory); on-site check in MF-04 (EXPERT-FR-021); test counts of Report 5 1.5.0 |
 | 09/11/2026 | Final scope of Review 2 agreed with the supervisor: features F-23…F-30, gaps G-20 rewritten and G-21…G-27 added, test counts of Report 5 1.4.0; owners per work package (Kiệt operations backend, Bảo firmware, knowledge and analytics backend and simulator, Len technician mobile, Tuấn expert web, Nhi owner web) |

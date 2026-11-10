@@ -83,13 +83,13 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 ### G-20 — Farm Technician (Kiệt, Len, Nhi, Tuấn) — hạn 02/12
 
 **Backend (Kiệt):**
-- [ ] Spec: thêm phần kỹ thuật viên và lịch trực của nhà vào `/farms` (`houses.technicians`, roster); đổi enum `Role`, bỏ `TECHNICIAN` và thêm `FARM_TECHNICIAN`.
-- [ ] Đổi enum ở `backend/src/types/domain.types.ts`, `frontend/src/types/` và `mobile/src/types/` cùng một PR (shared enums). Viết `migrate:*` để chuyển dữ liệu cũ.
-- [ ] Quyền: Farm Technician là thành viên farm, chỉ thao tác trên nhà được gán. Thao tác ở nhà khác trả 403 (AUTH-FR-013). Gán một người không phải Farm Technician của farm trả 409. Mỗi nhà có tối đa một technician chính.
-- [ ] Technician được bật tắt tay, restart controller, vẽ vòng đếm, nhập thu hoạch và chấm điểm ngày ở nhà được gán. Không được sửa tham số, lắp thiết bị hay mời thành viên (Report 3 §2.4).
-- [ ] Lệnh từ xa (RESTART, đẩy cấu hình, OTA) chuyển hẳn sang console của Administrator (FARM-FR-009, 013); mọi lệnh đều ghi audit và báo cho Farm Owner.
+- [ ] Spec: thêm phần kỹ thuật viên và lịch trực của nhà vào `/farms` (`houses.technicians`, roster); đổi enum `Role`, bỏ `TECHNICIAN` và thêm `FARM_TECHNICIAN`. *Xong trừ lịch trực (a6fbf9c): `houses.technicians`, API gán/bỏ gán, enum; roster thêm khi làm lịch trực.*
+- [ ] Đổi enum ở `backend/src/types/domain.types.ts`, `frontend/src/types/` và `mobile/src/types/` cùng một PR (shared enums). Viết `migrate:*` để chuyển dữ liệu cũ. *Backend và `migrate:farm-technician` xong (f9d9522); web, mobile đổi trong PR màn hình của Tuấn, Len, Nhi (thống nhất 10/11: PR backend không sửa file của bạn khác).*
+- [x] Quyền: Farm Technician là thành viên farm, chỉ thao tác trên nhà được gán. Thao tác ở nhà khác trả 403 (AUTH-FR-013). Gán một người không phải Farm Technician của farm trả 409. Mỗi nhà có tối đa một technician chính. *(f9d9522) `canAccessHouse` trong `farmAccess.util`; gỡ thợ khỏi farm thì bỏ luôn các lần gán; thợ chưa nhận cảnh báo cho tới G-21.*
+- [ ] Technician được bật tắt tay, restart controller, vẽ vòng đếm, nhập thu hoạch và chấm điểm ngày ở nhà được gán. Không được sửa tham số, lắp thiết bị hay mời thành viên (Report 3 §2.4). *Relay, restart, vòng đếm, xem dashboard và live stream xong (f9d9522); nhập thu hoạch chờ trạng thái DRAFT của HARVEST-FR-006 (G-26), chấm điểm ngày ở G-11.*
+- [x] Lệnh từ xa (RESTART, đẩy cấu hình, OTA) chuyển hẳn sang console của Administrator (FARM-FR-009, 013); mọi lệnh đều ghi audit và báo cho Farm Owner. *(f9d9522) Farm Owner và thợ của nhà vẫn RESTART được (Report 3 §2.4); lệnh của Farm Owner không tự báo chính họ.*
 - [ ] Lịch trực (AUTH-FR-014, mức O): làm sau cùng. Nhà không có lịch trực thì dùng technician chính.
-- [ ] Bỏ `technicianAccess` cũ và route `/ota` của Technician cũ; cập nhật `roleMatrix.test.ts`.
+- [ ] Bỏ `technicianAccess` cũ và route `/ota` của Technician cũ; cập nhật `roleMatrix.test.ts`. *Backend xong (f9d9522): `technicianAccess.test.ts` viết lại theo nhà được gán, `roleMatrix.test.ts` theo role mới, bỏ `/admin/technicians`; route `/ota` ở web là phần của Tuấn.*
 
 **Giao diện:**
 - [ ] Len: đăng nhập bằng tài khoản technician; tab theo `roleTabs.ts`; danh sách các nhà được gán.
