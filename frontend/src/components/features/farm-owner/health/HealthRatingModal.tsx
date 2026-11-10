@@ -17,6 +17,8 @@ const SELECTED_CLASS: Record<HealthRatingValue, string> = {
   ACTION: 'border-alertRed bg-alertRed/10',
 };
 const NOTE_MAX_LENGTH = 1000;
+// BR-37: những gì người đánh giá quan sát tại nhà (không lặp lại số cảm biến); dấu hiệu nặng tô đỏ
+const GUIDE = ['flock', 'environment', 'air', 'disturbance', 'equipment', 'severe'] as const;
 
 // Câu dịch có đoạn **…** → đoạn đó in đậm chữ đen, phần còn lại giữ màu của khối chứa
 export function withBold(text: string): ReactNode[] {
@@ -108,48 +110,69 @@ export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRa
 
   return (
     <>
-      <Modal open={!isSkipOpen} onClose={close} ariaLabel={t('rate.title', { date: date(day.date), house: day.house_name })} size="lg" closeOnBackdrop>
+      <Modal open={!isSkipOpen} onClose={close} ariaLabel={t('rate.title', { date: date(day.date), house: day.house_name })} size="xl" closeOnBackdrop>
         <div className="flex flex-col gap-5">
-          {/* Tiêu đề in đậm cả dòng; chừa chỗ nút ✕ */}
-          <h2 className="flex min-h-9 items-center pr-12 text-lg font-bold text-charcoal [overflow-wrap:anywhere]">
-            {t('rate.title', { date: date(day.date), house: day.house_name })}
-          </h2>
-          {/* Thanh ngang ngăn tiêu đề với nội dung (cùng nét ModalHeader của popup người dùng) */}
-          <hr className="border-gray-200" />
-          {/* Phần trong **…** của câu dịch in đậm chữ đen */}
-          <p className="text-sm text-warmGray">{withBold(t('rate.intro'))}</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" role="radiogroup" aria-label={t('col.myRating')}>
-            {RATINGS.map(value => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={rating === value}
-                onClick={() => {
-                  setRating(value);
-                  setIsPickError(false);
-                }}
-                className={cn(
-                  'flex flex-col gap-1 rounded-xl border-2 border-warmGray/15 p-4 text-left transition-colors hover:bg-warmGray/5',
-                  rating === value && SELECTED_CLASS[value],
-                )}
-              >
-                <span className="font-semibold text-charcoal">{t(`status.${value}`)}</span>
-                <span className="text-xs text-warmGray">{t(`statusHint.${value}`)}</span>
-              </button>
-            ))}
+          {/* Đầu popup: tiêu đề in đậm (chừa chỗ nút ✕) + câu nhắc ngay dưới, phần **…** in đậm chữ đen; luôn hiện, không cuộn */}
+          <div className="flex flex-col gap-1">
+            <h2 className="flex min-h-9 items-center pr-12 text-lg font-bold text-charcoal [overflow-wrap:anywhere]">
+              {t('rate.title', { date: date(day.date), house: day.house_name })}
+            </h2>
+            <p className="pr-12 text-sm text-warmGray">{withBold(t('rate.intro'))}</p>
           </div>
-          {isPickError && <p className="text-sm text-alertRed">{t('rate.pickOne')}</p>}
-          <Textarea
-            label={t('rate.note')}
-            placeholder={t('rate.notePlaceholder')}
-            value={note}
-            maxLength={NOTE_MAX_LENGTH}
-            onChange={event => setNote(event.target.value)}
-          />
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={() => setIsSkipOpen(true)} disabled={rate.isPending}>{t('rate.skip')}</Button>
-            <Button onClick={handleSave} loading={rate.isPending}>{t('rate.save')}</Button>
+          {/* Thanh ngang ngăn đầu popup với nội dung (cùng nét ModalHeader của popup người dùng) */}
+          <hr className="border-gray-200" />
+          {/* Thân cuộn được khi màn thấp; đầu popup và nút luôn hiện */}
+          <div className="-mx-1 flex max-h-[60vh] flex-col gap-5 overflow-y-auto px-1">
+            {/* Hướng dẫn quan sát BR-37, hiện trước khi chọn mức để mọi người đánh giá cùng một thước đo */}
+            <section className="flex flex-col gap-2 rounded-xl bg-warmGray/[0.06] p-4" aria-label={t('rate.guideTitle')}>
+              <p className="text-sm font-semibold text-charcoal">{t('rate.guideTitle')}</p>
+              {/* Bảng 1 cột: nhãn trái cố định, nội dung phải — mỗi nhóm thường gọn 1 dòng */}
+              <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5 text-xs">
+                {GUIDE.map(item => (
+                  <div key={item} className="contents">
+                    <dt className={cn('font-semibold', item === 'severe' ? 'text-alertRed' : 'text-charcoal')}>{t(`rate.guide.${item}`)}</dt>
+                    <dd className="text-warmGray">{t(`rate.guide.${item}Text`)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" role="radiogroup" aria-label={t('col.myRating')}>
+              {RATINGS.map(value => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={rating === value}
+                  onClick={() => {
+                    setRating(value);
+                    setIsPickError(false);
+                  }}
+                  className={cn(
+                    'flex flex-col gap-1 rounded-xl border-2 border-warmGray/15 p-4 text-left transition-colors hover:bg-warmGray/5',
+                    rating === value && SELECTED_CLASS[value],
+                  )}
+                >
+                  <span className="font-semibold text-charcoal">{t(`status.${value}`)}</span>
+                  <span className="text-xs text-warmGray">{t(`statusHint.${value}`)}</span>
+                </button>
+              ))}
+            </div>
+            {isPickError && <p className="text-sm text-alertRed">{t('rate.pickOne')}</p>}
+            <Textarea
+              label={t('rate.note')}
+              placeholder={t('rate.notePlaceholder')}
+              value={note}
+              maxLength={NOTE_MAX_LENGTH}
+              onChange={event => setNote(event.target.value)}
+            />
+          </div>
+          {/* Câu nhắc bỏ qua bên trái, 2 nút bên phải trên cùng hàng */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-warmGray">{t('rate.skipHint')}</p>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row">
+              <Button variant="secondary" onClick={() => setIsSkipOpen(true)} disabled={rate.isPending}>{t('rate.skip')}</Button>
+              <Button onClick={handleSave} loading={rate.isPending}>{t('rate.save')}</Button>
+            </div>
           </div>
         </div>
       </Modal>
