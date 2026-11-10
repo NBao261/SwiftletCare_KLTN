@@ -5216,14 +5216,14 @@ components:
               properties:
                 return_rate_trend:
                   type: array
-                  description: "Tỷ lệ chim về từng ngày của kỳ; ngày thiếu phiên đánh dấu `complete: false` (VISION-FR-020)"
+                  description: "Tỷ lệ chim về từng ngày của kỳ; ngày thiếu phiên đánh dấu `complete: false` (VISION-FR-020). Ngày người gọi còn PENDING có `return_rate: null`, như `indicators` ở API ngày (BR-31)"
                   items:
                     type: object
                     properties:
                       date: { type: string, format: date }
-                      return_rate: { type: number, nullable: true }
+                      return_rate: { type: number, nullable: true, description: "null khi chưa đếm đủ hoặc người gọi chưa chấm ngày đó (BR-31)" }
                       complete: { type: boolean }
-                avg_return_rate: { type: number, nullable: true, description: "Trung bình các ngày đủ phiên" }
+                avg_return_rate: { type: number, nullable: true, description: "Trung bình các ngày đủ phiên mà người gọi được thấy (BR-31)" }
                 weather:
                   type: object
                   nullable: true
