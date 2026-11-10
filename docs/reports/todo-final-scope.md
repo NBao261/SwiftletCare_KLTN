@@ -1,6 +1,6 @@
 # Việc cần làm — phần scope cuối (sau `todo-review2.md`)
 
-Cập nhật 09/11/2026, theo scope cuối đã chốt với giảng viên hướng dẫn sau Review 2 (phiếu v3 bản cuối, BM03 1.3, SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0, BM04).
+Cập nhật 10/11/2026: SRS 4.2.1, SDD 2.2.1 (PR #147), lịch tuần 1 của Bảo. Trước đó 09/11/2026, theo scope cuối đã chốt với giảng viên hướng dẫn sau Review 2 (phiếu v3 bản cuối, BM03 1.3, SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0, BM04).
 
 File này hướng dẫn **phần làm mới** để hệ thống đủ như hồ sơ đã nộp: Farm Technician, Work Order, bảo trì phòng ngừa, bù phun sương theo thời tiết, profile cấu hình, luật khuyến nghị, tổng quan trại, chu kỳ thu hoạch và bộ giả lập (gap G-20…G-27), cùng hai việc mới của MF-04 và MF-06 (EXPERT-FR-021, 022).
 
@@ -71,7 +71,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 | Tuần | Kiệt | Bảo | Len | Nhi | Tuấn |
 |---|---|---|---|---|---|
-| 1 (10–16/11) | Spec G-20, G-21 → backend G-20 | G-27 giả lập; G-07 (từ `todo-review2.md`) | Đăng nhập technician, danh sách nhà được gán (G-20) | Màn gán kỹ thuật viên (G-20) | Console thiết bị của Admin (G-20) |
+| 1 (10–16/11) | Spec G-20, G-21 → backend G-20 | G-27 giả lập; G-08 (từ `todo-review2.md`; G-07 Kiệt làm, đã merge #137) | Đăng nhập technician, danh sách nhà được gán (G-20) | Màn gán kỹ thuật viên (G-20) | Console thiết bị của Admin (G-20) |
 | 2 (17–23/11) | Backend G-21 | G-23 firmware + backend | Màn cảnh báo + Work Order của technician (G-21) | Duyệt Work Order trên web (G-21) | Màn luật thời tiết (G-23); bằng chứng kiểm tra tại chỗ (G-21) |
 | 3 (24/11–02/12) | Phần mới của G-11 (chấm điểm, ngày lệch) | Spec G-24, G-25, G-26 | Chấm điểm ngày trên mobile (G-11) | Chấm điểm trên web (G-11) | Màn ngày lệch (G-11) |
 | 4 (03–09/12) | Backend G-22 | Backend G-24 | Checklist, ghi bảo trì (G-22) | Kế hoạch bảo trì (G-22); áp profile, giai đoạn nhà (G-24) | Profile, luật khuyến nghị (G-24) |
@@ -295,7 +295,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 | Việc | Cần cho | Hạn |
 |---|---|---|
-| 18 mục sửa tài liệu của BM02 (BM04 §9, các mục có hạn 11/11) | Cam kết BM04 | 11/11/2026 |
+| 16 mục sửa tài liệu của BM02 (BM04 §9, các mục có hạn 11/11, đều của Bảo) — xong 10/11/2026, PR #147 | Cam kết BM04 | 11/11/2026 |
 | Train model v2 trên frame khó; đo NFR-09 trên cùng ngày test và clip của v1. Mục tiêu dưới 10 %, nên nhắm 5–7 % | WF-03, NFR-09 | 02/12/2026 |
 | Phỏng vấn 2–3 người nuôi: mức chỉ số sức khỏe (BR-28…30), ít nhất 3 luật khuyến nghị, chu kỳ bảo trì thực tế | MF-06, MF-07, MF-08 có nguồn | 02/12/2026 |
 | Chấm điểm thực địa ≥ 14 ngày (technician chấm hằng ngày) | NFR-14 | Bắt đầu từ khi G-11 lên staging |

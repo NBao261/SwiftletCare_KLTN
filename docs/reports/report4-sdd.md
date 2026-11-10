@@ -296,7 +296,7 @@ Background jobs:
 | --- | --- | --- |
 | `deviceOffline` | every 10 s | Controller silent > 30 s → `OFFLINE` + `NODE_OFFLINE`; AI node silent > 90 s → `OFFLINE` + `EDGE_AI_DEGRADED` |
 | `overrideExpiry` | every 1 min | Expired overrides back to `AUTO` |
-| `alertEscalation` | every 2 min | Unacknowledged CRITICAL/HIGH after 15 min, `NODE_OFFLINE` after 1 h → sent once more to the Farm Owners (ALERT-FR-015); automatic resolution of breaches and episodic alerts (BR-16) |
+| `alertEscalation` | every 1 min | Escalation to the Farm Owners after `escalation_min` (ALERT-FR-017, BR-40); unacknowledged CRITICAL/HIGH after 15 min, `NODE_OFFLINE` after 1 h → sent once more (ALERT-FR-015); automatic resolution of breaches and episodic alerts (BR-16) |
 | `configSync` | every 1 min | Controllers still reporting an old configuration version: republish; 3 heartbeats behind while online → `CONFIG_MISMATCH` (BR-24) |
 | `sensorAnomaly` | every 10 min | Stuck, jumping and drifting sensors → `SENSOR_ANOMALY` |
 | `forecast` | every 10 min | 60-minute forecast → `FORECAST_BREACH` |
@@ -1861,7 +1861,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 2.2.1 | 10/11/2026 | BM02 items due 11/11/2026: SMTP e-mail provider in the Section 2.1 diagram (A-03); mobile versions and Jest from `mobile/package.json` in Section 3.2 (A-06); mDNS broker discovery named as a development aid in Section 3.4 (A-01); services and the `deletionRequestReminder` job of the code listed in Section 5.3 (A-07); every transition of Section 8 names its requirement (ST-06); SM-06 restore within 24 h (ST-01), SM-08 "not evaluated" (ST-07), SM-12 starts at `PENDING` and leaves `UNKNOWN` (ST-03), following SRS 4.2.1 |
+| 2.2.1 | 10/11/2026 | BM02 items due 11/11/2026: SMTP e-mail provider in the Section 2.1 diagram (A-03); mobile versions and Jest from `mobile/package.json` in Section 3.2 (A-06); mDNS broker discovery named as a development aid in Section 3.4 (A-01); services and the `deletionRequestReminder` job of the code listed in Section 5.3 (A-07); every transition of Section 8 names its requirement (ST-06); SM-06 restore within 24 h (ST-01), SM-08 "not evaluated" (ST-07), SM-12 starts at `PENDING` and leaves `UNKNOWN` (ST-03), following SRS 4.2.1; the `alertEscalation` job runs every minute as in DF-13 and the operations modules |
 | 2.2.0 | 09/11/2026 | AD-04: every inferred alert of a house with a technician is checked on site first, a faulty sensor opens a Work Order; AD-06: the Farm Technician (daily) and the Farm Owner (on site) rate, the Domain Expert reviews the disagreeing days and adjusts the levels (SRS 4.2.0) |
 | 2.1.0 | 09/11/2026 | Eight main flows (SRS 4.1.0): AD-09 is the diagram of supporting flow SF-06 (harvest recording and season summary); AD-04 adds the on-site check by the Farm Technician (EXPERT-FR-021, `onsite_checks` in `ALERT`); AD-07 without the Domain Expert lane; the weather lane of AD-01 takes its rules from MF-05 |
 | 2.0.1 | 09/11/2026 | Only people are actors in the activity diagrams (Section 9); AD-03 shows the Farm Technician drawing the counting ring; the ring editor is also in the mobile app (Section 5.4) |
