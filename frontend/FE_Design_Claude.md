@@ -60,7 +60,7 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Đã xoá** màn, component, API, hook, type, hằng số của ticket, chat ticket, SLA, lịch bảo trì, vùng Technician, màn farm của Admin và role `SALES_STAFF` (`todo-remove-platform.md` PR 6). Các mục 2.4, 2.10, 5.5, 6.2, 6.3, 7, 12.0, 12.2, 12.7, 13.4, 13.14, 13.16 và Phụ lục D bỏ phần mô tả code đã xoá. |
+| 1 | **Đã xoá** màn, component, API, hook, type, hằng số của ticket, chat ticket, SLA, lịch bảo trì, vùng Technician, màn farm của Admin và role `SALES_STAFF` (PR #100–#107). Các mục 2.4, 2.10, 5.5, 6.2, 6.3, 7, 12.0, 12.2, 12.7, 13.4, 13.14, 13.16 và Phụ lục D bỏ phần mô tả code đã xoá. |
 | 2 | **2.4:** mức độ cảnh báo vẫn 3 cấp, kiểu `SeverityLevel`; `PriorityBadge`, `constants/priority.ts` bỏ — `SeverityBadge` là badge duy nhất. **2.10** chỉ còn `Stepper` cho luồng nhiều bước. |
 | 3 | **Form farm:** ô vị trí ("Dùng vị trí hiện tại" + vĩ độ/kinh độ, bắt buộc khi tạo) thay ô khu vực; validator `validations/farm-owner/farm.validation.ts`. Thuật ngữ "Vị trí · Vĩ độ · Kinh độ" thêm vào 6.2. |
 | 4 | **Admin** chỉ tạo tài khoản Kỹ thuật viên (AUTH-FR-005c); "Yêu cầu tài khoản" chỉ còn yêu cầu xoá. 12.0 c dòng 6, 7, 9, 11 đánh dấu xong. |
@@ -69,7 +69,7 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Ticket, chat ticket, SLA, lịch bảo trì, vùng của Technician và việc Admin quản lý farm ra ngoài phạm vi** (Report 3 §8). Màn và component ticket còn trong code chỉ được gỡ, không thêm hay sửa rộng; việc gỡ theo `docs/reports/todo-remove-platform.md` (PR 2 ẩn, PR 6 xoá). Các mục 2.4, 2.10, 6.2, 7, 12.2, 13.4 và Phụ lục D vẫn tả code hiện có cho tới khi gỡ xong. |
+| 1 | **Ticket, chat ticket, SLA, lịch bảo trì, vùng của Technician và việc Admin quản lý farm ra ngoài phạm vi** (Report 3 §8). Màn và component ticket còn trong code chỉ được gỡ, không thêm hay sửa rộng; đã gỡ ở PR #100–#107. Các mục 2.4, 2.10, 6.2, 7, 12.2, 13.4 và Phụ lục D vẫn tả code hiện có cho tới khi gỡ xong. |
 | 2 | **12.0 viết lại:** Technician là vai trò kỹ thuật, thấy nhà/tầng/thiết bị và cảnh báo thiết bị của **mọi farm**, không xem dữ liệu môi trường; đăng ký, dời, gỡ thiết bị, lệnh từ xa, OTA; **không** bật/tắt relay, không sửa ngưỡng/hệ số, không xác nhận cảnh báo; Farm Owner được báo mỗi thao tác thiết bị của Technician. Admin không tạo, xem hay quản lý farm. 12.0 c thêm dòng gỡ ticket và màn farm của Admin. |
 | 3 | **12.8 `OPS_ROLES`:** nút relay và xác nhận cảnh báo chỉ Farm Owner thấy. **13.4:** phòng `ticket:<id>` và sự kiện chat ticket sẽ gỡ. **13.14:** thêm nợ ticket/vùng. Cảnh báo `ACTIVE` quá 15 phút giờ được **gửi lại** cho Farm Owner (ALERT-FR-015), không còn sinh ticket; loại cảnh báo mới `MAINTENANCE_DUE` (ALERT-FR-016) cần nhãn ở `enumLabels.i18n.ts` khi backend có. |
 
@@ -77,7 +77,7 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Căn cứ đổi sang Report 3/Report 4** (`docs/reports/`); `SwiftletCare_SRS.md` chỉ còn là ghi chú nội bộ. Chỗ code còn lệch với Report 3/Report 4 ghi ở `docs/reports/project-tracking.md` §6. |
+| 1 | **Căn cứ đổi sang Report 3/Report 4** (`docs/reports/`). Chỗ code còn lệch với Report 3/Report 4 ghi ở `docs/reports/project-tracking.md` §6. |
 | 2 | **12.0 viết lại theo Report 3 §2.4:** Farm Owner tự thiết lập thiết bị bằng QR (SF-01), Technician chỉ làm khi có ticket lắp đặt; Technician không sửa ngưỡng/hệ số mờ; Technician chỉ can thiệp tay và xác nhận cảnh báo khi đang giữ ticket; Admin không xác nhận cảnh báo, không can thiệp tay; farm chưa có chuyên gia thì Farm Owner quyết thay (BR-22); chuyên gia duyệt thay đổi của chủ farm (EXPERT-FR-010) và là người duy nhất áp gợi ý hệ số (EXPERT-FR-011); chủ farm xem lịch sử quyết định của chuyên gia (EXPERT-FR-009). |
 | 3 | **12.8 nhóm role:** thêm `SETUP_ROLES` (Farm Owner · Technician); kiểm chứng cảnh báo, tham số phát hiện, vòng đếm, lịch đếm chuyển sang `FARM_SIDE_ROLES` (Farm Owner ghi khi farm chưa có chuyên gia); `EXPERT_ONLY` chỉ còn kết luận, duyệt thay đổi, duyệt đề xuất; `HARVEST_ROLES` đích bỏ Admin. |
 | 4 | **2.5, 2.6.1:** trạng thái thiết bị theo vòng đời Report 3 §6.6 (`ERROR`/`DEGRADED` không dùng); thêm trạng thái cảnh báo `DISMISSED` (Đã bác bỏ); NH3/CO2 là ngưỡng cảnh báo của Zone; bỏ "Quá lạnh (sưởi)"; mốc 20 giây của nhãn bộ điều khiển và các mốc của điểm cân bằng Zone là hằng số tự chọn của giao diện (Report 3 §4.5). |
@@ -128,7 +128,7 @@
 
 ### v2.5.0 → v2.6.0 (theo SRS v2.0.0, sau Review 1)
 
-> Khi file này mâu thuẫn với Report 3 (`docs/reports/report3-srs.md`, yêu cầu) hoặc Report 4 (`docs/reports/report4-sdd.md`, thiết kế), hai Report thắng và file này phải sửa theo. `SwiftletCare_SRS.md` từ Review 2 chỉ còn là ghi chú nội bộ.
+> Khi file này mâu thuẫn với Report 3 (`docs/reports/report3-srs.md`, yêu cầu) hoặc Report 4 (`docs/reports/report4-sdd.md`, thiết kế), hai Report thắng và file này phải sửa theo.
 
 | # | Thay đổi |
 |---|---|
@@ -815,7 +815,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
 | Chi tiết thiết bị `/devices/detail` — tên thiết bị con của bộ kit (do Kỹ thuật viên đặt) | FARM-FR-005/006 (phần mở rộng UI) | 🟡 Chưa có endpoint — `farmMock.api.ts#getDeviceComponentNames` đọc `src/data/deviceComponents.data.ts`; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) | **Có** |
 
-*Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/project-tracking.md` §6 (cột "Trạng thái Backend" của `SwiftletCare_SRS.md` §5 không còn được cập nhật) — lệch nhau thì tin hai nguồn đó và sửa bảng này.
+*Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/project-tracking.md` §6 — lệch nhau thì tin hai nguồn đó và sửa bảng này.
 
 ---
 

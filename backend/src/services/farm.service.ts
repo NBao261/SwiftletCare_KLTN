@@ -17,12 +17,12 @@ import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import {
-  assertValidBirdCountTuning, assertValidDetectionTuning, firmwareDetectionConfig, pickBirdCountTuning,
+  assertValidBirdCountTuning, assertValidDetectionTuning, pickBirdCountTuning,
   pickDetectionTuning, resolveBirdCountTuning, resolveDetectionTuning,
   DEFAULT_HEALTH_LEVELS, assertValidHealthLevels, pickHealthLevels, resolveHealthLevels,
 } from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning } from '@/types'
 
@@ -458,7 +458,7 @@ export async function applyFuzzyTuning(
   if (overflow > 0) zone.fuzzy_tuning_history.splice(0, overflow)
   await zone.save()
 
-  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', { ...zone.fuzzy_tuning })
+  await publishZoneConfig(zone._id)
   const auditId = await logAction(user._id, 'FUZZY_TUNING_UPDATED', 'zone', String(zone._id), {
     source, before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
     ...opts.logDetails,
@@ -501,7 +501,7 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
   if (overflow > 0) zone.detection_tuning_history.splice(0, overflow)
   await zone.save()
 
-  publishCommand(String(farm._id), String(house._id), String(zone._id), 'config/update', firmwareDetectionConfig(merged))
+  await publishZoneConfig(zone._id)
   const auditId = await logAction(user._id, 'DETECTION_TUNING_UPDATED', 'zone', String(zone._id), {
     before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
   }, { farmId: String(farm._id) })

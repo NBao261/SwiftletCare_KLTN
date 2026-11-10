@@ -51,6 +51,12 @@ describe('apiLimiter — đếm theo tài khoản', () => {
     await request(app).post('/auth/refresh').set('Authorization', bearer('user-c')).expect(200)
   })
 
+  it('never limits the broker and media server calling /internal', async () => {
+    for (let i = 0; i < 6; i++) {
+      await request(app).post('/internal/mqtt-auth').expect(404) // không route thật: chỉ cần không phải 429
+    }
+  })
+
   it('never limits /health and sends the X-RateLimit headers on counted requests', async () => {
     for (let i = 0; i < 5; i++) await request(app).get('/health').set('Authorization', bearer('user-d')).expect(200)
 

@@ -133,9 +133,9 @@ def save_state(session: str, today: str, counter: RingCounter, path: Path = STAT
 
 # ── MQTT ─────────────────────────────────────────────────────────────────────
 def topic_base(env) -> str:
-    """SRS v2.1.8 — camera ở cửa ra vào của cả nhà yến nên topic theo House, không có đoạn zone:
-    swiftletcare/{farmId}/{houseId}/heartbeat | vision/bird-count | vision/alert (khớp backend mqtt.client.ts)."""
-    return f"swiftletcare/{env['FARM_ID']}/{env['HOUSE_ID']}"
+    """Report 4 §7.2 — mỗi thiết bị một cây topic, nhà yến của camera do backend giữ:
+    swiftletcare/dev/{deviceId}/heartbeat | vision/bird-count | vision/alert | config."""
+    return f"swiftletcare/dev/{env['CAMERA_DEVICE_ID']}"
 
 
 class Publisher:
@@ -150,8 +150,7 @@ class Publisher:
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=self.device_id)
         if cfg.get("tls"):                       # cloud: chứng chỉ Let's Encrypt, dùng CA có sẵn của hệ điều hành
             self.client.tls_set()
-        if os.getenv("MQTT_USERNAME"):
-            self.client.username_pw_set(os.environ["MQTT_USERNAME"], os.getenv("MQTT_PASSWORD"))
+        self.client.username_pw_set(self.device_id, os.environ["MQTT_PASSWORD"])   # tài khoản riêng của thiết bị
         self.client.on_connect = lambda *a: logger.info(f"MQTT đã nối {cfg['broker']}:{cfg['port']}")
         self.client.on_disconnect = lambda *a: logger.warning("MQTT mất kết nối, tự nối lại")
         self.client.connect_async(cfg["broker"], cfg["port"])   # tự kết nối lại khi rớt
@@ -177,9 +176,9 @@ class Publisher:
             "timestamp": int(time.time() * 1000),
         }), qos=1)
 
-    def heartbeat(self) -> None:
+    def heartbeat(self, fps: float) -> None:
         self.client.publish(self.topic_heartbeat, json.dumps({
-            "deviceId": self.device_id, "firmwareVersion": self.model_version,
+            "deviceId": self.device_id, "modelVersion": self.model_version, "fps": round(fps, 1),
         }), qos=0)
 
 
@@ -217,8 +216,8 @@ def main() -> None:
     device_id = os.environ.get("CAMERA_DEVICE_ID", "")
     rings = RingStore(Path(cfg["tracking"]["ring_override_file"]), device_id)
     ring: Optional[Ring] = rings.load()
-    if not args.no_mqtt and device_id and os.environ.get("FARM_ID") and os.environ.get("HOUSE_ID"):
-        start_listener(cfg["mqtt"], rings, os.environ["FARM_ID"], os.environ["HOUSE_ID"], device_id)
+    if not args.no_mqtt and device_id:
+        start_listener(cfg["mqtt"], rings, device_id)
 
     pipe: Optional[FramePipeline] = None
     session: Optional[str] = None
@@ -276,7 +275,7 @@ def main() -> None:
         if now - last_pub >= cfg["mqtt"]["publish_interval_sec"]:
             last_pub = now
             if pub:
-                pub.heartbeat()
+                pub.heartbeat(fps)
                 if session:
                     pub.bird_count(session, counter, conf_sum / max(conf_n, 1))
             if session and live:

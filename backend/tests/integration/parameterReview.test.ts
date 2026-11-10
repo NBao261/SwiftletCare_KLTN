@@ -22,11 +22,11 @@ import { Notification } from '@/models/notification.model'
 import { ParameterReview } from '@/models/parameterReview.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { User } from '@/models/user.model'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import * as thresholdUpdate from '@/utils/thresholdUpdate.util'
 import type { Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true), publishHouseCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitNotificationNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitHouseDeviceStatusChange: jest.fn(), emitRelayUpdate: jest.fn(),
@@ -95,7 +95,7 @@ describe('mở mục duyệt khi Farm Owner sửa (EXPERT-FR-010)', () => {
     await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 78 }).expect(200)
 
     expect((await Zone.findById(zone._id).lean())!.thresholds.humidity_min).toBe(78)
-    expect(publishCommand).toHaveBeenCalled()
+    expect(publishDeviceConfig).toHaveBeenCalled()
     const [review] = await reviewsOf(zone._id)
     expect(review).toMatchObject({ group: 'thresholds', status: 'PENDING_REVIEW' })
     expect(review.old_values.humidity_min).toBe(75)
@@ -171,7 +171,7 @@ describe('chuyên gia duyệt (Report 3 §6.10)', () => {
     const after = (await Zone.findById(zone._id).lean())!
     expect(after.thresholds.humidity_min).toBe(75)
     expect(after.threshold_history.at(-1)).toMatchObject({ source: 'EXPERT_REVERT', changed_by_role: 'DOMAIN_EXPERT' })
-    expect(publishCommand).toHaveBeenCalled()
+    expect(publishDeviceConfig).toHaveBeenCalled()
     expect((await ParameterReview.findById(review._id).lean())!.status).toBe('REVERTED')
     expect(await Notification.countDocuments({ user_id: owner._id })).toBe(1)
   })

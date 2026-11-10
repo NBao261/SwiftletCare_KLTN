@@ -18,7 +18,7 @@ import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { migrateDataModel } from '@/scripts/migrate-data-model.script'
 import type { CurrentUser } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/services/notification.service', () => ({
   ...jest.requireActual('@/services/notification.service'),
   notifyUser: jest.fn().mockResolvedValue(undefined),

@@ -19,7 +19,7 @@ camera:
 
 model:
   path: "models/yolo26n.onnx"     # model COCO tạm để thử đường ống; đổi thành models/swiftlet_v1.onnx sau GĐ2
-  version: "yolo26n-coco"         # gửi lên backend làm firmwareVersion trong heartbeat
+  version: "yolo26n-coco"         # gửi lên backend làm modelVersion trong heartbeat
   input_size: 640                 # phải bằng imgsz lúc export
   confidence_threshold: 0.30      # cũng là ngưỡng mở vết của ByteTrack; plan §6.2
   nms_iou_threshold: 0.45         # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
@@ -55,7 +55,7 @@ tracking:
   # Chỉ ngoại suy vết nhanh: chim lượn dời 20–35 px/frame, chim qua lỗ 150–200 px/frame (clip 22/10).
   # 60 nằm giữa hai mức, chọn tay; đo lại khi có clip với thời gian phơi sáng ngắn hơn.
   extrapolate_min_speed_px: 60
-  # VISION-FR-018: vòng Domain Expert vẽ trên web (backend gửi qua MQTT config/update của nhà) được lưu
+  # VISION-FR-018: vòng Domain Expert vẽ trên web (backend gửi qua `config` retained của thiết bị) được lưu
   # vào file này và thắng ring/into_ring_is_exit ở trên, kể cả sau khi khởi động lại.
   ring_override_file: "state/counting_ring.json"
 
