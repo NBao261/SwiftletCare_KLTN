@@ -159,7 +159,7 @@ ensureCollection("auditlogs", {
     },
     "actor_role": {
       "bsonType": ["string", "null"],
-      "enum": ["ADMIN", "FARM_OWNER", "DOMAIN_EXPERT", "TECHNICIAN", null]
+      "enum": ["ADMIN", "FARM_OWNER", "DOMAIN_EXPERT", "FARM_TECHNICIAN", "TECHNICIAN", null]
     },
     "farm_id": {
       "bsonType": ["objectId", "null"]
@@ -442,7 +442,7 @@ ensureCollection("farms", {
           },
           "role": {
             "bsonType": ["string", "null"],
-            "enum": ["FARM_OWNER", "DOMAIN_EXPERT", null]
+            "enum": ["FARM_OWNER", "DOMAIN_EXPERT", "FARM_TECHNICIAN", null]
           },
           "joined_at": {
             "bsonType": ["date", "null"]
@@ -619,6 +619,21 @@ ensureCollection("houses", {
         }
       }
     },
+    "technicians": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "user_id": {
+            "bsonType": "objectId"
+          },
+          "primary": {
+            "bsonType": ["bool", "null"]
+          }
+        },
+        "required": ["user_id"]
+      }
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     },
@@ -631,6 +646,7 @@ ensureCollection("houses", {
   },
   "required": ["farm_id", "name"]
 })
+db.getCollection("houses").createIndex({"technicians.user_id":1})
 db.getCollection("houses").createIndex({"farm_id":1})
 
 // ── invitations (model Invitation) ──
@@ -645,7 +661,7 @@ ensureCollection("invitations", {
     },
     "invited_role": {
       "bsonType": "string",
-      "enum": ["FARM_OWNER", "DOMAIN_EXPERT"]
+      "enum": ["FARM_OWNER", "DOMAIN_EXPERT", "FARM_TECHNICIAN"]
     },
     "invited_by": {
       "bsonType": "objectId"
@@ -1232,7 +1248,7 @@ ensureCollection("users", {
     },
     "role": {
       "bsonType": ["string", "null"],
-      "enum": ["ADMIN", "FARM_OWNER", "DOMAIN_EXPERT", "TECHNICIAN", null]
+      "enum": ["ADMIN", "FARM_OWNER", "DOMAIN_EXPERT", "FARM_TECHNICIAN", null]
     },
     "avatar_url": {
       "bsonType": ["string", "null"]

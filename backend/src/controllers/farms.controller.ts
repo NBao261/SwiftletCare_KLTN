@@ -90,6 +90,18 @@ export const createZone = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data: zone })
 })
 
+/** PUT /farms/houses/:houseId/technicians/:userId – AUTH-FR-013 */
+export const assignTechnician = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.assignTechnician(req.params.houseId, req.user, req.params.userId, req.body?.primary === true)
+  res.json({ success: true, data: house })
+})
+
+/** DELETE /farms/houses/:houseId/technicians/:userId – AUTH-FR-013 */
+export const unassignTechnician = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.unassignTechnician(req.params.houseId, req.user, req.params.userId)
+  res.json({ success: true, data: house })
+})
+
 /** GET /farms/houses/:houseId/zones */
 export const listZones = asyncHandler(async (req: Request, res: Response) => {
   const zones = await farmService.listZones(req.params.houseId, req.user)

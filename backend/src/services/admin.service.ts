@@ -1,4 +1,3 @@
-import crypto from 'crypto'
 import { User, IUser } from '@/models/user.model'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
@@ -120,9 +119,9 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   const ownedFarms = await Farm.find({ owner_id: user._id, is_deleted: false })
 
   for (const farm of ownedFarms) {
-    // Quyền chủ chỉ chuyển cho đồng sở hữu (AUTH-FR-012) — Domain Expert là người được mời
-    // vận hành, không nhận quyền chủ; farm không còn đồng sở hữu thì bị xoá mềm.
-    const otherMembers = farm.members.filter(m => String(m.user_id) !== userId && m.role !== 'DOMAIN_EXPERT')
+    // Quyền chủ chỉ chuyển cho đồng sở hữu (AUTH-FR-012) — Domain Expert, Farm Technician là người được
+    // mời, không nhận quyền chủ; farm không còn đồng sở hữu thì bị xoá mềm.
+    const otherMembers = farm.members.filter(m => String(m.user_id) !== userId && m.role !== 'DOMAIN_EXPERT' && m.role !== 'FARM_TECHNICIAN')
     if (otherMembers.length > 0) {
       const nextOwner = otherMembers.reduce((earliest, m) =>
         m.joined_at < earliest.joined_at ? m : earliest)
@@ -256,57 +255,3 @@ export async function remindPendingDeletionRequests(now = new Date()): Promise<n
   return due.length
 }
 
-// ── Admin tự tạo tài khoản Technician — AUTH-FR-005c ─────────────────────────
-
-/** Technician làm việc trên mọi farm (FARM-FR-009) nên không còn khu vực phụ trách */
-export interface CreateTechnicianInput {
-  email: string; password: string; full_name: string; phone?: string
-}
-
-export async function createTechnician(adminId: string, input: CreateTechnicianInput): Promise<IUser> {
-  const normalizedEmail = input.email.toLowerCase().trim()
-  if (await User.findOne({ email: normalizedEmail })) throw ConflictError('Email đã được đăng ký')
-
-  const user = await User.create({
-    email: normalizedEmail,
-    password_hash: input.password, // pre-save hook tự hash
-    full_name: input.full_name,
-    phone: input.phone || undefined,
-    role: 'TECHNICIAN',
-    // Admin biết mật khẩu này — Technician phải tự đổi ở lần đăng nhập đầu
-    must_change_password: true,
-  })
-
-  await logAction(adminId, 'USER_CREATED', 'user', String(user._id), { role: 'TECHNICIAN' })
-  return user
-}
-
-/** Technician còn dùng được (chưa xoá theo yêu cầu) */
-async function findManageableTechnician(technicianId: string): Promise<IUser> {
-  const technician = await User.findById(technicianId)
-  if (!technician) throw NotFoundError('Không tìm thấy người dùng')
-  if (technician.role !== 'TECHNICIAN') throw BadRequestError('Chỉ áp dụng cho tài khoản Technician')
-  if (technician.deleted_at) throw ConflictError('Tài khoản đã bị xoá theo yêu cầu')
-  return technician
-}
-
-/**
- * AUTH-FR-005c — Technician quên mật khẩu mà email chưa nối SMTP thật, hoặc tài khoản
- * nghi bị lộ: Admin cấp mật khẩu tạm (sinh ngẫu nhiên, trả ĐÚNG 1 lần). Mọi phiên cũ bị
- * thu hồi và Technician phải đổi mật khẩu ở lần đăng nhập kế tiếp.
- */
-export async function resetTechnicianPassword(
-  adminId: string, technicianId: string,
-): Promise<{ technician: IUser; temporaryPassword: string }> {
-  const technician = await findManageableTechnician(technicianId)
-  const temporaryPassword = crypto.randomBytes(9).toString('base64url') // 12 ký tự
-
-  technician.password_hash = temporaryPassword // pre-save hook tự hash (SEC-NFR-003)
-  technician.must_change_password = true
-  technician.refresh_tokens = [] as never
-  await technician.save()
-  disconnectUser(technicianId)
-
-  await logAction(adminId, 'TECHNICIAN_PASSWORD_RESET', 'user', technicianId)
-  return { technician, temporaryPassword }
-}

@@ -7,8 +7,8 @@ import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
 import { OPEN_STATUSES } from '@/services/alert.service'
 import {
-  hasFarmAccess, hasDeviceAccess, isPrimaryOwner, findFarmOrThrow, findZoneChainOrThrow,
-  assertZoneAccess, assertHouseAccess, assertExpertDecision,
+  hasFarmAccess, hasDeviceAccess, isPrimaryOwner, isFarmTechnician, canAccessHouse, listAssignedHouseIds,
+  findFarmOrThrow, findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
@@ -29,22 +29,21 @@ import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning } from '@/typ
 const INVITATION_TTL_MS = 7 * 86400_000
 
 /**
- * FARM-FR-001, FARM-FR-009 — Technician thấy mọi farm (chỉ cấu trúc, để chọn House→Zone khi
- * setup thiết bị); Administrator không thấy farm nào (Report 3 §2.4).
+ * FARM-FR-001 — farm mình sở hữu hoặc là thành viên; Farm Technician thấy farm mình là thành viên
+ * (để tới các nhà được giao, AUTH-FR-013); Administrator không thấy farm nào (Report 3 §2.4).
  */
 export async function listFarms(user: CurrentUser): Promise<Array<IFarm | FarmDetail>> {
   if (user.role === 'ADMIN') return []
-  const filter = user.role === 'TECHNICIAN' ? {} : { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
+  const filter = { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
 
   const farms = await Farm.find(filter).sort({ created_at: -1 })
   return user.role === 'FARM_OWNER' ? farms : farms.map(farm => onlyOwnMembership(farm, user))
 }
 
 /**
- * Domain Expert không quản lý thành viên (AUTH-FR-005) nên không cần — và không được
- * thấy — danh sách thành viên của farm; chỉ giữ bản ghi của chính mình. Technician không
- * là thành viên nên không thấy ai. Dùng chung cho danh sách và chi tiết farm để hai đường
- * không lệch nhau.
+ * Domain Expert và Farm Technician không quản lý thành viên (AUTH-FR-005) nên không cần — và
+ * không được thấy — danh sách thành viên của farm; chỉ giữ bản ghi của chính mình. Dùng chung
+ * cho danh sách và chi tiết farm để hai đường không lệch nhau.
  */
 function onlyOwnMembership(farm: IFarm, user: CurrentUser): FarmDetail {
   const plain = farm.toObject() as unknown as FarmDetail
@@ -92,7 +91,8 @@ export interface FarmDetail extends Omit<IFarm, 'members'> {
 
 export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDetail> {
   const farm = await findFarmOrThrow(farmId)
-  if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
+  // Farm Technician thành viên farm xem được farm (tên, địa chỉ) để tới các nhà được giao (AUTH-FR-013)
+  if (!hasFarmAccess(farm, user) && !isFarmTechnician(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
 
   if (user.role !== 'FARM_OWNER') return onlyOwnMembership(farm, user)
 
@@ -155,8 +155,17 @@ export async function softDeleteFarm(farm: IFarm): Promise<void> {
 
 export interface InviteMemberInput {
   email: string
-  /** FARM_OWNER = đồng sở hữu (mặc định); DOMAIN_EXPERT = chuyên gia nuôi yến, phạm vi cả farm */
+  /**
+   * FARM_OWNER = đồng sở hữu (mặc định); DOMAIN_EXPERT = chuyên gia nuôi yến, phạm vi cả farm;
+   * FARM_TECHNICIAN = thợ của chủ farm, chỉ các nhà được gán (AUTH-FR-013)
+   */
   role?: FarmMemberRole
+}
+
+const MEMBER_ROLE_LABEL: Record<FarmMemberRole, string> = {
+  FARM_OWNER: 'Farm Owner',
+  DOMAIN_EXPERT: 'Domain Expert',
+  FARM_TECHNICIAN: 'Farm Technician',
 }
 
 /**
@@ -164,7 +173,8 @@ export interface InviteMemberInput {
  * vào farm.members. Không đòi email đã có tài khoản: chưa có thì người được mời
  * tạo tài khoản ngay từ link (createAccountFromInvitation, AUTH-FR-010) — không có
  * đăng ký công khai (Report 3 §1.2).
- * Mời đồng sở hữu (FARM_OWNER) hoặc Domain Expert (v2.0.0) — cả hai đều theo cả farm.
+ * Mời đồng sở hữu (FARM_OWNER) hoặc Domain Expert (v2.0.0) — cả hai đều theo cả farm; hoặc Farm
+ * Technician (Report 3 4.0.0) — chưa làm được gì cho tới khi được gán vào nhà (assignTechnician).
  */
 export async function inviteMember(farmId: string, user: CurrentUser, input: InviteMemberInput): Promise<IInvitation> {
   const farm = await findFarmOrThrow(farmId)
@@ -179,10 +189,10 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
     throw ConflictError('Người dùng đã là thành viên farm này')
   }
 
-  // Tài khoản đã có mang 1 role cố định (1 email = 1 role): không mời Technician/Admin,
-  // cũng không mời chéo Farm Owner ↔ Domain Expert — báo ngay thay vì để lời mời chờ vô ích.
+  // Tài khoản đã có mang 1 role cố định (1 email = 1 role): không mời Admin, cũng không mời chéo
+  // giữa Farm Owner, Domain Expert, Farm Technician — báo ngay thay vì để lời mời chờ vô ích.
   if (existingMember && existingMember.role !== role) {
-    throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — ${role === 'DOMAIN_EXPERT' ? 'Domain Expert' : 'Farm Owner'} cần dùng email khác`)
+    throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — ${MEMBER_ROLE_LABEL[role]} cần dùng email khác`)
   }
 
   const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
@@ -213,8 +223,8 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
   if (invitation.invited_email !== user.email?.toLowerCase()) {
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
-  // 1 email = 1 role: tài khoản Farm Owner không nhận lời mời Domain Expert (và ngược lại),
-  // Technician/Admin không thành thành viên farm qua lời mời
+  // 1 email = 1 role: tài khoản Farm Owner không nhận lời mời Domain Expert hay Farm Technician
+  // (và ngược lại), Admin không thành thành viên farm qua lời mời
   if (user.role !== invitation.invited_role) {
     throw ConflictError(`Lời mời dành cho ${invitation.invited_role} nhưng tài khoản này là ${user.role} — hãy dùng email khác`)
   }
@@ -332,8 +342,46 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
 
   farm.members.splice(memberIndex, 1)
   await farm.save()
+  // AUTH-FR-005 — gỡ Farm Technician thì bỏ luôn các lần gán vào nhà của farm này
+  await House.updateMany({ farm_id: farm._id }, { $pull: { technicians: { user_id: targetUserId } } })
   await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId })
   return farm
+}
+
+/**
+ * AUTH-FR-013 — Farm Owner gán Farm Technician (thành viên farm) vào 1 nhà. Một thợ phục vụ nhiều nhà,
+ * mỗi nhà tối đa 1 thợ chính: gán `primary` thì thợ chính cũ thành thợ phụ. Gán lại chỉ đổi `primary`.
+ */
+export async function assignTechnician(houseId: string, user: CurrentUser, technicianId: string, primary = false): Promise<IHouse> {
+  const { house, farm } = await findHouseChainOrThrow(houseId)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
+  const member = farm.members.find(m => String(m.user_id) === technicianId && m.role === 'FARM_TECHNICIAN')
+  if (!member) throw ConflictError('Người này không phải Farm Technician của farm')
+
+  const others = (house.technicians ?? [])
+    .filter(t => String(t.user_id) !== technicianId)
+    .map(t => ({ user_id: t.user_id, primary: primary ? false : t.primary }))
+  house.technicians = [...others, { user_id: member.user_id, primary }]
+  await house.save()
+  await logAction(user._id, 'HOUSE_TECHNICIAN_ASSIGNED', 'house', String(house._id), {
+    user_id: technicianId, primary,
+  }, { farmId: String(farm._id) })
+  return house
+}
+
+/** AUTH-FR-013 — bỏ gán; không có lần gán nào vẫn trả nhà (idempotent) */
+export async function unassignTechnician(houseId: string, user: CurrentUser, technicianId: string): Promise<IHouse> {
+  const { house, farm } = await findHouseChainOrThrow(houseId)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
+  const before = (house.technicians ?? []).length
+  house.technicians = (house.technicians ?? []).filter(t => String(t.user_id) !== technicianId)
+  if (house.technicians.length !== before) {
+    await house.save()
+    await logAction(user._id, 'HOUSE_TECHNICIAN_UNASSIGNED', 'house', String(house._id), {
+      user_id: technicianId,
+    }, { farmId: String(farm._id) })
+  }
+  return house
 }
 
 /** Job nền: chuyển Invitation quá hạn sang EXPIRED (AUTH-FR-010, Flow 12 case 3d) */
@@ -358,6 +406,10 @@ export async function createHouse(
 
 export async function listHouses(farmId: string, user: CurrentUser) {
   const farm = await findFarmOrThrow(farmId)
+  // AUTH-FR-013 — Farm Technician chỉ nhận các nhà được giao
+  if (isFarmTechnician(farm, user)) {
+    return House.find({ farm_id: farm._id, _id: { $in: await listAssignedHouseIds(user) } }).sort({ created_at: -1 })
+  }
   if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
   return House.find({ farm_id: farm._id }).sort({ created_at: -1 })
 }
@@ -383,16 +435,16 @@ export async function listZones(houseId: string, user: CurrentUser) {
   const house = await House.findById(houseId)
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
-  if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
+  if (!canAccessHouse(farm, house, user, 'device')) throw ForbiddenError('Không có quyền trên house này')
   return Zone.find({ house_id: house._id }).sort({ created_at: -1 })
 }
 
 /** ENV-FR-006, ENV-FR-009 (lưu lịch sử thay đổi) */
 /** ENV-FR-006 — GET đơn 1 Zone, chủ yếu để FE lấy `thresholds` hiện tại trước khi mở form sửa. */
 export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone> {
-  const { zone, farm } = await findZoneChainOrThrow(zoneId)
-  // Technician cần Zone (và cấu hình gửi xuống thiết bị) khi setup và đẩy cấu hình (FARM-FR-009)
-  if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên zone này')
+  const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
+  // Administrator xem Zone của thiết bị ở mọi farm (FARM-FR-009); Farm Technician chỉ nhà được giao
+  if (!canAccessHouse(farm, house, user, 'device')) throw ForbiddenError('Không có quyền trên zone này')
   return zone
 }
 

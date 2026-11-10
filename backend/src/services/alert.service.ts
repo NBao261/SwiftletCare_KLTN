@@ -398,14 +398,15 @@ export interface ListAlertsQuery {
 }
 
 /**
- * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Technician thấy
- * cảnh báo thiết bị của mọi farm (FARM-FR-009); Admin không thấy farm nào (Report 3 §2.4).
+ * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Administrator thấy
+ * cảnh báo thiết bị của mọi farm (FARM-FR-009, Report 3 §2.4); Farm Technician rỗng cho tới khi
+ * cảnh báo được định tuyến theo nhà (G-21, AUTH-FR-014).
  */
 export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   const accessibleFarms = await listAccessibleFarmIds(user, 'device')
   const filter: Record<string, unknown> = { farm_id: { $in: accessibleFarms } }
   // $and để giữ nguyên bộ lọc `type` của người gọi: giao với loại thiết bị
-  if (user.role === 'TECHNICIAN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
+  if (user.role === 'ADMIN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
 
   if (query.farmId) {
     if (!accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
@@ -439,7 +440,7 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   return { records, total, page, limit, unreadCount }
 }
 
-/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Technician chỉ cảnh báo thiết bị) */
+/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Administrator chỉ cảnh báo thiết bị) */
 async function findAlertWithAccess(alertId: string, user: CurrentUser) {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')

@@ -19,7 +19,7 @@ const invitationSchema = new Schema<IInvitation>(
   {
     farm_id:       { type: Schema.Types.ObjectId, ref: 'Farm', required: true },
     invited_email: { type: String, required: true, lowercase: true, trim: true },
-    invited_role:  { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT'] satisfies FarmMemberRole[], required: true },
+    invited_role:  { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] satisfies FarmMemberRole[], required: true },
     invited_by:    { type: Schema.Types.ObjectId, ref: 'User', required: true },
     token:         { type: String, required: true, unique: true },
     status:        { type: String, enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED'], default: 'PENDING' },

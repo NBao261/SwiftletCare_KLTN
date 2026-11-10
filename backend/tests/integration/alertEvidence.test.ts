@@ -53,7 +53,7 @@ async function seed() {
   seq++
   const owner = await User.create({ email: `o${seq}@test.vn`, password_hash: 'password123', full_name: 'Chủ', role: 'FARM_OWNER' })
   const expert = await User.create({ email: `e${seq}@test.vn`, password_hash: 'password123', full_name: 'Chuyên gia', role: 'DOMAIN_EXPERT' })
-  const technician = await User.create({ email: `t${seq}@test.vn`, password_hash: 'password123', full_name: 'KTV', role: 'TECHNICIAN' })
+  const technician = await User.create({ email: `t${seq}@test.vn`, password_hash: 'password123', full_name: 'KTV', role: 'FARM_TECHNICIAN' })
   const farm = await Farm.create({
     name: 'F', address: 'x', owner_id: owner._id,
     members: [{ user_id: owner._id, is_primary: true }, { user_id: expert._id, role: 'DOMAIN_EXPERT' }],
@@ -140,7 +140,7 @@ describe('GET /alerts/:id/evidence — quyền và loại cảnh báo', () => {
 
     const inferred = await mkAlert('NOISE_ANOMALY')
     await get(inferred._id, tokenFor(owner._id, 'FARM_OWNER')).expect(200)
-    await get(inferred._id, tokenFor(technician._id, 'TECHNICIAN')).expect(403)
+    await get(inferred._id, tokenFor(technician._id, 'FARM_TECHNICIAN')).expect(403)
     const other = await seed()
     await get(inferred._id, tokenFor(other.expert._id, 'DOMAIN_EXPERT')).expect(403)
   })

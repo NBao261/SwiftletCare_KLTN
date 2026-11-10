@@ -17,21 +17,27 @@ const coordinates = (required: boolean) => {
   ]
 }
 
-// FARM-FR-009 — Technician thấy mọi farm (chỉ cấu trúc), Admin không thấy farm nào (service lọc)
+// FARM-FR-001 — farm mình sở hữu hoặc là thành viên (cả Farm Technician), Admin không thấy farm nào (service lọc)
 router.get   ('/',             farmController.list)
 router.post  ('/',             requireRole('FARM_OWNER'), body('name').trim().notEmpty(), body('address').trim().notEmpty(), ...coordinates(true), validate, farmController.create)
 router.get   ('/:id',          param('id').isMongoId(), validate, farmController.getOne)
 // Report 3 §2.4 — Administrator không quản lý farm (FARM-FR-001); xoá farm và thành viên: service chỉ cho Primary Owner
 router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), ...coordinates(false), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), validate, farmController.remove)
-// AUTH-FR-005 (v2.0.0) — mời đồng sở hữu hoặc Domain Expert; cả hai đều theo cả farm (không còn zone_ids)
+// AUTH-FR-005 — mời đồng sở hữu, Domain Expert (cả farm) hoặc Farm Technician (nhà được gán, AUTH-FR-013)
 router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(), body('email').isEmail(),
-  body('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT']), validate, farmController.inviteMember)
+  body('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']), validate, farmController.inviteMember)
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 
 // Houses — cấu trúc farm chỉ Farm Owner tạo (FARM-FR-002, Report 3 §2.4)
 router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
+
+// AUTH-FR-013 — Farm Owner gán/bỏ gán Farm Technician vào nhà; mỗi nhà tối đa 1 thợ chính
+router.put   ('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),
+  body('primary').optional().isBoolean({ strict: true }), validate, farmController.assignTechnician)
+router.delete('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),
+  validate, farmController.unassignTechnician)
 
 // Zones (under house)
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createZone)

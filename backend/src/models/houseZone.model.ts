@@ -24,6 +24,8 @@ export interface IHouse extends Document {
   /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
+  /** AUTH-FR-013 — Farm Technician được giao nhà này; tối đa 1 thợ chính (Report 4 ERD `HOUSE.technicians`) */
+  technicians: Array<{ user_id: Types.ObjectId; primary: boolean }>
 }
 
 export interface IThresholdHistoryEntry {
@@ -91,9 +93,16 @@ const houseSchema = new Schema<IHouse>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
     }],
+    technicians: [{
+      user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      primary: { type: Boolean, default: false },
+      _id: false,
+    }],
   },
   { timestamps: { createdAt: 'created_at' } }
 )
+// AUTH-FR-004 — tìm các nhà được giao của 1 thợ (phạm vi dữ liệu của Farm Technician)
+houseSchema.index({ 'technicians.user_id': 1 })
 
 const zoneSchema = new Schema<IZone>(
   {

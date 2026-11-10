@@ -110,7 +110,7 @@ describe('mời Domain Expert (AUTH-FR-005/010, EXPERT-FR-001)', () => {
     const { owner, farm, t } = await seed()
     await call('post', `/farms/${farm._id}/members`, t.owner, { email: 'a@test.vn', role: 'FARM_OPERATOR' }).expect(422)
     await call('post', `/farms/${farm._id}/members`, t.owner, { email: 'b@test.vn', role: 'DOMAIN_EXPERT' }).expect(201)
-    const tech = await mkUser('TECHNICIAN')
+    const tech = await mkUser('FARM_TECHNICIAN')
     await expect(inviteMember(String(farm._id), asUser(owner), { email: tech.email, role: 'DOMAIN_EXPERT' })).rejects.toMatchObject({ statusCode: 409 })
   })
 
