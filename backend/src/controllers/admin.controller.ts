@@ -88,7 +88,7 @@ export const rotateBrokerSecret = asyncHandler(async (req: Request, res: Respons
   res.json({ success: true, data: await provisionedDeviceService.rotateBrokerSecret(req.user._id, req.params.id) })
 })
 
-/** POST /admin/provisioned-devices/:id/rotate-key – FARM-FR-003 (secret_key mới chỉ trả về 1 lần) */
+/** POST /admin/provisioned-devices/:id/rotate-key – FARM-FR-010, BR-26: thiết bị trong kho hoặc đã gỡ (secret_key mới chỉ trả về 1 lần) */
 export const rotateProvisionedKey = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await provisionedDeviceService.rotateProvisionedKey(req.user._id, req.params.id) })
 })
