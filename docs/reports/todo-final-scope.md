@@ -93,7 +93,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 **Giao diện:**
 - [ ] Len: đăng nhập bằng tài khoản technician; tab theo `roleTabs.ts`; danh sách các nhà được gán.
-- [ ] Nhi: màn gán technician vào nhà trên web Owner. Màn lịch trực để sau cùng, cùng lúc với phần backend.
+- [ ] Nhi: màn gán technician vào nhà trên web Owner. Màn lịch trực để sau cùng, cùng lúc với phần backend. *(Gán xong: Nhi, 11/11, nhánh `feat/g20-farm-technician` — tab "Thành viên farm" của trang nhà có mục "Kỹ thuật viên": công tắc "Giao nhà này" và ô "Thợ chính" lưu ngay qua `PUT/DELETE /farms/houses/{houseId}/technicians/{userId}`, Farm Owner nào cũng giao được, chuyên gia chỉ xem; mời Farm Technician vào farm (`INVITE_ROLES`); mục "Chủ nhà yến" không còn lẫn kỹ thuật viên. Còn màn lịch trực.)*
 - [ ] Tuấn: màn Technician cũ chuyển thành console thiết bị của Administrator (danh sách thiết bị, cảnh báo thiết bị, RESTART, OTA).
 
 **Xong khi:** `roleMatrix.test.ts` pass với role mới, technician nhà A nhận 403 ở nhà B, và không còn chuỗi `TECHNICIAN` nào ngoài `FARM_TECHNICIAN` và phần migration.

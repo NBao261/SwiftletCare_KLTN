@@ -19,6 +19,11 @@ export const farmApi = {
   createHouse: (farmId: string, input: { name: string; floors?: number; description?: string }) =>
     api.post<ApiResponse<House>>(`/farms/${farmId}/houses`, input),
   listHouses: (farmId: string) => api.get<ApiResponse<House[]>>(`/farms/${farmId}/houses`),
+  // AUTH-FR-013 — gán / bỏ gán Farm Technician vào nhà; gọi lại PUT với người đã gán chỉ đổi primary
+  assignTechnician: (houseId: string, userId: string, primary: boolean) =>
+    api.put<ApiResponse<House>>(`/farms/houses/${houseId}/technicians/${userId}`, { primary }),
+  unassignTechnician: (houseId: string, userId: string) =>
+    api.delete<ApiResponse<House>>(`/farms/houses/${houseId}/technicians/${userId}`),
 
   createZone: (houseId: string, input: { name: string; floor?: number }) =>
     api.post<ApiResponse<Zone>>(`/farms/houses/${houseId}/zones`, input),

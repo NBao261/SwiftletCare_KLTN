@@ -16,12 +16,13 @@ interface FarmFrameProps {
 export default function FarmFrame({ title, description, action, className, children }: FarmFrameProps) {
   return (
     <Card size="lg" className={cn('flex flex-col gap-4', className)}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      {/* Tiêu đề + mô tả chiếm phần còn lại (mô tả dài thì xuống dòng trong cột), nút cùng hàng bên phải; điện thoại cho nút xuống hàng */}
+      <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
+        <div className="min-w-0 flex-1">
           <h2 className="flex flex-wrap items-center gap-2 text-h2 text-charcoal">{title}</h2>
           {description && <div className="mt-1 text-sm text-warmGray">{description}</div>}
         </div>
-        {action}
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       {children}
     </Card>

@@ -163,6 +163,17 @@ export function useRemoveMember(farmId: string) {
   })
 }
 
+// AUTH-FR-013 — bật/tắt giao nhà cho 1 Farm Technician, đổi thợ chính (primary: true đẩy thợ chính cũ thành thợ phụ)
+export function useSetHouseTechnician(farmId: string, houseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { userId: string; assigned: boolean; primary?: boolean }) => (input.assigned
+      ? farmApi.assignTechnician(houseId, input.userId, input.primary ?? false)
+      : farmApi.unassignTechnician(houseId, input.userId)),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['houses', farmId] }),
+  })
+}
+
 // ── Zone phẳng của 1 Farm (kèm tên nhà) ───────────────────────────────────
 
 export interface FlatZone extends Zone { houseName: string }

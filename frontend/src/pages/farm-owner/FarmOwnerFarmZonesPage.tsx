@@ -203,7 +203,7 @@ export default function FarmOwnerFarmZonesPage() {
             </aside>
           </div>
         ) : tab === 'members' ? (
-          <FarmMembersManager farmId={farm._id} />
+          <FarmMembersManager farmId={farm._id} houseId={house._id} />
         ) : (
           <FarmFrame title={t('house.devicesTitle', { n: devices.length })} description={t('zone.devicesDesc')}>
             <DeviceListTable devices={devices} zoneNameById={zoneNameById} onSelect={setSelected} />
