@@ -23,6 +23,8 @@ interface DeviceListRowProps {
   onOpenDecommission: () => void;
   /** G-20: Chỉ FARM_OWNER mới được đăng ký/dời/gỡ/thay thiết bị và quản lý file loa (ADMIN, FARM_TECHNICIAN → 403) */
   canOnboard: boolean;
+  /** G-20: Chỉ ADMIN gửi được lệnh PUSH_CONFIG (FARM_OWNER, FARM_TECHNICIAN → 403) */
+  canPushConfig?: boolean;
 }
 
 const STALE_HEARTBEAT_MS = 5 * 60 * 1000
@@ -54,7 +56,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pu
 export default function DeviceListRow({
   node, zoneId, locationLabel, index = 0, isExpanded, onToggleExpand,
   onReboot, rebootUnsupported,
-  onOpenAudio, onOpenReassign, onOpenReplace, onOpenDecommission, canOnboard
+  onOpenAudio, onOpenReassign, onOpenReplace, onOpenDecommission, canOnboard, canPushConfig
 }: DeviceListRowProps) {
   const isOnline = node.status === "ONLINE";
   const badge = STATUS_BADGE[node.status] ?? { label: node.status, cls: "bg-stone text-charcoal", dot: "bg-warmGray", accent: "bg-transparent" };
@@ -175,6 +177,7 @@ export default function DeviceListRow({
                 onOpenReplace={onOpenReplace}
                 onOpenDecommission={onOpenDecommission}
                 canOnboard={canOnboard}
+                canPushConfig={canPushConfig}
               />
             )}
           </div>

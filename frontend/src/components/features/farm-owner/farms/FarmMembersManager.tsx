@@ -26,8 +26,8 @@ const ROLE_LABEL: Record<MemberRoleKey, FarmKey> = {
   FARM_TECHNICIAN: 'members.role.FARM_TECHNICIAN',
 }
 
-// Vai trò mời được (G-20: thêm FARM_TECHNICIAN — Farm Owner mời thợ vào farm qua POST /farms/:id/members)
-const INVITE_ROLES: FarmMemberRole[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
+// Vai trò mời được
+const INVITE_ROLES: FarmMemberRole[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
 
 interface MemberRow {
   userId: string

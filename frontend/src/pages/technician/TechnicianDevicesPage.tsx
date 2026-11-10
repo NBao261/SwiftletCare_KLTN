@@ -35,7 +35,8 @@ export default function TechnicianDevicesPage() {
   const canManageLifecycle = usePermission("FARM_OWNER");
   // G-20: RESTART: ADMIN, FARM_OWNER, FARM_TECHNICIAN
   const canRestart = usePermission("ADMIN", "FARM_OWNER", "FARM_TECHNICIAN");
-  // G-20: PUSH_CONFIG và OTA: chỉ ADMIN — sẽ truyền vào DeviceDiagnosticsPanel ở sprint tiếp theo
+  // G-20: PUSH_CONFIG: chỉ ADMIN (FARM_OWNER, FARM_TECHNICIAN → 403)
+  const canPushConfig = usePermission("ADMIN");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Bộ lọc vị trí độc lập (Local state) — khởi tạo từ searchParams nếu có điều hướng từ trang Trang trại
@@ -372,6 +373,7 @@ export default function TechnicianDevicesPage() {
                   onOpenReplace={() => setReplaceNodeId(node._id)}
                   onOpenDecommission={() => setDecommissionNodeId(node._id)}
                   canOnboard={canManageLifecycle}
+                  canPushConfig={canPushConfig}
                   rebootUnsupported={rebootUnsupportedIds.has(node._id)}
                   onReboot={canRestart ? () => setRebootNodeId(node._id) : undefined}
                 />
