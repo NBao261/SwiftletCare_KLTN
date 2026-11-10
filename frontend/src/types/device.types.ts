@@ -97,3 +97,21 @@ export interface SystemNodeStatus {
   summary: { total: number; online: number; offline: number; pending: number }
   nodes: SystemNodeStatusItem[]
 }
+
+// ── Kho thiết bị (FARM-FR-010, Report 3 §6.16) — GET /admin/provisioned-devices ─────────────────────────────────────
+export type ProvisionedDeviceKind = 'SENSOR' | 'CAMERA'
+/** Trạng thái nhãn, backend suy ra mỗi lần đọc. Cấp lại mã kích hoạt / thu hồi được ở IN_STOCK và RELEASED */
+export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
+
+export interface ProvisionedDevice {
+  _id: string; device_id: string; kind: ProvisionedDeviceKind
+  claimed_at?: string | null; revoked_at?: string | null; revoke_reason?: string | null
+  created_by: string; created_at: string
+  stock_status: StockStatus
+}
+
+/** Mã chỉ trả đúng 1 lần: thêm vào kho trả cả hai, cấp lại mã kích hoạt / mật khẩu broker trả 1 trong 2 */
+export interface IssuedDeviceSecrets {
+  device_id: string; kind: ProvisionedDeviceKind
+  secret_key?: string; broker_secret?: string
+}

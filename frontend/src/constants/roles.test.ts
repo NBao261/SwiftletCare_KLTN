@@ -24,6 +24,7 @@ const MATRIX: Record<string, Role[]> = {
   '/alerts': [FO, TECH],
   '/system/health': [ADMIN],
   '/system/devices': [ADMIN],
+  '/system/device-stock': [ADMIN],
   '/system/settings': [ADMIN],
   '/system/audit-log': [ADMIN],
   '/users': [ADMIN],

@@ -104,6 +104,7 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
   { path: '/system/devices',   roles: ADMIN_ONLY },
+  { path: '/system/device-stock', roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_SIDE_ROLES },
   { path: '/vision',           roles: FARM_SIDE_ROLES },
   { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
