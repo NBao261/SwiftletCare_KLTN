@@ -1,16 +1,19 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { healthDayApi, type HealthDayScope } from '@/apis/shared/healthDays.api'
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { HealthLevels, HealthRatingState, HealthRatingValue, HealthReportKind, HouseHealthDay } from '@/types'
 
 const HEALTH_DAYS_KEY = 'health-days'
 const HEALTH_REPORTS_KEY = 'house-health-reports'
+// Số báo cáo mỗi trang, cũng là số dòng khung bảng
+export const REPORT_PAGE_SIZE = 10
 
 // Mới nhất trước, cùng ngày thì theo tên nhà
 function byDateThenHouse(left: HouseHealthDay, right: HouseHealthDay): number {
   return right.date.localeCompare(left.date) || left.house_name.localeCompare(right.house_name)
 }
 
-// MF-11 — ngày của 1 nhà, 1 farm, hoặc mọi farm (backend cần houseId hoặc farmId nên mỗi farm 1 request)
+// MF-06 — ngày của 1 nhà, 1 farm, hoặc mọi farm (backend cần houseId hoặc farmId nên mỗi farm 1 request)
 export function useHealthDays(params: {
   farmIds: string[]
   houseId: string
@@ -39,7 +42,7 @@ export function useHealthDays(params: {
   })
 }
 
-// Chấm, bỏ qua, ghi chú đều trả ngày đầy đủ; làm mới mọi danh sách ngày và báo cáo (ngày bị che đổi theo BR-31)
+// Đánh giá, bỏ qua, ghi chú: làm mới ngày và báo cáo; 409 (đã đánh giá nơi khác, vừa quá hạn) cũng làm mới danh sách ngày
 function useDayMutation<Input>(mutate: (input: Input) => Promise<HouseHealthDay>) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -48,6 +51,16 @@ function useDayMutation<Input>(mutate: (input: Input) => Promise<HouseHealthDay>
       void queryClient.invalidateQueries({ queryKey: [HEALTH_DAYS_KEY] })
       void queryClient.invalidateQueries({ queryKey: [HEALTH_REPORTS_KEY] })
     },
+    onError: error => {
+      if ((error as { response?: { status?: number } }).response?.status === 409) void queryClient.invalidateQueries({ queryKey: [HEALTH_DAYS_KEY] })
+    },
+  })
+}
+
+// CSV các ngày theo phạm vi và ngôn ngữ; trả blob để trang tự lưu file
+export function useDownloadHealthCsv() {
+  return useMutation({
+    mutationFn: (scope: HealthDayScope & { lang: 'vi' | 'en' }) => healthDayApi.downloadCsv(scope).then(response => response.data),
   })
 }
 
@@ -83,14 +96,15 @@ export function useUpdateHealthLevels(houseId: string) {
 }
 
 
-// EXPERT-FR-005 — báo cáo theo nhà hoặc farm, mới nhất trước; scope null = chưa chọn được phạm vi
-export function useHouseHealthReports(scope: { houseId?: string; farmId?: string } | null, kind?: HealthReportKind) {
-  return useQuery({
-    queryKey: [HEALTH_REPORTS_KEY, scope, kind],
-    // ponytail: 100 báo cáo mới nhất (≈ 3 tháng báo cáo ngày của 1 nhà), thêm phân trang server khi cần xem xa hơn
-    queryFn: () => healthDayApi.listReports({ ...scope, kind, limit: 100 }).then(response => response.data.data),
-    enabled: Boolean(scope),
-  })
+// EXPERT-FR-005 — báo cáo theo nhà hoặc farm, mới nhất trước, phân trang server; scope null = chưa chọn được phạm vi
+export function useHouseHealthReports(scope: { houseId?: string; farmId?: string } | null, kind: HealthReportKind | undefined, page: number) {
+  return usePaginatedListQuery(
+    [HEALTH_REPORTS_KEY, scope, kind, page],
+    () => healthDayApi.listReports({ ...scope, kind, page, limit: REPORT_PAGE_SIZE }),
+    page,
+    REPORT_PAGE_SIZE,
+    { enabled: Boolean(scope) },
+  )
 }
 
 // Chi tiết đọc lại mỗi lần mở: các ngày che theo trạng thái đánh giá hiện tại (BR-31)

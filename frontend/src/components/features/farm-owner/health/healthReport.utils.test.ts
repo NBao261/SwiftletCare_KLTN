@@ -45,6 +45,7 @@ const report: HouseHealthReport = {
   ],
   status_counts: { GOOD: 0, WATCH: 1, ACTION: 0, INSUFFICIENT_DATA: 0 },
   hidden_days: 1,
+  expert_conclusion: null,
 };
 
 describe('reportDayRows', () => {
@@ -82,8 +83,8 @@ describe('reportPeriod', () => {
 });
 
 describe('countsText và zoneFacts', () => {
-  it('dịch loại cảnh báo, mỗi loại 1 dòng, bỏ loại đếm 0, loại lạ giữ nguyên mã, không có gì thì —', () => {
-    expect(countsText({ SENSOR_FAULT: 2, NODE_OFFLINE: 0, NEW_TYPE: 1 }, vi)).toBe('Lỗi cảm biến 2\nNEW_TYPE 1');
+  it('dịch loại cảnh báo, mỗi loại 1 dòng, bỏ loại đếm 0, loại lạ gom thành Khác N, không có gì thì —', () => {
+    expect(countsText({ SENSOR_FAULT: 2, NODE_OFFLINE: 0, NEW_TYPE: 1, OTHER_TYPE: 2 }, vi)).toBe('Lỗi cảm biến 2\nKhác 3');
     expect(countsText({}, vi)).toBe(NO_VALUE);
   });
 

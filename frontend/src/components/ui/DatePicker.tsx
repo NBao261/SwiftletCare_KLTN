@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 
-import { t } from '@/i18n';
+import { intlLocale, t } from '@/i18n';
 import { cn } from '@/lib/cn';
-import { useLanguageStore } from '@/stores/languageStore';
 
 const DAYS_PER_WEEK = 7;
 // 1 thứ Hai bất kỳ (01/01/2024) để lấy tên thứ theo ngôn ngữ, tuần bắt đầu từ thứ Hai
@@ -52,10 +51,8 @@ interface DatePickerProps {
   required?: boolean;
 }
 
-// Ô ngày dd/mm/yyyy (FE_Design 6.1) thay <input type="date"> vốn theo định dạng và ngôn ngữ của trình duyệt: gõ tay tự chèn "/",
-// hoặc mở lịch tháng chọn (tuần bắt đầu thứ Hai, tên thứ/tháng theo VI/EN); ngày ngoài min–max bị mờ
+// Ô ngày dd/mm/yyyy (FE_Design 6.1): gõ tay tự chèn "/" hoặc chọn trên lịch tháng; ngày ngoài min–max bị mờ
 export default function DatePicker({ id, label, value, onChange, min = '', max, error, required = false }: DatePickerProps): JSX.Element {
-  const lang = useLanguageStore(state => state.lang);
   const rootRef = useRef<HTMLDivElement>(null);
   const [text, setText] = useState(() => toDisplay(value));
   const [isOpen, setIsOpen] = useState(false);
@@ -88,14 +85,13 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
     };
   }, [isOpen]);
 
-  // Tên thứ và tiêu đề tháng theo ngôn ngữ đang chọn
-  const locale = lang === 'vi' ? 'vi-VN' : 'en-GB';
+  // Tên thứ, tháng theo ngôn ngữ (AppShell remount khi đổi ngôn ngữ); VI dạng hẹp "T2 … CN", EN "Mon" vì "M/T" bị trùng
+  const locale = intlLocale();
   const weekdayNames = useMemo(() => {
-    // VI dạng hẹp "T2 … CN" cho vừa cột; EN "Mon" (dạng hẹp "M/T" bị trùng chữ)
-    const formatter = new Intl.DateTimeFormat(locale, { weekday: lang === 'vi' ? 'narrow' : 'short' });
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: locale.startsWith('vi') ? 'narrow' : 'short' });
     return Array.from({ length: DAYS_PER_WEEK }, (_, index) =>
       formatter.format(new Date(MONDAY_REFERENCE.getFullYear(), MONDAY_REFERENCE.getMonth(), MONDAY_REFERENCE.getDate() + index)));
-  }, [lang, locale]);
+  }, [locale]);
   const monthTitle = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(viewYear, viewMonth, 1));
 
   // Ô lịch: chỗ trống đầu tháng (tuần bắt đầu thứ Hai) + các ngày trong tháng
@@ -154,7 +150,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
       </div>
       {error && <span className="text-xs text-alertRed">{error}</span>}
 
-      {/* Lịch tháng nổi dưới ô: rộng bằng ô ngày (tối đa 20rem), căn mép trái nên không tràn khỏi popup khi ô hẹp */}
+      {/* Lịch nổi dưới ô, rộng bằng ô (tối đa 20rem); nút ngày co theo cột nên ô hẹp không đè nhau */}
       {isOpen && (
         <div className="glass-panel absolute left-0 top-full z-20 mt-2 w-full max-w-xs rounded-2xl border border-warmGray/15 bg-white p-3 shadow-popover">
           <div className="mb-2 flex items-center justify-between">
@@ -193,7 +189,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
                   disabled={isDisabled}
                   onClick={() => selectDay(day)}
                   className={cn(
-                    'mx-auto h-8 w-8 rounded-full text-xs tabular-nums transition-colors',
+                    'mx-auto aspect-square w-full max-w-[2rem] rounded-full text-xs tabular-nums transition-colors',
                     isSelected ? 'bg-charcoal font-semibold text-white' : 'text-charcoal hover:bg-warmGray/10',
                     key === todayKey && !isSelected && 'ring-1 ring-charcoal/30',
                     isDisabled && 'cursor-not-allowed text-warmGray/40 hover:bg-transparent',

@@ -45,8 +45,7 @@ export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRa
   const [note, setNote] = useState('');
   const [isPickError, setIsPickError] = useState(false);
   const [isSkipOpen, setIsSkipOpen] = useState(false);
-  // Nháp (rating + note) thuộc ngày nào: thoát bằng ✕/Esc/nhấn ra ngoài giữ nháp, mở lại đúng ngày đó thấy lại;
-  // mở ngày khác thì bắt đầu trống. Chỉ giữ 1 nháp, mất khi rời trang.
+  // Ngày của nháp: đóng rồi mở lại đúng ngày đó thì còn nháp, mở ngày khác thì trống
   const [draftDayId, setDraftDayId] = useState<string | null>(null);
 
   if (!day) return null;
@@ -73,10 +72,13 @@ export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRa
     setIsPickError(false);
   }
 
-  // 409 RATING_CLOSED: đã chấm/bỏ qua ở nơi khác hoặc vừa quá hạn
+  // Câu lỗi chung theo nhóm (13.16 b); 409 (đã đánh giá nơi khác, vừa quá hạn) thì đóng popup, danh sách tự làm mới
   function showError(error: unknown): void {
-    const status = (error as { response?: { status?: number } }).response?.status;
-    push(status === 409 ? t('rate.closed') : apiErrorMessage(error), 'error');
+    push(apiErrorMessage(error), 'error');
+    if ((error as { response?: { status?: number } }).response?.status === 409) {
+      clearDraft();
+      close();
+    }
   }
 
   function reveal(revealed: HouseHealthDay, message: string): void {

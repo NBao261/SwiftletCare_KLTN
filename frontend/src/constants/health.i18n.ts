@@ -1,7 +1,7 @@
 import { alertTypeDict, prefixLabels, roleDict } from '@/constants/enumLabels.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển màn Sức khỏe nhà yến (/health) — trạng thái ngày, đánh giá ngày, mức chỉ số (MF-11, BR-28…31)
+// Từ điển màn Sức khỏe nhà yến (/health) — trạng thái ngày, đánh giá ngày, mức chỉ số (MF-06, BR-28…31)
 const vi = {
   // Đầu trang
   'page.title': 'Sức khỏe nhà yến',
@@ -81,7 +81,6 @@ const vi = {
   'rate.skip': 'Bỏ qua ngày này',
   'rate.pickOne': 'Chọn một mức trước khi lưu',
   'rate.saved': 'Đã lưu đánh giá',
-  'rate.closed': 'Ngày này đã được đánh giá, đã bỏ qua hoặc đã quá hạn đánh giá',
   'skip.title': 'Bỏ qua ngày này?',
   'skip.desc': '**Không thể hoàn tác.** Trạng thái của hệ thống sẽ hiện ra ngay và bạn sẽ **không đánh giá được ngày này nữa**. Ngày bỏ qua **không được tính vào độ khớp** giữa bạn và hệ thống.',
   'skip.confirm': 'Bỏ qua ngày này',
@@ -241,6 +240,7 @@ const vi = {
   'rd.nh3': 'NH3 TB / cao nhất',
   'rd.co2': 'CO2 TB / cao nhất',
   'rd.alerts': 'Cảnh báo',
+  'rd.otherAlerts': 'Khác {n}',
   'rd.inferredLabel': 'Cảnh báo suy luận',
   'rd.inferredConfirmed': '{n} xác nhận',
   'rd.inferredDismissed': '{n} bác bỏ',
@@ -342,7 +342,6 @@ const en: Record<HealthKey, string> = {
   'rate.skip': 'Skip this day',
   'rate.pickOne': 'Choose a level before saving',
   'rate.saved': 'Rating saved',
-  'rate.closed': 'This day is already rated, skipped or past its rating deadline',
   'skip.title': 'Skip this day?',
   'skip.desc': '**This cannot be undone.** The system status will show right away and you will **no longer be able to rate this day**. A skipped day is **left out of the agreement** between you and the system.',
   'skip.confirm': 'Skip this day',
@@ -495,6 +494,7 @@ const en: Record<HealthKey, string> = {
   'rd.nh3': 'NH3 mean / max',
   'rd.co2': 'CO2 mean / max',
   'rd.alerts': 'Alerts',
+  'rd.otherAlerts': 'Other {n}',
   'rd.inferredLabel': 'Inferred alerts',
   'rd.inferredConfirmed': '{n} confirmed',
   'rd.inferredDismissed': '{n} dismissed',

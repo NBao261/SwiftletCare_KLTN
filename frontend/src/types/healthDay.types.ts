@@ -1,4 +1,4 @@
-// Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, chấm điểm độc lập (MF-11; api-spec HouseHealthDay)
+// Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, đánh giá độc lập (MF-06; api-spec HouseHealthDay)
 
 export type HealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA';
 export type HealthRatingValue = 'GOOD' | 'WATCH' | 'ACTION';
@@ -80,6 +80,8 @@ export interface HouseHealthLevels {
   house_id: string;
   health_levels: HealthLevels;
   defaults: HealthLevels;
+  // Người gọi sửa được không, cùng luật PUT (BR-22, chỉ đếm chuyên gia còn hoạt động)
+  can_edit: boolean;
 }
 
 // EXPERT-FR-005 — báo cáo sức khỏe theo nhà yến (api-spec HouseHealthReportSummary, BR-33; CUSTOM do người dùng tạo)
@@ -96,13 +98,6 @@ export interface HouseHealthReportSummary {
   period_end: string;
   generated_at: string;
   has_conclusion: boolean;
-  // Đề xuất cho backend (chưa có trong api-spec): kèm kết luận ở danh sách để bảng hiện được; thiếu thì bảng chỉ ghi "Đã có kết luận"
-  expert_conclusion?: {
-    text: string;
-    by: { _id: string; full_name: string | null };
-    at: string;
-    edited_at?: string | null;
-  } | null;
 }
 
 export interface HealthReportZoneSection {
@@ -140,4 +135,11 @@ export interface HouseHealthReport extends HouseHealthReportSummary {
   days: HouseHealthDay[];
   status_counts: Record<HealthStatus, number>;
   hidden_days: number;
+  // Chỉ có ở chi tiết (api-spec HouseHealthReport), danh sách chỉ có has_conclusion
+  expert_conclusion: {
+    text: string;
+    by: { _id: string; full_name: string | null };
+    at: string;
+    edited_at?: string | null;
+  } | null;
 }

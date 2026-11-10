@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
-import { healthDayApi, type HealthDayScope } from '@/apis/shared/healthDays.api';
+import type { HealthDayScope } from '@/apis/shared/healthDays.api';
 import ScopeFilter from '@/components/common/ScopeFilter';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthDayDrawer from '@/components/features/farm-owner/health/HealthDayDrawer';
@@ -11,19 +11,18 @@ import HealthRatingModal from '@/components/features/farm-owner/health/HealthRat
 import HealthReportSection from '@/components/features/farm-owner/health/HealthReportSection';
 import { HOVER_DARK_BUTTON, shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import { Button, EmptyState, FilterChip, SectionCard } from '@/components/ui';
+import { Button, EmptyState, FilterChip, LoadingSkeleton, SectionCard } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
-import { useFarm } from '@/hooks/shared/useFarms';
-import { useHealthDays } from '@/hooks/shared/useHealthDays';
+import { useDownloadHealthCsv, useHealthDays } from '@/hooks/shared/useHealthDays';
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
 import type { HouseHealthDay } from '@/types';
 
-// Khoảng ngày xem được; backend cho tối đa 31 ngày một lần đọc
+// Khoảng ngày xem được (thêm hôm nay, tối đa 31 ngày một lần đọc)
 const RANGE_DAYS = [7, 14, 30] as const;
 type RangeDays = (typeof RANGE_DAYS)[number];
 // Tên tab trùng tiền tố khoá tiêu đề thẻ (table.title, report.title)
@@ -40,7 +39,7 @@ function saveCsv(blob: Blob, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
-// MF-11 — trạng thái sức khỏe theo ngày của nhà yến và đánh giá ngày độc lập (BR-31); Farm Owner và Domain Expert
+// MF-06 — trạng thái sức khỏe theo ngày của nhà yến và đánh giá ngày độc lập (BR-31); Farm Owner và Domain Expert
 export default function FarmOwnerHealthPage(): JSX.Element {
   const { t, lang } = useTranslation(healthDict);
   // Trạng thái tính theo nhà yến nên chỉ lọc tới nhà (ô Zone khoá)
@@ -56,8 +55,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const [ratingDay, setRatingDay] = useState<HouseHealthDay | null>(null);
   const [viewDay, setViewDay] = useState<HouseHealthDay | null>(null);
   const [isLevelsOpen, setIsLevelsOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  // Tab nằm trên URL (?tab=report) để từ trang chi tiết báo cáo quay lại đúng tab; giữ các tham số khác (?preview)
+  // Tab nằm trên URL (?tab=report) để từ trang chi tiết báo cáo quay lại đúng tab
   const [searchParams, setSearchParams] = useSearchParams();
   const tab: HealthTab = searchParams.get('tab') === 'report' ? 'report' : 'table';
   const setTab = (value: HealthTab) => setSearchParams(previous => {
@@ -67,18 +65,16 @@ export default function FarmOwnerHealthPage(): JSX.Element {
     return next;
   }, { replace: true });
 
+  // N ngày trước + hôm nay: ngày hôm nay − N còn đánh giá được tới hết hôm nay (hạn D+7), không được rơi khỏi bảng
   const to = vietnamDate();
-  const from = shiftDate(to, -(rangeDays - 1));
+  const from = shiftDate(to, -rangeDays);
   const farmIds = useMemo(() => (scope.farmId ? [scope.farmId] : scope.farms.map(farm => farm._id)), [scope.farmId, scope.farms]);
   const { days, isLoading, isError, error, refetch } = useHealthDays({ farmIds, houseId: scope.houseId, from, to });
   const pendingDays = useMemo(() => days.filter(day => day.my_rating_state === 'PENDING'), [days]);
   const shownDays = canRate && isToRateOnly ? pendingDays : days;
 
-  // BR-22: Farm Owner chỉ sửa mức khi farm chưa có chuyên gia; backend vẫn là chốt chặn (403)
   const house = scope.houses.find(item => item._id === scope.houseId);
-  const { data: houseFarm } = useFarm(house?.farm_id);
-  const farmHasExpert = (houseFarm?.members ?? []).some(member => member.role === 'DOMAIN_EXPERT');
-  const canEditLevels = isExpert || !farmHasExpert;
+  const downloadCsv = useDownloadHealthCsv();
 
   // CSV và báo cáo theo nhà hoặc farm đang lọc; xem tất cả trang trại mà chỉ có 1 farm thì dùng farm đó
   let csvScope: HealthDayScope | null = null;
@@ -89,17 +85,12 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const openRating = useCallback((day: HouseHealthDay) => setRatingDay(day), []);
   const openView = useCallback((day: HouseHealthDay) => setViewDay(day), []);
 
-  async function handleExport(): Promise<void> {
+  function handleExport(): void {
     if (!csvScope) return;
-    setIsExporting(true);
-    try {
-      const response = await healthDayApi.downloadCsv({ ...csvScope, from, to, lang });
-      saveCsv(response.data, `suc-khoe-nha-yen-${from}-${to}.csv`);
-    } catch (exportError) {
-      push(apiErrorMessage(exportError, t('page.exportFailed')), 'error');
-    } finally {
-      setIsExporting(false);
-    }
+    downloadCsv.mutate({ ...csvScope, from, to, lang }, {
+      onSuccess: blob => saveCsv(blob, `suc-khoe-nha-yen-${from}-${to}.csv`),
+      onError: exportError => push(apiErrorMessage(exportError, t('page.exportFailed')), 'error'),
+    });
   }
 
   const filter = (
@@ -173,7 +164,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
               >
                 {t('page.levels')}
               </Button>
-              <Button variant="secondary" size="sm" className={HOVER_DARK_BUTTON} disabled={!csvScope} loading={isExporting} onClick={() => void handleExport()}>
+              <Button variant="secondary" size="sm" className={HOVER_DARK_BUTTON} disabled={!csvScope} loading={downloadCsv.isPending} onClick={handleExport}>
                 {t('page.export')}
               </Button>
             </div>
@@ -193,11 +184,9 @@ export default function FarmOwnerHealthPage(): JSX.Element {
             </div>
           </div>
 
-          {/* Đang tải và rỗng: khung viền đứt (như EmptyState) chứa hình minh hoạ bảng của Dashboard, giãn hết phần còn lại của thẻ */}
+          {/* Đang tải: LoadingSkeleton (FE_Design 13.5); rỗng: khung viền đứt chứa hình minh hoạ bảng */}
           {isLoading || scope.isLoading ? (
-            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12 motion-safe:animate-pulse" role="status">
-              <TableEmptyState title={t('table.loading')} />
-            </div>
+            <LoadingSkeleton count={5} className="h-14 w-full" />
           ) : isError ? (
             <EmptyState
               title={t('page.errorTitle')}
@@ -226,7 +215,6 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           open={isLevelsOpen}
           onClose={() => setIsLevelsOpen(false)}
           house={{ id: house._id, name: house.name }}
-          canEdit={canEditLevels}
           readOnlyNote={t('levels.readOnlyExpert')}
         />
       )}

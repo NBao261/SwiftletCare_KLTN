@@ -9,8 +9,7 @@ import { useToastStore } from '@/stores/toastStore';
 import { HEALTH_LEVEL_LIMITS, validateHealthLevels, type HealthLevelError, type HealthLevelKey } from '@/validations/common/healthLevels.validation';
 import type { HealthLevels } from '@/types';
 
-// 3 chỉ số có mức riêng, mỗi chỉ số 1 hàng; đàn chim lấy mức từ tham số phát hiện của nhà (hàng chỉ ghi chú).
-// op: phép so sánh như backend (healthAssessment.service) — môi trường thấp hơn mốc là lệch, không khí và tiếng ồn từ mốc trở lên là lệch
+// 3 chỉ số có mức riêng, mỗi chỉ số 1 hàng; op là phép so sánh như healthAssessment.service của backend
 type Source = 'environment' | 'air' | 'noise';
 const ROWS: Array<{ source: Source; op: '<' | '≥'; slight: HealthLevelKey; clear: HealthLevelKey; step: number }> = [
   { source: 'environment', op: '<', slight: 'in_range_slight_pct', clear: 'in_range_clear_pct', step: 1 },
@@ -37,18 +36,12 @@ interface HealthLevelsModalProps {
   open: boolean;
   onClose: () => void;
   house: { id: string; name: string };
-  // Domain Expert sửa; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22) — backend vẫn chặn lần cuối
-  canEdit: boolean;
-  // Lý do chỉ xem khi không sửa được
+  // Lý do chỉ xem khi backend trả can_edit false
   readOnlyNote: string;
 }
 
-/**
- * ANALYTICS-FR-012, BR-28 — mức xếp từng chỉ số vào Lệch nhẹ / Lệch rõ của 1 nhà yến.
- * Bảng điều kiện: cột "Lệch nhẹ khi / Lệch rõ khi", mỗi ô là phép so sánh + mốc + đơn vị nên đọc ra luôn ý nghĩa, không cần chữ giải thích.
- * Một khung dọc, mọi chỉ số thấy cùng lúc; thân popup cuộn khi màn thấp nên không tràn.
- */
-export default function HealthLevelsModal({ open, onClose, house, canEdit: canEditGuess, readOnlyNote }: HealthLevelsModalProps): JSX.Element {
+// ANALYTICS-FR-012, BR-28 — mức Lệch nhẹ / Lệch rõ của từng chỉ số 1 nhà, dạng bảng điều kiện
+export default function HealthLevelsModal({ open, onClose, house, readOnlyNote }: HealthLevelsModalProps): JSX.Element {
   const { t, exact } = useTranslation(healthDict);
   const { data, isLoading, isError, error, refetch } = useHealthLevels(open ? house.id : '');
   const update = useUpdateHealthLevels(house.id);
@@ -56,10 +49,9 @@ export default function HealthLevelsModal({ open, onClose, house, canEdit: canEd
   const apiErrorMessage = useApiErrorMessage();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [errors, setErrors] = useState<Partial<Record<HealthLevelKey, HealthLevelError>>>({});
-  // Backend là chốt cuối của BR-22: lưu bị 403 thì chuyển sang chỉ xem với lý do backend trả về.
-  // ponytail: canEdit của trang đoán theo members[].role (không biết chuyên gia bị khoá) — bỏ khi backend trả can_edit trong HouseHealthLevels
+  // Quyền sửa theo can_edit của backend (BR-22); lưu vẫn bị 403 thì chuyển sang chỉ xem kèm lý do backend trả về
   const [deniedReason, setDeniedReason] = useState<string | null>(null);
-  const canEdit = canEditGuess && !deniedReason;
+  const canEdit = Boolean(data?.can_edit) && !deniedReason;
 
   // Mở popup hoặc tải xong thì lấy giá trị đang dùng
   useEffect(() => {

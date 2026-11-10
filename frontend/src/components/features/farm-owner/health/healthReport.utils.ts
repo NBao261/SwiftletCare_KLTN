@@ -61,16 +61,19 @@ export function reportPeriod(report: HouseHealthReportSummary, format: ReportFor
   return format.t('report.period', { from, to: format.date(end) });
 }
 
-// Mỗi loại 1 dòng ("Lỗi cảm biến 2\nThiết bị mất kết nối 1"), bỏ loại đếm 0, không có gì thì "—";
-// loại lạ (enum mới của backend) in nguyên mã thay vì bỏ
+// Mỗi loại 1 dòng, bỏ loại đếm 0, không có gì thì "—"; loại chưa có trong từ điển gom thành 1 dòng "Khác N", không in mã enum
 export function countsText(counts: Record<string, number>, format: ReportFormat): string {
-  const entries = Object.entries(counts).filter(([, count]) => count > 0);
-  if (entries.length === 0) return NO_VALUE;
-  return entries.map(([type, count]) => {
+  const lines: string[] = [];
+  let other = 0;
+  for (const [type, count] of Object.entries(counts)) {
+    if (count <= 0) continue;
     // Từ điển thiếu khoá thì translate trả undefined
     const label: string | undefined = format.t(`alertType.${type}` as Parameters<HealthTranslate>[0]);
-    return `${label ?? type} ${count}`;
-  }).join('\n');
+    if (label) lines.push(`${label} ${count}`);
+    else other += count;
+  }
+  if (other > 0) lines.push(format.t('rd.otherAlerts', { n: other }));
+  return lines.length === 0 ? NO_VALUE : lines.join('\n');
 }
 
 // Cảnh báo suy luận theo kết luận của chuyên gia: chỉ phần khác 0, mỗi phần 1 dòng, không có gì thì "—"

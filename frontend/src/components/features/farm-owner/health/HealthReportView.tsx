@@ -44,8 +44,7 @@ function Group({ title, grow, children }: { title: string; grow: string; childre
   );
 }
 
-// Số liệu trong 1 hàng, các cột rộng đều nên số thẳng hàng; thiếu chỗ thì cột tự xuống dòng
-// icons cùng thứ tự facts: icon nhỏ xám trước nhãn để nhìn lướt nhận ra số
+// Số liệu 1 hàng, cột rộng đều, thiếu chỗ tự xuống dòng; icons cùng thứ tự facts
 function Figures({ facts, icons }: { facts: ReportFact[]; icons: Icon[] }): JSX.Element {
   return (
     <dl className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-x-6 gap-y-3">
@@ -71,10 +70,7 @@ interface HealthReportViewProps {
   isDownloading: boolean;
 }
 
-/**
- * EXPERT-FR-005, 006 — 1 báo cáo theo nhà, rộng hết trang: tóm tắt (trạng thái, đàn chim, thời tiết cạnh nhau) → kết luận chuyên gia
- * → các ngày → theo Zone. Cùng số liệu với PDF (healthReport.utils.ts).
- */
+// EXPERT-FR-005, 006 — 1 báo cáo theo nhà: tóm tắt, kết luận, các ngày, theo Zone; cùng số liệu với PDF
 export default function HealthReportView({ report, onDownload, isDownloading }: HealthReportViewProps): JSX.Element {
   const { t, date, dateTime, hourMinute, exact } = useTranslation(healthDict);
   const format = useMemo(() => ({ t, date, dateTime, number: (value: number) => exact(value, 1) }), [t, date, dateTime, exact]);
@@ -91,7 +87,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
       <header className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h1 className="flex min-w-0 items-center gap-2 text-h1 text-charcoal">
-            <HouseIcon size={28} weight="bold" className="shrink-0" aria-hidden />
+            <HouseIcon size={24} weight="bold" className="shrink-0" aria-hidden />
             <span title={report.house_name} className="truncate">{report.house_name}</span>
           </h1>
           <p className="text-base font-semibold text-warmGray">
@@ -143,7 +139,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
 
       <Part title={t('rd.conclusion')}>
         {report.expert_conclusion ? (
-          <blockquote className="flex flex-col gap-2 border-l-4 border-limeMist pl-4">
+          <blockquote className="flex flex-col gap-2 border-l-4 border-accent-600 pl-4">
             <p className="whitespace-pre-line text-sm leading-relaxed text-charcoal">{report.expert_conclusion.text}</p>
             <footer className="text-xs text-warmGray">
               {report.expert_conclusion.by.full_name ?? NO_VALUE} · {dateTime(report.expert_conclusion.at)}
@@ -155,8 +151,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
         )}
       </Part>
 
-      {/* Mỗi ngày 1 dòng: ngày · trạng thái · chim về | lý do hệ thống | đánh giá của người — thẻ rộng thì 3 phần nằm ngang
-          dưới hàng tiêu đề, hẹp thì tự xuống dòng (ẩn hàng tiêu đề vì không còn thẳng cột) */}
+      {/* Mỗi ngày 1 dòng 3 phần (hệ thống | lý do | đánh giá của người); thẻ hẹp thì xuống dòng và ẩn hàng tiêu đề */}
       <Part title={t('rd.days')}>
         <div className={cn(DAY_ROW, 'hidden border-b border-warmGray/30 pb-2 text-xs font-semibold text-warmGray md:flex')}>
           <span className={DAY_MAIN}>{t('rd.colDayStatus')}</span>

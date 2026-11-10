@@ -47,8 +47,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
         key: 'myRating',
         header: t('col.myRating'),
         render: day => (
-          // Không tô màu như cột Trạng thái (xanh/cam/đỏ là sức khỏe nhà): ngày cần chấm chữ đậm, ngày đã xong chữ xám;
-          // chỉ dòng hạn đổi cam khi còn hôm nay hoặc ngày mai
+          // Không tô màu (xanh/cam/đỏ dành cho trạng thái): ngày cần đánh giá chữ đậm, hạn sắp hết chữ cam
           day.my_rating_state === 'PENDING' ? (
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-charcoal">{t(`ratingState.${day.my_rating_state}`)}</span>
@@ -78,7 +77,6 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       columns={columns}
       rows={days}
       getRowKey={day => day._id}
-      onRowClick={day => (day.my_rating_state === 'PENDING' ? onRate(day) : onView(day))}
       rowHeight={ROW_HEIGHT}
       pageSize={ROW_COUNT}
       emptyNotice={t('table.emptyTitle')}
