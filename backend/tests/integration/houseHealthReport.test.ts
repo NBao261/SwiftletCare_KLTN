@@ -164,8 +164,9 @@ describe('số liệu của báo cáo (EXPERT-FR-005)', () => {
 })
 
 describe('BR-31 — báo cáo che ngày người gọi chưa chấm', () => {
-  it('ngày chưa chấm không có trạng thái, lý do, điểm; status_counts bỏ ngày đó; chấm xong thì hiện', async () => {
+  it('ngày chưa chấm không có trạng thái, lý do, điểm, tỷ lệ chim về; status_counts bỏ ngày đó; chấm xong thì hiện', async () => {
     const { farm, house, ownerToken, expertToken } = await setup()
+    await seedCounts(house, DAY, [90, 70])
     // Người chấm thứ hai là chủ đồng sở hữu (BR-31, Report 3 4.2.0: chuyên gia không chấm)
     const coOwner = await User.create({ email: 'co-report@t.vn', password_hash: 'password123', full_name: 'Đồng chủ', role: 'FARM_OWNER' })
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: coOwner._id, role: 'FARM_OWNER' } } })
@@ -177,6 +178,9 @@ describe('BR-31 — báo cáo che ngày người gọi chưa chấm', () => {
     // Chuyên gia không phải người chấm: báo cáo không che ngày nào với chuyên gia
     const expertView = await call('get', `/health-reports/${(await generateHouseReport('CUSTOM', String(house._id), addDays(DAY, -1), DAY))!.report._id}`, expertToken).expect(200)
     expect(expertView.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 1 }, hidden_days: 0 })
+    expect(expertView.body.data.house_metrics).toMatchObject({
+      return_rate_trend: [{ date: addDays(DAY, -1), return_rate: 90 }, { date: DAY, return_rate: 70 }], avg_return_rate: 80,
+    })
     const { report } = (await generateHouseReport('CUSTOM', String(house._id), addDays(DAY, -1), DAY))!
 
     const res = await call('get', `/health-reports/${report._id}`, ownerToken).expect(200)
@@ -186,10 +190,17 @@ describe('BR-31 — báo cáo che ngày người gọi chưa chấm', () => {
     expect(pending).not.toHaveProperty('current_reasons')
     expect(pending).not.toHaveProperty('ratings')
     expect(res.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 0 }, hidden_days: 1 })
+    // Tỷ lệ chim về của ngày chưa chấm cũng che, trung bình chỉ còn ngày đã thấy (BR-31)
+    expect(res.body.data.house_metrics).toMatchObject({
+      return_rate_trend: [{ date: addDays(DAY, -1), return_rate: 90 }, { date: DAY, return_rate: null, complete: true }], avg_return_rate: 90,
+    })
 
     await call('post', `/health-reports/days/${hidden._id}/rating`, ownerToken, { rating: 'ACTION' }).expect(201)
     const after = await call('get', `/health-reports/${report._id}`, ownerToken).expect(200)
     expect(after.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 1 }, hidden_days: 0 })
+    expect(after.body.data.house_metrics).toMatchObject({ return_rate_trend: [{ return_rate: 90 }, { return_rate: 70 }], avg_return_rate: 80 })
+    // Dữ liệu lưu không bị che
+    expect((await HouseHealthReport.findById(report._id).lean())!.house_metrics.avg_return_rate).toBe(80)
   })
 })
 

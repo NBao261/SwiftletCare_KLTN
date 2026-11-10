@@ -101,11 +101,15 @@ export async function buildHouseReport(
     const day = byDate.get(date)
     return { date, return_rate: day?.return_rate ?? null, complete: isFlockDayComplete(day) }
   })
-  const complete = return_rate_trend.filter(d => d.complete && d.return_rate !== null)
-  const avg_return_rate = complete.length
+  return { house_metrics: { return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend), weather }, zone_sections }
+}
+
+/** Trung bình tỷ lệ chim về của các ngày đủ phiên — dùng chung lúc tạo và lúc che theo người gọi */
+function averageReturnRate(trend: HouseReportMetrics['return_rate_trend']): number | null {
+  const complete = trend.filter(d => d.complete && d.return_rate !== null)
+  return complete.length
     ? round1(complete.reduce((s, d) => s + (d.return_rate as number), 0) / complete.length)
     : null
-  return { house_metrics: { return_rate_trend, avg_return_rate, weather }, zone_sections }
 }
 
 /**
@@ -251,16 +255,23 @@ async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser,
   await report.populate('expert_conclusion.by', 'full_name')
   const days = await presentHouseDays(user, house, report.period_start, report.period_end, now)
   const status_counts: Record<HealthStatus, number> = { GOOD: 0, WATCH: 0, ACTION: 0, INSUFFICIENT_DATA: 0 }
-  let hidden_days = 0
+  const hiddenDates = new Set<string>()
   for (const day of days) {
     if ('current_status' in day) status_counts[day.current_status]++
-    else hidden_days++
+    else hiddenDates.add(day.date)
   }
+  const plain = report.toObject()
+  // BR-31 — tỷ lệ chim về của ngày người gọi chưa chấm cũng che như `indicators` ở API ngày (chỉ số đàn
+  // chim suy từ nó); trung bình tính lại trên các ngày người đó thấy. Dữ liệu lưu không đổi.
+  const metrics: HouseReportMetrics = plain.house_metrics
+  const return_rate_trend = metrics.return_rate_trend.map(d =>
+    (hiddenDates.has(d.date) ? { ...d, return_rate: null } : d))
   return {
-    ...report.toObject(),
+    ...plain,
     _id: String(report._id), farm_id: String(report.farm_id), house_id: String(report.house_id), house_name: house.name,
     has_conclusion: !!report.expert_conclusion,
-    days, status_counts, hidden_days,
+    house_metrics: { ...metrics, return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend) },
+    days, status_counts, hidden_days: hiddenDates.size,
   }
 }
 
