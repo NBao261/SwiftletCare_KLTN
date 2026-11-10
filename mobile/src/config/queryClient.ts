@@ -1,4 +1,7 @@
-import { QueryClient } from '@tanstack/react-query'
+import { AppState, type AppStateStatus } from 'react-native'
+import { QueryClient, focusManager, onlineManager } from '@tanstack/react-query'
+import * as Network from 'expo-network'
+import { useConnectionStore } from '@/stores/connectionStore'
 
 const FIVE_MINUTES = 5 * 60 * 1000
 const TEN_MINUTES = 10 * 60 * 1000
@@ -12,11 +15,33 @@ export const queryClient = new QueryClient({
       retry: 2,
       refetchOnWindowFocus: false,
     },
+    // Thao tác ghi (lệnh relay, tạo nhà, xác nhận…) không tự gửi lại và không xếp hàng chờ có mạng: mất mạng thì báo lỗi
+    // ngay để người dùng tự bấm lại — một lệnh gửi muộn hoặc gửi trùng có thể bật bơm ngoài ý muốn (BR-35)
     mutations: {
-      retry: 1,
+      retry: 0,
+      networkMode: 'always',
     },
   },
 })
+
+// Nối React Query với mạng và vòng đời app — gọi một lần ở app/_layout.tsx (không chạy lúc import để test không cần module native):
+// - mất mạng thì query tạm dừng, có mạng lại thì tự tải lại những gì đang hiện (expo-network báo thay đổi mạng)
+// - mạng đổi thì bỏ cờ "máy chủ không phản hồi" cũ (lỗi lúc mất mạng không phải lỗi máy chủ); request sau tự đặt lại
+// - app chạy nền thì coi như không focus: ngừng các nhịp tải lại định kỳ (refetchInterval), mở lại thì chạy tiếp
+export function connectQueryToDeviceState() {
+  onlineManager.setEventListener(setOnline => {
+    const subscription = Network.addNetworkStateListener(state => {
+      const isOnline = state.isConnected !== false && state.isInternetReachable !== false
+      if (isOnline) useConnectionStore.getState().setServerUnreachable(false)
+      setOnline(isOnline)
+    })
+    return () => subscription.remove()
+  })
+  focusManager.setEventListener(setFocused => {
+    const subscription = AppState.addEventListener('change', (status: AppStateStatus) => setFocused(status === 'active'))
+    return () => subscription.remove()
+  })
+}
 
 // Kéo để làm mới / "Thử lại": tải lại mọi dữ liệu đang hiện (các tab vẫn sống nên gồm cả tab khác), trừ token xem camera —
 // token mới đổi URL HLS nên video đang phát sẽ khởi động lại (mở lại trình phát thì useCameraStreamUrl tự xin token mới)
