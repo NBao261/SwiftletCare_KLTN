@@ -1,5 +1,6 @@
 #include "RemoteOta.h"
 #include "RemoteCommand.h"
+#include "config/CaCert.h"
 #include "config/Config.h"
 #include <HTTPClient.h>
 #include <Update.h>
@@ -10,11 +11,9 @@
 namespace RemoteOta {
 
 bool download(const char *url, const char *sha256Hex) {
-  // ponytail: không kiểm chứng chỉ máy chủ — tính toàn vẹn dựa vào SHA-256 đi kèm lệnh
-  // MQTT (file bị tráo trên đường thì hash lệch, không flash). Có CA của MinIO thì
-  // thay bằng setCACert() để chặn luôn việc tải từ máy chủ giả.
+  // DF-4: chứng chỉ máy chủ OTA phải do Let's Encrypt cấp; SHA-256 đi kèm lệnh chặn thêm file bị tráo
   WiFiClientSecure client;
-  client.setInsecure();
+  client.setCACert(ISRG_ROOT_X1);
   HTTPClient http;
   http.setTimeout(OTA_READ_TIMEOUT_MS);
   if (!http.begin(client, url)) {

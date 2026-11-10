@@ -56,7 +56,7 @@ void RelayState::applyRelay(int pin, bool state) {
 // Chế độ và thời gian còn lại của từng relay gửi trong `relays` (BR-20).
 bool RelayState::anyOverride() const { return overrides.any(); }
 
-String RelayState::toJson(bool withRemaining) const {
+String RelayState::toJson(bool withRemaining, const char *commandId) const {
 
   String json = "{";
   json += "\"deviceId\":\"" + String(Config::deviceId) + "\",";
@@ -77,7 +77,9 @@ String RelayState::toJson(bool withRemaining) const {
       json += ",\"remaining_ms\":" + String(overrides.remainingMs(channel, now));
     json += "}";
   }
-  json += "}}";
+  json += "}";
+  if (commandId && commandId[0]) json += ",\"commandId\":\"" + String(commandId) + "\"";
+  json += "}";
   return json;
 }
 
@@ -95,7 +97,7 @@ static bool autoDemandKnown = false;
 
 static uint8_t toPct(float duty) { return (uint8_t)lroundf(duty * 100.0f); }
 
-// Hệ số mờ + cửa sổ đọc lại mỗi chu kỳ: config/update (mqttTask) đổi được lúc chạy
+// Hệ số mờ + cửa sổ đọc lại mỗi chu kỳ: topic `config` (mqttTask) đổi được lúc chạy
 static FuzzyControl::Tuning currentTuning() {
   FuzzyControl::Tuning t;
   t.humidityBand = Config::fuzzyHumidityBand;

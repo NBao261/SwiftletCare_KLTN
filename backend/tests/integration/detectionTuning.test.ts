@@ -15,16 +15,17 @@ import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
-import { publishCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { getBirdCountTrends } from '@/services/analytics.service'
 import { vnDate } from '@/services/birdCount.service'
-import { buildDeviceConfig } from '@/services/device.service'
+import { buildDeviceConfig } from '@/services/deviceConfig.service'
+import { SensorNode } from '@/models/device.model'
 import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import type { CurrentUser, Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(),
@@ -65,11 +66,12 @@ async function seed() {
   })
   const house = await House.create({ farm_id: farm._id, name: 'H' })
   const zone = await Zone.create({ house_id: house._id, name: 'Z' })
+  const node = await SensorNode.create({ device_id: `ESP32-DT-${seq}`, zone_id: zone._id, status: 'ONLINE' })
   const put = (token: string, body: object) =>
     request(app).put(`/farms/zones/${zone._id}/detection-tuning`).set('Authorization', `Bearer ${token}`).send(body)
   const putHouse = (token: string, body: object, houseId: unknown = house._id) =>
     request(app).put(`/farms/houses/${houseId}/bird-count-tuning`).set('Authorization', `Bearer ${token}`).send(body)
-  return { owner, expert, farm, house, zone, put, putHouse, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
+  return { owner, expert, farm, house, zone, node, put, putHouse, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
 }
 
 describe('PUT /farms/zones/:zoneId/detection-tuning', () => {
@@ -79,7 +81,7 @@ describe('PUT /farms/zones/:zoneId/detection-tuning', () => {
   })
 
   it('Domain Expert lưu tham số kèm lịch sử + audit, và chỉ 5 tham số của firmware được gửi xuống thiết bị', async () => {
-    const { farm, house, zone, expert, put, t } = await seed()
+    const { zone, node, expert, put, t } = await seed()
 
     // return_rate_drop_pct không còn là tham số của Zone (SRS v2.1.8) → bị bỏ như key lạ
     const res = await put(t.expert, { noise_margin_db: 12, pump_dry_on_sec: '240', return_rate_drop_pct: 30, unknown_key: 1 })
@@ -93,9 +95,9 @@ describe('PUT /farms/zones/:zoneId/detection-tuning', () => {
       new_values: { noise_margin_db: 12, pump_dry_on_sec: 240 },
     })
     expect(String(saved.detection_tuning_history[0].changed_by)).toBe(String(expert._id))
-    expect(publishCommand).toHaveBeenCalledWith(String(farm._id), String(house._id), String(zone._id), 'config/update', {
+    expect(publishDeviceConfig).toHaveBeenCalledWith(node.device_id, expect.objectContaining({
       noise_margin_db: 12, noise_min_sec: 10, pump_dry_on_sec: 240, pump_dry_min_rise_pct: 2, speaker_drop_pct: 70,
-    })
+    }))
     expect(await AuditLog.countDocuments({ action: 'DETECTION_TUNING_UPDATED' })).toBe(1)
   })
 
@@ -119,7 +121,7 @@ describe('PUT /farms/zones/:zoneId/detection-tuning', () => {
   ])('từ chối %s', async (_label, body) => {
     const { put, t } = await seed()
     expect((await put(t.expert, body)).status).toBe(400)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 })
 
@@ -141,7 +143,7 @@ describe('PUT /farms/houses/:houseId/bird-count-tuning (SRS v2.1.8)', () => {
     })
     expect(String(saved.bird_count_tuning_history[0].changed_by)).toBe(String(expert._id))
     expect(await AuditLog.countDocuments({ action: 'BIRD_COUNT_TUNING_UPDATED' })).toBe(1)
-    expect(publishCommand).not.toHaveBeenCalled()
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 
   it('Farm Owner và chuyên gia của farm khác không sửa được', async () => {

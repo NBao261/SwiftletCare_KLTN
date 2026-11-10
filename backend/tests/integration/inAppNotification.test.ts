@@ -23,7 +23,7 @@ import { sendTelegram } from '@/services/telegram.service'
 import { emitNotificationNew } from '@/socket'
 import type { AlertType, Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitAlertNew: jest.fn(), emitNotificationNew: jest.fn() }))
 jest.mock('@/services/telegram.service', () => ({ sendTelegram: jest.fn().mockResolvedValue(undefined) }))
 

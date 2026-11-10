@@ -142,6 +142,9 @@ export interface HeartbeatPayload {
   /** FARM-FR-006 — firmware ≥ 1.4.0: lý do lần khởi động gần nhất (POWERON, BROWNOUT, TASK_WDT…) và IP LAN */
   resetReason?: string
   ip?: string
+  /** Report 4 §7.2 — heartbeat của nút AI */
+  modelVersion?: string
+  fps?: number
 }
 
 /** VISION-FR-018 — vòng đếm quanh lỗ ra vào, các đỉnh (x, y) theo tỉ lệ khung hình 0–1 */

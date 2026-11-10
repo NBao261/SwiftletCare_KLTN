@@ -1,12 +1,13 @@
 import { SensorNode, CameraNode, ISensorNode, ICameraNode, IN_SERVICE } from '@/models/device.model'
-import { House, Zone, IZone } from '@/models/houseZone.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import { Alert } from '@/models/alert.model'
 import {
   findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertHouseAccessByParams,
   listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds, assertExpertDecision,
 } from '@/utils/farmAccess.util'
-import { publishCommand, publishHouseCommand } from '@/mqtt/mqtt.client'
+import { publishDeviceCommand, publishDeviceConfig } from '@/mqtt/mqtt.client'
+import { publishNodeConfig } from '@/services/deviceConfig.service'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
@@ -15,13 +16,11 @@ import { findRecipients, notifyUser, type UserNotification } from '@/services/no
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
-import { firmwareDetectionConfig, resolveDetectionTuning } from '@/utils/detectionTuning.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogFromDevice, closeRelayOverrideLog,
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
 } from '@/services/relayOverrideLog.service'
 import { AppError, NotFoundError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
-import { stampCommand } from '@/utils/deviceCommand.util'
 import logger from '@/utils/logger.util'
 import type { AlertType, ControlMode, RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
 
@@ -229,12 +228,7 @@ export async function controlRelay(
 
   // Lệnh không tới được broker thì DB vẫn giữ trạng thái mong muốn (ESP32 sẽ
   // đồng bộ khi online lại), nhưng phải nói thật cho UI biết qua `delivered`.
-  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', stampCommand({
-    deviceId: node.device_id,
-    relayName,
-    state: input.state,
-    durationMs: overrideMs,
-  }))
+  const delivered = publishDeviceCommand(node.device_id, 'RELAY', { relayName, state: input.state, durationMs: overrideMs })
 
   emitRelayUpdate(String(chain.zone._id), {
     zoneId: String(chain.zone._id),
@@ -282,9 +276,8 @@ async function assertPumpOnAllowed(
 
 /**
  * ENV-FR-018, BR-20 — huỷ can thiệp tay sớm, không đợi hết hạn. Không có `relayName` → mọi relay về
- * AUTO ngay. Có `relayName` → chỉ relay đó: đóng lịch sử của nó và gửi `clear_override` kèm tên relay;
- * thiết bị còn relay khác đang tay thì vẫn MANUAL. Firmware < 1.6.0 chưa đọc `relayName` nên huỷ mọi
- * relay rồi báo AUTO qua relay/status — confirmRelayStatus đóng phần còn lại theo trạng thái đó.
+ * AUTO ngay. Có `relayName` → chỉ relay đó: đóng lịch sử của nó và gửi `CLEAR_OVERRIDE` kèm tên relay;
+ * thiết bị còn relay khác đang tay thì vẫn MANUAL.
  */
 export async function clearRelayOverride(nodeId: string, user: CurrentUser, relayName?: RelayName): Promise<ISensorNode> {
   const node = await SensorNode.findById(nodeId)
@@ -298,7 +291,7 @@ export async function clearRelayOverride(nodeId: string, user: CurrentUser, rela
   await node.save()
 
   const zoneId = String(chain.zone._id)
-  publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', stampCommand({ deviceId: node.device_id, action: 'clear_override' }))
+  publishDeviceCommand(node.device_id, 'CLEAR_OVERRIDE')
   for (const name of RELAY_NAMES) {
     emitRelayUpdate(zoneId, { zoneId, relayName: name, state: node.relay_states[name], mode: 'AUTO' })
   }
@@ -316,9 +309,7 @@ async function clearOneRelayOverride(
 ): Promise<ISensorNode> {
   if (node.relays[relayName].mode !== 'MANUAL') return node
   const zoneId = String(chain.zone._id)
-  publishCommand(String(chain.farm._id), String(chain.house._id), zoneId, 'relay/command', stampCommand({
-    deviceId: node.device_id, action: 'clear_override', relayName,
-  }))
+  publishDeviceCommand(node.device_id, 'CLEAR_OVERRIDE', { relayName })
   await closeRelayOverrideLog(node._id, relayName, 'CLEARED_EARLY')
   setRelayAuto(node, relayName)
   syncOverrideSummary(node)
@@ -329,11 +320,8 @@ async function clearOneRelayOverride(
 }
 
 /**
- * FARM-FR-007b, Flow 21 Nhánh A — Technician dời thiết bị sang Zone/Farm khác
- * trong khi thiết bị còn ONLINE. Publish MQTT config/reassign lên topic CŨ
- * (farm/house/zone hiện tại), ESP32 tự lưu định danh mới vào NVS + restart +
- * kết nối lại theo topic mới. Nhánh B (thiết bị OFFLINE, AP-mode + secretKey)
- * chưa được implement — chỉ hỗ trợ dời khi ONLINE.
+ * FARM-FR-007b — dời thiết bị sang Zone/Farm khác. Report 4 D3: chỉ đổi Zone trong DB rồi publish lại
+ * `config` retained, thiết bị không biết farm, house, zone; thiết bị offline nhận khi kết nối lại.
  */
 export async function reassignZone(
   nodeId: string,
@@ -344,34 +332,23 @@ export async function reassignZone(
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
 
-  // Chỉ thiết bị đang kết nối nhận được lệnh dời — cùng quy tắc với lệnh từ xa
-  // (sendRemoteCommand). Mất kết nối thì cần nhánh AP-mode, chưa hỗ trợ.
-  if (node.status !== 'ONLINE') {
-    throw ConflictError(`Thiết bị đang ${node.status} — chỉ dời Zone được khi thiết bị đang kết nối (nhánh AP-mode chưa được hỗ trợ)`)
-  }
-
   // Check quyền trên CẢ Farm nguồn lẫn Farm đích (SRS Flow 21 bước 4a).
   const sourceChain = await assertZoneAccess(String(node.zone_id), user, 'device')
-  // Dời về chính Zone đang ở chỉ làm thiết bị khởi động lại vô ích và ghi audit sai
+  // Dời về chính Zone đang ở chỉ ghi audit sai
   if (String(sourceChain.zone._id) === input.newZoneId) {
     throw BadRequestError('Thiết bị đã ở Zone này — chọn Zone khác để dời')
   }
   const destChain = await assertZoneAccess(input.newZoneId, user, 'device')
 
-  // Publish lên topic CŨ — thiết bị vẫn đang lắng nghe ở đó cho tới khi restart.
-  const delivered = publishCommand(String(sourceChain.farm._id), String(sourceChain.house._id), String(sourceChain.zone._id), 'config/reassign', {
-    deviceId: node.device_id,
-    newFarmId: String(destChain.farm._id),
-    newHouseId: String(destChain.house._id),
-    newZoneId: String(destChain.zone._id),
-  })
-
   // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên. Override đang
-  // chạy thuộc về Zone cũ nên kết thúc ở đây (như decommissionDevice); không cần gửi
-  // clear_override: override chỉ nằm trong RAM và thiết bị restart ngay sau config/reassign.
+  // chạy thuộc về Zone cũ nên kết thúc ở đây (như decommissionDevice).
   node.zone_id = destChain.zone._id
   resetOverrides(node)
   await node.save()
+  // Report 4 D3: thiết bị không biết farm, house, zone, chỉ nhận cấu hình của Zone mới. Không có
+  // khởi động lại nên phải tự huỷ override đang chạy trên thiết bị.
+  const overrideCleared = publishDeviceCommand(node.device_id, 'CLEAR_OVERRIDE')
+  const delivered = publishNodeConfig(destChain.zone, node) && overrideCleared
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
   // Cảnh báo cũ thuộc farm/zone nguồn — để lại thì job gửi lại cho Farm Owner farm cũ
   // về phần cứng đã chuyển đi; sự cố còn thật sẽ được báo lại ở zone mới.
@@ -439,17 +416,10 @@ export async function listCameraNodes(params: { houseId?: string; zoneId?: strin
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
 /**
- * `topicParts` — ['swiftletcare', farmId, houseId, zoneId, 'heartbeat'] (mqtt.client.ts
- * đã split() sẵn topic thật của message này, khác payload.deviceId chỉ để tra SensorNode).
- * FARM-FR-003b (tự chữa): thiết bị mới onboarding vẫn publish theo farmId/houseId/zoneId
- * MẶC ĐỊNH (Secrets.h/NVS cũ) cho tới khi có ai đẩy identity thật xuống — AP-mode form
- * không còn làm việc này nữa (đã thử, vướng captive-portal auto-detect của OS làm mất
- * dữ liệu, xem WiFiProvisioner.cpp). Thay vào đó: so farmId/houseId/zoneId TRÊN TOPIC
- * heartbeat vừa nhận với chain THẬT của node.zone_id — lệch thì tự đẩy config/reassign
- * lên đúng topic (cũ) mà heartbeat vừa tới, y hệt cơ chế Flow 21 Nhánh A nhưng do backend
- * tự kích hoạt thay vì Technician bấm nút.
+ * FARM-FR-005 — heartbeat của controller, hoặc của nút AI (cùng đường heartbeat). Thiết bị được nhận
+ * diện qua `deviceId` trong tin, đã khớp với topic ở mqtt.client (Report 4 §7.2).
  */
-export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: string[]): Promise<void> {
+export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong heartbeat payload')
 
   const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
@@ -476,40 +446,12 @@ export async function recordHeartbeat(payload: HeartbeatPayload, topicParts?: st
 
   if (wasOffline) await announceBackOnline(node)
 
-  if (topicParts && topicParts.length >= 4) {
-    const [, topicFarmId, topicHouseId, topicZoneId] = topicParts
-    try {
-      const chain = await findZoneChainOrThrow(String(node.zone_id))
-      const realFarmId = String(chain.farm._id)
-      const realHouseId = String(chain.house._id)
-      const realZoneId = String(chain.zone._id)
-      const topicMatches = topicFarmId === realFarmId && topicHouseId === realHouseId && topicZoneId === realZoneId
-      if (topicMatches && (payload.justConnected || wasOffline)) {
-        // config/update không retained + PubSubClient clean session → thiết bị
-        // offline/restart lúc ngưỡng hay lịch loa bị sửa sẽ giữ mãi giá trị cũ
-        // trong NVS. Đẩy lại bộ config hiện hành mỗi lần thiết bị vừa (re)connect.
-        publishCommand(realFarmId, realHouseId, realZoneId, 'config/update', { deviceId: node.device_id, ...buildDeviceConfig(chain.zone, node) })
-      }
-      // Topic lệch: chỉ reassign — thiết bị restart, heartbeat `justConnected`
-      // kế tiếp (đúng topic) sẽ tự đồng bộ config ở nhánh trên.
-      if (!topicMatches) {
-        logger.info('Heartbeat tới trên topic lệch với Zone thật — tự đẩy config/reassign', {
-          deviceId: payload.deviceId,
-          from: `${topicFarmId}/${topicHouseId}/${topicZoneId}`,
-          to: `${realFarmId}/${realHouseId}/${realZoneId}`,
-        })
-        publishCommand(topicFarmId, topicHouseId, topicZoneId, 'config/reassign', {
-          deviceId: node.device_id,
-          newFarmId: realFarmId,
-          newHouseId: realHouseId,
-          newZoneId: realZoneId,
-        })
-      }
-    } catch (err) {
-      // Zone của node có thể đã bị xoá/đổi — không chặn xử lý heartbeat bình
-      // thường chỉ vì bước tự chữa topic thất bại.
-      logger.warn('Không tự sửa được topic lệch cho heartbeat', { deviceId: payload.deviceId, err: (err as Error).message })
-    }
+  // `config` retained đã có sẵn ở broker; gửi lại để lấp lần publish backend lỡ khi mất kết nối broker
+  // (tới G-08 mới so được phiên bản). Lần đầu thiết bị lên mạng sau khi đăng ký cũng đi qua đây.
+  if (payload.justConnected || wasOffline) {
+    await findZoneChainOrThrow(String(node.zone_id))
+      .then(chain => publishNodeConfig(chain.zone, node))
+      .catch((err: Error) => logger.warn('Không gửi lại được cấu hình thiết bị', { deviceId: payload.deviceId, err: err.message }))
   }
 }
 
@@ -539,7 +481,8 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   const wasOnline = camera.status === 'ONLINE'
   camera.status = 'ONLINE'
   camera.last_heartbeat = new Date()
-  if (payload.firmwareVersion) camera.model_version = payload.firmwareVersion
+  if (payload.modelVersion) camera.model_version = payload.modelVersion
+  if (payload.fps !== undefined) camera.fps = payload.fps
   camera.activation_overdue_at = undefined
   await camera.save()
   if ((payload.justConnected || !wasOnline) && camera.counting_ring) await pushCountingRing(camera)
@@ -577,50 +520,14 @@ async function announceBackOnline(node: Pick<ISensorNode, '_id' | 'zone_id'>): P
     status: 'ONLINE',
     timestamp: new Date().toISOString(),
   })
-  // Không để lỗi DB ở đây chặn bước resync config/reassign phía sau trong recordHeartbeat;
+  // Không để lỗi DB ở đây chặn bước gửi lại cấu hình phía sau trong recordHeartbeat;
   // cảnh báo sót vẫn được resolveNodeOfflineAlertsOfOnlineNodes dọn trong ≤ 2 phút.
   await resolveAlertsForNode(String(node._id), 'Thiết bị đã kết nối lại', 'NODE_OFFLINE').catch((err: Error) =>
     logger.error('Đóng cảnh báo NODE_OFFLINE thất bại', { nodeId: String(node._id), err }),
   )
 }
 
-const hourOf = (hhmm: string) => Number(hhmm.slice(0, 2))
 
-/**
- * Payload MQTT `config/update` đầy đủ cho 1 ESP32 — key khớp firmware
- * `Config::update()` (firmware/src/config/Config.cpp). Ngưỡng + hệ số logic mờ
- * thuộc Zone, lịch loa ru thuộc từng thiết bị (ENV-FR-006, ENV-FR-021, ENV-FR-013b). Firmware chỉ có 2 khung
- * giờ theo giờ tròn; `windows` rỗng = chưa từng cấu hình → không gửi key khung
- * giờ để firmware giữ mặc định của nó; chỉ 1 khung → khung 2 = 0-0 (không bao giờ khớp).
- */
-export function buildDeviceConfig(
-  zone: Pick<IZone, 'thresholds' | 'fuzzy_tuning'> & { detection_tuning?: Partial<IZone['detection_tuning']> },
-  node: Pick<ISensorNode, 'speaker_schedule' | 'audio'>,
-) {
-  const t = zone.thresholds
-  const [w1, w2] = node.speaker_schedule.windows
-  return {
-    temp_min: t.temp_min,
-    temp_max: t.temp_max,
-    humidity_min: t.humidity_min,
-    humidity_max: t.humidity_max,
-    light_max: t.light_max,
-    nh3_max: t.nh3_max,
-    co2_max: t.co2_max,
-    ...zone.fuzzy_tuning,
-    // EXPERT-FR-008 — 5 tham số phát hiện chạy trên ESP32 (Zone cũ chưa có thì gửi mặc định)
-    ...firmwareDetectionConfig(resolveDetectionTuning(zone.detection_tuning)),
-    speaker_schedule_enabled: node.speaker_schedule.enabled,
-    speaker_volume: node.audio.volume,
-    speaker_track: node.audio.current_track,
-    ...(w1 && {
-      speaker_window1_start_hour: hourOf(w1.start),
-      speaker_window1_end_hour: hourOf(w1.end),
-      speaker_window2_start_hour: w2 ? hourOf(w2.start) : 0,
-      speaker_window2_end_hour: w2 ? hourOf(w2.end) : 0,
-    }),
-  }
-}
 
 export interface SpeakerScheduleInput {
   enabled?: boolean
@@ -646,8 +553,7 @@ export async function updateSpeakerSchedule(nodeId: string, user: CurrentUser, i
   if (input.track !== undefined) node.audio.current_track = input.track
   await node.save()
 
-  publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update',
-    { deviceId: node.device_id, ...buildDeviceConfig(chain.zone, node) })
+  publishNodeConfig(chain.zone, node)
   await logAction(user._id, 'SPEAKER_SCHEDULE_UPDATED', 'sensor_node', String(node._id), { ...input })
   return node
 }
@@ -1007,14 +913,14 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     )
   }
 
-  let payload: Record<string, unknown>
+  let delivered: boolean
   switch (input.command) {
     case 'PUSH_CONFIG':
       // Chỉ đẩy ngưỡng thì hệ số mờ/lịch loa lệch vẫn lệch — đúng thứ lệnh này phải sửa
-      payload = buildDeviceConfig(chain.zone, node)
+      delivered = publishNodeConfig(chain.zone, node)
       break
     case 'RESTART':
-      payload = { command: 'RESTART' }
+      delivered = publishDeviceCommand(node.device_id, 'RESTART')
       break
     case 'OTA': {
       if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
@@ -1022,14 +928,13 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
         throw ConflictError(`Thiết bị đang chạy đúng phiên bản ${input.ota.version}`)
       }
       const { version, url, sha256 } = input.ota
-      payload = { command: 'OTA', ota: { version, url, sha256 } }
+      delivered = publishDeviceCommand(node.device_id, 'OTA', { version, url, sha256 })
       break
     }
     default:
       throw BadRequestError('command phải là RESTART, PUSH_CONFIG hoặc OTA')
   }
 
-  const delivered = publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'config/update', stampCommand({ deviceId: node.device_id, ...payload }))
   if (!delivered) {
     // Không ghi ota_pending khi lệnh chưa rời backend: nếu ghi, UI hiện "đang cập
     // nhật" rồi 30 phút sau báo thất bại cho một lệnh chưa từng được gửi đi.
@@ -1063,16 +968,12 @@ const ringOf = (ring: CountingRing): CountingRing => ({
 })
 
 /**
- * Gửi vòng đếm xuống nút AI qua `config/update` của nhà (nút AI không có đoạn zone). Trả false khi
- * broker chưa kết nối — không chặn việc lưu: nút AI nhận lại lúc kết nối lại (recordCameraHeartbeat).
+ * Vòng đếm là `config` retained của nút AI. Trả false khi broker chưa kết nối — không chặn việc
+ * lưu: nút AI nhận lại lúc kết nối lại (recordCameraHeartbeat).
  */
 async function pushCountingRing(camera: ICameraNode): Promise<boolean> {
   if (!camera.counting_ring) return false
-  const house = await House.findById(camera.house_id).select('farm_id').lean()
-  if (!house) return false
-  return publishHouseCommand(String(house.farm_id), String(camera.house_id), 'config/update', {
-    deviceId: camera.device_id, counting_ring: ringOf(camera.counting_ring),
-  })
+  return publishDeviceConfig(camera.device_id, { deviceId: camera.device_id, counting_ring: ringOf(camera.counting_ring) })
 }
 
 /**
@@ -1183,11 +1084,7 @@ export async function expireManualOverrides(): Promise<number> {
   for (const { node, relayName } of reverted) {
     const chain = chainByZone.get(String(node.zone_id))
     if (!chain) continue
-    publishCommand(String(chain.farm._id), String(chain.house._id), String(chain.zone._id), 'relay/command', stampCommand({
-      deviceId: node.device_id,
-      action: 'clear_override',
-      relayName,
-    }))
+    publishDeviceCommand(node.device_id, 'CLEAR_OVERRIDE', { relayName })
     emitRelayUpdate(String(chain.zone._id), {
       zoneId: String(chain.zone._id),
       relayName,

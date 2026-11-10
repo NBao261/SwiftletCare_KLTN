@@ -21,7 +21,7 @@ import { confirmRelayStatus, expireManualOverrides } from '@/services/device.ser
 import { closeOrphanedOverrideLogs, closeOverrideLogs } from '@/services/relayOverrideLog.service'
 import type { Role } from '@/types'
 
-jest.mock('@/mqtt/mqtt.client', () => ({ publishCommand: jest.fn().mockReturnValue(true) }))
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
   emitTelemetryUpdate: jest.fn(), emitRelayUpdate: jest.fn(), emitAlertNew: jest.fn(),
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(),

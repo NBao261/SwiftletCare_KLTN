@@ -20,7 +20,7 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode } from '@/models/device.model'
 import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisionedDevice.model'
-import { hashKey } from '@/services/provisionedDevice.service'
+import { hashBrokerSecret, hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
 /** Tọa độ farm demo (Quận 1, TP.HCM) — bắt buộc khi tạo farm (FARM-FR-001, A-5) */
@@ -130,10 +130,12 @@ async function seed(): Promise<void> {
   ]
   for (const [id, kind, secretKey, claimed] of demoDevices) {
     if (await ProvisionedDevice.exists({ device_id: id })) continue
+    // Chỉ cho dev: mật khẩu broker bằng activation key demo, đặt vào SECRET_MQTT_PASSWORD hoặc .env của AI node
     await ProvisionedDevice.create({
-      device_id: id, kind, secret_key_hash: hashKey(secretKey), ...(claimed ? { claimed_at: new Date() } : {}),
+      device_id: id, kind, secret_key_hash: hashKey(secretKey), broker_secret_hash: hashBrokerSecret(secretKey).toString('hex'),
+      ...(claimed ? { claimed_at: new Date() } : {}),
     })
-    logger.info(`[seed] Provisioned device: ${id} (${kind}, secretKey: ${secretKey})`)
+    logger.info(`[seed] Provisioned device: ${id} (${kind}, secretKey và broker secret: ${secretKey})`)
   }
 
   logger.info('[seed] Done. Zone ID để test API/socket:', { zoneId: String(zone._id) })

@@ -9,6 +9,8 @@ export interface IAlert extends Document {
   /** Cảnh báo của cả nhà yến (camera đếm chim: EDGE_AI_DEGRADED, LOW_RETURN_RATE — SRS v2.1.8), không gắn Zone */
   house_id?: Types.ObjectId
   node_id?: Types.ObjectId
+  /** Report 4 §7.2 — `eventId` mới nhất thiết bị gửi cho cảnh báo này */
+  event_id?: string
   type: AlertType
   severity: AlertSeverity
   title: string
@@ -48,6 +50,7 @@ const alertSchema = new Schema<IAlert>(
     zone_id:  { type: Schema.Types.ObjectId, ref: 'Zone' },
     house_id: { type: Schema.Types.ObjectId, ref: 'House' },
     node_id:  { type: Schema.Types.ObjectId },
+    event_id: { type: String },
     type: {
       type: String,
       enum: [
@@ -93,6 +96,8 @@ alertSchema.index({ farm_id: 1, zone_id: 1, node_id: 1, type: 1, status: 1 })
 // Cảnh báo của cả nhà (camera đếm chim) — lọc GET /alerts?houseId= và dedup theo House
 alertSchema.index({ house_id: 1, type: 1, status: 1 }, { partialFilterExpression: { house_id: { $exists: true } } })
 // Alert đã đóng tự xoá sau 180 ngày; alert đang mở không có resolved_at nên không bao giờ hết hạn
+// Report 4 §7.2, NFR-06 c — 1 sự kiện của thiết bị không tạo 2 cảnh báo khi QoS 1 giao lại
+alertSchema.index({ node_id: 1, event_id: 1 }, { unique: true, partialFilterExpression: { event_id: { $type: 'string' } } })
 alertSchema.index({ resolved_at: 1 }, { expireAfterSeconds: 180 * 24 * 60 * 60 })
 
 export const Alert = model<IAlert>('Alert', alertSchema)
