@@ -4,7 +4,7 @@ import { router, useIsFocused, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
 import { refetchVisibleQueries } from '@/config/queryClient'
-import { BellIcon, GearSixIcon, WifiSlashIcon } from 'phosphor-react-native'
+import { BellIcon, GearSixIcon } from 'phosphor-react-native'
 import { ActuatorSection } from '@/components/farm/ActuatorSection'
 import { BirdCountStrip } from '@/components/farm/BirdCountStrip'
 import { DeviceDetailSheet } from '@/components/farm/DeviceDetailSheet'
@@ -12,34 +12,31 @@ import { DeviceSection, type SelectedDevice } from '@/components/farm/DeviceSect
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
 import { HouseCameraPanel } from '@/components/farm/HouseCameraPanel'
 import { HouseYieldRow } from '@/components/farm/HouseYieldRow'
+import { LiveSensorPanel } from '@/components/farm/LiveSensorPanel'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { RelayControlSheet } from '@/components/farm/RelayControlSheet'
-import { SensorTileGrid } from '@/components/farm/SensorTileGrid'
 import { ZoneAlertRow } from '@/components/farm/ZoneAlertRow'
 import { ZoneSettingsSection } from '@/components/farm/ZoneSettingsSection'
 import { ZoneTabs } from '@/components/farm/ZoneTabs'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
-import { Radius, Spacing } from '@/constants/theme'
+import { Spacing } from '@/constants/theme'
 import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
 import { useHouseDetail } from '@/hooks/farm/useHouseDetail'
 import { useOrderedHouses } from '@/hooks/farm/useOrderedHouses'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { useNow } from '@/hooks/time/useNow'
 import { useFarmPrefsStore } from '@/stores/farmPrefsStore'
 import type { RelayName } from '@/types'
-import { getForecastMinutesAhead } from '@/utils/alert.utils'
-import { formatElapsed } from '@/utils/date.utils'
-import { buildSensorTiles } from '@/utils/sensorTile.utils'
 import type { SettingsSectionKind } from '@/utils/settingsSection.utils'
 import { t } from '@/utils/i18n.utils'
+import { buildHouseReturnTo } from '@/utils/navigation.utils'
 
-// "Cập nhật X giây trước" chạy theo từng giây
-const CLOCK_INTERVAL_MS = 1000
 // Cao bằng lưới cảm biến 2 cột × 3 hàng (mỗi ô khoảng 82, 2 khoảng 8)
 const SENSOR_SKELETON_HEIGHT = 262
 
@@ -56,7 +53,6 @@ export default function HouseDetailScreen() {
   const queryClient = useQueryClient()
   const isFocused = useIsFocused()
   const insets = useSafeAreaInsets()
-  const now = useNow(CLOCK_INTERVAL_MS)
   const { houseId, zoneId: requestedZoneId } = useLocalSearchParams<{ houseId: string; zoneId?: string }>()
   const { userId } = useFarmPrefs()
   const setLastZone = useFarmPrefsStore(state => state.setLastZone)
@@ -80,8 +76,9 @@ export default function HouseDetailScreen() {
     ? (detail.controllers.find(controller => controller._id === relaySelection.controllerId) ?? null)
     : null
 
-  // ‹ luôn về danh sách nhà của farm, kể cả khi mở thẳng Màn B từ Trang chủ
-  const goBack = () => router.dismissTo('/(tabs)/farms')
+  // ‹ về màn đã mở lối tắt (Trang chủ, cảnh báo…); mở từ danh sách nhà thì về danh sách nhà của farm
+  const returnBack = useReturnBack()
+  const goBack = returnBack ?? (() => router.dismissTo('/(tabs)/farms'))
 
   const handleSelectZone = (zoneId: string) => {
     setSelectedZoneId(zoneId)
@@ -107,12 +104,15 @@ export default function HouseDetailScreen() {
   const retry = () => refetchVisibleQueries(queryClient)
   // Tab Cảnh báo lọc sẵn nhà này (chuông) hoặc tầng đang xem (hàng cảnh báo tầng)
   const openAlerts = (zoneId?: string) =>
-    router.navigate({ pathname: '/(tabs)/alerts', params: { houseId, zoneId: zoneId ?? '' } })
+    router.navigate({
+      pathname: '/(tabs)/alerts',
+      params: { houseId, zoneId: zoneId ?? '', returnTo: buildHouseReturnTo(houseId) },
+    })
   // Phân tích đúng nhà và tầng đang xem: ô cảm biến mở tab Môi trường của chỉ số đó, dải chim mở tab Đàn chim
   const openAnalytics = (params: { tab: 'env' | 'birds'; metric?: string }) =>
     router.navigate({
       pathname: '/(tabs)/analytics',
-      params: { houseId, zoneId: detail.zone?._id ?? '', ...params },
+      params: { houseId, zoneId: detail.zone?._id ?? '', returnTo: buildHouseReturnTo(houseId), ...params },
     })
   const openSettings = () => router.push({ pathname: '/(tabs)/farms/[houseId]/settings', params: { houseId } })
   // Từ nút ⋮ của khối Cài đặt zone: mở đúng mục, đúng tầng đang xem; edit = mở sẵn chế độ sửa
@@ -132,25 +132,13 @@ export default function HouseDetailScreen() {
     if (!detail.zone) return <EmptyState message={t('Nhà chưa có khu vực')} />
     if (detail.controllers.length === 0) return <EmptyState message={t('Zone chưa có thiết bị gửi dữ liệu')} />
 
-    const tiles = buildSensorTiles(detail.telemetry, detail.zone.thresholds, now)
-    const forecastMinutes = {
-      temperature: getForecastMinutesAhead(detail.zoneAlerts, 'temperature'),
-      humidity: getForecastMinutesAhead(detail.zoneAlerts, 'humidity'),
-    }
-    const updatedAt = detail.telemetry ? new Date(detail.telemetry.timestamp).getTime() : null
     return (
-      <View style={styles.sensors}>
-        <SensorTileGrid
-          tiles={tiles}
-          forecastMinutes={forecastMinutes}
-          onPressTile={metric => openAnalytics({ tab: 'env', metric })}
-        />
-        <Text variant="small" color={palette.textSecondary}>
-          {updatedAt === null
-            ? t('Chưa có số đo')
-            : t('Cập nhật {elapsed} trước', { elapsed: formatElapsed(now - updatedAt) })}
-        </Text>
-      </View>
+      <LiveSensorPanel
+        telemetry={detail.telemetry}
+        thresholds={detail.zone.thresholds}
+        zoneAlerts={detail.zoneAlerts}
+        onPressTile={metric => openAnalytics({ tab: 'env', metric })}
+      />
     )
   }
 
@@ -237,12 +225,12 @@ export default function HouseDetailScreen() {
             onSelect={handleSelectZone}
           />
         )}
-        {!detail.isSocketConnected && (
-          <View style={[styles.banner, { backgroundColor: palette.surfaceStrong }]}>
-            <WifiSlashIcon size={16} color={palette.text} />
-            <Text variant="small" style={styles.flex}>
-              {t('Mất kết nối realtime, số đo tự tải lại mỗi 30 giây')}
+        {detail.isZoneAlertsError && (
+          <View style={styles.alertError}>
+            <Text variant="small" weight="semiBold" color={palette.alert} style={styles.flex}>
+              {t('Không tải được cảnh báo của tầng')}
             </Text>
+            <Button variant="link" size="sm" label={t('Thử lại')} onPress={retry} />
           </View>
         )}
         {detail.zoneAlertCount > 0 && detail.zoneHighestSeverity && (
@@ -286,13 +274,6 @@ const styles = StyleSheet.create({
   cameraArea: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.xs },
   // Khoảng giữa các khối gọn hơn các màn khác để dải chim, sản lượng, tab tầng và cả lưới cảm biến nằm trong màn đầu
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, gap: Spacing.md },
-  sensors: { gap: Spacing.sm },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-  },
   flex: { flex: 1 },
+  alertError: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
 })
