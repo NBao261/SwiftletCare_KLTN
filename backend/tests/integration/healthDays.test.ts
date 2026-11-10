@@ -302,6 +302,8 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
     const ok = await call('put', `/farms/houses/${house._id}/health-levels`, expertToken, { in_range_slight_pct: 85, noise_clear: 4 })
     expect(ok.status).toBe(200)
     expect(ok.body.data.health_levels).toMatchObject({ in_range_slight_pct: 85, noise_clear: 4, in_range_clear_pct: 75 })
+    // Cùng dạng với GET (api-spec HouseHealthLevels): web ghi response vào cache, thiếu can_edit thì popup bị khoá
+    expect(ok.body.data.can_edit).toBe(true)
     expect(await AuditLog.countDocuments({ action: 'HEALTH_LEVELS_UPDATED' })).toBe(1)
 
     expect((await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { noise_clear: 5 })).status).toBe(403)
@@ -315,6 +317,7 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
     expect((await call('get', `/farms/houses/${house._id}/health-levels`, ownerToken)).body.data.can_edit).toBe(true)
     const res = await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { air_slight_h: 2 })
     expect(res.status).toBe(200)
+    expect(res.body.data.can_edit).toBe(true)
     expect((await House.findById(house._id).lean())!.health_levels.air_slight_h).toBe(2)
   })
 

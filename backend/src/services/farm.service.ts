@@ -549,7 +549,8 @@ export async function updateHouseHealthLevels(houseId: string, user: CurrentUser
   await notifyExpertDecision(user, farm._id, auditId, {
     what: 'chỉnh mức chỉ số sức khỏe', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
   })
-  return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS }
+  // Cùng dạng HouseHealthLevels với GET (client ghi thẳng vào cache): lưu được tức là sửa được
+  return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS, can_edit: true }
 }
 
 export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {
