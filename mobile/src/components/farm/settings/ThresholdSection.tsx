@@ -134,7 +134,7 @@ function ThresholdEditor({ zone, editor, onSaved }: ThresholdSectionProps) {
   )
 }
 
-// Mục "Ngưỡng môi trường" của một zone (ENV-FR-006): xem 7 ngưỡng; chủ trại và chuyên gia bấm "Sửa" để chỉnh,
+// Mục "Ngưỡng môi trường" của một zone (ENV-FR-006): xem các ngưỡng (THRESHOLD_KEYS); chủ trại và chuyên gia bấm "Sửa" để chỉnh,
 // ô vuông ở chân card đặt lại mặc định hệ thống (ENV-FR-020)
 export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProps) {
   const user = useAuthStore(state => state.user)
@@ -146,7 +146,10 @@ export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProp
   const confirmReset = () =>
     NativeAlert.alert(
       t('Đặt lại ngưỡng mặc định?'),
-      t('7 ngưỡng của {zone} sẽ về mặc định hệ thống và gửi xuống controller.', { zone: zone.name }),
+      t('{count} ngưỡng của {zone} sẽ về mặc định hệ thống và gửi xuống controller.', {
+        count: THRESHOLD_KEYS.length,
+        zone: zone.name,
+      }),
       [
         { text: t('Huỷ'), style: 'cancel' },
         {
