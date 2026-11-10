@@ -283,7 +283,7 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Kiệt (Bảo chuyển giao)
 
-Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, chưa merge: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging (danh sách kiểm tra 2.0.0 ở `firmware/README.md`), màn kho thiết bị hiện `broker_secret` một lần (web, Nhi, sau khi merge).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
+Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, chưa merge: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging (danh sách kiểm tra 2.0.0 ở `firmware/README.md`), màn kho thiết bị hiện `broker_secret` một lần (web, Nhi — xong 11/11 trong G-09, `042c3fb`).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
 
 - [x] Kho thiết bị: khi thêm thiết bị, sinh broker secret (trả một lần như activation key, lưu hash `broker_secret_hash`); thu hồi thì EMQX từ chối.
 - [x] Backend:
@@ -322,8 +322,8 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-09 — Màn SF-01 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
 
-- [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
-- [ ] Màn Zone: in mã QR tầng.
+- [x] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash. *(Nhi, 11/11, `042c3fb`, nhánh `feat/g09-device-setup`: trang `/system/device-stock` — thêm thiết bị → popup hiện một lần nhãn QR `swiftletcare://claim?d=…&k=…` kèm mã thiết bị, mã kích hoạt, nút In nhãn (iframe ẩn, nhãn 60 × 32 mm) và mật khẩu broker có nút Sao chép, không in lên nhãn; bảng trạng thái nhãn (§6.16) có tìm kiếm, lọc loại và trạng thái nhãn, sắp theo thiết bị hoặc ngày nhập; menu dòng cấp lại mã kích hoạt, cấp lại mật khẩu broker, thu hồi đúng trạng thái API cho phép; API chưa có tìm kiếm/sắp xếp nên trang tải cả kho rồi lọc ở client)*
+- [x] Màn Zone: in mã QR tầng. *(Nhi, 11/11, `eb3a601`: menu "…" của trang Zone (Farm Owner) → In mã QR tầng `swiftletcare://zone?z=<zone ID>` kèm nhà, tầng, tên Zone; mã sinh ở `lib/qrCode.ts`, cùng định dạng bộ quét mobile, test `qrCode.test.ts`)*
 - [x] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS". *(Kiệt, 09/11, `adf3a60` spec + `7631056` backend, nhánh `feat/g09-device-setup`: cấp được khi thiết bị `IN_STOCK` hoặc `RELEASED`, đang dùng hoặc đã thu hồi thì 409; `GET /admin/provisioned-devices` trả `stock_status` (Report 3 §6.16) cho màn kho của Nhi; TC-ST-26 thêm trường hợp `RELEASED`)*
 - [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
 - [ ] Web: `/onboarding` cho Farm Owner.
