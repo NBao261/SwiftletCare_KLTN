@@ -131,6 +131,8 @@ export function ControlTab({ scope }: ControlTabProps) {
               <Pressable
                 key={change.changed_at}
                 onPress={() => setOpenChange(change)}
+                // Chip thấp hơn 44 nên nới vùng chạm (MOBILE_GUIDE 3.7)
+                hitSlop={Spacing.sm}
                 style={[styles.marker, { borderColor: palette.border }]}
                 accessibilityRole="button"
                 accessibilityLabel={t('Đổi hệ số lúc {time}', { time: formatDateTime(change.changed_at) })}

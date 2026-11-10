@@ -1,10 +1,12 @@
 import { Pressable, ScrollView, StyleSheet } from 'react-native'
 import { PlusIcon } from 'phosphor-react-native'
+import { CHIP_LABEL_MAX_LENGTH } from '@/components/ui/choice-chip'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Zone } from '@/types'
 import { t } from '@/utils/i18n.utils'
+import { truncateText } from '@/utils/name.utils'
 
 interface ZoneSettingsTabsProps {
   zones: Zone[]
@@ -31,8 +33,8 @@ export function ZoneSettingsTabs({ zones, selectedZoneId, onSelect, onAdd }: Zon
             accessibilityState={{ selected: isSelected }}
             accessibilityLabel={zone.name}
           >
-            <Text variant="body" weight="semiBold" color={isSelected ? palette.onInverse : palette.text}>
-              {zone.name}
+            <Text variant="body" weight="semiBold" color={isSelected ? palette.onInverse : palette.text} numberOfLines={1}>
+              {truncateText(zone.name, CHIP_LABEL_MAX_LENGTH)}
             </Text>
           </Pressable>
         )
