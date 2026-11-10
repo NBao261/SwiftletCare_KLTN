@@ -662,7 +662,7 @@ paths:
               type: object
               required: [device_id, kind]
               properties:
-                device_id: { type: string, example: node_101 }
+                device_id: { type: string, pattern: "^[A-Za-z0-9_-]+$", example: node_101, description: "Chỉ chữ, số, `_`, `-` (NFR-10 d): device ID là username và một đoạn topic trên broker, nên `+`, `#`, `/` hay khoảng trắng → 422" }
                 kind: { type: string, enum: [SENSOR, CAMERA] }
       responses:
         "201":
