@@ -593,6 +593,7 @@ paths:
               properties:
                 device_id: { type: string, pattern: "^[A-Za-z0-9_-]+$", example: node_101, description: "Chỉ chữ, số, `_`, `-` (NFR-10 d): device ID là username và một đoạn topic trên broker, nên `+`, `#`, `/` hay khoảng trắng → 422" }
                 kind: { type: string, enum: [SENSOR, CAMERA] }
+                simulated: { type: boolean, default: false, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập; controller/camera đăng ký từ mục kho này mang cờ simulated" }
       responses:
         "201":
           description: Đã cấp
@@ -601,7 +602,7 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, simulated: { type: boolean }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -4923,6 +4924,7 @@ components:
             playing: { type: boolean }
             loop: { type: boolean }
         registered_at: { type: string, format: date-time }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         ota_pending:
           type: object
           nullable: true
@@ -4963,6 +4965,7 @@ components:
         model_version: { type: string }
         fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất" }
         registered_at: { type: string, format: date-time }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
@@ -5229,6 +5232,7 @@ components:
         claimed_at: { type: string, format: date-time, nullable: true }
         revoked_at: { type: string, format: date-time, nullable: true, description: "Đã thu hồi — không kích hoạt được nữa" }
         revoke_reason: { type: string, nullable: true }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập" }
         created_by: { type: string }
         created_at: { type: string, format: date-time }
 

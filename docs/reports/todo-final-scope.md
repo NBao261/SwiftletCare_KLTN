@@ -281,11 +281,11 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-27 — Bộ giả lập thiết bị (Bảo) — hạn 02/12, làm sớm nhất
 
-- [ ] `simulator/` (Node.js + mqtt.js):
+- [x] `simulator/` (Node.js + mqtt.js): *(Bảo, 12/11/2026, PR #151: `npm test` 5/5; chưa chạy với EMQX thật vì máy chưa bật Docker — chạy thử ở máy dev rồi trên staging)*
   - đăng ký N controller và camera qua API Admin;
   - publish telemetry, heartbeat và số đếm trên đúng topic của thiết bị thật;
   - có kịch bản gây sự cố (cảnh báo, mất kết nối) để test định tuyến và Work Order.
-- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004).
+- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004). *(Backend xong ở PR #151: cờ đi từ kho sang controller và camera, có trong `GET /devices/sensor-nodes`, `/camera-nodes`, `/admin/provisioned-devices`. Còn nhãn "giả lập" trên màn hình: Nhi (web Owner, Admin), Tuấn (console thiết bị của Admin), Len (mobile).)*
 - [ ] Dùng cho:
   - NFR-03: 120 controller và 20 camera;
   - NFR-15: 30 cảnh báo và 10 Work Order, đo độ trễ leo thang và độ trễ xác minh phục hồi;

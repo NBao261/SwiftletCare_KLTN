@@ -46,7 +46,8 @@ router.put('/delete-requests/:id/reject',
 
 /** Kho thiết bị xuất xưởng: cấp cặp {device_id, secretKey} để in nhãn – FARM-FR-003, Flow 1 bước 3 */
 router.post('/provisioned-devices',
-  body('device_id').isString().trim().matches(DEVICE_ID_PATTERN), body('kind').isIn(['SENSOR', 'CAMERA']), validate,
+  body('device_id').isString().trim().matches(DEVICE_ID_PATTERN), body('kind').isIn(['SENSOR', 'CAMERA']),
+  body('simulated').optional().isBoolean({ strict: true }), validate,
   adminController.createProvisionedDevice,
 )
 router.get('/provisioned-devices',
