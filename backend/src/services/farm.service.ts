@@ -430,7 +430,7 @@ export async function setRoster(houseId: string, user: CurrentUser, shifts: Rost
   return presentRoster(house, house.roster)
 }
 
-/** AUTH-FR-014 — Farm Owner, Domain Expert xem cả lịch; Farm Technician được giao chỉ thấy ca của mình */
+/** AUTH-FR-014, Report 3 §2.4 — Farm Owner xem cả lịch; Farm Technician được giao chỉ thấy ca của mình; Domain Expert không xem (route chặn) */
 export async function getRoster(houseId: string, user: CurrentUser) {
   const { house } = await assertHouseAccess(houseId, user)
   const roster = house.roster ?? []
@@ -491,14 +491,29 @@ export async function createHouse(
   return House.create({ farm_id: farm._id, name: input.name, floors: input.floors, description: input.description })
 }
 
-export async function listHouses(farmId: string, user: CurrentUser) {
+/** Nhà trong GET /farms/:id/houses: lịch trực tuỳ role (Report 3 §2.4) */
+export type HouseListItem = Omit<IHouse, 'roster'> & { roster?: IHouse['roster'] }
+
+export async function listHouses(farmId: string, user: CurrentUser): Promise<HouseListItem[]> {
   const farm = await findFarmOrThrow(farmId)
-  // AUTH-FR-013 — Farm Technician chỉ nhận các nhà được giao
+  // AUTH-FR-013 — Farm Technician chỉ nhận các nhà được giao; lịch trực chỉ còn ca của mình (§2.4 "read own roster")
   if (isFarmTechnician(farm, user)) {
-    return House.find({ farm_id: farm._id, _id: { $in: await listAssignedHouseIds(user) } }).sort({ created_at: -1 })
+    const assigned = await House.find({ farm_id: farm._id, _id: { $in: await listAssignedHouseIds(user) } }).sort({ created_at: -1 })
+    return assigned.map(house => {
+      const plain = house.toObject() as unknown as HouseListItem
+      plain.roster = (plain.roster ?? []).filter(s => String(s.technician_id) === user._id)
+      return plain
+    })
   }
   if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  return House.find({ farm_id: farm._id }).sort({ created_at: -1 })
+  const houses = await House.find({ farm_id: farm._id }).sort({ created_at: -1 })
+  // Lịch trực là của Farm Owner (§2.4): Domain Expert và Administrator không nhận
+  if (user.role === 'FARM_OWNER') return houses
+  return houses.map(house => {
+    const plain = house.toObject() as unknown as HouseListItem
+    delete plain.roster
+    return plain
+  })
 }
 
 /** FARM-FR-002 */

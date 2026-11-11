@@ -92,12 +92,30 @@ describe('PUT/GET /farms/houses/:houseId/roster (AUTH-FR-014)', () => {
 
     await as(b.token).put(path, { shifts: [] }).expect(403)
     await as(c.token).get(path).expect(403)
+    // Report 3 §2.4: Domain Expert không có quyền với lịch trực, kể cả xem
     const expert = await tokenOf('DOMAIN_EXPERT')
+    await as(expert.token).get(path).expect(403)
     await as(expert.token).put(path, { shifts: [] }).expect(403)
     const admin = await tokenOf('ADMIN')
     await as(admin.token).get(path).expect(403)
     const other = await seedOwnerFarm()
     await as(other.token).put(path, { shifts: [] }).expect(403)
+  })
+
+  it('the house list carries the whole roster for the Farm Owner, only own shifts for a technician, none for the expert', async () => {
+    const { a, b, owner, path, farm, token } = await seed()
+    await owner.put(path, { shifts: [shift(a.user._id, 'PRIMARY', '06:00', '18:00'), shift(b.user._id, 'BACKUP', '18:00', '06:00')] }).expect(200)
+    const expert = await tokenOf('DOMAIN_EXPERT')
+    farm.members.push({ user_id: expert.user._id, role: 'DOMAIN_EXPERT' } as never)
+    await farm.save()
+    const houseOf = async (userToken: string) => (await as(userToken).get(`/farms/${farm._id}/houses`).expect(200)).body.data[0]
+    const technicianIds = (house: { roster: Array<{ technician_id: string }> }) => house.roster.map(s => s.technician_id)
+
+    expect(technicianIds(await houseOf(token))).toEqual([String(a.user._id), String(b.user._id)])
+    expect(technicianIds(await houseOf(b.token))).toEqual([String(b.user._id)])
+    const seenByExpert = await houseOf(expert.token)
+    expect(seenByExpert).not.toHaveProperty('roster')
+    expect(seenByExpert.technicians).toHaveLength(2)
   })
 
   it('unassigning a technician or removing them from the farm drops their shifts', async () => {

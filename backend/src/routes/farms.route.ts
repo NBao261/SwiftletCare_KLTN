@@ -50,8 +50,9 @@ router.put   ('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'),
   body('primary').optional().isBoolean({ strict: true }), validate, farmController.assignTechnician)
 router.delete('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),
   validate, farmController.unassignTechnician)
-// AUTH-FR-014 — lịch trực theo tuần: Farm Owner đặt, thợ được giao chỉ xem ca của mình (service lọc)
-router.get   ('/houses/:houseId/roster', requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'), param('houseId').isMongoId(),
+// AUTH-FR-014 — lịch trực theo tuần: Farm Owner đặt, thợ được giao chỉ xem ca của mình (service lọc); Domain Expert
+// không có quyền với lịch trực (Report 3 §2.4)
+router.get   ('/houses/:houseId/roster', requireRole('FARM_OWNER', 'FARM_TECHNICIAN'), param('houseId').isMongoId(),
   validate, farmController.getRoster)
 router.put   ('/houses/:houseId/roster', requireRole('FARM_OWNER'), param('houseId').isMongoId(),
   body('shifts').isArray(),

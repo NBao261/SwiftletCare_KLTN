@@ -8,6 +8,7 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
+import mongoose from 'mongoose'
 import alertRoutes from '@/routes/alerts.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import deviceRoutes from '@/routes/devices.route'
@@ -226,15 +227,31 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
     await tech$.get(`/telemetry/zones/${zone._id}/latest`).expect(403)
   })
 
-  it('gets no alerts until alerts are routed by house (G-21)', async () => {
-    const { farm, zone, house, tech, owner$, tech$ } = await seedFarmWithTechnician()
-    await owner$.put(assignPath(house._id, tech.user._id)).expect(200)
-    const offline = await Alert.create({
-      severity: 'HIGH', title: 't', message: 'm', status: 'ACTIVE', farm_id: farm._id, zone_id: zone._id, type: 'NODE_OFFLINE',
-    })
+  it('reads the alerts of the assigned house only and is not notified yet (G-21)', async () => {
+    const { farm, zone, zone2, house, house2, tech, owner$, tech$ } = await seedFarmWithTechnician()
+    const base = { severity: 'HIGH', title: 't', message: 'm', status: 'ACTIVE', farm_id: farm._id }
+    const offline = await Alert.create({ ...base, zone_id: zone._id, type: 'NODE_OFFLINE' })
+    const lowReturn = await Alert.create({ ...base, severity: 'LOW', house_id: house._id, type: 'LOW_RETURN_RATE' })
+    const elsewhere = await Alert.create({ ...base, zone_id: zone2._id, type: 'NODE_OFFLINE' })
+    const otherHouse = await Alert.create({ ...base, severity: 'LOW', house_id: house2._id, type: 'LOW_RETURN_RATE' })
 
-    expect((await tech$.get('/alerts').expect(200)).body.data).toEqual([])
+    // Chưa được giao nhà: danh sách rỗng, kể cả khi lọc theo farm của mình (không 403)
+    expect((await tech$.get(`/alerts?farmId=${farm._id}`).expect(200)).body.data).toEqual([])
     await tech$.get(`/alerts/${offline._id}`).expect(403)
+
+    await owner$.put(assignPath(house._id, tech.user._id)).expect(200)
+    const ids = (path: string) => tech$.get(path).expect(200).then(res => (res.body.data as Array<{ _id: string }>).map(a => a._id).sort())
+    const mine = [String(offline._id), String(lowReturn._id)].sort()
+    expect(await ids('/alerts')).toEqual(mine)
+    expect(await ids(`/alerts?farmId=${farm._id}`)).toEqual(mine)
+    expect(await ids(`/alerts?farmId=${new mongoose.Types.ObjectId()}`)).toEqual([])
+    expect((await tech$.get(`/alerts?farmId=${farm._id}&status=ACTIVE&limit=1`).expect(200)).body.meta.total).toBe(2)
+    await tech$.get(`/alerts/${offline._id}`).expect(200)
+    await tech$.get(`/alerts/${lowReturn._id}`).expect(200)
+    await tech$.get(`/alerts/${elsewhere._id}`).expect(403)
+    await tech$.get(`/alerts/${otherHouse._id}`).expect(403)
+    // Xác nhận cảnh báo của thợ chưa mở ở backend (ALERT-FR-009 cho thợ đi cùng G-21)
+    await tech$.put(`/alerts/${offline._id}/acknowledge`, { note: 'x' }).expect(403)
     // Thợ không nằm trong danh sách nhận cảnh báo của farm (cảnh báo theo nhà là G-21)
     const { findRecipients } = await import('@/services/notification.service')
     expect((await findRecipients(String(farm._id))).map(u => String(u._id))).not.toContain(String(tech.user._id))
