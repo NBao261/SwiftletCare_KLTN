@@ -700,6 +700,8 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Proposal retry on concurrent submission | 3 attempts | Absorbs concurrent submission on the same zone before failing with duplicate-key error (EXPERT-FR-011) |
 | Live-stream viewing token | 60 s | A leaked token expires quickly (VISION-FR-013) |
 | Counting ring vertices | 3–12 | Input check (VISION-FR-018) |
+| Farm, house and zone names | at most 50 characters | Input check, the same in the applications (FARM-FR-001, 002) |
+| Floors of a house | 1–10 | Input check; a zone floor cannot exceed the floors of its house (FARM-FR-002) |
 | Ring margin around the hole outline | 60 px | Outline measured on 21/10/2026, widened evenly (VISION-FR-005) |
 | Overlap of the two image tiles | 160 px | Larger than a circling bird (about 40 px), so a bird at a tile edge is whole in the other tile (VISION-FR-004) |
 | Extrapolation at the hole | tracks faster than 60 px/frame, over at most 2 frames | Measured on one clip (BR-25) |
