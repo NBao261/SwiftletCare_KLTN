@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { getScopeKey, useActiveAlertsOfScopes } from '@/hooks/alert/useActiveAlertsOfScopes'
-import { useRefreshAlertsOnNew } from '@/hooks/alert/useRefreshAlertsOnNew'
 import { useLiveHouseBirdCount } from '@/hooks/bird-count/useLiveHouseBirdCount'
 import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useDeviceStream } from '@/hooks/device/useDeviceStream'
@@ -9,7 +8,6 @@ import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useLatestTelemetryOfZones } from '@/hooks/telemetry/useLatestTelemetryOfZones'
-import { useSocketConnection } from '@/hooks/telemetry/useSocketConnection'
 import { useZoneTelemetryStream } from '@/hooks/telemetry/useZoneTelemetryStream'
 import { useFarmPrefsStore } from '@/stores/farmPrefsStore'
 import type { Alert } from '@/types'
@@ -40,12 +38,10 @@ export function useHouseDetail(houseId: string, selectedZoneId: string | undefin
   const telemetryQuery = useLatestTelemetryOfZones(zoneId ? [zoneId] : [])
   const today = useLiveHouseBirdCount(houseId)
   const alertsQuery = useActiveAlertsOfScopes([{ houseId }, ...zones.map(item => ({ zoneId: item._id }))])
-  const isSocketConnected = useSocketConnection()
 
-  // Realtime: số đo của zone đang chọn, relay và trạng thái thiết bị, cảnh báo mới
+  // Realtime: số đo của zone đang chọn, relay và trạng thái thiết bị; cảnh báo mới do useBellRealtime tải lại cho cả app
   useZoneTelemetryStream(zoneId ? [zoneId] : [])
   useDeviceStream()
-  useRefreshAlertsOnNew()
 
   // Mở nhà nào thì nhà đó là nhà xem gần nhất của farm; lần sau vào tab Farm thì mở thẳng nhà này
   const farmId = house?.farm_id
@@ -57,12 +53,10 @@ export function useHouseDetail(houseId: string, selectedZoneId: string | undefin
     markAutoOpened(farmId)
   }, [userId, farmId, houseId, setLastHouse, setCurrentFarm, markAutoOpened])
 
-  const houseScope = alertsQuery.byScopeKey.get(getScopeKey({ houseId }))
   const zoneAlerts: Alert[] = zoneId ? (alertsQuery.byScopeKey.get(getScopeKey({ zoneId }))?.alerts ?? []) : []
   const zoneAlertCount = zoneId ? (alertsQuery.byScopeKey.get(getScopeKey({ zoneId }))?.total ?? 0) : 0
-  const houseAlertCount =
-    (houseScope?.total ?? 0) +
-    zones.reduce((total, item) => total + (alertsQuery.byScopeKey.get(getScopeKey({ zoneId: item._id }))?.total ?? 0), 0)
+  // Không tải được cảnh báo của tầng đang xem: báo lỗi thay vì coi như 0 cảnh báo
+  const isZoneAlertsError = Boolean(zoneId) && alertsQuery.isError && !alertsQuery.byScopeKey.has(getScopeKey({ zoneId }))
   const alertZoneIds = new Set(
     zones.filter(item => (alertsQuery.byScopeKey.get(getScopeKey({ zoneId: item._id }))?.total ?? 0) > 0).map(item => item._id),
   )
@@ -77,10 +71,9 @@ export function useHouseDetail(houseId: string, selectedZoneId: string | undefin
     today,
     zoneAlerts,
     zoneAlertCount,
+    isZoneAlertsError,
     zoneHighestSeverity: getHighestSeverity(zoneAlerts),
-    houseAlertCount,
     alertZoneIds,
-    isSocketConnected,
     isHouseLoading: housesQuery.isLoading,
     isHouseError: housesQuery.isError,
     isZonesLoading: zonesQuery.isLoading,

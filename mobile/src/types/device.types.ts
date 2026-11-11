@@ -11,6 +11,15 @@ export interface RelayStates {
   ventilation: boolean
 }
 
+// Chế độ và hạn của một relay (BR-20) — khớp RelayOverride trong api-spec
+export interface RelayOverride {
+  mode: ControlMode
+  // Chỉ có khi mode = MANUAL
+  override_expiry?: string
+  // ID người bật tay; thiết bị tự báo MANUAL thì không có
+  override_by?: string
+}
+
 export interface SensorNode {
   _id: string
   device_id: string
@@ -25,9 +34,11 @@ export interface SensorNode {
   reset_reason?: string
   ip?: string
   relay_states: RelayStates
+  // Tóm tắt cả controller: MANUAL khi có ít nhất một relay đang điều khiển tay, hạn là hạn sớm nhất — chế độ thật của từng
+  // relay nằm trong relays (BR-20); dữ liệu cũ chưa có relays thì dùng hai trường này cho mọi relay
   control_mode: ControlMode
-  // Một hạn chung cho cả controller: hết hạn thì mọi relay về AUTO
   override_expiry?: string
+  relays?: Partial<Record<keyof RelayStates, RelayOverride>>
   // Khung giờ phát loa ru (ENV-FR-013b), giờ dạng HH:mm
   speaker_schedule?: { enabled?: boolean; windows?: { start: string; end: string }[] }
   registered_at?: string
@@ -66,6 +77,8 @@ export interface RelayOverrideLog {
   expires_at: string
   ended_at: string | null
   end_reason: 'EXPIRED' | 'CLEARED_EARLY' | 'REPLACED' | null
+  // ENV-FR-019 — bật bơm lúc Zone có cảnh báo cảm biến/phun sương và Farm Owner đã xác nhận
+  alert_confirmed?: boolean
 }
 
 // Token xem live stream 60 giây của một camera (VISION-FR-013) — khớp GET /devices/camera-nodes/{id}/stream-token

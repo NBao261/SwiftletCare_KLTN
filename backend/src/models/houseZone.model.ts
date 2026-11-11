@@ -24,6 +24,10 @@ export interface IHouse extends Document {
   /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
+  /** AUTH-FR-013 — Farm Technician được giao nhà này; tối đa 1 thợ chính (Report 4 ERD `HOUSE.technicians`) */
+  technicians: Array<{ user_id: Types.ObjectId; primary: boolean }>
+  /** AUTH-FR-014 — lịch trực theo tuần (giờ VN); ngoài mọi ca thì cảnh báo tới thợ chính (utils/roster.util.ts) */
+  roster: Array<{ technician_id: Types.ObjectId; role: 'PRIMARY' | 'BACKUP'; weekdays: number[]; start: string; end: string }>
 }
 
 export interface IThresholdHistoryEntry {
@@ -91,9 +95,24 @@ const houseSchema = new Schema<IHouse>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
     }],
+    technicians: [{
+      user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      primary: { type: Boolean, default: false },
+      _id: false,
+    }],
+    roster: [{
+      technician_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      role:     { type: String, enum: ['PRIMARY', 'BACKUP'], required: true },
+      weekdays: [{ type: Number, min: 0, max: 6 }],
+      start:    { type: String, required: true },
+      end:      { type: String, required: true },
+      _id: false,
+    }],
   },
   { timestamps: { createdAt: 'created_at' } }
 )
+// AUTH-FR-004 — tìm các nhà được giao của 1 thợ (phạm vi dữ liệu của Farm Technician)
+houseSchema.index({ 'technicians.user_id': 1 })
 
 const zoneSchema = new Schema<IZone>(
   {

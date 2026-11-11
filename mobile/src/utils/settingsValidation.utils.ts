@@ -13,7 +13,7 @@ export interface NumberRule {
 export type NumberDraft<K extends string> = Record<K, string>
 export type DraftErrors<K extends string> = Partial<Record<K, string>>
 
-// Hệ số mờ dạng số; bộ lọc đầu vào là công tắc nên không nằm trong bảng số
+// Hệ số fuzzy dạng số; bộ lọc đầu vào là công tắc nên không nằm trong bảng số
 export type FuzzyNumberKey = Exclude<keyof FuzzyTuning, 'fuzzy_input_filter'>
 
 // Khoảng đo của từng cảm biến, khớp THRESHOLD_LIMITS trong backend/src/utils/thresholds.util.ts
@@ -61,8 +61,32 @@ export const COORDINATE_RULES: Record<keyof Coordinates, NumberRule> = {
   lng: { min: -180, max: 180 },
 }
 
-// Số tầng của nhà, tầng của zone: số nguyên từ 1 (model backend mặc định 1)
-export const FLOOR_RULE: NumberRule = { min: 1, max: Number.MAX_SAFE_INTEGER, integer: true }
+// Số tầng của nhà: số nguyên 1–10 (Len chốt 10/11/2026; backend chưa kiểm số tầng — đề xuất cho Kiệt ở todo-review2 G-16)
+export const HOUSE_FLOOR_RULE: NumberRule = { min: 1, max: 10, integer: true }
+
+// Tầng của một khu vực: từ 1 tới số tầng của nhà; nhà cũ chưa có số tầng thì lấy mức trên của số tầng nhà
+export function getZoneFloorRule(houseFloors: number | undefined): NumberRule {
+  return { min: 1, max: houseFloors ?? HOUSE_FLOOR_RULE.max, integer: true }
+}
+
+// Độ dài tối đa của tên farm / nhà / khu vực (Len chốt 10/11/2026; backend chỉ bắt không rỗng — đề xuất cho Kiệt)
+export const NAME_MAX_LENGTH = 50
+
+// Tên để so trùng: bỏ khoảng trắng đầu cuối, gộp khoảng trắng giữa, không phân biệt hoa thường; dấu tiếng Việt vẫn giữ
+// ("  nhà  A " = "Nhà a", còn "Nhà Á" khác "Nhà A")
+export function normalizeName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi')
+}
+
+// Câu lỗi của ô tên; hợp lệ thì null. existingNames: tên đang có cùng cấp (nhà trong farm, khu vực trong nhà) để chặn trùng
+export function validateName(name: string, existingNames: readonly string[] = [], duplicateMessage = ''): string | null {
+  const trimmed = name.trim()
+  if (trimmed === '') return t('Không được để trống')
+  if (trimmed.length > NAME_MAX_LENGTH) return t('Tối đa {max} ký tự', { max: NAME_MAX_LENGTH })
+  if (existingNames.length === 0) return null
+  const normalizedNames = new Set(existingNames.map(normalizeName))
+  return normalizedNames.has(normalizeName(trimmed)) ? duplicateMessage : null
+}
 
 // Chữ người dùng gõ thành số: nhận cả dấu phẩy lẫn dấu chấm làm dấu thập phân (bàn phím số Android chỉ có dấu chấm), không
 // nhận ngăn hàng nghìn

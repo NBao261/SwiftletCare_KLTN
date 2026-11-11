@@ -78,9 +78,9 @@ describe('GET /admin/users — query validation & pagination', () => {
 
   it('filters by role and status', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    await makeUser('tech@test.vn', 'TECHNICIAN')
+    await makeUser('tech@test.vn', 'FARM_TECHNICIAN')
     const res = await request(app)
-      .get('/admin/users?role=TECHNICIAN&status=active')
+      .get('/admin/users?role=FARM_TECHNICIAN&status=active')
       .set('Authorization', `Bearer ${token}`).expect(200)
     expect(res.body.data).toHaveLength(1)
     expect(res.body.data[0].email).toBe('tech@test.vn')
@@ -208,7 +208,7 @@ describe('PUT /admin/users/:id/status — boolean coercion', () => {
 describe('PUT /admin/users/:id/status — response', () => {
   it('returns the locked user without meta', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
+    const { user: tech } = await makeUser('tech@test.vn', 'FARM_TECHNICIAN')
     const res = await request(app)
       .put(`/admin/users/${tech._id}/status`)
       .set('Authorization', `Bearer ${token}`)
@@ -244,36 +244,10 @@ describe('PUT /admin/delete-requests/:id/reject', () => {
   })
 })
 
-describe('POST /admin/technicians — phone', () => {
-  const base = { email: 'newtech@test.vn', password: 'password123', full_name: 'Tech mới' }
-
-  it.each(['12345', '09123456789', 'abc0912345678'])('returns 422 for phone %p', async phone => {
-    const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
-      .send({ ...base, phone }).expect(422)
-    expect(await User.countDocuments({ email: base.email })).toBe(0)
-  })
-
-  it('accepts a phone with separators or +84 and stores it without them', async () => {
-    const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    const res = await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
-      .send({ ...base, phone: '+84 912.345-678' }).expect(201)
-    expect(res.body.data.phone).toBe('+84912345678')
-  })
-
-  it('works without a phone and stores no region (Technician works on every farm, FARM-FR-009)', async () => {
-    const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    const res = await request(app).post('/admin/technicians').set('Authorization', `Bearer ${token}`)
-      .send({ ...base, phone: '', assigned_regions: ['HCMC'] }).expect(201)
-    expect(res.body.data.phone).toBeUndefined()
-    expect(res.body.data.assigned_regions).toBeUndefined()
-  })
-})
-
 describe('PUT /admin/delete-requests/:id/complete', () => {
   it('completes a technician deletion without any extra flag', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
+    const { user: tech } = await makeUser('tech@test.vn', 'FARM_TECHNICIAN')
     tech.deletion_requested_at = new Date()
     await tech.save()
     await request(app)
@@ -284,9 +258,9 @@ describe('PUT /admin/delete-requests/:id/complete', () => {
 })
 
 describe('PUT /admin/technicians/:id/regions', () => {
-  it('is gone (Report 3 §8: no Technician regions)', async () => {
+  it('is gone (Report 3 §8: no Technician regions; G-20: no /admin/technicians at all)', async () => {
     const { token } = await makeUser('admin@test.vn', 'ADMIN')
-    const { user: tech } = await makeUser('tech@test.vn', 'TECHNICIAN')
+    const { user: tech } = await makeUser('tech@test.vn', 'FARM_TECHNICIAN')
     await request(app).put(`/admin/technicians/${tech._id}/regions`).set('Authorization', `Bearer ${token}`)
       .send({ assigned_regions: ['HCMC'] }).expect(404)
   })

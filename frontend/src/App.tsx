@@ -47,7 +47,7 @@ function RoleLayout() {
   switch (role) {
     case "ADMIN":
       return <AdminLayout />;
-    case "TECHNICIAN":
+    case "FARM_TECHNICIAN":
       return <TechnicianLayout />;
     case "DOMAIN_EXPERT":
       return <DomainExpertLayout />;

@@ -8,6 +8,7 @@ import { useSensorNodes } from '@/hooks/device/useSensorNodes'
 import { summarizeDeviceStatuses, type DeviceStatusSummary } from '@/utils/device.utils'
 import { getDeviceStatusLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 // Câu tóm tắt: ưu tiên báo thiết bị mất kết nối, rồi tới thiết bị chưa gửi heartbeat đầu tiên
 function getDeviceSummary(summary: DeviceStatusSummary): string {
@@ -62,7 +63,7 @@ export function DeviceStatTile() {
         }))}
         hiddenCount={Math.max(0, notOnlineNodes.length - MAX_DETAIL_ITEMS)}
         // shortcut: chưa có tab Thiết bị lọc offline — tạm mở tab Trang trại
-        onViewAll={() => router.navigate('/(tabs)/farms')}
+        onViewAll={() => router.navigate({ pathname: '/(tabs)/farms', params: { returnTo: RETURN_TO_HOME } })}
       />
     </>
   )

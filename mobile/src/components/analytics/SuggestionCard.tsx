@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { FormMessage } from '@/components/ui/form-message'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { RetryLine } from '@/components/common/RetryLine'
 import { Spacing } from '@/constants/theme'
 import { useControlSuggestion } from '@/hooks/analytics/useControlSuggestion'
 import { useSubmitProposal } from '@/hooks/expert-activity/useSubmitProposal'
@@ -121,9 +122,7 @@ export function SuggestionCard({ zoneId, zoneName, farm }: SuggestionCardProps) 
     if (suggestionQuery.isLoading) return <Skeleton width="100%" height={SKELETON_HEIGHT} />
     if (suggestionQuery.isError || !data) {
       return (
-        <Text variant="small" color={palette.textSecondary} onPress={() => suggestionQuery.refetch()}>
-          {t('Không tải được. Chạm để thử lại')}
-        </Text>
+        <RetryLine message={t('Không tải được')} onRetry={() => suggestionQuery.refetch()} isRetrying={suggestionQuery.isFetching} />
       )
     }
     if (!suggestion) {

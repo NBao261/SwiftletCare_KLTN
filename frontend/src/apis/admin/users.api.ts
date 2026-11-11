@@ -10,15 +10,12 @@ export interface ListAdminUsersQuery {
   limit?: number
 }
 
-export interface CreateTechnicianInput {
-  email: string; password: string; full_name: string; phone?: string
-}
-
 /**
  * Router `/admin` (backend/src/routes/admin.route.ts) — mọi endpoint đều
  * `requireRole('ADMIN')`. Không có DELETE /admin/users/:id: xoá tài khoản chỉ đi
- * qua hàng đợi delete-requests (AUTH-FR-012); cũng không có endpoint sửa
- * hồ sơ người khác (AUTH-FR-005c: chỉ tạo Technician và cấp lại mật khẩu tạm).
+ * qua hàng đợi delete-requests (AUTH-FR-012).
+ * G-20: POST /admin/technicians và PUT /admin/technicians/:id/password đã bị xoá khỏi backend (f9d9522).
+ * Farm Technician được Farm Owner mời qua POST /farms/:id/members với role FARM_TECHNICIAN.
  */
 export const adminApi = {
   // ── Tài khoản — AUTH-FR-011 / Flow 19 ──────────────────────────────────────
@@ -35,8 +32,4 @@ export const adminApi = {
 
   completeDeleteRequest: (id: string) =>
     api.put<ApiResponse<User>>(`/admin/delete-requests/${id}/complete`),
-
-  // ── Tạo tài khoản nhân viên — AUTH-FR-005c / Flow 16 bước 1a ────────────────
-  createTechnician: (input: CreateTechnicianInput) =>
-    api.post<ApiResponse<User>>('/admin/technicians', input),
 }

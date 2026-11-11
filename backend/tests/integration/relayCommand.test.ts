@@ -285,13 +285,13 @@ describe('mỗi relay một hạn (BR-20, ENV-FR-018)', () => {
 
 describe('dời thiết bị sang Zone khác', () => {
   it('dời thiết bị sang Zone khác: override đang chạy kết thúc ở Zone cũ', async () => {
-    const { farm, node, relay, token } = await seed()
+    const { farm, node, relay, token, user } = await seed()
     const house2 = await House.create({ farm_id: farm._id, name: 'H2' })
     const zone2 = await Zone.create({ house_id: house2._id, name: 'Z2' })
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
     jest.clearAllMocks()
 
-    await reassignZone(String(node._id), { _id: String(new mongoose.Types.ObjectId()), email: 'tech@test.vn', role: 'TECHNICIAN' }, { newZoneId: String(zone2._id) })
+    await reassignZone(String(node._id), user, { newZoneId: String(zone2._id) })
 
     const after = (await SensorNode.findById(node._id))!
     expect(String(after.zone_id)).toBe(String(zone2._id))

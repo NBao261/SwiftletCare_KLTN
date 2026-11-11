@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { memo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import * as Haptics from 'expo-haptics'
@@ -21,16 +21,25 @@ interface AlertRowProps {
   alert: Alert
   locationText: string
   now: number
-  // Chủ trại vuốt sang trái để xác nhận; không truyền thì hàng không vuốt được
-  onAcknowledge?: () => void
-  onPress: () => void
+  // Chủ trại vuốt sang trái để xác nhận; không truyền thì hàng không vuốt được. Nhận chính cảnh báo để màn truyền một hàm
+  // cố định (useCallback) cho mọi hàng — memo mới bỏ qua được hàng không đổi
+  onAcknowledge?: (alert: Alert) => void
+  onPress: (alert: Alert) => void
   // Cảnh báo mới vào khi đang mở app: viền nháy một lần
   isNew?: boolean
 }
 
 // Một hàng cảnh báo (đặc tả §2.5): mức + loại, vị trí, trạng thái, thời gian gần nhất, số lần lặp,
-// "Chờ phán quyết" của loại suy luận, đếm ngược nhắc lại (ALERT-FR-015)
-export function AlertRow({ alert, locationText, now, onAcknowledge, onPress, isNew = false }: AlertRowProps) {
+// "Chờ phán quyết" của loại suy luận, đếm ngược nhắc lại (ALERT-FR-015). memo: danh sách vẽ lại (mở sheet, tải lại 30 giây)
+// thì hàng nào không đổi props không vẽ lại
+export const AlertRow = memo(function AlertRow({
+  alert,
+  locationText,
+  now,
+  onAcknowledge,
+  onPress,
+  isNew = false,
+}: AlertRowProps) {
   const palette = usePalette()
   const swipeRef = useRef<SwipeableMethods>(null)
   const [isFullTime, setFullTime] = useState(false)
@@ -58,7 +67,7 @@ export function AlertRow({ alert, locationText, now, onAcknowledge, onPress, isN
 
   const content = (
     <Pressable
-      onPress={onPress}
+      onPress={() => onPress(alert)}
       onLongPress={() => setFullTime(current => !current)}
       style={[styles.row, { backgroundColor: palette.surface, borderColor: isNew ? palette.alert : 'transparent' }]}
       accessibilityRole="button"
@@ -112,7 +121,7 @@ export function AlertRow({ alert, locationText, now, onAcknowledge, onPress, isN
         <Pressable
           onPress={() => {
             swipeRef.current?.close()
-            onAcknowledge()
+            onAcknowledge(alert)
           }}
           style={[styles.action, { backgroundColor: palette.inverse }]}
           accessibilityRole="button"
@@ -128,7 +137,7 @@ export function AlertRow({ alert, locationText, now, onAcknowledge, onPress, isN
       {content}
     </ReanimatedSwipeable>
   )
-}
+})
 
 const styles = StyleSheet.create({
   row: {

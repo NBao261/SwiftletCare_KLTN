@@ -94,7 +94,7 @@ function SettingGroup({ group, onMenu }: { group: SettingGroupData; onMenu: () =
   )
 }
 
-// Khối "Cài đặt zone" ở chi tiết nhà (thu gọn mặc định) để xem nhanh: ngưỡng (ENV-FR-006), hệ số bộ điều khiển mờ
+// Khối "Cài đặt zone" ở chi tiết nhà (thu gọn mặc định) để xem nhanh: ngưỡng (ENV-FR-006), hệ số bộ điều khiển fuzzy
 // (ENV-FR-021), tham số phát hiện của zone và mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008) — mọi số lấy đúng từ backend.
 // Nút ⋮ của từng nhóm: "Chỉnh sửa" mở Cài đặt nhà đúng mục đó, mở sẵn chế độ sửa; không có quyền thì chỉ "Xem trong Cài đặt nhà"
 export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSettingsSectionProps) {
@@ -115,7 +115,7 @@ export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSetting
     },
     {
       kind: 'fuzzy',
-      title: t('Hệ số bộ điều khiển mờ'),
+      title: t('Tự điều khiển phun sương và quạt'),
       rows: FUZZY_KEYS.map(key => {
         const { label, unit } = getFuzzyTuningLabel(key)
         return { label, value: formatSetting(zone.fuzzy_tuning?.[key], unit) }
@@ -157,7 +157,7 @@ export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSetting
         icon: GearSixIcon,
         label: t('Xem trong Cài đặt nhà'),
         // Trong app chỉ gặp ở tham số phát hiện và mức giảm tỷ lệ về tổ với chủ trại
-        caption: t('Chỉ chuyên gia sửa được'),
+        caption: t('Xem các mức đang dùng'),
         onPress: () => onOpenSettings(group.kind, false),
       },
     ]

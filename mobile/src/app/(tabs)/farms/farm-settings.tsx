@@ -25,6 +25,7 @@ import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { canPerform } from '@/utils/permission.utils'
+import { HOUSE_FLOOR_RULE } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
 const SECTION_SKELETON_HEIGHT = 76
@@ -158,6 +159,9 @@ export default function FarmSettingsScreen() {
             scopeLabel={farm.name}
             nameLabel={t('Tên nhà')}
             numberLabel={t('Số tầng')}
+            numberRule={HOUSE_FLOOR_RULE}
+            existingNames={housesQuery.houses.map(item => item.name)}
+            duplicateMessage={t('Farm đã có nhà tên này')}
             submit={(name, floors) => createHouse.mutateAsync({ farmId: farm._id, payload: { name, floors } })}
             onCreated={() => {
               setHouseSheetOpen(false)

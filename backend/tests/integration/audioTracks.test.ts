@@ -64,13 +64,13 @@ const tokenFor = (id: unknown, role: string) =>
 
 async function seed(status: 'ONLINE' | 'OFFLINE' = 'ONLINE') {
   const owner = await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'Owner', role: 'FARM_OWNER' })
-  const tech = await User.create({ email: 'tech@test.vn', password_hash: 'password123', full_name: 'Tech', role: 'TECHNICIAN' })
-  const farm = await Farm.create({ name: 'Farm', address: 'HCMC', owner_id: owner._id })
-  const house = await House.create({ farm_id: farm._id, name: 'House' })
+  const tech = await User.create({ email: 'tech@test.vn', password_hash: 'password123', full_name: 'Tech', role: 'FARM_TECHNICIAN' })
+  const farm = await Farm.create({ name: 'Farm', address: 'HCMC', owner_id: owner._id, members: [{ user_id: tech._id, role: 'FARM_TECHNICIAN' }] })
+  const house = await House.create({ farm_id: farm._id, name: 'House', technicians: [{ user_id: tech._id, primary: true }] })
   const zone = await Zone.create({ house_id: house._id, name: 'Zone' })
   const node = await SensorNode.create({ device_id: 'ESP32-A', zone_id: zone._id, status })
   const chain = [String(farm._id), String(house._id), String(zone._id)]
-  return { node, chain, ownerToken: tokenFor(owner._id, 'FARM_OWNER'), techToken: tokenFor(tech._id, 'TECHNICIAN') }
+  return { node, chain, ownerToken: tokenFor(owner._id, 'FARM_OWNER'), techToken: tokenFor(tech._id, 'FARM_TECHNICIAN') }
 }
 
 const base = (nodeId: unknown) => `/devices/sensor-nodes/${nodeId}`
@@ -86,9 +86,9 @@ function upload(nodeId: unknown, token: string, fields: { track_number?: string;
 }
 
 async function uploadSynced(ctx: Awaited<ReturnType<typeof seed>>) {
-  const { body } = await upload(ctx.node._id, ctx.techToken)
+  const { body } = await upload(ctx.node._id, ctx.ownerToken)
   await request(app).put(`${base(ctx.node._id)}/audio-tracks/${body.data._id}/sync-status`)
-    .set('Authorization', `Bearer ${ctx.techToken}`).send({ synced_to_sd: true })
+    .set('Authorization', `Bearer ${ctx.ownerToken}`).send({ synced_to_sd: true })
   jest.clearAllMocks()
   return body.data._id as string
 }
@@ -97,7 +97,7 @@ describe('upload', () => {
   it('stores the file on MinIO and lists it with a signed listening URL', async () => {
     const ctx = await seed()
 
-    const res = await upload(ctx.node._id, ctx.techToken)
+    const res = await upload(ctx.node._id, ctx.ownerToken)
 
     expect(res.status).toBe(201)
     expect(res.body.data).toMatchObject({ track_number: 2, display_name: 'Tiếng chim gọi bầy', synced_to_sd: false, file_size_bytes: MP3.length })
@@ -111,7 +111,7 @@ describe('upload', () => {
 
   it('rejects a non-mp3 file', async () => {
     const ctx = await seed()
-    const res = await upload(ctx.node._id, ctx.techToken, {}, { buffer: MP3, filename: 'song.wav', contentType: 'audio/wav' })
+    const res = await upload(ctx.node._id, ctx.ownerToken, {}, { buffer: MP3, filename: 'song.wav', contentType: 'audio/wav' })
     expect(res.status).toBe(400)
     expect(putObject).not.toHaveBeenCalled()
   })
@@ -119,22 +119,22 @@ describe('upload', () => {
   it('rejects a file over 10MB', async () => {
     const ctx = await seed()
     const big = Buffer.alloc(10 * 1024 * 1024 + 1)
-    const res = await upload(ctx.node._id, ctx.techToken, {}, { buffer: big, filename: 'big.mp3', contentType: 'audio/mpeg' })
+    const res = await upload(ctx.node._id, ctx.ownerToken, {}, { buffer: big, filename: 'big.mp3', contentType: 'audio/mpeg' })
     expect(res.status).toBe(400)
     expect(res.body.error.message).toMatch(/10MB/)
   })
 
   it('rejects a track number already used on this device', async () => {
     const ctx = await seed()
-    await upload(ctx.node._id, ctx.techToken)
-    const res = await upload(ctx.node._id, ctx.techToken)
+    await upload(ctx.node._id, ctx.ownerToken)
+    const res = await upload(ctx.node._id, ctx.ownerToken)
     expect(res.status).toBe(409)
     expect(await AudioTrack.countDocuments()).toBe(1)
   })
 
-  it('is not allowed for a Farm Owner', async () => {
+  it('is not allowed for a Farm Technician, even of this house (ENV-FR-013c belongs to the Farm Owner)', async () => {
     const ctx = await seed()
-    const res = await upload(ctx.node._id, ctx.ownerToken)
+    const res = await upload(ctx.node._id, ctx.techToken)
     expect(res.status).toBe(403)
   })
 })
@@ -142,7 +142,7 @@ describe('upload', () => {
 describe('select / play-now / stop', () => {
   it('blocks choosing or playing a track that is not on the SD card yet', async () => {
     const ctx = await seed()
-    const { body } = await upload(ctx.node._id, ctx.techToken)
+    const { body } = await upload(ctx.node._id, ctx.ownerToken)
     const trackId = body.data._id
 
     const select = await request(app).put(`${base(ctx.node._id)}/audio-tracks/${trackId}/select`).set('Authorization', `Bearer ${ctx.ownerToken}`)
@@ -199,9 +199,9 @@ describe('select / play-now / stop', () => {
 describe('delete', () => {
   it('removes the record and the MinIO object', async () => {
     const ctx = await seed()
-    const { body } = await upload(ctx.node._id, ctx.techToken)
+    const { body } = await upload(ctx.node._id, ctx.ownerToken)
 
-    const res = await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${body.data._id}`).set('Authorization', `Bearer ${ctx.techToken}`)
+    const res = await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${body.data._id}`).set('Authorization', `Bearer ${ctx.ownerToken}`)
 
     expect(res.status).toBe(200)
     expect(await AudioTrack.countDocuments()).toBe(0)
@@ -213,7 +213,7 @@ describe('delete', () => {
     const trackId = await uploadSynced(ctx)
     await request(app).put(`${base(ctx.node._id)}/audio-tracks/${trackId}/select`).set('Authorization', `Bearer ${ctx.ownerToken}`).expect(200)
 
-    const res = await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${trackId}`).set('Authorization', `Bearer ${ctx.techToken}`)
+    const res = await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${trackId}`).set('Authorization', `Bearer ${ctx.ownerToken}`)
 
     expect(res.status).toBe(409)
     expect(await AudioTrack.countDocuments()).toBe(1)
@@ -223,15 +223,15 @@ describe('delete', () => {
 describe('decommissioned device', () => {
   it('refuses upload and SD-sync changes (nobody is on site to copy the file)', async () => {
     const ctx = await seed()
-    const { body } = await upload(ctx.node._id, ctx.techToken)
+    const { body } = await upload(ctx.node._id, ctx.ownerToken)
     await SensorNode.updateOne({ _id: ctx.node._id }, { decommissioned_at: new Date() })
 
-    expect((await upload(ctx.node._id, ctx.techToken, { track_number: '3' })).status).toBe(409)
+    expect((await upload(ctx.node._id, ctx.ownerToken, { track_number: '3' })).status).toBe(409)
     const sync = await request(app).put(`${base(ctx.node._id)}/audio-tracks/${body.data._id}/sync-status`)
-      .set('Authorization', `Bearer ${ctx.techToken}`).send({ synced_to_sd: true })
+      .set('Authorization', `Bearer ${ctx.ownerToken}`).send({ synced_to_sd: true })
     expect(sync.status).toBe(409)
     // Dọn danh mục của thiết bị đã gỡ vẫn được
-    await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${body.data._id}`).set('Authorization', `Bearer ${ctx.techToken}`).expect(200)
+    await request(app).delete(`${base(ctx.node._id)}/audio-tracks/${body.data._id}`).set('Authorization', `Bearer ${ctx.ownerToken}`).expect(200)
   })
 })
 

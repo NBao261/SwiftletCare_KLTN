@@ -146,8 +146,8 @@ export default function FarmOwnerFarmZoneDetailPage() {
             {isFarmOwner && (
               <ActionsMenu
                 items={[
-                  { label: t('structure.rename'), onClick: () => setEditMode('rename') },
-                  { label: t('structure.delete'), onClick: () => setEditMode('delete'), danger: true },
+                  { label: t('structure.rename', { target: t('structure.zone') }), onClick: () => setEditMode('rename') },
+                  { label: t('structure.delete', { target: t('structure.zone') }), onClick: () => setEditMode('delete'), danger: true },
                 ]}
               />
             )}

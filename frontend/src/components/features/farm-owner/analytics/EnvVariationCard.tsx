@@ -72,8 +72,8 @@ interface EnvVariationCardProps {
 }
 
 // Vai trò người đặt ngưỡng có nhãn riêng
-const SETTER_ROLES = new Set(['FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN', 'ADMIN']);
-type SetterRole = 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIAN' | 'ADMIN';
+const SETTER_ROLES = new Set(['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN', 'ADMIN']);
+type SetterRole = 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN' | 'ADMIN';
 
 // Biến thiên nhiệt độ, độ ẩm theo khoảng thời gian (ANALYTICS-FR-001) kèm số đo khí trực tiếp
 export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory }: EnvVariationCardProps): JSX.Element {

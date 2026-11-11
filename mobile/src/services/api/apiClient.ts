@@ -5,7 +5,8 @@ import { API_BASE_URL, ENDPOINTS } from '@/constants/apiEndpoints'
 import { clearLocalSession } from '@/services/session/localSession'
 import { setSocketTokenRefresher } from '@/services/socket/socketClient'
 import { useAuthStore } from '@/stores/authStore'
-import { readApiError } from '@/utils/apiError.utils'
+import { useConnectionStore } from '@/stores/connectionStore'
+import { isServerUnreachableError, readApiError } from '@/utils/apiError.utils'
 
 // ─── Cấu hình ────────────────────────────────────────────────────────────────
 
@@ -145,7 +146,24 @@ async function handleResponseError(error: AxiosError): Promise<AxiosResponse> {
   return retryWithToken(request, newAccessToken)
 }
 
-apiClient.interceptors.response.use(response => response, handleResponseError)
+// Banner "Mất kết nối máy chủ" cả khi chưa đăng nhập (chưa có socket): request không nhận được phản hồi nào thì bật cờ, có
+// phản hồi (kể cả 4xx/5xx) thì tắt. Chỉ ghi khi đổi để không làm các màn đang nghe dựng lại
+function setServerUnreachable(isUnreachable: boolean): void {
+  const store = useConnectionStore.getState()
+  if (store.isServerUnreachable !== isUnreachable) store.setServerUnreachable(isUnreachable)
+}
+
+apiClient.interceptors.response.use(
+  response => {
+    setServerUnreachable(false)
+    return response
+  },
+  (error: AxiosError) => {
+    if (error.response) setServerUnreachable(false)
+    else if (isServerUnreachableError(error)) setServerUnreachable(true)
+    return handleResponseError(error)
+  },
+)
 
 // Socket bị từ chối vì token hết hạn cũng dùng chung lần làm mới này (các request đang chờ không bị gọi refresh hai lần)
 setSocketTokenRefresher(refreshAccessToken)

@@ -13,6 +13,7 @@ import { formatVietnamDayMonth, getVietnamDate } from '@/utils/date.utils'
 import { summarizeHouseMonthYield } from '@/utils/harvest.utils'
 import { formatDecimal } from '@/utils/number.utils'
 import { t } from '@/utils/i18n.utils'
+import { buildHouseReturnTo } from '@/utils/navigation.utils'
 
 // Như web: số kg hiện 2 chữ số lẻ (KILOGRAM_DIGITS)
 const KILOGRAM_DIGITS = 2
@@ -63,7 +64,7 @@ export function HouseYieldRow({ farmId, houseId, zoneIds }: HouseYieldRowProps) 
     // Mở tab Sản lượng của Phân tích, đúng nhà này (ghi và sửa đợt thu vẫn là bước thu hoạch của G-16)
     <Card
       style={styles.row}
-      onPress={() => router.navigate({ pathname: '/(tabs)/analytics', params: { houseId, tab: 'harvest' } })}
+      onPress={() => router.navigate({ pathname: '/(tabs)/analytics', params: { houseId, tab: 'harvest', returnTo: buildHouseReturnTo(houseId) } })}
       accessibilityLabel={`${title}: ${valueText}, ${detailText}`}
       accessibilityHint={t('Mở thống kê thu hoạch')}
     >

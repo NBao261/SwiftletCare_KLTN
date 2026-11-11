@@ -20,6 +20,7 @@ import type { HouseCardData } from '@/hooks/farm/useHouseStatuses'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { HouseStatus } from '@/utils/houseStatus.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 export const HOUSE_CARD_HEIGHT = 176
 const ICON_CIRCLE_SIZE = 40
@@ -58,21 +59,21 @@ function openStatusTarget({ house, status }: HouseCardData) {
     return
   }
   if (target.screen === 'zone') {
-    router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: house._id, zoneId: target.zoneId } })
+    router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: house._id, zoneId: target.zoneId, returnTo: RETURN_TO_HOME } })
     return
   }
   // Cảnh báo của nhà: tab Cảnh báo lọc sẵn nhà này
   if (target.screen === 'house-alerts') {
-    router.navigate({ pathname: '/(tabs)/alerts', params: { houseId: house._id } })
+    router.navigate({ pathname: '/(tabs)/alerts', params: { houseId: house._id, returnTo: RETURN_TO_HOME } })
     return
   }
   // Nhà chưa có thiết bị: mở Cài đặt nhà, nơi thêm camera và controller bằng nhãn QR hoặc nhập tay (SF-01)
   if (target.screen === 'add-device') {
-    router.navigate({ pathname: '/(tabs)/farms/[houseId]/settings', params: { houseId: house._id } })
+    router.navigate({ pathname: '/(tabs)/farms/[houseId]/settings', params: { houseId: house._id, returnTo: RETURN_TO_HOME } })
     return
   }
   // Nhà và thiết bị của nhà: Màn B (thiết bị nằm trong khối "Thiết bị")
-  router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: house._id } })
+  router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: house._id, returnTo: RETURN_TO_HOME } })
 }
 
 interface HouseStatusCardProps {

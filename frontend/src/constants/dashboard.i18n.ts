@@ -134,7 +134,7 @@ const vi = {
   'env.sourceManual': 'Ngưỡng do {setter} đặt ngày {date} — NH3, CO2 chỉ để cảnh báo',
   'env.setter.FARM_OWNER': 'chủ nhà yến',
   'env.setter.DOMAIN_EXPERT': 'chuyên gia',
-  'env.setter.TECHNICIAN': 'kỹ thuật viên',
+  'env.setter.FARM_TECHNICIAN': 'kỹ thuật viên',
   'env.setter.ADMIN': 'quản trị viên',
   'env.setter.other': 'người dùng',
 
@@ -349,7 +349,7 @@ const en: Record<DashboardKey, string> = {
   'env.sourceManual': 'Thresholds set by the {setter} on {date} — NH3 and CO2 are alert-only',
   'env.setter.FARM_OWNER': 'farm owner',
   'env.setter.DOMAIN_EXPERT': 'domain expert',
-  'env.setter.TECHNICIAN': 'technician',
+  'env.setter.FARM_TECHNICIAN': 'technician',
   'env.setter.ADMIN': 'administrator',
   'env.setter.other': 'user',
 

@@ -36,7 +36,7 @@ export interface Invitation {
   _id: string
   farm_id: string
   invited_email: string
-  invited_role: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
+  invited_role: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
   invited_by: string
   token: string
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'

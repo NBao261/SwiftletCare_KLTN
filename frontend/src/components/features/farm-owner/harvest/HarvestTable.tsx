@@ -3,7 +3,7 @@ import { DownloadSimpleIcon, PlusIcon, WarningCircleIcon } from '@phosphor-icons
 
 import TableEmptyState from '@/components/common/TableEmptyState';
 import {
-  Button, Card, ClearFiltersButton, DataTable, SearchInput, SelectMenu, SortChips, type DataTableColumn,
+  Badge, Button, Card, ClearFiltersButton, DataTable, SearchInput, SelectMenu, SortChips, type DataTableColumn,
 } from '@/components/ui';
 import ActionsMenu from '@/components/ui/ActionsMenu';
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants';
@@ -29,6 +29,8 @@ const TABLE_MIN_WIDTH = 640;
 const CELL_PADDING = 'px-3';
 const GRAMS_PER_KILOGRAM = 1000;
 type SortKey = 'date' | 'weight';
+// Lọc theo trạng thái xác nhận (HARVEST-FR-006): lần thu còn lô chờ Farm Owner xác nhận hay đã xác nhận hết
+type StatusFilter = '' | 'PENDING' | 'CONFIRMED';
 const DEFAULT_SORT_KEY: SortKey = 'date';
 const DEFAULT_SORT_DIRECTION: SortDirection = 'desc';
 
@@ -50,6 +52,8 @@ interface HarvestTableProps {
   // Không truyền (Domain Expert chỉ đọc) thì ẩn nút ghi, sửa, xoá
   onEdit?: (group: HarvestGroup) => void;
   onDelete?: (group: HarvestGroup) => void;
+  // Chỉ Farm Owner: xác nhận các lô DRAFT của lần thu
+  onConfirm?: (group: HarvestGroup) => void;
   onCreate?: () => void;
   onExport: () => void;
   // Có thì khoá nút ghi đợt thu và hiện lý do (phạm vi đang lọc chưa có Zone)
@@ -57,11 +61,12 @@ interface HarvestTableProps {
 }
 
 // Bảng lần thu (1 dòng 1 lần thu): tìm / lọc / sắp xếp ở client, khung 4 dòng cuộn dọc không bù dòng trống (ngoại lệ FE_Design 1.1)
-export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
+export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, onConfirm, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const [search, setSearch] = useState('');
   const [houseFilter, setHouseFilter] = useState('');
   const [nestTypeFilter, setNestTypeFilter] = useState<NestType | ''>('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
   const [sortDirection, setSortDirection] = useState<SortDirection>(DEFAULT_SORT_DIRECTION);
 
@@ -76,7 +81,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
   }
 
   // Số điều kiện lọc đang bật — hiện trên nút Hủy lọc
-  const activeFilterCount = [search, houseFilter, nestTypeFilter].filter(value => value !== '').length
+  const activeFilterCount = [search, houseFilter, nestTypeFilter, statusFilter].filter(value => value !== '').length
     + (sortKey !== DEFAULT_SORT_KEY || sortDirection !== DEFAULT_SORT_DIRECTION ? 1 : 0);
   const isFiltering = activeFilterCount > 0;
 
@@ -84,6 +89,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
     setSearch('');
     setHouseFilter('');
     setNestTypeFilter('');
+    setStatusFilter('');
     setSortKey(DEFAULT_SORT_KEY);
     setSortDirection(DEFAULT_SORT_DIRECTION);
   }
@@ -97,19 +103,27 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
       const zone = zoneById.get(group.zone_id);
       if (houseFilter && zone?.house_id !== houseFilter) return false;
       if (nestTypeFilter && !group.nestTypes.includes(nestTypeFilter)) return false;
+      const isPending = group.pendingIds.length > 0;
+      if (statusFilter === 'PENDING' && !isPending) return false;
+      if (statusFilter === 'CONFIRMED' && isPending) return false;
       if (keyword && !(zone?.houseName ?? '').toLowerCase().includes(keyword)) return false;
       return true;
     });
     const direction = sortDirection === 'asc' ? 1 : -1;
     const value = SORT_VALUE[sortKey];
     return matched.sort((first, second) => (value(first) - value(second)) * direction);
-  }, [groups, zoneById, houseFilter, nestTypeFilter, search, sortKey, sortDirection]);
+  }, [groups, zoneById, houseFilter, nestTypeFilter, statusFilter, search, sortKey, sortDirection]);
 
   // Không hiện mã trace_code (mã định danh nội bộ của mẻ, FE_Design 13.16a)
   const columns: DataTableColumn<HarvestGroup>[] = [
     {
       key: 'date', header: t('col.date'), className: cn('w-[17%] whitespace-nowrap', CELL_PADDING),
-      render: group => <span className="text-sm font-semibold text-charcoal">{formatStandardDate(group.harvest_date)}</span>,
+      render: group => (
+        <div className="flex flex-col items-start gap-1">
+          <span className="text-sm font-semibold text-charcoal">{formatStandardDate(group.harvest_date)}</span>
+          {group.pendingIds.length > 0 && <Badge tone="warning">{t('status.pending')}</Badge>}
+        </div>
+      ),
     },
     {
       key: 'house', header: t('col.house'), className: cn('w-[16%]', CELL_PADDING),
@@ -142,6 +156,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
           <ActionsMenu
             items={[
               { label: t('action.detail'), onClick: () => onOpenDetail(group) },
+              ...(onConfirm && group.pendingIds.length > 0 ? [{ label: t('action.confirm'), onClick: () => onConfirm(group) }] : []),
               ...(onEdit ? [{ label: t('action.edit'), onClick: () => onEdit(group) }] : []),
               ...(onDelete ? [{ label: t('action.delete'), onClick: () => onDelete(group), danger: true }] : []),
             ]}
@@ -158,6 +173,11 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
   const nestTypeOptions: Array<{ value: NestType | ''; label: string }> = [
     { value: '', label: t('table.allNestTypes') },
     ...NEST_TYPES.map(nestType => ({ value: nestType, label: t(`nestType.${nestType}`) })),
+  ];
+  const statusOptions: Array<{ value: StatusFilter; label: string }> = [
+    { value: '', label: t('table.allStatuses') },
+    { value: 'PENDING', label: t('status.pending') },
+    { value: 'CONFIRMED', label: t('status.confirmed') },
   ];
   const emptyTitle = isFiltering ? t('table.emptyFilteredTitle') : t('table.emptyTitle');
 
@@ -200,6 +220,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
             <SelectMenu ariaLabel={t('table.filterHouse')} value={houseFilter} onChange={setHouseFilter} options={houseOptions} />
           )}
           <SelectMenu ariaLabel={t('table.filterNestType')} value={nestTypeFilter} onChange={setNestTypeFilter} options={nestTypeOptions} />
+          <SelectMenu ariaLabel={t('table.filterStatus')} value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
         </div>
         {/* Hàng sắp xếp bên trái, nút Hủy lọc bên phải (chỉ hiện khi đang lọc) — giữ cao cố định để bảng không nhảy */}
         <div className="flex min-h-[2.25rem] flex-wrap items-center justify-between gap-2">
