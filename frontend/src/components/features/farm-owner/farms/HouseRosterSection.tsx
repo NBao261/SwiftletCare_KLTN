@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { PlusIcon } from '@phosphor-icons/react'
 import { Badge, Button, FilterChip, Input, Modal, SelectMenu } from '@/components/ui'
 import ActionsMenu from '@/components/ui/ActionsMenu'
@@ -12,7 +12,6 @@ import { CAPSULE_ACTION_CLASS, MEMBER_PAGE_SIZE, MEMBER_ROW_HEIGHT } from '@/com
 import { NO_VALUE } from '@/constants/display'
 import { farmDict, type FarmKey } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
-import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useHouseRoster, useHouses, useSetHouseRoster } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
@@ -41,10 +40,9 @@ interface HouseRosterSectionProps {
 // Trạng thái popup: thêm ca mới (index null) hoặc sửa ca thứ index
 type Editing = { index: number | null } | null
 
-// AUTH-FR-014 — lịch trực theo tuần của 1 nhà: Farm Owner thêm / sửa / xoá ca (mỗi lần gửi lại cả lịch), Domain Expert chỉ xem
+// AUTH-FR-014 — lịch trực theo tuần của 1 nhà, Farm Owner thêm / sửa / xoá ca
 export default function HouseRosterSection({ top, searchBox, query, farmId, houseId, technicians }: HouseRosterSectionProps) {
   const { t } = useTranslation(farmDict)
-  const isFarmOwner = usePermission('FARM_OWNER')
   const { data: houses } = useHouses(farmId)
   const { data: roster = [], isLoading, isError, refetch } = useHouseRoster(houseId)
   const setRoster = useSetHouseRoster(houseId)
@@ -54,7 +52,7 @@ export default function HouseRosterSection({ top, searchBox, query, farmId, hous
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
 
   const house = houses?.find(item => item._id === houseId)
-  const nameById = new Map(technicians.map(row => [row.userId, row.name ?? row.email ?? NO_VALUE]))
+  const nameById = useMemo(() => new Map(technicians.map(row => [row.userId, row.name ?? row.email ?? NO_VALUE])), [technicians])
   // Chỉ thợ đang được giao nhà này mới xếp ca được (backend trả 409 nếu không)
   const assigned = (house?.technicians ?? [])
     .filter(item => nameById.has(item.user_id))
@@ -78,7 +76,9 @@ export default function HouseRosterSection({ top, searchBox, query, farmId, hous
   const rows = roster
     .map((shift, index) => ({ shift, index }))
     .filter(row => !query || (nameById.get(row.shift.technician_id) ?? '').toLowerCase().includes(query))
-  const emptyText = roster.length > 0 ? t('members.noMatch') : assigned.length === 0 && isFarmOwner ? t('roster.needTechnician') : t('roster.empty')
+  let emptyText = t('roster.empty')
+  if (roster.length > 0) emptyText = t('members.noMatch')
+  else if (assigned.length === 0) emptyText = t('roster.needTechnician')
 
   // Cột: kỹ thuật viên · vai · ngày · giờ · thao tác
   const columns: DataTableColumn<ShiftRow>[] = [
@@ -97,16 +97,37 @@ export default function HouseRosterSection({ top, searchBox, query, farmId, hous
     },
     {
       key: 'actions', header: '', align: 'center', className: 'w-16',
-      render: ({ index }) => (isFarmOwner ? (
+      render: ({ index }) => (
         <ActionsMenu
           items={[
             { label: t('roster.edit'), onClick: () => setEditing({ index }) },
             { label: t('roster.delete'), onClick: () => setDeleteIndex(index), danger: true },
           ]}
         />
-      ) : null),
+      ),
     },
   ]
+
+  let body = (
+    <FixedRowsTable
+      columns={columns}
+      rows={rows}
+      getRowKey={row => `${row.shift.technician_id}-${row.shift.role}-${row.index}`}
+      rowHeight={MEMBER_ROW_HEIGHT}
+      pageSize={MEMBER_PAGE_SIZE}
+      emptyNotice={emptyText}
+      emptyContent={<TableEmptyState title={emptyText} />}
+    />
+  )
+  if (isLoading) body = <LoadingSkeleton count={2} className="h-12 w-full" />
+  else if (isError) {
+    body = (
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-warmGray/15 bg-white px-4 py-4 text-sm text-warmGray">
+        {t('roster.loadFailed')}
+        <Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('state.retry')}</Button>
+      </div>
+    )
+  }
 
   return (
     <FarmFrame
@@ -116,40 +137,20 @@ export default function HouseRosterSection({ top, searchBox, query, farmId, hous
       action={(
         <div className="flex flex-wrap items-center gap-2">
           {searchBox}
-          {isFarmOwner && (
-            <Button
-              variant="secondary"
-              className={CAPSULE_ACTION_CLASS}
-              disabled={assigned.length === 0}
-              title={assigned.length === 0 ? t('roster.needTechnician') : undefined}
-              onClick={() => setEditing({ index: null })}
-            >
-              <PlusIcon size={16} weight="bold" />
-              {t('roster.add')}
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            className={CAPSULE_ACTION_CLASS}
+            disabled={assigned.length === 0}
+            title={assigned.length === 0 ? t('roster.needTechnician') : undefined}
+            onClick={() => setEditing({ index: null })}
+          >
+            <PlusIcon size={16} weight="bold" />
+            {t('roster.add')}
+          </Button>
         </div>
       )}
     >
-      {isLoading ? (
-        <LoadingSkeleton count={2} className="h-12 w-full" />
-      ) : isError ? (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-warmGray/15 bg-white px-4 py-4 text-sm text-warmGray">
-          {t('roster.loadFailed')}
-          <Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('state.retry')}</Button>
-        </div>
-      ) : (
-        <FixedRowsTable
-          columns={columns}
-          rows={rows}
-          getRowKey={row => `${row.shift.technician_id}-${row.shift.role}-${row.index}`}
-          rowHeight={MEMBER_ROW_HEIGHT}
-          pageSize={MEMBER_PAGE_SIZE}
-          emptyNotice={emptyText}
-          emptyContent={<TableEmptyState title={emptyText} />}
-        />
-      )}
-      {!isFarmOwner && <p className="mt-2 text-xs text-warmGray">{t('roster.ownerOnly')}</p>}
+      {body}
 
       {editing && (
         <ShiftModal
@@ -204,7 +205,7 @@ function ShiftModal({ title, initial, options, others, saving, onClose, onSave }
 
   function handleSubmit(event: FormEvent): void {
     event.preventDefault()
-    const shift: RosterShift = { technician_id: technicianId, role, weekdays: [...weekdays].sort((a, b) => a - b), start, end }
+    const shift: RosterShift = { technician_id: technicianId, role, weekdays: [...weekdays].sort((first, second) => first - second), start, end }
     const problem = validateRosterShift(shift, others)
     setError(problem)
     if (!problem) onSave(shift)

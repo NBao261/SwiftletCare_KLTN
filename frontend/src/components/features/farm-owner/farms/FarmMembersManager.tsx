@@ -52,19 +52,20 @@ interface MemberRow {
 const matchesQuery = (row: MemberRow, query: string): boolean =>
   !query || `${row.name ?? ''} ${row.email ?? ''}`.toLowerCase().includes(query)
 
-// Thành viên của 1 farm theo vai trò (AUTH-FR-005/010, EXPERT-FR-001): chủ chính, đồng sở hữu, chuyên gia, kỹ thuật viên;
-// chỉ Primary Owner mời / gỡ. Mở từ trang 1 nhà (houseId) thì mục Kỹ thuật viên có cột giao nhà này và thợ chính (AUTH-FR-013)
+// Thành viên farm theo vai trò (AUTH-FR-005/010/013, EXPERT-FR-001)
 export default function FarmMembersManager({ farmId, houseId }: { farmId: string; houseId?: string }) {
   const { t } = useTranslation(farmDict)
   const { data: farm, isLoading } = useFarm(farmId)
   const currentUserId = useAuthStore(state => state.user?._id)
+  const isFarmOwner = usePermission('FARM_OWNER')
   const removeMember = useRemoveMember(farmId)
   const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
   const [inviteRole, setInviteRole] = useState<FarmMemberRole | null>(null)
   const [removeTarget, setRemoveTarget] = useState<MemberRow | null>(null)
   const [group, setGroup] = useState<MemberGroup>('owners')
-  const { data: roster = [] } = useHouseRoster(houseId)
+  // Lịch trực chỉ cho Farm Owner: role khác không nhận được tên thợ (GET /farms/:id)
+  const { data: roster = [] } = useHouseRoster(isFarmOwner ? houseId : undefined)
   const [search, setSearch] = useState('')
   const query = search.trim().toLowerCase()
 
@@ -141,7 +142,7 @@ export default function FarmMembersManager({ farmId, houseId }: { farmId: string
     { key: 'owners', label: t('members.ownersTitle', { n: owners.length }) },
     { key: 'experts', label: t('members.expertsTitle', { n: experts.length }) },
     { key: 'technicians', label: t('members.techniciansTitle', { n: technicians.length }) },
-    ...(houseId ? [{ key: 'roster' as const, label: t('roster.title', { n: roster.length }) }] : []),
+    ...(houseId && isFarmOwner ? [{ key: 'roster' as const, label: t('roster.title', { n: roster.length }) }] : []),
   ]
 
   // Chip chọn nhóm nằm ngay trong thẻ của bảng (khe top của FarmFrame), không còn là 1 hàng rời
@@ -177,7 +178,7 @@ export default function FarmMembersManager({ farmId, houseId }: { farmId: string
           query={query}
         />
       )}
-      {group === 'roster' && houseId && (
+      {group === 'roster' && houseId && isFarmOwner && (
         <HouseRosterSection top={groupChips} searchBox={searchBox} query={query} farmId={farmId} houseId={houseId} technicians={technicians} />
       )}
       {!isPrimaryOwner && <p className="text-xs text-warmGray">{t('members.primaryOnly')}</p>}
@@ -270,25 +271,31 @@ interface TechnicianSectionProps {
   query: string
 }
 
-// AUTH-FR-013 — kỹ thuật viên của farm; bật "Giao nhà này" là lưu ngay (PUT/DELETE …/technicians/:userId), mỗi nhà tối đa 1 thợ chính.
-// Farm Owner nào cũng giao nhà được (backend chặn role khác); mời / gỡ khỏi farm vẫn chỉ Primary Owner
+// AUTH-FR-013 — kỹ thuật viên của farm, giao nhà và thợ chính
 function TechnicianSection({ top, searchBox, farmId, houseId, technicians, isPrimaryOwner, onInvite, onRemove, query }: TechnicianSectionProps) {
   const { t } = useTranslation(farmDict)
   const isFarmOwner = usePermission('FARM_OWNER')
   const { data: houses } = useHouses(houseId ? farmId : undefined)
+  const { data: roster = [] } = useHouseRoster(houseId)
+  const [unassignTarget, setUnassignTarget] = useState<MemberRow | null>(null)
   const setTechnician = useSetHouseTechnician(farmId, houseId ?? '')
   const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
   const assignment = new Map((houses?.find(house => house._id === houseId)?.technicians ?? []).map(item => [item.user_id, item.primary]))
-  const canAssign = Boolean(houseId) && isFarmOwner
+  // Khoá công tắc tới khi có danh sách nhà, kẻo giao nhà dựa trên dữ liệu chưa tải
+  const canAssign = Boolean(houseId) && isFarmOwner && Boolean(houses)
+  const lostShiftCount = roster.filter(shift => shift.technician_id === unassignTarget?.userId).length
 
   const labelOf = (row: MemberRow) => row.name ?? row.email ?? NO_VALUE
   const isSaving = (row: MemberRow) => setTechnician.isPending && setTechnician.variables?.userId === row.userId
 
-  function save(row: MemberRow, assigned: boolean, primary: boolean, doneKey: FarmKey): void {
+  function save(row: MemberRow, assigned: boolean, primary: boolean, doneKey: FarmKey, onDone?: () => void): void {
     const name = labelOf(row)
     setTechnician.mutate({ userId: row.userId, assigned, primary }, {
-      onSuccess: () => push(t(doneKey, { name })),
+      onSuccess: () => {
+        push(t(doneKey, { name }))
+        onDone?.()
+      },
       onError: reason => push(apiErrorMessage(reason, t('members.assignFailed')), 'error'),
     })
   }
@@ -302,7 +309,7 @@ function TechnicianSection({ top, searchBox, farmId, houseId, technicians, isPri
           checked={assignment.has(row.userId)}
           disabled={!canAssign || isSaving(row)}
           aria-label={t('members.assignLabel', { name: labelOf(row) })}
-          onChange={checked => save(row, checked, false, checked ? 'members.assigned' : 'members.unassigned')}
+          onChange={checked => (checked ? save(row, true, false, 'members.assigned') : setUnassignTarget(row))}
         />
       ),
     },
@@ -370,6 +377,17 @@ function TechnicianSection({ top, searchBox, farmId, houseId, technicians, isPri
         emptyContent={<TableEmptyState title={t(query ? 'members.noMatch' : 'members.techniciansEmpty')} />}
       />
       {houseId && !isFarmOwner && <p className="mt-2 text-xs text-warmGray">{t('members.assignOwnerOnly')}</p>}
+      {/* Bỏ giao nhà thì backend xoá luôn các ca trực của thợ đó */}
+      <ConfirmModal
+        open={unassignTarget !== null}
+        title={t('members.unassignTitle', { name: unassignTarget ? labelOf(unassignTarget) : NO_VALUE })}
+        description={t(lostShiftCount > 0 ? 'members.unassignDescShifts' : 'members.unassignDesc', { n: lostShiftCount })}
+        confirmLabel={t('members.unassign')}
+        danger
+        loading={setTechnician.isPending}
+        onConfirm={() => unassignTarget && save(unassignTarget, false, false, 'members.unassigned', () => setUnassignTarget(null))}
+        onCancel={() => setUnassignTarget(null)}
+      />
     </FarmFrame>
   )
 }
