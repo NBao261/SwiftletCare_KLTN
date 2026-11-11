@@ -196,12 +196,12 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo scope cuối:
 
-- [ ] Người chấm (BR-31, EXPERT-FR-012): *(Farm Owner xong, Domain Expert và Administrator 403 — Kiệt, 10/11, `08c5e18`; phần Farm Technician chuyển từ G-20 sang đây, làm khi #126 và #146 đã merge.)*
+- [x] Người chấm (BR-31, EXPERT-FR-012): *(Farm Owner xong, Domain Expert và Administrator 403 — Kiệt, 10/11, `08c5e18`; Farm Technician xong — Kiệt, 12/11, `621bd480` spec + `d515d45d`: thợ chấm, bỏ qua, ghi chú ở nhà được giao, nhà khác hoặc bị gỡ khỏi nhà 403, xem ngày, báo cáo, CSV của nhà được giao, không xem độ khớp và ngày lệch; thông báo "ngày đã sẵn sàng" tới thợ được giao.)*
   - Farm Technician của nhà chấm **mỗi ngày**; Farm Owner chấm **những ngày có mặt ở nhà**;
   - Domain Expert và Administrator gửi chấm điểm thì 403;
   - mỗi technician và mỗi Farm Owner chấm riêng.
 - [x] Trước khi chấm hoặc bỏ qua, mọi endpoint (ngày, báo cáo, CSV) không trả trạng thái, lý do hay điểm của người khác. Rating và snapshot lưu trong một lần ghi atomic, rồi mới trả trạng thái. *(đã có từ 31/10, giữ nguyên khi đổi người chấm)*
-- [ ] Ngày được tạo lượt chấm chờ cho từng technician được gán và từng Farm Owner. *(lượt chấm suy ra lúc đọc, không lưu; Farm Owner xong, chuyên gia không còn lượt chấm — `08c5e18`; technician chờ G-20)* Quá 7 ngày chưa chấm thì `EXPIRED` (SM-18).
+- [x] Ngày được tạo lượt chấm chờ cho từng technician được gán và từng Farm Owner. *(lượt chấm suy ra lúc đọc, không lưu; Farm Owner xong, chuyên gia không còn lượt chấm — `08c5e18`; technician xong — `d515d45d`)* Quá 7 ngày chưa chấm thì `EXPIRED` (SM-18).
 - [x] **Xem ngày lệch (EXPERT-FR-022):** *(backend: Kiệt, 10/11, `4dda5e6` + `08c5e18`, `GET /health-reports/disagreements`; màn hình: Tuấn)*
   - chuyên gia xem các ngày có điểm chấm khác snapshot, kèm chỉ số và lý do của từng ngày;
   - chuyên gia chỉnh mức chỉ số sức khỏe của nhà (BR-28); thay đổi lưu lịch sử và áp từ lần đánh giá tiếp theo;
