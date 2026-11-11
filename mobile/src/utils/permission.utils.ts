@@ -18,6 +18,7 @@ export type PermissionAction =
   | 'editBirdCountTuning'
   | 'applyCoefficientSuggestion'
   | 'writeConclusion'
+  | 'rateHealthDay'
   | 'acknowledgeAlert'
   | 'setAlertVerdict'
   | 'editNotificationSettings'
@@ -57,6 +58,9 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   applyCoefficientSuggestion: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Viết kết luận báo cáo (EXPERT-FR-006): chỉ chuyên gia
   writeConclusion: ['DOMAIN_EXPERT'],
+  // Chấm hoặc bỏ qua trạng thái ngày của nhà (EXPERT-FR-012, BR-31): backend G-11 chỉ nhận Farm Owner, chuyên gia và Admin 403;
+  // Report 3 4.2.0 thêm Farm Technician của nhà được giao — thêm FARM_TECHNICIAN khi backend G-20 mở
+  rateHealthDay: ['FARM_OWNER'],
   // Xác nhận đã biết cảnh báo (ALERT-FR-009): chỉ chủ trại, chuyên gia bị 403
   acknowledgeAlert: ['FARM_OWNER'],
   // Phán quyết cảnh báo suy luận (EXPERT-FR-003): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)

@@ -18,6 +18,7 @@ import { SensorTileGrid } from '@/components/farm/SensorTileGrid'
 import { ZoneAlertRow } from '@/components/farm/ZoneAlertRow'
 import { ZoneSettingsSection } from '@/components/farm/ZoneSettingsSection'
 import { ZoneTabs } from '@/components/farm/ZoneTabs'
+import { HealthDayCard } from '@/components/health/HealthDayCard'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
@@ -228,6 +229,7 @@ export default function HouseDetailScreen() {
         }
       >
         <BirdCountStrip today={detail.today} onPress={() => openAnalytics({ tab: 'birds' })} />
+        <HealthDayCard houseId={house._id} />
         <HouseYieldRow farmId={house.farm_id} houseId={house._id} zoneIds={detail.zones.map(zone => zone._id)} />
         {detail.zone && (
           <ZoneTabs

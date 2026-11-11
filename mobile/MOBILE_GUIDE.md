@@ -5,7 +5,7 @@
 > - Đồng bộ enum với backend: đã xong `Role` (`DOMAIN_EXPERT`), `NOISE_ANOMALY`, `MAINTENANCE_DUE`, kênh `telegram` và các tên của SRS 3.1.0 (G-01): `MISTING_INEFFECTIVE`, `UNEXPECTED_RESTART`, `ACTUATOR_FAULT`, `CONFIG_MISMATCH`, `DISMISSED`; đã gỡ `PREDATOR_DETECTED`, Zalo/SMS, relay sưởi, trạng thái thiết bị `ERROR`/`DEGRADED`.
 > - Thiết lập thiết bị (SF-01): quét nhãn QR của bộ điều khiển và mã QR tầng bằng `expo-camera`, hướng dẫn cài Wi-Fi qua AP-mode, hiện tiến trình setup (đã đăng ký → online → đã áp cấu hình).
 > - Đăng ký FCM token sau khi đăng nhập, huỷ khi đăng xuất, nhận push (ALERT-FR-002) — **chỉ Farm Owner**: Domain Expert không nhận thông báo ngoài app (Report 3 §2.4), chỉ có thông báo trong app. Live stream HLS bằng `expo-video` theo camera của nhà yến (VISION-FR-013); Farm Owner đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009).
-> - Domain Expert dùng **cùng màn hình** với Farm Owner, chỉ đọc vận hành; trên mobile có kiểm chứng cảnh báo suy luận, sửa ngưỡng/hệ số/tham số phát hiện, trạng thái sức khỏe ngày của **nhà yến** và chấm điểm, báo cáo và kết luận (Report 4 §5.4). Vẽ vòng đếm chỉ làm trên web (VISION-FR-018). Cây luồng: mục 2.1.
+> - Domain Expert dùng **cùng màn hình** với Farm Owner, chỉ đọc vận hành; trên mobile có kiểm chứng cảnh báo suy luận, sửa ngưỡng/hệ số/tham số phát hiện, trạng thái sức khỏe ngày của **nhà yến** (chỉ xem — chuyên gia không chấm, SRS 4.2.0 BR-31), báo cáo và kết luận (Report 4 §5.4). Vẽ vòng đếm chỉ làm trên web (VISION-FR-018). Cây luồng: mục 2.1.
 > - Ticket, SLA, khu vực Technician đã ra ngoài phạm vi (Report 3 §8) và đã gỡ khỏi app.
 
 App Expo Router (React Native) cho **Farm Owner và Domain Expert** (Report 4 §5.4) — Technician làm việc trên web console; dùng chung backend với web. Report 4 §3.2 khai báo app React Native này (web vẫn là PWA riêng trong `frontend/`). Luật review PR mobile nằm ở `mobile/CLAUDE.md`; việc mobile còn thiếu ở `docs/reports/project-tracking.md` §6 (G-16).
@@ -100,8 +100,8 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `react-native-maps` có trong `package.json`                                                                                                                                           | — Report 4 §5.4 nói không thêm thư viện bản đồ                             | gỡ khi làm màn trang trại                                                                                                               |
 | FCM: chưa có `google-services.json` (`android.googleServicesFile`), backend chưa có endpoint nhận token trong `api-spec.yaml`                                                         | push (ALERT-FR-002)                                                        | chờ backend (G-10); không tự đặt endpoint                                                                                               |
-| Endpoint MF-06 (trạng thái ngày, chấm điểm, bỏ qua) chưa có trong `api-spec.yaml`                                                                                                     | màn sức khỏe ngày (BR-31)                                                  | chờ backend (G-11)                                                                                                                      |
-| `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/health-reports`, `/harvests`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, harvest, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml`                                                                                                  |
+| Farm Technician chưa chấm điểm ngày: backend G-11 chỉ nhận Farm Owner (`ASSESSOR_ROLES`), `/health-reports` trả 403 cho kỹ thuật viên                                                  | chấm điểm ngày của kỹ thuật viên (BR-31, EXPERT-FR-012)                     | chờ backend G-20; rồi thêm `FARM_TECHNICIAN` vào `rateHealthDay` (`utils/permission.utils.ts`)                                          |
+| `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/harvests`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, harvest, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml`                                                                                                  |
 | Socket chưa có `NOTIFICATION_NEW` (phòng nhà, tầng đã đếm số màn dùng chung)                                                                                                                                       | đếm chim, cảnh báo nhà yến, thông báo                                      | thêm trước màn đầu tiên đăng ký sự kiện                                                                                                 |
 | `.env.example` còn ghi "SRS §9.1"                                                                                                                                                     | —                                                                          | đổi thành `docs/api/api-spec.yaml`                                                                                                      |
 
@@ -134,7 +134,8 @@ mobile/
    │  │                          #   menu-1/ (không role nào dùng) · menu-2/ (menu tạm của Domain Expert)
    │  ├─ farm/[farmId].tsx       # chuyển tiếp sang Màn A của farm đó (giữ cho link cũ)
    │  ├─ zone/[zoneId].tsx       # chuyển tiếp sang Màn B của nhà chứa zone, đúng tab tầng (giữ cho link cũ)
-   │  └─ alert/[alertId].tsx     # chi tiết cảnh báo dạng trang (Trang chủ, sau này push) — cùng AlertDetailContent với sheet của tab Cảnh báo
+   │  ├─ alert/[alertId].tsx     # chi tiết cảnh báo dạng trang (Trang chủ, sau này push) — cùng AlertDetailContent với sheet của tab Cảnh báo
+   │  └─ health/                 # index = các ngày của một nhà (?houseId, chọn nhà ▾) · [dayId] = chấm ngày còn chờ (BR-31, BR-37) hoặc chi tiết ngày
    ├─ components/
    │  ├─ ui/                     # text · button · pressable-scale · text-field · code-input · form-message · card · icon-button · bottom-sheet · split-badge · skeleton · empty-state · loading-overlay · toast
    │  ├─ auth/                   # AuthScreenLayout.tsx (khung chung các màn xác thực, không cuộn; form nhích lên vừa đủ khi bàn phím mở) ·
@@ -145,8 +146,9 @@ mobile/
    │  ├─ charts/                 # bọc react-native-gifted-charts, chỉ ở đây import thư viện: ChartFrame (cao 220, 4 trạng thái, chú thích, câu cho trình đọc màn hình) ·
    │  │                          #   MetricLineChart (đường theo thời gian, vạch ngưỡng, điểm ngoài ngưỡng cam, chạm giữ xem giá trị, nhiều chuỗi, nét đứt dự báo) ·
    │  │                          #   BirdBarChart (cột đôi Ra/Về + đường tỉ lệ về tổ) · ControlChart (độ ẩm + vùng phun sương, quạt, mốc đổi hệ số) · HarvestStackedChart (sản lượng xếp chồng theo loại tổ, như web) · ChartFullscreenModal (xoay ngang)
+   │  ├─ health/                 # trạng thái ngày (MF-06): HealthStatusBadge · HealthDayRow · HealthDayCard (thẻ ở Màn B) · HealthRatingForm (hướng dẫn BR-37, 3 mức, bỏ qua) · HealthDayDetail
    │  ├─ analytics/              # màn Phân tích: AnalyticsFilterBar (chip tầng, đầu màn) · AnalyticsRangeChips (chip thời gian, dưới hàng tab, dính khi cuộn) · ChoiceChips · KpiGrid/KpiTile · AnalyticsTabs (dính khi cuộn, cùng kiểu chip tầng) · StatRow ·
-   │  │                          #   BirdTab (BucketSheet, CorrelationCard) · EnvironmentTab · ControlTab (OverrideHistoryCard, SuggestionCard) · HarvestTab · ReportTab (ReportMetrics)
+   │  │                          #   BirdTab (BucketSheet, CorrelationCard) · EnvironmentTab · ControlTab (OverrideHistoryCard, SuggestionCard) · HarvestTab · ReportTab (HouseReportDetail, ReportMetrics theo Zone, CustomReportSheet)
    │  ├─ alert/                  # tab Cảnh báo: SeveritySummary (dải mức = lọc nhanh) · SeverityLabel · AlertFilterChips (Tầng · Loại · Phán quyết) ·
    │  │                          #   AlertRow (vuốt trái để xác nhận) · AcknowledgeSheet (chip ghi chú nhanh) · AlertDetailSheet (toàn màn, kéo xuống để đóng) ·
    │  │                          #   AlertDetailContent · AlertEvidence (bằng chứng ghép ±30 phút) · VerdictSheet · NotificationSettingsSheet (⚙)
@@ -189,9 +191,9 @@ mobile/
    │  │                          #   useRegisterSensorNode · useRegisterCameraNode (đăng ký bằng mã trên nhãn; gcTime 0 để không giữ mã kích hoạt)
    │  ├─ analytics/              # useAnalyticsScope (nhà, tầng, khoảng, tab, chỉ số: tham số route → đã nhớ → mặc định) · useAnalyticsKpis ·
    │  │                          #   useBirdDaily · useBirdBuckets · useCorrelations · useEnvSummaries · useForecast · useControlPerformances · useAutonomies ·
-   │  │                          #   useControlSuggestion · useZoneRelayOverrides · useHealthReports · useHealthReportPreview · useUpdateConclusion
+   │  │                          #   useControlSuggestion · useZoneRelayOverrides · useHealthReports (theo nhà, theo loại kỳ) · useHouseHealthReport · useCreateHealthReport · useUpdateConclusion
    │  ├─ harvest/                # useFarmHarvests (đợt thu của farm)
-   │  ├─ health/                 # usePendingHealthDays (chưa có API — G-11) · useUnreadHealthReports
+   │  ├─ health/                 # useHealthDays · useHealthDay · useRateHealthDay · useSkipHealthDay · useUpdateRatingNote · usePendingHealthDays (mọi farm, trong hạn 7 ngày) · useUnreadHealthReports
    │  ├─ notification/           # useUnreadNotificationCount · useNotifications (phân trang) · useMarkNotificationRead · useMarkAllNotificationsRead
    │  ├─ expert-activity/        # hoạt động chuyên gia (API thật /expert-activity*): useExpertActivityList · useParameterReviewList · useProposalList · usePendingExpertReviewCount · useSubmitProposal
    │  ├─ profile/                # hook của trang Tài khoản cho mục backend chưa có route (dữ liệu mẫu): usePendingInvitations ·
@@ -243,7 +245,10 @@ Farm Owner — (tabs)
 │                       hệ số mờ, tham số phát hiện, controller (+ thêm), + thêm tầng — mỗi mục "Sửa" / "Lưu" riêng
 │                Cài đặt farm (farm-settings): thông tin, toạ độ (lấy vị trí hiện tại), nhà yến (+ thêm nhà), xoá farm (chủ chính); farm-create: tạo farm
 │                thêm thiết bị (SF-01): quét nhãn QR hoặc nhập tay ─► đăng ký vào nhà / tầng; còn thiếu: Wi-Fi AP-mode, tiến trình setup (FARM-FR-012)
-│                còn thiếu: trạng thái ngày + chấm điểm (BR-31), báo cáo; sửa tên, xoá nhà và tầng (backend chưa có API)
+│                Màn B có thẻ "Trạng thái ngày" (ngày gần nhất; còn chờ chấm thì nút "Đánh giá ngày") ─► health?houseId (các ngày của nhà, lọc Cần đánh giá / 7 / 14 / 30 ngày)
+│                       ─► health/[dayId]: ngày còn chờ chấm = form chấm (hướng dẫn quan sát BR-37, 3 mức, ghi chú, "Bỏ qua" có xác nhận); chấm xong = chi tiết
+│                       (trạng thái, lý do, 4 chỉ số, thời tiết, các đánh giá, thêm ghi chú); "Việc chờ bạn" ở Trang chủ mở ngày chờ cũ nhất
+│                còn thiếu: sửa tên, xoá nhà và tầng (backend chưa có API)
 │                harvests (ghi, sửa — SF-04)
 ├─ Cảnh báo    alerts: phạm vi ▾ riêng của tab, mặc định tất cả: Tất cả trang trại ─► một farm (Tất cả nhà) ─► một nhà (chip Tầng);
 │                không theo farm/nhà của tab Farm, Phân tích; ⚙ cài đặt thông báo; dải mức = lọc nhanh; Đang hiệu lực · Đã đóng;
@@ -254,6 +259,8 @@ Farm Owner — (tabs)
 ├─ Phân tích   analytics   một màn: chọn nhà ▾, chip tầng ("Tất cả tầng"); 4 ô KPI (tỉ lệ về tổ, trong ngưỡng, tự động,
 │                          cảnh báo); tab nội bộ Đàn chim · Môi trường · Điều khiển · Sản lượng · Báo cáo, ngay dưới là chip khoảng thời gian (cùng dính khi cuộn, ẩn ở Sản lượng, Báo cáo); nhớ lựa chọn khi tắt app;
 │                          cùng giao diện các màn khác: nền Paper, card trắng, chip kiểu tab tầng, header chọn nhà ▾
+│                          tab Báo cáo theo nhà: chip Ngày · Tuần · Tháng · Theo yêu cầu, mở rộng tại chỗ (trạng thái các ngày — ngày chưa chấm bị che, đàn chim,
+│                          thời tiết, các ngày, từng Zone, kết luận); "Tạo báo cáo" = theo yêu cầu tối đa 31 ngày; chỉ xem, PDF/CSV ở web
 │                          lối vào: ô cảm biến / dải chim ở Màn B, thẻ Báo cáo mới và tỉ lệ về tổ ở Trang chủ (tham số houseId, zoneId, tab, metric, reportId)
 │                          còn thiếu: quyết định của chuyên gia (EXPERT-FR-009), gửi gợi ý chờ duyệt, phiên thiếu (VISION-FR-020) — "Sắp có"
 └─ Tài khoản   profile     hồ sơ, đổi mật khẩu, kênh thông báo (push, Telegram), thông báo trong app, đăng xuất
@@ -274,7 +281,7 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | Thao tác                                                                    |                        Farm Owner                        |    Domain Expert     |
 | --------------------------------------------------------------------------- | :------------------------------------------------------: | :------------------: |
 | Xem dashboard, phân tích, đếm chim, live stream, báo cáo, trạng thái ngày   |                            ✓                             |      ✓ chỉ đọc       |
-| Chấm điểm trạng thái ngày của nhà (BR-31)                                   |                            ✓                             |          ✓           |
+| Chấm điểm trạng thái ngày của nhà (BR-31)                                   |                            ✓                             |  – (xem ngày lệch)   |
 | Xác nhận đã xử lý cảnh báo                                                  |                            ✓                             |          –           |
 | Nhận push, cài kênh Telegram                                                |                            ✓                             |          –           |
 | Kiểm chứng cảnh báo suy luận, sửa tham số phát hiện, lịch đếm, mức sức khỏe | chỉ khi farm chưa có chuyên gia (BR-22), còn lại chỉ đọc |          ✓           |

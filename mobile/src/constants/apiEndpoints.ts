@@ -77,9 +77,15 @@ export const ENDPOINTS = {
   NOTIFICATION_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
   NOTIFICATIONS_READ_ALL: '/notifications/read-all',
 
-  // Báo cáo sức khoẻ (EXPERT-FR-005/006)
+  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006); preview kiểu cũ (deprecated) chỉ còn bằng chứng cảnh báo dùng
   HEALTH_REPORTS: '/health-reports',
   HEALTH_REPORT_PREVIEW: '/health-reports/preview',
+  // Trạng thái ngày và chấm điểm (ANALYTICS-FR-012, EXPERT-FR-012, BR-31)
+  HEALTH_DAYS: '/health-reports/days',
+  HEALTH_DAY_DETAIL: (dayId: string) => `/health-reports/days/${dayId}`,
+  HEALTH_DAY_RATING: (dayId: string) => `/health-reports/days/${dayId}/rating`,
+  HEALTH_DAY_SKIP: (dayId: string) => `/health-reports/days/${dayId}/skip`,
+  HEALTH_DAY_RATING_NOTE: (dayId: string) => `/health-reports/days/${dayId}/rating/note`,
   HEALTH_REPORT_DETAIL: (reportId: string) => `/health-reports/${reportId}`,
   HEALTH_REPORT_CONCLUSION: (reportId: string) => `/health-reports/${reportId}/conclusion`,
 

@@ -66,6 +66,8 @@ export default function RootLayout() {
               <Stack.Screen name="farm/[farmId]" />
               <Stack.Screen name="zone/[zoneId]" />
               <Stack.Screen name="alert/[alertId]" />
+              <Stack.Screen name="health/index" />
+              <Stack.Screen name="health/[dayId]" />
             </Stack>
           </QueryClientProvider>
         )}

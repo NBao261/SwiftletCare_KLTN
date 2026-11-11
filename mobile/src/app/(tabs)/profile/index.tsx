@@ -42,7 +42,7 @@ import { useCancelAccountDeletion } from '@/hooks/auth/useCancelAccountDeletion'
 import { useRequestAccountDeletion } from '@/hooks/auth/useRequestAccountDeletion'
 import { usePendingExpertReviewCount } from '@/hooks/expert-activity/usePendingExpertReviewCount'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
-import { usePendingHealthDays, HAS_PENDING_HEALTH_DAYS_API } from '@/hooks/health/usePendingHealthDays'
+import { usePendingHealthDays } from '@/hooks/health/usePendingHealthDays'
 import { useSwitchLanguage } from '@/hooks/i18n/useSwitchLanguage'
 import { useNow } from '@/hooks/time/useNow'
 import { useUnreadNotificationCount } from '@/hooks/notification/useUnreadNotificationCount'
@@ -243,9 +243,8 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
             <ProfileShortcutCard
               icon={ClipboardTextIcon}
               title={t('Chấm điểm ngày')}
-              caption={t('{count} ngày chờ chấm', { count: pendingDaysQuery.data?.length ?? 0 })}
-              onPress={() => router.navigate('/(tabs)/home')}
-              isComingSoon={!HAS_PENDING_HEALTH_DAYS_API}
+              caption={pendingDaysQuery.isLoading ? '_' : t('{count} ngày chờ chấm', { count: pendingDaysQuery.data.length })}
+              onPress={() => router.push('/health')}
             />
             <ProfileShortcutCard
               icon={ListChecksIcon}
