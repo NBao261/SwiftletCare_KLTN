@@ -12,8 +12,10 @@ interface ProfileRowProps {
   label: string
   // Có thì nhãn thành chữ nhỏ xám phía trên và giá trị là dòng chính (thẻ thông tin); không có thì nhãn là dòng chính
   value?: string
-  // Dòng phụ dưới nhãn (giải thích, trạng thái)
+  // Dòng phụ dưới nhãn (giải thích, trạng thái), tối đa 2 dòng
   caption?: string
+  // Các dòng chi tiết dưới dòng phụ, hiện đủ không cắt (ví dụ chỉ số nào đổi từ bao nhiêu thành bao nhiêu)
+  details?: string[]
   // Có thì cả hàng bấm được và hiện mũi tên ›
   onPress?: () => void
   // Thao tác phá huỷ (yêu cầu xoá tài khoản): chữ và icon màu cảnh báo
@@ -31,6 +33,7 @@ export function ProfileRow({
   label,
   value,
   caption,
+  details,
   onPress,
   isDestructive = false,
   trailing,
@@ -60,6 +63,11 @@ export function ProfileRow({
             {caption}
           </Text>
         )}
+        {details?.map(line => (
+          <Text key={line} variant="small" color={mainColor}>
+            {line}
+          </Text>
+        ))}
       </View>
       {trailing}
       {onPress && !trailing && <CaretRightIcon size={16} color={palette.textSecondary} />}
@@ -72,7 +80,7 @@ export function ProfileRow({
 
   if (!onPress) {
     return (
-      <View style={rowStyle} accessible accessibilityLabel={accessibilityLabel ?? [label, value, caption].filter(Boolean).join(', ')}>
+      <View style={rowStyle} accessible accessibilityLabel={accessibilityLabel ?? [label, value, caption, ...(details ?? [])].filter(Boolean).join(', ')}>
         {content}
       </View>
     )
@@ -83,7 +91,7 @@ export function ProfileRow({
       style={rowStyle}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? [label, value, caption].filter(Boolean).join(', ')}
+      accessibilityLabel={accessibilityLabel ?? [label, value, caption, ...(details ?? [])].filter(Boolean).join(', ')}
     >
       {content}
     </Pressable>
