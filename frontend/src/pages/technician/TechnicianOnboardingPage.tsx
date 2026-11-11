@@ -51,7 +51,7 @@ export default function OnboardingPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-charcoal">Lắp đặt thiết bị mới</h1>
-        <p className="mt-0.5 text-sm text-warmGray">Hướng dẫn từng bước kết nối ESP32 vào hệ thống SwiftletCare</p>
+        <p className="mt-0.5 text-sm text-warmGray">Hướng dẫn từng bước kết nối thiết bị vào hệ thống SwiftletCare</p>
       </div>
 
       {/* Stepper */}

@@ -1,15 +1,20 @@
-﻿// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID + secretKey) — B9 + C1
+// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID + secretKey) — B9 + C1
 // BE (Flow 1 bước 3–4) xác thực cặp {device_id, secret_key} in trên nhãn thiết bị:
 // sensor → POST /devices/sensor-nodes/register, camera → POST /devices/camera-nodes/register.
 // Phân loại lỗi bằng HTTP status code, không string-match message:
 //   400 = sai Device ID / secretKey, 403 = không có quyền với farm này, 409 = đã đăng ký
+//
+// I-06: label secretKey → "Mã kích hoạt"
+// I-07: label Device ID → "Mã thiết bị"
+// I-08: SensorNode → "Bộ điều khiển", CameraNode → "Camera"
+// Device type selector đã chuyển lên Step1 (I-01) — hiện badge read-only
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import type { RegisterDeviceInput } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/helpers'
-import { Thermometer, Camera, QrCode, CheckCircle2, X } from 'lucide-react'
-import type { OnboardingState, DeviceType } from './onboardingTypes'
+import { Thermometer, Camera, QrCode, CheckCircle2, X, AlertTriangle, XCircle, ArrowLeft, ArrowRight } from 'lucide-react'
+import type { OnboardingState } from './onboardingTypes'
 
 type ValidateError  = 'DEVICE_ALREADY_REGISTERED' | 'INVALID_DEVICE' | 'FORBIDDEN' | 'UNKNOWN' | null
 type ValidateStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -32,12 +37,15 @@ function parseDeviceQR(raw: string): { deviceId: string; secretKey: string } | n
   return null
 }
 
+/** Label hiển thị thân thiện cho device type */
+const DEVICE_LABEL = { SENSOR_NODE: 'Bộ điều khiển', CAMERA_NODE: 'Camera' } as const
+
 export function Step2Validate({ data, patch, onNext, onBack }: Props) {
   const [status, setStatus] = useState<ValidateStatus>(data.deviceDbId ? 'success' : 'idle')
   const [error, setError] = useState<ValidateError>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [validatedModel, setValidatedModel] = useState(
-    data.deviceDbId ? `${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'} (Đã xác thực)` : '',
+    data.deviceDbId ? `${DEVICE_LABEL[data.deviceType]} (Đã xác thực)` : '',
   )
   const [showQrInput, setShowQrInput] = useState(false)
   const [qrRaw, setQrRaw] = useState('')
@@ -90,7 +98,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       const modelFromBe = (res.data.data as { model?: string }).model
       const modelLabel = modelFromBe ? `${modelFromBe} · ` : ''
-      setValidatedModel(`${modelLabel}${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'}`)
+      setValidatedModel(`${modelLabel}${DEVICE_LABEL[data.deviceType]}`)
 
       setStatus('success')
     } catch (err: unknown) {
@@ -109,41 +117,26 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     }
   }
 
+  const deviceLabel = DEVICE_LABEL[data.deviceType]
+  const DeviceIcon = data.deviceType === 'SENSOR_NODE' ? Thermometer : Camera
+
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h2 className="text-lg font-bold text-charcoal">Bước 2 — Xác thực thiết bị</h2>
-        <p className="mt-1 text-sm text-warmGray">Nhập Device ID và secretKey in trên nhãn dán mặt sau thiết bị.</p>
-      </div>
-
-      {/* Device type selector */}
-      <div className="flex flex-col gap-1.5">
-        <label className="label-caption">Loại thiết bị</label>
-        <div className="flex gap-2">
-          {(['SENSOR_NODE', 'CAMERA_NODE'] as DeviceType[]).map(t => (
-            <button
-              key={t}
-              type="button"
-              disabled={status === 'loading' || status === 'success'}
-              onClick={() => { patch({ deviceType: t }); setStatus('idle'); setError(null) }}
-              className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                data.deviceType === t
-                  ? 'border-charcoal bg-charcoal/5 text-charcoal'
-                  : 'border-graphite/20 text-warmGray hover:border-graphite/40'
-              }`}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                {t === 'SENSOR_NODE' ? <Thermometer className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                {t === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'}
-              </span>
-            </button>
-          ))}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <h2 className="text-lg font-bold text-charcoal">Bước 2 — Xác thực thiết bị</h2>
+          <p className="mt-1 text-sm text-warmGray">Nhập mã thiết bị và mã kích hoạt in trên nhãn dán mặt sau thiết bị.</p>
         </div>
+        {/* I-01: Read-only badge hiển thị device type đã chọn ở Step 1 */}
+        <span className="inline-flex items-center gap-1 rounded-full bg-charcoal/5 px-2.5 py-1 text-xs font-semibold text-charcoal">
+          <DeviceIcon className="h-3.5 w-3.5" />
+          {deviceLabel}
+        </span>
       </div>
 
-      {/* Device ID + QR toggle */}
+      {/* I-07: Mã thiết bị + QR toggle */}
       <div className="flex flex-col gap-1.5">
-        <label className="label-caption" htmlFor="onboarding-device-id">Device ID</label>
+        <label className="label-caption" htmlFor="onboarding-device-id">Mã thiết bị</label>
         <div className="flex gap-2">
           <input
             id="onboarding-device-id"
@@ -165,7 +158,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
           </button>
         </div>
         {error === 'DEVICE_ALREADY_REGISTERED' && (
-          <p className="text-sm text-climateOrange">⚠️ {errorMessage || 'Thiết bị đã được đăng ký'}</p>
+          <p className="flex items-center gap-1.5 text-sm text-climateOrange">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{errorMessage || 'Thiết bị đã được đăng ký'}</span>
+          </p>
         )}
       </div>
 
@@ -187,15 +183,15 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         </div>
       )}
 
-      {/* secretKey */}
+      {/* I-06: Mã kích hoạt */}
       <div className="flex flex-col gap-1.5">
-        <label className="label-caption" htmlFor="onboarding-secret-key">secretKey</label>
+        <label className="label-caption" htmlFor="onboarding-secret-key">Mã kích hoạt</label>
         <input
           id="onboarding-secret-key"
           value={data.secretKey}
           disabled={status === 'success'}
           onChange={e => { patch({ secretKey: e.target.value }); setStatus('idle') }}
-          placeholder="VD: ABCD-EFGH-JKMN (in trên nhãn)"
+          placeholder="VD: ABCD-EFGH-JKMN"
           autoComplete="off"
           spellCheck={false}
           className="input w-full tabular-nums uppercase"
@@ -223,10 +219,13 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {error === 'DEVICE_ALREADY_REGISTERED' && (
         <div className="rounded-xl border border-l-4 border-climateOrange/30 border-l-climateOrange bg-climateOrange/[0.08] px-4 py-3">
-          <p className="font-semibold text-climateOrange">✗ Thiết bị đã tồn tại trên hệ thống</p>
-          <ul className="mt-1.5 flex flex-col gap-1 text-sm text-climateOrange/80">
-            <li>• Thiết bị đang được gán cho một Farm khác</li>
-            <li>• Có thể Device ID bị nhập sai chữ hoa/thường</li>
+          <p className="flex items-center gap-1.5 font-semibold text-climateOrange">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Thiết bị đã tồn tại trên hệ thống</span>
+          </p>
+          <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-sm text-climateOrange/80">
+            <li>Thiết bị đang được gán cho một Farm khác</li>
+            <li>Có thể mã thiết bị bị nhập sai chữ hoa/thường</li>
           </ul>
           <p className="mt-2 text-sm text-climateOrange/70">Liên hệ Admin để gỡ gán thiết bị.</p>
         </div>
@@ -234,16 +233,22 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {error === 'INVALID_DEVICE' && (
         <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
-          <p className="font-semibold text-alertRed">✗ Device ID hoặc secretKey không đúng</p>
+          <p className="flex items-center gap-1.5 font-semibold text-alertRed">
+            <XCircle className="h-4 w-4 shrink-0" />
+            <span>Mã thiết bị hoặc mã kích hoạt không đúng</span>
+          </p>
           <p className="mt-1 text-sm text-alertRed/80">
-            {errorMessage || 'Kiểm tra lại Device ID và secretKey trên nhãn dán mặt sau thiết bị.'}
+            {errorMessage || 'Kiểm tra lại mã thiết bị và mã kích hoạt trên nhãn dán mặt sau thiết bị.'}
           </p>
         </div>
       )}
 
       {error === 'FORBIDDEN' && (
         <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
-          <p className="font-semibold text-alertRed">✗ Bạn không có quyền với trang trại này</p>
+          <p className="flex items-center gap-1.5 font-semibold text-alertRed">
+            <XCircle className="h-4 w-4 shrink-0" />
+            <span>Bạn không có quyền với trang trại này</span>
+          </p>
           <p className="mt-1 text-sm text-alertRed/80">
             {errorMessage || 'Tài khoản này không được đăng ký thiết bị vào trang trại đã chọn. Quay lại bước 1 chọn vị trí khác.'}
           </p>
@@ -252,14 +257,23 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       {error === 'UNKNOWN' && (
         <div className="rounded-xl border border-l-4 border-graphite/30 border-l-graphite bg-graphite/5 px-4 py-3">
-          <p className="font-semibold text-charcoal">✗ Lỗi kết nối</p>
+          <p className="flex items-center gap-1.5 font-semibold text-charcoal">
+            <XCircle className="h-4 w-4 shrink-0" />
+            <span>Lỗi kết nối</span>
+          </p>
           <p className="mt-1 text-sm text-warmGray">Không thể kết nối đến máy chủ. Kiểm tra mạng và thử lại.</p>
         </div>
       )}
 
       <div className="flex gap-3 border-t border-graphite/10 pt-4">
-        <Button variant="secondary" onClick={onBack} className="flex-1">← Quay lại</Button>
-        <Button onClick={onNext} disabled={status !== 'success'} className="flex-1">Tiếp theo →</Button>
+        <Button variant="secondary" onClick={onBack} className="flex-1">
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại
+        </Button>
+        <Button onClick={onNext} disabled={status !== 'success'} className="flex-1">
+          Tiếp theo
+          <ArrowRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   )

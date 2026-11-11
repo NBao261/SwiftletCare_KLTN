@@ -6,7 +6,7 @@ import { useFarms, useHouses, useZones, useAllZones } from "@/hooks/shared/useFa
 import { deviceApi } from "@/apis/shared/devices.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Modal, Card, SelectMenu } from "@/components/ui";
-import { IconFarm } from "@/components/ui/icons";
+import { Home, Plus, Wrench } from "lucide-react";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
 import SystemHealthBar, { needsAttention } from "@/components/features/technician/devices/SystemHealthBar";
@@ -225,7 +225,7 @@ export default function TechnicianDevicesPage() {
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-warmGray/15 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm font-bold text-charcoal shrink-0 mr-1">
-            <IconFarm width={18} height={18} className="text-warmGray" />
+            <Home size={18} className="text-warmGray" />
             <span>Vị trí:</span>
           </div>
 
@@ -295,14 +295,16 @@ export default function TechnicianDevicesPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 self-end lg:self-auto">
           {canOnboard && (
             <>
               <Button variant="secondary" onClick={() => navigate('/onboarding')}>
+                <Wrench className="h-4 w-4" />
                 Hướng dẫn Lắp đặt
               </Button>
               <Button onClick={handleOpenRegister}>
-                + Kích hoạt thiết bị
+                <Plus className="h-4 w-4" />
+                Kích hoạt thiết bị
               </Button>
             </>
           )}
@@ -318,12 +320,13 @@ export default function TechnicianDevicesPage() {
             description={
               hasLocationFilter
                 ? "Không tìm thấy thiết bị ESP32 nào được lắp đặt tại khu vực đang lọc. Bạn có thể kích hoạt thiết bị mới vào vị trí này."
-                : "Hệ thống chưa có thiết bị ESP32 nào được kích hoạt. Hãy bấm “+ Kích hoạt thiết bị” để bắt đầu."
+                : "Hệ thống chưa có thiết bị ESP32 nào được kích hoạt. Hãy bấm “Kích hoạt thiết bị” để bắt đầu."
             }
             action={
               canOnboard ? (
                 <Button onClick={handleOpenRegister}>
-                  + Kích hoạt thiết bị
+                  <Plus className="h-4 w-4" />
+                  Kích hoạt thiết bị
                 </Button>
               ) : undefined
             }

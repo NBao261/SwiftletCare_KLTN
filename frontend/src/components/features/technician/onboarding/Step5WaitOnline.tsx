@@ -1,5 +1,9 @@
-// Step5WaitOnline.tsx — Bước 5: Chờ thiết bị kết nối MQTT (B6)
+// Step5WaitOnline.tsx — Bước cuối: Chờ thiết bị kết nối MQTT (B6)
 // 15 phút countdown + socket listener DEVICE_STATUS_CHANGE
+//
+// I-03: milestones dynamic theo device type (CAMERA_NODE: 2 mốc, SENSOR_NODE: 3 mốc)
+// I-04: "Thử lại từ Bước 3" → "Thử lại"
+// I-09: "MQTT broker" → "Máy chủ", "ESP32" → "Thiết bị"
 //
 // Fix: Gọi joinZone(data.zoneId) khi mount để socket vào đúng room zone:<zoneId>.
 //      Backend emit DEVICE_STATUS_CHANGE tới room zone:<zoneId>, không phải broadcast.
@@ -11,7 +15,7 @@
 //
 // Giao diện: vòng đếm ngược 15 phút (SVG) + 3 mốc kết nối có đường nối — 100% từ socket/countdown thật.
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Check, Loader2, AlertTriangle } from 'lucide-react'
+import { Check, Loader2, AlertTriangle, Circle, RotateCcw } from 'lucide-react'
 import { useSocket } from '@/hooks/common/useSocket'
 import { joinZone, leaveZone, onDeviceStatusChange } from '@/lib/socket'
 import { deviceApi } from '@/apis/shared/devices.api'
@@ -48,7 +52,7 @@ function MilestoneList({ items }: { items: Milestone[] }) {
                 !m.done && !waiting && 'bg-white text-warmGray ring-2 ring-graphite/15',
               )}
             >
-              {m.done ? <Check size={14} strokeWidth={2.5} /> : waiting ? <Loader2 size={14} strokeWidth={2.5} className="animate-spin motion-reduce:animate-none" /> : <span className="h-1.5 w-1.5 rounded-full bg-graphite/30" />}
+              {m.done ? <Check size={14} strokeWidth={2.5} /> : waiting ? <Loader2 size={14} strokeWidth={2.5} className="animate-spin motion-reduce:animate-none" /> : <Circle size={8} className="fill-current text-graphite/30" />}
             </span>
             <span className={cn('text-sm', m.done ? 'font-medium text-charcoal' : waiting ? 'font-semibold text-charcoal' : 'text-warmGray')}>{m.label}</span>
           </li>
@@ -156,16 +160,19 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
           <h2 className="text-lg font-bold text-charcoal">Kích hoạt quá hạn</h2>
           <p className="mt-1 text-sm text-warmGray">Thiết bị không gửi tín hiệu trong 15 phút.</p>
         </div>
-        <ul className="w-full max-w-sm text-left text-sm text-warmGray">
+        <ul className="w-full max-w-sm list-disc space-y-1 pl-5 text-left text-sm text-warmGray">
           {[
             'WiFi nhà yến có thể bị nhập sai mật khẩu',
-            'ESP32 chưa khởi động lại sau khi nhận config',
+            'Thiết bị chưa khởi động lại sau khi nhận cấu hình',
             'Khoảng cách WiFi quá xa, tín hiệu yếu',
-            'MQTT broker đang bảo trì',
-          ].map((r, i) => <li key={i} className="flex items-start gap-2">• <span>{r}</span></li>)}
+            'Máy chủ đang bảo trì',
+          ].map((r, i) => <li key={i}>{r}</li>)}
         </ul>
         <div className="flex w-full max-w-xs flex-col gap-2">
-          <Button onClick={onRetry} className="w-full justify-center">Thử lại từ Bước 3</Button>
+          <Button onClick={onRetry} className="w-full justify-center">
+            <RotateCcw className="h-4 w-4" />
+            Thử lại
+          </Button>
           <button onClick={onSuccess} className="text-sm text-warmGray hover:text-charcoal">
             Bỏ qua, về danh sách thiết bị
           </button>
@@ -204,11 +211,16 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
       </div>
 
       <MilestoneList
-        items={[
-          { label: 'Đã nhận cấu hình WiFi', done: true },
-          { label: 'Kết nối WiFi nhà yến', done: wifiConnecting || mqttOk },
-          { label: 'Kết nối MQTT broker', done: mqttOk },
-        ]}
+        items={data.deviceType === 'CAMERA_NODE'
+          ? [
+              { label: 'Kết nối mạng', done: wifiConnecting || mqttOk },
+              { label: 'Kết nối máy chủ', done: mqttOk },
+            ]
+          : [
+              { label: 'Đã nhận cấu hình WiFi', done: true },
+              { label: 'Kết nối WiFi nhà yến', done: wifiConnecting || mqttOk },
+              { label: 'Kết nối máy chủ', done: mqttOk },
+            ]}
       />
     </div>
   )

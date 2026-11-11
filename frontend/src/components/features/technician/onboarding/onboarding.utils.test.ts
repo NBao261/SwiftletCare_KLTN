@@ -103,3 +103,4 @@ describe('buildPayload — CAMERA_NODE uses house_id (FARM-FR-004)', () => {
     expect(p.secret_key).toBe('KEY-001')
   })
 })
+
