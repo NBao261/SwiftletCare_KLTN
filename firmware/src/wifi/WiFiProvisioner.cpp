@@ -61,8 +61,7 @@ static const char *PORTAL_HTML = R"HTML(
     <input name="ssid" value="%WIFI_SSID%" %SSID_REQUIRED% autocomplete="off">
     <label>Mat khau</label>
     <input name="password" type="password" autocomplete="off">
-    <label>Dia chi IP MQTT Broker (de trong neu khong doi)</label>
-    <input name="mqttBroker" value="%MQTT_BROKER%" autocomplete="off">
+    %BROKER_FIELD%
     <button type="submit">Ket noi</button>
   </form>
 </div>
@@ -77,7 +76,7 @@ static const char *SAVED_HTML = R"HTML(
 align-items:center;justify-content:center;text-align:center;padding:0 24px}</style>
 </head><body><div>
 <h2>Da luu cau hinh moi</h2>
-<p>Thiet bi dang khoi dong lai va ket noi. Neu sai WiFi/MQTT broker, thiet bi
+<p>Thiet bi dang khoi dong lai va ket noi. Neu sai WiFi, thiet bi
 se tu phat lai mang cau hinh nay de ban nhap lai.</p>
 </div></body></html>
 )HTML";
@@ -129,7 +128,15 @@ void startCaptivePortal(AsyncWebServer &server) {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = String(PORTAL_HTML);
     html.replace("%DEVICE_ID%", Config::deviceId);
-    html.replace("%MQTT_BROKER%", Config::mqttBroker);
+    // FARM-FR-003c (BM02 S-03) — bản chính thức chỉ nhập Wi-Fi: địa chỉ broker nạp lúc flash
+    // (tools/flash_identity.py --broker). Bản dev giữ ô broker để thử với broker trên laptop.
+#ifdef SWIFTLETCARE_PRODUCTION_BUILD
+    html.replace("%BROKER_FIELD%", "");
+#else
+    html.replace("%BROKER_FIELD%",
+                 "<label>Dia chi IP MQTT Broker (ban dev, de trong neu khong doi)</label>"
+                 "<input name=\"mqttBroker\" value=\"" + Config::mqttBroker + "\" autocomplete=\"off\">");
+#endif
     html.replace("%WIFI_SSID%", Config::wifiSsid);
     // SSID bắt buộc nhập chỉ khi portal mở do WiFi chưa từng connect được
     // (không có gì để "giữ nguyên" nếu để trống); optional khi WiFi vẫn
@@ -164,9 +171,9 @@ void startCaptivePortal(AsyncWebServer &server) {
     // Nếu ssid rỗng (chỉ có thể xảy ra khi WiFi đang connected, theo guard ở
     // trên) — bỏ qua, không đụng tới WiFi credentials đã lưu.
 
-    // MQTT broker: optional, để trống nghĩa là giữ nguyên giá trị cũ (không
-    // ghi gì vào NVS, MQTTManager::begin() vẫn dùng giá trị đã lưu trước đó
-    // hoặc mặc định Secrets.h nếu chưa từng đổi).
+#ifndef SWIFTLETCARE_PRODUCTION_BUILD
+    // Bản dev: ô broker tuỳ chọn, để trống thì giữ giá trị cũ. Bản chính thức bỏ qua
+    // tham số này dù client có gửi (FARM-FR-003c: broker chỉ đặt lúc flash).
     if (request->hasParam("mqttBroker", true)) {
       String broker = request->getParam("mqttBroker", true)->value();
       broker.trim();
@@ -174,8 +181,10 @@ void startCaptivePortal(AsyncWebServer &server) {
         StorageManager::saveMqttBroker(broker);
       }
     }
+#endif
 
-    // farm, house, zone không có trên thiết bị: backend giữ từ lúc đăng ký (FARM-FR-003c, Report 4 D3)    request->send(200, "text/html", SAVED_HTML);
+    // farm, house, zone không có trên thiết bị: backend giữ từ lúc đăng ký (FARM-FR-003c, Report 4 D3)
+    request->send(200, "text/html", SAVED_HTML);
     // Delay nhỏ để response kịp gửi về trình duyệt trước khi mất kết nối AP
     delay(1500);
     ESP.restart();

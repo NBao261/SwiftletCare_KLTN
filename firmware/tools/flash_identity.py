@@ -4,7 +4,7 @@
 Chạy 1 lần lúc xuất xưởng, SAU KHI nạp firmware. Lệnh này ghi đè toàn bộ phân vùng NVS (Wi-Fi, ngưỡng đã lưu).
 
     pip install esp-idf-nvs-partition-gen esptool
-    python tools/flash_identity.py --port COM5 --device-id node_001 --broker-secret <broker_secret>
+    python tools/flash_identity.py --port COM5 --device-id node_001 --broker-secret <broker_secret> [--broker mqtt.swiftletcare.vn]
 
 `broker_secret` lấy từ màn kho thiết bị khi nhập thiết bị, hoặc `npm run device:broker-secret -- <deviceId>`
 trong backend/. Mật khẩu chỉ nằm trong file tạm và bị xoá ngay sau khi ghi.
@@ -29,6 +29,9 @@ def main() -> None:
     parser.add_argument("--port", required=True)
     parser.add_argument("--device-id", required=True)
     parser.add_argument("--broker-secret", required=True)
+    # FARM-FR-003c: địa chỉ broker đặt lúc flash (trang AP-mode bản chính thức chỉ nhập Wi-Fi);
+    # bỏ trống thì thiết bị dùng địa chỉ biên dịch trong Secrets.h
+    parser.add_argument("--broker", help="Tên miền hoặc IP của broker, vd mqtt.swiftletcare.vn")
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory() as folder:
@@ -38,7 +41,9 @@ def main() -> None:
             "key,type,encoding,value\n"
             "identity,namespace,,\n"
             f"device_id,data,string,{args.device_id}\n"
-            f"broker_secret,data,string,{args.broker_secret}\n",
+            f"broker_secret,data,string,{args.broker_secret}\n"
+            # StorageManager đọc broker ở namespace `swiftlet`, khoá `mqttBroker`
+            + (f"swiftlet,namespace,,\nmqttBroker,data,string,{args.broker}\n" if args.broker else ""),
             encoding="utf-8",
         )
         run("esp_idf_nvs_partition_gen", "generate", str(csv_path), str(bin_path), NVS_SIZE)

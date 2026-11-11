@@ -68,9 +68,12 @@ static String uriOf(const String &host) {
   return String(MQTT_PORT == 8883 ? "mqtts://" : "mqtt://") + host + ":" + String(MQTT_PORT);
 }
 
-/** true nếu resolve được (đã cập nhật Config::mqttBroker nếu cần) */
+/**
+ * true nếu resolve được (đã cập nhật Config::mqttBroker nếu cần). FARM-FR-003c: chỉ bản dev tìm broker
+ * trên mạng LAN; bản chính thức (và bản TLS, vì chứng chỉ gắn tên miền) dùng địa chỉ nạp lúc flash.
+ */
 static bool resolveBrokerViaMdns() {
-#if MQTT_PORT == 8883
+#if MQTT_PORT == 8883 || defined(SWIFTLETCARE_PRODUCTION_BUILD)
   return false;
 #else
   if (!mdnsStarted) {
