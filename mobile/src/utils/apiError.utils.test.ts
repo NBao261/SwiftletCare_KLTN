@@ -5,6 +5,7 @@ import {
   getDeviceRegisterErrorMessage,
   getSettingsErrorMessage,
   INVALID_CODE_MESSAGE,
+  isServerUnreachableError,
   NETWORK_ERROR_MESSAGE,
   readApiError,
   SERVER_ERROR_MESSAGE,
@@ -124,5 +125,19 @@ describe('getDeviceRegisterErrorMessage', () => {
     expect(getDeviceRegisterErrorMessage(backendError(409, 'CONFLICT'))).toBe(
       'Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký',
     )
+  })
+})
+
+describe('isServerUnreachableError', () => {
+  it('lỗi axios không có phản hồi (máy chủ tắt, quá thời gian chờ) là không tới được máy chủ', () => {
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ERR_NETWORK' })).toBe(true)
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ECONNABORTED' })).toBe(true)
+  })
+
+  it('máy chủ có trả lời, request bị huỷ hoặc lỗi không phải axios thì không tính', () => {
+    expect(isServerUnreachableError({ isAxiosError: true, response: { status: 500 } })).toBe(false)
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ERR_CANCELED' })).toBe(false)
+    expect(isServerUnreachableError(new Error('boom'))).toBe(false)
+    expect(isServerUnreachableError(null)).toBe(false)
   })
 })

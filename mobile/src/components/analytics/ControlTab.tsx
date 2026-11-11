@@ -13,11 +13,13 @@ import type { AnalyticsScope } from '@/hooks/analytics/useAnalyticsScope'
 import { useAutonomies } from '@/hooks/analytics/useAutonomies'
 import { useControlPerformances } from '@/hooks/analytics/useControlPerformances'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { useAuthStore } from '@/stores/authStore'
 import type { AnalyticsRange, FuzzyTuning, TuningChange } from '@/types'
 import { getAxisBounds, summarizeValues } from '@/utils/analytics.utils'
 import { formatDateTime, formatVietnamDayMonthOf, formatVietnamTime } from '@/utils/date.utils'
 import { getFuzzyTuningLabel, getRoleLabel } from '@/utils/label.utils'
 import { formatDecimal, formatPercentValue } from '@/utils/number.utils'
+import { canPerform } from '@/utils/permission.utils'
 import { formatStoredNumber } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -50,6 +52,7 @@ function getTimeFormatter(range: AnalyticsRange): (isoDate: string) => string {
 // lịch sử điều khiển tay; gợi ý hệ số
 export function ControlTab({ scope }: ControlTabProps) {
   const palette = usePalette()
+  const user = useAuthStore(state => state.user)
   const zone = scope.focusZone
   const zoneId = zone?._id ?? ''
   const performances = useControlPerformances(zoneId ? [zoneId] : [], scope.range)
@@ -131,6 +134,8 @@ export function ControlTab({ scope }: ControlTabProps) {
               <Pressable
                 key={change.changed_at}
                 onPress={() => setOpenChange(change)}
+                // Chip thấp hơn 44 nên nới vùng chạm (MOBILE_GUIDE 3.7)
+                hitSlop={Spacing.sm}
                 style={[styles.marker, { borderColor: palette.border }]}
                 accessibilityRole="button"
                 accessibilityLabel={t('Đổi hệ số lúc {time}', { time: formatDateTime(change.changed_at) })}
@@ -161,7 +166,8 @@ export function ControlTab({ scope }: ControlTabProps) {
       </Card>
 
       <OverrideHistoryCard zoneId={zoneId} />
-      <SuggestionCard zoneId={zoneId} zoneName={zone.name} farm={scope.farm} />
+      {/* Gợi ý hệ số: backend chỉ cho chủ trại và chuyên gia */}
+      {canPerform(user, 'viewControlSuggestion') && <SuggestionCard zoneId={zoneId} zoneName={zone.name} farm={scope.farm} />}
 
       <BottomSheet visible={openChange !== null} onClose={() => setOpenChange(null)}>
         <Text variant="heading">{t('Đổi hệ số')}</Text>

@@ -24,9 +24,7 @@ export function ZoneInfoSection({ zone, editor }: ZoneInfoSectionProps) {
       subtitle={zone.name}
       scopeLabel={zone.name}
       isExpanded={editor.isExpanded(id)}
-      onToggle={() => editor.toggle(id)}
-      footerNote={t('Đổi tên, xoá khu vực sẽ mở khi backend có API')}
-    >
+      onToggle={() => editor.toggle(id)}    >
       <SettingsMetaGrid
         items={[
           { label: t('Tên khu vực'), value: zone.name },

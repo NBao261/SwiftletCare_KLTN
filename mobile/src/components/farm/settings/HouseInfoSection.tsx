@@ -28,9 +28,7 @@ export function HouseInfoSection({ house, zones, editor }: HouseInfoSectionProps
       subtitle={house.name}
       scopeLabel={t('Nhà')}
       isExpanded={editor.isExpanded(id)}
-      onToggle={() => editor.toggle(id)}
-      footerNote={t('Đổi tên, xoá nhà sẽ mở khi backend có API')}
-    >
+      onToggle={() => editor.toggle(id)}    >
       <SettingsMetaGrid
         items={[
           { label: t('Tên nhà'), value: house.name },

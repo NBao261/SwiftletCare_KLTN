@@ -11,6 +11,7 @@ import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import type { Alert } from '@/types'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_ALERTS } from '@/utils/navigation.utils'
 
 // Kéo xuống quá khoảng này, hoặc vuốt nhanh, thì đóng sheet
 const CLOSE_DISTANCE = 120
@@ -90,6 +91,7 @@ export function AlertDetailSheet({ alert, onClose }: AlertDetailSheetProps) {
               initialAlert={alert}
               isReady={isReady}
               onLeave={close}
+              returnTo={RETURN_TO_ALERTS}
               onMessage={toast.show}
             />
           )}
