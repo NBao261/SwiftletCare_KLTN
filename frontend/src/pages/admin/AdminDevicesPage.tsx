@@ -1,9 +1,4 @@
-// ADMIN — Thiết bị toàn hệ thống, CHỈ XEM (OPS-NFR-004, GET /devices/system-status). Theo SRS, Admin không quản lý
-// thiết bị: kích hoạt/gán/dời là việc của Technician (FARM-FR-003/007/007b, RACI Admin = "I (audit)"), bật/tắt relay
-// là việc của Farm Owner/Technician (ENV-FR-016, RACI Admin = "–"). Vì vậy trang này thay cho /devices (màn làm việc
-// của Technician) trong menu Admin: không nút kích hoạt, không điều khiển relay, không dời Zone.
-// Cùng khuôn trang Người dùng: hàng ô số → tìm kiếm → bộ lọc + sắp xếp → bảng → phân trang (client-side trên
-// toàn bộ node vì API trả hết 1 lần).
+// ADMIN — thiết bị toàn hệ thống, chỉ xem (OPS-NFR-004, GET /devices/system-status)
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
@@ -119,7 +114,7 @@ export default function AdminDevicesPage() {
       {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}
       <SectionCard title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống">
 
-        {/* Hàng 1: tìm kiếm — không có nút tạo: kích hoạt thiết bị là việc của Technician */}
+        {/* Hàng 1: tìm kiếm — không có nút tạo: thiết bị mới nhập ở Kho thiết bị, Farm Owner đăng ký từ nhãn */}
         <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
 
         {/* Hàng 2: bộ lọc + sắp xếp */}
@@ -142,7 +137,7 @@ export default function AdminDevicesPage() {
           minRows={PAGE_SIZE}
           emptyMessage={hasActiveFilters
             ? 'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
-            : 'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi Technician kích hoạt qua Web Console Onboarding.'}
+            : 'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi chủ nhà yến đăng ký từ nhãn QR.'}
         />
 
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}

@@ -13,7 +13,7 @@ export interface SocketTelemetryUpdate {
   sound: number | null
   relayStates: RelayStates
   controlMode: ControlMode
-  // % phun sương và % quạt do bộ điều khiển mờ tính
+  // % phun sương và % quạt do bộ điều khiển fuzzy tính
   controlOutput?: { misting: number; ventilation: number }
   timestamp: string
 }

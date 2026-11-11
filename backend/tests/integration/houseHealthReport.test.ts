@@ -241,7 +241,7 @@ describe('TC-F21-01 — xem báo cáo theo nhà', () => {
     const other = await setup()
     await call('get', `/health-reports/${report._id}`, other.ownerToken).expect(403)
     await call('get', `/health-reports?houseId=${house._id}`, other.ownerToken).expect(403)
-    for (const role of ['TECHNICIAN', 'ADMIN'] as const) {
+    for (const role of ['FARM_TECHNICIAN', 'ADMIN'] as const) {
       const user = await User.create({ email: `${role}${Math.random()}@t.vn`, password_hash: 'password123', full_name: role, role })
       await call('get', `/health-reports/${report._id}`, tokenFor(user._id, role)).expect(403)
     }

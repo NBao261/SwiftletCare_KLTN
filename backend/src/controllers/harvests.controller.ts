@@ -26,6 +26,12 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: batch })
 })
 
+/** POST /harvests/:id/confirm – HARVEST-FR-006 */
+export const confirm = asyncHandler(async (req: Request, res: Response) => {
+  const batch = await harvestService.confirmHarvest(req.params.id, req.user)
+  res.json({ success: true, data: batch })
+})
+
 /** DELETE /harvests/:id – xoá mềm */
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await harvestService.removeHarvest(req.params.id, req.user)

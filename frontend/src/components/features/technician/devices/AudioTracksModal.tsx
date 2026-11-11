@@ -16,12 +16,13 @@ const sdName = (n: number) => `${String(n).padStart(4, '0')}.mp3`
 const sizeLabel = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 
 /**
- * ENV-FR-013c — danh mục file loa ru của 1 thiết bị. Theo RACI SRS ⁹: Technician/Admin
- * upload + tự đánh dấu đã chép vào thẻ SD (web không ghi được xuống thẻ); Farm Owner
- * chọn bài mặc định cho lịch và phát thử — chỉ với bài đã có trên thẻ.
+ * ENV-FR-013c — danh mục file loa ru của 1 thiết bị.
+ * G-20 (backend f9d9522): Upload, đánh dấu chép thẻ SD và xoá file loa chuyển từ Technician sang Farm Owner.
+ * FARM_OWNER: upload + đánh dấu đã chép SD + chọn bài mặc định + phát thử.
+ * ADMIN và FARM_TECHNICIAN gọi POST/PUT/DELETE audio-tracks → 403.
  */
 export default function AudioTracksModal({ node, onClose }: { node: SensorNode; onClose: () => void }) {
-  const canManage = usePermission('TECHNICIAN')
+  const canManage = usePermission('FARM_OWNER')
   const canOperate = usePermission('FARM_OWNER')
   const push = useToastStore(s => s.push)
   const { data: tracks, isLoading } = useAudioTracks(node._id)

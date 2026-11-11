@@ -7,9 +7,11 @@
 // SRS AUTH-FR-004 (v2.0.0). DOMAIN_EXPERT = chuyên gia nuôi yến do Primary Owner mời,
 // phạm vi luôn là cả farm: chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo suy luận,
 // chỉnh ngưỡng/hệ số/tham số phát hiện — không relay hay ghi thu hoạch (mục 4.4).
-export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIAN'
+// FARM_TECHNICIAN (Report 3 4.0.0, AUTH-FR-004, 013) = thợ của chủ farm, thành viên farm, chỉ thao tác trên
+// nhà được giao; thay role TECHNICIAN cũ (mọi farm, lệnh từ xa — G-20).
+export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
 /** Vai trò phía khách hàng có thể là thành viên farm (`farms.members[].role`, `invitations.invited_role`) */
-export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
+export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
 // PENDING: Technician đã tạo record qua Web Console Onboarding nhưng thiết bị
 // chưa gửi heartbeat đầu tiên (SRS §8.2, Flow 1 bước 4).
 // Report 3 §6.6 — chỉ 3 trạng thái kết nối (ERROR/DEGRADED bỏ ở G-01, migrate:alert-types)
@@ -36,7 +38,8 @@ export type ControlMode  = 'AUTO' | 'MANUAL'
 
 // ── Module HARVEST (§5.8, §8.2) ───────────────────────────────────────────────
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-export type HarvestStatus = 'DRAFT'
+/** HARVEST-FR-001, 006 — lô của Farm Technician chờ Farm Owner xác nhận; lô của Farm Owner xác nhận ngay */
+export type HarvestStatus = 'DRAFT' | 'CONFIRMED'
 
 // ── JWT Payload ────────────────────────────────────────────────────────────────
 export interface JwtAccessPayload {

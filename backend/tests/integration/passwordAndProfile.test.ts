@@ -1,6 +1,6 @@
 /**
- * AUTH-FR-005c — mật khẩu tạm của Technician (bắt đổi trước khi dùng), PUT /auth/password,
- * Admin cấp lại mật khẩu tạm cho Technician.
+ * Mật khẩu tạm (bắt đổi trước khi dùng), PUT /auth/password. Admin không còn tạo hay cấp mật khẩu
+ * cho Technician (G-20: Farm Technician vào farm qua lời mời của Farm Owner, AUTH-FR-005, 010).
  */
 import { randomBytes } from 'crypto'
 import express, { type RequestHandler } from 'express'
@@ -14,7 +14,6 @@ import { authenticate } from '@/middlewares/auth.middleware'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { AuditLog } from '@/models/auditLog.model'
 import { User } from '@/models/user.model'
-import { createTechnician, resetTechnicianPassword } from '@/services/admin.service'
 import { loginUser } from '@/services/auth.service'
 import type { Role } from '@/types'
 
@@ -52,15 +51,13 @@ const mkUser = (email: string, role: Role, extra: object = {}) =>
 const freshPassword = () => randomBytes(9).toString('base64url')
 
 describe('mật khẩu tạm (must_change_password)', () => {
-  it('a technician created by an admin must change the password before using anything else', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
+  it('a user with a temporary password must change it before using anything else', async () => {
     const temporary = freshPassword()
     const chosen = freshPassword()
-    const tech = await createTechnician(String(admin._id), {
-      email: 'tech@test.vn', password: temporary, full_name: 'Tech',
+    const tech = await User.create({
+      email: 'tech@test.vn', password_hash: temporary, full_name: 'Tech', role: 'FARM_TECHNICIAN', must_change_password: true,
     })
-    expect(tech.must_change_password).toBe(true)
-    const token = tokenFor(tech._id, 'TECHNICIAN')
+    const token = tokenFor(tech._id, 'FARM_TECHNICIAN')
 
     const blocked = await request(app).get('/protected').set('Authorization', `Bearer ${token}`).expect(403)
     expect(blocked.body.error.code).toBe('PASSWORD_CHANGE_REQUIRED')
@@ -75,8 +72,8 @@ describe('mật khẩu tạm (must_change_password)', () => {
   })
 
   it('still lets a user with a temporary password log out', async () => {
-    const user = await mkUser('temp@test.vn', 'TECHNICIAN', { must_change_password: true })
-    await request(app).post('/auth/logout').set('Authorization', `Bearer ${tokenFor(user._id, 'TECHNICIAN')}`).expect(200)
+    const user = await mkUser('temp@test.vn', 'FARM_TECHNICIAN', { must_change_password: true })
+    await request(app).post('/auth/logout').set('Authorization', `Bearer ${tokenFor(user._id, 'FARM_TECHNICIAN')}`).expect(200)
   })
 })
 
@@ -111,35 +108,14 @@ describe('PUT /auth/password', () => {
   })
 })
 
-describe('Admin quản lý Technician', () => {
-  it('issues a one-time temporary password that works and must be changed, and drops every session', async () => {
+describe('Admin không còn quản lý Technician (G-20)', () => {
+  it('has no technician account or temporary-password route', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', {
-      refresh_tokens: [{ token_hash: 'x', expires: new Date(Date.now() + 1e6) }],
-    })
+    const tech = await mkUser('tech@test.vn', 'FARM_TECHNICIAN')
+    const auth = `Bearer ${tokenFor(admin._id, 'ADMIN')}`
 
-    const res = await request(app).put(`/admin/technicians/${tech._id}/password`)
-      .set('Authorization', `Bearer ${tokenFor(admin._id, 'ADMIN')}`).expect(200)
-
-    const temporary = res.body.data.temporary_password as string
-    expect(temporary).toHaveLength(12)
-    const after = (await User.findById(tech._id))!
-    expect(await after.comparePassword(temporary)).toBe(true)
-    expect(after.must_change_password).toBe(true)
-    expect(after.refresh_tokens).toHaveLength(0)
-    expect(await AuditLog.countDocuments({ action: 'TECHNICIAN_PASSWORD_RESET' })).toBe(1)
-  })
-
-  it('refuses non-technicians and deleted accounts, and no longer edits a technician profile', async () => {
-    const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN')
-    const owner = await mkUser('owner@test.vn', 'FARM_OWNER')
-    const deleted = await mkUser('gone@test.vn', 'TECHNICIAN', { deleted_at: new Date(), is_active: false })
-
-    // AUTH-FR-005c chỉ còn tạo tài khoản và cấp lại mật khẩu tạm
-    await request(app).put(`/admin/technicians/${tech._id}/profile`)
-      .set('Authorization', `Bearer ${tokenFor(admin._id, 'ADMIN')}`).send({ full_name: 'x' }).expect(404)
-    await expect(resetTechnicianPassword(String(admin._id), String(owner._id))).rejects.toMatchObject({ statusCode: 400 })
-    await expect(resetTechnicianPassword(String(admin._id), String(deleted._id))).rejects.toMatchObject({ statusCode: 409 })
+    await request(app).post('/admin/technicians').set('Authorization', auth)
+      .send({ email: 'new@test.vn', password: freshPassword(), full_name: 'x' }).expect(404)
+    await request(app).put(`/admin/technicians/${tech._id}/password`).set('Authorization', auth).expect(404)
   })
 })

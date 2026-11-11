@@ -1,7 +1,6 @@
-import { Pressable, ScrollView, StyleSheet } from 'react-native'
-import { Text } from '@/components/ui/text'
-import { Radius, Spacing } from '@/constants/theme'
-import { usePalette } from '@/hooks/theme/usePalette'
+import { ScrollView, StyleSheet } from 'react-native'
+import { ChoiceChip } from '@/components/ui/choice-chip'
+import { Spacing } from '@/constants/theme'
 
 export interface ChoiceOption<T extends string> {
   id: T
@@ -29,41 +28,27 @@ export function ChoiceChips<T extends string>({
   disabled = false,
   accessibilityLabel,
 }: ChoiceChipsProps<T>) {
-  const palette = usePalette()
-  const idleColor = placement === 'screen' ? palette.surface : palette.surfaceStrong
-
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
-      style={disabled && styles.disabled}
       accessibilityLabel={accessibilityLabel}
     >
-      {options.map(option => {
-        const isSelected = option.id === selectedId
-        return (
-          <Pressable
-            key={option.id}
-            onPress={() => onSelect(option.id)}
-            disabled={disabled}
-            style={[styles.chip, { backgroundColor: isSelected ? palette.inverse : idleColor }]}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isSelected, disabled }}
-            accessibilityLabel={option.label}
-          >
-            <Text variant="body" weight="semiBold" color={isSelected ? palette.onInverse : palette.text}>
-              {option.label}
-            </Text>
-          </Pressable>
-        )
-      })}
+      {options.map(option => (
+        <ChoiceChip
+          key={option.id}
+          label={option.label}
+          isSelected={option.id === selectedId}
+          onPress={() => onSelect(option.id)}
+          placement={placement}
+          disabled={disabled}
+        />
+      ))}
     </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
   row: { gap: Spacing.sm },
-  chip: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
-  disabled: { opacity: 0.4 },
 })

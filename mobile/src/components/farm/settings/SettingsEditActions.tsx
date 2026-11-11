@@ -13,11 +13,12 @@ interface SettingsEditActionsProps {
   isSaveDisabled: boolean
   // Lỗi từ backend sau khi bấm Lưu
   error?: string | null
-  // Chữ căn giữa thanh, mặc định "Cập nhật"
+  // Chữ căn giữa thanh, mặc định "Cập nhật"; form tạo farm / nhà / tầng truyền "Tạo mới"
   label?: string
 }
 
-// Phần cuối của một mục đang sửa: câu lỗi, thanh đen là nút "Cập nhật" chữ căn giữa (chỉ gửi đúng mục này), nút chữ Huỷ bên dưới
+// Phần cuối của một mục đang sửa hoặc form tạo mới: câu lỗi, thanh đen là nút chữ lime căn giữa ("Cập nhật" chỉ gửi đúng mục
+// này, "Tạo mới" gửi cả form), nút chữ Huỷ bên dưới — nút tạo và nút cập nhật dùng chung một khung
 export function SettingsEditActions({
   onSave,
   onCancel,

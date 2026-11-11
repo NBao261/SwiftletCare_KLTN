@@ -69,7 +69,7 @@ async function seed({ withExpert = true } = {}) {
     User.create({ email: `${prefix}${seq}@test.vn`, password_hash: 'password123', full_name, role })
   const [owner, coOwner, expert, technician, admin] = await Promise.all([
     mk('o', 'FARM_OWNER', 'Chủ'), mk('c', 'FARM_OWNER', 'Đồng sở hữu'), mk('e', 'DOMAIN_EXPERT', 'Chuyên gia Lan'),
-    mk('t', 'TECHNICIAN', 'Kỹ thuật'), mk('a', 'ADMIN', 'Quản trị'),
+    mk('t', 'FARM_TECHNICIAN', 'Kỹ thuật'), mk('a', 'ADMIN', 'Quản trị'),
   ])
   const farm = await Farm.create({
     name: 'F', address: 'x', coordinates: { lat: 10, lng: 106 }, owner_id: owner._id,
@@ -84,7 +84,7 @@ async function seed({ withExpert = true } = {}) {
   const alert = await Alert.create({ farm_id: farm._id, zone_id: zone._id, type: 'NOISE_ANOMALY', severity: 'MEDIUM', title: 'Ồn bất thường', message: 'm' })
   const t = {
     owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT'),
-    technician: tokenFor(technician._id, 'TECHNICIAN'), admin: tokenFor(admin._id, 'ADMIN'),
+    technician: tokenFor(technician._id, 'FARM_TECHNICIAN'), admin: tokenFor(admin._id, 'ADMIN'),
   }
   const send = (method: 'get' | 'put', path: string, token: string, body: object = {}) =>
     request(app)[method](path).set('Authorization', `Bearer ${token}`).send(body)

@@ -11,6 +11,7 @@ import { Spacing } from '@/constants/theme'
 import { useInviteFarmMember } from '@/hooks/farm/useInviteFarmMember'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { InvitedRole } from '@/types'
+import { getInvitedRoleDescription } from '@/utils/account.utils'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { isValidEmail } from '@/utils/validation.utils'
 import { t } from '@/utils/i18n.utils'
@@ -25,7 +26,7 @@ interface InviteMemberSheetProps {
   onClose: () => void
 }
 
-// Sheet mời thành viên (AUTH-FR-005, EXPERT-FR-001): email và vai trò; lời mời hết hạn sau 7 ngày (§6.4).
+// Sheet mời thành viên (AUTH-FR-005, EXPERT-FR-001): email và vai trò (đồng sở hữu, chuyên gia, kỹ thuật viên nhà yến — G-20); lời mời hết hạn sau 7 ngày (§6.4).
 // Token lời mời trong phản hồi không ra khỏi hook mời; sheet chỉ biết mời xong hay lỗi
 export function InviteMemberSheet({ visible, farmId, farmName, defaultRole, onInvited, onClose }: InviteMemberSheetProps) {
   const palette = usePalette()
@@ -90,6 +91,7 @@ export function InviteMemberSheet({ visible, farmId, farmName, defaultRole, onIn
           options={[
             { id: 'DOMAIN_EXPERT', label: t('Chuyên gia') },
             { id: 'FARM_OWNER', label: t('Đồng sở hữu') },
+            { id: 'FARM_TECHNICIAN', label: t('Kỹ thuật viên nhà yến') },
           ]}
           selectedId={role}
           onSelect={setRole}
@@ -97,9 +99,7 @@ export function InviteMemberSheet({ visible, farmId, farmName, defaultRole, onIn
           accessibilityLabel={t('Vai trò')}
         />
         <Text variant="small" color={palette.textSecondary}>
-          {role === 'DOMAIN_EXPERT'
-            ? t('Chuyên gia xem toàn farm, kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và tham số; không điều khiển relay.')
-            : t('Đồng sở hữu có quyền như chủ trại, trừ xoá farm và mời, gỡ thành viên.')}
+          {getInvitedRoleDescription(role)}
         </Text>
       </View>
       <FormMessage message={formError} />

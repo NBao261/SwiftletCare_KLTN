@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 import { HOME_SKELETON_DELAY_MS } from '@/constants/homeSkeleton'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 const CARD_GAP = Spacing.md
 const PLACEHOLDER_HEIGHT = 168
@@ -66,7 +67,7 @@ export function FarmCarousel() {
       <EmptyState
         variant="create"
         message={t('Tạo trang trại')}
-        onAction={() => router.navigate('/(tabs)/farms/farm-create')}
+        onAction={() => router.navigate({ pathname: '/(tabs)/farms/farm-create', params: { returnTo: RETURN_TO_HOME } })}
         height={PLACEHOLDER_HEIGHT}
       />
     ) : (

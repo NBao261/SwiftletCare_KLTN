@@ -170,7 +170,7 @@ describe('TC-F22-03 — quyền và hạn chấm', () => {
   it('Domain Expert, Technician, Administrator → 403 (BR-31: chỉ người chấm)', async () => {
     const { house, expertToken } = await setup()
     const day = await mkDay(house, YESTERDAY)
-    for (const role of ['TECHNICIAN', 'ADMIN'] as Role[]) {
+    for (const role of ['FARM_TECHNICIAN', 'ADMIN'] as Role[]) {
       const user = await User.create({ email: `${role}@t.vn`, password_hash: 'password123', full_name: role, role })
       const res = await call('post', `/health-reports/days/${day._id}/rating`, tokenFor(user._id, role), { rating: 'GOOD' })
       expect(res.status).toBe(403)

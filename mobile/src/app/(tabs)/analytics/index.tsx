@@ -23,11 +23,13 @@ import { Radius, Spacing } from '@/constants/theme'
 import { useAnalyticsKpis } from '@/hooks/analytics/useAnalyticsKpis'
 import { useAnalyticsScope } from '@/hooks/analytics/useAnalyticsScope'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useNow } from '@/hooks/time/useNow'
 import type { AnalyticsTab } from '@/stores/farmPrefsStore'
 import { getVietnamDate } from '@/utils/date.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_ANALYTICS } from '@/utils/navigation.utils'
 
 // Qua ngày mới thì số đàn chim theo ngày tải lại
 const CLOCK_INTERVAL_MS = 60 * 1000
@@ -37,6 +39,8 @@ const SKELETON_TILE_COUNT = 4
  * Điều khiển · Sản lượng · Báo cáo (ANALYTICS-FR-001…011, EXPERT-FR-005/006, đặc tả "Menu Phân tích") */
 export default function AnalyticsScreen() {
   const palette = usePalette()
+  // Mở từ lối tắt (Trang chủ, màn nhà, Tài khoản…) thì có nút ‹ quay về
+  const returnBack = useReturnBack()
   // Đổi ngôn ngữ thì dựng lại cả màn (key = ngôn ngữ) để mọi chữ ra đúng ngôn ngữ
   const language = useLanguage()
   const queryClient = useQueryClient()
@@ -137,7 +141,10 @@ export default function AnalyticsScreen() {
             onSelectTab={openTab}
             // Tab Cảnh báo lọc sẵn nhà đang xem
             onOpenAlerts={() =>
-              router.navigate({ pathname: '/(tabs)/alerts', params: { houseId: house?._id ?? '' } })
+              router.navigate({
+                pathname: '/(tabs)/alerts',
+                params: { houseId: house?._id ?? '', returnTo: RETURN_TO_ANALYTICS },
+              })
             }
           />
         </View>
@@ -160,6 +167,7 @@ export default function AnalyticsScreen() {
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
       {/* Cùng kiểu header chọn nhà của màn Farm: tên nhà ▾, bấm để đổi nhà */}
       <AppHeader
+        onBack={returnBack}
         leading={
           <HeaderPicker
             title={house?.name ?? t('Phân tích')}

@@ -23,9 +23,20 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
 
-/** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018 */
+/** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018
+ * G-20: màn Technician cũ chuyển thành Console Thiết bị cho ADMIN + giữ quyền cho FARM_OWNER, FARM_TECHNICIAN.
+ * Phân quyền API (backend f9d9522):
+ *   - Cài đặt/dời/gỡ/thay/audio: FARM_OWNER only  → canManageLifecycle
+ *   - RESTART: ADMIN, FARM_OWNER, FARM_TECHNICIAN   → canRestart
+ *   - PUSH_CONFIG, OTA: ADMIN only                  → canAdminCmd
+ */
 export default function TechnicianDevicesPage() {
-  const canOnboard = usePermission("TECHNICIAN");
+  // G-20: Chỉ FARM_OWNER mới được đăng ký/dời/gỡ/thay thiết bị và quản lý file loa (ADMIN, FARM_TECHNICIAN → 403)
+  const canManageLifecycle = usePermission("FARM_OWNER");
+  // G-20: RESTART: ADMIN, FARM_OWNER, FARM_TECHNICIAN
+  const canRestart = usePermission("ADMIN", "FARM_OWNER", "FARM_TECHNICIAN");
+  // G-20: PUSH_CONFIG: chỉ ADMIN (FARM_OWNER, FARM_TECHNICIAN → 403)
+  const canPushConfig = usePermission("ADMIN");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Bộ lọc vị trí độc lập (Local state) — khởi tạo từ searchParams nếu có điều hướng từ trang Trang trại
@@ -295,7 +306,8 @@ export default function TechnicianDevicesPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
-          {canOnboard && (
+          {/* G-20: Chỉ FARM_OWNER kích hoạt thiết bị (ADMIN & FARM_TECHNICIAN nhận 403) */}
+          {canManageLifecycle && (
             <Button onClick={handleOpenRegister}>
               + Kích hoạt thiết bị
             </Button>
@@ -315,7 +327,7 @@ export default function TechnicianDevicesPage() {
                 : "Hệ thống chưa có thiết bị ESP32 nào được kích hoạt. Hãy bấm “+ Kích hoạt thiết bị” để bắt đầu."
             }
             action={
-              canOnboard ? (
+              canManageLifecycle ? (
                 <Button onClick={handleOpenRegister}>
                   + Kích hoạt thiết bị
                 </Button>
@@ -360,9 +372,10 @@ export default function TechnicianDevicesPage() {
                   onOpenReassign={() => setReassignNodeId(node._id)}
                   onOpenReplace={() => setReplaceNodeId(node._id)}
                   onOpenDecommission={() => setDecommissionNodeId(node._id)}
-                  canOnboard={canOnboard}
+                  canOnboard={canManageLifecycle}
+                  canPushConfig={canPushConfig}
                   rebootUnsupported={rebootUnsupportedIds.has(node._id)}
-                  onReboot={canOnboard ? () => setRebootNodeId(node._id) : undefined}
+                  onReboot={canRestart ? () => setRebootNodeId(node._id) : undefined}
                 />
               );
             })}

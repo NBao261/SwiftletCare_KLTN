@@ -1,9 +1,11 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { CHIP_LABEL_MAX_LENGTH } from '@/components/ui/choice-chip'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Zone } from '@/types'
 import { t } from '@/utils/i18n.utils'
+import { truncateText } from '@/utils/name.utils'
 
 const DOT_SIZE = 6
 
@@ -34,8 +36,8 @@ export function ZoneTabs({ zones, selectedZoneId, alertZoneIds, onSelect }: Zone
             accessibilityState={{ selected: isSelected }}
             accessibilityLabel={hasAlert ? t('{zone}, có cảnh báo', { zone: zone.name }) : zone.name}
           >
-            <Text variant="body" weight="semiBold" color={isSelected ? palette.onInverse : palette.text}>
-              {zone.name}
+            <Text variant="body" weight="semiBold" color={isSelected ? palette.onInverse : palette.text} numberOfLines={1}>
+              {truncateText(zone.name, CHIP_LABEL_MAX_LENGTH)}
             </Text>
             {hasAlert && <View style={[styles.dot, { backgroundColor: palette.alert }]} />}
           </Pressable>

@@ -5,29 +5,53 @@ import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError
 import type { CurrentUser } from '@/types'
 
 type FarmScope = Pick<IFarm, 'owner_id' | 'members'>
+type HouseScope = Pick<IHouse, 'technicians'>
 
 /**
  * Owner hoặc thành viên (đồng sở hữu, Domain Expert) — mở cả dữ liệu vận hành của farm.
- * Technician và Administrator không phải thành viên nên không qua (Report 3 §2.4, FARM-FR-009).
+ * Administrator không phải thành viên nên không qua (Report 3 §2.4, FARM-FR-009). Farm Technician là thành
+ * viên nhưng chỉ có quyền trên nhà được giao (AUTH-FR-004, 013): mặc định chặn, đường nào mở cho thợ
+ * thì kiểm theo nhà bằng `canAccessHouse`.
  */
 export function hasFarmAccess(farm: FarmScope, user: CurrentUser): boolean {
+  if (user.role === 'FARM_TECHNICIAN') return false
   if (String(farm.owner_id) === user._id) return true
-  return farm.members.some(m => String(m.user_id) === user._id)
+  return farm.members.some(m => String(m.user_id) === user._id && m.role !== 'FARM_TECHNICIAN')
+}
+
+/** AUTH-FR-005 — user là Farm Technician thành viên của farm này */
+export function isFarmTechnician(farm: Pick<IFarm, 'members'>, user: CurrentUser): boolean {
+  return user.role === 'FARM_TECHNICIAN'
+    && farm.members.some(m => String(m.user_id) === user._id && m.role === 'FARM_TECHNICIAN')
+}
+
+/** AUTH-FR-013 — Farm Technician của farm và được giao nhà này */
+export function isAssignedTechnician(farm: Pick<IFarm, 'members'>, house: HouseScope, user: CurrentUser): boolean {
+  return isFarmTechnician(farm, user) && (house.technicians ?? []).some(t => String(t.user_id) === user._id)
 }
 
 /**
- * FARM-FR-009 — Technician thấy House, Zone, thiết bị và cảnh báo thiết bị của mọi farm mà không
+ * FARM-FR-009 — Administrator thấy House, Zone, thiết bị và cảnh báo thiết bị của mọi farm mà không
  * cần là thành viên; chỉ dùng cho các đường đó, không cho telemetry, phân tích, số đếm chim…
  */
 export function hasDeviceAccess(farm: FarmScope, user: CurrentUser): boolean {
-  return user.role === 'TECHNICIAN' || hasFarmAccess(farm, user)
+  return user.role === 'ADMIN' || hasFarmAccess(farm, user)
 }
 
-/** `device` = cấu trúc farm và thiết bị (mở cho Technician), `farm` = mọi thứ còn lại */
+/** `device` = cấu trúc farm và thiết bị (mở cho Administrator), `farm` = mọi thứ còn lại */
 export type AccessScope = 'farm' | 'device'
 
 function canAccess(farm: FarmScope, user: CurrentUser, scope: AccessScope): boolean {
   return scope === 'device' ? hasDeviceAccess(farm, user) : hasFarmAccess(farm, user)
+}
+
+/**
+ * Quyền trên 1 nhà: quyền trên farm theo `scope`, hoặc Farm Technician được giao nhà đó (cả 2 phạm vi:
+ * dashboard, relay, restart, vòng đếm của nhà được giao — AUTH-FR-004, 013). Route vẫn phải cho
+ * FARM_TECHNICIAN qua `requireRole` thì thợ mới tới được đây.
+ */
+export function canAccessHouse(farm: FarmScope, house: HouseScope, user: CurrentUser, scope: AccessScope = 'farm'): boolean {
+  return canAccess(farm, user, scope) || isAssignedTechnician(farm, house, user)
 }
 
 /**
@@ -102,7 +126,7 @@ export async function assertHouseAccess(
   houseId: string, user: CurrentUser, scope: AccessScope = 'farm',
 ): Promise<{ house: IHouse; farm: IFarm }> {
   const chain = await findHouseChainOrThrow(houseId)
-  if (!canAccess(chain.farm, user, scope)) throw ForbiddenError('Không có quyền trên house này')
+  if (!canAccessHouse(chain.farm, chain.house, user, scope)) throw ForbiddenError('Không có quyền trên house này')
   return chain
 }
 
@@ -135,17 +159,19 @@ export async function assertZoneAccess(
   scope: AccessScope = 'farm',
 ): Promise<{ zone: IZone; house: IHouse; farm: IFarm }> {
   const chain = await findZoneChainOrThrow(zoneId)
-  // Quyền trên 1 Zone = quyền trên farm chứa nó (SRS v2.0.0 bỏ phạm vi theo Zone)
-  if (!canAccess(chain.farm, user, scope)) throw ForbiddenError('Không có quyền trên zone này')
+  // Quyền trên 1 Zone = quyền trên nhà chứa nó: farm (SRS v2.0.0 bỏ phạm vi theo Zone) hoặc thợ được giao nhà
+  if (!canAccessHouse(chain.farm, chain.house, user, scope)) throw ForbiddenError('Không có quyền trên zone này')
   return chain
 }
 
 /**
  * Farm user được phép xem — dùng chung cho list/scoping theo role (Alert/Analytics/Harvest).
- * Admin không thấy farm nào (Report 3 §2.4); Technician thấy mọi farm ở phạm vi `device`.
+ * Admin không thấy farm nào, trừ phạm vi `device` thì thấy mọi farm (Report 3 §2.4, FARM-FR-009).
+ * Farm Technician không có quyền cả farm nên rỗng; theo nhà thì dùng listAccessibleZoneIds/HouseIds.
  */
 export async function listAccessibleFarmIds(user: CurrentUser, scope: AccessScope = 'farm') {
-  if (scope === 'device' && user.role === 'TECHNICIAN') return (await Farm.find().select('_id').lean()).map(f => f._id)
+  if (user.role === 'FARM_TECHNICIAN') return []
+  if (user.role === 'ADMIN') return scope === 'device' ? (await Farm.find().select('_id').lean()).map(f => f._id) : []
   return (
     await Farm.find({ $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] })
       .select('_id')
@@ -159,14 +185,26 @@ export async function listAccessibleFarmIds(user: CurrentUser, scope: AccessScop
  * `zoneId` cụ thể để check — tránh trả về dữ liệu của farm khác (IDOR).
  */
 export async function listAccessibleZoneIds(user: CurrentUser, scope: AccessScope = 'farm') {
+  if (user.role === 'FARM_TECHNICIAN') return Zone.find({ house_id: { $in: await listAssignedHouseIds(user) } }).distinct('_id')
   const farmIds = await listAccessibleFarmIds(user, scope)
   return Zone.find({ farm_id: { $in: farmIds } }).distinct('_id')
 }
 
 /** House user được phép xem — liệt kê camera đếm chim khi không có `houseId` cụ thể (chống IDOR) */
 export async function listAccessibleHouseIds(user: CurrentUser, scope: AccessScope = 'farm') {
+  if (user.role === 'FARM_TECHNICIAN') return listAssignedHouseIds(user)
   const farmIds = await listAccessibleFarmIds(user, scope)
   return House.find({ farm_id: { $in: farmIds } }).distinct('_id')
+}
+
+/**
+ * AUTH-FR-013 — nhà được giao của 1 Farm Technician, chỉ ở farm người đó còn là thành viên thợ: bị gỡ
+ * khỏi farm thì mất quyền ngay cả khi lần gán còn sót.
+ */
+export async function listAssignedHouseIds(user: CurrentUser) {
+  if (user.role !== 'FARM_TECHNICIAN') return []
+  const farmIds = await Farm.find({ members: { $elemMatch: { user_id: user._id, role: 'FARM_TECHNICIAN' } } }).distinct('_id')
+  return House.find({ farm_id: { $in: farmIds }, 'technicians.user_id': user._id }).distinct('_id')
 }
 
 /** Mọi House thuộc Farm chưa xoá mềm — cùng phạm vi với listActiveZoneIds cho màn hình Admin */

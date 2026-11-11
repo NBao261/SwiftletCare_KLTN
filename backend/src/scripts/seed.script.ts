@@ -43,18 +43,23 @@ async function seed(): Promise<void> {
     logger.info(`[seed] User already exists: ${user.email}`)
   }
 
-  // ── User (Technician) — người đăng ký/kích hoạt thiết bị (FARM-FR-003) ────
+  // ── User (Farm Technician) — thợ của chủ farm, gán vào nhà chính ở dưới (AUTH-FR-013) ────
   let technician = await User.findOne({ email: 'tech@swiftletcare.dev' })
   if (!technician) {
     technician = await User.create({
       email: 'tech@swiftletcare.dev',
       password_hash: 'Test1234!',
-      full_name: 'Demo Technician',
-      role: 'TECHNICIAN',
+      full_name: 'Demo Farm Technician',
+      role: 'FARM_TECHNICIAN',
     })
-    logger.info(`[seed] Created technician: ${technician.email} (password: Test1234!)`)
+    logger.info(`[seed] Created farm technician: ${technician.email} (password: Test1234!)`)
+  } else if ((technician.role as string) === 'TECHNICIAN') {
+    // DB seed từ trước G-20: role Technician cũ
+    technician.role = 'FARM_TECHNICIAN'
+    await technician.save()
+    logger.info(`[seed] Converted ${technician.email} to FARM_TECHNICIAN`)
   } else {
-    logger.info(`[seed] Technician already exists: ${technician.email}`)
+    logger.info(`[seed] Farm technician already exists: ${technician.email}`)
   }
 
   // ── Farm ──────────────────────────────────────────────────────────────────
@@ -100,6 +105,16 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Created house: ${house._id}`)
   } else {
     logger.info(`[seed] House already exists: ${house._id}`)
+  }
+  if (!farm.members.some(m => String(m.user_id) === String(technician!._id))) {
+    farm.members.push({ user_id: technician._id, is_primary: false, role: 'FARM_TECHNICIAN' } as never)
+    await farm.save()
+    logger.info(`[seed] Added ${technician.email} to farm ${farm._id} as FARM_TECHNICIAN`)
+  }
+  if (!(house.technicians ?? []).some(t => String(t.user_id) === String(technician!._id))) {
+    house.technicians = [...(house.technicians ?? []), { user_id: technician._id, primary: true }]
+    await house.save()
+    logger.info(`[seed] Assigned ${technician.email} to house ${house._id} (primary)`)
   }
 
   // ── Zone ──────────────────────────────────────────────────────────────────

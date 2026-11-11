@@ -1,7 +1,11 @@
 import { describe, expect, it } from '@jest/globals'
-import type { Alert } from '@/types'
+import type { Alert, RelayName, SensorNode } from '@/types'
 import {
   buildPumpConfirmMessage,
+  countManualRelays,
+  getManualRelays,
+  getRelayExpiry,
+  getRelayMode,
   clampOverrideDuration,
   formatClockTime,
   formatDuration,
@@ -123,5 +127,61 @@ describe('getRelayControlErrorMessage', () => {
     expect(getRelayControlErrorMessage(apiError(422, 'VALIDATION_ERROR'), false)).toBe(
       'Thời lượng không hợp lệ: bật bơm tối đa 30 phút, còn lại tối đa 24 giờ',
     )
+  })
+})
+
+const RELAYS: RelayName[] = ['misting', 'ventilation', 'speaker']
+
+function makeNode(overrides: Partial<SensorNode> = {}): SensorNode {
+  return {
+    _id: 'node-1',
+    device_id: 'SC-001',
+    zone_id: 'zone-1',
+    firmware_version: '1.6.0',
+    status: 'ONLINE',
+    relay_states: { misting: false, speaker: false, ventilation: false },
+    control_mode: 'AUTO',
+    ...overrides,
+  }
+}
+
+describe('getRelayMode / getRelayExpiry (BR-20)', () => {
+  it('đọc chế độ và hạn riêng của từng relay', () => {
+    const node = makeNode({
+      control_mode: 'MANUAL',
+      override_expiry: '2026-10-30T10:15:00.000Z',
+      relays: {
+        misting: { mode: 'MANUAL', override_expiry: '2026-10-30T10:15:00.000Z' },
+        ventilation: { mode: 'MANUAL', override_expiry: '2026-10-30T11:00:00.000Z' },
+        speaker: { mode: 'AUTO' },
+      },
+    })
+    expect(getRelayMode(node, 'misting')).toBe('MANUAL')
+    expect(getRelayMode(node, 'speaker')).toBe('AUTO')
+    expect(getRelayExpiry(node, 'ventilation')).toBe('2026-10-30T11:00:00.000Z')
+    expect(getRelayExpiry(node, 'speaker')).toBeNull()
+  })
+
+  it('controller cũ chưa gửi relays thì dùng chế độ và hạn chung', () => {
+    const node = makeNode({ control_mode: 'MANUAL', override_expiry: '2026-10-30T10:30:00.000Z' })
+    expect(getRelayMode(node, 'speaker')).toBe('MANUAL')
+    expect(getRelayExpiry(node, 'speaker')).toBe('2026-10-30T10:30:00.000Z')
+  })
+
+  it('relay MANUAL do thiết bị tự báo không có hạn thì trả null', () => {
+    const node = makeNode({ control_mode: 'MANUAL', override_expiry: '2026-10-30T10:30:00.000Z', relays: { misting: { mode: 'MANUAL' } } })
+    expect(getRelayExpiry(node, 'misting')).toBeNull()
+  })
+})
+
+describe('getManualRelays / countManualRelays', () => {
+  it('đếm theo relay, không theo controller', () => {
+    const first = makeNode({
+      control_mode: 'MANUAL',
+      relays: { misting: { mode: 'MANUAL' }, ventilation: { mode: 'MANUAL' }, speaker: { mode: 'AUTO' } },
+    })
+    const second = makeNode({ _id: 'node-2', relays: { misting: { mode: 'AUTO' } } })
+    expect(getManualRelays(first, RELAYS)).toEqual(['misting', 'ventilation'])
+    expect(countManualRelays([first, second], RELAYS)).toBe(2)
   })
 })

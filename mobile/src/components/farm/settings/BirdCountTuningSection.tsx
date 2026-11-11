@@ -6,6 +6,7 @@ import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useUpdateBirdCountTuning } from '@/hooks/farm/useUpdateBirdCountTuning'
 import { useAuthStore } from '@/stores/authStore'
 import type { BirdCountTuning, House } from '@/types'
+import { getBirdCountTuningLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { getSettingsSectionId } from '@/utils/settingsSection.utils'
 import { BIRD_COUNT_TUNING_RULES } from '@/utils/settingsValidation.utils'
@@ -17,11 +18,6 @@ interface BirdCountTuningSectionProps {
   house: House
   editor: SectionEditor
   onSaved: (message: string) => void
-}
-
-// Tên và đơn vị của tham số đếm chim (schema BirdCountTuning trong api-spec)
-function getBirdCountTuningLabel(): { label: string; unit: string } {
-  return { label: t('Tỷ lệ về tổ giảm'), unit: '%' }
 }
 
 // Mục "Mức giảm tỷ lệ về tổ" của cả nhà (EXPERT-FR-008): giảm quá mức này so với kỳ trước thì báo LOW_RETURN_RATE.
@@ -37,15 +33,9 @@ export function BirdCountTuningSection({ house, editor, onSaved }: BirdCountTuni
       id={getSettingsSectionId('bird-count')}
       icon={BirdIcon}
       title={t('Mức giảm tỷ lệ về tổ')}
-      subtitle={t('Giảm quá mức này so với kỳ trước thì cảnh báo')}
+      subtitle={t('Giảm quá mức này so với 7 ngày trước thì cảnh báo')}
       scopeLabel={t('Nhà')}
-      footerNote={
-        canEdit
-          ? hasExpert === false
-            ? t('Farm chưa có chuyên gia nên bạn chỉnh thay. Áp dụng cho cả nhà')
-            : t('Chỉ chuyên gia sửa được. Áp dụng cho cả nhà')
-          : t('Do chuyên gia chỉnh')
-      }
+      footerNote={canEdit ? t('Áp dụng cho cả nhà') : undefined}
       keys={BIRD_COUNT_KEYS}
       rules={BIRD_COUNT_TUNING_RULES}
       values={house.bird_count_tuning}

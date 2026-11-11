@@ -15,6 +15,7 @@ import { useMarkNotificationRead } from '@/hooks/notification/useMarkNotificatio
 import { usePalette } from '@/hooks/theme/usePalette'
 import { getIsoWeekNumber } from '@/utils/date.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 // Chiều cao một dòng chữ body — khung xương lúc tải thay đúng chỗ dòng nội dung
 const REPORT_LINE_HEIGHT = 20
@@ -103,6 +104,7 @@ export function NewReportCard() {
     router.navigate({
       pathname: '/(tabs)/analytics',
       params: {
+        returnTo: RETURN_TO_HOME,
         tab: 'reports',
         houseId: houseId ?? '',
         zoneId: report.zone_id,

@@ -1,4 +1,17 @@
-import type { AlertSeverity, AlertStatus, AlertType, ControlMode, DetectionTuning, DeviceStatus, FuzzyTuning, NestType, RelayName, Role } from '@/types'
+import type {
+  AlertSeverity,
+  AlertStatus,
+  AlertType,
+  BirdCountTuning,
+  ControlMode,
+  DetectionTuning,
+  DeviceStatus,
+  FuzzyTuning,
+  NestType,
+  RelayName,
+  Role,
+  Thresholds,
+} from '@/types'
 import type { SensorMetric, ThresholdMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
 import { getSeverityLevel, getSeverityLevelLabel } from '@/utils/severity.utils'
@@ -111,12 +124,12 @@ const CONTROL_MODE_LABELS: Record<ControlMode, string> = {
   MANUAL: 'Điều khiển tay',
 }
 
-// Chế độ của controller: AUTO theo bộ điều khiển mờ, MANUAL đang ép tay (ENV-FR-017)
+// Chế độ của controller: AUTO theo bộ điều khiển fuzzy, MANUAL đang ép tay (ENV-FR-017)
 export function getControlModeLabel(mode: ControlMode): string {
   return t(CONTROL_MODE_LABELS[mode])
 }
 
-// Tên và đơn vị hệ số bộ điều khiển mờ (ENV-FR-021), theo mô tả FuzzyTuning trong api-spec
+// Tên và đơn vị hệ số bộ điều khiển fuzzy (ENV-FR-021), theo mô tả FuzzyTuning trong api-spec
 const FUZZY_TUNING_LABELS: Record<keyof FuzzyTuning, { label: string; unit: string }> = {
   fuzzy_humidity_band: { label: 'Dải chuyển tiếp độ ẩm', unit: '%' },
   fuzzy_temp_band: { label: 'Dải nóng', unit: '°C' },
@@ -144,11 +157,37 @@ export function getDetectionTuningLabel(key: keyof DetectionTuning): { label: st
   return { label: t(label), unit: t(unit) }
 }
 
+// Tên và đơn vị từng ngưỡng của zone (ENV-FR-006), cho lịch sử thay đổi: chỉ số + thấp nhất / cao nhất / tối đa
+const THRESHOLD_KEY_LABELS: Record<keyof Thresholds, { metric: SensorMetric; label: string }> = {
+  temp_min: { metric: 'temperature', label: 'Nhiệt độ thấp nhất' },
+  temp_max: { metric: 'temperature', label: 'Nhiệt độ cao nhất' },
+  humidity_min: { metric: 'humidity', label: 'Độ ẩm thấp nhất' },
+  humidity_max: { metric: 'humidity', label: 'Độ ẩm cao nhất' },
+  light_max: { metric: 'light', label: 'Ánh sáng tối đa' },
+  nh3_max: { metric: 'nh3', label: 'NH3 tối đa' },
+  co2_max: { metric: 'co2', label: 'CO2 tối đa' },
+}
+
+export function getThresholdKeyLabel(key: keyof Thresholds): { label: string; unit: string } {
+  const { metric, label } = THRESHOLD_KEY_LABELS[key]
+  return { label: t(label), unit: getMetricUnit(metric) }
+}
+
+// Tên và đơn vị tham số đếm chim của nhà (schema BirdCountTuning trong api-spec, EXPERT-FR-008)
+const BIRD_COUNT_TUNING_LABELS: Record<keyof BirdCountTuning, { label: string; unit: string }> = {
+  return_rate_drop_pct: { label: 'Tỷ lệ về tổ giảm', unit: '%' },
+}
+
+export function getBirdCountTuningLabel(key: keyof BirdCountTuning): { label: string; unit: string } {
+  const { label, unit } = BIRD_COUNT_TUNING_LABELS[key]
+  return { label: t(label), unit }
+}
+
 const ROLE_LABELS: Record<Role, string> = {
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ trại',
   DOMAIN_EXPERT: 'Chuyên gia',
-  TECHNICIAN: 'Kỹ thuật viên',
+  FARM_TECHNICIAN: 'Kỹ thuật viên nhà yến',
 }
 
 // Tên vai trò của người dùng

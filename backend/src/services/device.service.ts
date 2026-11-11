@@ -20,7 +20,7 @@ import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogFromDevice, closeRelayOverrideLog,
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
 } from '@/services/relayOverrideLog.service'
-import { AppError, NotFoundError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
+import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { AlertType, ControlMode, RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
 
@@ -112,13 +112,12 @@ async function retireDeviceId(Model: typeof SensorNode, nodeId: unknown, deviceI
 }
 
 /**
- * FARM-FR-009, Report 3 §2.4 ghi chú ² — Technician thao tác trên farm mà không là thành viên, nên
- * mỗi lần đăng ký, dời, gỡ, khôi phục, thay hay gửi lệnh từ xa đều báo trong app cho các Farm Owner
- * của farm (cùng danh sách người nhận cảnh báo, không có Domain Expert). Không throw: thông báo
- * hỏng không được làm hỏng thao tác thiết bị.
+ * FARM-FR-009, 013 — thao tác thiết bị của người không phải Farm Owner (Administrator gửi lệnh từ xa,
+ * Farm Technician khởi động lại) được báo trong app cho các Farm Owner của farm (cùng danh sách người
+ * nhận cảnh báo, không có Domain Expert). Không throw: thông báo hỏng không được làm hỏng thao tác thiết bị.
  */
 async function notifyOwnersOfTechnicianAction(user: CurrentUser, farmId: unknown, message: UserNotification): Promise<void> {
-  if (user.role !== 'TECHNICIAN') return
+  if (user.role !== 'ADMIN' && user.role !== 'FARM_TECHNICIAN') return
   try {
     const owners = await findRecipients(String(farmId))
     await Promise.all(owners.map(o => notifyUser(String(o._id), message)))
@@ -895,6 +894,10 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user, 'device')
+  // FARM-FR-013 — Administrator gửi mọi lệnh; Farm Owner, Farm Technician chỉ khởi động lại
+  if (user.role !== 'ADMIN' && input.command !== 'RESTART') {
+    throw ForbiddenError('Chỉ Administrator gửi được lệnh đẩy cấu hình hoặc cập nhật firmware — Farm Owner và Farm Technician chỉ khởi động lại thiết bị')
+  }
   // Validate nội dung lệnh trước trạng thái thiết bị: URL firmware sai thì phải
   // báo đúng lý do đó, không lẫn với "thiết bị chưa ONLINE".
   if (input.command === 'OTA') {
@@ -951,8 +954,9 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     deviceId: node.device_id, command: input.command,
     ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
   })
+  const actor = user.role === 'ADMIN' ? 'Quản trị viên' : 'Kỹ thuật viên'
   await notifyOwnersOfTechnicianAction(user, chain.farm._id, {
-    title: input.command === 'OTA' ? 'Kỹ thuật viên đã cập nhật firmware' : 'Kỹ thuật viên đã gửi lệnh tới thiết bị',
+    title: input.command === 'OTA' ? `${actor} đã cập nhật firmware` : `${actor} đã gửi lệnh tới thiết bị`,
     body: input.command === 'OTA'
       ? `${node.device_id} đang được cập nhật lên firmware ${input.ota?.version}.`
       : `Lệnh ${input.command} đã được gửi tới ${node.device_id} ở khu vực "${chain.zone.name}".`,
@@ -986,8 +990,9 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   if (!camera) throw NotFoundError('Không tìm thấy camera')
   assertInService(camera)
   const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
+  // VISION-FR-018 — Farm Technician vẽ được vòng ở nhà được giao (assertHouseAccess đã kiểm nhà);
   // BR-22 — Farm Owner chỉ vẽ thay khi farm chưa có chuyên gia
-  await assertExpertDecision(farm, user)
+  if (user.role !== 'FARM_TECHNICIAN') await assertExpertDecision(farm, user)
 
   const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
   const after = ringOf(ring)

@@ -3,8 +3,9 @@ import { Types } from 'mongoose'
 import { HarvestBatch, IHarvestBatch } from '@/models/harvestBatch.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { averageReturnRate, houseDailyCounts, vnDate } from '@/services/birdCount.service'
-import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
-import { NotFoundError } from '@/utils/appError.util'
+import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds, listAccessibleZoneIds } from '@/utils/farmAccess.util'
+import { logAction } from '@/services/auditLog.service'
+import { ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, NestType } from '@/types'
 
 /** HARVEST-FR-002 — cửa sổ lấy trung bình môi trường trước ngày thu hoạch */
@@ -83,9 +84,14 @@ export interface CreateHarvestInput {
   product_images?: string[]
 }
 
-/** HARVEST-FR-001..004 — tạo đợt thu hoạch, tự gắn ảnh chụp môi trường/đàn chim + trace_code (mã định danh mẻ) */
+/**
+ * HARVEST-FR-001..004 — tạo đợt thu hoạch, tự gắn ảnh chụp môi trường/đàn chim + trace_code (mã định danh mẻ).
+ * Farm Technician chỉ ở zone của nhà được giao (assertZoneAccess) và lô chờ Farm Owner xác nhận (DRAFT);
+ * lô của Farm Owner xác nhận ngay (HARVEST-FR-006).
+ */
 export async function createHarvest(user: CurrentUser, input: CreateHarvestInput): Promise<IHarvestBatch> {
   const { zone, house } = await assertZoneAccess(input.zone_id, user)
+  const confirmed = user.role === 'FARM_OWNER'
 
   const harvestDate = new Date(input.harvest_date)
   const [envSnapshot, flockSnapshot] = await Promise.all([
@@ -105,13 +111,20 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
     product_images: input.product_images ?? [],
     env_snapshot:   envSnapshot,
     flock_snapshot: flockSnapshot,
-    status: 'DRAFT',
+    status: confirmed ? 'CONFIRMED' : 'DRAFT',
+    ...(confirmed && { confirmed_by: user._id, confirmed_at: new Date() }),
   })
 }
 
 export async function listHarvests(user: CurrentUser, farmId?: string) {
   // farmId do client gửi phải qua kiểm quyền — trước đây gán thẳng vào filter nên
   // đọc được mẻ thu hoạch của farm bất kỳ chỉ bằng cách đoán id (IDOR)
+  // Farm Technician: chỉ lô ở zone của các nhà được giao (AUTH-FR-013), farmId chỉ thu hẹp thêm
+  if (user.role === 'FARM_TECHNICIAN') {
+    const filter: Record<string, unknown> = { zone_id: { $in: await listAccessibleZoneIds(user) } }
+    if (farmId) filter.farm_id = farmId
+    return HarvestBatch.find(filter).sort({ harvest_date: -1 }).lean()
+  }
   if (farmId) await assertFarmAccess(farmId, user)
   const filter: Record<string, unknown> = { farm_id: farmId ?? { $in: await listAccessibleFarmIds(user) } }
   return HarvestBatch.find(filter).sort({ harvest_date: -1 }).lean()
@@ -120,8 +133,18 @@ export async function listHarvests(user: CurrentUser, farmId?: string) {
 export async function getHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
   const batch = await HarvestBatch.findById(id)
   if (!batch || batch.is_deleted) throw NotFoundError('Không tìm thấy đợt thu hoạch')
-  await assertFarmAccess(String(batch.farm_id), user)
+  // Farm Technician xem lô theo nhà được giao, các role khác theo farm
+  if (user.role === 'FARM_TECHNICIAN') await assertZoneAccess(String(batch.zone_id), user)
+  else await assertFarmAccess(String(batch.farm_id), user)
   return batch
+}
+
+/** HARVEST-FR-005 — Farm Technician chỉ sửa, xoá lô DRAFT do chính mình nhập */
+function assertTechnicianOwnDraft(batch: IHarvestBatch, user: CurrentUser): void {
+  if (user.role !== 'FARM_TECHNICIAN') return
+  if (batch.status !== 'DRAFT' || String(batch.created_by) !== user._id) {
+    throw ForbiddenError('Farm Technician chỉ sửa hoặc xoá lô chưa xác nhận do chính mình nhập')
+  }
 }
 
 /**
@@ -133,6 +156,7 @@ export async function updateHarvest(
   id: string, user: CurrentUser, updates: Partial<CreateHarvestInput>,
 ): Promise<IHarvestBatch> {
   const batch = await getHarvest(id, user)
+  assertTechnicianOwnDraft(batch, user)
   if (updates.nest_count !== undefined) batch.nest_count = updates.nest_count
   if (updates.weight_grams !== undefined) batch.weight_grams = updates.weight_grams
   if (updates.nest_type !== undefined) batch.nest_type = updates.nest_type
@@ -143,6 +167,25 @@ export async function updateHarvest(
 
 export async function removeHarvest(id: string, user: CurrentUser): Promise<void> {
   const batch = await getHarvest(id, user)
+  assertTechnicianOwnDraft(batch, user)
   batch.is_deleted = true
   await batch.save()
+}
+
+/**
+ * HARVEST-FR-006 — Farm Owner của farm xác nhận lô do Farm Technician nhập: DRAFT → CONFIRMED; đã xác nhận
+ * → 409. Đóng chu kỳ thu hoạch khi xác nhận (HARVEST-FR-007) làm ở G-26.
+ */
+export async function confirmHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
+  const batch = await getHarvest(id, user)
+  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner xác nhận lô thu hoạch')
+  if (batch.status === 'CONFIRMED') throw ConflictError('Lô này đã được xác nhận')
+  batch.status = 'CONFIRMED'
+  batch.confirmed_by = user._id as never
+  batch.confirmed_at = new Date()
+  await batch.save()
+  await logAction(user._id, 'HARVEST_CONFIRMED', 'harvest_batch', String(batch._id), {
+    created_by: String(batch.created_by),
+  }, { farmId: String(batch.farm_id) })
+  return batch
 }

@@ -248,7 +248,7 @@ const CSV_TEXT: Record<ReasonLang, {
     status: { GOOD: 'Tốt', WATCH: 'Theo dõi', ACTION: 'Cần xử lý', INSUFFICIENT_DATA: 'Thiếu dữ liệu' },
     level: { NORMAL: 'Bình thường', SLIGHT: 'Nhẹ', CLEAR: 'Rõ' },
     notAssessed: 'Không đánh giá',
-    role: { FARM_OWNER: 'Chủ trại', DOMAIN_EXPERT: 'Chuyên gia' },
+    role: { FARM_OWNER: 'Chủ trại', DOMAIN_EXPERT: 'Chuyên gia', FARM_TECHNICIAN: 'Kỹ thuật viên' },
     skipped: 'Bỏ qua',
   },
   en: {
@@ -264,7 +264,7 @@ const CSV_TEXT: Record<ReasonLang, {
     status: { GOOD: 'Good', WATCH: 'Watch', ACTION: 'Action needed', INSUFFICIENT_DATA: 'Insufficient data' },
     level: { NORMAL: 'Normal', SLIGHT: 'Slight', CLEAR: 'Clear' },
     notAssessed: 'Not assessed',
-    role: { FARM_OWNER: 'Farm Owner', DOMAIN_EXPERT: 'Domain Expert' },
+    role: { FARM_OWNER: 'Farm Owner', DOMAIN_EXPERT: 'Domain Expert', FARM_TECHNICIAN: 'Farm Technician' },
     skipped: 'Skipped',
   },
 }

@@ -18,10 +18,10 @@ const FarmOwnerHealthPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealt
 const FarmOwnerHealthReportPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthReportPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
-/** /farms dùng chung URL nhưng Technician có trang riêng (chỉ cấu trúc + thiết bị trong vùng, không sản lượng) */
+/** /farms dùng chung URL nhưng Farm Technician có trang riêng (chỉ cấu trúc + thiết bị nhà được giao) */
 function FarmsIndexRoute() {
-  const isTechnician = usePermission('TECHNICIAN')
-  return isTechnician ? <TechnicianFarmsPage /> : <FarmOwnerFarmsPage />
+  const isFarmTechnician = usePermission('FARM_TECHNICIAN')
+  return isFarmTechnician ? <TechnicianFarmsPage /> : <FarmOwnerFarmsPage />
 }
 
 export const farmOwnerRoutes = (

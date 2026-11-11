@@ -29,6 +29,14 @@ export function readApiError(error: unknown): ApiErrorInfo {
   }
 }
 
+// Request không nhận được phản hồi nào từ máy chủ (máy chủ tắt, sai địa chỉ, quá thời gian chờ) — không tính request bị huỷ
+// (rời màn, React Query huỷ) và lỗi có status (máy chủ vẫn trả lời, dù là 4xx/5xx). Đọc theo cấu trúc như readApiError
+export function isServerUnreachableError(error: unknown): boolean {
+  const axiosLike = error as { isAxiosError?: boolean; response?: unknown; code?: string } | null
+  if (!axiosLike?.isAxiosError || axiosLike.response) return false
+  return axiosLike.code !== 'ERR_CANCELED'
+}
+
 // Thời gian chờ đọc được: dưới 1 phút ghi giây, từ 1 phút làm tròn lên theo phút
 export function formatWaitTime(seconds: number): string {
   if (seconds < 60) return t('{count} giây', { count: Math.max(1, Math.ceil(seconds)) })

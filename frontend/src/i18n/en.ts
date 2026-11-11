@@ -104,8 +104,8 @@ const en: Record<string, string> = {
   'Không tải được nhật ký': 'Could not load the logs',
   'Chưa cập nhật số điện thoại': 'No phone number yet',
   'Đồng sở hữu': 'Co-owner',
-  'Quản trị viên và kỹ thuật viên': 'Administrators and technicians',
   'Chủ nhà yến và chuyên gia': 'Swiftlet farm owners and experts',
+  'Chủ nhà yến, chuyên gia và kỹ thuật viên nhà yến': 'Swiftlet farm owners, experts and farm technicians',
   'Hoạt động': 'Active',
   'Đã khoá': 'Locked',
   'Chờ xoá': 'Pending deletion',
@@ -178,7 +178,6 @@ const en: Record<string, string> = {
   // Chỉ số hiệu năng
   'Biểu đồ giám sát hiệu năng giải quyết sự cố và tỷ lệ cam kết chất lượng dịch vụ': 'Incident resolution performance and service-level commitment chart',
   'Thời gian xử lý TB': 'Avg. resolution time',
-  'Technician quá tải': 'Overloaded technicians',
   'Ngày đạt mục tiêu': 'Days on target',
   'Nhật ký hoạt động gần đây': 'Recent activity',
   'Đăng nhập và thay đổi tài khoản mới nhất': 'Latest logins and account changes',
@@ -268,7 +267,7 @@ const en: Record<string, string> = {
   'Cảnh báo của thiết bị': 'Device alerts',
   'Đo lần cuối trước khi mất kết nối': 'Last reading before the device went offline',
   'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.': 'No devices match the filters — try other filters or keywords.',
-  'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi Technician kích hoạt qua Web Console Onboarding.': 'No devices yet — devices appear here once a Technician activates them via Web Console Onboarding.',
+  'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi chủ nhà yến đăng ký từ nhãn QR.': 'No devices yet — devices appear here once a Farm Owner registers them from their QR label.',
   'Không tải được trạng thái thiết bị': 'Could not load device status',
 
   // ── Màn khác ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -324,8 +323,6 @@ const en: Record<string, string> = {
   // Tạo tài khoản
   'Tạo tài khoản': 'Create account',
   'Tạo tài khoản kỹ thuật viên': 'Create technician account',
-  'Đã tạo tài khoản kỹ thuật viên': 'Technician account created',
-  'Kỹ thuật viên thấy thiết bị và cảnh báo thiết bị của mọi trang trại': 'Technicians see the devices and device alerts of every farm',
   'VD: Nguyễn Văn An': 'E.g. John Smith',
   'Số điện thoại': 'Phone number',
   'Mật khẩu': 'Password',
