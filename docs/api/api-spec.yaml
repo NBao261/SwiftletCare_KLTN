@@ -1156,7 +1156,7 @@ paths:
                           properties:
                             _id: { type: string }
                             invited_email: { type: string, format: email }
-                            invited_role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT] }
+                            invited_role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN] }
                             status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED] }
                             expires_at: { type: string, format: date-time }
                             responded_at: { type: string, format: date-time }
@@ -4007,7 +4007,7 @@ paths:
   /health-reports:
     get:
       tags: [HealthReports]
-      summary: "Danh sách báo cáo sức khỏe theo nhà yến (EXPERT-FR-005) — FARM_OWNER/DOMAIN_EXPERT (mọi route /health-reports)"
+      summary: "Danh sách báo cáo sức khỏe theo nhà yến (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao (Report 3 §2.4)"
       description: |
         Báo cáo theo nhà yến, mỗi Zone một mục (G-11 phần b). Job tạo theo lịch BR-33: `DAILY` ngay sau
         đánh giá ngày (sau kiểm tra tỷ lệ chim về 19:15), `WEEKLY` thứ Hai 06:00 (7 ngày trước đó),
@@ -4023,7 +4023,7 @@ paths:
       parameters:
         - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Kiểu cũ: báo cáo tuần của 1 Zone, trả ZoneHealthReport" }
         - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId (hoặc zoneId kiểu cũ) là bắt buộc (400 nếu thiếu)" }
-        - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
+        - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm; Farm Technician: chỉ các nhà được giao" }
         - { name: kind, in: query, schema: { type: string, enum: [DAILY, WEEKLY, MONTHLY, CUSTOM] } }
         - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN — báo cáo có kỳ kết thúc từ ngày này" }
         - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN — báo cáo có kỳ bắt đầu tới ngày này" }
@@ -4053,7 +4053,7 @@ paths:
         "422": { $ref: "#/components/responses/ValidationError" }
     post:
       tags: [HealthReports]
-      summary: "Tạo báo cáo theo yêu cầu cho khoảng bất kỳ tới 31 ngày (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT"
+      summary: "Tạo báo cáo theo yêu cầu cho khoảng bất kỳ tới 31 ngày (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN ở nhà được giao"
       description: |
         Tạo và lưu báo cáo `CUSTOM` của 1 nhà cho các ngày `from`…`to` (giờ VN, tính cả 2 đầu). Cùng nhà và
         cùng khoảng đã có báo cáo `CUSTOM` thì tính lại và trả bản đó (200), không tạo bản thứ hai. Sẽ thay
@@ -4089,7 +4089,7 @@ paths:
     get:
       tags: [HealthReports]
       deprecated: true
-      summary: "(Kiểu cũ) Số liệu sức khỏe Zone theo khoảng bất kỳ, không lưu (EXPERT-FR-005)"
+      summary: "(Kiểu cũ) Số liệu sức khỏe Zone theo khoảng bất kỳ, không lưu (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT"
       description: "Giữ cho các màn hiện có; báo cáo theo nhà theo yêu cầu dùng POST /health-reports."
       parameters:
         - { name: zoneId, in: query, required: true, schema: { type: string } }
@@ -4111,7 +4111,7 @@ paths:
   /health-reports/days:
     get:
       tags: [HealthReports]
-      summary: "Trạng thái sức khỏe các ngày của nhà yến (ANALYTICS-FR-012, BR-31) — FARM_OWNER, DOMAIN_EXPERT"
+      summary: "Trạng thái sức khỏe các ngày của nhà yến (ANALYTICS-FR-012, BR-31) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao (farmId: chỉ các nhà được giao)"
       description: |
         Mỗi nhà mỗi ngày (giờ VN) một bản ghi, do job đánh giá tạo sau kiểm tra tỷ lệ chim về (19:15,
         BR-21) và tính lại khi dữ liệu trễ hoặc kết luận cảnh báo đổi trong 7 ngày (SM-17). Mới nhất trước.
@@ -4142,7 +4142,7 @@ paths:
   /health-reports/days.csv:
     get:
       tags: [HealthReports]
-      summary: "CSV chỉ số theo ngày (EXPERT-FR-013) — FARM_OWNER, DOMAIN_EXPERT"
+      summary: "CSV chỉ số theo ngày (EXPERT-FR-013) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao"
       description: |
         1 dòng mỗi nhà × ngày: tên nhà, ngày, trạng thái chấm của người gọi, giá trị và mức của 4 chỉ số,
         tỷ lệ chim về, trạng thái, lý do, điểm của từng người chấm (tên, vai trò), thời tiết. Không có id
@@ -4186,11 +4186,11 @@ paths:
   /health-reports/days/{dayId}/rating:
     post:
       tags: [HealthReports]
-      summary: "Chấm trạng thái ngày theo quan sát của mình (EXPERT-FR-012) — chỉ người chấm: FARM_OWNER"
+      summary: "Chấm trạng thái ngày theo quan sát của mình (EXPERT-FR-012) — chỉ người chấm: FARM_OWNER, FARM_TECHNICIAN của nhà"
       description: |
         **Người chấm (BR-31, Report 3 4.2.0):** Farm Owner chấm những ngày có mặt ở nhà; Farm Technician
-        của nhà chấm mỗi ngày (thêm cùng vai `FARM_TECHNICIAN`, G-20). Domain Expert và Administrator nhận
-        403: chuyên gia xem các ngày lệch thay vì chấm (`GET /health-reports/disagreements`).
+        được giao nhà chấm mỗi ngày (nhà khác hoặc đã bị gỡ khỏi nhà → 403, AUTH-FR-013). Domain Expert và
+        Administrator nhận 403: chuyên gia xem các ngày lệch thay vì chấm (`GET /health-reports/disagreements`).
         Điểm và ảnh chụp đánh giá (`current_status`, `current_reasons` và mức từng nguồn lúc ghi) được lưu
         trong một lệnh ghi, rồi mới trả ngày đầy đủ. Ảnh chụp không bao giờ đổi; NFR-14 chỉ dùng ảnh chụp.
         Mỗi người chấm riêng; chấm được tới hết 7 ngày sau ngày đó (Report 3 §4.5). Ghi audit
@@ -4224,9 +4224,9 @@ paths:
   /health-reports/days/{dayId}/skip:
     post:
       tags: [HealthReports]
-      summary: "Bỏ qua chấm ngày này (EXPERT-FR-012, BR-31) — chỉ người chấm: FARM_OWNER"
+      summary: "Bỏ qua chấm ngày này (EXPERT-FR-012, BR-31) — chỉ người chấm: FARM_OWNER, FARM_TECHNICIAN của nhà"
       description: |
-        Farm Owner bỏ qua những ngày không ra nhà yến. Domain Expert và Administrator nhận 403. Hiện trạng thái cho người gọi; lần bỏ qua không tính vào NFR-14 (SM-18 `PENDING → SKIPPED`).
+        Farm Owner bỏ qua những ngày không ra nhà yến (Farm Technician cũng bỏ qua được). Domain Expert và Administrator nhận 403. Hiện trạng thái cho người gọi; lần bỏ qua không tính vào NFR-14 (SM-18 `PENDING → SKIPPED`).
         Ghi audit `HEALTH_DAY_SKIPPED`.
       parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
       responses:
@@ -4246,7 +4246,7 @@ paths:
   /health-reports/days/{dayId}/rating/note:
     patch:
       tags: [HealthReports]
-      summary: "Thêm ghi chú vào điểm đã chấm (SM-18 RATED → RATED) — điểm không đổi; chỉ người chấm: FARM_OWNER"
+      summary: "Thêm ghi chú vào điểm đã chấm (SM-18 RATED → RATED) — điểm không đổi; chỉ người chấm: FARM_OWNER, FARM_TECHNICIAN của nhà"
       parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -4281,15 +4281,15 @@ paths:
         khớp kèm khoảng tin cậy Wilson 95 %, kappa Cohen trọng số tuyến tính, AC1 của Gwet, ma trận nhầm
         lẫn, tỷ lệ báo động giả của trạng thái gộp và của từng nguồn riêng (mức NORMAL/SLIGHT/CLEAR quy ra
         GOOD/WATCH/ACTION). Ảnh chụp `INSUFFICIENT_DATA` đếm riêng, không vào độ khớp. Ngày người gọi còn
-        `PENDING` bị bỏ ra (BR-31). Chỉ tính điểm của người chấm (BR-31: Farm Owner, sau G-20 thêm Farm
-        Technician); điểm Domain Expert chấm trước Report 3 4.2.0 vẫn hiện trong ngày nhưng không tính.
+        `PENDING` bị bỏ ra (BR-31). Chỉ tính điểm của người chấm (BR-31: Farm Owner, Farm Technician);
+        Farm Technician không xem độ khớp (403); điểm Domain Expert chấm trước Report 3 4.2.0 vẫn hiện trong ngày nhưng không tính.
         `ratings` liệt kê từng cặp để mọi con số tính lại được. Khoảng tối đa 366 ngày.
       parameters:
         - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
         - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
         - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định to − 6 ngày" }
         - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN; mặc định hôm nay" }
-        - { name: role, in: query, schema: { type: string, enum: [FARM_OWNER] }, description: "Chỉ điểm của vai người chấm này (G-20 thêm FARM_TECHNICIAN); vai khác → 422" }
+        - { name: role, in: query, schema: { type: string, enum: [FARM_OWNER, FARM_TECHNICIAN] }, description: "Chỉ điểm của vai người chấm này; vai khác → 422" }
       responses:
         "200":
           description: OK
@@ -4313,7 +4313,7 @@ paths:
         có ít nhất một điểm `RATED` của người chấm khác trạng thái trong ảnh chụp lúc chấm; ảnh chụp
         `INSUFFICIENT_DATA` và điểm Domain Expert chấm trước Report 3 4.2.0 không tính. Mới nhất trước. Người
         gọi không phải người chấm nên thấy đủ trạng thái, lý do, chỉ số. Farm Owner ở farm có chuyên gia còn
-        hoạt động nhận 403 (BR-22); Farm Technician không có quyền (G-20). Khoảng tối đa 366 ngày.
+        hoạt động nhận 403 (BR-22); Farm Technician nhận 403 (Report 3 §2.4). Khoảng tối đa 366 ngày.
       parameters:
         - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
         - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
@@ -4335,7 +4335,7 @@ paths:
   /health-reports/{id}:
     get:
       tags: [HealthReports]
-      summary: "Chi tiết 1 báo cáo theo nhà kèm các mục Zone, trạng thái ngày và kết luận (EXPERT-FR-005, 013)"
+      summary: "Chi tiết 1 báo cáo theo nhà kèm các mục Zone, trạng thái ngày và kết luận (EXPERT-FR-005, 013) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN ở nhà được giao"
       description: |
         Đủ số liệu để web dựng PDF bằng `jspdf` (EXPERT-FR-013: PDF có đúng số trong ứng dụng; không có id
         nội bộ trong file — client không in các trường `_id`). **BR-31:** `days` dựng lúc đọc từ trạng thái
@@ -4957,7 +4957,7 @@ components:
             properties:
               user_id: { type: string }
               is_primary: { type: boolean }
-              role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT], description: "FARM_OWNER = đồng sở hữu; DOMAIN_EXPERT = chuyên gia nuôi yến, cả farm (v2.0.0)" }
+              role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN], description: "FARM_OWNER = đồng sở hữu; DOMAIN_EXPERT = chuyên gia nuôi yến, cả farm (v2.0.0); FARM_TECHNICIAN = thợ, chỉ các nhà được giao (AUTH-FR-013)" }
               joined_at: { type: string, format: date-time }
               full_name: { type: string, description: "Chỉ có ở GET /farms/:id" }
               email: { type: string, format: email, description: "Chỉ có ở GET /farms/:id" }
@@ -4971,7 +4971,7 @@ components:
         _id: { type: string }
         farm_id: { type: string }
         invited_email: { type: string, format: email }
-        invited_role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT] }
+        invited_role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN] }
         invited_by: { type: string }
         token: { type: string }
         status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED] }
@@ -5281,7 +5281,7 @@ components:
             properties:
               _id: { type: string }
               by: { type: object, properties: { _id: { type: string }, full_name: { type: string, nullable: true } } }
-              role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT], description: "DOMAIN_EXPERT chỉ còn ở điểm chấm trước Report 3 4.2.0" }
+              role: { type: string, enum: [FARM_OWNER, FARM_TECHNICIAN, DOMAIN_EXPERT], description: "Vai người chấm (BR-31); DOMAIN_EXPERT chỉ còn ở điểm chấm trước Report 3 4.2.0" }
               outcome: { type: string, enum: [RATED, SKIPPED] }
               rating: { type: string, enum: [GOOD, WATCH, ACTION], nullable: true }
               note: { type: string, nullable: true }
