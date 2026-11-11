@@ -135,14 +135,14 @@ async function notifyOwnersOfTechnicianAction(user: CurrentUser, farmId: unknown
  */
 export async function registerSensorNode(user: CurrentUser, input: RegisterDeviceInput): Promise<ISensorNode> {
   const { zone, farm } = await assertZoneAccess(input.zone_id, user, 'device')
-  await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
+  const { simulated } = await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
 
   const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
   if (existing?.decommissioned_at) await retireDeviceId(SensorNode, existing._id, input.device_id)
   else if (existing) await assertNotRegistered({ zoneId: existing.zone_id }, String(farm._id))
 
   const node = await SensorNode.create({
-    device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id,
+    device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id, simulated,
   })
   await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'sensor_node', String(node._id), {
@@ -378,7 +378,7 @@ export interface RegisterCameraInput {
  */
 export async function registerCameraNode(user: CurrentUser, input: RegisterCameraInput) {
   const { house, farm } = await assertHouseAccessByParams({ houseId: input.house_id, zoneId: input.zone_id }, user, 'device')
-  await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
+  const { simulated } = await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
   const existing = await CameraNode.findOne({ device_id: input.device_id }).select('house_id decommissioned_at').lean()
   if (existing?.decommissioned_at) await retireDeviceId(CameraNode as never, existing._id, input.device_id)
@@ -387,7 +387,7 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterCamer
   // Chọn field tường minh — trải thẳng body vào create() cho phép client tự đặt status/registered_at
   const node = await CameraNode.create({
     device_id: input.device_id, house_id: house._id, rtsp_url: input.rtsp_url,
-    status: 'PENDING', registered_by: user._id,
+    status: 'PENDING', registered_by: user._id, simulated,
   })
   await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {

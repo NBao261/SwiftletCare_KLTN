@@ -90,7 +90,7 @@ describe('cấp lại secretKey', () => {
     const { secret_key: newKey } = await rotateProvisionedKey(adminId, id)
 
     expect(newKey).not.toBe(oldKey)
-    await expect(verifyActivationKey('ESP-001', 'SENSOR', newKey)).resolves.toBeUndefined()
+    await expect(verifyActivationKey('ESP-001', 'SENSOR', newKey)).resolves.toEqual({ simulated: false })
     await expect(verifyActivationKey('ESP-001', 'SENSOR', oldKey)).rejects.toMatchObject({ statusCode: 400 })
   })
 

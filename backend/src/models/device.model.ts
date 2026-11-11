@@ -49,6 +49,8 @@ export interface ISensorNode extends Document {
     loop: boolean
   }
   registered_at: Date
+  /** SYSTEM-FR-004 — chép từ kho lúc đăng ký: thiết bị của bộ giả lập, mọi màn hình phải ghi rõ */
+  simulated: boolean
   /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
   /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
@@ -94,6 +96,8 @@ export interface ICameraNode extends Document {
   /** Số khung hình xử lý mỗi giây ở heartbeat gần nhất */
   fps?: number
   registered_at: Date
+  /** SYSTEM-FR-004 — chép từ kho lúc đăng ký: thiết bị của bộ giả lập, mọi màn hình phải ghi rõ */
+  simulated: boolean
   /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
   /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
@@ -191,6 +195,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     },
     registered_at:   { type: Date, default: Date.now },
     registered_by:   { type: Schema.Types.ObjectId, ref: 'User' },
+    simulated:       { type: Boolean, default: false },
     activation_overdue_at: { type: Date },
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },
@@ -217,6 +222,7 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     fps:            { type: Number },
     registered_at:  { type: Date, default: Date.now },
     registered_by:  { type: Schema.Types.ObjectId, ref: 'User' },
+    simulated:      { type: Boolean, default: false },
     activation_overdue_at: { type: Date },
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },

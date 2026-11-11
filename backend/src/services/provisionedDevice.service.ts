@@ -28,8 +28,8 @@ const generateBrokerSecret = () => crypto.randomBytes(24).toString('base64url')
  * trả về ở đây, đúng 1 lần, để in nhãn — backend không lưu lại được nữa.
  */
 export async function createProvisionedDevice(
-  adminId: string, input: { device_id: string; kind: ProvisionedDeviceKind },
-): Promise<{ device_id: string; kind: ProvisionedDeviceKind; secret_key: string; broker_secret: string }> {
+  adminId: string, input: { device_id: string; kind: ProvisionedDeviceKind; simulated?: boolean },
+): Promise<{ device_id: string; kind: ProvisionedDeviceKind; simulated: boolean; secret_key: string; broker_secret: string }> {
   const deviceId = input.device_id.trim()
   // Chặn cả ở service (script nhập kho không qua route): ID có `+`, `#`, `/` phá cô lập trên broker
   if (!DEVICE_ID_PATTERN.test(deviceId)) {
@@ -41,14 +41,15 @@ export async function createProvisionedDevice(
 
   const secretKey = generateSecretKey()
   const brokerSecret = generateBrokerSecret()
+  const simulated = input.simulated === true
   const device = await ProvisionedDevice.create({
-    device_id: deviceId, kind: input.kind, secret_key_hash: hashKey(secretKey),
+    device_id: deviceId, kind: input.kind, simulated, secret_key_hash: hashKey(secretKey),
     broker_secret_hash: hashBrokerSecret(brokerSecret).toString('hex'), created_by: adminId,
   })
   await logAction(adminId, 'DEVICE_PROVISIONED', 'provisioned_device', String(device._id), {
-    deviceId, kind: input.kind,
+    deviceId, kind: input.kind, simulated,
   })
-  return { device_id: deviceId, kind: input.kind, secret_key: secretKey, broker_secret: brokerSecret }
+  return { device_id: deviceId, kind: input.kind, simulated, secret_key: secretKey, broker_secret: brokerSecret }
 }
 
 export async function listProvisionedDevices(query: {
@@ -73,7 +74,8 @@ export async function listProvisionedDevices(query: {
  * Flow 1 bước 4 / case 3a — xác thực cặp {device_id, secretKey} trên nhãn. Không
  * phân biệt "không có trong kho" với "sai key" để không lộ device_id nào có thật.
  */
-export async function verifyActivationKey(deviceId: string, kind: ProvisionedDeviceKind, secretKey: string): Promise<void> {
+/** Trả cờ `simulated` của mục kho để thiết bị đăng ký mang theo (SYSTEM-FR-004) */
+export async function verifyActivationKey(deviceId: string, kind: ProvisionedDeviceKind, secretKey: string): Promise<{ simulated: boolean }> {
   const device = await ProvisionedDevice.findOne({ device_id: deviceId, kind }).select('+secret_key_hash').lean()
   const expected = Buffer.from(device?.secret_key_hash ?? hashKey(''), 'hex')
   const actual = Buffer.from(hashKey(secretKey ?? ''), 'hex')
@@ -84,6 +86,7 @@ export async function verifyActivationKey(deviceId: string, kind: ProvisionedDev
   if (device.revoked_at) {
     throw ConflictError('Thiết bị này đã bị Administrator thu hồi, không kích hoạt được — liên hệ Administrator')
   }
+  return { simulated: device.simulated === true }
 }
 
 async function findProvisionedOrThrow(id: string) {

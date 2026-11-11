@@ -291,6 +291,9 @@ ensureCollection("cameranodes", {
     "registered_by": {
       "bsonType": ["objectId", "null"]
     },
+    "simulated": {
+      "bsonType": ["bool", "null"]
+    },
     "activation_overdue_at": {
       "bsonType": ["date", "null"]
     },
@@ -837,6 +840,9 @@ ensureCollection("provisioneddevices", {
     "revoke_reason": {
       "bsonType": ["string", "null"]
     },
+    "simulated": {
+      "bsonType": ["bool", "null"]
+    },
     "created_by": {
       "bsonType": ["objectId", "null"]
     },
@@ -1089,6 +1095,9 @@ ensureCollection("sensornodes", {
     },
     "registered_by": {
       "bsonType": ["objectId", "null"]
+    },
+    "simulated": {
+      "bsonType": ["bool", "null"]
     },
     "activation_overdue_at": {
       "bsonType": ["date", "null"]
