@@ -436,6 +436,8 @@ export async function getRoster(houseId: string, user: CurrentUser) {
   const roster = house.roster ?? []
   const shifts = user.role === 'FARM_TECHNICIAN' ? roster.filter(s => String(s.technician_id) === user._id) : roster
   return presentRoster(house, shifts)
+}
+
 export type InvitationStatus = IInvitation['status']
 
 /**
