@@ -136,9 +136,27 @@ describe('GET /farms/:id/invitations (AUTH-FR-005, 010)', () => {
     expect(listed[0]).not.toHaveProperty('token')
     expect(listed[0]).toMatchObject({ invited_email: 'p@test.vn', invited_role: 'DOMAIN_EXPERT', status: 'PENDING' })
 
+    const res = await as(token).get(`/farms/${farm._id}/invitations`).expect(200)
+    expect(res.body.meta).toEqual({ total: 1, page: 1, limit: 20 })
+
     const expired = (await as(token).get(`/farms/${farm._id}/invitations?status=EXPIRED`).expect(200)).body.data as Array<Record<string, unknown>>
     expect(expired.map(row => [row._id, row.status])).toEqual([[String(overdue._id), 'EXPIRED']])
     await as(token).get(`/farms/${farm._id}/invitations?status=ALL`).expect(422)
+    await as(token).get(`/farms/${farm._id}/invitations?page=0`).expect(422)
+  })
+
+  it('pages the invitations newest first with meta', async () => {
+    const ctx = await seedOwnerFarm()
+    const day = 86400_000
+    await Invitation.insertMany(Array.from({ length: 3 }, (_, i) => ({
+      farm_id: ctx.farm._id, invited_by: ctx.owner._id, invited_role: 'DOMAIN_EXPERT', invited_email: `d${i}@test.vn`,
+      token: `t-page-${seq}-${i}`, status: 'DECLINED', expires_at: new Date(Date.now() + day), created_at: new Date(Date.now() - i * day),
+    })))
+    const first = await as(ctx.token).get(`/farms/${ctx.farm._id}/invitations?status=DECLINED&limit=2`).expect(200)
+    expect(first.body.meta).toEqual({ total: 3, page: 1, limit: 2 })
+    expect(first.body.data.map((row: { invited_email: string }) => row.invited_email)).toEqual(['d0@test.vn', 'd1@test.vn'])
+    const second = await as(ctx.token).get(`/farms/${ctx.farm._id}/invitations?status=DECLINED&limit=2&page=2`).expect(200)
+    expect(second.body.data.map((row: { invited_email: string }) => row.invited_email)).toEqual(['d2@test.vn'])
   })
 
   it('is only for the Primary Owner of the farm', async () => {

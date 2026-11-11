@@ -11,6 +11,7 @@ import {
   assertZoneAccess, assertHouseAccess, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { paginate } from '@/utils/helpers.util'
 import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange } from '@/services/parameterReview.service'
 import { getDefaultThresholds } from '@/services/system.service'
@@ -359,7 +360,10 @@ export type InvitationStatus = IInvitation['status']
  * AUTH-FR-005, 010 — lời mời của 1 farm cho màn Thành viên, chỉ Primary Owner. PENDING đã quá hạn được
  * coi là EXPIRED (cùng luật với findPendingInvitationOrThrow) dù job nền chưa kịp đổi. Không trả `token`.
  */
-export async function listInvitations(farmId: string, user: CurrentUser, status: InvitationStatus = 'PENDING') {
+export async function listInvitations(
+  farmId: string, user: CurrentUser, query: { status?: InvitationStatus; page?: number | string; limit?: number | string } = {},
+) {
+  const status = query.status ?? 'PENDING'
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới xem được lời mời')
 
@@ -369,10 +373,16 @@ export async function listInvitations(farmId: string, user: CurrentUser, status:
   else if (status === 'EXPIRED') filter.$or = [{ status: 'EXPIRED' }, { status: 'PENDING', expires_at: { $lte: now } }]
   else filter.status = status
 
-  const invitations = await Invitation.find(filter).select('-token').sort({ created_at: -1 }).lean()
-  return invitations.map(invitation => (
+  // Lịch sử lời mời của farm chỉ tăng thêm: phân trang như mọi danh sách (paginate, mặc định 20, tối đa 100)
+  const { page, skip, limit } = paginate(query.page, query.limit)
+  const [rows, total] = await Promise.all([
+    Invitation.find(filter).select('-token').sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+    Invitation.countDocuments(filter),
+  ])
+  const records = rows.map(invitation => (
     invitation.status === 'PENDING' && invitation.expires_at <= now ? { ...invitation, status: 'EXPIRED' as const } : invitation
   ))
+  return { records, total, page, limit }
 }
 
 /** Job nền: chuyển Invitation quá hạn sang EXPIRED (AUTH-FR-010, Flow 12 case 3d) */

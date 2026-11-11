@@ -35,7 +35,8 @@ router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 // AUTH-FR-005, 010 — lời mời của farm cho màn Thành viên (mặc định đang chờ); service chỉ cho Primary Owner
 router.get   ('/:id/invitations', requireRole('FARM_OWNER'), param('id').isMongoId(),
-  query('status').optional().isString().isIn(['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED']), validate, farmController.listInvitations)
+  query('status').optional().isString().isIn(['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED']),
+  query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 }), validate, farmController.listInvitations)
 
 // Houses — cấu trúc farm chỉ Farm Owner tạo (FARM-FR-002, Report 3 §2.4)
 router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule(),
