@@ -220,7 +220,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 **Backend (Bảo):**
 - [ ] Spec `/profiles` (draft, approve, archive, apply), `/recommendations` (luật, khuyến nghị của nhà, chấp nhận, từ chối, hiệu quả theo luật), giai đoạn nhà trong `/farms`.
 - [ ] Collections `configprofiles`, `recommendationrules`, `recommendations` (unique `rule_id + house_id` khi đang `OPEN`). Chạy `npm run db:script`.
-- [ ] **Giai đoạn nhà** (FARM-FR-014, BR-46):
+- [x] **Giai đoạn nhà** (FARM-FR-014, BR-46): *(backend: Kiệt, 12/11, `78ada1a` + `e5ebd08`, làm trong PR #126 của G-11; màn đặt giai đoạn trên web: Nhi)*
   - Farm Owner hoặc chuyên gia đặt `ATTRACTING` / `OCCUPIED`, có lịch sử; technician đặt thì 403;
   - nhà `ATTRACTING` không đánh giá chỉ số đàn, không tạo `LOW_RETURN_RATE`, lý do ghi "attracting stage".
 - [ ] **Profile** (EXPERT-FR-014, 015; SM-23):
