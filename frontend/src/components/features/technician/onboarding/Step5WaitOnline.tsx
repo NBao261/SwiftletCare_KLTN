@@ -80,17 +80,18 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
 
   // Fix: Tham gia room zone để nhận event DEVICE_STATUS_CHANGE
   useEffect(() => {
-    const zoneId = data.location.zoneId
-    if (!zoneId) return
+    // CAMERA_NODE join room theo houseId (không có zoneId)
+    const roomId = data.deviceType === 'CAMERA_NODE' ? data.location.houseId : data.location.zoneId
+    if (!roomId) return
 
-    joinZone(zoneId)
+    joinZone(roomId)
 
     return () => {
-      leaveZone(zoneId)
+      leaveZone(roomId)
       // Fix: clear timer khi unmount để tránh memory leak
       if (successTimer.current) clearTimeout(successTimer.current)
     }
-  }, [data.location.zoneId])
+  }, [data.deviceType, data.location.houseId, data.location.zoneId])
 
   // Fix: Polling dự phòng khi mount — bắt case thiết bị đã ONLINE trước khi vào Step 5.
   // Socket chỉ bắn khi có transition trạng thái SAU khi mount.
@@ -98,9 +99,10 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   useEffect(() => {
     if (!data.deviceDbId) return
     let cancelled = false
-    // _id của CameraNode không tồn tại trong collection sensor → getSensorNode luôn 404; tra đúng danh sách camera của zone
+    // _id của CameraNode không tồn tại trong collection sensor → getSensorNode luôn 404
+    // CAMERA_NODE: tra danh sách camera của house (không phải zone) — FARM-FR-004
     const fetchStatus = data.deviceType === 'CAMERA_NODE'
-      ? deviceApi.listCameraNodes(data.location.zoneId)
+      ? deviceApi.listCameraNodes(data.location.houseId)
           .then(res => res.data.data.find(n => n._id === data.deviceDbId)?.status)
       : deviceApi.getSensorNode(data.deviceDbId).then(res => res.data.data.status)
     fetchStatus
@@ -113,7 +115,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
       })
       .catch(() => { /* Bỏ qua lỗi mạng — socket vẫn hoạt động song song */ })
     return () => { cancelled = true }
-  }, [data.deviceDbId, data.deviceType, data.location.zoneId, handleSuccess])
+  }, [data.deviceDbId, data.deviceType, data.location.houseId, data.location.zoneId, handleSuccess])
 
   // Countdown timer
   useEffect(() => {

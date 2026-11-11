@@ -20,7 +20,10 @@ export function Step1Location({ data, patch, onNext }: Props) {
   const houseName = houses?.find(h => h._id === data.location.houseId)?.name
   const zoneName  = zones?.find(z => z._id === data.location.zoneId)?.name
 
-  const isComplete = !!(data.location.farmId && data.location.houseId && data.location.zoneId)
+  // CAMERA_NODE gắn vào House (không cần Zone); SENSOR_NODE cần đủ Farm+House+Zone
+  const isComplete = data.deviceType === 'CAMERA_NODE'
+    ? !!(data.location.farmId && data.location.houseId)
+    : !!(data.location.farmId && data.location.houseId && data.location.zoneId)
 
   return (
     <div className="flex flex-col gap-5">
@@ -39,7 +42,9 @@ export function Step1Location({ data, patch, onNext }: Props) {
           <CheckCircle2 className="h-6 w-6 text-success shrink-0" />
           <div>
             <p className="font-semibold text-charcoal">Vị trí đã chọn</p>
-            <p className="text-sm text-charcoal/70">{farmName} › {houseName} › {zoneName}</p>
+            <p className="text-sm text-charcoal/70">
+              {farmName} › {houseName}{data.deviceType === 'SENSOR_NODE' && zoneName ? ` › ${zoneName}` : ''}
+            </p>
           </div>
         </div>
       )}

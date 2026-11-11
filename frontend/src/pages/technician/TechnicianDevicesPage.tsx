@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { usePermission } from "@/hooks/common/usePermission";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { useFarms, useHouses, useZones, useAllZones } from "@/hooks/shared/useFarms";
@@ -25,7 +25,8 @@ import { getApiErrorMessage } from "@/lib/helpers";
 
 /** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018 */
 export default function TechnicianDevicesPage() {
-  const canOnboard = usePermission("TECHNICIAN");
+  const canOnboard = usePermission("FARM_OWNER", "TECHNICIAN");
+  const navigate   = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Bộ lọc vị trí độc lập (Local state) — khởi tạo từ searchParams nếu có điều hướng từ trang Trang trại
@@ -296,9 +297,14 @@ export default function TechnicianDevicesPage() {
 
         <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
           {canOnboard && (
-            <Button onClick={handleOpenRegister}>
-              + Kích hoạt thiết bị
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => navigate('/onboarding')}>
+                Hướng dẫn Lắp đặt
+              </Button>
+              <Button onClick={handleOpenRegister}>
+                + Kích hoạt thiết bị
+              </Button>
+            </>
           )}
         </div>
       </div>

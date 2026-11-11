@@ -1,13 +1,14 @@
-// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID + secretKey) — B9 + C1
+﻿// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID + secretKey) — B9 + C1
 // BE (Flow 1 bước 3–4) xác thực cặp {device_id, secret_key} in trên nhãn thiết bị:
 // sensor → POST /devices/sensor-nodes/register, camera → POST /devices/camera-nodes/register.
 // Phân loại lỗi bằng HTTP status code, không string-match message:
 //   400 = sai Device ID / secretKey, 403 = không có quyền với farm này, 409 = đã đăng ký
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
+import type { RegisterDeviceInput } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/helpers'
-import { Thermometer, Camera, QrCode, CheckCircle2 } from 'lucide-react'
+import { Thermometer, Camera, QrCode, CheckCircle2, X } from 'lucide-react'
 import type { OnboardingState, DeviceType } from './onboardingTypes'
 
 type ValidateError  = 'DEVICE_ALREADY_REGISTERED' | 'INVALID_DEVICE' | 'FORBIDDEN' | 'UNKNOWN' | null
@@ -20,17 +21,45 @@ interface Props {
   onBack: () => void
 }
 
+/** Parse URI QR từ nhãn thiết bị: swiftletcare://claim?d=<id>&k=<key> */
+function parseDeviceQR(raw: string): { deviceId: string; secretKey: string } | null {
+  try {
+    const url = new URL(raw.trim())
+    const d   = url.searchParams.get('d')
+    const k   = url.searchParams.get('k')
+    if (d && k) return { deviceId: d, secretKey: k }
+  } catch { /* không phải URI hợp lệ */ }
+  return null
+}
+
 export function Step2Validate({ data, patch, onNext, onBack }: Props) {
-  // Quay lại bước này sau khi đã đăng ký (deviceDbId có sẵn) → giữ trạng thái thành công,
-  // đăng ký lại cùng device_id sẽ bị BE trả 409
   const [status, setStatus] = useState<ValidateStatus>(data.deviceDbId ? 'success' : 'idle')
   const [error, setError] = useState<ValidateError>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [validatedModel, setValidatedModel] = useState(
     data.deviceDbId ? `${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'} (Đã xác thực)` : '',
   )
+  const [showQrInput, setShowQrInput] = useState(false)
+  const [qrRaw, setQrRaw] = useState('')
+  const [qrError, setQrError] = useState('')
 
-  const canSubmit = Boolean(data.deviceId.trim() && data.secretKey.trim() && data.location.zoneId)
+  // CAMERA_NODE chỉ cần houseId (không cần zoneId) — FARM-FR-004
+  const canSubmit = data.deviceType === 'CAMERA_NODE'
+    ? Boolean(data.deviceId.trim() && data.secretKey.trim() && data.location.houseId)
+    : Boolean(data.deviceId.trim() && data.secretKey.trim() && data.location.zoneId)
+
+  function handleQrPaste() {
+    const parsed = parseDeviceQR(qrRaw)
+    if (!parsed) {
+      setQrError('Nội dung QR không đúng định dạng swiftletcare://claim?d=…&k=…')
+      return
+    }
+    patch({ deviceId: parsed.deviceId, secretKey: parsed.secretKey })
+    setStatus('idle')
+    setQrError('')
+    setShowQrInput(false)
+    setQrRaw('')
+  }
 
   async function handleValidate() {
     if (!canSubmit) return
@@ -38,21 +67,31 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     setError(null)
     setErrorMessage('')
     try {
-      const payload = {
-        device_id: data.deviceId.trim(),
-        zone_id: data.location.zoneId!,
-        secret_key: data.secretKey.trim(),
+      let res
+      if (data.deviceType === 'CAMERA_NODE') {
+        // CAMERA_NODE: house_id thay vì zone_id — FARM-FR-004
+        // RegisterDeviceInput yêu cầu zone_id nhưng BE camera endpoint nhận house_id;
+        // cast để tránh TS error mà không sửa file API (thuộc scope của Kiệt).
+        const payload = {
+          device_id: data.deviceId.trim(),
+          house_id: data.location.houseId!,
+          secret_key: data.secretKey.trim(),
+        } as unknown as RegisterDeviceInput & { rtsp_url?: string }
+        res = await deviceApi.registerCameraNode(payload)
+      } else {
+        const payload: RegisterDeviceInput = {
+          device_id: data.deviceId.trim(),
+          zone_id: data.location.zoneId!,
+          secret_key: data.secretKey.trim(),
+        }
+        res = await deviceApi.registerSensorNode(payload)
       }
-      // Camera Node có endpoint riêng — gọi nhầm sang sensor sẽ bị BE từ chối vì khác loại trong kho thiết bị
-      const res = data.deviceType === 'CAMERA_NODE'
-        ? await deviceApi.registerCameraNode(payload)
-        : await deviceApi.registerSensorNode(payload)
       patch({ deviceDbId: res.data.data._id })
-      
+
       const modelFromBe = (res.data.data as { model?: string }).model
       const modelLabel = modelFromBe ? `${modelFromBe} · ` : ''
       setValidatedModel(`${modelLabel}${data.deviceType === 'SENSOR_NODE' ? 'SensorNode' : 'CameraNode'}`)
-      
+
       setStatus('success')
     } catch (err: unknown) {
       const httpStatus = (err as { response?: { status?: number } })?.response?.status
@@ -102,7 +141,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         </div>
       </div>
 
-      {/* Device ID */}
+      {/* Device ID + QR toggle */}
       <div className="flex flex-col gap-1.5">
         <label className="label-caption" htmlFor="onboarding-device-id">Device ID</label>
         <div className="flex gap-2">
@@ -116,8 +155,13 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
               error === 'DEVICE_ALREADY_REGISTERED' ? 'border-2 border-climateOrange focus:border-climateOrange' : ''
             }`}
           />
-          <button className="flex items-center justify-center rounded-xl border border-graphite/20 px-3 text-warmGray hover:bg-graphite/10" title="Quét QR">
-            <QrCode className="h-5 w-5" />
+          <button
+            type="button"
+            onClick={() => { setShowQrInput(v => !v); setQrError('') }}
+            className="flex items-center justify-center rounded-xl border border-graphite/20 px-3 text-warmGray hover:bg-graphite/10"
+            title={showQrInput ? 'Đóng' : 'Dán nội dung QR'}
+          >
+            {showQrInput ? <X className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
           </button>
         </div>
         {error === 'DEVICE_ALREADY_REGISTERED' && (
@@ -125,7 +169,25 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         )}
       </div>
 
-      {/* secretKey — BE xác thực cặp {device_id, secret_key} (kho provisioned_devices) */}
+      {/* QR URI paste panel */}
+      {showQrInput && (
+        <div className="flex flex-col gap-2 rounded-xl border border-graphite/15 bg-graphite/[0.04] p-3">
+          <label className="label-caption">Dán nội dung QR (URI từ nhãn thiết bị)</label>
+          <div className="flex gap-2">
+            <input
+              value={qrRaw}
+              onChange={e => { setQrRaw(e.target.value); setQrError('') }}
+              placeholder="swiftletcare://claim?d=…&k=…"
+              className="input flex-1 text-xs tabular-nums"
+              autoFocus
+            />
+            <Button type="button" onClick={handleQrPaste} className="shrink-0">Điền</Button>
+          </div>
+          {qrError && <p className="text-xs text-alertRed">{qrError}</p>}
+        </div>
+      )}
+
+      {/* secretKey */}
       <div className="flex flex-col gap-1.5">
         <label className="label-caption" htmlFor="onboarding-secret-key">secretKey</label>
         <input
@@ -166,9 +228,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             <li>• Thiết bị đang được gán cho một Farm khác</li>
             <li>• Có thể Device ID bị nhập sai chữ hoa/thường</li>
           </ul>
-          <button className="mt-2 text-sm font-semibold text-climateOrange underline">
-            Liên hệ Admin để gỡ gán thiết bị
-          </button>
+          <p className="mt-2 text-sm text-climateOrange/70">Liên hệ Admin để gỡ gán thiết bị.</p>
         </div>
       )}
 
@@ -185,7 +245,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
           <p className="font-semibold text-alertRed">✗ Bạn không có quyền với trang trại này</p>
           <p className="mt-1 text-sm text-alertRed/80">
-            {errorMessage || 'Tài khoản này không được đăng ký thiết bị vào trang trại đã chọn. Quay lại bước 1 chọn Zone khác.'}
+            {errorMessage || 'Tài khoản này không được đăng ký thiết bị vào trang trại đã chọn. Quay lại bước 1 chọn vị trí khác.'}
           </p>
         </div>
       )}
