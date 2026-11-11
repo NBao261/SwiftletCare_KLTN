@@ -1,8 +1,4 @@
-// ADMIN — Thiết bị toàn hệ thống, CHỈ XEM (OPS-NFR-004, GET /devices/system-status). Đăng ký/dời/gỡ thiết bị là việc
-// của Farm Owner (FARM-FR-003/007b/008), bật/tắt relay của Farm Owner và Farm Technician của nhà (Report 3 §2.4) — Admin
-// không bao giờ bật relay. Lệnh từ xa và OTA của Admin nằm ở console /devices (G-20).
-// Cùng khuôn trang Người dùng: hàng ô số → tìm kiếm → bộ lọc + sắp xếp → bảng → phân trang (client-side trên
-// toàn bộ node vì API trả hết 1 lần).
+// ADMIN — thiết bị toàn hệ thống, chỉ xem (OPS-NFR-004, GET /devices/system-status)
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'

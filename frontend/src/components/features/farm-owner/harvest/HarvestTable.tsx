@@ -103,7 +103,9 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
       const zone = zoneById.get(group.zone_id);
       if (houseFilter && zone?.house_id !== houseFilter) return false;
       if (nestTypeFilter && !group.nestTypes.includes(nestTypeFilter)) return false;
-      if (statusFilter && (group.pendingIds.length > 0) !== (statusFilter === 'PENDING')) return false;
+      const isPending = group.pendingIds.length > 0;
+      if (statusFilter === 'PENDING' && !isPending) return false;
+      if (statusFilter === 'CONFIRMED' && isPending) return false;
       if (keyword && !(zone?.houseName ?? '').toLowerCase().includes(keyword)) return false;
       return true;
     });

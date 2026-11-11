@@ -10,7 +10,7 @@ const HHMM_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 const MINUTES_PER_DAY = 1440
 const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY
 
-const toMinutes = (hhmm: string): number => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
+const toMinutes = (time: string): number => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5))
 
 export const isOvernightShift = (shift: Pick<RosterShift, 'start' | 'end'>): boolean => toMinutes(shift.end) < toMinutes(shift.start)
 
@@ -25,8 +25,7 @@ function weeklyIntervals(shift: Pick<RosterShift, 'weekdays' | 'start' | 'end'>)
   })
 }
 
-// Kiểm 1 ca trước khi gửi PUT …/roster (AUTH-FR-014), cùng luật backend: có thợ, ≥ 1 ngày, giờ HH:mm khác nhau,
-// không chồng giờ với ca cùng vai trong `others` (các ca còn lại của nhà)
+// AUTH-FR-014 — kiểm 1 ca trước khi lưu lịch trực, cùng luật roster.util của backend
 export function validateRosterShift(shift: RosterShift, others: RosterShift[]): RosterError | null {
   if (!shift.technician_id) return 'roster.errTechnician'
   if (shift.weekdays.length === 0) return 'roster.errDays'

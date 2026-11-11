@@ -45,8 +45,7 @@ export const FARM_SIDE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
 /** Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc — khớp backend harvests (canRead/canWrite). */
 export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
 
-/** Trang trại (/farms, nhà, Zone): Farm Owner quản lý, Domain Expert chỉ đọc, Farm Technician xem nhà được giao.
- * Không có Admin: trang nhà/Zone có số liệu môi trường, Admin không xem và không quản lý farm (Report 3 §2.4). */
+// Trang trại (/farms, nhà, Zone) — không có Admin (Report 3 §2.4)
 export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 
 /** Danh sách thiết bị (/devices): các role trang trại + Admin (console thiết bị mọi farm, chỉ thiết bị và cảnh báo thiết bị — G-20). */

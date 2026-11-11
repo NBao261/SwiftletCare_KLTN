@@ -141,9 +141,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           ref={menuRef}
           role="listbox"
           aria-label={tr(ariaLabel)}
-          // Cao đúng maxVisible dòng (field 4, filter 8) kể cả padding/gap/border — vừa khít, không lộ nửa dòng kế tiếp.
-          // Hàng lọc: kính mờ nền trắng (.glass-panel, index.css). Trong popup (`field`): nền trắng đặc như khung Modal,
-          // vì kính mờ để lộ nút/ô của form phía sau danh sách
+          // Danh sách trong popup (field) nền trắng đặc, hàng lọc nền kính mờ
           style={{ ...style, maxHeight: listHeight(maxVisible) }}
           className={cn(
             'z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl p-1.5 [scrollbar-width:thin]',
