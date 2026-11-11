@@ -11,7 +11,8 @@ export interface ControlRelayInput {
   isAlertConfirmed?: boolean
 }
 
-// Điều khiển tay một relay (ENV-FR-016); xong thì tải lại controller và lịch sử override
+// Điều khiển tay một relay (ENV-FR-016), trả kèm lệnh đã tới broker chưa (meta.commandDelivered); xong thì tải lại
+// controller và lịch sử override
 // (không tải lại cả nhánh devices để khỏi xin lại token live stream đang mở)
 export function useControlRelay() {
   const queryClient = useQueryClient()
@@ -20,9 +21,11 @@ export function useControlRelay() {
     // Lệnh điều khiển không tự gửi lại: gửi lại lệnh bật bơm phải do người dùng bấm
     retry: false,
     mutationFn: ({ sensorNodeId, relay, state, durationMs, isAlertConfirmed }: ControlRelayInput) =>
-      deviceApi
-        .controlRelay(sensorNodeId, relay, state, durationMs, isAlertConfirmed)
-        .then(response => response.data.data),
+      deviceApi.controlRelay(sensorNodeId, relay, state, durationMs, isAlertConfirmed).then(response => ({
+        controller: response.data.data,
+        // Thiếu cờ (backend cũ) thì coi như đã gửi; false: backend chưa nối broker, lệnh chưa tới controller
+        isCommandDelivered: response.data.meta?.commandDelivered !== false,
+      })),
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ['devices', 'sensor-nodes'] }),

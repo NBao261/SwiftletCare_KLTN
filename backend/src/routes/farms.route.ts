@@ -1,7 +1,8 @@
 import { Router } from 'express'
-import { body, param } from 'express-validator'
+import { body, param, query } from 'express-validator'
 import * as farmController from '@/controllers/farms.controller'
 import { HOUSE_STAGES } from '@/utils/houseStage.util'
+import { MAX_HOUSE_FLOORS, MAX_NAME_LENGTH } from '@/services/farm.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
@@ -20,22 +21,35 @@ const coordinates = (required: boolean) => {
 
 // FARM-FR-009 — Technician thấy mọi farm (chỉ cấu trúc), Admin không thấy farm nào (service lọc)
 router.get   ('/',             farmController.list)
-router.post  ('/',             requireRole('FARM_OWNER'), body('name').trim().notEmpty(), body('address').trim().notEmpty(), ...coordinates(true), validate, farmController.create)
+// Report 3 §4.5 — tên farm, nhà, zone tối đa MAX_NAME_LENGTH ký tự
+const nameRule = () => body('name').trim().notEmpty().withMessage('Cần tên')
+  .isLength({ max: MAX_NAME_LENGTH }).withMessage(`Tên tối đa ${MAX_NAME_LENGTH} ký tự`)
+
+router.post  ('/',             requireRole('FARM_OWNER'), nameRule(), body('address').trim().notEmpty(), ...coordinates(true), validate, farmController.create)
 router.get   ('/:id',          param('id').isMongoId(), validate, farmController.getOne)
 // Report 3 §2.4 — Administrator không quản lý farm (FARM-FR-001); xoá farm và thành viên: service chỉ cho Primary Owner
-router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), ...coordinates(false), validate, farmController.update)
+router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule().optional(), ...coordinates(false), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), validate, farmController.remove)
 // AUTH-FR-005 (v2.0.0) — mời đồng sở hữu hoặc Domain Expert; cả hai đều theo cả farm (không còn zone_ids)
 router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(), body('email').isEmail(),
   body('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT']), validate, farmController.inviteMember)
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
+// AUTH-FR-005, 010 — lời mời của farm cho màn Thành viên (mặc định đang chờ); service chỉ cho Primary Owner
+router.get   ('/:id/invitations', requireRole('FARM_OWNER'), param('id').isMongoId(),
+  query('status').optional().isString().isIn(['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED']),
+  query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 }), validate, farmController.listInvitations)
 
 // Houses — cấu trúc farm chỉ Farm Owner tạo (FARM-FR-002, Report 3 §2.4)
-router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createHouse)
+router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule(),
+  body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
+  validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
 
 // Zones (under house)
-router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createZone)
+router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule(),
+  // Không vượt số tầng của nhà: service kiểm (400)
+  body('floor').optional().isInt({ min: 1 }).withMessage('Tầng là số nguyên từ 1').toInt(),
+  validate, farmController.createZone)
 router.get ('/houses/:houseId/zones',    param('houseId').isMongoId(), validate, farmController.listZones)
 router.get ('/zones/:zoneId',            param('zoneId').isMongoId(), validate, farmController.getZone)
 // Ngưỡng và hệ số mờ: Farm Owner và Domain Expert của farm (ENV-FR-006, 020, 021); Technician, Admin không

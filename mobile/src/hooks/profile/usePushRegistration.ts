@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as Notifications from 'expo-notifications'
-import { pushTokenApi } from '@/services/api/pushToken.api'
 import { registerForPushNotifications } from '@/services/notification/pushNotification'
 
 // Nhận push trên máy này (ALERT-FR-002): quyền thông báo đọc thật từ hệ điều hành; chỉ xin quyền khi người dùng bấm.
-// Bước gửi mã thiết bị lên máy chủ đang là bản mẫu (pushTokenApi) vì backend chưa có route (G-10); mã không được ghi log
+// Backend chưa có route nhận mã thiết bị (G-10, chưa có trong api-spec) nên mã KHÔNG gửi đi đâu và không ghi log — màn phải
+// nói rõ máy chủ chưa gửi push. Có route thì thêm ENDPOINTS + services/api/pushToken.api.ts và gửi mã ở đây
 export function usePushRegistration() {
   const queryClient = useQueryClient()
 
@@ -17,9 +17,7 @@ export function usePushRegistration() {
     retry: false,
     mutationFn: async () => {
       const token = await registerForPushNotifications()
-      if (!token) return false
-      await pushTokenApi.register(token)
-      return true
+      return token !== null
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['push-permission'] }),
   })

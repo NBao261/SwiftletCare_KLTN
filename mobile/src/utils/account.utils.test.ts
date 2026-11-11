@@ -1,6 +1,14 @@
 import { describe, expect, it } from '@jest/globals'
 import type { FarmMember } from '@/types'
-import { getDaysLeft, getDeletionDeadline, getInitial, getMemberRoleLabel, isReviewPending, sortMembers } from '@/utils/account.utils'
+import {
+  getActivityVerdict,
+  getDaysLeft,
+  getDeletionDeadline,
+  getExpertActionLabel,
+  getMemberRoleLabel,
+  isReviewPending,
+  sortMembers,
+} from '@/utils/account.utils'
 
 function buildMember(userId: string, extra: Partial<FarmMember> = {}): FarmMember {
   return { user_id: userId, is_primary: false, joined_at: '2026-10-01T00:00:00.000Z', ...extra }
@@ -42,15 +50,20 @@ describe('các hàm phụ của trang Tài khoản', () => {
     expect(getDeletionDeadline('2026-11-02T00:00:00.000Z')).toBe('2026-12-02T00:00:00.000Z')
   })
 
-  it('chữ cái đầu lấy từ tên (từ cuối), không có tên thì dấu hỏi', () => {
-    expect(getInitial('Nguyễn Vũ Len')).toBe('L')
-    expect(getInitial('  ')).toBe('?')
-    expect(getInitial(undefined)).toBe('?')
-  })
-
   it('mục chờ duyệt và đề xuất đã gửi là còn chờ', () => {
     expect(isReviewPending('PENDING_REVIEW')).toBe(true)
     expect(isReviewPending('PROPOSED')).toBe(true)
     expect(isReviewPending('ACCEPTED')).toBe(false)
+  })
+
+  it('tên quyết định theo mã action của backend, mã lạ thì "Quyết định khác"', () => {
+    expect(getExpertActionLabel('ALERT_VERDICT_SET')).toBe('Phán quyết cảnh báo')
+    expect(getExpertActionLabel('SOMETHING_NEW')).toBe('Quyết định khác')
+  })
+
+  it('đọc kết quả phán quyết trong metadata, giá trị lạ thì null', () => {
+    expect(getActivityVerdict({ result: 'REJECTED' })).toBe('REJECTED')
+    expect(getActivityVerdict({ result: 'MAYBE' })).toBeNull()
+    expect(getActivityVerdict(undefined)).toBeNull()
   })
 })

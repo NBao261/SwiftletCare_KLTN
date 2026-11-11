@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { CaretRightIcon } from 'phosphor-react-native'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -32,7 +33,7 @@ export function PendingTasksCard() {
       <EmptyState
         message={t('Không tải được việc chờ bạn')}
         actionLabel={t('Thử lại')}
-        onAction={() => queryClient.refetchQueries({ type: 'active' })}
+        onAction={() => refetchVisibleQueries(queryClient)}
         height={CARD_HEIGHT}
       />
     )

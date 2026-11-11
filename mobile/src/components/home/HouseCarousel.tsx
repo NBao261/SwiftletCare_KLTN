@@ -1,6 +1,7 @@
 import { FlatList, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { HomeSection } from '@/components/home/HomeSection'
 import { HOUSE_CARD_HEIGHT, HouseStatusCard } from '@/components/home/HouseStatusCard'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -68,7 +69,7 @@ export function HouseCarousel() {
         <EmptyState
           message={t('Không tải được')}
           actionLabel={t('Thử lại')}
-          onAction={() => queryClient.refetchQueries({ type: 'active' })}
+          onAction={() => refetchVisibleQueries(queryClient)}
           height={HOUSE_CARD_HEIGHT}
         />
       )

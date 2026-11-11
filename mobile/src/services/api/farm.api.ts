@@ -61,6 +61,10 @@ export const farmApi = {
   updateFuzzyTuning: (zoneId: string, payload: FuzzyTuning) =>
     apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_FUZZY_TUNING(zoneId), payload),
 
+  // Áp gợi ý hệ số hiện tại (EXPERT-FR-011): server tự tính lại gợi ý và ghi nguồn SUGGESTION_APPROVED; chủ trại trên farm
+  // có chuyên gia bị 403, không có gợi ý thì 409 kèm lý do
+  applySuggestion: (zoneId: string) => apiClient.post<ApiResponse<Zone>>(ENDPOINTS.ZONE_APPLY_SUGGESTION(zoneId)),
+
   // Tham số phát hiện của Zone (EXPERT-FR-008), chỉ chuyên gia
   updateDetectionTuning: (zoneId: string, payload: DetectionTuning) =>
     apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_DETECTION_TUNING(zoneId), payload),

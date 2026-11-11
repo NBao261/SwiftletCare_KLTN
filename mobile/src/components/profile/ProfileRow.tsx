@@ -5,7 +5,7 @@ import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
-const ICON_BOX_SIZE = 40
+const ICON_BOX_SIZE = 36
 
 interface ProfileRowProps {
   icon: Icon
@@ -91,7 +91,7 @@ export function ProfileRow({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
   iconBox: {
     width: ICON_BOX_SIZE,
     height: ICON_BOX_SIZE,
@@ -99,5 +99,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  texts: { flex: 1, minWidth: 0, gap: 2 },
+  texts: { flex: 1, minWidth: 0, gap: 1 },
 })

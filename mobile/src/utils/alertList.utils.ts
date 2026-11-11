@@ -49,6 +49,12 @@ export function isInferredAlert(alert: Pick<Alert, 'type'>): boolean {
   return INFERRED_ALERT_TYPES.includes(alert.type)
 }
 
+// Phán quyết chỉ có nghĩa với loại suy luận: đang lọc một loại khác thì bỏ lọc phán quyết — backend trả 400 cho cặp đó
+// (listAlerts), và chuyên gia mặc định lọc "Chờ phán quyết" nên chọn loại nào cũng gặp
+export function resolveVerdictFilter(type: AlertType | null, verdict: VerdictFilter | null): VerdictFilter | null {
+  return type && !isInferredAlert({ type }) ? null : verdict
+}
+
 // Mốc thời gian gần nhất của cảnh báo: lần lặp gần nhất, chưa lặp thì lúc tạo
 function getLatestTime(alert: Alert): string {
   return alert.last_seen_at ?? alert.created_at
@@ -90,6 +96,17 @@ export function filterAlerts(
   })
 }
 
+// Bỏ cảnh báo trùng id khi ghép nhiều trang: backend chỉ sắp theo created_at nên các bản ghi cùng giờ tạo có thể nằm ở
+// hai trang, và một cảnh báo đổi trạng thái giữa hai lần tải trang cũng có thể xuất hiện hai lần — trùng thì đếm sai
+export function uniqueById(alerts: Alert[]): Alert[] {
+  const seen = new Set<string>()
+  return alerts.filter(alert => {
+    if (seen.has(alert._id)) return false
+    seen.add(alert._id)
+    return true
+  })
+}
+
 // Số cảnh báo theo từng cấp hiển thị (dải tóm tắt, đặc tả §2.2); CRITICAL và HIGH cùng tính vào Khẩn cấp
 export function countBySeverityLevel(alerts: Alert[]): Record<SeverityLevel, number> {
   const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }
@@ -112,4 +129,105 @@ export function getRenotifyState(alert: Alert, now: number): RenotifyState | nul
   if (alert.renotified_at) return { kind: 'sent' }
   const remaining = Date.parse(alert.created_at) + delay - now
   return { kind: 'countdown', minutes: Math.max(0, Math.ceil(remaining / MINUTE_MS)) }
+}
+
+// ── Danh sách cảnh báo phân trang ở server (khi không lọc theo nhà) ─────────────────────────────────────────────────────
+
+// Trạng thái của hai phần tab Cảnh báo, theo thứ tự hiện: chưa xác nhận trước đã xác nhận; đã hết trước bị bác bỏ
+export const ACTIVE_ALERT_STATUSES: readonly Alert['status'][] = ['ACTIVE', 'ACKNOWLEDGED']
+export const CLOSED_ALERT_STATUSES: readonly Alert['status'][] = ['RESOLVED', 'DISMISSED']
+
+// Mức backend của từng cấp hiển thị, nặng trước
+const LEVEL_SEVERITIES: Record<SeverityLevel, readonly AlertSeverity[]> = {
+  P1: ['CRITICAL', 'HIGH'],
+  P2: ['MEDIUM'],
+  P3: ['LOW'],
+}
+export const ALERT_SEVERITIES: readonly AlertSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+
+// Bộ lọc backend GET /alerts nhận được (farmId, zoneId, type, verdict); lọc nhà gồm cả tầng thì chưa (Known debt)
+export interface ServerAlertFilter {
+  // null: mọi farm người dùng được xem
+  farmId: string | null
+  zoneId: string | null
+  type: AlertType | null
+  verdict: VerdictFilter | null
+}
+
+// Một mắt của chuỗi trang: một trạng thái và (khi đang lọc cấp) một mức backend — backend chỉ nhận một giá trị mỗi tham số
+export interface AlertChainLink {
+  status: Alert['status']
+  severity: AlertSeverity | null
+}
+
+// Chuỗi trang theo thứ tự hiện: từng trạng thái, trong đó từng mức của cấp đang lọc (không lọc thì mọi mức một lượt)
+export function buildAlertChain(statuses: readonly Alert['status'][], level: SeverityLevel | null): AlertChainLink[] {
+  const severities = level ? LEVEL_SEVERITIES[level] : [null]
+  return statuses.flatMap(status => severities.map(severity => ({ status, severity })))
+}
+
+// Tham số GET /alerts của một mắt
+export function toAlertQueryParams(
+  filter: ServerAlertFilter,
+  link: AlertChainLink,
+  page: number,
+  limit: number,
+): Record<string, string> {
+  return {
+    ...(filter.farmId ? { farmId: filter.farmId } : {}),
+    ...(filter.zoneId ? { zoneId: filter.zoneId } : {}),
+    ...(filter.type ? { type: filter.type } : {}),
+    ...(filter.verdict ? { verdict: filter.verdict } : {}),
+    status: link.status,
+    ...(link.severity ? { severity: link.severity } : {}),
+    page: String(page),
+    limit: String(limit),
+  }
+}
+
+// Vị trí trang trong chuỗi: mắt thứ mấy, trang thứ mấy của mắt đó
+export interface AlertChainPageParam {
+  link: number
+  page: number
+}
+
+export interface AlertChainPage {
+  link: number
+  items: Alert[]
+  // meta.total của mắt đó
+  total: number
+}
+
+// Tải một trang của chuỗi. Mắt rỗng thì tự đi tiếp đến khi có dữ liệu hoặc hết chuỗi: danh sách rỗng không có gì để cuộn hay
+// bấm "Xem thêm", nên dừng ở mắt rỗng sẽ hiện "Mọi thứ đang ổn" trong khi các mắt sau còn cảnh báo
+export async function fetchAlertChainPage(
+  chain: readonly AlertChainLink[],
+  pageParam: AlertChainPageParam,
+  fetchLinkPage: (link: AlertChainLink, page: number) => Promise<Pick<AlertChainPage, 'items' | 'total'>>,
+): Promise<AlertChainPage> {
+  const link = chain[pageParam.link]
+  if (!link) return { link: pageParam.link, items: [], total: 0 }
+  const result = await fetchLinkPage(link, pageParam.page)
+  if (result.items.length > 0 || pageParam.link + 1 >= chain.length) return { link: pageParam.link, ...result }
+  return fetchAlertChainPage(chain, { link: pageParam.link + 1, page: 1 }, fetchLinkPage)
+}
+
+// Trang kế tiếp theo meta.total: mắt hiện tại còn thì trang sau, hết thì sang mắt sau; hết chuỗi thì undefined
+export function getNextAlertChainPage(
+  chainLength: number,
+  pages: readonly AlertChainPage[],
+): AlertChainPageParam | undefined {
+  const lastPage = pages[pages.length - 1]
+  if (!lastPage) return { link: 0, page: 1 }
+  const linkPages = pages.filter(page => page.link === lastPage.link)
+  const loaded = linkPages.reduce((total, page) => total + page.items.length, 0)
+  if (loaded < lastPage.total && lastPage.items.length > 0) return { link: lastPage.link, page: linkPages.length + 1 }
+  return lastPage.link + 1 < chainLength ? { link: lastPage.link + 1, page: 1 } : undefined
+}
+
+// Số cảnh báo theo cấp từ meta.total của từng mức backend
+export function sumLevelCounts(totals: Readonly<Record<AlertSeverity, number>>): Record<SeverityLevel, number> {
+  const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }
+  for (const severity of ALERT_SEVERITIES) counts[getSeverityLevel(severity)] += totals[severity]
+  return counts
 }

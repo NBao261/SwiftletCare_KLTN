@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { BellIcon, GearSixIcon, WifiSlashIcon } from 'phosphor-react-native'
 import { ActuatorSection } from '@/components/farm/ActuatorSection'
 import { BirdCountStrip } from '@/components/farm/BirdCountStrip'
@@ -60,6 +61,13 @@ export default function HouseDetailScreen() {
   const { userId } = useFarmPrefs()
   const setLastZone = useFarmPrefsStore(state => state.setLastZone)
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(requestedZoneId)
+  // Mở lại cùng nhà với tầng khác (thẻ Trang chủ, hàng cảnh báo tầng): màn không dựng lại nên đổi tầng theo tham số mới,
+  // ngay trong lúc dựng (không qua effect để khỏi vẽ một lần ở tầng cũ)
+  const [syncedZoneParam, setSyncedZoneParam] = useState(requestedZoneId)
+  if (requestedZoneId !== syncedZoneParam) {
+    setSyncedZoneParam(requestedZoneId)
+    if (requestedZoneId) setSelectedZoneId(requestedZoneId)
+  }
   const detail = useHouseDetail(houseId, selectedZoneId)
   const { houses: farmHouses } = useOrderedHouses(detail.house?.farm_id ?? '')
   const [isHouseSheetOpen, setHouseSheetOpen] = useState(false)
@@ -90,13 +98,13 @@ export default function HouseDetailScreen() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      await queryClient.refetchQueries({ type: 'active' })
+      await refetchVisibleQueries(queryClient)
     } finally {
       setRefreshing(false)
     }
   }
 
-  const retry = () => queryClient.refetchQueries({ type: 'active' })
+  const retry = () => refetchVisibleQueries(queryClient)
   // Tab Cảnh báo lọc sẵn nhà này (chuông) hoặc tầng đang xem (hàng cảnh báo tầng)
   const openAlerts = (zoneId?: string) =>
     router.navigate({ pathname: '/(tabs)/alerts', params: { houseId, zoneId: zoneId ?? '' } })

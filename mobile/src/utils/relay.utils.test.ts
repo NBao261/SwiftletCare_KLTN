@@ -8,6 +8,7 @@ import {
   formatRemainingTime,
   formatSpeakerWindows,
   getOverrideDurationLimits,
+  getRelayControlErrorMessage,
 } from '@/utils/relay.utils'
 
 const now = new Date('2026-10-30T10:00:00.000Z').getTime()
@@ -98,5 +99,29 @@ describe('buildPumpConfirmMessage từ error.details', () => {
   it('cảnh báo không có trạng thái thì chỉ ghi loại', () => {
     const message = buildPumpConfirmMessage([{ _id: 'a', type: 'RS485_BUS_FAILURE', title: '' }], 30 * 60_000)
     expect(message.split('\n')[1]).toBe('• Lỗi bus cảm biến')
+  })
+})
+
+describe('getRelayControlErrorMessage', () => {
+  // Lỗi axios tối thiểu: status + mã lỗi trong body như backend trả
+  const apiError = (status: number, code?: string) => ({ response: { status, data: { error: { code } } } })
+
+  it('409 CONFIRMATION_REQUIRED lúc bật bơm thì báo cảnh báo chặn bơm', () => {
+    expect(getRelayControlErrorMessage(apiError(409, 'CONFIRMATION_REQUIRED'), true)).toBe(
+      'Khu vực vừa có cảnh báo chặn bật bơm, vui lòng xem lại',
+    )
+  })
+
+  it('409 khác (controller đã gỡ) hoặc không phải bật bơm thì dùng câu chung', () => {
+    expect(getRelayControlErrorMessage(apiError(409, 'CONFLICT'), true)).toBe('Đã có lỗi xảy ra. Vui lòng thử lại sau')
+    expect(getRelayControlErrorMessage(apiError(409, 'CONFIRMATION_REQUIRED'), false)).toBe(
+      'Đã có lỗi xảy ra. Vui lòng thử lại sau',
+    )
+  })
+
+  it('422 thì báo giới hạn thời lượng', () => {
+    expect(getRelayControlErrorMessage(apiError(422, 'VALIDATION_ERROR'), false)).toBe(
+      'Thời lượng không hợp lệ: bật bơm tối đa 30 phút, còn lại tối đa 24 giờ',
+    )
   })
 })

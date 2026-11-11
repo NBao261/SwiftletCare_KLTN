@@ -15,10 +15,11 @@ export type CellularAutoplay = 'allow' | 'deny'
 // Tab nội bộ của màn Phân tích
 export type AnalyticsTab = 'birds' | 'env' | 'control' | 'harvest' | 'reports'
 
-// Bộ lọc tab Cảnh báo, nhớ khi tắt app (đặc tả Trang Cảnh báo §8). houseId null là mọi nhà, chưa có thì dùng nhà xem
-// gần nhất của tab Farm; zoneId null là mọi tầng
+// Bộ lọc tab Cảnh báo, nhớ khi tắt app (đặc tả Trang Cảnh báo §8). Phạm vi riêng của tab, không theo tab Farm:
+// farmId null là mọi farm, houseId null là mọi nhà của farm đang chọn, zoneId null là mọi tầng — chưa chọn gì là tất cả
 export interface AlertsPrefs {
   segment: 'active' | 'resolved'
+  farmId: string | null
   houseId: string | null
   zoneId: string | null
   severity: SeverityLevel | null
@@ -37,6 +38,9 @@ export interface AnalyticsPrefs {
 
 export interface FarmPrefs {
   currentFarmId?: string
+  // Tab Farm đang xem "Tất cả trang trại" (thẻ từng farm, chạm để vào nhà của farm đó); chưa chọn thì mặc định
+  // là tất cả khi thuộc từ 2 farm
+  isAllFarmsView?: boolean
   lastHouseIdByFarm: Record<string, string>
   // Nhà đã ghim lên đầu danh sách, chung mọi farm — như web (pinnedHouseStore)
   pinnedHouseIds: string[]
@@ -64,6 +68,7 @@ interface FarmPrefsState {
   // Farm đã tự mở nhà xem gần nhất trong phiên này — chỉ giữ trong bộ nhớ, không lưu xuống máy
   autoOpenedFarmIds: string[]
   setCurrentFarm: (userId: string, farmId: string) => void
+  setAllFarmsView: (userId: string, isAllFarmsView: boolean) => void
   setLastHouse: (userId: string, farmId: string, houseId: string) => void
   togglePinnedHouse: (userId: string, houseId: string) => void
   setLastZone: (userId: string, houseId: string, zoneId: string) => void
@@ -85,12 +90,29 @@ function updatePrefs(
   return { byUserId: { ...state.byUserId, [userId]: { ...current, ...change(current) } } }
 }
 
+// Đọc dữ liệu đã lưu của bản cũ. Trước bản 2 (thứ tự nhà tự sắp) thì bỏ hết. Bản 2 → 3: giữ mọi lựa chọn; bộ lọc tab
+// Cảnh báo chưa có farmId thì nhà/tầng đã nhớ thuộc phạm vi cũ (nhà xem gần nhất của tab Farm) — đưa về mặc định mới
+// "tất cả" thay vì đoán farm
+export function migrateFarmPrefs(persistedState: unknown, version: number): Pick<FarmPrefsState, 'byUserId'> {
+  const byUserId = (persistedState as { byUserId?: unknown } | null)?.byUserId
+  if (version < 2 || typeof byUserId !== 'object' || byUserId === null) return { byUserId: {} }
+  const migrated: Record<string, FarmPrefs> = {}
+  for (const [userId, prefs] of Object.entries(byUserId as Record<string, FarmPrefs>)) {
+    const alerts = prefs.alerts
+    migrated[userId] =
+      alerts && alerts.farmId === undefined ? { ...prefs, alerts: { ...alerts, houseId: null, zoneId: null } } : prefs
+  }
+  return { byUserId: migrated }
+}
+
 export const useFarmPrefsStore = create<FarmPrefsState>()(
   persist(
     set => ({
       byUserId: {},
       autoOpenedFarmIds: [],
       setCurrentFarm: (userId, farmId) => set(state => updatePrefs(state, userId, () => ({ currentFarmId: farmId }))),
+      setAllFarmsView: (userId, isAllFarmsView) =>
+        set(state => updatePrefs(state, userId, () => ({ isAllFarmsView }))),
       setLastHouse: (userId, farmId, houseId) =>
         set(state =>
           updatePrefs(state, userId, prefs => ({ lastHouseIdByFarm: { ...prefs.lastHouseIdByFarm, [farmId]: houseId } })),
@@ -128,9 +150,9 @@ export const useFarmPrefsStore = create<FarmPrefsState>()(
     }),
     {
       name: 'farm-prefs',
-      // Bản 2: bỏ thứ tự nhà tự sắp (↑↓), thay bằng nhà ghim như web
-      version: 2,
-      migrate: () => ({ byUserId: {} }),
+      // Bản 2: bỏ thứ tự nhà tự sắp (↑↓), thay bằng nhà ghim như web. Bản 3: tab Cảnh báo có farmId riêng
+      version: 3,
+      migrate: (persistedState, version) => migrateFarmPrefs(persistedState, version),
       storage: createJSONStorage(() => preferenceStateStorage),
       // Chỉ lưu lựa chọn theo tài khoản; danh sách farm đã tự mở là của phiên hiện tại
       partialize: state => ({ byUserId: state.byUserId }),
