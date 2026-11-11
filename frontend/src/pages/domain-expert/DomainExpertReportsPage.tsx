@@ -139,40 +139,44 @@ export default function DomainExpertReportsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warmGray/20 bg-white px-4 py-3 shadow-xs">
           <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Phân hệ báo cáo và ngày đánh giá lệch">
             <button
+              id="tab-periodic-reports"
               type="button"
               role="tab"
               aria-selected={activeTab === 'reports'}
+              aria-controls="panel-periodic-reports"
               onClick={() => setTab('reports')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal ${
                 activeTab === 'reports'
                   ? 'bg-charcoal text-white shadow-xs'
                   : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal'
               }`}
             >
-              <FileText className="h-3.5 w-3.5" />
+              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Báo cáo & Kết luận định kỳ</span>
               {pendingReportsCount > 0 && (
-                <span className="rounded-full bg-orange-500 px-2 py-0.5 font-mono text-[10px] font-bold text-white">
+                <span className="rounded-full bg-orange-500 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
                   {pendingReportsCount}
                 </span>
               )}
             </button>
 
             <button
+              id="tab-disagreements"
               type="button"
               role="tab"
               aria-selected={activeTab === 'disagreements'}
+              aria-controls="panel-disagreements"
               onClick={() => setTab('disagreements')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal ${
                 activeTab === 'disagreements'
                   ? 'bg-charcoal text-white shadow-xs'
                   : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal'
               }`}
             >
-              <Scale className="h-3.5 w-3.5" />
+              <Scale className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Ngày đánh giá lệch & Mức chỉ số</span>
               {disagreeingDaysCount > 0 && (
-                <span className="rounded-full bg-amber-500 px-2 py-0.5 font-mono text-[10px] font-bold text-white">
+                <span className="rounded-full bg-amber-600 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
                   {disagreeingDaysCount}
                 </span>
               )}
@@ -187,7 +191,12 @@ export default function DomainExpertReportsPage() {
         </div>
 
         {activeTab === 'reports' ? (
-          <div className="flex flex-col lg:flex-row gap-5 items-start">
+          <div
+            id="panel-periodic-reports"
+            role="tabpanel"
+            aria-labelledby="tab-periodic-reports"
+            className="flex flex-col lg:flex-row gap-5 items-start"
+          >
             {/* Cột trái — 340px */}
             <div className="w-full lg:w-[340px] lg:flex-shrink-0">
               <ReportListPanel
@@ -237,7 +246,14 @@ export default function DomainExpertReportsPage() {
             </div>
           </div>
         ) : (
-          <DisagreementsSection />
+          <div
+            id="panel-disagreements"
+            role="tabpanel"
+            aria-labelledby="tab-disagreements"
+            className="w-full"
+          >
+            <DisagreementsSection />
+          </div>
         )}
       </div>
       <Toast show={toast.show} message={toast.message} />

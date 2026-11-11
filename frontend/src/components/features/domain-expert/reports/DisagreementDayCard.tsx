@@ -4,13 +4,13 @@ import {
   Calendar,
   SlidersHorizontal,
   UserCheck,
-  ArrowRight,
+  ArrowLeftRight,
   MessageSquareText,
   Activity,
 } from 'lucide-react';
 import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
 import { formatHealthReason } from '@/components/features/farm-owner/health/healthDay.utils';
-import { Badge, Button, type BadgeTone } from '@/components/ui';
+import { Badge, type BadgeTone } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
 import { healthDict } from '@/constants/health.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -129,10 +129,13 @@ function DisagreementItemBlock({
             <HealthStatusBadge status={item.rating} />
           </div>
 
-          <div className="flex flex-col items-center px-1 text-warmGray">
-            <ArrowRight className="h-4 w-4 text-amber-600" />
-            <span className="font-mono text-[10px] font-bold uppercase text-amber-700">
-              Lệch
+          <div
+            aria-hidden="true"
+            className="flex flex-col items-center px-1 text-warmGray"
+          >
+            <ArrowLeftRight className="h-4 w-4 text-amber-700" />
+            <span className="font-mono text-[10px] font-bold uppercase text-amber-900">
+              Đối chiếu
             </span>
           </div>
 
@@ -240,12 +243,15 @@ export default function DisagreementDayCard({
   const format = (value: number) => exact(value, 1);
 
   return (
-    <section className="relative z-10 flex w-full max-w-screen-xl flex-col gap-4 rounded-2xl border border-warmGray/20 bg-white p-4 shadow-xs transition-all hover:shadow-sm sm:p-5">
-      {/* Header của ngày lệch: Ngày + Nhà yến + Trạng thái hiện tại + Nút chỉnh mức chỉ số */}
+    <article
+      aria-label={`Ngày đánh giá lệch ${date(day.date)} tại ${day.house_name}`}
+      className="relative z-10 flex w-full max-w-screen-xl flex-col gap-4 rounded-2xl border border-warmGray/20 bg-white p-4 shadow-xs sm:p-5"
+    >
+      {/* Header của ngày lệch: Ngày + Nhà yến + Trạng thái hiện tại + Liên kết mức chỉ số cấp nhà */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warmGray/15 pb-3.5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 rounded-lg bg-charcoal px-2.5 py-1 text-xs font-bold text-white">
-            <Calendar className="h-3.5 w-3.5 text-limeMist" />
+          <div className="flex items-center gap-1.5 rounded-lg bg-charcoal px-2.5 py-1 font-mono text-xs font-bold tabular-nums text-white">
+            <Calendar className="h-3.5 w-3.5 text-limeMist" aria-hidden="true" />
             <span>{date(day.date)}</span>
           </div>
 
@@ -253,27 +259,28 @@ export default function DisagreementDayCard({
             {day.house_name}
           </span>
 
-          <span className="rounded-full border border-amber-300 bg-amber-100 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-amber-900">
+          <Badge tone="warning" className="font-mono tabular-nums">
             {day.disagreements.length} lượt chấm lệch
-          </span>
+          </Badge>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-warmGray">
             <span>Trạng thái hiện tại:</span>
             <HealthStatusBadge status={day.current_status} />
           </div>
 
-          <Button
-            variant="secondary"
-            size="sm"
+          <button
+            type="button"
             onClick={() =>
               onEditLevels({ id: day.house_id, name: day.house_name })
             }
+            aria-label={`Xem và chỉnh mức chỉ số sức khỏe chung của ${day.house_name}`}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-graphite underline-offset-4 transition-colors hover:bg-stone/40 hover:text-charcoal hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal"
           >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>Chỉnh mức chỉ số</span>
-          </Button>
+            <SlidersHorizontal className="h-3.5 w-3.5 text-warmGray" aria-hidden="true" />
+            <span>Mức chỉ số của {day.house_name} →</span>
+          </button>
         </div>
       </div>
 
@@ -349,6 +356,6 @@ export default function DisagreementDayCard({
           </ul>
         </div>
       )}
-    </section>
+    </article>
   );
 }
