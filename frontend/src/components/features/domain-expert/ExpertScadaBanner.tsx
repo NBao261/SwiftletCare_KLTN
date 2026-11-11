@@ -12,6 +12,7 @@
  * SRS v2.1.4: §4.4, EXPERT-FR-001/002/003, ENV-FR-006
  */
 
+import { t } from '@/i18n'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
@@ -163,7 +164,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
           </div>
 
           <span className="text-xs font-bold uppercase tracking-tight text-charcoal sm:text-sm whitespace-nowrap">
-            Giám Sát Vận Hành
+            {t('Giám sát vận hành')}
           </span>
         </div>
 

@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Calendar, Check, FileText, Scale } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
+import { t as i18nT } from '@/i18n';
 import MockDataTooltip from '@/components/shared/MockDataTooltip';
 import ReportListPanel from '@/components/features/domain-expert/reports/ReportListPanel';
 import HealthMetricsGrid from '@/components/features/domain-expert/reports/HealthMetricsGrid';
@@ -137,7 +138,7 @@ export default function DomainExpertReportsPage() {
       <div className="w-full max-w-screen-xl mx-auto flex flex-col gap-5">
         {/* Thanh chuyển phân hệ: Báo cáo & Kết luận định kỳ vs. Ngày đánh giá lệch & Mức chỉ số */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warmGray/20 bg-white px-4 py-3 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Phân hệ báo cáo và ngày đánh giá lệch">
+          <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label={i18nT('Báo cáo và ngày đánh giá lệch')}>
             <button
               id="tab-periodic-reports"
               type="button"
@@ -152,7 +153,7 @@ export default function DomainExpertReportsPage() {
               }`}
             >
               <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Báo cáo & Kết luận định kỳ</span>
+              <span>{i18nT('Báo cáo & Kết luận định kỳ')}</span>
               {pendingReportsCount > 0 && (
                 <span className="rounded-full bg-orange-500 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
                   {pendingReportsCount}
@@ -174,7 +175,7 @@ export default function DomainExpertReportsPage() {
               }`}
             >
               <Scale className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Ngày đánh giá lệch & Mức chỉ số</span>
+              <span>{i18nT('Ngày đánh giá lệch & Mức chỉ số')}</span>
               {disagreeingDaysCount > 0 && (
                 <span className="rounded-full bg-amber-600 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
                   {disagreeingDaysCount}
@@ -185,8 +186,8 @@ export default function DomainExpertReportsPage() {
 
           <span className="text-xs text-warmGray">
             {activeTab === 'reports'
-              ? 'Tổng hợp sức khỏe định kỳ và xuất bản kết luận chuyên môn gửi Chủ nhà yến'
-              : 'Đối chiếu đánh giá thực địa với hệ thống và tinh chỉnh mức chỉ số sức khỏe của nhà yến'}
+              ? i18nT('Tổng hợp sức khỏe định kỳ và xuất bản kết luận chuyên môn gửi Chủ nhà yến')
+              : i18nT('Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống và chỉnh mức chỉ số của nhà')}
           </span>
         </div>
 
