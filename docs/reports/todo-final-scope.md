@@ -209,7 +209,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [ ] Giao diện *(còn mobile của Len và màn ngày lệch của Tuấn)*:
   - [ ] Len: chấm điểm trên mobile, hiện hướng dẫn chấm (BR-37) trước khi chấm;
   - [x] Nhi: chấm điểm trên web Owner; *(Nhi, 11/11: `/health` — Farm Owner chấm hoặc "Bỏ qua" ngày không có mặt ở nhà, hướng dẫn BR-37 trước khi chọn mức (10/11), Domain Expert không còn chấm (10/11))*
-  - [ ] Tuấn: màn ngày lệch và chỉnh mức trên web chuyên gia.
+  - [x] Tuấn: màn ngày lệch và chỉnh mức trên web chuyên gia. *(Tuấn, 10/11, nhánh `feat/g11-health-assessment`, commits `1c5ee85c` + `bf936377`: DisagreementsSection (scope filter, KPI strip, Bento grid mức chỉ số), DisagreementDayCard, ExpertHealthLevelsModal (GET/PUT /farms/houses/{houseId}/health-levels, BR-28); 8 unit tests; 245/245 tests pass)*
 
 **Test:** TC-F22-01…03; TC-ST-44…53.
 
