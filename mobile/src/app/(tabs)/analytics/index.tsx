@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native'
 import { router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { AnalyticsFilterBar } from '@/components/analytics/AnalyticsFilterBar'
 import { AnalyticsRangeChips } from '@/components/analytics/AnalyticsRangeChips'
 import { AnalyticsTabs } from '@/components/analytics/AnalyticsTabs'
@@ -58,7 +59,7 @@ export default function AnalyticsScreen() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      await queryClient.refetchQueries({ type: 'active' })
+      await refetchVisibleQueries(queryClient)
     } finally {
       setRefreshing(false)
     }
@@ -89,7 +90,7 @@ export default function AnalyticsScreen() {
           <EmptyState
             message={t('Không tải được')}
             actionLabel={t('Thử lại')}
-            onAction={() => queryClient.refetchQueries({ type: 'active' })}
+            onAction={() => refetchVisibleQueries(queryClient)}
           />
         </View>
       )

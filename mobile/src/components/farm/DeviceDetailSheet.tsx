@@ -38,7 +38,7 @@ function getDetailRows(selected: SelectedDevice): { label: string; value: string
   ]
 }
 
-// Chi tiết một thiết bị, chỉ xem — thiết lập, chuyển, thay thiết bị làm ở luồng cài đặt thiết bị (MF-10)
+// Chi tiết một thiết bị, chỉ xem — thiết lập, chuyển, thay thiết bị làm ở luồng cài đặt thiết bị (SF-01)
 export function DeviceDetailSheet({ selected, onClose }: DeviceDetailSheetProps) {
   const palette = usePalette()
   if (!selected) return null

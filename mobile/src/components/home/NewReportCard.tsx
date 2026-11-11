@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { SealCheckIcon } from 'phosphor-react-native'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -69,7 +70,7 @@ export function NewReportCard() {
           <Text variant="body" color={palette.textSecondary} style={styles.errorText}>
             {t('Không tải được báo cáo mới')}
           </Text>
-          <Button variant="link" label={t('Thử lại')} onPress={() => queryClient.refetchQueries({ type: 'active' })} />
+          <Button variant="link" label={t('Thử lại')} onPress={() => refetchVisibleQueries(queryClient)} />
         </View>
       </Card>
     )

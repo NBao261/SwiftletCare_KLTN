@@ -3,23 +3,24 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Redirect, router } from 'expo-router'
 import { ArrowsClockwiseIcon, CheckCircleIcon, ClockIcon, GavelIcon, PencilSimpleIcon } from 'phosphor-react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
-import { MockDataBadge } from '@/components/common/MockDataBadge'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { ProfileRow } from '@/components/profile/ProfileRow'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
-import { IS_MOCK_API_ENABLED } from '@/constants/mockApi'
 import { Radius, Spacing } from '@/constants/theme'
+import { useExpertActivityList } from '@/hooks/expert-activity/useExpertActivityList'
+import { useParameterReviewList } from '@/hooks/expert-activity/useParameterReviewList'
+import { useProposalList } from '@/hooks/expert-activity/useProposalList'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
-import { useExpertDecisions } from '@/hooks/profile/useExpertDecisions'
-import { useMyReviewItems } from '@/hooks/profile/useMyReviewItems'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
-import type { ExpertDecision, ReviewItem } from '@/types'
-import { getDecisionTypeLabel, getReviewStatusLabel, isReviewPending } from '@/utils/account.utils'
+import type { ChangeReviewStatus, ExpertActivityEntry, ProposalStatus } from '@/types'
+import { getActivityVerdict, getExpertActionLabel, getReviewStatusLabel, isReviewPending } from '@/utils/account.utils'
 import { formatDateTime } from '@/utils/date.utils'
 import { getRoleLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
@@ -27,74 +28,167 @@ import { t } from '@/utils/i18n.utils'
 
 type ActivityTab = 'decisions' | 'reviews'
 
-// Nơi áp dụng quyết định: nhà · khu vực
-function getScopeText(houseName?: string, zoneName?: string): string {
-  return [houseName, zoneName].filter(Boolean).join(' · ')
-}
+const LIST_SKELETON_HEIGHT = 160
 
-// Nội dung một quyết định: giá trị cũ → mới, hoặc phán quyết
-function getDecisionDetail(decision: ExpertDecision): string {
-  if (decision.verdict) return decision.verdict === 'CONFIRMED' ? t('Xác nhận đúng') : t('Bác bỏ')
-  if (decision.old_value && decision.new_value) return `${decision.old_value} → ${decision.new_value}`
-  return ''
+// Biểu tượng theo trạng thái mục chờ duyệt / đề xuất
+function getStatusIcon(status: ChangeReviewStatus | ProposalStatus) {
+  if (isReviewPending(status)) return ClockIcon
+  return status === 'REVERTED' || status === 'REJECTED' ? ArrowsClockwiseIcon : CheckCircleIcon
 }
 
 /**
- * Hoạt động chuyên gia trên farm: quyết định của chuyên gia mà chủ trại được báo (EXPERT-FR-009) và thay đổi của chủ trại
- * đang chờ chuyên gia duyệt (EXPERT-FR-010/011). Backend chưa có route — toàn bộ là dữ liệu mẫu, có nhãn
+ * Hoạt động chuyên gia trên farm: lịch sử quyết định (EXPERT-FR-009, GET /expert-activity — gồm cả quyết định chủ trại
+ * làm thay khi farm chưa có chuyên gia, BR-22), thay đổi của chủ trại chờ chuyên gia duyệt (EXPERT-FR-010) và gợi ý hệ số
+ * đã gửi (EXPERT-FR-011). Mỗi danh sách tải theo trang (meta)
  */
 export default function ExpertActivityScreen() {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
   const { farm } = useCurrentFarm()
+  const farmId = farm?._id ?? ''
   const [tab, setTab] = useState<ActivityTab>('decisions')
-  const decisionsQuery = useExpertDecisions(farm?._id ?? '')
-  const reviewsQuery = useMyReviewItems(farm?._id ?? '')
+  const directory = useZoneDirectory()
+  const decisionsQuery = useExpertActivityList(farmId, tab === 'decisions')
+  const reviewsQuery = useParameterReviewList(farmId, tab === 'reviews')
+  const proposalsQuery = useProposalList(farmId, tab === 'reviews')
 
   if (!canPerform(user, 'viewOwnerProfile')) return <Redirect href="/(tabs)/profile" />
 
-  const renderDecision = (decision: ExpertDecision, index: number, total: number) => (
-    <ProfileRow
-      key={decision._id}
-      icon={decision.type === 'ALERT_VERDICT' ? GavelIcon : PencilSimpleIcon}
-      label={getDecisionTypeLabel(decision.type)}
-      caption={[
-        `${decision.actor_name} (${getRoleLabel(decision.actor_role)}) · ${formatDateTime(decision.created_at)}`,
-        getScopeText(decision.house_name, decision.zone_name),
-        getDecisionDetail(decision),
-      ]
-        .filter(Boolean)
-        .join('\n')}
-      hasDivider={index < total - 1}
-    />
-  )
+  // Nơi áp dụng: nhà › khu vực, tra tên từ danh sách đã tải; không có thì bỏ
+  const getScopeText = (zoneId?: string | null, houseId?: string | null): string => {
+    const zone = zoneId ? directory.zoneById.get(zoneId) : undefined
+    const house = directory.houseById.get(houseId ?? zone?.house_id ?? '')
+    return [house?.name, zone?.name].filter(Boolean).join(' › ')
+  }
 
-  const renderReview = (item: ReviewItem, index: number, total: number) => (
-    <ProfileRow
-      key={item._id}
-      icon={isReviewPending(item.status) ? ClockIcon : item.status === 'REVERTED' ? ArrowsClockwiseIcon : CheckCircleIcon}
-      label={item.kind === 'CHANGE_REVIEW' ? t('Thay đổi ngưỡng, hệ số của bạn') : t('Gợi ý hệ số bạn đã gửi')}
-      value={getReviewStatusLabel(item.status)}
-      caption={[getScopeText(item.house_name, item.zone_name), `${item.old_value} → ${item.new_value}`, formatDateTime(item.created_at)]
-        .filter(Boolean)
-        .join('\n')}
-      hasDivider={index < total - 1}
-    />
-  )
+  const renderDecision = (entry: ExpertActivityEntry, index: number, total: number) => {
+    const verdict = getActivityVerdict(entry.metadata)
+    return (
+      <ProfileRow
+        key={entry._id}
+        icon={entry.action === 'ALERT_VERDICT_SET' ? GavelIcon : PencilSimpleIcon}
+        label={getExpertActionLabel(entry.action)}
+        caption={[
+          `${entry.actor?.full_name ?? '_'} (${getRoleLabel(entry.actor_role)}) · ${formatDateTime(entry.created_at)}`,
+          getScopeText(entry.zone_id, entry.house_id),
+          verdict ? (verdict === 'CONFIRMED' ? t('Xác nhận đúng') : t('Bác bỏ')) : '',
+        ]
+          .filter(Boolean)
+          .join('\n')}
+        hasDivider={index < total - 1}
+      />
+    )
+  }
 
-  const renderList = () => {
-    if (!IS_MOCK_API_ENABLED) return <EmptyState message={t('Hoạt động chuyên gia: Sắp có')} />
-    const query = tab === 'decisions' ? decisionsQuery : reviewsQuery
-    if (query.isLoading) return <Skeleton width="100%" height={160} radius={Radius.lg} />
-    if (query.isError) return <EmptyState message={t('Không tải được hoạt động chuyên gia')} actionLabel={t('Thử lại')} onAction={() => query.refetch()} />
-    if (tab === 'decisions') {
-      const decisions = decisionsQuery.data ?? []
-      if (decisions.length === 0) return <EmptyState message={t('Chưa có quyết định nào của chuyên gia')} />
-      return <Card style={styles.listCard}>{decisions.map((decision, index) => renderDecision(decision, index, decisions.length))}</Card>
+  const renderDecisions = () => {
+    if (decisionsQuery.isLoading) return <Skeleton width="100%" height={LIST_SKELETON_HEIGHT} radius={Radius.lg} />
+    if (decisionsQuery.isError) {
+      return (
+        <EmptyState
+          message={t('Không tải được hoạt động chuyên gia')}
+          actionLabel={t('Thử lại')}
+          onAction={() => decisionsQuery.refetch()}
+        />
+      )
     }
-    const items = reviewsQuery.data ?? []
-    if (items.length === 0) return <EmptyState message={t('Không có thay đổi nào chờ chuyên gia')} />
-    return <Card style={styles.listCard}>{items.map((item, index) => renderReview(item, index, items.length))}</Card>
+    const entries = decisionsQuery.data?.pages.flatMap(page => page.data) ?? []
+    if (entries.length === 0) return <EmptyState message={t('Chưa có quyết định nào của chuyên gia')} />
+    return (
+      <>
+        <Card style={styles.listCard}>{entries.map((entry, index) => renderDecision(entry, index, entries.length))}</Card>
+        {decisionsQuery.hasNextPage && (
+          <Button
+            label={t('Xem thêm')}
+            variant="link"
+            loading={decisionsQuery.isFetchingNextPage}
+            onPress={() => decisionsQuery.fetchNextPage()}
+          />
+        )}
+      </>
+    )
+  }
+
+  const renderReviews = () => {
+    if (reviewsQuery.isLoading || proposalsQuery.isLoading) {
+      return <Skeleton width="100%" height={LIST_SKELETON_HEIGHT} radius={Radius.lg} />
+    }
+    if (reviewsQuery.isError || proposalsQuery.isError) {
+      return (
+        <EmptyState
+          message={t('Không tải được hoạt động chuyên gia')}
+          actionLabel={t('Thử lại')}
+          onAction={() => {
+            void reviewsQuery.refetch()
+            void proposalsQuery.refetch()
+          }}
+        />
+      )
+    }
+    const reviews = reviewsQuery.data?.pages.flatMap(page => page.data) ?? []
+    const proposals = proposalsQuery.data?.pages.flatMap(page => page.data) ?? []
+    if (reviews.length === 0 && proposals.length === 0) {
+      return <EmptyState message={t('Không có thay đổi nào chờ chuyên gia')} />
+    }
+    return (
+      <>
+        {reviews.length > 0 && (
+          <View style={styles.group}>
+            <Text variant="body" weight="semiBold">
+              {t('Thay đổi ngưỡng, hệ số của bạn')}
+            </Text>
+            <Card style={styles.listCard}>
+              {reviews.map((review, index) => (
+                <ProfileRow
+                  key={review._id}
+                  icon={getStatusIcon(review.status)}
+                  label={review.group === 'thresholds' ? t('Ngưỡng') : t('Hệ số điều khiển')}
+                  value={getReviewStatusLabel(review.status)}
+                  caption={[getScopeText(review.zone_id), formatDateTime(review.updated_at)].filter(Boolean).join('\n')}
+                  hasDivider={index < reviews.length - 1}
+                />
+              ))}
+            </Card>
+            {reviewsQuery.hasNextPage && (
+              <Button
+                label={t('Xem thêm')}
+                variant="link"
+                loading={reviewsQuery.isFetchingNextPage}
+                onPress={() => reviewsQuery.fetchNextPage()}
+              />
+            )}
+          </View>
+        )}
+        {proposals.length > 0 && (
+          <View style={styles.group}>
+            <Text variant="body" weight="semiBold">
+              {t('Gợi ý hệ số bạn đã gửi')}
+            </Text>
+            <Card style={styles.listCard}>
+              {proposals.map((proposal, index) => (
+                <ProfileRow
+                  key={proposal._id}
+                  icon={getStatusIcon(proposal.status)}
+                  label={getScopeText(proposal.zone_id) || t('Gợi ý hệ số')}
+                  value={getReviewStatusLabel(proposal.status)}
+                  caption={[formatDateTime(proposal.created_at), proposal.note ? t('Lý do: {note}', { note: proposal.note }) : '']
+                    .filter(Boolean)
+                    .join('\n')}
+                  hasDivider={index < proposals.length - 1}
+                />
+              ))}
+            </Card>
+            {proposalsQuery.hasNextPage && (
+              <Button
+                label={t('Xem thêm')}
+                variant="link"
+                loading={proposalsQuery.isFetchingNextPage}
+                onPress={() => proposalsQuery.fetchNextPage()}
+              />
+            )}
+          </View>
+        )}
+      </>
+    )
   }
 
   return (
@@ -104,14 +198,11 @@ export default function ExpertActivityScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: Spacing.lg + TAB_BAR_OVERLAP }]}
       >
-        <View style={styles.intro}>
-          {IS_MOCK_API_ENABLED && <MockDataBadge />}
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Mọi quyết định của chuyên gia trên {farm} và các thay đổi của bạn đang chờ chuyên gia duyệt.', {
-              farm: farm?.name ?? '_',
-            })}
-          </Text>
-        </View>
+        <Text variant="small" color={palette.textSecondary}>
+          {t('Mọi quyết định của chuyên gia trên {farm} và các thay đổi của bạn đang chờ chuyên gia duyệt.', {
+            farm: farm?.name ?? '_',
+          })}
+        </Text>
         <ChoiceChips<ActivityTab>
           options={[
             { id: 'decisions', label: t('Quyết định của chuyên gia') },
@@ -121,7 +212,7 @@ export default function ExpertActivityScreen() {
           onSelect={setTab}
           accessibilityLabel={t('Chọn danh sách')}
         />
-        {renderList()}
+        {!farm ? <EmptyState message={t('Chưa có farm')} /> : tab === 'decisions' ? renderDecisions() : renderReviews()}
       </ScrollView>
     </View>
   )
@@ -130,6 +221,6 @@ export default function ExpertActivityScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: Spacing.lg, gap: Spacing.lg },
-  intro: { gap: Spacing.sm },
+  group: { gap: Spacing.sm },
   listCard: { paddingVertical: Spacing.xs },
 })

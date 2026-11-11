@@ -1,9 +1,10 @@
 import { StyleSheet, View } from 'react-native'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import { BellIcon, MagnifyingGlassIcon } from 'phosphor-react-native'
+import { BellIcon } from 'phosphor-react-native'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { IconButton } from '@/components/ui/icon-button'
+import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { useUnreadNotificationCount } from '@/hooks/notification/useUnreadNotificationCount'
@@ -15,7 +16,7 @@ import { t } from '@/utils/i18n.utils'
 
 const AVATAR_SIZE = 44
 
-// Đầu Trang chủ: ảnh đại diện + tên bên trái; tìm kiếm, thông báo bên phải
+// Đầu Trang chủ: ảnh đại diện + tên bên trái (bấm mở trang Tài khoản); thông báo bên phải
 export function HomeHeader() {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
@@ -24,7 +25,13 @@ export function HomeHeader() {
   return (
     <AppHeader
       leading={
-        <View style={styles.user}>
+        // Bấm ảnh hoặc tên: chuyển sang tab Tài khoản (navigate như các link chuyển tab khác), mốc thời gian để trang cuộn về đầu
+        <PressableScale
+          style={styles.user}
+          onPress={() => router.navigate({ pathname: '/(tabs)/profile', params: { scrollToTopAt: String(Date.now()) } })}
+          accessibilityRole="button"
+          accessibilityLabel={t('Mở trang Tài khoản')}
+        >
           {user?.avatar_url ? (
             <Image source={{ uri: user.avatar_url }} style={styles.avatar} accessible={false} />
           ) : (
@@ -37,12 +44,10 @@ export function HomeHeader() {
           <Text variant="body" weight="bold" numberOfLines={1} style={styles.name}>
             {user?.full_name || '_'}
           </Text>
-        </View>
+        </PressableScale>
       }
       right={
         <View style={styles.actions}>
-          {/* shortcut: chưa có màn tìm kiếm (Report 3 chưa có yêu cầu) — gắn onPress khi nhóm chốt màn */}
-          <IconButton icon={MagnifyingGlassIcon} label={t('Tìm kiếm')} />
           {/* Hộp thông báo trong ứng dụng (EXPERT-FR-007) ở tab Tài khoản — màn đó chỉ mở cho Farm Owner */}
           <IconButton
             icon={BellIcon}

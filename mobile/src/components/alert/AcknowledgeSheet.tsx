@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidateAlertQueries } from '@/config/queryClient'
 import { StyleSheet, TextInput, View } from 'react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -57,7 +58,7 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
         onSuccess: () => onDone(t('Đã xác nhận cảnh báo')),
         onError: error => {
           if (readApiError(error).status !== 409) return
-          void queryClient.invalidateQueries({ queryKey: ['alerts'] })
+          void invalidateAlertQueries(queryClient)
           onDone(t('Cảnh báo đã thay đổi, danh sách đã tải lại'))
         },
       },

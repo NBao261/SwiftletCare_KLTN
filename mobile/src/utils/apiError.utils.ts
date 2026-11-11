@@ -9,7 +9,8 @@ export interface ApiErrorInfo {
 }
 
 // Thao tác xác thực đang chạy — cùng một mã lỗi nhưng câu báo khác nhau theo màn
-export type AuthAction = 'login' | 'request-code' | 'reset-password' | 'change-password'
+// change-temporary-password: đổi mật khẩu tạm ở lần đăng nhập đầu; change-password: đổi mật khẩu ở tab Tài khoản
+export type AuthAction = 'login' | 'request-code' | 'reset-password' | 'change-password' | 'change-temporary-password'
 
 // Chưa tới được backend (mất mạng, sai địa chỉ máy chủ, hết thời gian chờ)
 export const NETWORK_ERROR_MESSAGE = 'Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại'
@@ -61,8 +62,13 @@ export function getAuthErrorMessage(error: unknown, action: AuthAction): string 
       : t('Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên')
   }
   if (errorInfo.code === 'INVALID_RESET_TOKEN') return t(INVALID_CODE_MESSAGE)
-  if (errorInfo.code === 'INVALID_CURRENT_PASSWORD') return t('Mật khẩu tạm không chính xác')
-  if (errorInfo.code === 'PASSWORD_UNCHANGED') return t('Mật khẩu mới phải khác mật khẩu tạm')
+  const isTemporary = action === 'change-temporary-password'
+  if (errorInfo.code === 'INVALID_CURRENT_PASSWORD') {
+    return isTemporary ? t('Mật khẩu tạm không chính xác') : t('Mật khẩu hiện tại không chính xác')
+  }
+  if (errorInfo.code === 'PASSWORD_UNCHANGED') {
+    return isTemporary ? t('Mật khẩu mới phải khác mật khẩu tạm') : t('Mật khẩu mới phải khác mật khẩu hiện tại')
+  }
 
   // Sai email hay sai mật khẩu đều chung một câu (AUTH-FR-002)
   if (action === 'login' && errorInfo.status === 401) return t('Tài khoản hoặc mật khẩu không chính xác')

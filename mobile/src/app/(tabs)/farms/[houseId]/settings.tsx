@@ -11,6 +11,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { AddDeviceSheet, type AddDeviceTarget } from '@/components/farm/settings/AddDeviceSheet'
 import { BirdCountTuningSection } from '@/components/farm/settings/BirdCountTuningSection'
 import { CreateItemSheet } from '@/components/farm/settings/CreateItemSheet'
@@ -110,7 +111,7 @@ export default function HouseSettingsScreen() {
     setZoneSheetOpen(true)
   }
 
-  const retry = () => queryClient.refetchQueries({ type: 'active' })
+  const retry = () => refetchVisibleQueries(queryClient)
 
   // Cuộn tới mục được mở; các khối phía trên tải xong làm mục dời xuống thì cuộn lại, tới khi người dùng tự cuộn
   const scrollToTarget = () => {
@@ -181,7 +182,7 @@ export default function HouseSettingsScreen() {
           <FuzzyTuningSection zone={zone} editor={editor} onSaved={toast.show} />
         </View>
         <View onLayout={event => handleSectionLayout(getSettingsSectionId('detection', zone._id), event)}>
-          <DetectionTuningSection zone={zone} editor={editor} onSaved={toast.show} />
+          <DetectionTuningSection zone={zone} farmId={house.farm_id} editor={editor} onSaved={toast.show} />
         </View>
         <DeviceListSection
           id={`controllers:${zone._id}`}
