@@ -717,7 +717,7 @@ ensureCollection("househealthdays", {
           },
           "role": {
             "bsonType": "string",
-            "enum": ["FARM_OWNER", "DOMAIN_EXPERT"]
+            "enum": ["FARM_OWNER", "FARM_TECHNICIAN", "DOMAIN_EXPERT"]
           },
           "outcome": {
             "bsonType": "string",

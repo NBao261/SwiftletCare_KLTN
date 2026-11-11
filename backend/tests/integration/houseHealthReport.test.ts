@@ -15,6 +15,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { HouseHealthReport } from '@/models/houseHealthReport.model'
+import { House } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
@@ -222,7 +223,7 @@ describe('POST /health-reports — báo cáo theo yêu cầu (tối đa 31 ngày
 })
 
 describe('TC-F21-01 — xem báo cáo theo nhà', () => {
-  it('Farm Owner và Domain Expert xem danh sách và chi tiết; người farm khác, Technician, Administrator → 403', async () => {
+  it('Farm Owner, Domain Expert và thợ được giao nhà xem danh sách và chi tiết; người farm khác, Administrator → 403', async () => {
     const { farm, house, ownerToken, expertToken } = await setup()
     const { report } = (await generateHouseReport('WEEKLY', String(house._id), addDays(DAY, -6), DAY))!
 
@@ -241,10 +242,20 @@ describe('TC-F21-01 — xem báo cáo theo nhà', () => {
     const other = await setup()
     await call('get', `/health-reports/${report._id}`, other.ownerToken).expect(403)
     await call('get', `/health-reports?houseId=${house._id}`, other.ownerToken).expect(403)
+    // Administrator và thợ không thuộc farm → 403
     for (const role of ['FARM_TECHNICIAN', 'ADMIN'] as const) {
       const user = await User.create({ email: `${role}${Math.random()}@t.vn`, password_hash: 'password123', full_name: role, role })
       await call('get', `/health-reports/${report._id}`, tokenFor(user._id, role)).expect(403)
     }
+    // Report 3 §2.4 — thợ được giao nhà đọc báo cáo của nhà đó; lọc theo farm chỉ ra nhà được giao
+    const technician = await User.create({ email: `ft${Math.random()}@t.vn`, password_hash: 'password123', full_name: 'Thợ', role: 'FARM_TECHNICIAN' })
+    const technicianToken = tokenFor(technician._id, 'FARM_TECHNICIAN')
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: technician._id, role: 'FARM_TECHNICIAN' } } })
+    await call('get', `/health-reports/${report._id}`, technicianToken).expect(403)
+    expect((await call('get', `/health-reports?farmId=${farm._id}&kind=WEEKLY`, technicianToken).expect(200)).body.meta.total).toBe(0)
+    await House.updateOne({ _id: house._id }, { $push: { technicians: { user_id: technician._id, primary: true } } })
+    await call('get', `/health-reports/${report._id}`, technicianToken).expect(200)
+    expect((await call('get', `/health-reports?farmId=${farm._id}&kind=WEEKLY`, technicianToken).expect(200)).body.meta.total).toBe(1)
   })
 })
 

@@ -2,6 +2,7 @@ import { Types } from 'mongoose'
 import { baselineAfter, stageOn } from '@/utils/houseStage.util'
 import { Alert, type IAlert } from '@/models/alert.model'
 import { BirdCountBucket } from '@/models/birdCountBucket.model'
+import { Farm } from '@/models/farm.model'
 import { HouseHealthDay, type HealthIndicators, type IDayWeather, type IHouseHealthDay } from '@/models/houseHealthDay.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
@@ -387,11 +388,17 @@ export async function assessAllHouses(date = vnDate(new Date()), now = new Date(
 
 /**
  * EXPERT-FR-012 — thông báo không có trạng thái: người nhận phải chấm trước khi xem. Chỉ người chấm
- * (BR-31: Farm Owner; G-20 thêm Farm Technician của nhà); Domain Expert không chấm nên không nhận.
+ * (BR-31): Farm Owner và Farm Technician được giao nhà (còn là thợ của farm); Domain Expert không chấm nên không nhận.
  */
 async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
-  const house = await House.findById(day.house_id).select('name').lean()
-  const recipients = (await findRecipients(String(day.farm_id))).map(u => String(u._id))
+  const [house, farm] = await Promise.all([
+    House.findById(day.house_id).select('name technicians').lean(),
+    Farm.findById(day.farm_id).select('members').lean(),
+  ])
+  const farmTechnicians = new Set((farm?.members ?? []).filter(m => m.role === 'FARM_TECHNICIAN').map(m => String(m.user_id)))
+  const technicians = (house?.technicians ?? []).map(t => String(t.user_id)).filter(id => farmTechnicians.has(id))
+  const owners = (await findRecipients(String(day.farm_id))).map(u => String(u._id))
+  const recipients = [...new Set([...owners, ...technicians])]
   await Promise.all(recipients.map(id => notifyUser(id, {
     title: `Đánh giá ngày ${day.date} của ${house?.name ?? 'nhà yến'}`,
     body: 'Hãy chấm tình trạng đàn theo quan sát của bạn trước khi xem kết quả của hệ thống.',

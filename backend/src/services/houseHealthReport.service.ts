@@ -13,7 +13,7 @@ import { RAIN_MM_PER_HOUR, addDays, isFlockDayComplete, vnDayStart } from '@/ser
 import { MAX_DAY_RANGE, presentHouseDays } from '@/services/healthDay.service'
 import { buildZoneMetrics, getHealthReport, setReportConclusion as setZoneReportConclusion } from '@/services/healthReport.service'
 import { findFarmExperts, findRecipients, notifyUser } from '@/services/notification.service'
-import { assertFarmAccess, assertHouseAccess, listActiveHouseIds } from '@/utils/farmAccess.util'
+import { assertHouseAccess, listActiveHouseIds, listFarmHouseIds } from '@/utils/farmAccess.util'
 import { BadRequestError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
@@ -221,10 +221,8 @@ export interface ListHouseReportsQuery {
 export async function listHouseReports(user: CurrentUser, query: ListHouseReportsQuery) {
   let houseIds: unknown[]
   if (query.houseId) houseIds = [(await assertHouseAccess(query.houseId, user)).house._id]
-  else if (query.farmId) {
-    await assertFarmAccess(query.farmId, user)
-    houseIds = (await House.find({ farm_id: query.farmId }).select('_id').lean()).map(h => h._id)
-  } else throw BadRequestError('Cần houseId hoặc farmId')
+  else if (query.farmId) houseIds = await listFarmHouseIds(query.farmId, user)
+  else throw BadRequestError('Cần houseId hoặc farmId')
   if (query.from && query.to && query.from > query.to) throw BadRequestError('from phải không sau to')
 
   const filter = {

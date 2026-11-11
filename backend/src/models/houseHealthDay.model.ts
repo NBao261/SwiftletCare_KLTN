@@ -123,7 +123,7 @@ const houseHealthDaySchema = new Schema<IHouseHealthDay>(
     computed_at: { type: Date, required: true },
     ratings: [{
       by:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
-      role:    { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT'] satisfies FarmMemberRole[], required: true },
+      role:    { type: String, enum: ['FARM_OWNER', 'FARM_TECHNICIAN', 'DOMAIN_EXPERT'] satisfies FarmMemberRole[], required: true },
       outcome: { type: String, enum: ['RATED', 'SKIPPED'], required: true },
       rating:  { type: String, enum: ['GOOD', 'WATCH', 'ACTION'] satisfies HealthRatingValue[] },
       note:    { type: String },

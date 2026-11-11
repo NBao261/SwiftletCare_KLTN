@@ -11,7 +11,7 @@ import {
   type OrderedStatus, type RatingPair,
 } from '@/utils/agreement.util'
 import { resolveHealthLevels } from '@/utils/detectionTuning.util'
-import { assertExpertDecision, assertFarmAccess, assertHouseAccess } from '@/utils/farmAccess.util'
+import { assertExpertDecision, assertFarmAccess, assertHouseAccess, listFarmHouseIds } from '@/utils/farmAccess.util'
 import { formatReason, type ReasonLang } from '@/utils/healthReason.util'
 import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource, Role } from '@/types'
 
@@ -23,10 +23,10 @@ import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, Healt
 
 /**
  * BR-31 (Report 3 4.2.0) — người chấm: Farm Owner (những ngày có mặt ở nhà) và Farm Technician của nhà
- * (mỗi ngày, thêm vào đây cùng vai `FARM_TECHNICIAN` ở G-20). Domain Expert không chấm: xem các ngày lệch
+ * được giao (mỗi ngày; chỉ tới được nhà được giao, AUTH-FR-013). Domain Expert không chấm: xem các ngày lệch
  * (EXPERT-FR-022) và thấy trạng thái ngay vì không có gì để che.
  */
-export const ASSESSOR_ROLES: readonly Role[] = ['FARM_OWNER']
+export const ASSESSOR_ROLES: readonly Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN']
 export const isAssessor = (role: Role) => ASSESSOR_ROLES.includes(role)
 
 /** Khoảng đọc tối đa 1 lần (EXPERT-FR-005: báo cáo theo yêu cầu tới 31 ngày) */
@@ -101,8 +101,8 @@ async function resolveHouses(user: CurrentUser, params: { houseId?: string; farm
     return [house]
   }
   if (params.farmId) {
-    await assertFarmAccess(params.farmId, user)
-    return House.find({ farm_id: params.farmId }).select('name farm_id').lean()
+    // Farm Technician: chỉ các nhà được giao trong farm
+    return House.find({ _id: { $in: await listFarmHouseIds(params.farmId, user) } }).select('name farm_id').lean()
   }
   throw BadRequestError('Cần houseId hoặc farmId')
 }

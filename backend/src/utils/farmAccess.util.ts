@@ -207,6 +207,17 @@ export async function listAssignedHouseIds(user: CurrentUser) {
   return House.find({ farm_id: { $in: farmIds }, 'technicians.user_id': user._id }).distinct('_id')
 }
 
+/**
+ * Nhà của 1 farm mà người gọi được xem khi lọc theo `farmId`: cả farm với Farm Owner và Domain Expert,
+ * chỉ các nhà được giao với Farm Technician (AUTH-FR-013); người khác 403.
+ */
+export async function listFarmHouseIds(farmId: string, user: CurrentUser) {
+  const farm = await findFarmOrThrow(farmId)
+  if (isFarmTechnician(farm, user)) return House.find({ farm_id: farm._id, 'technicians.user_id': user._id }).distinct('_id')
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
+  return House.find({ farm_id: farm._id }).distinct('_id')
+}
+
 /** Mọi House thuộc Farm chưa xoá mềm — cùng phạm vi với listActiveZoneIds cho màn hình Admin */
 export async function listActiveHouseIds() {
   const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')

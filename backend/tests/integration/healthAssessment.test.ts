@@ -4,7 +4,9 @@
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
+import { Farm } from '@/models/farm.model'
 import { House } from '@/models/houseZone.model'
+import { User } from '@/models/user.model'
 import { Alert } from '@/models/alert.model'
 import { vnDate } from '@/services/birdCount.service'
 import { addDays, assessAllHouses, assessHouseDay, computeHouseDay, recomputeForAlert, vnDayStart } from '@/services/healthAssessment.service'
@@ -181,6 +183,19 @@ describe('job đánh giá (SM-17)', () => {
       expect(JSON.stringify(message)).not.toMatch(/ACTION|WATCH|GOOD|Cần xử lý/)
       expect(message.ref.kind).toBe('health_day')
     }
+  })
+
+  it('báo cả Farm Technician được giao nhà (BR-31), không báo thợ đã rời farm', async () => {
+    const { farm, house, owner } = await scenario({ rates: FLOCK_CLEAR })
+    const [assigned, left] = await Promise.all(['a', 'b'].map(tag => User.create({
+      email: `ft-${tag}-${house._id}@t.vn`, password_hash: 'password123', full_name: tag, role: 'FARM_TECHNICIAN',
+    })))
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: assigned._id, role: 'FARM_TECHNICIAN' } } })
+    await House.updateOne({ _id: house._id }, { $set: { technicians: [{ user_id: assigned._id, primary: true }, { user_id: left._id, primary: false }] } })
+
+    expect(await assessAllHouses(DATE, NOW)).toBe(1)
+    const recipients = (notifyUser as jest.Mock).mock.calls.map(c => c[0]).sort()
+    expect(recipients).toEqual([String(owner._id), String(assigned._id)].sort())
   })
 
   it('chuyên gia bác bỏ NOISE_ANOMALY của ngày đã đánh giá → tính lại ngay, ACTION thành WATCH', async () => {

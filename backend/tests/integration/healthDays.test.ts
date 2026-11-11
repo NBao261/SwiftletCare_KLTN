@@ -1,7 +1,7 @@
 /**
  * EXPERT-FR-012/013, BR-31, SM-18, ANALYTICS-FR-014 — chấm độc lập trạng thái ngày (TC-F22-01…03,
  * TC-ST §6.18), CSV (TC-F21-02), mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22), độ khớp, ngày lệch
- * (EXPERT-FR-022). Người chấm theo Report 3 4.2.0: Farm Owner (Farm Technician thêm ở G-20); Domain
+ * (EXPERT-FR-022). Người chấm theo Report 3 4.2.0: Farm Owner và Farm Technician được giao nhà; Domain
  * Expert không chấm.
  */
 import express from 'express'
@@ -167,7 +167,7 @@ describe('TC-F22-02 — trạng thái hiện tại theo dữ liệu, ảnh chụ
 })
 
 describe('TC-F22-03 — quyền và hạn chấm', () => {
-  it('Domain Expert, Technician, Administrator → 403 (BR-31: chỉ người chấm)', async () => {
+  it('Domain Expert, Administrator, Farm Technician ngoài farm → 403 (BR-31: chỉ người chấm của nhà)', async () => {
     const { house, expertToken } = await setup()
     const day = await mkDay(house, YESTERDAY)
     for (const role of ['FARM_TECHNICIAN', 'ADMIN'] as Role[]) {
@@ -453,5 +453,79 @@ describe('ngày lệch (EXPERT-FR-022)', () => {
     })
     const res = await call('get', `/health-reports/disagreements?houseId=${house._id}`, expertToken)
     expect(res.body.data.houses[0].health_levels.noise_slight).toBe(2)
+  })
+})
+
+/** Farm Technician là thành viên farm, được giao `house` nếu có (AUTH-FR-013) */
+async function addTechnician(farm: { _id: unknown }, house?: { _id: unknown }) {
+  const technician = await User.create({
+    email: `ft${new Types.ObjectId()}@t.vn`, password_hash: 'password123', full_name: 'Thợ', role: 'FARM_TECHNICIAN',
+  })
+  await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: technician._id, role: 'FARM_TECHNICIAN' } } })
+  if (house) await House.updateOne({ _id: house._id }, { $push: { technicians: { user_id: technician._id, primary: true } } })
+  return { technician, token: tokenFor(technician._id, 'FARM_TECHNICIAN') }
+}
+
+describe('Farm Technician chấm ngày của nhà được giao (BR-31, EXPERT-FR-012, AUTH-FR-013)', () => {
+  it('chấm riêng với Farm Owner: chưa chấm thì bị che, chấm xong mới thấy trạng thái; mỗi người một lượt', async () => {
+    const { farm, house, ownerToken } = await setup()
+    const { technician, token } = await addTechnician(farm, house)
+    const day = await mkDay(house, YESTERDAY)
+
+    const before = (await call('get', `/health-reports/days?houseId=${house._id}`, token)).body.data[0]
+    expect(before).toMatchObject({ my_rating_state: 'PENDING' })
+    expect(before).not.toHaveProperty('current_status')
+    expect((await call('get', `/health-reports/days?houseId=${house._id}&myRatingState=PENDING`, token)).body.data).toHaveLength(1)
+
+    const rated = await call('post', `/health-reports/days/${day._id}/rating`, token, { rating: 'WATCH' })
+    expect(rated.status).toBe(201)
+    expect(rated.body.data).toMatchObject({ my_rating_state: 'RATED', current_status: 'ACTION' })
+    expect(rated.body.data.ratings).toEqual([
+      expect.objectContaining({ role: 'FARM_TECHNICIAN', rating: 'WATCH', by: { _id: String(technician._id), full_name: 'Thợ' } }),
+    ])
+    expect((await call('post', `/health-reports/days/${day._id}/rating`, token, { rating: 'GOOD' })).status).toBe(409)
+
+    // Lượt của thợ không mở trạng thái cho Farm Owner: chủ vẫn chấm riêng
+    const ownerView = (await call('get', `/health-reports/days/${day._id}`, ownerToken)).body.data
+    expect(ownerView).toMatchObject({ my_rating_state: 'PENDING' })
+    expect(ownerView).not.toHaveProperty('ratings')
+    expect((await call('post', `/health-reports/days/${day._id}/skip`, ownerToken)).status).toBe(201)
+    expect((await HouseHealthDay.findById(day._id).lean())!.ratings.map(r => r.role)).toEqual(['FARM_TECHNICIAN', 'FARM_OWNER'])
+    // Lệnh ghi dạng pipeline bỏ qua validator của Mongoose: schema (và $jsonSchema của init.mongo.js) phải nhận vai thợ
+    await expect((await HouseHealthDay.findById(day._id))!.validate()).resolves.toBeUndefined()
+    // Độ khớp tách theo vai người chấm (NFR-14)
+    expect((await call('get', `/health-reports/evaluation?houseId=${house._id}&role=FARM_TECHNICIAN`, ownerToken)).status).toBe(200)
+  })
+
+  it('chỉ ở nhà được giao: nhà khác 403, lọc theo farm chỉ ra nhà được giao, quá 7 ngày thì EXPIRED; gỡ khỏi nhà thì mất quyền', async () => {
+    const { farm, house } = await setup()
+    const other = await House.create({ farm_id: farm._id, name: 'Nhà khác' })
+    const { technician, token } = await addTechnician(farm, house)
+    const mine = await mkDay(house, YESTERDAY)
+    const notMine = await mkDay(other, YESTERDAY)
+    const old = await mkDay(house, addDays(TODAY, -8))
+    const from = addDays(TODAY, -8)
+
+    expect((await call('get', `/health-reports/days?houseId=${other._id}`, token)).status).toBe(403)
+    expect((await call('get', `/health-reports/days/${notMine._id}`, token)).status).toBe(403)
+    expect((await call('post', `/health-reports/days/${notMine._id}/rating`, token, { rating: 'GOOD' })).status).toBe(403)
+
+    const listed = (await call('get', `/health-reports/days?farmId=${farm._id}&from=${from}`, token)).body.data as Array<{ _id: string; my_rating_state: string }>
+    expect(listed.map(d => d._id).sort()).toEqual([String(mine._id), String(old._id)].sort())
+    expect(listed.find(d => d._id === String(old._id))!.my_rating_state).toBe('EXPIRED')
+    expect((await call('post', `/health-reports/days/${old._id}/rating`, token, { rating: 'GOOD' })).status).toBe(409)
+    const csv = await call('get', `/health-reports/days.csv?houseId=${house._id}&from=${from}`, token)
+    expect(csv.status).toBe(200)
+
+    await House.updateOne({ _id: house._id }, { $pull: { technicians: { user_id: technician._id } } })
+    expect((await call('post', `/health-reports/days/${mine._id}/rating`, token, { rating: 'GOOD' })).status).toBe(403)
+  })
+
+  it('không xem độ khớp, ngày lệch hay báo cáo Zone cũ (Report 3 §2.4)', async () => {
+    const { farm, house, zone } = await setup()
+    const { token } = await addTechnician(farm, house)
+    expect((await call('get', `/health-reports/evaluation?houseId=${house._id}`, token)).status).toBe(403)
+    expect((await call('get', `/health-reports/disagreements?houseId=${house._id}`, token)).status).toBe(403)
+    expect((await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${YESTERDAY}`, token)).status).toBe(403)
   })
 })
