@@ -1536,6 +1536,41 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
 
+  /farms/houses/{houseId}/stage:
+    put:
+      tags: [Farms]
+      summary: "Đặt giai đoạn nhà yến (FARM-FR-014, BR-46) — FARM_OWNER, DOMAIN_EXPERT của farm"
+      description: |
+        `ATTRACTING`: chim chưa về ở — đánh giá ngày không xét đàn chim (lý do `ATTRACTING_STAGE`, không thành
+        `INSUFFICIENT_DATA` vì thiếu số đếm) và không tạo `LOW_RETURN_RATE`. `OCCUPIED` (mặc định): nhà đã có chim
+        ở; chuyển sang `OCCUPIED` thì nền so sánh tỷ lệ chim về (BR-21) chỉ gồm các ngày sau lần chuyển. Mỗi lần đổi
+        lưu vào `stage_history` (người đổi, vai trò, thời điểm) và audit `HOUSE_STAGE_UPDATED`; thay đổi của Domain
+        Expert báo cho Farm Owner (EXPERT-FR-009). Đặt lại đúng giai đoạn đang có thì không ghi gì.
+        Administrator, Farm Technician, người farm khác → 403.
+      parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stage]
+              properties:
+                stage: { type: string, enum: [ATTRACTING, OCCUPIED] }
+      responses:
+        "200":
+          description: Nhà sau khi đặt
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/House" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /farms/houses/{houseId}/bird-count-tuning:
     put:
       tags: [Farms]
@@ -4794,6 +4829,16 @@ components:
         description: { type: string }
         bird_count_tuning: { $ref: "#/components/schemas/BirdCountTuning" }
         health_levels: { $ref: "#/components/schemas/HealthLevels" }
+        stage: { type: string, enum: [ATTRACTING, OCCUPIED], default: OCCUPIED, description: "FARM-FR-014, BR-46 — giai đoạn nhà" }
+        stage_history:
+          type: array
+          items:
+            type: object
+            properties:
+              stage: { type: string, enum: [ATTRACTING, OCCUPIED] }
+              changed_by: { type: string }
+              changed_by_role: { type: string }
+              changed_at: { type: string, format: date-time }
         created_at: { type: string, format: date-time }
 
     Thresholds:
@@ -4977,11 +5022,12 @@ components:
         - `NOISE_EPISODES`: `{ episodes }`
         - `WEATHER_UNAVAILABLE`: {}
         - `RAIN_DOWNGRADE`: `{ mm_per_hour }` — ACTION hạ xuống WATCH (BR-30)
+        - `ATTRACTING_STAGE`: {} — nhà giai đoạn dẫn dụ, không đánh giá đàn chim (BR-46)
       required: [code, source, level, values]
       properties:
         code:
           type: string
-          enum: [ALL_NORMAL, MISSING_DATA, NOT_ASSESSED, ENV_IN_RANGE, AIR_OVER_LIMIT, FLOCK_DROP, FLOCK_NO_BASELINE, NOISE_EPISODES, WEATHER_UNAVAILABLE, RAIN_DOWNGRADE]
+          enum: [ALL_NORMAL, MISSING_DATA, NOT_ASSESSED, ENV_IN_RANGE, AIR_OVER_LIMIT, FLOCK_DROP, FLOCK_NO_BASELINE, NOISE_EPISODES, WEATHER_UNAVAILABLE, RAIN_DOWNGRADE, ATTRACTING_STAGE]
         source: { type: string, enum: [environment, air, flock, noise], nullable: true }
         level: { type: string, enum: [SLIGHT, CLEAR], nullable: true, description: "Mức của nguồn khi lý do là một chỉ số lệch" }
         values: { type: object, additionalProperties: true }
