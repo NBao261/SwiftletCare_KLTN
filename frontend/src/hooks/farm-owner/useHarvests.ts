@@ -28,6 +28,14 @@ export function useUpdateHarvest() {
   })
 }
 
+export function useConfirmHarvest() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => harvestApi.confirm(id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['harvests'] }),
+  })
+}
+
 export function useDeleteHarvest() {
   const queryClient = useQueryClient()
   return useMutation({

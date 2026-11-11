@@ -15,7 +15,7 @@ import { harvestDict, type HarvestTranslate } from '@/constants/harvest.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
+import { useConfirmHarvest, useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { formatStandardDate } from '@/lib/i18n';
@@ -86,6 +86,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   // HARVEST-FR: Farm Owner ghi, Domain Expert chỉ đọc (Report 3 §2.4)
   const canWrite = usePermission('FARM_OWNER');
   const deleteHarvest = useDeleteHarvest();
+  const confirmHarvest = useConfirmHarvest();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
 
@@ -95,6 +96,9 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const [editGroupKey, setEditGroupKey] = useState<string | null>(null);
   const [deleteGroupKey, setDeleteGroupKey] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Lần thu đang chờ hỏi lại trước khi xác nhận các lô DRAFT
+  const [confirmGroupKey, setConfirmGroupKey] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Backend lưu lần thu theo Zone; giao diện chỉ hiện nhà yến của Zone đó
   const houseNameByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.houseName])), [zones]);
@@ -167,6 +171,23 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
     setDetailGroupKey(null);
   }
 
+  // HARVEST-FR-006 — xác nhận cả lần thu = xác nhận từng lô DRAFT của các loại yến trong nhóm
+  async function handleConfirm(): Promise<void> {
+    const group = confirmGroupKey ? groupByKey.get(confirmGroupKey) : undefined;
+    if (!group) return;
+    setIsConfirming(true);
+    const results = await Promise.allSettled(group.pendingIds.map(id => confirmHarvest.mutateAsync(id)));
+    setIsConfirming(false);
+    const failure = results.find(result => result.status === 'rejected') as PromiseRejectedResult | undefined;
+    if (failure) {
+      push(apiErrorMessage(failure.reason, t('confirm.failed')), 'error');
+      return;
+    }
+    push(t('confirm.done'));
+    setConfirmGroupKey(null);
+  }
+  const confirmGroup = confirmGroupKey ? groupByKey.get(confirmGroupKey) : undefined;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
@@ -197,6 +218,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
             onOpenDetail={group => setDetailGroupKey(group.key)}
             onEdit={canWrite ? group => setEditGroupKey(group.key) : undefined}
             onDelete={canWrite ? group => setDeleteGroupKey(group.key) : undefined}
+            onConfirm={canWrite ? group => setConfirmGroupKey(group.key) : undefined}
             onCreate={canWrite ? () => setIsCreateOpen(true) : undefined}
             createBlockedReason={createBlockedReason}
             onExport={() => exportCsv(allBatches, houseNameByZone, personNames, t)}
@@ -235,6 +257,20 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
           onClose={() => setEditGroupKey(null)}
         />
       )}
+
+      <ConfirmModal
+        open={confirmGroup !== undefined}
+        title={t('confirm.title')}
+        description={confirmGroup ? t('confirm.description', {
+          date: formatStandardDate(confirmGroup.harvest_date),
+          house: houseNameByZone.get(confirmGroup.zone_id) ?? NO_VALUE,
+          creator: creatorName(confirmGroup),
+        }) : ''}
+        confirmLabel={t('action.confirm')}
+        loading={isConfirming}
+        onConfirm={() => void handleConfirm()}
+        onCancel={() => setConfirmGroupKey(null)}
+      />
 
       <ConfirmModal
         open={deleteGroupKey !== null}

@@ -32,6 +32,11 @@ const vi = {
   'table.allHouses': 'Tất cả nhà yến',
   'table.filterNestType': 'Lọc theo loại tổ',
   'table.allNestTypes': 'Tất cả loại tổ',
+  'table.filterStatus': 'Lọc theo trạng thái xác nhận',
+  'table.allStatuses': 'Tất cả trạng thái',
+  // HARVEST-FR-006 — lô do kỹ thuật viên nhập chờ chủ nhà yến xác nhận
+  'status.pending': 'Chờ xác nhận',
+  'status.confirmed': 'Đã xác nhận',
   'table.sortDate': 'Ngày thu hoạch',
   'table.sortWeight': 'Sản lượng',
   'table.clearFilters': 'Hủy lọc',
@@ -50,6 +55,7 @@ const vi = {
   'action.detail': 'Chi tiết',
   'action.edit': 'Sửa',
   'action.delete': 'Xóa',
+  'action.confirm': 'Xác nhận đợt thu',
 
   // Loại tổ
   // Tên gọi hiển thị theo màu tổ; backend vẫn lưu RAW / CLEANED / PREMIUM
@@ -90,6 +96,10 @@ const vi = {
   'delete.confirm': 'Xóa',
   'delete.done': 'Đã xoá đợt thu hoạch',
   'delete.failed': 'Xoá thất bại',
+  'confirm.title': 'Xác nhận đợt thu hoạch?',
+  'confirm.description': 'Đợt thu ngày {date} ở {house} do {creator} nhập. Sau khi xác nhận, kỹ thuật viên không sửa hay xoá được nữa.',
+  'confirm.done': 'Đã xác nhận đợt thu hoạch',
+  'confirm.failed': 'Không xác nhận được đợt thu hoạch',
 
   // Biểu đồ năm
   'chart.titleMonth': 'Sản lượng theo tháng {year}',
@@ -199,6 +209,10 @@ const en: Record<HarvestKey, string> = {
   'table.allHouses': 'All houses',
   'table.filterNestType': 'Filter by nest type',
   'table.allNestTypes': 'All nest types',
+  'table.filterStatus': 'Filter by confirmation status',
+  'table.allStatuses': 'All statuses',
+  'status.pending': 'Awaiting confirmation',
+  'status.confirmed': 'Confirmed',
   'table.sortDate': 'Harvest date',
   'table.sortWeight': 'Yield',
   'table.clearFilters': 'Clear filters',
@@ -217,6 +231,7 @@ const en: Record<HarvestKey, string> = {
   'action.detail': 'Details',
   'action.edit': 'Edit',
   'action.delete': 'Delete',
+  'action.confirm': 'Confirm harvest',
 
   'nestType.RAW': 'White nest',
   'nestType.CLEANED': 'Pink nest',
@@ -252,6 +267,10 @@ const en: Record<HarvestKey, string> = {
   'delete.confirm': 'Delete',
   'delete.done': 'Harvest batch deleted',
   'delete.failed': 'Could not delete the batch',
+  'confirm.title': 'Confirm this harvest?',
+  'confirm.description': 'Harvest of {date} at {house}, entered by {creator}. Once confirmed, the technician can no longer edit or delete it.',
+  'confirm.done': 'Harvest confirmed',
+  'confirm.failed': 'Could not confirm the harvest',
 
   'chart.titleMonth': 'Monthly yield {year}',
   'chart.titleQuarter': 'Quarterly yield {year}',
