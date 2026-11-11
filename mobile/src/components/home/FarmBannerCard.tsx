@@ -30,7 +30,8 @@ function getAlertText(activeAlertCount: number | undefined): string {
   return t('{count} cảnh báo đang mở', { count: activeAlertCount })
 }
 
-// Khung tổng quan của MỘT Farm: tên Farm, tổng số nhà yến, số cảnh báo đang mở của cả Farm
+// Khung tổng quan của MỘT Farm: tên Farm, tổng số nhà yến, số cảnh báo đang mở của cả Farm. Chạm cả thẻ hoặc nút mũi
+// tên thì mở danh sách nhà của farm ở tab Farm (Trang chủ, "Tất cả trang trại" của tab Farm)
 export function FarmBannerCard({ farm, width }: FarmBannerCardProps) {
   const palette = usePalette()
   const housesQuery = useHouses(farm._id)
@@ -42,10 +43,16 @@ export function FarmBannerCard({ farm, width }: FarmBannerCardProps) {
   const alertText = getAlertText(activeAlertCount)
   // Cam chỉ dùng khi có cảnh báo; không có thì chữ xám trên nền tối
   const alertColor = activeAlertCount ? palette.alert : palette.onInverseSecondary
+  const openFarm = () => router.navigate({ pathname: '/(tabs)/farms', params: { farmId: farm._id } })
 
   return (
     // Farm chưa có trường ảnh trong API — nền đen với 2 vòng olive quanh nút mũi tên
-    <Card tone="inverse" style={[styles.card, { width }]}>
+    <Card
+      tone="inverse"
+      style={[styles.card, { width }]}
+      onPress={openFarm}
+      accessibilityLabel={`${farm.name}, ${houseText}, ${alertText}`}
+    >
       {/* 2 vòng trang trí: vòng ngoài olive mờ, vòng trong olive đậm hơn */}
       <View
         style={[styles.ring, styles.outerRing, { backgroundColor: palette.farmRingOuter }]}
@@ -62,7 +69,7 @@ export function FarmBannerCard({ farm, width }: FarmBannerCardProps) {
         </Text>
         <PressableScale
           style={[styles.arrowButton, { backgroundColor: palette.primary }]}
-          onPress={() => router.navigate({ pathname: '/(tabs)/farms', params: { farmId: farm._id } })}
+          onPress={openFarm}
           accessibilityRole="button"
           accessibilityLabel={t('Xem chi tiết {name}', { name: farm.name })}
         >

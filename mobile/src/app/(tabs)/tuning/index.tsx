@@ -31,6 +31,7 @@ import { useInferredAlerts } from '@/hooks/expert/useInferredAlerts'
 import { useHealthReports } from '@/hooks/expert/useExpertReports'
 import { useExpertReviewItems } from '@/hooks/expert/useExpertReviews'
 import {
+  useApplyFuzzySuggestion,
   useFuzzySuggestion,
   useResetThresholds,
   useUpdateDetectionTuning,
@@ -64,7 +65,6 @@ const CHIP_ITEMS: { key: TuningChipKey; label: string }[] = [
   { key: 'thresholds', label: 'Ngưỡng nhiệt ẩm' },
   { key: 'fuzzy', label: 'Độ ẩm & Gió' },
   { key: 'detection', label: 'Bắt lỗi' },
-  { key: 'standards', label: 'Tỷ lệ chim về' },
 ]
 
 /**
@@ -181,6 +181,7 @@ export default function TuningScreen() {
   const updateThresholdsMutation = useUpdateThresholds()
   const resetThresholdsMutation = useResetThresholds()
   const updateFuzzyMutation = useUpdateFuzzyTuning()
+  const applyFuzzySuggestionMutation = useApplyFuzzySuggestion()
   const updateDetectionMutation = useUpdateDetectionTuning()
   const updateHouseDetectionMutation = useUpdateHouseDetection()
 
@@ -248,20 +249,41 @@ export default function TuningScreen() {
     }
   }, [activeZoneId, clearAllEdits, resetThresholdsMutation, showToast])
 
-  const handleApplyAiFuzzySuggestion = useCallback(() => {
-    if (!fuzzySuggestion?.suggested_values) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
-    setFuzzyEdits(prev => ({ ...prev, ...fuzzySuggestion.suggested_values }))
-  }, [fuzzySuggestion])
+  const suggestedValues = fuzzySuggestion?.suggestion ?? fuzzySuggestion?.suggested_values ?? null
+  const aiR2 = fuzzySuggestion?.model?.r2 ?? fuzzySuggestion?.r_squared ?? null
+  const aiInRangeNow = fuzzySuggestion?.predicted?.inRangeNow
+  const aiInRangeSuggested = fuzzySuggestion?.predicted?.inRangeSuggested
+  const aiDeltaPct =
+    fuzzySuggestion?.predicted_in_range_pct ??
+    (aiInRangeNow != null && aiInRangeSuggested != null
+      ? aiInRangeSuggested - aiInRangeNow
+      : null)
+  const aiReasonText = fuzzySuggestion?.reason ?? fuzzySuggestion?.reasoning ?? null
 
-  const kpiInRangePct = useMemo(() => {
+  const handleApplyAiFuzzySuggestion = useCallback(async () => {
+    if (!suggestedValues) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
+    if (activeZoneId && fuzzySuggestion?.suggestion) {
+      try {
+        await applyFuzzySuggestionMutation.mutateAsync(activeZoneId)
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
+        showToast(t('Đã áp dụng gợi ý hệ số mờ từ AI'))
+        return
+      } catch {
+        // Fallback sang điền vào form cục bộ nếu endpoint trả lỗi
+      }
+    }
+    setFuzzyEdits(prev => ({ ...prev, ...suggestedValues }))
+  }, [activeZoneId, applyFuzzySuggestionMutation, fuzzySuggestion?.suggestion, showToast, suggestedValues])
+
+  const kpiInRangePct = useMemo<number | null>(() => {
     const latestReport = (healthReportsResponse?.data || [])[0]
-    return latestReport?.time_in_range_pct ?? 91.5
+    return latestReport?.metrics?.humidity_in_range_pct ?? latestReport?.time_in_range_pct ?? null
   }, [healthReportsResponse?.data])
 
   const kpiBreachedCount = useMemo(() => (activeAlertsResponse?.data || []).length, [activeAlertsResponse?.data])
   const kpiOwnerReviewsCount = useMemo(() => (reviewItemsResponse?.data || []).filter(it => it.zone_id === activeZoneId).length, [activeZoneId, reviewItemsResponse?.data])
-  const kpiAiAvailable = useMemo(() => Boolean(fuzzySuggestion?.suggested_values && (fuzzySuggestion.r_squared ?? 0) >= 0.3), [fuzzySuggestion])
+  const kpiAiAvailable = useMemo(() => Boolean(suggestedValues && (aiR2 ?? 0) >= 0.3), [aiR2, suggestedValues])
 
   const getFieldValue = (chip: TuningChipKey, key: string, defVal: number) => {
     if (chip === 'thresholds') return localThresholds[key as keyof ExpertThresholds] ?? defVal
@@ -312,10 +334,14 @@ export default function TuningScreen() {
                     {t('Trong dải chuẩn')}
                   </Text>
                   <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                    {`${kpiInRangePct.toFixed(1)}%`}
+                    {kpiInRangePct != null ? `${kpiInRangePct.toFixed(1)}%` : '_'}
                   </Text>
                   <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
-                    {kpiInRangePct < 85 ? t('Cần can thiệp vi khí hậu') : t('Đạt chuẩn vi khí hậu')}
+                    {kpiInRangePct == null
+                      ? t('Chưa có kỳ báo cáo')
+                      : kpiInRangePct < 85
+                        ? t('Cần can thiệp vi khí hậu')
+                        : t('Đạt chuẩn vi khí hậu')}
                   </Text>
                 </View>
               </View>
@@ -412,7 +438,7 @@ export default function TuningScreen() {
             </ScrollView>
 
             <View style={styles.controlsArea}>
-              {selectedChip === 'fuzzy' && fuzzySuggestion ? (
+              {selectedChip === 'fuzzy' && suggestedValues ? (
                 <Card style={[styles.aiSuggestionCard, { marginBottom: Spacing.sm }]}>
                   <View style={styles.aiHeaderRow}>
                     <View style={[styles.aiTag, { backgroundColor: palette.primary }]}>
@@ -421,26 +447,36 @@ export default function TuningScreen() {
                         {t('Gợi ý tự động từ AI')}
                       </Text>
                     </View>
-                    <Text variant="small" weight="semiBold" color={palette.text}>
-                      {`Độ tin cậy: ${Math.round((fuzzySuggestion.r_squared ?? 0.85) * 100)}%`}
-                    </Text>
+                    {aiR2 != null ? (
+                      <Text variant="small" weight="semiBold" color={palette.text}>
+                        {`Độ tin cậy: ${Math.round(aiR2 * 100)}%`}
+                      </Text>
+                    ) : null}
                   </View>
-                  <Text variant="body" weight="semiBold" color={palette.text}>
-                    {t('Dự kiến tăng thời gian đạt chuẩn vi khí hậu lên {pct}%', {
-                      pct:
-                        fuzzySuggestion.predicted_in_range_pct > 0
-                          ? `+${fuzzySuggestion.predicted_in_range_pct.toFixed(1)}`
-                          : fuzzySuggestion.predicted_in_range_pct.toFixed(1),
-                    })}
-                  </Text>
-                  {fuzzySuggestion.reasoning ? (
+                  {aiInRangeNow != null && aiInRangeSuggested != null ? (
+                    <Text variant="body" weight="semiBold" color={palette.text}>
+                      {t('Đạt chuẩn dự kiến: {now}% → {next}%', {
+                        now: Math.round(aiInRangeNow),
+                        next: Math.round(aiInRangeSuggested),
+                      })}
+                    </Text>
+                  ) : aiDeltaPct != null ? (
+                    <Text variant="body" weight="semiBold" color={palette.text}>
+                      {t('Dự kiến tăng thời gian đạt chuẩn vi khí hậu lên {pct}%', {
+                        pct: aiDeltaPct > 0 ? `+${aiDeltaPct.toFixed(1)}` : aiDeltaPct.toFixed(1),
+                      })}
+                    </Text>
+                  ) : null}
+                  {aiReasonText ? (
                     <Text variant="small" color={palette.textSecondary}>
-                      {fuzzySuggestion.reasoning}
+                      {aiReasonText}
                     </Text>
                   ) : null}
                   <Button
                     label={t('Áp dụng gợi ý này')}
                     onPress={handleApplyAiFuzzySuggestion}
+                    loading={applyFuzzySuggestionMutation.isPending}
+                    disabled={applyFuzzySuggestionMutation.isPending}
                     variant="primary"
                     size="md"
                     trailingIcon={Lightning}

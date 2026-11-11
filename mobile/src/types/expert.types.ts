@@ -1,4 +1,33 @@
-import type { Alert, AlertStatus } from './alert.types'
+import type {
+  ChangeReviewStatus,
+  CoefficientProposal,
+  ExpertActivityEntry,
+  ParameterReview,
+  ProposalStatus,
+} from './account.types'
+import type {
+  Alert,
+  AlertEvidence,
+  AlertStatus,
+  AlertVerdict,
+  AlertVerdictResult,
+  EvidenceSourceStatus,
+  EvidenceTelemetrySample,
+} from './alert.types'
+import type { BirdCountBucket } from './analytics.types'
+import type { ExpertConclusion, ZoneHealthMetrics } from './healthReport.types'
+
+export type {
+  AlertEvidence,
+  BirdCountBucket,
+  ChangeReviewStatus,
+  CoefficientProposal,
+  EvidenceSourceStatus,
+  EvidenceTelemetrySample,
+  ExpertActivityEntry,
+  ParameterReview,
+  ProposalStatus,
+}
 
 // Các loại cảnh báo suy luận cần chuyên gia kiểm chứng (EXPERT-FR-003)
 export type InferredAlertType =
@@ -9,51 +38,18 @@ export type InferredAlertType =
   | 'MISTING_INEFFECTIVE'
 
 // Kết quả kiểm chứng của chuyên gia
-export type VerdictResult = 'CONFIRMED' | 'REJECTED'
+export type VerdictResult = AlertVerdictResult
 
-export interface ExpertVerdict {
-  result: VerdictResult
-  note: string
-  by: { _id: string; full_name: string }
-  role: 'DOMAIN_EXPERT' | 'FARM_OWNER'
-  at: string
-}
+export type ExpertVerdict = AlertVerdict
 
-export interface InferredAlert extends Omit<Alert, 'expert_verdict'> {
-  expert_verdict?: ExpertVerdict
+export interface InferredAlert extends Alert {
   previous_status?: AlertStatus
-  house_id?: string
 }
 
-export interface TelemetrySample {
-  timestamp: string
-  temperature?: number
-  humidity?: number
-  nh3?: number
-  co2?: number
-  sound_db?: number
-  light?: number
-}
-
-export interface BirdCountBucket {
-  bucket_start: string
-  entry_count: number
-  exit_count: number
-}
-
-// Bằng chứng đa phương thức (ALERT-FR-014)
-export interface AlertEvidence {
-  alert_id: string
-  type: InferredAlertType
-  window: { from: string; to: string }
-  telemetry?: { status: 'ok' | 'missing'; samples: TelemetrySample[] }
-  bird_counts?: { status: 'ok' | 'missing'; buckets: BirdCountBucket[] }
-  device_alerts: Alert[]
-  earlier_verdicts: InferredAlert[]
-}
+export type TelemetrySample = EvidenceTelemetrySample
 
 // Trạng thái kiểm duyệt thay đổi của chủ farm (EXPERT-FR-010)
-export type ReviewItemStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' | 'ADJUSTED'
+export type ReviewItemStatus = ChangeReviewStatus
 
 export interface ReviewItem {
   _id: string
@@ -64,29 +60,9 @@ export interface ReviewItem {
   status: ReviewItemStatus
   old_values: Record<string, number>
   new_values: Record<string, number>
-  changed_by: { _id: string; full_name: string }
+  changed_by: string | { _id: string; full_name?: string }
   created_at: string
-}
-
-// Trạng thái đề xuất hệ số mờ từ chủ farm (EXPERT-FR-011)
-export type ProposalStatus = 'PROPOSED' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED'
-
-export interface CoefficientProposal {
-  _id: string
-  farm_id: string
-  zone_id: string
-  status: ProposalStatus
-  suggested_values: Record<string, number>
-  current_values: Record<string, number>
-  r_squared?: number
-  predicted_in_range_pct?: number
-  predicted?: {
-    inRangeNow?: number
-    inRangeSuggested?: number
-    in_range_pct?: number
-  }
-  submitted_by: { _id: string; full_name: string }
-  created_at: string
+  updated_at?: string
 }
 
 // Trạng thái sức khỏe nhà yến (EXPERT-FR-005, BR-28)
@@ -119,19 +95,6 @@ export type ExpertActionType =
   | 'CONCLUSION_WRITTEN'
   | 'COUNTING_RING_SET'
   | 'COUNTING_SCHEDULE_SET'
-
-export interface ExpertActivityEntry {
-  _id: string
-  action: ExpertActionType
-  actor: { _id: string; full_name: string }
-  actor_role: 'DOMAIN_EXPERT' | 'FARM_OWNER'
-  target_type: 'Alert' | 'Zone' | 'House' | 'Report'
-  target_id: string
-  zone_id?: string
-  house_id?: string
-  metadata: Record<string, unknown>
-  created_at: string
-}
 
 export interface ExpertVerdictStats {
   type: InferredAlertType
@@ -173,10 +136,20 @@ export interface ExpertDetectionTuning {
 }
 
 export interface FuzzySuggestionResponse {
-  suggested_values: Partial<ExpertFuzzyTuning>
-  current_values: ExpertFuzzyTuning
-  r_squared: number
-  predicted_in_range_pct: number
+  current?: ExpertFuzzyTuning
+  model?: { r2: number; samples: number; days: number } | null
+  suggestion?: Partial<ExpertFuzzyTuning> | null
+  reason?: string | null
+  predicted?: {
+    inRangeNow: number
+    inRangeSuggested: number
+    mistingNow: number
+    mistingSuggested: number
+  }
+  suggested_values?: Partial<ExpertFuzzyTuning>
+  current_values?: ExpertFuzzyTuning
+  r_squared?: number
+  predicted_in_range_pct?: number
   reasoning?: string
 }
 
@@ -184,16 +157,18 @@ export interface ZoneHealthReportItem {
   _id: string
   zone_id: string
   farm_id: string
-  report_type: 'DAILY' | 'WEEKLY' | 'MONTHLY'
+  report_type?: 'DAILY' | 'WEEKLY' | 'MONTHLY'
   period_start: string
   period_end: string
-  health_status: DailyHealthStatus
-  time_in_range_pct: number
-  autonomy_pct: number
-  alerts_count: number
-  confirmed_alerts_count: number
-  expert_conclusion?: string
+  generated_at?: string
+  health_status?: DailyHealthStatus
+  time_in_range_pct?: number
+  autonomy_pct?: number
+  alerts_count?: number
+  confirmed_alerts_count?: number
+  metrics?: ZoneHealthMetrics
+  expert_conclusion?: ExpertConclusion | string | null
   expert_conclusion_by?: { _id: string; full_name: string }
   expert_conclusion_at?: string
-  created_at: string
+  created_at?: string
 }

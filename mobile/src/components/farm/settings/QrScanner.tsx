@@ -15,7 +15,7 @@ interface QrScannerProps {
   onScanned: (data: string) => void
 }
 
-// Quét mã QR bằng camera sau (expo-camera, MF-10): chỉ nhận mã QR; chưa cấp quyền camera thì hỏi
+// Quét mã QR bằng camera sau (expo-camera, SF-01): chỉ nhận mã QR; chưa cấp quyền camera thì hỏi
 export function QrScanner({ onScanned }: QrScannerProps) {
   const palette = usePalette()
   const [permission, requestPermission] = useCameraPermissions()

@@ -95,11 +95,17 @@ export const expertApi = {
       {}
     ),
 
-  // ── 3. Tinh chỉnh Hệ số mờ Fuzzy (EXPERT-FR-004, ANALYTICS-FR-010) ──────────────
+  // ── 3. Tinh chỉnh Hệ số mờ Fuzzy (EXPERT-FR-004, ANALYTICS-FR-010, EXPERT-FR-011) ──
   getFuzzySuggestion: (zoneId: string) =>
-    apiClient.get<ApiResponse<FuzzySuggestionResponse>>(ENDPOINTS.ANALYTICS_CONTROL_SUGGESTION, {
+    apiClient.get<ApiResponse<FuzzySuggestionResponse>>(ENDPOINTS.CONTROL_SUGGESTION, {
       params: { zoneId },
     }),
+
+  applyFuzzySuggestion: (zoneId: string) =>
+    apiClient.post<ApiResponse<{ _id: string; house_id: string; fuzzy_tuning: ExpertFuzzyTuning }>>(
+      ENDPOINTS.ZONE_APPLY_SUGGESTION(zoneId),
+      {}
+    ),
 
   updateFuzzyTuning: (zoneId: string, tuning: Partial<ExpertFuzzyTuning>) =>
     apiClient.put<ApiResponse<{ _id: string; fuzzy_tuning: ExpertFuzzyTuning }>>(
@@ -139,7 +145,7 @@ export const expertApi = {
 
   // ── 6. Kiểm duyệt Thay đổi của Chủ Farm (EXPERT-FR-010) ─────────────────────────
   getReviewItems: (params?: { farm_id?: string; zone_id?: string; status?: ReviewItemStatus }) =>
-    apiClient.get<ApiResponse<ReviewItem[]>>(ENDPOINTS.EXPERT_REVIEW_ITEMS, {
+    apiClient.get<ApiResponse<ReviewItem[]>>(ENDPOINTS.EXPERT_REVIEWS, {
       params: {
         farmId: params?.farm_id,
         zoneId: params?.zone_id,
@@ -198,7 +204,7 @@ export const expertApi = {
 
   // ── 9. Nhật ký Hoạt động Chuyên gia (EXPERT-FR-009) ───────────────────────────
   getExpertActivity: (farmId: string, params?: ExpertActivityQueryParams) =>
-    apiClient.get<ApiResponse<ExpertActivityEntry[]>>(ENDPOINTS.EXPERT_ACTIVITY_LIST, {
+    apiClient.get<ApiResponse<ExpertActivityEntry[]>>(ENDPOINTS.EXPERT_ACTIVITY, {
       params: {
         farmId,
         type: params?.action,

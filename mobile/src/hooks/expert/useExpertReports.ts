@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { HAS_PENDING_HEALTH_DAYS_API } from '@/hooks/health/usePendingHealthDays'
 import { expertApi } from '@/services/api/expert.api'
 import type { DailyHealthStatus } from '@/types'
 
@@ -52,7 +53,7 @@ export function useDayRating(houseId: string, date: string) {
   return useQuery({
     queryKey: ['expert', 'day-rating', houseId, date],
     queryFn: () => expertApi.getDayRating(houseId, date).then(res => res.data),
-    enabled: Boolean(houseId && date),
+    enabled: HAS_PENDING_HEALTH_DAYS_API && Boolean(houseId && date),
   })
 }
 

@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CheckCircle,
   Clock,
+  MapPin,
   SlidersHorizontal,
   User,
   Warning,
@@ -17,6 +18,7 @@ import { Card } from '@/components/ui/card'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { ReviewItem } from '@/types/expert.types'
@@ -58,13 +60,21 @@ export function QueueReviewCard({
   const palette = usePalette()
   const router = useRouter()
   const setZoneId = useExpertScopeStore(state => state.setZoneId)
+  const { zoneById, houseById } = useZoneDirectory()
 
   const [isConfirmRevertOpen, setIsConfirmRevertOpen] = useState(false)
 
-  const changedByName = item.changed_by?.full_name || t('Chủ nhà')
+  const changedByName =
+    typeof item.changed_by === 'object' && item.changed_by?.full_name
+      ? item.changed_by.full_name
+      : t('Chủ trại')
   const timeStr = formatTimeAgo(item.created_at)
   const groupKey = item.group ?? item.parameter_group
   const groupLabel = groupKey === 'thresholds' ? t('Ngưỡng nhiệt ẩm') : t('Độ ẩm & Gió')
+  const zone = item.zone_id ? zoneById.get(item.zone_id) : undefined
+  const zoneName = zone?.name
+  const houseName = zone?.house_id ? houseById.get(zone.house_id)?.name : undefined
+  const locationLabel = [houseName, zoneName].filter(Boolean).join(' › ')
 
   const diffKeys = Object.keys(item.new_values || {})
 
@@ -85,7 +95,7 @@ export function QueueReviewCard({
     }
     router.push({
       pathname: '/(tabs)/tuning',
-      params: { zoneId: item.zone_id, chip: 'thresholds' },
+      params: { zoneId: item.zone_id, chip: groupKey === 'fuzzy' ? 'fuzzy' : 'thresholds' },
     })
   }
 
@@ -112,6 +122,15 @@ export function QueueReviewCard({
           </Text>
         </View>
       </View>
+
+      {locationLabel ? (
+        <View style={[styles.authorRow, { marginTop: Spacing.xs }]}>
+          <MapPin size={12} color={palette.textSecondary} />
+          <Text variant="small" color={palette.textSecondary}>
+            {locationLabel}
+          </Text>
+        </View>
+      ) : null}
 
       {/* Hộp Diff đối chiếu trực quan Giá trị cũ ➔ Giá trị mới */}
       <View style={[styles.diffBox, { backgroundColor: palette.surfaceStrong }]}>

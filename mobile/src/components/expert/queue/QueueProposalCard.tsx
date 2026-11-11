@@ -5,6 +5,7 @@ import {
   ArrowRight,
   CheckCircle,
   Clock,
+  MapPin,
   Sparkle,
   TrendUp,
   XCircle,
@@ -16,6 +17,7 @@ import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { TextField } from '@/components/ui/text-field'
 import { BorderWidth, FontFamily, Radius, Spacing } from '@/constants/theme'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { CoefficientProposal } from '@/types'
 import { formatTimeAgo } from '@/utils/date.utils'
@@ -47,19 +49,53 @@ export function QueueProposalCard({
   isSubmitting = false,
 }: QueueProposalCardProps) {
   const palette = usePalette()
+  const { zoneById, houseById } = useZoneDirectory()
 
   const [isRejectSheetOpen, setIsRejectSheetOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectError, setRejectError] = useState<string | null>(null)
 
   const timeStr = formatTimeAgo(proposal.created_at)
-  const submittedBy = proposal.submitted_by?.full_name || t('Hệ thống AI gợi ý')
-  const rSquared = `${Math.round((proposal.r_squared ?? 0.85) * 100)}%`
+  const submittedBy =
+    typeof proposal.submitted_by === 'object' && proposal.submitted_by?.full_name
+      ? proposal.submitted_by.full_name
+      : t('Chủ trại đề xuất')
+  const zone = proposal.zone_id ? zoneById.get(proposal.zone_id) : undefined
+  const zoneName = zone?.name
+  const houseName = zone?.house_id ? houseById.get(zone.house_id)?.name : undefined
+  const locationLabel = [houseName, zoneName].filter(Boolean).join(' › ')
+
+  const inRangeNow = proposal.predicted?.inRangeNow
+  const inRangeSuggested = proposal.predicted?.inRangeSuggested
+  const mistingNow = proposal.predicted?.mistingNow
+  const mistingSuggested = proposal.predicted?.mistingSuggested
+
+  const leftMetricLabel =
+    inRangeNow != null && inRangeSuggested != null
+      ? t('Đạt chuẩn dự kiến')
+      : t('Độ tin cậy AI')
+  const leftMetricValue =
+    inRangeNow != null && inRangeSuggested != null
+      ? `${Math.round(inRangeNow)}% → ${Math.round(inRangeSuggested)}%`
+      : proposal.r_squared != null
+        ? `${Math.round(proposal.r_squared * 100)}%`
+        : '_'
+
   const rawPredictedPct =
     proposal.predicted_in_range_pct ??
-    proposal.predicted?.inRangeSuggested ??
+    (inRangeNow != null && inRangeSuggested != null ? inRangeSuggested - inRangeNow : undefined) ??
     proposal.predicted?.in_range_pct
-  const predictedPct = rawPredictedPct != null ? `+${rawPredictedPct.toFixed(1)}%` : '+12.5%'
+
+  const rightMetricLabel =
+    mistingNow != null && mistingSuggested != null
+      ? t('Phun sương dự kiến')
+      : t('Dự kiến đạt chuẩn')
+  const rightMetricValue =
+    mistingNow != null && mistingSuggested != null
+      ? `${Math.round(mistingNow)}% → ${Math.round(mistingSuggested)}%`
+      : rawPredictedPct != null
+        ? `${rawPredictedPct >= 0 ? '+' : ''}${rawPredictedPct.toFixed(1)}%`
+        : '_'
 
   const suggestedKeys = Object.keys(proposal.suggested_values || {})
 
@@ -100,14 +136,29 @@ export function QueueProposalCard({
         </View>
       </View>
 
-      {/* Chỉ số Độ tin cậy AI và % cải thiện dự kiến */}
+      {locationLabel ? (
+        <View style={[styles.sourceRow, { marginTop: Spacing.xs }]}>
+          <MapPin size={12} color={palette.textSecondary} />
+          <Text variant="small" color={palette.textSecondary}>
+            {locationLabel}
+          </Text>
+        </View>
+      ) : null}
+
+      {proposal.note ? (
+        <Text variant="small" color={palette.textSecondary} style={{ marginTop: Spacing.xs }}>
+          {proposal.note}
+        </Text>
+      ) : null}
+
+      {/* Chỉ số dự kiến từ mô hình điều khiển / AI */}
       <View style={[styles.metricsBox, { backgroundColor: palette.surfaceStrong }]}>
         <View style={styles.metricItem}>
           <Text variant="small" color={palette.textSecondary}>
-            {t('Độ tin cậy AI')}
+            {leftMetricLabel}
           </Text>
           <Text variant="heading" weight="semiBold" style={styles.metricValue}>
-            {rSquared}
+            {leftMetricValue}
           </Text>
         </View>
 
@@ -117,11 +168,11 @@ export function QueueProposalCard({
           <View style={styles.metricLabelRow}>
             <TrendUp size={12} color={palette.houseHealthy} weight="bold" />
             <Text variant="small" color={palette.textSecondary}>
-              {t('Dự kiến đạt chuẩn')}
+              {rightMetricLabel}
             </Text>
           </View>
           <Text variant="heading" weight="semiBold" color={palette.houseHealthy} style={styles.metricValue}>
-            {predictedPct}
+            {rightMetricValue}
           </Text>
         </View>
       </View>
@@ -141,8 +192,10 @@ export function QueueProposalCard({
         </View>
 
         {suggestedKeys.map((key, index) => {
-          const currentVal = proposal.current_values?.[key] ?? '--'
-          const suggestedVal = proposal.suggested_values?.[key] ?? '--'
+          const currentMap = proposal.current_values as Record<string, number | boolean | undefined> | undefined
+          const suggestedMap = proposal.suggested_values as Record<string, number | boolean | undefined> | undefined
+          const currentVal = String(currentMap?.[key] ?? '--')
+          const suggestedVal = String(suggestedMap?.[key] ?? '--')
           const label = FUZZY_LABELS[key] || key
 
           return (

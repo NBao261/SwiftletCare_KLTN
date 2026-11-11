@@ -48,6 +48,7 @@ import {
   useTakeProposalAction,
   useTakeReviewAction,
 } from '@/hooks/expert/useExpertReviews'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -71,10 +72,18 @@ interface QueueInferredAlertCardProps {
 function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
   const palette = usePalette()
   const router = useRouter()
+  const { zoneById, houseById } = useZoneDirectory()
 
   const alertTitle = getInferredAlertLabel(alert.type)
   const alertDesc = alert.message || getInferredAlertDescription(alert.type)
   const timeStr = formatTimeAgo(alert.created_at)
+  const zone = alert.zone_id ? zoneById.get(alert.zone_id) : undefined
+  const zoneName = zone?.name
+  const houseId = alert.house_id || zone?.house_id
+  const houseName = houseId ? houseById.get(houseId)?.name : undefined
+  const locationLabel =
+    [houseName, zoneName].filter(Boolean).join(' › ') ||
+    (alert.zone_id ? t('Tầng / Zone') : t('Toàn nhà'))
 
   const handleInspect = () => {
     router.push({
@@ -110,7 +119,7 @@ function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
         <View style={styles.alertLocationWrapper}>
           <MapPin size={13} color={palette.textSecondary} />
           <Text variant="small" color={palette.textSecondary}>
-            {alert.zone_id ? t('Tầng / Zone') : t('Toàn nhà')}
+            {locationLabel}
           </Text>
         </View>
       </View>
@@ -276,11 +285,16 @@ export default function QueueScreen() {
     return list.filter(item => item.state === 'PENDING' || item.state === 'RATED')
   }, [dayRatingResponse])
 
+  const unfinalizedReportsCount = useMemo(() => {
+    const list = reportsResponse?.data || []
+    return list.filter(r => !r.expert_conclusion).length
+  }, [reportsResponse])
+
   const kpiAlertsCount = pendingInferredAlerts.length
   const kpiReviewsCount = pendingReviewItems.length
   const kpiProposalsCount = pendingProposals.length
   const kpiRatingsAndReportsCount =
-    pendingRatings.filter(r => r.state === 'PENDING').length + pendingReports.length
+    pendingRatings.filter(r => r.state === 'PENDING').length + unfinalizedReportsCount
 
   const isRefreshing =
     isAlertsRefetching ||

@@ -64,6 +64,22 @@ export function useFuzzySuggestion(zoneId: string) {
 }
 
 /**
+ * Hook áp dụng trực tiếp gợi ý hệ số mờ từ AI vào Zone (POST /farms/zones/:zoneId/fuzzy-tuning/apply-suggestion)
+ */
+export function useApplyFuzzySuggestion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (zoneId: string) => expertApi.applyFuzzySuggestion(zoneId),
+    onSuccess: (_, zoneId) => {
+      queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning', zoneId] })
+      queryClient.invalidateQueries({ queryKey: ['expert', 'fuzzy-suggestion', zoneId] })
+      queryClient.invalidateQueries({ queryKey: ['zones'] })
+    },
+  })
+}
+
+/**
  * Hook cập nhật hệ số điều khiển mờ Sugeno Fuzzy của Zone (EXPERT-FR-004, BR-05)
  */
 export function useUpdateFuzzyTuning() {

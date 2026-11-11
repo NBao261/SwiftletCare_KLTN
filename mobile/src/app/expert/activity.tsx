@@ -14,10 +14,13 @@ import { SplitBadge } from '@/components/ui/split-badge'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { useExpertActivity } from '@/hooks/expert/useExpertReports'
+import { useFarms } from '@/hooks/farm/useFarms'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { ExpertActivityEntry } from '@/types'
+import { getActivityVerdict, getExpertActionLabel } from '@/utils/account.utils'
 import { formatDateTime } from '@/utils/date.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -60,6 +63,9 @@ export default function ExpertActivityScreen() {
   const language = useLanguage()
   const router = useRouter()
   const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
+  const { data: farmsData } = useFarms()
+  const effectiveFarmId = selectedFarmId || farmsData?.data?.[0]?._id || ''
+  const directory = useZoneDirectory()
 
   const [activeFilter, setActiveFilter] = useState<ActivityFilterKey>('ALL')
 
@@ -68,7 +74,7 @@ export default function ExpertActivityScreen() {
     isLoading,
     isRefetching,
     refetch,
-  } = useExpertActivity(selectedFarmId || '')
+  } = useExpertActivity(effectiveFarmId)
 
   const activities = useMemo<ExpertActivityEntry[]>(() => {
     return activityResponse?.data || []
@@ -81,7 +87,9 @@ export default function ExpertActivityScreen() {
         a.action === 'THRESHOLD_UPDATED' ||
         a.action === 'THRESHOLD_RESET' ||
         a.action === 'FUZZY_UPDATED' ||
-        a.action === 'DETECTION_TUNING_UPDATED'
+        a.action === 'FUZZY_TUNING_UPDATED' ||
+        a.action === 'DETECTION_TUNING_UPDATED' ||
+        a.action === 'BIRD_COUNT_TUNING_UPDATED'
       )
     }
     if (activeFilter === 'VERDICTS') {
@@ -97,11 +105,18 @@ export default function ExpertActivityScreen() {
     if (activeFilter === 'PROPOSALS') {
       return activities.filter(a =>
         a.action === 'PROPOSAL_APPROVED' ||
-        a.action === 'PROPOSAL_REJECTED'
+        a.action === 'PROPOSAL_REJECTED' ||
+        a.action === 'SUGGESTION_APPROVED'
       )
     }
     return activities
   }, [activities, activeFilter])
+
+  const getScopeText = (zoneId?: string | null, houseId?: string | null): string => {
+    const zone = zoneId ? directory.zoneById.get(zoneId) : undefined
+    const house = directory.houseById.get(houseId ?? zone?.house_id ?? '')
+    return [house?.name, zone?.name].filter(Boolean).join(' › ')
+  }
 
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
@@ -172,9 +187,11 @@ export default function ExpertActivityScreen() {
             { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl * 3 },
           ]}
           renderItem={({ item }) => {
-            const actionText = ACTION_LABELS[item.action] || t('Thao tác chuyên gia')
-            const actorName = item.actor?.full_name || t('Chuyên gia')
+            const actionText = ACTION_LABELS[item.action] || getExpertActionLabel(item.action)
+            const actorName = item.actor?.full_name || (item.actor_role === 'DOMAIN_EXPERT' ? t('Chuyên gia') : t('Chủ trại'))
             const dateStr = formatDateTime(item.created_at)
+            const scopeStr = getScopeText(item.zone_id, item.house_id)
+            const verdict = getActivityVerdict(item.metadata)
 
             const isExpert = item.actor_role === 'DOMAIN_EXPERT'
 
@@ -204,11 +221,14 @@ export default function ExpertActivityScreen() {
                     innerColor={isExpert ? palette.onPrimary : palette.surface}
                     innerTextColor={isExpert ? palette.primary : palette.textSecondary}
                   />
-                  {item.target_type && (
-                    <Text variant="small" color={palette.textSecondary}>
-                      {item.target_type} {item.target_id ? `#${item.target_id.slice(-6)}` : ''}
-                    </Text>
-                  )}
+                  <Text variant="small" color={palette.textSecondary}>
+                    {[
+                      scopeStr,
+                      verdict ? (verdict === 'CONFIRMED' ? t('Xác nhận đúng') : t('Bác bỏ')) : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
                 </View>
               </Card>
             )

@@ -29,6 +29,8 @@ export const ENDPOINTS = {
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
   ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
   ZONE_FUZZY_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning`,
+  // Áp gợi ý hệ số hiện tại do server tính (EXPERT-FR-011): chuyên gia; chủ trại khi farm chưa có chuyên gia (BR-22)
+  ZONE_APPLY_SUGGESTION: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning/apply-suggestion`,
   ZONE_DETECTION_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning`,
   HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
 
@@ -44,13 +46,25 @@ export const ENDPOINTS = {
 
   // Dữ liệu cảm biến (ENV-FR-*)
   TELEMETRY_LATEST: (zoneId: string) => `/telemetry/zones/${zoneId}/latest`,
-  TELEMETRY_HISTORY: (zoneId: string) => `/telemetry/zones/${zoneId}/history`,
 
   // Cảnh báo (ALERT-FR-*)
   ALERTS: '/alerts',
   ALERT_DETAIL: (alertId: string) => `/alerts/${alertId}`,
   ALERT_ACKNOWLEDGE: (alertId: string) => `/alerts/${alertId}/acknowledge`,
   ALERT_VERDICT: (alertId: string) => `/alerts/${alertId}/verdict`,
+  // Bằng chứng ±30 phút của cảnh báo suy luận (ALERT-FR-014)
+  ALERT_EVIDENCE: (alertId: string) => `/alerts/${alertId}/evidence`,
+
+  // Hoạt động chuyên gia (EXPERT-FR-009/010/011)
+  EXPERT_ACTIVITY: '/expert-activity',
+  EXPERT_REVIEWS: '/expert-activity/reviews',
+  EXPERT_REVIEW_ITEM_ACTION: (itemId: string) => `/expert-activity/reviews/${itemId}`,
+  EXPERT_REVIEW_ACCEPT: (itemId: string) => `/expert-activity/reviews/${itemId}/accept`,
+  EXPERT_REVIEW_REVERT: (itemId: string) => `/expert-activity/reviews/${itemId}/revert`,
+  EXPERT_PROPOSALS: '/expert-activity/proposals',
+  EXPERT_PROPOSAL_ACTION: (proposalId: string) => `/expert-activity/proposals/${proposalId}`,
+  EXPERT_PROPOSAL_APPROVE: (proposalId: string) => `/expert-activity/proposals/${proposalId}/approve`,
+  EXPERT_PROPOSAL_REJECT: (proposalId: string) => `/expert-activity/proposals/${proposalId}/reject`,
 
   // Phân tích (ANALYTICS-FR-*)
   BIRD_COUNT_DAILY: '/analytics/bird-count/daily',
@@ -80,29 +94,8 @@ export const ENDPOINTS = {
   // Thu hoạch (HARVEST-FR-001…005) — danh sách đợt thu của farm
   HARVESTS: '/harvests',
 
-  // Nghiệp vụ Chuyên gia (Domain Expert: EXPERT-FR-*)
+  // Nghiệp vụ Chuyên gia bổ sung (Domain Expert: EXPERT-FR-*)
   ALERT_VERDICT_STATS: '/alerts/verdict-stats',
-  ALERT_EVIDENCE: (alertId: string) => `/alerts/${alertId}/evidence`,
-
-  // Tinh chỉnh cấu hình Zone & House bổ sung (EXPERT-FR-004, EXPERT-FR-012)
   ZONE_DETAIL: (zoneId: string) => `/farms/zones/${zoneId}`,
   HOUSE_DAILY_RATING: (houseId: string) => `/farms/houses/${houseId}/daily-rating`,
-
-  // Gợi ý mờ & Phân tích chuyên gia (ANALYTICS-FR-*)
-  ANALYTICS_CONTROL_SUGGESTION: '/analytics/control/suggestion',
-  ANALYTICS_CONTROL_PERFORMANCE: '/analytics/control/performance',
-  ANALYTICS_AUTONOMY: '/analytics/autonomy',
-  ANALYTICS_FORECAST: '/analytics/forecast',
-
-  // Kiểm duyệt & Đề xuất (EXPERT-FR-009/010/011 — khớp backend /expert-activity)
-  EXPERT_REVIEW_ITEMS: '/expert-activity/reviews',
-  EXPERT_REVIEW_ITEM_ACTION: (itemId: string) => `/expert-activity/reviews/${itemId}`,
-  EXPERT_REVIEW_ACCEPT: (itemId: string) => `/expert-activity/reviews/${itemId}/accept`,
-  EXPERT_REVIEW_REVERT: (itemId: string) => `/expert-activity/reviews/${itemId}/revert`,
-  EXPERT_PROPOSALS: '/expert-activity/proposals',
-  EXPERT_PROPOSAL_ACTION: (proposalId: string) => `/expert-activity/proposals/${proposalId}`,
-  EXPERT_PROPOSAL_APPROVE: (proposalId: string) => `/expert-activity/proposals/${proposalId}/approve`,
-  EXPERT_PROPOSAL_REJECT: (proposalId: string) => `/expert-activity/proposals/${proposalId}/reject`,
-  EXPERT_ACTIVITY: (farmId: string) => `/expert-activity?farmId=${encodeURIComponent(farmId)}`,
-  EXPERT_ACTIVITY_LIST: '/expert-activity',
 } as const

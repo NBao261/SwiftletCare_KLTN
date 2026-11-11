@@ -16,7 +16,7 @@ function buildUser(role: Role): User {
 }
 
 describe('canPerform', () => {
-  it('chỉ Farm Owner được thiết lập thiết bị bằng QR (MF-10)', () => {
+  it('chỉ Farm Owner được thiết lập thiết bị bằng QR (SF-01)', () => {
     expect(canPerform(buildUser('FARM_OWNER'), 'setupDevice')).toBe(true)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'setupDevice')).toBe(false)
   })
@@ -45,14 +45,16 @@ describe('canPerform', () => {
     }
   })
 
-  it('ngưỡng và hệ số mờ: chủ trại và chuyên gia; tham số phát hiện, mức giảm tỷ lệ về tổ: chỉ chuyên gia', () => {
+  it('ngưỡng và hệ số mờ: chủ trại và chuyên gia; tham số phát hiện, mức giảm tỷ lệ về tổ: chuyên gia, chủ trại khi farm chưa có chuyên gia', () => {
     for (const action of ['editThresholds', 'editFuzzyTuning'] as const) {
       expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(true)
       expect(canPerform(buildUser('DOMAIN_EXPERT'), action)).toBe(true)
     }
     for (const action of ['editDetectionTuning', 'editBirdCountTuning'] as const) {
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(false)
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(true)
       expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(false)
-      expect(canPerform(buildUser('DOMAIN_EXPERT'), action)).toBe(true)
+      expect(canPerform(buildUser('DOMAIN_EXPERT'), action, { farmHasExpert: true })).toBe(true)
     }
   })
 
@@ -73,6 +75,9 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('FARM_OWNER'), 'acknowledgeAlert')).toBe(true)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'acknowledgeAlert')).toBe(false)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'setAlertVerdict')).toBe(true)
+    // BR-22: chủ trại phán quyết thay chỉ khi farm chưa có chuyên gia
+    expect(canPerform(buildUser('FARM_OWNER'), 'setAlertVerdict', { farmHasExpert: true })).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'setAlertVerdict', { farmHasExpert: false })).toBe(true)
     expect(canPerform(buildUser('FARM_OWNER'), 'setAlertVerdict')).toBe(false)
     expect(canPerform(buildUser('FARM_OWNER'), 'editNotificationSettings')).toBe(true)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'editNotificationSettings')).toBe(false)

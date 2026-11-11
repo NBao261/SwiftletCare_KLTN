@@ -1,9 +1,7 @@
 import React, { useState } from 'react'
-import { Alert as NativeAlert, Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import {
-  FileCsv,
-  FilePdf,
   NotePencil,
   Sparkle,
 } from 'phosphor-react-native'
@@ -33,7 +31,7 @@ const TEMPLATE_CONCLUSIONS = [
 
 /**
  * Thẻ Báo cáo sức khỏe định kỳ cần Chuyên gia kết luận (EXPERT-FR-005, 006, 013).
- * Tích hợp tải nhanh PDF/CSV và BottomSheet ban hành kết luận chỉ trong đúng 2 chạm.
+ * Tích hợp BottomSheet ban hành kết luận chỉ trong đúng 2 chạm.
  * Sử dụng <Card> phẳng không viền đồng bộ 100% với ReportTab của FARM_OWNER.
  */
 export function QueueReportCard({
@@ -43,32 +41,35 @@ export function QueueReportCard({
 }: QueueReportCardProps) {
   const palette = usePalette()
 
+  const existingConclusionText =
+    typeof report.expert_conclusion === 'object' && report.expert_conclusion !== null
+      ? report.expert_conclusion.text
+      : report.expert_conclusion || ''
+  const existingConclusionAt =
+    typeof report.expert_conclusion === 'object' && report.expert_conclusion !== null
+      ? report.expert_conclusion.at
+      : report.expert_conclusion_at
+
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [conclusionText, setConclusionText] = useState(report.expert_conclusion || '')
+  const [conclusionText, setConclusionText] = useState(existingConclusionText)
   const [errorText, setErrorText] = useState<string | null>(null)
 
-  const hasConclusion = Boolean(report.expert_conclusion)
+  const hasConclusion = Boolean(existingConclusionText)
   const title = t('Báo cáo {type} kỳ {start}', {
     type: report.report_type === 'DAILY' ? 'ngày' : report.report_type === 'WEEKLY' ? 'tuần' : 'tháng',
     start: report.period_start?.slice(0, 10) || '',
   })
 
-  const inRangePct = `${Math.round(report.time_in_range_pct || 90)}%`
-  const autonomyPct = `${Math.round(report.autonomy_pct || 85)}%`
+  const rawInRangePct = report.metrics?.humidity_in_range_pct ?? report.time_in_range_pct
+  const rawAutonomyPct = report.metrics?.auto_mode_pct ?? report.autonomy_pct
+  const inRangePct = rawInRangePct != null ? `${Math.round(rawInRangePct)}%` : '_'
+  const autonomyPct = rawAutonomyPct != null ? `${Math.round(rawAutonomyPct)}%` : '_'
 
-  const handleDownloadPdf = () => {
-    NativeAlert.alert(
-      t('Tải báo cáo PDF'),
-      t('Đã tạo liên kết tải file PDF báo cáo sức khỏe nhà yến.')
-    )
-  }
-
-  const handleDownloadCsv = () => {
-    NativeAlert.alert(
-      t('Tải dữ liệu CSV'),
-      t('Đã chuẩn bị file CSV dữ liệu nhiệt ẩm theo thời gian.')
-    )
-  }
+  const alertsCount =
+    report.alerts_count ??
+    (report.metrics?.alerts_by_type
+      ? Object.values(report.metrics.alerts_by_type).reduce((sum, n) => sum + (n || 0), 0)
+      : 0)
 
   const handleSelectTemplate = (template: string) => {
     setErrorText(null)
@@ -144,10 +145,10 @@ export function QueueReportCard({
           <Text
             variant="body"
             weight="semiBold"
-            color={report.alerts_count > 0 ? palette.alert : palette.text}
+            color={alertsCount > 0 ? palette.alert : palette.text}
             style={styles.statVal}
           >
-            {report.alerts_count || 0}
+            {alertsCount}
           </Text>
         </View>
       </View>
@@ -156,44 +157,20 @@ export function QueueReportCard({
       {hasConclusion && (
         <View style={[styles.conclusionBox, { backgroundColor: palette.surfaceStrong }]}>
           <Text variant="small" weight="semiBold" color={palette.textSecondary}>
-            {t('Kết luận chuyên gia ({at}):', {
-              at: report.expert_conclusion_at ? formatDateTime(report.expert_conclusion_at) : '',
-            })}
+            {existingConclusionAt
+              ? t('Kết luận chuyên gia ({at}):', {
+                  at: formatDateTime(existingConclusionAt),
+                })
+              : t('Kết luận chuyên gia:')}
           </Text>
           <Text variant="body" color={palette.text}>
-            {report.expert_conclusion}
+            {existingConclusionText}
           </Text>
         </View>
       )}
 
-      {/* Cụm nút: Tải PDF / CSV & Nút Viết kết luận */}
+      {/* Nút Viết / Sửa kết luận */}
       <View style={styles.bottomActions}>
-        <View style={styles.downloadButtons}>
-          <PressableScale
-            onPress={handleDownloadPdf}
-            style={[styles.dlBtn, { backgroundColor: palette.surfaceStrong }]}
-            accessibilityRole="button"
-            accessibilityLabel={t('Tải báo cáo PDF')}
-          >
-            <FilePdf size={16} color={palette.text} />
-            <Text variant="small" weight="semiBold">
-              PDF
-            </Text>
-          </PressableScale>
-
-          <PressableScale
-            onPress={handleDownloadCsv}
-            style={[styles.dlBtn, { backgroundColor: palette.surfaceStrong }]}
-            accessibilityRole="button"
-            accessibilityLabel={t('Tải số liệu CSV')}
-          >
-            <FileCsv size={16} color={palette.text} />
-            <Text variant="small" weight="semiBold">
-              CSV
-            </Text>
-          </PressableScale>
-        </View>
-
         <PressableScale
           onPress={() => setIsSheetOpen(true)}
           disabled={isSubmitting}
@@ -354,19 +331,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: Spacing.md,
     gap: Spacing.sm,
-  },
-  downloadButtons: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  dlBtn: {
-    height: 44,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.full,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
   },
   writeBtn: {
     flex: 1,
