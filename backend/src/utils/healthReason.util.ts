@@ -38,6 +38,7 @@ const VI: Record<HealthReasonCode, Phrase> = {
   FLOCK_NO_BASELINE: v => `Đàn chim: chưa đủ ${v.min_days} ngày nền để so sánh tỷ lệ chim về`,
   NOISE_EPISODES: (v, l) => `Tiếng ồn: ${v.episodes} đợt ồn bất thường (mức ${l})`,
   WEATHER_UNAVAILABLE: () => 'Không có dữ liệu thời tiết',
+  ATTRACTING_STAGE: () => 'Đàn chim: nhà đang ở giai đoạn dẫn dụ, không đánh giá tỷ lệ chim về',
   RAIN_DOWNGRADE: v => `Mưa ≥ ${v.mm_per_hour} mm/giờ trùng phiên đếm và đợt ồn — hạ từ ACTION xuống WATCH (BR-30)`,
 }
 
@@ -61,6 +62,7 @@ const EN: Record<HealthReasonCode, Phrase> = {
   FLOCK_NO_BASELINE: v => `Flock: fewer than ${v.min_days} baseline days to compare the return rate`,
   NOISE_EPISODES: (v, l) => `Noise: ${v.episodes} abnormal noise episodes (${l} level)`,
   WEATHER_UNAVAILABLE: () => 'No weather data',
+  ATTRACTING_STAGE: () => 'Flock: the house is in the attracting stage, the return rate is not assessed',
   RAIN_DOWNGRADE: v => `Rain ≥ ${v.mm_per_hour} mm/h during a counting session and a noise episode — ACTION lowered to WATCH (BR-30)`,
 }
 

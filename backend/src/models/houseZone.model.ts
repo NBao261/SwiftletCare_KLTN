@@ -1,7 +1,7 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
-import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, Thresholds, Role } from '@/types'
+import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, HouseStage, Thresholds, Role } from '@/types'
 import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
 
 /**
@@ -26,6 +26,9 @@ export interface IHouse extends Document {
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
   /** ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà; thiếu trường nào thì dùng mặc định */
   health_levels: HealthLevels
+  /** FARM-FR-014, BR-46 — giai đoạn nhà; lịch sử dùng để đánh giá lại ngày cũ đúng giai đoạn lúc ấy */
+  stage: HouseStage
+  stage_history: Array<{ stage: HouseStage; changed_by: Types.ObjectId; changed_by_role: Role; changed_at: Date }>
 }
 
 export interface IThresholdHistoryEntry {
@@ -101,6 +104,14 @@ const houseSchema = new Schema<IHouse>(
       noise_slight:        { type: Number, default: DEFAULT_HEALTH_LEVELS.noise_slight },
       noise_clear:         { type: Number, default: DEFAULT_HEALTH_LEVELS.noise_clear },
     },
+    stage: { type: String, enum: ['ATTRACTING', 'OCCUPIED'] satisfies HouseStage[], default: 'OCCUPIED' },
+    stage_history: [{
+      stage:           { type: String, enum: ['ATTRACTING', 'OCCUPIED'] satisfies HouseStage[], required: true },
+      changed_by:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      changed_by_role: { type: String, required: true },
+      changed_at:      { type: Date, required: true },
+      _id: false,
+    }],
   },
   { timestamps: { createdAt: 'created_at' } }
 )

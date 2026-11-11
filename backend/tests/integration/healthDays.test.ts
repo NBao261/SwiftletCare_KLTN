@@ -293,6 +293,35 @@ describe('lọc theo trạng thái chấm của người gọi', () => {
   })
 })
 
+describe('giai đoạn nhà (FARM-FR-014, BR-46)', () => {
+  it('Farm Owner và Domain Expert đặt giai đoạn, có lịch sử và audit; đặt lại cùng giai đoạn thì không ghi', async () => {
+    const { house, farm, owner, ownerToken, expertToken } = await setup()
+    const path = `/farms/houses/${house._id}/stage`
+    expect((await House.findById(house._id).lean())!.stage).toBe('OCCUPIED')
+
+    expect((await call('put', path, ownerToken, { stage: 'ATTRACTING' }).expect(200)).body.data.stage).toBe('ATTRACTING')
+    await call('put', path, ownerToken, { stage: 'ATTRACTING' }).expect(200)
+    await call('put', path, expertToken, { stage: 'OCCUPIED' }).expect(200)
+
+    const saved = (await House.findById(house._id).lean())!
+    expect(saved.stage).toBe('OCCUPIED')
+    expect(saved.stage_history.map(h => [h.stage, h.changed_by_role])).toEqual([['ATTRACTING', 'FARM_OWNER'], ['OCCUPIED', 'DOMAIN_EXPERT']])
+    expect(String(saved.stage_history[0].changed_by)).toBe(String(owner._id))
+    expect(await AuditLog.countDocuments({ action: 'HOUSE_STAGE_UPDATED', farm_id: farm._id })).toBe(2)
+  })
+
+  it('giai đoạn sai → 422; Administrator, người farm khác → 403', async () => {
+    const { house, ownerToken } = await setup()
+    const path = `/farms/houses/${house._id}/stage`
+    await call('put', path, ownerToken, { stage: 'EMPTY' }).expect(422)
+    await call('put', path, ownerToken, {}).expect(422)
+    const admin = await User.create({ email: 'admin-stage@t.vn', password_hash: 'password123', full_name: 'A', role: 'ADMIN' })
+    await call('put', path, tokenFor(admin._id, 'ADMIN'), { stage: 'ATTRACTING' }).expect(403)
+    const other = await seedHouse()
+    await call('put', path, tokenFor(other.owner._id, 'FARM_OWNER'), { stage: 'ATTRACTING' }).expect(403)
+  })
+})
+
 describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
   it('chuyên gia sửa → 200; chủ trại khi farm có chuyên gia → 403; ngoài khoảng hoặc CLEAR nhẹ hơn SLIGHT → 400', async () => {
     const { house, ownerToken, expertToken } = await setup()

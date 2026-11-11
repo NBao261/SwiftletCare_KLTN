@@ -921,6 +921,32 @@ ensureCollection("houses", {
         }
       }
     },
+    "stage": {
+      "bsonType": ["string", "null"],
+      "enum": ["ATTRACTING", "OCCUPIED", null]
+    },
+    "stage_history": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "stage": {
+            "bsonType": "string",
+            "enum": ["ATTRACTING", "OCCUPIED"]
+          },
+          "changed_by": {
+            "bsonType": "objectId"
+          },
+          "changed_by_role": {
+            "bsonType": "string"
+          },
+          "changed_at": {
+            "bsonType": "date"
+          }
+        },
+        "required": ["stage", "changed_by", "changed_by_role", "changed_at"]
+      }
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     },

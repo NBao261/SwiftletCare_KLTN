@@ -1,4 +1,5 @@
 import { Types } from 'mongoose'
+import { baselineAfter, stageOn } from '@/utils/houseStage.util'
 import { Alert, type IAlert } from '@/models/alert.model'
 import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { HouseHealthDay, type HealthIndicators, type IDayWeather, type IHouseHealthDay } from '@/models/houseHealthDay.model'
@@ -185,8 +186,11 @@ export interface Assessment {
  * `now` — đánh giá lúc 19:30 chỉ phủ phần ngày đã qua; job tối hôm sau tính lại đủ cả ngày.
  */
 export async function computeHouseDay(houseId: string, date: string, now = new Date()): Promise<Assessment | null> {
-  const house = await House.findById(houseId).select('farm_id name bird_count_tuning health_levels').lean()
+  const house = await House.findById(houseId).select('farm_id name bird_count_tuning health_levels stage_history').lean()
   if (!house) return null
+  // BR-46 — giai đoạn của nhà trong ngày đó (theo lịch sử, để tính lại ngày cũ đúng giai đoạn)
+  const attracting = stageOn(house.stage_history, date) === 'ATTRACTING'
+  const occupiedSince = baselineAfter(house.stage_history, date)
   const levels: HealthLevels = resolveHealthLevels(house.health_levels)
   const dropPct = resolveBirdCountTuning(house.bird_count_tuning).return_rate_drop_pct
   const start = vnDayStart(date)
@@ -236,10 +240,14 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   const days = await houseDailyCounts(houseId, { from: addDays(date, -BASELINE_DAYS), to: date })
   const today = days.find(d => d.date === date)
   const flockComplete = isFlockDayComplete(today)
-  const previous = days.filter(d => d.date < date && isFlockDayComplete(d))
+  // BR-46 — về OCCUPIED thì nền chỉ gồm các ngày sau lần chuyển
+  const previous = days.filter(d => d.date < date && isFlockDayComplete(d) && (!occupiedSince || d.date > occupiedSince))
   let flockValue: number | null = null
   let flockLevel: HealthLevel | null = null
-  if (flockComplete) {
+  if (attracting) {
+    // BR-46 — nhà dẫn dụ: không đánh giá đàn chim, không vì thiếu số đếm mà thành INSUFFICIENT_DATA
+    reasons.push(reason('ATTRACTING_STAGE', 'flock'))
+  } else if (flockComplete) {
     if (previous.length < MIN_BASELINE_DAYS) {
       flockLevel = 'NORMAL'
       reasons.push(reason('FLOCK_NO_BASELINE', 'flock', { min_days: MIN_BASELINE_DAYS, baseline_days: previous.length }))
@@ -284,7 +292,7 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   const lv = (s: HealthSource) => indicators[s].level
   const assessed = SOURCES.map(lv).filter((l): l is HealthLevel => l !== null)
   let status: HealthStatus
-  if (!envComplete || !flockComplete) status = 'INSUFFICIENT_DATA'
+  if (!envComplete || (!flockComplete && !attracting)) status = 'INSUFFICIENT_DATA'
   else if (lv('flock') === 'CLEAR' && (['environment', 'air', 'noise'] as HealthSource[]).some(s => lv(s) === 'SLIGHT' || lv(s) === 'CLEAR')) status = 'ACTION'
   else if (assessed.includes('CLEAR') || assessed.filter(l => l === 'SLIGHT').length >= 2) status = 'WATCH'
   else status = 'GOOD'

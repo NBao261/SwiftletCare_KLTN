@@ -216,3 +216,44 @@ describe('job đánh giá (SM-17)', () => {
     expect(again?.day.ratings).toHaveLength(1)
   })
 })
+
+describe('BR-46 — nhà giai đoạn dẫn dụ (FARM-FR-014)', () => {
+  /** Đổi giai đoạn lúc 08:00 giờ VN của ngày `date` */
+  const stageAt = (stage: 'ATTRACTING' | 'OCCUPIED', date: string) =>
+    ({ stage, changed_by: new mongoose.Types.ObjectId(), changed_by_role: 'FARM_OWNER', changed_at: new Date(vnDayStart(date).getTime() + 8 * 3600_000) })
+
+  it('nhà ATTRACTING: không đánh giá đàn chim, không thành INSUFFICIENT_DATA vì thiếu số đếm, lý do ghi giai đoạn dẫn dụ', async () => {
+    const { house } = await scenario({ rates: [100, 100, 100, null] })
+    await House.updateOne({ _id: house._id }, { stage: 'ATTRACTING', stage_history: [stageAt('ATTRACTING', addDays(DATE, -10))] })
+    const a = await compute(house._id)
+    expect(a?.current_status).toBe('GOOD')
+    expect(a?.indicators.flock).toMatchObject({ value: null, level: null })
+    expect(a?.current_reasons).toContainEqual({ code: 'ATTRACTING_STAGE', source: 'flock', level: null, values: {} })
+    expect(a?.current_reasons).not.toContainEqual(reasonOf('MISSING_DATA', { source: 'flock' }))
+  })
+
+  it('nhà ATTRACTING: đàn chim giảm mạnh không góp vào trạng thái', async () => {
+    const { house } = await scenario({ rates: FLOCK_CLEAR, humidityOutSlots: HUMIDITY_SLIGHT })
+    await House.updateOne({ _id: house._id }, { stage: 'ATTRACTING', stage_history: [stageAt('ATTRACTING', addDays(DATE, -10))] })
+    const a = await compute(house._id)
+    // Không có ATTRACTING thì đàn chim CLEAR + độ ẩm SLIGHT là ACTION (TC-F20-01); ở đây chỉ còn độ ẩm SLIGHT
+    expect(a?.current_status).toBe('GOOD')
+    expect(a?.current_reasons).not.toContainEqual(reasonOf('FLOCK_DROP'))
+  })
+
+  it('về OCCUPIED: nền so sánh chỉ gồm các ngày sau lần chuyển; ngày cũ tính lại theo giai đoạn lúc ấy', async () => {
+    const { house } = await scenario({ rates: FLOCK_CLEAR })
+    await House.updateOne({ _id: house._id }, {
+      stage: 'OCCUPIED',
+      stage_history: [stageAt('ATTRACTING', addDays(DATE, -20)), stageAt('OCCUPIED', addDays(DATE, -2))],
+    })
+    const a = await compute(house._id)
+    // Chỉ còn 1 ngày nền (DATE-1) → chưa đủ 3 ngày, đàn chim bình thường
+    expect(a?.indicators.flock).toMatchObject({ value: null, level: 'NORMAL' })
+    expect(a?.current_reasons).toContainEqual(reasonOf('FLOCK_NO_BASELINE', { values: { min_days: 3, baseline_days: 1 } }))
+
+    // Ngày trước lần chuyển vẫn là ATTRACTING khi tính lại
+    const earlier = await computeHouseDay(String(house._id), addDays(DATE, -3), NOW)
+    expect(earlier?.current_reasons).toContainEqual(reasonOf('ATTRACTING_STAGE'))
+  })
+})

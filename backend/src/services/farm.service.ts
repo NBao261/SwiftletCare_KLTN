@@ -24,7 +24,7 @@ import {
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning } from '@/types'
+import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning, HouseStage } from '@/types'
 
 /** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
 const INVITATION_TTL_MS = 7 * 86400_000
@@ -551,6 +551,29 @@ export async function updateHouseHealthLevels(houseId: string, user: CurrentUser
   })
   // Cùng dạng HouseHealthLevels với GET (client ghi thẳng vào cache): lưu được tức là sửa được
   return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS, can_edit: true }
+}
+
+/**
+ * FARM-FR-014 — Farm Owner hoặc Domain Expert của farm đặt giai đoạn nhà, có lịch sử. Nhà `ATTRACTING` không đánh
+ * giá đàn chim, không có LOW_RETURN_RATE; về `OCCUPIED` thì cửa sổ so sánh BR-21 tính lại từ ngày kế tiếp (BR-46).
+ * Đặt lại đúng giai đoạn đang có thì không ghi gì.
+ */
+export async function setHouseStage(houseId: string, user: CurrentUser, stage: HouseStage): Promise<IHouse> {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền đặt giai đoạn của nhà này')
+  const before = house.stage ?? 'OCCUPIED'
+  if (before === stage) return house
+
+  house.stage = stage
+  house.stage_history.push({ stage, changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date() })
+  await house.save()
+  const auditId = await logAction(user._id, 'HOUSE_STAGE_UPDATED', 'house', String(house._id), {
+    before, after: stage,
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'đổi giai đoạn nhà', place: `Nhà "${house.name}"`, detail: `${before} → ${stage}`,
+  })
+  return house
 }
 
 export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {

@@ -1,4 +1,5 @@
 import { Types } from 'mongoose'
+import { baselineAfter, stageOn } from '@/utils/houseStage.util'
 import { CameraNode, IN_SERVICE } from '@/models/device.model'
 import { House } from '@/models/houseZone.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
@@ -225,10 +226,14 @@ export async function checkReturnRateDrops(sessionDate = vnDate(new Date())): Pr
 
 /** Một nhà của checkReturnRateDrops; trả true khi tạo cảnh báo mới */
 async function checkHouseReturnRate(houseId: string, sessionDate: string, from: string): Promise<boolean> {
+  const stage = await House.findById(houseId).select('stage_history').lean()
+  // BR-46 — nhà dẫn dụ không có LOW_RETURN_RATE; về OCCUPIED thì nền chỉ gồm các ngày sau lần chuyển
+  if (stageOn(stage?.stage_history, sessionDate) === 'ATTRACTING') return false
+  const occupiedSince = baselineAfter(stage?.stage_history, sessionDate)
   const days = await houseDailyCounts(houseId, { from, to: sessionDate })
   const today = days.at(-1)
   if (today?.date !== sessionDate || today.return_rate === null) return false
-  const previous = days.slice(0, -1).filter(d => d.return_rate !== null)
+  const previous = days.slice(0, -1).filter(d => d.return_rate !== null && (!occupiedSince || d.date > occupiedSince))
   if (previous.length < MIN_BASELINE_DAYS) return false
 
   const rate = today.return_rate

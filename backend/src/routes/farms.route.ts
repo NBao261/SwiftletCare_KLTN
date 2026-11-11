@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { body, param } from 'express-validator'
 import * as farmController from '@/controllers/farms.controller'
+import { HOUSE_STAGES } from '@/utils/houseStage.util'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
@@ -56,5 +57,8 @@ router.put ('/houses/:houseId/bird-count-tuning', requireRole('FARM_OWNER','DOMA
 // sửa, Farm Owner chỉ khi farm chưa có chuyên gia (BR-22, service kiểm)
 router.get ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.getHealthLevels)
 router.put ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateHealthLevels)
+// FARM-FR-014, BR-46 — giai đoạn nhà: Farm Owner, Domain Expert của farm (Farm Technician, Admin → 403)
+router.put ('/houses/:houseId/stage', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(),
+  body('stage').isString().isIn([...HOUSE_STAGES]), validate, farmController.setHouseStage)
 
 export default router

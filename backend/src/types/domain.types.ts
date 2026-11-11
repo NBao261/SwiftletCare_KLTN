@@ -137,6 +137,9 @@ export type HealthRatingState = 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED'
 export type HealthReasonCode =
   | 'ALL_NORMAL' | 'MISSING_DATA' | 'NOT_ASSESSED' | 'ENV_IN_RANGE' | 'AIR_OVER_LIMIT'
   | 'FLOCK_DROP' | 'FLOCK_NO_BASELINE' | 'NOISE_EPISODES' | 'WEATHER_UNAVAILABLE' | 'RAIN_DOWNGRADE'
+  | 'ATTRACTING_STAGE'
+/** FARM-FR-014, BR-46 — ATTRACTING: chim chưa về ở, không đánh giá đàn chim; OCCUPIED: nhà đã có chim ở */
+export type HouseStage = 'ATTRACTING' | 'OCCUPIED'
 
 /**
  * ANALYTICS-FR-012 — 1 lý do của trạng thái ngày: mã + số liệu, không phải câu, để web và mobile tự dịch

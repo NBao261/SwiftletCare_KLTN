@@ -139,6 +139,12 @@ export const getHealthLevels = asyncHandler(async (req: Request, res: Response) 
 })
 
 /** PUT /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-22 */
+/** PUT /farms/houses/:houseId/stage – FARM-FR-014, BR-46 */
+export const setHouseStage = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.setHouseStage(req.params.houseId, req.user, req.body.stage)
+  res.json({ success: true, data: house })
+})
+
 export const updateHealthLevels = asyncHandler(async (req: Request, res: Response) => {
   const data = await farmService.updateHouseHealthLevels(req.params.houseId, req.user, req.body)
   res.json({ success: true, data })
