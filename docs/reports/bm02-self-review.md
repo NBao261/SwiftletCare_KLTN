@@ -29,7 +29,7 @@ Team response: Fixed (link to commit) · Kept (reason) · Planned (owner and due
 | --- | --- | --- | --- | --- | --- | --- |
 | S-01 | Scope | SRS §2.2, §7.2 | Đối chiếu tự động hai chiều: cả 125 FR đều truy được về một mục của form đăng ký, và mục nào của form cũng có FR. Chỉ ENV-FR-026 (O) không nằm trong luồng nào. | Low | Script đếm FR trên §3, §2.2, §7.1; ENV-FR-026 có trong §7.1 nhưng không có trong §2.2. [chưa có trong gap] | Kept — ENV-FR-026 is optional (O) and runs only when the Administrator changes the system defaults, which is not a business process of its own; it stays outside the main and supporting flows. |
 | S-02 | Scope | SRS §7.1, row C.4 | ENV-FR-013c có actor là Farm Owner nhưng lại truy về mục "C.4 Administrator". Form không có mục nào về quản lý bài nhạc dẫn dụ. | Low | SRS §3.12.1 so với §7.1. [chưa có trong gap] | Fixed (commit `6b9e742`): ENV-FR-013c traced to C.1 Closed-Loop Control (the Farm Owner's attractant sound) in Report 3 §7.1 |
-| S-03 | Scope | FARM-FR-003c vs form C.2 / NFR-13 | Form ghi "only the Wi-Fi network is entered on the device", nhưng FR cho phép nhập thêm địa chỉ broker ở trang AP mode. | Low | registration-v3 C.2; SRS FARM-FR-003c. [chưa có trong gap] | Fixed (commit `6b9e742`): FARM-FR-003c — the AP-mode page asks only for Wi-Fi; the broker address is flashed with the device credential (BR-27), mDNS stays a development aid; Planned — Nguyễn Chí Bảo, 02/12/2026: remove the broker field from the AP-mode page of the production firmware (G-09) |
+| S-03 | Scope | FARM-FR-003c vs form C.2 / NFR-13 | Form ghi "only the Wi-Fi network is entered on the device", nhưng FR cho phép nhập thêm địa chỉ broker ở trang AP mode. | Low | registration-v3 C.2; SRS FARM-FR-003c. [chưa có trong gap] | Fixed (commit `6b9e742`, `b3bc4b8`): FARM-FR-003c — the AP-mode page asks only for Wi-Fi; the broker address is flashed with the device credential (BR-27), mDNS stays a development aid; firmware 2.0.1 removes the broker field and mDNS from the production build (G-09) |
 | R-01 | Requirements | ANALYTICS-FR-014, VISION-FR-016 | Actor ghi "Team (evaluation)", không phải actor cũng không phải component theo định nghĩa §2.3. | Low | SRS §2.3, §3.7, §3.8. [chưa có trong gap] | Fixed (commit `4b704ec`, SRS 4.0.0): actor "Team" (project team, evaluation and test tool) in Report 3 §2.3 |
 | R-02 | Requirements | AUTH-FR-002, 010 | Actor "All users" và "Invitee" không có trong bảng actor §2.3. | Low | SRS §3.12.2. [chưa có trong gap] | Fixed (commit `6b9e742`): "All users" and "Invitee" in the actor table of Report 3 §2.3 |
 | R-03 | Requirements | ANALYTICS-FR-001 | Tiêu chí "at most the documented number of points" nhưng con số này không được ghi ở đâu, nên không test được. | Medium | SRS §3.7. [chưa có trong gap] | Fixed (commit `6b9e742`): ANALYTICS-FR-001 — at most 120 points per range, buckets of at least 1 min (`MAX_BUCKETS`, Report 3 §4.5) |
@@ -87,9 +87,9 @@ Team response: Fixed (link to commit) · Kept (reason) · Planned (owner and due
 | --- | --- | --- | --- | --- |
 | High | 13 | 0 | 0 | 13 |
 | Medium | 16 | 2 | 0 | 14 |
-| Low | 13 | 9 | 2 | 2 |
+| Low | 13 | 10 | 2 | 1 |
 
-R-06 reports no defect (severity "None") and is not counted. Status on 10/11/2026: a finding counts as Fixed only when no Planned part is left; the items fixed in the documents whose code is still planned (S-03, ST-01, ST-03, A-03, A-06, A-07) stay under Planned. Every High finding is Planned and appears in section 5 (Known Gaps) of the Design Brief.
+R-06 reports no defect (severity "None") and is not counted. Status on 10/11/2026: a finding counts as Fixed only when no Planned part is left; the items fixed in the documents whose code is still planned (ST-01, ST-03, A-03, A-06, A-07) stay under Planned. Every High finding is Planned and appears in section 5 (Known Gaps) of the Design Brief.
 
 ## 6. Appendix – English Translation
 

@@ -2,7 +2,7 @@
 
 > **Phạm vi sau Review 1 — firmware 1.4.0.** Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md)); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.1). Firmware đã có: quạt chỉ theo nhiệt độ + độ ẩm (NH3/CO2 chỉ gửi telemetry), không còn sưởi, bơm khô thì tự ngừng phun, mất cảm biến nhiệt-ẩm thì relay về TẮT, cảnh báo ồn là `NOISE_ANOMALY`, năm tham số phát hiện chỉnh được qua MQTT; từ 1.4.0 nhận lệnh `RESTART`/`OTA` từ xa (kiểm SHA-256, tự quay về bản cũ nếu bản mới không kết nối được MQTT trong 10 phút) và gửi lý do khởi động lại + IP trong heartbeat. Công tắc bypass đã bỏ khỏi phạm vi (nhà yến thử nghiệm đi mượn, không đấu lại được — Report 3 §8). Còn lại: THREAT-FR-014 — đo dòng bơm và quạt trên mạch nhóm tự vẽ, chưa làm; ENV-FR-027 — gửi version cấu hình đang áp trong heartbeat, chưa làm.
 >
-> **Thiết lập thiết bị (SF-01, FARM-FR-003c):** trang cài Wi-Fi (AP-mode) chỉ nhận Wi-Fi và địa chỉ broker, không có farm/house/zone hay khoá. Thiết bị không lưu mã kích hoạt in trên nhãn — backend kiểm tra mã đó khi Farm Owner quét nhãn; từ 2.0.0 thiết bị chỉ biết device ID và broker secret (nạp vào NVS bằng `tools/flash_identity.py`); farm/house/zone nằm ở backend, thiết bị chỉ nhận cấu hình của tầng qua topic retained `swiftletcare/dev/{deviceId}/config`, nên dời tầng chỉ đổi trong DB (không còn `config/reassign`).
+> **Thiết lập thiết bị (SF-01, FARM-FR-003c):** trang cài Wi-Fi (AP-mode) của bản chính thức (`esp32prod`, từ 2.0.1) chỉ nhận Wi-Fi; địa chỉ broker nạp lúc flash (`tools/flash_identity.py --broker`, không có thì lấy `Secrets.h`) và mDNS chỉ chạy ở bản dev, nơi trang AP vẫn có ô broker để thử với broker trên laptop. Không có farm/house/zone hay khoá. Thiết bị không lưu mã kích hoạt in trên nhãn — backend kiểm tra mã đó khi Farm Owner quét nhãn; từ 2.0.0 thiết bị chỉ biết device ID và broker secret (nạp vào NVS bằng `tools/flash_identity.py`); farm/house/zone nằm ở backend, thiết bị chỉ nhận cấu hình của tầng qua topic retained `swiftletcare/dev/{deviceId}/config`, nên dời tầng chỉ đổi trong DB (không còn `config/reassign`).
 >
 > **Thử trên thiết bị thật:** firmware đã chạy trên board ESP32 thật, nhưng chưa ghi lại bản nào và kịch bản nào đã thử. Ghi kết quả (ngày, bản firmware, đạt/không đạt) của từng kịch bản dưới đây vào đây trước khi báo cáo hoặc Report 5 dùng tới: rút cảm biến nhiệt-ẩm (relay phải TẮT), chạy bơm không có nước (phải báo `PUMP_DRY` và ngừng phun), đổi tham số từ web. Riêng 1.4.0: OTA từ trang OTA của Technician thành công (heartbeat báo bản mới); file sai SHA-256 và rút mạng giữa lúc tải (phải giữ bản cũ); bản mới không tới được broker (phải quay về bản cũ sau 10 phút); `RESTART` từ web; TLS bắt tay trong `mqttTask` (stack 12 KB) không tràn stack.
 >
@@ -13,6 +13,11 @@
 > - rút mạng, bấm bật relay trên web, cắm lại sau hơn 60 giây: lệnh bị bỏ và thiết bị gửi `relay/status` để web hiện đúng trạng thái;
 > - bật relay ngay sau khi khởi động, trước khi có giờ NTP: lệnh vẫn áp (Report 3 §8.1);
 > - board còn chạy 1.5.0 vẫn điều khiển tay được với backend mới (hết hạn hoặc huỷ 1 relay thì cả 3 relay về tự động như trước).
+>
+> **2.0.1 (trang AP-mode chỉ Wi-Fi, FARM-FR-003c, BM02 S-03, G-09) — chưa thử trên board.** Đã làm 12/11/2026 (`b3bc4b8`): `pio run -e esp32dev` và `pio run -e esp32prod` build được; `pio test -e native` chưa chạy trên máy này (thiếu g++), CI chạy. Còn phải thử trên board:
+> - nạp bản `esp32prod` + `flash_identity.py --broker <tên miền>`: trang AP chỉ có tên và mật khẩu Wi-Fi; lưu xong trình duyệt hiện trang "Đã lưu" rồi thiết bị khởi động lại và nối đúng broker đã nạp;
+> - bản `esp32prod` không hỏi mDNS (log không có dòng "mDNS tìm được broker"); bản `esp32dev` vẫn tìm được broker trên laptop qua `npm run mdns` và vẫn có ô broker;
+> - mạng Wi-Fi không tới được broker: trang AP mở lại để đổi Wi-Fi.
 >
 > **2.0.0 (MQTT theo thiết bị, G-07, Report 4 D3, §7.2) — chưa thử trên board.** Đã làm 08/11/2026: `pio run -e esp32dev` và `pio run -e esp32prod` build được (`espressif32@6.9.0`); test native chạy ở CI (gồm `test_alert_queue`, `test_command_filter`, `test_remote_command`); backend với EMQX thật trong Docker: mỗi thiết bị chỉ vào được cây topic của mình 8/8 (`npm run mqtt:isolation`, NFR-10 d), chạy thử đầu cuối 9/9 bằng client giả lập. Còn phải thử trên board (2 controller + AI node, trước khi lên staging):
 > - nạp device ID + broker secret bằng `tools/flash_identity.py` rồi khởi động: thiết bị nối EMQX bằng tài khoản riêng, backend chuyển `ONLINE` và thiết bị nhận cấu hình retained của tầng;
@@ -36,7 +41,7 @@ pio run -t upload        # nạp qua USB
 pio device monitor        # Serial monitor 115200
 ```
 
-Cấu hình WiFi/MQTT: `src/config/Secrets.h` cho dev (mẫu `Secrets.h.example`), production nhập Wi-Fi ở trang AP-mode và nạp device ID + broker secret vào NVS bằng `tools/flash_identity.py`. Thiết bị không lưu farm/house/zone. Tham số chạy (ngưỡng, hệ số mờ, tham số phát hiện, loa) nhận qua topic retained `…/{deviceId}/config` (ENV-FR-006).
+Cấu hình WiFi/MQTT: `src/config/Secrets.h` cho dev (mẫu `Secrets.h.example`), production nhập Wi-Fi ở trang AP-mode và nạp device ID + broker secret (và địa chỉ broker với `--broker`) vào NVS bằng `tools/flash_identity.py`. Thiết bị không lưu farm/house/zone. Tham số chạy (ngưỡng, hệ số mờ, tham số phát hiện, loa) nhận qua topic retained `…/{deviceId}/config` (ENV-FR-006).
 
 ## Kiến trúc (FreeRTOS, 3 task)
 
