@@ -10,6 +10,7 @@ import { farmDict } from '@/constants/farmStructure.i18n'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { NO_VALUE } from '@/constants/display'
+import type { HouseStaff } from '@/hooks/farm-owner/useFarmStructure'
 
 interface HouseTableProps {
   houses: HouseNode[]
@@ -17,7 +18,7 @@ interface HouseTableProps {
   /** false = role không xem được thu hoạch → bỏ cột sản lượng */
   showYield: boolean
   onTogglePin: (houseId: string) => void
-  staffByHouse: Record<string, { name: string; initials: string }> | undefined
+  staffByHouse: Map<string, HouseStaff>
   onOpen: (node: HouseNode) => void
 }
 
@@ -53,7 +54,7 @@ export default function HouseTable({ houses, staffByHouse, pinned, showYield, on
       },
       {
         key: 'staff', header: t('card.staff'), className: 'w-[12%]',
-        render: node => <span className="truncate text-small text-graphite">{staffByHouse?.[node.house._id]?.name ?? NO_VALUE}</span>,
+        render: node => <span className="truncate text-small text-graphite">{staffByHouse.get(node.house._id)?.name ?? NO_VALUE}</span>,
       },
       {
         key: 'actions', header: t('table.actions'), align: 'center', className: 'w-[7%]',

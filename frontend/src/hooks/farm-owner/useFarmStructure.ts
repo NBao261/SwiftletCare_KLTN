@@ -5,7 +5,7 @@ import { deviceApi } from '@/apis/shared/devices.api'
 import { alertApi } from '@/apis/shared/alerts.api'
 import { harvestApi } from '@/apis/farm-owner/harvests.api'
 import { farmMockApi } from '@/apis/farm-owner/farmMock.api'
-import { useFarms } from '@/hooks/shared/useFarms'
+import { useFarmDetails, useFarms } from '@/hooks/shared/useFarms'
 import { useSensorNodes } from '@/hooks/shared/useDevices'
 import { useEnvCompareBatched } from '@/hooks/farm-owner/useAnalytics'
 import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry'
@@ -146,7 +146,26 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
   }
 }
 
-/** Trường backend chưa có (người phụ trách, lịch thu dự kiến) — hiện rỗng, xem farmMock.api.ts. staleTime Infinity: chưa có nguồn thật để làm mới. */
+export interface HouseStaff { name: string; initials: string }
+
+// "Phụ trách" của mỗi nhà: thợ chính (AUTH-FR-013), tên tra trong thành viên farm — chỉ Farm Owner nhận được tên
+export function useHouseStaff(houses: House[]): Map<string, HouseStaff> {
+  const farmIds = useMemo(() => [...new Set(houses.map(house => house.farm_id))], [houses])
+  const farms = useFarmDetails(farmIds)
+  return useMemo(() => {
+    const nameById = new Map<string, string>()
+    for (const farm of farms) for (const member of farm.members) nameById.set(member.user_id, member.full_name ?? member.email ?? '')
+    const staffByHouse = new Map<string, HouseStaff>()
+    for (const house of houses) {
+      const primary = house.technicians?.find(item => item.primary)
+      const name = primary ? nameById.get(primary.user_id) : undefined
+      if (name) staffByHouse.set(house._id, { name, initials: (name.trim().split(/\s+/).pop() ?? name).charAt(0).toUpperCase() })
+    }
+    return staffByHouse
+  }, [farms, houses])
+}
+
+/** Trường backend chưa có (lịch thu dự kiến) — hiện rỗng, xem farmMock.api.ts. staleTime Infinity: chưa có nguồn thật để làm mới. */
 export function useStructureExtras(houseIds: string[]) {
   const key = houseIds.join(',')
   return useQuery({

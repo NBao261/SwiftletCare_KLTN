@@ -17,7 +17,7 @@ import AddZoneModal from '@/components/features/farm-owner/farms/AddZoneModal'
 import StructureEditModal from '@/components/features/farm-owner/farms/StructureEditModal'
 import ActionsMenu from '@/components/ui/ActionsMenu'
 import { NO_VALUE } from '@/constants/display'
-import { useFarmStructure, useHouseZoneIds, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
+import { useFarmStructure, useHouseStaff, useHouseZoneIds, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
@@ -47,6 +47,8 @@ export default function FarmOwnerFarmZonesPage() {
   const { structure, isLoading, isError, metricsLoading, canViewHarvest, refetch } = useFarmStructure({ liveZoneIds })
   const node = houseId ? structure.houseById.get(houseId) : undefined
   const { data: extras } = useStructureExtras(houseId ? [houseId] : [])
+  const pageHouses = useMemo(() => (node ? [node.house] : []), [node])
+  const staffByHouse = useHouseStaff(pageHouses)
   // FARM-FR-002 — chỉ Farm Owner tạo Zone
   const isFarmOwner = usePermission('FARM_OWNER')
 
@@ -121,7 +123,7 @@ export default function FarmOwnerFarmZonesPage() {
 
   const { house, farm } = node
   const returnRateDrop = house.bird_count_tuning?.return_rate_drop_pct
-  const staff = extras?.houseStaff[house._id]
+  const staff = staffByHouse.get(house._id)
 
   const houseTabs: Array<{ key: Tab; label: string; icon: typeof CpuIcon }> = [
     { key: 'overview', label: t('tab.overview'), icon: SquaresFourIcon },
