@@ -326,7 +326,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [x] Màn Zone: in mã QR tầng. *(Nhi, 11/11, `eb3a601`: menu "…" của trang Zone (Farm Owner) → In mã QR tầng `swiftletcare://zone?z=<zone ID>` kèm nhà, tầng, tên Zone; mã sinh ở `lib/qrCode.ts`, cùng định dạng bộ quét mobile, test `qrCode.test.ts`)*
 - [x] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS". *(Kiệt, 09/11, `adf3a60` spec + `7631056` backend, nhánh `feat/g09-device-setup`: cấp được khi thiết bị `IN_STOCK` hoặc `RELEASED`, đang dùng hoặc đã thu hồi thì 409; `GET /admin/provisioned-devices` trả `stock_status` (Report 3 §6.16) cho màn kho của Nhi; TC-ST-26 thêm trường hợp `RELEASED`)*
 - [ ] Mobile: quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
-- [ ] Web: `/onboarding` cho Farm Owner.
+- [x] Web: `/onboarding` cho Farm Owner. *(Tuấn, 11/11, `cbfcb635`, nhánh `feat/g09-device-setup`: wizard 4 bước cho SENSOR_NODE (Vị trí→Xác thực→Kết nối AP+WiFi→Đợi kết nối) và 3 bước cho CAMERA_NODE (Vị trí→Xác thực→Đợi kết nối); QR URI parse `swiftletcare://claim?d=…&k=…` có toggle input; CAMERA_NODE gửi `house_id` đúng FARM-FR-004; nút "Hướng dẫn Lắp đặt" trong TechnicianDevicesPage cho FARM_OWNER + TECHNICIAN; 12/12 vitest pass)*
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
 
