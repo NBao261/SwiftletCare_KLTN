@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatHealthLevelsSummary,
-  getAssessorRoleLabel,
-  getDisagreementDirection,
-} from '@/components/features/domain-expert/reports/DisagreementDayCard';
+import { getDisagreementDirection } from '@/components/features/domain-expert/reports/DisagreementDayCard';
 import {
   formatAgreementIndex,
   formatRatePercent,
@@ -21,12 +17,6 @@ import type {
 
 describe('G-11 — Expert Health Disagreements & Evaluation Unit Tests (EXPERT-FR-022, ANALYTICS-FR-014, BR-28)', () => {
   describe('EXPERT-FR-022: Phân tích chiều lệch và vai trò người chấm thực địa', () => {
-    it('getAssessorRoleLabel trả về đúng nhãn tiếng Việt cho Chủ nhà yến và Kỹ thuật viên', () => {
-      expect(getAssessorRoleLabel('FARM_OWNER')).toBe('Chủ nhà yến');
-      expect(getAssessorRoleLabel('FARM_TECHNICIAN')).toBe('Kỹ thuật viên nhà yến');
-      expect(getAssessorRoleLabel('OTHER_ROLE')).toBe('OTHER_ROLE');
-    });
-
     it('getDisagreementDirection xác định đúng chiều lệch STRICTER và LENIENT', () => {
       expect(getDisagreementDirection('WATCH', 'GOOD')).toBe('STRICTER');
       expect(getDisagreementDirection('ACTION', 'GOOD')).toBe('STRICTER');
@@ -35,23 +25,6 @@ describe('G-11 — Expert Health Disagreements & Evaluation Unit Tests (EXPERT-F
       expect(getDisagreementDirection('GOOD', 'WATCH')).toBe('LENIENT');
       expect(getDisagreementDirection('GOOD', 'ACTION')).toBe('LENIENT');
       expect(getDisagreementDirection('WATCH', 'ACTION')).toBe('LENIENT');
-    });
-  });
-
-  describe('BR-28: Tóm tắt mức chỉ số sức khỏe của nhà yến', () => {
-    it('formatHealthLevelsSummary định dạng chính xác 3 nhóm chỉ số môi trường, không khí, tiếng ồn', () => {
-      const summary = formatHealthLevelsSummary({
-        in_range_slight_pct: 80,
-        in_range_clear_pct: 60,
-        air_slight_h: 2,
-        air_clear_h: 6,
-        noise_slight: 2,
-        noise_clear: 5,
-      });
-
-      expect(summary.environment).toBe('Lệch nhẹ < 80% · Lệch rõ < 60%');
-      expect(summary.air).toBe('Lệch nhẹ ≥ 2h · Lệch rõ ≥ 6h');
-      expect(summary.noise).toBe('Lệch nhẹ ≥ 2 đợt · Lệch rõ ≥ 5 đợt');
     });
   });
 

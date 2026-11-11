@@ -20,7 +20,6 @@ import type {
 } from '@/types/expert/disagreements.types';
 import type {
   HealthLevel,
-  HealthLevels,
   HealthRatingValue,
   HealthSource,
 } from '@/types/healthDay.types';
@@ -40,15 +39,6 @@ const RATING_SEVERITY: Record<HealthRatingValue, number> = {
 };
 
 /**
- * Trả về nhãn hiển thị tiếng Việt chuẩn cho vai trò người chấm thực địa (BR-31, EXPERT-FR-012)
- */
-export function getAssessorRoleLabel(role: string): string {
-  if (role === 'FARM_TECHNICIAN') return 'Kỹ thuật viên nhà yến';
-  if (role === 'FARM_OWNER') return 'Chủ nhà yến';
-  return role;
-}
-
-/**
  * Xác định chiều lệch giữa đánh giá thực địa của người chấm và trạng thái ảnh chụp hệ thống:
  * - 'STRICTER': Người chấm đánh giá mức độ nghiêm trọng cao hơn hệ thống (VD: Người chấm Cần xử lý, Hệ thống báo Tốt)
  * - 'LENIENT': Người chấm đánh giá nhẹ hơn hệ thống (VD: Người chấm Tốt, Hệ thống báo Cần theo dõi)
@@ -60,21 +50,6 @@ export function getDisagreementDirection(
   return RATING_SEVERITY[rating] > RATING_SEVERITY[snapshotStatus]
     ? 'STRICTER'
     : 'LENIENT';
-}
-
-/**
- * Định dạng chuỗi tóm tắt mức chỉ số sức khỏe hiện tại của nhà yến (BR-28)
- */
-export function formatHealthLevelsSummary(levels: HealthLevels): {
-  environment: string;
-  air: string;
-  noise: string;
-} {
-  return {
-    environment: `Lệch nhẹ < ${levels.in_range_slight_pct}% · Lệch rõ < ${levels.in_range_clear_pct}%`,
-    air: `Lệch nhẹ ≥ ${levels.air_slight_h}h · Lệch rõ ≥ ${levels.air_clear_h}h`,
-    noise: `Lệch nhẹ ≥ ${levels.noise_slight} đợt · Lệch rõ ≥ ${levels.noise_clear} đợt`,
-  };
 }
 
 interface DisagreementDayCardProps {
@@ -106,16 +81,17 @@ function DisagreementItemBlock({
           </div>
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="font-bold text-charcoal">
-              {item.assessor.full_name || 'Người chấm thực địa'}
+              {item.assessor.full_name || t('dis.rater')}
             </span>
             <span className="text-warmGray">•</span>
             <span className="rounded-md border border-warmGray/15 bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
-              {getAssessorRoleLabel(item.assessor.role)}
+              {/* ponytail: Role của web chưa có FARM_TECHNICIAN tới khi G-20 merge; khi đó đổi sang t(`role.${item.assessor.role}`) */}
+              {item.assessor.role === 'FARM_TECHNICIAN' ? t('dis.farmTechnician') : t('role.FARM_OWNER')}
             </span>
           </div>
         </div>
         <span className="font-mono text-[11px] text-warmGray">
-          Chấm lúc: {dateTime(item.at)}
+          {t('dis.ratedAt', { time: dateTime(item.at) })}
         </span>
       </div>
 
@@ -124,7 +100,7 @@ function DisagreementItemBlock({
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warmGray/20 bg-white p-3 md:col-span-7">
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-medium text-warmGray">
-              Người chấm tại nhà
+              {t('dis.raterSide')}
             </span>
             <HealthStatusBadge status={item.rating} />
           </div>
@@ -135,13 +111,13 @@ function DisagreementItemBlock({
           >
             <ArrowLeftRight className="h-4 w-4 text-amber-700" />
             <span className="font-mono text-[10px] font-bold uppercase text-amber-900">
-              Đối chiếu
+              {t('dis.compare')}
             </span>
           </div>
 
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-medium text-warmGray">
-              Hệ thống lúc chấm
+              {t('dis.systemSide')}
             </span>
             <HealthStatusBadge status={item.snapshot_status} />
           </div>
@@ -155,8 +131,8 @@ function DisagreementItemBlock({
               }`}
             >
               {direction === 'STRICTER'
-                ? 'Thực địa cảnh báo cao hơn'
-                : 'Hệ thống cảnh báo cao hơn'}
+                ? t('dis.stricter')
+                : t('dis.lenient')}
             </span>
           </div>
         </div>
@@ -165,7 +141,7 @@ function DisagreementItemBlock({
         <div className="flex flex-col justify-center rounded-xl border border-warmGray/15 bg-white/90 p-3 md:col-span-5">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-graphite">
             <MessageSquareText className="h-3.5 w-3.5 text-warmGray" />
-            <span>Ghi chú quan sát thực địa</span>
+            <span>{t('dis.note')}</span>
           </div>
           {item.note ? (
             <p className="mt-1 border-l-2 border-charcoal/30 pl-2.5 text-xs leading-relaxed text-charcoal">
@@ -185,7 +161,7 @@ function DisagreementItemBlock({
           {hasSnapshotLevels && (
             <div className="flex flex-wrap items-center gap-2 pb-1">
               <span className="text-[11px] font-semibold text-graphite">
-                Mức từng nguồn lúc chấm:
+                {t('dis.sourceLevels')}
               </span>
               {SOURCES.map((source) => {
                 const level = item.snapshot_levels?.[source] ?? null;
@@ -210,7 +186,7 @@ function DisagreementItemBlock({
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] font-semibold text-graphite">
-                  Lý do hệ thống ghi nhận lúc chấm:
+                  {t('dis.snapshotReasons')}
                 </span>
                 {currentStatus !== item.snapshot_status && (
                   <span className="text-[11px] italic text-warmGray">
@@ -244,7 +220,7 @@ export default function DisagreementDayCard({
 
   return (
     <article
-      aria-label={`Ngày đánh giá lệch ${date(day.date)} tại ${day.house_name}`}
+      aria-label={t('dis.dayLabel', { date: date(day.date), house: day.house_name })}
       className="relative z-10 flex w-full max-w-screen-xl flex-col gap-4 rounded-2xl border border-warmGray/20 bg-white p-4 shadow-xs sm:p-5"
     >
       {/* Header của ngày lệch: Ngày + Nhà yến + Trạng thái hiện tại + Liên kết mức chỉ số cấp nhà */}
@@ -260,13 +236,13 @@ export default function DisagreementDayCard({
           </span>
 
           <Badge tone="warning" className="font-mono tabular-nums">
-            {day.disagreements.length} lượt chấm lệch
+            {t('dis.count', { n: day.disagreements.length })}
           </Badge>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-warmGray">
-            <span>Trạng thái hiện tại:</span>
+            <span>{t('dis.currentStatus')}</span>
             <HealthStatusBadge status={day.current_status} />
           </div>
 
@@ -275,11 +251,11 @@ export default function DisagreementDayCard({
             onClick={() =>
               onEditLevels({ id: day.house_id, name: day.house_name })
             }
-            aria-label={`Xem và chỉnh mức chỉ số sức khỏe chung của ${day.house_name}`}
+            aria-label={t('dis.houseLevelsLabel', { house: day.house_name })}
             className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-graphite underline-offset-4 transition-colors hover:bg-stone/40 hover:text-charcoal hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal"
           >
             <SlidersHorizontal className="h-3.5 w-3.5 text-warmGray" aria-hidden="true" />
-            <span>Mức chỉ số của {day.house_name} →</span>
+            <span>{t('dis.houseLevels', { house: day.house_name })}</span>
           </button>
         </div>
       </div>
@@ -299,7 +275,7 @@ export default function DisagreementDayCard({
       <div className="flex w-full flex-col gap-2.5 pt-1">
         <div className="flex items-center gap-1.5 text-xs font-bold text-charcoal">
           <Activity className="h-3.5 w-3.5 text-graphite" />
-          <span>{t('detail.indicators')} thực đo trong ngày</span>
+          <span>{t('dis.indicators')}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -345,7 +321,7 @@ export default function DisagreementDayCard({
       {day.current_reasons.length > 0 && (
         <div className="flex w-full flex-col gap-1 rounded-xl border border-warmGray/15 bg-stone/20 px-3.5 py-2.5 text-xs">
           <span className="font-semibold text-graphite">
-            {t('detail.reasons')} hiện tại của hệ thống:
+            {t('dis.currentReasons')}
           </span>
           <ul className="flex flex-col gap-1 border-l-2 border-warmGray/30 pl-2.5 text-charcoal">
             {day.current_reasons.map((reason, index) => (

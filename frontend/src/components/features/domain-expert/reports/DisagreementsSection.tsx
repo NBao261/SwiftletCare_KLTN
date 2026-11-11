@@ -8,7 +8,7 @@ import {
   Building2,
   BarChart3,
 } from 'lucide-react';
-import ExpertHealthLevelsModal from '@/components/features/domain-expert/reports/ExpertHealthLevelsModal';
+import HealthLevelsModal from '@/components/features/farm-owner/health/HealthLevelsModal';
 import {
   shiftDate,
   vietnamDate,
@@ -105,7 +105,6 @@ export default function DisagreementsSection() {
   const {
     data: evaluation,
     isLoading: isLoadingEvaluation,
-    refetch: refetchEvaluation,
   } = useHealthEvaluation(queryParams);
 
   if (!selectedFarmId) {
@@ -113,8 +112,8 @@ export default function DisagreementsSection() {
       <div className="w-full max-w-screen-xl rounded-2xl border border-warmGray/20 bg-white p-8 [&_p]:text-balance">
         <EmptyState
           icon={<Building2 className="h-8 w-8 text-warmGray" />}
-          title="Chưa chọn trang trại"
-          description="Vui lòng chọn một trang trại trên thanh giám sát SCADA phía trên để xem các ngày đánh giá lệch và cấu hình mức chỉ số sức khỏe của nhà yến."
+          title={t('dis.noFarmTitle')}
+          description={t('dis.noFarmDesc')}
         />
       </div>
     );
@@ -124,7 +123,7 @@ export default function DisagreementsSection() {
     <div className="relative z-10 flex w-full max-w-screen-xl flex-col gap-5">
       {/* Khối 1: Thanh công cụ lọc gọn trên 1 hàng + Chỉ số Độ đồng thuận & Báo động giả (ANALYTICS-FR-014) */}
       <section
-        aria-label="Bộ lọc và thống kê độ đồng thuận đánh giá sức khỏe"
+        aria-label={t('dis.filters')}
         className="flex w-full flex-col gap-4 rounded-2xl border border-warmGray/20 bg-white p-4 shadow-xs sm:p-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -132,18 +131,18 @@ export default function DisagreementsSection() {
             {/* Nhóm 1: Chọn phạm vi Toàn trang trại vs Nhà đang chọn */}
             <div
               role="group"
-              aria-label="Phạm vi nhà yến tra cứu"
+              aria-label={t('dis.scope')}
               className="flex flex-wrap items-center gap-2"
             >
               <FilterChip
                 active={scopeMode === 'FARM' || !activeHouse}
-                label={`Tất cả nhà · ${selectedFarmName || 'Trang trại'}`}
+                label={t('dis.allHouses', { farm: selectedFarmName || t('dis.farm') })}
                 onClick={() => setScopeMode('FARM')}
               />
               {activeHouse && (
                 <FilterChip
                   active={scopeMode === 'HOUSE'}
-                  label={`Nhà đang chọn · ${activeHouse.name}`}
+                  label={t('dis.selectedHouse', { house: activeHouse.name })}
                   onClick={() => setScopeMode('HOUSE')}
                 />
               )}
@@ -158,14 +157,14 @@ export default function DisagreementsSection() {
             {/* Nhóm 2: Khoảng ngày tra cứu */}
             <div
               role="group"
-              aria-label="Khoảng thời gian tra cứu"
+              aria-label={t('dis.range')}
               className="flex flex-wrap items-center gap-2"
             >
               {DISAGREEMENT_RANGES.map((value) => (
                 <FilterChip
                   key={value}
                   active={rangeDays === value}
-                  label={`${value} ngày`}
+                  label={t('dis.rangeDays', { n: value })}
                   onClick={() => setRangeDays(value)}
                 />
               ))}
@@ -174,7 +173,7 @@ export default function DisagreementsSection() {
 
           {/* Khoảng ngày cụ thể — luôn hiển thị trên mọi kích thước màn hình */}
           <span className="font-mono text-xs tabular-nums text-warmGray">
-            Khoảng tra cứu: {date(from)} – {date(to)}
+            {t('dis.period', { from: date(from), to: date(to) })}
           </span>
         </div>
 
@@ -183,10 +182,9 @@ export default function DisagreementsSection() {
           <div
             role="status"
             aria-live="polite"
-            aria-label="Đang tải chỉ số độ đồng thuận và tỷ lệ báo động giả"
+            aria-label={t('dis.loading')}
             className="grid grid-cols-2 gap-2.5 border-t border-warmGray/15 pt-3.5 sm:grid-cols-3 lg:grid-cols-6"
           >
-            <span className="sr-only">Đang tải thống kê độ đồng thuận...</span>
             <LoadingSkeleton count={2} className="h-16 w-full rounded-xl" />
             <LoadingSkeleton
               count={1}
@@ -201,21 +199,21 @@ export default function DisagreementsSection() {
           <div className="grid grid-cols-2 gap-2.5 border-t border-warmGray/15 pt-3.5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="flex flex-col justify-between rounded-xl border border-warmGray/15 bg-stone/25 px-3 py-2.5">
               <span className="text-[11px] font-medium text-warmGray">
-                Số lượt đã chấm
+                {t('dis.ratedCount')}
               </span>
               <div className="mt-1 flex flex-col">
                 <span className="font-mono text-lg font-bold leading-tight tabular-nums text-charcoal">
                   {evaluation.rated_count}
                 </span>
                 <span className="mt-0.5 text-[11px] text-warmGray">
-                  {totalDays} ngày · {totalDisagreements} lượt lệch
+                  {t('dis.ratedSub', { days: totalDays, n: totalDisagreements })}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col justify-between rounded-xl border border-warmGray/15 bg-stone/25 px-3 py-2.5">
               <span className="text-[11px] font-medium text-warmGray">
-                Độ đồng thuận (CI 95%)
+                {t('dis.agreement')}
               </span>
               <div className="mt-1 flex flex-col">
                 <span className="font-mono text-lg font-bold leading-tight tabular-nums text-charcoal">
@@ -224,7 +222,7 @@ export default function DisagreementsSection() {
                 <span className="mt-0.5 font-mono text-[11px] tabular-nums text-warmGray">
                   {evaluation.agreement
                     ? `${formatRatePercent(evaluation.agreement.ci_low)} – ${formatRatePercent(evaluation.agreement.ci_high)}`
-                    : 'Chưa đủ mẫu CI'}
+                    : t('dis.noCi')}
                 </span>
               </div>
             </div>
@@ -240,7 +238,7 @@ export default function DisagreementsSection() {
                   <span>AC1 {formatAgreementIndex(evaluation.gwet_ac1)}</span>
                 </div>
                 <span className="mt-0.5 text-[11px] text-warmGray">
-                  Hệ số đồng thuận trọng số
+                  {t('dis.kappaHint')}
                 </span>
               </div>
             </div>
@@ -249,10 +247,10 @@ export default function DisagreementsSection() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-1 text-[11px] font-medium text-warmGray">
                   <BarChart3 className="h-3 w-3" aria-hidden="true" />
-                  <span>Tỷ lệ báo động giả theo nguồn (khi thực địa chấm Tốt)</span>
+                  <span>{t('dis.falseAlarm')}</span>
                 </span>
                 <span className="font-mono text-[11px] font-semibold tabular-nums text-charcoal">
-                  Gộp: {formatRatePercent(evaluation.false_alarm_rate.combined)}
+                  {t('dis.combined', { value: formatRatePercent(evaluation.false_alarm_rate.combined) })}
                 </span>
               </div>
               <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
@@ -275,17 +273,16 @@ export default function DisagreementsSection() {
 
       {/* Khối 2: Mức chỉ số sức khỏe hiện hành theo từng nhà yến (Bento 3 cột cân đối 100% chiều ngang) */}
       <section
-        aria-label="Mức chỉ số sức khỏe hiện hành theo nhà yến"
+        aria-label={t('dis.levelsTitle')}
         className="flex w-full flex-col gap-3.5 rounded-2xl border border-warmGray/20 bg-white p-4 shadow-xs sm:p-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-charcoal sm:text-[15px]">
-              Mức chỉ số sức khỏe hiện hành theo nhà yến
+              {t('dis.levelsTitle')}
             </h2>
             <p className="text-xs text-warmGray">
-              Ngưỡng phân loại từng chỉ số vào mức Lệch nhẹ hoặc Lệch rõ. Thay
-              đổi sẽ lưu lịch sử kiểm toán và áp dụng từ lần đánh giá kế tiếp.
+              {t('levels.intro')}
             </p>
           </div>
         </div>
@@ -294,14 +291,13 @@ export default function DisagreementsSection() {
           <div
             role="status"
             aria-live="polite"
-            aria-label="Đang tải cấu hình mức chỉ số sức khỏe của nhà yến"
+            aria-label={t('dis.loading')}
           >
-            <span className="sr-only">Đang tải mức chỉ số sức khỏe...</span>
             <LoadingSkeleton count={1} className="h-32 w-full rounded-xl" />
           </div>
         ) : houses.length === 0 ? (
           <div className="rounded-xl border border-dashed border-warmGray/30 bg-stone/15 px-4 py-6 text-center text-xs text-warmGray text-balance">
-            Chưa có nhà yến nào trong phạm vi này được ghi nhận cấu hình mức chỉ số sức khỏe.
+            {t('dis.noHouses')}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -331,7 +327,7 @@ export default function DisagreementsSection() {
                     }
                   >
                     <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Chỉnh mức chỉ số</span>
+                    <span>{t('dis.editLevels')}</span>
                   </Button>
                 </div>
 
@@ -349,10 +345,10 @@ export default function DisagreementsSection() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Badge tone="warning" className="font-mono tabular-nums">
-                        Lệch nhẹ &lt; {house.health_levels.in_range_slight_pct}%
+                        {t('level.SLIGHT')} &lt; {house.health_levels.in_range_slight_pct} {t('levels.unit.environment')}
                       </Badge>
                       <Badge tone="critical" className="font-mono tabular-nums">
-                        Lệch rõ &lt; {house.health_levels.in_range_clear_pct}%
+                        {t('level.CLEAR')} &lt; {house.health_levels.in_range_clear_pct} {t('levels.unit.environment')}
                       </Badge>
                     </div>
                   </div>
@@ -369,10 +365,10 @@ export default function DisagreementsSection() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Badge tone="warning" className="font-mono tabular-nums">
-                        Lệch nhẹ ≥ {house.health_levels.air_slight_h} giờ
+                        {t('level.SLIGHT')} ≥ {house.health_levels.air_slight_h} {t('levels.unit.air')}
                       </Badge>
                       <Badge tone="critical" className="font-mono tabular-nums">
-                        Lệch rõ ≥ {house.health_levels.air_clear_h} giờ
+                        {t('level.CLEAR')} ≥ {house.health_levels.air_clear_h} {t('levels.unit.air')}
                       </Badge>
                     </div>
                   </div>
@@ -389,10 +385,10 @@ export default function DisagreementsSection() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Badge tone="warning" className="font-mono tabular-nums">
-                        Lệch nhẹ ≥ {house.health_levels.noise_slight} đợt
+                        {t('level.SLIGHT')} ≥ {house.health_levels.noise_slight} {t('levels.unit.noise')}
                       </Badge>
                       <Badge tone="critical" className="font-mono tabular-nums">
-                        Lệch rõ ≥ {house.health_levels.noise_clear} đợt
+                        {t('level.CLEAR')} ≥ {house.health_levels.noise_clear} {t('levels.unit.noise')}
                       </Badge>
                     </div>
                   </div>
@@ -409,17 +405,16 @@ export default function DisagreementsSection() {
           <div
             role="status"
             aria-live="polite"
-            aria-label="Đang tải danh sách ngày đánh giá lệch"
+            aria-label={t('dis.loading')}
             className="flex w-full flex-col gap-4"
           >
-            <span className="sr-only">Đang tải danh sách ngày đánh giá lệch...</span>
             <LoadingSkeleton count={2} className="h-56 w-full rounded-2xl" />
           </div>
         ) : isError ? (
           <div className="rounded-2xl border border-warmGray/20 bg-white p-8 [&_p]:text-balance">
             <EmptyState
               icon={<AlertTriangle className="h-8 w-8 text-alertRed" />}
-              title="Không tải được danh sách ngày đánh giá lệch"
+              title={t('dis.errorTitle')}
               description={apiErrorMessage(error)}
               action={
                 <Button
@@ -436,11 +431,11 @@ export default function DisagreementsSection() {
           <div className="rounded-2xl border border-warmGray/20 bg-white px-6 py-10 [&_p]:text-balance">
             <EmptyState
               icon={<CheckCircle2 className="h-8 w-8 text-emerald-600" />}
-              title="Không có ngày đánh giá lệch trong giai đoạn này"
+              title={t('dis.emptyTitle')}
               description={
                 evaluation && evaluation.rated_count > 0
-                  ? `Tất cả ${evaluation.rated_count} lượt chấm thực địa trong ${rangeDays} ngày qua đều đồng thuận với trạng thái ảnh chụp của hệ thống.`
-                  : 'Chưa phát sinh lượt chấm thực địa nào lệch với trạng thái ảnh chụp của hệ thống trong khoảng ngày đã chọn.'
+                  ? t('dis.emptyAllAgree', { n: evaluation.rated_count, days: rangeDays })
+                  : t('dis.emptyNone')
               }
             />
           </div>
@@ -455,17 +450,15 @@ export default function DisagreementsSection() {
         )}
       </div>
 
-      {/* Modal chỉnh mức chỉ số sức khỏe của nhà yến (riêng cho màn Chuyên gia chuẩn BR-28) */}
+      {/* Popup mức chỉ số dùng chung với Farm Owner; quyền sửa theo can_edit của backend (BR-28, BR-22) */}
       {editingHouse && (
-        <ExpertHealthLevelsModal
-          open={Boolean(editingHouse)}
+        <HealthLevelsModal
+          open
           onClose={() => {
             setEditingHouse(null);
             void refetch();
-            void refetchEvaluation();
           }}
           house={editingHouse}
-          canEdit={true}
           readOnlyNote={t('levels.readOnlyExpert')}
         />
       )}
