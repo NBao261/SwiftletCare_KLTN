@@ -25,6 +25,9 @@ export const ENDPOINTS = {
   // Mời và gỡ thành viên farm — chỉ Primary Owner (AUTH-FR-005, EXPERT-FR-001)
   FARM_MEMBERS: (farmId: string) => `/farms/${farmId}/members`,
   FARM_MEMBER: (farmId: string, userId: string) => `/farms/${farmId}/members/${userId}`,
+  // Lời mời đang chờ của farm (AUTH-FR-010) — CHƯA có trong api-spec lẫn backend, là đường đề xuất cho Kiệt (todo-review2
+  // G-16); invitation.api.ts vẫn trả dữ liệu mẫu cho tới khi route có trong spec
+  FARM_INVITATIONS: (farmId: string) => `/farms/${farmId}/invitations`,
   HOUSE_ZONES: (houseId: string) => `/farms/houses/${houseId}/zones`,
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
   ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
@@ -76,6 +79,9 @@ export const ENDPOINTS = {
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
   NOTIFICATIONS_READ_ALL: '/notifications/read-all',
+  // FCM device token của máy (ALERT-FR-002, G-10): POST đăng ký, DELETE gỡ — theo api-spec của nhánh feat/g10-fcm-push,
+  // chưa merge vào develop
+  PUSH_TOKENS: '/notifications/push-tokens',
 
   // Báo cáo sức khoẻ (EXPERT-FR-005/006)
   HEALTH_REPORTS: '/health-reports',
