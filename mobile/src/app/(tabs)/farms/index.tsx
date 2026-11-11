@@ -175,7 +175,9 @@ export default function FarmsScreen() {
         <FarmSummaryStrip
           summary={summaryQuery.summary}
           severityCounts={severityQuery.data ?? null}
-          hasExpert={farmHasExpert(farm)}
+          // GET /farms chỉ trả bản ghi thành viên của chính người gọi khi không phải Farm Owner (onlyOwnMembership): thợ, chuyên gia
+          // không biết farm có chuyên gia hay không nên ẩn nhãn
+          hasExpert={canPerform(user, 'viewFarmMembers') ? farmHasExpert(farm) : null}
           isDetailLoading={summaryQuery.isLoading}
           // Chưa có chuyên gia: mở Thành viên của đúng farm này để mời, ‹ quay về danh sách nhà
           onInviteExpert={

@@ -35,7 +35,8 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
   // Kỹ thuật viên nhà yến (G-20, Report 3 §2.4): cùng 5 tab và cùng màn với Farm Owner; backend chỉ trả các nhà được giao, nút
-  // thao tác theo canPerform (xác nhận cảnh báo, điều khiển tay có; tạo nhà, đăng ký thiết bị, sửa ngưỡng không)
+  // thao tác theo canPerform (điều khiển tay có; xác nhận cảnh báo, tạo nhà, đăng ký thiết bị, sửa ngưỡng không). Tab Cảnh báo giữ
+  // theo Report 3 (ALERT-FR-009, 017) nhưng backend G-20 còn trả 403 cho /alerts của kỹ thuật viên — chờ G-21 chuyển cảnh báo theo nhà
   FARM_TECHNICIAN: [
     { name: 'home', title: 'Trang chủ', icon: HouseIcon },
     { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },

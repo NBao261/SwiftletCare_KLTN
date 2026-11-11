@@ -16,7 +16,8 @@ interface FarmSummaryStripProps {
   summary: FarmSummary
   // Chưa tải xong số theo mức thì null, hiện "_"
   severityCounts: Record<AlertSeverity, number> | null
-  hasExpert: boolean
+  // null: người dùng không xem được thành viên farm nên không biết farm có chuyên gia hay không — ẩn nhãn
+  hasExpert: boolean | null
   // Zone, thiết bị chưa tải xong thì số hiện "_"
   isDetailLoading: boolean
   // Farm chưa có chuyên gia: bấm nhãn "Chưa có chuyên gia" mở Thành viên để mời; không truyền thì nhãn chỉ để xem
@@ -52,7 +53,7 @@ export function FarmSummaryStrip({ summary, severityCounts, hasExpert, isDetailL
         </Text>
         {/* Farm có chuyên gia thì chuyên gia quyết các tham số phát hiện; chưa có thì chủ trại quyết thay (BR-22) và được nhắc
             mời chuyên gia. Nhãn xám, không cam: thiếu chuyên gia không phải cảnh báo hay lỗi */}
-        {hasExpert ? (
+        {hasExpert === null ? null : hasExpert ? (
           <View style={badgeStyle}>
             <Text variant="label">{t('Có chuyên gia')}</Text>
           </View>
