@@ -1403,6 +1403,69 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /farms/houses/{houseId}/roster:
+    parameters:
+      - { $ref: "#/components/parameters/HouseId" }
+    get:
+      tags: [Farms]
+      summary: "Lịch trực của nhà (AUTH-FR-014) — FARM_OWNER, DOMAIN_EXPERT của farm; FARM_TECHNICIAN được giao chỉ thấy ca của mình"
+      description: |
+        Farm Technician được giao nhà chỉ nhận các ca của chính mình (Report 3 §2.4 "read own roster").
+        Nhà không có lịch thì cảnh báo dùng thợ chính (G-21 gọi `technicianOnDuty`). Administrator → 403.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          roster: { type: array, items: { $ref: "#/components/schemas/RosterShift" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Farms]
+      summary: "Đặt lịch trực của nhà (AUTH-FR-014) — FARM_OWNER của farm"
+      description: |
+        Thay toàn bộ lịch bằng `shifts` (mảng rỗng = bỏ lịch). Mỗi ca: Farm Technician đang được giao nhà
+        (không thì 409), vai thợ chính `PRIMARY` hoặc thợ phụ `BACKUP`, các ngày trong tuần và giờ bắt đầu,
+        kết thúc theo giờ VN do Farm Owner tự nhập. Hai ca cùng vai chồng giờ, giờ sai dạng, `start` bằng
+        `end` → 400. Ngoài ca của thợ chính, cảnh báo của nhà tới thợ đang trực (ALERT-FR-017, G-21).
+        Bỏ gán hoặc gỡ thợ khỏi farm thì bỏ luôn các ca của người đó. Audit `HOUSE_ROSTER_UPDATED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shifts]
+              properties:
+                shifts: { type: array, items: { $ref: "#/components/schemas/RosterShift" } }
+      responses:
+        "200":
+          description: Lịch sau khi đặt
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          roster: { type: array, items: { $ref: "#/components/schemas/RosterShift" } }
+        "400": { description: "Ca chồng giờ cùng vai, giờ sai dạng hoặc start bằng end", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Người trong ca không phải Farm Technician đang được giao nhà", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /farms/houses/{houseId}/zones:
     parameters: [{ $ref: "#/components/parameters/HouseId" }]
     post:
@@ -3552,8 +3615,10 @@ paths:
   /harvests:
     post:
       tags: [Harvests]
-      summary: "Tạo Harvest Batch (HARVEST-FR-001..004) — FARM_OWNER (Domain Expert chỉ xem qua GET)"
+      summary: "Tạo Harvest Batch (HARVEST-FR-001..004) — FARM_OWNER; FARM_TECHNICIAN ở nhà được giao (Domain Expert chỉ xem qua GET)"
       description: |
+        Lô của Farm Owner có `status: CONFIRMED` ngay; lô của Farm Technician (chỉ ở zone của nhà được giao,
+        nhà khác → 403) là `DRAFT`, chờ Farm Owner xác nhận (`POST /harvests/{id}/confirm`, HARVEST-FR-006).
         Tự động gắn `env_snapshot` (trung bình môi trường 7 ngày trước thu
         hoạch — HARVEST-FR-002) và `flock_snapshot` (return rate 30 ngày —
         HARVEST-FR-003), sinh `trace_code` (UUID) làm mã định danh mẻ. Nếu
@@ -3582,7 +3647,7 @@ paths:
       responses:
         "201":
           {
-            description: "Đã tạo (status=DRAFT)",
+            description: "Đã tạo (status=CONFIRMED với Farm Owner, DRAFT với Farm Technician)",
             content:
               {
                 application/json:
@@ -3610,7 +3675,7 @@ paths:
         "422": { $ref: "#/components/responses/ValidationError" }
     get:
       tags: [Harvests]
-      summary: Danh sách Harvest Batch (farm mình sở hữu/thành viên, hoặc lọc theo farmId)
+      summary: "Danh sách Harvest Batch (farm mình sở hữu/thành viên, hoặc lọc theo farmId); Farm Technician chỉ lô của nhà được giao"
       parameters: [{ name: farmId, in: query, schema: { type: string } }]
       responses:
         "200":
@@ -3681,8 +3746,8 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [Harvests]
-      summary: "Cập nhật Harvest Batch (HARVEST-FR-005)"
-      description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây."
+      summary: "Cập nhật Harvest Batch (HARVEST-FR-005) — FARM_OWNER mọi lô; FARM_TECHNICIAN chỉ lô DRAFT của mình"
+      description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây. Farm Technician sửa lô đã CONFIRMED hoặc lô của người khác → 403."
       requestBody:
         content:
           application/json:
@@ -3723,7 +3788,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [Harvests]
-      summary: "Xóa mềm Harvest Batch"
+      summary: "Xóa mềm Harvest Batch (HARVEST-FR-005) — FARM_OWNER mọi lô; FARM_TECHNICIAN chỉ lô DRAFT của mình"
       responses:
         "200":
           {
@@ -3735,6 +3800,29 @@ paths:
               },
           }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /harvests/{id}/confirm:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Harvests]
+      summary: "Xác nhận lô do Farm Technician nhập (HARVEST-FR-006) — FARM_OWNER của farm"
+      description: |
+        `DRAFT` → `CONFIRMED`, ghi `confirmed_by`, `confirmed_at`, audit `HARVEST_CONFIRMED`. Lô đã xác nhận
+        → 409; Farm Technician, Domain Expert → 403. Đóng chu kỳ thu hoạch khi xác nhận (HARVEST-FR-007) làm ở G-26.
+      responses:
+        "200":
+          description: Lô sau khi xác nhận
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HarvestBatch" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Lô đã được xác nhận", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   # ── HEALTH REPORTS ────────────────────────────────────────────────────────
   /health-reports:
@@ -4431,7 +4519,22 @@ components:
             properties:
               user_id: { type: string }
               primary: { type: boolean }
+        roster:
+          type: array
+          description: "AUTH-FR-014 — lịch trực theo tuần của nhà (GET/PUT /farms/houses/{houseId}/roster)"
+          items: { $ref: "#/components/schemas/RosterShift" }
         created_at: { type: string, format: date-time }
+
+    RosterShift:
+      type: object
+      description: "AUTH-FR-014 — một ca trực của nhà"
+      required: [technician_id, role, weekdays, start, end]
+      properties:
+        technician_id: { type: string }
+        role: { type: string, enum: [PRIMARY, BACKUP] }
+        weekdays: { type: array, minItems: 1, maxItems: 7, items: { type: integer, minimum: 0, maximum: 6 }, description: "0 = Chủ nhật … 6 = thứ Bảy" }
+        start: { type: string, example: "06:00", description: "HH:mm giờ VN" }
+        end: { type: string, example: "18:00", description: "HH:mm giờ VN; end trước start là ca qua nửa đêm, tính cho ngày bắt đầu" }
 
     Thresholds:
       type: object
@@ -5031,7 +5134,8 @@ components:
 
     HarvestStatus:
       type: string
-      enum: [DRAFT]
+      enum: [DRAFT, CONFIRMED]
+      description: "HARVEST-FR-001, 006 — lô của Farm Technician chờ Farm Owner xác nhận (DRAFT); lô của Farm Owner xác nhận ngay"
 
     HarvestBatch:
       type: object
@@ -5081,6 +5185,8 @@ components:
             avg_return_rate_30d: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong 30 ngày trước mẻ" }
             estimated_population: { type: integer, nullable: true, description: "Số ròng về buổi chiều lớn nhất của Zone trong 30 ngày (BirdCountDay.net_entry)" }
         status: { $ref: "#/components/schemas/HarvestStatus" }
+        confirmed_by: { type: string, nullable: true, description: "Farm Owner xác nhận lô (HARVEST-FR-006)" }
+        confirmed_at: { type: string, format: date-time, nullable: true }
         is_deleted: { type: boolean }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
