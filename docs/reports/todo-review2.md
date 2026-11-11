@@ -276,6 +276,7 @@ Một PR cho backend, web, mobile, firmware:
 - [x] **Len — web:** giới hạn bơm 30 phút và hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm. *(Nhi làm thay theo nhờ của Len, 03/11, `eab3be5`, nhánh `feat/g06-manual-override`: nút bật phun sương chạy tối đa 30 phút dù chọn thời hạn dài hơn (BR-08), quạt, loa và tắt bơm vẫn theo thời hạn đã chọn; 409 `CONFIRMATION_REQUIRED` mở popup liệt kê cảnh báo, "Vẫn bật bơm" gửi lại với `confirmed: true`; `ScadaNodeCard.tsx`, `scada.constants.ts`, `scadaRelay.ts`, `dashboard.i18n.ts` của Len — Len duyệt)*
 - [x] **Len — web:** huỷ từng relay (`DELETE …/relay-override?relayName=`). *(Nhi làm thay theo nhờ của Len, 03/11, nhánh `feat/g06-manual-override`: relay đang can thiệp tay lấy từ lịch sử can thiệp còn mở (`ended_at` trống), dòng relay đó có nút "Về tự động"; firmware chưa đọc `relayName` thì thiết bị vẫn trả mọi relay về tự động cho tới Backend phần 2 + G-07; `ScadaNodeCard.tsx`, `useAnalytics.ts`, `FarmOwnerScadaPage.tsx` của Len — Len duyệt)*
 - [x] **Len — mobile:** giới hạn bơm 30 phút và hộp xác nhận như web. *(Len, 03/11, nhánh `feat/g06-manual-override` — merge nền mobile `feat/mobile-farmowner-farm` vào vì `RelayControlSheet.tsx` chưa có trên `develop`: giới hạn bật bơm 1–30 phút (BR-08) giữ nguyên; sửa lỗi chỉ xét cảnh báo `ACTIVE` — hook `usePumpBlockingAlerts` lấy `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` cả `ACTIVE` lẫn `ACKNOWLEDGED`, tải mới mỗi lần mở sheet, lỗi thì khoá nút và có "Thử lại"; hộp xác nhận liệt kê từng cảnh báo kèm trạng thái và thời lượng; "Vẫn bật bơm" gửi `confirmed: true` (`useControlRelay`, `deviceApi.controlRelay`); 409 `CONFIRMATION_REQUIRED` đọc `error.details` bằng `parseConfirmationAlerts` rồi hỏi lại; câu lỗi riêng 422/403/409; nút "Về tự động" ở Trang chủ hỏi xác nhận. Còn lại ở mobile: huỷ từng relay và hiện `alert_confirmed` trong lịch sử — ghi ở Known debt `mobile/CLAUDE.md`)*
+- [x] **Len — mobile:** hạn và huỷ theo từng relay (BR-20, ENV-FR-018/019). *(Len, 10/11, nhánh `feat/mobile-farmowner-farm`: mỗi dòng relay ở Màn B có nút gạt BẬT/TẮT gửi ngay 30 phút mặc định (bơm tối đa 30 phút, TẮT hỏi lại, bật bơm hỏi theo 409), chế độ và giờ tự về AUTO đọc `relays[relay]`, nút "Về AUTO" riêng gửi `relayName`, "Về AUTO tất cả" khi từ 2 relay; dải ở Trang chủ chỉ trả relay đó; lịch sử hiện `alert_confirmed`; `hooks/device/useRelayCommand.ts` dùng chung cho sheet và nút gạt)*
 - [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
 - [x] Test TC-ST "MANUAL → MANUAL". *(06/11, `relayCommand.test.ts` + `test_relay_override`, backend 615/615)*
 - [x] Sửa theo review PR #124 *(Kiệt, 02/11, `37f61a2` spec + `c3d3ff8` backend)*: huỷ 1 relay không đang can thiệp tay thì không gửi lệnh, không ghi audit (200, như khi thiết bị AUTO). Góp ý còn lại không sửa code: web `ScadaNodeCard.tsx` cần giới hạn bơm 30 phút và hộp xác nhận (dòng Web/mobile ở trên, Len) trước khi G-06 lên staging.
@@ -325,7 +326,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
-- [ ] Mobile (Len): quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
+- [ ] Mobile (Len): quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình. *(Len, 11/11, nhánh `feat/g20-farm-technician`: quét mã tầng `swiftletcare://zone?z=` trước hay sau nhãn đều được, hoặc chọn khu vực từ danh sách (FARM-FR-007), mã tầng ngoài farm bị chặn; đăng ký xong hiện hướng dẫn cài Wi-Fi theo firmware (mạng `SwiftletCare-Setup-<mã thiết bị>`, 192.168.4.1, chỉ hỏi Wi-Fi) và tiến trình Đã đăng ký → Đã kết nối, quá 15 phút nhắc kiểm tra Wi-Fi (BR-27). Còn chờ: bước APPLIED hiện "Sắp có" tới khi G-08 trả phiên bản cấu hình (ENV-FR-027))*
 - [ ] Web: `/onboarding` cho Farm Owner + Technician.
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
@@ -336,7 +337,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
   - adapter `push` dùng `firebase-admin` (credential qua biến môi trường, không commit);
   - xoá token FCM báo invalid;
   - không log token.
-- [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo.
+- [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo. *(Len, 11/11, nhánh `feat/g20-farm-technician`, theo api-spec của `feat/g10-fcm-push`: lấy FCM device token (`getDevicePushTokenAsync`, chỉ Android) và `POST /notifications/push-tokens` sau đăng nhập khi đã cho phép, `DELETE` trước khi đăng xuất; chỉ xin quyền khi người dùng chạm "Nhận push trên máy này"; bấm push mở đúng cảnh báo (data `{ kind, id }`), báo cáo, hoặc chuông. Còn chờ: G-10 merge vào develop, bản build có `google-services.json`, rồi đo NFR-02)*
 - [ ] Test TC-F08-03 (mock Firebase Admin).
 
 ### G-11 — MF-06 (P0-Demo) — Kiệt (backend), Nhi (web), Len (mobile)
@@ -409,13 +410,19 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 Thứ tự:
 
 1. **Len:** đăng nhập (đổi mật khẩu lần đầu), lưu token an toàn, điều hướng theo role, `off*` socket khi unmount — làm trước, các bước sau dựa vào.
+   - *(Len, đã có từ PR #127: đăng nhập, đổi mật khẩu tạm, token trong SecureStore, tab theo `roleTabs.ts`, gỡ socket khi rời màn; 11/11 listener socket sống qua lần đăng nhập lại)*
 2. **Len:** FCM (G-10).
 3. **Len:** dashboard số đo hiện tại + chế độ relay.
+   - *(Len, đã có từ PR #127: Trang chủ, màn nhà với số đo hiện tại, chế độ từng relay)*
 4. **Len:** cảnh báo: danh sách, chi tiết, xác nhận, `DISMISSED`.
+   - *(Len, danh sách, chi tiết, xác nhận, đã đóng gồm `DISMISSED` có từ PR #127; 11/11 nhánh `feat/g20-farm-technician`: chuông hai mục Thông báo | Cảnh báo chưa xác nhận là màn riêng ẩn thanh tab, số realtime qua `NOTIFICATION_NEW`/`ALERT_NEW`, tải lại khi socket nối lại; chi tiết cảnh báo có khung kết luận chuyên gia và lịch sử xử lý; trang chi tiết thông báo kèm Hoạt động chuyên gia ghi rõ chỉ số cũ → mới)*
 5. **Len:** can thiệp tay có xác nhận (G-06).
+   - *(Len, xem G-06: giới hạn bơm và hộp xác nhận 03/11, hạn và huỷ theo từng relay 10/11)*
 6. **Len:** setup QR (G-09).
+   - *(Len, xem G-09: quét nhãn 01/11; mã tầng, hướng dẫn Wi-Fi, tiến trình 11/11)*
 7. **Len:** trạng thái ngày + chấm điểm (G-11).
 8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; phát tại chỗ theo camera của House, không dùng route riêng).
+   - *(Len, đã có từ PR #127: tab Phân tích (Đàn chim, Môi trường, Điều khiển, Sản lượng, Báo cáo), live stream HLS phát tại chỗ theo camera của nhà)*
 9. **Len:** báo cáo.
 10. **Len:** thu hoạch.
 11. **Tuấn:** màn chuyên gia (hàng đợi việc, kết luận cảnh báo, tham số).
@@ -446,7 +453,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-20 — Farm Technician thay vai Technician cũ (P1, phạm vi cuối 09/11/2026) — Kiệt (backend), Tuấn (console thiết bị của Admin), Len (đăng nhập technician trên mobile), Nhi (màn gán nhà)
 
-- [ ] Đổi `TECHNICIAN` (mọi farm, lệnh từ xa) thành `FARM_TECHNICIAN`: thành viên farm, chỉ thao tác trên nhà được gán (AUTH-FR-004, 005, 013); enum đổi ở cả backend, web, mobile, `migrate:*` cho dữ liệu cũ. *Backend xong (spec a6fbf9c, code f9d9522, Kiệt làm thay Bảo): enum, quyền theo nhà, `migrate:farm-technician` (tài khoản cũ chưa vào farm nào); web xong (`f9364593` + `a527ace2`, `4621428f` — Tuấn, Nhi); còn enum và màn hình mobile của Len.*
+- [ ] Đổi `TECHNICIAN` (mọi farm, lệnh từ xa) thành `FARM_TECHNICIAN`: thành viên farm, chỉ thao tác trên nhà được gán (AUTH-FR-004, 005, 013); enum đổi ở cả backend, web, mobile, `migrate:*` cho dữ liệu cũ. *Backend xong (spec a6fbf9c, code f9d9522, Kiệt làm thay Bảo): enum, quyền theo nhà, `migrate:farm-technician` (tài khoản cũ chưa vào farm nào); web xong (`f9364593` + `a527ace2`, `4621428f` — Tuấn, Nhi); còn enum và màn hình mobile của Len.* *(Mobile — Len, 11/11, nhánh `feat/g20-farm-technician`: enum `FARM_TECHNICIAN` ở `types`, nhãn "Kỹ thuật viên nhà yến"; thợ đăng nhập được với 5 tab như Farm Owner (`roleTabs.ts`), chỉ thấy nhà được giao, chưa được giao thì báo "Bạn chưa được giao nhà nào"; quyền theo Report 3 §2.4 trong `permission.utils.ts` (điều khiển tay, cài thông báo, chuông, push); Farm Owner mời được kỹ thuật viên; chính sách quyền riêng tư cập nhật. Tạm ẩn với thợ tới khi backend mở: xác nhận cảnh báo, báo cáo sức khỏe, bằng chứng, gợi ý hệ số (backend G-20 trả 403); chưa thử với tài khoản thợ thật)*
 - [x] Lệnh từ xa và OTA chuyển sang console thiết bị của Administrator (FARM-FR-009, 013); Farm Owner và technician của nhà được RESTART. *Backend xong (f9d9522): Admin mọi lệnh ở mọi farm, Farm Owner và thợ chỉ RESTART (lệnh khác 403), lệnh của Admin/thợ báo Farm Owner; console thiết bị của Admin trên web xong (Tuấn, 10/11, `f9364593` + `a527ace2`, cùng `4621428f`: `/devices`, `/alerts`, `/ota` ở `AdminLayout`, `PUSH_CONFIG` và `/ota` chỉ `ADMIN`, `AudioTracksModal` chuyển sang `FARM_OWNER`, bỏ tạo tài khoản Technician ở Admin).*
 - [ ] Gán technician vào nhà; lịch trực (AUTH-FR-014, O — làm sau cùng). *Gán xong ở backend (f9d9522): `PUT/DELETE /farms/houses/:houseId/technicians/:userId`, 1 thợ chính mỗi nhà; màn gán trên web xong (Nhi, 11/11, `b1b0eb3f`, tab "Thành viên farm" của trang nhà); câu chữ web còn nói Kỹ thuật viên lắp đặt, dời thiết bị, cập nhật firmware đổi theo Report 3 §2.4 (Nhi, 11/11). Còn lịch trực (backend và màn).* *(Lịch trực backend xong: `a86b9d0` spec, `8288724` code; còn màn lịch trực trên web.)*
 
