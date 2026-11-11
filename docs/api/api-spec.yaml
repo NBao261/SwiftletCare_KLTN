@@ -4686,6 +4686,7 @@ components:
         farm_id: { type: string, readOnly: true, description: "Farm của House chứa Zone — server tự điền, không đổi được (SRS v1.23.0)" }
         name: { type: string }
         floor: { type: integer }
+        config_version: { type: integer, readOnly: true, description: "ENV-FR-027 — tăng ở mỗi lần đổi ngưỡng, hệ số mờ hoặc tham số phát hiện (giây Unix, luôn lớn hơn bản trước); đi kèm `config` gửi xuống controller" }
         thresholds: { $ref: "#/components/schemas/Thresholds" }
         threshold_history:
           type: array
@@ -4880,6 +4881,11 @@ components:
             enum: [PENDING, ONLINE, OFFLINE],
             description: "PENDING = Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên (Flow 1)",
           }
+        config_sync:
+          type: string
+          enum: [PENDING, APPLIED, MISMATCH, UNKNOWN]
+          description: "ENV-FR-027, Report 3 §6.12 — controller mới hoặc vừa có cấu hình mới: PENDING; heartbeat báo đúng `config_version` của Zone: APPLIED (FARM-FR-012 \"đã áp cấu hình\"); online mà 3 heartbeat liên tiếp vẫn báo bản cũ: MISMATCH kèm cảnh báo CONFIG_MISMATCH (BR-24); firmware trước 2.1.0 không báo phiên bản: UNKNOWN"
+        applied_config_version: { type: integer, nullable: true, description: "ENV-FR-027 — phiên bản cấu hình heartbeat gần nhất báo; null khi firmware không báo" }
         rssi: { type: number }
         booted_at: { type: string, format: date-time, description: "FARM-FR-006 — thời điểm khởi động, tính từ `uptime` của heartbeat" }
         free_heap: { type: number, description: "FARM-FR-006 — byte RAM còn trống lúc heartbeat gần nhất" }
