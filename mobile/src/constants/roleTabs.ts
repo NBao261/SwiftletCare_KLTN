@@ -24,10 +24,19 @@ export interface RoleTab {
 /**
  * Tab của từng role trên mobile — chỗ duy nhất cần sửa khi đổi menu.
  * Đổi menu: sửa title/icon, trỏ name sang route thật trong src/app/(tabs)/.
- * Role không có ở đây thì không được vào app: Technician và Admin dùng bản web (Report 4 §5.4).
+ * Role không có ở đây thì không được vào app: Administrator dùng console web (Report 4 §5.4).
  */
 export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
   FARM_OWNER: [
+    { name: 'home', title: 'Trang chủ', icon: HouseIcon },
+    { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
+    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, showsAlertBadge: true, isFeatured: true },
+    { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
+    { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
+  ],
+  // Kỹ thuật viên nhà yến (G-20, Report 3 §2.4): cùng 5 tab và cùng màn với Farm Owner; backend chỉ trả các nhà được giao, nút
+  // thao tác theo canPerform (xác nhận cảnh báo, điều khiển tay có; tạo nhà, đăng ký thiết bị, sửa ngưỡng không)
+  FARM_TECHNICIAN: [
     { name: 'home', title: 'Trang chủ', icon: HouseIcon },
     { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
     { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, showsAlertBadge: true, isFeatured: true },
