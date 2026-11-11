@@ -27,7 +27,7 @@ export type PermissionAction =
 
 // Role được làm từng thao tác (Report 3 §2.4); Technician và Admin không vào app
 const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
-  // Thiết lập thiết bị bằng QR (MF-10): chỉ Farm Owner, Domain Expert chỉ xem thiết bị
+  // Thiết lập thiết bị bằng QR (SF-01): chỉ Farm Owner, Domain Expert chỉ xem thiết bị
   setupDevice: ['FARM_OWNER'],
   // Điều khiển tay một relay (ENV-FR-016): chỉ Farm Owner, chuyên gia chỉ xem (Report 3 §2.4)
   controlRelay: ['FARM_OWNER'],
@@ -49,18 +49,18 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   // Ngưỡng và hệ số bộ điều khiển mờ thuộc farm: chủ trại và chuyên gia sửa (ENV-FR-006, ENV-FR-021)
   editThresholds: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   editFuzzyTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
-  // Tham số phát hiện của zone và mức giảm tỷ lệ về tổ của nhà: chỉ chuyên gia (EXPERT-FR-008)
-  editDetectionTuning: ['DOMAIN_EXPERT'],
-  editBirdCountTuning: ['DOMAIN_EXPERT'],
+  // Tham số phát hiện của zone và mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008): chuyên gia; chủ trại chỉ khi farm chưa
+  // có chuyên gia (BR-22, backend assertExpertDecision)
+  editDetectionTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  editBirdCountTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Áp dụng gợi ý hệ số (EXPERT-FR-011): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22, xem FARM_OWNER_WITHOUT_EXPERT)
   applyCoefficientSuggestion: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Viết kết luận báo cáo (EXPERT-FR-006): chỉ chuyên gia
   writeConclusion: ['DOMAIN_EXPERT'],
   // Xác nhận đã biết cảnh báo (ALERT-FR-009): chỉ chủ trại, chuyên gia bị 403
   acknowledgeAlert: ['FARM_OWNER'],
-  // Phán quyết cảnh báo suy luận (EXPERT-FR-003): backend chỉ cho chuyên gia; BR-22 (chủ trại khi farm chưa có
-  // chuyên gia) backend chưa làm nên chưa mở cho chủ trại
-  setAlertVerdict: ['DOMAIN_EXPERT'],
+  // Phán quyết cảnh báo suy luận (EXPERT-FR-003): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)
+  setAlertVerdict: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chuyên gia không nhận push, Telegram
   editNotificationSettings: ['FARM_OWNER'],
   // Trang Tài khoản đầy đủ (hồ sơ, lối tắt, thành viên, bảo mật): làm cho Farm Owner; Domain Expert giữ trang cơ bản
@@ -72,7 +72,12 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
 }
 
 // Thao tác chủ trại chỉ được làm khi farm chưa có chuyên gia (BR-22); có chuyên gia thì việc đó của chuyên gia
-const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set(['applyCoefficientSuggestion'])
+const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set([
+  'applyCoefficientSuggestion',
+  'setAlertVerdict',
+  'editDetectionTuning',
+  'editBirdCountTuning',
+])
 
 // Thao tác backend chỉ cho Primary Owner (người tạo farm); đồng sở hữu chỉ xem
 const PRIMARY_OWNER_ONLY: ReadonlySet<PermissionAction> = new Set(['manageFarmMembers'])

@@ -1,25 +1,25 @@
-import type { ExpertDecisionType, FarmMember, ReviewItem } from '@/types'
+import type { ChangeReviewStatus, FarmMember, ProposalStatus } from '@/types'
 import { t } from '@/utils/i18n.utils'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-// Các loại quyết định chuyên gia Farm Owner được báo (EXPERT-FR-009)
-const DECISION_TYPE_LABELS: Record<ExpertDecisionType, string> = {
-  THRESHOLDS: 'Sửa ngưỡng',
-  THRESHOLDS_RESET: 'Đặt lại ngưỡng mặc định',
-  FUZZY_TUNING: 'Sửa hệ số điều khiển',
-  DETECTION_TUNING: 'Sửa tham số phát hiện',
-  RETURN_RATE_DROP: 'Sửa mức giảm tỷ lệ về tổ',
-  COUNTING_RING: 'Vẽ vòng đếm',
-  COUNTING_SCHEDULE: 'Đặt lịch đếm chim',
-  ALERT_VERDICT: 'Phán quyết cảnh báo',
-  CONCLUSION: 'Viết kết luận báo cáo',
-  CHANGE_REVIEW: 'Duyệt thay đổi của chủ trại',
-  SUGGESTION_APPROVAL: 'Duyệt gợi ý hệ số',
+// Tên các loại quyết định trong lịch sử hoạt động chuyên gia (EXPERT-FR-009) — khoá là mã action của GET /expert-activity
+const EXPERT_ACTION_LABELS: Record<string, string> = {
+  THRESHOLD_UPDATED: 'Sửa ngưỡng',
+  FUZZY_TUNING_UPDATED: 'Sửa hệ số điều khiển',
+  DETECTION_TUNING_UPDATED: 'Sửa tham số phát hiện',
+  BIRD_COUNT_TUNING_UPDATED: 'Sửa mức giảm tỷ lệ về tổ',
+  COUNTING_RING_UPDATED: 'Vẽ vòng đếm',
+  ALERT_VERDICT_SET: 'Phán quyết cảnh báo',
+  HEALTH_REPORT_CONCLUDED: 'Viết kết luận báo cáo',
+  REVIEW_ACCEPTED: 'Chấp nhận thay đổi của chủ trại',
+  REVIEW_REVERTED: 'Hoàn lại thay đổi của chủ trại',
+  PROPOSAL_APPROVED: 'Duyệt gợi ý hệ số',
+  PROPOSAL_REJECTED: 'Từ chối gợi ý hệ số',
 }
 
 // Trạng thái mục chờ duyệt (§6.10) và đề xuất gợi ý (§6.11)
-const REVIEW_STATUS_LABELS: Record<ReviewItem['status'], string> = {
+const REVIEW_STATUS_LABELS: Record<ChangeReviewStatus | ProposalStatus, string> = {
   PENDING_REVIEW: 'Chờ chuyên gia duyệt',
   ACCEPTED: 'Đã chấp nhận',
   REVERTED: 'Đã hoàn tác',
@@ -30,17 +30,24 @@ const REVIEW_STATUS_LABELS: Record<ReviewItem['status'], string> = {
   SUPERSEDED: 'Đã có đề xuất mới hơn',
 }
 
-export function getDecisionTypeLabel(type: ExpertDecisionType): string {
-  return t(DECISION_TYPE_LABELS[type])
+// Mã action lạ (backend thêm loại mới) thì ghi chung "Quyết định khác"
+export function getExpertActionLabel(action: string): string {
+  return t(EXPERT_ACTION_LABELS[action] ?? 'Quyết định khác')
 }
 
-export function getReviewStatusLabel(status: ReviewItem['status']): string {
+export function getReviewStatusLabel(status: ChangeReviewStatus | ProposalStatus): string {
   return t(REVIEW_STATUS_LABELS[status])
 }
 
 // Mục còn chờ chuyên gia xử lý
-export function isReviewPending(status: ReviewItem['status']): boolean {
+export function isReviewPending(status: ChangeReviewStatus | ProposalStatus): boolean {
   return status === 'PENDING_REVIEW' || status === 'PROPOSED'
+}
+
+// Kết quả phán quyết trong metadata của ALERT_VERDICT_SET; không có thì null
+export function getActivityVerdict(metadata: Record<string, unknown> | undefined): 'CONFIRMED' | 'REJECTED' | null {
+  const result = metadata?.result
+  return result === 'CONFIRMED' || result === 'REJECTED' ? result : null
 }
 
 // Vai trò của một thành viên trong farm: chủ chính, đồng sở hữu hoặc chuyên gia (member cũ không có role là đồng sở hữu)
@@ -67,10 +74,4 @@ const DELETION_DEADLINE_DAYS = 30
 
 export function getDeletionDeadline(requestedAt: string): string {
   return new Date(Date.parse(requestedAt) + DELETION_DEADLINE_DAYS * DAY_MS).toISOString()
-}
-
-// Chữ cái đầu cho ảnh đại diện mặc định: chữ đầu của từ cuối (tên) theo cách gọi tên tiếng Việt
-export function getInitial(fullName: string | undefined): string {
-  const words = (fullName ?? '').trim().split(/\s+/).filter(Boolean)
-  return (words[words.length - 1]?.[0] ?? '?').toUpperCase()
 }

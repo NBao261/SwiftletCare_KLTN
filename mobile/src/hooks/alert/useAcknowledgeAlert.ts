@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { invalidateAlertQueries } from '@/config/queryClient'
 import { alertApi } from '@/services/api/alert.api'
 
 interface AcknowledgeAlertPayload {
@@ -13,7 +14,7 @@ export function useAcknowledgeAlert() {
   return useMutation({
     mutationFn: ({ alertId, note }: AcknowledgeAlertPayload) => alertApi.acknowledge(alertId, note),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['alerts'] })
+      void invalidateAlertQueries(queryClient)
     },
   })
 }

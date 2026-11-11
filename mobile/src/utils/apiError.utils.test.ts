@@ -63,11 +63,20 @@ describe('getAuthErrorMessage', () => {
   })
 
   it('đổi mật khẩu tạm: sai mật khẩu tạm, mật khẩu mới trùng cũ', () => {
-    expect(getAuthErrorMessage(backendError(400, 'INVALID_CURRENT_PASSWORD'), 'change-password')).toBe(
+    expect(getAuthErrorMessage(backendError(400, 'INVALID_CURRENT_PASSWORD'), 'change-temporary-password')).toBe(
       'Mật khẩu tạm không chính xác',
     )
-    expect(getAuthErrorMessage(backendError(400, 'PASSWORD_UNCHANGED'), 'change-password')).toBe(
+    expect(getAuthErrorMessage(backendError(400, 'PASSWORD_UNCHANGED'), 'change-temporary-password')).toBe(
       'Mật khẩu mới phải khác mật khẩu tạm',
+    )
+  })
+
+  it('đổi mật khẩu ở tab Tài khoản: nói "mật khẩu hiện tại", không nói "mật khẩu tạm"', () => {
+    expect(getAuthErrorMessage(backendError(400, 'INVALID_CURRENT_PASSWORD'), 'change-password')).toBe(
+      'Mật khẩu hiện tại không chính xác',
+    )
+    expect(getAuthErrorMessage(backendError(400, 'PASSWORD_UNCHANGED'), 'change-password')).toBe(
+      'Mật khẩu mới phải khác mật khẩu hiện tại',
     )
   })
 

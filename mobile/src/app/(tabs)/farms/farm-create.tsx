@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BarnIcon } from 'phosphor-react-native'
 import { LocateRow } from '@/components/farm/settings/LocateRow'
 import { SettingsActionBar } from '@/components/farm/settings/SettingsActionBar'
 import { SettingsMetaGrid } from '@/components/farm/settings/SettingsMetaGrid'
 import { SettingsSection } from '@/components/farm/settings/SettingsSection'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { FormMessage } from '@/components/ui/form-message'
 import { Spacing } from '@/constants/theme'
 import { useCreateFarm } from '@/hooks/farm/useCreateFarm'
@@ -32,7 +32,6 @@ const COORDINATE_KEYS: (keyof Coordinates)[] = ['lat', 'lng']
 export default function FarmCreateScreen() {
   const palette = usePalette()
   const language = useLanguage()
-  const insets = useSafeAreaInsets()
   const createFarm = useCreateFarm()
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
@@ -54,7 +53,7 @@ export default function FarmCreateScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.xxl }]}
+          contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl }]}
         >
           <SettingsSection
             icon={BarnIcon}
