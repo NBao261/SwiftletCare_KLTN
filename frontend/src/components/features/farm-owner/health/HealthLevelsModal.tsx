@@ -157,8 +157,8 @@ export default function HealthLevelsModal({ open, onClose, house, readOnlyNote }
               </ul>
             </div>
 
-            {/* Sửa được: Về mặc định + Lưu; chỉ xem: lý do (đóng bằng ✕ ở góc) */}
-            <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            {/* Sửa được: Về mặc định + Lưu sát nhau bên phải; chỉ xem: lý do (đóng bằng ✕ ở góc) */}
+            <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-end">
               {canEdit ? (
                 <>
                   <Button variant="secondary" onClick={() => {
@@ -170,7 +170,7 @@ export default function HealthLevelsModal({ open, onClose, house, readOnlyNote }
                   <Button onClick={handleSave} loading={update.isPending}>{t('levels.save')}</Button>
                 </>
               ) : (
-                <p className="text-sm italic text-warmGray">{deniedReason ?? readOnlyNote}</p>
+                <p className="text-sm italic text-warmGray sm:mr-auto">{deniedReason ?? readOnlyNote}</p>
               )}
             </div>
           </>
