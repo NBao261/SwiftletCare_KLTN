@@ -177,6 +177,7 @@ const vi = {
   'csv.temperature': 'Nhiệt độ TB 7 ngày (°C)',
   'csv.humidity': 'Độ ẩm TB 7 ngày (%)',
   'csv.weight': 'Khối lượng (g)',
+  'csv.status': 'Trạng thái',
 };
 
 export type HarvestKey = keyof typeof vi;
@@ -345,6 +346,7 @@ const en: Record<HarvestKey, string> = {
   'csv.temperature': 'Avg temperature 7 days (°C)',
   'csv.humidity': 'Avg humidity 7 days (%)',
   'csv.weight': 'Weight (g)',
+  'csv.status': 'Status',
 };
 
 export const harvestDict: Dictionary<HarvestKey> = { vi, en };

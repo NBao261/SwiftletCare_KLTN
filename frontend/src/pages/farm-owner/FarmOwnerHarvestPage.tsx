@@ -45,7 +45,7 @@ function buildPersonNames(farms: Farm[], user: User | null): Map<string, string>
 function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>, personNames: Map<string, string>, translate: HarvestTranslate): void {
   const header = [
     translate('col.date'), translate('col.house'), translate('col.creator'), translate('col.nestType'), translate('form.nests'),
-    translate('csv.weight'), translate('csv.temperature'), translate('csv.humidity'),
+    translate('csv.weight'), translate('csv.temperature'), translate('csv.humidity'), translate('csv.status'),
   ];
   const rows = batches.map(batch => {
     const environment = environmentSummary(batch.env_snapshot);
@@ -58,6 +58,7 @@ function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>
       String(batch.weight_grams),
       environment ? String(environment.temperature) : '',
       environment ? String(environment.humidity) : '',
+      translate(batch.status === 'DRAFT' ? 'status.pending' : 'status.confirmed'),
     ];
   });
   const csv = [header, ...rows].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -113,6 +114,9 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   // Mỗi lần thu 1 nhóm: các loại yến ghi cùng lần gộp lại
   const groups = useMemo(() => groupHarvests(scopedBatches), [scopedBatches]);
   const groupByKey = useMemo(() => new Map(groups.map(group => [group.key, group])), [groups]);
+  // Sản lượng chỉ tính lô đã xác nhận (BR-43); bảng và CSV vẫn có lô chờ xác nhận
+  const confirmedBatches = useMemo(() => scopedBatches.filter(batch => batch.status !== 'DRAFT'), [scopedBatches]);
+  const confirmedGroups = useMemo(() => groupHarvests(confirmedBatches), [confirmedBatches]);
 
   if (scope.farms.length === 0) {
     return (
@@ -201,7 +205,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
       </div>
 
       <HarvestStatsCards
-        groups={groups}
+        groups={confirmedGroups}
         zones={zones}
         farmNames={scope.farmNames}
       />
@@ -225,11 +229,11 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
           />
         </div>
         <div className="min-w-0 xl:col-span-4 xl:h-full xl:min-h-0">
-          <NestTypeBreakdownCard batches={allBatches} />
+          <NestTypeBreakdownCard batches={confirmedBatches} />
         </div>
       </div>
 
-      <HarvestYearChart batches={allBatches} />
+      <HarvestYearChart batches={confirmedBatches} />
 
       {/* Popup chỉ dựng khi mở nên mỗi lần mở là form mới */}
       {isCreateOpen && !createBlockedReason && <HarvestFormModal scope={scope} creatorName={user?.full_name ?? NO_VALUE} onClose={() => setIsCreateOpen(false)} />}
