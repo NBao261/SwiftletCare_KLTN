@@ -142,6 +142,8 @@ const vi = {
   'reason.AIR_OVER_LIMIT': 'Không khí: NH3 hoặc CO2 vượt ngưỡng {hours} giờ ở {zone} ({level})',
   'reason.FLOCK_DROP': 'Đàn chim: tỷ lệ chim về {rate} %, giảm {drop} % so với trung bình {days} ngày trước ({average} %) ({level})',
   'reason.FLOCK_NO_BASELINE': 'Đàn chim: chưa đủ {days} ngày để so sánh tỷ lệ chim về',
+  // BR-46 — nhà giai đoạn dẫn dụ
+  'reason.ATTRACTING_STAGE': 'Đàn chim: nhà đang ở giai đoạn dẫn dụ, không xét tỷ lệ chim về',
   'reason.NOISE_EPISODES': 'Tiếng ồn: {episodes} đợt ồn bất thường ({level})',
   'reason.WEATHER_UNAVAILABLE': 'Không có dữ liệu thời tiết',
   'reason.RAIN_DOWNGRADE': 'Mưa từ {mm} mm/giờ trùng phiên đếm và đợt ồn nên hạ từ Cần xử lý xuống Cần theo dõi',
@@ -445,6 +447,7 @@ const en: Record<HealthKey, string> = {
   'reason.AIR_OVER_LIMIT': 'Air quality: NH3 or CO2 above the limit for {hours} h in {zone} ({level})',
   'reason.FLOCK_DROP': 'Flock: return rate {rate} %, {drop} % below the mean of the {days} previous days ({average} %) ({level})',
   'reason.FLOCK_NO_BASELINE': 'Flock: fewer than {days} days to compare the return rate',
+  'reason.ATTRACTING_STAGE': 'Flock: the house is in the attracting stage, the return rate is not assessed',
   'reason.NOISE_EPISODES': 'Noise: {episodes} abnormal noise episodes ({level})',
   'reason.WEATHER_UNAVAILABLE': 'No weather data',
   'reason.RAIN_DOWNGRADE': 'Rain of {mm} mm/h or more during a counting session and a noise episode, so Action needed was lowered to Watch',

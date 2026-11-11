@@ -9,7 +9,8 @@ export type HealthRatingState = 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED';
 
 export type HealthReasonCode =
   | 'ALL_NORMAL' | 'MISSING_DATA' | 'NOT_ASSESSED' | 'ENV_IN_RANGE' | 'AIR_OVER_LIMIT'
-  | 'FLOCK_DROP' | 'FLOCK_NO_BASELINE' | 'NOISE_EPISODES' | 'WEATHER_UNAVAILABLE' | 'RAIN_DOWNGRADE';
+  | 'FLOCK_DROP' | 'FLOCK_NO_BASELINE' | 'NOISE_EPISODES' | 'WEATHER_UNAVAILABLE' | 'RAIN_DOWNGRADE'
+  | 'ATTRACTING_STAGE';
 
 // Lý do dạng mã + số liệu, client tự dịch (api-spec HealthReason)
 export interface HealthReason {

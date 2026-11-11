@@ -71,6 +71,7 @@ export function formatHealthReason(reason: HealthReason, t: HealthTranslate, for
       return t('reason.RAIN_DOWNGRADE', { mm: numberOf(values.mm_per_hour, format) });
     case 'ALL_NORMAL':
     case 'WEATHER_UNAVAILABLE':
+    case 'ATTRACTING_STAGE':
       return t(`reason.${reason.code}`);
   }
 }
