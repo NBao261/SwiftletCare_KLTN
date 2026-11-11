@@ -41,10 +41,10 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-01 | Telemetry, live dashboard | Nguyễn Chí Bảo | Done | #3, #9, #36; TC-F01-01..03 | — | — |
 | F-02 | Fuzzy control | Nguyễn Chí Bảo | Done | #50; TC-F02-01..03 | — | — |
 | F-03 | Thresholds, coefficients | Nguyễn Chí Bảo | Done | #100, #101, #150; TC-F03-01..03, TC-ST-28…32 | — | — |
-| F-04 | Offline operation | Nguyễn Chí Bảo | In progress | #36, #41, #87; TC-F04-02 | 30-min outage run on the prototype (NFR-06); alerts kept until PUBACK (G-07) | 2 |
+| F-04 | Offline operation | Nguyễn Chí Bảo | In progress | #36, #41, #87, #137; TC-F04-02 | 30-min outage run on the prototype (NFR-06) | 2 |
 | F-05 | Self-diagnosis | Trần Minh Kiệt | In progress | #50, #59, #113; TC-F05-01..03 | Board test of misting without humidity rise and of an unplugged sensor, recorded in `firmware/README.md` (G-19) | 2 |
 | F-06 | Actuator current check | Trần Minh Kiệt | Planned | — | Board with ADS1115 and shunt resistors on the DC demo loads; firmware; `ACTUATOR_FAULT` (G-13) | 3 |
-| F-07 | Alert lifecycle | Nguyễn Vũ Len | In progress | #103, #117, #122, #125; TC-F07-01, 02, 03 | Event IDs (G-07); mobile alert screens (G-16) | 2 |
+| F-07 | Alert lifecycle | Nguyễn Vũ Len | In progress | #103, #117, #122, #125, #137; TC-F07-01, 02, 03 | Mobile alert screens (G-16) | 2 |
 | F-08 | Push and Telegram | Trần Minh Kiệt | In progress | #59, #103; TC-F08-01, 02 | FCM sending and mobile token (G-10) | 2 |
 | F-09 | Forecast warning | Nguyễn Chí Bảo | Done | #50; TC-F09-01..03 | — | — |
 | F-10 | Counting, return rate | Nguyễn Chí Bảo | In progress | #85, #88, #95; TC-F10-01..03 | Model v2 and NFR-09 measurement (v1: about 10 % off hand counts); sessions from buckets; incomplete sessions (G-12) | 2 |
@@ -60,7 +60,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-20 | Daily health status | Nguyễn Thị Yến Nhi | Planned | — | Daily job, levels, weather (G-11) | 2 |
 | F-21 | Reports, PDF/CSV | Nguyễn Thị Yến Nhi | In progress | TC-F21-01 | Reports per house (day/week/month); PDF, CSV (G-11) | 3 |
 | F-22 | Independent rating | Nguyễn Thị Yến Nhi | Planned | — | Rating route, snapshot, screens (G-11) | 2 |
-| F-23 | Alert routing and escalation | Trần Minh Kiệt | Planned | — | Technician role, assignment, routing, escalation job, on-site cause (G-20, G-21); technician screens (G-16) | 2 |
+| F-23 | Alert routing and escalation | Trần Minh Kiệt | Planned | — | Routing by house, escalation job, on-site cause (G-21; role and assignment done in G-20, PR #146); technician screens (G-16) | 2 |
 | F-24 | Work Orders closed by the data | Trần Minh Kiệt | Planned | — | Work Orders, recovery check, approval, MTTA/MTTR (G-21); mobile and web screens (G-16) | 2 |
 | F-25 | Preventive maintenance | Nguyễn Vũ Len | Planned | — | Plans, run hours, checklists, calibration (G-22): backend Kiệt, mobile Len, web Nhi | 2–3 |
 | F-26 | Weather compensation | Nguyễn Chí Bảo | Planned | — | Forecast job, rules, `compensation` topic, firmware offset (G-23); rule screen (Tuấn) | 2 |
@@ -91,7 +91,7 @@ Results count only when they come from a CI run on the tag being reported (Repor
 | DF-1 | PR #89 (pipeline publishes counts, buckets and heartbeat over MQTT, pushes video to MediaMTX, CI job for pytest) was merged into the branch of PR #88 eleven seconds after #88 itself was merged into `develop`, so none of it reached `develop` | High | 23/10/2026 | Nguyễn Chí Bảo | Closed 23/10/2026 — merged into `develop` by PR #95 |
 | DF-2 | Technician and Administrator can edit zone thresholds and fuzzy coefficients; Technician can override relays and acknowledge alerts (Report 3 §2.4) | High | Report 3 review | Trần Minh Kiệt | Closed 24/10/2026 — PR #100 (routes), PR #101 (web buttons) |
 | DF-3 | Farm Owner cannot register, move or remove devices (SF-01) | High | Report 3 review | Trần Minh Kiệt | Closed 24/10/2026 — PR #100 |
-| DF-4 | Firmware connects to MQTT without TLS; OTA download uses `setInsecure()` | High | Staging design, specification review | Trần Minh Kiệt | Fixed on `feat/g07-mqtt-per-device`, closes when G-07 merges and is tried on a board |
+| DF-4 | Firmware connects to MQTT without TLS; OTA download uses `setInsecure()` | High | Staging design, specification review | Trần Minh Kiệt | Fixed by PR #137 (merged 10/11/2026, firmware 2.0.0); closes once firmware 2.0.0 is tried on a board (`firmware/README.md`) |
 | DF-5 | Domain Expert web screens fall back to mock data (`services/expert/expertFallback.service.ts`, `data/mocks/`) | Medium | Merge of PR #91 | Thái Minh Tuấn | Closed 01/11/2026 — PR `feat/g15-expert-technician-ui` |
 | DF-6 | `THRESHOLD_BREACH` is raised on the first out-of-range sample, so a controlled humidity dip raises an alert | Medium | Specification review 26/10/2026 | Trần Minh Kiệt | Closed (G-05, 31/10/2026: dwell time of BR-34) |
 
