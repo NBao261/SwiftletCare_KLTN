@@ -486,7 +486,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-27 — Bộ giả lập thiết bị (P0-Demo, cần cho NFR-03 và demo nhiều nhà) — Bảo
 
-- [ ] `simulator/` (Node.js + mqtt.js): đăng ký N thiết bị qua API Admin, publish telemetry, heartbeat, số đếm trên topic riêng; cờ `simulated` hiện trên mọi màn hình (SYSTEM-FR-004).
+- [x] `simulator/` (Node.js + mqtt.js): đăng ký N thiết bị qua API Admin, publish telemetry, heartbeat, số đếm trên topic riêng; cờ `simulated` hiện trên mọi màn hình (SYSTEM-FR-004).
 
 ## 5. Thứ tự đề xuất
 
