@@ -11,6 +11,7 @@ import {
   findFarmOrThrow, findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { assertValidRoster, type RosterShift } from '@/utils/roster.util'
 import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange } from '@/services/parameterReview.service'
 import { getDefaultThresholds } from '@/services/system.service'
@@ -343,7 +344,7 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
   farm.members.splice(memberIndex, 1)
   await farm.save()
   // AUTH-FR-005 — gỡ Farm Technician thì bỏ luôn các lần gán vào nhà của farm này
-  await House.updateMany({ farm_id: farm._id }, { $pull: { technicians: { user_id: targetUserId } } })
+  await House.updateMany({ farm_id: farm._id }, { $pull: { technicians: { user_id: targetUserId }, roster: { technician_id: targetUserId } } })
   await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId })
   return farm
 }
@@ -376,12 +377,47 @@ export async function unassignTechnician(houseId: string, user: CurrentUser, tec
   const before = (house.technicians ?? []).length
   house.technicians = (house.technicians ?? []).filter(t => String(t.user_id) !== technicianId)
   if (house.technicians.length !== before) {
+    // AUTH-FR-014 — thợ không còn ở nhà thì không còn ca trực ở đó
+    house.roster = (house.roster ?? []).filter(s => String(s.technician_id) !== technicianId)
     await house.save()
     await logAction(user._id, 'HOUSE_TECHNICIAN_UNASSIGNED', 'house', String(house._id), {
       user_id: technicianId,
     }, { farmId: String(farm._id) })
   }
   return house
+}
+
+const presentRoster = (house: IHouse, shifts: IHouse['roster']) => ({
+  house_id: String(house._id),
+  roster: shifts.map(s => ({ technician_id: String(s.technician_id), role: s.role, weekdays: [...s.weekdays], start: s.start, end: s.end })),
+})
+
+/**
+ * AUTH-FR-014 — Farm Owner thay toàn bộ lịch trực của nhà. Người trong ca phải là thợ đang được giao nhà
+ * (409); giờ, ngày và chồng ca kiểm ở roster.util (400).
+ */
+export async function setRoster(houseId: string, user: CurrentUser, shifts: RosterShift[]) {
+  const { house, farm } = await findHouseChainOrThrow(houseId)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
+  const assigned = new Set((house.technicians ?? []).map(t => String(t.user_id)))
+  const stranger = shifts.find(s => !assigned.has(s.technician_id))
+  if (stranger) throw ConflictError('Người trong ca không phải Farm Technician đang được giao nhà này')
+  assertValidRoster(shifts)
+
+  house.roster = shifts.map(s => ({ ...s, weekdays: [...s.weekdays].sort((a, b) => a - b) })) as never
+  await house.save()
+  await logAction(user._id, 'HOUSE_ROSTER_UPDATED', 'house', String(house._id), {
+    shifts: shifts.length,
+  }, { farmId: String(farm._id) })
+  return presentRoster(house, house.roster)
+}
+
+/** AUTH-FR-014 — Farm Owner, Domain Expert xem cả lịch; Farm Technician được giao chỉ thấy ca của mình */
+export async function getRoster(houseId: string, user: CurrentUser) {
+  const { house } = await assertHouseAccess(houseId, user)
+  const roster = house.roster ?? []
+  const shifts = user.role === 'FARM_TECHNICIAN' ? roster.filter(s => String(s.technician_id) === user._id) : roster
+  return presentRoster(house, shifts)
 }
 
 /** Job nền: chuyển Invitation quá hạn sang EXPIRED (AUTH-FR-010, Flow 12 case 3d) */

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { body, param } from 'express-validator'
 import * as farmController from '@/controllers/farms.controller'
+import { HHMM_PATTERN, ROSTER_ROLES } from '@/utils/roster.util'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
@@ -38,6 +39,18 @@ router.put   ('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'),
   body('primary').optional().isBoolean({ strict: true }), validate, farmController.assignTechnician)
 router.delete('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),
   validate, farmController.unassignTechnician)
+// AUTH-FR-014 — lịch trực theo tuần: Farm Owner đặt, thợ được giao chỉ xem ca của mình (service lọc)
+router.get   ('/houses/:houseId/roster', requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'), param('houseId').isMongoId(),
+  validate, farmController.getRoster)
+router.put   ('/houses/:houseId/roster', requireRole('FARM_OWNER'), param('houseId').isMongoId(),
+  body('shifts').isArray(),
+  body('shifts.*.technician_id').isString().isMongoId(),
+  body('shifts.*.role').isString().isIn([...ROSTER_ROLES]),
+  body('shifts.*.weekdays').isArray({ min: 1, max: 7 }),
+  body('shifts.*.weekdays.*').isInt({ min: 0, max: 6 }).toInt(),
+  body('shifts.*.start').isString().matches(HHMM_PATTERN).withMessage('start dạng HH:mm'),
+  body('shifts.*.end').isString().matches(HHMM_PATTERN).withMessage('end dạng HH:mm'),
+  validate, farmController.setRoster)
 
 // Zones (under house)
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), body('name').trim().notEmpty(), validate, farmController.createZone)
