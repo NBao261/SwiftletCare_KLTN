@@ -1,6 +1,6 @@
 # Việc cần làm — Review 2 và Iteration 2
 
-Cập nhật 09/11/2026: theo scope cuối (SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0 với 170 test case, BM04). Các bước đã đánh `[x]` giữ nguyên làm lịch sử; bước nào còn mở mà lệch SRS 4.2.0 thì đã sửa ngay tại chỗ (phân công §0.1, quyết định 8, G-11, G-12, G-15). Trước đó: 03/11/2026 (6 luồng chính, SRS 3.2.0), 27/10/2026 (phân công lại theo vai trò).
+Cập nhật 10/11/2026: SRS 4.2.1, SDD 2.2.1 (16 mục BM02 hạn 11/11, PR #147); G-07 đã merge (#137); G-08, G-09 theo SM-12 và FARM-FR-003c mới; G-10, G-12 ghi phần Kiệt làm thay. Trước đó 09/11/2026: theo scope cuối (SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0 với 170 test case, BM04). Các bước đã đánh `[x]` giữ nguyên làm lịch sử; bước nào còn mở mà lệch SRS 4.2.0 thì đã sửa ngay tại chỗ (phân công §0.1, quyết định 8, G-11, G-12, G-15). Trước đó: 03/11/2026 (6 luồng chính, SRS 3.2.0), 27/10/2026 (phân công lại theo vai trò).
 
 **Phần scope cuối (G-20…G-27, EXPERT-FR-021, 022):** các bước chi tiết ở [`todo-final-scope.md`](todo-final-scope.md); làm tiếp ở đó sau khi xong phần của mình trong file này.
 
@@ -62,7 +62,7 @@ Cập nhật 09/11/2026: theo scope cuối (SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0
 Việc không cần backend mà Len, Tuấn, Nhi nhận thêm (mục 3, mục 5):
 
 - gán nhãn hộp `swiftlet` trên Roboflow và đếm tay clip cho NFR-09 (Bảo chia ngày quay, duyệt 20 khung đầu của mỗi người);
-- đo NFR phía client trên staging: Nhi NFR-01, 03 (k6) và NFR-13; Len NFR-02;
+- đo NFR phía client trên staging: Nhi NFR-01, 13, 14; Len NFR-02 (7 NFR cam kết ở BM04: thêm Bảo NFR-06, 09 và Kiệt NFR-15);
 - ảnh màn hình cho Report 4 §5 và hướng dẫn sử dụng phần màn của mình.
 
 ### 0.2 Quy tắc để không giẫm chân nhau
@@ -127,10 +127,10 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 | [x] | Mở PR nhánh tài liệu vào `develop` | P0-Tag | PR #108, #109, #111 đã merge |
 | [x] | Chạy CI đủ mọi module trên commit cuối của `develop` (Actions → CI → *Run workflow*); xanh thì gắn tag `review-2` **đúng commit đó** (push tag chạy CI lần nữa, không phải dời tag). Tải 3 artifact của lần chạy trên tag (`backend-jest-results`, `firmware-pio-junit`, `ai-pipeline-pytest-junit`), rồi `python docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md --jest jest-results.json --pio pio-junit.xml --pytest pytest-junit.xml`; ghi link lần chạy CI vào Report 5 §6 | P0-Tag | CI đã có trigger tag `review-*`, chạy tay và artifact (26/10); **xong 04/11/2026**: tag `review-2` = `7d5e643b`, CI trên tag xanh (run 41801124931), Report 5 1.3.0 sinh từ artifact: 83/83 Pass |
 | [x] | **BM02**: chạy prompt chuẩn trên tag, không sửa prompt, giữ nguyên kết quả; trả lời Fixed/Kept/Planned, mỗi điểm Planned ghi **một** người chịu trách nhiệm và hạn (gap nhiều người thì tách theo phần, như Tracking §6); điểm High Kept/Planned thêm vào BM01 §5 | P0-Nộp | Tắt Memory trước khi chạy; **xong 04/11/2026**: Claude Code (Opus 5.5) trên `7d5e643b`, 42 điểm (13 High, đều Planned), `bm02-self-review.md` + `tools/make_bm02.py`; BM01 §5 ghi các điểm High |
-| [ ] | Xuất PDF, đặt tên `SEP490_<Mã đề tài>_R2_<Tên hồ sơ>.pdf` (hướng dẫn mục 01, 03): `Registration` (phiếu v3 + BM03 trong một file), `Report1`…`Report5`, Project Tracking, `SelfReview` (BM02), `DesignBrief` (BM01, có link repo tag `review-2`) | P0-Nộp | Mermaid render sẵn; Bảo |
-| [ ] | **Máy demo cho buổi review** (mục 07): một máy chạy được Iteration 1 từ tag (`docker compose up -d mongodb emqx`, backend, web), chạy được bộ test (`npm test`, `vitest run`, `pio test -e native`, `pytest`), mở sẵn repo, Design Brief và các sơ đồ Report 4 | P0-Nộp | Bảo chuẩn bị, Kiệt chạy thử trước 1 ngày |
-| [ ] | **Diễn tập phần 2 và 3** (mục 07): trình bày 5 quyết định (mỗi chủ quyết định tự nói), 3 rủi ro, các điểm Kept/Planned của BM02; tập phân tích tác động của tình huống thay đổi trên sơ đồ và code — thêm một role, thêm một trạng thái cho Alert hoặc Device, Telegram/FCM/Open-Meteo ngừng hoạt động, tải tăng 10 lần — chỉ ra thực thể, trạng thái, luồng, API, test nào đổi | P0-Nộp | Cả team, ít nhất 1 buổi |
-| [ ] | **Diễn tập phần 5** (xác minh sở hữu): từng người mở code phần mình trong BM01 §8, giải thích, chạy test của mình, trả lời 2–3 câu "nếu… thì sao" do người khác hỏi | P0-Nộp | Cả team; tất cả phải có mặt ở buổi review |
+| [x] | Xuất PDF, đặt tên `SEP490_<Mã đề tài>_R2_<Tên hồ sơ>.pdf` (hướng dẫn mục 01, 03): `Registration` (phiếu v3 + BM03 trong một file), `Report1`…`Report5`, Project Tracking, `SelfReview` (BM02), `DesignBrief` (BM01, có link repo tag `review-2`) | P0-Nộp | Mermaid render sẵn; Bảo. **Xong 09/11/2026** (bộ PDF nộp Review 2); Report 3, Report 4, Project Tracking, SelfReview xuất lại 10/11 theo PR #147 |
+| [x] | **Máy demo cho buổi review** (mục 07): một máy chạy được Iteration 1 từ tag (`docker compose up -d mongodb emqx`, backend, web), chạy được bộ test (`npm test`, `vitest run`, `pio test -e native`, `pytest`), mở sẵn repo, Design Brief và các sơ đồ Report 4 | P0-Nộp | Bảo chuẩn bị, Kiệt chạy thử trước 1 ngày. **Xong** (Bảo xác nhận 10/11/2026) |
+| [x] | **Diễn tập phần 2 và 3** (mục 07): trình bày 5 quyết định (mỗi chủ quyết định tự nói), 3 rủi ro, các điểm Kept/Planned của BM02; tập phân tích tác động của tình huống thay đổi trên sơ đồ và code — thêm một role, thêm một trạng thái cho Alert hoặc Device, Telegram/FCM/Open-Meteo ngừng hoạt động, tải tăng 10 lần — chỉ ra thực thể, trạng thái, luồng, API, test nào đổi | P0-Nộp | Cả team, ít nhất 1 buổi. **Xong** (Bảo xác nhận 10/11/2026) |
+| [x] | **Diễn tập phần 5** (xác minh sở hữu): từng người mở code phần mình trong BM01 §8, giải thích, chạy test của mình, trả lời 2–3 câu "nếu… thì sao" do người khác hỏi | P0-Nộp | Cả team; tất cả phải có mặt ở buổi review. **Xong** (Bảo xác nhận 10/11/2026) |
 | [x] | Xoá SRS nội bộ cũ `SwiftletCare_SRS.md` (09/11/2026; còn trong lịch sử git) | P2 | |
 
 **Ngưỡng Defense 1.1** (không phải điều kiện nộp Review 2): 100 % workflow chạy end-to-end trên staging · ≥ 90 % test đạt · ≥ 50 % test tự động trong CI · không còn defect Critical/High.
@@ -207,7 +207,7 @@ Một PR cho backend, web, mobile, firmware:
   - xoá `authApi.register` (`apis/auth/auth.api.ts`), mutation `register` trong `hooks/auth/useAuth.ts`, `RegisterRequest` (`types/auth.types.ts`) và các comment AUTH-FR-001;
   - `InvitationPage.tsx`: người chưa có tài khoản đặt tên và mật khẩu ngay trên trang lời mời, gọi endpoint mới, không điều hướng sang `/register`.
 - [x] **P0-Tag — mobile:** xoá `app/(auth)/register.tsx`; xoá `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY` (`constants/api.ts`) và `register`, `sendOtp`, `verifyOtp` (`services/api/auth.ts`).
-- [ ] **P1 — Admin tạo Farm Owner:** `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, như Technician); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model.
+- [ ] **P1 — Admin tạo Farm Owner:** `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, AUTH-FR-005c; từ G-20 Farm Technician vào bằng lời mời nên không còn tài khoản Technician tạo sẵn); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model.
 - [ ] **P1 — e-mail thật** cho lời mời, mã đặt lại mật khẩu và mật khẩu tạm (SF-03 chạy end-to-end; hiện `auth.service.ts` chỉ `console.log` mã reset, `notification.service.ts#sendEmail` chỉ ghi log):
   - SMTP qua `nodemailer` (đã có trong dependencies), thông tin đăng nhập SMTP bằng biến môi trường, thêm vào `.env.example`;
   - không ghi log mật khẩu tạm, mã reset hay token lời mời;
@@ -284,7 +284,7 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Kiệt (Bảo chuyển giao)
 
-Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, chưa merge: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging (danh sách kiểm tra 2.0.0 ở `firmware/README.md`), màn kho thiết bị hiện `broker_secret` một lần (web, Nhi, sau khi merge).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
+Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, **đã merge PR #137 ngày 10/11/2026**: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging (danh sách kiểm tra 2.0.0 ở `firmware/README.md`), màn kho thiết bị hiện `broker_secret` một lần (web, Nhi, sau khi merge).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
 
 - [x] Kho thiết bị: khi thêm thiết bị, sinh broker secret (trả một lần như activation key, lưu hash `broker_secret_hash`); thu hồi thì EMQX từ chối.
 - [x] Backend:
@@ -318,8 +318,9 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 ### G-08 — Phiên bản cấu hình (P1) — Bảo
 
 - [ ] `zones.config_version` tăng mỗi lần đổi ngưỡng, hệ số hoặc tham số phát hiện; `config` retained mang version; heartbeat báo `applied_config_version`; job `configSync` publish lại khi còn version cũ, quá 3 heartbeat lúc online thì `CONFIG_MISMATCH`; firmware cũ không báo version thì `UNKNOWN`.
+- [ ] Trạng thái theo SM-12 mới (SRS 4.2.1 §6.12, BM02 ST-03): controller mới đăng ký bắt đầu ở `PENDING` (FARM-FR-012), không phải `APPLIED`; `UNKNOWN` về `APPLIED` khi heartbeat báo đúng version hiện tại, về `PENDING` khi báo version cũ.
 - [ ] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN).
-- [ ] Test TC-ST config sync 4 dòng.
+- [ ] Test TC-ST-28…32 (5 case config sync, Report 5); jest phủ thêm `(new) → PENDING` và lối ra của `UNKNOWN` (không thêm case vào 170).
 
 ### G-09 — Màn SF-01 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
 
@@ -328,8 +329,9 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
 - [ ] Mobile (Len): quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình. *(Len, 11/11, nhánh `feat/g20-farm-technician`: quét mã tầng `swiftletcare://zone?z=` trước hay sau nhãn đều được, hoặc chọn khu vực từ danh sách (FARM-FR-007), mã tầng ngoài farm bị chặn; đăng ký xong hiện hướng dẫn cài Wi-Fi theo firmware (mạng `SwiftletCare-Setup-<mã thiết bị>`, 192.168.4.1, chỉ hỏi Wi-Fi) và tiến trình Đã đăng ký → Đã kết nối, quá 15 phút nhắc kiểm tra Wi-Fi (BR-27). Còn chờ: bước APPLIED hiện "Sắp có" tới khi G-08 trả phiên bản cấu hình (ENV-FR-027))*
 - [ ] Web: `/onboarding` cho Farm Owner + Technician.
+- [ ] **Bảo — firmware:** bỏ ô địa chỉ broker khỏi trang AP-mode của bản production (`esp32prod`); broker là tên miền nạp lúc flash cùng credential, bản dev vẫn tìm broker qua mDNS (FARM-FR-003c, BR-27, BM02 S-03; hạn 02/12/2026).
 
-### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend), Len (mobile, đo NFR-02)
+### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend; Kiệt làm thay theo phân công của Bảo, PR #140), Len (mobile, đo NFR-02)
 
 - [ ] Backend:
   - collection `pushtokens`;
@@ -359,7 +361,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [ ] Chuyên gia xem các ngày lệch và chỉnh mức của nhà (EXPERT-FR-022): bước chi tiết ở `todo-final-scope.md` (G-11 phần mới).
 - [ ] Test TC-F20/21/22 và TC-ST-44…53 (trạng thái ngày 6.17, lượt chấm 6.18, báo cáo 6.9).
 
-### G-12 — Đếm chim (P1) — Bảo (AI, backend), Tuấn (trình vẽ vòng đếm trên web), Len (trình vẽ vòng đếm trên mobile cho Farm Technician), Len, Tuấn, Nhi (gán nhãn, đếm clip)
+### G-12 — Đếm chim (P1) — Bảo (AI, backend; test vẽ khung của AI node do Kiệt làm thay, PR #145), Tuấn (trình vẽ vòng đếm trên web), Len (trình vẽ vòng đếm trên mobile cho Farm Technician), Len, Tuấn, Nhi (gán nhãn, đếm clip)
 
 - [ ] Backend:
   - lịch đếm theo mùa và khung tạm (VISION-FR-019);
@@ -368,7 +370,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
   - job tỷ lệ chạy 15 phút sau khung chiều của từng House;
   - heartbeat AI có `fps` < 10 thì `EDGE_AI_DEGRADED`.
 - [ ] Vòng đếm (VISION-FR-018): Domain Expert **và Farm Technician của nhà có camera** được vẽ, có lịch sử, vai trò và audit (Farm Owner khi farm không có chuyên gia, BR-22); technician nhà khác bị 403. Web: trình vẽ trên khung hình live (Tuấn); mobile: trình vẽ cho technician (Len).
-- [ ] AI pipeline: tách phần vẽ khung + vòng thành hàm có test `tests/test_annotate.py` (TC-F11-01: mọi khung có vòng và hộp kèm track ID).
+- [ ] AI pipeline: tách phần vẽ khung + vòng thành hàm có test `tests/test_annotate.py` (TC-F11-01: mọi khung có vòng và hộp kèm track ID). *(Kiệt, PR #145, chưa merge)*
 - [ ] Đánh giá NFR-09 (VISION-FR-016): P/R phát hiện trên ≥ 200 khung có nhãn hộp cho mỗi điều kiện sáng (IoU ≥ 0,5) và sai số đếm trên 20 clip, đều lấy từ ngày quay không dùng cho train, val, chọn model, ngưỡng confidence, vòng đếm hay tham số tracker; nếu đã chia ngẫu nhiên theo frame trên Roboflow thì chia lại theo ngày (`tools/split_by_day.py`).
 - [ ] Model: v1 đã train (03/11/2026), lệch đếm tay khoảng 10 %; train v2 trên frame khó và đo lại trên cùng ngày test (mục 3).
 
