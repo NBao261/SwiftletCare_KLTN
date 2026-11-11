@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { MapPinIcon, PlusIcon, UserIcon, WarningCircleIcon } from '@phosphor-icons/react'
-import { Button, EmptyState, FilterChip } from '@/components/ui'
+import { CpuIcon, MapPinIcon, PlusIcon, SquaresFourIcon, UserIcon, UsersThreeIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { Button, EmptyState } from '@/components/ui'
 import StableHeight from '@/components/ui/StableHeight'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
@@ -123,6 +123,12 @@ export default function FarmOwnerFarmZonesPage() {
   const returnRateDrop = house.bird_count_tuning?.return_rate_drop_pct
   const staff = extras?.houseStaff[house._id]
 
+  const houseTabs: Array<{ key: Tab; label: string; icon: typeof CpuIcon }> = [
+    { key: 'overview', label: t('tab.overview'), icon: SquaresFourIcon },
+    { key: 'devices', label: `${t('tab.devices')} ${node.counts.online}/${node.counts.total}`, icon: CpuIcon },
+    { key: 'members', label: t('house.members'), icon: UsersThreeIcon },
+  ]
+
   return (
     <div className="flex flex-col gap-6">
       {scopeFilter}
@@ -142,22 +148,40 @@ export default function FarmOwnerFarmZonesPage() {
             {isFarmOwner && (
               <ActionsMenu
                 items={[
-                  { label: t('structure.rename'), onClick: () => setEditMode('rename') },
-                  { label: t('structure.delete'), onClick: () => setEditMode('delete'), danger: true },
+                  { label: t('structure.rename', { target: t('structure.house') }), onClick: () => setEditMode('rename') },
+                  { label: t('structure.delete', { target: t('structure.house') }), onClick: () => setEditMode('delete'), danger: true },
                 ]}
               />
             )}
           </div>
         }
-      >
-        <div className="flex gap-2">
-          <FilterChip active={tab === 'overview'} label={t('tab.overview')} onClick={() => setTab('overview')} />
-          <FilterChip active={tab === 'devices'} label={`${t('tab.devices')} ${node.counts.online}/${node.counts.total}`} onClick={() => setTab('devices')} />
-          <FilterChip active={tab === 'members'} label={t('house.members')} onClick={() => setTab('members')} />
-        </div>
-      </FarmFrame>
+      />
 
-      <StableHeight minHeight={TAB_MIN_HEIGHT}>
+      {/* Tab của trang nhà: 1 hàng trong thẻ trắng riêng, 3 ô bằng nhau; ô đang chọn nền đen */}
+      <div role="tablist" aria-label={house.name} className="grid grid-cols-3 gap-1.5 rounded-3xl border border-warmGray/15 bg-white p-1.5 shadow-card">
+        {houseTabs.map(item => {
+          const isActive = tab === item.key
+          return (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setTab(item.key)}
+              className={cn(
+                'flex h-14 min-w-0 items-center justify-center gap-2 rounded-[1.25rem] px-3 text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal',
+                isActive ? 'bg-charcoal text-white' : 'text-graphite hover:bg-warmGray/10 hover:text-charcoal',
+              )}
+            >
+              <item.icon size={20} className="shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tổng quan, Thiết bị giữ chiều cao để đổi tab không giật; Thành viên farm (1 nhóm, bảng 5 dòng) cao đúng nội dung */}
+      <StableHeight key={tab === 'members' ? 'members' : 'house'} minHeight={tab === 'members' ? 0 : TAB_MIN_HEIGHT}>
         {tab === 'overview' ? (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <FarmFrame

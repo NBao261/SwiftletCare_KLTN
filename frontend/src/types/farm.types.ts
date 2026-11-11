@@ -31,6 +31,15 @@ export interface House {
   technicians?: Array<{ user_id: string; primary: boolean }>
 }
 
+// AUTH-FR-014 — một ca trực của nhà: 0 = Chủ nhật … 6 = thứ Bảy, giờ VN HH:mm, end trước start là ca qua nửa đêm
+export interface RosterShift {
+  technician_id: string
+  role: 'PRIMARY' | 'BACKUP'
+  weekdays: number[]
+  start: string
+  end: string
+}
+
 /** EXPERT-FR-008 — tham số phát hiện theo Zone, Domain Expert chỉnh, gửi xuống ESP32 */
 export interface DetectionTuning {
   noise_margin_db?: number; noise_min_sec?: number
