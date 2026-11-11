@@ -9,7 +9,7 @@ import {
 import { publishDeviceCommand, publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { publishNodeConfig } from '@/services/deviceConfig.service'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
-import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
+import { raiseCameraLowFpsAlert, raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
@@ -82,6 +82,8 @@ export const OFFLINE_THRESHOLD_MS = 30_000
  * ponytail: 90 giây = 3 nhịp liền mất, chọn tay không có nguồn (SRS §0.5 bảng giả định).
  */
 export const CAMERA_OFFLINE_THRESHOLD_MS = 90_000
+/** THREAT-FR-010, Report 3 §4.5 — nút AI xử lý dưới số khung hình/giây này thì không đếm kịp */
+export const MIN_AI_FPS = 10
 
 export interface RegisterDeviceInput { device_id: string; zone_id: string; secret_key: string }
 
@@ -486,16 +488,32 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   camera.activation_overdue_at = undefined
   await camera.save()
   if ((payload.justConnected || !wasOnline) && camera.counting_ring) await pushCountingRing(camera)
-  if (wasOnline) return
+  if (!wasOnline) {
+    emitHouseDeviceStatusChange(String(camera.house_id), {
+      nodeId: String(camera._id),
+      status: 'ONLINE',
+      timestamp: new Date().toISOString(),
+    })
+    await resolveAlertsForNode(String(camera._id), 'Nút AI đã kết nối lại', 'EDGE_AI_DEGRADED').catch((err: Error) =>
+      logger.error('Đóng cảnh báo EDGE_AI_DEGRADED thất bại', { nodeId: String(camera._id), err }),
+    )
+  }
+  await checkCameraFps(String(camera._id), payload.fps)
+}
 
-  emitHouseDeviceStatusChange(String(camera.house_id), {
-    nodeId: String(camera._id),
-    status: 'ONLINE',
-    timestamp: new Date().toISOString(),
-  })
-  await resolveAlertsForNode(String(camera._id), 'Nút AI đã kết nối lại', 'EDGE_AI_DEGRADED').catch((err: Error) =>
-    logger.error('Đóng cảnh báo EDGE_AI_DEGRADED thất bại', { nodeId: String(camera._id), err }),
-  )
+/**
+ * THREAT-FR-010 — heartbeat báo dưới MIN_AI_FPS thì nhà có EDGE_AI_DEGRADED; báo đủ trở lại thì đóng (lúc
+ * này nút đang online nên cảnh báo mở chỉ có thể là cảnh báo chậm, kể cả bản nút AI tự gửi qua vision/alert).
+ * Heartbeat không có fps (nút AI cũ) thì không xét. Không throw: cảnh báo hỏng không làm hỏng heartbeat.
+ */
+async function checkCameraFps(cameraId: string, fps: number | undefined): Promise<void> {
+  if (typeof fps !== 'number' || !Number.isFinite(fps)) return
+  try {
+    if (fps < MIN_AI_FPS) await raiseCameraLowFpsAlert(cameraId, fps, MIN_AI_FPS)
+    else await resolveAlertsForNode(cameraId, 'Nút AI xử lý đủ khung hình trở lại', 'EDGE_AI_DEGRADED')
+  } catch (err) {
+    logger.error('Kiểm tra số khung hình của nút AI thất bại', { nodeId: cameraId, fps, err })
+  }
 }
 
 /**
