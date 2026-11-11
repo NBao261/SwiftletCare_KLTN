@@ -1200,12 +1200,15 @@ paths:
         Để màn Thành viên hiện các lời mời đang chờ. Mặc định `status=PENDING`: chỉ lời mời còn hạn.
         Lời mời PENDING đã quá 7 ngày được trả với `status: EXPIRED` (cùng luật khi chấp nhận) và nằm
         trong `status=EXPIRED`. Không trả `token`: token là khoá của link mời. Mới nhất trước.
-        Đồng sở hữu không phải Primary Owner, Domain Expert, farm khác → 403.
+        Đồng sở hữu không phải Primary Owner, Domain Expert, farm khác → 403. Phân trang như mọi danh sách
+        (`page`, `limit` mặc định 20, tối đa 100; `meta.total` là tổng số lời mời khớp bộ lọc).
       parameters:
         - { $ref: "#/components/parameters/FarmId" }
         - name: status
           in: query
           schema: { type: string, enum: [PENDING, ACCEPTED, DECLINED, EXPIRED], default: PENDING }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
         "200":
           description: OK
@@ -1227,6 +1230,12 @@ paths:
                             expires_at: { type: string, format: date-time }
                             responded_at: { type: string, format: date-time }
                             created_at: { type: string, format: date-time }
+                      meta:
+                        type: object
+                        properties:
+                          page: { type: integer }
+                          limit: { type: integer }
+                          total: { type: integer }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
