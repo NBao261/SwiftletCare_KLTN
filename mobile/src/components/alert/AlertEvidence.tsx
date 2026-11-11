@@ -2,13 +2,14 @@ import { StyleSheet, View } from 'react-native'
 import { StatRow } from '@/components/analytics/StatRow'
 import { ChartFrame } from '@/components/charts/ChartFrame'
 import { MetricLineChart } from '@/components/charts/MetricLineChart'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import { useAlertEvidence } from '@/hooks/alert/useAlertEvidence'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { Alert, TelemetryRecord, Zone } from '@/types'
+import type { Alert, AlertEvidence as AlertEvidenceData, EvidenceTelemetrySample } from '@/types'
 import { getAxisBounds } from '@/utils/analytics.utils'
-import { formatVietnamTime } from '@/utils/date.utils'
+import { formatDateTime, formatVietnamTime } from '@/utils/date.utils'
 import { getAlertTypeLabel, getMetricLabel, getMetricUnit } from '@/utils/label.utils'
 import { formatPercentValue } from '@/utils/number.utils'
 import { METRIC_DECIMALS } from '@/utils/sensorTile.utils'
@@ -17,97 +18,152 @@ import { t } from '@/utils/i18n.utils'
 
 // Biểu đồ nhỏ xếp dọc trong chi tiết
 const MINI_CHART_HEIGHT = 110
-const EVIDENCE_METRICS: SensorMetric[] = ['temperature', 'humidity', 'nh3', 'co2', 'sound']
+const EVIDENCE_SKELETON_HEIGHT = 160
+// Chỉ số có trong mẫu bằng chứng (api-spec AlertEvidence.telemetry — không có ánh sáng)
+const EVIDENCE_METRICS: Exclude<SensorMetric, 'light'>[] = ['temperature', 'humidity', 'nh3', 'co2', 'sound']
 
-// Trường của bản ghi số đo ứng với từng chỉ số
-function readMetric(record: TelemetryRecord, metric: SensorMetric): number | null {
-  const values: Record<SensorMetric, number | undefined> = {
-    temperature: record.temperature,
-    humidity: record.humidity,
-    light: record.light_lux,
-    nh3: record.nh3_ppm,
-    co2: record.co2_ppm,
-    sound: record.sound_db,
+// Trường của mẫu bằng chứng ứng với từng chỉ số; thiếu thì null (không vẽ về 0)
+function readMetric(sample: EvidenceTelemetrySample, metric: Exclude<SensorMetric, 'light'>): number | null {
+  const values: Record<Exclude<SensorMetric, 'light'>, number | null | undefined> = {
+    temperature: sample.temperature,
+    humidity: sample.humidity,
+    nh3: sample.nh3_ppm,
+    co2: sample.co2_ppm,
+    sound: sample.sound_db,
   }
   const value = values[metric]
   return typeof value === 'number' ? value : null
 }
 
-interface AlertEvidenceProps {
-  alert: Alert
-  houseId: string | null
-  houseZones: Zone[]
-  enabled: boolean
-  now: number
+// Một danh sách cảnh báo ngắn: loại + giờ (hoặc kết luận); rỗng thì một câu
+function AlertList({ title, alerts, emptyText, showVerdict = false }: {
+  title: string
+  alerts: Alert[]
+  emptyText: string
+  showVerdict?: boolean
+}) {
+  const palette = usePalette()
+  return (
+    <View style={styles.block}>
+      <Text variant="small" weight="semiBold">
+        {title}
+      </Text>
+      {alerts.length === 0 ? (
+        <Text variant="small" color={palette.textSecondary}>
+          {emptyText}
+        </Text>
+      ) : (
+        alerts.map(item => (
+          <StatRow
+            key={item._id}
+            label={`${getAlertTypeLabel(item.type)} · ${formatDateTime(item.created_at)}`}
+            value={
+              showVerdict && item.expert_verdict
+                ? item.expert_verdict.result === 'CONFIRMED'
+                  ? t('Đúng')
+                  : t('Bác bỏ')
+                : formatVietnamTime(item.created_at)
+            }
+            isWarning={!showVerdict}
+          />
+        ))
+      )}
+    </View>
+  )
 }
 
-// Bằng chứng của cảnh báo suy luận (ALERT-FR-014, BR-23), ghép từ API sẵn có: các chỉ số của khu vực và số chim 5 phút
-// của nhà ±30 phút quanh lúc cảnh báo (vạch cam tại lúc cảnh báo), cảnh báo thiết bị đang mở của khu vực;
-// tỉ lệ về tổ giảm thì xem cả ngày của từng tầng. Nguồn không có số thì ghi "Thiếu dữ liệu", không vẽ về 0
-export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: AlertEvidenceProps) {
+interface AlertEvidenceProps {
+  alert: Alert
+  // Chỉ tải sau khi sheet mở xong
+  enabled: boolean
+}
+
+// Bằng chứng của cảnh báo suy luận (ALERT-FR-014, BR-23) do backend tổng hợp: các chỉ số của khu vực và số chim 5 phút
+// của nhà ±30 phút quanh lúc cảnh báo (vạch cam tại lúc cảnh báo), cảnh báo thiết bị đang mở của khu vực; tỉ lệ về tổ giảm
+// thì % trong ngưỡng từng khu vực, tiếng ồn lạ và cảnh báo thiết bị trong ngày của phiên. Nguồn "missing" ghi
+// "Thiếu dữ liệu", không vẽ về 0. Hệ thống chỉ trình bày, không tự kết luận
+export function AlertEvidence({ alert, enabled }: AlertEvidenceProps) {
   const palette = usePalette()
-  const evidence = useAlertEvidence({ alert, houseId, houseZones, enabled, now })
-  const markerTime = evidence.window.at
+  const evidenceQuery = useAlertEvidence(alert._id, enabled)
+  const evidence: AlertEvidenceData | undefined = evidenceQuery.data
+
+  if (evidenceQuery.isLoading || (!evidence && !evidenceQuery.isError)) {
+    return <Skeleton width="100%" height={EVIDENCE_SKELETON_HEIGHT} />
+  }
+  if (!evidence) {
+    return (
+      <Text variant="small" color={palette.textSecondary} onPress={() => evidenceQuery.refetch()}>
+        {t('Không tải được bằng chứng. Chạm để thử lại')}
+      </Text>
+    )
+  }
+
+  const earlierVerdicts = (
+    <AlertList
+      title={t('Kết luận trước đây cùng loại')}
+      alerts={evidence.earlier_verdicts}
+      emptyText={t('Chưa có cảnh báo cùng loại nào được kết luận')}
+      showVerdict
+    />
+  )
 
   if (alert.type === 'LOW_RETURN_RATE') {
-    const { rows, isLoading, isError } = evidence.daily
+    const zones = evidence.zones_in_range ?? []
     return (
       <View style={styles.section}>
         <Text variant="body" weight="semiBold">
           {t('Bằng chứng trong ngày của phiên')}
         </Text>
-        {isLoading ? (
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Đang tải')}
-          </Text>
-        ) : isError || rows.length === 0 ? (
+        {zones.length === 0 ? (
           <Text variant="small" color={palette.textSecondary}>
             {t('Thiếu dữ liệu')}
           </Text>
         ) : (
-          rows.map(({ zone, metrics }) => {
-            const alertEntries = Object.entries(metrics.alerts_by_type).filter(([, count]) => (count ?? 0) > 0)
-            return (
-              <View key={zone._id} style={styles.zoneBlock}>
-                <Text variant="small" weight="semiBold">
-                  {zone.name}
-                </Text>
-                <StatRow
-                  label={t('Độ ẩm trong ngưỡng')}
-                  value={
-                    metrics.humidity_in_range_pct === null
-                      ? t('Thiếu dữ liệu')
-                      : formatPercentValue(metrics.humidity_in_range_pct)
-                  }
-                />
-                <StatRow
-                  label={t('Nhiệt độ trong ngưỡng')}
-                  value={
-                    metrics.temp_in_range_pct === null
-                      ? t('Thiếu dữ liệu')
-                      : formatPercentValue(metrics.temp_in_range_pct)
-                  }
-                />
-                {alertEntries.map(([type, count]) => (
-                  <StatRow
-                    key={type}
-                    label={getAlertTypeLabel(type as Alert['type'])}
-                    value={t('{count} lần', { count: count ?? 0 })}
-                    isWarning
-                  />
-                ))}
-              </View>
-            )
-          })
+          zones.map(zone => (
+            <View key={zone.zone_id} style={styles.block}>
+              <Text variant="small" weight="semiBold">
+                {zone.name}
+              </Text>
+              <StatRow
+                label={t('Độ ẩm trong ngưỡng')}
+                value={
+                  zone.status === 'missing' || zone.humidity_in_range_pct === null
+                    ? t('Thiếu dữ liệu')
+                    : formatPercentValue(zone.humidity_in_range_pct)
+                }
+              />
+              <StatRow
+                label={t('Nhiệt độ trong ngưỡng')}
+                value={
+                  zone.status === 'missing' || zone.temp_in_range_pct === null
+                    ? t('Thiếu dữ liệu')
+                    : formatPercentValue(zone.temp_in_range_pct)
+                }
+              />
+            </View>
+          ))
         )}
+        <AlertList
+          title={t('Tiếng ồn lạ của nhà trong ngày')}
+          alerts={evidence.noise_alerts ?? []}
+          emptyText={t('Không có tiếng ồn lạ trong ngày')}
+        />
+        <AlertList
+          title={t('Cảnh báo thiết bị của nhà trong ngày')}
+          alerts={evidence.device_alerts}
+          emptyText={t('Không có cảnh báo thiết bị trong ngày')}
+        />
+        {earlierVerdicts}
       </View>
     )
   }
 
-  const records = evidence.telemetry.data ?? []
-  const times = records.map(record => record.timestamp)
-  const buckets = evidence.buckets.data ?? []
-  const deviceAlerts = (evidence.deviceAlerts.data ?? []).filter(item => item._id !== alert._id)
+  const telemetry = evidence.telemetry
+  const samples = telemetry?.status === 'ok' ? telemetry.samples : []
+  const times = samples.map(sample => sample.timestamp)
+  const birdCounts = evidence.bird_counts
+  const buckets = birdCounts?.status === 'ok' ? birdCounts.buckets : []
+  const deviceAlerts = evidence.device_alerts.filter(item => item._id !== alert._id)
 
   return (
     <View style={styles.section}>
@@ -115,19 +171,18 @@ export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: Aler
         {t('Bằng chứng ±30 phút quanh lúc cảnh báo')}
       </Text>
       {EVIDENCE_METRICS.map(metric => {
-        const values = records.map(record => readMetric(record, metric))
-        const hasData = values.some(value => value !== null)
+        const values = samples.map(sample => readMetric(sample, metric))
         return (
           <ChartFrame
             key={metric}
             title={getMetricLabel(metric)}
             summary={t('{metric} quanh lúc cảnh báo', { metric: getMetricLabel(metric) })}
             height={MINI_CHART_HEIGHT}
-            isLoading={evidence.telemetry.isLoading}
-            isError={evidence.telemetry.isError}
-            isEmpty={!hasData}
+            isLoading={false}
+            isError={false}
+            isEmpty={!values.some(value => value !== null)}
             emptyMessage={t('Thiếu dữ liệu')}
-            onRetry={() => evidence.telemetry.refetch()}
+            onRetry={() => evidenceQuery.refetch()}
           >
             {width => (
               <MetricLineChart
@@ -139,7 +194,7 @@ export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: Aler
                 axis={getAxisBounds(values, [])}
                 decimals={METRIC_DECIMALS[metric]}
                 unit={getMetricUnit(metric)}
-                markerTime={markerTime}
+                markerTime={alert.created_at}
               />
             )}
           </ChartFrame>
@@ -149,11 +204,11 @@ export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: Aler
         title={t('Chim ra / về 5 phút của nhà')}
         summary={t('Chim ra, chim về 5 phút quanh lúc cảnh báo')}
         height={MINI_CHART_HEIGHT}
-        isLoading={evidence.buckets.isLoading}
-        isError={evidence.buckets.isError}
+        isLoading={false}
+        isError={false}
         isEmpty={buckets.length === 0}
         emptyMessage={t('Thiếu dữ liệu (camera không gửi số đếm trong khoảng này)')}
-        onRetry={() => evidence.buckets.refetch()}
+        onRetry={() => evidenceQuery.refetch()}
         legend={[
           { label: t('Ra'), color: palette.houseHealthy },
           { label: t('Về'), color: palette.text },
@@ -183,36 +238,19 @@ export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: Aler
             }}
             decimals={0}
             unit=""
-            markerTime={markerTime}
+            markerTime={alert.created_at}
             fillArea={false}
           />
         )}
       </ChartFrame>
-      <View style={styles.zoneBlock}>
-        <Text variant="small" weight="semiBold">
-          {t('Cảnh báo thiết bị đang mở của khu vực')}
-        </Text>
-        {evidence.deviceAlerts.isLoading ? (
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Đang tải')}
-          </Text>
-        ) : deviceAlerts.length === 0 ? (
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Không có cảnh báo thiết bị nào đang mở')}
-          </Text>
-        ) : (
-          deviceAlerts.map(item => (
-            <StatRow
-              key={item._id}
-              label={getAlertTypeLabel(item.type)}
-              value={formatVietnamTime(item.created_at)}
-              isWarning
-            />
-          ))
-        )}
-      </View>
+      <AlertList
+        title={t('Cảnh báo thiết bị đang mở của khu vực')}
+        alerts={deviceAlerts}
+        emptyText={t('Không có cảnh báo thiết bị nào đang mở')}
+      />
+      {earlierVerdicts}
       <Text variant="small" color={palette.textSecondary}>
-        {t('Ghép từ số đo, số đếm chim và cảnh báo của hệ thống; vạch cam là lúc cảnh báo.')}
+        {t('Số đo, số đếm chim và cảnh báo do hệ thống ghi lại; vạch cam là lúc cảnh báo.')}
       </Text>
     </View>
   )
@@ -220,5 +258,5 @@ export function AlertEvidence({ alert, houseId, houseZones, enabled, now }: Aler
 
 const styles = StyleSheet.create({
   section: { gap: Spacing.md },
-  zoneBlock: { gap: Spacing.xs },
+  block: { gap: Spacing.xs },
 })

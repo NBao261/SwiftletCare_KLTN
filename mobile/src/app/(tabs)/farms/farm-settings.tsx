@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Alert as NativeAlert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { CreateItemSheet } from '@/components/farm/settings/CreateItemSheet'
 import { FarmHousesSection } from '@/components/farm/settings/FarmHousesSection'
 import { FarmInfoSection } from '@/components/farm/settings/FarmInfoSection'
 import { FarmLocationSection } from '@/components/farm/settings/FarmLocationSection'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -34,7 +35,6 @@ const SKELETON_COUNT = 3
 export default function FarmSettingsScreen() {
   const palette = usePalette()
   const language = useLanguage()
-  const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
   const { farmId } = useLocalSearchParams<{ farmId: string }>()
   const user = useAuthStore(state => state.user)
@@ -90,7 +90,7 @@ export default function FarmSettingsScreen() {
     )
   }
 
-  const retry = () => queryClient.refetchQueries({ type: 'active' })
+  const retry = () => refetchVisibleQueries(queryClient)
 
   const renderBody = () => {
     if (farmsQuery.isLoading) {
@@ -145,7 +145,7 @@ export default function FarmSettingsScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.xxl }]}
+            contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl }]}
           >
             {renderBody()}
           </ScrollView>
@@ -167,7 +167,7 @@ export default function FarmSettingsScreen() {
           />
         )}
       </View>
-      {toast.message && <Toast message={toast.message} bottomOffset={insets.bottom + Spacing.lg} />}
+      {toast.message && <Toast message={toast.message} bottomOffset={TAB_BAR_OVERLAP + Spacing.lg} />}
     </View>
   )
 }

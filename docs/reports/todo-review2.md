@@ -415,7 +415,7 @@ Thứ tự:
 5. **Len:** can thiệp tay có xác nhận (G-06).
 6. **Len:** setup QR (G-09).
 7. **Len:** trạng thái ngày + chấm điểm (G-11).
-8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; đổi route `livestream/[zoneId]` → theo camera của House).
+8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; phát tại chỗ theo camera của House, không dùng route riêng).
 9. **Len:** báo cáo.
 10. **Len:** thu hoạch.
 11. **Tuấn:** màn chuyên gia (hàng đợi việc, kết luận cảnh báo, tham số).
@@ -493,5 +493,5 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
    - Len: G-15 chữ "PLC", form thu hoạch (G-14), cấu hình Playwright, màn Farm Owner mobile bước 3–4 khi nền mobile xong; *(từ 01/11 Nhi làm thay các việc này theo nhờ của Len, Len duyệt PR; "PLC" xong 01/11, `4b3944b`)*
    - Len, Tuấn, Nhi: gán nhãn trong những ngày chờ API;
    - Tuấn: dời màn chuyên gia sang `domain-expert/`, bỏ dữ liệu giả, trang chủ hàng đợi việc (G-15).
-3. **Tuần 2–3:** Kiệt backend G-03 → G-04 → G-11 → G-02 phần P1; Bảo train model, G-10 backend; Tuấn web G-03/G-04 theo spec, trình vẽ vòng đếm (G-12); Nhi màn G-11 web + mobile, in nhãn (G-09); Len G-06 web/mobile (sau backend G-06), in mã tầng và setup QR mobile (G-09, **[Ủy quyền cho Len làm]**); Bảo G-08 sau G-07, G-12 backend, staging (G-17).
+3. **Tuần 2–3:** Kiệt backend G-03 → G-04 → G-11 → G-02 phần P1; Bảo train model, G-10 backend; Tuấn web G-03/G-04 theo spec, trình vẽ vòng đếm (G-12); Nhi màn G-11 web + mobile, in nhãn và setup QR (G-09); Len G-06 web/mobile (sau backend G-06), in mã tầng (G-09); Bảo G-08 sau G-07, G-12 backend, staging (G-17).
 4. **Iteration 3:** G-13 (Bảo), G-18 (Kiệt); seed (Kiệt, Bảo) + test E2E từng DS (chủ workflow); đếm tay clip, đánh giá NFR-09; chạy thực địa ≥ 14 ngày, đo NFR (mỗi người số đo của mình); tổng duyệt demo trên staging.

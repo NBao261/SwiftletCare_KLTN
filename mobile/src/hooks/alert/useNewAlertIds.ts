@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidateAlertQueries } from '@/config/queryClient'
 import { offAlertNew, onAlertNew } from '@/services/socket/socketClient'
 import type { SocketAlertNew } from '@/types'
 
@@ -15,7 +16,7 @@ export function useNewAlertIds(): ReadonlySet<string> {
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = []
     const handleNew = (payload: SocketAlertNew) => {
-      void queryClient.invalidateQueries({ queryKey: ['alerts'] })
+      void invalidateAlertQueries(queryClient)
       setNewIds(current => new Set(current).add(payload.alertId))
       timers.push(
         setTimeout(

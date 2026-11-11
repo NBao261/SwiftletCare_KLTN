@@ -1,6 +1,7 @@
 import { FlatList, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { CAMERA_CARD_WIDTH, CameraCard } from '@/components/home/CameraCard'
 import { HomeSection } from '@/components/home/HomeSection'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -57,7 +58,7 @@ export function CameraCarousel({ onOpen }: CameraCarouselProps) {
         <EmptyState
           message={t('Không tải được')}
           actionLabel={t('Thử lại')}
-          onAction={() => queryClient.refetchQueries({ type: 'active' })}
+          onAction={() => refetchVisibleQueries(queryClient)}
           width={CAMERA_CARD_WIDTH}
           height={PLACEHOLDER_HEIGHT}
         />
