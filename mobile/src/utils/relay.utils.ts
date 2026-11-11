@@ -1,6 +1,7 @@
-import { OVERRIDE_MAX_MS, OVERRIDE_MIN_MS, PUMP_ON_MAX_MS } from '@/constants/relayOverride'
+import { CONFIRMATION_REQUIRED_CODE, OVERRIDE_MAX_MS, OVERRIDE_MIN_MS, PUMP_ON_MAX_MS } from '@/constants/relayOverride'
 import type { RelayName, SensorNode } from '@/types'
 import type { PumpBlockingAlert } from '@/utils/alert.utils'
+import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
 import { getAlertStatusLabel, getAlertTypeLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -72,4 +73,15 @@ export function buildPumpConfirmMessage(alerts: PumpBlockingAlert[], durationMs:
   )
   const question = t('Bơm có thể chạy không đúng. Vẫn bật bơm trong {duration}?', { duration: formatDuration(durationMs) })
   return [t('Khu vực đang có cảnh báo:'), ...lines, '', question].join('\n')
+}
+
+// Câu lỗi khi gửi lệnh relay theo mã của backend. Câu "cảnh báo chặn bật bơm" chỉ dành cho 409 CONFIRMATION_REQUIRED lúc bật
+// bơm; 409 khác (controller đã bị gỡ khỏi hệ thống) dùng câu chung
+export function getRelayControlErrorMessage(error: unknown, isPumpOn: boolean): string {
+  const errorInfo = readApiError(error)
+  const isPumpConfirmation = isPumpOn && errorInfo.status === 409 && errorInfo.code === CONFIRMATION_REQUIRED_CODE
+  return getSettingsErrorMessage(error, {
+    422: t('Thời lượng không hợp lệ: bật bơm tối đa 30 phút, còn lại tối đa 24 giờ'),
+    ...(isPumpConfirmation ? { 409: t('Khu vực vừa có cảnh báo chặn bật bơm, vui lòng xem lại') } : {}),
+  })
 }

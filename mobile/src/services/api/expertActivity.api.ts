@@ -1,10 +1,40 @@
-import { MOCK_EXPERT_DECISIONS, MOCK_REVIEW_ITEMS, mockResponse } from '@/services/mock/account.mock'
+import { apiClient } from '@/services/api/apiClient'
+import { ENDPOINTS } from '@/constants/apiEndpoints'
+import type { ApiResponse, CoefficientProposal, ExpertActivityEntry, ParameterReview } from '@/types'
 
-// Lịch sử quyết định của chuyên gia (EXPERT-FR-009) và mục chờ duyệt của Farm Owner (EXPERT-FR-010/011).
-// TODO(G-04, EXPERT-FR-009/010/011): backend chưa có route — khi có trong api-spec, thêm vào ENDPOINTS và thay thân hàm
-// bằng apiClient.get<ApiResponse<…>>(ENDPOINTS.…, { params: { farmId } }); hook và màn không phải đổi
+// Tham số trang chung của các danh sách hoạt động chuyên gia (api-spec Page, Limit)
+export interface ExpertActivityPageParams {
+  farmId: string
+  page?: number
+  limit?: number
+  status?: string
+}
+
+function toQuery({ farmId, page, limit, status }: ExpertActivityPageParams): Record<string, string> {
+  return {
+    farmId,
+    ...(page ? { page: String(page) } : {}),
+    ...(limit ? { limit: String(limit) } : {}),
+    ...(status ? { status } : {}),
+  }
+}
+
+// Hoạt động chuyên gia trên một farm (EXPERT-FR-009/010/011)
 export const expertActivityApi = {
-  listDecisions: (_farmId: string) => mockResponse(MOCK_EXPERT_DECISIONS, { total: MOCK_EXPERT_DECISIONS.length }),
+  // Lịch sử quyết định, mới nhất trước
+  listActivity: (params: ExpertActivityPageParams) =>
+    apiClient.get<ApiResponse<ExpertActivityEntry[]>>(ENDPOINTS.EXPERT_ACTIVITY, { params: toQuery(params) }),
 
-  listMyReviewItems: (_farmId: string) => mockResponse(MOCK_REVIEW_ITEMS, { total: MOCK_REVIEW_ITEMS.length }),
+  // Thay đổi ngưỡng, hệ số của Farm Owner chờ chuyên gia (farm có chuyên gia)
+  listReviews: (params: ExpertActivityPageParams) =>
+    apiClient.get<ApiResponse<ParameterReview[]>>(ENDPOINTS.EXPERT_REVIEWS, { params: toQuery(params) }),
+
+  // Gợi ý hệ số Farm Owner đã gửi chuyên gia
+  listProposals: (params: ExpertActivityPageParams) =>
+    apiClient.get<ApiResponse<CoefficientProposal[]>>(ENDPOINTS.EXPERT_PROPOSALS, { params: toQuery(params) }),
+
+  // Farm Owner gửi gợi ý hiện tại của zone cho chuyên gia; server tự tính gợi ý. Farm chưa có chuyên gia hoặc không có
+  // gợi ý thì 409
+  submitProposal: (zoneId: string) =>
+    apiClient.post<ApiResponse<CoefficientProposal>>(ENDPOINTS.EXPERT_PROPOSALS, { zoneId }),
 }

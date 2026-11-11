@@ -8,7 +8,6 @@ import { AlertDetailContent } from '@/components/alert/AlertDetailContent'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { useNow } from '@/hooks/time/useNow'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import type { Alert } from '@/types'
 import { t } from '@/utils/i18n.utils'
@@ -18,7 +17,6 @@ const CLOSE_DISTANCE = 120
 const CLOSE_VELOCITY = 800
 const HANDLE_WIDTH = 40
 const HANDLE_HEIGHT = 4
-const CLOCK_INTERVAL_MS = 60 * 1000
 const SPRING_BACK = { duration: 200, reduceMotion: ReduceMotion.System }
 
 interface AlertDetailSheetProps {
@@ -33,7 +31,6 @@ export function AlertDetailSheet({ alert, onClose }: AlertDetailSheetProps) {
   const palette = usePalette()
   const insets = useSafeAreaInsets()
   const { height } = useWindowDimensions()
-  const now = useNow(CLOCK_INTERVAL_MS)
   const toast = useToastMessage()
   const translateY = useSharedValue(0)
   const [isReady, setReady] = useState(false)
@@ -92,7 +89,6 @@ export function AlertDetailSheet({ alert, onClose }: AlertDetailSheetProps) {
               alertId={alert._id}
               initialAlert={alert}
               isReady={isReady}
-              now={now}
               onLeave={close}
               onMessage={toast.show}
             />

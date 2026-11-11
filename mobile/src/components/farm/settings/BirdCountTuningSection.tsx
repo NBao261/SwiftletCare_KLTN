@@ -2,6 +2,7 @@ import { BirdIcon } from 'phosphor-react-native'
 import { ComingSoonAction } from '@/components/common/ComingSoonAction'
 import { NumberTuningSection } from '@/components/farm/settings/NumberTuningSection'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
+import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useUpdateBirdCountTuning } from '@/hooks/farm/useUpdateBirdCountTuning'
 import { useAuthStore } from '@/stores/authStore'
 import type { BirdCountTuning, House } from '@/types'
@@ -24,10 +25,11 @@ function getBirdCountTuningLabel(): { label: string; unit: string } {
 }
 
 // Mục "Mức giảm tỷ lệ về tổ" của cả nhà (EXPERT-FR-008): giảm quá mức này so với kỳ trước thì báo LOW_RETURN_RATE.
-// Chỉ chuyên gia sửa, chủ trại xem
+// Chuyên gia sửa; farm chưa có chuyên gia thì chủ trại sửa thay (BR-22), còn lại chủ trại chỉ xem
 export function BirdCountTuningSection({ house, editor, onSaved }: BirdCountTuningSectionProps) {
   const user = useAuthStore(state => state.user)
-  const canEdit = canPerform(user, 'editBirdCountTuning')
+  const hasExpert = useFarmHasExpert(house.farm_id)
+  const canEdit = canPerform(user, 'editBirdCountTuning', { farmHasExpert: hasExpert })
   const updateBirdCountTuning = useUpdateBirdCountTuning()
 
   return (
@@ -37,7 +39,13 @@ export function BirdCountTuningSection({ house, editor, onSaved }: BirdCountTuni
       title={t('Mức giảm tỷ lệ về tổ')}
       subtitle={t('Giảm quá mức này so với kỳ trước thì cảnh báo')}
       scopeLabel={t('Nhà')}
-      footerNote={canEdit ? t('Chỉ chuyên gia sửa được. Áp dụng cho cả nhà') : t('Do chuyên gia chỉnh')}
+      footerNote={
+        canEdit
+          ? hasExpert === false
+            ? t('Farm chưa có chuyên gia nên bạn chỉnh thay. Áp dụng cho cả nhà')
+            : t('Chỉ chuyên gia sửa được. Áp dụng cho cả nhà')
+          : t('Do chuyên gia chỉnh')
+      }
       keys={BIRD_COUNT_KEYS}
       rules={BIRD_COUNT_TUNING_RULES}
       values={house.bird_count_tuning}

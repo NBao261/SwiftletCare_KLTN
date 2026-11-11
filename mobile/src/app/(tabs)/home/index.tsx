@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BlurTargetView } from 'expo-blur'
 import { useQueryClient } from '@tanstack/react-query'
+import { refetchVisibleQueries } from '@/config/queryClient'
 import { CameraCarousel } from '@/components/home/CameraCarousel'
 import { FarmCarousel } from '@/components/home/FarmCarousel'
 import { HomeHeader } from '@/components/home/HomeHeader'
@@ -63,7 +64,7 @@ export default function HomeScreen() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      await queryClient.refetchQueries({ type: 'active' })
+      await refetchVisibleQueries(queryClient)
     } finally {
       setRefreshing(false)
     }

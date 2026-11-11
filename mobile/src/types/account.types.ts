@@ -23,53 +23,57 @@ export interface InviteMemberPayload {
   role: InvitedRole
 }
 
-// Các loại quyết định của chuyên gia mà Farm Owner được báo (EXPERT-FR-009). Backend chưa có lịch sử hoạt động chuyên gia:
-// tên giá trị là tạm, đổi theo api-spec khi route có
-export type ExpertDecisionType =
-  | 'THRESHOLDS'
-  | 'THRESHOLDS_RESET'
-  | 'FUZZY_TUNING'
-  | 'DETECTION_TUNING'
-  | 'RETURN_RATE_DROP'
-  | 'COUNTING_RING'
-  | 'COUNTING_SCHEDULE'
-  | 'ALERT_VERDICT'
-  | 'CONCLUSION'
-  | 'CHANGE_REVIEW'
-  | 'SUGGESTION_APPROVAL'
-
-export interface ExpertDecision {
+// Một quyết định trong lịch sử hoạt động của farm (EXPERT-FR-009, api-spec ExpertActivityEntry, GET /expert-activity).
+// action là mã audit của backend (THRESHOLD_UPDATED, ALERT_VERDICT_SET…); Farm Owner làm thay khi farm chưa có chuyên
+// gia (BR-22) thì actor_role = FARM_OWNER
+export interface ExpertActivityEntry {
   _id: string
-  type: ExpertDecisionType
-  actor_name: string
-  // Farm chưa có chuyên gia thì Farm Owner quyết thay, lưu kèm vai trò (BR-22)
+  action: string
+  actor: { _id: string; full_name?: string } | null
   actor_role: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
+  target_type: string
+  target_id: string
+  zone_id?: string | null
+  house_id?: string | null
+  // Giá trị cũ/mới (before, after) hoặc kết quả kiểm chứng (result) — hình dạng tuỳ action
+  metadata?: Record<string, unknown>
   created_at: string
-  house_name?: string
-  zone_name?: string
-  // Giá trị cũ và mới đã định dạng sẵn, hoặc phán quyết
-  old_value?: string
-  new_value?: string
-  verdict?: 'CONFIRMED' | 'REJECTED'
-  note?: string
 }
 
-// Mục chờ chuyên gia duyệt khi Farm Owner tự sửa ngưỡng, hệ số (EXPERT-FR-010, §6.10) hoặc gửi gợi ý hệ số (EXPERT-FR-011, §6.11)
+// Mục duyệt thay đổi của Farm Owner trên farm có chuyên gia (EXPERT-FR-010, api-spec ParameterReview)
 export type ChangeReviewStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' | 'ADJUSTED'
+
+export interface ParameterReview {
+  _id: string
+  zone_id: string
+  farm_id: string
+  group: 'thresholds' | 'fuzzy'
+  old_values: Record<string, unknown>
+  new_values: Record<string, unknown>
+  status: ChangeReviewStatus
+  changed_by: string
+  reviewed_by?: string | null
+  reviewed_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Gợi ý hệ số Farm Owner gửi chuyên gia (EXPERT-FR-011, api-spec CoefficientProposal)
 export type ProposalStatus = 'PROPOSED' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED'
 
-export interface ReviewItem {
+export interface CoefficientProposal {
   _id: string
-  kind: 'CHANGE_REVIEW' | 'SUGGESTION_PROPOSAL'
-  group: 'THRESHOLDS' | 'FUZZY_TUNING'
-  status: ChangeReviewStatus | ProposalStatus
-  house_name: string
-  zone_name: string
-  old_value: string
-  new_value: string
+  zone_id: string
+  farm_id: string
+  submitted_by: string
+  suggested_values: Record<string, unknown>
+  current_values: Record<string, unknown>
+  status: ProposalStatus
+  // Lý do từ chối
+  note?: string | null
+  decided_by?: string | null
+  decided_at?: string | null
   created_at: string
-  resolved_at?: string
-  note?: string
 }
 
 // Kênh nhận cho từng loại sự kiện (ALERT-FR-005). Tắt một kênh thì loại đó không gửi qua kênh ấy, cảnh báo vẫn có trong app

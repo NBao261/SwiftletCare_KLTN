@@ -9,6 +9,7 @@ import {
   isNumberDraftChanged,
   parseNumberDraft,
   parseNumberInput,
+  THRESHOLD_RULES,
   toInputText,
   validateNumber,
   validateNumberDraft,
@@ -37,6 +38,21 @@ describe('parseNumberInput', () => {
     expect(parseNumberInput('')).toBeNull()
     expect(parseNumberInput('abc')).toBeNull()
     expect(parseNumberInput('1.500,5')).toBeNull()
+  })
+
+  it('số có 3 chữ số thập phân vẫn là số: toạ độ 10.762, 106.660', () => {
+    expect(parseNumberInput('10.762')).toBe(10.762)
+    expect(parseNumberInput('106.660')).toBe(106.66)
+    expect(parseNumberInput('0.125')).toBe(0.125)
+  })
+})
+
+describe('validateNumber với số trông như có dấu ngăn nghìn', () => {
+  it('toạ độ nhận 10.762; ô ánh sáng tối đa (tới 200.000) báo "1.500" là mơ hồ', () => {
+    expect(validateNumber('10.762', COORDINATE_RULES.lat)).toBeNull()
+    expect(validateNumber('106.660', COORDINATE_RULES.lng)).toBeNull()
+    expect(validateNumber('1.500', THRESHOLD_RULES.light_max)).toBe('Nhập số không có dấu ngăn nghìn')
+    expect(validateNumber('1500', THRESHOLD_RULES.light_max)).toBeNull()
   })
 })
 
