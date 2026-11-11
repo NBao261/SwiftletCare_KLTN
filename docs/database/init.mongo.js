@@ -553,7 +553,13 @@ ensureCollection("harvestbatches", {
     },
     "status": {
       "bsonType": ["string", "null"],
-      "enum": ["DRAFT", null]
+      "enum": ["DRAFT", "CONFIRMED", null]
+    },
+    "confirmed_by": {
+      "bsonType": ["objectId", "null"]
+    },
+    "confirmed_at": {
+      "bsonType": ["date", "null"]
     },
     "is_deleted": {
       "bsonType": ["bool", "null"]
@@ -632,6 +638,34 @@ ensureCollection("houses", {
           }
         },
         "required": ["user_id"]
+      }
+    },
+    "roster": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "technician_id": {
+            "bsonType": "objectId"
+          },
+          "role": {
+            "bsonType": "string",
+            "enum": ["PRIMARY", "BACKUP"]
+          },
+          "weekdays": {
+            "bsonType": ["array", "null"],
+            "items": {
+              "bsonType": "number"
+            }
+          },
+          "start": {
+            "bsonType": "string"
+          },
+          "end": {
+            "bsonType": "string"
+          }
+        },
+        "required": ["technician_id", "role", "start", "end"]
       }
     },
     "_id": {

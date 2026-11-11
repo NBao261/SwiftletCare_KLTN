@@ -38,7 +38,8 @@ export type ControlMode  = 'AUTO' | 'MANUAL'
 
 // ── Module HARVEST (§5.8, §8.2) ───────────────────────────────────────────────
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-export type HarvestStatus = 'DRAFT'
+/** HARVEST-FR-001, 006 — lô của Farm Technician chờ Farm Owner xác nhận; lô của Farm Owner xác nhận ngay */
+export type HarvestStatus = 'DRAFT' | 'CONFIRMED'
 
 // ── JWT Payload ────────────────────────────────────────────────────────────────
 export interface JwtAccessPayload {

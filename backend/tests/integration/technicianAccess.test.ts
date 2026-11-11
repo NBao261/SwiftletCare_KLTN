@@ -174,6 +174,8 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
       `/telemetry/zones/${zone._id}/history`,
       `/analytics/env/summary?zoneId=${zone._id}`,
       `/analytics/bird-count/daily?houseId=${house._id}`,
+      // HARVEST-FR-001 — thợ xem lô của nhà được giao (lọc ở service, harvestConfirm.test.ts)
+      `/harvests?farmId=${farm._id}`,
     ]) {
       expect([path, (await tech$.get(path)).status]).toEqual([path, 200])
     }
@@ -183,7 +185,6 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
       `/telemetry/zones/${other.zone._id}/latest`,
       `/farms/${other.farm._id}`,
       `/analytics/control/suggestion?zoneId=${zone._id}`,
-      `/harvests?farmId=${farm._id}`,
       `/health-reports?zoneId=${zone._id}`,
     ]) {
       expect([path, (await tech$.get(path)).status]).toEqual([path, 403])

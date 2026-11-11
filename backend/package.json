@@ -22,6 +22,7 @@
     "device:broker-secret": "tsx src/scripts/rotate-broker-secret.script.ts",
     "migrate:relay-overrides": "tsx src/scripts/migrate-relay-overrides.script.ts",
     "migrate:farm-technician": "tsx src/scripts/migrate-farm-technician.script.ts",
+    "migrate:harvest-confirmed": "tsx src/scripts/migrate-harvest-confirmed.script.ts",
     "db:script": "tsx src/scripts/export-db-script.script.ts",
     "build": "tsc",
     "build:check": "tsc --noEmit",
