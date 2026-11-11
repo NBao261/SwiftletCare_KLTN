@@ -317,10 +317,12 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-08 — Phiên bản cấu hình (P1) — Bảo
 
-- [ ] `zones.config_version` tăng mỗi lần đổi ngưỡng, hệ số hoặc tham số phát hiện; `config` retained mang version; heartbeat báo `applied_config_version`; job `configSync` publish lại khi còn version cũ, quá 3 heartbeat lúc online thì `CONFIG_MISMATCH`; firmware cũ không báo version thì `UNKNOWN`.
-- [ ] Trạng thái theo SM-12 mới (SRS 4.2.1 §6.12, BM02 ST-03): controller mới đăng ký bắt đầu ở `PENDING` (FARM-FR-012), không phải `APPLIED`; `UNKNOWN` về `APPLIED` khi heartbeat báo đúng version hiện tại, về `PENDING` khi báo version cũ.
-- [ ] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN).
-- [ ] Test TC-ST-28…32 (5 case config sync, Report 5); jest phủ thêm `(new) → PENDING` và lối ra của `UNKNOWN` (không thêm case vào 170).
+*(Bảo, 12/11/2026, nhánh `feat/g08-config-version`, PR #150: backend + firmware 2.1.0; backend 673/673 test, `pio test -e native` 76/76, `esp32dev` và `esp32prod` build được; **chưa thử trên board**, danh sách kiểm tra 2.1.0 ở `firmware/README.md`. Phiên bản là giây Unix luôn lớn hơn bản trước của Zone, để controller dời sang Zone khác không bị coi là đã áp vì trùng số; heartbeat gửi `appliedConfigVersion` như các trường heartbeat khác, SDD 2.2.2 ghi theo. Màn hiện trạng thái đồng bộ là việc của G-09 (Nhi, Len).)*
+
+- [x] `zones.config_version` tăng mỗi lần đổi ngưỡng, hệ số hoặc tham số phát hiện; `config` retained mang version; heartbeat báo `applied_config_version`; job `configSync` publish lại khi còn version cũ, quá 3 heartbeat lúc online thì `CONFIG_MISMATCH`; firmware cũ không báo version thì `UNKNOWN`.
+- [x] Trạng thái theo SM-12 mới (SRS 4.2.1 §6.12, BM02 ST-03): controller mới đăng ký bắt đầu ở `PENDING` (FARM-FR-012), không phải `APPLIED`; `UNKNOWN` về `APPLIED` khi heartbeat báo đúng version hiện tại, về `PENDING` khi báo version cũ.
+- [x] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN). *(`config_sync`, `applied_config_version` trong `GET /devices/sensor-nodes`, `config_version` trong Zone)*
+- [x] Test TC-ST-28…32 (5 case config sync, Report 5); jest phủ thêm `(new) → PENDING` và lối ra của `UNKNOWN` (không thêm case vào 170).
 
 ### G-09 — Màn SF-01 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
 
@@ -329,7 +331,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
 - [ ] Mobile (Len): quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình. *(Len, 11/11, nhánh `feat/g20-farm-technician`: quét mã tầng `swiftletcare://zone?z=` trước hay sau nhãn đều được, hoặc chọn khu vực từ danh sách (FARM-FR-007), mã tầng ngoài farm bị chặn; đăng ký xong hiện hướng dẫn cài Wi-Fi theo firmware (mạng `SwiftletCare-Setup-<mã thiết bị>`, 192.168.4.1, chỉ hỏi Wi-Fi) và tiến trình Đã đăng ký → Đã kết nối, quá 15 phút nhắc kiểm tra Wi-Fi (BR-27). Còn chờ: bước APPLIED hiện "Sắp có" tới khi G-08 trả phiên bản cấu hình (ENV-FR-027))*
 - [ ] Web: `/onboarding` cho Farm Owner + Technician.
-- [ ] **Bảo — firmware:** bỏ ô địa chỉ broker khỏi trang AP-mode của bản production (`esp32prod`); broker là tên miền nạp lúc flash cùng credential, bản dev vẫn tìm broker qua mDNS (FARM-FR-003c, BR-27, BM02 S-03; hạn 02/12/2026).
+- [x] **Bảo — firmware:** bỏ ô địa chỉ broker khỏi trang AP-mode của bản production (`esp32prod`); broker là tên miền nạp lúc flash cùng credential, bản dev vẫn tìm broker qua mDNS (FARM-FR-003c, BR-27, BM02 S-03; hạn 02/12/2026). *(firmware 2.1.0, PR #150: bản production chỉ hỏi Wi-Fi, bỏ qua `mqttBroker` gửi lên, không dùng mDNS hay địa chỉ đã lưu)*
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend; Kiệt làm thay theo phân công của Bảo, PR #140), Len (mobile, đo NFR-02)
 

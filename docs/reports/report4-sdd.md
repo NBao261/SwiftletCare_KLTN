@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.1 (Review 2, final scope) |
-| Date | 10/11/2026 |
+| Document version | 2.2.2 (Review 2, final scope) |
+| Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -577,6 +577,7 @@ erDiagram
     date last_heartbeat
     string last_reset_reason
     number applied_config_version
+    string config_sync "PENDING | APPLIED | MISMATCH | UNKNOWN"
     object actuator_baseline "learned normal current per load"
     object run_hours "pump, fan since last service"
     object switch_counts "pump, fan since last service"
@@ -1016,7 +1017,7 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | --- | --- | --- | --- |
 | `telemetry` | controller → cloud | `deviceId`, six readings, stale sensors, `control_output`, `pump_current_a`, `fan_current_a`, timestamp | 0 |
 | `telemetry/buffered` | controller → cloud | Samples from the offline buffer, each with its own timestamp; deleted from flash on PUBACK | 1 |
-| `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `applied_config_version` | 0 |
+| `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0) | 0 |
 | `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected | 0 |
 | `relay/status` | controller → cloud | `deviceId`, per relay: state, mode, expiry; `commandId` of the command that caused the change, if any | 1 |
 | `alert` | controller → cloud | `deviceId`, `eventId`, type, severity, details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
@@ -1861,6 +1862,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.2 | 12/11/2026 | Configuration sync as built (G-08): the heartbeat field is named `appliedConfigVersion`, like the other heartbeat fields; the ERD stores `config_sync` (Report 3 §6.12) on the controller |
 | 2.2.1 | 10/11/2026 | BM02 items due 11/11/2026: SMTP e-mail provider in the Section 2.1 diagram (A-03); mobile versions and Jest from `mobile/package.json` in Section 3.2 (A-06); mDNS broker discovery named as a development aid in Section 3.4 (A-01); services and the `deletionRequestReminder` job of the code listed in Section 5.3 (A-07); every transition of Section 8 names its requirement (ST-06); SM-06 restore within 24 h (ST-01), SM-08 "not evaluated" (ST-07), SM-12 starts at `PENDING` and leaves `UNKNOWN` (ST-03), following SRS 4.2.1; the `alertEscalation` job runs every minute as in DF-13 and the operations modules |
 | 2.2.0 | 09/11/2026 | AD-04: every inferred alert of a house with a technician is checked on site first, a faulty sensor opens a Work Order; AD-06: the Farm Technician (daily) and the Farm Owner (on site) rate, the Domain Expert reviews the disagreeing days and adjusts the levels (SRS 4.2.0) |
 | 2.1.0 | 09/11/2026 | Eight main flows (SRS 4.1.0): AD-09 is the diagram of supporting flow SF-06 (harvest recording and season summary); AD-04 adds the on-site check by the Farm Technician (EXPERT-FR-021, `onsite_checks` in `ALERT`); AD-07 without the Domain Expert lane; the weather lane of AD-01 takes its rules from MF-05 |
