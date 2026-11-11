@@ -446,9 +446,9 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-20 — Farm Technician thay vai Technician cũ (P1, phạm vi cuối 09/11/2026) — Kiệt (backend), Tuấn (console thiết bị của Admin), Len (đăng nhập technician trên mobile), Nhi (màn gán nhà)
 
-- [ ] Đổi `TECHNICIAN` (mọi farm, lệnh từ xa) thành `FARM_TECHNICIAN`: thành viên farm, chỉ thao tác trên nhà được gán (AUTH-FR-004, 005, 013); enum đổi ở cả backend, web, mobile, `migrate:*` cho dữ liệu cũ. *Backend xong (spec a6fbf9c, code f9d9522, Kiệt làm thay Bảo): enum, quyền theo nhà, `migrate:farm-technician` (tài khoản cũ chưa vào farm nào); còn enum và màn hình web, mobile.*
-- [ ] Lệnh từ xa và OTA chuyển sang console thiết bị của Administrator (FARM-FR-009, 013); Farm Owner và technician của nhà được RESTART. *Backend xong (f9d9522): Admin mọi lệnh ở mọi farm, Farm Owner và thợ chỉ RESTART (lệnh khác 403), lệnh của Admin/thợ báo Farm Owner; còn console của Tuấn.*
-- [ ] Gán technician vào nhà; lịch trực (AUTH-FR-014, O — làm sau cùng). *Gán xong ở backend (f9d9522): `PUT/DELETE /farms/houses/:houseId/technicians/:userId`, 1 thợ chính mỗi nhà; còn màn gán của Nhi và lịch trực.*
+- [ ] Đổi `TECHNICIAN` (mọi farm, lệnh từ xa) thành `FARM_TECHNICIAN`: thành viên farm, chỉ thao tác trên nhà được gán (AUTH-FR-004, 005, 013); enum đổi ở cả backend, web, mobile, `migrate:*` cho dữ liệu cũ. *Backend xong (spec a6fbf9c, code f9d9522, Kiệt làm thay Bảo): enum, quyền theo nhà, `migrate:farm-technician` (tài khoản cũ chưa vào farm nào); web xong (`f9364593` + `a527ace2`, `4621428f` — Tuấn, Nhi); còn enum và màn hình mobile của Len.*
+- [x] Lệnh từ xa và OTA chuyển sang console thiết bị của Administrator (FARM-FR-009, 013); Farm Owner và technician của nhà được RESTART. *Backend xong (f9d9522): Admin mọi lệnh ở mọi farm, Farm Owner và thợ chỉ RESTART (lệnh khác 403), lệnh của Admin/thợ báo Farm Owner; console thiết bị của Admin trên web xong (Tuấn, 10/11, `f9364593` + `a527ace2`, cùng `4621428f`: `/devices`, `/alerts`, `/ota` ở `AdminLayout`, `PUSH_CONFIG` và `/ota` chỉ `ADMIN`, `AudioTracksModal` chuyển sang `FARM_OWNER`, bỏ tạo tài khoản Technician ở Admin).*
+- [ ] Gán technician vào nhà; lịch trực (AUTH-FR-014, O — làm sau cùng). *Gán xong ở backend (f9d9522): `PUT/DELETE /farms/houses/:houseId/technicians/:userId`, 1 thợ chính mỗi nhà; màn gán trên web xong (Nhi, 11/11, `b1b0eb3f`); còn lịch trực.*
 
 ### G-21 — Định tuyến, leo thang, Work Order (P0-Demo cho WF-02) — Kiệt (backend), Len (mobile technician), Nhi (duyệt trên web)
 
