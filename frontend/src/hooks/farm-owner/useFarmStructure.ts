@@ -114,7 +114,7 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
     () => buildFarmStructure({
       farms: farms ?? [], housesByFarm, zonesByHouse,
       sensors: sensorsQ.data ?? [], cameras: camerasQ.data ?? [],
-      alerts: alertsQ.data?.items ?? [], harvests: harvestsQ.data ?? [], metricsByZone,
+      alerts: alertsQ.data?.items ?? [], harvests: (harvestsQ.data ?? []).filter(batch => batch.status !== 'DRAFT'), metricsByZone,
     }),
     [farms, housesByFarm, zonesByHouse, sensorsQ.data, camerasQ.data, alertsQ.data, harvestsQ.data, metricsByZone],
   )
