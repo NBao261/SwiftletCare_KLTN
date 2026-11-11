@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { EMPTY_FARM_PREFS, useFarmPrefsStore } from '@/stores/farmPrefsStore'
+import { EMPTY_FARM_PREFS, migrateFarmPrefs, useFarmPrefsStore } from '@/stores/farmPrefsStore'
 
 // Kho file cần module native: trong test thay bằng kho trong bộ nhớ
 jest.mock('@/services/storage/preferenceStorage', () => {
@@ -47,5 +47,33 @@ describe('farmPrefsStore', () => {
     markAutoOpened('farm-1')
     markAutoOpened('farm-1')
     expect(useFarmPrefsStore.getState().autoOpenedFarmIds).toEqual(['farm-1'])
+  })
+})
+
+describe('migrateFarmPrefs', () => {
+  it('bản 2 → 3: giữ mọi lựa chọn, bộ lọc Cảnh báo chưa có farmId thì nhà/tầng về "tất cả"', () => {
+    const migrated = migrateFarmPrefs(
+      {
+        byUserId: {
+          'user-1': {
+            ...EMPTY_FARM_PREFS,
+            pinnedHouseIds: ['house-1'],
+            alerts: { houseId: 'house-1', zoneId: 'zone-1', severity: 'P1' },
+          },
+        },
+      },
+      2,
+    )
+    const prefs = migrated.byUserId['user-1']
+    expect(prefs?.pinnedHouseIds).toEqual(['house-1'])
+    expect(prefs?.alerts).toEqual({ houseId: null, zoneId: null, severity: 'P1' })
+  })
+
+  it('đã có farmId thì giữ nguyên; bản cũ hơn 2 thì bỏ hết', () => {
+    const alerts = { farmId: 'farm-1', houseId: 'house-1', zoneId: null }
+    expect(migrateFarmPrefs({ byUserId: { 'user-1': { ...EMPTY_FARM_PREFS, alerts } } }, 2).byUserId['user-1']?.alerts).toEqual(
+      alerts,
+    )
+    expect(migrateFarmPrefs({ byUserId: { 'user-1': EMPTY_FARM_PREFS } }, 1)).toEqual({ byUserId: {} })
   })
 })

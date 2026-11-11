@@ -16,12 +16,14 @@ const getPasswordRule = () => t('Tối thiểu {count} ký tự', { count: PASSW
 interface ChangePasswordFormProps {
   // Nhãn ô mật khẩu đang dùng: "Mật khẩu tạm" ở lần đăng nhập đầu, "Mật khẩu hiện tại" ở tab Tài khoản
   currentPasswordLabel: string
+  // Lần đăng nhập đầu với mật khẩu tạm: câu báo lỗi nói "mật khẩu tạm" thay vì "mật khẩu hiện tại"
+  isTemporary?: boolean
   onSuccess: () => void
 }
 
 // Form đổi mật khẩu khi đang đăng nhập (PUT /auth/password, AUTH-FR-005c) — dùng chung cho màn mật khẩu tạm
 // ((auth)/reset-password) và tab Tài khoản (profile/change-password), theo MOBILE_GUIDE §2.2
-export function ChangePasswordForm({ currentPasswordLabel, onSuccess }: ChangePasswordFormProps) {
+export function ChangePasswordForm({ currentPasswordLabel, isTemporary = false, onSuccess }: ChangePasswordFormProps) {
   const changePassword = useChangePassword()
   const newPasswordRef = useRef<TextInputInstance>(null)
   const confirmPasswordRef = useRef<TextInputInstance>(null)
@@ -69,7 +71,7 @@ export function ChangePasswordForm({ currentPasswordLabel, onSuccess }: ChangePa
         onSuccess,
         onError: error => {
           const errorCode = readApiError(error).code
-          const message = getAuthErrorMessage(error, 'change-password')
+          const message = getAuthErrorMessage(error, isTemporary ? 'change-temporary-password' : 'change-password')
           if (errorCode === 'INVALID_CURRENT_PASSWORD') setFieldErrors({ current: message })
           else if (errorCode === 'PASSWORD_UNCHANGED') setFieldErrors({ new: message })
           else setFormError(message)

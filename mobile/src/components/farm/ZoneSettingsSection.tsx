@@ -6,6 +6,7 @@ import { CollapsibleSection } from '@/components/farm/CollapsibleSection'
 import { IconButton } from '@/components/ui/icon-button'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Spacing } from '@/constants/theme'
+import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { DetectionTuning, FuzzyTuning, House, Zone } from '@/types'
@@ -99,6 +100,8 @@ function SettingGroup({ group, onMenu }: { group: SettingGroupData; onMenu: () =
 export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSettingsSectionProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
+  // BR-22: farm chưa có chuyên gia thì chủ trại sửa thay tham số phát hiện, mức giảm tỷ lệ về tổ
+  const hasExpert = useFarmHasExpert(house.farm_id)
   const [menuGroup, setMenuGroup] = useState<SettingGroupData | null>(null)
 
   const groups: SettingGroupData[] = [
@@ -138,7 +141,7 @@ export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSetting
   ]
 
   const getMenuActions = (group: SettingGroupData): MenuAction[] => {
-    const canEdit = canPerform(user, SETTINGS_SECTION_EDIT_ACTION[group.kind])
+    const canEdit = canPerform(user, SETTINGS_SECTION_EDIT_ACTION[group.kind], { farmHasExpert: hasExpert })
     if (canEdit) {
       return [
         {

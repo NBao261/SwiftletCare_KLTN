@@ -66,7 +66,7 @@ function openStatusTarget({ house, status }: HouseCardData) {
     router.navigate({ pathname: '/(tabs)/alerts', params: { houseId: house._id } })
     return
   }
-  // Nhà chưa có thiết bị: mở Cài đặt nhà, nơi thêm camera và controller bằng nhãn QR hoặc nhập tay (MF-10)
+  // Nhà chưa có thiết bị: mở Cài đặt nhà, nơi thêm camera và controller bằng nhãn QR hoặc nhập tay (SF-01)
   if (target.screen === 'add-device') {
     router.navigate({ pathname: '/(tabs)/farms/[houseId]/settings', params: { houseId: house._id } })
     return

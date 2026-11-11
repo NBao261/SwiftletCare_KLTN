@@ -1,5 +1,6 @@
 import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
+import { useFarms } from '@/hooks/farm/useFarms'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import type { Alert } from '@/types'
 
@@ -7,6 +8,7 @@ export interface AlertLocation {
   // Nhà của cảnh báo: cảnh báo mức nhà mang house_id, cảnh báo tầng tra qua tầng
   houseId: string | null
   houseName: string | null
+  farmName: string | null
   zoneName: string | null
   deviceName: string | null
   // "Nhà A › Tầng 2 · node_001"; thiếu phần nào thì bỏ phần đó, không có gì thì "_"
@@ -17,6 +19,8 @@ export interface AlertLocation {
 // node_id của cảnh báo là id bản ghi thiết bị nên đổi ra device_id để hiện
 export function useAlertLocations() {
   const directory = useZoneDirectory()
+  const farmsQuery = useFarms()
+  const farmNameById = new Map((farmsQuery.data?.data ?? []).map(farm => [farm._id, farm.name]))
   const sensorNodesQuery = useSensorNodes()
   const cameraNodesQuery = useCameraNodes()
   const deviceById = new Map<string, string>([
@@ -27,12 +31,14 @@ export function useAlertLocations() {
   const locate = (alert: Alert): AlertLocation => {
     const zone = alert.zone_id ? directory.zoneById.get(alert.zone_id) : undefined
     const houseId = alert.house_id ?? zone?.house_id ?? null
-    const houseName = houseId ? (directory.houseById.get(houseId)?.name ?? null) : null
+    const house = houseId ? directory.houseById.get(houseId) : undefined
+    const houseName = house?.name ?? null
+    const farmName = farmNameById.get(alert.farm_id) ?? null
     const zoneName = zone?.name ?? null
     const deviceName = alert.node_id ? (deviceById.get(alert.node_id) ?? null) : null
     const place = [houseName, zoneName].filter(Boolean).join(' › ')
     const text = [place, deviceName].filter(Boolean).join(' · ') || '_'
-    return { houseId, houseName, zoneName, deviceName, text }
+    return { houseId, houseName, farmName, zoneName, deviceName, text }
   }
 
   return { locate, zoneById: directory.zoneById }

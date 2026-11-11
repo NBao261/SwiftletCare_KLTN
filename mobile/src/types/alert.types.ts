@@ -1,5 +1,5 @@
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (EXPERT-FR-003) — backend chưa ghi giá trị này (Known debt)
+// DISMISSED: cảnh báo suy luận bị bác bỏ (EXPERT-FR-003), không còn hiệu lực; đổi kết luận sang CONFIRMED thì về previous_status
 export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'
 
 // Khớp backend/src/types/domain.types.ts (SRS 3.1.0)
@@ -23,10 +23,12 @@ export type AlertType =
 // Phán quyết của chuyên gia cho cảnh báo suy luận (EXPERT-FR-003); by là id người phán quyết
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 
+// Người kết luận: backend populate { _id, full_name } (api-spec Alert.expert_verdict); kết luận trước G-03 không có role
 export interface AlertVerdict {
   result: AlertVerdictResult
-  note?: string
-  by: string
+  note?: string | null
+  by: { _id: string; full_name?: string } | null
+  role?: 'DOMAIN_EXPERT' | 'FARM_OWNER'
   at: string
 }
 
@@ -57,4 +59,43 @@ export interface Alert {
   renotified_at?: string
   // Không có là chưa phán quyết
   expert_verdict?: AlertVerdict
+}
+
+// Bằng chứng của cảnh báo suy luận (ALERT-FR-014, GET /alerts/{id}/evidence, api-spec AlertEvidence). Mỗi nguồn có
+// status ok | missing — missing là không có dữ liệu trong cửa sổ, không phải 0
+export type EvidenceSourceStatus = 'ok' | 'missing'
+
+export interface EvidenceTelemetrySample {
+  timestamp: string
+  temperature?: number | null
+  humidity?: number | null
+  nh3_ppm?: number | null
+  co2_ppm?: number | null
+  sound_db?: number | null
+}
+
+export interface AlertEvidence {
+  alert_id: string
+  type: AlertType
+  window: { from: string; to: string }
+  // Loại theo zone: mẫu số đo của zone, số đếm 5 phút của nhà chứa zone
+  telemetry?: { status: EvidenceSourceStatus; samples: EvidenceTelemetrySample[] } | null
+  bird_counts?: {
+    status: EvidenceSourceStatus
+    buckets: { bucket_start: string; entry_count: number; exit_count: number }[]
+  } | null
+  // LOW_RETURN_RATE: % thời gian trong ngưỡng của từng zone trong ngày, tiếng ồn lạ của nhà trong ngày
+  zones_in_range?:
+    | {
+        zone_id: string
+        name: string
+        status: EvidenceSourceStatus
+        temp_in_range_pct: number | null
+        humidity_in_range_pct: number | null
+      }[]
+    | null
+  noise_alerts?: Alert[] | null
+  device_alerts: Alert[]
+  // Tối đa 10 cảnh báo trước cùng loại, cùng zone/nhà, đã có kết luận (EXPERT-FR-003)
+  earlier_verdicts: Alert[]
 }

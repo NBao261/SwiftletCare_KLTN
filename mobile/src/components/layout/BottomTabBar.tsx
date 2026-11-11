@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { useSegments } from 'expo-router'
-import { useSyncAlertBadge } from '@/hooks/alert/useSyncAlertBadge'
 import type { BottomTabBarProps as NavigatorTabBarProps } from 'expo-router/tabs'
 import Svg, { Defs, FeGaussianBlur, FeOffset, Filter, Path } from 'react-native-svg'
 import { Text } from '@/components/ui/text'
@@ -59,9 +58,9 @@ interface BottomTabBarProps extends NavigatorTabBarProps {
   unreadCount: number
 }
 
-// Màn chi tiết bên trong một tab không hiện thanh tab, để nội dung chiếm cả màn: chi tiết nhà yến, cài đặt nhà,
-// cài đặt farm và tạo farm (tab Trang trại)
-const ROUTES_WITHOUT_TAB_BAR = new Set(['[houseId]', 'settings', 'farm-settings', 'farm-create'])
+// Màn không hiện thanh tab để nội dung chiếm cả màn — chỉ chi tiết nhà yến và Cài đặt nhà (yêu cầu của Len, chủ phần
+// mobile Farm Owner, 2026-11-03). So cả đường dẫn để màn cùng tên ở tab khác vẫn giữ thanh tab
+const ROUTES_WITHOUT_TAB_BAR = new Set(['(tabs)/farms/[houseId]', '(tabs)/farms/[houseId]/settings'])
 
 // Route "alerts/index" của expo-router ứng với tab name "alerts"
 function findTab(tabs: readonly RoleTab[], routeName: string): RoleTab | undefined {
@@ -106,17 +105,15 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
   // Tên tab dịch theo ngôn ngữ đang chọn
   const language = useLanguage()
   const { width } = useWindowDimensions()
-  // Đoạn cuối đường dẫn màn đang mở, ví dụ (tabs)/farms/[houseId] → "[houseId]"
-  const segments = useSegments()
-  // Số trên badge tab Cảnh báo (chỉ role có badge)
-  useSyncAlertBadge(tabs.some(tab => tab.showsAlertBadge))
+  // Đường dẫn màn đang mở (useSegments không có đoạn "index"), ví dụ "(tabs)/farms/[houseId]"
+  const routePath = useSegments().join('/')
   const height = EDGE_TOP + BAR_HEIGHT + insets.bottom
   const itemWidth = width / state.routes.length
   const featuredIndex = state.routes.findIndex(route => findTab(tabs, route.name)?.isFeatured)
   const edgePath = buildEdgePath(width, featuredIndex < 0 ? null : itemWidth * (featuredIndex + 0.5))
   const fillPath = `${edgePath} L ${width} ${height} L 0 ${height} Z`
 
-  if (ROUTES_WITHOUT_TAB_BAR.has(segments[segments.length - 1] ?? '')) return null
+  if (ROUTES_WITHOUT_TAB_BAR.has(routePath)) return null
 
   return (
     // Kéo lên phủ đáy màn để nút nổi đè lên nội dung; vùng trong suốt cho chạm xuyên qua

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { invalidateAlertQueries } from '@/config/queryClient'
 import { alertApi } from '@/services/api/alert.api'
 import type { AlertVerdictResult } from '@/types'
 
@@ -15,6 +16,6 @@ export function useSetAlertVerdict() {
   return useMutation({
     mutationFn: ({ alertId, result, note }: SetAlertVerdictInput) =>
       alertApi.setVerdict(alertId, result, note).then(response => response.data.data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alerts'] }),
+    onSuccess: () => invalidateAlertQueries(queryClient),
   })
 }

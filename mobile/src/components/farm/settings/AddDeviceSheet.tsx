@@ -28,7 +28,7 @@ interface AddDeviceSheetProps {
   onRegistered: (message: string) => void
 }
 
-// Đăng ký thiết bị bằng nhãn (MF-10): quét QR trên nhãn hoặc gõ tay mã thiết bị và mã kích hoạt, xem lại rồi gửi.
+// Đăng ký thiết bị bằng nhãn (SF-01): quét QR trên nhãn hoặc gõ tay mã thiết bị và mã kích hoạt, xem lại rồi gửi.
 // Mã kích hoạt chỉ nằm trong ô nhập và đi một lần tới API — không lưu, không ghi log (FARM-FR-010)
 export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheetProps) {
   const palette = usePalette()
