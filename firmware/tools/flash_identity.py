@@ -42,8 +42,9 @@ def main() -> None:
             "identity,namespace,,\n"
             f"device_id,data,string,{args.device_id}\n"
             f"broker_secret,data,string,{args.broker_secret}\n"
-            # StorageManager đọc broker ở namespace `swiftlet`, khoá `mqttBroker`
-            + (f"swiftlet,namespace,,\nmqttBroker,data,string,{args.broker}\n" if args.broker else ""),
+            # StorageManager::loadFlashedBroker đọc khoá `broker` cùng namespace `identity`: trang AP-mode
+            # (namespace `swiftlet`) không ghi đè được, và bản production cũng dùng nó
+            + (f"broker,data,string,{args.broker}\n" if args.broker else ""),
             encoding="utf-8",
         )
         run("esp_idf_nvs_partition_gen", "generate", str(csv_path), str(bin_path), NVS_SIZE)

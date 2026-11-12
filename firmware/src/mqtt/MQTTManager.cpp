@@ -390,9 +390,12 @@ void begin() {
   // không ai cần biết/nhập IP thủ công. Chỉ khi mDNS thất bại (mạng chặn
   // multicast, hoặc chưa chạy `npm run mdns` trên máy host) mới rơi về IP đã
   // lưu qua captive portal, cuối cùng mới về mặc định Secrets.h.
+  // FARM-FR-003c — broker nạp lúc flash (`flash_identity.py --broker`) thay mặc định biên dịch trong Secrets.h
+  String flashedBroker;
+  if (StorageManager::loadFlashedBroker(flashedBroker)) Config::mqttBroker = flashedBroker;
 #ifdef SWIFTLETCARE_PRODUCTION_BUILD
-  // FARM-FR-003c, BR-27 — bản production chỉ dùng tên miền broker nạp lúc flash (Secrets.h): không
-  // mDNS, không địa chỉ nhập ở AP-mode, để thiết bị không thể bị trỏ sang broker khác tại nhà yến.
+  // FARM-FR-003c, BR-27 — bản production chỉ dùng broker nạp lúc flash (NVS `identity`, không có thì Secrets.h):
+  // không mDNS, không địa chỉ nhập ở AP-mode, để thiết bị không thể bị trỏ sang broker khác tại nhà yến.
   Serial.println("[MQTT] Broker nạp lúc flash: " + Config::mqttBroker);
 #else
   if (!resolveBrokerViaMdns()) {

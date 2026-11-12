@@ -14,11 +14,6 @@
 > - bật relay ngay sau khi khởi động, trước khi có giờ NTP: lệnh vẫn áp (Report 3 §8.1);
 > - board còn chạy 1.5.0 vẫn điều khiển tay được với backend mới (hết hạn hoặc huỷ 1 relay thì cả 3 relay về tự động như trước).
 >
-> **2.0.1 (trang AP-mode chỉ Wi-Fi, FARM-FR-003c, BM02 S-03, G-09) — chưa thử trên board.** Đã làm 12/11/2026 (`b3bc4b8`): `pio run -e esp32dev` và `pio run -e esp32prod` build được; `pio test -e native` chưa chạy trên máy này (thiếu g++), CI chạy. Còn phải thử trên board:
-> - nạp bản `esp32prod` + `flash_identity.py --broker <tên miền>`: trang AP chỉ có tên và mật khẩu Wi-Fi; lưu xong trình duyệt hiện trang "Đã lưu" rồi thiết bị khởi động lại và nối đúng broker đã nạp;
-> - bản `esp32prod` không hỏi mDNS (log không có dòng "mDNS tìm được broker"); bản `esp32dev` vẫn tìm được broker trên laptop qua `npm run mdns` và vẫn có ô broker;
-> - mạng Wi-Fi không tới được broker: trang AP mở lại để đổi Wi-Fi.
->
 > **2.0.0 (MQTT theo thiết bị, G-07, Report 4 D3, §7.2) — chưa thử trên board.** Đã làm 08/11/2026: `pio run -e esp32dev` và `pio run -e esp32prod` build được (`espressif32@6.9.0`); test native chạy ở CI (gồm `test_alert_queue`, `test_command_filter`, `test_remote_command`); backend với EMQX thật trong Docker: mỗi thiết bị chỉ vào được cây topic của mình 8/8 (`npm run mqtt:isolation`, NFR-10 d), chạy thử đầu cuối 9/9 bằng client giả lập. Còn phải thử trên board (2 controller + AI node, trước khi lên staging):
 > - nạp device ID + broker secret bằng `tools/flash_identity.py` rồi khởi động: thiết bị nối EMQX bằng tài khoản riêng, backend chuyển `ONLINE` và thiết bị nhận cấu hình retained của tầng;
 > - bản `esp32prod`: TLS bắt tay với CA ISRG Root X1 ở cổng 8883 thành công, `mqttTask` không tràn stack; sai mật khẩu hoặc thiết bị đã thu hồi thì EMQX từ chối;
@@ -34,6 +29,8 @@
 > - sửa ngưỡng trên web: thiết bị nhận `config` có `config_version` mới, heartbeat kế tiếp báo `appliedConfigVersion` bằng số đó, màn hình hiện "đã áp" (`config_sync` = `APPLIED`);
 > - khởi động lại thiết bị: heartbeat đầu tiên vẫn báo đúng phiên bản (đọc lại từ NVS, khoá `cfgVersion`);
 > - bản `esp32prod`: trang AP-mode chỉ có Wi-Fi; gửi tay `mqttBroker` vào `/save` cũng không đổi broker;
+> - nạp bản `esp32prod` + `flash_identity.py --broker <tên miền>` (G-09): thiết bị nối đúng broker đã nạp (NVS `identity`, khoá `broker`), log không có dòng mDNS; không nạp `--broker` thì dùng tên miền trong `Secrets.h`; lưu Wi-Fi xong trang "Đã lưu" hiện rồi thiết bị khởi động lại;
+> - bản `esp32dev` vẫn tìm được broker trên laptop qua `npm run mdns` và vẫn có ô broker; mạng Wi-Fi không tới được broker thì trang AP mở lại để đổi Wi-Fi;
 > - board còn chạy 2.0.0 với backend mới: hiện `UNKNOWN`, không có cảnh báo `CONFIG_MISMATCH`.
 
 PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `docs/hardware/components-guide.md`. Việc lắp đặt và thử ngoài thực địa: `docs/reports/todo-review2.md` mục 3.
