@@ -49,6 +49,13 @@ function RedirectToReviews() {
   return <Navigate to={`/domain-expert/reviews${location.search}`} replace />;
 }
 
+function RedirectToDisagreements() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set('tab', 'disagreements');
+  return <Navigate to={`/domain-expert/reports?${params.toString()}`} replace />;
+}
+
 /**
  * Shell bọc toàn bộ trang domain-expert — tương tự ExpertPageShell cũ nhưng
  * import component từ đúng bucket domain-expert/.
@@ -89,8 +96,9 @@ export const domainExpertRoutes = (
       {/* Duyệt tham số & Đề xuất hệ số mờ (G-04) */}
       <Route path="reviews" element={<DomainExpertReviewsPage />} />
 
-      {/* Báo cáo sức khỏe & Kết luận */}
+      {/* Báo cáo sức khỏe & Kết luận + Xem ngày đánh giá lệch (EXPERT-FR-022) */}
       <Route path="reports" element={<DomainExpertReportsPage />} />
+      <Route path="disagreements" element={<RedirectToDisagreements />} />
 
       {/* Lịch sử hoạt động */}
       <Route path="history" element={<DomainExpertHistoryPage />} />
@@ -104,6 +112,7 @@ export const domainExpertRoutes = (
     <Route path="expert/audit-logs" element={<RedirectToVerdicts />} />
     <Route path="expert/alerts" element={<RedirectToVerdicts />} />
     <Route path="expert/reports" element={<RedirectToReports />} />
+    <Route path="expert/disagreements" element={<RedirectToDisagreements />} />
     <Route path="expert/tuning" element={<RedirectToTuning />} />
     <Route path="expert/reviews" element={<RedirectToReviews />} />
     <Route path="expert/dashboard" element={<Navigate to="/domain-expert/queue" replace />} />
