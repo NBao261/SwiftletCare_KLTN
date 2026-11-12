@@ -144,55 +144,61 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
 
       {/* Mỗi ngày 1 dòng 3 phần (hệ thống | lý do | đánh giá của người); thẻ hẹp thì xuống dòng và ẩn hàng tiêu đề */}
       <Part title={t('rd.days')}>
-        <div className={cn(DAY_ROW, 'hidden border-b border-warmGray/30 pb-2 text-xs font-semibold text-warmGray md:flex')}>
-          <span className={DAY_MAIN}>{t('rd.colDayStatus')}</span>
-          <span className={DAY_REASONS}>{t('detail.reasons')}</span>
-          <span className={DAY_RATINGS}>{t('rd.colRatings')}</span>
-        </div>
-        <ol className="flex flex-col">
-          {dayRows.map(row => (
-            <li key={row.date} className="flex flex-col gap-2 border-b border-warmGray/15 py-3 text-sm last:border-b-0">
-              <div className={DAY_ROW}>
-                {/* Cùng bố cục cột đánh giá: hàng 1 "Hệ thống" + trạng thái ngay cạnh; hàng 2 lúc tính; hàng 3 tỷ lệ chim về */}
-                <div className={cn(DAY_MAIN, 'flex flex-col gap-0.5')}>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-charcoal">{t('rd.system')}</span>
-                    {row.status
-                      ? <HealthStatusBadge status={row.status} className="shrink-0 whitespace-nowrap" />
-                      : <span className="shrink-0 text-xs italic text-warmGray">{row.statusText}</span>}
-                  </div>
-                  <span className="text-xs text-warmGray">{t('rd.computedAt', { time: dateTime(row.computedAt) })}</span>
-                  <span className="text-xs font-semibold text-charcoal">
-                    {t('rd.returnRate')} {row.returnRate}
-                  </span>
-                </div>
-                <div className={DAY_REASONS}>
-                  {row.reasons.length > 0 ? (
-                    <ul className="flex list-disc flex-col gap-1 pl-4 text-charcoal" aria-label={t('detail.reasons')}>
-                      {row.reasons.map((reason, index) => <li key={index}>{reason}</li>)}
-                    </ul>
-                  ) : <span className="text-warmGray">{NO_VALUE}</span>}
-                </div>
-                {/* Người · vai trò · lúc đánh giá (cùng ngày chỉ giờ phút), badge mức họ chọn (bỏ qua: chữ xám), ghi chú dòng dưới */}
-                <div className={cn(DAY_RATINGS, 'flex flex-col gap-2')} aria-label={t('detail.ratings')}>
-                  {row.ratingItems.length > 0 ? row.ratingItems.map((item, index) => (
-                    <div key={index} className="flex flex-col gap-0.5">
-                      {/* Hàng 1: tên, mức đánh giá ngay cạnh; hàng 2: vai trò · ngày giờ đánh giá; ghi chú dưới cùng */}
+        {dayRows.length === 0 ? (
+          <p className="text-sm italic text-warmGray">{t('rd.noDays')}</p>
+        ) : (
+          <>
+            <div className={cn(DAY_ROW, 'hidden border-b border-warmGray/30 pb-2 text-xs font-semibold text-warmGray md:flex')}>
+              <span className={DAY_MAIN}>{t('rd.colDayStatus')}</span>
+              <span className={DAY_REASONS}>{t('detail.reasons')}</span>
+              <span className={DAY_RATINGS}>{t('rd.colRatings')}</span>
+            </div>
+            <ol className="flex flex-col">
+              {dayRows.map(row => (
+                <li key={row.date} className="flex flex-col gap-2 border-b border-warmGray/15 py-3 text-sm last:border-b-0">
+                  <div className={DAY_ROW}>
+                    {/* Cùng bố cục cột đánh giá: hàng 1 "Hệ thống" + trạng thái ngay cạnh; hàng 2 lúc tính; hàng 3 tỷ lệ chim về */}
+                    <div className={cn(DAY_MAIN, 'flex flex-col gap-0.5')}>
                       <div className="flex items-center gap-3">
-                        <span title={item.name} className="min-w-0 truncate font-semibold text-charcoal">{item.name}</span>
-                        {item.rating
-                          ? <HealthStatusBadge status={item.rating} className="shrink-0 whitespace-nowrap" />
-                          : <span className="shrink-0 text-xs italic text-warmGray">{t('detail.skipped')}</span>}
+                        <span className="font-semibold text-charcoal">{t('rd.system')}</span>
+                        {row.status
+                          ? <HealthStatusBadge status={row.status} className="shrink-0 whitespace-nowrap" />
+                          : <span className="shrink-0 text-xs italic text-warmGray">{row.statusText}</span>}
                       </div>
-                      <span className="text-xs text-warmGray">{item.role} · {dateTime(item.at)}</span>
-                      {item.note && <p className="text-xs text-graphite">{item.note}</p>}
+                      <span className="text-xs text-warmGray">{t('rd.computedAt', { time: dateTime(row.computedAt) })}</span>
+                      <span className="text-xs font-semibold text-charcoal">
+                        {t('rd.returnRate')} {row.returnRate}
+                      </span>
                     </div>
-                  )) : <span className="text-warmGray">{NO_VALUE}</span>}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
+                    <div className={DAY_REASONS}>
+                      {row.reasons.length > 0 ? (
+                        <ul className="flex list-disc flex-col gap-1 pl-4 text-charcoal" aria-label={t('detail.reasons')}>
+                          {row.reasons.map((reason, index) => <li key={index}>{reason}</li>)}
+                        </ul>
+                      ) : <span className="text-warmGray">{NO_VALUE}</span>}
+                    </div>
+                    {/* Người · vai trò · lúc đánh giá (cùng ngày chỉ giờ phút), badge mức họ chọn (bỏ qua: chữ xám), ghi chú dòng dưới */}
+                    <div className={cn(DAY_RATINGS, 'flex flex-col gap-2')} aria-label={t('detail.ratings')}>
+                      {row.ratingItems.length > 0 ? row.ratingItems.map((item, index) => (
+                        <div key={index} className="flex flex-col gap-0.5">
+                          {/* Hàng 1: tên, mức đánh giá ngay cạnh; hàng 2: vai trò · ngày giờ đánh giá; ghi chú dưới cùng */}
+                          <div className="flex items-center gap-3">
+                            <span title={item.name} className="min-w-0 truncate font-semibold text-charcoal">{item.name}</span>
+                            {item.rating
+                              ? <HealthStatusBadge status={item.rating} className="shrink-0 whitespace-nowrap" />
+                              : <span className="shrink-0 text-xs italic text-warmGray">{t('detail.skipped')}</span>}
+                          </div>
+                          <span className="text-xs text-warmGray">{item.role} · {dateTime(item.at)}</span>
+                          {item.note && <p className="text-xs text-graphite">{item.note}</p>}
+                        </div>
+                      )) : <span className="text-warmGray">{NO_VALUE}</span>}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </Part>
 
       {/* So sánh các Zone: hàng = chỉ số, cột = Zone; nhiều Zone thì cuộn ngang trong khung */}
