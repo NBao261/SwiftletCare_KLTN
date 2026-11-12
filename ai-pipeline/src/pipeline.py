@@ -78,13 +78,14 @@ def track_ids(tracks: sv.Detections):
 LABEL_HEIGHT = 12
 
 
-def label_origin(box: Sequence[int], frame_shape: Tuple[int, ...]) -> Tuple[int, int]:
+def label_origin(box: Sequence[int], frame_shape: Tuple[int, ...], text_width: int = 0) -> Tuple[int, int]:
     """
     Where the "#id" text starts (its baseline). Above the box when there is room; a bird at the top
-    edge gets it below the box, so every tracked bird keeps its id inside the frame (VISION-FR-014).
+    edge gets it below the box, and a bird at the right edge gets it shifted left by the text width,
+    so every tracked bird keeps its whole id inside the frame (VISION-FR-014).
     """
     height, width = frame_shape[0], frame_shape[1]
-    x = min(max(int(box[0]), 0), max(width - 1, 0))
+    x = min(max(int(box[0]), 0), max(width - 1 - text_width, 0))
     y = int(box[1]) - 4 if int(box[1]) - 4 >= LABEL_HEIGHT else int(box[3]) + LABEL_HEIGHT + 2
     return x, min(y, height - 1)
 
@@ -95,7 +96,9 @@ def draw(frame: np.ndarray, tracks: sv.Detections, counter: RingCounter, fps: fl
     cv2.polylines(frame, [counter.polygon.astype(np.int32)], True, YELLOW, 2)
     for box, tid in zip(tracks.xyxy.astype(int), track_ids(tracks)):
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), GREEN, 2)
-        cv2.putText(frame, f"#{tid}", label_origin(box, frame.shape), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
+        label = f"#{tid}"
+        (text_width, _), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        cv2.putText(frame, label, label_origin(box, frame.shape, text_width), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
     text = (f"VAO {counter.entry_count}  RA {counter.exit_count}  ?{counter.ambiguous}  {fps:.0f} FPS"
             f"  {session or 'ngoai phien'}")
     org = (10, frame.shape[0] - 16)

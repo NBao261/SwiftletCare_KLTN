@@ -88,6 +88,13 @@ def test_label_stays_inside_a_frame_edge():
     assert label_origin((620, H - 15, 639, H - 1), (H, W, 3))[1] <= H - 1
 
 
+def test_label_of_a_bird_at_the_right_edge_is_not_cut():
+    # "#1234" is wider than the 8 px between the box and the right edge: it moves left, whole
+    assert label_origin((632, 100, 639, 118), (H, W, 3), text_width=40)[0] == W - 1 - 40
+    img = draw(blank(), tracks([(632, 100, 639, 118)], [1234]), counter(), fps=25)
+    assert has_color(img, GREEN, W - 45, 80, W - 9, 97), "the #id label of a bird at the right edge is cut"
+
+
 class FakeEngine:
     """Stands in for the ONNX model: one detection per bird per frame, moving a few px each frame."""
 
