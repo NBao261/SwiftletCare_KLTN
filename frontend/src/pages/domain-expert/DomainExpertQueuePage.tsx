@@ -32,7 +32,9 @@ import {
   SEVERITY_LABELS,
   SEVERITY_BADGE_CLASS,
 } from '@/hooks/domain-expert/useExpertAlerts'
-import { useHealthReportList } from '@/hooks/domain-expert/useHealthReports'
+import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
+import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements'
+import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
 import { useExpertAiSuggestion } from '@/hooks/domain-expert/useZoneTuning'
 import {
   useParameterReviews,
@@ -76,7 +78,7 @@ function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZone
 
 export default function DomainExpertQueuePage() {
   const navigate = useNavigate()
-  const { selectedFarmId, selectedFarmName, selectedZoneId, selectedZoneName } = useZoneStore()
+  const { selectedFarmId, selectedFarmName, selectedHouseId, selectedZoneId, selectedZoneName } = useZoneStore()
 
   // ── Dữ liệu cảnh báo suy luận AI — đồng bộ 100% với SCADA Banner ───────────
   const { kpiCounts, isLoading: isLoadingAlerts } = useAlertsWithFilters(
@@ -89,10 +91,10 @@ export default function DomainExpertQueuePage() {
     selectedZoneId ?? undefined,
   )
 
-  // ── Dữ liệu báo cáo sức khỏe zone định kỳ ──────────────────────────────────
-  const { data: healthReports = [], isLoading: isLoadingReports } = useHealthReportList(
-    selectedZoneId ?? undefined,
-  )
+  // ── Báo cáo sức khỏe theo nhà: chờ kết luận / đã kết luận (cùng phạm vi tab Báo cáo & Kết luận) ──
+  const {
+    pending: pendingReports, concluded: publishedReports, isLoading: isLoadingReports,
+  } = useHealthReportConclusionCounts(selectedFarmId ?? '', selectedHouseId ?? '')
 
   // ── Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic ───────────────────────
   const { data: aiSuggestion } = useExpertAiSuggestion(selectedZoneId ?? undefined)
@@ -111,6 +113,15 @@ export default function DomainExpertQueuePage() {
 
   const totalPendingReviews = pendingReviewsCount + pendingProposalsCount
 
+  // ── Dữ liệu ngày đánh giá lệch 14 ngày gần nhất (EXPERT-FR-022) ────────────
+  const to = vietnamDate()
+  const from = shiftDate(to, -13)
+  const { totalDays: disagreeingDaysCount } = useHealthDisagreements({
+    farmId: selectedFarmId ?? undefined,
+    from,
+    to,
+  })
+
   // ── Tính toán các chỉ số thực chất từ Backend ─────────────────────────────
   const pendingAlerts = useMemo(
     () => allAlerts.filter(a => INFERRED_TYPES.has(a.type) && !a.expert_verdict),
@@ -119,9 +130,6 @@ export default function DomainExpertQueuePage() {
 
   const pendingCount = kpiCounts?.pending ?? pendingAlerts.length
   const activeAlert = pendingAlerts[0]
-
-  const pendingReports = healthReports.filter(r => !r.expert_conclusion?.text).length
-  const publishedReports = Math.max(0, healthReports.length - pendingReports)
 
   const hasAiTuningSuggestion = Boolean(aiSuggestion?.suggestion)
 
@@ -234,9 +242,9 @@ export default function DomainExpertQueuePage() {
         </div>
       </Link>
 
-      {/* ── Thẻ 3: Báo cáo sức khỏe & kết luận chuyên môn ── */}
+      {/* ── Thẻ 3: Báo cáo sức khỏe & Ngày đánh giá lệch (EXPERT-FR-005, EXPERT-FR-022) ── */}
       <Link
-        to="/domain-expert/reports"
+        to={disagreeingDaysCount > 0 && pendingReports === 0 ? '/domain-expert/reports?tab=disagreements' : '/domain-expert/reports'}
         className="group flex flex-1 flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
       >
         <div className="flex flex-col gap-2.5 sm:gap-3">
@@ -248,6 +256,10 @@ export default function DomainExpertQueuePage() {
               <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
                 Cần ký duyệt ({pendingReports})
               </span>
+            ) : disagreeingDaysCount > 0 ? (
+              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
+                Ngày lệch ({disagreeingDaysCount})
+              </span>
             ) : (
               <span className="rounded-md border border-accent-600/30 bg-accent-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent-900">
                 Đã cập nhật tuần này
@@ -257,10 +269,10 @@ export default function DomainExpertQueuePage() {
 
           <div>
             <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
-              Báo cáo & Khuyến nghị
+              Báo cáo & Ngày đánh giá lệch
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
-              Tổng hợp sức khỏe đàn yến theo tuần và ban hành kết luận chuyên môn kỹ thuật.
+              Ban hành kết luận báo cáo sức khỏe và đối chiếu các ngày chấm thực địa lệch với hệ thống.
             </p>
           </div>
 
@@ -269,13 +281,16 @@ export default function DomainExpertQueuePage() {
               Chờ duyệt: <strong className="font-semibold text-charcoal">{pendingReports}</strong>
             </span>
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+              Ngày lệch: <strong className="font-semibold text-charcoal">{disagreeingDaysCount}</strong>
+            </span>
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
               Đã ban hành: <strong className="font-semibold text-charcoal">{publishedReports}</strong>
             </span>
           </div>
         </div>
 
         <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
-          <span>Xem danh sách báo cáo</span>
+          <span>{disagreeingDaysCount > 0 && pendingReports === 0 ? 'Xem ngày đánh giá lệch' : 'Xem báo cáo & ngày lệch'}</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
       </Link>

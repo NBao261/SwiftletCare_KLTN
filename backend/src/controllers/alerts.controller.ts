@@ -4,6 +4,7 @@ import * as alertEvidenceService from '@/services/alertEvidence.service'
 import * as onsiteCheckService from '@/services/onsiteCheck.service'
 import type { OnsiteObservation } from '@/models/alert.model'
 import type { SiteCause } from '@/models/workOrder.model'
+import { recomputeForAlert } from '@/services/healthAssessment.service'
 import type { AlertVerdictResult } from '@/types'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
@@ -43,6 +44,8 @@ export const setVerdict = asyncHandler(async (req: Request, res: Response) => {
     req.params.id, req.user, req.body.result as AlertVerdictResult, req.body.note as string | undefined,
     req.body.needs_visit === true,
   )
+  // SM-17 — NOISE_ANOMALY bị bác bỏ / xác nhận lại đổi chỉ số tiếng ồn của ngày (BR-28)
+  await recomputeForAlert(alert)
   res.json({ success: true, data: alert })
 })
 

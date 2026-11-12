@@ -12,12 +12,13 @@
  * SRS v2.1.4: §4.4, EXPERT-FR-001/002/003, ENV-FR-006
  */
 
+import { t } from '@/i18n'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
 import { useAlertsWithFilters } from '@/hooks/domain-expert/useExpertAlerts'
 import { useExpertAutonomy } from '@/hooks/domain-expert/useExpertDashboard'
-import { useHealthReportList } from '@/hooks/domain-expert/useHealthReports'
+import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
 import ExpertScadaKpiPills from './ExpertScadaKpiPills'
 import ZoneSelectorDropdown from './ZoneSelectorDropdown'
 import { BannerSkeleton, BannerEmpty } from './ExpertScadaBannerStates'
@@ -115,11 +116,12 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
   // Dùng chung hook useAlertsWithFilters để số liệu cảnh báo luôn khớp chính xác với thẻ bên dưới
   const { kpiCounts } = useAlertsWithFilters(effectiveFarmId, effectiveZoneId)
   const { data: autonomy } = useExpertAutonomy(effectiveZoneId ?? '', '24h')
-  const { data: healthReports } = useHealthReportList(effectiveZoneId)
+  // Báo cáo theo nhà đang chọn (chưa chọn nhà thì cả farm), như tab Báo cáo & Kết luận
+  const reportHouseId = selectedHouseId && houses?.some(h => h._id === selectedHouseId) ? selectedHouseId : ''
+  const { pending: pendingReports } = useHealthReportConclusionCounts(effectiveFarmId ?? '', reportHouseId)
 
   const pendingCount = kpiCounts?.pending ?? 0
   const autoModePct = autonomy?.auto_mode_pct ?? 100
-  const pendingReports = healthReports?.filter(r => !r.expert_conclusion?.text).length ?? 0
 
   // ── Tên hiển thị trên capsule selector ─────────────────────────────────────
   const currentFarm = farms?.find(f => f._id === currentFarmId)
@@ -163,7 +165,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
           </div>
 
           <span className="text-xs font-bold uppercase tracking-tight text-charcoal sm:text-sm whitespace-nowrap">
-            Giám Sát Vận Hành
+            {t('Giám sát vận hành')}
           </span>
         </div>
 

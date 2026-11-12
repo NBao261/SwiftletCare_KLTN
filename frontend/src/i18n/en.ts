@@ -48,6 +48,7 @@ const en: Record<string, string> = {
   'Hủy': 'Cancel',
   'Xác nhận': 'Confirm',
   'Đóng': 'Close',
+  'Mở lịch chọn ngày': 'Open calendar',
   'Lưu': 'Save',
   'Hủy lọc': 'Clear filters',
   'Xoá bộ lọc': 'Clear filters',
@@ -489,6 +490,23 @@ const en: Record<string, string> = {
   '{{metric}} {{value}} · dưới ngưỡng {{limit}}': '{{metric}} {{value}} · below the {{limit}} limit',
   'liên tục từ {{time}}': 'continuously since {{time}}',
   'Lý do khởi động lại: {{reason}}': 'Restart reason: {{reason}}',
+  // ── Domain Expert: thanh trạng thái, trang Báo cáo & Kết luận ──
+  'Giám sát vận hành': 'Operations monitoring',
+  'Tỷ lệ thời gian vi khí hậu chạy tự động trong 24 giờ qua': 'Share of the last 24 hours the micro-climate ran automatically',
+  'Tự động': 'Automatic',
+  '{{n}} cảnh báo suy luận đang chờ chuyên gia kết luận': '{{n}} inferred alerts waiting for an expert verdict',
+  'Không có cảnh báo tồn đọng': 'No alert waiting',
+  'Cảnh báo chờ': 'Alerts waiting',
+  'Cảnh báo tồn': 'Alerts waiting',
+  '{{n}} báo cáo đang chờ chuyên gia kết luận': '{{n}} reports waiting for an expert conclusion',
+  'Không có báo cáo chờ kết luận': 'No report waiting for a conclusion',
+  'Báo cáo chờ': 'Reports waiting',
+  'Báo cáo tồn': 'Reports waiting',
+  'Báo cáo và ngày đánh giá lệch': 'Reports and disagreeing days',
+  'Báo cáo & Kết luận định kỳ': 'Periodic reports & conclusions',
+  'Ngày đánh giá lệch & Mức chỉ số': 'Disagreeing days & indicator levels',
+  'Mở một báo cáo để viết kết luận gửi Chủ nhà yến': 'Open a report to write a conclusion for the farm owner',
+  'Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống và chỉnh mức chỉ số của nhà': 'Compare on-site ratings with the system status and tune the indicator levels of each house',
 }
 
 export default en

@@ -23,6 +23,7 @@ export { default as ClearFiltersButton } from '@/components/ui/ClearFiltersButto
 export { default as StatTile } from '@/components/ui/StatTile'
 export { default as SectionCard } from '@/components/ui/SectionCard'
 export { default as SearchInput } from '@/components/ui/SearchInput'
+export { default as DatePicker } from '@/components/ui/DatePicker'
 export { default as EmptyState } from '@/components/ui/EmptyState'
 export { default as LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 export { default as RadialGauge } from '@/components/ui/RadialGauge'

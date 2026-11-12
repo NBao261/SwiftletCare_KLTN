@@ -237,6 +237,28 @@ export async function activeTechnicianOnDuty(
   }, at)
 }
 
+/**
+ * Nhà của 1 farm mà người gọi được xem khi lọc theo `farmId`: cả farm với Farm Owner và Domain Expert,
+ * chỉ các nhà được giao với Farm Technician (AUTH-FR-013); người khác 403.
+ */
+export async function listFarmHouseIds(farmId: string, user: CurrentUser) {
+  const farm = await findFarmOrThrow(farmId)
+  if (isFarmTechnician(farm, user)) return House.find({ farm_id: farm._id, 'technicians.user_id': user._id }).distinct('_id')
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
+  return House.find({ farm_id: farm._id }).distinct('_id')
+}
+
+/**
+ * Thợ được giao nhà, còn là Farm Technician của farm và còn hoạt động (AUTH-FR-013): những người nhận việc
+ * của nhà, như thông báo "ngày đã sẵn sàng" (BR-31). Gỡ khỏi farm hay bị khoá thì không còn nhận.
+ */
+export async function listActiveHouseTechnicianIds(houseId: unknown): Promise<string[]> {
+  const house = await House.findById(houseId).select('farm_id technicians')
+  if (!house || (house.technicians ?? []).length === 0) return []
+  const farm = await Farm.findById(house.farm_id).select('members')
+  return farm ? activeHouseTechnicianIds(house, farm) : []
+}
+
 /** Mọi House thuộc Farm chưa xoá mềm — cùng phạm vi với listActiveZoneIds cho màn hình Admin */
 export async function listActiveHouseIds() {
   const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
