@@ -1,15 +1,27 @@
-import { useQuery } from '@tanstack/react-query'
-import type { PendingHealthDay } from '@/types'
+import { useQueries } from '@tanstack/react-query'
+import { useFarms } from '@/hooks/farm/useFarms'
+import { healthReportApi } from '@/services/api/healthReport.api'
+import type { HouseHealthDay } from '@/types'
+import { getPendingRatingRange } from '@/utils/healthDay.utils'
 
-// shortcut: backend chưa có API ngày chờ chấm (gap G-11, chưa có trong api-spec) — có route thì gọi trong queryFn
-// và đổi cờ này thành true; trước đó khối "Việc chờ bạn" ghi "Sắp có" cho phần này thay vì đếm 0
-export const HAS_PENDING_HEALTH_DAYS_API = false
-
-// Các ngày đang chờ người dùng chấm (MF-06, BR-31)
+// Các ngày đang chờ người dùng chấm ở mọi farm (MF-06, BR-31): mỗi farm một lần gọi, chỉ trong hạn chấm 7 ngày
 export function usePendingHealthDays() {
-  return useQuery({
-    queryKey: ['health-days', 'pending-rating'],
-    queryFn: (): Promise<PendingHealthDay[]> => Promise.resolve([]),
-    enabled: HAS_PENDING_HEALTH_DAYS_API,
+  const farmsQuery = useFarms()
+  const farmIds = (farmsQuery.data?.data ?? []).map(farm => farm._id)
+  const { from, to } = getPendingRatingRange()
+
+  return useQueries({
+    queries: farmIds.map(farmId => ({
+      queryKey: ['health-days', 'pending', farmId, from, to],
+      queryFn: () =>
+        healthReportApi
+          .listDays({ farmId, from, to, myRatingState: 'PENDING' })
+          .then(response => response.data.data),
+    })),
+    combine: (results): { data: HouseHealthDay[]; isLoading: boolean; isError: boolean } => ({
+      data: results.flatMap(result => result.data ?? []),
+      isLoading: farmsQuery.isLoading || results.some(result => result.isLoading),
+      isError: farmsQuery.isError || results.some(result => result.isError),
+    }),
   })
 }

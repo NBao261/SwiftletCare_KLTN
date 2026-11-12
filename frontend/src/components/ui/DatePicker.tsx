@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 
-import { harvestDict } from '@/constants/harvest.i18n';
-import { useTranslation } from '@/hooks/common/useTranslation';
+import { intlLocale, t } from '@/i18n';
 import { cn } from '@/lib/cn';
 
 const DAYS_PER_WEEK = 7;
@@ -38,19 +37,22 @@ function parseDisplay(text: string): string {
   return isReal ? dateKey(year, month - 1, day) : '';
 }
 
-interface HarvestDatePickerProps {
+interface DatePickerProps {
   id: string;
   label: string;
+  // yyyy-mm-dd; '' = chưa chọn hoặc gõ chưa đủ / sai ngày
   value: string;
   onChange: (value: string) => void;
-  min: string;
+  // yyyy-mm-dd; bỏ trống min = không giới hạn ngày đầu
+  min?: string;
   max: string;
   error?: string;
+  // Dấu * đỏ sau nhãn như các ô bắt buộc khác của form
+  required?: boolean;
 }
 
-// Ô ngày dd/mm/yyyy (FE_Design 6.1) thay <input type="date"> vốn theo định dạng của trình duyệt: gõ tay tự chèn "/", hoặc mở lịch tháng chọn; ngày ngoài min–max bị mờ
-export default function HarvestDatePicker({ id, label, value, onChange, min, max, error }: HarvestDatePickerProps): JSX.Element {
-  const { t, lang } = useTranslation(harvestDict);
+// Ô ngày dd/mm/yyyy (FE_Design 6.1): gõ tay tự chèn "/" hoặc chọn trên lịch tháng; ngày ngoài min–max bị mờ
+export default function DatePicker({ id, label, value, onChange, min = '', max, error, required = false }: DatePickerProps): JSX.Element {
   const rootRef = useRef<HTMLDivElement>(null);
   const [text, setText] = useState(() => toDisplay(value));
   const [isOpen, setIsOpen] = useState(false);
@@ -83,10 +85,10 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
     };
   }, [isOpen]);
 
-  // Tên thứ và tiêu đề tháng theo ngôn ngữ đang chọn
-  const locale = lang === 'vi' ? 'vi-VN' : 'en-GB';
+  // Tên thứ, tháng theo ngôn ngữ (AppShell remount khi đổi ngôn ngữ); VI dạng hẹp "T2 … CN", EN "Mon" vì "M/T" bị trùng
+  const locale = intlLocale();
   const weekdayNames = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: locale.startsWith('vi') ? 'narrow' : 'short' });
     return Array.from({ length: DAYS_PER_WEEK }, (_, index) =>
       formatter.format(new Date(MONDAY_REFERENCE.getFullYear(), MONDAY_REFERENCE.getMonth(), MONDAY_REFERENCE.getDate() + index)));
   }, [locale]);
@@ -95,7 +97,7 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
   // Ô lịch: chỗ trống đầu tháng (tuần bắt đầu thứ Hai) + các ngày trong tháng
   const leadingBlanks = (new Date(viewYear, viewMonth, 1).getDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const isPreviousDisabled = dateKey(viewYear, viewMonth, 1) <= min;
+  const isPreviousDisabled = min !== '' && dateKey(viewYear, viewMonth, 1) <= min;
   const isNextDisabled = dateKey(viewYear, viewMonth, daysInMonth) >= max;
   const today = new Date();
   const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
@@ -121,7 +123,7 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
     <div ref={rootRef} className="relative flex flex-col gap-1.5">
       <label htmlFor={id} className="label-caption">
         {label}
-        <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>
+        {required && <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>}
       </label>
       <div className="relative">
         <input
@@ -129,7 +131,7 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          placeholder={t('date.placeholder')}
+          placeholder="dd/mm/yyyy"
           value={text}
           onChange={handleTyping}
           aria-invalid={Boolean(error)}
@@ -138,7 +140,7 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
         />
         <button
           type="button"
-          aria-label={t('date.openCalendar')}
+          aria-label={t('Mở lịch chọn ngày')}
           aria-expanded={isOpen}
           onClick={() => setIsOpen(current => !current)}
           className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-charcoal hover:bg-warmGray/10"
@@ -148,13 +150,13 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
       </div>
       {error && <span className="text-xs text-alertRed">{error}</span>}
 
-      {/* Lịch tháng nổi dưới ô */}
+      {/* Lịch nổi dưới ô, rộng bằng ô (tối đa 20rem); nút ngày co theo cột nên ô hẹp không đè nhau */}
       {isOpen && (
-        <div className="glass-panel absolute right-0 top-full z-20 mt-2 w-72 rounded-2xl border border-warmGray/15 bg-white p-3 shadow-popover">
+        <div className="glass-panel absolute left-0 top-full z-20 mt-2 w-full max-w-xs rounded-2xl border border-warmGray/15 bg-white p-3 shadow-popover">
           <div className="mb-2 flex items-center justify-between">
             <button
               type="button"
-              aria-label={t('date.previousMonth')}
+              aria-label={t('Tháng trước')}
               disabled={isPreviousDisabled}
               onClick={() => shiftMonth(-1)}
               className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:text-warmGray/40 disabled:hover:bg-transparent"
@@ -164,7 +166,7 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
             <span className="text-sm font-semibold capitalize text-charcoal">{monthTitle}</span>
             <button
               type="button"
-              aria-label={t('date.nextMonth')}
+              aria-label={t('Tháng sau')}
               disabled={isNextDisabled}
               onClick={() => shiftMonth(1)}
               className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:text-warmGray/40 disabled:hover:bg-transparent"
@@ -187,7 +189,7 @@ export default function HarvestDatePicker({ id, label, value, onChange, min, max
                   disabled={isDisabled}
                   onClick={() => selectDay(day)}
                   className={cn(
-                    'h-8 rounded-full text-xs tabular-nums transition-colors',
+                    'mx-auto aspect-square w-full max-w-[2rem] rounded-full text-xs tabular-nums transition-colors',
                     isSelected ? 'bg-charcoal font-semibold text-white' : 'text-charcoal hover:bg-warmGray/10',
                     key === todayKey && !isSelected && 'ring-1 ring-charcoal/30',
                     isDisabled && 'cursor-not-allowed text-warmGray/40 hover:bg-transparent',

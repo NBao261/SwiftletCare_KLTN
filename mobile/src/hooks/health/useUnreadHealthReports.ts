@@ -1,13 +1,13 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { healthReportApi } from '@/services/api/healthReport.api'
 import { notificationApi } from '@/services/api/notification.api'
-import type { ZoneHealthReport } from '@/types'
+import type { HouseHealthReport } from '@/types'
 import { MAX_PAGE_LIMIT, fetchAllPages } from '@/utils/pagination.utils'
 
 export interface UnreadHealthReport {
   // Thông báo trỏ tới báo cáo — đánh dấu đọc thông báo này khi có màn mở báo cáo
   notificationId: string
-  report: ZoneHealthReport
+  report: HouseHealthReport
 }
 
 // Báo cáo sức khoẻ người dùng chưa đọc: thông báo chưa đọc loại health_report, kèm chi tiết từng báo cáo
@@ -29,13 +29,16 @@ export function useUnreadHealthReports() {
   return useQueries({
     queries: reportRefs.map(({ reportId }) => ({
       queryKey: ['health-reports', reportId],
-      queryFn: () => healthReportApi.getDetail(reportId).then(response => response.data.data),
+      queryFn: () => healthReportApi.getHouseReport(reportId).then(response => response.data.data),
     })),
     combine: (results): { reports: UnreadHealthReport[]; isLoading: boolean; isError: boolean } => ({
       isLoading: notificationsQuery.isLoading || results.some(result => result.isLoading),
       isError: notificationsQuery.isError || results.some(result => result.isError),
+      // Job tuần theo Zone cũ (deprecated) vẫn gửi thông báo; GET /health-reports/{id} trả báo cáo Zone không có house_id — bỏ qua
       reports: results.flatMap((result, index) =>
-        result.data ? [{ notificationId: reportRefs[index].notificationId, report: result.data }] : [],
+        result.data && typeof result.data.house_id === 'string'
+          ? [{ notificationId: reportRefs[index].notificationId, report: result.data }]
+          : [],
       ),
     }),
   })
