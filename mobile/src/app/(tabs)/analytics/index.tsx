@@ -71,11 +71,12 @@ export default function AnalyticsScreen() {
 
   const renderTabContent = () => {
     if (scope.tab === 'birds') return <BirdTab scope={scope} today={today} />
+    // Báo cáo theo nhà (EXPERT-FR-005) không cần Zone
+    if (scope.tab === 'reports') return <ReportTab scope={scope} />
     if (scope.zones.length === 0) return <EmptyState message={t('Nhà chưa có khu vực')} />
     if (scope.tab === 'env') return <EnvironmentTab scope={scope} />
     if (scope.tab === 'control') return <ControlTab scope={scope} />
-    if (scope.tab === 'harvest') return <HarvestTab scope={scope} today={today} />
-    return <ReportTab scope={scope} />
+    return <HarvestTab scope={scope} today={today} />
   }
 
   const renderBody = () => {

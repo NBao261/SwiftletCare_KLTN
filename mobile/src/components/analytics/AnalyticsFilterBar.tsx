@@ -10,7 +10,7 @@ interface AnalyticsFilterBarProps {
 }
 
 // Chip tầng ở đầu màn Phân tích (đặc tả §3.1), dùng chung mọi tab và cả 4 ô KPI: ẩn khi nhà một tầng,
-// mờ ở tab Đàn chim vì đàn chim tính theo nhà. Chip khoảng thời gian nằm dưới hàng tab (AnalyticsRangeChips)
+// mờ ở tab Đàn chim và Báo cáo vì hai tab này tính theo nhà. Chip khoảng thời gian nằm dưới hàng tab (AnalyticsRangeChips)
 export function AnalyticsFilterBar({ scope }: AnalyticsFilterBarProps) {
   if (scope.zones.length < 2) return null
 
@@ -24,7 +24,7 @@ export function AnalyticsFilterBar({ scope }: AnalyticsFilterBarProps) {
       options={zoneOptions}
       selectedId={scope.selectedZoneId ?? ALL_ZONES}
       onSelect={id => scope.selectZone(id === ALL_ZONES ? null : id)}
-      disabled={scope.tab === 'birds'}
+      disabled={scope.tab === 'birds' || scope.tab === 'reports'}
       accessibilityLabel={t('Chọn khu vực')}
     />
   )
