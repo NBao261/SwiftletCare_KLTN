@@ -30,6 +30,11 @@
 > - khởi động lại thiết bị: heartbeat đầu tiên vẫn báo đúng phiên bản (đọc lại từ NVS, khoá `cfgVersion`);
 > - bản `esp32prod`: trang AP-mode chỉ có Wi-Fi; gửi tay `mqttBroker` vào `/save` cũng không đổi broker;
 > - board còn chạy 2.0.0 với backend mới: hiện `UNKNOWN`, không có cảnh báo `CONFIG_MISMATCH`.
+>
+> **2.2.0 (bù phun sương theo thời tiết G-23, ENV-FR-029, BR-38) — chưa thử trên board.** Đã làm 12/11/2026: `pio run -e esp32dev` và `pio run -e esp32prod` build được, `pio test -e native` 84/84 (`test_weather_compensation`). Còn phải thử trên board:
+> - publish tay retained `swiftletcare/dev/{deviceId}/compensation` với `{"offset_pct":5,"expires_at":<epoch ms + 10 phút>}`: log `[FUZZY] MISTING` có `weather=5.0%`, nhu cầu phun tăng 5 điểm; quá hạn thì về như cũ;
+> - tin có `expires_at` đã qua (tin retained cũ khi kết nối lại) và tin trước khi có NTP: offset 0;
+> - rút cảm biến nhiệt-ẩm khi đang có offset dương: bơm vẫn TẮT (THREAT-FR-013); đang bật tay hoặc đang chốt bơm khô: offset không đổi gì; quạt không đổi.
 
 PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu nối: `docs/hardware/components-guide.md`. Việc lắp đặt và thử ngoài thực địa: `docs/reports/todo-review2.md` mục 3.
 
