@@ -3,7 +3,6 @@ import { ENDPOINTS } from '@/constants/apiEndpoints'
 import type {
   ApiResponse,
   HealthRatingValue,
-  HealthReportPreview,
   HouseHealthDay,
   HouseHealthReport,
   HouseHealthReportKind,
@@ -58,10 +57,6 @@ export const healthReportApi = {
   // Báo cáo theo yêu cầu của 1 nhà, tối đa 31 ngày; cùng khoảng thì backend tính lại bản cũ
   createCustomReport: (houseId: string, from: string, to: string) =>
     apiClient.post<ApiResponse<HouseHealthReport>>(ENDPOINTS.HEALTH_REPORTS, { houseId, from, to }),
-
-  // (Kiểu cũ, deprecated) số liệu một Zone trong khoảng tự chọn — chỉ bằng chứng cảnh báo LOW_RETURN_RATE còn dùng
-  preview: (zoneId: string, from: string, to: string) =>
-    apiClient.get<ApiResponse<HealthReportPreview>>(ENDPOINTS.HEALTH_REPORT_PREVIEW, { params: { zoneId, from, to } }),
 
   // Kết luận của chuyên gia (EXPERT-FR-006); chỉ người viết đầu tiên sửa được
   updateConclusion: (reportId: string, text: string) =>

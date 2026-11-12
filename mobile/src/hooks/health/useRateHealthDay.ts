@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { healthReportApi } from '@/services/api/healthReport.api'
 import type { HealthRatingValue } from '@/types'
-import { storeRevealedHealthDay } from '@/utils/healthDay.utils'
+import { readApiError } from '@/utils/apiError.utils'
+import { refreshHealthDayLists, storeRevealedHealthDay } from '@/utils/healthDay.utils'
 
 export interface RateHealthDayInput {
   dayId: string
@@ -19,5 +20,9 @@ export function useRateHealthDay() {
       healthReportApi.rateDay(dayId, rating, note).then(response => response.data.data),
     retry: 0,
     onSuccess: day => storeRevealedHealthDay(queryClient, day),
+    // 409 RATING_CLOSED: ngày đã chốt ở nơi khác (web, máy khác, quá hạn) — danh sách chờ chấm và báo cáo phải tải lại
+    onError: error => {
+      if (readApiError(error).status === 409) void refreshHealthDayLists(queryClient)
+    },
   })
 }

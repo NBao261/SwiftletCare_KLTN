@@ -11,7 +11,6 @@ import type {
   MyRatingState,
 } from '@/types'
 import { formatDayMonth, getVietnamDate } from '@/utils/date.utils'
-import { getRoleLabel } from '@/utils/label.utils'
 import { formatDecimal } from '@/utils/number.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -94,13 +93,6 @@ export function getHealthSourceLabel(source: HealthSource): string {
 // Mức của một chỉ số; null là nguồn không đủ dữ liệu nên không xét
 export function getIndicatorLevelLabel(level: HealthIndicatorLevel | null): string {
   return level ? t(LEVEL_LABELS[level]) : t('Không xét')
-}
-
-// Vai trò của người chấm: Farm Owner, Farm Technician (G-20), Domain Expert (điểm chấm cũ trước Report 3 4.2.0)
-export function getRaterRoleLabel(role: string): string {
-  if (role === 'FARM_OWNER' || role === 'DOMAIN_EXPERT') return getRoleLabel(role)
-  if (role === 'FARM_TECHNICIAN') return t('Kỹ thuật viên')
-  return role
 }
 
 // Giá trị chỉ số kèm đơn vị theo nguồn; thiếu thì "_"
@@ -232,14 +224,19 @@ export function isHealthDayHidden(day: HouseHealthDay): boolean {
   return day.my_rating_state === 'PENDING' || day.current_status === undefined
 }
 
-// Sau khi chấm, bỏ qua, sửa ghi chú: ghi ngày đầy đủ backend trả vào cache rồi tải lại danh sách ngày và báo cáo,
-// vì trạng thái các ngày đó vừa mở cho người dùng
-export function storeRevealedHealthDay(queryClient: QueryClient, day: HouseHealthDay): Promise<void> {
-  queryClient.setQueryData(['health-days', 'detail', day._id], day)
+// Tải lại danh sách ngày (chờ chấm, ngày của nhà) và báo cáo; chi tiết ngày do màn tự tải
+export function refreshHealthDayLists(queryClient: QueryClient): Promise<void> {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ['health-days'], predicate: query => query.queryKey[1] !== 'detail' }),
     queryClient.invalidateQueries({ queryKey: ['health-reports'] }),
   ]).then(() => undefined)
+}
+
+// Sau khi chấm, bỏ qua, sửa ghi chú: ghi ngày đầy đủ backend trả vào cache rồi tải lại danh sách ngày và báo cáo,
+// vì trạng thái các ngày đó vừa mở cho người dùng
+export function storeRevealedHealthDay(queryClient: QueryClient, day: HouseHealthDay): Promise<void> {
+  queryClient.setQueryData(['health-days', 'detail', day._id], day)
+  return refreshHealthDayLists(queryClient)
 }
 
 export interface PendingTasksSummary {

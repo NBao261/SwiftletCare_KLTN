@@ -22,10 +22,10 @@ import {
   getHealthSourceLabel,
   getHealthStatusLabel,
   getIndicatorLevelLabel,
-  getRaterRoleLabel,
   getRatingStateLabel,
 } from '@/utils/healthDay.utils'
 import { formatDecimal } from '@/utils/number.utils'
+import { getRoleLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
 // Ghi chú tối đa 1000 ký tự (api-spec PATCH /health-reports/days/{dayId}/rating/note)
@@ -84,7 +84,7 @@ export function HealthDayDetail({ day, onMessage }: HealthDayDetailProps) {
               {name}
             </Text>
             <Text variant="small" color={palette.textSecondary}>
-              {`${getRaterRoleLabel(item.role)} · ${formatDateTime(item.at)}`}
+              {`${getRoleLabel(item.role)} · ${formatDateTime(item.at)}`}
             </Text>
           </View>
           {item.outcome === 'RATED' && item.rating ? (

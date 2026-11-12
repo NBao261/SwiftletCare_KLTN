@@ -1,36 +1,13 @@
 // Trạng thái sức khỏe theo ngày và báo cáo theo nhà yến (MF-06: ANALYTICS-FR-012, EXPERT-FR-005/006/012, BR-28…31)
 
+import type { Role } from './auth.types'
+
 export interface ExpertConclusion {
   text: string
   by: { _id: string; full_name: string }
   at: string
   // Lần sửa gần nhất của tác giả (EXPERT-FR-006)
   edited_at?: string | null
-}
-
-// Số liệu Zone của GET /health-reports/preview (kiểu cũ, deprecated) — chỉ còn bằng chứng cảnh báo LOW_RETURN_RATE dùng
-export interface ZoneHealthMetrics {
-  sample_count: number
-  temp_in_range_pct: number | null
-  humidity_in_range_pct: number | null
-  auto_mode_pct: number | null
-  misting_switches: number
-  ventilation_switches: number
-  alerts_by_type: Partial<Record<string, number>>
-  avg_return_rate: number | null
-  nh3_avg: number | null
-  nh3_max: number | null
-  co2_avg: number | null
-  co2_max: number | null
-}
-
-// GET /health-reports/preview (kiểu cũ) — số liệu một Zone trong khoảng tự chọn, không lưu
-export interface HealthReportPreview {
-  zone_id: string
-  farm_id: string
-  period_start: string
-  period_end: string
-  metrics: ZoneHealthMetrics
 }
 
 // Mức người chấm chọn (EXPERT-FR-012)
@@ -85,10 +62,13 @@ export interface HealthDayWeather {
 }
 
 // Điểm của một người chấm, kèm ảnh chụp trạng thái lúc chấm
+// Vai trò của người chấm: Farm Owner, Farm Technician (BR-31); DOMAIN_EXPERT chỉ còn ở điểm chấm cũ trước Report 3 4.2.0
+export type HealthRaterRole = Extract<Role, 'FARM_OWNER' | 'FARM_TECHNICIAN' | 'DOMAIN_EXPERT'>
+
 export interface HealthDayRating {
   _id: string
   by: { _id: string; full_name: string | null }
-  role: string
+  role: HealthRaterRole
   outcome: 'RATED' | 'SKIPPED'
   rating: HealthRatingValue | null
   note: string | null
