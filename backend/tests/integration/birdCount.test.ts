@@ -320,6 +320,30 @@ describe('checkReturnRateDrops (VISION-FR-011)', () => {
     expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
   })
 
+  it('BR-46 — nhà ATTRACTING không có LOW_RETURN_RATE; về OCCUPIED thì nền chỉ gồm các ngày sau lần chuyển', async () => {
+    const change = (stage: string, iso: string) => ({ stage, changed_by: house._id, changed_by_role: 'FARM_OWNER', changed_at: new Date(iso) })
+    const { camera, house } = await seed()
+    await eveningRates(camera._id, house._id, [['2026-10-12', 90], ['2026-10-13', 90], ['2026-10-14', 90], ['2026-10-15', 60]])
+
+    // Cảnh báo còn mở từ trước khi sang ATTRACTING được đóng, không giữ suốt giai đoạn dẫn dụ
+    const open = await Alert.create({
+      farm_id: house.farm_id, house_id: house._id, type: 'LOW_RETURN_RATE', severity: 'LOW', title: 't', message: 'm', status: 'ACTIVE',
+    })
+    await House.updateOne({ _id: house._id }, { stage: 'ATTRACTING', stage_history: [change('ATTRACTING', '2026-10-01T01:00:00Z')] })
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
+    expect((await Alert.findById(open._id).lean())!.status).toBe('RESOLVED')
+
+    // Về OCCUPIED ngày 13/10: nền chỉ còn 14/10 → chưa đủ 3 ngày
+    await House.updateOne({ _id: house._id }, {
+      stage: 'OCCUPIED', stage_history: [change('ATTRACTING', '2026-10-01T01:00:00Z'), change('OCCUPIED', '2026-10-13T01:00:00Z')],
+    })
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
+
+    // Không có lần chuyển nào: đủ 3 ngày nền → cảnh báo như trước BR-46
+    await House.updateOne({ _id: house._id }, { stage: 'OCCUPIED', stage_history: [] })
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(1)
+  })
+
   it('dùng return_rate_drop_pct của House và cần ít nhất 3 ngày nền', async () => {
     const { camera, house } = await seed()
     await House.updateOne({ _id: house._id }, { 'bird_count_tuning.return_rate_drop_pct': 40 })

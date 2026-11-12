@@ -1,3 +1,6 @@
+# Khoá private service account Firebase (FIREBASE_SERVICE_ACCOUNT_PATH) — không bao giờ commit
+config/firebase-service-account.json
+
 # Logs
 logs
 *.log

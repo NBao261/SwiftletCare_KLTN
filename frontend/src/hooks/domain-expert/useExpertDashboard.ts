@@ -39,17 +39,6 @@ export function useExpertBirdTrends(zoneId: string, days = 7) {
   })
 }
 
-// ── 4. Báo cáo sức khỏe gần nhất (WeeklySummaryCard) ─────────────────────────
-export function useLatestHealthReport(zoneId: string) {
-  return useQuery({
-    queryKey: ['expert', 'health-reports', zoneId, 'latest'],
-    queryFn: () => expertService.getHealthReports(zoneId, { limit: 1 }),
-    staleTime: 5 * 60_000,
-    enabled: Boolean(zoneId),
-    select: data => data?.[0] ?? null,
-  })
-}
-
 // ── 5. Gợi ý tinh chỉnh mờ cho WeeklySummaryCard ─────────────────────────────
 export function useExpertFuzzySuggestion(zoneId: string) {
   return useQuery({

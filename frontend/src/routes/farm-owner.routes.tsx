@@ -14,6 +14,8 @@ const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsP
 const FarmOwnerFarmZonesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZonesPage'))
 const FarmOwnerFarmZoneDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZoneDetailPage'))
 const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarvestPage'))
+const FarmOwnerHealthPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthPage'))
+const FarmOwnerHealthReportPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthReportPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
 /** /farms dùng chung URL nhưng Farm Technician có trang riêng (chỉ cấu trúc + thiết bị nhà được giao) */
@@ -93,6 +95,23 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={HARVEST_ROLES}>
           <FarmOwnerHarvestPage />
+        </RequireRole>
+      }
+    />
+    {/* MF-06 — trạng thái ngày và đánh giá ngày: Farm Owner đánh giá, Domain Expert chỉ xem (SRS 4.2.0, BR-31) */}
+    <Route
+      path="health"
+      element={
+        <RequireRole allow={FARM_SIDE_ROLES}>
+          <FarmOwnerHealthPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="health/report"
+      element={
+        <RequireRole allow={FARM_SIDE_ROLES}>
+          <FarmOwnerHealthReportPage />
         </RequireRole>
       }
     />
