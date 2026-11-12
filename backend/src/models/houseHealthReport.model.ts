@@ -71,7 +71,9 @@ const houseHealthReportSchema = new Schema<IHouseHealthReport>(
       },
     },
   },
-  { versionKey: false },
+  // minimize: false — giữ object rỗng (`device_faults`, `alerts_by_type` của zone không có cảnh báo) như api-spec;
+  // mặc định Mongoose bỏ chúng khi save và trong toObject(), nên API trả thiếu trường
+  { versionKey: false, minimize: false },
 )
 
 // Report 4 §6.3 — 1 báo cáo mỗi nhà, loại và kỳ: job chạy lại hoặc 2 instance không tạo bản trùng

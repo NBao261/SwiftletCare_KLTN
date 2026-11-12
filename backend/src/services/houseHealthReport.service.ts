@@ -264,9 +264,18 @@ async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser,
   const metrics: HouseReportMetrics = plain.house_metrics
   const return_rate_trend = metrics.return_rate_trend.map(d =>
     (hiddenDates.has(d.date) ? { ...d, return_rate: null } : d))
+  // Bản lưu cũ có thể thiếu object rỗng (minimize mặc định của Mongoose): bù lại để luôn đúng api-spec
+  const sections: Partial<HouseReportZoneSection>[] = plain.zone_sections ?? []
+  const zone_sections = sections.map(section => ({
+    ...section,
+    alerts_by_type: section.alerts_by_type ?? {},
+    device_faults: section.device_faults ?? {},
+  }))
   return {
     ...plain,
     _id: String(report._id), farm_id: String(report.farm_id), house_id: String(report.house_id), house_name: house.name,
+    zone_sections,
+    expert_conclusion: plain.expert_conclusion ?? null,
     has_conclusion: !!report.expert_conclusion,
     house_metrics: { ...metrics, return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend) },
     days, status_counts, hidden_days: hiddenDates.size,

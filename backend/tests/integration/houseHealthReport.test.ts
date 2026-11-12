@@ -259,6 +259,33 @@ describe('TC-F21-01 — xem báo cáo theo nhà', () => {
   })
 })
 
+describe('chi tiết báo cáo giữ đủ trường như api-spec', () => {
+  it('zone không có cảnh báo vẫn có alerts_by_type, device_faults là {}; chưa có kết luận thì expert_conclusion là null', async () => {
+    const { house, ownerToken } = await setup()
+    const { report } = (await generateHouseReport('WEEKLY', String(house._id), addDays(DAY, -6), DAY))!
+
+    // Dữ liệu lưu đủ object rỗng; lỗi cũ là toObject() bỏ chúng khi trả API
+    const stored = await HouseHealthReport.collection.findOne({ _id: report._id })
+    expect(stored!.zone_sections[0]).toMatchObject({ alerts_by_type: {}, device_faults: {} })
+
+    const one = (await call('get', `/health-reports/${report._id}`, ownerToken).expect(200)).body.data
+    expect(one.zone_sections[0]).toMatchObject({ alerts_by_type: {}, device_faults: {} })
+    expect(one).toHaveProperty('expert_conclusion', null)
+  })
+
+  it('báo cáo cũ lưu thiếu object rỗng vẫn đọc ra đủ trường', async () => {
+    const { house, ownerToken } = await setup()
+    const { report } = (await generateHouseReport('WEEKLY', String(house._id), addDays(DAY, -6), DAY))!
+    // Giả lập bản lưu trước khi có minimize: false
+    await HouseHealthReport.collection.updateOne(
+      { _id: report._id }, { $unset: { 'zone_sections.0.alerts_by_type': '', 'zone_sections.0.device_faults': '' } },
+    )
+
+    const one = (await call('get', `/health-reports/${report._id}`, ownerToken).expect(200)).body.data
+    expect(one.zone_sections[0]).toMatchObject({ alerts_by_type: {}, device_faults: {} })
+  })
+})
+
 describe('kết luận của chuyên gia (EXPERT-FR-006, SM-09)', () => {
   it('GENERATED → CONCLUDED, Farm Owner được báo; tác giả sửa thì lưu edited_at; chuyên gia khác và Farm Owner → 403', async () => {
     const { farm, house, owner, ownerToken, expertToken } = await setup()
