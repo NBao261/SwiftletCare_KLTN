@@ -29,6 +29,7 @@ export type PermissionAction =
   | 'limitedToAssignedHouses'
   | 'viewFarmMembers'
   | 'manageFarmMembers'
+  | 'drawCountingRing'
 
 // Role được làm từng thao tác (Report 3 §2.4); Admin không vào app. Farm Technician (G-20) chỉ thấy và thao tác trên nhà được
 // giao — backend chỉ trả nhà, tầng, thiết bị, cảnh báo của các nhà đó và trả 403 ở nhà khác (AUTH-FR-013)
@@ -59,6 +60,9 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   // có chuyên gia (BR-22, backend assertExpertDecision)
   editDetectionTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   editBirdCountTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Vẽ vòng đếm của camera (VISION-FR-018, Report 3 §2.4): chuyên gia và kỹ thuật viên của nhà có camera (backend 403 ở nhà khác);
+  // chủ trại chỉ khi farm chưa có chuyên gia (BR-22)
+  drawCountingRing: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
   // Áp dụng gợi ý hệ số (EXPERT-FR-011): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22, xem FARM_OWNER_WITHOUT_EXPERT)
   applyCoefficientSuggestion: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Viết kết luận báo cáo (EXPERT-FR-006): chỉ chuyên gia
@@ -94,6 +98,7 @@ const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set([
   'setAlertVerdict',
   'editDetectionTuning',
   'editBirdCountTuning',
+  'drawCountingRing',
 ])
 
 // Thao tác backend chỉ cho Primary Owner (người tạo farm); đồng sở hữu chỉ xem
