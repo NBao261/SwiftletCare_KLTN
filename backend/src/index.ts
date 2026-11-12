@@ -9,6 +9,7 @@ import app              from './config/app.config'
 import { connectDB }    from './config/db.config'
 import { initSocket }   from './socket'
 import { connectMQTT }  from './mqtt/mqtt.client'
+import { startWeatherCompensationJob } from './jobs/weatherCompensation.job'
 import { startDeviceOfflineJob } from './jobs/deviceOffline.job'
 import { startAlertEscalationJob } from './jobs/alertEscalation.job'
 import { startOverrideExpiryJob } from './jobs/overrideExpiry.job'
@@ -41,6 +42,8 @@ async function bootstrap(): Promise<void> {
 
   // 4b. Các job nền: phát hiện offline (FARM-FR-005), gửi lại cảnh báo
   // chưa xác nhận (ALERT-FR-015), hết hạn Manual Override (ENV-FR-018)
+  // ENV-FR-028 — bù phun sương theo dự báo, mỗi giờ
+  startWeatherCompensationJob()
   startDeviceOfflineJob()
   startAlertEscalationJob()
   startOverrideExpiryJob()
