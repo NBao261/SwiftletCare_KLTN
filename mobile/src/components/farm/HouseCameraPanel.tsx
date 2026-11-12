@@ -129,7 +129,7 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
     { icon: MagnifyingGlassMinusIcon, label: t('Thu nhỏ'), onPress: withControlsKept(zoom.zoomOut) },
     { icon: ArrowsOutIcon, label: t('Toàn màn hình'), onPress: withControlsKept(() => setFullscreen(true)) },
     // Vẽ vòng đếm (VISION-FR-018): chuyên gia, kỹ thuật viên của nhà, chủ trại khi farm chưa có chuyên gia
-    ...(camera && canDrawRing ? [{ icon: PolygonIcon, label: t('Vẽ vòng đếm'), onPress: openRingEditor }] : []),
+    ...(camera && canDrawRing ? [{ icon: PolygonIcon, label: t('Vẽ vòng đếm của camera'), onPress: openRingEditor }] : []),
   ]
 
   if (isCollapsed) {

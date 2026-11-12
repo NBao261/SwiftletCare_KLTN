@@ -299,6 +299,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Thu nhỏ': 'Zoom out',
   'Phát camera': 'Play camera',
   // Trình vẽ vòng đếm (VISION-FR-018)
+  // Nút mở trình vẽ và tiêu đề trình vẽ; 'Vẽ vòng đếm' là nhãn quá khứ của lịch sử hoạt động
+  'Vẽ vòng đếm của camera': 'Draw counting ring',
   'Camera chưa phát nên chưa thấy hình': 'The camera is not playing, so there is no picture yet',
   'Khung hình camera: chạm để thêm một điểm của vòng': 'Camera frame: tap to add a point of the ring',
   'Chạm quanh miệng lỗ ra vào để đặt từ 3 đến 12 điểm, lần lượt theo vòng.':

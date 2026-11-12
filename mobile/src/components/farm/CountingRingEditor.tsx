@@ -125,7 +125,7 @@ export function CountingRingEditor({ camera, player, videoMessage, onClose }: Co
   return (
     <Modal visible={camera !== null} animationType="slide" statusBarTranslucent onRequestClose={requestClose}>
       <View style={[styles.screen, { backgroundColor: palette.background }]}>
-        <AppHeader title={t('Vẽ vòng đếm')} onBack={requestClose} />
+        <AppHeader title={t('Vẽ vòng đếm của camera')} onBack={requestClose} />
         <ScrollView
           contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.xl }}
           showsVerticalScrollIndicator={false}
