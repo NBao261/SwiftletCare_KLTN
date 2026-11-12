@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import { countDaysInclusive, formatReportPeriod, validateCustomReportRange } from '@/utils/healthReport.utils'
+import { canEditConclusion, countDaysInclusive, formatReportPeriod, validateCustomReportRange } from '@/utils/healthReport.utils'
 
 describe('formatReportPeriod', () => {
   it('tên kỳ theo loại báo cáo', () => {
@@ -25,5 +25,20 @@ describe('validateCustomReportRange', () => {
     expect(validateCustomReportRange('2026-10-11', today, today)).toBe('Báo cáo dài tối đa 31 ngày')
     expect(validateCustomReportRange('2026-11-05', '2026-11-04', today)).toBe('Ngày đầu phải trước hoặc bằng ngày cuối')
     expect(validateCustomReportRange('2026-11-05', '2026-11-12', today)).toBe('Ngày cuối không được sau hôm nay')
+  })
+})
+
+describe('canEditConclusion', () => {
+  const conclusion = { text: 'Ổn định', by: { _id: 'expert-a', full_name: 'Chuyên gia A' }, at: '2026-11-10T08:00:00Z' }
+
+  it('chưa có kết luận thì chuyên gia nào cũng viết được', () => {
+    expect(canEditConclusion(null, 'expert-b')).toBe(true)
+    expect(canEditConclusion(undefined, 'expert-b')).toBe(true)
+  })
+
+  it('đã có kết luận thì chỉ tác giả sửa được (EXPERT-FR-006)', () => {
+    expect(canEditConclusion(conclusion, 'expert-a')).toBe(true)
+    expect(canEditConclusion(conclusion, 'expert-b')).toBe(false)
+    expect(canEditConclusion(conclusion, null)).toBe(false)
   })
 })

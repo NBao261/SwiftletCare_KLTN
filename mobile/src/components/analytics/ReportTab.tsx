@@ -21,7 +21,7 @@ import { useAuthStore } from '@/stores/authStore'
 import type { HouseHealthReportKind, HouseHealthReportSummary } from '@/types'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { farmHasExpert } from '@/utils/farm.utils'
-import { REPORT_KINDS, formatReportPeriod, getReportKindLabel } from '@/utils/healthReport.utils'
+import { REPORT_KINDS, canEditConclusion, formatReportPeriod, getReportKindLabel } from '@/utils/healthReport.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -42,10 +42,12 @@ interface ReportTabProps {
 function ExpandedReport({
   reportId,
   hasExpert,
+  userId,
   onEditConclusion,
 }: {
   reportId: string
   hasExpert: boolean
+  userId: string | null
   onEditConclusion?: (reportId: string, text: string) => void
 }) {
   const palette = usePalette()
@@ -56,11 +58,13 @@ function ExpandedReport({
   if (reportQuery.isError || !report) {
     return <RetryLine message={t('Không tải được báo cáo')} onRetry={() => reportQuery.refetch()} isRetrying={reportQuery.isFetching} />
   }
+  // Kết luận của chuyên gia khác thì không có nút sửa
+  const canEdit = onEditConclusion && canEditConclusion(report.expert_conclusion, userId)
   return (
     <HouseReportDetail
       report={report}
       hasExpert={hasExpert}
-      onEditConclusion={onEditConclusion ? () => onEditConclusion(report._id, report.expert_conclusion?.text ?? '') : undefined}
+      onEditConclusion={canEdit ? () => onEditConclusion(report._id, report.expert_conclusion?.text ?? '') : undefined}
     />
   )
 }
@@ -125,6 +129,7 @@ export function ReportTab({ scope }: ReportTabProps) {
           <ExpandedReport
             reportId={report._id}
             hasExpert={hasExpert}
+            userId={user?._id ?? null}
             onEditConclusion={canWrite ? (reportId, text) => setEditing({ reportId, text }) : undefined}
           />
         )}

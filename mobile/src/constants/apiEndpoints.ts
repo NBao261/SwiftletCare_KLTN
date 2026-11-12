@@ -83,7 +83,7 @@ export const ENDPOINTS = {
   // chưa merge vào develop
   PUSH_TOKENS: '/notifications/push-tokens',
 
-  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006); preview kiểu cũ (deprecated) chỉ còn bằng chứng cảnh báo dùng
+  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006)
   HEALTH_REPORTS: '/health-reports',
   // Trạng thái ngày và chấm điểm (ANALYTICS-FR-012, EXPERT-FR-012, BR-31)
   HEALTH_DAYS: '/health-reports/days',

@@ -1,4 +1,4 @@
-import type { HouseHealthReportKind, HouseHealthReportSummary } from '@/types'
+import type { ExpertConclusion, HouseHealthReportKind, HouseHealthReportSummary } from '@/types'
 import { getIsoWeekNumber } from '@/utils/date.utils'
 import { formatHealthDate } from '@/utils/healthDay.utils'
 import { t } from '@/utils/i18n.utils'
@@ -46,4 +46,9 @@ export function validateCustomReportRange(from: string, to: string, today: strin
     return t('Báo cáo dài tối đa {days} ngày', { days: CUSTOM_REPORT_MAX_DAYS })
   }
   return null
+}
+
+// EXPERT-FR-006 — chưa có kết luận thì chuyên gia nào cũng viết được; đã có thì chỉ người viết đầu tiên sửa (backend trả 403)
+export function canEditConclusion(conclusion: ExpertConclusion | null | undefined, userId: string | null): boolean {
+  return !conclusion || (userId !== null && conclusion.by._id === userId)
 }
