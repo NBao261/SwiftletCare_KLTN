@@ -1,4 +1,4 @@
-import type { DeviceStatus } from '@/types'
+import type { ConfigSyncState, DeviceStatus } from '@/types'
 import { formatElapsed } from '@/utils/date.utils'
 import { formatDecimal } from '@/utils/number.utils'
 
@@ -18,6 +18,22 @@ export function summarizeDeviceStatuses(statuses: DeviceStatus[]): DeviceStatusS
     else summary.pending += 1
   }
   return summary
+}
+
+// Bước "Đã áp cấu hình khu vực" khi setup controller (FARM-FR-012, ENV-FR-027)
+export type ConfigApplyStep = 'waiting-connection' | 'waiting-config' | 'applied' | 'mismatch' | 'unknown'
+
+// Đọc bước áp cấu hình từ trạng thái kết nối và config_sync: chưa kết nối thì chưa tới bước này; MISMATCH là đã quá
+// 3 heartbeat vẫn báo bản cũ (BR-24); UNKNOWN là firmware trước 2.1.0 không báo phiên bản
+export function getConfigApplyStep(
+  status: DeviceStatus | null,
+  configSync: ConfigSyncState | undefined,
+): ConfigApplyStep {
+  if (configSync === 'APPLIED') return 'applied'
+  if (status === null || status === 'PENDING') return 'waiting-connection'
+  if (configSync === 'MISMATCH') return 'mismatch'
+  if (configSync === 'UNKNOWN') return 'unknown'
+  return 'waiting-config'
 }
 
 const BYTES_PER_KB = 1024

@@ -996,6 +996,12 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Đã kết nối': 'Connected',
   'Đang chờ thiết bị gửi tín hiệu đầu tiên': 'Waiting for the first signal from the device',
   'Đã áp cấu hình khu vực': 'Zone configuration applied',
+  'Sau khi thiết bị kết nối': 'After the device connects',
+  'Đang chờ thiết bị nhận cấu hình của khu vực': 'Waiting for the device to take the zone configuration',
+  'Thiết bị chưa áp cấu hình mới nhất, hệ thống đang gửi lại':
+    'The device has not applied the latest configuration; the system is sending it again',
+  'Firmware của thiết bị không báo phiên bản cấu hình nên chưa xác nhận được bước này':
+    'The device firmware does not report its configuration version, so this step cannot be confirmed',
   'Tiến trình': 'Progress',
   'Quá 15 phút thiết bị chưa kết nối. Kiểm tra lại bước cài Wi-Fi ở trên.': 'The device has not connected for 15 minutes. Check the Wi-Fi setup above.',
   'Quá 15 phút camera chưa kết nối. Kiểm tra máy đếm chim đã bật và có mạng.': 'The camera has not connected for 15 minutes. Check that the counting machine is on and online.',

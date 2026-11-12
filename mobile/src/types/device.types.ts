@@ -2,6 +2,9 @@ import type { Role } from './auth.types'
 
 // Khớp backend/src/types/domain.types.ts — PENDING: đã đăng ký nhưng chưa gửi heartbeat đầu tiên; chỉ 3 trạng thái kết nối (Report 3 §6.6)
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
+
+// Đồng bộ cấu hình của controller (ENV-FR-027, Report 3 §6.12) — cùng ConfigSyncState ở backend/src/types/domain.types.ts
+export type ConfigSyncState = 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
 export type ControlMode = 'AUTO' | 'MANUAL'
 
 // Relay IN1 phun sương, IN2 loa ru, IN3 quạt — khớp backend; IN4 dự phòng, đã bỏ sưởi (Report 3 §8)
@@ -27,6 +30,9 @@ export interface SensorNode {
   firmware_version: string
   last_heartbeat?: string
   status: DeviceStatus
+  // ENV-FR-027 — APPLIED khi heartbeat báo đúng config_version của Zone; applied_config_version null khi firmware không báo
+  config_sync?: ConfigSyncState
+  applied_config_version?: number | null
   rssi?: number
   // FARM-FR-006 — chẩn đoán từ heartbeat: thời điểm khởi động (tính uptime), RAM trống, lý do khởi động, IP trong LAN
   booted_at?: string

@@ -1,5 +1,27 @@
 import { describe, expect, it } from '@jest/globals'
-import { formatFreeHeap, formatUptime, summarizeDeviceStatuses } from '@/utils/device.utils'
+import { formatFreeHeap, formatUptime, getConfigApplyStep, summarizeDeviceStatuses } from '@/utils/device.utils'
+
+describe('getConfigApplyStep', () => {
+  it('chưa kết nối thì chờ kết nối, dù config_sync còn PENDING', () => {
+    expect(getConfigApplyStep(null, undefined)).toBe('waiting-connection')
+    expect(getConfigApplyStep('PENDING', 'PENDING')).toBe('waiting-connection')
+  })
+
+  it('đã kết nối mà chưa báo đúng phiên bản thì chờ nhận cấu hình', () => {
+    expect(getConfigApplyStep('ONLINE', 'PENDING')).toBe('waiting-config')
+    expect(getConfigApplyStep('OFFLINE', undefined)).toBe('waiting-config')
+  })
+
+  it('APPLIED là xong, kể cả khi thiết bị vừa mất kết nối', () => {
+    expect(getConfigApplyStep('ONLINE', 'APPLIED')).toBe('applied')
+    expect(getConfigApplyStep('OFFLINE', 'APPLIED')).toBe('applied')
+  })
+
+  it('tách riêng cấu hình chưa khớp và firmware không báo phiên bản', () => {
+    expect(getConfigApplyStep('ONLINE', 'MISMATCH')).toBe('mismatch')
+    expect(getConfigApplyStep('ONLINE', 'UNKNOWN')).toBe('unknown')
+  })
+})
 
 describe('summarizeDeviceStatuses', () => {
   it('đếm riêng online, offline và chờ kết nối', () => {
