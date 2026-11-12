@@ -48,7 +48,7 @@ export const analyticsApi = {
   getForecast: (zoneId: string) =>
     apiClient.get<ApiResponse<ForecastResult>>(ENDPOINTS.FORECAST, { params: { zoneId } }),
 
-  // Gợi ý hệ số bộ điều khiển mờ (ANALYTICS-FR-010), chỉ đọc
+  // Gợi ý hệ số bộ điều khiển fuzzy (ANALYTICS-FR-010), chỉ đọc
   getControlSuggestion: (zoneId: string) =>
     apiClient.get<ApiResponse<ControlSuggestion>>(ENDPOINTS.CONTROL_SUGGESTION, { params: { zoneId } }),
 }

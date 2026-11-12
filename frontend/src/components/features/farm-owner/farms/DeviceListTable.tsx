@@ -74,5 +74,5 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
     return cols
   }, [t, ago, zoneNameById, onSelect])
 
-  return <FixedRowsTable columns={columns} rows={devices} getRowKey={device => device.id} onRowClick={onSelect} emptyNotice={t(zoneNameById ? 'house.noDevice' : 'device.empty')} emptyContent={<TableEmptyState title={t(zoneNameById ? 'house.noDevice' : 'device.empty')} />} rowHeight={64} />
+  return <FixedRowsTable columns={columns} rows={devices} getRowKey={device => device.id} onRowClick={onSelect} emptyNotice={t(zoneNameById ? 'house.noDevice' : 'device.empty')} emptyContent={<TableEmptyState title={t(zoneNameById ? 'house.noDevice' : 'device.empty')} />} rowHeight={64} pageSize={5} />
 }

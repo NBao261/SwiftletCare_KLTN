@@ -15,7 +15,7 @@ import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
 import { getAlertTypeLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
-const NOTE_INPUT_HEIGHT = 88
+const NOTE_INPUT_HEIGHT = 96
 // Ghi chú dài tối đa như phán quyết (api-spec)
 const NOTE_MAX_LENGTH = 1000
 

@@ -1,6 +1,6 @@
 # Việc cần làm — phần scope cuối (sau `todo-review2.md`)
 
-Cập nhật 09/11/2026, theo scope cuối đã chốt với giảng viên hướng dẫn sau Review 2 (phiếu v3 bản cuối, BM03 1.3, SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0, BM04).
+Cập nhật 10/11/2026: SRS 4.2.1, SDD 2.2.1 (PR #147), lịch tuần 1 của Bảo. Trước đó 09/11/2026, theo scope cuối đã chốt với giảng viên hướng dẫn sau Review 2 (phiếu v3 bản cuối, BM03 1.3, SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0, BM04).
 
 File này hướng dẫn **phần làm mới** để hệ thống đủ như hồ sơ đã nộp: Farm Technician, Work Order, bảo trì phòng ngừa, bù phun sương theo thời tiết, profile cấu hình, luật khuyến nghị, tổng quan trại, chu kỳ thu hoạch và bộ giả lập (gap G-20…G-27), cùng hai việc mới của MF-04 và MF-06 (EXPERT-FR-021, 022).
 
@@ -71,7 +71,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 | Tuần | Kiệt | Bảo | Len | Nhi | Tuấn |
 |---|---|---|---|---|---|
-| 1 (10–16/11) | Spec G-20, G-21 → backend G-20 | G-27 giả lập; G-07 (từ `todo-review2.md`) | Đăng nhập technician, danh sách nhà được gán (G-20) | Màn gán kỹ thuật viên (G-20) | Console thiết bị của Admin (G-20) |
+| 1 (10–16/11) | Spec G-20, G-21 → backend G-20 | G-27 giả lập; G-08 (từ `todo-review2.md`; G-07 Kiệt làm, đã merge #137) | Đăng nhập technician, danh sách nhà được gán (G-20) | Màn gán kỹ thuật viên (G-20) | Console thiết bị của Admin (G-20) |
 | 2 (17–23/11) | Backend G-21 | G-23 firmware + backend | Màn cảnh báo + Work Order của technician (G-21) | Duyệt Work Order trên web (G-21) | Màn luật thời tiết (G-23); bằng chứng kiểm tra tại chỗ (G-21) |
 | 3 (24/11–02/12) | Phần mới của G-11 (chấm điểm, ngày lệch) | Spec G-24, G-25, G-26 | Chấm điểm ngày trên mobile (G-11) | Chấm điểm trên web (G-11) | Màn ngày lệch (G-11) |
 | 4 (03–09/12) | Backend G-22 | Backend G-24 | Checklist, ghi bảo trì (G-22) | Kế hoạch bảo trì (G-22); áp profile, giai đoạn nhà (G-24) | Profile, luật khuyến nghị (G-24) |
@@ -83,18 +83,18 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 ### G-20 — Farm Technician (Kiệt, Len, Nhi, Tuấn) — hạn 02/12
 
 **Backend (Kiệt):**
-- [ ] Spec: thêm phần kỹ thuật viên và lịch trực của nhà vào `/farms` (`houses.technicians`, roster); đổi enum `Role`, bỏ `TECHNICIAN` và thêm `FARM_TECHNICIAN`.
-- [ ] Đổi enum ở `backend/src/types/domain.types.ts`, `frontend/src/types/` và `mobile/src/types/` cùng một PR (shared enums). Viết `migrate:*` để chuyển dữ liệu cũ.
-- [ ] Quyền: Farm Technician là thành viên farm, chỉ thao tác trên nhà được gán. Thao tác ở nhà khác trả 403 (AUTH-FR-013). Gán một người không phải Farm Technician của farm trả 409. Mỗi nhà có tối đa một technician chính.
-- [ ] Technician được bật tắt tay, restart controller, vẽ vòng đếm, nhập thu hoạch và chấm điểm ngày ở nhà được gán. Không được sửa tham số, lắp thiết bị hay mời thành viên (Report 3 §2.4).
-- [ ] Lệnh từ xa (RESTART, đẩy cấu hình, OTA) chuyển hẳn sang console của Administrator (FARM-FR-009, 013); mọi lệnh đều ghi audit và báo cho Farm Owner.
-- [ ] Lịch trực (AUTH-FR-014, mức O): làm sau cùng. Nhà không có lịch trực thì dùng technician chính.
-- [ ] Bỏ `technicianAccess` cũ và route `/ota` của Technician cũ; cập nhật `roleMatrix.test.ts`.
+- [x] Spec: thêm phần kỹ thuật viên và lịch trực của nhà vào `/farms` (`houses.technicians`, roster); đổi enum `Role`, bỏ `TECHNICIAN` và thêm `FARM_TECHNICIAN`. *Xong trừ lịch trực (a6fbf9c): `houses.technicians`, API gán/bỏ gán, enum; roster thêm khi làm lịch trực.* *(Lịch trực: `a86b9d0`, `GET/PUT /farms/houses/{houseId}/roster`, ca theo tuần do Farm Owner nhập giờ.)*
+- [x] Đổi enum ở `backend/src/types/domain.types.ts`, `frontend/src/types/` và `mobile/src/types/` cùng một PR (shared enums). Viết `migrate:*` để chuyển dữ liệu cũ. *Backend và `migrate:farm-technician` xong (f9d9522); web xong (`f9364593`, `4621428f` — Tuấn, Nhi); mobile xong (`384ace40` — Len), cả ba cùng PR #146.*
+- [x] Quyền: Farm Technician là thành viên farm, chỉ thao tác trên nhà được gán. Thao tác ở nhà khác trả 403 (AUTH-FR-013). Gán một người không phải Farm Technician của farm trả 409. Mỗi nhà có tối đa một technician chính. *(f9d9522) `canAccessHouse` trong `farmAccess.util`; gỡ thợ khỏi farm thì bỏ luôn các lần gán; thợ chưa nhận cảnh báo cho tới G-21.* *(12/11, sau review #146: thợ xem được cảnh báo của nhà được giao (`GET /alerts`, `GET /alerts/{id}`), nhận thông báo và xác nhận vẫn chờ G-21; Domain Expert không xem lịch trực, `GET /farms/{id}/houses` chỉ trả cả lịch cho Farm Owner, thợ chỉ thấy ca của mình — Report 3 §2.4.)*
+- [x] Technician được bật tắt tay, restart controller, vẽ vòng đếm, nhập thu hoạch và chấm điểm ngày ở nhà được gán. Không được sửa tham số, lắp thiết bị hay mời thành viên (Report 3 §2.4). *Relay, restart, vòng đếm, xem dashboard và live stream xong (f9d9522); nhập thu hoạch chờ trạng thái DRAFT của HARVEST-FR-006 (G-26), chấm điểm ngày ở G-11.* *(11/11: nhập thu hoạch `fb2db1d` — lô của thợ là `DRAFT`, Farm Owner xác nhận bằng `POST /harvests/{id}/confirm`, thợ chỉ sửa/xoá lô `DRAFT` của mình; chấm điểm ngày **chuyển sang G-11** (mục "Người chấm" của G-11 phần mới), làm khi #126 và #146 đã merge vì cần code G-11.)*
+- [x] Lệnh từ xa (RESTART, đẩy cấu hình, OTA) chuyển hẳn sang console của Administrator (FARM-FR-009, 013); mọi lệnh đều ghi audit và báo cho Farm Owner. *(f9d9522) Farm Owner và thợ của nhà vẫn RESTART được (Report 3 §2.4); lệnh của Farm Owner không tự báo chính họ.*
+- [x] Lịch trực (AUTH-FR-014, mức O): làm sau cùng. Nhà không có lịch trực thì dùng technician chính. *(Backend: Kiệt, 11/11, `8288724`: lịch tuần theo nhà, thợ chính/thợ phụ, giờ VN, ca qua nửa đêm; chỉ thợ đang được giao, ca cùng vai không chồng giờ; thợ chỉ xem ca của mình; bỏ gán thì mất ca; `roster.util#technicianOnDuty` cho G-21 gửi cảnh báo. Màn lịch trực trên web: Nhi.)*
+- [x] Bỏ `technicianAccess` cũ và route `/ota` của Technician cũ; cập nhật `roleMatrix.test.ts`. *Backend xong (f9d9522): `technicianAccess.test.ts` viết lại theo nhà được gán, `roleMatrix.test.ts` theo role mới, bỏ `/admin/technicians`; web xong (`f9364593`, `4621428f` — Tuấn, Nhi): route `/ota` chuyển sang `ADMIN_ONLY`, cập nhật `roles.test.ts`.*
 
 **Giao diện:**
-- [ ] Len: đăng nhập bằng tài khoản technician; tab theo `roleTabs.ts`; danh sách các nhà được gán.
-- [ ] Nhi: màn gán technician vào nhà trên web Owner. Màn lịch trực để sau cùng, cùng lúc với phần backend.
-- [ ] Tuấn: màn Technician cũ chuyển thành console thiết bị của Administrator (danh sách thiết bị, cảnh báo thiết bị, RESTART, OTA).
+- [x] Len: đăng nhập bằng tài khoản technician; tab theo `roleTabs.ts`; danh sách các nhà được gán. *(Len, 11/11, `384ace40`, merge cùng PR #146 ngày 12/11)*
+- [x] Nhi: màn gán technician vào nhà trên web Owner. Màn lịch trực để sau cùng, cùng lúc với phần backend. *(Gán xong: Nhi, 11/11, nhánh `feat/g20-farm-technician` — tab "Thành viên farm" của trang nhà có mục "Kỹ thuật viên": công tắc "Giao nhà này" và ô "Thợ chính" lưu ngay qua `PUT/DELETE /farms/houses/{houseId}/technicians/{userId}`, Farm Owner nào cũng giao được, chuyên gia chỉ xem; mời Farm Technician vào farm (`INVITE_ROLES`); mục "Chủ nhà yến" không còn lẫn kỹ thuật viên. Lịch trực xong 11/11: nhóm "Lịch trực" trong tab "Thành viên farm" — bảng ca (thợ, loại ca chính/phụ, ngày, giờ, ca qua đêm), thêm/sửa/xoá ca gửi lại cả lịch qua `PUT …/roster`, kiểm trước như backend (≥ 1 ngày, giờ khác nhau, ca cùng loại không chồng giờ, `roster.validation.test.ts`); chỉ Farm Owner thấy nhóm này, chuyên gia và thợ không xem lịch trực (Report 3 §2.4). Tab Thành viên farm chia 4 nhóm bằng chip, bảng cố định 5 dòng, ô tìm theo tên/email.)*
+- [x] Tuấn: màn Technician cũ chuyển thành console thiết bị của Administrator (danh sách thiết bị, cảnh báo thiết bị, RESTART, OTA). *(Tuấn, 10/11, nhánh `feat/g20-farm-technician`, commits `f9364593` + `a527ace2`, cùng `4621428f`: đổi enum `TECHNICIAN` → `FARM_TECHNICIAN` trên web, thêm nhóm Console Thiết bị (`/devices`, `/alerts`, `/ota`) vào `AdminLayout`, khóa `PUSH_CONFIG` và `/ota` cho `ADMIN`, giữ `RESTART` cho `ADMIN`/`FARM_OWNER`/`FARM_TECHNICIAN`, chuyển `AudioTracksModal` sang `FARM_OWNER`, gỡ tạo tài khoản Technician ở Admin; 214/214 tests pass)*
 
 **Xong khi:** `roleMatrix.test.ts` pass với role mới, technician nhà A nhận 403 ở nhà B, và không còn chuỗi `TECHNICIAN` nào ngoài `FARM_TECHNICIAN` và phần migration.
 
@@ -196,7 +196,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo scope cuối:
 
-- [ ] Người chấm (BR-31, EXPERT-FR-012):
+- [ ] Người chấm (BR-31, EXPERT-FR-012): *(Phần Farm Technician chuyển từ G-20 sang đây: làm khi #126 và #146 đã merge.)*
   - Farm Technician của nhà chấm **mỗi ngày**; Farm Owner chấm **những ngày có mặt ở nhà**;
   - Domain Expert và Administrator gửi chấm điểm thì 403;
   - mỗi technician và mỗi Farm Owner chấm riêng.
@@ -274,18 +274,18 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [ ] Nhập sổ sản lượng các mùa trước của nhà thử nghiệm nếu chủ nhà còn giữ (A-8). Không có thì dữ liệu mẫu phải ghi rõ là mẫu.
 - [ ] Giao diện:
   - Len: nhập lô thu hoạch trên mobile;
-  - Nhi: xác nhận lô và xem chu kỳ trên web;
+  - Nhi: xác nhận lô và xem chu kỳ trên web; *(Xác nhận lô xong — Nhi, 11/11, nhánh `feat/g20-farm-technician` (API `fb2db1d` của Kiệt): trang Thu hoạch hiện nhãn "Chờ xác nhận" ở đợt còn lô `DRAFT`, lọc theo trạng thái, menu "Xác nhận đợt thu" (Farm Owner) gọi `POST /harvests/{id}/confirm` cho từng lô `DRAFT`. Còn xem chu kỳ, chờ backend G-26. 12/11: thẻ sản lượng, biểu đồ năm và tỉ lệ loại tổ chỉ tính lô đã xác nhận (BR-43); bảng và CSV (cột Trạng thái) vẫn có lô chờ xác nhận.)*
   - Tuấn: viết kết luận mùa vụ.
 
 **Test:** TC-F30-01…03. Đây là luồng phụ, test không tính vào 170 nhưng vẫn phải viết.
 
 ### G-27 — Bộ giả lập thiết bị (Bảo) — hạn 02/12, làm sớm nhất
 
-- [ ] `simulator/` (Node.js + mqtt.js):
+- [x] `simulator/` (Node.js + mqtt.js): *(Bảo, 12/11/2026, PR #151: `npm test` 5/5; chưa chạy với EMQX thật vì máy chưa bật Docker — chạy thử ở máy dev rồi trên staging)*
   - đăng ký N controller và camera qua API Admin;
   - publish telemetry, heartbeat và số đếm trên đúng topic của thiết bị thật;
   - có kịch bản gây sự cố (cảnh báo, mất kết nối) để test định tuyến và Work Order.
-- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004).
+- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004). *(Backend xong ở PR #151: cờ đi từ kho sang controller và camera, có trong `GET /devices/sensor-nodes`, `/camera-nodes`, `/admin/provisioned-devices`. Còn nhãn "giả lập" trên màn hình: Nhi (web Owner, Admin), Tuấn (console thiết bị của Admin), Len (mobile).)*
 - [ ] Dùng cho:
   - NFR-03: 120 controller và 20 camera;
   - NFR-15: 30 cảnh báo và 10 Work Order, đo độ trễ leo thang và độ trễ xác minh phục hồi;
@@ -295,7 +295,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 | Việc | Cần cho | Hạn |
 |---|---|---|
-| 18 mục sửa tài liệu của BM02 (BM04 §9, các mục có hạn 11/11) | Cam kết BM04 | 11/11/2026 |
+| 16 mục sửa tài liệu của BM02 (BM04 §9, các mục có hạn 11/11, đều của Bảo) — xong 10/11/2026, PR #147 | Cam kết BM04 | 11/11/2026 |
 | Train model v2 trên frame khó; đo NFR-09 trên cùng ngày test và clip của v1. Mục tiêu dưới 10 %, nên nhắm 5–7 % | WF-03, NFR-09 | 02/12/2026 |
 | Phỏng vấn 2–3 người nuôi: mức chỉ số sức khỏe (BR-28…30), ít nhất 3 luật khuyến nghị, chu kỳ bảo trì thực tế | MF-06, MF-07, MF-08 có nguồn | 02/12/2026 |
 | Chấm điểm thực địa ≥ 14 ngày (technician chấm hằng ngày) | NFR-14 | Bắt đầu từ khi G-11 lên staging |

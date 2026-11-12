@@ -61,8 +61,7 @@ static const char *PORTAL_HTML = R"HTML(
     <input name="ssid" value="%WIFI_SSID%" %SSID_REQUIRED% autocomplete="off">
     <label>Mat khau</label>
     <input name="password" type="password" autocomplete="off">
-    %BROKER_FIELD%
-    <button type="submit">Ket noi</button>
+%BROKER_FIELD%    <button type="submit">Ket noi</button>
   </form>
 </div>
 </body></html>
@@ -128,14 +127,15 @@ void startCaptivePortal(AsyncWebServer &server) {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = String(PORTAL_HTML);
     html.replace("%DEVICE_ID%", Config::deviceId);
-    // FARM-FR-003c (BM02 S-03) — bản chính thức chỉ nhập Wi-Fi: địa chỉ broker nạp lúc flash
-    // (tools/flash_identity.py --broker). Bản dev giữ ô broker để thử với broker trên laptop.
+    // FARM-FR-003c — bản production chỉ hỏi Wi-Fi: broker là tên miền nạp lúc flash cùng tài khoản
+    // của thiết bị (BR-27). Bản dev vẫn cho nhập IP broker trên laptop khi mDNS không tìm được.
 #ifdef SWIFTLETCARE_PRODUCTION_BUILD
     html.replace("%BROKER_FIELD%", "");
 #else
     html.replace("%BROKER_FIELD%",
-                 "<label>Dia chi IP MQTT Broker (ban dev, de trong neu khong doi)</label>"
-                 "<input name=\"mqttBroker\" value=\"" + Config::mqttBroker + "\" autocomplete=\"off\">");
+                 String("<label>Dia chi IP MQTT Broker (de trong neu khong doi)</label>\n"
+                        "<input name=\"mqttBroker\" value=\"") +
+                     Config::mqttBroker + "\" autocomplete=\"off\">\n");
 #endif
     html.replace("%WIFI_SSID%", Config::wifiSsid);
     // SSID bắt buộc nhập chỉ khi portal mở do WiFi chưa từng connect được
@@ -171,9 +171,10 @@ void startCaptivePortal(AsyncWebServer &server) {
     // Nếu ssid rỗng (chỉ có thể xảy ra khi WiFi đang connected, theo guard ở
     // trên) — bỏ qua, không đụng tới WiFi credentials đã lưu.
 
+    // MQTT broker: optional, để trống nghĩa là giữ nguyên giá trị cũ (không
+    // ghi gì vào NVS, MQTTManager::begin() vẫn dùng giá trị đã lưu trước đó
+    // hoặc mặc định Secrets.h nếu chưa từng đổi).
 #ifndef SWIFTLETCARE_PRODUCTION_BUILD
-    // Bản dev: ô broker tuỳ chọn, để trống thì giữ giá trị cũ. Bản chính thức bỏ qua
-    // tham số này dù client có gửi (FARM-FR-003c: broker chỉ đặt lúc flash).
     if (request->hasParam("mqttBroker", true)) {
       String broker = request->getParam("mqttBroker", true)->value();
       broker.trim();

@@ -45,22 +45,10 @@ export const rejectDeletionRequest = asyncHandler(async (req: Request, res: Resp
   res.json({ success: true, data: user })
 })
 
-/** POST /admin/technicians – AUTH-FR-005c, Flow 16 */
-export const createTechnician = asyncHandler(async (req: Request, res: Response) => {
-  const user = await adminService.createTechnician(req.user._id, req.body)
-  res.status(201).json({ success: true, data: user })
-})
-
-/** PUT /admin/technicians/:id/password – AUTH-FR-005c (mật khẩu tạm chỉ trả về 1 lần) */
-export const resetTechnicianPassword = asyncHandler(async (req: Request, res: Response) => {
-  const { technician, temporaryPassword } = await adminService.resetTechnicianPassword(req.user._id, req.params.id)
-  res.json({ success: true, data: { technician, temporary_password: temporaryPassword } })
-})
-
 /** POST /admin/provisioned-devices – FARM-FR-003 (secret_key chỉ trả về 1 lần để in nhãn) */
 export const createProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
   const device = await provisionedDeviceService.createProvisionedDevice(req.user._id, {
-    device_id: req.body.device_id, kind: req.body.kind,
+    device_id: req.body.device_id, kind: req.body.kind, simulated: req.body.simulated,
   })
   res.status(201).json({ success: true, data: device })
 })

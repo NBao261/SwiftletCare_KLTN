@@ -3,7 +3,8 @@ import { RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } fro
 import { router, useLocalSearchParams } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { refetchVisibleQueries } from '@/config/queryClient'
-import { BellIcon, GearSixIcon } from 'phosphor-react-native'
+import { GearSixIcon } from 'phosphor-react-native'
+import { BellButton } from '@/components/common/BellButton'
 import { FarmSummaryStrip } from '@/components/farm/FarmSummaryStrip'
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
 import { OptionSheet } from '@/components/farm/OptionSheet'
@@ -15,7 +16,6 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spacing } from '@/constants/theme'
-import { useActiveAlertCount } from '@/hooks/alert/useActiveAlertCount'
 import { useActiveAlertCountsBySeverity } from '@/hooks/alert/useActiveAlertCountsBySeverity'
 import { useAutoOpenLastHouse } from '@/hooks/farm/useAutoOpenLastHouse'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
@@ -23,6 +23,7 @@ import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
 import { useFarmHouseCards } from '@/hooks/farm/useFarmHouseCards'
 import { useFarmSummary } from '@/hooks/farm/useFarmSummary'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useNow } from '@/hooks/time/useNow'
 import { useAuthStore } from '@/stores/authStore'
@@ -30,6 +31,7 @@ import { useFarmPrefsStore } from '@/stores/farmPrefsStore'
 import { farmHasExpert } from '@/utils/farm.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_FARMS } from '@/utils/navigation.utils'
 
 // Khung xương: 3 thẻ nhà đúng cỡ thẻ thật
 const SKELETON_CARD_COUNT = 3
@@ -49,10 +51,14 @@ export default function FarmsScreen() {
   const { width: windowWidth } = useWindowDimensions()
   const now = useNow(CLOCK_INTERVAL_MS)
   const { farmId: requestedFarmId } = useLocalSearchParams<{ farmId?: string }>()
+  // Mở từ lối tắt ở Trang chủ thì có nút ‹ quay về, và hiện danh sách thay vì tự mở nhà xem gần nhất
+  const returnBack = useReturnBack()
   const { userId, prefs } = useFarmPrefs()
   const user = useAuthStore(state => state.user)
   const canCreateFarm = canPerform(user, 'createFarm')
   const canCreateHouse = canPerform(user, 'createHouse')
+  // Kỹ thuật viên chỉ thấy nhà được giao (AUTH-FR-013): danh sách trống là chưa được giao, không phải farm chưa có nhà
+  const isAssignedHousesOnly = canPerform(user, 'limitedToAssignedHouses')
   const setCurrentFarm = useFarmPrefsStore(state => state.setCurrentFarm)
   const setAllFarmsView = useFarmPrefsStore(state => state.setAllFarmsView)
   const togglePinnedHouse = useFarmPrefsStore(state => state.togglePinnedHouse)
@@ -64,7 +70,6 @@ export default function FarmsScreen() {
   const housesQuery = useFarmHouseCards(farmId, now)
   const summaryQuery = useFarmSummary(housesQuery.houses.map(house => house._id))
   const severityQuery = useActiveAlertCountsBySeverity(farmId)
-  const { data: alertCount } = useActiveAlertCount(isAllFarms ? null : farmId)
   const [isFarmSheetOpen, setFarmSheetOpen] = useState(false)
   const [isRefreshing, setRefreshing] = useState(false)
 
@@ -72,7 +77,7 @@ export default function FarmsScreen() {
     farmId,
     houses: housesQuery.houses,
     isReady: !housesQuery.isLoading && !housesQuery.isError,
-    isFarmRequested: Boolean(requestedFarmId),
+    isFarmRequested: Boolean(requestedFarmId) || returnBack !== undefined,
   })
 
   // Farm đang xem thành farm mở mặc định cho lần sau; mở một farm qua link (thẻ farm, Trang chủ) là rời "Tất cả"
@@ -102,14 +107,6 @@ export default function FarmsScreen() {
   }
   // Nút ‹ khi đang ở một farm (thuộc từ 2 farm): về "Tất cả trang trại"
   const showAllFarms = () => handleSelectFarm(ALL_FARMS)
-  // Chuông: cảnh báo của farm đang xem, hoặc của mọi farm khi đang xem tất cả
-  const openAlerts = () =>
-    router.navigate({
-      pathname: '/(tabs)/alerts',
-      params: isAllFarms
-        ? { allFarms: '1', farmId: '', houseId: '', zoneId: '' }
-        : { farmId, allFarms: '', houseId: '', zoneId: '' },
-    })
 
   // Kéo xuống: tải lại mọi khối đang hiện
   const handleRefresh = async () => {
@@ -157,7 +154,7 @@ export default function FarmsScreen() {
     if (!farm) {
       return (
         <EmptyState
-          message={t('Bạn chưa có trang trại nào')}
+          message={isAssignedHousesOnly ? t('Bạn chưa thuộc trang trại nào. Hãy nhờ chủ trại mời bạn') : t('Bạn chưa có trang trại nào')}
           actionLabel={canCreateFarm ? t('Tạo trang trại') : undefined}
           onAction={canCreateFarm ? openFarmCreate : undefined}
         />
@@ -166,7 +163,7 @@ export default function FarmsScreen() {
     if (housesQuery.cards.length === 0) {
       return (
         <EmptyState
-          message={t('Farm chưa có nhà yến')}
+          message={isAssignedHousesOnly ? t('Bạn chưa được giao nhà nào. Hãy nhờ chủ trại giao nhà cho bạn') : t('Farm chưa có nhà yến')}
           actionLabel={canCreateHouse ? t('Thêm nhà') : undefined}
           onAction={canCreateHouse ? openFarmSettings : undefined}
         />
@@ -178,8 +175,17 @@ export default function FarmsScreen() {
         <FarmSummaryStrip
           summary={summaryQuery.summary}
           severityCounts={severityQuery.data ?? null}
-          hasExpert={farmHasExpert(farm)}
+          // GET /farms chỉ trả bản ghi thành viên của chính người gọi khi không phải Farm Owner (onlyOwnMembership): thợ, chuyên gia
+          // không biết farm có chuyên gia hay không nên ẩn nhãn
+          hasExpert={canPerform(user, 'viewFarmMembers') ? farmHasExpert(farm) : null}
           isDetailLoading={summaryQuery.isLoading}
+          // Chưa có chuyên gia: mở Thành viên của đúng farm này để mời, ‹ quay về danh sách nhà
+          onInviteExpert={
+            canPerform(user, 'viewFarmMembers')
+              ? () =>
+                  router.push({ pathname: '/(tabs)/profile/members', params: { farmId, returnTo: RETURN_TO_FARMS } })
+              : undefined
+          }
         />
         {/* Cùng thẻ nhà của carousel Trang chủ; ở đây bấm thì mở Màn B của nhà */}
         {housesQuery.cards.map(card => (
@@ -203,7 +209,7 @@ export default function FarmsScreen() {
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader
-        onBack={farmQuery.hasMultipleFarms && !isAllFarms ? showAllFarms : undefined}
+        onBack={returnBack ?? (farmQuery.hasMultipleFarms && !isAllFarms ? showAllFarms : undefined)}
         leading={
           <HeaderPicker
             title={headerTitle}
@@ -217,13 +223,7 @@ export default function FarmsScreen() {
         }
         right={
           <View style={styles.headerActions}>
-            {/* Tab Cảnh báo của cả farm đang xem (mọi farm khi đang xem tất cả) */}
-            <IconButton
-              icon={BellIcon}
-              label={t('Cảnh báo đang hiệu lực')}
-              badgeCount={alertCount ?? 0}
-              onPress={openAlerts}
-            />
+            <BellButton />
             {farm && <IconButton icon={GearSixIcon} label={t('Cài đặt trang trại')} onPress={openFarmSettings} />}
           </View>
         }

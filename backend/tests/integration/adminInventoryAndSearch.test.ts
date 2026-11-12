@@ -92,7 +92,7 @@ describe('cấp lại secretKey', () => {
     const { secret_key: newKey } = await rotateProvisionedKey(adminId, id)
 
     expect(newKey).not.toBe(oldKey)
-    await expect(verifyActivationKey('ESP-001', 'SENSOR', newKey)).resolves.toBeUndefined()
+    await expect(verifyActivationKey('ESP-001', 'SENSOR', newKey)).resolves.toEqual({ simulated: false })
     await expect(verifyActivationKey('ESP-001', 'SENSOR', oldKey)).rejects.toMatchObject({ statusCode: 400 })
   })
 
@@ -103,7 +103,7 @@ describe('cấp lại secretKey', () => {
 
     const { secret_key: newKey } = await rotateProvisionedKey(adminId, id)
 
-    await expect(verifyActivationKey('ESP-001', 'SENSOR', newKey)).resolves.toBeUndefined()
+    await expect(verifyActivationKey('ESP-001', 'SENSOR', newKey)).resolves.toEqual({ simulated: false })
     await expect(verifyActivationKey('ESP-001', 'SENSOR', oldKey)).rejects.toMatchObject({ statusCode: 400 })
     const audit = await AuditLog.findOne({ action: 'DEVICE_PROVISION_KEY_ROTATED' }).lean()
     expect(audit?.metadata).toMatchObject({ deviceId: 'ESP-001', released: true })
@@ -115,7 +115,7 @@ describe('cấp lại secretKey', () => {
     await SensorNode.create({ device_id: 'ESP-001', zone_id: new mongoose.Types.ObjectId(), status: 'ONLINE' })
     await request(app).post(`/admin/provisioned-devices/${id}/rotate-key`)
       .set('Authorization', `Bearer ${tokenFor(adminId, 'ADMIN')}`).expect(409)
-    await expect(verifyActivationKey('ESP-001', 'SENSOR', secretKey)).resolves.toBeUndefined()   // key cũ vẫn giữ
+    await expect(verifyActivationKey('ESP-001', 'SENSOR', secretKey)).resolves.toEqual({ simulated: false })   // key cũ vẫn giữ
 
     const other = await createProvisionedDevice(adminId, { device_id: 'ESP-002', kind: 'SENSOR' })
     const otherId = String((await ProvisionedDevice.findOne({ device_id: other.device_id }))!._id)
@@ -150,8 +150,8 @@ describe('GET /admin/provisioned-devices — trạng thái nhãn (Report 3 §6.1
 describe('GET /admin/users — tìm kiếm', () => {
   async function seed() {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    await mkUser('nguyen.van.a@test.vn', 'TECHNICIAN', { full_name: 'Nguyễn Văn A', phone: '0911111111' })
-    await mkUser('tran.b@test.vn', 'TECHNICIAN', { full_name: 'Trần B' })
+    await mkUser('nguyen.van.a@test.vn', 'FARM_TECHNICIAN', { full_name: 'Nguyễn Văn A', phone: '0911111111' })
+    await mkUser('tran.b@test.vn', 'FARM_TECHNICIAN', { full_name: 'Trần B' })
     await mkUser('locked@test.vn', 'FARM_OWNER', { is_active: false })
     await mkUser('deleted-x@swiftletcare.local', 'FARM_OWNER', { is_active: false, deleted_at: new Date() })
     return tokenFor(admin._id, 'ADMIN')

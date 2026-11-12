@@ -1,27 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { canAccessPath, getRoleHomePath } from '@/constants/roles'
+import { DEVICE_LIST_ROLES, FARM_STRUCTURE_ROLES, canAccessPath, getRoleHomePath } from '@/constants/roles'
 import type { Role } from '@/types'
 
 const FO: Role = 'FARM_OWNER'
 const DE: Role = 'DOMAIN_EXPERT'
-const TECH: Role = 'TECHNICIAN'
+const FT: Role = 'FARM_TECHNICIAN'  // G-20: đổi TECHNICIAN → FARM_TECHNICIAN
 const ADMIN: Role = 'ADMIN'
-const ROLES: Role[] = [FO, DE, TECH, ADMIN]
+const ROLES: Role[] = [FO, DE, FT, ADMIN]
 
-// Ma trận quyền web theo Report 3 §2.4 và todo-review2.md G-15: path → role được vào
+// Ma trận quyền web theo Report 3 §2.4 và G-20 (backend f9d9522): path → role được vào
 const MATRIX: Record<string, Role[]> = {
   '/dashboard': [FO, DE],
   '/dashboard/scada': [FO],
   '/analytics': [FO, DE],
   '/vision': [FO, DE],
   '/harvests': [FO, DE],
-  '/farms': [FO, DE, TECH],
-  '/farms/f1/houses/h1/zones/z1': [FO, DE, TECH],
-  '/devices': [FO, DE, TECH],
+  '/farms': [FO, DE, FT],
+  '/farms/f1/houses/h1/zones/z1': [FO, DE, FT],
+  '/devices': [ADMIN, FO, DE, FT],      // G-20: ADMIN có Console thiết bị qua /devices
   '/devices/detail': [FO, DE],
-  '/onboarding': [FO, TECH],
-  '/ota': [TECH],
-  '/alerts': [FO, TECH],
+  '/onboarding': [FO],                  // G-20: chỉ FARM_OWNER (FARM_TECHNICIAN/ADMIN gọi API → 403)
+  '/ota': [ADMIN],                      // G-20: OTA chỉ ADMIN (route /ota ở web là phần của Tuấn)
+  '/alerts': [ADMIN, FO, FT],           // G-20: ADMIN xem cảnh báo thiết bị mọi farm
   '/system/health': [ADMIN],
   '/system/devices': [ADMIN],
   '/system/device-stock': [ADMIN],
@@ -33,7 +33,14 @@ const MATRIX: Record<string, Role[]> = {
   '/settings': ROLES,
 }
 
-describe('canAccessPath — ma trận quyền web (G-15)', () => {
+describe('nhóm role của route (RequireRole)', () => {
+  it('trang farm, nhà, Zone không có Admin (số liệu môi trường); /devices có Admin', () => {
+    expect(FARM_STRUCTURE_ROLES).not.toContain(ADMIN)
+    expect(DEVICE_LIST_ROLES).toEqual(expect.arrayContaining([ADMIN, FO, DE, FT]))
+  })
+})
+
+describe('canAccessPath — ma trận quyền web (G-20)', () => {
   for (const [path, allowed] of Object.entries(MATRIX)) {
     for (const role of ROLES) {
       const expected = allowed.includes(role)

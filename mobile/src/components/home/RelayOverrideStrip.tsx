@@ -18,6 +18,7 @@ import { getRelayLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { formatRemainingTime } from '@/utils/relay.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 const ICON_CIRCLE_SIZE = 40
 // Cập nhật chữ "còn … phút" mỗi 30 giây
@@ -57,7 +58,7 @@ export function RelayOverrideStrip() {
         tone="inverse"
         style={styles.strip}
         // shortcut: chưa có màn danh sách relay thủ công — tạm mở tab Trang trại
-        onPress={() => router.navigate('/(tabs)/farms')}
+        onPress={() => router.navigate({ pathname: '/(tabs)/farms', params: { returnTo: RETURN_TO_HOME } })}
         accessibilityLabel={t('{count} relay đang chạy thủ công', { count: overrides.length })}
       >
         <Text variant="body" weight="semiBold" color={palette.onInverse} style={styles.texts}>
@@ -95,13 +96,19 @@ export function RelayOverrideStrip() {
           label={t('VỀ TỰ ĐỘNG')}
           size="sm"
           onPress={() =>
-            // Backend chỉ có một hạn chung cho controller: trả về AUTO là mọi relay của controller (ENV-FR-018)
+            // Chỉ relay này về AUTO, các relay khác của controller giữ nguyên (BR-20, ENV-FR-018)
             NativeAlert.alert(
-              t('Trả về AUTO'),
-              t('Mọi relay của bộ điều khiển {device} sẽ về tự động.', { device: override.node.device_id }),
+              t('Trả {relay} về AUTO?', { relay: getRelayLabel(override.log.relay) }),
+              t('{relay} của bộ điều khiển {device} sẽ quay về chế độ tự động ngay, thiết bị khác giữ nguyên.', {
+                relay: getRelayLabel(override.log.relay),
+                device: override.node.device_id,
+              }),
               [
                 { text: t('Huỷ'), style: 'cancel' },
-                { text: t('Trả về AUTO'), onPress: () => clearOverride.mutate(override.node._id) },
+                {
+                  text: t('Trả về AUTO'),
+                  onPress: () => clearOverride.mutate({ sensorNodeId: override.node._id, relayName: override.log.relay }),
+                },
               ],
             )
           }

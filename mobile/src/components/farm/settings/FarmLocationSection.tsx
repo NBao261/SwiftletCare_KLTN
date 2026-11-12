@@ -106,9 +106,7 @@ export function FarmLocationSection(props: FarmLocationSectionProps) {
       isExpanded={editor.isExpanded(SECTION_ID)}
       onToggle={() => editor.toggle(SECTION_ID)}
       onEdit={canEdit ? () => editor.startEditing(SECTION_ID) : undefined}
-      isEditing={isEditing}
-      footerNote={t('Chủ trại sửa được. Vĩ độ −90 đến 90, kinh độ −180 đến 180')}
-    >
+      isEditing={isEditing}    >
       {isEditing ? (
         <FarmLocationEditor {...props} />
       ) : (

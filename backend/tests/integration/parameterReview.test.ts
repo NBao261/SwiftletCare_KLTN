@@ -69,7 +69,7 @@ async function seed({ withExpert = true } = {}) {
   const mk = (prefix: string, role: Role, full_name: string) =>
     User.create({ email: `${prefix}${seq}@test.vn`, password_hash: 'password123', full_name, role })
   const [owner, expert, technician, admin] = await Promise.all([
-    mk('o', 'FARM_OWNER', 'Chủ'), mk('e', 'DOMAIN_EXPERT', 'Chuyên gia'), mk('t', 'TECHNICIAN', 'KTV'), mk('a', 'ADMIN', 'QT'),
+    mk('o', 'FARM_OWNER', 'Chủ'), mk('e', 'DOMAIN_EXPERT', 'Chuyên gia'), mk('t', 'FARM_TECHNICIAN', 'KTV'), mk('a', 'ADMIN', 'QT'),
   ])
   const farm = await Farm.create({
     name: 'F', address: 'x', coordinates: { lat: 10, lng: 106 }, owner_id: owner._id,
@@ -80,7 +80,7 @@ async function seed({ withExpert = true } = {}) {
   const node = await SensorNode.create({ device_id: `ESP-${seq}`, zone_id: zone._id, status: 'ONLINE' })
   const t = {
     owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT'),
-    technician: tokenFor(technician._id, 'TECHNICIAN'), admin: tokenFor(admin._id, 'ADMIN'),
+    technician: tokenFor(technician._id, 'FARM_TECHNICIAN'), admin: tokenFor(admin._id, 'ADMIN'),
   }
   const send = (method: 'get' | 'put', path: string, token: string, body: object = {}) =>
     request(app)[method](path).set('Authorization', `Bearer ${token}`).send(body)

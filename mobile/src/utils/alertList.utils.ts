@@ -9,7 +9,7 @@ export const INFERRED_ALERT_TYPES: readonly AlertType[] = [
   'LOW_RETURN_RATE',
 ]
 
-// Cảnh báo về thiết bị — khớp danh sách loại Technician được xem ở backend (alert.service.ts)
+// Cảnh báo về thiết bị — khớp DEVICE_ALERT_TYPES ở backend (alert.service.ts), loại Administrator được xem ở console thiết bị
 export const DEVICE_ALERT_TYPES: readonly AlertType[] = [
   'NODE_OFFLINE',
   'EDGE_AI_DEGRADED',

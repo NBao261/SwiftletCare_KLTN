@@ -17,4 +17,6 @@ export const harvestApi = {
   update: (id: string, input: Partial<Omit<CreateHarvestInput, 'zone_id'>>) =>
     api.put<ApiResponse<HarvestBatch>>(`/harvests/${id}`, input),
   remove: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/harvests/${id}`),
+  // HARVEST-FR-006 — Farm Owner xác nhận lô DRAFT do Farm Technician nhập
+  confirm: (id: string) => api.post<ApiResponse<HarvestBatch>>(`/harvests/${id}/confirm`),
 }

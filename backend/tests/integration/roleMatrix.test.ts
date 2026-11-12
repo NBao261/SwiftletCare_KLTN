@@ -1,12 +1,14 @@
 /**
- * Report 3 §2.4 — ma trận quyền: Technician, Admin không sửa ngưỡng/hệ số mờ, không bật relay,
- * không sửa lịch loa, không xác nhận cảnh báo; Admin không quản lý farm; Farm Owner tự setup
- * thiết bị (MF-10) nhưng chỉ ở farm của mình (FARM-FR-007).
+ * Report 3 §2.4 — ma trận quyền: Farm Technician (kể cả ở nhà được giao), Admin không sửa ngưỡng/hệ số
+ * mờ, không sửa lịch loa, không xác nhận cảnh báo, không setup/dời/gỡ thiết bị, không quản lý file loa;
+ * Admin không bật relay, không quản lý farm; Farm Owner tự setup thiết bị (MF-10) nhưng chỉ ở farm của
+ * mình (FARM-FR-007).
  */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import alertRoutes from '@/routes/alerts.route'
+import analyticsRoutes from '@/routes/analytics.route'
 import deviceRoutes from '@/routes/devices.route'
 import farmRoutes from '@/routes/farms.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
@@ -39,6 +41,7 @@ app.use(express.json())
 app.use('/farms', farmRoutes)
 app.use('/devices', deviceRoutes)
 app.use('/alerts', alertRoutes)
+app.use('/analytics', analyticsRoutes)
 app.use(errorHandler)
 
 useTestDb()
@@ -65,7 +68,13 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
     const alert = await Alert.create({
       farm_id: farm._id, zone_id: zone._id, type: 'THRESHOLD_BREACH', severity: 'MEDIUM', title: 't', message: 'm', status: 'ACTIVE',
     })
-    const tech = { role: 'TECHNICIAN', token: (await tokenOf('TECHNICIAN')).token }
+    // Farm Technician được giao chính nhà này: các dòng dưới vẫn phải 403 vì role, không vì phạm vi
+    const techUser = await tokenOf('FARM_TECHNICIAN')
+    farm.members.push({ user_id: techUser.user._id, role: 'FARM_TECHNICIAN' } as never)
+    await farm.save()
+    house.technicians = [{ user_id: techUser.user._id, primary: true }] as never
+    await house.save()
+    const tech = { role: 'FARM_TECHNICIAN', token: techUser.token }
     const admin = { role: 'ADMIN', token: (await tokenOf('ADMIN')).token }
     const n = `/devices/sensor-nodes/${node._id}`
     const track = `${n}/audio-tracks/${node._id}`
@@ -76,28 +85,30 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
       ['delete', `/farms/${farm._id}`,                        [admin]],
       ['post',   `/farms/${farm._id}/members`,                [admin]],
       ['delete', `/farms/${farm._id}/members/${node._id}`,    [admin]],
+      ['post',   `/farms/${farm._id}/members`,                [tech]],
       ['post',   `/farms/${farm._id}/houses`,                 [tech, admin]],
+      ['put',    `/farms/houses/${house._id}/technicians/${node._id}`, [tech, admin]],
       ['post',   `/farms/houses/${house._id}/zones`,          [tech, admin]],
       ['put',    `/farms/zones/${zone._id}/thresholds`,       [tech, admin]],
       ['put',    `/farms/zones/${zone._id}/thresholds/reset`, [tech, admin]],
       ['put',    `/farms/zones/${zone._id}/fuzzy-tuning`,     [tech, admin]],
       ['put',    `${n}/thresholds`,                           [tech, admin]],
-      ['post',   `${n}/relay`,                                [tech, admin]],
-      ['delete', `${n}/relay-override`,                       [tech, admin]],
+      ['post',   `${n}/relay`,                                [admin]],
+      ['delete', `${n}/relay-override`,                       [admin]],
       ['put',    `${n}/speaker-schedule`,                     [tech, admin]],
-      ['get',    `${n}/relay-overrides`,                      [tech, admin]],
-      ['post',   '/devices/sensor-nodes/register',            [admin]],
-      ['post',   '/devices/camera-nodes/register',            [admin]],
-      ['put',    `${n}/reassign-zone`,                        [admin]],
-      ['post',   `${n}/decommission`,                         [admin]],
-      ['post',   `${n}/restore`,                              [admin]],
-      ['post',   `${n}/replace`,                              [admin]],
-      ['post',   `/devices/camera-nodes/${camera._id}/decommission`, [admin]],
-      ['post',   `/devices/camera-nodes/${camera._id}/restore`,      [admin]],
-      ['post',   `${n}/commands`,                             [admin]],
-      ['post',   `${n}/audio-tracks`,                         [admin]],
-      ['put',    `${track}/sync-status`,                      [admin]],
-      ['delete', track,                                       [admin]],
+      ['get',    `${n}/relay-overrides`,                      [admin]],
+      ['post',   '/devices/sensor-nodes/register',            [tech, admin]],
+      ['post',   '/devices/camera-nodes/register',            [tech, admin]],
+      ['put',    `${n}/reassign-zone`,                        [tech, admin]],
+      ['post',   `${n}/decommission`,                         [tech, admin]],
+      ['post',   `${n}/restore`,                              [tech, admin]],
+      ['post',   `${n}/replace`,                              [tech, admin]],
+      ['post',   `/devices/camera-nodes/${camera._id}/decommission`, [tech, admin]],
+      ['post',   `/devices/camera-nodes/${camera._id}/restore`,      [tech, admin]],
+      ['post',   `${n}/audio-tracks`,                         [tech, admin]],
+      ['put',    `${track}/sync-status`,                      [tech, admin]],
+      ['delete', track,                                       [tech, admin]],
+      ['get',    `/analytics/control/suggestion?zoneId=${zone._id}`, [tech, admin]],
       ['put',    `/alerts/${alert._id}/acknowledge`,          [tech, admin]],
     ]
     const allowed: string[] = []
@@ -110,9 +121,9 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
     expect(allowed).toEqual([])
   })
 
-  it('Farm Owner không còn gửi lệnh từ xa (FARM-FR-013 chỉ Technician)', async () => {
+  it('Farm Owner chỉ khởi động lại, không đẩy cấu hình hay OTA (FARM-FR-013 — lệnh khác là của Administrator)', async () => {
     const { node, token } = await seedOwnerFarm()
-    await call('post', `/devices/sensor-nodes/${node._id}/commands`, token, { command: 'RESTART' }).expect(403)
+    await call('post', `/devices/sensor-nodes/${node._id}/commands`, token, { command: 'PUSH_CONFIG' }).expect(403)
   })
 })
 

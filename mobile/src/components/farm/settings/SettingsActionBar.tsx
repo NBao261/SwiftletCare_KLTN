@@ -1,16 +1,17 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { BUTTON_HEIGHTS } from '@/components/ui/button'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
-// Cao bằng nút lớn (MOBILE_GUIDE 3.5)
-const BAR_MIN_HEIGHT = 56
+// Cùng khung nút lớn của app (MOBILE_GUIDE 3.5): cao 52, bo tròn hết cỡ
+const BAR_MIN_HEIGHT = BUTTON_HEIGHTS.lg
 
 interface SettingsActionBarProps {
   // Chữ trắng bên trái ("Lưu thay đổi", "Thiết bị online")
   label: string
-  // Chữ lime đậm bên phải ("2/3", "TẠO"); không truyền thì label là một chữ lime đậm căn giữa (nút "Cập nhật")
+  // Chữ lime đậm bên phải ("2/3", "GỬI"); không truyền thì label là một chữ lime đậm căn giữa (nút "Cập nhật", "Tạo mới")
   value?: string
   // Có thì cả thanh là nút bấm; không có thì chỉ để xem
   onPress?: () => void
@@ -92,9 +93,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
   },
   centered: { justifyContent: 'center' },
   label: { flex: 1 },

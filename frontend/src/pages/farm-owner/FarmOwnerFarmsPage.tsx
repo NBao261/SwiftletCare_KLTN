@@ -20,7 +20,7 @@ import { farmHousePath, farmZonePath, useFarmsScopeRouting, useScopeFilter } fro
 import { isUpFromChildState } from '@/lib/navigationState'
 import { useDeleteFarm, useFarms } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
-import { useFarmStructure, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
+import { useFarmStructure, useHouseStaff } from '@/hooks/farm-owner/useFarmStructure'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
@@ -52,10 +52,9 @@ export default function FarmOwnerFarmsPage() {
   const navigate = useNavigate()
   const { data: farms } = useFarms()
   const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
-  const houseIds = useMemo(() => structure.houses.map(node => node.house._id), [structure.houses])
   // Nhà đã có (kèm trang trại) để chặn tạo nhà trùng tên trong cùng trang trại
   const existingHouses = useMemo(() => structure.houses.map(node => node.house), [structure.houses])
-  const { data: extras } = useStructureExtras(houseIds)
+  const staffByHouse = useHouseStaff(existingHouses)
   const { pinned, toggle: togglePin } = usePinnedHouses()
   // Khung lọc chung các trang Farm Owner, lưu khi chuyển trang; chọn nhà / Zone thì sang trang chi tiết đúng cấp
   const scope = useScopeFilter()
@@ -137,7 +136,7 @@ export default function FarmOwnerFarmsPage() {
       counts[node.health] += 1
       if (filter !== 'all' && node.health !== filter) continue
       if (keyword) {
-        const staff = extras?.houseStaff[node.house._id]?.name ?? ''
+        const staff = staffByHouse.get(node.house._id)?.name ?? ''
         const haystack = `${node.house.name} ${node.farm.name} ${node.farm.address} ${staff}`.toLowerCase()
         if (!haystack.includes(keyword)) continue
       }
@@ -146,7 +145,7 @@ export default function FarmOwnerFarmsPage() {
     // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm) — chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
     const pinnedFirst = [...visible.filter(node => pinned.has(node.house._id)), ...visible.filter(node => !pinned.has(node.house._id))]
     return { visible: pinnedFirst, counts }
-  }, [scopedHouses, search, filter, extras, pinned])
+  }, [scopedHouses, search, filter, staffByHouse, pinned])
 
   // Nhà đang hiện của từng farm (giữ thứ tự nhà ghim lên đầu)
   const visibleByFarm = useMemo(() => {
@@ -204,7 +203,7 @@ export default function FarmOwnerFarmsPage() {
   function renderHouses(farmId: string): JSX.Element {
     const houses = visibleByFarm.get(farmId) ?? []
     if (view === 'list') {
-      return <HouseTable houses={houses} staffByHouse={extras?.houseStaff} pinned={pinned} showYield={canViewHarvest} onTogglePin={togglePin} onOpen={openHouse} />
+      return <HouseTable houses={houses} staffByHouse={staffByHouse} pinned={pinned} showYield={canViewHarvest} onTogglePin={togglePin} onOpen={openHouse} />
     }
     // Kẹp trang lưới theo số trang còn lại khi lọc / tìm kiếm làm ít đi
     const page = Math.min(gridPageByFarm[farmId] ?? 1, Math.max(1, Math.ceil(houses.length / GRID_PAGE_SIZE)))
@@ -216,7 +215,7 @@ export default function FarmOwnerFarmsPage() {
             <HouseCard
               key={row.house._id}
               node={row}
-              staff={extras?.houseStaff[row.house._id]}
+              staff={staffByHouse.get(row.house._id)}
               pinned={pinned.has(row.house._id)}
               showYield={canViewHarvest}
               onTogglePin={() => togglePin(row.house._id)}

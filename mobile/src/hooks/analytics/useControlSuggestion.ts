@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/services/api/analytics.api'
 
-// Gợi ý hệ số bộ điều khiển mờ của một tầng (ANALYTICS-FR-010), chỉ đọc
+// Gợi ý hệ số bộ điều khiển fuzzy của một tầng (ANALYTICS-FR-010), chỉ đọc
 export function useControlSuggestion(zoneId: string, enabled: boolean) {
   return useQuery({
     queryKey: ['analytics', 'control-suggestion', zoneId],

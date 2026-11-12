@@ -1,12 +1,15 @@
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, ScrollView, StyleSheet, View } from 'react-native'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { PushDeviceRow } from '@/components/profile/PushDeviceRow'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Language } from '@/stores/languageStore'
 import type { User } from '@/types'
+import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
 interface ProfileBasicContentProps {
@@ -17,7 +20,8 @@ interface ProfileBasicContentProps {
   bottomPadding: number
 }
 
-// Trang Tài khoản cơ bản (tên, email, đổi ngôn ngữ, đăng xuất) — giữ nguyên cho role chưa làm trang đầy đủ (Domain Expert)
+// Trang Tài khoản cơ bản (tên, email, đổi ngôn ngữ, đăng xuất) cho role chưa có trang đầy đủ (Domain Expert, kỹ thuật viên);
+// người nhận push (kỹ thuật viên) có thêm dòng nhận push trên máy này (ALERT-FR-002)
 export function ProfileBasicContent({ user, language, isSwitching, onSwitchLanguage, bottomPadding }: ProfileBasicContentProps) {
   const palette = usePalette()
 
@@ -32,6 +36,11 @@ export function ProfileBasicContent({ user, language, isSwitching, onSwitchLangu
           </Text>
         </View>
 
+        {canPerform(user, 'editNotificationSettings') && (
+          <Card style={styles.listCard}>
+            <PushDeviceRow onMessage={message => Alert.alert(message)} />
+          </Card>
+        )}
         {/* Chuyển ngữ Việt ⇄ Anh, lưu theo tài khoản; nhãn viết bằng ngôn ngữ đích để ai cũng đọc được */}
         <Button
           variant="secondary"
@@ -48,4 +57,5 @@ export function ProfileBasicContent({ user, language, isSwitching, onSwitchLangu
 const styles = StyleSheet.create({
   content: { padding: Spacing.lg, gap: Spacing.xl },
   profileCard: { padding: Spacing.lg, gap: Spacing.xs, borderRadius: Radius.lg },
+  listCard: { paddingVertical: Spacing.xs },
 })

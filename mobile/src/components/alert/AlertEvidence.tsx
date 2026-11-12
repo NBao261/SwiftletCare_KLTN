@@ -4,6 +4,7 @@ import { ChartFrame } from '@/components/charts/ChartFrame'
 import { MetricLineChart } from '@/components/charts/MetricLineChart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { RetryLine } from '@/components/common/RetryLine'
 import { Spacing } from '@/constants/theme'
 import { useAlertEvidence } from '@/hooks/alert/useAlertEvidence'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -92,9 +93,7 @@ export function AlertEvidence({ alert, enabled }: AlertEvidenceProps) {
   }
   if (!evidence) {
     return (
-      <Text variant="small" color={palette.textSecondary} onPress={() => evidenceQuery.refetch()}>
-        {t('Không tải được bằng chứng. Chạm để thử lại')}
-      </Text>
+      <RetryLine message={t('Không tải được bằng chứng')} onRetry={() => evidenceQuery.refetch()} isRetrying={evidenceQuery.isFetching} />
     )
   }
 

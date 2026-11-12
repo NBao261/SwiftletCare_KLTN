@@ -10,6 +10,7 @@ import { useHouses } from '@/hooks/farm/useHouses'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Farm } from '@/types'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 const CARD_HEIGHT = 168
 const ARROW_BUTTON_SIZE = 48
@@ -43,7 +44,7 @@ export function FarmBannerCard({ farm, width }: FarmBannerCardProps) {
   const alertText = getAlertText(activeAlertCount)
   // Cam chỉ dùng khi có cảnh báo; không có thì chữ xám trên nền tối
   const alertColor = activeAlertCount ? palette.alert : palette.onInverseSecondary
-  const openFarm = () => router.navigate({ pathname: '/(tabs)/farms', params: { farmId: farm._id } })
+  const openFarm = () => router.navigate({ pathname: '/(tabs)/farms', params: { farmId: farm._id, returnTo: RETURN_TO_HOME } })
 
   return (
     // Farm chưa có trường ảnh trong API — nền đen với 2 vòng olive quanh nút mũi tên

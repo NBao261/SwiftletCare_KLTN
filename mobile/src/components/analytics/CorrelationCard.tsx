@@ -7,6 +7,7 @@ import { MetricLineChart } from '@/components/charts/MetricLineChart'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { RetryLine } from '@/components/common/RetryLine'
 import { BorderWidth, Spacing } from '@/constants/theme'
 import { useCorrelations } from '@/hooks/analytics/useCorrelations'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -97,9 +98,7 @@ export function CorrelationCard({ zones, days }: CorrelationCardProps) {
       {correlations.isLoading ? (
         <Skeleton width="100%" height={ROW_SKELETON_HEIGHT * zones.length} />
       ) : correlations.isError ? (
-        <Text variant="small" color={palette.textSecondary} onPress={() => correlations.refetch()}>
-          {t('Không tải được. Chạm để thử lại')}
-        </Text>
+        <RetryLine message={t('Không tải được')} onRetry={() => correlations.refetch()} />
       ) : (
         zones.map((zone, index) => {
           const points = correlations.pointsByZone.get(zone._id) ?? []

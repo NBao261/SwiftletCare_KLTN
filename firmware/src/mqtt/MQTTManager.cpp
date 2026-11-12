@@ -390,6 +390,11 @@ void begin() {
   // không ai cần biết/nhập IP thủ công. Chỉ khi mDNS thất bại (mạng chặn
   // multicast, hoặc chưa chạy `npm run mdns` trên máy host) mới rơi về IP đã
   // lưu qua captive portal, cuối cùng mới về mặc định Secrets.h.
+#ifdef SWIFTLETCARE_PRODUCTION_BUILD
+  // FARM-FR-003c, BR-27 — bản production chỉ dùng tên miền broker nạp lúc flash (Secrets.h): không
+  // mDNS, không địa chỉ nhập ở AP-mode, để thiết bị không thể bị trỏ sang broker khác tại nhà yến.
+  Serial.println("[MQTT] Broker nạp lúc flash: " + Config::mqttBroker);
+#else
   if (!resolveBrokerViaMdns()) {
     String savedBroker;
     if (StorageManager::loadMqttBroker(savedBroker)) {
@@ -399,6 +404,7 @@ void begin() {
       Serial.println("[MQTT] Dùng mặc định Secrets.h: " + Config::mqttBroker);
     }
   }
+#endif
 
   brokerUri = uriOf(Config::mqttBroker);
   esp_mqtt_client_config_t config = {};
@@ -493,6 +499,7 @@ bool publishHeartbeat() {
   doc["uptime"] = esp_timer_get_time() / 1000; // ms, 64 bit — millis() tràn sau 49 ngày
   doc["resetReason"] = bootResetReason;
   doc["ip"] = WiFi.localIP().toString();
+  doc["appliedConfigVersion"] = Config::configVersion; // ENV-FR-027: backend so với phiên bản của Zone
   doc["timestamp"] = millis();
   if (justConnected) doc["justConnected"] = true;
 

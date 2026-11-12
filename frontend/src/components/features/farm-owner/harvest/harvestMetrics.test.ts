@@ -158,4 +158,13 @@ describe('groupHarvests', () => {
     ] as HarvestBatch[];
     expect(groupHarvests(batches).map(group => group.batches.length)).toEqual([2, 1]);
   });
+
+  it('lần thu còn lô DRAFT (thợ nhập) thì có id lô chờ xác nhận (HARVEST-FR-006)', () => {
+    const batches = [
+      { ...batch('2026-10-20T00:00:00Z', 100, 10), _id: 'b1', zone_id: 'z1', nest_type: 'RAW', status: 'DRAFT' },
+      { ...batch('2026-10-20T00:00:00Z', 50, 5), _id: 'b2', zone_id: 'z1', nest_type: 'CLEANED', status: 'CONFIRMED' },
+      { ...batch('2026-10-18T00:00:00Z', 70, 7), _id: 'b3', zone_id: 'z1', nest_type: 'RAW', status: 'CONFIRMED' },
+    ] as HarvestBatch[];
+    expect(groupHarvests(batches).map(group => group.pendingIds)).toEqual([['b1'], []]);
+  });
 });
