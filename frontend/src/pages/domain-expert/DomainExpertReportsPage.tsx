@@ -1,17 +1,4 @@
-/**
- * DomainExpertReportsPage — Báo cáo & Kết luận + Xem Ngày Đánh Giá Lệch (EXPERT-FR-005/006/007, EXPERT-FR-022, BR-28)
- *
- * Rename + re-bucket từ ExpertReportsPage:
- *   Cũ: pages/expert/ExpertReportsPage.tsx  →  /expert/reports
- *   Mới: pages/domain-expert/DomainExpertReportsPage.tsx  →  /domain-expert/reports
- *
- * Hỗ trợ 2 phân hệ qua URL query (?tab=disagreements):
- *   - Tab 1 (mặc định): Báo cáo & Kết luận định kỳ — báo cáo theo nhà (ngày/tuần/tháng/theo yêu cầu) của farm hoặc nhà
- *     đang chọn; mở 1 báo cáo để viết kết luận (EXPERT-FR-006)
- *   - Tab 2 (?tab=disagreements): Xem Ngày Đánh Giá Lệch & Chỉnh Mức Chỉ Số Nhà Yến (EXPERT-FR-022, BR-28)
- *
- * Bucket: pages/domain-expert/ — §12.4.
- */
+// DomainExpertReportsPage — Báo cáo & Kết luận, Ngày đánh giá lệch & Mức chỉ số (EXPERT-FR-005/006, EXPERT-FR-022, BR-28)
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Scale } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
@@ -98,7 +85,7 @@ export default function DomainExpertReportsPage() {
               <Scale className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{i18nT('Ngày đánh giá lệch & Mức chỉ số')}</span>
               {disagreeingDaysCount > 0 && (
-                <span className="rounded-full bg-amber-600 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
+                <span className="rounded-full bg-orange-600 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
                   {disagreeingDaysCount}
                 </span>
               )}

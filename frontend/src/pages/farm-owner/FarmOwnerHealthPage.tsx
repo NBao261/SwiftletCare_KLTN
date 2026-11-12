@@ -31,8 +31,6 @@ const TABS = ['table', 'report', 'disagreements'] as const;
 type HealthTab = (typeof TABS)[number];
 
 // BR-22 — farm chưa có chuyên gia thì Farm Owner xem ngày lệch thay chuyên gia (EXPERT-FR-022)
-// ponytail: GET /farms không cho biết tài khoản chuyên gia bị khoá, nên farm chỉ còn chuyên gia bị khoá vẫn ẩn tab
-// (backend thì cho Farm Owner vào); cần thì backend trả cờ chuyên gia còn hoạt động theo farm
 function hasExpert(farm: Farm): boolean {
   return farm.members.some(member => member.role === 'DOMAIN_EXPERT');
 }

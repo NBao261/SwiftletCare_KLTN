@@ -5,6 +5,7 @@ import {
   formatRatePercent,
 } from '@/components/common/DisagreementsSection';
 import { NO_VALUE } from '@/constants/display';
+import { formatNumber } from '@/lib/i18n';
 import { disagreementsApi } from '@/apis/domain-expert/disagreements.api';
 import {
   DISAGREEMENTS_QUERY_KEY,
@@ -29,19 +30,24 @@ describe('G-11 — Expert Health Disagreements & Evaluation Unit Tests (EXPERT-F
   });
 
   describe('ANALYTICS-FR-014: Định dạng chỉ số Độ đồng thuận & Tỷ lệ báo động giả', () => {
-    it('formatRatePercent chuyển tỷ lệ 0..1 sang phần trăm 1 chữ số thập phân', () => {
-      expect(formatRatePercent(0.8571)).toBe('85.7%');
-      expect(formatRatePercent(0)).toBe('0.0%');
-      expect(formatRatePercent(1)).toBe('100.0%');
-      expect(formatRatePercent(null)).toBe(NO_VALUE);
-      expect(formatRatePercent(undefined)).toBe(NO_VALUE);
+    const english = (value: number, digits: number) => formatNumber(value, 'en', digits);
+    const vietnamese = (value: number, digits: number) => formatNumber(value, 'vi', digits);
+
+    it('formatRatePercent chuyển tỷ lệ 0..1 sang phần trăm 1 chữ số thập phân, dấu thập phân theo ngôn ngữ', () => {
+      expect(formatRatePercent(0.8571, english)).toBe('85.7%');
+      expect(formatRatePercent(0.8571, vietnamese)).toBe('85,7%');
+      expect(formatRatePercent(0, english)).toBe('0.0%');
+      expect(formatRatePercent(1, english)).toBe('100.0%');
+      expect(formatRatePercent(null, english)).toBe(NO_VALUE);
+      expect(formatRatePercent(undefined, english)).toBe(NO_VALUE);
     });
 
     it('formatAgreementIndex định dạng hệ số Kappa / AC1 với 2 chữ số thập phân', () => {
-      expect(formatAgreementIndex(0.742)).toBe('0.74');
-      expect(formatAgreementIndex(0)).toBe('0.00');
-      expect(formatAgreementIndex(null)).toBe(NO_VALUE);
-      expect(formatAgreementIndex(undefined)).toBe(NO_VALUE);
+      expect(formatAgreementIndex(0.742, english)).toBe('0.74');
+      expect(formatAgreementIndex(0.742, vietnamese)).toBe('0,74');
+      expect(formatAgreementIndex(0, english)).toBe('0.00');
+      expect(formatAgreementIndex(null, english)).toBe(NO_VALUE);
+      expect(formatAgreementIndex(undefined, english)).toBe(NO_VALUE);
     });
   });
 
@@ -54,7 +60,6 @@ describe('G-11 — Expert Health Disagreements & Evaluation Unit Tests (EXPERT-F
           to: '2026-11-10',
         }),
       ).toEqual([
-        'expert',
         'health-disagreements',
         'farm-01',
         '',
@@ -70,7 +75,6 @@ describe('G-11 — Expert Health Disagreements & Evaluation Unit Tests (EXPERT-F
           role: 'FARM_OWNER',
         }),
       ).toEqual([
-        'expert',
         'health-evaluation',
         'farm-01',
         '',

@@ -28,6 +28,9 @@ describe('formatHealthReason', () => {
     expect(formatHealthReason(reason('NOT_ASSESSED', 'air'), en, plain)).toBe('Air quality not assessed (missing NH3, CO2 samples)');
     expect(formatHealthReason(reason('NOT_ASSESSED', 'noise'), vi, plain)).toBe('Chưa xét tiếng ồn (thiếu mẫu độ ồn)');
     expect(formatHealthReason(reason('WEATHER_UNAVAILABLE'), vi, plain)).toBe('Không có dữ liệu thời tiết');
+    // BR-46 — nhà dẫn dụ: không xét đàn chim
+    expect(formatHealthReason(reason('ATTRACTING_STAGE', 'flock'), vi, plain)).toBe('Đàn chim: nhà đang ở giai đoạn dẫn dụ, không xét tỷ lệ chim về');
+    expect(formatHealthReason(reason('ATTRACTING_STAGE', 'flock'), en, plain)).toBe('Flock: the house is in the attracting stage, the return rate is not assessed');
     expect(formatHealthReason(reason('RAIN_DOWNGRADE', null, { mm_per_hour: 1 }), vi, plain))
       .toBe('Mưa từ 1 mm/giờ trùng phiên đếm và đợt ồn nên hạ từ Cần xử lý xuống Cần theo dõi');
   });

@@ -257,7 +257,7 @@ export default function DomainExpertQueuePage() {
                 Cần ký duyệt ({pendingReports})
               </span>
             ) : disagreeingDaysCount > 0 ? (
-              <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-800">
+              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
                 Ngày lệch ({disagreeingDaysCount})
               </span>
             ) : (

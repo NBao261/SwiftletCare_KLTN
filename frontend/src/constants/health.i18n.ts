@@ -283,6 +283,7 @@ const vi = {
 
   // EXPERT-FR-022 — màn ngày đánh giá lệch của chuyên gia
   'dis.noFarmTitle': 'Chưa chọn trang trại',
+  'dis.evaluationError': 'Không tải được độ đồng thuận và tỷ lệ báo động giả.',
   'dis.noFarmDesc': 'Chọn một trang trại ở bộ lọc phía trên để xem các ngày đánh giá lệch và mức chỉ số của nhà yến.',
   'dis.filters': 'Bộ lọc và độ đồng thuận',
   'dis.scope': 'Phạm vi nhà yến',
@@ -307,7 +308,6 @@ const vi = {
   'dis.emptyTitle': 'Không có ngày đánh giá lệch trong khoảng này',
   'dis.emptyAllAgree': 'Cả {n} lượt đánh giá trong {days} ngày qua đều khớp với trạng thái hệ thống lúc đánh giá.',
   'dis.emptyNone': 'Chưa có lượt đánh giá nào lệch với trạng thái hệ thống trong khoảng đã chọn.',
-  'dis.farmTechnician': 'Kỹ thuật viên nhà yến',
   'dis.rater': 'Người đánh giá',
   'dis.ratedAt': 'Đánh giá lúc {time}',
   'dis.raterSide': 'Người đánh giá tại nhà',
@@ -595,6 +595,7 @@ const en: Record<HealthKey, string> = {
   ...prefixLabels('role.', roleDict.en),
 
   'dis.noFarmTitle': 'No farm selected',
+  'dis.evaluationError': 'Could not load the agreement and false alarm rates.',
   'dis.noFarmDesc': 'Choose a farm in the filter above to see the days whose ratings disagree and the indicator levels of its houses.',
   'dis.filters': 'Filters and agreement',
   'dis.scope': 'House scope',
@@ -619,7 +620,6 @@ const en: Record<HealthKey, string> = {
   'dis.emptyTitle': 'No disagreeing day in this period',
   'dis.emptyAllAgree': 'All {n} ratings of the last {days} days match the system status at rating time.',
   'dis.emptyNone': 'No rating disagrees with the system status in the chosen period.',
-  'dis.farmTechnician': 'Farm Technician',
   'dis.rater': 'Rater',
   'dis.ratedAt': 'Rated {time}',
   'dis.raterSide': 'Rating on site',

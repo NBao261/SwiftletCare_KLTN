@@ -10,7 +10,6 @@ import type {
 export const DISAGREEMENTS_QUERY_KEY = (
   params: Partial<HealthDisagreementsQueryParams>,
 ) => [
-  'expert',
   'health-disagreements',
   params.farmId ?? '',
   params.houseId ?? '',
@@ -22,7 +21,6 @@ export const DISAGREEMENTS_QUERY_KEY = (
 export const EVALUATION_QUERY_KEY = (
   params: Partial<HealthDisagreementsQueryParams>,
 ) => [
-  'expert',
   'health-evaluation',
   params.farmId ?? '',
   params.houseId ?? '',
@@ -31,10 +29,7 @@ export const EVALUATION_QUERY_KEY = (
   params.role ?? '',
 ];
 
-/**
- * Hook lấy danh sách các ngày người chấm đánh giá lệch với trạng thái ảnh chụp của hệ thống
- * lúc chấm (EXPERT-FR-022) kèm mức chỉ số sức khỏe hiện tại của từng nhà yến (BR-28).
- */
+// EXPERT-FR-022 — ngày người chấm đánh giá lệch ảnh chụp hệ thống, kèm mức chỉ số của từng nhà (BR-28)
 export function useHealthDisagreements(
   params: HealthDisagreementsQueryParams,
   options?: { enabled?: boolean },
@@ -67,10 +62,7 @@ export function useHealthDisagreements(
   };
 }
 
-/**
- * Hook lấy thống kê độ đồng thuận (Agreement + CI 95%, Weighted Kappa, Gwet's AC1)
- * và tỷ lệ báo động giả theo từng nguồn chỉ số (ANALYTICS-FR-014, NFR-14).
- */
+// ANALYTICS-FR-014 — độ đồng thuận (CI 95%, Kappa, AC1) và tỷ lệ báo động giả theo nguồn (NFR-14)
 export function useHealthEvaluation(
   params: HealthDisagreementsQueryParams,
   options?: { enabled?: boolean },

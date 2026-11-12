@@ -38,11 +38,7 @@ const RATING_SEVERITY: Record<HealthRatingValue, number> = {
   ACTION: 2,
 };
 
-/**
- * Xác định chiều lệch giữa đánh giá thực địa của người chấm và trạng thái ảnh chụp hệ thống:
- * - 'STRICTER': Người chấm đánh giá mức độ nghiêm trọng cao hơn hệ thống (VD: Người chấm Cần xử lý, Hệ thống báo Tốt)
- * - 'LENIENT': Người chấm đánh giá nhẹ hơn hệ thống (VD: Người chấm Tốt, Hệ thống báo Cần theo dõi)
- */
+// Chiều lệch: STRICTER = người chấm nặng hơn ảnh chụp hệ thống, LENIENT = nhẹ hơn
 export function getDisagreementDirection(
   rating: HealthRatingValue,
   snapshotStatus: HealthRatingValue,
@@ -76,7 +72,7 @@ function DisagreementItemBlock({
       {/* Hàng 1: Thông tin người chấm thực địa + Thời điểm chấm */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warmGray/15 pb-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-warmGray/20 bg-white text-charcoal shadow-2xs">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-warmGray/20 bg-white text-charcoal">
             <UserCheck className="h-3.5 w-3.5 text-charcoal" />
           </div>
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -85,8 +81,7 @@ function DisagreementItemBlock({
             </span>
             <span className="text-warmGray">•</span>
             <span className="rounded-md border border-warmGray/15 bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
-              {/* ponytail: Role của web chưa có FARM_TECHNICIAN tới khi G-20 merge; khi đó đổi sang t(`role.${item.assessor.role}`) */}
-              {item.assessor.role === 'FARM_TECHNICIAN' ? t('dis.farmTechnician') : t('role.FARM_OWNER')}
+              {t(`role.${item.assessor.role}`)}
             </span>
           </div>
         </div>
@@ -109,8 +104,8 @@ function DisagreementItemBlock({
             aria-hidden="true"
             className="flex flex-col items-center px-1 text-warmGray"
           >
-            <ArrowLeftRight className="h-4 w-4 text-amber-700" />
-            <span className="font-mono text-[10px] font-bold uppercase text-amber-900">
+            <ArrowLeftRight className="h-4 w-4 text-orange-700" />
+            <span className="font-mono text-[10px] font-bold uppercase text-orange-900">
               {t('dis.compare')}
             </span>
           </div>
@@ -126,8 +121,8 @@ function DisagreementItemBlock({
             <span
               className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
                 direction === 'STRICTER'
-                  ? 'border border-amber-200 bg-amber-50 text-amber-900'
-                  : 'border border-sky-200 bg-sky-50 text-sky-900'
+                  ? 'border border-orange-200 bg-orange-50 text-orange-900'
+                  : 'border border-accent-200 bg-accent-50 text-accent-900'
               }`}
             >
               {direction === 'STRICTER'
@@ -196,9 +191,9 @@ function DisagreementItemBlock({
                   </span>
                 )}
               </div>
-              <ul className="flex flex-col gap-1 border-l-2 border-amber-400/70 pl-2.5 text-xs text-charcoal">
-                {item.snapshot_reasons.map((reason, idx) => (
-                  <li key={`${reason.code}-${reason.source ?? ''}-${idx}`}>
+              <ul className="flex flex-col gap-1 border-l-2 border-orange-400/70 pl-2.5 text-xs text-charcoal">
+                {item.snapshot_reasons.map((reason, index) => (
+                  <li key={`${reason.code}-${reason.source ?? ''}-${index}`}>
                     {formatHealthReason(reason, t, format)}
                   </li>
                 ))}
@@ -221,7 +216,7 @@ export default function DisagreementDayCard({
   return (
     <article
       aria-label={t('dis.dayLabel', { date: date(day.date), house: day.house_name })}
-      className="relative z-10 flex w-full max-w-screen-xl flex-col gap-4 rounded-2xl border border-warmGray/20 bg-white p-4 shadow-xs sm:p-5"
+      className="relative z-10 flex w-full max-w-screen-xl flex-col gap-4 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card"
     >
       {/* Header của ngày lệch: Ngày + Nhà yến + Trạng thái hiện tại + Liên kết mức chỉ số cấp nhà */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warmGray/15 pb-3.5">
@@ -262,9 +257,9 @@ export default function DisagreementDayCard({
 
       {/* Danh sách các lượt chấm lệch trong ngày */}
       <div className="flex w-full flex-col gap-3">
-        {day.disagreements.map((item, idx) => (
+        {day.disagreements.map((item, index) => (
           <DisagreementItemBlock
-            key={`${day.day_id}-disagreement-${idx}`}
+            key={`${day.day_id}-disagreement-${index}`}
             item={item}
             currentStatus={day.current_status}
           />

@@ -1,5 +1,7 @@
 // Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, đánh giá độc lập (MF-06; api-spec HouseHealthDay)
 
+import type { Role } from '@/types/common.types';
+
 export type HealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA';
 export type HealthRatingValue = 'GOOD' | 'WATCH' | 'ACTION';
 export type HealthLevel = 'NORMAL' | 'SLIGHT' | 'CLEAR';
@@ -38,7 +40,7 @@ export interface HealthDayWeather {
 export interface HealthDayRating {
   _id: string;
   by: { _id: string; full_name: string | null };
-  role: 'FARM_OWNER' | 'DOMAIN_EXPERT';
+  role: Extract<Role, 'FARM_OWNER' | 'FARM_TECHNICIAN' | 'DOMAIN_EXPERT'>;
   outcome: 'RATED' | 'SKIPPED';
   rating: HealthRatingValue | null;
   note: string | null;
