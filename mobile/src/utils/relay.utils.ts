@@ -1,5 +1,5 @@
 import { CONFIRMATION_REQUIRED_CODE, OVERRIDE_MAX_MS, OVERRIDE_MIN_MS, PUMP_ON_MAX_MS } from '@/constants/relayOverride'
-import type { RelayName, SensorNode } from '@/types'
+import type { ControlMode, RelayName, SensorNode } from '@/types'
 import type { PumpBlockingAlert } from '@/utils/alert.utils'
 import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
 import { getAlertStatusLabel, getAlertTypeLabel } from '@/utils/label.utils'
@@ -52,9 +52,26 @@ export function formatClockTime(isoDate: string): string {
   return new Date(new Date(isoDate).getTime() + VIETNAM_OFFSET_MS).toISOString().slice(11, 16)
 }
 
-// Số controller đang điều khiển tay — backend giữ một hạn chung cho cả controller nên đếm theo controller
-export function countManualControllers(nodes: SensorNode[]): number {
-  return nodes.filter(node => node.control_mode === 'MANUAL').length
+// Chế độ của một relay (BR-20): đọc relays[relay]; controller cũ chưa gửi relays thì lấy chế độ chung của controller
+export function getRelayMode(node: SensorNode, relay: RelayName): ControlMode {
+  return node.relays?.[relay]?.mode ?? node.control_mode
+}
+
+// Giờ relay tự về AUTO; relay đang AUTO thì null
+export function getRelayExpiry(node: SensorNode, relay: RelayName): string | null {
+  if (getRelayMode(node, relay) !== 'MANUAL') return null
+  const ownExpiry = node.relays?.[relay]
+  return (ownExpiry ? ownExpiry.override_expiry : node.override_expiry) ?? null
+}
+
+// Các relay đang điều khiển tay của một controller, theo thứ tự truyền vào
+export function getManualRelays(node: SensorNode, relays: readonly RelayName[]): RelayName[] {
+  return relays.filter(relay => getRelayMode(node, relay) === 'MANUAL')
+}
+
+// Tổng số relay đang điều khiển tay của nhiều controller
+export function countManualRelays(nodes: SensorNode[], relays: readonly RelayName[]): number {
+  return nodes.reduce((total, node) => total + getManualRelays(node, relays).length, 0)
 }
 
 // Khung giờ phát loa: "05:00–07:00 · 17:00–19:00"; tắt lịch hoặc chưa có thì null

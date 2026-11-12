@@ -8,7 +8,10 @@ import { applySoftDeleteScope } from '@/utils/softDelete.util'
 export interface IFarmMember {
   user_id:    Types.ObjectId
   is_primary: boolean // true = người tạo Farm (AUTH-FR-005)
-  /** FARM_OWNER = đồng sở hữu (quyền vận hành đầy đủ); DOMAIN_EXPERT = chuyên gia nuôi yến, cả farm (AUTH-FR-005) */
+  /**
+   * FARM_OWNER = đồng sở hữu (quyền vận hành đầy đủ); DOMAIN_EXPERT = chuyên gia nuôi yến, cả farm;
+   * FARM_TECHNICIAN = thợ của chủ farm, chỉ các nhà được giao (`houses.technicians`, AUTH-FR-005, 013)
+   */
   role:       FarmMemberRole
   joined_at:  Date
 }
@@ -38,7 +41,7 @@ const farmSchema = new Schema<IFarm>(
       user_id:    { type: Schema.Types.ObjectId, ref: 'User' },
       is_primary: { type: Boolean, default: false },
       // Member cũ (trước v1.23.0) không có field này — đều là Farm Owner
-      role:       { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT'] satisfies FarmMemberRole[], default: 'FARM_OWNER' },
+      role:       { type: String, enum: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] satisfies FarmMemberRole[], default: 'FARM_OWNER' },
       joined_at:  { type: Date, default: Date.now },
     }],
     is_deleted: { type: Boolean, default: false },

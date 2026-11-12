@@ -128,18 +128,18 @@ describe('getHealthOverview', () => {
 
   it('counts users per role/activity and no tickets (SYSTEM-FR-003)', async () => {
     await seedFarm('live')
-    await User.create({ email: 'locked@test.vn', password_hash: 'password123', full_name: 'L', role: 'TECHNICIAN', is_active: false })
+    await User.create({ email: 'locked@test.vn', password_hash: 'password123', full_name: 'L', role: 'FARM_TECHNICIAN', is_active: false })
     // Đã xoá theo yêu cầu: cũng is_active=false nhưng không được tính là "bị khoá"
     await User.create({
       email: 'deleted-x@swiftletcare.local', password_hash: 'password123', full_name: 'Tài khoản đã xoá',
-      role: 'TECHNICIAN', is_active: false, deleted_at: new Date(),
+      role: 'FARM_TECHNICIAN', is_active: false, deleted_at: new Date(),
     })
 
     const overview = await getHealthOverview()
 
     expect(overview).not.toHaveProperty('openTickets')
     expect(overview.users.byRole.FARM_OWNER).toEqual({ active: 1, inactive: 0, deleted: 0 })
-    expect(overview.users.byRole.TECHNICIAN).toEqual({ active: 0, inactive: 1, deleted: 1 })
+    expect(overview.users.byRole.FARM_TECHNICIAN).toEqual({ active: 0, inactive: 1, deleted: 1 })
     expect(overview.users).toMatchObject({ total: 3, active: 1, inactive: 1, deleted: 1 })
   })
 

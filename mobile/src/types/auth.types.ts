@@ -1,5 +1,7 @@
 // Khớp backend/src/types/domain.types.ts (Report 3 §2.3)
-export type Role = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'TECHNICIAN'
+// FARM_TECHNICIAN (Report 3 4.0.0, G-20): thợ của chủ farm, thành viên farm, chỉ thao tác trên nhà được giao (AUTH-FR-013);
+// khớp backend/src/types/domain.types.ts
+export type Role = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
 
 // Kênh ngoài app: push (ALERT-FR-002) và Telegram (ALERT-FR-013)
 export interface NotificationPreferences {

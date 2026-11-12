@@ -1,17 +1,14 @@
 import { StyleSheet, View } from 'react-native'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import { BellIcon } from 'phosphor-react-native'
+import { BellButton } from '@/components/common/BellButton'
 import { AppHeader } from '@/components/layout/AppHeader'
-import { IconButton } from '@/components/ui/icon-button'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
-import { useUnreadNotificationCount } from '@/hooks/notification/useUnreadNotificationCount'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import { getInitials } from '@/utils/name.utils'
-import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
 const AVATAR_SIZE = 44
@@ -20,7 +17,6 @@ const AVATAR_SIZE = 44
 export function HomeHeader() {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
-  const { data: unreadCount = 0 } = useUnreadNotificationCount()
 
   return (
     <AppHeader
@@ -48,13 +44,7 @@ export function HomeHeader() {
       }
       right={
         <View style={styles.actions}>
-          {/* Hộp thông báo trong ứng dụng (EXPERT-FR-007) ở tab Tài khoản — màn đó chỉ mở cho Farm Owner */}
-          <IconButton
-            icon={BellIcon}
-            label={t('Thông báo')}
-            badgeCount={unreadCount}
-            onPress={canPerform(user, 'viewOwnerProfile') ? () => router.push('/(tabs)/profile/notifications') : undefined}
-          />
+          <BellButton />
         </View>
       }
     />

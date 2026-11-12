@@ -1,6 +1,6 @@
 # Việc cần làm — Review 2 và Iteration 2
 
-Cập nhật 09/11/2026: theo scope cuối (SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0 với 170 test case, BM04). Các bước đã đánh `[x]` giữ nguyên làm lịch sử; bước nào còn mở mà lệch SRS 4.2.0 thì đã sửa ngay tại chỗ (phân công §0.1, quyết định 8, G-11, G-12, G-15). Trước đó: 03/11/2026 (6 luồng chính, SRS 3.2.0), 27/10/2026 (phân công lại theo vai trò).
+Cập nhật 10/11/2026: SRS 4.2.1, SDD 2.2.1 (16 mục BM02 hạn 11/11, PR #147); G-07 đã merge (#137); G-08, G-09 theo SM-12 và FARM-FR-003c mới; G-10, G-12 ghi phần Kiệt làm thay. Trước đó 09/11/2026: theo scope cuối (SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0 với 170 test case, BM04). Các bước đã đánh `[x]` giữ nguyên làm lịch sử; bước nào còn mở mà lệch SRS 4.2.0 thì đã sửa ngay tại chỗ (phân công §0.1, quyết định 8, G-11, G-12, G-15). Trước đó: 03/11/2026 (6 luồng chính, SRS 3.2.0), 27/10/2026 (phân công lại theo vai trò).
 
 **Phần scope cuối (G-20…G-27, EXPERT-FR-021, 022):** các bước chi tiết ở [`todo-final-scope.md`](todo-final-scope.md); làm tiếp ở đó sau khi xong phần của mình trong file này.
 
@@ -62,7 +62,7 @@ Cập nhật 09/11/2026: theo scope cuối (SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0
 Việc không cần backend mà Len, Tuấn, Nhi nhận thêm (mục 3, mục 5):
 
 - gán nhãn hộp `swiftlet` trên Roboflow và đếm tay clip cho NFR-09 (Bảo chia ngày quay, duyệt 20 khung đầu của mỗi người);
-- đo NFR phía client trên staging: Nhi NFR-01, 03 (k6) và NFR-13; Len NFR-02;
+- đo NFR phía client trên staging: Nhi NFR-01, 13, 14; Len NFR-02 (7 NFR cam kết ở BM04: thêm Bảo NFR-06, 09 và Kiệt NFR-15);
 - ảnh màn hình cho Report 4 §5 và hướng dẫn sử dụng phần màn của mình.
 
 ### 0.2 Quy tắc để không giẫm chân nhau
@@ -127,10 +127,10 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 | [x] | Mở PR nhánh tài liệu vào `develop` | P0-Tag | PR #108, #109, #111 đã merge |
 | [x] | Chạy CI đủ mọi module trên commit cuối của `develop` (Actions → CI → *Run workflow*); xanh thì gắn tag `review-2` **đúng commit đó** (push tag chạy CI lần nữa, không phải dời tag). Tải 3 artifact của lần chạy trên tag (`backend-jest-results`, `firmware-pio-junit`, `ai-pipeline-pytest-junit`), rồi `python docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md --jest jest-results.json --pio pio-junit.xml --pytest pytest-junit.xml`; ghi link lần chạy CI vào Report 5 §6 | P0-Tag | CI đã có trigger tag `review-*`, chạy tay và artifact (26/10); **xong 04/11/2026**: tag `review-2` = `7d5e643b`, CI trên tag xanh (run 41801124931), Report 5 1.3.0 sinh từ artifact: 83/83 Pass |
 | [x] | **BM02**: chạy prompt chuẩn trên tag, không sửa prompt, giữ nguyên kết quả; trả lời Fixed/Kept/Planned, mỗi điểm Planned ghi **một** người chịu trách nhiệm và hạn (gap nhiều người thì tách theo phần, như Tracking §6); điểm High Kept/Planned thêm vào BM01 §5 | P0-Nộp | Tắt Memory trước khi chạy; **xong 04/11/2026**: Claude Code (Opus 5.5) trên `7d5e643b`, 42 điểm (13 High, đều Planned), `bm02-self-review.md` + `tools/make_bm02.py`; BM01 §5 ghi các điểm High |
-| [ ] | Xuất PDF, đặt tên `SEP490_<Mã đề tài>_R2_<Tên hồ sơ>.pdf` (hướng dẫn mục 01, 03): `Registration` (phiếu v3 + BM03 trong một file), `Report1`…`Report5`, Project Tracking, `SelfReview` (BM02), `DesignBrief` (BM01, có link repo tag `review-2`) | P0-Nộp | Mermaid render sẵn; Bảo |
-| [ ] | **Máy demo cho buổi review** (mục 07): một máy chạy được Iteration 1 từ tag (`docker compose up -d mongodb emqx`, backend, web), chạy được bộ test (`npm test`, `vitest run`, `pio test -e native`, `pytest`), mở sẵn repo, Design Brief và các sơ đồ Report 4 | P0-Nộp | Bảo chuẩn bị, Kiệt chạy thử trước 1 ngày |
-| [ ] | **Diễn tập phần 2 và 3** (mục 07): trình bày 5 quyết định (mỗi chủ quyết định tự nói), 3 rủi ro, các điểm Kept/Planned của BM02; tập phân tích tác động của tình huống thay đổi trên sơ đồ và code — thêm một role, thêm một trạng thái cho Alert hoặc Device, Telegram/FCM/Open-Meteo ngừng hoạt động, tải tăng 10 lần — chỉ ra thực thể, trạng thái, luồng, API, test nào đổi | P0-Nộp | Cả team, ít nhất 1 buổi |
-| [ ] | **Diễn tập phần 5** (xác minh sở hữu): từng người mở code phần mình trong BM01 §8, giải thích, chạy test của mình, trả lời 2–3 câu "nếu… thì sao" do người khác hỏi | P0-Nộp | Cả team; tất cả phải có mặt ở buổi review |
+| [x] | Xuất PDF, đặt tên `SEP490_<Mã đề tài>_R2_<Tên hồ sơ>.pdf` (hướng dẫn mục 01, 03): `Registration` (phiếu v3 + BM03 trong một file), `Report1`…`Report5`, Project Tracking, `SelfReview` (BM02), `DesignBrief` (BM01, có link repo tag `review-2`) | P0-Nộp | Mermaid render sẵn; Bảo. **Xong 09/11/2026** (bộ PDF nộp Review 2); Report 3, Report 4, Project Tracking, SelfReview xuất lại 10/11 theo PR #147 |
+| [x] | **Máy demo cho buổi review** (mục 07): một máy chạy được Iteration 1 từ tag (`docker compose up -d mongodb emqx`, backend, web), chạy được bộ test (`npm test`, `vitest run`, `pio test -e native`, `pytest`), mở sẵn repo, Design Brief và các sơ đồ Report 4 | P0-Nộp | Bảo chuẩn bị, Kiệt chạy thử trước 1 ngày. **Xong** (Bảo xác nhận 10/11/2026) |
+| [x] | **Diễn tập phần 2 và 3** (mục 07): trình bày 5 quyết định (mỗi chủ quyết định tự nói), 3 rủi ro, các điểm Kept/Planned của BM02; tập phân tích tác động của tình huống thay đổi trên sơ đồ và code — thêm một role, thêm một trạng thái cho Alert hoặc Device, Telegram/FCM/Open-Meteo ngừng hoạt động, tải tăng 10 lần — chỉ ra thực thể, trạng thái, luồng, API, test nào đổi | P0-Nộp | Cả team, ít nhất 1 buổi. **Xong** (Bảo xác nhận 10/11/2026) |
+| [x] | **Diễn tập phần 5** (xác minh sở hữu): từng người mở code phần mình trong BM01 §8, giải thích, chạy test của mình, trả lời 2–3 câu "nếu… thì sao" do người khác hỏi | P0-Nộp | Cả team; tất cả phải có mặt ở buổi review. **Xong** (Bảo xác nhận 10/11/2026) |
 | [x] | Xoá SRS nội bộ cũ `SwiftletCare_SRS.md` (09/11/2026; còn trong lịch sử git) | P2 | |
 
 **Ngưỡng Defense 1.1** (không phải điều kiện nộp Review 2): 100 % workflow chạy end-to-end trên staging · ≥ 90 % test đạt · ≥ 50 % test tự động trong CI · không còn defect Critical/High.
@@ -207,7 +207,7 @@ Một PR cho backend, web, mobile, firmware:
   - xoá `authApi.register` (`apis/auth/auth.api.ts`), mutation `register` trong `hooks/auth/useAuth.ts`, `RegisterRequest` (`types/auth.types.ts`) và các comment AUTH-FR-001;
   - `InvitationPage.tsx`: người chưa có tài khoản đặt tên và mật khẩu ngay trên trang lời mời, gọi endpoint mới, không điều hướng sang `/register`.
 - [x] **P0-Tag — mobile:** xoá `app/(auth)/register.tsx`; xoá `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY` (`constants/api.ts`) và `register`, `sendOtp`, `verifyOtp` (`services/api/auth.ts`).
-- [ ] **P1 — Admin tạo Farm Owner:** `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, như Technician); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model.
+- [ ] **P1 — Admin tạo Farm Owner:** `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, AUTH-FR-005c; từ G-20 Farm Technician vào bằng lời mời nên không còn tài khoản Technician tạo sẵn); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model.
 - [ ] **P1 — e-mail thật** cho lời mời, mã đặt lại mật khẩu và mật khẩu tạm (SF-03 chạy end-to-end; hiện `auth.service.ts` chỉ `console.log` mã reset, `notification.service.ts#sendEmail` chỉ ghi log):
   - SMTP qua `nodemailer` (đã có trong dependencies), thông tin đăng nhập SMTP bằng biến môi trường, thêm vào `.env.example`;
   - không ghi log mật khẩu tạm, mã reset hay token lời mời;
@@ -276,6 +276,7 @@ Một PR cho backend, web, mobile, firmware:
 - [x] **Len — web:** giới hạn bơm 30 phút và hộp xác nhận liệt kê cảnh báo đang mở trước khi bật bơm. *(Nhi làm thay theo nhờ của Len, 03/11, `eab3be5`, nhánh `feat/g06-manual-override`: nút bật phun sương chạy tối đa 30 phút dù chọn thời hạn dài hơn (BR-08), quạt, loa và tắt bơm vẫn theo thời hạn đã chọn; 409 `CONFIRMATION_REQUIRED` mở popup liệt kê cảnh báo, "Vẫn bật bơm" gửi lại với `confirmed: true`; `ScadaNodeCard.tsx`, `scada.constants.ts`, `scadaRelay.ts`, `dashboard.i18n.ts` của Len — Len duyệt)*
 - [x] **Len — web:** huỷ từng relay (`DELETE …/relay-override?relayName=`). *(Nhi làm thay theo nhờ của Len, 03/11, nhánh `feat/g06-manual-override`: relay đang can thiệp tay lấy từ lịch sử can thiệp còn mở (`ended_at` trống), dòng relay đó có nút "Về tự động"; firmware chưa đọc `relayName` thì thiết bị vẫn trả mọi relay về tự động cho tới Backend phần 2 + G-07; `ScadaNodeCard.tsx`, `useAnalytics.ts`, `FarmOwnerScadaPage.tsx` của Len — Len duyệt)*
 - [x] **Len — mobile:** giới hạn bơm 30 phút và hộp xác nhận như web. *(Len, 03/11, nhánh `feat/g06-manual-override` — merge nền mobile `feat/mobile-farmowner-farm` vào vì `RelayControlSheet.tsx` chưa có trên `develop`: giới hạn bật bơm 1–30 phút (BR-08) giữ nguyên; sửa lỗi chỉ xét cảnh báo `ACTIVE` — hook `usePumpBlockingAlerts` lấy `SENSOR_FAULT`/`RS485_BUS_FAILURE`/`MISTING_INEFFECTIVE` cả `ACTIVE` lẫn `ACKNOWLEDGED`, tải mới mỗi lần mở sheet, lỗi thì khoá nút và có "Thử lại"; hộp xác nhận liệt kê từng cảnh báo kèm trạng thái và thời lượng; "Vẫn bật bơm" gửi `confirmed: true` (`useControlRelay`, `deviceApi.controlRelay`); 409 `CONFIRMATION_REQUIRED` đọc `error.details` bằng `parseConfirmationAlerts` rồi hỏi lại; câu lỗi riêng 422/403/409; nút "Về tự động" ở Trang chủ hỏi xác nhận. Còn lại ở mobile: huỷ từng relay và hiện `alert_confirmed` trong lịch sử — ghi ở Known debt `mobile/CLAUDE.md`)*
+- [x] **Len — mobile:** hạn và huỷ theo từng relay (BR-20, ENV-FR-018/019). *(Len, 10/11, nhánh `feat/mobile-farmowner-farm`: mỗi dòng relay ở Màn B có nút gạt BẬT/TẮT gửi ngay 30 phút mặc định (bơm tối đa 30 phút, TẮT hỏi lại, bật bơm hỏi theo 409), chế độ và giờ tự về AUTO đọc `relays[relay]`, nút "Về AUTO" riêng gửi `relayName`, "Về AUTO tất cả" khi từ 2 relay; dải ở Trang chủ chỉ trả relay đó; lịch sử hiện `alert_confirmed`; `hooks/device/useRelayCommand.ts` dùng chung cho sheet và nút gạt)*
 - [x] Test TC-F17-02 *(`relayCommand.test.ts`, Kiệt 31/10, `fae12fe`)*.
 - [x] Test TC-ST "MANUAL → MANUAL". *(06/11, `relayCommand.test.ts` + `test_relay_override`, backend 615/615)*
 - [x] Sửa theo review PR #124 *(Kiệt, 02/11, `37f61a2` spec + `c3d3ff8` backend)*: huỷ 1 relay không đang can thiệp tay thì không gửi lệnh, không ghi audit (200, như khi thiết bị AUTO). Góp ý còn lại không sửa code: web `ScadaNodeCard.tsx` cần giới hạn bơm 30 phút và hộp xác nhận (dòng Web/mobile ở trên, Len) trước khi G-06 lên staging.
@@ -283,7 +284,7 @@ Một PR cho backend, web, mobile, firmware:
 
 ### G-07 — MQTT theo thiết bị (P1, PR lớn nhất) — Kiệt (Bảo chuyển giao)
 
-Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, chưa merge: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging (danh sách kiểm tra 2.0.0 ở `firmware/README.md`), màn kho thiết bị hiện `broker_secret` một lần (web, Nhi, sau khi merge).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
+Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `feat/g07-mqtt-per-device`, chồng lên G-06, **đã merge PR #137 ngày 10/11/2026**: `0597e9b` spec + `43d93f7` backend + `fdf77eb` firmware + `f838870` AI node + `551976d` broker, `ee3a8b0` ghim `espressif32`; EMQX thật đạt 8/8 kiểm tra NFR-10 (d), backend 629/629, `esp32dev` và `esp32prod` build được)* **Còn phải làm: thử trên bàn với 2 controller + AI node trước khi lên staging (danh sách kiểm tra 2.0.0 ở `firmware/README.md`), màn kho thiết bị hiện `broker_secret` một lần (web, Nhi, sau khi merge).** `config_version` để G-08. Script có sẵn: `npm run mqtt:isolation`.
 
 - [x] Kho thiết bị: khi thêm thiết bị, sinh broker secret (trả một lần như activation key, lưu hash `broker_secret_hash`); thu hồi thì EMQX từ chối.
 - [x] Backend:
@@ -316,19 +317,23 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-08 — Phiên bản cấu hình (P1) — Bảo
 
-- [ ] `zones.config_version` tăng mỗi lần đổi ngưỡng, hệ số hoặc tham số phát hiện; `config` retained mang version; heartbeat báo `applied_config_version`; job `configSync` publish lại khi còn version cũ, quá 3 heartbeat lúc online thì `CONFIG_MISMATCH`; firmware cũ không báo version thì `UNKNOWN`.
-- [ ] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN).
-- [ ] Test TC-ST config sync 4 dòng.
+*(Bảo, 12/11/2026, nhánh `feat/g08-config-version`, PR #150: backend + firmware 2.1.0; backend 673/673 test, `pio test -e native` 76/76, `esp32dev` và `esp32prod` build được; **chưa thử trên board**, danh sách kiểm tra 2.1.0 ở `firmware/README.md`. Phiên bản là giây Unix luôn lớn hơn bản trước của Zone, để controller dời sang Zone khác không bị coi là đã áp vì trùng số; heartbeat gửi `appliedConfigVersion` như các trường heartbeat khác, SDD 2.2.2 ghi theo. Màn hiện trạng thái đồng bộ là việc của G-09 (Nhi, Len).)*
+
+- [x] `zones.config_version` tăng mỗi lần đổi ngưỡng, hệ số hoặc tham số phát hiện; `config` retained mang version; heartbeat báo `applied_config_version`; job `configSync` publish lại khi còn version cũ, quá 3 heartbeat lúc online thì `CONFIG_MISMATCH`; firmware cũ không báo version thì `UNKNOWN`.
+- [x] Trạng thái theo SM-12 mới (SRS 4.2.1 §6.12, BM02 ST-03): controller mới đăng ký bắt đầu ở `PENDING` (FARM-FR-012), không phải `APPLIED`; `UNKNOWN` về `APPLIED` khi heartbeat báo đúng version hiện tại, về `PENDING` khi báo version cũ.
+- [x] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN). *(`config_sync`, `applied_config_version` trong `GET /devices/sensor-nodes`, `config_version` trong Zone)*
+- [x] Test TC-ST-28…32 (5 case config sync, Report 5); jest phủ thêm `(new) → PENDING` và lối ra của `UNKNOWN` (không thêm case vào 170).
 
 ### G-09 — Màn SF-01 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
 
 - [ ] Web Admin: in nhãn ngay sau khi thêm thiết bị (`qrcode`), hiện broker secret một lần để flash.
 - [ ] Màn Zone: in mã QR tầng.
 - [ ] Cấp lại key cho thiết bị đã gỡ (BR-26), sửa `rotateProvisionedKey` và comment cũ "secretKey trong NVS".
-- [ ] Mobile (Len): quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình.
+- [ ] Mobile (Len): quét nhãn + mã tầng (`expo-camera`), hướng dẫn Wi-Fi AP-mode, màn tiến trình (PENDING → ONLINE → APPLIED). Đã có (01/11, nhánh `feat/mobile-farmowner-farm`): quét nhãn QR hoặc nhập tay rồi đăng ký camera vào nhà, controller vào tầng, trong Cài đặt nhà; còn thiếu quét mã tầng, Wi-Fi AP-mode và màn tiến trình. *(Len, 11/11, nhánh `feat/g20-farm-technician`: quét mã tầng `swiftletcare://zone?z=` trước hay sau nhãn đều được, hoặc chọn khu vực từ danh sách (FARM-FR-007), mã tầng ngoài farm bị chặn; đăng ký xong hiện hướng dẫn cài Wi-Fi theo firmware (mạng `SwiftletCare-Setup-<mã thiết bị>`, 192.168.4.1, chỉ hỏi Wi-Fi) và tiến trình Đã đăng ký → Đã kết nối, quá 15 phút nhắc kiểm tra Wi-Fi (BR-27). Còn chờ: bước APPLIED hiện "Sắp có" tới khi G-08 trả phiên bản cấu hình (ENV-FR-027))*
 - [ ] Web: `/onboarding` cho Farm Owner + Technician.
+- [x] **Bảo — firmware:** bỏ ô địa chỉ broker khỏi trang AP-mode của bản production (`esp32prod`); broker là tên miền nạp lúc flash cùng credential, bản dev vẫn tìm broker qua mDNS (FARM-FR-003c, BR-27, BM02 S-03; hạn 02/12/2026). *(firmware 2.1.0, PR #150: bản production chỉ hỏi Wi-Fi, bỏ qua `mqttBroker` gửi lên, không dùng mDNS hay địa chỉ đã lưu)*
 
-### G-10 — FCM (P0-Demo, cần cho NFR-02) — Kiệt (backend, Bảo chuyển giao), Len (mobile, đo NFR-02)
+### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend; Kiệt làm thay theo phân công của Bảo, PR #140), Len (mobile, đo NFR-02)
 
 - [x] Backend: *(Kiệt làm thay Bảo, 09/11, nhánh `feat/g10-fcm-push`: `4dedb0d` spec + `177dedc` backend; credential là file service account trỏ bằng `FIREBASE_SERVICE_ACCOUNT_PATH`, `.gitignore` chặn file này ở mọi thư mục; token Expo bị từ chối 422; ẩn danh tài khoản xoá token; **chưa gửi thật** vì nhóm chưa có project Firebase)*
   - collection `pushtokens`;
@@ -336,7 +341,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
   - adapter `push` dùng `firebase-admin` (credential qua biến môi trường, không commit);
   - xoá token FCM báo invalid;
   - không log token.
-- [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo.
+- [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo. *(Len, 11/11, nhánh `feat/g20-farm-technician`, theo api-spec của `feat/g10-fcm-push`: lấy FCM device token (`getDevicePushTokenAsync`, chỉ Android) và `POST /notifications/push-tokens` sau đăng nhập khi đã cho phép, `DELETE` trước khi đăng xuất; chỉ xin quyền khi người dùng chạm "Nhận push trên máy này"; bấm push mở đúng cảnh báo (data `{ kind, id }`), báo cáo, hoặc chuông. Còn chờ: G-10 merge vào develop, bản build có `google-services.json`, rồi đo NFR-02)*
 - [x] Test TC-F08-03 (mock Firebase Admin). *(`pushNotification.test.ts`, `177dedc`)*
 
 ### G-11 — MF-06 (P0-Demo) — Kiệt (backend), Nhi (web), Len (mobile)
@@ -358,7 +363,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - [ ] Chuyên gia xem các ngày lệch và chỉnh mức của nhà (EXPERT-FR-022): bước chi tiết ở `todo-final-scope.md` (G-11 phần mới).
 - [ ] Test TC-F20/21/22 và TC-ST-44…53 (trạng thái ngày 6.17, lượt chấm 6.18, báo cáo 6.9).
 
-### G-12 — Đếm chim (P1) — Bảo (AI, backend), Tuấn (trình vẽ vòng đếm trên web), Len (trình vẽ vòng đếm trên mobile cho Farm Technician), Len, Tuấn, Nhi (gán nhãn, đếm clip)
+### G-12 — Đếm chim (P1) — Bảo (AI, backend; test vẽ khung của AI node do Kiệt làm thay, PR #145), Tuấn (trình vẽ vòng đếm trên web), Len (trình vẽ vòng đếm trên mobile cho Farm Technician), Len, Tuấn, Nhi (gán nhãn, đếm clip)
 
 - [ ] Backend:
   - lịch đếm theo mùa và khung tạm (VISION-FR-019);
@@ -367,7 +372,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
   - job tỷ lệ chạy 15 phút sau khung chiều của từng House;
   - heartbeat AI có `fps` < 10 thì `EDGE_AI_DEGRADED`.
 - [ ] Vòng đếm (VISION-FR-018): Domain Expert **và Farm Technician của nhà có camera** được vẽ, có lịch sử, vai trò và audit (Farm Owner khi farm không có chuyên gia, BR-22); technician nhà khác bị 403. Web: trình vẽ trên khung hình live (Tuấn); mobile: trình vẽ cho technician (Len).
-- [ ] AI pipeline: tách phần vẽ khung + vòng thành hàm có test `tests/test_annotate.py` (TC-F11-01: mọi khung có vòng và hộp kèm track ID).
+- [ ] AI pipeline: tách phần vẽ khung + vòng thành hàm có test `tests/test_annotate.py` (TC-F11-01: mọi khung có vòng và hộp kèm track ID). *(Kiệt, PR #145, chưa merge)*
 - [ ] Đánh giá NFR-09 (VISION-FR-016): P/R phát hiện trên ≥ 200 khung có nhãn hộp cho mỗi điều kiện sáng (IoU ≥ 0,5) và sai số đếm trên 20 clip, đều lấy từ ngày quay không dùng cho train, val, chọn model, ngưỡng confidence, vòng đếm hay tham số tracker; nếu đã chia ngẫu nhiên theo frame trên Roboflow thì chia lại theo ngày (`tools/split_by_day.py`).
 - [ ] Model: v1 đã train (03/11/2026), lệch đếm tay khoảng 10 %; train v2 trên frame khó và đo lại trên cùng ngày test (mục 3).
 
@@ -409,13 +414,19 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 Thứ tự:
 
 1. **Len:** đăng nhập (đổi mật khẩu lần đầu), lưu token an toàn, điều hướng theo role, `off*` socket khi unmount — làm trước, các bước sau dựa vào.
+   - *(Len, đã có từ PR #127: đăng nhập, đổi mật khẩu tạm, token trong SecureStore, tab theo `roleTabs.ts`, gỡ socket khi rời màn; 11/11 listener socket sống qua lần đăng nhập lại)*
 2. **Len:** FCM (G-10).
 3. **Len:** dashboard số đo hiện tại + chế độ relay.
+   - *(Len, đã có từ PR #127: Trang chủ, màn nhà với số đo hiện tại, chế độ từng relay)*
 4. **Len:** cảnh báo: danh sách, chi tiết, xác nhận, `DISMISSED`.
+   - *(Len, danh sách, chi tiết, xác nhận, đã đóng gồm `DISMISSED` có từ PR #127; 11/11 nhánh `feat/g20-farm-technician`: chuông hai mục Thông báo | Cảnh báo chưa xác nhận là màn riêng ẩn thanh tab, số realtime qua `NOTIFICATION_NEW`/`ALERT_NEW`, tải lại khi socket nối lại; chi tiết cảnh báo có khung kết luận chuyên gia và lịch sử xử lý; trang chi tiết thông báo kèm Hoạt động chuyên gia ghi rõ chỉ số cũ → mới)*
 5. **Len:** can thiệp tay có xác nhận (G-06).
+   - *(Len, xem G-06: giới hạn bơm và hộp xác nhận 03/11, hạn và huỷ theo từng relay 10/11)*
 6. **Len:** setup QR (G-09).
+   - *(Len, xem G-09: quét nhãn 01/11; mã tầng, hướng dẫn Wi-Fi, tiến trình 11/11)*
 7. **Len:** trạng thái ngày + chấm điểm (G-11).
 8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; phát tại chỗ theo camera của House, không dùng route riêng).
+   - *(Len, đã có từ PR #127: tab Phân tích (Đàn chim, Môi trường, Điều khiển, Sản lượng, Báo cáo), live stream HLS phát tại chỗ theo camera của nhà)*
 9. **Len:** báo cáo.
 10. **Len:** thu hoạch.
 11. **Tuấn:** màn chuyên gia (hàng đợi việc, kết luận cảnh báo, tham số).
@@ -446,9 +457,9 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-20 — Farm Technician thay vai Technician cũ (P1, phạm vi cuối 09/11/2026) — Kiệt (backend), Tuấn (console thiết bị của Admin), Len (đăng nhập technician trên mobile), Nhi (màn gán nhà)
 
-- [ ] Đổi `TECHNICIAN` (mọi farm, lệnh từ xa) thành `FARM_TECHNICIAN`: thành viên farm, chỉ thao tác trên nhà được gán (AUTH-FR-004, 005, 013); enum đổi ở cả backend, web, mobile, `migrate:*` cho dữ liệu cũ.
-- [ ] Lệnh từ xa và OTA chuyển sang console thiết bị của Administrator (FARM-FR-009, 013); Farm Owner và technician của nhà được RESTART.
-- [ ] Gán technician vào nhà; lịch trực (AUTH-FR-014, O — làm sau cùng).
+- [x] Đổi `TECHNICIAN` (mọi farm, lệnh từ xa) thành `FARM_TECHNICIAN`: thành viên farm, chỉ thao tác trên nhà được gán (AUTH-FR-004, 005, 013); enum đổi ở cả backend, web, mobile, `migrate:*` cho dữ liệu cũ. *Backend xong (spec a6fbf9c, code f9d9522, Kiệt làm thay Bảo): enum, quyền theo nhà, `migrate:farm-technician` (tài khoản cũ chưa vào farm nào); web xong (`f9364593` + `a527ace2`, `4621428f` — Tuấn, Nhi); còn enum và màn hình mobile của Len.* *(Mobile — Len, 11/11, nhánh `feat/g20-farm-technician`: enum `FARM_TECHNICIAN` ở `types`, nhãn "Kỹ thuật viên nhà yến"; thợ đăng nhập được với 5 tab như Farm Owner (`roleTabs.ts`), chỉ thấy nhà được giao, chưa được giao thì báo "Bạn chưa được giao nhà nào"; quyền theo Report 3 §2.4 trong `permission.utils.ts` (điều khiển tay, cài thông báo, chuông, push); Farm Owner mời được kỹ thuật viên; chính sách quyền riêng tư cập nhật. Tạm ẩn với thợ tới khi backend mở: xác nhận cảnh báo, báo cáo sức khỏe, bằng chứng, gợi ý hệ số (backend G-20 trả 403); chưa thử với tài khoản thợ thật)*
+- [x] Lệnh từ xa và OTA chuyển sang console thiết bị của Administrator (FARM-FR-009, 013); Farm Owner và technician của nhà được RESTART. *Backend xong (f9d9522): Admin mọi lệnh ở mọi farm, Farm Owner và thợ chỉ RESTART (lệnh khác 403), lệnh của Admin/thợ báo Farm Owner; console thiết bị của Admin trên web xong (Tuấn, 10/11, `f9364593` + `a527ace2`, cùng `4621428f`: `/devices`, `/alerts`, `/ota` ở `AdminLayout`, `PUSH_CONFIG` và `/ota` chỉ `ADMIN`, `AudioTracksModal` chuyển sang `FARM_OWNER`, bỏ tạo tài khoản Technician ở Admin).*
+- [x] Gán technician vào nhà; lịch trực (AUTH-FR-014, O — làm sau cùng). *Gán xong ở backend (f9d9522): `PUT/DELETE /farms/houses/:houseId/technicians/:userId`, 1 thợ chính mỗi nhà; màn gán trên web xong (Nhi, 11/11, `b1b0eb3f`, tab "Thành viên farm" của trang nhà); câu chữ web còn nói Kỹ thuật viên lắp đặt, dời thiết bị, cập nhật firmware đổi theo Report 3 §2.4 (Nhi, 11/11). Còn lịch trực (backend và màn).* *(Lịch trực backend xong: `a86b9d0` spec, `8288724` code; màn lịch trực trên web xong — Nhi, 11/11, chi tiết ở `todo-final-scope.md` G-20.)*
 
 ### G-21 — Định tuyến, leo thang, Work Order (P0-Demo cho WF-02) — Kiệt (backend), Len (mobile technician), Nhi (duyệt trên web)
 
@@ -479,7 +490,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-27 — Bộ giả lập thiết bị (P0-Demo, cần cho NFR-03 và demo nhiều nhà) — Bảo
 
-- [ ] `simulator/` (Node.js + mqtt.js): đăng ký N thiết bị qua API Admin, publish telemetry, heartbeat, số đếm trên topic riêng; cờ `simulated` hiện trên mọi màn hình (SYSTEM-FR-004).
+- [x] `simulator/` (Node.js + mqtt.js): đăng ký N thiết bị qua API Admin, publish telemetry, heartbeat, số đếm trên topic riêng; cờ `simulated` hiện trên mọi màn hình (SYSTEM-FR-004).
 
 ## 5. Thứ tự đề xuất
 

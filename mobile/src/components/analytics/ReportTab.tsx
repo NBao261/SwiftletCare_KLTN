@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { FormMessage } from '@/components/ui/form-message'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { RetryLine } from '@/components/common/RetryLine'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import type { AnalyticsScope } from '@/hooks/analytics/useAnalyticsScope'
 import { useHealthReportPreview } from '@/hooks/analytics/useHealthReportPreview'
@@ -173,9 +174,7 @@ export function ReportTab({ scope }: ReportTabProps) {
             <Skeleton key={index} width="100%" height={ROW_SKELETON_HEIGHT} delayMs={index * 75} />
           ))
         ) : reportsQuery.isError ? (
-          <Text variant="small" color={palette.textSecondary} onPress={() => reportsQuery.refetch()}>
-            {t('Không tải được. Chạm để thử lại')}
-          </Text>
+          <RetryLine message={t('Không tải được')} onRetry={() => reportsQuery.refetch()} isRetrying={reportsQuery.isFetching} />
         ) : reports.length === 0 ? (
           <Text variant="small" color={palette.textSecondary}>
             {t('Khu vực chưa có báo cáo tuần')}
@@ -213,9 +212,7 @@ export function ReportTab({ scope }: ReportTabProps) {
         ) : previewQuery.isLoading ? (
           <Skeleton width="100%" height={ROW_SKELETON_HEIGHT * 3} />
         ) : previewQuery.isError || !previewQuery.data ? (
-          <Text variant="small" color={palette.textSecondary} onPress={() => previewQuery.refetch()}>
-            {t('Không tải được. Chạm để thử lại')}
-          </Text>
+          <RetryLine message={t('Không tải được')} onRetry={() => previewQuery.refetch()} isRetrying={previewQuery.isFetching} />
         ) : (
           <>
             <Text variant="small" color={palette.textSecondary}>

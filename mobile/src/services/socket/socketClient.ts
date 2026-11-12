@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client'
 import { WEBSOCKET_BASE_URL } from '@/constants/apiEndpoints'
 import { useAuthStore } from '@/stores/authStore'
 import type {
+  InAppNotification,
   SocketAlertNew,
   SocketBirdCountUpdate,
   SocketDeviceStatusChange,
@@ -14,6 +15,13 @@ let socket: Socket | null = null
 // Số màn đang theo dõi từng phòng: nhiều màn cùng vào một phòng (chi tiết nhà, Cảnh báo) thì chỉ rời phòng khi màn cuối rời
 const joinedZoneIds = new Map<string, number>()
 const joinedHouseIds = new Map<string, number>()
+
+// Listener sống qua mọi socket: hook gắn ở layout vẫn sống khi đăng xuất rồi đăng nhập lại (socket mới), nên bảng này giữ
+// listener và gắn lại vào mỗi socket được tạo; còn nghe khi socket chưa tạo (đăng ký trước lúc connectSocket)
+type SocketListener = (payload: unknown) => void
+const persistentListeners = new Map<string, Set<SocketListener>>()
+// Chạy sau mỗi lần socket nối lại (không phải lần nối đầu) và đã vào lại các phòng: màn tải lại số để bù tin lọt lúc mất mạng
+const reconnectListeners = new Set<() => void>()
 
 // Hàm làm mới access token, apiClient đăng ký lúc khởi động (socketClient không import apiClient để tránh vòng import)
 let refreshAccessToken: (() => Promise<string>) | null = null
@@ -60,12 +68,17 @@ export function connectSocket(): Socket {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
   })
+  // Lần nối đầu của socket này: dữ liệu vừa được tải qua REST nên chưa cần báo "nối lại"
+  let hasConnectedBefore = false
   socket.on('connect', () => {
     hasRefreshedForThisConnection = false
     joinedZoneIds.forEach((_count, zoneId) => socket?.emit('JOIN_ZONE', { zoneId }))
     joinedHouseIds.forEach((_count, houseId) => socket?.emit('JOIN_HOUSE', { houseId }))
+    if (hasConnectedBefore) reconnectListeners.forEach(listener => listener())
+    hasConnectedBefore = true
   })
   socket.on('connect_error', handleConnectError)
+  persistentListeners.forEach((listeners, event) => listeners.forEach(listener => socket?.on(event, listener)))
 
   return socket
 }
@@ -80,6 +93,38 @@ export function disconnectSocket(): void {
 
 export function getSocket(): Socket | null {
   return socket
+}
+
+// Nghe một sự kiện trên mọi socket (hiện tại và các socket tạo sau); trả hàm huỷ cho cleanup của effect.
+// Payload server gửi đã đúng kiểu của sự kiện (api-spec), chỉ ép kiểu ở đây
+export function subscribeSocketEvent<Payload>(event: string, handler: (payload: Payload) => void): () => void {
+  const listener: SocketListener = payload => handler(payload as Payload)
+  const listeners = persistentListeners.get(event) ?? new Set<SocketListener>()
+  listeners.add(listener)
+  persistentListeners.set(event, listeners)
+  socket?.on(event, listener)
+  return () => {
+    listeners.delete(listener)
+    socket?.off(event, listener)
+  }
+}
+
+// Thông báo mới trong hộp thư của chính người dùng (NOTIFICATION_NEW, room user:<id> backend tự cho vào khi kết nối)
+export function onNotificationNew(handler: (notification: InAppNotification) => void): () => void {
+  return subscribeSocketEvent<InAppNotification>('NOTIFICATION_NEW', handler)
+}
+
+// Cảnh báo mới ở các phòng nhà/tầng đang theo dõi, sống qua mọi socket như onNotificationNew
+export function subscribeAlertNew(handler: (alert: SocketAlertNew) => void): () => void {
+  return subscribeSocketEvent<SocketAlertNew>('ALERT_NEW', handler)
+}
+
+// Socket vừa nối lại sau khi mất kết nối (đổi mạng, mất sóng, app quay lại từ nền); trả hàm huỷ
+export function onSocketReconnect(handler: () => void): () => void {
+  reconnectListeners.add(handler)
+  return () => {
+    reconnectListeners.delete(handler)
+  }
 }
 
 // Vào/ra phòng của Zone để nhận số đo realtime
@@ -123,14 +168,6 @@ export function onTelemetryUpdate(handler: (update: SocketTelemetryUpdate) => vo
 
 export function offTelemetryUpdate(handler: (update: SocketTelemetryUpdate) => void): void {
   socket?.off('TELEMETRY_UPDATE', handler)
-}
-
-export function onAlertNew(handler: (alert: SocketAlertNew) => void): void {
-  socket?.on('ALERT_NEW', handler)
-}
-
-export function offAlertNew(handler: (alert: SocketAlertNew) => void): void {
-  socket?.off('ALERT_NEW', handler)
 }
 
 export function onBirdCountUpdate(handler: (update: SocketBirdCountUpdate) => void): void {

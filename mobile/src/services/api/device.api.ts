@@ -54,5 +54,7 @@ export const deviceApi = {
     apiClient.get<ApiResponse<StreamToken>>(ENDPOINTS.CAMERA_STREAM_TOKEN(cameraId)),
 
   // Tắt override sớm, trả mọi relay của thiết bị về tự động (ENV-FR-018)
-  clearRelayOverride: (sensorNodeId: string) => apiClient.delete(ENDPOINTS.RELAY_OVERRIDE(sensorNodeId)),
+  // Có relayName thì chỉ trả relay đó về AUTO (BR-20); không có thì trả mọi relay của controller
+  clearRelayOverride: (sensorNodeId: string, relayName?: keyof RelayStates) =>
+    apiClient.delete(ENDPOINTS.RELAY_OVERRIDE(sensorNodeId), relayName ? { params: { relayName } } : undefined),
 }

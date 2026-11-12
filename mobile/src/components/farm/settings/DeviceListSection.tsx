@@ -25,7 +25,7 @@ interface DeviceListSectionProps {
 }
 
 // Mục danh sách thiết bị: camera AI của nhà (FARM-FR-004) hoặc controller của một tầng (FARM-FR-003).
-// Không có nút "Sửa": thiết bị thêm bằng nhãn QR / nhập tay, gỡ và chuyển thiết bị là việc của Technician (FARM-FR-008)
+// Không có nút "Sửa": thiết bị thêm bằng nhãn QR / nhập tay; gỡ, chuyển, thay thiết bị là việc của Farm Owner (FARM-FR-007b, 008), chưa có màn
 export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd }: DeviceListSectionProps) {
   const isCamera = kind === 'camera'
   const onlineCount = devices.filter(device => device.status === 'ONLINE').length
@@ -42,12 +42,12 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
   return (
     <SettingsSection
       icon={isCamera ? VideoCameraIcon : CpuIcon}
-      title={isCamera ? t('Camera AI') : t('Controller')}
-      subtitle={isCamera ? t('Đếm chim ở cửa ra vào của cả nhà') : t('Đo môi trường và bật tắt relay của khu vực')}
+      title={isCamera ? t('Camera AI') : t('Bộ điều khiển')}
+      subtitle={isCamera ? t('Đếm chim ở cửa ra vào của cả nhà') : t('Đo môi trường, bật tắt phun sương, quạt, loa')}
       scopeLabel={scopeLabel}
       isExpanded={editor.isExpanded(id)}
       onToggle={() => editor.toggle(id)}
-      footerNote={onAdd ? t('Quét nhãn QR trên thiết bị hoặc nhập tay mã in trên nhãn') : t('Chủ trại thêm thiết bị')}
+      footerNote={onAdd ? t('Quét nhãn QR trên thiết bị hoặc nhập tay mã in trên nhãn') : undefined}
       footerTile={onAdd ? { icon: QrCodeIcon, label: t('Quét nhãn QR để thêm thiết bị'), onPress: onAdd } : undefined}
     >
       <SettingsTable
@@ -56,12 +56,12 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
           { label: t('Trạng thái'), align: 'right', flex: 1.5 },
         ]}
         rows={rows}
-        emptyText={isCamera ? t('Nhà chưa có camera') : t('Khu vực chưa có controller')}
+        emptyText={isCamera ? t('Nhà chưa có camera') : t('Khu vực chưa có bộ điều khiển')}
       />
       {devices.length > 0 && (
         <SettingsActionBar label={t('Đang trực tuyến')} value={`${onlineCount}/${devices.length}`} />
       )}
-      {onAdd && <Button label={isCamera ? t('Thêm camera') : t('Thêm controller')} size="md" onPress={onAdd} />}
+      {onAdd && <Button label={isCamera ? t('Thêm camera') : t('Thêm bộ điều khiển')} size="md" onPress={onAdd} />}
     </SettingsSection>
   )
 }

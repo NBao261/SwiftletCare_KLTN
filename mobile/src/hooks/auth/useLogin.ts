@@ -11,7 +11,7 @@ interface LoginCredentials {
   password: string
 }
 
-// Đăng nhập đúng nhưng role không dùng app mobile (Technician, Admin dùng bản web)
+// Đăng nhập đúng nhưng role không dùng app mobile (Administrator dùng console web)
 export class UnsupportedRoleError extends Error {
   constructor() {
     super(t('Tài khoản này chỉ dùng được trên bản web'))

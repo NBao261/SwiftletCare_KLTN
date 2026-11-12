@@ -4,7 +4,7 @@
 // (constants.ts) và từng modal (*Modal.tsx) nằm ở file riêng trong cùng thư mục.
 import { useState } from 'react'
 import { useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
-import { Button, ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
+import { ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import DataTable from '@/components/ui/DataTable'
@@ -17,7 +17,6 @@ import { buildUserColumns } from '@/components/features/admin/users/userColumns'
 import UserDetailModal from '@/components/features/admin/users/UserDetailModal'
 import LockUserModal from '@/components/features/admin/users/LockUserModal'
 import UnlockUserModal from '@/components/features/admin/users/UnlockUserModal'
-import CreateUserModal from '@/components/features/admin/users/CreateUserModal'
 import UserStats from '@/components/features/admin/users/UserStats'
 import type { Role, User, SortDirection } from '@/types'
 
@@ -34,8 +33,9 @@ const DEFAULT_SORT_DIR: SortDirection = 'desc'
  */
 type UserTab = 'staff' | 'customers'
 const TABS: { key: UserTab; label: string; description: string; roles: Role[] }[] = [
-  { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên và kỹ thuật viên', roles: ['ADMIN', 'TECHNICIAN'] },
-  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến và chuyên gia', roles: ['FARM_OWNER', 'DOMAIN_EXPERT'] },
+  // Farm Technician là nhân viên của chủ farm (được mời vào farm), không phải nhân viên hệ thống — G-20
+  { key: 'staff', label: 'Nhân viên hệ thống', description: 'Quản trị viên', roles: ['ADMIN'] },
+  { key: 'customers', label: 'Người dùng', description: 'Chủ nhà yến, chuyên gia và kỹ thuật viên nhà yến', roles: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] },
 ]
 
 export default function AdminUsersPage() {
@@ -48,7 +48,6 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<UsersSortKey>(DEFAULT_SORT_BY)
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR)
-  const [showCreate, setShowCreate] = useState(false)
   const [viewTarget, setViewTarget] = useState<User | null>(null)
   const [lockTarget, setLockTarget] = useState<User | null>(null)
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
@@ -126,8 +125,7 @@ export default function AdminUsersPage() {
         }
       >
 
-        {/* Hàng 1: tìm kiếm + tạo tài khoản. Nút tạo chỉ ở tab Nhân viên — Admin chỉ tạo Technician/chuyên gia
-            (AUTH-FR-005c), Farm Owner tự đăng ký. Chọn vai trò ngay trong modal thay vì 2 nút riêng. */}
+        {/* Hàng 1: tìm kiếm. Admin không tạo tài khoản: Farm Owner mời kỹ thuật viên, chuyên gia vào farm (AUTH-FR-010) */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[200px] flex-1">
             <SearchInput
@@ -136,7 +134,6 @@ export default function AdminUsersPage() {
               onChange={v => { setSearch(v); setPage(1) }}
             />
           </div>
-          {tab === 'staff' && <Button onClick={() => setShowCreate(true)}>+ Tạo tài khoản</Button>}
         </div>
 
         {/* Hàng 2: toàn bộ bộ lọc + sắp xếp */}
@@ -186,7 +183,6 @@ export default function AdminUsersPage() {
         <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
       </SectionCard>
 
-      <CreateUserModal open={showCreate} onClose={() => setShowCreate(false)} />
       <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} />
       <LockUserModal user={lockTarget} onClose={() => setLockTarget(null)} />
       <UnlockUserModal user={unlockTarget} onClose={() => setUnlockTarget(null)} />

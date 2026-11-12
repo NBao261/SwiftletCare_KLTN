@@ -36,13 +36,7 @@ export function DetectionTuningSection({ zone, farmId, editor, onSaved }: Detect
       title={t('Tham số phát hiện')}
       subtitle={t('Khi nào báo tiếng ồn lạ, phun sương không hiệu quả, loa hỏng')}
       scopeLabel={zone.name}
-      footerNote={
-        canEdit
-          ? hasExpert === false
-            ? t('Farm chưa có chuyên gia nên bạn chỉnh thay. Lưu xong controller của khu vực áp dụng ngay')
-            : t('Chỉ chuyên gia sửa được. Lưu xong controller của khu vực áp dụng ngay')
-          : t('Do chuyên gia chỉnh')
-      }
+      footerNote={canEdit ? t('Lưu xong áp dụng ngay cho khu vực') : undefined}
       keys={DETECTION_KEYS}
       rules={DETECTION_TUNING_RULES}
       values={zone.detection_tuning}

@@ -42,12 +42,13 @@ function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): b
  * Người nhận cảnh báo vận hành của 1 farm (ALERT-FR-005): chủ farm và mọi đồng sở hữu.
  * Domain Expert KHÔNG nhận cảnh báo vận hành ngoài ứng dụng (EXPERT-FR-007) — đó là
  * việc của Farm Owner; chuyên gia thấy cảnh báo trong ứng dụng và nhận báo cáo sức khỏe.
+ * Farm Technician chưa nhận: cảnh báo theo nhà được giao là G-21 (AUTH-FR-014).
  */
 export async function findRecipients(farmId: string) {
   const farm = await Farm.findById(farmId)
   if (!farm) return []
 
-  const members = farm.members.filter(m => m.role !== 'DOMAIN_EXPERT')
+  const members = farm.members.filter(m => m.role !== 'DOMAIN_EXPERT' && m.role !== 'FARM_TECHNICIAN')
   const userIds = [farm.owner_id, ...members.map(m => m.user_id)]
   return User.find({ _id: { $in: userIds }, is_active: true }).lean()
 }

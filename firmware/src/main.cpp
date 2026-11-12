@@ -251,8 +251,9 @@ void loop() {
     // broker cũ sai (đổi mạng WiFi khác). Bật lại đúng captive portal (đặt ở
     // đây, không gọi trực tiếp từ mqttTask, để tránh đổi WiFi.mode()/khởi
     // động AsyncWebServer từ 1 FreeRTOS task khác core).
+    // Bản production chỉ đổi được Wi-Fi ở đây (FARM-FR-003c); bản dev đổi được cả IP broker.
     Serial.println("[MQTT] Broker không phản hồi sau nhiều lần thử — bật "
-                   "AP-mode để nhập lại địa chỉ broker");
+                   "AP-mode để nhập lại Wi-Fi");
     WiFiProvisioner::startCaptivePortal(otaServer);
   } else {
     vTaskDelay(pdMS_TO_TICKS(1000));

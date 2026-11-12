@@ -54,7 +54,7 @@ export default function StructureEditModal({ kind, mode, name, deviceCount, exis
         <div className="flex justify-end gap-2 border-t border-warmGray/10 pt-4">
           <Button type="button" variant="secondary" className="min-w-[8rem]" onClick={onClose}>{t('structure.cancel')}</Button>
           <Button type="button" className="min-w-[8rem]" disabled>
-            {t(mode === 'rename' ? 'structure.save' : 'structure.delete')}
+            {mode === 'rename' ? t('structure.save') : t('structure.delete', { target })}
           </Button>
         </div>
       </div>

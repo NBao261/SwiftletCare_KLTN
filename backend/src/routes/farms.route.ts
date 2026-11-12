@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { body, param, query } from 'express-validator'
 import * as farmController from '@/controllers/farms.controller'
+import { HHMM_PATTERN, ROSTER_ROLES } from '@/utils/roster.util'
 import { MAX_HOUSE_FLOORS, MAX_NAME_LENGTH } from '@/services/farm.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
@@ -18,7 +19,7 @@ const coordinates = (required: boolean) => {
   ]
 }
 
-// FARM-FR-009 — Technician thấy mọi farm (chỉ cấu trúc), Admin không thấy farm nào (service lọc)
+// FARM-FR-001 — farm mình sở hữu hoặc là thành viên (cả Farm Technician), Admin không thấy farm nào (service lọc)
 router.get   ('/',             farmController.list)
 // Report 3 §4.5 — tên farm, nhà, zone tối đa MAX_NAME_LENGTH ký tự
 const nameRule = () => body('name').trim().notEmpty().withMessage('Cần tên')
@@ -29,9 +30,9 @@ router.get   ('/:id',          param('id').isMongoId(), validate, farmController
 // Report 3 §2.4 — Administrator không quản lý farm (FARM-FR-001); xoá farm và thành viên: service chỉ cho Primary Owner
 router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule().optional(), ...coordinates(false), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), validate, farmController.remove)
-// AUTH-FR-005 (v2.0.0) — mời đồng sở hữu hoặc Domain Expert; cả hai đều theo cả farm (không còn zone_ids)
+// AUTH-FR-005 — mời đồng sở hữu, Domain Expert (cả farm) hoặc Farm Technician (nhà được gán, AUTH-FR-013)
 router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(), body('email').isEmail(),
-  body('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT']), validate, farmController.inviteMember)
+  body('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']), validate, farmController.inviteMember)
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 // AUTH-FR-005, 010 — lời mời của farm cho màn Thành viên (mặc định đang chờ); service chỉ cho Primary Owner
 router.get   ('/:id/invitations', requireRole('FARM_OWNER'), param('id').isMongoId(),
@@ -43,6 +44,25 @@ router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
   validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
+
+// AUTH-FR-013 — Farm Owner gán/bỏ gán Farm Technician vào nhà; mỗi nhà tối đa 1 thợ chính
+router.put   ('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),
+  body('primary').optional().isBoolean({ strict: true }), validate, farmController.assignTechnician)
+router.delete('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),
+  validate, farmController.unassignTechnician)
+// AUTH-FR-014 — lịch trực theo tuần: Farm Owner đặt, thợ được giao chỉ xem ca của mình (service lọc); Domain Expert
+// không có quyền với lịch trực (Report 3 §2.4)
+router.get   ('/houses/:houseId/roster', requireRole('FARM_OWNER', 'FARM_TECHNICIAN'), param('houseId').isMongoId(),
+  validate, farmController.getRoster)
+router.put   ('/houses/:houseId/roster', requireRole('FARM_OWNER'), param('houseId').isMongoId(),
+  body('shifts').isArray(),
+  body('shifts.*.technician_id').isString().isMongoId(),
+  body('shifts.*.role').isString().isIn([...ROSTER_ROLES]),
+  body('shifts.*.weekdays').isArray({ min: 1, max: 7 }),
+  body('shifts.*.weekdays.*').isInt({ min: 0, max: 6 }).toInt(),
+  body('shifts.*.start').isString().matches(HHMM_PATTERN).withMessage('start dạng HH:mm'),
+  body('shifts.*.end').isString().matches(HHMM_PATTERN).withMessage('end dạng HH:mm'),
+  validate, farmController.setRoster)
 
 // Zones (under house)
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule(),

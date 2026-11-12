@@ -10,6 +10,7 @@ import type { Zone } from '@/types'
 import { getMetricLabel } from '@/utils/label.utils'
 import { getBreachedMetrics, isRecentReading, type ThresholdMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 interface ZoneBreach {
   zone: Zone
@@ -55,11 +56,11 @@ export function ZoneThresholdStatTile() {
   const handleViewAll = () => {
     if (breaches.length === 1) {
       const { zone } = breaches[0]
-      router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: zone.house_id, zoneId: zone._id } })
+      router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: zone.house_id, zoneId: zone._id, returnTo: RETURN_TO_HOME } })
       return
     }
     // shortcut: chưa có màn danh sách khu vực lệch nhóm theo nhà — tạm mở tab Trang trại
-    router.navigate('/(tabs)/farms')
+    router.navigate({ pathname: '/(tabs)/farms', params: { returnTo: RETURN_TO_HOME } })
   }
 
   return (

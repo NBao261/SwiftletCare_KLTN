@@ -133,7 +133,7 @@ export function NotificationSettingsSheet({ visible, onClose }: NotificationSett
           </View>
           <Button
             label={t('Lưu')}
-            size="sm"
+            size="md"
             onPress={() =>
               updatePreferences.mutate({ quiet_hours: { start: quietStart.trim(), end: quietEnd.trim() } })
             }
@@ -157,7 +157,7 @@ export function NotificationSettingsSheet({ visible, onClose }: NotificationSett
                 )}
         </Text>
         <View style={styles.row}>
-          <Button label={t('Liên kết')} size="sm" onPress={() => link.mutate()} loading={link.isPending} />
+          <Button label={t('Liên kết')} size="md" onPress={() => link.mutate()} loading={link.isPending} />
           {isLinked && (
             <Button label={t('Huỷ liên kết')} variant="link" onPress={confirmUnlink} loading={unlink.isPending} />
           )}

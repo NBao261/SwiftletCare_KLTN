@@ -7,6 +7,7 @@ import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { useUpdateFarm } from '@/hooks/farm/useUpdateFarm'
 import type { Farm } from '@/types'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
+import { NAME_MAX_LENGTH, validateName } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
 interface FarmInfoSectionProps {
@@ -23,7 +24,7 @@ function FarmInfoEditor({ farm, editor, onSaved }: FarmInfoSectionProps) {
   const updateFarm = useUpdateFarm()
   const [name, setName] = useState(farm.name)
   const [address, setAddress] = useState(farm.address)
-  const nameError = name.trim() === '' ? t('Không được để trống') : null
+  const nameError = validateName(name)
   const addressError = address.trim() === '' ? t('Không được để trống') : null
   const isChangedWith = (nextName: string, nextAddress: string) =>
     nextName.trim() !== farm.name || nextAddress.trim() !== farm.address
@@ -54,6 +55,7 @@ function FarmInfoEditor({ farm, editor, onSaved }: FarmInfoSectionProps) {
               label: t('Tên trang trại'),
               keyboardType: 'default',
               autoCapitalize: 'sentences',
+              maxLength: NAME_MAX_LENGTH,
             },
             error: nameError,
             isFullWidth: true,
@@ -100,9 +102,7 @@ export function FarmInfoSection(props: FarmInfoSectionProps) {
       isExpanded={editor.isExpanded(SECTION_ID)}
       onToggle={() => editor.toggle(SECTION_ID)}
       onEdit={canEdit ? () => editor.startEditing(SECTION_ID) : undefined}
-      isEditing={isEditing}
-      footerNote={t('Chủ trại sửa được')}
-    >
+      isEditing={isEditing}    >
       {isEditing ? (
         <FarmInfoEditor {...props} />
       ) : (

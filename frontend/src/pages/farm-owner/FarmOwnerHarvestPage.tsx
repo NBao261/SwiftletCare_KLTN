@@ -15,7 +15,7 @@ import { harvestDict, type HarvestTranslate } from '@/constants/harvest.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
+import { useConfirmHarvest, useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { formatStandardDate } from '@/lib/i18n';
@@ -45,7 +45,7 @@ function buildPersonNames(farms: Farm[], user: User | null): Map<string, string>
 function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>, personNames: Map<string, string>, translate: HarvestTranslate): void {
   const header = [
     translate('col.date'), translate('col.house'), translate('col.creator'), translate('col.nestType'), translate('form.nests'),
-    translate('csv.weight'), translate('csv.temperature'), translate('csv.humidity'),
+    translate('csv.weight'), translate('csv.temperature'), translate('csv.humidity'), translate('csv.status'),
   ];
   const rows = batches.map(batch => {
     const environment = environmentSummary(batch.env_snapshot);
@@ -58,6 +58,7 @@ function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>
       String(batch.weight_grams),
       environment ? String(environment.temperature) : '',
       environment ? String(environment.humidity) : '',
+      translate(batch.status === 'DRAFT' ? 'status.pending' : 'status.confirmed'),
     ];
   });
   const csv = [header, ...rows].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -86,6 +87,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   // HARVEST-FR: Farm Owner ghi, Domain Expert chỉ đọc (Report 3 §2.4)
   const canWrite = usePermission('FARM_OWNER');
   const deleteHarvest = useDeleteHarvest();
+  const confirmHarvest = useConfirmHarvest();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
 
@@ -95,6 +97,9 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const [editGroupKey, setEditGroupKey] = useState<string | null>(null);
   const [deleteGroupKey, setDeleteGroupKey] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Lần thu đang chờ hỏi lại trước khi xác nhận các lô DRAFT
+  const [confirmGroupKey, setConfirmGroupKey] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Backend lưu lần thu theo Zone; giao diện chỉ hiện nhà yến của Zone đó
   const houseNameByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.houseName])), [zones]);
@@ -109,6 +114,9 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   // Mỗi lần thu 1 nhóm: các loại yến ghi cùng lần gộp lại
   const groups = useMemo(() => groupHarvests(scopedBatches), [scopedBatches]);
   const groupByKey = useMemo(() => new Map(groups.map(group => [group.key, group])), [groups]);
+  // Sản lượng chỉ tính lô đã xác nhận (BR-43); bảng và CSV vẫn có lô chờ xác nhận
+  const confirmedBatches = useMemo(() => scopedBatches.filter(batch => batch.status !== 'DRAFT'), [scopedBatches]);
+  const confirmedGroups = useMemo(() => groupHarvests(confirmedBatches), [confirmedBatches]);
 
   if (scope.farms.length === 0) {
     return (
@@ -167,6 +175,23 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
     setDetailGroupKey(null);
   }
 
+  // HARVEST-FR-006 — xác nhận cả lần thu = xác nhận từng lô DRAFT của các loại yến trong nhóm
+  async function handleConfirm(): Promise<void> {
+    const group = confirmGroupKey ? groupByKey.get(confirmGroupKey) : undefined;
+    if (!group) return;
+    setIsConfirming(true);
+    const results = await Promise.allSettled(group.pendingIds.map(id => confirmHarvest.mutateAsync(id)));
+    setIsConfirming(false);
+    const failure = results.find(result => result.status === 'rejected') as PromiseRejectedResult | undefined;
+    if (failure) {
+      push(apiErrorMessage(failure.reason, t('confirm.failed')), 'error');
+      return;
+    }
+    push(t('confirm.done'));
+    setConfirmGroupKey(null);
+  }
+  const confirmGroup = confirmGroupKey ? groupByKey.get(confirmGroupKey) : undefined;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
@@ -180,7 +205,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
       </div>
 
       <HarvestStatsCards
-        groups={groups}
+        groups={confirmedGroups}
         zones={zones}
         farmNames={scope.farmNames}
       />
@@ -197,17 +222,18 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
             onOpenDetail={group => setDetailGroupKey(group.key)}
             onEdit={canWrite ? group => setEditGroupKey(group.key) : undefined}
             onDelete={canWrite ? group => setDeleteGroupKey(group.key) : undefined}
+            onConfirm={canWrite ? group => setConfirmGroupKey(group.key) : undefined}
             onCreate={canWrite ? () => setIsCreateOpen(true) : undefined}
             createBlockedReason={createBlockedReason}
             onExport={() => exportCsv(allBatches, houseNameByZone, personNames, t)}
           />
         </div>
         <div className="min-w-0 xl:col-span-4 xl:h-full xl:min-h-0">
-          <NestTypeBreakdownCard batches={allBatches} />
+          <NestTypeBreakdownCard batches={confirmedBatches} />
         </div>
       </div>
 
-      <HarvestYearChart batches={allBatches} />
+      <HarvestYearChart batches={confirmedBatches} />
 
       {/* Popup chỉ dựng khi mở nên mỗi lần mở là form mới */}
       {isCreateOpen && !createBlockedReason && <HarvestFormModal scope={scope} creatorName={user?.full_name ?? NO_VALUE} onClose={() => setIsCreateOpen(false)} />}
@@ -235,6 +261,20 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
           onClose={() => setEditGroupKey(null)}
         />
       )}
+
+      <ConfirmModal
+        open={confirmGroup !== undefined}
+        title={t('confirm.title')}
+        description={confirmGroup ? t('confirm.description', {
+          date: formatStandardDate(confirmGroup.harvest_date),
+          house: houseNameByZone.get(confirmGroup.zone_id) ?? NO_VALUE,
+          creator: creatorName(confirmGroup),
+        }) : ''}
+        confirmLabel={t('action.confirm')}
+        loading={isConfirming}
+        onConfirm={() => void handleConfirm()}
+        onCancel={() => setConfirmGroupKey(null)}
+      />
 
       <ConfirmModal
         open={deleteGroupKey !== null}

@@ -50,6 +50,7 @@ volatile int speakerWindow2StartHour = SPEAKER_WINDOW_2_START_HOUR;
 volatile int speakerWindow2EndHour = SPEAKER_WINDOW_2_END_HOUR;
 volatile int speakerVolume = DFPLAYER_DEFAULT_VOLUME;
 volatile int speakerTrack = DFPLAYER_DEFAULT_TRACK;
+volatile uint32_t configVersion = 0;
 
 void load() {
   // Giá trị thật (mặc định Config.h hoặc đã lưu từ NVS) đã được
@@ -120,6 +121,9 @@ void update(const char *jsonPayload) {
     speakerVolume = doc["speaker_volume"].as<int>();
   if (doc["speaker_track"].is<int>())
     speakerTrack = doc["speaker_track"].as<int>();
+  // Ghi sau mọi giá trị khác: heartbeat chỉ báo phiên bản khi cả bản cấu hình đó đã được áp (ENV-FR-027)
+  if (doc["config_version"].is<uint32_t>())
+    configVersion = doc["config_version"].as<uint32_t>();
   Serial.println("[Config] Updated from MQTT");
   save(); // ENV-FR-013b/006/007: persist ngay, không chỉ sống trong RAM
 }

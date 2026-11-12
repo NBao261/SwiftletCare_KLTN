@@ -7,7 +7,7 @@ import {
   listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { publishDeviceCommand, publishDeviceConfig } from '@/mqtt/mqtt.client'
-import { publishNodeConfig } from '@/services/deviceConfig.service'
+import { publishNodeConfig, publishZoneConfig } from '@/services/deviceConfig.service'
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
@@ -16,11 +16,12 @@ import { findRecipients, notifyUser, type UserNotification } from '@/services/no
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
+import { syncAfterHeartbeat } from '@/utils/configSync.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogFromDevice, closeRelayOverrideLog,
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
 } from '@/services/relayOverrideLog.service'
-import { AppError, NotFoundError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
+import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { AlertType, ControlMode, RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
 
@@ -112,13 +113,12 @@ async function retireDeviceId(Model: typeof SensorNode, nodeId: unknown, deviceI
 }
 
 /**
- * FARM-FR-009, Report 3 §2.4 ghi chú ² — Technician thao tác trên farm mà không là thành viên, nên
- * mỗi lần đăng ký, dời, gỡ, khôi phục, thay hay gửi lệnh từ xa đều báo trong app cho các Farm Owner
- * của farm (cùng danh sách người nhận cảnh báo, không có Domain Expert). Không throw: thông báo
- * hỏng không được làm hỏng thao tác thiết bị.
+ * FARM-FR-009, 013 — thao tác thiết bị của người không phải Farm Owner (Administrator gửi lệnh từ xa,
+ * Farm Technician khởi động lại) được báo trong app cho các Farm Owner của farm (cùng danh sách người
+ * nhận cảnh báo, không có Domain Expert). Không throw: thông báo hỏng không được làm hỏng thao tác thiết bị.
  */
 async function notifyOwnersOfTechnicianAction(user: CurrentUser, farmId: unknown, message: UserNotification): Promise<void> {
-  if (user.role !== 'TECHNICIAN') return
+  if (user.role !== 'ADMIN' && user.role !== 'FARM_TECHNICIAN') return
   try {
     const owners = await findRecipients(String(farmId))
     await Promise.all(owners.map(o => notifyUser(String(o._id), message)))
@@ -136,14 +136,14 @@ async function notifyOwnersOfTechnicianAction(user: CurrentUser, farmId: unknown
  */
 export async function registerSensorNode(user: CurrentUser, input: RegisterDeviceInput): Promise<ISensorNode> {
   const { zone, farm } = await assertZoneAccess(input.zone_id, user, 'device')
-  await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
+  const { simulated } = await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
 
   const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
   if (existing?.decommissioned_at) await retireDeviceId(SensorNode, existing._id, input.device_id)
   else if (existing) await assertNotRegistered({ zoneId: existing.zone_id }, String(farm._id))
 
   const node = await SensorNode.create({
-    device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id,
+    device_id: input.device_id, zone_id: input.zone_id, status: 'PENDING', registered_by: user._id, simulated,
   })
   await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'sensor_node', String(node._id), {
@@ -344,11 +344,15 @@ export async function reassignZone(
   // chạy thuộc về Zone cũ nên kết thúc ở đây (như decommissionDevice).
   node.zone_id = destChain.zone._id
   resetOverrides(node)
+  node.config_sync = 'PENDING'
+  node.config_stale_heartbeats = 0
   await node.save()
   // Report 4 D3: thiết bị không biết farm, house, zone, chỉ nhận cấu hình của Zone mới. Không có
   // khởi động lại nên phải tự huỷ override đang chạy trên thiết bị.
   const overrideCleared = publishDeviceCommand(node.device_id, 'CLEAR_OVERRIDE')
-  const delivered = publishNodeConfig(destChain.zone, node) && overrideCleared
+  // ENV-FR-027 — Zone đích nhận phiên bản mới (mọi thiết bị của nó nhận lại cấu hình) để phiên bản
+  // thiết bị còn giữ từ Zone cũ không thể trùng số với Zone mới mà bị coi là đã áp.
+  const delivered = (await publishZoneConfig(destChain.zone._id)) && overrideCleared
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
   // Cảnh báo cũ thuộc farm/zone nguồn — để lại thì job gửi lại cho Farm Owner farm cũ
   // về phần cứng đã chuyển đi; sự cố còn thật sẽ được báo lại ở zone mới.
@@ -379,7 +383,7 @@ export interface RegisterCameraInput {
  */
 export async function registerCameraNode(user: CurrentUser, input: RegisterCameraInput) {
   const { house, farm } = await assertHouseAccessByParams({ houseId: input.house_id, zoneId: input.zone_id }, user, 'device')
-  await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
+  const { simulated } = await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
   const existing = await CameraNode.findOne({ device_id: input.device_id }).select('house_id decommissioned_at').lean()
   if (existing?.decommissioned_at) await retireDeviceId(CameraNode as never, existing._id, input.device_id)
@@ -388,7 +392,7 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterCamer
   // Chọn field tường minh — trải thẳng body vào create() cho phép client tự đặt status/registered_at
   const node = await CameraNode.create({
     device_id: input.device_id, house_id: house._id, rtsp_url: input.rtsp_url,
-    status: 'PENDING', registered_by: user._id,
+    status: 'PENDING', registered_by: user._id, simulated,
   })
   await markClaimed(input.device_id)
   await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {
@@ -432,6 +436,12 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
   if (payload.rssi !== undefined) node.rssi = payload.rssi
   if (payload.firmwareVersion) node.firmware_version = payload.firmwareVersion
   applyDiagnostics(node, payload)
+  // ENV-FR-027 — so phiên bản cấu hình controller báo với phiên bản hiện tại của Zone (Report 3 §6.12)
+  const zone = await Zone.findById(node.zone_id).select('config_version').lean()
+  const sync = syncAfterHeartbeat({ stale: node.config_stale_heartbeats ?? 0 }, payload.appliedConfigVersion, zone?.config_version ?? 0)
+  node.config_sync = sync.state
+  node.applied_config_version = sync.applied
+  node.config_stale_heartbeats = sync.stale
   // Flow 15 bước 5 — heartbeat đầu tiên chạy đúng bản mới = OTA thành công
   const otaDone = node.ota_pending && payload.firmwareVersion === node.ota_pending.version ? node.ota_pending : null
   if (otaDone) node.ota_pending = undefined
@@ -446,8 +456,8 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
 
   if (wasOffline) await announceBackOnline(node)
 
-  // `config` retained đã có sẵn ở broker; gửi lại để lấp lần publish backend lỡ khi mất kết nối broker
-  // (tới G-08 mới so được phiên bản). Lần đầu thiết bị lên mạng sau khi đăng ký cũng đi qua đây.
+  // `config` retained đã có sẵn ở broker; gửi lại để lấp lần publish backend lỡ khi mất kết nối broker.
+  // Lần đầu thiết bị lên mạng sau khi đăng ký cũng đi qua đây; còn lệch phiên bản thì job configSync gửi lại.
   if (payload.justConnected || wasOffline) {
     await findZoneChainOrThrow(String(node.zone_id))
       .then(chain => publishNodeConfig(chain.zone, node))
@@ -895,6 +905,10 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
   assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user, 'device')
+  // FARM-FR-013 — Administrator gửi mọi lệnh; Farm Owner, Farm Technician chỉ khởi động lại
+  if (user.role !== 'ADMIN' && input.command !== 'RESTART') {
+    throw ForbiddenError('Chỉ Administrator gửi được lệnh đẩy cấu hình hoặc cập nhật firmware — Farm Owner và Farm Technician chỉ khởi động lại thiết bị')
+  }
   // Validate nội dung lệnh trước trạng thái thiết bị: URL firmware sai thì phải
   // báo đúng lý do đó, không lẫn với "thiết bị chưa ONLINE".
   if (input.command === 'OTA') {
@@ -951,8 +965,9 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     deviceId: node.device_id, command: input.command,
     ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
   })
+  const actor = user.role === 'ADMIN' ? 'Quản trị viên' : 'Kỹ thuật viên'
   await notifyOwnersOfTechnicianAction(user, chain.farm._id, {
-    title: input.command === 'OTA' ? 'Kỹ thuật viên đã cập nhật firmware' : 'Kỹ thuật viên đã gửi lệnh tới thiết bị',
+    title: input.command === 'OTA' ? `${actor} đã cập nhật firmware` : `${actor} đã gửi lệnh tới thiết bị`,
     body: input.command === 'OTA'
       ? `${node.device_id} đang được cập nhật lên firmware ${input.ota?.version}.`
       : `Lệnh ${input.command} đã được gửi tới ${node.device_id} ở khu vực "${chain.zone.name}".`,
@@ -986,8 +1001,9 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   if (!camera) throw NotFoundError('Không tìm thấy camera')
   assertInService(camera)
   const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
+  // VISION-FR-018 — Farm Technician vẽ được vòng ở nhà được giao (assertHouseAccess đã kiểm nhà);
   // BR-22 — Farm Owner chỉ vẽ thay khi farm chưa có chuyên gia
-  await assertExpertDecision(farm, user)
+  if (user.role !== 'FARM_TECHNICIAN') await assertExpertDecision(farm, user)
 
   const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
   const after = ringOf(ring)

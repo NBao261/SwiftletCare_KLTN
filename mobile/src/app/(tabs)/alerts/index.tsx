@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native'
 import { useIsFocused } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircleIcon, GearSixIcon, WifiSlashIcon } from 'phosphor-react-native'
+import { CheckCircleIcon, GearSixIcon } from 'phosphor-react-native'
 import { AcknowledgeSheet } from '@/components/alert/AcknowledgeSheet'
 import { AlertDetailSheet } from '@/components/alert/AlertDetailSheet'
 import { AlertFilterChips } from '@/components/alert/AlertFilterChips'
@@ -21,37 +21,25 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
-import { useActiveAlertList } from '@/hooks/alert/useActiveAlertList'
-import { useAlertLevelCounts } from '@/hooks/alert/useAlertLevelCounts'
 import { useAlertLocations } from '@/hooks/alert/useAlertLocations'
 import { useAlertRooms } from '@/hooks/alert/useAlertRooms'
+import { useAlertsListData } from '@/hooks/alert/useAlertsListData'
 import { useAlertsScope } from '@/hooks/alert/useAlertsScope'
+import { useLinkedAlert } from '@/hooks/alert/useLinkedAlert'
 import { useNewAlertIds } from '@/hooks/alert/useNewAlertIds'
-import { usePagedAlertList } from '@/hooks/alert/usePagedAlertList'
 import { useRefetchInvalidatedAlertLists } from '@/hooks/alert/useRefetchInvalidatedAlertLists'
-import { useResolvedAlertList } from '@/hooks/alert/useResolvedAlertList'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
-import { useSocketConnection } from '@/hooks/telemetry/useSocketConnection'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useNow } from '@/hooks/time/useNow'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import type { Alert } from '@/types'
-import {
-  ACTIVE_ALERT_STATUSES,
-  CLOSED_ALERT_STATUSES,
-  countBySeverityLevel,
-  filterAlerts,
-  sortAlerts,
-  uniqueById,
-} from '@/utils/alertList.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
 // Đồng hồ cho "3 phút trước" và đếm ngược nhắc lại
 const CLOCK_INTERVAL_MS = 30 * 1000
-// Không có sự kiện socket khi cảnh báo đổi trạng thái nên phần "Đang hiệu lực" tải lại định kỳ khi tab đang hiện
-const ACTIVE_REFRESH_INTERVAL_MS = 30 * 1000
 const SKELETON_ROW_COUNT = 5
 const ROW_GAP = Spacing.sm
 // Giá trị "Tất cả" trong bảng chọn farm, nhà
@@ -71,36 +59,10 @@ export default function AlertsScreen() {
   const isResolved = scope.segment === 'resolved'
   // Tab vẫn sống khi chuyển tab khác: chỉ tải lại định kỳ khi đang hiện
   const isFocused = useIsFocused()
-  // Chọn một nhà: backend chưa lọc nhà gồm cả tầng nên tải đủ cảnh báo của farm rồi lọc trên máy (Known debt); còn lại
-  // phân trang và lọc ở server, số trên dải mức lấy từ meta.total
-  const isHouseMode = Boolean(scope.house)
-  const serverFilter = { farmId: scope.farmId, zoneId: null, type: scope.type, verdict: scope.verdict }
-  const pollInterval = isFocused ? ACTIVE_REFRESH_INTERVAL_MS : false
-  const serverEnabled = scope.isReady && !isHouseMode
-  const pagedQuery = usePagedAlertList({
-    statuses: isResolved ? CLOSED_ALERT_STATUSES : ACTIVE_ALERT_STATUSES,
-    filter: serverFilter,
-    level: scope.severity,
-    enabled: serverEnabled,
-    refetchInterval: isResolved ? false : pollInterval,
-  })
-  const levelCountsQuery = useAlertLevelCounts({
-    statuses: isResolved ? CLOSED_ALERT_STATUSES : ACTIVE_ALERT_STATUSES,
-    filter: serverFilter,
-    enabled: serverEnabled,
-    refetchInterval: isResolved ? false : pollInterval,
-  })
-  // Số trên chip "Đang hiệu lực" khi đang xem "Đã đóng" (cùng khoá với dải mức của phần đang hiệu lực)
-  const activeCountsQuery = useAlertLevelCounts({
-    statuses: ACTIVE_ALERT_STATUSES,
-    filter: serverFilter,
-    enabled: serverEnabled,
-    refetchInterval: pollInterval,
-  })
-  const activeQuery = useActiveAlertList(scope.farmId, scope.isReady && isHouseMode, isFocused)
-  const resolvedQuery = useResolvedAlertList(scope.farmId, scope.isReady && isHouseMode && isResolved)
+  // Mở từ lối tắt (Trang chủ, màn nhà, Phân tích…) thì có nút ‹ quay về
+  const returnBack = useReturnBack()
+  const list = useAlertsListData(scope, isFocused)
   const newAlertIds = useNewAlertIds()
-  const isSocketConnected = useSocketConnection()
   const [detailAlert, setDetailAlert] = useState<Alert | null>(null)
   const [acknowledgeTarget, setAcknowledgeTarget] = useState<Alert | null>(null)
   const [sheetKey, setSheetKey] = useState(0)
@@ -114,38 +76,6 @@ export default function AlertsScreen() {
 
   useAlertRooms(scope.house?._id ?? null, zoneIds)
 
-  const houseQuery = isResolved ? resolvedQuery : activeQuery
-  const baseFilter = {
-    houseId: scope.house?._id ?? null,
-    houseZoneIds: zoneIds,
-    zoneId: scope.zoneId,
-    type: scope.type,
-    verdict: scope.verdict,
-  }
-  // Chế độ một nhà: dải tóm tắt đếm theo mọi bộ lọc trừ mức; danh sách lọc thêm mức đang chọn
-  const houseSource = filterAlerts(houseQuery.data ?? [], baseFilter)
-  const houseFiltered = filterAlerts(houseSource, { ...baseFilter, severity: scope.severity })
-  const alerts = isHouseMode
-    ? isResolved
-      ? houseFiltered
-      : sortAlerts(houseFiltered)
-    : uniqueById(pagedQuery.data?.pages.flatMap(page => page.items) ?? [])
-  const counts = isHouseMode ? countBySeverityLevel(houseSource) : (levelCountsQuery.data ?? null)
-  const activeCounts = isHouseMode
-    ? countBySeverityLevel(filterAlerts(activeQuery.data ?? [], baseFilter))
-    : activeCountsQuery.data
-  const activeTotal = activeCounts ? activeCounts.P1 + activeCounts.P2 + activeCounts.P3 : null
-  // Không tải được danh sách farm thì query cảnh báo không bao giờ chạy: báo lỗi, không quay khung xương mãi
-  const isListLoading =
-    !scope.isFarmsError && (!scope.isReady || (isHouseMode ? houseQuery.isLoading : pagedQuery.isLoading))
-  const isListError = scope.isFarmsError || (isHouseMode ? houseQuery.isError : pagedQuery.isError)
-  const retryList = () => {
-    // Tải được farm thì query cảnh báo tự chạy
-    if (scope.isFarmsError) return void scope.retryFarms()
-    if (isHouseMode) return void houseQuery.refetch()
-    void pagedQuery.refetch()
-    void levelCountsQuery.refetch()
-  }
 
   // Cảnh báo mới / xác nhận / phán quyết chỉ đánh dấu danh sách cũ (invalidateAlertQueries): tab đang hiện thì tải lại ngay
   useRefetchInvalidatedAlertLists(isFocused)
@@ -172,13 +102,19 @@ export default function AlertsScreen() {
     }
   }
 
-  const openAcknowledge = (alert: Alert) => {
+  // Hàm cố định cho mọi hàng để AlertRow (memo) không vẽ lại khi danh sách vẽ lại
+  const openAcknowledge = useCallback((alert: Alert) => {
     setSheetKey(key => key + 1)
     setAcknowledgeTarget(alert)
-  }
+  }, [])
+  const openDetail = useCallback((alert: Alert) => setDetailAlert(alert), [])
+  // Mở từ chuông / thông báo với alertId: mở thẳng sheet chi tiết của đúng cảnh báo đó
+  const showToast = toast.show
+  const handleLinkedAlertMissing = useCallback(() => showToast(t('Không mở được cảnh báo này')), [showToast])
+  useLinkedAlert(openDetail, handleLinkedAlertMissing)
 
   const renderEmpty = () => {
-    if (isListLoading) {
+    if (list.isListLoading) {
       return (
         <View style={styles.list}>
           {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
@@ -187,12 +123,12 @@ export default function AlertsScreen() {
         </View>
       )
     }
-    if (isListError) {
+    if (list.isListError) {
       return (
         <EmptyState
           message={t('Không tải được cảnh báo')}
           actionLabel={t('Thử lại')}
-          onAction={retryList}
+          onAction={list.retryList}
         />
       )
     }
@@ -219,24 +155,16 @@ export default function AlertsScreen() {
 
   const header = (
     <View style={styles.header}>
-      {!isSocketConnected && (
-        <View style={[styles.banner, { backgroundColor: palette.surfaceStrong }]}>
-          <WifiSlashIcon size={16} color={palette.text} />
-          <Text variant="small" style={styles.flex}>
-            {t('Mất kết nối realtime, danh sách tự tải lại mỗi 30 giây')}
-          </Text>
-        </View>
-      )}
       <SeveritySummary
-        counts={counts}
+        counts={list.counts}
         selected={scope.severity}
         onToggle={scope.toggleSeverity}
         // Không tải được số thì dải vẫn hiện "_" và vẫn lọc được, không quay khung xương mãi
-        isLoading={isListLoading || (counts === null && !levelCountsQuery.isError && !scope.isFarmsError)}
+        isLoading={list.isListLoading || (list.counts === null && !list.isCountsError && !scope.isFarmsError)}
       />
       <ChoiceChips
         options={[
-          { id: 'active', label: t('Đang hiệu lực ({count})', { count: activeTotal ?? '_' }) },
+          { id: 'active', label: t('Đang hiệu lực ({count})', { count: list.activeTotal ?? '_' }) },
           { id: 'resolved', label: t('Đã đóng') },
         ]}
         selectedId={scope.segment}
@@ -251,6 +179,7 @@ export default function AlertsScreen() {
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <View key={language} style={styles.screen}>
         <AppHeader
+          onBack={returnBack}
           leading={
             <HeaderPicker
               title={scopeTitle}
@@ -265,7 +194,7 @@ export default function AlertsScreen() {
           }
         />
         <FlatList
-          data={alerts}
+          data={list.alerts}
           keyExtractor={alert => alert._id}
           renderItem={({ item }) => (
             <AlertRow
@@ -273,8 +202,8 @@ export default function AlertsScreen() {
               locationText={getLocationText(item)}
               now={now}
               isNew={newAlertIds.has(item._id)}
-              onPress={() => setDetailAlert(item)}
-              onAcknowledge={canAcknowledge ? () => openAcknowledge(item) : undefined}
+              onPress={openDetail}
+              onAcknowledge={canAcknowledge ? openAcknowledge : undefined}
             />
           )}
           getItemLayout={(_data, index) => ({
@@ -287,17 +216,17 @@ export default function AlertsScreen() {
           ListEmptyComponent={renderEmpty()}
           // Phân trang ở server: cuộn gần cuối hoặc bấm "Xem thêm" thì tải trang kế (có thể sang trạng thái/mức kế tiếp)
           ListFooterComponent={
-            !isHouseMode && pagedQuery.hasNextPage ? (
+            list.hasNextPage ? (
               <Button
                 label={t('Xem thêm')}
                 variant="link"
-                loading={pagedQuery.isFetchingNextPage}
-                onPress={() => pagedQuery.fetchNextPage()}
+                loading={list.isFetchingNextPage}
+                onPress={list.fetchNextPage}
               />
             ) : undefined
           }
           onEndReached={() => {
-            if (!isHouseMode && pagedQuery.hasNextPage && !pagedQuery.isFetchingNextPage) void pagedQuery.fetchNextPage()
+            if (list.hasNextPage && !list.isFetchingNextPage) list.fetchNextPage()
           }}
           onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
@@ -386,7 +315,6 @@ const styles = StyleSheet.create({
   header: { gap: Spacing.md, marginBottom: Spacing.md },
   list: { gap: ROW_GAP },
   separator: { height: ROW_GAP },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderRadius: Radius.md, padding: Spacing.md },
   flex: { flex: 1 },
   allClear: { alignItems: 'center', gap: Spacing.sm, borderRadius: Radius.lg, padding: Spacing.xl },
 })

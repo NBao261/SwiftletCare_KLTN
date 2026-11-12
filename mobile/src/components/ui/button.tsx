@@ -6,7 +6,7 @@ import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
 // Chiều cao theo MOBILE_GUIDE 3.5: sm 36 · md 44 · lg 52
-const BUTTON_HEIGHTS = { sm: 36, md: 44, lg: 52 } as const
+export const BUTTON_HEIGHTS = { sm: 36, md: 44, lg: 52 } as const
 const BUTTON_PADDINGS = { sm: Spacing.lg, md: Spacing.lg, lg: Spacing.xl } as const
 
 interface ButtonProps {

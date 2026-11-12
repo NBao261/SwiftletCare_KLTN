@@ -58,13 +58,13 @@ export const roleDict: Dictionary<Role> = {
   vi: {
     ADMIN: 'Quản trị viên',
     FARM_OWNER: 'Chủ nhà yến',
-    TECHNICIAN: 'Kỹ thuật viên',
+    FARM_TECHNICIAN: 'Kỹ thuật viên nhà yến',
     DOMAIN_EXPERT: 'Chuyên gia',
   },
   en: {
     ADMIN: 'Administrator',
     FARM_OWNER: 'Farm Owner',
-    TECHNICIAN: 'Technician',
+    FARM_TECHNICIAN: 'Farm Technician',
     DOMAIN_EXPERT: 'Expert',
   },
 };

@@ -61,9 +61,7 @@ static const char *PORTAL_HTML = R"HTML(
     <input name="ssid" value="%WIFI_SSID%" %SSID_REQUIRED% autocomplete="off">
     <label>Mat khau</label>
     <input name="password" type="password" autocomplete="off">
-    <label>Dia chi IP MQTT Broker (de trong neu khong doi)</label>
-    <input name="mqttBroker" value="%MQTT_BROKER%" autocomplete="off">
-    <button type="submit">Ket noi</button>
+%BROKER_FIELD%    <button type="submit">Ket noi</button>
   </form>
 </div>
 </body></html>
@@ -129,7 +127,16 @@ void startCaptivePortal(AsyncWebServer &server) {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = String(PORTAL_HTML);
     html.replace("%DEVICE_ID%", Config::deviceId);
-    html.replace("%MQTT_BROKER%", Config::mqttBroker);
+    // FARM-FR-003c — bản production chỉ hỏi Wi-Fi: broker là tên miền nạp lúc flash cùng tài khoản
+    // của thiết bị (BR-27). Bản dev vẫn cho nhập IP broker trên laptop khi mDNS không tìm được.
+#ifdef SWIFTLETCARE_PRODUCTION_BUILD
+    html.replace("%BROKER_FIELD%", "");
+#else
+    html.replace("%BROKER_FIELD%",
+                 String("<label>Dia chi IP MQTT Broker (de trong neu khong doi)</label>\n"
+                        "<input name=\"mqttBroker\" value=\"") +
+                     Config::mqttBroker + "\" autocomplete=\"off\">\n");
+#endif
     html.replace("%WIFI_SSID%", Config::wifiSsid);
     // SSID bắt buộc nhập chỉ khi portal mở do WiFi chưa từng connect được
     // (không có gì để "giữ nguyên" nếu để trống); optional khi WiFi vẫn
@@ -167,6 +174,7 @@ void startCaptivePortal(AsyncWebServer &server) {
     // MQTT broker: optional, để trống nghĩa là giữ nguyên giá trị cũ (không
     // ghi gì vào NVS, MQTTManager::begin() vẫn dùng giá trị đã lưu trước đó
     // hoặc mặc định Secrets.h nếu chưa từng đổi).
+#ifndef SWIFTLETCARE_PRODUCTION_BUILD
     if (request->hasParam("mqttBroker", true)) {
       String broker = request->getParam("mqttBroker", true)->value();
       broker.trim();
@@ -174,6 +182,7 @@ void startCaptivePortal(AsyncWebServer &server) {
         StorageManager::saveMqttBroker(broker);
       }
     }
+#endif
 
     // farm, house, zone không có trên thiết bị: backend giữ từ lúc đăng ký (FARM-FR-003c, Report 4 D3)    request->send(200, "text/html", SAVED_HTML);
     // Delay nhỏ để response kịp gửi về trình duyệt trước khi mất kết nối AP

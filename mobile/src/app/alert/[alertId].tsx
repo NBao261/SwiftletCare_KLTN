@@ -9,6 +9,7 @@ import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { t } from '@/utils/i18n.utils'
+import { buildAlertReturnTo } from '@/utils/navigation.utils'
 
 
 /** Chi tiết cảnh báo dạng trang (ALERT-FR-007…009, 014) — mở từ Trang chủ và sau này từ thông báo push;
@@ -24,7 +25,7 @@ export default function AlertDetailScreen() {
     <View style={[styles.screen, { backgroundColor: palette.background, paddingBottom: insets.bottom }]}>
       <View key={language} style={styles.screen}>
         <AppHeader title={t('Chi tiết cảnh báo')} onBack={() => router.back()} />
-        <AlertDetailContent alertId={alertId} isReady onMessage={toast.show} />
+        <AlertDetailContent alertId={alertId} isReady onMessage={toast.show} returnTo={buildAlertReturnTo(alertId)} />
       </View>
       {toast.message && <Toast message={toast.message} bottomOffset={insets.bottom + Spacing.xxl * 2} />}
     </View>
