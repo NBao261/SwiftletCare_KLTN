@@ -25,6 +25,8 @@ export interface SensorNode {
   speaker_schedule: { enabled: boolean; windows: Array<{ start: string; end: string }> }
   audio: { current_track: number; volume: number; playing: boolean; loop: boolean }
   registered_at: string
+  /** SYSTEM-FR-004 — thiết bị của bộ giả lập, chép từ kho lúc đăng ký */
+  simulated?: boolean
   /** FARM-FR-013 — lệnh OTA đã gửi, chờ heartbeat báo đúng firmware_version mới */
   ota_pending?: { version: string; url: string; requested_at: string; requested_by?: string }
   /** OTA quá hạn xác nhận — thiết bị vẫn chạy `running_version` (đã rollback) */
@@ -81,6 +83,8 @@ export interface CameraNode {
   /** VISION-FR-018 — vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml */
   counting_ring?: { points: Array<[number, number]>; into_ring_is_exit: boolean; updated_at?: string } | null
   status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
+  /** SYSTEM-FR-004 — thiết bị của bộ giả lập */
+  simulated?: boolean
   activation_overdue_at?: string
   decommissioned_at?: string; decommission_reason?: string
 }

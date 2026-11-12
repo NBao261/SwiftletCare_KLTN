@@ -2,6 +2,7 @@ import { useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CaretDownIcon, CpuIcon, VideoCameraIcon } from '@phosphor-icons/react';
 
+import SimulatedBadge from '@/components/common/SimulatedBadge';
 import StatusDot from '@/components/common/StatusDot';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import { Card, ClearFiltersButton, SearchInput, SelectMenu, SortChips } from '@/components/ui';
@@ -263,6 +264,7 @@ function DeviceGroup({ title, devices, emptyText, onDetail }: DeviceGroupProps):
                   <p className="truncate text-sm font-semibold text-charcoal">
                     {t(isSensor ? 'list.kitName' : 'list.cameraName', { id: device.deviceId })}
                   </p>
+                  <SimulatedBadge simulated={device.simulated} />
                 </div>
                 <StatusDot status={device.status} />
                 <button type="button" className={DETAIL_BUTTON_CLASS} onClick={() => onDetail(device)}>

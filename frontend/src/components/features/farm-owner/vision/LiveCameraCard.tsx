@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { ArrowsInIcon, ArrowsOutIcon, HourglassIcon, VideoCameraSlashIcon, WifiSlashIcon } from '@phosphor-icons/react'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
 import { Button, Card, SelectMenu } from '@/components/ui'
 import { NO_VALUE } from '@/constants/display'
@@ -74,6 +75,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
             {/* Chấm xanh khi đang phát, xám khi chưa có hình */}
             <span className={cn('h-2 w-2 shrink-0 rounded-full', isPlaying ? 'bg-accent-600' : 'bg-warmGray/40')} />
             <h2 className="text-h2 text-charcoal">{t('camera.title')}</h2>
+            <SimulatedBadge simulated={camera?.simulated} />
           </div>
           <p className="mt-1 text-sm text-warmGray">{t('camera.subtitle', { house: houseName })}</p>
         </div>
