@@ -514,10 +514,13 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
 /**
  * THREAT-FR-010 — heartbeat báo dưới MIN_AI_FPS thì nhà có EDGE_AI_DEGRADED; báo đủ trở lại thì đóng (lúc
  * này nút đang online nên cảnh báo mở chỉ có thể là cảnh báo chậm, kể cả bản nút AI tự gửi qua vision/alert).
- * Heartbeat không có fps (nút AI cũ) thì không xét. Không throw: cảnh báo hỏng không làm hỏng heartbeat.
+ * Heartbeat không có fps (nút AI cũ) thì không xét. `fps` ≤ 0 là chưa đo: nút AI gửi heartbeat đầu ngay ở khung
+ * hình đầu tiên sau khi khởi động, trước lần đo đầu (`stream.py`), nên xét nó là mở cảnh báo giả mỗi lần khởi
+ * động. Pipeline treo thì không gửi heartbeat nào, cảnh báo mất kết nối (deviceOffline.job) lo trường hợp đó.
+ * Không throw: cảnh báo hỏng không làm hỏng heartbeat.
  */
 async function checkCameraFps(cameraId: string, fps: number | undefined): Promise<void> {
-  if (typeof fps !== 'number' || !Number.isFinite(fps)) return
+  if (typeof fps !== 'number' || !Number.isFinite(fps) || fps <= 0) return
   try {
     if (fps < MIN_AI_FPS) await raiseCameraLowFpsAlert(cameraId, fps, MIN_AI_FPS)
     else await resolveAlertsForNode(cameraId, 'Nút AI xử lý đủ khung hình trở lại', 'EDGE_AI_DEGRADED')

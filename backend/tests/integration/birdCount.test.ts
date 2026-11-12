@@ -427,6 +427,17 @@ describe('nút AI: heartbeat, offline, vision/alert (THREAT-FR-010)', () => {
     expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' })).toBe(1)
   })
 
+  it('heartbeat fps 0 lúc nút AI vừa khởi động (chưa đo) không mở cảnh báo, không đóng cảnh báo đang mở', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 0, justConnected: true } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED' })).toBe(0)
+    expect((await CameraNode.findById(camera._id).lean())!.status).toBe('ONLINE')
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 6 } as never)
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 0 } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' })).toBe(1)
+  })
+
   it('nút AI tự gửi EDGE_AI_DEGRADED qua vision/alert, heartbeat sau đủ fps thì đóng', async () => {
     const { camera } = await seed()
     await recordHeartbeat({ deviceId: camera.device_id, fps: 15 } as never)
