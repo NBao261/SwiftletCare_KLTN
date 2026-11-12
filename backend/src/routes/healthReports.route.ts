@@ -44,6 +44,8 @@ router.get('/', readers,
   query('kind').optional().isIn(HOUSE_REPORT_KINDS),
   query('from').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
   query('to').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false" lọt xuống service là truthy
+  query('hasConclusion').optional().isBoolean().toBoolean(),
   validate, healthReportController.list)
 router.post('/', readers,
   body('houseId').isMongoId(),

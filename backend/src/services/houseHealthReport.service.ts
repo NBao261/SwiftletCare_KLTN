@@ -213,6 +213,8 @@ export interface ListHouseReportsQuery {
   kind?: HouseReportKind
   from?: string
   to?: string
+  // true: chỉ báo cáo đã có kết luận; false: chỉ báo cáo chưa có (đếm "chờ kết luận" của chuyên gia)
+  hasConclusion?: boolean
   page?: number
   limit?: number
 }
@@ -230,6 +232,7 @@ export async function listHouseReports(user: CurrentUser, query: ListHouseReport
     ...(query.kind && { kind: query.kind }),
     ...(query.from && { period_end: { $gte: query.from } }),
     ...(query.to && { period_start: { $lte: query.to } }),
+    ...(query.hasConclusion !== undefined && { expert_conclusion: query.hasConclusion ? { $ne: null } : null }),
   }
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [rows, total] = await Promise.all([

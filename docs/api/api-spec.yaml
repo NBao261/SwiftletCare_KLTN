@@ -4028,6 +4028,7 @@ paths:
         - { name: kind, in: query, schema: { type: string, enum: [DAILY, WEEKLY, MONTHLY, CUSTOM] } }
         - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN — báo cáo có kỳ kết thúc từ ngày này" }
         - { name: to, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN — báo cáo có kỳ bắt đầu tới ngày này" }
+        - { name: hasConclusion, in: query, schema: { type: boolean }, description: "true: chỉ báo cáo đã có kết luận; false: chỉ báo cáo chưa có (số \"báo cáo chờ kết luận\" của chuyên gia = meta.total). Không gửi: mọi báo cáo" }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:

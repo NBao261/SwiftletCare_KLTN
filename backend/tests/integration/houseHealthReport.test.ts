@@ -307,6 +307,23 @@ describe('kết luận của chuyên gia (EXPERT-FR-006, SM-09)', () => {
   })
 })
 
+describe('lọc theo kết luận (hasConclusion)', () => {
+  it('false chỉ đếm báo cáo chưa có kết luận, true chỉ đếm báo cáo đã có; giá trị khác → 422', async () => {
+    const { farm, house, ownerToken, expertToken } = await setup()
+    const { report } = (await generateHouseReport('WEEKLY', String(house._id), addDays(DAY, -6), DAY))!
+    await generateHouseReport('DAILY', String(house._id), DAY, DAY)
+    await call('put', `/health-reports/${report._id}/conclusion`, expertToken, { text: 'Đàn ổn định' }).expect(200)
+
+    const total = async (query: string) =>
+      (await call('get', `/health-reports?farmId=${farm._id}${query}`, ownerToken).expect(200)).body.meta.total
+    expect(await total('')).toBe(2)
+    expect(await total('&hasConclusion=false')).toBe(1)
+    expect(await total('&hasConclusion=true')).toBe(1)
+    expect(await total('&hasConclusion=false&kind=WEEKLY')).toBe(0)
+    await call('get', `/health-reports?farmId=${farm._id}&hasConclusion=yes`, ownerToken).expect(422)
+  })
+})
+
 describe('báo cáo tuần theo Zone cũ vẫn chạy (deprecated)', () => {
   it('?zoneId trả ZoneHealthReport; id báo cáo Zone mở được và viết kết luận được', async () => {
     const { farm, zone, ownerToken, expertToken } = await setup()
