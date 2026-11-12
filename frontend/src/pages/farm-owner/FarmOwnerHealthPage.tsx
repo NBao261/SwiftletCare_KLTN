@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { HealthDayScope } from '@/apis/shared/healthDays.api';
 import ScopeFilter from '@/components/common/ScopeFilter';
 import TableEmptyState from '@/components/common/TableEmptyState';
+import DisagreementsSection from '@/components/features/domain-expert/reports/DisagreementsSection';
 import HealthDayDrawer from '@/components/features/farm-owner/health/HealthDayDrawer';
 import HealthDayTable from '@/components/features/farm-owner/health/HealthDayTable';
 import HealthLevelsModal from '@/components/features/farm-owner/health/HealthLevelsModal';
@@ -20,14 +21,21 @@ import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useDownloadHealthCsv, useHealthDays } from '@/hooks/shared/useHealthDays';
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
-import type { HouseHealthDay } from '@/types';
+import type { Farm, HouseHealthDay } from '@/types';
 
 // Khoảng ngày xem được (thêm hôm nay, tối đa 31 ngày một lần đọc)
 const RANGE_DAYS = [7, 14, 30] as const;
 type RangeDays = (typeof RANGE_DAYS)[number];
-// Tên tab trùng tiền tố khoá tiêu đề thẻ (table.title, report.title)
-const TABS = ['table', 'report'] as const;
+// Tên tab trùng tiền tố khoá tiêu đề thẻ (table.title, report.title, disagreements.title)
+const TABS = ['table', 'report', 'disagreements'] as const;
 type HealthTab = (typeof TABS)[number];
+
+// BR-22 — farm chưa có chuyên gia thì Farm Owner xem ngày lệch thay chuyên gia (EXPERT-FR-022)
+// ponytail: GET /farms không cho biết tài khoản chuyên gia bị khoá, nên farm chỉ còn chuyên gia bị khoá vẫn ẩn tab
+// (backend thì cho Farm Owner vào); cần thì backend trả cờ chuyên gia còn hoạt động theo farm
+function hasExpert(farm: Farm): boolean {
+  return farm.members.some(member => member.role === 'DOMAIN_EXPERT');
+}
 
 // Tải blob CSV backend trả về (đã có BOM, ngôn ngữ theo lang)
 function saveCsv(blob: Blob, fileName: string): void {
@@ -57,7 +65,13 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const [isLevelsOpen, setIsLevelsOpen] = useState(false);
   // Tab nằm trên URL (?tab=report) để từ trang chi tiết báo cáo quay lại đúng tab
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab: HealthTab = searchParams.get('tab') === 'report' ? 'report' : 'table';
+  const selectedFarm = scope.farms.find(farm => farm._id === scope.farmId);
+  // Đang xem 1 farm: farm đó chưa có chuyên gia; xem tất cả: có ít nhất 1 farm chưa có (chọn farm trong tab)
+  const canReviewDisagreements = !isExpert && (selectedFarm ? !hasExpert(selectedFarm) : scope.farms.some(farm => !hasExpert(farm)));
+  // Chuyên gia xem và kết luận báo cáo ở /domain-expert/reports (FE_Design §12.0 c), ở đây chỉ còn bảng ngày
+  const visibleTabs = TABS.filter(value => (value !== 'report' || !isExpert) && (value !== 'disagreements' || canReviewDisagreements));
+  const tabParam = searchParams.get('tab');
+  const tab: HealthTab = visibleTabs.find(value => value === tabParam) ?? 'table';
   const setTab = (value: HealthTab) => setSearchParams(previous => {
     const next = new URLSearchParams(previous);
     if (value === 'table') next.delete('tab');
@@ -109,7 +123,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   // Tab pill như AdminUsersPage, trên thẻ: bảng ngày và bảng báo cáo, mỗi lúc 1 thẻ
   const tabs = (
     <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
-      {TABS.map(value => (
+      {visibleTabs.map(value => (
         <button
           key={value}
           type="button"
@@ -144,7 +158,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   return (
     <div className="flex flex-1 flex-col gap-6">
       {filter}
-      {tabs}
+      {visibleTabs.length > 1 && tabs}
 
       {/* Thẻ trắng kéo hết chiều cao còn lại của màn hình */}
       {tab === 'table' ? (
@@ -204,8 +218,14 @@ export default function FarmOwnerHealthPage(): JSX.Element {
             <HealthDayTable days={shownDays} canRate={canRate} onRate={openRating} onView={openView} />
           )}
         </SectionCard>
-      ) : (
+      ) : tab === 'report' ? (
         <HealthReportSection scope={csvScope} house={house ? { id: house._id, name: house.name } : null} />
+      ) : (
+        <DisagreementsSection
+          farmId={csvScope?.farmId ?? scope.farmId}
+          farmName={selectedFarm?.name ?? (scope.farms.length === 1 ? scope.farms[0].name : '')}
+          houseId={scope.houseId}
+        />
       )}
 
       <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onRevealed={setViewDay} />

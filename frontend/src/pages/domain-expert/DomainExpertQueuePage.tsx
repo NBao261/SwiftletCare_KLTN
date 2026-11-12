@@ -32,7 +32,7 @@ import {
   SEVERITY_LABELS,
   SEVERITY_BADGE_CLASS,
 } from '@/hooks/domain-expert/useExpertAlerts'
-import { useHealthReportList } from '@/hooks/domain-expert/useHealthReports'
+import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements'
 import { shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils'
 import { useExpertAiSuggestion } from '@/hooks/domain-expert/useZoneTuning'
@@ -78,7 +78,7 @@ function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZone
 
 export default function DomainExpertQueuePage() {
   const navigate = useNavigate()
-  const { selectedFarmId, selectedFarmName, selectedZoneId, selectedZoneName } = useZoneStore()
+  const { selectedFarmId, selectedFarmName, selectedHouseId, selectedZoneId, selectedZoneName } = useZoneStore()
 
   // ── Dữ liệu cảnh báo suy luận AI — đồng bộ 100% với SCADA Banner ───────────
   const { kpiCounts, isLoading: isLoadingAlerts } = useAlertsWithFilters(
@@ -91,10 +91,10 @@ export default function DomainExpertQueuePage() {
     selectedZoneId ?? undefined,
   )
 
-  // ── Dữ liệu báo cáo sức khỏe zone định kỳ ──────────────────────────────────
-  const { data: healthReports = [], isLoading: isLoadingReports } = useHealthReportList(
-    selectedZoneId ?? undefined,
-  )
+  // ── Báo cáo sức khỏe theo nhà: chờ kết luận / đã kết luận (cùng phạm vi tab Báo cáo & Kết luận) ──
+  const {
+    pending: pendingReports, concluded: publishedReports, isLoading: isLoadingReports,
+  } = useHealthReportConclusionCounts(selectedFarmId ?? '', selectedHouseId ?? '')
 
   // ── Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic ───────────────────────
   const { data: aiSuggestion } = useExpertAiSuggestion(selectedZoneId ?? undefined)
@@ -130,9 +130,6 @@ export default function DomainExpertQueuePage() {
 
   const pendingCount = kpiCounts?.pending ?? pendingAlerts.length
   const activeAlert = pendingAlerts[0]
-
-  const pendingReports = healthReports.filter(r => !r.expert_conclusion?.text).length
-  const publishedReports = Math.max(0, healthReports.length - pendingReports)
 
   const hasAiTuningSuggestion = Boolean(aiSuggestion?.suggestion)
 

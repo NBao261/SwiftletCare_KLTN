@@ -33,7 +33,7 @@ export const healthDayApi = {
     api.put<ApiResponse<HouseHealthLevels>>(`/farms/houses/${houseId}/health-levels`, levels),
 
   // EXPERT-FR-005 — báo cáo theo nhà (ngày/tuần/tháng theo lịch BR-33, CUSTOM theo yêu cầu tối đa 31 ngày)
-  listReports: (scope: { houseId?: string; farmId?: string; kind?: HealthReportKind; page?: number; limit?: number }) =>
+  listReports: (scope: { houseId?: string; farmId?: string; kind?: HealthReportKind; hasConclusion?: boolean; page?: number; limit?: number }) =>
     api.get<ApiResponse<HouseHealthReportSummary[]>>('/health-reports', { params: scope }),
   getReport: (reportId: string) => api.get<ApiResponse<HouseHealthReport>>(`/health-reports/${reportId}`),
   // Cùng nhà, cùng khoảng đã có thì backend tính lại và trả bản cũ (200)

@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import {
   AlertTriangle,
-  CheckCircle2,
   SlidersHorizontal,
   Building2,
   BarChart3,
 } from 'lucide-react';
+import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthLevelsModal from '@/components/features/farm-owner/health/HealthLevelsModal';
 import {
   shiftDate,
@@ -30,7 +30,6 @@ import {
   useHealthEvaluation,
 } from '@/hooks/domain-expert/useHealthDisagreements';
 import { useHouses } from '@/hooks/shared/useFarms';
-import { useZoneStore } from '@/stores/zoneStore';
 import type { HealthSource } from '@/types/healthDay.types';
 
 const DISAGREEMENT_RANGES = [7, 14, 30, 90] as const;
@@ -60,12 +59,18 @@ export function formatAgreementIndex(value: number | null | undefined): string {
   return value.toFixed(2);
 }
 
-export default function DisagreementsSection() {
+interface DisagreementsSectionProps {
+  // Farm và nhà đang chọn ('' = chưa chọn): chuyên gia lấy từ thanh trên, Farm Owner (BR-22) từ khung lọc /health
+  farmId: string;
+  farmName: string;
+  houseId: string;
+}
+
+export default function DisagreementsSection({ farmId: selectedFarmId, farmName: selectedFarmName, houseId: selectedHouseId }: DisagreementsSectionProps) {
   const { t, date } = useTranslation(healthDict);
   const apiErrorMessage = useApiErrorMessage();
 
-  const { selectedFarmId, selectedFarmName, selectedHouseId } = useZoneStore();
-  const { data: farmHouses = [] } = useHouses(selectedFarmId ?? undefined);
+  const { data: farmHouses = [] } = useHouses(selectedFarmId || undefined);
 
   const [rangeDays, setRangeDays] = useState<DisagreementRangeDays>(14);
   const [scopeMode, setScopeMode] = useState<'FARM' | 'HOUSE'>('FARM');
@@ -79,7 +84,7 @@ export default function DisagreementsSection() {
     scopeMode === 'HOUSE' && activeHouse ? activeHouse._id : undefined;
   const effectiveFarmId = effectiveHouseId
     ? undefined
-    : (selectedFarmId ?? undefined);
+    : (selectedFarmId || undefined);
 
   const to = vietnamDate();
   const from = shiftDate(to, -(rangeDays - 1));
@@ -428,16 +433,19 @@ export default function DisagreementsSection() {
             />
           </div>
         ) : days.length === 0 ? (
-          <div className="rounded-2xl border border-warmGray/20 bg-white px-6 py-10 [&_p]:text-balance">
-            <EmptyState
-              icon={<CheckCircle2 className="h-8 w-8 text-emerald-600" />}
-              title={t('dis.emptyTitle')}
-              description={
-                evaluation && evaluation.rated_count > 0
-                  ? t('dis.emptyAllAgree', { n: evaluation.rated_count, days: rangeDays })
-                  : t('dis.emptyNone')
-              }
-            />
+          // Cùng khung rỗng của bảng ngày ở /health: thẻ trắng, viền đứt, hình minh hoạ TableEmptyState
+          <div className="rounded-2xl border border-warmGray/20 bg-white p-5 shadow-xs sm:p-6">
+            {/* pt-20: vòng tròn ngoài của hình minh hoạ lố khung 40px phía trên, để trên dưới đều chừa 40px */}
+            <div className="flex items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 pb-10 pt-20">
+              <TableEmptyState
+                title={t('dis.emptyTitle')}
+                description={
+                  evaluation && evaluation.rated_count > 0
+                    ? t('dis.emptyAllAgree', { n: evaluation.rated_count, days: rangeDays })
+                    : t('dis.emptyNone')
+                }
+              />
+            </div>
           </div>
         ) : (
           days.map((day) => (

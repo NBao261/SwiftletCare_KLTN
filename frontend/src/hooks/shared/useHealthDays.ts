@@ -97,10 +97,12 @@ export function useUpdateHealthLevels(houseId: string) {
 
 
 // EXPERT-FR-005 — báo cáo theo nhà hoặc farm, mới nhất trước, phân trang server; scope null = chưa chọn được phạm vi
-export function useHouseHealthReports(scope: { houseId?: string; farmId?: string } | null, kind: HealthReportKind | undefined, page: number) {
+export function useHouseHealthReports(
+  scope: { houseId?: string; farmId?: string } | null, kind: HealthReportKind | undefined, hasConclusion: boolean | undefined, page: number,
+) {
   return usePaginatedListQuery(
-    [HEALTH_REPORTS_KEY, scope, kind, page],
-    () => healthDayApi.listReports({ ...scope, kind, page, limit: REPORT_PAGE_SIZE }),
+    [HEALTH_REPORTS_KEY, scope, kind, hasConclusion, page],
+    () => healthDayApi.listReports({ ...scope, kind, hasConclusion, page, limit: REPORT_PAGE_SIZE }),
     page,
     REPORT_PAGE_SIZE,
     { enabled: Boolean(scope) },
@@ -122,6 +124,24 @@ export function useCreateHouseHealthReport() {
     mutationFn: (input: { houseId: string; from: string; to: string }) =>
       healthDayApi.createReport(input).then(response => response.data.data),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [HEALTH_REPORTS_KEY] }),
+  })
+}
+
+// Hàng đợi chuyên gia — số báo cáo chưa có / đã có kết luận của nhà (houseId) hoặc cả farm; chỉ đọc meta.total
+export function useHealthReportConclusionCounts(farmId: string, houseId: string) {
+  const scope = houseId ? { houseId } : { farmId }
+  const count = (hasConclusion: boolean) => ({
+    queryKey: [HEALTH_REPORTS_KEY, 'count', scope, hasConclusion],
+    queryFn: () => healthDayApi.listReports({ ...scope, hasConclusion, limit: 1 }).then(response => response.data.meta?.total ?? 0),
+    enabled: Boolean(houseId || farmId),
+  })
+  return useQueries({
+    queries: [count(false), count(true)],
+    combine: ([pending, concluded]) => ({
+      pending: pending.data ?? 0,
+      concluded: concluded.data ?? 0,
+      isLoading: pending.isLoading || concluded.isLoading,
+    }),
   })
 }
 

@@ -5,7 +5,7 @@ import { PlusIcon } from '@phosphor-icons/react';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthReportCreateModal from '@/components/features/farm-owner/health/HealthReportCreateModal';
 import { HEALTH_REPORT_PATH, reportPeriod, type HealthReportState } from '@/components/features/farm-owner/health/healthReport.utils';
-import { ActionsMenu, Badge, Button, EmptyState, FilterChip, LoadingSkeleton, SectionCard, type DataTableColumn } from '@/components/ui';
+import { ActionsMenu, Badge, Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -15,6 +15,8 @@ import { useHealthReportPdf } from '@/hooks/shared/useHealthReportPdf';
 import type { HealthReportKind, HouseHealthReportSummary } from '@/types';
 
 const KINDS: HealthReportKind[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
+// Lọc theo kết luận ('' = mọi báo cáo) → hasConclusion của GET /health-reports
+type ConclusionFilter = '' | 'none' | 'has';
 // Cùng chiều cao dòng bảng ngày (tab bên cạnh)
 const ROW_HEIGHT = 72;
 
@@ -32,13 +34,15 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const navigate = useNavigate();
   const location = useLocation();
   const backTo = location.pathname + location.search;
-  const [kind, setKind] = useState<HealthReportKind | undefined>(undefined);
+  const [kind, setKind] = useState<HealthReportKind | ''>('');
+  const [conclusion, setConclusion] = useState<ConclusionFilter>('');
+  const hasConclusion = conclusion === '' ? undefined : conclusion === 'has';
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   // Đổi phạm vi hoặc loại thì về trang 1
-  const filterKey = JSON.stringify([scope, kind]);
+  const filterKey = JSON.stringify([scope, kind, hasConclusion]);
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
   const page = pageState.key === filterKey ? pageState.page : 1;
-  const { records: reports, total, isLoading, isError, error, refetch } = useHouseHealthReports(scope, kind, page);
+  const { records: reports, total, isLoading, isError, error, refetch } = useHouseHealthReports(scope, kind || undefined, hasConclusion, page);
   const { download, downloadingId } = useHealthReportPdf();
 
   // Chi tiết là trang riêng, id qua history state
@@ -87,13 +91,25 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
 
   return (
     <SectionCard title={t('report.title')} description={t('report.subtitle')}>
-      {/* Lọc loại bên trái, nút tạo bên phải */}
+      {/* 2 ô chọn lọc loại và kết luận bên trái, nút tạo bên phải */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <FilterChip active={!kind} label={t('kind.all')} onClick={() => setKind(undefined)} />
-          {KINDS.map(value => (
-            <FilterChip key={value} active={kind === value} label={t(`kind.${value}`)} onClick={() => setKind(value)} />
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <SelectMenu
+            ariaLabel={t('report.filterKind')}
+            value={kind}
+            onChange={setKind}
+            options={[{ value: '', label: t('kind.all') }, ...KINDS.map(value => ({ value, label: t(`kind.${value}`) }))]}
+          />
+          <SelectMenu
+            ariaLabel={t('report.filterConclusion')}
+            value={conclusion}
+            onChange={setConclusion}
+            options={[
+              { value: '', label: t('conclusion.all') },
+              { value: 'none', label: t('conclusion.none') },
+              { value: 'has', label: t('conclusion.has') },
+            ]}
+          />
         </div>
         <Button
           size="sm"

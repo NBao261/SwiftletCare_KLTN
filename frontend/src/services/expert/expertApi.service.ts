@@ -12,7 +12,6 @@ import type {
   AutonomyResponse,
   BirdCountTrendsResponse,
   ZoneComparisonResponse,
-  ZoneHealthReportItem,
   HarvestBatchItem,
   RelayOverrideLogItem,
   AlertEvidence,
@@ -102,8 +101,4 @@ export const expertApi = {
 
   getRelayOverrideLogs: (nodeId: string, params?: { page?: number; limit?: number }) =>
     api.get<ApiResponse<RelayOverrideLogItem[]>>(`/devices/sensor-nodes/${nodeId}/relay-overrides`, { params }),
-
-  // ── 7. Báo cáo Sức khỏe Zone (EXPERT-FR-005/006) ───────────────────────────
-  getHealthReports: (zoneId: string, params?: { page?: number; limit?: number }) =>
-    api.get<ApiResponse<ZoneHealthReportItem[]>>('/health-reports', { params: { zoneId, ...params } }),
 }

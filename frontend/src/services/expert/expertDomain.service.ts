@@ -3,7 +3,7 @@ import type {
   ExpertVerdictStats, InferredAlertItem, ExpertThresholds,
   ExpertFuzzyTuning, ExpertDetectionTuning, FuzzySuggestionResponse,
   ForecastResponse, ControlPerformanceResponse, AutonomyResponse,
-  BirdCountTrendsResponse, ZoneHealthReportItem, HarvestBatchItem,
+  BirdCountTrendsResponse, HarvestBatchItem,
   AlertEvidence, ExpertActivityEntry, ExpertActivityQuery,
 } from '@/types/expert.types'
 
@@ -73,11 +73,6 @@ export const expertService = {
 
   async getHarvestBatches(params?: { farmId?: string; zoneId?: string }): Promise<HarvestBatchItem[]> {
     const res = await expertApi.getHarvestBatches(params)
-    return Array.isArray(res.data?.data) ? res.data.data : []
-  },
-
-  async getHealthReports(zoneId: string, params?: { page?: number; limit?: number }): Promise<ZoneHealthReportItem[]> {
-    const res = await expertApi.getHealthReports(zoneId, params)
     return Array.isArray(res.data?.data) ? res.data.data : []
   },
 

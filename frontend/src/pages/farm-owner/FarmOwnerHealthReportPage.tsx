@@ -5,6 +5,7 @@ import { reportPeriod, type HealthReportState } from '@/components/features/farm
 import { EmptyState, LoadingSkeleton } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { usePermission } from '@/hooks/common/usePermission';
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseHealthReport } from '@/hooks/shared/useHealthDays';
@@ -14,7 +15,9 @@ import { useHealthReportPdf } from '@/hooks/shared/useHealthReportPdf';
 export default function FarmOwnerHealthReportPage(): JSX.Element {
   const state = useLocation().state as HealthReportState | null;
   const reportId = state?.reportId;
-  const backTo = state?.backTo ?? '/health?tab=report';
+  // Mất history state (F5, tab mới): chuyên gia về tab Báo cáo & Kết luận, Farm Owner về tab Báo cáo của /health
+  const listPath = usePermission('DOMAIN_EXPERT') ? '/domain-expert/reports' : '/health?tab=report';
+  const backTo = state?.backTo ?? listPath;
   const { t, date, dateTime, exact } = useTranslation(healthDict);
   const apiErrorMessage = useApiErrorMessage();
   const { data: report, isLoading, isError, error } = useHouseHealthReport(reportId);
@@ -24,7 +27,7 @@ export default function FarmOwnerHealthReportPage(): JSX.Element {
   usePageBreadcrumb([{ label: report ? `${report.house_name} · ${reportPeriod(report, format)}` : t('report.title') }]);
   usePageBack(backTo, t('report.title'));
 
-  if (!reportId) return <Navigate to="/health?tab=report" replace />;
+  if (!reportId) return <Navigate to={listPath} replace />;
   if (isLoading) return <LoadingSkeleton count={3} className="h-40 w-full" />;
   if (isError || !report) return <EmptyState title={t('rd.loadFailed')} description={apiErrorMessage(error)} />;
 

@@ -25,7 +25,7 @@ import { useHouses } from '@/hooks/shared/useFarms';
 type ReportsPageTab = 'reports' | 'disagreements';
 
 export default function DomainExpertReportsPage() {
-  const { selectedFarmId, selectedHouseId } = useZoneStore();
+  const { selectedFarmId, selectedFarmName, selectedHouseId } = useZoneStore();
   const { data: farmHouses = [] } = useHouses(selectedFarmId ?? undefined);
   const house = farmHouses.find(item => item._id === selectedHouseId);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -127,7 +127,7 @@ export default function DomainExpertReportsPage() {
             aria-labelledby="tab-disagreements"
             className="w-full"
           >
-            <DisagreementsSection />
+            <DisagreementsSection farmId={selectedFarmId ?? ''} farmName={selectedFarmName ?? ''} houseId={selectedHouseId ?? ''} />
           </div>
         )}
       </div>
