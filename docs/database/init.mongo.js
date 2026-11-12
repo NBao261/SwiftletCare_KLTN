@@ -103,6 +103,74 @@ ensureCollection("alerts", {
       },
       "required": ["result", "by", "at"]
     },
+    "routing": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "technician_id": {
+          "bsonType": ["objectId", "null"]
+        },
+        "owners_notified": {
+          "bsonType": "bool"
+        }
+      },
+      "required": ["owners_notified"]
+    },
+    "escalated_at": {
+      "bsonType": ["date", "null"]
+    },
+    "site_cause": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "cause": {
+          "bsonType": "string",
+          "enum": ["WATER", "NOZZLE", "PUMP", "FAN", "DOOR", "SENSOR", "SPEAKER", "OTHER"]
+        },
+        "photos": {
+          "bsonType": ["array", "null"],
+          "items": {
+            "bsonType": "string"
+          }
+        },
+        "by": {
+          "bsonType": "objectId"
+        },
+        "at": {
+          "bsonType": "date"
+        }
+      },
+      "required": ["cause", "by", "at"]
+    },
+    "onsite_checks": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "technician_id": {
+            "bsonType": "objectId"
+          },
+          "requested_at": {
+            "bsonType": "date"
+          },
+          "observation": {
+            "bsonType": ["string", "null"],
+            "enum": ["BIRDS_DISTURBED", "WORK_OR_PEOPLE_NEARBY", "RAIN", "SENSOR_DIRTY_OR_FAULTY", "NOTHING_UNUSUAL", "OTHER", null]
+          },
+          "note": {
+            "bsonType": ["string", "null"]
+          },
+          "photo": {
+            "bsonType": ["string", "null"]
+          },
+          "answered_by": {
+            "bsonType": ["objectId", "null"]
+          },
+          "answered_at": {
+            "bsonType": ["date", "null"]
+          }
+        },
+        "required": ["technician_id", "requested_at"]
+      }
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }
@@ -113,6 +181,7 @@ db.getCollection("alerts").createIndex({"farm_id":1,"zone_id":1,"node_id":1,"typ
 db.getCollection("alerts").createIndex({"house_id":1,"type":1,"status":1}, {"partialFilterExpression":{"house_id":{"$exists":true}}})
 db.getCollection("alerts").createIndex({"node_id":1,"event_id":1}, {"unique":true,"partialFilterExpression":{"event_id":{"$type":"string"}}})
 db.getCollection("alerts").createIndex({"resolved_at":1}, {"expireAfterSeconds":15552000})
+db.getCollection("alerts").createIndex({"status":1,"routing.owners_notified":1,"created_at":1}, {"partialFilterExpression":{"routing.owners_notified":false}})
 
 // ── audiotracks (model AudioTrack) ──
 ensureCollection("audiotracks", {
@@ -746,7 +815,7 @@ ensureCollection("notifications", {
       "properties": {
         "kind": {
           "bsonType": "string",
-          "enum": ["alert", "health_report", "expert_decision", "parameter_review", "coefficient_proposal"]
+          "enum": ["alert", "health_report", "expert_decision", "parameter_review", "coefficient_proposal", "work_order"]
         },
         "id": {
           "bsonType": "objectId"
@@ -1326,6 +1395,55 @@ ensureCollection("users", {
         },
         "telegram": {
           "bsonType": ["bool", "null"]
+        },
+        "by_severity": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "CRITICAL": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            },
+            "HIGH": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            },
+            "MEDIUM": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            },
+            "LOW": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            }
+          }
         },
         "quiet_hours": {
           "bsonType": ["object", "null"],

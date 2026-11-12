@@ -8,7 +8,7 @@ import { activeExpertIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { IAlert } from '@/models/alert.model'
-import type { CurrentUser, NotificationPreferences } from '@/types'
+import type { AlertSeverity, CurrentUser, NotificationPreferences } from '@/types'
 
 /**
  * Notification Service — ALERT-FR-002..006.
@@ -39,10 +39,9 @@ function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): b
 }
 
 /**
- * Người nhận cảnh báo vận hành của 1 farm (ALERT-FR-005): chủ farm và mọi đồng sở hữu.
- * Domain Expert KHÔNG nhận cảnh báo vận hành ngoài ứng dụng (EXPERT-FR-007) — đó là
- * việc của Farm Owner; chuyên gia thấy cảnh báo trong ứng dụng và nhận báo cáo sức khỏe.
- * Farm Technician chưa nhận: cảnh báo theo nhà được giao là G-21 (AUTH-FR-014).
+ * Farm Owner của 1 farm: chủ farm và mọi đồng sở hữu. Domain Expert KHÔNG nhận cảnh báo vận hành ngoài
+ * ứng dụng (EXPERT-FR-007). Cảnh báo của nhà có thợ tới thợ đang trực trước, Farm Owner sau
+ * `escalation_min` (ALERT-FR-017) — chọn người nhận ở `alertRouting.service`.
  */
 export async function findRecipients(farmId: string) {
   const farm = await Farm.findById(farmId)
@@ -77,15 +76,32 @@ async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   })))
 }
 
-/** `repeat` — lần gửi lại vì chưa ai xác nhận (ALERT-FR-015): chỉ báo Farm Owner, tiêu đề ghi "Nhắc lại" */
-export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVerdict?: boolean; repeat?: boolean } = {}): Promise<void> {
+/** ALERT-FR-005 — kênh của mức cảnh báo ghi đè cài đặt chung; push mặc định tắt khi không đặt, Telegram mặc định bật */
+export function channelEnabled(prefs: NotificationPreferences | undefined, severity: AlertSeverity, channel: 'push' | 'telegram'): boolean {
+  const chosen = prefs?.by_severity?.[severity]?.[channel] ?? prefs?.[channel]
+  return channel === 'push' ? !!chosen : chosen !== false
+}
+
+export interface DispatchAlertOptions {
+  awaitsVerdict?: boolean
+  /** Lần gửi lại vì chưa ai xác nhận (ALERT-FR-015): tiêu đề ghi "Nhắc lại" */
+  repeat?: boolean
+  /** Leo thang lên Farm Owner vì thợ chưa xác nhận (BR-40): tiêu đề ghi "Chưa ai xác nhận" */
+  escalation?: boolean
+  /** Người nhận do alertRouting chọn (ALERT-FR-017); không có = Farm Owner của farm */
+  recipientIds?: string[]
+}
+
+export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAlertOptions = {}): Promise<void> {
   if (opts.awaitsVerdict) {
     // Không chặn kênh của Farm Owner: lỗi ở đây chỉ ghi log
     void notifyExpertsPendingVerdict(alert).catch((err: Error) =>
       logger.warn('Báo chuyên gia có cảnh báo chờ kiểm chứng thất bại', { alertId: String(alert._id), err }),
     )
   }
-  const recipients = await findRecipients(String(alert.farm_id))
+  const recipients = opts.recipientIds
+    ? await User.find({ _id: { $in: opts.recipientIds }, is_active: true }).lean()
+    : await findRecipients(String(alert.farm_id))
   if (recipients.length === 0) {
     logger.warn('Cảnh báo không có người nhận', { alertId: String(alert._id), farmId: String(alert.farm_id) })
     return
@@ -103,7 +119,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVer
       return
     }
 
-    const title = opts.repeat ? `Nhắc lại: ${alert.title}` : alert.title
+    const title = opts.escalation ? `Chưa ai xác nhận: ${alert.title}` : opts.repeat ? `Nhắc lại: ${alert.title}` : alert.title
     const body = `[${alert.severity}] ${title} — ${alert.message}`
 
     // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
@@ -111,8 +127,8 @@ export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVer
     // Zalo/SMS nằm ngoài phạm vi (Report 3 §8). Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
     // không kéo theo kênh còn lại.
     const channels: Array<[string, Promise<unknown> | undefined]> = [
-      ['push', prefs?.push ? sendPush(String(user._id), title, body) : undefined],
-      ['telegram', prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
+      ['push', channelEnabled(prefs, alert.severity, 'push') ? sendPush(String(user._id), title, body) : undefined],
+      ['telegram', channelEnabled(prefs, alert.severity, 'telegram') && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
     ]
     const outcomes = await Promise.allSettled(channels.map(([, sending]) => sending))
     outcomes.forEach((outcome, i) => {

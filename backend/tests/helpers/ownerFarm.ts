@@ -11,6 +11,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
+import { WorkOrder } from '@/models/workOrder.model'
 import type { CurrentUser } from '@/types'
 
 /**
@@ -31,7 +32,7 @@ export function useTestDb(): void {
     jest.restoreAllMocks()
     jest.clearAllMocks()
     await Promise.all([
-      Alert, AuditLog, BirdCountRecord, SensorNode, Farm, HarvestBatch, House, Zone, RelayOverrideLog, Telemetry, User,
+      Alert, AuditLog, BirdCountRecord, SensorNode, Farm, HarvestBatch, House, Zone, RelayOverrideLog, Telemetry, User, WorkOrder,
     ].map(m => (m as typeof User).deleteMany({ is_deleted: { $in: [true, false, null] } })))
   })
 }

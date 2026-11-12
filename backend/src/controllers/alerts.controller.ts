@@ -1,6 +1,9 @@
 import { Request, Response } from 'express'
 import * as alertService from '@/services/alert.service'
 import * as alertEvidenceService from '@/services/alertEvidence.service'
+import * as onsiteCheckService from '@/services/onsiteCheck.service'
+import type { OnsiteObservation } from '@/models/alert.model'
+import type { SiteCause } from '@/models/workOrder.model'
 import type { AlertVerdictResult } from '@/types'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
@@ -22,13 +25,15 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
 
 /** GET /alerts/:id */
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
-  const alert = await alertService.getAlert(req.params.id, req.user)
+  const alert = await alertService.getAlertDetail(req.params.id, req.user)
   res.json({ success: true, data: alert })
 })
 
-/** PUT /alerts/:id/acknowledge – ALERT-FR-009 */
+/** PUT /alerts/:id/acknowledge – ALERT-FR-009, 018 */
 export const acknowledge = asyncHandler(async (req: Request, res: Response) => {
-  const alert = await alertService.acknowledgeAlert(req.params.id, req.user, req.body.note as string | undefined)
+  const alert = await alertService.acknowledgeAlert(
+    req.params.id, req.user, req.body.note as string | undefined, req.body.cause as SiteCause | undefined,
+  )
   res.json({ success: true, data: alert })
 })
 
@@ -36,7 +41,17 @@ export const acknowledge = asyncHandler(async (req: Request, res: Response) => {
 export const setVerdict = asyncHandler(async (req: Request, res: Response) => {
   const alert = await alertService.setAlertVerdict(
     req.params.id, req.user, req.body.result as AlertVerdictResult, req.body.note as string | undefined,
+    req.body.needs_visit === true,
   )
+  res.json({ success: true, data: alert })
+})
+
+/** POST /alerts/:id/onsite-check – EXPERT-FR-021 (thợ ghi quan sát tại chỗ, ảnh tuỳ chọn) */
+export const answerOnsiteCheck = asyncHandler(async (req: Request, res: Response) => {
+  const alert = await onsiteCheckService.answerOnsiteCheck(req.params.id, req.user, {
+    observation: req.body.observation as OnsiteObservation,
+    note: req.body.note as string | undefined,
+  }, req.file)
   res.json({ success: true, data: alert })
 })
 

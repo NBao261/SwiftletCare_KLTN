@@ -2,6 +2,7 @@ import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
+import { technicianOnDuty } from '@/utils/roster.util'
 import type { CurrentUser } from '@/types'
 
 type FarmScope = Pick<IFarm, 'owner_id' | 'members'>
@@ -205,6 +206,35 @@ export async function listAssignedHouseIds(user: CurrentUser) {
   if (user.role !== 'FARM_TECHNICIAN') return []
   const farmIds = await Farm.find({ members: { $elemMatch: { user_id: user._id, role: 'FARM_TECHNICIAN' } } }).distinct('_id')
   return House.find({ farm_id: { $in: farmIds }, 'technicians.user_id': user._id }).distinct('_id')
+}
+
+/**
+ * AUTH-FR-013 — thợ được giao nhà mà còn là Farm Technician của farm và còn hoạt động: bị gỡ khỏi farm hay bị
+ * khoá thì không nhận cảnh báo, Work Order hay yêu cầu kiểm tra nữa dù lần gán còn sót.
+ */
+export async function activeHouseTechnicianIds(
+  house: Pick<IHouse, 'technicians'>, farm: Pick<IFarm, 'members'>,
+): Promise<string[]> {
+  const members = new Set(farm.members.filter(m => m.role === 'FARM_TECHNICIAN').map(m => String(m.user_id)))
+  const assigned = (house.technicians ?? []).map(t => String(t.user_id)).filter(id => members.has(id))
+  if (assigned.length === 0) return []
+  const active = await User.find({ _id: { $in: assigned }, role: 'FARM_TECHNICIAN', is_active: true }).select('_id').lean()
+  return active.map(u => String(u._id))
+}
+
+/**
+ * ALERT-FR-017, AUTH-FR-014 — thợ đang trực của nhà lúc `at`, chỉ tính thợ còn hiệu lực
+ * (activeHouseTechnicianIds); null = nhà không có thợ, Farm Owner xử lý.
+ */
+export async function activeTechnicianOnDuty(
+  house: Pick<IHouse, 'technicians' | 'roster'>, farm: Pick<IFarm, 'members'>, at: Date = new Date(),
+): Promise<string | null> {
+  const valid = new Set(await activeHouseTechnicianIds(house, farm))
+  if (valid.size === 0) return null
+  return technicianOnDuty({
+    technicians: (house.technicians ?? []).filter(t => valid.has(String(t.user_id))),
+    roster: (house.roster ?? []).filter(s => valid.has(String(s.technician_id))),
+  }, at)
 }
 
 /** Mọi House thuộc Farm chưa xoá mềm — cùng phạm vi với listActiveZoneIds cho màn hình Admin */

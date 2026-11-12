@@ -1,10 +1,12 @@
 import { Types } from 'mongoose'
-import { Alert, IAlert } from '@/models/alert.model'
+import { Alert, IAlert, OPEN_ALERT_STATUSES, type OnsiteCheck } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew, emitHouseAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
+import { repeatRecipientIds, routeNewAlert } from '@/services/alertRouting.service'
+import { handleNewAlert, openWorkOrderForAlert } from '@/services/workOrder.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import {
   assertExpertDecision, assertFarmAccess, assertHouseAccess, assertZoneAccess, listAccessibleFarmIds, listAccessibleHouseIds,
@@ -13,6 +15,9 @@ import {
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
+import { presignedGetUrl } from '@/config/minio.config'
+import { photoUrls } from '@/services/workOrder.service'
+import type { SiteCause } from '@/models/workOrder.model'
 import logger from '@/utils/logger.util'
 import type { DwelledBreach } from '@/utils/breachDwell.util'
 import type {
@@ -44,7 +49,7 @@ export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFF
  * Gồm cả `DISMISSED` (SM-01): cảnh báo bị bác bỏ vẫn gộp lần gặp lại cùng sự cố (không tạo cảnh báo
  * mới, không thông báo — ALERT-FR-008) và tự đóng khi hết sự cố như cảnh báo còn hiệu lực (BR-16).
  */
-export const OPEN_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED']
+export const OPEN_STATUSES: AlertStatus[] = OPEN_ALERT_STATUSES
 
 /**
  * ALERT-FR-001, BR-15 — mức độ mặc định theo loại sự kiện. Thiết bị có thể gửi kèm
@@ -208,11 +213,22 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
   if (input.zoneId) emitAlertNew(input.zoneId, wsAlert)
   if (input.houseId) emitHouseAlertNew(input.houseId, wsAlert)
 
+  // ALERT-FR-017 — chọn người nhận theo thợ đang trực của nhà. Định tuyến lỗi thì vẫn gửi Farm Owner như
+  // trước G-21: cảnh báo (nhất là CRITICAL) không được mất vì bước chọn người nhận (ALERT-FR-005)
+  const awaitsVerdict = INFERRED_ALERT_TYPES.includes(input.type)
+  let recipientIds: string[] | undefined
+  try {
+    recipientIds = await routeNewAlert(alert, { awaitsVerdict })
+  } catch (err) {
+    logger.error('Định tuyến cảnh báo thất bại — gửi Farm Owner', { alertId: String(alert._id), err })
+  }
   // Không await: gửi thông báo chậm/lỗi không được chặn luồng ghi cảnh báo
   // EXPERT-FR-007 — cảnh báo suy luận còn báo Domain Expert trong ứng dụng để kiểm chứng
-  void dispatchAlertNotification(alert, { awaitsVerdict: INFERRED_ALERT_TYPES.includes(input.type) }).catch((err: Error) =>
+  void dispatchAlertNotification(alert, { awaitsVerdict, ...(recipientIds && { recipientIds }) }).catch((err: Error) =>
     logger.error('Gửi thông báo cảnh báo thất bại', { alertId: String(alert._id), err }),
   )
+  // BR-39 — cảnh báo thiết bị mở Work Order; sự cố quay lại gắn vào Work Order đang mở (lỗi chỉ ghi log)
+  await handleNewAlert(alert)
 
   return alert
 }
@@ -476,10 +492,46 @@ export async function getAlert(alertId: string, user: CurrentUser): Promise<IAle
 }
 
 /**
- * ALERT-FR-009 — Farm Owner xác nhận đã xử lý kèm ghi chú. Ghi chú "Báo động giả"
- * được giữ lại làm dữ liệu đánh giá chất lượng model AI sau này (Flow 4 case 9a).
+ * EXPERT-FR-021 — yêu cầu kiểm tra tại chỗ kèm tên thợ và URL tạm của ảnh (khoá MinIO không ra API). Dùng cho
+ * chi tiết cảnh báo và bằng chứng (ALERT-FR-014).
  */
-export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?: string): Promise<IAlert> {
+export async function presentOnsiteChecks(alert: IAlert) {
+  await alert.populate([
+    { path: 'onsite_checks.technician_id', select: 'full_name' }, { path: 'onsite_checks.answered_by', select: 'full_name' },
+  ])
+  const checks: OnsiteCheck[] = alert.toObject().onsite_checks ?? []
+  return Promise.all(checks.map(async ({ photo, ...check }) => ({
+    ...check, photo_url: photo ? await presignedGetUrl(photo) : null,
+  })))
+}
+
+/** Chi tiết cảnh báo cho API: ảnh tại chỗ (ALERT-FR-018) và kiểm tra tại chỗ (EXPERT-FR-021) dạng URL tạm */
+async function presentAlert(alert: IAlert) {
+  await alert.populate('expert_verdict.by', 'full_name')
+  const onsiteChecks = await presentOnsiteChecks(alert)
+  const { site_cause: siteCause, ...rest } = alert.toObject()
+  return {
+    ...rest,
+    onsite_checks: onsiteChecks,
+    site_cause: siteCause
+      ? { cause: siteCause.cause, by: siteCause.by, at: siteCause.at, photo_urls: await photoUrls(siteCause.photos) }
+      : null,
+  }
+}
+
+export async function getAlertDetail(alertId: string, user: CurrentUser) {
+  return presentAlert(await getAlert(alertId, user))
+}
+
+/**
+ * ALERT-FR-009 — Farm Owner, hoặc Farm Technician ở nhà được giao (route + findAlertWithAccess), xác nhận kèm ghi
+ * chú. Ghi chú "Báo động giả" được giữ lại làm dữ liệu đánh giá chất lượng model AI (Flow 4 case 9a). Xác nhận
+ * trước escalation_min thì không leo thang (BR-40: job chỉ xét cảnh báo ACTIVE). `cause` — nguyên nhân tìm thấy tại
+ * chỗ (ALERT-FR-018), không bắt buộc ở bước này.
+ */
+export async function acknowledgeAlert(
+  alertId: string, user: CurrentUser, note?: string, cause?: SiteCause,
+) {
   const { alert } = await findAlertWithAccess(alertId, user)
   if (alert.status === 'DISMISSED') throw ConflictError('Cảnh báo này đã bị bác bỏ, không còn hiệu lực')
   if (alert.status !== 'ACTIVE') throw ConflictError('Cảnh báo này đã được xác nhận trước đó')
@@ -488,6 +540,7 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
   alert.acknowledged_at = new Date()
   alert.acknowledged_by = user._id as never
   alert.acknowledgement_note = note
+  if (cause) alert.site_cause = { cause, photos: [], by: user._id as never, at: alert.acknowledged_at }
   if (alert.type === 'MAINTENANCE_DUE') {
     // BR-16 — xác nhận = đã bảo trì: đếm lại từ 0 cho tải đó và đóng cảnh báo
     alert.status = 'RESOLVED'
@@ -503,7 +556,7 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
     }
   }
   await alert.save()
-  return alert
+  return presentAlert(alert)
 }
 
 /**
@@ -516,8 +569,8 @@ export async function acknowledgeAlert(alertId: string, user: CurrentUser, note?
  * Xác nhận đã xử lý vẫn là việc của Farm Owner (ALERT-FR-009).
  */
 export async function setAlertVerdict(
-  alertId: string, user: CurrentUser, result: AlertVerdictResult, note?: string,
-): Promise<IAlert> {
+  alertId: string, user: CurrentUser, result: AlertVerdictResult, note?: string, needsVisit = false,
+) {
   const { alert, farm } = await findAlertWithAccess(alertId, user)
   if (!INFERRED_ALERT_TYPES.includes(alert.type)) {
     throw BadRequestError(`Chỉ kiểm chứng cảnh báo suy luận (${INFERRED_ALERT_TYPES.join(', ')})`)
@@ -527,6 +580,9 @@ export async function setAlertVerdict(
   // Route đã chặn; giữ ở service cho mọi đường gọi khác
   if (result === 'REJECTED' && !trimmedNote) {
     throw new AppError(422, 'VALIDATION_ERROR', 'Bác bỏ cảnh báo phải ghi lý do')
+  }
+  if (result === 'REJECTED' && needsVisit) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Cảnh báo bị bác bỏ thì không mở Work Order')
   }
 
   const statusBefore = alert.status
@@ -541,7 +597,7 @@ export async function setAlertVerdict(
   await alert.save()
 
   const auditId = await logAction(user._id, 'ALERT_VERDICT_SET', 'alert', String(alert._id), {
-    type: alert.type, result, note: trimmedNote, status_before: statusBefore, status_after: alert.status,
+    type: alert.type, result, note: trimmedNote, needs_visit: needsVisit || undefined, status_before: statusBefore, status_after: alert.status,
     zone_id: alert.zone_id ? String(alert.zone_id) : undefined, house_id: alert.house_id ? String(alert.house_id) : undefined,
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
@@ -555,7 +611,9 @@ export async function setAlertVerdict(
       logger.error('Báo lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err }),
     )
   }
-  return alert.populate('expert_verdict.by', 'full_name')
+  // BR-39, OPS-FR-001 — chuyên gia xác nhận cần thợ tới nhà: mở Work Order (đã có cái đang mở thì không thêm)
+  if (needsVisit) await openWorkOrderForAlert(alert, 'EXPERT', user._id)
+  return presentAlert(alert)
 }
 
 /**
@@ -716,7 +774,9 @@ export async function renotifyStaleAlerts(now = new Date()): Promise<number> {
     )
     if (modifiedCount === 0) continue
     try {
-      await dispatchAlertNotification(alert, { repeat: true })
+      // ALERT-FR-015 — gửi lại cho người đã nhận lần đầu (ALERT-FR-017); cảnh báo trước G-21 gửi Farm Owner
+      const recipientIds = await repeatRecipientIds(alert)
+      await dispatchAlertNotification(alert, { repeat: true, ...(recipientIds && { recipientIds }) })
       sent++
     } catch (err) {
       // 1 cảnh báo lỗi không chặn các cảnh báo khác; không gửi lại lần nữa (ALERT-FR-015: tối đa 2 lần)
