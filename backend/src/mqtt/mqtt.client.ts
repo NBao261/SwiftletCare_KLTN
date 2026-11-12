@@ -31,7 +31,8 @@ export function connectMQTT(): void {
   const caPath = process.env.MQTT_CA_CERT_PATH ?? ''
   const options: mqtt.IClientOptions = {
     // Phiên bền: lệnh và tin QoS 1 của thiết bị không mất trong lúc backend khởi động lại
-    clientId: process.env.MQTT_CLIENT_ID ?? 'swiftletcare-backend',
+    // `||`: MQTT_CLIENT_ID= để trống trong .env là chuỗi rỗng — ID rỗng với phiên bền bị broker từ chối
+    clientId: process.env.MQTT_CLIENT_ID || 'swiftletcare-backend',
     clean: false,
     username: process.env.MQTT_USERNAME,
     password: process.env.MQTT_PASSWORD,
