@@ -43,9 +43,11 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const openReport = useCallback((reportId: string) => navigate(HEALTH_REPORT_PATH, { state: { reportId } satisfies HealthReportState }), [navigate]);
   const format = useMemo(() => ({ t, date, dateTime, number: (value: number) => exact(value, 1) }), [t, date, dateTime, exact]);
   const firstIndex = (page - 1) * REPORT_PAGE_SIZE;
+  // Số thứ tự tra Map dựng 1 lần, không indexOf mỗi dòng (FE_Design 13.12)
+  const rowNumbers = useMemo(() => new Map(reports.map((report, index) => [report._id, firstIndex + index + 1])), [reports, firstIndex]);
 
   const columns = useMemo<DataTableColumn<HouseHealthReportSummary>[]>(() => [
-    { key: 'index', header: t('col.index'), className: 'w-16', render: report => <span className="text-sm text-warmGray">{firstIndex + reports.indexOf(report) + 1}</span> },
+    { key: 'index', header: t('col.index'), className: 'w-16', render: report => <span className="text-sm text-warmGray">{rowNumbers.get(report._id)}</span> },
     { key: 'period', header: t('col.period'), className: 'w-[18%] whitespace-nowrap', render: report => <span className="text-sm font-semibold text-charcoal">{reportPeriod(report, format)}</span> },
     { key: 'house', header: t('col.house'), className: 'w-[18%]', render: report => <span title={report.house_name} className="block truncate text-sm font-semibold text-charcoal">{report.house_name}</span> },
     { key: 'kind', header: t('col.kind'), className: 'w-[14%] whitespace-nowrap', render: report => <span className="text-sm text-charcoal">{t(`kindLong.${report.kind}`)}</span> },
@@ -79,7 +81,7 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
         </div>
       ),
     },
-  ], [t, format, dateTime, reports, firstIndex, download, downloadingId, openReport]);
+  ], [t, format, dateTime, rowNumbers, download, downloadingId, openReport]);
 
   return (
     <SectionCard title={t('report.title')} description={t('report.subtitle')}>
