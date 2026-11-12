@@ -106,3 +106,25 @@ export function getDeviceRegisterErrorMessage(error: unknown): string {
     409: t('Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký'),
   })
 }
+
+// Câu báo lỗi khi dời controller sang khu vực khác (FARM-FR-007b): 400 trùng khu vực đang ở, 409 thiết bị đã gỡ hoặc không trực tuyến
+export function getDeviceMoveErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    400: t('Thiết bị đang ở khu vực này rồi'),
+    409: t('Thiết bị phải đang trực tuyến mới dời được, hoặc thiết bị đã bị gỡ'),
+  })
+}
+
+// Câu báo lỗi khi gỡ thiết bị (FARM-FR-008): 409 thiết bị đã gỡ, hoặc vừa trực tuyến lại sau khi mở màn
+export function getDeviceRemoveErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    409: t('Không gỡ được: thiết bị đã bị gỡ hoặc vừa trực tuyến lại. Tải lại rồi thử lại'),
+  })
+}
+
+// Câu báo lỗi khi khôi phục thiết bị vừa gỡ (FARM-FR-008): 409 quá 24 giờ, mã đã đăng ký lại, hoặc thiết bị thay thế còn đang dùng
+export function getDeviceRestoreErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    409: t('Không khôi phục được: đã quá 24 giờ, thiết bị đã được đăng ký lại hoặc đã có thiết bị thay'),
+  })
+}

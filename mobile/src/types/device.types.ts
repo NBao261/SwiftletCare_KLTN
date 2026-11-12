@@ -50,6 +50,9 @@ export interface SensorNode {
   registered_at?: string
   // Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat
   activation_overdue_at?: string | null
+  // FARM-FR-008 — thời điểm gỡ (danh sách chỉ trả thiết bị đang dùng, trường này có ở bản ghi gỡ/khôi phục trả về) và node lắp thay
+  decommissioned_at?: string | null
+  replaced_by?: string | null
 }
 
 // Camera đếm chim ở cửa ra vào của cả nhà yến — gắn House, không gắn Zone (SRS v2.1.8)
@@ -64,6 +67,8 @@ export interface CameraNode {
   registered_at?: string
   // Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat
   activation_overdue_at?: string | null
+  // FARM-FR-008 — thời điểm gỡ, có ở bản ghi gỡ/khôi phục trả về
+  decommissioned_at?: string | null
 }
 
 export type RelayName = keyof RelayStates

@@ -1002,6 +1002,56 @@ export const EN_TRANSLATIONS: Record<string, string> = {
     'The device has not applied the latest configuration; the system is sending it again',
   'Firmware của thiết bị không báo phiên bản cấu hình nên chưa xác nhận được bước này':
     'The device firmware does not report its configuration version, so this step cannot be confirmed',
+  // Dời, thay, gỡ, khôi phục thiết bị đã lắp (FARM-FR-007b, 008)
+  'Dời sang khu vực khác': 'Move to another zone',
+  'Quét mã tầng mới hoặc chọn khu vực': 'Scan the new floor code or pick a zone',
+  'Chỉ dời được khi thiết bị đang trực tuyến': 'Only an online device can be moved',
+  'Chỉ dời được khi thiết bị đang trực tuyến. Bật nguồn và chờ thiết bị kết nối rồi thử lại.':
+    'Only an online device can be moved. Power it on, wait for it to connect, then try again.',
+  'Đang ở: {zone}': 'Now in: {zone}',
+  'Dời sang: {zone}': 'Move to: {zone}',
+  'Chọn khu vực mới': 'Choose the new zone',
+  'Quét mã tầng mới': 'Scan the new floor code',
+  'Đưa mã QR dán ở tầng mới vào giữa khung': 'Center the QR code on the new floor in the frame',
+  'Dời thiết bị': 'Move device',
+  'Đã dời {device} sang {zone}': 'Moved {device} to {zone}',
+  'Thiết bị đang ở khu vực này rồi': 'The device is already in this zone',
+  'Thiết bị phải đang trực tuyến mới dời được, hoặc thiết bị đã bị gỡ':
+    'The device must be online to be moved, or it has been removed',
+  'Thay thiết bị': 'Replace device',
+  'Thay bộ điều khiển': 'Replace controller',
+  'Quét nhãn thiết bị mới, giữ khu vực và lịch sử': 'Scan the new device label; the zone and history are kept',
+  'Đưa nhãn QR trên thiết bị mới vào giữa khung': 'Center the QR label of the new device in the frame',
+  'Thiết bị thay lắp vào khu vực của thiết bị cũ, không cần mã tầng. Hãy quét nhãn thiết bị mới':
+    'The replacement goes into the old device’s zone, no floor code needed. Scan the new device label',
+  'Thay cho thiết bị': 'Replaces device',
+  'Lý do thay': 'Reason for replacing',
+  'Lắp vào khu vực: {zone}': 'Installed in zone: {zone}',
+  'Đã thay {old} bằng {device}': 'Replaced {old} with {device}',
+  'Gỡ thiết bị': 'Remove device',
+  'Ẩn khỏi danh sách, giữ lịch sử, khôi phục được trong 24 giờ':
+    'Hidden from the list, history kept, can be restored within 24 hours',
+  'Gỡ {device}?': 'Remove {device}?',
+  'Thiết bị đang trực tuyến: gỡ thì khu vực này mất giám sát và điều khiển tự động. Lịch sử dữ liệu vẫn được giữ.':
+    'The device is online: removing it stops monitoring and automatic control in this zone. Its data history is kept.',
+  'Thiết bị sẽ ẩn khỏi danh sách, lịch sử dữ liệu vẫn được giữ. Khôi phục được trong 24 giờ.':
+    'The device will be hidden from the list and its data history kept. It can be restored within 24 hours.',
+  'Thiết bị ẩn khỏi danh sách, dữ liệu cũ vẫn tra cứu được. Sau khi gỡ, nhãn cũ đăng ký lại được.':
+    'The device is hidden from the list and its old data stays available. After removal, its label registers it again.',
+  'Thiết bị đang trực tuyến': 'The device is online',
+  'Lý do': 'Reason',
+  'Đã gỡ {device}': 'Removed {device}',
+  'Không gỡ được: thiết bị đã bị gỡ hoặc vừa trực tuyến lại. Tải lại rồi thử lại':
+    'Could not remove: the device was already removed or just came online. Reload and try again',
+  'Vừa gỡ {device}. Khôi phục được trong 24 giờ': 'Just removed {device}. It can be restored within 24 hours',
+  'Khôi phục': 'Restore',
+  'Khôi phục {device}': 'Restore {device}',
+  'Khôi phục thiết bị': 'Restore device',
+  'Thiết bị hiện lại trong danh sách và chờ kết nối lại. Cảnh báo đã đóng lúc gỡ không mở lại.':
+    'The device comes back to the list and waits to reconnect. Alerts closed at removal are not reopened.',
+  'Đã khôi phục {device}': 'Restored {device}',
+  'Không khôi phục được: đã quá 24 giờ, thiết bị đã được đăng ký lại hoặc đã có thiết bị thay':
+    'Could not restore: more than 24 hours have passed, the device was registered again or has a replacement',
   'Tiến trình': 'Progress',
   'Quá 15 phút thiết bị chưa kết nối. Kiểm tra lại bước cài Wi-Fi ở trên.': 'The device has not connected for 15 minutes. Check the Wi-Fi setup above.',
   'Quá 15 phút camera chưa kết nối. Kiểm tra máy đếm chim đã bật và có mạng.': 'The camera has not connected for 15 minutes. Check that the counting machine is on and online.',

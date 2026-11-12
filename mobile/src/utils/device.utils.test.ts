@@ -1,5 +1,40 @@
 import { describe, expect, it } from '@jest/globals'
-import { formatFreeHeap, formatUptime, getConfigApplyStep, summarizeDeviceStatuses } from '@/utils/device.utils'
+import {
+  canReassignZone,
+  formatFreeHeap,
+  formatUptime,
+  getConfigApplyStep,
+  getDeviceActions,
+  isWithinRestoreWindow,
+  summarizeDeviceStatuses,
+} from '@/utils/device.utils'
+
+describe('getDeviceActions', () => {
+  it('controller dời, thay, gỡ được; camera chỉ gỡ', () => {
+    expect(getDeviceActions('controller')).toEqual(['move', 'replace', 'remove'])
+    expect(getDeviceActions('camera')).toEqual(['remove'])
+  })
+})
+
+describe('canReassignZone', () => {
+  it('chỉ dời controller đang trực tuyến', () => {
+    expect(canReassignZone('ONLINE')).toBe(true)
+    expect(canReassignZone('OFFLINE')).toBe(false)
+    expect(canReassignZone('PENDING')).toBe(false)
+  })
+})
+
+describe('isWithinRestoreWindow', () => {
+  const removedAt = '2026-11-12T00:00:00.000Z'
+  const removedMs = new Date(removedAt).getTime()
+  const hourMs = 60 * 60 * 1000
+
+  it('còn khôi phục được tới đúng 24 giờ, quá thì hết', () => {
+    expect(isWithinRestoreWindow(removedAt, removedMs + 23 * hourMs)).toBe(true)
+    expect(isWithinRestoreWindow(removedAt, removedMs + 24 * hourMs)).toBe(true)
+    expect(isWithinRestoreWindow(removedAt, removedMs + 24 * hourMs + 1)).toBe(false)
+  })
+})
 
 describe('getConfigApplyStep', () => {
   it('chưa kết nối thì chờ kết nối, dù config_sync còn PENDING', () => {

@@ -36,6 +36,27 @@ export function getConfigApplyStep(
   return 'waiting-config'
 }
 
+// Thao tác Farm Owner làm trên một thiết bị đã lắp (SF-01): dời khu vực và thay chỉ có ở controller (FARM-FR-007b, 008),
+// camera gắn nhà nên chỉ gỡ được
+export type DeviceAction = 'move' | 'replace' | 'remove'
+
+export function getDeviceActions(kind: 'controller' | 'camera'): DeviceAction[] {
+  return kind === 'controller' ? ['move', 'replace', 'remove'] : ['remove']
+}
+
+// Backend chỉ dời controller đang trực tuyến (409 khi không ONLINE); Report 3 FARM-FR-007b muốn dời cả thiết bị offline khi nó
+// kết nối lại, phần đó chờ backend
+export function canReassignZone(status: DeviceStatus): boolean {
+  return status === 'ONLINE'
+}
+
+// Thiết bị gỡ còn khôi phục được trong 24 giờ (FARM-FR-008, Report 3 §6.6); quá hạn backend trả 409
+const RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000
+
+export function isWithinRestoreWindow(decommissionedAt: string, now: number = Date.now()): boolean {
+  return now - new Date(decommissionedAt).getTime() <= RESTORE_WINDOW_MS
+}
+
 const BYTES_PER_KB = 1024
 
 // Thời gian chạy từ lúc khởi động (FARM-FR-006): "3 giờ", "2 ngày"; chưa có thì "_"
