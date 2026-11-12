@@ -20,6 +20,8 @@ frontend/.env
 *.crt
 config/certs/
 config/firebase-service-account.json
+# File service account Firebase ở bất kỳ thư mục nào (backend đọc ./config/ tính từ backend/)
+**/firebase-service-account*.json
 
 # Logs
 *.log

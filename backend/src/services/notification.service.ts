@@ -1,6 +1,7 @@
 import { User } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { Notification, type NotificationRefKind } from '@/models/notification.model'
+import { sendPushToUser } from '@/services/push.service'
 import { sendTelegram } from '@/services/telegram.service'
 import { emitNotificationNew } from '@/socket'
 import { NotFoundError } from '@/utils/appError.util'
@@ -13,11 +14,10 @@ import type { CurrentUser, NotificationPreferences } from '@/types'
 /**
  * Notification Service — ALERT-FR-002..006.
  *
- * PHẠM VI HIỆN TẠI: toàn bộ logic định tuyến (chọn người nhận, chọn kênh, giờ
- * im lặng, ngoại lệ CRITICAL) đã cài đặt thật và test được. Kênh ngoài ứng dụng
- * CHẠY THẬT là Telegram bot (ALERT-FR-013, services/telegram.service.ts) — phiếu v2
- * cam kết "Telegram bot hoặc push", chỉ cần một trong hai. Firebase FCM vẫn dừng ở
- * mức ghi log; Zalo ZNS và SMS nằm ngoài phạm vi SRS v2.0.0, adapter để nguyên không nối.
+ * Định tuyến (chọn người nhận, chọn kênh, giờ im lặng, ngoại lệ CRITICAL) cài đặt ở đây. Kênh ngoài
+ * ứng dụng: Telegram bot (ALERT-FR-013, services/telegram.service.ts) và push FCM (ALERT-FR-002,
+ * services/push.service.ts) — mỗi kênh tự bỏ qua khi chưa cấu hình credential. Email mới ghi log;
+ * Zalo ZNS và SMS nằm ngoài phạm vi (Report 3 §8).
  */
 
 /** ALERT-FR-006 — giờ im lặng chỉ chặn được cảnh báo dưới mức CRITICAL */
@@ -111,7 +111,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVer
     // Zalo/SMS nằm ngoài phạm vi (Report 3 §8). Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
     // không kéo theo kênh còn lại.
     const channels: Array<[string, Promise<unknown> | undefined]> = [
-      ['push', prefs?.push ? sendPush(String(user._id), title, body) : undefined],
+      ['push', prefs?.push ? sendPush(String(user._id), title, body, { kind: 'alert', id: String(alert._id) }, alert.severity === 'CRITICAL') : undefined],
       ['telegram', prefs?.telegram !== false && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
     ]
     const outcomes = await Promise.allSettled(channels.map(([, sending]) => sending))
@@ -127,12 +127,11 @@ export async function dispatchAlertNotification(alert: IAlert, opts: { awaitsVer
   })
 }
 
-// ── Adapter tới nhà cung cấp ngoài (chưa nối credential thật) ───────────────
+// ── Adapter tới nhà cung cấp ngoài ───────────────────────────────────────────
 
-async function sendPush(userId: string, title: string, body: string): Promise<void> {
-  // TODO(E6): nối Firebase FCM bằng service account; cần lưu device token của
-  // từng user khi họ đăng nhập trên PWA (ALERT-FR-002).
-  logger.info('[notify:push] (chưa nối FCM thật)', { userId, title, body })
+/** ALERT-FR-002 — `ref` cho app mở đúng màn hình khi người dùng bấm vào thông báo */
+async function sendPush(userId: string, title: string, body: string, ref?: UserNotification['ref'], urgent = false): Promise<void> {
+  await sendPushToUser(userId, { title, body, data: ref ? { kind: ref.kind, id: ref.id } : undefined, urgent })
 }
 
 async function sendEmail(email: string | undefined, subject: string, body: string): Promise<void> {
@@ -180,10 +179,9 @@ export async function notifyUser(userId: string, message: UserNotification, opts
         logger.warn('Ghi thông báo trong ứng dụng thất bại', { err, userId, title: message.title }))
     }
     if (!emailOnly && user.notification_preferences?.push !== false) {
-      await sendPush(String(user._id), message.title, message.body)
+      await sendPush(String(user._id), message.title, message.body, message.ref)
     }
-    // Telegram là kênh duy nhất gửi thật (push/email mới ghi log): không đi qua đây thì
-    // báo cáo sức khỏe Zone, kết luận của chuyên gia… không tới được ai.
+    // Không đi qua đây thì báo cáo sức khỏe, kết luận của chuyên gia… không tới được Telegram
     if (!emailOnly && user.notification_preferences?.telegram !== false && user.telegram_chat_id) {
       await sendTelegram(user.telegram_chat_id, `${message.title}\n${message.body}`)
     }
