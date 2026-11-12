@@ -91,8 +91,8 @@ TC=[
  (J,I+'telegram.test.ts','gửi tới chủ farm đã liên kết')),
 ('TC-F08-02','F-08','Owner with quiet hours','Create a MEDIUM and a CRITICAL alert in quiet hours','—','MEDIUM not sent; CRITICAL sent',
  (J,I+'telegram.test.ts','tôn trọng giờ im lặng, trừ cảnh báo CRITICAL')),
-('TC-F08-03','F-08','Mobile app signed in with a registered FCM token','Create a CRITICAL alert; sign out; create another','Firebase test project','Push received for the first only; an invalid token reported by FCM is removed',
- (T,'backend jest with a mocked Firebase Admin SDK (G-10)')),
+('TC-F08-03','F-08','Mobile app signed in with a registered FCM token','Create a CRITICAL alert; sign out; create another','Firebase Admin SDK mocked','Push received for the first only; an invalid token reported by FCM is removed',
+ [(J,I+'pushNotification.test.ts','pushes a CRITICAL alert with high priority'),(J,I+'pushNotification.test.ts','deletes a token FCM reports invalid')]),
 # F-09
 ('TC-F09-01','F-09','6 h of humidity falling toward `humidity_min`','Run the forecast scan','Seeded 5-minute means','LOW `FORECAST_BREACH` with expected time; resolved when the trend is gone',
  (J,I+'forecastAndRelayUsage.test.ts','raises a LOW FORECAST_BREACH early warning')),

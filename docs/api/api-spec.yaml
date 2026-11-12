@@ -4691,6 +4691,57 @@ paths:
         "404": { description: "Không có, hoặc là thông báo của người khác" }
         "422": { $ref: "#/components/responses/ValidationError" }   # id không phải ObjectId
 
+  /notifications/push-tokens:
+    post:
+      tags: [Notifications]
+      summary: "Đăng ký FCM device token của máy đang đăng nhập (ALERT-FR-002) — mọi role đã đăng nhập"
+      description: |
+        App mobile gọi sau khi đăng nhập (SDD §5.4). Gọi lại với cùng token chỉ cập nhật `last_seen_at`.
+        Token đang gắn với tài khoản khác (một máy đổi tài khoản) thì chuyển sang người gọi, để tài khoản
+        cũ không nhận push trên máy này nữa. Phải là **FCM device token**: token Expo
+        (`ExponentPushToken[...]`) bị từ chối 422. Token không bao giờ được trả lại hay ghi vào log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushTokenInput" }
+      responses:
+        "200":
+          description: Đã đăng ký
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { registered: { type: boolean, example: true } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }   # thiếu token, platform sai, token Expo
+    delete:
+      tags: [Notifications]
+      summary: "Gỡ FCM device token khi đăng xuất (ALERT-FR-002)"
+      description: |
+        Chỉ gỡ token của chính người gọi. Token không có (đã gỡ, hoặc của người khác) vẫn trả 200 để app gọi
+        lại an toàn lúc đăng xuất. Backend cũng tự xoá token mà FCM báo không còn hợp lệ.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties: { token: { type: string } }
+      responses:
+        "200":
+          description: Đã gỡ (hoặc không có gì để gỡ)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { registered: { type: boolean, example: false } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -5156,6 +5207,14 @@ components:
           description: "net_entry / net_exit × 100, có thể > 100; null khi thiếu phiên sáng hoặc chiều, hoặc sáng không có chim ra"
         has_morning: { type: boolean }
         has_evening: { type: boolean }
+
+    PushTokenInput:
+      type: object
+      description: "ALERT-FR-002 — FCM device token của 1 máy (`expo-notifications` getDevicePushTokenAsync)"
+      required: [token, platform]
+      properties:
+        token: { type: string, description: "FCM device token; không nhận token Expo" }
+        platform: { type: string, enum: [android, ios] }
 
     Notification:
       type: object

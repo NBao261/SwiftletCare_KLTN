@@ -335,14 +335,14 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-10 — FCM (P0-Demo, cần cho NFR-02) — Bảo (backend; Kiệt làm thay theo phân công của Bảo, PR #140), Len (mobile, đo NFR-02)
 
-- [ ] Backend:
+- [x] Backend: *(Kiệt làm thay Bảo, 09/11, nhánh `feat/g10-fcm-push`: `4dedb0d` spec + `177dedc` backend; credential là file service account trỏ bằng `FIREBASE_SERVICE_ACCOUNT_PATH`, `.gitignore` chặn file này ở mọi thư mục; token Expo bị từ chối 422; ẩn danh tài khoản xoá token; **chưa gửi thật** vì nhóm chưa có project Firebase)*
   - collection `pushtokens`;
   - `POST`/`DELETE /notifications/push-tokens`;
   - adapter `push` dùng `firebase-admin` (credential qua biến môi trường, không commit);
   - xoá token FCM báo invalid;
   - không log token.
-- [ ] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo. *(Len, 11/11, nhánh `feat/g20-farm-technician`, theo api-spec của `feat/g10-fcm-push`: lấy FCM device token (`getDevicePushTokenAsync`, chỉ Android) và `POST /notifications/push-tokens` sau đăng nhập khi đã cho phép, `DELETE` trước khi đăng xuất; chỉ xin quyền khi người dùng chạm "Nhận push trên máy này"; bấm push mở đúng cảnh báo (data `{ kind, id }`), báo cáo, hoặc chuông. Còn chờ: G-10 merge vào develop, bản build có `google-services.json`, rồi đo NFR-02)*
-- [ ] Test TC-F08-03 (mock Firebase Admin).
+- [x] Mobile: `expo-notifications` lấy FCM token sau đăng nhập, huỷ khi đăng xuất; mở thông báo thì vào chi tiết cảnh báo. *(Len, 11/11, nhánh `feat/g20-farm-technician`, theo api-spec của `feat/g10-fcm-push`: lấy FCM device token (`getDevicePushTokenAsync`, chỉ Android) và `POST /notifications/push-tokens` sau đăng nhập khi đã cho phép, `DELETE` trước khi đăng xuất; chỉ xin quyền khi người dùng chạm "Nhận push trên máy này"; bấm push mở đúng cảnh báo (data `{ kind, id }`), báo cáo, hoặc chuông. Còn chờ: G-10 merge vào develop, bản build có `google-services.json`, rồi đo NFR-02)* *(Len, 12/11 — Nhi ghi thay theo nhờ của Len: lấy token, gửi lên sau đăng nhập, gỡ khi đăng xuất, bấm push mở đúng màn đã xong. Chưa nhận push thật vì cần đủ ba điều: nhánh `feat/g10-fcm-push` merge vào `develop`; bản build có `google-services.json` (Expo Go không lấy được FCM token); chỉ Android, iOS chưa làm. Đo NFR-02 (cảnh báo tới máy trong 5 giây) chờ hai điều đầu)* *(Len, 12/11, nhánh `feat/g10-fcm-push`: phần code mobile xong — thêm `mobile/app.config.js` đặt `android.googleServicesFile` từ biến môi trường kiểu file `GOOGLE_SERVICES_JSON` của EAS hoặc `mobile/google-services.json` (gitignored), không có file thì bỏ qua để Expo Go vẫn chạy; plugin `expo-notifications` có `defaultChannel: "alerts"` để push lúc app chạy nền vào kênh ưu tiên cao (backend không gửi kênh); sửa `mobile/CLAUDE.md`, `MOBILE_GUIDE.md`. Chưa thử với push thật. Còn chờ, ngoài mobile: nhánh `feat/g10-fcm-push` merge vào `develop`; nhóm tạo project Firebase, đưa `google-services.json` lên EAS và service account cho backend; iOS; đo NFR-02 sau hai việc đầu)*
+- [x] Test TC-F08-03 (mock Firebase Admin). *(`pushNotification.test.ts`, `177dedc`)*
 
 ### G-11 — MF-06 (P0-Demo) — Kiệt (backend), Nhi (web), Len (mobile)
 
