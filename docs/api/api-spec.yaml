@@ -86,10 +86,10 @@ tags:
     description: "HARVEST-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0) — ghi: Farm Owner; đọc: Farm Owner, Domain Expert; Technician, Administrator → 403 (Report 3 §2.4)"
   - name: HealthReports
     description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
-  - name: Profiles
-    description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: Domain Expert soạn, duyệt, lưu trữ — Farm Owner khi farm chưa có chuyên gia, BR-22; Farm Owner áp cho các nhà) — Farm Technician, Administrator → 403"
   - name: Notifications
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
+  - name: Profiles
+    description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: Domain Expert soạn, duyệt, lưu trữ — Farm Owner khi farm chưa có chuyên gia, BR-22; Farm Owner áp cho các nhà) — Farm Technician, Administrator → 403"
 
 
 security:
