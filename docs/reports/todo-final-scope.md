@@ -101,30 +101,30 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 ### G-21 — Định tuyến, Work Order, kiểm tra tại chỗ (Kiệt, Len, Nhi, Tuấn) — hạn 02/12
 
 **Backend (Kiệt):**
-- [ ] Spec `/work-orders`: danh sách theo nhà hoặc người được giao, open, start, done (kèm nguyên nhân, ảnh, checklist), approve, reopen, cancel, reassign.
-- [ ] Collection `workorders`: index `house_id + status` và `assignee_id + status`; index unique một phần trên `alert_id` khi chưa đóng, để mỗi cảnh báo chỉ có một Work Order mở. Ảnh lưu trên MinIO. Chạy `npm run db:script`.
-- [ ] `alertRouting.service`:
+- [x] Spec `/work-orders`: danh sách theo nhà hoặc người được giao, open, start, done (kèm nguyên nhân, ảnh, checklist), approve, reopen, cancel, reassign. *(Kiệt, 13/11, `ef5dd71` spec + `ba35b7a` backend, nhánh `feat/g21-work-orders`: thêm `alertId` để mở từ chi tiết cảnh báo, `GET /work-orders/metrics`, `POST /alerts/{id}/onsite-check`, `needs_visit` của verdict, `cause` khi xác nhận)*
+- [x] Collection `workorders`: index `house_id + status` và `assignee_id + status`; index unique một phần trên `alert_id` khi chưa đóng, để mỗi cảnh báo chỉ có một Work Order mở. Ảnh lưu trên MinIO. Chạy `npm run db:script`. *(`ba35b7a`: cờ `is_open` cho index unique một phần vì `partialFilterExpression` trước MongoDB 6.0 không nhận `$in`; `alerts` thêm `routing`, `escalated_at`, `site_cause`, `onsite_checks`)*
+- [x] `alertRouting.service`: *(`ba35b7a`: chỉ tính thợ còn hiệu lực: vẫn là thợ của farm, chưa bị khoá; định tuyến lỗi thì vẫn gửi Farm Owner như cũ)*
   - người nhận là technician đang trực của nhà;
   - nhà không có technician thì gửi Farm Owner;
   - cảnh báo CRITICAL gửi cả hai cùng lúc;
   - cảnh báo suy luận gửi thêm Domain Expert (ALERT-FR-017).
-- [ ] `alertEscalation.job` chạy mỗi phút:
+- [x] `alertEscalation.job` chạy mỗi phút: *(`ba35b7a`: `escalation_min`, `recovery_verify_min` là hằng số trong code, chốt 13/11; kênh theo mức cảnh báo ở `PUT /auth/notification-preferences` (`by_severity`), CRITICAL tắt hết kênh ngoài app → 400)*
   - leo thang lên Farm Owner một lần sau `escalation_min` (mặc định 15, khoảng 5–60, BR-40);
   - CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005).
-- [ ] Cơ chế gửi lại đã có (`renotifyStaleAlerts`, ALERT-FR-015, `alertRenotify.test.ts`): giữ nguyên, chỉ đổi danh sách người nhận sang `alertRouting.service`, và giữ cho test cũ vẫn pass.
-- [ ] `workOrder.service`:
+- [x] Cơ chế gửi lại đã có (`renotifyStaleAlerts`, ALERT-FR-015, `alertRenotify.test.ts`): giữ nguyên, chỉ đổi danh sách người nhận sang `alertRouting.service`, và giữ cho test cũ vẫn pass. *(`ba35b7a`: gửi lại cho người nhận lần đầu; Farm Owner đã nhận bản leo thang thì không nhận thêm "Nhắc lại"; cảnh báo cũ không có `routing` gửi Farm Owner, `alertRenotify.test.ts` vẫn qua)*
+- [x] `workOrder.service`: *(Kiệt, 13/11, `ba35b7a`)*
   - mở tự động theo BR-39: `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`, `RS485_BUS_FAILURE`, `SPEAKER_FAILURE`; `NODE_OFFLINE` hoặc `EDGE_AI_DEGRADED` còn mở sau 30 phút; cảnh báo suy luận chuyên gia xác nhận cần đến nhà;
   - cùng một sự cố lặp lại không mở Work Order thứ hai;
   - Farm Owner mở tay được; technician hoặc chuyên gia mở thì 403.
-- [ ] Nguyên nhân tại chỗ (ALERT-FR-018): nước, béc phun, bơm, quạt, cửa, cảm biến, loa hoặc khác, kèm ảnh. Đóng Work Order của cảnh báo thiết bị mà thiếu nguyên nhân trả 422.
-- [ ] `recoveryCheck.job` mỗi phút (BR-41):
+- [x] Nguyên nhân tại chỗ (ALERT-FR-018): nước, béc phun, bơm, quạt, cửa, cảm biến, loa hoặc khác, kèm ảnh. Đóng Work Order của cảnh báo thiết bị mà thiếu nguyên nhân trả 422. *(Kiệt, 13/11, `ba35b7a`)*
+- [x] `recoveryCheck.job` mỗi phút (BR-41): *(Kiệt, 13/11, `ba35b7a`)*
   - "done" chuyển sang `VERIFYING`;
   - giữ phục hồi đủ `recovery_verify_min` (mặc định 10) thì chuyển `AWAITING_APPROVAL`;
   - sự cố quay lại thì về `IN_PROGRESS`;
   - cảnh báo tự phục hồi trước khi bắt đầu làm thì đóng với kết quả "self-recovered".
-- [ ] Farm Owner duyệt (đóng Work Order và cảnh báo), mở lại kèm ghi chú, huỷ kèm lý do (OPS-FR-004). Duyệt sai trạng thái trả 409.
-- [ ] MTTA, MTTR, tỷ lệ bảo trì đúng hạn theo nhà và theo technician (OPS-FR-009, BR-40), trong `opsMetrics.service`.
-- [ ] **Kiểm tra tại chỗ (EXPERT-FR-021):**
+- [x] Farm Owner duyệt (đóng Work Order và cảnh báo), mở lại kèm ghi chú, huỷ kèm lý do (OPS-FR-004). Duyệt sai trạng thái trả 409. *(Kiệt, 13/11, `ba35b7a`)*
+- [x] MTTA, MTTR, tỷ lệ bảo trì đúng hạn theo nhà và theo technician (OPS-FR-009, BR-40), trong `opsMetrics.service`. *(`ba35b7a`: tỷ lệ bảo trì đúng hạn trả `null` tới G-22)*
+- [x] **Kiểm tra tại chỗ (EXPERT-FR-021):** *(Kiệt, 13/11, `ba35b7a`)*
   - mỗi cảnh báo suy luận ở nhà có technician tạo đúng một yêu cầu kiểm tra cho technician đó;
   - technician ghi quan sát (chim bị động, có người hoặc công việc gần đó, mưa, cảm biến bẩn hoặc hỏng, không có gì lạ, khác) kèm ảnh tuỳ chọn;
   - quan sát được thêm vào bằng chứng của cảnh báo (ALERT-FR-014) trước khi chuyên gia kết luận;
