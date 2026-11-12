@@ -25,6 +25,8 @@
 > - OTA qua HTTPS dùng CA mới (không còn `setInsecure()`); bản mới không tới được broker thì quay về bản cũ sau 10 phút;
 > - AI node: nối bằng tài khoản riêng, heartbeat có `fps` và `model_version`, nhận vòng đếm từ `config` retained.
 >
+> **2.1.1 (broker nạp lúc flash, FARM-FR-003c, BR-27) — chưa thử trên board.** Đã làm 12–13/11/2026: địa chỉ broker nạp cùng danh tính bằng `tools/flash_identity.py --broker` (NVS `identity`, key `broker`) thay mặc định `Secrets.h` ở cả hai bản; bản `esp32prod` không tìm broker qua mDNS, mDNS chỉ còn ở bản dev. Còn phải thử trên board: flash có `--broker` rồi kiểm thiết bị kết nối đúng broker đó.
+
 > **2.1.0 (phiên bản cấu hình G-08, ENV-FR-027; trang AP-mode chỉ hỏi Wi-Fi ở bản production, FARM-FR-003c) — chưa thử trên board.** Đã làm 12/11/2026: `pio run -e esp32dev` và `pio run -e esp32prod` build được, `pio test -e native` 76/76. Còn phải thử trên board:
 > - sửa ngưỡng trên web: thiết bị nhận `config` có `config_version` mới, heartbeat kế tiếp báo `appliedConfigVersion` bằng số đó, màn hình hiện "đã áp" (`config_sync` = `APPLIED`);
 > - khởi động lại thiết bị: heartbeat đầu tiên vẫn báo đúng phiên bản (đọc lại từ NVS, khoá `cfgVersion`);
