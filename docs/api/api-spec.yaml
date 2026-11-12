@@ -5725,7 +5725,7 @@ components:
           }
         last_heartbeat: { type: string, format: date-time }
         model_version: { type: string }
-        fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất" }
+        fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất. Dưới 10 thì nhà có `EDGE_AI_DEGRADED` (`metadata.cause: LOW_FPS`), heartbeat đủ 10 trở lên thì đóng (THREAT-FR-010, Report 3 §4.5). `0` là chưa đo (heartbeat đầu ngay sau khi nút AI khởi động): không xét, không mở cảnh báo" }
         registered_at: { type: string, format: date-time }
         simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         registered_by: { type: string, nullable: true }
@@ -5827,7 +5827,7 @@ components:
         title: { type: string }
         message: { type: string }
         snapshot_url: { type: string, nullable: true }
-        metadata: { type: object }
+        metadata: { type: object, description: "`EDGE_AI_DEGRADED` do nút AI xử lý chậm: `{ cause: LOW_FPS, fps, min_fps }`" }
         details:
           type: object
           nullable: true

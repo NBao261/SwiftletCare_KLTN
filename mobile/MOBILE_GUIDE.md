@@ -241,7 +241,8 @@ Farm Owner — (tabs)
 ├─ Trang trại  farms (Màn A: "Tất cả trang trại" = thẻ từng farm (mặc định khi thuộc từ 2 farm) ─► nhà của một farm (‹ về tất cả),
 │                đổi farm, ghim ★ nhà lên đầu, ⚙ cài đặt farm, + tạo farm) ─► farms/[houseId] (Màn B: một nhà)
 │                vào một farm thì mở thẳng nhà xem gần nhất (farm 1 nhà thì nhà đó); zone là tab, thiết bị là sheet — không có màn thứ 3
-│                Màn B: camera ghim đầu (live stream, số chim), đàn chim hôm nay, tab tầng, 6 ô cảm biến,
+│                Màn B: camera ghim đầu (live stream, số chim; nút vẽ vòng đếm khi farm chưa có chuyên gia, BR-22),
+│                       đàn chim hôm nay, tab tầng, 6 ô cảm biến,
 │                       relay chế độ tay (MF-01), thiết bị (chỉ xem), Cài đặt zone xem nhanh (⋮ "Chỉnh sửa" ─► đúng mục, mở sẵn chế độ sửa),
 │                       ⚙ ─► [houseId]/settings
 │                Cài đặt nhà: thông tin nhà, camera AI (+ thêm), mức giảm tỷ lệ về tổ; theo tầng: thông tin tầng, ngưỡng (+ đặt lại mặc định),
@@ -273,7 +274,7 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 ├─ Trang chủ   home        cùng màn với Farm Owner, chỉ đọc; khối riêng mỗi role quyết bằng canPerform
 ├─ Trang trại  farms ─► cùng cây màn của Farm Owner, KHÔNG có relay, device-setup, ghi harvest
 │                zone : sửa ngưỡng, hệ số, 5 tham số phát hiện (EXPERT-FR-008) — trong Cài đặt nhà, cùng màn với Farm Owner
-│                house: mức tỷ lệ về giảm (Cài đặt nhà), lịch đếm; vẽ vòng đếm làm trên web
+│                house: mức tỷ lệ về giảm (Cài đặt nhà), lịch đếm; vẽ vòng đếm từ nút trên khung camera của Màn B (VISION-FR-018)
 ├─ Cảnh báo    alerts (mặc định lọc "Chờ phán quyết"): kiểm chứng Xác nhận đúng / Bác bỏ (bắt buộc lý do) cảnh báo suy luận;
 │                KHÔNG xác nhận đã xử lý, không vuốt, không ⚙
 ├─ Báo cáo     analytics   báo cáo + viết kết luận, duyệt thay đổi của Farm Owner, áp dụng gợi ý hệ số
