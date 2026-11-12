@@ -217,13 +217,13 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-24 — Giai đoạn nhà, profile, luật khuyến nghị (Bảo, Tuấn, Nhi) — hạn 23/12
 
-**Backend (Bảo):**
-- [ ] Spec `/profiles` (draft, approve, archive, apply), `/recommendations` (luật, khuyến nghị của nhà, chấp nhận, từ chối, hiệu quả theo luật), giai đoạn nhà trong `/farms`.
-- [ ] Collections `configprofiles`, `recommendationrules`, `recommendations` (unique `rule_id + house_id` khi đang `OPEN`). Chạy `npm run db:script`.
+**Backend (Bảo):** *(Bảo, 12/11/2026, nhánh `feat/g24-config-profiles`, PR #153: phần profile xong — `/profiles` và collection `configprofiles`; backend 683/683 test. Giai đoạn nhà Kiệt đã làm trong G-11 (PR #126: `PUT /farms/houses/{houseId}/stage`, `stage_history`, BR-46 trong đánh giá ngày và `LOW_RETURN_RATE`), tick khi #126 merge. Luật khuyến nghị chờ G-11 (#126) và G-21.)*
+- [ ] Spec `/profiles` (draft, approve, archive, apply) *(xong, PR #153)*, `/recommendations` (luật, khuyến nghị của nhà, chấp nhận, từ chối, hiệu quả theo luật), giai đoạn nhà trong `/farms`.
+- [ ] Collections `configprofiles` *(xong, PR #153)*, `recommendationrules`, `recommendations` (unique `rule_id + house_id` khi đang `OPEN`). Chạy `npm run db:script`.
 - [ ] **Giai đoạn nhà** (FARM-FR-014, BR-46):
   - Farm Owner hoặc chuyên gia đặt `ATTRACTING` / `OCCUPIED`, có lịch sử; technician đặt thì 403;
   - nhà `ATTRACTING` không đánh giá chỉ số đàn, không tạo `LOW_RETURN_RATE`, lý do ghi "attracting stage".
-- [ ] **Profile** (EXPERT-FR-014, 015; SM-23):
+- [x] **Profile** (EXPERT-FR-014, 015; SM-23): *(PR #153. Nhóm nào trong hồ sơ cũng tuỳ chọn, nhưng đã có thì đủ khoá; Farm Owner farm không có chuyên gia soạn và duyệt được (BR-22); áp hệ số mờ thì đề xuất hệ số đang chờ của zone thành `SUPERSEDED`)*
   - chuyên gia tạo profile `DRAFT` (ngưỡng, hệ số mờ, tham số phát hiện, lịch loa) rồi duyệt thành `APPROVED`;
   - giá trị ngoài khoảng trả 400; người không phải chuyên gia duyệt thì 403;
   - Farm Owner áp profile cho các nhà: mỗi zone nhận một thay đổi có lịch sử (nguồn `PROFILE`) và một phiên bản cấu hình mới (cần G-08);
