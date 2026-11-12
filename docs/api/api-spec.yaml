@@ -593,6 +593,7 @@ paths:
               properties:
                 device_id: { type: string, pattern: "^[A-Za-z0-9_-]+$", example: node_101, description: "Chỉ chữ, số, `_`, `-` (NFR-10 d): device ID là username và một đoạn topic trên broker, nên `+`, `#`, `/` hay khoảng trắng → 422" }
                 kind: { type: string, enum: [SENSOR, CAMERA] }
+                simulated: { type: boolean, default: false, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập; controller/camera đăng ký từ mục kho này mang cờ simulated" }
       responses:
         "201":
           description: Đã cấp
@@ -601,7 +602,7 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, simulated: { type: boolean }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -5080,6 +5081,7 @@ components:
         farm_id: { type: string, readOnly: true, description: "Farm của House chứa Zone — server tự điền, không đổi được (SRS v1.23.0)" }
         name: { type: string }
         floor: { type: integer }
+        config_version: { type: integer, readOnly: true, description: "ENV-FR-027 — tăng ở mỗi lần đổi ngưỡng, hệ số mờ hoặc tham số phát hiện (giây Unix, luôn lớn hơn bản trước); đi kèm `config` gửi xuống controller" }
         thresholds: { $ref: "#/components/schemas/Thresholds" }
         threshold_history:
           type: array
@@ -5581,6 +5583,11 @@ components:
             enum: [PENDING, ONLINE, OFFLINE],
             description: "PENDING = Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên (Flow 1)",
           }
+        config_sync:
+          type: string
+          enum: [PENDING, APPLIED, MISMATCH, UNKNOWN]
+          description: "ENV-FR-027, Report 3 §6.12 — controller mới hoặc vừa có cấu hình mới: PENDING; heartbeat báo đúng `config_version` của Zone: APPLIED (FARM-FR-012 \"đã áp cấu hình\"); online mà 3 heartbeat liên tiếp vẫn báo bản cũ: MISMATCH kèm cảnh báo CONFIG_MISMATCH (BR-24); firmware trước 2.1.0 không báo phiên bản: UNKNOWN"
+        applied_config_version: { type: integer, nullable: true, description: "ENV-FR-027 — phiên bản cấu hình heartbeat gần nhất báo; null khi firmware không báo" }
         rssi: { type: number }
         booted_at: { type: string, format: date-time, description: "FARM-FR-006 — thời điểm khởi động, tính từ `uptime` của heartbeat" }
         free_heap: { type: number, description: "FARM-FR-006 — byte RAM còn trống lúc heartbeat gần nhất" }
@@ -5618,6 +5625,7 @@ components:
             playing: { type: boolean }
             loop: { type: boolean }
         registered_at: { type: string, format: date-time }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         ota_pending:
           type: object
           nullable: true
@@ -5658,6 +5666,7 @@ components:
         model_version: { type: string }
         fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất" }
         registered_at: { type: string, format: date-time }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
@@ -5924,6 +5933,7 @@ components:
         claimed_at: { type: string, format: date-time, nullable: true }
         revoked_at: { type: string, format: date-time, nullable: true, description: "Đã thu hồi — không kích hoạt được nữa" }
         revoke_reason: { type: string, nullable: true }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập" }
         created_by: { type: string }
         created_at: { type: string, format: date-time }
 

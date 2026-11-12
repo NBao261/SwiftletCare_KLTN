@@ -34,6 +34,8 @@ export type AlertType =
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
+/** ENV-FR-027, Report 3 §6.12 — controller đã chạy đúng phiên bản cấu hình của Zone chưa */
+export type ConfigSyncState = 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
 
 
 // ── Module HARVEST (§5.8, §8.2) ───────────────────────────────────────────────
@@ -182,6 +184,8 @@ export interface HeartbeatPayload {
   /** FARM-FR-006 — firmware ≥ 1.4.0: lý do lần khởi động gần nhất (POWERON, BROWNOUT, TASK_WDT…) và IP LAN */
   resetReason?: string
   ip?: string
+  /** ENV-FR-027 — firmware ≥ 2.1.0: phiên bản cấu hình đang chạy; thiếu = firmware cũ (UNKNOWN) */
+  appliedConfigVersion?: number
   /** Report 4 §7.2 — heartbeat của nút AI */
   modelVersion?: string
   fps?: number

@@ -3,6 +3,7 @@ import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
 import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, HouseStage, Thresholds, Role } from '@/types'
 import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
+import { currentConfigVersion } from '@/utils/configSync.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -82,6 +83,8 @@ export interface IZone extends Document {
   /** EXPERT-FR-008 — tham số phát hiện do Domain Expert chỉnh; thiếu trường nào thì dùng mặc định */
   detection_tuning: DetectionTuning
   detection_tuning_history: IDetectionTuningHistoryEntry[]
+  /** ENV-FR-027 — tăng ở mỗi lần đổi ngưỡng, hệ số mờ hoặc tham số phát hiện (deviceConfig.service#publishZoneConfig) */
+  config_version: number
 }
 
 const houseSchema = new Schema<IHouse>(
@@ -187,6 +190,7 @@ const zoneSchema = new Schema<IZone>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
     }],
+    config_version: { type: Number, default: () => currentConfigVersion() },
   },
   { timestamps: { createdAt: 'created_at' } }
 )

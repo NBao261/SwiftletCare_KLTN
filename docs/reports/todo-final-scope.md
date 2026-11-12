@@ -1,6 +1,6 @@
 # Việc cần làm — phần scope cuối (sau `todo-review2.md`)
 
-Cập nhật 09/11/2026, theo scope cuối đã chốt với giảng viên hướng dẫn sau Review 2 (phiếu v3 bản cuối, BM03 1.3, SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0, BM04).
+Cập nhật 10/11/2026: SRS 4.2.1, SDD 2.2.1 (PR #147), lịch tuần 1 của Bảo. Trước đó 09/11/2026, theo scope cuối đã chốt với giảng viên hướng dẫn sau Review 2 (phiếu v3 bản cuối, BM03 1.3, SRS 4.2.0, SDD 2.2.0, Report 5 1.5.0, BM04).
 
 File này hướng dẫn **phần làm mới** để hệ thống đủ như hồ sơ đã nộp: Farm Technician, Work Order, bảo trì phòng ngừa, bù phun sương theo thời tiết, profile cấu hình, luật khuyến nghị, tổng quan trại, chu kỳ thu hoạch và bộ giả lập (gap G-20…G-27), cùng hai việc mới của MF-04 và MF-06 (EXPERT-FR-021, 022).
 
@@ -71,7 +71,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 | Tuần | Kiệt | Bảo | Len | Nhi | Tuấn |
 |---|---|---|---|---|---|
-| 1 (10–16/11) | Spec G-20, G-21 → backend G-20 | G-27 giả lập; G-07 (từ `todo-review2.md`) | Đăng nhập technician, danh sách nhà được gán (G-20) | Màn gán kỹ thuật viên (G-20) | Console thiết bị của Admin (G-20) |
+| 1 (10–16/11) | Spec G-20, G-21 → backend G-20 | G-27 giả lập; G-08 (từ `todo-review2.md`; G-07 Kiệt làm, đã merge #137) | Đăng nhập technician, danh sách nhà được gán (G-20) | Màn gán kỹ thuật viên (G-20) | Console thiết bị của Admin (G-20) |
 | 2 (17–23/11) | Backend G-21 | G-23 firmware + backend | Màn cảnh báo + Work Order của technician (G-21) | Duyệt Work Order trên web (G-21) | Màn luật thời tiết (G-23); bằng chứng kiểm tra tại chỗ (G-21) |
 | 3 (24/11–02/12) | Phần mới của G-11 (chấm điểm, ngày lệch) | Spec G-24, G-25, G-26 | Chấm điểm ngày trên mobile (G-11) | Chấm điểm trên web (G-11) | Màn ngày lệch (G-11) |
 | 4 (03–09/12) | Backend G-22 | Backend G-24 | Checklist, ghi bảo trì (G-22) | Kế hoạch bảo trì (G-22); áp profile, giai đoạn nhà (G-24) | Profile, luật khuyến nghị (G-24) |
@@ -92,7 +92,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 - [x] Bỏ `technicianAccess` cũ và route `/ota` của Technician cũ; cập nhật `roleMatrix.test.ts`. *Backend xong (f9d9522): `technicianAccess.test.ts` viết lại theo nhà được gán, `roleMatrix.test.ts` theo role mới, bỏ `/admin/technicians`; web xong (`f9364593`, `4621428f` — Tuấn, Nhi): route `/ota` chuyển sang `ADMIN_ONLY`, cập nhật `roles.test.ts`.*
 
 **Giao diện:**
-- [ ] Len: đăng nhập bằng tài khoản technician; tab theo `roleTabs.ts`; danh sách các nhà được gán.
+- [x] Len: đăng nhập bằng tài khoản technician; tab theo `roleTabs.ts`; danh sách các nhà được gán. *(Len, 11/11, `384ace40`, merge cùng PR #146 ngày 12/11)*
 - [x] Nhi: màn gán technician vào nhà trên web Owner. Màn lịch trực để sau cùng, cùng lúc với phần backend. *(Gán xong: Nhi, 11/11, nhánh `feat/g20-farm-technician` — tab "Thành viên farm" của trang nhà có mục "Kỹ thuật viên": công tắc "Giao nhà này" và ô "Thợ chính" lưu ngay qua `PUT/DELETE /farms/houses/{houseId}/technicians/{userId}`, Farm Owner nào cũng giao được, chuyên gia chỉ xem; mời Farm Technician vào farm (`INVITE_ROLES`); mục "Chủ nhà yến" không còn lẫn kỹ thuật viên. Lịch trực xong 11/11: nhóm "Lịch trực" trong tab "Thành viên farm" — bảng ca (thợ, loại ca chính/phụ, ngày, giờ, ca qua đêm), thêm/sửa/xoá ca gửi lại cả lịch qua `PUT …/roster`, kiểm trước như backend (≥ 1 ngày, giờ khác nhau, ca cùng loại không chồng giờ, `roster.validation.test.ts`); chỉ Farm Owner thấy nhóm này, chuyên gia và thợ không xem lịch trực (Report 3 §2.4). Tab Thành viên farm chia 4 nhóm bằng chip, bảng cố định 5 dòng, ô tìm theo tên/email.)*
 - [x] Tuấn: màn Technician cũ chuyển thành console thiết bị của Administrator (danh sách thiết bị, cảnh báo thiết bị, RESTART, OTA). *(Tuấn, 10/11, nhánh `feat/g20-farm-technician`, commits `f9364593` + `a527ace2`, cùng `4621428f`: đổi enum `TECHNICIAN` → `FARM_TECHNICIAN` trên web, thêm nhóm Console Thiết bị (`/devices`, `/alerts`, `/ota`) vào `AdminLayout`, khóa `PUSH_CONFIG` và `/ota` cho `ADMIN`, giữ `RESTART` cho `ADMIN`/`FARM_OWNER`/`FARM_TECHNICIAN`, chuyển `AudioTracksModal` sang `FARM_OWNER`, gỡ tạo tài khoản Technician ở Admin; 214/214 tests pass)*
 
@@ -282,11 +282,11 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-27 — Bộ giả lập thiết bị (Bảo) — hạn 02/12, làm sớm nhất
 
-- [ ] `simulator/` (Node.js + mqtt.js):
+- [x] `simulator/` (Node.js + mqtt.js): *(Bảo, 12/11/2026, PR #151: `npm test` 5/5; chưa chạy với EMQX thật vì máy chưa bật Docker — chạy thử ở máy dev rồi trên staging)*
   - đăng ký N controller và camera qua API Admin;
   - publish telemetry, heartbeat và số đếm trên đúng topic của thiết bị thật;
   - có kịch bản gây sự cố (cảnh báo, mất kết nối) để test định tuyến và Work Order.
-- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004).
+- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004). *(Backend xong ở PR #151: cờ đi từ kho sang controller và camera, có trong `GET /devices/sensor-nodes`, `/camera-nodes`, `/admin/provisioned-devices`. Còn nhãn "giả lập" trên màn hình: Nhi (web Owner, Admin), Tuấn (console thiết bị của Admin), Len (mobile).)*
 - [ ] Dùng cho:
   - NFR-03: 120 controller và 20 camera;
   - NFR-15: 30 cảnh báo và 10 Work Order, đo độ trễ leo thang và độ trễ xác minh phục hồi;
@@ -296,7 +296,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 | Việc | Cần cho | Hạn |
 |---|---|---|
-| 18 mục sửa tài liệu của BM02 (BM04 §9, các mục có hạn 11/11) | Cam kết BM04 | 11/11/2026 |
+| 16 mục sửa tài liệu của BM02 (BM04 §9, các mục có hạn 11/11, đều của Bảo) — xong 10/11/2026, PR #147 | Cam kết BM04 | 11/11/2026 |
 | Train model v2 trên frame khó; đo NFR-09 trên cùng ngày test và clip của v1. Mục tiêu dưới 10 %, nên nhắm 5–7 % | WF-03, NFR-09 | 02/12/2026 |
 | Phỏng vấn 2–3 người nuôi: mức chỉ số sức khỏe (BR-28…30), ít nhất 3 luật khuyến nghị, chu kỳ bảo trì thực tế | MF-06, MF-07, MF-08 có nguồn | 02/12/2026 |
 | Chấm điểm thực địa ≥ 14 ngày (technician chấm hằng ngày) | NFR-14 | Bắt đầu từ khi G-11 lên staging |

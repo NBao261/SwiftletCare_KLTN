@@ -291,6 +291,9 @@ ensureCollection("cameranodes", {
     "registered_by": {
       "bsonType": ["objectId", "null"]
     },
+    "simulated": {
+      "bsonType": ["bool", "null"]
+    },
     "activation_overdue_at": {
       "bsonType": ["date", "null"]
     },
@@ -1165,6 +1168,9 @@ ensureCollection("provisioneddevices", {
     "revoke_reason": {
       "bsonType": ["string", "null"]
     },
+    "simulated": {
+      "bsonType": ["bool", "null"]
+    },
     "created_by": {
       "bsonType": ["objectId", "null"]
     },
@@ -1283,6 +1289,16 @@ ensureCollection("sensornodes", {
     "status": {
       "bsonType": ["string", "null"],
       "enum": ["PENDING", "ONLINE", "OFFLINE", null]
+    },
+    "applied_config_version": {
+      "bsonType": ["number", "null"]
+    },
+    "config_sync": {
+      "bsonType": ["string", "null"],
+      "enum": ["PENDING", "APPLIED", "MISMATCH", "UNKNOWN", null]
+    },
+    "config_stale_heartbeats": {
+      "bsonType": ["number", "null"]
     },
     "rssi": {
       "bsonType": ["number", "null"]
@@ -1417,6 +1433,9 @@ ensureCollection("sensornodes", {
     },
     "registered_by": {
       "bsonType": ["objectId", "null"]
+    },
+    "simulated": {
+      "bsonType": ["bool", "null"]
     },
     "activation_overdue_at": {
       "bsonType": ["date", "null"]
@@ -1934,6 +1953,9 @@ ensureCollection("zones", {
           }
         }
       }
+    },
+    "config_version": {
+      "bsonType": ["number", "null"]
     },
     "_id": {
       "bsonType": ["objectId", "null"]
