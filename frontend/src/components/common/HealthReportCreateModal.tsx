@@ -1,8 +1,7 @@
 import { useState } from 'react';
 
-import { shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
-import { withBold } from '@/components/features/farm-owner/health/HealthRatingModal';
-import { MAX_REPORT_DAYS, reportRangeError } from '@/components/features/farm-owner/health/healthReport.utils';
+import { shiftDate, vietnamDate, withBold } from '@/components/common/healthDay.utils';
+import { MAX_REPORT_DAYS, reportRangeError } from '@/components/common/healthReport.utils';
 import { Button, DatePicker, Modal } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';

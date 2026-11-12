@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   countsText, reportDayRows, reportPeriod, reportRangeError, zoneFacts, zoneHeader, type ReportFormat,
-} from '@/components/features/farm-owner/health/healthReport.utils';
+} from '@/components/common/healthReport.utils';
 import { NO_VALUE } from '@/constants/display';
 import { healthDict } from '@/constants/health.i18n';
 import { formatDateTime, formatStandardDate, translate } from '@/lib/i18n';

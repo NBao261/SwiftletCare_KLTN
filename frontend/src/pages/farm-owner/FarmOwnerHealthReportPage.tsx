@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 
 import HealthReportView from '@/components/features/farm-owner/health/HealthReportView';
-import { reportPeriod, type HealthReportState } from '@/components/features/farm-owner/health/healthReport.utils';
+import { reportPeriod, type HealthReportState } from '@/components/common/healthReport.utils';
 import { EmptyState, LoadingSkeleton } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';

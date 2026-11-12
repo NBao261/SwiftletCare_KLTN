@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { healthDayApi } from '@/apis/shared/healthDays.api'
-import { downloadHealthReportPdf } from '@/components/features/farm-owner/health/healthReportPdf'
+import { downloadHealthReportPdf } from '@/components/common/healthReportPdf'
 import { healthDict } from '@/constants/health.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'

@@ -1,3 +1,4 @@
+import { createElement, type ReactNode } from 'react';
 import type { HealthTranslate } from '@/constants/health.i18n';
 import type { HealthReason } from '@/types';
 
@@ -74,4 +75,10 @@ export function formatHealthReason(reason: HealthReason, t: HealthTranslate, for
     case 'ATTRACTING_STAGE':
       return t(`reason.${reason.code}`);
   }
+}
+
+// Câu dịch có đoạn **…** → đoạn đó in đậm chữ đen, phần còn lại giữ màu của khối chứa
+export function withBold(text: string): ReactNode[] {
+  return text.split('**').map((part, index) =>
+    index % 2 === 1 ? createElement('strong', { key: index, className: 'font-semibold text-charcoal' }, part) : part);
 }

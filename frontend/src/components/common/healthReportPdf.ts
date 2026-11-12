@@ -3,7 +3,7 @@ import type { jsPDF as JsPdf } from 'jspdf';
 import {
   REPORT_STATUSES, incompleteDayCount, reportDayRows, reportPeriod, weatherFacts, zoneFacts, zoneHeader,
   type ReportFact, type ReportFormat,
-} from '@/components/features/farm-owner/health/healthReport.utils';
+} from '@/components/common/healthReport.utils';
 import { NO_VALUE } from '@/constants/display';
 import type { HouseHealthReport } from '@/types';
 

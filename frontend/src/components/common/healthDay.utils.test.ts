@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHealthReason, isRatingDeadlineNear, lastRatingDay, shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
+import { formatHealthReason, isRatingDeadlineNear, lastRatingDay, shiftDate, vietnamDate } from '@/components/common/healthDay.utils';
 import { healthDict, type HealthTranslate } from '@/constants/health.i18n';
 import { formatStandardDate, translate } from '@/lib/i18n';
 import type { HealthReason } from '@/types';

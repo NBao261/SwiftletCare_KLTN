@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 
+import { withBold } from '@/components/common/healthDay.utils';
 import { Button, ConfirmModal, Modal, Textarea } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -19,12 +20,6 @@ const SELECTED_CLASS: Record<HealthRatingValue, string> = {
 const NOTE_MAX_LENGTH = 1000;
 // BR-37: những gì người đánh giá quan sát tại nhà (không lặp lại số cảm biến); dấu hiệu nặng tô đỏ
 const GUIDE = ['flock', 'environment', 'air', 'disturbance', 'equipment', 'severe'] as const;
-
-// Câu dịch có đoạn **…** → đoạn đó in đậm chữ đen, phần còn lại giữ màu của khối chứa
-export function withBold(text: string): ReactNode[] {
-  return text.split('**').map((part, index) =>
-    index % 2 === 1 ? <strong key={index} className="font-semibold text-charcoal">{part}</strong> : part);
-}
 
 interface HealthRatingModalProps {
   // Ngày còn PENDING; null = đóng

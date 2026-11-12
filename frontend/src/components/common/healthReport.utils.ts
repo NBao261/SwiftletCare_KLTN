@@ -1,4 +1,4 @@
-import { formatHealthReason } from '@/components/features/farm-owner/health/healthDay.utils';
+import { formatHealthReason } from '@/components/common/healthDay.utils';
 import { NO_VALUE } from '@/constants/display';
 import type { HealthTranslate } from '@/constants/health.i18n';
 import type { HealthRatingValue, HealthReportZoneSection, HealthStatus, HouseHealthReport, HouseHealthReportSummary } from '@/types';

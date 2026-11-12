@@ -4,11 +4,11 @@ import {
   BirdIcon, CalendarDotsIcon, CalendarXIcon, CloudRainIcon, DropIcon, FilePdfIcon, HouseIcon, ThermometerSimpleIcon, type Icon,
 } from '@phosphor-icons/react';
 import HealthReportConclusion from '@/components/features/farm-owner/health/HealthReportConclusion';
-import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
-import { vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
+import HealthStatusBadge from '@/components/common/HealthStatusBadge';
+import { vietnamDate } from '@/components/common/healthDay.utils';
 import {
   REPORT_STATUSES, incompleteDayCount, reportDayRows, reportPeriod, weatherFacts, zoneFacts, type ReportFact,
-} from '@/components/features/farm-owner/health/healthReport.utils';
+} from '@/components/common/healthReport.utils';
 import { Button } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
 import { healthDict } from '@/constants/health.i18n';

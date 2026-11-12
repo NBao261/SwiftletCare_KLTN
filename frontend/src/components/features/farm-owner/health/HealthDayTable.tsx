@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
-import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
-import { HOVER_DARK_BUTTON, isRatingDeadlineNear, lastRatingDay } from '@/components/features/farm-owner/health/healthDay.utils';
+import HealthStatusBadge from '@/components/common/HealthStatusBadge';
+import { HOVER_DARK_BUTTON, isRatingDeadlineNear, lastRatingDay } from '@/components/common/healthDay.utils';
 import { Button, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { NO_VALUE } from '@/constants/display';

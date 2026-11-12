@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getDisagreementDirection } from '@/components/features/domain-expert/reports/DisagreementDayCard';
+import { getDisagreementDirection } from '@/components/common/DisagreementDayCard';
 import {
   formatAgreementIndex,
   formatRatePercent,
-} from '@/components/features/domain-expert/reports/DisagreementsSection';
+} from '@/components/common/DisagreementsSection';
 import { NO_VALUE } from '@/constants/display';
 import { disagreementsApi } from '@/apis/domain-expert/disagreements.api';
 import {

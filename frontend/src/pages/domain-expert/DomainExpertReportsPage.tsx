@@ -16,9 +16,9 @@ import { useSearchParams } from 'react-router-dom';
 import { FileText, Scale } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { t as i18nT } from '@/i18n';
-import DisagreementsSection from '@/components/features/domain-expert/reports/DisagreementsSection';
-import HealthReportSection from '@/components/features/farm-owner/health/HealthReportSection';
-import { shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
+import DisagreementsSection from '@/components/common/DisagreementsSection';
+import HealthReportSection from '@/components/common/HealthReportSection';
+import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils';
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements';
 import { useHouses } from '@/hooks/shared/useFarms';
 

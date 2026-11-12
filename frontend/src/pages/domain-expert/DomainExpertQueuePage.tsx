@@ -34,7 +34,7 @@ import {
 } from '@/hooks/domain-expert/useExpertAlerts'
 import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements'
-import { shiftDate, vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils'
+import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
 import { useExpertAiSuggestion } from '@/hooks/domain-expert/useZoneTuning'
 import {
   useParameterReviews,

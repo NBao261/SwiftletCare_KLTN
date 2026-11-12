@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { PlusIcon } from '@phosphor-icons/react';
 import TableEmptyState from '@/components/common/TableEmptyState';
-import HealthReportCreateModal from '@/components/features/farm-owner/health/HealthReportCreateModal';
-import { HEALTH_REPORT_PATH, reportPeriod, type HealthReportState } from '@/components/features/farm-owner/health/healthReport.utils';
+import HealthReportCreateModal from '@/components/common/HealthReportCreateModal';
+import { HEALTH_REPORT_PATH, reportPeriod, type HealthReportState } from '@/components/common/healthReport.utils';
 import { ActionsMenu, Badge, Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { healthDict } from '@/constants/health.i18n';

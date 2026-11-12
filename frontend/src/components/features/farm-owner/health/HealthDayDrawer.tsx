@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
 
 import { CloudRainIcon, DropIcon, PencilSimpleIcon, PlusIcon, ThermometerIcon } from '@phosphor-icons/react';
-import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
-import { formatHealthReason } from '@/components/features/farm-owner/health/healthDay.utils';
+import HealthStatusBadge from '@/components/common/HealthStatusBadge';
+import { formatHealthReason } from '@/components/common/healthDay.utils';
 import { Badge, Button, Textarea, type BadgeTone } from '@/components/ui';
 import { Drawer } from '@/components/ui/Drawer';
 import { NO_VALUE } from '@/constants/display';

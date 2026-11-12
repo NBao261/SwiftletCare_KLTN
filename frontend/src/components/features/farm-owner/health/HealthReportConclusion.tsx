@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { HOVER_DARK_BUTTON } from '@/components/features/farm-owner/health/healthDay.utils';
+import { HOVER_DARK_BUTTON } from '@/components/common/healthDay.utils';
 import { Button, Textarea } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
 import { healthDict } from '@/constants/health.i18n';

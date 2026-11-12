@@ -8,12 +8,12 @@ import {
   BarChart3,
 } from 'lucide-react';
 import TableEmptyState from '@/components/common/TableEmptyState';
-import HealthLevelsModal from '@/components/features/farm-owner/health/HealthLevelsModal';
+import HealthLevelsModal from '@/components/common/HealthLevelsModal';
 import {
   shiftDate,
   vietnamDate,
-} from '@/components/features/farm-owner/health/healthDay.utils';
-import DisagreementDayCard from '@/components/features/domain-expert/reports/DisagreementDayCard';
+} from '@/components/common/healthDay.utils';
+import DisagreementDayCard from '@/components/common/DisagreementDayCard';
 import {
   Badge,
   Button,

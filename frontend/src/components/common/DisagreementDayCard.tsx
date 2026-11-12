@@ -8,8 +8,8 @@ import {
   MessageSquareText,
   Activity,
 } from 'lucide-react';
-import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
-import { formatHealthReason } from '@/components/features/farm-owner/health/healthDay.utils';
+import HealthStatusBadge from '@/components/common/HealthStatusBadge';
+import { formatHealthReason } from '@/components/common/healthDay.utils';
 import { Badge, type BadgeTone } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
 import { healthDict } from '@/constants/health.i18n';
