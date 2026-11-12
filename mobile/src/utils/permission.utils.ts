@@ -6,6 +6,7 @@ export type PermissionAction =
   | 'controlRelay'
   | 'clearRelayOverride'
   | 'viewOwnerTasks'
+  | 'viewPendingRatings'
   | 'createFarm'
   | 'createHouse'
   | 'registerCamera'
@@ -18,6 +19,7 @@ export type PermissionAction =
   | 'editBirdCountTuning'
   | 'applyCoefficientSuggestion'
   | 'writeConclusion'
+  | 'rateHealthDay'
   | 'acknowledgeAlert'
   | 'setAlertVerdict'
   | 'editNotificationSettings'
@@ -42,6 +44,8 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   clearRelayOverride: ['FARM_OWNER', 'FARM_TECHNICIAN'],
   // Khối "Việc chờ bạn" và "Báo cáo mới" ở Trang chủ: việc của chủ trại
   viewOwnerTasks: ['FARM_OWNER'],
+  // Ngày chờ mình chấm trong khối "Việc chờ bạn" (BR-31): người chấm — chủ trại và kỹ thuật viên của nhà được giao
+  viewPendingRatings: ['FARM_OWNER', 'FARM_TECHNICIAN'],
   // Tạo trang trại, nhà yến (FARM-FR-001, 002): chỉ chủ trại — Admin không tạo farm thay chủ (Report 3 §8)
   createFarm: ['FARM_OWNER'],
   createHouse: ['FARM_OWNER'],
@@ -67,6 +71,9 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   applyCoefficientSuggestion: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Viết kết luận báo cáo (EXPERT-FR-006): chỉ chuyên gia
   writeConclusion: ['DOMAIN_EXPERT'],
+  // Chấm, bỏ qua, ghi chú trạng thái ngày của nhà (EXPERT-FR-012, BR-31, Report 3 4.2.0): Farm Owner và Farm Technician của
+  // nhà được giao (backend ASSESSOR_ROLES); chuyên gia xem các ngày lệch thay vì chấm, Admin không vào app
+  rateHealthDay: ['FARM_OWNER', 'FARM_TECHNICIAN'],
   // Xác nhận đã biết cảnh báo (ALERT-FR-009): chủ trại; chuyên gia 403. Report 3 §2.4 cho cả kỹ thuật viên nhà được giao, nhưng
   // backend G-20 (PUT /alerts/{id}/acknowledge) mới cho FARM_OWNER — thêm FARM_TECHNICIAN khi backend mở
   acknowledgeAlert: ['FARM_OWNER'],
@@ -79,9 +86,10 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   viewOwnerProfile: ['FARM_OWNER'],
   // Chuông (hộp thông báo + cảnh báo chờ xác nhận): người nhận và xác nhận cảnh báo — chủ trại, kỹ thuật viên
   viewBell: ['FARM_OWNER', 'FARM_TECHNICIAN'],
-  // Báo cáo sức khỏe, bằng chứng cảnh báo suy luận, gợi ý hệ số: backend G-20 mới cho chủ trại và chuyên gia (/health-reports,
-  // /alerts/{id}/evidence, /analytics/control/suggestion trả 403 cho kỹ thuật viên) — mở cho kỹ thuật viên khi backend mở
-  viewHealthReports: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Trạng thái ngày, báo cáo sức khỏe theo nhà (EXPERT-FR-005, ANALYTICS-FR-012): kỹ thuật viên chỉ thấy nhà được giao (backend)
+  viewHealthReports: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Bằng chứng cảnh báo suy luận, gợi ý hệ số: backend chỉ cho chủ trại và chuyên gia (/alerts/{id}/evidence, /health-reports/preview,
+  // /analytics/control/suggestion trả 403 cho kỹ thuật viên) — mở cho kỹ thuật viên khi backend mở
   viewAlertEvidence: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   viewControlSuggestion: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Chỉ thấy các nhà được giao (AUTH-FR-013): danh sách trống nghĩa là chưa được giao nhà, không phải farm chưa có nhà

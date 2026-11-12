@@ -1,5 +1,5 @@
 import {
-  BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, GearSixIcon, HouseIcon, SquaresFourIcon, WarningIcon,
+  BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, GearSixIcon, HeartbeatIcon, HouseIcon, SquaresFourIcon, WarningIcon,
 } from '@phosphor-icons/react'
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
@@ -51,6 +51,11 @@ const menuSections: MenuSection[] = [
         label: 'Phân tích',
         path: '/analytics',
         icon: ChartBarIcon
+      },
+      {
+        label: 'Sức khỏe nhà yến',
+        path: '/health',
+        icon: HeartbeatIcon
       },
       {
         label: 'Thông báo',

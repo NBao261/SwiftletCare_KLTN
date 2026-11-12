@@ -5,13 +5,14 @@ import { CoefficientProposal } from '@/models/coefficientProposal.model'
 import { User, IUser } from '@/models/user.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
-import { OPEN_STATUSES } from '@/services/alert.service'
+import { OPEN_STATUSES, resolveHouseAlerts } from '@/services/alert.service'
 import {
   hasFarmAccess, hasDeviceAccess, isPrimaryOwner, isFarmTechnician, canAccessHouse, listAssignedHouseIds,
   findFarmOrThrow, findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { assertValidRoster, type RosterShift } from '@/utils/roster.util'
+import { DEFAULT_HOUSE_STAGE } from '@/utils/houseStage.util'
 import { paginate } from '@/utils/helpers.util'
 import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange } from '@/services/parameterReview.service'
@@ -21,11 +22,12 @@ import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/threshold
 import {
   assertValidBirdCountTuning, assertValidDetectionTuning, pickBirdCountTuning,
   pickDetectionTuning, resolveBirdCountTuning, resolveDetectionTuning,
+  DEFAULT_HEALTH_LEVELS, assertValidHealthLevels, pickHealthLevels, resolveHealthLevels,
 } from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning } from '@/types'
+import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning, HouseStage } from '@/types'
 
 /** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
 const INVITATION_TTL_MS = 7 * 86400_000
@@ -494,26 +496,25 @@ export async function createHouse(
 /** Nhà trong GET /farms/:id/houses: lịch trực tuỳ role (Report 3 §2.4) */
 export type HouseListItem = Omit<IHouse, 'roster'> & { roster?: IHouse['roster'] }
 
+/** Nhà trả cho người gọi: lịch trực chỉ Farm Owner nhận, thợ chỉ ca của mình (Report 3 §2.4) */
+function presentHouse(house: IHouse, user: CurrentUser): HouseListItem {
+  if (user.role === 'FARM_OWNER') return house
+  const plain = house.toObject() as unknown as HouseListItem
+  if (user.role === 'FARM_TECHNICIAN') plain.roster = (plain.roster ?? []).filter(s => String(s.technician_id) === user._id)
+  else delete plain.roster
+  return plain
+}
+
 export async function listHouses(farmId: string, user: CurrentUser): Promise<HouseListItem[]> {
   const farm = await findFarmOrThrow(farmId)
   // AUTH-FR-013 — Farm Technician chỉ nhận các nhà được giao; lịch trực chỉ còn ca của mình (§2.4 "read own roster")
   if (isFarmTechnician(farm, user)) {
     const assigned = await House.find({ farm_id: farm._id, _id: { $in: await listAssignedHouseIds(user) } }).sort({ created_at: -1 })
-    return assigned.map(house => {
-      const plain = house.toObject() as unknown as HouseListItem
-      plain.roster = (plain.roster ?? []).filter(s => String(s.technician_id) === user._id)
-      return plain
-    })
+    return assigned.map(house => presentHouse(house, user))
   }
   if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
   const houses = await House.find({ farm_id: farm._id }).sort({ created_at: -1 })
-  // Lịch trực là của Farm Owner (§2.4): Domain Expert và Administrator không nhận
-  if (user.role === 'FARM_OWNER') return houses
-  return houses.map(house => {
-    const plain = house.toObject() as unknown as HouseListItem
-    delete plain.roster
-    return plain
-  })
+  return houses.map(house => presentHouse(house, user))
 }
 
 /** FARM-FR-002 */
@@ -675,7 +676,69 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
  * của cả nhà nên mức giảm tỷ lệ chim về (cảnh báo LOW_RETURN_RATE) đặt theo House, không theo Zone.
  * Cùng cách làm với tham số Zone: kiểm tra khoảng, lưu lịch sử, ghi audit. Backend dùng, không gửi thiết bị.
  */
-export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {
+/**
+ * ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà (bản ghi cũ thiếu trường nào thì dùng mặc định).
+ * `can_edit` dùng đúng luật của PUT (BR-22) để client không phải tự đoán chuyên gia còn hoạt động hay không.
+ */
+export async function getHouseHealthLevels(houseId: string, user: CurrentUser) {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  const canEdit = await assertExpertDecision(farm, user).then(() => true, () => false)
+  return {
+    house_id: String(house._id), health_levels: resolveHealthLevels(house.health_levels), defaults: DEFAULT_HEALTH_LEVELS,
+    can_edit: canEdit,
+  }
+}
+
+/** ANALYTICS-FR-012 — Domain Expert đặt mức trong khoảng BR-28; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22) */
+export async function updateHouseHealthLevels(houseId: string, user: CurrentUser, updates: Record<string, unknown>) {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  await assertExpertDecision(farm, user)
+
+  const picked = pickHealthLevels(updates)
+  if (Object.keys(picked).length === 0) throw BadRequestError('Không có mức nào để cập nhật')
+  const oldValues = resolveHealthLevels(house.health_levels)
+  const merged = { ...oldValues, ...picked }
+  assertValidHealthLevels(merged)
+
+  house.health_levels = merged
+  await house.save()
+
+  const auditId = await logAction(user._id, 'HEALTH_LEVELS_UPDATED', 'house', String(house._id), {
+    before: oldValues, after: merged, house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'chỉnh mức chỉ số sức khỏe', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
+  })
+  // Cùng dạng HouseHealthLevels với GET (client ghi thẳng vào cache): lưu được tức là sửa được
+  return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS, can_edit: true }
+}
+
+/**
+ * FARM-FR-014 — Farm Owner hoặc Domain Expert của farm đặt giai đoạn nhà, có lịch sử. Nhà `ATTRACTING` không đánh
+ * giá đàn chim, không có LOW_RETURN_RATE; về `OCCUPIED` thì cửa sổ so sánh BR-21 tính lại từ ngày kế tiếp (BR-46).
+ * Đặt lại đúng giai đoạn đang có thì không ghi gì.
+ */
+export async function setHouseStage(houseId: string, user: CurrentUser, stage: HouseStage): Promise<HouseListItem> {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền đặt giai đoạn của nhà này')
+  const before = house.stage ?? DEFAULT_HOUSE_STAGE
+  if (before === stage) return presentHouse(house, user)
+
+  house.stage = stage
+  house.stage_history.push({ stage, changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date() })
+  await house.save()
+  // BR-46 — nhà dẫn dụ không có LOW_RETURN_RATE: cảnh báo còn mở từ giai đoạn trước được đóng
+  if (stage === 'ATTRACTING') await resolveHouseAlerts(String(house._id), 'LOW_RETURN_RATE', 'Nhà chuyển sang giai đoạn dẫn dụ: không xét tỷ lệ chim về (BR-46)')
+  const auditId = await logAction(user._id, 'HOUSE_STAGE_UPDATED', 'house', String(house._id), {
+    before, after: stage,
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'đổi giai đoạn nhà', place: `Nhà "${house.name}"`, detail: `${before} → ${stage}`,
+  })
+  return presentHouse(house, user)
+}
+
+export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<HouseListItem> {
   const { house, farm } = await assertHouseAccess(houseId, user)
   // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
   await assertExpertDecision(farm, user)
@@ -700,5 +763,5 @@ export async function updateHouseBirdCountTuning(houseId: string, user: CurrentU
   await notifyExpertDecision(user, farm._id, auditId, {
     what: 'chỉnh mức giảm tỷ lệ chim về', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
   })
-  return house
+  return presentHouse(house, user)
 }

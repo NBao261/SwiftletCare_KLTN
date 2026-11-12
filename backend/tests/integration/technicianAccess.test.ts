@@ -186,7 +186,8 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
       `/telemetry/zones/${other.zone._id}/latest`,
       `/farms/${other.farm._id}`,
       `/analytics/control/suggestion?zoneId=${zone._id}`,
-      `/health-reports?zoneId=${zone._id}`,
+      // Báo cáo sức khỏe: thợ đọc ở nhà được giao (Report 3 §2.4), nhà khác 403
+      `/health-reports?zoneId=${zone2._id}`,
     ]) {
       expect([path, (await tech$.get(path)).status]).toEqual([path, 403])
     }
