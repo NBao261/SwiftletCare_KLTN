@@ -236,7 +236,12 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
             <ProfileShortcutCard
               icon={ClipboardTextIcon}
               title={t('Chấm điểm ngày')}
-              caption={pendingDaysQuery.isLoading ? '_' : t('{count} ngày chờ chấm', { count: pendingDaysQuery.data.length })}
+              // Chưa có số (đang tải, lỗi) thì không hiện "0 ngày" giả
+              caption={
+                pendingDaysQuery.isLoading || pendingDaysQuery.isError
+                  ? '_'
+                  : t('{count} ngày chờ chấm', { count: pendingDaysQuery.data.length })
+              }
               onPress={() => router.push('/health')}
             />
             <ProfileShortcutCard

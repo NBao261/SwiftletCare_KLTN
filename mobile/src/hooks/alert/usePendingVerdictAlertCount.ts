@@ -4,10 +4,13 @@ import { alertApi } from '@/services/api/alert.api'
 import { farmHasExpert } from '@/utils/farm.utils'
 
 // Số cảnh báo suy luận chờ chủ trại phán quyết — chỉ ở farm chưa có chuyên gia (BR-22); có chuyên gia thì chuyên gia quyết.
-// Chỉ cần meta.total nên mỗi farm tải 1 dòng
-export function usePendingVerdictAlertCount() {
+// Chỉ cần meta.total nên mỗi farm tải 1 dòng. enabled = false (kỹ thuật viên: không phán quyết, và GET /farms chỉ trả bản ghi
+// của chính họ nên farmHasExpert luôn false) thì không gọi, số là 0
+export function usePendingVerdictAlertCount(enabled = true) {
   const farmsQuery = useFarms()
-  const farmIdsWithoutExpert = (farmsQuery.data?.data ?? []).filter(farm => !farmHasExpert(farm)).map(farm => farm._id)
+  const farmIdsWithoutExpert = enabled
+    ? (farmsQuery.data?.data ?? []).filter(farm => !farmHasExpert(farm)).map(farm => farm._id)
+    : []
 
   return useQueries({
     queries: farmIdsWithoutExpert.map(farmId => ({

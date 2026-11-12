@@ -3,6 +3,7 @@ import { router } from 'expo-router'
 import { CaretRightIcon, HeartbeatIcon } from 'phosphor-react-native'
 import { HealthStatusBadge } from '@/components/health/HealthStatusBadge'
 import { Button } from '@/components/ui/button'
+import { RetryLine } from '@/components/common/RetryLine'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
@@ -42,12 +43,7 @@ export function HealthDayCard({ houseId }: HealthDayCardProps) {
   const renderBody = () => {
     if (daysQuery.isError) {
       return (
-        <View style={styles.row}>
-          <Text variant="small" color={palette.textSecondary} style={styles.flex}>
-            {t('Không tải được trạng thái ngày')}
-          </Text>
-          <Button label={t('Thử lại')} variant="link" onPress={() => daysQuery.refetch()} />
-        </View>
+        <RetryLine message={t('Không tải được trạng thái ngày')} onRetry={() => daysQuery.refetch()} isRetrying={daysQuery.isFetching} />
       )
     }
     if (!latest) {

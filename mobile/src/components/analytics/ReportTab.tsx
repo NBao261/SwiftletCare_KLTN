@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { FormMessage } from '@/components/ui/form-message'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { RetryLine } from '@/components/common/RetryLine'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import type { AnalyticsScope } from '@/hooks/analytics/useAnalyticsScope'
 import { useHealthReports } from '@/hooks/analytics/useHealthReports'
@@ -53,14 +54,7 @@ function ExpandedReport({
 
   if (reportQuery.isLoading) return <Skeleton width="100%" height={DETAIL_SKELETON_HEIGHT} color={palette.surfaceStrong} />
   if (reportQuery.isError || !report) {
-    return (
-      <View style={styles.retryRow}>
-        <Text variant="small" color={palette.textSecondary} style={styles.flex}>
-          {t('Không tải được báo cáo')}
-        </Text>
-        <Button label={t('Thử lại')} variant="link" onPress={() => reportQuery.refetch()} />
-      </View>
-    )
+    return <RetryLine message={t('Không tải được báo cáo')} onRetry={() => reportQuery.refetch()} isRetrying={reportQuery.isFetching} />
   }
   return (
     <HouseReportDetail
@@ -146,12 +140,7 @@ export function ReportTab({ scope }: ReportTabProps) {
     }
     if (reportsQuery.isError) {
       return (
-        <View style={styles.retryRow}>
-          <Text variant="small" color={palette.textSecondary} style={styles.flex}>
-            {t('Không tải được báo cáo')}
-          </Text>
-          <Button label={t('Thử lại')} variant="link" onPress={() => reportsQuery.refetch()} />
-        </View>
+        <RetryLine message={t('Không tải được báo cáo')} onRetry={() => reportsQuery.refetch()} isRetrying={reportsQuery.isFetching} />
       )
     }
     if (reports.length === 0) {
@@ -241,7 +230,6 @@ const styles = StyleSheet.create({
   tab: { gap: Spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   flex: { flex: 1 },
-  retryRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   reportHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.md },
   badge: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
   input: {

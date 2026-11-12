@@ -437,7 +437,7 @@ Thứ tự:
    - *(Len, xem G-06: giới hạn bơm và hộp xác nhận 03/11, hạn và huỷ theo từng relay 10/11)*
 6. **Len:** setup QR (G-09).
    - *(Len, xem G-09: quét nhãn 01/11; mã tầng, hướng dẫn Wi-Fi, tiến trình 11/11)*
-7. **Len:** trạng thái ngày + chấm điểm (G-11). *(Len, 11/11: xong phần Farm Owner — xem G-11)*
+7. **Len:** trạng thái ngày + chấm điểm (G-11). *(Len, 11/11: xong phần Farm Owner; 12/11: Farm Technician — xem G-11)*
 8. **Len:** phân tích số đếm, live stream HLS (`expo-video`, token 60 giây; phát tại chỗ theo camera của House, không dùng route riêng).
    - *(Len, đã có từ PR #127: tab Phân tích (Đàn chim, Môi trường, Điều khiển, Sản lượng, Báo cáo), live stream HLS phát tại chỗ theo camera của nhà)*
 9. **Len:** báo cáo. *(Len, 11/11: báo cáo theo nhà ở tab Báo cáo — xem G-11)*

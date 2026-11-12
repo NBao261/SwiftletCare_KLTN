@@ -100,7 +100,6 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `react-native-maps` có trong `package.json`                                                                                                                                           | — Report 4 §5.4 nói không thêm thư viện bản đồ                             | gỡ khi làm màn trang trại                                                                                                               |
 | FCM: chưa có `google-services.json` (`android.googleServicesFile`), backend chưa có endpoint nhận token trong `api-spec.yaml`                                                         | push (ALERT-FR-002)                                                        | chờ backend (G-10); không tự đặt endpoint                                                                                               |
-| Farm Technician chưa chấm điểm ngày: backend G-11 chỉ nhận Farm Owner (`ASSESSOR_ROLES`), `/health-reports` trả 403 cho kỹ thuật viên                                                  | chấm điểm ngày của kỹ thuật viên (BR-31, EXPERT-FR-012)                     | chờ backend G-20; rồi thêm `FARM_TECHNICIAN` vào `rateHealthDay` (`utils/permission.utils.ts`)                                          |
 | `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/harvests`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, harvest, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml`                                                                                                  |
 | `.env.example` còn ghi "SRS §9.1"                                                                                                                                                     | —                                                                          | đổi thành `docs/api/api-spec.yaml`                                                                                                      |
 
@@ -227,7 +226,7 @@ mobile/
 
 ### 2.1 Luồng theo role trên mobile
 
-Nguồn: Report 3 §2.2 (luồng MF), §2.4 (quyền), Report 4 §5.4 (phạm vi mobile). **Farm Owner**, **kỹ thuật viên nhà yến** và **Domain Expert** vào app. Kỹ thuật viên dùng cùng màn với Farm Owner trên nhà được giao: điều khiển tay, cài kênh thông báo, nhận push (xác nhận cảnh báo, báo cáo, bằng chứng, gợi ý hệ số tạm ẩn vì backend G-20 chưa mở — Known debt trong `mobile/CLAUDE.md`); chưa được giao nhà thì danh sách ghi "Bạn chưa được giao nhà nào"; chỉ xem ngưỡng, hệ số, tham số; không đăng ký thiết bị, không tạo nhà/tầng, trang Tài khoản cơ bản (thêm dòng nhận push). Administrator đăng nhập đúng vẫn bị đăng xuất, kèm câu "Tài khoản này chỉ dùng được trên bản web".
+Nguồn: Report 3 §2.2 (luồng MF), §2.4 (quyền), Report 4 §5.4 (phạm vi mobile). **Farm Owner**, **kỹ thuật viên nhà yến** và **Domain Expert** vào app. Kỹ thuật viên dùng cùng màn với Farm Owner trên nhà được giao: điều khiển tay, cài kênh thông báo, nhận push, chấm ngày và xem báo cáo của nhà được giao (G-11; ô "Việc chờ bạn" ở Trang chủ chỉ đếm ngày chờ chấm) (xác nhận cảnh báo, bằng chứng, gợi ý hệ số tạm ẩn vì backend chưa mở — Known debt trong `mobile/CLAUDE.md`); chưa được giao nhà thì danh sách ghi "Bạn chưa được giao nhà nào"; chỉ xem ngưỡng, hệ số, tham số; không đăng ký thiết bị, không tạo nhà/tầng, trang Tài khoản cơ bản (thêm dòng nhận push). Administrator đăng nhập đúng vẫn bị đăng xuất, kèm câu "Tài khoản này chỉ dùng được trên bản web".
 
 ```
 Splash
@@ -251,7 +250,8 @@ Farm Owner — (tabs)
 │                thêm thiết bị (SF-01): quét nhãn QR hoặc nhập tay ─► đăng ký vào nhà / tầng; còn thiếu: Wi-Fi AP-mode, tiến trình setup (FARM-FR-012)
 │                Màn B có thẻ "Trạng thái ngày" (ngày gần nhất; còn chờ chấm thì nút "Đánh giá ngày") ─► health?houseId (các ngày của nhà, lọc Cần đánh giá / 7 / 14 / 30 ngày)
 │                       ─► health/[dayId]: ngày còn chờ chấm = form chấm (hướng dẫn quan sát BR-37, 3 mức, ghi chú, "Bỏ qua" có xác nhận); chấm xong = chi tiết
-│                       (trạng thái, lý do, 4 chỉ số, thời tiết, các đánh giá, thêm ghi chú); "Việc chờ bạn" ở Trang chủ mở ngày chờ cũ nhất
+│                       (trạng thái, lý do, 4 chỉ số, thời tiết, các đánh giá, thêm ghi chú); "Việc chờ bạn" ở Trang chủ mở ngày chờ cũ nhất;
+│                       kỹ thuật viên chấm như chủ trại trên nhà được giao (BR-31)
 │                còn thiếu: sửa tên, xoá nhà và tầng (backend chưa có API)
 │                harvests (ghi, sửa — SF-04)
 ├─ Cảnh báo    alerts: phạm vi ▾ riêng của tab, mặc định tất cả: Tất cả trang trại ─► một farm (Tất cả nhà) ─► một nhà (chip Tầng);

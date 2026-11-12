@@ -12,19 +12,23 @@ import { Radius, Spacing } from '@/constants/theme'
 import { usePendingVerdictAlertCount } from '@/hooks/alert/usePendingVerdictAlertCount'
 import { usePendingHealthDays } from '@/hooks/health/usePendingHealthDays'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { useAuthStore } from '@/stores/authStore'
 import { getOldestPendingDay, summarizePendingTasks } from '@/utils/healthDay.utils'
 import { t } from '@/utils/i18n.utils'
+import { canPerform } from '@/utils/permission.utils'
 
 const COUNT_BOX_SIZE = 48
 // Chiều cao khung xương / khung lỗi: ô số 48 + lề card 16×2
 const CARD_HEIGHT = COUNT_BOX_SIZE + Spacing.lg * 2
 
-// Khối "Việc chờ bạn": ngày chờ chủ chấm + cảnh báo chờ chủ phán quyết; hết việc vẫn giữ khối, số là 0
+// Khối "Việc chờ bạn": ngày chờ người dùng chấm (chủ trại, kỹ thuật viên) + cảnh báo chờ chủ phán quyết (chỉ chủ trại);
+// hết việc vẫn giữ khối, số là 0
 export function PendingTasksCard() {
   const palette = usePalette()
   const queryClient = useQueryClient()
+  const user = useAuthStore(state => state.user)
   const pendingDaysQuery = usePendingHealthDays()
-  const pendingVerdicts = usePendingVerdictAlertCount()
+  const pendingVerdicts = usePendingVerdictAlertCount(canPerform(user, 'viewOwnerTasks'))
 
   if (pendingVerdicts.isLoading || pendingDaysQuery.isLoading) {
     return <Skeleton width="100%" height={CARD_HEIGHT} delayMs={HOME_SKELETON_DELAY_MS.tasks} />
