@@ -110,6 +110,8 @@ const en: Record<string, string> = {
   'Chờ xoá': 'Pending deletion',
   'Đã xoá': 'Deleted',
   'Chờ kết nối': 'Awaiting connection',
+  'Giả lập': 'Simulated',
+  'Thiết bị của bộ giả lập, không phải thiết bị thật': 'Simulator device, not a real one',
   Lỗi: 'Error',
   'Suy giảm': 'Degraded',
   'Mới': 'New',

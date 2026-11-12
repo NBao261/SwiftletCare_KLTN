@@ -1,6 +1,7 @@
 import { CpuIcon, InfoIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { Badge, Button, type BadgeTone } from '@/components/ui'
 import { Drawer } from '@/components/ui/Drawer'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { ZONE_METRICS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { wifiQuality, type DeviceRow, type ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 import { useDeviceProfile } from '@/hooks/farm-owner/useFarmStructure'
@@ -49,7 +50,10 @@ export default function DeviceDetailDrawer({ device, zoneNode, onClose }: Device
             </span>
             <div className="min-w-0">
               <p className="truncate text-h3 text-charcoal">{t(isSensor ? 'device.sensor.name' : 'device.camera.name')}</p>
-              <p className="truncate text-small text-warmGray">{device.deviceId}</p>
+              <p className="flex min-w-0 items-center gap-1.5 text-small text-warmGray">
+                <span className="truncate">{device.deviceId}</span>
+                <SimulatedBadge simulated={device.simulated} />
+              </p>
             </div>
           </div>
           <Badge tone={STATUS_TONE[device.status]}>{t(`status.${device.status}`)}</Badge>
