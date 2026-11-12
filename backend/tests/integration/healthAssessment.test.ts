@@ -185,13 +185,15 @@ describe('job đánh giá (SM-17)', () => {
     }
   })
 
-  it('báo cả Farm Technician được giao nhà (BR-31), không báo thợ đã rời farm', async () => {
+  it('báo cả Farm Technician được giao nhà (BR-31), không báo thợ đã rời farm hay bị khoá', async () => {
     const { farm, house, owner } = await scenario({ rates: FLOCK_CLEAR })
-    const [assigned, left] = await Promise.all(['a', 'b'].map(tag => User.create({
-      email: `ft-${tag}-${house._id}@t.vn`, password_hash: 'password123', full_name: tag, role: 'FARM_TECHNICIAN',
+    const [assigned, left, locked] = await Promise.all(['a', 'b', 'c'].map(tag => User.create({
+      email: `ft-${tag}-${house._id}@t.vn`, password_hash: 'password123', full_name: tag, role: 'FARM_TECHNICIAN', is_active: tag !== 'c',
     })))
-    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: assigned._id, role: 'FARM_TECHNICIAN' } } })
-    await House.updateOne({ _id: house._id }, { $set: { technicians: [{ user_id: assigned._id, primary: true }, { user_id: left._id, primary: false }] } })
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { $each: [assigned, locked].map(u => ({ user_id: u._id, role: 'FARM_TECHNICIAN' })) } } })
+    await House.updateOne({ _id: house._id }, {
+      $set: { technicians: [{ user_id: assigned._id, primary: true }, { user_id: left._id, primary: false }, { user_id: locked._id, primary: false }] },
+    })
 
     expect(await assessAllHouses(DATE, NOW)).toBe(1)
     const recipients = (notifyUser as jest.Mock).mock.calls.map(c => c[0]).sort()

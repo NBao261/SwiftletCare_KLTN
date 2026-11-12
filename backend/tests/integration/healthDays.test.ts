@@ -12,6 +12,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import farmRoutes from '@/routes/farms.route'
 import healthReportRoutes from '@/routes/healthReports.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
+import { Alert } from '@/models/alert.model'
 import { AuditLog } from '@/models/auditLog.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Farm } from '@/models/farm.model'
@@ -322,6 +323,28 @@ describe('giai đoạn nhà (FARM-FR-014, BR-46)', () => {
   })
 })
 
+describe('giai đoạn nhà: cảnh báo, lịch trực, quyền (BR-46, Report 3 §2.4)', () => {
+  it('sang ATTRACTING thì đóng LOW_RETURN_RATE đang mở; response không có lịch trực trừ Farm Owner; thợ → 403', async () => {
+    const { farm, house, ownerToken, expertToken } = await setup()
+    const { technician, token: technicianToken } = await addTechnician(farm, house)
+    const shift = { technician_id: technician._id, role: 'PRIMARY', weekdays: [1], start: '06:00', end: '18:00' }
+    await House.updateOne({ _id: house._id }, { $set: { roster: [shift] } })
+    const open = await Alert.create({
+      farm_id: farm._id, house_id: house._id, type: 'LOW_RETURN_RATE', severity: 'LOW', title: 't', message: 'm', status: 'ACTIVE',
+    })
+    const path = `/farms/houses/${house._id}/stage`
+
+    await call('put', path, technicianToken, { stage: 'ATTRACTING' }).expect(403)
+    const byExpert = (await call('put', path, expertToken, { stage: 'ATTRACTING' }).expect(200)).body.data
+    expect(byExpert).not.toHaveProperty('roster')
+    expect((await Alert.findById(open._id).lean())!.status).toBe('RESOLVED')
+
+    // Cùng giai đoạn (không ghi gì) cũng không trả lịch trực
+    expect((await call('put', path, expertToken, { stage: 'ATTRACTING' }).expect(200)).body.data).not.toHaveProperty('roster')
+    expect((await call('put', path, ownerToken, { stage: 'OCCUPIED' }).expect(200)).body.data.roster).toHaveLength(1)
+  })
+})
+
 describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
   it('chuyên gia sửa → 200; chủ trại khi farm có chuyên gia → 403; ngoài khoảng hoặc CLEAR nhẹ hơn SLIGHT → 400', async () => {
     const { house, ownerToken, expertToken } = await setup()
@@ -400,6 +423,20 @@ describe('ngày lệch (EXPERT-FR-022)', () => {
   const rated = (by: { _id: unknown }, role: string, snap: HealthStatus, value: string, note?: string) => ({
     by: by._id, role, outcome: 'RATED', rating: value, note, at: new Date(),
     snapshot: { status: snap, reasons: [FLOCK_REASON], levels },
+  })
+
+  it('Farm Owner xem thay chuyên gia (BR-22) không thấy ngày mình còn chờ chấm (BR-31)', async () => {
+    const { farm, house, owner } = await seedHouse({ withExpert: false })
+    const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
+    const { technician } = await addTechnician(farm, house)
+    const day = await mkDay(house, YESTERDAY, 'ACTION', { ratings: [rated(technician, 'FARM_TECHNICIAN', 'ACTION', 'WATCH', 'Chim về đều')] })
+    const path = `/health-reports/disagreements?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}`
+
+    expect((await call('get', path, ownerToken).expect(200)).body.data.days).toEqual([])
+    await call('post', `/health-reports/days/${day._id}/rating`, ownerToken, { rating: 'ACTION' }).expect(201)
+    const listed = (await call('get', path, ownerToken).expect(200)).body.data.days
+    expect(listed).toHaveLength(1)
+    expect(listed[0].disagreements).toEqual([expect.objectContaining({ assessor: { full_name: 'Thợ', role: 'FARM_TECHNICIAN' }, rating: 'WATCH' })])
   })
 
   it('chỉ trả ngày có điểm của người chấm khác ảnh chụp, kèm chỉ số, lý do và mức của nhà', async () => {

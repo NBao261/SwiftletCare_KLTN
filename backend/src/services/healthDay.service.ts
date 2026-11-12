@@ -381,6 +381,9 @@ export async function listDisagreements(
   const houses = await House.find({ _id: { $in: [...houseNames.keys()] } }).select('name health_levels').lean()
 
   const result = days.flatMap(d => {
+    // BR-31 — Farm Owner xem ngày lệch thay chuyên gia (BR-22) nhưng vẫn là người chấm: ngày mình còn chờ chấm
+    // thì không lộ trạng thái, lý do hay điểm của người khác, như evaluateRatings
+    if (ratingState(d, user, now) === 'PENDING') return []
     const disagreements = d.ratings
       .filter(r => r.outcome === 'RATED' && r.rating && isAssessor(r.role)
         && r.snapshot.status !== 'INSUFFICIENT_DATA' && r.rating !== r.snapshot.status)

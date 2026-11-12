@@ -325,8 +325,13 @@ describe('checkReturnRateDrops (VISION-FR-011)', () => {
     const { camera, house } = await seed()
     await eveningRates(camera._id, house._id, [['2026-10-12', 90], ['2026-10-13', 90], ['2026-10-14', 90], ['2026-10-15', 60]])
 
+    // Cảnh báo còn mở từ trước khi sang ATTRACTING được đóng, không giữ suốt giai đoạn dẫn dụ
+    const open = await Alert.create({
+      farm_id: house.farm_id, house_id: house._id, type: 'LOW_RETURN_RATE', severity: 'LOW', title: 't', message: 'm', status: 'ACTIVE',
+    })
     await House.updateOne({ _id: house._id }, { stage: 'ATTRACTING', stage_history: [change('ATTRACTING', '2026-10-01T01:00:00Z')] })
     expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
+    expect((await Alert.findById(open._id).lean())!.status).toBe('RESOLVED')
 
     // Về OCCUPIED ngày 13/10: nền chỉ còn 14/10 → chưa đủ 3 ngày
     await House.updateOne({ _id: house._id }, {

@@ -228,7 +228,10 @@ export async function checkReturnRateDrops(sessionDate = vnDate(new Date())): Pr
 async function checkHouseReturnRate(houseId: string, sessionDate: string, from: string): Promise<boolean> {
   const stage = await House.findById(houseId).select('stage_history').lean()
   // BR-46 — nhà dẫn dụ không có LOW_RETURN_RATE; về OCCUPIED thì nền chỉ gồm các ngày sau lần chuyển
-  if (stageOn(stage?.stage_history, sessionDate) === 'ATTRACTING') return false
+  if (stageOn(stage?.stage_history, sessionDate) === 'ATTRACTING') {
+    await resolveHouseAlerts(houseId, 'LOW_RETURN_RATE', 'Nhà chuyển sang giai đoạn dẫn dụ: không xét tỷ lệ chim về (BR-46)')
+    return false
+  }
   const occupiedSince = baselineAfter(stage?.stage_history, sessionDate)
   const days = await houseDailyCounts(houseId, { from, to: sessionDate })
   const today = days.at(-1)

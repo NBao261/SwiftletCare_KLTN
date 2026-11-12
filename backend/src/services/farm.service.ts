@@ -5,13 +5,14 @@ import { CoefficientProposal } from '@/models/coefficientProposal.model'
 import { User, IUser } from '@/models/user.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
-import { OPEN_STATUSES } from '@/services/alert.service'
+import { OPEN_STATUSES, resolveHouseAlerts } from '@/services/alert.service'
 import {
   hasFarmAccess, hasDeviceAccess, isPrimaryOwner, isFarmTechnician, canAccessHouse, listAssignedHouseIds,
   findFarmOrThrow, findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { assertValidRoster, type RosterShift } from '@/utils/roster.util'
+import { DEFAULT_HOUSE_STAGE } from '@/utils/houseStage.util'
 import { paginate } from '@/utils/helpers.util'
 import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange } from '@/services/parameterReview.service'
@@ -495,26 +496,25 @@ export async function createHouse(
 /** Nhà trong GET /farms/:id/houses: lịch trực tuỳ role (Report 3 §2.4) */
 export type HouseListItem = Omit<IHouse, 'roster'> & { roster?: IHouse['roster'] }
 
+/** Nhà trả cho người gọi: lịch trực chỉ Farm Owner nhận, thợ chỉ ca của mình (Report 3 §2.4) */
+function presentHouse(house: IHouse, user: CurrentUser): HouseListItem {
+  if (user.role === 'FARM_OWNER') return house
+  const plain = house.toObject() as unknown as HouseListItem
+  if (user.role === 'FARM_TECHNICIAN') plain.roster = (plain.roster ?? []).filter(s => String(s.technician_id) === user._id)
+  else delete plain.roster
+  return plain
+}
+
 export async function listHouses(farmId: string, user: CurrentUser): Promise<HouseListItem[]> {
   const farm = await findFarmOrThrow(farmId)
   // AUTH-FR-013 — Farm Technician chỉ nhận các nhà được giao; lịch trực chỉ còn ca của mình (§2.4 "read own roster")
   if (isFarmTechnician(farm, user)) {
     const assigned = await House.find({ farm_id: farm._id, _id: { $in: await listAssignedHouseIds(user) } }).sort({ created_at: -1 })
-    return assigned.map(house => {
-      const plain = house.toObject() as unknown as HouseListItem
-      plain.roster = (plain.roster ?? []).filter(s => String(s.technician_id) === user._id)
-      return plain
-    })
+    return assigned.map(house => presentHouse(house, user))
   }
   if (!hasDeviceAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
   const houses = await House.find({ farm_id: farm._id }).sort({ created_at: -1 })
-  // Lịch trực là của Farm Owner (§2.4): Domain Expert và Administrator không nhận
-  if (user.role === 'FARM_OWNER') return houses
-  return houses.map(house => {
-    const plain = house.toObject() as unknown as HouseListItem
-    delete plain.roster
-    return plain
-  })
+  return houses.map(house => presentHouse(house, user))
 }
 
 /** FARM-FR-002 */
@@ -718,25 +718,27 @@ export async function updateHouseHealthLevels(houseId: string, user: CurrentUser
  * giá đàn chim, không có LOW_RETURN_RATE; về `OCCUPIED` thì cửa sổ so sánh BR-21 tính lại từ ngày kế tiếp (BR-46).
  * Đặt lại đúng giai đoạn đang có thì không ghi gì.
  */
-export async function setHouseStage(houseId: string, user: CurrentUser, stage: HouseStage): Promise<IHouse> {
+export async function setHouseStage(houseId: string, user: CurrentUser, stage: HouseStage): Promise<HouseListItem> {
   const { house, farm } = await assertHouseAccess(houseId, user)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền đặt giai đoạn của nhà này')
-  const before = house.stage ?? 'OCCUPIED'
-  if (before === stage) return house
+  const before = house.stage ?? DEFAULT_HOUSE_STAGE
+  if (before === stage) return presentHouse(house, user)
 
   house.stage = stage
   house.stage_history.push({ stage, changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date() })
   await house.save()
+  // BR-46 — nhà dẫn dụ không có LOW_RETURN_RATE: cảnh báo còn mở từ giai đoạn trước được đóng
+  if (stage === 'ATTRACTING') await resolveHouseAlerts(String(house._id), 'LOW_RETURN_RATE', 'Nhà chuyển sang giai đoạn dẫn dụ: không xét tỷ lệ chim về (BR-46)')
   const auditId = await logAction(user._id, 'HOUSE_STAGE_UPDATED', 'house', String(house._id), {
     before, after: stage,
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
     what: 'đổi giai đoạn nhà', place: `Nhà "${house.name}"`, detail: `${before} → ${stage}`,
   })
-  return house
+  return presentHouse(house, user)
 }
 
-export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IHouse> {
+export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<HouseListItem> {
   const { house, farm } = await assertHouseAccess(houseId, user)
   // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
   await assertExpertDecision(farm, user)
@@ -761,5 +763,5 @@ export async function updateHouseBirdCountTuning(houseId: string, user: CurrentU
   await notifyExpertDecision(user, farm._id, auditId, {
     what: 'chỉnh mức giảm tỷ lệ chim về', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
   })
-  return house
+  return presentHouse(house, user)
 }

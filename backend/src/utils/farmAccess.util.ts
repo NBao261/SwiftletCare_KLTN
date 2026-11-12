@@ -218,6 +218,20 @@ export async function listFarmHouseIds(farmId: string, user: CurrentUser) {
   return House.find({ farm_id: farm._id }).distinct('_id')
 }
 
+/**
+ * Thợ được giao nhà, còn là Farm Technician của farm và còn hoạt động (AUTH-FR-013): những người nhận việc
+ * của nhà, như thông báo "ngày đã sẵn sàng" (BR-31). Gỡ khỏi farm hay bị khoá thì không còn nhận.
+ */
+export async function listActiveHouseTechnicianIds(houseId: unknown): Promise<string[]> {
+  const house = await House.findById(houseId).select('farm_id technicians').lean()
+  if (!house || (house.technicians ?? []).length === 0) return []
+  const farm = await Farm.findById(house.farm_id).select('members').lean()
+  const farmTechnicians = new Set((farm?.members ?? []).filter(m => m.role === 'FARM_TECHNICIAN').map(m => String(m.user_id)))
+  const ids = house.technicians.map(t => String(t.user_id)).filter(id => farmTechnicians.has(id))
+  if (ids.length === 0) return []
+  return (await User.find({ _id: { $in: ids }, is_active: true }).distinct('_id')).map(String)
+}
+
 /** Mọi House thuộc Farm chưa xoá mềm — cùng phạm vi với listActiveZoneIds cho màn hình Admin */
 export async function listActiveHouseIds() {
   const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
