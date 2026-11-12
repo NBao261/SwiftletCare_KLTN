@@ -7,6 +7,7 @@ import { useActiveAlertSummary } from '@/hooks/alert/useActiveAlertSummary'
 import { useAlerts } from '@/hooks/alert/useAlerts'
 import { getSeverityLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 // Vài cảnh báo đang mở mới nhất cho phần chi tiết
 const LATEST_ALERT_PARAMS = { status: 'ACTIVE', limit: String(MAX_DETAIL_ITEMS) }
@@ -56,7 +57,7 @@ export function AlertStatTile() {
           isProblem: alert.severity === 'CRITICAL' || alert.severity === 'HIGH',
         }))}
         hiddenCount={Math.max(0, (alertSummary?.total ?? 0) - latestAlerts.length)}
-        onViewAll={() => router.navigate('/(tabs)/alerts')}
+        onViewAll={() => router.navigate({ pathname: '/(tabs)/alerts', params: { returnTo: RETURN_TO_HOME } })}
       />
     </>
   )

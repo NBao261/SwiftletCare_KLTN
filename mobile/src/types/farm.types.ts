@@ -1,10 +1,11 @@
 import type { Role } from './auth.types'
 
-// Thành viên farm: FARM_OWNER = đồng sở hữu, DOMAIN_EXPERT = chuyên gia; member cũ không có role → đồng sở hữu
+// Thành viên farm: FARM_OWNER = đồng sở hữu, DOMAIN_EXPERT = chuyên gia, FARM_TECHNICIAN = kỹ thuật viên nhà yến (G-20);
+// member cũ không có role → đồng sở hữu
 export interface FarmMember {
   user_id: string
   is_primary: boolean
-  role?: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
+  role?: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
   joined_at: string
   // Chỉ có ở GET /farms/{id} (tên người xác nhận, người phán quyết cảnh báo)
   full_name?: string
@@ -53,7 +54,7 @@ export interface Thresholds {
   co2_max: number
 }
 
-// Hệ số bộ điều khiển mờ của Zone (ENV-FR-021) — tên field = key MQTT config/update
+// Hệ số bộ điều khiển fuzzy của Zone (ENV-FR-021) — tên field = key MQTT config/update
 export interface FuzzyTuning {
   fuzzy_humidity_band?: number
   fuzzy_temp_band?: number
@@ -71,7 +72,7 @@ export interface DetectionTuning {
   speaker_drop_pct?: number
 }
 
-// Một lần đổi hệ số mờ của zone (Zone.fuzzy_tuning_history trong api-spec); changed_by là id, không có tên
+// Một lần đổi hệ số fuzzy của zone (Zone.fuzzy_tuning_history trong api-spec); changed_by là id, không có tên
 export interface FuzzyTuningHistoryEntry {
   changed_by: string
   changed_by_role?: Role

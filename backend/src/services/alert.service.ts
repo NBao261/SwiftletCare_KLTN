@@ -6,7 +6,10 @@ import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew, emitHouseAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
-import { assertExpertDecision, assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import {
+  assertExpertDecision, assertFarmAccess, assertHouseAccess, assertZoneAccess, listAccessibleFarmIds, listAccessibleHouseIds,
+  listAccessibleZoneIds,
+} from '@/utils/farmAccess.util'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
@@ -398,17 +401,19 @@ export interface ListAlertsQuery {
 }
 
 /**
- * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Technician thấy
- * cảnh báo thiết bị của mọi farm (FARM-FR-009); Admin không thấy farm nào (Report 3 §2.4).
+ * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Administrator thấy
+ * cảnh báo thiết bị của mọi farm (FARM-FR-009, Report 3 §2.4); Farm Technician thấy cảnh báo của
+ * các nhà được giao (§2.4, AUTH-FR-013) — việc gửi cảnh báo tới thợ theo ca trực là G-21.
  */
 export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
-  const accessibleFarms = await listAccessibleFarmIds(user, 'device')
-  const filter: Record<string, unknown> = { farm_id: { $in: accessibleFarms } }
-  // $and để giữ nguyên bộ lọc `type` của người gọi: giao với loại thiết bị
-  if (user.role === 'TECHNICIAN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
+  const filter: Record<string, unknown> = await alertScopeFilter(user)
 
   if (query.farmId) {
-    if (!accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
+    // Thợ đã bị giới hạn theo nhà nên farm khác chỉ cho danh sách rỗng
+    if (user.role !== 'FARM_TECHNICIAN') {
+      const accessibleFarms = await listAccessibleFarmIds(user, 'device')
+      if (!accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
+    }
     filter.farm_id = query.farmId
   }
   if (query.zoneId) filter.zone_id = query.zoneId
@@ -439,10 +444,28 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   return { records, total, page, limit, unreadCount }
 }
 
-/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Technician chỉ cảnh báo thiết bị) */
+/** Phạm vi cảnh báo của 1 user: farm của mình; thợ theo nhà được giao (cảnh báo của zone hoặc của nhà) */
+async function alertScopeFilter(user: CurrentUser): Promise<Record<string, unknown>> {
+  if (user.role === 'FARM_TECHNICIAN') {
+    const [houseIds, zoneIds] = await Promise.all([listAccessibleHouseIds(user), listAccessibleZoneIds(user)])
+    return { $or: [{ house_id: { $in: houseIds } }, { zone_id: { $in: zoneIds } }] }
+  }
+  const filter: Record<string, unknown> = { farm_id: { $in: await listAccessibleFarmIds(user, 'device') } }
+  // $and để giữ nguyên bộ lọc `type` của người gọi: giao với loại thiết bị
+  if (user.role === 'ADMIN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
+  return filter
+}
+
+/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Administrator chỉ cảnh báo thiết bị) */
 async function findAlertWithAccess(alertId: string, user: CurrentUser) {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
+  if (user.role === 'FARM_TECHNICIAN') {
+    // AUTH-FR-013 — thợ chỉ trên nhà được giao: cảnh báo của zone theo nhà chứa zone, cảnh báo của nhà theo nhà
+    if (alert.zone_id) return { alert, farm: (await assertZoneAccess(String(alert.zone_id), user)).farm }
+    if (alert.house_id) return { alert, farm: (await assertHouseAccess(String(alert.house_id), user)).farm }
+    throw ForbiddenError('Không có quyền trên cảnh báo này')
+  }
   const farm = await assertFarmAccess(String(alert.farm_id), user, DEVICE_ALERT_TYPES.includes(alert.type) ? 'device' : 'farm')
   return { alert, farm }
 }

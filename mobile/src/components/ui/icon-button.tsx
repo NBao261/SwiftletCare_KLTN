@@ -22,10 +22,12 @@ interface IconButtonProps {
   badgeCount?: number
   // Nét icon: 'fill' cho trạng thái đang bật (ví dụ đã ghim)
   weight?: IconWeight
+  // Màu icon, chỉ truyền token của palette (ví dụ palette.alert cho nút gỡ); mặc định palette.text
+  color?: string
 }
 
 // Nút chỉ có icon, không nền, kèm badge số tuỳ chọn
-export function IconButton({ icon: ButtonIcon, label, onPress, badgeCount = 0, weight = 'regular' }: IconButtonProps) {
+export function IconButton({ icon: ButtonIcon, label, onPress, badgeCount = 0, weight = 'regular', color }: IconButtonProps) {
   const palette = usePalette()
   const hasBadge = badgeCount > 0
   const badgeText = badgeCount > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : String(badgeCount)
@@ -39,7 +41,7 @@ export function IconButton({ icon: ButtonIcon, label, onPress, badgeCount = 0, w
       onPress={onPress}
       style={styles.button}
     >
-      <ButtonIcon size={ICON_SIZE} color={palette.text} weight={weight} />
+      <ButtonIcon size={ICON_SIZE} color={color ?? palette.text} weight={weight} />
       {hasBadge && (
         // Badge số đỏ chữ trắng — theo yêu cầu, khác badge lime của thanh tab
         <View style={[styles.badge, { backgroundColor: palette.notificationBadge, borderColor: palette.background }]}>

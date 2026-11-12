@@ -2,15 +2,19 @@ import { describe, expect, it } from '@jest/globals'
 import {
   COORDINATE_RULES,
   DETECTION_TUNING_RULES,
-  FLOOR_RULE,
   formatStoredNumber,
   FUZZY_TUNING_RULES,
+  getZoneFloorRule,
   hasDraftErrors,
+  HOUSE_FLOOR_RULE,
   isNumberDraftChanged,
+  NAME_MAX_LENGTH,
+  normalizeName,
   parseNumberDraft,
   parseNumberInput,
   THRESHOLD_RULES,
   toInputText,
+  validateName,
   validateNumber,
   validateNumberDraft,
   validateThresholdDraft,
@@ -68,7 +72,9 @@ describe('validateNumber', () => {
     expect(validateNumber('25', FUZZY_TUNING_RULES.fuzzy_humidity_band)).toBe('Từ 2 đến 20')
     expect(validateNumber('120,5', FUZZY_TUNING_RULES.fuzzy_window_sec)).toBe('Nhập số nguyên')
     expect(validateNumber('', FUZZY_TUNING_RULES.fuzzy_temp_band)).toBe('Nhập một số')
-    expect(validateNumber('0', FLOOR_RULE)).toBe('Từ 1 trở lên')
+    expect(validateNumber('0', HOUSE_FLOOR_RULE)).toBe('Từ 1 đến 10')
+    expect(validateNumber('11', HOUSE_FLOOR_RULE)).toBe('Từ 1 đến 10')
+    expect(validateNumber('2,5', HOUSE_FLOOR_RULE)).toBe('Nhập số nguyên')
   })
 
   it('đúng mép khoảng thì hợp lệ', () => {
@@ -121,5 +127,36 @@ describe('formatStoredNumber', () => {
     expect(formatStoredNumber(0.05)).toBe('0,05')
     expect(formatStoredNumber(1500)).toBe('1.500')
     expect(formatStoredNumber(26)).toBe('26')
+  })
+})
+
+describe('getZoneFloorRule', () => {
+  it('tầng của khu vực không vượt số tầng của nhà; nhà chưa có số tầng thì lấy mức 10', () => {
+    expect(validateNumber('3', getZoneFloorRule(3))).toBeNull()
+    expect(validateNumber('4', getZoneFloorRule(3))).toBe('Từ 1 đến 3')
+    expect(getZoneFloorRule(undefined).max).toBe(HOUSE_FLOOR_RULE.max)
+  })
+})
+
+describe('normalizeName', () => {
+  it('bỏ khoảng trắng thừa và hoa thường, giữ dấu tiếng Việt', () => {
+    expect(normalizeName('  nhà  A ')).toBe(normalizeName('Nhà a'))
+    expect(normalizeName('Nhà Á')).not.toBe(normalizeName('Nhà A'))
+  })
+})
+
+describe('validateName', () => {
+  const houseNames = ['Nhà A', 'Nhà B']
+
+  it('rỗng hoặc dài quá thì báo lỗi', () => {
+    expect(validateName('   ')).toBe('Không được để trống')
+    expect(validateName('a'.repeat(NAME_MAX_LENGTH))).toBeNull()
+    expect(validateName('a'.repeat(NAME_MAX_LENGTH + 1))).toBe('Tối đa 50 ký tự')
+  })
+
+  it('trùng tên cùng cấp (khác hoa thường, thừa khoảng trắng) thì báo câu trùng', () => {
+    expect(validateName(' nhà  a', houseNames, 'Trùng')).toBe('Trùng')
+    expect(validateName('Nhà C', houseNames, 'Trùng')).toBeNull()
+    expect(validateName('Nhà Á', houseNames, 'Trùng')).toBeNull()
   })
 })

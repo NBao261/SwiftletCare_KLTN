@@ -18,6 +18,8 @@ export interface SettingsInputProps {
   keyboardType?: KeyboardTypeOptions
   autoCapitalize?: 'none' | 'sentences' | 'characters' | 'words'
   editable?: boolean
+  // Số ký tự tối đa gõ được (ô tên: NAME_MAX_LENGTH)
+  maxLength?: number
 }
 
 // Ô nhập gọn trong bảng và lưới thông tin của trang cài đặt: nền Paper bo nhỏ, viền Ink khi đang nhập, viền cam khi lỗi
@@ -31,6 +33,7 @@ export function SettingsInput({
   keyboardType = 'decimal-pad',
   autoCapitalize = 'none',
   editable = true,
+  maxLength,
 }: SettingsInputProps) {
   const palette = usePalette()
   const [isFocused, setFocused] = useState(false)
@@ -47,6 +50,7 @@ export function SettingsInput({
       autoCapitalize={autoCapitalize}
       autoCorrect={false}
       editable={editable}
+      maxLength={maxLength}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={[

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet } from 'react-native'
 import { CaretDownIcon } from 'phosphor-react-native'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { Button } from '@/components/ui/button'
+import { CHIP_LABEL_MAX_LENGTH } from '@/components/ui/choice-chip'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import type { AlertsScope } from '@/hooks/alert/useAlertsScope'
@@ -11,6 +12,7 @@ import type { AlertType } from '@/types'
 import { isInferredAlert, type VerdictFilter } from '@/utils/alertList.utils'
 import { getAlertTypeLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
+import { truncateText } from '@/utils/name.utils'
 
 // Giá trị "Tất cả" trong bảng chọn
 const ALL = '__all__'
@@ -94,7 +96,7 @@ export function AlertFilterChips({ scope }: AlertFilterChipsProps) {
                 color={chip.isActive ? palette.onInverse : palette.text}
                 numberOfLines={1}
               >
-                {chip.label}
+                {truncateText(chip.label, CHIP_LABEL_MAX_LENGTH)}
               </Text>
               <CaretDownIcon size={14} color={chip.isActive ? palette.onInverse : palette.text} weight="bold" />
             </Pressable>

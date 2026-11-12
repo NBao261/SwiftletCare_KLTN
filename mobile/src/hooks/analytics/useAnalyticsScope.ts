@@ -4,9 +4,11 @@ import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
 import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useOrderedHouses } from '@/hooks/farm/useOrderedHouses'
+import { useAuthStore } from '@/stores/authStore'
 import { useFarmPrefsStore, type AnalyticsPrefs, type AnalyticsTab } from '@/stores/farmPrefsStore'
 import type { AnalyticsRange } from '@/types'
 import type { BirdPeriod } from '@/utils/analytics.utils'
+import { canPerform } from '@/utils/permission.utils'
 import type { SensorMetric } from '@/utils/threshold.utils'
 
 const TABS: readonly AnalyticsTab[] = ['birds', 'env', 'control', 'harvest', 'reports']
@@ -26,6 +28,8 @@ export interface AnalyticsParams {
 // Phạm vi đang xem ở màn Phân tích, dùng chung mọi tab: nhà, tầng (null = tất cả), khoảng, tab, chỉ số.
 // Thứ tự lấy: tham số route → lựa chọn đã nhớ → mặc định. Đổi gì cũng nhớ lại và ghi vào route
 export function useAnalyticsScope() {
+  const user = useAuthStore(state => state.user)
+  const canViewReports = canPerform(user, 'viewHealthReports')
   const params = useLocalSearchParams<AnalyticsParams & Record<string, string>>()
   const { userId, prefs } = useFarmPrefs()
   const setAnalyticsPrefs = useFarmPrefsStore(state => state.setAnalyticsPrefs)
@@ -63,7 +67,9 @@ export function useAnalyticsScope() {
   const focusZone = zones.find(zone => zone._id === selectedZoneId) ?? zones[0] ?? null
 
   const remembered = prefs.analytics ?? {}
-  const tab: AnalyticsTab = TABS.find(item => item === params.tab) ?? remembered.tab ?? 'birds'
+  const requestedTab: AnalyticsTab = TABS.find(item => item === params.tab) ?? remembered.tab ?? 'birds'
+  // Tab Báo cáo chỉ cho role backend cho xem báo cáo sức khỏe; role khác về tab Đàn chim
+  const tab: AnalyticsTab = requestedTab === 'reports' && !canViewReports ? 'birds' : requestedTab
   const metric: SensorMetric = METRICS.find(item => item === params.metric) ?? remembered.metric ?? 'temperature'
   const storedRange: AnalyticsRange = remembered.range ?? '7d'
   // Khoảng ngắn chỉ hợp lệ ở tab Môi trường; tab khác dùng 24 giờ

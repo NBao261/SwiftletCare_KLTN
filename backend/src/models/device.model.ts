@@ -1,5 +1,5 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
-import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role } from '@/types'
+import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role, ConfigSyncState } from '@/types'
 
 /**
  * SensorNode + CameraNode Documents – SRS §8.2
@@ -25,6 +25,12 @@ export interface ISensorNode extends Document {
   ota_failed?: { version: string; failed_at: Date; running_version: string }
   last_heartbeat?: Date
   status: DeviceStatus
+  /** ENV-FR-027 — phiên bản cấu hình heartbeat gần nhất báo; null = firmware không báo (UNKNOWN) */
+  applied_config_version?: number | null
+  /** Report 3 §6.12 — controller mới bắt đầu ở PENDING (FARM-FR-012) */
+  config_sync: ConfigSyncState
+  /** BR-24 — số heartbeat liên tiếp vẫn báo phiên bản cũ */
+  config_stale_heartbeats: number
   rssi?: number
   /** FARM-FR-006 — chẩn đoán từ xa, lấy từ heartbeat (firmware ≥ 1.4.0 mới gửi reset_reason, ip) */
   booted_at?: Date
@@ -49,6 +55,8 @@ export interface ISensorNode extends Document {
     loop: boolean
   }
   registered_at: Date
+  /** SYSTEM-FR-004 — chép từ kho lúc đăng ký: thiết bị của bộ giả lập, mọi màn hình phải ghi rõ */
+  simulated: boolean
   /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
   /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
@@ -94,6 +102,8 @@ export interface ICameraNode extends Document {
   /** Số khung hình xử lý mỗi giây ở heartbeat gần nhất */
   fps?: number
   registered_at: Date
+  /** SYSTEM-FR-004 — chép từ kho lúc đăng ký: thiết bị của bộ giả lập, mọi màn hình phải ghi rõ */
+  simulated: boolean
   /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
   /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
@@ -162,6 +172,9 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     // tiên (Flow 1 bước 4→8). cron job `deviceOffline.job` chỉ quét node ONLINE nên node
     // PENDING không bị nhầm thành OFFLINE khi chưa từng kết nối.
     status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE'] satisfies DeviceStatus[], default: 'PENDING' },
+    applied_config_version: { type: Number, default: null },
+    config_sync:      { type: String, enum: ['PENDING','APPLIED','MISMATCH','UNKNOWN'] satisfies ConfigSyncState[], default: 'PENDING' },
+    config_stale_heartbeats: { type: Number, default: 0 },
     rssi:             { type: Number },
     booted_at:        { type: Date },
     free_heap:        { type: Number },
@@ -191,6 +204,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
     },
     registered_at:   { type: Date, default: Date.now },
     registered_by:   { type: Schema.Types.ObjectId, ref: 'User' },
+    simulated:       { type: Boolean, default: false },
     activation_overdue_at: { type: Date },
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },
@@ -217,6 +231,7 @@ const cameraNodeSchema = new Schema<ICameraNode>(
     fps:            { type: Number },
     registered_at:  { type: Date, default: Date.now },
     registered_by:  { type: Schema.Types.ObjectId, ref: 'User' },
+    simulated:      { type: Boolean, default: false },
     activation_overdue_at: { type: Date },
     decommissioned_at:   { type: Date },
     decommission_reason: { type: String },

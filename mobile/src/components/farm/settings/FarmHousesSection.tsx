@@ -27,9 +27,7 @@ export function FarmHousesSection({ houses, editor, onOpenHouse, onAdd }: FarmHo
       subtitle={t('Bấm một nhà để vào cài đặt của nhà')}
       scopeLabel={t('Trang trại')}
       isExpanded={editor.isExpanded(SECTION_ID)}
-      onToggle={() => editor.toggle(SECTION_ID)}
-      footerNote={t('Đổi tên, xoá nhà sẽ mở khi backend có API')}
-    >
+      onToggle={() => editor.toggle(SECTION_ID)}    >
       <SettingsTable
         columns={[
           { label: t('Tên nhà'), flex: 2 },

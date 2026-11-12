@@ -9,10 +9,11 @@ import { cn } from '@/lib/cn'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { NO_VALUE } from '@/constants/display'
+import type { HouseStaff } from '@/hooks/farm-owner/useFarmStructure'
 
 interface HouseCardProps {
   node: HouseNode
-  staff?: { name: string; initials: string }
+  staff?: HouseStaff
   pinned: boolean
   /** false = role không xem được thu hoạch → ẩn sản lượng tháng */
   showYield: boolean

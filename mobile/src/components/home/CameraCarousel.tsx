@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 import { HOME_SKELETON_DELAY_MS } from '@/constants/homeSkeleton'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 const CARD_GAP = Spacing.md
 // Chiều cao khung giữ chỗ khi đang tải/lỗi: khung 16:9 + phần chữ bên dưới
@@ -71,7 +72,7 @@ export function CameraCarousel({ onOpen }: CameraCarouselProps) {
         <EmptyState
           variant="create"
           message={t('Tạo camera AI')}
-          onAction={() => router.navigate('/(tabs)/farms')}
+          onAction={() => router.navigate({ pathname: '/(tabs)/farms', params: { returnTo: RETURN_TO_HOME } })}
           width={CAMERA_CARD_WIDTH}
           height={PLACEHOLDER_HEIGHT}
         />

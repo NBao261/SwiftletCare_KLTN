@@ -45,7 +45,7 @@ describe('canPerform', () => {
     }
   })
 
-  it('ngưỡng và hệ số mờ: chủ trại và chuyên gia; tham số phát hiện, mức giảm tỷ lệ về tổ: chuyên gia, chủ trại khi farm chưa có chuyên gia', () => {
+  it('ngưỡng và hệ số fuzzy: chủ trại và chuyên gia; tham số phát hiện, mức giảm tỷ lệ về tổ: chuyên gia, chủ trại khi farm chưa có chuyên gia', () => {
     for (const action of ['editThresholds', 'editFuzzyTuning'] as const) {
       expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(true)
       expect(canPerform(buildUser('DOMAIN_EXPERT'), action)).toBe(true)
@@ -93,6 +93,34 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('FARM_OWNER'), 'manageFarmMembers', { isPrimaryOwner: false })).toBe(false)
     expect(canPerform(buildUser('FARM_OWNER'), 'manageFarmMembers')).toBe(false)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'manageFarmMembers', { isPrimaryOwner: true })).toBe(false)
+  })
+
+  it('kỹ thuật viên nhà yến (G-20): điều khiển tay, cài thông báo, dùng chuông; không sửa cấu hình, không lập thiết bị', () => {
+    const technician = buildUser('FARM_TECHNICIAN')
+    // Backend G-20 chưa cho kỹ thuật viên xác nhận cảnh báo, xem báo cáo, bằng chứng, gợi ý hệ số
+    expect(canPerform(technician, 'acknowledgeAlert')).toBe(false)
+    expect(canPerform(technician, 'viewHealthReports')).toBe(false)
+    expect(canPerform(technician, 'viewAlertEvidence')).toBe(false)
+    expect(canPerform(technician, 'viewControlSuggestion')).toBe(false)
+    expect(canPerform(technician, 'limitedToAssignedHouses')).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'limitedToAssignedHouses')).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'viewHealthReports')).toBe(true)
+    expect(canPerform(technician, 'controlRelay')).toBe(true)
+    expect(canPerform(technician, 'clearRelayOverride')).toBe(true)
+    expect(canPerform(technician, 'editNotificationSettings')).toBe(true)
+    expect(canPerform(technician, 'viewBell')).toBe(true)
+    expect(canPerform(technician, 'setAlertVerdict', { farmHasExpert: false })).toBe(false)
+    expect(canPerform(technician, 'editThresholds')).toBe(false)
+    expect(canPerform(technician, 'editFuzzyTuning')).toBe(false)
+    expect(canPerform(technician, 'editDetectionTuning', { farmHasExpert: false })).toBe(false)
+    expect(canPerform(technician, 'setupDevice')).toBe(false)
+    expect(canPerform(technician, 'registerCamera')).toBe(false)
+    expect(canPerform(technician, 'createHouse')).toBe(false)
+    expect(canPerform(technician, 'createZone')).toBe(false)
+    expect(canPerform(technician, 'viewOwnerProfile')).toBe(false)
+    expect(canPerform(technician, 'viewFarmMembers')).toBe(false)
+    expect(canPerform(technician, 'viewOwnerTasks')).toBe(false)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewBell')).toBe(false)
   })
 
   it('chưa đăng nhập thì không được thao tác nào', () => {

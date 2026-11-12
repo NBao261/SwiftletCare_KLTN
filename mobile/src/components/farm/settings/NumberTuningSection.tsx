@@ -26,7 +26,7 @@ import {
 } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
-// Công tắc bật/tắt đi kèm các hệ số (bộ lọc đầu vào của bộ điều khiển mờ)
+// Công tắc bật/tắt đi kèm các hệ số (bộ lọc đầu vào của bộ điều khiển fuzzy)
 export interface TuningToggle {
   label: string
   value: boolean | undefined
@@ -39,7 +39,7 @@ export interface NumberTuningSectionProps<K extends string> {
   title: string
   subtitle: string
   scopeLabel: string
-  footerNote: string
+  footerNote?: string
   keys: readonly K[]
   rules: Record<K, NumberRule>
   values: Partial<Record<K, number>> | undefined
@@ -184,7 +184,7 @@ function NumberTuningEditor<K extends string>(props: NumberTuningSectionProps<K>
   )
 }
 
-// Mục cài đặt gồm các tham số số có khoảng hợp lệ (hệ số mờ, tham số phát hiện, mức giảm tỷ lệ về tổ):
+// Mục cài đặt gồm các tham số số có khoảng hợp lệ (hệ số fuzzy, tham số phát hiện, mức giảm tỷ lệ về tổ):
 // xem dạng bảng Tham số · Giá trị · Khoảng; người có quyền bấm "Sửa" để nhập
 export function NumberTuningSection<K extends string>(props: NumberTuningSectionProps<K>) {
   const {

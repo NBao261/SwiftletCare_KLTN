@@ -16,7 +16,7 @@ const SECTIONS_VI: PolicySection[] = [
     // §1.2, C-5
     title: '1. Phạm vi',
     paragraphs: [
-      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản Chủ trại và Kỹ thuật viên; người đồng sở hữu và Chuyên gia tham gia qua lời mời.',
+      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản Chủ trại; người đồng sở hữu, Chuyên gia và Kỹ thuật viên nhà yến tham gia qua lời mời của Chủ trại.',
       'Dữ liệu cá nhân được xử lý theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân.',
     ],
   },
@@ -55,8 +55,8 @@ const SECTIONS_VI: PolicySection[] = [
     items: [
       'Chủ trại và người đồng sở hữu: toàn bộ dữ liệu trang trại của mình.',
       'Chuyên gia của trang trại: xem dữ liệu vận hành, số đếm chim và báo cáo; không điều khiển relay.',
-      'Kỹ thuật viên: nhà, khu, thiết bị và cảnh báo thiết bị; không xem số đo môi trường, số đếm chim, luồng camera, thu hoạch hay báo cáo. Mọi thao tác trên thiết bị đều được ghi nhật ký và báo cho Chủ trại.',
-      'Quản trị viên: tài khoản, nhật ký hệ thống và số liệu tổng quan; không xem dữ liệu của trang trại nào.',
+      'Kỹ thuật viên nhà yến: chỉ các nhà được Chủ trại giao — số đo, số đếm chim, luồng camera, thiết bị và cảnh báo của các nhà đó; không xem nhà khác. Mọi thao tác trên thiết bị đều được ghi nhật ký và báo cho Chủ trại.',
+      'Quản trị viên: tài khoản, nhật ký hệ thống, thiết bị và cảnh báo thiết bị của mọi trang trại để bảo trì từ xa; không xem số đo môi trường, số đếm chim hay báo cáo.',
     ],
   },
   {
@@ -109,7 +109,7 @@ const SECTIONS_EN: PolicySection[] = [
   {
     title: '1. Scope',
     paragraphs: [
-      'Each SwiftletCare installation serves one swiftlet house owner and that owner’s farms. There is no public sign-up: the Administrator creates the Farm Owner and Technician accounts; co-owners and the Domain Expert join by invitation.',
+      'Each SwiftletCare installation serves one swiftlet house owner and that owner’s farms. There is no public sign-up: the Administrator creates the Farm Owner account; co-owners, the Domain Expert and Farm Technicians join by the Farm Owner’s invitation.',
       'Personal data is processed according to Decree 13/2023/ND-CP on personal data protection (Vietnam).',
     ],
   },
@@ -140,8 +140,8 @@ const SECTIONS_EN: PolicySection[] = [
     items: [
       'Farm Owner and co-owners: all data of their own farms.',
       'The farm’s Domain Expert: operational data, bird counts and reports; cannot control relays.',
-      'Technician: houses, zones, devices and device alerts; cannot see environmental readings, bird counts, the camera stream, harvests or reports. Every device action is logged and reported to the Farm Owner.',
-      'Administrator: accounts, system logs and overview figures; cannot see the data of any farm.',
+      'Farm Technician: only the houses the Farm Owner assigns — readings, bird counts, the camera stream, devices and alerts of those houses; no other house. Every device action is logged and reported to the Farm Owner.',
+      'Administrator: accounts, system logs, and the devices and device alerts of every farm for remote maintenance; cannot see environmental readings, bird counts or reports.',
     ],
   },
   {

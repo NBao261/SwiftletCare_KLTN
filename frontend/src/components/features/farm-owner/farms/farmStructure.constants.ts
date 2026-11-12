@@ -41,3 +41,7 @@ export function thresholdRange(key: MetricMeta['key'], t: Thresholds): string | 
 
 /** Tra nhãn/đơn vị/số lẻ theo key — mọi nơi hiện 1 chỉ số (banner, card zone, drawer) định dạng giống nhau */
 export const METRIC_BY_KEY = Object.fromEntries(ZONE_METRICS.map(m => [m.key, m])) as Record<MetricMeta['key'], MetricMeta>
+
+// Bảng thành viên, lịch trực của trang nhà: khung cố định 5 dòng, nhiều hơn thì phân trang
+export const MEMBER_PAGE_SIZE = 5
+export const MEMBER_ROW_HEIGHT = 64

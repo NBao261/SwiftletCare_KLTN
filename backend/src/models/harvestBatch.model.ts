@@ -29,6 +29,9 @@ export interface IHarvestBatch extends Document {
     estimated_population?: number
   }
   status: HarvestStatus
+  /** HARVEST-FR-006 — Farm Owner xác nhận lô (lô của Farm Owner: chính người tạo, lúc tạo) */
+  confirmed_by?: Types.ObjectId
+  confirmed_at?: Date
   created_at: Date
   updated_at: Date
   is_deleted: boolean
@@ -59,7 +62,9 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
       avg_return_rate_30d: { type: Number },
       estimated_population: { type: Number },
     },
-    status: { type: String, enum: ['DRAFT'] satisfies HarvestStatus[], default: 'DRAFT' },
+    status: { type: String, enum: ['DRAFT', 'CONFIRMED'] satisfies HarvestStatus[], default: 'DRAFT' },
+    confirmed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+    confirmed_at: { type: Date },
     is_deleted: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }

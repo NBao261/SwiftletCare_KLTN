@@ -14,6 +14,7 @@ import { summarizeReturnRate } from '@/utils/returnRate.utils'
 import { t } from '@/utils/i18n.utils'
 import { HOME_SKELETON_DELAY_MS } from '@/constants/homeSkeleton'
 import { Skeleton } from '@/components/ui/skeleton'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 const ICON_BOX_SIZE = 40
 // Chiều cao thanh khi có số: lề 16×2 + 3 dòng chữ 16, 20, 16 + 2 khoảng 4
@@ -66,11 +67,11 @@ export function ReturnRateBar() {
   const handlePress = () => {
     const singleHouse = countedHouseIds.length === 1 ? houseById.get(countedHouseIds[0]) : undefined
     if (singleHouse) {
-      router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: singleHouse._id } })
+      router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId: singleHouse._id, returnTo: RETURN_TO_HOME } })
       return
     }
     // Nhiều nhà: mở tab Đàn chim của Phân tích (đổi nhà ở thanh trên)
-    router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'birds' } })
+    router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'birds', returnTo: RETURN_TO_HOME } })
   }
 
   if (isLoading) return <Skeleton width="100%" height={BAR_HEIGHT} delayMs={HOME_SKELETON_DELAY_MS.returnRate} />

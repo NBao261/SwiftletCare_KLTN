@@ -15,6 +15,7 @@ interface DeviceDiagnosticsPanelProps {
   onOpenReplace: () => void
   onOpenDecommission: () => void
   canOnboard: boolean
+  canPushConfig?: boolean
 }
 
 export default function DeviceDiagnosticsPanel({
@@ -25,6 +26,7 @@ export default function DeviceDiagnosticsPanel({
   onOpenReplace,
   onOpenDecommission,
   canOnboard,
+  canPushConfig = false,
 }: DeviceDiagnosticsPanelProps) {
   const [activeTab, setActiveTab] = useState<"config" | "audio">("config")
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
@@ -154,28 +156,32 @@ export default function DeviceDiagnosticsPanel({
         <div className="flex flex-col gap-4 animate-fade-in">
         <DeviceInfoCard node={node} />
         <div className="flex flex-col md:flex-row gap-4">
-          {canOnboard && node.status === "ONLINE" && (
+          {(canPushConfig || canOnboard) && node.status === "ONLINE" && (
             <div className="flex-1 p-5 bg-white border border-warmGray/10 rounded-2xl shadow-sm flex flex-col justify-between">
               <div>
                 <h4 className="text-small font-bold text-charcoal mb-1">Thao tác thiết bị</h4>
                 <p className="text-xs text-warmGray mb-4">Đồng bộ lại cấu hình chuẩn từ Zone hoặc dời thiết bị sang Zone khác khi cần thiết.</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={handlePushConfig}
-                  loading={sendCommand.isPending}
-                  className="flex-1"
-                >
-                  Đồng bộ cấu hình
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={onOpenReassign}
-                  className="flex-1"
-                >
-                  Dời Zone
-                </Button>
+                {canPushConfig && (
+                  <Button
+                    variant="secondary"
+                    onClick={handlePushConfig}
+                    loading={sendCommand.isPending}
+                    className="flex-1"
+                  >
+                    Đồng bộ cấu hình
+                  </Button>
+                )}
+                {canOnboard && (
+                  <Button
+                    variant="secondary"
+                    onClick={onOpenReassign}
+                    className="flex-1"
+                  >
+                    Dời Zone
+                  </Button>
+                )}
               </div>
             </div>
           )}

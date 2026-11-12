@@ -65,7 +65,7 @@ tags:
   - name: Auth
     description: "AUTH-FR-002..004/009/012 (đăng nhập/JWT/quên-đặt lại mật khẩu/yêu cầu xoá tài khoản). Không có đăng ký công khai và không đăng nhập bằng OTP (Report 3 §1.2, §8): Admin tạo tài khoản Farm Owner và Technician (AUTH-FR-005c), co-owner và Domain Expert tạo tài khoản từ link lời mời (`POST /invitations/{token}/create-account`, AUTH-FR-010)"
   - name: Admin
-    description: AUTH-FR-005c/007/011/012, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, tạo Technician và cấp lại mật khẩu tạm, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
+    description: AUTH-FR-005c/007/011/012, OPS-NFR-004 (quản lý tài khoản, khoá/mở khoá, xử lý yêu cầu xoá, dashboard trạng thái node toàn hệ thống) — mọi endpoint chỉ ADMIN
   - name: System
     description: SYSTEM-FR-001..003 (Module SYSTEM §5.11 — xem audit log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống) — mọi endpoint chỉ ADMIN
   - name: Farms
@@ -75,13 +75,13 @@ tags:
   - name: Internal
     description: Dịch vụ nội bộ gọi backend (MediaMTX hỏi quyền stream) — không mở ra Internet
   - name: Telemetry
-    description: "ENV-FR-001..005 — Farm Owner, Domain Expert của farm; Technician, Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
+    description: "ENV-FR-001..005 — Farm Owner, Domain Expert của farm; Farm Technician chỉ ở nhà được giao (AUTH-FR-004, 013); Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
   - name: Alerts
     description: ALERT-FR-001/002/006/007/008/009/014, EXPERT-FR-003 (Alert Engine — dedup, quiet hours, danh sách, xác nhận, kiểm chứng và bằng chứng của cảnh báo suy luận)
   - name: ExpertActivity
     description: "EXPERT-FR-009 — lịch sử quyết định của Domain Expert trên một farm (và của Farm Owner khi farm chưa có chuyên gia, BR-22); chỉ Farm Owner và Domain Expert của farm"
   - name: Analytics
-    description: "ANALYTICS-FR-001..005, VISION-FR-008..011 (biểu đồ môi trường, so sánh đa Zone, đếm chim/return-rate — chờ dữ liệu thật từ module VISION) — Farm Owner, Domain Expert của farm; Technician, Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
+    description: "ANALYTICS-FR-001..005, VISION-FR-008..011 (biểu đồ môi trường, so sánh đa Zone, đếm chim/return-rate — chờ dữ liệu thật từ module VISION) — Farm Owner, Domain Expert của farm; Farm Technician chỉ ở nhà được giao (AUTH-FR-004, 013), trừ `/analytics/control/suggestion`; Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
   - name: Harvests
     description: "HARVEST-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0) — ghi: Farm Owner; đọc: Farm Owner, Domain Expert; Technician, Administrator → 403 (Report 3 §2.4)"
   - name: HealthReports
@@ -571,77 +571,6 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
-  /admin/technicians:
-    post:
-      tags: [Admin]
-      summary: "Admin tự tạo tài khoản Technician (AUTH-FR-005c, Flow 16) — chỉ ADMIN"
-      description: |
-        `password` là mật khẩu tạm: tài khoản tạo ra có `must_change_password=true`,
-        Technician phải đổi (`PUT /auth/password`) trước khi dùng các API khác (403
-        `PASSWORD_CHANGE_REQUIRED`). Technician làm việc trên mọi farm (FARM-FR-009) nên không
-        có khu vực phụ trách; `assigned_regions` gửi lên bị bỏ qua.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password, full_name]
-              properties:
-                email: { type: string, format: email }
-                password: { type: string, minLength: 8, description: "Mật khẩu tạm" }
-                full_name: { type: string }
-                phone:
-                  type: string
-                  description: "Tuỳ chọn. 0 + 9 số hoặc +84 + 9 số; khoảng trắng, dấu chấm, gạch ngang được bỏ trước khi kiểm tra"
-                  example: "0912 345 678"
-      responses:
-        "201":
-          description: Đã tạo
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/User" } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-
-  /admin/technicians/{id}/password:
-    put:
-      tags: [Admin]
-      summary: "Cấp mật khẩu tạm mới cho Technician (AUTH-FR-005c) — chỉ ADMIN"
-      description: |
-        Dùng khi Technician quên mật khẩu (email chưa nối SMTP thật) hoặc tài khoản nghi bị
-        lộ. Backend sinh mật khẩu ngẫu nhiên 12 ký tự, trả **đúng 1 lần** trong
-        `data.temporary_password`; thu hồi mọi phiên, ngắt socket, đặt
-        `must_change_password=true`. Audit `TECHNICIAN_PASSWORD_RESET` (không ghi mật khẩu).
-      parameters:
-        [{ name: id, in: path, required: true, schema: { type: string } }]
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          technician: { $ref: "#/components/schemas/User" }
-                          temporary_password: { type: string, example: "q3Zx8_Lm0aPw" }
-        "400":
-          description: "Tài khoản không phải Technician"
-          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: "Tài khoản đã bị xoá theo yêu cầu"
-          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
-
   # ── SYSTEM ────────────────────────────────────────────────────────────────
   /admin/provisioned-devices:
     post:
@@ -664,6 +593,7 @@ paths:
               properties:
                 device_id: { type: string, pattern: "^[A-Za-z0-9_-]+$", example: node_101, description: "Chỉ chữ, số, `_`, `-` (NFR-10 d): device ID là username và một đoạn topic trên broker, nên `+`, `#`, `/` hay khoảng trắng → 422" }
                 kind: { type: string, enum: [SENSOR, CAMERA] }
+                simulated: { type: boolean, default: false, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập; controller/camera đăng ký từ mục kho này mang cờ simulated" }
       responses:
         "201":
           description: Đã cấp
@@ -672,7 +602,7 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, simulated: { type: boolean }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -911,7 +841,7 @@ paths:
       summary: Danh sách farm của user hiện tại
       description: |
         - FARM_OWNER, DOMAIN_EXPERT: các farm mình sở hữu hoặc là thành viên (Domain Expert chỉ thấy bản ghi thành viên của chính mình)
-        - TECHNICIAN: mọi farm, chỉ cấu trúc (`members` rỗng) — để chọn House→Zone khi setup thiết bị (FARM-FR-009)
+        - FARM_TECHNICIAN: các farm mình là thành viên, chỉ bản ghi thành viên của chính mình (AUTH-FR-005, 013)
         - ADMIN: rỗng — Administrator không thấy farm nào (Report 3 §2.4)
       responses:
         "200":
@@ -995,7 +925,7 @@ paths:
       summary: Chi tiết farm
       description: |
         Farm Owner của farm: đủ `members` và `owner`. Domain Expert: chỉ bản ghi thành viên của mình.
-        Technician: mọi farm, `members` rỗng, không có `owner` (FARM-FR-009). Administrator → 403.
+        Farm Technician (thành viên farm): chỉ bản ghi thành viên của mình. Administrator → 403.
       responses:
         "200":
           {
@@ -1083,14 +1013,15 @@ paths:
   /farms/{id}/members:
     post:
       tags: [Farms]
-      summary: "Mời đồng sở hữu (FARM_OWNER) hoặc Domain Expert (AUTH-FR-005/010, EXPERT-FR-001, Flow 12) — chỉ Primary Owner"
+      summary: "Mời đồng sở hữu (FARM_OWNER), Domain Expert hoặc Farm Technician (AUTH-FR-005/010, EXPERT-FR-001, Flow 12) — chỉ Primary Owner"
       description: |
         Tạo một Invitation PENDING (hết hạn sau 7 ngày); email chưa có tài khoản thì
         đăng ký xong tự động accept và tài khoản mang đúng `role` được mời.
         - `role` mặc định `FARM_OWNER`. `DOMAIN_EXPERT` là chuyên gia nuôi yến, phạm vi luôn là cả farm
           (SRS v2.0.0 bỏ `zone_ids`).
-        - 1 email = 1 role: email đã là tài khoản role khác (Technician, Admin, hoặc
-          Farm Owner ↔ Domain Expert) → 409, cần dùng email khác.
+        - `FARM_TECHNICIAN`: thợ của chủ farm, sau khi nhận lời mời chưa làm được gì cho tới khi Farm Owner
+          gán vào nhà (`PUT /farms/houses/{houseId}/technicians/{userId}`, AUTH-FR-013).
+        - 1 email = 1 role: email đã là tài khoản role khác (Admin, hoặc khác role được mời) → 409, cần dùng email khác.
         - Ghi audit `FARM_MEMBER_INVITED`.
       parameters: [{ $ref: "#/components/parameters/FarmId" }]
       requestBody:
@@ -1104,7 +1035,7 @@ paths:
                 properties:
                   {
                     email: { type: string, format: email },
-                    role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT], default: FARM_OWNER },
+                    role: { type: string, enum: [FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN], default: FARM_OWNER },
                   },
               }
       responses:
@@ -1147,6 +1078,7 @@ paths:
     delete:
       tags: [Farms]
       summary: Gỡ thành viên khỏi farm (Flow 12 bước 5) — chỉ Primary Owner, không thể tự gỡ chính mình
+      description: "Gỡ Farm Technician thì bỏ luôn mọi lần gán của người đó vào các nhà của farm (AUTH-FR-005)."
       parameters:
         - { $ref: "#/components/parameters/FarmId" }
         - { name: userId, in: path, required: true, schema: { type: string } }
@@ -1457,6 +1389,7 @@ paths:
     get:
       tags: [Farms]
       summary: Danh sách House của farm
+      description: "Farm Technician chỉ nhận các nhà được giao (AUTH-FR-013)."
       responses:
         "200":
           {
@@ -1486,6 +1419,118 @@ paths:
                   },
               },
           }
+
+  /farms/houses/{houseId}/technicians/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/HouseId" }
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    put:
+      tags: [Farms]
+      summary: "Gán Farm Technician vào nhà (AUTH-FR-013) — FARM_OWNER của farm"
+      description: |
+        Người được gán phải là thành viên farm với role `FARM_TECHNICIAN`, không thì 409. Một thợ phục vụ
+        được nhiều nhà; mỗi nhà có tối đa 1 thợ chính: gán `primary: true` thì thợ chính cũ của nhà thành thợ
+        phụ. Gọi lại với người đã gán chỉ đổi `primary`. Sau khi gán, thợ thấy và thao tác được trên nhà này
+        (dashboard, relay, restart, vòng đếm); nhà khác → 403 (AUTH-FR-004). Audit `HOUSE_TECHNICIAN_ASSIGNED`.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                primary: { type: boolean, default: false, description: "Thợ chính của nhà" }
+      responses:
+        "200":
+          description: Nhà sau khi gán
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/House" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Người này không phải Farm Technician của farm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Farms]
+      summary: "Bỏ gán Farm Technician khỏi nhà (AUTH-FR-013) — FARM_OWNER của farm"
+      description: "Không có lần gán nào thì vẫn 200. Audit `HOUSE_TECHNICIAN_UNASSIGNED`."
+      responses:
+        "200":
+          description: Nhà sau khi bỏ gán
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/House" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /farms/houses/{houseId}/roster:
+    parameters:
+      - { $ref: "#/components/parameters/HouseId" }
+    get:
+      tags: [Farms]
+      summary: "Lịch trực của nhà (AUTH-FR-014) — FARM_OWNER của farm; FARM_TECHNICIAN được giao chỉ thấy ca của mình"
+      description: |
+        Farm Technician được giao nhà chỉ nhận các ca của chính mình (Report 3 §2.4 "read own roster").
+        Nhà không có lịch thì cảnh báo dùng thợ chính (G-21 gọi `technicianOnDuty`). Domain Expert, Administrator → 403
+        (Report 3 §2.4: lịch trực là của Farm Owner).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          roster: { type: array, items: { $ref: "#/components/schemas/RosterShift" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Farms]
+      summary: "Đặt lịch trực của nhà (AUTH-FR-014) — FARM_OWNER của farm"
+      description: |
+        Thay toàn bộ lịch bằng `shifts` (mảng rỗng = bỏ lịch). Mỗi ca: Farm Technician đang được giao nhà
+        (không thì 409), vai thợ chính `PRIMARY` hoặc thợ phụ `BACKUP`, các ngày trong tuần và giờ bắt đầu,
+        kết thúc theo giờ VN do Farm Owner tự nhập. Hai ca cùng vai chồng giờ, giờ sai dạng, `start` bằng
+        `end` → 400. Ngoài ca của thợ chính, cảnh báo của nhà tới thợ đang trực (ALERT-FR-017, G-21).
+        Bỏ gán hoặc gỡ thợ khỏi farm thì bỏ luôn các ca của người đó. Audit `HOUSE_ROSTER_UPDATED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shifts]
+              properties:
+                shifts: { type: array, items: { $ref: "#/components/schemas/RosterShift" } }
+      responses:
+        "200":
+          description: Lịch sau khi đặt
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          roster: { type: array, items: { $ref: "#/components/schemas/RosterShift" } }
+        "400": { description: "Ca chồng giờ cùng vai, giờ sai dạng hoặc start bằng end", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Người trong ca không phải Farm Technician đang được giao nhà", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /farms/houses/{houseId}/zones:
     parameters: [{ $ref: "#/components/parameters/HouseId" }]
@@ -1622,7 +1667,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403":
-          description: "Role không được sửa hệ số (TECHNICIAN, ADMIN) hoặc không có quyền trên Zone này"
+          description: "Role không được sửa hệ số (FARM_TECHNICIAN, ADMIN) hoặc không có quyền trên Zone này"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
@@ -1786,13 +1831,10 @@ paths:
   /devices/sensor-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — FARM_OWNER/TECHNICIAN (FARM-FR-003, SF-01)"
+      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — FARM_OWNER (FARM-FR-003, SF-01)"
       description: |
         Farm Owner tự setup thiết bị ở farm của mình (SF-01): Zone thuộc farm khác → 403
-        (FARM-FR-007). Technician hỗ trợ; Administrator, Domain Expert → 403 (Report 3 §2.4).
-
-        Technician đăng ký được ở mọi farm, không cần là thành viên (FARM-FR-009); mỗi lần
-        Technician đăng ký, các Farm Owner của farm nhận một thông báo trong app.
+        (FARM-FR-007). Farm Technician, Administrator, Domain Expert → 403 (Report 3 §2.4).
         Phải nhập đúng cặp `{device_id, secret_key}` in trên nhãn thiết bị (do Admin
         cấp qua `POST /admin/provisioned-devices`, không phân biệt hoa/thường).
         Node tạo ra ở trạng thái `PENDING`, chỉ chuyển `ONLINE` khi thiết bị gửi
@@ -1850,7 +1892,7 @@ paths:
     get:
       tags: [Devices]
       summary: Danh sách ESP32 Sensor Node
-      description: "Thiết bị của các farm user là thành viên; Technician: mọi farm (FARM-FR-009); Administrator: rỗng."
+      description: "Thiết bị của các farm user là thành viên; Farm Technician: chỉ nhà được giao (AUTH-FR-013); Administrator: mọi farm (FARM-FR-009)."
       parameters:
         - name: zoneId
           in: query
@@ -1995,7 +2037,7 @@ paths:
   /devices/sensor-nodes/{id}/relay-override:
     delete:
       tags: [Devices]
-      summary: "Tắt Manual Override sớm của 1 relay hoặc mọi relay (ENV-FR-018, BR-20), chỉ FARM_OWNER"
+      summary: "Tắt Manual Override sớm của 1 relay hoặc mọi relay (ENV-FR-018, BR-20) — FARM_OWNER, FARM_TECHNICIAN (nhà được giao)"
       description: |
         Không có `relayName`: đặt mọi mục của `relays` về `AUTO`, publish lệnh `CLEAR_OVERRIDE` lên `cmd`
         để ESP32 trả mọi relay về điều khiển tự động; đóng mọi lịch sử còn mở.
@@ -2046,10 +2088,10 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Devices]
-      summary: "Upload file .mp3 vào danh mục loa ru (ENV-FR-013c(a)) — TECHNICIAN"
+      summary: "Upload file .mp3 vào danh mục loa ru (ENV-FR-013c) — FARM_OWNER"
       description: |
         Lưu bản gốc lên MinIO + tạo bản ghi `synced_to_sd=false`. Web KHÔNG ghi được
-        file xuống thẻ SD (DFPlayer không có lệnh ghi) — Technician tự chép file với
+        file xuống thẻ SD (DFPlayer không có lệnh ghi) — Farm Owner tự chép file với
         tên `000N.mp3` (N = `track_number`) rồi đánh dấu qua `sync-status`.
         Chỉ nhận `.mp3` (`audio/mpeg`), tối đa 10MB (SRS §12.4). Ghi audit `AUDIO_TRACK_UPLOADED`.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
@@ -2091,7 +2133,7 @@ paths:
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}:
     delete:
       tags: [Devices]
-      summary: "Xoá bài khỏi danh mục web (không xoá file trên thẻ SD) — TECHNICIAN"
+      summary: "Xoá bài khỏi danh mục web (không xoá file trên thẻ SD) — FARM_OWNER"
       description: |
         Bài đã chép vào thẻ SD và đang là `speaker_track` của thiết bị (còn hoạt động) thì
         trả 409 — thiết bị vẫn phát số đó mà web mất dấu là bài nào; chọn bài khác hoặc
@@ -2111,7 +2153,7 @@ paths:
   /devices/sensor-nodes/{id}/audio-tracks/{trackId}/sync-status:
     put:
       tags: [Devices]
-      summary: "Đánh dấu đã/chưa chép file vào thẻ SD (ENV-FR-013c(a)) — TECHNICIAN"
+      summary: "Đánh dấu đã/chưa chép file vào thẻ SD (ENV-FR-013c) — FARM_OWNER"
       parameters: [{ $ref: "#/components/parameters/NodeId" }, { $ref: "#/components/parameters/TrackId" }]
       requestBody:
         required: true
@@ -2199,7 +2241,7 @@ paths:
   /devices/sensor-nodes/{id}/relay-overrides:
     get:
       tags: [Devices]
-      summary: "Lịch sử can thiệp tay của thiết bị (ENV-FR-019) — FARM_OWNER/DOMAIN_EXPERT (Technician, Admin → 403)"
+      summary: "Lịch sử can thiệp tay của thiết bị (ENV-FR-019) — FARM_OWNER/DOMAIN_EXPERT, FARM_TECHNICIAN (nhà được giao); Admin → 403"
       description: |
         Mỗi lần ép 1 relay là 1 bản ghi, mới nhất trước. `ended_at = null` là đang override.
         `end_reason`: `EXPIRED` (hết hạn), `CLEARED_EARLY` (tắt sớm, gỡ thiết bị, hoặc thiết
@@ -2227,11 +2269,12 @@ paths:
   /devices/sensor-nodes/{id}/relay:
     post:
       tags: [Devices]
-      summary: "Điều khiển relay — Manual Override (ENV-FR-016..018), chỉ FARM_OWNER"
+      summary: "Điều khiển relay — Manual Override (ENV-FR-016..018) — FARM_OWNER, FARM_TECHNICIAN (nhà được giao)"
       description: |
         Publish lệnh `RELAY` lên `swiftletcare/dev/{deviceId}/cmd` (phong bì `commandId`, `type`, `issuedAt`, `payload`, BR-35), đặt relay đó trong
         `relays` thành `MANUAL` với hạn `now + durationMs`; các relay khác giữ hạn của chúng (BR-20).
-        Technician, Administrator, Domain Expert → 403 (Report 3 §2.4). Gọi lại cùng trạng thái
+        Farm Technician chỉ ở nhà được giao, nhà khác → 403 (ENV-FR-016, AUTH-FR-004). Administrator,
+        Domain Expert → 403 (Report 3 §2.4). Gọi lại cùng trạng thái
         để gia hạn override (Flow 13 case 4a).
 
         BR-08: bật bơm (`relayName=misting`, `state=true`) 1–30 phút — quá 30 phút → 422; tắt bơm, quạt,
@@ -2329,12 +2372,11 @@ paths:
   /devices/camera-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — FARM_OWNER (farm của mình)/TECHNICIAN (FARM-FR-004, SF-01)"
+      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — FARM_OWNER (farm của mình) (FARM-FR-004, SF-01)"
       description: |
         Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho. SRS v2.1.8: camera lắp ở
         cửa ra vào của cả nhà yến nên gắn House (`house_id`). `zone_id` là cách gửi cũ (trước v2.1.8), được quy
-        ra House chứa Zone; cần một trong hai. Technician đăng ký được ở mọi farm và các Farm Owner
-        của farm nhận thông báo trong app (FARM-FR-009).
+        ra House chứa Zone; cần một trong hai. Farm Technician, Administrator → 403 (Report 3 §2.4).
       requestBody:
         required: true
         content:
@@ -2423,7 +2465,7 @@ paths:
   /devices/sensor-nodes/{id}/decommission:
     post:
       tags: [Devices]
-      summary: "Gỡ bỏ thiết bị, giữ lịch sử dữ liệu (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
+      summary: "Gỡ bỏ thiết bị, giữ lịch sử dữ liệu (FARM-FR-008) — FARM_OWNER (farm của mình)"
       description: |
         Không xoá document: telemetry/alert cũ tham chiếu `node_id` nên vẫn truy
         vấn được. Thiết bị bị ẩn khỏi danh sách/thống kê, heartbeat/telemetry từ
@@ -2431,8 +2473,7 @@ paths:
 
         Thiết bị **đang ONLINE** phải gửi kèm `force: true` (409 nếu
         thiếu) — gỡ một thiết bị còn sống là mất giám sát cả Zone. Cảnh báo còn mở
-        của nó được đóng theo, các Farm Owner nhận thông báo trong app khi người gỡ là
-        Technician (FARM-FR-009), và trong **24 giờ** vẫn
+        của nó được đóng theo, và trong **24 giờ** vẫn
         khôi phục lại được qua `/restore`.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
@@ -2461,7 +2502,7 @@ paths:
   /devices/sensor-nodes/{id}/restore:
     post:
       tags: [Devices]
-      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
+      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)"
       description: |
         Xoá `decommissioned_at` và cờ `activation_overdue_at`, đưa thiết bị về
         `OFFLINE` — hoặc `PENDING` nếu nó chưa từng gửi heartbeat lần nào (vẫn
@@ -2496,9 +2537,10 @@ paths:
   /devices/camera-nodes/{id}/counting-ring:
     put:
       tags: [Devices]
-      summary: "Vẽ vòng đếm chim của 1 camera (VISION-FR-018) — DOMAIN_EXPERT của farm chứa camera; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      summary: "Vẽ vòng đếm chim của 1 camera (VISION-FR-018) — DOMAIN_EXPERT của farm; FARM_TECHNICIAN ở nhà được giao; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
       description: |
-        Farm Owner trên farm đã có Domain Expert → 403. Thay đổi của Domain Expert báo trong app cho mọi
+        Farm Technician vẽ hoặc chỉnh được vòng của camera ở nhà được giao (VISION-FR-018, Report 3 §2.4);
+        nhà khác → 403. Farm Owner trên farm đã có Domain Expert → 403. Thay đổi của Domain Expert báo trong app cho mọi
         Farm Owner và vào lịch sử hoạt động (EXPERT-FR-009).
         Vòng khép kín quanh miệng lỗ ra vào (`docs/bird-counting-plan.md` 3.3 ý 7, 19.8), các đỉnh
         `[x, y]` theo tỉ lệ khung hình 0–1, theo thứ tự quanh vòng; 3–12 đỉnh (12 là giới hạn kỹ thuật
@@ -2537,13 +2579,13 @@ paths:
   /devices/camera-nodes/{id}/stream-token:
     get:
       tags: [Devices]
-      summary: "Token xem live stream của 1 camera (VISION-FR-013) — FARM_OWNER/DOMAIN_EXPERT của farm chứa camera"
+      summary: "Token xem live stream của 1 camera (VISION-FR-013) — FARM_OWNER/DOMAIN_EXPERT của farm, FARM_TECHNICIAN ở nhà được giao"
       description: |
         Video không đi qua backend: trình duyệt mở WebRTC (WHEP) tới MediaMTX ở đường `path`,
         gửi `token` trong header `Authorization: Bearer <token>` (hoặc `?token=`). MediaMTX hỏi
         `POST /internal/stream-auth`, token chỉ hợp lệ cho đúng `path` đó và hết hạn sau `expires_in`
         giây (chỉ cần còn hạn lúc mở kết nối; kết nối lại thì xin token mới). Token này không dùng
-        được làm access token. Technician/Admin không xem live stream (Report 3 §2.4).
+        được làm access token. Administrator không xem live stream (Report 3 §2.4).
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
         "200":
@@ -2636,7 +2678,7 @@ paths:
   /devices/camera-nodes/{id}/restore:
     post:
       tags: [Devices]
-      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
+      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)"
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -2661,7 +2703,7 @@ paths:
   /devices/sensor-nodes/{id}/replace:
     post:
       tags: [Devices]
-      summary: "Thay thiết bị hỏng bằng thiết bị mới cùng Zone (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
+      summary: "Thay thiết bị hỏng bằng thiết bị mới cùng Zone (FARM-FR-008) — FARM_OWNER (farm của mình)"
       description: |
         Đăng ký thiết bị mới (cần `secret_key` như onboarding, trạng thái PENDING)
         vào đúng Zone của thiết bị cũ, chép lịch loa/âm lượng, rồi gỡ thiết bị cũ
@@ -2694,15 +2736,14 @@ paths:
   /devices/sensor-nodes/{id}/reassign-zone:
     put:
       tags: [Devices]
-      summary: "Dời thiết bị sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — FARM_OWNER/TECHNICIAN"
+      summary: "Dời thiết bị sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — FARM_OWNER"
       description: |
         Farm Owner chỉ dời trong farm của mình: Zone nguồn hoặc đích thuộc farm khác → 403
         (FARM-FR-007); Administrator → 403 (Report 3 §2.4).
         Chỉ đổi Zone trong cơ sở dữ liệu rồi publish lại `config` (retained) của Zone mới lên topic
         của thiết bị, thiết bị offline nhận khi kết nối lại; thiết bị không biết farm, house, zone (D3). Kiểm quyền trên cả Zone
         nguồn lẫn Zone đích; cảnh báo còn mở của thiết bị ở Zone cũ được đóng; audit
-        `DEVICE_REASSIGNED`; người dời là Technician (mọi farm, FARM-FR-009) thì các Farm Owner của
-        farm nguồn và đích nhận thông báo trong app. Dời về chính Zone đang ở trả 400.
+        `DEVICE_REASSIGNED`. Dời về chính Zone đang ở trả 400.
         `meta.commandDelivered=false` khi backend chưa kết nối broker.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
@@ -2732,10 +2773,12 @@ paths:
   /devices/sensor-nodes/{id}/commands:
     post:
       tags: [Devices]
-      summary: "Xử lý từ xa: khởi động lại / đẩy lại ngưỡng / OTA firmware (FARM-FR-013, Flow 15) — chỉ TECHNICIAN"
+      summary: "Xử lý từ xa: khởi động lại / đẩy lại ngưỡng / OTA firmware (FARM-FR-013, Flow 15) — ADMIN; FARM_OWNER, FARM_TECHNICIAN chỉ RESTART"
       description: |
-        Technician gửi được tới thiết bị của mọi farm; mỗi lệnh được audit và báo trong app cho các
-        Farm Owner của farm (FARM-FR-009, 013).
+        Administrator gửi được mọi lệnh tới thiết bị của mọi farm mà không là thành viên (FARM-FR-009).
+        Farm Owner chỉ `RESTART` thiết bị của farm mình; Farm Technician chỉ `RESTART` thiết bị ở nhà được
+        giao; `PUSH_CONFIG` hay `OTA` của họ → 403 (FARM-FR-013). Domain Expert → 403. Mỗi lệnh được audit;
+        lệnh của Administrator hoặc Farm Technician được báo trong app cho các Farm Owner của farm.
         Chỉ gửi được khi thiết bị `ONLINE` (409 nếu không). Topic theo thiết bị (Report 4 §7.2):
         - `PUSH_CONFIG`: publish lại `swiftletcare/dev/{deviceId}/config` (retained) — ngưỡng, hệ số mờ,
           tham số phát hiện của Zone và lịch/âm lượng/bài loa của thiết bị
@@ -2790,7 +2833,7 @@ paths:
   /devices/camera-nodes/{id}/decommission:
     post:
       tags: [Devices]
-      summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — FARM_OWNER (farm của mình)/TECHNICIAN"
+      summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — FARM_OWNER (farm của mình)"
       description: |
         Cùng quy tắc với `POST /devices/sensor-nodes/{id}/decommission`: không xoá
         document nên dữ liệu cũ tham chiếu `node_id` vẫn truy vấn được, thiết bị
@@ -2960,11 +3003,13 @@ paths:
       summary: "Danh sách cảnh báo (ALERT-FR-007) — phân trang, filter"
       description: |
         Farm Owner chỉ thấy cảnh báo của farm mình (owner/member). Domain Expert thấy
-        cảnh báo của farm được mời (chỉ đọc + kiểm chứng). Technician thấy **cảnh báo
+        cảnh báo của farm được mời (chỉ đọc + kiểm chứng). Administrator thấy **cảnh báo
         thiết bị** của mọi farm (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`, `SENSOR_FAULT`,
         `RS485_BUS_FAILURE`, `UNEXPECTED_RESTART`, `SPEAKER_FAILURE`, `MISTING_INEFFECTIVE`,
         `ACTUATOR_FAULT`, `CONFIG_MISMATCH`, `MAINTENANCE_DUE` —
-        Report 3 §1.3, FARM-FR-009), giao với bộ lọc `type`. Administrator: rỗng.
+        Report 3 §2.4, FARM-FR-009), giao với bộ lọc `type`. Farm Technician thấy cảnh báo của các nhà được giao
+        (cảnh báo của zone trong nhà và cảnh báo của nhà, AUTH-FR-013); `farmId` của farm khác cho danh sách rỗng, không 403.
+        Gửi cảnh báo tới thợ theo ca trực là G-21.
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
@@ -3057,7 +3102,7 @@ paths:
     get:
       tags: [Alerts]
       summary: Chi tiết cảnh báo
-      description: "Cùng phạm vi với danh sách: Technician chỉ mở được cảnh báo thiết bị (loại khác → 403); Administrator → 403."
+      description: "Cùng phạm vi với danh sách: Administrator chỉ mở được cảnh báo thiết bị (loại khác → 403); Farm Technician chỉ cảnh báo của nhà được giao (nhà khác → 403)."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -3665,8 +3710,10 @@ paths:
   /harvests:
     post:
       tags: [Harvests]
-      summary: "Tạo Harvest Batch (HARVEST-FR-001..004) — FARM_OWNER (Domain Expert chỉ xem qua GET)"
+      summary: "Tạo Harvest Batch (HARVEST-FR-001..004) — FARM_OWNER; FARM_TECHNICIAN ở nhà được giao (Domain Expert chỉ xem qua GET)"
       description: |
+        Lô của Farm Owner có `status: CONFIRMED` ngay; lô của Farm Technician (chỉ ở zone của nhà được giao,
+        nhà khác → 403) là `DRAFT`, chờ Farm Owner xác nhận (`POST /harvests/{id}/confirm`, HARVEST-FR-006).
         Tự động gắn `env_snapshot` (trung bình môi trường 7 ngày trước thu
         hoạch — HARVEST-FR-002) và `flock_snapshot` (return rate 30 ngày —
         HARVEST-FR-003), sinh `trace_code` (UUID) làm mã định danh mẻ. Nếu
@@ -3695,7 +3742,7 @@ paths:
       responses:
         "201":
           {
-            description: "Đã tạo (status=DRAFT)",
+            description: "Đã tạo (status=CONFIRMED với Farm Owner, DRAFT với Farm Technician)",
             content:
               {
                 application/json:
@@ -3723,7 +3770,7 @@ paths:
         "422": { $ref: "#/components/responses/ValidationError" }
     get:
       tags: [Harvests]
-      summary: Danh sách Harvest Batch (farm mình sở hữu/thành viên, hoặc lọc theo farmId)
+      summary: "Danh sách Harvest Batch (farm mình sở hữu/thành viên, hoặc lọc theo farmId); Farm Technician chỉ lô của nhà được giao"
       parameters: [{ name: farmId, in: query, schema: { type: string } }]
       responses:
         "200":
@@ -3794,8 +3841,8 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [Harvests]
-      summary: "Cập nhật Harvest Batch (HARVEST-FR-005)"
-      description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây."
+      summary: "Cập nhật Harvest Batch (HARVEST-FR-005) — FARM_OWNER mọi lô; FARM_TECHNICIAN chỉ lô DRAFT của mình"
+      description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây. Farm Technician sửa lô đã CONFIRMED hoặc lô của người khác → 403."
       requestBody:
         content:
           application/json:
@@ -3836,7 +3883,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [Harvests]
-      summary: "Xóa mềm Harvest Batch"
+      summary: "Xóa mềm Harvest Batch (HARVEST-FR-005) — FARM_OWNER mọi lô; FARM_TECHNICIAN chỉ lô DRAFT của mình"
       responses:
         "200":
           {
@@ -3848,6 +3895,29 @@ paths:
               },
           }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /harvests/{id}/confirm:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Harvests]
+      summary: "Xác nhận lô do Farm Technician nhập (HARVEST-FR-006) — FARM_OWNER của farm"
+      description: |
+        `DRAFT` → `CONFIRMED`, ghi `confirmed_by`, `confirmed_at`, audit `HARVEST_CONFIRMED`. Lô đã xác nhận
+        → 409; Farm Technician, Domain Expert → 403. Đóng chu kỳ thu hoạch khi xác nhận (HARVEST-FR-007) làm ở G-26.
+      responses:
+        "200":
+          description: Lô sau khi xác nhận
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HarvestBatch" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Lô đã được xác nhận", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   # ── HEALTH REPORTS ────────────────────────────────────────────────────────
   /health-reports:
@@ -4386,8 +4456,8 @@ components:
 
     Role:
       type: string
-      enum: [ADMIN, FARM_OWNER, DOMAIN_EXPERT, TECHNICIAN]
-      description: "AUTH-FR-004 (v2.0.0). DOMAIN_EXPERT = chuyên gia nuôi yến do Primary Owner mời, phạm vi cả farm: chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo suy luận, chỉnh ngưỡng/hệ số/tham số phát hiện; không relay hay ghi thu hoạch (SRS mục 4.4)"
+      enum: [ADMIN, FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN]
+      description: "FARM_TECHNICIAN (Report 3 4.0.0, AUTH-FR-004, 013) = thợ của chủ farm, thành viên farm, chỉ thao tác trên nhà được giao; thay role TECHNICIAN cũ (mọi farm, lệnh từ xa). AUTH-FR-004 (v2.0.0). DOMAIN_EXPERT = chuyên gia nuôi yến do Primary Owner mời, phạm vi cả farm: chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo suy luận, chỉnh ngưỡng/hệ số/tham số phát hiện; không relay hay ghi thu hoạch (SRS mục 4.4)"
 
     DeviceStatusSummary:
       type: object
@@ -4536,7 +4606,30 @@ components:
         floors: { type: integer }
         description: { type: string }
         bird_count_tuning: { $ref: "#/components/schemas/BirdCountTuning" }
+        technicians:
+          type: array
+          description: "AUTH-FR-013 — Farm Technician được giao nhà này; tối đa 1 thợ chính"
+          items:
+            type: object
+            properties:
+              user_id: { type: string }
+              primary: { type: boolean }
+        roster:
+          type: array
+          description: "AUTH-FR-014 — lịch trực theo tuần của nhà (GET/PUT /farms/houses/{houseId}/roster). Trong GET /farms/{id}/houses: Farm Owner nhận cả lịch, Farm Technician chỉ ca của mình, Domain Expert và Administrator không có trường này."
+          items: { $ref: "#/components/schemas/RosterShift" }
         created_at: { type: string, format: date-time }
+
+    RosterShift:
+      type: object
+      description: "AUTH-FR-014 — một ca trực của nhà"
+      required: [technician_id, role, weekdays, start, end]
+      properties:
+        technician_id: { type: string }
+        role: { type: string, enum: [PRIMARY, BACKUP] }
+        weekdays: { type: array, minItems: 1, maxItems: 7, items: { type: integer, minimum: 0, maximum: 6 }, description: "0 = Chủ nhật … 6 = thứ Bảy" }
+        start: { type: string, example: "06:00", description: "HH:mm giờ VN" }
+        end: { type: string, example: "18:00", description: "HH:mm giờ VN; end trước start là ca qua nửa đêm, tính cho ngày bắt đầu" }
 
     Thresholds:
       type: object
@@ -4594,6 +4687,7 @@ components:
         farm_id: { type: string, readOnly: true, description: "Farm của House chứa Zone — server tự điền, không đổi được (SRS v1.23.0)" }
         name: { type: string }
         floor: { type: integer }
+        config_version: { type: integer, readOnly: true, description: "ENV-FR-027 — tăng ở mỗi lần đổi ngưỡng, hệ số mờ hoặc tham số phát hiện (giây Unix, luôn lớn hơn bản trước); đi kèm `config` gửi xuống controller" }
         thresholds: { $ref: "#/components/schemas/Thresholds" }
         threshold_history:
           type: array
@@ -4763,7 +4857,7 @@ components:
         display_name: { type: string }
         file_url: { type: string, description: "URL MinIO ký tạm 1 giờ, chỉ để nghe trên web" }
         file_size_bytes: { type: integer }
-        synced_to_sd: { type: boolean, description: "Technician tự đánh dấu sau khi chép tay vào thẻ SD" }
+        synced_to_sd: { type: boolean, description: "Farm Owner tự đánh dấu sau khi chép tay vào thẻ SD" }
         uploaded_by: { type: string }
         uploaded_at: { type: string, format: date-time }
 
@@ -4788,6 +4882,11 @@ components:
             enum: [PENDING, ONLINE, OFFLINE],
             description: "PENDING = Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên (Flow 1)",
           }
+        config_sync:
+          type: string
+          enum: [PENDING, APPLIED, MISMATCH, UNKNOWN]
+          description: "ENV-FR-027, Report 3 §6.12 — controller mới hoặc vừa có cấu hình mới: PENDING; heartbeat báo đúng `config_version` của Zone: APPLIED (FARM-FR-012 \"đã áp cấu hình\"); online mà 3 heartbeat liên tiếp vẫn báo bản cũ: MISMATCH kèm cảnh báo CONFIG_MISMATCH (BR-24); firmware trước 2.1.0 không báo phiên bản: UNKNOWN"
+        applied_config_version: { type: integer, nullable: true, description: "ENV-FR-027 — phiên bản cấu hình heartbeat gần nhất báo; null khi firmware không báo" }
         rssi: { type: number }
         booted_at: { type: string, format: date-time, description: "FARM-FR-006 — thời điểm khởi động, tính từ `uptime` của heartbeat" }
         free_heap: { type: number, description: "FARM-FR-006 — byte RAM còn trống lúc heartbeat gần nhất" }
@@ -4825,6 +4924,7 @@ components:
             playing: { type: boolean }
             loop: { type: boolean }
         registered_at: { type: string, format: date-time }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         ota_pending:
           type: object
           nullable: true
@@ -4865,6 +4965,7 @@ components:
         model_version: { type: string }
         fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất. Dưới 10 thì nhà có `EDGE_AI_DEGRADED` (`metadata.cause: LOW_FPS`), heartbeat đủ 10 trở lên thì đóng (THREAT-FR-010, Report 3 §4.5)" }
         registered_at: { type: string, format: date-time }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         registered_by: { type: string, nullable: true }
         activation_overdue_at: { type: string, format: date-time, nullable: true, description: "Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat" }
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
@@ -5131,12 +5232,14 @@ components:
         claimed_at: { type: string, format: date-time, nullable: true }
         revoked_at: { type: string, format: date-time, nullable: true, description: "Đã thu hồi — không kích hoạt được nữa" }
         revoke_reason: { type: string, nullable: true }
+        simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập" }
         created_by: { type: string }
         created_at: { type: string, format: date-time }
 
     HarvestStatus:
       type: string
-      enum: [DRAFT]
+      enum: [DRAFT, CONFIRMED]
+      description: "HARVEST-FR-001, 006 — lô của Farm Technician chờ Farm Owner xác nhận (DRAFT); lô của Farm Owner xác nhận ngay"
 
     HarvestBatch:
       type: object
@@ -5186,6 +5289,8 @@ components:
             avg_return_rate_30d: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong 30 ngày trước mẻ" }
             estimated_population: { type: integer, nullable: true, description: "Số ròng về buổi chiều lớn nhất của Zone trong 30 ngày (BirdCountDay.net_entry)" }
         status: { $ref: "#/components/schemas/HarvestStatus" }
+        confirmed_by: { type: string, nullable: true, description: "Farm Owner xác nhận lô (HARVEST-FR-006)" }
+        confirmed_at: { type: string, format: date-time, nullable: true }
         is_deleted: { type: boolean }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }

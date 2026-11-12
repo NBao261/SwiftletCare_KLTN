@@ -59,6 +59,7 @@ void saveConfig() {
   prefs.putInt("spkW2End", Config::speakerWindow2EndHour);
   prefs.putInt("spkVol", Config::speakerVolume);
   prefs.putInt("spkTrack", Config::speakerTrack);
+  prefs.putUInt("cfgVersion", Config::configVersion);
   Serial.println("[Storage] Config saved to NVS");
 }
 
@@ -91,6 +92,7 @@ void loadConfig() {
       prefs.getInt("spkW2End", SPEAKER_WINDOW_2_END_HOUR);
   Config::speakerVolume = prefs.getInt("spkVol", DFPLAYER_DEFAULT_VOLUME);
   Config::speakerTrack = prefs.getInt("spkTrack", DFPLAYER_DEFAULT_TRACK);
+  Config::configVersion = prefs.getUInt("cfgVersion", 0);
   Serial.println("[Storage] Config loaded from NVS");
 }
 

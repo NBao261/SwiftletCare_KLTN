@@ -1,5 +1,6 @@
 import { Redirect, Tabs } from 'expo-router'
 import { BottomTabBar } from '@/components/layout/BottomTabBar'
+import { RealtimeSync } from '@/components/layout/RealtimeSync'
 import { getRoleTabs } from '@/constants/roleTabs'
 import { useSyncAlertBadge } from '@/hooks/alert/useSyncAlertBadge'
 import { useAlertStore } from '@/stores/alertStore'
@@ -20,18 +21,22 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
-      // Thanh tab tự vẽ (components/layout/BottomTabBar.tsx): bo góc, bóng, nút nổi giữa
-      tabBar={props => <BottomTabBar {...props} tabs={tabs} unreadCount={unreadCount} />}
-      screenOptions={{
-        headerShown: false,
-        // Mặc định ẩn mọi route trong (tabs); chỉ tab của role được bật lại bên dưới
-        hidden: true,
-      }}
-    >
-      {tabs.map(tab => (
-        <Tabs.Screen key={tab.name} name={tab.name} options={{ hidden: false, title: tab.title }} />
-      ))}
-    </Tabs>
+    <>
+      {/* Realtime của chuông và cảnh báo cho cả phiên; key theo người dùng để đổi tài khoản là bắt đầu lại */}
+      <RealtimeSync key={user._id} />
+      <Tabs
+        // Thanh tab tự vẽ (components/layout/BottomTabBar.tsx): bo góc, bóng, nút nổi giữa
+        tabBar={props => <BottomTabBar {...props} tabs={tabs} unreadCount={unreadCount} />}
+        screenOptions={{
+          headerShown: false,
+          // Mặc định ẩn mọi route trong (tabs); chỉ tab của role được bật lại bên dưới
+          hidden: true,
+        }}
+      >
+        {tabs.map(tab => (
+          <Tabs.Screen key={tab.name} name={tab.name} options={{ hidden: false, title: tab.title }} />
+        ))}
+      </Tabs>
+    </>
   )
 }

@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { AcknowledgeSheet } from '@/components/alert/AcknowledgeSheet'
 import { AlertEvidence } from '@/components/alert/AlertEvidence'
+import { AlertTimeline } from '@/components/alert/AlertTimeline'
+import { ExpertVerdictCard } from '@/components/alert/ExpertVerdictCard'
 import { SeverityLabel } from '@/components/alert/SeverityLabel'
 import { VerdictSheet } from '@/components/alert/VerdictSheet'
 import { StatRow } from '@/components/analytics/StatRow'
@@ -21,7 +23,7 @@ import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { Alert, RelayName } from '@/types'
-import { describeAlertDetail, getAutoCloseText, isEnvironmentAlert } from '@/utils/alertDetail.utils'
+import { buildAlertTimeline, describeAlertDetail, getAutoCloseText, isEnvironmentAlert } from '@/utils/alertDetail.utils'
 import { isInferredAlert } from '@/utils/alertList.utils'
 import { formatDateTime } from '@/utils/date.utils'
 import { farmHasExpert } from '@/utils/farm.utils'
@@ -42,6 +44,8 @@ interface AlertDetailContentProps {
   onLeave?: () => void
   // Thông báo ngắn sau khi xác nhận, phán quyết
   onMessage?: (message: string) => void
+  // Màn tầng / phân tích mở từ đây có nút ‹ quay về đây: route chi tiết hoặc tab Cảnh báo (sheet)
+  returnTo: string
 }
 
 // Nội dung chi tiết một cảnh báo (đặc tả §3), dùng chung cho sheet ở tab Cảnh báo và route alert/[alertId]:
@@ -52,6 +56,7 @@ export function AlertDetailContent({
   isReady,
   onLeave,
   onMessage,
+  returnTo,
 }: AlertDetailContentProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
@@ -89,7 +94,10 @@ export function AlertDetailContent({
     isInferred &&
     alert.status !== 'RESOLVED' &&
     canPerform(user, 'setAlertVerdict', { farmHasExpert: farm ? farmHasExpert(farm) : undefined })
-  const controllers = (sensorNodesQuery.data?.data ?? []).filter(node => node.zone_id === alert.zone_id)
+  // Chỉ controller ONLINE mới nhận được lệnh điều khiển tay
+  const controllers = (sensorNodesQuery.data?.data ?? []).filter(
+    node => node.zone_id === alert.zone_id && node.status === 'ONLINE',
+  )
   const canControl = canPerform(user, 'controlRelay') && isEnvironmentAlert(alert) && controllers.length > 0
   const selectedController = controllers.find(node => node._id === relaySelection?.controllerId) ?? null
   const detailLines = describeAlertDetail(alert)
@@ -101,10 +109,10 @@ export function AlertDetailContent({
     if (!houseId) return
     onLeave?.()
     if (alert.type === 'LOW_RETURN_RATE') {
-      router.navigate({ pathname: '/(tabs)/analytics', params: { houseId, tab: 'birds' } })
+      router.navigate({ pathname: '/(tabs)/analytics', params: { houseId, tab: 'birds', returnTo } })
       return
     }
-    router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId, zoneId: alert.zone_id ?? '' } })
+    router.navigate({ pathname: '/(tabs)/farms/[houseId]', params: { houseId, zoneId: alert.zone_id ?? '', returnTo } })
   }
 
   return (
@@ -119,6 +127,9 @@ export function AlertDetailContent({
             {location?.text ?? '_'}
           </Text>
         </View>
+
+        {/* Kết luận của chuyên gia nổi ở đầu: chủ trại đọc hướng dẫn trước khi xác nhận */}
+        {verdict && <ExpertVerdictCard verdict={verdict} />}
 
         <Card>
           <StatRow label={t('Trạng thái')} value={getAlertStatusLabel(alert.status)} />
@@ -147,46 +158,18 @@ export function AlertDetailContent({
           ))}
         </Card>
 
-        {isInferred && (
+        {isInferred && canPerform(user, 'viewAlertEvidence') && (
           <Card>
             <AlertEvidence alert={alert} enabled={isReady} />
           </Card>
         )}
 
-        <Card>
-          <Text variant="body" weight="semiBold">
-            {t('Lịch sử')}
-          </Text>
-          <StatRow label={t('Tạo')} value={formatDateTime(alert.created_at)} />
-          {alert.acknowledged_at && (
-            <StatRow
-              label={t('Xác nhận')}
-              value={`${formatDateTime(alert.acknowledged_at)} · ${memberName(alert.acknowledged_by) ?? t('Chủ trại')}`}
-            />
-          )}
-          {alert.acknowledgement_note ? (
-            <Text variant="small" color={palette.textSecondary}>
-              {t('Ghi chú: {note}', { note: alert.acknowledgement_note })}
-            </Text>
-          ) : null}
-          {alert.renotified_at && <StatRow label={t('Đã nhắc lại')} value={formatDateTime(alert.renotified_at)} />}
-          {isInferred && (
-            <StatRow
-              label={t('Phán quyết')}
-              value={
-                verdict
-                  ? `${verdict.result === 'CONFIRMED' ? t('Đúng') : t('Bác bỏ')} · ${verdict.by?.full_name ?? (verdict.role === 'FARM_OWNER' ? t('Chủ trại') : t('Chuyên gia'))} · ${formatDateTime(verdict.at)}`
-                  : t('Chờ phán quyết')
-              }
-              isWarning={!verdict}
-            />
-          )}
-          {verdict?.note ? (
-            <Text variant="small" color={palette.textSecondary}>
-              {t('Ghi chú phán quyết: {note}', { note: verdict.note })}
-            </Text>
-          ) : null}
-        </Card>
+        <AlertTimeline
+          entries={buildAlertTimeline(alert, memberName)}
+          footer={
+            isInferred && !verdict ? <StatRow label={t('Phán quyết')} value={t('Chờ phán quyết')} isWarning /> : undefined
+          }
+        />
       </ScrollView>
 
       <View style={[styles.actions, { backgroundColor: palette.background, borderTopColor: palette.divider }]}>
