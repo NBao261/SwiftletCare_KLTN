@@ -39,4 +39,7 @@ export const healthDayApi = {
   // Cùng nhà, cùng khoảng đã có thì backend tính lại và trả bản cũ (200)
   createReport: (input: { houseId: string; from: string; to: string }) =>
     api.post<ApiResponse<HouseHealthReport>>('/health-reports', input),
+  // EXPERT-FR-006 — chỉ Domain Expert; người viết sửa được kết luận của mình, chuyên gia khác 403
+  setConclusion: (reportId: string, text: string) =>
+    api.put<ApiResponse<HouseHealthReport>>(`/health-reports/${reportId}/conclusion`, { text }),
 }

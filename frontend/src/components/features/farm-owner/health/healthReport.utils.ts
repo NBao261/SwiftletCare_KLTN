@@ -16,7 +16,8 @@ export const REPORT_STATUSES: HealthStatus[] = ['GOOD', 'WATCH', 'ACTION', 'INSU
 
 // Trang chi tiết 1 báo cáo; id truyền qua history state, không đưa lên URL (FE_Design 13.16 a)
 export const HEALTH_REPORT_PATH = '/health/report';
-export interface HealthReportState { reportId: string }
+// backTo: trang đã mở báo cáo (/health?tab=report hoặc tab báo cáo của chuyên gia)
+export interface HealthReportState { reportId: string; backTo?: string }
 
 export interface ReportFact {
   label: string;

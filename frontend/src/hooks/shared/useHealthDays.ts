@@ -124,3 +124,15 @@ export function useCreateHouseHealthReport() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [HEALTH_REPORTS_KEY] }),
   })
 }
+
+// EXPERT-FR-006 — lưu kết luận: chi tiết lấy bản backend trả, danh sách đọc lại cột "Kết luận"
+export function useSetHealthReportConclusion(reportId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (text: string) => healthDayApi.setConclusion(reportId, text).then(response => response.data.data),
+    onSuccess: report => {
+      queryClient.setQueryData([HEALTH_REPORTS_KEY, 'detail', reportId], report)
+      void queryClient.invalidateQueries({ queryKey: [HEALTH_REPORTS_KEY] })
+    },
+  })
+}

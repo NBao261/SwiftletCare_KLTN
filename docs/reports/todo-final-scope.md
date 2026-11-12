@@ -206,11 +206,11 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
   - chuyên gia xem các ngày có điểm chấm khác snapshot, kèm chỉ số và lý do của từng ngày;
   - chuyên gia chỉnh mức chỉ số sức khỏe của nhà (BR-28); thay đổi lưu lịch sử và áp từ lần đánh giá tiếp theo;
   - Farm Owner (ở farm có chuyên gia) hoặc technician vào chức năng này thì 403.
-- [ ] Giao diện *(còn tab báo cáo của chuyên gia — Tuấn)*:
+- [x] Giao diện:
   - [x] Len: chấm điểm trên mobile, hiện hướng dẫn chấm (BR-37) trước khi chấm; *(Len, 11/11, nhánh `feat/g11-health-assessment` (`368cc8d7`): Farm Owner — form chấm có hướng dẫn BR-37, bỏ qua có xác nhận, chi tiết ngày sau khi chấm (xem `todo-review2.md` G-11). 12/11: Farm Technician chấm, bỏ qua, ghi chú ngày của nhà được giao (`rateHealthDay`, theo `ASSESSOR_ROLES` backend của Kiệt), thấy ngày chờ chấm trong "Việc chờ bạn" ở Trang chủ (không có phần phán quyết cảnh báo) và tab Báo cáo của Phân tích (`viewHealthReports`))*
   - [x] Nhi: chấm điểm trên web Owner; *(Nhi, 11/11: `/health` — Farm Owner chấm hoặc "Bỏ qua" ngày không có mặt ở nhà, hướng dẫn BR-37 trước khi chọn mức (10/11), Domain Expert không còn chấm (10/11))*
   - [x] Tuấn: màn ngày lệch và chỉnh mức trên web chuyên gia. *(Tuấn, 10/11, nhánh `feat/g11-health-assessment`, commits `1c5ee85c` + `bf936377`: DisagreementsSection (scope filter, KPI strip, Bento grid mức chỉ số), DisagreementDayCard, ExpertHealthLevelsModal (GET/PUT /farms/houses/{houseId}/health-levels, BR-28); 8 unit tests; 245/245 tests pass)*
-  - [ ] Tuấn: tab "Báo cáo & Kết luận định kỳ" của chuyên gia (`/domain-expert/reports`) theo báo cáo theo nhà (`GET /health-reports?houseId|farmId&kind`, `GET /health-reports/{id}`) thay báo cáo tuần theo Zone đã deprecated; chuyên gia viết kết luận bằng `PUT /health-reports/{id}/conclusion` (EXPERT-FR-007); bỏ số liệu bịa khi chưa có báo cáo (chu kỳ, tên zone, số mẫu, số kỳ tuần); chữ qua `healthDict`. *(Nhi phát hiện 11/11; dùng lại `HealthReportSection`, `HealthReportView`)*
+  - [x] Tuấn: tab "Báo cáo & Kết luận định kỳ" của chuyên gia (`/domain-expert/reports`) theo báo cáo theo nhà (`GET /health-reports?houseId|farmId&kind`, `GET /health-reports/{id}`) thay báo cáo tuần theo Zone đã deprecated; chuyên gia viết kết luận bằng `PUT /health-reports/{id}/conclusion` (EXPERT-FR-007); bỏ số liệu bịa khi chưa có báo cáo (chu kỳ, tên zone, số mẫu, số kỳ tuần); chữ qua `healthDict`. *(Nhi phát hiện 11/11, làm thay Tuấn 12/11: tab dùng `HealthReportSection` theo farm/nhà đang chọn, chuyên gia viết và sửa kết luận của mình ở trang chi tiết báo cáo (`HealthReportConclusion`); bỏ báo cáo tuần theo Zone và số liệu bịa)*
 
 **Test:** TC-F22-01…03; TC-ST-44…53.
 

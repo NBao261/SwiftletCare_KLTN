@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { PlusIcon } from '@phosphor-icons/react';
 import TableEmptyState from '@/components/common/TableEmptyState';
@@ -30,6 +30,8 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const { t, date, dateTime, exact } = useTranslation(healthDict);
   const apiErrorMessage = useApiErrorMessage();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backTo = location.pathname + location.search;
   const [kind, setKind] = useState<HealthReportKind | undefined>(undefined);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   // Đổi phạm vi hoặc loại thì về trang 1
@@ -40,7 +42,7 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
   const { download, downloadingId } = useHealthReportPdf();
 
   // Chi tiết là trang riêng, id qua history state
-  const openReport = useCallback((reportId: string) => navigate(HEALTH_REPORT_PATH, { state: { reportId } satisfies HealthReportState }), [navigate]);
+  const openReport = useCallback((reportId: string) => navigate(HEALTH_REPORT_PATH, { state: { reportId, backTo } satisfies HealthReportState }), [navigate, backTo]);
   const format = useMemo(() => ({ t, date, dateTime, number: (value: number) => exact(value, 1) }), [t, date, dateTime, exact]);
   const firstIndex = (page - 1) * REPORT_PAGE_SIZE;
   // Số thứ tự tra Map dựng 1 lần, không indexOf mỗi dòng (FE_Design 13.12)

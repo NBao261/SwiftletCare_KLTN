@@ -106,10 +106,4 @@ export const expertApi = {
   // ── 7. Báo cáo Sức khỏe Zone (EXPERT-FR-005/006) ───────────────────────────
   getHealthReports: (zoneId: string, params?: { page?: number; limit?: number }) =>
     api.get<ApiResponse<ZoneHealthReportItem[]>>('/health-reports', { params: { zoneId, ...params } }),
-
-  previewHealthReport: (params: { zoneId: string; from: string; to?: string }) =>
-    api.get<ApiResponse<ZoneHealthReportItem>>('/health-reports/preview', { params }),
-
-  setReportConclusion: (reportId: string, text: string) =>
-    api.put<ApiResponse<ZoneHealthReportItem>>(`/health-reports/${reportId}/conclusion`, { text }),
 }

@@ -505,7 +505,7 @@ const en: Record<string, string> = {
   'Báo cáo và ngày đánh giá lệch': 'Reports and disagreeing days',
   'Báo cáo & Kết luận định kỳ': 'Periodic reports & conclusions',
   'Ngày đánh giá lệch & Mức chỉ số': 'Disagreeing days & indicator levels',
-  'Tổng hợp sức khỏe định kỳ và xuất bản kết luận chuyên môn gửi Chủ nhà yến': 'Periodic health summaries and the expert conclusions published to the Farm Owner',
+  'Mở một báo cáo để viết kết luận gửi Chủ nhà yến': 'Open a report to write a conclusion for the farm owner',
   'Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống và chỉnh mức chỉ số của nhà': 'Compare on-site ratings with the system status and tune the indicator levels of each house',
 }
 

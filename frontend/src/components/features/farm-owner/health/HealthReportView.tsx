@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import {
   BirdIcon, CalendarDotsIcon, CalendarXIcon, CloudRainIcon, DropIcon, FilePdfIcon, HouseIcon, ThermometerSimpleIcon, type Icon,
 } from '@phosphor-icons/react';
+import HealthReportConclusion from '@/components/features/farm-owner/health/HealthReportConclusion';
 import HealthStatusBadge from '@/components/features/farm-owner/health/HealthStatusBadge';
 import { vietnamDate } from '@/components/features/farm-owner/health/healthDay.utils';
 import {
@@ -138,17 +139,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
       </section>
 
       <Part title={t('rd.conclusion')}>
-        {report.expert_conclusion ? (
-          <blockquote className="flex flex-col gap-2 border-l-4 border-accent-600 pl-4">
-            <p className="whitespace-pre-line text-sm leading-relaxed text-charcoal">{report.expert_conclusion.text}</p>
-            <footer className="text-xs text-warmGray">
-              {report.expert_conclusion.by.full_name ?? NO_VALUE} · {dateTime(report.expert_conclusion.at)}
-              {report.expert_conclusion.edited_at && ` · ${t('rd.edited', { time: dateTime(report.expert_conclusion.edited_at) })}`}
-            </footer>
-          </blockquote>
-        ) : (
-          <p className="text-sm italic text-warmGray">{t('rd.noConclusion')}</p>
-        )}
+        <HealthReportConclusion report={report} />
       </Part>
 
       {/* Mỗi ngày 1 dòng 3 phần (hệ thống | lý do | đánh giá của người); thẻ hẹp thì xuống dòng và ẩn hàng tiêu đề */}
