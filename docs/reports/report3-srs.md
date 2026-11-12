@@ -729,6 +729,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Escalation time (`escalation_min`) | 15 min (5–60) | First recipient's window before the Farm Owners are told (BR-40); value agreed by the team, not from a field source |
 | Recovery verification (`recovery_verify_min`) | 10 min (5–60) | A repair counts only after the data stay recovered (BR-41) |
 | Weather compensation limits | ±10 percentage points; at most 2 h; 0 offline after 2 h | Keeps the forecast a small correction of the fuzzy output (BR-38) |
+| Weather compensation rules | At most 10 rules per house; condition entered within 0–50 °C, 0–100 % outdoor humidity, 0.1–50 mm of rain over the next 2 h | Input limits against typing errors (ENV-FR-030), not farming advice |
 | Automatic Work Order for offline devices | after 30 min open | A short outage that recovers by itself opens no job (BR-39) |
 | Recommendation expiry and effect window | 7 days; 7 days before against 7 days after acceptance | BR-42 |
 | Grace before an overdue plan escalates (`maintenance_grace_days`) | 7 days | OPS-FR-006 |

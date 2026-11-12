@@ -169,24 +169,25 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 ### G-23 — Bù phun sương theo thời tiết (Bảo, Tuấn) — hạn 02/12
 
-- [ ] Spec: luật bù thời tiết của nhà nằm trong `/farms` (houses); topic retained `swiftletcare/dev/{deviceId}/compensation` với `offset_pct` (−10…+10), `expires_at`, `rule_id`, QoS 1 (Report 4 §7.2).
-- [ ] Backend: luật theo nhà (ENV-FR-030):
+- [x] Spec: luật bù thời tiết của nhà nằm trong `/farms` (houses); topic retained `swiftletcare/dev/{deviceId}/compensation` với `offset_pct` (−10…+10), `expires_at`, `rule_id`, QoS 1 (Report 4 §7.2). *(`GET/PUT /farms/houses/{houseId}/weather-rules`, schema `WeatherRule`; `expires_at` là epoch ms như `issuedAt` của `cmd`)*
+- [x] Backend: luật theo nhà (ENV-FR-030):
   - điều kiện dự báo: nhiệt độ ≥, độ ẩm ngoài trời ≥, hoặc có mưa;
   - offset ngoài ±10 hoặc thời hạn quá 2 giờ trả 400;
   - Farm Owner (ở farm có chuyên gia) hoặc technician gửi luật thì 403.
-- [ ] `weatherCompensation.job` chạy mỗi giờ, sau `weather.job` của G-11 (ENV-FR-028):
+- [x] `weatherCompensation.job` chạy mỗi giờ, sau `weather.job` của G-11 (ENV-FR-028):
   - lấy dự báo 2 giờ tới; khi nhiều luật cùng đúng thì lấy offset có trị tuyệt đối lớn nhất;
   - gửi offset kèm hạn, tối đa 2 giờ;
   - không có luật hoặc không có dự báo thì gửi 0.
-- [ ] Firmware (ENV-FR-029):
+- [x] Firmware (ENV-FR-029):
   - cộng offset vào nhu cầu phun của bộ mờ cho tới khi hết hạn, kẹp kết quả trong 0–100 %;
   - hết hạn, hoặc mất broker 2 giờ, thì offset về 0;
   - không đụng quạt, bật tay hay chốt phun.
   - Hằng số: `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS` ở backend; `WEATHER_COMP_OFFLINE_MS` ở firmware (Report 4 §5.5).
-- [ ] Ghi vào nhật ký mỗi lần áp offset, để đo hiệu quả trên những ngày có và không có bù (NFR-16, không cam kết, nhưng nên có số liệu).
+  - *(firmware 2.2.0, `pid/WeatherCompensation.{h,cpp}`: chỉ cộng khi số đo hợp lệ, nên cảm biến hỏng vẫn tắt bơm (THREAT-FR-013); chưa có NTP thì bỏ tin vì không biết hạn)*
+- [x] Ghi vào nhật ký mỗi lần áp offset, để đo hiệu quả trên những ngày có và không có bù (NFR-16, không cam kết, nhưng nên có số liệu). *(collection `weathercompensations`, một dòng mỗi lần gửi offset khác 0 kèm luật và dự báo)*
 - [ ] Tuấn: màn luật bù thời tiết trên web chuyên gia.
 
-**Test:** TC-F26-01, TC-F26-03 (jest); TC-F26-02 (`pio test -e native`).
+**Test:** TC-F26-01, TC-F26-03 (jest, `weatherCompensation.test.ts`); TC-F26-02 (`pio test -e native`, `test_weather_compensation`). *(Xong, PR #152)*
 
 **Demo:** DS-01 (Bảo trình bày).
 
