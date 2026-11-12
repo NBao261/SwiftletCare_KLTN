@@ -86,6 +86,8 @@ tags:
     description: "HARVEST-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0) — ghi: Farm Owner; đọc: Farm Owner, Domain Expert; Technician, Administrator → 403 (Report 3 §2.4)"
   - name: HealthReports
     description: EXPERT-FR-005/006 (báo cáo sức khỏe Zone do hệ thống tự tổng hợp + kết luận của Domain Expert)
+  - name: Profiles
+    description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: Domain Expert soạn, duyệt, lưu trữ — Farm Owner khi farm chưa có chuyên gia, BR-22; Farm Owner áp cho các nhà) — Farm Technician, Administrator → 403"
   - name: Notifications
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
 
@@ -2607,6 +2609,194 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { description: "Máy chủ video chưa được cấu hình (STREAM_TOKEN_SECRET trống)" }
 
+  /profiles:
+    get:
+      tags: [Profiles]
+      summary: "Hồ sơ cấu hình của farm (EXPERT-FR-014) — FARM_OWNER, DOMAIN_EXPERT của farm"
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [DRAFT, APPROVED, ARCHIVED] } }
+      responses:
+        "200":
+          description: Mới sửa trước
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/ConfigProfile" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    post:
+      tags: [Profiles]
+      summary: "Soạn hồ sơ cấu hình, trạng thái DRAFT (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      description: |
+        Mỗi nhóm (`thresholds`, `fuzzy_tuning`, `detection_tuning`, `speaker_schedule`) có thể bỏ trống — áp hồ sơ thì
+        nhóm đó không đổi — nhưng đã gửi thì phải đủ mọi khoá và trong khoảng như khi sửa một zone (400). Cần ít nhất
+        một nhóm. `stage` (tuỳ chọn) ghi giai đoạn nhà mà hồ sơ dành cho. Farm Owner trên farm có chuyên gia (BR-22),
+        Farm Technician → 403. Audit `CONFIG_PROFILE_CREATED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [farm_id]
+                  properties:
+                    farm_id: { type: string }
+                - $ref: "#/components/schemas/ConfigProfileInput"
+      responses:
+        "201":
+          description: Hồ sơ DRAFT
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ConfigProfile" }
+        "400": { description: "Giá trị ngoài khoảng, nhóm thiếu khoá hoặc hồ sơ không có nhóm nào", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /profiles/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Profiles]
+      summary: "Một hồ sơ cấu hình (EXPERT-FR-014) — FARM_OWNER, DOMAIN_EXPERT của farm"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ConfigProfile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Profiles]
+      summary: "Sửa hồ sơ DRAFT (EXPERT-FR-014) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      description: "Thay toàn bộ nội dung (nhóm không gửi thì bỏ khỏi hồ sơ). Hồ sơ APPROVED hoặc ARCHIVED → 409. Audit `CONFIG_PROFILE_UPDATED`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConfigProfileInput" }
+      responses:
+        "200":
+          description: Hồ sơ sau khi sửa
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ConfigProfile" }
+        "400": { description: "Giá trị ngoài khoảng, nhóm thiếu khoá hoặc hồ sơ không có nhóm nào", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Hồ sơ không còn là DRAFT", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /profiles/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Profiles]
+      summary: "Duyệt hồ sơ DRAFT → APPROVED (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      description: "Báo Farm Owner khi chuyên gia duyệt (EXPERT-FR-009). Hồ sơ không ở DRAFT → 409. Audit `CONFIG_PROFILE_APPROVED`."
+      responses:
+        "200":
+          description: Hồ sơ APPROVED
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ConfigProfile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Hồ sơ không ở DRAFT", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /profiles/{id}/archive:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Profiles]
+      summary: "Lưu trữ hồ sơ APPROVED → ARCHIVED (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      description: "Hồ sơ đã lưu trữ không áp được nữa. Hồ sơ không ở APPROVED → 409. Audit `CONFIG_PROFILE_ARCHIVED`."
+      responses:
+        "200":
+          description: Hồ sơ ARCHIVED
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/ConfigProfile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Hồ sơ không ở APPROVED", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /profiles/{id}/apply:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Profiles]
+      summary: "Áp hồ sơ APPROVED cho các nhà (EXPERT-FR-015) — FARM_OWNER"
+      description: |
+        Mỗi zone của các nhà nhận các nhóm của hồ sơ, lịch sử ghi nguồn `PROFILE` (ngưỡng, hệ số mờ, tham số phát
+        hiện); lịch loa chép vào mọi controller của zone; rồi mỗi zone một phiên bản cấu hình mới (ENV-FR-027), nên
+        controller hiện `PENDING` tới khi heartbeat báo đã áp. Áp hệ số mờ thì đề xuất hệ số đang chờ của zone thành
+        `SUPERSEDED`. Hồ sơ DRAFT hoặc ARCHIVED → 409; nhà ngoài farm của hồ sơ → 400; Domain Expert, Farm
+        Technician → 403. Audit `CONFIG_PROFILE_APPLIED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [house_ids]
+              properties:
+                house_ids: { type: array, minItems: 1, items: { type: string } }
+      responses:
+        "200":
+          description: Phiên bản cấu hình mới của từng zone
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          profile_id: { type: string }
+                          zones:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                zone_id: { type: string }
+                                house_id: { type: string }
+                                name: { type: string }
+                                config_version: { type: integer }
+        "400": { description: "Có nhà không thuộc farm của hồ sơ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Hồ sơ không ở APPROVED", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /internal/stream-auth:
     post:
       tags: [Internal]
@@ -4641,6 +4831,54 @@ components:
         light_max: { type: number, example: 0.2 }
         nh3_max: { type: number, example: 25 }
         co2_max: { type: number, example: 1500 }
+
+    ConfigProfileInput:
+      type: object
+      description: "EXPERT-FR-014 — nội dung hồ sơ; nhóm có mặt phải đủ khoá"
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 50 }
+        stage: { type: string, enum: [ATTRACTING, OCCUPIED], nullable: true }
+        thresholds: { $ref: "#/components/schemas/Thresholds" }
+        fuzzy_tuning: { $ref: "#/components/schemas/FuzzyTuning" }
+        detection_tuning: { $ref: "#/components/schemas/DetectionTuning" }
+        speaker_schedule:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            windows:
+              type: array
+              minItems: 1
+              maxItems: 2
+              items:
+                type: object
+                properties:
+                  start: { type: string, example: "05:00", description: "Giờ tròn HH:00" }
+                  end: { type: string, example: "07:00", description: "Giờ tròn HH:00, tối đa 24:00, sau start" }
+
+    ConfigProfile:
+      allOf:
+        - $ref: "#/components/schemas/ConfigProfileInput"
+        - type: object
+          properties:
+            _id: { type: string }
+            farm_id: { type: string }
+            author_id: { type: string }
+            status: { type: string, enum: [DRAFT, APPROVED, ARCHIVED] }
+            approved_by: { type: string }
+            approved_at: { type: string, format: date-time }
+            archived_at: { type: string, format: date-time }
+            applications:
+              type: array
+              items:
+                type: object
+                properties:
+                  house_ids: { type: array, items: { type: string } }
+                  zone_count: { type: integer }
+                  applied_by: { type: string }
+                  applied_at: { type: string, format: date-time }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
 
     FuzzyTuning:
       type: object

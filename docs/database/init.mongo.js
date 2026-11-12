@@ -408,6 +408,78 @@ db.getCollection("coefficientproposals").createIndex({"zone_id":1,"status":1})
 db.getCollection("coefficientproposals").createIndex({"zone_id":1}, {"unique":true,"partialFilterExpression":{"status":"PROPOSED"}})
 db.getCollection("coefficientproposals").createIndex({"farm_id":1,"created_at":-1})
 
+// ── configprofiles (model ConfigProfile) ──
+ensureCollection("configprofiles", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "author_id": {
+      "bsonType": "objectId"
+    },
+    "name": {
+      "bsonType": "string"
+    },
+    "stage": {
+      "bsonType": ["string", "null"],
+      "enum": ["ATTRACTING", "OCCUPIED", null]
+    },
+    "thresholds": {},
+    "fuzzy_tuning": {},
+    "detection_tuning": {},
+    "speaker_schedule": {},
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["DRAFT", "APPROVED", "ARCHIVED", null]
+    },
+    "approved_by": {
+      "bsonType": ["objectId", "null"]
+    },
+    "approved_at": {
+      "bsonType": ["date", "null"]
+    },
+    "archived_at": {
+      "bsonType": ["date", "null"]
+    },
+    "applications": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "house_ids": {
+            "bsonType": ["array", "null"],
+            "items": {
+              "bsonType": "objectId"
+            }
+          },
+          "zone_count": {
+            "bsonType": "number"
+          },
+          "applied_by": {
+            "bsonType": "objectId"
+          },
+          "applied_at": {
+            "bsonType": "date"
+          }
+        },
+        "required": ["zone_count", "applied_by", "applied_at"]
+      }
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "updated_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["farm_id", "author_id", "name"]
+})
+db.getCollection("configprofiles").createIndex({"farm_id":1,"status":1})
+
 // ── farms (model Farm) ──
 ensureCollection("farms", {
   "bsonType": "object",
@@ -1499,7 +1571,7 @@ ensureCollection("zones", {
           "new_values": {},
           "source": {
             "bsonType": ["string", "null"],
-            "enum": ["MANUAL", "RESET_TO_DEFAULT", "EXPERT_REVERT", null]
+            "enum": ["MANUAL", "RESET_TO_DEFAULT", "EXPERT_REVERT", "PROFILE", null]
           },
           "changed_by_role": {
             "bsonType": ["string", "null"]
@@ -1548,7 +1620,7 @@ ensureCollection("zones", {
           "new_values": {},
           "source": {
             "bsonType": ["string", "null"],
-            "enum": ["MANUAL", "EXPERT_REVERT", "SUGGESTION_APPROVED", null]
+            "enum": ["MANUAL", "EXPERT_REVERT", "SUGGESTION_APPROVED", "PROFILE", null]
           },
           "_id": {
             "bsonType": ["objectId", "null"]
@@ -1592,6 +1664,10 @@ ensureCollection("zones", {
           },
           "old_values": {},
           "new_values": {},
+          "source": {
+            "bsonType": ["string", "null"],
+            "enum": ["PROFILE", null]
+          },
           "_id": {
             "bsonType": ["objectId", "null"]
           }
