@@ -148,16 +148,16 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 ### G-22 — Bảo trì phòng ngừa (Kiệt, Len, Nhi) — hạn 23/12
 
 **Backend (Kiệt):**
-- [ ] Spec `/maintenance`: kế hoạch, mẫu checklist, ghi bảo trì và hiệu chuẩn, danh sách đến hạn.
-- [ ] Collection `maintenanceplans` (index `house_id + equipment`, `state + next_due_at`; mẫu checklist nhúng trong document).
-- [ ] Kế hoạch theo giờ chạy hoặc số lần đóng ngắt (bơm, quạt) và theo lịch (vệ sinh cảm biến và béc phun, hiệu chuẩn). Khoảng ≤ 0 trả 422; technician tạo kế hoạch trả 403 (OPS-FR-005).
-- [ ] **Không tự đặt chu kỳ bảo trì.** Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi. Dữ liệu demo ghi rõ nguồn.
-- [ ] `runHours.job` mỗi giờ (BR-45): tính giờ chạy khi relay ON; bộ điều khiển có đo dòng thì chỉ tính khi dòng trên 50 % dòng bình thường.
-- [ ] `maintenanceDue.job` mỗi giờ, và lúc 07:00 cho kế hoạch theo lịch:
+- [x] Spec `/maintenance`: kế hoạch, mẫu checklist, ghi bảo trì và hiệu chuẩn, danh sách đến hạn. *(Kiệt, 13/11, `4a9bbfc` spec + `8368ff3` model + `3eff6f7` backend, nhánh `feat/g22-maintenance` nối tiếp G-21: `/maintenance/plans` (GET, POST, PUT, DELETE → `RETIRED`), `/maintenance/plans/{id}/comments` cho chuyên gia, `/maintenance/due`, `PUT /work-orders/{id}/checklist`; ghi bảo trì là duyệt Work Order phòng ngừa, không có route ghi tay)*
+- [x] Collection `maintenanceplans` (index `house_id + equipment`, `state + next_due_at`; mẫu checklist nhúng trong document). *(`8368ff3`: kế hoạch giữ `records` (lịch sử ghi bảo trì) và `comments`; Work Order thêm `plan_id`, `checklist`, origin `PLAN`, `CHECKLIST`)*
+- [x] Kế hoạch theo giờ chạy hoặc số lần đóng ngắt (bơm, quạt) và theo lịch (vệ sinh cảm biến và béc phun, hiệu chuẩn). Khoảng ≤ 0 trả 422; technician tạo kế hoạch trả 403 (OPS-FR-005). *(`3eff6f7`)*
+- [x] **Không tự đặt chu kỳ bảo trì.** Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi. Dữ liệu demo ghi rõ nguồn. *(`3eff6f7`: `source` bắt buộc khi tạo kế hoạch; code không có chu kỳ mặc định nào)*
+- [x] `runHours.job` mỗi giờ (BR-45): tính giờ chạy khi relay ON; bộ điều khiển có đo dòng thì chỉ tính khi dòng trên 50 % dòng bình thường. *(`3eff6f7`: dùng lại `relayUsage.job` đếm theo relay; phần chỉ tính khi dòng trên 50 % mức bình thường làm sau khi G-13 (#156) merge và firmware báo mức đã học)*
+- [x] `maintenanceDue.job` mỗi giờ, và lúc 07:00 cho kế hoạch theo lịch: *(`3eff6f7`: phút 10 mỗi giờ cho kế hoạch theo giờ chạy, số lần đóng cắt và quá hạn; 07:00 giờ VN cho kế hoạch theo lịch; tải có kế hoạch thì bỏ mốc mặc định `RELAY_SERVICE_LIMITS`)*
   - đến hạn thì tạo `MAINTENANCE_DUE` (mức LOW) và một Work Order phòng ngừa cho technician (ALERT-FR-016);
   - quá hạn thêm `maintenance_grace_days` (7 ngày) thì báo Farm Owner một lần (`OVERDUE`).
-- [ ] Ghi bảo trì: đặt bộ đếm về 0, đóng `MAINTENANCE_DUE`, tính hạn kế tiếp. Ghi hiệu chuẩn thì lưu ngày hiệu chuẩn kế tiếp (OPS-FR-008).
-- [ ] Checklist kiểm tra (bồn nước, béc phun, quạt, cửa, dấu vết chuột hoặc rắn): mục nào ghi "defect" thì mở Work Order sửa chữa (OPS-FR-007).
+- [x] Ghi bảo trì: đặt bộ đếm về 0, đóng `MAINTENANCE_DUE`, tính hạn kế tiếp. Ghi hiệu chuẩn thì lưu ngày hiệu chuẩn kế tiếp (OPS-FR-008). *(`3eff6f7`: Farm Owner duyệt Work Order phòng ngừa = một lần ghi; checklist phải đủ mới báo xong (BR-41); xác nhận `MAINTENANCE_DUE` của kế hoạch không đặt bộ đếm về 0)*
+- [x] Checklist kiểm tra (bồn nước, béc phun, quạt, cửa, dấu vết chuột hoặc rắn): mục nào ghi "defect" thì mở Work Order sửa chữa (OPS-FR-007). *(`3eff6f7`)*
 
 **Giao diện:**
 - [ ] Len: làm checklist kèm ảnh, ghi bảo trì và hiệu chuẩn trên mobile.
