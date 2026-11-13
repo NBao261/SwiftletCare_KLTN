@@ -66,6 +66,14 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('FARM_OWNER'), 'applyCoefficientSuggestion')).toBe(false)
   })
 
+  it('vòng đếm: chuyên gia và kỹ thuật viên vẽ; chủ trại chỉ khi farm chưa có chuyên gia (VISION-FR-018, BR-22)', () => {
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'drawCountingRing')).toBe(true)
+    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'drawCountingRing')).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing', { farmHasExpert: false })).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing', { farmHasExpert: true })).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing')).toBe(false)
+  })
+
   it('chỉ chuyên gia viết kết luận báo cáo', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'writeConclusion')).toBe(true)
     expect(canPerform(buildUser('FARM_OWNER'), 'writeConclusion')).toBe(false)

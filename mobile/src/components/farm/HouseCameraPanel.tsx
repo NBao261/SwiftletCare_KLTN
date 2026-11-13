@@ -11,9 +11,11 @@ import {
   MagnifyingGlassPlusIcon,
   PauseIcon,
   PlayIcon,
+  PolygonIcon,
   VideoCameraIcon,
 } from 'phosphor-react-native'
-import { CameraControlColumn } from '@/components/farm/CameraControlColumn'
+import { CameraControlColumn, type CameraControl } from '@/components/farm/CameraControlColumn'
+import { CountingRingEditor } from '@/components/farm/CountingRingEditor'
 import { CameraFullscreenModal } from '@/components/farm/CameraFullscreenModal'
 import { CellularPlaybackPrompt } from '@/components/farm/CellularPlaybackPrompt'
 import { ZoomableView } from '@/components/common/ZoomableView'
@@ -24,6 +26,7 @@ import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { useAutoHideControls } from '@/hooks/device/useAutoHideControls'
 import { useCameraAutoplay } from '@/hooks/device/useCameraAutoplay'
+import { useCanDrawCountingRing } from '@/hooks/device/useCanDrawCountingRing'
 import { useCameraStreamUrl } from '@/hooks/device/useCameraStreamUrl'
 import { useVideoZoom } from '@/hooks/device/useVideoZoom'
 import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
@@ -58,6 +61,9 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
   const setCameraCollapsed = useFarmPrefsStore(state => state.setCameraCollapsed)
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null)
   const [isFullscreen, setFullscreen] = useState(false)
+  // Trình vẽ vòng đếm đang mở; key mới mỗi lần mở để bản nháp lấy lại vòng đang lưu
+  const [isRingEditorOpen, setRingEditorOpen] = useState(false)
+  const [ringEditorKey, setRingEditorKey] = useState(0)
 
   // Camera online đứng trước để mặc định mở được ngay
   const sortedCameras = [...cameras].sort(
@@ -67,6 +73,7 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
   const cameraIndex = camera ? cameras.findIndex(item => item._id === camera._id) : -1
   const isCollapsed = prefs.isCameraCollapsed
   const isOnline = camera?.status === 'ONLINE'
+  const canDrawRing = useCanDrawCountingRing(camera?.house_id ?? null)
   const autoplay = useCameraAutoplay({ canPlay: isActive && !isCollapsed && isOnline })
   const streamQuery = useCameraStreamUrl(autoplay.shouldStream && camera ? camera._id : null)
   const player = useVideoPlayer(streamQuery.data ?? null, videoPlayer => {
@@ -108,6 +115,23 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
   }
   const statusText = camera ? getCameraStatusBadge(camera.status) : '_'
 
+  // Mở trình vẽ vòng đếm; camera đang chờ bấm phát thì phát luôn để vẽ trên hình thật
+  const openRingEditor = () => {
+    if (autoplay.isWaitingForPlay) autoplay.playOnce()
+    setRingEditorKey(key => key + 1)
+    setRingEditorOpen(true)
+  }
+  // Câu thay cho hình trong trình vẽ: chưa có luồng (đang hỏi dữ liệu di động) thì nói rõ, vẫn chỉnh được vòng đang lưu
+  const ringEditorMessage = message?.text ?? (autoplay.shouldStream ? null : t('Camera chưa phát nên chưa thấy hình'))
+  const cameraControls: CameraControl[] = [
+    { icon: CaretUpIcon, label: t('Thu gọn camera'), onPress: () => setCollapsed(true) },
+    { icon: MagnifyingGlassPlusIcon, label: t('Phóng to'), onPress: withControlsKept(zoom.zoomIn) },
+    { icon: MagnifyingGlassMinusIcon, label: t('Thu nhỏ'), onPress: withControlsKept(zoom.zoomOut) },
+    { icon: ArrowsOutIcon, label: t('Toàn màn hình'), onPress: withControlsKept(() => setFullscreen(true)) },
+    // Vẽ vòng đếm (VISION-FR-018): chuyên gia, kỹ thuật viên của nhà, chủ trại khi farm chưa có chuyên gia
+    ...(camera && canDrawRing ? [{ icon: PolygonIcon, label: t('Vẽ vòng đếm của camera'), onPress: openRingEditor }] : []),
+  ]
+
   if (isCollapsed) {
     return (
       <Animated.View layout={LinearTransition.reduceMotion(ReduceMotion.System)}>
@@ -132,8 +156,8 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
       layout={LinearTransition.reduceMotion(ReduceMotion.System)}
       style={[styles.frame, { width: frameWidth, height: frameWidth * ASPECT_RATIO, backgroundColor: palette.inverse }]}
     >
-      {/* Video hoặc câu báo trạng thái; đang xem toàn màn thì khung toàn màn giữ player */}
-      {!isFullscreen && (autoplay.shouldStream || message) && (
+      {/* Video hoặc câu báo trạng thái; đang xem toàn màn hoặc đang vẽ vòng thì màn đó giữ player */}
+      {!isFullscreen && !isRingEditorOpen && (autoplay.shouldStream || message) && (
         <CameraVideoSurface
           player={player}
           message={message?.text ?? null}
@@ -174,14 +198,7 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
       {/* Thanh điều khiển ở mọi trạng thái, kể cả khi chưa có camera: một cột dọc mép phải (thu gọn khung, phóng to,
           thu nhỏ, toàn màn hình), giữa phát/tạm dừng khi có video. Chạm khung để hiện/ẩn, tự ẩn sau 3 giây khi đang phát */}
       <Animated.View style={[styles.fill, controls.animatedStyle]} pointerEvents={controls.isVisible ? 'box-none' : 'none'}>
-        <CameraControlColumn
-          controls={[
-            { icon: CaretUpIcon, label: t('Thu gọn camera'), onPress: () => setCollapsed(true) },
-            { icon: MagnifyingGlassPlusIcon, label: t('Phóng to'), onPress: withControlsKept(zoom.zoomIn) },
-            { icon: MagnifyingGlassMinusIcon, label: t('Thu nhỏ'), onPress: withControlsKept(zoom.zoomOut) },
-            { icon: ArrowsOutIcon, label: t('Toàn màn hình'), onPress: withControlsKept(() => setFullscreen(true)) },
-          ]}
-        />
+        <CameraControlColumn controls={cameraControls} />
         {hasVideo && !isFullscreen && (
           <View style={styles.center} pointerEvents="box-none">
             <PlayerControlButton
@@ -228,6 +245,13 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
         message={message?.text ?? null}
         onRetry={message?.onRetry}
         onClose={() => setFullscreen(false)}
+      />
+      <CountingRingEditor
+        key={`ring-${ringEditorKey}`}
+        camera={isRingEditorOpen ? camera : null}
+        player={player}
+        videoMessage={ringEditorMessage}
+        onClose={() => setRingEditorOpen(false)}
       />
     </Animated.View>
   )

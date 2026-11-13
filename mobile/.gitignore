@@ -24,6 +24,8 @@ local.properties
 *.apk
 *.aab
 *.keystore
+# Firebase của bản Android: nạp qua EAS file env GOOGLE_SERVICES_JSON (app.config.js)
+google-services.json
 
 # iOS
 ios/

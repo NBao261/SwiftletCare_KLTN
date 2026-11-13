@@ -1,19 +1,24 @@
 /**
  * notifyUser / notifyAdmins — thông báo nghiệp vụ (không gắn Alert).
- * Bước gửi thật vẫn là adapter ghi log, nên test kiểm tra qua logger.
+ * Push đi qua push.service (giả lập ở đây, có test riêng ở pushNotification.test.ts); email vẫn là
+ * adapter ghi log nên kiểm tra qua logger.
  */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { User } from '@/models/user.model'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
+import { sendPushToUser } from '@/services/push.service'
 import logger from '@/utils/logger.util'
+
+jest.mock('@/services/push.service', () => ({ sendPushToUser: jest.fn().mockResolvedValue(1) }))
 
 let mongod: MongoMemoryServer
 const infoSpy = jest.spyOn(logger, 'info').mockImplementation((() => logger) as never)
 const warnSpy = jest.spyOn(logger, 'warn').mockImplementation((() => logger) as never)
 
-const sentTo = (channel: string) =>
-  (infoSpy.mock.calls as unknown[][])
+const sentTo = (channel: string): Array<Record<string, unknown>> => channel === 'push'
+  ? jest.mocked(sendPushToUser).mock.calls.map(([userId, msg]) => ({ userId, ...msg }))
+  : (infoSpy.mock.calls as unknown[][])
     .filter(c => String(c[0]).includes(`[notify:${channel}]`))
     .map(c => c[1] as Record<string, unknown>)
 
@@ -42,6 +47,17 @@ describe('notifyUser', () => {
 
     expect(sentTo('push')).toHaveLength(1)
     expect(sentTo('email')).toEqual([expect.objectContaining({ email: 'owner@test.vn', subject: message.title })])
+  })
+
+  it('passes what the app should open with the push (ALERT-FR-002)', async () => {
+    const user = await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'Owner', role: 'FARM_OWNER' })
+    const reportId = String(new mongoose.Types.ObjectId())
+
+    await notifyUser(String(user._id), { ...message, ref: { kind: 'health_report', id: reportId } })
+
+    expect(sentTo('push')).toEqual([expect.objectContaining({
+      userId: String(user._id), title: message.title, data: { kind: 'health_report', id: reportId }, urgent: false,
+    })])
   })
 
   it('skips push when the user turned it off but still emails', async () => {

@@ -55,11 +55,20 @@ export interface SensorNode {
   replaced_by?: string | null
 }
 
+// Vòng đếm khép kín quanh miệng lỗ ra vào (VISION-FR-018, CountingRing trong api-spec): 3–12 đỉnh [x, y] theo tỉ lệ khung hình
+// 0–1, theo thứ tự quanh vòng; into_ring_is_exit true = chim đi vào vòng là RA
+export interface CountingRing {
+  points: [number, number][]
+  into_ring_is_exit: boolean
+}
+
 // Camera đếm chim ở cửa ra vào của cả nhà yến — gắn House, không gắn Zone (SRS v2.1.8)
 export interface CameraNode {
   _id: string
   device_id: string
   house_id: string
+  // VISION-FR-018 — vòng đếm đã vẽ cho camera này; null thì nút AI dùng vòng mặc định trong config.yaml của nó
+  counting_ring?: (CountingRing & { updated_at?: string; updated_by?: string }) | null
   rtsp_url?: string
   status: DeviceStatus
   last_heartbeat?: string

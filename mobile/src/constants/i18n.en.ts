@@ -295,6 +295,36 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Phóng to': 'Zoom in',
   'Thu nhỏ': 'Zoom out',
   'Phát camera': 'Play camera',
+  // Trình vẽ vòng đếm (VISION-FR-018)
+  // Nút mở trình vẽ và tiêu đề trình vẽ; 'Vẽ vòng đếm' là nhãn quá khứ của lịch sử hoạt động
+  'Vẽ vòng đếm của camera': 'Draw counting ring',
+  'Camera chưa phát nên chưa thấy hình': 'The camera is not playing, so there is no picture yet',
+  'Khung hình camera: chạm để thêm một điểm của vòng': 'Camera frame: tap to add a point of the ring',
+  'Chạm quanh miệng lỗ ra vào để đặt từ 3 đến 12 điểm, lần lượt theo vòng.':
+    'Tap around the entrance hole to place 3 to 12 points, one after another around the ring.',
+  '{count}/{max} điểm': '{count}/{max} points',
+  'Bỏ điểm cuối': 'Undo last point',
+  'Vẽ lại': 'Start over',
+  'Chim đi vào trong vòng là': 'A bird going into the ring is',
+  'Bay ra ngoài': 'Flying out',
+  'Bay về tổ': 'Coming home',
+  'Chiều của vòng đếm': 'Direction of the counting ring',
+  'Vòng đang dùng cập nhật {time}': 'Ring in use updated {time}',
+  'Camera chưa có vòng riêng, máy đếm chim đang dùng vòng mặc định':
+    'This camera has no ring of its own; the bird counter uses its default ring',
+  'Đổi vòng thì số đếm trước và sau khi đổi không so sánh được với nhau.':
+    'After the ring changes, counts before and after the change cannot be compared.',
+  'Lưu vòng đếm': 'Save counting ring',
+  'Đã lưu vòng đếm, máy đếm chim đã nhận vòng mới': 'Counting ring saved; the bird counter has the new ring',
+  'Đã lưu vòng đếm. Máy đếm chim sẽ nhận vòng khi kết nối lại':
+    'Counting ring saved. The bird counter will get it when it reconnects',
+  'Bỏ vòng đang vẽ?': 'Discard the ring you are drawing?',
+  'Các điểm vừa đặt chưa được lưu.': 'The points you placed are not saved.',
+  'Vẽ tiếp': 'Keep drawing',
+  'Bỏ': 'Discard',
+  'Bạn không có quyền vẽ vòng đếm của camera này': 'You are not allowed to draw the counting ring of this camera',
+  'Camera đã bị gỡ khỏi hệ thống': 'The camera has been removed from the system',
+  'Vòng đếm cần từ 3 đến 12 điểm trong khung hình': 'The counting ring needs 3 to 12 points inside the frame',
   'Bạn đang dùng dữ liệu di động': 'You are on mobile data',
   'Tự phát camera khi dùng dữ liệu di động?': 'Play the camera automatically on mobile data?',
   'Luôn phát': 'Always play',
