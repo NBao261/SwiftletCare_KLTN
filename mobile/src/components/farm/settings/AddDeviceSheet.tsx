@@ -57,7 +57,8 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
   const replaceSensorNode = useReplaceSensorNode()
   const [mode, setMode] = useState<SheetMode>('scan')
   const [scanAttempt, setScanAttempt] = useState(0)
-  const [scanNotice, setScanNotice] = useState<string | null>(null)
+  // Câu dưới khung quét: chỉ câu đã chọn khu vực theo mã tầng là thành công, còn lại là quét nhầm
+  const [scanNotice, setScanNotice] = useState<{ text: string; tone: 'error' | 'success' } | null>(null)
   const [deviceId, setDeviceId] = useState('')
   const [activationKey, setActivationKey] = useState('')
   const [reason, setReason] = useState('')
@@ -81,7 +82,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
   // Mã tầng đọc được: chỉ nhận khu vực người dùng được xem (backend vẫn kiểm quyền, 403 nếu không có, FARM-FR-007)
   const applyZoneCode = (scannedZoneId: string): boolean => {
     if (!directory.zoneById.has(scannedZoneId)) {
-      setScanNotice(t('Mã tầng này không thuộc trang trại của bạn'))
+      setScanNotice({ text: t('Mã tầng này không thuộc trang trại của bạn'), tone: 'error' })
       return false
     }
     setZoneId(scannedZoneId)
@@ -103,12 +104,15 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
     const scannedZoneId = parseZoneCode(data)
     if (scannedZoneId && target?.kind === 'controller') {
       if (applyZoneCode(scannedZoneId)) {
-        setScanNotice(t('Đã chọn {zone}. Giờ quét nhãn dán trên thiết bị', { zone: getZoneName(scannedZoneId) }))
+        setScanNotice({
+          text: t('Đã chọn {zone}. Giờ quét nhãn dán trên thiết bị', { zone: getZoneName(scannedZoneId) }),
+          tone: 'success',
+        })
       }
       restartScan()
       return
     }
-    setScanNotice(getWrongCodeNotice(Boolean(scannedZoneId)))
+    setScanNotice({ text: getWrongCodeNotice(Boolean(scannedZoneId)), tone: 'error' })
     restartScan()
   }
 
@@ -124,7 +128,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
   const handleZoneScanned = (data: string) => {
     const scannedZoneId = parseZoneCode(data)
     if (!scannedZoneId) {
-      setScanNotice(t('Mã này không phải mã tầng SwiftletCare'))
+      setScanNotice({ text: t('Mã này không phải mã tầng SwiftletCare'), tone: 'error' })
       restartScan()
       return
     }
@@ -173,7 +177,10 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
     onRegistered(getDoneMessage(registered.deviceId))
   }
 
+  // Thay bằng chính thiết bị cũ: backend trả 400 như mã kích hoạt sai, nên chặn và báo đúng lý do ngay trên máy
+  const isSameAsOldDevice = target?.kind === 'replace' && deviceId.trim() === target.oldDeviceId
   const isFilled =
+    !isSameAsOldDevice &&
     deviceId.trim() !== '' &&
     activationKey.trim() !== '' &&
     (isCamera || zoneId !== '') &&
@@ -182,7 +189,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
   const renderScan = () => (
     <View style={styles.body}>
       <QrScanner key={scanAttempt} onScanned={handleScanned} />
-      <FormMessage message={scanNotice} tone={scanNotice && zoneId && !isCamera ? 'success' : 'error'} />
+      <FormMessage message={scanNotice?.text ?? null} tone={scanNotice?.tone} />
       <Text variant="small" color={palette.textSecondary}>
         {isCamera
           ? t('Đưa nhãn QR trên camera vào giữa khung')
@@ -203,7 +210,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
   const renderZoneScan = () => (
     <View style={styles.body}>
       <QrScanner key={`zone-${scanAttempt}`} onScanned={handleZoneScanned} />
-      <FormMessage message={scanNotice} />
+      <FormMessage message={scanNotice?.text ?? null} tone={scanNotice?.tone} />
       <Text variant="small" color={palette.textSecondary}>
         {t('Đưa mã QR dán ở tầng vào giữa khung')}
       </Text>
@@ -252,6 +259,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
                     value: reason,
                     onChangeText: setReason,
                     label: t('Lý do thay'),
+                    keyboardType: 'default' as const,
                     autoCapitalize: 'sentences' as const,
                   },
                   isFullWidth: true,
@@ -292,6 +300,7 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
           </View>
         </View>
       )}
+      <FormMessage message={isSameAsOldDevice ? t('Thiết bị mới phải khác thiết bị cũ') : null} />
       <FormMessage message={mutation.error ? getDeviceRegisterErrorMessage(mutation.error) : null} />
       <SettingsActionBar
         label={isReplace ? t('Thay thiết bị') : t('Đăng ký thiết bị')}

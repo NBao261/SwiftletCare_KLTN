@@ -25,7 +25,7 @@ import { Spacing } from '@/constants/theme'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { DeviceStatus } from '@/types'
-import { canReassignZone, type DeviceAction, getDeviceActions, isWithinRestoreWindow } from '@/utils/device.utils'
+import { type DeviceAction, getDeviceActions, isWithinRestoreWindow } from '@/utils/device.utils'
 import { getDeviceStatusLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -56,15 +56,8 @@ interface DeviceListSectionProps {
 }
 
 // Tên và dòng phụ của từng thao tác trong bảng ⋮ của một thiết bị
-function getActionText(action: DeviceAction, device: ListedDevice): { label: string; caption: string } {
-  if (action === 'move') {
-    return {
-      label: t('Dời sang khu vực khác'),
-      caption: canReassignZone(device.status)
-        ? t('Quét mã tầng mới hoặc chọn khu vực')
-        : t('Chỉ dời được khi thiết bị đang trực tuyến'),
-    }
-  }
+function getActionText(action: DeviceAction): { label: string; caption: string } {
+  if (action === 'move') return { label: t('Dời sang khu vực khác'), caption: t('Quét mã tầng mới hoặc chọn khu vực') }
   if (action === 'replace') return { label: t('Thay thiết bị'), caption: t('Quét nhãn thiết bị mới, giữ khu vực và lịch sử') }
   return { label: t('Gỡ thiết bị'), caption: t('Ẩn khỏi danh sách, giữ lịch sử, khôi phục được trong 24 giờ') }
 }
@@ -108,7 +101,7 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
         .filter(action => (action === 'move' ? Boolean(manage?.zone) : action === 'replace' ? Boolean(manage?.onReplace) : true))
         .map(action => ({
           icon: ACTION_ICONS[action],
-          ...getActionText(action, menuDevice),
+          ...getActionText(action),
           onPress: () => runAction(action, menuDevice),
         }))
     : []

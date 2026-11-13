@@ -59,14 +59,17 @@ interface DeviceSetupProgressProps {
 export function DeviceSetupProgress({ kind, deviceRecordId }: DeviceSetupProgressProps) {
   const palette = usePalette()
   const setup = useSetupDeviceStatus(kind, deviceRecordId)
-  const isOnline = setup.status === 'ONLINE' || setup.status === 'OFFLINE'
+  const isOnline = setup.status === 'ONLINE'
+  // Đã từng kết nối rồi mất (OFFLINE): chờ kết nối lại, khác với thiết bị mới chưa gửi tín hiệu nào (PENDING)
+  const connectionCaption =
+    setup.status === 'OFFLINE' ? t('Thiết bị đang mất kết nối, chờ kết nối lại') : t('Đang chờ thiết bị gửi tín hiệu đầu tiên')
   const steps: ProgressStep[] = [
     { key: 'registered', label: t('Đã đăng ký'), state: 'done' },
     {
       key: 'online',
       label: t('Đã kết nối'),
       state: isOnline ? 'done' : 'waiting',
-      caption: isOnline ? undefined : t('Đang chờ thiết bị gửi tín hiệu đầu tiên'),
+      caption: isOnline ? undefined : connectionCaption,
     },
     ...(setup.configStep ? [buildConfigStep(setup.configStep)] : []),
   ]

@@ -1021,9 +1021,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   // Dời, thay, gỡ, khôi phục thiết bị đã lắp (FARM-FR-007b, 008)
   'Dời sang khu vực khác': 'Move to another zone',
   'Quét mã tầng mới hoặc chọn khu vực': 'Scan the new floor code or pick a zone',
-  'Chỉ dời được khi thiết bị đang trực tuyến': 'Only an online device can be moved',
-  'Chỉ dời được khi thiết bị đang trực tuyến. Bật nguồn và chờ thiết bị kết nối rồi thử lại.':
-    'Only an online device can be moved. Power it on, wait for it to connect, then try again.',
+  'Thiết bị đang không trực tuyến: dời xong, thiết bị nhận cấu hình khu vực mới khi kết nối lại.':
+    'The device is offline: once moved, it gets the new zone configuration when it reconnects.',
   'Đang ở: {zone}': 'Now in: {zone}',
   'Dời sang: {zone}': 'Move to: {zone}',
   'Chọn khu vực mới': 'Choose the new zone',
@@ -1032,8 +1031,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Dời thiết bị': 'Move device',
   'Đã dời {device} sang {zone}': 'Moved {device} to {zone}',
   'Thiết bị đang ở khu vực này rồi': 'The device is already in this zone',
-  'Thiết bị phải đang trực tuyến mới dời được, hoặc thiết bị đã bị gỡ':
-    'The device must be online to be moved, or it has been removed',
+  'Thiết bị đã bị gỡ, không dời được': 'The device has been removed and cannot be moved',
+  'Thiết bị đang mất kết nối, chờ kết nối lại': 'The device is offline; waiting for it to reconnect',
+  'Thiết bị mới phải khác thiết bị cũ': 'The new device must differ from the old one',
   'Thay thiết bị': 'Replace device',
   'Thay bộ điều khiển': 'Replace controller',
   'Quét nhãn thiết bị mới, giữ khu vực và lịch sử': 'Scan the new device label; the zone and history are kept',

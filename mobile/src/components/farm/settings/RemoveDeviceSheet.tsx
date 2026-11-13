@@ -111,7 +111,13 @@ export function RemoveDeviceSheet({ target, onClose, onDone }: RemoveDeviceSheet
           items={[
             {
               label: t('Lý do'),
-              input: { value: reason, onChangeText: setReason, label: t('Lý do'), autoCapitalize: 'sentences' },
+              input: {
+                value: reason,
+                onChangeText: setReason,
+                label: t('Lý do'),
+                keyboardType: 'default' as const,
+                autoCapitalize: 'sentences',
+              },
               isFullWidth: true,
             },
           ]}

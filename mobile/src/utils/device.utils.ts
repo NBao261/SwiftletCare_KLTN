@@ -23,16 +23,18 @@ export function summarizeDeviceStatuses(statuses: DeviceStatus[]): DeviceStatusS
 // Bước "Đã áp cấu hình khu vực" khi setup controller (FARM-FR-012, ENV-FR-027)
 export type ConfigApplyStep = 'waiting-connection' | 'waiting-config' | 'applied' | 'mismatch' | 'unknown'
 
-// Đọc bước áp cấu hình từ trạng thái kết nối và config_sync: chưa kết nối thì chưa tới bước này; MISMATCH là đã quá
-// 3 heartbeat vẫn báo bản cũ (BR-24); UNKNOWN là firmware trước 2.1.0 không báo phiên bản
+// Đọc bước áp cấu hình từ trạng thái kết nối và config_sync: chưa kết nối hoặc đang mất kết nối thì chờ kết nối (controller chỉ
+// nhận cấu hình khi trực tuyến); MISMATCH là đã quá 3 heartbeat vẫn báo bản cũ (BR-24); UNKNOWN là firmware trước 2.1.0 không
+// báo phiên bản, nên không chờ được nữa
 export function getConfigApplyStep(
   status: DeviceStatus | null,
   configSync: ConfigSyncState | undefined,
 ): ConfigApplyStep {
   if (configSync === 'APPLIED') return 'applied'
   if (status === null || status === 'PENDING') return 'waiting-connection'
-  if (configSync === 'MISMATCH') return 'mismatch'
   if (configSync === 'UNKNOWN') return 'unknown'
+  if (status === 'OFFLINE') return 'waiting-connection'
+  if (configSync === 'MISMATCH') return 'mismatch'
   return 'waiting-config'
 }
 
@@ -44,10 +46,9 @@ export function getDeviceActions(kind: 'controller' | 'camera'): DeviceAction[] 
   return kind === 'controller' ? ['move', 'replace', 'remove'] : ['remove']
 }
 
-// Backend chỉ dời controller đang trực tuyến (409 khi không ONLINE); Report 3 FARM-FR-007b muốn dời cả thiết bị offline khi nó
-// kết nối lại, phần đó chờ backend
-export function canReassignZone(status: DeviceStatus): boolean {
-  return status === 'ONLINE'
+// Dời được cả controller không trực tuyến (FARM-FR-007b): backend chỉ đổi khu vực, controller nhận cấu hình mới khi kết nối lại
+export function appliesMoveOnReconnect(status: DeviceStatus): boolean {
+  return status !== 'ONLINE'
 }
 
 // Thiết bị gỡ còn khôi phục được trong 24 giờ (FARM-FR-008, Report 3 §6.6); quá hạn backend trả 409

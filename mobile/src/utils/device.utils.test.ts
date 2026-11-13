@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
 import {
-  canReassignZone,
+  appliesMoveOnReconnect,
   formatFreeHeap,
   formatUptime,
   getConfigApplyStep,
@@ -16,11 +16,11 @@ describe('getDeviceActions', () => {
   })
 })
 
-describe('canReassignZone', () => {
-  it('chỉ dời controller đang trực tuyến', () => {
-    expect(canReassignZone('ONLINE')).toBe(true)
-    expect(canReassignZone('OFFLINE')).toBe(false)
-    expect(canReassignZone('PENDING')).toBe(false)
+describe('appliesMoveOnReconnect', () => {
+  it('controller không trực tuyến vẫn dời được, nhận khu vực mới khi kết nối lại', () => {
+    expect(appliesMoveOnReconnect('ONLINE')).toBe(false)
+    expect(appliesMoveOnReconnect('OFFLINE')).toBe(true)
+    expect(appliesMoveOnReconnect('PENDING')).toBe(true)
   })
 })
 
@@ -44,7 +44,13 @@ describe('getConfigApplyStep', () => {
 
   it('đã kết nối mà chưa báo đúng phiên bản thì chờ nhận cấu hình', () => {
     expect(getConfigApplyStep('ONLINE', 'PENDING')).toBe('waiting-config')
-    expect(getConfigApplyStep('OFFLINE', undefined)).toBe('waiting-config')
+    expect(getConfigApplyStep('ONLINE', undefined)).toBe('waiting-config')
+  })
+
+  it('đang mất kết nối mà chưa áp cấu hình thì chờ kết nối lại, không quay ở bước nhận cấu hình', () => {
+    expect(getConfigApplyStep('OFFLINE', 'PENDING')).toBe('waiting-connection')
+    expect(getConfigApplyStep('OFFLINE', 'MISMATCH')).toBe('waiting-connection')
+    expect(getConfigApplyStep('OFFLINE', undefined)).toBe('waiting-connection')
   })
 
   it('APPLIED là xong, kể cả khi thiết bị vừa mất kết nối', () => {
@@ -55,6 +61,7 @@ describe('getConfigApplyStep', () => {
   it('tách riêng cấu hình chưa khớp và firmware không báo phiên bản', () => {
     expect(getConfigApplyStep('ONLINE', 'MISMATCH')).toBe('mismatch')
     expect(getConfigApplyStep('ONLINE', 'UNKNOWN')).toBe('unknown')
+    expect(getConfigApplyStep('OFFLINE', 'UNKNOWN')).toBe('unknown')
   })
 })
 

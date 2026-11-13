@@ -135,7 +135,7 @@ describe('getDeviceMoveErrorMessage', () => {
   it('400 là trùng khu vực đang ở, 409 là không trực tuyến hoặc đã gỡ, 403 dùng câu chung', () => {
     expect(getDeviceMoveErrorMessage(backendError(400))).toBe('Thiết bị đang ở khu vực này rồi')
     expect(getDeviceMoveErrorMessage(backendError(409))).toBe(
-      'Thiết bị phải đang trực tuyến mới dời được, hoặc thiết bị đã bị gỡ',
+      'Thiết bị đã bị gỡ, không dời được',
     )
     expect(getDeviceMoveErrorMessage(backendError(403))).toBe('Bạn không có quyền thực hiện thao tác này')
   })

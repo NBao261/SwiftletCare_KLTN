@@ -34,9 +34,10 @@ function readConfigStep(kind: SetupDeviceKind, device: SetupDevice | null): Conf
   return getConfigApplyStep(device?.status ?? null, configSync)
 }
 
-// Còn phải hỏi lại không: camera xong khi đã kết nối; controller xong khi đã áp cấu hình hoặc firmware không báo phiên bản
+// Còn phải hỏi lại không: xong khi thiết bị đang trực tuyến và (controller) đã áp cấu hình hoặc firmware không báo phiên bản.
+// Thiết bị mất kết nối thì màn chờ nó kết nối lại (bước "Đã kết nối"), chỉ hỏi trong lúc màn tiến trình còn mở
 function isSetupSettled(kind: SetupDeviceKind, device: SetupDevice | null): boolean {
-  if (!device || device.status === 'PENDING') return false
+  if (device?.status !== 'ONLINE') return false
   const configStep = readConfigStep(kind, device)
   return configStep === null || configStep === 'applied' || configStep === 'unknown'
 }

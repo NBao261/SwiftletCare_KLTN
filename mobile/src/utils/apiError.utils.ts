@@ -107,11 +107,11 @@ export function getDeviceRegisterErrorMessage(error: unknown): string {
   })
 }
 
-// Câu báo lỗi khi dời controller sang khu vực khác (FARM-FR-007b): 400 trùng khu vực đang ở, 409 thiết bị đã gỡ hoặc không trực tuyến
+// Câu báo lỗi khi dời controller sang khu vực khác (FARM-FR-007b): 400 trùng khu vực đang ở, 409 thiết bị đã gỡ
 export function getDeviceMoveErrorMessage(error: unknown): string {
   return getSettingsErrorMessage(error, {
     400: t('Thiết bị đang ở khu vực này rồi'),
-    409: t('Thiết bị phải đang trực tuyến mới dời được, hoặc thiết bị đã bị gỡ'),
+    409: t('Thiết bị đã bị gỡ, không dời được'),
   })
 }
 

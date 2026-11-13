@@ -15,7 +15,7 @@ import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { DeviceStatus } from '@/types'
 import { getDeviceMoveErrorMessage } from '@/utils/apiError.utils'
-import { canReassignZone } from '@/utils/device.utils'
+import { appliesMoveOnReconnect } from '@/utils/device.utils'
 import { parseZoneCode } from '@/utils/qrCode.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -40,7 +40,7 @@ interface MoveDeviceSheetProps {
 type SheetMode = 'pick' | 'scan' | 'progress'
 
 // Dời controller đã lắp sang khu vực khác (FARM-FR-007b): quét mã QR dán ở tầng mới (FARM-FR-011) hoặc chọn khu vực, rồi theo
-// dõi tới khi controller áp cấu hình của khu vực mới (FARM-FR-012). Backend chỉ dời thiết bị đang trực tuyến (409 nếu không)
+// dõi tới khi controller áp cấu hình của khu vực mới (FARM-FR-012). Controller không trực tuyến vẫn dời được, nhận khi kết nối lại
 export function MoveDeviceSheet({ target, onClose, onMoved }: MoveDeviceSheetProps) {
   const palette = usePalette()
   const directory = useZoneDirectory()
@@ -51,7 +51,7 @@ export function MoveDeviceSheet({ target, onClose, onMoved }: MoveDeviceSheetPro
   const [newZoneId, setNewZoneId] = useState('')
   const houseZones = target?.zones ?? []
   const otherZones = houseZones.filter(zone => zone._id !== target?.zoneId)
-  const isOnline = target ? canReassignZone(target.status) : false
+  const isAppliedOnReconnect = target ? appliesMoveOnReconnect(target.status) : false
 
   // Tên khu vực: khu vực của nhà đang mở ghi tên; khu vực nhà khác (quét mã tầng nhà khác) ghi kèm tên nhà
   const getZoneName = (id: string): string => {
@@ -93,10 +93,10 @@ export function MoveDeviceSheet({ target, onClose, onMoved }: MoveDeviceSheetPro
 
   const renderPick = () => (
     <View style={styles.body}>
-      {!isOnline && (
-        <FormMessage
-          message={t('Chỉ dời được khi thiết bị đang trực tuyến. Bật nguồn và chờ thiết bị kết nối rồi thử lại.')}
-        />
+      {isAppliedOnReconnect && (
+        <Text variant="small" color={palette.textSecondary}>
+          {t('Thiết bị đang không trực tuyến: dời xong, thiết bị nhận cấu hình khu vực mới khi kết nối lại.')}
+        </Text>
       )}
       <Text variant="small" color={palette.textSecondary}>
         {t('Đang ở: {zone}', { zone: target ? getZoneName(target.zoneId) : '_' })}
@@ -110,7 +110,6 @@ export function MoveDeviceSheet({ target, onClose, onMoved }: MoveDeviceSheetPro
           selectedId={newZoneId || null}
           onSelect={setNewZoneId}
           placement="card"
-          disabled={!isOnline}
           accessibilityLabel={t('Chọn khu vực mới')}
         />
       )}
@@ -119,7 +118,6 @@ export function MoveDeviceSheet({ target, onClose, onMoved }: MoveDeviceSheetPro
         <Button
           label={t('Quét mã tầng mới')}
           variant="link"
-          disabled={!isOnline}
           onPress={() => {
             setScanNotice(null)
             setMode('scan')
@@ -131,7 +129,7 @@ export function MoveDeviceSheet({ target, onClose, onMoved }: MoveDeviceSheetPro
         label={t('Dời thiết bị')}
         value={t('GỬI')}
         onPress={submit}
-        disabled={!isOnline || !newZoneId}
+        disabled={!newZoneId}
         loading={reassignZone.isPending}
         accessibilityLabel={t('Dời thiết bị')}
       />
