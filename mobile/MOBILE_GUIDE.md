@@ -195,6 +195,7 @@ mobile/
    │  │                          #   useBirdDaily · useBirdBuckets · useCorrelations · useEnvSummaries · useForecast · useControlPerformances · useAutonomies ·
    │  │                          #   useControlSuggestion · useZoneRelayOverrides · useHealthReports (theo nhà, theo loại kỳ) · useHouseHealthReport · useCreateHealthReport · useUpdateConclusion
    │  ├─ harvest/                # useFarmHarvests (đợt thu của farm)
+   │  ├─ work-order/             # useWorkOrders (phân trang theo meta) · useWorkOrderDetail · useOpenWorkOrderCount (khối Trang chủ) · useStartWorkOrder · useCompleteWorkOrder (nguyên nhân, việc đã làm, ảnh multipart) — G-21
    │  ├─ health/                 # useHealthDays · useHealthDay · useRateHealthDay · useSkipHealthDay · useUpdateRatingNote · usePendingHealthDays (mọi farm, trong hạn 7 ngày) · useUnreadHealthReports
    │  ├─ notification/           # useUnreadNotificationCount · useNotifications (phân trang) · useNotificationDetail · useMarkNotificationRead · useMarkAllNotificationsRead (cả hai trừ số ngay, lỗi thì trả lại) ·
    │  │                          #   useBellCounts (số chuông = thông báo chưa đọc + cảnh báo chưa xác nhận) · useBellRealtime (NOTIFICATION_NEW, ALERT_NEW, nối lại socket) · useOpenNotification
@@ -288,6 +289,7 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | Xem dashboard, phân tích, đếm chim, live stream, báo cáo, trạng thái ngày   |                            ✓                             |      ✓ chỉ đọc       |
 | Chấm điểm trạng thái ngày của nhà (BR-31)                                   |                            ✓                             |  – (xem ngày lệch)   |
 | Xác nhận đã xử lý cảnh báo                                                  |                            ✓                             |          –           |
+| Work Order: bắt đầu, báo xong kèm nguyên nhân và ảnh (G-21; kỹ thuật viên: nhà được giao, cũng trả lời kiểm tra tại chỗ) |                            ✓                             |         đọc          |
 | Nhận push, cài kênh Telegram                                                |                            ✓                             |          –           |
 | Kiểm chứng cảnh báo suy luận, sửa tham số phát hiện, lịch đếm, mức sức khỏe | chỉ khi farm chưa có chuyên gia (BR-22), còn lại chỉ đọc |          ✓           |
 | Viết kết luận, duyệt thay đổi của Farm Owner                                |                           đọc                            |          ✓           |
