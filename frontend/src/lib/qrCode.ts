@@ -6,6 +6,20 @@ import QRCode from 'qrcode'
 export const deviceLabelCode = (deviceId: string, activationKey: string) =>
   `swiftletcare://claim?d=${encodeURIComponent(deviceId)}&k=${encodeURIComponent(activationKey)}`
 
+// Đọc nhãn thiết bị, cùng quy tắc parseDeviceLabel của mobile; sai tiền tố hoặc thiếu d/k thì null
+export function parseDeviceLabelCode(text: string): { deviceId: string; secretKey: string } | null {
+  const trimmed = text.trim()
+  if (!trimmed.toLowerCase().startsWith('swiftletcare://claim?')) return null
+  try {
+    const params = new URL(trimmed).searchParams
+    const deviceId = params.get('d')?.trim()
+    const secretKey = params.get('k')?.trim()
+    return deviceId && secretKey ? { deviceId, secretKey } : null
+  } catch {
+    return null
+  }
+}
+
 /** Mã tầng: chỉ zone ID — tự nó không cho quyền gì (FARM-FR-007 vẫn kiểm quyền người quét) */
 export const zoneCode = (zoneId: string) => `swiftletcare://zone?z=${encodeURIComponent(zoneId)}`
 

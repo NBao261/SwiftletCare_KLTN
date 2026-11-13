@@ -37,7 +37,7 @@ export function Step3ConnectAP({ data, onNext, onBack }: Props) {
         <div className="flex-1">
           <p className="label-caption">Tên WiFi AP cần kết nối</p>
           <p className="mt-1 tabular-nums text-lg font-bold text-charcoal">{ssidAP}</p>
-          <p className="mt-0.5 text-sm text-warmGray">Mật khẩu: <span className="tabular-nums font-semibold">swiftlet2025</span></p>
+          <p className="mt-0.5 text-sm text-warmGray">Mạng mở, không cần mật khẩu</p>
         </div>
         <button
           type="button"

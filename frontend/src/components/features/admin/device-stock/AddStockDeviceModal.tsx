@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button, Input, Modal, ModalHeader, SelectMenu } from '@/components/ui'
 import { useAddStockDevice } from '@/hooks/admin/useDeviceStock'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import type { IssuedDeviceSecrets, ProvisionedDeviceKind } from '@/types'
 
@@ -27,13 +27,17 @@ export default function AddStockDeviceModal({ open, onClose, onAdded }: {
 }) {
   const add = useAddStockDevice()
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
   const [deviceId, setDeviceId] = useState('')
   const [kind, setKind] = useState<ProvisionedDeviceKind>('SENSOR')
   const [touched, setTouched] = useState(false)
+  // Mã backend vừa báo trùng (409), báo ngay ở ô nhập tới khi đổi mã
+  const [duplicateId, setDuplicateId] = useState('')
 
-  useEffect(() => { if (open) { setDeviceId(''); setKind('SENSOR'); setTouched(false) } }, [open])
+  useEffect(() => { if (open) { setDeviceId(''); setKind('SENSOR'); setTouched(false); setDuplicateId('') } }, [open])
 
-  const error = touched ? validate(deviceId) : undefined
+  const duplicateError = duplicateId && deviceId.trim() === duplicateId ? t('Mã thiết bị đã có trong kho') : undefined
+  const error = touched ? validate(deviceId) ?? duplicateError : undefined
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -41,8 +45,11 @@ export default function AddStockDeviceModal({ open, onClose, onAdded }: {
     if (validate(deviceId)) return
     add.mutate({ device_id: deviceId.trim(), kind }, {
       onSuccess: onAdded,
-      // 409 "device_id đã có trong kho thiết bị" — backend trả câu tiếng Việt
-      onError: err => push(getApiErrorMessage(err, t('Thêm thiết bị thất bại')), 'error'),
+      onError: err => {
+        const status = (err as { response?: { status?: number } }).response?.status
+        if (status === 409) setDuplicateId(deviceId.trim())
+        else push(apiErrorMessage(err, t('Thêm thiết bị thất bại')), 'error')
+      },
     })
   }
 

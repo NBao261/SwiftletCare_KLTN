@@ -1,18 +1,10 @@
-// Step2Validate.tsx — Bước 2: Xác thực thiết bị (Device ID + secretKey) — B9 + C1
-// BE (Flow 1 bước 3–4) xác thực cặp {device_id, secret_key} in trên nhãn thiết bị:
-// sensor → POST /devices/sensor-nodes/register, camera → POST /devices/camera-nodes/register.
-// Phân loại lỗi bằng HTTP status code, không string-match message:
-//   400 = sai Device ID / secretKey, 403 = không có quyền với farm này, 409 = đã đăng ký
-//
-// I-06: label secretKey → "Mã kích hoạt"
-// I-07: label Device ID → "Mã thiết bị"
-// I-08: SensorNode → "Bộ điều khiển", CameraNode → "Camera"
-// Device type selector đã chuyển lên Step1 (I-01) — hiện badge read-only
+// Step2Validate — bước 2: xác thực mã thiết bị + mã kích hoạt trên nhãn; lỗi phân theo mã HTTP (400/404 sai mã, 403 không có quyền, 409 đã đăng ký)
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
-import type { RegisterDeviceInput } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
+import { canValidateDevice, cameraRegisterInput, sensorRegisterInput } from '@/components/features/technician/onboarding/onboarding.utils'
 import { getApiErrorMessage } from '@/lib/helpers'
+import { parseDeviceLabelCode } from '@/lib/qrCode'
 import { Thermometer, Camera, QrCode, CheckCircle2, X, AlertTriangle, XCircle, ArrowLeft, ArrowRight } from 'lucide-react'
 import type { OnboardingState } from './onboardingTypes'
 
@@ -24,17 +16,6 @@ interface Props {
   patch: (p: Partial<OnboardingState>) => void
   onNext: () => void
   onBack: () => void
-}
-
-/** Parse URI QR từ nhãn thiết bị: swiftletcare://claim?d=<id>&k=<key> */
-function parseDeviceQR(raw: string): { deviceId: string; secretKey: string } | null {
-  try {
-    const url = new URL(raw.trim())
-    const d   = url.searchParams.get('d')
-    const k   = url.searchParams.get('k')
-    if (d && k) return { deviceId: d, secretKey: k }
-  } catch { /* không phải URI hợp lệ */ }
-  return null
 }
 
 /** Label hiển thị thân thiện cho device type */
@@ -51,13 +32,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
   const [qrRaw, setQrRaw] = useState('')
   const [qrError, setQrError] = useState('')
 
-  // CAMERA_NODE chỉ cần houseId (không cần zoneId) — FARM-FR-004
-  const canSubmit = data.deviceType === 'CAMERA_NODE'
-    ? Boolean(data.deviceId.trim() && data.secretKey.trim() && data.location.houseId)
-    : Boolean(data.deviceId.trim() && data.secretKey.trim() && data.location.zoneId)
+  const canSubmit = canValidateDevice(data)
 
   function handleQrPaste() {
-    const parsed = parseDeviceQR(qrRaw)
+    const parsed = parseDeviceLabelCode(qrRaw)
     if (!parsed) {
       setQrError('Nội dung QR không đúng định dạng swiftletcare://claim?d=…&k=…')
       return
@@ -75,25 +53,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     setError(null)
     setErrorMessage('')
     try {
-      let res
-      if (data.deviceType === 'CAMERA_NODE') {
-        // CAMERA_NODE: house_id thay vì zone_id — FARM-FR-004
-        // RegisterDeviceInput yêu cầu zone_id nhưng BE camera endpoint nhận house_id;
-        // cast để tránh TS error mà không sửa file API (thuộc scope của Kiệt).
-        const payload = {
-          device_id: data.deviceId.trim(),
-          house_id: data.location.houseId!,
-          secret_key: data.secretKey.trim(),
-        } as unknown as RegisterDeviceInput & { rtsp_url?: string }
-        res = await deviceApi.registerCameraNode(payload)
-      } else {
-        const payload: RegisterDeviceInput = {
-          device_id: data.deviceId.trim(),
-          zone_id: data.location.zoneId!,
-          secret_key: data.secretKey.trim(),
-        }
-        res = await deviceApi.registerSensorNode(payload)
-      }
+      // Camera gắn nhà (house_id), bộ điều khiển gắn Zone — FARM-FR-004
+      const res = data.deviceType === 'CAMERA_NODE'
+        ? await deviceApi.registerCameraNode(cameraRegisterInput(data))
+        : await deviceApi.registerSensorNode(sensorRegisterInput(data))
       patch({ deviceDbId: res.data.data._id })
 
       const modelFromBe = (res.data.data as { model?: string }).model
@@ -153,6 +116,8 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             onClick={() => { setShowQrInput(v => !v); setQrError('') }}
             className="flex items-center justify-center rounded-xl border border-graphite/20 px-3 text-warmGray hover:bg-graphite/10"
             title={showQrInput ? 'Đóng' : 'Dán nội dung QR'}
+            aria-label={showQrInput ? 'Đóng ô dán nội dung QR' : 'Dán nội dung QR'}
+            aria-expanded={showQrInput}
           >
             {showQrInput ? <X className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
           </button>
@@ -168,9 +133,10 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
       {/* QR URI paste panel */}
       {showQrInput && (
         <div className="flex flex-col gap-2 rounded-xl border border-graphite/15 bg-graphite/[0.04] p-3">
-          <label className="label-caption">Dán nội dung QR (URI từ nhãn thiết bị)</label>
+          <label className="label-caption" htmlFor="onboarding-qr-text">Dán nội dung QR (URI từ nhãn thiết bị)</label>
           <div className="flex gap-2">
             <input
+              id="onboarding-qr-text"
               value={qrRaw}
               onChange={e => { setQrRaw(e.target.value); setQrError('') }}
               placeholder="swiftletcare://claim?d=…&k=…"

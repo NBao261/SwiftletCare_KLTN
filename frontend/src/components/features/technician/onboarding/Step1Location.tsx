@@ -1,6 +1,4 @@
-// Step1Location.tsx — Bước 1: Chọn loại thiết bị & vị trí lắp đặt
-// I-01: Device type selector chuyển lên Step 1; ẩn Zone cho CAMERA_NODE
-// I-02: Mô tả dynamic theo device type
+// Step1Location — bước 1: chọn loại thiết bị và vị trí lắp đặt (camera gắn nhà, không có Zone)
 import { Button, SelectMenu } from '@/components/ui'
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
 import { CheckCircle2, Thermometer, Camera, ChevronRight, ArrowRight } from 'lucide-react'
@@ -18,6 +16,8 @@ export function Step1Location({ data, patch, onNext }: Props) {
   const { data: zones, isLoading: loadingZones }    = useZones(data.location.houseId)
 
   const isCamera  = data.deviceType === 'CAMERA_NODE'
+  // Bước 2 đã đăng ký thiết bị vào vị trí này: khoá loại và vị trí (đổi chỗ thì dời thiết bị ở trang Thiết bị)
+  const isRegistered = Boolean(data.deviceDbId)
   const farmName  = farms?.find(f => f._id === data.location.farmId)?.name
   const houseName = houses?.find(h => h._id === data.location.houseId)?.name
   const zoneName  = zones?.find(z => z._id === data.location.zoneId)?.name
@@ -58,11 +58,12 @@ export function Step1Location({ data, patch, onNext }: Props) {
               key={t}
               type="button"
               onClick={() => handleDeviceTypeChange(t)}
+              disabled={isRegistered}
               className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${
                 data.deviceType === t
                   ? 'border-charcoal bg-charcoal/5 text-charcoal'
                   : 'border-graphite/20 text-warmGray hover:border-graphite/40'
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-60`}
             >
               <span className="flex items-center justify-center gap-1.5">
                 {t === 'SENSOR_NODE' ? <Thermometer className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
@@ -82,7 +83,7 @@ export function Step1Location({ data, patch, onNext }: Props) {
           </label>
           <SelectMenu
             field
-            disabled={loadingFarms}
+            disabled={isRegistered || loadingFarms}
             value={data.location.farmId ?? ''}
             ariaLabel="Chọn trang trại"
             options={[
@@ -100,7 +101,7 @@ export function Step1Location({ data, patch, onNext }: Props) {
           </label>
           <SelectMenu
             field
-            disabled={!data.location.farmId || loadingHouses}
+            disabled={isRegistered || !data.location.farmId || loadingHouses}
             value={data.location.houseId ?? ''}
             ariaLabel="Chọn nhà"
             options={[
@@ -119,7 +120,7 @@ export function Step1Location({ data, patch, onNext }: Props) {
             </label>
             <SelectMenu
               field
-              disabled={!data.location.houseId || loadingZones}
+              disabled={isRegistered || !data.location.houseId || loadingZones}
               value={data.location.zoneId ?? ''}
               ariaLabel="Chọn zone"
               options={[
@@ -131,6 +132,10 @@ export function Step1Location({ data, patch, onNext }: Props) {
           </div>
         )}
       </div>
+
+      {isRegistered && (
+        <p className="text-sm text-warmGray">Thiết bị đã đăng ký vào vị trí này. Muốn đổi vị trí, hãy hoàn tất cài đặt rồi dời thiết bị ở trang Thiết bị.</p>
+      )}
 
       {isComplete && (
         <div className="flex items-center gap-3 rounded-xl border border-limeMist/30 bg-limeMist/15 px-4 py-3">

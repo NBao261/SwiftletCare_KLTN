@@ -15,8 +15,8 @@ import IssuedSecretsModal from '@/components/features/admin/device-stock/IssuedS
 import {
   useDeviceStock, useRevokeStockDevice, useRotateBrokerSecret, useRotateStockKey,
 } from '@/hooks/admin/useDeviceStock'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import type { IssuedDeviceSecrets, ProvisionedDevice, ProvisionedDeviceKind, SortDirection, StockStatus } from '@/types'
 
@@ -69,6 +69,7 @@ export default function AdminDeviceStockPage() {
   const rotateBroker = useRotateBrokerSecret()
   const revoke = useRevokeStockDevice()
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -98,7 +99,7 @@ export default function AdminDeviceStockPage() {
     setSearch(''); setKind(''); setStatus(''); setSortBy(DEFAULT_SORT_BY); setSortDir(DEFAULT_SORT_DIR); setPage(1)
   }
 
-  const onError = (err: unknown) => push(getApiErrorMessage(err, t('Thao tác thất bại')), 'error')
+  const onError = (err: unknown) => push(apiErrorMessage(err, t('Thao tác thất bại')), 'error')
   const showIssued = (result: IssuedDeviceSecrets) => { setPending(null); setIssued(result) }
 
   function confirmRotate() {
