@@ -1,9 +1,35 @@
-import { TrendingUp, ThumbsUp, Sparkles } from 'lucide-react'
 import type { RecommendationEffect } from '@/types/expert.types'
+import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 
 interface Props {
   effects: RecommendationEffect[]
 }
+
+const COLUMNS: DataTableColumn<RecommendationEffect>[] = [
+  {
+    key: 'rule_name',
+    header: 'Luật',
+    render: row => <span className="font-medium text-charcoal">{row.rule_name}</span>,
+  },
+  {
+    key: 'total_generated',
+    header: 'Tạo',
+    align: 'right',
+    render: row => <span className="text-warmGray">{row.total_generated}</span>,
+  },
+  {
+    key: 'total_accepted',
+    header: 'Chấp nhận',
+    align: 'right',
+    render: row => <span className="text-warmGray">{row.total_accepted}</span>,
+  },
+  {
+    key: 'total_improved',
+    header: 'Cải thiện',
+    align: 'right',
+    render: row => <span className="font-semibold text-green-700">{row.total_improved}</span>,
+  },
+]
 
 export default function RecommendationEffectPanel({ effects }: Props) {
   const totals = effects.reduce(
@@ -16,49 +42,29 @@ export default function RecommendationEffectPanel({ effects }: Props) {
   )
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* KPI tổng */}
       <div className="grid grid-cols-3 gap-3">
-        <KpiTile icon={<Sparkles className="w-4 h-4 text-blue-500" />} label="Đã tạo" value={totals.generated} />
-        <KpiTile icon={<ThumbsUp className="w-4 h-4 text-green-500" />} label="Đã chấp nhận" value={totals.accepted} />
-        <KpiTile icon={<TrendingUp className="w-4 h-4 text-emerald-500" />} label="Có cải thiện" value={totals.improved} />
+        <KpiTile label="Đã tạo" value={totals.generated} colorClass="text-blue-600" />
+        <KpiTile label="Đã chấp nhận" value={totals.accepted} colorClass="text-green-600" />
+        <KpiTile label="Có cải thiện" value={totals.improved} colorClass="text-emerald-600" />
       </div>
 
-      {/* Bảng theo luật */}
-      {effects.length > 0 && (
-        <div className="rounded-xl border border-neutral-200 overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-neutral-100 bg-neutral-50 text-[11px] text-[#878380] font-semibold">
-                <th className="text-left px-3 py-2">Luật</th>
-                <th className="text-right px-3 py-2">Tạo</th>
-                <th className="text-right px-3 py-2">Chấp nhận</th>
-                <th className="text-right px-3 py-2">Cải thiện</th>
-              </tr>
-            </thead>
-            <tbody>
-              {effects.map(e => (
-                <tr key={e.rule_id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/60">
-                  <td className="px-3 py-2 text-[#27231F] font-medium max-w-0 truncate" style={{ maxWidth: '14rem' }}>{e.rule_name}</td>
-                  <td className="px-3 py-2 text-right text-[#878380]">{e.total_generated}</td>
-                  <td className="px-3 py-2 text-right text-[#878380]">{e.total_accepted}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-emerald-700">{e.total_improved}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={COLUMNS}
+        rows={effects}
+        getRowKey={e => e.rule_id}
+        emptyMessage="Chưa có dữ liệu hiệu quả"
+      />
     </div>
   )
 }
 
-function KpiTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+function KpiTile({ label, value, colorClass }: { label: string; value: number; colorClass: string }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white px-3 py-3 text-center space-y-1">
-      <div className="flex justify-center">{icon}</div>
-      <p className="text-lg font-bold text-[#27231F]">{value}</p>
-      <p className="text-[11px] text-[#878380]">{label}</p>
+    <div className="rounded-2xl border border-warmGray/15 bg-white px-3 py-3 text-center space-y-1 shadow-card">
+      <p className={`text-2xl font-bold ${colorClass}`}>{value}</p>
+      <p className="text-xs text-warmGray">{label}</p>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp, CheckCircle2, Archive, Pencil } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/helpers'
+import { Button } from '@/components/ui/Button'
 import type { ConfigProfile } from '@/types/expert.types'
 import ProfileStatusBadge from './ProfileStatusBadge'
 
@@ -29,22 +30,22 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
   ].filter(Boolean)
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
+    <div className="rounded-2xl border border-warmGray/15 bg-white shadow-card overflow-hidden">
       <div
-        className="flex items-start justify-between gap-3 p-4 cursor-pointer hover:bg-neutral-50/60 transition-colors"
+        className="flex items-start justify-between gap-3 p-4 cursor-pointer hover:bg-warmGray/5 transition-colors"
         onClick={() => setExpanded(v => !v)}
       >
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-sm text-[#27231F] truncate">{profile.name}</span>
+            <span className="font-semibold text-sm text-charcoal truncate">{profile.name}</span>
             <ProfileStatusBadge status={profile.status} />
             {profile.stage && (
-              <span className="text-[11px] text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full border border-neutral-200">
+              <span className="text-xs text-warmGray bg-warmGray/10 px-2 py-0.5 rounded-full border border-warmGray/15">
                 {STAGE_LABEL[profile.stage] ?? profile.stage}
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-[#878380]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-warmGray">
             {groups.length > 0 && (
               <span>Nhóm: {groups.join(', ')}</span>
             )}
@@ -54,51 +55,45 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
             <span>Tạo {formatDate(profile.created_at)}</span>
           </div>
         </div>
-        <div className="shrink-0 mt-0.5 text-neutral-400">
+        <div className="shrink-0 mt-0.5 text-warmGray">
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </div>
       </div>
 
       {expanded && (
-        <div className="border-t border-neutral-100 px-4 py-3 space-y-3">
-          {profile.thresholds && (
-            <ThresholdSection thresholds={profile.thresholds} />
-          )}
-          {profile.fuzzy_tuning && (
-            <FuzzySection fuzzy={profile.fuzzy_tuning} />
-          )}
-          {profile.detection_tuning && (
-            <DetectionSection detection={profile.detection_tuning} />
-          )}
-          {profile.speaker_schedule && (
-            <SpeakerSection schedule={profile.speaker_schedule} />
-          )}
+        <div className="border-t border-warmGray/10 px-4 py-3 space-y-3">
+          {profile.thresholds && <ThresholdSection thresholds={profile.thresholds} />}
+          {profile.fuzzy_tuning && <FuzzySection fuzzy={profile.fuzzy_tuning} />}
+          {profile.detection_tuning && <DetectionSection detection={profile.detection_tuning} />}
+          {profile.speaker_schedule && <SpeakerSection schedule={profile.speaker_schedule} />}
 
-          {/* Actions */}
-          <div className={cn('flex flex-wrap gap-2 pt-1 border-t border-neutral-100', disabled && 'opacity-50 pointer-events-none')}>
+          <div className={cn('flex flex-wrap gap-2 pt-1 border-t border-warmGray/10', disabled && 'opacity-50 pointer-events-none')}>
             {profile.status === 'DRAFT' && (
               <>
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={e => { e.stopPropagation(); onEdit?.() }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-medium text-[#27231F] hover:bg-neutral-50 transition-colors"
                 >
                   <Pencil className="w-3.5 h-3.5" /> Sửa
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="accent"
+                  size="sm"
                   onClick={e => { e.stopPropagation(); onApprove?.() }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt hồ sơ
-                </button>
+                </Button>
               </>
             )}
             {profile.status === 'APPROVED' && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={e => { e.stopPropagation(); onArchive?.() }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-medium text-[#878380] hover:bg-neutral-50 transition-colors"
               >
                 <Archive className="w-3.5 h-3.5" /> Lưu trữ
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -110,16 +105,16 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
 function FieldRow({ label, value }: { label: string; value: string | number | boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <span className="text-[11px] text-[#878380]">{label}</span>
-      <span className="text-xs font-medium text-[#27231F]">{String(value)}</span>
+      <span className="text-xs text-warmGray">{label}</span>
+      <span className="text-sm font-medium text-charcoal">{String(value)}</span>
     </div>
   )
 }
 
 function GroupBox({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-3 space-y-1.5">
-      <p className="text-[11px] font-semibold text-[#878380] uppercase tracking-wide">{title}</p>
+    <div className="rounded-xl bg-warmGray/5 border border-warmGray/10 p-3 space-y-1.5">
+      <p className="text-xs font-semibold text-warmGray uppercase tracking-wide">{title}</p>
       {children}
     </div>
   )

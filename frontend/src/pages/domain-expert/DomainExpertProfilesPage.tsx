@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { BookCopy, Plus, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import { Button } from '@/components/ui/Button'
+import EmptyState from '@/components/ui/EmptyState'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
@@ -84,10 +86,10 @@ export default function DomainExpertProfilesPage() {
 
   if (!farmId) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-        <BookCopy className="w-10 h-10 text-neutral-300" />
-        <p className="text-sm font-medium text-[#878380]">Chọn trang trại ở thanh trên để xem hồ sơ cấu hình</p>
-      </div>
+      <EmptyState
+        icon={<BookCopy className="w-10 h-10" />}
+        title="Chọn trang trại ở thanh trên để xem hồ sơ cấu hình"
+      />
     )
   }
 
@@ -96,17 +98,14 @@ export default function DomainExpertProfilesPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold text-[#27231F]">Hồ sơ cấu hình</h1>
-          <p className="mt-0.5 text-xs text-[#878380]">
+          <h1 className="text-lg font-bold text-charcoal">Hồ sơ cấu hình</h1>
+          <p className="mt-0.5 text-sm text-warmGray">
             EXPERT-FR-014, 015 — Soạn hồ sơ bản nháp rồi duyệt; Farm Owner áp hồ sơ cho các nhà
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#27231F] text-white text-xs font-semibold hover:bg-[#3D3630] transition-colors"
-        >
+        <Button variant="primary" size="sm" onClick={openCreate}>
           <Plus className="w-3.5 h-3.5" /> Tạo hồ sơ
-        </button>
+        </Button>
       </div>
 
       {/* Bộ lọc trạng thái */}
@@ -115,10 +114,10 @@ export default function DomainExpertProfilesPage() {
           <button
             key={f.value}
             onClick={() => setStatusFilter(f.value)}
-            className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
               statusFilter === f.value
-                ? 'bg-[#27231F] text-white border-[#27231F]'
-                : 'bg-white text-[#878380] border-neutral-200 hover:border-neutral-300'
+                ? 'bg-charcoal text-white border-charcoal'
+                : 'bg-white text-warmGray border-warmGray/20 hover:border-warmGray/40'
             }`}
           >
             {f.label}
@@ -126,24 +125,20 @@ export default function DomainExpertProfilesPage() {
         ))}
       </div>
 
-      {/* Lỗi */}
       {error && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
+        <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Danh sách */}
       {isLoading ? (
-        <LoadingSkeleton count={3} className="h-16 w-full rounded-xl" />
+        <LoadingSkeleton count={3} className="h-16 w-full rounded-2xl" />
       ) : !profiles || profiles.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-12 text-center">
-          <BookCopy className="w-9 h-9 text-neutral-300" />
-          <p className="text-sm text-[#878380]">
-            {statusFilter === 'ALL' ? 'Chưa có hồ sơ nào. Tạo hồ sơ đầu tiên.' : `Không có hồ sơ ở trạng thái "${STATUS_FILTERS.find(f => f.value === statusFilter)?.label}".`}
-          </p>
-        </div>
+        <EmptyState
+          icon={<BookCopy className="w-9 h-9" />}
+          title={statusFilter === 'ALL' ? 'Chưa có hồ sơ nào. Tạo hồ sơ đầu tiên.' : `Không có hồ sơ ở trạng thái "${STATUS_FILTERS.find(f => f.value === statusFilter)?.label}".`}
+        />
       ) : (
         <div className="space-y-3">
           {profiles.map(p => (
