@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
-import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisionedDevice.model'
+import { ProvisionedDevice, type IProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisionedDevice.model'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
 import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
@@ -52,9 +52,15 @@ export async function createProvisionedDevice(
   return { device_id: deviceId, kind: input.kind, simulated, secret_key: secretKey, broker_secret: brokerSecret }
 }
 
+/** Report 3 §6.16 — trạng thái nhãn của 1 thiết bị trong kho */
+export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
+
+type StockRecord = Pick<IProvisionedDevice,
+  '_id' | 'device_id' | 'kind' | 'claimed_at' | 'revoked_at' | 'revoke_reason' | 'created_by' | 'created_at'>
+
 export async function listProvisionedDevices(query: {
   kind?: string; claimed?: string; revoked?: string; page?: string | number; limit?: string | number
-}) {
+}): Promise<{ records: Array<StockRecord & { stock_status: StockStatus }>; total: number; page: number; limit: number }> {
   const filter: Record<string, unknown> = {}
   if (query.kind) filter.kind = query.kind
   if (query.claimed === 'true') filter.claimed_at = { $ne: null }
@@ -64,10 +70,27 @@ export async function listProvisionedDevices(query: {
 
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [records, total] = await Promise.all([
-    ProvisionedDevice.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+    ProvisionedDevice.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean<StockRecord[]>(),
     ProvisionedDevice.countDocuments(filter),
   ])
-  return { records, total, page, limit }
+
+  // Report 3 §6.16 — trạng thái nhãn suy ra từ kho + thiết bị đang dùng, không lưu riêng
+  const idsOf = (kind: ProvisionedDeviceKind) => records.filter(r => r.kind === kind).map(r => r.device_id)
+  const [sensors, cameras] = await Promise.all([
+    SensorNode.find({ device_id: { $in: idsOf('SENSOR') }, ...IN_SERVICE }).select('device_id').lean(),
+    CameraNode.find({ device_id: { $in: idsOf('CAMERA') }, ...IN_SERVICE }).select('device_id').lean(),
+  ])
+  const inService = new Set([...sensors, ...cameras].map(d => d.device_id))
+  const stockStatus = (r: StockRecord): StockStatus =>
+    r.revoked_at ? 'REVOKED' : inService.has(r.device_id) ? 'IN_SERVICE' : r.claimed_at ? 'RELEASED' : 'IN_STOCK'
+
+  return { records: records.map(r => ({ ...r, stock_status: stockStatus(r) })), total, page, limit }
+}
+
+/** Thiết bị đang dùng ở một farm (chưa gỡ, FARM-FR-008) */
+async function isInService(device: { device_id: string; kind: ProvisionedDeviceKind }): Promise<boolean> {
+  const Model = device.kind === 'SENSOR' ? SensorNode : CameraNode
+  return !!(await Model.exists({ device_id: device.device_id, ...IN_SERVICE }))
 }
 
 /**
@@ -103,8 +126,7 @@ async function findProvisionedOrThrow(id: string) {
  */
 export async function revokeProvisionedDevice(adminId: string, id: string, reason: string) {
   const device = await findProvisionedOrThrow(id)
-  const Model = device.kind === 'SENSOR' ? SensorNode : CameraNode
-  if (await Model.exists({ device_id: device.device_id, ...IN_SERVICE })) {
+  if (await isInService(device)) {
     throw ConflictError('Thiết bị đang hoạt động ở một farm — gỡ thiết bị trước rồi mới thu hồi')
   }
 
@@ -118,20 +140,23 @@ export async function revokeProvisionedDevice(adminId: string, id: string, reaso
 }
 
 /**
- * Cấp secretKey mới (in lại nhãn) cho thiết bị CHƯA kích hoạt bị mất/lộ nhãn. Thiết
- * bị đã kích hoạt thì không đổi được: firmware lưu secretKey trong NVS để mở khu AP-mode
- * nâng cao (FARM-FR-003c), đổi ở backend là hai bên lệch nhau.
+ * FARM-FR-010, BR-26 — cấp secretKey mới (in lại nhãn) khi nhãn bị mất hoặc lộ, cho thiết bị
+ * không đang dùng ở farm nào: còn trong kho (IN_STOCK) hoặc đã gỡ khỏi farm (RELEASED, Report 3
+ * §6.16). Thiết bị không lưu secretKey nên đổi ở backend không làm thiết bị lệch; nhãn cũ bị từ
+ * chối ngay. Thiết bị đang dùng thì phải gỡ trước, để không ai chiếm được thiết bị đang chạy.
  */
 export async function rotateProvisionedKey(adminId: string, id: string) {
   const device = await findProvisionedOrThrow(id)
-  if (device.claimed_at) {
-    throw ConflictError('Thiết bị đã kích hoạt — secretKey đã nằm trong thiết bị, không đổi được')
+  if (await isInService(device)) {
+    throw ConflictError('Thiết bị đang hoạt động ở một farm — gỡ thiết bị trước rồi mới cấp lại key')
   }
 
   const secretKey = generateSecretKey()
   device.secret_key_hash = hashKey(secretKey)
   await device.save()
-  await logAction(adminId, 'DEVICE_PROVISION_KEY_ROTATED', 'provisioned_device', id, { deviceId: device.device_id })
+  await logAction(adminId, 'DEVICE_PROVISION_KEY_ROTATED', 'provisioned_device', id, {
+    deviceId: device.device_id, released: !!device.claimed_at,
+  })
   return { device_id: device.device_id, kind: device.kind, secret_key: secretKey }
 }
 

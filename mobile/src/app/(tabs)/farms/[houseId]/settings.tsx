@@ -98,6 +98,7 @@ export default function HouseSettingsScreen() {
   const canRegisterCamera = canPerform(user, 'registerCamera')
   const canRegisterController = canPerform(user, 'setupDevice')
   const canCreateZone = canPerform(user, 'createZone')
+  const zoneOptions = zones.map(item => ({ _id: item._id, name: item.name }))
 
   // Đổi tầng khi đang sửa dở thì hỏi bỏ thay đổi trước
   const selectZone = (zoneId: string) =>
@@ -197,13 +198,24 @@ export default function HouseSettingsScreen() {
           editor={editor}
           onAdd={
             canRegisterController
-              ? () =>
-                  openDeviceSheet({
-                    kind: 'controller',
-                    zoneId: zone._id,
-                    name: zone.name,
-                    zones: zones.map(item => ({ _id: item._id, name: item.name })),
-                  })
+              ? () => openDeviceSheet({ kind: 'controller', zoneId: zone._id, name: zone.name, zones: zoneOptions })
+              : undefined
+          }
+          // Dời, thay, gỡ controller đã lắp (FARM-FR-007b, 008): cùng quyền thiết lập thiết bị của Farm Owner
+          manage={
+            canRegisterController
+              ? {
+                  zone: { _id: zone._id, zones: zoneOptions },
+                  onReplace: device =>
+                    openDeviceSheet({
+                      kind: 'replace',
+                      oldRecordId: device._id,
+                      oldDeviceId: device.device_id,
+                      zoneId: zone._id,
+                      name: zone.name,
+                    }),
+                  onDone: toast.show,
+                }
               : undefined
           }
         />
@@ -240,6 +252,8 @@ export default function HouseSettingsScreen() {
                   ? () => openDeviceSheet({ kind: 'camera', houseId: house._id, name: house.name })
                   : undefined
               }
+              // Gỡ camera (FARM-FR-008): camera gắn nhà, không dời khu vực, không có API thay
+              manage={canRegisterCamera ? { onDone: toast.show } : undefined}
             />
             <View onLayout={event => handleSectionLayout(getSettingsSectionId('bird-count'), event)}>
               <BirdCountTuningSection house={house} editor={editor} onSaved={toast.show} />

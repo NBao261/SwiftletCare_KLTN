@@ -10,7 +10,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import adminRoutes from '@/routes/admin.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { AuditLog } from '@/models/auditLog.model'
-import { SensorNode } from '@/models/device.model'
+import { CameraNode, SensorNode } from '@/models/device.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
 import {
@@ -35,7 +35,9 @@ afterAll(async () => {
   await mongod.stop()
 })
 afterEach(async () => {
-  await Promise.all([AuditLog.deleteMany({}), ProvisionedDevice.deleteMany({}), SensorNode.deleteMany({}), User.deleteMany({})])
+  await Promise.all([
+    AuditLog.deleteMany({}), ProvisionedDevice.deleteMany({}), SensorNode.deleteMany({}), CameraNode.deleteMany({}), User.deleteMany({}),
+  ])
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -94,15 +96,54 @@ describe('cấp lại secretKey', () => {
     await expect(verifyActivationKey('ESP-001', 'SENSOR', oldKey)).rejects.toMatchObject({ statusCode: 400 })
   })
 
-  it('refuses a device that was already activated or revoked', async () => {
-    const { adminId, id } = await provision()
+  it('re-issues the key of a released device: the old label no longer registers it (BR-26)', async () => {
+    const { adminId, id, secretKey: oldKey } = await provision()
     await ProvisionedDevice.updateOne({ _id: id }, { claimed_at: new Date() })
-    await expect(rotateProvisionedKey(adminId, id)).rejects.toMatchObject({ statusCode: 409 })
+    await SensorNode.create({ device_id: 'ESP-001', zone_id: new mongoose.Types.ObjectId(), status: 'ONLINE', decommissioned_at: new Date() })
+
+    const { secret_key: newKey } = await rotateProvisionedKey(adminId, id)
+
+    await expect(verifyActivationKey('ESP-001', 'SENSOR', newKey)).resolves.toEqual({ simulated: false })
+    await expect(verifyActivationKey('ESP-001', 'SENSOR', oldKey)).rejects.toMatchObject({ statusCode: 400 })
+    const audit = await AuditLog.findOne({ action: 'DEVICE_PROVISION_KEY_ROTATED' }).lean()
+    expect(audit?.metadata).toMatchObject({ deviceId: 'ESP-001', released: true })
+  })
+
+  it('refuses a device in service or revoked', async () => {
+    const { adminId, id, secretKey } = await provision()
+    await ProvisionedDevice.updateOne({ _id: id }, { claimed_at: new Date() })
+    await SensorNode.create({ device_id: 'ESP-001', zone_id: new mongoose.Types.ObjectId(), status: 'ONLINE' })
+    await request(app).post(`/admin/provisioned-devices/${id}/rotate-key`)
+      .set('Authorization', `Bearer ${tokenFor(adminId, 'ADMIN')}`).expect(409)
+    await expect(verifyActivationKey('ESP-001', 'SENSOR', secretKey)).resolves.toEqual({ simulated: false })   // key cũ vẫn giữ
 
     const other = await createProvisionedDevice(adminId, { device_id: 'ESP-002', kind: 'SENSOR' })
     const otherId = String((await ProvisionedDevice.findOne({ device_id: other.device_id }))!._id)
     await revokeProvisionedDevice(adminId, otherId, 'Lỗi')
     await expect(rotateProvisionedKey(adminId, otherId)).rejects.toMatchObject({ statusCode: 409 })
+  })
+})
+
+describe('GET /admin/provisioned-devices — trạng thái nhãn (Report 3 §6.16)', () => {
+  it('derives IN_STOCK, IN_SERVICE, RELEASED and REVOKED for controllers and cameras', async () => {
+    const { adminId } = await provision('IN-STOCK')
+    const add = (device_id: string, kind: 'SENSOR' | 'CAMERA') => createProvisionedDevice(adminId, { device_id, kind })
+    await Promise.all([add('SERVING', 'SENSOR'), add('RELEASED', 'SENSOR'), add('REVOKED', 'SENSOR'), add('CAM-SERVING', 'CAMERA')])
+    await ProvisionedDevice.updateMany({ device_id: { $in: ['SERVING', 'RELEASED', 'CAM-SERVING'] } }, { claimed_at: new Date() })
+    await SensorNode.create([
+      { device_id: 'SERVING', zone_id: new mongoose.Types.ObjectId(), status: 'ONLINE' },
+      { device_id: 'RELEASED', zone_id: new mongoose.Types.ObjectId(), status: 'ONLINE', decommissioned_at: new Date() },
+    ])
+    await CameraNode.create({ device_id: 'CAM-SERVING', house_id: new mongoose.Types.ObjectId(), status: 'ONLINE' })
+    await revokeProvisionedDevice(adminId, String((await ProvisionedDevice.findOne({ device_id: 'REVOKED' }))!._id), 'Mất')
+
+    const res = await request(app).get('/admin/provisioned-devices')
+      .set('Authorization', `Bearer ${tokenFor(adminId, 'ADMIN')}`).expect(200)
+
+    const status = Object.fromEntries((res.body.data as Array<{ device_id: string; stock_status: string }>).map(d => [d.device_id, d.stock_status]))
+    expect(status).toEqual({
+      'IN-STOCK': 'IN_STOCK', SERVING: 'IN_SERVICE', RELEASED: 'RELEASED', REVOKED: 'REVOKED', 'CAM-SERVING': 'IN_SERVICE',
+    })
   })
 })
 

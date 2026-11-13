@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { CalendarBlankIcon, CpuIcon, MusicNotesIcon, VideoCameraIcon } from '@phosphor-icons/react';
 
+import SimulatedBadge from '@/components/common/SimulatedBadge';
 import StatusDot from '@/components/common/StatusDot';
 import { uptimeParts, type DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants';
@@ -42,6 +43,7 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
         </div>
         <div className="flex items-center gap-3">
           <span className="rounded-lg bg-gray-100 px-2 py-1 text-caption text-graphite">{device.deviceId}</span>
+          <SimulatedBadge simulated={device.simulated} />
           <StatusDot status={device.status} />
           {onOpenSchedule && (
             <button type="button" className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5')} onClick={onOpenSchedule}>

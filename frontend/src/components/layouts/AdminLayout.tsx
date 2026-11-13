@@ -2,7 +2,7 @@ import AppShell from '@/components/layouts/AppShell'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import {
   IconAlert, IconAnalytics, IconBell, IconDashboard,
-  IconDevice, IconOTA, IconSettings, IconUsers,
+  IconDevice, IconOTA, IconOnboarding, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
 /**
@@ -44,6 +44,8 @@ const menuSections: MenuSection[] = [
     // Module SYSTEM (mục 5.11) — "control center" chỉ Admin
     title: 'Hệ thống',
     items: [
+      // FARM-FR-010 — nhập thiết bị, in nhãn QR, cấp lại mã, thu hồi
+      { label: 'Kho thiết bị', path: '/system/device-stock', icon: IconOnboarding },
       { label: 'Cấu hình mặc định', path: '/system/settings', icon: IconSettings },
       { label: 'Nhật ký hệ thống', path: '/system/audit-log', icon: IconAnalytics },
     ],

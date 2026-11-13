@@ -98,8 +98,17 @@ async function transition(
 // ── Mở Work Order (OPS-FR-001, BR-39) ───────────────────────────────────────
 
 /** Work Order chưa đóng của cùng sự cố: cùng nhà, cùng loại cảnh báo, cùng thiết bị */
-function findOpenForIncident(houseId: unknown, alert: Pick<IAlert, 'type' | 'node_id'>) {
-  return WorkOrder.findOne({ house_id: houseId, alert_type: alert.type, node_id: alert.node_id ?? null, is_open: true })
+async function findOpenForIncident(
+  houseId: unknown, alert: Pick<IAlert, 'type' | 'node_id' | 'details'>,
+): Promise<IWorkOrder | null> {
+  const open = await WorkOrder.find({ house_id: houseId, alert_type: alert.type, node_id: alert.node_id ?? null, is_open: true })
+  // THREAT-FR-014 — bơm và quạt của cùng controller là hai sự cố (createAlert gộp trùng theo `details.load`): chỉ gắn
+  // vào Work Order của cảnh báo cùng tải
+  const load = alert.type === 'ACTUATOR_FAULT' ? alert.details?.load : undefined
+  if (typeof load !== 'string') return open[0] ?? null
+  const sameLoad = new Set((await Alert.find({ _id: { $in: open.map(w => w.alert_id) }, 'details.load': load })
+    .select('_id').lean()).map(a => String(a._id)))
+  return open.find(w => sameLoad.has(String(w.alert_id))) ?? null
 }
 
 /**

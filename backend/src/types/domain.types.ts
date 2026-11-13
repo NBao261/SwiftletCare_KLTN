@@ -177,6 +177,9 @@ export interface TelemetryPayload {
   relay_states: RelayStates
   control_mode: ControlMode
   control_output?: ControlOutput
+  /** THREAT-FR-014 — dòng đo của bơm và quạt (A); controller không đo dòng thì không gửi */
+  pump_current_a?: number
+  fan_current_a?: number
   timestamp: number   // Unix ms
 }
 
