@@ -59,12 +59,12 @@ describe('default thresholds', () => {
   it('merges a partial update, persists it and audits before/after', async () => {
     const { admin } = await adminToken()
 
-    const after = await updateDefaultThresholds(String(admin._id), { temp_max: 33, co2_max: '1800' })
+    const after = await updateDefaultThresholds(String(admin._id), { temp_max: 33, co2_max: '1800', source: 'TL-101' })
 
     expect(after).toMatchObject({ ...DEFAULT_THRESHOLDS, temp_max: 33, co2_max: 1800 })
     expect(await getDefaultThresholds()).toMatchObject({ temp_max: 33, co2_max: 1800 })
     const [log] = await AuditLog.find({ action: 'DEFAULT_THRESHOLDS_UPDATED' }).lean()
-    expect(log.metadata).toMatchObject({ before: DEFAULT_THRESHOLDS, after: { temp_max: 33 } })
+    expect(log.metadata).toMatchObject({ before: DEFAULT_THRESHOLDS, after: { temp_max: 33 }, source: 'TL-101' })
   })
 
   it.each([
@@ -73,7 +73,7 @@ describe('default thresholds', () => {
     [{ temp_min: 40 }, /temp_min phải nhỏ hơn temp_max/], // 40 >= temp_max mặc định 31
   ])('rejects %p and stores nothing', async (input, message) => {
     const { admin } = await adminToken()
-    await expect(updateDefaultThresholds(String(admin._id), input)).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(message) })
+    await expect(updateDefaultThresholds(String(admin._id), { ...input, source: 'TL-101' })).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(message) })
     expect(await SystemSetting.countDocuments()).toBe(0)
   })
 
@@ -81,15 +81,15 @@ describe('default thresholds', () => {
     it('rejects an out-of-range value at the route (422) before it reaches the service', async () => {
       const { token } = await adminToken()
       await request(app).put('/system/settings/default-thresholds').set('Authorization', `Bearer ${token}`)
-        .send({ humidity_max: 500 }).expect(422)
+        .send({ humidity_max: 500, source: 'TL-101' }).expect(422)
       await request(app).put('/system/settings/default-thresholds').set('Authorization', `Bearer ${token}`)
-        .send({ temp_max: 'hot' }).expect(422)
+        .send({ temp_max: 'hot', source: 'TL-101' }).expect(422)
     })
 
     it('accepts a valid partial update and returns the full set', async () => {
       const { token } = await adminToken()
       const res = await request(app).put('/system/settings/default-thresholds').set('Authorization', `Bearer ${token}`)
-        .send({ nh3_max: 30 }).expect(200)
+        .send({ nh3_max: 30, source: 'MC-501' }).expect(200)
       expect(res.body.data).toMatchObject({ ...DEFAULT_THRESHOLDS, nh3_max: 30 })
     })
 

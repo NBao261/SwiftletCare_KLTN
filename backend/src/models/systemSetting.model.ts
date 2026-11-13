@@ -7,6 +7,9 @@ export interface ISystemSetting extends Document {
   /** Khoá ép singleton — xem ghi chú ở schema */
   _singleton: boolean
   default_thresholds: Thresholds
+  /** ENV-FR-007 — nguồn (mã mục REF-5) và thời điểm của lần đổi ngưỡng mặc định gần nhất */
+  default_thresholds_source?: string
+  default_thresholds_updated_at?: Date
 
   updated_by?: Types.ObjectId
   updated_at: Date
@@ -32,6 +35,8 @@ const systemSettingSchema = new Schema<ISystemSetting>(
       nh3_max:      { type: Number, required: true },
       co2_max:      { type: Number, required: true },
     },
+    default_thresholds_source: { type: String },
+    default_thresholds_updated_at: { type: Date },
 
     updated_by: { type: Schema.Types.ObjectId, ref: 'User' },
   },

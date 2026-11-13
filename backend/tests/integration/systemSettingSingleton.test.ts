@@ -32,7 +32,7 @@ describe('system_settings singleton', () => {
 
   it('chỉ tạo 1 document dù nhiều request lưu đồng thời', async () => {
     await Promise.all(
-      Array.from({ length: 20 }, (_, i) => updateDefaultThresholds(adminId, { temp_min: 20 + (i % 5) })),
+      Array.from({ length: 20 }, (_, i) => updateDefaultThresholds(adminId, { temp_min: 20 + (i % 5), source: 'TL-101' })),
     )
 
     expect(await SystemSetting.countDocuments()).toBe(1)
@@ -40,7 +40,7 @@ describe('system_settings singleton', () => {
 
   it('trả về cùng một giá trị qua nhiều lần đọc sau khi lưu đồng thời', async () => {
     await Promise.all(
-      Array.from({ length: 10 }, (_, i) => updateDefaultThresholds(adminId, { co2_max: 1000 + i })),
+      Array.from({ length: 10 }, (_, i) => updateDefaultThresholds(adminId, { co2_max: 1000 + i, source: 'TL-101' })),
     )
 
     const reads = await Promise.all(Array.from({ length: 5 }, () => getDefaultThresholds()))
@@ -48,7 +48,7 @@ describe('system_settings singleton', () => {
   })
 
   it('chặn insert document thứ 2 ở tầng DB', async () => {
-    await updateDefaultThresholds(adminId, { temp_min: 27 })
+    await updateDefaultThresholds(adminId, { temp_min: 27, source: 'TL-101' })
 
     await expect(SystemSetting.create({ default_thresholds: await getDefaultThresholds() }))
       .rejects.toMatchObject({ code: 11000 })
