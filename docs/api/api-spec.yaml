@@ -752,8 +752,11 @@ paths:
   /system/settings/default-thresholds:
     get:
       tags: [System]
-      summary: "Xem ngưỡng mặc định hệ thống (SYSTEM-FR-002, ENV-FR-007) — chỉ ADMIN"
-      description: Chưa từng cấu hình thì trả giá trị gốc (khớp firmware Config.h).
+      summary: "Xem ngưỡng mặc định hệ thống kèm nguồn và lịch sử (SYSTEM-FR-002, ENV-FR-007) — chỉ ADMIN"
+      description: |
+        Chưa từng cấu hình thì trả giá trị gốc (khớp firmware Config.h), không có `source`.
+        Ngoài 7 trường ngưỡng còn có nguồn của lần đổi gần nhất và `history`: tối đa 20 lần
+        đổi gần nhất (mới nhất trước), mỗi lần có người đổi, thời điểm, nguồn, giá trị cũ và mới.
       responses:
         "200":
           description: OK
@@ -762,22 +765,39 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { $ref: "#/components/schemas/Thresholds" } }
+                  - properties: { data: { $ref: "#/components/schemas/DefaultThresholdsView" } }
         "403": { $ref: "#/components/responses/Forbidden" }
     put:
       tags: [System]
-      summary: "Chỉnh ngưỡng mặc định hệ thống (SYSTEM-FR-002) — chỉ ADMIN"
+      summary: "Chỉnh ngưỡng mặc định hệ thống, bắt buộc có nguồn (ENV-FR-007, 026) — chỉ ADMIN"
       description: |
-        Gửi 1 phần hoặc cả 7 trường, phần còn lại giữ nguyên. Đây là nguồn
-        Farm Owner dùng khi "Reset về mặc định" 1 Zone (ENV-FR-020) — KHÔNG tự
-        áp xuống các Zone đang chạy. Mọi thay đổi ghi audit log. Mỗi giá trị phải nằm
-        trong khoảng đo của cảm biến tương ứng (nhiệt −40..125°C, ẩm 0..100%,
-        ánh sáng ≤ 200.000 lux, NH3 ≤ 500 ppm, CO2 ≤ 5000 ppm), nếu không 422.
+        Gửi 1 phần hoặc cả 7 trường, phần còn lại giữ nguyên, kèm `source` (bắt buộc):
+        nguồn của giá trị mới, phải chứa mã một mục của evidence register REF-5
+        (`docs/evidence-register.md`, dạng `TL-xxx` hoặc `MC-xxx`, ví dụ `"TL-012 §3.2"`).
+        Thiếu `source`, `source` không có mã REF-5, hoặc không có trường ngưỡng nào → 422.
+        Đây là nguồn Zone mới lấy và nguồn Farm Owner dùng khi "Reset về mặc định" 1 Zone
+        (ENV-FR-020): ngưỡng của mọi Zone đang có giữ nguyên và không gửi cấu hình nào
+        xuống controller. Audit log `DEFAULT_THRESHOLDS_UPDATED` ghi giá trị cũ, mới và nguồn.
+        Mỗi giá trị phải nằm trong khoảng đo của cảm biến tương ứng (nhiệt −40..125°C,
+        ẩm 0..100%, ánh sáng ≤ 200.000 lux, NH3 ≤ 500 ppm, CO2 ≤ 5000 ppm), nếu không 422.
+        ENV-FR-026: sau khi lưu, Domain Expert của mỗi farm có zone khác mặc định mới ở một
+        trường vừa đổi (farm chưa có chuyên gia: các Farm Owner, BR-22) nhận một thông báo
+        trong ứng dụng liệt kê các zone đó; không áp gì vào zone.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/Thresholds" }
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/Thresholds"
+                - type: object
+                  required: [source]
+                  properties:
+                    source:
+                      type: string
+                      maxLength: 500
+                      pattern: "\\b(TL|MC)-\\d{3}\\b"
+                      example: "TL-012 §3.2"
       responses:
         "200":
           description: Giá trị sau khi cập nhật
@@ -3804,6 +3824,9 @@ paths:
         HARVEST-FR-003), sinh `trace_code` (UUID) làm mã định danh mẻ. Nếu
         Zone chưa đủ dữ liệu telemetry/bird-count, snapshot trả về
         `insufficient_data: true` thay vì số liệu sai lệch.
+        Kiểm hợp lệ (HARVEST-FR-001), sai → 422: `harvest_date` là ngày ISO 8601 không sau
+        hôm nay theo giờ Việt Nam; `nest_count` số nguyên ≥ 1; `weight_grams` số > 0;
+        `nest_type` thuộc `RAW|CLEANED|PREMIUM`; `product_images` là mảng chuỗi.
       requestBody:
         required: true
         content:
@@ -3814,9 +3837,9 @@ paths:
                 [zone_id, harvest_date, nest_count, weight_grams, nest_type]
               properties:
                 zone_id: { type: string }
-                harvest_date: { type: string, format: date-time }
-                nest_count: { type: integer, example: 50 }
-                weight_grams: { type: number, example: 350.5 }
+                harvest_date: { type: string, format: date-time, description: "Không sau hôm nay (giờ VN)" }
+                nest_count: { type: integer, minimum: 1, example: 50 }
+                weight_grams: { type: number, exclusiveMinimum: true, minimum: 0, example: 350.5 }
                 nest_type:
                   {
                     type: string,
@@ -3927,15 +3950,15 @@ paths:
     put:
       tags: [Harvests]
       summary: "Cập nhật Harvest Batch (HARVEST-FR-005) — FARM_OWNER mọi lô; FARM_TECHNICIAN chỉ lô DRAFT của mình"
-      description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây. Farm Technician sửa lô đã CONFIRMED hoặc lô của người khác → 403."
+      description: "Sửa số liệu ghi nhận của mẻ; env/flock snapshot chỉ chụp một lần lúc tạo, không sửa qua đây. Farm Technician sửa lô đã CONFIRMED hoặc lô của người khác → 403. Trường gửi lên kiểm như lúc tạo (HARVEST-FR-001): `nest_count` < 1, `weight_grams` ≤ 0, `nest_type` lạ → 422."
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                nest_count: { type: integer }
-                weight_grams: { type: number }
+                nest_count: { type: integer, minimum: 1 }
+                weight_grams: { type: number, exclusiveMinimum: true, minimum: 0 }
                 nest_type: { type: string, enum: [RAW, CLEANED, PREMIUM] }
                 product_images: { type: array, items: { type: string } }
       responses:
@@ -3965,7 +3988,9 @@ paths:
                   },
               },
           }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     delete:
       tags: [Harvests]
       summary: "Xóa mềm Harvest Batch (HARVEST-FR-005) — FARM_OWNER mọi lô; FARM_TECHNICIAN chỉ lô DRAFT của mình"
@@ -5078,6 +5103,25 @@ components:
         start: { type: string, example: "06:00", description: "HH:mm giờ VN" }
         end: { type: string, example: "18:00", description: "HH:mm giờ VN; end trước start là ca qua nửa đêm, tính cho ngày bắt đầu" }
 
+    DefaultThresholdsView:
+      description: "Ngưỡng mặc định hệ thống kèm nguồn và lịch sử đổi (ENV-FR-007, SYSTEM-FR-002)"
+      allOf:
+        - $ref: "#/components/schemas/Thresholds"
+        - type: object
+          properties:
+            source: { type: string, nullable: true, description: "Nguồn của lần đổi gần nhất (mã REF-5)" }
+            updated_at: { type: string, format: date-time, nullable: true }
+            updated_by: { type: string, nullable: true }
+            history:
+              type: array
+              items:
+                type: object
+                properties:
+                  at: { type: string, format: date-time }
+                  by: { type: string, nullable: true }
+                  source: { type: string, nullable: true, description: "Rỗng với lần đổi trước G-18" }
+                  before: { $ref: "#/components/schemas/Thresholds" }
+                  after: { $ref: "#/components/schemas/Thresholds" }
     Thresholds:
       type: object
       properties:
