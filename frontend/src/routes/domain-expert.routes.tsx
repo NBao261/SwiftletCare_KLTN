@@ -27,6 +27,8 @@ const DomainExpertZoneTuningPage = lazy(() => import('@/pages/domain-expert/Doma
 const DomainExpertReportsPage = lazy(() => import('@/pages/domain-expert/DomainExpertReportsPage'));
 const DomainExpertHistoryPage = lazy(() => import('@/pages/domain-expert/DomainExpertHistoryPage'));
 const DomainExpertReviewsPage = lazy(() => import('@/pages/domain-expert/DomainExpertReviewsPage'));
+const DomainExpertProfilesPage = lazy(() => import('@/pages/domain-expert/DomainExpertProfilesPage'));
+const DomainExpertRecommendationRulesPage = lazy(() => import('@/pages/domain-expert/DomainExpertRecommendationRulesPage'));
 
 // ── Redirect helpers giữ nguyên query parameters (ví dụ: ?alertId=...) ─────────
 function RedirectToVerdicts() {
@@ -99,6 +101,12 @@ export const domainExpertRoutes = (
       {/* Báo cáo sức khỏe & Kết luận + Xem ngày đánh giá lệch (EXPERT-FR-022) */}
       <Route path="reports" element={<DomainExpertReportsPage />} />
       <Route path="disagreements" element={<RedirectToDisagreements />} />
+
+      {/* Hồ sơ cấu hình (EXPERT-FR-014, 015) */}
+      <Route path="profiles" element={<DomainExpertProfilesPage />} />
+
+      {/* Luật khuyến nghị & hiệu quả (EXPERT-FR-016…019) */}
+      <Route path="recommendation-rules" element={<DomainExpertRecommendationRulesPage />} />
 
       {/* Lịch sử hoạt động */}
       <Route path="history" element={<DomainExpertHistoryPage />} />
