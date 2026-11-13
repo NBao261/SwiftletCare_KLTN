@@ -4,6 +4,8 @@
  */
 import cron from 'node-cron'
 import { checkReturnRateDrops } from '@/services/birdCount.service'
+import { assessAllHouses } from '@/services/healthAssessment.service'
+import { generateDailyReports } from '@/services/houseHealthReport.service'
 import logger from '@/utils/logger.util'
 
 /** ponytail: 19:15 = hết phiên chiều + 15 phút chờ tin cuối, chọn tay (SRS §0.5); đổi cùng khung giờ phiên */
@@ -14,6 +16,14 @@ export function startReturnRateJob(): void {
     checkReturnRateDrops()
       .then(count => { if (count > 0) logger.info(`Đã tạo ${count} cảnh báo LOW_RETURN_RATE (VISION-FR-011)`) })
       .catch((err: Error) => logger.error('returnRate.job failed', { err }))
+      // ANALYTICS-FR-012 — đánh giá sức khỏe ngày chạy sau kiểm tra tỷ lệ chim về (BR-21), kể cả khi kiểm tra lỗi
+      .then(() => assessAllHouses())
+      .then(count => { if (count > 0) logger.info(`Đã đánh giá sức khỏe ${count} nhà yến (ANALYTICS-FR-012)`) })
+      .catch((err: Error) => logger.error('healthAssessment failed', { err }))
+      // EXPERT-FR-005, BR-33 — báo cáo ngày theo nhà ngay sau đánh giá ngày
+      .then(() => generateDailyReports())
+      .then(count => { if (count > 0) logger.info(`Đã tạo ${count} báo cáo ngày theo nhà (EXPERT-FR-005)`) })
+      .catch((err: Error) => logger.error('house daily reports failed', { err }))
   }, { timezone: 'Asia/Ho_Chi_Minh' })
   logger.info('Return-rate drop job scheduled (19:15 Asia/Ho_Chi_Minh)')
 }

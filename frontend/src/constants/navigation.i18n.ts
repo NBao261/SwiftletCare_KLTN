@@ -18,6 +18,7 @@ const vi = {
   'Trang trại': 'Trang trại',
   'Thống kê sản lượng': 'Thống kê sản lượng',
   'Phân tích': 'Phân tích',
+  'Sức khỏe nhà yến': 'Sức khỏe nhà yến',
   'Thông báo': 'Thông báo',
   'Cài đặt': 'Cài đặt',
   'Người dùng': 'Người dùng',
@@ -35,6 +36,14 @@ const vi = {
   'Quản trị viên': 'Quản trị viên',
   'Chủ nhà yến': 'Chủ nhà yến',
   'Kỹ thuật viên': 'Kỹ thuật viên',
+  // Domain Expert
+  'Chuyên môn': 'Chuyên môn',
+  'Hàng đợi việc': 'Hàng đợi việc',
+  'Thẩm định Cảnh báo': 'Thẩm định Cảnh báo',
+  'Ngưỡng & Hệ số mờ': 'Ngưỡng & Hệ số mờ',
+  'Duyệt & Đề xuất': 'Duyệt & Đề xuất',
+  'Báo cáo & Kết luận': 'Báo cáo & Kết luận',
+  'Lịch sử hoạt động': 'Lịch sử hoạt động',
 }
 
 type NavigationKey = keyof typeof vi
@@ -56,6 +65,7 @@ const en: Record<NavigationKey, string> = {
   'Trang trại': 'Farms',
   'Thống kê sản lượng': 'Yield statistics',
   'Phân tích': 'Analytics',
+  'Sức khỏe nhà yến': 'House health',
   'Thông báo': 'Notifications',
   'Cài đặt': 'Settings',
   'Người dùng': 'Users',
@@ -73,6 +83,13 @@ const en: Record<NavigationKey, string> = {
   'Quản trị viên': 'Administrator',
   'Chủ nhà yến': 'Farm Owner',
   'Kỹ thuật viên': 'Technician',
+  'Chuyên môn': 'Expert work',
+  'Hàng đợi việc': 'Work queue',
+  'Thẩm định Cảnh báo': 'Alert verdicts',
+  'Ngưỡng & Hệ số mờ': 'Thresholds & fuzzy coefficients',
+  'Duyệt & Đề xuất': 'Reviews & proposals',
+  'Báo cáo & Kết luận': 'Reports & conclusions',
+  'Lịch sử hoạt động': 'Activity history',
 }
 
 export const navigationDict: Dictionary<NavigationKey> = { vi, en }

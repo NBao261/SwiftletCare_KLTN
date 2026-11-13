@@ -66,6 +66,14 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('FARM_OWNER'), 'applyCoefficientSuggestion')).toBe(false)
   })
 
+  it('vòng đếm: chuyên gia và kỹ thuật viên vẽ; chủ trại chỉ khi farm chưa có chuyên gia (VISION-FR-018, BR-22)', () => {
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'drawCountingRing')).toBe(true)
+    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'drawCountingRing')).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing', { farmHasExpert: false })).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing', { farmHasExpert: true })).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing')).toBe(false)
+  })
+
   it('chỉ chuyên gia viết kết luận báo cáo', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'writeConclusion')).toBe(true)
     expect(canPerform(buildUser('FARM_OWNER'), 'writeConclusion')).toBe(false)
@@ -97,9 +105,14 @@ describe('canPerform', () => {
 
   it('kỹ thuật viên nhà yến (G-20): điều khiển tay, cài thông báo, dùng chuông; không sửa cấu hình, không lập thiết bị', () => {
     const technician = buildUser('FARM_TECHNICIAN')
-    // Backend G-20 chưa cho kỹ thuật viên xác nhận cảnh báo, xem báo cáo, bằng chứng, gợi ý hệ số
+    // Backend chưa cho kỹ thuật viên xác nhận cảnh báo, xem bằng chứng, gợi ý hệ số
     expect(canPerform(technician, 'acknowledgeAlert')).toBe(false)
-    expect(canPerform(technician, 'viewHealthReports')).toBe(false)
+    // Chấm ngày, xem trạng thái ngày và báo cáo của nhà được giao (BR-31, G-11)
+    expect(canPerform(technician, 'rateHealthDay')).toBe(true)
+    expect(canPerform(technician, 'viewHealthReports')).toBe(true)
+    expect(canPerform(technician, 'viewPendingRatings')).toBe(true)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'rateHealthDay')).toBe(false)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewPendingRatings')).toBe(false)
     expect(canPerform(technician, 'viewAlertEvidence')).toBe(false)
     expect(canPerform(technician, 'viewControlSuggestion')).toBe(false)
     expect(canPerform(technician, 'limitedToAssignedHouses')).toBe(true)

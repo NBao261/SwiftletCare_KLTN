@@ -1,10 +1,9 @@
 import { StyleSheet, View } from 'react-native'
 import { StatRow } from '@/components/analytics/StatRow'
-import { ComingSoonAction } from '@/components/common/ComingSoonAction'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { AlertType, ZoneHealthMetrics } from '@/types'
+import type { AlertType, HealthReportZoneSection } from '@/types'
 import { getAlertTypeShortLabel } from '@/utils/label.utils'
 import { formatDecimal, formatPercentValue } from '@/utils/number.utils'
 import { t } from '@/utils/i18n.utils'
@@ -21,29 +20,32 @@ function averageAndMax(average: number | null, max: number | null): string {
   return `${format(average)} / ${format(max)} ppm`
 }
 
-// Số liệu một kỳ báo cáo (EXPERT-FR-005), đúng các trường backend tính (healthReport.service buildZoneMetrics)
-export function ReportMetrics({ metrics }: { metrics: ZoneHealthMetrics }) {
+// Tên ngắn của loại cảnh báo; loại backend thêm sau mà app chưa có tên thì hiện nguyên mã
+function alertTypeLabel(type: string): string {
+  return getAlertTypeShortLabel(type as AlertType) || type
+}
+
+// Các loại có số lớn hơn 0
+function countEntries(counts: Partial<Record<string, number>> | undefined): [string, number][] {
+  return Object.entries(counts ?? {}).flatMap(([type, count]) => (count && count > 0 ? [[type, count] as [string, number]] : []))
+}
+
+// Số liệu một Zone trong báo cáo theo nhà (EXPERT-FR-005, schema HouseHealthReport.zone_sections)
+export function ReportMetrics({ section }: { section: HealthReportZoneSection }) {
   const palette = usePalette()
-  const alertEntries = (Object.entries(metrics.alerts_by_type) as [AlertType, number][]).filter(
-    ([, count]) => count > 0,
-  )
+  const alertEntries = countEntries(section.alerts_by_type)
+  const faultEntries = countEntries(section.device_faults)
+  const inferred = section.inferred_alerts
 
   return (
     <View style={styles.metrics}>
-      <StatRow label={t('Độ ẩm trong ngưỡng')} value={percent(metrics.humidity_in_range_pct)} />
-      <StatRow label={t('Nhiệt độ trong ngưỡng')} value={percent(metrics.temp_in_range_pct)} />
-      <StatRow label={t('Thời gian tự động')} value={percent(metrics.auto_mode_pct)} />
-      <StatRow
-        label={t('Đóng ngắt phun sương')}
-        value={t('{count} lần', { count: formatDecimal(metrics.misting_switches) })}
-      />
-      <StatRow
-        label={t('Đóng ngắt quạt')}
-        value={t('{count} lần', { count: formatDecimal(metrics.ventilation_switches) })}
-      />
-      <StatRow label={t('Tỉ lệ về tổ trung bình')} value={percent(metrics.avg_return_rate)} />
-      <StatRow label={t('NH₃ trung bình / cao nhất')} value={averageAndMax(metrics.nh3_avg, metrics.nh3_max)} />
-      <StatRow label={t('CO₂ trung bình / cao nhất')} value={averageAndMax(metrics.co2_avg, metrics.co2_max)} />
+      <StatRow label={t('Độ ẩm trong ngưỡng')} value={percent(section.humidity_in_range_pct)} />
+      <StatRow label={t('Nhiệt độ trong ngưỡng')} value={percent(section.temp_in_range_pct)} />
+      <StatRow label={t('Thời gian tự động')} value={percent(section.auto_mode_pct)} />
+      <StatRow label={t('Đóng ngắt phun sương')} value={t('{count} lần', { count: formatDecimal(section.misting_switches) })} />
+      <StatRow label={t('Đóng ngắt quạt')} value={t('{count} lần', { count: formatDecimal(section.ventilation_switches) })} />
+      <StatRow label={t('NH₃ trung bình / cao nhất')} value={averageAndMax(section.nh3_avg, section.nh3_max)} />
+      <StatRow label={t('CO₂ trung bình / cao nhất')} value={averageAndMax(section.co2_avg, section.co2_max)} />
       <Text variant="small" weight="semiBold" color={palette.text}>
         {t('Cảnh báo theo loại')}
       </Text>
@@ -53,11 +55,25 @@ export function ReportMetrics({ metrics }: { metrics: ZoneHealthMetrics }) {
         </Text>
       ) : (
         alertEntries.map(([type, count]) => (
-          <StatRow key={type} label={getAlertTypeShortLabel(type)} value={formatDecimal(count)} isWarning />
+          <StatRow key={type} label={alertTypeLabel(type)} value={formatDecimal(count)} isWarning />
         ))
       )}
-      {/* Báo cáo chưa chia cảnh báo suy luận theo xác nhận / bác bỏ / chờ */}
-      <ComingSoonAction label={t('Cảnh báo suy luận theo kết quả kiểm chứng')} />
+      {inferred && (
+        <StatRow
+          label={t('Cảnh báo suy luận: đúng / bác bỏ / chờ')}
+          value={`${formatDecimal(inferred.confirmed)} / ${formatDecimal(inferred.dismissed)} / ${formatDecimal(inferred.pending)}`}
+        />
+      )}
+      {faultEntries.length > 0 && (
+        <>
+          <Text variant="small" weight="semiBold" color={palette.text}>
+            {t('Lỗi thiết bị')}
+          </Text>
+          {faultEntries.map(([type, count]) => (
+            <StatRow key={type} label={alertTypeLabel(type)} value={formatDecimal(count)} isWarning />
+          ))}
+        </>
+      )}
     </View>
   )
 }

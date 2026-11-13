@@ -46,6 +46,8 @@ export const ENDPOINTS = {
   RELAY_OVERRIDE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-override`,
   RELAY_OVERRIDES: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-overrides`,
   CAMERA_STREAM_TOKEN: (cameraId: string) => `/devices/camera-nodes/${cameraId}/stream-token`,
+  // Vẽ vòng đếm của camera (VISION-FR-018): Domain Expert, Farm Technician nhà được giao, Farm Owner khi farm chưa có chuyên gia
+  CAMERA_COUNTING_RING: (cameraId: string) => `/devices/camera-nodes/${cameraId}/counting-ring`,
 
   // Dữ liệu cảm biến (ENV-FR-*)
   TELEMETRY_LATEST: (zoneId: string) => `/telemetry/zones/${zoneId}/latest`,
@@ -83,9 +85,14 @@ export const ENDPOINTS = {
   // chưa merge vào develop
   PUSH_TOKENS: '/notifications/push-tokens',
 
-  // Báo cáo sức khoẻ (EXPERT-FR-005/006)
+  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006)
   HEALTH_REPORTS: '/health-reports',
-  HEALTH_REPORT_PREVIEW: '/health-reports/preview',
+  // Trạng thái ngày và chấm điểm (ANALYTICS-FR-012, EXPERT-FR-012, BR-31)
+  HEALTH_DAYS: '/health-reports/days',
+  HEALTH_DAY_DETAIL: (dayId: string) => `/health-reports/days/${dayId}`,
+  HEALTH_DAY_RATING: (dayId: string) => `/health-reports/days/${dayId}/rating`,
+  HEALTH_DAY_SKIP: (dayId: string) => `/health-reports/days/${dayId}/skip`,
+  HEALTH_DAY_RATING_NOTE: (dayId: string) => `/health-reports/days/${dayId}/rating/note`,
   HEALTH_REPORT_DETAIL: (reportId: string) => `/health-reports/${reportId}`,
   HEALTH_REPORT_CONCLUSION: (reportId: string) => `/health-reports/${reportId}/conclusion`,
 

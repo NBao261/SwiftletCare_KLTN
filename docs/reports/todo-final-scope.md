@@ -196,20 +196,23 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo scope cuối:
 
-- [ ] Người chấm (BR-31, EXPERT-FR-012): *(Phần Farm Technician chuyển từ G-20 sang đây: làm khi #126 và #146 đã merge.)*
+- [x] Người chấm (BR-31, EXPERT-FR-012): *(Farm Owner xong, Domain Expert và Administrator 403 — Kiệt, 10/11, `08c5e18`; Farm Technician xong — Kiệt, 12/11, `621bd480` spec + `d515d45d`: thợ chấm, bỏ qua, ghi chú ở nhà được giao, nhà khác hoặc bị gỡ khỏi nhà 403, xem ngày, báo cáo, CSV của nhà được giao, không xem độ khớp và ngày lệch; thông báo "ngày đã sẵn sàng" tới thợ được giao.)*
   - Farm Technician của nhà chấm **mỗi ngày**; Farm Owner chấm **những ngày có mặt ở nhà**;
   - Domain Expert và Administrator gửi chấm điểm thì 403;
   - mỗi technician và mỗi Farm Owner chấm riêng.
-- [ ] Trước khi chấm hoặc bỏ qua, mọi endpoint (ngày, báo cáo, CSV) không trả trạng thái, lý do hay điểm của người khác. Rating và snapshot lưu trong một lần ghi atomic, rồi mới trả trạng thái.
-- [ ] Ngày được tạo lượt chấm chờ cho từng technician được gán và từng Farm Owner. Quá 7 ngày chưa chấm thì `EXPIRED` (SM-18).
-- [ ] **Xem ngày lệch (EXPERT-FR-022):**
+- [x] Trước khi chấm hoặc bỏ qua, mọi endpoint (ngày, báo cáo, CSV) không trả trạng thái, lý do hay điểm của người khác. Rating và snapshot lưu trong một lần ghi atomic, rồi mới trả trạng thái. *(đã có từ 31/10, giữ nguyên khi đổi người chấm)*
+- [x] Ngày được tạo lượt chấm chờ cho từng technician được gán và từng Farm Owner. *(lượt chấm suy ra lúc đọc, không lưu; Farm Owner xong, chuyên gia không còn lượt chấm — `08c5e18`; technician xong — `d515d45d`)* Quá 7 ngày chưa chấm thì `EXPIRED` (SM-18).
+- [x] **Xem ngày lệch (EXPERT-FR-022):** *(backend: Kiệt, 10/11, `4dda5e6` + `08c5e18`, `GET /health-reports/disagreements`; màn hình: Tuấn)*
   - chuyên gia xem các ngày có điểm chấm khác snapshot, kèm chỉ số và lý do của từng ngày;
   - chuyên gia chỉnh mức chỉ số sức khỏe của nhà (BR-28); thay đổi lưu lịch sử và áp từ lần đánh giá tiếp theo;
   - Farm Owner (ở farm có chuyên gia) hoặc technician vào chức năng này thì 403.
-- [ ] Giao diện:
-  - Len: chấm điểm trên mobile, hiện hướng dẫn chấm (BR-37) trước khi chấm;
-  - Nhi: chấm điểm trên web Owner;
-  - Tuấn: màn ngày lệch và chỉnh mức trên web chuyên gia.
+- [x] Giao diện:
+  - [x] Len: chấm điểm trên mobile, hiện hướng dẫn chấm (BR-37) trước khi chấm; *(Len, 11/11, nhánh `feat/g11-health-assessment` (`368cc8d7`): Farm Owner — form chấm có hướng dẫn BR-37, bỏ qua có xác nhận, chi tiết ngày sau khi chấm (xem `todo-review2.md` G-11). 12/11: Farm Technician chấm, bỏ qua, ghi chú ngày của nhà được giao (`rateHealthDay`, theo `ASSESSOR_ROLES` backend của Kiệt), thấy ngày chờ chấm trong "Việc chờ bạn" ở Trang chủ (không có phần phán quyết cảnh báo) và tab Báo cáo của Phân tích (`viewHealthReports`))*
+  - [x] Nhi: chấm điểm trên web Owner; *(Nhi, 11/11: `/health` — Farm Owner chấm hoặc "Bỏ qua" ngày không có mặt ở nhà, hướng dẫn BR-37 trước khi chọn mức (10/11), Domain Expert không còn chấm (10/11))*
+  - [x] Tuấn: màn ngày lệch và chỉnh mức trên web chuyên gia. *(Tuấn, 10/11, nhánh `feat/g11-health-assessment`, commits `1c5ee85c` + `bf936377`: DisagreementsSection (scope filter, KPI strip, Bento grid mức chỉ số), DisagreementDayCard, ExpertHealthLevelsModal (GET/PUT /farms/houses/{houseId}/health-levels, BR-28); 8 unit tests; 245/245 tests pass)*
+  - [x] Tuấn: tab "Báo cáo & Kết luận định kỳ" của chuyên gia (`/domain-expert/reports`) theo báo cáo theo nhà (`GET /health-reports?houseId|farmId&kind`, `GET /health-reports/{id}`) thay báo cáo tuần theo Zone đã deprecated; chuyên gia viết kết luận bằng `PUT /health-reports/{id}/conclusion` (EXPERT-FR-007); bỏ số liệu bịa khi chưa có báo cáo (chu kỳ, tên zone, số mẫu, số kỳ tuần); chữ qua `healthDict`. *(Nhi phát hiện 11/11, làm thay Tuấn 12/11: tab dùng `HealthReportSection` theo farm/nhà đang chọn, chuyên gia viết và sửa kết luận của mình ở trang chi tiết báo cáo (`HealthReportConclusion`); bỏ báo cáo tuần theo Zone và số liệu bịa)*
+  - [x] Số "báo cáo chờ kết luận" của chuyên gia (ô "Báo cáo tồn" trên thanh trên, thẻ báo cáo ở trang Việc chờ) đếm theo báo cáo theo nhà thay báo cáo tuần theo Zone. *(Nhi làm, Kiệt đồng ý, 12/11: backend `GET /health-reports?hasConclusion=true|false` (spec + test), web đọc `meta.total`; bỏ hook, service và kiểu báo cáo Zone cũ của chuyên gia)*
+  - [x] Farm Owner ở farm chưa có chuyên gia xem ngày lệch và chỉnh mức (EXPERT-FR-022, BR-22). *(Nhi, 12/11: tab "Ngày đánh giá lệch" ở `/health`, chỉ hiện khi farm đang chọn chưa có chuyên gia; dùng lại `DisagreementsSection`. Còn lại: `GET /farms` không cho biết chuyên gia bị khoá, nên farm chỉ còn chuyên gia bị khoá vẫn ẩn tab dù backend cho Farm Owner vào — cần backend trả cờ chuyên gia còn hoạt động theo farm)*
 
 **Test:** TC-F22-01…03; TC-ST-44…53.
 
@@ -220,7 +223,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 **Backend (Bảo):**
 - [ ] Spec `/profiles` (draft, approve, archive, apply), `/recommendations` (luật, khuyến nghị của nhà, chấp nhận, từ chối, hiệu quả theo luật), giai đoạn nhà trong `/farms`.
 - [ ] Collections `configprofiles`, `recommendationrules`, `recommendations` (unique `rule_id + house_id` khi đang `OPEN`). Chạy `npm run db:script`.
-- [ ] **Giai đoạn nhà** (FARM-FR-014, BR-46):
+- [x] **Giai đoạn nhà** (FARM-FR-014, BR-46): *(backend: Kiệt, 12/11, `78ada1a` + `e5ebd08`, làm trong PR #126 của G-11; màn đặt giai đoạn trên web: Nhi)*
   - Farm Owner hoặc chuyên gia đặt `ATTRACTING` / `OCCUPIED`, có lịch sử; technician đặt thì 403;
   - nhà `ATTRACTING` không đánh giá chỉ số đàn, không tạo `LOW_RETURN_RATE`, lý do ghi "attracting stage".
 - [x] **Profile** (EXPERT-FR-014, 015; SM-23): *(Bảo, 12/11/2026, PR #153: spec `/profiles` và collection `configprofiles` xong; giai đoạn nhà do Kiệt làm trong PR #126; luật khuyến nghị chờ G-11 và G-21. Nhóm nào trong hồ sơ cũng tuỳ chọn, nhưng đã có thì đủ khoá; Farm Owner farm không có chuyên gia soạn và duyệt được (BR-22); áp hệ số mờ thì đề xuất hệ số đang chờ của zone thành `SUPERSEDED`)*
