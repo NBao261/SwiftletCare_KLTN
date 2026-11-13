@@ -10,8 +10,8 @@ export function openAlertFromBell(alertId: string) {
   router.navigate({ pathname: '/(tabs)/alerts', params: { alertId, returnTo: RETURN_TO_NOTIFICATIONS } })
 }
 
-// Bấm một thông báo: đánh dấu đã đọc (số giảm ngay) rồi mở đúng chỗ — cảnh báo ở tab Cảnh báo, báo cáo ở tab Phân tích,
-// còn lại (quyết định của chuyên gia, lệnh từ xa trên thiết bị…) ở trang chi tiết thông báo
+// Bấm một thông báo: đánh dấu đã đọc (số giảm ngay) rồi mở đúng chỗ — cảnh báo ở tab Cảnh báo, báo cáo ở tab Phân tích, Work
+// Order ở trang chi tiết Work Order, còn lại (quyết định của chuyên gia, lệnh từ xa trên thiết bị…) ở trang chi tiết thông báo
 export function useOpenNotification() {
   const markRead = useMarkNotificationRead()
   const markNotificationRead = markRead.mutate
@@ -29,6 +29,10 @@ export function useOpenNotification() {
           pathname: '/(tabs)/analytics',
           params: { tab: 'reports', reportId: target.reportId, returnTo: RETURN_TO_NOTIFICATIONS },
         })
+        return
+      }
+      if (target.kind === 'workOrder') {
+        router.push({ pathname: '/work-orders/[workOrderId]', params: { workOrderId: target.workOrderId } })
         return
       }
       router.push({ pathname: '/notifications/[notificationId]', params: { notificationId: target.notificationId } })

@@ -10,15 +10,18 @@ export const NOTIFICATION_UNREAD_KEY = ['notifications', 'unread-count'] as cons
 // Số cảnh báo chưa xác nhận cho badge (useSyncAlertBadge)
 export const ALERT_BADGE_KEY = ['alerts', 'badge'] as const
 
-// Bấm một thông báo thì đi đâu: cảnh báo mở đúng cảnh báo ở tab Cảnh báo, báo cáo mở tab Phân tích, còn lại mở trang chi tiết
+// Bấm một thông báo thì đi đâu: cảnh báo mở đúng cảnh báo ở tab Cảnh báo, báo cáo mở tab Phân tích, Work Order mở trang chi tiết
+// Work Order (G-21), còn lại mở trang chi tiết thông báo
 export type NotificationTarget =
   | { kind: 'alert'; alertId: string }
   | { kind: 'report'; reportId: string }
+  | { kind: 'workOrder'; workOrderId: string }
   | { kind: 'detail'; notificationId: string }
 
 export function getNotificationTarget(notification: InAppNotification): NotificationTarget {
   if (notification.ref?.kind === 'alert') return { kind: 'alert', alertId: notification.ref.id }
   if (notification.ref?.kind === 'health_report') return { kind: 'report', reportId: notification.ref.id }
+  if (notification.ref?.kind === 'work_order') return { kind: 'workOrder', workOrderId: notification.ref.id }
   return { kind: 'detail', notificationId: notification._id }
 }
 
@@ -123,5 +126,6 @@ export function getPushTarget(data: unknown): PushTarget {
   const id = typeof record.id === 'string' && record.id ? record.id : null
   if (id && record.kind === 'alert') return { kind: 'alert', alertId: id }
   if (id && record.kind === 'health_report') return { kind: 'report', reportId: id }
+  if (id && record.kind === 'work_order') return { kind: 'workOrder', workOrderId: id }
   return { kind: 'bell' }
 }

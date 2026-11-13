@@ -135,4 +135,12 @@ describe('getPushTarget', () => {
     expect(getPushTarget({ kind: 'alert' })).toEqual({ kind: 'bell' })
     expect(getPushTarget(null)).toEqual({ kind: 'bell' })
   })
+
+  it('push và thông báo Work Order mở chi tiết Work Order (G-21)', () => {
+    expect(getPushTarget({ kind: 'work_order', id: 'wo-1' })).toEqual({ kind: 'workOrder', workOrderId: 'wo-1' })
+    expect(getNotificationTarget(buildNotification('e', { ref: { kind: 'work_order', id: 'wo-1' } }))).toEqual({
+      kind: 'workOrder',
+      workOrderId: 'wo-1',
+    })
+  })
 })
