@@ -21,7 +21,7 @@ import { User } from '@/models/user.model'
 import { ingestDeviceAlert } from '@/services/alert.service'
 import { checkReturnRateDrops, houseDailyCounts, ingestBirdCount, vnDate } from '@/services/birdCount.service'
 import { buildZoneMetrics } from '@/services/healthReport.service'
-import { CAMERA_OFFLINE_THRESHOLD_MS, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
+import { CAMERA_OFFLINE_THRESHOLD_MS, MIN_AI_FPS, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
 import { emitBirdCountUpdate, emitHouseAlertNew, emitHouseDeviceStatusChange } from '@/socket'
 import type { BirdCountPayload } from '@/types'
 
@@ -320,6 +320,30 @@ describe('checkReturnRateDrops (VISION-FR-011)', () => {
     expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
   })
 
+  it('BR-46 — nhà ATTRACTING không có LOW_RETURN_RATE; về OCCUPIED thì nền chỉ gồm các ngày sau lần chuyển', async () => {
+    const change = (stage: string, iso: string) => ({ stage, changed_by: house._id, changed_by_role: 'FARM_OWNER', changed_at: new Date(iso) })
+    const { camera, house } = await seed()
+    await eveningRates(camera._id, house._id, [['2026-10-12', 90], ['2026-10-13', 90], ['2026-10-14', 90], ['2026-10-15', 60]])
+
+    // Cảnh báo còn mở từ trước khi sang ATTRACTING được đóng, không giữ suốt giai đoạn dẫn dụ
+    const open = await Alert.create({
+      farm_id: house.farm_id, house_id: house._id, type: 'LOW_RETURN_RATE', severity: 'LOW', title: 't', message: 'm', status: 'ACTIVE',
+    })
+    await House.updateOne({ _id: house._id }, { stage: 'ATTRACTING', stage_history: [change('ATTRACTING', '2026-10-01T01:00:00Z')] })
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
+    expect((await Alert.findById(open._id).lean())!.status).toBe('RESOLVED')
+
+    // Về OCCUPIED ngày 13/10: nền chỉ còn 14/10 → chưa đủ 3 ngày
+    await House.updateOne({ _id: house._id }, {
+      stage: 'OCCUPIED', stage_history: [change('ATTRACTING', '2026-10-01T01:00:00Z'), change('OCCUPIED', '2026-10-13T01:00:00Z')],
+    })
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
+
+    // Không có lần chuyển nào: đủ 3 ngày nền → cảnh báo như trước BR-46
+    await House.updateOne({ _id: house._id }, { stage: 'OCCUPIED', stage_history: [] })
+    expect(await checkReturnRateDrops('2026-10-15')).toBe(1)
+  })
+
   it('dùng return_rate_drop_pct của House và cần ít nhất 3 ngày nền', async () => {
     const { camera, house } = await seed()
     await House.updateOne({ _id: house._id }, { 'bird_count_tuning.return_rate_drop_pct': 40 })
@@ -372,6 +396,56 @@ describe('checkReturnRateDrops (VISION-FR-011)', () => {
 })
 
 describe('nút AI: heartbeat, offline, vision/alert (THREAT-FR-010)', () => {
+  it('heartbeat dưới 10 fps → 1 EDGE_AI_DEGRADED của nhà (LOW_FPS), báo lại không nhân đôi; đủ fps thì đóng', async () => {
+    const { camera, house } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 18 } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED' })).toBe(0)
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 8 } as never)
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 7 } as never)
+    const slow = await Alert.find({ type: 'EDGE_AI_DEGRADED' }).lean()
+    expect(slow).toHaveLength(1)
+    expect(slow[0]).toMatchObject({ status: 'ACTIVE', house_id: house._id, node_id: camera._id, metadata: { cause: 'LOW_FPS', min_fps: MIN_AI_FPS } })
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 12 } as never)
+    expect((await Alert.findById(slow[0]._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  it('mất kết nối rồi quay lại vẫn chậm → đóng cảnh báo mất kết nối, mở cảnh báo chậm; heartbeat không có fps thì không xét', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 15 } as never)
+    await CameraNode.updateOne({ _id: camera._id }, { last_heartbeat: new Date(Date.now() - CAMERA_OFFLINE_THRESHOLD_MS - 1000) })
+    await markStaleDevicesOffline()
+    const offline = (await Alert.findOne({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' }).lean())!
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 6 } as never)
+    expect((await Alert.findById(offline._id).lean())!.status).toBe('RESOLVED')
+    const open = await Alert.find({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' }).lean()
+    expect(open.map(a => a.metadata)).toEqual([expect.objectContaining({ cause: 'LOW_FPS', fps: 6 })])
+
+    await recordHeartbeat({ deviceId: camera.device_id } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' })).toBe(1)
+  })
+
+  it('heartbeat fps 0 lúc nút AI vừa khởi động (chưa đo) không mở cảnh báo, không đóng cảnh báo đang mở', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 0, justConnected: true } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED' })).toBe(0)
+    expect((await CameraNode.findById(camera._id).lean())!.status).toBe('ONLINE')
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 6 } as never)
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 0 } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' })).toBe(1)
+  })
+
+  it('nút AI tự gửi EDGE_AI_DEGRADED qua vision/alert, heartbeat sau đủ fps thì đóng', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 15 } as never)
+    const reported = (await ingestDeviceAlert({ deviceId: camera.device_id, type: 'EDGE_AI_DEGRADED', message: 'FPS 6' }))!
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 15 } as never)
+    expect((await Alert.findById(reported._id).lean())!.status).toBe('RESOLVED')
+  })
+
   it('heartbeat đặt ONLINE + model_version; im quá ngưỡng → OFFLINE + EDGE_AI_DEGRADED của nhà; quay lại thì đóng', async () => {
     const { camera, house } = await seed()
     await CameraNode.updateOne({ _id: camera._id }, { status: 'PENDING' })

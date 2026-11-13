@@ -45,6 +45,8 @@ export default function HomeScreen() {
   const language = useLanguage()
   const user = useAuthStore(state => state.user)
   const canViewOwnerTasks = canPerform(user, 'viewOwnerTasks')
+  // Kỹ thuật viên cũng chấm ngày của nhà được giao (BR-31) nên thấy "Việc chờ bạn", chỉ phần ngày chờ chấm
+  const canViewPendingTasks = canViewOwnerTasks || canPerform(user, 'viewPendingRatings')
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
   const { zoneById } = useZoneDirectory()
@@ -103,8 +105,8 @@ export default function HomeScreen() {
             <FarmCarousel />
             <OverviewStats />
             <UrgentAlertBanner />
-            {/* Việc chờ và báo cáo mới là của chủ trại; dải relay chuyên gia vẫn thấy nhưng không có nút */}
-            {canViewOwnerTasks && <PendingTasksCard />}
+            {/* Việc chờ: chủ trại và kỹ thuật viên (ngày chờ chấm); báo cáo mới của chủ trại; dải relay chuyên gia vẫn thấy nhưng không có nút */}
+            {canViewPendingTasks && <PendingTasksCard />}
             <RelayOverrideStrip />
             {canViewOwnerTasks && <NewReportCard />}
             <HouseCarousel />

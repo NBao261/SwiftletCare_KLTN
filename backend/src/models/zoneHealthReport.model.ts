@@ -53,7 +53,8 @@ const zoneHealthReportSchema = new Schema<IZoneHealthReport>(
       },
     },
   },
-  { versionKey: false },
+  // minimize: false — giữ `alerts_by_type` rỗng như api-spec (mặc định Mongoose bỏ object rỗng khi save và toObject)
+  { versionKey: false, minimize: false },
 )
 
 // unique: 2 lần chạy chồng nhau (2 instance lúc deploy) cùng mốc phút không tạo 2 báo cáo + 2 thông báo

@@ -71,6 +71,8 @@ export default function RootLayout() {
               {/* Chuông: màn riêng ngoài các tab (không nằm trong tab Tài khoản), thanh tab ẩn khi mở */}
               <Stack.Screen name="notifications/index" />
               <Stack.Screen name="notifications/[notificationId]" />
+              <Stack.Screen name="health/index" />
+              <Stack.Screen name="health/[dayId]" />
             </Stack>
             {/* Báo mất mạng / mất kết nối máy chủ trên mọi màn, nằm ngay dưới thanh trạng thái */}
             <ConnectionBanner />

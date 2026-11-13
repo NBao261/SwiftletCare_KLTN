@@ -1,7 +1,6 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 
-import { Button, Input, Modal, SelectMenu } from '@/components/ui';
-import HarvestDatePicker from '@/components/features/farm-owner/harvest/HarvestDatePicker';
+import { Button, DatePicker, Input, Modal, SelectMenu } from '@/components/ui';
 import ImageLinksField from '@/components/features/farm-owner/harvest/ImageLinksField';
 import { GRAM_DIGITS, KILOGRAM_DIGITS, NEST_TYPE_BADGE_CLASS, NEST_TYPES } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { checkNestAmount, type HarvestGroup, type NestAmountError } from '@/components/features/farm-owner/harvest/harvestMetrics';
@@ -85,7 +84,7 @@ function fieldStateClass(isChosen: boolean): string {
   return isChosen ? 'border-accent-600 focus:border-accent-600' : 'text-warmGray';
 }
 
-// Nhãn ô chọn kiểu form, cùng nhãn Input/HarvestDatePicker (.label-caption + dấu * đỏ)
+// Nhãn ô chọn kiểu form, cùng nhãn Input/DatePicker (.label-caption + dấu * đỏ)
 function FieldLabel({ text }: { text: string }): JSX.Element {
   return (
     <span className="label-caption">
@@ -257,8 +256,9 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
               )}
               {/* Người nhập: người đang đăng nhập, backend tự ghi người tạo */}
               <Input label={t('form.creator')} value={creatorName} disabled readOnly />
-              <HarvestDatePicker
+              <DatePicker
                 id="harvest-date"
+                required
                 label={t('form.date')}
                 min={HARVEST_DATE_MIN}
                 max={today}

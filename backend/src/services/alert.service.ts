@@ -765,6 +765,27 @@ export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
   })
 }
 
+/**
+ * THREAT-FR-010 — nút AI còn gửi heartbeat nhưng xử lý dưới `minFps` khung hình/giây: đang chạy mà quá
+ * chậm để đếm. Cùng loại và khoá dedup với cảnh báo mất kết nối, nên heartbeat thấp liên tiếp chỉ tăng
+ * `occurrence_count` của một cảnh báo.
+ */
+export async function raiseCameraLowFpsAlert(cameraId: string, fps: number, minFps: number): Promise<void> {
+  const camera = await CameraNode.findById(cameraId).lean()
+  if (!camera) return
+  const house = await House.findById(camera.house_id).lean()
+  if (!house) return
+  await createAlert({
+    farmId:  String(house.farm_id),
+    houseId: String(house._id),
+    nodeId:  String(camera._id),
+    type:    'EDGE_AI_DEGRADED',
+    title:   `Nút AI đếm chim ${camera.device_id} xử lý chậm`,
+    message: `Nút AI ${camera.device_id} tại ${house.name} chỉ xử lý ${fps} khung hình/giây (cần từ ${minFps}); số đếm chim có thể thiếu.`,
+    metadata: { cause: 'LOW_FPS', fps, min_fps: minFps },
+  })
+}
+
 /** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */
 export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
   const node = await SensorNode.findById(nodeId).lean()

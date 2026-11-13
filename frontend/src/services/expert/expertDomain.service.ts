@@ -3,7 +3,7 @@ import type {
   ExpertVerdictStats, InferredAlertItem, ExpertThresholds,
   ExpertFuzzyTuning, ExpertDetectionTuning, FuzzySuggestionResponse,
   ForecastResponse, ControlPerformanceResponse, AutonomyResponse,
-  BirdCountTrendsResponse, ZoneHealthReportItem, HarvestBatchItem,
+  BirdCountTrendsResponse, HarvestBatchItem,
   AlertEvidence, ExpertActivityEntry, ExpertActivityQuery,
 } from '@/types/expert.types'
 
@@ -76,20 +76,6 @@ export const expertService = {
     return Array.isArray(res.data?.data) ? res.data.data : []
   },
 
-  async getHealthReports(zoneId: string, params?: { page?: number; limit?: number }): Promise<ZoneHealthReportItem[]> {
-    const res = await expertApi.getHealthReports(zoneId, params)
-    return Array.isArray(res.data?.data) ? res.data.data : []
-  },
-
-  async previewHealthReport(params: { zoneId: string; from: string; to?: string }): Promise<ZoneHealthReportItem> {
-    const res = await expertApi.previewHealthReport(params)
-    return res.data?.data
-  },
-
-  async getHealthReportPreview(zoneId: string): Promise<ZoneHealthReportItem> {
-    return this.previewHealthReport({ zoneId, from: new Date(Date.now() - 7 * 86400000).toISOString() })
-  },
-
   // ── Thao tác ghi (Không nuốt lỗi - throw lỗi thật để UI hiển thị) ───────
   async setAlertVerdict(alertId: string, result: 'CONFIRMED' | 'REJECTED', note?: string): Promise<InferredAlertItem> {
     const res = await expertApi.setAlertVerdict(alertId, result, note)
@@ -114,14 +100,5 @@ export const expertService = {
   async updateDetectionTuning(zoneId: string, tuning: Partial<ExpertDetectionTuning>): Promise<ExpertDetectionTuning> {
     const res = await expertApi.updateDetectionTuning(zoneId, tuning)
     return res.data.data.detection_tuning
-  },
-
-  async setReportConclusion(reportId: string, text: string): Promise<ZoneHealthReportItem> {
-    const res = await expertApi.setReportConclusion(reportId, text)
-    return res.data.data
-  },
-
-  async publishHealthConclusion(reportId: string, text: string): Promise<ZoneHealthReportItem> {
-    return this.setReportConclusion(reportId, text)
   },
 }

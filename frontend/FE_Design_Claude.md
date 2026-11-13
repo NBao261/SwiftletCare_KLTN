@@ -808,7 +808,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Trạng thái `DISMISSED`, gói bằng chứng của cảnh báo suy luận | EXPERT-FR-003, ALERT-FR-014 | ⬜ Chưa có ở backend (#19, #23) | `ComingSoon` cho phần bằng chứng |
 | Đồng bộ cấu hình theo bộ điều khiển | ENV-FR-027 | ⬜ Chưa có (#22) | `ComingSoon` |
 | Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
-| Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ⬜ Chưa có endpoint (#32–36) | `ComingSoon` |
+| Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ✅ API thật (`/health-reports/days*`, `/health-reports`, `/farms/houses/:id/health-levels`); màn `/health` và trang báo cáo `/health/report` (PR #126) | Không |
 | Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
 | Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
@@ -1538,7 +1538,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 
 | Nhóm | Component |
 |---|---|
-| Nền tảng | `Button` · `Card` · `Badge` · `Input` · `Select` · `Textarea` · `Toggle` · `Avatar` · `icons.tsx` |
+| Nền tảng | `Button` · `Card` · `Badge` · `Input` · `Select` · `Textarea` · `Toggle` · `Avatar` · `DatePicker` (ô ngày dd/mm/yyyy + lịch tháng, thay `<input type="date">`) · `icons.tsx` |
 | Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
 | Khung, ô số liệu | `SectionCard` · `StatTile` · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
 | Lớp nổi | `Modal` · `ConfirmModal` · `NoteActionModal` (popup nhập lý do) · `Drawer` · `ActionsMenu` · `SelectMenu` · `useFloatingMenu.ts` |

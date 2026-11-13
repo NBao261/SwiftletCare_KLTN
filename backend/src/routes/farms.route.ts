@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { body, param, query } from 'express-validator'
 import * as farmController from '@/controllers/farms.controller'
+import { HOUSE_STAGES } from '@/utils/houseStage.util'
 import { HHMM_PATTERN, ROSTER_ROLES } from '@/utils/roster.util'
 import { MAX_HOUSE_FLOORS, MAX_NAME_LENGTH } from '@/services/farm.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
@@ -102,5 +103,12 @@ router.put ('/zones/:zoneId/detection-tuning', requireRole('FARM_OWNER','DOMAIN_
 // EXPERT-FR-008 (v2.1.8) — mức giảm tỷ lệ chim về theo nhà yến (camera ở cửa ra vào của cả nhà): Domain Expert
 // sửa; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22)
 router.put ('/houses/:houseId/bird-count-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateBirdCountTuning)
+// ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà yến: Farm Owner và Domain Expert xem; Domain Expert
+// sửa, Farm Owner chỉ khi farm chưa có chuyên gia (BR-22, service kiểm)
+router.get ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.getHealthLevels)
+router.put ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateHealthLevels)
+// FARM-FR-014, BR-46 — giai đoạn nhà: Farm Owner, Domain Expert của farm (Farm Technician, Admin → 403)
+router.put ('/houses/:houseId/stage', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(),
+  body('stage').isString().isIn([...HOUSE_STAGES]), validate, farmController.setHouseStage)
 
 export default router
