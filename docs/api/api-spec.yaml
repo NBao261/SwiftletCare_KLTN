@@ -3566,14 +3566,22 @@ paths:
       tags: [WorkOrders]
       summary: "Báo đã làm xong, kèm việc đã làm, nguyên nhân và ảnh (OPS-FR-002, ALERT-FR-018) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
       description: |
-        `IN_PROGRESS` → `VERIFYING`: hệ thống kiểm dữ liệu phục hồi trong `recovery_verify_min` (10 phút,
-        BR-41) rồi chuyển `AWAITING_APPROVAL`. Work Order không gắn cảnh báo thì chuyển thẳng
-        `AWAITING_APPROVAL` (không có dữ liệu để kiểm).
+        `IN_PROGRESS` → `VERIFYING`: hệ thống kiểm điều kiện của cảnh báo giữ phục hồi `recovery_verify_min`
+        (10 phút, BR-41) sau lúc báo xong rồi chuyển `AWAITING_APPROVAL`:
+        - `MISTING_INEFFECTIVE`: độ ẩm của controller trên `humidity_min` của zone (OPS-FR-003);
+        - `SENSOR_FAULT`, `RS485_BUS_FAILURE`: telemetry đủ số đo của cả 5 cảm biến;
+        - `ACTUATOR_FAULT`: controller không gửi lại cảnh báo trong 1 chu kỳ gửi lại (15 phút, Report 3 §4.5);
+        - `SPEAKER_FAILURE`: không báo lại trong 10 phút (backend không có dữ liệu để kiểm, Farm Owner duyệt);
+        - loại khác: cảnh báo đã đóng (vượt ngưỡng về ngưỡng, thiết bị online lại…).
+        Controller báo lại sự cố sau lúc báo xong, hoặc có cảnh báo mới của cùng sự cố lúc đang kiểm hay chờ
+        duyệt → trở lại `IN_PROGRESS`. Work Order không gắn cảnh báo thì chuyển thẳng `AWAITING_APPROVAL`
+        (không có dữ liệu để kiểm).
 
         `cause` bắt buộc với Work Order của `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`,
         `RS485_BUS_FAILURE`, `SPEAKER_FAILURE` (thiếu → 422); nguyên nhân và ảnh lưu cả vào cảnh báo
-        (`site_cause`). Ảnh: `multipart/form-data`, field `photos`, tối đa 5 ảnh JPEG/PNG/WebP, mỗi ảnh
-        ≤ 5 MB. Trạng thái khác → 409; thợ nhà khác → 403.
+        (`site_cause`). Ảnh: `multipart/form-data`, field `photos`, JPEG/PNG/WebP, mỗi ảnh ≤ 5 MB, tối đa
+        5 ảnh cho cả Work Order (tính cả ảnh của lần báo xong trước khi bị mở lại; vượt → 400). Trạng thái
+        khác → 409; thợ nhà khác → 403.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
