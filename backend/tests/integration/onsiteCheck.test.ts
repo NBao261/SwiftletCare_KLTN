@@ -77,6 +77,11 @@ describe('kiểm tra tại chỗ (EXPERT-FR-021)', () => {
     await owner$.post(path, { observation: 'RAIN' }).expect(403)
     await expert$.post(path, { observation: 'RAIN' }).expect(403)
     await tech$.post(path, { observation: 'SOMETHING' }).expect(422)
+    // Spec: yêu cầu còn chờ có `observation: null` (mobile tìm nút "Trả lời" theo đó), không phải thiếu khoá
+    const pending = await tech$.get(`/alerts/${alert._id}`).expect(200)
+    expect(pending.body.data.onsite_checks[0]).toMatchObject({
+      observation: null, note: null, answered_by: null, answered_at: null, photo_url: null,
+    })
 
     const res = await tech$.upload(path).field('observation', 'WORK_OR_PEOPLE_NEARBY').field('note', 'Thợ hàn mái nhà bên')
       .attach('photo', Buffer.from('jpeg'), { filename: 'a.jpg', contentType: 'image/jpeg' }).expect(200)

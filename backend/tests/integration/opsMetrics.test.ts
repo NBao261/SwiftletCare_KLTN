@@ -53,6 +53,11 @@ describe('MTTA, MTTR (OPS-FR-009)', () => {
     // Nhà H2: chưa xác nhận, chưa đóng; cảnh báo bị bác bỏ không tính; cảnh báo ngoài khoảng không tính
     await Alert.create({ ...base, house_id: house2._id, type: 'EDGE_AI_DEGRADED', status: 'ACTIVE', created_at: at(5) })
     await Alert.create({ ...base, zone_id: zone._id, type: 'NOISE_ANOMALY', status: 'DISMISSED', created_at: at(5), acknowledged_at: at(100) })
+    // Bị bác bỏ rồi job tự đóng (RESOLVED): vẫn là báo động giả, không tính
+    await Alert.create({
+      ...base, zone_id: zone._id, type: 'NOISE_ANOMALY', status: 'RESOLVED', created_at: at(5), acknowledged_at: at(100),
+      resolved_at: at(110), expert_verdict: { result: 'REJECTED', note: 'chim về muộn', by: tech._id, at: at(6) },
+    })
     await Alert.create({ ...base, zone_id: zone._id, type: 'NODE_OFFLINE', status: 'RESOLVED', created_at: at(-60), acknowledged_at: at(-50) })
 
     const q = `farmId=${farm._id}&from=${at(-1).toISOString()}&to=${at(120).toISOString()}`

@@ -7,7 +7,7 @@ import { Alert } from '@/models/alert.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
-import { acknowledgeAlert, createAlert, renotifyStaleAlerts } from '@/services/alert.service'
+import { acknowledgeAlert, createAlert, renotifyStaleAlerts, setAlertVerdict } from '@/services/alert.service'
 import { escalateUnacknowledgedAlerts } from '@/services/alertRouting.service'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import type { AlertType, CurrentUser } from '@/types'
@@ -104,6 +104,16 @@ describe('định tuyến cảnh báo (ALERT-FR-017)', () => {
     expect(lastDispatch()[1].recipientIds).not.toContain(String(tech!._id))
   })
 
+  it('nhà có thợ nhưng không có thợ chính (chưa đặt, hoặc thợ chính bị khoá): thợ hợp lệ nhận, không về Farm Owner', async () => {
+    const { farm, house, tech, raise } = await seed()
+    const second = await technician(farm)
+    house.technicians = [{ user_id: tech!._id, primary: true }, { user_id: second._id, primary: false }] as never
+    await house.save()
+    await User.updateOne({ _id: tech!._id }, { is_active: false })
+    await raise('UNEXPECTED_RESTART')
+    expect(lastDispatch()[1].recipientIds).toEqual([String(second._id)])
+  })
+
   it('thợ bị khoá hoặc đã rời farm không nhận: Farm Owner nhận', async () => {
     const { owner, tech, raise } = await seed()
     await User.updateOne({ _id: tech!._id }, { is_active: false })
@@ -120,6 +130,25 @@ describe('định tuyến cảnh báo (ALERT-FR-017)', () => {
   })
 })
 
+describe('cảnh báo bị bác bỏ rồi được xác nhận lại (SM-01)', () => {
+  it('báo lại cả thợ đang trực lẫn Farm Owner; job leo thang không báo Farm Owner thêm lần nữa (BR-40)', async () => {
+    const { owner, farm, tech, raise } = await seed()
+    const expert = await User.create({ email: `exp${++seq}@test.vn`, password_hash: 'password123', full_name: 'E', role: 'DOMAIN_EXPERT' })
+    farm.members.push({ user_id: expert._id, role: 'DOMAIN_EXPERT' } as never)
+    await farm.save()
+    const expertUser: CurrentUser = { _id: String(expert._id), email: expert.email, role: 'DOMAIN_EXPERT' }
+    const alert = (await raise('SENSOR_ANOMALY'))!
+
+    await setAlertVerdict(String(alert._id), expertUser, 'REJECTED', 'Cảm biến vừa lau')
+    await setAlertVerdict(String(alert._id), expertUser, 'CONFIRMED')
+    expect(lastDispatch()[1]).toEqual({ recipientIds: [String(tech!._id), String(owner._id)] })
+    expect((await Alert.findById(alert._id).lean())!.routing).toMatchObject({ technician_id: tech!._id, owners_notified: true })
+
+    await Alert.collection.updateOne({ _id: alert._id }, { $set: { created_at: ago(30) } })
+    expect(await escalateUnacknowledgedAlerts()).toBe(0)
+  })
+})
+
 describe('gửi lại cảnh báo chưa xác nhận (ALERT-FR-015) theo người đã nhận', () => {
   it('thợ nhận "Nhắc lại"; Farm Owner đã nhận bản leo thang thì không nhận thêm', async () => {
     const { tech, raise } = await seed()
@@ -128,6 +157,16 @@ describe('gửi lại cảnh báo chưa xác nhận (ALERT-FR-015) theo người
     await escalateUnacknowledgedAlerts()
     expect(await renotifyStaleAlerts()).toBe(1)
     expect(lastDispatch()[1]).toEqual({ repeat: true, recipientIds: [String(tech!._id)] })
+  })
+
+  it('thợ bị gỡ khỏi nhà sau khi nhận thì không nhận "Nhắc lại" (AUTH-FR-013)', async () => {
+    const { owner, house, raise } = await seed()
+    const alert = (await raise('RS485_BUS_FAILURE'))!
+    house.technicians = [] as never
+    await house.save()
+    await Alert.collection.updateOne({ _id: alert._id }, { $set: { created_at: ago(20) } })
+    expect(await renotifyStaleAlerts()).toBe(1)
+    expect(lastDispatch()[1]).toEqual({ repeat: true, recipientIds: [String(owner._id)] })
   })
 
   it('CRITICAL: gửi lại cho cả thợ và Farm Owner', async () => {

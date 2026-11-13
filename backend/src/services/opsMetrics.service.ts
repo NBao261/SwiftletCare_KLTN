@@ -45,6 +45,8 @@ export async function getOpsMetrics(
   const alerts = await Alert.find({
     farm_id: farm._id,
     status: { $ne: 'DISMISSED' },
+    // Bị bác bỏ rồi job tự đóng (RESOLVED) vẫn là báo động giả: loại theo kết luận, không chỉ theo trạng thái hiện tại
+    'expert_verdict.result': { $ne: 'REJECTED' },
     created_at: { $gte: query.from, $lt: query.to },
     $or: [{ house_id: { $in: houseIds } }, { zone_id: { $in: zones.map(z => z._id) } }],
   }).select('house_id zone_id created_at acknowledged_at resolved_at routing').lean()

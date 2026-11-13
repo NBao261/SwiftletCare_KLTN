@@ -2,7 +2,7 @@ import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { House, IHouse, Zone } from '@/models/houseZone.model'
 import { createInAppNotification, dispatchAlertNotification, findRecipients } from '@/services/notification.service'
-import { activeTechnicianOnDuty } from '@/utils/farmAccess.util'
+import { activeHouseTechnicianIds, activeTechnicianOnDuty } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
 
 /** BR-40, Report 3 §4.5 — thời gian người nhận đầu tiên có để xác nhận trước khi Farm Owner được báo (5–60, mặc định 15) */
@@ -41,14 +41,38 @@ export async function routeNewAlert(alert: IAlert, opts: { awaitsVerdict: boolea
 }
 
 /**
+ * SM-01 — cảnh báo bị bác bỏ nhầm được chuyên gia xác nhận lại: báo lại như cảnh báo mới, cho thợ đang trực của nhà
+ * lúc này (ALERT-FR-017) và cả Farm Owner. Ghi `owners_notified` để job leo thang không báo Farm Owner lần nữa
+ * (BR-40: một lần); không tạo thêm yêu cầu kiểm tra tại chỗ.
+ */
+export async function rerouteReconfirmedAlert(alert: IAlert): Promise<string[]> {
+  const house = await findAlertHouse(alert)
+  const farm = house ? await Farm.findById(alert.farm_id).select('members') : null
+  const technicianId = house && farm ? await activeTechnicianOnDuty(house, farm) : null
+  const recipientIds = [...(technicianId ? [technicianId] : []), ...await ownerIds(alert.farm_id)]
+  alert.routing = { ...(technicianId && { technician_id: technicianId as never }), owners_notified: true }
+  await Alert.updateOne({ _id: alert._id }, { $set: { routing: alert.routing } })
+  return recipientIds
+}
+
+/**
  * ALERT-FR-015 — người nhận lần gửi lại: những ai đã nhận lần đầu. Farm Owner đã nhận bản leo thang (BR-40) thì
- * không nhận thêm bản "Nhắc lại" cùng lúc. Cảnh báo trước G-21 (không có `routing`) gửi Farm Owner như cũ.
+ * không nhận thêm bản "Nhắc lại" cùng lúc. Thợ bị gỡ khỏi nhà, khỏi farm hay bị khoá từ lúc đó thì thôi
+ * (AUTH-FR-013). Cảnh báo trước G-21 (không có `routing`) gửi Farm Owner như cũ.
  */
 export async function repeatRecipientIds(alert: IAlert): Promise<string[] | undefined> {
   if (!alert.routing) return undefined
-  const technician = alert.routing.technician_id ? [String(alert.routing.technician_id)] : []
+  const technician = alert.routing.technician_id && await stillHouseTechnician(alert, String(alert.routing.technician_id))
+    ? [String(alert.routing.technician_id)]
+    : []
   const owners = alert.routing.owners_notified && !alert.escalated_at ? await ownerIds(alert.farm_id) : []
   return [...technician, ...owners]
+}
+
+async function stillHouseTechnician(alert: IAlert, technicianId: string): Promise<boolean> {
+  const house = await findAlertHouse(alert)
+  const farm = house ? await Farm.findById(alert.farm_id).select('members') : null
+  return !!house && !!farm && (await activeHouseTechnicianIds(house, farm)).includes(technicianId)
 }
 
 /**

@@ -5,7 +5,7 @@ import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew, emitHouseAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
-import { repeatRecipientIds, routeNewAlert } from '@/services/alertRouting.service'
+import { repeatRecipientIds, rerouteReconfirmedAlert, routeNewAlert } from '@/services/alertRouting.service'
 import { handleNewAlert, openWorkOrderForAlert } from '@/services/workOrder.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import {
@@ -527,8 +527,14 @@ export async function presentOnsiteChecks(alert: IAlert) {
     { path: 'onsite_checks.technician_id', select: 'full_name' }, { path: 'onsite_checks.answered_by', select: 'full_name' },
   ])
   const checks: OnsiteCheck[] = alert.toObject().onsite_checks ?? []
+  // Spec: yêu cầu chưa trả lời có `observation: null` (không phải thiếu khoá) — mobile tìm yêu cầu còn chờ theo đó
   return Promise.all(checks.map(async ({ photo, ...check }) => ({
-    ...check, photo_url: photo ? await presignedGetUrl(photo) : null,
+    ...check,
+    observation: check.observation ?? null,
+    note: check.note ?? null,
+    answered_by: check.answered_by ?? null,
+    answered_at: check.answered_at ?? null,
+    photo_url: photo ? await presignedGetUrl(photo) : null,
   })))
 }
 
@@ -633,8 +639,15 @@ export async function setAlertVerdict(
     detail: trimmedNote,
   })
   // SM-01 — cảnh báo bị bác bỏ nhầm được xác nhận lại: Farm Owner phải được báo lại như cảnh báo mới
+  // ALERT-FR-017 — báo lại cả thợ đang trực lẫn Farm Owner; Farm Owner coi như đã được báo nên job leo thang không
+  // gửi thêm lần nữa (BR-40)
   if (statusBefore === 'DISMISSED' && alert.status !== 'DISMISSED') {
-    void dispatchAlertNotification(alert).catch((err: Error) =>
+    // Định tuyến lỗi thì vẫn báo Farm Owner như trước G-21 (recipientIds rỗng → mặc định Farm Owner)
+    const recipientIds = await rerouteReconfirmedAlert(alert).catch((err: Error) => {
+      logger.error('Định tuyến lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err })
+      return undefined
+    })
+    void dispatchAlertNotification(alert, { recipientIds }).catch((err: Error) =>
       logger.error('Báo lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err }),
     )
   }

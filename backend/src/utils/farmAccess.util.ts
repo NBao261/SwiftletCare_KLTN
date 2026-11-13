@@ -224,17 +224,20 @@ export async function activeHouseTechnicianIds(
 
 /**
  * ALERT-FR-017, AUTH-FR-014 — thợ đang trực của nhà lúc `at`, chỉ tính thợ còn hiệu lực
- * (activeHouseTechnicianIds); null = nhà không có thợ, Farm Owner xử lý.
+ * (activeHouseTechnicianIds); ngoài ca trực mà nhà không có thợ chính còn hiệu lực (chưa đặt, hoặc thợ chính bị
+ * khoá, bị gỡ) thì là thợ hợp lệ được giao sớm nhất — nhà có thợ thì cảnh báo luôn tới thợ. null = nhà không có thợ,
+ * Farm Owner xử lý.
  */
 export async function activeTechnicianOnDuty(
   house: Pick<IHouse, 'technicians' | 'roster'>, farm: Pick<IFarm, 'members'>, at: Date = new Date(),
 ): Promise<string | null> {
   const valid = new Set(await activeHouseTechnicianIds(house, farm))
   if (valid.size === 0) return null
+  const technicians = (house.technicians ?? []).filter(t => valid.has(String(t.user_id)))
   return technicianOnDuty({
-    technicians: (house.technicians ?? []).filter(t => valid.has(String(t.user_id))),
+    technicians,
     roster: (house.roster ?? []).filter(s => valid.has(String(s.technician_id))),
-  }, at)
+  }, at) ?? (technicians[0] ? String(technicians[0].user_id) : null)
 }
 
 /**
