@@ -5787,6 +5787,8 @@ components:
         ventilation_pct: { type: number, nullable: true, description: "% quạt do bộ điều khiển mờ tính (firmware ≥ 1.1.0)" }
         misting_on: { type: boolean, nullable: true, description: "Relay phun sương lúc lấy mẫu" }
         ventilation_on: { type: boolean, nullable: true, description: "Relay quạt lúc lấy mẫu" }
+        pump_current_a: { type: number, nullable: true, minimum: 0, description: "THREAT-FR-014 — dòng đo của bơm phun sương (A); chỉ controller có đo dòng (board của nhóm, G-13) gửi; số âm không được lưu" }
+        fan_current_a: { type: number, nullable: true, minimum: 0, description: "THREAT-FR-014 — dòng đo của quạt (A), như `pump_current_a`" }
         is_anomaly: { type: boolean }
 
     AlertType:
@@ -5833,7 +5835,9 @@ components:
           nullable: true
           description: |
             Report 4 §6.1 — chi tiết của sự cố. `THRESHOLD_BREACH` (ALERT-FR-012): chỉ số đã đủ thời gian
-            chờ sớm nhất. `UNEXPECTED_RESTART` (THREAT-FR-012): `reset_reason`. `metadata` giữ nguyên cho
+            chờ sớm nhất. `UNEXPECTED_RESTART` (THREAT-FR-012): `reset_reason`. `ACTUATOR_FAULT` (THREAT-FR-014,
+            BR-32): `load`, `fault`, `normal_current_a`, `current_a`; mỗi tải một cảnh báo, firmware gửi lại khi lỗi còn
+            và cảnh báo tự đóng 60 phút sau lần gửi cuối. `metadata` giữ nguyên cho
             client cũ (`metadata.breaches` có mọi chỉ số đang vượt); `metadata.metrics` là các chỉ số
             cảnh báo đang báo (đã đủ thời gian chờ).
           properties:
@@ -5843,6 +5847,10 @@ components:
             direction: { type: string, enum: [above, below] }
             started_at: { type: string, format: date-time, description: "Mẫu đầu tiên của quãng vượt ngưỡng liên tục" }
             reset_reason: { type: string, description: "Firmware ≥ 1.5.0 gửi POWER_ON, WATCHDOG, BROWNOUT, CRASH; thiếu thì lấy lý do chi tiết của heartbeat gần nhất (VD TASK_WDT)" }
+            load: { type: string, enum: [misting, ventilation], description: "ACTUATOR_FAULT — tải không theo relay: bơm phun sương hoặc quạt" }
+            fault: { type: string, enum: [NO_CURRENT_WHILE_ON, CURRENT_WHILE_OFF], description: "ACTUATOR_FAULT — relay BẬT mà dòng dưới 50 % mức đã học (motor cháy, aptomat nhảy, đứt dây, công tắc của nhà bị tắt), hoặc relay TẮT mà dòng trên 20 % (relay dính, tải được bật bằng công tắc khác)" }
+            normal_current_a: { type: number, description: "ACTUATOR_FAULT — dòng bình thường đã học của tải (A)" }
+            current_a: { type: number, description: "ACTUATOR_FAULT — dòng đo lúc báo (A)" }
         status: { type: string, enum: [ACTIVE, ACKNOWLEDGED, DISMISSED, RESOLVED], description: "DISMISSED — cảnh báo suy luận bị bác bỏ, không còn hiệu lực (Report 3 §6.1, EXPERT-FR-003)" }
         previous_status: { type: string, enum: [ACTIVE, ACKNOWLEDGED], nullable: true, description: "Trạng thái trước khi bị bác bỏ; đổi kết luận sang CONFIRMED thì cảnh báo trở về trạng thái này" }
         created_at: { type: string, format: date-time }

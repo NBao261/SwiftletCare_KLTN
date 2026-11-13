@@ -391,8 +391,8 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-13 — Đo dòng tải (P1, It. 3) — Bảo
 
-- [ ] Firmware: ADS1115 (Adafruit ADS1X15), học dòng bình thường 30 giây đầu mỗi tải, so với trạng thái relay (BR-32), `ACTUATOR_FAULT`; telemetry `pump_current_a`, `fan_current_a`; test native TC-F06-01..03.
-- [ ] Backend lưu dòng, nhận cảnh báo (HIGH).
+- [ ] Firmware: ADS1115 (Adafruit ADS1X15), học dòng bình thường 30 giây đầu mỗi tải, so với trạng thái relay (BR-32), `ACTUATOR_FAULT`; telemetry `pump_current_a`, `fan_current_a`; test native TC-F06-01..03. *(Kiệt làm thay Bảo theo phân công của Bảo, 13/11, `03528a3`, nhánh `feat/g13-current-sensing`: phần logic xong — `pid/ActuatorCurrentMonitor` học dòng 30 s đầu của một lần BẬT, báo khi relay BẬT mà dòng < 50 % hoặc TẮT mà > 20 % đủ 30 s (cộng dồn theo trạng thái relay), hết lỗi sau 30 s chạy đúng, `relearn()` sau khi thay tải; test native `test_actuator_current` 10 test gồm TC-F06-01..03. Còn chờ board có shunt: đọc ADS1115, lưu mức đã học vào NVS, gửi `ACTUATOR_FAULT` (gửi lại mỗi `EPISODE_ALERT_RESEND_MS` khi lỗi còn, kèm `load`, `fault`, `normalCurrentA`, `currentA`), đưa dòng vào telemetry, học lại theo yêu cầu, tăng `FIRMWARE_VERSION`)*
+- [x] Backend lưu dòng, nhận cảnh báo (HIGH). *(Kiệt làm thay Bảo, 13/11, `e18a799` spec + `a0ac995` backend, nhánh `feat/g13-current-sensing`: telemetry lưu `pump_current_a`, `fan_current_a` (số âm bỏ); `ACTUATOR_FAULT` mức HIGH giữ `load`, `fault`, `normal_current_a`, `current_a` trong `details`, gộp trùng theo từng tải; thuộc nhóm cảnh báo theo đợt nên tự đóng 60 phút sau lần gửi lại cuối)*
 
 ### G-14 — Mô hình dữ liệu theo ERD (P1) — Kiệt; trường của gap nào thì làm trong PR gap đó; Nhi làm form thu hoạch web, Len trên mobile
 
