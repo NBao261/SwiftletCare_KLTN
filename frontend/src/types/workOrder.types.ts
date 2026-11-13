@@ -9,6 +9,9 @@ export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | '
 // ALERT-FR-018 — nguyên nhân thợ tìm thấy tại chỗ
 export type SiteCause = 'WATER' | 'NOZZLE' | 'PUMP' | 'FAN' | 'DOOR' | 'SENSOR' | 'SPEAKER' | 'OTHER';
 
+// Kết quả thợ báo khi xong việc
+export type WorkOrderResult = 'REPAIRED' | 'SELF_RECOVERED';
+
 export interface WorkOrderPerson {
   _id: string;
   full_name: string;
@@ -44,7 +47,7 @@ export interface WorkOrder {
   work_note: string | null;
   // Chỉ có ở GET /work-orders/{id}, URL tạm 1 giờ
   photo_urls?: string[];
-  result: 'REPAIRED' | 'SELF_RECOVERED' | null;
+  result: WorkOrderResult | null;
   cancel_reason: string | null;
   opened_at: string;
   started_at: string | null;

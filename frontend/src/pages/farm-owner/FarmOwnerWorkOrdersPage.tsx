@@ -23,6 +23,9 @@ import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { useToastStore } from '@/stores/toastStore';
 import type { WorkOrder } from '@/types';
 
+// Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (Report 3 §4.5, api-spec)
+const NOTE_MAX_LENGTH = 1000;
+
 // OPS-FR-001…004 — Work Order sửa chữa của Farm Owner: lọc theo farm/nhà và trạng thái, mở tay, duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ xem
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const { t } = useTranslation(workOrderDict);
@@ -73,6 +76,17 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
     onError: (actionError: unknown) => push(apiErrorMessage(actionError), 'error'),
   });
 
+  // Chưa có farm: đang tải thì khung chờ, tải lỗi thì báo kèm Thử lại, xong mới báo chưa có farm (FE_Design 13.5)
+  if (scope.farms.length === 0 && scope.isLoading) return <LoadingSkeleton count={5} className="h-14 w-full" />;
+  if (scope.farms.length === 0 && scope.isError) {
+    return (
+      <EmptyState
+        title={t('page.loadFailed')}
+        description={apiErrorMessage(undefined)}
+        action={<Button variant="secondary" size="sm" onClick={scope.refetch}>{t('page.retry')}</Button>}
+      />
+    );
+  }
   if (scope.farms.length === 0) {
     return (
       <EmptyState
@@ -178,6 +192,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         hint={t('reopen.hint')}
         submitLabel={t('action.reopen')}
         required
+        maxLength={NOTE_MAX_LENGTH}
         loading={actions.reopen.isPending}
         onSubmit={note => pending && actions.reopen.mutate({ workOrder: pending.workOrder, note }, callbacks('reopen.done'))}
       />
@@ -190,6 +205,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         hint={t('cancel.hint')}
         submitLabel={t('action.cancel')}
         required
+        maxLength={NOTE_MAX_LENGTH}
         danger
         loading={actions.cancel.isPending}
         onSubmit={reason => pending && actions.cancel.mutate({ workOrder: pending.workOrder, reason }, callbacks('cancel.done'))}

@@ -110,15 +110,20 @@ export default function WorkOrderDetailDrawer({
             <section className="flex flex-col gap-3">
               <p className="text-sm font-semibold text-charcoal">{t('detail.history')}</p>
               <ol className="flex flex-col gap-2 border-l-2 border-warmGray/30 pl-3">
-                {workOrder.history.map(entry => (
-                  <li key={`${entry.at}-${entry.to}`} className="flex flex-col gap-0.5 text-sm">
-                    <span className="font-semibold text-charcoal">{t(`status.${entry.to}`)}</span>
-                    <span className="text-xs text-warmGray">
-                      {dateTime(entry.at)} · {entry.by ? personNames.get(entry.by) ?? NO_VALUE : t('detail.system')}
-                    </span>
-                    {entry.note && <span className="text-xs text-graphite">{t('detail.historyNote', { note: entry.note })}</span>}
-                  </li>
-                ))}
+                {workOrder.history.map(entry => {
+                  // Trạng thái không đổi = lần giao lại; câu hệ thống tự ghi và chữ "Giao lại" của backend không hiện nguyên văn (FE_Design 13.16 a)
+                  const isReassign = entry.from === entry.to;
+                  const note = entry.by && !isReassign ? entry.note : null;
+                  return (
+                    <li key={`${entry.at}-${entry.to}`} className="flex flex-col gap-0.5 text-sm">
+                      <span className="font-semibold text-charcoal">{isReassign ? t('action.reassign') : t(`status.${entry.to}`)}</span>
+                      <span className="text-xs text-warmGray">
+                        {dateTime(entry.at)} · {entry.by ? personNames.get(entry.by) ?? NO_VALUE : t('detail.system')}
+                      </span>
+                      {note && <span className="text-xs text-graphite">{t('detail.historyNote', { note })}</span>}
+                    </li>
+                  );
+                })}
               </ol>
             </section>
           </>

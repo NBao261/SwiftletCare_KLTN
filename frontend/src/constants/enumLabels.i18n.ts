@@ -1,5 +1,5 @@
 import type { Dictionary } from '@/lib/i18n';
-import type { AlertStatus, AlertType, DeviceStatus, Role, SiteCause, WorkOrderOrigin, WorkOrderStatus } from '@/types';
+import type { AlertStatus, AlertType, DeviceStatus, Role, SiteCause, WorkOrderOrigin, WorkOrderResult, WorkOrderStatus } from '@/types';
 
 // Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
 
@@ -111,6 +111,12 @@ export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
 export const siteCauseDict: Dictionary<SiteCause> = {
   vi: { WATER: 'Nước', NOZZLE: 'Béc phun', PUMP: 'Bơm', FAN: 'Quạt', DOOR: 'Cửa', SENSOR: 'Cảm biến', SPEAKER: 'Loa', OTHER: 'Khác' },
   en: { WATER: 'Water', NOZZLE: 'Nozzle', PUMP: 'Pump', FAN: 'Fan', DOOR: 'Door', SENSOR: 'Sensor', SPEAKER: 'Speaker', OTHER: 'Other' },
+};
+
+// Kết quả Work Order thợ báo khi xong
+export const workOrderResultDict: Dictionary<WorkOrderResult> = {
+  vi: { REPAIRED: 'Đã sửa', SELF_RECOVERED: 'Tự phục hồi trước khi sửa' },
+  en: { REPAIRED: 'Repaired', SELF_RECOVERED: 'Recovered on its own before the repair' },
 };
 
 // Gắn tiền tố vào key để từ điển màn dùng lại nhãn chung (VD 'status.' + NEW → 'status.NEW')

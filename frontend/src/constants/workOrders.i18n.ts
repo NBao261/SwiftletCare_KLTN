@@ -1,5 +1,5 @@
 import {
-  alertTypeDict, prefixLabels, siteCauseDict, workOrderOriginDict, workOrderStatusDict,
+  alertTypeDict, prefixLabels, siteCauseDict, workOrderOriginDict, workOrderResultDict, workOrderStatusDict,
 } from '@/constants/enumLabels.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
@@ -10,6 +10,7 @@ const vi = {
   'page.noFarmDesc': 'Tạo trang trại và nhà yến ở trang Trang trại trước.',
   'page.goFarms': 'Đi tới Trang trại',
   'page.retry': 'Thử lại',
+  'page.loadFailed': 'Không tải được danh sách trang trại',
 
   // Bảng phiếu công việc
   'list.title': 'Phiếu công việc sửa chữa',
@@ -97,15 +98,13 @@ const vi = {
   'detail.noRecord': 'Kỹ thuật viên chưa báo xong.',
   'detail.history': 'Diễn biến',
   'detail.historyNote': 'Ghi chú: {note}',
-  'result.REPAIRED': 'Đã sửa',
-  'result.SELF_RECOVERED': 'Tự phục hồi trước khi sửa',
 
   // Thẻ trang nhà (OPS-FR-009, BR-40)
   'metrics.title': 'Xử lý sự cố',
   'metrics.desc': '30 ngày gần nhất',
   'metrics.mtta': 'Thời gian xác nhận TB',
   'metrics.mttr': 'Thời gian xử lý TB',
-  'metrics.minutes': '{value} phút',
+  'metrics.unit': 'phút',
   'metrics.alerts': '{n} cảnh báo',
   'metrics.withinTarget': '{pct}% xác nhận trong {target} phút',
   'metrics.openWorkOrders': 'Phiếu công việc chưa đóng',
@@ -115,6 +114,7 @@ const vi = {
   ...prefixLabels('status.', workOrderStatusDict.vi),
   ...prefixLabels('origin.', workOrderOriginDict.vi),
   ...prefixLabels('cause.', siteCauseDict.vi),
+  ...prefixLabels('result.', workOrderResultDict.vi),
   ...prefixLabels('alertType.', alertTypeDict.vi),
 };
 
@@ -125,6 +125,7 @@ const en: Record<WorkOrderKey, string> = {
   'page.noFarmDesc': 'Create a farm and a swiftlet house on the Farms page first.',
   'page.goFarms': 'Go to Farms',
   'page.retry': 'Retry',
+  'page.loadFailed': 'Could not load the farms',
 
   'list.title': 'Repair work orders',
   'list.subtitle': 'On-site repairs: opened automatically from equipment alerts or by you; you approve them once the data have recovered.',
@@ -208,14 +209,12 @@ const en: Record<WorkOrderKey, string> = {
   'detail.noRecord': 'The technician has not reported the job done yet.',
   'detail.history': 'Timeline',
   'detail.historyNote': 'Note: {note}',
-  'result.REPAIRED': 'Repaired',
-  'result.SELF_RECOVERED': 'Recovered on its own before the repair',
 
   'metrics.title': 'Incident handling',
   'metrics.desc': 'Last 30 days',
   'metrics.mtta': 'Mean time to acknowledge',
   'metrics.mttr': 'Mean time to resolve',
-  'metrics.minutes': '{value} min',
+  'metrics.unit': 'min',
   'metrics.alerts': '{n} alerts',
   'metrics.withinTarget': '{pct}% acknowledged within {target} min',
   'metrics.openWorkOrders': 'Open work orders',
@@ -225,6 +224,7 @@ const en: Record<WorkOrderKey, string> = {
   ...prefixLabels('status.', workOrderStatusDict.en),
   ...prefixLabels('origin.', workOrderOriginDict.en),
   ...prefixLabels('cause.', siteCauseDict.en),
+  ...prefixLabels('result.', workOrderResultDict.en),
   ...prefixLabels('alertType.', alertTypeDict.en),
 };
 
