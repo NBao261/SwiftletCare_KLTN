@@ -8,12 +8,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ReferenceLine, Cell, ResponsiveContainer,
 } from 'recharts'
-import { AlertTriangle, Clock, History, AlertCircle, ShieldAlert, Cpu } from 'lucide-react'
+import { AlertTriangle, Clock, History, AlertCircle, ShieldAlert, Cpu, ClipboardList, CheckCircle2, Hourglass } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import type { InferredAlertItem } from '@/types/expert.types'
+import type { InferredAlertItem, OnsiteCheck } from '@/types/expert.types'
 import { useAlertEvidence } from '@/hooks/domain-expert/useExpertAlerts'
 import { buildAlertEvidence, type EvidenceSource } from './alertEvidence'
 import { formatDate } from '@/lib/helpers'
+import { onsiteObservationDict } from '@/constants/enumLabels.i18n'
 
 interface Props { alert: InferredAlertItem }
 
@@ -95,6 +96,109 @@ function MissingBadge({ label }: { label: string }) {
       <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-200/80 text-amber-900 uppercase">
         missing
       </span>
+    </div>
+  )
+}
+
+const OBSERVATION_LABELS = onsiteObservationDict.vi
+
+function OnsiteCheckSection({ checks }: { checks: OnsiteCheck[] }) {
+  if (checks.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-3.5 space-y-2.5">
+      <div className="flex items-center gap-2">
+        <ClipboardList className="w-4 h-4 text-blue-600 shrink-0" />
+        <h4 className="text-xs font-bold text-[#27231F] uppercase tracking-wider">
+          Kiểm tra tại chỗ của Kỹ thuật viên (EXPERT-FR-021)
+        </h4>
+      </div>
+
+      {checks.map((check, idx) => {
+        const techName = check.technician_id?.full_name ?? 'Kỹ thuật viên'
+        const isPending = check.observation === null
+
+        return (
+          <div
+            key={idx}
+            className="bg-white rounded-lg border border-blue-100 p-3 text-xs space-y-2"
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                {isPending ? (
+                  <Hourglass className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                )}
+                <span className="font-semibold text-[#27231F]">{techName}</span>
+                {isPending && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-700 border border-amber-200 uppercase">
+                    Chờ phản hồi
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] text-[#878380] flex items-center gap-1 shrink-0">
+                <Clock className="w-3 h-3" />
+                {formatDate(check.requested_at)}
+              </span>
+            </div>
+
+            {!isPending && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#878380]">Quan sát:</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold border ${
+                      check.observation === 'NOTHING_UNUSUAL'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : check.observation === 'SENSOR_DIRTY_OR_FAULTY'
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    {OBSERVATION_LABELS[check.observation!]}
+                  </span>
+                </div>
+
+                {check.note && (
+                  <p className="text-[11.5px] text-[#4B4844] italic bg-neutral-50 px-2.5 py-1.5 rounded border border-neutral-100">
+                    "{check.note}"
+                  </p>
+                )}
+
+                {check.photo_url && (
+                  <div>
+                    <a
+                      href={check.photo_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-block"
+                    >
+                      <img
+                        src={check.photo_url}
+                        alt="Ảnh kiểm tra tại chỗ"
+                        className="max-h-32 rounded-lg border border-neutral-200 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                    <p className="text-[10.5px] text-[#878380] mt-0.5">
+                      Ảnh tại chỗ (URL tạm 1 giờ)
+                    </p>
+                  </div>
+                )}
+
+                {check.answered_at && (
+                  <p className="text-[10.5px] text-[#878380]">
+                    Trả lời lúc {formatDate(check.answered_at)}
+                    {check.answered_by?.full_name && check.answered_by.full_name !== techName
+                      ? ` bởi ${check.answered_by.full_name}`
+                      : ''}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -232,6 +336,11 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── KIỂM TRA TẠI CHỖ CỦA KỸ THUẬT VIÊN (EXPERT-FR-021) ── */}
+      {evidence?.onsite_checks && evidence.onsite_checks.length > 0 && (
+        <OnsiteCheckSection checks={evidence.onsite_checks} />
       )}
 
       {/* Hộp tương quan / chẩn đoán */}

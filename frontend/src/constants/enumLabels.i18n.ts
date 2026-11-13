@@ -1,5 +1,5 @@
 import type { Dictionary } from '@/lib/i18n';
-import type { AlertStatus, AlertType, DeviceStatus, Role, SiteCause, WorkOrderOrigin, WorkOrderResult, WorkOrderStatus } from '@/types';
+import type { AlertStatus, AlertType, DeviceStatus, OnsiteObservation, Role, SiteCause, WorkOrderOrigin, WorkOrderResult, WorkOrderStatus } from '@/types';
 
 // Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
 
@@ -111,6 +111,26 @@ export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
 export const siteCauseDict: Dictionary<SiteCause> = {
   vi: { WATER: 'Nước', NOZZLE: 'Béc phun', PUMP: 'Bơm', FAN: 'Quạt', DOOR: 'Cửa', SENSOR: 'Cảm biến', SPEAKER: 'Loa', OTHER: 'Khác' },
   en: { WATER: 'Water', NOZZLE: 'Nozzle', PUMP: 'Pump', FAN: 'Fan', DOOR: 'Door', SENSOR: 'Sensor', SPEAKER: 'Speaker', OTHER: 'Other' },
+};
+
+// Quan sát tại chỗ của Kỹ thuật viên (EXPERT-FR-021)
+export const onsiteObservationDict: Dictionary<OnsiteObservation> = {
+  vi: {
+    BIRDS_DISTURBED:        'Chim bị động',
+    WORK_OR_PEOPLE_NEARBY:  'Có người/công việc gần đó',
+    RAIN:                   'Mưa',
+    SENSOR_DIRTY_OR_FAULTY: 'Cảm biến bẩn hoặc hỏng',
+    NOTHING_UNUSUAL:        'Không có gì lạ',
+    OTHER:                  'Khác',
+  },
+  en: {
+    BIRDS_DISTURBED:        'Birds disturbed',
+    WORK_OR_PEOPLE_NEARBY:  'Work or people nearby',
+    RAIN:                   'Rain',
+    SENSOR_DIRTY_OR_FAULTY: 'Sensor dirty or faulty',
+    NOTHING_UNUSUAL:        'Nothing unusual',
+    OTHER:                  'Other',
+  },
 };
 
 // Kết quả Work Order thợ báo khi xong
