@@ -161,7 +161,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 **Giao diện:**
 - [ ] Len: làm checklist kèm ảnh, ghi bảo trì và hiệu chuẩn trên mobile.
-- [ ] Nhi: tạo và sửa kế hoạch bảo trì, xem danh sách đến hạn và quá hạn trên web.
+- [x] Nhi: tạo và sửa kế hoạch bảo trì, xem danh sách đến hạn và quá hạn trên web. *(Nhi, 13/11, nhánh `feat/g22-maintenance`: trang `/maintenance` "Lịch bảo trì" (menu Farm Owner và chuyên gia), 2 tab: "Cần bảo trì" (mặc định, kèm số kế hoạch) theo `GET /maintenance/due` (đến hạn từ ngày nào, số phiếu công việc đang mở) và "Kế hoạch bảo trì" — bảng phân trang lọc theo farm/nhà và trạng thái; Farm Owner tạo kế hoạch cho nhà đang lọc (bơm, quạt theo giờ chạy hoặc số lần đóng cắt; vệ sinh, hiệu chuẩn theo lịch; chu kỳ > 0, checklist 1–30 mục, nguồn bắt buộc — `maintenancePlan.validation.test.ts`), sửa chu kỳ, checklist, nguồn, ghi chú, xoá (`RETIRED`); chuyên gia xem và góp ý (`POST …/comments`); ngăn chi tiết có checklist, lịch sử bảo trì và góp ý. Màn duyệt Work Order phòng ngừa kèm checklist dùng màn Work Order của G-21 sau khi #155 merge.)*
 
 **Test:** TC-F25-01…03; TC-ST-64…68.
 
