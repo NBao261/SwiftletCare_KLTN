@@ -49,7 +49,7 @@ export default function MaintenancePlanDetailDrawer({ plan, houseName, onClose }
           </dl>
 
           <section className="flex flex-col gap-2">
-            <h3 className="label-caption">{t('detail.checklist')}</h3>
+            <h3 className="text-h3 text-charcoal">{t('detail.checklist')}</h3>
             <ol className="list-decimal space-y-1 pl-5 text-sm text-charcoal">
               {plan.checklist_template.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
             </ol>
@@ -57,9 +57,9 @@ export default function MaintenancePlanDetailDrawer({ plan, houseName, onClose }
 
           {/* Lịch sử bảo trì, mới nhất trước */}
           <section className="flex flex-col gap-2">
-            <h3 className="label-caption">{t('detail.records')}</h3>
+            <h3 className="text-h3 text-charcoal">{t('detail.records')}</h3>
             {plan.records.length === 0 ? (
-              <p className="text-sm text-warmGray">{t('detail.noRecords')}</p>
+              <p className="text-sm italic text-warmGray">{t('detail.noRecords')}</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {[...plan.records].reverse().map(record => (
@@ -78,9 +78,9 @@ export default function MaintenancePlanDetailDrawer({ plan, houseName, onClose }
           </section>
 
           <section className="flex flex-col gap-2">
-            <h3 className="label-caption">{t('detail.comments')}</h3>
+            <h3 className="text-h3 text-charcoal">{t('detail.comments')}</h3>
             {plan.comments.length === 0 ? (
-              <p className="text-sm text-warmGray">{t('detail.noComments')}</p>
+              <p className="text-sm italic text-warmGray">{t('detail.noComments')}</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {[...plan.comments].reverse().map(comment => (

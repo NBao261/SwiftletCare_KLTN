@@ -11,7 +11,7 @@ import type { MaintenancePlan, MaintenancePlanState } from '@/types';
 const ROW_HEIGHT = 72;
 
 export const PLAN_STATE_TONE: Record<MaintenancePlanState, BadgeTone> = {
-  SCHEDULED: 'info',
+  SCHEDULED: 'positive',
   DUE: 'warning',
   OVERDUE: 'critical',
   RETIRED: 'neutral',
