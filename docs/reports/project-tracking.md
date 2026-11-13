@@ -64,8 +64,8 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-24 | Work Orders closed by the data | Trần Minh Kiệt | Planned | — | Work Orders, recovery check, approval, MTTA/MTTR (G-21); mobile and web screens (G-16) | 2 |
 | F-25 | Preventive maintenance | Nguyễn Vũ Len | Planned | — | Plans, run hours, checklists, calibration (G-22): backend Kiệt, mobile Len, web Nhi | 2–3 |
 | F-26 | Weather compensation | Nguyễn Chí Bảo | Planned | — | Forecast job, rules, `compensation` topic, firmware offset (G-23); rule screen (Tuấn) | 2 |
-| F-27 | Recommendation rules | Thái Minh Tuấn | Planned | — | Rules, daily evaluation, effect (G-24): backend Bảo, web Tuấn | 2–3 |
-| F-28 | Configuration profiles and house stage | Thái Minh Tuấn | In progress | #126, #153; TC-F28-01, 02 | Profile screens: expert web Tuấn, applying on the owner web Nhi (G-24); house stage screens on web and mobile (`HouseStage` type not yet on the clients) | 2 |
+| F-27 | Recommendation rules | Thái Minh Tuấn | In progress | — | Rules, daily evaluation, effect (G-24): backend Bảo (week 4), web Tuấn done (86cab267, mock fallback until API ready) | 2–3 |
+| F-28 | Configuration profiles and house stage | Thái Minh Tuấn | In progress | #126, #153; TC-F28-01, 02 | Profile expert web screens done (86cab267); applying on owner web Nhi (G-24); house stage screens on web and mobile (`HouseStage` type not yet on the clients) | 2 |
 | F-29 | Farm overview and house comparison | Nguyễn Thị Yến Nhi | Planned | — | Overview, comparison, energy, flock trend (G-25): backend Bảo, web Nhi | 3 |
 | F-30 | Harvest cycles and season conclusion (supporting, SF-06) | Nguyễn Thị Yến Nhi | Planned | — | Technician entry, confirmation, cycles, conclusion (G-26): backend Bảo, web Nhi, mobile Len, conclusion Tuấn | 3 |
 

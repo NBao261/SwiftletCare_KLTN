@@ -239,7 +239,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [ ] **Không tự viết luật.** Phải có ít nhất 3 luật thật từ chuyên gia (phỏng vấn, mục 4); luật trong dữ liệu demo ghi rõ nguồn.
 
 **Giao diện:**
-- [ ] Tuấn (web chuyên gia): soạn và duyệt profile; soạn luật; trang hiệu quả theo luật (số khuyến nghị đã tạo, đã chấp nhận, đã cải thiện).
+- [x] Tuấn (web chuyên gia): soạn và duyệt profile; soạn luật; trang hiệu quả theo luật (số khuyến nghị đã tạo, đã chấp nhận, đã cải thiện). *(14/11/2026, `86cab267`; luật khuyến nghị dùng mock fallback chờ backend tuần 4)*
 - [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng.
 
 **Test:** TC-F27-01…03; TC-F28-01…03; TC-ST-69…74.
