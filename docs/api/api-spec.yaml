@@ -80,6 +80,8 @@ tags:
     description: "ALERT-FR-001/002/005/006/007/008/009/014/017/018, EXPERT-FR-003/021 (Alert Engine — dedup, định tuyến tới thợ đang trực và leo thang lên Farm Owner, quiet hours, danh sách, xác nhận kèm nguyên nhân tại chỗ, kiểm chứng, bằng chứng và kiểm tra tại chỗ của cảnh báo suy luận)"
   - name: WorkOrders
     description: "OPS-FR-001..004, 009, ALERT-FR-018, BR-39..41 (Work Order sửa chữa: mở tự động theo cảnh báo hoặc Farm Owner mở tay, thợ của nhà thực hiện, hệ thống kiểm dữ liệu phục hồi, Farm Owner duyệt; MTTA, MTTR). Farm Owner mở, duyệt, mở lại, huỷ, giao lại; Farm Technician thực hiện ở nhà được giao; Domain Expert chỉ đọc; Administrator → 403 (Report 3 §2.4)"
+  - name: Maintenance
+    description: "OPS-FR-005…008, ALERT-FR-016, BR-45 (bảo trì phòng ngừa: kế hoạch theo giờ chạy, số lần đóng cắt hoặc theo lịch, kèm checklist; đến hạn thì có `MAINTENANCE_DUE` và Work Order phòng ngừa; Farm Owner duyệt Work Order là một lần ghi bảo trì). Farm Owner tạo, sửa, xoá kế hoạch; Domain Expert đọc và góp ý; Farm Technician đọc kế hoạch của nhà được giao; Administrator → 403 (Report 3 §2.4)"
   - name: ExpertActivity
     description: "EXPERT-FR-009 — lịch sử quyết định của Domain Expert trên một farm (và của Farm Owner khi farm chưa có chuyên gia, BR-22); chỉ Farm Owner và Domain Expert của farm"
   - name: Analytics
@@ -3507,7 +3509,8 @@ paths:
 
         Theo thợ: cảnh báo được định tuyến tới thợ đó (`routing.technician_id`). Mục tiêu nội bộ để
         xác nhận là `escalation_min` (15 phút) cho mọi mức (BR-40) — số báo cáo, không phải cam kết.
-        `on_time_maintenance_rate` là `null` cho tới khi có Work Order phòng ngừa (G-22). Phút, làm tròn
+        `on_time_maintenance_rate` (BR-40): % Work Order phòng ngừa đến hạn trong khoảng đã đóng trước điểm đến hạn
+        cộng `maintenance_grace_days` (7 ngày); `null` khi không có Work Order phòng ngừa nào. Phút, làm tròn
         1 chữ số; không có mẫu thì `null`. Farm Technician, Administrator → 403.
       parameters:
         - { name: farmId, in: query, required: true, schema: { type: string } }
@@ -3665,6 +3668,197 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/WorkOrderOk" }
         "400": { description: "Người nhận không phải thợ của nhà", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/WorkOrderWrongState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ── MAINTENANCE ───────────────────────────────────────────────────────────
+  /maintenance/plans:
+    get:
+      tags: [Maintenance]
+      summary: "Danh sách kế hoạch bảo trì (OPS-FR-005) — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN (nhà được giao)"
+      description: "Farm Owner, Domain Expert: kế hoạch của các farm mình; Farm Technician: của các nhà được giao. `RETIRED` chỉ hiện khi lọc `state=RETIRED`. Administrator → 403."
+      parameters:
+        - { name: farmId, in: query, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { $ref: "#/components/schemas/MaintenancePlanState" } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/MaintenancePlan" } }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    post:
+      tags: [Maintenance]
+      summary: "Tạo kế hoạch bảo trì (OPS-FR-005) — chỉ FARM_OWNER"
+      description: |
+        Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi (`source`); hệ thống không tự đặt
+        chu kỳ. `PUMP`, `FAN` đi với `RUN_HOURS` (giờ chạy) hoặc `SWITCHES` (số lần đóng cắt), áp cho bơm hoặc quạt
+        của mọi controller trong nhà; `SENSOR`, `NOZZLE`, `CALIBRATION` đi với `CALENDAR` (`interval` tính bằng ngày).
+        Kết hợp khác hoặc `interval` ≤ 0 → 422. Kế hoạch mới ở `SCHEDULED`; kế hoạch theo lịch có điểm đến hạn đầu
+        là hôm nay cộng `interval` ngày (Report 3 §6.20). Farm Technician, Domain Expert, Administrator → 403.
+        Ghi audit `MAINTENANCE_PLAN_CREATED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaintenancePlanInput" }
+      responses:
+        "201":
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/MaintenancePlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /maintenance/plans/{id}:
+    put:
+      tags: [Maintenance]
+      summary: "Sửa khoảng, checklist, nguồn, ghi chú của kế hoạch (OPS-FR-005) — chỉ FARM_OWNER"
+      description: "Không đổi được `house_id`, `equipment`, `basis`. Kế hoạch `RETIRED` → 409. Kế hoạch theo lịch tính lại điểm đến hạn từ lần bảo trì gần nhất (hoặc ngày tạo). Ghi audit `MAINTENANCE_PLAN_UPDATED`."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                interval: { type: number, exclusiveMinimum: true, minimum: 0 }
+                checklist_template: { type: array, minItems: 1, maxItems: 30, items: { type: string, maxLength: 200 } }
+                source: { type: string, maxLength: 300 }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/MaintenancePlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Kế hoạch đã xoá (RETIRED)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Maintenance]
+      summary: "Xoá kế hoạch: chuyển RETIRED, không đến hạn nữa (OPS-FR-005) — chỉ FARM_OWNER"
+      description: "Lịch sử bảo trì giữ lại. Work Order phòng ngừa chưa đóng của kế hoạch không bị huỷ tự động (Farm Owner tự huỷ nếu muốn). Ghi audit `MAINTENANCE_PLAN_RETIRED`."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/MaintenancePlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /maintenance/plans/{id}/comments:
+    post:
+      tags: [Maintenance]
+      summary: "Góp ý cho kế hoạch (Report 3 §2.4) — chỉ DOMAIN_EXPERT"
+      description: "Chuyên gia góp ý chu kỳ hoặc checklist; Farm Owner được báo trong ứng dụng. Không sửa kế hoạch."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [text], properties: { text: { type: string, maxLength: 1000 } } }
+      responses:
+        "201":
+          description: Đã ghi
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/MaintenancePlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /maintenance/due:
+    get:
+      tags: [Maintenance]
+      summary: "Kế hoạch đang đến hạn hoặc quá hạn (OPS-FR-006) — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN (nhà được giao)"
+      description: "Kế hoạch `DUE` và `OVERDUE`, quá hạn trước, kèm Work Order phòng ngừa đang mở (`open_work_orders`)."
+      parameters:
+        - { name: farmId, in: query, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/MaintenancePlan" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /work-orders/{id}/checklist:
+    put:
+      tags: [WorkOrders]
+      summary: "Ghi kết quả một mục checklist của Work Order phòng ngừa (OPS-FR-007) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
+      description: |
+        Chỉ Work Order `PREVENTIVE` đang `IN_PROGRESS`; khác → 409. `DEFECT` mở một Work Order sửa chữa cho nhà
+        (origin `CHECKLIST`, OPS-FR-001), ghi lại ở mục đó; ghi lại cùng mục thì thay kết quả, không mở thêm Work
+        Order sửa chữa. Ảnh tuỳ chọn (`multipart/form-data`, field `photo`, JPEG/PNG/WebP ≤ 5 MB). Báo xong
+        (`POST /work-orders/{id}/done`) cần mọi mục đã có kết quả (BR-41), thiếu → 422.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [item_index, result]
+              properties:
+                item_index: { type: integer, minimum: 0 }
+                result: { type: string, enum: [OK, DEFECT] }
+                note: { type: string, maxLength: 1000 }
+                photo: { type: string, format: binary }
+          application/json:
+            schema:
+              type: object
+              required: [item_index, result]
+              properties:
+                item_index: { type: integer, minimum: 0 }
+                result: { type: string, enum: [OK, DEFECT] }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200": { $ref: "#/components/responses/WorkOrderOk" }
+        "400": { description: "`item_index` ngoài checklist, hoặc ảnh sai định dạng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/WorkOrderWrongState" }
@@ -6350,7 +6544,7 @@ components:
 
     WorkOrder:
       type: object
-      description: "OPS-FR-001…004 — Work Order sửa chữa; mỗi cảnh báo chỉ có 1 Work Order chưa đóng (BR-39)"
+      description: "OPS-FR-001…004, 006…008 — Work Order sửa chữa hoặc phòng ngừa; mỗi cảnh báo chỉ có 1 Work Order chưa đóng (BR-39)"
       properties:
         _id: { type: string }
         farm_id: { type: string }
@@ -6359,11 +6553,16 @@ components:
         node_id: { type: string, nullable: true }
         alert_id: { type: string, nullable: true }
         alert_type: { allOf: [{ $ref: "#/components/schemas/AlertType" }], nullable: true }
-        kind: { type: string, enum: [REPAIR, PREVENTIVE], description: "PREVENTIVE dùng cho bảo trì phòng ngừa (G-22)" }
+        kind: { type: string, enum: [REPAIR, PREVENTIVE], description: "PREVENTIVE: bảo trì phòng ngừa theo kế hoạch (OPS-FR-006)" }
         origin:
           type: string
-          enum: [ALERT, OUTAGE, EXPERT, ONSITE_CHECK, MANUAL]
-          description: "ALERT: cảnh báo thiết bị của BR-39; OUTAGE: NODE_OFFLINE / EDGE_AI_DEGRADED còn mở sau 30 phút; EXPERT: chuyên gia xác nhận cần tới nhà; ONSITE_CHECK: thợ thấy cảm biến hỏng (EXPERT-FR-021); MANUAL: Farm Owner mở"
+          enum: [ALERT, OUTAGE, EXPERT, ONSITE_CHECK, MANUAL, PLAN, CHECKLIST]
+          description: "ALERT: cảnh báo thiết bị của BR-39; OUTAGE: NODE_OFFLINE / EDGE_AI_DEGRADED còn mở sau 30 phút; EXPERT: chuyên gia xác nhận cần tới nhà; ONSITE_CHECK: thợ thấy cảm biến hỏng (EXPERT-FR-021); MANUAL: Farm Owner mở; PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006); CHECKLIST: mục checklist ghi DEFECT (OPS-FR-007)"
+        plan_id: { type: string, nullable: true, description: "Kế hoạch bảo trì của Work Order phòng ngừa" }
+        checklist:
+          type: array
+          description: "Work Order phòng ngừa: checklist chép từ mẫu của kế hoạch (OPS-FR-007)"
+          items: { $ref: "#/components/schemas/ChecklistItem" }
         title: { type: string }
         description: { type: string, nullable: true }
         status: { $ref: "#/components/schemas/WorkOrderStatus" }
@@ -6372,7 +6571,7 @@ components:
         cause: { allOf: [{ $ref: "#/components/schemas/SiteCause" }], nullable: true }
         work_note: { type: string, nullable: true }
         photo_urls: { type: array, items: { type: string }, description: "URL tạm (1 giờ); danh sách không kèm" }
-        result: { type: string, enum: [REPAIRED, SELF_RECOVERED], nullable: true }
+        result: { type: string, enum: [REPAIRED, SELF_RECOVERED, DONE], nullable: true, description: "DONE: Work Order phòng ngừa đã duyệt (một lần ghi bảo trì, OPS-FR-008)" }
         cancel_reason: { type: string, nullable: true }
         opened_at: { type: string, format: date-time }
         started_at: { type: string, format: date-time, nullable: true }
@@ -6391,6 +6590,71 @@ components:
               note: { type: string, nullable: true }
               at: { type: string, format: date-time }
 
+    ChecklistItem:
+      type: object
+      properties:
+        item: { type: string }
+        result: { type: string, enum: [OK, DEFECT], nullable: true, description: "null = chưa làm" }
+        note: { type: string, nullable: true }
+        photo_url: { type: string, nullable: true, description: "URL tạm (1 giờ)" }
+        by: { type: string, nullable: true }
+        at: { type: string, format: date-time, nullable: true }
+        repair_work_order_id: { type: string, nullable: true, description: "Work Order sửa chữa mở từ mục DEFECT" }
+
+    MaintenancePlanState:
+      type: string
+      description: "Report 3 §6.20 (SM-20)"
+      enum: [SCHEDULED, DUE, OVERDUE, RETIRED]
+
+    MaintenancePlanInput:
+      type: object
+      required: [house_id, equipment, basis, interval, checklist_template, source]
+      properties:
+        house_id: { type: string }
+        equipment: { type: string, enum: [PUMP, FAN, SENSOR, NOZZLE, CALIBRATION] }
+        basis: { type: string, enum: [RUN_HOURS, SWITCHES, CALENDAR], description: "PUMP, FAN: RUN_HOURS hoặc SWITCHES; SENSOR, NOZZLE, CALIBRATION: CALENDAR" }
+        interval: { type: number, exclusiveMinimum: true, minimum: 0, description: "Giờ chạy, số lần đóng cắt, hoặc số ngày (CALENDAR)" }
+        checklist_template: { type: array, minItems: 1, maxItems: 30, items: { type: string, maxLength: 200 }, example: ["Bồn nước", "Béc phun", "Quạt", "Cửa", "Dấu vết chuột hoặc rắn"] }
+        source: { type: string, maxLength: 300, description: "Nguồn của chu kỳ: khuyến cáo nhà sản xuất hoặc người nuôi" }
+        note: { type: string, maxLength: 1000 }
+
+    MaintenancePlan:
+      type: object
+      description: "OPS-FR-005 — kế hoạch bảo trì của một nhà cho một loại thiết bị; bộ đếm giờ chạy và số lần đóng cắt nằm ở từng controller (`relay_usage`)"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        house_id: { type: string }
+        equipment: { type: string, enum: [PUMP, FAN, SENSOR, NOZZLE, CALIBRATION] }
+        basis: { type: string, enum: [RUN_HOURS, SWITCHES, CALENDAR] }
+        interval: { type: number }
+        checklist_template: { type: array, items: { type: string } }
+        state: { $ref: "#/components/schemas/MaintenancePlanState" }
+        next_due_at: { type: string, format: date-time, nullable: true, description: "Kế hoạch theo lịch: điểm đến hạn kế tiếp; CALIBRATION: ngày hiệu chuẩn kế tiếp" }
+        due_since: { type: string, format: date-time, nullable: true }
+        overdue_notified_at: { type: string, format: date-time, nullable: true }
+        last_done_at: { type: string, format: date-time, nullable: true }
+        source: { type: string }
+        note: { type: string, nullable: true }
+        comments:
+          type: array
+          items:
+            type: object
+            properties: { by: { type: string }, text: { type: string }, at: { type: string, format: date-time } }
+        records:
+          type: array
+          description: "OPS-FR-008 — lịch sử bảo trì: mỗi Work Order phòng ngừa được duyệt là một lần ghi"
+          items:
+            type: object
+            properties:
+              work_order_id: { type: string }
+              node_id: { type: string, nullable: true }
+              kind: { type: string, enum: [MAINTENANCE, CALIBRATION] }
+              by: { type: string }
+              at: { type: string, format: date-time }
+              next_due_at: { type: string, format: date-time, nullable: true }
+        open_work_orders: { type: array, items: { type: string }, description: "Chỉ ở `GET /maintenance/due`: Work Order phòng ngừa đang mở" }
+
     OpsMetrics:
       type: object
       description: "OPS-FR-009, BR-40 — phút; null khi không có mẫu"
@@ -6401,7 +6665,7 @@ components:
         overall: { $ref: "#/components/schemas/OpsMetricRow" }
         by_house: { type: array, items: { allOf: [{ $ref: "#/components/schemas/OpsMetricRow" }, { properties: { house_id: { type: string }, name: { type: string } } }] } }
         by_technician: { type: array, items: { allOf: [{ $ref: "#/components/schemas/OpsMetricRow" }, { properties: { technician_id: { type: string }, full_name: { type: string } } }] } }
-        on_time_maintenance_rate: { type: number, nullable: true, description: "null cho tới G-22" }
+        on_time_maintenance_rate: { type: number, nullable: true, description: "BR-40 — % Work Order phòng ngừa đóng đúng hạn; null khi không có" }
 
     OpsMetricRow:
       type: object
