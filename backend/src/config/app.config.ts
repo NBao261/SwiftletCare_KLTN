@@ -27,6 +27,7 @@ import harvestRoutes        from '@/routes/harvests.route'
 import healthReportRoutes   from '@/routes/healthReports.route'
 import expertActivityRoutes from '@/routes/expertActivity.route'
 import notificationRoutes   from '@/routes/notifications.route'
+import profileRoutes        from '@/routes/profiles.route'
 import internalRoutes from '@/routes/internal.route'
 
 const app: Application = express()
@@ -95,6 +96,8 @@ app.use('/health-reports', healthReportRoutes)
 app.use('/expert-activity', expertActivityRoutes)
 // Hộp thông báo trong ứng dụng (EXPERT-FR-006/007)
 app.use('/notifications', notificationRoutes)
+// EXPERT-FR-014, 015 — hồ sơ cấu hình của farm
+app.use('/profiles', profileRoutes)
 
 // MediaMTX hỏi quyền đẩy/xem live stream (VISION-FR-013) — dịch vụ nội bộ, không phải người dùng
 app.use('/internal', internalRoutes)

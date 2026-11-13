@@ -226,7 +226,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [x] **Giai đoạn nhà** (FARM-FR-014, BR-46): *(backend: Kiệt, 12/11, `78ada1a` + `e5ebd08`, làm trong PR #126 của G-11; màn đặt giai đoạn trên web: Nhi)*
   - Farm Owner hoặc chuyên gia đặt `ATTRACTING` / `OCCUPIED`, có lịch sử; technician đặt thì 403;
   - nhà `ATTRACTING` không đánh giá chỉ số đàn, không tạo `LOW_RETURN_RATE`, lý do ghi "attracting stage".
-- [ ] **Profile** (EXPERT-FR-014, 015; SM-23):
+- [x] **Profile** (EXPERT-FR-014, 015; SM-23): *(Bảo, 12/11/2026, PR #153: spec `/profiles` và collection `configprofiles` xong; giai đoạn nhà do Kiệt làm trong PR #126; luật khuyến nghị chờ G-11 và G-21. Nhóm nào trong hồ sơ cũng tuỳ chọn, nhưng đã có thì đủ khoá; Farm Owner farm không có chuyên gia soạn và duyệt được (BR-22); áp hệ số mờ thì đề xuất hệ số đang chờ của zone thành `SUPERSEDED`)*
   - chuyên gia tạo profile `DRAFT` (ngưỡng, hệ số mờ, tham số phát hiện, lịch loa) rồi duyệt thành `APPROVED`;
   - giá trị ngoài khoảng trả 400; người không phải chuyên gia duyệt thì 403;
   - Farm Owner áp profile cho các nhà: mỗi zone nhận một thay đổi có lịch sử (nguồn `PROFILE`) và một phiên bản cấu hình mới (cần G-08);
@@ -239,7 +239,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [ ] **Không tự viết luật.** Phải có ít nhất 3 luật thật từ chuyên gia (phỏng vấn, mục 4); luật trong dữ liệu demo ghi rõ nguồn.
 
 **Giao diện:**
-- [ ] Tuấn (web chuyên gia): soạn và duyệt profile; soạn luật; trang hiệu quả theo luật (số khuyến nghị đã tạo, đã chấp nhận, đã cải thiện).
+- [x] Tuấn (web chuyên gia): soạn và duyệt profile; soạn luật; trang hiệu quả theo luật (số khuyến nghị đã tạo, đã chấp nhận, đã cải thiện). *(14/11/2026, `86cab267`; luật khuyến nghị dùng mock fallback chờ backend tuần 4)*
 - [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng.
 
 **Test:** TC-F27-01…03; TC-F28-01…03; TC-ST-69…74.

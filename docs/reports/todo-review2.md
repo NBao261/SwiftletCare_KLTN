@@ -491,7 +491,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-24 — Tri thức: giai đoạn nhà, hồ sơ cấu hình, luật khuyến nghị (P1) — Bảo (backend), Tuấn (web)
 
-- [ ] FARM-FR-014, EXPERT-FR-014…019; job đánh giá luật hằng ngày và đo hiệu quả (BR-42).
+- [ ] FARM-FR-014, EXPERT-FR-014…019; job đánh giá luật hằng ngày và đo hiệu quả (BR-42). *(Hồ sơ cấu hình EXPERT-FR-014, 015 xong: Bảo, 12/11/2026, PR #153. Giai đoạn nhà FARM-FR-014 trong PR #126 của Kiệt. Còn luật khuyến nghị.)*
 
 ### G-25 — Farm overview, so sánh nhà, điện năng, xu hướng đàn (P1, It. 3) — Bảo (backend), Nhi (web)
 

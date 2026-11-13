@@ -43,12 +43,12 @@ export interface IThresholdHistoryEntry {
   changed_at: Date
   old_values: Partial<Thresholds>
   new_values: Partial<Thresholds>
-  /** EXPERT_REVERT: chuyên gia hoàn lại thay đổi của Farm Owner (EXPERT-FR-010) */
-  source: 'MANUAL' | 'RESET_TO_DEFAULT' | 'EXPERT_REVERT'
+  /** EXPERT_REVERT: chuyên gia hoàn lại thay đổi của Farm Owner (EXPERT-FR-010); PROFILE: áp hồ sơ cấu hình (EXPERT-FR-015) */
+  source: 'MANUAL' | 'RESET_TO_DEFAULT' | 'EXPERT_REVERT' | 'PROFILE'
 }
 
 /** Nguồn 1 lần đổi hệ số mờ: sửa tay, chuyên gia hoàn lại (EXPERT-FR-010), áp gợi ý đã duyệt (EXPERT-FR-011) */
-export type FuzzyTuningSource = 'MANUAL' | 'EXPERT_REVERT' | 'SUGGESTION_APPROVED'
+export type FuzzyTuningSource = 'MANUAL' | 'EXPERT_REVERT' | 'SUGGESTION_APPROVED' | 'PROFILE'
 
 export interface IFuzzyTuningHistoryEntry {
   changed_by: Types.ObjectId
@@ -66,6 +66,8 @@ export interface IDetectionTuningHistoryEntry {
   changed_at: Date
   old_values: Partial<DetectionTuning>
   new_values: Partial<DetectionTuning>
+  /** Không có = sửa tay (EXPERT-FR-008); PROFILE = áp hồ sơ cấu hình (EXPERT-FR-015) */
+  source?: 'PROFILE'
 }
 
 export interface IZone extends Document {
@@ -158,7 +160,7 @@ const zoneSchema = new Schema<IZone>(
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
-      source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT', 'EXPERT_REVERT'] },
+      source: { type: String, enum: ['MANUAL', 'RESET_TO_DEFAULT', 'EXPERT_REVERT', 'PROFILE'] },
       changed_by_role: { type: String },
     }],
     fuzzy_tuning: {
@@ -174,7 +176,7 @@ const zoneSchema = new Schema<IZone>(
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
-      source: { type: String, enum: ['MANUAL', 'EXPERT_REVERT', 'SUGGESTION_APPROVED'] satisfies FuzzyTuningSource[] },
+      source: { type: String, enum: ['MANUAL', 'EXPERT_REVERT', 'SUGGESTION_APPROVED', 'PROFILE'] satisfies FuzzyTuningSource[] },
     }],
     detection_tuning: {
       noise_margin_db:       { type: Number, default: DEFAULT_DETECTION_TUNING.noise_margin_db },
@@ -189,6 +191,7 @@ const zoneSchema = new Schema<IZone>(
       changed_at: { type: Date },
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
+      source: { type: String, enum: ['PROFILE'] },
     }],
     config_version: { type: Number, default: () => currentConfigVersion() },
   },

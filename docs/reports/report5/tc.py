@@ -203,8 +203,8 @@ TC=[
 ('TC-F27-02','F-27','OPEN recommendation','Farm Owner accepts; another is rejected without a reason','—','Exactly one Work Order linked; 422',(T,'backend jest (G-24)')),
 ('TC-F27-03','F-27','One ACCEPTED 7 days ago; one OPEN for 7 days','Run the effect and expiry jobs','Seeded indicator values','MEASURED with the change equal to after − before; the other EXPIRED',(T,'backend jest (G-24)')),
 # F-28
-('TC-F28-01','F-28','Farm with a Domain Expert','Expert creates and approves a profile; saves one with humidity_min out of range; Farm Owner approves a draft','—','DRAFT then APPROVED; 400; 403',(T,'backend jest (G-24)')),
-('TC-F28-02','F-28','APPROVED profile; DRAFT profile','Farm Owner applies the approved one to two houses; applies the draft','—','Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409',(T,'backend jest (G-24)')),
+('TC-F28-01','F-28','Farm with a Domain Expert','Expert creates and approves a profile; saves one with humidity_min out of range; Farm Owner approves a draft','—','DRAFT then APPROVED; 400; 403',(J,I+'configProfiles.test.ts','TC-F28-01')),
+('TC-F28-02','F-28','APPROVED profile; DRAFT profile','Farm Owner applies the approved one to two houses; applies the draft','—','Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409',(J,I+'configProfiles.test.ts','TC-F28-02')),
 ('TC-F28-03','F-28','House with a seeded return-rate drop','Set the house ATTRACTING; run the daily assessment; technician sets the stage','—','Flock indicator not assessed, reasons say "attracting stage", no LOW_RETURN_RATE; 403',(T,'backend jest (G-24)')),
 # F-29
 ('TC-F29-01','F-29','Seeded farm of 3 houses (2 simulated)','GET the farm overview','—','Each house shows stage, today\'s status, open alerts and Work Orders, latest return rate equal to the seed; simulated houses marked',(T,'backend jest (G-25)')),
