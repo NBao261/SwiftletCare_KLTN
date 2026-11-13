@@ -666,12 +666,12 @@ paths:
   /admin/provisioned-devices/{id}/rotate-key:
     post:
       tags: [Admin]
-      summary: "Cấp secretKey mới để in lại nhãn (FARM-FR-003) — chỉ ADMIN"
+      summary: "Cấp secretKey mới để in lại nhãn khi nhãn bị mất hoặc lộ (FARM-FR-010, BR-26) — chỉ ADMIN"
       description: |
-        Chỉ thiết bị CHƯA kích hoạt và chưa bị thu hồi: thiết bị đã kích hoạt lưu secretKey
-        trong NVS (mở khu AP-mode nâng cao — FARM-FR-003c), đổi ở backend là hai bên lệch
-        nhau. Key cũ hết dùng được ngay; key mới trả **đúng 1 lần**. Audit
-        `DEVICE_PROVISION_KEY_ROTATED`.
+        Cấp được khi thiết bị không đang dùng ở farm nào: còn trong kho (`IN_STOCK`) hoặc đã gỡ
+        khỏi farm (`RELEASED`, Report 3 §6.16). Thiết bị không lưu secretKey (BR-26) nên đổi ở
+        backend không làm thiết bị lệch. Nhãn cũ bị từ chối (400) ngay; key mới trả **đúng 1 lần**.
+        Audit `DEVICE_PROVISION_KEY_ROTATED` (`released: true` khi thiết bị đã gỡ).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -686,7 +686,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: "Thiết bị đã kích hoạt hoặc đã bị thu hồi"
+          description: "Thiết bị đang dùng ở một farm (gỡ trước rồi mới cấp lại), hoặc đã bị thu hồi"
           content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
 
   /admin/provisioned-devices/{id}/rotate-broker-secret:
@@ -6005,6 +6005,13 @@ components:
         simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập" }
         created_by: { type: string }
         created_at: { type: string, format: date-time }
+        stock_status:
+          type: string
+          enum: [IN_STOCK, IN_SERVICE, RELEASED, REVOKED]
+          description: |
+            Trạng thái nhãn (Report 3 §6.16), suy ra mỗi lần đọc, không lưu: `REVOKED` khi đã thu hồi;
+            `IN_SERVICE` khi đang dùng ở một farm; `RELEASED` khi đã từng kích hoạt rồi gỡ; còn lại
+            `IN_STOCK`. Cấp lại key được ở `IN_STOCK` và `RELEASED`.
 
     HarvestStatus:
       type: string

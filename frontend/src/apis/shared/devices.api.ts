@@ -6,6 +6,8 @@ import type { ApiResponse, SensorNode, CameraNode, RelayName, RelayOverrideLog, 
  * (kho `provisioned_devices`). Thiếu secret_key → 400.
  */
 export interface RegisterDeviceInput { device_id: string; zone_id: string; secret_key: string }
+// FARM-FR-004 — camera gắn nhà yến (house_id), không gắn Zone
+export interface RegisterCameraInput { device_id: string; house_id: string; secret_key: string; rtsp_url?: string }
 
 /** FARM-FR-008 — POST /devices/sensor-nodes/:id/replace: node mới cùng Zone, qua đúng luồng secret_key */
 export interface ReplaceSensorNodeInput { new_device_id: string; secret_key: string; reason: string }
@@ -14,7 +16,7 @@ export const deviceApi = {
   registerSensorNode: (input: RegisterDeviceInput) =>
     api.post<ApiResponse<SensorNode>>('/devices/sensor-nodes/register', input),
   /** FARM-FR-004 — Camera Node (camera IP, AI node đọc RTSP) cùng luồng onboarding với sensor node (Flow 1b) */
-  registerCameraNode: (input: RegisterDeviceInput & { rtsp_url?: string }) =>
+  registerCameraNode: (input: RegisterCameraInput) =>
     api.post<ApiResponse<CameraNode>>('/devices/camera-nodes/register', input),
   listSensorNodes: (zoneId?: string) =>
     api.get<ApiResponse<SensorNode[]>>('/devices/sensor-nodes', { params: zoneId ? { zoneId } : undefined }),
@@ -40,8 +42,9 @@ export const deviceApi = {
   reassignZone: (id: string, newZoneId: string) =>
     api.put<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/reassign-zone`, { newZoneId }),
 
-  listCameraNodes: (zoneId?: string) =>
-    api.get<ApiResponse<CameraNode[]>>('/devices/camera-nodes', { params: zoneId ? { zoneId } : undefined }),
+  // FARM-FR-004 — camera gắn nhà yến; không truyền houseId thì mọi nhà user được xem
+  listCameraNodes: (houseId?: string) =>
+    api.get<ApiResponse<CameraNode[]>>('/devices/camera-nodes', { params: houseId ? { houseId } : undefined }),
 
   // FARM-FR-013 — xử lý từ xa. RESTART/OTA trả 501 khi thiết bị chạy firmware trước 1.4.0 (chỉ PUSH_CONFIG dùng được)
   sendCommand: (id: string, input: NodeCommandInput) =>

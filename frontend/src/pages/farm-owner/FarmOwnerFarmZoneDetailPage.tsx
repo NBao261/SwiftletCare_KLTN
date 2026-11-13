@@ -27,6 +27,7 @@ import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
+import { printQrLabels, zoneCode } from '@/lib/qrCode'
 
 // Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
 export default function FarmOwnerFarmZoneDetailPage() {
@@ -146,6 +147,19 @@ export default function FarmOwnerFarmZoneDetailPage() {
             {isFarmOwner && (
               <ActionsMenu
                 items={[
+                  // FARM-FR-011 — mã chỉ chứa zone ID, in ra để dán ở tầng
+                  {
+                    label: t('zone.printFloorCode'),
+                    onClick: () => void printQrLabels(zone.name, [{
+                      code: zoneCode(zone._id),
+                      lines: [
+                        { text: 'SwiftletCare', strong: true },
+                        { text: node.house.name },
+                        { text: `${t('zone.floor', { n: zone.floor })} · ${zone.name}`, strong: true },
+                        { text: t('zone.floorCodeHint') },
+                      ],
+                    }]),
+                  },
                   { label: t('structure.rename', { target: t('structure.zone') }), onClick: () => setEditMode('rename') },
                   { label: t('structure.delete', { target: t('structure.zone') }), onClick: () => setEditMode('delete'), danger: true },
                 ]}

@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient, type Query } from '@tanstack/react-query'
 import { deviceApi } from '@/apis/shared/devices.api'
-import { onRelayUpdate, onDeviceStatusChange } from '@/lib/socket'
+import { joinHouse, joinZone, leaveHouse, leaveZone, onRelayUpdate, onDeviceStatusChange } from '@/lib/socket'
 import { useSocket } from '@/hooks/common/useSocket'
-import type { RelayName, SpeakerScheduleInput, NodeCommandInput, SensorNode } from '@/types'
+import type { DeviceStatus, RelayName, SpeakerScheduleInput, NodeCommandInput, SensorNode } from '@/types'
 import type { ReplaceSensorNodeInput } from '@/apis/shared/devices.api'
 
 /**
@@ -33,6 +33,29 @@ export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; r
   }, [queryClient])
 
   return query
+}
+
+// Trạng thái realtime của 1 thiết bị: vào room nơi gắn thiết bị (camera: nhà, bộ điều khiển: Zone) và báo mỗi DEVICE_STATUS_CHANGE của nó
+export function useDeviceStatusEvents(
+  room: { houseId?: string; zoneId?: string }, nodeId: string, onStatus: (status: DeviceStatus) => void,
+) {
+  useSocket()
+  const onStatusRef = useRef(onStatus)
+  onStatusRef.current = onStatus
+  const { houseId, zoneId } = room
+
+  useEffect(() => {
+    if (houseId) joinHouse(houseId)
+    else if (zoneId) joinZone(zoneId)
+    const off = onDeviceStatusChange(event => {
+      if (nodeId && event.nodeId === nodeId) onStatusRef.current(event.status)
+    })
+    return () => {
+      off()
+      if (houseId) leaveHouse(houseId)
+      else if (zoneId) leaveZone(zoneId)
+    }
+  }, [houseId, zoneId, nodeId])
 }
 
 /** useSystemNodeStatus – OPS-NFR-004, Admin xem nhanh trạng thái mọi node toàn hệ thống */

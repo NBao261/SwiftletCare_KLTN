@@ -21,6 +21,8 @@ export interface DeviceRow {
   id: string; deviceId: string; type: 'sensor' | 'camera'
   status: DeviceStatus; rssi?: number; firmware?: string
   lastHeartbeat?: string; registeredAt: string; zoneId: string
+  // SYSTEM-FR-004 — thiết bị của bộ giả lập
+  simulated?: boolean
 }
 
 export interface DeviceCounts { total: number; online: number; offline: number }
@@ -144,7 +146,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
   for (const s of sensors) {
     pushDevice({
       id: s._id, deviceId: s.device_id, type: 'sensor', status: s.status, rssi: s.rssi,
-      firmware: s.firmware_version, lastHeartbeat: s.last_heartbeat, registeredAt: s.registered_at, zoneId: s.zone_id,
+      firmware: s.firmware_version, lastHeartbeat: s.last_heartbeat, registeredAt: s.registered_at, zoneId: s.zone_id, simulated: s.simulated,
     })
   }
   // Camera gắn nhà (house_id); bản ghi cũ chỉ có zone_id thì quy ra nhà chứa Zone đó
@@ -156,7 +158,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
     if (!houseId) continue
     const row: DeviceRow = {
       id: c._id, deviceId: c.device_id, type: 'camera', status: c.status, firmware: c.model_version,
-      lastHeartbeat: c.last_heartbeat, registeredAt: c.registered_at, zoneId: '',
+      lastHeartbeat: c.last_heartbeat, registeredAt: c.registered_at, zoneId: '', simulated: c.simulated,
     }
     const list = camerasByHouse.get(houseId)
     if (list) list.push(row)
