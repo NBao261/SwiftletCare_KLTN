@@ -12,6 +12,7 @@ import workOrderRoutes from '@/routes/workOrders.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
 import { House, Zone } from '@/models/houseZone.model'
+import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { WorkOrder } from '@/models/workOrder.model'
 import { putObject } from '@/config/minio.config'
@@ -242,6 +243,7 @@ describe('vòng đời Work Order (OPS-FR-002…004, BR-41)', () => {
   it('cảnh báo tự phục hồi trước khi bắt đầu → CLOSED "self-recovered"', async () => {
     const { raise } = await seed()
     const alert = (await raise('MISTING_INEFFECTIVE'))!
+    await WorkOrder.updateMany({}, { opened_at: ago(20) })
     await Alert.updateOne({ _id: alert._id }, { status: 'RESOLVED', resolved_at: ago(11) })
     expect((await verifyWorkOrders()).selfRecovered).toBe(1)
     expect((await WorkOrder.findOne().lean())!).toMatchObject({ status: 'CLOSED', result: 'SELF_RECOVERED', is_open: false })
@@ -265,6 +267,119 @@ describe('vòng đời Work Order (OPS-FR-002…004, BR-41)', () => {
       .attach('photos', Buffer.from('x'), { filename: 'a.gif', contentType: 'image/gif' }).expect(400)
     const done = await tech$.post(`/work-orders/${wo._id}/done`, { work_note: 'xong' }).expect(200)
     expect(done.body.data.status).toBe('AWAITING_APPROVAL')
+  })
+})
+
+describe('kiểm phục hồi theo loại cảnh báo (BR-41, OPS-FR-003)', () => {
+  const at = (d: Date, min: number) => new Date(d.getTime() + min * 60_000)
+  const FULL = { temperature: 28, humidity: 85, light_lux: 0.1, nh3_ppm: 5, co2_ppm: 800, sound_db: 40 }
+
+  async function doneOn(type: AlertType, cause: string) {
+    const ctx = await seed()
+    const alert = (await ctx.raise(type))!
+    const wo = (await WorkOrder.findOne())!
+    const path = `/work-orders/${wo._id}`
+    await ctx.tech$.post(`${path}/start`).expect(200)
+    await ctx.tech$.post(`${path}/done`, { cause }).expect(200)
+    const doneAt = (await WorkOrder.findById(wo._id).lean())!.done_at!
+    /** Mẫu telemetry mỗi phút, phút `fromMin`…`toMin` sau lúc báo xong */
+    const samples = (fromMin: number, toMin: number, values: (minute: number) => object = () => FULL) =>
+      Telemetry.insertMany(Array.from({ length: toMin - fromMin + 1 }, (_, i) => ({
+        node_id: ctx.node._id, zone_id: ctx.zone._id, timestamp: at(doneAt, fromMin + i), ...values(fromMin + i),
+      })))
+    const status = async () => (await WorkOrder.findById(wo._id).lean())!.status
+    return { ...ctx, alert, wo, path, doneAt, samples, status }
+  }
+
+  it('MISTING_INEFFECTIVE: độ ẩm về trên humidity_min 10 phút sau khi báo xong → chờ duyệt, dù cảnh báo chưa tự đóng', async () => {
+    const { doneAt, samples, status } = await doneOn('MISTING_INEFFECTIVE', 'NOZZLE')
+    // Phút 2 còn khô (dưới humidity_min 75): tính lại từ mẫu đó
+    await samples(0, 9, minute => ({ ...FULL, humidity: minute === 2 ? 70 : 85 }))
+    expect((await verifyWorkOrders(at(doneAt, 10))).verified).toBe(0)
+    await samples(10, 12)
+    expect((await verifyWorkOrders(at(doneAt, 12))).verified).toBe(1)
+    expect(await status()).toBe('AWAITING_APPROVAL')
+  })
+
+  it('SENSOR_FAULT: đủ số đo của 5 cảm biến 10 phút → chờ duyệt; thiếu 1 số đo thì tính lại từ mẫu đó', async () => {
+    const { doneAt, samples, status } = await doneOn('SENSOR_FAULT', 'SENSOR')
+    await samples(0, 11, minute => (minute === 5 ? { ...FULL, co2_ppm: undefined } : FULL))
+    expect((await verifyWorkOrders(at(doneAt, 12))).verified).toBe(0)
+    await samples(12, 16)
+    expect((await verifyWorkOrders(at(doneAt, 16))).verified).toBe(1)
+    expect(await status()).toBe('AWAITING_APPROVAL')
+  })
+
+  it('controller báo lại sự cố sau lúc báo xong (cảnh báo gộp trùng) → IN_PROGRESS, báo thợ', async () => {
+    const { tech, alert, doneAt, samples, status } = await doneOn('RS485_BUS_FAILURE', 'SENSOR')
+    await samples(0, 12)
+    await Alert.collection.updateOne({ _id: alert._id }, { $set: { last_seen_at: at(doneAt, 2) } })
+    ;(notifyUser as jest.Mock).mockClear()
+    expect((await verifyWorkOrders(at(doneAt, 12))).verified).toBe(0)
+    expect(await status()).toBe('IN_PROGRESS')
+    expect(notifyUser).toHaveBeenCalledWith(String(tech.user._id), expect.objectContaining({ title: expect.stringContaining('Sự cố quay lại') }))
+  })
+
+  it('ACTUATOR_FAULT: không gửi lại trong 1 chu kỳ 15 phút → chờ duyệt, không phải chờ cảnh báo tự đóng sau 60 phút', async () => {
+    const { doneAt, status } = await doneOn('ACTUATOR_FAULT', 'PUMP')
+    expect((await verifyWorkOrders(at(doneAt, 11))).verified).toBe(0)
+    expect((await verifyWorkOrders(at(doneAt, 16))).verified).toBe(1)
+    expect(await status()).toBe('AWAITING_APPROVAL')
+  })
+
+  it('SPEAKER_FAILURE: không báo lại 10 phút → chuyển Farm Owner duyệt, không kẹt ở VERIFYING', async () => {
+    const { doneAt, status } = await doneOn('SPEAKER_FAILURE', 'SPEAKER')
+    expect((await verifyWorkOrders(at(doneAt, 5))).verified).toBe(0)
+    expect((await verifyWorkOrders(at(doneAt, 11))).verified).toBe(1)
+    expect(await status()).toBe('AWAITING_APPROVAL')
+  })
+
+  it('sự cố tái phát khi đang chờ duyệt → IN_PROGRESS; Farm Owner không duyệt được, cảnh báo mới vẫn mở', async () => {
+    const { alert, doneAt, raise, owner$, path, status } = await doneOn('SPEAKER_FAILURE', 'SPEAKER')
+    expect((await verifyWorkOrders(at(doneAt, 11))).verified).toBe(1)
+    await Alert.updateOne({ _id: alert._id }, { status: 'RESOLVED', resolved_at: new Date() })
+    const again = (await raise('SPEAKER_FAILURE'))!
+    expect(await WorkOrder.countDocuments()).toBe(1)
+    expect(await status()).toBe('IN_PROGRESS')
+    expect((await WorkOrder.findOne().lean())!.alert_id).toEqual(again._id)
+    await owner$.post(`${path}/approve`).expect(409)
+    expect((await Alert.findById(again._id).lean())!.status).toBe('ACTIVE')
+  })
+
+  it('Work Order mở tay trên cảnh báo đã đóng từ trước không tự đóng "self-recovered"', async () => {
+    const { house, owner$, raise } = await seed()
+    const alert = (await raise('THRESHOLD_BREACH'))!
+    await Alert.updateOne({ _id: alert._id }, { status: 'RESOLVED', resolved_at: ago(30), last_seen_at: ago(35) })
+    await owner$.post('/work-orders', { house_id: String(house._id), title: 'Kiểm lại quạt', alert_id: String(alert._id) }).expect(201)
+    expect((await verifyWorkOrders(later(20))).selfRecovered).toBe(0)
+    expect((await WorkOrder.findOne().lean())!.status).toBe('OPEN')
+  })
+
+  it('tối đa 5 ảnh cho cả Work Order, tính cả ảnh của lần báo xong trước khi bị mở lại (Report 3 §4.5)', async () => {
+    const { house, owner$, tech$ } = await seed()
+    const wo = (await owner$.post('/work-orders', { house_id: String(house._id), title: 'Sửa cửa' }).expect(201)).body.data
+    const path = `/work-orders/${wo._id}`
+    const withPhotos = (n: number) => {
+      const req = tech$.upload(`${path}/done`).field('work_note', 'xong')
+      for (let i = 0; i < n; i++) req.attach('photos', Buffer.from('jpeg'), { filename: `p${i}.jpg`, contentType: 'image/jpeg' })
+      return req
+    }
+    await tech$.post(`${path}/start`).expect(200)
+    await withPhotos(3).expect(200)
+    await owner$.post(`${path}/reopen`, { note: 'Cửa còn kẹt' }).expect(200)
+    await withPhotos(3).expect(400)
+    const done = await withPhotos(2).expect(200)
+    expect(done.body.data.photo_urls).toHaveLength(5)
+  })
+
+  it('giao lại sau khi đã báo trễ thì Farm Owner không bị báo trễ lần nữa (BR-40)', async () => {
+    const { tech2, owner$, raise } = await seed()
+    await raise('MISTING_INEFFECTIVE')
+    await WorkOrder.updateMany({}, { opened_at: ago(16) })
+    expect((await verifyWorkOrders()).escalated).toBe(1)
+    const wo = (await WorkOrder.findOne().lean())!
+    await owner$.post(`/work-orders/${wo._id}/reassign`, { assignee_id: String(tech2.user._id) }).expect(200)
+    expect((await verifyWorkOrders()).escalated).toBe(0)
   })
 })
 
