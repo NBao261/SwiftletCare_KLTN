@@ -3,11 +3,12 @@ import { Alert, IAlert, OPEN_ALERT_STATUSES } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { House } from '@/models/houseZone.model'
 import {
-  IWorkOrder, OPEN_WORK_ORDER_STATUSES, SiteCause, WorkOrder, WorkOrderOrigin, WorkOrderStatus,
+  ChecklistItem, IWorkOrder, OPEN_WORK_ORDER_STATUSES, SiteCause, WorkOrder, WorkOrderOrigin, WorkOrderStatus,
 } from '@/models/workOrder.model'
 import { findAlertHouse, ESCALATION_MS } from '@/services/alertRouting.service'
 import { logAction } from '@/services/auditLog.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
+import { recordMaintenance } from '@/services/maintenanceRecord.service'
 import { presignedGetUrl, putObject } from '@/config/minio.config'
 import { AppError, BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import {
@@ -182,6 +183,40 @@ export async function openWorkOrdersForOutages(now = new Date()): Promise<number
   return opened
 }
 
+export interface PreventiveWorkOrderInput {
+  plan: { _id: Types.ObjectId; farm_id: Types.ObjectId; house_id: Types.ObjectId; checklist_template: string[] }
+  title: string
+  description: string
+  alertId?: Types.ObjectId
+  zoneId?: Types.ObjectId
+  nodeId?: Types.ObjectId
+}
+
+/**
+ * OPS-FR-006 — kế hoạch bảo trì đến hạn: một Work Order phòng ngừa cho thợ đang trực của nhà (nhà không có thợ thì
+ * Farm Owner xử lý), checklist chép từ mẫu của kế hoạch (OPS-FR-007). Không gán `alert_type`, để cảnh báo đến hạn của
+ * kế hoạch khác trên cùng controller không bị gộp vào Work Order này (findOpenForIncident).
+ */
+export async function openPreventiveWorkOrder(input: PreventiveWorkOrderInput): Promise<IWorkOrder | null> {
+  const [house, farm] = await Promise.all([House.findById(input.plan.house_id), Farm.findById(input.plan.farm_id).select('members')])
+  if (!house || !farm) return null
+  const assignee = await activeTechnicianOnDuty(house, farm)
+  try {
+    const wo = await WorkOrder.create({
+      farm_id: house.farm_id, house_id: house._id, zone_id: input.zoneId, node_id: input.nodeId, alert_id: input.alertId,
+      kind: 'PREVENTIVE', origin: 'PLAN', plan_id: input.plan._id, title: input.title, description: input.description,
+      checklist: input.plan.checklist_template.map(item => ({ item })),
+      assignee_id: assignee ?? undefined, history: [historyEntry(undefined, 'OPEN')],
+    })
+    await notifyAll(await handlerIds(wo), wo, `Đến hạn bảo trì: ${input.title}`, input.description)
+    return wo
+  } catch (err) {
+    // Cảnh báo đến hạn đã có Work Order đang mở (index unique một phần của BR-39)
+    if ((err as { code?: number }).code === 11000) return WorkOrder.findOne({ alert_id: input.alertId, is_open: true })
+    throw err
+  }
+}
+
 /** OPS-FR-001 — Farm Owner mở tay (route chỉ FARM_OWNER) */
 export async function createManualWorkOrder(
   user: CurrentUser, input: { house_id: string; title: string; description?: string; alert_id?: string },
@@ -229,11 +264,14 @@ async function findWorkOrderWithAccess(id: string, user: CurrentUser): Promise<I
 
 export async function presentWorkOrder(wo: IWorkOrder, withPhotos: boolean) {
   await wo.populate([{ path: 'assignee_id', select: 'full_name' }, { path: 'opened_by', select: 'full_name' }])
-  const { assignee_id: assignee, opened_by: openedBy, photos, ...rest } = wo.toObject()
+  const { assignee_id: assignee, opened_by: openedBy, photos, checklist, ...rest } = wo.toObject()
   return {
     ...rest,
     assignee: assignee ?? null,
     opened_by: openedBy ?? null,
+    checklist: await Promise.all((checklist ?? []).map(async ({ photo, ...item }: ChecklistItem) => ({
+      ...item, photo_url: withPhotos && photo ? await presignedGetUrl(photo) : null,
+    }))),
     ...(withPhotos && { photo_urls: await photoUrls(photos) }),
   }
 }
@@ -286,6 +324,51 @@ export async function startWorkOrder(id: string, user: CurrentUser) {
 }
 
 /**
+ * OPS-FR-007 — ghi kết quả một mục checklist của Work Order phòng ngừa đang làm. Mục DEFECT mở đúng một Work Order sửa
+ * chữa cho nhà (origin CHECKLIST, OPS-FR-001); ghi lại cùng mục chỉ thay kết quả.
+ */
+export async function updateChecklistItem(
+  id: string, user: CurrentUser, input: { item_index: number; result: 'OK' | 'DEFECT'; note?: string }, photo?: UploadedPhoto,
+) {
+  const wo = await findWorkOrderWithAccess(id, user)
+  if (wo.kind !== 'PREVENTIVE' || wo.status !== 'IN_PROGRESS') {
+    throw ConflictError('Chỉ ghi checklist của Work Order phòng ngừa đang làm')
+  }
+  const current = wo.checklist[input.item_index]
+  if (!current) throw BadRequestError('Mục checklist không tồn tại')
+
+  const [photoKey] = photo ? await storePhotos([photo], `work-orders/${wo._id}/checklist`) : []
+  let repairId = current.repair_work_order_id
+  if (input.result === 'DEFECT' && !repairId) {
+    const repair = await WorkOrder.create({
+      farm_id: wo.farm_id, house_id: wo.house_id, zone_id: wo.zone_id, node_id: wo.node_id,
+      kind: 'REPAIR', origin: 'CHECKLIST', title: `Sửa chữa: ${current.item}`,
+      description: input.note?.trim() || `Kiểm tra theo checklist "${wo.title}" thấy hỏng`,
+      assignee_id: wo.assignee_id, opened_by: user._id, history: [historyEntry(undefined, 'OPEN', user._id)],
+    })
+    repairId = repair._id
+    await notifyAll(await handlerIds(repair), repair, `Work Order mới: ${repair.title}`, repair.description ?? '')
+  }
+  const prefix = `checklist.${input.item_index}`
+  const updated = await WorkOrder.findOneAndUpdate(
+    { _id: wo._id, status: 'IN_PROGRESS' },
+    {
+      $set: {
+        [`${prefix}.result`]: input.result,
+        [`${prefix}.note`]: input.note?.trim() || undefined,
+        [`${prefix}.by`]: user._id,
+        [`${prefix}.at`]: new Date(),
+        ...(photoKey && { [`${prefix}.photo`]: photoKey }),
+        ...(repairId && { [`${prefix}.repair_work_order_id`]: repairId }),
+      },
+    },
+    { new: true },
+  )
+  if (!updated) throw ConflictError('Work Order vừa được người khác cập nhật, hãy tải lại')
+  return presentWorkOrder(updated, true)
+}
+
+/**
  * IN_PROGRESS → VERIFYING (BR-41: hệ thống kiểm dữ liệu phục hồi); Work Order không gắn cảnh báo thì không có gì
  * để kiểm → AWAITING_APPROVAL. Cảnh báo thiết bị của BR-39 phải có nguyên nhân (ALERT-FR-018, 422); nguyên nhân
  * và ảnh lưu cả vào cảnh báo.
@@ -298,10 +381,15 @@ export async function completeWorkOrder(
   if (!input.cause && wo.alert_type && AUTO_WORK_ORDER_TYPES.includes(wo.alert_type)) {
     throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi nguyên nhân tìm thấy tại chỗ (ALERT-FR-018)')
   }
+  // BR-41 — Work Order phòng ngừa được kiểm bằng checklist đủ, không bằng dữ liệu phục hồi
+  const preventive = wo.kind === 'PREVENTIVE'
+  if (preventive && wo.checklist.some(i => !i.result)) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi kết quả mọi mục checklist trước khi báo xong (OPS-FR-007)')
+  }
   if (files.length > MAX_WORK_ORDER_PHOTOS) throw BadRequestError(`Tối đa ${MAX_WORK_ORDER_PHOTOS} ảnh`)
   const photos = await storePhotos(files, `work-orders/${wo._id}`)
   const now = new Date()
-  const to: WorkOrderStatus = wo.alert_id ? 'VERIFYING' : 'AWAITING_APPROVAL'
+  const to: WorkOrderStatus = wo.alert_id && !preventive ? 'VERIFYING' : 'AWAITING_APPROVAL'
   const updated = await transition(wo, ['IN_PROGRESS'], to, {
     done_at: now, cause: input.cause, work_note: input.work_note?.trim() || undefined,
     photos: [...wo.photos, ...photos], ...(to === 'AWAITING_APPROVAL' && { verified_at: now }),
@@ -331,13 +419,19 @@ async function audit(user: CurrentUser, action: string, wo: IWorkOrder, metadata
 export async function approveWorkOrder(id: string, user: CurrentUser) {
   const wo = await findWorkOrderWithAccess(id, user)
   const now = new Date()
-  const updated = await transition(wo, ['AWAITING_APPROVAL'], 'CLOSED', { closed_at: now, result: 'REPAIRED' }, user._id)
+  const preventive = wo.kind === 'PREVENTIVE'
+  const updated = await transition(wo, ['AWAITING_APPROVAL'], 'CLOSED', {
+    closed_at: now, result: preventive ? 'DONE' : 'REPAIRED',
+  }, user._id)
   if (wo.alert_id) {
     await Alert.updateOne(
       { _id: wo.alert_id, status: { $in: OPEN_ALERT_STATUSES } },
-      { $set: { status: 'RESOLVED', resolved_at: now, acknowledgement_note: 'Đã sửa — Farm Owner duyệt Work Order' } },
+      { $set: { status: 'RESOLVED', resolved_at: now, acknowledgement_note: preventive
+        ? 'Đã bảo trì — Farm Owner duyệt Work Order phòng ngừa' : 'Đã sửa — Farm Owner duyệt Work Order' } },
     )
   }
+  // OPS-FR-008 — đặt bộ đếm về 0, tính hạn kế tiếp, ghi lịch sử bảo trì
+  if (preventive) await recordMaintenance(updated, user._id, now)
   await audit(user, 'WORK_ORDER_APPROVED', updated)
   return presentWorkOrder(updated, true)
 }
@@ -401,7 +495,7 @@ function recoveredSince(alert: Pick<IAlert, 'type' | 'status' | 'resolved_at' | 
  */
 export async function verifyWorkOrders(now = new Date()): Promise<{ verified: number; selfRecovered: number; escalated: number }> {
   const result = { verified: 0, selfRecovered: 0, escalated: 0 }
-  const pending = await WorkOrder.find({ status: { $in: ['OPEN', 'VERIFYING'] }, alert_id: { $exists: true } })
+  const pending = await WorkOrder.find({ status: { $in: ['OPEN', 'VERIFYING'] }, alert_id: { $exists: true }, kind: { $ne: 'PREVENTIVE' } })
   const alerts = new Map((await Alert.find({ _id: { $in: pending.map(w => w.alert_id) } })
     .select('type status resolved_at last_seen_at').lean()).map(a => [String(a._id), a]))
 
@@ -428,7 +522,7 @@ export async function verifyWorkOrders(now = new Date()): Promise<{ verified: nu
   }
 
   const stale = await WorkOrder.find({
-    status: 'OPEN', assignee_id: { $exists: true }, escalated_at: null,
+    status: 'OPEN', assignee_id: { $exists: true }, escalated_at: null, kind: { $ne: 'PREVENTIVE' },
     opened_at: { $lte: new Date(now.getTime() - ESCALATION_MS) },
   })
   for (const wo of stale) {

@@ -60,6 +60,16 @@ export const done = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: wo })
 })
 
+/** PUT /work-orders/:id/checklist – OPS-FR-007 */
+export const updateChecklist = asyncHandler(async (req: Request, res: Response) => {
+  const wo = await workOrderService.updateChecklistItem(req.params.id, req.user, {
+    item_index: req.body.item_index as number,
+    result: req.body.result as 'OK' | 'DEFECT',
+    note: req.body.note as string | undefined,
+  }, req.file)
+  res.json({ success: true, data: wo })
+})
+
 /** POST /work-orders/:id/approve – OPS-FR-004 */
 export const approve = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await workOrderService.approveWorkOrder(req.params.id, req.user) })

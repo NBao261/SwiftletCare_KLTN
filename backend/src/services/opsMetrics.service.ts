@@ -5,6 +5,7 @@ import { WorkOrder } from '@/models/workOrder.model'
 import { ESCALATION_MIN, ESCALATION_MS } from '@/services/alertRouting.service'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
+import { onTimeMaintenanceRate } from '@/services/maintenance.service'
 import type { CurrentUser } from '@/types'
 
 interface Sample { tta?: number; ttr?: number }
@@ -28,7 +29,7 @@ function row(samples: Sample[]) {
  * OPS-FR-009, BR-40 — MTTA = trung bình (xác nhận − tạo); MTTR = trung bình (Work Order đóng, không có thì cảnh
  * báo đóng − tạo), trên cảnh báo tạo trong [from, to) của farm hoặc của 1 nhà; cảnh báo bị bác bỏ (`DISMISSED`)
  * không tính. Theo thợ: thợ được định tuyến cảnh báo (ALERT-FR-017). Số báo cáo nội bộ, không phải cam kết.
- * Tỷ lệ bảo trì đúng hạn cần Work Order phòng ngừa (G-22) nên còn null.
+ * Tỷ lệ bảo trì đúng hạn theo BR-40 (maintenance.service#onTimeMaintenanceRate).
  */
 export async function getOpsMetrics(
   user: CurrentUser, query: { farmId: string; houseId?: string; from: Date; to: Date },
@@ -76,6 +77,6 @@ export async function getOpsMetrics(
     overall: row(all),
     by_house: houses.map(h => ({ house_id: String(h._id), name: h.name, ...row(byHouse.get(String(h._id)) ?? []) })),
     by_technician: technicians.map(t => ({ technician_id: String(t._id), full_name: t.full_name, ...row(byTechnician.get(String(t._id)) ?? []) })),
-    on_time_maintenance_rate: null,
+    on_time_maintenance_rate: await onTimeMaintenanceRate(houseIds, query.from, query.to),
   }
 }

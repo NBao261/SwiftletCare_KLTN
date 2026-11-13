@@ -169,6 +169,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     house_id: input.houseId,
     node_id: input.nodeId,
     type: input.type,
+    // OPS-FR-006 — mỗi kế hoạch bảo trì đến hạn là một sự cố riêng, kể cả hai kế hoạch trên cùng controller
+    ...(input.type === 'MAINTENANCE_DUE' && typeof input.details?.plan_id === 'string' && { 'details.plan_id': input.details.plan_id }),
     status: { $in: OPEN_STATUSES },
   }).select('_id created_at last_seen_at').lean()
   if (open) {
@@ -541,7 +543,9 @@ export async function acknowledgeAlert(
   alert.acknowledged_by = user._id as never
   alert.acknowledgement_note = note
   if (cause) alert.site_cause = { cause, photos: [], by: user._id as never, at: alert.acknowledged_at }
-  if (alert.type === 'MAINTENANCE_DUE') {
+  // Cảnh báo theo mốc mặc định (không có kế hoạch): xác nhận = đã bảo trì. Cảnh báo của kế hoạch chỉ đóng khi Farm
+  // Owner duyệt Work Order phòng ngừa (OPS-FR-008), nên xác nhận ở đây không đặt bộ đếm về 0
+  if (alert.type === 'MAINTENANCE_DUE' && !alert.details?.plan_id) {
     // BR-16 — xác nhận = đã bảo trì: đếm lại từ 0 cho tải đó và đóng cảnh báo
     alert.status = 'RESOLVED'
     alert.resolved_at = alert.acknowledged_at
