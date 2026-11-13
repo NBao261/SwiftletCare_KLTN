@@ -1,6 +1,14 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
-import type { ApiResponse, CameraNode, RelayOverrideLog, RelayStates, SensorNode, StreamToken } from '@/types'
+import type {
+  ApiResponse,
+  CameraNode,
+  CountingRing,
+  RelayOverrideLog,
+  RelayStates,
+  SensorNode,
+  StreamToken,
+} from '@/types'
 
 // Body đăng ký controller vào một Zone (FARM-FR-003): device_id và mã kích hoạt in trên nhãn
 export interface RegisterSensorNodePayload {
@@ -52,6 +60,10 @@ export const deviceApi = {
   // Token 60 giây để mở live stream của một camera (VISION-FR-013)
   getStreamToken: (cameraId: string) =>
     apiClient.get<ApiResponse<StreamToken>>(ENDPOINTS.CAMERA_STREAM_TOKEN(cameraId)),
+
+  // Lưu vòng đếm của một camera (VISION-FR-018); ring_delivered false = nút AI nhận vòng khi kết nối lại broker
+  updateCountingRing: (cameraId: string, ring: CountingRing) =>
+    apiClient.put<ApiResponse<CameraNode & { ring_delivered?: boolean }>>(ENDPOINTS.CAMERA_COUNTING_RING(cameraId), ring),
 
   // Tắt override sớm, trả mọi relay của thiết bị về tự động (ENV-FR-018)
   // Có relayName thì chỉ trả relay đó về AUTO (BR-20); không có thì trả mọi relay của controller

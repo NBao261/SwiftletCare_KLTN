@@ -91,8 +91,8 @@ TC=[
  (J,I+'telegram.test.ts','gửi tới chủ farm đã liên kết')),
 ('TC-F08-02','F-08','Owner with quiet hours','Create a MEDIUM and a CRITICAL alert in quiet hours','—','MEDIUM not sent; CRITICAL sent',
  (J,I+'telegram.test.ts','tôn trọng giờ im lặng, trừ cảnh báo CRITICAL')),
-('TC-F08-03','F-08','Mobile app signed in with a registered FCM token','Create a CRITICAL alert; sign out; create another','Firebase test project','Push received for the first only; an invalid token reported by FCM is removed',
- (T,'backend jest with a mocked Firebase Admin SDK (G-10)')),
+('TC-F08-03','F-08','Mobile app signed in with a registered FCM token','Create a CRITICAL alert; sign out; create another','Firebase Admin SDK mocked','Push received for the first only; an invalid token reported by FCM is removed',
+ [(J,I+'pushNotification.test.ts','pushes a CRITICAL alert with high priority'),(J,I+'pushNotification.test.ts','deletes a token FCM reports invalid')]),
 # F-09
 ('TC-F09-01','F-09','6 h of humidity falling toward `humidity_min`','Run the forecast scan','Seeded 5-minute means','LOW `FORECAST_BREACH` with expected time; resolved when the trend is gone',
  (J,I+'forecastAndRelayUsage.test.ts','raises a LOW FORECAST_BREACH early warning')),
@@ -109,7 +109,7 @@ TC=[
  [(Y,'test_counting','test_track_lost_at_the_frame_edge_counts_nothing'),(Y,'test_counting','test_slow_circling_bird_lost_near_the_ring_counts_nothing')]),
 # F-11
 ('TC-F11-01','F-11','Pipeline running on a recorded clip','Process frames and read the published frames','Clip with tracked birds','Every published frame shows the ring and a box with a track ID on each tracked bird',
- (T,'AI pipeline pytest `test_annotate.py` (G-12)')),
+ [(Y,'test_annotate','test_every_published_frame_has_the_ring_and_a_box_with_id_per_tracked_bird'),(Y,'test_annotate','test_bird_at_the_top_edge_keeps_its_id_inside_the_frame')]),
 ('TC-F11-02','F-11','Camera of a farm; its Farm Owner and Domain Expert','GET stream-token as each','—','Token valid 60 s for path `cam-<device_id>` only',
  (J,I+'streamAuth.test.ts','Farm Owner và Domain Expert của farm nhận token 60 giây')),
 ('TC-F11-03','F-11','User who is not a member of the farm; Farm Owner of another farm','GET stream-token as each','—','403',

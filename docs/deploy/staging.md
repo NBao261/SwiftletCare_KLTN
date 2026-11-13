@@ -130,6 +130,7 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 | Rollback | Checkout tag trước, chạy lại `up -d --build`; nếu dữ liệu đã đổi thì `mongorestore` bản `pre-deploy` |
 | Sao lưu | Cron 03:00 mỗi ngày, giữ 7 bản (plan §15.9), cộng một bản trước mỗi lần triển khai; chép ra ngoài VPS `[TEAM: nơi lưu]` |
 | Bí mật | `deploy/.env.staging` chỉ nằm trên VPS, không commit; đổi mật khẩu các tài khoản seed trước khi đưa link cho người ngoài |
+| Push FCM (ALERT-FR-002) | Đặt file service account Firebase lên VPS (không commit), mount vào container backend và trỏ `FIREBASE_SERVICE_ACCOUNT_PATH` tới nó; thiếu thì backend không gửi push, các kênh khác vẫn chạy |
 | Sau bảo vệ | Hạ cỡ hoặc tắt VPS để không phát sinh phí |
 
 ## 4. Phương án lùi

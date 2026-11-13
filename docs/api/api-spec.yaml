@@ -5023,6 +5023,57 @@ paths:
         "404": { description: "Không có, hoặc là thông báo của người khác" }
         "422": { $ref: "#/components/responses/ValidationError" }   # id không phải ObjectId
 
+  /notifications/push-tokens:
+    post:
+      tags: [Notifications]
+      summary: "Đăng ký FCM device token của máy đang đăng nhập (ALERT-FR-002) — mọi role đã đăng nhập"
+      description: |
+        App mobile gọi sau khi đăng nhập (SDD §5.4). Gọi lại với cùng token chỉ cập nhật `last_seen_at`.
+        Token đang gắn với tài khoản khác (một máy đổi tài khoản) thì chuyển sang người gọi, để tài khoản
+        cũ không nhận push trên máy này nữa. Phải là **FCM device token**: token Expo
+        (`ExponentPushToken[...]`) bị từ chối 422. Token không bao giờ được trả lại hay ghi vào log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushTokenInput" }
+      responses:
+        "200":
+          description: Đã đăng ký
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { registered: { type: boolean, example: true } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }   # thiếu token, platform sai, token Expo
+    delete:
+      tags: [Notifications]
+      summary: "Gỡ FCM device token khi đăng xuất (ALERT-FR-002)"
+      description: |
+        Chỉ gỡ token của chính người gọi. Token không có (đã gỡ, hoặc của người khác) vẫn trả 200 để app gọi
+        lại an toàn lúc đăng xuất. Backend cũng tự xoá token mà FCM báo không còn hợp lệ.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties: { token: { type: string } }
+      responses:
+        "200":
+          description: Đã gỡ (hoặc không có gì để gỡ)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { registered: { type: boolean, example: false } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -5510,6 +5561,14 @@ components:
           description: "net_entry / net_exit × 100, có thể > 100; null khi thiếu phiên sáng hoặc chiều, hoặc sáng không có chim ra"
         has_morning: { type: boolean }
         has_evening: { type: boolean }
+
+    PushTokenInput:
+      type: object
+      description: "ALERT-FR-002 — FCM device token của 1 máy (`expo-notifications` getDevicePushTokenAsync)"
+      required: [token, platform]
+      properties:
+        token: { type: string, description: "FCM device token; không nhận token Expo" }
+        platform: { type: string, enum: [android, ios] }
 
     Notification:
       type: object
@@ -6020,7 +6079,7 @@ components:
           }
         last_heartbeat: { type: string, format: date-time }
         model_version: { type: string }
-        fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất" }
+        fps: { type: number, description: "Số khung hình xử lý mỗi giây ở heartbeat gần nhất. Dưới 10 thì nhà có `EDGE_AI_DEGRADED` (`metadata.cause: LOW_FPS`), heartbeat đủ 10 trở lên thì đóng (THREAT-FR-010, Report 3 §4.5). `0` là chưa đo (heartbeat đầu ngay sau khi nút AI khởi động): không xét, không mở cảnh báo" }
         registered_at: { type: string, format: date-time }
         simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), chép từ kho lúc đăng ký; mọi màn hình phải ghi rõ là giả lập" }
         registered_by: { type: string, nullable: true }
@@ -6122,7 +6181,7 @@ components:
         title: { type: string }
         message: { type: string }
         snapshot_url: { type: string, nullable: true }
-        metadata: { type: object }
+        metadata: { type: object, description: "`EDGE_AI_DEGRADED` do nút AI xử lý chậm: `{ cause: LOW_FPS, fps, min_fps }`" }
         details:
           type: object
           nullable: true

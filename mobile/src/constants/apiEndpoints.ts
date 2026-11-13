@@ -46,6 +46,8 @@ export const ENDPOINTS = {
   RELAY_OVERRIDE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-override`,
   RELAY_OVERRIDES: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-overrides`,
   CAMERA_STREAM_TOKEN: (cameraId: string) => `/devices/camera-nodes/${cameraId}/stream-token`,
+  // Vẽ vòng đếm của camera (VISION-FR-018): Domain Expert, Farm Technician nhà được giao, Farm Owner khi farm chưa có chuyên gia
+  CAMERA_COUNTING_RING: (cameraId: string) => `/devices/camera-nodes/${cameraId}/counting-ring`,
 
   // Dữ liệu cảm biến (ENV-FR-*)
   TELEMETRY_LATEST: (zoneId: string) => `/telemetry/zones/${zoneId}/latest`,

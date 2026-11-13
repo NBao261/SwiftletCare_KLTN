@@ -21,7 +21,7 @@ import { User } from '@/models/user.model'
 import { ingestDeviceAlert } from '@/services/alert.service'
 import { checkReturnRateDrops, houseDailyCounts, ingestBirdCount, vnDate } from '@/services/birdCount.service'
 import { buildZoneMetrics } from '@/services/healthReport.service'
-import { CAMERA_OFFLINE_THRESHOLD_MS, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
+import { CAMERA_OFFLINE_THRESHOLD_MS, MIN_AI_FPS, markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
 import { emitBirdCountUpdate, emitHouseAlertNew, emitHouseDeviceStatusChange } from '@/socket'
 import type { BirdCountPayload } from '@/types'
 
@@ -396,6 +396,56 @@ describe('checkReturnRateDrops (VISION-FR-011)', () => {
 })
 
 describe('nút AI: heartbeat, offline, vision/alert (THREAT-FR-010)', () => {
+  it('heartbeat dưới 10 fps → 1 EDGE_AI_DEGRADED của nhà (LOW_FPS), báo lại không nhân đôi; đủ fps thì đóng', async () => {
+    const { camera, house } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 18 } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED' })).toBe(0)
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 8 } as never)
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 7 } as never)
+    const slow = await Alert.find({ type: 'EDGE_AI_DEGRADED' }).lean()
+    expect(slow).toHaveLength(1)
+    expect(slow[0]).toMatchObject({ status: 'ACTIVE', house_id: house._id, node_id: camera._id, metadata: { cause: 'LOW_FPS', min_fps: MIN_AI_FPS } })
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 12 } as never)
+    expect((await Alert.findById(slow[0]._id).lean())!.status).toBe('RESOLVED')
+  })
+
+  it('mất kết nối rồi quay lại vẫn chậm → đóng cảnh báo mất kết nối, mở cảnh báo chậm; heartbeat không có fps thì không xét', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 15 } as never)
+    await CameraNode.updateOne({ _id: camera._id }, { last_heartbeat: new Date(Date.now() - CAMERA_OFFLINE_THRESHOLD_MS - 1000) })
+    await markStaleDevicesOffline()
+    const offline = (await Alert.findOne({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' }).lean())!
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 6 } as never)
+    expect((await Alert.findById(offline._id).lean())!.status).toBe('RESOLVED')
+    const open = await Alert.find({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' }).lean()
+    expect(open.map(a => a.metadata)).toEqual([expect.objectContaining({ cause: 'LOW_FPS', fps: 6 })])
+
+    await recordHeartbeat({ deviceId: camera.device_id } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' })).toBe(1)
+  })
+
+  it('heartbeat fps 0 lúc nút AI vừa khởi động (chưa đo) không mở cảnh báo, không đóng cảnh báo đang mở', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 0, justConnected: true } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED' })).toBe(0)
+    expect((await CameraNode.findById(camera._id).lean())!.status).toBe('ONLINE')
+
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 6 } as never)
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 0 } as never)
+    expect(await Alert.countDocuments({ type: 'EDGE_AI_DEGRADED', status: 'ACTIVE' })).toBe(1)
+  })
+
+  it('nút AI tự gửi EDGE_AI_DEGRADED qua vision/alert, heartbeat sau đủ fps thì đóng', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 15 } as never)
+    const reported = (await ingestDeviceAlert({ deviceId: camera.device_id, type: 'EDGE_AI_DEGRADED', message: 'FPS 6' }))!
+    await recordHeartbeat({ deviceId: camera.device_id, fps: 15 } as never)
+    expect((await Alert.findById(reported._id).lean())!.status).toBe('RESOLVED')
+  })
+
   it('heartbeat đặt ONLINE + model_version; im quá ngưỡng → OFFLINE + EDGE_AI_DEGRADED của nhà; quay lại thì đóng', async () => {
     const { camera, house } = await seed()
     await CameraNode.updateOne({ _id: camera._id }, { status: 'PENDING' })
