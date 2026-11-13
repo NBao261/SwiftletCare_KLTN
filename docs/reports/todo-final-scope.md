@@ -288,7 +288,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
   - đăng ký N controller và camera qua API Admin;
   - publish telemetry, heartbeat và số đếm trên đúng topic của thiết bị thật;
   - có kịch bản gây sự cố (cảnh báo, mất kết nối) để test định tuyến và Work Order.
-- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004). *(Backend xong ở PR #151: cờ đi từ kho sang controller và camera, có trong `GET /devices/sensor-nodes`, `/camera-nodes`, `/admin/provisioned-devices`. Còn nhãn "giả lập" trên màn hình: Nhi (web Owner, Admin), Tuấn (console thiết bị của Admin), Len (mobile).)*
+- [ ] Mọi thiết bị giả lập có cờ `simulated`, hiện trên mọi màn hình (SYSTEM-FR-004). *(Backend xong ở PR #151: cờ đi từ kho sang controller và camera, có trong `GET /devices/sensor-nodes`, `/camera-nodes`, `/admin/provisioned-devices`. Còn nhãn "giả lập" trên màn hình: Nhi (web Owner, Admin), Tuấn (console thiết bị của Admin), Len (mobile).)* *(Web Owner xong — Nhi, 12/11, nhánh `feat/g09-device-setup`: nhãn "Giả lập" (`common/SimulatedBadge`) ở danh sách và chi tiết thiết bị, bảng và ngăn chi tiết thiết bị của trang nhà/Zone, thiết bị cần chú ý, khung camera AI, thẻ bộ điều khiển SCADA, khung camera trực tiếp; thiết bị thật không hiện gì. Còn web Admin: màn kho thiết bị (sau khi PR #139 merge) và `/system/devices` — `GET /devices/system-status` chưa trả `simulated`, cần Bảo hoặc Kiệt thêm.)*
 - [ ] Dùng cho:
   - NFR-03: 120 controller và 20 camera;
   - NFR-15: 30 cảnh báo và 10 Work Order, đo độ trễ leo thang và độ trễ xác minh phục hồi;

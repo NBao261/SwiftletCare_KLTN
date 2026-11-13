@@ -9,6 +9,7 @@ const SOCKET_URL = import.meta.env.VITE_WS_URL || ''
 
 let socket: Socket | null = null
 const joinedZones = new Map<string, number>()
+const joinedHouses = new Map<string, number>()
 
 /** Lazy-tạo 1 socket duy nhất cho cả app — connect/disconnect do useSocket() hook quản lý */
 export function getSocket(): Socket {
@@ -22,6 +23,7 @@ export function getSocket(): Socket {
     })
     socket.on('connect', () => {
       joinedZones.forEach((_count, zoneId) => socket?.emit('JOIN_ZONE', { zoneId }))
+      joinedHouses.forEach((_count, houseId) => socket?.emit('JOIN_HOUSE', { houseId }))
     })
   }
   return socket
@@ -41,6 +43,23 @@ export function leaveZone(zoneId: string) {
     return
   }
   joinedZones.set(zoneId, count - 1)
+}
+
+// Room house:<houseId> — trạng thái camera, số đếm chim và cảnh báo của cả nhà yến
+export function joinHouse(houseId: string) {
+  const count = joinedHouses.get(houseId) ?? 0
+  joinedHouses.set(houseId, count + 1)
+  if (count === 0) getSocket().emit('JOIN_HOUSE', { houseId })
+}
+
+export function leaveHouse(houseId: string) {
+  const count = joinedHouses.get(houseId) ?? 0
+  if (count <= 1) {
+    joinedHouses.delete(houseId)
+    getSocket().emit('LEAVE_HOUSE', { houseId })
+    return
+  }
+  joinedHouses.set(houseId, count - 1)
 }
 
 export function onTelemetryUpdate(cb: (data: TelemetryUpdateEvent) => void) {

@@ -1314,7 +1314,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 ### 13.4. Realtime — Socket.io
 
 - **[Bắt buộc]** Component/page **không** import `@/lib/socket`. Kết nối và đăng ký sự kiện đi qua hook (`useSocket`, `useTelemetry`, `useAlertNotifications`).
-- **[Bắt buộc]** Mọi `on*`/`joinZone` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`) — thiếu cleanup là rò listener mỗi lần đổi zone.
+- **[Bắt buộc]** Mọi `on*`/`joinZone`/`joinHouse` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`/`leaveHouse`) — thiếu cleanup là rò listener mỗi lần đổi zone hoặc nhà.
 - **[Bắt buộc]** Tên sự kiện và payload khớp backend và Report 4 §7.3: phòng `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE` — số đếm chim, camera, cảnh báo của nhà yến), phòng riêng `user:<id>`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`; type trong `types/socket.types.ts`.
 
 ### 13.5. Lỗi, loading, rỗng
@@ -1569,6 +1569,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `lib/helpers.ts` | `getApiErrorMessage` (nợ 13.16 b) · `formatDate`/`formatDateOnly` (nợ 6.1) · `formatRelativeTime` | — |
 | `lib/axios.ts` | instance API + tự làm mới phiên 401 | 13.1 |
 | `lib/socket.ts` | socket singleton — chỉ dùng qua hook | 13.4 |
+| `lib/qrCode.ts` | `deviceLabelCode` · `parseDeviceLabelCode` (nhãn thiết bị `swiftletcare://claim?d=&k=`) · `zoneCode` (mã tầng) · `qrDataUrl` · `printQrLabels` — cùng định dạng bộ đọc mobile | — |
 | `lib/queryClient.ts` | React Query client (30s, retry 1) | 13.2 |
 | `lib/navigation.ts` · `lib/chartTheme.ts` | chuyển về đăng nhập · theme Chart.js (bảng `CHART_COLORS` dùng cả cho recharts) | 8 |
 | `features/farm-owner/harvest/ChartParts.tsx` | Thành phần biểu đồ shadcn trên recharts: `ChartContainer`, `ChartTooltip(Content)`, `ChartLegend(Content)` — chỉ dùng trong trang Thu hoạch | 8 |

@@ -326,6 +326,9 @@ const vi = {
   // Đổi tên / xoá nhà, Zone (chờ API)
   'structure.house': 'nhà yến',
   'structure.zone': 'Zone',
+  // FARM-FR-011 — mã QR dán ở tầng, quét trên mobile để chọn Zone khi thiết lập bộ điều khiển
+  'zone.printFloorCode': 'In mã QR tầng',
+  'zone.floorCodeHint': 'Quét để chọn tầng khi thiết lập bộ điều khiển',
   'structure.rename': 'Đổi tên {target}',
   'structure.delete': 'Xoá {target}',
   'structure.renameTitle': 'Đổi tên {target} {name}',
@@ -669,6 +672,8 @@ const en: Record<Key, string> = {
   'addHouse.errorDuplicate': 'A house with this name already exists — pick another name',
   'structure.house': 'house',
   'structure.zone': 'zone',
+  'zone.printFloorCode': 'Print floor code',
+  'zone.floorCodeHint': 'Scan to choose this floor when setting up a controller',
   'structure.rename': 'Rename {target}',
   'structure.delete': 'Delete {target}',
   'structure.renameTitle': 'Rename {target} {name}',
