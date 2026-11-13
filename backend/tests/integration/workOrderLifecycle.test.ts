@@ -109,6 +109,20 @@ describe('mở Work Order (OPS-FR-001, BR-39)', () => {
     expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ ref: expect.objectContaining({ kind: 'work_order' }) }))
   })
 
+  it('ACTUATOR_FAULT của bơm và của quạt trên cùng controller mở hai Work Order (THREAT-FR-014)', async () => {
+    const { farm, zone, node } = await seed()
+    const fault = (load: string) => createAlert({
+      farmId: String(farm._id), zoneId: String(zone._id), nodeId: String(node._id), type: 'ACTUATOR_FAULT',
+      title: `ACTUATOR_FAULT ${load}`, message: 'tải không theo relay', details: { load },
+    })
+    await fault('misting')
+    await fault('ventilation')
+    expect(await Alert.countDocuments({ type: 'ACTUATOR_FAULT' })).toBe(2)
+    const orders = await WorkOrder.find({ alert_type: 'ACTUATOR_FAULT' }).lean()
+    expect(orders).toHaveLength(2)
+    expect(new Set(orders.map(o => String(o.alert_id))).size).toBe(2)
+  })
+
   it('cảnh báo đo trực tiếp khác (vượt ngưỡng) không mở Work Order', async () => {
     const { raise } = await seed()
     await raise('THRESHOLD_BREACH')
