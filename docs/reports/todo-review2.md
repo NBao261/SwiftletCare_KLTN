@@ -464,9 +464,9 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-18 — Việc nhỏ (P2) — Kiệt
 
-- [ ] ENV-FR-007: bắt buộc nguồn khi Admin đổi ngưỡng mặc định (422).
-- [ ] HARVEST-FR-001: số tổ, khối lượng > 0, ngày không ở tương lai.
-- [ ] (Tùy chọn) ENV-FR-026; device ID lấy từ MAC.
+- [x] ENV-FR-007: bắt buộc nguồn khi Admin đổi ngưỡng mặc định (422). *Backend xong (Kiệt, 13/11, nhánh `feat/g18-small-rules`, spec 302f36f7, code 56cd7a51): `source` phải chứa mã mục REF-5 (`TL-xxx`, `MC-xxx`), audit ghi cũ, mới, nguồn; `GET` trả nguồn và lịch sử đổi (SYSTEM-FR-002). Còn ô nguồn trên trang Admin web (Nhi).*
+- [x] HARVEST-FR-001: số tổ, khối lượng > 0, ngày không ở tương lai. *Backend xong (Kiệt, 13/11, d9140f82): kiểm lúc tạo và lúc sửa (422), ngày sau hôm nay theo giờ VN bị chặn.*
+- [x] (Tùy chọn) ENV-FR-026; device ID lấy từ MAC. *ENV-FR-026 xong (Kiệt, 13/11, 56cd7a51): báo trong app cho chuyên gia (Farm Owner nếu farm chưa có chuyên gia) các zone khác mặc định mới. Device ID từ MAC không làm: đổi định danh firmware, provisioning và QR nhãn.*
 
 ### G-20 — Farm Technician thay vai Technician cũ (P1, phạm vi cuối 09/11/2026) — Kiệt (backend), Tuấn (console thiết bị của Admin), Len (đăng nhập technician trên mobile), Nhi (màn gán nhà)
 
