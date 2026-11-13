@@ -42,6 +42,13 @@ export const ENDPOINTS = {
   CAMERA_NODES: '/devices/camera-nodes',
   SENSOR_NODE_REGISTER: '/devices/sensor-nodes/register',
   CAMERA_NODE_REGISTER: '/devices/camera-nodes/register',
+  // Dời controller sang khu vực khác (FARM-FR-007b); gỡ, khôi phục trong 24 giờ, thay thiết bị (FARM-FR-008)
+  SENSOR_NODE_REASSIGN_ZONE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/reassign-zone`,
+  SENSOR_NODE_DECOMMISSION: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/decommission`,
+  SENSOR_NODE_RESTORE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/restore`,
+  SENSOR_NODE_REPLACE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/replace`,
+  CAMERA_NODE_DECOMMISSION: (cameraId: string) => `/devices/camera-nodes/${cameraId}/decommission`,
+  CAMERA_NODE_RESTORE: (cameraId: string) => `/devices/camera-nodes/${cameraId}/restore`,
   RELAY_CONTROL: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay`,
   RELAY_OVERRIDE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-override`,
   RELAY_OVERRIDES: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-overrides`,

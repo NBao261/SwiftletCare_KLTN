@@ -75,7 +75,7 @@ static const char *SAVED_HTML = R"HTML(
 align-items:center;justify-content:center;text-align:center;padding:0 24px}</style>
 </head><body><div>
 <h2>Da luu cau hinh moi</h2>
-<p>Thiet bi dang khoi dong lai va ket noi. Neu sai WiFi/MQTT broker, thiet bi
+<p>Thiet bi dang khoi dong lai va ket noi. Neu sai WiFi, thiet bi
 se tu phat lai mang cau hinh nay de ban nhap lai.</p>
 </div></body></html>
 )HTML";
@@ -184,7 +184,8 @@ void startCaptivePortal(AsyncWebServer &server) {
     }
 #endif
 
-    // farm, house, zone không có trên thiết bị: backend giữ từ lúc đăng ký (FARM-FR-003c, Report 4 D3)    request->send(200, "text/html", SAVED_HTML);
+    // farm, house, zone không có trên thiết bị: backend giữ từ lúc đăng ký (FARM-FR-003c, Report 4 D3)
+    request->send(200, "text/html", SAVED_HTML);
     // Delay nhỏ để response kịp gửi về trình duyệt trước khi mất kết nối AP
     delay(1500);
     ESP.restart();
