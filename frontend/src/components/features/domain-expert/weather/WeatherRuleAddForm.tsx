@@ -1,10 +1,8 @@
-/**
- * WeatherRuleAddForm — Form thêm một luật bù thời tiết mới
- * ENV-FR-030, BR-38: metric, min, offset_pct (−10…+10 ≠ 0), duration_min (1…120)
- */
+// ENV-FR-030, BR-38 — Form thêm luật bù thời tiết: metric, min, offset_pct (−10…+10 ≠ 0), duration_min (1…120)
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { Button } from '@/components/ui/Button'
 import type { WeatherRule } from '@/types/expert.types'
 import { validateWeatherRule, isWeatherRuleValid, METRIC_MIN_RANGE } from '@/validations/common/weatherRule.validation'
 
@@ -41,19 +39,18 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
   }
 
   const inputCls = (err?: string) => cn(
-    'w-full rounded-lg border px-2.5 py-1.5 text-xs text-[#27231F] bg-white outline-none transition-colors',
-    err ? 'border-red-400 focus:ring-1 focus:ring-red-300' : 'border-neutral-200 focus:border-[#27231F] focus:ring-1 focus:ring-[#27231F]/20',
+    'w-full rounded-lg border px-2.5 py-1.5 text-sm text-charcoal bg-white outline-none transition-colors',
+    err ? 'border-alertRed focus:ring-1 focus:ring-alertRed/30' : 'border-warmGray/15 focus:border-charcoal focus:ring-1 focus:ring-charcoal/20',
     disabled && 'opacity-50 cursor-not-allowed',
   )
 
   return (
-    <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/60 p-3.5 space-y-3">
-      <p className="text-xs font-semibold text-[#27231F]">Thêm luật mới</p>
+    <div className="rounded-2xl border border-dashed border-warmGray/30 bg-warmGray/5 p-4 space-y-3">
+      <p className="text-sm font-semibold text-charcoal">Thêm luật mới</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Chỉ số */}
         <div className="sm:col-span-2 space-y-1">
-          <label className="text-[11px] text-[#878380] font-medium">Chỉ số thời tiết</label>
+          <label className="text-xs text-warmGray font-medium">Chỉ số thời tiết</label>
           <select
             value={draft.metric}
             onChange={e => setDraft(d => ({ ...d, metric: e.target.value as WeatherRule['metric'], min: undefined }))}
@@ -65,12 +62,11 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-          {errors.metric && <p className="text-[10.5px] text-red-500">{errors.metric}</p>}
+          {errors.metric && <p className="text-xs text-alertRed">{errors.metric}</p>}
         </div>
 
-        {/* Ngưỡng min */}
         <div className="space-y-1">
-          <label className="text-[11px] text-[#878380] font-medium">
+          <label className="text-xs text-warmGray font-medium">
             Ngưỡng {metaRange ? `(${metaRange.min}…${metaRange.max} ${metaRange.unit})` : ''}
           </label>
           <input
@@ -81,12 +77,11 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
             placeholder={metaRange ? `vd. ${metaRange.max * 0.7 | 0}` : '—'}
             className={inputCls(errors.min)}
           />
-          {errors.min && <p className="text-[10.5px] text-red-500">{errors.min}</p>}
+          {errors.min && <p className="text-xs text-alertRed">{errors.min}</p>}
         </div>
 
-        {/* Mức bù */}
         <div className="space-y-1">
-          <label className="text-[11px] text-[#878380] font-medium">Mức bù phun (−10…+10, ≠ 0)</label>
+          <label className="text-xs text-warmGray font-medium">Mức bù phun (−10…+10, ≠ 0)</label>
           <input
             type="number"
             value={draft.offset_pct ?? ''}
@@ -96,12 +91,11 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
             placeholder="vd. +5 hoặc −3"
             className={inputCls(errors.offset_pct)}
           />
-          {errors.offset_pct && <p className="text-[10.5px] text-red-500">{errors.offset_pct}</p>}
+          {errors.offset_pct && <p className="text-xs text-alertRed">{errors.offset_pct}</p>}
         </div>
 
-        {/* Thời hạn */}
         <div className="space-y-1">
-          <label className="text-[11px] text-[#878380] font-medium">Thời hạn (1…120 phút)</label>
+          <label className="text-xs text-warmGray font-medium">Thời hạn (1…120 phút)</label>
           <input
             type="number"
             value={draft.duration_min ?? ''}
@@ -111,22 +105,14 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
             placeholder="vd. 60"
             className={inputCls(errors.duration_min)}
           />
-          {errors.duration_min && <p className="text-[10.5px] text-red-500">{errors.duration_min}</p>}
+          {errors.duration_min && <p className="text-xs text-alertRed">{errors.duration_min}</p>}
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={disabled}
-        className={cn(
-          'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-          'bg-[#27231F] text-white hover:bg-[#3D3630] disabled:opacity-50 disabled:cursor-not-allowed',
-        )}
-      >
+      <Button variant="primary" size="sm" onClick={handleSubmit} disabled={disabled}>
         <Plus className="w-3.5 h-3.5" />
         Thêm luật
-      </button>
+      </Button>
     </div>
   )
 }
