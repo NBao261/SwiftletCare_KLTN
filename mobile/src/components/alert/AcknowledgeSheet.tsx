@@ -10,9 +10,10 @@ import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import { useAcknowledgeAlert } from '@/hooks/alert/useAcknowledgeAlert'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { Alert } from '@/types'
+import type { Alert, SiteCause } from '@/types'
 import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
-import { getAlertTypeLabel } from '@/utils/label.utils'
+import { getAlertTypeLabel, getSiteCauseLabel } from '@/utils/label.utils'
+import { isCauseAlertType, SITE_CAUSES } from '@/utils/workOrder.utils'
 import { t } from '@/utils/i18n.utils'
 
 const NOTE_INPUT_HEIGHT = 96
@@ -36,7 +37,8 @@ interface AcknowledgeSheetProps {
   onDone: (message: string) => void
 }
 
-// Xác nhận đã biết một cảnh báo (ALERT-FR-009, chỉ chủ trại): chip ghi chú nhanh hoặc tự gõ, để trống vẫn lưu được.
+// Xác nhận đã biết một cảnh báo (ALERT-FR-009): chủ trại và kỹ thuật viên nhà được giao; chip ghi chú nhanh hoặc tự gõ, để trống
+// vẫn lưu được. Cảnh báo thiết bị có thêm ô nguyên nhân tìm thấy tại chỗ, không bắt buộc, chạm lần nữa để bỏ chọn (ALERT-FR-018).
 // Cảnh báo vừa đổi trạng thái (409) thì báo và tải lại
 export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetProps) {
   const palette = usePalette()
@@ -44,6 +46,8 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
   const acknowledge = useAcknowledgeAlert()
   const [quickNote, setQuickNote] = useState<QuickNote | null>(null)
   const [note, setNote] = useState('')
+  const [cause, setCause] = useState<SiteCause | null>(null)
+  const hasCause = alert ? isCauseAlertType(alert.type) : false
 
   const selectQuickNote = (id: QuickNote) => {
     setQuickNote(id)
@@ -53,7 +57,7 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
   const save = () => {
     if (!alert) return
     acknowledge.mutate(
-      { alertId: alert._id, note: note.trim() || undefined },
+      { alertId: alert._id, note: note.trim() || undefined, cause: hasCause && cause ? cause : undefined },
       {
         onSuccess: () => onDone(t('Đã xác nhận cảnh báo')),
         onError: error => {
@@ -78,6 +82,20 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
           {alert ? getAlertTypeLabel(alert.type) : ''}
         </Text>
       </View>
+      {hasCause && (
+        <View style={styles.field}>
+          <Text variant="small" weight="semiBold" color={palette.textSecondary}>
+            {t('Nguyên nhân tìm thấy tại chỗ (nếu đã biết)')}
+          </Text>
+          <ChoiceChips
+            options={SITE_CAUSES.map(item => ({ id: item, label: getSiteCauseLabel(item) }))}
+            selectedId={cause}
+            onSelect={id => setCause(current => (current === id ? null : id))}
+            placement="card"
+            accessibilityLabel={t('Nguyên nhân tìm thấy tại chỗ')}
+          />
+        </View>
+      )}
       <ChoiceChips
         options={getQuickNotes()}
         selectedId={quickNote}
@@ -110,6 +128,7 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
 
 const styles = StyleSheet.create({
   header: { gap: Spacing.xs },
+  field: { gap: Spacing.sm },
   input: {
     ...Typography.body,
     height: NOTE_INPUT_HEIGHT,
