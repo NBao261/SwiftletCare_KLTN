@@ -1671,6 +1671,12 @@ ensureCollection("telemetries", {
     "ventilation_on": {
       "bsonType": ["bool", "null"]
     },
+    "pump_current_a": {
+      "bsonType": ["number", "null"]
+    },
+    "fan_current_a": {
+      "bsonType": ["number", "null"]
+    },
     "is_anomaly": {
       "bsonType": ["bool", "null"]
     },

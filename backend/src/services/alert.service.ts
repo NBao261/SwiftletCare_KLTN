@@ -37,7 +37,15 @@ export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
  * trên firmware để thử lại vẫn khô thì gộp vào cùng 1 cảnh báo), không có nguồn nuôi yến.
  */
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
-export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE']
+/**
+ * `ACTUATOR_FAULT` (THREAT-FR-014): firmware gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào tải còn không theo relay,
+ * nên cảnh báo tự đóng khi tải chạy đúng trở lại và firmware thôi gửi.
+ */
+export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT']
+
+/** THREAT-FR-014 — hai tải có đo dòng; cảnh báo nêu tải nào (bơm phun sương hoặc quạt) */
+export const ACTUATOR_LOADS = ['misting', 'ventilation'] as const
+const ACTUATOR_FAULT_KINDS = ['NO_CURRENT_WHILE_ON', 'CURRENT_WHILE_OFF'] as const
 
 /**
  * Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này.
@@ -164,6 +172,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     house_id: input.houseId,
     node_id: input.nodeId,
     type: input.type,
+    // THREAT-FR-014 — bơm hỏng và quạt hỏng trên cùng controller là hai sự cố, mỗi tải một cảnh báo
+    ...(input.type === 'ACTUATOR_FAULT' && typeof input.details?.load === 'string' && { 'details.load': input.details.load }),
     status: { $in: OPEN_STATUSES },
   }).select('_id created_at last_seen_at').lean()
   if (open) {
@@ -265,6 +275,8 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
         common.details = { reset_reason: resetReason }
       }
     }
+    // THREAT-FR-014 — tải nào không theo relay, theo hướng nào, so với mức đã học; giá trị lạ thì bỏ
+    if (type === 'ACTUATOR_FAULT') common.details = actuatorFaultDetails(message)
     // `name` cho tiêu đề mặc định — firmware không gửi kèm title
     const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
     if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
@@ -285,6 +297,21 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     ...common, farmId: String(house.farm_id), houseId: String(house._id), nodeId: String(camera._id),
     title: (message.title as string | undefined) ?? `${type} tại ${house.name}`,
   })
+}
+
+/**
+ * THREAT-FR-014, BR-32 — chi tiết `ACTUATOR_FAULT` từ firmware: `load` (misting | ventilation), `fault`
+ * (NO_CURRENT_WHILE_ON | CURRENT_WHILE_OFF), `normalCurrentA`, `currentA`. Trường thiếu hoặc sai kiểu thì bỏ, không
+ * từ chối cảnh báo: báo lỗi tải quan trọng hơn đủ chi tiết.
+ */
+function actuatorFaultDetails(message: Record<string, unknown>): Record<string, unknown> | undefined {
+  const isAmps = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
+  const details: Record<string, unknown> = {}
+  if (ACTUATOR_LOADS.includes(message.load as never)) details.load = message.load
+  if (ACTUATOR_FAULT_KINDS.includes(message.fault as never)) details.fault = message.fault
+  if (isAmps(message.normalCurrentA)) details.normal_current_a = message.normalCurrentA
+  if (isAmps(message.currentA)) details.current_a = message.currentA
+  return Object.keys(details).length > 0 ? details : undefined
 }
 
 /**

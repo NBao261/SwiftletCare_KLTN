@@ -387,7 +387,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Live-data label, zone balance bands | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`, `ZoneBalanceCard` |
 | Health-indicator level defaults | backend `DEFAULT_HEALTH_LEVELS` (`detectionTuning.util.ts`), `COMPLETENESS_MIN_PCT` (`healthAssessment.service.ts`) |
 | Rain confounder, rating window | backend `RAIN_MM_PER_HOUR`, `RATING_WINDOW_DAYS` (`healthAssessment.service.ts`) |
-| Actuator current check | firmware actuator-current monitor |
+| Actuator current check | firmware `ActuatorCurrentMonitor::LEARN_MS`, `HOLD_MS`, `ON_MIN_RATIO`, `OFF_MAX_RATIO` (`pid/ActuatorCurrentMonitor.h`) |
 | Weather fetch | backend `jobs/weather.job.ts`, `WEATHER_FETCH_TIMEOUT_MS` (`weather.service.ts`) |
 | Evaluation range | backend `MAX_EVALUATION_RANGE` (`healthDay.service.ts`) |
 | Size of one installation | staging sizing (Section 3.4) and the NFR-03 load script |
