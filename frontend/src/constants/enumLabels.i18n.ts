@@ -1,5 +1,5 @@
 import type { Dictionary } from '@/lib/i18n';
-import type { AlertStatus, AlertType, DeviceStatus, Role } from '@/types';
+import type { AlertStatus, AlertType, DeviceStatus, Role, SiteCause, WorkOrderOrigin, WorkOrderStatus } from '@/types';
 
 // Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
 
@@ -67,6 +67,50 @@ export const roleDict: Dictionary<Role> = {
     FARM_TECHNICIAN: 'Farm Technician',
     DOMAIN_EXPERT: 'Expert',
   },
+};
+
+// Trạng thái Work Order (Report 3 §6.19, SM-19)
+export const workOrderStatusDict: Dictionary<WorkOrderStatus> = {
+  vi: {
+    OPEN: 'Chưa bắt đầu',
+    IN_PROGRESS: 'Đang làm',
+    VERIFYING: 'Đang kiểm dữ liệu',
+    AWAITING_APPROVAL: 'Chờ duyệt',
+    CLOSED: 'Đã đóng',
+    CANCELLED: 'Đã huỷ',
+  },
+  en: {
+    OPEN: 'Not started',
+    IN_PROGRESS: 'In progress',
+    VERIFYING: 'Verifying data',
+    AWAITING_APPROVAL: 'Awaiting approval',
+    CLOSED: 'Closed',
+    CANCELLED: 'Cancelled',
+  },
+};
+
+// Nguồn mở Work Order (OPS-FR-001, BR-39)
+export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
+  vi: {
+    ALERT: 'Cảnh báo thiết bị',
+    OUTAGE: 'Mất kết nối quá 30 phút',
+    EXPERT: 'Chuyên gia xác nhận cần tới nhà',
+    ONSITE_CHECK: 'Kỹ thuật viên thấy cảm biến hỏng',
+    MANUAL: 'Chủ nhà yến tạo',
+  },
+  en: {
+    ALERT: 'Equipment alert',
+    OUTAGE: 'Offline for over 30 minutes',
+    EXPERT: 'Expert confirmed a visit is needed',
+    ONSITE_CHECK: 'Technician found a faulty sensor',
+    MANUAL: 'Created by the Farm Owner',
+  },
+};
+
+// Nguyên nhân tìm thấy tại chỗ (ALERT-FR-018)
+export const siteCauseDict: Dictionary<SiteCause> = {
+  vi: { WATER: 'Nước', NOZZLE: 'Béc phun', PUMP: 'Bơm', FAN: 'Quạt', DOOR: 'Cửa', SENSOR: 'Cảm biến', SPEAKER: 'Loa', OTHER: 'Khác' },
+  en: { WATER: 'Water', NOZZLE: 'Nozzle', PUMP: 'Pump', FAN: 'Fan', DOOR: 'Door', SENSOR: 'Sensor', SPEAKER: 'Speaker', OTHER: 'Other' },
 };
 
 // Gắn tiền tố vào key để từ điển màn dùng lại nhãn chung (VD 'status.' + NEW → 'status.NEW')

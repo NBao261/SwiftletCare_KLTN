@@ -754,6 +754,8 @@ Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới th
 | Đếm chim · Tỷ lệ chim về | Bird count · Return rate | |
 | Vòng đếm · Lịch đếm (theo mùa, tạm thời) | Counting ring · Counting schedule (seasonal, temporary) | VISION-FR-018, 019 |
 | Thu hoạch | Harvest | |
+| Phiếu công việc · Tạo · Chưa đóng · Duyệt · Mở lại · Huỷ · Giao lại | Work order · Create · Open · Approve · Reopen · Cancel · Reassign | MF-02, OPS-FR-001…004; tài liệu và backend gọi "Work Order" và "open", giao diện tiếng Việt dùng "phiếu công việc", "tạo" (không dùng "mở phiếu") |
+| Thời gian xác nhận TB · Thời gian xử lý TB | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR (OPS-FR-009, BR-40) |
 | Vị trí (farm) · Vĩ độ · Kinh độ | Location · Latitude · Longitude | Một farm là một địa điểm (FARM-FR-001, A-5); không có "khu vực" |
 
 ### 6.3. Quy ước key i18n
@@ -983,6 +985,7 @@ module.exports = {
 | Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | I (mọi farm; chỉ cấu trúc, thiết bị, cảnh báo thiết bị) | – |
 | Xoá farm, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | – |
 | Ghi nhận thu hoạch | R | I | – | – |
+| Phiếu công việc (Work Order) sửa chữa: mở tay, duyệt, mở lại, huỷ, giao lại; MTTA/MTTR theo nhà (OPS-FR-001…004, 009) | R | I (chỉ đọc) | – (làm trên mobile) | – |
 | Tài khoản (tạo Technician, khoá/mở), cấu hình mặc định, audit log, tổng quan kỹ thuật | I | I | I | R |
 | Chọn bài loa ru / nghe thử | R | – | – | – |
 | Lịch loa của bộ điều khiển (BR-07) | R | – | – | – |

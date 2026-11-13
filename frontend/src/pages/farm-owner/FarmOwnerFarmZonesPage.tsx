@@ -14,6 +14,7 @@ import DeviceListTable from '@/components/features/farm-owner/farms/DeviceListTa
 import DeviceDetailDrawer from '@/components/features/farm-owner/farms/DeviceDetailDrawer'
 import FarmMembersManager from '@/components/features/farm-owner/farms/FarmMembersManager'
 import AddZoneModal from '@/components/features/farm-owner/farms/AddZoneModal'
+import HouseOpsMetricsCard from '@/components/features/farm-owner/work-orders/HouseOpsMetricsCard'
 import StructureEditModal from '@/components/features/farm-owner/farms/StructureEditModal'
 import ActionsMenu from '@/components/ui/ActionsMenu'
 import { NO_VALUE } from '@/constants/display'
@@ -51,6 +52,8 @@ export default function FarmOwnerFarmZonesPage() {
   const staffByHouse = useHouseStaff(pageHouses)
   // FARM-FR-002 — chỉ Farm Owner tạo Zone
   const isFarmOwner = usePermission('FARM_OWNER')
+  // OPS-FR-009 — MTTA, MTTR: Farm Owner và Domain Expert (kỹ thuật viên nhận 403)
+  const canViewOpsMetrics = usePermission('FARM_OWNER', 'DOMAIN_EXPERT')
 
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'devices' ? 'devices' : 'overview')
@@ -216,6 +219,7 @@ export default function FarmOwnerFarmZonesPage() {
             <aside className="flex flex-col gap-6">
               {canViewHarvest && <HouseProductionCard node={node} recent={node.recent} nextHarvestAt={extras?.nextHarvest[house._id]} />}
               <AttentionDevicesCard counts={node.counts} problems={problems} zoneNameById={zoneNameById} onSelect={setSelected} />
+              {canViewOpsMetrics && <HouseOpsMetricsCard farmId={farm._id} houseId={house._id} />}
               {/* EXPERT-FR-008 — mức giảm tỷ lệ chim về của nhà do chuyên gia đặt, chủ nhà yến chỉ xem */}
               <FarmFrame title={t('tuning.birdTitle')} description={t('tuning.birdDesc')}>
                 <div className="rounded-2xl border border-warmGray/15 bg-white p-4">
