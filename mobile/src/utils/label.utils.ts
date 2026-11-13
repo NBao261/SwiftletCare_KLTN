@@ -8,9 +8,13 @@ import type {
   DeviceStatus,
   FuzzyTuning,
   NestType,
+  OnsiteObservation,
   RelayName,
   Role,
+  SiteCause,
   Thresholds,
+  WorkOrderOrigin,
+  WorkOrderStatus,
 } from '@/types'
 import type { SensorMetric, ThresholdMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
@@ -242,4 +246,64 @@ const ALERT_STATUS_LABELS: Record<AlertStatus, string> = {
 
 export function getAlertStatusLabel(status: AlertStatus): string {
   return t(ALERT_STATUS_LABELS[status])
+}
+
+// Nguyên nhân tìm thấy tại chỗ (ALERT-FR-018), cùng chữ với todo G-21: nước, béc phun, bơm, quạt, cửa, cảm biến, loa, khác
+const SITE_CAUSE_LABELS: Record<SiteCause, string> = {
+  WATER: 'Nước',
+  NOZZLE: 'Béc phun',
+  PUMP: 'Bơm',
+  FAN: 'Quạt',
+  DOOR: 'Cửa',
+  SENSOR: 'Cảm biến',
+  SPEAKER: 'Loa',
+  OTHER: 'Khác',
+}
+
+export function getSiteCauseLabel(cause: SiteCause): string {
+  return t(SITE_CAUSE_LABELS[cause])
+}
+
+// Điều thợ quan sát được khi kiểm tra tại chỗ (EXPERT-FR-021)
+const ONSITE_OBSERVATION_LABELS: Record<OnsiteObservation, string> = {
+  BIRDS_DISTURBED: 'Chim bị động',
+  WORK_OR_PEOPLE_NEARBY: 'Có người hoặc công việc gần đó',
+  RAIN: 'Mưa',
+  SENSOR_DIRTY_OR_FAULTY: 'Cảm biến bẩn hoặc hỏng',
+  NOTHING_UNUSUAL: 'Không có gì lạ',
+  OTHER: 'Khác',
+}
+
+// Thứ tự hiện trên form trả lời
+export const ONSITE_OBSERVATIONS = Object.keys(ONSITE_OBSERVATION_LABELS) as OnsiteObservation[]
+
+export function getOnsiteObservationLabel(observation: OnsiteObservation): string {
+  return t(ONSITE_OBSERVATION_LABELS[observation])
+}
+
+// Trạng thái Work Order (Report 3 §6.19, SM-19)
+const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
+  OPEN: 'Chờ bắt đầu',
+  IN_PROGRESS: 'Đang làm',
+  VERIFYING: 'Đang kiểm dữ liệu',
+  AWAITING_APPROVAL: 'Chờ chủ trại duyệt',
+  CLOSED: 'Đã đóng',
+  CANCELLED: 'Đã huỷ',
+}
+
+export function getWorkOrderStatusLabel(status: WorkOrderStatus): string {
+  return t(WORK_ORDER_STATUS_LABELS[status])
+}
+
+// Nguồn mở Work Order (BR-39)
+const WORK_ORDER_ORIGIN_LABELS: Record<WorkOrderOrigin, string> = {
+  ALERT: 'Mở tự động từ cảnh báo thiết bị',
+  OUTAGE: 'Mở tự động: thiết bị mất kết nối quá 30 phút',
+  EXPERT: 'Chuyên gia xác nhận cần tới nhà',
+  ONSITE_CHECK: 'Kiểm tra tại chỗ thấy cảm biến hỏng',
+  MANUAL: 'Chủ trại mở',
+}
+
+export function getWorkOrderOriginLabel(origin: WorkOrderOrigin): string {
+  return t(WORK_ORDER_ORIGIN_LABELS[origin])
 }
