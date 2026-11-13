@@ -3,11 +3,17 @@ import { SystemSetting } from '@/models/systemSetting.model'
 import { Farm } from '@/models/farm.model'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { User } from '@/models/user.model'
+import { Zone } from '@/models/houseZone.model'
 import { summarizeByStatus } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
-import { listActiveHouseIds, listActiveZoneIds } from '@/utils/farmAccess.util'
+import { createInAppNotification, findRecipients } from '@/services/notification.service'
+import { AppError } from '@/utils/appError.util'
+import { activeExpertIds, listActiveHouseIds, listActiveZoneIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
-import { DEFAULT_THRESHOLDS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
+import logger from '@/utils/logger.util'
+import {
+  DEFAULT_THRESHOLDS, REF5_ENTRY_PATTERN, SOURCE_MAX_LENGTH, THRESHOLD_KEYS, assertValidThresholds, pickThresholds,
+} from '@/utils/thresholds.util'
 import type { Thresholds } from '@/types'
 
 // ── SYSTEM-FR-001: Audit Log viewer ──────────────────────────────────────────
@@ -88,16 +94,120 @@ async function writeSetting(update: Record<string, unknown>): Promise<void> {
   }
 }
 
+/** Số lần đổi gần nhất trả kèm ngưỡng mặc định (SYSTEM-FR-002) — giới hạn hiển thị, không phải luật nghiệp vụ */
+const DEFAULT_THRESHOLDS_HISTORY_LIMIT = 20
+
+export interface DefaultThresholdsChange {
+  at: Date
+  by: string | null
+  source: string | null
+  before?: Thresholds
+  after?: Thresholds
+}
+
+export type DefaultThresholdsView = Thresholds & {
+  source: string | null
+  updated_at: Date | null
+  updated_by: string | null
+  history: DefaultThresholdsChange[]
+}
+
+/**
+ * SYSTEM-FR-002 — ngưỡng mặc định kèm nguồn của lần đổi gần nhất và lịch sử đổi (từ audit log, nên lần
+ * đổi trước G-18 có `source: null`).
+ */
+export async function getDefaultThresholdsView(): Promise<DefaultThresholdsView> {
+  const [setting, logs] = await Promise.all([
+    SystemSetting.findOne(SINGLETON).lean(),
+    AuditLog.find({ action: 'DEFAULT_THRESHOLDS_UPDATED' })
+      .sort({ created_at: -1 }).limit(DEFAULT_THRESHOLDS_HISTORY_LIMIT).lean(),
+  ])
+  const metaOf = (m: Record<string, unknown> | undefined) => (m ?? {}) as { before?: Thresholds; after?: Thresholds; source?: string }
+  return {
+    ...(setting?.default_thresholds ?? DEFAULT_THRESHOLDS),
+    source: setting?.default_thresholds_source ?? null,
+    updated_at: setting?.default_thresholds_updated_at ?? null,
+    updated_by: setting?.updated_by ? String(setting.updated_by) : null,
+    history: logs.map(l => {
+      const meta = metaOf(l.metadata)
+      return {
+        at: l.created_at,
+        by: l.actor_id ? String(l.actor_id) : null,
+        source: meta.source ?? null,
+        before: meta.before,
+        after: meta.after,
+      }
+    }),
+  }
+}
+
+/**
+ * ENV-FR-007 — Admin đổi ngưỡng mặc định, bắt buộc kèm nguồn là một mục của REF-5 (route kiểm trước; kiểm
+ * lại ở đây cho mọi đường gọi). Mặc định chỉ là giá trị tham khảo: ngưỡng của mọi zone đang có giữ nguyên
+ * và không gửi cấu hình nào xuống controller; zone tạo hoặc reset sau đó mới lấy giá trị mới (ENV-FR-020).
+ */
 export async function updateDefaultThresholds(
   adminId: string, input: Record<string, unknown>,
 ): Promise<Thresholds> {
+  const source = typeof input.source === 'string' ? input.source.trim() : ''
+  if (!REF5_ENTRY_PATTERN.test(source) || source.length > SOURCE_MAX_LENGTH) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Nguồn phải chứa mã một mục của REF-5 (TL-xxx hoặc MC-xxx)')
+  }
+  const changes = pickThresholds(input)
+  if (Object.keys(changes).length === 0) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Không có ngưỡng nào để đổi')
+  }
   const before = await getDefaultThresholds()
-  const after: Thresholds = { ...before, ...pickThresholds(input) }
+  const after: Thresholds = { ...before, ...changes }
   assertValidThresholds(after)
 
-  await writeSetting({ default_thresholds: after, updated_by: adminId })
-  await logAction(adminId, 'DEFAULT_THRESHOLDS_UPDATED', 'system_settings', undefined, { before, after })
+  await writeSetting({
+    default_thresholds: after, default_thresholds_source: source,
+    default_thresholds_updated_at: new Date(), updated_by: adminId,
+  })
+  await logAction(adminId, 'DEFAULT_THRESHOLDS_UPDATED', 'system_settings', undefined, { before, after, source })
+
+  const changedKeys = THRESHOLD_KEYS.filter(k => before[k] !== after[k])
+  if (changedKeys.length > 0) {
+    void notifyZonesDifferingFromDefaults(changedKeys, after).catch((err: Error) =>
+      logger.warn('Báo zone khác ngưỡng mặc định mới thất bại', { err }))
+  }
   return after
+}
+
+type ThresholdKey = typeof THRESHOLD_KEYS[number]
+
+/**
+ * ENV-FR-026 — sau khi đổi mặc định, mỗi farm có zone khác mặc định mới ở một trường vừa đổi nhận một
+ * thông báo trong ứng dụng liệt kê các zone đó: gửi Domain Expert còn hoạt động, farm chưa có chuyên gia
+ * thì các Farm Owner (BR-22). Không áp gì vào zone: Farm Owner hoặc chuyên gia tự reset hay sửa.
+ */
+export async function notifyZonesDifferingFromDefaults(changedKeys: ThresholdKey[], after: Thresholds): Promise<void> {
+  const zones = await Zone.find({
+    $or: changedKeys.map(k => ({ [`thresholds.${k}`]: { $ne: after[k] } })),
+  }).select('farm_id name thresholds').lean()
+  if (zones.length === 0) return
+
+  const byFarm = new Map<string, typeof zones>()
+  for (const z of zones) byFarm.set(String(z.farm_id), [...(byFarm.get(String(z.farm_id)) ?? []), z])
+  // Model Farm tự ẩn farm đã xoá mềm
+  const farms = await Farm.find({ _id: { $in: [...byFarm.keys()] } }).select('name members')
+
+  await Promise.all(farms.map(async farm => {
+    const experts = await activeExpertIds(farm)
+    const recipients = experts.length > 0
+      ? experts
+      : (await findRecipients(String(farm._id))).map(u => String(u._id))
+    const lines = (byFarm.get(String(farm._id)) ?? []).map(z => {
+      const differing = changedKeys.filter(k => z.thresholds?.[k] !== after[k])
+      return `${z.name}: ${differing.map(k => `${k} ${z.thresholds?.[k]} (mặc định mới ${after[k]})`).join(', ')}`
+    })
+    const message = {
+      title: `Ngưỡng mặc định đã đổi: ${lines.length} zone của ${farm.name} khác mặc định mới`,
+      body: `${lines.join('; ')}. Ngưỡng các zone giữ nguyên; reset hoặc sửa nếu cần.`,
+    }
+    await Promise.all(recipients.map(id => createInAppNotification(id, message)))
+  }))
 }
 
 // ── SYSTEM-FR-003: tổng quan sức khỏe hệ thống ──────────────────────────────

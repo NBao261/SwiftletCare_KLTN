@@ -3,7 +3,7 @@ import { body, query } from 'express-validator'
 import * as systemController from '@/controllers/system.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
-import { THRESHOLD_KEYS, THRESHOLD_LIMITS } from '@/utils/thresholds.util'
+import { REF5_ENTRY_PATTERN, SOURCE_MAX_LENGTH, THRESHOLD_KEYS, THRESHOLD_LIMITS } from '@/utils/thresholds.util'
 
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
@@ -19,8 +19,10 @@ router.get('/audit-logs',
 )
 
 router.get('/settings/default-thresholds', systemController.getDefaultThresholds)
+// ENV-FR-007 — đổi mặc định phải kèm nguồn chứa mã một mục của REF-5, thiếu hoặc sai → 422
 router.put('/settings/default-thresholds',
   ...THRESHOLD_KEYS.map(key => body(key).optional().isFloat({ min: THRESHOLD_LIMITS[key].min, max: THRESHOLD_LIMITS[key].max })),
+  body('source').isString().bail().trim().isLength({ min: 1, max: SOURCE_MAX_LENGTH }).matches(REF5_ENTRY_PATTERN),
   validate,
   systemController.updateDefaultThresholds,
 )
