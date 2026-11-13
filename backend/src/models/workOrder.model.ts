@@ -12,8 +12,21 @@ export const SITE_CAUSES = ['WATER', 'NOZZLE', 'PUMP', 'FAN', 'DOOR', 'SENSOR', 
 export type SiteCause = typeof SITE_CAUSES[number]
 
 /** Nguồn mở Work Order (BR-39, OPS-FR-001) */
-export const WORK_ORDER_ORIGINS = ['ALERT', 'OUTAGE', 'EXPERT', 'ONSITE_CHECK', 'MANUAL'] as const
+/** PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006); CHECKLIST: mục checklist ghi DEFECT (OPS-FR-007) */
+export const WORK_ORDER_ORIGINS = ['ALERT', 'OUTAGE', 'EXPERT', 'ONSITE_CHECK', 'MANUAL', 'PLAN', 'CHECKLIST'] as const
 export type WorkOrderOrigin = typeof WORK_ORDER_ORIGINS[number]
+
+/** OPS-FR-007 — một mục checklist của Work Order phòng ngừa */
+export interface ChecklistItem {
+  item: string
+  result?: 'OK' | 'DEFECT'
+  note?: string
+  /** Khoá object trên MinIO */
+  photo?: string
+  by?: Types.ObjectId
+  at?: Date
+  repair_work_order_id?: Types.ObjectId
+}
 
 export interface WorkOrderHistoryEntry {
   from?: WorkOrderStatus
@@ -34,8 +47,10 @@ export interface IWorkOrder extends Document {
   alert_id?: Types.ObjectId
   /** Loại cảnh báo lúc mở — so sự cố lặp lại và nguyên nhân bắt buộc (ALERT-FR-018) */
   alert_type?: AlertType
-  /** PREVENTIVE dành cho bảo trì phòng ngừa (G-22) */
+  /** PREVENTIVE: bảo trì phòng ngừa theo kế hoạch (OPS-FR-006) */
   kind: 'REPAIR' | 'PREVENTIVE'
+  plan_id?: Types.ObjectId
+  checklist: ChecklistItem[]
   origin: WorkOrderOrigin
   title: string
   description?: string
@@ -53,7 +68,8 @@ export interface IWorkOrder extends Document {
   work_note?: string
   /** Khoá object trên MinIO */
   photos: string[]
-  result?: 'REPAIRED' | 'SELF_RECOVERED'
+  /** DONE: Work Order phòng ngừa đã duyệt, là một lần ghi bảo trì (OPS-FR-008) */
+  result?: 'REPAIRED' | 'SELF_RECOVERED' | 'DONE'
   cancel_reason?: string
   opened_at: Date
   started_at?: Date
@@ -74,6 +90,17 @@ const workOrderSchema = new Schema<IWorkOrder>(
     alert_id:    { type: Schema.Types.ObjectId, ref: 'Alert' },
     alert_type:  { type: String },
     kind:        { type: String, enum: ['REPAIR', 'PREVENTIVE'], default: 'REPAIR' },
+    plan_id:     { type: Schema.Types.ObjectId, ref: 'MaintenancePlan' },
+    checklist: [{
+      item:   { type: String, required: true },
+      result: { type: String, enum: ['OK', 'DEFECT'] },
+      note:   { type: String },
+      photo:  { type: String },
+      by:     { type: Schema.Types.ObjectId, ref: 'User' },
+      at:     { type: Date },
+      repair_work_order_id: { type: Schema.Types.ObjectId, ref: 'WorkOrder' },
+      _id: false,
+    }],
     origin:      { type: String, enum: WORK_ORDER_ORIGINS, required: true },
     title:       { type: String, required: true },
     description: { type: String },
@@ -84,7 +111,7 @@ const workOrderSchema = new Schema<IWorkOrder>(
     cause:       { type: String, enum: SITE_CAUSES },
     work_note:   { type: String },
     photos:      { type: [String], default: [] },
-    result:      { type: String, enum: ['REPAIRED', 'SELF_RECOVERED'] },
+    result:      { type: String, enum: ['REPAIRED', 'SELF_RECOVERED', 'DONE'] },
     cancel_reason: { type: String },
     opened_at:   { type: Date, default: Date.now },
     started_at:  { type: Date },
@@ -107,6 +134,8 @@ const workOrderSchema = new Schema<IWorkOrder>(
 // Report 4 §6.4 — danh sách theo nhà và theo người được giao
 workOrderSchema.index({ house_id: 1, status: 1 })
 workOrderSchema.index({ assignee_id: 1, status: 1 })
+// G-22 — Work Order phòng ngừa của một kế hoạch (danh sách đến hạn, chỉ số bảo trì đúng hạn)
+workOrderSchema.index({ plan_id: 1, status: 1 }, { partialFilterExpression: { plan_id: { $exists: true } } })
 // BR-39 — một cảnh báo chỉ có 1 Work Order chưa đóng (hai lần mở đồng thời: lần sau gặp lỗi trùng khoá)
 workOrderSchema.index(
   { alert_id: 1 },
