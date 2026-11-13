@@ -185,7 +185,7 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
   - Hằng số: `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS` ở backend; `WEATHER_COMP_OFFLINE_MS` ở firmware (Report 4 §5.5).
   - *(firmware 2.2.0, `pid/WeatherCompensation.{h,cpp}`: chỉ cộng khi số đo hợp lệ, nên cảm biến hỏng vẫn tắt bơm (THREAT-FR-013); chưa có NTP thì bỏ tin vì không biết hạn)*
 - [x] Ghi vào nhật ký mỗi lần áp offset, để đo hiệu quả trên những ngày có và không có bù (NFR-16, không cam kết, nhưng nên có số liệu). *(collection `weathercompensations`, một dòng mỗi lần gửi offset khác 0 kèm luật và dự báo)*
-- [ ] Tuấn: màn luật bù thời tiết trên web chuyên gia.
+- [x] Tuấn: màn luật bù thời tiết trên web chuyên gia. *(`b1819a03`, 14/11/2026: `/domain-expert/weather-rules`, WeatherRuleRow + WeatherRuleAddForm + DomainExpertWeatherRulesPage)*
 
 **Test:** TC-F26-01, TC-F26-03 (jest, `weatherCompensation.test.ts`); TC-F26-02 (`pio test -e native`, `test_weather_compensation`). *(Xong, PR #152)*
 
