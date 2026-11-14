@@ -18,7 +18,7 @@ interface FuzzyTuningSectionProps {
   onSaved: (message: string) => void
 }
 
-// Mục "Hệ số bộ điều khiển mờ" của một zone (ENV-FR-021, ENV-FR-022): chủ trại và chuyên gia sửa,
+// Mục "Hệ số bộ điều khiển fuzzy" của một zone (ENV-FR-021, ENV-FR-022): chủ trại và chuyên gia sửa,
 // backend gửi xuống controller của zone ngay, không cần nạp lại firmware
 export function FuzzyTuningSection({ zone, editor, onSaved }: FuzzyTuningSectionProps) {
   const user = useAuthStore(state => state.user)
@@ -28,10 +28,10 @@ export function FuzzyTuningSection({ zone, editor, onSaved }: FuzzyTuningSection
     <NumberTuningSection
       id={getSettingsSectionId('fuzzy', zone._id)}
       icon={SlidersHorizontalIcon}
-      title={t('Hệ số bộ điều khiển mờ')}
+      title={t('Tự điều khiển phun sương và quạt')}
       subtitle={t('Cách phun sương và quạt phản ứng quanh ngưỡng')}
       scopeLabel={zone.name}
-      footerNote={t('Chủ trại và chuyên gia sửa được. Lưu xong controller của khu vực áp dụng ngay')}
+      footerNote={t('Lưu xong áp dụng ngay cho khu vực')}
       keys={FUZZY_KEYS}
       rules={FUZZY_TUNING_RULES}
       values={zone.fuzzy_tuning}
@@ -42,7 +42,7 @@ export function FuzzyTuningSection({ zone, editor, onSaved }: FuzzyTuningSection
       save={(values, inputFilter) =>
         updateFuzzyTuning.mutateAsync({ zoneId: zone._id, tuning: { ...values, fuzzy_input_filter: inputFilter } })
       }
-      savedMessage={t('Đã lưu hệ số bộ điều khiển mờ')}
+      savedMessage={t('Đã lưu cài đặt phun sương và quạt')}
       onSaved={onSaved}
     />
   )

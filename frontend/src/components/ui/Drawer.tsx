@@ -54,8 +54,9 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
         aria-label={title}
         className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl outline-none animate-slide-in-right flex flex-col"
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-warmGray/10 px-6">
-          {title && <h2 className="text-lg font-bold text-charcoal">{title}</h2>}
+        <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-warmGray/10 px-6">
+          {/* Thanh tiêu đề cao cố định: tên dài cắt "…", rê chuột xem đủ */}
+          {title && <h2 title={typeof title === 'string' ? title : undefined} className="min-w-0 truncate text-lg font-bold text-charcoal">{title}</h2>}
           <Button variant="icon" size="sm" onClick={onClose} aria-label="Đóng">
             <CloseIcon />
           </Button>

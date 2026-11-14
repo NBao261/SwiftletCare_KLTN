@@ -10,7 +10,7 @@ import type { Role, User } from '@/types'
 /** Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner) */
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN', 'ADMIN']
+const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN', 'ADMIN']
 
 /** Dòng phụ ô vai trò: tình trạng hoạt động của nhóm đó (thay cho "% tổng số" — tỉ lệ không giúp Admin làm gì) */
 function roleSub(list: User[]) {
@@ -44,7 +44,7 @@ export default function UserStats() {
   const total = users.length
   const byRole = (r: Role) => users.filter(u => u.role === r)
   const statusCount = (s: ReturnType<typeof getUserStatus>) => users.filter(u => getUserStatus(u) === s).length
-  const technicians = byRole('TECHNICIAN')
+  const technicians = byRole('FARM_TECHNICIAN')
   const pendingDeletion = statusCount('PENDING_DELETION')
   const lockedUsers = users.filter(u => getUserStatus(u) === 'LOCKED')
   const lockedByRole = ROLES_IN_TILES

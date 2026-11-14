@@ -54,7 +54,7 @@ export default function EnvSensorPanel({ zone, scopeControl, isLinked = false }:
   let sourceText = ''
   if (zone && source.isDefault) sourceText = t('env.sourceDefault')
   if (zone && !source.isDefault) {
-    const setter = source.role && ['FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN', 'ADMIN'].includes(source.role)
+    const setter = source.role && ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN', 'ADMIN'].includes(source.role)
       ? t(`env.setter.${source.role as 'FARM_OWNER'}`)
       : t('env.setter.other')
     sourceText = t('env.sourceManual', { setter, date: source.changedAt ? date(source.changedAt) : NO_VALUE })

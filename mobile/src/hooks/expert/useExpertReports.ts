@@ -1,21 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { HAS_PENDING_HEALTH_DAYS_API } from '@/hooks/health/usePendingHealthDays'
 import { expertApi } from '@/services/api/expert.api'
-import type { DailyHealthStatus } from '@/types'
+import type { HouseHealthReportKind } from '@/types'
 
 /**
- * Hook lấy danh sách báo cáo sức khỏe nhà yến (EXPERT-FR-005, EXPERT-FR-013)
+ * Hook lấy danh sách báo cáo sức khỏe theo nhà (EXPERT-FR-005, EXPERT-FR-013).
+ * Hàng đợi chuyên gia truyền has_conclusion=false để chỉ lấy báo cáo chờ kết luận.
  */
 export function useHealthReports(params?: {
   farm_id?: string
-  zone_id?: string
+  house_id?: string
+  kind?: HouseHealthReportKind
+  has_conclusion?: boolean
   page?: number
   limit?: number
 }) {
   return useQuery({
     queryKey: ['expert', 'health-reports', params],
     queryFn: () => expertApi.getHealthReports(params).then(res => res.data),
-    enabled: Boolean(params?.zone_id),
+    enabled: Boolean(params?.farm_id || params?.house_id),
   })
 }
 
@@ -42,45 +44,6 @@ export function useSetReportConclusion() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'health-reports'] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'health-report-detail', vars.reportId] })
-    },
-  })
-}
-
-/**
- * Hook lấy trạng thái đánh giá ngày độc lập theo quy tắc mù BR-31 (EXPERT-FR-012)
- */
-export function useDayRating(houseId: string, date: string) {
-  return useQuery({
-    queryKey: ['expert', 'day-rating', houseId, date],
-    queryFn: () => expertApi.getDayRating(houseId, date).then(res => res.data),
-    enabled: HAS_PENDING_HEALTH_DAYS_API && Boolean(houseId && date),
-  })
-}
-
-/**
- * Hook gửi kết quả đánh giá ngày độc lập 2 bước của Chuyên gia (EXPERT-FR-012, BR-31)
- */
-export function useSubmitDayRating() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({
-      houseId,
-      date,
-      status,
-      note,
-    }: {
-      houseId: string
-      date: string
-      status: DailyHealthStatus
-      note?: string
-    }) => expertApi.submitDayRating(houseId, date, status, note),
-    onSuccess: (res, vars) => {
-      if (res?.data) {
-        queryClient.setQueryData(['expert', 'day-rating', vars.houseId, vars.date], res.data)
-      }
-      queryClient.invalidateQueries({ queryKey: ['expert', 'day-rating', vars.houseId, vars.date] })
-      queryClient.invalidateQueries({ queryKey: ['expert', 'health-reports'] })
     },
   })
 }

@@ -1,8 +1,9 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
-import type { BirdCountTuning, DetectionTuning, FuzzyTuning, Thresholds, Role } from '@/types'
-import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING } from '@/utils/detectionTuning.util'
+import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, HouseStage, Thresholds, Role } from '@/types'
+import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
+import { currentConfigVersion } from '@/utils/configSync.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -24,6 +25,15 @@ export interface IHouse extends Document {
   /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
+  /** ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà; thiếu trường nào thì dùng mặc định */
+  health_levels: HealthLevels
+  /** FARM-FR-014, BR-46 — giai đoạn nhà; lịch sử dùng để đánh giá lại ngày cũ đúng giai đoạn lúc ấy */
+  stage: HouseStage
+  stage_history: Array<{ stage: HouseStage; changed_by: Types.ObjectId; changed_by_role: Role; changed_at: Date }>
+  /** AUTH-FR-013 — Farm Technician được giao nhà này; tối đa 1 thợ chính (Report 4 ERD `HOUSE.technicians`) */
+  technicians: Array<{ user_id: Types.ObjectId; primary: boolean }>
+  /** AUTH-FR-014 — lịch trực theo tuần (giờ VN); ngoài mọi ca thì cảnh báo tới thợ chính (utils/roster.util.ts) */
+  roster: Array<{ technician_id: Types.ObjectId; role: 'PRIMARY' | 'BACKUP'; weekdays: number[]; start: string; end: string }>
 }
 
 export interface IThresholdHistoryEntry {
@@ -73,6 +83,8 @@ export interface IZone extends Document {
   /** EXPERT-FR-008 — tham số phát hiện do Domain Expert chỉnh; thiếu trường nào thì dùng mặc định */
   detection_tuning: DetectionTuning
   detection_tuning_history: IDetectionTuningHistoryEntry[]
+  /** ENV-FR-027 — tăng ở mỗi lần đổi ngưỡng, hệ số mờ hoặc tham số phát hiện (deviceConfig.service#publishZoneConfig) */
+  config_version: number
 }
 
 const houseSchema = new Schema<IHouse>(
@@ -91,9 +103,40 @@ const houseSchema = new Schema<IHouse>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
     }],
+    health_levels: {
+      in_range_slight_pct: { type: Number, default: DEFAULT_HEALTH_LEVELS.in_range_slight_pct },
+      in_range_clear_pct:  { type: Number, default: DEFAULT_HEALTH_LEVELS.in_range_clear_pct },
+      air_slight_h:        { type: Number, default: DEFAULT_HEALTH_LEVELS.air_slight_h },
+      air_clear_h:         { type: Number, default: DEFAULT_HEALTH_LEVELS.air_clear_h },
+      noise_slight:        { type: Number, default: DEFAULT_HEALTH_LEVELS.noise_slight },
+      noise_clear:         { type: Number, default: DEFAULT_HEALTH_LEVELS.noise_clear },
+    },
+    stage: { type: String, enum: ['ATTRACTING', 'OCCUPIED'] satisfies HouseStage[], default: 'OCCUPIED' },
+    stage_history: [{
+      stage:           { type: String, enum: ['ATTRACTING', 'OCCUPIED'] satisfies HouseStage[], required: true },
+      changed_by:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      changed_by_role: { type: String, required: true },
+      changed_at:      { type: Date, required: true },
+      _id: false,
+    }],
+    technicians: [{
+      user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      primary: { type: Boolean, default: false },
+      _id: false,
+    }],
+    roster: [{
+      technician_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      role:     { type: String, enum: ['PRIMARY', 'BACKUP'], required: true },
+      weekdays: [{ type: Number, min: 0, max: 6 }],
+      start:    { type: String, required: true },
+      end:      { type: String, required: true },
+      _id: false,
+    }],
   },
   { timestamps: { createdAt: 'created_at' } }
 )
+// AUTH-FR-004 — tìm các nhà được giao của 1 thợ (phạm vi dữ liệu của Farm Technician)
+houseSchema.index({ 'technicians.user_id': 1 })
 
 const zoneSchema = new Schema<IZone>(
   {
@@ -147,6 +190,7 @@ const zoneSchema = new Schema<IZone>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
     }],
+    config_version: { type: Number, default: () => currentConfigVersion() },
   },
   { timestamps: { createdAt: 'created_at' } }
 )

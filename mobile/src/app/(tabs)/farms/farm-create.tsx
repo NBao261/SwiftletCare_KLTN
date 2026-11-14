@@ -3,23 +3,25 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import { router } from 'expo-router'
 import { BarnIcon } from 'phosphor-react-native'
 import { LocateRow } from '@/components/farm/settings/LocateRow'
-import { SettingsActionBar } from '@/components/farm/settings/SettingsActionBar'
+import { SettingsEditActions } from '@/components/farm/settings/SettingsEditActions'
 import { SettingsMetaGrid } from '@/components/farm/settings/SettingsMetaGrid'
 import { SettingsSection } from '@/components/farm/settings/SettingsSection'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
-import { FormMessage } from '@/components/ui/form-message'
 import { Spacing } from '@/constants/theme'
 import { useCreateFarm } from '@/hooks/farm/useCreateFarm'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { Coordinates } from '@/types'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import {
   COORDINATE_RULES,
   hasDraftErrors,
+  NAME_MAX_LENGTH,
   parseNumberDraft,
   toInputText,
+  validateName,
   validateNumberDraft,
   type NumberDraft,
 } from '@/utils/settingsValidation.utils'
@@ -31,13 +33,17 @@ const COORDINATE_KEYS: (keyof Coordinates)[] = ['lat', 'lng']
  * Chưa có gì để chia mục nên là một form đầy đủ, cùng khung ảnh mẫu với trang cài đặt */
 export default function FarmCreateScreen() {
   const palette = usePalette()
+  // Mở từ Trang chủ thì ‹ về Trang chủ, không thì về danh sách trang trại
+  const returnBack = useReturnBack()
+  const goBack = returnBack ?? (() => router.back())
   const language = useLanguage()
   const createFarm = useCreateFarm()
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [coordinates, setCoordinates] = useState<NumberDraft<keyof Coordinates>>({ lat: '', lng: '' })
   const coordinateErrors = validateNumberDraft(coordinates, COORDINATE_RULES)
-  const isValid = name.trim() !== '' && address.trim() !== '' && !hasDraftErrors(coordinateErrors)
+  const nameError = validateName(name)
+  const isValid = nameError === null && address.trim() !== '' && !hasDraftErrors(coordinateErrors)
 
   const submit = () =>
     createFarm.mutate(
@@ -48,7 +54,7 @@ export default function FarmCreateScreen() {
 
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
-      <AppHeader title={t('Tạo trang trại')} onBack={() => router.back()} />
+      <AppHeader title={t('Tạo trang trại')} onBack={goBack} />
       <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -60,9 +66,7 @@ export default function FarmCreateScreen() {
             title={t('Trang trại mới')}
             subtitle={t('Một trang trại là một địa điểm. Nhà yến ở nơi khác thì tạo trang trại khác')}
             scopeLabel={t('Trang trại')}
-            isExpanded
-            footerNote={t('Bạn là chủ chính của trang trại vừa tạo')}
-          >
+            isExpanded          >
             <SettingsMetaGrid
               items={[
                 {
@@ -73,7 +77,10 @@ export default function FarmCreateScreen() {
                     label: t('Tên trang trại'),
                     keyboardType: 'default',
                     autoCapitalize: 'sentences',
+                    maxLength: NAME_MAX_LENGTH,
                   },
+                  // Ô còn trống thì chưa báo lỗi, chỉ khoá nút Tạo mới
+                  error: name === '' ? null : nameError,
                   isFullWidth: true,
                 },
                 {
@@ -106,14 +113,14 @@ export default function FarmCreateScreen() {
             <LocateRow
               onLocated={located => setCoordinates({ lat: toInputText(located.lat), lng: toInputText(located.lng) })}
             />
-            <FormMessage message={createFarm.error ? getSettingsErrorMessage(createFarm.error) : null} />
-            <SettingsActionBar
-              label={t('Tạo trang trại')}
-              value={t('TẠO')}
-              onPress={submit}
-              disabled={!isValid}
-              loading={createFarm.isPending}
-              accessibilityLabel={t('Tạo trang trại')}
+            {/* Cùng khung với nút "Cập nhật" của trang cài đặt: thanh đen chữ lime căn giữa + Huỷ */}
+            <SettingsEditActions
+              label={t('Tạo mới')}
+              onSave={submit}
+              onCancel={goBack}
+              isSaving={createFarm.isPending}
+              isSaveDisabled={!isValid}
+              error={createFarm.error ? getSettingsErrorMessage(createFarm.error) : null}
             />
           </SettingsSection>
         </ScrollView>

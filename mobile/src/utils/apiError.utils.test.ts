@@ -2,9 +2,13 @@ import { describe, expect, it } from '@jest/globals'
 import {
   formatWaitTime,
   getAuthErrorMessage,
+  getDeviceMoveErrorMessage,
   getDeviceRegisterErrorMessage,
+  getDeviceRemoveErrorMessage,
+  getDeviceRestoreErrorMessage,
   getSettingsErrorMessage,
   INVALID_CODE_MESSAGE,
+  isServerUnreachableError,
   NETWORK_ERROR_MESSAGE,
   readApiError,
   SERVER_ERROR_MESSAGE,
@@ -124,5 +128,46 @@ describe('getDeviceRegisterErrorMessage', () => {
     expect(getDeviceRegisterErrorMessage(backendError(409, 'CONFLICT'))).toBe(
       'Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký',
     )
+  })
+})
+
+describe('getDeviceMoveErrorMessage', () => {
+  it('400 là trùng khu vực đang ở, 409 là không trực tuyến hoặc đã gỡ, 403 dùng câu chung', () => {
+    expect(getDeviceMoveErrorMessage(backendError(400))).toBe('Thiết bị đang ở khu vực này rồi')
+    expect(getDeviceMoveErrorMessage(backendError(409))).toBe(
+      'Thiết bị đã bị gỡ, không dời được',
+    )
+    expect(getDeviceMoveErrorMessage(backendError(403))).toBe('Bạn không có quyền thực hiện thao tác này')
+  })
+})
+
+describe('getDeviceRemoveErrorMessage', () => {
+  it('409 báo thiết bị đã gỡ hoặc vừa trực tuyến lại, mất mạng dùng câu mạng', () => {
+    expect(getDeviceRemoveErrorMessage(backendError(409))).toBe(
+      'Không gỡ được: thiết bị đã bị gỡ hoặc vừa trực tuyến lại. Tải lại rồi thử lại',
+    )
+    expect(getDeviceRemoveErrorMessage(new Error('Network Error'))).toBe(NETWORK_ERROR_MESSAGE)
+  })
+})
+
+describe('getDeviceRestoreErrorMessage', () => {
+  it('409 gộp các lý do backend từ chối khôi phục', () => {
+    expect(getDeviceRestoreErrorMessage(backendError(409))).toBe(
+      'Không khôi phục được: đã quá 24 giờ, thiết bị đã được đăng ký lại hoặc đã có thiết bị thay',
+    )
+  })
+})
+
+describe('isServerUnreachableError', () => {
+  it('lỗi axios không có phản hồi (máy chủ tắt, quá thời gian chờ) là không tới được máy chủ', () => {
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ERR_NETWORK' })).toBe(true)
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ECONNABORTED' })).toBe(true)
+  })
+
+  it('máy chủ có trả lời, request bị huỷ hoặc lỗi không phải axios thì không tính', () => {
+    expect(isServerUnreachableError({ isAxiosError: true, response: { status: 500 } })).toBe(false)
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ERR_CANCELED' })).toBe(false)
+    expect(isServerUnreachableError(new Error('boom'))).toBe(false)
+    expect(isServerUnreachableError(null)).toBe(false)
   })
 })

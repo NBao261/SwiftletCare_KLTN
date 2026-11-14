@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { useQueryClient } from '@tanstack/react-query'
-import { offNotificationNew, onNotificationNew } from '@/services/socket/socketClient'
+import { onNotificationNew } from '@/services/socket/socketClient'
 import {
   ArrowRight,
   CalendarCheck,
@@ -21,7 +21,6 @@ import {
   SlidersHorizontal,
   WarningCircle,
 } from 'phosphor-react-native'
-import { QueueDayRatingCard } from '@/components/expert/queue/QueueDayRatingCard'
 import { QueueProposalCard } from '@/components/expert/queue/QueueProposalCard'
 import { QueueReportCard } from '@/components/expert/queue/QueueReportCard'
 import { QueueReviewCard } from '@/components/expert/queue/QueueReviewCard'
@@ -36,12 +35,7 @@ import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
 import { useInferredAlerts } from '@/hooks/expert/useInferredAlerts'
-import {
-  useDayRating,
-  useHealthReports,
-  useSetReportConclusion,
-  useSubmitDayRating,
-} from '@/hooks/expert/useExpertReports'
+import { useHealthReports, useSetReportConclusion } from '@/hooks/expert/useExpertReports'
 import {
   useExpertProposals,
   useExpertReviewItems,
@@ -49,11 +43,10 @@ import {
   useTakeReviewAction,
 } from '@/hooks/expert/useExpertReviews'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
-import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
-import type { DailyHealthStatus, DayRating, InferredAlert, ReviewItem, CoefficientProposal, ZoneHealthReportItem } from '@/types/expert.types'
+import type { InferredAlert, ReviewItem, CoefficientProposal, HouseHealthReportSummary } from '@/types/expert.types'
 import { formatTimeAgo } from '@/utils/date.utils'
 import { getInferredAlertDescription, getInferredAlertLabel } from '@/utils/inferredAlert.utils'
 import { t } from '@/utils/i18n.utils'
@@ -170,18 +163,14 @@ export default function QueueScreen() {
       void queryClient.invalidateQueries({ queryKey: ['expert'] })
       void queryClient.invalidateQueries({ queryKey: ['inferred-alerts'] })
     }
-    onNotificationNew(handleNotification)
-    return () => {
-      offNotificationNew(handleNotification)
-    }
+    const unsubscribe = onNotificationNew(handleNotification)
+    return unsubscribe
   }, [queryClient])
 
   const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
   const selectedHouseId = useExpertScopeStore(state => state.selectedHouseId)
   const selectedZoneId = useExpertScopeStore(state => state.selectedZoneId)
 
-  const { zones } = useZonesOfHouses(selectedHouseId ? [selectedHouseId] : [])
-  const effectiveZoneId = selectedZoneId || zones[0]?._id || undefined
 
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -198,12 +187,6 @@ export default function QueueScreen() {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     }
-  }, [])
-
-  const yesterday = useMemo(() => {
-    const d = new Date()
-    d.setDate(d.getDate() - 1)
-    return d.toISOString().slice(0, 10)
   }, [])
 
   const {
@@ -247,17 +230,10 @@ export default function QueueScreen() {
     refetch: refetchReports,
   } = useHealthReports({
     farm_id: selectedFarmId || undefined,
-    zone_id: effectiveZoneId,
+    house_id: selectedHouseId || undefined,
+    has_conclusion: false,
   })
   const setReportConclusion = useSetReportConclusion()
-
-  const {
-    data: dayRatingResponse,
-    isLoading: isDayRatingLoading,
-    isRefetching: isDayRatingRefetching,
-    refetch: refetchDayRating,
-  } = useDayRating(selectedHouseId || '', yesterday)
-  const submitDayRating = useSubmitDayRating()
 
   const pendingInferredAlerts = useMemo<InferredAlert[]>(() => {
     const list = alertsResponse?.data || []
@@ -272,43 +248,29 @@ export default function QueueScreen() {
     return proposalsResponse?.data || []
   }, [proposalsResponse])
 
-  const pendingReports = useMemo<ZoneHealthReportItem[]>(() => {
-    const list = reportsResponse?.data || []
-    const unfinalized = list.filter(r => !r.expert_conclusion)
-    return unfinalized.length > 0 ? unfinalized : list.slice(0, 1)
+  // Danh sách đã lọc has_conclusion=false ở server nên mọi báo cáo trả về đều đang chờ kết luận
+  const pendingReports = useMemo<HouseHealthReportSummary[]>(() => {
+    return (reportsResponse?.data || []).filter(r => !r.has_conclusion)
   }, [reportsResponse])
 
-  const pendingRatings = useMemo<DayRating[]>(() => {
-    const raw = dayRatingResponse?.data
-    if (!raw) return []
-    const list = Array.isArray(raw) ? raw : [raw]
-    return list.filter(item => item.state === 'PENDING' || item.state === 'RATED')
-  }, [dayRatingResponse])
-
-  const unfinalizedReportsCount = useMemo(() => {
-    const list = reportsResponse?.data || []
-    return list.filter(r => !r.expert_conclusion).length
-  }, [reportsResponse])
+  const unfinalizedReportsCount = pendingReports.length
 
   const kpiAlertsCount = pendingInferredAlerts.length
   const kpiReviewsCount = pendingReviewItems.length
   const kpiProposalsCount = pendingProposals.length
-  const kpiRatingsAndReportsCount =
-    pendingRatings.filter(r => r.state === 'PENDING').length + unfinalizedReportsCount
+  const kpiReportsCount = unfinalizedReportsCount
 
   const isRefreshing =
     isAlertsRefetching ||
     isReviewsRefetching ||
     isProposalsRefetching ||
-    isReportsRefetching ||
-    isDayRatingRefetching
+    isReportsRefetching
 
   const handleRefreshAll = () => {
     void refetchAlerts()
     void refetchReviews()
     void refetchProposals()
     void refetchReports()
-    void refetchDayRating()
   }
 
   const handleSectionLayout = (key: string, event: LayoutChangeEvent) => {
@@ -367,23 +329,6 @@ export default function QueueScreen() {
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
       showToast(t('Không thể từ chối đề xuất, vui lòng thử lại'))
-    }
-  }
-
-  const handleSubmitDayRating = async (
-    houseId: string,
-    date: string,
-    status: DailyHealthStatus,
-    note?: string
-  ) => {
-    try {
-      await submitDayRating.mutateAsync({ houseId, date, status, note })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã lưu đánh giá sức khỏe ngày và mở đối chiếu'))
-    } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể lưu đánh giá ngày, vui lòng thử lại'))
-      throw err
     }
   }
 
@@ -507,19 +452,19 @@ export default function QueueScreen() {
               </PressableScale>
             </View>
 
-            {/* Ô 4: Chấm ngày & Báo cáo */}
+            {/* Ô 4: Báo cáo chờ kết luận */}
             <View style={styles.kpiCell}>
               <PressableScale
-                onPress={() => scrollToSection('ratings')}
+                onPress={() => scrollToSection('reports')}
                 style={[styles.kpiTile, { backgroundColor: palette.surface }]}
                 accessibilityRole="button"
-                accessibilityLabel={t('Cuộn tới danh sách chấm ngày và báo cáo')}
+                accessibilityLabel={t('Cuộn tới danh sách báo cáo chờ kết luận')}
               >
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
-                  {t('Chấm ngày & báo cáo')}
+                  {t('Báo cáo chờ kết luận')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} kỳ', { count: kpiRatingsAndReportsCount })}
+                  {t('{count} kỳ', { count: kpiReportsCount })}
                 </Text>
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                   {t('Đánh giá định kỳ')}
@@ -666,52 +611,7 @@ export default function QueueScreen() {
             )}
           </View>
 
-          {/* KHỐI 6: Section Đánh giá sức khỏe nhà yến */}
-          <View
-            onLayout={e => handleSectionLayout('ratings', e)}
-            style={styles.sectionContainer}
-          >
-            <View style={styles.sectionHeaderRow}>
-              <View style={styles.sectionTitleGroup}>
-                <CalendarCheck size={18} weight="bold" color={palette.text} />
-                <Text variant="heading" weight="semiBold">
-                  {t('Đánh giá sức khỏe nhà yến')}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.countBadge,
-                  { backgroundColor: palette.surface },
-                ]}
-              >
-                <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {pendingRatings.length}
-                </Text>
-              </View>
-            </View>
-
-            {isDayRatingLoading ? (
-              <View style={styles.skeletonBox}>
-                <Skeleton width="100%" height={140} radius={Radius.lg} />
-              </View>
-            ) : pendingRatings.length > 0 ? (
-              pendingRatings.map(dayRating => (
-                <QueueDayRatingCard
-                  key={dayRating._id}
-                  dayRating={dayRating}
-                  onSubmitRating={handleSubmitDayRating}
-                  isSubmitting={submitDayRating.isPending}
-                />
-              ))
-            ) : (
-              <EmptyState
-                height={80}
-                message={t('Chưa có kỳ đánh giá sức khỏe ngày nào đang chờ xử lý.')}
-              />
-            )}
-          </View>
-
-          {/* KHỐI 7: Section Báo cáo vi khí hậu & Kết luận */}
+          {/* KHỐI 6: Section Báo cáo vi khí hậu & Kết luận */}
           <View
             onLayout={e => handleSectionLayout('reports', e)}
             style={styles.sectionContainer}

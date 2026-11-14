@@ -68,8 +68,14 @@ export function KpiGrid({ kpis, isAllZones, onSelectTab, onOpenAlerts }: KpiGrid
       <View style={styles.cell}>
         <KpiTile
           label={t('Cảnh báo')}
-          value={t('{count} đang mở', { count: formatDecimal(alerts.total) })}
-          caption={alerts.highestSeverity ? getSeverityLabel(alerts.highestSeverity) : t('Không có cảnh báo')}
+          value={alerts.total === null ? '_' : t('{count} đang mở', { count: formatDecimal(alerts.total) })}
+          caption={
+            alerts.total === null
+              ? t('Không tải được')
+              : alerts.highestSeverity
+                ? getSeverityLabel(alerts.highestSeverity)
+                : t('Không có cảnh báo')
+          }
           isWarning={isAlertWarning}
           isLoading={kpis.isAlertLoading}
           onPress={onOpenAlerts}

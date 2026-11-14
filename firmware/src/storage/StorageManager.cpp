@@ -59,6 +59,7 @@ void saveConfig() {
   prefs.putInt("spkW2End", Config::speakerWindow2EndHour);
   prefs.putInt("spkVol", Config::speakerVolume);
   prefs.putInt("spkTrack", Config::speakerTrack);
+  prefs.putUInt("cfgVersion", Config::configVersion);
   Serial.println("[Storage] Config saved to NVS");
 }
 
@@ -91,6 +92,7 @@ void loadConfig() {
       prefs.getInt("spkW2End", SPEAKER_WINDOW_2_END_HOUR);
   Config::speakerVolume = prefs.getInt("spkVol", DFPLAYER_DEFAULT_VOLUME);
   Config::speakerTrack = prefs.getInt("spkTrack", DFPLAYER_DEFAULT_TRACK);
+  Config::configVersion = prefs.getUInt("cfgVersion", 0);
   Serial.println("[Storage] Config loaded from NVS");
 }
 
@@ -133,6 +135,15 @@ bool loadDeviceIdentity(String &deviceId, String &brokerSecret) {
   brokerSecret = identity.getString("broker_secret", "");
   identity.end();
   return deviceId.length() > 0 && brokerSecret.length() > 0;
+}
+
+// Cùng namespace với tài khoản: trang AP-mode (namespace `swiftlet`) không ghi đè được
+bool loadFlashedBroker(String &broker) {
+  Preferences identity;
+  if (!identity.begin("identity", true)) return false;
+  broker = identity.getString("broker", "");
+  identity.end();
+  return broker.length() > 0;
 }
 
 void saveAlertQueue(const void *data, size_t size) { prefs.putBytes("alertQueue", data, size); }

@@ -6,7 +6,10 @@ import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew, emitHouseAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
-import { assertExpertDecision, assertFarmAccess, listAccessibleFarmIds } from '@/utils/farmAccess.util'
+import {
+  assertExpertDecision, assertFarmAccess, assertHouseAccess, assertZoneAccess, listAccessibleFarmIds, listAccessibleHouseIds,
+  listAccessibleZoneIds,
+} from '@/utils/farmAccess.util'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
@@ -34,7 +37,15 @@ export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
  * trên firmware để thử lại vẫn khô thì gộp vào cùng 1 cảnh báo), không có nguồn nuôi yến.
  */
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
-export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE']
+/**
+ * `ACTUATOR_FAULT` (THREAT-FR-014): firmware gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào tải còn không theo relay,
+ * nên cảnh báo tự đóng khi tải chạy đúng trở lại và firmware thôi gửi.
+ */
+export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT']
+
+/** THREAT-FR-014 — hai tải có đo dòng; cảnh báo nêu tải nào (bơm phun sương hoặc quạt) */
+export const ACTUATOR_LOADS = ['misting', 'ventilation'] as const
+const ACTUATOR_FAULT_KINDS = ['NO_CURRENT_WHILE_ON', 'CURRENT_WHILE_OFF'] as const
 
 /**
  * Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này.
@@ -161,6 +172,8 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     house_id: input.houseId,
     node_id: input.nodeId,
     type: input.type,
+    // THREAT-FR-014 — bơm hỏng và quạt hỏng trên cùng controller là hai sự cố, mỗi tải một cảnh báo
+    ...(input.type === 'ACTUATOR_FAULT' && typeof input.details?.load === 'string' && { 'details.load': input.details.load }),
     status: { $in: OPEN_STATUSES },
   }).select('_id created_at last_seen_at').lean()
   if (open) {
@@ -262,6 +275,8 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
         common.details = { reset_reason: resetReason }
       }
     }
+    // THREAT-FR-014 — tải nào không theo relay, theo hướng nào, so với mức đã học; giá trị lạ thì bỏ
+    if (type === 'ACTUATOR_FAULT') common.details = actuatorFaultDetails(message)
     // `name` cho tiêu đề mặc định — firmware không gửi kèm title
     const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
     if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
@@ -282,6 +297,21 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     ...common, farmId: String(house.farm_id), houseId: String(house._id), nodeId: String(camera._id),
     title: (message.title as string | undefined) ?? `${type} tại ${house.name}`,
   })
+}
+
+/**
+ * THREAT-FR-014, BR-32 — chi tiết `ACTUATOR_FAULT` từ firmware: `load` (misting | ventilation), `fault`
+ * (NO_CURRENT_WHILE_ON | CURRENT_WHILE_OFF), `normalCurrentA`, `currentA`. Trường thiếu hoặc sai kiểu thì bỏ, không
+ * từ chối cảnh báo: báo lỗi tải quan trọng hơn đủ chi tiết.
+ */
+function actuatorFaultDetails(message: Record<string, unknown>): Record<string, unknown> | undefined {
+  const isAmps = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
+  const details: Record<string, unknown> = {}
+  if (ACTUATOR_LOADS.includes(message.load as never)) details.load = message.load
+  if (ACTUATOR_FAULT_KINDS.includes(message.fault as never)) details.fault = message.fault
+  if (isAmps(message.normalCurrentA)) details.normal_current_a = message.normalCurrentA
+  if (isAmps(message.currentA)) details.current_a = message.currentA
+  return Object.keys(details).length > 0 ? details : undefined
 }
 
 /**
@@ -398,17 +428,19 @@ export interface ListAlertsQuery {
 }
 
 /**
- * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Technician thấy
- * cảnh báo thiết bị của mọi farm (FARM-FR-009); Admin không thấy farm nào (Report 3 §2.4).
+ * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Administrator thấy
+ * cảnh báo thiết bị của mọi farm (FARM-FR-009, Report 3 §2.4); Farm Technician thấy cảnh báo của
+ * các nhà được giao (§2.4, AUTH-FR-013) — việc gửi cảnh báo tới thợ theo ca trực là G-21.
  */
 export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
-  const accessibleFarms = await listAccessibleFarmIds(user, 'device')
-  const filter: Record<string, unknown> = { farm_id: { $in: accessibleFarms } }
-  // $and để giữ nguyên bộ lọc `type` của người gọi: giao với loại thiết bị
-  if (user.role === 'TECHNICIAN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
+  const filter: Record<string, unknown> = await alertScopeFilter(user)
 
   if (query.farmId) {
-    if (!accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
+    // Thợ đã bị giới hạn theo nhà nên farm khác chỉ cho danh sách rỗng
+    if (user.role !== 'FARM_TECHNICIAN') {
+      const accessibleFarms = await listAccessibleFarmIds(user, 'device')
+      if (!accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
+    }
     filter.farm_id = query.farmId
   }
   if (query.zoneId) filter.zone_id = query.zoneId
@@ -439,10 +471,28 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   return { records, total, page, limit, unreadCount }
 }
 
-/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Technician chỉ cảnh báo thiết bị) */
+/** Phạm vi cảnh báo của 1 user: farm của mình; thợ theo nhà được giao (cảnh báo của zone hoặc của nhà) */
+async function alertScopeFilter(user: CurrentUser): Promise<Record<string, unknown>> {
+  if (user.role === 'FARM_TECHNICIAN') {
+    const [houseIds, zoneIds] = await Promise.all([listAccessibleHouseIds(user), listAccessibleZoneIds(user)])
+    return { $or: [{ house_id: { $in: houseIds } }, { zone_id: { $in: zoneIds } }] }
+  }
+  const filter: Record<string, unknown> = { farm_id: { $in: await listAccessibleFarmIds(user, 'device') } }
+  // $and để giữ nguyên bộ lọc `type` của người gọi: giao với loại thiết bị
+  if (user.role === 'ADMIN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
+  return filter
+}
+
+/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Administrator chỉ cảnh báo thiết bị) */
 async function findAlertWithAccess(alertId: string, user: CurrentUser) {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
+  if (user.role === 'FARM_TECHNICIAN') {
+    // AUTH-FR-013 — thợ chỉ trên nhà được giao: cảnh báo của zone theo nhà chứa zone, cảnh báo của nhà theo nhà
+    if (alert.zone_id) return { alert, farm: (await assertZoneAccess(String(alert.zone_id), user)).farm }
+    if (alert.house_id) return { alert, farm: (await assertHouseAccess(String(alert.house_id), user)).farm }
+    throw ForbiddenError('Không có quyền trên cảnh báo này')
+  }
   const farm = await assertFarmAccess(String(alert.farm_id), user, DEVICE_ALERT_TYPES.includes(alert.type) ? 'device' : 'farm')
   return { alert, farm }
 }
@@ -739,6 +789,27 @@ export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
     type:    'EDGE_AI_DEGRADED',
     title:   `Nút AI đếm chim ${camera.device_id} mất kết nối`,
     message: `Không nhận được heartbeat từ nút AI ${camera.device_id} tại ${house.name}; số đếm chim đang gián đoạn.`,
+  })
+}
+
+/**
+ * THREAT-FR-010 — nút AI còn gửi heartbeat nhưng xử lý dưới `minFps` khung hình/giây: đang chạy mà quá
+ * chậm để đếm. Cùng loại và khoá dedup với cảnh báo mất kết nối, nên heartbeat thấp liên tiếp chỉ tăng
+ * `occurrence_count` của một cảnh báo.
+ */
+export async function raiseCameraLowFpsAlert(cameraId: string, fps: number, minFps: number): Promise<void> {
+  const camera = await CameraNode.findById(cameraId).lean()
+  if (!camera) return
+  const house = await House.findById(camera.house_id).lean()
+  if (!house) return
+  await createAlert({
+    farmId:  String(house.farm_id),
+    houseId: String(house._id),
+    nodeId:  String(camera._id),
+    type:    'EDGE_AI_DEGRADED',
+    title:   `Nút AI đếm chim ${camera.device_id} xử lý chậm`,
+    message: `Nút AI ${camera.device_id} tại ${house.name} chỉ xử lý ${fps} khung hình/giây (cần từ ${minFps}); số đếm chim có thể thiếu.`,
+    metadata: { cause: 'LOW_FPS', fps, min_fps: minFps },
   })
 }
 

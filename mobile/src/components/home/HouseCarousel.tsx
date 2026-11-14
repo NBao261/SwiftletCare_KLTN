@@ -14,6 +14,7 @@ import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 import { HOME_SKELETON_DELAY_MS } from '@/constants/homeSkeleton'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 // Trang chủ hiện tối đa 5 thẻ, còn lại nằm sau "Xem tất cả (n)"
 const MAX_VISIBLE_HOUSES = 5
@@ -44,7 +45,7 @@ export function HouseCarousel() {
   const hasMore = items.length > MAX_VISIBLE_HOUSES
 
   // shortcut: chưa có màn danh sách nhà yến — tạm mở tab Trang trại
-  const openAllHouses = () => router.navigate('/(tabs)/farms')
+  const openAllHouses = () => router.navigate({ pathname: '/(tabs)/farms', params: { returnTo: RETURN_TO_HOME } })
 
   const renderBody = () => {
     // Đang tải: khung xương đúng hình thẻ
@@ -86,7 +87,11 @@ export function HouseCarousel() {
             height={HOUSE_CARD_HEIGHT}
           />
         ) : (
-          <EmptyState message={t('Chưa có nhà yến')} height={HOUSE_CARD_HEIGHT} />
+          <EmptyState
+            // Kỹ thuật viên chỉ thấy nhà được giao (AUTH-FR-013)
+            message={canPerform(user, 'limitedToAssignedHouses') ? t('Bạn chưa được giao nhà nào') : t('Chưa có nhà yến')}
+            height={HOUSE_CARD_HEIGHT}
+          />
         )
       )
     }

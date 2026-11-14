@@ -6,8 +6,9 @@ import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 router.use(authenticate)
-// Dữ liệu vận hành: chỉ Farm Owner, Domain Expert; Technician, Admin không (Report 3 §2.4, FARM-FR-009)
-router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
+// Dữ liệu vận hành: Farm Owner, Domain Expert; Farm Technician chỉ ở nhà được giao (service kiểm Zone/House,
+// AUTH-FR-004, 013); Admin không (Report 3 §2.4, FARM-FR-009)
+router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'))
 
 // ANALYTICS-FR-001/005 — biểu đồ môi trường + so sánh đa Zone (Farm Owner dùng hằng ngày)
 router.get('/env/summary',       query('zoneId').isMongoId(), validate, analyticsController.envSummary)
@@ -18,7 +19,8 @@ router.get('/control/performance', query('zoneId').isMongoId(), validate, analyt
 router.get('/autonomy',            query('zoneId').isMongoId(), validate, analyticsController.autonomy)
 // ANALYTICS-FR-009 — dự báo độ ẩm/nhiệt độ 60 phút tới (Holt trend tắt dần) + MAE đánh giá lùi
 // ANALYTICS-FR-010 — gợi ý hệ số mờ từ mô hình học trên dữ liệu thật (chỉ đề xuất, không tự áp dụng)
-router.get('/control/suggestion', query('zoneId').isMongoId(), validate, analyticsController.tuningSuggestion)
+// Gợi ý hệ số là dữ liệu để chỉnh hệ số (Farm Owner, Domain Expert) — Farm Technician không
+router.get('/control/suggestion', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), query('zoneId').isMongoId(), validate, analyticsController.tuningSuggestion)
 router.get('/forecast',          query('zoneId').isMongoId(), validate, analyticsController.forecast)
 
 // VISION/ANALYTICS-FR-002/003 — đếm chim là của cả nhà yến (SRS v2.1.8): `houseId`; `zoneId` là cách

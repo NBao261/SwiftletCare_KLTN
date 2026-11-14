@@ -57,7 +57,7 @@ export const farmApi = {
   // Ghi đè 7 ngưỡng bằng mặc định hệ thống (ENV-FR-020)
   resetThresholds: (zoneId: string) => apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_THRESHOLDS_RESET(zoneId)),
 
-  // Hệ số bộ điều khiển mờ (ENV-FR-021)
+  // Hệ số bộ điều khiển fuzzy (ENV-FR-021)
   updateFuzzyTuning: (zoneId: string, payload: FuzzyTuning) =>
     apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_FUZZY_TUNING(zoneId), payload),
 

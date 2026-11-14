@@ -28,7 +28,7 @@ import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { useInferredAlerts } from '@/hooks/expert/useInferredAlerts'
-import { useHealthReports } from '@/hooks/expert/useExpertReports'
+import { useControlPerformances } from '@/hooks/analytics/useControlPerformances'
 import { useExpertReviewItems } from '@/hooks/expert/useExpertReviews'
 import {
   useApplyFuzzySuggestion,
@@ -112,7 +112,8 @@ export default function TuningScreen() {
   const { data: fuzzySuggestionResponse } = useFuzzySuggestion(activeZoneId)
   const fuzzySuggestion = fuzzySuggestionResponse?.data
 
-  const { data: healthReportsResponse } = useHealthReports({ farm_id: selectedFarmId || undefined, zone_id: activeZoneId || undefined, limit: 1 })
+  // % thời gian trong ngưỡng của tầng: lấy từ hiệu quả điều khiển 7 ngày (ANALYTICS-FR-008), không còn từ báo cáo tuần theo Zone cũ
+  const controlPerformances = useControlPerformances(activeZoneId ? [activeZoneId] : [], '7d')
   const { data: activeAlertsResponse } = useInferredAlerts({ farm_id: selectedFarmId || undefined, zone_id: activeZoneId || undefined, verdict: 'pending' })
   const { data: reviewItemsResponse } = useExpertReviewItems({ farm_id: selectedFarmId || undefined, status: 'PENDING_REVIEW' })
 
@@ -277,9 +278,9 @@ export default function TuningScreen() {
   }, [activeZoneId, applyFuzzySuggestionMutation, fuzzySuggestion?.suggestion, showToast, suggestedValues])
 
   const kpiInRangePct = useMemo<number | null>(() => {
-    const latestReport = (healthReportsResponse?.data || [])[0]
-    return latestReport?.metrics?.humidity_in_range_pct ?? latestReport?.time_in_range_pct ?? null
-  }, [healthReportsResponse?.data])
+    const stats = controlPerformances.byZone.get(activeZoneId)?.stats
+    return stats?.humidityInRangePct ?? stats?.temperatureInRangePct ?? null
+  }, [controlPerformances.byZone, activeZoneId])
 
   const kpiBreachedCount = useMemo(() => (activeAlertsResponse?.data || []).length, [activeAlertsResponse?.data])
   const kpiOwnerReviewsCount = useMemo(() => (reviewItemsResponse?.data || []).filter(it => it.zone_id === activeZoneId).length, [activeZoneId, reviewItemsResponse?.data])

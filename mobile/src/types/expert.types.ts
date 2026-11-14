@@ -15,7 +15,11 @@ import type {
   EvidenceTelemetrySample,
 } from './alert.types'
 import type { BirdCountBucket } from './analytics.types'
-import type { ExpertConclusion, ZoneHealthMetrics } from './healthReport.types'
+import type {
+  HouseHealthReport,
+  HouseHealthReportKind,
+  HouseHealthReportSummary,
+} from './healthReport.types'
 
 export type {
   AlertEvidence,
@@ -25,6 +29,9 @@ export type {
   EvidenceSourceStatus,
   EvidenceTelemetrySample,
   ExpertActivityEntry,
+  HouseHealthReport,
+  HouseHealthReportKind,
+  HouseHealthReportSummary,
   ParameterReview,
   ProposalStatus,
 }
@@ -67,18 +74,6 @@ export interface ReviewItem {
 
 // Trạng thái sức khỏe nhà yến (EXPERT-FR-005, BR-28)
 export type DailyHealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA'
-
-// Đánh giá ngày độc lập 2 bước (EXPERT-FR-012, BR-31)
-export interface DayRating {
-  _id: string
-  house_id: string
-  date: string // YYYY-MM-DD
-  system_status?: DailyHealthStatus
-  system_reasons?: string[]
-  assessor_status?: DailyHealthStatus
-  note?: string
-  state: 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED'
-}
 
 // Loại hành động của chuyên gia cho nhật ký hoạt động (EXPERT-FR-009)
 export type ExpertActionType =
@@ -153,22 +148,3 @@ export interface FuzzySuggestionResponse {
   reasoning?: string
 }
 
-export interface ZoneHealthReportItem {
-  _id: string
-  zone_id: string
-  farm_id: string
-  report_type?: 'DAILY' | 'WEEKLY' | 'MONTHLY'
-  period_start: string
-  period_end: string
-  generated_at?: string
-  health_status?: DailyHealthStatus
-  time_in_range_pct?: number
-  autonomy_pct?: number
-  alerts_count?: number
-  confirmed_alerts_count?: number
-  metrics?: ZoneHealthMetrics
-  expert_conclusion?: ExpertConclusion | string | null
-  expert_conclusion_by?: { _id: string; full_name: string }
-  expert_conclusion_at?: string
-  created_at?: string
-}

@@ -700,6 +700,8 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Proposal retry on concurrent submission | 3 attempts | Absorbs concurrent submission on the same zone before failing with duplicate-key error (EXPERT-FR-011) |
 | Live-stream viewing token | 60 s | A leaked token expires quickly (VISION-FR-013) |
 | Counting ring vertices | 3–12 | Input check (VISION-FR-018) |
+| Farm, house and zone names | at most 50 characters | Input check, the same in the applications (FARM-FR-001, 002) |
+| Floors of a house | 1–10 | Input check; a zone floor cannot exceed the floors of its house (FARM-FR-002) |
 | Ring margin around the hole outline | 60 px | Outline measured on 21/10/2026, widened evenly (VISION-FR-005) |
 | Overlap of the two image tiles | 160 px | Larger than a circling bird (about 40 px), so a bird at a tile edge is whole in the other tile (VISION-FR-004) |
 | Extrapolation at the hole | tracks faster than 60 px/frame, over at most 2 frames | Measured on one clip (BR-25) |
@@ -720,8 +722,9 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Health-indicator level defaults | in range 90 % / 75 %; air quality 1 h / 4 h; noise 1 / 3 episodes; completeness 80 % of valid samples per source | Daily health status until the Domain Expert sets confirmed levels (BR-28) |
 | Rain confounder | ≥ 1 mm in an hour overlapping a session and a noise episode | Avoids `ACTION` on rainy days (BR-30) |
 | Actuator current check | learn over 30 s; fault below 50 % (ON) or above 20 % (OFF) of normal for 30 s | `ACTUATOR_FAULT` (BR-32) |
-| Weather fetch | every hour | Weather context (ANALYTICS-FR-013) |
+| Weather fetch | every hour; a request is dropped after 10 s and the next hour fetches the last day again | Weather context (ANALYTICS-FR-013) |
 | Rating window | 7 days after the day | Ratings stay close to the observation (EXPERT-FR-012) |
+| Evaluation range | up to 366 days per request | Bounds one agreement computation (ANALYTICS-FR-014) |
 | Size of the detection test set | at least 200 labelled frames per lighting condition | Enough boxes for Precision and Recall per lighting (NFR-09) |
 | Size of one installation | 5 farms, 20 houses, 60 zones, 120 controllers, 20 AI nodes, 50 accounts | Sizing of the staging server and of the NFR-03 load test (A-7) |
 | Escalation time (`escalation_min`) | 15 min (5–60) | First recipient's window before the Farm Owners are told (BR-40); value agreed by the team, not from a field source |

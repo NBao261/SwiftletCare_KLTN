@@ -1,4 +1,5 @@
 import { RobotIcon, VideoCameraIcon } from '@phosphor-icons/react'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { useHouseAdvice } from '@/hooks/farm-owner/useFarmStructure'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -14,6 +15,7 @@ export default function AiAdviceCard({ houseId, camera }: { houseId: string; cam
       <div className="flex h-24 w-full shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-warmGray/10 text-warmGray sm:w-40">
         <VideoCameraIcon size={24} />
         <span className="px-2 text-center text-caption">{camera ? camera.deviceId : t('ai.noCamera')}</span>
+        <SimulatedBadge simulated={camera?.simulated} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">

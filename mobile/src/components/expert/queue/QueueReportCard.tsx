@@ -1,80 +1,51 @@
-import React, { useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { useState } from 'react'
+import { StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
-import {
-  NotePencil,
-  Sparkle,
-} from 'phosphor-react-native'
+import { NotePencil } from 'phosphor-react-native'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import { TextField } from '@/components/ui/text-field'
-import { BorderWidth, Radius, Spacing } from '@/constants/theme'
+import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { ZoneHealthReportItem } from '@/types'
-import { formatDateTime } from '@/utils/date.utils'
+import type { HouseHealthReportSummary } from '@/types'
 import { t } from '@/utils/i18n.utils'
 
 interface QueueReportCardProps {
-  report: ZoneHealthReportItem
+  report: HouseHealthReportSummary
   onSetConclusion: (reportId: string, text: string) => Promise<void> | void
   isSubmitting?: boolean
 }
 
-const TEMPLATE_CONCLUSIONS = [
-  'Vận hành ổn định, tiếp tục duy trì dải thông số hiện tại.',
-  'Độ ẩm tầng trên có dấu hiệu khô, cần tăng thời gian phun sương +30s.',
-  'Phát hiện âm thanh lạ về đêm, khuyến nghị kiểm tra loa dẫn dụ và cửa thu chim.',
-]
+const KIND_LABEL: Record<HouseHealthReportSummary['kind'], string> = {
+  DAILY: 'ngày',
+  WEEKLY: 'tuần',
+  MONTHLY: 'tháng',
+  CUSTOM: 'theo yêu cầu',
+}
 
 /**
- * Thẻ Báo cáo sức khỏe định kỳ cần Chuyên gia kết luận (EXPERT-FR-005, 006, 013).
- * Tích hợp BottomSheet ban hành kết luận chỉ trong đúng 2 chạm.
- * Sử dụng <Card> phẳng không viền đồng bộ 100% với ReportTab của FARM_OWNER.
+ * Thẻ Báo cáo sức khỏe theo nhà cần Chuyên gia kết luận (EXPERT-FR-005, 006, 013).
+ * Danh sách báo cáo chỉ trả tóm tắt (HouseHealthReportSummary) nên thẻ hiện nhà, kỳ và trạng thái kết luận;
+ * chỉ số chi tiết nằm ở báo cáo đầy đủ (màn Phân tích của Farm Owner). Hàng đợi lọc hasConclusion=false.
  */
-export function QueueReportCard({
-  report,
-  onSetConclusion,
-  isSubmitting = false,
-}: QueueReportCardProps) {
+export function QueueReportCard({ report, onSetConclusion, isSubmitting = false }: QueueReportCardProps) {
   const palette = usePalette()
 
-  const existingConclusionText =
-    typeof report.expert_conclusion === 'object' && report.expert_conclusion !== null
-      ? report.expert_conclusion.text
-      : report.expert_conclusion || ''
-  const existingConclusionAt =
-    typeof report.expert_conclusion === 'object' && report.expert_conclusion !== null
-      ? report.expert_conclusion.at
-      : report.expert_conclusion_at
-
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [conclusionText, setConclusionText] = useState(existingConclusionText)
+  const [conclusionText, setConclusionText] = useState('')
   const [errorText, setErrorText] = useState<string | null>(null)
 
-  const hasConclusion = Boolean(existingConclusionText)
-  const title = t('Báo cáo {type} kỳ {start}', {
-    type: report.report_type === 'DAILY' ? 'ngày' : report.report_type === 'WEEKLY' ? 'tuần' : 'tháng',
-    start: report.period_start?.slice(0, 10) || '',
+  const title = t('Báo cáo {kind}: {house}', {
+    kind: KIND_LABEL[report.kind],
+    house: report.house_name,
   })
-
-  const rawInRangePct = report.metrics?.humidity_in_range_pct ?? report.time_in_range_pct
-  const rawAutonomyPct = report.metrics?.auto_mode_pct ?? report.autonomy_pct
-  const inRangePct = rawInRangePct != null ? `${Math.round(rawInRangePct)}%` : '_'
-  const autonomyPct = rawAutonomyPct != null ? `${Math.round(rawAutonomyPct)}%` : '_'
-
-  const alertsCount =
-    report.alerts_count ??
-    (report.metrics?.alerts_by_type
-      ? Object.values(report.metrics.alerts_by_type).reduce((sum, n) => sum + (n || 0), 0)
-      : 0)
-
-  const handleSelectTemplate = (template: string) => {
-    setErrorText(null)
-    setConclusionText(template)
-  }
+  const period = t('Kỳ {start} → {end}', {
+    start: report.period_start,
+    end: report.period_end,
+  })
 
   const handlePublish = async () => {
     if (!conclusionText.trim()) {
@@ -96,160 +67,45 @@ export function QueueReportCard({
         <Text variant="heading" weight="semiBold" style={{ flex: 1 }}>
           {title}
         </Text>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: hasConclusion ? palette.primary : palette.surfaceStrong,
-            },
-          ]}
-        >
-          <Text
-            variant="label"
-            weight="bold"
-            color={hasConclusion ? palette.onPrimary : palette.textSecondary}
-          >
-            {hasConclusion ? t('Có kết luận') : t('Chưa có kết luận')}
+        <View style={[styles.statusBadge, { backgroundColor: palette.surfaceStrong }]}>
+          <Text variant="label" weight="bold" color={palette.textSecondary}>
+            {report.has_conclusion ? t('Có kết luận') : t('Chưa có kết luận')}
           </Text>
         </View>
       </View>
 
-      {/* 3 Chỉ số tóm tắt vi khí hậu */}
-      <View style={[styles.statsBox, { backgroundColor: palette.surfaceStrong }]}>
-        <View style={styles.statCol}>
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Trong ngưỡng')}
-          </Text>
-          <Text variant="body" weight="semiBold" style={styles.statVal}>
-            {inRangePct}
-          </Text>
-        </View>
+      <Text variant="small" color={palette.textSecondary} style={styles.period}>
+        {period}
+      </Text>
 
-        <View style={[styles.statDivider, { backgroundColor: palette.divider }]} />
-
-        <View style={styles.statCol}>
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Máy tự chạy')}
-          </Text>
-          <Text variant="body" weight="semiBold" style={styles.statVal}>
-            {autonomyPct}
-          </Text>
-        </View>
-
-        <View style={[styles.statDivider, { backgroundColor: palette.divider }]} />
-
-        <View style={styles.statCol}>
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Sự cố khẩn')}
-          </Text>
-          <Text
-            variant="body"
-            weight="semiBold"
-            color={alertsCount > 0 ? palette.alert : palette.text}
-            style={styles.statVal}
-          >
-            {alertsCount}
-          </Text>
-        </View>
-      </View>
-
-      {/* Hiển thị kết luận hiện tại nếu có (giống ReportTab.conclusionBox của Farmer) */}
-      {hasConclusion && (
-        <View style={[styles.conclusionBox, { backgroundColor: palette.surfaceStrong }]}>
-          <Text variant="small" weight="semiBold" color={palette.textSecondary}>
-            {existingConclusionAt
-              ? t('Kết luận chuyên gia ({at}):', {
-                  at: formatDateTime(existingConclusionAt),
-                })
-              : t('Kết luận chuyên gia:')}
-          </Text>
-          <Text variant="body" color={palette.text}>
-            {existingConclusionText}
-          </Text>
-        </View>
-      )}
-
-      {/* Nút Viết / Sửa kết luận */}
+      {/* Nút Viết kết luận */}
       <View style={styles.bottomActions}>
         <PressableScale
           onPress={() => setIsSheetOpen(true)}
           disabled={isSubmitting}
-          style={[
-            styles.writeBtn,
-            {
-              backgroundColor: hasConclusion ? palette.surfaceStrong : palette.primary,
-              opacity: isSubmitting ? 0.6 : 1,
-            },
-          ]}
+          style={[styles.writeBtn, { backgroundColor: palette.primary, opacity: isSubmitting ? 0.6 : 1 }]}
           accessibilityRole="button"
           accessibilityLabel={t('Viết kết luận và khuyến nghị')}
         >
-          <NotePencil
-            size={16}
-            weight="bold"
-            color={hasConclusion ? palette.text : palette.onPrimary}
-          />
-          <Text
-            variant="small"
-            weight="semiBold"
-            color={hasConclusion ? palette.text : palette.onPrimary}
-          >
-            {hasConclusion ? t('Sửa kết luận') : t('Viết kết luận →')}
+          <NotePencil size={16} weight="bold" color={palette.onPrimary} />
+          <Text variant="small" weight="semiBold" color={palette.onPrimary}>
+            {t('Viết kết luận →')}
           </Text>
         </PressableScale>
       </View>
 
-      {/* BottomSheet: Viết kết luận & 3 Chip mẫu gợi ý nhanh (2 chạm) */}
-      <BottomSheet
-        visible={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-      >
+      {/* BottomSheet: Viết kết luận */}
+      <BottomSheet visible={isSheetOpen} onClose={() => setIsSheetOpen(false)}>
         <View style={styles.sheetHeader}>
           <Text variant="heading" weight="semiBold">
             {t('Kết luận & Khuyến nghị')}
           </Text>
           <Text variant="small" color={palette.textSecondary}>
-            {t('Chọn nhanh mẫu khuyến nghị chuyên gia hoặc nhập nội dung tùy biến.')}
+            {t('Nhận định chuyên môn cho kỳ báo cáo này của nhà {house}.', { house: report.house_name })}
           </Text>
         </View>
 
         <View style={styles.sheetBody}>
-          <Text variant="small" weight="semiBold" color={palette.textSecondary} style={{ marginBottom: 4 }}>
-            {t('Mẫu khuyến nghị nhanh (1 chạm):')}
-          </Text>
-          <View style={styles.templatesContainer}>
-            {TEMPLATE_CONCLUSIONS.map((tmpl, idx) => {
-              const isSelected = conclusionText === tmpl
-              return (
-                <Pressable
-                  key={idx}
-                  onPress={() => handleSelectTemplate(tmpl)}
-                  style={[
-                    styles.templateChip,
-                    {
-                      backgroundColor: isSelected ? palette.inverse : palette.surfaceStrong,
-                    },
-                  ]}
-                >
-                  <Sparkle
-                    size={12}
-                    color={isSelected ? palette.onInverse : palette.textSecondary}
-                    weight="bold"
-                  />
-                  <Text
-                    variant="small"
-                    weight={isSelected ? 'semiBold' : 'regular'}
-                    color={isSelected ? palette.onInverse : palette.text}
-                    numberOfLines={2}
-                    style={{ flex: 1 }}
-                  >
-                    {tmpl}
-                  </Text>
-                </Pressable>
-              )
-            })}
-          </View>
-
           <TextField
             label={t('Nội dung kết luận')}
             value={conclusionText}
@@ -300,30 +156,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.full,
   },
-  statsBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  statCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statVal: {
-    marginTop: 2,
-    fontVariant: ['tabular-nums'],
-  },
-  statDivider: {
-    width: BorderWidth.hairline,
-    height: 24,
-  },
-  conclusionBox: {
-    borderRadius: Radius.sm,
-    padding: Spacing.md,
-    marginTop: Spacing.sm,
-    gap: Spacing.xs,
+  period: {
+    marginTop: Spacing.xs,
   },
   bottomActions: {
     flexDirection: 'row',
@@ -346,16 +180,6 @@ const styles = StyleSheet.create({
   },
   sheetBody: {
     gap: Spacing.sm,
-  },
-  templatesContainer: {
-    gap: Spacing.xs,
-  },
-  templateChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
   },
   sheetActions: {
     flexDirection: 'row',

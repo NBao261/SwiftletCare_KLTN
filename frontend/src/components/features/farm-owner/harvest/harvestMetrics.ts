@@ -221,6 +221,8 @@ export interface HarvestGroup {
   weight_grams: number;
   env_snapshot?: EnvSnapshot;
   product_images: string[];
+  // HARVEST-FR-006 — id các lô DRAFT (Farm Technician nhập, chờ Farm Owner xác nhận); rỗng = đã xác nhận hết
+  pendingIds: string[];
 }
 
 // Khoá nhóm của 1 đợt
@@ -251,6 +253,7 @@ export function groupHarvests(batches: HarvestBatch[]): HarvestGroup[] {
       weight_grams: sorted.reduce((sum, batch) => sum + batch.weight_grams, 0),
       env_snapshot: first.env_snapshot,
       product_images: first.product_images,
+      pendingIds: sorted.filter(batch => batch.status === 'DRAFT').map(batch => batch._id),
     };
   });
 }

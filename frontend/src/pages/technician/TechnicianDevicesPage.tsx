@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect, FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { usePermission } from "@/hooks/common/usePermission";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { useFarms, useHouses, useZones, useAllZones } from "@/hooks/shared/useFarms";
 import { deviceApi } from "@/apis/shared/devices.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Modal, Card, SelectMenu } from "@/components/ui";
-import { IconFarm } from "@/components/ui/icons";
+import { Home, Plus, Wrench } from "lucide-react";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
 import SystemHealthBar, { needsAttention } from "@/components/features/technician/devices/SystemHealthBar";
@@ -23,9 +23,21 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
 
-/** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018 */
+/** Devices Page – FARM-FR-003/005/006, ENV-FR-013b/013c, ENV-FR-016..018
+ * G-20: màn Technician cũ chuyển thành Console Thiết bị cho ADMIN + giữ quyền cho FARM_OWNER, FARM_TECHNICIAN.
+ * Phân quyền API (backend f9d9522):
+ *   - Cài đặt/dời/gỡ/thay/audio: FARM_OWNER only  → canManageLifecycle
+ *   - RESTART: ADMIN, FARM_OWNER, FARM_TECHNICIAN   → canRestart
+ *   - PUSH_CONFIG, OTA: ADMIN only                  → canAdminCmd
+ */
 export default function TechnicianDevicesPage() {
-  const canOnboard = usePermission("TECHNICIAN");
+  // G-20: Chỉ FARM_OWNER mới được đăng ký/dời/gỡ/thay thiết bị và quản lý file loa (ADMIN, FARM_TECHNICIAN → 403)
+  const canManageLifecycle = usePermission("FARM_OWNER");
+  // G-20: RESTART: ADMIN, FARM_OWNER, FARM_TECHNICIAN
+  const canRestart = usePermission("ADMIN", "FARM_OWNER", "FARM_TECHNICIAN");
+  // G-20: PUSH_CONFIG: chỉ ADMIN (FARM_OWNER, FARM_TECHNICIAN → 403)
+  const canPushConfig = usePermission("ADMIN");
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Bộ lọc vị trí độc lập (Local state) — khởi tạo từ searchParams nếu có điều hướng từ trang Trang trại
@@ -224,7 +236,7 @@ export default function TechnicianDevicesPage() {
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-warmGray/15 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm font-bold text-charcoal shrink-0 mr-1">
-            <IconFarm width={18} height={18} className="text-warmGray" />
+            <Home size={18} className="text-warmGray" />
             <span>Vị trí:</span>
           </div>
 
@@ -294,11 +306,19 @@ export default function TechnicianDevicesPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
-          {canOnboard && (
-            <Button onClick={handleOpenRegister}>
-              + Kích hoạt thiết bị
-            </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 self-end lg:self-auto">
+          {/* G-20: chỉ FARM_OWNER lắp đặt và kích hoạt thiết bị (ADMIN, FARM_TECHNICIAN nhận 403) */}
+          {canManageLifecycle && (
+            <>
+              <Button variant="secondary" onClick={() => navigate('/onboarding')}>
+                <Wrench className="h-4 w-4" />
+                Hướng dẫn Lắp đặt
+              </Button>
+              <Button onClick={handleOpenRegister}>
+                <Plus className="h-4 w-4" />
+                Kích hoạt thiết bị
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -312,12 +332,13 @@ export default function TechnicianDevicesPage() {
             description={
               hasLocationFilter
                 ? "Không tìm thấy thiết bị ESP32 nào được lắp đặt tại khu vực đang lọc. Bạn có thể kích hoạt thiết bị mới vào vị trí này."
-                : "Hệ thống chưa có thiết bị ESP32 nào được kích hoạt. Hãy bấm “+ Kích hoạt thiết bị” để bắt đầu."
+                : "Hệ thống chưa có thiết bị ESP32 nào được kích hoạt. Hãy bấm “Kích hoạt thiết bị” để bắt đầu."
             }
             action={
-              canOnboard ? (
+              canManageLifecycle ? (
                 <Button onClick={handleOpenRegister}>
-                  + Kích hoạt thiết bị
+                  <Plus className="h-4 w-4" />
+                  Kích hoạt thiết bị
                 </Button>
               ) : undefined
             }
@@ -360,9 +381,10 @@ export default function TechnicianDevicesPage() {
                   onOpenReassign={() => setReassignNodeId(node._id)}
                   onOpenReplace={() => setReplaceNodeId(node._id)}
                   onOpenDecommission={() => setDecommissionNodeId(node._id)}
-                  canOnboard={canOnboard}
+                  canOnboard={canManageLifecycle}
+                  canPushConfig={canPushConfig}
                   rebootUnsupported={rebootUnsupportedIds.has(node._id)}
-                  onReboot={canOnboard ? () => setRebootNodeId(node._id) : undefined}
+                  onReboot={canRestart ? () => setRebootNodeId(node._id) : undefined}
                 />
               );
             })}

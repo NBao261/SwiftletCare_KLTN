@@ -11,7 +11,7 @@ import { PressableScale } from '@/components/ui/pressable-scale'
 import { useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { useQueryClient } from '@tanstack/react-query'
-import { offNotificationNew, onNotificationNew } from '@/services/socket/socketClient'
+import { onNotificationNew } from '@/services/socket/socketClient'
 import {
   ArrowUp,
   SlidersHorizontal,
@@ -77,10 +77,8 @@ export default function VerdictsScreen() {
       void queryClient.invalidateQueries({ queryKey: ['verdict-stats'] })
       void queryClient.invalidateQueries({ queryKey: ['expert'] })
     }
-    onNotificationNew(handleNotification)
-    return () => {
-      offNotificationNew(handleNotification)
-    }
+    const unsubscribe = onNotificationNew(handleNotification)
+    return unsubscribe
   }, [queryClient])
 
   const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)

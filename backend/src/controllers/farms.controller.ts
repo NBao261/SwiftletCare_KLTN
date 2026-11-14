@@ -48,6 +48,16 @@ export const removeMember = asyncHandler(async (req: Request, res: Response) => 
   res.json({ success: true, data: farm })
 })
 
+/** GET /farms/:id/invitations – AUTH-FR-005, 010: lời mời của farm cho Primary Owner, không có token */
+export const listInvitations = asyncHandler(async (req: Request, res: Response) => {
+  const { records, total, page, limit } = await farmService.listInvitations(req.params.id, req.user, {
+    status: req.query.status as farmService.InvitationStatus | undefined,
+    page: req.query.page as string | undefined,
+    limit: req.query.limit as string | undefined,
+  })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
+})
+
 /** GET /invitations/:token – xem trước lời mời, không cần đăng nhập */
 export const getInvitation = asyncHandler(async (req: Request, res: Response) => {
   const result = await farmService.getInvitationByToken(req.params.token)
@@ -90,6 +100,28 @@ export const createZone = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data: zone })
 })
 
+/** PUT /farms/houses/:houseId/technicians/:userId – AUTH-FR-013 */
+export const assignTechnician = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.assignTechnician(req.params.houseId, req.user, req.params.userId, req.body?.primary === true)
+  res.json({ success: true, data: house })
+})
+
+/** GET /farms/houses/:houseId/roster – AUTH-FR-014 */
+export const getRoster = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await farmService.getRoster(req.params.houseId, req.user) })
+})
+
+/** PUT /farms/houses/:houseId/roster – AUTH-FR-014 */
+export const setRoster = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await farmService.setRoster(req.params.houseId, req.user, req.body.shifts) })
+})
+
+/** DELETE /farms/houses/:houseId/technicians/:userId – AUTH-FR-013 */
+export const unassignTechnician = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.unassignTechnician(req.params.houseId, req.user, req.params.userId)
+  res.json({ success: true, data: house })
+})
+
 /** GET /farms/houses/:houseId/zones */
 export const listZones = asyncHandler(async (req: Request, res: Response) => {
   const zones = await farmService.listZones(req.params.houseId, req.user)
@@ -130,6 +162,24 @@ export const updateDetectionTuning = asyncHandler(async (req: Request, res: Resp
 export const updateBirdCountTuning = asyncHandler(async (req: Request, res: Response) => {
   const house = await farmService.updateHouseBirdCountTuning(req.params.houseId, req.user, req.body)
   res.json({ success: true, data: house })
+})
+
+/** GET /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-28 */
+export const getHealthLevels = asyncHandler(async (req: Request, res: Response) => {
+  const data = await farmService.getHouseHealthLevels(req.params.houseId, req.user)
+  res.json({ success: true, data })
+})
+
+/** PUT /farms/houses/:houseId/stage – FARM-FR-014, BR-46 */
+export const setHouseStage = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.setHouseStage(req.params.houseId, req.user, req.body.stage)
+  res.json({ success: true, data: house })
+})
+
+/** PUT /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-22 */
+export const updateHealthLevels = asyncHandler(async (req: Request, res: Response) => {
+  const data = await farmService.updateHouseHealthLevels(req.params.houseId, req.user, req.body)
+  res.json({ success: true, data })
 })
 
 /** PUT /farms/zones/:zoneId/thresholds/reset – ENV-FR-020 */

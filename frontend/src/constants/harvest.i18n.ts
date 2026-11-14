@@ -32,6 +32,11 @@ const vi = {
   'table.allHouses': 'Tất cả nhà yến',
   'table.filterNestType': 'Lọc theo loại tổ',
   'table.allNestTypes': 'Tất cả loại tổ',
+  'table.filterStatus': 'Lọc theo trạng thái xác nhận',
+  'table.allStatuses': 'Tất cả trạng thái',
+  // HARVEST-FR-006 — lô do kỹ thuật viên nhập chờ chủ nhà yến xác nhận
+  'status.pending': 'Chờ xác nhận',
+  'status.confirmed': 'Đã xác nhận',
   'table.sortDate': 'Ngày thu hoạch',
   'table.sortWeight': 'Sản lượng',
   'table.clearFilters': 'Hủy lọc',
@@ -50,6 +55,7 @@ const vi = {
   'action.detail': 'Chi tiết',
   'action.edit': 'Sửa',
   'action.delete': 'Xóa',
+  'action.confirm': 'Xác nhận đợt thu',
 
   // Loại tổ
   // Tên gọi hiển thị theo màu tổ; backend vẫn lưu RAW / CLEANED / PREMIUM
@@ -90,6 +96,10 @@ const vi = {
   'delete.confirm': 'Xóa',
   'delete.done': 'Đã xoá đợt thu hoạch',
   'delete.failed': 'Xoá thất bại',
+  'confirm.title': 'Xác nhận đợt thu hoạch?',
+  'confirm.description': 'Đợt thu ngày {date} ở {house} do {creator} nhập. Sau khi xác nhận, kỹ thuật viên không sửa hay xoá được nữa.',
+  'confirm.done': 'Đã xác nhận đợt thu hoạch',
+  'confirm.failed': 'Không xác nhận được đợt thu hoạch',
 
   // Biểu đồ năm
   'chart.titleMonth': 'Sản lượng theo tháng {year}',
@@ -145,10 +155,6 @@ const vi = {
   'page.blockedHouse': 'Nhà {house} chưa có Zone nào nên chưa ghi được đợt thu. Thêm Zone cho nhà này ở trang Trang trại trước.',
   'page.blockedFarm': 'Trang trại chưa có Zone nào nên chưa ghi được đợt thu. Thêm nhà yến và Zone ở trang Trang trại trước.',
   'form.errorOldDate': 'Ngày thu không được trước năm 2000',
-  'date.placeholder': 'dd/mm/yyyy',
-  'date.openCalendar': 'Mở lịch chọn ngày',
-  'date.previousMonth': 'Tháng trước',
-  'date.nextMonth': 'Tháng sau',
   'form.amountsTitle': 'Sản lượng theo loại yến',
   'form.amountsHint': 'Chỉ nhập số liệu cho loại yến thu hoạch thực tế. Các ô để trống sẽ mặc định là 0.',
   'form.colType': 'Loại yến',
@@ -167,6 +173,7 @@ const vi = {
   'csv.temperature': 'Nhiệt độ TB 7 ngày (°C)',
   'csv.humidity': 'Độ ẩm TB 7 ngày (%)',
   'csv.weight': 'Khối lượng (g)',
+  'csv.status': 'Trạng thái',
 };
 
 export type HarvestKey = keyof typeof vi;
@@ -199,6 +206,10 @@ const en: Record<HarvestKey, string> = {
   'table.allHouses': 'All houses',
   'table.filterNestType': 'Filter by nest type',
   'table.allNestTypes': 'All nest types',
+  'table.filterStatus': 'Filter by confirmation status',
+  'table.allStatuses': 'All statuses',
+  'status.pending': 'Awaiting confirmation',
+  'status.confirmed': 'Confirmed',
   'table.sortDate': 'Harvest date',
   'table.sortWeight': 'Yield',
   'table.clearFilters': 'Clear filters',
@@ -217,6 +228,7 @@ const en: Record<HarvestKey, string> = {
   'action.detail': 'Details',
   'action.edit': 'Edit',
   'action.delete': 'Delete',
+  'action.confirm': 'Confirm harvest',
 
   'nestType.RAW': 'White nest',
   'nestType.CLEANED': 'Pink nest',
@@ -252,6 +264,10 @@ const en: Record<HarvestKey, string> = {
   'delete.confirm': 'Delete',
   'delete.done': 'Harvest batch deleted',
   'delete.failed': 'Could not delete the batch',
+  'confirm.title': 'Confirm this harvest?',
+  'confirm.description': 'Harvest of {date} at {house}, entered by {creator}. Once confirmed, the technician can no longer edit or delete it.',
+  'confirm.done': 'Harvest confirmed',
+  'confirm.failed': 'Could not confirm the harvest',
 
   'chart.titleMonth': 'Monthly yield {year}',
   'chart.titleQuarter': 'Quarterly yield {year}',
@@ -305,10 +321,6 @@ const en: Record<HarvestKey, string> = {
   'page.blockedHouse': 'House {house} has no zone yet, so no harvest can be recorded. Add a zone to this house on the Farms page first.',
   'page.blockedFarm': 'This farm has no zone yet, so no harvest can be recorded. Add a house and a zone on the Farms page first.',
   'form.errorOldDate': 'The harvest date cannot be before 2000',
-  'date.placeholder': 'dd/mm/yyyy',
-  'date.openCalendar': 'Open calendar',
-  'date.previousMonth': 'Previous month',
-  'date.nextMonth': 'Next month',
   'form.amountsTitle': 'Yield by nest type',
   'form.amountsHint': 'Only fill in the nest types actually harvested. Empty fields default to 0.',
   'form.colType': 'Nest type',
@@ -326,6 +338,7 @@ const en: Record<HarvestKey, string> = {
   'csv.temperature': 'Avg temperature 7 days (°C)',
   'csv.humidity': 'Avg humidity 7 days (%)',
   'csv.weight': 'Weight (g)',
+  'csv.status': 'Status',
 };
 
 export const harvestDict: Dictionary<HarvestKey> = { vi, en };

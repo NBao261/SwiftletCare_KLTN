@@ -32,6 +32,8 @@ void markEverConnected();
 
 // NVS – device ID và mật khẩu broker do tools/flash_identity.py ghi (namespace `identity`). false nếu chưa flash
 bool loadDeviceIdentity(String &deviceId, String &brokerSecret);
+// NVS – địa chỉ broker nạp lúc flash (`flash_identity.py --broker`, namespace `identity`, FARM-FR-003c). false nếu không nạp
+bool loadFlashedBroker(String &broker);
 
 // NVS – hàng đợi cảnh báo chờ PUBACK (Report 4 §7.2, NFR-06 c), lưu nguyên khối
 void saveAlertQueue(const void *data, size_t size);

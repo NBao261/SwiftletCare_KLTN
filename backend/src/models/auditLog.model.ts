@@ -6,7 +6,7 @@ export interface IAuditLog extends Document {
   _id: Types.ObjectId
   actor_id?: Types.ObjectId // ref User, rỗng nếu hệ thống tự ghi (ví dụ job nền)
   /** Vai trò người làm lúc ghi (EXPERT-FR-009); rỗng khi hệ thống tự ghi ngoài request */
-  actor_role?: Role
+  actor_role?: Role | 'TECHNICIAN'
   /** Farm của hành động — nguồn của lịch sử hoạt động chuyên gia (EXPERT-FR-009, Report 4 §6.1) */
   farm_id?: Types.ObjectId
   action: string            // ACCOUNT_LOCKED, ACCOUNT_UNLOCKED, ACCOUNT_DELETED, DEVICE_COMMAND_SENT, ...
@@ -20,7 +20,8 @@ export interface IAuditLog extends Document {
 const auditLogSchema = new Schema<IAuditLog>(
   {
     actor_id:    { type: Schema.Types.ObjectId, ref: 'User' },
-    actor_role:  { type: String, enum: ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'TECHNICIAN'] satisfies Role[] },
+    // `TECHNICIAN` chỉ còn ở dòng audit ghi trước G-20 (role cũ): lịch sử không sửa
+    actor_role:  { type: String, enum: [...(['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] satisfies Role[]), 'TECHNICIAN'] },
     farm_id:     { type: Schema.Types.ObjectId, ref: 'Farm' },
     action:      { type: String, required: true },
     target_type: { type: String, required: true },

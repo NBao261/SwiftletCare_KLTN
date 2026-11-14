@@ -158,3 +158,67 @@ export function describeAlertDetail(alert: Alert): string[] {
 export function isEnvironmentAlert(alert: Pick<Alert, 'type' | 'zone_id'>): boolean {
   return Boolean(alert.zone_id) && ['THRESHOLD_BREACH', 'FORECAST_BREACH', 'MISTING_INEFFECTIVE'].includes(alert.type)
 }
+
+// Một mục trong lịch sử xử lý của cảnh báo
+export interface AlertTimelineEntry {
+  key: string
+  at: string
+  actor: string
+  action: string
+  note?: string
+}
+
+// Người kết luận: tên backend populate; thiếu tên thì gọi theo vai trò (farm chưa có chuyên gia thì chủ trại kết luận, BR-22)
+export function getVerdictActorName(verdict: NonNullable<Alert['expert_verdict']>): string {
+  return verdict.by?.full_name ?? (verdict.role === 'FARM_OWNER' ? t('Chủ trại') : t('Chuyên gia'))
+}
+
+// Lịch sử xử lý của một cảnh báo theo thời gian, cũ trước: hệ thống tạo → nhắc lại → kết luận → chủ trại xác nhận → đóng.
+// Chỉ dựng từ trường cảnh báo backend trả; expert_verdict chỉ giữ lần kết luận mới nhất. resolveMemberName: tên người xác
+// nhận theo id (thành viên farm), không có thì "Chủ trại"
+export function buildAlertTimeline(
+  alert: Alert,
+  resolveMemberName: (userId: string | undefined) => string | null,
+): AlertTimelineEntry[] {
+  const system = t('Hệ thống')
+  const verdict = alert.expert_verdict
+  const entries: AlertTimelineEntry[] = [{ key: 'created', at: alert.created_at, actor: system, action: t('Tạo cảnh báo') }]
+
+  if (alert.renotified_at) {
+    entries.push({ key: 'renotified', at: alert.renotified_at, actor: system, action: t('Nhắc lại vì chưa ai xác nhận') })
+  }
+  if (verdict) {
+    entries.push({
+      key: 'verdict',
+      at: verdict.at,
+      actor: getVerdictActorName(verdict),
+      action: verdict.result === 'CONFIRMED' ? t('Kết luận: cảnh báo đúng') : t('Kết luận: bác bỏ cảnh báo'),
+      ...(verdict.note ? { note: verdict.note } : {}),
+    })
+    if (alert.status === 'DISMISSED' && verdict.result === 'REJECTED') {
+      entries.push({ key: 'dismissed', at: verdict.at, actor: getVerdictActorName(verdict), action: t('Đóng vì bị bác bỏ') })
+    }
+  }
+  // acknowledgement_note là ghi chú của chủ trại khi xác nhận, hoặc lý do hệ thống ghi khi tự đóng
+  if (alert.acknowledged_at) {
+    entries.push({
+      key: 'acknowledged',
+      at: alert.acknowledged_at,
+      actor: resolveMemberName(alert.acknowledged_by) ?? t('Chủ trại'),
+      action: t('Xác nhận đã biết'),
+      ...(alert.acknowledgement_note ? { note: alert.acknowledgement_note } : {}),
+    })
+  }
+  if (alert.status === 'RESOLVED' && alert.resolved_at) {
+    entries.push({
+      key: 'resolved',
+      at: alert.resolved_at,
+      actor: system,
+      action: t('Đóng cảnh báo'),
+      ...(!alert.acknowledged_at && alert.acknowledgement_note ? { note: alert.acknowledgement_note } : {}),
+    })
+  }
+
+  // sort ổn định: hai mục cùng thời điểm giữ thứ tự thêm (kết luận trước "đóng vì bị bác bỏ", xác nhận trước "đóng")
+  return entries.sort((first, second) => Date.parse(first.at) - Date.parse(second.at))
+}

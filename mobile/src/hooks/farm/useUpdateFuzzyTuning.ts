@@ -7,7 +7,7 @@ export interface UpdateFuzzyTuningInput {
   tuning: FuzzyTuning
 }
 
-// Lưu hệ số bộ điều khiển mờ của zone (ENV-FR-021): backend gửi xuống controller qua config/update
+// Lưu hệ số bộ điều khiển fuzzy của zone (ENV-FR-021): backend gửi xuống controller qua config/update
 export function useUpdateFuzzyTuning() {
   const queryClient = useQueryClient()
 

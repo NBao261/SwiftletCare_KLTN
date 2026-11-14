@@ -3,6 +3,7 @@ import { CpuIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { type DataTableColumn } from '@/components/ui'
 import FixedRowsTable from '@/components/ui/FixedRowsTable'
 import TableEmptyState from '@/components/common/TableEmptyState'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -39,7 +40,12 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
       },
       {
         key: 'id', header: t('device.col.id'), className: 'w-[16%] whitespace-nowrap',
-        render: device => <span className="rounded-lg bg-warmGray/10 px-2 py-1 text-caption text-graphite">{device.deviceId}</span>,
+        render: device => (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="rounded-lg bg-warmGray/10 px-2 py-1 text-caption text-graphite">{device.deviceId}</span>
+            <SimulatedBadge simulated={device.simulated} />
+          </span>
+        ),
       },
     ]
     if (zoneNameById) {
@@ -74,5 +80,5 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
     return cols
   }, [t, ago, zoneNameById, onSelect])
 
-  return <FixedRowsTable columns={columns} rows={devices} getRowKey={device => device.id} onRowClick={onSelect} emptyNotice={t(zoneNameById ? 'house.noDevice' : 'device.empty')} emptyContent={<TableEmptyState title={t(zoneNameById ? 'house.noDevice' : 'device.empty')} />} rowHeight={64} />
+  return <FixedRowsTable columns={columns} rows={devices} getRowKey={device => device.id} onRowClick={onSelect} emptyNotice={t(zoneNameById ? 'house.noDevice' : 'device.empty')} emptyContent={<TableEmptyState title={t(zoneNameById ? 'house.noDevice' : 'device.empty')} />} rowHeight={64} pageSize={5} />
 }

@@ -808,7 +808,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Trạng thái `DISMISSED`, gói bằng chứng của cảnh báo suy luận | EXPERT-FR-003, ALERT-FR-014 | ⬜ Chưa có ở backend (#19, #23) | `ComingSoon` cho phần bằng chứng |
 | Đồng bộ cấu hình theo bộ điều khiển | ENV-FR-027 | ⬜ Chưa có (#22) | `ComingSoon` |
 | Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
-| Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ⬜ Chưa có endpoint (#32–36) | `ComingSoon` |
+| Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ✅ API thật (`/health-reports/days*`, `/health-reports`, `/farms/houses/:id/health-levels`); màn `/health` và trang báo cáo `/health/report` (PR #126) | Không |
 | Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
 | Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
@@ -1314,7 +1314,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 ### 13.4. Realtime — Socket.io
 
 - **[Bắt buộc]** Component/page **không** import `@/lib/socket`. Kết nối và đăng ký sự kiện đi qua hook (`useSocket`, `useTelemetry`, `useAlertNotifications`).
-- **[Bắt buộc]** Mọi `on*`/`joinZone` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`) — thiếu cleanup là rò listener mỗi lần đổi zone.
+- **[Bắt buộc]** Mọi `on*`/`joinZone`/`joinHouse` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`/`leaveHouse`) — thiếu cleanup là rò listener mỗi lần đổi zone hoặc nhà.
 - **[Bắt buộc]** Tên sự kiện và payload khớp backend và Report 4 §7.3: phòng `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE` — số đếm chim, camera, cảnh báo của nhà yến), phòng riêng `user:<id>`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`; type trong `types/socket.types.ts`.
 
 ### 13.5. Lỗi, loading, rỗng
@@ -1538,7 +1538,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 
 | Nhóm | Component |
 |---|---|
-| Nền tảng | `Button` · `Card` · `Badge` · `Input` · `Select` · `Textarea` · `Toggle` · `Avatar` · `icons.tsx` |
+| Nền tảng | `Button` · `Card` · `Badge` · `Input` · `Select` · `Textarea` · `Toggle` · `Avatar` · `DatePicker` (ô ngày dd/mm/yyyy + lịch tháng, thay `<input type="date">`) · `icons.tsx` |
 | Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
 | Khung, ô số liệu | `SectionCard` · `StatTile` · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
 | Lớp nổi | `Modal` · `ConfirmModal` · `NoteActionModal` (popup nhập lý do) · `Drawer` · `ActionsMenu` · `SelectMenu` · `useFloatingMenu.ts` |
@@ -1569,6 +1569,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `lib/helpers.ts` | `getApiErrorMessage` (nợ 13.16 b) · `formatDate`/`formatDateOnly` (nợ 6.1) · `formatRelativeTime` | — |
 | `lib/axios.ts` | instance API + tự làm mới phiên 401 | 13.1 |
 | `lib/socket.ts` | socket singleton — chỉ dùng qua hook | 13.4 |
+| `lib/qrCode.ts` | `deviceLabelCode` · `parseDeviceLabelCode` (nhãn thiết bị `swiftletcare://claim?d=&k=`) · `zoneCode` (mã tầng) · `qrDataUrl` · `printQrLabels` — cùng định dạng bộ đọc mobile | — |
 | `lib/queryClient.ts` | React Query client (30s, retry 1) | 13.2 |
 | `lib/navigation.ts` · `lib/chartTheme.ts` | chuyển về đăng nhập · theme Chart.js (bảng `CHART_COLORS` dùng cả cho recharts) | 8 |
 | `features/farm-owner/harvest/ChartParts.tsx` | Thành phần biểu đồ shadcn trên recharts: `ChartContainer`, `ChartTooltip(Content)`, `ChartLegend(Content)` — chỉ dùng trong trang Thu hoạch | 8 |

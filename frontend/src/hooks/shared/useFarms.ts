@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
-import type { Coordinates, FuzzyTuning, Zone, FarmMemberRole } from '@/types'
+import type { Coordinates, FuzzyTuning, Zone, FarmMemberRole, RosterShift } from '@/types'
 
 const isMongoId = (id: string | undefined): boolean => Boolean(id && /^[0-9a-fA-F]{24}$/.test(id))
 
@@ -159,7 +159,45 @@ export function useRemoveMember(farmId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (userId: string) => farmApi.removeMember(farmId, userId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['farms', farmId] }),
+    // Gỡ thợ khỏi farm thì backend bỏ luôn các lần giao nhà và ca trực của người đó
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['farms', farmId] })
+      void queryClient.invalidateQueries({ queryKey: ['houses', farmId] })
+      void queryClient.invalidateQueries({ queryKey: ['roster'] })
+    },
+  })
+}
+
+// AUTH-FR-013 — bật/tắt giao nhà cho 1 Farm Technician, đổi thợ chính (primary: true đẩy thợ chính cũ thành thợ phụ)
+export function useSetHouseTechnician(farmId: string, houseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { userId: string; assigned: boolean; primary?: boolean }) => (input.assigned
+      ? farmApi.assignTechnician(houseId, input.userId, input.primary ?? false)
+      : farmApi.unassignTechnician(houseId, input.userId)),
+    // Bỏ giao nhà thì backend bỏ luôn các ca trực của thợ đó
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['houses', farmId] })
+      void queryClient.invalidateQueries({ queryKey: ['roster', houseId] })
+    },
+  })
+}
+
+// AUTH-FR-014 — lịch trực của 1 nhà (Farm Owner, Domain Expert xem cả lịch)
+export function useHouseRoster(houseId: string | undefined) {
+  return useQuery({
+    queryKey: ['roster', houseId],
+    queryFn: () => farmApi.getRoster(houseId!).then(response => response.data.data.roster),
+    enabled: isMongoId(houseId),
+  })
+}
+
+// Thay cả lịch trực của nhà: thêm, sửa, xoá 1 ca đều gửi lại toàn bộ
+export function useSetHouseRoster(houseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (shifts: RosterShift[]) => farmApi.setRoster(houseId, shifts),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['roster', houseId] }),
   })
 }
 

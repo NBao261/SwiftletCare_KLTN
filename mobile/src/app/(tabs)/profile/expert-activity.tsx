@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Redirect, router } from 'expo-router'
-import { ArrowsClockwiseIcon, CheckCircleIcon, ClockIcon, GavelIcon, PencilSimpleIcon } from 'phosphor-react-native'
+import { ArrowsClockwiseIcon, CheckCircleIcon, ClockIcon } from 'phosphor-react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
+import { ExpertDecisionList } from '@/components/profile/ExpertDecisionList'
 import { ProfileRow } from '@/components/profile/ProfileRow'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -12,17 +13,15 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
-import { useExpertActivityList } from '@/hooks/expert-activity/useExpertActivityList'
 import { useParameterReviewList } from '@/hooks/expert-activity/useParameterReviewList'
 import { useProposalList } from '@/hooks/expert-activity/useProposalList'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
-import type { ChangeReviewStatus, ExpertActivityEntry, ProposalStatus } from '@/types'
-import { getActivityVerdict, getExpertActionLabel, getReviewStatusLabel, isReviewPending } from '@/utils/account.utils'
+import type { ChangeReviewStatus, ProposalStatus } from '@/types'
+import { describeValueDiff, getReviewStatusLabel, isReviewPending } from '@/utils/account.utils'
 import { formatDateTime } from '@/utils/date.utils'
-import { getRoleLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -48,7 +47,6 @@ export default function ExpertActivityScreen() {
   const farmId = farm?._id ?? ''
   const [tab, setTab] = useState<ActivityTab>('decisions')
   const directory = useZoneDirectory()
-  const decisionsQuery = useExpertActivityList(farmId, tab === 'decisions')
   const reviewsQuery = useParameterReviewList(farmId, tab === 'reviews')
   const proposalsQuery = useProposalList(farmId, tab === 'reviews')
 
@@ -59,53 +57,6 @@ export default function ExpertActivityScreen() {
     const zone = zoneId ? directory.zoneById.get(zoneId) : undefined
     const house = directory.houseById.get(houseId ?? zone?.house_id ?? '')
     return [house?.name, zone?.name].filter(Boolean).join(' › ')
-  }
-
-  const renderDecision = (entry: ExpertActivityEntry, index: number, total: number) => {
-    const verdict = getActivityVerdict(entry.metadata)
-    return (
-      <ProfileRow
-        key={entry._id}
-        icon={entry.action === 'ALERT_VERDICT_SET' ? GavelIcon : PencilSimpleIcon}
-        label={getExpertActionLabel(entry.action)}
-        caption={[
-          `${entry.actor?.full_name ?? '_'} (${getRoleLabel(entry.actor_role)}) · ${formatDateTime(entry.created_at)}`,
-          getScopeText(entry.zone_id, entry.house_id),
-          verdict ? (verdict === 'CONFIRMED' ? t('Xác nhận đúng') : t('Bác bỏ')) : '',
-        ]
-          .filter(Boolean)
-          .join('\n')}
-        hasDivider={index < total - 1}
-      />
-    )
-  }
-
-  const renderDecisions = () => {
-    if (decisionsQuery.isLoading) return <Skeleton width="100%" height={LIST_SKELETON_HEIGHT} radius={Radius.lg} />
-    if (decisionsQuery.isError) {
-      return (
-        <EmptyState
-          message={t('Không tải được hoạt động chuyên gia')}
-          actionLabel={t('Thử lại')}
-          onAction={() => decisionsQuery.refetch()}
-        />
-      )
-    }
-    const entries = decisionsQuery.data?.pages.flatMap(page => page.data) ?? []
-    if (entries.length === 0) return <EmptyState message={t('Chưa có quyết định nào của chuyên gia')} />
-    return (
-      <>
-        <Card style={styles.listCard}>{entries.map((entry, index) => renderDecision(entry, index, entries.length))}</Card>
-        {decisionsQuery.hasNextPage && (
-          <Button
-            label={t('Xem thêm')}
-            variant="link"
-            loading={decisionsQuery.isFetchingNextPage}
-            onPress={() => decisionsQuery.fetchNextPage()}
-          />
-        )}
-      </>
-    )
   }
 
   const renderReviews = () => {
@@ -144,6 +95,7 @@ export default function ExpertActivityScreen() {
                   label={review.group === 'thresholds' ? t('Ngưỡng') : t('Hệ số điều khiển')}
                   value={getReviewStatusLabel(review.status)}
                   caption={[getScopeText(review.zone_id), formatDateTime(review.updated_at)].filter(Boolean).join('\n')}
+                  details={describeValueDiff(review.old_values, review.new_values)}
                   hasDivider={index < reviews.length - 1}
                 />
               ))}
@@ -170,9 +122,11 @@ export default function ExpertActivityScreen() {
                   icon={getStatusIcon(proposal.status)}
                   label={getScopeText(proposal.zone_id) || t('Gợi ý hệ số')}
                   value={getReviewStatusLabel(proposal.status)}
-                  caption={[formatDateTime(proposal.created_at), proposal.note ? t('Lý do: {note}', { note: proposal.note }) : '']
-                    .filter(Boolean)
-                    .join('\n')}
+                  caption={formatDateTime(proposal.created_at)}
+                  details={[
+                    ...describeValueDiff(proposal.current_values, proposal.suggested_values),
+                    ...(proposal.note ? [t('Lý do: {note}', { note: proposal.note })] : []),
+                  ]}
                   hasDivider={index < proposals.length - 1}
                 />
               ))}
@@ -212,7 +166,11 @@ export default function ExpertActivityScreen() {
           onSelect={setTab}
           accessibilityLabel={t('Chọn danh sách')}
         />
-        {!farm ? <EmptyState message={t('Chưa có farm')} /> : tab === 'decisions' ? renderDecisions() : renderReviews()}
+        {!farm ? <EmptyState message={t('Chưa có farm')} /> : tab === 'decisions' ? (
+          <ExpertDecisionList farmId={farmId} enabled />
+        ) : (
+          renderReviews()
+        )}
       </ScrollView>
     </View>
   )

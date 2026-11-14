@@ -67,7 +67,11 @@ export function useAnalyticsKpis(scope: AnalyticsScope, today: string) {
         alerts.byScopeKey.get(getScopeKey(item)),
       )
     : []
-  const alertTotal = scopeAlerts.reduce((total, item) => total + (item?.total ?? 0), 0)
+  // Một phạm vi chưa có số (đang tải hoặc lỗi) thì chưa biết tổng: null để ô hiện "_", không hiện 0 giả
+  const alertTotal =
+    houseId && scopeAlerts.every(item => item !== undefined)
+      ? scopeAlerts.reduce((total, item) => total + (item?.total ?? 0), 0)
+      : null
   const highestSeverity: AlertSeverity | null = getHighestSeverity(scopeAlerts.flatMap(item => item?.alerts ?? []))
 
   return {

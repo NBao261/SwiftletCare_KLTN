@@ -1,36 +1,7 @@
 import { describe, expect, it } from '@jest/globals'
-import type { DayRating, ReviewItem, ZoneHealthReportItem } from '@/types/expert.types'
+import type { HouseHealthReportSummary, ReviewItem } from '@/types/expert.types'
 
 describe('Queue business logic & BR-31 guardrails', () => {
-  it('Khối 6: Quy tắc mù hai bước BR-31 bảo vệ trạng thái hệ thống khi PENDING', () => {
-    const pendingRating: DayRating = {
-      _id: 'rating-01',
-      house_id: 'house-01',
-      date: '2026-11-01',
-      state: 'PENDING',
-      system_status: 'WATCH',
-      system_reasons: ['Độ ẩm thấp 68%'],
-    }
-
-    // Khi state === 'PENDING' và chưa có assessor_status, UI phải ẩn thông tin hệ thống
-    const isBlind = pendingRating.state === 'PENDING' && !pendingRating.assessor_status
-    expect(isBlind).toBe(true)
-
-    const revealedSystemStatusBeforeRate = !isBlind ? pendingRating.system_status : undefined
-    expect(revealedSystemStatusBeforeRate).toBeUndefined()
-
-    // Khi chuyên gia đã chấm điểm (assessor_status được set sau khi POST thành công), mở khóa reveal đối chiếu
-    const ratedRating: DayRating = {
-      ...pendingRating,
-      assessor_status: 'GOOD',
-      state: 'RATED',
-    }
-    const isRevealed = ratedRating.state === 'RATED' || Boolean(ratedRating.assessor_status)
-    expect(isRevealed).toBe(true)
-    const revealedSystemStatusAfterRate = isRevealed ? ratedRating.system_status : undefined
-    expect(revealedSystemStatusAfterRate).toBe('WATCH')
-  })
-
   it('Khối 5: Từ chối đề xuất Fuzzy bắt buộc phải có lý do', () => {
     const validateRejection = (reason: string): { valid: boolean; error?: string } => {
       if (!reason.trim()) {
@@ -61,23 +32,21 @@ describe('Queue business logic & BR-31 guardrails', () => {
     expect(item.new_values.humidity_min).toBeLessThan(item.old_values.humidity_min)
   })
 
-  it('Khối 7: Báo cáo sức khỏe tổng hợp chỉ số thời gian đạt chuẩn và tự chủ', () => {
-    const report: ZoneHealthReportItem = {
+  it('Khối 6: Báo cáo theo nhà chờ kết luận có has_conclusion = false', () => {
+    const report: HouseHealthReportSummary = {
       _id: 'report-01',
       farm_id: 'farm-01',
-      zone_id: 'zone-01',
-      report_type: 'WEEKLY',
-      health_status: 'GOOD',
-      alerts_count: 2,
-      confirmed_alerts_count: 1,
-      period_start: '2026-10-26T00:00:00Z',
-      period_end: '2026-11-01T23:59:59Z',
-      time_in_range_pct: 92.4,
-      autonomy_pct: 88.0,
-      created_at: '2026-11-02T02:00:00Z',
+      house_id: 'house-01',
+      house_name: 'Nhà A',
+      kind: 'WEEKLY',
+      period_start: '2026-10-26',
+      period_end: '2026-11-01',
+      generated_at: '2026-11-02T02:00:00Z',
+      has_conclusion: false,
     }
 
-    expect(report.time_in_range_pct).toBe(92.4)
-    expect(report.expert_conclusion).toBeUndefined()
+    // Hàng đợi chuyên gia chỉ hiện báo cáo chưa có kết luận (lọc has_conclusion=false ở server)
+    expect(report.has_conclusion).toBe(false)
+    expect(report.kind).toBe('WEEKLY')
   })
 })

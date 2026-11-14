@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, ScrollView, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
@@ -17,6 +17,7 @@ import { HomeSection } from '@/components/home/HomeSection'
 import { LanguageFlag } from '@/components/profile/LanguageFlag'
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
 import { ProfileRow } from '@/components/profile/ProfileRow'
+import { PushDeviceRow } from '@/components/profile/PushDeviceRow'
 import { Card } from '@/components/ui/card'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
@@ -35,12 +36,14 @@ interface ProfileBasicContentProps {
   bottomPadding: number
 }
 
-// Trang Tài khoản của Chuyên gia (Domain Expert) — đồng bộ 100% thiết kế với OwnerProfileContent (ProfileAvatar, ProfileRow, LanguageFlag, Privacy)
+// Trang Tài khoản cơ bản cho role chưa có trang đầy đủ (Domain Expert, Farm Technician) — đồng bộ thiết kế với OwnerProfileContent
+// (ProfileAvatar, ProfileRow, LanguageFlag, Privacy). Người nhận push (kỹ thuật viên) có thêm dòng nhận push trên máy này (ALERT-FR-002)
 export function ProfileBasicContent({ user, language, isSwitching, onSwitchLanguage, bottomPadding }: ProfileBasicContentProps) {
   const palette = usePalette()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const isExpert = canPerform(user, 'writeConclusion')
+  const canReceivePush = canPerform(user, 'editNotificationSettings')
 
   return (
     <ScrollView
@@ -78,6 +81,15 @@ export function ProfileBasicContent({ user, language, isSwitching, onSwitchLangu
               caption={t('Lịch sử thẩm định cảnh báo, duyệt ngưỡng và đề xuất hệ số')}
               onPress={() => router.push('/expert/activity')}
             />
+          </Card>
+        </HomeSection>
+      )}
+
+      {/* Nhận push trên máy này (ALERT-FR-002) — chỉ role được nhận thông báo (kỹ thuật viên); Domain Expert không nhận push ngoài app */}
+      {canReceivePush && (
+        <HomeSection isCompact title={t('Thông báo')}>
+          <Card style={styles.listCard}>
+            <PushDeviceRow onMessage={message => Alert.alert(message)} />
           </Card>
         </HomeSection>
       )}

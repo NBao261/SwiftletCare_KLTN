@@ -8,7 +8,6 @@ import {
   BellRingingIcon,
   ChartLineIcon,
   ClipboardTextIcon,
-  DeviceMobileIcon,
   EnvelopeSimpleIcon,
   GlobeIcon,
   IdentificationBadgeIcon,
@@ -30,6 +29,7 @@ import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { LanguageFlag } from '@/components/profile/LanguageFlag'
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
 import { ProfileBasicContent } from '@/components/profile/ProfileBasicContent'
+import { PushDeviceRow } from '@/components/profile/PushDeviceRow'
 import { ProfileRow } from '@/components/profile/ProfileRow'
 import { ProfileShortcutCard } from '@/components/profile/ProfileShortcutCard'
 import { Card } from '@/components/ui/card'
@@ -42,11 +42,11 @@ import { useCancelAccountDeletion } from '@/hooks/auth/useCancelAccountDeletion'
 import { useRequestAccountDeletion } from '@/hooks/auth/useRequestAccountDeletion'
 import { usePendingExpertReviewCount } from '@/hooks/expert-activity/usePendingExpertReviewCount'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
-import { usePendingHealthDays, HAS_PENDING_HEALTH_DAYS_API } from '@/hooks/health/usePendingHealthDays'
+import { usePendingHealthDays } from '@/hooks/health/usePendingHealthDays'
 import { useSwitchLanguage } from '@/hooks/i18n/useSwitchLanguage'
 import { useNow } from '@/hooks/time/useNow'
+import { useBellCounts } from '@/hooks/notification/useBellCounts'
 import { useUnreadNotificationCount } from '@/hooks/notification/useUnreadNotificationCount'
-import { usePushRegistration } from '@/hooks/profile/usePushRegistration'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
@@ -57,6 +57,7 @@ import { formatDate } from '@/utils/date.utils'
 import { getRoleLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t, translate } from '@/utils/i18n.utils'
+import { RETURN_TO_PROFILE } from '@/utils/navigation.utils'
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -136,11 +137,12 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
   }, [scrollToTopAt])
 
   const unreadQuery = useUnreadNotificationCount()
+  // Lối tắt Thông báo mở chuông nên hiện cùng số với chuông: thông báo chưa đọc + cảnh báo chưa xác nhận
+  const bellCounts = useBellCounts()
   const pendingDaysQuery = usePendingHealthDays()
   const pendingReviewQuery = usePendingExpertReviewCount(farm?._id ?? '')
   const requestDeletion = useRequestAccountDeletion()
   const cancelDeletion = useCancelAccountDeletion()
-  const push = usePushRegistration()
   // Số ngày còn lại tới hạn xử lý yêu cầu xoá: cập nhật mỗi giờ là đủ
   const now = useNow(HOUR_MS)
 
@@ -182,15 +184,6 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
     ])
   }
 
-  const enablePush = () =>
-    push.enable.mutate(undefined, {
-      onSuccess: isEnabled =>
-        toast.show(
-          isEnabled
-            ? t('Đã cho phép thông báo. Máy chủ chưa gửi push tới máy này (Sắp có)')
-            : t('Chưa được cấp quyền thông báo'),
-        ),
-    })
 
   return (
     <>
@@ -231,21 +224,25 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
             <ProfileShortcutCard
               icon={BellIcon}
               title={t('Thông báo')}
-              caption={unreadQuery.isLoading ? '_' : t('{count} chưa đọc', { count: unreadQuery.data ?? 0 })}
-              onPress={() => router.push('/(tabs)/profile/notifications')}
+              caption={unreadQuery.isLoading ? '_' : t('{count} mới', { count: bellCounts.total })}
+              onPress={() => router.push('/notifications')}
             />
             <ProfileShortcutCard
               icon={ChartLineIcon}
               title={t('Báo cáo sức khỏe')}
               caption={t('Ngày, tuần, tháng')}
-              onPress={() => router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'reports' } })}
+              onPress={() => router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'reports', returnTo: RETURN_TO_PROFILE } })}
             />
             <ProfileShortcutCard
               icon={ClipboardTextIcon}
               title={t('Chấm điểm ngày')}
-              caption={t('{count} ngày chờ chấm', { count: pendingDaysQuery.data?.length ?? 0 })}
-              onPress={() => router.navigate('/(tabs)/home')}
-              isComingSoon={!HAS_PENDING_HEALTH_DAYS_API}
+              // Chưa có số (đang tải, lỗi) thì không hiện "0 ngày" giả
+              caption={
+                pendingDaysQuery.isLoading || pendingDaysQuery.isError
+                  ? '_'
+                  : t('{count} ngày chờ chấm', { count: pendingDaysQuery.data.length })
+              }
+              onPress={() => router.push('/health')}
             />
             <ProfileShortcutCard
               icon={ListChecksIcon}
@@ -276,19 +273,7 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
               onPress={IS_MOCK_API_ENABLED ? () => router.push('/(tabs)/profile/notification-channels') : undefined}
               hasDivider
             />
-            <ProfileRow
-              icon={DeviceMobileIcon}
-              label={t('Nhận push trên máy này')}
-              caption={
-                // Quyền là thật, nhưng backend chưa nhận mã thiết bị (G-10) nên chưa có push nào được gửi
-                push.isLoading
-                  ? '_'
-                  : push.isGranted
-                    ? t('Đã cho phép · máy chủ chưa gửi push (Sắp có)')
-                    : t('Chưa cho phép, chạm để bật')
-              }
-              onPress={push.isGranted || push.enable.isPending ? undefined : enablePush}
-            />
+            <PushDeviceRow onMessage={toast.show} />
           </Card>
         </HomeSection>
 

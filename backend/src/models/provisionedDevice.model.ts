@@ -21,6 +21,8 @@ export interface IProvisionedDevice extends Document {
   /** Admin thu hồi (mất/lộ nhãn, hàng lỗi) — từ đó không kích hoạt được nữa */
   revoked_at?: Date
   revoke_reason?: string
+  /** SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), không phải phần cứng thật */
+  simulated: boolean
   created_by?: Types.ObjectId
   created_at: Date
 }
@@ -34,6 +36,7 @@ const provisionedDeviceSchema = new Schema<IProvisionedDevice>(
     claimed_at:      { type: Date },
     revoked_at:      { type: Date },
     revoke_reason:   { type: String, trim: true },
+    simulated:       { type: Boolean, default: false },
     created_by:      { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: false }, versionKey: false },

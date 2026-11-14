@@ -9,18 +9,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { HOME_SKELETON_DELAY_MS } from '@/constants/homeSkeleton'
 import { Radius, Spacing } from '@/constants/theme'
-import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useUnreadHealthReports } from '@/hooks/health/useUnreadHealthReports'
 import { useMarkNotificationRead } from '@/hooks/notification/useMarkNotificationRead'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { getIsoWeekNumber } from '@/utils/date.utils'
+import { formatReportPeriod, getReportKindLabel } from '@/utils/healthReport.utils'
 import { t } from '@/utils/i18n.utils'
+import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
 // Chiều cao một dòng chữ body — khung xương lúc tải thay đúng chỗ dòng nội dung
 const REPORT_LINE_HEIGHT = 20
 
-// Hàng đầu khối: nhãn "BÁO CÁO MỚI", kèm số tuần khi chỉ có một báo cáo
-function ReportHeader({ weekNumber }: { weekNumber?: number }) {
+// Hàng đầu khối: nhãn "BÁO CÁO MỚI", kèm loại kỳ khi chỉ có một báo cáo
+function ReportHeader({ kindLabel }: { kindLabel?: string }) {
   const palette = usePalette()
 
   return (
@@ -29,9 +29,9 @@ function ReportHeader({ weekNumber }: { weekNumber?: number }) {
       <Text variant="label" weight="bold" color={palette.reportLabel} style={styles.headerLabel}>
         {t('BÁO CÁO MỚI')}
       </Text>
-      {weekNumber !== undefined && (
+      {kindLabel !== undefined && (
         <Text variant="small" color={palette.textSecondary}>
-          {t('Tuần {week}', { week: weekNumber })}
+          {kindLabel}
         </Text>
       )}
     </View>
@@ -43,7 +43,6 @@ export function NewReportCard() {
   const palette = usePalette()
   const queryClient = useQueryClient()
   const { reports, isLoading, isError } = useUnreadHealthReports()
-  const { zoneById, houseById } = useZoneDirectory()
   const markRead = useMarkNotificationRead()
 
   // Đang tải: giữ khung và nhãn, dòng nội dung là khung xương
@@ -88,13 +87,9 @@ export function NewReportCard() {
 
   const isSingle = reports.length === 1
   const [{ report }] = reports
-  // Báo cáo gắn Zone; tên nhà tra qua Zone chứa báo cáo
-  const houseId = zoneById.get(report.zone_id)?.house_id
-  const houseName = (houseId && houseById.get(houseId)?.name) ?? '_'
-  // Báo cáo hiện tại ra theo tuần (06:00 thứ Hai cho tuần trước)
-  const weekNumber = getIsoWeekNumber(report.period_start)
+  // Báo cáo theo nhà: tuần (06:00 thứ Hai), tháng (06:00 ngày 1) có thông báo, ngày và theo yêu cầu thì không (BR-33)
   const title = isSingle
-    ? t('Báo cáo tuần {week} · {house} đã sẵn sàng', { week: weekNumber, house: houseName })
+    ? t('Báo cáo {period} · {house} đã sẵn sàng', { period: formatReportPeriod(report), house: report.house_name })
     : t('{count} báo cáo mới', { count: reports.length })
   const conclusion = isSingle ? report.expert_conclusion : null
 
@@ -103,17 +98,17 @@ export function NewReportCard() {
     router.navigate({
       pathname: '/(tabs)/analytics',
       params: {
+        returnTo: RETURN_TO_HOME,
         tab: 'reports',
-        houseId: houseId ?? '',
-        zoneId: report.zone_id,
+        houseId: report.house_id,
         reportId: isSingle ? report._id : '',
       },
     })
   }
 
   return (
-    // Mở tab Báo cáo của Phân tích, đúng nhà, tầng và báo cáo; đánh dấu thông báo đã đọc.
-    // Tab Báo cáo không hiện trạng thái ngày nên không lộ trạng thái chủ chưa chấm (BR-31)
+    // Mở tab Báo cáo của Phân tích, đúng nhà và báo cáo; đánh dấu thông báo đã đọc.
+    // Báo cáo che các ngày chủ chưa chấm (BR-31, backend) nên không lộ trạng thái
     <Card
       onPress={openReports}
       accessibilityHint={t('Mở báo cáo ở Phân tích')}
@@ -121,7 +116,7 @@ export function NewReportCard() {
         conclusion ? t('{title}. Chuyên gia {name}: {text}', { title, name: conclusion.by.full_name, text: conclusion.text }) : title
       }
     >
-      <ReportHeader weekNumber={isSingle ? weekNumber : undefined} />
+      <ReportHeader kindLabel={isSingle ? getReportKindLabel(report.kind) : undefined} />
 
       <Text variant="heading" weight="semiBold">
         {title}

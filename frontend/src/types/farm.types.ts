@@ -13,8 +13,10 @@ export interface Farm {
   created_at: string
 }
 
-/** Vai trò thành viên farm (POST /farms/:id/members) */
-export type FarmMemberRole = 'FARM_OWNER' | 'DOMAIN_EXPERT'
+/** Vai trò thành viên farm (POST /farms/:id/members)
+ * G-20: thêm FARM_TECHNICIAN — thợ được Farm Owner gán vào nhà cụ thể (backend f9d9522)
+ */
+export type FarmMemberRole = 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
 
 /** Vị trí farm — một farm là một địa điểm (A-5) */
 export interface Coordinates { lat: number; lng: number }
@@ -25,6 +27,17 @@ export interface BirdCountTuning { return_rate_drop_pct?: number }
 export interface House {
   _id: string; farm_id: string; name: string; floors: number; description?: string
   bird_count_tuning?: BirdCountTuning
+  /** G-20: danh sách thợ được Farm Owner gán vào nhà này (Nhi thực hiện UI gán, backend f9d9522) */
+  technicians?: Array<{ user_id: string; primary: boolean }>
+}
+
+// AUTH-FR-014 — một ca trực của nhà: 0 = Chủ nhật … 6 = thứ Bảy, giờ VN HH:mm, end trước start là ca qua nửa đêm
+export interface RosterShift {
+  technician_id: string
+  role: 'PRIMARY' | 'BACKUP'
+  weekdays: number[]
+  start: string
+  end: string
 }
 
 /** EXPERT-FR-008 — tham số phát hiện theo Zone, Domain Expert chỉnh, gửi xuống ESP32 */

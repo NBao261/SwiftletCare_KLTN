@@ -134,7 +134,7 @@ function ThresholdEditor({ zone, editor, onSaved }: ThresholdSectionProps) {
   )
 }
 
-// Mục "Ngưỡng môi trường" của một zone (ENV-FR-006): xem 7 ngưỡng; chủ trại và chuyên gia bấm "Sửa" để chỉnh,
+// Mục "Ngưỡng môi trường" của một zone (ENV-FR-006): xem các ngưỡng (THRESHOLD_KEYS); chủ trại và chuyên gia bấm "Sửa" để chỉnh,
 // ô vuông ở chân card đặt lại mặc định hệ thống (ENV-FR-020)
 export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProps) {
   const user = useAuthStore(state => state.user)
@@ -146,7 +146,10 @@ export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProp
   const confirmReset = () =>
     NativeAlert.alert(
       t('Đặt lại ngưỡng mặc định?'),
-      t('7 ngưỡng của {zone} sẽ về mặc định hệ thống và gửi xuống controller.', { zone: zone.name }),
+      t('{count} ngưỡng của {zone} sẽ về mức mặc định và áp dụng ngay.', {
+        count: THRESHOLD_KEYS.length,
+        zone: zone.name,
+      }),
       [
         { text: t('Huỷ'), style: 'cancel' },
         {
@@ -178,17 +181,13 @@ export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProp
     <SettingsSection
       icon={ThermometerIcon}
       title={t('Ngưỡng môi trường')}
-      subtitle={t('Ngoài ngưỡng thì cảnh báo; nhiệt, ẩm còn dùng để điều khiển')}
+      subtitle={t('Vượt mức thì cảnh báo và tự bật phun sương, quạt')}
       scopeLabel={zone.name}
       isExpanded={editor.isExpanded(id)}
       onToggle={() => editor.toggle(id)}
       onEdit={canEdit ? () => editor.startEditing(id) : undefined}
       isEditing={isEditing}
-      footerNote={
-        canEdit
-          ? t('Chủ trại và chuyên gia sửa được. Ô bên phải đặt lại mặc định hệ thống')
-          : t('Chủ trại và chuyên gia sửa được')
-      }
+      footerNote={canEdit ? t('Lưu xong áp dụng ngay cho khu vực') : undefined}
       footerTile={
         canEdit && !isEditing
           ? {

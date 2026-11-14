@@ -1,4 +1,4 @@
-import type { DeviceStatus } from '@/types'
+import type { ConfigSyncState, DeviceStatus } from '@/types'
 import { formatElapsed } from '@/utils/date.utils'
 import { formatDecimal } from '@/utils/number.utils'
 
@@ -18,6 +18,44 @@ export function summarizeDeviceStatuses(statuses: DeviceStatus[]): DeviceStatusS
     else summary.pending += 1
   }
   return summary
+}
+
+// Bước "Đã áp cấu hình khu vực" khi setup controller (FARM-FR-012, ENV-FR-027)
+export type ConfigApplyStep = 'waiting-connection' | 'waiting-config' | 'applied' | 'mismatch' | 'unknown'
+
+// Đọc bước áp cấu hình từ trạng thái kết nối và config_sync: chưa kết nối hoặc đang mất kết nối thì chờ kết nối (controller chỉ
+// nhận cấu hình khi trực tuyến); MISMATCH là đã quá 3 heartbeat vẫn báo bản cũ (BR-24); UNKNOWN là firmware trước 2.1.0 không
+// báo phiên bản, nên không chờ được nữa
+export function getConfigApplyStep(
+  status: DeviceStatus | null,
+  configSync: ConfigSyncState | undefined,
+): ConfigApplyStep {
+  if (configSync === 'APPLIED') return 'applied'
+  if (status === null || status === 'PENDING') return 'waiting-connection'
+  if (configSync === 'UNKNOWN') return 'unknown'
+  if (status === 'OFFLINE') return 'waiting-connection'
+  if (configSync === 'MISMATCH') return 'mismatch'
+  return 'waiting-config'
+}
+
+// Thao tác Farm Owner làm trên một thiết bị đã lắp (SF-01): dời khu vực và thay chỉ có ở controller (FARM-FR-007b, 008),
+// camera gắn nhà nên chỉ gỡ được
+export type DeviceAction = 'move' | 'replace' | 'remove'
+
+export function getDeviceActions(kind: 'controller' | 'camera'): DeviceAction[] {
+  return kind === 'controller' ? ['move', 'replace', 'remove'] : ['remove']
+}
+
+// Dời được cả controller không trực tuyến (FARM-FR-007b): backend chỉ đổi khu vực, controller nhận cấu hình mới khi kết nối lại
+export function appliesMoveOnReconnect(status: DeviceStatus): boolean {
+  return status !== 'ONLINE'
+}
+
+// Thiết bị gỡ còn khôi phục được trong 24 giờ (FARM-FR-008, Report 3 §6.6); quá hạn backend trả 409
+const RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000
+
+export function isWithinRestoreWindow(decommissionedAt: string, now: number = Date.now()): boolean {
+  return now - new Date(decommissionedAt).getTime() <= RESTORE_WINDOW_MS
 }
 
 const BYTES_PER_KB = 1024

@@ -49,7 +49,7 @@ afterEach(async () => {
   ])
 })
 
-const mkUser = (email: string, role: 'ADMIN' | 'FARM_OWNER' | 'TECHNICIAN' = 'FARM_OWNER', extra: object = {}) =>
+const mkUser = (email: string, role: 'ADMIN' | 'FARM_OWNER' | 'FARM_TECHNICIAN' = 'FARM_OWNER', extra: object = {}) =>
   User.create({ email, password_hash: 'password123', full_name: email, role, ...extra })
 
 const mkFarm = (owner: { _id: unknown }, others: Array<{ user: { _id: unknown }; joined: string }> = [], extra: object = {}) =>
@@ -338,7 +338,7 @@ describe('completeDeletionRequest', () => {
 
   it('anonymises a deleted technician', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const tech = await mkUser('tech@test.vn', 'TECHNICIAN', requested)
+    const tech = await mkUser('tech@test.vn', 'FARM_TECHNICIAN', requested)
 
     await completeDeletionRequest(String(admin._id), String(tech._id))
 

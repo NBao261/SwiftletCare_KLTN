@@ -35,6 +35,7 @@ import { useCreateZone } from '@/hooks/farm/useCreateZone'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useSingleSectionEdit } from '@/hooks/farm/useSingleSectionEdit'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
@@ -44,15 +45,19 @@ import {
   parseSettingsSectionKind,
   SETTINGS_SECTION_EDIT_ACTION,
 } from '@/utils/settingsSection.utils'
+import { getZoneFloorRule } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
 const SECTION_SKELETON_HEIGHT = 76
 const SKELETON_COUNT = 4
 
-/** Cài đặt một nhà yến: thông tin nhà, camera AI, mức giảm tỷ lệ về tổ, rồi từng tầng (ngưỡng, hệ số mờ, tham số phát hiện,
+/** Cài đặt một nhà yến: thông tin nhà, camera AI, mức giảm tỷ lệ về tổ, rồi từng tầng (ngưỡng, hệ số fuzzy, tham số phát hiện,
  * controller). Mỗi mục sửa và lưu riêng, mỗi lúc một mục (FARM-FR-002/003/004, ENV-FR-006/020/021, EXPERT-FR-008) */
 export default function HouseSettingsScreen() {
   const palette = usePalette()
+  // Mở từ lối tắt ở Trang chủ (nhà chưa có thiết bị) thì ‹ về Trang chủ, không thì về màn trước
+  const returnBack = useReturnBack()
+  const goBack = returnBack ?? (() => router.back())
   const language = useLanguage()
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
@@ -93,6 +98,7 @@ export default function HouseSettingsScreen() {
   const canRegisterCamera = canPerform(user, 'registerCamera')
   const canRegisterController = canPerform(user, 'setupDevice')
   const canCreateZone = canPerform(user, 'createZone')
+  const zoneOptions = zones.map(item => ({ _id: item._id, name: item.name }))
 
   // Đổi tầng khi đang sửa dở thì hỏi bỏ thay đổi trước
   const selectZone = (zoneId: string) =>
@@ -132,7 +138,7 @@ export default function HouseSettingsScreen() {
   if (!house) {
     return (
       <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
-        <AppHeader title={t('Cài đặt nhà')} onBack={() => router.back()} />
+        <AppHeader title={t('Cài đặt nhà')} onBack={goBack} />
         <View style={styles.content}>
           {housesQuery.isLoading ? (
             Array.from({ length: SKELETON_COUNT }, (_, index) => (
@@ -192,7 +198,24 @@ export default function HouseSettingsScreen() {
           editor={editor}
           onAdd={
             canRegisterController
-              ? () => openDeviceSheet({ kind: 'controller', zoneId: zone._id, name: zone.name })
+              ? () => openDeviceSheet({ kind: 'controller', zoneId: zone._id, name: zone.name, zones: zoneOptions })
+              : undefined
+          }
+          // Dời, thay, gỡ controller đã lắp (FARM-FR-007b, 008): cùng quyền thiết lập thiết bị của Farm Owner
+          manage={
+            canRegisterController
+              ? {
+                  zone: { _id: zone._id, zones: zoneOptions },
+                  onReplace: device =>
+                    openDeviceSheet({
+                      kind: 'replace',
+                      oldRecordId: device._id,
+                      oldDeviceId: device.device_id,
+                      zoneId: zone._id,
+                      name: zone.name,
+                    }),
+                  onDone: toast.show,
+                }
               : undefined
           }
         />
@@ -203,7 +226,7 @@ export default function HouseSettingsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <View key={language} style={styles.screen}>
-        <AppHeader title={t('Cài đặt nhà')} onBack={() => router.back()} />
+        <AppHeader title={t('Cài đặt nhà')} onBack={goBack} />
         <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             ref={scrollRef}
@@ -229,6 +252,8 @@ export default function HouseSettingsScreen() {
                   ? () => openDeviceSheet({ kind: 'camera', houseId: house._id, name: house.name })
                   : undefined
               }
+              // Gỡ camera (FARM-FR-008): camera gắn nhà, không dời khu vực, không có API thay
+              manage={canRegisterCamera ? { onDone: toast.show } : undefined}
             />
             <View onLayout={event => handleSectionLayout(getSettingsSectionId('bird-count'), event)}>
               <BirdCountTuningSection house={house} editor={editor} onSaved={toast.show} />
@@ -265,6 +290,9 @@ export default function HouseSettingsScreen() {
           scopeLabel={house.name}
           nameLabel={t('Tên khu vực')}
           numberLabel={t('Tầng số')}
+          numberRule={getZoneFloorRule(house.floors)}
+          existingNames={zones.map(item => item.name)}
+          duplicateMessage={t('Nhà đã có khu vực tên này')}
           submit={async (name, floor) => {
             const created = await createZone.mutateAsync({ houseId: house._id, payload: { name, floor } })
             setSelectedZoneId(created._id)

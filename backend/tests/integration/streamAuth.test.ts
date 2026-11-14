@@ -51,7 +51,7 @@ async function seed(deviceId?: string) {
   const mk = (name: string, role: string) =>
     User.create({ email: `${name}${seq}@test.vn`, password_hash: 'password123', full_name: name, role })
   const [owner, expert, technician, stranger] = await Promise.all([
-    mk('owner', 'FARM_OWNER'), mk('expert', 'DOMAIN_EXPERT'), mk('tech', 'TECHNICIAN'), mk('stranger', 'FARM_OWNER'),
+    mk('owner', 'FARM_OWNER'), mk('expert', 'DOMAIN_EXPERT'), mk('tech', 'FARM_TECHNICIAN'), mk('stranger', 'FARM_OWNER'),
   ])
   const farm = await Farm.create({
     name: 'F', address: 'x', owner_id: owner._id,
@@ -64,7 +64,7 @@ async function seed(deviceId?: string) {
     camera,
     t: {
       owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT'),
-      technician: tokenFor(technician._id, 'TECHNICIAN'), stranger: tokenFor(stranger._id, 'FARM_OWNER'),
+      technician: tokenFor(technician._id, 'FARM_TECHNICIAN'), stranger: tokenFor(stranger._id, 'FARM_OWNER'),
     },
   }
 }

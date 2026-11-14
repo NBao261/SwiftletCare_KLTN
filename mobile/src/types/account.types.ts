@@ -3,7 +3,7 @@ import type { Role } from './auth.types'
 
 // Lời mời thành viên farm — khớp schema Invitation của api-spec (AUTH-FR-010, Report 3 §6.4)
 export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
-export type InvitedRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT'>
+export type InvitedRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
 
 export interface Invitation {
   _id: string

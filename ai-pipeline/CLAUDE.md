@@ -46,7 +46,7 @@ tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels from 
 tools/track_clip.py  clip segment → video with green boxes + counts; --detector motion until a trained model exists
 tools/split_by_day.py    labelled export → train/val/test by recording day + data.yaml
 tools/record_session.ps1 daily clip recording (Task Scheduler 05:15/17:15) to D:\SwiftletCare\clips, remuxed to seekable mp4
-tests/                counting, inference, frame_prep, state, stream_pusher, pick_roi, dataset_tools, remote_config
+tests/                counting, inference, frame_prep, state, stream_pusher, pick_roi, dataset_tools, remote_config, annotate (TC-F11-01)
 ```
 
 Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `state/` (the last counting ring received) — clips, frames and datasets live on `D:\SwiftletCare\` (plan §7.1).

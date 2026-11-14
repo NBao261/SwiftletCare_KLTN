@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import * as ScreenOrientation from 'expo-screen-orientation'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClient } from '@/config/queryClient'
+import { connectQueryToDeviceState, queryClient } from '@/config/queryClient'
 import { useAuthStore } from '@/stores/authStore'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
@@ -13,12 +13,14 @@ import { useFonts } from 'expo-font'
 import { FontFamily } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { AnimatedSplash } from '@/components/layout/AnimatedSplash'
+import { ConnectionBanner } from '@/components/layout/ConnectionBanner'
 import { startRealtimeIfReady } from '@/services/session/localSession'
 import { useAccountLanguage } from '@/hooks/i18n/useAccountLanguage'
 
 SplashScreen.preventAutoHideAsync()
 // Cả app chỉ dùng chiều dọc; riêng trình phát camera mở khoá xoay khi đang phóng to (components/home/LiveCameraPlayer.tsx)
 ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined)
+connectQueryToDeviceState()
 
 // Font Plus Jakarta Sans — tên khoá trùng FontFamily để Typography trỏ đúng file
 const FONT_FILES = {
@@ -67,7 +69,14 @@ export default function RootLayout() {
               <Stack.Screen name="zone/[zoneId]" />
               <Stack.Screen name="alert/[alertId]" />
               <Stack.Screen name="expert/activity" />
+              {/* Chuông: màn riêng ngoài các tab (không nằm trong tab Tài khoản), thanh tab ẩn khi mở */}
+              <Stack.Screen name="notifications/index" />
+              <Stack.Screen name="notifications/[notificationId]" />
+              <Stack.Screen name="health/index" />
+              <Stack.Screen name="health/[dayId]" />
             </Stack>
+            {/* Báo mất mạng / mất kết nối máy chủ trên mọi màn, nằm ngay dưới thanh trạng thái */}
+            <ConnectionBanner />
           </QueryClientProvider>
         )}
         {!isSplashDone && <AnimatedSplash isReady={isReady} onFinish={handleSplashFinish} />}

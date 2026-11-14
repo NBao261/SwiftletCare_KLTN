@@ -22,12 +22,10 @@ export type {
   ReviewItem,
   ReviewItemStatus,
   DailyHealthStatus,
-  DayRating,
   ExpertActionType,
   ExpertVerdictStats,
   ExpertThresholds,
   ExpertFuzzyTuning,
   ExpertDetectionTuning,
   FuzzySuggestionResponse,
-  ZoneHealthReportItem,
 } from './expert.types'

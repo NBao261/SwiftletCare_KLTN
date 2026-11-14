@@ -4,20 +4,20 @@ import type { ApiResponse } from '@/types'
 import type {
   AlertEvidence,
   CoefficientProposal,
-  DayRating,
-  DailyHealthStatus,
   ExpertActivityEntry,
   ExpertDetectionTuning,
   ExpertFuzzyTuning,
   ExpertThresholds,
   ExpertVerdictStats,
   FuzzySuggestionResponse,
+  HouseHealthReport,
+  HouseHealthReportKind,
+  HouseHealthReportSummary,
   InferredAlert,
   ProposalStatus,
   ReviewItem,
   ReviewItemStatus,
   VerdictResult,
-  ZoneHealthReportItem,
 } from '@/types/expert.types'
 
 // Tham số lọc danh sách cảnh báo suy luận
@@ -126,22 +126,32 @@ export const expertApi = {
       tuning
     ),
 
-  // ── 5. Báo cáo Sức khỏe & Kết luận (EXPERT-FR-005, EXPERT-FR-006, EXPERT-FR-013) ──
-  getHealthReports: (params?: { farm_id?: string; zone_id?: string; page?: number; limit?: number }) =>
-    apiClient.get<ApiResponse<ZoneHealthReportItem[]>>(ENDPOINTS.HEALTH_REPORTS, {
+  // ── 5. Báo cáo Sức khỏe theo nhà & Kết luận (EXPERT-FR-005, EXPERT-FR-006, EXPERT-FR-013) ──
+  // Báo cáo theo nhà (GET /health-reports?farmId|houseId&kind&hasConclusion); hàng đợi chuyên gia lọc hasConclusion=false
+  getHealthReports: (params?: {
+    farm_id?: string
+    house_id?: string
+    kind?: HouseHealthReportKind
+    has_conclusion?: boolean
+    page?: number
+    limit?: number
+  }) =>
+    apiClient.get<ApiResponse<HouseHealthReportSummary[]>>(ENDPOINTS.HEALTH_REPORTS, {
       params: {
         farmId: params?.farm_id,
-        zoneId: params?.zone_id,
+        houseId: params?.house_id,
+        kind: params?.kind,
+        hasConclusion: params?.has_conclusion,
         page: params?.page,
         limit: params?.limit,
       },
     }),
 
   getHealthReportDetail: (reportId: string) =>
-    apiClient.get<ApiResponse<ZoneHealthReportItem>>(ENDPOINTS.HEALTH_REPORT_DETAIL(reportId)),
+    apiClient.get<ApiResponse<HouseHealthReport>>(ENDPOINTS.HEALTH_REPORT_DETAIL(reportId)),
 
   setReportConclusion: (reportId: string, text: string) =>
-    apiClient.put<ApiResponse<ZoneHealthReportItem>>(ENDPOINTS.HEALTH_REPORT_CONCLUSION(reportId), { text }),
+    apiClient.put<ApiResponse<HouseHealthReport>>(ENDPOINTS.HEALTH_REPORT_CONCLUSION(reportId), { text }),
 
   // ── 6. Kiểm duyệt Thay đổi của Chủ Farm (EXPERT-FR-010) ─────────────────────────
   getReviewItems: (params?: { farm_id?: string; zone_id?: string; status?: ReviewItemStatus }) =>
@@ -189,20 +199,7 @@ export const expertApi = {
     })
   },
 
-  // ── 8. Đánh giá Ngày theo quy tắc BR-31 (EXPERT-FR-012) ────────────────────────
-  getDayRating: (houseId: string, date: string) =>
-    apiClient.get<ApiResponse<DayRating>>(ENDPOINTS.HOUSE_DAILY_RATING(houseId), {
-      params: { date },
-    }),
-
-  submitDayRating: (houseId: string, date: string, status: DailyHealthStatus, note?: string) =>
-    apiClient.post<ApiResponse<DayRating>>(ENDPOINTS.HOUSE_DAILY_RATING(houseId), {
-      date,
-      status,
-      note,
-    }),
-
-  // ── 9. Nhật ký Hoạt động Chuyên gia (EXPERT-FR-009) ───────────────────────────
+  // ── 8. Nhật ký Hoạt động Chuyên gia (EXPERT-FR-009) ───────────────────────────
   getExpertActivity: (farmId: string, params?: ExpertActivityQueryParams) =>
     apiClient.get<ApiResponse<ExpertActivityEntry[]>>(ENDPOINTS.EXPERT_ACTIVITY, {
       params: {

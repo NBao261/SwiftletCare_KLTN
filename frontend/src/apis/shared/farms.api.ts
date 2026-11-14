@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Farm, FarmMemberRole, Coordinates, FuzzyTuning, House, Zone, Invitation } from '@/types'
+import type { ApiResponse, Farm, FarmMemberRole, Coordinates, FuzzyTuning, House, RosterShift, Zone, Invitation } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
@@ -19,6 +19,16 @@ export const farmApi = {
   createHouse: (farmId: string, input: { name: string; floors?: number; description?: string }) =>
     api.post<ApiResponse<House>>(`/farms/${farmId}/houses`, input),
   listHouses: (farmId: string) => api.get<ApiResponse<House[]>>(`/farms/${farmId}/houses`),
+  // AUTH-FR-013 — gán / bỏ gán Farm Technician vào nhà; gọi lại PUT với người đã gán chỉ đổi primary
+  assignTechnician: (houseId: string, userId: string, primary: boolean) =>
+    api.put<ApiResponse<House>>(`/farms/houses/${houseId}/technicians/${userId}`, { primary }),
+  unassignTechnician: (houseId: string, userId: string) =>
+    api.delete<ApiResponse<House>>(`/farms/houses/${houseId}/technicians/${userId}`),
+  // AUTH-FR-014 — lịch trực của nhà; PUT thay cả lịch (mảng rỗng = bỏ lịch)
+  getRoster: (houseId: string) =>
+    api.get<ApiResponse<{ house_id: string; roster: RosterShift[] }>>(`/farms/houses/${houseId}/roster`),
+  setRoster: (houseId: string, shifts: RosterShift[]) =>
+    api.put<ApiResponse<{ house_id: string; roster: RosterShift[] }>>(`/farms/houses/${houseId}/roster`, { shifts }),
 
   createZone: (houseId: string, input: { name: string; floor?: number }) =>
     api.post<ApiResponse<Zone>>(`/farms/houses/${houseId}/zones`, input),

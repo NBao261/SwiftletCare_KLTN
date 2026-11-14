@@ -29,6 +29,14 @@ export function readApiError(error: unknown): ApiErrorInfo {
   }
 }
 
+// Request không nhận được phản hồi nào từ máy chủ (máy chủ tắt, sai địa chỉ, quá thời gian chờ) — không tính request bị huỷ
+// (rời màn, React Query huỷ) và lỗi có status (máy chủ vẫn trả lời, dù là 4xx/5xx). Đọc theo cấu trúc như readApiError
+export function isServerUnreachableError(error: unknown): boolean {
+  const axiosLike = error as { isAxiosError?: boolean; response?: unknown; code?: string } | null
+  if (!axiosLike?.isAxiosError || axiosLike.response) return false
+  return axiosLike.code !== 'ERR_CANCELED'
+}
+
 // Thời gian chờ đọc được: dưới 1 phút ghi giây, từ 1 phút làm tròn lên theo phút
 export function formatWaitTime(seconds: number): string {
   if (seconds < 60) return t('{count} giây', { count: Math.max(1, Math.ceil(seconds)) })
@@ -96,5 +104,27 @@ export function getDeviceRegisterErrorMessage(error: unknown): string {
   return getSettingsErrorMessage(error, {
     400: t('Mã thiết bị hoặc mã kích hoạt không đúng'),
     409: t('Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký'),
+  })
+}
+
+// Câu báo lỗi khi dời controller sang khu vực khác (FARM-FR-007b): 400 trùng khu vực đang ở, 409 thiết bị đã gỡ
+export function getDeviceMoveErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    400: t('Thiết bị đang ở khu vực này rồi'),
+    409: t('Thiết bị đã bị gỡ, không dời được'),
+  })
+}
+
+// Câu báo lỗi khi gỡ thiết bị (FARM-FR-008): 409 thiết bị đã gỡ, hoặc vừa trực tuyến lại sau khi mở màn
+export function getDeviceRemoveErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    409: t('Không gỡ được: thiết bị đã bị gỡ hoặc vừa trực tuyến lại. Tải lại rồi thử lại'),
+  })
+}
+
+// Câu báo lỗi khi khôi phục thiết bị vừa gỡ (FARM-FR-008): 409 quá 24 giờ, mã đã đăng ký lại, hoặc thiết bị thay thế còn đang dùng
+export function getDeviceRestoreErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    409: t('Không khôi phục được: đã quá 24 giờ, thiết bị đã được đăng ký lại hoặc đã có thiết bị thay'),
   })
 }

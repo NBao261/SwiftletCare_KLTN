@@ -25,6 +25,9 @@ export const ENDPOINTS = {
   // Mời và gỡ thành viên farm — chỉ Primary Owner (AUTH-FR-005, EXPERT-FR-001)
   FARM_MEMBERS: (farmId: string) => `/farms/${farmId}/members`,
   FARM_MEMBER: (farmId: string, userId: string) => `/farms/${farmId}/members/${userId}`,
+  // Lời mời đang chờ của farm (AUTH-FR-010) — CHƯA có trong api-spec lẫn backend, là đường đề xuất cho Kiệt (todo-review2
+  // G-16); invitation.api.ts vẫn trả dữ liệu mẫu cho tới khi route có trong spec
+  FARM_INVITATIONS: (farmId: string) => `/farms/${farmId}/invitations`,
   HOUSE_ZONES: (houseId: string) => `/farms/houses/${houseId}/zones`,
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
   ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
@@ -39,10 +42,19 @@ export const ENDPOINTS = {
   CAMERA_NODES: '/devices/camera-nodes',
   SENSOR_NODE_REGISTER: '/devices/sensor-nodes/register',
   CAMERA_NODE_REGISTER: '/devices/camera-nodes/register',
+  // Dời controller sang khu vực khác (FARM-FR-007b); gỡ, khôi phục trong 24 giờ, thay thiết bị (FARM-FR-008)
+  SENSOR_NODE_REASSIGN_ZONE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/reassign-zone`,
+  SENSOR_NODE_DECOMMISSION: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/decommission`,
+  SENSOR_NODE_RESTORE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/restore`,
+  SENSOR_NODE_REPLACE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/replace`,
+  CAMERA_NODE_DECOMMISSION: (cameraId: string) => `/devices/camera-nodes/${cameraId}/decommission`,
+  CAMERA_NODE_RESTORE: (cameraId: string) => `/devices/camera-nodes/${cameraId}/restore`,
   RELAY_CONTROL: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay`,
   RELAY_OVERRIDE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-override`,
   RELAY_OVERRIDES: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay-overrides`,
   CAMERA_STREAM_TOKEN: (cameraId: string) => `/devices/camera-nodes/${cameraId}/stream-token`,
+  // Vẽ vòng đếm của camera (VISION-FR-018): Domain Expert, Farm Technician nhà được giao, Farm Owner khi farm chưa có chuyên gia
+  CAMERA_COUNTING_RING: (cameraId: string) => `/devices/camera-nodes/${cameraId}/counting-ring`,
 
   // Dữ liệu cảm biến (ENV-FR-*)
   TELEMETRY_LATEST: (zoneId: string) => `/telemetry/zones/${zoneId}/latest`,
@@ -82,10 +94,18 @@ export const ENDPOINTS = {
   NOTIFICATIONS: '/notifications',
   NOTIFICATION_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
   NOTIFICATIONS_READ_ALL: '/notifications/read-all',
+  // FCM device token của máy (ALERT-FR-002, G-10): POST đăng ký, DELETE gỡ — theo api-spec của nhánh feat/g10-fcm-push,
+  // chưa merge vào develop
+  PUSH_TOKENS: '/notifications/push-tokens',
 
-  // Báo cáo sức khoẻ (EXPERT-FR-005/006/013)
+  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006/013)
   HEALTH_REPORTS: '/health-reports',
-  HEALTH_REPORT_PREVIEW: '/health-reports/preview',
+  // Trạng thái ngày và chấm điểm (ANALYTICS-FR-012, EXPERT-FR-012, BR-31)
+  HEALTH_DAYS: '/health-reports/days',
+  HEALTH_DAY_DETAIL: (dayId: string) => `/health-reports/days/${dayId}`,
+  HEALTH_DAY_RATING: (dayId: string) => `/health-reports/days/${dayId}/rating`,
+  HEALTH_DAY_SKIP: (dayId: string) => `/health-reports/days/${dayId}/skip`,
+  HEALTH_DAY_RATING_NOTE: (dayId: string) => `/health-reports/days/${dayId}/rating/note`,
   HEALTH_REPORT_DETAIL: (reportId: string) => `/health-reports/${reportId}`,
   HEALTH_REPORT_CONCLUSION: (reportId: string) => `/health-reports/${reportId}/conclusion`,
   HEALTH_REPORT_PDF: (reportId: string) => `/health-reports/${reportId}/pdf`,
@@ -97,5 +117,4 @@ export const ENDPOINTS = {
   // Nghiệp vụ Chuyên gia bổ sung (Domain Expert: EXPERT-FR-*)
   ALERT_VERDICT_STATS: '/alerts/verdict-stats',
   ZONE_DETAIL: (zoneId: string) => `/farms/zones/${zoneId}`,
-  HOUSE_DAILY_RATING: (houseId: string) => `/farms/houses/${houseId}/daily-rating`,
 } as const
