@@ -877,6 +877,53 @@ ensureCollection("houses", {
     "description": {
       "bsonType": ["string", "null"]
     },
+    "weather_rules": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "metric": {
+            "bsonType": "string",
+            "enum": ["temperature", "humidity", "rain"]
+          },
+          "min": {
+            "bsonType": "number"
+          },
+          "offset_pct": {
+            "bsonType": "number"
+          },
+          "duration_min": {
+            "bsonType": "number"
+          },
+          "active": {
+            "bsonType": ["bool", "null"]
+          },
+          "_id": {
+            "bsonType": ["objectId", "null"]
+          }
+        },
+        "required": ["metric", "min", "offset_pct", "duration_min"]
+      }
+    },
+    "weather_rules_history": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "changed_by": {
+            "bsonType": ["objectId", "null"]
+          },
+          "changed_by_role": {
+            "bsonType": ["string", "null"]
+          },
+          "changed_at": {
+            "bsonType": ["date", "null"]
+          },
+          "old_values": {},
+          "new_values": {}
+        }
+      }
+    },
     "bird_count_tuning": {
       "bsonType": ["object", "null"],
       "properties": {
@@ -1755,6 +1802,53 @@ ensureCollection("users", {
 })
 db.getCollection("users").createIndex({"email":1}, {"unique":true})
 db.getCollection("users").createIndex({"telegram_link_code_hash":1}, {"sparse":true})
+
+// ── weathercompensations (model WeatherCompensation) ──
+ensureCollection("weathercompensations", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "rule_id": {
+      "bsonType": "objectId"
+    },
+    "offset_pct": {
+      "bsonType": "number"
+    },
+    "sent_at": {
+      "bsonType": "date"
+    },
+    "expires_at": {
+      "bsonType": "date"
+    },
+    "forecast": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "temperature_max": {
+          "bsonType": ["number", "null"]
+        },
+        "humidity_max": {
+          "bsonType": ["number", "null"]
+        },
+        "rain_mm": {
+          "bsonType": ["number", "null"]
+        }
+      }
+    },
+    "controllers": {
+      "bsonType": "number"
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["farm_id", "house_id", "rule_id", "offset_pct", "sent_at", "expires_at", "controllers"]
+})
+db.getCollection("weathercompensations").createIndex({"house_id":1,"sent_at":-1})
 
 // ── weatherobservations (model WeatherObservation) ──
 ensureCollection("weatherobservations", {

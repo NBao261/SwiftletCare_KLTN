@@ -195,9 +195,9 @@ TC=[
 ('TC-F25-02','F-25','Plan DUE with its Work Order','Technician records the maintenance; owner creates a plan with interval 0','—','Counter 0, alert RESOLVED, next due point = interval from now; 422 for interval 0',(T,'backend jest (G-22)')),
 ('TC-F25-03','F-25','Plan DUE for 7 days; open inspection checklist','Run the due job; answer one checklist item "defect"','—','Farm Owners notified once (OVERDUE); one repair Work Order opened',(T,'backend jest (G-22)')),
 # F-26
-('TC-F26-01','F-26','House rule: +5 % when the forecast reaches 33 °C','Run the compensation job with a forecast of 34 °C within 2 h, then with no active rule','Seeded forecast','Controllers receive +5 % with expiry ≤ 2 h; then 0',(T,'backend jest (G-23)')),
-('TC-F26-02','F-26','Controller with fuzzy misting demand 40 %','Receive +5 %; let it expire; receive +80 % in a forged message','—','45 %; 40 % after expiry; demand clamped to 0–100 % and offset clamped to ±10; ventilation unchanged',(T,'firmware native (G-23)')),
-('TC-F26-03','F-26','Farm with a Domain Expert','Expert saves offset 12 %; expert saves a duration of 3 h; technician saves a rule','—','400; 400; 403',(T,'backend jest (G-23)')),
+('TC-F26-01','F-26','House rule: +5 % when the forecast reaches 33 °C','Run the compensation job with a forecast of 34 °C within 2 h, then with no active rule','Seeded forecast','Controllers receive +5 % with expiry ≤ 2 h; then 0',(J,I+'weatherCompensation.test.ts','TC-F26-01')),
+('TC-F26-02','F-26','Controller with fuzzy misting demand 40 %','Receive +5 %; let it expire; receive +80 % in a forged message','—','45 %; 40 % after expiry; demand clamped to 0–100 % and offset clamped to ±10; ventilation unchanged',[(P,'test_weather_compensation','test_offset_added_to_fuzzy_demand'),(P,'test_weather_compensation','test_offset_zero_after_expiry'),(P,'test_weather_compensation','test_forged_offset_and_duration_are_clamped')]),
+('TC-F26-03','F-26','Farm with a Domain Expert','Expert saves offset 12 %; expert saves a duration of 3 h; technician saves a rule','—','400; 400; 403',(J,I+'weatherCompensation.test.ts','TC-F26-03')),
 # F-27
 ('TC-F27-01','F-27','Active rule: NH3 above the limit ≥ 4 h a day for 3 days','Seed 3 such days; run the daily job twice','—','One OPEN recommendation with its evidence; no second one while it is open',(T,'backend jest (G-24)')),
 ('TC-F27-02','F-27','OPEN recommendation','Farm Owner accepts; another is rejected without a reason','—','Exactly one Work Order linked; 422',(T,'backend jest (G-24)')),

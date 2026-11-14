@@ -1532,6 +1532,85 @@ paths:
         "409": { description: "Người trong ca không phải Farm Technician đang được giao nhà", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /farms/houses/{houseId}/weather-rules:
+    parameters:
+      - { $ref: "#/components/parameters/HouseId" }
+    get:
+      tags: [Farms]
+      summary: "Luật bù phun sương theo thời tiết của nhà (ENV-FR-030) — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN của nhà"
+      description: |
+        Các luật của nhà và lần bù khác 0 gần nhất (`last_compensation`, null khi chưa từng bù). Farm Technician
+        chỉ xem nhà được giao (Report 3 §2.4); Administrator → 403.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          rules: { type: array, items: { $ref: "#/components/schemas/WeatherRule" } }
+                          last_compensation:
+                            type: object
+                            nullable: true
+                            properties:
+                              rule_id: { type: string }
+                              offset_pct: { type: number }
+                              sent_at: { type: string, format: date-time }
+                              expires_at: { type: string, format: date-time }
+                              forecast:
+                                type: object
+                                properties:
+                                  temperature_max: { type: number, nullable: true }
+                                  humidity_max: { type: number, nullable: true }
+                                  rain_mm: { type: number, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Farms]
+      summary: "Đặt luật bù phun sương theo thời tiết của nhà (ENV-FR-030, BR-38) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      description: |
+        Thay toàn bộ luật bằng `rules` (mảng rỗng = bỏ hết, tối đa 10). Luật gửi kèm `_id` giữ id cũ. Mỗi luật:
+        dự báo 2 giờ tới (nhiệt độ cao nhất °C, độ ẩm ngoài trời cao nhất %, tổng mưa mm) ≥ `min` thì cộng
+        `offset_pct` (−10…+10, khác 0) vào nhu cầu phun của mọi controller trong nhà, hạn `duration_min` (1…120 phút).
+        Job mỗi giờ (phút 10) chọn luật có |offset| lớn nhất trong các luật thoả và gửi retained trên
+        `swiftletcare/dev/{deviceId}/compensation` (`offset_pct`, `expires_at` epoch ms, `rule_id`); không luật
+        nào thoả hoặc không có dự báo thì gửi 0 (ENV-FR-028). Offset ngoài ±10, thời hạn trên 2 giờ, ngưỡng ngoài
+        khoảng → 400. Farm Owner trên farm có chuyên gia (BR-22), Farm Technician → 403. Lưu lịch sử,
+        audit `WEATHER_RULES_UPDATED`, chuyên gia đổi thì báo Farm Owner (EXPERT-FR-009).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rules]
+              properties:
+                rules: { type: array, maxItems: 10, items: { $ref: "#/components/schemas/WeatherRule" } }
+      responses:
+        "200":
+          description: Luật sau khi đặt
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          rules: { type: array, items: { $ref: "#/components/schemas/WeatherRule" } }
+        "400": { description: "Offset ngoài ±10 hoặc bằng 0, thời hạn ngoài 1…120 phút, ngưỡng ngoài khoảng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /farms/houses/{houseId}/zones:
     parameters: [{ $ref: "#/components/parameters/HouseId" }]
     post:
@@ -5077,6 +5156,18 @@ components:
         weekdays: { type: array, minItems: 1, maxItems: 7, items: { type: integer, minimum: 0, maximum: 6 }, description: "0 = Chủ nhật … 6 = thứ Bảy" }
         start: { type: string, example: "06:00", description: "HH:mm giờ VN" }
         end: { type: string, example: "18:00", description: "HH:mm giờ VN; end trước start là ca qua nửa đêm, tính cho ngày bắt đầu" }
+
+    WeatherRule:
+      type: object
+      description: "ENV-FR-030, BR-38 — dự báo 2 giờ tới ≥ min thì cộng offset_pct vào nhu cầu phun, trong duration_min phút"
+      required: [metric, min, offset_pct, duration_min]
+      properties:
+        _id: { type: string, description: "rule_id gửi kèm offset; gửi lại để giữ id" }
+        metric: { type: string, enum: [temperature, humidity, rain], description: "temperature: °C cao nhất (0…50); humidity: % ngoài trời cao nhất (0…100); rain: tổng mm (0.1…50)" }
+        min: { type: number, example: 33 }
+        offset_pct: { type: number, minimum: -10, maximum: 10, example: 5, description: "Điểm % của nhu cầu phun, khác 0" }
+        duration_min: { type: integer, minimum: 1, maximum: 120, example: 120 }
+        active: { type: boolean, default: true }
 
     Thresholds:
       type: object

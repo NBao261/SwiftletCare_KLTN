@@ -92,6 +92,14 @@ export function publishDeviceConfig(deviceId: string, config: object): boolean {
   return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/config`, config, true)
 }
 
+/**
+ * Report 4 §7.2, BR-38 — offset bù thời tiết, retained: controller kết nối lại vẫn nhận bản cuối, và tự bỏ khi
+ * `expires_at` đã qua
+ */
+export function publishDeviceCompensation(deviceId: string, compensation: object): boolean {
+  return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/compensation`, compensation, true)
+}
+
 function publishTo(topic: string, payload: unknown, retain = false): boolean {
   if (!client?.connected) {
     logger.warn('Không gửi được lệnh MQTT — broker chưa kết nối', { topic })

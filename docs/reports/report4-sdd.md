@@ -393,7 +393,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Size of one installation | staging sizing (Section 3.4) and the NFR-03 load script |
 | Retention (BR-36) | TTL indexes of Section 6.3 |
 | Escalation time, recovery verification | backend `ESCALATION_MIN`, `RECOVERY_VERIFY_MIN` (defaults of the farm settings) |
-| Weather compensation limits | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`; firmware `WEATHER_COMP_OFFLINE_MS` |
+| Weather compensation limits and rule inputs | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `MAX_WEATHER_RULES`, `WEATHER_METRIC_LIMITS` (`utils/weatherCompensation.util.ts`); firmware `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `WEATHER_COMP_OFFLINE_MS` (`pid/WeatherCompensation.h`) |
 | Automatic Work Order for offline devices | backend `WORK_ORDER_OFFLINE_DELAY_MIN` |
 | Recommendation expiry and effect window | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
@@ -928,6 +928,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `househealthdays` | Daily health status | `house_id + date` unique; `farm_id + date` | Ratings with their snapshots embedded |
 | `househealthreports` | Health report | `house_id + kind + period_start + period_end` unique | Zone sections and conclusion embedded |
 | `weatherobservations` | Weather hour | `farm_id + hour` unique; TTL | |
+| `weathercompensations` | Weather compensation sent | `house_id + sent_at` | One row per non-zero offset sent to a house, with the rule and the forecast used, so that NFR-16 compares the hours with and without it |
 | `notifications` | In-app notification | `user_id + created_at`; TTL | |
 | `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date`; `zone_id + status` | `DRAFT` until confirmed; soft delete; photo in MinIO |
 | `auditlogs` | Audit entry | `actor_id + created_at`, `farm_id + created_at`, `target_type + target_id`, `action + created_at` | Source of the expert activity history |
@@ -954,7 +955,7 @@ Report 3, BR-36 sets the retention periods; this table is how they are enforced.
 | Hourly weather | 90 days | TTL index on `weatherobservations.hour` |
 | In-app notifications | 90 days | TTL index on `notifications.created_at` |
 | Resolved alerts | 180 days after resolution | TTL index on `alerts.resolved_at` |
-| Session counts, daily statuses and ratings, reports, harvests and harvest cycles, override logs, histories, Work Orders, maintenance plans and records, recommendations and rules, configuration profiles, audit log | Life of the installation | No TTL; soft delete where a requirement asks for it |
+| Session counts, daily statuses and ratings, reports, harvests and harvest cycles, override logs, histories, weather compensations sent, Work Orders, maintenance plans and records, recommendations and rules, configuration profiles, audit log | Life of the installation | No TTL; soft delete where a requirement asks for it |
 
 ### 6.4 Schema Migrations
 
@@ -971,7 +972,7 @@ The Iteration 1 database is carried into this design by idempotent scripts (`npm
 | Weekly zone reports moved into house reports with `kind` and zone sections | `zonehealthreports` → `househealthreports` | EXPERT-FR-005 |
 | Unused harvest state `ARCHIVED` removed; `nest_type`, `photo_object_key` | `harvestbatches` | HARVEST-FR-001 |
 | `sla_hours` removed from the settings | `systemsettings` | Report 3 §8 |
-| New collections created empty | `pushtokens`, `househealthdays`, `weatherobservations`, `parameterreviews`, `coefficientproposals` | ALERT-FR-002, ANALYTICS-FR-012, 013, EXPERT-FR-010, 011 |
+| New collections created empty | `pushtokens`, `househealthdays`, `weatherobservations`, `weathercompensations`, `parameterreviews`, `coefficientproposals` | ALERT-FR-002, ANALYTICS-FR-012, 013, ENV-FR-028, EXPERT-FR-010, 011 |
 
 ### 6.5 Database Script
 
