@@ -248,7 +248,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-25 — Tổng quan trại, so sánh nhà, điện năng (Bảo, Nhi) — hạn 23/12
 
-- [x] Spec `/farms/{id}/overview`, `/farms/{id}/comparison`. *(Kiệt làm thay Bảo, 14/11, nhánh `feat/g25-farm-overview` nối tiếp G-21, spec `5cb74b29`, code `998d30b3`: thêm `GET /analytics/energy` và `flock_trend` trong `/analytics/bird-count/trends`)*
+- [x] Spec `/farms/{id}/overview`, `/farms/{id}/comparison`. *(Kiệt làm thay Bảo, 14/11, PR #159, nhánh `feat/g25-farm-overview` nối tiếp G-21; sửa theo review của Bảo cùng ngày: thêm `GET /analytics/energy` và `flock_trend` trong `/analytics/bird-count/trends`)*
 - [x] `farmOverview.service` (ANALYTICS-FR-015): mỗi nhà hiện giai đoạn, trạng thái hôm nay, cảnh báo đang mở, Work Order đang mở, tỷ lệ về gần nhất. Nhà chưa có trạng thái thì ghi lý do. *(`998d30b3`; `status_reason`: `NOT_COMPUTED` hoặc `INSUFFICIENT_DATA`)*
 - [x] `houseComparison.service` (ANALYTICS-FR-016, BR-44): *(`998d30b3`: MTTR dùng chung công thức của `opsMetrics.service`; sản lượng chu kỳ trả `null` tới khi có G-26)*
   - các cột: thời gian trong ngưỡng, tỷ lệ ngày `GOOD`, tỷ lệ về trung bình, xu hướng đàn, cảnh báo, MTTR, điện năng ước tính, sản lượng chu kỳ gần nhất;
