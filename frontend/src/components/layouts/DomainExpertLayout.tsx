@@ -2,7 +2,7 @@ import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, His
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 import { IconSettings } from '@/components/ui/icons';
-import { BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, SquaresFourIcon } from '@phosphor-icons/react';
+import { BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, SquaresFourIcon, WrenchIcon } from '@phosphor-icons/react';
 
 /**
  * Layout cho vai trò Chuyên gia nuôi yến (DOMAIN_EXPERT) — FE_Design §12.5.
@@ -45,6 +45,7 @@ const menuSections: MenuSection[] = [
       { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
       { label: 'Sức khỏe nhà yến', path: '/health', icon: HeartbeatIcon },
       { label: 'Thiết bị & Cảm biến', path: '/devices', icon: CpuIcon },
+      { label: 'Phiếu công việc', path: '/work-orders', icon: WrenchIcon },
       { label: 'Trang trại', path: '/farms', icon: HouseIcon },
       { label: 'Thống kê sản lượng', path: '/harvests', icon: BasketIcon },
     ],

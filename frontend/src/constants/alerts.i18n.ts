@@ -1,4 +1,5 @@
 import { alertStatusDict, alertTypeDict, prefixLabels, siteCauseDict } from '@/constants/enumLabels.i18n';
+import { levelDict } from '@/constants/severity.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
 // Từ điển trang Thông báo của Farm Owner (/alerts) — ALERT-FR-007, 009, 018
@@ -15,6 +16,8 @@ const vi = {
   'list.subtitleAdmin': 'Cảnh báo thiết bị của mọi trang trại: mất kết nối, cảm biến lỗi, khởi động lại bất thường. Chủ nhà yến và kỹ thuật viên xác nhận.',
   'list.filterStatus': 'Lọc trạng thái',
   'filter.all': 'Mọi trạng thái',
+  'list.filterLevel': 'Lọc mức độ',
+  'filter.allLevels': 'Mọi mức độ',
   'list.errorTitle': 'Không tải được cảnh báo',
   'list.emptyTitle': 'Không có cảnh báo nào',
   'list.emptyHint': 'Khi môi trường vượt ngưỡng, thiết bị lỗi hoặc mất kết nối, cảnh báo hiện ở đây.',
@@ -64,6 +67,7 @@ const vi = {
   ...prefixLabels('type.', alertTypeDict.vi),
   ...prefixLabels('status.', alertStatusDict.vi),
   ...prefixLabels('cause.', siteCauseDict.vi),
+  ...prefixLabels('level.', levelDict.vi),
 };
 
 export type AlertsKey = keyof typeof vi;
@@ -81,6 +85,8 @@ const en: Record<AlertsKey, string> = {
   'list.subtitleAdmin': 'Device alerts of every farm: offline devices, sensor faults, unexpected restarts. Farm owners and technicians acknowledge them.',
   'list.filterStatus': 'Filter by status',
   'filter.all': 'All statuses',
+  'list.filterLevel': 'Filter by level',
+  'filter.allLevels': 'All levels',
   'list.errorTitle': 'Could not load the alerts',
   'list.emptyTitle': 'No alerts',
   'list.emptyHint': 'Alerts show here when the environment leaves its range or a device fails or goes offline.',
@@ -128,6 +134,7 @@ const en: Record<AlertsKey, string> = {
   ...prefixLabels('type.', alertTypeDict.en),
   ...prefixLabels('status.', alertStatusDict.en),
   ...prefixLabels('cause.', siteCauseDict.en),
+  ...prefixLabels('level.', levelDict.en),
 };
 
 export const alertsDict: Dictionary<AlertsKey> = { vi, en };

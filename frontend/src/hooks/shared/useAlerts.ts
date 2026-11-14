@@ -4,11 +4,12 @@ import { alertApi } from '@/apis/shared/alerts.api'
 import { useAlertStore } from '@/stores/alertStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
-import type { Alert, AlertSeverity, AlertStatus, SiteCause } from '@/types'
+import type { Alert, AlertStatus, SiteCause } from '@/types'
 
 export interface AlertsListQuery {
   farmId?: string; zoneId?: string
-  status?: AlertStatus; severity?: AlertSeverity
+  // 1 mức, hoặc nhiều mức nối dấu phẩy (severityQueryOf) cho cấp Khẩn cấp
+  status?: AlertStatus; severity?: string
   page?: number; limit?: number
 }
 

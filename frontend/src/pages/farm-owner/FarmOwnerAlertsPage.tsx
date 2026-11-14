@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import TableEmptyState from '@/components/common/TableEmptyState';
@@ -8,6 +8,7 @@ import AlertTable, { type AlertAction } from '@/components/features/farm-owner/a
 import { Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
 import { alertsDict } from '@/constants/alerts.i18n';
 import { NO_VALUE } from '@/constants/display';
+import { LEVELS, severityQueryOf } from '@/constants/severity';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -15,12 +16,14 @@ import { useCameraNodes } from '@/hooks/farm-owner/useFarmOwnerDashboard';
 import { ALERT_PAGE_SIZE, useAlertsList } from '@/hooks/shared/useAlerts';
 import { useSensorNodes } from '@/hooks/shared/useDevices';
 import { useAllZones } from '@/hooks/shared/useFarms';
-import type { Alert, AlertStatus } from '@/types';
+import { lastPage } from '@/lib/helpers';
+import type { Alert, AlertStatus, SeverityLevel } from '@/types';
 
 const ALERT_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED', 'RESOLVED'];
 type StatusFilter = 'all' | AlertStatus;
+type LevelFilter = 'all' | SeverityLevel;
 
-// ALERT-FR-007, 009, 018 — /alerts của Farm Owner, Farm Technician (nhà được giao), Admin (chỉ xem cảnh báo thiết bị): lọc trạng thái, chi tiết, xác nhận kèm nguyên nhân
+// ALERT-FR-007, 009, 018 — /alerts của Farm Owner, Farm Technician (nhà được giao), Admin (chỉ xem cảnh báo thiết bị): lọc trạng thái và mức độ, chi tiết, xác nhận kèm nguyên nhân
 export default function FarmOwnerAlertsPage(): JSX.Element {
   const { t } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -30,18 +33,32 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
   const subtitleKey = isAdmin ? 'list.subtitleAdmin' : isTechnician ? 'list.subtitleTechnician' : 'list.subtitle';
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  // Đổi trạng thái thì về trang 1
-  const [pageState, setPageState] = useState({ key: statusFilter, page: 1 });
-  const page = pageState.key === statusFilter ? pageState.page : 1;
+  const [levelFilter, setLevelFilter] = useState<LevelFilter>('all');
+  // Đổi trạng thái hay mức độ thì về trang 1
+  const filterKey = `${statusFilter}|${levelFilter}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
   const { records: alerts, total, isLoading, isError, error, refetch } = useAlertsList({
     ...(statusFilter !== 'all' && { status: statusFilter }),
+    ...(levelFilter !== 'all' && { severity: severityQueryOf(levelFilter) }),
     page,
     limit: ALERT_PAGE_SIZE,
   });
+  // Xác nhận cảnh báo cuối của trang cuối (đang lọc Mới) làm trang rỗng: lùi về trang cuối còn dữ liệu
+  useEffect(() => {
+    if (!isLoading && !isError && alerts.length === 0 && page > 1) {
+      setPageState({ key: filterKey, page: lastPage(total, ALERT_PAGE_SIZE) });
+    }
+  }, [isLoading, isError, alerts.length, page, total, filterKey]);
 
   // Bấm 1 thông báo ở chuông (AppHeader) sang đây kèm ?highlight=<id>: mở thẳng chi tiết cảnh báo đó
   const [searchParams, setSearchParams] = useSearchParams();
-  const [detailId, setDetailId] = useState<string | null>(() => searchParams.get('highlight'));
+  const highlightId = searchParams.get('highlight');
+  const [detailId, setDetailId] = useState<string | null>(highlightId);
+  // Đang ở /alerts mà bấm thông báo khác: route không remount, nên mở theo ?highlight mỗi lần nó đổi
+  useEffect(() => {
+    if (highlightId) setDetailId(highlightId);
+  }, [highlightId]);
   const [ackAlert, setAckAlert] = useState<Alert | null>(null);
 
   // Vị trí: "Nhà > Zone", hoặc tên nhà với cảnh báo cả nhà (camera); thiết bị: mã bộ điều khiển hoặc camera
@@ -84,6 +101,15 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
               ...ALERT_STATUSES.map(item => ({ value: item, label: t(`status.${item}`) })),
             ]}
           />
+          <SelectMenu
+            ariaLabel={t('list.filterLevel')}
+            value={levelFilter}
+            onChange={setLevelFilter}
+            options={[
+              { value: 'all', label: t('filter.allLevels') },
+              ...LEVELS.map(level => ({ value: level, label: t(`level.${level}`) })),
+            ]}
+          />
         </div>
 
         {isLoading ? (
@@ -102,7 +128,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
         ) : (
           <AlertTable
             alerts={alerts}
-            serverPagination={{ page, total, onChange: next => setPageState({ key: statusFilter, page: next }) }}
+            serverPagination={{ page, total, onChange: next => setPageState({ key: filterKey, page: next }) }}
             locationOf={locationOf}
             canAcknowledge={canAcknowledge}
             onAction={handleAction}
