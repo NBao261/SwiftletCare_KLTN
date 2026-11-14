@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import type { InAppNotification } from '@/types'
 import {
   affectsAlerts,
+  affectsWorkOrders,
   createRecentIdSet,
   createTrailingRunner,
   findNotificationInPages,
@@ -58,6 +59,13 @@ describe('getNotificationTarget', () => {
     expect(affectsAlerts(buildNotification('b', { ref: { kind: 'alert', id: 'x' } }))).toBe(true)
     expect(affectsAlerts(buildNotification('c', { ref: { kind: 'health_report', id: 'x' } }))).toBe(false)
     expect(affectsAlerts(buildNotification('d'))).toBe(false)
+  })
+
+  it('thông báo Work Order, cảnh báo và quyết định của chuyên gia làm tải lại Work Order', () => {
+    expect(affectsWorkOrders(buildNotification('a', { ref: { kind: 'work_order', id: 'x' } }))).toBe(true)
+    expect(affectsWorkOrders(buildNotification('b', { ref: { kind: 'alert', id: 'x' } }))).toBe(true)
+    expect(affectsWorkOrders(buildNotification('c', { ref: { kind: 'expert_decision', id: 'x' } }))).toBe(true)
+    expect(affectsWorkOrders(buildNotification('d', { ref: { kind: 'health_report', id: 'x' } }))).toBe(false)
   })
 })
 

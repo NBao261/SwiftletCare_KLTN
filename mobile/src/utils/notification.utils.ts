@@ -33,6 +33,12 @@ export function affectsAlerts(notification: InAppNotification): boolean {
   return notification.ref?.kind === 'expert_decision' || notification.ref?.kind === 'alert'
 }
 
+// Thông báo có thể kèm Work Order vừa đổi phía server (job kiểm phục hồi chuyển chờ duyệt, sự cố quay lại về "Đang làm", cảnh báo
+// hoặc chuyên gia cần tới nhà mở Work Order mới) mà không có sự kiện riêng, nên danh sách, chi tiết, số Work Order phải tải lại
+export function affectsWorkOrders(notification: InAppNotification): boolean {
+  return notification.ref?.kind === 'work_order' || affectsAlerts(notification)
+}
+
 // Tìm một thông báo trong các trang đã tải (backend không có GET /notifications/{id})
 export function findNotificationInPages(
   pages: NotificationPages | undefined,
