@@ -11,7 +11,7 @@ export function openAlertFromBell(alertId: string) {
 }
 
 // Bấm một thông báo: đánh dấu đã đọc (số giảm ngay) rồi mở đúng chỗ — cảnh báo ở tab Cảnh báo, báo cáo ở tab Phân tích, Work
-// Order ở trang chi tiết Work Order, còn lại (quyết định của chuyên gia, lệnh từ xa trên thiết bị…) ở trang chi tiết thông báo
+// Order ở trang chi tiết Work Order, ngày đánh giá ở health/[dayId], còn lại (quyết định của chuyên gia, lệnh từ xa trên thiết bị…) ở trang chi tiết thông báo
 export function useOpenNotification() {
   const markRead = useMarkNotificationRead()
   const markNotificationRead = markRead.mutate
@@ -33,6 +33,10 @@ export function useOpenNotification() {
       }
       if (target.kind === 'workOrder') {
         router.push({ pathname: '/work-orders/[workOrderId]', params: { workOrderId: target.workOrderId } })
+        return
+      }
+      if (target.kind === 'healthDay') {
+        router.push({ pathname: '/health/[dayId]', params: { dayId: target.dayId } })
         return
       }
       router.push({ pathname: '/notifications/[notificationId]', params: { notificationId: target.notificationId } })

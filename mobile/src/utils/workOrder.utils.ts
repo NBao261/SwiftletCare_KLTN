@@ -1,4 +1,5 @@
-import type { Alert, AlertType, LocalPhoto, OnsiteCheck, SiteCause, WorkOrderStatus } from '@/types'
+import type { Alert, AlertType, LocalPhoto, OnsiteCheck, SiteCause, WorkOrder, WorkOrderStatus } from '@/types'
+import { t } from '@/utils/i18n.utils'
 
 // Loại cảnh báo thiết bị phải ghi nguyên nhân tại chỗ khi đóng Work Order (ALERT-FR-018, backend 422 nếu thiếu) — cũng là loại
 // hiện ô chọn nguyên nhân khi xác nhận cảnh báo
@@ -35,9 +36,27 @@ export function getWorkOrderAction(status: WorkOrderStatus): WorkOrderAction | n
   return null
 }
 
+// Yêu cầu kiểm tra tại chỗ đã được trả lời: có điều quan sát hoặc lúc trả lời. Spec ghi observation null khi chưa trả lời, nhưng
+// bản ghi cũ có thể thiếu hẳn khoá (undefined) — cả hai đều là chưa trả lời
+export function isOnsiteCheckAnswered(check: OnsiteCheck): boolean {
+  return check.observation != null || check.answered_at != null
+}
+
 // Yêu cầu kiểm tra tại chỗ còn chờ thợ trả lời (EXPERT-FR-021): backend tạo đúng một yêu cầu mỗi cảnh báo suy luận
 export function getPendingOnsiteCheck(alert: Pick<Alert, 'onsite_checks'>): OnsiteCheck | null {
-  return alert.onsite_checks?.find(check => check.observation === null) ?? null
+  return alert.onsite_checks?.find(check => !isOnsiteCheckAnswered(check)) ?? null
+}
+
+// Các mốc của Work Order đã xảy ra, theo thứ tự vòng đời (SM-19): mở, bắt đầu, báo xong, dữ liệu phục hồi (BR-41), đóng
+export function getWorkOrderMilestones(workOrder: WorkOrder): { label: string; time: string }[] {
+  const milestones = [
+    { label: t('Mở lúc'), time: workOrder.opened_at },
+    { label: t('Bắt đầu'), time: workOrder.started_at },
+    { label: t('Báo xong'), time: workOrder.done_at },
+    { label: t('Dữ liệu đã phục hồi'), time: workOrder.verified_at },
+    { label: t('Đóng lúc'), time: workOrder.closed_at },
+  ]
+  return milestones.flatMap(item => (item.time ? [{ label: item.label, time: item.time }] : []))
 }
 
 // Kiểu ảnh theo đuôi file; backend nhận JPEG/PNG/WebP, camera trả JPEG

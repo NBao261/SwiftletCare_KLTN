@@ -247,14 +247,17 @@ export function AlertDetailContent({
         )}
       </View>
 
-      <AcknowledgeSheet
-        alert={isAcknowledgeOpen ? alert : null}
-        onClose={() => setAcknowledgeOpen(false)}
-        onDone={message => {
-          setAcknowledgeOpen(false)
-          onMessage?.(message)
-        }}
-      />
+      {/* Chỉ mount khi mở: mỗi lần mở ghi chú và nguyên nhân bắt đầu trống, không mang lựa chọn cũ sang lần sau */}
+      {isAcknowledgeOpen && (
+        <AcknowledgeSheet
+          alert={alert}
+          onClose={() => setAcknowledgeOpen(false)}
+          onDone={message => {
+            setAcknowledgeOpen(false)
+            onMessage?.(message)
+          }}
+        />
+      )}
       {isOnsiteCheckOpen && (
         <OnsiteCheckSheet
           alert={alert}

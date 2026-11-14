@@ -11,17 +11,19 @@ export const NOTIFICATION_UNREAD_KEY = ['notifications', 'unread-count'] as cons
 export const ALERT_BADGE_KEY = ['alerts', 'badge'] as const
 
 // Bấm một thông báo thì đi đâu: cảnh báo mở đúng cảnh báo ở tab Cảnh báo, báo cáo mở tab Phân tích, Work Order mở trang chi tiết
-// Work Order (G-21), còn lại mở trang chi tiết thông báo
+// Work Order (G-21), ngày đánh giá mở health/[dayId] (MF-06), còn lại mở trang chi tiết thông báo
 export type NotificationTarget =
   | { kind: 'alert'; alertId: string }
   | { kind: 'report'; reportId: string }
   | { kind: 'workOrder'; workOrderId: string }
+  | { kind: 'healthDay'; dayId: string }
   | { kind: 'detail'; notificationId: string }
 
 export function getNotificationTarget(notification: InAppNotification): NotificationTarget {
   if (notification.ref?.kind === 'alert') return { kind: 'alert', alertId: notification.ref.id }
   if (notification.ref?.kind === 'health_report') return { kind: 'report', reportId: notification.ref.id }
   if (notification.ref?.kind === 'work_order') return { kind: 'workOrder', workOrderId: notification.ref.id }
+  if (notification.ref?.kind === 'health_day') return { kind: 'healthDay', dayId: notification.ref.id }
   return { kind: 'detail', notificationId: notification._id }
 }
 
@@ -127,5 +129,6 @@ export function getPushTarget(data: unknown): PushTarget {
   if (id && record.kind === 'alert') return { kind: 'alert', alertId: id }
   if (id && record.kind === 'health_report') return { kind: 'report', reportId: id }
   if (id && record.kind === 'work_order') return { kind: 'workOrder', workOrderId: id }
+  if (id && record.kind === 'health_day') return { kind: 'healthDay', dayId: id }
   return { kind: 'bell' }
 }

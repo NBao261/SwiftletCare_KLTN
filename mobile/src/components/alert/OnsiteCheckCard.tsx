@@ -8,6 +8,7 @@ import { usePalette } from '@/hooks/theme/usePalette'
 import type { OnsiteCheck } from '@/types'
 import { formatDateTime } from '@/utils/date.utils'
 import { getOnsiteObservationLabel } from '@/utils/label.utils'
+import { isOnsiteCheckAnswered } from '@/utils/workOrder.utils'
 import { t } from '@/utils/i18n.utils'
 
 const PHOTO_HEIGHT = 180
@@ -21,7 +22,7 @@ interface OnsiteCheckCardProps {
 export function OnsiteCheckCard({ check }: OnsiteCheckCardProps) {
   const palette = usePalette()
   const technicianName = check.technician_id?.full_name ?? t('Kỹ thuật viên nhà yến')
-  const isAnswered = check.observation !== null
+  const isAnswered = isOnsiteCheckAnswered(check)
 
   return (
     <Card style={styles.card}>
@@ -29,9 +30,9 @@ export function OnsiteCheckCard({ check }: OnsiteCheckCardProps) {
         {t('Kiểm tra tại chỗ')}
       </Text>
       <StatRow label={t('Yêu cầu')} value={`${technicianName} · ${formatDateTime(check.requested_at)}`} />
-      {check.observation ? (
+      {isAnswered ? (
         <>
-          <StatRow label={t('Quan sát')} value={getOnsiteObservationLabel(check.observation)} />
+          <StatRow label={t('Quan sát')} value={check.observation ? getOnsiteObservationLabel(check.observation) : '_'} />
           <StatRow
             label={t('Trả lời')}
             value={[check.answered_by?.full_name, check.answered_at ? formatDateTime(check.answered_at) : null]
@@ -53,7 +54,7 @@ export function OnsiteCheckCard({ check }: OnsiteCheckCardProps) {
           ) : null}
         </>
       ) : (
-        <StatRow label={t('Quan sát')} value={t('Chờ kỹ thuật viên trả lời')} isWarning={!isAnswered} />
+        <StatRow label={t('Quan sát')} value={t('Chờ kỹ thuật viên trả lời')} isWarning />
       )}
     </Card>
   )

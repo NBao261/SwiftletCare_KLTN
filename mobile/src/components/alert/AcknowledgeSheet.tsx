@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { invalidateAlertQueries } from '@/config/queryClient'
 import { StyleSheet, TextInput, View } from 'react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -42,7 +40,6 @@ interface AcknowledgeSheetProps {
 // Cảnh báo vừa đổi trạng thái (409) thì báo và tải lại
 export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetProps) {
   const palette = usePalette()
-  const queryClient = useQueryClient()
   const acknowledge = useAcknowledgeAlert()
   const [quickNote, setQuickNote] = useState<QuickNote | null>(null)
   const [note, setNote] = useState('')
@@ -60,10 +57,9 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
       { alertId: alert._id, note: note.trim() || undefined, cause: hasCause && cause ? cause : undefined },
       {
         onSuccess: () => onDone(t('Đã xác nhận cảnh báo')),
+        // Hook đã tải lại cảnh báo khi gặp 409; ở đây chỉ báo và đóng sheet
         onError: error => {
-          if (readApiError(error).status !== 409) return
-          void invalidateAlertQueries(queryClient)
-          onDone(t('Cảnh báo đã thay đổi, danh sách đã tải lại'))
+          if (readApiError(error).status === 409) onDone(t('Cảnh báo đã thay đổi, danh sách đã tải lại'))
         },
       },
     )

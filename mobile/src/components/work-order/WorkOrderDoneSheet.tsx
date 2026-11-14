@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native'
-import { useQueryClient } from '@tanstack/react-query'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { PhotoCaptureField } from '@/components/common/PhotoCaptureField'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -34,7 +33,6 @@ interface WorkOrderDoneSheetProps {
 // (409) thì báo và tải lại
 export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDoneSheetProps) {
   const palette = usePalette()
-  const queryClient = useQueryClient()
   const complete = useCompleteWorkOrder(workOrder?._id ?? '')
   const [cause, setCause] = useState<SiteCause | null>(null)
   const [workNote, setWorkNote] = useState('')
@@ -53,10 +51,9 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
               ? t('Đã báo xong, hệ thống đang kiểm dữ liệu phục hồi')
               : t('Đã báo xong, chờ chủ trại duyệt'),
           ),
+        // Hook đã tải lại Work Order khi gặp 409; ở đây chỉ báo và đóng sheet
         onError: error => {
-          if (readApiError(error).status !== 409) return
-          void queryClient.invalidateQueries({ queryKey: ['work-orders'] })
-          onDone(t('Work Order đã đổi trạng thái, đã tải lại'))
+          if (readApiError(error).status === 409) onDone(t('Work Order đã đổi trạng thái, đã tải lại'))
         },
       },
     )
