@@ -4,8 +4,24 @@ import type { AlertType, OnsiteObservation, PersonRef, SiteCause } from '@/types
 export type WorkOrderStatus = 'OPEN' | 'IN_PROGRESS' | 'VERIFYING' | 'AWAITING_APPROVAL' | 'CLOSED' | 'CANCELLED'
 
 // Nguồn mở Work Order (BR-39): cảnh báo thiết bị, thiết bị mất kết nối quá 30 phút, chuyên gia cần tới nhà, thợ thấy cảm biến
-// hỏng khi kiểm tra tại chỗ, Farm Owner mở tay
-export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL'
+// hỏng khi kiểm tra tại chỗ, Farm Owner mở tay; G-22: kế hoạch bảo trì đến hạn (PLAN), mục checklist ghi hỏng (CHECKLIST)
+export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL' | 'PLAN' | 'CHECKLIST'
+
+// Kết quả một mục checklist của Work Order phòng ngừa (OPS-FR-007)
+export type ChecklistResult = 'OK' | 'DEFECT'
+
+// Một mục checklist — khớp ChecklistItem trong api-spec; result null hoặc thiếu = chưa làm
+export interface ChecklistItem {
+  item: string
+  result?: ChecklistResult | null
+  note?: string | null
+  // URL tạm (1 giờ)
+  photo_url?: string | null
+  by?: string | null
+  at?: string | null
+  // Work Order sửa chữa mở từ mục DEFECT
+  repair_work_order_id?: string | null
+}
 
 export interface WorkOrderHistoryEntry {
   from: WorkOrderStatus | null
@@ -27,6 +43,9 @@ export interface WorkOrder {
   alert_type?: AlertType | null
   kind: 'REPAIR' | 'PREVENTIVE'
   origin: WorkOrderOrigin
+  // Work Order phòng ngừa: kế hoạch bảo trì và checklist chép từ mẫu của kế hoạch (G-22)
+  plan_id?: string | null
+  checklist?: ChecklistItem[]
   title: string
   description?: string | null
   status: WorkOrderStatus
@@ -38,7 +57,8 @@ export interface WorkOrder {
   work_note?: string | null
   // URL tạm (1 giờ); danh sách không kèm
   photo_urls?: string[]
-  result?: 'REPAIRED' | 'SELF_RECOVERED' | null
+  // DONE: Work Order phòng ngừa đã duyệt — một lần ghi bảo trì (OPS-FR-008)
+  result?: 'REPAIRED' | 'SELF_RECOVERED' | 'DONE' | null
   cancel_reason?: string | null
   opened_at: string
   started_at?: string | null
@@ -59,6 +79,14 @@ export interface CompleteWorkOrderInput {
   cause?: SiteCause
   workNote?: string
   photos: LocalPhoto[]
+}
+
+// Thân PUT /work-orders/{id}/checklist
+export interface ChecklistItemInput {
+  itemIndex: number
+  result: ChecklistResult
+  note?: string
+  photo?: LocalPhoto
 }
 
 // Thân POST /alerts/{id}/onsite-check
