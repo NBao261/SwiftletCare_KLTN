@@ -1568,6 +1568,12 @@ ensureCollection("systemsettings", {
       },
       "required": ["temp_min", "temp_max", "humidity_min", "humidity_max", "light_max", "nh3_max", "co2_max"]
     },
+    "default_thresholds_source": {
+      "bsonType": ["string", "null"]
+    },
+    "default_thresholds_updated_at": {
+      "bsonType": ["date", "null"]
+    },
     "updated_by": {
       "bsonType": ["objectId", "null"]
     },
