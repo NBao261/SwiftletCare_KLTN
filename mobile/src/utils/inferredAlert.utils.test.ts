@@ -7,7 +7,10 @@ describe('inferredAlert.utils', () => {
     expect(getInferredAlertLabel('SENSOR_ANOMALY')).toBe('Cảm biến nhảy số bất thường')
     expect(getInferredAlertLabel('FORECAST_BREACH')).toBe('Dự báo sắp lệch nhiệt ẩm')
     expect(getInferredAlertLabel('LOW_RETURN_RATE')).toBe('Đàn chim về tổ sụt giảm')
-    expect(getInferredAlertLabel('MISTING_INEFFECTIVE')).toBe('Bơm sương chạy nhưng không lên ẩm')
+  })
+
+  it('returns fallback for MISTING_INEFFECTIVE (device alert, not inferred type)', () => {
+    expect(getInferredAlertLabel('MISTING_INEFFECTIVE')).toBe('Cảnh báo bất thường')
   })
 
   it('returns fallback label for unknown alert type', () => {

@@ -163,21 +163,11 @@ export const expertApi = {
       },
     }),
 
-  takeReviewAction: (
-    itemId: string,
-    action: 'ACCEPT' | 'REVERT' | 'ADJUST',
-    adjustedValues?: Record<string, number>
-  ) => {
+  takeReviewAction: (itemId: string, action: 'ACCEPT' | 'REVERT') => {
     if (action === 'ACCEPT') {
       return apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_ACCEPT(itemId))
     }
-    if (action === 'REVERT') {
-      return apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_REVERT(itemId))
-    }
-    return apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_ITEM_ACTION(itemId), {
-      action,
-      adjusted_values: adjustedValues,
-    })
+    return apiClient.put<ApiResponse<ReviewItem>>(ENDPOINTS.EXPERT_REVIEW_REVERT(itemId))
   },
 
   // ── 7. Duyệt Đề xuất Hệ số mờ (EXPERT-FR-011) ──────────────────────────────────

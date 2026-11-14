@@ -40,6 +40,7 @@ import {
   useUpdateThresholds,
   useZoneTuning,
 } from '@/hooks/expert/useZoneTuning'
+import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -49,9 +50,7 @@ import { t } from '@/utils/i18n.utils'
 import {
   DEFAULT_DETECTION,
   DEFAULT_FUZZY,
-  DEFAULT_STANDARDS,
   DEFAULT_THRESHOLDS,
-  HealthStandardsConfig,
   TUNING_GROUPS_METADATA,
   TUNING_RANGES,
 } from '@/utils/tuning.utils'
@@ -59,7 +58,7 @@ import {
 const KPI_TILE_HEIGHT = 112
 const ICON_BOX_SIZE = 44
 
-type TuningChipKey = 'thresholds' | 'fuzzy' | 'detection' | 'standards'
+type TuningChipKey = 'thresholds' | 'fuzzy' | 'detection'
 
 const CHIP_ITEMS: { key: TuningChipKey; label: string }[] = [
   { key: 'thresholds', label: 'Ngưỡng nhiệt ẩm' },
@@ -94,14 +93,14 @@ export default function TuningScreen() {
   }, [selectedZoneId, setZoneId, zones])
 
   const [selectedChip, setSelectedChip] = useState<TuningChipKey>(() => {
-    if (params.chip === 'fuzzy' || params.chip === 'detection' || params.chip === 'standards') return params.chip
+    if (params.chip === 'fuzzy' || params.chip === 'detection') return params.chip
     return 'thresholds'
   })
 
   const [prevParamChip, setPrevParamChip] = useState(params.chip)
   if (params.chip !== prevParamChip) {
     setPrevParamChip(params.chip)
-    if (params.chip === 'fuzzy' || params.chip === 'detection' || params.chip === 'standards' || params.chip === 'thresholds') {
+    if (params.chip === 'fuzzy' || params.chip === 'detection' || params.chip === 'thresholds') {
       setSelectedChip(params.chip)
     }
   }
@@ -117,27 +116,28 @@ export default function TuningScreen() {
   const { data: activeAlertsResponse } = useInferredAlerts({ farm_id: selectedFarmId || undefined, zone_id: activeZoneId || undefined, verdict: 'pending' })
   const { data: reviewItemsResponse } = useExpertReviewItems({ farm_id: selectedFarmId || undefined, status: 'PENDING_REVIEW' })
 
+  // return_rate_drop_pct thuộc cấp Nhà (bird_count_tuning), không phải cấp Zone (detection_tuning) — EXPERT-FR-008, BR-09f
+  const { houses } = useAllHouses()
+  const currentHouse = useMemo(() => houses.find(h => h._id === selectedHouseId), [houses, selectedHouseId])
+
   const zoneData = zoneDetailResponse?.data
 
   const serverThresholds = useMemo<ExpertThresholds>(() => ({ ...DEFAULT_THRESHOLDS, ...(zoneData?.thresholds ?? {}) }), [zoneData])
   const serverFuzzy = useMemo<ExpertFuzzyTuning>(() => ({ ...DEFAULT_FUZZY, ...(zoneData?.fuzzy_tuning ?? {}) }), [zoneData])
   const serverDetection = useMemo<ExpertDetectionTuning>(() => ({ ...DEFAULT_DETECTION, ...(zoneData?.detection_tuning ?? {}) }), [zoneData])
-  const serverHouseRate = serverDetection.return_rate_drop_pct ?? TUNING_RANGES.return_rate_drop_pct.default
-  const initialStandards = DEFAULT_STANDARDS
+  const serverHouseRate = currentHouse?.bird_count_tuning?.return_rate_drop_pct ?? TUNING_RANGES.return_rate_drop_pct.default
 
   const [prevZoneId, setPrevZoneId] = useState(activeZoneId)
   const [thresholdEdits, setThresholdEdits] = useState<Partial<ExpertThresholds>>({})
   const [fuzzyEdits, setFuzzyEdits] = useState<Partial<ExpertFuzzyTuning>>({})
   const [detectionEdits, setDetectionEdits] = useState<Partial<ExpertDetectionTuning>>({})
   const [houseReturnRateEdit, setHouseReturnRateEdit] = useState<number | null>(null)
-  const [standardsEdits, setStandardsEdits] = useState<Partial<HealthStandardsConfig>>({})
 
   const clearAllEdits = useCallback(() => {
     setThresholdEdits({})
     setFuzzyEdits({})
     setDetectionEdits({})
     setHouseReturnRateEdit(null)
-    setStandardsEdits({})
   }, [])
 
   if (activeZoneId !== prevZoneId) {
@@ -149,34 +149,29 @@ export default function TuningScreen() {
   const localFuzzy = useMemo<ExpertFuzzyTuning>(() => ({ ...serverFuzzy, ...fuzzyEdits }), [serverFuzzy, fuzzyEdits])
   const localDetection = useMemo<ExpertDetectionTuning>(() => ({ ...serverDetection, ...detectionEdits }), [serverDetection, detectionEdits])
   const localHouseReturnRate = houseReturnRateEdit ?? serverHouseRate
-  const localStandards = useMemo<HealthStandardsConfig>(() => ({ ...initialStandards, ...standardsEdits }), [initialStandards, standardsEdits])
 
-  const handleParamChange = useCallback((chip: TuningChipKey, key: string, val: number) => {
+  const handleParamChange = useCallback((chip: TuningChipKey, key: string, value: number) => {
     if (chip === 'thresholds') {
       const k = key as keyof ExpertThresholds
-      setThresholdEdits(prev => (val === serverThresholds[k] ? (({ [k]: _, ...r }) => r)(prev) : { ...prev, [k]: val }))
+      setThresholdEdits(prev => (value === serverThresholds[k] ? (({ [k]: _removed, ...rest }) => rest)(prev) : { ...prev, [k]: value }))
     } else if (chip === 'fuzzy') {
       const k = key as keyof ExpertFuzzyTuning
-      setFuzzyEdits(prev => (val === serverFuzzy[k] ? (({ [k]: _, ...r }) => r)(prev) : { ...prev, [k]: val }))
+      setFuzzyEdits(prev => (value === serverFuzzy[k] ? (({ [k]: _removed, ...rest }) => rest)(prev) : { ...prev, [k]: value }))
     } else if (chip === 'detection') {
       if (key === 'return_rate_drop_pct') {
-        setHouseReturnRateEdit(val === serverHouseRate ? null : val)
+        setHouseReturnRateEdit(value === serverHouseRate ? null : value)
       } else {
         const k = key as keyof ExpertDetectionTuning
-        setDetectionEdits(prev => (val === serverDetection[k] ? (({ [k]: _, ...r }) => r)(prev) : { ...prev, [k]: val }))
+        setDetectionEdits(prev => (value === serverDetection[k] ? (({ [k]: _removed, ...rest }) => rest)(prev) : { ...prev, [k]: value }))
       }
-    } else if (chip === 'standards') {
-      const k = key as keyof HealthStandardsConfig
-      setStandardsEdits(prev => (val === initialStandards[k] ? (({ [k]: _, ...r }) => r)(prev) : { ...prev, [k]: val }))
     }
-  }, [serverThresholds, serverFuzzy, serverDetection, serverHouseRate, initialStandards])
+  }, [serverThresholds, serverFuzzy, serverDetection, serverHouseRate])
 
   const totalDirtyCount =
     Object.keys(thresholdEdits).length +
     Object.keys(fuzzyEdits).length +
     Object.keys(detectionEdits).length +
-    (houseReturnRateEdit !== null ? 1 : 0) +
-    Object.keys(standardsEdits).length
+    (houseReturnRateEdit !== null ? 1 : 0)
   const isDirty = totalDirtyCount > 0
 
   const updateThresholdsMutation = useUpdateThresholds()
@@ -289,8 +284,7 @@ export default function TuningScreen() {
   const getFieldValue = (chip: TuningChipKey, key: string, defVal: number) => {
     if (chip === 'thresholds') return localThresholds[key as keyof ExpertThresholds] ?? defVal
     if (chip === 'fuzzy') return (localFuzzy[key as keyof ExpertFuzzyTuning] as number) ?? defVal
-    if (chip === 'detection') return key === 'return_rate_drop_pct' ? localHouseReturnRate : ((localDetection[key as keyof ExpertDetectionTuning] as number) ?? defVal)
-    return localStandards[key as keyof HealthStandardsConfig] ?? defVal
+    return key === 'return_rate_drop_pct' ? localHouseReturnRate : ((localDetection[key as keyof ExpertDetectionTuning] as number) ?? defVal)
   }
 
   const breachedWarning = kpiBreachedCount > 0
