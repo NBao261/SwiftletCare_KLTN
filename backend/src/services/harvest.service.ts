@@ -5,7 +5,7 @@ import { Telemetry } from '@/models/telemetry.model'
 import { averageReturnRate, houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds, listAccessibleZoneIds } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
-import { ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
+import { AppError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, NestType } from '@/types'
 
 /** HARVEST-FR-002 — cửa sổ lấy trung bình môi trường trước ngày thu hoạch */
@@ -93,7 +93,11 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
   const { zone, house } = await assertZoneAccess(input.zone_id, user)
   const confirmed = user.role === 'FARM_OWNER'
 
+  // HARVEST-FR-001 — ngày hợp lệ: không phải ngày chưa tới theo giờ VN (ngày thu hoạch người dùng chọn)
   const harvestDate = new Date(input.harvest_date)
+  if (Number.isNaN(harvestDate.getTime()) || vnDate(harvestDate) > vnDate(new Date())) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Ngày thu hoạch không hợp lệ hoặc sau hôm nay')
+  }
   const [envSnapshot, flockSnapshot] = await Promise.all([
     buildEnvSnapshot(input.zone_id, harvestDate),
     buildFlockSnapshot(String(house._id), harvestDate),
