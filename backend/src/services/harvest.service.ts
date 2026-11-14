@@ -5,6 +5,7 @@ import { Telemetry } from '@/models/telemetry.model'
 import { averageReturnRate, houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds, listAccessibleZoneIds } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { rebuildZoneCyclesSafely } from '@/services/harvestCycle.service'
 import { ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, NestType } from '@/types'
 
@@ -99,7 +100,7 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
     buildFlockSnapshot(String(house._id), harvestDate),
   ])
 
-  return HarvestBatch.create({
+  const batch = await HarvestBatch.create({
     farm_id:      house.farm_id,
     zone_id:      zone._id,
     created_by:   user._id,
@@ -114,6 +115,9 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
     status: confirmed ? 'CONFIRMED' : 'DRAFT',
     ...(confirmed && { confirmed_by: user._id, confirmed_at: new Date() }),
   })
+  // HARVEST-FR-007 — lô của Farm Owner xác nhận ngay nên đóng chu kỳ của zone
+  if (confirmed) await rebuildZoneCyclesSafely(zone._id)
+  return batch
 }
 
 export async function listHarvests(user: CurrentUser, farmId?: string) {
@@ -162,6 +166,8 @@ export async function updateHarvest(
   if (updates.nest_type !== undefined) batch.nest_type = updates.nest_type
   if (updates.product_images !== undefined) batch.product_images = updates.product_images
   await batch.save()
+  // Report 3 §6.13 — Farm Owner sửa lô đã xác nhận thì số liệu chu kỳ tính lại
+  if (batch.status === 'CONFIRMED') await rebuildZoneCyclesSafely(batch.zone_id)
   return batch
 }
 
@@ -170,11 +176,13 @@ export async function removeHarvest(id: string, user: CurrentUser): Promise<void
   assertTechnicianOwnDraft(batch, user)
   batch.is_deleted = true
   await batch.save()
+  // HARVEST-FR-005 — lô đã xác nhận bị xoá thì rời chu kỳ của nó: chu kỳ gộp vào chu kỳ sau
+  if (batch.status === 'CONFIRMED') await rebuildZoneCyclesSafely(batch.zone_id)
 }
 
 /**
  * HARVEST-FR-006 — Farm Owner của farm xác nhận lô do Farm Technician nhập: DRAFT → CONFIRMED; đã xác nhận
- * → 409. Đóng chu kỳ thu hoạch khi xác nhận (HARVEST-FR-007) làm ở G-26.
+ * → 409. Xác nhận đóng chu kỳ thu hoạch của zone (HARVEST-FR-007, harvestCycle.service).
  */
 export async function confirmHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
   const batch = await getHarvest(id, user)
@@ -187,5 +195,6 @@ export async function confirmHarvest(id: string, user: CurrentUser): Promise<IHa
   await logAction(user._id, 'HARVEST_CONFIRMED', 'harvest_batch', String(batch._id), {
     created_by: String(batch.created_by),
   }, { farmId: String(batch.farm_id) })
+  await rebuildZoneCyclesSafely(batch.zone_id)
   return batch
 }

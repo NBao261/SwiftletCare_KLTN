@@ -3797,8 +3797,9 @@ paths:
       tags: [Harvests]
       summary: "Tạo Harvest Batch (HARVEST-FR-001..004) — FARM_OWNER; FARM_TECHNICIAN ở nhà được giao (Domain Expert chỉ xem qua GET)"
       description: |
-        Lô của Farm Owner có `status: CONFIRMED` ngay; lô của Farm Technician (chỉ ở zone của nhà được giao,
-        nhà khác → 403) là `DRAFT`, chờ Farm Owner xác nhận (`POST /harvests/{id}/confirm`, HARVEST-FR-006).
+        Lô của Farm Owner có `status: CONFIRMED` ngay và đóng chu kỳ thu hoạch của zone (HARVEST-FR-007, xem
+        `GET /harvests/cycles`); lô của Farm Technician (chỉ ở zone của nhà được giao, nhà khác → 403) là `DRAFT`,
+        chờ Farm Owner xác nhận (`POST /harvests/{id}/confirm`, HARVEST-FR-006).
         Tự động gắn `env_snapshot` (trung bình môi trường 7 ngày trước thu
         hoạch — HARVEST-FR-002) và `flock_snapshot` (return rate 30 ngày —
         HARVEST-FR-003), sinh `trace_code` (UUID) làm mã định danh mẻ. Nếu
@@ -3889,6 +3890,94 @@ paths:
               },
           }
 
+  /harvests/cycles:
+    get:
+      tags: [Harvests]
+      summary: "Chu kỳ thu hoạch theo zone (HARVEST-FR-007, ANALYTICS-FR-004) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao"
+      description: |
+        Chu kỳ của một zone chạy từ lần thu hoạch đã xác nhận trước (hoặc lúc đăng ký controller đầu tiên của zone)
+        tới lần thu hoạch đã xác nhận kế tiếp (BR-43). Các lô đã xác nhận của cùng zone, cùng ngày (giờ VN) là một
+        lần thu hoạch: sản lượng là tổng số tổ, tổng cân nặng. Chu kỳ đóng có so sánh với chu kỳ trước và cùng kỳ
+        năm trước (chu kỳ của zone có ngày đóng trong ±30 ngày của một năm trước; không có thì `null` kèm lý do),
+        tỷ lệ ngày `GOOD`, tỷ lệ chim về trung bình, thời gian trong ngưỡng của zone và độ đủ (dưới 80 % số ngày
+        được đánh giá thì `incomplete`). Chu kỳ chưa đóng có `status: OPEN`. Lọc theo `zoneId`, `houseId` hoặc
+        `farmId`; sắp theo `start_date` giảm dần (danh sách chu kỳ đóng của một zone là xu hướng sản lượng).
+      parameters:
+        - { name: zoneId, in: query, schema: { type: string, format: objectId } }
+        - { name: houseId, in: query, schema: { type: string, format: objectId } }
+        - { name: farmId, in: query, schema: { type: string, format: objectId } }
+        - { name: status, in: query, schema: { type: string, enum: [OPEN, CLOSED, CONCLUDED] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/HarvestCycle" } }
+                      meta: { type: object, properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /harvests/cycles/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: objectId } }
+    get:
+      tags: [Harvests]
+      summary: "Chi tiết một chu kỳ thu hoạch — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HarvestCycle" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /harvests/cycles/{id}/conclusion:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: objectId } }
+    put:
+      tags: [Harvests]
+      summary: "Kết luận mùa vụ (EXPERT-FR-020) — DOMAIN_EXPERT; FARM_OWNER chỉ khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Ghi kết luận và khuyến nghị cho mùa sau trên một chu kỳ đã đóng; chu kỳ chuyển `CONCLUDED`, sửa lại vẫn
+        `CONCLUDED`. Chuyên gia viết thì mỗi Farm Owner nhận một thông báo trong ứng dụng (EXPERT-FR-009). Chu kỳ
+        `OPEN` → 409; Farm Owner khi farm có chuyên gia, Farm Technician → 403. Audit `HARVEST_CYCLE_CONCLUDED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, maxLength: 2000 }
+                recommendations: { type: string, maxLength: 2000 }
+      responses:
+        "200":
+          description: Chu kỳ sau khi kết luận
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/HarvestCycle" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Chu kỳ chưa đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /harvests/{id}:
     parameters:
       [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -3969,6 +4058,7 @@ paths:
     delete:
       tags: [Harvests]
       summary: "Xóa mềm Harvest Batch (HARVEST-FR-005) — FARM_OWNER mọi lô; FARM_TECHNICIAN chỉ lô DRAFT của mình"
+      description: "Xoá lô đã xác nhận thì chu kỳ nó đóng gộp vào chu kỳ sau (Report 3 §6.13); sửa số tổ, cân nặng của lô đã xác nhận (PUT) thì số liệu chu kỳ được tính lại."
       responses:
         "200":
           {
@@ -3989,7 +4079,8 @@ paths:
       summary: "Xác nhận lô do Farm Technician nhập (HARVEST-FR-006) — FARM_OWNER của farm"
       description: |
         `DRAFT` → `CONFIRMED`, ghi `confirmed_by`, `confirmed_at`, audit `HARVEST_CONFIRMED`. Lô đã xác nhận
-        → 409; Farm Technician, Domain Expert → 403. Đóng chu kỳ thu hoạch khi xác nhận (HARVEST-FR-007) làm ở G-26.
+        → 409; Farm Technician, Domain Expert → 403. Xác nhận đóng chu kỳ thu hoạch của zone (HARVEST-FR-007,
+        BR-43): các lô đã xác nhận của cùng zone, cùng ngày (giờ VN) là một lần thu hoạch.
       responses:
         "200":
           description: Lô sau khi xác nhận
@@ -6018,6 +6109,58 @@ components:
       enum: [DRAFT, CONFIRMED]
       description: "HARVEST-FR-001, 006 — lô của Farm Technician chờ Farm Owner xác nhận (DRAFT); lô của Farm Owner xác nhận ngay"
 
+    HarvestCycle:
+      type: object
+      description: "Chu kỳ thu hoạch của một zone (BR-43, Report 3 §6.22)"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        house_id: { type: string }
+        zone_id: { type: string }
+        start_date: { type: string, format: date-time }
+        end_date: { type: string, format: date-time, nullable: true, description: "Ngày thu hoạch đóng chu kỳ; null khi OPEN" }
+        status: { type: string, enum: [OPEN, CLOSED, CONCLUDED] }
+        closing_harvest:
+          type: object
+          nullable: true
+          properties:
+            date: { type: string, example: "2026-11-10", description: "Ngày giờ VN" }
+            batch_ids: { type: array, items: { type: string } }
+            nest_count: { type: integer }
+            weight_grams: { type: number }
+        comparison:
+          type: object
+          nullable: true
+          properties:
+            previous: { $ref: "#/components/schemas/HarvestCycleComparison" }
+            same_period_last_year: { $ref: "#/components/schemas/HarvestCycleComparison" }
+        health:
+          type: object
+          nullable: true
+          properties:
+            good_days_pct: { type: number, nullable: true }
+            return_rate_avg: { type: number, nullable: true }
+            time_in_range_pct: { type: number, nullable: true }
+        completeness_pct: { type: number, nullable: true, description: "% số ngày của chu kỳ đã được đánh giá" }
+        incomplete: { type: boolean, description: "Dưới 80 % số ngày được đánh giá (BR-43)" }
+        conclusion:
+          type: object
+          nullable: true
+          properties:
+            text: { type: string }
+            recommendations: { type: string, nullable: true }
+            by: { type: string }
+            role: { type: string, enum: [DOMAIN_EXPERT, FARM_OWNER] }
+            at: { type: string, format: date-time }
+    HarvestCycleComparison:
+      type: object
+      properties:
+        cycle_id: { type: string, nullable: true }
+        nest_count: { type: integer, nullable: true }
+        weight_grams: { type: number, nullable: true }
+        nest_count_change_pct: { type: number, nullable: true }
+        weight_change_pct: { type: number, nullable: true }
+        reason: { type: string, nullable: true, description: "Vì sao không so sánh được (không có chu kỳ trước, không có chu kỳ năm trước)" }
     HarvestBatch:
       type: object
       description: HARVEST-FR-001..005 — Harvest Batch (đợt thu hoạch), tự gắn env/flock snapshot lúc tạo

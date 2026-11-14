@@ -212,8 +212,10 @@ TC=[
 ('TC-F29-03','F-29','Load drawing 1.0 A at 12 V for 10 h; 8 weeks of counts','GET energy and flock trend','—','0.12 kWh; weekly and monthly mean morning exits equal the seed',(T,'backend jest (G-25)')),
 # F-30
 ('TC-F30-01','F-30','Technician of the zone\'s house','Enter a valid harvest; enter one without weight; expert enters one','—','DRAFT batch; 422; 403',(T,'backend jest (G-26)')),
-('TC-F30-02','F-30','DRAFT batch; seeded previous cycle and the cycle of the previous year','Farm Owner confirms it; confirms it again','—','CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409',(T,'backend jest (G-26)')),
-('TC-F30-03','F-30','CLOSED cycle; farm with a Domain Expert','Expert writes the season conclusion; Farm Owner writes one','—','CONCLUDED and one notification per Farm Owner; 403',(T,'backend jest (G-26)')),
+('TC-F30-02','F-30','DRAFT batch; seeded previous cycle and the cycle of the previous year','Farm Owner confirms it; confirms it again','—','CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409',
+ (J,I+'harvestCycle.test.ts','lô của thợ được xác nhận: CLOSED với sản lượng')),
+('TC-F30-03','F-30','CLOSED cycle; farm with a Domain Expert','Expert writes the season conclusion; Farm Owner writes one','—','CONCLUDED and one notification per Farm Owner; 403',
+ (J,I+'harvestCycle.test.ts','chuyên gia viết → CONCLUDED')),
 ]
 # Main workflows: end-to-end on staging following the main scenario of the Design Brief
 WF=[('WF-01','DS-01'),('WF-02','DS-03'),('WF-03','DS-05'),('WF-04','DS-07'),('WF-05','DS-09'),('WF-06','DS-11'),('WF-07','DS-13'),('WF-08','DS-15')]
