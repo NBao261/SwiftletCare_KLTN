@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.3 (Review 2, final scope) |
+| Document version | 4.2.6 (Review 2, final scope) |
 | Date | 10/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -701,6 +701,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Live-stream viewing token | 60 s | A leaked token expires quickly (VISION-FR-013) |
 | Counting ring vertices | 3–12 | Input check (VISION-FR-018) |
 | Farm, house and zone names | at most 50 characters | Input check, the same in the applications (FARM-FR-001, 002) |
+| Source of a default-threshold change | at most 500 characters, containing a REF-5 entry code (`TL-xxx` or `MC-xxx`) | Input check; room for the entry code and its section, not a document (ENV-FR-007) |
 | Floors of a house | 1–10 | Input check; a zone floor cannot exceed the floors of its house (FARM-FR-002) |
 | Ring margin around the hole outline | 60 px | Outline measured on 21/10/2026, widened evenly (VISION-FR-005) |
 | Overlap of the two image tiles | 160 px | Larger than a circling bird (about 40 px), so a bird at a tile edge is whole in the other tile (VISION-FR-004) |
@@ -1144,6 +1145,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.6 | 15/11/2026 | Length of the source of a default-threshold change in Section 4.5 (ENV-FR-007; G-18) |
 | 4.2.3 | 14/11/2026 | Telemetry gap, overview look-up and comparison period constants in Section 4.5 (ANALYTICS-FR-015…017, BR-45; G-25) |
 | 4.2.2 | 13/11/2026 | Size and number of on-site photos, and Work Order text lengths, in Section 4.5 (ALERT-FR-018, EXPERT-FR-021, OPS-FR-001…004; G-21) |
 | 4.2.1 | 10/11/2026 | BM02 items due 11/11/2026: "All users" and "Invitee" in Section 2.3 (R-02); ANALYTICS-FR-001 at most 120 chart points (R-03); THREAT-FR-007 and Section 6.8 learn 3,600 samples per hour (R-04); testable criteria for THREAT-FR-005, ANALYTICS-FR-005 and AUTH-FR-012 with its 30-day deadline (R-05); the AP-mode page takes only the Wi-Fi network, the broker address is flashed (FARM-FR-003c, S-03); restore of a removed device within 24 h (FARM-FR-008, Section 6.6, ST-01); configuration sync starts at `PENDING` and leaves `UNKNOWN` (Section 6.12, ST-03); "not evaluated" has an exit (Section 6.8, ST-07); ENV-FR-013c traced to C.1 (S-02); three constants in Section 4.5 |

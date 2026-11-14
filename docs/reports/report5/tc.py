@@ -214,7 +214,8 @@ TC=[
 ('TC-F29-03','F-29','Load drawing 1.0 A at 12 V for 10 h; 8 weeks of counts','GET energy and flock trend','—','0.12 kWh; weekly and monthly mean morning exits equal the seed',
  [(J,I+'farmOverview.test.ts','quạt 1,0 A ở 12 V chạy 10 giờ'),(J,I+'farmOverview.test.ts','8 tuần số đếm')]),
 # F-30
-('TC-F30-01','F-30','Technician of the zone\'s house','Enter a valid harvest; enter one without weight; expert enters one','—','DRAFT batch; 422; 403',(T,'backend jest (G-26)')),
+('TC-F30-01','F-30','Technician of the zone\'s house','Enter a valid harvest; enter one without weight; expert enters one','—','DRAFT batch; 422; 403',
+ [(J,I+'harvestConfirm.test.ts','a technician batch is DRAFT, only in assigned houses'),(J,I+'harvestValidation.test.ts','thiếu cân nặng'),(J,I+'domainExpert.test.ts','xem được mẻ thu hoạch nhưng không ghi')]),
 ('TC-F30-02','F-30','DRAFT batch; seeded previous cycle and the cycle of the previous year','Farm Owner confirms it; confirms it again','—','CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409',(T,'backend jest (G-26)')),
 ('TC-F30-03','F-30','CLOSED cycle; farm with a Domain Expert','Expert writes the season conclusion; Farm Owner writes one','—','CONCLUDED and one notification per Farm Owner; 403',(T,'backend jest (G-26)')),
 ]
