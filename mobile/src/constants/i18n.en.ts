@@ -1218,6 +1218,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chụp ảnh': 'Take a photo',
   'Chụp thêm ({n}/{max})': 'Take another ({n}/{max})',
   'Đang mở camera': 'Opening the camera',
+  'Không chụp được ảnh. Vui lòng thử lại': 'Could not take the photo. Please try again',
   // Kiểm tra tại chỗ cảnh báo suy luận (EXPERT-FR-021)
   'Kiểm tra tại chỗ': 'On-site check',
   'Yêu cầu': 'Requested',
