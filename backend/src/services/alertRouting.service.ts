@@ -1,3 +1,4 @@
+import { Types } from 'mongoose'
 import { Alert, IAlert } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { House, IHouse, Zone } from '@/models/houseZone.model'
@@ -43,15 +44,17 @@ export async function routeNewAlert(alert: IAlert, opts: { awaitsVerdict: boolea
 /**
  * SM-01 — cảnh báo bị bác bỏ nhầm được chuyên gia xác nhận lại: báo lại như cảnh báo mới, cho thợ đang trực của nhà
  * lúc này (ALERT-FR-017) và cả Farm Owner. Ghi `owners_notified` để job leo thang không báo Farm Owner lần nữa
- * (BR-40: một lần); không tạo thêm yêu cầu kiểm tra tại chỗ.
+ * (BR-40: một lần); không tạo thêm yêu cầu kiểm tra tại chỗ. Giữ `technician_id` ban đầu: MTTA/MTTR theo thợ
+ * (OPS-FR-009) tính từ lúc tạo nên thuộc về thợ được định tuyến lúc đó, không phải thợ trực lúc xác nhận lại.
+ * Không tự lưu: nơi gọi lưu cùng lần đổi trạng thái.
  */
 export async function rerouteReconfirmedAlert(alert: IAlert): Promise<string[]> {
   const house = await findAlertHouse(alert)
   const farm = house ? await Farm.findById(alert.farm_id).select('members') : null
   const technicianId = house && farm ? await activeTechnicianOnDuty(house, farm) : null
   const recipientIds = [...(technicianId ? [technicianId] : []), ...await ownerIds(alert.farm_id)]
-  alert.routing = { ...(technicianId && { technician_id: technicianId as never }), owners_notified: true }
-  await Alert.updateOne({ _id: alert._id }, { $set: { routing: alert.routing } })
+  const routedTechnician = alert.routing?.technician_id ?? (technicianId ? new Types.ObjectId(technicianId) : undefined)
+  alert.routing = { ...(routedTechnician && { technician_id: routedTechnician }), owners_notified: true }
   return recipientIds
 }
 

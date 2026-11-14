@@ -147,6 +147,23 @@ describe('cảnh báo bị bác bỏ rồi được xác nhận lại (SM-01)', 
     await Alert.collection.updateOne({ _id: alert._id }, { $set: { created_at: ago(30) } })
     expect(await escalateUnacknowledgedAlerts()).toBe(0)
   })
+
+  it('giữ thợ được định tuyến lúc tạo cho MTTA/MTTR, nhưng báo lại cho thợ đang trực lúc xác nhận lại', async () => {
+    const { owner, farm, house, tech, raise } = await seed()
+    const expert = await User.create({ email: `exp${++seq}@test.vn`, password_hash: 'password123', full_name: 'E', role: 'DOMAIN_EXPERT' })
+    farm.members.push({ user_id: expert._id, role: 'DOMAIN_EXPERT' } as never)
+    await farm.save()
+    const expertUser: CurrentUser = { _id: String(expert._id), email: expert.email, role: 'DOMAIN_EXPERT' }
+    const alert = (await raise('SENSOR_ANOMALY'))!
+    await setAlertVerdict(String(alert._id), expertUser, 'REJECTED', 'nhầm')
+    // Hôm sau thợ khác trực
+    const next = await technician(farm)
+    house.technicians = [{ user_id: next._id, primary: true }] as never
+    await house.save()
+    await setAlertVerdict(String(alert._id), expertUser, 'CONFIRMED')
+    expect(lastDispatch()[1]).toEqual({ recipientIds: [String(next._id), String(owner._id)] })
+    expect((await Alert.findById(alert._id).lean())!.routing).toMatchObject({ technician_id: tech!._id, owners_notified: true })
+  })
 })
 
 describe('gửi lại cảnh báo chưa xác nhận (ALERT-FR-015) theo người đã nhận', () => {

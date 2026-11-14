@@ -225,7 +225,8 @@ export async function activeHouseTechnicianIds(
 /**
  * ALERT-FR-017, AUTH-FR-014 — thợ đang trực của nhà lúc `at`, chỉ tính thợ còn hiệu lực
  * (activeHouseTechnicianIds); ngoài ca trực mà nhà không có thợ chính còn hiệu lực (chưa đặt, hoặc thợ chính bị
- * khoá, bị gỡ) thì là thợ hợp lệ được giao sớm nhất — nhà có thợ thì cảnh báo luôn tới thợ. null = nhà không có thợ,
+ * khoá, bị gỡ) thì là thợ hợp lệ đầu tiên trong danh sách gán của nhà (`houses.technicians`; gán lại hay đổi thợ
+ * chính thì thợ đó xuống cuối) — nhà có thợ thì cảnh báo luôn tới thợ. null = nhà không có thợ,
  * Farm Owner xử lý.
  */
 export async function activeTechnicianOnDuty(
