@@ -582,6 +582,158 @@ ensureCollection("harvestbatches", {
 db.getCollection("harvestbatches").createIndex({"trace_code":1}, {"unique":true})
 db.getCollection("harvestbatches").createIndex({"farm_id":1,"harvest_date":-1})
 
+// ── harvestcycles (model HarvestCycle) ──
+ensureCollection("harvestcycles", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "zone_id": {
+      "bsonType": "objectId"
+    },
+    "start_date": {
+      "bsonType": "date"
+    },
+    "end_date": {
+      "bsonType": ["date", "null"]
+    },
+    "status": {
+      "bsonType": "string",
+      "enum": ["OPEN", "CLOSED", "CONCLUDED"]
+    },
+    "closing_harvest": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "date": {
+          "bsonType": "string"
+        },
+        "batch_ids": {
+          "bsonType": ["array", "null"],
+          "items": {
+            "bsonType": "objectId"
+          }
+        },
+        "nest_count": {
+          "bsonType": "number"
+        },
+        "weight_grams": {
+          "bsonType": "number"
+        }
+      },
+      "required": ["date", "nest_count", "weight_grams"]
+    },
+    "comparison": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "previous": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "cycle_id": {
+              "bsonType": ["objectId", "null"]
+            },
+            "nest_count": {
+              "bsonType": ["number", "null"]
+            },
+            "weight_grams": {
+              "bsonType": ["number", "null"]
+            },
+            "nest_count_change_pct": {
+              "bsonType": ["number", "null"]
+            },
+            "weight_change_pct": {
+              "bsonType": ["number", "null"]
+            },
+            "reason": {
+              "bsonType": ["string", "null"]
+            }
+          }
+        },
+        "same_period_last_year": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "cycle_id": {
+              "bsonType": ["objectId", "null"]
+            },
+            "nest_count": {
+              "bsonType": ["number", "null"]
+            },
+            "weight_grams": {
+              "bsonType": ["number", "null"]
+            },
+            "nest_count_change_pct": {
+              "bsonType": ["number", "null"]
+            },
+            "weight_change_pct": {
+              "bsonType": ["number", "null"]
+            },
+            "reason": {
+              "bsonType": ["string", "null"]
+            }
+          }
+        }
+      }
+    },
+    "health": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "good_days_pct": {
+          "bsonType": ["number", "null"]
+        },
+        "return_rate_avg": {
+          "bsonType": ["number", "null"]
+        },
+        "time_in_range_pct": {
+          "bsonType": ["number", "null"]
+        }
+      }
+    },
+    "completeness_pct": {
+      "bsonType": ["number", "null"]
+    },
+    "incomplete": {
+      "bsonType": ["bool", "null"]
+    },
+    "conclusion": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "text": {
+          "bsonType": "string"
+        },
+        "recommendations": {
+          "bsonType": ["string", "null"]
+        },
+        "by": {
+          "bsonType": "objectId"
+        },
+        "role": {
+          "bsonType": "string",
+          "enum": ["DOMAIN_EXPERT", "FARM_OWNER"]
+        },
+        "at": {
+          "bsonType": "date"
+        }
+      },
+      "required": ["text", "by", "role", "at"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "updated_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["farm_id", "house_id", "zone_id", "start_date", "status"]
+})
+db.getCollection("harvestcycles").createIndex({"zone_id":1,"start_date":1}, {"unique":true})
+db.getCollection("harvestcycles").createIndex({"house_id":1,"end_date":-1})
+
 // ── househealthdays (model HouseHealthDay) ──
 ensureCollection("househealthdays", {
   "bsonType": "object",
