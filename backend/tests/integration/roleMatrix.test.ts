@@ -118,6 +118,11 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
       ['get',    '/work-orders',                              [admin]],
       ['post',   '/work-orders',                              [tech, admin]],
       ['get',    `/work-orders/metrics?farmId=${farm._id}`,   [tech, admin]],
+      // ANALYTICS-FR-015, 016 — tổng quan trại và so sánh nhà: Farm Owner, chuyên gia đọc (Report 3 §2.4)
+      ['get',    `/farms/${farm._id}/overview`,               [tech, admin]],
+      ['get',    `/farms/${farm._id}/comparison`,             [tech, admin]],
+      // ANALYTICS-FR-017 — điện năng là phân tích: Administrator không xem dữ liệu vận hành (FARM-FR-009)
+      ['get',    `/analytics/energy?houseId=${zone.house_id}`, [admin]],
       ['post',   `/work-orders/${node._id}/start`,            [admin]],
       ['post',   `/work-orders/${node._id}/approve`,          [tech, admin]],
       ['post',   `/work-orders/${node._id}/reopen`,           [tech, admin]],

@@ -1,6 +1,9 @@
 import { Request, Response } from 'express'
 import * as farmService from '@/services/farm.service'
 import * as coefficientProposalService from '@/services/coefficientProposal.service'
+import * as farmOverviewService from '@/services/farmOverview.service'
+import * as houseComparisonService from '@/services/houseComparison.service'
+import type { ComparisonSortKey } from '@/services/houseComparison.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /farms – FARM-FR-001 */
@@ -186,4 +189,24 @@ export const updateHealthLevels = asyncHandler(async (req: Request, res: Respons
 export const resetThresholds = asyncHandler(async (req: Request, res: Response) => {
   const zone = await farmService.resetZoneThresholds(req.params.zoneId, req.user)
   res.json({ success: true, data: zone })
+})
+
+/** Mặc định so sánh 30 ngày gần nhất (khoảng hiển thị, không phải luật nghiệp vụ) */
+const DEFAULT_COMPARISON_DAYS = 30
+
+/** GET /farms/:id/overview – ANALYTICS-FR-015 */
+export const overview = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await farmOverviewService.getFarmOverview(req.user, req.params.id) })
+})
+
+/** GET /farms/:id/comparison – ANALYTICS-FR-016, BR-44 */
+export const comparison = asyncHandler(async (req: Request, res: Response) => {
+  const to = req.query.to ? new Date(req.query.to as string) : new Date()
+  const from = req.query.from ? new Date(req.query.from as string) : new Date(to.getTime() - DEFAULT_COMPARISON_DAYS * 86_400_000)
+  const data = await houseComparisonService.getHouseComparison(req.user, {
+    farmId: req.params.id, from, to,
+    sort: req.query.sort as ComparisonSortKey | undefined,
+    order: req.query.order as 'asc' | 'desc' | undefined,
+  })
+  res.json({ success: true, data })
 })

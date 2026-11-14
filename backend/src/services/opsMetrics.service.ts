@@ -13,7 +13,7 @@ const round1 = (ms: number) => Math.round(ms / 6_000) / 10
 const mean = (values: number[]) => (values.length ? round1(values.reduce((a, b) => a + b, 0) / values.length) : null)
 
 /** Một dòng chỉ số: số cảnh báo, MTTA, MTTR, % cảnh báo đã xác nhận mà xác nhận trong mục tiêu (phút) */
-function row(samples: Sample[]) {
+export function opsRow(samples: Sample[]) {
   const tta = samples.flatMap(s => (s.tta === undefined ? [] : [s.tta]))
   const ttr = samples.flatMap(s => (s.ttr === undefined ? [] : [s.ttr]))
   return {
@@ -38,16 +38,34 @@ export async function getOpsMetrics(
   const houses = await House.find({ farm_id: farm._id, ...(query.houseId && { _id: query.houseId }) }).select('name').lean()
   if (query.houseId && houses.length === 0) throw NotFoundError('Không tìm thấy nhà trong farm này')
 
-  const houseIds = houses.map(h => h._id)
+  const { all, byHouse, byTechnician } = await collectAlertSamples(farm._id, houses.map(h => h._id), query.from, query.to)
+  const technicians = await User.find({ _id: { $in: [...byTechnician.keys()] } }).select('full_name').lean()
+  return {
+    from: query.from,
+    to: query.to,
+    target_ack_min: ESCALATION_MIN,
+    overall: opsRow(all),
+    by_house: houses.map(h => ({ house_id: String(h._id), name: h.name, ...opsRow(byHouse.get(String(h._id)) ?? []) })),
+    by_technician: technicians.map(t => ({ technician_id: String(t._id), full_name: t.full_name, ...opsRow(byTechnician.get(String(t._id)) ?? []) })),
+    on_time_maintenance_rate: null,
+  }
+}
+
+/**
+ * Mẫu MTTA/MTTR của các cảnh báo tạo trong [from, to) ở các nhà cho trước (cảnh báo của nhà và của zone trong nhà),
+ * gom theo nhà và theo thợ được định tuyến. Báo động giả không tính: `DISMISSED`, hoặc chuyên gia đã bác bỏ rồi job
+ * tự đóng. Dùng chung cho OPS-FR-009 và bảng so sánh nhà (BR-44).
+ */
+export async function collectAlertSamples(farmId: unknown, houseIds: unknown[], from: Date, to: Date) {
   const zones = await Zone.find({ house_id: { $in: houseIds } }).select('house_id').lean()
   const houseOfZone = new Map(zones.map(z => [String(z._id), String(z.house_id)]))
 
   const alerts = await Alert.find({
-    farm_id: farm._id,
+    farm_id: farmId,
     status: { $ne: 'DISMISSED' },
     // Bị bác bỏ rồi job tự đóng (RESOLVED) vẫn là báo động giả: loại theo kết luận, không chỉ theo trạng thái hiện tại
     'expert_verdict.result': { $ne: 'REJECTED' },
-    created_at: { $gte: query.from, $lt: query.to },
+    created_at: { $gte: from, $lt: to },
     $or: [{ house_id: { $in: houseIds } }, { zone_id: { $in: zones.map(z => z._id) } }],
   }).select('house_id zone_id created_at acknowledged_at resolved_at routing').lean()
 
@@ -69,15 +87,5 @@ export async function getOpsMetrics(
     const technicianId = a.routing?.technician_id ? String(a.routing.technician_id) : undefined
     if (technicianId) byTechnician.set(technicianId, [...(byTechnician.get(technicianId) ?? []), sample])
   }
-
-  const technicians = await User.find({ _id: { $in: [...byTechnician.keys()] } }).select('full_name').lean()
-  return {
-    from: query.from,
-    to: query.to,
-    target_ack_min: ESCALATION_MIN,
-    overall: row(all),
-    by_house: houses.map(h => ({ house_id: String(h._id), name: h.name, ...row(byHouse.get(String(h._id)) ?? []) })),
-    by_technician: technicians.map(t => ({ technician_id: String(t._id), full_name: t.full_name, ...row(byTechnician.get(String(t._id)) ?? []) })),
-    on_time_maintenance_rate: null,
-  }
+  return { all, byHouse, byTechnician }
 }
