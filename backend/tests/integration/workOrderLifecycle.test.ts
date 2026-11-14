@@ -18,7 +18,7 @@ import { WorkOrder } from '@/models/workOrder.model'
 import { putObject } from '@/config/minio.config'
 import { createAlert } from '@/services/alert.service'
 import { notifyUser } from '@/services/notification.service'
-import { openWorkOrdersForOutages, verifyWorkOrders } from '@/services/workOrder.service'
+import { openWorkOrdersForOutages, storePhotos, verifyWorkOrders } from '@/services/workOrder.service'
 import type { AlertType, Role } from '@/types'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
 
@@ -320,17 +320,22 @@ describe('kiểm phục hồi theo loại cảnh báo (BR-41, OPS-FR-003)', () =
     expect(notifyUser).toHaveBeenCalledWith(String(tech.user._id), expect.objectContaining({ title: expect.stringContaining('Sự cố quay lại') }))
   })
 
-  it('ACTUATOR_FAULT: không gửi lại trong 1 chu kỳ 15 phút → chờ duyệt, không phải chờ cảnh báo tự đóng sau 60 phút', async () => {
-    const { doneAt, status } = await doneOn('ACTUATOR_FAULT', 'PUMP')
-    expect((await verifyWorkOrders(at(doneAt, 11))).verified).toBe(0)
-    expect((await verifyWorkOrders(at(doneAt, 16))).verified).toBe(1)
-    expect(await status()).toBe('AWAITING_APPROVAL')
-  })
+  it.each([['ACTUATOR_FAULT', 'PUMP'], ['SPEAKER_FAILURE', 'SPEAKER']] as const)(
+    '%s: chưa có dữ liệu để kiểm phục hồi → chờ duyệt kèm ghi chú, không gọi là đã phục hồi, không kẹt ở VERIFYING',
+    async (type, cause) => {
+      const { owner, wo, doneAt, status } = await doneOn(type, cause)
+      ;(notifyUser as jest.Mock).mockClear()
+      expect((await verifyWorkOrders(at(doneAt, 1))).verified).toBe(1)
+      expect(await status()).toBe('AWAITING_APPROVAL')
+      expect((await WorkOrder.findById(wo._id).lean())!.history.at(-1)!.note).toContain('Chưa có dữ liệu để kiểm phục hồi')
+      expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ body: expect.stringContaining('chưa có dữ liệu') }))
+    })
 
-  it('SPEAKER_FAILURE: không báo lại 10 phút → chuyển Farm Owner duyệt, không kẹt ở VERIFYING', async () => {
-    const { doneAt, status } = await doneOn('SPEAKER_FAILURE', 'SPEAKER')
-    expect((await verifyWorkOrders(at(doneAt, 5))).verified).toBe(0)
-    expect((await verifyWorkOrders(at(doneAt, 11))).verified).toBe(1)
+  it('MISTING_INEFFECTIVE được gửi lại trong lúc firmware còn chốt ngừng phun không bị coi là tái phát; độ ẩm phục hồi thì chờ duyệt', async () => {
+    const { alert, doneAt, samples, status } = await doneOn('MISTING_INEFFECTIVE', 'WATER')
+    await Alert.collection.updateOne({ _id: alert._id }, { $set: { last_seen_at: at(doneAt, 5) } })
+    await samples(0, 12)
+    expect((await verifyWorkOrders(at(doneAt, 12))).verified).toBe(1)
     expect(await status()).toBe('AWAITING_APPROVAL')
   })
 
@@ -344,6 +349,42 @@ describe('kiểm phục hồi theo loại cảnh báo (BR-41, OPS-FR-003)', () =
     expect((await WorkOrder.findOne().lean())!.alert_id).toEqual(again._id)
     await owner$.post(`${path}/approve`).expect(409)
     expect((await Alert.findById(again._id).lean())!.status).toBe('ACTIVE')
+  })
+
+  it('rời chờ duyệt vì tái phát thì Farm Owner cũng được báo', async () => {
+    const { owner, alert, doneAt, raise } = await doneOn('SPEAKER_FAILURE', 'SPEAKER')
+    expect((await verifyWorkOrders(at(doneAt, 1))).verified).toBe(1)
+    await Alert.updateOne({ _id: alert._id }, { status: 'RESOLVED', resolved_at: new Date() })
+    ;(notifyUser as jest.Mock).mockClear()
+    await raise('SPEAKER_FAILURE')
+    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ title: expect.stringContaining('Sự cố quay lại') }))
+  })
+
+  it('Work Order vừa đổi trạng thái lúc gắn cảnh báo mới: thử lại rồi gắn; đổi liên tục thì gắn không điều kiện, không mở Work Order thứ hai', async () => {
+    const { raise } = await seed()
+    const first = (await raise('ACTUATOR_FAULT'))!
+    const wo = (await WorkOrder.findOne().lean())!
+    // Lần 1 thua race (findOneAndUpdate theo trạng thái trả null), lần 2 gắn được
+    await Alert.updateOne({ _id: first._id }, { status: 'RESOLVED', resolved_at: new Date() })
+    const spy = jest.spyOn(WorkOrder, 'findOneAndUpdate').mockResolvedValueOnce(null as never)
+    const second = (await raise('ACTUATOR_FAULT'))!
+    expect(spy).toHaveBeenCalled()
+    expect(await WorkOrder.countDocuments()).toBe(1)
+    expect((await WorkOrder.findById(wo._id).lean())!.alert_id).toEqual(second._id)
+    // Cả 2 lần đều thua: gắn không điều kiện, vẫn 1 Work Order
+    await Alert.updateOne({ _id: second._id }, { status: 'RESOLVED', resolved_at: new Date() })
+    spy.mockResolvedValueOnce(null as never).mockResolvedValueOnce(null as never)
+    const third = (await raise('ACTUATOR_FAULT'))!
+    expect(await WorkOrder.countDocuments()).toBe(1)
+    expect((await WorkOrder.findById(wo._id).lean())!.alert_id).toEqual(third._id)
+  })
+
+  it('khoá ảnh không trùng dù 2 lần lưu trong cùng 1 mili giây', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1_800_000_000_000)
+    const file = { buffer: Buffer.from('jpeg'), mimetype: 'image/jpeg', size: 4 }
+    const [a] = await storePhotos([file], 'work-orders/x')
+    const [b] = await storePhotos([file], 'work-orders/x')
+    expect(a).not.toBe(b)
   })
 
   it('Work Order mở tay trên cảnh báo đã đóng từ trước không tự đóng "self-recovered"', async () => {

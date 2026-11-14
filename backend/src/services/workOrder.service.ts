@@ -114,7 +114,8 @@ async function findOpenForIncident(
 
 /**
  * Gắn cảnh báo mới vào Work Order chưa đóng của cùng sự cố; null = không có Work Order nào để gắn (hoặc nó vừa
- * đóng giữa lúc đọc và lúc ghi). Thử lại 1 lần khi Work Order vừa đổi trạng thái.
+ * đóng giữa lúc đọc và lúc ghi). Thử lại 1 lần khi Work Order vừa đổi trạng thái; vẫn đổi liên tục thì gắn không điều
+ * kiện vào Work Order còn mở, không mở Work Order thứ hai cho cùng sự cố (BR-39).
  */
 async function attachToOpenIncident(houseId: unknown, alert: IAlert): Promise<IWorkOrder | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -123,7 +124,14 @@ async function attachToOpenIncident(houseId: unknown, alert: IAlert): Promise<IW
     const linked = await relinkRecurringIncident(existing, alert)
     if (linked) return linked
   }
-  return null
+  const existing = await findOpenForIncident(houseId, alert)
+  if (!existing) return null
+  logger.warn('Work Order đổi trạng thái liên tục khi gắn cảnh báo mới; gắn không điều kiện', {
+    workOrderId: String(existing._id), alertId: String(alert._id),
+  })
+  await WorkOrder.updateOne({ _id: existing._id }, { $set: { alert_id: alert._id } })
+  existing.alert_id = alert._id
+  return existing
 }
 
 /**
@@ -165,7 +173,10 @@ const DONE_STATUSES: WorkOrderStatus[] = ['VERIFYING', 'AWAITING_APPROVAL']
 async function backToInProgress(wo: IWorkOrder, set: Record<string, unknown>, title: string): Promise<IWorkOrder> {
   const reopened = await transition(wo, DONE_STATUSES, 'IN_PROGRESS', { ...set, done_at: null, verified_at: null },
     undefined, 'Sự cố còn hoặc quay lại sau khi báo xong (BR-41)')
-  await notifyAll(await handlerIds(reopened), reopened, `Sự cố quay lại: ${title}`,
+  // Farm Owner đã nhận "chờ duyệt" thì cũng được báo, kẻo bấm duyệt rồi gặp 409
+  const recipients = new Set(await handlerIds(reopened))
+  if (wo.status === 'AWAITING_APPROVAL') for (const id of await ownerIdsOf(wo.farm_id)) recipients.add(id)
+  await notifyAll([...recipients], reopened, `Sự cố quay lại: ${title}`,
     'Dữ liệu chưa phục hồi sau khi báo xong — Work Order trở lại "đang làm".')
   return reopened
 }
@@ -355,9 +366,10 @@ export async function completeWorkOrder(
   return presentWorkOrder(updated, true)
 }
 
-async function notifyOwnersAwaitingApproval(wo: IWorkOrder): Promise<void> {
-  await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chờ duyệt: ${wo.title}`,
-    'Đã làm xong và dữ liệu đã phục hồi — cần Farm Owner duyệt để đóng.')
+async function notifyOwnersAwaitingApproval(wo: IWorkOrder, unverified = false): Promise<void> {
+  await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chờ duyệt: ${wo.title}`, unverified
+    ? 'Đã làm xong; hệ thống chưa có dữ liệu để kiểm phục hồi — Farm Owner kiểm tại chỗ rồi duyệt để đóng.'
+    : 'Đã làm xong và dữ liệu đã phục hồi — cần Farm Owner duyệt để đóng.')
 }
 
 // ── Farm Owner (OPS-FR-004) ─────────────────────────────────────────────────
@@ -425,10 +437,17 @@ export async function reassignWorkOrder(id: string, user: CurrentUser, assigneeI
 // ── Kiểm phục hồi (OPS-FR-003, BR-41) và leo thang (BR-40) ──────────────────
 
 /**
- * Report 3 §4.5 "Repeat of an ongoing episodic alert" — controller gửi lại `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`
- * mỗi 15 phút chừng nào sự cố còn (firmware `EPISODE_ALERT_RESEND_MS`): qua chừng đó không thấy gửi lại là sự cố đã hết.
+ * BR-41 — firmware chỉ gửi các cảnh báo này khi sự cố xuất hiện (không gửi lại khi sự cố còn): thấy lại sau lúc báo
+ * xong là sự cố đã quay lại. `MISTING_INEFFECTIVE` không thuộc nhóm này: firmware gửi lại mỗi 15 phút suốt lúc còn
+ * chốt ngừng phun (tới 30 phút sau khi sửa xong), nên dựa vào độ ẩm.
  */
-const EPISODE_ALERT_RESEND_MS = 15 * 60_000
+const RERAISED_ON_RECURRENCE: AlertType[] = ['SENSOR_FAULT', 'RS485_BUS_FAILURE']
+/**
+ * BR-41 — chưa có dữ liệu nào cho thấy phục hồi: `ACTUATOR_FAULT` cần dòng bình thường mà backend chưa biết mức firmware
+ * học được (board đo dòng chưa làm), `SPEAKER_FAILURE` chỉ được gửi một lần khi sự cố xuất hiện. Work Order chuyển
+ * chờ duyệt kèm ghi chú, Farm Owner kiểm tại chỗ khi duyệt.
+ */
+const UNVERIFIABLE_RECOVERY: AlertType[] = ['ACTUATOR_FAULT', 'SPEAKER_FAILURE']
 /** Số đo của 5 cảm biến RS485 (THREAT-FR-013): cảm biến đọc lỗi thì telemetry bỏ trống trường đó */
 const RS485_FIELDS = ['temperature', 'humidity', 'light_lux', 'nh3_ppm', 'co2_ppm', 'sound_db'] as const
 
@@ -459,22 +478,23 @@ async function telemetryStaysRecovered(nodeId: unknown, from: Date, isBad: Recor
 
 /**
  * BR-41 — sau "done", điều kiện của cảnh báo có giữ phục hồi RECOVERY_VERIFY_MIN không:
- * - controller báo lại sự cố sau lúc báo xong (cảnh báo gộp trùng nên chỉ `last_seen_at` tăng) → còn sự cố;
+ * - `SENSOR_FAULT`, `RS485_BUS_FAILURE` được controller báo lại sau lúc báo xong (cảnh báo gộp trùng nên chỉ
+ *   `last_seen_at` tăng) → sự cố quay lại;
+ * - `ACTUATOR_FAULT`, `SPEAKER_FAILURE`: chưa có dữ liệu để kiểm → chờ duyệt kèm ghi chú (UNVERIFIABLE_RECOVERY);
  * - cảnh báo đã đóng → tính từ lúc đóng;
  * - `MISTING_INEFFECTIVE`: độ ẩm về trên `humidity_min` của zone (OPS-FR-003);
  * - `SENSOR_FAULT`, `RS485_BUS_FAILURE`: đủ số đo của cả 5 cảm biến;
- * - `ACTUATOR_FAULT`: không có lần gửi lại nào trong 1 chu kỳ gửi lại — backend chưa biết mức dòng bình thường
- *   firmware đã học, nên đây là cách gần nhất với "dòng bình thường";
- * - `SPEAKER_FAILURE`: backend không có dữ liệu để kiểm (firmware chỉ gửi khi sự cố xuất hiện): không báo lại trong
- *   RECOVERY_VERIFY_MIN thì chuyển Farm Owner duyệt;
  * - loại khác: chờ cảnh báo đóng.
  */
-async function verificationOf(wo: IWorkOrder, alert: VerifiedAlert, now: Date): Promise<'RECOVERED' | 'RECURRED' | null> {
+async function verificationOf(
+  wo: IWorkOrder, alert: VerifiedAlert, now: Date,
+): Promise<'RECOVERED' | 'RECURRED' | 'UNVERIFIABLE' | null> {
   const doneAt = wo.done_at
   if (!doneAt) return null
-  if (AUTO_WORK_ORDER_TYPES.includes(alert.type) && alert.status !== 'RESOLVED' && alert.last_seen_at && alert.last_seen_at > doneAt) {
+  if (RERAISED_ON_RECURRENCE.includes(alert.type) && alert.status !== 'RESOLVED' && alert.last_seen_at && alert.last_seen_at > doneAt) {
     return 'RECURRED'
   }
+  if (UNVERIFIABLE_RECOVERY.includes(alert.type)) return 'UNVERIFIABLE'
   const elapsedSince = (from: Date) => now.getTime() - from.getTime() >= RECOVERY_VERIFY_MS
   const since = resolvedSince(alert)
   if (since) return elapsedSince(since > doneAt ? since : doneAt) ? 'RECOVERED' : null
@@ -493,12 +513,6 @@ async function verificationOf(wo: IWorkOrder, alert: VerifiedAlert, now: Date): 
       const missing = { $or: RS485_FIELDS.map(field => ({ [field]: { $exists: false } })) }
       return await telemetryStaysRecovered(alert.node_id, doneAt, missing) ? 'RECOVERED' : null
     }
-    case 'ACTUATOR_FAULT': {
-      const lastSeen = alert.last_seen_at ?? doneAt
-      return elapsedSince(doneAt) && now.getTime() - lastSeen.getTime() >= EPISODE_ALERT_RESEND_MS ? 'RECOVERED' : null
-    }
-    case 'SPEAKER_FAILURE':
-      return elapsedSince(doneAt) ? 'RECOVERED' : null
     default:
       return null
   }
@@ -538,6 +552,11 @@ export async function verifyWorkOrders(now = new Date()): Promise<{ verified: nu
           const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined,
             `Dữ liệu giữ phục hồi ${RECOVERY_VERIFY_MIN} phút (BR-41)`)
           await notifyOwnersAwaitingApproval(updated)
+          result.verified++
+        } else if (outcome === 'UNVERIFIABLE') {
+          const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined,
+            'Chưa có dữ liệu để kiểm phục hồi (BR-41): Farm Owner kiểm tại chỗ khi duyệt')
+          await notifyOwnersAwaitingApproval(updated, true)
           result.verified++
         }
       } else if (selfRecovered(wo, alert, now)) {
