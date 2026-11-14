@@ -477,10 +477,10 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-21 — Định tuyến, leo thang, Work Order (P0-Demo cho WF-02) — Kiệt (backend), Len (mobile technician), Nhi (duyệt trên web)
 
-- [ ] `alertRouting.service` + `alertEscalation.job` mỗi phút (ALERT-FR-017, BR-40); CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005).
-- [ ] Kiểm tra tại chỗ cảnh báo suy luận: backend yêu cầu Farm Technician của nhà kiểm tra trước khi chuyên gia kết luận, cảm biến hỏng mở Work Order ngay (EXPERT-FR-021).
-- [ ] Work Order: mở tự động theo BR-39, start, done kèm nguyên nhân và ảnh (ALERT-FR-018), `recoveryCheck.job` (BR-41), duyệt, mở lại, huỷ; MTTA/MTTR (OPS-FR-009).
-- [ ] Test TC-F23, TC-F24, TC-ST WorkOrder (Report 5) viết cùng PR.
+- [x] `alertRouting.service` + `alertEscalation.job` mỗi phút (ALERT-FR-017, BR-40); CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005). *(Kiệt, 13/11, nhánh `feat/g21-work-orders`: spec `ef5dd71`, code `ba35b7a`; sửa sau review #155 `92feede9`: cảnh báo xác nhận lại tới thợ, nhà không có thợ chính vẫn tới thợ)*
+- [x] Kiểm tra tại chỗ cảnh báo suy luận: backend yêu cầu Farm Technician của nhà kiểm tra trước khi chuyên gia kết luận, cảm biến hỏng mở Work Order ngay (EXPERT-FR-021). *(Kiệt, `ba35b7a`, `92feede9`; màn trả lời trên mobile: Len; hiện trong bằng chứng của chuyên gia: Tuấn)*
+- [x] Work Order: mở tự động theo BR-39, start, done kèm nguyên nhân và ảnh (ALERT-FR-018), `recoveryCheck.job` (BR-41), duyệt, mở lại, huỷ; MTTA/MTTR (OPS-FR-009). *(Kiệt, `ba35b7a`; sửa sau review #155 `d5650466`: kiểm phục hồi theo từng loại cảnh báo, tái phát lúc chờ duyệt; màn thợ: Len; duyệt trên web: Nhi)*
+- [x] Test TC-F23, TC-F24, TC-ST WorkOrder (Report 5) viết cùng PR. *(`alertRouting`, `workOrderLifecycle`, `onsiteCheck`, `opsMetrics` test; nguồn trong `report5/tc.py` từ `c86af76`)*
 
 ### G-22 — Bảo trì phòng ngừa (P1) — Kiệt (backend), Len (mobile), Nhi (web)
 

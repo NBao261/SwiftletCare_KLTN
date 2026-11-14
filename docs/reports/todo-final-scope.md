@@ -133,9 +133,9 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
   - nhà không có technician thì không tạo yêu cầu.
 
 **Giao diện:**
-- [ ] Len (mobile technician): danh sách cảnh báo của các nhà được gán, xác nhận cảnh báo kèm nguyên nhân; Work Order với các nút start, done, chụp ảnh; màn trả lời yêu cầu kiểm tra tại chỗ.
+- [x] Len (mobile technician): danh sách cảnh báo của các nhà được gán, xác nhận cảnh báo kèm nguyên nhân; Work Order với các nút start, done, chụp ảnh; màn trả lời yêu cầu kiểm tra tại chỗ. *(Len, 13/11, nhánh `feat/g21-work-orders`: `6f5fb20b`, `421c14bd`, `1f9e6ffb`, `03413cd9`; sửa theo review #155 ngày 14/11: `4771a970`, `3c7ce1ec`, `bfee2800`. Còn ảnh chụp màn hình trên máy thật hoặc emulator trong PR)*
 - [x] Nhi (web Owner): danh sách Work Order, duyệt, mở lại, huỷ, giao lại; MTTA và MTTR trên trang nhà. *(Nhi, 13/11, nhánh `feat/g21-work-orders`: trang `/work-orders` (menu Vận hành) lọc theo farm/nhà và trạng thái (mặc định chưa đóng), bảng phân trang server, ngăn chi tiết có nguồn, người làm, nguyên nhân, việc đã làm, ảnh và diễn biến; Farm Owner tạo phiếu bằng tay cho nhà đang lọc (OPS-FR-001), duyệt (hỏi lại vì đóng cả cảnh báo), mở lại kèm ghi chú, huỷ kèm lý do, giao lại cho thợ đang được giao nhà; Domain Expert chỉ xem. Trang nhà có thẻ "Xử lý sự cố": MTTA, MTTR 30 ngày, % xác nhận trong `escalation_min`, số Work Order chưa đóng (ẩn với kỹ thuật viên); giao diện tiếng Việt gọi Work Order là "phiếu công việc" (FE_Design 6.2). Test `workOrder.utils.test.ts`)*
-- [ ] Tuấn (web chuyên gia): hiện quan sát của technician trong gói bằng chứng của cảnh báo suy luận.
+- [x] Tuấn (web chuyên gia): hiện quan sát của technician trong gói bằng chứng của cảnh báo suy luận. *(Tuấn, 14/11, nhánh `feat/g21-work-orders`: `b6aa2640`, tách `OnsiteCheckSection` ở `7d95de23`)*
 
 **Test phải viết trong PR:**
 - TC-F23-01…03;
