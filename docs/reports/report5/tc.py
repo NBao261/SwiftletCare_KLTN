@@ -207,9 +207,12 @@ TC=[
 ('TC-F28-02','F-28','APPROVED profile; DRAFT profile','Farm Owner applies the approved one to two houses; applies the draft','—','Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409',(T,'backend jest (G-24)')),
 ('TC-F28-03','F-28','House with a seeded return-rate drop','Set the house ATTRACTING; run the daily assessment; technician sets the stage','—','Flock indicator not assessed, reasons say "attracting stage", no LOW_RETURN_RATE; 403',(T,'backend jest (G-24)')),
 # F-29
-('TC-F29-01','F-29','Seeded farm of 3 houses (2 simulated)','GET the farm overview','—','Each house shows stage, today\'s status, open alerts and Work Orders, latest return rate equal to the seed; simulated houses marked',(T,'backend jest (G-25)')),
-('TC-F29-02','F-29','Same farm; 30 days of seed','GET the comparison; sort by MTTR','—','Each cell equals BR-44; houses ordered by MTTR; no score column',(T,'backend jest (G-25)')),
-('TC-F29-03','F-29','Load drawing 1.0 A at 12 V for 10 h; 8 weeks of counts','GET energy and flock trend','—','0.12 kWh; weekly and monthly mean morning exits equal the seed',(T,'backend jest (G-25)')),
+('TC-F29-01','F-29','Seeded farm of 3 houses (2 simulated)','GET the farm overview','—','Each house shows stage, today\'s status, open alerts and Work Orders, latest return rate equal to the seed; simulated houses marked',
+ (J,I+'farmOverview.test.ts','mỗi nhà: giai đoạn, trạng thái hôm nay hoặc lý do')),
+('TC-F29-02','F-29','Same farm; 30 days of seed','GET the comparison; sort by MTTR','—','Each cell equals BR-44; houses ordered by MTTR; no score column',
+ (J,I+'farmOverview.test.ts','mỗi ô đúng BR-44')),
+('TC-F29-03','F-29','Load drawing 1.0 A at 12 V for 10 h; 8 weeks of counts','GET energy and flock trend','—','0.12 kWh; weekly and monthly mean morning exits equal the seed',
+ [(J,I+'farmOverview.test.ts','quạt 1,0 A ở 12 V chạy 10 giờ'),(J,I+'farmOverview.test.ts','8 tuần số đếm')]),
 # F-30
 ('TC-F30-01','F-30','Technician of the zone\'s house','Enter a valid harvest; enter one without weight; expert enters one','—','DRAFT batch; 422; 403',(T,'backend jest (G-26)')),
 ('TC-F30-02','F-30','DRAFT batch; seeded previous cycle and the cycle of the previous year','Farm Owner confirms it; confirms it again','—','CONFIRMED; cycle CLOSED with yield, comparisons, GOOD share, return rate and time in range equal to the seed; 409',(T,'backend jest (G-26)')),

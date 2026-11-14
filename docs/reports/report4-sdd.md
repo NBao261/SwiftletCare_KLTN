@@ -396,6 +396,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Weather compensation limits | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`; firmware `WEATHER_COMP_OFFLINE_MS` |
 | Automatic Work Order for offline devices | backend `WORK_ORDER_OFFLINE_DELAY_MIN` |
 | On-site photos | backend `MAX_PHOTO_BYTES`, `MAX_WORK_ORDER_PHOTOS` (`workOrder.service.ts`) |
+| Supply voltage of the demo loads (A-9) | backend `LOAD_SUPPLY_VOLTAGE` (`energy.service.ts`): 5 V misting, 12 V fan, as the controller board of Section 3 |
 | Recommendation expiry and effect window | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
 | Same period of the previous year, complete cycle | backend `HARVEST_SAME_PERIOD_DAYS`, `HARVEST_CYCLE_MIN_COMPLETENESS` |

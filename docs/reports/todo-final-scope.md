@@ -248,14 +248,14 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-25 — Tổng quan trại, so sánh nhà, điện năng (Bảo, Nhi) — hạn 23/12
 
-- [ ] Spec `/farms/{id}/overview`, `/farms/{id}/comparison`.
-- [ ] `farmOverview.service` (ANALYTICS-FR-015): mỗi nhà hiện giai đoạn, trạng thái hôm nay, cảnh báo đang mở, Work Order đang mở, tỷ lệ về gần nhất. Nhà chưa có trạng thái thì ghi lý do.
-- [ ] `houseComparison.service` (ANALYTICS-FR-016, BR-44):
+- [x] Spec `/farms/{id}/overview`, `/farms/{id}/comparison`. *(Kiệt làm thay Bảo, 14/11, nhánh `feat/g25-farm-overview` nối tiếp G-21, spec `5cb74b29`, code `998d30b3`: thêm `GET /analytics/energy` và `flock_trend` trong `/analytics/bird-count/trends`)*
+- [x] `farmOverview.service` (ANALYTICS-FR-015): mỗi nhà hiện giai đoạn, trạng thái hôm nay, cảnh báo đang mở, Work Order đang mở, tỷ lệ về gần nhất. Nhà chưa có trạng thái thì ghi lý do. *(`998d30b3`; `status_reason`: `NOT_COMPUTED` hoặc `INSUFFICIENT_DATA`)*
+- [x] `houseComparison.service` (ANALYTICS-FR-016, BR-44): *(`998d30b3`: MTTR dùng chung công thức của `opsMetrics.service`; sản lượng chu kỳ trả `null` tới khi có G-26)*
   - các cột: thời gian trong ngưỡng, tỷ lệ ngày `GOOD`, tỷ lệ về trung bình, xu hướng đàn, cảnh báo, MTTR, điện năng ước tính, sản lượng chu kỳ gần nhất;
   - sắp xếp được theo từng cột; **không có điểm tổng hay xếp hạng**.
-- [ ] Điện năng (ANALYTICS-FR-017, BR-45): điện áp × dòng trung bình × thời gian chạy, theo tải và theo tháng; tải không đo dòng thì hiện "not available". Phải có G-13 mới có số thật.
-- [ ] Xu hướng đàn theo tuần và tháng từ số chim ra buổi sáng (ANALYTICS-FR-002); lượng mưa của phiên ghi trên cảnh báo `LOW_RETURN_RATE` (VISION-FR-011).
-- [ ] Thiết bị giả lập luôn có nhãn "simulated" trên mọi màn hình (SYSTEM-FR-004).
+- [x] Điện năng (ANALYTICS-FR-017, BR-45): điện áp × dòng trung bình × thời gian chạy, theo tải và theo tháng; tải không đo dòng thì hiện "not available". Phải có G-13 mới có số thật. *(`998d30b3`, `energy.service`: điện áp tải DC demo 5 V bơm, 12 V quạt (A-9); tải nguồn lưới chưa hỗ trợ)*
+- [x] Xu hướng đàn theo tuần và tháng từ số chim ra buổi sáng (ANALYTICS-FR-002); lượng mưa của phiên ghi trên cảnh báo `LOW_RETURN_RATE` (VISION-FR-011). *(`998d30b3`: số ròng ra của phiên sáng, bỏ ngày thiếu phiên; `92f88236`: mưa trong khung phiên ở `sessionRain.service`)*
+- [ ] Thiết bị giả lập luôn có nhãn "simulated" trên mọi màn hình (SYSTEM-FR-004). *(Backend: tổng quan trả `simulated` theo nhà; còn nhãn trên các màn web, mobile)*
 - [ ] Nhi: trang tổng quan trại và bảng so sánh nhà trên web.
 
 **Test:** TC-F29-01…03.
