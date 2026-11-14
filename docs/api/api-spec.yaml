@@ -315,10 +315,11 @@ paths:
                     LOW: { $ref: "#/components/schemas/ChannelChoice" }
                 quiet_hours:
                   type: object
+                  description: "Giờ `HH:mm` theo giờ VN; chuỗi rỗng ở `start` hoặc `end` = tắt giờ im lặng"
                   properties:
                     {
-                      start: { type: string, example: "22:00" },
-                      end: { type: string, example: "06:00" },
+                      start: { type: string, example: "22:00", description: "HH:mm hoặc chuỗi rỗng" },
+                      end: { type: string, example: "06:00", description: "HH:mm hoặc chuỗi rỗng" },
                     }
       responses:
         "200":
@@ -376,8 +377,12 @@ paths:
     delete:
       tags: [Auth]
       summary: "Hủy liên kết Telegram (ALERT-FR-013)"
+      description: |
+        Telegram đang là kênh ngoài ứng dụng duy nhất của cảnh báo CRITICAL (push của CRITICAL tắt) thì 400: bật push
+        cho CRITICAL trước (ALERT-FR-005).
       responses:
         "200": { description: Đã hủy liên kết, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "400": { description: "CRITICAL sẽ không còn kênh ngoài ứng dụng nào", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /auth/delete-request:
@@ -1094,7 +1099,7 @@ paths:
     delete:
       tags: [Farms]
       summary: Gỡ thành viên khỏi farm (Flow 12 bước 5) — chỉ Primary Owner, không thể tự gỡ chính mình
-      description: "Gỡ Farm Technician thì bỏ luôn mọi lần gán của người đó vào các nhà của farm (AUTH-FR-005)."
+      description: "Gỡ Farm Technician thì bỏ luôn mọi lần gán của người đó vào các nhà của farm, và Work Order đang mở của người đó chuyển cho Farm Owner (bỏ người nhận, Farm Owner được báo; AUTH-FR-005)."
       parameters:
         - { $ref: "#/components/parameters/FarmId" }
         - { name: userId, in: path, required: true, schema: { type: string } }
@@ -1471,7 +1476,7 @@ paths:
     delete:
       tags: [Farms]
       summary: "Bỏ gán Farm Technician khỏi nhà (AUTH-FR-013) — FARM_OWNER của farm"
-      description: "Không có lần gán nào thì vẫn 200. Audit `HOUSE_TECHNICIAN_UNASSIGNED`."
+      description: "Không có lần gán nào thì vẫn 200. Work Order đang mở của thợ ở nhà này chuyển cho Farm Owner (AUTH-FR-005). Audit `HOUSE_TECHNICIAN_UNASSIGNED`."
       responses:
         "200":
           description: Nhà sau khi bỏ gán
@@ -3105,6 +3110,8 @@ paths:
       tags: [Alerts]
       summary: "Danh sách cảnh báo (ALERT-FR-007) — phân trang, filter"
       description: |
+        Mỗi dòng không kèm ảnh (không có `onsite_checks[].photo_url`, `site_cause.photo_urls`, cũng không có khoá
+        MinIO): ảnh xem ở `GET /alerts/{id}`. Kiểm tra tại chỗ chưa trả lời có `observation: null` như chi tiết.
         Farm Owner chỉ thấy cảnh báo của farm mình (owner/member). Domain Expert thấy
         cảnh báo của farm được mời (chỉ đọc + kiểm chứng). Administrator thấy **cảnh báo
         thiết bị** của mọi farm (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`, `SENSOR_FAULT`,
@@ -3575,9 +3582,10 @@ paths:
         (10 phút, BR-41) sau lúc báo xong rồi chuyển `AWAITING_APPROVAL`:
         - `MISTING_INEFFECTIVE`: độ ẩm của controller trên `humidity_min` của zone (OPS-FR-003);
         - `SENSOR_FAULT`, `RS485_BUS_FAILURE`: telemetry đủ số đo của cả 5 cảm biến;
-        - `ACTUATOR_FAULT`, `SPEAKER_FAILURE`: chưa có dữ liệu nào cho thấy phục hồi (chưa biết mức dòng bình thường
-          firmware học được; loa chỉ được báo một lần khi hỏng) → lượt kiểm kế tiếp chuyển `AWAITING_APPROVAL` kèm ghi
-          chú "chưa có dữ liệu để kiểm phục hồi", Farm Owner kiểm tại chỗ khi duyệt;
+        - `ACTUATOR_FAULT`, `SPEAKER_FAILURE`, `UNEXPECTED_RESTART`: chưa có dữ liệu nào cho thấy phục hồi (chưa biết
+          mức dòng bình thường firmware học được; loa chỉ được báo một lần khi hỏng; khởi động lại không bao giờ tự đóng)
+          → lượt kiểm kế tiếp chuyển `AWAITING_APPROVAL` kèm ghi chú "chưa có dữ liệu để kiểm phục hồi", Farm Owner kiểm
+          tại chỗ khi duyệt;
         - loại khác: cảnh báo đã đóng (vượt ngưỡng về ngưỡng, thiết bị online lại…).
         `SENSOR_FAULT`, `RS485_BUS_FAILURE` được controller báo lại sau lúc báo xong, hoặc có cảnh báo mới của cùng sự
         cố lúc đang kiểm hay chờ duyệt → trở lại `IN_PROGRESS` (rời chờ duyệt thì Farm Owner cũng được báo).
@@ -3650,7 +3658,7 @@ paths:
     post:
       tags: [WorkOrders]
       summary: "Huỷ kèm lý do (OPS-FR-004) — chỉ FARM_OWNER"
-      description: "`OPEN`, `IN_PROGRESS` → `CANCELLED`; cảnh báo của nó không đổi. Thiếu `reason` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_CANCELLED`."
+      description: "`OPEN`, `IN_PROGRESS`, `VERIFYING` → `CANCELLED` (huỷ từ `VERIFYING` là lối ra khi điều kiện không phục hồi theo cách hệ thống đo được); cảnh báo của nó không đổi. Thiếu `reason` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_CANCELLED`."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -6402,7 +6410,8 @@ components:
         done_at: { type: string, format: date-time, nullable: true }
         verified_at: { type: string, format: date-time, nullable: true, description: "Lúc dữ liệu đã phục hồi đủ `recovery_verify_min` (BR-41)" }
         closed_at: { type: string, format: date-time, nullable: true }
-        escalated_at: { type: string, format: date-time, nullable: true, description: "Lúc báo Farm Owner vì chưa ai bắt đầu sau `escalation_min` (BR-40)" }
+        assigned_at: { type: string, format: date-time, nullable: true, description: "Lúc giao cho thợ hiện tại; quá hạn \"chưa ai bắt đầu\" tính từ đây (BR-40)" }
+        escalated_at: { type: string, format: date-time, nullable: true, description: "Lúc báo Farm Owner vì chưa ai bắt đầu sau `escalation_min` kể từ lúc giao (BR-40)" }
         history:
           type: array
           items:
