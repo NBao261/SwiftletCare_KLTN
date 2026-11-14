@@ -38,6 +38,8 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
   const [workNote, setWorkNote] = useState('')
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
   const isCauseRequired = isCauseAlertType(workOrder?.alert_type)
+  // Work Order phòng ngừa (G-22): kiểm bằng checklist đủ, không có nguyên nhân sự cố; duyệt là một lần ghi bảo trì
+  const isPreventive = workOrder?.kind === 'PREVENTIVE'
   const canSave = !isCauseRequired || cause !== null
 
   const save = () => {
@@ -53,7 +55,7 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
           ),
         // Hook đã tải lại Work Order khi gặp 409; ở đây chỉ báo và đóng sheet
         onError: error => {
-          if (readApiError(error).status === 409) onDone(t('Work Order đã đổi trạng thái, đã tải lại'))
+          if (readApiError(error).status === 409) onDone(t('Phiếu công việc đã đổi trạng thái, đã tải lại'))
         },
       },
     )
@@ -82,18 +84,20 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.field}>
-          <Text variant="small" weight="semiBold" color={palette.textSecondary}>
-            {isCauseRequired ? t('Nguyên nhân tìm thấy tại chỗ (bắt buộc)') : t('Nguyên nhân tìm thấy tại chỗ (nếu có)')}
-          </Text>
-          <ChoiceChips
-            options={SITE_CAUSES.map(item => ({ id: item, label: getSiteCauseLabel(item) }))}
-            selectedId={cause}
-            onSelect={id => setCause(current => (current === id && !isCauseRequired ? null : id))}
-            placement="card"
-            accessibilityLabel={t('Nguyên nhân tìm thấy tại chỗ')}
-          />
-        </View>
+        {!isPreventive && (
+          <View style={styles.field}>
+            <Text variant="small" weight="semiBold" color={palette.textSecondary}>
+              {isCauseRequired ? t('Nguyên nhân tìm thấy tại chỗ (bắt buộc)') : t('Nguyên nhân tìm thấy tại chỗ (nếu có)')}
+            </Text>
+            <ChoiceChips
+              options={SITE_CAUSES.map(item => ({ id: item, label: getSiteCauseLabel(item) }))}
+              selectedId={cause}
+              onSelect={id => setCause(current => (current === id && !isCauseRequired ? null : id))}
+              placement="card"
+              accessibilityLabel={t('Nguyên nhân tìm thấy tại chỗ')}
+            />
+          </View>
+        )}
         <TextInput
           value={workNote}
           onChangeText={setWorkNote}
@@ -112,9 +116,11 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
           disabled={complete.isPending}
         />
         <Text variant="small" color={palette.textSecondary}>
-          {workOrder?.alert_id
-            ? t('Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong 10 phút rồi chuyển chủ trại duyệt; sự cố quay lại thì Work Order về "Đang làm".')
-            : t('Gửi xong, Work Order chuyển chủ trại duyệt.')}
+          {isPreventive
+            ? t('Gửi xong, phiếu công việc chuyển chủ trại duyệt. Chủ trại duyệt là một lần ghi bảo trì: bộ đếm về 0 và hạn kế tiếp được tính.')
+            : workOrder?.alert_id
+            ? t('Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong 10 phút rồi chuyển chủ trại duyệt; sự cố quay lại thì phiếu công việc về "Đang làm".')
+            : t('Gửi xong, phiếu công việc chuyển chủ trại duyệt.')}
         </Text>
       </ScrollView>
       <FormMessage message={errorMessage} />
