@@ -18,7 +18,7 @@ export function useExpertReviewItems(params?: {
 }
 
 /**
- * Hook xử lý hành động review thay đổi của Chủ trại (ACCEPT, REVERT, ADJUST)
+ * Hook xử lý hành động review thay đổi của Chủ trại (ACCEPT hoặc REVERT — theo api-spec.yaml)
  */
 export function useTakeReviewAction() {
   const queryClient = useQueryClient()
@@ -27,12 +27,10 @@ export function useTakeReviewAction() {
     mutationFn: ({
       itemId,
       action,
-      adjustedValues,
     }: {
       itemId: string
-      action: 'ACCEPT' | 'REVERT' | 'ADJUST'
-      adjustedValues?: Record<string, number>
-    }) => expertApi.takeReviewAction(itemId, action, adjustedValues),
+      action: 'ACCEPT' | 'REVERT'
+    }) => expertApi.takeReviewAction(itemId, action),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'review-items'] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning'] })

@@ -197,6 +197,7 @@ export default function QueueScreen() {
   } = useInferredAlerts({
     farm_id: selectedFarmId || undefined,
     zone_id: selectedZoneId || undefined,
+    verdict: 'pending',
   })
 
   const {

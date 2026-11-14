@@ -36,13 +36,13 @@ export type {
   ProposalStatus,
 }
 
-// Các loại cảnh báo suy luận cần chuyên gia kiểm chứng (EXPERT-FR-003)
+// Các loại cảnh báo suy luận cần chuyên gia kiểm chứng (EXPERT-FR-003, api-spec.yaml dòng 3105/3303)
+// MISTING_INEFFECTIVE là device alert, không phải inferred type — không hiện trong hàng đợi kiểm chứng
 export type InferredAlertType =
   | 'NOISE_ANOMALY'
   | 'SENSOR_ANOMALY'
   | 'FORECAST_BREACH'
   | 'LOW_RETURN_RATE'
-  | 'MISTING_INEFFECTIVE'
 
 // Kết quả kiểm chứng của chuyên gia
 export type VerdictResult = AlertVerdictResult

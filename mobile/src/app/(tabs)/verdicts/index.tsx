@@ -38,14 +38,16 @@ const KPI_TILE_HEIGHT = 112
 
 type FilterStatus = 'ALL' | 'PENDING' | 'CONFIRMED' | 'REJECTED'
 
+// Chỉ 4 loại cảnh báo suy luận cần kiểm chứng — MISTING_INEFFECTIVE là device alert, không thuộc inferred types (api-spec.yaml dòng 3105)
 const INFERRED_TYPE_OPTIONS: { key: string; label: string }[] = [
   { key: 'ALL', label: 'Tất cả loại sự cố' },
   { key: 'NOISE_ANOMALY', label: 'Tiếng ồn bất thường trong nhà' },
   { key: 'SENSOR_ANOMALY', label: 'Cảm biến nhảy số bất thường' },
-  { key: 'MISTING_INEFFECTIVE', label: 'Bơm sương chạy nhưng không lên ẩm' },
   { key: 'LOW_RETURN_RATE', label: 'Đàn chim về tổ sụt giảm' },
   { key: 'FORECAST_BREACH', label: 'Dự báo sắp lệch nhiệt ẩm' },
 ]
+
+const INFERRED_ALERT_TYPES = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'] as const
 
 const SEVERITY_OPTIONS: { key: string; label: string }[] = [
   { key: 'ALL', label: 'Tất cả mức độ' },
@@ -127,7 +129,9 @@ export default function VerdictsScreen() {
   const setAlertVerdict = useSetAlertVerdict()
 
   const rawAlerts: InferredAlert[] = useMemo(() => {
-    return alertsResponse?.data || []
+    const alerts = alertsResponse?.data || []
+    // Chỉ giữ lại 4 loại inferred type thực sự cần kiểm chứng (api-spec.yaml dòng 3105/3303)
+    return alerts.filter(a => (INFERRED_ALERT_TYPES as readonly string[]).includes(a.type))
   }, [alertsResponse])
 
   const kpiData = useMemo(() => {

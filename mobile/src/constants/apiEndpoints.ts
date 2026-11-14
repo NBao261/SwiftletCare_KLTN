@@ -70,11 +70,9 @@ export const ENDPOINTS = {
   // Hoạt động chuyên gia (EXPERT-FR-009/010/011)
   EXPERT_ACTIVITY: '/expert-activity',
   EXPERT_REVIEWS: '/expert-activity/reviews',
-  EXPERT_REVIEW_ITEM_ACTION: (itemId: string) => `/expert-activity/reviews/${itemId}`,
   EXPERT_REVIEW_ACCEPT: (itemId: string) => `/expert-activity/reviews/${itemId}/accept`,
   EXPERT_REVIEW_REVERT: (itemId: string) => `/expert-activity/reviews/${itemId}/revert`,
   EXPERT_PROPOSALS: '/expert-activity/proposals',
-  EXPERT_PROPOSAL_ACTION: (proposalId: string) => `/expert-activity/proposals/${proposalId}`,
   EXPERT_PROPOSAL_APPROVE: (proposalId: string) => `/expert-activity/proposals/${proposalId}/approve`,
   EXPERT_PROPOSAL_REJECT: (proposalId: string) => `/expert-activity/proposals/${proposalId}/reject`,
 
@@ -108,8 +106,6 @@ export const ENDPOINTS = {
   HEALTH_DAY_RATING_NOTE: (dayId: string) => `/health-reports/days/${dayId}/rating/note`,
   HEALTH_REPORT_DETAIL: (reportId: string) => `/health-reports/${reportId}`,
   HEALTH_REPORT_CONCLUSION: (reportId: string) => `/health-reports/${reportId}/conclusion`,
-  HEALTH_REPORT_PDF: (reportId: string) => `/health-reports/${reportId}/pdf`,
-  HEALTH_REPORT_DAILY_CSV: '/health-reports/daily-csv',
 
   // Thu hoạch (HARVEST-FR-001…005) — danh sách đợt thu của farm
   HARVESTS: '/harvests',

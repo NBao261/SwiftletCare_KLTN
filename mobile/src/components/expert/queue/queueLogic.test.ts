@@ -15,7 +15,7 @@ describe('Queue business logic & BR-31 guardrails', () => {
     expect(validateRejection('Hệ số dải nhiệt độ quá hẹp, dễ gây dao động quạt hút').valid).toBe(true)
   })
 
-  it('Khối 4: Review thay đổi hỗ trợ 3 hành động ACCEPT, REVERT và ADJUST', () => {
+  it('Khối 4: Review thay đổi hỗ trợ 2 hành động ACCEPT và REVERT (api-spec.yaml)', () => {
     const item: ReviewItem = {
       _id: 'item-01',
       farm_id: 'farm-01',
@@ -28,8 +28,10 @@ describe('Queue business logic & BR-31 guardrails', () => {
       created_at: '2026-11-02T10:00:00Z',
     }
 
+    const allowedActions: ('ACCEPT' | 'REVERT')[] = ['ACCEPT', 'REVERT']
     expect(item.status).toBe('PENDING_REVIEW')
     expect(item.new_values.humidity_min).toBeLessThan(item.old_values.humidity_min)
+    expect(allowedActions).toHaveLength(2)
   })
 
   it('Khối 6: Báo cáo theo nhà chờ kết luận có has_conclusion = false', () => {

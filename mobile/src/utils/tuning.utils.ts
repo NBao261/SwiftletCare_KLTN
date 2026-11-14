@@ -12,16 +12,6 @@ export interface TuningParamConfig {
   label: string
 }
 
-export interface HealthStandardsConfig {
-  good_in_range_min_pct: number
-  good_return_rate_min_pct: number
-  good_max_critical_alerts: number
-  watch_in_range_min_pct: number
-  watch_return_rate_drop_pct: number
-  action_return_rate_drop_pct: number
-  action_consecutive_breaches: number
-}
-
 export const TUNING_RANGES = {
   // ── Nhóm 1: Ngưỡng an toàn vi khí hậu (BR-01, BR-02, ENV-FR-006) ──
   temp_min: {
@@ -167,63 +157,6 @@ export const TUNING_RANGES = {
     label: 'Sụt giảm tỷ lệ chim về',
   },
 
-  // ── Nhóm 4: Cấp độ sức khỏe nhà yến (BR-28, ANALYTICS-FR-012) ──
-  good_in_range_min_pct: {
-    min: 70,
-    max: 95,
-    step: 1,
-    default: 85,
-    unit: '%',
-    label: 'Vi khí hậu chuẩn tối thiểu (GOOD)',
-  },
-  good_return_rate_min_pct: {
-    min: 70,
-    max: 100,
-    step: 1,
-    default: 90,
-    unit: '%',
-    label: 'Chim về chuẩn tối thiểu (GOOD)',
-  },
-  good_max_critical_alerts: {
-    min: 0,
-    max: 2,
-    step: 1,
-    default: 0,
-    unit: 'sự cố',
-    label: 'Cảnh báo khẩn cấp tối đa (GOOD)',
-  },
-  watch_in_range_min_pct: {
-    min: 60,
-    max: 85,
-    step: 1,
-    default: 75,
-    unit: '%',
-    label: 'Vi khí hậu mức theo dõi (WATCH)',
-  },
-  watch_return_rate_drop_pct: {
-    min: 5,
-    max: 30,
-    step: 1,
-    default: 15,
-    unit: '%',
-    label: 'Giảm chim về mức theo dõi (WATCH)',
-  },
-  action_return_rate_drop_pct: {
-    min: 20,
-    max: 60,
-    step: 5,
-    default: 30,
-    unit: '%',
-    label: 'Sụt giảm đàn khẩn cấp (ACTION)',
-  },
-  action_consecutive_breaches: {
-    min: 1,
-    max: 7,
-    step: 1,
-    default: 3,
-    unit: 'ngày',
-    label: 'Số ngày lệch chuẩn liên tiếp (ACTION)',
-  },
 } as const
 
 export type TuningParamKey = keyof typeof TUNING_RANGES
@@ -314,16 +247,6 @@ export const DEFAULT_DETECTION = {
   return_rate_drop_pct: TUNING_RANGES.return_rate_drop_pct.default,
 }
 
-export const DEFAULT_STANDARDS: HealthStandardsConfig = {
-  good_in_range_min_pct: TUNING_RANGES.good_in_range_min_pct.default,
-  good_return_rate_min_pct: TUNING_RANGES.good_return_rate_min_pct.default,
-  good_max_critical_alerts: TUNING_RANGES.good_max_critical_alerts.default,
-  watch_in_range_min_pct: TUNING_RANGES.watch_in_range_min_pct.default,
-  watch_return_rate_drop_pct: TUNING_RANGES.watch_return_rate_drop_pct.default,
-  action_return_rate_drop_pct: TUNING_RANGES.action_return_rate_drop_pct.default,
-  action_consecutive_breaches: TUNING_RANGES.action_consecutive_breaches.default,
-}
-
 export interface TuningFieldConfig {
   key: TuningParamKey
   label: string
@@ -347,7 +270,7 @@ export interface TuningCardConfig {
  * Metadata định nghĩa cấu trúc 4 Chip và các nhóm Card điều khiển tham số.
  * Giúp màn hình tuning render bằng .map() mà không bị phình to code.
  */
-export const TUNING_GROUPS_METADATA: Record<'thresholds' | 'fuzzy' | 'detection' | 'standards', TuningCardConfig[]> = {
+export const TUNING_GROUPS_METADATA: Record<'thresholds' | 'fuzzy' | 'detection', TuningCardConfig[]> = {
   thresholds: [
     {
       id: 'temp',
@@ -417,39 +340,6 @@ export const TUNING_GROUPS_METADATA: Record<'thresholds' | 'fuzzy' | 'detection'
       description: 'Cảnh báo khi lượng chim về tổ giảm bất thường so với 7 ngày qua.',
       fields: [
         { ...TUNING_RANGES.return_rate_drop_pct, key: 'return_rate_drop_pct', decimals: 0 },
-      ],
-    },
-  ],
-  standards: [
-    {
-      id: 'good',
-      title: 'Tiêu chuẩn Nhà yến Tốt (GOOD)',
-      description: 'Nhà yến vận hành ổn định, môi trường đạt chuẩn và đàn chim phát triển.',
-      statusType: 'good',
-      fields: [
-        { ...TUNING_RANGES.good_in_range_min_pct, key: 'good_in_range_min_pct', decimals: 0 },
-        { ...TUNING_RANGES.good_return_rate_min_pct, key: 'good_return_rate_min_pct', decimals: 0 },
-        { ...TUNING_RANGES.good_max_critical_alerts, key: 'good_max_critical_alerts', decimals: 0 },
-      ],
-    },
-    {
-      id: 'watch',
-      title: 'Tiêu chuẩn Cần Theo Dõi (WATCH)',
-      description: 'Có dấu hiệu biến động nhiệt ẩm hoặc đàn chim về giảm nhẹ.',
-      statusType: 'watch',
-      fields: [
-        { ...TUNING_RANGES.watch_in_range_min_pct, key: 'watch_in_range_min_pct', decimals: 0 },
-        { ...TUNING_RANGES.watch_return_rate_drop_pct, key: 'watch_return_rate_drop_pct', decimals: 0 },
-      ],
-    },
-    {
-      id: 'action',
-      title: 'Tiêu chuẩn Cần Xử Lý Ngay (ACTION)',
-      description: 'Môi trường lệch chuẩn kéo dài hoặc sụt giảm đàn chim nghiêm trọng.',
-      statusType: 'action',
-      fields: [
-        { ...TUNING_RANGES.action_return_rate_drop_pct, key: 'action_return_rate_drop_pct', decimals: 0 },
-        { ...TUNING_RANGES.action_consecutive_breaches, key: 'action_consecutive_breaches', decimals: 0 },
       ],
     },
   ],
