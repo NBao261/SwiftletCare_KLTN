@@ -103,6 +103,74 @@ ensureCollection("alerts", {
       },
       "required": ["result", "by", "at"]
     },
+    "routing": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "technician_id": {
+          "bsonType": ["objectId", "null"]
+        },
+        "owners_notified": {
+          "bsonType": "bool"
+        }
+      },
+      "required": ["owners_notified"]
+    },
+    "escalated_at": {
+      "bsonType": ["date", "null"]
+    },
+    "site_cause": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "cause": {
+          "bsonType": "string",
+          "enum": ["WATER", "NOZZLE", "PUMP", "FAN", "DOOR", "SENSOR", "SPEAKER", "OTHER"]
+        },
+        "photos": {
+          "bsonType": ["array", "null"],
+          "items": {
+            "bsonType": "string"
+          }
+        },
+        "by": {
+          "bsonType": "objectId"
+        },
+        "at": {
+          "bsonType": "date"
+        }
+      },
+      "required": ["cause", "by", "at"]
+    },
+    "onsite_checks": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "technician_id": {
+            "bsonType": "objectId"
+          },
+          "requested_at": {
+            "bsonType": "date"
+          },
+          "observation": {
+            "bsonType": ["string", "null"],
+            "enum": ["BIRDS_DISTURBED", "WORK_OR_PEOPLE_NEARBY", "RAIN", "SENSOR_DIRTY_OR_FAULTY", "NOTHING_UNUSUAL", "OTHER", null]
+          },
+          "note": {
+            "bsonType": ["string", "null"]
+          },
+          "photo": {
+            "bsonType": ["string", "null"]
+          },
+          "answered_by": {
+            "bsonType": ["objectId", "null"]
+          },
+          "answered_at": {
+            "bsonType": ["date", "null"]
+          }
+        },
+        "required": ["technician_id", "requested_at"]
+      }
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }
@@ -113,6 +181,7 @@ db.getCollection("alerts").createIndex({"farm_id":1,"zone_id":1,"node_id":1,"typ
 db.getCollection("alerts").createIndex({"house_id":1,"type":1,"status":1}, {"partialFilterExpression":{"house_id":{"$exists":true}}})
 db.getCollection("alerts").createIndex({"node_id":1,"event_id":1}, {"unique":true,"partialFilterExpression":{"event_id":{"$type":"string"}}})
 db.getCollection("alerts").createIndex({"resolved_at":1}, {"expireAfterSeconds":15552000})
+db.getCollection("alerts").createIndex({"status":1,"routing.owners_notified":1,"created_at":1}, {"partialFilterExpression":{"routing.owners_notified":false}})
 
 // ── audiotracks (model AudioTrack) ──
 ensureCollection("audiotracks", {
@@ -1056,6 +1125,116 @@ ensureCollection("invitations", {
 db.getCollection("invitations").createIndex({"token":1}, {"unique":true})
 db.getCollection("invitations").createIndex({"farm_id":1,"invited_email":1,"status":1})
 
+// ── maintenanceplans (model MaintenancePlan) ──
+ensureCollection("maintenanceplans", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "equipment": {
+      "bsonType": "string",
+      "enum": ["PUMP", "FAN", "SENSOR", "NOZZLE", "CALIBRATION"]
+    },
+    "basis": {
+      "bsonType": "string",
+      "enum": ["RUN_HOURS", "SWITCHES", "CALENDAR"]
+    },
+    "interval": {
+      "bsonType": "number"
+    },
+    "checklist_template": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "state": {
+      "bsonType": ["string", "null"],
+      "enum": ["SCHEDULED", "DUE", "OVERDUE", "RETIRED", null]
+    },
+    "next_due_at": {
+      "bsonType": ["date", "null"]
+    },
+    "due_since": {
+      "bsonType": ["date", "null"]
+    },
+    "overdue_notified_at": {
+      "bsonType": ["date", "null"]
+    },
+    "last_done_at": {
+      "bsonType": ["date", "null"]
+    },
+    "source": {
+      "bsonType": "string"
+    },
+    "note": {
+      "bsonType": ["string", "null"]
+    },
+    "comments": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "by": {
+            "bsonType": "objectId"
+          },
+          "text": {
+            "bsonType": "string"
+          },
+          "at": {
+            "bsonType": "date"
+          }
+        },
+        "required": ["by", "text", "at"]
+      }
+    },
+    "records": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "work_order_id": {
+            "bsonType": "objectId"
+          },
+          "node_id": {
+            "bsonType": ["objectId", "null"]
+          },
+          "kind": {
+            "bsonType": "string",
+            "enum": ["MAINTENANCE", "CALIBRATION"]
+          },
+          "by": {
+            "bsonType": "objectId"
+          },
+          "at": {
+            "bsonType": "date"
+          },
+          "next_due_at": {
+            "bsonType": ["date", "null"]
+          }
+        },
+        "required": ["work_order_id", "kind", "by", "at"]
+      }
+    },
+    "created_by": {
+      "bsonType": "objectId"
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["farm_id", "house_id", "equipment", "basis", "interval", "source", "created_by"]
+})
+db.getCollection("maintenanceplans").createIndex({"house_id":1,"equipment":1})
+db.getCollection("maintenanceplans").createIndex({"state":1,"next_due_at":1})
+
 // ── notifications (model Notification) ──
 ensureCollection("notifications", {
   "bsonType": "object",
@@ -1074,7 +1253,7 @@ ensureCollection("notifications", {
       "properties": {
         "kind": {
           "bsonType": "string",
-          "enum": ["alert", "health_report", "health_day", "expert_decision", "parameter_review", "coefficient_proposal"]
+          "enum": ["alert", "health_report", "health_day", "expert_decision", "parameter_review", "coefficient_proposal", "work_order"]
         },
         "id": {
           "bsonType": "objectId"
@@ -1687,6 +1866,55 @@ ensureCollection("users", {
         "telegram": {
           "bsonType": ["bool", "null"]
         },
+        "by_severity": {
+          "bsonType": ["object", "null"],
+          "properties": {
+            "CRITICAL": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            },
+            "HIGH": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            },
+            "MEDIUM": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            },
+            "LOW": {
+              "bsonType": ["object", "null"],
+              "properties": {
+                "push": {
+                  "bsonType": ["bool", "null"]
+                },
+                "telegram": {
+                  "bsonType": ["bool", "null"]
+                }
+              }
+            }
+          }
+        },
         "quiet_hours": {
           "bsonType": ["object", "null"],
           "properties": {
@@ -1783,6 +2011,164 @@ ensureCollection("weatherobservations", {
 })
 db.getCollection("weatherobservations").createIndex({"farm_id":1,"hour":1}, {"unique":true})
 db.getCollection("weatherobservations").createIndex({"hour":1}, {"expireAfterSeconds":7776000})
+
+// ── workorders (model WorkOrder) ──
+ensureCollection("workorders", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "zone_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "node_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "alert_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "alert_type": {
+      "bsonType": ["string", "null"]
+    },
+    "kind": {
+      "bsonType": ["string", "null"],
+      "enum": ["REPAIR", "PREVENTIVE", null]
+    },
+    "plan_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "checklist": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "item": {
+            "bsonType": "string"
+          },
+          "result": {
+            "bsonType": ["string", "null"],
+            "enum": ["OK", "DEFECT", null]
+          },
+          "note": {
+            "bsonType": ["string", "null"]
+          },
+          "photo": {
+            "bsonType": ["string", "null"]
+          },
+          "by": {
+            "bsonType": ["objectId", "null"]
+          },
+          "at": {
+            "bsonType": ["date", "null"]
+          },
+          "repair_work_order_id": {
+            "bsonType": ["objectId", "null"]
+          }
+        },
+        "required": ["item"]
+      }
+    },
+    "origin": {
+      "bsonType": "string",
+      "enum": ["ALERT", "OUTAGE", "EXPERT", "ONSITE_CHECK", "MANUAL", "PLAN", "CHECKLIST"]
+    },
+    "title": {
+      "bsonType": "string"
+    },
+    "description": {
+      "bsonType": ["string", "null"]
+    },
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["OPEN", "IN_PROGRESS", "VERIFYING", "AWAITING_APPROVAL", "CLOSED", "CANCELLED", null]
+    },
+    "is_open": {
+      "bsonType": ["bool", "null"]
+    },
+    "assignee_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "opened_by": {
+      "bsonType": ["objectId", "null"]
+    },
+    "cause": {
+      "bsonType": ["string", "null"],
+      "enum": ["WATER", "NOZZLE", "PUMP", "FAN", "DOOR", "SENSOR", "SPEAKER", "OTHER", null]
+    },
+    "work_note": {
+      "bsonType": ["string", "null"]
+    },
+    "photos": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "result": {
+      "bsonType": ["string", "null"],
+      "enum": ["REPAIRED", "SELF_RECOVERED", "DONE", null]
+    },
+    "cancel_reason": {
+      "bsonType": ["string", "null"]
+    },
+    "opened_at": {
+      "bsonType": ["date", "null"]
+    },
+    "started_at": {
+      "bsonType": ["date", "null"]
+    },
+    "done_at": {
+      "bsonType": ["date", "null"]
+    },
+    "verified_at": {
+      "bsonType": ["date", "null"]
+    },
+    "closed_at": {
+      "bsonType": ["date", "null"]
+    },
+    "escalated_at": {
+      "bsonType": ["date", "null"]
+    },
+    "history": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "from": {
+            "bsonType": ["string", "null"],
+            "enum": ["OPEN", "IN_PROGRESS", "VERIFYING", "AWAITING_APPROVAL", "CLOSED", "CANCELLED", null]
+          },
+          "to": {
+            "bsonType": "string",
+            "enum": ["OPEN", "IN_PROGRESS", "VERIFYING", "AWAITING_APPROVAL", "CLOSED", "CANCELLED"]
+          },
+          "by": {
+            "bsonType": ["objectId", "null"]
+          },
+          "note": {
+            "bsonType": ["string", "null"]
+          },
+          "at": {
+            "bsonType": "date"
+          }
+        },
+        "required": ["to", "at"]
+      }
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["farm_id", "house_id", "origin", "title"]
+})
+db.getCollection("workorders").createIndex({"house_id":1,"status":1})
+db.getCollection("workorders").createIndex({"assignee_id":1,"status":1})
+db.getCollection("workorders").createIndex({"plan_id":1,"status":1}, {"partialFilterExpression":{"plan_id":{"$exists":true}}})
+db.getCollection("workorders").createIndex({"alert_id":1}, {"unique":true,"partialFilterExpression":{"is_open":true,"alert_id":{"$exists":true}}})
 
 // ── zonehealthreports (model ZoneHealthReport) ──
 ensureCollection("zonehealthreports", {

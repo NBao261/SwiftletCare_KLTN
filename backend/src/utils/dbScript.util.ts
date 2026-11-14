@@ -19,6 +19,7 @@ import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { HouseHealthReport } from '@/models/houseHealthReport.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
+import { MaintenancePlan } from '@/models/maintenancePlan.model'
 import { Notification } from '@/models/notification.model'
 import { ParameterReview } from '@/models/parameterReview.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
@@ -28,6 +29,7 @@ import { SystemSetting } from '@/models/systemSetting.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
+import { WorkOrder } from '@/models/workOrder.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- models have different document types
@@ -35,8 +37,9 @@ type AnyModel = Model<any>
 
 export const ALL_MODELS: AnyModel[] = [
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
-  Farm, HarvestBatch, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, Notification, ParameterReview, PushToken,
-  ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, ZoneHealthReport,
+  Farm, HarvestBatch, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, MaintenancePlan, Notification, ParameterReview,
+  PushToken, ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, WorkOrder,
+  ZoneHealthReport,
 ]
 
 export interface JsonSchemaNode {

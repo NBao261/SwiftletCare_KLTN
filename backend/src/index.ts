@@ -11,6 +11,8 @@ import { initSocket }   from './socket'
 import { connectMQTT }  from './mqtt/mqtt.client'
 import { startDeviceOfflineJob } from './jobs/deviceOffline.job'
 import { startAlertEscalationJob } from './jobs/alertEscalation.job'
+import { startRecoveryCheckJob } from './jobs/recoveryCheck.job'
+import { startMaintenanceDueJob } from './jobs/maintenanceDue.job'
 import { startOverrideExpiryJob } from './jobs/overrideExpiry.job'
 import { startInvitationExpiryJob } from './jobs/invitationExpiry.job'
 import { startActivationOverdueJob } from './jobs/activationOverdue.job'
@@ -45,6 +47,8 @@ async function bootstrap(): Promise<void> {
   // chưa xác nhận (ALERT-FR-015), hết hạn Manual Override (ENV-FR-018)
   startDeviceOfflineJob()
   startAlertEscalationJob()
+  startRecoveryCheckJob()
+  startMaintenanceDueJob()
   startOverrideExpiryJob()
   startInvitationExpiryJob()
   startActivationOverdueJob()

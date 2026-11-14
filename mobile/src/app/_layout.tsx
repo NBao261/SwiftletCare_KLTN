@@ -73,6 +73,11 @@ export default function RootLayout() {
               <Stack.Screen name="notifications/[notificationId]" />
               <Stack.Screen name="health/index" />
               <Stack.Screen name="health/[dayId]" />
+              {/* Work Order sửa chữa (G-21): danh sách và chi tiết, ngoài các tab */}
+              <Stack.Screen name="work-orders/index" />
+              <Stack.Screen name="work-orders/[workOrderId]" />
+              {/* Bảo trì phòng ngừa (G-22): kế hoạch đến hạn và mọi kế hoạch, ngoài các tab */}
+              <Stack.Screen name="maintenance/index" />
             </Stack>
             {/* Báo mất mạng / mất kết nối máy chủ trên mọi màn, nằm ngay dưới thanh trạng thái */}
             <ConnectionBanner />

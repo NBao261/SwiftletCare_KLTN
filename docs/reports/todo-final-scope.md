@@ -101,30 +101,30 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 ### G-21 — Định tuyến, Work Order, kiểm tra tại chỗ (Kiệt, Len, Nhi, Tuấn) — hạn 02/12
 
 **Backend (Kiệt):**
-- [ ] Spec `/work-orders`: danh sách theo nhà hoặc người được giao, open, start, done (kèm nguyên nhân, ảnh, checklist), approve, reopen, cancel, reassign.
-- [ ] Collection `workorders`: index `house_id + status` và `assignee_id + status`; index unique một phần trên `alert_id` khi chưa đóng, để mỗi cảnh báo chỉ có một Work Order mở. Ảnh lưu trên MinIO. Chạy `npm run db:script`.
-- [ ] `alertRouting.service`:
+- [x] Spec `/work-orders`: danh sách theo nhà hoặc người được giao, open, start, done (kèm nguyên nhân, ảnh, checklist), approve, reopen, cancel, reassign. *(Kiệt, 13/11, `ef5dd71` spec + `ba35b7a` backend, nhánh `feat/g21-work-orders`: thêm `alertId` để mở từ chi tiết cảnh báo, `GET /work-orders/metrics`, `POST /alerts/{id}/onsite-check`, `needs_visit` của verdict, `cause` khi xác nhận)*
+- [x] Collection `workorders`: index `house_id + status` và `assignee_id + status`; index unique một phần trên `alert_id` khi chưa đóng, để mỗi cảnh báo chỉ có một Work Order mở. Ảnh lưu trên MinIO. Chạy `npm run db:script`. *(`ba35b7a`: cờ `is_open` cho index unique một phần vì `partialFilterExpression` trước MongoDB 6.0 không nhận `$in`; `alerts` thêm `routing`, `escalated_at`, `site_cause`, `onsite_checks`)*
+- [x] `alertRouting.service`: *(`ba35b7a`: chỉ tính thợ còn hiệu lực: vẫn là thợ của farm, chưa bị khoá; định tuyến lỗi thì vẫn gửi Farm Owner như cũ)*
   - người nhận là technician đang trực của nhà;
   - nhà không có technician thì gửi Farm Owner;
   - cảnh báo CRITICAL gửi cả hai cùng lúc;
   - cảnh báo suy luận gửi thêm Domain Expert (ALERT-FR-017).
-- [ ] `alertEscalation.job` chạy mỗi phút:
+- [x] `alertEscalation.job` chạy mỗi phút: *(`ba35b7a`: `escalation_min`, `recovery_verify_min` là hằng số trong code, chốt 13/11; kênh theo mức cảnh báo ở `PUT /auth/notification-preferences` (`by_severity`), CRITICAL tắt hết kênh ngoài app → 400)*
   - leo thang lên Farm Owner một lần sau `escalation_min` (mặc định 15, khoảng 5–60, BR-40);
   - CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005).
-- [ ] Cơ chế gửi lại đã có (`renotifyStaleAlerts`, ALERT-FR-015, `alertRenotify.test.ts`): giữ nguyên, chỉ đổi danh sách người nhận sang `alertRouting.service`, và giữ cho test cũ vẫn pass.
-- [ ] `workOrder.service`:
+- [x] Cơ chế gửi lại đã có (`renotifyStaleAlerts`, ALERT-FR-015, `alertRenotify.test.ts`): giữ nguyên, chỉ đổi danh sách người nhận sang `alertRouting.service`, và giữ cho test cũ vẫn pass. *(`ba35b7a`: gửi lại cho người nhận lần đầu; Farm Owner đã nhận bản leo thang thì không nhận thêm "Nhắc lại"; cảnh báo cũ không có `routing` gửi Farm Owner, `alertRenotify.test.ts` vẫn qua)*
+- [x] `workOrder.service`: *(Kiệt, 13/11, `ba35b7a`)*
   - mở tự động theo BR-39: `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`, `RS485_BUS_FAILURE`, `SPEAKER_FAILURE`; `NODE_OFFLINE` hoặc `EDGE_AI_DEGRADED` còn mở sau 30 phút; cảnh báo suy luận chuyên gia xác nhận cần đến nhà;
   - cùng một sự cố lặp lại không mở Work Order thứ hai;
   - Farm Owner mở tay được; technician hoặc chuyên gia mở thì 403.
-- [ ] Nguyên nhân tại chỗ (ALERT-FR-018): nước, béc phun, bơm, quạt, cửa, cảm biến, loa hoặc khác, kèm ảnh. Đóng Work Order của cảnh báo thiết bị mà thiếu nguyên nhân trả 422.
-- [ ] `recoveryCheck.job` mỗi phút (BR-41):
+- [x] Nguyên nhân tại chỗ (ALERT-FR-018): nước, béc phun, bơm, quạt, cửa, cảm biến, loa hoặc khác, kèm ảnh. Đóng Work Order của cảnh báo thiết bị mà thiếu nguyên nhân trả 422. *(Kiệt, 13/11, `ba35b7a`)*
+- [x] `recoveryCheck.job` mỗi phút (BR-41): *(Kiệt, 13/11, `ba35b7a`)*
   - "done" chuyển sang `VERIFYING`;
   - giữ phục hồi đủ `recovery_verify_min` (mặc định 10) thì chuyển `AWAITING_APPROVAL`;
   - sự cố quay lại thì về `IN_PROGRESS`;
   - cảnh báo tự phục hồi trước khi bắt đầu làm thì đóng với kết quả "self-recovered".
-- [ ] Farm Owner duyệt (đóng Work Order và cảnh báo), mở lại kèm ghi chú, huỷ kèm lý do (OPS-FR-004). Duyệt sai trạng thái trả 409.
-- [ ] MTTA, MTTR, tỷ lệ bảo trì đúng hạn theo nhà và theo technician (OPS-FR-009, BR-40), trong `opsMetrics.service`.
-- [ ] **Kiểm tra tại chỗ (EXPERT-FR-021):**
+- [x] Farm Owner duyệt (đóng Work Order và cảnh báo), mở lại kèm ghi chú, huỷ kèm lý do (OPS-FR-004). Duyệt sai trạng thái trả 409. *(Kiệt, 13/11, `ba35b7a`)*
+- [x] MTTA, MTTR, tỷ lệ bảo trì đúng hạn theo nhà và theo technician (OPS-FR-009, BR-40), trong `opsMetrics.service`. *(`ba35b7a`: tỷ lệ bảo trì đúng hạn trả `null` tới G-22)*
+- [x] **Kiểm tra tại chỗ (EXPERT-FR-021):** *(Kiệt, 13/11, `ba35b7a`)*
   - mỗi cảnh báo suy luận ở nhà có technician tạo đúng một yêu cầu kiểm tra cho technician đó;
   - technician ghi quan sát (chim bị động, có người hoặc công việc gần đó, mưa, cảm biến bẩn hoặc hỏng, không có gì lạ, khác) kèm ảnh tuỳ chọn;
   - quan sát được thêm vào bằng chứng của cảnh báo (ALERT-FR-014) trước khi chuyên gia kết luận;
@@ -148,20 +148,20 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 ### G-22 — Bảo trì phòng ngừa (Kiệt, Len, Nhi) — hạn 23/12
 
 **Backend (Kiệt):**
-- [ ] Spec `/maintenance`: kế hoạch, mẫu checklist, ghi bảo trì và hiệu chuẩn, danh sách đến hạn.
-- [ ] Collection `maintenanceplans` (index `house_id + equipment`, `state + next_due_at`; mẫu checklist nhúng trong document).
-- [ ] Kế hoạch theo giờ chạy hoặc số lần đóng ngắt (bơm, quạt) và theo lịch (vệ sinh cảm biến và béc phun, hiệu chuẩn). Khoảng ≤ 0 trả 422; technician tạo kế hoạch trả 403 (OPS-FR-005).
-- [ ] **Không tự đặt chu kỳ bảo trì.** Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi. Dữ liệu demo ghi rõ nguồn.
-- [ ] `runHours.job` mỗi giờ (BR-45): tính giờ chạy khi relay ON; bộ điều khiển có đo dòng thì chỉ tính khi dòng trên 50 % dòng bình thường.
-- [ ] `maintenanceDue.job` mỗi giờ, và lúc 07:00 cho kế hoạch theo lịch:
+- [x] Spec `/maintenance`: kế hoạch, mẫu checklist, ghi bảo trì và hiệu chuẩn, danh sách đến hạn. *(Kiệt, 13/11, `4a9bbfc` spec + `8368ff3` model + `3eff6f7` backend, nhánh `feat/g22-maintenance` nối tiếp G-21: `/maintenance/plans` (GET, POST, PUT, DELETE → `RETIRED`), `/maintenance/plans/{id}/comments` cho chuyên gia, `/maintenance/due`, `PUT /work-orders/{id}/checklist`; ghi bảo trì là duyệt Work Order phòng ngừa, không có route ghi tay)*
+- [x] Collection `maintenanceplans` (index `house_id + equipment`, `state + next_due_at`; mẫu checklist nhúng trong document). *(`8368ff3`: kế hoạch giữ `records` (lịch sử ghi bảo trì) và `comments`; Work Order thêm `plan_id`, `checklist`, origin `PLAN`, `CHECKLIST`)*
+- [x] Kế hoạch theo giờ chạy hoặc số lần đóng ngắt (bơm, quạt) và theo lịch (vệ sinh cảm biến và béc phun, hiệu chuẩn). Khoảng ≤ 0 trả 422; technician tạo kế hoạch trả 403 (OPS-FR-005). *(`3eff6f7`)*
+- [x] **Không tự đặt chu kỳ bảo trì.** Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi. Dữ liệu demo ghi rõ nguồn. *(`3eff6f7`: `source` bắt buộc khi tạo kế hoạch; code không có chu kỳ mặc định nào)*
+- [x] `runHours.job` mỗi giờ (BR-45): tính giờ chạy khi relay ON; bộ điều khiển có đo dòng thì chỉ tính khi dòng trên 50 % dòng bình thường. *(`3eff6f7`: dùng lại `relayUsage.job` đếm theo relay; phần chỉ tính khi dòng trên 50 % mức bình thường làm sau khi G-13 (#156) merge và firmware báo mức đã học)*
+- [x] `maintenanceDue.job` mỗi giờ, và lúc 07:00 cho kế hoạch theo lịch: *(`3eff6f7`: phút 10 mỗi giờ cho kế hoạch theo giờ chạy, số lần đóng cắt và quá hạn; 07:00 giờ VN cho kế hoạch theo lịch; tải có kế hoạch thì bỏ mốc mặc định `RELAY_SERVICE_LIMITS`)*
   - đến hạn thì tạo `MAINTENANCE_DUE` (mức LOW) và một Work Order phòng ngừa cho technician (ALERT-FR-016);
   - quá hạn thêm `maintenance_grace_days` (7 ngày) thì báo Farm Owner một lần (`OVERDUE`).
-- [ ] Ghi bảo trì: đặt bộ đếm về 0, đóng `MAINTENANCE_DUE`, tính hạn kế tiếp. Ghi hiệu chuẩn thì lưu ngày hiệu chuẩn kế tiếp (OPS-FR-008).
-- [ ] Checklist kiểm tra (bồn nước, béc phun, quạt, cửa, dấu vết chuột hoặc rắn): mục nào ghi "defect" thì mở Work Order sửa chữa (OPS-FR-007).
+- [x] Ghi bảo trì: đặt bộ đếm về 0, đóng `MAINTENANCE_DUE`, tính hạn kế tiếp. Ghi hiệu chuẩn thì lưu ngày hiệu chuẩn kế tiếp (OPS-FR-008). *(`3eff6f7`: Farm Owner duyệt Work Order phòng ngừa = một lần ghi; checklist phải đủ mới báo xong (BR-41); xác nhận `MAINTENANCE_DUE` của kế hoạch không đặt bộ đếm về 0)*
+- [x] Checklist kiểm tra (bồn nước, béc phun, quạt, cửa, dấu vết chuột hoặc rắn): mục nào ghi "defect" thì mở Work Order sửa chữa (OPS-FR-007). *(`3eff6f7`)*
 
 **Giao diện:**
 - [ ] Len: làm checklist kèm ảnh, ghi bảo trì và hiệu chuẩn trên mobile.
-- [ ] Nhi: tạo và sửa kế hoạch bảo trì, xem danh sách đến hạn và quá hạn trên web.
+- [x] Nhi: tạo và sửa kế hoạch bảo trì, xem danh sách đến hạn và quá hạn trên web. *(Nhi, 13/11, nhánh `feat/g22-maintenance`: trang `/maintenance` "Lịch bảo trì" (menu Farm Owner và chuyên gia), 2 tab: "Cần bảo trì" (mặc định, kèm số kế hoạch) theo `GET /maintenance/due` (đến hạn từ ngày nào, số phiếu công việc đang mở) và "Kế hoạch bảo trì" — bảng phân trang lọc theo farm/nhà và trạng thái; Farm Owner tạo kế hoạch cho nhà đang lọc (bơm, quạt theo giờ chạy hoặc số lần đóng cắt; vệ sinh, hiệu chuẩn theo lịch; chu kỳ > 0, checklist 1–30 mục, nguồn bắt buộc — `maintenancePlan.validation.test.ts`), sửa chu kỳ, checklist, nguồn, ghi chú, xoá (`RETIRED`); chuyên gia xem và góp ý (`POST …/comments`); ngăn chi tiết có checklist, lịch sử bảo trì và góp ý. Màn duyệt Work Order phòng ngừa kèm checklist dùng màn Work Order của G-21 sau khi #155 merge.)*
 
 **Test:** TC-F25-01…03; TC-ST-64…68.
 

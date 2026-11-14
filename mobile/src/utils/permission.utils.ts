@@ -32,6 +32,11 @@ export type PermissionAction =
   | 'viewFarmMembers'
   | 'manageFarmMembers'
   | 'drawCountingRing'
+  | 'answerOnsiteCheck'
+  | 'viewWorkOrders'
+  | 'workOnWorkOrder'
+  | 'viewAssignedWorkOrdersOnly'
+  | 'viewMaintenance'
 
 // Role được làm từng thao tác (Report 3 §2.4); Admin không vào app. Farm Technician (G-20) chỉ thấy và thao tác trên nhà được
 // giao — backend chỉ trả nhà, tầng, thiết bị, cảnh báo của các nhà đó và trả 403 ở nhà khác (AUTH-FR-013)
@@ -74,9 +79,20 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   // Chấm, bỏ qua, ghi chú trạng thái ngày của nhà (EXPERT-FR-012, BR-31, Report 3 4.2.0): Farm Owner và Farm Technician của
   // nhà được giao (backend ASSESSOR_ROLES); chuyên gia xem các ngày lệch thay vì chấm, Admin không vào app
   rateHealthDay: ['FARM_OWNER', 'FARM_TECHNICIAN'],
-  // Xác nhận đã biết cảnh báo (ALERT-FR-009): chủ trại; chuyên gia 403. Report 3 §2.4 cho cả kỹ thuật viên nhà được giao, nhưng
-  // backend G-20 (PUT /alerts/{id}/acknowledge) mới cho FARM_OWNER — thêm FARM_TECHNICIAN khi backend mở
-  acknowledgeAlert: ['FARM_OWNER'],
+  // Xác nhận đã biết cảnh báo, kèm nguyên nhân tại chỗ (ALERT-FR-009, 018): chủ trại và kỹ thuật viên nhà được giao (backend
+  // G-21, nhà khác 403); chuyên gia 403
+  acknowledgeAlert: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Trả lời yêu cầu kiểm tra tại chỗ cảnh báo suy luận (EXPERT-FR-021): chỉ thợ được giao nhà; chủ trại, chuyên gia 403
+  answerOnsiteCheck: ['FARM_TECHNICIAN'],
+  // Xem Work Order (OPS-FR-001…004): chủ trại, chuyên gia (đọc), kỹ thuật viên (nhà được giao)
+  viewWorkOrders: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Bắt đầu, báo xong Work Order (OPS-FR-002): kỹ thuật viên nhà được giao và chủ trại; duyệt, mở lại, huỷ, giao lại ở web
+  workOnWorkOrder: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Khối Work Order ở Trang chủ đếm việc giao cho chính mình: kỹ thuật viên; chủ trại đếm cả farm
+  viewAssignedWorkOrdersOnly: ['FARM_TECHNICIAN'],
+  // Xem kế hoạch bảo trì, đến hạn, lịch sử ghi (OPS-FR-005…008, G-22): chủ trại, chuyên gia, kỹ thuật viên nhà được giao; tạo, sửa
+  // kế hoạch và duyệt Work Order phòng ngừa (một lần ghi bảo trì) là việc của chủ trại trên web
+  viewMaintenance: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
   // Phán quyết cảnh báo suy luận (EXPERT-FR-003): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)
   setAlertVerdict: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chủ trại và kỹ thuật viên (nhận cảnh báo đầu tiên của nhà được

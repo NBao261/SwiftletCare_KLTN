@@ -14,6 +14,7 @@ const FarmOwnerFarmsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmsP
 const FarmOwnerFarmZonesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZonesPage'))
 const FarmOwnerFarmZoneDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZoneDetailPage'))
 const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarvestPage'))
+const FarmOwnerMaintenancePage = lazy(() => import('@/pages/farm-owner/FarmOwnerMaintenancePage'))
 const FarmOwnerHealthPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthPage'))
 const FarmOwnerHealthReportPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthReportPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
@@ -95,6 +96,15 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={HARVEST_ROLES}>
           <FarmOwnerHarvestPage />
+        </RequireRole>
+      }
+    />
+    {/* MF-07 — kế hoạch bảo trì phòng ngừa: Farm Owner tạo, sửa, xoá; Domain Expert xem và góp ý (OPS-FR-005) */}
+    <Route
+      path="maintenance"
+      element={
+        <RequireRole allow={FARM_SIDE_ROLES}>
+          <FarmOwnerMaintenancePage />
         </RequireRole>
       }
     />

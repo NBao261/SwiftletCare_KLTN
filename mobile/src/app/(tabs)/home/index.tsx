@@ -20,6 +20,8 @@ import { LiveCameraPlayer } from '@/components/home/LiveCameraPlayer'
 import { NewReportCard } from '@/components/home/NewReportCard'
 import { OverviewStats } from '@/components/home/OverviewStats'
 import { PendingTasksCard } from '@/components/home/PendingTasksCard'
+import { MaintenanceDueCard } from '@/components/home/MaintenanceDueCard'
+import { WorkOrderTasksCard } from '@/components/home/WorkOrderTasksCard'
 import { RelayOverrideStrip } from '@/components/home/RelayOverrideStrip'
 import { UrgentAlertBanner } from '@/components/home/UrgentAlertBanner'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
@@ -47,6 +49,7 @@ export default function HomeScreen() {
   const canViewOwnerTasks = canPerform(user, 'viewOwnerTasks')
   // Kỹ thuật viên cũng chấm ngày của nhà được giao (BR-31) nên thấy "Việc chờ bạn", chỉ phần ngày chờ chấm
   const canViewPendingTasks = canViewOwnerTasks || canPerform(user, 'viewPendingRatings')
+  const canWorkOnWorkOrders = canPerform(user, 'workOnWorkOrder')
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
   const { zoneById } = useZoneDirectory()
@@ -105,8 +108,16 @@ export default function HomeScreen() {
             <FarmCarousel />
             <OverviewStats />
             <UrgentAlertBanner />
-            {/* Việc chờ: chủ trại và kỹ thuật viên (ngày chờ chấm); báo cáo mới của chủ trại; dải relay chuyên gia vẫn thấy nhưng không có nút */}
-            {canViewPendingTasks && <PendingTasksCard />}
+            {/* Nhóm việc cần làm, xếp sát nhau (khoảng cách nhỏ hơn giữa các khối khác): việc chờ (ngày chờ chấm — chủ trại và
+                kỹ thuật viên), Work Order sửa chữa (G-21: kỹ thuật viên — việc giao cho mình, chủ trại — việc còn mở của farm),
+                bảo trì đến hạn (G-22) */}
+            {(canViewPendingTasks || canWorkOnWorkOrders) && (
+              <View style={styles.taskGroup}>
+                {canViewPendingTasks && <PendingTasksCard />}
+                {canWorkOnWorkOrders && <WorkOrderTasksCard />}
+                {canWorkOnWorkOrders && canPerform(user, 'viewMaintenance') && <MaintenanceDueCard />}
+              </View>
+            )}
             <RelayOverrideStrip />
             {canViewOwnerTasks && <NewReportCard />}
             <HouseCarousel />
@@ -137,5 +148,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: Spacing.lg, gap: Spacing.xl },
+  // Ba khối việc cần làm liền nhau như một nhóm
+  taskGroup: { gap: Spacing.sm },
   refreshLabel: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
 })

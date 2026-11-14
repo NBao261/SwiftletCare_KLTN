@@ -66,6 +66,20 @@ export const ENDPOINTS = {
   ALERT_VERDICT: (alertId: string) => `/alerts/${alertId}/verdict`,
   // Bằng chứng ±30 phút của cảnh báo suy luận (ALERT-FR-014)
   ALERT_EVIDENCE: (alertId: string) => `/alerts/${alertId}/evidence`,
+  // Thợ của nhà trả lời yêu cầu kiểm tra tại chỗ cảnh báo suy luận (EXPERT-FR-021)
+  ALERT_ONSITE_CHECK: (alertId: string) => `/alerts/${alertId}/onsite-check`,
+
+  // Work Order sửa chữa (OPS-FR-001…004, G-21): danh sách, chi tiết, bắt đầu, báo xong
+  WORK_ORDERS: '/work-orders',
+  WORK_ORDER_DETAIL: (workOrderId: string) => `/work-orders/${workOrderId}`,
+  WORK_ORDER_START: (workOrderId: string) => `/work-orders/${workOrderId}/start`,
+  WORK_ORDER_DONE: (workOrderId: string) => `/work-orders/${workOrderId}/done`,
+  // Ghi một mục checklist của Work Order phòng ngừa (OPS-FR-007, G-22)
+  WORK_ORDER_CHECKLIST: (workOrderId: string) => `/work-orders/${workOrderId}/checklist`,
+
+  // Bảo trì phòng ngừa (OPS-FR-005…008, G-22): kế hoạch, kế hoạch đến hạn hoặc quá hạn
+  MAINTENANCE_PLANS: '/maintenance/plans',
+  MAINTENANCE_DUE: '/maintenance/due',
 
   // Hoạt động chuyên gia (EXPERT-FR-009/010/011)
   EXPERT_ACTIVITY: '/expert-activity',

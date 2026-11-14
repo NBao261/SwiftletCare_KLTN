@@ -3,9 +3,9 @@ import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { User, IUser } from '@/models/user.model'
 import { logAction } from '@/services/auditLog.service'
-import { notifyAdmins } from '@/services/notification.service'
-import type { JwtAccessPayload } from '@/types'
-import { AppError, UnauthorizedError } from '@/utils/appError.util'
+import { channelEnabled, notifyAdmins } from '@/services/notification.service'
+import type { AlertSeverity, ChannelChoice, JwtAccessPayload, NotificationPreferences } from '@/types'
+import { AppError, BadRequestError, UnauthorizedError } from '@/utils/appError.util'
 
 const ACCESS_TTL  = process.env.JWT_ACCESS_TTL  ?? '15m'
 const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? '30d'
@@ -198,19 +198,42 @@ export async function changePassword(
   await logAction(userId, 'PASSWORD_CHANGED', 'user', userId)
 }
 
-/** ALERT-FR-005/006 — Farm Owner chọn kênh nhận thông báo + giờ im lặng */
-export async function updateNotificationPreferences(
-  userId: string,
-  prefs: Partial<{ push: boolean; telegram: boolean; quiet_hours: { start: string; end: string } }>,
-): Promise<IUser> {
+const SEVERITIES: AlertSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+
+export interface NotificationPreferencesInput {
+  push?: boolean
+  telegram?: boolean
+  quiet_hours?: { start?: string; end?: string }
+  /** null ở 1 mức = bỏ ghi đè, mức đó theo cài đặt chung */
+  by_severity?: Partial<Record<AlertSeverity, ChannelChoice | null>>
+}
+
+/**
+ * ALERT-FR-005/006 — mỗi người tự chọn kênh nhận thông báo (chung, và theo mức cảnh báo) và giờ im lặng.
+ * Cảnh báo CRITICAL phải còn ít nhất 1 kênh ngoài ứng dụng (push hoặc Telegram), không thì 400.
+ */
+export async function updateNotificationPreferences(userId: string, input: NotificationPreferencesInput): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
 
-  user.notification_preferences = {
-    ...user.notification_preferences,
-    ...prefs,
-    quiet_hours: { ...user.notification_preferences.quiet_hours, ...prefs.quiet_hours },
+  const current = user.toObject().notification_preferences
+  const bySeverity: Partial<Record<AlertSeverity, ChannelChoice>> = { ...current.by_severity }
+  for (const severity of SEVERITIES) {
+    if (!input.by_severity || !(severity in input.by_severity)) continue
+    const choice = input.by_severity[severity]
+    if (choice === null || choice === undefined) delete bySeverity[severity]
+    else bySeverity[severity] = { ...bySeverity[severity], ...choice }
   }
+  const next: NotificationPreferences = {
+    push: input.push ?? current.push,
+    telegram: input.telegram ?? current.telegram,
+    quiet_hours: { ...current.quiet_hours, ...input.quiet_hours },
+    by_severity: bySeverity,
+  }
+  if (!channelEnabled(next, 'CRITICAL', 'push') && !channelEnabled(next, 'CRITICAL', 'telegram')) {
+    throw BadRequestError('Cảnh báo CRITICAL phải còn ít nhất một kênh ngoài ứng dụng (push hoặc Telegram)')
+  }
+  user.notification_preferences = next
   await user.save()
   return user
 }
