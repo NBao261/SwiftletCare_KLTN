@@ -27,7 +27,7 @@ const menuSections: MenuSection[] = [
     title: 'Console Thiết bị',
     items: [
       { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
-      { label: 'Cảnh báo thiết bị', path: '/alerts', icon: IconAlert },
+      { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
       { label: 'OTA Firmware', path: '/ota', icon: IconOTA },
     ],
   },
@@ -62,7 +62,7 @@ const menuSections: MenuSection[] = [
 const dockItems: MenuItem[] = [
   { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
   { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
-  { label: 'Cảnh báo thiết bị', path: '/alerts', icon: IconAlert },
+  { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
   { label: 'Người dùng', path: '/users', icon: IconUsers },
 ]
 
