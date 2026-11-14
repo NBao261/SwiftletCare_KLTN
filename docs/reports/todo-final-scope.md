@@ -264,20 +264,20 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-26 — Chu kỳ thu hoạch (Bảo, Nhi, Len, Tuấn) — hạn 23/12
 
-- [ ] Spec `/harvests`: lô thu hoạch (nhập, xác nhận), chu kỳ của zone, kết luận mùa vụ.
-- [ ] Collection `harvestcycles` (unique `zone_id + start_date`).
-- [ ] Nhập lô (HARVEST-FR-001):
+- [x] Spec `/harvests`: lô thu hoạch (nhập, xác nhận), chu kỳ của zone, kết luận mùa vụ. *(Kiệt làm thay Bảo, 15/11, nhánh `feat/g26-harvest-cycles`: `GET /harvests/cycles`, `GET /harvests/cycles/{id}`, `PUT /harvests/cycles/{id}/conclusion`; `0df5423`)*
+- [x] Collection `harvestcycles` (unique `zone_id + start_date`). *(cùng index `house_id + end_date` của Report 4 §6.4; `daa8f37`)*
+- [x] Nhập lô (HARVEST-FR-001): *(đã có từ G-20: `DRAFT` của thợ, xác nhận, 409, 403; kiểm hợp lệ ở G-18 #158)*
   - technician nhập thì lô ở `DRAFT`;
   - Farm Owner xác nhận thì thành `CONFIRMED`; xác nhận lại trả 409, technician xác nhận thì 403 (HARVEST-FR-006).
-- [ ] Đóng chu kỳ khi xác nhận (HARVEST-FR-007, BR-43):
+- [x] Đóng chu kỳ khi xác nhận (HARVEST-FR-007, BR-43): *(`harvestCycle.service#rebuildZoneCycles` dựng lại chu kỳ của zone từ các lô đã xác nhận mỗi lần xác nhận, sửa, xoá; lô cùng ngày gộp một lần thu hoạch; sức khỏe chu kỳ từ các ngày sức khỏe vì telemetry chỉ giữ 90 ngày; `d2d59b5`)*
   - tính sản lượng; so với chu kỳ trước và cùng kỳ năm trước (±30 ngày);
   - tính tỷ lệ ngày `GOOD`, tỷ lệ về, thời gian trong ngưỡng;
   - chu kỳ có dưới 80 % số ngày được đánh giá thì ghi "incomplete".
-- [ ] Chuyên gia viết kết luận mùa vụ thì chu kỳ chuyển `CONCLUDED`, và mỗi Farm Owner nhận một thông báo (EXPERT-FR-020).
+- [x] Chuyên gia viết kết luận mùa vụ thì chu kỳ chuyển `CONCLUDED`, và mỗi Farm Owner nhận một thông báo (EXPERT-FR-020). *(Farm Owner viết được khi farm chưa có chuyên gia, BR-22; `d2d59b5`)*
 - [ ] Nhập sổ sản lượng các mùa trước của nhà thử nghiệm nếu chủ nhà còn giữ (A-8). Không có thì dữ liệu mẫu phải ghi rõ là mẫu.
 - [ ] Giao diện:
   - Len: nhập lô thu hoạch trên mobile;
-  - Nhi: xác nhận lô và xem chu kỳ trên web; *(Xác nhận lô xong — Nhi, 11/11, nhánh `feat/g20-farm-technician` (API `fb2db1d` của Kiệt): trang Thu hoạch hiện nhãn "Chờ xác nhận" ở đợt còn lô `DRAFT`, lọc theo trạng thái, menu "Xác nhận đợt thu" (Farm Owner) gọi `POST /harvests/{id}/confirm` cho từng lô `DRAFT`. Còn xem chu kỳ, chờ backend G-26. 12/11: thẻ sản lượng, biểu đồ năm và tỉ lệ loại tổ chỉ tính lô đã xác nhận (BR-43); bảng và CSV (cột Trạng thái) vẫn có lô chờ xác nhận.)*
+  - Nhi: xác nhận lô và xem chu kỳ trên web; *(Xác nhận lô xong — Nhi, 11/11, nhánh `feat/g20-farm-technician` (API `fb2db1d` của Kiệt): trang Thu hoạch hiện nhãn "Chờ xác nhận" ở đợt còn lô `DRAFT`, lọc theo trạng thái, menu "Xác nhận đợt thu" (Farm Owner) gọi `POST /harvests/{id}/confirm` cho từng lô `DRAFT`. Còn xem chu kỳ: backend G-26 xong (Kiệt, 15/11, `feat/g26-harvest-cycles`, `GET /harvests/cycles`). 12/11: thẻ sản lượng, biểu đồ năm và tỉ lệ loại tổ chỉ tính lô đã xác nhận (BR-43); bảng và CSV (cột Trạng thái) vẫn có lô chờ xác nhận.)*
   - Tuấn: viết kết luận mùa vụ.
 
 **Test:** TC-F30-01…03. Đây là luồng phụ, test không tính vào 170 nhưng vẫn phải viết.
