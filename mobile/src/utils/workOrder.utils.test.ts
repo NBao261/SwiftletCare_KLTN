@@ -1,10 +1,12 @@
 import { describe, expect, it } from '@jest/globals'
-import type { OnsiteCheck } from '@/types'
+import type { OnsiteCheck, WorkOrder } from '@/types'
 import {
   buildPhotoPart,
   getPendingOnsiteCheck,
   getWorkOrderAction,
+  getWorkOrderMilestones,
   isCauseAlertType,
+  isOnsiteCheckAnswered,
   isWorkOrderOpen,
 } from '@/utils/workOrder.utils'
 
@@ -48,6 +50,41 @@ describe('getPendingOnsiteCheck (EXPERT-FR-021)', () => {
     expect(getPendingOnsiteCheck({ onsite_checks: [{ ...request, observation: 'RAIN' }] })).toBeNull()
     expect(getPendingOnsiteCheck({ onsite_checks: [] })).toBeNull()
     expect(getPendingOnsiteCheck({})).toBeNull()
+  })
+
+  it('yêu cầu backend trả thiếu khoá observation (bản ghi lúc tạo) vẫn là đang chờ', () => {
+    const missingKeys: OnsiteCheck = { requested_at: '2026-11-13T01:00:00.000Z' }
+    expect(isOnsiteCheckAnswered(missingKeys)).toBe(false)
+    expect(getPendingOnsiteCheck({ onsite_checks: [missingKeys] })).toBe(missingKeys)
+  })
+
+  it('có lúc trả lời thì coi là đã trả lời, kể cả khi thiếu observation', () => {
+    expect(isOnsiteCheckAnswered({ ...request, answered_at: '2026-11-13T02:00:00.000Z' })).toBe(true)
+    expect(isOnsiteCheckAnswered({ ...request, observation: 'NOTHING_UNUSUAL' })).toBe(true)
+  })
+})
+
+describe('getWorkOrderMilestones (SM-19)', () => {
+  const workOrder: WorkOrder = {
+    _id: 'wo-1',
+    farm_id: 'farm-1',
+    house_id: 'house-1',
+    kind: 'REPAIR',
+    origin: 'ALERT',
+    title: 'Bơm không lên nước',
+    status: 'VERIFYING',
+    opened_at: '2026-11-13T01:00:00.000Z',
+    started_at: '2026-11-13T01:10:00.000Z',
+    done_at: '2026-11-13T01:40:00.000Z',
+    verified_at: null,
+  }
+
+  it('chỉ trả các mốc đã xảy ra, theo thứ tự vòng đời', () => {
+    expect(getWorkOrderMilestones(workOrder).map(item => item.time)).toEqual([
+      '2026-11-13T01:00:00.000Z',
+      '2026-11-13T01:10:00.000Z',
+      '2026-11-13T01:40:00.000Z',
+    ])
   })
 })
 

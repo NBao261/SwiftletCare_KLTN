@@ -3,7 +3,6 @@ import { Alert as NativeAlert, RefreshControl, ScrollView, StyleSheet, View } fr
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import { Image } from 'expo-image'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useQueryClient } from '@tanstack/react-query'
 import { StatRow } from '@/components/analytics/StatRow'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { WorkOrderDoneSheet } from '@/components/work-order/WorkOrderDoneSheet'
@@ -15,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
-import { useAllHouses } from '@/hooks/farm/useAllHouses'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useGoBackOrHome } from '@/hooks/navigation/useGoBackOrHome'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -32,7 +31,7 @@ import {
   getWorkOrderStatusLabel,
 } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
-import { getWorkOrderAction } from '@/utils/workOrder.utils'
+import { getWorkOrderAction, getWorkOrderMilestones } from '@/utils/workOrder.utils'
 import { t } from '@/utils/i18n.utils'
 
 const DETAIL_SKELETON_HEIGHT = 240
@@ -47,12 +46,11 @@ export default function WorkOrderDetailScreen() {
   const insets = useSafeAreaInsets()
   const goBack = useGoBackOrHome()
   const toast = useToastMessage()
-  const queryClient = useQueryClient()
   const { workOrderId = '' } = useLocalSearchParams<{ workOrderId?: string }>()
   const user = useAuthStore(state => state.user)
   const detailQuery = useWorkOrderDetail(workOrderId)
   const startWorkOrder = useStartWorkOrder()
-  const allHouses = useAllHouses()
+  const { houseById } = useZoneDirectory()
   const [isDoneOpen, setDoneOpen] = useState(false)
   const [isRefreshing, setRefreshing] = useState(false)
   const workOrder = detailQuery.data ?? null
@@ -72,9 +70,9 @@ export default function WorkOrderDetailScreen() {
     if (!workOrder) return
     startWorkOrder.mutate(workOrder._id, {
       onSuccess: () => toast.show(t('Đã bắt đầu làm')),
+      // Hook đã tải lại Work Order khi gặp 409; ở đây chỉ báo
       onError: error => {
         if (readApiError(error).status === 409) {
-          void queryClient.invalidateQueries({ queryKey: ['work-orders'] })
           toast.show(t('Work Order đã đổi trạng thái, đã tải lại'))
           return
         }
@@ -97,14 +95,7 @@ export default function WorkOrderDetailScreen() {
         />
       )
     }
-    const houseName = allHouses.houses.find(house => house._id === workOrder.house_id)?.name ?? '_'
-    const milestones = [
-      { label: t('Mở lúc'), time: workOrder.opened_at },
-      { label: t('Bắt đầu'), time: workOrder.started_at },
-      { label: t('Báo xong'), time: workOrder.done_at },
-      { label: t('Dữ liệu đã phục hồi'), time: workOrder.verified_at },
-      { label: t('Đóng lúc'), time: workOrder.closed_at },
-    ].filter(item => item.time)
+    const houseName = houseById.get(workOrder.house_id)?.name ?? '_'
     return (
       <>
         <View style={styles.titleBlock}>
@@ -121,8 +112,8 @@ export default function WorkOrderDetailScreen() {
           <StatRow label={t('Nhà yến')} value={houseName} />
           <StatRow label={t('Người được giao')} value={workOrder.assignee?.full_name ?? t('Chủ trại xử lý')} />
           {workOrder.alert_type && <StatRow label={t('Cảnh báo')} value={getAlertTypeLabel(workOrder.alert_type)} />}
-          {milestones.map(item => (
-            <StatRow key={item.label} label={item.label} value={formatDateTime(item.time as string)} />
+          {getWorkOrderMilestones(workOrder).map(item => (
+            <StatRow key={item.label} label={item.label} value={formatDateTime(item.time)} />
           ))}
           {workOrder.escalated_at && (
             <StatRow label={t('Đã báo chủ trại')} value={formatDateTime(workOrder.escalated_at)} isWarning />

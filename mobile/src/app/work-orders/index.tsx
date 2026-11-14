@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
-import { useAllHouses } from '@/hooks/farm/useAllHouses'
+import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useGoBackOrHome } from '@/hooks/navigation/useGoBackOrHome'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -36,7 +36,7 @@ export default function WorkOrdersScreen() {
   const isTechnician = canPerform(user, 'viewAssignedWorkOrdersOnly')
   const [filter, setFilter] = useState<WorkOrderFilter>(isTechnician ? 'mine' : 'open')
   const [isRefreshing, setRefreshing] = useState(false)
-  const allHouses = useAllHouses()
+  const { houseById } = useZoneDirectory()
   const workOrdersQuery = useWorkOrders(
     {
       assigneeId: filter === 'mine' ? 'me' : undefined,
@@ -45,7 +45,6 @@ export default function WorkOrdersScreen() {
     canPerform(user, 'viewWorkOrders'),
   )
   const workOrders = workOrdersQuery.data?.pages.flatMap(page => page.data) ?? []
-  const houseNameById = new Map(allHouses.houses.map(house => [house._id, house.name]))
 
   if (!canPerform(user, 'viewWorkOrders')) return <Redirect href="/(tabs)/home" />
 
@@ -91,7 +90,7 @@ export default function WorkOrdersScreen() {
       <WorkOrderRow
         key={workOrder._id}
         workOrder={workOrder}
-        houseName={houseNameById.get(workOrder.house_id) ?? '_'}
+        houseName={houseById.get(workOrder.house_id)?.name ?? '_'}
         hasDivider={index < workOrders.length - 1}
         onPress={() => router.push({ pathname: '/work-orders/[workOrderId]', params: { workOrderId: workOrder._id } })}
       />

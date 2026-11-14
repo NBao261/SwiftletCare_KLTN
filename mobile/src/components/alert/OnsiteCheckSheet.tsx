@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native'
-import { useQueryClient } from '@tanstack/react-query'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { PhotoCaptureField } from '@/components/common/PhotoCaptureField'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { FormMessage } from '@/components/ui/form-message'
 import { Text } from '@/components/ui/text'
-import { invalidateAlertQueries } from '@/config/queryClient'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import { useAnswerOnsiteCheck } from '@/hooks/alert/useAnswerOnsiteCheck'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -34,7 +32,6 @@ interface OnsiteCheckSheetProps {
 // backend mở ngay Work Order sửa chữa. Yêu cầu đã được trả lời hoặc không còn (409) thì báo và tải lại
 export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetProps) {
   const palette = usePalette()
-  const queryClient = useQueryClient()
   const answer = useAnswerOnsiteCheck(alert?._id ?? '')
   const [observation, setObservation] = useState<OnsiteObservation | null>(null)
   const [note, setNote] = useState('')
@@ -48,10 +45,11 @@ export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetPro
       {
         onSuccess: () =>
           onDone(opensWorkOrder ? t('Đã gửi quan sát, Work Order sửa cảm biến đã được mở') : t('Đã gửi quan sát')),
+        // Hook đã tải lại cảnh báo khi gặp 409; ở đây chỉ báo và đóng sheet
         onError: error => {
-          if (readApiError(error).status !== 409) return
-          void invalidateAlertQueries(queryClient)
-          onDone(t('Yêu cầu kiểm tra đã được trả lời hoặc không còn, cảnh báo đã tải lại'))
+          if (readApiError(error).status === 409) {
+            onDone(t('Yêu cầu kiểm tra đã được trả lời hoặc không còn, cảnh báo đã tải lại'))
+          }
         },
       },
     )

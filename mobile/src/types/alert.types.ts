@@ -87,11 +87,12 @@ export interface PersonRef {
   full_name?: string
 }
 
-// Một yêu cầu kiểm tra tại chỗ và câu trả lời của thợ — khớp OnsiteCheck trong api-spec; observation null = chưa trả lời
+// Một yêu cầu kiểm tra tại chỗ và câu trả lời của thợ — khớp OnsiteCheck trong api-spec; observation null hoặc thiếu = chưa trả
+// lời (isOnsiteCheckAnswered)
 export interface OnsiteCheck {
   technician_id?: PersonRef | null
   requested_at: string
-  observation: OnsiteObservation | null
+  observation?: OnsiteObservation | null
   note?: string | null
   // URL tạm (1 giờ)
   photo_url?: string | null
