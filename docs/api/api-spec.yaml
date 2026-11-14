@@ -1354,8 +1354,9 @@ paths:
         Mỗi nhà (sắp theo tên): giai đoạn, trạng thái hôm nay (ngày giờ VN), số cảnh báo đang mở (`ACTIVE`,
         `ACKNOWLEDGED`; cảnh báo bị bác bỏ không tính), số Work Order chưa đóng, tỷ lệ chim về gần nhất kèm ngày.
         Nhà chưa có trạng thái hôm nay có `status: null` và `status_reason`: `NOT_COMPUTED` (chưa đánh giá
-        ngày) hoặc `INSUFFICIENT_DATA` (đã đánh giá nhưng không đủ dữ liệu). `simulated: true` khi mọi thiết bị
-        của nhà đều là thiết bị giả lập (SYSTEM-FR-004).
+        ngày) hoặc `INSUFFICIENT_DATA` (đã đánh giá nhưng không đủ dữ liệu). Tỷ lệ chim về gần nhất tìm trong 30
+        ngày gần nhất (Report 3 §4.5); không có ngày nào có tỷ lệ thì `null`. Nhà sắp theo tên tiếng Việt.
+        `simulated: true` khi mọi thiết bị của nhà đều là thiết bị giả lập (SYSTEM-FR-004).
       responses:
         "200":
           description: OK
@@ -1371,8 +1372,10 @@ paths:
                           farm_id: { type: string }
                           date: { type: string, example: "2026-11-14", description: "Ngày hôm nay giờ VN" }
                           houses: { type: array, items: { $ref: "#/components/schemas/HouseOverview" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /farms/{id}/comparison:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
@@ -1384,8 +1387,10 @@ paths:
         % ngày `GOOD` trên số ngày đã đánh giá đủ dữ liệu, tỷ lệ chim về trung bình (ngày đủ 2 phiên), xu hướng đàn
         (% đổi của trung bình chim ra buổi sáng so với kỳ liền trước cùng độ dài), số cảnh báo đã có trong kỳ (không
         tính báo động giả) và đang mở, MTTR (BR-40), điện năng ước tính (BR-45; `null` = not available), sản lượng
-        chu kỳ gần nhất (`null` tới khi có chu kỳ thu hoạch, G-26). Sắp theo `sort`/`order`, ô trống luôn xuống cuối.
-        **Không có điểm tổng hay xếp hạng.**
+        chu kỳ gần nhất (`null` tới khi có chu kỳ thu hoạch, G-26). Sắp theo `sort`/`order`, ô trống luôn xuống cuối,
+        bằng nhau thì theo `house_id`. **Không có điểm tổng hay xếp hạng.** Khoảng được làm tròn ra trọn ngày giờ VN
+        (từ đầu ngày của `from` tới hết ngày trước `to`) để mọi cột cùng một khoảng; `days` là số ngày; tối đa 366
+        ngày (Report 3 §4.5), quá thì 400.
       parameters:
         - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 30 ngày" }
         - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
@@ -1409,12 +1414,14 @@ paths:
                         type: object
                         properties:
                           farm_id: { type: string }
-                          from: { type: string, format: date-time }
-                          to: { type: string, format: date-time }
+                          from: { type: string, format: date-time, description: "Đầu ngày giờ VN sau khi làm tròn" }
+                          to: { type: string, format: date-time, description: "Hết ngày giờ VN sau khi làm tròn (không gồm mốc này)" }
+                          days: { type: integer }
                           sort: { type: string }
                           order: { type: string, enum: [asc, desc] }
                           rows: { type: array, items: { $ref: "#/components/schemas/HouseComparisonRow" } }
-        "400": { description: "from không trước to" }
+        "400": { description: "from không trước to, hoặc khoảng quá 366 ngày" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -4137,6 +4144,8 @@ paths:
                               ANALYTICS-FR-002 — trung bình số chim ra buổi sáng (ra − vào của phiên sáng) theo tuần (từ thứ
                               Hai, giờ VN) và theo tháng trong khoảng `days`, kèm % đổi so với kỳ liền trước; ngày thiếu
                               phiên (VISION-FR-020) không tính. Muốn đủ trung bình tháng thì gửi `days` dài hơn (vd 90).
+                              Tuần, tháng đầu của khoảng có thể chỉ có vài ngày (xem `days` của kỳ) nhưng vẫn là mốc so
+                              sánh của kỳ sau.
                             properties:
                               weekly: { type: array, items: { $ref: "#/components/schemas/FlockPeriod" } }
                               monthly: { type: array, items: { $ref: "#/components/schemas/FlockPeriod" } }
@@ -4186,12 +4195,15 @@ paths:
       summary: "Điện năng ước tính của bơm và quạt của 1 nhà theo tháng (ANALYTICS-FR-017, BR-45)"
       description: |
         Σ điện áp × dòng đo × thời gian: mỗi mẫu telemetry lúc relay BẬT và có dòng đo được tính tới mẫu kế tiếp
-        của cùng controller (khoảng quá 30 giây là mất kết nối, không tính). Điện áp theo tải DC demo của board
+        của cùng controller (khoảng quá 30 giây là mất kết nối, không tính, Report 3 §4.5). Tính theo zone lúc
+        đo: controller dời sang nhà khác thì điện đã dùng vẫn thuộc nhà cũ. Điện áp theo tải DC demo của board
         nhóm: bơm 5 V, quạt 12 V (A-9); tải nguồn lưới chưa hỗ trợ. Tải không có dòng đo trong tháng → `null`
-        ("not available"). Là số ước tính, không phải công tơ. Telemetry giữ 90 ngày (BR-36) nên mặc định là
-        90 ngày gần nhất. Quyền: FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN ở nhà được giao.
+        ("not available"). Là số ước tính, không phải công tơ. **Lệch BR-45 đã biết:** BR-45 chỉ tính tải chạy khi
+        dòng trên 50 % dòng bình thường, nhưng backend chưa biết mức đã học của firmware nên mọi mẫu relay BẬT có
+        dòng đều được cộng. Telemetry giữ 90 ngày (BR-36) nên mặc định là 90 ngày gần nhất; khoảng làm tròn ra
+        trọn ngày giờ VN, tối đa 366 ngày. Quyền: FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN ở nhà được giao.
       parameters:
-        - { name: houseId, in: query, required: true, schema: { type: string } }
+        - { name: houseId, in: query, required: true, schema: { type: string, format: objectId } }
         - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 90 ngày" }
         - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
       responses:
@@ -4218,7 +4230,7 @@ paths:
                               misting_kwh: { type: number, nullable: true }
                               ventilation_kwh: { type: number, nullable: true }
                               total_kwh: { type: number, nullable: true }
-        "400": { description: "from không trước to" }
+        "400": { description: "from không trước to, hoặc khoảng quá 366 ngày" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
