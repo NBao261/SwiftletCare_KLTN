@@ -1284,13 +1284,14 @@ stateDiagram-v2
   OPEN --> IN_PROGRESS : technician starts (OPS-FR-002)
   OPEN --> CLOSED : alert recovered for 10 min before the work starts, self-recovered (OPS-FR-003)
   IN_PROGRESS --> VERIFYING : technician done, cause and photos (OPS-FR-002, ALERT-FR-018)
-  VERIFYING --> AWAITING_APPROVAL : recovered for recovery_verify_min (BR-41)
+  VERIFYING --> AWAITING_APPROVAL : recovered for recovery_verify_min, or no data shows it, marked not verified (BR-41)
   VERIFYING --> IN_PROGRESS : condition comes back (OPS-FR-003)
   AWAITING_APPROVAL --> CLOSED : owner approves, alert resolved (OPS-FR-004, 009)
-  AWAITING_APPROVAL --> IN_PROGRESS : owner reopens (OPS-FR-004)
+  AWAITING_APPROVAL --> IN_PROGRESS : owner reopens, or the incident comes back (OPS-FR-003, 004)
   OPEN --> CANCELLED : owner cancels with reason (OPS-FR-004)
   IN_PROGRESS --> CANCELLED : owner cancels with reason (OPS-FR-004)
-  OPEN --> OPEN : not started in time, escalated (OPS-FR-004, 006, BR-40)
+  VERIFYING --> CANCELLED : owner cancels with reason (OPS-FR-004)
+  OPEN --> OPEN : not started within escalation_min of its assignment, escalated (OPS-FR-004, 006, BR-40)
   CLOSED --> [*]
   CANCELLED --> [*]
 ```
