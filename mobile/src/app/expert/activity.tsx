@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { Redirect, useRouter } from 'expo-router'
 import {
   Clock,
   SlidersHorizontal,
@@ -18,6 +18,7 @@ import { useFarms } from '@/hooks/farm/useFarms'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { useAuthStore } from '@/stores/authStore'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { ExpertActivityEntry } from '@/types'
 import { getActivityVerdict, getExpertActionLabel } from '@/utils/account.utils'
@@ -62,6 +63,7 @@ export default function ExpertActivityScreen() {
   const palette = usePalette()
   const language = useLanguage()
   const router = useRouter()
+  const user = useAuthStore(state => state.user)
   const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
   const { data: farmsData } = useFarms()
   const effectiveFarmId = selectedFarmId || farmsData?.data?.[0]?._id || ''
@@ -72,6 +74,7 @@ export default function ExpertActivityScreen() {
   const {
     data: activityResponse,
     isLoading,
+    isError,
     isRefetching,
     refetch,
   } = useExpertActivity(effectiveFarmId)
@@ -118,6 +121,8 @@ export default function ExpertActivityScreen() {
     return [house?.name, zone?.name].filter(Boolean).join(' › ')
   }
 
+  if (user?.role !== 'DOMAIN_EXPERT') return <Redirect href="/(tabs)/queue" />
+
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader title={t('Nhật ký xử lý kỹ thuật')} onBack={() => router.back()} />
@@ -158,7 +163,15 @@ export default function ExpertActivityScreen() {
         </ScrollView>
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <View style={styles.emptyContainer}>
+          <EmptyState
+            message={t('Không tải được nhật ký hoạt động. Vui lòng thử lại.')}
+            actionLabel={t('Thử lại')}
+            onAction={() => { void refetch() }}
+          />
+        </View>
+      ) : isLoading ? (
         <View style={styles.skeletonContainer}>
           <Skeleton width="100%" height={96} radius={Radius.lg} />
           <View style={{ height: Spacing.sm }} />

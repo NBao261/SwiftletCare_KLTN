@@ -81,23 +81,26 @@ export type ExpertActionType =
   | 'THRESHOLD_UPDATED'
   | 'THRESHOLD_RESET'
   | 'FUZZY_UPDATED'
+  | 'FUZZY_TUNING_UPDATED'
   | 'DETECTION_TUNING_UPDATED'
+  | 'BIRD_COUNT_TUNING_UPDATED'
   | 'REVIEW_ACCEPTED'
   | 'REVIEW_REVERTED'
   | 'REVIEW_ADJUSTED'
   | 'PROPOSAL_APPROVED'
   | 'PROPOSAL_REJECTED'
   | 'CONCLUSION_WRITTEN'
+  | 'HEALTH_REPORT_CONCLUDED'
   | 'COUNTING_RING_SET'
+  | 'COUNTING_RING_UPDATED'
   | 'COUNTING_SCHEDULE_SET'
 
 export interface ExpertVerdictStats {
   type: InferredAlertType
-  total: number
   confirmed: number
   rejected: number
   pending: number
-  confirmation_rate: number
+  confirmedPct: number | null
 }
 
 // Cấu hình Ngưỡng & Vi khí hậu Zone (BR-01, BR-02)

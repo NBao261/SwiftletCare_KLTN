@@ -44,6 +44,7 @@ import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { ExpertDetectionTuning, ExpertFuzzyTuning, ExpertThresholds } from '@/types'
 import { t } from '@/utils/i18n.utils'
@@ -107,7 +108,7 @@ export default function TuningScreen() {
 
   const activeZoneId = selectedZoneId || ''
 
-  const { data: zoneDetailResponse, isLoading: isZoneLoading, isRefetching, refetch } = useZoneTuning(activeZoneId)
+  const { data: zoneDetailResponse, isLoading: isZoneLoading, isError: isZoneError, isRefetching, refetch } = useZoneTuning(activeZoneId)
   const { data: fuzzySuggestionResponse } = useFuzzySuggestion(activeZoneId)
   const fuzzySuggestion = fuzzySuggestionResponse?.data
 
@@ -188,22 +189,7 @@ export default function TuningScreen() {
     updateHouseDetectionMutation.isPending
 
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg)
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage(null)
-    }, 3000)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    }
-  }, [])
+  const { message: toastMessage, show: showToast } = useToastMessage()
 
   const handleSaveAndApply = useCallback(async () => {
     if (!activeZoneId || !isDirty) return
@@ -312,6 +298,14 @@ export default function TuningScreen() {
           <View style={styles.emptyContainer}>
             <EmptyState message={t('Vui lòng chọn một Tầng / Zone để xem và hiệu chỉnh tham số vận hành.')} />
           </View>
+        ) : isZoneError ? (
+          <View style={styles.emptyContainer}>
+            <EmptyState
+              message={t('Không tải được tham số vận hành. Vui lòng kéo xuống để thử lại.')}
+              actionLabel={t('Thử lại')}
+              onAction={() => { void refetch() }}
+            />
+          </View>
         ) : isZoneLoading && !zoneDetailResponse ? (
           <View style={styles.loadingContainer}>
             <Skeleton width="100%" height={160} radius={Radius.lg} />
@@ -334,9 +328,7 @@ export default function TuningScreen() {
                   <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                     {kpiInRangePct == null
                       ? t('Chưa có kỳ báo cáo')
-                      : kpiInRangePct < 85
-                        ? t('Cần can thiệp vi khí hậu')
-                        : t('Đạt chuẩn vi khí hậu')}
+                      : t('Hiệu quả 7 ngày qua')}
                   </Text>
                 </View>
               </View>
@@ -540,6 +532,7 @@ export default function TuningScreen() {
                             }}
                             accessibilityRole="switch"
                             accessibilityState={{ checked: localFuzzy.fuzzy_input_filter }}
+                            accessibilityLabel={t('Bật tắt lọc tín hiệu cảm biến')}
                           >
                             {localFuzzy.fuzzy_input_filter ? (
                               <ToggleRight size={36} color={palette.text} weight="fill" />

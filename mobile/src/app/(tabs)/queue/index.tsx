@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   LayoutChangeEvent,
   RefreshControl,
@@ -12,22 +12,19 @@ import * as Haptics from 'expo-haptics'
 import { useQueryClient } from '@tanstack/react-query'
 import { onNotificationNew } from '@/services/socket/socketClient'
 import {
-  ArrowRight,
   CalendarCheck,
   ClipboardText,
-  Clock,
   ClockCounterClockwise,
-  MapPin,
   SlidersHorizontal,
   WarningCircle,
 } from 'phosphor-react-native'
+import { QueueInferredAlertCard } from '@/components/expert/queue/QueueInferredAlertCard'
 import { QueueProposalCard } from '@/components/expert/queue/QueueProposalCard'
 import { QueueReportCard } from '@/components/expert/queue/QueueReportCard'
 import { QueueReviewCard } from '@/components/expert/queue/QueueReviewCard'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { ExpertHeaderPicker, PersistentScopeBar } from '@/components/layout/PersistentScopeBar'
-import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -42,106 +39,14 @@ import {
   useTakeProposalAction,
   useTakeReviewAction,
 } from '@/hooks/expert/useExpertReviews'
-import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { InferredAlert, ReviewItem, CoefficientProposal, HouseHealthReportSummary } from '@/types/expert.types'
-import { formatTimeAgo } from '@/utils/date.utils'
-import { getInferredAlertDescription, getInferredAlertLabel } from '@/utils/inferredAlert.utils'
 import { t } from '@/utils/i18n.utils'
 
 const KPI_TILE_HEIGHT = 112
-
-interface QueueInferredAlertCardProps {
-  alert: InferredAlert
-}
-
-/**
- * Thẻ Cảnh báo suy luận AI khẩn cấp P0 trong Hàng đợi (EXPERT-FR-003, ALERT-FR-014).
- * Chuẩn hóa bằng <Card> phẳng không viền theo design system FARM_OWNER.
- * Chạm [Kiểm tra ngay →] chuyển thẳng sang tab Thẩm định với alertId chọn sẵn đúng 1 chạm.
- */
-function QueueInferredAlertCard({ alert }: QueueInferredAlertCardProps) {
-  const palette = usePalette()
-  const router = useRouter()
-  const { zoneById, houseById } = useZoneDirectory()
-
-  const alertTitle = getInferredAlertLabel(alert.type)
-  const alertDesc = alert.message || getInferredAlertDescription(alert.type)
-  const timeStr = formatTimeAgo(alert.created_at)
-  const zone = alert.zone_id ? zoneById.get(alert.zone_id) : undefined
-  const zoneName = zone?.name
-  const houseId = alert.house_id || zone?.house_id
-  const houseName = houseId ? houseById.get(houseId)?.name : undefined
-  const locationLabel =
-    [houseName, zoneName].filter(Boolean).join(' › ') ||
-    (alert.zone_id ? t('Tầng / Zone') : t('Toàn nhà'))
-
-  const handleInspect = () => {
-    router.push({
-      pathname: '/(tabs)/verdicts',
-      params: { alertId: alert._id },
-    })
-  }
-
-  return (
-    <Card style={styles.alertCard}>
-      {/* Hàng 1: Badge mức độ Báo động & Thời gian tương đối */}
-      <View style={styles.alertTopRow}>
-        <View style={[styles.alertBadgePill, { backgroundColor: palette.severityP2 }]}>
-          <View style={[styles.alertDot, { backgroundColor: palette.alert }]} />
-          <Text variant="label" weight="bold" color={palette.severityP2Text}>
-            {t('Báo động')}
-          </Text>
-        </View>
-
-        <View style={styles.alertTimeWrapper}>
-          <Clock size={12} color={palette.textSecondary} />
-          <Text variant="small" color={palette.textSecondary}>
-            {timeStr}
-          </Text>
-        </View>
-      </View>
-
-      {/* Hàng 2: Tên sự cố & Vị trí Zone */}
-      <View style={styles.alertTitleRow}>
-        <Text variant="heading" weight="semiBold">
-          {alertTitle}
-        </Text>
-        <View style={styles.alertLocationWrapper}>
-          <MapPin size={13} color={palette.textSecondary} />
-          <Text variant="small" color={palette.textSecondary}>
-            {locationLabel}
-          </Text>
-        </View>
-      </View>
-
-      {/* Hàng 3: Tóm tắt viễn trắc */}
-      <Text variant="body" color={palette.text} numberOfLines={2} style={styles.alertDescription}>
-        {alertDesc}
-      </Text>
-
-      {/* Hàng 4: Nút hành động 1 chạm [Kiểm tra ngay →] */}
-      <PressableScale
-        onPress={handleInspect}
-        style={[
-          styles.alertActionButton,
-          {
-            backgroundColor: palette.inverse,
-          },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={t('Kiểm tra ngay sự cố này')}
-      >
-        <Text variant="body" weight="semiBold" color={palette.onInverse}>
-          {t('Kiểm tra ngay')}
-        </Text>
-        <ArrowRight size={16} weight="bold" color={palette.onInverse} />
-      </PressableScale>
-    </Card>
-  )
-}
 
 /**
  * [PHẦN 1] MOBILE — MENU HÀNG ĐỢI (src/app/(tabs)/queue/index.tsx)
@@ -160,8 +65,10 @@ export default function QueueScreen() {
   // Realtime WebSocket: tự động làm mới hàng đợi khi có thông báo mới (EXPERT-FR-007)
   useEffect(() => {
     const handleNotification = () => {
-      void queryClient.invalidateQueries({ queryKey: ['expert'] })
-      void queryClient.invalidateQueries({ queryKey: ['inferred-alerts'] })
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'inferred-alerts'] })
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'review-items'] })
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] })
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'health-reports'] })
     }
     const unsubscribe = onNotificationNew(handleNotification)
     return unsubscribe
@@ -172,26 +79,12 @@ export default function QueueScreen() {
   const selectedZoneId = useExpertScopeStore(state => state.selectedZoneId)
 
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg)
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage(null)
-    }, 3000)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    }
-  }, [])
+  const { message: toastMessage, show: showToast } = useToastMessage()
 
   const {
     data: alertsResponse,
     isLoading: isAlertsLoading,
+    isError: isAlertsError,
     isRefetching: isAlertsRefetching,
     refetch: refetchAlerts,
   } = useInferredAlerts({
@@ -203,6 +96,7 @@ export default function QueueScreen() {
   const {
     data: reviewsResponse,
     isLoading: isReviewsLoading,
+    isError: isReviewsError,
     isRefetching: isReviewsRefetching,
     refetch: refetchReviews,
   } = useExpertReviewItems({
@@ -215,6 +109,7 @@ export default function QueueScreen() {
   const {
     data: proposalsResponse,
     isLoading: isProposalsLoading,
+    isError: isProposalsError,
     isRefetching: isProposalsRefetching,
     refetch: refetchProposals,
   } = useExpertProposals({
@@ -227,6 +122,7 @@ export default function QueueScreen() {
   const {
     data: reportsResponse,
     isLoading: isReportsLoading,
+    isError: isReportsError,
     isRefetching: isReportsRefetching,
     refetch: refetchReports,
   } = useHealthReports({
@@ -504,7 +400,14 @@ export default function QueueScreen() {
               </View>
             </View>
 
-            {isAlertsLoading ? (
+            {isAlertsError ? (
+              <EmptyState
+                height={80}
+                message={t('Không tải được danh sách cảnh báo.')}
+                actionLabel={t('Thử lại')}
+                onAction={() => { void refetchAlerts() }}
+              />
+            ) : isAlertsLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={120} radius={Radius.lg} />
               </View>
@@ -544,7 +447,14 @@ export default function QueueScreen() {
               </View>
             </View>
 
-            {isReviewsLoading ? (
+            {isReviewsError ? (
+              <EmptyState
+                height={80}
+                message={t('Không tải được danh sách yêu cầu.')}
+                actionLabel={t('Thử lại')}
+                onAction={() => { void refetchReviews() }}
+              />
+            ) : isReviewsLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={140} radius={Radius.lg} />
               </View>
@@ -590,7 +500,14 @@ export default function QueueScreen() {
               </View>
             </View>
 
-            {isProposalsLoading ? (
+            {isProposalsError ? (
+              <EmptyState
+                height={80}
+                message={t('Không tải được danh sách đề xuất.')}
+                actionLabel={t('Thử lại')}
+                onAction={() => { void refetchProposals() }}
+              />
+            ) : isProposalsLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={160} radius={Radius.lg} />
               </View>
@@ -636,7 +553,14 @@ export default function QueueScreen() {
               </View>
             </View>
 
-            {isReportsLoading ? (
+            {isReportsError ? (
+              <EmptyState
+                height={80}
+                message={t('Không tải được danh sách báo cáo.')}
+                actionLabel={t('Thử lại')}
+                onAction={() => { void refetchReports() }}
+              />
+            ) : isReportsLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={160} radius={Radius.lg} />
               </View>
@@ -720,56 +644,5 @@ const styles = StyleSheet.create({
   },
   skeletonBox: {
     marginBottom: Spacing.sm,
-  },
-  alertCard: {
-    padding: Spacing.lg,
-    marginBottom: Spacing.sm,
-    gap: 0,
-  },
-  alertTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  alertBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-  },
-  alertDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  alertTimeWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  alertTitleRow: {
-    marginTop: Spacing.xs,
-  },
-  alertLocationWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  alertDescription: {
-    marginTop: Spacing.xs,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  alertActionButton: {
-    height: 44,
-    borderRadius: Radius.full,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.md,
   },
 })

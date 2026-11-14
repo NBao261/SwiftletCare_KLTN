@@ -30,6 +30,7 @@ import { Radius, Spacing } from '@/constants/theme'
 import { useInferredAlerts, useSetAlertVerdict, useVerdictStats } from '@/hooks/expert/useInferredAlerts'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import type { InferredAlert, VerdictResult } from '@/types'
 import { t } from '@/utils/i18n.utils'
@@ -94,31 +95,18 @@ export default function VerdictsScreen() {
   const [userToggledAlertId, setUserToggledAlertId] = useState<string | null | undefined>(undefined)
   const expandedAlertId = userToggledAlertId !== undefined ? userToggledAlertId : (params.alertId ?? null)
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg)
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage(null)
-    }, 3000)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    }
-  }, [])
+  const { message: toastMessage, show: showToast } = useToastMessage()
 
   const {
     data: alertsResponse,
     isLoading: isAlertsLoading,
+    isError: isAlertsError,
     isRefetching,
     refetch,
   } = useInferredAlerts({
     farm_id: selectedFarmId || undefined,
     zone_id: selectedZoneId || undefined,
+    type: selectedType !== 'ALL' ? selectedType : undefined,
   })
 
   const { refetch: refetchStats } = useVerdictStats({
@@ -168,12 +156,11 @@ export default function VerdictsScreen() {
       if (filterStatus === 'CONFIRMED' && item.expert_verdict?.result !== 'CONFIRMED') return false
       if (filterStatus === 'REJECTED' && item.expert_verdict?.result !== 'REJECTED') return false
 
-      if (selectedType !== 'ALL' && item.type !== selectedType) return false
       if (selectedSeverity !== 'ALL' && item.severity !== selectedSeverity) return false
 
       return true
     })
-  }, [filterStatus, rawAlerts, selectedSeverity, selectedType])
+  }, [filterStatus, rawAlerts, selectedSeverity])
 
   useEffect(() => {
     if (params.alertId) {
@@ -467,7 +454,13 @@ export default function VerdictsScreen() {
 
           {/* KHỐI 4: Danh sách Card Cảnh báo tích hợp Inline Collapsible Evidence Drawer */}
           <View style={styles.alertListSection}>
-            {isAlertsLoading ? (
+            {isAlertsError ? (
+              <EmptyState
+                message={t('Không tải được danh sách cảnh báo. Vui lòng kéo xuống để thử lại.')}
+                actionLabel={t('Thử lại')}
+                onAction={() => { void refetch() }}
+              />
+            ) : isAlertsLoading ? (
               <View style={styles.skeletonWrapper}>
                 <Skeleton width="100%" height={120} radius={Radius.lg} />
                 <View style={{ height: Spacing.md }} />
