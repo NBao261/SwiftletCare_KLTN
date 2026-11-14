@@ -50,26 +50,28 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2 space-y-1">
-          <label className="text-xs text-warmGray font-medium">Chỉ số thời tiết</label>
+          <label htmlFor="wr-metric" className="text-xs text-warmGray font-medium">Chỉ số thời tiết</label>
           <select
+            id="wr-metric"
             value={draft.metric}
             onChange={e => setDraft(d => ({ ...d, metric: e.target.value as WeatherRule['metric'], min: undefined }))}
             disabled={disabled}
             className={cn(inputCls(errors.metric), 'appearance-none')}
           >
             <option value="">— Chọn chỉ số —</option>
-            {METRIC_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+            {METRIC_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
           {errors.metric && <p className="text-xs text-alertRed">{errors.metric}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs text-warmGray font-medium">
+          <label htmlFor="wr-min" className="text-xs text-warmGray font-medium">
             Ngưỡng {metaRange ? `(${metaRange.min}…${metaRange.max} ${metaRange.unit})` : ''}
           </label>
           <input
+            id="wr-min"
             type="number"
             value={draft.min ?? ''}
             onChange={e => setDraft(d => ({ ...d, min: e.target.value === '' ? undefined : Number(e.target.value) }))}
@@ -81,8 +83,9 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs text-warmGray font-medium">Mức bù phun (−10…+10, ≠ 0)</label>
+          <label htmlFor="wr-offset" className="text-xs text-warmGray font-medium">Mức bù phun (−10…+10, ≠ 0)</label>
           <input
+            id="wr-offset"
             type="number"
             value={draft.offset_pct ?? ''}
             onChange={e => setDraft(d => ({ ...d, offset_pct: e.target.value === '' ? undefined : Number(e.target.value) }))}
@@ -95,8 +98,9 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs text-warmGray font-medium">Thời hạn (1…120 phút)</label>
+          <label htmlFor="wr-duration" className="text-xs text-warmGray font-medium">Thời hạn (1…120 phút)</label>
           <input
+            id="wr-duration"
             type="number"
             value={draft.duration_min ?? ''}
             onChange={e => setDraft(d => ({ ...d, duration_min: e.target.value === '' ? undefined : Number(e.target.value) }))}

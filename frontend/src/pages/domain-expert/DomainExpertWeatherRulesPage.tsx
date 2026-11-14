@@ -1,9 +1,5 @@
-/**
- * DomainExpertWeatherRulesPage — Màn luật bù phun sương theo thời tiết
- * ENV-FR-028…030, BR-38: Chuyên gia đặt tối đa 10 luật cho từng nhà.
- * Farm Owner được đặt khi farm chưa có chuyên gia (BR-22, gate bằng backend 403).
- */
-import { useState } from 'react'
+// ENV-FR-028…030, BR-38: Chuyên gia đặt tối đa 10 luật cho từng nhà (Farm Owner khi không có chuyên gia, BR-22)
+import { useState, useEffect } from 'react'
 import { CloudRain, Info, Zap, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
@@ -22,20 +18,20 @@ function LastCompensationBadge({ data }: {
   data: NonNullable<import('@/types/expert.types').WeatherRulesResponse['last_compensation']>
 }) {
   const sign = data.offset_pct > 0 ? '+' : ''
-  const fc = data.forecast
+  const forecast = data.forecast
   return (
-    <div className="flex flex-wrap items-start gap-3 p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-sm">
-      <Zap className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+    <div className="flex flex-wrap items-start gap-3 p-3.5 rounded-2xl bg-infoBlue/5 border border-infoBlue/20 text-sm">
+      <Zap className="w-4 h-4 text-infoBlue shrink-0 mt-0.5" />
       <div className="space-y-0.5 min-w-0">
-        <p className="font-semibold text-blue-800">
-          Lần bù gần nhất: <span className="text-blue-900">{sign}{data.offset_pct}% phun</span>
-          <span className="ml-2 font-normal text-blue-700">trong {formatDate(data.sent_at)}</span>
+        <p className="font-semibold text-charcoal">
+          Lần bù gần nhất: <span className="text-charcoal">{sign}{data.offset_pct}% phun</span>
+          <span className="ml-2 font-normal text-infoBlue/80">trong {formatDate(data.sent_at)}</span>
         </p>
-        <p className="text-blue-700">
+        <p className="text-infoBlue/80">
           Hết hạn lúc {formatDate(data.expires_at)}
-          {fc.temperature_max !== null && <> · Nhiệt: {fc.temperature_max}°C</>}
-          {fc.humidity_max !== null && <> · Độ ẩm: {fc.humidity_max}%</>}
-          {fc.rain_mm !== null && <> · Mưa: {fc.rain_mm} mm</>}
+          {forecast.temperature_max !== null && <> · Nhiệt: {forecast.temperature_max}°C</>}
+          {forecast.humidity_max !== null && <> · Độ ẩm: {forecast.humidity_max}%</>}
+          {forecast.rain_mm !== null && <> · Mưa: {forecast.rain_mm} mm</>}
         </p>
       </div>
     </div>
@@ -44,7 +40,7 @@ function LastCompensationBadge({ data }: {
 
 export default function DomainExpertWeatherRulesPage() {
   const { selectedHouseId } = useZoneStore()
-  const { data, isLoading } = useWeatherRules(selectedHouseId ?? undefined)
+  const { data, isLoading, isError } = useWeatherRules(selectedHouseId ?? undefined)
   const mutation = useUpdateWeatherRules(selectedHouseId ?? undefined)
   const getErrorMessage = useApiErrorMessage()
 
@@ -52,7 +48,12 @@ export default function DomainExpertWeatherRulesPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // Dùng localRules khi người dùng đang chỉnh, ngược lại dùng từ server
+  useEffect(() => {
+    setLocalRules(null)
+    setSaveError(null)
+    setSaveSuccess(false)
+  }, [selectedHouseId])
+
   const rules: WeatherRule[] = localRules ?? data?.rules ?? []
   const isDirty = localRules !== null
 
@@ -98,7 +99,7 @@ export default function DomainExpertWeatherRulesPage() {
   if (!selectedHouseId) {
     return (
       <EmptyState
-        icon={<CloudRain className="w-10 h-10" />}
+        icon={<CloudRain className="w-8 h-8" />}
         title="Chọn nhà yến ở thanh trên để xem luật bù thời tiết"
       />
     )
@@ -114,24 +115,32 @@ export default function DomainExpertWeatherRulesPage() {
         </p>
       </div>
 
+      {/* Lỗi tải dữ liệu */}
+      {isError && !isLoading && (
+        <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>Không thể tải luật bù thời tiết. Vui lòng thử lại.</span>
+        </div>
+      )}
+
       {/* Lần bù gần nhất */}
       {isLoading ? (
         <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />
-      ) : data?.last_compensation ? (
+      ) : !isError && data?.last_compensation ? (
         <LastCompensationBadge data={data.last_compensation} />
-      ) : (
+      ) : !isError ? (
         <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
           <Info className="w-4 h-4 shrink-0" />
           <span>Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).</span>
         </div>
-      )}
+      ) : null}
 
       {/* Danh sách luật hiện tại */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-charcoal">Danh sách luật ({rules.length}/{MAX_RULES})</h2>
           {rules.length >= MAX_RULES && (
-            <span className="text-xs text-amber-800 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-full font-semibold">
+            <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
               Đã đạt tối đa 10 luật
             </span>
           )}
@@ -159,8 +168,8 @@ export default function DomainExpertWeatherRulesPage() {
         )}
       </div>
 
-      {/* Form thêm luật mới */}
-      {rules.length < MAX_RULES && (
+      {/* Form thêm luật mới — ẩn khi đang tải hoặc GET lỗi */}
+      {!isLoading && !isError && rules.length < MAX_RULES && (
         <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
       )}
 
@@ -175,7 +184,7 @@ export default function DomainExpertWeatherRulesPage() {
         <div className="flex items-center justify-between gap-3 pt-2 border-t border-warmGray/10">
           <div>
             {saveSuccess && !isDirty && (
-              <span className="text-sm text-green-700 font-medium">Đã lưu luật thành công.</span>
+              <span className="text-sm text-success font-medium">Đã lưu luật thành công.</span>
             )}
           </div>
           <div className="flex items-center gap-2">

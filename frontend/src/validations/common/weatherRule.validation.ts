@@ -40,6 +40,8 @@ export function validateWeatherRule(rule: Partial<WeatherRule>): WeatherRuleErro
 
   if (rule.duration_min === undefined || rule.duration_min === null || isNaN(rule.duration_min)) {
     errors.duration_min = 'Nhập thời hạn (1…120 phút)'
+  } else if (!Number.isInteger(rule.duration_min)) {
+    errors.duration_min = 'Thời hạn phải là số phút nguyên'
   } else if (rule.duration_min < 1 || rule.duration_min > 120) {
     errors.duration_min = 'Thời hạn phải trong khoảng 1…120 phút'
   }

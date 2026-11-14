@@ -46,8 +46,8 @@ export default function WeatherRuleRow({ rule, onToggle, onRemove, disabled }: P
         <span className={cn(
           'shrink-0 px-2 py-0.5 rounded-full font-semibold border text-xs',
           rule.offset_pct > 0
-            ? 'bg-blue-50 text-blue-700 border-blue-200'
-            : 'bg-orange-50 text-orange-700 border-orange-200',
+            ? 'bg-infoBlue/5 text-infoBlue border-infoBlue/20'
+            : 'bg-climateOrange/10 text-climateOrange border-climateOrange/20',
         )}>
           {sign}{rule.offset_pct}% phun
         </span>
