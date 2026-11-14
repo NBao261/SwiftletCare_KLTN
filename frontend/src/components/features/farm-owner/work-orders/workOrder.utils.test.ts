@@ -1,9 +1,22 @@
 // Test logic thuần của trang Work Order (G-21, OPS-FR-004, Report 3 §6.19)
 import { describe, expect, it } from 'vitest';
 import {
-  WORK_ORDER_STATUSES, memberNames, ownerActions, reassignCandidates, statusFilterQuery,
+  WORK_ORDER_STATUSES, isRecoveryUnverified, memberNames, ownerActions, reassignCandidates, statusFilterQuery,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import type { Farm, House } from '@/types';
+
+describe('isRecoveryUnverified — phiếu chờ duyệt mà hệ thống chưa kiểm được dữ liệu (BR-41)', () => {
+  it('mở tay không gắn cảnh báo, ACTUATOR_FAULT, SPEAKER_FAILURE: chưa kiểm được', () => {
+    expect(isRecoveryUnverified({ alert_id: null, alert_type: null })).toBe(true);
+    expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'ACTUATOR_FAULT' })).toBe(true);
+    expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'SPEAKER_FAILURE' })).toBe(true);
+  });
+
+  it('cảnh báo cảm biến: dữ liệu đã được kiểm', () => {
+    expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'SENSOR_FAULT' })).toBe(false);
+    expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'MISTING_INEFFECTIVE' })).toBe(false);
+  });
+});
 
 describe('ownerActions — thao tác của Farm Owner theo trạng thái', () => {
   it('chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ', () => {

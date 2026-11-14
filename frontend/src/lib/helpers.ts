@@ -11,6 +11,11 @@ export function wifiQuality(rssi: number | undefined): 'excellent' | 'good' | 'f
   return 'weak'
 }
 
+/** Trang cuối của danh sách phân trang (ít nhất 1) — lùi về khi thao tác làm trang đang xem rỗng */
+export function lastPage(total: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(total / pageSize))
+}
+
 /** Format date to Vietnamese locale */
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })

@@ -53,11 +53,14 @@ export function useHouseOpsMetrics(farmId: string, houseId: string) {
   });
 }
 
-// Thao tác của Farm Owner (OPS-FR-001, 004); xong thì tải lại mọi truy vấn Work Order
+// Thao tác của Farm Owner (OPS-FR-001, 004); xong hay lỗi (409: trạng thái đã đổi) đều tải lại Work Order và cảnh báo, vì duyệt đóng luôn cảnh báo
 export function useWorkOrderActions() {
   const queryClient = useQueryClient();
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: [WORK_ORDERS_KEY] });
-  const options = { onSuccess: refresh };
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: [WORK_ORDERS_KEY] });
+    void queryClient.invalidateQueries({ queryKey: ['alerts'] });
+  };
+  const options = { onSettled: refresh };
   return {
     create: useMutation({
       mutationFn: (input: CreateWorkOrderInput) => workOrderApi.create(input).then(response => response.data.data),

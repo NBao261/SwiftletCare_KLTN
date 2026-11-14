@@ -1,7 +1,7 @@
 // Logic thuần của trang Work Order: thao tác theo trạng thái (Report 3 §6.19), bộ lọc, thợ có thể giao lại
 import type { WorkOrderListQuery } from '@/apis/farm-owner/workOrders.api';
 import type { BadgeTone } from '@/components/ui';
-import type { Farm, House, WorkOrderStatus } from '@/types';
+import type { AlertType, Farm, House, WorkOrder, WorkOrderStatus } from '@/types';
 
 export const WORK_ORDER_STATUSES: WorkOrderStatus[] = ['OPEN', 'IN_PROGRESS', 'VERIFYING', 'AWAITING_APPROVAL', 'CLOSED', 'CANCELLED'];
 
@@ -22,6 +22,14 @@ export function ownerActions(status: WorkOrderStatus): OwnerAction[] {
   if (status === 'AWAITING_APPROVAL') return ['approve', 'reopen'];
   if (status === 'OPEN' || status === 'IN_PROGRESS') return ['reassign', 'cancel'];
   return [];
+}
+
+// BR-41 — loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi (UNVERIFIABLE_RECOVERY ở workOrder.service.ts)
+const UNVERIFIABLE_ALERT_TYPES: AlertType[] = ['ACTUATOR_FAULT', 'SPEAKER_FAILURE'];
+
+// Phiếu sang chờ duyệt mà chưa kiểm được dữ liệu: mở tay không gắn cảnh báo, hoặc cảnh báo thuộc loại trên
+export function isRecoveryUnverified(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type'>): boolean {
+  return !workOrder.alert_id || (workOrder.alert_type !== null && UNVERIFIABLE_ALERT_TYPES.includes(workOrder.alert_type));
 }
 
 // Ô lọc trạng thái: 'open' = chưa đóng/huỷ (mặc định), 'all' = mọi Work Order, hoặc 1 trạng thái

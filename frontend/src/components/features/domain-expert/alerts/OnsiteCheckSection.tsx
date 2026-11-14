@@ -2,7 +2,7 @@
 import { ClipboardList, CheckCircle2, Hourglass, Clock } from 'lucide-react'
 import type { OnsiteCheck } from '@/types/expert.types'
 import { onsiteObservationDict } from '@/constants/enumLabels.i18n'
-import { formatDate } from '@/lib/helpers'
+import { formatDateTime } from '@/lib/i18n'
 
 const OBSERVATION_LABELS = onsiteObservationDict.vi
 
@@ -44,7 +44,7 @@ export default function OnsiteCheckSection({ checks }: Props) {
               </div>
               <span className="text-xs text-warmGray flex items-center gap-1 shrink-0">
                 <Clock className="w-3 h-3" />
-                {formatDate(check.requested_at)}
+                {formatDateTime(check.requested_at)}
               </span>
             </div>
 
@@ -86,7 +86,7 @@ export default function OnsiteCheckSection({ checks }: Props) {
 
                 {check.answered_at && (
                   <p className="text-xs text-warmGray">
-                    Trả lời lúc {formatDate(check.answered_at)}
+                    Trả lời lúc {formatDateTime(check.answered_at)}
                     {check.answered_by?.full_name && check.answered_by._id !== check.technician_id?._id
                       ? ` bởi ${check.answered_by.full_name}`
                       : ''}

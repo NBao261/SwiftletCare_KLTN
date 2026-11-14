@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatRelativeTime, formatDuration } from '@/lib/helpers'
+import { formatRelativeTime, formatDuration, lastPage } from '@/lib/helpers'
 
 describe('formatRelativeTime', () => {
   const now = Date.parse('2026-09-22T12:00:00Z')
@@ -18,5 +18,14 @@ describe('formatDuration', () => {
     expect(formatDuration(2 * 60 * MIN)).toBe('2 giờ')
     expect(formatDuration((28 * 60 + 59) * MIN)).toBe('1 ngày 4 giờ')
     expect(formatDuration(48 * 60 * MIN)).toBe('2 ngày')
+  })
+})
+
+describe('lastPage', () => {
+  it('trang cuối còn dữ liệu, ít nhất là trang 1', () => {
+    expect(lastPage(0, 10)).toBe(1)
+    expect(lastPage(10, 10)).toBe(1)
+    expect(lastPage(11, 10)).toBe(2)
+    expect(lastPage(20, 10)).toBe(2)
   })
 })
