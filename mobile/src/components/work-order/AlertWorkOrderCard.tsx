@@ -27,7 +27,7 @@ export function AlertWorkOrderCard({ alertId, houseName, enabled }: AlertWorkOrd
   return (
     <Card>
       <Text variant="body" weight="semiBold">
-        {t('Work Order')}
+        {t('Phiếu công việc')}
       </Text>
       {workOrders.map((workOrder, index) => (
         <WorkOrderRow

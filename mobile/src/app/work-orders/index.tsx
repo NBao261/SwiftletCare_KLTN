@@ -73,7 +73,7 @@ export default function WorkOrdersScreen() {
     if (workOrdersQuery.isError) {
       return (
         <EmptyState
-          message={t('Không tải được Work Order')}
+          message={t('Không tải được phiếu công việc')}
           actionLabel={t('Thử lại')}
           onAction={() => workOrdersQuery.refetch()}
         />
@@ -82,7 +82,7 @@ export default function WorkOrdersScreen() {
     if (workOrders.length === 0) {
       return (
         <Text variant="small" color={palette.textSecondary}>
-          {filter === 'closed' ? t('Chưa có Work Order đã đóng') : t('Không có Work Order nào đang mở')}
+          {filter === 'closed' ? t('Chưa có phiếu công việc đã đóng') : t('Không có phiếu công việc nào đang mở')}
         </Text>
       )
     }
@@ -99,7 +99,7 @@ export default function WorkOrdersScreen() {
 
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
-      <AppHeader title={t('Work Order')} onBack={goBack} />
+      <AppHeader title={t('Phiếu công việc')} onBack={goBack} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}
@@ -120,7 +120,7 @@ export default function WorkOrdersScreen() {
           ]}
           selectedId={filter}
           onSelect={setFilter}
-          accessibilityLabel={t('Lọc Work Order')}
+          accessibilityLabel={t('Lọc phiếu công việc')}
         />
         <Card>{renderList()}</Card>
         {workOrdersQuery.hasNextPage && (
@@ -134,7 +134,7 @@ export default function WorkOrdersScreen() {
         )}
         <Text variant="small" color={palette.textSecondary}>
           {t(
-            'Work Order mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, hệ thống kiểm dữ liệu phục hồi rồi chủ trại duyệt trên web.',
+            'Phiếu công việc mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, hệ thống kiểm dữ liệu phục hồi rồi chủ trại duyệt trên web.',
           )}
         </Text>
       </ScrollView>

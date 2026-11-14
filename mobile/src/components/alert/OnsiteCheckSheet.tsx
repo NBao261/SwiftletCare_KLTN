@@ -44,7 +44,7 @@ export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetPro
       { observation, note: note.trim() || undefined, photo: photos[0] },
       {
         onSuccess: () =>
-          onDone(opensWorkOrder ? t('Đã gửi quan sát, Work Order sửa cảm biến đã được mở') : t('Đã gửi quan sát')),
+          onDone(opensWorkOrder ? t('Đã gửi quan sát, phiếu công việc sửa cảm biến đã được mở') : t('Đã gửi quan sát')),
         // Hook đã tải lại cảnh báo khi gặp 409; ở đây chỉ báo và đóng sheet
         onError: error => {
           if (readApiError(error).status === 409) {
@@ -103,7 +103,7 @@ export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetPro
         <PhotoCaptureField photos={photos} onChange={setPhotos} maxPhotos={1} disabled={answer.isPending} />
         {opensWorkOrder && (
           <Text variant="small" color={palette.textSecondary}>
-            {t('Gửi xong, hệ thống mở ngay một Work Order sửa cảm biến cho nhà này.')}
+            {t('Gửi xong, hệ thống mở ngay một phiếu công việc sửa cảm biến cho nhà này.')}
           </Text>
         )}
       </ScrollView>
