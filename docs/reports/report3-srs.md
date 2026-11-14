@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.2 (Review 2, final scope) |
+| Document version | 4.2.5 (Review 2, final scope) |
 | Date | 10/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -734,6 +734,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | On-site photos | JPEG, PNG or WebP, at most 5 MB each; at most 5 per Work Order, 1 per on-site check | Input check; a phone photo fits after the app's compression (ALERT-FR-018, EXPERT-FR-021) |
 | Recommendation expiry and effect window | 7 days; 7 days before against 7 days after acceptance | BR-42 |
 | Grace before an overdue plan escalates (`maintenance_grace_days`) | 7 days | OPS-FR-006 |
+| Maintenance plan and checklist text | 1–30 checklist items of at most 200 characters; source of the interval at most 300 characters; plan note, expert comment and checklist item note at most 1,000 characters each | Input check, the same in the applications; enough for a short inspection list (OPS-FR-005, 007) |
 | Same period of the previous year | ±30 days | BR-43 |
 | Complete harvest cycle | at least 80 % of its days assessed | BR-43 |
 
@@ -1141,6 +1142,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.5 | 15/11/2026 | Length of the maintenance plan and checklist texts in Section 4.5 (OPS-FR-005, 007; G-22) |
 | 4.2.2 | 13/11/2026 | Size and number of on-site photos in Section 4.5 (ALERT-FR-018, EXPERT-FR-021; G-21) |
 | 4.2.1 | 10/11/2026 | BM02 items due 11/11/2026: "All users" and "Invitee" in Section 2.3 (R-02); ANALYTICS-FR-001 at most 120 chart points (R-03); THREAT-FR-007 and Section 6.8 learn 3,600 samples per hour (R-04); testable criteria for THREAT-FR-005, ANALYTICS-FR-005 and AUTH-FR-012 with its 30-day deadline (R-05); the AP-mode page takes only the Wi-Fi network, the broker address is flashed (FARM-FR-003c, S-03); restore of a removed device within 24 h (FARM-FR-008, Section 6.6, ST-01); configuration sync starts at `PENDING` and leaves `UNKNOWN` (Section 6.12, ST-03); "not evaluated" has an exit (Section 6.8, ST-07); ENV-FR-013c traced to C.1 (S-02); three constants in Section 4.5 |
 | 4.2.0 | 09/11/2026 | The Farm Technician does the on-site work of MF-04 and MF-06: every inferred alert of a house is checked on site by its technician before the expert's verdict, and a faulty sensor found on site opens a Work Order (EXPERT-FR-021, BR-39); the daily rating is done by the Farm Technician every day and by the Farm Owner on the days at the house, not by the Domain Expert, who reviews the days that disagree and adjusts the levels (EXPERT-FR-012, 022, BR-31, A-6, NFR-14, Section 6.18) |
