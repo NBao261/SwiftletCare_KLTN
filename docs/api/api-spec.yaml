@@ -1492,7 +1492,9 @@ paths:
       summary: "Lịch trực của nhà (AUTH-FR-014) — FARM_OWNER của farm; FARM_TECHNICIAN được giao chỉ thấy ca của mình"
       description: |
         Farm Technician được giao nhà chỉ nhận các ca của chính mình (Report 3 §2.4 "read own roster").
-        Nhà không có lịch thì cảnh báo dùng thợ chính (G-21 gọi `technicianOnDuty`). Domain Expert, Administrator → 403
+        Nhà không có lịch thì cảnh báo dùng thợ chính (G-21 gọi `technicianOnDuty`); không có thợ chính còn hiệu lực (chưa
+        đặt, bị khoá hay bị gỡ) thì dùng thợ hợp lệ đầu tiên trong danh sách gán, để nhà có thợ thì cảnh báo luôn tới thợ
+        (ALERT-FR-017). Domain Expert, Administrator → 403
         (Report 3 §2.4: lịch trực là của Farm Owner).
       responses:
         "200":
@@ -3340,7 +3342,9 @@ paths:
         Tác động lên `status` (Report 3 §6.1, SM-01):
         - `REJECTED` khi `ACTIVE`/`ACKNOWLEDGED` → `DISMISSED`, trạng thái cũ lưu ở `previous_status`;
           cảnh báo không còn hiệu lực, lần gặp lại cùng sự cố chỉ tăng `occurrence_count`, không thông báo;
-        - đổi sang `CONFIRMED` khi `DISMISSED` → về `previous_status` và báo lại Farm Owner;
+        - đổi sang `CONFIRMED` khi `DISMISSED` → về `previous_status` và báo lại như cảnh báo mới: thợ đang trực của
+          nhà và Farm Owner (ALERT-FR-017); Farm Owner coi như đã được báo nên không bị leo thang thêm lần nữa (BR-40);
+          `routing.technician_id` giữ thợ được định tuyến lúc tạo (MTTA/MTTR theo thợ);
         - `CONFIRMED` trên cảnh báo còn hiệu lực, hoặc mọi kết luận trên cảnh báo `RESOLVED` → giữ nguyên.
 
         Ghi audit `ALERT_VERDICT_SET`; kết luận của Domain Expert báo trong app cho mọi Farm Owner (EXPERT-FR-009).
@@ -3503,7 +3507,8 @@ paths:
         Tính trên cảnh báo tạo trong `[from, to)` của farm (hoặc của nhà):
         - MTTA = trung bình (`acknowledged_at` − `created_at`) của cảnh báo đã xác nhận;
         - MTTR = trung bình (lúc Work Order của cảnh báo đóng, không có thì `resolved_at` − `created_at`)
-          của cảnh báo đã đóng; cảnh báo `DISMISSED` không tính.
+          của cảnh báo đã đóng; báo động giả không tính: cảnh báo `DISMISSED`, hoặc đã bị chuyên gia bác bỏ
+          (`expert_verdict.result: REJECTED`) rồi được job tự đóng.
 
         Theo thợ: cảnh báo được định tuyến tới thợ đó (`routing.technician_id`). Mục tiêu nội bộ để
         xác nhận là `escalation_min` (15 phút) cho mọi mức (BR-40) — số báo cáo, không phải cam kết.
@@ -3570,11 +3575,13 @@ paths:
         (10 phút, BR-41) sau lúc báo xong rồi chuyển `AWAITING_APPROVAL`:
         - `MISTING_INEFFECTIVE`: độ ẩm của controller trên `humidity_min` của zone (OPS-FR-003);
         - `SENSOR_FAULT`, `RS485_BUS_FAILURE`: telemetry đủ số đo của cả 5 cảm biến;
-        - `ACTUATOR_FAULT`: controller không gửi lại cảnh báo trong 1 chu kỳ gửi lại (15 phút, Report 3 §4.5);
-        - `SPEAKER_FAILURE`: không báo lại trong 10 phút (backend không có dữ liệu để kiểm, Farm Owner duyệt);
+        - `ACTUATOR_FAULT`, `SPEAKER_FAILURE`: chưa có dữ liệu nào cho thấy phục hồi (chưa biết mức dòng bình thường
+          firmware học được; loa chỉ được báo một lần khi hỏng) → lượt kiểm kế tiếp chuyển `AWAITING_APPROVAL` kèm ghi
+          chú "chưa có dữ liệu để kiểm phục hồi", Farm Owner kiểm tại chỗ khi duyệt;
         - loại khác: cảnh báo đã đóng (vượt ngưỡng về ngưỡng, thiết bị online lại…).
-        Controller báo lại sự cố sau lúc báo xong, hoặc có cảnh báo mới của cùng sự cố lúc đang kiểm hay chờ
-        duyệt → trở lại `IN_PROGRESS`. Work Order không gắn cảnh báo thì chuyển thẳng `AWAITING_APPROVAL`
+        `SENSOR_FAULT`, `RS485_BUS_FAILURE` được controller báo lại sau lúc báo xong, hoặc có cảnh báo mới của cùng sự
+        cố lúc đang kiểm hay chờ duyệt → trở lại `IN_PROGRESS` (rời chờ duyệt thì Farm Owner cũng được báo).
+        `MISTING_INEFFECTIVE` được gửi lại trong lúc firmware còn chốt ngừng phun không tính là quay lại. Work Order không gắn cảnh báo thì chuyển thẳng `AWAITING_APPROVAL`
         (không có dữ liệu để kiểm).
 
         `cause` bắt buộc với Work Order của `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`,
