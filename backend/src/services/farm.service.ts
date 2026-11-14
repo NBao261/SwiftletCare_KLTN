@@ -11,6 +11,7 @@ import {
   findFarmOrThrow, findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertExpertDecision,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { releaseTechnicianWorkOrders } from '@/services/workOrder.service'
 import { assertValidRoster, type RosterShift } from '@/utils/roster.util'
 import { DEFAULT_HOUSE_STAGE } from '@/utils/houseStage.util'
 import { paginate } from '@/utils/helpers.util'
@@ -365,7 +366,9 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
   await farm.save()
   // AUTH-FR-005 — gỡ Farm Technician thì bỏ luôn các lần gán vào nhà của farm này
   await House.updateMany({ farm_id: farm._id }, { $pull: { technicians: { user_id: targetUserId }, roster: { technician_id: targetUserId } } })
-  await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId })
+  // AUTH-FR-005 — Work Order đang mở của thợ chuyển cho Farm Owner
+  const released = await releaseTechnicianWorkOrders(targetUserId, { farmId: farm._id }, user._id)
+  await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId, work_orders_released: released || undefined })
   return farm
 }
 
@@ -400,8 +403,10 @@ export async function unassignTechnician(houseId: string, user: CurrentUser, tec
     // AUTH-FR-014 — thợ không còn ở nhà thì không còn ca trực ở đó
     house.roster = (house.roster ?? []).filter(s => String(s.technician_id) !== technicianId)
     await house.save()
+    // AUTH-FR-005 — không còn ở nhà thì Work Order đang mở của nhà này chuyển cho Farm Owner
+    const released = await releaseTechnicianWorkOrders(technicianId, { houseId: house._id }, user._id)
     await logAction(user._id, 'HOUSE_TECHNICIAN_UNASSIGNED', 'house', String(house._id), {
-      user_id: technicianId,
+      user_id: technicianId, work_orders_released: released || undefined,
     }, { farmId: String(farm._id) })
   }
   return house

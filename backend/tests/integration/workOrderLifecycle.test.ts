@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import alertRoutes from '@/routes/alerts.route'
 import workOrderRoutes from '@/routes/workOrders.route'
+import farmRoutes from '@/routes/farms.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
 import { House, Zone } from '@/models/houseZone.model'
@@ -40,6 +41,11 @@ app.use(express.json())
 app.use('/alerts', alertRoutes)
 app.use('/work-orders', workOrderRoutes)
 app.use(errorHandler)
+
+const farmApp = express()
+farmApp.use(express.json())
+farmApp.use('/farms', farmRoutes)
+farmApp.use(errorHandler)
 
 useTestDb()
 
@@ -252,7 +258,7 @@ describe('vòng đời Work Order (OPS-FR-002…004, BR-41)', () => {
   it('chưa ai bắt đầu sau 15 phút → báo Farm Owner 1 lần (BR-40)', async () => {
     const { owner, raise } = await seed()
     await raise('MISTING_INEFFECTIVE')
-    await WorkOrder.updateMany({}, { opened_at: ago(16) })
+    await WorkOrder.updateMany({}, { opened_at: ago(16), assigned_at: ago(16) })
     ;(notifyUser as jest.Mock).mockClear()
     expect((await verifyWorkOrders()).escalated).toBe(1)
     expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ title: expect.stringContaining('chưa ai bắt đầu') }))
@@ -416,11 +422,81 @@ describe('kiểm phục hồi theo loại cảnh báo (BR-41, OPS-FR-003)', () =
   it('giao lại sau khi đã báo trễ thì Farm Owner không bị báo trễ lần nữa (BR-40)', async () => {
     const { tech2, owner$, raise } = await seed()
     await raise('MISTING_INEFFECTIVE')
-    await WorkOrder.updateMany({}, { opened_at: ago(16) })
+    await WorkOrder.updateMany({}, { opened_at: ago(16), assigned_at: ago(16) })
     expect((await verifyWorkOrders()).escalated).toBe(1)
     const wo = (await WorkOrder.findOne().lean())!
     await owner$.post(`/work-orders/${wo._id}/reassign`, { assignee_id: String(tech2.user._id) }).expect(200)
     expect((await verifyWorkOrders()).escalated).toBe(0)
+  })
+})
+
+describe('sửa theo review của Bảo (#155)', () => {
+  it('Work Order mở khi nhà chưa có thợ, giao muộn: quá hạn tính từ lúc giao, không báo ngay (BR-40)', async () => {
+    const { house, tech, owner$, raise } = await seed(false)
+    await raise('SPEAKER_FAILURE')
+    const wo = (await WorkOrder.findOne().lean())!
+    expect(wo.assignee_id).toBeUndefined()
+    await WorkOrder.updateOne({ _id: wo._id }, { opened_at: ago(120) })
+    house.technicians = [{ user_id: tech.user._id, primary: true }] as never
+    await house.save()
+    await owner$.post(`/work-orders/${wo._id}/reassign`, { assignee_id: String(tech.user._id) }).expect(200)
+    expect((await verifyWorkOrders()).escalated).toBe(0)
+    await WorkOrder.updateOne({ _id: wo._id }, { assigned_at: ago(16) })
+    expect((await verifyWorkOrders()).escalated).toBe(1)
+  })
+
+  it('UNEXPECTED_RESTART không bao giờ tự đóng: Work Order mở tay báo xong thì chờ duyệt kèm ghi chú, không kẹt VERIFYING', async () => {
+    const { house, owner$, tech$, raise } = await seed()
+    const alert = (await raise('UNEXPECTED_RESTART'))!
+    const wo = (await owner$.post('/work-orders', { house_id: String(house._id), title: 'Kiểm nguồn', alert_id: String(alert._id) }).expect(201)).body.data
+    await tech$.post(`/work-orders/${wo._id}/start`).expect(200)
+    await tech$.post(`/work-orders/${wo._id}/done`, { work_note: 'Thay ổ cắm' }).expect(200)
+    expect((await verifyWorkOrders(later(1))).verified).toBe(1)
+    const after = (await WorkOrder.findById(wo._id).lean())!
+    expect(after.status).toBe('AWAITING_APPROVAL')
+    expect(after.history.at(-1)!.note).toContain('Chưa có dữ liệu để kiểm phục hồi')
+  })
+
+  it('Farm Owner huỷ được Work Order đang VERIFYING (lối ra khi điều kiện không phục hồi theo cách đo được)', async () => {
+    const { tech$, owner$, raise } = await seed()
+    await raise('MISTING_INEFFECTIVE')
+    const wo = (await WorkOrder.findOne().lean())!
+    await tech$.post(`/work-orders/${wo._id}/start`).expect(200)
+    await tech$.post(`/work-orders/${wo._id}/done`, { cause: 'WATER' }).expect(200)
+    const cancelled = await owner$.post(`/work-orders/${wo._id}/cancel`, { reason: 'Thay cả cụm bơm, mở phiếu mới' }).expect(200)
+    expect(cancelled.body.data).toMatchObject({ status: 'CANCELLED', is_open: false })
+  })
+
+  it('một Work Order lỗi khi kiểm không làm dừng các Work Order khác và phần leo thang', async () => {
+    const { owner, tech$, raise } = await seed()
+    await raise('MISTING_INEFFECTIVE')
+    const broken = (await WorkOrder.findOne().lean())!
+    await tech$.post(`/work-orders/${broken._id}/start`).expect(200)
+    await tech$.post(`/work-orders/${broken._id}/done`, { cause: 'WATER' }).expect(200)
+    await raise('SPEAKER_FAILURE')
+    await WorkOrder.updateMany({ alert_type: 'SPEAKER_FAILURE' }, { opened_at: ago(16), assigned_at: ago(16) })
+    jest.spyOn(Zone, 'findById').mockImplementation(() => { throw new Error('db down') })
+    ;(notifyUser as jest.Mock).mockClear()
+    const run = await verifyWorkOrders(later(1))
+    expect(run.escalated).toBe(1)
+    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ title: expect.stringContaining('chưa ai bắt đầu') }))
+  })
+
+  it('AUTH-FR-005: gỡ thợ khỏi farm hay bỏ gán khỏi nhà thì Work Order đang mở của thợ chuyển cho Farm Owner', async () => {
+    const { owner, farm, house, tech, tech2, raise, token } = await seed()
+    await raise('SPEAKER_FAILURE')
+    const wo = (await WorkOrder.findOne().lean())!
+    expect(wo.assignee_id).toEqual(tech.user._id)
+    ;(notifyUser as jest.Mock).mockClear()
+    await request(farmApp).delete(`/farms/houses/${house._id}/technicians/${tech.user._id}`).set('Authorization', `Bearer ${token}`).expect(200)
+    const released = (await WorkOrder.findById(wo._id).lean())!
+    expect(released.assignee_id).toBeUndefined()
+    expect(released.history.at(-1)!.note).toContain('AUTH-FR-005')
+    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ title: expect.stringContaining('chuyển cho bạn') }))
+
+    await WorkOrder.updateOne({ _id: wo._id }, { assignee_id: tech2.user._id })
+    await request(farmApp).delete(`/farms/${farm._id}/members/${tech2.user._id}`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect((await WorkOrder.findById(wo._id).lean())!.assignee_id).toBeUndefined()
   })
 })
 
