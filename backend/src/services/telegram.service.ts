@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { User } from '@/models/user.model'
-import { NotFoundError, ServiceUnavailableError } from '@/utils/appError.util'
+import { BadRequestError, NotFoundError, ServiceUnavailableError } from '@/utils/appError.util'
+import { criticalHasOutsideChannel } from '@/utils/notificationChannels.util'
 import logger from '@/utils/logger.util'
 
 /**
@@ -68,8 +69,16 @@ export async function createTelegramLink(userId: string): Promise<{ deep_link: s
   return { deep_link: `https://t.me/${botUsername()}?start=${code}`, expires_at: expiresAt }
 }
 
-/** Hủy liên kết bất cứ lúc nào — thôi nhận tin, xoá luôn mã liên kết còn treo */
+/**
+ * Hủy liên kết — thôi nhận tin, xoá luôn mã liên kết còn treo. Telegram là kênh ngoài ứng dụng duy nhất của CRITICAL
+ * (push đang tắt) thì không cho huỷ (ALERT-FR-005, 400): bật push cho CRITICAL trước.
+ */
 export async function unlinkTelegram(userId: string): Promise<void> {
+  const user = await User.findById(userId).select('notification_preferences telegram_chat_id').lean()
+  if (!user) throw NotFoundError('Không tìm thấy người dùng')
+  if (user.telegram_chat_id && !criticalHasOutsideChannel(user.notification_preferences, false)) {
+    throw BadRequestError('Bật push cho cảnh báo CRITICAL trước khi huỷ liên kết Telegram: CRITICAL phải còn ít nhất một kênh ngoài ứng dụng')
+  }
   await User.updateOne(
     { _id: userId },
     { $unset: { telegram_chat_id: 1, telegram_link_code_hash: 1, telegram_link_expires_at: 1 } },

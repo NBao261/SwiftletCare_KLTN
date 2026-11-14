@@ -58,8 +58,9 @@ const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
 router.put('/notification-preferences', authenticate,
   body('push').optional().isBoolean({ strict: true }),
   body('telegram').optional().isBoolean({ strict: true }),
-  body('quiet_hours.start').optional().isString().matches(HHMM),
-  body('quiet_hours.end').optional().isString().matches(HHMM),
+  // Chuỗi rỗng = tắt giờ im lặng (web gửi khi người dùng xoá hai ô giờ; isWithinQuietHours coi rỗng là không có)
+  body(['quiet_hours.start', 'quiet_hours.end']).optional().isString()
+    .custom((v: string) => v === '' || HHMM.test(v)).withMessage('Giờ dạng HH:mm, hoặc rỗng để tắt giờ im lặng'),
   body('by_severity').optional().isObject(),
   // null = bỏ ghi đè của mức đó
   body(['by_severity.CRITICAL', 'by_severity.HIGH', 'by_severity.MEDIUM', 'by_severity.LOW'])

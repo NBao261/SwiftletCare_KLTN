@@ -3,7 +3,8 @@ import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { User, IUser } from '@/models/user.model'
 import { logAction } from '@/services/auditLog.service'
-import { channelEnabled, notifyAdmins } from '@/services/notification.service'
+import { notifyAdmins } from '@/services/notification.service'
+import { criticalHasOutsideChannel } from '@/utils/notificationChannels.util'
 import type { AlertSeverity, ChannelChoice, JwtAccessPayload, NotificationPreferences } from '@/types'
 import { AppError, BadRequestError, UnauthorizedError } from '@/utils/appError.util'
 
@@ -210,7 +211,7 @@ export interface NotificationPreferencesInput {
 
 /**
  * ALERT-FR-005/006 — mỗi người tự chọn kênh nhận thông báo (chung, và theo mức cảnh báo) và giờ im lặng.
- * Cảnh báo CRITICAL phải còn ít nhất 1 kênh ngoài ứng dụng (push hoặc Telegram), không thì 400.
+ * Cảnh báo CRITICAL phải còn ít nhất 1 kênh ngoài ứng dụng (push, hoặc Telegram đã liên kết), không thì 400.
  */
 export async function updateNotificationPreferences(userId: string, input: NotificationPreferencesInput): Promise<IUser> {
   const user = await User.findById(userId)
@@ -230,8 +231,8 @@ export async function updateNotificationPreferences(userId: string, input: Notif
     quiet_hours: { ...current.quiet_hours, ...input.quiet_hours },
     by_severity: bySeverity,
   }
-  if (!channelEnabled(next, 'CRITICAL', 'push') && !channelEnabled(next, 'CRITICAL', 'telegram')) {
-    throw BadRequestError('Cảnh báo CRITICAL phải còn ít nhất một kênh ngoài ứng dụng (push hoặc Telegram)')
+  if (!criticalHasOutsideChannel(next, !!user.telegram_chat_id)) {
+    throw BadRequestError('Cảnh báo CRITICAL phải còn ít nhất một kênh ngoài ứng dụng (push, hoặc Telegram đã liên kết)')
   }
   user.notification_preferences = next
   await user.save()
