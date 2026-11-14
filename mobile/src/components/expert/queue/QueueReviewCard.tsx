@@ -76,7 +76,13 @@ export function QueueReviewCard({
   const houseName = zone?.house_id ? houseById.get(zone.house_id)?.name : undefined
   const locationLabel = [houseName, zoneName].filter(Boolean).join(' › ')
 
-  const diffKeys = Object.keys(item.new_values || {})
+  // Chỉ giữ tham số thực sự đổi: chủ nhà có thể gửi cả nhóm nhưng phần lớn giá trị giữ nguyên,
+  // liệt kê "26 → 26" gây rối cho chuyên gia (user, 2026-11-14)
+  const allKeys = Object.keys(item.new_values || {})
+  const changedKeys = allKeys.filter(
+    key => String(item.old_values?.[key] ?? '') !== String(item.new_values?.[key] ?? ''),
+  )
+  const hasNoChange = allKeys.length > 0 && changedKeys.length === 0
 
   const handleAcceptPress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
@@ -134,12 +140,12 @@ export function QueueReviewCard({
 
       {/* Hộp Diff đối chiếu trực quan Giá trị cũ ➔ Giá trị mới */}
       <View style={[styles.diffBox, { backgroundColor: palette.surfaceStrong }]}>
-        {diffKeys.length === 0 ? (
+        {allKeys.length === 0 || hasNoChange ? (
           <Text variant="small" color={palette.textSecondary}>
-            {t('Không có chi tiết sai lệch')}
+            {hasNoChange ? t('Không có thay đổi so với giá trị hiện tại') : t('Không có chi tiết sai lệch')}
           </Text>
         ) : (
-          diffKeys.map((key, idx) => {
+          changedKeys.map((key, idx) => {
             const oldVal = item.old_values?.[key] ?? '--'
             const newVal = item.new_values?.[key] ?? '--'
             const label = PARAM_LABELS[key] || key
@@ -149,7 +155,7 @@ export function QueueReviewCard({
                 key={key}
                 style={[
                   styles.diffRow,
-                  idx < diffKeys.length - 1 && {
+                  idx < changedKeys.length - 1 && {
                     borderBottomWidth: BorderWidth.hairline,
                     borderBottomColor: palette.divider,
                   },
@@ -174,66 +180,62 @@ export function QueueReviewCard({
         )}
       </View>
 
-      {/* Cụm 3 nút hành động thuận tay cái: Nút phụ bên trái, nút chính [Chấp thuận] bên phải */}
+      {/* Cụm hành động 2 tầng: hàng chính + link huỷ riêng để tách biệt rõ ràng (user, 2026-11-14) */}
       <View style={styles.actionsContainer}>
-        {/* Nút 1 (Phụ bên trái): Hoàn nguyên */}
+        {/* Hàng 1: Chỉnh thêm (secondary) + Chấp thuận (primary) — tap target đủ rộng, không nhầm */}
+        <View style={styles.primaryRow}>
+          <PressableScale
+            onPress={handleAdjustPress}
+            disabled={isSubmitting}
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor: palette.surfaceStrong,
+                opacity: isSubmitting ? 0.6 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t('Chỉnh thêm trên tab tham số')}
+          >
+            <SlidersHorizontal size={15} color={palette.text} />
+            <Text variant="small" weight="semiBold" color={palette.text}>
+              {t('Chỉnh thêm')}
+            </Text>
+          </PressableScale>
+
+          <PressableScale
+            onPress={handleAcceptPress}
+            disabled={isSubmitting}
+            style={[
+              styles.actionButton,
+              styles.acceptButton,
+              {
+                backgroundColor: palette.primary,
+                opacity: isSubmitting ? 0.6 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t('Chấp thuận thay đổi này')}
+          >
+            <CheckCircle size={16} weight="bold" color={palette.onPrimary} />
+            <Text variant="small" weight="semiBold" color={palette.onPrimary}>
+              {t('Chấp thuận')}
+            </Text>
+          </PressableScale>
+        </View>
+
+        {/* Hàng 2: Hoàn nguyên — hành động huỷ/phá tách biệt hẳn, link nhỏ, giảm nguy cơ bấm nhầm */}
         <PressableScale
           onPress={() => setIsConfirmRevertOpen(true)}
           disabled={isSubmitting}
-          style={[
-            styles.actionButton,
-            {
-              backgroundColor: palette.surfaceStrong,
-              opacity: isSubmitting ? 0.6 : 1,
-            },
-          ]}
+          hitSlop={8}
+          style={[styles.revertLink, { opacity: isSubmitting ? 0.5 : 1 }]}
           accessibilityRole="button"
           accessibilityLabel={t('Hoàn nguyên giá trị cũ')}
         >
-          <ArrowCounterClockwise size={15} color={palette.deviceError} />
-          <Text variant="small" weight="semiBold" color={palette.deviceError}>
-            {t('Hoàn nguyên')}
-          </Text>
-        </PressableScale>
-
-        {/* Nút 2 (Phụ bên trái): Chỉnh thêm */}
-        <PressableScale
-          onPress={handleAdjustPress}
-          disabled={isSubmitting}
-          style={[
-            styles.actionButton,
-            {
-              backgroundColor: palette.surfaceStrong,
-              opacity: isSubmitting ? 0.6 : 1,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={t('Chỉnh thêm trên tab tham số')}
-        >
-          <SlidersHorizontal size={15} color={palette.text} />
-          <Text variant="small" weight="semiBold" color={palette.text}>
-            {t('Chỉnh thêm')}
-          </Text>
-        </PressableScale>
-
-        {/* Nút 3 (Chính bên phải - thuận tay cái): Chấp thuận */}
-        <PressableScale
-          onPress={handleAcceptPress}
-          disabled={isSubmitting}
-          style={[
-            styles.actionButton,
-            styles.primaryButton,
-            {
-              backgroundColor: palette.primary,
-              opacity: isSubmitting ? 0.6 : 1,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={t('Chấp thuận thay đổi này')}
-        >
-          <CheckCircle size={16} weight="bold" color={palette.onPrimary} />
-          <Text variant="small" weight="semiBold" color={palette.onPrimary}>
-            {t('Chấp thuận')}
+          <ArrowCounterClockwise size={13} color={palette.deviceError} />
+          <Text variant="label" color={palette.deviceError}>
+            {t('Hoàn nguyên về giá trị trước')}
           </Text>
         </PressableScale>
       </View>
@@ -319,7 +321,10 @@ const styles = StyleSheet.create({
   diffValues: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: Spacing.xs,
+    // Cố định bề rộng cột giá trị để mũi tên cũ→mới thẳng hàng giữa các dòng
+    minWidth: 104,
   },
   oldVal: {
     textDecorationLine: 'line-through',
@@ -329,9 +334,14 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   actionsContainer: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
+    flexDirection: 'column',
+    gap: Spacing.sm,
     marginTop: Spacing.md,
+  },
+  // Hàng chính: 2 nút chia đều chiều ngang, tap target đủ rộng (user, 2026-11-14)
+  primaryRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
   },
   actionButton: {
     flex: 1,
@@ -342,8 +352,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  primaryButton: {
-    flex: 1.25,
+  // Nút chấp thuận rộng hơn nút phụ để nhấn mạnh hành động chính
+  acceptButton: {
+    flex: 1.5,
+  },
+  // Link huỷ nhỏ căn giữa — tách biệt hẳn để không nhầm với hành động chính
+  revertLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
   },
   sheetHeaderRow: {
     flexDirection: 'row',

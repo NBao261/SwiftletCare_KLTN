@@ -335,7 +335,7 @@ export default function TuningScreen() {
                     {t('Trong dải chuẩn')}
                   </Text>
                   <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                    {kpiInRangePct != null ? `${kpiInRangePct.toFixed(1)}%` : '_'}
+                    {kpiInRangePct != null ? `${kpiInRangePct.toFixed(1)}%` : '—'}
                   </Text>
                   <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                     {kpiInRangePct == null

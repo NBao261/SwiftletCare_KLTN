@@ -32,7 +32,8 @@ describe('roleTabs', () => {
 
     const verdictsTab = tabs.find(t => t.name === 'verdicts')
     expect(verdictsTab?.showsAlertBadge).toBe(true)
-    expect(verdictsTab?.isFeatured).toBe(true)
+    // 4 tab đều nhau, không nút nổi: highlight chạy theo tab đang chọn (user, 2026-11-14)
+    expect(tabs.some(tab => tab.isFeatured)).toBe(false)
   })
 
   it('role nào dùng mobile cũng có tab Tài khoản để đăng xuất', () => {

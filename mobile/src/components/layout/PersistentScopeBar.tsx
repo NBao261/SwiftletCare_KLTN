@@ -283,9 +283,12 @@ export function PersistentScopeBar({
 
         {/* Chip chọn khoảng thời gian (đồng bộ kiểu AlertFilterChips của Farmer) */}
         {showDateRange && (
-          <Pressable
-            hitSlop={8}
-            onPress={() => setDateRangeSheetVisible(true)}
+          <>
+            {/* Vách ngăn mảnh tách nhóm Tầng (chọn phạm vi) và nhóm Thời gian cho đỡ dồn 1 dải */}
+            <View style={[styles.groupDivider, { backgroundColor: palette.divider }]} />
+            <Pressable
+              hitSlop={8}
+              onPress={() => setDateRangeSheetVisible(true)}
             style={[
               styles.chip,
               {
@@ -315,7 +318,8 @@ export function PersistentScopeBar({
               color={dateRange !== '24h' ? palette.onInverse : palette.text}
               weight="bold"
             />
-          </Pressable>
+            </Pressable>
+          </>
         )}
       </ScrollView>
 
@@ -444,6 +448,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     paddingVertical: Spacing.xs,
+  },
+  // Vách ngăn dọc mảnh giữa nhóm chip Tầng và chip Thời gian
+  groupDivider: {
+    width: BorderWidth.hairline,
+    height: 20,
+    marginHorizontal: Spacing.xs,
   },
   sheetHeader: {
     gap: 2,

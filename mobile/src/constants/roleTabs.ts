@@ -46,10 +46,11 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
-  // Tab nghiệp vụ Chuyên gia (Domain Expert) — Thẩm định là tab trung tâm nổi bật (isFeatured: true)
+  // Tab nghiệp vụ Chuyên gia (Domain Expert) — 4 tab đều nhau, không dùng nút nổi: với 4 tab nút nổi
+  // rơi vào vị trí thứ 2 (lệch trái) và khối lime đứng yên lấn át chỉ báo tab đang chọn (user, 2026-11-14)
   DOMAIN_EXPERT: [
     { name: 'queue', title: 'Hàng đợi', icon: TrayIcon },
-    { name: 'verdicts', title: 'Thẩm định', icon: ShieldCheckIcon, showsAlertBadge: true, isFeatured: true },
+    { name: 'verdicts', title: 'Thẩm định', icon: ShieldCheckIcon, showsAlertBadge: true },
     { name: 'tuning', title: 'Tham số', icon: SlidersHorizontalIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],

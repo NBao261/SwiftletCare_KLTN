@@ -42,10 +42,11 @@ export function QueueReportCard({ report, onSetConclusion, isSubmitting = false 
     kind: KIND_LABEL[report.kind],
     house: report.house_name,
   })
-  const period = t('Kỳ {start} → {end}', {
-    start: report.period_start,
-    end: report.period_end,
-  })
+  // Báo cáo ngày (hoặc kỳ gói gọn trong 1 ngày) chỉ hiện 1 mốc, không lặp "x → x"
+  const period =
+    report.period_start === report.period_end
+      ? t('Kỳ {date}', { date: report.period_start })
+      : t('Kỳ {start} → {end}', { start: report.period_start, end: report.period_end })
 
   const handlePublish = async () => {
     if (!conclusionText.trim()) {
@@ -83,12 +84,12 @@ export function QueueReportCard({ report, onSetConclusion, isSubmitting = false 
         <PressableScale
           onPress={() => setIsSheetOpen(true)}
           disabled={isSubmitting}
-          style={[styles.writeBtn, { backgroundColor: palette.primary, opacity: isSubmitting ? 0.6 : 1 }]}
+          style={[styles.writeBtn, { backgroundColor: palette.surfaceStrong, opacity: isSubmitting ? 0.6 : 1 }]}
           accessibilityRole="button"
           accessibilityLabel={t('Viết kết luận và khuyến nghị')}
         >
-          <NotePencil size={16} weight="bold" color={palette.onPrimary} />
-          <Text variant="small" weight="semiBold" color={palette.onPrimary}>
+          <NotePencil size={16} weight="bold" color={palette.text} />
+          <Text variant="small" weight="semiBold" color={palette.text}>
             {t('Viết kết luận →')}
           </Text>
         </PressableScale>
