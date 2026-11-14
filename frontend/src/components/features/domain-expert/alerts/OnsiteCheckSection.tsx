@@ -14,9 +14,9 @@ export default function OnsiteCheckSection({ checks }: Props) {
   if (checks.length === 0) return null
 
   return (
-    <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-3.5 space-y-2.5">
+    <div className="rounded-2xl border border-infoBlue/20 bg-infoBlue/5 p-3.5 space-y-2.5">
       <div className="flex items-center gap-2">
-        <ClipboardList className="w-4 h-4 text-blue-600 shrink-0" />
+        <ClipboardList className="w-4 h-4 text-infoBlue shrink-0" />
         <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
           Kiểm tra tại chỗ của Kỹ thuật viên (EXPERT-FR-021)
         </h4>
@@ -27,17 +27,17 @@ export default function OnsiteCheckSection({ checks }: Props) {
         const isPending = check.observation === null
 
         return (
-          <div key={idx} className="bg-white rounded-xl border border-blue-100 p-3 text-sm space-y-2">
+          <div key={idx} className="bg-white rounded-xl border border-infoBlue/10 p-3 text-sm space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
                 {isPending ? (
-                  <Hourglass className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <Hourglass className="w-3.5 h-3.5 text-statusYellow shrink-0" />
                 ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
                 )}
                 <span className="font-semibold text-charcoal">{techName}</span>
                 {isPending && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase">
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-statusYellow/15 text-charcoal border border-statusYellow/40 uppercase">
                     Chờ phản hồi
                   </span>
                 )}
@@ -55,10 +55,10 @@ export default function OnsiteCheckSection({ checks }: Props) {
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
                       check.observation === 'NOTHING_UNUSUAL'
-                        ? 'bg-green-50 text-green-700 border-green-200'
+                        ? 'bg-success/10 text-success border-success/20'
                         : check.observation === 'SENSOR_DIRTY_OR_FAULTY'
                           ? 'bg-alertRed/5 text-alertRed border-alertRed/20'
-                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                          : 'bg-statusYellow/10 text-charcoal border-statusYellow/30'
                     }`}
                   >
                     {OBSERVATION_LABELS[check.observation!]}
@@ -87,7 +87,7 @@ export default function OnsiteCheckSection({ checks }: Props) {
                 {check.answered_at && (
                   <p className="text-xs text-warmGray">
                     Trả lời lúc {formatDate(check.answered_at)}
-                    {check.answered_by?.full_name && check.answered_by.full_name !== techName
+                    {check.answered_by?.full_name && check.answered_by._id !== check.technician_id?._id
                       ? ` bởi ${check.answered_by.full_name}`
                       : ''}
                   </p>
