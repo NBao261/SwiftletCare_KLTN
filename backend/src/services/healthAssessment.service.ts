@@ -1,13 +1,13 @@
 import { Types } from 'mongoose'
 import { baselineAfter, stageOn } from '@/utils/houseStage.util'
 import { Alert, type IAlert } from '@/models/alert.model'
-import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { HouseHealthDay, type HealthIndicators, type IDayWeather, type IHouseHealthDay } from '@/models/houseHealthDay.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import { BASELINE_DAYS, MIN_BASELINE_DAYS, houseDailyCounts, vnDate, type HouseDayCounts } from '@/services/birdCount.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
+import { overlaps, sessionWindows, type Interval } from '@/services/sessionRain.service'
 import { listActiveHouseIds, listActiveHouseTechnicianIds } from '@/utils/farmAccess.util'
 import { resolveBirdCountTuning, resolveHealthLevels } from '@/utils/detectionTuning.util'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
@@ -31,7 +31,6 @@ export const RATING_WINDOW_DAYS = 7
 
 const DAY_MS = 86_400_000
 const HOUR_MS = 3_600_000
-const BUCKET_MS = 5 * 60_000
 const SOURCES: HealthSource[] = ['environment', 'air', 'flock', 'noise']
 /** 1 lý do có cấu trúc (client tự dịch); mức NORMAL không ghi vào lý do */
 const reason = (
@@ -44,8 +43,6 @@ export const vnDayStart = (date: string) => new Date(`${date}T00:00:00+07:00`)
 export const addDays = (date: string, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)
 
-interface Interval { start: number; end: number }
-const overlaps = (a: Interval, b: Interval) => a.start < b.end && b.start < a.end
 
 // ── Môi trường + không khí + độ đủ tiếng ồn (telemetry) ───────────────────────────────────────────
 
@@ -124,27 +121,13 @@ const fromLevel = (v: number, slight: number, clear: number): HealthLevel => (v 
  * VISION-FR-020 — ngày đủ cả 2 phiên đếm. G-12 (Bảo) bổ sung: phiên không đầy đủ khi có
  * `EDGE_AI_DEGRADED` của nhà mở trong khung phiên.
  */
-export function isFlockDayComplete(day: HouseDayCounts | undefined): boolean {
+export function isFlockDayComplete(
+  day: Pick<HouseDayCounts, 'has_morning' | 'has_evening' | 'return_rate'> | undefined,
+): boolean {
   return !!day && day.has_morning && day.has_evening && day.return_rate !== null
 }
 
 // ── Mưa (BR-30) ───────────────────────────────────────────────────────────────────────────────────
-
-/**
- * Khung 2 phiên đếm của ngày lấy từ khoảng 5 phút có số đếm (sáng trước 12:00, chiều sau 12:00 giờ VN).
- * G-12 thay bằng `window_start`/`window_end` của phiên.
- */
-async function sessionWindows(houseId: string, start: Date): Promise<Interval[]> {
-  const noon = start.getTime() + 12 * HOUR_MS
-  const buckets = await BirdCountBucket.find({ house_id: houseId, bucket_start: { $gte: start, $lt: new Date(start.getTime() + DAY_MS) } })
-    .select('bucket_start').lean()
-  const windows: Interval[] = []
-  for (const [lo, hi] of [[start.getTime(), noon], [noon, start.getTime() + DAY_MS]]) {
-    const times = buckets.map(b => b.bucket_start.getTime()).filter(t => t >= lo && t < hi)
-    if (times.length) windows.push({ start: Math.min(...times), end: Math.max(...times) + BUCKET_MS })
-  }
-  return windows
-}
 
 interface DayWeather { summary: IDayWeather | null; rainHours: Interval[] }
 

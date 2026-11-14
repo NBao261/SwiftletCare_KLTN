@@ -1,5 +1,29 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import type { AlertType, AlertSeverity, AlertStatus, AlertVerdictResult, FarmMemberRole } from '@/types'
+import { SITE_CAUSES, type SiteCause } from '@/models/workOrder.model'
+
+/**
+ * Cảnh báo còn mở (chưa RESOLVED) — gồm cả `DISMISSED` (SM-01). Đặt ở model để workOrder.service dùng chung mà
+ * không import alert.service (alert.service import workOrder.service).
+ */
+export const OPEN_ALERT_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED']
+
+/** EXPERT-FR-021 — điều thợ quan sát được tại chỗ */
+export const ONSITE_OBSERVATIONS = [
+  'BIRDS_DISTURBED', 'WORK_OR_PEOPLE_NEARBY', 'RAIN', 'SENSOR_DIRTY_OR_FAULTY', 'NOTHING_UNUSUAL', 'OTHER',
+] as const
+export type OnsiteObservation = typeof ONSITE_OBSERVATIONS[number]
+
+export interface OnsiteCheck {
+  technician_id: Types.ObjectId
+  requested_at: Date
+  observation?: OnsiteObservation
+  note?: string
+  /** Khoá object trên MinIO */
+  photo?: string
+  answered_by?: Types.ObjectId
+  answered_at?: Date
+}
 
 /** Alert document – SRS §8.2, ALERT-FR-001 */
 export interface IAlert extends Document {
@@ -42,6 +66,17 @@ export interface IAlert extends Document {
    * hoặc Farm Owner khi farm chưa có chuyên gia (BR-22); kết luận cũ trước G-03 không có `role`
    */
   expert_verdict?: { result: AlertVerdictResult; note?: string; by: Types.ObjectId; role?: FarmMemberRole; at: Date }
+  /**
+   * ALERT-FR-017 — người nhận lúc tạo: thợ đang trực của nhà, và Farm Owner đã được báo chưa (CRITICAL, hoặc nhà
+   * không có thợ). Không có = cảnh báo trước G-21, gửi lại cho Farm Owner như cũ.
+   */
+  routing?: { technician_id?: Types.ObjectId; owners_notified: boolean }
+  /** BR-40 — lúc báo Farm Owner vì thợ chưa xác nhận sau escalation_min; có rồi thì không báo nữa */
+  escalated_at?: Date
+  /** ALERT-FR-018 — nguyên nhân tìm thấy tại chỗ (khi xác nhận hoặc khi Work Order làm xong) */
+  site_cause?: { cause: SiteCause; photos: string[]; by: Types.ObjectId; at: Date }
+  /** EXPERT-FR-021 — yêu cầu kiểm tra tại chỗ của cảnh báo suy luận, kèm câu trả lời của thợ */
+  onsite_checks: OnsiteCheck[]
 }
 
 const alertSchema = new Schema<IAlert>(
@@ -87,6 +122,33 @@ const alertSchema = new Schema<IAlert>(
         _id: false,
       },
     },
+    routing: {
+      type: {
+        technician_id:   { type: Schema.Types.ObjectId, ref: 'User' },
+        owners_notified: { type: Boolean, required: true },
+        _id: false,
+      },
+    },
+    escalated_at: { type: Date },
+    site_cause: {
+      type: {
+        cause:  { type: String, enum: SITE_CAUSES, required: true },
+        photos: { type: [String], default: [] },
+        by:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        at:     { type: Date, required: true },
+        _id: false,
+      },
+    },
+    onsite_checks: [{
+      technician_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      requested_at:  { type: Date, required: true },
+      observation:   { type: String, enum: ONSITE_OBSERVATIONS },
+      note:          { type: String },
+      photo:         { type: String },
+      answered_by:   { type: Schema.Types.ObjectId, ref: 'User' },
+      answered_at:   { type: Date },
+      _id: false,
+    }],
   },
   { versionKey: false }
 )
@@ -99,5 +161,7 @@ alertSchema.index({ house_id: 1, type: 1, status: 1 }, { partialFilterExpression
 // Report 4 §7.2, NFR-06 c — 1 sự kiện của thiết bị không tạo 2 cảnh báo khi QoS 1 giao lại
 alertSchema.index({ node_id: 1, event_id: 1 }, { unique: true, partialFilterExpression: { event_id: { $type: 'string' } } })
 alertSchema.index({ resolved_at: 1 }, { expireAfterSeconds: 180 * 24 * 60 * 60 })
+// BR-40 — job leo thang tìm cảnh báo còn ACTIVE mà Farm Owner chưa được báo
+alertSchema.index({ status: 1, 'routing.owners_notified': 1, created_at: 1 }, { partialFilterExpression: { 'routing.owners_notified': false } })
 
 export const Alert = model<IAlert>('Alert', alertSchema)

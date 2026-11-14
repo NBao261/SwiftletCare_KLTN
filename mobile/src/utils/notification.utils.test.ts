@@ -135,4 +135,20 @@ describe('getPushTarget', () => {
     expect(getPushTarget({ kind: 'alert' })).toEqual({ kind: 'bell' })
     expect(getPushTarget(null)).toEqual({ kind: 'bell' })
   })
+
+  it('push và thông báo ngày đánh giá mở đúng ngày của nhà (MF-06)', () => {
+    expect(getPushTarget({ kind: 'health_day', id: 'day-1' })).toEqual({ kind: 'healthDay', dayId: 'day-1' })
+    expect(getNotificationTarget(buildNotification('f', { ref: { kind: 'health_day', id: 'day-1' } }))).toEqual({
+      kind: 'healthDay',
+      dayId: 'day-1',
+    })
+  })
+
+  it('push và thông báo Work Order mở chi tiết Work Order (G-21)', () => {
+    expect(getPushTarget({ kind: 'work_order', id: 'wo-1' })).toEqual({ kind: 'workOrder', workOrderId: 'wo-1' })
+    expect(getNotificationTarget(buildNotification('e', { ref: { kind: 'work_order', id: 'wo-1' } }))).toEqual({
+      kind: 'workOrder',
+      workOrderId: 'wo-1',
+    })
+  })
 })

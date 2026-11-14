@@ -6,6 +6,7 @@ import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { emitBirdCountUpdate } from '@/socket'
 import { createAlert, resolveHouseAlerts } from '@/services/alert.service'
+import { sessionRainfall } from '@/services/sessionRain.service'
 import { assertHouseAccessByParams } from '@/utils/farmAccess.util'
 import { resolveBirdCountTuning } from '@/utils/detectionTuning.util'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
@@ -254,12 +255,19 @@ async function checkHouseReturnRate(houseId: string, sessionDate: string, from: 
     return false
   }
 
+  // VISION-FR-011 — ghi lượng mưa của các phiên đếm trong ngày (mưa làm chim về muộn, BR-30) hoặc ghi rõ không có
+  // dữ liệu thời tiết; chỉ để người xem cân nhắc, không đổi quyết định báo
+  const rain = await sessionRainfall(houseId, house.farm_id, sessionDate)
+  const rainMm = rain?.mm ?? null
+  const rainText = rain === null
+    ? 'không có dữ liệu thời tiết'
+    : rain.scope === 'SESSIONS' ? `mưa trong phiên đếm ${rain.mm} mm` : `mưa cả ngày ${rain.mm} mm (chưa biết khung phiên đếm)`
   const alert = await createAlert({
     farmId: String(house.farm_id), houseId,
     type: 'LOW_RETURN_RATE',
     title: `Tỷ lệ chim về giảm tại ${house.name}`,
-    message: `Tỷ lệ chim về ${rate.toFixed(1)}%, giảm ${dropPct.toFixed(1)}% so với trung bình ${previous.length} ngày trước (${avg.toFixed(1)}%)`,
-    metadata: { sessionDate, returnRate: rate, avg: +avg.toFixed(2), dropPct: +dropPct.toFixed(1), limit },
+    message: `Tỷ lệ chim về ${rate.toFixed(1)}%, giảm ${dropPct.toFixed(1)}% so với trung bình ${previous.length} ngày trước (${avg.toFixed(1)}%); ${rainText}`,
+    metadata: { sessionDate, returnRate: rate, avg: +avg.toFixed(2), dropPct: +dropPct.toFixed(1), limit, rainMm },
   })
   return alert !== null
 }

@@ -18,8 +18,11 @@ export const RELAY_SERVICE_LIMITS: Record<UsageRelay, { hours: number; switches:
   ventilation: { hours: 2000, switches: 100_000 },
 }
 
-/** Khoảng giữa 2 mẫu lớn hơn thế này = mất kết nối, không biết relay có chạy không → không tính. */
-const MAX_GAP_MS = 30_000
+/**
+ * Report 3 §4.5 — 2 mẫu telemetry cách nhau quá chừng này là mất kết nối, không biết relay có chạy không → không tính.
+ * Dùng chung cho giờ chạy (ALERT-FR-016) và điện năng (BR-45, energy.service).
+ */
+export const MAX_GAP_MS = 30_000
 /** Lần đầu (chưa có counted_until) chỉ đếm 7 ngày gần nhất — telemetry giữ 90 ngày, đếm hết quá nặng */
 const FIRST_RUN_LOOKBACK_MS = 7 * 86400_000
 /** Mỗi lần chạy tối đa bấy nhiêu mẫu/thiết bị — còn thì lần sau (mỗi giờ) đếm tiếp */

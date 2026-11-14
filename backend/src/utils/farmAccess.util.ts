@@ -2,6 +2,7 @@ import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
+import { technicianOnDuty } from '@/utils/roster.util'
 import type { CurrentUser } from '@/types'
 
 type FarmScope = Pick<IFarm, 'owner_id' | 'members'>
@@ -208,6 +209,38 @@ export async function listAssignedHouseIds(user: CurrentUser) {
 }
 
 /**
+ * AUTH-FR-013 — thợ được giao nhà mà còn là Farm Technician của farm và còn hoạt động: bị gỡ khỏi farm hay bị
+ * khoá thì không nhận cảnh báo, Work Order hay yêu cầu kiểm tra nữa dù lần gán còn sót.
+ */
+export async function activeHouseTechnicianIds(
+  house: Pick<IHouse, 'technicians'>, farm: Pick<IFarm, 'members'>,
+): Promise<string[]> {
+  const members = new Set(farm.members.filter(m => m.role === 'FARM_TECHNICIAN').map(m => String(m.user_id)))
+  const assigned = (house.technicians ?? []).map(t => String(t.user_id)).filter(id => members.has(id))
+  if (assigned.length === 0) return []
+  const active = await User.find({ _id: { $in: assigned }, role: 'FARM_TECHNICIAN', is_active: true }).select('_id').lean()
+  return active.map(u => String(u._id))
+}
+
+/**
+ * ALERT-FR-017, AUTH-FR-014 — thợ đang trực của nhà lúc `at`, chỉ tính thợ còn hiệu lực
+ * (activeHouseTechnicianIds); ngoài ca trực mà nhà không có thợ chính còn hiệu lực (chưa đặt, hoặc thợ chính bị
+ * khoá, bị gỡ) thì là thợ hợp lệ được giao sớm nhất — nhà có thợ thì cảnh báo luôn tới thợ. null = nhà không có thợ,
+ * Farm Owner xử lý.
+ */
+export async function activeTechnicianOnDuty(
+  house: Pick<IHouse, 'technicians' | 'roster'>, farm: Pick<IFarm, 'members'>, at: Date = new Date(),
+): Promise<string | null> {
+  const valid = new Set(await activeHouseTechnicianIds(house, farm))
+  if (valid.size === 0) return null
+  const technicians = (house.technicians ?? []).filter(t => valid.has(String(t.user_id)))
+  return technicianOnDuty({
+    technicians,
+    roster: (house.roster ?? []).filter(s => valid.has(String(s.technician_id))),
+  }, at) ?? (technicians[0] ? String(technicians[0].user_id) : null)
+}
+
+/**
  * Nhà của 1 farm mà người gọi được xem khi lọc theo `farmId`: cả farm với Farm Owner và Domain Expert,
  * chỉ các nhà được giao với Farm Technician (AUTH-FR-013); người khác 403.
  */
@@ -223,13 +256,10 @@ export async function listFarmHouseIds(farmId: string, user: CurrentUser) {
  * của nhà, như thông báo "ngày đã sẵn sàng" (BR-31). Gỡ khỏi farm hay bị khoá thì không còn nhận.
  */
 export async function listActiveHouseTechnicianIds(houseId: unknown): Promise<string[]> {
-  const house = await House.findById(houseId).select('farm_id technicians').lean()
+  const house = await House.findById(houseId).select('farm_id technicians')
   if (!house || (house.technicians ?? []).length === 0) return []
-  const farm = await Farm.findById(house.farm_id).select('members').lean()
-  const farmTechnicians = new Set((farm?.members ?? []).filter(m => m.role === 'FARM_TECHNICIAN').map(m => String(m.user_id)))
-  const ids = house.technicians.map(t => String(t.user_id)).filter(id => farmTechnicians.has(id))
-  if (ids.length === 0) return []
-  return (await User.find({ _id: { $in: ids }, is_active: true }).distinct('_id')).map(String)
+  const farm = await Farm.findById(house.farm_id).select('members')
+  return farm ? activeHouseTechnicianIds(house, farm) : []
 }
 
 /** Mọi House thuộc Farm chưa xoá mềm — cùng phạm vi với listActiveZoneIds cho màn hình Admin */

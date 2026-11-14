@@ -42,6 +42,8 @@ router.get('/bird-count/current', ...birdScope, validate, analyticsController.bi
 router.get('/bird-count/buckets',
   ...birdScope, ...dateRange, validate,
   analyticsController.birdCountBuckets)
+// ANALYTICS-FR-017, BR-45 — điện năng ước tính của bơm và quạt của 1 nhà theo tháng
+router.get('/energy', query('houseId').isString().bail().isMongoId(), ...dateRange, validate, analyticsController.energy)
 // Môi trường đo theo Zone, tỷ lệ chim về lấy của nhà yến chứa Zone
 router.get('/correlation',       query('zoneId').isMongoId(), validate, analyticsController.envBirdCorrelation)
 

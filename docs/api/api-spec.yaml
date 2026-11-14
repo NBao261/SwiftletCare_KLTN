@@ -77,7 +77,9 @@ tags:
   - name: Telemetry
     description: "ENV-FR-001..005 — Farm Owner, Domain Expert của farm; Farm Technician chỉ ở nhà được giao (AUTH-FR-004, 013); Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
   - name: Alerts
-    description: ALERT-FR-001/002/006/007/008/009/014, EXPERT-FR-003 (Alert Engine — dedup, quiet hours, danh sách, xác nhận, kiểm chứng và bằng chứng của cảnh báo suy luận)
+    description: "ALERT-FR-001/002/005/006/007/008/009/014/017/018, EXPERT-FR-003/021 (Alert Engine — dedup, định tuyến tới thợ đang trực và leo thang lên Farm Owner, quiet hours, danh sách, xác nhận kèm nguyên nhân tại chỗ, kiểm chứng, bằng chứng và kiểm tra tại chỗ của cảnh báo suy luận)"
+  - name: WorkOrders
+    description: "OPS-FR-001..004, 009, ALERT-FR-018, BR-39..41 (Work Order sửa chữa: mở tự động theo cảnh báo hoặc Farm Owner mở tay, thợ của nhà thực hiện, hệ thống kiểm dữ liệu phục hồi, Farm Owner duyệt; MTTA, MTTR). Farm Owner mở, duyệt, mở lại, huỷ, giao lại; Farm Technician thực hiện ở nhà được giao; Domain Expert chỉ đọc; Administrator → 403 (Report 3 §2.4)"
   - name: ExpertActivity
     description: "EXPERT-FR-009 — lịch sử quyết định của Domain Expert trên một farm (và của Farm Owner khi farm chưa có chuyên gia, BR-22); chỉ Farm Owner và Domain Expert của farm"
   - name: Analytics
@@ -287,10 +289,15 @@ paths:
   /auth/notification-preferences:
     put:
       tags: [Auth]
-      summary: "Cấu hình kênh nhận thông báo + giờ im lặng (ALERT-FR-005/006/013)"
+      summary: "Cấu hình kênh nhận thông báo + giờ im lặng (ALERT-FR-005/006/013) — mọi role"
       description: |
         `telegram` chỉ có tác dụng khi tài khoản đã liên kết bot (`POST /auth/telegram/link`).
         Zalo/SMS nằm ngoài phạm vi (Report 3 §8): trường lạ gửi lên bị bỏ qua.
+
+        ALERT-FR-005 — kênh theo loại sự kiện: `by_severity` ghi đè `push`/`telegram` cho cảnh báo
+        mức đó; mức không ghi thì dùng `push`/`telegram` chung. Cảnh báo luôn có trong ứng dụng dù
+        tắt mọi kênh. Cấu hình làm cảnh báo CRITICAL không còn kênh ngoài ứng dụng nào (cả push lẫn
+        Telegram đều tắt) → 400. Gửi `by_severity.<mức>: null` để bỏ ghi đè của mức đó.
       requestBody:
         content:
           application/json:
@@ -299,6 +306,13 @@ paths:
               properties:
                 push: { type: boolean }
                 telegram: { type: boolean }
+                by_severity:
+                  type: object
+                  properties:
+                    CRITICAL: { $ref: "#/components/schemas/ChannelChoice" }
+                    HIGH: { $ref: "#/components/schemas/ChannelChoice" }
+                    MEDIUM: { $ref: "#/components/schemas/ChannelChoice" }
+                    LOW: { $ref: "#/components/schemas/ChannelChoice" }
                 quiet_hours:
                   type: object
                   properties:
@@ -328,7 +342,9 @@ paths:
                   },
               },
           }
+        "400": { description: "Cảnh báo CRITICAL không còn kênh ngoài ứng dụng nào (ALERT-FR-005)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /auth/telegram/link:
     post:
@@ -1328,6 +1344,87 @@ paths:
                   { schema: { $ref: "#/components/schemas/ApiError" } },
               },
           }
+
+  /farms/{id}/overview:
+    parameters: [{ $ref: "#/components/parameters/FarmId" }]
+    get:
+      tags: [Farms]
+      summary: "Tổng quan trại (ANALYTICS-FR-015) — FARM_OWNER, DOMAIN_EXPERT (đọc); thợ và Admin → 403"
+      description: |
+        Mỗi nhà (sắp theo tên): giai đoạn, trạng thái hôm nay (ngày giờ VN), số cảnh báo đang mở (`ACTIVE`,
+        `ACKNOWLEDGED`; cảnh báo bị bác bỏ không tính), số Work Order chưa đóng, tỷ lệ chim về gần nhất kèm ngày.
+        Nhà chưa có trạng thái hôm nay có `status: null` và `status_reason`: `NOT_COMPUTED` (chưa đánh giá
+        ngày) hoặc `INSUFFICIENT_DATA` (đã đánh giá nhưng không đủ dữ liệu). Tỷ lệ chim về gần nhất tìm trong 30
+        ngày gần nhất (Report 3 §4.5); không có ngày nào có tỷ lệ thì `null`. Nhà sắp theo tên tiếng Việt.
+        `simulated: true` khi mọi thiết bị của nhà đều là thiết bị giả lập (SYSTEM-FR-004).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          farm_id: { type: string }
+                          date: { type: string, example: "2026-11-14", description: "Ngày hôm nay giờ VN" }
+                          houses: { type: array, items: { $ref: "#/components/schemas/HouseOverview" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /farms/{id}/comparison:
+    parameters: [{ $ref: "#/components/parameters/FarmId" }]
+    get:
+      tags: [Farms]
+      summary: "So sánh các nhà của trại (ANALYTICS-FR-016, BR-44) — FARM_OWNER, DOMAIN_EXPERT (đọc); thợ và Admin → 403"
+      description: |
+        Một hàng mỗi nhà trong khoảng [from, to): thời gian trong ngưỡng (trung bình chỉ số môi trường BR-28),
+        % ngày `GOOD` trên số ngày đã đánh giá đủ dữ liệu, tỷ lệ chim về trung bình (ngày đủ 2 phiên), xu hướng đàn
+        (% đổi của trung bình chim ra buổi sáng so với kỳ liền trước cùng độ dài), số cảnh báo đã có trong kỳ (không
+        tính báo động giả) và đang mở, MTTR (BR-40), điện năng ước tính (BR-45; `null` = not available), sản lượng
+        chu kỳ gần nhất (`null` tới khi có chu kỳ thu hoạch, G-26). Sắp theo `sort`/`order`, ô trống luôn xuống cuối,
+        bằng nhau thì theo `house_id`. **Không có điểm tổng hay xếp hạng.** Khoảng được làm tròn ra trọn ngày giờ VN
+        (từ đầu ngày của `from` tới hết ngày trước `to`) để mọi cột cùng một khoảng; `days` là số ngày; tối đa 366
+        ngày (Report 3 §4.5), quá thì 400.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 30 ngày" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: name
+            enum: [name, time_in_range_pct, good_days_pct, return_rate_avg, flock_trend_pct, alerts_raised, alerts_open, mttr_min, energy_kwh, last_cycle_yield_g]
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          farm_id: { type: string }
+                          from: { type: string, format: date-time, description: "Đầu ngày giờ VN sau khi làm tròn" }
+                          to: { type: string, format: date-time, description: "Hết ngày giờ VN sau khi làm tròn (không gồm mốc này)" }
+                          days: { type: integer }
+                          sort: { type: string }
+                          order: { type: string, enum: [asc, desc] }
+                          rows: { type: array, items: { $ref: "#/components/schemas/HouseComparisonRow" } }
+        "400": { description: "from không trước to, hoặc khoảng quá 366 ngày" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /farms/{id}/houses:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
@@ -3231,6 +3328,7 @@ paths:
 
         Nguồn không có dữ liệu trong cửa sổ (VD nút AI offline) có `status: missing`, không trả 0.
         `earlier_verdicts`: tối đa 10 cảnh báo trước cùng loại, cùng zone/nhà, đã có kết luận.
+        `onsite_checks`: yêu cầu kiểm tra tại chỗ và quan sát của Farm Technician (EXPERT-FR-021).
         Loại không phải suy luận → 400; không có quyền trên farm → 403 (Technician, Administrator).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -3251,14 +3349,29 @@ paths:
   /alerts/{id}/acknowledge:
     put:
       tags: [Alerts]
-      summary: "Xác nhận cảnh báo (ALERT-FR-009) — chỉ FARM_OWNER (Domain Expert chỉ đọc và kiểm chứng)"
-      description: "Chỉ `FARM_OWNER`; Technician, Administrator chỉ xem cảnh báo → 403 (Report 3 §2.4). Chỉ xác nhận được cảnh báo còn `status=ACTIVE`; ghi chú được giữ làm dữ liệu đánh giá chất lượng model AI (VD \"Báo động giả\"). Xác nhận `MAINTENANCE_DUE` = đã bảo trì: đếm lại `since_service_*` của các tải trong `metadata.loads` từ 0 và chuyển cảnh báo sang `RESOLVED` (ALERT-FR-016, BR-16)."
+      summary: "Xác nhận cảnh báo (ALERT-FR-009, 018) — FARM_OWNER; FARM_TECHNICIAN ở nhà được giao"
+      description: |
+        Farm Owner, và Farm Technician trên cảnh báo của nhà được giao (nhà khác → 403); Domain Expert,
+        Administrator → 403 (Report 3 §2.4). Chỉ xác nhận được cảnh báo còn `status=ACTIVE` (khác → 409);
+        lưu người, thời điểm, ghi chú (giữ làm dữ liệu đánh giá model AI, VD "Báo động giả"). Xác nhận
+        trước `escalation_min` (15 phút) thì không leo thang lên Farm Owner (ALERT-FR-017).
+
+        `cause` (ALERT-FR-018, tuỳ chọn): nguyên nhân tìm thấy tại chỗ của cảnh báo thiết bị, lưu ở
+        `site_cause`. Nguyên nhân bắt buộc khi đóng Work Order (`POST /work-orders/{id}/done`), không bắt
+        buộc ở đây.
+
+        Xác nhận `MAINTENANCE_DUE` = đã bảo trì: đếm lại `since_service_*` của các tải trong
+        `metadata.loads` từ 0 và chuyển cảnh báo sang `RESOLVED` (ALERT-FR-016, BR-16).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
           application/json:
-            schema: { type: object, properties: { note: { type: string } } }
+            schema:
+              type: object
+              properties:
+                note: { type: string, maxLength: 1000 }
+                cause: { $ref: "#/components/schemas/SiteCause" }
       responses:
         "200":
           {
@@ -3285,6 +3398,7 @@ paths:
           }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
         "409":
           {
             description: Cảnh báo này đã được xác nhận trước đó,
@@ -3311,6 +3425,10 @@ paths:
         - `CONFIRMED` trên cảnh báo còn hiệu lực, hoặc mọi kết luận trên cảnh báo `RESOLVED` → giữ nguyên.
 
         Ghi audit `ALERT_VERDICT_SET`; kết luận của Domain Expert báo trong app cho mọi Farm Owner (EXPERT-FR-009).
+
+        `needs_visit: true` cùng `CONFIRMED` (BR-39, OPS-FR-001): mở một Work Order sửa chữa cho cảnh báo,
+        giao thợ đang trực của nhà (nhà không có thợ thì Farm Owner xử lý); cảnh báo đã có Work Order đang
+        mở thì không mở thêm. `needs_visit` cùng `REJECTED` → 422.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3323,6 +3441,7 @@ paths:
               properties:
                 result: { type: string, enum: [CONFIRMED, REJECTED] }
                 note: { type: string, maxLength: 1000, description: "Bắt buộc khi `result = REJECTED`" }
+                needs_visit: { type: boolean, default: false, description: "Cần thợ tới nhà: mở Work Order (BR-39)" }
       responses:
         "200":
           description: Đã ghi kết quả kiểm chứng
@@ -3336,6 +3455,308 @@ paths:
         "400": { description: "Cảnh báo không thuộc loại suy luận", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { description: "Không có quyền trên farm, hoặc Farm Owner trên farm đã có Domain Expert (BR-22)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /alerts/{id}/onsite-check:
+    post:
+      tags: [Alerts]
+      summary: "Trả lời yêu cầu kiểm tra tại chỗ của một cảnh báo suy luận (EXPERT-FR-021) — FARM_TECHNICIAN ở nhà được giao"
+      description: |
+        Khi một cảnh báo suy luận (`NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE`)
+        được tạo ở nhà có Farm Technician, backend tạo đúng một yêu cầu kiểm tra cho thợ đang trực
+        (`onsite_checks[0]`, thông báo trong ứng dụng); nhà không có thợ thì không có yêu cầu và chuyên gia
+        kết luận trên dữ liệu.
+
+        Thợ được giao nhà ghi điều quan sát được, kèm ảnh tuỳ chọn (`multipart/form-data`, field `photo`,
+        JPEG/PNG/WebP ≤ 5 MB). Câu trả lời nằm trong `onsite_checks` của cảnh báo và trong bằng chứng
+        (`GET /alerts/{id}/evidence`), trước khi chuyên gia kết luận. `SENSOR_ANOMALY` được trả lời
+        `SENSOR_DIRTY_OR_FAULTY` thì mở ngay một Work Order sửa chữa (BR-39).
+
+        Thợ nhà khác → 403; Farm Owner, Domain Expert, Administrator → 403. Cảnh báo không có yêu cầu
+        kiểm tra, hoặc yêu cầu đã được trả lời → 409.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [observation]
+              properties:
+                observation: { $ref: "#/components/schemas/OnsiteObservation" }
+                note: { type: string, maxLength: 1000 }
+                photo: { type: string, format: binary }
+          application/json:
+            schema:
+              type: object
+              required: [observation]
+              properties:
+                observation: { $ref: "#/components/schemas/OnsiteObservation" }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Đã ghi quan sát
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Alert" }
+        "400": { description: "Ảnh không phải JPEG/PNG/WebP hoặc quá 5 MB", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Không có yêu cầu kiểm tra, hoặc đã trả lời", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ── WORK ORDERS ───────────────────────────────────────────────────────────
+  /work-orders:
+    get:
+      tags: [WorkOrders]
+      summary: "Danh sách Work Order (OPS-FR-001…004) — FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN (nhà được giao)"
+      description: |
+        Mới mở trước. Farm Owner, Domain Expert: Work Order của các farm mình; Farm Technician: Work Order
+        của các nhà được giao (`farmId`/`houseId` khác chỉ cho danh sách rỗng hoặc 403). Administrator → 403.
+        `assigneeId=me` = Work Order giao cho chính người gọi.
+      parameters:
+        - { name: farmId, in: query, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string } }
+        - { name: alertId, in: query, schema: { type: string }, description: "Work Order của một cảnh báo (mở từ màn chi tiết cảnh báo)" }
+        - { name: assigneeId, in: query, schema: { type: string }, description: "id người được giao, hoặc `me`" }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/WorkOrderStatus" } }
+        - { name: open, in: query, schema: { type: string, enum: ["true", "false"] }, description: "`true` = chưa đóng/huỷ (OPEN, IN_PROGRESS, VERIFYING, AWAITING_APPROVAL)" }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/WorkOrder" } }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    post:
+      tags: [WorkOrders]
+      summary: "Farm Owner mở tay một Work Order sửa chữa (OPS-FR-001) — chỉ FARM_OWNER"
+      description: |
+        Giao thợ đang trực của nhà (AUTH-FR-014; nhà không có thợ thì để trống, Farm Owner xử lý). Có
+        `alert_id` thì cảnh báo phải thuộc nhà đó; cảnh báo đã có Work Order đang mở → 409.
+        Farm Technician, Domain Expert, Administrator → 403. Ghi audit `WORK_ORDER_OPENED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [house_id, title]
+              properties:
+                house_id: { type: string }
+                title: { type: string, maxLength: 200 }
+                description: { type: string, maxLength: 2000 }
+                alert_id: { type: string }
+      responses:
+        "201":
+          description: Đã mở
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/WorkOrder" }
+        "400": { description: "Cảnh báo không thuộc nhà này", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Cảnh báo đã có Work Order đang mở", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /work-orders/metrics:
+    get:
+      tags: [WorkOrders]
+      summary: "MTTA, MTTR theo nhà và theo thợ (OPS-FR-009, BR-40) — FARM_OWNER, DOMAIN_EXPERT"
+      description: |
+        Tính trên cảnh báo tạo trong `[from, to)` của farm (hoặc của nhà):
+        - MTTA = trung bình (`acknowledged_at` − `created_at`) của cảnh báo đã xác nhận;
+        - MTTR = trung bình (lúc Work Order của cảnh báo đóng, không có thì `resolved_at` − `created_at`)
+          của cảnh báo đã đóng; cảnh báo `DISMISSED` không tính.
+
+        Theo thợ: cảnh báo được định tuyến tới thợ đó (`routing.technician_id`). Mục tiêu nội bộ để
+        xác nhận là `escalation_min` (15 phút) cho mọi mức (BR-40) — số báo cáo, không phải cam kết.
+        `on_time_maintenance_rate` là `null` cho tới khi có Work Order phòng ngừa (G-22). Phút, làm tròn
+        1 chữ số; không có mẫu thì `null`. Farm Technician, Administrator → 403.
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+        - { name: houseId, in: query, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/OpsMetrics" }
+        "400": { description: "`from` không trước `to`", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /work-orders/{id}:
+    get:
+      tags: [WorkOrders]
+      summary: "Chi tiết Work Order — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN (nhà được giao)"
+      description: "`photo_urls` là URL tạm (1 giờ) của ảnh. Thợ nhà khác, Administrator → 403."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/WorkOrder" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /work-orders/{id}/start:
+    post:
+      tags: [WorkOrders]
+      summary: "Bắt đầu làm (OPS-FR-002) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
+      description: "`OPEN` → `IN_PROGRESS`. Trạng thái khác → 409; thợ nhà khác → 403."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { $ref: "#/components/responses/WorkOrderOk" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/WorkOrderWrongState" }
+
+  /work-orders/{id}/done:
+    post:
+      tags: [WorkOrders]
+      summary: "Báo đã làm xong, kèm việc đã làm, nguyên nhân và ảnh (OPS-FR-002, ALERT-FR-018) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
+      description: |
+        `IN_PROGRESS` → `VERIFYING`: hệ thống kiểm điều kiện của cảnh báo giữ phục hồi `recovery_verify_min`
+        (10 phút, BR-41) sau lúc báo xong rồi chuyển `AWAITING_APPROVAL`:
+        - `MISTING_INEFFECTIVE`: độ ẩm của controller trên `humidity_min` của zone (OPS-FR-003);
+        - `SENSOR_FAULT`, `RS485_BUS_FAILURE`: telemetry đủ số đo của cả 5 cảm biến;
+        - `ACTUATOR_FAULT`: controller không gửi lại cảnh báo trong 1 chu kỳ gửi lại (15 phút, Report 3 §4.5);
+        - `SPEAKER_FAILURE`: không báo lại trong 10 phút (backend không có dữ liệu để kiểm, Farm Owner duyệt);
+        - loại khác: cảnh báo đã đóng (vượt ngưỡng về ngưỡng, thiết bị online lại…).
+        Controller báo lại sự cố sau lúc báo xong, hoặc có cảnh báo mới của cùng sự cố lúc đang kiểm hay chờ
+        duyệt → trở lại `IN_PROGRESS`. Work Order không gắn cảnh báo thì chuyển thẳng `AWAITING_APPROVAL`
+        (không có dữ liệu để kiểm).
+
+        `cause` bắt buộc với Work Order của `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`,
+        `RS485_BUS_FAILURE`, `SPEAKER_FAILURE` (thiếu → 422); nguyên nhân và ảnh lưu cả vào cảnh báo
+        (`site_cause`). Ảnh: `multipart/form-data`, field `photos`, JPEG/PNG/WebP, mỗi ảnh ≤ 5 MB, tối đa
+        5 ảnh cho cả Work Order (tính cả ảnh của lần báo xong trước khi bị mở lại; vượt → 400). Trạng thái
+        khác → 409; thợ nhà khác → 403.
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                cause: { $ref: "#/components/schemas/SiteCause" }
+                work_note: { type: string, maxLength: 2000 }
+                photos: { type: array, maxItems: 5, items: { type: string, format: binary } }
+          application/json:
+            schema:
+              type: object
+              properties:
+                cause: { $ref: "#/components/schemas/SiteCause" }
+                work_note: { type: string, maxLength: 2000 }
+      responses:
+        "200": { $ref: "#/components/responses/WorkOrderOk" }
+        "400": { description: "Ảnh không phải JPEG/PNG/WebP hoặc quá 5 MB", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/WorkOrderWrongState" }
+        "422": { description: "Thiếu nguyên nhân của cảnh báo thiết bị (ALERT-FR-018)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /work-orders/{id}/approve:
+    post:
+      tags: [WorkOrders]
+      summary: "Duyệt, đóng Work Order và cảnh báo của nó (OPS-FR-004) — chỉ FARM_OWNER"
+      description: "`AWAITING_APPROVAL` → `CLOSED` (kết quả `REPAIRED`); cảnh báo còn mở được đóng. Trạng thái khác → 409. Ghi audit `WORK_ORDER_APPROVED`."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { $ref: "#/components/responses/WorkOrderOk" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/WorkOrderWrongState" }
+
+  /work-orders/{id}/reopen:
+    post:
+      tags: [WorkOrders]
+      summary: "Mở lại kèm ghi chú (OPS-FR-004) — chỉ FARM_OWNER"
+      description: "`AWAITING_APPROVAL` → `IN_PROGRESS`, báo người được giao. Thiếu `note` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_REOPENED`."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [note], properties: { note: { type: string, maxLength: 1000 } } }
+      responses:
+        "200": { $ref: "#/components/responses/WorkOrderOk" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/WorkOrderWrongState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /work-orders/{id}/cancel:
+    post:
+      tags: [WorkOrders]
+      summary: "Huỷ kèm lý do (OPS-FR-004) — chỉ FARM_OWNER"
+      description: "`OPEN`, `IN_PROGRESS` → `CANCELLED`; cảnh báo của nó không đổi. Thiếu `reason` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_CANCELLED`."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 1000 } } }
+      responses:
+        "200": { $ref: "#/components/responses/WorkOrderOk" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/WorkOrderWrongState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /work-orders/{id}/reassign:
+    post:
+      tags: [WorkOrders]
+      summary: "Giao lại cho một thợ của nhà (OPS-FR-004) — chỉ FARM_OWNER"
+      description: "`OPEN`, `IN_PROGRESS`; người nhận phải là Farm Technician đang được giao nhà và còn hoạt động (khác → 400); trạng thái khác → 409. Báo người mới. Ghi audit `WORK_ORDER_REASSIGNED`."
+      parameters:
+        [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [assignee_id], properties: { assignee_id: { type: string } } }
+      responses:
+        "200": { $ref: "#/components/responses/WorkOrderOk" }
+        "400": { description: "Người nhận không phải thợ của nhà", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/WorkOrderWrongState" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   # ── ANALYTICS ─────────────────────────────────────────────────────────────
@@ -3717,6 +4138,17 @@ paths:
                           house_id: { type: string }
                           days: { type: integer }
                           records: { type: array, items: { $ref: "#/components/schemas/BirdCountDay" } }
+                          flock_trend:
+                            type: object
+                            description: |
+                              ANALYTICS-FR-002 — trung bình số chim ra buổi sáng (ra − vào của phiên sáng) theo tuần (từ thứ
+                              Hai, giờ VN) và theo tháng trong khoảng `days`, kèm % đổi so với kỳ liền trước; ngày thiếu
+                              phiên (VISION-FR-020) không tính. Muốn đủ trung bình tháng thì gửi `days` dài hơn (vd 90).
+                              Tuần, tháng đầu của khoảng có thể chỉ có vài ngày (xem `days` của kỳ) nhưng vẫn là mốc so
+                              sánh của kỳ sau.
+                            properties:
+                              weekly: { type: array, items: { $ref: "#/components/schemas/FlockPeriod" } }
+                              monthly: { type: array, items: { $ref: "#/components/schemas/FlockPeriod" } }
                           avg_return_rate: { type: number, nullable: true }
                           latest_return_rate: { type: number, nullable: true }
                           drop_percent: { type: number, nullable: true }
@@ -3756,6 +4188,52 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }   # from/to không đọc được thành ngày, thiếu houseId/zoneId
+
+  /analytics/energy:
+    get:
+      tags: [Analytics]
+      summary: "Điện năng ước tính của bơm và quạt của 1 nhà theo tháng (ANALYTICS-FR-017, BR-45)"
+      description: |
+        Σ điện áp × dòng đo × thời gian: mỗi mẫu telemetry lúc relay BẬT và có dòng đo được tính tới mẫu kế tiếp
+        của cùng controller (khoảng quá 30 giây là mất kết nối, không tính, Report 3 §4.5). Tính theo zone lúc
+        đo: controller dời sang nhà khác thì điện đã dùng vẫn thuộc nhà cũ. Điện áp theo tải DC demo của board
+        nhóm: bơm 5 V, quạt 12 V (A-9); tải nguồn lưới chưa hỗ trợ. Tải không có dòng đo trong tháng → `null`
+        ("not available"). Là số ước tính, không phải công tơ. **Lệch BR-45 đã biết:** BR-45 chỉ tính tải chạy khi
+        dòng trên 50 % dòng bình thường, nhưng backend chưa biết mức đã học của firmware nên mọi mẫu relay BẬT có
+        dòng đều được cộng. Telemetry giữ 90 ngày (BR-36) nên mặc định là 90 ngày gần nhất; khoảng làm tròn ra
+        trọn ngày giờ VN, tối đa 366 ngày. Quyền: FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN ở nhà được giao.
+      parameters:
+        - { name: houseId, in: query, required: true, schema: { type: string, format: objectId } }
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 90 ngày" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                          supply_voltage: { type: object, properties: { misting: { type: number, example: 5 }, ventilation: { type: number, example: 12 } } }
+                          estimated: { type: boolean, example: true }
+                          months: { type: array, items: { $ref: "#/components/schemas/EnergyMonth" } }
+                          total:
+                            type: object
+                            properties:
+                              misting_kwh: { type: number, nullable: true }
+                              ventilation_kwh: { type: number, nullable: true }
+                              total_kwh: { type: number, nullable: true }
+        "400": { description: "from không trước to, hoặc khoảng quá 366 ngày" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /analytics/correlation:
     get:
@@ -4863,6 +5341,20 @@ components:
           application/json:
             { schema: { $ref: "#/components/schemas/ApiError" } },
         }
+    WorkOrderOk:
+      description: Work Order sau khi đổi trạng thái
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiSuccess"
+              - properties:
+                  data: { $ref: "#/components/schemas/WorkOrder" }
+    WorkOrderWrongState:
+      description: "Work Order không ở trạng thái cho phép thao tác này (Report 3 §6.19)"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
 
   schemas:
     ApiSuccess:
@@ -4962,6 +5454,14 @@ components:
           properties:
             push: { type: boolean }
             telegram: { type: boolean }
+            by_severity:
+              type: object
+              description: "ALERT-FR-005 — kênh riêng cho cảnh báo theo mức; mức không có thì dùng `push`/`telegram` chung"
+              properties:
+                CRITICAL: { $ref: "#/components/schemas/ChannelChoice" }
+                HIGH: { $ref: "#/components/schemas/ChannelChoice" }
+                MEDIUM: { $ref: "#/components/schemas/ChannelChoice" }
+                LOW: { $ref: "#/components/schemas/ChannelChoice" }
             quiet_hours:
               {
                 type: object,
@@ -5078,6 +5578,51 @@ components:
         start: { type: string, example: "06:00", description: "HH:mm giờ VN" }
         end: { type: string, example: "18:00", description: "HH:mm giờ VN; end trước start là ca qua nửa đêm, tính cho ngày bắt đầu" }
 
+    HouseOverview:
+      type: object
+      description: "Một nhà trong tổng quan trại (ANALYTICS-FR-015)"
+      properties:
+        house_id: { type: string }
+        name: { type: string }
+        stage: { type: string, enum: [ATTRACTING, OCCUPIED] }
+        status: { type: string, enum: [GOOD, WATCH, ACTION], nullable: true }
+        status_reason: { type: string, enum: [NOT_COMPUTED, INSUFFICIENT_DATA], nullable: true }
+        open_alerts: { type: integer }
+        open_work_orders: { type: integer }
+        latest_return_rate:
+          type: object
+          nullable: true
+          properties: { date: { type: string, example: "2026-11-13" }, value: { type: number } }
+        simulated: { type: boolean, description: "Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004)" }
+    HouseComparisonRow:
+      type: object
+      description: "Một hàng của bảng so sánh nhà (BR-44); không có điểm tổng hay xếp hạng"
+      properties:
+        house_id: { type: string }
+        name: { type: string }
+        time_in_range_pct: { type: number, nullable: true }
+        good_days_pct: { type: number, nullable: true }
+        return_rate_avg: { type: number, nullable: true }
+        flock_trend_pct: { type: number, nullable: true }
+        alerts_raised: { type: integer }
+        alerts_open: { type: integer }
+        mttr_min: { type: number, nullable: true }
+        energy_kwh: { type: number, nullable: true, description: "Ước tính (BR-45); null = not available" }
+        energy: { type: object, properties: { misting_kwh: { type: number, nullable: true }, ventilation_kwh: { type: number, nullable: true } } }
+        last_cycle_yield_g: { type: number, nullable: true, description: "Sản lượng chu kỳ đã đóng gần nhất (BR-43); null tới khi có G-26" }
+    EnergyMonth:
+      type: object
+      properties:
+        month: { type: string, example: "2026-10", description: "Tháng giờ VN" }
+        misting_kwh: { type: number, nullable: true, description: "null = not available (không có dòng đo)" }
+        ventilation_kwh: { type: number, nullable: true }
+    FlockPeriod:
+      type: object
+      properties:
+        period: { type: string, description: "Tuần: thứ Hai đầu tuần (YYYY-MM-DD); tháng: YYYY-MM" }
+        days: { type: integer, description: "Số ngày đủ 2 phiên trong kỳ" }
+        mean_morning_exit: { type: number }
+        change_pct: { type: number, nullable: true, description: "% đổi so với kỳ liền trước; null khi kỳ trước không có số" }
     Thresholds:
       type: object
       properties:
@@ -5228,7 +5773,7 @@ components:
           nullable: true
           description: "Đối tượng để client mở tới"
           properties:
-            kind: { type: string, enum: [alert, health_report, health_day, expert_decision, parameter_review, coefficient_proposal], description: "`health_day`: ngày đánh giá mới của nhà yến, mở `GET /health-reports/days/{dayId}` (thông báo không kèm trạng thái, BR-31); `expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007)" }
+            kind: { type: string, enum: [alert, health_report, health_day, expert_decision, parameter_review, coefficient_proposal, work_order], description: "`health_day`: ngày đánh giá mới của nhà yến, mở `GET /health-reports/days/{dayId}` (thông báo không kèm trạng thái, BR-31); `expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007); `work_order`: Work Order được giao, cần duyệt, bị mở lại (OPS-FR-001…004); `alert` cũng dùng cho yêu cầu kiểm tra tại chỗ (EXPERT-FR-021)" }
             id: { type: string }
         read_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
@@ -5860,7 +6405,30 @@ components:
         resolved_at: { type: string, format: date-time, nullable: true, description: "Sự cố hết (THRESHOLD_BREACH tự đóng sau 5 phút không vượt ngưỡng, NODE_OFFLINE tự đóng khi thiết bị kết nối lại), hoặc thiết bị đã được gỡ khỏi hệ thống (FARM-FR-008). Alert đã đóng tự xoá sau 180 ngày." }
         acknowledged_by: { type: string, nullable: true }
         acknowledgement_note: { type: string, nullable: true }
-        renotified_at: { type: string, format: date-time, nullable: true, description: "ALERT-FR-015 — lúc đã gửi lại cho Farm Owner vì chưa ai xác nhận (CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau 1 giờ); chỉ gửi lại 1 lần" }
+        renotified_at: { type: string, format: date-time, nullable: true, description: "ALERT-FR-015 — lúc đã gửi lại cho người nhận vì chưa ai xác nhận (CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau 1 giờ); chỉ gửi lại 1 lần" }
+        routing:
+          type: object
+          nullable: true
+          description: |
+            ALERT-FR-017 — người nhận lúc tạo: thợ đang trực của nhà (`technician_id`), Farm Owner có được
+            báo ngay không (`owners_notified`: CRITICAL, hoặc nhà không có thợ). Thiếu = cảnh báo trước G-21.
+          properties:
+            technician_id: { type: string, nullable: true }
+            owners_notified: { type: boolean }
+        escalated_at: { type: string, format: date-time, nullable: true, description: "BR-40 — lúc báo Farm Owner vì thợ chưa xác nhận sau `escalation_min` (15 phút); chỉ 1 lần" }
+        site_cause:
+          type: object
+          nullable: true
+          description: "ALERT-FR-018 — nguyên nhân tìm thấy tại chỗ (khi xác nhận hoặc khi Work Order làm xong)"
+          properties:
+            cause: { $ref: "#/components/schemas/SiteCause" }
+            photo_urls: { type: array, items: { type: string } }
+            by: { type: string }
+            at: { type: string, format: date-time }
+        onsite_checks:
+          type: array
+          description: "EXPERT-FR-021 — yêu cầu kiểm tra tại chỗ (chỉ cảnh báo suy luận ở nhà có thợ)"
+          items: { $ref: "#/components/schemas/OnsiteCheck" }
         expert_verdict:
           type: object
           nullable: true
@@ -5940,6 +6508,114 @@ components:
           type: array
           description: "EXPERT-FR-003 — tối đa 10 cảnh báo trước cùng loại, cùng zone/nhà, đã có kết luận"
           items: { $ref: "#/components/schemas/Alert" }
+        onsite_checks:
+          type: array
+          description: "EXPERT-FR-021 — yêu cầu kiểm tra tại chỗ và quan sát của thợ (rỗng khi nhà không có thợ)"
+          items: { $ref: "#/components/schemas/OnsiteCheck" }
+
+    ChannelChoice:
+      type: object
+      nullable: true
+      description: "ALERT-FR-005 — kênh ngoài ứng dụng cho một mức cảnh báo; trường không có thì dùng cài đặt chung"
+      properties:
+        push: { type: boolean }
+        telegram: { type: boolean }
+
+    SiteCause:
+      type: string
+      description: "ALERT-FR-018 — nguyên nhân tìm thấy tại chỗ"
+      enum: [WATER, NOZZLE, PUMP, FAN, DOOR, SENSOR, SPEAKER, OTHER]
+
+    OnsiteObservation:
+      type: string
+      description: "EXPERT-FR-021 — chim bị động, có người hoặc công việc gần đó, mưa, cảm biến bẩn hoặc hỏng, không có gì lạ, khác"
+      enum: [BIRDS_DISTURBED, WORK_OR_PEOPLE_NEARBY, RAIN, SENSOR_DIRTY_OR_FAULTY, NOTHING_UNUSUAL, OTHER]
+
+    OnsiteCheck:
+      type: object
+      properties:
+        technician_id: { type: object, description: "Thợ được yêu cầu", properties: { _id: { type: string }, full_name: { type: string } } }
+        requested_at: { type: string, format: date-time }
+        observation: { allOf: [{ $ref: "#/components/schemas/OnsiteObservation" }], nullable: true, description: "null = chưa trả lời" }
+        note: { type: string, nullable: true }
+        photo_url: { type: string, nullable: true, description: "URL tạm (1 giờ)" }
+        answered_by: { type: object, nullable: true, properties: { _id: { type: string }, full_name: { type: string } } }
+        answered_at: { type: string, format: date-time, nullable: true }
+
+    WorkOrderStatus:
+      type: string
+      description: "Report 3 §6.19 (SM-19)"
+      enum: [OPEN, IN_PROGRESS, VERIFYING, AWAITING_APPROVAL, CLOSED, CANCELLED]
+
+    WorkOrder:
+      type: object
+      description: "OPS-FR-001…004 — Work Order sửa chữa; mỗi cảnh báo chỉ có 1 Work Order chưa đóng (BR-39)"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        house_id: { type: string }
+        zone_id: { type: string, nullable: true }
+        node_id: { type: string, nullable: true }
+        alert_id: { type: string, nullable: true }
+        alert_type: { allOf: [{ $ref: "#/components/schemas/AlertType" }], nullable: true }
+        kind: { type: string, enum: [REPAIR, PREVENTIVE], description: "PREVENTIVE dùng cho bảo trì phòng ngừa (G-22)" }
+        origin:
+          type: string
+          enum: [ALERT, OUTAGE, EXPERT, ONSITE_CHECK, MANUAL]
+          description: "ALERT: cảnh báo thiết bị của BR-39; OUTAGE: NODE_OFFLINE / EDGE_AI_DEGRADED còn mở sau 30 phút; EXPERT: chuyên gia xác nhận cần tới nhà; ONSITE_CHECK: thợ thấy cảm biến hỏng (EXPERT-FR-021); MANUAL: Farm Owner mở"
+        title: { type: string }
+        description: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/WorkOrderStatus" }
+        assignee: { type: object, nullable: true, description: "Thợ được giao; null = nhà không có thợ, Farm Owner xử lý", properties: { _id: { type: string }, full_name: { type: string } } }
+        opened_by: { type: object, nullable: true, description: "null = hệ thống mở", properties: { _id: { type: string }, full_name: { type: string } } }
+        cause: { allOf: [{ $ref: "#/components/schemas/SiteCause" }], nullable: true }
+        work_note: { type: string, nullable: true }
+        photo_urls: { type: array, items: { type: string }, description: "URL tạm (1 giờ); danh sách không kèm" }
+        result: { type: string, enum: [REPAIRED, SELF_RECOVERED], nullable: true }
+        cancel_reason: { type: string, nullable: true }
+        opened_at: { type: string, format: date-time }
+        started_at: { type: string, format: date-time, nullable: true }
+        done_at: { type: string, format: date-time, nullable: true }
+        verified_at: { type: string, format: date-time, nullable: true, description: "Lúc dữ liệu đã phục hồi đủ `recovery_verify_min` (BR-41)" }
+        closed_at: { type: string, format: date-time, nullable: true }
+        escalated_at: { type: string, format: date-time, nullable: true, description: "Lúc báo Farm Owner vì chưa ai bắt đầu sau `escalation_min` (BR-40)" }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              from: { allOf: [{ $ref: "#/components/schemas/WorkOrderStatus" }], nullable: true }
+              to: { $ref: "#/components/schemas/WorkOrderStatus" }
+              by: { type: string, nullable: true, description: "null = hệ thống" }
+              note: { type: string, nullable: true }
+              at: { type: string, format: date-time }
+
+    OpsMetrics:
+      type: object
+      description: "OPS-FR-009, BR-40 — phút; null khi không có mẫu"
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        target_ack_min: { type: number, example: 15, description: "Mục tiêu nội bộ = escalation_min" }
+        overall: { $ref: "#/components/schemas/OpsMetricRow" }
+        by_house: { type: array, items: { allOf: [{ $ref: "#/components/schemas/OpsMetricRow" }, { properties: { house_id: { type: string }, name: { type: string } } }] } }
+        by_technician: { type: array, items: { allOf: [{ $ref: "#/components/schemas/OpsMetricRow" }, { properties: { technician_id: { type: string }, full_name: { type: string } } }] } }
+        on_time_maintenance_rate: { type: number, nullable: true, description: "null cho tới G-22" }
+
+    OpsMetricRow:
+      type: object
+      properties:
+        alerts: { type: integer }
+        mtta_min: { type: number, nullable: true }
+        mttr_min: { type: number, nullable: true }
+        acknowledged_within_target_pct: { type: number, nullable: true }
+
+    PageMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
 
     ParameterReview:
       type: object

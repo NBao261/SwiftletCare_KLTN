@@ -444,6 +444,7 @@ Thứ tự:
 10. **Len:** thu hoạch.
 11. **Tuấn:** màn chuyên gia (hàng đợi việc, kết luận cảnh báo, tham số).
 12. **Len:** app của Farm Technician (cảnh báo nhà được gán, Work Order, checklist, kiểm tra tại chỗ, chấm điểm hằng ngày, vòng đếm, nhập thu hoạch): bước chi tiết ở `todo-final-scope.md` (G-20, G-21, G-22, G-11, G-12, G-26).
+   - *(Len, 13/11, nhánh `feat/g21-work-orders`, phần G-21 theo api-spec của Kiệt: kỹ thuật viên xác nhận cảnh báo của nhà được giao (`acknowledgeAlert` mở cho `FARM_TECHNICIAN`), cảnh báo thiết bị có ô nguyên nhân tại chỗ không bắt buộc (`cause`, ALERT-FR-018); chi tiết cảnh báo hiện nguyên nhân tại chỗ, lúc đã báo chủ trại, khung "Kiểm tra tại chỗ" và Work Order của cảnh báo; thợ được giao nhà có nút "Trả lời kiểm tra tại chỗ" — chọn điều quan sát được, ghi chú, 1 ảnh (`POST /alerts/{id}/onsite-check`, multipart khi có ảnh, EXPERT-FR-021); màn `work-orders` (Giao cho tôi / Đang mở / Đã đóng, phân trang theo `meta`) và `work-orders/[id]` (nguồn, nhà, cảnh báo gốc, các mốc, nguyên nhân, việc đã làm, ảnh, lịch sử) với "Bắt đầu làm" (OPEN) và "Báo đã làm xong" (IN_PROGRESS: nguyên nhân bắt buộc với cảnh báo thiết bị, việc đã làm, tối đa 5 ảnh chụp bằng `expo-camera`); khối "Work Order" ở Trang chủ; bấm thông báo / push `work_order` mở đúng Work Order; 409 thì báo và tải lại. Duyệt, mở lại, huỷ, giao lại ở web (Nhi). Còn chờ: G-21 backend merge vào `develop`; chạy thử trên máy với tài khoản thợ)* *(Len, 14/11, sửa theo review PR #155: thêm `health_day` vào enum thông báo, bấm thông báo / push mở `health/[dayId]`; làm mới khi 409 chuyển vào `onError` của `useStartWorkOrder`, `useCompleteWorkOrder`, `useAnswerOnsiteCheck`, `useAcknowledgeAlert`; sheet xác nhận trong chi tiết cảnh báo chỉ mount khi mở nên không mang nguyên nhân, ghi chú cũ sang lần sau; chụp ảnh lỗi thì báo trên khung camera; route chi tiết Work Order tra nhà qua `useZoneDirectory`, mốc thời gian qua `getWorkOrderMilestones`; nút chụp ảnh dùng variant mới `outline` của `Button`, nút bỏ ảnh đủ vùng chạm 44; yêu cầu kiểm tra thiếu khoá `observation` vẫn là đang chờ (`isOnsiteCheckAnswered`, có test); câu xin quyền camera iOS ghi cả chụp ảnh tại chỗ. Còn chờ: ảnh chụp các màn mới trên máy cho PR)*
 
 Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app không hiện màn hay nút không được phép):
 - Farm Owner và Farm Technician (chỉ nhà được gán) xác nhận cảnh báo và bật/tắt relay (từ 09/11/2026, Report 3 §2.4);
@@ -476,10 +477,10 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-21 — Định tuyến, leo thang, Work Order (P0-Demo cho WF-02) — Kiệt (backend), Len (mobile technician), Nhi (duyệt trên web)
 
-- [ ] `alertRouting.service` + `alertEscalation.job` mỗi phút (ALERT-FR-017, BR-40); CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005).
-- [ ] Kiểm tra tại chỗ cảnh báo suy luận: backend yêu cầu Farm Technician của nhà kiểm tra trước khi chuyên gia kết luận, cảm biến hỏng mở Work Order ngay (EXPERT-FR-021).
-- [ ] Work Order: mở tự động theo BR-39, start, done kèm nguyên nhân và ảnh (ALERT-FR-018), `recoveryCheck.job` (BR-41), duyệt, mở lại, huỷ; MTTA/MTTR (OPS-FR-009).
-- [ ] Test TC-F23, TC-F24, TC-ST WorkOrder (Report 5) viết cùng PR.
+- [x] `alertRouting.service` + `alertEscalation.job` mỗi phút (ALERT-FR-017, BR-40); CRITICAL luôn tới ít nhất một kênh ngoài app (ALERT-FR-005). *(Kiệt, 13/11, nhánh `feat/g21-work-orders`: spec `ef5dd71`, code `ba35b7a`; sửa sau review #155 `92feede9`: cảnh báo xác nhận lại tới thợ, nhà không có thợ chính vẫn tới thợ)*
+- [x] Kiểm tra tại chỗ cảnh báo suy luận: backend yêu cầu Farm Technician của nhà kiểm tra trước khi chuyên gia kết luận, cảm biến hỏng mở Work Order ngay (EXPERT-FR-021). *(Kiệt, `ba35b7a`, `92feede9`; màn trả lời trên mobile: Len; hiện trong bằng chứng của chuyên gia: Tuấn)*
+- [x] Work Order: mở tự động theo BR-39, start, done kèm nguyên nhân và ảnh (ALERT-FR-018), `recoveryCheck.job` (BR-41), duyệt, mở lại, huỷ; MTTA/MTTR (OPS-FR-009). *(Kiệt, `ba35b7a`; sửa sau review #155 `d5650466`: kiểm phục hồi theo từng loại cảnh báo, tái phát lúc chờ duyệt; màn thợ: Len; duyệt trên web: Nhi)*
+- [x] Test TC-F23, TC-F24, TC-ST WorkOrder (Report 5) viết cùng PR. *(`alertRouting`, `workOrderLifecycle`, `onsiteCheck`, `opsMetrics` test; nguồn trong `report5/tc.py` từ `c86af76`)*
 
 ### G-22 — Bảo trì phòng ngừa (P1) — Kiệt (backend), Len (mobile), Nhi (web)
 

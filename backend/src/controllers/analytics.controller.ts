@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import * as analyticsService from '@/services/analytics.service'
 import * as birdCountService from '@/services/birdCount.service'
+import * as energyService from '@/services/energy.service'
 import * as forecastService from '@/services/forecast.service'
 import * as tuningSuggestionService from '@/services/tuningSuggestion.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
@@ -94,4 +95,14 @@ export const envBirdCorrelation = asyncHandler(async (req: Request, res: Respons
     days: req.query.days ? Number(req.query.days) : 30,
   })
   res.json({ success: true, data })
+})
+
+/** Mặc định 90 ngày: telemetry chỉ giữ chừng đó (BR-36), xa hơn không có số */
+const DEFAULT_ENERGY_DAYS = 90
+
+/** GET /analytics/energy – ANALYTICS-FR-017, BR-45 */
+export const energy = asyncHandler(async (req: Request, res: Response) => {
+  const to = req.query.to ? new Date(req.query.to as string) : new Date()
+  const from = req.query.from ? new Date(req.query.from as string) : new Date(to.getTime() - DEFAULT_ENERGY_DAYS * 86_400_000)
+  res.json({ success: true, data: await energyService.getHouseEnergy(req.user, { houseId: req.query.houseId as string, from, to }) })
 })
