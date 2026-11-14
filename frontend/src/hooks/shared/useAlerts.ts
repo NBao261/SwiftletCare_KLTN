@@ -4,13 +4,16 @@ import { alertApi } from '@/apis/shared/alerts.api'
 import { useAlertStore } from '@/stores/alertStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
-import type { Alert, AlertSeverity, AlertStatus } from '@/types'
+import type { Alert, AlertSeverity, AlertStatus, SiteCause } from '@/types'
 
 export interface AlertsListQuery {
   farmId?: string; zoneId?: string
   status?: AlertStatus; severity?: AlertSeverity
   page?: number; limit?: number
 }
+
+// Số cảnh báo mỗi trang ở trang Thông báo của Farm Owner, cũng là số dòng khung bảng
+export const ALERT_PAGE_SIZE = 10
 
 /** Danh sách cảnh báo theo filter của trang Alerts (ALERT-FR-007) — KHÔNG đồng bộ badge chuông,
  *  vì `total`/`meta.unreadCount` ở đây bị chính severity/status filter của trang thu hẹp. Badge
@@ -67,11 +70,20 @@ export function useAlertsInfinite(pageSize: number, status?: AlertStatus, enable
   })
 }
 
-/** ALERT-FR-009 — xác nhận cảnh báo kèm ghi chú tùy chọn */
+/** ALERT-FR-009, 018 — xác nhận cảnh báo kèm ghi chú và nguyên nhân tại chỗ tùy chọn */
 export function useAcknowledgeAlert() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, note }: { id: string; note?: string }) => alertApi.acknowledge(id, note),
+    mutationFn: ({ id, note, cause }: { id: string; note?: string; cause?: SiteCause }) => alertApi.acknowledge(id, note, cause),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['alerts'] }),
+  })
+}
+
+/** Chi tiết 1 cảnh báo kèm ảnh nguyên nhân tại chỗ (URL tạm); null = chưa mở */
+export function useAlert(id: string | null) {
+  return useQuery({
+    queryKey: ['alerts', 'detail', id],
+    queryFn: () => alertApi.getOne(id!).then(response => response.data.data),
+    enabled: Boolean(id),
   })
 }
