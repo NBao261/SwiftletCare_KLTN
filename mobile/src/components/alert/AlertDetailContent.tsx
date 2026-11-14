@@ -5,6 +5,8 @@ import { AcknowledgeSheet } from '@/components/alert/AcknowledgeSheet'
 import { AlertEvidence } from '@/components/alert/AlertEvidence'
 import { AlertTimeline } from '@/components/alert/AlertTimeline'
 import { ExpertVerdictCard } from '@/components/alert/ExpertVerdictCard'
+import { OnsiteCheckCard } from '@/components/alert/OnsiteCheckCard'
+import { OnsiteCheckSheet } from '@/components/alert/OnsiteCheckSheet'
 import { SeverityLabel } from '@/components/alert/SeverityLabel'
 import { VerdictSheet } from '@/components/alert/VerdictSheet'
 import { StatRow } from '@/components/analytics/StatRow'
@@ -15,6 +17,7 @@ import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { AlertWorkOrderCard } from '@/components/work-order/AlertWorkOrderCard'
 import { BorderWidth, Spacing } from '@/constants/theme'
 import { useAlertDetail } from '@/hooks/alert/useAlertDetail'
 import { useAlertLocations } from '@/hooks/alert/useAlertLocations'
@@ -27,8 +30,9 @@ import { buildAlertTimeline, describeAlertDetail, getAutoCloseText, isEnvironmen
 import { isInferredAlert } from '@/utils/alertList.utils'
 import { formatDateTime } from '@/utils/date.utils'
 import { farmHasExpert } from '@/utils/farm.utils'
-import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel } from '@/utils/label.utils'
+import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel, getSiteCauseLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
+import { getPendingOnsiteCheck } from '@/utils/workOrder.utils'
 import { t } from '@/utils/i18n.utils'
 
 const RELAYS: RelayName[] = ['misting', 'ventilation', 'speaker']
@@ -69,6 +73,7 @@ export function AlertDetailContent({
   const farm = farmQuery.data?.data ?? null
   const sensorNodesQuery = useSensorNodes()
   const [isAcknowledgeOpen, setAcknowledgeOpen] = useState(false)
+  const [isOnsiteCheckOpen, setOnsiteCheckOpen] = useState(false)
   const [verdictResult, setVerdictResult] = useState<'CONFIRMED' | 'REJECTED' | null>(null)
   const [isRelayPickerOpen, setRelayPickerOpen] = useState(false)
   const [relaySelection, setRelaySelection] = useState<{ controllerId: string; relay: RelayName } | null>(null)
@@ -88,6 +93,9 @@ export function AlertDetailContent({
     farm?.members.find(member => member.user_id === userId)?.full_name ?? null
   const isInferred = isInferredAlert(alert)
   const canAcknowledge = canPerform(user, 'acknowledgeAlert') && alert.status === 'ACTIVE'
+  // Yêu cầu kiểm tra tại chỗ còn chờ: chỉ thợ được giao nhà trả lời (EXPERT-FR-021); backend tạo một yêu cầu mỗi cảnh báo suy luận
+  const onsiteCheck = alert.onsite_checks?.[0] ?? null
+  const canAnswerOnsiteCheck = canPerform(user, 'answerOnsiteCheck') && getPendingOnsiteCheck(alert) !== null
   // Chuyên gia phán quyết; farm chưa có chuyên gia thì chủ trại phán quyết thay (BR-22). Cảnh báo đã hết (RESOLVED) thì
   // không kết luận nữa; bị bác bỏ (DISMISSED) vẫn đổi lại "Đúng" được
   const canVerdict =
@@ -147,6 +155,13 @@ export function AlertDetailContent({
           />
           <StatRow label={t('Tự đóng')} value={getAutoCloseText(alert.type)} />
           {alert.resolved_at && <StatRow label={t('Đã đóng lúc')} value={formatDateTime(alert.resolved_at)} />}
+          {/* Nguyên nhân tìm thấy tại chỗ, khi xác nhận hoặc khi Work Order làm xong (ALERT-FR-018) */}
+          {alert.site_cause && (
+            <StatRow label={t('Nguyên nhân tại chỗ')} value={getSiteCauseLabel(alert.site_cause.cause)} />
+          )}
+          {alert.escalated_at && (
+            <StatRow label={t('Đã báo chủ trại')} value={formatDateTime(alert.escalated_at)} isWarning />
+          )}
         </Card>
 
         <Card>
@@ -162,6 +177,12 @@ export function AlertDetailContent({
           <Card>
             <AlertEvidence alert={alert} enabled={isReady} />
           </Card>
+        )}
+
+        {onsiteCheck && <OnsiteCheckCard check={onsiteCheck} />}
+
+        {canPerform(user, 'viewWorkOrders') && (
+          <AlertWorkOrderCard alertId={alert._id} houseName={location?.houseName ?? '_'} enabled={isReady} />
         )}
 
         <AlertTimeline
@@ -188,6 +209,14 @@ export function AlertDetailContent({
             variant="secondary"
             size="md"
             onPress={() => setRelayPickerOpen(true)}
+            style={styles.action}
+          />
+        )}
+        {canAnswerOnsiteCheck && (
+          <Button
+            label={t('Trả lời kiểm tra tại chỗ')}
+            size="md"
+            onPress={() => setOnsiteCheckOpen(true)}
             style={styles.action}
           />
         )}
@@ -218,14 +247,27 @@ export function AlertDetailContent({
         )}
       </View>
 
-      <AcknowledgeSheet
-        alert={isAcknowledgeOpen ? alert : null}
-        onClose={() => setAcknowledgeOpen(false)}
-        onDone={message => {
-          setAcknowledgeOpen(false)
-          onMessage?.(message)
-        }}
-      />
+      {/* Chỉ mount khi mở: mỗi lần mở ghi chú và nguyên nhân bắt đầu trống, không mang lựa chọn cũ sang lần sau */}
+      {isAcknowledgeOpen && (
+        <AcknowledgeSheet
+          alert={alert}
+          onClose={() => setAcknowledgeOpen(false)}
+          onDone={message => {
+            setAcknowledgeOpen(false)
+            onMessage?.(message)
+          }}
+        />
+      )}
+      {isOnsiteCheckOpen && (
+        <OnsiteCheckSheet
+          alert={alert}
+          onClose={() => setOnsiteCheckOpen(false)}
+          onDone={message => {
+            setOnsiteCheckOpen(false)
+            onMessage?.(message)
+          }}
+        />
+      )}
       <VerdictSheet
         key={verdictResult ?? 'closed'}
         alertId={alert._id}

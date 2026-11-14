@@ -20,6 +20,7 @@ import { LiveCameraPlayer } from '@/components/home/LiveCameraPlayer'
 import { NewReportCard } from '@/components/home/NewReportCard'
 import { OverviewStats } from '@/components/home/OverviewStats'
 import { PendingTasksCard } from '@/components/home/PendingTasksCard'
+import { WorkOrderTasksCard } from '@/components/home/WorkOrderTasksCard'
 import { RelayOverrideStrip } from '@/components/home/RelayOverrideStrip'
 import { UrgentAlertBanner } from '@/components/home/UrgentAlertBanner'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
@@ -47,6 +48,7 @@ export default function HomeScreen() {
   const canViewOwnerTasks = canPerform(user, 'viewOwnerTasks')
   // Kỹ thuật viên cũng chấm ngày của nhà được giao (BR-31) nên thấy "Việc chờ bạn", chỉ phần ngày chờ chấm
   const canViewPendingTasks = canViewOwnerTasks || canPerform(user, 'viewPendingRatings')
+  const canWorkOnWorkOrders = canPerform(user, 'workOnWorkOrder')
   const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
   const { zoneById } = useZoneDirectory()
@@ -107,6 +109,8 @@ export default function HomeScreen() {
             <UrgentAlertBanner />
             {/* Việc chờ: chủ trại và kỹ thuật viên (ngày chờ chấm); báo cáo mới của chủ trại; dải relay chuyên gia vẫn thấy nhưng không có nút */}
             {canViewPendingTasks && <PendingTasksCard />}
+            {/* Work Order sửa chữa (G-21): kỹ thuật viên — việc giao cho mình, chủ trại — việc còn mở của farm */}
+            {canWorkOnWorkOrders && <WorkOrderTasksCard />}
             <RelayOverrideStrip />
             {canViewOwnerTasks && <NewReportCard />}
             <HouseCarousel />

@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleSheet, type StyleProp, type ViewStyle } from 'r
 import type { Icon } from 'phosphor-react-native'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
-import { Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
 // Chiều cao theo MOBILE_GUIDE 3.5: sm 36 · md 44 · lg 52
@@ -12,8 +12,9 @@ const BUTTON_PADDINGS = { sm: Spacing.lg, md: Spacing.lg, lg: Spacing.xl } as co
 interface ButtonProps {
   label: string
   onPress: () => void
-  // primary: nền lime; secondary: nền trắng không viền; inverse: nền Ink chữ trắng (trên khối màu); link: chữ gạch chân
-  variant?: 'primary' | 'secondary' | 'inverse' | 'link'
+  // primary: nền lime; secondary: nền trắng không viền; outline: nền trắng viền border (nút phụ đặt trên nền trắng của sheet, card,
+  // nơi secondary không nổi); inverse: nền Ink chữ trắng (trên khối màu); link: chữ gạch chân
+  variant?: 'primary' | 'secondary' | 'outline' | 'inverse' | 'link'
   size?: keyof typeof BUTTON_HEIGHTS
   // Icon đứng sau chữ, ví dụ mũi tên "Xử lý ngay →"
   trailingIcon?: Icon
@@ -47,6 +48,10 @@ export function Button({
   const variantStyle = {
     primary: [filledStyle, { backgroundColor: palette.primary }],
     secondary: [filledStyle, { backgroundColor: palette.surface }],
+    outline: [
+      filledStyle,
+      { backgroundColor: palette.surface, borderWidth: BorderWidth.strong, borderColor: palette.border },
+    ],
     inverse: [filledStyle, { backgroundColor: palette.inverse }],
     link: styles.link,
   }[variant]
@@ -54,6 +59,7 @@ export function Button({
   const textColor = {
     primary: palette.onPrimary,
     secondary: palette.text,
+    outline: palette.text,
     inverse: palette.onInverse,
     link: color ?? palette.textSecondary,
   }[variant]
