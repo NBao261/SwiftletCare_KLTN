@@ -9,6 +9,7 @@ export function useExpertReviewItems(params?: {
   farm_id?: string
   zone_id?: string
   status?: ReviewItemStatus
+  limit?: number
 }) {
   return useQuery({
     queryKey: ['expert', 'review-items', params],
@@ -34,7 +35,9 @@ export function useTakeReviewAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'review-items'] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning'] })
-      queryClient.invalidateQueries({ queryKey: ['expert', 'activity'] })
+      // Duyệt/hoàn nguyên đổi cấu hình zone → màn trang trại (['zones']) và nhật ký quyết định (['expert-activity'])
+      queryClient.invalidateQueries({ queryKey: ['zones'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }
@@ -46,6 +49,7 @@ export function useExpertProposals(params?: {
   farm_id?: string
   zone_id?: string
   status?: ProposalStatus
+  limit?: number
 }) {
   return useQuery({
     queryKey: ['expert', 'proposals', params],
@@ -73,7 +77,8 @@ export function useTakeProposalAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning'] })
-      queryClient.invalidateQueries({ queryKey: ['expert', 'activity'] })
+      queryClient.invalidateQueries({ queryKey: ['zones'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }

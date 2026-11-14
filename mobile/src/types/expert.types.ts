@@ -75,25 +75,21 @@ export interface ReviewItem {
 // Trạng thái sức khỏe nhà yến (EXPERT-FR-005, BR-28)
 export type DailyHealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA'
 
-// Loại hành động của chuyên gia cho nhật ký hoạt động (EXPERT-FR-009)
+// Loại hành động của chuyên gia cho nhật ký hoạt động (EXPERT-FR-009).
+// Khớp enum backend EXPERT_DECISION_ACTIONS (expertActivity.service.ts) và api-spec GET /expert-activity?type
 export type ExpertActionType =
-  | 'ALERT_VERDICT_SET'
   | 'THRESHOLD_UPDATED'
-  | 'THRESHOLD_RESET'
-  | 'FUZZY_UPDATED'
   | 'FUZZY_TUNING_UPDATED'
   | 'DETECTION_TUNING_UPDATED'
   | 'BIRD_COUNT_TUNING_UPDATED'
+  | 'COUNTING_RING_UPDATED'
+  | 'ALERT_VERDICT_SET'
+  | 'HEALTH_REPORT_CONCLUDED'
   | 'REVIEW_ACCEPTED'
   | 'REVIEW_REVERTED'
-  | 'REVIEW_ADJUSTED'
   | 'PROPOSAL_APPROVED'
   | 'PROPOSAL_REJECTED'
-  | 'CONCLUSION_WRITTEN'
-  | 'HEALTH_REPORT_CONCLUDED'
-  | 'COUNTING_RING_SET'
-  | 'COUNTING_RING_UPDATED'
-  | 'COUNTING_SCHEDULE_SET'
+  | 'HEALTH_LEVELS_UPDATED'
 
 export interface ExpertVerdictStats {
   type: InferredAlertType

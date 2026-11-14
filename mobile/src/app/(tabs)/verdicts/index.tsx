@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Pressable,
   RefreshControl,
@@ -9,13 +9,7 @@ import {
 } from 'react-native'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { useLocalSearchParams } from 'expo-router'
-import * as Haptics from 'expo-haptics'
-import { useQueryClient } from '@tanstack/react-query'
-import { onNotificationNew } from '@/services/socket/socketClient'
-import {
-  ArrowUp,
-  SlidersHorizontal,
-} from 'phosphor-react-native'
+import { ArrowUp, SlidersHorizontal } from 'phosphor-react-native'
 import { ExpertHeaderPicker, PersistentScopeBar } from '@/components/layout/PersistentScopeBar'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { VerdictCard } from '@/components/expert/VerdictCard'
@@ -27,17 +21,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
-import { useInferredAlerts, useSetAlertVerdict, useVerdictStats } from '@/hooks/expert/useInferredAlerts'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { useToastMessage } from '@/hooks/ui/useToastMessage'
-import { useExpertScopeStore } from '@/stores/expertScopeStore'
-import type { InferredAlert, VerdictResult } from '@/types'
+import { useVerdictsScreen, type VerdictFilter } from '@/hooks/expert/useVerdictsScreen'
 import { t } from '@/utils/i18n.utils'
 
 const KPI_TILE_HEIGHT = 112
-
-type FilterStatus = 'ALL' | 'PENDING' | 'CONFIRMED' | 'REJECTED'
 
 // Chỉ 4 loại cảnh báo suy luận cần kiểm chứng — MISTING_INEFFECTIVE là device alert, không thuộc inferred types (api-spec.yaml dòng 3105)
 const INFERRED_TYPE_OPTIONS: { key: string; label: string }[] = [
@@ -48,8 +37,6 @@ const INFERRED_TYPE_OPTIONS: { key: string; label: string }[] = [
   { key: 'FORECAST_BREACH', label: 'Dự báo sắp lệch nhiệt ẩm' },
 ]
 
-const INFERRED_ALERT_TYPES = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'] as const
-
 const SEVERITY_OPTIONS: { key: string; label: string }[] = [
   { key: 'ALL', label: 'Tất cả mức độ' },
   { key: 'CRITICAL', label: 'Khẩn cấp' },
@@ -58,10 +45,16 @@ const SEVERITY_OPTIONS: { key: string; label: string }[] = [
   { key: 'LOW', label: 'Thường' },
 ]
 
+const STATUS_CHIPS: { key: VerdictFilter; label: string }[] = [
+  { key: 'PENDING', label: 'Chờ kiểm tra' },
+  { key: 'CONFIRMED', label: 'Báo đúng' },
+  { key: 'REJECTED', label: 'Báo ảo' },
+]
+
 /**
  * [PHẦN 2] MOBILE — MENU THẨM ĐỊNH (src/app/(tabs)/verdicts/index.tsx)
- * Kiến trúc 1 màn hình duy nhất (One-Screen Consolidated) cho Domain Expert,
- * đồng bộ 100% quy chuẩn thẩm mỹ Calm Industrial với nhánh FARM_OWNER.
+ * Màn mỏng: dữ liệu/KPI/phân trang/ghi phán quyết nằm trong useVerdictsScreen; màn chỉ render.
+ * Calm Industrial đồng bộ với nhánh FARM_OWNER.
  */
 export default function VerdictsScreen() {
   const palette = usePalette()
@@ -71,96 +64,31 @@ export default function VerdictsScreen() {
   const cardLayouts = useRef<Record<string, number>>({})
   const listSectionY = useRef(0)
 
-  const queryClient = useQueryClient()
+  const {
+    kpi,
+    alerts,
+    statusFilter,
+    setStatusFilter,
+    selectedType,
+    setSelectedType,
+    selectedSeverity,
+    setSelectedSeverity,
+    hasAdvancedFilter,
+    isLoading,
+    isError,
+    isRefetching,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetchAll,
+    submitVerdict,
+    isSubmitting,
+    toastMessage,
+  } = useVerdictsScreen()
 
-  // Realtime WebSocket: tự động làm mới danh sách thẩm định khi có thông báo mới (EXPERT-FR-007)
-  useEffect(() => {
-    const handleNotification = () => {
-      void queryClient.invalidateQueries({ queryKey: ['inferred-alerts'] })
-      void queryClient.invalidateQueries({ queryKey: ['verdict-stats'] })
-      void queryClient.invalidateQueries({ queryKey: ['expert'] })
-    }
-    const unsubscribe = onNotificationNew(handleNotification)
-    return unsubscribe
-  }, [queryClient])
-
-  const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
-  const selectedZoneId = useExpertScopeStore(state => state.selectedZoneId)
-
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('ALL')
-  const [selectedType, setSelectedType] = useState<string>('ALL')
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL')
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
-
   const [userToggledAlertId, setUserToggledAlertId] = useState<string | null | undefined>(undefined)
   const expandedAlertId = userToggledAlertId !== undefined ? userToggledAlertId : (params.alertId ?? null)
-
-  const { message: toastMessage, show: showToast } = useToastMessage()
-
-  const {
-    data: alertsResponse,
-    isLoading: isAlertsLoading,
-    isError: isAlertsError,
-    isRefetching,
-    refetch,
-  } = useInferredAlerts({
-    farm_id: selectedFarmId || undefined,
-    zone_id: selectedZoneId || undefined,
-    type: selectedType !== 'ALL' ? selectedType : undefined,
-  })
-
-  const { refetch: refetchStats } = useVerdictStats({
-    farm_id: selectedFarmId || undefined,
-    zone_id: selectedZoneId || undefined,
-  })
-
-  const setAlertVerdict = useSetAlertVerdict()
-
-  const rawAlerts: InferredAlert[] = useMemo(() => {
-    const alerts = alertsResponse?.data || []
-    // Chỉ giữ lại 4 loại inferred type thực sự cần kiểm chứng (api-spec.yaml dòng 3105/3303)
-    return alerts.filter(a => (INFERRED_ALERT_TYPES as readonly string[]).includes(a.type))
-  }, [alertsResponse])
-
-  const kpiData = useMemo(() => {
-    let pending = 0
-    let confirmed = 0
-    let rejected = 0
-
-    rawAlerts.forEach(a => {
-      if (!a.expert_verdict) {
-        pending += 1
-      } else if (a.expert_verdict.result === 'CONFIRMED') {
-        confirmed += 1
-      } else if (a.expert_verdict.result === 'REJECTED') {
-        rejected += 1
-      }
-    })
-
-    const total = rawAlerts.length
-    const evaluatedTotal = confirmed + rejected
-    const confirmRate = evaluatedTotal > 0 ? Math.round((confirmed / evaluatedTotal) * 100) : 0
-
-    return {
-      total,
-      pending,
-      confirmed,
-      rejected,
-      confirmRate,
-    }
-  }, [rawAlerts])
-
-  const filteredAlerts = useMemo(() => {
-    return rawAlerts.filter(item => {
-      if (filterStatus === 'PENDING' && Boolean(item.expert_verdict)) return false
-      if (filterStatus === 'CONFIRMED' && item.expert_verdict?.result !== 'CONFIRMED') return false
-      if (filterStatus === 'REJECTED' && item.expert_verdict?.result !== 'REJECTED') return false
-
-      if (selectedSeverity !== 'ALL' && item.severity !== selectedSeverity) return false
-
-      return true
-    })
-  }, [filterStatus, rawAlerts, selectedSeverity])
 
   useEffect(() => {
     if (params.alertId) {
@@ -185,32 +113,16 @@ export default function VerdictsScreen() {
     [params.alertId]
   )
 
-  const handleVerdictSubmit = useCallback(
-    async (alertId: string, result: VerdictResult, note?: string) => {
-      try {
-        await setAlertVerdict.mutateAsync({ alertId, result, note })
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-        showToast(
-          result === 'CONFIRMED'
-            ? t('Đã xác nhận cảnh báo đúng')
-            : t('Đã bác bỏ cảnh báo ảo và gửi lý do')
-        )
-      } catch {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-        showToast(t('Không thể lưu kết luận thẩm định, vui lòng thử lại'))
-      }
+  const handleKpiPress = useCallback(
+    (status: VerdictFilter) => {
+      setStatusFilter(status)
+      scrollRef.current?.scrollTo({ y: Math.max(0, listSectionY.current - 12), animated: true })
     },
-    [setAlertVerdict, showToast]
+    [setStatusFilter]
   )
 
-  const handleKpiPress = useCallback((status: FilterStatus) => {
-    setFilterStatus(status)
-    scrollRef.current?.scrollTo({ y: Math.max(0, listSectionY.current - 12), animated: true })
-  }, [])
-
-  const pendingTileWarning = kpiData.pending > 0
+  const pendingTileWarning = kpi.pending > 0
   const pendingSecondaryColor = pendingTileWarning ? palette.severityP2Text : palette.textSecondary
-  const hasAdvancedFilter = selectedType !== 'ALL' || selectedSeverity !== 'ALL'
 
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
@@ -220,42 +132,31 @@ export default function VerdictsScreen() {
         ref={scrollRef}
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl * 3 },
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl * 3 }]}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => {
-              refetch()
-              refetchStats()
-            }}
-            tintColor={palette.text}
-          />
+          <RefreshControl refreshing={isRefetching} onRefresh={refetchAll} tintColor={palette.text} />
         }
       >
-        {/* KHỐI 1: Thanh chọn Tầng & Khoảng thời gian ghim cố định đầu trang */}
+        {/* KHỐI 1: Thanh chọn Tầng ghim cố định đầu trang */}
         <View style={[styles.stickyScopeContainer, { backgroundColor: palette.background }]}>
           <PersistentScopeBar />
         </View>
 
         <View style={styles.mainContent}>
-          {/* KHỐI 2: Lưới 2x2 gồm 4 Ô KPI chuẩn KpiTile của FARM_OWNER */}
+          {/* KHỐI 2: Lưới 2x2 gồm 4 Ô KPI — số liệu từ verdict-stats (toàn bộ, mọi trang) */}
           <View style={styles.kpiGrid}>
-            {/* Ô 1: Tổng cảnh báo */}
             <View style={styles.kpiCell}>
               <PressableScale
-                onPress={() => handleKpiPress('ALL')}
+                onPress={() => handleKpiPress('PENDING')}
                 style={[styles.kpiTile, { backgroundColor: palette.surface }]}
                 accessibilityRole="button"
-                accessibilityLabel={t('Lọc tất cả cảnh báo')}
+                accessibilityLabel={t('Tổng cảnh báo suy luận')}
               >
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                   {t('Tổng cảnh báo')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} sự cố', { count: kpiData.total })}
+                  {t('{count} sự cố', { count: kpi.total })}
                 </Text>
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                   {t('Đã ghi nhận')}
@@ -263,16 +164,10 @@ export default function VerdictsScreen() {
               </PressableScale>
             </View>
 
-            {/* Ô 2: Chờ kiểm tra */}
             <View style={styles.kpiCell}>
               <PressableScale
                 onPress={() => handleKpiPress('PENDING')}
-                style={[
-                  styles.kpiTile,
-                  {
-                    backgroundColor: pendingTileWarning ? palette.severityP2 : palette.surface,
-                  },
-                ]}
+                style={[styles.kpiTile, { backgroundColor: pendingTileWarning ? palette.severityP2 : palette.surface }]}
                 accessibilityRole="button"
                 accessibilityLabel={t('Lọc cảnh báo chờ kiểm tra')}
               >
@@ -280,15 +175,14 @@ export default function VerdictsScreen() {
                   {t('Chờ kiểm tra')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} đang mở', { count: kpiData.pending })}
+                  {t('{count} đang mở', { count: kpi.pending })}
                 </Text>
                 <Text variant="small" color={pendingSecondaryColor} numberOfLines={1}>
-                  {kpiData.pending > 0 ? t('Cần chuyên gia xem') : t('Đã xử lý hết')}
+                  {kpi.pending > 0 ? t('Cần chuyên gia xem') : t('Đã xử lý hết')}
                 </Text>
               </PressableScale>
             </View>
 
-            {/* Ô 3: Tỷ lệ báo đúng (%) */}
             <View style={styles.kpiCell}>
               <PressableScale
                 onPress={() => handleKpiPress('CONFIRMED')}
@@ -300,7 +194,7 @@ export default function VerdictsScreen() {
                   {t('Báo đúng')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {`${kpiData.confirmRate}%`}
+                  {`${kpi.confirmRate}%`}
                 </Text>
                 <View style={styles.kpiCaptionRow}>
                   <ArrowUp size={12} color={palette.houseHealthy} weight="bold" />
@@ -311,7 +205,6 @@ export default function VerdictsScreen() {
               </PressableScale>
             </View>
 
-            {/* Ô 4: Báo ảo (Bác bỏ) */}
             <View style={styles.kpiCell}>
               <PressableScale
                 onPress={() => handleKpiPress('REJECTED')}
@@ -323,7 +216,7 @@ export default function VerdictsScreen() {
                   {t('Báo ảo (Bác bỏ)')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} đã loại', { count: kpiData.rejected })}
+                  {t('{count} đã loại', { count: kpi.rejected })}
                 </Text>
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                   {t('Báo sai / nhiễu')}
@@ -332,135 +225,57 @@ export default function VerdictsScreen() {
             </View>
           </View>
 
-          {/* KHỐI 3: Hàng Filter Chips bo tròn không viền chuẩn ChoiceChips của FARM_OWNER */}
+          {/* KHỐI 3: Chip trạng thái kiểm chứng (lọc ở server) + nút Bộ lọc nâng cao */}
           <View
             onLayout={e => {
               listSectionY.current = e.nativeEvent.layout.y
             }}
             style={styles.filterSection}
           >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterChipsRow}
-            >
-              {/* Chip: Tất cả */}
-              <Pressable
-                hitSlop={8}
-                onPress={() => setFilterStatus('ALL')}
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor: filterStatus === 'ALL' ? palette.inverse : palette.surface,
-                  },
-                ]}
-              >
-                <Text
-                  variant="body"
-                  weight="semiBold"
-                  color={filterStatus === 'ALL' ? palette.onInverse : palette.text}
-                >
-                  {t('Tất cả ({count})', { count: kpiData.total })}
-                </Text>
-              </Pressable>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
+              {STATUS_CHIPS.map(chip => {
+                const active = statusFilter === chip.key
+                const count = chip.key === 'PENDING' ? kpi.pending : chip.key === 'CONFIRMED' ? kpi.confirmed : kpi.rejected
+                return (
+                  <Pressable
+                    key={chip.key}
+                    hitSlop={8}
+                    onPress={() => setStatusFilter(chip.key)}
+                    style={[styles.filterChip, { backgroundColor: active ? palette.inverse : palette.surface }]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text variant="body" weight="semiBold" color={active ? palette.onInverse : palette.text}>
+                      {t('{label} ({count})', { label: t(chip.label), count })}
+                    </Text>
+                  </Pressable>
+                )
+              })}
 
-              {/* Chip: Chờ kiểm tra */}
-              <Pressable
-                hitSlop={8}
-                onPress={() => setFilterStatus('PENDING')}
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor: filterStatus === 'PENDING' ? palette.inverse : palette.surface,
-                  },
-                ]}
-              >
-                <Text
-                  variant="body"
-                  weight="semiBold"
-                  color={filterStatus === 'PENDING' ? palette.onInverse : palette.text}
-                >
-                  {t('Chờ kiểm tra ({count})', { count: kpiData.pending })}
-                </Text>
-              </Pressable>
-
-              {/* Chip: Báo đúng */}
-              <Pressable
-                hitSlop={8}
-                onPress={() => setFilterStatus('CONFIRMED')}
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor: filterStatus === 'CONFIRMED' ? palette.inverse : palette.surface,
-                  },
-                ]}
-              >
-                <Text
-                  variant="body"
-                  weight="semiBold"
-                  color={filterStatus === 'CONFIRMED' ? palette.onInverse : palette.text}
-                >
-                  {t('Báo đúng ({count})', { count: kpiData.confirmed })}
-                </Text>
-              </Pressable>
-
-              {/* Chip: Báo ảo */}
-              <Pressable
-                hitSlop={8}
-                onPress={() => setFilterStatus('REJECTED')}
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor: filterStatus === 'REJECTED' ? palette.inverse : palette.surface,
-                  },
-                ]}
-              >
-                <Text
-                  variant="body"
-                  weight="semiBold"
-                  color={filterStatus === 'REJECTED' ? palette.onInverse : palette.text}
-                >
-                  {t('Báo ảo ({count})', { count: kpiData.rejected })}
-                </Text>
-              </Pressable>
-
-              {/* Nút Lọc nâng cao */}
               <Pressable
                 hitSlop={8}
                 onPress={() => setIsFilterSheetOpen(true)}
-                style={[
-                  styles.filterChip,
-                  styles.advancedFilterButton,
-                  {
-                    backgroundColor: hasAdvancedFilter ? palette.inverse : palette.surface,
-                  },
-                ]}
+                style={[styles.filterChip, styles.advancedFilterButton, { backgroundColor: hasAdvancedFilter ? palette.inverse : palette.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('Bộ lọc nâng cao')}
               >
-                <SlidersHorizontal
-                  size={14}
-                  weight="bold"
-                  color={hasAdvancedFilter ? palette.onInverse : palette.text}
-                />
-                <Text
-                  variant="body"
-                  weight="semiBold"
-                  color={hasAdvancedFilter ? palette.onInverse : palette.text}
-                >
+                <SlidersHorizontal size={14} weight="bold" color={hasAdvancedFilter ? palette.onInverse : palette.text} />
+                <Text variant="body" weight="semiBold" color={hasAdvancedFilter ? palette.onInverse : palette.text}>
                   {t('Bộ lọc')}
                 </Text>
               </Pressable>
             </ScrollView>
           </View>
 
-          {/* KHỐI 4: Danh sách Card Cảnh báo tích hợp Inline Collapsible Evidence Drawer */}
+          {/* KHỐI 4: Danh sách Card Cảnh báo + tải thêm theo trang (meta) */}
           <View style={styles.alertListSection}>
-            {isAlertsError ? (
+            {isError ? (
               <EmptyState
                 message={t('Không tải được danh sách cảnh báo. Vui lòng kéo xuống để thử lại.')}
                 actionLabel={t('Thử lại')}
-                onAction={() => { void refetch() }}
+                onAction={refetchAll}
               />
-            ) : isAlertsLoading ? (
+            ) : isLoading ? (
               <View style={styles.skeletonWrapper}>
                 <Skeleton width="100%" height={120} radius={Radius.lg} />
                 <View style={{ height: Spacing.md }} />
@@ -468,37 +283,42 @@ export default function VerdictsScreen() {
                 <View style={{ height: Spacing.md }} />
                 <Skeleton width="100%" height={120} radius={Radius.lg} />
               </View>
-            ) : filteredAlerts.length === 0 ? (
-              <EmptyState
-                message={t('Không tìm thấy sự cố nào thỏa mãn bộ lọc hiện tại.')}
-              />
+            ) : alerts.length === 0 ? (
+              <EmptyState message={t('Không tìm thấy sự cố nào thỏa mãn bộ lọc hiện tại.')} />
             ) : (
-              filteredAlerts.map(alert => (
-                <View
-                  key={alert._id}
-                  onLayout={e => {
-                    cardLayouts.current[alert._id] = e.nativeEvent.layout.y
-                  }}
-                >
-                  <VerdictCard
-                    alert={alert}
-                    isExpanded={expandedAlertId === alert._id}
-                    onToggleExpand={() => handleToggleCard(alert._id)}
-                    onVerdictSubmit={handleVerdictSubmit}
-                    isSubmitting={setAlertVerdict.isPending}
+              <>
+                {alerts.map(alert => (
+                  <View
+                    key={alert._id}
+                    onLayout={e => {
+                      cardLayouts.current[alert._id] = e.nativeEvent.layout.y
+                    }}
+                  >
+                    <VerdictCard
+                      alert={alert}
+                      isExpanded={expandedAlertId === alert._id}
+                      onToggleExpand={() => handleToggleCard(alert._id)}
+                      onVerdictSubmit={submitVerdict}
+                      isSubmitting={isSubmitting}
+                    />
+                  </View>
+                ))}
+                {hasNextPage && (
+                  <Button
+                    label={t('Xem thêm')}
+                    variant="link"
+                    loading={isFetchingNextPage}
+                    onPress={() => fetchNextPage()}
                   />
-                </View>
-              ))
+                )}
+              </>
             )}
           </View>
         </View>
       </ScrollView>
 
-      {/* BottomSheet: Bộ lọc phụ gọn gàng (Loại cảnh báo & Mức độ) */}
-      <BottomSheet
-        visible={isFilterSheetOpen}
-        onClose={() => setIsFilterSheetOpen(false)}
-      >
+      {/* BottomSheet: Bộ lọc phụ (Loại cảnh báo & Mức độ) */}
+      <BottomSheet visible={isFilterSheetOpen} onClose={() => setIsFilterSheetOpen(false)}>
         <View style={styles.sheetHeader}>
           <Text variant="heading" weight="semiBold">
             {t('Bộ lọc nâng cao')}
@@ -517,19 +337,10 @@ export default function VerdictsScreen() {
                   key={opt.key}
                   hitSlop={8}
                   onPress={() => setSelectedType(opt.key)}
-                  style={[
-                    styles.sheetChip,
-                    {
-                      backgroundColor: active ? palette.inverse : palette.surfaceStrong,
-                    },
-                  ]}
+                  style={[styles.sheetChip, { backgroundColor: active ? palette.inverse : palette.surfaceStrong }]}
                 >
-                  <Text
-                    variant="body"
-                    weight="semiBold"
-                    color={active ? palette.onInverse : palette.text}
-                  >
-                    {opt.label}
+                  <Text variant="body" weight="semiBold" color={active ? palette.onInverse : palette.text}>
+                    {t(opt.label)}
                   </Text>
                 </Pressable>
               )
@@ -547,19 +358,10 @@ export default function VerdictsScreen() {
                   key={opt.key}
                   hitSlop={8}
                   onPress={() => setSelectedSeverity(opt.key)}
-                  style={[
-                    styles.sheetChip,
-                    {
-                      backgroundColor: active ? palette.inverse : palette.surfaceStrong,
-                    },
-                  ]}
+                  style={[styles.sheetChip, { backgroundColor: active ? palette.inverse : palette.surfaceStrong }]}
                 >
-                  <Text
-                    variant="body"
-                    weight="semiBold"
-                    color={active ? palette.onInverse : palette.text}
-                  >
-                    {opt.label}
+                  <Text variant="body" weight="semiBold" color={active ? palette.onInverse : palette.text}>
+                    {t(opt.label)}
                   </Text>
                 </Pressable>
               )
@@ -587,9 +389,7 @@ export default function VerdictsScreen() {
         </View>
       </BottomSheet>
 
-      {toastMessage && (
-        <Toast message={toastMessage} bottomOffset={TAB_BAR_OVERLAP + Spacing.lg} />
-      )}
+      {toastMessage && <Toast message={toastMessage} bottomOffset={TAB_BAR_OVERLAP + Spacing.lg} />}
     </View>
   )
 }

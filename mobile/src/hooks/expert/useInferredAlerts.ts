@@ -50,10 +50,11 @@ export function useSetAlertVerdict() {
       note?: string
     }) => expertApi.setAlertVerdict(alertId, result, note),
     onSuccess: () => {
-      // Làm mới danh sách cảnh báo và thống kê phán quyết
+      // Làm mới danh sách cảnh báo, thống kê phán quyết, danh sách cảnh báo của Farm Owner và nhật ký quyết định
       queryClient.invalidateQueries({ queryKey: ['expert', 'inferred-alerts'] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'verdict-stats'] })
       queryClient.invalidateQueries({ queryKey: ['alerts'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }

@@ -6,7 +6,6 @@ import {
   View,
 } from 'react-native'
 import {
-  CalendarBlank,
   CaretDown,
   Check,
   Stack,
@@ -18,18 +17,10 @@ import { useFarms } from '@/hooks/farm/useFarms'
 import { useHouses } from '@/hooks/farm/useHouses'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { useExpertScopeStore, type ExpertDateRange } from '@/stores/expertScopeStore'
+import { useExpertScopeStore } from '@/stores/expertScopeStore'
 import { t } from '@/utils/i18n.utils'
 
-const DATE_RANGE_LABELS: Record<ExpertDateRange, string> = {
-  today: 'Hôm nay',
-  '24h': '24 giờ',
-  '7d': '7 ngày',
-  '30d': '30 ngày',
-}
-
 interface PersistentScopeBarProps {
-  showDateRange?: boolean
   requireZone?: boolean
 }
 
@@ -164,7 +155,6 @@ export function ExpertHeaderPicker() {
  * đồng bộ 100% với ChoiceChips / ZoneTabs / AlertFilterChips của nhánh FARM_OWNER.
  */
 export function PersistentScopeBar({
-  showDateRange = true,
   requireZone = false,
 }: PersistentScopeBarProps) {
   const palette = usePalette()
@@ -173,11 +163,9 @@ export function PersistentScopeBar({
     selectedFarmId,
     selectedHouseId,
     selectedZoneId,
-    dateRange,
     setFarmId,
     setHouseId,
     setZoneId,
-    setDateRange,
   } = useExpertScopeStore()
 
   const { data: farmsData } = useFarms()
@@ -203,7 +191,6 @@ export function PersistentScopeBar({
   }, [houses, selectedFarmId, selectedHouseId, setHouseId])
 
   const [zoneSheetVisible, setZoneSheetVisible] = useState(false)
-  const [dateRangeSheetVisible, setDateRangeSheetVisible] = useState(false)
 
   const currentHouse = houses.find(h => h._id === currentHouseId)
 
@@ -280,47 +267,6 @@ export function PersistentScopeBar({
             <CaretDown size={14} color={palette.text} weight="bold" />
           </Pressable>
         )}
-
-        {/* Chip chọn khoảng thời gian (đồng bộ kiểu AlertFilterChips của Farmer) */}
-        {showDateRange && (
-          <>
-            {/* Vách ngăn mảnh tách nhóm Tầng (chọn phạm vi) và nhóm Thời gian cho đỡ dồn 1 dải */}
-            <View style={[styles.groupDivider, { backgroundColor: palette.divider }]} />
-            <Pressable
-              hitSlop={8}
-              onPress={() => setDateRangeSheetVisible(true)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: dateRange !== '24h' ? palette.inverse : palette.surface,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t('Chọn khoảng thời gian, hiện tại là {label}', {
-              label: DATE_RANGE_LABELS[dateRange],
-            })}
-          >
-            <CalendarBlank
-              size={14}
-              color={dateRange !== '24h' ? palette.onInverse : palette.text}
-              weight="bold"
-            />
-            <Text
-              variant="body"
-              weight="semiBold"
-              color={dateRange !== '24h' ? palette.onInverse : palette.text}
-              numberOfLines={1}
-            >
-              {DATE_RANGE_LABELS[dateRange]}
-            </Text>
-            <CaretDown
-              size={14}
-              color={dateRange !== '24h' ? palette.onInverse : palette.text}
-              weight="bold"
-            />
-            </Pressable>
-          </>
-        )}
       </ScrollView>
 
       {/* BottomSheet Chọn Tầng dự phòng */}
@@ -381,38 +327,6 @@ export function PersistentScopeBar({
           })}
         </ScrollView>
       </BottomSheet>
-
-      {/* BottomSheet Chọn Khoảng thời gian (kiểu OptionSheet phẳng) */}
-      <BottomSheet visible={dateRangeSheetVisible} onClose={() => setDateRangeSheetVisible(false)}>
-        <Text variant="heading">{t('Khoảng thời gian')}</Text>
-
-        <View style={styles.sheetList}>
-          {(['today', '24h', '7d', '30d'] as const).map((range, index) => {
-            const isSelected = range === dateRange
-            return (
-              <Pressable
-                key={range}
-                onPress={() => {
-                  setDateRange(range)
-                  setDateRangeSheetVisible(false)
-                }}
-                style={[
-                  styles.sheetRow,
-                  index > 0 && {
-                    borderTopWidth: BorderWidth.hairline,
-                    borderTopColor: palette.divider,
-                  },
-                ]}
-              >
-                <Text variant="body" weight={isSelected ? 'semiBold' : 'regular'}>
-                  {DATE_RANGE_LABELS[range]}
-                </Text>
-                {isSelected && <Check size={20} color={palette.text} weight="bold" />}
-              </Pressable>
-            )
-          })}
-        </View>
-      </BottomSheet>
     </View>
   )
 }
@@ -448,12 +362,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     paddingVertical: Spacing.xs,
-  },
-  // Vách ngăn dọc mảnh giữa nhóm chip Tầng và chip Thời gian
-  groupDivider: {
-    width: BorderWidth.hairline,
-    height: 20,
-    marginHorizontal: Spacing.xs,
   },
   sheetHeader: {
     gap: 2,

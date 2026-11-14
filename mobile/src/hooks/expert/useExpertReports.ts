@@ -44,6 +44,9 @@ export function useSetReportConclusion() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'health-reports'] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'health-report-detail', vars.reportId] })
+      // Màn báo cáo của Farm Owner đọc theo ['health-reports']; nhật ký quyết định theo ['expert-activity']
+      queryClient.invalidateQueries({ queryKey: ['health-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }

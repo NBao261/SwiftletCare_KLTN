@@ -1,23 +1,10 @@
-import { describe, expect, it, beforeEach, jest } from '@jest/globals'
+import { describe, expect, it, beforeEach } from '@jest/globals'
 import { useExpertScopeStore } from '@/stores/expertScopeStore'
 
-// Mock react-native-mmkv cho môi trường Jest (không có NitroModules native binding)
-const mockStorage = new Map<string, string>()
-jest.mock('react-native-mmkv', () => ({
-  createMMKV: () => ({
-    getString: (key: string) => mockStorage.get(key),
-    set: (key: string, value: string) => {
-      mockStorage.set(key, value)
-    },
-    remove: (key: string) => mockStorage.delete(key),
-    contains: (key: string) => mockStorage.has(key),
-    clearAll: () => mockStorage.clear(),
-  }),
-}))
+// Store thuần in-memory (không dùng MMKV) nên không cần mock native binding nào
 
 describe('useExpertScopeStore', () => {
   beforeEach(() => {
-    mockStorage.clear()
     useExpertScopeStore.getState().resetScope()
   })
 
@@ -26,7 +13,6 @@ describe('useExpertScopeStore', () => {
     expect(state.selectedFarmId).toBeNull()
     expect(state.selectedHouseId).toBeNull()
     expect(state.selectedZoneId).toBeNull()
-    expect(state.dateRange).toBe('today')
   })
 
   it('cập nhật farmId thì reset houseId và zoneId', () => {
@@ -51,13 +37,5 @@ describe('useExpertScopeStore', () => {
     expect(updated.selectedFarmId).toBe('farm-1')
     expect(updated.selectedHouseId).toBe('house-new')
     expect(updated.selectedZoneId).toBeNull()
-  })
-
-  it('cập nhật dateRange thành công', () => {
-    const store = useExpertScopeStore.getState()
-    store.setDateRange('7d')
-
-    const updated = useExpertScopeStore.getState()
-    expect(updated.dateRange).toBe('7d')
   })
 })

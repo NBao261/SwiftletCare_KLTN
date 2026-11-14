@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
-import * as Haptics from 'expo-haptics'
 import {
   ArrowCounterClockwise,
   CheckCircle,
@@ -27,39 +26,14 @@ import { StepperInput } from '@/components/ui/stepper-input'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
-import { useInferredAlerts } from '@/hooks/expert/useInferredAlerts'
-import { useControlPerformances } from '@/hooks/analytics/useControlPerformances'
-import { useExpertReviewItems } from '@/hooks/expert/useExpertReviews'
-import {
-  useApplyFuzzySuggestion,
-  useFuzzySuggestion,
-  useResetThresholds,
-  useUpdateDetectionTuning,
-  useUpdateFuzzyTuning,
-  useUpdateHouseDetection,
-  useUpdateThresholds,
-  useZoneTuning,
-} from '@/hooks/expert/useZoneTuning'
-import { useAllHouses } from '@/hooks/farm/useAllHouses'
-import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { useToastMessage } from '@/hooks/ui/useToastMessage'
-import { useExpertScopeStore } from '@/stores/expertScopeStore'
-import type { ExpertDetectionTuning, ExpertFuzzyTuning, ExpertThresholds } from '@/types'
+import { useTuningScreen, type TuningChipKey } from '@/hooks/expert/useTuningScreen'
 import { t } from '@/utils/i18n.utils'
-import {
-  DEFAULT_DETECTION,
-  DEFAULT_FUZZY,
-  DEFAULT_THRESHOLDS,
-  TUNING_GROUPS_METADATA,
-  TUNING_RANGES,
-} from '@/utils/tuning.utils'
+import { TUNING_GROUPS_METADATA } from '@/utils/tuning.utils'
 
 const KPI_TILE_HEIGHT = 112
 const ICON_BOX_SIZE = 44
-
-type TuningChipKey = 'thresholds' | 'fuzzy' | 'detection'
 
 const CHIP_ITEMS: { key: TuningChipKey; label: string }[] = [
   { key: 'thresholds', label: 'Ngưỡng nhiệt ẩm' },
@@ -78,20 +52,38 @@ export default function TuningScreen() {
   const scrollRef = useRef<ScrollViewInstance>(null)
   const params = useLocalSearchParams<{ zoneId?: string; chip?: string }>()
 
-  const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
-  const selectedHouseId = useExpertScopeStore(state => state.selectedHouseId)
-  const selectedZoneId = useExpertScopeStore(state => state.selectedZoneId)
-  const setZoneId = useExpertScopeStore(state => state.setZoneId)
-
-  const { zones } = useZonesOfHouses(selectedHouseId ? [selectedHouseId] : [])
-
-  useEffect(() => {
-    if (params.zoneId && params.zoneId !== selectedZoneId) setZoneId(params.zoneId)
-  }, [params.zoneId, selectedZoneId, setZoneId])
-
-  useEffect(() => {
-    if (!selectedZoneId && zones.length > 0) setZoneId(zones[0]._id)
-  }, [selectedZoneId, setZoneId, zones])
+  const {
+    activeZoneId,
+    hasZoneData,
+    isZoneLoading,
+    isZoneError,
+    isRefetching,
+    refetch,
+    getFieldValue,
+    handleParamChange,
+    fuzzyInputFilter,
+    toggleFuzzyInputFilter,
+    isDirty,
+    totalDirtyCount,
+    isSaving,
+    saveAndApply,
+    resetLocal,
+    resetSystemDefaults,
+    isResetting,
+    isApplyingSuggestion,
+    suggestedValues,
+    aiR2,
+    aiInRangeNow,
+    aiInRangeSuggested,
+    aiDeltaPct,
+    aiReasonText,
+    applyAiFuzzySuggestion,
+    kpiInRangePct,
+    kpiBreachedCount,
+    kpiOwnerReviewsCount,
+    kpiAiAvailable,
+    toastMessage,
+  } = useTuningScreen(params.zoneId)
 
   const [selectedChip, setSelectedChip] = useState<TuningChipKey>(() => {
     if (params.chip === 'fuzzy' || params.chip === 'detection') return params.chip
@@ -106,171 +98,11 @@ export default function TuningScreen() {
     }
   }
 
-  const activeZoneId = selectedZoneId || ''
-
-  const { data: zoneDetailResponse, isLoading: isZoneLoading, isError: isZoneError, isRefetching, refetch } = useZoneTuning(activeZoneId)
-  const { data: fuzzySuggestionResponse } = useFuzzySuggestion(activeZoneId)
-  const fuzzySuggestion = fuzzySuggestionResponse?.data
-
-  // % thời gian trong ngưỡng của tầng: lấy từ hiệu quả điều khiển 7 ngày (ANALYTICS-FR-008), không còn từ báo cáo tuần theo Zone cũ
-  const controlPerformances = useControlPerformances(activeZoneId ? [activeZoneId] : [], '7d')
-  const { data: activeAlertsResponse } = useInferredAlerts({ farm_id: selectedFarmId || undefined, zone_id: activeZoneId || undefined, verdict: 'pending' })
-  const { data: reviewItemsResponse } = useExpertReviewItems({ farm_id: selectedFarmId || undefined, status: 'PENDING_REVIEW' })
-
-  // return_rate_drop_pct thuộc cấp Nhà (bird_count_tuning), không phải cấp Zone (detection_tuning) — EXPERT-FR-008, BR-09f
-  const { houses } = useAllHouses()
-  const currentHouse = useMemo(() => houses.find(h => h._id === selectedHouseId), [houses, selectedHouseId])
-
-  const zoneData = zoneDetailResponse?.data
-
-  const serverThresholds = useMemo<ExpertThresholds>(() => ({ ...DEFAULT_THRESHOLDS, ...(zoneData?.thresholds ?? {}) }), [zoneData])
-  const serverFuzzy = useMemo<ExpertFuzzyTuning>(() => ({ ...DEFAULT_FUZZY, ...(zoneData?.fuzzy_tuning ?? {}) }), [zoneData])
-  const serverDetection = useMemo<ExpertDetectionTuning>(() => ({ ...DEFAULT_DETECTION, ...(zoneData?.detection_tuning ?? {}) }), [zoneData])
-  const serverHouseRate = currentHouse?.bird_count_tuning?.return_rate_drop_pct ?? TUNING_RANGES.return_rate_drop_pct.default
-
-  const [prevZoneId, setPrevZoneId] = useState(activeZoneId)
-  const [thresholdEdits, setThresholdEdits] = useState<Partial<ExpertThresholds>>({})
-  const [fuzzyEdits, setFuzzyEdits] = useState<Partial<ExpertFuzzyTuning>>({})
-  const [detectionEdits, setDetectionEdits] = useState<Partial<ExpertDetectionTuning>>({})
-  const [houseReturnRateEdit, setHouseReturnRateEdit] = useState<number | null>(null)
-
-  const clearAllEdits = useCallback(() => {
-    setThresholdEdits({})
-    setFuzzyEdits({})
-    setDetectionEdits({})
-    setHouseReturnRateEdit(null)
-  }, [])
-
-  if (activeZoneId !== prevZoneId) {
-    setPrevZoneId(activeZoneId)
-    clearAllEdits()
-  }
-
-  const localThresholds = useMemo<ExpertThresholds>(() => ({ ...serverThresholds, ...thresholdEdits }), [serverThresholds, thresholdEdits])
-  const localFuzzy = useMemo<ExpertFuzzyTuning>(() => ({ ...serverFuzzy, ...fuzzyEdits }), [serverFuzzy, fuzzyEdits])
-  const localDetection = useMemo<ExpertDetectionTuning>(() => ({ ...serverDetection, ...detectionEdits }), [serverDetection, detectionEdits])
-  const localHouseReturnRate = houseReturnRateEdit ?? serverHouseRate
-
-  const handleParamChange = useCallback((chip: TuningChipKey, key: string, value: number) => {
-    if (chip === 'thresholds') {
-      const k = key as keyof ExpertThresholds
-      setThresholdEdits(prev => (value === serverThresholds[k] ? (({ [k]: _removed, ...rest }) => rest)(prev) : { ...prev, [k]: value }))
-    } else if (chip === 'fuzzy') {
-      const k = key as keyof ExpertFuzzyTuning
-      setFuzzyEdits(prev => (value === serverFuzzy[k] ? (({ [k]: _removed, ...rest }) => rest)(prev) : { ...prev, [k]: value }))
-    } else if (chip === 'detection') {
-      if (key === 'return_rate_drop_pct') {
-        setHouseReturnRateEdit(value === serverHouseRate ? null : value)
-      } else {
-        const k = key as keyof ExpertDetectionTuning
-        setDetectionEdits(prev => (value === serverDetection[k] ? (({ [k]: _removed, ...rest }) => rest)(prev) : { ...prev, [k]: value }))
-      }
-    }
-  }, [serverThresholds, serverFuzzy, serverDetection, serverHouseRate])
-
-  const totalDirtyCount =
-    Object.keys(thresholdEdits).length +
-    Object.keys(fuzzyEdits).length +
-    Object.keys(detectionEdits).length +
-    (houseReturnRateEdit !== null ? 1 : 0)
-  const isDirty = totalDirtyCount > 0
-
-  const updateThresholdsMutation = useUpdateThresholds()
-  const resetThresholdsMutation = useResetThresholds()
-  const updateFuzzyMutation = useUpdateFuzzyTuning()
-  const applyFuzzySuggestionMutation = useApplyFuzzySuggestion()
-  const updateDetectionMutation = useUpdateDetectionTuning()
-  const updateHouseDetectionMutation = useUpdateHouseDetection()
-
-  const isSaving =
-    updateThresholdsMutation.isPending ||
-    updateFuzzyMutation.isPending ||
-    updateDetectionMutation.isPending ||
-    updateHouseDetectionMutation.isPending
-
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
-  const { message: toastMessage, show: showToast } = useToastMessage()
 
-  const handleSaveAndApply = useCallback(async () => {
-    if (!activeZoneId || !isDirty) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
-    const promises: Promise<unknown>[] = []
-
-    if (Object.keys(thresholdEdits).length > 0) promises.push(updateThresholdsMutation.mutateAsync({ zoneId: activeZoneId, thresholds: thresholdEdits }))
-    if (Object.keys(fuzzyEdits).length > 0) promises.push(updateFuzzyMutation.mutateAsync({ zoneId: activeZoneId, tuning: fuzzyEdits }))
-    if (Object.keys(detectionEdits).length > 0) promises.push(updateDetectionMutation.mutateAsync({ zoneId: activeZoneId, tuning: detectionEdits }))
-    if (houseReturnRateEdit !== null && selectedHouseId) promises.push(updateHouseDetectionMutation.mutateAsync({ houseId: selectedHouseId, returnRateDropPct: localHouseReturnRate }))
-
-    try {
-      await Promise.all(promises)
-      clearAllEdits()
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã lưu và áp dụng tham số vận hành'))
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể lưu tham số, vui lòng thử lại'))
-    }
-  }, [activeZoneId, clearAllEdits, detectionEdits, fuzzyEdits, houseReturnRateEdit, isDirty, localHouseReturnRate, selectedHouseId, showToast, thresholdEdits, updateDetectionMutation, updateFuzzyMutation, updateHouseDetectionMutation, updateThresholdsMutation])
-
-  const handleResetLocal = useCallback(() => {
-    clearAllEdits()
-  }, [clearAllEdits])
-
-  const handleResetSystemDefaults = useCallback(async () => {
-    if (!activeZoneId) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
+  const handleResetSystemDefaults = () => {
     setIsResetModalOpen(false)
-    try {
-      await resetThresholdsMutation.mutateAsync(activeZoneId)
-      clearAllEdits()
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã khôi phục dải chuẩn SwiftletCare'))
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể khôi phục dải chuẩn, vui lòng thử lại'))
-    }
-  }, [activeZoneId, clearAllEdits, resetThresholdsMutation, showToast])
-
-  const suggestedValues = fuzzySuggestion?.suggestion ?? fuzzySuggestion?.suggested_values ?? null
-  const aiR2 = fuzzySuggestion?.model?.r2 ?? fuzzySuggestion?.r_squared ?? null
-  const aiInRangeNow = fuzzySuggestion?.predicted?.inRangeNow
-  const aiInRangeSuggested = fuzzySuggestion?.predicted?.inRangeSuggested
-  const aiDeltaPct =
-    fuzzySuggestion?.predicted_in_range_pct ??
-    (aiInRangeNow != null && aiInRangeSuggested != null
-      ? aiInRangeSuggested - aiInRangeNow
-      : null)
-  const aiReasonText = fuzzySuggestion?.reason ?? fuzzySuggestion?.reasoning ?? null
-
-  const handleApplyAiFuzzySuggestion = useCallback(async () => {
-    if (!suggestedValues) return
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
-    if (activeZoneId && fuzzySuggestion?.suggestion) {
-      try {
-        await applyFuzzySuggestionMutation.mutateAsync(activeZoneId)
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-        showToast(t('Đã áp dụng gợi ý hệ số mờ từ AI'))
-        return
-      } catch {
-        // Fallback sang điền vào form cục bộ nếu endpoint trả lỗi
-      }
-    }
-    setFuzzyEdits(prev => ({ ...prev, ...suggestedValues }))
-  }, [activeZoneId, applyFuzzySuggestionMutation, fuzzySuggestion?.suggestion, showToast, suggestedValues])
-
-  const kpiInRangePct = useMemo<number | null>(() => {
-    const stats = controlPerformances.byZone.get(activeZoneId)?.stats
-    return stats?.humidityInRangePct ?? stats?.temperatureInRangePct ?? null
-  }, [controlPerformances.byZone, activeZoneId])
-
-  const kpiBreachedCount = useMemo(() => (activeAlertsResponse?.data || []).length, [activeAlertsResponse?.data])
-  const kpiOwnerReviewsCount = useMemo(() => (reviewItemsResponse?.data || []).filter(it => it.zone_id === activeZoneId).length, [activeZoneId, reviewItemsResponse?.data])
-  const kpiAiAvailable = useMemo(() => Boolean(suggestedValues && (aiR2 ?? 0) >= 0.3), [aiR2, suggestedValues])
-
-  const getFieldValue = (chip: TuningChipKey, key: string, defVal: number) => {
-    if (chip === 'thresholds') return localThresholds[key as keyof ExpertThresholds] ?? defVal
-    if (chip === 'fuzzy') return (localFuzzy[key as keyof ExpertFuzzyTuning] as number) ?? defVal
-    return key === 'return_rate_drop_pct' ? localHouseReturnRate : ((localDetection[key as keyof ExpertDetectionTuning] as number) ?? defVal)
+    void resetSystemDefaults()
   }
 
   const breachedWarning = kpiBreachedCount > 0
@@ -291,7 +123,7 @@ export default function TuningScreen() {
         ]}
       >
         <View style={[styles.stickyHeaderContainer, { backgroundColor: palette.background }]}>
-          <PersistentScopeBar showDateRange={false} requireZone />
+          <PersistentScopeBar requireZone />
         </View>
 
         {!activeZoneId ? (
@@ -306,7 +138,7 @@ export default function TuningScreen() {
               onAction={() => { void refetch() }}
             />
           </View>
-        ) : isZoneLoading && !zoneDetailResponse ? (
+        ) : isZoneLoading && !hasZoneData ? (
           <View style={styles.loadingContainer}>
             <Skeleton width="100%" height={160} radius={Radius.lg} />
             <Skeleton width="100%" height={48} radius={Radius.full} />
@@ -461,9 +293,9 @@ export default function TuningScreen() {
                   ) : null}
                   <Button
                     label={t('Áp dụng gợi ý này')}
-                    onPress={handleApplyAiFuzzySuggestion}
-                    loading={applyFuzzySuggestionMutation.isPending}
-                    disabled={applyFuzzySuggestionMutation.isPending}
+                    onPress={applyAiFuzzySuggestion}
+                    loading={isApplyingSuggestion}
+                    disabled={isApplyingSuggestion}
                     variant="primary"
                     size="md"
                     trailingIcon={Lightning}
@@ -524,17 +356,12 @@ export default function TuningScreen() {
                           </View>
                           <Pressable
                             hitSlop={8}
-                            onPress={() => {
-                              setFuzzyEdits(prev => ({
-                                ...prev,
-                                fuzzy_input_filter: !localFuzzy.fuzzy_input_filter,
-                              }))
-                            }}
+                            onPress={toggleFuzzyInputFilter}
                             accessibilityRole="switch"
-                            accessibilityState={{ checked: localFuzzy.fuzzy_input_filter }}
+                            accessibilityState={{ checked: fuzzyInputFilter }}
                             accessibilityLabel={t('Bật tắt lọc tín hiệu cảm biến')}
                           >
-                            {localFuzzy.fuzzy_input_filter ? (
+                            {fuzzyInputFilter ? (
                               <ToggleRight size={36} color={palette.text} weight="fill" />
                             ) : (
                               <ToggleLeft size={36} color={palette.textSecondary} weight="regular" />
@@ -552,8 +379,8 @@ export default function TuningScreen() {
                       variant="secondary"
                       label={t('Khôi phục dải chuẩn SwiftletCare')}
                       onPress={() => setIsResetModalOpen(true)}
-                      loading={resetThresholdsMutation.isPending}
-                      disabled={resetThresholdsMutation.isPending}
+                      loading={isResetting}
+                      disabled={isResetting}
                     />
                   </View>
                 ) : null}
@@ -577,7 +404,7 @@ export default function TuningScreen() {
 
           <View style={styles.dockActions}>
             <PressableScale
-              onPress={handleResetLocal}
+              onPress={resetLocal}
               disabled={isSaving}
               style={[styles.dockSecondaryBtn, { backgroundColor: palette.surface }]}
               accessibilityRole="button"
@@ -590,7 +417,7 @@ export default function TuningScreen() {
             </PressableScale>
 
             <PressableScale
-              onPress={handleSaveAndApply}
+              onPress={saveAndApply}
               disabled={isSaving}
               style={[styles.dockPrimaryBtn, { backgroundColor: palette.primary, opacity: isSaving ? 0.7 : 1 }]}
               accessibilityRole="button"

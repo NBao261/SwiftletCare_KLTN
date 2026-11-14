@@ -33,7 +33,9 @@ export function useUpdateThresholds() {
     }) => expertApi.updateThresholds(zoneId, thresholds),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning', vars.zoneId] })
+      // Màn trang trại/phân tích đọc cấu hình zone theo ['zones']; nhật ký quyết định theo ['expert-activity']
       queryClient.invalidateQueries({ queryKey: ['zones'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }
@@ -48,6 +50,8 @@ export function useResetThresholds() {
     mutationFn: (zoneId: string) => expertApi.resetThresholds(zoneId),
     onSuccess: (_, zoneId) => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning', zoneId] })
+      queryClient.invalidateQueries({ queryKey: ['zones'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }
@@ -75,6 +79,7 @@ export function useApplyFuzzySuggestion() {
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning', zoneId] })
       queryClient.invalidateQueries({ queryKey: ['expert', 'fuzzy-suggestion', zoneId] })
       queryClient.invalidateQueries({ queryKey: ['zones'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }
@@ -95,6 +100,8 @@ export function useUpdateFuzzyTuning() {
     }) => expertApi.updateFuzzyTuning(zoneId, tuning),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning', vars.zoneId] })
+      queryClient.invalidateQueries({ queryKey: ['zones'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }
@@ -115,6 +122,8 @@ export function useUpdateDetectionTuning() {
     }) => expertApi.updateDetectionTuning(zoneId, tuning),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['expert', 'zone-tuning', vars.zoneId] })
+      queryClient.invalidateQueries({ queryKey: ['zones'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }
@@ -134,7 +143,10 @@ export function useUpdateHouseDetection() {
       returnRateDropPct: number
     }) => expertApi.updateHouseDetection(houseId, { return_rate_drop_pct: returnRateDropPct }),
     onSuccess: () => {
+      // ['houses'] cho màn trang trại, ['expert'] cho màn tinh chỉnh, ['expert-activity'] cho nhật ký
       queryClient.invalidateQueries({ queryKey: ['expert'] })
+      queryClient.invalidateQueries({ queryKey: ['houses'] })
+      queryClient.invalidateQueries({ queryKey: ['expert-activity'] })
     },
   })
 }

@@ -1,16 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react'
-import {
-  LayoutChangeEvent,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-  type ScrollViewInstance,
-} from 'react-native'
+import { useRef } from 'react'
+import { LayoutChangeEvent, RefreshControl, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native'
 import { useRouter } from 'expo-router'
-import * as Haptics from 'expo-haptics'
-import { useQueryClient } from '@tanstack/react-query'
-import { onNotificationNew } from '@/services/socket/socketClient'
 import {
   CalendarCheck,
   ClipboardText,
@@ -31,27 +21,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
-import { useInferredAlerts } from '@/hooks/expert/useInferredAlerts'
-import { useHealthReports, useSetReportConclusion } from '@/hooks/expert/useExpertReports'
-import {
-  useExpertProposals,
-  useExpertReviewItems,
-  useTakeProposalAction,
-  useTakeReviewAction,
-} from '@/hooks/expert/useExpertReviews'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
-import { useToastMessage } from '@/hooks/ui/useToastMessage'
-import { useExpertScopeStore } from '@/stores/expertScopeStore'
-import type { InferredAlert, ReviewItem, CoefficientProposal, HouseHealthReportSummary } from '@/types/expert.types'
+import { useQueueScreen } from '@/hooks/expert/useQueueScreen'
 import { t } from '@/utils/i18n.utils'
 
 const KPI_TILE_HEIGHT = 112
 
 /**
  * [PHẦN 1] MOBILE — MENU HÀNG ĐỢI (src/app/(tabs)/queue/index.tsx)
- * Kiến trúc 1 màn hình duy nhất (One-Screen Consolidated) cho Domain Expert,
- * đồng bộ 100% quy chuẩn thẩm mỹ Calm Industrial với nhánh FARM_OWNER.
+ * Màn mỏng: dữ liệu/đếm/hành động nằm trong useQueueScreen; màn chỉ render 4 nhóm việc chờ xử lý.
  */
 export default function QueueScreen() {
   const palette = usePalette()
@@ -60,115 +39,25 @@ export default function QueueScreen() {
   const scrollRef = useRef<ScrollViewInstance>(null)
   const sectionYPositions = useRef<Record<string, number>>({})
 
-  const queryClient = useQueryClient()
-
-  // Realtime WebSocket: tự động làm mới hàng đợi khi có thông báo mới (EXPERT-FR-007)
-  useEffect(() => {
-    const handleNotification = () => {
-      void queryClient.invalidateQueries({ queryKey: ['expert', 'inferred-alerts'] })
-      void queryClient.invalidateQueries({ queryKey: ['expert', 'review-items'] })
-      void queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] })
-      void queryClient.invalidateQueries({ queryKey: ['expert', 'health-reports'] })
-    }
-    const unsubscribe = onNotificationNew(handleNotification)
-    return unsubscribe
-  }, [queryClient])
-
-  const selectedFarmId = useExpertScopeStore(state => state.selectedFarmId)
-  const selectedHouseId = useExpertScopeStore(state => state.selectedHouseId)
-  const selectedZoneId = useExpertScopeStore(state => state.selectedZoneId)
-
-
-  const { message: toastMessage, show: showToast } = useToastMessage()
-
   const {
-    data: alertsResponse,
-    isLoading: isAlertsLoading,
-    isError: isAlertsError,
-    isRefetching: isAlertsRefetching,
-    refetch: refetchAlerts,
-  } = useInferredAlerts({
-    farm_id: selectedFarmId || undefined,
-    zone_id: selectedZoneId || undefined,
-    verdict: 'pending',
-  })
-
-  const {
-    data: reviewsResponse,
-    isLoading: isReviewsLoading,
-    isError: isReviewsError,
-    isRefetching: isReviewsRefetching,
-    refetch: refetchReviews,
-  } = useExpertReviewItems({
-    farm_id: selectedFarmId || undefined,
-    zone_id: selectedZoneId || undefined,
-    status: 'PENDING_REVIEW',
-  })
-  const takeReviewAction = useTakeReviewAction()
-
-  const {
-    data: proposalsResponse,
-    isLoading: isProposalsLoading,
-    isError: isProposalsError,
-    isRefetching: isProposalsRefetching,
-    refetch: refetchProposals,
-  } = useExpertProposals({
-    farm_id: selectedFarmId || undefined,
-    zone_id: selectedZoneId || undefined,
-    status: 'PROPOSED',
-  })
-  const takeProposalAction = useTakeProposalAction()
-
-  const {
-    data: reportsResponse,
-    isLoading: isReportsLoading,
-    isError: isReportsError,
-    isRefetching: isReportsRefetching,
-    refetch: refetchReports,
-  } = useHealthReports({
-    farm_id: selectedFarmId || undefined,
-    house_id: selectedHouseId || undefined,
-    has_conclusion: false,
-  })
-  const setReportConclusion = useSetReportConclusion()
-
-  const pendingInferredAlerts = useMemo<InferredAlert[]>(() => {
-    const list = alertsResponse?.data || []
-    return list.filter(a => !a.expert_verdict)
-  }, [alertsResponse])
-
-  const pendingReviewItems = useMemo<ReviewItem[]>(() => {
-    return reviewsResponse?.data || []
-  }, [reviewsResponse])
-
-  const pendingProposals = useMemo<CoefficientProposal[]>(() => {
-    return proposalsResponse?.data || []
-  }, [proposalsResponse])
-
-  // Danh sách đã lọc has_conclusion=false ở server nên mọi báo cáo trả về đều đang chờ kết luận
-  const pendingReports = useMemo<HouseHealthReportSummary[]>(() => {
-    return (reportsResponse?.data || []).filter(r => !r.has_conclusion)
-  }, [reportsResponse])
-
-  const unfinalizedReportsCount = pendingReports.length
-
-  const kpiAlertsCount = pendingInferredAlerts.length
-  const kpiReviewsCount = pendingReviewItems.length
-  const kpiProposalsCount = pendingProposals.length
-  const kpiReportsCount = unfinalizedReportsCount
-
-  const isRefreshing =
-    isAlertsRefetching ||
-    isReviewsRefetching ||
-    isProposalsRefetching ||
-    isReportsRefetching
-
-  const handleRefreshAll = () => {
-    void refetchAlerts()
-    void refetchReviews()
-    void refetchProposals()
-    void refetchReports()
-  }
+    alerts,
+    reviews,
+    proposals,
+    reports,
+    counts,
+    sections,
+    isRefreshing,
+    refreshAll,
+    acceptReview,
+    revertReview,
+    approveProposal,
+    rejectProposal,
+    setConclusion,
+    isReviewActing,
+    isProposalActing,
+    isReportActing,
+    toastMessage,
+  } = useQueueScreen()
 
   const handleSectionLayout = (key: string, event: LayoutChangeEvent) => {
     sectionYPositions.current[key] = event.nativeEvent.layout.y
@@ -181,71 +70,11 @@ export default function QueueScreen() {
     }
   }
 
-  const handleAcceptReview = async (itemId: string) => {
-    try {
-      await takeReviewAction.mutateAsync({ itemId, action: 'ACCEPT' })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã chấp thuận thay đổi tham số của chủ nhà'))
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể chấp thuận thay đổi, vui lòng thử lại'))
-    }
-  }
-
-  const handleRevertReview = async (itemId: string) => {
-    try {
-      await takeReviewAction.mutateAsync({ itemId, action: 'REVERT' })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã hoàn nguyên tham số về giá trị an toàn'))
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể hoàn nguyên tham số, vui lòng thử lại'))
-    }
-  }
-
-  const handleApproveProposal = async (proposalId: string) => {
-    try {
-      await takeProposalAction.mutateAsync({ proposalId, action: 'APPROVE' })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã duyệt áp dụng bộ hệ số độ ẩm & gió'))
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể duyệt đề xuất, vui lòng thử lại'))
-    }
-  }
-
-  const handleRejectProposal = async (proposalId: string, reason: string) => {
-    try {
-      await takeProposalAction.mutateAsync({
-        proposalId,
-        action: 'REJECT',
-        rejectionReason: reason,
-      })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã từ chối đề xuất và gửi phản hồi'))
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể từ chối đề xuất, vui lòng thử lại'))
-    }
-  }
-
-  const handleSetReportConclusion = async (reportId: string, text: string) => {
-    try {
-      await setReportConclusion.mutateAsync({ reportId, text })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined)
-      showToast(t('Đã ban hành kết luận chuyên môn cho báo cáo'))
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined)
-      showToast(t('Không thể lưu kết luận báo cáo, vui lòng thử lại'))
-    }
-  }
-
-  const alertTileWarning = kpiAlertsCount > 0
+  const alertTileWarning = counts.alerts > 0
   const alertTileSecondary = alertTileWarning ? palette.severityP2Text : palette.textSecondary
 
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
-      {/* Header chọn Nhà yến trực tiếp ở leading + nút Nhật ký hoạt động ở right */}
       <AppHeader
         leading={<ExpertHeaderPicker />}
         right={
@@ -264,36 +93,21 @@ export default function QueueScreen() {
         ref={scrollRef}
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl * 3 },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefreshAll}
-            tintColor={palette.text}
-          />
-        }
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl * 3 }]}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refreshAll} tintColor={palette.text} />}
       >
-        {/* KHỐI 1: Hàng Chip chọn Tầng & Thời gian ghim cố định đầu trang */}
+        {/* KHỐI 1: Thanh chọn Tầng ghim cố định đầu trang */}
         <View style={[styles.stickyScopeContainer, { backgroundColor: palette.background }]}>
           <PersistentScopeBar />
         </View>
 
         <View style={styles.mainContent}>
-          {/* KHỐI 2: Lưới 2x2 gồm 4 Ô KPI chuẩn KpiTile của FARM_OWNER */}
+          {/* KHỐI 2: Lưới 2x2 gồm 4 Ô KPI — số đếm từ meta.total */}
           <View style={styles.kpiGrid}>
-            {/* Ô 1: Cảnh báo chờ kiểm tra */}
             <View style={styles.kpiCell}>
               <PressableScale
                 onPress={() => scrollToSection('alerts')}
-                style={[
-                  styles.kpiTile,
-                  {
-                    backgroundColor: alertTileWarning ? palette.severityP2 : palette.surface,
-                  },
-                ]}
+                style={[styles.kpiTile, { backgroundColor: alertTileWarning ? palette.severityP2 : palette.surface }]}
                 accessibilityRole="button"
                 accessibilityLabel={t('Cuộn tới danh sách cảnh báo')}
               >
@@ -301,15 +115,14 @@ export default function QueueScreen() {
                   {t('Chờ kiểm tra')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} đang mở', { count: kpiAlertsCount })}
+                  {t('{count} đang mở', { count: counts.alerts })}
                 </Text>
                 <Text variant="small" color={alertTileSecondary} numberOfLines={1}>
-                  {kpiAlertsCount > 0 ? t('Sự cố cần xem ngay') : t('Chưa có cảnh báo')}
+                  {counts.alerts > 0 ? t('Sự cố cần xem ngay') : t('Chưa có cảnh báo')}
                 </Text>
               </PressableScale>
             </View>
 
-            {/* Ô 2: Yêu cầu từ chủ nhà */}
             <View style={styles.kpiCell}>
               <PressableScale
                 onPress={() => scrollToSection('reviews')}
@@ -321,7 +134,7 @@ export default function QueueScreen() {
                   {t('Chủ nhà xin đổi')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} yêu cầu', { count: kpiReviewsCount })}
+                  {t('{count} yêu cầu', { count: counts.reviews })}
                 </Text>
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                   {t('Chờ duyệt ngưỡng')}
@@ -329,7 +142,6 @@ export default function QueueScreen() {
               </PressableScale>
             </View>
 
-            {/* Ô 3: Đề xuất độ ẩm & gió */}
             <View style={styles.kpiCell}>
               <PressableScale
                 onPress={() => scrollToSection('proposals')}
@@ -341,7 +153,7 @@ export default function QueueScreen() {
                   {t('Gợi ý độ ẩm & gió')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} đề xuất', { count: kpiProposalsCount })}
+                  {t('{count} đề xuất', { count: counts.proposals })}
                 </Text>
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                   {t('Tự động hóa từ AI')}
@@ -349,7 +161,6 @@ export default function QueueScreen() {
               </PressableScale>
             </View>
 
-            {/* Ô 4: Báo cáo chờ kết luận */}
             <View style={styles.kpiCell}>
               <PressableScale
                 onPress={() => scrollToSection('reports')}
@@ -361,7 +172,7 @@ export default function QueueScreen() {
                   {t('Báo cáo chờ kết luận')}
                 </Text>
                 <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.kpiValue}>
-                  {t('{count} kỳ', { count: kpiReportsCount })}
+                  {t('{count} kỳ', { count: counts.reports })}
                 </Text>
                 <Text variant="small" color={palette.textSecondary} numberOfLines={1}>
                   {t('Đánh giá định kỳ')}
@@ -370,64 +181,42 @@ export default function QueueScreen() {
             </View>
           </View>
 
-          {/* KHỐI 3: Section Cảnh báo bất thường */}
-          <View
-            onLayout={e => handleSectionLayout('alerts', e)}
-            style={styles.sectionContainer}
-          >
+          {/* KHỐI 3: Cảnh báo bất thường */}
+          <View onLayout={e => handleSectionLayout('alerts', e)} style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
-                <WarningCircle size={18} weight="bold" color={kpiAlertsCount > 0 ? palette.alert : palette.text} />
+                <WarningCircle size={18} weight="bold" color={counts.alerts > 0 ? palette.alert : palette.text} />
                 <Text variant="heading" weight="semiBold">
                   {t('Cảnh báo bất thường')}
                 </Text>
               </View>
-              <View
-                style={[
-                  styles.countBadge,
-                  {
-                    backgroundColor: kpiAlertsCount > 0 ? palette.severityP2 : palette.surface,
-                  },
-                ]}
-              >
-                <Text
-                  variant="label"
-                  weight="bold"
-                  color={kpiAlertsCount > 0 ? palette.severityP2Text : palette.textSecondary}
-                >
-                  {kpiAlertsCount}
+              <View style={[styles.countBadge, { backgroundColor: counts.alerts > 0 ? palette.severityP2 : palette.surface }]}>
+                <Text variant="label" weight="bold" color={counts.alerts > 0 ? palette.severityP2Text : palette.textSecondary}>
+                  {counts.alerts}
                 </Text>
               </View>
             </View>
 
-            {isAlertsError ? (
+            {sections.alerts.isError ? (
               <EmptyState
                 height={80}
                 message={t('Không tải được danh sách cảnh báo.')}
                 actionLabel={t('Thử lại')}
-                onAction={() => { void refetchAlerts() }}
+                onAction={() => { void sections.alerts.refetch() }}
               />
-            ) : isAlertsLoading ? (
+            ) : sections.alerts.isLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={120} radius={Radius.lg} />
               </View>
-            ) : pendingInferredAlerts.length > 0 ? (
-              pendingInferredAlerts.map(alert => (
-                <QueueInferredAlertCard key={alert._id} alert={alert} />
-              ))
+            ) : alerts.length > 0 ? (
+              alerts.map(alert => <QueueInferredAlertCard key={alert._id} alert={alert} />)
             ) : (
-              <EmptyState
-                height={80}
-                message={t('Không có cảnh báo bất thường nào cần kiểm tra.')}
-              />
+              <EmptyState height={80} message={t('Không có cảnh báo bất thường nào cần kiểm tra.')} />
             )}
           </View>
 
-          {/* KHỐI 4: Section Yêu cầu đổi thông số từ Chủ nhà */}
-          <View
-            onLayout={e => handleSectionLayout('reviews', e)}
-            style={styles.sectionContainer}
-          >
+          {/* KHỐI 4: Yêu cầu đổi thông số từ Chủ nhà */}
+          <View onLayout={e => handleSectionLayout('reviews', e)} style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <ClipboardText size={18} weight="bold" color={palette.text} />
@@ -435,52 +224,41 @@ export default function QueueScreen() {
                   {t('Yêu cầu đổi thông số từ chủ nhà')}
                 </Text>
               </View>
-              <View
-                style={[
-                  styles.countBadge,
-                  { backgroundColor: palette.surface },
-                ]}
-              >
+              <View style={[styles.countBadge, { backgroundColor: palette.surface }]}>
                 <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {kpiReviewsCount}
+                  {counts.reviews}
                 </Text>
               </View>
             </View>
 
-            {isReviewsError ? (
+            {sections.reviews.isError ? (
               <EmptyState
                 height={80}
                 message={t('Không tải được danh sách yêu cầu.')}
                 actionLabel={t('Thử lại')}
-                onAction={() => { void refetchReviews() }}
+                onAction={() => { void sections.reviews.refetch() }}
               />
-            ) : isReviewsLoading ? (
+            ) : sections.reviews.isLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={140} radius={Radius.lg} />
               </View>
-            ) : pendingReviewItems.length > 0 ? (
-              pendingReviewItems.map(item => (
+            ) : reviews.length > 0 ? (
+              reviews.map(item => (
                 <QueueReviewCard
                   key={item._id}
                   item={item}
-                  onAccept={handleAcceptReview}
-                  onRevert={handleRevertReview}
-                  isSubmitting={takeReviewAction.isPending}
+                  onAccept={acceptReview}
+                  onRevert={revertReview}
+                  isSubmitting={isReviewActing}
                 />
               ))
             ) : (
-              <EmptyState
-                height={80}
-                message={t('Tất cả yêu cầu thay đổi từ chủ nhà đã được xử lý xong.')}
-              />
+              <EmptyState height={80} message={t('Tất cả yêu cầu thay đổi từ chủ nhà đã được xử lý xong.')} />
             )}
           </View>
 
-          {/* KHỐI 5: Section Đề xuất độ ẩm & gió tự động */}
-          <View
-            onLayout={e => handleSectionLayout('proposals', e)}
-            style={styles.sectionContainer}
-          >
+          {/* KHỐI 5: Đề xuất độ ẩm & gió tự động */}
+          <View onLayout={e => handleSectionLayout('proposals', e)} style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <SlidersHorizontal size={18} weight="bold" color={palette.text} />
@@ -488,52 +266,41 @@ export default function QueueScreen() {
                   {t('Đề xuất độ ẩm & gió tự động')}
                 </Text>
               </View>
-              <View
-                style={[
-                  styles.countBadge,
-                  { backgroundColor: palette.surface },
-                ]}
-              >
+              <View style={[styles.countBadge, { backgroundColor: palette.surface }]}>
                 <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {kpiProposalsCount}
+                  {counts.proposals}
                 </Text>
               </View>
             </View>
 
-            {isProposalsError ? (
+            {sections.proposals.isError ? (
               <EmptyState
                 height={80}
                 message={t('Không tải được danh sách đề xuất.')}
                 actionLabel={t('Thử lại')}
-                onAction={() => { void refetchProposals() }}
+                onAction={() => { void sections.proposals.refetch() }}
               />
-            ) : isProposalsLoading ? (
+            ) : sections.proposals.isLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={160} radius={Radius.lg} />
               </View>
-            ) : pendingProposals.length > 0 ? (
-              pendingProposals.map(proposal => (
+            ) : proposals.length > 0 ? (
+              proposals.map(proposal => (
                 <QueueProposalCard
                   key={proposal._id}
                   proposal={proposal}
-                  onApprove={handleApproveProposal}
-                  onReject={handleRejectProposal}
-                  isSubmitting={takeProposalAction.isPending}
+                  onApprove={approveProposal}
+                  onReject={rejectProposal}
+                  isSubmitting={isProposalActing}
                 />
               ))
             ) : (
-              <EmptyState
-                height={80}
-                message={t('Không có đề xuất độ ẩm & gió mới từ AI.')}
-              />
+              <EmptyState height={80} message={t('Không có đề xuất độ ẩm & gió mới từ AI.')} />
             )}
           </View>
 
-          {/* KHỐI 6: Section Báo cáo vi khí hậu & Kết luận */}
-          <View
-            onLayout={e => handleSectionLayout('reports', e)}
-            style={styles.sectionContainer}
-          >
+          {/* KHỐI 6: Báo cáo vi khí hậu & Kết luận */}
+          <View onLayout={e => handleSectionLayout('reports', e)} style={styles.sectionContainer}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <CalendarCheck size={18} weight="bold" color={palette.text} />
@@ -541,51 +308,41 @@ export default function QueueScreen() {
                   {t('Báo cáo vi khí hậu & kết luận')}
                 </Text>
               </View>
-              <View
-                style={[
-                  styles.countBadge,
-                  { backgroundColor: palette.surface },
-                ]}
-              >
+              <View style={[styles.countBadge, { backgroundColor: palette.surface }]}>
                 <Text variant="label" weight="bold" color={palette.textSecondary}>
-                  {pendingReports.length}
+                  {counts.reports}
                 </Text>
               </View>
             </View>
 
-            {isReportsError ? (
+            {sections.reports.isError ? (
               <EmptyState
                 height={80}
                 message={t('Không tải được danh sách báo cáo.')}
                 actionLabel={t('Thử lại')}
-                onAction={() => { void refetchReports() }}
+                onAction={() => { void sections.reports.refetch() }}
               />
-            ) : isReportsLoading ? (
+            ) : sections.reports.isLoading ? (
               <View style={styles.skeletonBox}>
                 <Skeleton width="100%" height={160} radius={Radius.lg} />
               </View>
-            ) : pendingReports.length > 0 ? (
-              pendingReports.map(report => (
+            ) : reports.length > 0 ? (
+              reports.map(report => (
                 <QueueReportCard
                   key={report._id}
                   report={report}
-                  onSetConclusion={handleSetReportConclusion}
-                  isSubmitting={setReportConclusion.isPending}
+                  onSetConclusion={setConclusion}
+                  isSubmitting={isReportActing}
                 />
               ))
             ) : (
-              <EmptyState
-                height={80}
-                message={t('Tất cả báo cáo vi khí hậu đã được hoàn tất kết luận chuyên môn.')}
-              />
+              <EmptyState height={80} message={t('Tất cả báo cáo vi khí hậu đã được hoàn tất kết luận chuyên môn.')} />
             )}
           </View>
         </View>
       </ScrollView>
 
-      {toastMessage && (
-        <Toast message={toastMessage} bottomOffset={TAB_BAR_OVERLAP + Spacing.lg} />
-      )}
+      {toastMessage && <Toast message={toastMessage} bottomOffset={TAB_BAR_OVERLAP + Spacing.lg} />}
     </View>
   )
 }
@@ -624,25 +381,29 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   sectionContainer: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
+    gap: Spacing.sm,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
   },
   sectionTitleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
+    flexShrink: 1,
   },
   countBadge: {
+    minWidth: 28,
+    height: 24,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
     borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   skeletonBox: {
-    marginBottom: Spacing.sm,
+    marginTop: Spacing.xs,
   },
 })

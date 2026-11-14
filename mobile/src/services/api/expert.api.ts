@@ -154,12 +154,14 @@ export const expertApi = {
     apiClient.put<ApiResponse<HouseHealthReport>>(ENDPOINTS.HEALTH_REPORT_CONCLUSION(reportId), { text }),
 
   // ── 6. Kiểm duyệt Thay đổi của Chủ Farm (EXPERT-FR-010) ─────────────────────────
-  getReviewItems: (params?: { farm_id?: string; zone_id?: string; status?: ReviewItemStatus }) =>
+  getReviewItems: (params?: { farm_id?: string; zone_id?: string; status?: ReviewItemStatus; page?: number; limit?: number }) =>
     apiClient.get<ApiResponse<ReviewItem[]>>(ENDPOINTS.EXPERT_REVIEWS, {
       params: {
         farmId: params?.farm_id,
         zoneId: params?.zone_id,
         status: params?.status,
+        page: params?.page,
+        limit: params?.limit,
       },
     }),
 
@@ -171,12 +173,14 @@ export const expertApi = {
   },
 
   // ── 7. Duyệt Đề xuất Hệ số mờ (EXPERT-FR-011) ──────────────────────────────────
-  getProposals: (params?: { farm_id?: string; zone_id?: string; status?: ProposalStatus }) =>
+  getProposals: (params?: { farm_id?: string; zone_id?: string; status?: ProposalStatus; page?: number; limit?: number }) =>
     apiClient.get<ApiResponse<CoefficientProposal[]>>(ENDPOINTS.EXPERT_PROPOSALS, {
       params: {
         farmId: params?.farm_id,
         zoneId: params?.zone_id,
         status: params?.status,
+        page: params?.page,
+        limit: params?.limit,
       },
     }),
 
