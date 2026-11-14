@@ -94,9 +94,6 @@ async function writeSetting(update: Record<string, unknown>): Promise<void> {
   }
 }
 
-/** Số lần đổi gần nhất trả kèm ngưỡng mặc định (SYSTEM-FR-002) — giới hạn hiển thị, không phải luật nghiệp vụ */
-const DEFAULT_THRESHOLDS_HISTORY_LIMIT = 20
-
 export interface DefaultThresholdsChange {
   at: Date
   by: string | null
@@ -113,14 +110,15 @@ export type DefaultThresholdsView = Thresholds & {
 }
 
 /**
- * SYSTEM-FR-002 — ngưỡng mặc định kèm nguồn của lần đổi gần nhất và lịch sử đổi (từ audit log, nên lần
- * đổi trước G-18 có `source: null`).
+ * SYSTEM-FR-002 — ngưỡng mặc định kèm nguồn của lần đổi gần nhất và mọi lần đổi ("every change with its source,
+ * author and time"; audit log giữ vĩnh viễn, BR-36), từ audit log nên lần đổi trước G-18 có `source: null`. Không
+ * cắt bớt: Admin đổi ngưỡng mặc định hiếm khi, danh sách nhỏ.
  */
 export async function getDefaultThresholdsView(): Promise<DefaultThresholdsView> {
   const [setting, logs] = await Promise.all([
     SystemSetting.findOne(SINGLETON).lean(),
     AuditLog.find({ action: 'DEFAULT_THRESHOLDS_UPDATED' })
-      .sort({ created_at: -1 }).limit(DEFAULT_THRESHOLDS_HISTORY_LIMIT).lean(),
+      .sort({ created_at: -1 }).lean(),
   ])
   const metaOf = (m: Record<string, unknown> | undefined) => (m ?? {}) as { before?: Thresholds; after?: Thresholds; source?: string }
   return {

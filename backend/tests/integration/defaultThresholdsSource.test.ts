@@ -121,6 +121,19 @@ describe('ENV-FR-007 — nguồn của ngưỡng mặc định', () => {
     expect(res.body.data.history.map((h: { source: string }) => h.source)).toEqual(['MC-501', 'TL-421'])
     expect(res.body.data.history[0]).toMatchObject({ by: String(admin._id), before: { temp_max: 32 }, after: { temp_max: 33 } })
   })
+
+  it('GET trả mọi lần đổi, không cắt ở một số lần gần nhất (SYSTEM-FR-002 "every change")', async () => {
+    const admin = await makeUser('ADMIN')
+    const t0 = Date.now() - 30 * 60_000
+    await AuditLog.create(Array.from({ length: 25 }, (_, i) => ({
+      actor_id: admin._id, action: 'DEFAULT_THRESHOLDS_UPDATED', target_type: 'system_setting',
+      metadata: { source: `TL-${String(100 + i)}` }, created_at: new Date(t0 + i * 60_000),
+    })))
+    const res = await request(app).get('/system/settings/default-thresholds').set('Authorization', `Bearer ${tokenOf(admin)}`).expect(200)
+    expect(res.body.data.history).toHaveLength(25)
+    expect(res.body.data.history[0].source).toBe('TL-124')
+    expect(res.body.data.history[24].source).toBe('TL-100')
+  })
 })
 
 describe('ENV-FR-026 — báo các zone khác mặc định mới', () => {

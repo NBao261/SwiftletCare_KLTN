@@ -755,8 +755,8 @@ paths:
       summary: "Xem ngưỡng mặc định hệ thống kèm nguồn và lịch sử (SYSTEM-FR-002, ENV-FR-007) — chỉ ADMIN"
       description: |
         Chưa từng cấu hình thì trả giá trị gốc (khớp firmware Config.h), không có `source`.
-        Ngoài 7 trường ngưỡng còn có nguồn của lần đổi gần nhất và `history`: tối đa 20 lần
-        đổi gần nhất (mới nhất trước), mỗi lần có người đổi, thời điểm, nguồn, giá trị cũ và mới.
+        Ngoài 7 trường ngưỡng còn có nguồn của lần đổi gần nhất và `history`: mọi lần đổi (mới nhất
+        trước; audit log giữ vĩnh viễn, BR-36), mỗi lần có người đổi, thời điểm, nguồn, giá trị cũ và mới.
       responses:
         "200":
           description: OK
@@ -774,7 +774,8 @@ paths:
         Gửi 1 phần hoặc cả 7 trường, phần còn lại giữ nguyên, kèm `source` (bắt buộc):
         nguồn của giá trị mới, phải chứa mã một mục của evidence register REF-5
         (`docs/evidence-register.md`, dạng `TL-xxx` hoặc `MC-xxx`, ví dụ `"TL-012 §3.2"`).
-        Thiếu `source`, `source` không có mã REF-5, hoặc không có trường ngưỡng nào → 422.
+        Thiếu `source`, `source` không có mã REF-5, dài quá 500 ký tự (Report 3 §4.5), hoặc không có
+        trường ngưỡng nào → 422. Chỉ kiểm định dạng mã (`TL-xxx`, `MC-xxx`), không kiểm mã có trong sổ.
         Đây là nguồn Zone mới lấy và nguồn Farm Owner dùng khi "Reset về mặc định" 1 Zone
         (ENV-FR-020): ngưỡng của mọi Zone đang có giữ nguyên và không gửi cấu hình nào
         xuống controller. Audit log `DEFAULT_THRESHOLDS_UPDATED` ghi giá trị cũ, mới và nguồn.
