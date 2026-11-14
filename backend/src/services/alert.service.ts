@@ -445,6 +445,23 @@ export interface ListAlertsQuery {
 }
 
 /**
+ * Dòng của danh sách cảnh báo: không ký URL ảnh cho từng dòng, nên bỏ hẳn khoá MinIO thô (`onsite_checks[].photo`,
+ * `site_cause.photos`) — ảnh xem ở chi tiết; kiểm tra tại chỗ chưa trả lời có `observation: null` như chi tiết (spec).
+ */
+function listRowView<T extends { onsite_checks?: OnsiteCheck[]; site_cause?: { photos?: string[] } }>(row: T) {
+  const { onsite_checks: checks, site_cause: siteCause, ...rest } = row
+  return {
+    ...rest,
+    ...(siteCause && { site_cause: (({ photos: _photos, ...cause }) => cause)(siteCause) }),
+    onsite_checks: (checks ?? []).map(({ photo: _photo, ...check }) => ({
+      ...check,
+      observation: check.observation ?? null, note: check.note ?? null,
+      answered_by: check.answered_by ?? null, answered_at: check.answered_at ?? null,
+    })),
+  }
+}
+
+/**
  * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Administrator thấy
  * cảnh báo thiết bị của mọi farm (FARM-FR-009, Report 3 §2.4); Farm Technician thấy cảnh báo của
  * các nhà được giao (§2.4, AUTH-FR-013) — việc gửi cảnh báo tới thợ theo ca trực là G-21.
@@ -480,7 +497,8 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
 
   const [records, total, unreadCount] = await Promise.all([
     // ALERT-FR-007 — cảnh báo DISMISSED hiện ai bác bỏ: kèm tên người kết luận
-    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).populate('expert_verdict.by', 'full_name').lean(),
+    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).populate('expert_verdict.by', 'full_name').lean()
+      .then(rows => rows.map(listRowView)),
     Alert.countDocuments(filter),
     Alert.countDocuments({ ...filter, status: 'ACTIVE' }),
   ])
