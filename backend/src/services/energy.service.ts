@@ -1,8 +1,8 @@
-import { SensorNode } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { BadRequestError } from '@/utils/appError.util'
+import { MAX_GAP_MS } from '@/services/relayUsage.service'
 import { assertHouseAccess } from '@/utils/farmAccess.util'
+import { vnDayPeriod } from '@/utils/period.util'
 import type { CurrentUser } from '@/types'
 
 export type EnergyLoad = 'misting' | 'ventilation'
@@ -13,8 +13,6 @@ export type EnergyLoad = 'misting' | 'ventilation'
  */
 export const LOAD_SUPPLY_VOLTAGE: Record<EnergyLoad, number> = { misting: 5, ventilation: 12 }
 
-/** Khoảng giữa 2 mẫu lớn hơn thế này = mất kết nối, không biết tải có chạy không → không tính (như relayUsage) */
-const MAX_GAP_MS = 30_000
 const MS_PER_KWH = 3_600_000 * 1000
 
 const LOADS: Array<{ load: EnergyLoad; on: string; current: string }> = [
@@ -37,12 +35,17 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000
  * mỗi mẫu telemetry lúc relay BẬT và có dòng đo được tính tới mẫu kế tiếp của cùng controller. Relay bật mà dòng bằng 0
  * (tải hỏng) thì góp 0. Controller không đo dòng thì tải đó "not available". Ước tính, không phải số công tơ; telemetry
  * chỉ giữ 90 ngày (BR-36) nên tháng cũ hơn không có số.
+ *
+ * Lệch BR-45 đã biết: BR-45 chỉ tính tải đang chạy khi dòng trên 50 % dòng bình thường (BR-32), nhưng backend chưa biết
+ * mức dòng bình thường firmware học được, nên mọi mẫu relay BẬT có dòng đều được cộng (tải kẹt hút ít dòng vẫn góp điện).
+ * Sẽ áp mức 50 % khi firmware báo mức đã học.
+ *
+ * Lọc theo `zone_id` của chính dòng telemetry (zone lúc đo), không theo zone hiện tại của controller: controller dời sang
+ * nhà khác thì điện đã dùng vẫn thuộc nhà cũ, và controller đã gỡ vẫn được tính.
  */
 export async function houseEnergyByMonth(houseId: unknown, from: Date, to: Date): Promise<EnergyMonth[]> {
   const zoneIds = await Zone.find({ house_id: houseId }).distinct('_id')
-  // Cả controller đã gỡ: điện đã dùng trong khoảng vẫn tính
-  const nodeIds = await SensorNode.find({ zone_id: { $in: zoneIds } }).distinct('_id')
-  if (nodeIds.length === 0) return []
+  if (zoneIds.length === 0) return []
 
   const contribution = ({ load, on, current }: (typeof LOADS)[number]) => ({
     [`${load}_wms`]: {
@@ -58,7 +61,7 @@ export async function houseEnergyByMonth(houseId: unknown, from: Date, to: Date)
   })
 
   const rows: Array<Record<string, number> & { _id: string }> = await Telemetry.aggregate([
-    { $match: { node_id: { $in: nodeIds }, timestamp: { $gte: from, $lt: to } } },
+    { $match: { zone_id: { $in: zoneIds }, timestamp: { $gte: from, $lt: to } } },
     {
       $setWindowFields: {
         partitionBy: '$node_id',
@@ -107,11 +110,12 @@ export function totalEnergy(months: EnergyMonth[]): { misting_kwh: number | null
 
 /** GET /analytics/energy — Farm Owner, chuyên gia (đọc), thợ ở nhà được giao (Report 3 §2.4, analytics) */
 export async function getHouseEnergy(user: CurrentUser, query: { houseId: string; from: Date; to: Date }) {
-  if (query.from >= query.to) throw BadRequestError('`from` phải trước `to`')
+  // Trọn ngày giờ VN, tối đa 1 năm (Report 3 §4.5) → 400
+  const range = vnDayPeriod(query.from, query.to)
   const { house } = await assertHouseAccess(query.houseId, user)
-  const months = await houseEnergyByMonth(house._id, query.from, query.to)
+  const months = await houseEnergyByMonth(house._id, range.from, range.to)
   return {
-    house_id: String(house._id), from: query.from, to: query.to,
+    house_id: String(house._id), from: range.from, to: range.to,
     supply_voltage: LOAD_SUPPLY_VOLTAGE,
     estimated: true,
     months,

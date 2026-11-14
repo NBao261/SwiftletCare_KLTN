@@ -54,13 +54,14 @@ const DAY = 86_400_000
 const HOUR = 3_600_000
 let seq = 0
 
-async function member(farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'], role: Role) {
+async function memberUser(farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'], role: Role) {
   seq++
   const user = await User.create({ email: `ov${seq}@test.vn`, password_hash: 'password123', full_name: `${role}${seq}`, role })
   if (role !== 'ADMIN') farm.members.push({ user_id: user._id, role } as never)
   await farm.save()
-  return jwt.sign({ sub: String(user._id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
+  return { user, token: jwt.sign({ sub: String(user._id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' }) }
 }
+const member = async (farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'], role: Role) => (await memberUser(farm, role)).token
 
 /** Ngày giờ VN cách hôm nay `offset` ngày ('YYYY-MM-DD') */
 const vnDay = (offset: number) => vnDate(new Date(Date.now() + offset * DAY))
@@ -144,6 +145,32 @@ describe('tổng quan trại (ANALYTICS-FR-015) — TC-F29-01', () => {
   })
 })
 
+describe('tổng quan và so sánh: quyền, farm, nhà trộn thiết bị', () => {
+  it('chủ farm khác → 403; farm không tồn tại → 404', async () => {
+    const { farm } = await seedFarm()
+    const other = await seedOwnerFarm()
+    for (const path of ['overview', 'comparison']) {
+      await request(app).get(`/farms/${farm._id}/${path}`).set('Authorization', `Bearer ${other.token}`).expect(403)
+      await request(app).get(`/farms/${new mongoose.Types.ObjectId()}/${path}`).set('Authorization', `Bearer ${other.token}`).expect(404)
+    }
+  })
+
+  it('nhà có cả thiết bị thật và giả lập không phải nhà giả lập (SYSTEM-FR-004)', async () => {
+    const { farm, token, house } = await seedFarm()
+    await CameraNode.create({ device_id: `SIMCAM-1-${++seq}`, house_id: house._id, status: 'ONLINE', simulated: true })
+    const res = await request(app).get(`/farms/${farm._id}/overview`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data.houses.find((h: { house_id: string }) => h.house_id === String(house._id)).simulated).toBe(false)
+  })
+
+  it('khoảng quá 366 ngày → 400', async () => {
+    const { farm, token, house } = await seedFarm()
+    const to = new Date()
+    const from = new Date(to.getTime() - 400 * DAY)
+    await request(app).get(`/farms/${farm._id}/comparison?from=${from.toISOString()}&to=${to.toISOString()}`).set('Authorization', `Bearer ${token}`).expect(400)
+    await request(app).get(`/analytics/energy?houseId=${house._id}&from=${from.toISOString()}&to=${to.toISOString()}`).set('Authorization', `Bearer ${token}`).expect(400)
+  })
+})
+
 describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
   it('mỗi ô đúng BR-44; sắp theo MTTR, ô trống xuống cuối; không có cột điểm tổng', async () => {
     const { farm, token, house, house2, house3, zone, zone2 } = await seedFarm()
@@ -215,6 +242,30 @@ describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 00
     expect(res.body.data).toMatchObject({ estimated: true, supply_voltage: { misting: 5, ventilation: 12 }, total: { misting_kwh: null, ventilation_kwh: 0.12, total_kwh: 0.12 } })
   })
 
+  it('controller dời sang nhà khác: điện đã dùng vẫn thuộc nhà cũ, điện sau khi dời thuộc nhà mới', async () => {
+    const { house, house2, zone, zone2, node } = await seedFarm()
+    const start = new Date('2026-10-10T00:00:00+07:00')
+    const hourAt = (zoneId: unknown, from: Date) => Array.from({ length: 121 }, (_, i) => ({
+      node_id: node._id, zone_id: zoneId, timestamp: new Date(from.getTime() + i * 30_000), ventilation_on: true, fan_current_a: 1.0,
+    }))
+    await Telemetry.insertMany(hourAt(zone._id, start))
+    await SensorNode.updateOne({ _id: node._id }, { zone_id: zone2._id })
+    await Telemetry.insertMany(hourAt(zone2._id, new Date(start.getTime() + 5 * HOUR)))
+
+    const range = [new Date('2026-10-01T00:00:00+07:00'), new Date('2026-11-01T00:00:00+07:00')] as const
+    // 1 giờ ở 12 V × 1,0 A = 0,012 kWh mỗi nhà
+    expect(await houseEnergyByMonth(house._id, ...range)).toEqual([{ month: '2026-10', misting_kwh: null, ventilation_kwh: 0.012 }])
+    expect(await houseEnergyByMonth(house2._id, ...range)).toEqual([{ month: '2026-10', misting_kwh: null, ventilation_kwh: 0.012 }])
+  })
+
+  it('thợ được giao nhà xem điện năng của nhà đó; nhà chưa được giao → 403', async () => {
+    const { farm, house, house2 } = await seedFarm()
+    const technician = await memberUser(farm, 'FARM_TECHNICIAN')
+    await House.updateOne({ _id: house._id }, { technicians: [{ user_id: technician.user._id, primary: true }] })
+    await request(app).get(`/analytics/energy?houseId=${house._id}`).set('Authorization', `Bearer ${technician.token}`).expect(200)
+    await request(app).get(`/analytics/energy?houseId=${house2._id}`).set('Authorization', `Bearer ${technician.token}`).expect(403)
+  })
+
   it('8 tuần số đếm: trung bình chim ra buổi sáng theo tuần và theo tháng đúng seed; ngày thiếu phiên bị bỏ', () => {
     const day = (date: string, netExit: number, complete = true) => ({
       date, net_exit: netExit, has_morning: true, has_evening: complete, return_rate: complete ? 90 : null,
@@ -259,6 +310,33 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
     expect(alert.message).toContain('mưa trong phiên đếm 2.5 mm')
     expect(alert.metadata).toMatchObject({ rainMm: 2.5 })
+  })
+
+  it('có khung phiên nhưng không có số đo mưa trong khung (chỉ có giờ khác) → ghi không có dữ liệu, không ghi 0 mm', async () => {
+    const { farm, house } = await seedFarm()
+    await dropToday(house._id)
+    const today = vnDay(0)
+    await BirdCountBucket.create({ camera_node_id: new mongoose.Types.ObjectId(), house_id: house._id, bucket_start: new Date(`${today}T17:30:00+07:00`), entry_count: 5, exit_count: 0 })
+    await WeatherObservation.create({ farm_id: farm._id, hour: new Date(`${today}T09:00:00+07:00`), precipitation_mm: 0 })
+    expect(await checkReturnRateDrops(today)).toBe(1)
+    const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
+    expect(alert.message).toContain('không có dữ liệu thời tiết')
+    expect(alert.message).not.toContain('0 mm')
+    expect(alert.metadata).toMatchObject({ rainMm: null })
+  })
+
+  it('chưa biết khung phiên (chưa có số đếm 5 phút) → ghi mưa cả ngày, không ghi "trong phiên đếm"', async () => {
+    const { farm, house } = await seedFarm()
+    await dropToday(house._id)
+    const today = vnDay(0)
+    await WeatherObservation.create([
+      { farm_id: farm._id, hour: new Date(`${today}T09:00:00+07:00`), precipitation_mm: 1.5 },
+      { farm_id: farm._id, hour: new Date(`${today}T17:00:00+07:00`), precipitation_mm: 2 },
+    ])
+    expect(await checkReturnRateDrops(today)).toBe(1)
+    const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
+    expect(alert.message).toContain('mưa cả ngày 3.5 mm')
+    expect(alert.message).not.toContain('trong phiên đếm')
   })
 
   it('không có dữ liệu thời tiết thì ghi rõ', async () => {

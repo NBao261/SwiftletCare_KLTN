@@ -8,6 +8,11 @@ import { houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
 import type { CurrentUser, HealthStatus, HouseStage } from '@/types'
 
+/**
+ * Report 3 §4.5 — "tỷ lệ chim về gần nhất" tìm trong chừng này ngày: không gom toàn bộ lịch sử số đếm của mọi nhà mỗi
+ * lần mở trang; nhà không có ngày nào có tỷ lệ trong khoảng này hiện `null`.
+ */
+export const LATEST_RETURN_RATE_DAYS = 30
 /** Cảnh báo còn chờ xử lý: bác bỏ (`DISMISSED`) là báo động giả, không tính là đang mở */
 const UNHANDLED_ALERT_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
@@ -72,7 +77,10 @@ export interface HouseOverview {
 export async function getFarmOverview(user: CurrentUser, farmId: string): Promise<{ farm_id: string; date: string; houses: HouseOverview[] }> {
   const farm = await assertFarmAccess(farmId, user)
   const today = vnDate(new Date())
-  const houses = await House.find({ farm_id: farm._id }).select('name stage').sort({ name: 1 }).lean<FarmHouse[]>()
+  // Sắp theo tên tiếng Việt như bảng so sánh (thứ tự nhị phân của MongoDB đặt chữ có dấu sau 'z')
+  const houses = (await House.find({ farm_id: farm._id }).select('name stage').lean<FarmHouse[]>())
+    .sort((a, b) => a.name.localeCompare(b.name, 'vi') || String(a._id).localeCompare(String(b._id)))
+  const recentFrom = vnDate(new Date(Date.now() - LATEST_RETURN_RATE_DAYS * 86_400_000))
   const houseIds = houses.map(h => h._id)
 
   const [days, alerts, workOrders, simulated, counts] = await Promise.all([
@@ -84,7 +92,7 @@ export async function getFarmOverview(user: CurrentUser, farmId: string): Promis
     ]),
     simulatedHouses(houses),
     // Một nguồn cho số đếm của nhà (birdCount.service#houseDailyCounts), không tự gộp bird_count_records ở đây
-    Promise.all(houses.map(h => houseDailyCounts(String(h._id), { to: today }))),
+    Promise.all(houses.map(h => houseDailyCounts(String(h._id), { from: recentFrom, to: today }))),
   ])
   const statusOf = new Map(days.map(d => [String(d.house_id), d.current_status]))
   const workOrdersOf = new Map(workOrders.map(w => [String(w._id), w.n]))

@@ -257,8 +257,11 @@ async function checkHouseReturnRate(houseId: string, sessionDate: string, from: 
 
   // VISION-FR-011 — ghi lượng mưa của các phiên đếm trong ngày (mưa làm chim về muộn, BR-30) hoặc ghi rõ không có
   // dữ liệu thời tiết; chỉ để người xem cân nhắc, không đổi quyết định báo
-  const rainMm = await sessionRainfall(houseId, house.farm_id, sessionDate)
-  const rainText = rainMm === null ? 'không có dữ liệu thời tiết' : `mưa trong phiên đếm ${rainMm} mm`
+  const rain = await sessionRainfall(houseId, house.farm_id, sessionDate)
+  const rainMm = rain?.mm ?? null
+  const rainText = rain === null
+    ? 'không có dữ liệu thời tiết'
+    : rain.scope === 'SESSIONS' ? `mưa trong phiên đếm ${rain.mm} mm` : `mưa cả ngày ${rain.mm} mm (chưa biết khung phiên đếm)`
   const alert = await createAlert({
     farmId: String(house.farm_id), houseId,
     type: 'LOW_RETURN_RATE',

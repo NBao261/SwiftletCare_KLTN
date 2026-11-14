@@ -5,8 +5,8 @@ import { houseEnergyByMonth, totalEnergy } from '@/services/energy.service'
 import { openAlertCounts, type FarmHouse } from '@/services/farmOverview.service'
 import { isFlockDayComplete } from '@/services/healthAssessment.service'
 import { collectAlertSamples, opsRow } from '@/services/opsMetrics.service'
-import { BadRequestError } from '@/utils/appError.util'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
+import { vnDayPeriod } from '@/utils/period.util'
 import type { CurrentUser } from '@/types'
 
 /** Các cột sắp xếp được của BR-44 (cùng tên trường trong mỗi hàng); không có cột điểm tổng hay xếp hạng */
@@ -52,9 +52,11 @@ export function sortComparison(rows: ComparisonRow[], key: ComparisonSortKey, or
   return [...rows].sort((a, b) => {
     const x = a[key]
     const y = b[key]
-    if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1
-    if (typeof x === 'string' && typeof y === 'string') return sign * x.localeCompare(y, 'vi')
-    return sign * ((x as number) - (y as number))
+    const byId = a.house_id.localeCompare(b.house_id)
+    if (x === null || y === null) return x === y ? byId : x === null ? 1 : -1
+    const diff = typeof x === 'string' && typeof y === 'string' ? x.localeCompare(y, 'vi') : (x as number) - (y as number)
+    // Bằng nhau thì theo house_id, để thứ tự không đổi giữa các lần gọi
+    return diff === 0 ? byId : sign * diff
   })
 }
 
@@ -98,23 +100,23 @@ async function houseRow(
 export async function getHouseComparison(
   user: CurrentUser, query: { farmId: string; from: Date; to: Date; sort?: ComparisonSortKey; order?: 'asc' | 'desc' },
 ) {
-  if (query.from >= query.to) throw BadRequestError('`from` phải trước `to`')
+  // Trọn ngày giờ VN: mọi cột cùng một khoảng ngày, kỳ liền trước có cùng số ngày; quá 1 năm → 400
+  const range = vnDayPeriod(query.from, query.to)
   const farm = await assertFarmAccess(query.farmId, user)
   const houses = await House.find({ farm_id: farm._id }).select('name stage').lean<FarmHouse[]>()
   const houseIds = houses.map(h => h._id)
-  const span = query.to.getTime() - query.from.getTime()
+  const span = range.to.getTime() - range.from.getTime()
   const period = {
-    from: query.from, to: query.to,
-    fromDate: vnDate(query.from),
-    // `to` không tính: ngày cuối là ngày của mili giây trước `to`
-    toDate: vnDate(new Date(query.to.getTime() - 1)),
-    prevFromDate: vnDate(new Date(query.from.getTime() - span)),
+    from: range.from, to: range.to,
+    fromDate: vnDate(range.from),
+    toDate: vnDate(new Date(range.to.getTime() - 1)),
+    prevFromDate: vnDate(new Date(range.from.getTime() - span)),
   }
 
   const [days, { byHouse }, openAlerts] = await Promise.all([
     HouseHealthDay.find({ house_id: { $in: houseIds }, date: { $gte: period.fromDate, $lte: period.toDate } })
       .select('house_id current_status indicators.environment.value').lean(),
-    collectAlertSamples(farm._id, houseIds, query.from, query.to),
+    collectAlertSamples(farm._id, houseIds, range.from, range.to),
     openAlertCounts(farm._id, houses),
   ])
   const health = new Map<string, Array<{ status: string; environment: number | null }>>()
@@ -125,7 +127,7 @@ export async function getHouseComparison(
 
   const rows = await Promise.all(houses.map(h => houseRow(h, period, health, byHouse, openAlerts)))
   return {
-    farm_id: String(farm._id), from: query.from, to: query.to,
+    farm_id: String(farm._id), from: range.from, to: range.to, days: range.days,
     sort: query.sort ?? 'name', order: query.order ?? 'asc',
     rows: sortComparison(rows, query.sort ?? 'name', query.order ?? 'asc'),
   }

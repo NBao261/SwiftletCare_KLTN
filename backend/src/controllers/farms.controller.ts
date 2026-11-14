@@ -191,7 +191,7 @@ export const resetThresholds = asyncHandler(async (req: Request, res: Response) 
   res.json({ success: true, data: zone })
 })
 
-/** Mặc định so sánh 30 ngày gần nhất (khoảng hiển thị, không phải luật nghiệp vụ) */
+/** Report 3 §4.5 — khoảng so sánh mặc định 30 ngày gần nhất (service làm tròn ra trọn ngày giờ VN) */
 const DEFAULT_COMPARISON_DAYS = 30
 
 /** GET /farms/:id/overview – ANALYTICS-FR-015 */
