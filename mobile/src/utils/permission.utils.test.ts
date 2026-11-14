@@ -117,6 +117,10 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewWorkOrders')).toBe(true)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'workOnWorkOrder')).toBe(false)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'answerOnsiteCheck')).toBe(false)
+    // G-22: xem kế hoạch bảo trì ở nhà được giao; tạo, sửa kế hoạch là việc của chủ trại trên web
+    expect(canPerform(technician, 'viewMaintenance')).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'viewMaintenance')).toBe(true)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewMaintenance')).toBe(true)
     // Chấm ngày, xem trạng thái ngày và báo cáo của nhà được giao (BR-31, G-11)
     expect(canPerform(technician, 'rateHealthDay')).toBe(true)
     expect(canPerform(technician, 'viewHealthReports')).toBe(true)
