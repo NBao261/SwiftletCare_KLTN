@@ -110,6 +110,9 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
   const height = EDGE_TOP + BAR_HEIGHT + insets.bottom
   const itemWidth = width / state.routes.length
   const featuredIndex = state.routes.findIndex(route => findTab(tabs, route.name)?.isFeatured)
+  // Thanh tab có nút nổi (Farm Owner) giữ nguyên thiết kế đóng băng: tab active chỉ đổi icon đặc, không nền tròn.
+  // Thanh không nút nổi (Chuyên gia) cho nền lime chạy theo tab đang chọn làm chỉ báo active.
+  const hasFeatured = featuredIndex >= 0
   const edgePath = buildEdgePath(width, featuredIndex < 0 ? null : itemWidth * (featuredIndex + 0.5))
   const fillPath = `${edgePath} L ${width} ${height} L 0 ${height} Z`
 
@@ -160,9 +163,13 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
                   <TabBadge count={badgeCount} />
                 </View>
               ) : (
-                // Tab thường đang chọn: chỉ icon đặc + chữ màu mực, không nền tròn lime (người dùng đổi 2026-10-31)
-                <View style={styles.iconCircle}>
-                  <TabIcon size={TAB_ICON_SIZE} color={color} weight={isFocused ? 'fill' : 'regular'} />
+                // Tab thường đang chọn: nền tròn lime chạy theo tab active (chỉ thanh không nút nổi), icon đặc (user, 2026-11-14)
+                <View style={[styles.iconCircle, isFocused && !hasFeatured && { backgroundColor: palette.primary }]}>
+                  <TabIcon
+                    size={TAB_ICON_SIZE}
+                    color={isFocused && !hasFeatured ? palette.onPrimary : color}
+                    weight={isFocused ? 'fill' : 'regular'}
+                  />
                   <TabBadge count={badgeCount} />
                 </View>
               )}
