@@ -101,6 +101,15 @@ describe('kế hoạch bảo trì (OPS-FR-005)', () => {
     await expert$.post('/maintenance/plans', body).expect(403)
   })
 
+  it('mỗi nhà một kế hoạch cho mỗi loại thiết bị: kế hoạch bơm thứ hai → 409; nhà khác, hay sau khi xoá thì được', async () => {
+    const { house2, plan, owner$ } = await seed()
+    const first = (await plan().expect(201)).body.data
+    await plan({ basis: 'SWITCHES', interval: 100_000 }).expect(409)
+    await plan({ house_id: String(house2._id) }).expect(201)
+    await owner$.delete(`/maintenance/plans/${first._id}`).expect(200)
+    await plan({ interval: 400 }).expect(201)
+  })
+
   it('kế hoạch theo lịch có điểm đến hạn đầu = hôm nay + khoảng ngày', async () => {
     const { plan } = await seed()
     const before = Date.now()
@@ -163,6 +172,35 @@ describe('đến hạn (OPS-FR-006, ALERT-FR-016)', () => {
     expect(await Alert.countDocuments({ type: 'MAINTENANCE_DUE', 'details.plan_id': { $exists: true } })).toBe(1)
   })
 
+  it('quạt chưa có kế hoạch vượt mốc mặc định khi cảnh báo của kế hoạch bơm đang mở: cảnh báo riêng, không gộp', async () => {
+    const { node, plan, setPumpHours } = await seed()
+    const created = (await plan().expect(201)).body.data
+    await setPumpHours(500)
+    await checkDuePlans()
+    await SensorNode.updateOne({ _id: node._id }, { 'relay_usage.ventilation.since_service_hours': 2001 })
+    const t0 = Date.now() - 60_000
+    await Telemetry.create([
+      { node_id: node._id, zone_id: node.zone_id, timestamp: new Date(t0), misting_on: false, ventilation_on: true },
+      { node_id: node._id, zone_id: node.zone_id, timestamp: new Date(t0 + 10_000), misting_on: false, ventilation_on: true },
+    ])
+    await accumulateRelayUsage()
+    const alerts = await Alert.find({ type: 'MAINTENANCE_DUE' }).lean()
+    expect(alerts).toHaveLength(2)
+    const planAlert = alerts.find(a => a.details?.plan_id)!
+    const fanAlert = alerts.find(a => !a.details?.plan_id)!
+    expect(planAlert.details).toMatchObject({ plan_id: created._id, load: 'misting' })
+    expect((fanAlert.metadata?.loads as Array<{ relay: string }>).map(l => l.relay)).toEqual(['ventilation'])
+  })
+
+  it('kế hoạch theo lịch đến hạn hôm nay (dù điểm đến hạn sau 07:00) thì báo ở lượt 07:00 hôm đó', async () => {
+    const { plan } = await seed()
+    const created = (await plan({ equipment: 'NOZZLE', basis: 'CALENDAR', interval: 30 }).expect(201)).body.data
+    // Điểm đến hạn 10:00 giờ VN ngày 01/12
+    await MaintenancePlan.updateOne({ _id: created._id }, { next_due_at: new Date('2026-12-01T03:00:00Z') })
+    expect((await checkDuePlans(new Date('2026-11-30T00:00:00Z'), { calendar: true })).opened).toBe(0)
+    expect((await checkDuePlans(new Date('2026-12-01T00:00:00Z'), { calendar: true })).opened).toBe(1)
+  })
+
   it('kế hoạch theo lịch chỉ đến hạn ở lượt 07:00 sau điểm đến hạn; cảnh báo của nhà', async () => {
     const { house, plan } = await seed()
     await plan({ equipment: 'SENSOR', basis: 'CALENDAR', interval: 30 }).expect(201)
@@ -194,6 +232,17 @@ describe('đến hạn (OPS-FR-006, ALERT-FR-016)', () => {
     expect((await owner$.get('/maintenance/plans').expect(200)).body.data).toHaveLength(0)
     expect((await owner$.get('/maintenance/plans?state=RETIRED').expect(200)).body.data).toHaveLength(1)
     await owner$.put(`/maintenance/plans/${created._id}`, { interval: 100 }).expect(409)
+  })
+
+  it('xoá kế hoạch đang đến hạn: Work Order phòng ngừa bị huỷ và cảnh báo của kế hoạch đóng', async () => {
+    const { plan, owner$, setPumpHours } = await seed()
+    const created = (await plan().expect(201)).body.data
+    await setPumpHours(520)
+    await checkDuePlans()
+    const wo = (await WorkOrder.findOne().lean())!
+    await owner$.delete(`/maintenance/plans/${created._id}`).expect(200)
+    expect((await WorkOrder.findById(wo._id).lean())!).toMatchObject({ status: 'CANCELLED', is_open: false })
+    expect((await Alert.findById(wo.alert_id).lean())!.status).toBe('RESOLVED')
   })
 })
 
@@ -258,6 +307,11 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
     expect(repairs).toHaveLength(1)
     expect(repairs[0]).toMatchObject({ kind: 'REPAIR', title: 'Sửa chữa: Bồn nước', description: 'Bồn rò nước' })
     await tech$.put(`/work-orders/${repairs[0]._id}/checklist`, { item_index: 0, result: 'OK' }).expect(409)
+
+    // Ghi lại là Đạt với ghi chú trống: ghi chú "Bồn rò nước" cũ bị bỏ
+    const again = await tech$.put(`${path}/checklist`, { item_index: 0, result: 'OK' }).expect(200)
+    expect(again.body.data.checklist[0].result).toBe('OK')
+    expect(again.body.data.checklist[0].note).toBeUndefined()
   })
 
   it('Work Order phòng ngừa không bị leo thang 15 phút như Work Order sửa chữa', async () => {
@@ -290,10 +344,14 @@ describe('danh sách đến hạn và tỷ lệ bảo trì đúng hạn (OPS-FR-
       { ...base, status: 'CLOSED', is_open: false, closed_at: new Date(t0.getTime() + 3 * DAY) },
       { ...base, status: 'CLOSED', is_open: false, closed_at: new Date(t0.getTime() + 9 * DAY) },
       { ...base, status: 'OPEN' },
+      { ...base, status: 'CANCELLED', is_open: false, closed_at: new Date(t0.getTime() + DAY) },
       { ...base, kind: 'REPAIR', origin: 'MANUAL', status: 'CLOSED', is_open: false, closed_at: t0 },
     ])
     const range: [Date, Date] = [new Date(t0.getTime() - DAY), new Date(t0.getTime() + DAY)]
-    expect(await onTimeMaintenanceRate([house._id], ...range)).toBe(33)
+    // Đóng trễ và còn mở quá 7 ngày là trễ; bị huỷ thì không tính
+    expect(await onTimeMaintenanceRate([house._id], ...range, new Date('2026-11-20T00:00:00Z'))).toBe(33)
+    // Hai ngày sau khi mở: cái còn mở chưa trễ, không vào mẫu số
+    expect(await onTimeMaintenanceRate([house._id], ...range, new Date(t0.getTime() + 2 * DAY))).toBe(50)
     expect(await onTimeMaintenanceRate([house._id], new Date('2026-01-01'), new Date('2026-02-01'))).toBeNull()
   })
 })

@@ -10,7 +10,7 @@ import { createAlert } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
 import { LOAD_OF_EQUIPMENT } from '@/services/maintenanceRecord.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
-import { openPreventiveWorkOrder } from '@/services/workOrder.service'
+import { cancelPlanWorkOrders, openPreventiveWorkOrder } from '@/services/workOrder.service'
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import {
   assertFarmAccess, assertHouseAccess, listAccessibleFarmIds, listAssignedHouseIds,
@@ -22,6 +22,13 @@ import type { CurrentUser } from '@/types'
 /** OPS-FR-006, Report 3 §4.5 — kế hoạch còn đến hạn quá chừng này thì báo Farm Owner (OVERDUE) */
 export const MAINTENANCE_GRACE_DAYS = 7
 const DAY_MS = 86_400_000
+const VN_OFFSET_MS = 7 * 3600_000
+
+/** Hết ngày hôm nay theo giờ Việt Nam: kế hoạch theo lịch "đến hạn hôm nay" là có điểm đến hạn trước lúc này */
+function endOfVnDay(now: Date): Date {
+  const vnDayStart = Math.floor((now.getTime() + VN_OFFSET_MS) / DAY_MS) * DAY_MS
+  return new Date(vnDayStart + DAY_MS - VN_OFFSET_MS)
+}
 
 const EQUIPMENT_LABEL: Record<MaintenanceEquipment, string> = {
   PUMP: 'bơm phun sương', FAN: 'quạt thông gió', SENSOR: 'vệ sinh cảm biến', NOZZLE: 'vệ sinh béc phun', CALIBRATION: 'hiệu chuẩn cảm biến',
@@ -102,6 +109,11 @@ export async function listDuePlans(
 export async function createPlan(user: CurrentUser, input: MaintenancePlanInput, now = new Date()) {
   const { house, farm } = await assertHouseAccess(input.house_id, user)
   assertPlanShape(input.equipment, input.basis, input.interval)
+  // OPS-FR-005 — một kế hoạch cho mỗi nhà và loại thiết bị: hai kế hoạch bơm (hay quạt) dùng chung một bộ đếm của tải,
+  // ghi bảo trì theo kế hoạch này sẽ đặt lại bộ đếm của kế hoạch kia
+  if (await MaintenancePlan.exists({ house_id: house._id, equipment: input.equipment, state: { $ne: 'RETIRED' } })) {
+    throw ConflictError('Nhà này đã có kế hoạch cho loại thiết bị này, hãy sửa kế hoạch đó')
+  }
   const plan = await MaintenancePlan.create({
     farm_id: farm._id, house_id: house._id, equipment: input.equipment, basis: input.basis, interval: input.interval,
     checklist_template: input.checklist_template.map(i => i.trim()).filter(Boolean),
@@ -138,12 +150,26 @@ export async function updatePlan(
   return plan
 }
 
+/**
+ * SM-20 — xoá kế hoạch: RETIRED; Work Order phòng ngừa chưa làm xong bị huỷ và cảnh báo `MAINTENANCE_DUE` của kế hoạch
+ * không còn Work Order nào đang mở thì đóng, để không còn cảnh báo không ai đóng được (chỉ duyệt Work Order mới đóng nó).
+ */
 export async function retirePlan(id: string, user: CurrentUser) {
   const plan = await findPlanWithAccess(id, user)
   if (plan.state !== 'RETIRED') {
     plan.state = 'RETIRED'
     await plan.save()
-    await logAction(user._id, 'MAINTENANCE_PLAN_RETIRED', 'maintenance_plan', String(plan._id), {}, { farmId: String(plan.farm_id) })
+    const reason = 'Kế hoạch bảo trì đã bị xoá'
+    const cancelled = await cancelPlanWorkOrders(plan._id, user, reason)
+    const stillOpen = (await WorkOrder.find({ plan_id: plan._id, is_open: true }).select('alert_id').lean())
+      .map(w => w.alert_id).filter(Boolean)
+    const { modifiedCount: resolved } = await Alert.updateMany(
+      { type: 'MAINTENANCE_DUE', 'details.plan_id': String(plan._id), status: { $in: OPEN_ALERT_STATUSES }, _id: { $nin: stillOpen } },
+      { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: reason },
+    )
+    await logAction(user._id, 'MAINTENANCE_PLAN_RETIRED', 'maintenance_plan', String(plan._id), {
+      cancelled_work_orders: cancelled, resolved_alerts: resolved,
+    }, { farmId: String(plan.farm_id) })
   }
   return plan
 }
@@ -205,7 +231,8 @@ async function checkCountedPlan(plan: IMaintenancePlan, now: Date): Promise<numb
 
 /** Kế hoạch theo lịch: đến điểm đến hạn → cảnh báo của nhà + Work Order */
 async function checkCalendarPlan(plan: IMaintenancePlan, now: Date): Promise<number> {
-  if (!plan.next_due_at || plan.next_due_at > now) return 0
+  // OPS-FR-006 — "đến hạn hôm nay thì báo lúc 07:00": so với hết ngày VN, không với giờ của lượt chạy
+  if (!plan.next_due_at || plan.next_due_at >= endOfVnDay(now)) return 0
   if (await WorkOrder.exists({ plan_id: plan._id, is_open: true })) return 0
   await markDue(plan, now)
   const house = await House.findById(plan.house_id).select('name').lean()
@@ -260,15 +287,19 @@ export async function checkDuePlans(now = new Date(), opts: { calendar?: boolean
 }
 
 /**
- * BR-40 — tỷ lệ bảo trì đúng hạn: Work Order phòng ngừa mở trong [from, to) đã đóng trước lúc mở (điểm đến hạn) cộng
- * MAINTENANCE_GRACE_DAYS; null khi không có Work Order phòng ngừa nào.
+ * BR-40 — tỷ lệ bảo trì đúng hạn = Work Order phòng ngừa đóng trước lúc mở (điểm đến hạn) cộng MAINTENANCE_GRACE_DAYS /
+ * Work Order phòng ngừa đến hạn, mở trong [from, to). Mẫu số chỉ gồm cái đã đóng hoặc đã quá hạn chót: cái còn trong
+ * hạn chưa trễ, cái bị huỷ (kế hoạch bị xoá, hay đã có cái thay thế) không phải một lần đến hạn. null khi không có.
  */
-export async function onTimeMaintenanceRate(houseIds: Types.ObjectId[], from: Date, to: Date): Promise<number | null> {
+export async function onTimeMaintenanceRate(
+  houseIds: Types.ObjectId[], from: Date, to: Date, now = new Date(),
+): Promise<number | null> {
   const orders = await WorkOrder.find({
-    kind: 'PREVENTIVE', house_id: { $in: houseIds }, opened_at: { $gte: from, $lt: to },
+    kind: 'PREVENTIVE', house_id: { $in: houseIds }, opened_at: { $gte: from, $lt: to }, status: { $ne: 'CANCELLED' },
   }).select('opened_at closed_at status').lean()
-  if (orders.length === 0) return null
-  const onTime = orders.filter(o => o.status === 'CLOSED' && o.closed_at
-    && o.closed_at.getTime() <= o.opened_at.getTime() + MAINTENANCE_GRACE_DAYS * DAY_MS).length
-  return Math.round((100 * onTime) / orders.length)
+  const graceMs = MAINTENANCE_GRACE_DAYS * DAY_MS
+  const due = orders.filter(o => o.status === 'CLOSED' || o.opened_at.getTime() + graceMs <= now.getTime())
+  if (due.length === 0) return null
+  const onTime = due.filter(o => o.status === 'CLOSED' && o.closed_at && o.closed_at.getTime() <= o.opened_at.getTime() + graceMs).length
+  return Math.round((100 * onTime) / due.length)
 }

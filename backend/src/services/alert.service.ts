@@ -179,8 +179,11 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     type: input.type,
     // THREAT-FR-014 — bơm hỏng và quạt hỏng trên cùng controller là hai sự cố, mỗi tải một cảnh báo
     ...(input.type === 'ACTUATOR_FAULT' && typeof input.details?.load === 'string' && { 'details.load': input.details.load }),
-    // OPS-FR-006 — mỗi kế hoạch bảo trì đến hạn là một sự cố riêng, kể cả hai kế hoạch trên cùng controller
-    ...(input.type === 'MAINTENANCE_DUE' && typeof input.details?.plan_id === 'string' && { 'details.plan_id': input.details.plan_id }),
+    // OPS-FR-006 — mỗi kế hoạch bảo trì đến hạn là một sự cố riêng, kể cả hai kế hoạch trên cùng controller; cảnh báo
+    // theo mốc mặc định (không kế hoạch, ALERT-FR-016) không gộp vào cảnh báo của một kế hoạch trên cùng controller
+    ...(input.type === 'MAINTENANCE_DUE' && {
+      'details.plan_id': typeof input.details?.plan_id === 'string' ? input.details.plan_id : { $exists: false },
+    }),
     status: { $in: OPEN_STATUSES },
   }).select('_id created_at last_seen_at').lean()
   if (open) {

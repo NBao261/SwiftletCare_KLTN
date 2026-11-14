@@ -3281,8 +3281,10 @@ paths:
         `site_cause`. Nguyên nhân bắt buộc khi đóng Work Order (`POST /work-orders/{id}/done`), không bắt
         buộc ở đây.
 
-        Xác nhận `MAINTENANCE_DUE` = đã bảo trì: đếm lại `since_service_*` của các tải trong
-        `metadata.loads` từ 0 và chuyển cảnh báo sang `RESOLVED` (ALERT-FR-016, BR-16).
+        Xác nhận `MAINTENANCE_DUE` theo mốc mặc định (tải chưa có kế hoạch, không có `details.plan_id`) = đã bảo
+        trì: đếm lại `since_service_*` của các tải trong `metadata.loads` từ 0 và chuyển cảnh báo sang `RESOLVED`
+        (ALERT-FR-016, BR-16). `MAINTENANCE_DUE` của một kế hoạch bảo trì (có `details.plan_id`) chỉ chuyển
+        `ACKNOWLEDGED`, không đếm lại: nó đóng khi Farm Owner duyệt Work Order phòng ngừa (OPS-FR-008).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3509,8 +3511,9 @@ paths:
 
         Theo thợ: cảnh báo được định tuyến tới thợ đó (`routing.technician_id`). Mục tiêu nội bộ để
         xác nhận là `escalation_min` (15 phút) cho mọi mức (BR-40) — số báo cáo, không phải cam kết.
-        `on_time_maintenance_rate` (BR-40): % Work Order phòng ngừa đến hạn trong khoảng đã đóng trước điểm đến hạn
-        cộng `maintenance_grace_days` (7 ngày); `null` khi không có Work Order phòng ngừa nào. Phút, làm tròn
+        `on_time_maintenance_rate` (BR-40): % Work Order phòng ngừa mở (đến hạn) trong khoảng đã đóng trước điểm
+        đến hạn cộng `maintenance_grace_days` (7 ngày). Mẫu số chỉ gồm Work Order đã đóng hoặc đã quá hạn chót; cái
+        còn trong hạn chưa tính, cái `CANCELLED` không tính; `null` khi không còn Work Order nào để tính. Phút, làm tròn
         1 chữ số; không có mẫu thì `null`. Farm Technician, Administrator → 403.
       parameters:
         - { name: farmId, in: query, required: true, schema: { type: string } }
@@ -3570,8 +3573,9 @@ paths:
       summary: "Báo đã làm xong, kèm việc đã làm, nguyên nhân và ảnh (OPS-FR-002, ALERT-FR-018) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
       description: |
         `IN_PROGRESS` → `VERIFYING`: hệ thống kiểm dữ liệu phục hồi trong `recovery_verify_min` (10 phút,
-        BR-41) rồi chuyển `AWAITING_APPROVAL`. Work Order không gắn cảnh báo thì chuyển thẳng
-        `AWAITING_APPROVAL` (không có dữ liệu để kiểm).
+        BR-41) rồi chuyển `AWAITING_APPROVAL`. Work Order không gắn cảnh báo, và Work Order `PREVENTIVE` (dù gắn
+        `MAINTENANCE_DUE`), chuyển thẳng `AWAITING_APPROVAL` (không có dữ liệu phục hồi để kiểm). Work Order
+        `PREVENTIVE` cần mọi mục checklist đã có kết quả (OPS-FR-007), thiếu → 422.
 
         `cause` bắt buộc với Work Order của `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`,
         `RS485_BUS_FAILURE`, `SPEAKER_FAILURE` (thiếu → 422); nguyên nhân và ảnh lưu cả vào cảnh báo
@@ -3600,13 +3604,13 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/WorkOrderWrongState" }
-        "422": { description: "Thiếu nguyên nhân của cảnh báo thiết bị (ALERT-FR-018)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { description: "Thiếu nguyên nhân của cảnh báo thiết bị (ALERT-FR-018), hoặc Work Order phòng ngừa còn mục checklist chưa ghi (OPS-FR-007)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   /work-orders/{id}/approve:
     post:
       tags: [WorkOrders]
       summary: "Duyệt, đóng Work Order và cảnh báo của nó (OPS-FR-004) — chỉ FARM_OWNER"
-      description: "`AWAITING_APPROVAL` → `CLOSED` (kết quả `REPAIRED`); cảnh báo còn mở được đóng. Trạng thái khác → 409. Ghi audit `WORK_ORDER_APPROVED`."
+      description: "`AWAITING_APPROVAL` → `CLOSED`; cảnh báo còn mở được đóng. Work Order sửa chữa có kết quả `REPAIRED`. Work Order `PREVENTIVE` có kết quả `DONE` và là một lần ghi bảo trì (OPS-FR-008): bộ đếm của tải về 0 (kế hoạch theo giờ chạy hoặc số lần đóng cắt), điểm đến hạn kế tiếp = lúc duyệt + `interval` ngày (kế hoạch theo lịch; hiệu chuẩn là ngày hiệu chuẩn kế tiếp), một dòng trong `records` của kế hoạch, kế hoạch về `SCHEDULED` khi không còn Work Order phòng ngừa nào đang mở. Trạng thái khác → 409. Ghi audit `WORK_ORDER_APPROVED`."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -3705,8 +3709,10 @@ paths:
         Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi (`source`); hệ thống không tự đặt
         chu kỳ. `PUMP`, `FAN` đi với `RUN_HOURS` (giờ chạy) hoặc `SWITCHES` (số lần đóng cắt), áp cho bơm hoặc quạt
         của mọi controller trong nhà; `SENSOR`, `NOZZLE`, `CALIBRATION` đi với `CALENDAR` (`interval` tính bằng ngày).
-        Kết hợp khác hoặc `interval` ≤ 0 → 422. Kế hoạch mới ở `SCHEDULED`; kế hoạch theo lịch có điểm đến hạn đầu
-        là hôm nay cộng `interval` ngày (Report 3 §6.20). Farm Technician, Domain Expert, Administrator → 403.
+        Kết hợp khác hoặc `interval` ≤ 0 → 422. Mỗi nhà một kế hoạch cho mỗi loại thiết bị (OPS-FR-005: hai kế
+        hoạch bơm dùng chung một bộ đếm): nhà đã có kế hoạch chưa xoá cho `equipment` này → 409. Kế hoạch mới ở
+        `SCHEDULED`; kế hoạch theo lịch có điểm đến hạn đầu là hôm nay cộng `interval` ngày (Report 3 §6.20) và
+        đến hạn ở lượt 07:00 giờ VN của ngày chứa điểm đến hạn. Farm Technician, Domain Expert, Administrator → 403.
         Ghi audit `MAINTENANCE_PLAN_CREATED`.
       requestBody:
         required: true
@@ -3725,6 +3731,7 @@ paths:
                       data: { $ref: "#/components/schemas/MaintenancePlan" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Nhà đã có kế hoạch cho loại thiết bị này", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /maintenance/plans/{id}:
@@ -3762,7 +3769,7 @@ paths:
     delete:
       tags: [Maintenance]
       summary: "Xoá kế hoạch: chuyển RETIRED, không đến hạn nữa (OPS-FR-005) — chỉ FARM_OWNER"
-      description: "Lịch sử bảo trì giữ lại. Work Order phòng ngừa chưa đóng của kế hoạch không bị huỷ tự động (Farm Owner tự huỷ nếu muốn). Ghi audit `MAINTENANCE_PLAN_RETIRED`."
+      description: "Lịch sử bảo trì giữ lại. Work Order phòng ngừa chưa làm xong (`OPEN`, `IN_PROGRESS`) của kế hoạch bị huỷ (`CANCELLED`); cái đã báo xong (`AWAITING_APPROVAL`) vẫn chờ Farm Owner duyệt. `MAINTENANCE_DUE` của kế hoạch không còn Work Order nào đang mở thì chuyển `RESOLVED`. Ghi audit `MAINTENANCE_PLAN_RETIRED` (số Work Order đã huỷ, số cảnh báo đã đóng)."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -3831,8 +3838,8 @@ paths:
       summary: "Ghi kết quả một mục checklist của Work Order phòng ngừa (OPS-FR-007) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
       description: |
         Chỉ Work Order `PREVENTIVE` đang `IN_PROGRESS`; khác → 409. `DEFECT` mở một Work Order sửa chữa cho nhà
-        (origin `CHECKLIST`, OPS-FR-001), ghi lại ở mục đó; ghi lại cùng mục thì thay kết quả, không mở thêm Work
-        Order sửa chữa. Ảnh tuỳ chọn (`multipart/form-data`, field `photo`, JPEG/PNG/WebP ≤ 5 MB). Báo xong
+        (origin `CHECKLIST`, OPS-FR-001), ghi lại ở mục đó; ghi lại cùng mục thì thay kết quả và ghi chú (gửi ghi
+        chú trống là bỏ ghi chú cũ), không mở thêm Work Order sửa chữa. Ảnh tuỳ chọn (`multipart/form-data`, field `photo`, JPEG/PNG/WebP ≤ 5 MB). Báo xong
         (`POST /work-orders/{id}/done`) cần mọi mục đã có kết quả (BR-41), thiếu → 422.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -4004,7 +4011,7 @@ paths:
                               ventilationSwitchesPerHour: { type: number, nullable: true }
                           service_limits:
                             type: object
-                            description: "ALERT-FR-016 — mốc bảo trì theo thời gian chạy (quá mốc → cảnh báo MAINTENANCE_DUE)"
+                            description: "ALERT-FR-016 — mốc bảo trì mặc định theo thời gian chạy (quá mốc → cảnh báo MAINTENANCE_DUE), chỉ cho tải chưa có kế hoạch bảo trì của nhà"
                             properties:
                               misting: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
                               ventilation: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
@@ -6176,7 +6183,7 @@ components:
       properties:
         relay_usage:
           type: object
-          description: "ALERT-FR-016 — giờ chạy + số lần đóng cắt thật của bơm/quạt; `since_service_*` về 0 khi Farm Owner xác nhận MAINTENANCE_DUE"
+          description: "ALERT-FR-016 — giờ chạy + số lần đóng cắt thật của bơm/quạt; `since_service_*` về 0 khi Farm Owner xác nhận MAINTENANCE_DUE theo mốc mặc định, hoặc duyệt Work Order phòng ngừa của kế hoạch bảo trì (OPS-FR-008)"
           properties:
             misting: { $ref: "#/components/schemas/RelayUsage" }
             ventilation: { $ref: "#/components/schemas/RelayUsage" }
@@ -6673,7 +6680,7 @@ components:
         overall: { $ref: "#/components/schemas/OpsMetricRow" }
         by_house: { type: array, items: { allOf: [{ $ref: "#/components/schemas/OpsMetricRow" }, { properties: { house_id: { type: string }, name: { type: string } } }] } }
         by_technician: { type: array, items: { allOf: [{ $ref: "#/components/schemas/OpsMetricRow" }, { properties: { technician_id: { type: string }, full_name: { type: string } } }] } }
-        on_time_maintenance_rate: { type: number, nullable: true, description: "BR-40 — % Work Order phòng ngừa đóng đúng hạn; null khi không có" }
+        on_time_maintenance_rate: { type: number, nullable: true, description: "BR-40 — % Work Order phòng ngừa đóng đúng hạn, trên các Work Order đã đóng hoặc đã quá hạn chót (không tính CANCELLED); null khi không có" }
 
     OpsMetricRow:
       type: object

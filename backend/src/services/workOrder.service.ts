@@ -359,17 +359,20 @@ export async function updateChecklistItem(
     await notifyAll(await handlerIds(repair), repair, `Work Order mới: ${repair.title}`, repair.description ?? '')
   }
   const prefix = `checklist.${input.item_index}`
+  const note = input.note?.trim()
   const updated = await WorkOrder.findOneAndUpdate(
     { _id: wo._id, status: 'IN_PROGRESS' },
     {
       $set: {
         [`${prefix}.result`]: input.result,
-        [`${prefix}.note`]: input.note?.trim() || undefined,
         [`${prefix}.by`]: user._id,
         [`${prefix}.at`]: new Date(),
+        ...(note && { [`${prefix}.note`]: note }),
         ...(photoKey && { [`${prefix}.photo`]: photoKey }),
         ...(repairId && { [`${prefix}.repair_work_order_id`]: repairId }),
       },
+      // Ghi lại mục với ghi chú trống thì bỏ ghi chú cũ: Mongoose bỏ qua key `undefined` trong $set
+      ...(!note && { $unset: { [`${prefix}.note`]: 1 } }),
     },
     { new: true },
   )
@@ -458,6 +461,26 @@ export async function cancelWorkOrder(id: string, user: CurrentUser, reason: str
   const updated = await transition(wo, ['OPEN', 'IN_PROGRESS'], 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
   await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason })
   return presentWorkOrder(updated, true)
+}
+
+/**
+ * SM-20 — kế hoạch bảo trì bị xoá: Work Order phòng ngừa chưa làm xong (OPEN, IN_PROGRESS) của nó bị huỷ; cái đã báo
+ * xong (AWAITING_APPROVAL) vẫn chờ Farm Owner duyệt như một lần ghi bảo trì. Trả về số Work Order đã huỷ.
+ */
+export async function cancelPlanWorkOrders(planId: Types.ObjectId, user: CurrentUser, reason: string): Promise<number> {
+  const pending = await WorkOrder.find({ plan_id: planId, status: { $in: ['OPEN', 'IN_PROGRESS'] } })
+  let cancelled = 0
+  for (const wo of pending) {
+    try {
+      const updated = await transition(wo, ['OPEN', 'IN_PROGRESS'], 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
+      await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason })
+      cancelled++
+    } catch (err) {
+      // Vừa có người đổi trạng thái (409): để nguyên Work Order đó
+      if (!(err instanceof AppError)) throw err
+    }
+  }
+  return cancelled
 }
 
 export async function reassignWorkOrder(id: string, user: CurrentUser, assigneeId: string) {
