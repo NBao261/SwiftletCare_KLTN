@@ -1260,8 +1260,16 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Xem chi tiết Work Order': 'Open the work order',
   'Đã báo xong, hệ thống đang kiểm dữ liệu phục hồi': 'Marked done, the system is checking that the data recovered',
   'Đã báo xong, chờ chủ trại duyệt': 'Marked done, waiting for the owner to approve',
+  'Đã báo xong, chờ chủ trại kiểm tại chỗ rồi duyệt': 'Marked done, waiting for the owner to check on site and approve',
   'Work Order đã đổi trạng thái, đã tải lại': 'The work order changed state and was reloaded',
-  'Ảnh phải là JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh': 'Photos must be JPEG, PNG or WebP, at most 5 MB each',
+  'Ảnh phải là JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh và tối đa {max} ảnh tính cả ảnh đã gửi trước':
+    'Photos must be JPEG, PNG or WebP, at most 5 MB each and at most {max} photos including those sent before',
+  'Đã có {n} ảnh từ lần báo xong trước, chụp thêm được {m} ảnh':
+    '{n} photos kept from the previous report, you can add {m} more',
+  'Đã đủ {max} ảnh từ lần báo xong trước, không chụp thêm được':
+    'The previous report already has {max} photos, no more can be added',
+  'Gửi xong, loại sự cố này chưa có dữ liệu để hệ thống kiểm nên chuyển thẳng chủ trại kiểm tại chỗ rồi duyệt.':
+    'Once sent, it goes straight to the owner to check on site and approve, as the system has no data to check this kind of fault.',
   'Chỉ kỹ thuật viên được giao nhà này hoặc chủ trại mới báo xong được': 'Only the technician assigned to this house or the owner can mark it done',
   'Cảnh báo thiết bị cần ghi nguyên nhân tìm thấy tại chỗ': 'A device alert needs the cause found on site',
   'Báo đã làm xong': 'Mark as done',
@@ -1281,13 +1289,15 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Giao cho tôi': 'Assigned to me',
   'Đang mở': 'Open',
   'Lọc Work Order': 'Filter work orders',
-  'Work Order mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, hệ thống kiểm dữ liệu phục hồi rồi chủ trại duyệt trên web.': 'Work orders open automatically from device alerts or when the expert confirms a visit is needed. When the work is done, the system checks that the data recovered, then the owner approves it on the web.',
+  'Work Order mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, sự cố có dữ liệu để kiểm thì hệ thống kiểm dữ liệu phục hồi trước, rồi chủ trại duyệt trên web.':
+    'Work orders open automatically from device alerts or when the expert confirms a visit is needed. When the work is done, the system first checks that the data recovered if the fault has data to check, then the owner approves it on the web.',
   'Đã bắt đầu làm': 'Work started',
   'Không bắt đầu được': 'Could not start',
   'Chỉ kỹ thuật viên được giao nhà này hoặc chủ trại mới làm được': 'Only the technician assigned to this house or the owner can do this',
   'Mở lúc': 'Opened',
   'Báo xong': 'Marked done',
   'Dữ liệu đã phục hồi': 'Data recovered',
+  'Chuyển chờ duyệt': 'Sent for approval',
   'Đóng lúc': 'Closed',
   'Người được giao': 'Assignee',
   'Kết quả tại chỗ': 'On-site result',

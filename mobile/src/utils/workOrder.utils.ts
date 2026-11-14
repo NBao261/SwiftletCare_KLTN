@@ -47,13 +47,24 @@ export function getPendingOnsiteCheck(alert: Pick<Alert, 'onsite_checks'>): Onsi
   return alert.onsite_checks?.find(check => !isOnsiteCheckAnswered(check)) ?? null
 }
 
-// Các mốc của Work Order đã xảy ra, theo thứ tự vòng đời (SM-19): mở, bắt đầu, báo xong, dữ liệu phục hồi (BR-41), đóng
+// Loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi sau khi báo xong (BR-41, UNVERIFIABLE_RECOVERY của workOrder.service):
+// chuyển chờ duyệt kèm ghi chú để chủ trại kiểm tại chỗ
+const UNVERIFIABLE_RECOVERY_TYPES: ReadonlySet<AlertType> = new Set(['ACTUATOR_FAULT', 'SPEAKER_FAILURE'])
+
+// Báo xong có được hệ thống kiểm dữ liệu phục hồi không (BR-41): chỉ Work Order gắn cảnh báo, trừ loại chưa có dữ liệu để kiểm
+export function hasRecoveryCheck(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type'>): boolean {
+  if (!workOrder.alert_id) return false
+  return !workOrder.alert_type || !UNVERIFIABLE_RECOVERY_TYPES.has(workOrder.alert_type)
+}
+
+// Các mốc của Work Order đã xảy ra, theo thứ tự vòng đời (SM-19): mở, bắt đầu, báo xong, chuyển chờ duyệt, đóng. Mốc chờ duyệt
+// chỉ gọi là "dữ liệu đã phục hồi" khi hệ thống thật sự kiểm được dữ liệu
 export function getWorkOrderMilestones(workOrder: WorkOrder): { label: string; time: string }[] {
   const milestones = [
     { label: t('Mở lúc'), time: workOrder.opened_at },
     { label: t('Bắt đầu'), time: workOrder.started_at },
     { label: t('Báo xong'), time: workOrder.done_at },
-    { label: t('Dữ liệu đã phục hồi'), time: workOrder.verified_at },
+    { label: hasRecoveryCheck(workOrder) ? t('Dữ liệu đã phục hồi') : t('Chuyển chờ duyệt'), time: workOrder.verified_at },
     { label: t('Đóng lúc'), time: workOrder.closed_at },
   ]
   return milestones.flatMap(item => (item.time ? [{ label: item.label, time: item.time }] : []))
@@ -76,3 +87,8 @@ export function buildPhotoPart(photo: LocalPhoto, name: string): { uri: string; 
 
 // Số ảnh tối đa gửi kèm khi báo xong Work Order (api-spec: tối đa 5 ảnh, mỗi ảnh ≤ 5 MB)
 export const WORK_ORDER_MAX_PHOTOS = 5
+
+// Số ảnh còn chụp thêm được khi báo xong: giới hạn tính cho cả Work Order, ảnh của lần báo xong trước (trước khi bị mở lại) vẫn giữ
+export function getRemainingPhotoSlots(workOrder: Pick<WorkOrder, 'photo_urls'>): number {
+  return Math.max(0, WORK_ORDER_MAX_PHOTOS - (workOrder.photo_urls?.length ?? 0))
+}
