@@ -7,7 +7,7 @@ import { getPushTarget } from '@/utils/notification.utils'
 const handledResponseIds = new Set<string>()
 
 // Bấm thông báo đẩy (ALERT-FR-002), lúc app đang chạy hoặc mở app từ thông báo: cảnh báo mở đúng sheet chi tiết ở tab Cảnh báo,
-// báo cáo mở tab Phân tích › Báo cáo, Work Order mở trang chi tiết Work Order, còn lại mở chuông. Gắn khi đã đăng nhập (RealtimeSync) để các tab đã sẵn sàng
+// báo cáo mở tab Phân tích › Báo cáo, Work Order mở trang chi tiết Work Order, ngày đánh giá mở health/[dayId], còn lại mở chuông. Gắn khi đã đăng nhập (RealtimeSync) để các tab đã sẵn sàng
 export function usePushNotificationOpen() {
   const lastResponse = Notifications.useLastNotificationResponse()
 
@@ -24,6 +24,8 @@ export function usePushNotificationOpen() {
       router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'reports', reportId: target.reportId } })
     } else if (target.kind === 'workOrder') {
       router.push({ pathname: '/work-orders/[workOrderId]', params: { workOrderId: target.workOrderId } })
+    } else if (target.kind === 'healthDay') {
+      router.push({ pathname: '/health/[dayId]', params: { dayId: target.dayId } })
     } else {
       router.push('/notifications')
     }
