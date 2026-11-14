@@ -50,6 +50,9 @@ export interface IUser extends Document {
   comparePassword(plain: string): Promise<boolean>
 }
 
+/** ALERT-FR-005 — kênh của 1 mức cảnh báo; không có trường nào thì theo cài đặt chung */
+const channelChoiceSchema = new Schema({ push: Boolean, telegram: Boolean }, { _id: false })
+
 const userSchema = new Schema<IUser>(
   {
     email:         { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -65,6 +68,12 @@ const userSchema = new Schema<IUser>(
     notification_preferences: {
       push:  { type: Boolean, default: true },
       telegram: { type: Boolean, default: true },
+      by_severity: {
+        CRITICAL: { type: channelChoiceSchema, default: undefined },
+        HIGH:     { type: channelChoiceSchema, default: undefined },
+        MEDIUM:   { type: channelChoiceSchema, default: undefined },
+        LOW:      { type: channelChoiceSchema, default: undefined },
+      },
       quiet_hours: {
         start: { type: String, default: '22:00' },
         end:   { type: String, default: '06:00' },

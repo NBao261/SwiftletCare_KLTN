@@ -105,8 +105,18 @@ describe('canPerform', () => {
 
   it('kỹ thuật viên nhà yến (G-20): điều khiển tay, cài thông báo, dùng chuông; không sửa cấu hình, không lập thiết bị', () => {
     const technician = buildUser('FARM_TECHNICIAN')
-    // Backend chưa cho kỹ thuật viên xác nhận cảnh báo, xem bằng chứng, gợi ý hệ số
-    expect(canPerform(technician, 'acknowledgeAlert')).toBe(false)
+    // G-21: xác nhận cảnh báo, trả lời kiểm tra tại chỗ, làm Work Order của nhà được giao; backend chưa cho xem bằng chứng,
+    // gợi ý hệ số
+    expect(canPerform(technician, 'acknowledgeAlert')).toBe(true)
+    expect(canPerform(technician, 'answerOnsiteCheck')).toBe(true)
+    expect(canPerform(technician, 'workOnWorkOrder')).toBe(true)
+    expect(canPerform(technician, 'viewAssignedWorkOrdersOnly')).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'answerOnsiteCheck')).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'workOnWorkOrder')).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'viewAssignedWorkOrdersOnly')).toBe(false)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewWorkOrders')).toBe(true)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'workOnWorkOrder')).toBe(false)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'answerOnsiteCheck')).toBe(false)
     // Chấm ngày, xem trạng thái ngày và báo cáo của nhà được giao (BR-31, G-11)
     expect(canPerform(technician, 'rateHealthDay')).toBe(true)
     expect(canPerform(technician, 'viewHealthReports')).toBe(true)

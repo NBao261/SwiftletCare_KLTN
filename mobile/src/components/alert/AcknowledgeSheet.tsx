@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { invalidateAlertQueries } from '@/config/queryClient'
 import { StyleSheet, TextInput, View } from 'react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -10,9 +8,10 @@ import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import { useAcknowledgeAlert } from '@/hooks/alert/useAcknowledgeAlert'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { Alert } from '@/types'
+import type { Alert, SiteCause } from '@/types'
 import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
-import { getAlertTypeLabel } from '@/utils/label.utils'
+import { getAlertTypeLabel, getSiteCauseLabel } from '@/utils/label.utils'
+import { isCauseAlertType, SITE_CAUSES } from '@/utils/workOrder.utils'
 import { t } from '@/utils/i18n.utils'
 
 const NOTE_INPUT_HEIGHT = 96
@@ -36,14 +35,21 @@ interface AcknowledgeSheetProps {
   onDone: (message: string) => void
 }
 
-// Xác nhận đã biết một cảnh báo (ALERT-FR-009, chỉ chủ trại): chip ghi chú nhanh hoặc tự gõ, để trống vẫn lưu được.
+// Xác nhận đã biết một cảnh báo (ALERT-FR-009): chủ trại và kỹ thuật viên nhà được giao; chip ghi chú nhanh hoặc tự gõ, để trống
+// vẫn lưu được. Cảnh báo thiết bị có thêm ô nguyên nhân tìm thấy tại chỗ, không bắt buộc, chạm lần nữa để bỏ chọn (ALERT-FR-018).
 // Cảnh báo vừa đổi trạng thái (409) thì báo và tải lại
 export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetProps) {
   const palette = usePalette()
-  const queryClient = useQueryClient()
   const acknowledge = useAcknowledgeAlert()
+  // Đang lưu thì không cho đóng sheet: sheet chỉ mount khi mở, đóng sớm thì React Query bỏ callback của mutate() và mất câu báo
+  // kết quả (dữ liệu vẫn được hook làm mới)
+  const closeUnlessSaving = () => {
+    if (!acknowledge.isPending) onClose()
+  }
   const [quickNote, setQuickNote] = useState<QuickNote | null>(null)
   const [note, setNote] = useState('')
+  const [cause, setCause] = useState<SiteCause | null>(null)
+  const hasCause = alert ? isCauseAlertType(alert.type) : false
 
   const selectQuickNote = (id: QuickNote) => {
     setQuickNote(id)
@@ -53,13 +59,12 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
   const save = () => {
     if (!alert) return
     acknowledge.mutate(
-      { alertId: alert._id, note: note.trim() || undefined },
+      { alertId: alert._id, note: note.trim() || undefined, cause: hasCause && cause ? cause : undefined },
       {
         onSuccess: () => onDone(t('Đã xác nhận cảnh báo')),
+        // Hook đã tải lại cảnh báo khi gặp 409; ở đây chỉ báo và đóng sheet
         onError: error => {
-          if (readApiError(error).status !== 409) return
-          void invalidateAlertQueries(queryClient)
-          onDone(t('Cảnh báo đã thay đổi, danh sách đã tải lại'))
+          if (readApiError(error).status === 409) onDone(t('Cảnh báo đã thay đổi, danh sách đã tải lại'))
         },
       },
     )
@@ -71,13 +76,27 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
       : null
 
   return (
-    <BottomSheet visible={alert !== null} onClose={onClose}>
+    <BottomSheet visible={alert !== null} onClose={closeUnlessSaving}>
       <View style={styles.header}>
         <Text variant="heading">{t('Xác nhận cảnh báo')}</Text>
         <Text variant="small" color={palette.textSecondary}>
           {alert ? getAlertTypeLabel(alert.type) : ''}
         </Text>
       </View>
+      {hasCause && (
+        <View style={styles.field}>
+          <Text variant="small" weight="semiBold" color={palette.textSecondary}>
+            {t('Nguyên nhân tìm thấy tại chỗ (nếu đã biết)')}
+          </Text>
+          <ChoiceChips
+            options={SITE_CAUSES.map(item => ({ id: item, label: getSiteCauseLabel(item) }))}
+            selectedId={cause}
+            onSelect={id => setCause(current => (current === id ? null : id))}
+            placement="card"
+            accessibilityLabel={t('Nguyên nhân tìm thấy tại chỗ')}
+          />
+        </View>
+      )}
       <ChoiceChips
         options={getQuickNotes()}
         selectedId={quickNote}
@@ -110,6 +129,7 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
 
 const styles = StyleSheet.create({
   header: { gap: Spacing.xs },
+  field: { gap: Spacing.sm },
   input: {
     ...Typography.body,
     height: NOTE_INPUT_HEIGHT,

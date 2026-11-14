@@ -14,6 +14,7 @@ import type { InferredAlertItem } from '@/types/expert.types'
 import { useAlertEvidence } from '@/hooks/domain-expert/useExpertAlerts'
 import { buildAlertEvidence, type EvidenceSource } from './alertEvidence'
 import { formatDate } from '@/lib/helpers'
+import OnsiteCheckSection from './OnsiteCheckSection'
 
 interface Props { alert: InferredAlertItem }
 
@@ -22,9 +23,9 @@ function ChartTooltip({ active, payload, label, unit }: {
 }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5 shadow-lg text-xs">
-      <p className="font-semibold text-[#27231F]">{label}</p>
-      <p className="text-[#878380]">Giá trị: <b className="text-[#27231F]">{payload[0].value}{unit}</b></p>
+    <div className="bg-white border border-warmGray/15 rounded-lg px-3 py-1.5 shadow-lg text-xs">
+      <p className="font-semibold text-charcoal">{label}</p>
+      <p className="text-warmGray">Giá trị: <b className="text-charcoal">{payload[0].value}{unit}</b></p>
     </div>
   )
 }
@@ -35,9 +36,9 @@ function EvidenceBarCard({ src, dotColor }: { src: EvidenceSource; dotColor: str
       <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className={`w-2.5 h-2.5 rounded-full ${dotColor} shrink-0`} />
-          <span className="text-xs font-semibold text-[#27231F] whitespace-nowrap">{src.title}</span>
+          <span className="text-xs font-semibold text-charcoal whitespace-nowrap">{src.title}</span>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-[#878380] shrink-0">
+        <div className="flex items-center gap-2 text-xs text-warmGray shrink-0">
           <span>{src.badge1}</span>
           <span className="text-neutral-300">|</span>
           <span>{src.badge2}</span>
@@ -92,7 +93,7 @@ function MissingBadge({ label }: { label: string }) {
         <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
         <span>{label}</span>
       </div>
-      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-200/80 text-amber-900 uppercase">
+      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900 uppercase">
         missing
       </span>
     </div>
@@ -135,7 +136,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                   <div key={z.zone_id} className="py-2 flex items-center justify-between text-xs">
                     <span className="font-medium text-charcoal">{z.name}</span>
                     {z.status === 'missing' ? (
-                      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-100 text-warmGray">
+                      <span className="px-2 py-0.5 rounded text-xs font-semibold bg-neutral-100 text-warmGray">
                         Thiếu dữ liệu (missing)
                       </span>
                     ) : (
@@ -163,14 +164,14 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
               {evidence?.noise_alerts && evidence.noise_alerts.length > 0 ? (
                 <ul className="space-y-1">
                   {evidence.noise_alerts.map(a => (
-                    <li key={a._id} className="text-[11.5px] text-warmGray flex justify-between">
+                    <li key={a._id} className="text-xs text-warmGray flex justify-between">
                       <span className="truncate">{a.title}</span>
                       <span className="shrink-0">{formatDate(a.created_at)}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-warmGray text-[11.5px]">Không có sự cố tiếng ồn</p>
+                <p className="text-warmGray text-xs">Không có sự cố tiếng ồn</p>
               )}
             </div>
 
@@ -182,23 +183,23 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
               {evidence?.device_alerts && evidence.device_alerts.length > 0 ? (
                 <ul className="space-y-1">
                   {evidence.device_alerts.map(a => (
-                    <li key={a._id} className="text-[11.5px] text-warmGray flex justify-between">
+                    <li key={a._id} className="text-xs text-warmGray flex justify-between">
                       <span className="truncate">{a.title}</span>
                       <span className="shrink-0">{formatDate(a.created_at)}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-warmGray text-[11.5px]">Thiết bị vận hành ổn định</p>
+                <p className="text-warmGray text-xs">Thiết bị vận hành ổn định</p>
               )}
             </div>
           </div>
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-[11px] text-warmGray px-1">
+          <div className="flex items-center justify-between text-xs text-warmGray px-1">
             <span className="font-semibold text-charcoal">{cfg.windowLabel}</span>
-            <span className="text-[10.5px] uppercase tracking-wider text-warmGray">ALERT-FR-014</span>
+            <span className="text-xs uppercase tracking-wider text-warmGray">ALERT-FR-014</span>
           </div>
 
           {/* Nguồn 1: Cảm biến & Telemetry */}
@@ -222,7 +223,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>Thiết bị đang có cảnh báo mở tại khu vực này:</span>
               </div>
-              <ul className="list-disc list-inside space-y-0.5 text-warmGray text-[11.5px]">
+              <ul className="list-disc list-inside space-y-0.5 text-warmGray text-xs">
                 {evidence.device_alerts.map(da => (
                   <li key={da._id}>
                     <span className="font-medium text-charcoal">{da.title}</span> — {da.message}
@@ -232,6 +233,11 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── KIỂM TRA TẠI CHỖ CỦA KỸ THUẬT VIÊN (EXPERT-FR-021) ── */}
+      {evidence?.onsite_checks && evidence.onsite_checks.length > 0 && (
+        <OnsiteCheckSection checks={evidence.onsite_checks} />
       )}
 
       {/* Hộp tương quan / chẩn đoán */}
@@ -253,7 +259,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
               Kết luận tiền lệ cùng loại tại khu vực (EXPERT-FR-003)
             </h4>
           </div>
-          <span className="text-[11px] font-medium text-warmGray">
+          <span className="text-xs font-medium text-warmGray">
             {evidence?.earlier_verdicts?.length ?? 0}/10 kết luận gần nhất
           </span>
         </div>
@@ -274,7 +280,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
                           isConfirmed
                             ? 'bg-red-100 text-red-700 border border-red-200'
                             : 'bg-neutral-200 text-neutral-700 border border-neutral-300'
@@ -283,16 +289,16 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                         {isConfirmed ? 'ĐÃ XÁC NHẬN' : 'ĐÃ BÁC BỎ'}
                       </span>
                       <span className="font-semibold text-charcoal">
-                        {authorName} <span className="text-[11px] font-normal text-warmGray">({authorRole})</span>
+                        {authorName} <span className="text-xs font-normal text-warmGray">({authorRole})</span>
                       </span>
                     </div>
-                    <span className="text-[11px] text-warmGray flex items-center gap-1 shrink-0">
+                    <span className="text-xs text-warmGray flex items-center gap-1 shrink-0">
                       <Clock className="w-3 h-3" />
                       {v?.at ? formatDate(v.at) : formatDate(item.created_at)}
                     </span>
                   </div>
                   {v?.note && (
-                    <p className="text-[11.5px] text-graphite bg-white/80 p-2 rounded border border-neutral-100 italic">
+                    <p className="text-xs text-charcoal/70 bg-white/80 p-2 rounded-lg border border-warmGray/10 italic">
                       "{v.note}"
                     </p>
                   )}

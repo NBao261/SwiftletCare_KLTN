@@ -53,8 +53,21 @@ router.post(
   authController.resetPassword,
 )
 
-/** PUT /auth/notification-preferences – ALERT-FR-005/006 */
-router.put('/notification-preferences', authenticate, authController.updateNotificationPreferences)
+/** PUT /auth/notification-preferences – ALERT-FR-005/006 (mọi role tự chỉnh kênh của mình, Report 3 §2.4) */
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
+router.put('/notification-preferences', authenticate,
+  body('push').optional().isBoolean({ strict: true }),
+  body('telegram').optional().isBoolean({ strict: true }),
+  // Chuỗi rỗng = tắt giờ im lặng (web gửi khi người dùng xoá hai ô giờ; isWithinQuietHours coi rỗng là không có)
+  body(['quiet_hours.start', 'quiet_hours.end']).optional().isString()
+    .custom((v: string) => v === '' || HHMM.test(v)).withMessage('Giờ dạng HH:mm, hoặc rỗng để tắt giờ im lặng'),
+  body('by_severity').optional().isObject(),
+  // null = bỏ ghi đè của mức đó
+  body(['by_severity.CRITICAL', 'by_severity.HIGH', 'by_severity.MEDIUM', 'by_severity.LOW'])
+    .optional({ values: 'null' }).isObject(),
+  body('by_severity.*.push').optional().isBoolean({ strict: true }),
+  body('by_severity.*.telegram').optional().isBoolean({ strict: true }),
+  validate, authController.updateNotificationPreferences)
 
 /** ALERT-FR-013 — liên kết / hủy liên kết bot Telegram để nhận cảnh báo ngoài ứng dụng */
 router.post('/telegram/link', authenticate, authController.createTelegramLink)

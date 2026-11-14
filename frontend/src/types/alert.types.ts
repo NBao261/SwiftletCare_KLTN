@@ -1,4 +1,5 @@
 // Module ALERT (§5.5) — cảnh báo và mức độ nghiêm trọng.
+import type { SiteCause } from '@/types/workOrder.types'
 
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 // 3 cấp hiển thị của mức cảnh báo: P1 Khẩn cấp, P2 Cao, P3 Thường
@@ -37,6 +38,8 @@ export interface Alert {
   status: AlertStatus; created_at: string
   previous_status?: 'ACTIVE' | 'ACKNOWLEDGED'
   acknowledged_at?: string; acknowledged_by?: string; acknowledgement_note?: string
+  // ALERT-FR-018 — nguyên nhân tìm thấy tại chỗ, ghi khi xác nhận hoặc khi Work Order làm xong
+  site_cause?: { cause: SiteCause; photo_urls?: string[]; by: string; at: string } | null
   expert_verdict?: {
     result: 'CONFIRMED' | 'REJECTED'
     note?: string | null
