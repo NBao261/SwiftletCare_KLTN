@@ -41,6 +41,11 @@ interface AcknowledgeSheetProps {
 export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetProps) {
   const palette = usePalette()
   const acknowledge = useAcknowledgeAlert()
+  // Đang lưu thì không cho đóng sheet: sheet chỉ mount khi mở, đóng sớm thì React Query bỏ callback của mutate() và mất câu báo
+  // kết quả (dữ liệu vẫn được hook làm mới)
+  const closeUnlessSaving = () => {
+    if (!acknowledge.isPending) onClose()
+  }
   const [quickNote, setQuickNote] = useState<QuickNote | null>(null)
   const [note, setNote] = useState('')
   const [cause, setCause] = useState<SiteCause | null>(null)
@@ -71,7 +76,7 @@ export function AcknowledgeSheet({ alert, onClose, onDone }: AcknowledgeSheetPro
       : null
 
   return (
-    <BottomSheet visible={alert !== null} onClose={onClose}>
+    <BottomSheet visible={alert !== null} onClose={closeUnlessSaving}>
       <View style={styles.header}>
         <Text variant="heading">{t('Xác nhận cảnh báo')}</Text>
         <Text variant="small" color={palette.textSecondary}>

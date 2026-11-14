@@ -34,6 +34,11 @@ interface WorkOrderDoneSheetProps {
 export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDoneSheetProps) {
   const palette = usePalette()
   const complete = useCompleteWorkOrder(workOrder?._id ?? '')
+  // Đang lưu thì không cho đóng sheet: sheet chỉ mount khi mở, đóng sớm thì React Query bỏ callback của mutate() và mất câu báo
+  // kết quả (dữ liệu vẫn được hook làm mới)
+  const closeUnlessSaving = () => {
+    if (!complete.isPending) onClose()
+  }
   const [cause, setCause] = useState<SiteCause | null>(null)
   const [workNote, setWorkNote] = useState('')
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
@@ -69,7 +74,7 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
       : null
 
   return (
-    <BottomSheet visible={workOrder !== null} onClose={onClose}>
+    <BottomSheet visible={workOrder !== null} onClose={closeUnlessSaving}>
       <View style={styles.header}>
         <Text variant="heading">{t('Báo đã làm xong')}</Text>
         <Text variant="small" color={palette.textSecondary} numberOfLines={2}>

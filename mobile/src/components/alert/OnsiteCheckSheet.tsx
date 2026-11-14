@@ -33,6 +33,11 @@ interface OnsiteCheckSheetProps {
 export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetProps) {
   const palette = usePalette()
   const answer = useAnswerOnsiteCheck(alert?._id ?? '')
+  // Đang lưu thì không cho đóng sheet: sheet chỉ mount khi mở, đóng sớm thì React Query bỏ callback của mutate() và mất câu báo
+  // kết quả (dữ liệu vẫn được hook làm mới)
+  const closeUnlessSaving = () => {
+    if (!answer.isPending) onClose()
+  }
   const [observation, setObservation] = useState<OnsiteObservation | null>(null)
   const [note, setNote] = useState('')
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
@@ -64,7 +69,7 @@ export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetPro
       : null
 
   return (
-    <BottomSheet visible={alert !== null} onClose={onClose}>
+    <BottomSheet visible={alert !== null} onClose={closeUnlessSaving}>
       <View style={styles.header}>
         <Text variant="heading">{t('Trả lời kiểm tra tại chỗ')}</Text>
         <Text variant="small" color={palette.textSecondary}>
