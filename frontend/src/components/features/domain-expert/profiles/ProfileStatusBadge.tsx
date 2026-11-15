@@ -2,9 +2,9 @@ import { cn } from '@/lib/cn'
 import type { ConfigProfileStatus } from '@/types/expert.types'
 
 const CONFIG: Record<ConfigProfileStatus, { label: string; cls: string }> = {
-  DRAFT:    { label: 'Bản nháp',   cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  APPROVED: { label: 'Đã duyệt',  cls: 'bg-green-50 text-green-700 border-green-200' },
-  ARCHIVED: { label: 'Lưu trữ',   cls: 'bg-neutral-100 text-neutral-500 border-neutral-200' },
+  DRAFT:    { label: 'Bản nháp',   cls: 'bg-statusYellow/10 text-statusYellow border-statusYellow/30' },
+  APPROVED: { label: 'Đã duyệt',  cls: 'bg-success/10 text-success border-success/30' },
+  ARCHIVED: { label: 'Lưu trữ',   cls: 'bg-warmGray/10 text-warmGray border-warmGray/20' },
 }
 
 export default function ProfileStatusBadge({

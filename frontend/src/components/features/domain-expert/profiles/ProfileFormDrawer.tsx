@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +12,7 @@ interface Props {
   onClose: () => void
   onSubmit: (input: ConfigProfileInput) => void
   isPending?: boolean
+  error?: string | null
 }
 
 type GroupKey = 'thresholds' | 'fuzzy_tuning' | 'detection_tuning' | 'speaker_schedule'
@@ -49,7 +50,7 @@ function NumField({ label, value, onChange, min, max, step = 0.1, unit = '' }: {
   )
 }
 
-export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, isPending }: Props) {
+export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, isPending, error }: Props) {
   const [name, setName] = useState('')
   const [stage, setStage] = useState<HouseStage | ''>('')
   const [groups, setGroups] = useState<Partial<Record<GroupKey, boolean>>>({})
@@ -213,11 +214,18 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
               </div>
             ))}
             {speaker.windows.length < 2 && (
-              <button type="button" onClick={() => setSpeaker(s => ({ ...s, windows: [...s.windows, { start: '17:00', end: '19:00' }] }))} className="text-xs text-blue-600 hover:underline">+ Thêm khung 2</button>
+              <button type="button" onClick={() => setSpeaker(s => ({ ...s, windows: [...s.windows, { start: '17:00', end: '19:00' }] }))} className="text-xs text-infoBlue hover:underline">+ Thêm khung 2</button>
             )}
           </div>
         </GroupToggle>
       </div>
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="shrink-0 pt-4 border-t border-warmGray/10 flex items-center justify-end gap-2">
@@ -248,7 +256,13 @@ function GroupToggle({
         <input type="checkbox" checked={active} onChange={onToggle} className="w-4 h-4 rounded accent-charcoal" />
         <span className={cn('flex-1 text-sm font-medium', active ? 'text-charcoal' : 'text-warmGray')}>{label}</span>
         {active && (
-          <button type="button" onClick={onExpand} className="text-warmGray hover:text-charcoal">
+          <button
+            type="button"
+            onClick={onExpand}
+            aria-expanded={expanded}
+            aria-label={expanded ? `Thu gọn ${label}` : `Mở rộng ${label}`}
+            className="text-warmGray hover:text-charcoal"
+          >
             {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
         )}

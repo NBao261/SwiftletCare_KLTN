@@ -45,8 +45,8 @@ export default function DomainExpertProfilesPage() {
 
   const isPending = createMut.isPending || updateMut.isPending || approveMut.isPending || archiveMut.isPending
 
-  function openCreate() { setEditTarget(null); setDrawerOpen(true) }
-  function openEdit(p: ConfigProfile) { setEditTarget(p); setDrawerOpen(true) }
+  function openCreate() { setEditTarget(null); setError(null); setDrawerOpen(true) }
+  function openEdit(p: ConfigProfile) { setEditTarget(p); setError(null); setDrawerOpen(true) }
 
   async function handleSubmit(input: ConfigProfileInput) {
     setError(null)
@@ -113,6 +113,7 @@ export default function DomainExpertProfilesPage() {
         {STATUS_FILTERS.map(f => (
           <button
             key={f.value}
+            aria-pressed={statusFilter === f.value}
             onClick={() => setStatusFilter(f.value)}
             className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
               statusFilter === f.value
@@ -157,9 +158,10 @@ export default function DomainExpertProfilesPage() {
       <ProfileFormDrawer
         open={drawerOpen}
         initial={editTarget}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => { setDrawerOpen(false); setError(null) }}
         onSubmit={handleSubmit}
         isPending={createMut.isPending || updateMut.isPending}
+        error={error}
       />
     </div>
   )

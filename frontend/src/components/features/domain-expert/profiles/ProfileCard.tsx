@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, CheckCircle2, Archive, Pencil } from 'lucide-re
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/helpers'
 import { Button } from '@/components/ui/Button'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import type { ConfigProfile } from '@/types/expert.types'
 import ProfileStatusBadge from './ProfileStatusBadge'
 
@@ -21,6 +22,7 @@ interface Props {
 
 export default function ProfileCard({ profile, onEdit, onApprove, onArchive, disabled }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'archive' | null>(null)
 
   const groups = [
     profile.thresholds ? 'Ngưỡng môi trường' : null,
@@ -32,8 +34,13 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
   return (
     <div className="rounded-2xl border border-warmGray/15 bg-white shadow-card overflow-hidden">
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-controls={`profile-detail-${profile._id}`}
         className="flex items-start justify-between gap-3 p-4 cursor-pointer hover:bg-warmGray/5 transition-colors"
         onClick={() => setExpanded(v => !v)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(v => !v) } }}
       >
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -61,7 +68,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
       </div>
 
       {expanded && (
-        <div className="border-t border-warmGray/10 px-4 py-3 space-y-3">
+        <div id={`profile-detail-${profile._id}`} className="border-t border-warmGray/10 px-4 py-3 space-y-3">
           {profile.thresholds && <ThresholdSection thresholds={profile.thresholds} />}
           {profile.fuzzy_tuning && <FuzzySection fuzzy={profile.fuzzy_tuning} />}
           {profile.detection_tuning && <DetectionSection detection={profile.detection_tuning} />}
@@ -80,7 +87,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
                 <Button
                   variant="accent"
                   size="sm"
-                  onClick={e => { e.stopPropagation(); onApprove?.() }}
+                  onClick={e => { e.stopPropagation(); setConfirmAction('approve') }}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt hồ sơ
                 </Button>
@@ -90,7 +97,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={e => { e.stopPropagation(); onArchive?.() }}
+                onClick={e => { e.stopPropagation(); setConfirmAction('archive') }}
               >
                 <Archive className="w-3.5 h-3.5" /> Lưu trữ
               </Button>
@@ -98,6 +105,27 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmAction === 'approve'}
+        title="Duyệt hồ sơ cấu hình"
+        description={`Hồ sơ "${profile.name}" sẽ chuyển sang trạng thái Đã duyệt và sẵn sàng để Farm Owner áp dụng. Tiếp tục?`}
+        confirmLabel="Duyệt"
+        loading={disabled}
+        onConfirm={() => { setConfirmAction(null); onApprove?.() }}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      <ConfirmModal
+        open={confirmAction === 'archive'}
+        title="Lưu trữ hồ sơ cấu hình"
+        description={`Hồ sơ "${profile.name}" sẽ bị lưu trữ và không còn áp dụng được. Thao tác này không thể hoàn tác.`}
+        confirmLabel="Lưu trữ"
+        danger
+        loading={disabled}
+        onConfirm={() => { setConfirmAction(null); onArchive?.() }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   )
 }
