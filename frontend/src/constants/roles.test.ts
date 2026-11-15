@@ -16,6 +16,7 @@ const MATRIX: Record<string, Role[]> = {
   '/vision': [FO, DE],
   '/health': [FO, DE],
   '/harvests': [FO, DE],
+  '/work-orders': [FO, DE],             // G-21: Farm Owner thao tác, Domain Expert chỉ đọc (Report 3 §2.4)
   '/farms': [FO, DE, FT],
   '/farms/f1/houses/h1/zones/z1': [FO, DE, FT],
   '/devices': [ADMIN, FO, DE, FT],      // G-20: ADMIN có Console thiết bị qua /devices
@@ -25,6 +26,7 @@ const MATRIX: Record<string, Role[]> = {
   '/alerts': [ADMIN, FO, FT],           // G-20: ADMIN xem cảnh báo thiết bị mọi farm
   '/system/health': [ADMIN],
   '/system/devices': [ADMIN],
+  '/system/device-stock': [ADMIN],
   '/system/settings': [ADMIN],
   '/system/audit-log': [ADMIN],
   '/users': [ADMIN],

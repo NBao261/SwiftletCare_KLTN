@@ -113,6 +113,9 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
       ventilation_pct: isFiniteNumber(payload.control_output?.ventilation) ? payload.control_output?.ventilation : undefined,
       misting_on:      payload.relay_states?.misting,
       ventilation_on:  payload.relay_states?.ventilation,
+      // THREAT-FR-014 — dòng âm là số đo lỗi (shunt đo một chiều), không lưu
+      pump_current_a: isFiniteNumber(payload.pump_current_a) && payload.pump_current_a >= 0 ? payload.pump_current_a : undefined,
+      fan_current_a:  isFiniteNumber(payload.fan_current_a) && payload.fan_current_a >= 0 ? payload.fan_current_a : undefined,
       is_anomaly: anomaly,
     }).catch((err: { code?: number }) => {
       if (err.code === 11000) return null // bản QoS 1 giao lại, mẫu đã có

@@ -70,7 +70,7 @@ src/
 ## Plumbing
 
 - `lib/axios.ts` — instance with `withCredentials: true`, `Authorization` from `authStore`; on a 401 with `error.code === 'TOKEN_EXPIRED'` it runs a **single-flight** `POST /auth/refresh` shared by concurrent 401s and retries once, else clears auth and redirects to `/login` (`lib/navigation.ts#redirectToLogin`).
-- `lib/socket.ts` — lazy singleton (`autoConnect: false`, lifecycle owned by `hooks/common/useSocket.ts`); `auth` is a callback re-read on every (re)connect; exposes `joinZone`/`leaveZone` and `on*Update`/`onAlertNew` mirroring the backend `emit*()` events.
+- `lib/socket.ts` — lazy singleton (`autoConnect: false`, lifecycle owned by `hooks/common/useSocket.ts`); `auth` is a callback re-read on every (re)connect; exposes `joinZone`/`leaveZone`, `joinHouse`/`leaveHouse` (room `house:<id>`: camera status, bird counts and house alerts; both re-joined on reconnect) and `on*Update`/`onAlertNew` mirroring the backend `emit*()` events.
 - `lib/queryClient.ts` — singleton React Query client (`staleTime: 30s`, `retry: 1`) outside the React tree so the axios interceptor can clear it on logout/failed refresh.
 - **Two i18n systems run side by side** (FE_Design §6), both following `stores/languageStore.ts` so one VI/EN button switches both:
   - `src/i18n/` — i18next; the key is the Vietnamese sentence (`t('Danh sách trang trại')`), English in `i18n/en.ts`, a missing key falls back to Vietnamese. `t` works outside components because `AppShell` remounts the content on language change; never compute labels with `t` at module top level (frozen at load) — use `translated(...)`, a getter, or build them inside the component. Used by Admin screens and `components/ui/`.

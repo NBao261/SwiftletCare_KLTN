@@ -18,6 +18,9 @@ export interface ITelemetry extends Document {
   ventilation_pct?: number
   misting_on?: boolean
   ventilation_on?: boolean
+  // THREAT-FR-014 — dòng đo của bơm và quạt (A), chỉ có ở controller đo dòng (board của nhóm, G-13)
+  pump_current_a?: number
+  fan_current_a?: number
   is_anomaly: boolean
 }
 
@@ -36,6 +39,8 @@ const telemetrySchema = new Schema<ITelemetry>(
     ventilation_pct: { type: Number },
     misting_on:      { type: Boolean },
     ventilation_on:  { type: Boolean },
+    pump_current_a:  { type: Number, min: 0 },
+    fan_current_a:   { type: Number, min: 0 },
     is_anomaly:  { type: Boolean, default: false },
   },
   { timestamps: false, versionKey: false }

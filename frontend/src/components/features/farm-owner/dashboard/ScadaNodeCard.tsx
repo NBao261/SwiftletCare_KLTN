@@ -3,6 +3,7 @@ import { DropIcon, SpeakerHighIcon, WarningIcon, WindIcon, type Icon } from '@ph
 
 import { pumpConfirmAlerts, relayMinutes, type PumpConfirmAlert } from '@/components/features/farm-owner/dashboard/scadaRelay';
 import { Button, Modal } from '@/components/ui';
+import SimulatedBadge from '@/components/common/SimulatedBadge';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { deviceStatusDict } from '@/constants/enumLabels.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -107,6 +108,7 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
         <div className="flex min-w-0 items-center gap-2">
           <span className={cn('h-2 w-2 shrink-0 rounded-full', isOnline ? 'bg-success' : 'bg-warmGray/50')} />
           <p className="truncate text-body font-semibold text-charcoal">{node.device_id}</p>
+          <SimulatedBadge simulated={node.simulated} />
           <span className="text-small text-warmGray">{translateStatus(node.status)}</span>
         </div>
         <span

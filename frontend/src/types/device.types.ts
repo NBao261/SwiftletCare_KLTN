@@ -25,6 +25,8 @@ export interface SensorNode {
   speaker_schedule: { enabled: boolean; windows: Array<{ start: string; end: string }> }
   audio: { current_track: number; volume: number; playing: boolean; loop: boolean }
   registered_at: string
+  /** SYSTEM-FR-004 — thiết bị của bộ giả lập, chép từ kho lúc đăng ký */
+  simulated?: boolean
   /** FARM-FR-013 — lệnh OTA đã gửi, chờ heartbeat báo đúng firmware_version mới */
   ota_pending?: { version: string; url: string; requested_at: string; requested_by?: string }
   /** OTA quá hạn xác nhận — thiết bị vẫn chạy `running_version` (đã rollback) */
@@ -81,6 +83,8 @@ export interface CameraNode {
   /** VISION-FR-018 — vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml */
   counting_ring?: { points: Array<[number, number]>; into_ring_is_exit: boolean; updated_at?: string } | null
   status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
+  /** SYSTEM-FR-004 — thiết bị của bộ giả lập */
+  simulated?: boolean
   activation_overdue_at?: string
   decommissioned_at?: string; decommission_reason?: string
 }
@@ -96,4 +100,22 @@ export interface SystemNodeStatusItem {
 export interface SystemNodeStatus {
   summary: { total: number; online: number; offline: number; pending: number }
   nodes: SystemNodeStatusItem[]
+}
+
+// ── Kho thiết bị (FARM-FR-010, Report 3 §6.16) — GET /admin/provisioned-devices ─────────────────────────────────────
+export type ProvisionedDeviceKind = 'SENSOR' | 'CAMERA'
+/** Trạng thái nhãn, backend suy ra mỗi lần đọc. Cấp lại mã kích hoạt / thu hồi được ở IN_STOCK và RELEASED */
+export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
+
+export interface ProvisionedDevice {
+  _id: string; device_id: string; kind: ProvisionedDeviceKind
+  claimed_at?: string | null; revoked_at?: string | null; revoke_reason?: string | null
+  created_by: string; created_at: string
+  stock_status: StockStatus
+}
+
+/** Mã chỉ trả đúng 1 lần: thêm vào kho trả cả hai, cấp lại mã kích hoạt / mật khẩu broker trả 1 trong 2 */
+export interface IssuedDeviceSecrets {
+  device_id: string; kind: ProvisionedDeviceKind
+  secret_key?: string; broker_secret?: string
 }

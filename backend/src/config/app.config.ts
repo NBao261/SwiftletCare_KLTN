@@ -27,6 +27,7 @@ import harvestRoutes        from '@/routes/harvests.route'
 import healthReportRoutes   from '@/routes/healthReports.route'
 import expertActivityRoutes from '@/routes/expertActivity.route'
 import notificationRoutes   from '@/routes/notifications.route'
+import workOrderRoutes      from '@/routes/workOrders.route'
 import profileRoutes        from '@/routes/profiles.route'
 import internalRoutes from '@/routes/internal.route'
 
@@ -96,6 +97,8 @@ app.use('/health-reports', healthReportRoutes)
 app.use('/expert-activity', expertActivityRoutes)
 // Hộp thông báo trong ứng dụng (EXPERT-FR-006/007)
 app.use('/notifications', notificationRoutes)
+// OPS-FR-001…004, 009 — Work Order sửa chữa và MTTA/MTTR (G-21)
+app.use('/work-orders', workOrderRoutes)
 // EXPERT-FR-014, 015 — hồ sơ cấu hình của farm
 app.use('/profiles', profileRoutes)
 

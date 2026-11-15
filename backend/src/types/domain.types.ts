@@ -59,10 +59,18 @@ export interface CurrentUser {
 }
 
 // ── Sub-document interfaces ────────────────────────────────────────────────────
+/** ALERT-FR-005 — kênh ngoài ứng dụng cho 1 mức cảnh báo; trường không có thì theo cài đặt chung */
+export interface ChannelChoice {
+  push?: boolean
+  telegram?: boolean
+}
+
 export interface NotificationPreferences {
   push: boolean
   /** ALERT-FR-013 — chỉ có tác dụng khi tài khoản đã liên kết bot Telegram */
   telegram: boolean
+  /** ALERT-FR-005 — kênh theo loại sự kiện (mức cảnh báo), ghi đè `push`/`telegram` */
+  by_severity?: Partial<Record<AlertSeverity, ChannelChoice>>
   quiet_hours: { start: string; end: string }
 }
 
@@ -169,6 +177,9 @@ export interface TelemetryPayload {
   relay_states: RelayStates
   control_mode: ControlMode
   control_output?: ControlOutput
+  /** THREAT-FR-014 — dòng đo của bơm và quạt (A); controller không đo dòng thì không gửi */
+  pump_current_a?: number
+  fan_current_a?: number
   timestamp: number   // Unix ms
 }
 

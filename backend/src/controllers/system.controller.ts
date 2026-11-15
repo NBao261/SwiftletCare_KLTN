@@ -17,12 +17,12 @@ export const listAuditLogs = asyncHandler(async (req: Request, res: Response) =>
   res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
-/** GET /system/settings/default-thresholds – SYSTEM-FR-002 */
+/** GET /system/settings/default-thresholds – SYSTEM-FR-002 (kèm nguồn và lịch sử, ENV-FR-007) */
 export const getDefaultThresholds = asyncHandler(async (_req: Request, res: Response) => {
-  res.json({ success: true, data: await systemService.getDefaultThresholds() })
+  res.json({ success: true, data: await systemService.getDefaultThresholdsView() })
 })
 
-/** PUT /system/settings/default-thresholds – SYSTEM-FR-002 */
+/** PUT /system/settings/default-thresholds – ENV-FR-007 (bắt buộc nguồn REF-5), ENV-FR-026 */
 export const updateDefaultThresholds = asyncHandler(async (req: Request, res: Response) => {
   const thresholds = await systemService.updateDefaultThresholds(req.user._id, req.body)
   res.json({ success: true, data: thresholds })

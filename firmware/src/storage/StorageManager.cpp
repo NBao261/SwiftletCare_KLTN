@@ -137,6 +137,15 @@ bool loadDeviceIdentity(String &deviceId, String &brokerSecret) {
   return deviceId.length() > 0 && brokerSecret.length() > 0;
 }
 
+// Cùng namespace với tài khoản: trang AP-mode (namespace `swiftlet`) không ghi đè được
+bool loadFlashedBroker(String &broker) {
+  Preferences identity;
+  if (!identity.begin("identity", true)) return false;
+  broker = identity.getString("broker", "");
+  identity.end();
+  return broker.length() > 0;
+}
+
 void saveAlertQueue(const void *data, size_t size) { prefs.putBytes("alertQueue", data, size); }
 
 void loadAlertQueue(void *data, size_t size) {

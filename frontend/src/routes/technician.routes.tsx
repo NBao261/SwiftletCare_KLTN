@@ -19,7 +19,8 @@ import { usePermission } from '@/hooks/common/usePermission'
 const TechnicianDevicesPage = lazy(() => import('@/pages/technician/TechnicianDevicesPage'))
 // Farm Owner mở /devices qua trang bọc của mình (thêm khung lọc Nhà + Zone), role khác mở thẳng trang Technician
 const FarmOwnerDevicesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDevicesPage'))
-const TechnicianAlertsPage = lazy(() => import('@/pages/technician/TechnicianAlertsPage'))
+// /alerts: một trang cho cả 3 role — Farm Owner và Farm Technician xác nhận, Admin chỉ xem cảnh báo thiết bị
+const FarmOwnerAlertsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerAlertsPage'))
 const TechnicianOnboardingPage = lazy(() => import('@/pages/technician/TechnicianOnboardingPage'))
 const TechnicianOtaPage = lazy(() => import('@/pages/technician/TechnicianOtaPage'))
 
@@ -45,7 +46,7 @@ export const technicianRoutes = (
       element={
         // G-20: ADMIN xem cảnh báo thiết bị mọi farm; ALERT_ROLES = ADMIN | FARM_OWNER | FARM_TECHNICIAN
         <RequireRole allow={ALERT_ROLES}>
-          <TechnicianAlertsPage />
+          <FarmOwnerAlertsPage />
         </RequireRole>
       }
     />

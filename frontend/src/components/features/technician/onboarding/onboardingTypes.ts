@@ -12,8 +12,6 @@ export type OnboardingState = {
   secretKey:  string
   /** _id của SensorNode/CameraNode trong DB sau khi đăng ký thành công (Step2) */
   deviceDbId: string
-  ssid:       string  // WiFi farm SSID
-  wifiPass:   string
 }
 
 export type StepProps = {

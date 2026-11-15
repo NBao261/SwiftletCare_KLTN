@@ -76,6 +76,40 @@ describe('cảnh báo theo đợt tự đóng để lần tái phát không bị
   })
 })
 
+describe('ACTUATOR_FAULT — tải không theo relay (THREAT-FR-014, BR-32)', () => {
+  const fault = (deviceId: string, extra: Record<string, unknown>) =>
+    ingestDeviceAlert({ deviceId, type: 'ACTUATOR_FAULT', message: 'tải không theo relay', ...extra })
+
+  it('mỗi tải một cảnh báo HIGH nêu tải, hướng lỗi và dòng; gửi lại cùng tải chỉ gộp vào cảnh báo đang mở', async () => {
+    const { node } = await seed()
+    const pump = (await fault(node.device_id, { load: 'misting', fault: 'NO_CURRENT_WHILE_ON', normalCurrentA: 2, currentA: 0.1 }))!
+    expect(pump).toMatchObject({
+      severity: 'HIGH',
+      details: { load: 'misting', fault: 'NO_CURRENT_WHILE_ON', normal_current_a: 2, current_a: 0.1 },
+    })
+    // Quạt hỏng trên cùng controller là sự cố khác
+    expect(await fault(node.device_id, { load: 'ventilation', fault: 'CURRENT_WHILE_OFF', normalCurrentA: 1.5, currentA: 0.9 })).not.toBeNull()
+    // Firmware gửi lại khi lỗi bơm còn (EPISODE_ALERT_RESEND_MS)
+    expect(await fault(node.device_id, { load: 'misting', fault: 'NO_CURRENT_WHILE_ON', currentA: 0 })).toBeNull()
+    expect(await Alert.countDocuments({ type: 'ACTUATOR_FAULT' })).toBe(2)
+  })
+
+  it('chi tiết sai kiểu bị bỏ nhưng cảnh báo vẫn được tạo', async () => {
+    const { node } = await seed()
+    const alert = (await fault(node.device_id, { load: 'heater', fault: 'BURNT', normalCurrentA: -1, currentA: '0.5' }))!
+    expect(alert.details).toBeUndefined()
+    expect(alert.type).toBe('ACTUATOR_FAULT')
+  })
+
+  it('tự đóng khi firmware thôi gửi lại 60 phút (tải đã chạy đúng theo relay)', async () => {
+    const { node } = await seed()
+    await fault(node.device_id, { load: 'misting', fault: 'NO_CURRENT_WHILE_ON' })
+    expect(await resolveStaleEpisodeAlerts()).toBe(0)
+    expect(await resolveStaleEpisodeAlerts(new Date(Date.now() + EPISODE_CLEAR_MS + 60_000))).toBe(1)
+    expect((await Alert.findOne({ type: 'ACTUATOR_FAULT' }).lean())!.status).toBe('RESOLVED')
+  })
+})
+
 describe('bộ lọc GET /alerts (ALERT-FR-007, EXPERT-FR-003)', () => {
   it('bộ lọc GET /alerts chỉ nhận giá trị hợp lệ — toán tử Mongo trong query bị từ chối', async () => {
     const { farm, zone, node, token } = await seed()

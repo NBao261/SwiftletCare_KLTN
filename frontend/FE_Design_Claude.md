@@ -754,6 +754,8 @@ Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới th
 | Đếm chim · Tỷ lệ chim về | Bird count · Return rate | |
 | Vòng đếm · Lịch đếm (theo mùa, tạm thời) | Counting ring · Counting schedule (seasonal, temporary) | VISION-FR-018, 019 |
 | Thu hoạch | Harvest | |
+| Phiếu công việc · Tạo · Chưa đóng · Duyệt · Mở lại · Huỷ · Giao lại | Work order · Create · Open · Approve · Reopen · Cancel · Reassign | MF-02, OPS-FR-001…004; tài liệu và backend gọi "Work Order" và "open", giao diện tiếng Việt dùng "phiếu công việc", "tạo" (không dùng "mở phiếu") |
+| Thời gian xác nhận TB · Thời gian xử lý TB | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR (OPS-FR-009, BR-40) |
 | Vị trí (farm) · Vĩ độ · Kinh độ | Location · Latitude · Longitude | Một farm là một địa điểm (FARM-FR-001, A-5); không có "khu vực" |
 
 ### 6.3. Quy ước key i18n
@@ -983,6 +985,7 @@ module.exports = {
 | Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | I (mọi farm; chỉ cấu trúc, thiết bị, cảnh báo thiết bị) | – |
 | Xoá farm, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | – |
 | Ghi nhận thu hoạch | R | I | – | – |
+| Phiếu công việc (Work Order) sửa chữa: mở tay, duyệt, mở lại, huỷ, giao lại; MTTA/MTTR theo nhà (OPS-FR-001…004, 009) | R | I (chỉ đọc) | – (làm trên mobile) | – |
 | Tài khoản (tạo Technician, khoá/mở), cấu hình mặc định, audit log, tổng quan kỹ thuật | I | I | I | R |
 | Chọn bài loa ru / nghe thử | R | – | – | – |
 | Lịch loa của bộ điều khiển (BR-07) | R | – | – | – |
@@ -1090,11 +1093,12 @@ frontend/src/
 │   │                          FarmOwnerFarmHousesPage · FarmOwnerFarmZonesPage
 │   │                          FarmOwnerFarmZoneDetailPage · FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
 │   │                          FarmOwnerVisionPage · FarmOwnerDevicesPage · FarmOwnerDeviceDetailPage
+│   │                          FarmOwnerAlertsPage — /alerts của Farm Owner, Farm Technician và Admin
 │   │                          (đích) FarmOwnerDeviceSetupPage — SF-01, Technician mở cùng trang ở mọi farm
 │   ├── domain-expert/         (đích) DomainExpert<ChứcNăng>Page — kiểm chứng cảnh báo, báo cáo
 │   │                          sức khỏe Zone, duyệt thay đổi, duyệt đề xuất hệ số, tham số phát hiện,
 │   │                          vòng đếm, lịch đếm
-│   ├── technician/            TechnicianDevicesPage · TechnicianAlertsPage · TechnicianFarmsPage
+│   ├── technician/            TechnicianDevicesPage · TechnicianFarmsPage
 │   │                          TechnicianOnboardingPage · TechnicianOtaPage
 │   ├── auth/                  LoginPage · ForgotPasswordPage · InvitationPage (không có đăng ký công khai —
 │   │                          người được mời tạo tài khoản trên trang lời mời, G-02)
@@ -1314,7 +1318,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 ### 13.4. Realtime — Socket.io
 
 - **[Bắt buộc]** Component/page **không** import `@/lib/socket`. Kết nối và đăng ký sự kiện đi qua hook (`useSocket`, `useTelemetry`, `useAlertNotifications`).
-- **[Bắt buộc]** Mọi `on*`/`joinZone` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`) — thiếu cleanup là rò listener mỗi lần đổi zone.
+- **[Bắt buộc]** Mọi `on*`/`joinZone`/`joinHouse` trong `useEffect` phải huỷ ở cleanup (`off`/`leaveZone`/`leaveHouse`) — thiếu cleanup là rò listener mỗi lần đổi zone hoặc nhà.
 - **[Bắt buộc]** Tên sự kiện và payload khớp backend và Report 4 §7.3: phòng `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE` — số đếm chim, camera, cảnh báo của nhà yến), phòng riêng `user:<id>`; sự kiện `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`; type trong `types/socket.types.ts`.
 
 ### 13.5. Lỗi, loading, rỗng
@@ -1569,6 +1573,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `lib/helpers.ts` | `getApiErrorMessage` (nợ 13.16 b) · `formatDate`/`formatDateOnly` (nợ 6.1) · `formatRelativeTime` | — |
 | `lib/axios.ts` | instance API + tự làm mới phiên 401 | 13.1 |
 | `lib/socket.ts` | socket singleton — chỉ dùng qua hook | 13.4 |
+| `lib/qrCode.ts` | `deviceLabelCode` · `parseDeviceLabelCode` (nhãn thiết bị `swiftletcare://claim?d=&k=`) · `zoneCode` (mã tầng) · `qrDataUrl` · `printQrLabels` — cùng định dạng bộ đọc mobile | — |
 | `lib/queryClient.ts` | React Query client (30s, retry 1) | 13.2 |
 | `lib/navigation.ts` · `lib/chartTheme.ts` | chuyển về đăng nhập · theme Chart.js (bảng `CHART_COLORS` dùng cả cho recharts) | 8 |
 | `features/farm-owner/harvest/ChartParts.tsx` | Thành phần biểu đồ shadcn trên recharts: `ChartContainer`, `ChartTooltip(Content)`, `ChartLegend(Content)` — chỉ dùng trong trang Thu hoạch | 8 |

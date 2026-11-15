@@ -1,6 +1,7 @@
 // Stepper.tsx — stepper ngang dùng chung (Onboarding: WizardStepper).
 // Trước đây 2 nơi copy-paste cùng 1 khối JSX; gộp lại để chỉnh giao diện/chuyển động 1 chỗ.
 // Chuyển động: đường nối tô dần 500ms, bước hiện tại có vòng sáng (tắt khi prefers-reduced-motion).
+import { Check } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface StepperProps {
@@ -68,7 +69,7 @@ export default function Stepper({ steps, current, completed = false, activeTone 
                 !done && !active && 'bg-white text-warmGray ring-2 ring-graphite/15 ring-offset-2 ring-offset-white',
               )}
             >
-              {done ? '✓' : i + 1}
+              {done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : i + 1}
             </div>
             <span className={cn('text-center text-[10px] font-semibold tracking-wide sm:text-[11px]', active ? 'text-charcoal' : 'text-warmGray')}>
               {label}

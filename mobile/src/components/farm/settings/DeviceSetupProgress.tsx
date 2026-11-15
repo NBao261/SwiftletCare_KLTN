@@ -1,15 +1,51 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { CheckIcon } from 'phosphor-react-native'
+import { CheckIcon, WarningIcon } from 'phosphor-react-native'
 import { FormMessage } from '@/components/ui/form-message'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { type SetupDeviceKind, useSetupDeviceStatus } from '@/hooks/device/useSetupDeviceStatus'
 import { usePalette } from '@/hooks/theme/usePalette'
+import type { ConfigApplyStep } from '@/utils/device.utils'
 import { t } from '@/utils/i18n.utils'
 
 const STEP_ICON_SIZE = 24
 
-type StepState = 'done' | 'waiting' | 'coming-soon'
+// done: xong · waiting: đang chờ (vòng quay) · upcoming: chưa tới hoặc không xác nhận được · problem: lỗi cần chú ý
+type StepState = 'done' | 'waiting' | 'upcoming' | 'problem'
+
+interface ProgressStep {
+  key: string
+  label: string
+  state: StepState
+  caption?: string
+}
+
+// Bước "Đã áp cấu hình khu vực" theo config_sync của controller (ENV-FR-027)
+function buildConfigStep(configStep: ConfigApplyStep): ProgressStep {
+  const label = t('Đã áp cấu hình khu vực')
+  switch (configStep) {
+    case 'applied':
+      return { key: 'applied', label, state: 'done' }
+    case 'waiting-connection':
+      return { key: 'applied', label, state: 'upcoming', caption: t('Sau khi thiết bị kết nối') }
+    case 'waiting-config':
+      return { key: 'applied', label, state: 'waiting', caption: t('Đang chờ thiết bị nhận cấu hình của khu vực') }
+    case 'mismatch':
+      return {
+        key: 'applied',
+        label,
+        state: 'problem',
+        caption: t('Thiết bị chưa áp cấu hình mới nhất, hệ thống đang gửi lại'),
+      }
+    case 'unknown':
+      return {
+        key: 'applied',
+        label,
+        state: 'upcoming',
+        caption: t('Firmware của thiết bị không báo phiên bản cấu hình nên chưa xác nhận được bước này'),
+      }
+  }
+}
 
 interface DeviceSetupProgressProps {
   kind: SetupDeviceKind
@@ -17,24 +53,25 @@ interface DeviceSetupProgressProps {
   deviceRecordId: string
 }
 
-// Tiến trình setup thiết bị (FARM-FR-012): đã đăng ký (PENDING) → đã kết nối (heartbeat đầu tiên) → đã áp cấu hình khu vực.
-// Bước cuối cần phiên bản cấu hình thiết bị báo lên (ENV-FR-027) mà backend chưa có (G-08) nên ghi "Sắp có", không đoán.
+// Tiến trình setup thiết bị (FARM-FR-012): đã đăng ký (PENDING) → đã kết nối (heartbeat đầu tiên) → đã áp cấu hình khu vực
+// (controller: heartbeat báo đúng phiên bản cấu hình của Zone, config_sync = APPLIED — ENV-FR-027).
 // Quá 15 phút chưa kết nối thì nhắc kiểm tra bước cài Wi-Fi (BR-27)
 export function DeviceSetupProgress({ kind, deviceRecordId }: DeviceSetupProgressProps) {
   const palette = usePalette()
   const setup = useSetupDeviceStatus(kind, deviceRecordId)
-  const isOnline = setup.status === 'ONLINE' || setup.status === 'OFFLINE'
-  const steps: { key: string; label: string; state: StepState; caption?: string }[] = [
+  const isOnline = setup.status === 'ONLINE'
+  // Đã từng kết nối rồi mất (OFFLINE): chờ kết nối lại, khác với thiết bị mới chưa gửi tín hiệu nào (PENDING)
+  const connectionCaption =
+    setup.status === 'OFFLINE' ? t('Thiết bị đang mất kết nối, chờ kết nối lại') : t('Đang chờ thiết bị gửi tín hiệu đầu tiên')
+  const steps: ProgressStep[] = [
     { key: 'registered', label: t('Đã đăng ký'), state: 'done' },
     {
       key: 'online',
       label: t('Đã kết nối'),
       state: isOnline ? 'done' : 'waiting',
-      caption: isOnline ? undefined : t('Đang chờ thiết bị gửi tín hiệu đầu tiên'),
+      caption: isOnline ? undefined : connectionCaption,
     },
-    ...(kind === 'controller'
-      ? [{ key: 'applied', label: t('Đã áp cấu hình khu vực'), state: 'coming-soon' as const, caption: t('Sắp có') }]
-      : []),
+    ...(setup.configStep ? [buildConfigStep(setup.configStep)] : []),
   ]
 
   return (
@@ -52,12 +89,13 @@ export function DeviceSetupProgress({ kind, deviceRecordId }: DeviceSetupProgres
           >
             {step.state === 'done' && <CheckIcon size={14} color={palette.onPrimary} weight="bold" />}
             {step.state === 'waiting' && <ActivityIndicator size="small" color={palette.textSecondary} />}
+            {step.state === 'problem' && <WarningIcon size={14} color={palette.alert} weight="bold" />}
           </View>
           <View style={styles.texts}>
             <Text
               variant="body"
               weight={step.state === 'done' ? 'semiBold' : undefined}
-              color={step.state === 'coming-soon' ? palette.textSecondary : palette.text}
+              color={step.state === 'upcoming' ? palette.textSecondary : palette.text}
             >
               {step.label}
             </Text>

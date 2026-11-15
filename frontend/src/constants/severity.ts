@@ -11,6 +11,11 @@ export const SEVERITY_TO_LEVEL: Record<AlertSeverity, SeverityLevel> = {
   LOW: 'P3',
 };
 
+// Các mức backend của 1 cấp, nối bằng dấu phẩy cho tham số severity của GET /alerts (P1 → "CRITICAL,HIGH")
+export function severityQueryOf(level: SeverityLevel): string {
+  return (Object.keys(SEVERITY_TO_LEVEL) as AlertSeverity[]).filter(severity => SEVERITY_TO_LEVEL[severity] === level).join(',');
+}
+
 // Màu badge của 3 cấp
 export const LEVEL_BADGE_CLASS: Record<SeverityLevel, string> = {
   P1: 'bg-safetyOrange text-white',

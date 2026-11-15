@@ -2,7 +2,7 @@ import AppShell from '@/components/layouts/AppShell'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import {
   IconAlert, IconAnalytics, IconBell, IconDashboard,
-  IconDevice, IconOTA, IconSettings, IconUsers,
+  IconDevice, IconOTA, IconOnboarding, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
 /**
@@ -27,7 +27,7 @@ const menuSections: MenuSection[] = [
     title: 'Console Thiết bị',
     items: [
       { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
-      { label: 'Cảnh báo thiết bị', path: '/alerts', icon: IconAlert },
+      { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
       { label: 'OTA Firmware', path: '/ota', icon: IconOTA },
     ],
   },
@@ -44,6 +44,8 @@ const menuSections: MenuSection[] = [
     // Module SYSTEM (mục 5.11) — "control center" chỉ Admin
     title: 'Hệ thống',
     items: [
+      // FARM-FR-010 — nhập thiết bị, in nhãn QR, cấp lại mã, thu hồi
+      { label: 'Kho thiết bị', path: '/system/device-stock', icon: IconOnboarding },
       { label: 'Cấu hình mặc định', path: '/system/settings', icon: IconSettings },
       { label: 'Nhật ký hệ thống', path: '/system/audit-log', icon: IconAnalytics },
     ],
@@ -60,7 +62,7 @@ const menuSections: MenuSection[] = [
 const dockItems: MenuItem[] = [
   { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
   { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
-  { label: 'Cảnh báo thiết bị', path: '/alerts', icon: IconAlert },
+  { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
   { label: 'Người dùng', path: '/users', icon: IconUsers },
 ]
 

@@ -1,5 +1,6 @@
 import { CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceCounts, DeviceRow } from '@/components/features/farm-owner/farms/farmStructure'
@@ -42,7 +43,10 @@ export default function AttentionDevicesCard({ counts, problems, zoneNameById, o
             <button type="button" onClick={() => onSelect(d)} className="flex items-start gap-2 text-left">
               <WarningCircleIcon size={18} className="mt-0.5 shrink-0 text-climateOrange" />
               <span className="min-w-0">
-                <span className="block truncate text-small font-semibold text-charcoal">{t(d.type === 'sensor' ? 'device.sensor.name' : 'device.camera.name')} · {d.deviceId}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-small font-semibold text-charcoal">{t(d.type === 'sensor' ? 'device.sensor.name' : 'device.camera.name')} · {d.deviceId}</span>
+                  <SimulatedBadge simulated={d.simulated} />
+                </span>
                 <span className="block truncate text-caption text-warmGray">
                   {zoneNameById.get(d.zoneId) ?? ''} · {t(`status.${d.status}`)} · {d.lastHeartbeat ? t('attn.lastSeen', { ago: ago(d.lastHeartbeat) }) : t('attn.neverSeen')}
                 </span>

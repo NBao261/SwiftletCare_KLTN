@@ -3,10 +3,17 @@ import { param, body, query } from 'express-validator'
 import * as alertController from '@/controllers/alerts.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import multer from 'multer'
 import { ALERT_TYPES } from '@/services/alert.service'
+import { MAX_PHOTO_BYTES } from '@/services/workOrder.service'
+import { ONSITE_OBSERVATIONS } from '@/models/alert.model'
+import { SITE_CAUSES } from '@/models/workOrder.model'
 
 const router = Router()
 router.use(authenticate)
+
+// Ảnh tại chỗ giữ trong RAM rồi service đẩy lên MinIO (EXPERT-FR-021)
+const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } })
 
 // Mọi bộ lọc đều phải là chuỗi thuộc tập cho phép: `?type[$ne]=X` mà không chặn thì
 // thành toán tử Mongo trong filter (và làm lẫn cảnh báo thường vào hàng chờ kiểm chứng)
@@ -30,9 +37,13 @@ router.get('/:id/evidence', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('i
 // và kiểm chứng (mục 4.4)
 router.put(
   '/:id/acknowledge',
-  // ALERT-FR-009 — chỉ Farm Owner; Technician, Admin chỉ xem (Report 3 §2.4)
-  requireRole('FARM_OWNER'),
-  [param('id').isMongoId(), body('note').optional().isString()],
+  // ALERT-FR-009 — Farm Owner; Farm Technician ở nhà được giao (service kiểm nhà); Domain Expert, Admin chỉ xem (§2.4)
+  requireRole('FARM_OWNER', 'FARM_TECHNICIAN'),
+  [
+    param('id').isMongoId(), body('note').optional().isString().isLength({ max: 1000 }),
+    // ALERT-FR-018 — nguyên nhân tìm thấy tại chỗ
+    body('cause').optional().isString().isIn(SITE_CAUSES),
+  ],
   validate,
   alertController.acknowledge,
 )
@@ -45,9 +56,24 @@ router.put(
     param('id').isMongoId(), body('result').isIn(['CONFIRMED', 'REJECTED']),
     body('note').optional().isString().trim().isLength({ max: 1000 }),
     body('note').if(body('result').equals('REJECTED')).isString().trim().notEmpty().withMessage('Bác bỏ cảnh báo phải ghi lý do'),
+    // BR-39 — chuyên gia xác nhận cần thợ tới nhà: mở Work Order
+    body('needs_visit').optional().isBoolean({ strict: true }),
   ],
   validate,
   alertController.setVerdict,
+)
+// EXPERT-FR-021 — chỉ thợ được giao nhà trả lời yêu cầu kiểm tra tại chỗ (service kiểm nhà, nhà khác → 403)
+router.post(
+  '/:id/onsite-check',
+  requireRole('FARM_TECHNICIAN'),
+  photoUpload.single('photo'),
+  [
+    param('id').isMongoId(),
+    body('observation').isString().isIn(ONSITE_OBSERVATIONS),
+    body('note').optional().isString().isLength({ max: 1000 }),
+  ],
+  validate,
+  alertController.answerOnsiteCheck,
 )
 
 export default router

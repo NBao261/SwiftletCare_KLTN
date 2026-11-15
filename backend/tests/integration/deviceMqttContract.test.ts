@@ -108,6 +108,18 @@ describe('ingestTelemetry', () => {
     expect(emitTelemetryUpdate).toHaveBeenCalledTimes(3)
   })
 
+  it('stores the pump and fan currents; a negative or missing current is not stored (THREAT-FR-014)', async () => {
+    const { deviceId } = await seed()
+    const t0 = Date.now()
+    await ingestTelemetry(reading(deviceId, t0, { pump_current_a: 1.8, fan_current_a: 0.6 }))
+    await ingestTelemetry(reading(deviceId, t0 + 10_000, { pump_current_a: -0.2 }))
+
+    const [first, second] = await Telemetry.find().sort({ timestamp: 1 }).lean()
+    expect(first).toMatchObject({ pump_current_a: 1.8, fan_current_a: 0.6 })
+    expect(second.pump_current_a).toBeUndefined()
+    expect(second.fan_current_a).toBeUndefined()
+  })
+
   it('forwards the fuzzy controller output to the dashboard (ENV-FR-010/011)', async () => {
     const { deviceId, zone } = await seed()
 

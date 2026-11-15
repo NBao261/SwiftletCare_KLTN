@@ -18,6 +18,8 @@ export interface DeviceItem {
   bootedAt?: string;
   freeHeap?: number;
   ip?: string;
+  // SYSTEM-FR-004 — thiết bị của bộ giả lập
+  simulated?: boolean;
 }
 
 export interface ZoneDeviceGroup {
@@ -54,14 +56,14 @@ function sensorItem(sensor: SensorNode, houseId: string): DeviceItem {
   return {
     id: sensor._id, deviceId: sensor.device_id, type: 'sensor', status: sensor.status, houseId, zoneId: sensor.zone_id,
     rssi: sensor.rssi, version: sensor.firmware_version, lastHeartbeat: sensor.last_heartbeat, registeredAt: sensor.registered_at,
-    bootedAt: sensor.booted_at, freeHeap: sensor.free_heap, ip: sensor.ip,
+    bootedAt: sensor.booted_at, freeHeap: sensor.free_heap, ip: sensor.ip, simulated: sensor.simulated,
   };
 }
 
 function cameraItem(camera: CameraNode, houseId: string): DeviceItem {
   return {
     id: camera._id, deviceId: camera.device_id, type: 'camera', status: camera.status, houseId,
-    version: camera.model_version, lastHeartbeat: camera.last_heartbeat, registeredAt: camera.registered_at,
+    version: camera.model_version, lastHeartbeat: camera.last_heartbeat, registeredAt: camera.registered_at, simulated: camera.simulated,
   };
 }
 

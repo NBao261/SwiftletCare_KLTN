@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useLoginSplashStore } from '@/stores/loginSplashStore'
 import { queryClient } from '@/lib/queryClient'
 import { getRoleHomePath, canAccessPath } from '@/constants/roles'
-import type { User } from '@/types'
+import type { NotificationPreferencesInput } from '@/types'
 
 /** useAuth – login/logout/quên mật khẩu/thông báo/xoá tài khoản (AUTH-FR-002/003/009/012) */
 export function useAuth() {
@@ -65,7 +65,7 @@ export function useAuth() {
 
   // ALERT-FR-005/006 — backend trả lại User đầy đủ, gộp thẳng vào authStore để UI phản hồi tức thì
   const updateNotificationPreferences = useMutation({
-    mutationFn: (prefs: Partial<User['notification_preferences']>) => authApi.updateNotificationPreferences(prefs),
+    mutationFn: (prefs: NotificationPreferencesInput) => authApi.updateNotificationPreferences(prefs),
     onSuccess: ({ data }) => updateUser(data.data),
   })
 

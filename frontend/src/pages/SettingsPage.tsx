@@ -16,6 +16,14 @@ import { formatDate, getApiErrorMessage } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { ROLE_LABEL } from '@/constants/roles'
 import { t } from '@/i18n'
+import { LEVELS } from '@/constants/severity'
+import { levelDict } from '@/constants/severity.i18n'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import {
+  applyGeneralPush, bySeverityPayload, levelChannelsOf, urgentHasOutsideChannel, type LevelChannels,
+} from '@/validations/common/notificationChannels.validation'
+import type { SeverityLevel } from '@/types'
 
 /** Settings Page — hồ sơ, thông báo (ALERT-FR-005/006), bảo mật (AUTH-FR-009), xoá tài khoản (AUTH-FR-012) */
 export default function SettingsPage() {
@@ -103,10 +111,25 @@ function NotificationPreferencesCard() {
   const push = useToastStore(s => s.push)
   const prefs = user?.notification_preferences
 
+  const telegramLinked = user?.telegram_linked ?? false
+  // Nhãn 3 cấp dùng chung (FE_Design 6.3); lỗi API theo nhóm, không hiện câu thô của backend (13.16)
+  const { t: levelLabel } = useTranslation(levelDict)
+  const apiErrorMessage = useApiErrorMessage()
+
   const [push_, setPush] = useState(prefs?.push ?? true)
   // zalo/sms đã bỏ theo SRS 3.1.0 (G-01) — chỉ còn kênh push
   const [quietStart, setQuietStart] = useState(prefs?.quiet_hours?.start ?? '')
   const [quietEnd, setQuietEnd] = useState(prefs?.quiet_hours?.end ?? '')
+  // ALERT-FR-005 — kênh ngoài ứng dụng theo cấp cảnh báo
+  const [levels, setLevels] = useState(() => levelChannelsOf(prefs))
+  const urgentOk = urgentHasOutsideChannel(levels.P1, telegramLinked)
+  const setLevelChannel = (level: SeverityLevel, channel: keyof LevelChannels, value: boolean) =>
+    setLevels(current => ({ ...current, [level]: { ...current[level], [channel]: value } }))
+  // Push chung cũng là push của các cấp cảnh báo: đổi nó thì cả 3 cấp đổi theo
+  const changeGeneralPush = (value: boolean) => {
+    setPush(value)
+    setLevels(current => applyGeneralPush(current, value))
+  }
 
   // user (và prefs) có thể đổi từ nơi khác (tab khác, refetch) trong lúc trang
   // này đang mở — resync lại form thay vì chỉ seed 1 lần lúc mount.
@@ -114,14 +137,16 @@ function NotificationPreferencesCard() {
     setPush(prefs?.push ?? true)
     setQuietStart(prefs?.quiet_hours?.start ?? '')
     setQuietEnd(prefs?.quiet_hours?.end ?? '')
+    setLevels(levelChannelsOf(prefs))
   }, [prefs])
 
   function handleSave() {
+    const general = { push: push_, telegram: prefs?.telegram ?? true }
     updateNotificationPreferences.mutate(
-      { push: push_, quiet_hours: { start: quietStart, end: quietEnd } },
+      { push: push_, by_severity: bySeverityPayload(levels, general), quiet_hours: { start: quietStart, end: quietEnd } },
       {
         onSuccess: () => push('Đã lưu cài đặt thông báo'),
-        onError: (err) => push(getApiErrorMessage(err, 'Lưu thất bại'), 'error'),
+        onError: (err) => push(apiErrorMessage(err, t('Lưu thất bại')), 'error'),
       },
     )
   }
@@ -129,8 +154,33 @@ function NotificationPreferencesCard() {
   return (
     <SettingsCard icon={BellIcon} title="Thông báo" subtitle="Kênh nhận cảnh báo và giờ im lặng">
       <div className="flex flex-col gap-2">
-        <ToggleRow icon={BellIcon} label="Push notification" description="Thông báo trên trình duyệt/ứng dụng" checked={push_} onChange={setPush} />
+        <ToggleRow icon={BellIcon} label="Push notification" description="Thông báo trên trình duyệt/ứng dụng" checked={push_} onChange={changeGeneralPush} />
         {/* Zalo ZNS và SMS đã bỏ theo SRS 3.1.0 (G-01) */}
+      </div>
+
+      {/* ALERT-FR-005 — kênh theo cấp cảnh báo; Telegram chỉ hiện khi đã liên kết bot */}
+      <div className="mt-4 border-t border-warmGray/10 pt-4">
+        <p className="mb-2 text-body font-semibold text-charcoal">{t('Kênh theo mức cảnh báo')}</p>
+        <div className="flex flex-col gap-2">
+          {LEVELS.map(level => (
+            <div key={level} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-warmGray/5 px-3 py-2.5">
+              <span className="min-w-0 flex-1 text-body font-semibold text-charcoal">{levelLabel(level)}</span>
+              <label className="flex items-center gap-2 text-small text-warmGray">
+                {t('Push')}
+                <Toggle checked={levels[level].push} onChange={value => setLevelChannel(level, 'push', value)} aria-label={`${levelLabel(level)} — ${t('Push')}`} />
+              </label>
+              {telegramLinked && (
+                <label className="flex items-center gap-2 text-small text-warmGray">
+                  {t('Telegram')}
+                  <Toggle checked={levels[level].telegram} onChange={value => setLevelChannel(level, 'telegram', value)} aria-label={`${levelLabel(level)} — ${t('Telegram')}`} />
+                </label>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className={cn('mt-2 text-small', urgentOk ? 'text-warmGray' : 'text-safetyOrange')}>
+          {t('Cảnh báo Khẩn cấp phải còn ít nhất một kênh ngoài ứng dụng. Cảnh báo mọi mức vẫn luôn hiện trong ứng dụng.')}
+        </p>
       </div>
 
       <div className="mt-4 border-t border-warmGray/10 pt-4">
@@ -145,7 +195,7 @@ function NotificationPreferencesCard() {
         </div>
       </div>
 
-      <Button className="mt-4 w-full" loading={updateNotificationPreferences.isPending} onClick={handleSave}>
+      <Button className="mt-4 w-full" disabled={!urgentOk} loading={updateNotificationPreferences.isPending} onClick={handleSave}>
         Lưu cài đặt
       </Button>
     </SettingsCard>

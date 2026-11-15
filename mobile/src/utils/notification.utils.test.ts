@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import type { InAppNotification } from '@/types'
 import {
   affectsAlerts,
+  affectsWorkOrders,
   createRecentIdSet,
   createTrailingRunner,
   findNotificationInPages,
@@ -58,6 +59,13 @@ describe('getNotificationTarget', () => {
     expect(affectsAlerts(buildNotification('b', { ref: { kind: 'alert', id: 'x' } }))).toBe(true)
     expect(affectsAlerts(buildNotification('c', { ref: { kind: 'health_report', id: 'x' } }))).toBe(false)
     expect(affectsAlerts(buildNotification('d'))).toBe(false)
+  })
+
+  it('thông báo Work Order, cảnh báo và quyết định của chuyên gia làm tải lại Work Order', () => {
+    expect(affectsWorkOrders(buildNotification('a', { ref: { kind: 'work_order', id: 'x' } }))).toBe(true)
+    expect(affectsWorkOrders(buildNotification('b', { ref: { kind: 'alert', id: 'x' } }))).toBe(true)
+    expect(affectsWorkOrders(buildNotification('c', { ref: { kind: 'expert_decision', id: 'x' } }))).toBe(true)
+    expect(affectsWorkOrders(buildNotification('d', { ref: { kind: 'health_report', id: 'x' } }))).toBe(false)
   })
 })
 
@@ -134,5 +142,21 @@ describe('getPushTarget', () => {
     expect(getPushTarget({ kind: 'expert_decision', id: 'audit-1' })).toEqual({ kind: 'bell' })
     expect(getPushTarget({ kind: 'alert' })).toEqual({ kind: 'bell' })
     expect(getPushTarget(null)).toEqual({ kind: 'bell' })
+  })
+
+  it('push và thông báo ngày đánh giá mở đúng ngày của nhà (MF-06)', () => {
+    expect(getPushTarget({ kind: 'health_day', id: 'day-1' })).toEqual({ kind: 'healthDay', dayId: 'day-1' })
+    expect(getNotificationTarget(buildNotification('f', { ref: { kind: 'health_day', id: 'day-1' } }))).toEqual({
+      kind: 'healthDay',
+      dayId: 'day-1',
+    })
+  })
+
+  it('push và thông báo Work Order mở chi tiết Work Order (G-21)', () => {
+    expect(getPushTarget({ kind: 'work_order', id: 'wo-1' })).toEqual({ kind: 'workOrder', workOrderId: 'wo-1' })
+    expect(getNotificationTarget(buildNotification('e', { ref: { kind: 'work_order', id: 'wo-1' } }))).toEqual({
+      kind: 'workOrder',
+      workOrderId: 'wo-1',
+    })
   })
 })

@@ -15,6 +15,8 @@ const AdminSystemSettingsPage = lazy(() => import('@/pages/admin/AdminSystemSett
 const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
 // OPS-NFR-004 — thiết bị toàn hệ thống, chỉ xem; thay /devices (màn làm việc của Technician) trong menu Admin
 const AdminDevicesPage = lazy(() => import('@/pages/admin/AdminDevicesPage'))
+// FARM-FR-010 — kho thiết bị: thêm, in nhãn QR, cấp lại mã, thu hồi
+const AdminDeviceStockPage = lazy(() => import('@/pages/admin/AdminDeviceStockPage'))
 
 export const adminRoutes = (
   <>
@@ -39,6 +41,14 @@ export const adminRoutes = (
       element={
         <RequireRole allow={ADMIN_ONLY}>
           <AdminDevicesPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="system/device-stock"
+      element={
+        <RequireRole allow={ADMIN_ONLY}>
+          <AdminDeviceStockPage />
         </RequireRole>
       }
     />
