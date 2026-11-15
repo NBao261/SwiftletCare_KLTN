@@ -10,6 +10,7 @@ describe('isRecoveryUnverified — phiếu chờ duyệt mà hệ thống chưa 
     expect(isRecoveryUnverified({ alert_id: null, alert_type: null })).toBe(true);
     expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'ACTUATOR_FAULT' })).toBe(true);
     expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'SPEAKER_FAILURE' })).toBe(true);
+    expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'UNEXPECTED_RESTART' })).toBe(true);
   });
 
   it('cảnh báo cảm biến: dữ liệu đã được kiểm', () => {
@@ -25,8 +26,8 @@ describe('ownerActions — thao tác của Farm Owner theo trạng thái', () =>
     expect(ownerActions('IN_PROGRESS')).toEqual(['reassign', 'cancel']);
   });
 
-  it('đang kiểm dữ liệu, đã đóng, đã huỷ: không có thao tác (backend trả 409)', () => {
-    expect(ownerActions('VERIFYING')).toEqual([]);
+  it('đang kiểm dữ liệu: chỉ huỷ; đã đóng, đã huỷ: không có thao tác (backend trả 409)', () => {
+    expect(ownerActions('VERIFYING')).toEqual(['cancel']);
     expect(ownerActions('CLOSED')).toEqual([]);
     expect(ownerActions('CANCELLED')).toEqual([]);
   });

@@ -17,15 +17,16 @@ export const WORK_ORDER_STATUS_TONE: Record<WorkOrderStatus, BadgeTone> = {
 
 export type OwnerAction = 'approve' | 'reopen' | 'reassign' | 'cancel';
 
-// OPS-FR-004 — chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ; đang kiểm dữ liệu, đã đóng, đã huỷ: không có
+// OPS-FR-004 — chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ; đang kiểm dữ liệu: chỉ huỷ (lối ra khi dữ liệu không phục hồi); đã đóng, đã huỷ: không có
 export function ownerActions(status: WorkOrderStatus): OwnerAction[] {
   if (status === 'AWAITING_APPROVAL') return ['approve', 'reopen'];
   if (status === 'OPEN' || status === 'IN_PROGRESS') return ['reassign', 'cancel'];
+  if (status === 'VERIFYING') return ['cancel'];
   return [];
 }
 
 // BR-41 — loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi (UNVERIFIABLE_RECOVERY ở workOrder.service.ts)
-const UNVERIFIABLE_ALERT_TYPES: AlertType[] = ['ACTUATOR_FAULT', 'SPEAKER_FAILURE'];
+const UNVERIFIABLE_ALERT_TYPES: AlertType[] = ['ACTUATOR_FAULT', 'SPEAKER_FAILURE', 'UNEXPECTED_RESTART'];
 
 // Phiếu sang chờ duyệt mà chưa kiểm được dữ liệu: mở tay không gắn cảnh báo, hoặc cảnh báo thuộc loại trên
 export function isRecoveryUnverified(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type'>): boolean {
