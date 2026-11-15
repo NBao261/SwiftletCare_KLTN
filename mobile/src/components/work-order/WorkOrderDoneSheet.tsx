@@ -16,6 +16,7 @@ import {
   getRemainingPhotoSlots,
   hasRecoveryCheck,
   isCauseAlertType,
+  RECOVERY_VERIFY_MINUTES,
   SITE_CAUSES,
   WORK_ORDER_MAX_PHOTOS,
 } from '@/utils/workOrder.utils'
@@ -52,7 +53,8 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
   const keptPhotoCount = workOrder?.photo_urls?.length ?? 0
   const remainingPhotos = workOrder ? getRemainingPhotoSlots(workOrder) : WORK_ORDER_MAX_PHOTOS
   // Work Order vừa tải lại có thêm ảnh thì ảnh đã chụp có thể vượt chỗ còn lại: bỏ bớt ảnh mới gửi được, khỏi để backend trả 400
-  const canSave = (!isCauseRequired || cause !== null) && photos.length <= remainingPhotos
+  const extraPhotos = photos.length - remainingPhotos
+  const canSave = (!isCauseRequired || cause !== null) && extraPhotos <= 0
   // Loại cảnh báo chưa có dữ liệu để kiểm (BR-41) vẫn qua VERIFYING một nhịp rồi chuyển thẳng chủ trại kiểm tại chỗ
   const isRecoveryChecked = workOrder ? hasRecoveryCheck(workOrder) : false
 
@@ -88,6 +90,9 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
           422: t('Cảnh báo thiết bị cần ghi nguyên nhân tìm thấy tại chỗ'),
         })
       : null
+  // Nút Gửi tắt vì ảnh vừa chụp vượt chỗ còn lại thì nói rõ cần bỏ bao nhiêu ảnh
+  const photoOverflowMessage =
+    extraPhotos > 0 ? t('Bỏ bớt {k} ảnh vừa chụp để gửi được, chỉ còn chỗ cho {m} ảnh', { k: extraPhotos, m: remainingPhotos }) : null
 
   return (
     <BottomSheet visible={workOrder !== null} onClose={closeUnlessSaving}>
@@ -143,11 +148,14 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
           {!workOrder?.alert_id
             ? t('Gửi xong, Work Order chuyển chủ trại duyệt.')
             : isRecoveryChecked
-              ? t('Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong 10 phút rồi chuyển chủ trại duyệt; sự cố quay lại thì Work Order về "Đang làm".')
+              ? t(
+                  'Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong {min} phút rồi chuyển chủ trại duyệt; sự cố quay lại thì Work Order về "Đang làm".',
+                  { min: RECOVERY_VERIFY_MINUTES },
+                )
               : t('Gửi xong, loại sự cố này chưa có dữ liệu để hệ thống kiểm nên chuyển thẳng chủ trại kiểm tại chỗ rồi duyệt.')}
         </Text>
       </ScrollView>
-      <FormMessage message={errorMessage} />
+      <FormMessage message={errorMessage ?? photoOverflowMessage} />
       <Button label={t('Gửi')} onPress={save} loading={complete.isPending} disabled={!canSave} />
     </BottomSheet>
   )

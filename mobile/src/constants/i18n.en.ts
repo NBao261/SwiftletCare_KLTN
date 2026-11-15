@@ -1275,7 +1275,10 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Báo đã làm xong': 'Mark as done',
   'Việc đã làm (không bắt buộc)': 'Work done (optional)',
   'Việc đã làm': 'Work done',
-  'Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong 10 phút rồi chuyển chủ trại duyệt; sự cố quay lại thì Work Order về "Đang làm".': 'Once sent, the system checks that the data stays recovered for 10 minutes, then sends it to the owner to approve; if the fault comes back the work order returns to "In progress".',
+  'Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong {min} phút rồi chuyển chủ trại duyệt; sự cố quay lại thì Work Order về "Đang làm".':
+    'Once sent, the system checks that the data stays recovered for {min} minutes, then sends it to the owner to approve; if the fault comes back the work order returns to "In progress".',
+  'Bỏ bớt {k} ảnh vừa chụp để gửi được, chỉ còn chỗ cho {m} ảnh':
+    'Remove {k} of the new photos to send, there is room for only {m}',
   'Gửi xong, Work Order chuyển chủ trại duyệt.': 'Once sent, the work order goes to the owner to approve.',
   'Work Order': 'Work orders',
   'Không tải được Work Order': 'Could not load work orders',

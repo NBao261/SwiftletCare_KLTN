@@ -104,7 +104,9 @@ describe('getWorkOrderMilestones (SM-19)', () => {
 describe('hasRecoveryCheck (BR-41)', () => {
   it('chỉ Work Order gắn cảnh báo có dữ liệu để kiểm mới được kiểm phục hồi', () => {
     expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'SENSOR_FAULT' })).toBe(true)
+    expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'ACTUATOR_FAULT' })).toBe(false)
     expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'SPEAKER_FAILURE' })).toBe(false)
+    expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'UNEXPECTED_RESTART' })).toBe(false)
     expect(hasRecoveryCheck({ alert_id: null, alert_type: null })).toBe(false)
   })
 })

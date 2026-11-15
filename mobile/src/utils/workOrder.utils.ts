@@ -49,7 +49,10 @@ export function getPendingOnsiteCheck(alert: Pick<Alert, 'onsite_checks'>): Onsi
 
 // Loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi sau khi báo xong (BR-41, UNVERIFIABLE_RECOVERY của workOrder.service):
 // chuyển chờ duyệt kèm ghi chú để chủ trại kiểm tại chỗ
-const UNVERIFIABLE_RECOVERY_TYPES: ReadonlySet<AlertType> = new Set(['ACTUATOR_FAULT', 'SPEAKER_FAILURE'])
+const UNVERIFIABLE_RECOVERY_TYPES: ReadonlySet<AlertType> = new Set(['ACTUATOR_FAULT', 'SPEAKER_FAILURE', 'UNEXPECTED_RESTART'])
+
+// Số phút dữ liệu phải giữ phục hồi sau khi báo xong (Report 3 BR-41, recovery_verify_min ở §4.5; backend RECOVERY_VERIFY_MIN)
+export const RECOVERY_VERIFY_MINUTES = 10
 
 // Báo xong có được hệ thống kiểm dữ liệu phục hồi không (BR-41): chỉ Work Order gắn cảnh báo, trừ loại chưa có dữ liệu để kiểm
 export function hasRecoveryCheck(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type'>): boolean {
