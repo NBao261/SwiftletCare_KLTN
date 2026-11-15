@@ -84,14 +84,13 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
   const comp = cycle?.comparison
   const health = cycle?.health
 
-  const zoneLabel = cycle?.zone_id ?? '—'
   const fromLabel = cycle ? formatDate(cycle.start_date) : ''
   const toLabel = cycle?.end_date ? formatDate(cycle.end_date) : null
 
   const drawerTitle = cycle?.conclusion ? t('drawer.titleEdit') : t('drawer.title')
   const subtitleText = toLabel
-    ? t('drawer.subtitle', { zone: zoneLabel, from: fromLabel, to: toLabel })
-    : t('drawer.subtitleOpen', { zone: zoneLabel, from: fromLabel })
+    ? t('drawer.subtitle', { from: fromLabel, to: toLabel })
+    : t('drawer.subtitleOpen', { from: fromLabel })
 
   return createPortal(
     <>

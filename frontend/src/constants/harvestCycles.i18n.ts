@@ -7,18 +7,14 @@ const vi = {
 
   // Tiêu đề & mô tả
   'section.title': 'Chu kỳ thu hoạch',
-  'section.subtitle': 'Viết kết luận cho các chu kỳ đã đóng (EXPERT-FR-020)',
+  'section.subtitle': 'Viết kết luận cho các chu kỳ đã đóng',
   'section.noScope': 'Chọn trang trại hoặc nhà yến để xem chu kỳ thu hoạch',
 
   // Bộ lọc
   'filter.status': 'Trạng thái chu kỳ',
   'filter.all': 'Tất cả',
-  'filter.open': 'Đang mở',
-  'filter.closed': 'Đã đóng',
-  'filter.concluded': 'Đã kết luận',
 
   // Cột bảng
-  'col.zone': 'Khu vực',
   'col.period': 'Thời gian',
   'col.yield': 'Sản lượng',
   'col.comparison': 'So với trước',
@@ -56,8 +52,8 @@ const vi = {
   // Drawer — tiêu đề
   'drawer.title': 'Kết luận mùa vụ',
   'drawer.titleEdit': 'Sửa kết luận mùa vụ',
-  'drawer.subtitle': '{zone} · {from} – {to}',
-  'drawer.subtitleOpen': '{zone} · Từ {from}',
+  'drawer.subtitle': '{from} – {to}',
+  'drawer.subtitleOpen': 'Từ {from}',
 
   // Drawer — thông tin chu kỳ
   'drawer.yieldLabel': 'Sản lượng thu hoạch',
@@ -107,11 +103,7 @@ const en: Record<HarvestCyclesKey, string> = {
 
   'filter.status': 'Cycle status',
   'filter.all': 'All',
-  'filter.open': 'Open',
-  'filter.closed': 'Closed',
-  'filter.concluded': 'Concluded',
 
-  'col.zone': 'Zone',
   'col.period': 'Period',
   'col.yield': 'Yield',
   'col.comparison': 'vs. previous',
@@ -144,8 +136,8 @@ const en: Record<HarvestCyclesKey, string> = {
 
   'drawer.title': 'Season conclusion',
   'drawer.titleEdit': 'Edit season conclusion',
-  'drawer.subtitle': '{zone} · {from} – {to}',
-  'drawer.subtitleOpen': '{zone} · Since {from}',
+  'drawer.subtitle': '{from} – {to}',
+  'drawer.subtitleOpen': 'Since {from}',
 
   'drawer.yieldLabel': 'Closing harvest yield',
   'drawer.yieldValue': '{n} nests · {kg} kg ({date})',

@@ -55,13 +55,6 @@ export default function HarvestCyclesSection({ scope }: HarvestCyclesSectionProp
 
   const columns: DataTableColumn<HarvestCycle>[] = [
     {
-      key: 'zone',
-      header: t('col.zone'),
-      render: row => (
-        <span className="text-xs font-semibold text-charcoal">{row.zone_id}</span>
-      ),
-    },
-    {
       key: 'period',
       header: t('col.period'),
       render: row => (
