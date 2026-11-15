@@ -66,11 +66,23 @@ export const ENDPOINTS = {
   ALERT_VERDICT: (alertId: string) => `/alerts/${alertId}/verdict`,
   // Bằng chứng ±30 phút của cảnh báo suy luận (ALERT-FR-014)
   ALERT_EVIDENCE: (alertId: string) => `/alerts/${alertId}/evidence`,
+  // Thợ của nhà trả lời yêu cầu kiểm tra tại chỗ cảnh báo suy luận (EXPERT-FR-021)
+  ALERT_ONSITE_CHECK: (alertId: string) => `/alerts/${alertId}/onsite-check`,
+
+  // Work Order sửa chữa (OPS-FR-001…004, G-21): danh sách, chi tiết, bắt đầu, báo xong
+  WORK_ORDERS: '/work-orders',
+  WORK_ORDER_DETAIL: (workOrderId: string) => `/work-orders/${workOrderId}`,
+  WORK_ORDER_START: (workOrderId: string) => `/work-orders/${workOrderId}/start`,
+  WORK_ORDER_DONE: (workOrderId: string) => `/work-orders/${workOrderId}/done`,
 
   // Hoạt động chuyên gia (EXPERT-FR-009/010/011)
   EXPERT_ACTIVITY: '/expert-activity',
   EXPERT_REVIEWS: '/expert-activity/reviews',
+  EXPERT_REVIEW_ACCEPT: (itemId: string) => `/expert-activity/reviews/${itemId}/accept`,
+  EXPERT_REVIEW_REVERT: (itemId: string) => `/expert-activity/reviews/${itemId}/revert`,
   EXPERT_PROPOSALS: '/expert-activity/proposals',
+  EXPERT_PROPOSAL_APPROVE: (proposalId: string) => `/expert-activity/proposals/${proposalId}/approve`,
+  EXPERT_PROPOSAL_REJECT: (proposalId: string) => `/expert-activity/proposals/${proposalId}/reject`,
 
   // Phân tích (ANALYTICS-FR-*)
   BIRD_COUNT_DAILY: '/analytics/bird-count/daily',
@@ -92,7 +104,7 @@ export const ENDPOINTS = {
   // chưa merge vào develop
   PUSH_TOKENS: '/notifications/push-tokens',
 
-  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006)
+  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006/013)
   HEALTH_REPORTS: '/health-reports',
   // Trạng thái ngày và chấm điểm (ANALYTICS-FR-012, EXPERT-FR-012, BR-31)
   HEALTH_DAYS: '/health-reports/days',
@@ -105,4 +117,8 @@ export const ENDPOINTS = {
 
   // Thu hoạch (HARVEST-FR-001…005) — danh sách đợt thu của farm
   HARVESTS: '/harvests',
+
+  // Nghiệp vụ Chuyên gia bổ sung (Domain Expert: EXPERT-FR-*)
+  ALERT_VERDICT_STATS: '/alerts/verdict-stats',
+  ZONE_DETAIL: (zoneId: string) => `/farms/zones/${zoneId}`,
 } as const

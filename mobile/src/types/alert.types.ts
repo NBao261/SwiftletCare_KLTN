@@ -59,6 +59,45 @@ export interface Alert {
   renotified_at?: string
   // Không có là chưa phán quyết
   expert_verdict?: AlertVerdict
+  // ALERT-FR-017 — người nhận lúc tạo: thợ đang trực của nhà, Farm Owner được báo ngay không; thiếu = cảnh báo trước G-21
+  routing?: { technician_id?: string | null; owners_notified?: boolean } | null
+  // BR-40 — lúc báo Farm Owner vì thợ chưa xác nhận sau escalation_min
+  escalated_at?: string | null
+  // ALERT-FR-018 — nguyên nhân tìm thấy tại chỗ (khi xác nhận hoặc khi Work Order làm xong)
+  site_cause?: { cause: SiteCause; photo_urls?: string[]; by?: string; at?: string } | null
+  // EXPERT-FR-021 — yêu cầu kiểm tra tại chỗ (chỉ cảnh báo suy luận ở nhà có thợ)
+  onsite_checks?: OnsiteCheck[]
+}
+
+// Nguyên nhân tìm thấy tại chỗ (ALERT-FR-018) — khớp SiteCause trong api-spec
+export type SiteCause = 'WATER' | 'NOZZLE' | 'PUMP' | 'FAN' | 'DOOR' | 'SENSOR' | 'SPEAKER' | 'OTHER'
+
+// Điều thợ quan sát được khi kiểm tra tại chỗ cảnh báo suy luận (EXPERT-FR-021) — khớp OnsiteObservation trong api-spec
+export type OnsiteObservation =
+  | 'BIRDS_DISTURBED'
+  | 'WORK_OR_PEOPLE_NEARBY'
+  | 'RAIN'
+  | 'SENSOR_DIRTY_OR_FAULTY'
+  | 'NOTHING_UNUSUAL'
+  | 'OTHER'
+
+// Người được backend populate { _id, full_name }
+export interface PersonRef {
+  _id: string
+  full_name?: string
+}
+
+// Một yêu cầu kiểm tra tại chỗ và câu trả lời của thợ — khớp OnsiteCheck trong api-spec; observation null hoặc thiếu = chưa trả
+// lời (isOnsiteCheckAnswered)
+export interface OnsiteCheck {
+  technician_id?: PersonRef | null
+  requested_at: string
+  observation?: OnsiteObservation | null
+  note?: string | null
+  // URL tạm (1 giờ)
+  photo_url?: string | null
+  answered_by?: PersonRef | null
+  answered_at?: string | null
 }
 
 // Bằng chứng của cảnh báo suy luận (ALERT-FR-014, GET /alerts/{id}/evidence, api-spec AlertEvidence). Mỗi nguồn có
