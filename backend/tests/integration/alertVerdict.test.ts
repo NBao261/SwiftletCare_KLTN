@@ -30,6 +30,7 @@ jest.mock('@/socket', () => ({
   emitDeviceStatusChange: jest.fn(), emitBirdCountUpdate: jest.fn(),
 }))
 jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'),
   dispatchAlertNotification: jest.fn().mockResolvedValue(undefined),
   notifyUser: jest.fn().mockResolvedValue(undefined),
   notifyAdmins: jest.fn().mockResolvedValue(undefined),

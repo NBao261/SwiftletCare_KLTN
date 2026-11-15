@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.2 (Review 2, final scope) |
+| Document version | 2.2.3 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -392,9 +392,10 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Evaluation range | backend `MAX_EVALUATION_RANGE` (`healthDay.service.ts`) |
 | Size of one installation | staging sizing (Section 3.4) and the NFR-03 load script |
 | Retention (BR-36) | TTL indexes of Section 6.3 |
-| Escalation time, recovery verification | backend `ESCALATION_MIN`, `RECOVERY_VERIFY_MIN` (defaults of the farm settings) |
+| Escalation time, recovery verification | backend `ESCALATION_MIN` (`alertRouting.service.ts`), `RECOVERY_VERIFY_MIN` (`workOrder.service.ts`); the same for every farm, not set per farm |
 | Weather compensation limits | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`; firmware `WEATHER_COMP_OFFLINE_MS` |
 | Automatic Work Order for offline devices | backend `WORK_ORDER_OFFLINE_DELAY_MIN` |
+| On-site photos | backend `MAX_PHOTO_BYTES`, `MAX_WORK_ORDER_PHOTOS` (`workOrder.service.ts`) |
 | Recommendation expiry and effect window | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
 | Same period of the previous year, complete cycle | backend `HARVEST_SAME_PERIOD_DAYS`, `HARVEST_CYCLE_MIN_COMPLETENESS` |
@@ -661,9 +662,12 @@ erDiagram
     string previous_status "status before DISMISSED"
     object details "metric, observed, threshold, direction, started_at, reset_reason"
     object expert_verdict "result, note, by, role, at"
-    array onsite_checks "requested_by, technician, observation, photo, at"
+    array onsite_checks "technician, requested_at, observation, note, photo, answered_by, answered_at"
+    object routing "technician on duty, owners notified (ALERT-FR-017)"
+    object site_cause "cause, photos, by, at (ALERT-FR-018)"
     number occurrence_count
     date renotified_at
+    date escalated_at
     date resolved_at
   }
   BIRD_COUNT_RECORD {
@@ -1280,13 +1284,14 @@ stateDiagram-v2
   OPEN --> IN_PROGRESS : technician starts (OPS-FR-002)
   OPEN --> CLOSED : alert recovered for 10 min before the work starts, self-recovered (OPS-FR-003)
   IN_PROGRESS --> VERIFYING : technician done, cause and photos (OPS-FR-002, ALERT-FR-018)
-  VERIFYING --> AWAITING_APPROVAL : recovered for recovery_verify_min (BR-41)
+  VERIFYING --> AWAITING_APPROVAL : recovered for recovery_verify_min, or no data shows it, marked not verified (BR-41)
   VERIFYING --> IN_PROGRESS : condition comes back (OPS-FR-003)
   AWAITING_APPROVAL --> CLOSED : owner approves, alert resolved (OPS-FR-004, 009)
-  AWAITING_APPROVAL --> IN_PROGRESS : owner reopens (OPS-FR-004)
+  AWAITING_APPROVAL --> IN_PROGRESS : owner reopens, or the incident comes back (OPS-FR-003, 004)
   OPEN --> CANCELLED : owner cancels with reason (OPS-FR-004)
   IN_PROGRESS --> CANCELLED : owner cancels with reason (OPS-FR-004)
-  OPEN --> OPEN : not started in time, escalated (OPS-FR-004, 006, BR-40)
+  VERIFYING --> CANCELLED : owner cancels with reason (OPS-FR-004)
+  OPEN --> OPEN : not started within escalation_min of its assignment, escalated (OPS-FR-004, 006, BR-40)
   CLOSED --> [*]
   CANCELLED --> [*]
 ```
@@ -1864,6 +1869,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |
 | 2.2.2 | 12/11/2026 | Configuration sync as built (G-08): the heartbeat field is named `appliedConfigVersion`, like the other heartbeat fields; the ERD stores `config_sync` (Report 3 §6.12) on the controller |
 | 2.2.1 | 10/11/2026 | BM02 items due 11/11/2026: SMTP e-mail provider in the Section 2.1 diagram (A-03); mobile versions and Jest from `mobile/package.json` in Section 3.2 (A-06); mDNS broker discovery named as a development aid in Section 3.4 (A-01); services and the `deletionRequestReminder` job of the code listed in Section 5.3 (A-07); every transition of Section 8 names its requirement (ST-06); SM-06 restore within 24 h (ST-01), SM-08 "not evaluated" (ST-07), SM-12 starts at `PENDING` and leaves `UNKNOWN` (ST-03), following SRS 4.2.1; the `alertEscalation` job runs every minute as in DF-13 and the operations modules |
 | 2.2.0 | 09/11/2026 | AD-04: every inferred alert of a house with a technician is checked on site first, a faulty sensor opens a Work Order; AD-06: the Farm Technician (daily) and the Farm Owner (on site) rate, the Domain Expert reviews the disagreeing days and adjusts the levels (SRS 4.2.0) |

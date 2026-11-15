@@ -228,7 +228,7 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
     await tech$.get(`/telemetry/zones/${zone._id}/latest`).expect(403)
   })
 
-  it('reads the alerts of the assigned house only and is not notified yet (G-21)', async () => {
+  it('reads and acknowledges the alerts of the assigned house only (ALERT-FR-009)', async () => {
     const { farm, zone, zone2, house, house2, tech, owner$, tech$ } = await seedFarmWithTechnician()
     const base = { severity: 'HIGH', title: 't', message: 'm', status: 'ACTIVE', farm_id: farm._id }
     const offline = await Alert.create({ ...base, zone_id: zone._id, type: 'NODE_OFFLINE' })
@@ -251,9 +251,11 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
     await tech$.get(`/alerts/${lowReturn._id}`).expect(200)
     await tech$.get(`/alerts/${elsewhere._id}`).expect(403)
     await tech$.get(`/alerts/${otherHouse._id}`).expect(403)
-    // Xác nhận cảnh báo của thợ chưa mở ở backend (ALERT-FR-009 cho thợ đi cùng G-21)
-    await tech$.put(`/alerts/${offline._id}/acknowledge`, { note: 'x' }).expect(403)
-    // Thợ không nằm trong danh sách nhận cảnh báo của farm (cảnh báo theo nhà là G-21)
+    // ALERT-FR-009 — thợ xác nhận cảnh báo của nhà được giao (G-21), nhà khác → 403
+    await tech$.put(`/alerts/${elsewhere._id}/acknowledge`, { note: 'x' }).expect(403)
+    const acked = await tech$.put(`/alerts/${offline._id}/acknowledge`, { note: 'x', cause: 'SENSOR' }).expect(200)
+    expect(acked.body.data).toMatchObject({ status: 'ACKNOWLEDGED', acknowledged_by: String(tech.user._id), site_cause: { cause: 'SENSOR' } })
+    // Farm Owner vẫn chỉ là chủ và đồng sở hữu; thợ nhận cảnh báo qua alertRouting (ALERT-FR-017)
     const { findRecipients } = await import('@/services/notification.service')
     expect((await findRecipients(String(farm._id))).map(u => String(u._id))).not.toContain(String(tech.user._id))
   })

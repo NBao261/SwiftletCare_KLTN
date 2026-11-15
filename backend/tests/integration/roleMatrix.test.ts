@@ -8,6 +8,7 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import alertRoutes from '@/routes/alerts.route'
+import workOrderRoutes from '@/routes/workOrders.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import deviceRoutes from '@/routes/devices.route'
 import farmRoutes from '@/routes/farms.route'
@@ -42,6 +43,7 @@ app.use('/farms', farmRoutes)
 app.use('/devices', deviceRoutes)
 app.use('/alerts', alertRoutes)
 app.use('/analytics', analyticsRoutes)
+app.use('/work-orders', workOrderRoutes)
 app.use(errorHandler)
 
 useTestDb()
@@ -109,7 +111,18 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
       ['put',    `${track}/sync-status`,                      [tech, admin]],
       ['delete', track,                                       [tech, admin]],
       ['get',    `/analytics/control/suggestion?zoneId=${zone._id}`, [tech, admin]],
-      ['put',    `/alerts/${alert._id}/acknowledge`,          [tech, admin]],
+      // ALERT-FR-009 — thợ được giao nhà xác nhận được (G-21); Administrator chỉ xem
+      ['put',    `/alerts/${alert._id}/acknowledge`,          [admin]],
+      ['post',   `/alerts/${alert._id}/onsite-check`,         [admin]],
+      // OPS-FR-001, 004, 009 — chỉ Farm Owner mở, duyệt, mở lại, huỷ, giao lại; thợ thực hiện; Administrator không thấy
+      ['get',    '/work-orders',                              [admin]],
+      ['post',   '/work-orders',                              [tech, admin]],
+      ['get',    `/work-orders/metrics?farmId=${farm._id}`,   [tech, admin]],
+      ['post',   `/work-orders/${node._id}/start`,            [admin]],
+      ['post',   `/work-orders/${node._id}/approve`,          [tech, admin]],
+      ['post',   `/work-orders/${node._id}/reopen`,           [tech, admin]],
+      ['post',   `/work-orders/${node._id}/cancel`,           [tech, admin]],
+      ['post',   `/work-orders/${node._id}/reassign`,         [tech, admin]],
     ]
     const allowed: string[] = []
     for (const [method, path, roles] of cases) {
