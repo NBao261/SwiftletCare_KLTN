@@ -86,6 +86,13 @@ describe('getWorkOrderMilestones (SM-19)', () => {
       '2026-11-13T01:40:00.000Z',
     ])
   })
+
+  it('phiếu phòng ngừa gọi mốc chờ duyệt là chuyển chờ duyệt, không phải dữ liệu đã phục hồi', () => {
+    const verifiedAt = '2026-11-13T01:40:00.000Z'
+    const repair = { ...workOrder, status: 'AWAITING_APPROVAL' as const, verified_at: verifiedAt }
+    expect(getWorkOrderMilestones(repair)[3].label).toBe('Dữ liệu đã phục hồi')
+    expect(getWorkOrderMilestones({ ...repair, kind: 'PREVENTIVE', origin: 'PLAN' })[3].label).toBe('Chuyển chờ duyệt')
+  })
 })
 
 describe('buildPhotoPart', () => {

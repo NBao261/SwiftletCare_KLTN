@@ -53,7 +53,11 @@ export function getWorkOrderMilestones(workOrder: WorkOrder): { label: string; t
     { label: t('Mở lúc'), time: workOrder.opened_at },
     { label: t('Bắt đầu'), time: workOrder.started_at },
     { label: t('Báo xong'), time: workOrder.done_at },
-    { label: t('Dữ liệu đã phục hồi'), time: workOrder.verified_at },
+    // Phiếu phòng ngừa được kiểm bằng checklist đủ, chuyển chờ duyệt ngay lúc báo xong, không có dữ liệu phục hồi (BR-41)
+    {
+      label: workOrder.kind === 'PREVENTIVE' ? t('Chuyển chờ duyệt') : t('Dữ liệu đã phục hồi'),
+      time: workOrder.verified_at,
+    },
     { label: t('Đóng lúc'), time: workOrder.closed_at },
   ]
   return milestones.flatMap(item => (item.time ? [{ label: item.label, time: item.time }] : []))

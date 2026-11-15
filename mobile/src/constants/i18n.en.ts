@@ -1288,6 +1288,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Mở lúc': 'Opened',
   'Báo xong': 'Marked done',
   'Dữ liệu đã phục hồi': 'Data recovered',
+  'Chuyển chờ duyệt': 'Sent for approval',
+  'Cần ghi kết quả mọi mục checklist trước khi báo xong': 'Record a result for every checklist item before marking it done',
   'Đóng lúc': 'Closed',
   'Người được giao': 'Assignee',
   'Kết quả tại chỗ': 'On-site result',

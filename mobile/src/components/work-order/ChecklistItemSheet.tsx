@@ -15,7 +15,7 @@ import { getChecklistResultLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
 const NOTE_INPUT_HEIGHT = 88
-// Ghi chú dài tối đa (api-spec)
+// Ghi chú của một mục checklist dài tối đa (Report 3 §4.5, "Maintenance plan and checklist text")
 const NOTE_MAX_LENGTH = 1000
 // Cao tối đa phần form: còn chỗ cho nút khi bàn phím mở
 const FORM_MAX_HEIGHT = 480

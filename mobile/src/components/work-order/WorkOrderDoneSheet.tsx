@@ -66,7 +66,10 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
       ? getSettingsErrorMessage(complete.error, {
           400: t('Ảnh phải là JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh'),
           403: t('Chỉ kỹ thuật viên được giao nhà này hoặc chủ trại mới báo xong được'),
-          422: t('Cảnh báo thiết bị cần ghi nguyên nhân tìm thấy tại chỗ'),
+          // 422 của phiếu phòng ngừa: còn mục checklist chưa ghi (OPS-FR-007), ví dụ vừa có người sửa checklist
+          422: isPreventive
+            ? t('Cần ghi kết quả mọi mục checklist trước khi báo xong')
+            : t('Cảnh báo thiết bị cần ghi nguyên nhân tìm thấy tại chỗ'),
         })
       : null
 
