@@ -1,7 +1,7 @@
 // Test kênh theo mức cảnh báo ở trang Cài đặt (ALERT-FR-005)
 import { describe, expect, it } from 'vitest';
 import {
-  bySeverityPayload, levelChannelsOf, urgentHasOutsideChannel,
+  applyGeneralPush, bySeverityPayload, levelChannelsOf, urgentHasOutsideChannel,
 } from '@/validations/common/notificationChannels.validation';
 import type { NotificationPreferences } from '@/types';
 
@@ -48,5 +48,20 @@ describe('urgentHasOutsideChannel', () => {
     expect(urgentHasOutsideChannel({ push: false, telegram: true }, true)).toBe(true);
     expect(urgentHasOutsideChannel({ push: false, telegram: true }, false)).toBe(false);
     expect(urgentHasOutsideChannel({ push: false, telegram: false }, true)).toBe(false);
+  });
+});
+
+describe('applyGeneralPush', () => {
+  it('tắt Push chung rồi lưu: mọi cấp tắt push, không còn ghi đè nào', () => {
+    const prefs: NotificationPreferences = { push: true, telegram: true, quiet_hours: quiet };
+    const general = { push: false, telegram: true };
+    const levels = applyGeneralPush(levelChannelsOf(prefs), general.push);
+    expect(levels.P1).toEqual({ push: false, telegram: true });
+    expect(bySeverityPayload(levels, general)).toEqual({ CRITICAL: null, HIGH: null, MEDIUM: null, LOW: null });
+  });
+
+  it('giữ Telegram riêng của từng cấp', () => {
+    const prefs: NotificationPreferences = { push: false, telegram: true, quiet_hours: quiet, by_severity: { LOW: { telegram: false } } };
+    expect(applyGeneralPush(levelChannelsOf(prefs), true).P3).toEqual({ push: true, telegram: false });
   });
 });
