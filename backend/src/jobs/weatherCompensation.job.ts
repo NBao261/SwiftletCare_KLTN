@@ -6,7 +6,7 @@ import cron from 'node-cron'
 import { runWeatherCompensation } from '@/services/weatherCompensation.service'
 import logger from '@/utils/logger.util'
 
-/** Phút 10 mỗi giờ: sau job thời tiết (phút 5) để cùng một lượt số của Open-Meteo */
+/** Phút 10 mỗi giờ (Report 3 §4.5); service tự gọi dự báo của Open-Meteo, không phụ thuộc job thời tiết ở phút 5 */
 const CRON_EXPRESSION = '0 10 * * * *'
 
 export function startWeatherCompensationJob(): void {

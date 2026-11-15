@@ -4903,11 +4903,11 @@ paths:
         (`COUNTING_RING_UPDATED`), kết luận cảnh báo (`ALERT_VERDICT_SET`), kết luận báo cáo
         (`HEALTH_REPORT_CONCLUDED`), chấp nhận / hoàn lại thay đổi của Farm Owner (`REVIEW_ACCEPTED`,
         `REVIEW_REVERTED`), duyệt / từ chối đề xuất hệ số (`PROPOSAL_APPROVED`, `PROPOSAL_REJECTED`),
-        mức chỉ số sức khỏe của nhà (`HEALTH_LEVELS_UPDATED`).
+        mức chỉ số sức khỏe của nhà (`HEALTH_LEVELS_UPDATED`), luật bù thời tiết (`WEATHER_RULES_UPDATED`).
         Mỗi quyết định một dòng: hoàn lại hoặc duyệt đề xuất chỉ hiện `REVIEW_REVERTED` / `PROPOSAL_APPROVED`,
         không thêm dòng đổi ngưỡng / hệ số của chính thao tác đó.
         Quyết định mà Farm Owner làm thay khi farm chưa có chuyên gia
-        (BR-22: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, mức chỉ số sức khỏe) cũng được liệt kê,
+        (BR-22: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, mức chỉ số sức khỏe, luật bù thời tiết) cũng được liệt kê,
         với `actor_role = FARM_OWNER`. Mới nhất trước. Technician, Administrator → 403.
       parameters:
         - { name: farmId, in: query, required: true, schema: { type: string } }
@@ -4917,7 +4917,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED]
+            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED, WEATHER_RULES_UPDATED]
         - { name: zoneId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
         - { $ref: "#/components/parameters/Page" }

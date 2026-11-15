@@ -85,7 +85,8 @@ const HOT_RULE = { metric: 'temperature', min: 33, offset_pct: 5, duration_min: 
 /** Open-Meteo giả: mốc giờ tới có nhiệt độ `temp` (giờ GMT, như API thật) */
 function mockForecast(temp: number, now: Date) {
   const hour = (h: number) => new Date(now.getTime() + h * 3600_000).toISOString().slice(0, 13) + ':00'
-  return jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+  // Mỗi lần gọi một Response mới: body của Response chỉ đọc được một lần
+  return jest.spyOn(global, 'fetch').mockImplementation(async () => new Response(JSON.stringify({
     hourly: { time: [hour(1), hour(2)], temperature_2m: [temp - 1, temp], relative_humidity_2m: [70, 72], precipitation: [0, 0] },
   })))
 }
@@ -137,7 +138,51 @@ describe('ENV-FR-028 — weatherCompensation job', () => {
   })
 })
 
+describe('weatherCompensation job — failures', () => {
+  it('logs no compensation when no controller received it (broker down)', async () => {
+    const { put, t } = await seed()
+    await put(t.expert, [HOT_RULE])
+    const now = new Date('2026-11-12T03:10:00Z')
+    mockForecast(34, now)
+    jest.mocked(publishDeviceCompensation).mockReturnValue(false)
+
+    expect(await runWeatherCompensation(now)).toBe(0)
+    expect(await WeatherCompensation.countDocuments()).toBe(0)
+    jest.mocked(publishDeviceCompensation).mockReturnValue(true)
+  })
+
+  it('keeps going to the next house when one house fails', async () => {
+    const first = await seed()
+    const second = await seed()
+    await first.put(first.t.expert, [HOT_RULE])
+    await second.put(second.t.expert, [HOT_RULE])
+    const now = new Date('2026-11-12T03:10:00Z')
+    mockForecast(34, now)
+    jest.spyOn(WeatherCompensation, 'create').mockRejectedValueOnce(new Error('db down'))
+
+    // Nhà đầu lỗi khi ghi nhật ký nhưng controller đã nhận offset; nhà sau vẫn được xử lý và ghi
+    expect(await runWeatherCompensation(now)).toBe(2)
+    expect(await WeatherCompensation.countDocuments()).toBe(1)
+    // Cả 4 controller của 2 nhà vẫn nhận +5 %
+    expect(jest.mocked(publishDeviceCompensation).mock.calls.map(([, p]) => (p as { offset_pct: number }).offset_pct)).toEqual([5, 5, 5, 5])
+  })
+})
+
 describe('ENV-FR-030 — PUT /farms/houses/:houseId/weather-rules', () => {
+  it('keeps a rule _id only when it belongs to this house and is not repeated', async () => {
+    const a = await seed()
+    const b = await seed()
+    const ownId = (await a.put(a.t.expert, [HOT_RULE])).body.data.rules[0]._id
+    const foreignId = (await b.put(b.t.expert, [HOT_RULE])).body.data.rules[0]._id
+
+    const res = await a.put(a.t.expert, [{ ...HOT_RULE, _id: ownId }, { ...HOT_RULE, _id: ownId }, { ...HOT_RULE, _id: foreignId }])
+    expect(res.status).toBe(200)
+    const ids = res.body.data.rules.map((r: { _id: string }) => r._id)
+    expect(ids[0]).toBe(ownId)
+    expect(new Set(ids).size).toBe(3)
+    expect(ids).not.toContain(foreignId)
+  })
+
   it('TC-F26-03: offset 12 % → 400, duration 3 h → 400, technician → 403 (farm with an expert)', async () => {
     const { put, t } = await seed()
     expect((await put(t.expert, [{ ...HOT_RULE, offset_pct: 12 }])).status).toBe(400)

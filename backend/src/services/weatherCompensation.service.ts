@@ -5,6 +5,7 @@ import { WeatherCompensation } from '@/models/weatherCompensation.model'
 import { publishDeviceCompensation } from '@/mqtt/mqtt.client'
 import { logAction } from '@/services/auditLog.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
+import { OPEN_METEO_URL, WEATHER_FETCH_TIMEOUT_MS } from '@/services/weather.service'
 import { assertExpertDecision, assertHouseAccess } from '@/utils/farmAccess.util'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import {
@@ -20,11 +21,6 @@ import type { CurrentUser } from '@/types'
  * gửi retained trên `…/{deviceId}/compensation` cho mọi controller của nhà. Thời tiết chỉ dời phun sương
  * trong ±10 điểm, không bao giờ đụng quạt (C-6).
  */
-
-/** Open-Meteo, chỉ gửi toạ độ farm (Report 4 §10) */
-const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast'
-/** ponytail: Open-Meteo treo thì bỏ sau 10 giây, giờ sau gọi lại (cùng hằng số với job thời tiết của G-11) */
-const FORECAST_TIMEOUT_MS = 10_000
 
 const ruleView = (rules: IHouse['weather_rules']) => rules.map(r => ({
   _id: String(r._id), metric: r.metric, min: r.min, offset_pct: r.offset_pct, duration_min: r.duration_min, active: r.active,
@@ -46,7 +42,8 @@ export async function getWeatherRules(houseId: string, user: CurrentUser) {
 
 /**
  * ENV-FR-030 — thay cả bộ luật của nhà (như lịch trực): lưu lịch sử cũ/mới, ghi audit, báo Farm Owner khi
- * chuyên gia đổi (EXPERT-FR-009). Luật giữ `_id` cũ khi gửi kèm, để `rule_id` trong nhật ký bù vẫn trỏ đúng.
+ * chuyên gia đổi (EXPERT-FR-009). Luật giữ `_id` cũ khi gửi kèm, để `rule_id` trong nhật ký bù vẫn trỏ đúng;
+ * `_id` không thuộc nhà này hoặc gửi trùng thì bỏ, Mongoose cấp id mới. Luật mới có hiệu lực từ lần job kế tiếp.
  */
 export async function setWeatherRules(
   houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>,
@@ -54,11 +51,18 @@ export async function setWeatherRules(
   const { house, farm } = await assertHouseAccess(houseId, user)
   // BR-22 — Farm Owner chỉ đặt thay khi farm chưa có chuyên gia; Farm Technician đã bị chặn ở route
   await assertExpertDecision(farm, user)
-  const next = rules.map(r => ({
-    ...(r._id && { _id: r._id }),
-    metric: r.metric, min: Number(r.min), offset_pct: Number(r.offset_pct), duration_min: Number(r.duration_min),
-    active: r.active !== false,
-  }))
+  const ownIds = new Set(house.weather_rules.map(r => String(r._id)))
+  const keptIds = new Set<string>()
+  const next = rules.map(r => {
+    const id = r._id === undefined ? undefined : String(r._id)
+    const keepId = id !== undefined && ownIds.has(id) && !keptIds.has(id)
+    if (keepId) keptIds.add(id)
+    return {
+      ...(keepId && { _id: id }),
+      metric: r.metric, min: Number(r.min), offset_pct: Number(r.offset_pct), duration_min: Number(r.duration_min),
+      active: r.active !== false,
+    }
+  })
   assertValidWeatherRules(next)
 
   const before = ruleView(house.weather_rules)
@@ -83,7 +87,7 @@ export async function setWeatherRules(
 
 /** ENV-FR-028 — dự báo 2 giờ tới tại toạ độ farm; lỗi mạng hoặc Open-Meteo lỗi thì null (nơi gọi gửi 0) */
 export async function fetchForecast(coordinates: { lat: number; lng: number }, now = new Date()): Promise<ForecastSummary | null> {
-  const url = new URL(OPEN_METEO_URL)
+  const url = new URL(OPEN_METEO_URL())
   url.searchParams.set('latitude', String(coordinates.lat))
   url.searchParams.set('longitude', String(coordinates.lng))
   url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation')
@@ -91,7 +95,7 @@ export async function fetchForecast(coordinates: { lat: number; lng: number }, n
   // 2 ngày để cửa sổ 2 giờ qua nửa đêm GMT vẫn đủ mốc
   url.searchParams.set('forecast_days', '2')
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(FORECAST_TIMEOUT_MS) })
+    const res = await fetch(url, { signal: AbortSignal.timeout(WEATHER_FETCH_TIMEOUT_MS) })
     if (!res.ok) throw new Error(`Open-Meteo trả ${res.status}`)
     const body = (await res.json()) as { hourly?: Parameters<typeof summariseForecast>[0] }
     return summariseForecast(body.hourly, now)
@@ -104,7 +108,8 @@ export async function fetchForecast(coordinates: { lat: number; lng: number }, n
 /**
  * ENV-FR-028, BR-38 — gọi mỗi giờ từ jobs/weatherCompensation.job.ts. Mỗi nhà có controller: tính offset từ
  * luật đang bật và dự báo của farm (mỗi farm chỉ gọi Open-Meteo một lần), gửi cho mọi controller của nhà với
- * hạn ≤ 2 giờ; không luật nào thoả, không có luật hoặc không có dự báo thì gửi 0. Trả số nhà có offset khác 0.
+ * hạn ≤ 2 giờ; không luật nào thoả, không có luật hoặc không có dự báo thì gửi 0. Lỗi ở một nhà không làm các nhà
+ * sau mất offset mới. Trả số nhà đã nhận offset khác 0.
  */
 export async function runWeatherCompensation(now = new Date()): Promise<number> {
   const nodes = await SensorNode.find({ ...IN_SERVICE }).select('device_id zone_id').lean()
@@ -122,31 +127,37 @@ export async function runWeatherCompensation(now = new Date()): Promise<number> 
   const forecastOf = async (farmId: string) => {
     if (!forecasts.has(farmId)) {
       forecasts.set(farmId, Farm.findById(farmId).select('coordinates').lean()
-        .then(farm => (farm?.coordinates?.lat !== undefined ? fetchForecast(farm.coordinates, now) : null)))
+        .then(farm => (farm?.coordinates?.lat !== undefined ? fetchForecast(farm.coordinates, now) : null))
+        .catch(() => null))
     }
     return forecasts.get(farmId)!
   }
 
   let compensated = 0
   for (const house of houses) {
-    const devices = devicesOfHouse.get(String(house._id)) ?? []
-    const active = (house.weather_rules ?? []).filter(r => r.active)
-    // Không luật nào bật thì không gọi Open-Meteo
-    const forecast = active.length ? await forecastOf(String(house.farm_id)) : null
-    const rule = pickCompensation(active, forecast)
-    const expiresAt = new Date(now.getTime() + (rule ? Math.min(rule.duration_min * 60_000, WEATHER_COMP_MAX_MS) : 0))
-    const payload = {
-      offset_pct: rule?.offset_pct ?? 0,
-      expires_at: expiresAt.getTime(),
-      rule_id: rule ? String(rule._id) : null,
+    try {
+      const devices = devicesOfHouse.get(String(house._id)) ?? []
+      const active = (house.weather_rules ?? []).filter(r => r.active)
+      // Không luật nào bật thì không gọi Open-Meteo
+      const forecast = active.length ? await forecastOf(String(house.farm_id)) : null
+      const rule = pickCompensation(active, forecast)
+      const expiresAt = new Date(now.getTime() + (rule ? Math.min(rule.duration_min * 60_000, WEATHER_COMP_MAX_MS) : 0))
+      const payload = {
+        offset_pct: rule?.offset_pct ?? 0,
+        expires_at: expiresAt.getTime(),
+        rule_id: rule ? String(rule._id) : null,
+      }
+      const sent = devices.filter(deviceId => publishDeviceCompensation(deviceId, { deviceId, ...payload })).length
+      // NFR-16 so giờ có và không có bù: không controller nào nhận (mất broker) thì giờ đó không được bù
+      if (!rule || sent === 0) continue
+      compensated++
+      await WeatherCompensation.create({
+        farm_id: house.farm_id, house_id: house._id, rule_id: rule._id, offset_pct: rule.offset_pct,
+        sent_at: now, expires_at: expiresAt, forecast, controllers: sent,
+      })
+    } catch (err) {
+      logger.error('Bù thời tiết của một nhà thất bại', { houseId: String(house._id), err: (err as Error).message })
     }
-    const sent = devices.filter(deviceId => publishDeviceCompensation(deviceId, { deviceId, ...payload })).length
-    if (!rule) continue
-    compensated++
-    await WeatherCompensation.create({
-      farm_id: house.farm_id, house_id: house._id, rule_id: rule._id, offset_pct: rule.offset_pct,
-      sent_at: now, expires_at: expiresAt, forecast, controllers: sent,
-    })
   }
   return compensated
 }
