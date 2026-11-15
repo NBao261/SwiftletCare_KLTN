@@ -38,9 +38,9 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
     setTouched(false)
   }
 
-  const inputCls = (err?: string) => cn(
+  const inputClass = (error?: string) => cn(
     'w-full rounded-lg border px-2.5 py-1.5 text-sm text-charcoal bg-white outline-none transition-colors',
-    err ? 'border-alertRed focus:ring-1 focus:ring-alertRed/30' : 'border-warmGray/15 focus:border-charcoal focus:ring-1 focus:ring-charcoal/20',
+    error ? 'border-alertRed focus:ring-1 focus:ring-alertRed/30' : 'border-warmGray/15 focus:border-charcoal focus:ring-1 focus:ring-charcoal/20',
     disabled && 'opacity-50 cursor-not-allowed',
   )
 
@@ -54,9 +54,9 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
           <select
             id="wr-metric"
             value={draft.metric}
-            onChange={e => setDraft(d => ({ ...d, metric: e.target.value as WeatherRule['metric'], min: undefined }))}
+            onChange={event => setDraft(current => ({ ...current, metric: event.target.value as WeatherRule['metric'], min: undefined }))}
             disabled={disabled}
-            className={cn(inputCls(errors.metric), 'appearance-none')}
+            className={cn(inputClass(errors.metric), 'appearance-none')}
           >
             <option value="">— Chọn chỉ số —</option>
             {METRIC_OPTIONS.map(option => (
@@ -74,10 +74,10 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
             id="wr-min"
             type="number"
             value={draft.min ?? ''}
-            onChange={e => setDraft(d => ({ ...d, min: e.target.value === '' ? undefined : Number(e.target.value) }))}
+            onChange={event => setDraft(current => ({ ...current, min: event.target.value === '' ? undefined : Number(event.target.value) }))}
             disabled={disabled || !draft.metric}
             placeholder={metaRange ? `vd. ${metaRange.max * 0.7 | 0}` : '—'}
-            className={inputCls(errors.min)}
+            className={inputClass(errors.min)}
           />
           {errors.min && <p className="text-xs text-alertRed">{errors.min}</p>}
         </div>
@@ -88,11 +88,11 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
             id="wr-offset"
             type="number"
             value={draft.offset_pct ?? ''}
-            onChange={e => setDraft(d => ({ ...d, offset_pct: e.target.value === '' ? undefined : Number(e.target.value) }))}
+            onChange={event => setDraft(current => ({ ...current, offset_pct: event.target.value === '' ? undefined : Number(event.target.value) }))}
             disabled={disabled}
             step={1}
             placeholder="vd. +5 hoặc −3"
-            className={inputCls(errors.offset_pct)}
+            className={inputClass(errors.offset_pct)}
           />
           {errors.offset_pct && <p className="text-xs text-alertRed">{errors.offset_pct}</p>}
         </div>
@@ -103,11 +103,11 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
             id="wr-duration"
             type="number"
             value={draft.duration_min ?? ''}
-            onChange={e => setDraft(d => ({ ...d, duration_min: e.target.value === '' ? undefined : Number(e.target.value) }))}
+            onChange={event => setDraft(current => ({ ...current, duration_min: event.target.value === '' ? undefined : Number(event.target.value) }))}
             disabled={disabled}
             step={1}
             placeholder="vd. 60"
-            className={inputCls(errors.duration_min)}
+            className={inputClass(errors.duration_min)}
           />
           {errors.duration_min && <p className="text-xs text-alertRed">{errors.duration_min}</p>}
         </div>

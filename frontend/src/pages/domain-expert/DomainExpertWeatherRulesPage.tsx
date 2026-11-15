@@ -5,6 +5,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { useZoneStore } from '@/stores/zoneStore'
+import { useToastStore } from '@/stores/toastStore'
 import { useWeatherRules, useUpdateWeatherRules } from '@/hooks/domain-expert/useWeatherRules'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import type { WeatherRule } from '@/types/expert.types'
@@ -43,57 +44,88 @@ export default function DomainExpertWeatherRulesPage() {
   const { data, isLoading, isError } = useWeatherRules(selectedHouseId ?? undefined)
   const mutation = useUpdateWeatherRules(selectedHouseId ?? undefined)
   const getErrorMessage = useApiErrorMessage()
+  const pushToast = useToastStore(state => state.push)
 
   const [localRules, setLocalRules] = useState<WeatherRule[] | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
     setLocalRules(null)
     setSaveError(null)
-    setSaveSuccess(false)
   }, [selectedHouseId])
 
   const rules: WeatherRule[] = localRules ?? data?.rules ?? []
   const isDirty = localRules !== null
 
   function handleAdd(rule: WeatherRule) {
-    setLocalRules(prev => [...(prev ?? data?.rules ?? []), rule])
-    setSaveSuccess(false)
+    setLocalRules(currentRules => [...(currentRules ?? data?.rules ?? []), rule])
   }
 
   function handleRemove(index: number) {
-    setLocalRules(prev => {
-      const base = prev ?? data?.rules ?? []
-      return base.filter((_, i) => i !== index)
+    setLocalRules(currentRules => {
+      const base = currentRules ?? data?.rules ?? []
+      return base.filter((_, position) => position !== index)
     })
-    setSaveSuccess(false)
   }
 
   function handleToggle(index: number) {
-    setLocalRules(prev => {
-      const base = prev ?? data?.rules ?? []
-      return base.map((r, i) => i === index ? { ...r, active: !r.active } : r)
+    setLocalRules(currentRules => {
+      const base = currentRules ?? data?.rules ?? []
+      return base.map((rule, position) => position === index ? { ...rule, active: !rule.active } : rule)
     })
-    setSaveSuccess(false)
   }
 
   async function handleSave() {
     setSaveError(null)
-    setSaveSuccess(false)
     try {
       await mutation.mutateAsync(rules)
       setLocalRules(null)
-      setSaveSuccess(true)
-    } catch (err) {
-      setSaveError(getErrorMessage(err))
+      pushToast('Đã lưu luật bù thời tiết.', 'success')
+    } catch (error) {
+      setSaveError(getErrorMessage(error))
     }
   }
 
   function handleDiscard() {
     setLocalRules(null)
     setSaveError(null)
-    setSaveSuccess(false)
+  }
+
+  function renderLastCompensation() {
+    if (isLoading) return <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />
+    if (isError) return null
+    if (data?.last_compensation) return <LastCompensationBadge data={data.last_compensation} />
+    return (
+      <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
+        <Info className="w-4 h-4 shrink-0" />
+        <span>Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).</span>
+      </div>
+    )
+  }
+
+  function renderRulesList() {
+    if (isLoading) return <LoadingSkeleton count={3} className="h-12 w-full rounded-2xl" />
+    if (rules.length === 0) {
+      return (
+        <EmptyState
+          icon={<CloudRain className="w-8 h-8" />}
+          title="Chưa có luật nào. Thêm luật đầu tiên bên dưới."
+        />
+      )
+    }
+    return (
+      <div className="space-y-1.5">
+        {rules.map((rule, index) => (
+          <WeatherRuleRow
+            key={rule._id ?? index}
+            rule={rule}
+            onToggle={() => handleToggle(index)}
+            onRemove={() => handleRemove(index)}
+            disabled={mutation.isPending}
+          />
+        ))}
+      </div>
+    )
   }
 
   if (!selectedHouseId) {
@@ -124,16 +156,7 @@ export default function DomainExpertWeatherRulesPage() {
       )}
 
       {/* Lần bù gần nhất */}
-      {isLoading ? (
-        <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />
-      ) : !isError && data?.last_compensation ? (
-        <LastCompensationBadge data={data.last_compensation} />
-      ) : !isError ? (
-        <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
-          <Info className="w-4 h-4 shrink-0" />
-          <span>Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).</span>
-        </div>
-      ) : null}
+      {renderLastCompensation()}
 
       {/* Danh sách luật hiện tại */}
       <div className="space-y-2.5">
@@ -146,26 +169,7 @@ export default function DomainExpertWeatherRulesPage() {
           )}
         </div>
 
-        {isLoading ? (
-          <LoadingSkeleton count={3} className="h-12 w-full rounded-2xl" />
-        ) : rules.length === 0 ? (
-          <EmptyState
-            icon={<CloudRain className="w-8 h-8" />}
-            title="Chưa có luật nào. Thêm luật đầu tiên bên dưới."
-          />
-        ) : (
-          <div className="space-y-1.5">
-            {rules.map((rule, idx) => (
-              <WeatherRuleRow
-                key={rule._id ?? idx}
-                rule={rule}
-                onToggle={() => handleToggle(idx)}
-                onRemove={() => handleRemove(idx)}
-                disabled={mutation.isPending}
-              />
-            ))}
-          </div>
-        )}
+        {renderRulesList()}
       </div>
 
       {/* Form thêm luật mới — ẩn khi đang tải hoặc GET lỗi */}
@@ -180,29 +184,19 @@ export default function DomainExpertWeatherRulesPage() {
         </div>
       )}
 
-      {(isDirty || saveSuccess) && (
-        <div className="flex items-center justify-between gap-3 pt-2 border-t border-warmGray/10">
-          <div>
-            {saveSuccess && !isDirty && (
-              <span className="text-sm text-success font-medium">Đã lưu luật thành công.</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {isDirty && (
-              <Button variant="secondary" size="sm" onClick={handleDiscard} disabled={mutation.isPending}>
-                Huỷ thay đổi
-              </Button>
-            )}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSave}
-              disabled={!isDirty}
-              loading={mutation.isPending}
-            >
-              Lưu luật
-            </Button>
-          </div>
+      {isDirty && (
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
+          <Button variant="secondary" size="sm" onClick={handleDiscard} disabled={mutation.isPending}>
+            Huỷ thay đổi
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSave}
+            loading={mutation.isPending}
+          >
+            Lưu luật
+          </Button>
         </div>
       )}
     </div>

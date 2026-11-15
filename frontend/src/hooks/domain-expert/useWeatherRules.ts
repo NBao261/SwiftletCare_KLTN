@@ -8,7 +8,7 @@ export const WEATHER_RULES_KEY = (houseId: string | undefined) =>
 export function useWeatherRules(houseId: string | undefined) {
   return useQuery({
     queryKey: WEATHER_RULES_KEY(houseId),
-    queryFn: () => weatherRulesApi.getByHouse(houseId!).then(r => r.data.data),
+    queryFn: () => weatherRulesApi.getByHouse(houseId!).then(response => response.data.data),
     enabled: !!houseId,
   })
 }
@@ -17,7 +17,7 @@ export function useUpdateWeatherRules(houseId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (rules: WeatherRule[]) =>
-      weatherRulesApi.updateByHouse(houseId!, rules).then(r => r.data.data),
+      weatherRulesApi.updateByHouse(houseId!, rules).then(response => response.data.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: WEATHER_RULES_KEY(houseId) })
     },
