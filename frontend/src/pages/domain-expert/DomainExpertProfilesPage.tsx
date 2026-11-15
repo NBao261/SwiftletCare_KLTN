@@ -34,7 +34,7 @@ export default function DomainExpertProfilesPage() {
   const [editTarget, setEditTarget] = useState<ConfigProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: profiles, isLoading } = useProfiles(farmId, statusFilter === 'ALL' ? undefined : statusFilter)
+  const { data: profiles, isLoading, isError, refetch } = useProfiles(farmId, statusFilter === 'ALL' ? undefined : statusFilter)
   const createMut = useCreateProfile(farmId)
   const updateMut = useUpdateProfile(farmId)
   const approveMut = useApproveProfile(farmId)
@@ -135,6 +135,12 @@ export default function DomainExpertProfilesPage() {
 
       {isLoading ? (
         <LoadingSkeleton count={3} className="h-16 w-full rounded-2xl" />
+      ) : isError ? (
+        <EmptyState
+          icon={<AlertTriangle className="w-9 h-9 text-alertRed" />}
+          title="Không thể tải danh sách hồ sơ. Kiểm tra kết nối và thử lại."
+          action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+        />
       ) : !profiles || profiles.length === 0 ? (
         <EmptyState
           icon={<BookCopy className="w-9 h-9" />}

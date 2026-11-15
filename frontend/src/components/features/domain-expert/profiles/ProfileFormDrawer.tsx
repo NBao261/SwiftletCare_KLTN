@@ -253,7 +253,7 @@ function GroupToggle({
   return (
     <div className={cn('rounded-xl border transition-colors', active ? 'border-charcoal/20 bg-warmGray/5' : 'border-warmGray/15 bg-white')}>
       <div className="flex items-center gap-3 p-3">
-        <input type="checkbox" checked={active} onChange={onToggle} className="w-4 h-4 rounded accent-charcoal" />
+        <input type="checkbox" checked={active} onChange={onToggle} aria-label={`Bật nhóm: ${label}`} className="w-4 h-4 rounded accent-charcoal" />
         <span className={cn('flex-1 text-sm font-medium', active ? 'text-charcoal' : 'text-warmGray')}>{label}</span>
         {active && (
           <button
