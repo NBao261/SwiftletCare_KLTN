@@ -83,10 +83,13 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
     // Bỏ ?highlight để F5 không mở lại
     if (searchParams.has('highlight')) setSearchParams({}, { replace: true });
   };
+  // Chọn hàng khác thì bỏ ?highlight, để bấm lại chuông của cảnh báo cũ vẫn đổi URL và mở được
   const handleAction = useCallback((action: AlertAction, alert: Alert) => {
-    if (action === 'view') setDetailId(alert._id);
-    else setAckAlert(alert);
-  }, []);
+    if (action === 'view') {
+      setDetailId(alert._id);
+      if (highlightId && highlightId !== alert._id) setSearchParams({}, { replace: true });
+    } else setAckAlert(alert);
+  }, [highlightId, setSearchParams]);
 
   return (
     <div className="flex flex-1 flex-col gap-6">

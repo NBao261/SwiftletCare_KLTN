@@ -4,6 +4,7 @@ import { alertApi } from '@/apis/shared/alerts.api'
 import { useAlertStore } from '@/stores/alertStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
+import { newestFirstPage } from '@/lib/helpers'
 import type { Alert, AlertStatus, SiteCause } from '@/types'
 
 export interface AlertsListQuery {
@@ -22,11 +23,34 @@ export const ALERT_PAGE_SIZE = 10
 export function useAlertsList(query: AlertsListQuery, options?: { enabled?: boolean }) {
   return usePaginatedListQuery<Alert>(
     ['alerts', query],
-    () => alertApi.list(query as Record<string, string>),
+    () => listAlerts(query),
     query.page ?? 1,
     query.limit ?? 20,
     options,
   )
+}
+
+// Số dòng tối đa backend trả mỗi request (paginate, maxLimit)
+const BACKEND_MAX_LIMIT = 100
+
+// GET /alerts chỉ nhận 1 mức: nhiều mức (cấp Khẩn cấp = CRITICAL,HIGH) thì gọi từng mức rồi ghép, mới nhất trước
+// ponytail: mỗi mức lấy page × limit dòng đầu, trần 100 dòng của backend nên chỉ đúng tới trang 100 / limit; backend nhận danh sách mức thì bỏ nhánh này
+async function listAlerts(query: AlertsListQuery) {
+  const severities = query.severity?.split(',') ?? []
+  if (severities.length < 2) return alertApi.list(query as Record<string, string>)
+  const page = query.page ?? 1
+  const limit = query.limit ?? 20
+  const window = Math.min(page * limit, BACKEND_MAX_LIMIT)
+  const responses = await Promise.all(severities.map(severity =>
+    alertApi.list({ ...query, severity, page: 1, limit: window } as unknown as Record<string, string>)))
+  const first = responses[0].data
+  return {
+    data: {
+      ...first,
+      data: newestFirstPage(responses.map(response => response.data.data), page, limit),
+      meta: { ...first.meta, page, limit, total: responses.reduce((sum, response) => sum + (response.data.meta?.total ?? 0), 0) },
+    },
+  }
 }
 
 const ACTIVE_SAMPLE_LIMIT = 100
