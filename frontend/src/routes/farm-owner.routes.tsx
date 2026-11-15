@@ -17,6 +17,7 @@ const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarv
 const FarmOwnerHealthPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthPage'))
 const FarmOwnerHealthReportPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthReportPage'))
 const FarmOwnerWorkOrdersPage = lazy(() => import('@/pages/farm-owner/FarmOwnerWorkOrdersPage'))
+const FarmOwnerOverviewPage = lazy(() => import('@/pages/farm-owner/FarmOwnerOverviewPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
 /** /farms dùng chung URL nhưng Farm Technician có trang riêng (chỉ cấu trúc + thiết bị nhà được giao) */
@@ -48,6 +49,14 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerDeviceDetailPage />
+        </RequireRole>
+      }
+    />
+    <Route
+      path="overview"
+      element={
+        <RequireRole allow={FARM_SIDE_ROLES}>
+          <FarmOwnerOverviewPage />
         </RequireRole>
       }
     />
