@@ -31,8 +31,8 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'clearRelayOverride')).toBe(false)
   })
 
-  it('chỉ Farm Owner tạo trang trại, nhà yến và đăng ký camera', () => {
-    for (const action of ['createFarm', 'createHouse', 'registerCamera'] as const) {
+  it('chỉ Farm Owner tạo trang trại, nhà yến, đăng ký camera và xác nhận cảnh báo (BZ-16)', () => {
+    for (const action of ['createFarm', 'createHouse', 'registerCamera', 'acknowledgeAlert'] as const) {
       expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(true)
       expect(canPerform(buildUser('DOMAIN_EXPERT'), action)).toBe(false)
     }

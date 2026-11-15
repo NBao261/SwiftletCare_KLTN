@@ -182,7 +182,12 @@ export function AlertDetailContent({
         {onsiteCheck && <OnsiteCheckCard check={onsiteCheck} />}
 
         {canPerform(user, 'viewWorkOrders') && (
-          <AlertWorkOrderCard alertId={alert._id} houseName={location?.houseName ?? '_'} enabled={isReady} />
+          <AlertWorkOrderCard
+            alertId={alert._id}
+            houseName={location?.houseName ?? '_'}
+            enabled={isReady}
+            onLeave={onLeave}
+          />
         )}
 
         <AlertTimeline

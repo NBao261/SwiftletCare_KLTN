@@ -17,6 +17,7 @@ const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarv
 const FarmOwnerMaintenancePage = lazy(() => import('@/pages/farm-owner/FarmOwnerMaintenancePage'))
 const FarmOwnerHealthPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthPage'))
 const FarmOwnerHealthReportPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthReportPage'))
+const FarmOwnerWorkOrdersPage = lazy(() => import('@/pages/farm-owner/FarmOwnerWorkOrdersPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
 /** /farms dùng chung URL nhưng Farm Technician có trang riêng (chỉ cấu trúc + thiết bị nhà được giao) */
@@ -122,6 +123,15 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerHealthReportPage />
+        </RequireRole>
+      }
+    />
+    {/* MF-02 — Work Order sửa chữa: Farm Owner mở, duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ đọc (Report 3 §2.4) */}
+    <Route
+      path="work-orders"
+      element={
+        <RequireRole allow={FARM_SIDE_ROLES}>
+          <FarmOwnerWorkOrdersPage />
         </RequireRole>
       }
     />

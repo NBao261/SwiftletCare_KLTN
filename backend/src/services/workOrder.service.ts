@@ -1,7 +1,9 @@
+import { randomUUID } from 'crypto'
 import { Types } from 'mongoose'
 import { Alert, IAlert, OPEN_ALERT_STATUSES } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
-import { House } from '@/models/houseZone.model'
+import { House, Zone } from '@/models/houseZone.model'
+import { Telemetry } from '@/models/telemetry.model'
 import {
   ChecklistItem, IWorkOrder, OPEN_WORK_ORDER_STATUSES, SiteCause, WorkOrder, WorkOrderOrigin, WorkOrderStatus,
 } from '@/models/workOrder.model'
@@ -44,9 +46,9 @@ export async function storePhotos(files: UploadedPhoto[], prefix: string): Promi
     if (!PHOTO_TYPES[file.mimetype]) throw BadRequestError('Ảnh phải là JPEG, PNG hoặc WebP')
     if (file.size > MAX_PHOTO_BYTES) throw BadRequestError('Mỗi ảnh tối đa 5 MB')
   }
-  const stamp = Date.now()
-  return Promise.all(files.map(async (file, i) => {
-    const key = `${prefix}/${stamp}-${i}.${PHOTO_TYPES[file.mimetype]}`
+  // Khoá ngẫu nhiên: 2 request cùng 1 mili giây không ghi đè ảnh của nhau
+  return Promise.all(files.map(async file => {
+    const key = `${prefix}/${randomUUID()}.${PHOTO_TYPES[file.mimetype]}`
     await putObject(key, file.buffer, file.mimetype)
     return key
   }))
@@ -112,17 +114,39 @@ async function findOpenForIncident(
 }
 
 /**
+ * Gắn cảnh báo mới vào Work Order chưa đóng của cùng sự cố; null = không có Work Order nào để gắn (hoặc nó vừa
+ * đóng giữa lúc đọc và lúc ghi). Thử lại 1 lần khi Work Order vừa đổi trạng thái; vẫn đổi liên tục thì gắn không điều
+ * kiện vào Work Order còn mở, không mở Work Order thứ hai cho cùng sự cố (BR-39).
+ */
+async function attachToOpenIncident(houseId: unknown, alert: IAlert): Promise<IWorkOrder | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const existing = await findOpenForIncident(houseId, alert)
+    if (!existing) return null
+    const linked = await relinkRecurringIncident(existing, alert)
+    if (linked) return linked
+  }
+  const existing = await findOpenForIncident(houseId, alert)
+  if (!existing) return null
+  logger.warn('Work Order đổi trạng thái liên tục khi gắn cảnh báo mới; gắn không điều kiện', {
+    workOrderId: String(existing._id), alertId: String(alert._id),
+  })
+  await WorkOrder.updateOne({ _id: existing._id }, { $set: { alert_id: alert._id } })
+  existing.alert_id = alert._id
+  return existing
+}
+
+/**
  * Mở Work Order sửa chữa cho 1 cảnh báo, giao thợ đang trực của nhà (nhà không có thợ thì để trống, Farm Owner
  * xử lý). Cùng sự cố đã có Work Order chưa đóng thì không mở thêm mà gắn cảnh báo mới vào Work Order đó (BR-39);
- * nếu nó đang VERIFYING thì sự cố quay lại → IN_PROGRESS (OPS-FR-003).
+ * nếu nó đang chờ kiểm phục hồi hay chờ duyệt thì sự cố quay lại → IN_PROGRESS (OPS-FR-003).
  */
 export async function openWorkOrderForAlert(
   alert: IAlert, origin: Exclude<WorkOrderOrigin, 'MANUAL'>, openedBy?: string,
 ): Promise<IWorkOrder | null> {
   const house = await findAlertHouse(alert)
   if (!house) return null
-  const existing = await findOpenForIncident(house._id, alert)
-  if (existing) return relinkRecurringIncident(existing, alert)
+  const linked = await attachToOpenIncident(house._id, alert)
+  if (linked) return linked
 
   const farm = await Farm.findById(house.farm_id).select('members')
   if (!farm) return null
@@ -132,7 +156,7 @@ export async function openWorkOrderForAlert(
       farm_id: house.farm_id, house_id: house._id, zone_id: alert.zone_id, node_id: alert.node_id,
       alert_id: alert._id, alert_type: alert.type, origin, kind: 'REPAIR',
       title: `Sửa chữa: ${alert.title}`, description: alert.message,
-      assignee_id: assignee ?? undefined, opened_by: openedBy,
+      assignee_id: assignee ?? undefined, ...(assignee && { assigned_at: new Date() }), opened_by: openedBy,
       history: [historyEntry(undefined, 'OPEN', openedBy)],
     })
     await notifyAll(await handlerIds(wo), wo, `Work Order mới: ${alert.title}`, alert.message)
@@ -144,18 +168,34 @@ export async function openWorkOrderForAlert(
   }
 }
 
-async function relinkRecurringIncident(wo: IWorkOrder, alert: IAlert): Promise<IWorkOrder> {
+/** Đã báo xong (đang kiểm hay chờ duyệt) mà sự cố còn hoặc quay lại: trở lại "đang làm", báo người xử lý (OPS-FR-003) */
+const DONE_STATUSES: WorkOrderStatus[] = ['VERIFYING', 'AWAITING_APPROVAL']
+
+async function backToInProgress(wo: IWorkOrder, set: Record<string, unknown>, title: string): Promise<IWorkOrder> {
+  const reopened = await transition(wo, DONE_STATUSES, 'IN_PROGRESS', { ...set, done_at: null, verified_at: null },
+    undefined, 'Sự cố còn hoặc quay lại sau khi báo xong (BR-41)')
+  // Farm Owner đã nhận "chờ duyệt" thì cũng được báo, kẻo bấm duyệt rồi gặp 409
+  const recipients = new Set(await handlerIds(reopened))
+  if (wo.status === 'AWAITING_APPROVAL') for (const id of await ownerIdsOf(wo.farm_id)) recipients.add(id)
+  await notifyAll([...recipients], reopened, `Sự cố quay lại: ${title}`,
+    'Dữ liệu chưa phục hồi sau khi báo xong — Work Order trở lại "đang làm".')
+  return reopened
+}
+
+/**
+ * Cảnh báo mới của sự cố đã có Work Order chưa đóng. Đã báo xong thì sự cố quay lại → IN_PROGRESS: kể cả lúc chờ
+ * duyệt, để Farm Owner không duyệt và đóng nhầm cảnh báo còn đang chạy. Ghi có điều kiện theo trạng thái đã đọc:
+ * Work Order vừa đóng hay đổi trạng thái thì trả null để nơi gọi đọc lại.
+ */
+async function relinkRecurringIncident(wo: IWorkOrder, alert: IAlert): Promise<IWorkOrder | null> {
   if (String(wo.alert_id) === String(alert._id)) return wo
-  if (wo.status === 'VERIFYING') {
-    const reopened = await transition(wo, ['VERIFYING'], 'IN_PROGRESS', { alert_id: alert._id }, undefined,
-      'Sự cố quay lại trong lúc kiểm phục hồi (BR-41)')
-    await notifyAll(await handlerIds(reopened), reopened, `Sự cố quay lại: ${alert.title}`,
-      'Dữ liệu chưa phục hồi sau khi báo xong — Work Order trở lại "đang làm".')
-    return reopened
+  try {
+    if (DONE_STATUSES.includes(wo.status)) return await backToInProgress(wo, { alert_id: alert._id }, alert.title)
+  } catch (err) {
+    if (err instanceof AppError && err.statusCode === 409) return null
+    throw err
   }
-  await WorkOrder.updateOne({ _id: wo._id }, { $set: { alert_id: alert._id } })
-  wo.alert_id = alert._id
-  return wo
+  return WorkOrder.findOneAndUpdate({ _id: wo._id, status: wo.status }, { $set: { alert_id: alert._id } }, { new: true })
 }
 
 /**
@@ -169,8 +209,7 @@ export async function handleNewAlert(alert: IAlert): Promise<void> {
       return
     }
     const house = await findAlertHouse(alert)
-    const existing = house ? await findOpenForIncident(house._id, alert) : null
-    if (existing) await relinkRecurringIncident(existing, alert)
+    if (house) await attachToOpenIncident(house._id, alert)
   } catch (err) {
     logger.error('Mở/gắn Work Order cho cảnh báo mới thất bại', { alertId: String(alert._id), err })
   }
@@ -246,7 +285,7 @@ export async function createManualWorkOrder(
       farm_id: farm._id, house_id: house._id, origin: 'MANUAL', kind: 'REPAIR',
       title: input.title.trim(), description: input.description?.trim() || undefined,
       ...(alert && { alert_id: alert._id, alert_type: alert.type, zone_id: alert.zone_id, node_id: alert.node_id }),
-      assignee_id: assignee ?? undefined, opened_by: user._id,
+      assignee_id: assignee ?? undefined, ...(assignee && { assigned_at: new Date() }), opened_by: user._id,
       history: [historyEntry(undefined, 'OPEN', user._id)],
     })
   } catch (err) {
@@ -398,7 +437,10 @@ export async function completeWorkOrder(
   if (preventive && wo.checklist.some(i => !i.result)) {
     throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi kết quả mọi mục checklist trước khi báo xong (OPS-FR-007)')
   }
-  if (files.length > MAX_WORK_ORDER_PHOTOS) throw BadRequestError(`Tối đa ${MAX_WORK_ORDER_PHOTOS} ảnh`)
+  // Report 3 §4.5 — tối đa 5 ảnh cho cả Work Order: ảnh của các lần báo xong trước (trước khi bị mở lại) vẫn giữ
+  if (wo.photos.length + files.length > MAX_WORK_ORDER_PHOTOS) {
+    throw BadRequestError(`Mỗi Work Order tối đa ${MAX_WORK_ORDER_PHOTOS} ảnh (đã có ${wo.photos.length})`)
+  }
   const photos = await storePhotos(files, `work-orders/${wo._id}`)
   const now = new Date()
   const to: WorkOrderStatus = wo.alert_id && !preventive ? 'VERIFYING' : 'AWAITING_APPROVAL'
@@ -415,9 +457,10 @@ export async function completeWorkOrder(
   return presentWorkOrder(updated, true)
 }
 
-async function notifyOwnersAwaitingApproval(wo: IWorkOrder): Promise<void> {
-  await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chờ duyệt: ${wo.title}`,
-    'Đã làm xong và dữ liệu đã phục hồi — cần Farm Owner duyệt để đóng.')
+async function notifyOwnersAwaitingApproval(wo: IWorkOrder, unverified = false): Promise<void> {
+  await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chờ duyệt: ${wo.title}`, unverified
+    ? 'Đã làm xong; hệ thống chưa có dữ liệu để kiểm phục hồi — Farm Owner kiểm tại chỗ rồi duyệt để đóng.'
+    : 'Đã làm xong và dữ liệu đã phục hồi — cần Farm Owner duyệt để đóng.')
 }
 
 // ── Farm Owner (OPS-FR-004) ─────────────────────────────────────────────────
@@ -458,7 +501,8 @@ export async function reopenWorkOrder(id: string, user: CurrentUser, note: strin
 
 export async function cancelWorkOrder(id: string, user: CurrentUser, reason: string) {
   const wo = await findWorkOrderWithAccess(id, user)
-  const updated = await transition(wo, ['OPEN', 'IN_PROGRESS'], 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
+  // VERIFYING cũng huỷ được: lối ra khi điều kiện không bao giờ phục hồi theo cách hệ thống đo được (OPS-FR-004)
+  const updated = await transition(wo, ['OPEN', 'IN_PROGRESS', 'VERIFYING'], 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
   await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason })
   return presentWorkOrder(updated, true)
 }
@@ -493,10 +537,11 @@ export async function reassignWorkOrder(id: string, user: CurrentUser, assigneeI
   if (!house || !farm || !(await activeHouseTechnicianIds(house, farm)).includes(assigneeId)) {
     throw BadRequestError('Người nhận phải là Farm Technician đang được giao nhà này')
   }
+  // Không đặt lại `escalated_at`: Farm Owner vừa tự giao lại nên đã biết, và BR-40 chỉ báo trễ 1 lần cho mỗi Work Order
   const updated = await WorkOrder.findOneAndUpdate(
     { _id: wo._id, status: wo.status },
     {
-      $set: { assignee_id: assigneeId, escalated_at: null },
+      $set: { assignee_id: assigneeId, assigned_at: new Date() },
       $push: { history: historyEntry(wo.status, wo.status, user._id, 'Giao lại') },
     },
     { new: true },
@@ -510,18 +555,101 @@ export async function reassignWorkOrder(id: string, user: CurrentUser, assigneeI
 // ── Kiểm phục hồi (OPS-FR-003, BR-41) và leo thang (BR-40) ──────────────────
 
 /**
- * Lúc điều kiện của cảnh báo đã phục hồi; null = chưa. Cảnh báo đóng là điều kiện đã hết: thiết bị online lại
- * (NODE_OFFLINE), dòng tải bình thường (ACTUATOR_FAULT), sự cố không tái phát (loại khác). THRESHOLD_BREACH tự
- * đóng sau 5 phút không vượt (BR-16) nên chỉ số đã về ngưỡng từ lần vượt cuối (`last_seen_at`).
+ * BR-41 — firmware chỉ gửi các cảnh báo này khi sự cố xuất hiện (không gửi lại khi sự cố còn): thấy lại sau lúc báo
+ * xong là sự cố đã quay lại. `MISTING_INEFFECTIVE` không thuộc nhóm này: firmware gửi lại mỗi 15 phút suốt lúc còn
+ * chốt ngừng phun (tới 30 phút sau khi sửa xong), nên dựa vào độ ẩm.
  */
-function recoveredSince(alert: Pick<IAlert, 'type' | 'status' | 'resolved_at' | 'last_seen_at'> | undefined): Date | null {
-  if (!alert || alert.status !== 'RESOLVED' || !alert.resolved_at) return null
+const RERAISED_ON_RECURRENCE: AlertType[] = ['SENSOR_FAULT', 'RS485_BUS_FAILURE']
+/**
+ * BR-41 — chưa có dữ liệu nào cho thấy phục hồi: `ACTUATOR_FAULT` cần dòng bình thường mà backend chưa biết mức firmware
+ * học được (board đo dòng chưa làm), `SPEAKER_FAILURE` chỉ được gửi một lần khi sự cố xuất hiện, `UNEXPECTED_RESTART`
+ * là một lần khởi động lại không bao giờ tự đóng. Work Order chuyển chờ duyệt kèm ghi chú, Farm Owner kiểm tại chỗ khi
+ * duyệt.
+ */
+const UNVERIFIABLE_RECOVERY: AlertType[] = ['ACTUATOR_FAULT', 'SPEAKER_FAILURE', 'UNEXPECTED_RESTART']
+/** Số đo của 5 cảm biến RS485 (THREAT-FR-013): cảm biến đọc lỗi thì telemetry bỏ trống trường đó */
+const RS485_FIELDS = ['temperature', 'humidity', 'light_lux', 'nh3_ppm', 'co2_ppm', 'sound_db'] as const
+
+type VerifiedAlert = Pick<IAlert, 'type' | 'status' | 'resolved_at' | 'last_seen_at' | 'node_id' | 'zone_id'>
+
+/**
+ * Lúc cảnh báo đã đóng là điều kiện đã hết; null = chưa đóng. THRESHOLD_BREACH tự đóng sau 5 phút không vượt
+ * (BR-16) nên chỉ số đã về ngưỡng từ lần vượt cuối (`last_seen_at`); NODE_OFFLINE đóng khi thiết bị online lại.
+ */
+function resolvedSince(alert: VerifiedAlert): Date | null {
+  if (alert.status !== 'RESOLVED' || !alert.resolved_at) return null
   return alert.type === 'THRESHOLD_BREACH' ? alert.last_seen_at ?? alert.resolved_at : alert.resolved_at
 }
 
 /**
+ * Telemetry của controller giữ đạt `isBad = false` liên tục ít nhất RECOVERY_VERIFY_MIN tính từ `from` (hoặc từ mẫu
+ * xấu cuối cùng sau `from`). Không có telemetry thì chưa kết luận được (thiết bị mất kết nối là chuyện của NODE_OFFLINE).
+ */
+async function telemetryStaysRecovered(nodeId: unknown, from: Date, isBad: Record<string, unknown>): Promise<boolean> {
+  const [lastBad, latest] = await Promise.all([
+    Telemetry.findOne({ node_id: nodeId, timestamp: { $gte: from }, ...isBad }).sort({ timestamp: -1 }).select('timestamp').lean(),
+    Telemetry.findOne({ node_id: nodeId, timestamp: { $gte: from } }).sort({ timestamp: -1 }).select('timestamp').lean(),
+  ])
+  if (!latest) return false
+  const recoveredFrom = lastBad ? lastBad.timestamp : from
+  return latest.timestamp.getTime() - recoveredFrom.getTime() >= RECOVERY_VERIFY_MS
+}
+
+/**
+ * BR-41 — sau "done", điều kiện của cảnh báo có giữ phục hồi RECOVERY_VERIFY_MIN không:
+ * - `SENSOR_FAULT`, `RS485_BUS_FAILURE` được controller báo lại sau lúc báo xong (cảnh báo gộp trùng nên chỉ
+ *   `last_seen_at` tăng) → sự cố quay lại;
+ * - `ACTUATOR_FAULT`, `SPEAKER_FAILURE`: chưa có dữ liệu để kiểm → chờ duyệt kèm ghi chú (UNVERIFIABLE_RECOVERY);
+ * - cảnh báo đã đóng → tính từ lúc đóng;
+ * - `MISTING_INEFFECTIVE`: độ ẩm về trên `humidity_min` của zone (OPS-FR-003);
+ * - `SENSOR_FAULT`, `RS485_BUS_FAILURE`: đủ số đo của cả 5 cảm biến;
+ * - loại khác: chờ cảnh báo đóng.
+ */
+async function verificationOf(
+  wo: IWorkOrder, alert: VerifiedAlert, now: Date,
+): Promise<'RECOVERED' | 'RECURRED' | 'UNVERIFIABLE' | null> {
+  const doneAt = wo.done_at
+  if (!doneAt) return null
+  if (RERAISED_ON_RECURRENCE.includes(alert.type) && alert.status !== 'RESOLVED' && alert.last_seen_at && alert.last_seen_at > doneAt) {
+    return 'RECURRED'
+  }
+  if (UNVERIFIABLE_RECOVERY.includes(alert.type)) return 'UNVERIFIABLE'
+  const elapsedSince = (from: Date) => now.getTime() - from.getTime() >= RECOVERY_VERIFY_MS
+  const since = resolvedSince(alert)
+  if (since) return elapsedSince(since > doneAt ? since : doneAt) ? 'RECOVERED' : null
+
+  switch (alert.type) {
+    case 'MISTING_INEFFECTIVE': {
+      const zone = alert.zone_id ? await Zone.findById(alert.zone_id).select('thresholds').lean() : null
+      const humidityMin = zone?.thresholds?.humidity_min
+      if (!alert.node_id || humidityMin === undefined) return null
+      const dry = { $or: [{ humidity: { $lt: humidityMin } }, { humidity: { $exists: false } }] }
+      return await telemetryStaysRecovered(alert.node_id, doneAt, dry) ? 'RECOVERED' : null
+    }
+    case 'SENSOR_FAULT':
+    case 'RS485_BUS_FAILURE': {
+      if (!alert.node_id) return null
+      const missing = { $or: RS485_FIELDS.map(field => ({ [field]: { $exists: false } })) }
+      return await telemetryStaysRecovered(alert.node_id, doneAt, missing) ? 'RECOVERED' : null
+    }
+    default:
+      return null
+  }
+}
+
+/**
+ * OPEN tự đóng "self-recovered" chỉ khi cảnh báo phục hồi sau lúc mở Work Order và giữ RECOVERY_VERIFY_MIN: Work
+ * Order mở tay hay do chuyên gia xác nhận "cần tới nhà" trên cảnh báo đã đóng từ trước thì vẫn chờ người làm.
+ */
+function selfRecovered(wo: IWorkOrder, alert: VerifiedAlert, now: Date): boolean {
+  const since = resolvedSince(alert)
+  return !!since && since > wo.opened_at && now.getTime() - since.getTime() >= RECOVERY_VERIFY_MS
+}
+
+/**
  * Chạy mỗi phút (recoveryCheck.job):
- * - VERIFYING mà dữ liệu giữ phục hồi RECOVERY_VERIFY_MIN kể từ lúc báo xong → AWAITING_APPROVAL, báo Farm Owner;
+ * - VERIFYING mà điều kiện giữ phục hồi RECOVERY_VERIFY_MIN sau lúc báo xong → AWAITING_APPROVAL, báo Farm Owner;
+ *   controller báo lại sự cố → IN_PROGRESS, báo người xử lý (OPS-FR-003);
  * - OPEN mà cảnh báo tự hết và giữ phục hồi chừng đó trước khi ai bắt đầu → CLOSED, "self-recovered";
  * - OPEN có thợ mà chưa bắt đầu sau ESCALATION_MIN → báo Farm Owner 1 lần (BR-40, Report 3 §6.19).
  */
@@ -529,40 +657,85 @@ export async function verifyWorkOrders(now = new Date()): Promise<{ verified: nu
   const result = { verified: 0, selfRecovered: 0, escalated: 0 }
   const pending = await WorkOrder.find({ status: { $in: ['OPEN', 'VERIFYING'] }, alert_id: { $exists: true }, kind: { $ne: 'PREVENTIVE' } })
   const alerts = new Map((await Alert.find({ _id: { $in: pending.map(w => w.alert_id) } })
-    .select('type status resolved_at last_seen_at').lean()).map(a => [String(a._id), a]))
+    .select('type status resolved_at last_seen_at node_id zone_id title').lean()).map(a => [String(a._id), a]))
 
   for (const wo of pending) {
-    const since = recoveredSince(alerts.get(String(wo.alert_id)))
-    if (!since) continue
-    const from = wo.status === 'VERIFYING' && wo.done_at && wo.done_at > since ? wo.done_at : since
-    if (now.getTime() - from.getTime() < RECOVERY_VERIFY_MS) continue
+    const alert = alerts.get(String(wo.alert_id))
+    if (!alert) continue
     try {
       if (wo.status === 'VERIFYING') {
-        const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined,
-          `Dữ liệu giữ phục hồi ${RECOVERY_VERIFY_MIN} phút (BR-41)`)
-        await notifyOwnersAwaitingApproval(updated)
-        result.verified++
-      } else {
+        const outcome = await verificationOf(wo, alert, now)
+        if (outcome === 'RECURRED') {
+          await backToInProgress(wo, {}, alert.title)
+        } else if (outcome === 'RECOVERED') {
+          const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined,
+            `Dữ liệu giữ phục hồi ${RECOVERY_VERIFY_MIN} phút (BR-41)`)
+          await notifyOwnersAwaitingApproval(updated)
+          result.verified++
+        } else if (outcome === 'UNVERIFIABLE') {
+          const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined,
+            'Chưa có dữ liệu để kiểm phục hồi (BR-41): Farm Owner kiểm tại chỗ khi duyệt')
+          await notifyOwnersAwaitingApproval(updated, true)
+          result.verified++
+        }
+      } else if (selfRecovered(wo, alert, now)) {
         await transition(wo, ['OPEN'], 'CLOSED', { closed_at: now, result: 'SELF_RECOVERED' }, undefined,
           'Cảnh báo tự phục hồi trước khi bắt đầu làm (OPS-FR-003)')
         result.selfRecovered++
       }
     } catch (err) {
-      // Người dùng vừa đổi trạng thái giữa lúc đọc và lúc ghi — lượt sau xét lại
-      if (!(err instanceof AppError && err.statusCode === 409)) throw err
+      // 409: người dùng vừa đổi trạng thái giữa lúc đọc và lúc ghi — lượt sau xét lại. Lỗi khác chỉ ghi log: một
+      // Work Order lỗi không được làm dừng kiểm phục hồi và leo thang của mọi nhà
+      if (!(err instanceof AppError && err.statusCode === 409)) {
+        logger.error('Kiểm phục hồi Work Order thất bại', { workOrderId: String(wo._id), err })
+      }
     }
   }
 
+  // Quá hạn tính từ lúc thợ được giao (`assigned_at`); Work Order cũ chưa có mốc giao thì từ lúc mở
+  const cutoff = new Date(now.getTime() - ESCALATION_MS)
   const stale = await WorkOrder.find({
     status: 'OPEN', assignee_id: { $exists: true }, escalated_at: null, kind: { $ne: 'PREVENTIVE' },
-    opened_at: { $lte: new Date(now.getTime() - ESCALATION_MS) },
+    $or: [{ assigned_at: { $lte: cutoff } }, { assigned_at: { $exists: false }, opened_at: { $lte: cutoff } }],
   })
   for (const wo of stale) {
-    const { modifiedCount } = await WorkOrder.updateOne({ _id: wo._id, status: 'OPEN', escalated_at: null }, { $set: { escalated_at: now } })
-    if (modifiedCount === 0) continue
-    await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chưa ai bắt đầu: ${wo.title}`,
-      `Đã quá ${ESCALATION_MS / 60_000} phút từ lúc mở mà thợ được giao chưa bắt đầu — có thể giao lại cho người khác.`)
-    result.escalated++
+    try {
+      const { modifiedCount } = await WorkOrder.updateOne({ _id: wo._id, status: 'OPEN', escalated_at: null }, { $set: { escalated_at: now } })
+      if (modifiedCount === 0) continue
+      await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chưa ai bắt đầu: ${wo.title}`,
+        `Đã quá ${ESCALATION_MS / 60_000} phút từ lúc giao mà thợ chưa bắt đầu — có thể giao lại cho người khác.`)
+      result.escalated++
+    } catch (err) {
+      logger.error('Báo Work Order chưa ai bắt đầu thất bại', { workOrderId: String(wo._id), err })
+    }
   }
   return result
+}
+
+/**
+ * AUTH-FR-005 — gỡ Farm Technician khỏi farm (hay bỏ gán khỏi 1 nhà): Work Order còn mở của người đó trong phạm vi đó
+ * chuyển cho Farm Owner (bỏ người nhận, ghi lịch sử) và Farm Owner được báo. Trả số Work Order đã chuyển.
+ */
+export async function releaseTechnicianWorkOrders(
+  technicianId: string, scope: { farmId?: unknown; houseId?: unknown }, by: string,
+): Promise<number> {
+  const orders = await WorkOrder.find({
+    assignee_id: technicianId, is_open: true,
+    ...(scope.farmId !== undefined && { farm_id: scope.farmId }), ...(scope.houseId !== undefined && { house_id: scope.houseId }),
+  })
+  for (const wo of orders) {
+    const updated = await WorkOrder.findOneAndUpdate(
+      { _id: wo._id, assignee_id: technicianId },
+      {
+        $unset: { assignee_id: 1, assigned_at: 1 },
+        $push: { history: historyEntry(wo.status, wo.status, by, 'Thợ được giao bị gỡ: chuyển cho Farm Owner (AUTH-FR-005)') },
+      },
+      { new: true },
+    )
+    if (updated) {
+      await notifyAll(await ownerIdsOf(updated.farm_id), updated, `Work Order chuyển cho bạn: ${updated.title}`,
+        'Thợ được giao không còn ở nhà này — giao lại cho thợ khác hoặc tự xử lý.')
+    }
+  }
+  return orders.length
 }

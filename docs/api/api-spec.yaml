@@ -317,10 +317,11 @@ paths:
                     LOW: { $ref: "#/components/schemas/ChannelChoice" }
                 quiet_hours:
                   type: object
+                  description: "Giờ `HH:mm` theo giờ VN; chuỗi rỗng ở `start` hoặc `end` = tắt giờ im lặng"
                   properties:
                     {
-                      start: { type: string, example: "22:00" },
-                      end: { type: string, example: "06:00" },
+                      start: { type: string, example: "22:00", description: "HH:mm hoặc chuỗi rỗng" },
+                      end: { type: string, example: "06:00", description: "HH:mm hoặc chuỗi rỗng" },
                     }
       responses:
         "200":
@@ -378,8 +379,12 @@ paths:
     delete:
       tags: [Auth]
       summary: "Hủy liên kết Telegram (ALERT-FR-013)"
+      description: |
+        Telegram đang là kênh ngoài ứng dụng duy nhất của cảnh báo CRITICAL (push của CRITICAL tắt) thì 400: bật push
+        cho CRITICAL trước (ALERT-FR-005).
       responses:
         "200": { description: Đã hủy liên kết, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "400": { description: "CRITICAL sẽ không còn kênh ngoài ứng dụng nào", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /auth/delete-request:
@@ -1117,7 +1122,7 @@ paths:
     delete:
       tags: [Farms]
       summary: Gỡ thành viên khỏi farm (Flow 12 bước 5) — chỉ Primary Owner, không thể tự gỡ chính mình
-      description: "Gỡ Farm Technician thì bỏ luôn mọi lần gán của người đó vào các nhà của farm (AUTH-FR-005)."
+      description: "Gỡ Farm Technician thì bỏ luôn mọi lần gán của người đó vào các nhà của farm, và Work Order đang mở của người đó chuyển cho Farm Owner (bỏ người nhận, Farm Owner được báo; AUTH-FR-005)."
       parameters:
         - { $ref: "#/components/parameters/FarmId" }
         - { name: userId, in: path, required: true, schema: { type: string } }
@@ -1494,7 +1499,7 @@ paths:
     delete:
       tags: [Farms]
       summary: "Bỏ gán Farm Technician khỏi nhà (AUTH-FR-013) — FARM_OWNER của farm"
-      description: "Không có lần gán nào thì vẫn 200. Audit `HOUSE_TECHNICIAN_UNASSIGNED`."
+      description: "Không có lần gán nào thì vẫn 200. Work Order đang mở của thợ ở nhà này chuyển cho Farm Owner (AUTH-FR-005). Audit `HOUSE_TECHNICIAN_UNASSIGNED`."
       responses:
         "200":
           description: Nhà sau khi bỏ gán
@@ -1515,7 +1520,9 @@ paths:
       summary: "Lịch trực của nhà (AUTH-FR-014) — FARM_OWNER của farm; FARM_TECHNICIAN được giao chỉ thấy ca của mình"
       description: |
         Farm Technician được giao nhà chỉ nhận các ca của chính mình (Report 3 §2.4 "read own roster").
-        Nhà không có lịch thì cảnh báo dùng thợ chính (G-21 gọi `technicianOnDuty`). Domain Expert, Administrator → 403
+        Nhà không có lịch thì cảnh báo dùng thợ chính (G-21 gọi `technicianOnDuty`); không có thợ chính còn hiệu lực (chưa
+        đặt, bị khoá hay bị gỡ) thì dùng thợ hợp lệ đầu tiên trong danh sách gán, để nhà có thợ thì cảnh báo luôn tới thợ
+        (ALERT-FR-017). Domain Expert, Administrator → 403
         (Report 3 §2.4: lịch trực là của Farm Owner).
       responses:
         "200":
@@ -1669,6 +1676,36 @@ paths:
                   },
               },
           }
+
+  /farms/zones/{zoneId}:
+    get:
+      tags: [Farms]
+      summary: "Chi tiết một Zone — ngưỡng, hệ số mờ, tham số phát hiện (ENV-FR-006)"
+      description: |
+        Trả về Zone kèm `thresholds`, `fuzzy_tuning`, `detection_tuning` hiện tại.
+        Dùng trước khi mở form chỉnh tham số (mobile tuning screen).
+        Yêu cầu FARM_OWNER, DOMAIN_EXPERT hoặc FARM_TECHNICIAN với quyền trên house chứa zone.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      responses:
+        "200":
+          description: Zone detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      _id: { type: string }
+                      name: { type: string }
+                      thresholds: { $ref: "#/components/schemas/Thresholds" }
+                      fuzzy_tuning: { $ref: "#/components/schemas/FuzzyTuning" }
+                      detection_tuning: { $ref: "#/components/schemas/DetectionTuning" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /farms/zones/{zoneId}/fuzzy-tuning:
     put:
@@ -3126,6 +3163,8 @@ paths:
       tags: [Alerts]
       summary: "Danh sách cảnh báo (ALERT-FR-007) — phân trang, filter"
       description: |
+        Mỗi dòng không kèm ảnh (không có `onsite_checks[].photo_url`, `site_cause.photo_urls`, cũng không có khoá
+        MinIO): ảnh xem ở `GET /alerts/{id}`. Kiểm tra tại chỗ chưa trả lời có `observation: null` như chi tiết.
         Farm Owner chỉ thấy cảnh báo của farm mình (owner/member). Domain Expert thấy
         cảnh báo của farm được mời (chỉ đọc + kiểm chứng). Administrator thấy **cảnh báo
         thiết bị** của mọi farm (`NODE_OFFLINE`, `EDGE_AI_DEGRADED`, `SENSOR_FAULT`,
@@ -3365,7 +3404,9 @@ paths:
         Tác động lên `status` (Report 3 §6.1, SM-01):
         - `REJECTED` khi `ACTIVE`/`ACKNOWLEDGED` → `DISMISSED`, trạng thái cũ lưu ở `previous_status`;
           cảnh báo không còn hiệu lực, lần gặp lại cùng sự cố chỉ tăng `occurrence_count`, không thông báo;
-        - đổi sang `CONFIRMED` khi `DISMISSED` → về `previous_status` và báo lại Farm Owner;
+        - đổi sang `CONFIRMED` khi `DISMISSED` → về `previous_status` và báo lại như cảnh báo mới: thợ đang trực của
+          nhà và Farm Owner (ALERT-FR-017); Farm Owner coi như đã được báo nên không bị leo thang thêm lần nữa (BR-40);
+          `routing.technician_id` giữ thợ được định tuyến lúc tạo (MTTA/MTTR theo thợ);
         - `CONFIRMED` trên cảnh báo còn hiệu lực, hoặc mọi kết luận trên cảnh báo `RESOLVED` → giữ nguyên.
 
         Ghi audit `ALERT_VERDICT_SET`; kết luận của Domain Expert báo trong app cho mọi Farm Owner (EXPERT-FR-009).
@@ -3528,7 +3569,8 @@ paths:
         Tính trên cảnh báo tạo trong `[from, to)` của farm (hoặc của nhà):
         - MTTA = trung bình (`acknowledged_at` − `created_at`) của cảnh báo đã xác nhận;
         - MTTR = trung bình (lúc Work Order của cảnh báo đóng, không có thì `resolved_at` − `created_at`)
-          của cảnh báo đã đóng; cảnh báo `DISMISSED` không tính.
+          của cảnh báo đã đóng; báo động giả không tính: cảnh báo `DISMISSED`, hoặc đã bị chuyên gia bác bỏ
+          (`expert_verdict.result: REJECTED`) rồi được job tự đóng.
 
         Theo thợ: cảnh báo được định tuyến tới thợ đó (`routing.technician_id`). Mục tiêu nội bộ để
         xác nhận là `escalation_min` (15 phút) cho mọi mức (BR-40) — số báo cáo, không phải cam kết.
@@ -3593,15 +3635,26 @@ paths:
       tags: [WorkOrders]
       summary: "Báo đã làm xong, kèm việc đã làm, nguyên nhân và ảnh (OPS-FR-002, ALERT-FR-018) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
       description: |
-        `IN_PROGRESS` → `VERIFYING`: hệ thống kiểm dữ liệu phục hồi trong `recovery_verify_min` (10 phút,
-        BR-41) rồi chuyển `AWAITING_APPROVAL`. Work Order không gắn cảnh báo, và Work Order `PREVENTIVE` (dù gắn
-        `MAINTENANCE_DUE`), chuyển thẳng `AWAITING_APPROVAL` (không có dữ liệu phục hồi để kiểm). Work Order
-        `PREVENTIVE` cần mọi mục checklist đã có kết quả (OPS-FR-007), thiếu → 422.
+        `IN_PROGRESS` → `VERIFYING`: hệ thống kiểm điều kiện của cảnh báo giữ phục hồi `recovery_verify_min`
+        (10 phút, BR-41) sau lúc báo xong rồi chuyển `AWAITING_APPROVAL`:
+        - `MISTING_INEFFECTIVE`: độ ẩm của controller trên `humidity_min` của zone (OPS-FR-003);
+        - `SENSOR_FAULT`, `RS485_BUS_FAILURE`: telemetry đủ số đo của cả 5 cảm biến;
+        - `ACTUATOR_FAULT`, `SPEAKER_FAILURE`, `UNEXPECTED_RESTART`: chưa có dữ liệu nào cho thấy phục hồi (chưa biết
+          mức dòng bình thường firmware học được; loa chỉ được báo một lần khi hỏng; khởi động lại không bao giờ tự đóng)
+          → lượt kiểm kế tiếp chuyển `AWAITING_APPROVAL` kèm ghi chú "chưa có dữ liệu để kiểm phục hồi", Farm Owner kiểm
+          tại chỗ khi duyệt;
+        - loại khác: cảnh báo đã đóng (vượt ngưỡng về ngưỡng, thiết bị online lại…).
+        `SENSOR_FAULT`, `RS485_BUS_FAILURE` được controller báo lại sau lúc báo xong, hoặc có cảnh báo mới của cùng sự
+        cố lúc đang kiểm hay chờ duyệt → trở lại `IN_PROGRESS` (rời chờ duyệt thì Farm Owner cũng được báo).
+        `MISTING_INEFFECTIVE` được gửi lại trong lúc firmware còn chốt ngừng phun không tính là quay lại. Work Order không gắn cảnh báo, và Work Order
+        `PREVENTIVE` (dù gắn `MAINTENANCE_DUE`), chuyển thẳng `AWAITING_APPROVAL` (không có dữ liệu phục hồi để kiểm).
+        Work Order `PREVENTIVE` cần mọi mục checklist đã có kết quả (OPS-FR-007), thiếu → 422.
 
         `cause` bắt buộc với Work Order của `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`,
         `RS485_BUS_FAILURE`, `SPEAKER_FAILURE` (thiếu → 422); nguyên nhân và ảnh lưu cả vào cảnh báo
-        (`site_cause`). Ảnh: `multipart/form-data`, field `photos`, tối đa 5 ảnh JPEG/PNG/WebP, mỗi ảnh
-        ≤ 5 MB. Trạng thái khác → 409; thợ nhà khác → 403.
+        (`site_cause`). Ảnh: `multipart/form-data`, field `photos`, JPEG/PNG/WebP, mỗi ảnh ≤ 5 MB, tối đa
+        5 ảnh cho cả Work Order (tính cả ảnh của lần báo xong trước khi bị mở lại; vượt → 400). Trạng thái
+        khác → 409; thợ nhà khác → 403.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3663,7 +3716,7 @@ paths:
     post:
       tags: [WorkOrders]
       summary: "Huỷ kèm lý do (OPS-FR-004) — chỉ FARM_OWNER"
-      description: "`OPEN`, `IN_PROGRESS` → `CANCELLED`; cảnh báo của nó không đổi. Thiếu `reason` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_CANCELLED`."
+      description: "`OPEN`, `IN_PROGRESS`, `VERIFYING` → `CANCELLED` (huỷ từ `VERIFYING` là lối ra khi điều kiện không phục hồi theo cách hệ thống đo được); cảnh báo của nó không đổi. Thiếu `reason` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_CANCELLED`."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -6638,7 +6691,8 @@ components:
         done_at: { type: string, format: date-time, nullable: true }
         verified_at: { type: string, format: date-time, nullable: true, description: "Lúc dữ liệu đã phục hồi đủ `recovery_verify_min` (BR-41)" }
         closed_at: { type: string, format: date-time, nullable: true }
-        escalated_at: { type: string, format: date-time, nullable: true, description: "Lúc báo Farm Owner vì chưa ai bắt đầu sau `escalation_min` (BR-40)" }
+        assigned_at: { type: string, format: date-time, nullable: true, description: "Lúc giao cho thợ hiện tại; quá hạn \"chưa ai bắt đầu\" tính từ đây (BR-40)" }
+        escalated_at: { type: string, format: date-time, nullable: true, description: "Lúc báo Farm Owner vì chưa ai bắt đầu sau `escalation_min` kể từ lúc giao (BR-40)" }
         history:
           type: array
           items:

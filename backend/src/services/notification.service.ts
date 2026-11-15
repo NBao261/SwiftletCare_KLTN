@@ -8,8 +8,9 @@ import { NotFoundError } from '@/utils/appError.util'
 import { activeExpertIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
+import { channelEnabled } from '@/utils/notificationChannels.util'
 import type { IAlert } from '@/models/alert.model'
-import type { AlertSeverity, CurrentUser, NotificationPreferences } from '@/types'
+import type { CurrentUser, NotificationPreferences } from '@/types'
 
 /**
  * Notification Service — ALERT-FR-002..006.
@@ -77,10 +78,7 @@ async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
 }
 
 /** ALERT-FR-005 — kênh của mức cảnh báo ghi đè cài đặt chung; push mặc định tắt khi không đặt, Telegram mặc định bật */
-export function channelEnabled(prefs: NotificationPreferences | undefined, severity: AlertSeverity, channel: 'push' | 'telegram'): boolean {
-  const chosen = prefs?.by_severity?.[severity]?.[channel] ?? prefs?.[channel]
-  return channel === 'push' ? !!chosen : chosen !== false
-}
+export { channelEnabled } from '@/utils/notificationChannels.util'
 
 export interface DispatchAlertOptions {
   awaitsVerdict?: boolean

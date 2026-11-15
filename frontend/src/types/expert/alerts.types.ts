@@ -64,6 +64,25 @@ export interface ZoneInRange {
   humidity_in_range_pct: number | null
 }
 
+/** EXPERT-FR-021 — quan sát tại chỗ của Kỹ thuật viên */
+export type OnsiteObservation =
+  | 'BIRDS_DISTURBED'
+  | 'WORK_OR_PEOPLE_NEARBY'
+  | 'RAIN'
+  | 'SENSOR_DIRTY_OR_FAULTY'
+  | 'NOTHING_UNUSUAL'
+  | 'OTHER'
+
+export interface OnsiteCheck {
+  technician_id?: { _id: string; full_name: string }
+  requested_at: string
+  observation: OnsiteObservation | null
+  note?: string | null
+  photo_url?: string | null
+  answered_by?: { _id: string; full_name: string } | null
+  answered_at?: string | null
+}
+
 export interface AlertEvidence {
   alert_id: string
   type: InferredAlertType
@@ -80,6 +99,7 @@ export interface AlertEvidence {
   noise_alerts?: InferredAlertItem[] | null
   device_alerts: InferredAlertItem[]
   earlier_verdicts: InferredAlertItem[]
+  onsite_checks?: OnsiteCheck[] | null
 }
 
 /** EXPERT-FR-009 — Lịch sử hoạt động chuyên gia trên farm */

@@ -53,6 +53,11 @@ describe('MTTA, MTTR (OPS-FR-009)', () => {
     // Nhà H2: chưa xác nhận, chưa đóng; cảnh báo bị bác bỏ không tính; cảnh báo ngoài khoảng không tính
     await Alert.create({ ...base, house_id: house2._id, type: 'EDGE_AI_DEGRADED', status: 'ACTIVE', created_at: at(5) })
     await Alert.create({ ...base, zone_id: zone._id, type: 'NOISE_ANOMALY', status: 'DISMISSED', created_at: at(5), acknowledged_at: at(100) })
+    // Bị bác bỏ rồi job tự đóng (RESOLVED): vẫn là báo động giả, không tính
+    await Alert.create({
+      ...base, zone_id: zone._id, type: 'NOISE_ANOMALY', status: 'RESOLVED', created_at: at(5), acknowledged_at: at(100),
+      resolved_at: at(110), expert_verdict: { result: 'REJECTED', note: 'chim về muộn', by: tech._id, at: at(6) },
+    })
     await Alert.create({ ...base, zone_id: zone._id, type: 'NODE_OFFLINE', status: 'RESOLVED', created_at: at(-60), acknowledged_at: at(-50) })
 
     const q = `farmId=${farm._id}&from=${at(-1).toISOString()}&to=${at(120).toISOString()}`
@@ -87,7 +92,7 @@ describe('kênh theo mức cảnh báo (ALERT-FR-005)', () => {
   })
 
   it('PUT /auth/notification-preferences: lưu theo mức, bỏ ghi đè bằng null, CRITICAL không còn kênh ngoài ứng dụng → 400', async () => {
-    const { token } = await seedOwnerFarm()
+    const { owner, token } = await seedOwnerFarm()
     const put = (body: object) => request(app).put('/auth/notification-preferences').set('Authorization', `Bearer ${token}`).send(body)
 
     const saved = await put({ by_severity: { LOW: { push: false, telegram: false }, MEDIUM: { telegram: false } } }).expect(200)
@@ -95,11 +100,23 @@ describe('kênh theo mức cảnh báo (ALERT-FR-005)', () => {
 
     await put({ by_severity: { CRITICAL: { push: false, telegram: false } } }).expect(400)
     await put({ push: false, telegram: false }).expect(400)
-    // CRITICAL vẫn còn Telegram riêng thì tắt chung được
+    // Telegram chưa liên kết thì không gửi được, nên không tính là kênh của CRITICAL
+    await put({ push: false, telegram: false, by_severity: { CRITICAL: { telegram: true } } }).expect(400)
+    await User.updateOne({ _id: owner._id }, { telegram_chat_id: '12345' })
+    // Đã liên kết: CRITICAL vẫn còn Telegram riêng thì tắt chung được
     await put({ push: false, telegram: false, by_severity: { CRITICAL: { telegram: true } } }).expect(200)
     await put({ by_severity: { CRITICAL: null } }).expect(400)
 
     await put({ by_severity: { LOW: 'x' } }).expect(422)
     await put({ quiet_hours: { start: '25:00' } }).expect(422)
+    // Chuỗi rỗng = tắt giờ im lặng (web gửi khi xoá hai ô giờ)
+    const cleared = await put({ quiet_hours: { start: '', end: '' } }).expect(200)
+    expect(cleared.body.data.notification_preferences.quiet_hours).toMatchObject({ start: '', end: '' })
+
+    // Telegram đang là kênh ngoài ứng dụng duy nhất của CRITICAL → không cho huỷ liên kết
+    await request(app).delete('/auth/telegram/link').set('Authorization', `Bearer ${token}`).expect(400)
+    expect((await User.findById(owner._id).lean())!.telegram_chat_id).toBe('12345')
+    await put({ by_severity: { CRITICAL: { push: true } } }).expect(200)
+    await request(app).delete('/auth/telegram/link').set('Authorization', `Bearer ${token}`).expect(200)
   })
 })

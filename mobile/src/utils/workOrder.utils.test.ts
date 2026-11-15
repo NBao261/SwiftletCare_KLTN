@@ -3,8 +3,10 @@ import type { OnsiteCheck, WorkOrder } from '@/types'
 import {
   buildPhotoPart,
   getPendingOnsiteCheck,
+  getRemainingPhotoSlots,
   getWorkOrderAction,
   getWorkOrderMilestones,
+  hasRecoveryCheck,
   isCauseAlertType,
   isOnsiteCheckAnswered,
   isWorkOrderOpen,
@@ -87,11 +89,43 @@ describe('getWorkOrderMilestones (SM-19)', () => {
     ])
   })
 
+  it('chỉ gọi mốc chờ duyệt là dữ liệu đã phục hồi khi hệ thống kiểm được dữ liệu', () => {
+    const verified = { ...workOrder, status: 'AWAITING_APPROVAL' as const, verified_at: '2026-11-13T01:55:00.000Z' }
+    expect(getWorkOrderMilestones({ ...verified, alert_id: 'alert-1', alert_type: 'MISTING_INEFFECTIVE' })[3].label).toBe(
+      'Dữ liệu đã phục hồi',
+    )
+    expect(getWorkOrderMilestones({ ...verified, alert_id: 'alert-1', alert_type: 'ACTUATOR_FAULT' })[3].label).toBe(
+      'Chuyển chờ duyệt',
+    )
+    expect(getWorkOrderMilestones(verified)[3].label).toBe('Chuyển chờ duyệt')
+  })
   it('phiếu phòng ngừa gọi mốc chờ duyệt là chuyển chờ duyệt, không phải dữ liệu đã phục hồi', () => {
     const verifiedAt = '2026-11-13T01:40:00.000Z'
-    const repair = { ...workOrder, status: 'AWAITING_APPROVAL' as const, verified_at: verifiedAt }
+    // Phiếu sửa chữa gắn cảnh báo kiểm được dữ liệu (BR-41); phiếu phòng ngừa cũng gắn MAINTENANCE_DUE nhưng không kiểm
+    const repair = {
+      ...workOrder, status: 'AWAITING_APPROVAL' as const, verified_at: verifiedAt,
+      alert_id: 'alert-1', alert_type: 'MISTING_INEFFECTIVE' as const,
+    }
     expect(getWorkOrderMilestones(repair)[3].label).toBe('Dữ liệu đã phục hồi')
     expect(getWorkOrderMilestones({ ...repair, kind: 'PREVENTIVE', origin: 'PLAN' })[3].label).toBe('Chuyển chờ duyệt')
+  })
+})
+
+describe('hasRecoveryCheck (BR-41)', () => {
+  it('chỉ Work Order gắn cảnh báo có dữ liệu để kiểm mới được kiểm phục hồi', () => {
+    expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'SENSOR_FAULT' })).toBe(true)
+    expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'ACTUATOR_FAULT' })).toBe(false)
+    expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'SPEAKER_FAILURE' })).toBe(false)
+    expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'UNEXPECTED_RESTART' })).toBe(false)
+    expect(hasRecoveryCheck({ alert_id: null, alert_type: null })).toBe(false)
+  })
+})
+
+describe('getRemainingPhotoSlots', () => {
+  it('trừ ảnh đã gửi ở lần báo xong trước, không xuống dưới 0', () => {
+    expect(getRemainingPhotoSlots({})).toBe(5)
+    expect(getRemainingPhotoSlots({ photo_urls: ['a', 'b', 'c'] })).toBe(2)
+    expect(getRemainingPhotoSlots({ photo_urls: ['a', 'b', 'c', 'd', 'e', 'f'] })).toBe(0)
   })
 })
 

@@ -599,6 +599,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Cảnh báo theo loại': 'Alerts by type',
   'Không có cảnh báo trong kỳ': 'No alerts in this period',
   'Báo cáo {period}': 'Report {period}',
+  'Kỳ {date}': 'Period {date}',
+  'Không có thay đổi so với giá trị hiện tại': 'No change from current values',
+  'Hoàn nguyên về giá trị trước': 'Revert to previous values',
   'Có kết luận': 'Concluded',
   'Kết luận của chuyên gia': 'Expert conclusion',
   'Chưa có kết luận': 'No conclusion yet',
@@ -1260,14 +1263,25 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Xem chi tiết phiếu công việc': 'Open the work order',
   'Đã báo xong, hệ thống đang kiểm dữ liệu phục hồi': 'Marked done, the system is checking that the data recovered',
   'Đã báo xong, chờ chủ trại duyệt': 'Marked done, waiting for the owner to approve',
+  'Đã báo xong, chờ chủ trại kiểm tại chỗ rồi duyệt': 'Marked done, waiting for the owner to check on site and approve',
   'Phiếu công việc đã đổi trạng thái, đã tải lại': 'The work order changed state and was reloaded',
-  'Ảnh phải là JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh': 'Photos must be JPEG, PNG or WebP, at most 5 MB each',
+  'Ảnh phải là JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh và tối đa {max} ảnh tính cả ảnh đã gửi trước':
+    'Photos must be JPEG, PNG or WebP, at most 5 MB each and at most {max} photos including those sent before',
+  'Đã có {n} ảnh từ lần báo xong trước, chụp thêm được {m} ảnh':
+    '{n} photos kept from the previous report, you can add {m} more',
+  'Đã đủ {max} ảnh từ lần báo xong trước, không chụp thêm được':
+    'The previous report already has {max} photos, no more can be added',
+  'Gửi xong, loại sự cố này chưa có dữ liệu để hệ thống kiểm nên chuyển thẳng chủ trại kiểm tại chỗ rồi duyệt.':
+    'Once sent, it goes straight to the owner to check on site and approve, as the system has no data to check this kind of fault.',
   'Chỉ kỹ thuật viên được giao nhà này hoặc chủ trại mới báo xong được': 'Only the technician assigned to this house or the owner can mark it done',
   'Cảnh báo thiết bị cần ghi nguyên nhân tìm thấy tại chỗ': 'A device alert needs the cause found on site',
   'Báo đã làm xong': 'Mark as done',
   'Việc đã làm (không bắt buộc)': 'Work done (optional)',
   'Việc đã làm': 'Work done',
-  'Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong 10 phút rồi chuyển chủ trại duyệt; sự cố quay lại thì phiếu công việc về "Đang làm".': 'Once sent, the system checks that the data stays recovered for 10 minutes, then sends it to the owner to approve; if the fault comes back the work order returns to "In progress".',
+  'Gửi xong, hệ thống kiểm dữ liệu giữ phục hồi trong {min} phút rồi chuyển chủ trại duyệt; sự cố quay lại thì phiếu công việc về "Đang làm".':
+    'Once sent, the system checks that the data stays recovered for {min} minutes, then sends it to the owner to approve; if the fault comes back the work order returns to "In progress".',
+  'Bỏ bớt {k} ảnh vừa chụp để gửi được, chỉ còn chỗ cho {m} ảnh':
+    'Remove {k} of the new photos to send, there is room for only {m}',
   'Gửi xong, phiếu công việc chuyển chủ trại duyệt.': 'Once sent, the work order goes to the owner to approve.',
   'Phiếu công việc': 'Work orders',
   'Không tải được phiếu công việc': 'Could not load work orders',
@@ -1281,7 +1295,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Giao cho tôi': 'Assigned to me',
   'Đang mở': 'Open',
   'Lọc phiếu công việc': 'Filter work orders',
-  'Phiếu công việc mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, hệ thống kiểm dữ liệu phục hồi rồi chủ trại duyệt trên web.': 'Work orders open automatically from device alerts or when the expert confirms a visit is needed. When the work is done, the system checks that the data recovered, then the owner approves it on the web.',
+  'Phiếu công việc mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, sự cố có dữ liệu để kiểm thì hệ thống kiểm dữ liệu phục hồi trước, rồi chủ trại duyệt trên web.':
+    'Work orders open automatically from device alerts or when the expert confirms a visit is needed. When the work is done, the system first checks that the data recovered if the fault has data to check, then the owner approves it on the web.',
   'Đã bắt đầu làm': 'Work started',
   'Không bắt đầu được': 'Could not start',
   'Chỉ kỹ thuật viên được giao nhà này hoặc chủ trại mới làm được': 'Only the technician assigned to this house or the owner can do this',
