@@ -70,7 +70,11 @@ export const ENDPOINTS = {
   // Hoạt động chuyên gia (EXPERT-FR-009/010/011)
   EXPERT_ACTIVITY: '/expert-activity',
   EXPERT_REVIEWS: '/expert-activity/reviews',
+  EXPERT_REVIEW_ACCEPT: (itemId: string) => `/expert-activity/reviews/${itemId}/accept`,
+  EXPERT_REVIEW_REVERT: (itemId: string) => `/expert-activity/reviews/${itemId}/revert`,
   EXPERT_PROPOSALS: '/expert-activity/proposals',
+  EXPERT_PROPOSAL_APPROVE: (proposalId: string) => `/expert-activity/proposals/${proposalId}/approve`,
+  EXPERT_PROPOSAL_REJECT: (proposalId: string) => `/expert-activity/proposals/${proposalId}/reject`,
 
   // Phân tích (ANALYTICS-FR-*)
   BIRD_COUNT_DAILY: '/analytics/bird-count/daily',
@@ -92,7 +96,7 @@ export const ENDPOINTS = {
   // chưa merge vào develop
   PUSH_TOKENS: '/notifications/push-tokens',
 
-  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006)
+  // Báo cáo sức khoẻ theo nhà (EXPERT-FR-005/006/013)
   HEALTH_REPORTS: '/health-reports',
   // Trạng thái ngày và chấm điểm (ANALYTICS-FR-012, EXPERT-FR-012, BR-31)
   HEALTH_DAYS: '/health-reports/days',
@@ -105,4 +109,8 @@ export const ENDPOINTS = {
 
   // Thu hoạch (HARVEST-FR-001…005) — danh sách đợt thu của farm
   HARVESTS: '/harvests',
+
+  // Nghiệp vụ Chuyên gia bổ sung (Domain Expert: EXPERT-FR-*)
+  ALERT_VERDICT_STATS: '/alerts/verdict-stats',
+  ZONE_DETAIL: (zoneId: string) => `/farms/zones/${zoneId}`,
 } as const

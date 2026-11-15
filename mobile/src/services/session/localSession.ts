@@ -2,6 +2,7 @@ import { queryClient } from '@/config/queryClient'
 import { connectSocket, disconnectSocket } from '@/services/socket/socketClient'
 import { useAlertStore } from '@/stores/alertStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useExpertScopeStore } from '@/stores/expertScopeStore'
 
 // Mở realtime khi có phiên dùng được; mật khẩu tạm thì backend chặn mọi API khác nên chờ đổi xong
 export function startRealtimeIfReady(): void {
@@ -15,5 +16,6 @@ export async function clearLocalSession(): Promise<void> {
   disconnectSocket()
   queryClient.clear()
   useAlertStore.getState().clearAlerts()
+  useExpertScopeStore.getState().resetScope()
   await useAuthStore.getState().clearAuth()
 }

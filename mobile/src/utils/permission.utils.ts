@@ -119,6 +119,12 @@ export interface PermissionContext {
   isPrimaryOwner?: boolean
 }
 
+// Màn chỉ dành cho Domain Expert (hàng đợi, thẩm định, tinh chỉnh, nhật ký): guard tập trung ở đây
+// thay vì so user.role rải rác trong route (MOBILE_GUIDE 2.1)
+export function isDomainExpert(user: User | null): boolean {
+  return user?.role === 'DOMAIN_EXPERT'
+}
+
 // Chỗ duy nhất quyết định nút thao tác nào hiện — màn hình không tự so user.role
 export function canPerform(user: User | null, action: PermissionAction, context: PermissionContext = {}): boolean {
   if (!user) return false

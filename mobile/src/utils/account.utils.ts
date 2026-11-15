@@ -33,6 +33,7 @@ const EXPERT_ACTION_LABELS: Record<string, string> = {
   REVIEW_REVERTED: 'Hoàn lại thay đổi của chủ trại',
   PROPOSAL_APPROVED: 'Duyệt gợi ý hệ số',
   PROPOSAL_REJECTED: 'Từ chối gợi ý hệ số',
+  HEALTH_LEVELS_UPDATED: 'Sửa mức chỉ số sức khỏe',
 }
 
 // Trạng thái mục chờ duyệt (§6.10) và đề xuất gợi ý (§6.11)
