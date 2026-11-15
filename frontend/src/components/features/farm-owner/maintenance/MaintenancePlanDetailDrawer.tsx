@@ -19,7 +19,7 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }):
   return (
     <div className="flex items-start justify-between gap-4">
       <dt className="text-sm text-warmGray">{label}</dt>
-      <dd className="text-right text-sm text-charcoal">{children}</dd>
+      <dd className="min-w-0 break-words text-right text-sm text-charcoal">{children}</dd>
     </div>
   );
 }
@@ -31,7 +31,8 @@ export default function MaintenancePlanDetailDrawer({ plan, houseName, onClose }
   return (
     <Drawer open={Boolean(plan)} onClose={onClose} title={plan ? t(`equipment.${plan.equipment}`) : t('detail.title')}>
       {plan && (
-        <div className="flex flex-col gap-6">
+        // Drawer không tự cuộn: bọc vùng cuộn như DeviceDetailDrawer
+        <div className="-mx-6 flex flex-1 flex-col gap-6 overflow-y-auto px-6">
           <dl className="flex flex-col gap-3">
             <DetailRow label={t('detail.house')}>{houseName || NO_VALUE}</DetailRow>
             <DetailRow label={t('detail.interval')}>
@@ -50,7 +51,7 @@ export default function MaintenancePlanDetailDrawer({ plan, houseName, onClose }
 
           <section className="flex flex-col gap-2">
             <h3 className="text-h3 text-charcoal">{t('detail.checklist')}</h3>
-            <ol className="list-decimal space-y-1 pl-5 text-sm text-charcoal">
+            <ol className="list-decimal space-y-1 break-words pl-5 text-sm text-charcoal">
               {plan.checklist_template.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
             </ol>
           </section>
@@ -85,7 +86,7 @@ export default function MaintenancePlanDetailDrawer({ plan, houseName, onClose }
               <ul className="flex flex-col gap-2">
                 {[...plan.comments].reverse().map(comment => (
                   <li key={comment.at} className="rounded-xl border border-gray-200 px-3 py-2">
-                    <p className="whitespace-pre-line text-sm text-charcoal">{comment.text}</p>
+                    <p className="whitespace-pre-line break-words text-sm text-charcoal">{comment.text}</p>
                     <span className="text-xs text-warmGray">{dateTime(comment.at)}</span>
                   </li>
                 ))}

@@ -64,7 +64,7 @@ const vi = {
   'action.retire': 'Xoá kế hoạch',
   'action.comment': 'Góp ý',
   'retire.title': 'Xoá kế hoạch bảo trì',
-  'retire.desc': 'Kế hoạch sẽ không đến hạn nữa. Lịch sử bảo trì được giữ lại; phiếu công việc phòng ngừa đang mở không tự huỷ.',
+  'retire.desc': 'Kế hoạch sẽ không đến hạn nữa. Lịch sử bảo trì được giữ lại. Phiếu công việc phòng ngừa chưa báo xong bị huỷ; phiếu đã báo xong vẫn chờ bạn duyệt.',
   'retire.done': 'Đã xoá kế hoạch bảo trì',
   'comment.title': 'Góp ý kế hoạch bảo trì',
   'comment.label': 'Nội dung góp ý',
@@ -103,6 +103,7 @@ const vi = {
   'error.checklistEmpty': 'Checklist cần ít nhất 1 mục',
   'error.checklistTooMany': 'Checklist tối đa {max} mục',
   'error.source': 'Chưa nhập nguồn của chu kỳ',
+  'error.duplicate': 'Nhà này đã có kế hoạch cho việc bảo trì này. Hãy sửa kế hoạch đó.',
 
   // Ngăn chi tiết
   'detail.title': 'Chi tiết kế hoạch bảo trì',
@@ -183,7 +184,7 @@ const en: Record<MaintenanceKey, string> = {
   'action.retire': 'Delete plan',
   'action.comment': 'Comment',
   'retire.title': 'Delete maintenance plan',
-  'retire.desc': 'The plan will no longer fall due. Its maintenance history is kept; open preventive work orders are not cancelled.',
+  'retire.desc': 'The plan will no longer fall due. Its maintenance history is kept. Preventive work orders not yet reported done are cancelled; those already reported done still wait for your approval.',
   'retire.done': 'Maintenance plan deleted',
   'comment.title': 'Comment on the maintenance plan',
   'comment.label': 'Comment',
@@ -221,6 +222,7 @@ const en: Record<MaintenanceKey, string> = {
   'error.checklistEmpty': 'The checklist needs at least 1 item',
   'error.checklistTooMany': 'The checklist has at most {max} items',
   'error.source': 'Enter the source of the interval',
+  'error.duplicate': 'This house already has a plan for this maintenance. Edit that plan instead.',
 
   'detail.title': 'Maintenance plan details',
   'detail.house': 'House',

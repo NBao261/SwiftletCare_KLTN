@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { Button, Input, Modal, SelectMenu, Textarea } from '@/components/ui';
 import { maintenanceDict } from '@/constants/maintenance.i18n';
@@ -37,17 +37,29 @@ export default function MaintenancePlanFormModal({ open, house, plan, onClose }:
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<MaintenancePlanErrors>({});
 
-  // Popup không unmount giữa các lần mở — nạp lại kế hoạch đang sửa hoặc form trống mỗi lần mở
+  // Giá trị lúc mở: kế hoạch đang sửa, hoặc form trống
+  const initial = useMemo(() => ({
+    equipment: plan?.equipment ?? 'PUMP',
+    basis: plan?.basis ?? 'RUN_HOURS',
+    intervalText: plan ? String(plan.interval) : '',
+    checklist: plan?.checklist_template.length ? plan.checklist_template : [''],
+    source: plan?.source ?? '',
+    note: plan?.note ?? '',
+  }), [plan]);
+  // Đã nhập gì thì không cho bấm nền để đóng (mất dữ liệu)
+  const isDirty = JSON.stringify({ equipment, basis, intervalText, checklist, source, note }) !== JSON.stringify(initial);
+
+  // Popup không unmount giữa các lần mở — nạp lại giá trị lúc mở mỗi lần mở
   useEffect(() => {
     if (!open) return;
-    setEquipment(plan?.equipment ?? 'PUMP');
-    setBasis(plan?.basis ?? 'RUN_HOURS');
-    setIntervalText(plan ? String(plan.interval) : '');
-    setChecklist(plan?.checklist_template.length ? plan.checklist_template : ['']);
-    setSource(plan?.source ?? '');
-    setNote(plan?.note ?? '');
+    setEquipment(initial.equipment);
+    setBasis(initial.basis);
+    setIntervalText(initial.intervalText);
+    setChecklist(initial.checklist);
+    setSource(initial.source);
+    setNote(initial.note);
     setErrors({});
-  }, [open, plan]);
+  }, [open, initial]);
 
   // Đổi việc bảo trì thì về cách tính đầu tiên hợp lệ của việc đó
   function changeEquipment(next: MaintenanceEquipment): void {
@@ -75,7 +87,11 @@ export default function MaintenancePlanFormModal({ open, house, plan, onClose }:
         push(t(plan ? 'form.saved' : 'form.created'));
         onClose();
       },
-      onError: (error: unknown) => push(apiErrorMessage(error), 'error'),
+      // 409 khi tạo: nhà đã có kế hoạch cho việc bảo trì này
+      onError: (error: unknown) => {
+        const isDuplicate = !plan && (error as { response?: { status?: number } })?.response?.status === 409;
+        push(isDuplicate ? t('error.duplicate') : apiErrorMessage(error), 'error');
+      },
     };
     if (plan) update.mutate({ id: plan._id, input: fields }, callbacks);
     // Tạo mới bỏ ghi chú trống
@@ -88,7 +104,7 @@ export default function MaintenancePlanFormModal({ open, house, plan, onClose }:
       onClose={onClose}
       title={t(plan ? 'form.editTitle' : 'form.createTitle', { house: house.name })}
       size="lg"
-      closeOnBackdrop={!isPending}
+      closeOnBackdrop={!isDirty && !isPending}
     >
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         <hr className="border-gray-200" />
