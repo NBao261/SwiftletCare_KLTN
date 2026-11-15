@@ -138,10 +138,11 @@ describe('EXPERT-FR-007 — cảnh báo suy luận chờ kiểm chứng', () => 
   })
 
   it('cảnh báo đo trực tiếp (không suy luận) không báo chuyên gia', async () => {
-    const { farm, zone } = await seed()
+    const { expert, farm, zone } = await seed()
     await alertOf(farm._id, zone._id, 'MISTING_INEFFECTIVE')
     await new Promise(r => setTimeout(r, 100))
-    expect(await Notification.countDocuments()).toBe(0)
+    // Farm Owner nhận "Work Order mới" (BR-39), chuyên gia không nhận gì
+    expect(await Notification.countDocuments({ user_id: expert._id })).toBe(0)
   })
 
   it('báo cáo sức khỏe mới → chủ farm và chuyên gia đều có thông báo kèm ref', async () => {

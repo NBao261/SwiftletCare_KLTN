@@ -65,9 +65,18 @@ export interface CoefficientProposal {
   _id: string
   zone_id: string
   farm_id: string
-  submitted_by: string
-  suggested_values: Record<string, unknown>
-  current_values: Record<string, unknown>
+  submitted_by: string | { _id: string; full_name?: string }
+  suggested_values: Record<string, number | unknown>
+  current_values: Record<string, number | unknown>
+  predicted?: {
+    inRangeNow?: number
+    inRangeSuggested?: number
+    mistingNow?: number
+    mistingSuggested?: number
+    in_range_pct?: number
+  }
+  r_squared?: number
+  predicted_in_range_pct?: number
   status: ProposalStatus
   // Lý do từ chối
   note?: string | null

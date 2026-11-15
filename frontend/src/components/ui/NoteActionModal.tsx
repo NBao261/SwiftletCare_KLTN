@@ -16,6 +16,8 @@ interface NoteActionModalProps {
   required?: boolean
   /** Số ký tự tối thiểu (sau khi trim) — chặn lý do kiểu "ok"/"abc" */
   minLength?: number
+  /** Số ký tự tối đa — ô không cho gõ quá giới hạn của API */
+  maxLength?: number
   /** Thông báo khi bỏ trống — mặc định "Chưa nhập <label>" */
   emptyMessage?: string
   danger?: boolean
@@ -31,7 +33,7 @@ interface NoteActionModalProps {
  * duyệt; giá trị gửi đi đã được trim.
  */
 export default function NoteActionModal({
-  open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, emptyMessage, danger, loading, onSubmit,
+  open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, maxLength, emptyMessage, danger, loading, onSubmit,
 }: NoteActionModalProps) {
   const [note, setNote] = useState('')
   const [error, setError] = useState<string>()
@@ -62,6 +64,7 @@ export default function NoteActionModal({
           label={label}
           placeholder={placeholder /* Textarea tự dịch label/placeholder */}
           required={required}
+          maxLength={maxLength}
           value={note}
           error={error}
           // Popup canh giữa: lỗi cùng hàng nhãn để lỗi hiện/ẩn không làm popup trượt lên/xuống

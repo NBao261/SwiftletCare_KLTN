@@ -67,6 +67,14 @@ export function assertValidThresholds(t: Thresholds): void {
   }
 }
 
+/**
+ * ENV-FR-007 — nguồn của ngưỡng mặc định phải trỏ tới một mục của evidence register REF-5
+ * (`docs/evidence-register.md` §3.1: tài liệu `TL-xxx`, minh chứng `MC-xxx`). Đây là định dạng mã của
+ * REF-5, không phải hằng số tự chọn.
+ */
+export const REF5_ENTRY_PATTERN = /\b(TL|MC)-\d{3}\b/
+export const SOURCE_MAX_LENGTH = 500
+
 /** Chỉ giữ 7 khoá ngưỡng hợp lệ — chặn body chèn thêm field lạ vào document. Giá trị không phải số thành NaN. */
 export function pickThresholds(input: Record<string, unknown>): Partial<Thresholds> {
   const picked: Partial<Thresholds> = {}
