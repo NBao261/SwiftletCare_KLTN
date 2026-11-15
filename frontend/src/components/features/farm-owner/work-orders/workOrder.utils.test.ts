@@ -1,9 +1,9 @@
 // Test logic thuần của trang Work Order (G-21, OPS-FR-004, Report 3 §6.19)
 import { describe, expect, it } from 'vitest';
 import {
-  WORK_ORDER_STATUSES, isRecoveryUnverified, memberNames, ownerActions, reassignCandidates, statusFilterQuery,
+  WORK_ORDER_STATUSES, approvalDescriptionKey, isRecoveryUnverified, memberNames, ownerActions, reassignCandidates, statusFilterQuery,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
-import type { Farm, House } from '@/types';
+import type { Farm, House, WorkOrderStatus } from '@/types';
 
 describe('isRecoveryUnverified — phiếu chờ duyệt mà hệ thống chưa kiểm được dữ liệu (BR-41)', () => {
   it('mở tay không gắn cảnh báo, ACTUATOR_FAULT, SPEAKER_FAILURE: chưa kiểm được', () => {
@@ -20,20 +20,41 @@ describe('isRecoveryUnverified — phiếu chờ duyệt mà hệ thống chưa 
 });
 
 describe('ownerActions — thao tác của Farm Owner theo trạng thái', () => {
+  const repair = (status: WorkOrderStatus) => ownerActions({ status, kind: 'REPAIR' });
+  const preventive = (status: WorkOrderStatus) => ownerActions({ status, kind: 'PREVENTIVE' });
+
   it('chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ', () => {
-    expect(ownerActions('AWAITING_APPROVAL')).toEqual(['approve', 'reopen']);
-    expect(ownerActions('OPEN')).toEqual(['reassign', 'cancel']);
-    expect(ownerActions('IN_PROGRESS')).toEqual(['reassign', 'cancel']);
+    expect(repair('AWAITING_APPROVAL')).toEqual(['approve', 'reopen']);
+    expect(repair('OPEN')).toEqual(['reassign', 'cancel']);
+    expect(repair('IN_PROGRESS')).toEqual(['reassign', 'cancel']);
   });
 
   it('đang kiểm dữ liệu: chỉ huỷ; đã đóng, đã huỷ: không có thao tác (backend trả 409)', () => {
-    expect(ownerActions('VERIFYING')).toEqual(['cancel']);
-    expect(ownerActions('CLOSED')).toEqual([]);
-    expect(ownerActions('CANCELLED')).toEqual([]);
+    expect(repair('VERIFYING')).toEqual(['cancel']);
+    expect(repair('CLOSED')).toEqual([]);
+    expect(repair('CANCELLED')).toEqual([]);
   });
 
   it('chỉ duyệt được ở đúng 1 trạng thái', () => {
-    expect(WORK_ORDER_STATUSES.filter(status => ownerActions(status).includes('approve'))).toEqual(['AWAITING_APPROVAL']);
+    expect(WORK_ORDER_STATUSES.filter(status => repair(status).includes('approve'))).toEqual(['AWAITING_APPROVAL']);
+  });
+
+  it('phòng ngừa: không bao giờ có huỷ (backend 409, SM-20), các thao tác khác giữ nguyên', () => {
+    expect(WORK_ORDER_STATUSES.some(status => preventive(status).includes('cancel'))).toBe(false);
+    expect(preventive('OPEN')).toEqual(['reassign']);
+    expect(preventive('IN_PROGRESS')).toEqual(['reassign']);
+    expect(preventive('AWAITING_APPROVAL')).toEqual(['approve', 'reopen']);
+  });
+});
+
+describe('approvalDescriptionKey — câu trong hộp duyệt', () => {
+  it('phòng ngừa: theo checklist, kể cả khi có cảnh báo đến hạn', () => {
+    expect(approvalDescriptionKey({ kind: 'PREVENTIVE', alert_id: 'a1', alert_type: 'MAINTENANCE_DUE' })).toBe('approve.descPreventive');
+  });
+
+  it('sửa chữa: dữ liệu đã kiểm, hoặc chưa kiểm được', () => {
+    expect(approvalDescriptionKey({ kind: 'REPAIR', alert_id: 'a1', alert_type: 'THRESHOLD_BREACH' })).toBe('approve.desc');
+    expect(approvalDescriptionKey({ kind: 'REPAIR', alert_id: null, alert_type: null })).toBe('approve.descUnverified');
   });
 });
 

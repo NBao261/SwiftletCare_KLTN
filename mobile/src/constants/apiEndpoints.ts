@@ -74,6 +74,12 @@ export const ENDPOINTS = {
   WORK_ORDER_DETAIL: (workOrderId: string) => `/work-orders/${workOrderId}`,
   WORK_ORDER_START: (workOrderId: string) => `/work-orders/${workOrderId}/start`,
   WORK_ORDER_DONE: (workOrderId: string) => `/work-orders/${workOrderId}/done`,
+  // Ghi một mục checklist của Work Order phòng ngừa (OPS-FR-007, G-22)
+  WORK_ORDER_CHECKLIST: (workOrderId: string) => `/work-orders/${workOrderId}/checklist`,
+
+  // Bảo trì phòng ngừa (OPS-FR-005…008, G-22): kế hoạch, kế hoạch đến hạn hoặc quá hạn
+  MAINTENANCE_PLANS: '/maintenance/plans',
+  MAINTENANCE_DUE: '/maintenance/due',
 
   // Hoạt động chuyên gia (EXPERT-FR-009/010/011)
   EXPERT_ACTIVITY: '/expert-activity',

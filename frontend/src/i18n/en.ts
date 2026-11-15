@@ -59,6 +59,7 @@ const en: Record<string, string> = {
   'Xoá nội dung tìm kiếm': 'Clear search',
   'Chưa nhập {{field}}': 'Please enter {{field}}',
   '{{field}} cần ít nhất {{min}} ký tự (đang có {{count}})': '{{field}} needs at least {{min}} characters (currently {{count}})',
+  '{{field}} tối đa {{max}} ký tự (đang có {{count}})': '{{field}} has at most {{max}} characters (currently {{count}})',
   'Backend module này hiện là stub (501) — xem backend/README.md mục "Module → phạm vi".': 'This backend module is currently a stub (501) — see backend/README.md, section "Module → scope".',
   'Giao diện Demo — Chưa kết nối backend': 'Demo UI — not connected to the backend',
   'Chức năng này đang trong giai đoạn phát triển. Các thao tác trên trang này chưa có tác dụng thật với hệ thống.': 'This feature is under development. Actions on this page have no real effect on the system yet.',

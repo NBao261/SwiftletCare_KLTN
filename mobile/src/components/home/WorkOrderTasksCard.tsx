@@ -28,7 +28,7 @@ export function WorkOrderTasksCard() {
   if (countQuery.isError) {
     return (
       <EmptyState
-        message={t('Không tải được Work Order')}
+        message={t('Không tải được phiếu công việc')}
         actionLabel={t('Thử lại')}
         onAction={() => countQuery.refetch()}
         height={CARD_HEIGHT}
@@ -37,10 +37,10 @@ export function WorkOrderTasksCard() {
   }
 
   const count = countQuery.data ?? 0
-  const title = onlyMine ? t('Work Order giao cho bạn') : t('Work Order đang mở')
+  const title = onlyMine ? t('Phiếu công việc giao cho bạn') : t('Phiếu công việc đang mở')
   const summary =
     count === 0
-      ? t('Không có Work Order nào đang mở')
+      ? t('Không có phiếu công việc nào đang mở')
       : onlyMine
         ? t('{n} việc sửa chữa đang chờ bạn', { n: count })
         : t('{n} việc sửa chữa chưa đóng', { n: count })
@@ -50,7 +50,7 @@ export function WorkOrderTasksCard() {
       style={styles.card}
       onPress={() => router.push('/work-orders')}
       accessibilityLabel={`${title}: ${summary}`}
-      accessibilityHint={t('Mở danh sách Work Order')}
+      accessibilityHint={t('Mở danh sách phiếu công việc')}
     >
       {/* Lime chỉ làm chữ trên nền Ink */}
       <View style={[styles.countBox, { backgroundColor: palette.inverse }]}>
