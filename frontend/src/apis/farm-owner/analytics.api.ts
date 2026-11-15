@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, FuzzyTuning, Thresholds } from '@/types'
+import type { ApiResponse, EnergyEstimate, FlockPeriod, FuzzyTuning, Thresholds } from '@/types'
 
 export type AnalyticsRange = '1h' | '6h' | '24h' | '7d' | '30d'
 
@@ -74,6 +74,8 @@ export interface BirdCountTrendsResponse {
   // Mức giảm coi là đáng kể của nhà yến (return_rate_drop_pct, Domain Expert chỉnh — EXPERT-FR-008)
   drop_threshold_pct: number
   is_significant_drop: boolean
+  // ANALYTICS-FR-002 — số chim ra buổi sáng trung bình theo tuần và tháng; ngày thiếu phiên không tính
+  flock_trend?: { weekly: FlockPeriod[]; monthly: FlockPeriod[] }
 }
 
 // ANALYTICS-FR-011 — tỷ lệ thời gian tự động, tính từ lịch sử can thiệp tay
@@ -174,6 +176,9 @@ export const analyticsApi = {
     api.get<ApiResponse<BirdCountBucketsResponse>>('/analytics/bird-count/buckets', { params: { houseId, ...params } }),
   houseBirdCountCurrent: (houseId: string) =>
     api.get<ApiResponse<BirdCountCurrentResponse>>('/analytics/bird-count/current', { params: { houseId } }),
+  // ANALYTICS-FR-017, BR-45 — điện năng ước tính của bơm và quạt theo tháng; mặc định 90 ngày gần nhất
+  energy: (houseId: string) =>
+    api.get<ApiResponse<EnergyEstimate>>('/analytics/energy', { params: { houseId } }),
   correlation: (zoneId: string, days = 30) =>
     api.get<ApiResponse<EnvBirdCorrelationResponse>>('/analytics/correlation', { params: { zoneId, days } }),
 }

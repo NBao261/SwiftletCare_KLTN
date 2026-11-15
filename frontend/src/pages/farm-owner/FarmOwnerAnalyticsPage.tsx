@@ -9,7 +9,9 @@ import BirdHourlyCard from '@/components/features/farm-owner/analytics/BirdHourl
 import BirdWeeklyCard from '@/components/features/farm-owner/analytics/BirdWeeklyCard';
 import CompareZonesCard from '@/components/features/farm-owner/analytics/CompareZonesCard';
 import CorrelationCard from '@/components/features/farm-owner/analytics/CorrelationCard';
+import EnergyCard from '@/components/features/farm-owner/analytics/EnergyCard';
 import EnvVariationCard from '@/components/features/farm-owner/analytics/EnvVariationCard';
+import FlockTrendCard from '@/components/features/farm-owner/analytics/FlockTrendCard';
 import ForecastCard from '@/components/features/farm-owner/analytics/ForecastCard';
 import HealthReportCard from '@/components/features/farm-owner/analytics/HealthReportCard';
 import RelayOverrideHistoryCard from '@/components/features/farm-owner/analytics/RelayOverrideHistoryCard';
@@ -72,6 +74,14 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     />
   );
 
+  // Xu hướng đàn và điện năng tính theo 1 nhà (ANALYTICS-FR-002, 017): chỉ hiện khi đang lọc 1 nhà
+  const houseCards = houseId ? (
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <FlockTrendCard houseId={houseId} houseName={houseName} />
+      <EnergyCard houseId={houseId} houseName={houseName} />
+    </div>
+  ) : null;
+
   // Tất cả Zone: chỉ các khung hiện được nhiều Zone/nhà (lịch sử can thiệp tay, đếm chim cộng các nhà, so sánh Zone)
   if (zones.length > 0 && !zone) {
     body = (
@@ -79,6 +89,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
         <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
         <BirdHourlyCard houseIds={houseIds} scopeLabel={scopeLabel} />
         <BirdWeeklyCard houseIds={houseIds} scopeLabel={scopeLabel} />
+        {houseCards}
         <CompareZonesCard zones={zones} />
       </>
     );
@@ -110,6 +121,8 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
           <BirdWeeklyCard houseIds={[zone.house_id]} scopeLabel={zone.houseName} />
           <CorrelationCard zoneId={zone._id} />
         </div>
+
+        {houseCards}
 
         <CompareZonesCard zones={zones} />
       </>
