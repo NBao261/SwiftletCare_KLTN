@@ -120,10 +120,14 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
   float duty = FuzzyControl::mistingDemand(humidity, temperature, Config::humidityMin,
                                            Config::humidityMax, Config::tempMax, currentTuning());
   autoDemandKnown = FuzzyControl::inputsValid(temperature, humidity);
-  // BR-38 — bù thời tiết chỉ dời nhu cầu tự động khi số đo hợp lệ: số đo hỏng vẫn TẮT bơm (THREAT-FR-013)
-  float weatherOffset = weatherCompensation.current(millis(), MQTTManager::isConnected());
-  if (autoDemandKnown) duty = WeatherCompensation::apply(duty, weatherOffset);
+  // PumpDryMonitor theo dõi nhu cầu của bộ mờ, trước offset: ENV-FR-029 — offset không đổi chốt bơm khô
   autoMistingDemand = duty > 0.0f;
+  // BR-38 — tin `compensation` tới trước NTP được áp khi đã có đồng hồ
+  time_t nowSec = time(nullptr);
+  weatherCompensation.resolvePending(nowSec > 1700000000 ? (uint64_t)nowSec * 1000ULL : 0, millis());
+  float weatherOffset = weatherCompensation.current(millis(), MQTTManager::isConnected());
+  // Số đo hỏng vẫn TẮT bơm (THREAT-FR-013); ẩm đã tới humidity_max thì không bù dương (ENV-FR-010)
+  duty = WeatherCompensation::mistingDuty(duty, weatherOffset, autoDemandKnown, humidity >= Config::humidityMax);
   // Bơm khô đã phát hiện ở đợt này → ngừng phun tới hết đợt để bảo vệ bơm
   if (pumpMonitor.blocked()) duty = 0.0f;
   relay.mistingPct = toPct(duty);

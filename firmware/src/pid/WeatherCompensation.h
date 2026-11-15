@@ -20,18 +20,32 @@ static const uint32_t WEATHER_COMP_OFFLINE_MS = 2UL * 3600UL * 1000UL;
 class WeatherCompensation {
 public:
   /**
-   * Tin `compensation` mới (thay tin cũ). nowEpochMs = 0 khi chưa đồng bộ NTP: không biết còn hạn bao lâu nên
-   * offset về 0. offsetPct bị kẹp về ±WEATHER_COMP_MAX_PCT, thời hạn về WEATHER_COMP_MAX_MS.
+   * Tin `compensation` mới (thay tin cũ). nowEpochMs = 0 khi chưa đồng bộ NTP: chưa biết còn hạn bao lâu nên
+   * offset là 0 và tin được giữ chờ tới khi resolvePending() có đồng hồ (tin retained thường tới ngay sau
+   * khi khởi động, trước NTP). offsetPct bị kẹp về ±WEATHER_COMP_MAX_PCT, thời hạn về WEATHER_COMP_MAX_MS.
    */
   void receive(float offsetPct, uint64_t expiresAtEpochMs, uint64_t nowEpochMs, uint32_t nowMs);
+  /** Áp tin đang chờ khi đã có đồng hồ (nowEpochMs > 0); không có tin chờ thì không làm gì */
+  void resolvePending(uint64_t nowEpochMs, uint32_t nowMs);
   /** Offset đang có hiệu lực (điểm %); gọi mỗi chu kỳ điều khiển, brokerConnected để đếm thời gian mất broker */
   float current(uint32_t nowMs, bool brokerConnected);
   /** Nhu cầu phun 0..1 cộng offset (điểm %), kẹp trong 0..1 */
   static float apply(float duty, float offsetPct);
+  /**
+   * Nhu cầu đưa ra relay phun từ nhu cầu của bộ mờ (ENV-FR-029):
+   * - số đo không hợp lệ: giữ nhu cầu của bộ mờ (đã là 0, THREAT-FR-013), offset không bật được bơm;
+   * - ẩm đã ≥ humidity_max (bộ mờ: ẨM CAO → 0, ENV-FR-010): offset dương bị bỏ, offset âm vẫn áp;
+   * - còn lại: apply().
+   * Nhu cầu của bộ mờ (trước offset) mới là "nhu cầu" mà chốt bơm khô theo dõi, nên nơi gọi giữ nó riêng.
+   */
+  static float mistingDuty(float fuzzyDuty, float offsetPct, bool inputsValid, bool humidityAtMax);
 
 private:
   float offsetPct_ = 0.0f;
   uint32_t receivedMs_ = 0;
   uint32_t durationMs_ = 0;
   uint32_t lastConnectedMs_ = 0;
+  bool pending_ = false;
+  float pendingOffsetPct_ = 0.0f;
+  uint64_t pendingExpiresAtEpochMs_ = 0;
 };
