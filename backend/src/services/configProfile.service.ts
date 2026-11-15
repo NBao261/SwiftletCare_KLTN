@@ -1,11 +1,13 @@
 import { ConfigProfile, IConfigProfile, CONFIG_PROFILE_STAGES, type ConfigProfileStage, type SpeakerScheduleValues } from '@/models/configProfile.model'
 import { CoefficientProposal } from '@/models/coefficientProposal.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { logAction } from '@/services/auditLog.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
-import { assertExpertDecision, findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import { findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import { paginate } from '@/utils/helpers.util'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { THRESHOLD_KEYS, assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { FUZZY_TUNING_KEYS, assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
@@ -110,11 +112,19 @@ function assertStatus(profile: IConfigProfile, expected: IConfigProfile['status'
   if (profile.status !== expected) throw ConflictError(`Hồ sơ đang ${profile.status}, không thể ${action}`)
 }
 
-/** EXPERT-FR-014 — hồ sơ của farm, mới sửa trước */
-export async function listProfiles(farmId: string, user: CurrentUser, status?: string) {
+/** EXPERT-FR-014 — hồ sơ của farm, mới sửa trước, phân trang như mọi danh sách (backend/CLAUDE.md) */
+export async function listProfiles(
+  farmId: string, user: CurrentUser, query: { status?: string; page?: string; limit?: string } = {},
+) {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  return ConfigProfile.find({ farm_id: farm._id, ...(status && { status }) }).sort({ updated_at: -1 }).lean()
+  const filter = { farm_id: farm._id, ...(query.status && { status: query.status }) }
+  const { page, skip, limit } = paginate(query.page, query.limit)
+  const [records, total] = await Promise.all([
+    ConfigProfile.find(filter).sort({ updated_at: -1 }).skip(skip).limit(limit).lean(),
+    ConfigProfile.countDocuments(filter),
+  ])
+  return { records, total, page, limit }
 }
 
 export async function getProfile(profileId: string, user: CurrentUser) {
@@ -125,7 +135,6 @@ export async function getProfile(profileId: string, user: CurrentUser) {
 export async function createProfile(farmId: string, user: CurrentUser, input: ProfileInput) {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
-  await assertExpertDecision(farm, user)
   const content = parseProfileContent(input)
   const profile = await ConfigProfile.create({ farm_id: farm._id, author_id: user._id, name: input.name, ...content })
   await logAction(user._id, 'CONFIG_PROFILE_CREATED', 'config_profile', String(profile._id), { name: profile.name }, { farmId: String(farm._id) })
@@ -135,7 +144,6 @@ export async function createProfile(farmId: string, user: CurrentUser, input: Pr
 /** EXPERT-FR-014, SM-23 DRAFT → DRAFT: thay toàn bộ nội dung; hồ sơ đã duyệt hoặc lưu trữ không sửa được (409) */
 export async function updateProfile(profileId: string, user: CurrentUser, input: ProfileInput) {
   const { profile, farm } = await loadProfile(profileId, user)
-  await assertExpertDecision(farm, user)
   assertStatus(profile, 'DRAFT', 'sửa')
   const content = parseProfileContent(input)
   profile.set({ name: input.name ?? profile.name, thresholds: undefined, fuzzy_tuning: undefined, detection_tuning: undefined, speaker_schedule: undefined, ...content })
@@ -144,13 +152,21 @@ export async function updateProfile(profileId: string, user: CurrentUser, input:
   return profile
 }
 
+/**
+ * Chuyển trạng thái trong một lần ghi có điều kiện: hai request cùng lúc thì request sau nhận 409, không có hai
+ * audit và hai thông báo cho cùng một lần duyệt
+ */
+async function transition(profile: IConfigProfile, from: IConfigProfile['status'], set: Partial<IConfigProfile>, action: string) {
+  assertStatus(profile, from, action)
+  const updated = await ConfigProfile.findOneAndUpdate({ _id: profile._id, status: from }, set, { new: true })
+  if (!updated) throw ConflictError(`Hồ sơ vừa đổi trạng thái, không thể ${action}`)
+  return updated
+}
+
 /** EXPERT-FR-014, SM-23 DRAFT → APPROVED; báo Farm Owner (EXPERT-FR-009) */
 export async function approveProfile(profileId: string, user: CurrentUser) {
-  const { profile, farm } = await loadProfile(profileId, user)
-  await assertExpertDecision(farm, user)
-  assertStatus(profile, 'DRAFT', 'duyệt')
-  profile.set({ status: 'APPROVED', approved_by: user._id, approved_at: new Date() })
-  await profile.save()
+  const { profile: current, farm } = await loadProfile(profileId, user)
+  const profile = await transition(current, 'DRAFT', { status: 'APPROVED', approved_by: user._id as never, approved_at: new Date() }, 'duyệt')
   const auditId = await logAction(user._id, 'CONFIG_PROFILE_APPROVED', 'config_profile', String(profile._id), { name: profile.name }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, { what: 'duyệt hồ sơ cấu hình', place: `Hồ sơ "${profile.name}"` })
   return profile
@@ -158,11 +174,8 @@ export async function approveProfile(profileId: string, user: CurrentUser) {
 
 /** EXPERT-FR-014, SM-23 APPROVED → ARCHIVED; áp hồ sơ đã lưu trữ thì 409 */
 export async function archiveProfile(profileId: string, user: CurrentUser) {
-  const { profile, farm } = await loadProfile(profileId, user)
-  await assertExpertDecision(farm, user)
-  assertStatus(profile, 'APPROVED', 'lưu trữ')
-  profile.set({ status: 'ARCHIVED', archived_at: new Date() })
-  await profile.save()
+  const { profile: current, farm } = await loadProfile(profileId, user)
+  const profile = await transition(current, 'APPROVED', { status: 'ARCHIVED', archived_at: new Date() }, 'lưu trữ')
   await logAction(user._id, 'CONFIG_PROFILE_ARCHIVED', 'config_profile', String(profile._id), { name: profile.name }, { farmId: String(farm._id) })
   return profile
 }
@@ -204,6 +217,15 @@ export async function applyProfile(profileId: string, user: CurrentUser, houseId
       if (overflow > 0) history.splice(0, overflow)
     }
     await zone.save()
+    // EXPERT-FR-010 — mục duyệt đang chờ của Farm Owner không còn khớp giá trị của zone: đóng như khi chuyên gia tự
+    // sửa (ADJUSTED), để "hoàn lại" về sau không ghi giá trị cũ đè lên hồ sơ chuyên gia đã duyệt
+    const reviewedGroups = [content.thresholds && 'thresholds', content.fuzzy_tuning && 'fuzzy'].filter(Boolean)
+    if (reviewedGroups.length) {
+      await ParameterReview.updateMany(
+        { zone_id: zone._id, group: { $in: reviewedGroups }, status: 'PENDING_REVIEW' },
+        { status: 'ADJUSTED', reviewed_by: user._id, reviewed_at: now },
+      )
+    }
     if (content.speaker_schedule) {
       await SensorNode.updateMany({ zone_id: zone._id, ...IN_SERVICE }, { speaker_schedule: content.speaker_schedule })
     }

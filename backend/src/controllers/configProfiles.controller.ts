@@ -4,8 +4,12 @@ import { asyncHandler } from '@/utils/asyncHandler.util'
 
 /** GET /profiles?farmId= – EXPERT-FR-014 */
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const status = typeof req.query.status === 'string' ? req.query.status : undefined
-  res.json({ success: true, data: await configProfileService.listProfiles(String(req.query.farmId), req.user, status) })
+  const { records, total, page, limit } = await configProfileService.listProfiles(String(req.query.farmId), req.user, {
+    status: req.query.status as string | undefined,
+    page:   req.query.page as string | undefined,
+    limit:  req.query.limit as string | undefined,
+  })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
 /** GET /profiles/:id – EXPERT-FR-014 */
