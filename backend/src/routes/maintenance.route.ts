@@ -40,6 +40,8 @@ router.put('/plans/:id', requireRole('FARM_OWNER'), idParam,
 router.delete('/plans/:id', requireRole('FARM_OWNER'), idParam, validate, maintenanceController.retirePlan)
 router.post('/plans/:id/comments', requireRole('DOMAIN_EXPERT'), idParam,
   body('text').isString().trim().notEmpty().isLength({ max: 1000 }), validate, maintenanceController.addComment)
-router.get('/due', requireRole(...READERS), ...scope, validate, maintenanceController.listDue)
+router.get('/due', requireRole(...READERS), ...scope,
+  query('page').optional().isInt({ min: 1 }).toInt(), query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  validate, maintenanceController.listDue)
 
 export default router

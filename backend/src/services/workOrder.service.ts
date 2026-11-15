@@ -386,18 +386,40 @@ export async function updateChecklistItem(
   if (!current) throw BadRequestError('Mục checklist không tồn tại')
 
   const [photoKey] = photo ? await storePhotos([photo], `work-orders/${wo._id}/checklist`) : []
+  const prefix = `checklist.${input.item_index}`
   let repairId = current.repair_work_order_id
   if (input.result === 'DEFECT' && !repairId) {
-    const repair = await WorkOrder.create({
-      farm_id: wo.farm_id, house_id: wo.house_id, zone_id: wo.zone_id, node_id: wo.node_id,
-      kind: 'REPAIR', origin: 'CHECKLIST', title: `Sửa chữa: ${current.item}`,
-      description: input.note?.trim() || `Kiểm tra theo checklist "${wo.title}" thấy hỏng`,
-      assignee_id: wo.assignee_id, opened_by: user._id, history: [historyEntry(undefined, 'OPEN', user._id)],
-    })
-    repairId = repair._id
-    await notifyAll(await handlerIds(repair), repair, `Work Order mới: ${repair.title}`, repair.description ?? '')
+    // OPS-FR-007 — đúng một Work Order sửa chữa cho mỗi mục: giữ chỗ id trên mục bằng một cập nhật có điều kiện trước
+    // khi tạo, nên hai lần ghi DEFECT gần nhau (bấm đúp, gửi lại sau khi mất mạng) chỉ một lần tạo được
+    const claimedId = new Types.ObjectId()
+    const claimed = await WorkOrder.findOneAndUpdate(
+      // `$not $type` chứ không `null`: với mảng, `checklist.1.x: null` còn khớp khi phần tử khác không có trường `1`
+      { _id: wo._id, status: 'IN_PROGRESS', [`${prefix}.repair_work_order_id`]: { $not: { $type: 'objectId' } } },
+      { $set: { [`${prefix}.repair_work_order_id`]: claimedId } },
+      { new: true },
+    )
+    if (claimed) {
+      try {
+        const repair = await WorkOrder.create({
+          _id: claimedId,
+          farm_id: wo.farm_id, house_id: wo.house_id, zone_id: wo.zone_id, node_id: wo.node_id,
+          kind: 'REPAIR', origin: 'CHECKLIST', title: `Sửa chữa: ${current.item}`,
+          description: input.note?.trim() || `Kiểm tra theo checklist "${wo.title}" thấy hỏng`,
+          assignee_id: wo.assignee_id, opened_by: user._id, history: [historyEntry(undefined, 'OPEN', user._id)],
+        })
+        await notifyAll(await handlerIds(repair), repair, `Work Order mới: ${repair.title}`, repair.description ?? '')
+      } catch (err) {
+        // Tạo lỗi thì trả chỗ giữ, lần ghi sau tạo lại được
+        await WorkOrder.updateOne({ _id: wo._id, [`${prefix}.repair_work_order_id`]: claimedId },
+          { $unset: { [`${prefix}.repair_work_order_id`]: 1 } })
+        throw err
+      }
+      repairId = claimedId
+    } else {
+      // Lần ghi khác vừa giữ chỗ (hoặc Work Order vừa đổi trạng thái: cập nhật dưới sẽ trả 409)
+      repairId = (await WorkOrder.findById(wo._id).select('checklist').lean())?.checklist[input.item_index]?.repair_work_order_id
+    }
   }
-  const prefix = `checklist.${input.item_index}`
   const note = input.note?.trim()
   const updated = await WorkOrder.findOneAndUpdate(
     { _id: wo._id, status: 'IN_PROGRESS' },
@@ -501,6 +523,11 @@ export async function reopenWorkOrder(id: string, user: CurrentUser, note: strin
 
 export async function cancelWorkOrder(id: string, user: CurrentUser, reason: string) {
   const wo = await findWorkOrderWithAccess(id, user)
+  // SM-20 — kế hoạch còn đến hạn chỉ rời DUE khi ghi bảo trì hoặc xoá kế hoạch: huỷ phiếu phòng ngừa thì lượt kiểm kế
+  // tiếp lại mở phiếu mới và báo thợ lần nữa, nên không cho huỷ; không cần bảo trì nữa thì xoá kế hoạch
+  if (wo.kind === 'PREVENTIVE') {
+    throw ConflictError('Work Order phòng ngừa không huỷ được; nếu không cần bảo trì nữa, hãy xoá kế hoạch bảo trì')
+  }
   // VERIFYING cũng huỷ được: lối ra khi điều kiện không bao giờ phục hồi theo cách hệ thống đo được (OPS-FR-004)
   const updated = await transition(wo, ['OPEN', 'IN_PROGRESS', 'VERIFYING'], 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
   await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason })

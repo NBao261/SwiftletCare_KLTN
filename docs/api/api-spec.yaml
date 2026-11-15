@@ -3716,7 +3716,7 @@ paths:
     post:
       tags: [WorkOrders]
       summary: "Huỷ kèm lý do (OPS-FR-004) — chỉ FARM_OWNER"
-      description: "`OPEN`, `IN_PROGRESS`, `VERIFYING` → `CANCELLED` (huỷ từ `VERIFYING` là lối ra khi điều kiện không phục hồi theo cách hệ thống đo được); cảnh báo của nó không đổi. Thiếu `reason` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_CANCELLED`."
+      description: "`OPEN`, `IN_PROGRESS`, `VERIFYING` → `CANCELLED` (huỷ từ `VERIFYING` là lối ra khi điều kiện không phục hồi theo cách hệ thống đo được); cảnh báo của nó không đổi. Work Order `PREVENTIVE` không huỷ được (409): kế hoạch còn đến hạn chỉ rời `DUE` khi ghi bảo trì hoặc khi Farm Owner xoá kế hoạch (`DELETE /maintenance/plans/{id}` huỷ luôn Work Order phòng ngừa của nó), nếu huỷ thì lượt kiểm kế tiếp sẽ mở lại. Thiếu `reason` → 422; trạng thái khác → 409. Ghi audit `WORK_ORDER_CANCELLED`."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -3783,7 +3783,7 @@ paths:
         Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi (`source`); hệ thống không tự đặt
         chu kỳ. `PUMP`, `FAN` đi với `RUN_HOURS` (giờ chạy) hoặc `SWITCHES` (số lần đóng cắt), áp cho bơm hoặc quạt
         của mọi controller trong nhà; `SENSOR`, `NOZZLE`, `CALIBRATION` đi với `CALENDAR` (`interval` tính bằng ngày).
-        Kết hợp khác hoặc `interval` ≤ 0 → 422. Mỗi nhà một kế hoạch cho mỗi loại thiết bị (OPS-FR-005: hai kế
+        Kết hợp khác, `interval` ≤ 0, hoặc `interval` theo lịch lớn tới mức ngày đến hạn không biểu diễn được → 422. Mỗi nhà một kế hoạch cho mỗi loại thiết bị (OPS-FR-005: hai kế
         hoạch bơm dùng chung một bộ đếm): nhà đã có kế hoạch chưa xoá cho `equipment` này → 409. Kế hoạch mới ở
         `SCHEDULED`; kế hoạch theo lịch có điểm đến hạn đầu là hôm nay cộng `interval` ngày (Report 3 §6.20) và
         đến hạn ở lượt 07:00 giờ VN của ngày chứa điểm đến hạn. Farm Technician, Domain Expert, Administrator → 403.
@@ -3889,10 +3889,12 @@ paths:
     get:
       tags: [Maintenance]
       summary: "Kế hoạch đang đến hạn hoặc quá hạn (OPS-FR-006) — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN (nhà được giao)"
-      description: "Kế hoạch `DUE` và `OVERDUE`, quá hạn trước, kèm Work Order phòng ngừa đang mở (`open_work_orders`)."
+      description: "Kế hoạch `DUE` và `OVERDUE`, quá hạn trước, kèm Work Order phòng ngừa đang mở (`open_work_orders`). Phân trang: mặc định 100 dòng (mỗi nhà có tối đa một kế hoạch cho mỗi loại thiết bị nên một trang thường đủ), tối đa 100."
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
       responses:
         "200":
           description: OK
@@ -3903,6 +3905,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { type: array, items: { $ref: "#/components/schemas/MaintenancePlan" } }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
@@ -3913,7 +3916,7 @@ paths:
       description: |
         Chỉ Work Order `PREVENTIVE` đang `IN_PROGRESS`; khác → 409. `DEFECT` mở một Work Order sửa chữa cho nhà
         (origin `CHECKLIST`, OPS-FR-001), ghi lại ở mục đó; ghi lại cùng mục thì thay kết quả và ghi chú (gửi ghi
-        chú trống là bỏ ghi chú cũ), không mở thêm Work Order sửa chữa. Ảnh tuỳ chọn (`multipart/form-data`, field `photo`, JPEG/PNG/WebP ≤ 5 MB). Báo xong
+        chú trống là bỏ ghi chú cũ), không mở thêm Work Order sửa chữa, kể cả hai lần ghi `DEFECT` gửi gần nhau. Ảnh tuỳ chọn (`multipart/form-data`, field `photo`, JPEG/PNG/WebP ≤ 5 MB). Báo xong
         (`POST /work-orders/{id}/done`) cần mọi mục đã có kết quả (BR-41), thiếu → 422.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]

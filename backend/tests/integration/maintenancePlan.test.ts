@@ -110,6 +110,14 @@ describe('kế hoạch bảo trì (OPS-FR-005)', () => {
     await plan({ interval: 400 }).expect(201)
   })
 
+  it('khoảng theo lịch lớn tới mức ngày đến hạn vượt giới hạn của Date → 422, không lỗi 500', async () => {
+    const { plan, owner$ } = await seed()
+    await plan({ equipment: 'NOZZLE', basis: 'CALENDAR', interval: 1_000_000_000 }).expect(422)
+    const created = (await plan({ equipment: 'NOZZLE', basis: 'CALENDAR', interval: 30 }).expect(201)).body.data
+    await owner$.put(`/maintenance/plans/${created._id}`, { interval: 1_000_000_000 }).expect(422)
+    expect((await MaintenancePlan.findById(created._id).lean())!.interval).toBe(30)
+  })
+
   it('kế hoạch theo lịch có điểm đến hạn đầu = hôm nay + khoảng ngày', async () => {
     const { plan } = await seed()
     const before = Date.now()
@@ -308,10 +316,24 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
     expect(repairs[0]).toMatchObject({ kind: 'REPAIR', title: 'Sửa chữa: Bồn nước', description: 'Bồn rò nước' })
     await tech$.put(`/work-orders/${repairs[0]._id}/checklist`, { item_index: 0, result: 'OK' }).expect(409)
 
+    // Hai lần ghi DEFECT gần nhau cho một mục khác (bấm đúp): vẫn đúng một Work Order sửa chữa cho mục đó
+    const both = await Promise.all([0, 1].map(() => tech$.put(`${path}/checklist`, { item_index: 1, result: 'DEFECT' })))
+    expect(both.map(r => r.status)).toEqual([200, 200])
+    const second = await WorkOrder.find({ origin: 'CHECKLIST', title: 'Sửa chữa: Béc phun' }).lean()
+    expect(second).toHaveLength(1)
+    expect(String((await WorkOrder.findOne({ kind: 'PREVENTIVE' }).lean())!.checklist[1].repair_work_order_id)).toBe(String(second[0]._id))
+
     // Ghi lại là Đạt với ghi chú trống: ghi chú "Bồn rò nước" cũ bị bỏ
     const again = await tech$.put(`${path}/checklist`, { item_index: 0, result: 'OK' }).expect(200)
     expect(again.body.data.checklist[0].result).toBe('OK')
     expect(again.body.data.checklist[0].note).toBeUndefined()
+  })
+
+  it('Farm Owner không huỷ được Work Order phòng ngừa (409): kế hoạch chỉ rời DUE khi ghi bảo trì hoặc bị xoá', async () => {
+    const { owner$, path } = await due()
+    const res = await owner$.post(`${path}/cancel`, { reason: 'Chưa cần bảo trì' }).expect(409)
+    expect(res.body.error.message).toContain('xoá kế hoạch')
+    expect((await WorkOrder.findOne({ kind: 'PREVENTIVE' }).lean())!.status).toBe('IN_PROGRESS')
   })
 
   it('Work Order phòng ngừa không bị leo thang 15 phút như Work Order sửa chữa', async () => {
@@ -331,8 +353,11 @@ describe('danh sách đến hạn và tỷ lệ bảo trì đúng hạn (OPS-FR-
     await plan().expect(201)
     await setPumpHours(510)
     await checkDuePlans()
-    const due = (await owner$.get('/maintenance/due').expect(200)).body.data
+    const res = await owner$.get('/maintenance/due').expect(200)
+    expect(res.body.meta).toEqual({ total: 1, page: 1, limit: 100 })
+    const due = res.body.data
     expect(due).toHaveLength(1)
+    await owner$.get('/maintenance/due?limit=500').expect(422)
     expect(due[0]).toMatchObject({ state: 'DUE', open_work_orders: [String((await WorkOrder.findOne().lean())!._id)] })
   })
 

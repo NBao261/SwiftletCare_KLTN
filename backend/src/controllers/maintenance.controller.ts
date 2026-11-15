@@ -46,9 +46,11 @@ export const addComment = asyncHandler(async (req: Request, res: Response) => {
 
 /** GET /maintenance/due – OPS-FR-006 */
 export const listDue = asyncHandler(async (req: Request, res: Response) => {
-  const data = await maintenanceService.listDuePlans(req.user, {
+  const { records, total, page, limit } = await maintenanceService.listDuePlans(req.user, {
     farmId:  req.query.farmId as string | undefined,
     houseId: req.query.houseId as string | undefined,
+    page:    req.query.page as number | undefined,
+    limit:   req.query.limit as number | undefined,
   })
-  res.json({ success: true, data })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
 })

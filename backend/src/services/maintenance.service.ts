@@ -55,6 +55,13 @@ function assertPlanShape(equipment: MaintenanceEquipment, basis: MaintenanceBasi
   if (!(interval > 0)) throw invalid('Khoảng bảo trì phải lớn hơn 0')
 }
 
+/** Điểm đến hạn của kế hoạch theo lịch; `interval` lớn tới mức ngày vượt giới hạn của Date → 422, không lưu Invalid Date */
+function calendarDueFrom(from: Date, interval: number): Date {
+  const due = new Date(from.getTime() + interval * DAY_MS)
+  if (Number.isNaN(due.getTime())) throw invalid('Khoảng bảo trì quá lớn')
+  return due
+}
+
 // ── Kế hoạch (OPS-FR-005) ───────────────────────────────────────────────────
 
 /** Farm Owner, Domain Expert theo farm; Farm Technician theo nhà được giao (chỉ đọc) */
@@ -95,15 +102,21 @@ export async function listPlans(
 
 /** OPS-FR-006 — kế hoạch DUE và OVERDUE, quá hạn trước, kèm Work Order phòng ngừa đang mở */
 export async function listDuePlans(
-  user: CurrentUser, query: { farmId?: string; houseId?: string },
-): Promise<Array<Record<string, unknown> & { open_work_orders: string[] }>> {
+  user: CurrentUser, query: { farmId?: string; houseId?: string; page?: number; limit?: number },
+): Promise<{ records: Array<Record<string, unknown> & { open_work_orders: string[] }>; total: number; page: number; limit: number }> {
   const filter = await scopeFilter(user, query)
   filter.state = { $in: ['DUE', 'OVERDUE'] }
-  const plans = await MaintenancePlan.find(filter).sort({ state: -1, due_since: 1 }).lean()
+  // Mặc định 100 dòng: mỗi nhà có tối đa một kế hoạch cho mỗi loại thiết bị, nên một trang thường là đủ
+  const { page, skip, limit } = paginate(query.page, query.limit, { defaultLimit: 100 })
+  const [plans, total] = await Promise.all([
+    MaintenancePlan.find(filter).sort({ state: -1, due_since: 1, _id: 1 }).skip(skip).limit(limit).lean(),
+    MaintenancePlan.countDocuments(filter),
+  ])
   const open = await WorkOrder.find({ plan_id: { $in: plans.map(p => p._id) }, is_open: true }).select('plan_id').lean()
-  return plans.map(p => ({
+  const records = plans.map(p => ({
     ...p, open_work_orders: open.filter(w => String(w.plan_id) === String(p._id)).map(w => String(w._id)),
   }))
+  return { records, total, page, limit }
 }
 
 export async function createPlan(user: CurrentUser, input: MaintenancePlanInput, now = new Date()) {
@@ -119,7 +132,7 @@ export async function createPlan(user: CurrentUser, input: MaintenancePlanInput,
     checklist_template: input.checklist_template.map(i => i.trim()).filter(Boolean),
     source: input.source.trim(), note: input.note?.trim() || undefined, created_by: user._id, created_at: now,
     // SM-20 — kế hoạch theo lịch có điểm đến hạn đầu ngay khi tạo
-    ...(input.basis === 'CALENDAR' && { next_due_at: new Date(now.getTime() + input.interval * DAY_MS) }),
+    ...(input.basis === 'CALENDAR' && { next_due_at: calendarDueFrom(now, input.interval) }),
   })
   await logAction(user._id, 'MAINTENANCE_PLAN_CREATED', 'maintenance_plan', String(plan._id), {
     house_id: String(house._id), equipment: plan.equipment, basis: plan.basis, interval: plan.interval,
@@ -137,7 +150,7 @@ export async function updatePlan(
     assertPlanShape(plan.equipment, plan.basis, input.interval)
     plan.interval = input.interval
     if (plan.basis === 'CALENDAR') {
-      plan.next_due_at = new Date((plan.last_done_at ?? plan.created_at).getTime() + input.interval * DAY_MS)
+      plan.next_due_at = calendarDueFrom(plan.last_done_at ?? plan.created_at, input.interval)
     }
   }
   if (input.checklist_template) plan.checklist_template = input.checklist_template.map(i => i.trim()).filter(Boolean)
