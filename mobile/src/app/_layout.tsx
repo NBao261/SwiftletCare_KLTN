@@ -68,6 +68,7 @@ export default function RootLayout() {
               <Stack.Screen name="farm/[farmId]" />
               <Stack.Screen name="zone/[zoneId]" />
               <Stack.Screen name="alert/[alertId]" />
+              <Stack.Screen name="expert/activity" />
               {/* Chuông: màn riêng ngoài các tab (không nằm trong tab Tài khoản), thanh tab ẩn khi mở */}
               <Stack.Screen name="notifications/index" />
               <Stack.Screen name="notifications/[notificationId]" />

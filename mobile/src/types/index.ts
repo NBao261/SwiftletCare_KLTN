@@ -14,3 +14,19 @@ export * from './harvest.types'
 export * from './workOrder.types'
 export * from './analytics.types'
 export * from './account.types'
+export type {
+  InferredAlertType,
+  VerdictResult,
+  ExpertVerdict,
+  InferredAlert,
+  TelemetrySample,
+  ReviewItem,
+  ReviewItemStatus,
+  DailyHealthStatus,
+  ExpertActionType,
+  ExpertVerdictStats,
+  ExpertThresholds,
+  ExpertFuzzyTuning,
+  ExpertDetectionTuning,
+  FuzzySuggestionResponse,
+} from './expert.types'

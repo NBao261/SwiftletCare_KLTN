@@ -1675,6 +1675,36 @@ paths:
               },
           }
 
+  /farms/zones/{zoneId}:
+    get:
+      tags: [Farms]
+      summary: "Chi tiết một Zone — ngưỡng, hệ số mờ, tham số phát hiện (ENV-FR-006)"
+      description: |
+        Trả về Zone kèm `thresholds`, `fuzzy_tuning`, `detection_tuning` hiện tại.
+        Dùng trước khi mở form chỉnh tham số (mobile tuning screen).
+        Yêu cầu FARM_OWNER, DOMAIN_EXPERT hoặc FARM_TECHNICIAN với quyền trên house chứa zone.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      responses:
+        "200":
+          description: Zone detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      _id: { type: string }
+                      name: { type: string }
+                      thresholds: { $ref: "#/components/schemas/Thresholds" }
+                      fuzzy_tuning: { $ref: "#/components/schemas/FuzzyTuning" }
+                      detection_tuning: { $ref: "#/components/schemas/DetectionTuning" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /farms/zones/{zoneId}/fuzzy-tuning:
     put:
       tags: [Farms]
