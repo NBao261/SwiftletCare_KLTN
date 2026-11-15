@@ -278,7 +278,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [ ] Giao diện:
   - Len: nhập lô thu hoạch trên mobile;
   - Nhi: xác nhận lô và xem chu kỳ trên web; *(Xác nhận lô xong — Nhi, 11/11, nhánh `feat/g20-farm-technician` (API `fb2db1d` của Kiệt): trang Thu hoạch hiện nhãn "Chờ xác nhận" ở đợt còn lô `DRAFT`, lọc theo trạng thái, menu "Xác nhận đợt thu" (Farm Owner) gọi `POST /harvests/{id}/confirm` cho từng lô `DRAFT`. Còn xem chu kỳ: backend G-26 xong (Kiệt, 15/11, `feat/g26-harvest-cycles`, `GET /harvests/cycles`). 12/11: thẻ sản lượng, biểu đồ năm và tỉ lệ loại tổ chỉ tính lô đã xác nhận (BR-43); bảng và CSV (cột Trạng thái) vẫn có lô chờ xác nhận.)*
-  - Tuấn: viết kết luận mùa vụ.
+  - [x] Tuấn: viết kết luận mùa vụ. *(Tuấn, 16/11, nhánh `feat/g26-harvest-cycles`: `HarvestCyclesSection` (bảng chu kỳ, lọc trạng thái, phân trang) + `CycleConclusionDrawer` (ngăn kéo slide-over: sản lượng, so sánh, sức khỏe, form text+recommendations, PUT /harvests/cycles/{id}/conclusion, cảnh báo chu kỳ chưa đóng); tab "Kết luận mùa vụ" thứ 3 trên `DomainExpertReportsPage`; hooks `useHarvestCycles` + `useSubmitCycleConclusion`; i18n VI/EN.)*
 
 **Test:** TC-F30-01…03. Đây là luồng phụ, test không tính vào 170 nhưng vẫn phải viết.
 
