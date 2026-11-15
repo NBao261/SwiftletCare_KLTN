@@ -78,7 +78,10 @@ export const changePassword = asyncHandler(async (req: Request, res: Response) =
 
 /** PUT /auth/notification-preferences – ALERT-FR-005/006 */
 export const updateNotificationPreferences = asyncHandler(async (req: Request, res: Response) => {
-  const user = await authService.updateNotificationPreferences(req.user._id, req.body)
+  const { push, telegram, quiet_hours: quietHours, by_severity: bySeverity } = req.body as authService.NotificationPreferencesInput
+  const user = await authService.updateNotificationPreferences(req.user._id, {
+    push, telegram, quiet_hours: quietHours, by_severity: bySeverity,
+  })
   res.json({ success: true, data: user })
 })
 

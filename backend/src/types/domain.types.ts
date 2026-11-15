@@ -59,10 +59,18 @@ export interface CurrentUser {
 }
 
 // ── Sub-document interfaces ────────────────────────────────────────────────────
+/** ALERT-FR-005 — kênh ngoài ứng dụng cho 1 mức cảnh báo; trường không có thì theo cài đặt chung */
+export interface ChannelChoice {
+  push?: boolean
+  telegram?: boolean
+}
+
 export interface NotificationPreferences {
   push: boolean
   /** ALERT-FR-013 — chỉ có tác dụng khi tài khoản đã liên kết bot Telegram */
   telegram: boolean
+  /** ALERT-FR-005 — kênh theo loại sự kiện (mức cảnh báo), ghi đè `push`/`telegram` */
+  by_severity?: Partial<Record<AlertSeverity, ChannelChoice>>
   quiet_hours: { start: string; end: string }
 }
 

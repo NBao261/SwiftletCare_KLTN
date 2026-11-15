@@ -21,11 +21,13 @@ interface ModalProps {
   className?: string
   /** Nhấn ra vùng tối ngoài khung thì đóng — chỉ bật cho popup không có form dễ mất dữ liệu */
   closeOnBackdrop?: boolean
+  /** Ghi đè cỡ chữ tiêu đề (VD `text-h1`) — không truyền thì giữ cỡ chung `text-lg` */
+  titleClassName?: string
 }
 
 const SIZE_CLASS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-3xl' } as const
 
-export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', className, closeOnBackdrop = false }: ModalProps) {
+export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', className, closeOnBackdrop = false, titleClassName }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   // Nơi gọi hay truyền onClose inline (hàm mới mỗi render). Để onClose trong deps
   // thì mỗi phím gõ vào input → parent render lại → effect chạy lại → focus() giật
@@ -77,7 +79,7 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
         {title ? (
           <div className="mb-4 flex items-center justify-between gap-3">
             {/* Tên dài không có khoảng trắng (VD tên nhà) vẫn xuống dòng thay vì tràn khung */}
-            <h2 className="min-w-0 text-lg font-bold text-charcoal [overflow-wrap:anywhere]">{tr(title)}</h2>
+            <h2 className={cn('min-w-0 text-lg font-bold text-charcoal [overflow-wrap:anywhere]', titleClassName)}>{tr(title)}</h2>
             <Button variant="icon" size="sm" onClick={onClose} aria-label={t('Đóng')}>
               <CloseIcon />
             </Button>

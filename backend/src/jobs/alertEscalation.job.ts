@@ -1,7 +1,7 @@
 /**
- * ALERT-FR-015 — Cảnh báo CRITICAL/HIGH không được Farm Owner xác nhận trong
- * 15 phút (NODE_OFFLINE: 1 giờ) thì gửi lại 1 lần cho Farm Owner. Chạy nền vì
- * Farm Owner có thể đang ngủ/không mở app.
+ * ALERT-FR-017, BR-40 — cảnh báo thợ đang trực chưa xác nhận sau escalation_min (15 phút) được báo Farm Owner
+ * đúng 1 lần. ALERT-FR-015 — cảnh báo CRITICAL/HIGH chưa ai xác nhận trong 15 phút (NODE_OFFLINE: 1 giờ) được
+ * gửi lại 1 lần cho người đã nhận. Chạy nền vì người nhận có thể đang ngủ/không mở app.
  *
  * Cùng nhịp này cũng tự đóng THRESHOLD_BREACH đã hết (ALERT-FR-008), cảnh báo theo đợt
  * (NOISE_ANOMALY/MISTING_INEFFECTIVE) không còn tái phát, và
@@ -11,13 +11,19 @@ import cron from 'node-cron'
 import {
   renotifyStaleAlerts, resolveNodeOfflineAlertsOfOnlineNodes, resolveStaleEpisodeAlerts, resolveStaleThresholdAlerts,
 } from '@/services/alert.service'
+import { escalateUnacknowledgedAlerts } from '@/services/alertRouting.service'
 import logger from '@/utils/logger.util'
 
-/** Mỗi 2 phút — đủ dày để không trễ quá ngưỡng 15 phút, không tạo tải đáng kể */
-const CRON_EXPRESSION = '0 */2 * * * *'
+/** Mỗi phút — NFR-15 a: Farm Owner được báo không quá 60 s sau hạn leo thang (Report 4 §5.4) */
+const CRON_EXPRESSION = '0 * * * * *'
 
 export function startAlertEscalationJob(): void {
   cron.schedule(CRON_EXPRESSION, () => {
+    escalateUnacknowledgedAlerts()
+      .then(count => {
+        if (count > 0) logger.info(`Leo thang ${count} cảnh báo thợ chưa xác nhận lên Farm Owner (BR-40)`)
+      })
+      .catch((err: Error) => logger.error('escalateUnacknowledgedAlerts failed', { err }))
     renotifyStaleAlerts()
       .then(count => {
         if (count > 0) logger.info(`Gửi lại ${count} cảnh báo chưa ai xác nhận (ALERT-FR-015)`)

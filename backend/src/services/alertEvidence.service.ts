@@ -2,7 +2,7 @@ import { Types } from 'mongoose'
 import { Alert, IAlert } from '@/models/alert.model'
 import { Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { DEVICE_ALERT_TYPES, INFERRED_ALERT_TYPES, OPEN_STATUSES, getAlert } from '@/services/alert.service'
+import { DEVICE_ALERT_TYPES, INFERRED_ALERT_TYPES, OPEN_STATUSES, getAlert, presentOnsiteChecks } from '@/services/alert.service'
 import { inRangeSum, pct } from '@/services/analytics.service'
 import { sumHouseBuckets } from '@/services/birdCount.service'
 import { BadRequestError } from '@/utils/appError.util'
@@ -50,7 +50,11 @@ export async function getAlertEvidence(alertId: string, user: CurrentUser) {
   if (!INFERRED_ALERT_TYPES.includes(alert.type)) {
     throw BadRequestError(`Chỉ cảnh báo suy luận có bằng chứng (${INFERRED_ALERT_TYPES.join(', ')})`)
   }
-  const base = { alert_id: String(alert._id), type: alert.type, earlier_verdicts: await earlierVerdicts(alert) }
+  // EXPERT-FR-021 — quan sát của thợ tại chỗ đi cùng dữ liệu, trước khi chuyên gia kết luận
+  const base = {
+    alert_id: String(alert._id), type: alert.type, earlier_verdicts: await earlierVerdicts(alert),
+    onsite_checks: await presentOnsiteChecks(alert),
+  }
 
   if (alert.type === 'LOW_RETURN_RATE') {
     const sessionDate = (alert.metadata?.sessionDate as string | undefined) ?? new Date(alert.created_at.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)

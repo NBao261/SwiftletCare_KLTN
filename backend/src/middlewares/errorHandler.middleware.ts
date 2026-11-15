@@ -20,9 +20,13 @@ export function errorHandler(err: MongoError | AppError | MulterError, req: Requ
     return
   }
 
-  // Upload file (ENV-FR-013c) — VD vượt 10MB (SRS §12.4)
+  // Upload file — nhạc loa ru ≤ 10 MB (ENV-FR-013c), ảnh tại chỗ ≤ 5 MB (ALERT-FR-018, EXPERT-FR-021)
   if (err instanceof MulterError) {
-    const message = err.code === 'LIMIT_FILE_SIZE' ? 'File vượt quá dung lượng cho phép (10MB)' : `File upload không hợp lệ: ${err.message}`
+    const message = err.code === 'LIMIT_FILE_SIZE'
+      ? 'File vượt quá dung lượng cho phép (nhạc 10MB, ảnh 5MB)'
+      : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE'
+        ? 'Quá số file cho phép hoặc sai tên trường file'
+        : `File upload không hợp lệ: ${err.message}`
     res.status(400).json({ success: false, error: { code: 'INVALID_UPLOAD', message } })
     return
   }
