@@ -43,8 +43,9 @@ export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
  */
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
 /**
- * `ACTUATOR_FAULT` (THREAT-FR-014): firmware gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào tải còn không theo relay,
- * nên cảnh báo tự đóng khi tải chạy đúng trở lại và firmware thôi gửi.
+ * `ACTUATOR_FAULT` (THREAT-FR-014): thiết kế cho firmware gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào tải còn không
+ * theo relay, nên cảnh báo tự đóng khi tải chạy đúng trở lại. Firmware chưa gửi cảnh báo này (board đo dòng chưa làm);
+ * Work Order của nó không dựa vào việc gửi lại (workOrder.service#UNVERIFIABLE_RECOVERY).
  */
 export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT']
 
@@ -444,6 +445,23 @@ export interface ListAlertsQuery {
 }
 
 /**
+ * Dòng của danh sách cảnh báo: không ký URL ảnh cho từng dòng, nên bỏ hẳn khoá MinIO thô (`onsite_checks[].photo`,
+ * `site_cause.photos`) — ảnh xem ở chi tiết; kiểm tra tại chỗ chưa trả lời có `observation: null` như chi tiết (spec).
+ */
+function listRowView<T extends { onsite_checks?: OnsiteCheck[]; site_cause?: { photos?: string[] } }>(row: T) {
+  const { onsite_checks: checks, site_cause: siteCause, ...rest } = row
+  return {
+    ...rest,
+    ...(siteCause && { site_cause: (({ photos: _photos, ...cause }) => cause)(siteCause) }),
+    onsite_checks: (checks ?? []).map(({ photo: _photo, ...check }) => ({
+      ...check,
+      observation: check.observation ?? null, note: check.note ?? null,
+      answered_by: check.answered_by ?? null, answered_at: check.answered_at ?? null,
+    })),
+  }
+}
+
+/**
  * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Administrator thấy
  * cảnh báo thiết bị của mọi farm (FARM-FR-009, Report 3 §2.4); Farm Technician thấy cảnh báo của
  * các nhà được giao (§2.4, AUTH-FR-013) — việc gửi cảnh báo tới thợ theo ca trực là G-21.
@@ -479,7 +497,8 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
 
   const [records, total, unreadCount] = await Promise.all([
     // ALERT-FR-007 — cảnh báo DISMISSED hiện ai bác bỏ: kèm tên người kết luận
-    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).populate('expert_verdict.by', 'full_name').lean(),
+    Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).populate('expert_verdict.by', 'full_name').lean()
+      .then(rows => rows.map(listRowView)),
     Alert.countDocuments(filter),
     Alert.countDocuments({ ...filter, status: 'ACTIVE' }),
   ])
@@ -627,6 +646,16 @@ export async function setAlertVerdict(
     alert.previous_status = undefined
   }
   alert.expert_verdict = { result, note: trimmedNote, by: user._id as never, role: user.role as FarmMemberRole, at: new Date() }
+  // SM-01, ALERT-FR-017 — cảnh báo bị bác bỏ nhầm được xác nhận lại: định tuyến lại TRƯỚC khi lưu trạng thái mới, để
+  // job leo thang không thấy cảnh báo đã về ACTIVE mà `owners_notified` còn false (BR-40: báo Farm Owner một lần).
+  // Định tuyến lỗi thì `recipientIds` là undefined và lần báo lại về Farm Owner như trước G-21
+  const reconfirmed = statusBefore === 'DISMISSED' && alert.status !== 'DISMISSED'
+  const recipientIds = reconfirmed
+    ? await rerouteReconfirmedAlert(alert).catch((err: Error) => {
+      logger.error('Định tuyến lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err })
+      return undefined
+    })
+    : undefined
   await alert.save()
 
   const auditId = await logAction(user._id, 'ALERT_VERDICT_SET', 'alert', String(alert._id), {
@@ -638,15 +667,8 @@ export async function setAlertVerdict(
     place: alert.title,
     detail: trimmedNote,
   })
-  // SM-01 — cảnh báo bị bác bỏ nhầm được xác nhận lại: Farm Owner phải được báo lại như cảnh báo mới
-  // ALERT-FR-017 — báo lại cả thợ đang trực lẫn Farm Owner; Farm Owner coi như đã được báo nên job leo thang không
-  // gửi thêm lần nữa (BR-40)
-  if (statusBefore === 'DISMISSED' && alert.status !== 'DISMISSED') {
-    // Định tuyến lỗi thì vẫn báo Farm Owner như trước G-21 (recipientIds rỗng → mặc định Farm Owner)
-    const recipientIds = await rerouteReconfirmedAlert(alert).catch((err: Error) => {
-      logger.error('Định tuyến lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err })
-      return undefined
-    })
+  // Báo lại như cảnh báo mới: thợ đang trực và Farm Owner (định tuyến ở trên)
+  if (reconfirmed) {
     void dispatchAlertNotification(alert, { recipientIds }).catch((err: Error) =>
       logger.error('Báo lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err }),
     )

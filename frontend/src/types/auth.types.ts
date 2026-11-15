@@ -1,5 +1,6 @@
 // Module AUTH (§5.1) — tài khoản, đăng nhập, lời mời vào farm.
 
+import type { AlertSeverity } from '@/types/alert.types'
 import type { Role } from '@/types/common.types'
 
 /**
@@ -9,12 +10,29 @@ import type { Role } from '@/types/common.types'
  */
 export type UserStatus = 'ACTIVE' | 'LOCKED' | 'PENDING_DELETION' | 'DELETED'
 
+// ALERT-FR-005 — kênh ngoài ứng dụng của 1 mức cảnh báo; trường không có thì dùng cài đặt chung
+export interface ChannelChoice {
+  push?: boolean
+  telegram?: boolean
+}
+
+export interface NotificationPreferences {
+  push: boolean // zalo/sms đã bỏ theo SRS 3.1.0 (G-01)
+  telegram?: boolean
+  by_severity?: Partial<Record<AlertSeverity, ChannelChoice>>
+  quiet_hours: { start: string; end: string }
+}
+
+// Gửi lên PUT /auth/notification-preferences: by_severity.<mức> = null để bỏ ghi đè của mức đó
+export interface NotificationPreferencesInput extends Partial<Omit<NotificationPreferences, 'by_severity'>> {
+  by_severity?: Partial<Record<AlertSeverity, ChannelChoice | null>>
+}
+
 export interface User {
   _id: string; email: string; phone?: string; full_name: string; role: Role; avatar_url?: string
-  notification_preferences: {
-    push: boolean // zalo/sms đã bỏ theo SRS 3.1.0 (G-01)
-    quiet_hours: { start: string; end: string }
-  }
+  notification_preferences: NotificationPreferences
+  /** ALERT-FR-013 — đã liên kết bot Telegram */
+  telegram_linked?: boolean
   /** AUTH-FR-011 — false khi Admin khoá (Flow 19) HOẶC đã xoá theo yêu cầu (xem deleted_at) */
   is_active: boolean
   deactivated_at?: string

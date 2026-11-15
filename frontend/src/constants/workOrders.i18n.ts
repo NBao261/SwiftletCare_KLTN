@@ -14,7 +14,7 @@ const vi = {
 
   // Bảng phiếu công việc
   'list.title': 'Phiếu công việc sửa chữa',
-  'list.subtitle': 'Việc sửa tại nhà yến: tạo tự động từ cảnh báo thiết bị hoặc do bạn tạo; bạn duyệt khi dữ liệu đã phục hồi.',
+  'list.subtitle': 'Việc sửa tại nhà yến: tạo tự động từ cảnh báo thiết bị hoặc do bạn tạo; bạn duyệt sau khi thợ báo xong.',
   'list.subtitleExpert': 'Việc sửa tại nhà yến và tình trạng xử lý; chủ nhà yến duyệt, mở lại, huỷ hoặc giao lại.',
   'list.filterStatus': 'Lọc trạng thái',
   'filter.open': 'Chưa đóng',
@@ -44,6 +44,7 @@ const vi = {
 
   'approve.title': 'Duyệt phiếu công việc',
   'approve.desc': 'Dữ liệu đã phục hồi đủ thời gian kiểm. Duyệt sẽ đóng phiếu công việc và cảnh báo của nó.',
+  'approve.descUnverified': 'Hệ thống chưa có dữ liệu để kiểm phiếu này đã sửa xong chưa. Hãy kiểm tại nhà yến trước khi duyệt; duyệt sẽ đóng phiếu công việc và cảnh báo của nó.',
   'approve.done': 'Đã duyệt và đóng phiếu công việc',
   'reopen.title': 'Mở lại phiếu công việc',
   'reopen.label': 'Ghi chú cho kỹ thuật viên',
@@ -128,7 +129,7 @@ const en: Record<WorkOrderKey, string> = {
   'page.loadFailed': 'Could not load the farms',
 
   'list.title': 'Repair work orders',
-  'list.subtitle': 'On-site repairs: opened automatically from equipment alerts or by you; you approve them once the data have recovered.',
+  'list.subtitle': 'On-site repairs: opened automatically from equipment alerts or by you; you approve them once the technician reports them done.',
   'list.subtitleExpert': 'On-site repairs and their progress; the Farm Owner approves, reopens, cancels or reassigns them.',
   'list.filterStatus': 'Filter by status',
   'filter.open': 'Open',
@@ -157,6 +158,7 @@ const en: Record<WorkOrderKey, string> = {
 
   'approve.title': 'Approve the work order',
   'approve.desc': 'The data have stayed recovered for the check period. Approving closes the work order and its alert.',
+  'approve.descUnverified': 'The system has no data to check whether this repair worked. Check at the house before approving; approving closes the work order and its alert.',
   'approve.done': 'Work order approved and closed',
   'reopen.title': 'Reopen the work order',
   'reopen.label': 'Note for the technician',

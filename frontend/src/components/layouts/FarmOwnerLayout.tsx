@@ -63,7 +63,7 @@ const menuSections: MenuSection[] = [
         icon: HeartbeatIcon
       },
       {
-        label: 'Thông báo',
+        label: 'Cảnh báo',
         path: '/alerts',
         icon: WarningIcon
       },

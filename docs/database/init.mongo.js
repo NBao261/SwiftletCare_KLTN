@@ -1992,6 +1992,9 @@ ensureCollection("workorders", {
     "closed_at": {
       "bsonType": ["date", "null"]
     },
+    "assigned_at": {
+      "bsonType": ["date", "null"]
+    },
     "escalated_at": {
       "bsonType": ["date", "null"]
     },

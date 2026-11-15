@@ -438,6 +438,8 @@ const en: Record<string, string> = {
   'Đến': 'To',
   'Lưu cài đặt': 'Save settings',
   'Đã lưu cài đặt thông báo': 'Notification settings saved',
+  'Kênh theo mức cảnh báo': 'Channels by alert level',
+  'Cảnh báo Khẩn cấp phải còn ít nhất một kênh ngoài ứng dụng. Cảnh báo mọi mức vẫn luôn hiện trong ứng dụng.': 'Urgent alerts must keep at least one channel outside the app. Alerts of every level always show in the app.',
   'Lưu thất bại': 'Save failed',
   'Bảo mật': 'Security',
   'Đổi mật khẩu bằng mã gửi về email hiện tại': 'Change your password with a code sent to your current email',

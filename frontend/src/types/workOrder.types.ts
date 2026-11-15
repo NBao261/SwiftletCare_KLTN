@@ -53,6 +53,8 @@ export interface WorkOrder {
   started_at: string | null;
   done_at: string | null;
   verified_at: string | null;
+  // Lúc giao cho thợ hiện tại; quá hạn "chưa ai bắt đầu" tính từ đây (BR-40)
+  assigned_at: string | null;
   closed_at: string | null;
   escalated_at: string | null;
   history: WorkOrderHistoryEntry[];

@@ -23,9 +23,17 @@ describe('roleTabs', () => {
     expect(getRoleTabs('FARM_TECHNICIAN').map(tab => tab.name)).toEqual(['home', 'farms', 'alerts', 'analytics', 'profile'])
   })
 
-  it('Domain Expert có tab Cảnh báo, 1 menu tạm và tab Tài khoản', () => {
-    expect(getRoleTabs('DOMAIN_EXPERT').map(tab => tab.name)).toEqual(['alerts', 'menu-2', 'profile'])
-    expect(findTabTitle('menu-2')).toBe('Menu 2')
+  it('Domain Expert có 4 tab nghiệp vụ (Hàng đợi, Thẩm định, Tham số, Tài khoản)', () => {
+    const tabs = getRoleTabs('DOMAIN_EXPERT')
+    expect(tabs.map(tab => tab.name)).toEqual(['queue', 'verdicts', 'tuning', 'profile'])
+    expect(findTabTitle('queue')).toBe('Hàng đợi')
+    expect(findTabTitle('verdicts')).toBe('Thẩm định')
+    expect(findTabTitle('tuning')).toBe('Tham số')
+
+    const verdictsTab = tabs.find(t => t.name === 'verdicts')
+    expect(verdictsTab?.showsAlertBadge).toBe(true)
+    // 4 tab đều nhau, không nút nổi: highlight chạy theo tab đang chọn (user, 2026-11-14)
+    expect(tabs.some(tab => tab.isFeatured)).toBe(false)
   })
 
   it('role nào dùng mobile cũng có tab Tài khoản để đăng xuất', () => {
@@ -36,7 +44,7 @@ describe('roleTabs', () => {
 
   it('sau đăng nhập vào tab đầu của role; role không dùng mobile về màn đăng nhập', () => {
     expect(getRoleHomeHref('FARM_OWNER')).toBe('/(tabs)/home')
-    expect(getRoleHomeHref('DOMAIN_EXPERT')).toBe('/(tabs)/alerts')
+    expect(getRoleHomeHref('DOMAIN_EXPERT')).toBe('/(tabs)/queue')
     expect(getRoleHomeHref('FARM_TECHNICIAN')).toBe('/(tabs)/home')
     expect(getRoleHomeHref('ADMIN')).toBe('/(auth)/login')
   })

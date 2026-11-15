@@ -92,6 +92,12 @@ describe('kiểm tra tại chỗ (EXPERT-FR-021)', () => {
     })
     await tech$.post(path, { observation: 'RAIN' }).expect(409)
 
+    // Danh sách không ký URL ảnh cho từng dòng: không trả khoá MinIO thô, `observation` có như chi tiết
+    const list = await owner$.get('/alerts').expect(200)
+    const row = list.body.data.find((a: { _id: string }) => a._id === String(alert._id))
+    expect(row.onsite_checks[0]).toMatchObject({ observation: 'WORK_OR_PEOPLE_NEARBY' })
+    expect(row.onsite_checks[0]).not.toHaveProperty('photo')
+
     const evidence = await expert$.get(`/alerts/${alert._id}/evidence`).expect(200)
     expect(evidence.body.data.onsite_checks[0]).toMatchObject({ observation: 'WORK_OR_PEOPLE_NEARBY', technician_id: { _id: String(tech.user._id) } })
     expect(await WorkOrder.countDocuments()).toBe(0)

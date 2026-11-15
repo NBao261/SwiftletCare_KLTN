@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, LoginRequest, LoginResponse, User } from '@/types'
+import type { ApiResponse, LoginRequest, LoginResponse, NotificationPreferencesInput, User } from '@/types'
 
 export const authApi = {
   login: (input: LoginRequest) =>
@@ -13,7 +13,7 @@ export const authApi = {
     api.post<ApiResponse<{ message: string }>>('/auth/reset-password', input),
 
   // ALERT-FR-005/006 — kênh nhận thông báo + giờ im lặng
-  updateNotificationPreferences: (prefs: Partial<User['notification_preferences']>) =>
+  updateNotificationPreferences: (prefs: NotificationPreferencesInput) =>
     api.put<ApiResponse<User>>('/auth/notification-preferences', prefs),
 
   // AUTH-FR-012 — yêu cầu xoá tài khoản (Administrator xử lý trong ≤30 ngày)

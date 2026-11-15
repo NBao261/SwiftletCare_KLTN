@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon } from '@phosphor-icons/react';
 
@@ -9,7 +9,7 @@ import WorkOrderDetailDrawer from '@/components/features/farm-owner/work-orders/
 import WorkOrderReassignModal from '@/components/features/farm-owner/work-orders/WorkOrderReassignModal';
 import WorkOrderTable from '@/components/features/farm-owner/work-orders/WorkOrderTable';
 import {
-  WORK_ORDER_STATUSES, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
+  WORK_ORDER_STATUSES, isRecoveryUnverified, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
@@ -18,7 +18,8 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
-import { useWorkOrderActions, useWorkOrders } from '@/hooks/farm-owner/useWorkOrders';
+import { WORK_ORDER_PAGE_SIZE, useWorkOrderActions, useWorkOrders } from '@/hooks/farm-owner/useWorkOrders';
+import { lastPage } from '@/lib/helpers';
 import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { useToastStore } from '@/stores/toastStore';
 import type { WorkOrder } from '@/types';
@@ -46,6 +47,12 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
   const page = pageState.key === filterKey ? pageState.page : 1;
   const { records: workOrders, total, isLoading, isError, error, refetch } = useWorkOrders(query, page);
+  // Duyệt hay huỷ phiếu cuối của trang cuối làm trang rỗng: lùi về trang cuối còn dữ liệu
+  useEffect(() => {
+    if (!isLoading && !isError && workOrders.length === 0 && page > 1) {
+      setPageState({ key: filterKey, page: lastPage(total, WORK_ORDER_PAGE_SIZE) });
+    }
+  }, [isLoading, isError, workOrders.length, page, total, filterKey]);
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [pending, setPending] = useState<{ action: OwnerAction; workOrder: WorkOrder } | null>(null);
@@ -177,7 +184,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
       <ConfirmModal
         open={pending?.action === 'approve'}
         title={t('approve.title')}
-        description={t('approve.desc')}
+        description={t(pending && isRecoveryUnverified(pending.workOrder) ? 'approve.descUnverified' : 'approve.desc')}
         confirmLabel={t('action.approve')}
         loading={actions.approve.isPending}
         onConfirm={() => pending && actions.approve.mutate(pending.workOrder, callbacks('approve.done'))}

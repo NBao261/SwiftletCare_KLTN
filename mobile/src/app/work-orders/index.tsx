@@ -134,7 +134,7 @@ export default function WorkOrdersScreen() {
         )}
         <Text variant="small" color={palette.textSecondary}>
           {t(
-            'Work Order mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, hệ thống kiểm dữ liệu phục hồi rồi chủ trại duyệt trên web.',
+            'Work Order mở tự động từ cảnh báo thiết bị hoặc khi chuyên gia xác nhận cần tới nhà. Làm xong, sự cố có dữ liệu để kiểm thì hệ thống kiểm dữ liệu phục hồi trước, rồi chủ trại duyệt trên web.',
           )}
         </Text>
       </ScrollView>

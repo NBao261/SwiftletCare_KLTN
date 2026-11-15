@@ -60,6 +60,8 @@ export interface IWorkOrder extends Document {
   done_at?: Date
   verified_at?: Date
   closed_at?: Date
+  /** BR-40 — lúc giao cho thợ hiện tại; quá hạn "chưa ai bắt đầu" tính từ đây */
+  assigned_at?: Date
   /** BR-40 — đã báo Farm Owner vì chưa ai bắt đầu sau escalation_min */
   escalated_at?: Date
   history: WorkOrderHistoryEntry[]
@@ -91,6 +93,7 @@ const workOrderSchema = new Schema<IWorkOrder>(
     done_at:     { type: Date },
     verified_at: { type: Date },
     closed_at:   { type: Date },
+    assigned_at: { type: Date },
     escalated_at: { type: Date },
     history: [{
       from: { type: String, enum: WORK_ORDER_STATUSES },

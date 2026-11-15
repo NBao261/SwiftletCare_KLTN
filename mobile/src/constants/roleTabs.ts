@@ -2,9 +2,11 @@ import type { Href } from 'expo-router'
 import {
   BellIcon,
   ChartLineIcon,
-  UserCircleIcon,
   HouseIcon,
-  SquaresFourIcon,
+  ShieldCheckIcon,
+  SlidersHorizontalIcon,
+  TrayIcon,
+  UserCircleIcon,
   WarehouseIcon,
   type Icon,
 } from 'phosphor-react-native'
@@ -36,7 +38,7 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
   ],
   // Kỹ thuật viên nhà yến (G-20, Report 3 §2.4): cùng 5 tab và cùng màn với Farm Owner; backend chỉ trả các nhà được giao, nút
   // thao tác theo canPerform (điều khiển tay có; xác nhận cảnh báo, tạo nhà, đăng ký thiết bị, sửa ngưỡng không). Tab Cảnh báo giữ
-  // theo Report 3 (ALERT-FR-009, 017) nhưng backend G-20 còn trả 403 cho /alerts của kỹ thuật viên — chờ G-21 chuyển cảnh báo theo nhà
+  // theo Report 3 (ALERT-FR-009, 017); cảnh báo của nhà được giao mở từ G-20, định tuyến theo nhà hoàn thiện ở G-21
   FARM_TECHNICIAN: [
     { name: 'home', title: 'Trang chủ', icon: HouseIcon },
     { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
@@ -44,11 +46,12 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
-  // Cảnh báo dùng chung màn với Farm Owner (chuyên gia phán quyết cảnh báo suy luận, không xác nhận, không có badge);
-  // menu-2 còn tạm — đổi tên và gán route thật khi làm màn chuyên gia; Tài khoản dùng chung màn với Farm Owner
+  // Tab nghiệp vụ Chuyên gia (Domain Expert) — 4 tab đều nhau, không dùng nút nổi: với 4 tab nút nổi
+  // rơi vào vị trí thứ 2 (lệch trái) và khối lime đứng yên lấn át chỉ báo tab đang chọn (user, 2026-11-14)
   DOMAIN_EXPERT: [
-    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon },
-    { name: 'menu-2', title: 'Menu 2', icon: SquaresFourIcon },
+    { name: 'queue', title: 'Hàng đợi', icon: TrayIcon },
+    { name: 'verdicts', title: 'Thẩm định', icon: ShieldCheckIcon, showsAlertBadge: true },
+    { name: 'tuning', title: 'Tham số', icon: SlidersHorizontalIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
 }

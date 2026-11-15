@@ -1093,11 +1093,12 @@ frontend/src/
 │   │                          FarmOwnerFarmHousesPage · FarmOwnerFarmZonesPage
 │   │                          FarmOwnerFarmZoneDetailPage · FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
 │   │                          FarmOwnerVisionPage · FarmOwnerDevicesPage · FarmOwnerDeviceDetailPage
+│   │                          FarmOwnerAlertsPage — /alerts của Farm Owner, Farm Technician và Admin
 │   │                          (đích) FarmOwnerDeviceSetupPage — SF-01, Technician mở cùng trang ở mọi farm
 │   ├── domain-expert/         (đích) DomainExpert<ChứcNăng>Page — kiểm chứng cảnh báo, báo cáo
 │   │                          sức khỏe Zone, duyệt thay đổi, duyệt đề xuất hệ số, tham số phát hiện,
 │   │                          vòng đếm, lịch đếm
-│   ├── technician/            TechnicianDevicesPage · TechnicianAlertsPage · TechnicianFarmsPage
+│   ├── technician/            TechnicianDevicesPage · TechnicianFarmsPage
 │   │                          TechnicianOnboardingPage · TechnicianOtaPage
 │   ├── auth/                  LoginPage · ForgotPasswordPage · InvitationPage (không có đăng ký công khai —
 │   │                          người được mời tạo tài khoản trên trang lời mời, G-02)
