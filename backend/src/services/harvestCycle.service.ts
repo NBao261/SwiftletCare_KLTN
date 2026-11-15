@@ -98,20 +98,28 @@ async function cycleHealth(zone: { _id: unknown; name: string; house_id: unknown
   }
 }
 
-/** Chạy tuần tự theo zone: hai lần xác nhận cùng lúc không dựng chồng lên nhau */
-const rebuilding = new Map<string, Promise<void>>()
+/**
+ * Chạy tuần tự theo zone: hai lần dựng lại cùng lúc không chồng lên nhau, và kết luận mùa vụ không bị một lần dựng lại
+ * đang chạy (đã đọc chu kỳ trước khi kết luận được lưu) ghi đè.
+ */
+const zoneQueue = new Map<string, Promise<unknown>>()
+
+function inZoneQueue<T>(zoneId: string, task: () => Promise<T>): Promise<T> {
+  const next = (zoneQueue.get(zoneId) ?? Promise.resolve()).then(task, task)
+  zoneQueue.set(zoneId, next)
+  return next.finally(() => { if (zoneQueue.get(zoneId) === next) zoneQueue.delete(zoneId) })
+}
 
 /**
  * HARVEST-FR-007, BR-43, Report 3 §6.13 và §6.22 — dựng lại mọi chu kỳ của zone từ các lô đã xác nhận: chu kỳ đầu bắt
- * đầu lúc đăng ký controller đầu tiên của zone (không có, hoặc sau lần thu hoạch đầu, thì từ lần thu hoạch đầu), mỗi
- * lần thu hoạch đóng một chu kỳ, chu kỳ cuối `OPEN`. Một đường cho cả xác nhận, sửa, xoá (chu kỳ gộp vào chu kỳ sau) và
- * nhập lùi ngày. Giữ `_id` và kết luận mùa vụ của chu kỳ có cùng ngày thu hoạch đóng.
+ * đầu lúc đăng ký controller đầu tiên của zone, mỗi lần thu hoạch đóng một chu kỳ, chu kỳ cuối `OPEN`. Zone chưa có
+ * controller, hoặc controller đăng ký từ lần thu hoạch đầu trở đi (sổ sản lượng các mùa trước, A-8): lần thu hoạch đầu
+ * chỉ là mốc bắt đầu, vì chu kỳ nó đóng không có ngày bắt đầu. Một đường cho cả xác nhận, sửa, xoá (chu kỳ gộp vào chu
+ * kỳ sau) và nhập lùi ngày. Giữ `_id` và kết luận mùa vụ của chu kỳ có cùng ngày thu hoạch đóng.
  */
 export function rebuildZoneCycles(zoneId: unknown): Promise<void> {
   const key = String(zoneId)
-  const next = (rebuilding.get(key) ?? Promise.resolve()).then(() => doRebuild(key), () => doRebuild(key))
-  rebuilding.set(key, next)
-  return next.finally(() => { if (rebuilding.get(key) === next) rebuilding.delete(key) })
+  return inZoneQueue(key, () => doRebuild(key))
 }
 
 async function doRebuild(zoneId: string): Promise<void> {
@@ -123,23 +131,25 @@ async function doRebuild(zoneId: string): Promise<void> {
     HarvestCycle.find({ zone_id: zone._id }).lean(),
   ])
   const registeredAt = firstController?.registered_at
-  const firstStart = registeredAt && (!harvests[0] || registeredAt <= harvests[0].at) ? registeredAt : harvests[0]?.at
+  // Controller đăng ký trước lần thu hoạch đầu là mốc bắt đầu; không thì lần thu hoạch đầu là mốc (không đóng chu kỳ nào)
+  const anchoredByController = Boolean(registeredAt && harvests[0] && registeredAt < harvests[0].at)
+  const firstStart = anchoredByController || !harvests[0] ? registeredAt : harvests[0].at
   if (!firstStart) {
     await HarvestCycle.deleteMany({ zone_id: zone._id })
     return
   }
+  const closing = anchoredByController ? harvests : harvests.slice(1)
 
   const byClosingDate = new Map(existing.filter(c => c.closing_harvest).map(c => [c.closing_harvest!.date, c]))
   const openExisting = existing.find(c => c.status === 'OPEN')
   const docs: Array<Partial<IHarvestCycle> & { _id: Types.ObjectId }> = []
   let start: Date = firstStart
-  for (let i = 0; i < harvests.length; i++) {
-    const h = harvests[i]
+  for (let i = 0; i < closing.length; i++) {
+    const h = closing[i]
     const kept = byClosingDate.get(h.date)
     const id = kept?._id ?? new Types.ObjectId()
-    const prevHarvest = harvests[i - 1]
     const target = Date.parse(`${h.date}T00:00:00Z`) - 365 * DAY_MS
-    const lastYear = harvests.slice(0, i)
+    const lastYear = closing.slice(0, i)
       .map((x, j) => ({ x, j, gap: Math.abs(Date.parse(`${x.date}T00:00:00Z`) - target) }))
       .filter(c => c.gap <= HARVEST_SAME_PERIOD_DAYS * DAY_MS)
       .sort((a, b) => a.gap - b.gap)[0]
@@ -150,7 +160,7 @@ async function doRebuild(zoneId: string): Promise<void> {
       status,
       closing_harvest: { date: h.date, batch_ids: h.batchIds, nest_count: h.nestCount, weight_grams: round1(h.weightGrams) },
       comparison: {
-        previous: comparisonWith(h, prevHarvest, docs[i - 1]?._id, 'Chu kỳ đầu tiên của zone'),
+        previous: comparisonWith(h, closing[i - 1], docs[i - 1]?._id, 'Chu kỳ đầu tiên của zone'),
         same_period_last_year: comparisonWith(h, lastYear?.x, lastYear ? docs[lastYear.j]._id : undefined,
           `Không có chu kỳ nào đóng trong ±${HARVEST_SAME_PERIOD_DAYS} ngày của một năm trước`),
       },
@@ -163,16 +173,52 @@ async function doRebuild(zoneId: string): Promise<void> {
     _id: openExisting?._id ?? new Types.ObjectId(), farm_id: zone.farm_id, house_id: zone.house_id, zone_id: zone._id,
     start_date: start, status: 'OPEN', incomplete: false,
   })
+  await writeCycles(zoneId, existing, docs)
+}
 
-  const dropped = existing.filter(c => c.conclusion && !docs.some(d => String(d._id) === String(c._id)))
-  for (const c of dropped) {
+/** Trường chỉ chu kỳ đã đóng (hay đã kết luận) có: ghi lại chu kỳ thì bỏ trường bản mới không có */
+const OPTIONAL_FIELDS = ['end_date', 'closing_harvest', 'comparison', 'health', 'completeness_pct', 'conclusion'] as const
+
+/**
+ * Ghi chu kỳ đã dựng mà không bao giờ xoá một kết luận mùa vụ trước khi ghi lại nó (nó là dữ liệu duy nhất do người
+ * viết): chỉ xoá chu kỳ không còn trong kết quả (lô đóng bị xoá hay đổi ngày: gộp vào chu kỳ sau, kết luận ghi log);
+ * chu kỳ giữ lại được cập nhật tại chỗ theo `_id`. Mốc bắt đầu có thể dời sang mốc cũ của chu kỳ khác (nhập lùi ngày),
+ * nên trước hết đưa mốc của các chu kỳ sắp dời về một giá trị tạm riêng để không vướng index unique `zone_id +
+ * start_date`. Dừng giữa chừng thì chu kỳ còn mốc tạm nhưng vẫn giữ kết luận, lần dựng lại sau sửa đúng.
+ */
+async function writeCycles(
+  zoneId: string,
+  existing: Array<{ _id: Types.ObjectId; start_date: Date; conclusion?: { text?: string } | null }>,
+  docs: Array<Partial<IHarvestCycle> & { _id: Types.ObjectId }>,
+): Promise<void> {
+  const keep = new Set(docs.map(d => String(d._id)))
+  const dropped = existing.filter(c => !keep.has(String(c._id)))
+  for (const c of dropped.filter(x => x.conclusion)) {
     logger.warn('Chu kỳ có kết luận bị gộp vào chu kỳ sau vì lô đóng bị xoá hay sửa ngày', {
       cycleId: String(c._id), zoneId, conclusion: c.conclusion?.text,
     })
   }
-  // Xoá rồi ghi lại (giữ _id): mốc bắt đầu có thể đổi chỗ cho nhau, ghi đè từng cái sẽ vướng index unique zone + mốc
-  await HarvestCycle.deleteMany({ zone_id: zone._id })
-  await HarvestCycle.insertMany(docs)
+  if (dropped.length) await HarvestCycle.deleteMany({ _id: { $in: dropped.map(c => c._id) } })
+
+  const before = new Map(existing.map(c => [String(c._id), c.start_date.getTime()]))
+  const moving = docs.filter(d => before.has(String(d._id)) && before.get(String(d._id)) !== d.start_date!.getTime())
+  if (moving.length) {
+    // Mốc tạm trước năm 1970, khác nhau cho từng chu kỳ: không trùng mốc thật nào của zone
+    await HarvestCycle.bulkWrite(moving.map((d, i) => ({
+      updateOne: { filter: { _id: d._id }, update: { $set: { start_date: new Date(-1 - i) } } },
+    })))
+  }
+  // Ghi đủ trường của bản mới, bỏ các trường bản mới không có (VD chu kỳ OPEN chưa có lần thu hoạch đóng)
+  await HarvestCycle.bulkWrite(docs.map(({ _id, ...fields }) => {
+    const unset = OPTIONAL_FIELDS.filter(f => fields[f] === undefined)
+    return {
+      updateOne: {
+        filter: { _id },
+        update: { $set: fields, ...(unset.length && { $unset: Object.fromEntries(unset.map(f => [f, 1])) }) },
+        upsert: true,
+      },
+    }
+  }))
 }
 
 /** Dựng lại sau khi lô đổi: lỗi chỉ ghi log, thao tác trên lô vẫn xong (lần sau dựng lại đúng) */
@@ -248,20 +294,27 @@ export async function getCycle(id: string, user: CurrentUser) {
  * (EXPERT-FR-009). Chu kỳ `OPEN` → 409.
  */
 export async function concludeCycle(user: CurrentUser, id: string, input: { text: string; recommendations?: string }) {
-  const { cycle, farm } = await findCycleWithAccess(id, user)
+  const { cycle: found, farm } = await findCycleWithAccess(id, user)
   if (!farm) throw NotFoundError('Không tìm thấy chu kỳ thu hoạch')
   await assertExpertDecision(farm, user)
-  if (cycle.status === 'OPEN') throw ConflictError('Chu kỳ chưa đóng: chưa có lần thu hoạch nào được xác nhận')
 
-  cycle.conclusion = {
-    text: input.text.trim(),
-    recommendations: input.recommendations?.trim() || undefined,
-    by: new Types.ObjectId(user._id),
-    role: user.role as FarmMemberRole,
-    at: new Date(),
-  }
-  cycle.status = 'CONCLUDED'
-  await cycle.save()
+  // Trong hàng đợi của zone: một lần dựng lại đang chạy xong trước, rồi mới đọc lại chu kỳ và lưu kết luận
+  const cycle = await inZoneQueue(String(found.zone_id), async () => {
+    const current = await HarvestCycle.findById(id)
+    if (!current) throw NotFoundError('Không tìm thấy chu kỳ thu hoạch')
+    if (current.status === 'OPEN') throw ConflictError('Chu kỳ chưa đóng: chưa có lần thu hoạch nào được xác nhận')
+    current.conclusion = {
+      text: input.text.trim(),
+      recommendations: input.recommendations?.trim() || undefined,
+      by: new Types.ObjectId(user._id),
+      role: user.role as FarmMemberRole,
+      at: new Date(),
+    }
+    current.status = 'CONCLUDED'
+    await current.save()
+    return current
+  })
+  const conclusionText = cycle.conclusion?.text ?? ''
 
   const zone = await Zone.findById(cycle.zone_id).select('name').lean()
   const auditId = await logAction(user._id, 'HARVEST_CYCLE_CONCLUDED', 'harvest_cycle', String(cycle._id), {
@@ -270,7 +323,7 @@ export async function concludeCycle(user: CurrentUser, id: string, input: { text
   await notifyExpertDecision(user, farm._id, auditId, {
     what: 'viết kết luận mùa vụ',
     place: `${zone?.name ?? 'Zone'}, chu kỳ đóng ngày ${cycle.closing_harvest?.date ?? ''}`,
-    detail: cycle.conclusion.text,
+    detail: conclusionText,
   })
   return cycle
 }

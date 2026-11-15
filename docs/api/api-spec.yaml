@@ -4305,7 +4305,9 @@ paths:
       summary: "Chu kỳ thu hoạch theo zone (HARVEST-FR-007, ANALYTICS-FR-004) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao"
       description: |
         Chu kỳ của một zone chạy từ lần thu hoạch đã xác nhận trước (hoặc lúc đăng ký controller đầu tiên của zone)
-        tới lần thu hoạch đã xác nhận kế tiếp (BR-43). Các lô đã xác nhận của cùng zone, cùng ngày (giờ VN) là một
+        tới lần thu hoạch đã xác nhận kế tiếp (BR-43). Zone chưa có controller, hoặc controller đăng ký từ lần thu
+        hoạch đầu trở đi (sổ sản lượng các mùa trước): lần thu hoạch đầu chỉ là mốc bắt đầu, không đóng chu kỳ nào
+        (chu kỳ đó không có ngày bắt đầu). Các lô đã xác nhận của cùng zone, cùng ngày (giờ VN) là một
         lần thu hoạch: sản lượng là tổng số tổ, tổng cân nặng. Chu kỳ đóng có so sánh với chu kỳ trước và cùng kỳ
         năm trước (chu kỳ của zone có ngày đóng trong ±30 ngày của một năm trước; không có thì `null` kèm lý do),
         tỷ lệ ngày `GOOD`, tỷ lệ chim về trung bình, thời gian trong ngưỡng của zone và độ đủ (dưới 80 % số ngày

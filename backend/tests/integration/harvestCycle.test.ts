@@ -18,6 +18,7 @@ import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
+import { rebuildZoneCycles } from '@/services/harvestCycle.service'
 import type { Role } from '@/types'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
 
@@ -181,6 +182,63 @@ describe('kết luận mùa vụ (EXPERT-FR-020, BR-22) — TC-F30-03', () => {
     const closed = await closedOn('2026-09-01')
     const res = await owner$.put(`/harvests/cycles/${closed._id}/conclusion`, { text: 'Ổn định' }).expect(200)
     expect(res.body.data).toMatchObject({ status: 'CONCLUDED', conclusion: { role: 'FARM_OWNER' } })
+  })
+})
+
+describe('dựng lại chu kỳ: zone không có mốc trước lần thu hoạch đầu, ghi lỗi giữa chừng', () => {
+  it('zone chưa có controller: lần thu hoạch đầu chỉ là mốc bắt đầu, chu kỳ đầu đóng ở lần thứ hai', async () => {
+    const { zone, harvest, cycles, closedOn } = await seed()
+    await SensorNode.deleteMany({ zone_id: zone._id })
+    await harvest('2026-09-01')
+    const afterFirst = await cycles()
+    expect(afterFirst).toHaveLength(1)
+    expect(afterFirst[0]).toMatchObject({ status: 'OPEN', start_date: new Date('2026-09-01').toISOString() })
+
+    await harvest('2026-10-01', 120)
+    expect(await cycles()).toHaveLength(2)
+    expect(await closedOn('2026-10-01')).toMatchObject({
+      status: 'CLOSED', start_date: new Date('2026-09-01').toISOString(),
+      closing_harvest: { nest_count: 120 }, comparison: { previous: { cycle_id: null, reason: 'Chu kỳ đầu tiên của zone' } },
+    })
+  })
+
+  it('controller đăng ký sau lần thu hoạch đầu (nhập sổ các mùa trước, A-8): dựng lại không lỗi, chu kỳ đầu từ lần thu hoạch đầu', async () => {
+    const { harvest, cycles, closedOn } = await seed({ registeredAt: '2026-09-15' })
+    await harvest('2026-09-01')
+    await harvest('2026-10-01')
+    expect((await cycles()).map(c => c.status).sort()).toEqual(['CLOSED', 'OPEN'])
+    expect((await closedOn('2026-10-01')).start_date).toBe(new Date('2026-09-01').toISOString())
+  })
+
+  it('ghi chu kỳ lỗi giữa chừng không làm mất kết luận mùa vụ; nhập lùi ngày làm dời mốc vẫn giữ id và kết luận', async () => {
+    const { zone, expert$, harvest, closedOn } = await seed({ withExpert: true })
+    await harvest('2026-09-01')
+    const closed = await closedOn('2026-09-01')
+    await expert$!.put(`/harvests/cycles/${closed._id}/conclusion`, { text: 'Mùa khô' }).expect(200)
+
+    const failing = jest.spyOn(HarvestCycle, 'bulkWrite').mockRejectedValueOnce(new Error('mất kết nối'))
+    await expect(rebuildZoneCycles(zone._id)).rejects.toThrow('mất kết nối')
+    failing.mockRestore()
+    expect((await HarvestCycle.findById(closed._id).lean())!.conclusion).toMatchObject({ text: 'Mùa khô' })
+
+    // Lô lùi ngày 01/08: chu kỳ 01/09 dời mốc sang 01/08, chu kỳ mới 01/08 lấy mốc cũ của nó (vướng index unique nếu ghi thẳng)
+    await harvest('2026-08-01')
+    expect(await closedOn('2026-09-01')).toMatchObject({
+      _id: closed._id, status: 'CONCLUDED', conclusion: { text: 'Mùa khô' },
+      start_date: new Date('2026-08-01').toISOString(),
+    })
+    expect((await closedOn('2026-08-01')).start_date).toBe(closed.start_date)
+  })
+
+  it('kết luận gửi trong lúc chu kỳ đang được dựng lại vẫn được giữ (cùng hàng đợi của zone)', async () => {
+    const { zone, expert$, harvest, closedOn } = await seed({ withExpert: true })
+    await harvest('2026-09-01')
+    const closed = await closedOn('2026-09-01')
+    const rebuilding = rebuildZoneCycles(zone._id)
+    await expert$!.put(`/harvests/cycles/${closed._id}/conclusion`, { text: 'Ẩm thấp' }).expect(200)
+    await rebuilding
+    await rebuildZoneCycles(zone._id)
+    expect(await closedOn('2026-09-01')).toMatchObject({ status: 'CONCLUDED', conclusion: { text: 'Ẩm thấp' } })
   })
 })
 
