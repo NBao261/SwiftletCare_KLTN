@@ -91,7 +91,7 @@ tags:
   - name: Notifications
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
   - name: Profiles
-    description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: Domain Expert soạn, duyệt, lưu trữ — Farm Owner khi farm chưa có chuyên gia, BR-22; Farm Owner áp cho các nhà) — Farm Technician, Administrator → 403"
+    description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: chỉ Domain Expert soạn, duyệt, lưu trữ — Report 3 §2.4, BR-22 không cho Farm Owner làm thay; Farm Owner xem và áp cho các nhà) — Farm Technician, Administrator → 403"
 
 
 security:
@@ -2775,6 +2775,8 @@ paths:
       parameters:
         - { name: farmId, in: query, required: true, schema: { type: string } }
         - { name: status, in: query, schema: { type: string, enum: [DRAFT, APPROVED, ARCHIVED] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
       responses:
         "200":
           description: Mới sửa trước
@@ -2785,17 +2787,18 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { type: array, items: { $ref: "#/components/schemas/ConfigProfile" } }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
     post:
       tags: [Profiles]
-      summary: "Soạn hồ sơ cấu hình, trạng thái DRAFT (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      summary: "Soạn hồ sơ cấu hình, trạng thái DRAFT (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT (Report 3 §2.4; Farm Owner, kể cả farm chưa có chuyên gia → 403)"
       description: |
         Mỗi nhóm (`thresholds`, `fuzzy_tuning`, `detection_tuning`, `speaker_schedule`) có thể bỏ trống — áp hồ sơ thì
         nhóm đó không đổi — nhưng đã gửi thì phải đủ mọi khoá và trong khoảng như khi sửa một zone (400). Cần ít nhất
-        một nhóm. `stage` (tuỳ chọn) ghi giai đoạn nhà mà hồ sơ dành cho. Farm Owner trên farm có chuyên gia (BR-22),
-        Farm Technician → 403. Audit `CONFIG_PROFILE_CREATED`.
+        một nhóm. `stage` (tuỳ chọn) chỉ ghi giai đoạn nhà mà hồ sơ dành cho; khi áp không so với giai đoạn của nhà.
+        Farm Owner, Farm Technician → 403. Audit `CONFIG_PROFILE_CREATED`.
       requestBody:
         required: true
         content:
@@ -2840,9 +2843,10 @@ paths:
                       data: { $ref: "#/components/schemas/ConfigProfile" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     put:
       tags: [Profiles]
-      summary: "Sửa hồ sơ DRAFT (EXPERT-FR-014) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      summary: "Sửa hồ sơ DRAFT (EXPERT-FR-014) — DOMAIN_EXPERT (Report 3 §2.4; Farm Owner, kể cả farm chưa có chuyên gia → 403)"
       description: "Thay toàn bộ nội dung (nhóm không gửi thì bỏ khỏi hồ sơ). Hồ sơ APPROVED hoặc ARCHIVED → 409. Audit `CONFIG_PROFILE_UPDATED`."
       requestBody:
         required: true
@@ -2870,8 +2874,8 @@ paths:
       - { name: id, in: path, required: true, schema: { type: string } }
     post:
       tags: [Profiles]
-      summary: "Duyệt hồ sơ DRAFT → APPROVED (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
-      description: "Báo Farm Owner khi chuyên gia duyệt (EXPERT-FR-009). Hồ sơ không ở DRAFT → 409. Audit `CONFIG_PROFILE_APPROVED`."
+      summary: "Duyệt hồ sơ DRAFT → APPROVED (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT (Report 3 §2.4; Farm Owner, kể cả farm chưa có chuyên gia → 403)"
+      description: "Báo Farm Owner và hiện trong lịch sử hoạt động chuyên gia (EXPERT-FR-009). Hồ sơ không ở DRAFT, hoặc hai lần duyệt cùng lúc (lần sau) → 409. Audit `CONFIG_PROFILE_APPROVED`."
       responses:
         "200":
           description: Hồ sơ APPROVED
@@ -2885,13 +2889,14 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Hồ sơ không ở DRAFT", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /profiles/{id}/archive:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
     post:
       tags: [Profiles]
-      summary: "Lưu trữ hồ sơ APPROVED → ARCHIVED (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia"
+      summary: "Lưu trữ hồ sơ APPROVED → ARCHIVED (EXPERT-FR-014, SM-23) — DOMAIN_EXPERT (Report 3 §2.4; Farm Owner, kể cả farm chưa có chuyên gia → 403)"
       description: "Hồ sơ đã lưu trữ không áp được nữa. Hồ sơ không ở APPROVED → 409. Audit `CONFIG_PROFILE_ARCHIVED`."
       responses:
         "200":
@@ -2906,6 +2911,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Hồ sơ không ở APPROVED", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /profiles/{id}/apply:
     parameters:
@@ -2917,7 +2923,8 @@ paths:
         Mỗi zone của các nhà nhận các nhóm của hồ sơ, lịch sử ghi nguồn `PROFILE` (ngưỡng, hệ số mờ, tham số phát
         hiện); lịch loa chép vào mọi controller của zone; rồi mỗi zone một phiên bản cấu hình mới (ENV-FR-027), nên
         controller hiện `PENDING` tới khi heartbeat báo đã áp. Áp hệ số mờ thì đề xuất hệ số đang chờ của zone thành
-        `SUPERSEDED`. Hồ sơ DRAFT hoặc ARCHIVED → 409; nhà ngoài farm của hồ sơ → 400; Domain Expert, Farm
+        `SUPERSEDED`; mục duyệt đang chờ của Farm Owner trên ngưỡng hoặc hệ số mờ của zone chuyển `ADJUSTED` (EXPERT-FR-010).
+        Hồ sơ DRAFT hoặc ARCHIVED → 409; nhà ngoài farm của hồ sơ → 400; Domain Expert, Farm
         Technician → 403. Audit `CONFIG_PROFILE_APPLIED`.
       requestBody:
         required: true
@@ -5028,7 +5035,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED]
+            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED, CONFIG_PROFILE_APPROVED]
         - { name: zoneId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
         - { $ref: "#/components/parameters/Page" }

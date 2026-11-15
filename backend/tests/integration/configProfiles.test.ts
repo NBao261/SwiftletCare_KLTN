@@ -15,6 +15,7 @@ import { ConfigProfile } from '@/models/configProfile.model'
 import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
@@ -43,7 +44,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all([AuditLog, ConfigProfile, Farm, House, Zone, SensorNode, User].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([AuditLog, ConfigProfile, Farm, House, Zone, SensorNode, User, ParameterReview].map(m => (m as typeof User).deleteMany({})))
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -112,12 +113,51 @@ describe('EXPERT-FR-014 — prepare and approve a configuration profile', () => 
     expect((await call('post', '', t.expert, { farm_id: farm._id, name: 'x', speaker_schedule: { enabled: true, windows: [{ start: '07:00', end: '05:00' }] } })).status).toBe(400)
   })
 
-  it('lets the Farm Owner prepare and approve on a farm without an expert (BR-22); the technician gets 403', async () => {
+  it('keeps preparing and approving to the Domain Expert, even on a farm without an expert (Report 3 §2.4, BR-22)', async () => {
     const { farm, t, call } = await seed({ withExpert: false })
-    const created = await call('post', '', t.owner, { farm_id: farm._id, ...PROFILE })
-    expect(created.status).toBe(201)
-    expect((await call('post', `/${created.body.data._id}/approve`, t.owner)).status).toBe(200)
+    expect((await call('post', '', t.owner, { farm_id: farm._id, ...PROFILE })).status).toBe(403)
+    const draft = await ConfigProfile.create({ farm_id: farm._id, author_id: farm.owner_id, name: 'x', thresholds: PROFILE.thresholds })
+    expect((await call('put', `/${draft._id}`, t.owner, PROFILE)).status).toBe(403)
+    expect((await call('post', `/${draft._id}/approve`, t.owner)).status).toBe(403)
+    expect((await call('post', `/${draft._id}/archive`, t.owner)).status).toBe(403)
+    // Farm Owner vẫn đọc được
+    expect((await call('get', `/${draft._id}`, t.owner)).status).toBe(200)
+  })
+
+  it('rejects the technician, the Administrator and the members of another farm', async () => {
+    const { farm, t, call } = await seed()
+    const created = await call('post', '', t.expert, { farm_id: farm._id, ...PROFILE })
+    const id = created.body.data._id
+    const adminUser = await User.create({ email: `admin-${Date.now()}@test.vn`, password_hash: 'password123', full_name: 'A', role: 'ADMIN' })
+    const admin = tokenFor(adminUser._id, 'ADMIN')
     expect((await call('get', `?farmId=${farm._id}`, t.tech)).status).toBe(403)
+    expect((await call('post', '', t.tech, { farm_id: farm._id, ...PROFILE })).status).toBe(403)
+    expect((await call('post', `/${id}/approve`, admin)).status).toBe(403)
+    expect((await call('get', `/${id}`, admin)).status).toBe(403)
+
+    const other = await seed()
+    expect((await call('get', `/${id}`, other.t.owner)).status).toBe(403)
+    expect((await call('get', `?farmId=${farm._id}`, other.t.expert)).status).toBe(403)
+    expect((await call('post', `/${id}/approve`, other.t.expert)).status).toBe(403)
+  })
+
+  it('answers 404 for an unknown profile and 409 when archiving a draft or approving twice', async () => {
+    const { farm, t, call } = await seed()
+    expect((await call('get', `/${new mongoose.Types.ObjectId()}`, t.expert)).status).toBe(404)
+    const created = await call('post', '', t.expert, { farm_id: farm._id, ...PROFILE })
+    const id = created.body.data._id
+    expect((await call('post', `/${id}/archive`, t.expert)).status).toBe(409)
+    const [first, second] = await Promise.all([call('post', `/${id}/approve`, t.expert), call('post', `/${id}/approve`, t.expert)])
+    expect([first.status, second.status].sort()).toEqual([200, 409])
+    expect(await AuditLog.countDocuments({ action: 'CONFIG_PROFILE_APPROVED' })).toBe(1)
+  })
+
+  it('paginates the list', async () => {
+    const { farm, t, call } = await seed()
+    for (const name of ['a', 'b', 'c']) await call('post', '', t.expert, { farm_id: farm._id, ...PROFILE, name })
+    const res = await call('get', `?farmId=${farm._id}&page=2&limit=2`, t.owner)
+    expect(res.body.data).toHaveLength(1)
+    expect(res.body.meta).toEqual({ total: 3, page: 2, limit: 2 })
   })
 
   it('edits a DRAFT by replacing its content, and lists the profiles of the farm', async () => {
@@ -166,6 +206,18 @@ describe('EXPERT-FR-015 — apply an approved profile', () => {
 
     const draft = await call('post', '', t.expert, { farm_id: farm._id, ...PROFILE })
     expect((await call('post', `/${draft.body.data._id}/apply`, t.owner, { house_ids: [houses[0]._id] })).status).toBe(409)
+  })
+
+  it('closes the pending review of the Farm Owner, so a later revert cannot undo the profile (EXPERT-FR-010)', async () => {
+    const { houses, zones, t, call, profileId } = await approved()
+    const owner = (await User.findOne({ role: 'FARM_OWNER' }).sort({ _id: -1 }))!
+    await ParameterReview.create({
+      zone_id: zones[0]._id, farm_id: zones[0].farm_id, group: 'thresholds', old_values: { humidity_min: 75 }, new_values: { humidity_min: 78 },
+      changed_by: owner._id,
+    })
+    await call('post', `/${profileId}/apply`, t.owner, { house_ids: [houses[0]._id] })
+    const review = (await ParameterReview.findOne({ zone_id: zones[0]._id }).lean())!
+    expect(review.status).toBe('ADJUSTED')
   })
 
   it('applies only the groups the profile holds', async () => {
