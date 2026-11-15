@@ -16,6 +16,8 @@ interface NoteActionModalProps {
   required?: boolean
   /** Số ký tự tối thiểu (sau khi trim) — chặn lý do kiểu "ok"/"abc" */
   minLength?: number
+  /** Số ký tự tối đa (sau khi trim) — cùng giới hạn của backend */
+  maxLength?: number
   /** Thông báo khi bỏ trống — mặc định "Chưa nhập <label>" */
   emptyMessage?: string
   danger?: boolean
@@ -31,7 +33,7 @@ interface NoteActionModalProps {
  * duyệt; giá trị gửi đi đã được trim.
  */
 export default function NoteActionModal({
-  open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, emptyMessage, danger, loading, onSubmit,
+  open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, maxLength, emptyMessage, danger, loading, onSubmit,
 }: NoteActionModalProps) {
   const [note, setNote] = useState('')
   const [error, setError] = useState<string>()
@@ -44,6 +46,9 @@ export default function NoteActionModal({
     if (required && !trimmed) return emptyMessage ? tr(emptyMessage) : t('Chưa nhập {{field}}', { field: tr(label).toLowerCase() })
     if (minLength && trimmed.length < minLength) {
       return t('{{field}} cần ít nhất {{min}} ký tự (đang có {{count}})', { field: tr(label), min: minLength, count: trimmed.length })
+    }
+    if (maxLength && trimmed.length > maxLength) {
+      return t('{{field}} tối đa {{max}} ký tự (đang có {{count}})', { field: tr(label), max: maxLength, count: trimmed.length })
     }
     return undefined
   }

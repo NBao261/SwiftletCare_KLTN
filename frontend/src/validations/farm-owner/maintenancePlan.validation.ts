@@ -6,6 +6,8 @@ export const CHECKLIST_MAX_ITEMS = 30;
 export const CHECKLIST_ITEM_MAX_LENGTH = 200;
 export const SOURCE_MAX_LENGTH = 300;
 export const NOTE_MAX_LENGTH = 1000;
+// POST /maintenance/plans/{id}/comments
+export const COMMENT_MAX_LENGTH = 1000;
 
 export const EQUIPMENTS: MaintenanceEquipment[] = ['PUMP', 'FAN', 'SENSOR', 'NOZZLE', 'CALIBRATION'];
 

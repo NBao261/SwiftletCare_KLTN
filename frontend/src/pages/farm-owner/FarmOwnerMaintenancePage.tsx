@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PlusIcon } from '@phosphor-icons/react';
 
@@ -13,11 +13,12 @@ import { maintenanceDict } from '@/constants/maintenance.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useDueMaintenancePlans, useMaintenancePlanActions, useMaintenancePlans } from '@/hooks/farm-owner/useMaintenance';
+import { MAINTENANCE_PAGE_SIZE, useDueMaintenancePlans, useMaintenancePlanActions, useMaintenancePlans } from '@/hooks/farm-owner/useMaintenance';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
 import type { MaintenancePlan, MaintenancePlanState } from '@/types';
+import { COMMENT_MAX_LENGTH } from '@/validations/farm-owner/maintenancePlan.validation';
 
 const PLAN_STATES: MaintenancePlanState[] = ['SCHEDULED', 'DUE', 'OVERDUE', 'RETIRED'];
 // 'active' = mọi kế hoạch chưa xoá (backend mặc định bỏ RETIRED)
@@ -65,6 +66,12 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
   const page = pageState.key === filterKey ? pageState.page : 1;
   const { records: plans, total, isLoading, isError, error, refetch } = useMaintenancePlans(query, page);
+  // Xoá kế hoạch cuối của trang cuối làm trang rỗng: lùi về trang cuối còn dữ liệu
+  useEffect(() => {
+    if (!isLoading && !isError && plans.length === 0 && page > 1) {
+      setPageState({ key: filterKey, page: Math.max(1, Math.ceil(total / MAINTENANCE_PAGE_SIZE)) });
+    }
+  }, [isLoading, isError, plans.length, page, total, filterKey]);
 
   const [pending, setPending] = useState<{ action: PlanAction; plan: MaintenancePlan } | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -256,6 +263,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
         hint={t('comment.hint')}
         submitLabel={t('comment.submit')}
         required
+        maxLength={COMMENT_MAX_LENGTH}
         loading={actions.comment.isPending}
         onSubmit={text => pending && actions.comment.mutate({ id: pending.plan._id, text }, callbacks('comment.done'))}
       />
