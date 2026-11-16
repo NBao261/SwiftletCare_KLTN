@@ -158,23 +158,25 @@ export default function DomainExpertWeatherRulesPage() {
       {/* Lần bù gần nhất */}
       {renderLastCompensation()}
 
-      {/* Danh sách luật hiện tại */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-charcoal">Danh sách luật ({rules.length}/{MAX_RULES})</h2>
-          {rules.length >= MAX_RULES && (
-            <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
-              Đã đạt tối đa 10 luật
-            </span>
+      {/* Danh sách luật và form thêm — ẩn khi GET lỗi */}
+      {!isError && (
+        <>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-charcoal">Danh sách luật ({rules.length}/{MAX_RULES})</h2>
+              {rules.length >= MAX_RULES && (
+                <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
+                  Đã đạt tối đa 10 luật
+                </span>
+              )}
+            </div>
+            {renderRulesList()}
+          </div>
+
+          {!isLoading && rules.length < MAX_RULES && (
+            <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
           )}
-        </div>
-
-        {renderRulesList()}
-      </div>
-
-      {/* Form thêm luật mới — ẩn khi đang tải hoặc GET lỗi */}
-      {!isLoading && !isError && rules.length < MAX_RULES && (
-        <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
+        </>
       )}
 
       {saveError && (
