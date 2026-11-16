@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, type ReactNode } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import '@/lib/chartTheme';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
@@ -20,6 +20,21 @@ import { analyticsDict } from '@/constants/analytics.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useZone } from '@/hooks/shared/useFarms';
+import { cn } from '@/lib/cn';
+
+const TABS = ['env', 'birds', 'ops'] as const;
+type AnalyticsTab = typeof TABS[number];
+
+// 2 khung cạnh nhau trên màn rộng; thiếu 1 khung thì khung còn lại chiếm cả hàng
+function pair(left: ReactNode, right: ReactNode): ReactNode {
+  if (!right) return left;
+  return (
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      {left}
+      {right}
+    </div>
+  );
+}
 
 // Trang Phân tích của Farm Owner — ANALYTICS-FR-001..003/005/008..011, ENV-FR-019, EXPERT-FR-005/006
 export default function FarmOwnerAnalyticsPage(): JSX.Element {
@@ -33,6 +48,15 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   const scopeLabel = houseName || t('common.allHouses');
   // Ngưỡng lấy từ chi tiết Zone (luôn mới), danh sách Zone được giữ cache lâu hơn
   const { data: zoneDetail } = useZone(zone?._id);
+  // Tab nằm trên URL (?tab=birds) để quay lại đúng nhóm, mặc định Môi trường
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: AnalyticsTab = TABS.find(value => value === searchParams.get('tab')) ?? 'env';
+  const setTab = (value: AnalyticsTab) => setSearchParams(previous => {
+    const next = new URLSearchParams(previous);
+    if (value === 'env') next.delete('tab');
+    else next.set('tab', value);
+    return next;
+  }, { replace: true });
 
   if (isLoading) {
     return <LoadingSkeleton count={4} className="h-32 w-full" />;
@@ -62,7 +86,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   }
 
   // Thân trang theo phạm vi đang lọc
-  let body = (
+  let body: ReactNode = (
     <EmptyState
       title={houseId ? t('page.noHouseZoneTitle') : t('page.noZoneTitle')}
       description={t('page.noZoneDesc')}
@@ -74,59 +98,51 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     />
   );
 
-  // Xu hướng đàn và điện năng tính theo 1 nhà (ANALYTICS-FR-002, 017): chỉ hiện khi đang lọc 1 nhà
-  const houseCards = houseId ? (
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-      <FlockTrendCard houseId={houseId} houseName={houseName} />
-      <EnergyCard houseId={houseId} houseName={houseName} />
-    </div>
-  ) : null;
+  // Mỗi tab chỉ hiện 1 nhóm khung để bớt cuộn; khung theo Zone chỉ có khi đang lọc 1 Zone,
+  // xu hướng đàn và điện năng (ANALYTICS-FR-002, 017) chỉ khi đang lọc 1 nhà
+  if (zones.length > 0) {
+    // Đếm chim là của cả nhà yến chứa Zone (SRS v2.1.8)
+    const birdHouseIds = zone ? [zone.house_id] : houseIds;
+    const birdLabel = zone ? zone.houseName : scopeLabel;
+    const flockTrend = houseId ? <FlockTrendCard houseId={houseId} houseName={houseName} /> : null;
+    const energy = houseId ? <EnergyCard houseId={houseId} houseName={houseName} /> : null;
 
-  // Tất cả Zone: chỉ các khung hiện được nhiều Zone/nhà (lịch sử can thiệp tay, đếm chim cộng các nhà, so sánh Zone)
-  if (zones.length > 0 && !zone) {
-    body = (
-      <>
-        <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
-        <BirdHourlyCard houseIds={houseIds} scopeLabel={scopeLabel} />
-        <BirdWeeklyCard houseIds={houseIds} scopeLabel={scopeLabel} />
-        {houseCards}
-        <CompareZonesCard zones={zones} />
-      </>
-    );
-  }
-
-  // 1 Zone: đủ mọi khung
-  if (zone) {
-    body = (
-      <>
-        <AutomationCard zoneId={zone._id} zoneName={zone.name} />
-
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <HealthReportCard zoneId={zone._id} />
+    if (tab === 'env') {
+      body = (
+        <>
+          {zone && (
+            <>
+              <EnvVariationCard
+                zoneId={zone._id}
+                thresholds={zoneDetail?.thresholds ?? zone.thresholds}
+                thresholdHistory={zoneDetail?.threshold_history ?? zone.threshold_history}
+              />
+              <ForecastCard zoneId={zone._id} />
+            </>
+          )}
+          <CompareZonesCard zones={zones} />
+        </>
+      );
+    } else if (tab === 'birds') {
+      body = (
+        <>
+          <BirdHourlyCard houseIds={birdHouseIds} scopeLabel={birdLabel} />
+          {/* Tỷ lệ về và quy mô đàn trước, tương quan (phân tích sâu) sau cùng */}
+          {pair(<BirdWeeklyCard houseIds={birdHouseIds} scopeLabel={birdLabel} />, flockTrend)}
+          {zone && <CorrelationCard zoneId={zone._id} />}
+        </>
+      );
+    } else {
+      // Vận hành: mỗi khung 1 hàng đủ rộng; tóm tắt và kết luận trước, nhật ký chi tiết sau cùng
+      body = (
+        <>
+          {zone && <HealthReportCard zoneId={zone._id} />}
+          {zone && <AutomationCard zoneId={zone._id} zoneName={zone.name} />}
+          {energy}
           <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
-        </div>
-
-        <EnvVariationCard
-          zoneId={zone._id}
-          thresholds={zoneDetail?.thresholds ?? zone.thresholds}
-          thresholdHistory={zoneDetail?.threshold_history ?? zone.threshold_history}
-        />
-
-        <ForecastCard zoneId={zone._id} />
-
-        {/* Đếm chim là của cả nhà yến chứa Zone (SRS v2.1.8) */}
-        <BirdHourlyCard houseIds={[zone.house_id]} scopeLabel={zone.houseName} />
-
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <BirdWeeklyCard houseIds={[zone.house_id]} scopeLabel={zone.houseName} />
-          <CorrelationCard zoneId={zone._id} />
-        </div>
-
-        {houseCards}
-
-        <CompareZonesCard zones={zones} />
-      </>
-    );
+        </>
+      );
+    }
   }
 
   return (
@@ -140,6 +156,26 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
       <div className="sm:hidden">
         <ScopeFilter scope={scope} />
       </div>
+
+      {zones.length > 0 && (
+        <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
+          {TABS.map(value => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              onClick={() => setTab(value)}
+              className={cn(
+                'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
+                tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
+              )}
+            >
+              {t(`tab.${value}`)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {body}
     </div>

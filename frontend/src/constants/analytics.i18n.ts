@@ -11,6 +11,10 @@ const vi = {
   'page.noZoneDesc': 'Thêm nhà yến và Zone ở mục Trang trại để bắt đầu thu thập dữ liệu.',
   'page.goFarms': 'Đi tới Trang trại',
   'page.errorTitle': 'Không tải được danh sách Zone',
+  'page.tabs': 'Nhóm phân tích',
+  'tab.env': 'Môi trường',
+  'tab.birds': 'Đàn chim',
+  'tab.ops': 'Vận hành',
 
   // Dùng chung
   'common.retry': 'Thử lại',
@@ -253,6 +257,10 @@ const en: Record<AnalyticsKey, string> = {
   'page.noZoneDesc': 'Add a house and a zone under Farms to start collecting data.',
   'page.goFarms': 'Go to Farms',
   'page.errorTitle': 'Could not load the zone list',
+  'page.tabs': 'Analytics groups',
+  'tab.env': 'Environment',
+  'tab.birds': 'Flock',
+  'tab.ops': 'Operations',
 
   'common.retry': 'Retry',
   'common.allHouses': 'All houses',
