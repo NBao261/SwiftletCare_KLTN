@@ -137,7 +137,7 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 | DF-9 | Device setup | Administrator adds the device to the stock (label and broker credential issued) → device flashed with its ID and credential → Farm Owner scans the label and the floor code in the mobile app → `POST /devices/sensor-nodes/register` (device `PENDING`) → Wi-Fi entered in AP mode → first heartbeat on the device's own topics → backend sets `ONLINE` and publishes the zone's configuration retained → heartbeat reports the configuration version → app shows "configuration applied" | Nothing about the farm is typed on or stored in the device (FARM-FR-003c); a move only changes the zone in the database and republishes the configuration, online or offline |
 | DF-10 | Daily health assessment (MF-06) | After the evening return-rate check: per house, environment in range (telemetry of each zone), air-quality hours and noise episodes (alerts, dismissed ones excluded), return-rate drop (counts), completeness per source and the day's rain → levels of the house (BR-28) → status with reasons (BR-29, 30) → `househealthdays` (current status) → daily report → in-app notification → each assessor rates the day before seeing the status; the status shown is stored with the rating (BR-31) | Late data and later verdicts recompute the current status only; weekly and monthly reports aggregate the stored days; the field evaluation reads the snapshots (ANALYTICS-FR-014) |
 | DF-11 | Weather | Hourly job → Open-Meteo by farm coordinates → `weatherobservations` → charts and DF-10 | Only coordinates leave the system; used only by BR-30 and for display (C-6) |
-| DF-12 | Weather compensation | Hourly job after the weather fetch → forecast of the next 2 h × active rules of the house (ENV-FR-030) → offset and expiry (BR-38) → retained `…/{deviceId}/compensation` of every controller of the house → controller adds it to the misting demand | 0 after the expiry or 2 h offline; never ventilation (C-6) |
+| DF-12 | Weather compensation | Hourly job (minute 10, its own Open-Meteo request) → forecast of the next 2 h × active rules of the house (ENV-FR-030) → offset and expiry (BR-38) → retained `…/{deviceId}/compensation` of every controller of the house → controller adds it to the misting demand | 0 after the expiry or 2 h offline; never ventilation (C-6) |
 | DF-13 | Routing, escalation and Work Orders | `createAlert()` → recipients by the house's technician on duty (ALERT-FR-017) → escalation job every minute → Farm Owners after `escalation_min`; an alert of BR-39 opens a Work Order → technician's record → recovery check every minute (BR-41) → `AWAITING_APPROVAL` → Farm Owner closes | `WORK_ORDER_UPDATE` to the house room; MTTA/MTTR from the timestamps |
 | DF-14 | Preventive maintenance | Relay state, confirmed by the load current where measured → run hours and switch counts per load (BR-45) → hourly due check of the plans → `MAINTENANCE_DUE` + preventive Work Order → technician's checklist → counter reset | Calendar plans checked daily at 07:00 |
 | DF-15 | Recommendations | Daily job after the daily assessment → active rules per house (BR-42) → recommendation with its evidence → Farm Owner accepts (Work Order or review item) or rejects → effect job 7 days after acceptance | Rule statistics for the Domain Expert |
@@ -393,7 +393,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Size of one installation | staging sizing (Section 3.4) and the NFR-03 load script |
 | Retention (BR-36) | TTL indexes of Section 6.3 |
 | Escalation time, recovery verification | backend `ESCALATION_MIN` (`alertRouting.service.ts`), `RECOVERY_VERIFY_MIN` (`workOrder.service.ts`); the same for every farm, not set per farm |
-| Weather compensation limits | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`; firmware `WEATHER_COMP_OFFLINE_MS` |
+| Weather compensation limits and rule inputs | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `MAX_WEATHER_RULES`, `WEATHER_METRIC_LIMITS` (`utils/weatherCompensation.util.ts`); firmware `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `WEATHER_COMP_OFFLINE_MS` (`pid/WeatherCompensation.h`) |
 | Automatic Work Order for offline devices | backend `WORK_ORDER_OFFLINE_DELAY_MIN` |
 | On-site photos | backend `MAX_PHOTO_BYTES`, `MAX_WORK_ORDER_PHOTOS` (`workOrder.service.ts`) |
 | Recommendation expiry and effect window | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS` |
@@ -932,6 +932,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `househealthdays` | Daily health status | `house_id + date` unique; `farm_id + date` | Ratings with their snapshots embedded |
 | `househealthreports` | Health report | `house_id + kind + period_start + period_end` unique | Zone sections and conclusion embedded |
 | `weatherobservations` | Weather hour | `farm_id + hour` unique; TTL | |
+| `weathercompensations` | Weather compensation sent | `house_id + sent_at` | One row per non-zero offset sent to a house, with the rule and the forecast used, so that NFR-16 compares the hours with and without it |
 | `notifications` | In-app notification | `user_id + created_at`; TTL | |
 | `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date`; `zone_id + status` | `DRAFT` until confirmed; soft delete; photo in MinIO |
 | `auditlogs` | Audit entry | `actor_id + created_at`, `farm_id + created_at`, `target_type + target_id`, `action + created_at` | Source of the expert activity history |
@@ -958,7 +959,7 @@ Report 3, BR-36 sets the retention periods; this table is how they are enforced.
 | Hourly weather | 90 days | TTL index on `weatherobservations.hour` |
 | In-app notifications | 90 days | TTL index on `notifications.created_at` |
 | Resolved alerts | 180 days after resolution | TTL index on `alerts.resolved_at` |
-| Session counts, daily statuses and ratings, reports, harvests and harvest cycles, override logs, histories, Work Orders, maintenance plans and records, recommendations and rules, configuration profiles, audit log | Life of the installation | No TTL; soft delete where a requirement asks for it |
+| Session counts, daily statuses and ratings, reports, harvests and harvest cycles, override logs, histories, weather compensations sent, Work Orders, maintenance plans and records, recommendations and rules, configuration profiles, audit log | Life of the installation | No TTL; soft delete where a requirement asks for it |
 
 ### 6.4 Schema Migrations
 
@@ -975,7 +976,7 @@ The Iteration 1 database is carried into this design by idempotent scripts (`npm
 | Weekly zone reports moved into house reports with `kind` and zone sections | `zonehealthreports` → `househealthreports` | EXPERT-FR-005 |
 | Unused harvest state `ARCHIVED` removed; `nest_type`, `photo_object_key` | `harvestbatches` | HARVEST-FR-001 |
 | `sla_hours` removed from the settings | `systemsettings` | Report 3 §8 |
-| New collections created empty | `pushtokens`, `househealthdays`, `weatherobservations`, `parameterreviews`, `coefficientproposals` | ALERT-FR-002, ANALYTICS-FR-012, 013, EXPERT-FR-010, 011 |
+| New collections created empty | `pushtokens`, `househealthdays`, `weatherobservations`, `weathercompensations`, `parameterreviews`, `coefficientproposals` | ALERT-FR-002, ANALYTICS-FR-012, 013, ENV-FR-028, EXPERT-FR-010, 011 |
 
 ### 6.5 Database Script
 
@@ -1030,7 +1031,7 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | `vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
 | `vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` with the frame rate | 1 |
 | `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: counting ring, `config_version` | 1 |
-| `compensation` | cloud → controller | Retained. `offset_pct` (−10…+10), `expires_at`, `rule_id`; the controller uses 0 after `expires_at` or 2 h without the broker (BR-38) | 1 |
+| `compensation` | cloud → controller | Retained. `deviceId`, `offset_pct` (−10…+10, 0 when no rule holds), `expires_at` (epoch ms, like `issuedAt`), `rule_id` (null with offset 0); the controller uses 0 after `expires_at` or 2 h without the broker, and keeps a message received before its clock is set until it is (BR-38) | 1 |
 | `cmd` | cloud → device | Envelope `commandId`, `type` (`RELAY`, `CLEAR_OVERRIDE`, `AUDIO`, `RESTART`, `OTA`), `issuedAt`, payload. Applied once per `commandId`; `RELAY`, `AUDIO` and `RESTART` older than BR-35 are not applied | 1 |
 
 Retained messages are never ingested by the backend. A move to another zone only updates the database and republishes `config`; nothing is sent about farm, house or zone.

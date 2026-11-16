@@ -5,6 +5,8 @@
 #include "PIDController.h"
 #include "FuzzyControl.h"
 #include "PumpDryMonitor.h"
+#include "WeatherCompensation.h"
+#include "mqtt/MQTTManager.h"
 #include "config/Config.h"
 #include <Arduino.h>
 
@@ -94,6 +96,8 @@ namespace PIDController {
 static PumpDryMonitor pumpMonitor;
 static bool autoMistingDemand = false;
 static bool autoDemandKnown = false;
+// ENV-FR-029 — offset bù thời tiết; ghi ở mqttTask, đọc ở pidTask, cả hai giữ dataMutex
+static WeatherCompensation weatherCompensation;
 
 static uint8_t toPct(float duty) { return (uint8_t)lroundf(duty * 100.0f); }
 
@@ -115,8 +119,15 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
 
   float duty = FuzzyControl::mistingDemand(humidity, temperature, Config::humidityMin,
                                            Config::humidityMax, Config::tempMax, currentTuning());
-  autoMistingDemand = duty > 0.0f;
   autoDemandKnown = FuzzyControl::inputsValid(temperature, humidity);
+  // PumpDryMonitor theo dõi nhu cầu của bộ mờ, trước offset: ENV-FR-029 — offset không đổi chốt bơm khô
+  autoMistingDemand = duty > 0.0f;
+  // BR-38 — tin `compensation` tới trước NTP được áp khi đã có đồng hồ
+  time_t nowSec = time(nullptr);
+  weatherCompensation.resolvePending(nowSec > 1700000000 ? (uint64_t)nowSec * 1000ULL : 0, millis());
+  float weatherOffset = weatherCompensation.current(millis(), MQTTManager::isConnected());
+  // Số đo hỏng vẫn TẮT bơm (THREAT-FR-013); ẩm đã tới humidity_max thì không bù dương (ENV-FR-010)
+  duty = WeatherCompensation::mistingDuty(duty, weatherOffset, autoDemandKnown, humidity >= Config::humidityMax);
   // Bơm khô đã phát hiện ở đợt này → ngừng phun tới hết đợt để bảo vệ bơm
   if (pumpMonitor.blocked()) duty = 0.0f;
   relay.mistingPct = toPct(duty);
@@ -125,8 +136,13 @@ void runHumidityControl(float humidity, float temperature, RelayState &relay) {
 
   if (relay.mistingPct > 0) {
     Serial.println("[FUZZY] MISTING " + String(relay.mistingPct) + "% → " + (relay.misting ? "ON" : "OFF") +
-                   " (humidity=" + String(humidity, 1) + "% temp=" + String(temperature, 1) + "°C)");
+                   " (humidity=" + String(humidity, 1) + "% temp=" + String(temperature, 1) + "°C" +
+                   (weatherOffset != 0.0f ? " weather=" + String(weatherOffset, 1) + "%" : "") + ")");
   }
+}
+
+void setWeatherCompensation(float offsetPct, uint64_t expiresAtEpochMs, uint64_t nowEpochMs) {
+  weatherCompensation.receive(offsetPct, expiresAtEpochMs, nowEpochMs, millis());
 }
 
 // ENV-FR-011 (SRS v2.0.0): logic mờ nhiệt độ + độ ẩm → % quạt. NH3/CO2 không

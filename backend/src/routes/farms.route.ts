@@ -6,6 +6,8 @@ import { HHMM_PATTERN, ROSTER_ROLES } from '@/utils/roster.util'
 import { MAX_HOUSE_FLOORS, MAX_NAME_LENGTH } from '@/services/farm.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import * as weatherCompensationController from '@/controllers/weatherCompensation.controller'
+import { MAX_WEATHER_RULES, WEATHER_METRICS } from '@/utils/weatherCompensation.util'
 
 const router = Router()
 router.use(authenticate)
@@ -64,6 +66,20 @@ router.put   ('/houses/:houseId/roster', requireRole('FARM_OWNER'), param('house
   body('shifts.*.start').isString().matches(HHMM_PATTERN).withMessage('start dạng HH:mm'),
   body('shifts.*.end').isString().matches(HHMM_PATTERN).withMessage('end dạng HH:mm'),
   validate, farmController.setRoster)
+
+// ENV-FR-030 — luật bù phun sương theo thời tiết của nhà: Domain Expert đặt; Farm Owner chỉ khi farm chưa có
+// chuyên gia (BR-22, service kiểm); thợ của nhà chỉ xem (Report 3 §2.4). Khoảng giá trị: service kiểm (400)
+router.get('/houses/:houseId/weather-rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'),
+  param('houseId').isMongoId(), validate, weatherCompensationController.getRules)
+router.put('/houses/:houseId/weather-rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('houseId').isMongoId(),
+  body('rules').isArray({ max: MAX_WEATHER_RULES }),
+  body('rules.*._id').optional().isString().isMongoId(),
+  body('rules.*.metric').isString().isIn([...WEATHER_METRICS]),
+  body('rules.*.min').isFloat().toFloat(),
+  body('rules.*.offset_pct').isFloat().toFloat(),
+  body('rules.*.duration_min').isInt().toInt(),
+  body('rules.*.active').optional().isBoolean().toBoolean(),
+  validate, weatherCompensationController.setRules)
 
 // Zones (under house)
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule(),

@@ -27,6 +27,7 @@ const DomainExpertZoneTuningPage = lazy(() => import('@/pages/domain-expert/Doma
 const DomainExpertReportsPage = lazy(() => import('@/pages/domain-expert/DomainExpertReportsPage'));
 const DomainExpertHistoryPage = lazy(() => import('@/pages/domain-expert/DomainExpertHistoryPage'));
 const DomainExpertReviewsPage = lazy(() => import('@/pages/domain-expert/DomainExpertReviewsPage'));
+const DomainExpertWeatherRulesPage = lazy(() => import('@/pages/domain-expert/DomainExpertWeatherRulesPage'));
 const DomainExpertProfilesPage = lazy(() => import('@/pages/domain-expert/DomainExpertProfilesPage'));
 const DomainExpertRecommendationRulesPage = lazy(() => import('@/pages/domain-expert/DomainExpertRecommendationRulesPage'));
 
@@ -97,6 +98,9 @@ export const domainExpertRoutes = (
 
       {/* Duyệt tham số & Đề xuất hệ số mờ (G-04) */}
       <Route path="reviews" element={<DomainExpertReviewsPage />} />
+
+      {/* Luật bù phun sương theo thời tiết (ENV-FR-030, G-23) */}
+      <Route path="weather-rules" element={<DomainExpertWeatherRulesPage />} />
 
       {/* Báo cáo sức khỏe & Kết luận + Xem ngày đánh giá lệch (EXPERT-FR-022) */}
       <Route path="reports" element={<DomainExpertReportsPage />} />
