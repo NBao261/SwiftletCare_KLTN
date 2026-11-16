@@ -11,15 +11,14 @@ const vnDayStartOf = (at: Date) =>
   new Date(Math.floor((at.getTime() + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS)
 
 /**
- * Làm tròn [from, to) ra trọn ngày giờ VN (từ đầu ngày của `from` tới hết ngày của mili giây trước `to`), để mọi cột
- * (cảnh báo, MTTR, điện năng, trạng thái ngày, chim về) mô tả cùng một khoảng ngày. `from` không trước `to` → 400;
- * quá MAX_PERIOD_DAYS → 400.
+ * Đưa [from, to) về trọn ngày giờ VN mà giữ đúng số ngày yêu cầu (`to` − `from`, làm tròn lên): khoảng kết thúc ở hết
+ * ngày VN chứa mili giây trước `to` và lùi đúng chừng ấy ngày, để mọi cột (cảnh báo, MTTR, điện năng, trạng thái ngày,
+ * chim về) mô tả cùng một khoảng và "30 ngày" là 30 ngày, không 31. `from` không trước `to` → 400; quá MAX_PERIOD_DAYS → 400.
  */
 export function vnDayPeriod(from: Date, to: Date): { from: Date; to: Date; days: number } {
   if (from >= to) throw BadRequestError('`from` phải trước `to`')
-  const start = vnDayStartOf(from)
-  const end = new Date(vnDayStartOf(new Date(to.getTime() - 1)).getTime() + DAY_MS)
-  const days = Math.round((end.getTime() - start.getTime()) / DAY_MS)
+  const days = Math.ceil((to.getTime() - from.getTime()) / DAY_MS)
   if (days > MAX_PERIOD_DAYS) throw BadRequestError(`Khoảng tối đa ${MAX_PERIOD_DAYS} ngày`)
-  return { from: start, to: end, days }
+  const end = new Date(vnDayStartOf(new Date(to.getTime() - 1)).getTime() + DAY_MS)
+  return { from: new Date(end.getTime() - days * DAY_MS), to: end, days }
 }

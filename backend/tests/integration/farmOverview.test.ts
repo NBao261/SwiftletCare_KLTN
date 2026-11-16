@@ -31,6 +31,7 @@ import { WorkOrder } from '@/models/workOrder.model'
 import { flockTrend } from '@/services/analytics.service'
 import { checkReturnRateDrops, vnDate } from '@/services/birdCount.service'
 import { houseEnergyByMonth } from '@/services/energy.service'
+import { sortComparison, type ComparisonRow } from '@/services/houseComparison.service'
 import type { Role } from '@/types'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
 
@@ -62,6 +63,23 @@ async function memberUser(farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'
   return { user, token: jwt.sign({ sub: String(user._id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' }) }
 }
 const member = async (farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'], role: Role) => (await memberUser(farm, role)).token
+
+/**
+ * Tháng giờ VN liền trước tháng hiện tại: đầu tháng, đầu tháng này và nhãn 'YYYY-MM'. Telemetry seed ở đây luôn nằm
+ * trong TTL 90 ngày, không hết hạn theo năm như ngày cố định.
+ */
+function previousVnMonth() {
+  const today = vnDate(new Date())
+  const [year, month] = today.split('-').map(Number)
+  const prevYear = month === 1 ? year - 1 : year
+  const prevMonth = month === 1 ? 12 : month - 1
+  const label = `${prevYear}-${String(prevMonth).padStart(2, '0')}`
+  return {
+    start: new Date(`${label}-01T00:00:00+07:00`),
+    end: new Date(`${today.slice(0, 7)}-01T00:00:00+07:00`),
+    label,
+  }
+}
 
 /** Ngày giờ VN cách hôm nay `offset` ngày ('YYYY-MM-DD') */
 const vnDay = (offset: number) => vnDate(new Date(Date.now() + offset * DAY))
@@ -131,6 +149,23 @@ describe('tổng quan trại (ANALYTICS-FR-015) — TC-F29-01', () => {
     ])
   })
 
+  it('tỷ lệ chim về gần nhất chỉ tìm trong 30 ngày gần nhất (Report 3 §4.5): số cũ hơn thì null', async () => {
+    const { farm, token, house } = await seedFarm()
+    await sessions(house._id, new mongoose.Types.ObjectId(), vnDay(-40), 100, 90)
+    const res = await request(app).get(`/farms/${farm._id}/overview`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data.houses.find((h: { house_id: string }) => h.house_id === String(house._id)).latest_return_rate).toBeNull()
+  })
+
+  it('nhà sắp theo tên tiếng Việt ("Đông" trước "Em"), không theo thứ tự nhị phân', async () => {
+    const { farm, token, house2, house3 } = await seedFarm()
+    await House.updateOne({ _id: house2._id }, { name: 'Em' })
+    await House.updateOne({ _id: house3._id }, { name: 'Đông' })
+    const overview = await request(app).get(`/farms/${farm._id}/overview`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(overview.body.data.houses.map((h: { name: string }) => h.name)).toEqual(['A nhà thật', 'Đông', 'Em'])
+    const comparison = await request(app).get(`/farms/${farm._id}/comparison?sort=name`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(comparison.body.data.rows.map((r: { name: string }) => r.name)).toEqual(['A nhà thật', 'Đông', 'Em'])
+  })
+
   it('Domain Expert đọc được; Farm Technician và Administrator → 403', async () => {
     const { farm } = await seedFarm()
     const expert = await member(farm, 'DOMAIN_EXPERT')
@@ -172,6 +207,27 @@ describe('tổng quan và so sánh: quyền, farm, nhà trộn thiết bị', ()
 })
 
 describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
+  it('mặc định 30 ngày trọn giờ VN kết thúc hết hôm nay; khoảng gửi lên giữ đúng số ngày', async () => {
+    const { farm, token } = await seedFarm()
+    const endOfToday = new Date(new Date(`${vnDay(0)}T00:00:00+07:00`).getTime() + DAY)
+    const res = await request(app).get(`/farms/${farm._id}/comparison`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data).toMatchObject({
+      days: 30, to: endOfToday.toISOString(), from: new Date(endOfToday.getTime() - 30 * DAY).toISOString(),
+    })
+    const to = new Date()
+    const week = await request(app).get(`/farms/${farm._id}/comparison?from=${new Date(to.getTime() - 7 * DAY).toISOString()}&to=${to.toISOString()}`)
+      .set('Authorization', `Bearer ${token}`).expect(200)
+    expect(week.body.data.days).toBe(7)
+  })
+
+  it('ô bằng nhau thì theo house_id, cả khi sắp giảm dần; ô trống vẫn xuống cuối', () => {
+    const row = (house_id: string, alerts_raised: number, mttr_min: number | null) =>
+      ({ house_id, name: house_id, alerts_raised, mttr_min }) as unknown as ComparisonRow
+    const rows = [row('c', 1, null), row('b', 1, 5), row('a', 1, 5)]
+    expect(sortComparison(rows, 'alerts_raised', 'desc').map(r => r.house_id)).toEqual(['a', 'b', 'c'])
+    expect(sortComparison(rows, 'mttr_min', 'desc').map(r => r.house_id)).toEqual(['a', 'b', 'c'])
+  })
+
   it('mỗi ô đúng BR-44; sắp theo MTTR, ô trống xuống cuối; không có cột điểm tổng', async () => {
     const { farm, token, house, house2, house3, zone, zone2 } = await seedFarm()
     const to = new Date()
@@ -223,7 +279,8 @@ describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
 describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 002) — TC-F29-03', () => {
   it('quạt 1,0 A ở 12 V chạy 10 giờ → 0,12 kWh; bơm không đo dòng → not available; mẫu mất kết nối không tính', async () => {
     const { token, house, zone, node } = await seedFarm()
-    const start = new Date('2026-10-05T00:00:00+07:00')
+    const month = previousVnMonth()
+    const start = new Date(month.start.getTime() + 4 * DAY)
     // 10 giờ mẫu mỗi 30 giây = 1201 mẫu; thêm 1 mẫu sau khoảng mất kết nối 2 giờ (không được tính khoảng trống)
     const tenHours = Array.from({ length: 1201 }, (_, i) => ({
       node_id: node._id, zone_id: zone._id, timestamp: new Date(start.getTime() + i * 30_000),
@@ -234,17 +291,18 @@ describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 00
       { node_id: node._id, zone_id: zone._id, timestamp: new Date(start.getTime() + 12 * HOUR), ventilation_on: true, fan_current_a: 1.0 },
     ])
 
-    const months = await houseEnergyByMonth(house._id, new Date('2026-10-01T00:00:00+07:00'), new Date('2026-11-01T00:00:00+07:00'))
-    expect(months).toEqual([{ month: '2026-10', misting_kwh: null, ventilation_kwh: 0.12 }])
+    const months = await houseEnergyByMonth(house._id, month.start, month.end)
+    expect(months).toEqual([{ month: month.label, misting_kwh: null, ventilation_kwh: 0.12 }])
 
-    const res = await request(app).get(`/analytics/energy?houseId=${house._id}&from=2026-10-01T00:00:00%2B07:00&to=2026-11-01T00:00:00%2B07:00`)
+    const res = await request(app).get(`/analytics/energy?houseId=${house._id}&from=${month.start.toISOString()}&to=${month.end.toISOString()}`)
       .set('Authorization', `Bearer ${token}`).expect(200)
     expect(res.body.data).toMatchObject({ estimated: true, supply_voltage: { misting: 5, ventilation: 12 }, total: { misting_kwh: null, ventilation_kwh: 0.12, total_kwh: 0.12 } })
   })
 
   it('controller dời sang nhà khác: điện đã dùng vẫn thuộc nhà cũ, điện sau khi dời thuộc nhà mới', async () => {
     const { house, house2, zone, zone2, node } = await seedFarm()
-    const start = new Date('2026-10-10T00:00:00+07:00')
+    const month = previousVnMonth()
+    const start = new Date(month.start.getTime() + 9 * DAY)
     const hourAt = (zoneId: unknown, from: Date) => Array.from({ length: 121 }, (_, i) => ({
       node_id: node._id, zone_id: zoneId, timestamp: new Date(from.getTime() + i * 30_000), ventilation_on: true, fan_current_a: 1.0,
     }))
@@ -252,10 +310,10 @@ describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 00
     await SensorNode.updateOne({ _id: node._id }, { zone_id: zone2._id })
     await Telemetry.insertMany(hourAt(zone2._id, new Date(start.getTime() + 5 * HOUR)))
 
-    const range = [new Date('2026-10-01T00:00:00+07:00'), new Date('2026-11-01T00:00:00+07:00')] as const
+    const range = [month.start, month.end] as const
     // 1 giờ ở 12 V × 1,0 A = 0,012 kWh mỗi nhà
-    expect(await houseEnergyByMonth(house._id, ...range)).toEqual([{ month: '2026-10', misting_kwh: null, ventilation_kwh: 0.012 }])
-    expect(await houseEnergyByMonth(house2._id, ...range)).toEqual([{ month: '2026-10', misting_kwh: null, ventilation_kwh: 0.012 }])
+    expect(await houseEnergyByMonth(house._id, ...range)).toEqual([{ month: month.label, misting_kwh: null, ventilation_kwh: 0.012 }])
+    expect(await houseEnergyByMonth(house2._id, ...range)).toEqual([{ month: month.label, misting_kwh: null, ventilation_kwh: 0.012 }])
   })
 
   it('thợ được giao nhà xem điện năng của nhà đó; nhà chưa được giao → 403', async () => {

@@ -1418,8 +1418,9 @@ paths:
         (% đổi của trung bình chim ra buổi sáng so với kỳ liền trước cùng độ dài), số cảnh báo đã có trong kỳ (không
         tính báo động giả) và đang mở, MTTR (BR-40), điện năng ước tính (BR-45; `null` = not available), sản lượng
         chu kỳ gần nhất (`null` tới khi có chu kỳ thu hoạch, G-26). Sắp theo `sort`/`order`, ô trống luôn xuống cuối,
-        bằng nhau thì theo `house_id`. **Không có điểm tổng hay xếp hạng.** Khoảng được làm tròn ra trọn ngày giờ VN
-        (từ đầu ngày của `from` tới hết ngày trước `to`) để mọi cột cùng một khoảng; `days` là số ngày; tối đa 366
+        bằng nhau thì theo `house_id`. **Không có điểm tổng hay xếp hạng.** Khoảng được đưa về trọn ngày giờ VN mà
+        giữ đúng số ngày yêu cầu (`to` − `from`, làm tròn lên): kết thúc ở hết ngày VN chứa mốc ngay trước `to`, bắt
+        đầu lùi đúng `days` ngày, để mọi cột cùng một khoảng (mặc định 30 ngày là 30 ngày gồm cả hôm nay); tối đa 366
         ngày (Report 3 §4.5), quá thì 400.
       parameters:
         - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 30 ngày" }
@@ -1444,8 +1445,8 @@ paths:
                         type: object
                         properties:
                           farm_id: { type: string }
-                          from: { type: string, format: date-time, description: "Đầu ngày giờ VN sau khi làm tròn" }
-                          to: { type: string, format: date-time, description: "Hết ngày giờ VN sau khi làm tròn (không gồm mốc này)" }
+                          from: { type: string, format: date-time, description: "Đầu ngày giờ VN: `to` lùi `days` ngày" }
+                          to: { type: string, format: date-time, description: "Hết ngày giờ VN chứa mốc ngay trước `to` gửi lên (không gồm mốc này)" }
                           days: { type: integer }
                           sort: { type: string }
                           order: { type: string, enum: [asc, desc] }
