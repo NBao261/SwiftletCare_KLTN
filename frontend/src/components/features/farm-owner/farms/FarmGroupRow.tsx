@@ -1,5 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react'
-import { CaretDownIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
+import { CaretDownIcon, PencilSimpleIcon, PlusIcon, SlidersHorizontalIcon, TrashIcon } from '@phosphor-icons/react'
 import { Badge, Button } from '@/components/ui'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { NO_VALUE } from '@/constants/display'
@@ -22,6 +22,8 @@ interface FarmGroupRowProps {
   onEdit: () => void
   onDelete: () => void
   onAddHouse: () => void
+  // EXPERT-FR-015 — có thì hiện nút "Áp hồ sơ" (Farm Owner, farm đã có nhà)
+  onApplyProfile?: () => void
   // Các nhà yến của farm, chỉ hiện khi đang xổ
   children: ReactNode
 }
@@ -29,7 +31,7 @@ interface FarmGroupRowProps {
 // 1 hàng trang trại trên trang Trang trại: bấm hàng để xổ / thu các nhà yến bên trong, nút Sửa / Xoá / Thêm nhà ngay trên hàng
 export default function FarmGroupRow({
   farm, houseCount, deviceCount, alertHouseCount, isExpanded, isPrimary, canEdit, canAddHouse,
-  onToggle, onEdit, onDelete, onAddHouse, children,
+  onToggle, onEdit, onDelete, onAddHouse, onApplyProfile, children,
 }: FarmGroupRowProps) {
   const { t, num } = useTranslation(farmDict)
   const hasDevices = deviceCount > 0
@@ -77,6 +79,12 @@ export default function FarmGroupRow({
             <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={onAddHouse}>
               <PlusIcon size={14} weight="bold" />
               {t('farmGroup.addHouse')}
+            </Button>
+          )}
+          {onApplyProfile && (
+            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={onApplyProfile}>
+              <SlidersHorizontalIcon size={14} weight="bold" />
+              {t('profile.apply')}
             </Button>
           )}
           {canEdit && (

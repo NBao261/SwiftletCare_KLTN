@@ -227,7 +227,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [x] **Giai đoạn nhà** (FARM-FR-014, BR-46): *(backend: Kiệt, 12/11, `78ada1a` + `e5ebd08`, làm trong PR #126 của G-11; màn đặt giai đoạn trên web: Nhi)*
   - Farm Owner hoặc chuyên gia đặt `ATTRACTING` / `OCCUPIED`, có lịch sử; technician đặt thì 403;
   - nhà `ATTRACTING` không đánh giá chỉ số đàn, không tạo `LOW_RETURN_RATE`, lý do ghi "attracting stage".
-- [ ] **Profile** (EXPERT-FR-014, 015; SM-23):
+- [x] **Profile** (EXPERT-FR-014, 015; SM-23): *(Bảo, 12/11/2026, PR #153: spec `/profiles` và collection `configprofiles` xong; giai đoạn nhà do Kiệt làm trong PR #126; luật khuyến nghị chờ G-11 và G-21. Nhóm nào trong hồ sơ cũng tuỳ chọn, nhưng đã có thì đủ khoá; chỉ Domain Expert soạn và duyệt, Farm Owner kể cả ở farm chưa có chuyên gia chỉ xem và áp (Report 3 §2.4, BR-22; sửa theo tự review 16/11); áp hệ số mờ thì đề xuất hệ số đang chờ của zone thành `SUPERSEDED`, mục duyệt đang chờ của Farm Owner thành `ADJUSTED`; danh sách có phân trang)*
   - chuyên gia tạo profile `DRAFT` (ngưỡng, hệ số mờ, tham số phát hiện, lịch loa) rồi duyệt thành `APPROVED`;
   - giá trị ngoài khoảng trả 400; người không phải chuyên gia duyệt thì 403;
   - Farm Owner áp profile cho các nhà: mỗi zone nhận một thay đổi có lịch sử (nguồn `PROFILE`) và một phiên bản cấu hình mới (cần G-08);
@@ -240,8 +240,8 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [ ] **Không tự viết luật.** Phải có ít nhất 3 luật thật từ chuyên gia (phỏng vấn, mục 4); luật trong dữ liệu demo ghi rõ nguồn.
 
 **Giao diện:**
-- [ ] Tuấn (web chuyên gia): soạn và duyệt profile; soạn luật; trang hiệu quả theo luật (số khuyến nghị đã tạo, đã chấp nhận, đã cải thiện).
-- [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng.
+- [x] Tuấn (web chuyên gia): soạn và duyệt profile. *(14/11/2026, `86cab267`; 16/11/2026 `feat/g24-config-profiles`: sửa các lỗi chặn merge từ review — confirm dialog trước Duyệt/Lưu trữ, error hiển thị trong drawer, accessibility, màu token; màn luật khuyến nghị thay bằng `ComingSoon` chờ backend `/recommendations` và G-24 phần 2)*
+- [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng. *(16/11, nhánh `feat/g24-config-profiles`: xong đặt giai đoạn nhà — khung "Giai đoạn nhà" ở trang chi tiết nhà, Farm Owner chọn "Đang dẫn dụ" / "Đã có chim ở" có xác nhận nói rõ hệ quả BR-46, `PUT /farms/houses/{houseId}/stage`; xong áp profile — nút "Áp hồ sơ" trên hàng trang trại mở popup chọn 1 hồ sơ `APPROVED` (hiện các nhóm hồ sơ đổi) và nhiều nhà, `POST /profiles/{id}/apply`, báo số zone đã áp. Còn danh sách khuyến nghị, chờ backend `/recommendations`.)*
 
 **Test:** TC-F27-01…03; TC-F28-01…03; TC-ST-69…74.
 

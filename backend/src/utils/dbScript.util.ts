@@ -32,12 +32,14 @@ import { WeatherObservation } from '@/models/weatherObservation.model'
 import { WorkOrder } from '@/models/workOrder.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 import { WeatherCompensation } from '@/models/weatherCompensation.model'
+import { ConfigProfile } from '@/models/configProfile.model'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- models have different document types
 type AnyModel = Model<any>
 
 export const ALL_MODELS: AnyModel[] = [
   WeatherCompensation,
+  ConfigProfile,
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
   Farm, HarvestBatch, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, MaintenancePlan, Notification, ParameterReview,
   PushToken, ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, WorkOrder,

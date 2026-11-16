@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Farm, FarmMemberRole, Coordinates, FuzzyTuning, House, RosterShift, Zone, Invitation } from '@/types'
+import type { ApiResponse, Farm, FarmMemberRole, Coordinates, FuzzyTuning, House, HouseStage, RosterShift, Zone, Invitation } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
@@ -29,6 +29,10 @@ export const farmApi = {
     api.get<ApiResponse<{ house_id: string; roster: RosterShift[] }>>(`/farms/houses/${houseId}/roster`),
   setRoster: (houseId: string, shifts: RosterShift[]) =>
     api.put<ApiResponse<{ house_id: string; roster: RosterShift[] }>>(`/farms/houses/${houseId}/roster`, { shifts }),
+
+  // FARM-FR-014, BR-46 — đặt giai đoạn nhà (Farm Owner, Domain Expert của farm)
+  setHouseStage: (houseId: string, stage: HouseStage) =>
+    api.put<ApiResponse<House>>(`/farms/houses/${houseId}/stage`, { stage }),
 
   createZone: (houseId: string, input: { name: string; floor?: number }) =>
     api.post<ApiResponse<Zone>>(`/farms/houses/${houseId}/zones`, input),

@@ -1,4 +1,4 @@
-import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, History, CloudRain } from 'lucide-react';
+import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, History, CloudRain, BookCopy, Lightbulb } from 'lucide-react';
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 import { IconSettings } from '@/components/ui/icons';
@@ -35,6 +35,8 @@ const menuSections: MenuSection[] = [
       { label: 'Luật bù thời tiết', path: '/domain-expert/weather-rules', icon: CloudRain },
       { label: 'Duyệt & Đề xuất', path: '/domain-expert/reviews', icon: FileCheck },
       { label: 'Báo cáo & Kết luận', path: '/domain-expert/reports', icon: FileText },
+      { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles', icon: BookCopy },
+      { label: 'Luật khuyến nghị', path: '/domain-expert/recommendation-rules', icon: Lightbulb },
       { label: 'Lịch sử hoạt động', path: '/domain-expert/history', icon: History },
     ],
   },
