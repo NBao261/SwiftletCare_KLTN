@@ -69,7 +69,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-29 | Farm overview and house comparison | Nguyễn Thị Yến Nhi | In progress | backend in PR #159 (Kiệt, for Bảo); TC-F29-01…03 (Jest) | Web overview and comparison pages (Nhi); yield column waits for G-26 | 3 |
 | F-30 | Harvest cycles and season conclusion (supporting, SF-06) | Nguyễn Thị Yến Nhi | Planned | — | Technician entry, confirmation, cycles, conclusion (G-26): backend Bảo, web Nhi, mobile Len, conclusion Tuấn | 3 |
 
-Summary: 5 Done, 19 In progress, 6 Planned (F-23…F-30 added with the final scope of Review 2).
+Summary: 5 Done, 23 In progress, 2 Planned (F-23…F-30 added with the final scope of Review 2).
 
 ## 4. Test Progress (Report 5)
 
