@@ -489,7 +489,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-23 — Bù theo thời tiết (P1) — Bảo (firmware, backend), Tuấn (màn luật)
 
-- [ ] Lấy dự báo Open-Meteo; luật theo nhà (ENV-FR-030); `weatherCompensation.job`; topic retained `compensation`; firmware cộng offset có hạn, 0 khi offline 2 h (ENV-FR-028, 029, BR-38); test native + jest.
+- [x] Lấy dự báo Open-Meteo; luật theo nhà (ENV-FR-030); `weatherCompensation.job`; topic retained `compensation`; firmware cộng offset có hạn, 0 khi offline 2 h (ENV-FR-028, 029, BR-38); test native + jest. *(Bảo, 12/11/2026, nhánh `feat/g23-weather-compensation`, PR #152: backend + firmware 2.2.0; backend 693/693 test, `pio test -e native` 84/84, `esp32dev` và `esp32prod` build được; **chưa thử trên board**. Dự báo lấy thẳng từ Open-Meteo trong `weatherCompensation.service`, không chờ `weather.job` của G-11; job chạy phút 10 mỗi giờ. Màn luật: Tuấn, 14/11, `b1819a03`. Sửa theo review 14/11 (16/11): chốt bơm khô theo nhu cầu của bộ mờ trước offset, không bù dương khi ẩm ≥ `humidity_max`, tin tới trước NTP được giữ chờ, job cô lập lỗi từng nhà; `pio test -e native` 98/98.)*
 
 ### G-24 — Tri thức: giai đoạn nhà, hồ sơ cấu hình, luật khuyến nghị (P1) — Bảo (backend), Tuấn (web)
 

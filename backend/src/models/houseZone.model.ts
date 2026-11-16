@@ -4,10 +4,15 @@ import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
 import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, HouseStage, Thresholds, Role } from '@/types'
 import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
 import { currentConfigVersion } from '@/utils/configSync.util'
+import { WEATHER_METRICS, type WeatherRuleInput } from '@/utils/weatherCompensation.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
  */
+export interface IWeatherRule extends WeatherRuleInput {
+  _id: Types.ObjectId
+}
+
 export interface IBirdCountTuningHistoryEntry {
   changed_by: Types.ObjectId
   changed_by_role?: Role
@@ -22,6 +27,9 @@ export interface IHouse extends Document {
   name: string
   floors: number
   description?: string
+  /** ENV-FR-030 — luật bù phun sương theo dự báo của nhà (BR-38); `_id` là `rule_id` gửi kèm offset */
+  weather_rules: IWeatherRule[]
+  weather_rules_history: Array<{ changed_by: Types.ObjectId; changed_by_role?: Role; changed_at: Date; old_values: unknown; new_values: unknown }>
   /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
@@ -93,6 +101,21 @@ const houseSchema = new Schema<IHouse>(
     name:        { type: String, required: true, trim: true },
     floors:      { type: Number, default: 1 },
     description: { type: String },
+    weather_rules: [{
+      metric:       { type: String, enum: [...WEATHER_METRICS], required: true },
+      min:          { type: Number, required: true },
+      offset_pct:   { type: Number, required: true },
+      duration_min: { type: Number, required: true },
+      active:       { type: Boolean, default: true },
+    }],
+    weather_rules_history: [{
+      changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+      changed_by_role: { type: String },
+      changed_at: { type: Date },
+      old_values: { type: Schema.Types.Mixed },
+      new_values: { type: Schema.Types.Mixed },
+      _id: false,
+    }],
     bird_count_tuning: {
       return_rate_drop_pct: { type: Number, default: DEFAULT_BIRD_COUNT_TUNING.return_rate_drop_pct },
     },
