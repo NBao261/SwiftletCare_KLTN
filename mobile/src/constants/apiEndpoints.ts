@@ -121,8 +121,9 @@ export const ENDPOINTS = {
   HEALTH_REPORT_DETAIL: (reportId: string) => `/health-reports/${reportId}`,
   HEALTH_REPORT_CONCLUSION: (reportId: string) => `/health-reports/${reportId}/conclusion`,
 
-  // Thu hoạch (HARVEST-FR-001…005) — danh sách đợt thu của farm
+  // Thu hoạch (HARVEST-FR-001…005) — danh sách (GET) và tạo (POST) đợt thu; sửa (PUT), xoá mềm (DELETE) một đợt
   HARVESTS: '/harvests',
+  HARVEST_DETAIL: (harvestId: string) => `/harvests/${harvestId}`,
 
   // Nghiệp vụ Chuyên gia bổ sung (Domain Expert: EXPERT-FR-*)
   ALERT_VERDICT_STATS: '/alerts/verdict-stats',
