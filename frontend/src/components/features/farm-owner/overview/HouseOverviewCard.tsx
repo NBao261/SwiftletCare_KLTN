@@ -25,7 +25,7 @@ const CARD_TONE: Record<'GOOD' | 'WATCH' | 'ACTION' | 'NONE', { card: string; ic
   GOOD: { card: 'border border-accent-300 bg-white', icon: 'border-accent-200 bg-accent-100 text-accent-700' },
   WATCH: { card: 'border border-orange-300 bg-white', icon: 'border-orange-200 bg-orange-100 text-orange-600' },
   ACTION: { card: 'border-2 border-orange-300 bg-orange-50', icon: 'border-orange-200 bg-orange-100 text-orange-600' },
-  NONE: { card: 'border border-warmGray/15 bg-white', icon: 'border-warmGray/15 bg-warmGray/10 text-graphite' },
+  NONE: { card: 'border border-warmGray/15 bg-white', icon: 'border-accent-600 bg-accent-600 text-charcoal' },
 };
 
 // Ô số nhỏ trong thẻ: nhãn, số lớn, dòng phụ
@@ -33,7 +33,7 @@ function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; su
   return (
     <div className={cn('flex min-w-0 flex-col gap-1 rounded-xl border px-3 py-2.5', STAT_TONE[tone].box)}>
       <span className="label-caption truncate">{label}</span>
-      <span className={cn('text-xl font-extrabold leading-none tabular-nums', STAT_TONE[tone].value)}>{value}</span>
+      <span className={cn('text-xl font-extrabold leading-none', STAT_TONE[tone].value)}>{value}</span>
       <span className="line-clamp-2 text-caption font-medium tracking-normal text-warmGray" title={sub}>{sub}</span>
     </div>
   );

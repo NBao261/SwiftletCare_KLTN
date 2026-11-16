@@ -64,7 +64,7 @@ export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: 
       const isSorted = sort === metric;
       return (
         <div key={metric} className="flex min-w-[5.5rem] flex-col gap-1">
-          <span className={cn('text-base font-bold leading-6 tabular-nums', value === null ? 'text-warmGray' : 'text-charcoal')}>
+          <span className={cn('text-base font-bold leading-6', value === null ? 'text-warmGray' : 'text-charcoal')}>
             {value === null ? NO_VALUE : format[metric](value)}
           </span>
           {PERCENT_METRICS.has(metric) && (

@@ -197,6 +197,27 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
     </div>
   );
 
+  // Tab pill như trang Sức khỏe nhà yến, đặt bên phải dòng tiêu đề của khung
+  const tabSwitcher = (
+    <div className="inline-flex shrink-0 gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
+      {TABS.map(value => (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={tab === value}
+          onClick={() => setTab(value)}
+          className={cn(
+            'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
+            tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
+          )}
+        >
+          {t(`tab.${value}`)}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <HeaderActions>
@@ -210,45 +231,20 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
 
       {!farmId ? (
         <EmptyState title={t('page.pickFarmTitle')} description={t('page.pickFarmHint')} />
+      ) : tab === 'houses' ? (
+        <SectionCard
+          className="flex-1"
+          title={t('houses.title', { farm: farmName })}
+          description={overview.data ? t('houses.subtitle', { date: date(overview.data.date) }) : undefined}
+          action={tabSwitcher}
+        >
+          {housesBody}
+        </SectionCard>
       ) : (
-        <>
-          {/* Tab pill như trang Sức khỏe nhà yến: mỗi lúc 1 thẻ */}
-          <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
-            {TABS.map(value => (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={tab === value}
-                onClick={() => setTab(value)}
-                className={cn(
-                  'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
-                  tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-                )}
-              >
-                {t(`tab.${value}`)}
-              </button>
-            ))}
-          </div>
-
-          {tab === 'houses' ? (
-            <SectionCard
-              className="flex-1"
-              title={t('houses.title', { farm: farmName })}
-              description={overview.data ? t('houses.subtitle', { date: date(overview.data.date) }) : undefined}
-            >
-              {housesBody}
-            </SectionCard>
-          ) : (
-            <SectionCard
-              title={t('comparison.title')}
-              description={t('comparison.subtitle')}
-            >
-              {comparisonToolbar}
-              {comparisonBody}
-            </SectionCard>
-          )}
-        </>
+        <SectionCard title={t('comparison.title')} description={t('comparison.subtitle')} action={tabSwitcher}>
+          {comparisonToolbar}
+          {comparisonBody}
+        </SectionCard>
       )}
     </div>
   );
