@@ -3074,7 +3074,7 @@ paths:
       description: |
         Luật thoả ở một nhà khi mỗi ngày trong `window_days` ngày gần nhất (1–30) đều có giá trị của `indicator` và
         đạt `comparison` (`GTE`: ≥ `value`, `LTE`: ≤ `value`); thiếu số của một ngày thì không thoả. `source` ghi luật lấy từ
-        đâu (không tự viết luật). Chỉ số không hỗ trợ, cửa sổ ngoài 1–30, `value` hay hành động sai → 400. Farm Owner,
+        đâu (không tự viết luật). Chỉ số không hỗ trợ, cửa sổ hay `value` ngoài khoảng, hành động không hợp lệ → 400. Farm Owner,
         Farm Technician → 403. Thiếu `source` → 422. Audit `RECOMMENDATION_RULE_CREATED`.
         Sau khi khuyến nghị trước của luật và nhà đó được quyết định hoặc hết hạn, khuyến nghị mới chỉ mở khi mọi ngày
         của cửa sổ đều sau ngày đó (BR-42). Nhà đang dẫn dụ không có tỷ lệ chim về (BR-46); ngày chưa đánh giá không có
@@ -3144,7 +3144,7 @@ paths:
     put:
       tags: [Recommendations]
       summary: "Sửa luật hoặc bật/tắt (`active`) (EXPERT-FR-016) — DOMAIN_EXPERT"
-      description: "Thay toàn bộ nội dung luật; khuyến nghị đã mở giữ bằng chứng lúc mở. Audit `RECOMMENDATION_RULE_UPDATED`."
+      description: "Thay nội dung luật; `active` bỏ trống thì giữ nguyên trạng thái hiện tại. Khuyến nghị đã mở giữ bằng chứng và luật lúc mở (`rule_snapshot`). Audit `RECOMMENDATION_RULE_UPDATED`."
       requestBody:
         required: true
         content:
@@ -6421,7 +6421,7 @@ components:
             key: { type: string, example: humidity_min }
             value: { type: number }
         source: { type: string, maxLength: 500, description: "Luật lấy từ đâu (phỏng vấn, tài liệu)" }
-        active: { type: boolean, default: true }
+        active: { type: boolean, description: "POST bỏ trống → true; PUT bỏ trống → giữ trạng thái hiện tại" }
 
     RecommendationRule:
       allOf:

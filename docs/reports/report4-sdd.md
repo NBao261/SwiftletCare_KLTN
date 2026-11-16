@@ -396,7 +396,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Weather compensation limits and rule inputs | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `MAX_WEATHER_RULES`, `WEATHER_METRIC_LIMITS` (`utils/weatherCompensation.util.ts`); firmware `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `WEATHER_COMP_OFFLINE_MS` (`pid/WeatherCompensation.h`) |
 | Automatic Work Order for offline devices | backend `WORK_ORDER_OFFLINE_DELAY_MIN` |
 | On-site photos | backend `MAX_PHOTO_BYTES`, `MAX_WORK_ORDER_PHOTOS` (`workOrder.service.ts`) |
-| Recommendation expiry and effect window, rule inputs | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS`, `RULE_VALUE_LIMITS`, `RULE_WINDOW_MIN_DAYS`, `RULE_WINDOW_MAX_DAYS` (`utils/recommendationRule.util.ts`); daily 06:30 job `recommendationEffect.job.ts` |
+| Recommendation expiry and effect window, rule inputs | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS`, `RULE_VALUE_LIMITS`, `RULE_WINDOW_MIN_DAYS`, `RULE_WINDOW_MAX_DAYS`, `RULE_WORK_ORDER_TITLE_MAX` (`utils/recommendationRule.util.ts`); daily 06:30 job `recommendationEffect.job.ts` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
 | Same period of the previous year, complete cycle | backend `HARVEST_SAME_PERIOD_DAYS`, `HARVEST_CYCLE_MIN_COMPLETENESS` |
 
@@ -1042,7 +1042,7 @@ Retained messages are never ingested by the backend. A move to another zone only
 
 ### 7.3 WebSocket (Socket.io)
 
-Clients authenticate with the access token. Rooms: `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE`) and the personal room `user:<id>`. Server events: `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `ALERT_ESCALATED`, `WORK_ORDER_UPDATE`, `RECOMMENDATION_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`.
+Clients authenticate with the access token. Rooms: `zone:<id>` (`JOIN_ZONE`), `house:<id>` (`JOIN_HOUSE`) and the personal room `user:<id>`. Server events: `TELEMETRY_UPDATE`, `RELAY_UPDATE`, `DEVICE_STATUS_CHANGE`, `ALERT_NEW`, `ALERT_ESCALATED`, `WORK_ORDER_UPDATE`, `RECOMMENDATION_NEW`, `BIRD_COUNT_UPDATE`, `NOTIFICATION_NEW`. `RECOMMENDATION_NEW` goes to `house:<id>` with the recommendation id, house id, rule name and the day the rule held.
 
 ---
 
@@ -1874,7 +1874,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3) |
+| 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3); room and payload of `RECOMMENDATION_NEW` (Section 7.3) |
 | 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |
 | 2.2.2 | 12/11/2026 | Configuration sync as built (G-08): the heartbeat field is named `appliedConfigVersion`, like the other heartbeat fields; the ERD stores `config_sync` (Report 3 §6.12) on the controller |
 | 2.2.1 | 10/11/2026 | BM02 items due 11/11/2026: SMTP e-mail provider in the Section 2.1 diagram (A-03); mobile versions and Jest from `mobile/package.json` in Section 3.2 (A-06); mDNS broker discovery named as a development aid in Section 3.4 (A-01); services and the `deletionRequestReminder` job of the code listed in Section 5.3 (A-07); every transition of Section 8 names its requirement (ST-06); SM-06 restore within 24 h (ST-01), SM-08 "not evaluated" (ST-07), SM-12 starts at `PENDING` and leaves `UNKNOWN` (ST-03), following SRS 4.2.1; the `alertEscalation` job runs every minute as in DF-13 and the operations modules |

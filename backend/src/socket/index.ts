@@ -48,7 +48,11 @@ export type ServerEvents = {
   ALERT_NEW:            (data: WsAlertNew) => void
   DEVICE_STATUS_CHANGE: (data: WsDeviceStatusChange) => void
   NOTIFICATION_NEW:     (data: NotificationDto) => void
+  RECOMMENDATION_NEW:   (data: WsRecommendationNew) => void
 }
+
+/** EXPERT-FR-017 — khuyến nghị mới của một nhà (room `house:<houseId>`) */
+export interface WsRecommendationNew { _id: string; house_id: string; rule_name: string; raised_for: string }
 
 /** Socket event types received from clients */
 export type ClientEvents = {
@@ -162,7 +166,7 @@ export function emitHouseAlertNew(houseId: string, data: WsAlertNew): void {
 }
 
 /** EXPERT-FR-017, Report 4 §7.3 — khuyến nghị mới của một nhà, tới room `house:<houseId>` */
-export function emitRecommendationNew(houseId: string, data: { _id: string; house_id: string; rule_name: string; raised_for: string }): void {
+export function emitRecommendationNew(houseId: string, data: WsRecommendationNew): void {
   io?.to(`house:${houseId}`).emit('RECOMMENDATION_NEW', data)
 }
 

@@ -156,7 +156,8 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
   const action = rule.action
   // Kiểm giá trị mới với ngưỡng hay hệ số hiện tại của MỌI zone trước khi đổi gì: một zone sai thì không zone nào bị
   // sửa (400) và khuyến nghị vẫn mở, thay vì sửa dở một nửa nhà
-  const zones = action.type === 'PARAMETER_CHANGE' ? await Zone.find({ house_id: house._id }).lean() : []
+  // Document đầy đủ (không lean) để có giá trị mặc định của schema, như đường cập nhật thật
+  const zones = action.type === 'PARAMETER_CHANGE' ? await Zone.find({ house_id: house._id }) : []
   if (action.type === 'PARAMETER_CHANGE') {
     if (zones.length === 0) throw BadRequestError('Nhà chưa có zone nào để đổi tham số')
     const updates = { [action.key]: action.value }
@@ -166,6 +167,9 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
     }
   }
   const acceptStart = new Date()
+  // Zone đã đổi xong: giá trị đã được kiểm trước nên chỉ lỗi hạ tầng (DB, MQTT) mới dừng giữa chừng; khi đó ghi log
+  // các zone đã đổi để người vận hành biết nhà đang đổi dở, vì không hoàn tác cấu hình đã gửi xuống controller
+  const applied: string[] = []
   const recommendation = await decide(current._id, { status: 'ACCEPTED', decided_by: user._id as never, decided_at: acceptStart })
   try {
     if (action.type === 'WORK_ORDER') {
@@ -181,6 +185,7 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
       for (const zone of zones) {
         if (action.group === 'thresholds') await updateZoneThresholds(String(zone._id), user, updates)
         else await updateZoneFuzzyTuning(String(zone._id), user, updates)
+        applied.push(String(zone._id))
       }
       // Chỉ các mục duyệt vừa mở hoặc vừa cập nhật bởi lần chấp nhận này (một mục mỗi zone, EXPERT-FR-010)
       const reviews = await ParameterReview.find({
@@ -190,6 +195,11 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
     }
     await recommendation.save()
   } catch (err) {
+    if (applied.length > 0) {
+      logger.error('Chấp nhận khuyến nghị dừng giữa chừng, một số zone đã đổi tham số', {
+        recommendationId: String(recommendation._id), appliedZoneIds: applied, err: (err as Error).message,
+      })
+    }
     await reopen(recommendation._id)
     throw err
   }
@@ -201,15 +211,14 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
 }
 
 /**
- * Lỗi khi thực hiện: mở lại khuyến nghị, chỉ khi nó vẫn là ACCEPTED của lần này. Trùng index một-khuyến-nghị-mở
- * (đã có khuyến nghị mở khác cho luật và nhà) thì giữ ACCEPTED và ghi log, không ghi đè.
+ * Lỗi khi thực hiện: mở lại khuyến nghị, chỉ khi nó vẫn là ACCEPTED của lần này. Không mở lại được (trùng index
+ * một-khuyến-nghị-mở, DB lỗi) thì chỉ ghi log, để người gọi nhận đúng lỗi gốc.
  */
 async function reopen(id: Types.ObjectId) {
   try {
     await Recommendation.updateOne({ _id: id, status: 'ACCEPTED' }, { status: 'OPEN', $unset: { decided_by: 1, decided_at: 1 } })
   } catch (err) {
-    if ((err as { code?: number }).code !== 11000) throw err
-    logger.error('Không mở lại được khuyến nghị: đã có khuyến nghị mở khác cho luật và nhà', { recommendationId: String(id) })
+    logger.error('Không mở lại được khuyến nghị sau lỗi', { recommendationId: String(id), err: (err as Error).message })
   }
 }
 
@@ -343,8 +352,9 @@ export async function measureRecommendationEffects(now = new Date()): Promise<nu
   for (const recommendation of due) {
     try {
       const acceptedDate = vnDate(recommendation.decided_at!)
-      // Đủ 7 ngày sau theo lịch VN: ngày thứ 7 sau ngày chấp nhận đã đánh giá xong (19:15) thì sáng hôm sau mới đo
-      if (vnDate(now) <= dayOffset(acceptedDate, RECOMMENDATION_EFFECT_DAYS)) continue
+      // Ngày thứ 7 sau ngày chấp nhận được đánh giá lúc 19:15 hôm đó rồi tính lại đủ dữ liệu trễ lúc 19:15 hôm sau
+      // (assessAllHouses tính lại 7 ngày trước), nên chỉ đo từ sáng ngày thứ 9
+      if (vnDate(now) <= dayOffset(acceptedDate, RECOMMENDATION_EFFECT_DAYS + 1)) continue
       const rule = await snapshotOf(recommendation)
       const days = await indicatorDays(
         rule.indicator, { _id: recommendation.house_id },

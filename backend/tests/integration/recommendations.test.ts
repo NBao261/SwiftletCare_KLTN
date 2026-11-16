@@ -308,7 +308,7 @@ describe('EXPERT-FR-018 — decision of the Farm Owner', () => {
 describe('EXPERT-FR-019, BR-42 — expiry and effect', () => {
   it('TC-F27-03: the one accepted 7 days ago becomes MEASURED with change = after − before; the one open for 7 days EXPIRED', async () => {
     const s = await seed()
-    const now = new Date('2026-11-16T23:30:00Z') // 17/11 06:30 giờ VN: ngày 16/11 đã đánh giá xong
+    const now = new Date('2026-11-17T23:30:00Z') // 18/11 06:30 giờ VN: ngày 16/11 đã được tính lại lúc 19:15 ngày 17/11
     const acceptedAt = new Date('2026-11-09T00:00:00Z') // 09/11 giờ VN
     const accepted = await openRecommendation(s)
     await Recommendation.updateOne({ _id: accepted._id }, { status: 'ACCEPTED', decided_at: acceptedAt })
@@ -323,8 +323,9 @@ describe('EXPERT-FR-019, BR-42 — expiry and effect', () => {
     }
 
     expect(await expireRecommendations(now)).toBe(1)
-    // 16/11 06:30 giờ VN: ngày thứ 7 sau chưa đánh giá, chưa đo
-    expect(await measureRecommendationEffects(new Date('2026-11-15T23:30:00Z'))).toBe(0)
+    // Đã quá 7 × 24 giờ nhưng ngày thứ 7 (16/11) chưa được tính lại: 16/11 08:00 và 17/11 06:30 giờ VN chưa đo
+    expect(await measureRecommendationEffects(new Date('2026-11-16T01:00:00Z'))).toBe(0)
+    expect(await measureRecommendationEffects(new Date('2026-11-16T23:30:00Z'))).toBe(0)
     expect(await measureRecommendationEffects(now)).toBe(1)
     expect((await Recommendation.findById(stale._id).lean())!.status).toBe('EXPIRED')
     const measured = (await Recommendation.findById(accepted._id).lean())!
