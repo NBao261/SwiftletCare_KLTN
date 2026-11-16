@@ -3100,7 +3100,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/RecommendationRule" }
-        "400": { description: "Chỉ số không hỗ trợ, cửa sổ ngoài 1–30 ngày, value ngoài khoảng, hành động sai hoặc thiếu nguồn", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "Chỉ số hoặc so sánh không hỗ trợ, value hay cửa sổ ngoài khoảng, Work Order thiếu tiêu đề hoặc quá 200 ký tự, khoá hay giá trị tham số sai. Thiếu trường hoặc sai kiểu (source rỗng, action không phải object, action.type lạ, window_days không nguyên) là 422 của validator", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
