@@ -1,10 +1,11 @@
 // EXPERT-FR-020, HARVEST-FR-007 — Danh sách chu kỳ thu hoạch, kết luận mùa vụ
 import { useState } from 'react'
 import { Wheat } from 'lucide-react'
-import { Badge, DataTable, LoadingSkeleton, SelectMenu, SectionCard, type DataTableColumn } from '@/components/ui'
+import { Badge, Button, DataTable, LoadingSkeleton, Pagination, SelectMenu, SectionCard, type DataTableColumn } from '@/components/ui'
 import TableEmptyState from '@/components/common/TableEmptyState'
 import CycleConclusionDrawer from '@/components/features/domain-expert/harvest/CycleConclusionDrawer'
 import { harvestCyclesDict } from '@/constants/harvestCycles.i18n'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useHarvestCycles } from '@/hooks/domain-expert/useHarvestCycles'
 import type { HarvestCycle, HarvestCycleStatus } from '@/types/harvest.types'
@@ -26,13 +27,14 @@ const PAGE_SIZE = 10
 
 export default function HarvestCyclesSection({ scope }: HarvestCyclesSectionProps) {
   const { t, date: formatDate } = useTranslation(harvestCyclesDict)
+  const apiErrorMessage = useApiErrorMessage()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('')
   const [page, setPage] = useState(1)
   const [selectedCycle, setSelectedCycle] = useState<HarvestCycle | null>(null)
 
   const hasScope = !!(scope?.farmId || scope?.houseId)
 
-  const { data, isLoading } = useHarvestCycles(
+  const { records: cycles, total, isLoading, isError, error, refetch } = useHarvestCycles(
     {
       farmId: scope?.farmId,
       houseId: scope?.houseId,
@@ -42,9 +44,6 @@ export default function HarvestCyclesSection({ scope }: HarvestCyclesSectionProp
     },
     hasScope,
   )
-
-  const cycles = data?.cycles ?? []
-  const totalPages = data?.meta ? Math.ceil((data.meta.total ?? 0) / PAGE_SIZE) : 1
 
   const statusOptions: Array<{ value: StatusFilter; label: string }> = [
     { value: '', label: t('filter.all') },
@@ -120,21 +119,58 @@ export default function HarvestCyclesSection({ scope }: HarvestCyclesSectionProp
       header: t('col.actions'),
       align: 'center',
       render: row => (
-        <button
-          type="button"
+        <Button
+          size="sm"
           onClick={e => { e.stopPropagation(); setSelectedCycle(row) }}
           disabled={row.status === 'OPEN'}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-            row.status !== 'OPEN'
-              ? 'bg-charcoal text-white hover:bg-charcoal/80'
-              : 'bg-neutral-100 text-warmGray cursor-not-allowed'
-          }`}
         >
           {row.conclusion ? t('action.edit') : t('action.write')}
-        </button>
+        </Button>
       ),
     },
   ]
+
+  // Chưa chọn phạm vi → nhắc chọn; tải → khung chờ; lỗi → báo kèm Thử lại; rỗng → khung rỗng; còn lại là bảng (FE_Design 13.5)
+  let body = (
+    <div className="py-10">
+      <TableEmptyState title={t('section.noScope')} />
+    </div>
+  )
+  if (hasScope && isLoading) body = <LoadingSkeleton count={5} />
+  if (hasScope && !isLoading && isError) {
+    body = (
+      <div className="py-10">
+        <TableEmptyState title={t('error.title')} description={apiErrorMessage(error)} />
+        <div className="mt-3 flex justify-center">
+          <Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('error.retry')}</Button>
+        </div>
+      </div>
+    )
+  }
+  if (hasScope && !isLoading && !isError && cycles.length === 0) {
+    body = (
+      <div className="py-10">
+        <TableEmptyState
+          title={statusFilter ? t('empty.filteredTitle') : t('empty.title')}
+          description={statusFilter ? t('empty.filteredDesc') : t('empty.desc')}
+        />
+      </div>
+    )
+  }
+  if (hasScope && !isLoading && !isError && cycles.length > 0) {
+    body = (
+      <>
+        <DataTable
+          columns={columns}
+          rows={cycles}
+          getRowKey={row => row._id}
+          onRowClick={row => { if (row.status !== 'OPEN') setSelectedCycle(row) }}
+          minTableWidth={900}
+        />
+        <Pagination page={page} limit={PAGE_SIZE} total={total} onChange={setPage} />
+      </>
+    )
+  }
 
   return (
     <>
@@ -151,51 +187,7 @@ export default function HarvestCyclesSection({ scope }: HarvestCyclesSectionProp
           />
         }
       >
-        {!hasScope ? (
-          <div className="py-10">
-            <TableEmptyState title={t('section.noScope')} />
-          </div>
-        ) : isLoading ? (
-          <LoadingSkeleton count={5} />
-        ) : cycles.length === 0 ? (
-          <div className="py-10">
-            <TableEmptyState
-              title={statusFilter ? t('empty.filteredTitle') : t('empty.title')}
-              description={statusFilter ? t('empty.filteredDesc') : t('empty.desc')}
-            />
-          </div>
-        ) : (
-          <>
-            <DataTable
-              columns={columns}
-              rows={cycles}
-              getRowKey={row => row._id}
-              onRowClick={row => { if (row.status !== 'OPEN') setSelectedCycle(row) }}
-              minTableWidth={900}
-            />
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-3">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage(p => p - 1)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-warmGray/10 text-charcoal disabled:opacity-40 hover:bg-warmGray/20 transition-colors"
-                >
-                  ‹
-                </button>
-                <span className="text-xs text-warmGray">{page} / {totalPages}</span>
-                <button
-                  type="button"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(p => p + 1)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-warmGray/10 text-charcoal disabled:opacity-40 hover:bg-warmGray/20 transition-colors"
-                >
-                  ›
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        {body}
       </SectionCard>
 
       <CycleConclusionDrawer

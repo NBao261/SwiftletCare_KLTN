@@ -1,7 +1,8 @@
 // EXPERT-FR-020 — Ngăn kéo kết luận mùa vụ của Chuyên gia / Chủ nhà yến (BR-22)
 import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { X, AlertTriangle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui'
+import { Drawer } from '@/components/ui/Drawer'
 import { cn } from '@/lib/cn'
 import type { HarvestCycle } from '@/types/harvest.types'
 import { useTranslation } from '@/hooks/common/useTranslation'
@@ -57,11 +58,6 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
     }
   }, [cycle])
 
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [isOpen])
-
   const handleSave = async () => {
     if (!cycle || !text.trim()) return
     setErrorMsg(null)
@@ -78,8 +74,6 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
   const kg = (grams: number) => (grams / 1000).toFixed(2)
 
-  if (typeof document === 'undefined') return null
-
   const closing = cycle?.closing_harvest
   const comp = cycle?.comparison
   const health = cycle?.health
@@ -92,38 +86,11 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
     ? t('drawer.subtitle', { from: fromLabel, to: toLabel })
     : t('drawer.subtitleOpen', { from: fromLabel })
 
-  return createPortal(
-    <>
-      <div
-        onClick={onClose}
-        className={cn(
-          'fixed inset-0 z-40 transition-all duration-300',
-          isOpen ? 'bg-black/30 backdrop-blur-[2px] pointer-events-auto' : 'bg-transparent pointer-events-none',
-        )}
-      />
-
-      <aside className={cn(
-        'fixed top-0 right-0 z-50 h-full w-full max-w-[600px] bg-white shadow-2xl flex flex-col',
-        'transition-transform duration-300 ease-in-out border-l border-neutral-200',
-        isOpen ? 'translate-x-0' : 'translate-x-full',
-      )}>
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-neutral-100">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-charcoal leading-tight">{drawerTitle}</h2>
-            <p className="mt-1 text-xs text-warmGray">{subtitleText}</p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Đóng ngăn kéo"
-            className="text-warmGray hover:text-charcoal transition-colors p-1 rounded-lg hover:bg-neutral-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+  return (
+    <Drawer open={isOpen} onClose={onClose} title={drawerTitle}>
+        {/* Drawer không tự cuộn — vùng cuộn đặt ở đây, nút lưu ở dưới cùng */}
+        <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pb-4 space-y-4">
+          <p className="text-xs text-warmGray">{subtitleText}</p>
 
           {/* Cảnh báo chu kỳ chưa đóng */}
           {isCycleOpen && (
@@ -134,7 +101,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
           )}
 
           {/* Thông tin sản lượng */}
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3.5 space-y-1.5">
+          <div className="rounded-xl border border-warmGray/15 bg-warmGray/5 p-3.5 space-y-1.5">
             <p className="text-xs font-bold text-charcoal uppercase tracking-wider">{t('drawer.yieldLabel')}</p>
             {closing ? (
               <p className="text-sm text-charcoal">
@@ -154,7 +121,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
           {/* So sánh */}
           {comp && (
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3.5 space-y-2">
+            <div className="rounded-xl border border-warmGray/15 bg-warmGray/5 p-3.5 space-y-2">
               <p className="text-xs font-bold text-charcoal uppercase tracking-wider">{t('drawer.compLabel')}</p>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
@@ -186,7 +153,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
           )}
 
           {/* Sức khỏe */}
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3.5 space-y-1">
+          <div className="rounded-xl border border-warmGray/15 bg-warmGray/5 p-3.5 space-y-1">
             <p className="text-xs font-bold text-charcoal uppercase tracking-wider mb-1.5">{t('drawer.healthLabel')}</p>
             {health ? (
               <>
@@ -233,7 +200,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
                 disabled={!canWrite || mutation.isPending}
                 rows={5}
                 placeholder={t('drawer.textPlaceholder')}
-                className="w-full rounded-xl border border-warmGray/30 bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warmGray/50 focus:outline-none focus:ring-2 focus:ring-charcoal/20 resize-none disabled:bg-neutral-50 disabled:text-warmGray"
+                className="w-full rounded-xl border border-warmGray/30 bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warmGray/50 focus:outline-none focus:ring-2 focus:ring-charcoal/20 resize-none disabled:bg-warmGray/5 disabled:text-warmGray"
               />
               <p className="text-xs text-warmGray text-right">{t('drawer.textHint', { count: text.length })}</p>
             </div>
@@ -246,7 +213,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
                 disabled={!canWrite || mutation.isPending}
                 rows={4}
                 placeholder={t('drawer.recsPlaceholder')}
-                className="w-full rounded-xl border border-warmGray/30 bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warmGray/50 focus:outline-none focus:ring-2 focus:ring-charcoal/20 resize-none disabled:bg-neutral-50 disabled:text-warmGray"
+                className="w-full rounded-xl border border-warmGray/30 bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warmGray/50 focus:outline-none focus:ring-2 focus:ring-charcoal/20 resize-none disabled:bg-warmGray/5 disabled:text-warmGray"
               />
               <p className="text-xs text-warmGray text-right">{t('drawer.recsHint', { count: recs.length })}</p>
             </div>
@@ -261,35 +228,17 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-neutral-100 flex items-center justify-end gap-3 bg-white">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-charcoal hover:bg-neutral-50 transition-colors"
-          >
-            {t('drawer.cancel')}
-          </button>
-          <button
-            type="button"
-            disabled={!canWrite || !text.trim() || mutation.isPending}
+        <div className="-mx-6 -mb-5 flex shrink-0 items-center justify-end gap-3 border-t border-warmGray/10 px-6 py-3.5">
+          <Button variant="secondary" size="sm" onClick={onClose}>{t('drawer.cancel')}</Button>
+          <Button
+            size="sm"
+            disabled={!canWrite || !text.trim()}
+            loading={mutation.isPending}
             onClick={handleSave}
-            className={cn(
-              'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
-              canWrite && text.trim() && !mutation.isPending
-                ? 'bg-charcoal text-white hover:bg-charcoal/90 shadow-md'
-                : 'bg-neutral-200 text-neutral-400 cursor-not-allowed',
-            )}
           >
-            {mutation.isPending ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                {t('drawer.saving')}
-              </>
-            ) : t('drawer.save')}
-          </button>
+            {t('drawer.save')}
+          </Button>
         </div>
-      </aside>
-    </>,
-    document.body,
+    </Drawer>
   )
 }

@@ -48,6 +48,8 @@ const vi = {
   'empty.desc': 'Các chu kỳ sẽ được tạo tự động khi lô thu hoạch được xác nhận.',
   'empty.filteredTitle': 'Không có chu kỳ nào khớp bộ lọc',
   'empty.filteredDesc': 'Thử chọn trạng thái khác hoặc bỏ bộ lọc.',
+  'error.title': 'Không tải được chu kỳ thu hoạch',
+  'error.retry': 'Thử lại',
 
   // Drawer — tiêu đề
   'drawer.title': 'Kết luận mùa vụ',
@@ -133,6 +135,8 @@ const en: Record<HarvestCyclesKey, string> = {
   'empty.desc': 'Cycles are created automatically when a harvest batch is confirmed.',
   'empty.filteredTitle': 'No cycles match the filter',
   'empty.filteredDesc': 'Try a different status filter.',
+  'error.title': 'Could not load the harvest cycles',
+  'error.retry': 'Retry',
 
   'drawer.title': 'Season conclusion',
   'drawer.titleEdit': 'Edit season conclusion',

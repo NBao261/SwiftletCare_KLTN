@@ -78,6 +78,32 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
     { key: 'status', header: t('cycle.colStatus'), align: 'center', render: cycle => <Badge tone={STATUS_TONE[cycle.status]}>{t(`cycleStatus.${cycle.status}`)}</Badge> },
   ];
 
+  // Tải → khung chờ; lỗi → báo kèm Thử lại; còn lại là bảng (rỗng thì bảng tự hiện khung rỗng)
+  let body = (
+    <FixedRowsTable
+      columns={columns}
+      rows={cycles}
+      getRowKey={cycle => cycle._id}
+      onRowClick={setSelected}
+      rowHeight={ROW_HEIGHT}
+      pageSize={PAGE_SIZE}
+      emptyNotice={t('cycle.emptyTitle')}
+      emptyContent={<TableEmptyState title={t('cycle.emptyTitle')} description={t('cycle.emptyDesc')} />}
+      serverPagination={{ page, total, onChange: setPage }}
+    />
+  );
+  if (isLoading) body = <LoadingSkeleton count={3} className="h-12 w-full" />;
+  if (isError) {
+    body = (
+      <div className="py-8">
+        <TableEmptyState title={t('cycle.errorTitle')} description={apiErrorMessage(error)} />
+        <div className="mt-3 flex justify-center">
+          <Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Card size="lg" className="flex flex-col gap-4">
       <div>
@@ -85,28 +111,7 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
         <p className="mt-1 text-sm text-warmGray">{t('cycle.subtitle')}</p>
       </div>
 
-      {isLoading ? (
-        <LoadingSkeleton count={3} className="h-12 w-full" />
-      ) : isError ? (
-        <div className="py-8">
-          <TableEmptyState title={t('cycle.errorTitle')} description={apiErrorMessage(error)} />
-          <div className="mt-3 flex justify-center">
-            <Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>
-          </div>
-        </div>
-      ) : (
-        <FixedRowsTable
-          columns={columns}
-          rows={cycles}
-          getRowKey={cycle => cycle._id}
-          onRowClick={setSelected}
-          rowHeight={ROW_HEIGHT}
-          pageSize={PAGE_SIZE}
-          emptyNotice={t('cycle.emptyTitle')}
-          emptyContent={<TableEmptyState title={t('cycle.emptyTitle')} description={t('cycle.emptyDesc')} />}
-          serverPagination={{ page, total, onChange: setPage }}
-        />
-      )}
+      {body}
 
       <Drawer
         open={selected !== null}
