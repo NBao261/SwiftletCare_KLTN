@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import { harvestApi } from '@/apis/farm-owner/harvests.api'
 import { harvestCyclesApi } from '@/apis/domain-expert/harvestCycles.api'
 import type { CreateHarvestInput } from '@/apis/farm-owner/harvests.api'
@@ -11,16 +12,16 @@ export function useHarvests(farmId: string | undefined) {
   })
 }
 
-// HARVEST-FR-007 — 1 trang chu kỳ của nhà, của farm, hoặc mọi farm (cả hai rỗng), phân trang ở server;
-// khoá đầu ['harvest', 'cycles'] chung với màn kết luận mùa vụ để kết luận xong cũng làm mới
+// HARVEST-FR-007 — 1 trang chu kỳ (nhà, farm hoặc mọi farm), khoá ['harvest', 'cycles'] chung với màn kết luận mùa vụ
 export function useHarvestCycleList(farmId: string, houseId: string, page: number, limit: number) {
-  return useQuery({
-    queryKey: ['harvest', 'cycles', 'list', farmId, houseId, page, limit],
-    queryFn: () => harvestCyclesApi.list({ farmId: farmId || undefined, houseId: houseId || undefined, page, limit })
-      .then(response => ({ cycles: response.data.data ?? [], total: response.data.meta?.total ?? 0 })),
+  return usePaginatedListQuery(
+    ['harvest', 'cycles', 'list', farmId, houseId, page, limit],
+    () => harvestCyclesApi.list({ farmId: farmId || undefined, houseId: houseId || undefined, page, limit }),
+    page,
+    limit,
     // Giữ trang cũ trong lúc tải trang mới để bảng không nháy khung tải
-    placeholderData: previous => previous,
-  })
+    { placeholderData: keepPreviousData },
+  )
 }
 
 // Lô đổi thì backend dựng lại chu kỳ của zone (HARVEST-FR-007) nên làm mới cả đợt thu (trang Thu hoạch, Tổng quan, Trang trại) lẫn chu kỳ

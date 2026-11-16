@@ -34,9 +34,7 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
   const apiErrorMessage = useApiErrorMessage();
   // Trang về 1 khi đổi farm/nhà: trang Thu hoạch gắn key theo phạm vi lọc nên khung dựng lại
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError, error, refetch } = useHarvestCycleList(farmId, houseId, page, PAGE_SIZE);
-  const cycles = data?.cycles ?? [];
-  const total = data?.total ?? 0;
+  const { records: cycles, total, isLoading, isError, error, refetch } = useHarvestCycleList(farmId, houseId, page, PAGE_SIZE);
   const [selected, setSelected] = useState<HarvestCycle | null>(null);
 
   // Nhà có hơn 1 Zone thì ghi thêm tên Zone
