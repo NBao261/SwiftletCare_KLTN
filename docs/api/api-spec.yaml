@@ -3075,7 +3075,11 @@ paths:
         Luật thoả ở một nhà khi mỗi ngày trong `window_days` ngày gần nhất (1–30) đều có giá trị của `indicator` và
         đạt `comparison` (`GTE`: ≥ `value`, `LTE`: ≤ `value`); thiếu số của một ngày thì không thoả. `source` ghi luật lấy từ
         đâu (không tự viết luật). Chỉ số không hỗ trợ, cửa sổ ngoài 1–30, `value` hay hành động sai → 400. Farm Owner,
-        Farm Technician → 403. Audit `RECOMMENDATION_RULE_CREATED`.
+        Farm Technician → 403. Thiếu `source` → 422. Audit `RECOMMENDATION_RULE_CREATED`.
+        Sau khi khuyến nghị trước của luật và nhà đó được quyết định hoặc hết hạn, khuyến nghị mới chỉ mở khi mọi ngày
+        của cửa sổ đều sau ngày đó (BR-42). Nhà đang dẫn dụ không có tỷ lệ chim về (BR-46); ngày chưa đánh giá không có
+        số cảnh báo phun. Luật được chép vào khuyến nghị lúc mở (`rule_snapshot`), nên sửa luật sau đó không đổi khuyến
+        nghị đã mở.
       requestBody:
         required: true
         content:
@@ -3227,7 +3231,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/Recommendation" }
-        "400": { description: "Giá trị tham số không hợp với ngưỡng hiện tại của zone", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "Nhà chưa có zone, hoặc giá trị không hợp với ngưỡng/hệ số hiện tại của một zone (kiểm mọi zone trước, không zone nào bị sửa, khuyến nghị vẫn OPEN)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Khuyến nghị không còn mở", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
@@ -6438,6 +6442,17 @@ components:
         farm_id: { type: string }
         house_id: { type: string }
         rule_id: { description: "id luật; ở danh sách là object có name và action" }
+        rule_snapshot:
+          type: object
+          description: "Luật lúc khuyến nghị mở (tên, điều kiện, hành động); chấp nhận và đo hiệu quả dùng bản này. Không có ở khuyến nghị mở trước 17/11/2026"
+          properties:
+            name: { type: string }
+            indicator: { type: string }
+            comparison: { type: string }
+            value: { type: number }
+            window_days: { type: integer }
+            action: { type: object }
+        expired_at: { type: string, format: date-time, description: "Lúc chuyển EXPIRED" }
         status: { type: string, enum: [OPEN, ACCEPTED, REJECTED, EXPIRED, MEASURED] }
         evidence:
           type: object

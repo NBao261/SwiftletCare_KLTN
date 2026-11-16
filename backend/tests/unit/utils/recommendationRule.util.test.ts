@@ -8,6 +8,9 @@ const RULE = {
 describe('parseRuleInput (EXPERT-FR-016)', () => {
   it('accepts a supported indicator, a window of 1–30 days and an action', () => {
     expect(parseRuleInput(RULE)).toMatchObject({ indicator: 'AIR_HOURS_OVER', window_days: 3, active: true })
+    // Sửa luật không gửi `active`: giữ trạng thái hiện tại
+    expect(parseRuleInput(RULE, false).active).toBe(false)
+    expect(parseRuleInput({ ...RULE, active: true }, false).active).toBe(true)
     expect(parseRuleInput({ ...RULE, action: { type: 'PARAMETER_CHANGE', group: 'thresholds', key: 'humidity_min', value: 80 } }).action)
       .toEqual({ type: 'PARAMETER_CHANGE', group: 'thresholds', key: 'humidity_min', value: 80 })
   })
@@ -21,6 +24,10 @@ describe('parseRuleInput (EXPERT-FR-016)', () => {
     ['work order without title', { action: { type: 'WORK_ORDER', title: '' } }],
     ['unknown parameter key', { action: { type: 'PARAMETER_CHANGE', group: 'thresholds', key: 'heating', value: 1 } }],
     ['parameter out of range', { action: { type: 'PARAMETER_CHANGE', group: 'fuzzy', key: 'fuzzy_window_sec', value: 30 } }],
+    ['parameter null (not a 0 threshold)', { action: { type: 'PARAMETER_CHANGE', group: 'thresholds', key: 'humidity_min', value: null } }],
+    ['control window not whole seconds', { action: { type: 'PARAMETER_CHANGE', group: 'fuzzy', key: 'fuzzy_window_sec', value: 120.5 } }],
+    ['work order title over 200 characters', { action: { type: 'WORK_ORDER', title: 'x'.repeat(201) } }],
+    ['condition value null', { value: null }],
   ])('rejects %s with 400', (_label, over) => {
     expect(() => parseRuleInput({ ...RULE, ...over })).toThrow(expect.objectContaining({ statusCode: 400 }))
   })

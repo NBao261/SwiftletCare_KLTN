@@ -20,11 +20,15 @@ import { WorkOrder } from '@/models/workOrder.model'
 import {
   evaluateRecommendationRules, expireRecommendations, measureRecommendationEffects,
 } from '@/services/recommendation.service'
+import { emitRecommendationNew } from '@/socket'
+import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { dayOffset } from '@/utils/recommendationRule.util'
 import type { Role } from '@/types'
 import { useTestDb } from '../helpers/ownerFarm'
 
-jest.mock('@/socket', () => ({ emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitNotificationNew: jest.fn() }))
+jest.mock('@/socket', () => ({
+  emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitNotificationNew: jest.fn(), emitRecommendationNew: jest.fn(),
+}))
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/services/notification.service', () => ({
   ...jest.requireActual('@/services/notification.service'),
@@ -78,12 +82,12 @@ const NH3_RULE = {
 }
 
 /** Ngày sức khỏe của nhà với số giờ khí vượt ngưỡng `air` (và % trong ngưỡng `env`) */
-async function seedDay(house: { _id: unknown; farm_id: unknown }, date: string, air: number | null, env: number | null = 90) {
+async function seedDay(house: { _id: unknown; farm_id: unknown }, date: string, air: number | null, env: number | null = 90, returnRate: number | null = null) {
   await HouseHealthDay.create({
     house_id: house._id, farm_id: house.farm_id, date, computed_at: new Date(), current_status: 'WATCH', current_reasons: [],
     indicators: {
       environment: { value: env, level: null }, air: { value: air, level: null },
-      flock: { value: null, level: null }, noise: { value: 0, level: null },
+      flock: { value: null, level: null, details: { return_rate: returnRate } }, noise: { value: 0, level: null },
     },
     completeness: { environment: true, air: air !== null, flock: false, noise: true },
   })
@@ -99,6 +103,11 @@ describe('EXPERT-FR-016 — rules', () => {
     expect(created.body.data).toMatchObject({ indicator: 'AIR_HOURS_OVER', active: true })
     expect((await call('post', '/rules', t.expert, { farm_id: farm._id, ...NH3_RULE, indicator: 'HEALTH_GOOD_RATE' })).status).toBe(400)
     expect((await call('post', '/rules', t.expert, { farm_id: farm._id, ...NH3_RULE, window_days: 31 })).status).toBe(400)
+    // null không thành ngưỡng 0 áp cho mọi zone
+    const nullValue = { type: 'PARAMETER_CHANGE', group: 'thresholds', key: 'humidity_min', value: null }
+    expect((await call('post', '/rules', t.expert, { farm_id: farm._id, ...NH3_RULE, action: nullValue })).status).toBe(400)
+    const { source: _source, ...noSource } = NH3_RULE
+    expect((await call('post', '/rules', t.expert, { farm_id: farm._id, ...noSource })).status).toBe(422)
     expect((await call('post', '/rules', t.owner, { farm_id: farm._id, ...NH3_RULE })).status).toBe(403)
     expect((await call('post', '/rules', t.tech, { farm_id: farm._id, ...NH3_RULE })).status).toBe(403)
 
@@ -107,6 +116,9 @@ describe('EXPERT-FR-016 — rules', () => {
     // Bật/tắt
     const off = await call('put', `/rules/${created.body.data._id}`, t.expert, { ...NH3_RULE, active: false })
     expect(off.body.data.active).toBe(false)
+    // Sửa mà không gửi `active` thì luật đang tắt vẫn tắt
+    const edited = await call('put', `/rules/${created.body.data._id}`, t.expert, { ...NH3_RULE, value: 5 })
+    expect(edited.body.data).toMatchObject({ value: 5, active: false })
   })
 })
 
@@ -124,6 +136,7 @@ describe('EXPERT-FR-017 — daily evaluation', () => {
     expect(open[0]).toMatchObject({ status: 'OPEN', raised_for: TODAY })
     expect(open[0].evidence.days.map(d => d.value)).toEqual([5, 4, 6])
     expect(await Notification.countDocuments({ user_id: owner._id })).toBe(1)
+    expect(emitRecommendationNew).toHaveBeenCalledWith(String(house._id), expect.objectContaining({ _id: String(open[0]._id) }))
   })
 
   it('raises nothing when one day misses the condition, a day is missing, or the rule is off', async () => {
@@ -139,6 +152,51 @@ describe('EXPERT-FR-017 — daily evaluation', () => {
     await HouseHealthDay.updateOne({ date: dayOffset(TODAY, -1) }, { 'indicators.air.value': 5 })
     await call('put', `/rules/${rule.body.data._id}`, t.expert, { ...NH3_RULE, active: false })
     expect(await evaluateRecommendationRules(TODAY)).toBe(0)
+  })
+
+  it('BR-42: after a decision, a new recommendation needs a whole window of days after the decision day', async () => {
+    const { farm, house, t, call } = await seed()
+    await call('post', '/rules', t.expert, { farm_id: farm._id, ...NH3_RULE })
+    for (let i = -2; i <= 3; i++) await seedDay(house, dayOffset(TODAY, i), 6)
+    expect(await evaluateRecommendationRules(TODAY)).toBe(1)
+    await Recommendation.updateOne({ house_id: house._id }, {
+      status: 'REJECTED', decided_at: new Date(`${TODAY}T20:00:00+07:00`), reject_reason: 'Đã xử lý',
+    })
+    // Cửa sổ 15…17/11 còn chứa ngày đã quyết định: chưa mở lại
+    expect(await evaluateRecommendationRules(dayOffset(TODAY, 1))).toBe(0)
+    expect(await evaluateRecommendationRules(dayOffset(TODAY, 2))).toBe(0)
+    // Cửa sổ 17…19/11 sau ngày quyết định: mở khuyến nghị mới
+    expect(await evaluateRecommendationRules(dayOffset(TODAY, 3))).toBe(1)
+  })
+
+  it('BR-46: a house in stage ATTRACTING has no return rate, so a return-rate rule does not hold there', async () => {
+    const { farm, house, owner, t, call } = await seed()
+    await call('post', '/rules', t.expert, {
+      farm_id: farm._id, ...NH3_RULE, name: 'Chim về thấp', indicator: 'RETURN_RATE', comparison: 'LTE', value: 60,
+    })
+    for (let i = -2; i <= 0; i++) await seedDay(house, dayOffset(TODAY, i), 0, 90, 40)
+    await House.updateOne({ _id: house._id }, {
+      stage: 'ATTRACTING', stage_history: [{ stage: 'ATTRACTING', changed_by: owner._id, changed_by_role: 'FARM_OWNER', changed_at: new Date('2026-11-01T00:00:00Z') }],
+    })
+    expect(await evaluateRecommendationRules(TODAY)).toBe(0)
+    await House.updateOne({ _id: house._id }, {
+      stage: 'OCCUPIED', $push: { stage_history: { stage: 'OCCUPIED', changed_by: owner._id, changed_by_role: 'FARM_OWNER', changed_at: new Date('2026-11-05T00:00:00Z') } },
+    })
+    expect(await evaluateRecommendationRules(TODAY)).toBe(1)
+  })
+
+  it('skips the rules of a deleted farm; misting rules read unassessed days as missing, not as 0', async () => {
+    const { farm, house, t, call } = await seed()
+    await call('post', '/rules', t.expert, {
+      farm_id: farm._id, ...NH3_RULE, name: 'Phun tốt', indicator: 'MISTING_INEFFECTIVE', comparison: 'LTE', value: 0,
+    })
+    // Chưa có ngày đánh giá nào: không có số liệu thì không thoả
+    expect(await evaluateRecommendationRules(TODAY)).toBe(0)
+    for (let i = -2; i <= 0; i++) await seedDay(house, dayOffset(TODAY, i), 0)
+    await Farm.updateOne({ _id: farm._id }, { is_deleted: true })
+    expect(await evaluateRecommendationRules(TODAY)).toBe(0)
+    await Farm.updateOne({ _id: farm._id, is_deleted: true }, { is_deleted: false })
+    expect(await evaluateRecommendationRules(TODAY)).toBe(1)
   })
 })
 
@@ -197,6 +255,44 @@ describe('EXPERT-FR-018 — decision of the Farm Owner', () => {
     expect(res.body.data.review_ids.map(String)).toEqual([String(reviews[0]._id)])
   })
 
+  it('a fuzzy-coefficient action edits every zone; a value invalid in one zone changes no zone and keeps it OPEN', async () => {
+    const s = await seed()
+    const fuzzy = await openRecommendation(s, {
+      ...NH3_RULE, action: { type: 'PARAMETER_CHANGE', group: 'fuzzy', key: 'fuzzy_window_sec', value: 180 },
+    })
+    expect((await s.call('post', `/${fuzzy._id}/accept`, s.t.owner)).status).toBe(200)
+    expect((await Zone.findById(s.zone._id).lean())!.fuzzy_tuning.fuzzy_window_sec).toBe(180)
+
+    // Tầng 2 có humidity_max 78: humidity_min 80 sai ở đó, nên tầng 1 cũng không bị sửa
+    await Zone.create({ house_id: s.house._id, name: 'Tầng 2', thresholds: { ...DEFAULT_THRESHOLDS, humidity_max: 78 } })
+    const rec = await openRecommendation(s, {
+      ...NH3_RULE, name: 'Ẩm thấp', action: { type: 'PARAMETER_CHANGE', group: 'thresholds', key: 'humidity_min', value: 80 },
+    })
+    expect((await s.call('post', `/${rec._id}/accept`, s.t.owner)).status).toBe(400)
+    expect((await Zone.findById(s.zone._id).lean())!.thresholds.humidity_min).toBe(DEFAULT_THRESHOLDS.humidity_min)
+    expect((await Recommendation.findById(rec._id).lean())!.status).toBe('OPEN')
+  })
+
+  it('reopens after a failure and reuses the Work Order already opened on retry; accepts the rule as it was when raised', async () => {
+    const s = await seed()
+    const rule = await s.call('post', '/rules', s.t.expert, { farm_id: s.farm._id, ...NH3_RULE })
+    for (let i = -2; i <= 0; i++) await seedDay(s.house, dayOffset(TODAY, i), 6)
+    await evaluateRecommendationRules(TODAY)
+    const rec = (await Recommendation.findOne({ house_id: s.house._id }).lean())!
+    // Luật sửa sau khi khuyến nghị mở: khuyến nghị vẫn theo bản lúc mở
+    await s.call('put', `/rules/${rule.body.data._id}`, s.t.expert, { ...NH3_RULE, action: { type: 'WORK_ORDER', title: 'Tiêu đề mới' } })
+
+    const save = jest.spyOn(Recommendation.prototype, 'save').mockRejectedValueOnce(new Error('ghi lỗi'))
+    expect((await s.call('post', `/${rec._id}/accept`, s.t.owner)).status).toBe(500)
+    save.mockRestore()
+    expect((await Recommendation.findById(rec._id).lean())!.status).toBe('OPEN')
+
+    expect((await s.call('post', `/${rec._id}/accept`, s.t.owner)).status).toBe(200)
+    const orders = await WorkOrder.find({ recommendation_id: rec._id }).lean()
+    expect(orders).toHaveLength(1)
+    expect(orders[0].title).toBe(NH3_RULE.action.title)
+  })
+
   it('lets the technician of the house read the recommendations, and keeps other farms out', async () => {
     const s = await seed()
     await openRecommendation(s)
@@ -212,8 +308,8 @@ describe('EXPERT-FR-018 — decision of the Farm Owner', () => {
 describe('EXPERT-FR-019, BR-42 — expiry and effect', () => {
   it('TC-F27-03: the one accepted 7 days ago becomes MEASURED with change = after − before; the one open for 7 days EXPIRED', async () => {
     const s = await seed()
-    const now = new Date('2026-11-16T00:00:00Z')
-    const acceptedAt = new Date(now.getTime() - 7 * 86_400_000) // 09/11 giờ VN
+    const now = new Date('2026-11-16T23:30:00Z') // 17/11 06:30 giờ VN: ngày 16/11 đã đánh giá xong
+    const acceptedAt = new Date('2026-11-09T00:00:00Z') // 09/11 giờ VN
     const accepted = await openRecommendation(s)
     await Recommendation.updateOne({ _id: accepted._id }, { status: 'ACCEPTED', decided_at: acceptedAt })
     const stale = await Recommendation.create({
@@ -227,6 +323,8 @@ describe('EXPERT-FR-019, BR-42 — expiry and effect', () => {
     }
 
     expect(await expireRecommendations(now)).toBe(1)
+    // 16/11 06:30 giờ VN: ngày thứ 7 sau chưa đánh giá, chưa đo
+    expect(await measureRecommendationEffects(new Date('2026-11-15T23:30:00Z'))).toBe(0)
     expect(await measureRecommendationEffects(now)).toBe(1)
     expect((await Recommendation.findById(stale._id).lean())!.status).toBe('EXPIRED')
     const measured = (await Recommendation.findById(accepted._id).lean())!

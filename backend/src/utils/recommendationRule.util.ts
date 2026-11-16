@@ -1,5 +1,5 @@
 import { BadRequestError } from '@/utils/appError.util'
-import { THRESHOLD_KEYS, THRESHOLD_LIMITS } from '@/utils/thresholds.util'
+import { THRESHOLD_KEYS, THRESHOLD_LIMITS, toNumber } from '@/utils/thresholds.util'
 import { FUZZY_TUNING_KEYS, FUZZY_TUNING_LIMITS } from '@/utils/fuzzyTuning.util'
 
 /**
@@ -10,6 +10,8 @@ import { FUZZY_TUNING_KEYS, FUZZY_TUNING_LIMITS } from '@/utils/fuzzyTuning.util
 /** BR-42 — khuyến nghị mở quá 7 ngày thì EXPIRED; hiệu quả đo 7 ngày trước và 7 ngày sau khi chấp nhận (A-4) */
 export const RECOMMENDATION_EXPIRY_DAYS = 7
 export const RECOMMENDATION_EFFECT_DAYS = 7
+/** Report 3 §4.5 — tiêu đề Work Order tối đa 200 ký tự, như route `/work-orders` */
+export const RULE_WORK_ORDER_TITLE_MAX = 200
 /** EXPERT-FR-016 — cửa sổ của luật */
 export const RULE_WINDOW_MIN_DAYS = 1
 export const RULE_WINDOW_MAX_DAYS = 30
@@ -60,13 +62,16 @@ export interface RuleInput {
 
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
-/** EXPERT-FR-016 — 400 khi chỉ số không hỗ trợ, cửa sổ ngoài 1–30 ngày, giá trị ngoài khoảng hoặc hành động sai */
-export function parseRuleInput(input: Record<string, unknown>): RuleInput {
+/**
+ * EXPERT-FR-016 — 400 khi chỉ số không hỗ trợ, cửa sổ ngoài 1–30 ngày, giá trị ngoài khoảng hoặc hành động sai.
+ * `currentActive`: khi sửa luật mà không gửi `active` thì giữ trạng thái cũ, không tự bật lại luật đang tắt.
+ */
+export function parseRuleInput(input: Record<string, unknown>, currentActive = true): RuleInput {
   const indicator = input.indicator as RuleIndicator
   if (!RULE_INDICATORS.includes(indicator)) throw BadRequestError('Chỉ số không được hỗ trợ (EXPERT-FR-016)')
   const comparison = input.comparison as RuleComparison
   if (!RULE_COMPARISONS.includes(comparison)) throw BadRequestError('comparison phải là GTE hoặc LTE')
-  const value = Number(input.value)
+  const value = toNumber(input.value)
   const limit = RULE_VALUE_LIMITS[indicator]
   if (!isNumber(value) || value < limit.min || value > limit.max) {
     throw BadRequestError(`value phải từ ${limit.min} đến ${limit.max} ${limit.unit}`)
@@ -81,7 +86,7 @@ export function parseRuleInput(input: Record<string, unknown>): RuleInput {
   if (!source) throw BadRequestError('Luật cần ghi nguồn (phỏng vấn, tài liệu)')
   return {
     name, indicator, comparison, value, window_days: windowDays, action: parseAction(input.action), source,
-    active: input.active !== false,
+    active: typeof input.active === 'boolean' ? input.active : currentActive,
   }
 }
 
@@ -90,12 +95,14 @@ function parseAction(raw: unknown): RuleAction {
   if (action.type === 'WORK_ORDER') {
     const title = typeof action.title === 'string' ? action.title.trim() : ''
     if (!title) throw BadRequestError('Hành động Work Order cần tiêu đề')
+    if (title.length > RULE_WORK_ORDER_TITLE_MAX) throw BadRequestError(`Tiêu đề Work Order tối đa ${RULE_WORK_ORDER_TITLE_MAX} ký tự`)
     return { type: 'WORK_ORDER', title }
   }
   if (action.type === 'PARAMETER_CHANGE') {
     const group = action.group
     const key = String(action.key ?? '')
-    const value = Number(action.value)
+    // toNumber: null, '' hay false thành NaN, không thành 0 (một ngưỡng 0 sẽ được áp cho mọi zone)
+    const value = toNumber(action.value)
     const limits: Record<string, { min: number; max: number }> | undefined =
       group === 'thresholds' ? THRESHOLD_LIMITS : group === 'fuzzy' ? FUZZY_TUNING_LIMITS : undefined
     const keys: readonly string[] = group === 'thresholds' ? THRESHOLD_KEYS : group === 'fuzzy' ? FUZZY_TUNING_KEYS : []
@@ -103,6 +110,8 @@ function parseAction(raw: unknown): RuleAction {
     if (!isNumber(value) || value < limits[key].min || value > limits[key].max) {
       throw BadRequestError(`${key} phải từ ${limits[key].min} đến ${limits[key].max}`)
     }
+    // Cùng luật với assertValidFuzzyTuning: cửa sổ điều khiển là số giây nguyên
+    if (key === 'fuzzy_window_sec' && !Number.isInteger(value)) throw BadRequestError('fuzzy_window_sec phải là số giây nguyên')
     return { type: 'PARAMETER_CHANGE', group: group as 'thresholds' | 'fuzzy', key, value }
   }
   throw BadRequestError('Hành động phải là WORK_ORDER hoặc PARAMETER_CHANGE')

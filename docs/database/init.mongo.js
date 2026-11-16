@@ -1722,6 +1722,7 @@ ensureCollection("recommendations", {
     "rule_id": {
       "bsonType": "objectId"
     },
+    "rule_snapshot": {},
     "status": {
       "bsonType": ["string", "null"],
       "enum": ["OPEN", "ACCEPTED", "REJECTED", "EXPIRED", "MEASURED", null]
@@ -1737,6 +1738,9 @@ ensureCollection("recommendations", {
       "bsonType": ["objectId", "null"]
     },
     "decided_at": {
+      "bsonType": ["date", "null"]
+    },
+    "expired_at": {
       "bsonType": ["date", "null"]
     },
     "reject_reason": {
@@ -1760,6 +1764,7 @@ ensureCollection("recommendations", {
 })
 db.getCollection("recommendations").createIndex({"rule_id":1,"house_id":1}, {"unique":true,"partialFilterExpression":{"status":"OPEN"}})
 db.getCollection("recommendations").createIndex({"house_id":1,"status":1})
+db.getCollection("recommendations").createIndex({"farm_id":1,"status":1,"raised_at":-1})
 db.getCollection("recommendations").createIndex({"status":1,"raised_at":1})
 db.getCollection("recommendations").createIndex({"status":1,"decided_at":1})
 

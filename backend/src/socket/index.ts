@@ -161,6 +161,11 @@ export function emitHouseAlertNew(houseId: string, data: WsAlertNew): void {
   io?.to(`house:${houseId}`).emit('ALERT_NEW', data)
 }
 
+/** EXPERT-FR-017, Report 4 §7.3 — khuyến nghị mới của một nhà, tới room `house:<houseId>` */
+export function emitRecommendationNew(houseId: string, data: { _id: string; house_id: string; rule_name: string; raised_for: string }): void {
+  io?.to(`house:${houseId}`).emit('RECOMMENDATION_NEW', data)
+}
+
 /** EXPERT-FR-006/007 — thông báo trong ứng dụng mới, tới mọi phiên đang mở của chính người nhận */
 export function emitNotificationNew(userId: string, data: NotificationDto): void {
   io?.to(userRoom(userId)).emit('NOTIFICATION_NEW', data)
