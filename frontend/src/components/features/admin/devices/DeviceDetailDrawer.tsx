@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { CpuIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { Badge, Button, type BadgeTone } from '@/components/ui'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { Drawer } from '@/components/ui/Drawer'
 import { HeartbeatTime, WifiSignal, nodeLocation } from '@/components/features/admin/devices/deviceColumns'
 import { useFarm } from '@/hooks/shared/useFarms'
@@ -67,7 +68,10 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
               {isSensor ? <CpuIcon size={24} /> : <VideoCameraIcon size={24} />}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-h3 text-charcoal">{node.device_id}</p>
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="truncate text-h3 text-charcoal">{node.device_id}</p>
+                <SimulatedBadge simulated={node.simulated} />
+              </div>
               <p className="truncate text-small text-warmGray">
                 {/* SRS v2.0.0: camera là camera IP phát RTSP, AI đếm chim chạy trên AI node (PC) */}
                 {t(isSensor ? 'ESP32 · 5 cảm biến RS485' : 'Camera IP · RTSP Stream')}

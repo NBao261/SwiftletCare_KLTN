@@ -1,5 +1,6 @@
 import { Badge, Button } from '@/components/ui'
 import { type DataTableColumn } from '@/components/ui/DataTable'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
 import { formatRelativeTime, wifiQuality } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
@@ -71,6 +72,7 @@ export function buildDeviceColumns(startIndex: number, onView: (n: SystemNodeSta
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate font-bold text-charcoal" title={n.device_id}>{n.device_id}</span>
           <Badge tone="neutral" className="shrink-0">{n.type === 'sensor' ? 'Cảm biến' : 'Camera'}</Badge>
+          <SimulatedBadge simulated={n.simulated} />
         </div>
       ),
     },

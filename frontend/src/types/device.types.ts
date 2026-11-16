@@ -96,6 +96,8 @@ export interface SystemNodeStatusItem {
   /** Chỉ sensor — camera không có */
   firmware_version?: string; registered_at?: string
   zone_id: string; farm_id: string; farm_name: string; house_name: string; floor?: number; zone_name: string
+  /** SYSTEM-FR-004 — thiết bị của bộ giả lập */
+  simulated?: boolean
 }
 export interface SystemNodeStatus {
   summary: { total: number; online: number; offline: number; pending: number }
@@ -109,6 +111,8 @@ export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
 
 export interface ProvisionedDevice {
   _id: string; device_id: string; kind: ProvisionedDeviceKind
+  /** SYSTEM-FR-004 — nhãn của bộ giả lập, thiết bị đăng ký từ nhãn này mang theo cờ */
+  simulated?: boolean
   claimed_at?: string | null; revoked_at?: string | null; revoke_reason?: string | null
   created_by: string; created_at: string
   stock_status: StockStatus

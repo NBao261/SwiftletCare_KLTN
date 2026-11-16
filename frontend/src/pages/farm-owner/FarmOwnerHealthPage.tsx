@@ -30,9 +30,9 @@ type RangeDays = (typeof RANGE_DAYS)[number];
 const TABS = ['table', 'report', 'disagreements'] as const;
 type HealthTab = (typeof TABS)[number];
 
-// BR-22 — farm chưa có chuyên gia thì Farm Owner xem ngày lệch thay chuyên gia (EXPERT-FR-022)
+// BR-22 — farm không còn chuyên gia hoạt động (chưa mời hoặc đã bị khoá) thì Farm Owner xem ngày lệch thay chuyên gia (EXPERT-FR-022)
 function hasExpert(farm: Farm): boolean {
-  return farm.members.some(member => member.role === 'DOMAIN_EXPERT');
+  return farm.has_active_expert === true;
 }
 
 // Tải blob CSV backend trả về (đã có BOM, ngôn ngữ theo lang)
