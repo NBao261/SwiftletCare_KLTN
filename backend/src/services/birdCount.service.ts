@@ -2,11 +2,13 @@ import { Types } from 'mongoose'
 import { baselineAfter, stageOn } from '@/utils/houseStage.util'
 import { CameraNode, IN_SERVICE } from '@/models/device.model'
 import { House } from '@/models/houseZone.model'
+import { Alert } from '@/models/alert.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { emitBirdCountUpdate } from '@/socket'
 import { createAlert, resolveHouseAlerts } from '@/services/alert.service'
-import { assertHouseAccessByParams } from '@/utils/farmAccess.util'
+import { assertHouseAccessByParams, listActiveHouseIds } from '@/utils/farmAccess.util'
+import { returnRateCheckAt, scheduleOn, windowInterval, windowsOn, type TimeWindow } from '@/utils/countingSchedule.util'
 import { resolveBirdCountTuning } from '@/utils/detectionTuning.util'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -53,6 +55,11 @@ export interface HouseDayCounts {
   return_rate: number | null
   has_morning: boolean
   has_evening: boolean
+  /**
+   * VISION-FR-020 — một phiên của ngày không đầy đủ (nút AI mất kết nối trong khung): tỷ lệ vẫn hiện nhưng có cờ, ngày
+   * không được kiểm LOW_RETURN_RATE và không vào nền của ngày sau
+   */
+  incomplete: boolean
   /** Tin mới nhất của ngày (null khi chưa có tin) */
   updated_at: Date | null
 }
@@ -62,7 +69,7 @@ const sumIf = (session: SessionType, value: string | number) =>
 
 function toDayCounts(row: {
   _id: string; morning_entry: number; morning_exit: number; evening_entry: number; evening_exit: number
-  mornings: number; evenings: number; updated_at: Date | null
+  mornings: number; evenings: number; incompletes: number; updated_at: Date | null
 }): HouseDayCounts {
   const netExit = net(row.morning_exit, row.morning_entry)
   const netEntry = net(row.evening_entry, row.evening_exit)
@@ -76,6 +83,7 @@ function toDayCounts(row: {
     // Có thể vượt 100% (chim về nhiều hơn số đã đếm ra) — không kẹp, để người xem thấy
     return_rate: hasMorning && hasEvening && netExit > 0 ? +((netEntry / netExit) * 100).toFixed(2) : null,
     has_morning: hasMorning, has_evening: hasEvening,
+    incomplete: row.incompletes > 0,
     updated_at: row.updated_at,
   }
 }
@@ -101,6 +109,7 @@ export async function houseDailyCounts(houseId: string, range: { from?: string; 
         evening_exit:  sumIf('EVENING_ENTRY', '$exit_count'),
         mornings: sumIf('MORNING_EXIT', 1),
         evenings: sumIf('EVENING_ENTRY', 1),
+        incompletes: { $sum: { $cond: [{ $eq: ['$complete', false] }, 1, 0] } },
         updated_at: { $max: '$timestamp' },
       },
     },
@@ -129,7 +138,7 @@ export async function getCurrentBirdCount(user: CurrentUser, params: { houseId?:
 
 function emptyDay(date: string): HouseDayCounts {
   return toDayCounts({
-    _id: date, morning_entry: 0, morning_exit: 0, evening_entry: 0, evening_exit: 0, mornings: 0, evenings: 0, updated_at: null,
+    _id: date, morning_entry: 0, morning_exit: 0, evening_entry: 0, evening_exit: 0, mornings: 0, evenings: 0, incompletes: 0, updated_at: null,
   })
 }
 
@@ -160,7 +169,12 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
       { $set: { house_id: node.house_id }, ...counts },
       { upsert: true },
     )
-    return null
+    // SM-17 — số 5 phút về trễ (nút AI nối lại) cho ngày đã tính phiên: tính lại phiên theo khung đã lưu
+    const bucketDate = vnDate(new Date(bucketStart))
+    const houseId = String(node.house_id)
+    if (!(await BirdCountRecord.exists({ house_id: node.house_id, session_date: bucketDate, computed_at: { $exists: true } }))) return null
+    await computeHouseSessions(houseId, bucketDate)
+    return { houseId, sessionDate: bucketDate }
   }
 
   const sessionType = payload.session_type
@@ -168,6 +182,12 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
 
   const timestamp = new Date(Number.isFinite(payload.timestamp) ? payload.timestamp as number : Date.now())
   const sessionDate = vnDate(timestamp)
+
+  // VISION-FR-008 — phiên đã được backend tính từ số 5 phút theo khung của ngày: tin cộng dồn (theo khung mặc định
+  // của nút AI) tới muộn không ghi đè
+  if (await BirdCountRecord.exists({
+    camera_node_id: node._id, session_type: sessionType, session_date: sessionDate, computed_at: { $exists: true },
+  })) return null
 
   await BirdCountRecord.updateOne(
     { camera_node_id: node._id, session_type: sessionType, session_date: sessionDate },
@@ -205,8 +225,11 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
  * Ngày đã hồi lại thì đóng cảnh báo cũ — nếu không, dedup nuốt mọi lần giảm của những ngày sau.
  * Trả số cảnh báo mới.
  */
-export async function checkReturnRateDrops(sessionDate = vnDate(new Date())): Promise<number> {
-  const houseIds = await BirdCountRecord.distinct('house_id', { session_type: 'EVENING_ENTRY', session_date: sessionDate })
+export async function checkReturnRateDrops(sessionDate = vnDate(new Date()), onlyHouseIds?: string[]): Promise<number> {
+  const houseIds = await BirdCountRecord.distinct('house_id', {
+    session_type: 'EVENING_ENTRY', session_date: sessionDate,
+    ...(onlyHouseIds && { house_id: { $in: onlyHouseIds.map(id => new Types.ObjectId(id)) } }),
+  })
 
   // "7 ngày trước" là 7 ngày lịch, không phải 7 bản ghi gần nhất: camera mất kết nối nhiều ngày thì nền ít đi
   const from = new Date(Date.parse(sessionDate) - BASELINE_DAYS * DAY_MS).toISOString().slice(0, 10)
@@ -235,8 +258,9 @@ async function checkHouseReturnRate(houseId: string, sessionDate: string, from: 
   const occupiedSince = baselineAfter(stage?.stage_history, sessionDate)
   const days = await houseDailyCounts(houseId, { from, to: sessionDate })
   const today = days.at(-1)
-  if (today?.date !== sessionDate || today.return_rate === null) return false
-  const previous = days.slice(0, -1).filter(d => d.return_rate !== null && (!occupiedSince || d.date > occupiedSince))
+  // VISION-FR-020 — ngày không đầy đủ không được xét (không mở, không đóng cảnh báo) và không vào nền
+  if (today?.date !== sessionDate || today.return_rate === null || today.incomplete) return false
+  const previous = days.slice(0, -1).filter(d => d.return_rate !== null && !d.incomplete && (!occupiedSince || d.date > occupiedSince))
   if (previous.length < MIN_BASELINE_DAYS) return false
 
   const rate = today.return_rate
@@ -293,4 +317,65 @@ export async function sumHouseBuckets(houseId: unknown, from: Date, to: Date) {
     { $sort: { _id: 1 } },
     { $project: { _id: 0, bucket_start: '$_id', entry_count: 1, exit_count: 1 } },
   ])
+}
+
+// ── Phiên theo lịch đếm (VISION-FR-008, 019, 020; BR-21) ────────────────────────────────────────────
+
+/** VISION-FR-019 — khung sáng, chiều của nhà trong ngày `date` theo lịch đếm đang áp hôm đó */
+export async function houseWindowsOn(houseId: unknown, date: string) {
+  const house = await House.findById(houseId).select('counting_schedule_history').lean()
+  return windowsOn(scheduleOn(house?.counting_schedule_history, date), date)
+}
+
+/**
+ * VISION-FR-008, 020 — tính hai phiên của nhà trong ngày `date` từ số 5 phút của từng camera trong khung của ngày, lưu
+ * kèm khung đã dùng và cờ đầy đủ. Một số 5 phút thuộc phiên khi nó bắt đầu trong khung. Ngày đã tính giữ khung cũ
+ * (VISION-FR-019) nên lần tính lại do số về trễ cho cùng kết quả khung. Camera không có số 5 phút nào trong khung (chạy
+ * trên clip, không phát số 5 phút) giữ số cộng dồn của nút AI, chỉ nhận khung và cờ đầy đủ.
+ */
+export async function computeHouseSessions(houseId: string, date: string, now = new Date()): Promise<void> {
+  const house = new Types.ObjectId(houseId)
+  const scheduled = await houseWindowsOn(house, date)
+  for (const [sessionType, planned] of [['MORNING_EXIT', scheduled.morning], ['EVENING_ENTRY', scheduled.evening]] as const) {
+    const stored = await BirdCountRecord.findOne({ house_id: house, session_date: date, session_type: sessionType, window_start: { $exists: true } })
+      .select('window_start window_end').lean()
+    const window: TimeWindow = stored ? { start: stored.window_start as string, end: stored.window_end as string } : planned
+    const { start, end } = windowInterval(date, window)
+    // Nút AI của nhà mất kết nối lúc nào đó trong khung (cảnh báo mở trước khi khung hết và chưa đóng trước khi khung bắt đầu)
+    const degraded = await Alert.exists({
+      house_id: house, type: 'EDGE_AI_DEGRADED', created_at: { $lt: end },
+      $or: [{ resolved_at: null }, { resolved_at: { $gt: start } }],
+    })
+    const meta = { window_start: window.start, window_end: window.end, complete: !degraded, computed_at: now }
+    const perCamera = await BirdCountBucket.aggregate<{ _id: Types.ObjectId; entry_count: number; exit_count: number }>([
+      { $match: { house_id: house, bucket_start: { $gte: start, $lt: end } } },
+      { $group: { _id: '$camera_node_id', entry_count: { $sum: '$entry_count' }, exit_count: { $sum: '$exit_count' } } },
+    ])
+    for (const row of perCamera) {
+      await BirdCountRecord.updateOne(
+        { camera_node_id: row._id, session_type: sessionType, session_date: date },
+        { $set: { house_id: house, entry_count: row.entry_count, exit_count: row.exit_count, timestamp: end, ...meta } },
+        { upsert: true },
+      )
+    }
+    await BirdCountRecord.updateMany({ house_id: house, session_date: date, session_type: sessionType }, { $set: meta })
+  }
+}
+
+/**
+ * BR-21 — nhận việc kiểm tra buổi tối của các nhà đã tới giờ (15 phút sau khung chiều của chính nhà đó hôm nay). Mỗi
+ * nhà một lần mỗi ngày: ghi `last_session_check` có điều kiện nên hai lần chạy chồng nhau không nhận trùng. Trả ngày và
+ * các nhà vừa nhận.
+ */
+export async function claimDueHouses(now = new Date()): Promise<{ date: string; houseIds: string[] }> {
+  const date = vnDate(now)
+  const houses = await House.find({ _id: { $in: await listActiveHouseIds() }, last_session_check: { $ne: date } })
+    .select('counting_schedule_history').lean()
+  const houseIds: string[] = []
+  for (const house of houses) {
+    if (now < returnRateCheckAt(date, windowsOn(scheduleOn(house.counting_schedule_history, date), date))) continue
+    const { modifiedCount } = await House.updateOne({ _id: house._id, last_session_check: { $ne: date } }, { $set: { last_session_check: date } })
+    if (modifiedCount === 1) houseIds.push(String(house._id))
+  }
+  return { date, houseIds }
 }

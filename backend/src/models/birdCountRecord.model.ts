@@ -14,6 +14,13 @@ export interface IBirdCountRecord extends Document {
   entry_count: number
   exit_count: number
   confidence_avg?: number
+  /** VISION-FR-008 — khung (giờ VN 'HH:mm') đã dùng khi backend tính phiên từ số đếm 5 phút; chưa tính thì không có */
+  window_start?: string
+  window_end?: string
+  /** VISION-FR-020 — false khi nút AI của nhà mất kết nối (EDGE_AI_DEGRADED mở) trong khung */
+  complete?: boolean
+  /** Lúc backend tính phiên; từ đó tin cộng dồn của nút AI không ghi đè nữa */
+  computed_at?: Date
 }
 
 const birdCountSchema = new Schema<IBirdCountRecord>(
@@ -26,6 +33,10 @@ const birdCountSchema = new Schema<IBirdCountRecord>(
     entry_count:    { type: Number, default: 0 },
     exit_count:     { type: Number, default: 0 },
     confidence_avg: { type: Number },
+    window_start:   { type: String },
+    window_end:     { type: String },
+    complete:       { type: Boolean },
+    computed_at:    { type: Date },
     // Không lưu return_rate theo camera: tỷ lệ chim về tính cho cả House lúc đọc (birdCount.service#houseDailyCounts)
   },
   { timestamps: false }

@@ -1895,6 +1895,53 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /farms/houses/{houseId}/counting-schedule:
+    parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Farms]
+      summary: "Lịch đếm của nhà (VISION-FR-019) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/CountingScheduleView" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    put:
+      tags: [Farms]
+      summary: "Đặt lịch đếm của nhà (VISION-FR-019) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Thay cả lịch (hồ sơ theo mùa và khung tạm). Lịch mới áp từ ngày hôm sau (giờ VN) và lưu vào lịch sử; ngày đã
+        tính phiên giữ khung cũ. Hằng ngày, 15 phút sau khung chiều của ngày, backend tính hai phiên từ số đếm 5 phút
+        trong khung (VISION-FR-008) rồi kiểm tỷ lệ chim về (BR-21). Audit `COUNTING_SCHEDULE_UPDATED`; thay đổi của
+        Domain Expert báo trong app cho mọi Farm Owner (EXPERT-FR-009). Farm Owner trên farm có chuyên gia, Farm
+        Technician → 403.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CountingSchedule" }
+      responses:
+        "200":
+          description: Lịch đã lưu
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/CountingScheduleView" }
+        "400": { description: "Giờ không có dạng HH:mm, khung có giờ bắt đầu không trước giờ kết thúc, khung sáng không kết thúc trước khung chiều, ngày không có thật, hồ sơ chồng ngày, khung tạm chồng ngày, quá 12 hồ sơ hoặc 60 khung tạm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { description: "profiles hoặc temporary không phải danh sách", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
   /farms/houses/{houseId}/health-levels:
     get:
       tags: [Farms]
@@ -5621,7 +5668,8 @@ paths:
         (`COUNTING_RING_UPDATED`), kết luận cảnh báo (`ALERT_VERDICT_SET`), kết luận báo cáo
         (`HEALTH_REPORT_CONCLUDED`), chấp nhận / hoàn lại thay đổi của Farm Owner (`REVIEW_ACCEPTED`,
         `REVIEW_REVERTED`), duyệt / từ chối đề xuất hệ số (`PROPOSAL_APPROVED`, `PROPOSAL_REJECTED`),
-        mức chỉ số sức khỏe của nhà (`HEALTH_LEVELS_UPDATED`), luật bù thời tiết (`WEATHER_RULES_UPDATED`).
+        mức chỉ số sức khỏe của nhà (`HEALTH_LEVELS_UPDATED`), luật bù thời tiết (`WEATHER_RULES_UPDATED`), lịch đếm
+        (`COUNTING_SCHEDULE_UPDATED`).
         Mỗi quyết định một dòng: hoàn lại hoặc duyệt đề xuất chỉ hiện `REVIEW_REVERTED` / `PROPOSAL_APPROVED`,
         không thêm dòng đổi ngưỡng / hệ số của chính thao tác đó.
         Quyết định mà Farm Owner làm thay khi farm chưa có chuyên gia
@@ -5635,7 +5683,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED, WEATHER_RULES_UPDATED, CONFIG_PROFILE_APPROVED]
+            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED, WEATHER_RULES_UPDATED, CONFIG_PROFILE_APPROVED, COUNTING_SCHEDULE_UPDATED]
         - { name: zoneId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
         - { $ref: "#/components/parameters/Page" }
@@ -6603,6 +6651,77 @@ components:
           description: "net_entry / net_exit × 100, có thể > 100; null khi thiếu phiên sáng hoặc chiều, hoặc sáng không có chim ra"
         has_morning: { type: boolean }
         has_evening: { type: boolean }
+        incomplete:
+          type: boolean
+          description: "VISION-FR-020 — một phiên của ngày không đầy đủ (nút AI của nhà mất kết nối, `EDGE_AI_DEGRADED` mở trong khung): tỷ lệ vẫn trả nhưng ngày không được kiểm `LOW_RETURN_RATE` và không vào nền của ngày sau"
+
+    TimeWindow:
+      type: object
+      required: [start, end]
+      description: "Khung giờ VN, nửa mở [start, end); start trước end"
+      properties:
+        start: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$", example: "05:30" }
+        end: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$", example: "07:00" }
+
+    CountingSchedule:
+      type: object
+      description: |
+        VISION-FR-019 — lịch đếm của nhà. Khung tạm thắng hồ sơ theo mùa; ngày không thuộc hồ sơ nào dùng khung mặc
+        định (BR-13: sáng 05:30–07:00, chiều 17:30–19:00). Mỗi khung sáng phải kết thúc trước khi khung chiều bắt đầu.
+      properties:
+        profiles:
+          type: array
+          maxItems: 12
+          items:
+            type: object
+            required: [name, from, to, morning, evening]
+            properties:
+              name: { type: string, maxLength: 50 }
+              from: { type: string, example: "09-01", description: "MM-DD, tính cả hai đầu; from sau to là khoảng vắt qua năm mới" }
+              to: { type: string, example: "01-14" }
+              morning: { $ref: "#/components/schemas/TimeWindow" }
+              evening: { $ref: "#/components/schemas/TimeWindow" }
+        temporary:
+          type: array
+          maxItems: 60
+          items:
+            type: object
+            required: [from, to, morning, evening]
+            properties:
+              from: { type: string, format: date, example: "2026-11-20" }
+              to: { type: string, format: date }
+              morning: { $ref: "#/components/schemas/TimeWindow" }
+              evening: { $ref: "#/components/schemas/TimeWindow" }
+
+    CountingScheduleView:
+      type: object
+      properties:
+        house_id: { type: string }
+        schedule: { $ref: "#/components/schemas/CountingSchedule" }
+        effective_from: { type: string, format: date, nullable: true, description: "Lần sửa gần nhất áp từ ngày này (ngày hôm sau lần sửa); null khi chưa đặt lịch" }
+        default_windows:
+          type: object
+          properties:
+            morning: { $ref: "#/components/schemas/TimeWindow" }
+            evening: { $ref: "#/components/schemas/TimeWindow" }
+        today:
+          type: object
+          description: "Khung đang áp hôm nay (giờ VN)"
+          properties:
+            date: { type: string, format: date }
+            morning: { $ref: "#/components/schemas/TimeWindow" }
+            evening: { $ref: "#/components/schemas/TimeWindow" }
+            source: { type: string, enum: [TEMPORARY, PROFILE, DEFAULT] }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              effective_from: { type: string, format: date }
+              changed_by: { type: string }
+              changed_by_role: { type: string }
+              changed_at: { type: string, format: date-time }
+              schedule: { $ref: "#/components/schemas/CountingSchedule" }
 
     PushTokenInput:
       type: object
@@ -6655,7 +6774,7 @@ components:
         Ảnh chụp lúc chấm lưu cùng dạng. `values` theo mã:
         - `ALL_NORMAL`: {} — mọi chỉ số đã đánh giá đều bình thường (ngày GOOD)
         - `MISSING_DATA` (environment): `{ no_zones: true }` hoặc `{ min_pct, zones: [{ zone_name, valid_pct }] }`
-        - `MISSING_DATA` (flock): `{ missing: MORNING | EVENING | NO_DEPARTURES }`
+        - `MISSING_DATA` (flock): `{ missing: MORNING | EVENING | NO_DEPARTURES | INCOMPLETE }` (INCOMPLETE: nút AI mất kết nối trong khung phiên, VISION-FR-020)
         - `NOT_ASSESSED` (air, noise): {} — thiếu mẫu, nguồn không đánh giá
         - `ENV_IN_RANGE`: `{ zone_name, in_range_pct }`
         - `AIR_OVER_LIMIT`: `{ zone_name, hours }`

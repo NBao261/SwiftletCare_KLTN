@@ -121,11 +121,11 @@ const belowLevel = (v: number, slight: number, clear: number): HealthLevel => (v
 const fromLevel = (v: number, slight: number, clear: number): HealthLevel => (v >= clear ? 'CLEAR' : v >= slight ? 'SLIGHT' : 'NORMAL')
 
 /**
- * VISION-FR-020 — ngày đủ cả 2 phiên đếm. G-12 (Bảo) bổ sung: phiên không đầy đủ khi có
- * `EDGE_AI_DEGRADED` của nhà mở trong khung phiên.
+ * VISION-FR-020 — ngày đủ cả 2 phiên đếm, và không phiên nào không đầy đủ (`EDGE_AI_DEGRADED` của nhà mở
+ * trong khung phiên, birdCount.service#computeHouseSessions).
  */
 export function isFlockDayComplete(day: HouseDayCounts | undefined): boolean {
-  return !!day && day.has_morning && day.has_evening && day.return_rate !== null
+  return !!day && day.has_morning && day.has_evening && day.return_rate !== null && !day.incomplete
 }
 
 // ── Mưa (BR-30) ───────────────────────────────────────────────────────────────────────────────────
@@ -263,7 +263,8 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
       }
     }
   } else {
-    const missing = !today?.has_morning ? 'MORNING' : !today.has_evening ? 'EVENING' : 'NO_DEPARTURES'
+    // VISION-FR-020 — đủ hai phiên nhưng nút AI mất kết nối trong khung: INCOMPLETE
+    const missing = !today?.has_morning ? 'MORNING' : !today.has_evening ? 'EVENING' : today.incomplete ? 'INCOMPLETE' : 'NO_DEPARTURES'
     missingReasons.push(reason('MISSING_DATA', 'flock', { missing }))
   }
   indicators.flock = {
@@ -363,8 +364,9 @@ export async function assessHouseDay(houseId: string, date: string, now = new Da
  * báo "ngày đã sẵn sàng" (không kèm trạng thái, BR-31) khi ngày mới có lần đầu, rồi tính lại 7 ngày
  * trước để nhận dữ liệu buffer về trễ. Lỗi ở một nhà không làm bỏ qua các nhà sau. Trả số ngày mới.
  */
-export async function assessAllHouses(date = vnDate(new Date()), now = new Date()): Promise<number> {
-  const houseIds = await listActiveHouseIds()
+export async function assessAllHouses(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
+  // BR-21 — job buổi tối chạy theo từng nhà, sau khung chiều của chính nhà đó
+  const houseIds = onlyHouseIds ?? await listActiveHouseIds()
   let created = 0
   for (const id of houseIds) {
     const houseId = String(id)
