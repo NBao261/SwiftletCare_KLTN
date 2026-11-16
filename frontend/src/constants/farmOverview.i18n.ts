@@ -142,7 +142,7 @@ const en: Record<FarmOverviewKey, string> = {
   'short.flock_trend_pct': 'Trend',
   'short.alerts_raised': 'In period',
   'short.alerts_open': 'Open',
-  'short.mttr_min': 'Mean resolve',
+  'short.mttr_min': 'Mean resolve time',
   'short.energy_kwh': 'Energy (estimate)',
   'short.last_cycle_yield_g': 'Cycle yield',
   'unit.minutes': '{n} min',

@@ -18,7 +18,7 @@ const monthLabel = (month: string) => month.split('-').reverse().join('/');
 
 // ANALYTICS-FR-017, BR-45 — điện năng ước tính của bơm và quạt theo tháng; tải không có dòng đo ghi "không đo được"
 export default function EnergyCard({ houseId, houseName }: { houseId: string; houseName: string }): JSX.Element {
-  const { t, num } = useTranslation(analyticsDict);
+  const { t, num, exact } = useTranslation(analyticsDict);
   const { data, isLoading, isError, refetch } = useHouseEnergy(houseId);
   const months = useMemo(() => data?.months ?? [], [data]);
 
@@ -41,7 +41,7 @@ export default function EnergyCard({ houseId, houseName }: { houseId: string; ho
 
   // Số kWh 3 chữ số lẻ như backend (tải DC 5 V, 12 V rất nhỏ), hoặc "_" kèm dòng phụ "không đo được dòng điện"
   const tile = (value: number | null | undefined) => ({
-    value: value == null ? NO_VALUE : num(value, 3),
+    value: value == null ? NO_VALUE : exact(value, 3),
     unit: value == null ? undefined : 'kWh',
     sub: value == null ? t('energy.notAvailable') : t('energy.kwhSub'),
   });

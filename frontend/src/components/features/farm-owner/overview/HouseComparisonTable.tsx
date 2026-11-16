@@ -38,7 +38,7 @@ interface HouseComparisonTableProps {
 
 // ANALYTICS-FR-016, BR-44 — mỗi hàng 1 nhà, mỗi nhóm cột là các ô số nhỏ (số trên, nhãn dưới); backend sắp; không có điểm tổng hay xếp hạng
 export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: HouseComparisonTableProps): JSX.Element {
-  const { t, num } = useTranslation(farmOverviewDict);
+  const { t, num, exact } = useTranslation(farmOverviewDict);
 
   const columns = useMemo((): DataTableColumn<HouseComparisonRow>[] => {
     const trend = (value: number) => {
@@ -59,7 +59,7 @@ export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: 
       alerts_raised: value => num(value),
       alerts_open: value => <span className={cn(value > 0 && 'text-safetyOrange')}>{num(value)}</span>,
       mttr_min: value => t('unit.minutes', { n: num(value) }),
-      energy_kwh: value => t('unit.kwh', { n: num(value, 3) }),
+      energy_kwh: value => t('unit.kwh', { n: exact(value, 3) }),
       last_cycle_yield_g: value => t('unit.kg', { n: num(value / 1000, 2) }),
     };
 
@@ -106,7 +106,7 @@ export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: 
         ),
       })),
     ];
-  }, [t, num, simulatedHouseIds, sort]);
+  }, [t, num, exact, simulatedHouseIds, sort]);
 
   return <DataTable columns={columns} rows={rows} getRowKey={row => row.house_id} minTableWidth={960} />;
 }

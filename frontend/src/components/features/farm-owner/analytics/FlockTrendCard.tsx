@@ -63,6 +63,8 @@ export default function FlockTrendCard({ houseId, houseName }: { houseId: string
     if (latest && granularity === 'weekly') latestSub = t('flock.latestWeekSub', { date: date(latest.period), n: num(latest.days) });
     if (latest && granularity === 'monthly') latestSub = t('flock.latestMonthSub', { month: periodLabel(latest.period, 'monthly'), n: num(latest.days) });
     const change = latest?.change_pct ?? null;
+    let changeText = NO_VALUE;
+    if (change !== null) changeText = `${change > 0 ? '+' : ''}${num(change, 1)}`;
     body = (
       <>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -75,7 +77,7 @@ export default function FlockTrendCard({ houseId, houseName }: { houseId: string
           <KpiTile
             icon={TrendUpIcon}
             label={t('flock.change')}
-            value={change === null ? NO_VALUE : `${change > 0 ? '+' : ''}${num(change, 1)}`}
+            value={changeText}
             unit={change === null ? undefined : '%'}
             sub={t('flock.changeSub')}
           />
