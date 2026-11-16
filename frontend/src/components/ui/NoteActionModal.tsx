@@ -47,6 +47,9 @@ export default function NoteActionModal({
     if (minLength && trimmed.length < minLength) {
       return t('{{field}} cần ít nhất {{min}} ký tự (đang có {{count}})', { field: tr(label), min: minLength, count: trimmed.length })
     }
+    if (maxLength && trimmed.length > maxLength) {
+      return t('{{field}} tối đa {{max}} ký tự (đang có {{count}})', { field: tr(label), max: maxLength, count: trimmed.length })
+    }
     return undefined
   }
 

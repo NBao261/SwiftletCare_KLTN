@@ -1,6 +1,7 @@
 import { SensorNode, IN_SERVICE, ISensorNode } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
+import { MaintenancePlan } from '@/models/maintenancePlan.model'
 import { createAlert } from '@/services/alert.service'
 
 type UsageRelay = 'misting' | 'ventilation'
@@ -93,13 +94,19 @@ export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: n
  * mới và danh sách tải (`metadata.loads`) mà lúc xác nhận sẽ được đếm lại.
  */
 async function raiseMaintenanceDueIfDue(node: ISensorNode): Promise<boolean> {
+  const zone = await Zone.findById(node.zone_id).select('farm_id name house_id').lean()
+  if (!zone) return false
+  // ALERT-FR-016 — mốc mặc định chỉ cho tải chưa có kế hoạch bảo trì; tải đã có kế hoạch do maintenance.service lo,
+  // không báo hai lần
+  const planned = new Set((await MaintenancePlan.find({
+    house_id: zone.house_id, state: { $ne: 'RETIRED' }, equipment: { $in: ['PUMP', 'FAN'] },
+  }).select('equipment').lean()).map(p => (p.equipment === 'PUMP' ? 'misting' : 'ventilation')))
   const due = RELAYS.filter(r => {
+    if (planned.has(r)) return false
     const u = node.relay_usage[r]
     return u.since_service_hours >= RELAY_SERVICE_LIMITS[r].hours || u.since_service_switches >= RELAY_SERVICE_LIMITS[r].switches
   })
   if (due.length === 0) return false
-  const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
-  if (!zone) return false
 
   const loads = due.map(r => ({
     relay: r,

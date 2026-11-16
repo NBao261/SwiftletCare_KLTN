@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { WORK_ORDER_STATUS_TONE, ownerActions, type OwnerAction } from '@/components/features/farm-owner/work-orders/workOrder.utils';
-import { Badge, Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { Badge, Button, EmptyState, LoadingSkeleton, type BadgeTone } from '@/components/ui';
 import { Drawer } from '@/components/ui/Drawer';
 import { NO_VALUE } from '@/constants/display';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useWorkOrder } from '@/hooks/farm-owner/useWorkOrders';
-import type { WorkOrder } from '@/types';
+import type { ChecklistResult, WorkOrder } from '@/types';
 
 // Một dòng nhãn — giá trị
 function Field({ label, children }: { label: string; children: ReactNode }): JSX.Element {
@@ -18,6 +19,9 @@ function Field({ label, children }: { label: string; children: ReactNode }): JSX
     </div>
   );
 }
+
+// Mục checklist: đạt xanh, hỏng đỏ
+const CHECKLIST_TONE: Record<ChecklistResult, BadgeTone> = { OK: 'positive', DEFECT: 'critical' };
 
 interface WorkOrderDetailDrawerProps {
   // Work Order đang mở; null = đóng
@@ -31,14 +35,14 @@ interface WorkOrderDetailDrawerProps {
   onClose: () => void;
 }
 
-// OPS-FR-002…004 — chi tiết Work Order: trạng thái, nguồn, người làm, nguyên nhân và ảnh tại nhà, diễn biến
+// OPS-FR-002…004, 007 — chi tiết Work Order: trạng thái, nguồn, người làm, nguyên nhân và ảnh tại nhà, checklist bảo trì (phòng ngừa), diễn biến
 export default function WorkOrderDetailDrawer({
   workOrderId, houseNames, personNames, canManage, onAction, onClose,
 }: WorkOrderDetailDrawerProps): JSX.Element {
   const { t, dateTime } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
   const { data: workOrder, isLoading, isError, error, refetch } = useWorkOrder(workOrderId);
-  const actions = workOrder && canManage ? ownerActions(workOrder.status) : [];
+  const actions = workOrder && canManage ? ownerActions(workOrder) : [];
 
   return (
     <Drawer open={Boolean(workOrderId)} onClose={onClose} title={t('detail.title')}>
@@ -71,6 +75,37 @@ export default function WorkOrderDetailDrawer({
                 {workOrder.escalated_at && <Field label={t('detail.escalatedAt')}>{dateTime(workOrder.escalated_at)}</Field>}
               </dl>
             </section>
+
+            {/* OPS-FR-007 — checklist của phiếu phòng ngừa: kết quả, ghi chú, ảnh từng mục */}
+            {workOrder.kind === 'PREVENTIVE' && (workOrder.checklist ?? []).length > 0 && (
+              <section className="flex flex-col gap-3">
+                <p className="text-sm font-semibold text-charcoal">{t('detail.checklist')}</p>
+                <ol className="flex flex-col gap-2">
+                  {(workOrder.checklist ?? []).map((entry, index) => (
+                    <li key={`${index}-${entry.item}`} className="flex flex-col gap-1 rounded-xl border border-warmGray/30 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0 break-words text-sm text-charcoal">{index + 1}. {entry.item}</span>
+                        {entry.result ? (
+                          <Badge tone={CHECKLIST_TONE[entry.result]}>{t(`checklist.${entry.result}`)}</Badge>
+                        ) : (
+                          <span className="shrink-0 text-xs italic text-warmGray">{t('detail.checklistPending')}</span>
+                        )}
+                      </div>
+                      {entry.note && <p className="whitespace-pre-line break-words text-xs text-graphite">{entry.note}</p>}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-warmGray">
+                        {entry.at && <span>{dateTime(entry.at)} · {entry.by ? personNames.get(entry.by) ?? NO_VALUE : NO_VALUE}</span>}
+                        {entry.photo_url && (
+                          <a href={entry.photo_url} target="_blank" rel="noreferrer" className="font-semibold text-charcoal underline">
+                            {t('detail.checklistPhoto')}
+                          </a>
+                        )}
+                      </div>
+                      {entry.repair_work_order_id && <span className="text-xs font-semibold text-safetyOrange">{t('detail.checklistRepair')}</span>}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
 
             {/* Kết quả tại nhà: nguyên nhân, việc đã làm, ảnh (ALERT-FR-018); huỷ thì lý do huỷ */}
             <section className="flex flex-col gap-3">
@@ -129,6 +164,13 @@ export default function WorkOrderDetailDrawer({
           </>
         )}
       </div>
+
+      {/* Phiếu bảo trì chưa đóng không huỷ được (SM-20): chỉ chỗ xoá kế hoạch */}
+      {workOrder && canManage && workOrder.kind === 'PREVENTIVE' && ['OPEN', 'IN_PROGRESS'].includes(workOrder.status) && (
+        <p className="pt-3 text-xs text-warmGray">
+          {t('detail.preventiveHint')} <Link to="/maintenance" className="font-semibold text-charcoal underline">{t('detail.maintenanceLink')}</Link>.
+        </p>
+      )}
 
       {/* Nút thao tác theo trạng thái, chỉ Farm Owner */}
       {workOrder && actions.length > 0 && (

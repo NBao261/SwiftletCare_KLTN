@@ -7,6 +7,10 @@ import type {
   DetectionTuning,
   DeviceStatus,
   FuzzyTuning,
+  ChecklistResult,
+  MaintenanceBasis,
+  MaintenanceEquipment,
+  MaintenancePlanState,
   NestType,
   OnsiteObservation,
   RelayName,
@@ -302,8 +306,52 @@ const WORK_ORDER_ORIGIN_LABELS: Record<WorkOrderOrigin, string> = {
   EXPERT: 'Chuyên gia xác nhận cần tới nhà',
   ONSITE_CHECK: 'Kiểm tra tại chỗ thấy cảm biến hỏng',
   MANUAL: 'Chủ trại mở',
+  PLAN: 'Mở tự động: kế hoạch bảo trì đến hạn',
+  CHECKLIST: 'Mục checklist bảo trì ghi hỏng',
 }
 
 export function getWorkOrderOriginLabel(origin: WorkOrderOrigin): string {
   return t(WORK_ORDER_ORIGIN_LABELS[origin])
+}
+
+// Thiết bị của kế hoạch bảo trì (OPS-FR-005), cùng chữ với web (maintenance.i18n.ts)
+const MAINTENANCE_EQUIPMENT_LABELS: Record<MaintenanceEquipment, string> = {
+  PUMP: 'Bảo trì bơm phun sương',
+  FAN: 'Bảo trì quạt thông gió',
+  SENSOR: 'Vệ sinh cảm biến',
+  NOZZLE: 'Vệ sinh béc phun',
+  CALIBRATION: 'Hiệu chuẩn cảm biến',
+}
+
+export function getMaintenanceEquipmentLabel(equipment: MaintenanceEquipment): string {
+  return t(MAINTENANCE_EQUIPMENT_LABELS[equipment])
+}
+
+// Chu kỳ của kế hoạch kèm đơn vị theo cách tính: giờ chạy, số lần đóng cắt, số ngày
+export function formatMaintenanceInterval(basis: MaintenanceBasis, value: number): string {
+  if (basis === 'RUN_HOURS') return t('{n} giờ chạy', { n: value })
+  if (basis === 'SWITCHES') return t('{n} lần đóng cắt', { n: value })
+  return t('{n} ngày', { n: value })
+}
+
+// Trạng thái kế hoạch bảo trì (Report 3 §6.20, SM-20), cùng chữ với web
+const MAINTENANCE_PLAN_STATE_LABELS: Record<MaintenancePlanState, string> = {
+  SCHEDULED: 'Đã lên lịch',
+  DUE: 'Đến hạn',
+  OVERDUE: 'Quá hạn',
+  RETIRED: 'Đã xoá',
+}
+
+export function getMaintenancePlanStateLabel(state: MaintenancePlanState): string {
+  return t(MAINTENANCE_PLAN_STATE_LABELS[state])
+}
+
+// Kết quả một mục checklist (OPS-FR-007)
+const CHECKLIST_RESULT_LABELS: Record<ChecklistResult, string> = {
+  OK: 'Đạt',
+  DEFECT: 'Hỏng',
+}
+
+export function getChecklistResultLabel(result: ChecklistResult): string {
+  return t(CHECKLIST_RESULT_LABELS[result])
 }

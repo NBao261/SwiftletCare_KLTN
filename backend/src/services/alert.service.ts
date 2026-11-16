@@ -180,6 +180,11 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
     type: input.type,
     // THREAT-FR-014 — bơm hỏng và quạt hỏng trên cùng controller là hai sự cố, mỗi tải một cảnh báo
     ...(input.type === 'ACTUATOR_FAULT' && typeof input.details?.load === 'string' && { 'details.load': input.details.load }),
+    // OPS-FR-006 — mỗi kế hoạch bảo trì đến hạn là một sự cố riêng, kể cả hai kế hoạch trên cùng controller; cảnh báo
+    // theo mốc mặc định (không kế hoạch, ALERT-FR-016) không gộp vào cảnh báo của một kế hoạch trên cùng controller
+    ...(input.type === 'MAINTENANCE_DUE' && {
+      'details.plan_id': typeof input.details?.plan_id === 'string' ? input.details.plan_id : { $exists: false },
+    }),
     status: { $in: OPEN_STATUSES },
   }).select('_id created_at last_seen_at').lean()
   if (open) {
@@ -593,7 +598,9 @@ export async function acknowledgeAlert(
   alert.acknowledged_by = user._id as never
   alert.acknowledgement_note = note
   if (cause) alert.site_cause = { cause, photos: [], by: user._id as never, at: alert.acknowledged_at }
-  if (alert.type === 'MAINTENANCE_DUE') {
+  // Cảnh báo theo mốc mặc định (không có kế hoạch): xác nhận = đã bảo trì. Cảnh báo của kế hoạch chỉ đóng khi Farm
+  // Owner duyệt Work Order phòng ngừa (OPS-FR-008), nên xác nhận ở đây không đặt bộ đếm về 0
+  if (alert.type === 'MAINTENANCE_DUE' && !alert.details?.plan_id) {
     // BR-16 — xác nhận = đã bảo trì: đếm lại từ 0 cho tải đó và đóng cảnh báo
     alert.status = 'RESOLVED'
     alert.resolved_at = alert.acknowledged_at

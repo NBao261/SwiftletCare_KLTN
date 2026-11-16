@@ -83,7 +83,7 @@ export default function WorkOrderTable({
           <ActionsMenu
             items={[
               { label: t('action.view'), onClick: () => onView(workOrder) },
-              ...(canManage ? ownerActions(workOrder.status) : []).map(action => ({
+              ...(canManage ? ownerActions(workOrder) : []).map(action => ({
                 label: t(`action.${action}`),
                 onClick: () => onAction(action, workOrder),
                 danger: action === 'cancel',
