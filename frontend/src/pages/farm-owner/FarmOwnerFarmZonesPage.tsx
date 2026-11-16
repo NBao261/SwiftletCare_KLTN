@@ -8,6 +8,7 @@ import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
 import ZoneCard from '@/components/features/farm-owner/farms/ZoneCard'
 import HouseProductionCard from '@/components/features/farm-owner/farms/HouseProductionCard'
+import HouseStageCard from '@/components/features/farm-owner/farms/HouseStageCard'
 import AttentionDevicesCard from '@/components/features/farm-owner/farms/AttentionDevicesCard'
 import AiAdviceCard from '@/components/features/farm-owner/farms/AiAdviceCard'
 import DeviceListTable from '@/components/features/farm-owner/farms/DeviceListTable'
@@ -217,6 +218,7 @@ export default function FarmOwnerFarmZonesPage() {
             </FarmFrame>
 
             <aside className="flex flex-col gap-6">
+              <HouseStageCard house={house} canEdit={isFarmOwner} />
               {canViewHarvest && <HouseProductionCard node={node} recent={node.recent} nextHarvestAt={extras?.nextHarvest[house._id]} />}
               <AttentionDevicesCard counts={node.counts} problems={problems} zoneNameById={zoneNameById} onSelect={setSelected} />
               {canViewOpsMetrics && <HouseOpsMetricsCard farmId={farm._id} houseId={house._id} />}
