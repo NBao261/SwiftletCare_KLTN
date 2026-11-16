@@ -59,11 +59,9 @@ export default function FlockTrendCard({ houseId, houseName }: { houseId: string
     );
   }
   if (!isLoading && !isError) {
-    const latestSub = latest
-      ? granularity === 'weekly'
-        ? t('flock.latestWeekSub', { date: date(latest.period), n: num(latest.days) })
-        : t('flock.latestMonthSub', { month: periodLabel(latest.period, 'monthly'), n: num(latest.days) })
-      : NO_VALUE;
+    let latestSub = NO_VALUE;
+    if (latest && granularity === 'weekly') latestSub = t('flock.latestWeekSub', { date: date(latest.period), n: num(latest.days) });
+    if (latest && granularity === 'monthly') latestSub = t('flock.latestMonthSub', { month: periodLabel(latest.period, 'monthly'), n: num(latest.days) });
     const change = latest?.change_pct ?? null;
     body = (
       <>

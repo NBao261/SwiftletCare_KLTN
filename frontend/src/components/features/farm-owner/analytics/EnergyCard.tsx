@@ -6,7 +6,7 @@ import { DropIcon, FanIcon, LightningIcon } from '@phosphor-icons/react';
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
-import { axisTitle } from '@/components/features/farm-owner/analytics/analytics.constants';
+import { CHART_LEGEND, axisTitle } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -32,15 +32,16 @@ export default function EnergyCard({ houseId, houseName }: { houseId: string; ho
 
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
+    plugins: { ...baseChartOptions.plugins, legend: CHART_LEGEND },
     scales: {
       x: baseChartOptions.scales.x,
       y: { ...baseChartOptions.scales.y, min: 0, title: axisTitle(t('energy.chartAxis')) },
     },
   } as ChartOptions<'bar'>), [t]);
 
-  // Số kWh, hoặc "_" kèm dòng phụ "không đo được dòng điện"
+  // Số kWh 3 chữ số lẻ như backend (tải DC 5 V, 12 V rất nhỏ), hoặc "_" kèm dòng phụ "không đo được dòng điện"
   const tile = (value: number | null | undefined) => ({
-    value: value == null ? NO_VALUE : num(value, 2),
+    value: value == null ? NO_VALUE : num(value, 3),
     unit: value == null ? undefined : 'kWh',
     sub: value == null ? t('energy.notAvailable') : t('energy.kwhSub'),
   });

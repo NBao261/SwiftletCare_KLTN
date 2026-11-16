@@ -21,6 +21,13 @@ const GROUPS: Array<{ key: string; header: FarmOverviewKey; metrics: MetricKey[]
 // Chỉ số phần trăm 0–100: có thanh nhỏ dưới số
 const PERCENT_METRICS = new Set<MetricKey>(['time_in_range_pct', 'good_days_pct', 'return_rate_avg']);
 
+// Đàn tăng xanh, đàn giảm cam (cùng chiều cảnh báo tỷ lệ về thấp), không đổi xám
+function trendStyle(value: number) {
+  if (value > 0) return { icon: TrendUpIcon, color: 'text-accent-700' };
+  if (value < 0) return { icon: TrendDownIcon, color: 'text-safetyOrange' };
+  return { icon: MinusIcon, color: 'text-warmGray' };
+}
+
 interface HouseComparisonTableProps {
   rows: HouseComparisonRow[];
   // Nhà mà mọi thiết bị là giả lập (lấy từ tổng quan trại)
@@ -34,10 +41,8 @@ export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: 
   const { t, num } = useTranslation(farmOverviewDict);
 
   const columns = useMemo((): DataTableColumn<HouseComparisonRow>[] => {
-    // Đàn tăng xanh, đàn giảm cam (cùng chiều cảnh báo tỷ lệ về thấp), không đổi xám
     const trend = (value: number) => {
-      const TrendIcon = value > 0 ? TrendUpIcon : value < 0 ? TrendDownIcon : MinusIcon;
-      const color = value > 0 ? 'text-accent-700' : value < 0 ? 'text-safetyOrange' : 'text-warmGray';
+      const { icon: TrendIcon, color } = trendStyle(value);
       return (
         <span className={cn('inline-flex items-center gap-1', color)}>
           <TrendIcon size={14} weight="bold" aria-hidden />
@@ -54,7 +59,7 @@ export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: 
       alerts_raised: value => num(value),
       alerts_open: value => <span className={cn(value > 0 && 'text-safetyOrange')}>{num(value)}</span>,
       mttr_min: value => t('unit.minutes', { n: num(value) }),
-      energy_kwh: value => t('unit.kwh', { n: num(value, 2) }),
+      energy_kwh: value => t('unit.kwh', { n: num(value, 3) }),
       last_cycle_yield_g: value => t('unit.kg', { n: num(value / 1000, 2) }),
     };
 

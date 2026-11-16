@@ -7,6 +7,8 @@ import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/far
 import { Badge, Button } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
 import { farmOverviewDict } from '@/constants/farmOverview.i18n';
+import { farmDict } from '@/constants/farmStructure.i18n';
+import { healthDict } from '@/constants/health.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
 import type { HouseOverview } from '@/types';
@@ -48,6 +50,9 @@ interface HouseOverviewCardProps {
 // ANALYTICS-FR-015 — thẻ 1 nhà: giai đoạn, trạng thái hôm nay (hoặc lý do chưa có), cảnh báo và phiếu đang mở, tỷ lệ về gần nhất
 export default function HouseOverviewCard({ house, onOpenAnalytics }: HouseOverviewCardProps): JSX.Element {
   const { t, num, date } = useTranslation(farmOverviewDict);
+  // Nhãn giai đoạn nhà và "Không đủ dữ liệu" dùng lại từ điển Trang trại và Sức khỏe (FE_Design 6.3)
+  const { t: farmT } = useTranslation(farmDict);
+  const { t: healthT } = useTranslation(healthDict);
   const rate = house.latest_return_rate;
   const tone = CARD_TONE[house.status ?? 'NONE'];
   // Nhà tạo trước FARM-FR-014 chưa có stage: mặc định OCCUPIED (api-spec House.stage)
@@ -65,7 +70,7 @@ export default function HouseOverviewCard({ house, onOpenAnalytics }: HouseOverv
           {/* Tên dài: 1 dòng, thừa thì "…", rê chuột xem đủ */}
           <h3 className="truncate text-h3 text-charcoal" title={house.name}>{house.name}</h3>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge tone={stage === 'ATTRACTING' ? 'info' : 'neutral'}>{t(`stage.${stage}`)}</Badge>
+            <Badge tone={stage === 'ATTRACTING' ? 'info' : 'neutral'}>{farmT(`stage.${stage}`)}</Badge>
             <SimulatedBadge simulated={house.simulated} />
           </div>
         </div>
@@ -75,7 +80,7 @@ export default function HouseOverviewCard({ house, onOpenAnalytics }: HouseOverv
           {house.status ? (
             <HealthStatusBadge status={house.status} />
           ) : (
-            <span className="whitespace-nowrap text-xs italic text-warmGray">{t(`reason.${house.status_reason ?? 'NOT_COMPUTED'}`)}</span>
+            <span className="whitespace-nowrap text-xs italic text-warmGray">{house.status_reason === 'INSUFFICIENT_DATA' ? healthT('status.INSUFFICIENT_DATA') : t('reason.NOT_COMPUTED')}</span>
           )}
         </div>
       </header>

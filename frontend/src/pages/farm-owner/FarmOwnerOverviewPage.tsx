@@ -175,7 +175,7 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
         onChange={value => setPeriodDays(Number(value) as PeriodDays)}
         options={PERIOD_DAYS.map(value => ({
           value: String(value),
-          label: `${t('comparison.periodLabel')}: ${t('comparison.periodDays', { n: value })}`,
+          label: t('comparison.period', { n: value }),
         }))}
       />
       <SelectMenu
@@ -218,6 +218,28 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
     </div>
   );
 
+  // Thân trang: chưa chọn trại thì nhắc chọn, còn lại là khung của tab đang mở
+  let content = <EmptyState title={t('page.pickFarmTitle')} description={t('page.pickFarmHint')} />;
+  if (farmId && tab === 'houses') {
+    content = (
+      <SectionCard
+        className="flex-1"
+        title={t('houses.title', { farm: farmName })}
+        description={overview.data ? t('houses.subtitle', { date: date(overview.data.date) }) : undefined}
+        action={tabSwitcher}
+      >
+        {housesBody}
+      </SectionCard>
+    );
+  } else if (farmId) {
+    content = (
+      <SectionCard title={t('comparison.title')} description={t('comparison.subtitle')} action={tabSwitcher}>
+        {comparisonToolbar}
+        {comparisonBody}
+      </SectionCard>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <HeaderActions>
@@ -229,23 +251,7 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
         <ScopeFilter scope={scope} lockHouse />
       </div>
 
-      {!farmId ? (
-        <EmptyState title={t('page.pickFarmTitle')} description={t('page.pickFarmHint')} />
-      ) : tab === 'houses' ? (
-        <SectionCard
-          className="flex-1"
-          title={t('houses.title', { farm: farmName })}
-          description={overview.data ? t('houses.subtitle', { date: date(overview.data.date) }) : undefined}
-          action={tabSwitcher}
-        >
-          {housesBody}
-        </SectionCard>
-      ) : (
-        <SectionCard title={t('comparison.title')} description={t('comparison.subtitle')} action={tabSwitcher}>
-          {comparisonToolbar}
-          {comparisonBody}
-        </SectionCard>
-      )}
+      {content}
     </div>
   );
 }

@@ -98,8 +98,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     />
   );
 
-  // Mỗi tab chỉ hiện 1 nhóm khung để bớt cuộn; khung theo Zone chỉ có khi đang lọc 1 Zone,
-  // xu hướng đàn và điện năng (ANALYTICS-FR-002, 017) chỉ khi đang lọc 1 nhà
+  // Mỗi tab một nhóm khung; khung Zone khi lọc 1 Zone, đàn và điện năng (ANALYTICS-FR-002, 017) khi lọc 1 nhà
   if (zones.length > 0) {
     // Đếm chim là của cả nhà yến chứa Zone (SRS v2.1.8)
     const birdHouseIds = zone ? [zone.house_id] : houseIds;
