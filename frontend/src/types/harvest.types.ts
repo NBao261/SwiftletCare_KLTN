@@ -28,3 +28,49 @@ export interface HarvestBatch {
   is_deleted: boolean
   created_at: string; updated_at?: string
 }
+
+// HARVEST-FR-007, EXPERT-FR-020 — Chu kỳ thu hoạch (G-26)
+export type HarvestCycleStatus = 'OPEN' | 'CLOSED' | 'CONCLUDED'
+
+export interface HarvestCycleComparison {
+  cycle_id: string | null
+  nest_count: number | null
+  weight_grams: number | null
+  nest_count_change_pct: number | null
+  weight_change_pct: number | null
+  reason: string | null
+}
+
+export interface HarvestCycle {
+  _id: string
+  farm_id: string
+  house_id: string
+  zone_id: string
+  start_date: string
+  end_date: string | null
+  status: HarvestCycleStatus
+  closing_harvest: {
+    date: string
+    batch_ids: string[]
+    nest_count: number
+    weight_grams: number
+  } | null
+  comparison: {
+    previous: HarvestCycleComparison | null
+    same_period_last_year: HarvestCycleComparison | null
+  } | null
+  health: {
+    good_days_pct: number | null
+    return_rate_avg: number | null
+    time_in_range_pct: number | null
+  } | null
+  completeness_pct: number | null
+  incomplete: boolean
+  conclusion: {
+    text: string
+    recommendations: string | null
+    by: string
+    role: 'DOMAIN_EXPERT' | 'FARM_OWNER'
+    at: string
+  } | null
+}

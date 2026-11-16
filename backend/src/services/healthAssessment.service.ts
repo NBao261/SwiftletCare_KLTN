@@ -212,7 +212,8 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   indicators.environment = {
     value: envValue,
     level: envValue === null ? null : belowLevel(envValue, levels.in_range_slight_pct, levels.in_range_clear_pct),
-    details: { zones: zoneStats.map(z => ({ zone_name: z.zone_name, in_range_pct: z.in_range_pct === null ? null : round1(z.in_range_pct), valid_pct: round1(z.env_pct) })) },
+    // `zone_id` để chu kỳ thu hoạch của từng zone đọc lại thời gian trong ngưỡng (BR-43)
+    details: { zones: zoneStats.map(z => ({ zone_id: z.zone_id, zone_name: z.zone_name, in_range_pct: z.in_range_pct === null ? null : round1(z.in_range_pct), valid_pct: round1(z.env_pct) })) },
   }
   if (!envComplete) {
     const short = zoneStats.filter(z => z.env_pct < COMPLETENESS_MIN_PCT).map(z => ({ zone_name: z.zone_name, valid_pct: round1(z.env_pct) }))

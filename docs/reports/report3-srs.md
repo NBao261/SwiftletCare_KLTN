@@ -742,6 +742,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Maintenance plan and checklist text | 1–30 checklist items of at most 200 characters; source of the interval at most 300 characters; plan note, expert comment and checklist item note at most 1,000 characters each | Input check, the same in the applications; enough for a short inspection list (OPS-FR-005, 007) |
 | Same period of the previous year | ±30 days | BR-43 |
 | Complete harvest cycle | at least 80 % of its days assessed | BR-43 |
+| Season conclusion text | conclusion and recommendations ≤ 2,000 characters each | Input check; a season summary, not a report (EXPERT-FR-020) |
 
 ---
 
@@ -1151,6 +1152,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 | --- | --- | --- |
 | 4.2.6 | 15/11/2026 | Length of the source of a default-threshold change in Section 4.5 (ENV-FR-007; G-18) |
 | 4.2.5 | 15/11/2026 | Length of the maintenance plan and checklist texts in Section 4.5 (OPS-FR-005, 007; G-22); Section 6.19: a preventive Work Order is cancelled only by retiring its plan (G-22) |
+| 4.2.4 | 15/11/2026 | Length of the season conclusion in Section 4.5 (EXPERT-FR-020; G-26) |
 | 4.2.2 | 13/11/2026 | Size and number of on-site photos, and Work Order text lengths, in Section 4.5 (ALERT-FR-018, EXPERT-FR-021, OPS-FR-001…004; G-21); BR-41 names the recovery check per alert type and the case without data, Section 6.19 adds the return from `AWAITING_APPROVAL` when the incident comes back (OPS-FR-003; G-21); `escalation_min` and `recovery_verify_min` stated as constants, Work Order escalation counted from the assignment, cancel from `VERIFYING`, alert note lengths (G-21) |
 | 4.2.1 | 10/11/2026 | BM02 items due 11/11/2026: "All users" and "Invitee" in Section 2.3 (R-02); ANALYTICS-FR-001 at most 120 chart points (R-03); THREAT-FR-007 and Section 6.8 learn 3,600 samples per hour (R-04); testable criteria for THREAT-FR-005, ANALYTICS-FR-005 and AUTH-FR-012 with its 30-day deadline (R-05); the AP-mode page takes only the Wi-Fi network, the broker address is flashed (FARM-FR-003c, S-03); restore of a removed device within 24 h (FARM-FR-008, Section 6.6, ST-01); configuration sync starts at `PENDING` and leaves `UNKNOWN` (Section 6.12, ST-03); "not evaluated" has an exit (Section 6.8, ST-07); ENV-FR-013c traced to C.1 (S-02); three constants in Section 4.5 |
 | 4.2.0 | 09/11/2026 | The Farm Technician does the on-site work of MF-04 and MF-06: every inferred alert of a house is checked on site by its technician before the expert's verdict, and a faulty sensor found on site opens a Work Order (EXPERT-FR-021, BR-39); the daily rating is done by the Farm Technician every day and by the Farm Owner on the days at the house, not by the Domain Expert, who reviews the days that disagree and adjusts the levels (EXPERT-FR-012, 022, BR-31, A-6, NFR-14, Section 6.18) |
