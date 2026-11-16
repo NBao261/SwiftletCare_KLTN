@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.4 (Review 2, final scope) |
+| Document version | 2.2.5 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -300,7 +300,7 @@ Background jobs:
 | `configSync` | every 1 min | Controllers still reporting an old configuration version: republish; 3 heartbeats behind while online → `CONFIG_MISMATCH` (BR-24) |
 | `sensorAnomaly` | every 10 min | Stuck, jumping and drifting sensors → `SENSOR_ANOMALY` |
 | `forecast` | every 10 min | 60-minute forecast → `FORECAST_BREACH` |
-| `returnRate` | daily, 15 min after the evening window of each house (BR-21) | Sessions from the 5-minute buckets of that day's windows, completeness (VISION-FR-020), return rate vs previous days → `LOW_RETURN_RATE` |
+| `returnRate` | every 5 min; each house once a day, 15 min after its evening window (BR-21), claimed through `last_session_check` | Sessions from the 5-minute buckets of that day's windows, completeness (VISION-FR-020), return rate vs previous days → `LOW_RETURN_RATE` |
 | `healthAssessment` | daily, after `returnRate`; again when late data or a verdict touches a day of the last 7 | Current daily status of every house (ANALYTICS-FR-012, BR-28…30) |
 | `healthReport` | BR-33 | Daily, weekly and monthly reports per house with a section per zone; notifications |
 | `weather` | hourly | Weather of every farm with coordinates (ANALYTICS-FR-013) |
@@ -367,6 +367,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | AI node frame rate that raises `EDGE_AI_DEGRADED` | AI node `config.yaml`, backend `CAMERA_MIN_FPS` |
 | Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
 | Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
+| Counting schedule | backend `DEFAULT_WINDOWS`, `RETURN_RATE_CHECK_DELAY_MIN`, `MAX_SCHEDULE_PROFILES`, `MAX_TEMPORARY_WINDOWS`, `PROFILE_NAME_MAX_LENGTH` (`utils/countingSchedule.util.ts`) |
 | One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
 | Points of a telemetry chart | backend `MAX_BUCKETS` (`analytics.service.ts`) |
 | Noise baseline learned | firmware `NoiseAnomalyDetector::READY_SAMPLES` |
@@ -549,6 +550,8 @@ erDiagram
     string name
     object bird_count_tuning "return_rate_drop_pct"
     object counting_schedule "seasonal profiles, temporary windows"
+    array counting_schedule_history "schedule, effective_from (next day), changed_by, role"
+    string last_session_check "VN date of the last evening check"
     object health_levels "BR-28 level boundaries"
     string stage "ATTRACTING | OCCUPIED"
     array stage_history
@@ -681,6 +684,7 @@ erDiagram
     number entry_count
     number exit_count
     bool complete
+    date computed_at
   }
   BIRD_COUNT_BUCKET {
     ObjectId camera_node_id FK
@@ -1874,6 +1878,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.5 | 17/11/2026 | Counting schedule as built (G-12): the house keeps the history of its schedule and the date of its last evening check, a session record its computation time; the `returnRate` job runs every 5 minutes and takes each house once a day after its own evening window (Sections 5.3, 5.5, 6) |
 | 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3); room and payload of `RECOMMENDATION_NEW` (Section 7.3) |
 | 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |
 | 2.2.2 | 12/11/2026 | Configuration sync as built (G-08): the heartbeat field is named `appliedConfigVersion`, like the other heartbeat fields; the ERD stores `config_sync` (Report 3 §6.12) on the controller |
