@@ -265,21 +265,21 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-26 — Chu kỳ thu hoạch (Bảo, Nhi, Len, Tuấn) — hạn 23/12
 
-- [ ] Spec `/harvests`: lô thu hoạch (nhập, xác nhận), chu kỳ của zone, kết luận mùa vụ.
-- [ ] Collection `harvestcycles` (unique `zone_id + start_date`).
-- [ ] Nhập lô (HARVEST-FR-001):
+- [x] Spec `/harvests`: lô thu hoạch (nhập, xác nhận), chu kỳ của zone, kết luận mùa vụ. *(Kiệt làm thay Bảo, 15/11, nhánh `feat/g26-harvest-cycles`: `GET /harvests/cycles`, `GET /harvests/cycles/{id}`, `PUT /harvests/cycles/{id}/conclusion`; `0df5423`)*
+- [x] Collection `harvestcycles` (unique `zone_id + start_date`). *(cùng index `house_id + end_date` của Report 4 §6.4; `daa8f37`)*
+- [x] Nhập lô (HARVEST-FR-001): *(đã có từ G-20: `DRAFT` của thợ, xác nhận, 409, 403; kiểm hợp lệ ở G-18 #158)*
   - technician nhập thì lô ở `DRAFT`;
   - Farm Owner xác nhận thì thành `CONFIRMED`; xác nhận lại trả 409, technician xác nhận thì 403 (HARVEST-FR-006).
-- [ ] Đóng chu kỳ khi xác nhận (HARVEST-FR-007, BR-43):
+- [x] Đóng chu kỳ khi xác nhận (HARVEST-FR-007, BR-43): *(`harvestCycle.service#rebuildZoneCycles` dựng lại chu kỳ của zone từ các lô đã xác nhận mỗi lần xác nhận, sửa, xoá; lô cùng ngày gộp một lần thu hoạch; sức khỏe chu kỳ từ các ngày sức khỏe vì telemetry chỉ giữ 90 ngày; `d2d59b5`)*
   - tính sản lượng; so với chu kỳ trước và cùng kỳ năm trước (±30 ngày);
   - tính tỷ lệ ngày `GOOD`, tỷ lệ về, thời gian trong ngưỡng;
   - chu kỳ có dưới 80 % số ngày được đánh giá thì ghi "incomplete".
-- [ ] Chuyên gia viết kết luận mùa vụ thì chu kỳ chuyển `CONCLUDED`, và mỗi Farm Owner nhận một thông báo (EXPERT-FR-020).
+- [x] Chuyên gia viết kết luận mùa vụ thì chu kỳ chuyển `CONCLUDED`, và mỗi Farm Owner nhận một thông báo (EXPERT-FR-020). *(Farm Owner viết được khi farm chưa có chuyên gia, BR-22; `d2d59b5`)*
 - [ ] Nhập sổ sản lượng các mùa trước của nhà thử nghiệm nếu chủ nhà còn giữ (A-8). Không có thì dữ liệu mẫu phải ghi rõ là mẫu.
 - [ ] Giao diện:
-  - Len: nhập lô thu hoạch trên mobile;
-  - Nhi: xác nhận lô và xem chu kỳ trên web; *(Xác nhận lô xong — Nhi, 11/11, nhánh `feat/g20-farm-technician` (API `fb2db1d` của Kiệt): trang Thu hoạch hiện nhãn "Chờ xác nhận" ở đợt còn lô `DRAFT`, lọc theo trạng thái, menu "Xác nhận đợt thu" (Farm Owner) gọi `POST /harvests/{id}/confirm` cho từng lô `DRAFT`. Còn xem chu kỳ, chờ backend G-26. 12/11: thẻ sản lượng, biểu đồ năm và tỉ lệ loại tổ chỉ tính lô đã xác nhận (BR-43); bảng và CSV (cột Trạng thái) vẫn có lô chờ xác nhận.)*
-  - Tuấn: viết kết luận mùa vụ.
+  - [x] Len: nhập lô thu hoạch trên mobile; *(Len, 16/11, nhánh `feat/g26-harvest-cycles`: màn `harvests/` (các lần thu của một nhà, mở từ ô "Sản lượng tháng" ở Màn B và nút "Các lần thu" của Phân tích › Sản lượng) + `HarvestRunSheet` (ngày thu không quá hôm nay, số tổ + gram của 3 loại yến, mỗi loại một lô `POST /harvests`, gắn zone tạo sớm nhất của nhà như web; sửa `PUT`, xoá `DELETE /harvests/{id}`; lưu lỗi một phần thì giữ loại đã lưu); chủ trại sửa mọi lần thu, kỹ thuật viên chỉ lần thu `DRAFT` của mình, chuyên gia chỉ xem (`recordHarvest`, `editAnyHarvest`, `canEditHarvestRun`); ô sản lượng và tab Sản lượng chỉ tính lô đã xác nhận (BR-43); test `harvest.utils`. Xác nhận lô `DRAFT` vẫn ở web (Nhi). Chưa chạy trên emulator.)*
+  - Nhi: xác nhận lô và xem chu kỳ trên web; *(Xác nhận lô xong — Nhi, 11/11, nhánh `feat/g20-farm-technician` (API `fb2db1d` của Kiệt): trang Thu hoạch hiện nhãn "Chờ xác nhận" ở đợt còn lô `DRAFT`, lọc theo trạng thái, menu "Xác nhận đợt thu" (Farm Owner) gọi `POST /harvests/{id}/confirm` cho từng lô `DRAFT`. Còn xem chu kỳ: backend G-26 xong (Kiệt, 15/11, `feat/g26-harvest-cycles`, `GET /harvests/cycles`). 12/11: thẻ sản lượng, biểu đồ năm và tỉ lệ loại tổ chỉ tính lô đã xác nhận (BR-43); bảng và CSV (cột Trạng thái) vẫn có lô chờ xác nhận.)* *(Xem chu kỳ xong — Nhi, 16/11, nhánh `feat/g26-harvest-cycles`: khung "Chu kỳ thu hoạch" cuối trang Thu hoạch (`HarvestCyclesCard`, `GET /harvests/cycles` theo farm/nhà đang lọc, 5 chu kỳ mỗi trang, phân trang ở server) — nhà, thời gian, sản lượng lần thu đóng chu kỳ, % so với chu kỳ trước, tỉ lệ ngày tốt kèm nhãn "Thiếu dữ liệu", trạng thái; bấm dòng mở ngăn chi tiết: so với chu kỳ trước và cùng kỳ năm trước, tỉ lệ ngày tốt, tỉ lệ chim về, thời gian trong ngưỡng, số ngày có trạng thái, kết luận và khuyến nghị (chỉ xem; viết ở màn chuyên gia). Xác nhận/sửa/xoá lô làm mới luôn chu kỳ. Nhãn trạng thái chu kỳ đưa vào `enumLabels.i18n.ts` (`harvestCycleStatusDict`).)*
+  - [x] Tuấn: viết kết luận mùa vụ. *(Tuấn, 16/11, nhánh `feat/g26-harvest-cycles`: `HarvestCyclesSection` (bảng chu kỳ, lọc trạng thái, phân trang) + `CycleConclusionDrawer` (ngăn kéo slide-over: sản lượng, so sánh, sức khỏe, form text+recommendations, PUT /harvests/cycles/{id}/conclusion, cảnh báo chu kỳ chưa đóng); tab "Kết luận mùa vụ" thứ 3 trên `DomainExpertReportsPage`; hooks `useHarvestCycles` + `useSubmitCycleConclusion`; i18n VI/EN.)*
 
 **Test:** TC-F30-01…03. Đây là luồng phụ, test không tính vào 170 nhưng vẫn phải viết.
 

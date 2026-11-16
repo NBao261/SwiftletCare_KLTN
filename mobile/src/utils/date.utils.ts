@@ -62,6 +62,12 @@ export function formatVietnamDayMonthOf(isoDate: string): string {
   return formatVietnamDayMonth(Date.parse(isoDate))
 }
 
+// Ngày theo giờ Việt Nam của một thời điểm, dạng dd/MM/yyyy — không phụ thuộc múi giờ của máy
+export function formatVietnamDateOf(isoDate: string): string {
+  const [year, month, day] = getVietnamDate(Date.parse(isoDate)).split('-')
+  return `${day}/${month}/${year}`
+}
+
 // Nửa đêm (00:00 giờ Việt Nam) của ngày chứa thời điểm, dạng mili giây
 export function getVietnamDayStart(time: number): number {
   return Date.parse(`${getVietnamDate(time)}T00:00:00+07:00`)

@@ -37,6 +37,8 @@ export type PermissionAction =
   | 'workOnWorkOrder'
   | 'viewAssignedWorkOrdersOnly'
   | 'viewMaintenance'
+  | 'recordHarvest'
+  | 'editAnyHarvest'
 
 // Role được làm từng thao tác (Report 3 §2.4); Admin không vào app. Farm Technician (G-20) chỉ thấy và thao tác trên nhà được
 // giao — backend chỉ trả nhà, tầng, thiết bị, cảnh báo của các nhà đó và trả 403 ở nhà khác (AUTH-FR-013)
@@ -93,6 +95,11 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   // Xem kế hoạch bảo trì, đến hạn, lịch sử ghi (OPS-FR-005…008, G-22): chủ trại, chuyên gia, kỹ thuật viên nhà được giao; tạo, sửa
   // kế hoạch và duyệt Work Order phòng ngừa (một lần ghi bảo trì) là việc của chủ trại trên web
   viewMaintenance: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Ghi lần thu hoạch (HARVEST-FR-001): chủ trại (CONFIRMED ngay) và kỹ thuật viên nhà được giao (DRAFT chờ xác nhận); chuyên gia
+  // chỉ đọc (Report 3 §2.4)
+  recordHarvest: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Sửa, xoá mọi lô thu hoạch (HARVEST-FR-005): chủ trại; kỹ thuật viên chỉ lô DRAFT của chính mình (utils/harvest canEditHarvestRun)
+  editAnyHarvest: ['FARM_OWNER'],
   // Phán quyết cảnh báo suy luận (EXPERT-FR-003): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)
   setAlertVerdict: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chủ trại và kỹ thuật viên (nhận cảnh báo đầu tiên của nhà được

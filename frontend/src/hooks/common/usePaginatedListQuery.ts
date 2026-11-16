@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type keepPreviousData } from '@tanstack/react-query'
 import type { ApiResponse } from '@/types'
 
 /**
@@ -10,7 +10,7 @@ export function usePaginatedListQuery<T>(
   queryFn: () => Promise<{ data: ApiResponse<T[]> }>,
   fallbackPage = 1,
   fallbackLimit = 20,
-  queryOptions?: { enabled?: boolean; staleTime?: number; refetchInterval?: number },
+  queryOptions?: { enabled?: boolean; staleTime?: number; refetchInterval?: number; placeholderData?: typeof keepPreviousData },
 ) {
   const result = useQuery({ queryKey, queryFn, ...queryOptions })
   return {
