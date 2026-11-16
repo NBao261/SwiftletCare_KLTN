@@ -1,5 +1,6 @@
 // G-25 — tổng quan trại, so sánh nhà (ANALYTICS-FR-015, 016, BR-44), điện năng ước tính (ANALYTICS-FR-017, BR-45); api-spec HouseOverview, HouseComparisonRow, EnergyMonth
-export type HouseStage = 'ATTRACTING' | 'OCCUPIED';
+// Giai đoạn nhà dùng chung với hồ sơ cấu hình (G-24), không khai báo lại để barrel `@/types` không xuất trùng
+import type { HouseStage } from '@/types/expert/profile.types';
 
 // NOT_COMPUTED: chưa xét ngày hôm nay · INSUFFICIENT_DATA: đã xét nhưng thiếu dữ liệu
 export type OverviewStatusReason = 'NOT_COMPUTED' | 'INSUFFICIENT_DATA';
