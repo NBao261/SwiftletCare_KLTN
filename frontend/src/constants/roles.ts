@@ -108,6 +108,7 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
   { path: '/harvests',         roles: HARVEST_ROLES },
+  { path: '/maintenance',      roles: FARM_SIDE_ROLES },
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
   { path: '/system/devices',   roles: ADMIN_ONLY },
@@ -120,8 +121,11 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/domain-expert/alert-verdicts',  roles: EXPERT_ROLES },
   { path: '/domain-expert/reviews',         roles: EXPERT_ROLES },
   { path: '/domain-expert/tuning',          roles: EXPERT_ROLES },
-  { path: '/domain-expert/reports',         roles: EXPERT_ROLES },
-  { path: '/domain-expert/history',         roles: EXPERT_ROLES },
+  { path: '/domain-expert/weather-rules',         roles: EXPERT_ROLES },
+  { path: '/domain-expert/reports',               roles: EXPERT_ROLES },
+  { path: '/domain-expert/profiles',              roles: EXPERT_ROLES },
+  { path: '/domain-expert/recommendation-rules',  roles: EXPERT_ROLES },
+  { path: '/domain-expert/history',               roles: EXPERT_ROLES },
   { path: '/settings',         roles: ALL_ROLES },
 ]
 

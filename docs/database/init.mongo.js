@@ -477,6 +477,78 @@ db.getCollection("coefficientproposals").createIndex({"zone_id":1,"status":1})
 db.getCollection("coefficientproposals").createIndex({"zone_id":1}, {"unique":true,"partialFilterExpression":{"status":"PROPOSED"}})
 db.getCollection("coefficientproposals").createIndex({"farm_id":1,"created_at":-1})
 
+// ── configprofiles (model ConfigProfile) ──
+ensureCollection("configprofiles", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "author_id": {
+      "bsonType": "objectId"
+    },
+    "name": {
+      "bsonType": "string"
+    },
+    "stage": {
+      "bsonType": ["string", "null"],
+      "enum": ["ATTRACTING", "OCCUPIED", null]
+    },
+    "thresholds": {},
+    "fuzzy_tuning": {},
+    "detection_tuning": {},
+    "speaker_schedule": {},
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["DRAFT", "APPROVED", "ARCHIVED", null]
+    },
+    "approved_by": {
+      "bsonType": ["objectId", "null"]
+    },
+    "approved_at": {
+      "bsonType": ["date", "null"]
+    },
+    "archived_at": {
+      "bsonType": ["date", "null"]
+    },
+    "applications": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "house_ids": {
+            "bsonType": ["array", "null"],
+            "items": {
+              "bsonType": "objectId"
+            }
+          },
+          "zone_count": {
+            "bsonType": "number"
+          },
+          "applied_by": {
+            "bsonType": "objectId"
+          },
+          "applied_at": {
+            "bsonType": "date"
+          }
+        },
+        "required": ["zone_count", "applied_by", "applied_at"]
+      }
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "updated_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["farm_id", "author_id", "name"]
+})
+db.getCollection("configprofiles").createIndex({"farm_id":1,"status":1})
+
 // ── farms (model Farm) ──
 ensureCollection("farms", {
   "bsonType": "object",
@@ -1098,6 +1170,53 @@ ensureCollection("houses", {
     "description": {
       "bsonType": ["string", "null"]
     },
+    "weather_rules": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "metric": {
+            "bsonType": "string",
+            "enum": ["temperature", "humidity", "rain"]
+          },
+          "min": {
+            "bsonType": "number"
+          },
+          "offset_pct": {
+            "bsonType": "number"
+          },
+          "duration_min": {
+            "bsonType": "number"
+          },
+          "active": {
+            "bsonType": ["bool", "null"]
+          },
+          "_id": {
+            "bsonType": ["objectId", "null"]
+          }
+        },
+        "required": ["metric", "min", "offset_pct", "duration_min"]
+      }
+    },
+    "weather_rules_history": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "changed_by": {
+            "bsonType": ["objectId", "null"]
+          },
+          "changed_by_role": {
+            "bsonType": ["string", "null"]
+          },
+          "changed_at": {
+            "bsonType": ["date", "null"]
+          },
+          "old_values": {},
+          "new_values": {}
+        }
+      }
+    },
     "bird_count_tuning": {
       "bsonType": ["object", "null"],
       "properties": {
@@ -1276,6 +1395,116 @@ ensureCollection("invitations", {
 })
 db.getCollection("invitations").createIndex({"token":1}, {"unique":true})
 db.getCollection("invitations").createIndex({"farm_id":1,"invited_email":1,"status":1})
+
+// ── maintenanceplans (model MaintenancePlan) ──
+ensureCollection("maintenanceplans", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "equipment": {
+      "bsonType": "string",
+      "enum": ["PUMP", "FAN", "SENSOR", "NOZZLE", "CALIBRATION"]
+    },
+    "basis": {
+      "bsonType": "string",
+      "enum": ["RUN_HOURS", "SWITCHES", "CALENDAR"]
+    },
+    "interval": {
+      "bsonType": "number"
+    },
+    "checklist_template": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "state": {
+      "bsonType": ["string", "null"],
+      "enum": ["SCHEDULED", "DUE", "OVERDUE", "RETIRED", null]
+    },
+    "next_due_at": {
+      "bsonType": ["date", "null"]
+    },
+    "due_since": {
+      "bsonType": ["date", "null"]
+    },
+    "overdue_notified_at": {
+      "bsonType": ["date", "null"]
+    },
+    "last_done_at": {
+      "bsonType": ["date", "null"]
+    },
+    "source": {
+      "bsonType": "string"
+    },
+    "note": {
+      "bsonType": ["string", "null"]
+    },
+    "comments": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "by": {
+            "bsonType": "objectId"
+          },
+          "text": {
+            "bsonType": "string"
+          },
+          "at": {
+            "bsonType": "date"
+          }
+        },
+        "required": ["by", "text", "at"]
+      }
+    },
+    "records": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "work_order_id": {
+            "bsonType": "objectId"
+          },
+          "node_id": {
+            "bsonType": ["objectId", "null"]
+          },
+          "kind": {
+            "bsonType": "string",
+            "enum": ["MAINTENANCE", "CALIBRATION"]
+          },
+          "by": {
+            "bsonType": "objectId"
+          },
+          "at": {
+            "bsonType": "date"
+          },
+          "next_due_at": {
+            "bsonType": ["date", "null"]
+          }
+        },
+        "required": ["work_order_id", "kind", "by", "at"]
+      }
+    },
+    "created_by": {
+      "bsonType": "objectId"
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["farm_id", "house_id", "equipment", "basis", "interval", "source", "created_by"]
+})
+db.getCollection("maintenanceplans").createIndex({"house_id":1,"equipment":1})
+db.getCollection("maintenanceplans").createIndex({"state":1,"next_due_at":1})
 
 // ── notifications (model Notification) ──
 ensureCollection("notifications", {
@@ -2032,6 +2261,53 @@ ensureCollection("users", {
 db.getCollection("users").createIndex({"email":1}, {"unique":true})
 db.getCollection("users").createIndex({"telegram_link_code_hash":1}, {"sparse":true})
 
+// ── weathercompensations (model WeatherCompensation) ──
+ensureCollection("weathercompensations", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "rule_id": {
+      "bsonType": "objectId"
+    },
+    "offset_pct": {
+      "bsonType": "number"
+    },
+    "sent_at": {
+      "bsonType": "date"
+    },
+    "expires_at": {
+      "bsonType": "date"
+    },
+    "forecast": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "temperature_max": {
+          "bsonType": ["number", "null"]
+        },
+        "humidity_max": {
+          "bsonType": ["number", "null"]
+        },
+        "rain_mm": {
+          "bsonType": ["number", "null"]
+        }
+      }
+    },
+    "controllers": {
+      "bsonType": "number"
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["farm_id", "house_id", "rule_id", "offset_pct", "sent_at", "expires_at", "controllers"]
+})
+db.getCollection("weathercompensations").createIndex({"house_id":1,"sent_at":-1})
+
 // ── weatherobservations (model WeatherObservation) ──
 ensureCollection("weatherobservations", {
   "bsonType": "object",
@@ -2086,9 +2362,43 @@ ensureCollection("workorders", {
       "bsonType": ["string", "null"],
       "enum": ["REPAIR", "PREVENTIVE", null]
     },
+    "plan_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "checklist": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "item": {
+            "bsonType": "string"
+          },
+          "result": {
+            "bsonType": ["string", "null"],
+            "enum": ["OK", "DEFECT", null]
+          },
+          "note": {
+            "bsonType": ["string", "null"]
+          },
+          "photo": {
+            "bsonType": ["string", "null"]
+          },
+          "by": {
+            "bsonType": ["objectId", "null"]
+          },
+          "at": {
+            "bsonType": ["date", "null"]
+          },
+          "repair_work_order_id": {
+            "bsonType": ["objectId", "null"]
+          }
+        },
+        "required": ["item"]
+      }
+    },
     "origin": {
       "bsonType": "string",
-      "enum": ["ALERT", "OUTAGE", "EXPERT", "ONSITE_CHECK", "MANUAL"]
+      "enum": ["ALERT", "OUTAGE", "EXPERT", "ONSITE_CHECK", "MANUAL", "PLAN", "CHECKLIST"]
     },
     "title": {
       "bsonType": "string"
@@ -2124,7 +2434,7 @@ ensureCollection("workorders", {
     },
     "result": {
       "bsonType": ["string", "null"],
-      "enum": ["REPAIRED", "SELF_RECOVERED", null]
+      "enum": ["REPAIRED", "SELF_RECOVERED", "DONE", null]
     },
     "cancel_reason": {
       "bsonType": ["string", "null"]
@@ -2184,6 +2494,7 @@ ensureCollection("workorders", {
 })
 db.getCollection("workorders").createIndex({"house_id":1,"status":1})
 db.getCollection("workorders").createIndex({"assignee_id":1,"status":1})
+db.getCollection("workorders").createIndex({"plan_id":1,"status":1}, {"partialFilterExpression":{"plan_id":{"$exists":true}}})
 db.getCollection("workorders").createIndex({"alert_id":1}, {"unique":true,"partialFilterExpression":{"is_open":true,"alert_id":{"$exists":true}}})
 
 // ── zonehealthreports (model ZoneHealthReport) ──
@@ -2289,7 +2600,7 @@ ensureCollection("zones", {
           "new_values": {},
           "source": {
             "bsonType": ["string", "null"],
-            "enum": ["MANUAL", "RESET_TO_DEFAULT", "EXPERT_REVERT", null]
+            "enum": ["MANUAL", "RESET_TO_DEFAULT", "EXPERT_REVERT", "PROFILE", null]
           },
           "changed_by_role": {
             "bsonType": ["string", "null"]
@@ -2338,7 +2649,7 @@ ensureCollection("zones", {
           "new_values": {},
           "source": {
             "bsonType": ["string", "null"],
-            "enum": ["MANUAL", "EXPERT_REVERT", "SUGGESTION_APPROVED", null]
+            "enum": ["MANUAL", "EXPERT_REVERT", "SUGGESTION_APPROVED", "PROFILE", null]
           },
           "_id": {
             "bsonType": ["objectId", "null"]
@@ -2382,6 +2693,10 @@ ensureCollection("zones", {
           },
           "old_values": {},
           "new_values": {},
+          "source": {
+            "bsonType": ["string", "null"],
+            "enum": ["PROFILE", null]
+          },
           "_id": {
             "bsonType": ["objectId", "null"]
           }

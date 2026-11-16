@@ -9,7 +9,7 @@ import WorkOrderDetailDrawer from '@/components/features/farm-owner/work-orders/
 import WorkOrderReassignModal from '@/components/features/farm-owner/work-orders/WorkOrderReassignModal';
 import WorkOrderTable from '@/components/features/farm-owner/work-orders/WorkOrderTable';
 import {
-  WORK_ORDER_STATUSES, isRecoveryUnverified, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
+  WORK_ORDER_STATUSES, approvalDescriptionKey, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
@@ -184,7 +184,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
       <ConfirmModal
         open={pending?.action === 'approve'}
         title={t('approve.title')}
-        description={t(pending && isRecoveryUnverified(pending.workOrder) ? 'approve.descUnverified' : 'approve.desc')}
+        description={t(pending ? approvalDescriptionKey(pending.workOrder) : 'approve.desc')}
         confirmLabel={t('action.approve')}
         loading={actions.approve.isPending}
         onConfirm={() => pending && actions.approve.mutate(pending.workOrder, callbacks('approve.done'))}

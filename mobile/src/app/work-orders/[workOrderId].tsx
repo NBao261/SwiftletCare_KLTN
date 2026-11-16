@@ -5,6 +5,7 @@ import { Image } from 'expo-image'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatRow } from '@/components/analytics/StatRow'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { ChecklistSection } from '@/components/work-order/ChecklistSection'
 import { WorkOrderDoneSheet } from '@/components/work-order/WorkOrderDoneSheet'
 import { WorkOrderStatusLabel } from '@/components/work-order/WorkOrderStatusLabel'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,7 @@ import {
   getWorkOrderStatusLabel,
 } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
+import { getChecklistProgress } from '@/utils/maintenance.utils'
 import { getWorkOrderAction, getWorkOrderMilestones } from '@/utils/workOrder.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -38,7 +40,8 @@ const DETAIL_SKELETON_HEIGHT = 240
 const PHOTO_SIZE = 96
 
 /** Chi tiết một Work Order (OPS-FR-001…004, ALERT-FR-018): nguồn, nhà, cảnh báo gốc, người được giao, các mốc, nguyên nhân, việc đã
- * làm, ảnh, lịch sử trạng thái. Kỹ thuật viên nhà được giao và chủ trại bấm "Bắt đầu" (OPEN) hoặc "Báo đã làm xong" (IN_PROGRESS);
+ * làm, ảnh, lịch sử trạng thái; Work Order phòng ngừa có thêm checklist (G-22). Kỹ thuật viên nhà được giao và chủ trại bấm "Bắt đầu"
+ * (OPEN) hoặc "Báo đã làm xong" (IN_PROGRESS, phòng ngừa thì khi đủ checklist);
  * duyệt, mở lại, huỷ, giao lại ở web của chủ trại */
 export default function WorkOrderDetailScreen() {
   const palette = usePalette()
@@ -73,7 +76,7 @@ export default function WorkOrderDetailScreen() {
       // Hook đã tải lại Work Order khi gặp 409; ở đây chỉ báo
       onError: error => {
         if (readApiError(error).status === 409) {
-          toast.show(t('Work Order đã đổi trạng thái, đã tải lại'))
+          toast.show(t('Phiếu công việc đã đổi trạng thái, đã tải lại'))
           return
         }
         NativeAlert.alert(
@@ -89,7 +92,7 @@ export default function WorkOrderDetailScreen() {
       if (detailQuery.isLoading) return <Skeleton width="100%" height={DETAIL_SKELETON_HEIGHT} radius={Radius.md} />
       return (
         <EmptyState
-          message={t('Không tải được Work Order')}
+          message={t('Không tải được phiếu công việc')}
           actionLabel={t('Thử lại')}
           onAction={() => detailQuery.refetch()}
         />
@@ -119,6 +122,16 @@ export default function WorkOrderDetailScreen() {
             <StatRow label={t('Đã báo chủ trại')} value={formatDateTime(workOrder.escalated_at)} isWarning />
           )}
         </Card>
+
+        {/* Work Order phòng ngừa (G-22): checklist chép từ kế hoạch bảo trì, ghi từng mục khi đang làm */}
+        {workOrder.kind === 'PREVENTIVE' && (workOrder.checklist?.length ?? 0) > 0 && (
+          <ChecklistSection
+            workOrderId={workOrder._id}
+            checklist={workOrder.checklist ?? []}
+            isEditable={workOrder.status === 'IN_PROGRESS' && canPerform(user, 'workOnWorkOrder')}
+            onMessage={toast.show}
+          />
+        )}
 
         {workOrder.description ? (
           <Card>
@@ -179,6 +192,10 @@ export default function WorkOrderDetailScreen() {
           </Card>
         )}
 
+        {workOrder.plan_id && (
+          <Button label={t('Xem kế hoạch bảo trì')} variant="secondary" onPress={() => router.push('/maintenance')} />
+        )}
+
         {workOrder.alert_id && (
           <Button
             label={t('Xem cảnh báo gốc')}
@@ -191,11 +208,13 @@ export default function WorkOrderDetailScreen() {
   }
 
   const action = workOrder && canPerform(user, 'workOnWorkOrder') ? getWorkOrderAction(workOrder.status) : null
+  // Work Order phòng ngừa chỉ báo xong khi mọi mục checklist đã có kết quả (BR-41, backend 422 nếu thiếu)
+  const checklistProgress = getChecklistProgress(workOrder?.checklist)
 
   return (
     <View style={[styles.screen, { backgroundColor: palette.background, paddingBottom: insets.bottom }]}>
       <View key={language} style={styles.screen}>
-        <AppHeader title={t('Chi tiết Work Order')} onBack={goBack} />
+        <AppHeader title={t('Chi tiết phiếu công việc')} onBack={goBack} />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
@@ -215,7 +234,18 @@ export default function WorkOrderDetailScreen() {
             {action === 'start' ? (
               <Button label={t('Bắt đầu làm')} onPress={start} loading={startWorkOrder.isPending} />
             ) : (
-              <Button label={t('Báo đã làm xong')} onPress={() => setDoneOpen(true)} />
+              <Button
+                label={
+                  checklistProgress.isComplete
+                    ? t('Báo đã làm xong')
+                    : t('Ghi đủ checklist để báo xong ({done}/{total})', {
+                        done: checklistProgress.done,
+                        total: checklistProgress.total,
+                      })
+                }
+                onPress={() => setDoneOpen(true)}
+                disabled={!checklistProgress.isComplete}
+              />
             )}
           </View>
         )}

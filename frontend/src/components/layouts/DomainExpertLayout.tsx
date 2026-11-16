@@ -1,8 +1,8 @@
-import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, History } from 'lucide-react';
+import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, History, CloudRain, BookCopy, Lightbulb } from 'lucide-react';
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 import { IconSettings } from '@/components/ui/icons';
-import { BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, SquaresFourIcon, WrenchIcon } from '@phosphor-icons/react';
+import { BasketIcon, BirdIcon, CalendarCheckIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, SquaresFourIcon, WrenchIcon } from '@phosphor-icons/react';
 
 /**
  * Layout cho vai trò Chuyên gia nuôi yến (DOMAIN_EXPERT) — FE_Design §12.5.
@@ -32,8 +32,11 @@ const menuSections: MenuSection[] = [
       { label: 'Hàng đợi việc', path: '/domain-expert/queue', icon: ClipboardList },
       { label: 'Thẩm định Cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheck },
       { label: 'Ngưỡng & Hệ số mờ', path: '/domain-expert/tuning', icon: SlidersHorizontal },
+      { label: 'Luật bù thời tiết', path: '/domain-expert/weather-rules', icon: CloudRain },
       { label: 'Duyệt & Đề xuất', path: '/domain-expert/reviews', icon: FileCheck },
       { label: 'Báo cáo & Kết luận', path: '/domain-expert/reports', icon: FileText },
+      { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles', icon: BookCopy },
+      { label: 'Luật khuyến nghị', path: '/domain-expert/recommendation-rules', icon: Lightbulb },
       { label: 'Lịch sử hoạt động', path: '/domain-expert/history', icon: History },
     ],
   },
@@ -48,6 +51,7 @@ const menuSections: MenuSection[] = [
       { label: 'Phiếu công việc', path: '/work-orders', icon: WrenchIcon },
       { label: 'Trang trại', path: '/farms', icon: HouseIcon },
       { label: 'Thống kê sản lượng', path: '/harvests', icon: BasketIcon },
+      { label: 'Lịch bảo trì', path: '/maintenance', icon: CalendarCheckIcon },
     ],
   },
   {

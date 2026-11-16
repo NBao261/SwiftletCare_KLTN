@@ -1,4 +1,5 @@
 // Module FARM (§5.2) — Farm > House > Zone và ngưỡng môi trường của Zone.
+import type { HouseStage } from '@/types/expert/profile.types'
 
 export interface Farm {
   _id: string; name: string; address: string
@@ -29,6 +30,9 @@ export interface House {
   bird_count_tuning?: BirdCountTuning
   /** G-20: danh sách thợ được Farm Owner gán vào nhà này (Nhi thực hiện UI gán, backend f9d9522) */
   technicians?: Array<{ user_id: string; primary: boolean }>
+  /** FARM-FR-014, BR-46 — giai đoạn nhà; nhà tạo trước khi có trường này coi là OCCUPIED */
+  stage?: HouseStage
+  stage_history?: Array<{ stage: HouseStage; changed_by?: string; changed_by_role?: string; changed_at: string }>
 }
 
 // AUTH-FR-014 — một ca trực của nhà: 0 = Chủ nhật … 6 = thứ Bảy, giờ VN HH:mm, end trước start là ca qua nửa đêm

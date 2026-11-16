@@ -11,6 +11,7 @@ import HouseKpiRow from '@/components/features/farm-owner/farms/HouseKpiRow'
 import HouseCard from '@/components/features/farm-owner/farms/HouseCard'
 import HouseTable from '@/components/features/farm-owner/farms/HouseTable'
 import AddHouseModal from '@/components/features/farm-owner/farms/AddHouseModal'
+import ApplyProfileModal from '@/components/features/farm-owner/farms/ApplyProfileModal'
 import FarmFormModal from '@/components/features/farm-owner/farms/FarmFormModal'
 import FarmGroupRow from '@/components/features/farm-owner/farms/FarmGroupRow'
 import ScopeFilter from '@/components/common/ScopeFilter'
@@ -94,6 +95,8 @@ export default function FarmOwnerFarmsPage() {
   const [showCreateFarm, setShowCreateFarm] = useState(false)
   const [editFarm, setEditFarm] = useState<Farm | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Farm | null>(null)
+  // EXPERT-FR-015 — farm đang mở popup áp hồ sơ cấu hình
+  const [applyProfileFarm, setApplyProfileFarm] = useState<Farm | null>(null)
   // Farm người dùng bấm xổ khi đang xem tất cả trang trại (mặc định thu hết)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   // Đang tìm / lọc / chọn farm ở khung lọc thì farm có kết quả tự xổ, trừ farm người dùng vừa thu lại (đổi điều kiện lọc thì xổ lại)
@@ -358,6 +361,7 @@ export default function FarmOwnerFarmsPage() {
                     onEdit={() => setEditFarm(farm)}
                     onDelete={() => setDeleteTarget(farm)}
                     onAddHouse={() => setAddHouseFarmId(farm._id)}
+                    onApplyProfile={canCreateFarm && stats.houses > 0 ? () => setApplyProfileFarm(farm) : undefined}
                   >
                     {renderHouses(farm._id)}
                   </FarmGroupRow>
@@ -371,8 +375,15 @@ export default function FarmOwnerFarmsPage() {
       {addHouseFarmId !== null && (
         <AddHouseModal open onClose={() => setAddHouseFarmId(null)} farms={farms} existingHouses={existingHouses} initialFarmId={addHouseFarmId} />
       )}
+      {applyProfileFarm && (
+        <ApplyProfileModal
+          farm={applyProfileFarm}
+          houses={existingHouses.filter(house => house.farm_id === applyProfileFarm._id)}
+          onClose={() => setApplyProfileFarm(null)}
+        />
+      )}
       {showCreateFarm && <FarmFormModal onClose={() => setShowCreateFarm(false)} />}
-      {editFarm && <FarmFormModal farm={editFarm} onClose={() => setEditFarm(null)} />}
+      {editFarm &&<FarmFormModal farm={editFarm} onClose={() => setEditFarm(null)} />}
       <ConfirmModal
         open={deleteTarget !== null}
         title={t('manage.deleteTitle', { name: deleteTarget?.name ?? NO_VALUE })}

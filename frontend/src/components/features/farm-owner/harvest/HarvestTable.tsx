@@ -237,8 +237,11 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
       </div>
 
       {filteredGroups.length === 0 ? (
-        <div className={cn('flex items-center justify-center rounded-2xl border border-warmGray/15', TABLE_AREA_CLASS)}>
-          <TableEmptyState title={emptyTitle} description={isFiltering ? t('table.emptyFilteredHint') : t('table.emptyHint')} />
+        // Khung cao 318px: thu minh hoạ còn 80%, đệm trên 32px bù vòng tròn tràn lên 40px × 0,8 — hình và chữ nằm giữa, không tràn viền
+        <div className={cn('flex items-center justify-center overflow-hidden rounded-2xl border border-warmGray/15 pt-8', TABLE_AREA_CLASS)}>
+          <div className="scale-[0.8]">
+            <TableEmptyState title={emptyTitle} description={isFiltering ? t('table.emptyFilteredHint') : t('table.emptyHint')} />
+          </div>
         </div>
       ) : (
         <div className={TABLE_AREA_CLASS}>

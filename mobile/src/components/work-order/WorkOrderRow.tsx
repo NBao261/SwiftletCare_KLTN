@@ -29,7 +29,7 @@ export function WorkOrderRow({ workOrder, houseName, hasDivider, onPress }: Work
       style={[styles.row, hasDivider && { borderBottomWidth: BorderWidth.hairline, borderBottomColor: palette.divider }]}
       accessibilityRole="button"
       accessibilityLabel={`${workOrder.title}, ${getWorkOrderStatusLabel(workOrder.status)}, ${detailText}`}
-      accessibilityHint={t('Xem chi tiết Work Order')}
+      accessibilityHint={t('Xem chi tiết phiếu công việc')}
     >
       <View style={styles.texts}>
         <Text variant="body" weight="semiBold" numberOfLines={2}>

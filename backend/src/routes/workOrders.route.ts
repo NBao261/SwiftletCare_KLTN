@@ -55,6 +55,17 @@ router.post('/:id/done',
   body('work_note').optional().isString().isLength({ max: 2000 }),
   validate, workOrderController.done)
 
+// OPS-FR-007 — checklist của Work Order phòng ngừa: thợ nhà được giao, Farm Owner
+const checklistPhoto = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } })
+router.put('/:id/checklist',
+  requireRole(...DOERS),
+  checklistPhoto.single('photo'),
+  idParam,
+  body('item_index').isInt({ min: 0 }).toInt(),
+  body('result').isString().isIn(['OK', 'DEFECT']),
+  body('note').optional().isString().isLength({ max: 1000 }),
+  validate, workOrderController.updateChecklist)
+
 router.post('/:id/approve', requireRole('FARM_OWNER'), idParam, validate, workOrderController.approve)
 router.post('/:id/reopen', requireRole('FARM_OWNER'), idParam,
   body('note').isString().trim().notEmpty().withMessage('Mở lại phải ghi chú').isLength({ max: 1000 }),

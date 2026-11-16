@@ -12,6 +12,7 @@ export * from './notification.types'
 export * from './healthReport.types'
 export * from './harvest.types'
 export * from './workOrder.types'
+export * from './maintenance.types'
 export * from './analytics.types'
 export * from './account.types'
 export type {

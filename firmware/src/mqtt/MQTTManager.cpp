@@ -113,8 +113,9 @@ extern const char *bootResetReason;
 static const String &topicBase() { return mqttTopicBase; }
 
 // ── Tin nhận được ───────────────────────────────────────
+enum InboundKind : uint8_t { INBOUND_CMD, INBOUND_CONFIG, INBOUND_COMPENSATION };
 struct InboundMessage {
-  bool isConfig;
+  InboundKind kind;
   char *payload; // malloc ở task esp-mqtt, free ở mqttTask
 };
 static QueueHandle_t inboundQueue = nullptr;
@@ -126,14 +127,17 @@ static void queueInbound(const esp_mqtt_event_t *event) {
   }
   // topic của event không kết thúc bằng '\0'
   String topic(event->topic, event->topic_len);
-  bool isConfig = topic.endsWith("/config");
-  if (!isConfig && !topic.endsWith("/cmd")) return;
+  InboundKind kind;
+  if (topic.endsWith("/config")) kind = INBOUND_CONFIG;
+  else if (topic.endsWith("/compensation")) kind = INBOUND_COMPENSATION;
+  else if (topic.endsWith("/cmd")) kind = INBOUND_CMD;
+  else return;
 
   char *payload = static_cast<char *>(malloc(event->data_len + 1));
   if (!payload) return;
   memcpy(payload, event->data, event->data_len);
   payload[event->data_len] = '\0';
-  InboundMessage message = {isConfig, payload};
+  InboundMessage message = {kind, payload};
   if (xQueueSend(inboundQueue, &message, 0) != pdTRUE) {
     Serial.println("[MQTT] Hàng đợi tin nhận đầy — bỏ tin");
     free(payload);
@@ -171,6 +175,7 @@ static bool wasAcked(int msgId) {
 static void subscribeDeviceTopics() {
   esp_mqtt_client_subscribe(client, (topicBase() + "/cmd").c_str(), MQTT_QOS_ACKED);
   esp_mqtt_client_subscribe(client, (topicBase() + "/config").c_str(), MQTT_QOS_ACKED);
+  esp_mqtt_client_subscribe(client, (topicBase() + "/compensation").c_str(), MQTT_QOS_ACKED);
 }
 
 static void onMqttEvent(void *, esp_event_base_t, int32_t eventId, void *eventData) {
@@ -302,6 +307,24 @@ static void handleConfig(const char *payload) {
   Serial.println("[MQTT] Cấu hình mới: " + String(payload));
   Config::update(payload);
   StorageManager::saveConfigHash(hash);
+}
+
+// ENV-FR-029, BR-38 — `compensation` retained: offset (điểm %), hạn (epoch ms), luật. Kẹp và đổi hạn ra millis()
+// trong WeatherCompensation; tin retained đã hết hạn về lại lúc kết nối thì offset 0.
+static void handleCompensation(const char *payload) {
+  JsonDocument doc;
+  if (deserializeJson(doc, payload)) {
+    Serial.println("[MQTT] Bỏ tin compensation hỏng");
+    return;
+  }
+  float offsetPct = doc["offset_pct"] | 0.0f;
+  uint64_t expiresAt = doc["expires_at"] | (uint64_t)0;
+  time_t now = time(nullptr);
+  uint64_t nowEpochMs = now > 1700000000 ? (uint64_t)now * 1000ULL : 0; // chưa sync NTP → 0
+  if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) != pdTRUE) return;
+  PIDController::setWeatherCompensation(offsetPct, expiresAt, nowEpochMs);
+  xSemaphoreGive(dataMutex);
+  Serial.println("[MQTT] Bù thời tiết " + String(offsetPct, 1) + "% (luật " + String(doc["rule_id"] | "-") + ")");
 }
 
 // ── Gửi ─────────────────────────────────────────────────
@@ -464,7 +487,8 @@ void loop() {
 void processInbound() {
   InboundMessage message;
   while (xQueueReceive(inboundQueue, &message, 0) == pdTRUE) {
-    if (message.isConfig) handleConfig(message.payload);
+    if (message.kind == INBOUND_CONFIG) handleConfig(message.payload);
+    else if (message.kind == INBOUND_COMPENSATION) handleCompensation(message.payload);
     else handleCommand(message.payload);
     free(message.payload);
   }
