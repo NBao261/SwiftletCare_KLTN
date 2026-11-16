@@ -308,6 +308,7 @@ const WORK_ORDER_ORIGIN_LABELS: Record<WorkOrderOrigin, string> = {
   MANUAL: 'Chủ trại mở',
   PLAN: 'Mở tự động: kế hoạch bảo trì đến hạn',
   CHECKLIST: 'Mục checklist bảo trì ghi hỏng',
+  RECOMMENDATION: 'Chủ trại chấp nhận khuyến nghị',
 }
 
 export function getWorkOrderOriginLabel(origin: WorkOrderOrigin): string {

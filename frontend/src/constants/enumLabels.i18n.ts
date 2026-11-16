@@ -1,6 +1,7 @@
 import type { Dictionary } from '@/lib/i18n';
 import type {
-  AlertStatus, AlertType, ChecklistResult, DeviceStatus, OnsiteObservation, Role, SiteCause, WorkOrderOrigin, WorkOrderResult, WorkOrderStatus,
+  AlertStatus, AlertType, ChecklistResult, DeviceStatus, OnsiteObservation, RecommendationIndicator, RecommendationStatus, Role, SiteCause,
+  WorkOrderOrigin, WorkOrderResult, WorkOrderStatus,
 } from '@/types';
 
 // Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
@@ -101,6 +102,7 @@ export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
     MANUAL: 'Chủ nhà yến tạo',
     PLAN: 'Kế hoạch bảo trì đến hạn',
     CHECKLIST: 'Mục checklist bảo trì ghi hỏng',
+    RECOMMENDATION: 'Chủ nhà yến chấp nhận khuyến nghị',
   },
   en: {
     ALERT: 'Equipment alert',
@@ -110,6 +112,43 @@ export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
     MANUAL: 'Created by the Farm Owner',
     PLAN: 'Maintenance plan due',
     CHECKLIST: 'Maintenance checklist item marked defective',
+    RECOMMENDATION: 'Recommendation accepted by the Farm Owner',
+  },
+};
+
+// Chỉ số theo ngày mà luật khuyến nghị xét (EXPERT-FR-016)
+export const recommendationIndicatorDict: Dictionary<RecommendationIndicator> = {
+  vi: {
+    TIME_IN_RANGE: 'Thời gian trong ngưỡng (%)',
+    AIR_HOURS_OVER: 'Số giờ NH3 hoặc CO2 vượt ngưỡng',
+    RETURN_RATE: 'Tỷ lệ chim về (%)',
+    NOISE_EPISODES: 'Số đợt ồn bất thường',
+    MISTING_INEFFECTIVE: 'Số cảnh báo phun sương không hiệu quả',
+  },
+  en: {
+    TIME_IN_RANGE: 'Time in range (%)',
+    AIR_HOURS_OVER: 'Hours of NH3 or CO2 over the limit',
+    RETURN_RATE: 'Return rate (%)',
+    NOISE_EPISODES: 'Abnormal noise episodes',
+    MISTING_INEFFECTIVE: 'Ineffective misting alerts',
+  },
+};
+
+// Trạng thái khuyến nghị (Report 3 §6.21, SM-21)
+export const recommendationStatusDict: Dictionary<RecommendationStatus> = {
+  vi: {
+    OPEN: 'Chờ quyết định',
+    ACCEPTED: 'Đã chấp nhận',
+    REJECTED: 'Đã từ chối',
+    EXPIRED: 'Hết hạn',
+    MEASURED: 'Đã đo hiệu quả',
+  },
+  en: {
+    OPEN: 'Awaiting decision',
+    ACCEPTED: 'Accepted',
+    REJECTED: 'Rejected',
+    EXPIRED: 'Expired',
+    MEASURED: 'Effect measured',
   },
 };
 

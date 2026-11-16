@@ -1,67 +1,38 @@
-// EXPERT-FR-016…019 — React Query hooks cho luật khuyến nghị
-// Backend chưa sẵn; hook fallback về mock data khi API trả lỗi.
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { recommendationRulesApi } from '@/apis/domain-expert/recommendationRules.api'
-import { MOCK_RECOMMENDATION_RULES, MOCK_RECOMMENDATION_EFFECTS } from '@/data/recommendationRules.data'
-import type { RecommendationRule } from '@/types/expert.types'
+import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
+import type { RecommendationRuleInput } from '@/types'
 
-const RULES_KEY = (farmId: string) => ['recommendation-rules', farmId]
-const EFFECTS_KEY = (farmId: string) => ['recommendation-effects', farmId]
+// Khoá gốc chung: ghi luật làm mới cả danh sách lẫn hiệu quả
+const RULES_KEY = 'recommendation-rules'
+export const RULES_PAGE_SIZE = 10
 
-export function useRecommendationRules(farmId: string | undefined | null) {
+// EXPERT-FR-016 — luật của farm, mới sửa trước, phân trang server
+export function useRecommendationRules(farmId: string | undefined, page: number) {
+  return usePaginatedListQuery(
+    [RULES_KEY, 'list', farmId, page],
+    () => recommendationRulesApi.list(farmId!, page, RULES_PAGE_SIZE),
+    page,
+    RULES_PAGE_SIZE,
+    { enabled: Boolean(farmId) },
+  )
+}
+
+// EXPERT-FR-019 — số khuyến nghị đã mở, chấp nhận, đo, cải thiện theo từng luật
+export function useRecommendationRuleEffects(farmId: string | undefined) {
   return useQuery({
-    queryKey: RULES_KEY(farmId ?? ''),
-    queryFn: async () => {
-      try {
-        const r = await recommendationRulesApi.listRules(farmId!)
-        return r.data.data ?? []
-      } catch {
-        return MOCK_RECOMMENDATION_RULES
-      }
-    },
-    enabled: !!farmId,
-    staleTime: 30_000,
+    queryKey: [RULES_KEY, 'effects', farmId],
+    queryFn: () => recommendationRulesApi.effects(farmId!).then(response => response.data.data ?? []),
+    enabled: Boolean(farmId),
   })
 }
 
-export function useRecommendationEffects(farmId: string | undefined | null) {
-  return useQuery({
-    queryKey: EFFECTS_KEY(farmId ?? ''),
-    queryFn: async () => {
-      try {
-        const r = await recommendationRulesApi.listEffects(farmId!)
-        return r.data.data ?? []
-      } catch {
-        return MOCK_RECOMMENDATION_EFFECTS
-      }
-    },
-    enabled: !!farmId,
-    staleTime: 60_000,
-  })
-}
-
-export function useCreateRecommendationRule(farmId: string | undefined) {
-  const qc = useQueryClient()
+// Tạo mới (không có id) hoặc sửa, bật/tắt (có id)
+export function useSaveRecommendationRule(farmId: string | undefined) {
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (rule: Omit<RecommendationRule, '_id'>) =>
-      recommendationRulesApi.createRule(farmId!, rule),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: RULES_KEY(farmId ?? '') }) },
-  })
-}
-
-export function useUpdateRecommendationRule(farmId: string | undefined) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, rule }: { id: string; rule: Omit<RecommendationRule, '_id'> }) =>
-      recommendationRulesApi.updateRule(id, rule),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: RULES_KEY(farmId ?? '') }) },
-  })
-}
-
-export function useDeleteRecommendationRule(farmId: string | undefined) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => recommendationRulesApi.deleteRule(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: RULES_KEY(farmId ?? '') }) },
+    mutationFn: ({ id, input }: { id?: string; input: RecommendationRuleInput }) =>
+      id ? recommendationRulesApi.update(id, input) : recommendationRulesApi.create(farmId!, input),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: [RULES_KEY] }) },
   })
 }
