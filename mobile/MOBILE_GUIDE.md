@@ -100,7 +100,7 @@ Mọi biến `EXPO_PUBLIC_*` bị đóng vào app — không đặt secret ở �
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `react-native-maps` có trong `package.json`                                                                                                                                           | — Report 4 §5.4 nói không thêm thư viện bản đồ                             | gỡ khi làm màn trang trại                                                                                                               |
 | FCM: chưa có `google-services.json` (`android.googleServicesFile`), backend chưa có endpoint nhận token trong `api-spec.yaml`                                                         | push (ALERT-FR-002)                                                        | chờ backend (G-10); không tự đặt endpoint                                                                                               |
-| `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/harvests`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, harvest, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml`                                                                                                  |
+| `ENDPOINTS` chưa có: `/notifications`, `/alerts/{id}/verdict`, `/devices/camera-nodes/{id}/stream-token`, `/devices/sensor-nodes/{id}/relay-override` | thông báo trong app, kiểm chứng, báo cáo, live stream, chế độ tay | thêm khi làm màn, đúng `api-spec.yaml`                                                                                                  |
 | `.env.example` còn ghi "SRS §9.1"                                                                                                                                                     | —                                                                          | đổi thành `docs/api/api-spec.yaml`                                                                                                      |
 
 - Enum và kiểu dữ liệu giữ tay trong `src/types/<module>.types.ts`, phải khớp `backend/src/types/domain.types.ts` (không có package dùng chung).
@@ -136,6 +136,8 @@ mobile/
    │  └─ notifications/          # chuông — màn riêng ở stack gốc, ngoài các tab (thanh tab ẩn, tab Tài khoản không giữ màn này): index (hai mục Thông báo | Cảnh báo) ·
    │                             #   [notificationId] (chi tiết thông báo; quyết định của chuyên gia kèm Hoạt động chuyên gia bên dưới). ‹ quay về màn đã mở (useGoBackOrHome)
    │  └─ health/                 # index = các ngày của một nhà (?houseId, chọn nhà ▾) · [dayId] = chấm ngày còn chờ (BR-31, BR-37) hoặc chi tiết ngày
+   │  └─ harvests/               # index = các lần thu của một nhà (?houseId, chọn nhà ▾; ?source=analytics thì ẩn nút sang thống kê) — ghi, sửa, xoá lần thu
+   │                             #   trong HarvestRunSheet (SF-04, G-26); mở từ HouseYieldRow ở Màn B và nút "Các lần thu" của tab Sản lượng
    ├─ components/
    │  ├─ ui/                     # text · button · pressable-scale · text-field · code-input · form-message · card · icon-button · bottom-sheet · split-badge · skeleton · empty-state · loading-overlay · toast
    │  ├─ auth/                   # AuthScreenLayout.tsx (khung chung các màn xác thực, không cuộn; form nhích lên vừa đủ khi bàn phím mở) ·
@@ -147,6 +149,9 @@ mobile/
    │  │                          #   MetricLineChart (đường theo thời gian, vạch ngưỡng, điểm ngoài ngưỡng cam, chạm giữ xem giá trị, nhiều chuỗi, nét đứt dự báo) ·
    │  │                          #   BirdBarChart (cột đôi Ra/Về + đường tỉ lệ về tổ) · ControlChart (độ ẩm + vùng phun sương, quạt, mốc đổi hệ số) · HarvestStackedChart (sản lượng xếp chồng theo loại tổ, như web) · ChartFullscreenModal (xoay ngang)
    │  ├─ health/                 # trạng thái ngày (MF-06): HealthStatusBadge · HealthDayRow · HealthDayCard (thẻ ở Màn B) · HealthRatingForm (hướng dẫn BR-37, 3 mức, bỏ qua) · HealthDayDetail
+   │  ├─ harvest/                # thu hoạch (SF-04): HarvestRunRow (một lần thu: ngày, loại yến, số tổ, kg, nhãn "Chờ xác nhận") ·
+   │  │                          #   HarvestRunSheet (ghi / sửa một lần thu: ngày thu ‹ › không quá hôm nay, bảng 3 loại yến số tổ + gram — khung SettingsTable +
+   │  │                          #   SettingsEditActions như form tạo mới của trang cài đặt; lưu lỗi một phần thì giữ loại đã lưu như web; Xoá lần thu có hỏi lại)
    │  ├─ analytics/              # màn Phân tích: AnalyticsFilterBar (chip tầng, đầu màn) · AnalyticsRangeChips (chip thời gian, dưới hàng tab, dính khi cuộn) · ChoiceChips · KpiGrid/KpiTile · AnalyticsTabs (dính khi cuộn, cùng kiểu chip tầng) · StatRow ·
    │  │                          #   BirdTab (BucketSheet, CorrelationCard) · EnvironmentTab · ControlTab (OverrideHistoryCard, SuggestionCard) · HarvestTab · ReportTab (HouseReportDetail, ReportMetrics theo Zone, CustomReportSheet)
    │  ├─ alert/                  # tab Cảnh báo: SeveritySummary (dải mức = lọc nhanh) · SeverityLabel · AlertFilterChips (Tầng · Loại · Phán quyết) ·
@@ -157,7 +162,7 @@ mobile/
    │  ├─ common/                 # ComingSoonAction (thao tác backend chưa có API, nhãn "Sắp có") · RelayIcon (icon theo loại relay — Trang chủ và tab Trang trại) · BellButton (chuông duy nhất của Trang chủ và tab Trang trại: số = thông báo chưa đọc + cảnh báo chưa xác nhận, mở màn chuông) · ZoomableView (zoom và chạm hiện/ẩn thanh điều khiển trên khung camera)
    │  ├─ farm/                   # tab Trang trại — Màn A: HeaderPicker · OptionSheet (chọn farm/nhà) · FarmSummaryStrip; thẻ nhà dùng lại home/HouseStatusCard (onPress mở Màn B, nút ghim ★ như web);
    │  │                          #   Màn B: HouseCameraPanel (ghim đầu, thu gọn 48 px) · CameraFullscreenModal · CameraControlColumn (cột nút dọc mép phải, nút 40 icon 24 nét rỗng — khung nhỏ và toàn màn dùng chung) · CellularPlaybackPrompt · BirdCountStrip · ZoneTabs ·
-   │  │                          #   HouseYieldRow (ô ngang sản lượng tháng của nhà, dưới dải chim ra/về) · ZoneAlertRow · SensorTileGrid · CollapsibleSection · ActuatorSection · RelayControlSheet · DeviceSection · DeviceDetailSheet ·
+   │  │                          #   HouseYieldRow (ô ngang sản lượng tháng của nhà, dưới dải chim ra/về; chạm mở harvests/ của nhà) · ZoneAlertRow · SensorTileGrid · CollapsibleSection · ActuatorSection · RelayControlSheet · DeviceSection · DeviceDetailSheet ·
    │  │                          #   ZoneSettingsSection (Cài đặt zone xem nhanh, ⋮ mỗi nhóm mở đúng mục trong Cài đặt nhà) · ActionMenuSheet (bảng thao tác của nút ⋮)
    │  │                          #   settings/ (trang Cài đặt nhà, Cài đặt farm, Tạo farm — khung theo ảnh mẫu dạng hoá đơn, xem 3.10): SettingsSection (khung một mục) · SettingsMetaGrid ·
    │  │                          #   SettingsTable · SettingsInput · SettingsActionBar (thanh đen) · SettingsEditActions (Cập nhật hoặc Tạo mới/Huỷ) · SettingsTileButton · ComingSoonAction ·
@@ -194,7 +199,8 @@ mobile/
    │  ├─ analytics/              # useAnalyticsScope (nhà, tầng, khoảng, tab, chỉ số: tham số route → đã nhớ → mặc định) · useAnalyticsKpis ·
    │  │                          #   useBirdDaily · useBirdBuckets · useCorrelations · useEnvSummaries · useForecast · useControlPerformances · useAutonomies ·
    │  │                          #   useControlSuggestion · useZoneRelayOverrides · useHealthReports (theo nhà, theo loại kỳ) · useHouseHealthReport · useCreateHealthReport · useUpdateConclusion
-   │  ├─ harvest/                # useFarmHarvests (đợt thu của farm)
+   │  ├─ harvest/                # useFarmHarvests (đợt thu của farm) · useSaveHarvestRun (tạo / sửa / xoá từng loại yến song song, trả kết quả từng loại) ·
+   │  │                          #   useDeleteHarvestRun (xoá mọi đợt của một lần thu)
    │  ├─ work-order/             # useWorkOrders (phân trang theo meta) · useWorkOrderDetail · useOpenWorkOrderCount (khối Trang chủ) · useStartWorkOrder · useRecordChecklistItem (mục checklist của Work Order phòng ngừa, G-22) · useCompleteWorkOrder (nguyên nhân, việc đã làm, ảnh multipart) — G-21
    │  ├─ maintenance/            # useDueMaintenance (kế hoạch đến hạn, quá hạn) · useMaintenancePlans (phân trang theo meta) · useMaintenancePlanContext (tên nhà, mức đã dùng từ bộ đếm của controller) — G-22
    │  ├─ health/                 # useHealthDays · useHealthDay · useRateHealthDay · useSkipHealthDay · useUpdateRatingNote · usePendingHealthDays (mọi farm, trong hạn 7 ngày) · useUnreadHealthReports
@@ -220,7 +226,7 @@ mobile/
    │                             #   birdCount · socket · navigation · notification · healthReport · harvest — index.ts gom lại
    └─ utils/                     # <chủ đề>.utils.ts: date · number · label · validation · apiError · name · permission (canPerform) ·
                                  #   threshold · device · returnRate · alert · severity · relay · healthDay · houseStatus · camera ·
-                                 #   pagination · harvest (sản lượng tháng của nhà, gộp theo tháng / quý / năm và loại tổ — cách tính như web) · houseOrder (nhà ghim lên đầu) · sort (farm, zone tạo trước đứng đầu theo _id, như web) · sensorTile · farm ·
+                                 #   pagination · harvest (sản lượng tháng của nhà, gộp theo tháng / quý / năm và loại tổ, chỉ lô đã xác nhận — BR-43, cách tính như web; gom lần thu, kiểm dòng loại yến, lập thao tác lưu, canEditHarvestRun) · houseOrder (nhà ghim lên đầu) · sort (farm, zone tạo trước đứng đầu theo _id, như web) · sensorTile · farm ·
                                  #   alertList (sắp xếp, lọc, đếm theo mức, nhắc lại) · alertDetail (tự đóng, nội dung riêng theo loại) · qrCode (nhãn thiết bị, mã tầng) · settingsSection (khoá mục cài đặt, quyền sửa từng mục) · settingsValidation (khoảng hợp lệ của ngưỡng, hệ số, tham số phát hiện, toạ độ — lấy từ api-spec và backend)
 ```
 
@@ -256,7 +262,11 @@ Farm Owner — (tabs)
 │                       (trạng thái, lý do, 4 chỉ số, thời tiết, các đánh giá, thêm ghi chú); "Việc chờ bạn" ở Trang chủ mở ngày chờ cũ nhất;
 │                       kỹ thuật viên chấm như chủ trại trên nhà được giao (BR-31)
 │                còn thiếu: sửa tên, xoá nhà và tầng (backend chưa có API)
-│                harvests (ghi, sửa — SF-04)
+│                ô "Sản lượng tháng" ─► harvests?houseId (SF-04, G-26): các lần thu của nhà (mới nhất trước, lần thu còn lô DRAFT có nhãn "Chờ xác nhận"),
+│                       "Ghi lần thu" ─► sheet: ngày thu (không quá hôm nay), số tổ + gram của yến trắng / hồng / huyết — mỗi loại có số là một đợt,
+│                       gắn vào zone tạo sớm nhất của nhà như web; chủ trại ghi là CONFIRMED ngay, kỹ thuật viên ghi là DRAFT chờ chủ trại xác nhận trên web;
+│                       chạm lần thu ─► sửa số / xoá lần thu (chủ trại mọi lần thu, kỹ thuật viên chỉ lần thu còn DRAFT do mình ghi; ngày không đổi được);
+│                       nút biểu đồ ─► Phân tích › Sản lượng
 ├─ Cảnh báo    alerts: phạm vi ▾ riêng của tab, mặc định tất cả: Tất cả trang trại ─► một farm (Tất cả nhà) ─► một nhà (chip Tầng);
 │                không theo farm/nhà của tab Farm, Phân tích; ⚙ cài đặt thông báo; dải mức = lọc nhanh; Đang hiệu lực · Đã đóng;
 │                Tầng · Loại · Phán quyết (lọc loại không suy luận thì ẩn và không áp Phán quyết); vuốt trái để xác nhận (chip ghi chú nhanh); chạm hàng ─► sheet chi tiết toàn màn

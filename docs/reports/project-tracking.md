@@ -67,7 +67,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-27 | Recommendation rules | Thái Minh Tuấn | In progress | — | Rules, daily evaluation, effect (G-24): backend Bảo (after G-21), web screen replaced with ComingSoon 16/11 (pending `/recommendations` endpoint) | 2–3 |
 | F-28 | Configuration profiles and house stage | Thái Minh Tuấn | In progress | #126, #153; TC-F28-01, 02 | Profile expert web screens done (86cab267); blocking review issues fixed 16/11: confirm dialog, drawer error display, accessibility, color tokens; applying on owner web Nhi (G-24); house stage screens on web and mobile (`HouseStage` type not yet on the clients) | 2 |
 | F-29 | Farm overview and house comparison | Nguyễn Thị Yến Nhi | Planned | — | Overview, comparison, energy, flock trend (G-25): backend Bảo, web Nhi | 3 |
-| F-30 | Harvest cycles and season conclusion (supporting, SF-06) | Nguyễn Thị Yến Nhi | In progress | backend on `feat/g26-harvest-cycles` (Kiệt, for Bảo); TC-F30-02, 03 (Jest) | Web cycle view and yield trend (Nhi), season conclusion screen (Tuấn) (G-26) | 3 |
+| F-30 | Harvest cycles and season conclusion (supporting, SF-06) | Nguyễn Thị Yến Nhi | In progress | backend on `feat/g26-harvest-cycles` (Kiệt, for Bảo); mobile harvest entry (Len); TC-F30-02, 03 (Jest) | Web cycle view and yield trend (Nhi), season conclusion screen (Tuấn) (G-26) | 3 |
 
 Summary: 4 Done, 14 In progress, 12 Planned (F-23…F-30 added with the final scope of Review 2).
 
@@ -135,6 +135,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 
 | Date | Change |
 | --- | --- |
+| 16/11/2026 | G-26 mobile — harvest entry (Len, `feat/g26-harvest-cycles`): `harvests/` screen (runs of one house) + `HarvestRunSheet` (record / edit / delete a run: date, nests + grams per nest type, one batch per type via `POST`/`PUT`/`DELETE /harvests`); technician batches DRAFT, edits only its own DRAFT runs; yield row and analytics count confirmed batches only (BR-43) (HARVEST-FR-001, 005, 006) |
 | 16/11/2026 | G-26 web — season conclusion screen (Tuấn, `feat/g26-harvest-cycles`): `HarvestCyclesSection` + `CycleConclusionDrawer` + tab on `DomainExpertReportsPage`; `useHarvestCycles` / `useSubmitCycleConclusion`; i18n VI/EN (EXPERT-FR-020) |
 | 16/11/2026 | G-24 owner web (Nhi, `feat/g24-config-profiles`): "House stage" card on the house page — the Farm Owner switches between attracting and occupied after a confirmation that states the BR-46 effect (`PUT /farms/houses/{houseId}/stage`); "Apply profile" on the farm row opens a popup to pick one approved profile and several houses (`POST /profiles/{id}/apply`) and reports the zones updated. Recommendation list waits for the `/recommendations` backend |
 | 16/11/2026 | G-24 web fixes (Tuấn, `feat/g24-config-profiles`): recommendation-rules screen replaced with ComingSoon (backend `/recommendations` pending); profile screen blocking issues resolved — ConfirmModal before approve/archive, error display inside ProfileFormDrawer, role/tabIndex/aria-expanded/onKeyDown on expand area, aria-pressed on filters, aria-expanded/aria-label on GroupToggle, design token colors (statusYellow, success, warmGray, infoBlue) replacing raw Tailwind classes |
