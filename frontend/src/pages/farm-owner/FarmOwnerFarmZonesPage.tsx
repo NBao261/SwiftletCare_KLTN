@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CpuIcon, MapPinIcon, PlusIcon, SquaresFourIcon, UserIcon, UsersThreeIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState } from '@/components/ui'
-import StableHeight from '@/components/ui/StableHeight'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
@@ -33,9 +32,6 @@ import HeaderActions from '@/components/layouts/HeaderActions'
 import { FARMS_PATH, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
 import { useZoneStore } from '@/stores/zoneStore'
-
-/** Khung nội dung cao CỨNG (px) cho mọi tab — tab Tổng quan (cột phải ~880px) là cao nhất, tải lại hay đổi tab trang không đổi chiều cao */
-const TAB_MIN_HEIGHT = 880
 
 type Tab = 'overview' | 'devices' | 'members'
 
@@ -186,52 +182,61 @@ export default function FarmOwnerFarmZonesPage() {
         })}
       </div>
 
-      {/* Tổng quan, Thiết bị giữ chiều cao để đổi tab không giật; Thành viên farm (1 nhóm, bảng 5 dòng) cao đúng nội dung */}
-      <StableHeight key={tab === 'members' ? 'members' : 'house'} minHeight={tab === 'members' ? 0 : TAB_MIN_HEIGHT}>
+      {/* Mỗi tab cao đúng nội dung, không chừa khoảng trống dưới chân trang */}
+      <div>
         {tab === 'overview' ? (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <FarmFrame
-              title={t('house.zoneList', { n: node.zones.length })}
-              description={t('house.zoneListDesc')}
-              action={isFarmOwner && (
-                <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowAddZone(true)}>
-                  <PlusIcon size={12} weight="bold" />
-                  {t('house.addZone')}
-                </Button>
-              )}
-            >
-              {node.zones.length === 0 ? (
-                <EmptyState title={t('house.noZone')} description={t('house.noZoneDesc')} />
-              ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {node.zones.map(zone => (
-                    <ZoneCard
-                      key={zone.zone._id}
-                      node={zone}
-                      loadingMetrics={metricsLoading}
-                      onOpen={() => navigate(`/farms/${farmId}/houses/${houseId}/zones/${zone.zone._id}`)}
-                    />
-                  ))}
-                </div>
-              )}
-              <AiAdviceCard houseId={house._id} camera={camera} />
-            </FarmFrame>
+            <div className="flex min-w-0 flex-col gap-6">
+              {/* flex-1: khung Zone giãn cho đáy cột trái thẳng đáy cột phải */}
+              <FarmFrame
+                className="flex-1"
+                title={t('house.zoneList', { n: node.zones.length })}
+                description={t('house.zoneListDesc')}
+                action={isFarmOwner && (
+                  <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowAddZone(true)}>
+                    <PlusIcon size={12} weight="bold" />
+                    {t('house.addZone')}
+                  </Button>
+                )}
+              >
+                {node.zones.length === 0 ? (
+                  <EmptyState title={t('house.noZone')} description={t('house.noZoneDesc')} />
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {node.zones.map(zone => (
+                      <ZoneCard
+                        key={zone.zone._id}
+                        node={zone}
+                        loadingMetrics={metricsLoading}
+                        onOpen={() => navigate(`/farms/${farmId}/houses/${houseId}/zones/${zone.zone._id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+                <AiAdviceCard houseId={house._id} camera={camera} />
+              </FarmFrame>
 
-            <aside className="flex flex-col gap-6">
-              <HouseStageCard house={house} canEdit={isFarmOwner} />
+              {/* Cài đặt đàn chim của cả nhà, đặt dưới danh sách Zone (cột trái còn trống) để cột phải không quá dài */}
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <HouseStageCard house={house} canEdit={isFarmOwner} />
+                {/* EXPERT-FR-008 — mức giảm tỷ lệ chim về của nhà do chuyên gia đặt, chủ nhà yến chỉ xem */}
+                <FarmFrame title={t('tuning.birdTitle')} description={t('tuning.birdDesc')}>
+                  <div className="rounded-2xl border border-warmGray/15 bg-white p-4">
+                    <p className="label-caption">{t('tuning.birdDrop')}</p>
+                    <p className={cn('mt-2 text-2xl font-extrabold leading-none tracking-tight', returnRateDrop === undefined ? 'text-warmGray' : 'text-charcoal')}>
+                      {returnRateDrop === undefined ? NO_VALUE : `${returnRateDrop}%`}
+                    </p>
+                    <p className="mt-1.5 text-[11px] font-medium text-warmGray">{t('tuning.birdDropHint')}</p>
+                  </div>
+                </FarmFrame>
+              </div>
+            </div>
+
+            {/* Khung cuối giãn khi cột trái cao hơn, 2 cột luôn bằng đáy */}
+            <aside className="flex flex-col gap-6 [&>*:last-child]:flex-1">
               {canViewHarvest && <HouseProductionCard node={node} recent={node.recent} nextHarvestAt={extras?.nextHarvest[house._id]} />}
               <AttentionDevicesCard counts={node.counts} problems={problems} zoneNameById={zoneNameById} onSelect={setSelected} />
               {canViewOpsMetrics && <HouseOpsMetricsCard farmId={farm._id} houseId={house._id} />}
-              {/* EXPERT-FR-008 — mức giảm tỷ lệ chim về của nhà do chuyên gia đặt, chủ nhà yến chỉ xem */}
-              <FarmFrame title={t('tuning.birdTitle')} description={t('tuning.birdDesc')}>
-                <div className="rounded-2xl border border-warmGray/15 bg-white p-4">
-                  <p className="label-caption">{t('tuning.birdDrop')}</p>
-                  <p className={cn('mt-2 text-2xl font-extrabold leading-none tracking-tight', returnRateDrop === undefined ? 'text-warmGray' : 'text-charcoal')}>
-                    {returnRateDrop === undefined ? NO_VALUE : `${returnRateDrop}%`}
-                  </p>
-                  <p className="mt-1.5 text-[11px] font-medium text-warmGray">{t('tuning.birdDropHint')}</p>
-                </div>
-              </FarmFrame>
             </aside>
           </div>
         ) : tab === 'members' ? (
@@ -241,7 +246,7 @@ export default function FarmOwnerFarmZonesPage() {
             <DeviceListTable devices={devices} zoneNameById={zoneNameById} onSelect={setSelected} />
           </FarmFrame>
         )}
-      </StableHeight>
+      </div>
 
       <AddZoneModal open={showAddZone} onClose={() => setShowAddZone(false)} houseId={house._id} />
       {editMode && <StructureEditModal kind="house" mode={editMode} name={house.name} deviceCount={node.counts.total} existingNames={structure.houses.map(item => item.house.name)} onClose={() => setEditMode(null)} />}

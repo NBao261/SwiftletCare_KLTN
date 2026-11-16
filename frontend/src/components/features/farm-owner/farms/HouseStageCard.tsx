@@ -60,7 +60,8 @@ export default function HouseStageCard({ house, canEdit }: { house: House; canEd
           )
         })}
       </div>
-      <p className="mt-2 text-xs italic text-warmGray">{lastChange ? t('stage.lastChange', { date: date(lastChange) }) : t('stage.neverChanged')}</p>
+      {/* mt-auto: dòng cuối nằm sát đáy khi thẻ cao bằng thẻ bên cạnh */}
+      <p className="mt-auto text-xs italic text-warmGray">{lastChange ? t('stage.lastChange', { date: date(lastChange) }) : t('stage.neverChanged')}</p>
 
       <ConfirmModal
         open={!!target}
