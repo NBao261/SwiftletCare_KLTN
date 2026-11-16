@@ -6,7 +6,7 @@ import type { RecommendationRuleEffect } from '@/types'
 // EXPERT-FR-019 — mỗi luật: số khuyến nghị đã mở, đã chấp nhận, đã đo hiệu quả, có cải thiện
 export default function RecommendationEffectPanel({ effects }: { effects: RecommendationRuleEffect[] }) {
   const { t, num } = useTranslation(recommendationsDict)
-  const countCell = (value: number) => <span className="text-sm tabular-nums text-charcoal">{num(value)}</span>
+  const countCell = (value: number) => <span className="text-small tabular-nums text-charcoal">{num(value)}</span>
 
   const columns: DataTableColumn<RecommendationRuleEffect>[] = [
     {
@@ -14,8 +14,8 @@ export default function RecommendationEffectPanel({ effects }: { effects: Recomm
       header: t('col.rule'),
       render: row => (
         <div className="flex min-w-0 flex-col gap-1">
-          <span className="truncate text-sm font-semibold text-charcoal">{row.name}</span>
-          <span className="flex flex-wrap items-center gap-1.5 text-xs text-warmGray">
+          <span className="truncate text-small font-semibold text-charcoal">{row.name}</span>
+          <span className="flex flex-wrap items-center gap-1.5 text-caption text-warmGray">
             {t(`indicator.${row.indicator}`)}
             {!row.active && <Badge tone="neutral">{t('effects.off')}</Badge>}
           </span>
@@ -29,7 +29,7 @@ export default function RecommendationEffectPanel({ effects }: { effects: Recomm
       key: 'improved',
       header: t('effects.improved'),
       align: 'right',
-      render: row => <span className="text-sm font-semibold tabular-nums text-accent-800">{num(row.improved)}</span>,
+      render: row => <span className="text-small font-semibold tabular-nums text-accent-800">{num(row.improved)}</span>,
     },
   ]
 

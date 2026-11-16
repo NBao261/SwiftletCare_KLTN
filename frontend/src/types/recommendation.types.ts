@@ -56,6 +56,15 @@ export interface Recommendation {
   house_id: string;
   // Ở danh sách backend kèm tên và hành động của luật
   rule_id: { _id: string; name: string; action: RecommendationAction } | string;
+  // Luật lúc khuyến nghị mở; chấp nhận làm theo bản này (khuyến nghị mở trước 17/11/2026 không có)
+  rule_snapshot?: {
+    name: string;
+    indicator: RecommendationIndicator;
+    comparison: RecommendationComparison;
+    value: number;
+    window_days: number;
+    action: RecommendationAction;
+  };
   status: RecommendationStatus;
   evidence: {
     indicator: RecommendationIndicator;
@@ -69,6 +78,7 @@ export interface Recommendation {
   raised_for: string;
   decided_by?: string;
   decided_at?: string;
+  expired_at?: string;
   reject_reason?: string;
   work_order_id?: string;
   review_ids?: string[];

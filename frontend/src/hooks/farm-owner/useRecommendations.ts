@@ -17,18 +17,23 @@ export function useRecommendations(query: RecommendationListQuery, enabled: bool
   );
 }
 
-// EXPERT-FR-018 — chấp nhận mở Work Order hoặc mục duyệt, nên làm mới cả phiếu công việc
+// EXPERT-FR-018 — xong hay lỗi (409: đã quyết định nơi khác hoặc vừa hết hạn) đều tải lại danh sách và phiếu công việc
 export function useRecommendationActions() {
   const queryClient = useQueryClient();
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: [RECOMMENDATIONS_KEY] });
     void queryClient.invalidateQueries({ queryKey: ['work-orders'] });
   };
+  // Chấp nhận đổi tham số sửa ngưỡng hoặc hệ số mờ của mọi zone trong nhà
+  const refreshZones = () => {
+    void queryClient.invalidateQueries({ queryKey: ['zones'] });
+    void queryClient.invalidateQueries({ queryKey: ['zone'] });
+  };
   return {
-    accept: useMutation({ mutationFn: (id: string) => recommendationsApi.accept(id), onSuccess: refresh }),
+    accept: useMutation({ mutationFn: (id: string) => recommendationsApi.accept(id), onSuccess: refreshZones, onSettled: refresh }),
     reject: useMutation({
       mutationFn: ({ id, reason }: { id: string; reason: string }) => recommendationsApi.reject(id, reason),
-      onSuccess: refresh,
+      onSettled: refresh,
     }),
   };
 }

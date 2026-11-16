@@ -9,7 +9,7 @@ import { useToastStore } from '@/stores/toastStore'
 import type { FuzzyNumericKey, RecommendationIndicator, RecommendationRule } from '@/types'
 import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation'
 import {
-  RULE_NAME_MAX_LENGTH, RULE_SOURCE_MAX_LENGTH, RULE_VALUE_LIMITS, draftOfRule, ruleInputOf, validateRuleDraft, type RuleDraft,
+  RULE_NAME_MAX_LENGTH, RULE_SOURCE_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULE_VALUE_LIMITS, draftOfRule, ruleInputOf, validateRuleDraft, type RuleDraft,
 } from '@/validations/common/recommendationRule.validation'
 
 const INDICATORS = Object.keys(RULE_VALUE_LIMITS) as RecommendationIndicator[]
@@ -135,7 +135,7 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
               onChange={event => set('window_days', event.target.value)}
               error={errorText('window_days')}
             />
-            <p className="text-xs text-warmGray">{t('form.windowHint')}</p>
+            <p className="text-caption text-warmGray">{t('form.windowHint')}</p>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -156,6 +156,7 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
               label={t('form.title')}
               required
               placeholder={t('form.titlePlaceholder')}
+              maxLength={RULE_TITLE_MAX_LENGTH}
               value={draft.title}
               onChange={event => set('title', event.target.value)}
               error={errorText('title')}
@@ -188,7 +189,7 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
                     ...paramKeys.map(key => ({ value: key, label: t(`param.${key}` as RecommendationsKey) })),
                   ]}
                 />
-                {errorText('key') && <span className="text-xs text-alertRed">{errorText('key')}</span>}
+                {errorText('key') && <span className="text-caption text-alertRed">{errorText('key')}</span>}
               </div>
               <Input
                 id="rule-action-value"
@@ -216,7 +217,7 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
             error={errorText('source')}
           />
 
-          <label className="flex items-center gap-3 text-sm text-charcoal">
+          <label className="flex items-center gap-3 text-small text-charcoal">
             <Toggle checked={active} onChange={setActive} aria-label={t('form.active')} />
             {t('form.active')}
           </label>

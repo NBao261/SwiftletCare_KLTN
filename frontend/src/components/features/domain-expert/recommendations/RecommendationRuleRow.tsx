@@ -27,10 +27,10 @@ export default function RecommendationRuleRow({ rule, disabled, onToggle, onEdit
         aria-label={t(rule.active ? 'rules.turnOff' : 'rules.turnOn')}
       />
       <div className="min-w-0 flex-1 space-y-1">
-        <p className={cn('text-sm font-semibold', rule.active ? 'text-charcoal' : 'text-warmGray')}>{rule.name}</p>
-        <p className="text-sm text-charcoal">{text.condition(rule)}</p>
-        <p className="text-sm text-graphite">{text.action(rule.action)}</p>
-        <p className="break-words text-xs italic text-warmGray">{t('rules.source', { source: rule.source })}</p>
+        <p className={cn('text-small font-semibold', rule.active ? 'text-charcoal' : 'text-warmGray')}>{rule.name}</p>
+        <p className="text-small text-charcoal">{text.condition(rule)}</p>
+        <p className="text-small text-graphite">{text.action(rule.action)}</p>
+        <p className="break-words text-caption italic text-warmGray">{t('rules.source', { source: rule.source })}</p>
       </div>
       <Button variant="secondary" size="sm" onClick={onEdit} disabled={disabled} className="shrink-0">
         <Pencil className="h-3.5 w-3.5" aria-hidden />

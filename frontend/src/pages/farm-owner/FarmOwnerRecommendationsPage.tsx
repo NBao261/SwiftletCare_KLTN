@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import RecommendationDetailDrawer from '@/components/features/farm-owner/recommendations/RecommendationDetailDrawer';
-import RecommendationTable, { ruleOf } from '@/components/features/farm-owner/recommendations/RecommendationTable';
+import RecommendationTable from '@/components/features/farm-owner/recommendations/RecommendationTable';
+import { ruleOf } from '@/components/features/farm-owner/recommendations/recommendations.constants';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
 import { recommendationsDict } from '@/constants/recommendations.i18n';
@@ -52,6 +53,11 @@ export default function FarmOwnerRecommendationsPage(): JSX.Element {
     { ...scopeQuery, ...(statusFilter !== 'all' && { status: statusFilter }), page, limit: RECOMMENDATIONS_PAGE_SIZE },
     hasScope,
   );
+  // Quyết định xong làm trang cuối hết mục: lùi về trang cuối còn mục, để không kẹt ở khung rỗng
+  const lastPage = Math.max(1, Math.ceil(list.total / RECOMMENDATIONS_PAGE_SIZE));
+  useEffect(() => {
+    if (!list.isLoading && !list.isError && page > lastPage) setPageState({ key: filterKey, page: lastPage });
+  }, [list.isLoading, list.isError, page, lastPage, filterKey]);
 
   const [selected, setSelected] = useState<Recommendation | null>(null);
   const [pending, setPending] = useState<{ action: 'accept' | 'reject'; recommendation: Recommendation } | null>(null);
@@ -62,7 +68,16 @@ export default function FarmOwnerRecommendationsPage(): JSX.Element {
       setPending(null);
       setSelected(null);
     },
-    onError: (actionError: unknown) => push(apiErrorMessage(actionError), 'error'),
+    onError: (actionError: unknown) => {
+      // 409: khuyến nghị đã được quyết định nơi khác hoặc vừa hết hạn; danh sách đã tải lại nên đóng hộp thoại
+      if ((actionError as { response?: { status?: number } }).response?.status === 409) {
+        push(t('decide.stale'), 'error');
+        setPending(null);
+        setSelected(null);
+        return;
+      }
+      push(apiErrorMessage(actionError), 'error');
+    },
   });
 
   // Câu xác nhận nói đúng việc hệ thống sẽ làm khi chấp nhận

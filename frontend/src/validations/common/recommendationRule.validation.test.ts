@@ -43,5 +43,11 @@ describe('validateRuleDraft', () => {
     expect(validateRuleDraft({ ...change, group: 'thresholds', key: 'humidity_min', actionValue: '101' }).actionValue).toBe('range');
     expect(validateRuleDraft({ ...change, group: 'fuzzy', key: 'fuzzy_window_sec', actionValue: '30' }).actionValue).toBe('range');
     expect(validateRuleDraft({ ...change, group: 'fuzzy', key: 'fuzzy_window_sec', actionValue: '120' })).toEqual({});
+    expect(validateRuleDraft({ ...change, group: 'fuzzy', key: 'fuzzy_window_sec', actionValue: '120.5' }).actionValue).toBe('range');
+  });
+
+  it('tiêu đề phiếu tối đa 200 ký tự, như backend', () => {
+    expect(validateRuleDraft({ ...VALID, title: 'x'.repeat(201) }).title).toBe('tooLong');
+    expect(validateRuleDraft({ ...VALID, title: 'x'.repeat(200) }).title).toBeUndefined();
   });
 });

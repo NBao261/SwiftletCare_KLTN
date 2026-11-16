@@ -95,7 +95,7 @@ export default function DomainExpertRecommendationRulesPage() {
   if (!effects.isLoading && !effects.isError) {
     effectsBody = (
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-warmGray">{t('effects.subtitle')}</p>
+        <p className="text-small text-warmGray">{t('effects.subtitle')}</p>
         <RecommendationEffectPanel effects={effects.data ?? []} />
       </div>
     )

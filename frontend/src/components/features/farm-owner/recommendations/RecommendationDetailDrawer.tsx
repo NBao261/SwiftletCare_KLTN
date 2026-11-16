@@ -3,7 +3,7 @@ import { Chart } from 'react-chartjs-2';
 import { BarController, Chart as ChartJS, LineController, type ChartData, type ChartOptions } from 'chart.js';
 
 import { CHART_LEGEND, axisTitle } from '@/components/features/farm-owner/analytics/analytics.constants';
-import { RECOMMENDATION_STATUS_TONE, ruleOf } from '@/components/features/farm-owner/recommendations/RecommendationTable';
+import { RECOMMENDATION_STATUS_TONE, ruleOf } from '@/components/features/farm-owner/recommendations/recommendations.constants';
 import { Badge, Button } from '@/components/ui';
 import { Drawer } from '@/components/ui/Drawer';
 import { NO_VALUE } from '@/constants/display';
@@ -22,8 +22,8 @@ const dayLabel = (day: string) => day.split('-').slice(1).reverse().join('/');
 function DetailRow({ label, children }: { label: string; children: ReactNode }): JSX.Element {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-xs text-warmGray">{label}</dt>
-      <dd className="break-words text-sm text-charcoal">{children}</dd>
+      <dt className="text-caption text-warmGray">{label}</dt>
+      <dd className="break-words text-small text-charcoal">{children}</dd>
     </div>
   );
 }
@@ -31,7 +31,7 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }):
 // Có cải thiện, chưa cải thiện, hoặc thiếu số để so sánh
 function EffectVerdict({ improved }: { improved: boolean | null }): JSX.Element {
   const { t } = useTranslation(recommendationsDict);
-  if (improved === null) return <p className="text-sm italic text-warmGray">{t('detail.effectMissing')}</p>;
+  if (improved === null) return <p className="text-small italic text-warmGray">{t('detail.effectMissing')}</p>;
   return <Badge tone={improved ? 'positive' : 'neutral'}>{t(improved ? 'detail.improved' : 'detail.notImproved')}</Badge>;
 }
 
@@ -81,7 +81,7 @@ export default function RecommendationDetailDrawer({
           <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={RECOMMENDATION_STATUS_TONE[recommendation.status]}>{t(`status.${recommendation.status}`)}</Badge>
-              <span className="text-xs text-warmGray">{t('detail.raisedFor', { date: date(recommendation.raised_for) })}</span>
+              <span className="text-caption text-warmGray">{t('detail.raisedFor', { date: date(recommendation.raised_for) })}</span>
             </div>
 
             <dl className="flex flex-col gap-3">
@@ -89,11 +89,11 @@ export default function RecommendationDetailDrawer({
               <DetailRow label={t('detail.condition')}>{text.condition(evidence)}</DetailRow>
               <DetailRow label={t('detail.action')}>{rule ? text.action(rule.action) : NO_VALUE}</DetailRow>
             </dl>
-            {rule?.action.type === 'PARAMETER_CHANGE' && isOpen && <p className="text-xs text-warmGray">{t('detail.paramReview')}</p>}
+            {rule?.action.type === 'PARAMETER_CHANGE' && isOpen && <p className="text-caption text-warmGray">{t('detail.paramReview')}</p>}
 
             <section className="flex flex-col gap-2">
               <h3 className="text-h3 text-charcoal">{t('detail.evidence')}</h3>
-              <p className="text-xs text-warmGray">{t('detail.evidenceHint')}</p>
+              <p className="text-caption text-warmGray">{t('detail.evidenceHint')}</p>
               <div className="h-56">
                 <Chart type="bar" data={chartData} options={chartOptions} />
               </div>
@@ -102,11 +102,11 @@ export default function RecommendationDetailDrawer({
             {recommendation.decided_at && (
               <section className="flex flex-col gap-2">
                 <h3 className="text-h3 text-charcoal">{t('detail.decision')}</h3>
-                <p className="text-sm text-charcoal">{t('detail.decidedAt', { date: dateTime(recommendation.decided_at) })}</p>
+                <p className="text-small text-charcoal">{t('detail.decidedAt', { date: dateTime(recommendation.decided_at) })}</p>
                 {recommendation.reject_reason && <DetailRow label={t('detail.rejectReason')}>{recommendation.reject_reason}</DetailRow>}
-                {recommendation.work_order_id && <p className="text-sm text-charcoal">{t('detail.workOrder')}</p>}
+                {recommendation.work_order_id && <p className="text-small text-charcoal">{t('detail.workOrder')}</p>}
                 {Boolean(recommendation.review_ids?.length) && (
-                  <p className="text-sm text-charcoal">{t('detail.reviews', { n: recommendation.review_ids?.length ?? 0 })}</p>
+                  <p className="text-small text-charcoal">{t('detail.reviews', { n: recommendation.review_ids?.length ?? 0 })}</p>
                 )}
               </section>
             )}
@@ -123,7 +123,7 @@ export default function RecommendationDetailDrawer({
               </section>
             )}
 
-            {isOpen && <p className="text-xs italic text-warmGray">{t('detail.expiresHint')}</p>}
+            {isOpen && <p className="text-caption italic text-warmGray">{t('detail.expiresHint')}</p>}
           </div>
 
           {canDecide && isOpen && (

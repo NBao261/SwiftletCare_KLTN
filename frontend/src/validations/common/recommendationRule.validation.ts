@@ -14,6 +14,8 @@ export const RULE_WINDOW_MIN_DAYS = 1;
 export const RULE_WINDOW_MAX_DAYS = 30;
 export const RULE_NAME_MAX_LENGTH = 50;
 export const RULE_SOURCE_MAX_LENGTH = 500;
+// Tiêu đề Work Order của luật, như route /work-orders (RULE_WORK_ORDER_TITLE_MAX)
+export const RULE_TITLE_MAX_LENGTH = 200;
 // Lý do từ chối khuyến nghị (api-spec reject.reason)
 export const REJECT_REASON_MAX_LENGTH = 1000;
 
@@ -52,18 +54,21 @@ export function validateRuleDraft(draft: RuleDraft): RuleDraftErrors {
   if (!draft.source.trim()) errors.source = 'required';
   else if (draft.source.trim().length > RULE_SOURCE_MAX_LENGTH) errors.source = 'tooLong';
   if (draft.actionType === 'WORK_ORDER' && !draft.title.trim()) errors.title = 'required';
+  else if (draft.actionType === 'WORK_ORDER' && draft.title.trim().length > RULE_TITLE_MAX_LENGTH) errors.title = 'tooLong';
   if (draft.actionType === 'PARAMETER_CHANGE') {
     const limits: Record<string, { min: number; max: number }> = draft.group === 'thresholds' ? THRESHOLD_LIMITS : FUZZY_TUNING_LIMITS;
     if (!limits[draft.key]) errors.key = 'required';
     else if (draft.actionValue.trim() === '') errors.actionValue = 'required';
     else if (outOfRange(toNumber(draft.actionValue), limits[draft.key])) errors.actionValue = 'range';
+    // Cửa sổ điều khiển là số giây nguyên, như assertValidFuzzyTuning
+    else if (draft.key === 'fuzzy_window_sec' && !Number.isInteger(toNumber(draft.actionValue))) errors.actionValue = 'range';
   }
   return errors;
 }
 
 // Luật đang có → giá trị ô form
 export function draftOfRule(rule: RecommendationRule): RuleDraft {
-  const action = rule.action
+  const action = rule.action;
   return {
     name: rule.name,
     indicator: rule.indicator,
@@ -76,7 +81,7 @@ export function draftOfRule(rule: RecommendationRule): RuleDraft {
     key: action.type === 'PARAMETER_CHANGE' ? action.key : '',
     actionValue: action.type === 'PARAMETER_CHANGE' ? String(action.value) : '',
     source: rule.source,
-  }
+  };
 }
 
 // Ô form đã kiểm → thân request (api-spec RecommendationRuleInput)
@@ -84,15 +89,15 @@ export function ruleInputOf(draft: RuleDraft, active: boolean): RecommendationRu
   const base = {
     name: draft.name.trim(), indicator: draft.indicator, comparison: draft.comparison, value: Number(draft.value),
     window_days: Number(draft.window_days), source: draft.source.trim(), active,
-  }
-  if (draft.actionType === 'WORK_ORDER') return { ...base, action: { type: 'WORK_ORDER', title: draft.title.trim() } }
+  };
+  if (draft.actionType === 'WORK_ORDER') return { ...base, action: { type: 'WORK_ORDER', title: draft.title.trim() } };
   if (draft.group === 'thresholds') {
-    return { ...base, action: { type: 'PARAMETER_CHANGE', group: 'thresholds', key: draft.key as keyof Thresholds, value: Number(draft.actionValue) } }
+    return { ...base, action: { type: 'PARAMETER_CHANGE', group: 'thresholds', key: draft.key as keyof Thresholds, value: Number(draft.actionValue) } };
   }
-  return { ...base, action: { type: 'PARAMETER_CHANGE', group: 'fuzzy', key: draft.key as FuzzyNumericKey, value: Number(draft.actionValue) } }
+  return { ...base, action: { type: 'PARAMETER_CHANGE', group: 'fuzzy', key: draft.key as FuzzyNumericKey, value: Number(draft.actionValue) } };
 }
 
 // Bật/tắt gửi lại cả luật (PUT thay toàn bộ) với `active` mới
 export function toggledRuleInput(rule: RecommendationRule): RecommendationRuleInput {
-  return ruleInputOf(draftOfRule(rule), !rule.active)
+  return ruleInputOf(draftOfRule(rule), !rule.active);
 }

@@ -1,28 +1,16 @@
 import { useMemo } from 'react';
-import { Badge, Button, type BadgeTone, type DataTableColumn } from '@/components/ui';
+import { RECOMMENDATION_STATUS_TONE, ruleOf } from '@/components/features/farm-owner/recommendations/recommendations.constants';
+import { Badge, Button, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { NO_VALUE } from '@/constants/display';
 import { recommendationsDict } from '@/constants/recommendations.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { RECOMMENDATIONS_PAGE_SIZE } from '@/hooks/farm-owner/useRecommendations';
 import { useRecommendationText } from '@/hooks/shared/useRecommendationText';
-import type { Recommendation, RecommendationAction, RecommendationStatus } from '@/types';
+import type { Recommendation } from '@/types';
 
 // Cùng chiều cao dòng bảng kế hoạch bảo trì
 const ROW_HEIGHT = 72;
-
-export const RECOMMENDATION_STATUS_TONE: Record<RecommendationStatus, BadgeTone> = {
-  OPEN: 'warning',
-  ACCEPTED: 'info',
-  REJECTED: 'neutral',
-  EXPIRED: 'neutral',
-  MEASURED: 'positive',
-};
-
-// Ở danh sách backend kèm tên và hành động của luật; chỉ có id thì không hiện được
-export function ruleOf(recommendation: Recommendation): { name: string; action: RecommendationAction } | null {
-  return typeof recommendation.rule_id === 'string' ? null : recommendation.rule_id;
-}
 
 interface RecommendationTableProps {
   recommendations: Recommendation[];
@@ -46,21 +34,21 @@ export default function RecommendationTable({
       key: 'house',
       header: t('col.house'),
       className: 'w-[16%]',
-      render: row => <span className="block truncate text-sm text-charcoal">{houseNames.get(row.house_id) ?? NO_VALUE}</span>,
+      render: row => <span className="block truncate text-small text-charcoal">{houseNames.get(row.house_id) ?? NO_VALUE}</span>,
     },
     {
       key: 'rule',
       header: t('col.rule'),
       className: 'w-[22%]',
-      render: row => <span className="block truncate text-sm font-semibold text-charcoal">{ruleOf(row)?.name ?? NO_VALUE}</span>,
+      render: row => <span className="block truncate text-small font-semibold text-charcoal">{ruleOf(row)?.name ?? NO_VALUE}</span>,
     },
-    { key: 'raisedFor', header: t('col.raisedFor'), className: 'w-[12%] whitespace-nowrap', render: row => <span className="text-sm text-charcoal">{date(row.raised_for)}</span> },
+    { key: 'raisedFor', header: t('col.raisedFor'), className: 'w-[12%] whitespace-nowrap', render: row => <span className="text-small text-charcoal">{date(row.raised_for)}</span> },
     {
       key: 'action',
       header: t('col.action'),
       render: row => {
         const rule = ruleOf(row);
-        return <span className="line-clamp-2 text-sm text-charcoal">{rule ? text.action(rule.action) : NO_VALUE}</span>;
+        return <span className="line-clamp-2 text-small text-charcoal">{rule ? text.action(rule.action) : NO_VALUE}</span>;
       },
     },
     {
@@ -73,12 +61,13 @@ export default function RecommendationTable({
       key: 'open',
       header: '',
       align: 'center',
-      className: 'w-44',
+      className: 'w-48',
       render: row => {
         const decide = canDecide && row.status === 'OPEN';
         return (
           <Button
             size="sm"
+            className="whitespace-nowrap"
             variant={decide ? 'primary' : 'secondary'}
             onClick={event => {
               event.stopPropagation();
