@@ -13,7 +13,6 @@ import { formatVietnamDayMonth, getVietnamDate } from '@/utils/date.utils'
 import { summarizeHouseMonthYield } from '@/utils/harvest.utils'
 import { formatDecimal } from '@/utils/number.utils'
 import { t } from '@/utils/i18n.utils'
-import { buildHouseReturnTo } from '@/utils/navigation.utils'
 
 // Như web: số kg hiện 2 chữ số lẻ (KILOGRAM_DIGITS)
 const KILOGRAM_DIGITS = 2
@@ -24,7 +23,7 @@ const CLOCK_INTERVAL_MS = 60 * 1000
 
 interface HouseYieldRowProps {
   farmId: string
-  // Nhà đang xem: chạm ô thì mở tab Sản lượng của nhà này
+  // Nhà đang xem: chạm ô thì mở các lần thu của nhà này
   houseId: string
   // Các zone của nhà: đợt thu gắn zone nên cộng theo zone
   zoneIds: string[]
@@ -61,12 +60,12 @@ export function HouseYieldRow({ farmId, houseId, zoneIds }: HouseYieldRowProps) 
     : t('Chưa có đợt thu nào trong tháng')
 
   return (
-    // Mở tab Sản lượng của Phân tích, đúng nhà này (ghi và sửa đợt thu vẫn là bước thu hoạch của G-16)
+    // Mở các lần thu của nhà này (ghi, sửa lần thu — SF-04); thống kê theo tháng / quý / năm ở nút biểu đồ của màn đó
     <Card
       style={styles.row}
-      onPress={() => router.navigate({ pathname: '/(tabs)/analytics', params: { houseId, tab: 'harvest', returnTo: buildHouseReturnTo(houseId) } })}
+      onPress={() => router.push({ pathname: '/harvests', params: { houseId } })}
       accessibilityLabel={`${title}: ${valueText}, ${detailText}`}
-      accessibilityHint={t('Mở thống kê thu hoạch')}
+      accessibilityHint={t('Mở các lần thu')}
     >
       <PackageIcon size={20} color={palette.text} />
       <View style={styles.texts}>

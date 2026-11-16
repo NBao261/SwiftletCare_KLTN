@@ -1,15 +1,16 @@
-// DomainExpertReportsPage — Báo cáo & Kết luận, Ngày đánh giá lệch & Mức chỉ số (EXPERT-FR-005/006, EXPERT-FR-022, BR-28)
+// DomainExpertReportsPage — Báo cáo & Kết luận, Ngày đánh giá lệch & Mức chỉ số, Kết luận mùa vụ (EXPERT-FR-005/006, EXPERT-FR-020/022, BR-28)
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Scale } from 'lucide-react';
+import { FileText, Scale, Wheat } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { t as i18nT } from '@/i18n';
 import DisagreementsSection from '@/components/common/DisagreementsSection';
 import HealthReportSection from '@/components/common/HealthReportSection';
+import HarvestCyclesSection from '@/components/features/domain-expert/harvest/HarvestCyclesSection';
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils';
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements';
 import { useHouses } from '@/hooks/shared/useFarms';
 
-type ReportsPageTab = 'reports' | 'disagreements';
+type ReportsPageTab = 'reports' | 'disagreements' | 'harvest-cycles';
 
 export default function DomainExpertReportsPage() {
   const { selectedFarmId, selectedFarmName, selectedHouseId } = useZoneStore();
@@ -17,8 +18,11 @@ export default function DomainExpertReportsPage() {
   const house = farmHouses.find(item => item._id === selectedHouseId);
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const rawTab = searchParams.get('tab');
   const activeTab: ReportsPageTab =
-    searchParams.get('tab') === 'disagreements' ? 'disagreements' : 'reports';
+    rawTab === 'disagreements' ? 'disagreements'
+    : rawTab === 'harvest-cycles' ? 'harvest-cycles'
+    : 'reports';
 
   const setTab = (tab: ReportsPageTab) => {
     setSearchParams(
@@ -90,11 +94,30 @@ export default function DomainExpertReportsPage() {
                 </span>
               )}
             </button>
+
+            <button
+              id="tab-harvest-cycles"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'harvest-cycles'}
+              aria-controls="panel-harvest-cycles"
+              onClick={() => setTab('harvest-cycles')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal ${
+                activeTab === 'harvest-cycles'
+                  ? 'bg-charcoal text-white shadow-xs'
+                  : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal'
+              }`}
+            >
+              <Wheat className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{i18nT('Kết luận mùa vụ')}</span>
+            </button>
           </div>
 
           <span className="text-xs text-warmGray">
             {activeTab === 'reports'
               ? i18nT('Mở một báo cáo để viết kết luận gửi Chủ nhà yến')
+              : activeTab === 'harvest-cycles'
+              ? i18nT('Viết kết luận tổng thể cho chu kỳ thu hoạch đã đóng')
               : i18nT('Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống và chỉnh mức chỉ số của nhà')}
           </span>
         </div>
@@ -106,6 +129,15 @@ export default function DomainExpertReportsPage() {
             aria-labelledby="tab-periodic-reports"
           >
             <HealthReportSection scope={reportScope} house={house ? { id: house._id, name: house.name } : null} />
+          </div>
+        ) : activeTab === 'harvest-cycles' ? (
+          <div
+            id="panel-harvest-cycles"
+            role="tabpanel"
+            aria-labelledby="tab-harvest-cycles"
+            className="w-full"
+          >
+            <HarvestCyclesSection scope={reportScope} />
           </div>
         ) : (
           <div

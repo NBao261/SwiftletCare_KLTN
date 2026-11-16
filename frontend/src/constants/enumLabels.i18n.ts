@@ -2,6 +2,7 @@ import type { Dictionary } from '@/lib/i18n';
 import type {
   AlertStatus, AlertType, ChecklistResult, DeviceStatus, OnsiteObservation, Role, SiteCause, WorkOrderOrigin, WorkOrderResult, WorkOrderStatus,
 } from '@/types';
+import type { HarvestCycleStatus } from '@/types/harvest.types';
 
 // Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
 
@@ -149,6 +150,12 @@ export const workOrderResultDict: Dictionary<WorkOrderResult> = {
 export const checklistResultDict: Dictionary<ChecklistResult> = {
   vi: { OK: 'Đạt', DEFECT: 'Hỏng' },
   en: { OK: 'OK', DEFECT: 'Defective' },
+};
+
+// Trạng thái chu kỳ thu hoạch (HARVEST-FR-007, EXPERT-FR-020)
+export const harvestCycleStatusDict: Dictionary<HarvestCycleStatus> = {
+  vi: { OPEN: 'Đang mở', CLOSED: 'Đã đóng', CONCLUDED: 'Đã kết luận' },
+  en: { OPEN: 'Open', CLOSED: 'Closed', CONCLUDED: 'Concluded' },
 };
 
 // Gắn tiền tố vào key để từ điển màn dùng lại nhãn chung (VD 'status.' + NEW → 'status.NEW')

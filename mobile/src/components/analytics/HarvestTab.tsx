@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { CaretLeftIcon, CaretRightIcon } from 'phosphor-react-native'
+import { router } from 'expo-router'
+import { CaretLeftIcon, CaretRightIcon, ListBulletsIcon } from 'phosphor-react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { StatRow } from '@/components/analytics/StatRow'
 import { CHART_HEIGHT, ChartFrame } from '@/components/charts/ChartFrame'
 import { HarvestStackedChart } from '@/components/charts/HarvestStackedChart'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { IconButton } from '@/components/ui/icon-button'
 import { Text } from '@/components/ui/text'
@@ -154,13 +156,22 @@ export function HarvestTab({ scope, today }: HarvestTabProps) {
         )}
         <Text variant="small" color={palette.textSecondary}>
           {t(
-            'Tính từ các đợt thu đã ghi của {scope}; đợt đã xoá không tính. Một lần thu là các loại yến cùng khu vực, cùng ngày.',
+            'Tính từ các đợt thu đã xác nhận của {scope}; đợt đã xoá hoặc còn chờ xác nhận không tính. Một lần thu là các loại yến cùng khu vực, cùng ngày.',
             {
               scope: scopeName,
             },
           )}
         </Text>
       </Card>
+      {/* Danh sách lần thu của nhà: ghi, sửa lần thu (SF-04) — chuyên gia chỉ xem */}
+      {scope.house && (
+        <Button
+          label={t('Các lần thu')}
+          variant="secondary"
+          trailingIcon={ListBulletsIcon}
+          onPress={() => router.push({ pathname: '/harvests', params: { houseId: scope.house?._id, source: 'analytics' } })}
+        />
+      )}
     </View>
   )
 }
