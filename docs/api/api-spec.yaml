@@ -94,6 +94,8 @@ tags:
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
   - name: Profiles
     description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: chỉ Domain Expert soạn, duyệt, lưu trữ — Report 3 §2.4, BR-22 không cho Farm Owner làm thay; Farm Owner xem và áp cho các nhà) — Farm Technician, Administrator → 403"
+  - name: Recommendations
+    description: "EXPERT-FR-016…019 (luật khuyến nghị: Domain Expert viết; khuyến nghị: Farm Owner chấp nhận hoặc từ chối, chuyên gia và thợ của nhà chỉ đọc) — Administrator → 403"
 
 
 security:
@@ -3042,6 +3044,227 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Hồ sơ không ở APPROVED", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /recommendations/rules:
+    get:
+      tags: [Recommendations]
+      summary: "Luật khuyến nghị của farm (EXPERT-FR-016) — FARM_OWNER, DOMAIN_EXPERT của farm"
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Mới sửa trước
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/RecommendationRule" } }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    post:
+      tags: [Recommendations]
+      summary: "Viết luật khuyến nghị (EXPERT-FR-016) — DOMAIN_EXPERT"
+      description: |
+        Luật thoả ở một nhà khi mỗi ngày trong `window_days` ngày gần nhất (1–30) đều có giá trị của `indicator` và
+        đạt `comparison` (`GTE`: ≥ `value`, `LTE`: ≤ `value`); thiếu số của một ngày thì không thoả. `source` ghi luật lấy từ
+        đâu (không tự viết luật). Chỉ số không hỗ trợ, cửa sổ hay `value` ngoài khoảng, hành động không hợp lệ → 400. Farm Owner,
+        Farm Technician → 403. Thiếu `source` → 422. Audit `RECOMMENDATION_RULE_CREATED`.
+        Sau khi khuyến nghị trước của luật và nhà đó được quyết định hoặc hết hạn, khuyến nghị mới chỉ mở khi mọi ngày
+        của cửa sổ đều sau ngày đó (BR-42). Nhà đang dẫn dụ không có tỷ lệ chim về (BR-46); ngày chưa đánh giá không có
+        số cảnh báo phun. Luật được chép vào khuyến nghị lúc mở (`rule_snapshot`), nên sửa luật sau đó không đổi khuyến
+        nghị đã mở.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [farm_id]
+                  properties: { farm_id: { type: string } }
+                - $ref: "#/components/schemas/RecommendationRuleInput"
+      responses:
+        "201":
+          description: Luật đã lưu, đang bật
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/RecommendationRule" }
+        "400": { description: "Chỉ số hoặc so sánh không hỗ trợ, value hay cửa sổ ngoài khoảng, Work Order thiếu tiêu đề hoặc quá 200 ký tự, khoá hay giá trị tham số sai. Thiếu trường hoặc sai kiểu (source rỗng, action không phải object, action.type lạ, window_days không nguyên) là 422 của validator", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /recommendations/rules/effects:
+    get:
+      tags: [Recommendations]
+      summary: "Hiệu quả theo luật (EXPERT-FR-019) — FARM_OWNER, DOMAIN_EXPERT của farm"
+      description: "Mỗi luật: số khuyến nghị đã mở, đã chấp nhận (gồm đã đo), đã đo hiệu quả, đã cải thiện."
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Một dòng mỗi luật
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: 
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            rule_id: { type: string }
+                            name: { type: string }
+                            indicator: { type: string }
+                            active: { type: boolean }
+                            raised: { type: integer }
+                            accepted: { type: integer }
+                            measured: { type: integer }
+                            improved: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /recommendations/rules/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      tags: [Recommendations]
+      summary: "Sửa luật hoặc bật/tắt (`active`) (EXPERT-FR-016) — DOMAIN_EXPERT"
+      description: "Thay nội dung luật; `active` bỏ trống thì giữ nguyên trạng thái hiện tại. Khuyến nghị đã mở giữ bằng chứng và luật lúc mở (`rule_snapshot`). Audit `RECOMMENDATION_RULE_UPDATED`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecommendationRuleInput" }
+      responses:
+        "200":
+          description: Luật sau khi sửa
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/RecommendationRule" }
+        "400": { description: "Như khi tạo luật", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /recommendations:
+    get:
+      tags: [Recommendations]
+      summary: "Khuyến nghị của nhà hoặc farm (EXPERT-FR-017) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao (houseId)"
+      parameters:
+        - { name: farmId, in: query, schema: { type: string }, description: "Bắt buộc khi không có houseId" }
+        - { name: houseId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [OPEN, ACCEPTED, REJECTED, EXPIRED, MEASURED] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Mới mở trước; `rule_id` kèm `name` và `action` của luật
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/Recommendation" } }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /recommendations/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Recommendations]
+      summary: "Một khuyến nghị kèm bằng chứng (EXPERT-FR-017)"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Recommendation" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /recommendations/{id}/accept:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Recommendations]
+      summary: "Chấp nhận khuyến nghị OPEN (EXPERT-FR-018, SM-21) — FARM_OWNER"
+      description: |
+        Hành động `WORK_ORDER`: mở đúng một Work Order sửa chữa (nguồn `RECOMMENDATION`, `recommendation_id`) cho thợ đang
+        trực của nhà (MF-02). Hành động `PARAMETER_CHANGE`: sửa ngưỡng hoặc hệ số mờ của mọi zone trong nhà như Farm Owner
+        tự sửa, farm có chuyên gia thì mỗi zone có một mục duyệt (MF-05, EXPERT-FR-010), id ở `review_ids`. Khuyến nghị
+        không còn OPEN (đã quyết định, hết hạn) → 409; lỗi khi thực hiện thì khuyến nghị mở lại. Audit `RECOMMENDATION_ACCEPTED`.
+      responses:
+        "200":
+          description: Khuyến nghị ACCEPTED
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Recommendation" }
+        "400": { description: "Nhà chưa có zone, hoặc giá trị không hợp với ngưỡng/hệ số hiện tại của một zone (kiểm mọi zone trước, không zone nào bị sửa, khuyến nghị vẫn OPEN)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Khuyến nghị không còn mở", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /recommendations/{id}/reject:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Recommendations]
+      summary: "Từ chối khuyến nghị OPEN kèm lý do (EXPERT-FR-018, SM-21) — FARM_OWNER"
+      description: "Thiếu lý do → 422. Không còn OPEN → 409. Audit `RECOMMENDATION_REJECTED`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, maxLength: 1000 } }
+      responses:
+        "200":
+          description: Khuyến nghị REJECTED
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Recommendation" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Khuyến nghị không còn mở", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /internal/stream-auth:
@@ -6178,6 +6401,90 @@ components:
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
 
+    RecommendationRuleInput:
+      type: object
+      description: "EXPERT-FR-016 — luật khuyến nghị"
+      required: [name, indicator, comparison, value, window_days, action, source]
+      properties:
+        name: { type: string, maxLength: 50 }
+        indicator:
+          type: string
+          enum: [TIME_IN_RANGE, AIR_HOURS_OVER, RETURN_RATE, NOISE_EPISODES, MISTING_INEFFECTIVE]
+          description: "Chỉ số theo ngày: % trong ngưỡng (0–100), giờ NH3 hoặc CO2 vượt ngưỡng (0–24), tỷ lệ chim về % (0–200), số đợt ồn bất thường, số cảnh báo phun không hiệu quả"
+        comparison: { type: string, enum: [GTE, LTE] }
+        value: { type: number }
+        window_days: { type: integer, minimum: 1, maximum: 30 }
+        action:
+          type: object
+          description: "`WORK_ORDER` cần `title`; `PARAMETER_CHANGE` cần `group` (thresholds, fuzzy), `key` có thật và `value` trong khoảng của khoá đó"
+          required: [type]
+          properties:
+            type: { type: string, enum: [WORK_ORDER, PARAMETER_CHANGE] }
+            title: { type: string }
+            group: { type: string, enum: [thresholds, fuzzy] }
+            key: { type: string, example: humidity_min }
+            value: { type: number }
+        source: { type: string, maxLength: 500, description: "Luật lấy từ đâu (phỏng vấn, tài liệu)" }
+        active: { type: boolean, description: "POST bỏ trống → true; PUT bỏ trống → giữ trạng thái hiện tại" }
+
+    RecommendationRule:
+      allOf:
+        - $ref: "#/components/schemas/RecommendationRuleInput"
+        - type: object
+          properties:
+            _id: { type: string }
+            farm_id: { type: string }
+            author_id: { type: string }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+
+    Recommendation:
+      type: object
+      description: "EXPERT-FR-017…019, Report 3 §6.21"
+      properties:
+        _id: { type: string }
+        farm_id: { type: string }
+        house_id: { type: string }
+        rule_id: { description: "id luật; ở danh sách là object có name và action" }
+        rule_snapshot:
+          type: object
+          description: "Luật lúc khuyến nghị mở (tên, điều kiện, hành động); chấp nhận và đo hiệu quả dùng bản này. Không có ở khuyến nghị mở trước 17/11/2026"
+          properties:
+            name: { type: string }
+            indicator: { type: string }
+            comparison: { type: string }
+            value: { type: number }
+            window_days: { type: integer }
+            action: { type: object }
+        expired_at: { type: string, format: date-time, description: "Lúc chuyển EXPIRED" }
+        status: { type: string, enum: [OPEN, ACCEPTED, REJECTED, EXPIRED, MEASURED] }
+        evidence:
+          type: object
+          properties:
+            indicator: { type: string }
+            comparison: { type: string }
+            value: { type: number }
+            window_days: { type: integer }
+            days:
+              type: array
+              items: { type: object, properties: { date: { type: string, example: "2026-11-16" }, value: { type: number, nullable: true } } }
+        raised_at: { type: string, format: date-time }
+        raised_for: { type: string, example: "2026-11-16", description: "Ngày (giờ VN) luật thoả" }
+        decided_by: { type: string }
+        decided_at: { type: string, format: date-time }
+        reject_reason: { type: string }
+        work_order_id: { type: string }
+        review_ids: { type: array, items: { type: string } }
+        effect:
+          type: object
+          description: "Trung bình 7 ngày sau trừ 7 ngày trước ngày chấp nhận; null khi thiếu số"
+          properties:
+            before: { type: number, nullable: true }
+            after: { type: number, nullable: true }
+            change: { type: number, nullable: true }
+            improved: { type: boolean, nullable: true }
+            measured_at: { type: string, format: date-time }
+
     FuzzyTuning:
       type: object
       description: "ENV-FR-021 — hệ số bộ điều khiển mờ trên ESP32; tên field = key MQTT config"
@@ -7105,9 +7412,10 @@ components:
         kind: { type: string, enum: [REPAIR, PREVENTIVE], description: "PREVENTIVE: bảo trì phòng ngừa theo kế hoạch (OPS-FR-006)" }
         origin:
           type: string
-          enum: [ALERT, OUTAGE, EXPERT, ONSITE_CHECK, MANUAL, PLAN, CHECKLIST]
-          description: "ALERT: cảnh báo thiết bị của BR-39; OUTAGE: NODE_OFFLINE / EDGE_AI_DEGRADED còn mở sau 30 phút; EXPERT: chuyên gia xác nhận cần tới nhà; ONSITE_CHECK: thợ thấy cảm biến hỏng (EXPERT-FR-021); MANUAL: Farm Owner mở; PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006); CHECKLIST: mục checklist ghi DEFECT (OPS-FR-007)"
+          enum: [ALERT, OUTAGE, EXPERT, ONSITE_CHECK, MANUAL, PLAN, CHECKLIST, RECOMMENDATION]
+          description: "ALERT: cảnh báo thiết bị của BR-39; OUTAGE: NODE_OFFLINE / EDGE_AI_DEGRADED còn mở sau 30 phút; EXPERT: chuyên gia xác nhận cần tới nhà; ONSITE_CHECK: thợ thấy cảm biến hỏng (EXPERT-FR-021); MANUAL: Farm Owner mở; PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006); CHECKLIST: mục checklist ghi DEFECT (OPS-FR-007); RECOMMENDATION: Farm Owner chấp nhận khuyến nghị (EXPERT-FR-018)"
         plan_id: { type: string, nullable: true, description: "Kế hoạch bảo trì của Work Order phòng ngừa" }
+        recommendation_id: { type: string, nullable: true, description: "Khuyến nghị đã chấp nhận thành Work Order này (EXPERT-FR-018)" }
         checklist:
           type: array
           description: "Work Order phòng ngừa: checklist chép từ mẫu của kế hoạch (OPS-FR-007)"

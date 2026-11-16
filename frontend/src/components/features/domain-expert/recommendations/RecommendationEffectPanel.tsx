@@ -1,70 +1,37 @@
-import type { RecommendationEffect } from '@/types/expert.types'
-import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
+import { Badge, DataTable, type DataTableColumn } from '@/components/ui'
+import { recommendationsDict } from '@/constants/recommendations.i18n'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import type { RecommendationRuleEffect } from '@/types'
 
-interface Props {
-  effects: RecommendationEffect[]
-}
+// EXPERT-FR-019 — mỗi luật: số khuyến nghị đã mở, đã chấp nhận, đã đo hiệu quả, có cải thiện
+export default function RecommendationEffectPanel({ effects }: { effects: RecommendationRuleEffect[] }) {
+  const { t, num } = useTranslation(recommendationsDict)
+  const countCell = (value: number) => <span className="text-small tabular-nums text-charcoal">{num(value)}</span>
 
-const COLUMNS: DataTableColumn<RecommendationEffect>[] = [
-  {
-    key: 'rule_name',
-    header: 'Luật',
-    render: row => <span className="font-medium text-charcoal">{row.rule_name}</span>,
-  },
-  {
-    key: 'total_generated',
-    header: 'Tạo',
-    align: 'right',
-    render: row => <span className="text-warmGray">{row.total_generated}</span>,
-  },
-  {
-    key: 'total_accepted',
-    header: 'Chấp nhận',
-    align: 'right',
-    render: row => <span className="text-warmGray">{row.total_accepted}</span>,
-  },
-  {
-    key: 'total_improved',
-    header: 'Cải thiện',
-    align: 'right',
-    render: row => <span className="font-semibold text-green-700">{row.total_improved}</span>,
-  },
-]
+  const columns: DataTableColumn<RecommendationRuleEffect>[] = [
+    {
+      key: 'rule',
+      header: t('col.rule'),
+      render: row => (
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate text-small font-semibold text-charcoal">{row.name}</span>
+          <span className="flex flex-wrap items-center gap-1.5 text-caption text-warmGray">
+            {t(`indicator.${row.indicator}`)}
+            {!row.active && <Badge tone="neutral">{t('effects.off')}</Badge>}
+          </span>
+        </div>
+      ),
+    },
+    { key: 'raised', header: t('effects.raised'), align: 'right', render: row => countCell(row.raised) },
+    { key: 'accepted', header: t('effects.accepted'), align: 'right', render: row => countCell(row.accepted) },
+    { key: 'measured', header: t('effects.measured'), align: 'right', render: row => countCell(row.measured) },
+    {
+      key: 'improved',
+      header: t('effects.improved'),
+      align: 'right',
+      render: row => <span className="text-small font-semibold tabular-nums text-accent-800">{num(row.improved)}</span>,
+    },
+  ]
 
-export default function RecommendationEffectPanel({ effects }: Props) {
-  const totals = effects.reduce(
-    (acc, e) => ({
-      generated: acc.generated + e.total_generated,
-      accepted:  acc.accepted  + e.total_accepted,
-      improved:  acc.improved  + e.total_improved,
-    }),
-    { generated: 0, accepted: 0, improved: 0 },
-  )
-
-  return (
-    <div className="space-y-4">
-      {/* KPI tổng */}
-      <div className="grid grid-cols-3 gap-3">
-        <KpiTile label="Đã tạo" value={totals.generated} colorClass="text-blue-600" />
-        <KpiTile label="Đã chấp nhận" value={totals.accepted} colorClass="text-green-600" />
-        <KpiTile label="Có cải thiện" value={totals.improved} colorClass="text-emerald-600" />
-      </div>
-
-      <DataTable
-        columns={COLUMNS}
-        rows={effects}
-        getRowKey={e => e.rule_id}
-        emptyMessage="Chưa có dữ liệu hiệu quả"
-      />
-    </div>
-  )
-}
-
-function KpiTile({ label, value, colorClass }: { label: string; value: number; colorClass: string }) {
-  return (
-    <div className="rounded-2xl border border-warmGray/15 bg-white px-3 py-3 text-center space-y-1 shadow-card">
-      <p className={`text-2xl font-bold ${colorClass}`}>{value}</p>
-      <p className="text-xs text-warmGray">{label}</p>
-    </div>
-  )
+  return <DataTable columns={columns} rows={effects} getRowKey={row => row.rule_id} emptyMessage={t('effects.empty')} minTableWidth={640} />
 }

@@ -30,6 +30,7 @@ import notificationRoutes   from '@/routes/notifications.route'
 import workOrderRoutes      from '@/routes/workOrders.route'
 import maintenanceRoutes    from '@/routes/maintenance.route'
 import profileRoutes        from '@/routes/profiles.route'
+import recommendationRoutes from '@/routes/recommendations.route'
 import internalRoutes from '@/routes/internal.route'
 
 const app: Application = express()
@@ -104,6 +105,8 @@ app.use('/work-orders', workOrderRoutes)
 app.use('/maintenance', maintenanceRoutes)
 // EXPERT-FR-014, 015 — hồ sơ cấu hình của farm
 app.use('/profiles', profileRoutes)
+// EXPERT-FR-016…019 — luật và khuyến nghị (MF-08)
+app.use('/recommendations', recommendationRoutes)
 
 // MediaMTX hỏi quyền đẩy/xem live stream (VISION-FR-013) — dịch vụ nội bộ, không phải người dùng
 app.use('/internal', internalRoutes)

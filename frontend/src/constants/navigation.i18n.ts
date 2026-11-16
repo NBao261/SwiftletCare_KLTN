@@ -28,6 +28,7 @@ const vi = {
   'Lắp đặt thiết bị': 'Lắp đặt thiết bị',
   'OTA Firmware': 'OTA Firmware',
   'Lịch bảo trì': 'Lịch bảo trì',
+  'Khuyến nghị': 'Khuyến nghị',
 
   'Xin chào,': 'Xin chào,',
   'Đăng xuất': 'Đăng xuất',
@@ -75,6 +76,7 @@ const en: Record<NavigationKey, string> = {
   'Lắp đặt thiết bị': 'Device installation',
   'OTA Firmware': 'OTA Firmware',
   'Lịch bảo trì': 'Maintenance schedule',
+  'Khuyến nghị': 'Recommendations',
 
   'Xin chào,': 'Hello,',
   'Đăng xuất': 'Log out',
