@@ -19,6 +19,7 @@ import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { HouseHealthReport } from '@/models/houseHealthReport.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Invitation } from '@/models/invitation.model'
+import { MaintenancePlan } from '@/models/maintenancePlan.model'
 import { Notification } from '@/models/notification.model'
 import { ParameterReview } from '@/models/parameterReview.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
@@ -38,8 +39,9 @@ type AnyModel = Model<any>
 export const ALL_MODELS: AnyModel[] = [
   WeatherCompensation,
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
-  Farm, HarvestBatch, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, Notification, ParameterReview, PushToken,
-  ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, WorkOrder, ZoneHealthReport,
+  Farm, HarvestBatch, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, MaintenancePlan, Notification, ParameterReview,
+  PushToken, ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, WorkOrder,
+  ZoneHealthReport,
 ]
 
 export interface JsonSchemaNode {

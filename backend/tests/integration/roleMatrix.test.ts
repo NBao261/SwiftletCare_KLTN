@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import alertRoutes from '@/routes/alerts.route'
 import workOrderRoutes from '@/routes/workOrders.route'
+import maintenanceRoutes from '@/routes/maintenance.route'
 import analyticsRoutes from '@/routes/analytics.route'
 import deviceRoutes from '@/routes/devices.route'
 import farmRoutes from '@/routes/farms.route'
@@ -44,6 +45,7 @@ app.use('/devices', deviceRoutes)
 app.use('/alerts', alertRoutes)
 app.use('/analytics', analyticsRoutes)
 app.use('/work-orders', workOrderRoutes)
+app.use('/maintenance', maintenanceRoutes)
 app.use(errorHandler)
 
 useTestDb()
@@ -123,6 +125,14 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
       ['post',   `/work-orders/${node._id}/reopen`,           [tech, admin]],
       ['post',   `/work-orders/${node._id}/cancel`,           [tech, admin]],
       ['post',   `/work-orders/${node._id}/reassign`,         [tech, admin]],
+      ['put',    `/work-orders/${node._id}/checklist`,        [admin]],
+      // OPS-FR-005 — Farm Owner định nghĩa kế hoạch; thợ đọc; chuyên gia góp ý; Administrator không thấy
+      ['get',    '/maintenance/plans',                        [admin]],
+      ['post',   '/maintenance/plans',                        [tech, admin]],
+      ['put',    `/maintenance/plans/${node._id}`,            [tech, admin]],
+      ['delete', `/maintenance/plans/${node._id}`,            [tech, admin]],
+      ['post',   `/maintenance/plans/${node._id}/comments`,   [tech, admin]],
+      ['get',    '/maintenance/due',                          [admin]],
     ]
     const allowed: string[] = []
     for (const [method, path, roles] of cases) {

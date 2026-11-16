@@ -1,6 +1,6 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
-import type { ApiResponse, CompleteWorkOrderInput, WorkOrder, WorkOrderStatus } from '@/types'
+import type { ApiResponse, ChecklistItemInput, CompleteWorkOrderInput, WorkOrder, WorkOrderStatus } from '@/types'
 import { buildPhotoPart } from '@/utils/workOrder.utils'
 
 // Bộ lọc GET /work-orders: assigneeId 'me' = Work Order giao cho chính người gọi; open 'true' = chưa đóng, chưa huỷ
@@ -47,5 +47,18 @@ export const workOrderApi = {
     if (workNote) form.append('work_note', workNote)
     photos.forEach((photo, index) => form.append('photos', buildPhotoPart(photo, `work-order-${index + 1}`)))
     return apiClient.post<ApiResponse<WorkOrder>>(url, form, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+
+  // Ghi một mục checklist của Work Order phòng ngừa đang IN_PROGRESS (OPS-FR-007): DEFECT mở một Work Order sửa chữa; ghi lại cùng
+  // mục thì thay kết quả. Có ảnh thì gửi multipart (field photo), không thì JSON; trạng thái khác 409
+  recordChecklistItem: (workOrderId: string, { itemIndex, result, note, photo }: ChecklistItemInput) => {
+    const url = ENDPOINTS.WORK_ORDER_CHECKLIST(workOrderId)
+    if (!photo) return apiClient.put<ApiResponse<WorkOrder>>(url, { item_index: itemIndex, result, note })
+    const form = new FormData()
+    form.append('item_index', String(itemIndex))
+    form.append('result', result)
+    if (note) form.append('note', note)
+    form.append('photo', buildPhotoPart(photo, `checklist-${itemIndex + 1}`))
+    return apiClient.put<ApiResponse<WorkOrder>>(url, form, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
 }

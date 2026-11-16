@@ -1,5 +1,7 @@
 import type { Dictionary } from '@/lib/i18n';
-import type { AlertStatus, AlertType, DeviceStatus, OnsiteObservation, Role, SiteCause, WorkOrderOrigin, WorkOrderResult, WorkOrderStatus } from '@/types';
+import type {
+  AlertStatus, AlertType, ChecklistResult, DeviceStatus, OnsiteObservation, Role, SiteCause, WorkOrderOrigin, WorkOrderResult, WorkOrderStatus,
+} from '@/types';
 
 // Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
 
@@ -97,6 +99,8 @@ export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
     EXPERT: 'Chuyên gia xác nhận cần tới nhà',
     ONSITE_CHECK: 'Kỹ thuật viên thấy cảm biến hỏng',
     MANUAL: 'Chủ nhà yến tạo',
+    PLAN: 'Kế hoạch bảo trì đến hạn',
+    CHECKLIST: 'Mục checklist bảo trì ghi hỏng',
   },
   en: {
     ALERT: 'Equipment alert',
@@ -104,6 +108,8 @@ export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
     EXPERT: 'Expert confirmed a visit is needed',
     ONSITE_CHECK: 'Technician found a faulty sensor',
     MANUAL: 'Created by the Farm Owner',
+    PLAN: 'Maintenance plan due',
+    CHECKLIST: 'Maintenance checklist item marked defective',
   },
 };
 
@@ -135,8 +141,14 @@ export const onsiteObservationDict: Dictionary<OnsiteObservation> = {
 
 // Kết quả Work Order thợ báo khi xong
 export const workOrderResultDict: Dictionary<WorkOrderResult> = {
-  vi: { REPAIRED: 'Đã sửa', SELF_RECOVERED: 'Tự phục hồi trước khi sửa' },
-  en: { REPAIRED: 'Repaired', SELF_RECOVERED: 'Recovered on its own before the repair' },
+  vi: { REPAIRED: 'Đã sửa', SELF_RECOVERED: 'Tự phục hồi trước khi sửa', DONE: 'Đã bảo trì' },
+  en: { REPAIRED: 'Repaired', SELF_RECOVERED: 'Recovered on its own before the repair', DONE: 'Maintenance done' },
+};
+
+// Kết quả 1 mục checklist bảo trì (OPS-FR-007), cùng chữ với mobile
+export const checklistResultDict: Dictionary<ChecklistResult> = {
+  vi: { OK: 'Đạt', DEFECT: 'Hỏng' },
+  en: { OK: 'OK', DEFECT: 'Defective' },
 };
 
 // Gắn tiền tố vào key để từ điển màn dùng lại nhãn chung (VD 'status.' + NEW → 'status.NEW')

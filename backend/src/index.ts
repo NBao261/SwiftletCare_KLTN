@@ -13,6 +13,7 @@ import { startWeatherCompensationJob } from './jobs/weatherCompensation.job'
 import { startDeviceOfflineJob } from './jobs/deviceOffline.job'
 import { startAlertEscalationJob } from './jobs/alertEscalation.job'
 import { startRecoveryCheckJob } from './jobs/recoveryCheck.job'
+import { startMaintenanceDueJob } from './jobs/maintenanceDue.job'
 import { startOverrideExpiryJob } from './jobs/overrideExpiry.job'
 import { startInvitationExpiryJob } from './jobs/invitationExpiry.job'
 import { startActivationOverdueJob } from './jobs/activationOverdue.job'
@@ -50,6 +51,7 @@ async function bootstrap(): Promise<void> {
   startDeviceOfflineJob()
   startAlertEscalationJob()
   startRecoveryCheckJob()
+  startMaintenanceDueJob()
   startOverrideExpiryJob()
   startInvitationExpiryJob()
   startActivationOverdueJob()

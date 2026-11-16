@@ -1,5 +1,5 @@
 import {
-  alertTypeDict, prefixLabels, siteCauseDict, workOrderOriginDict, workOrderResultDict, workOrderStatusDict,
+  alertTypeDict, checklistResultDict, prefixLabels, siteCauseDict, workOrderOriginDict, workOrderResultDict, workOrderStatusDict,
 } from '@/constants/enumLabels.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
@@ -13,9 +13,9 @@ const vi = {
   'page.loadFailed': 'Không tải được danh sách trang trại',
 
   // Bảng phiếu công việc
-  'list.title': 'Phiếu công việc sửa chữa',
-  'list.subtitle': 'Việc sửa tại nhà yến: tạo tự động từ cảnh báo thiết bị hoặc do bạn tạo; bạn duyệt sau khi thợ báo xong.',
-  'list.subtitleExpert': 'Việc sửa tại nhà yến và tình trạng xử lý; chủ nhà yến duyệt, mở lại, huỷ hoặc giao lại.',
+  'list.title': 'Phiếu công việc',
+  'list.subtitle': 'Việc sửa chữa và bảo trì tại nhà yến: tạo tự động từ cảnh báo thiết bị, kế hoạch bảo trì đến hạn hoặc do bạn tạo; bạn duyệt sau khi thợ báo xong.',
+  'list.subtitleExpert': 'Việc sửa chữa và bảo trì tại nhà yến và tình trạng xử lý; chủ nhà yến duyệt, mở lại, huỷ hoặc giao lại.',
   'list.filterStatus': 'Lọc trạng thái',
   'filter.open': 'Chưa đóng',
   'filter.all': 'Mọi trạng thái',
@@ -23,7 +23,7 @@ const vi = {
   'list.needHouse': 'Chọn một nhà yến ở bộ lọc phía trên để tạo phiếu công việc',
   'list.errorTitle': 'Không tải được phiếu công việc',
   'list.emptyTitle': 'Không có phiếu công việc nào',
-  'list.emptyHint': 'Phiếu công việc được tạo tự động khi có cảnh báo thiết bị cần tới nhà, hoặc do bạn tạo.',
+  'list.emptyHint': 'Phiếu công việc được tạo tự động khi có cảnh báo thiết bị cần tới nhà hoặc kế hoạch bảo trì đến hạn, hoặc do bạn tạo.',
 
   'col.index': 'STT',
   'col.title': 'Việc cần làm',
@@ -45,6 +45,7 @@ const vi = {
   'approve.title': 'Duyệt phiếu công việc',
   'approve.desc': 'Dữ liệu đã phục hồi đủ thời gian kiểm. Duyệt sẽ đóng phiếu công việc và cảnh báo của nó.',
   'approve.descUnverified': 'Hệ thống chưa có dữ liệu để kiểm phiếu này đã sửa xong chưa. Hãy kiểm tại nhà yến trước khi duyệt; duyệt sẽ đóng phiếu công việc và cảnh báo của nó.',
+  'approve.descPreventive': 'Kỹ thuật viên đã ghi đủ checklist bảo trì. Duyệt sẽ đóng phiếu, ghi một lần bảo trì vào kế hoạch (bơm, quạt: đặt lại bộ đếm; việc theo lịch: tính hạn kế tiếp) và đóng cảnh báo đến hạn bảo trì.',
   'approve.done': 'Đã duyệt và đóng phiếu công việc',
   'reopen.title': 'Mở lại phiếu công việc',
   'reopen.label': 'Ghi chú cho kỹ thuật viên',
@@ -98,6 +99,12 @@ const vi = {
   'detail.cancelReason': 'Lý do huỷ',
   'detail.noRecord': 'Kỹ thuật viên chưa báo xong.',
   'detail.history': 'Diễn biến',
+  'detail.checklist': 'Checklist bảo trì',
+  'detail.checklistPending': 'Chưa làm',
+  'detail.checklistPhoto': 'Xem ảnh',
+  'detail.checklistRepair': 'Đã mở phiếu sửa chữa cho mục này',
+  'detail.preventiveHint': 'Phiếu bảo trì không huỷ được. Nếu không cần bảo trì nữa, hãy xoá kế hoạch ở trang',
+  'detail.maintenanceLink': 'Lịch bảo trì',
   'detail.historyNote': 'Ghi chú: {note}',
 
   // Thẻ trang nhà (OPS-FR-009, BR-40)
@@ -116,6 +123,7 @@ const vi = {
   ...prefixLabels('origin.', workOrderOriginDict.vi),
   ...prefixLabels('cause.', siteCauseDict.vi),
   ...prefixLabels('result.', workOrderResultDict.vi),
+  ...prefixLabels('checklist.', checklistResultDict.vi),
   ...prefixLabels('alertType.', alertTypeDict.vi),
 };
 
@@ -128,9 +136,9 @@ const en: Record<WorkOrderKey, string> = {
   'page.retry': 'Retry',
   'page.loadFailed': 'Could not load the farms',
 
-  'list.title': 'Repair work orders',
-  'list.subtitle': 'On-site repairs: opened automatically from equipment alerts or by you; you approve them once the technician reports them done.',
-  'list.subtitleExpert': 'On-site repairs and their progress; the Farm Owner approves, reopens, cancels or reassigns them.',
+  'list.title': 'Work orders',
+  'list.subtitle': 'On-site repairs and maintenance: opened automatically from equipment alerts, due maintenance plans or by you; you approve them once the technician reports them done.',
+  'list.subtitleExpert': 'On-site repairs and maintenance and their progress; the Farm Owner approves, reopens, cancels or reassigns them.',
   'list.filterStatus': 'Filter by status',
   'filter.open': 'Open',
   'filter.all': 'Any status',
@@ -138,7 +146,7 @@ const en: Record<WorkOrderKey, string> = {
   'list.needHouse': 'Pick a swiftlet house in the filter above to create a work order',
   'list.errorTitle': 'Could not load the work orders',
   'list.emptyTitle': 'No work orders',
-  'list.emptyHint': 'A work order opens automatically when an equipment alert needs a visit, or when you open one.',
+  'list.emptyHint': 'A work order opens automatically when an equipment alert needs a visit or a maintenance plan falls due, or when you open one.',
 
   'col.index': 'No.',
   'col.title': 'Job',
@@ -159,6 +167,7 @@ const en: Record<WorkOrderKey, string> = {
   'approve.title': 'Approve the work order',
   'approve.desc': 'The data have stayed recovered for the check period. Approving closes the work order and its alert.',
   'approve.descUnverified': 'The system has no data to check whether this repair worked. Check at the house before approving; approving closes the work order and its alert.',
+  'approve.descPreventive': 'The technician has filled the whole maintenance checklist. Approving closes the work order, records one maintenance on the plan (pump, fan: resets the counter; calendar work: computes the next due date) and closes the maintenance-due alert.',
   'approve.done': 'Work order approved and closed',
   'reopen.title': 'Reopen the work order',
   'reopen.label': 'Note for the technician',
@@ -210,6 +219,12 @@ const en: Record<WorkOrderKey, string> = {
   'detail.cancelReason': 'Cancel reason',
   'detail.noRecord': 'The technician has not reported the job done yet.',
   'detail.history': 'Timeline',
+  'detail.checklist': 'Maintenance checklist',
+  'detail.checklistPending': 'Not done',
+  'detail.checklistPhoto': 'View photo',
+  'detail.checklistRepair': 'A repair work order was opened for this item',
+  'detail.preventiveHint': 'A maintenance work order cannot be cancelled. If the maintenance is no longer needed, delete the plan on the page',
+  'detail.maintenanceLink': 'Maintenance schedule',
   'detail.historyNote': 'Note: {note}',
 
   'metrics.title': 'Incident handling',
@@ -227,6 +242,7 @@ const en: Record<WorkOrderKey, string> = {
   ...prefixLabels('origin.', workOrderOriginDict.en),
   ...prefixLabels('cause.', siteCauseDict.en),
   ...prefixLabels('result.', workOrderResultDict.en),
+  ...prefixLabels('checklist.', checklistResultDict.en),
   ...prefixLabels('alertType.', alertTypeDict.en),
 };
 
