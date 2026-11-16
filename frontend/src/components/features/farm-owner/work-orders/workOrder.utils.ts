@@ -17,12 +17,23 @@ export const WORK_ORDER_STATUS_TONE: Record<WorkOrderStatus, BadgeTone> = {
 
 export type OwnerAction = 'approve' | 'reopen' | 'reassign' | 'cancel';
 
-// OPS-FR-004 — chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ; đang kiểm dữ liệu: chỉ huỷ (lối ra khi dữ liệu không phục hồi); đã đóng, đã huỷ: không có
-export function ownerActions(status: WorkOrderStatus): OwnerAction[] {
-  if (status === 'AWAITING_APPROVAL') return ['approve', 'reopen'];
-  if (status === 'OPEN' || status === 'IN_PROGRESS') return ['reassign', 'cancel'];
-  if (status === 'VERIFYING') return ['cancel'];
-  return [];
+// OPS-FR-004 — chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ; đang kiểm dữ liệu: chỉ huỷ (lối ra khi dữ liệu không phục hồi); đã đóng, đã huỷ: không có.
+// Work Order phòng ngừa không huỷ được (backend 409, SM-20): không cần bảo trì nữa thì xoá kế hoạch
+export function ownerActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>): OwnerAction[] {
+  const { status } = workOrder;
+  let actions: OwnerAction[] = [];
+  if (status === 'AWAITING_APPROVAL') actions = ['approve', 'reopen'];
+  if (status === 'OPEN' || status === 'IN_PROGRESS') actions = ['reassign', 'cancel'];
+  if (status === 'VERIFYING') actions = ['cancel'];
+  return workOrder.kind === 'PREVENTIVE' ? actions.filter(action => action !== 'cancel') : actions;
+}
+
+// Câu giải thích trong hộp duyệt: phòng ngừa kiểm bằng checklist (BR-41); sửa chữa kiểm bằng dữ liệu, trừ khi hệ thống chưa có dữ liệu để kiểm
+export function approvalDescriptionKey(
+  workOrder: Pick<WorkOrder, 'kind' | 'alert_id' | 'alert_type'>,
+): 'approve.descPreventive' | 'approve.descUnverified' | 'approve.desc' {
+  if (workOrder.kind === 'PREVENTIVE') return 'approve.descPreventive';
+  return isRecoveryUnverified(workOrder) ? 'approve.descUnverified' : 'approve.desc';
 }
 
 // BR-41 — loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi (UNVERIFIABLE_RECOVERY ở workOrder.service.ts)

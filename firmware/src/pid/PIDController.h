@@ -51,6 +51,8 @@ private:
 
 namespace PIDController {
 void runHumidityControl(float humidity, float temperature, RelayState &relay); // ENV-FR-010 (mờ)
+// ENV-FR-029, BR-38 — tin `compensation` của backend (mqttTask, giữ dataMutex); nowEpochMs = 0 khi chưa có NTP
+void setWeatherCompensation(float offsetPct, uint64_t expiresAtEpochMs, uint64_t nowEpochMs);
 // Quạt chỉ theo nhiệt độ + độ ẩm (SRS v2.0.0) — NH3/CO2 không còn là đầu vào.
 void runVentilationControl(float temperature, float humidity, RelayState &relay); // ENV-FR-011 (mờ)
 

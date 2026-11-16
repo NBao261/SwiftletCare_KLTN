@@ -12,8 +12,13 @@ export function useCompleteWorkOrder(workOrderId: string) {
 
   return useMutation({
     mutationFn: (input: CompleteWorkOrderInput) => workOrderApi.complete(workOrderId, input),
+    // Work Order phòng ngừa: kế hoạch bảo trì của nó cũng đổi (G-22)
     onSuccess: () =>
-      Promise.all([queryClient.invalidateQueries({ queryKey: ['work-orders'] }), invalidateAlertQueries(queryClient)]),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['work-orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['maintenance'] }),
+        invalidateAlertQueries(queryClient),
+      ]),
     onError: error => {
       const { status } = readApiError(error)
       if (status === 409 || status === 400) void queryClient.invalidateQueries({ queryKey: ['work-orders'] })

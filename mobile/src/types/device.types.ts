@@ -23,6 +23,14 @@ export interface RelayOverride {
   override_by?: string
 }
 
+// Giờ chạy, số lần đóng cắt của một tải — khớp RelayUsage trong api-spec
+export interface RelayUsage {
+  on_hours?: number
+  switches?: number
+  since_service_hours?: number
+  since_service_switches?: number
+}
+
 export interface SensorNode {
   _id: string
   device_id: string
@@ -47,6 +55,13 @@ export interface SensorNode {
   relays?: Partial<Record<keyof RelayStates, RelayOverride>>
   // Khung giờ phát loa ru (ENV-FR-013b), giờ dạng HH:mm
   speaker_schedule?: { enabled?: boolean; windows?: { start: string; end: string }[] }
+  // ALERT-FR-016, BR-45 — giờ chạy và số lần đóng cắt của bơm (misting), quạt (ventilation); since_service_* tính từ lần bảo trì
+  // trước, về 0 khi Work Order phòng ngừa được duyệt
+  relay_usage?: {
+    misting?: RelayUsage
+    ventilation?: RelayUsage
+    counted_until?: string
+  }
   registered_at?: string
   // Flow 1 case 8a — PENDING quá 15 phút chưa có heartbeat
   activation_overdue_at?: string | null

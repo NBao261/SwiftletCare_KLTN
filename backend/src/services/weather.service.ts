@@ -7,7 +7,8 @@ import logger from '@/utils/logger.util'
  * Chỉ toạ độ rời hệ thống (Report 4 §10). Farm không có toạ độ hoặc lần gọi lỗi thì không ghi gì —
  * giá trị thiếu hiện là thiếu, không bao giờ là 0. Chỉ dùng để hiển thị và cho luật mưa BR-30 (C-6).
  */
-const OPEN_METEO_URL = () => process.env.OPEN_METEO_URL || 'https://api.open-meteo.com/v1/forecast'
+/** Dùng chung với bù thời tiết (weatherCompensation.service): staging hay proxy đặt một biến cho cả hai luồng */
+export const OPEN_METEO_URL = () => process.env.OPEN_METEO_URL || 'https://api.open-meteo.com/v1/forecast'
 /** ponytail: Open-Meteo treo thì bỏ sau 10 giây, giờ sau gọi lại (hằng số kỹ thuật, Report 3 §4.5) */
 export const WEATHER_FETCH_TIMEOUT_MS = 10_000
 const HOUR_MS = 3600_000

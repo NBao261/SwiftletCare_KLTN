@@ -148,20 +148,20 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 ### G-22 — Bảo trì phòng ngừa (Kiệt, Len, Nhi) — hạn 23/12
 
 **Backend (Kiệt):**
-- [ ] Spec `/maintenance`: kế hoạch, mẫu checklist, ghi bảo trì và hiệu chuẩn, danh sách đến hạn.
-- [ ] Collection `maintenanceplans` (index `house_id + equipment`, `state + next_due_at`; mẫu checklist nhúng trong document).
-- [ ] Kế hoạch theo giờ chạy hoặc số lần đóng ngắt (bơm, quạt) và theo lịch (vệ sinh cảm biến và béc phun, hiệu chuẩn). Khoảng ≤ 0 trả 422; technician tạo kế hoạch trả 403 (OPS-FR-005).
-- [ ] **Không tự đặt chu kỳ bảo trì.** Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi. Dữ liệu demo ghi rõ nguồn.
-- [ ] `runHours.job` mỗi giờ (BR-45): tính giờ chạy khi relay ON; bộ điều khiển có đo dòng thì chỉ tính khi dòng trên 50 % dòng bình thường.
-- [ ] `maintenanceDue.job` mỗi giờ, và lúc 07:00 cho kế hoạch theo lịch:
+- [x] Spec `/maintenance`: kế hoạch, mẫu checklist, ghi bảo trì và hiệu chuẩn, danh sách đến hạn. *(Kiệt, 13/11, `4a9bbfc` spec + `8368ff3` model + `3eff6f7` backend, nhánh `feat/g22-maintenance` nối tiếp G-21: `/maintenance/plans` (GET, POST, PUT, DELETE → `RETIRED`), `/maintenance/plans/{id}/comments` cho chuyên gia, `/maintenance/due`, `PUT /work-orders/{id}/checklist`; ghi bảo trì là duyệt Work Order phòng ngừa, không có route ghi tay)*
+- [x] Collection `maintenanceplans` (index `house_id + equipment`, `state + next_due_at`; mẫu checklist nhúng trong document). *(`8368ff3`: kế hoạch giữ `records` (lịch sử ghi bảo trì) và `comments`; Work Order thêm `plan_id`, `checklist`, origin `PLAN`, `CHECKLIST`)*
+- [x] Kế hoạch theo giờ chạy hoặc số lần đóng ngắt (bơm, quạt) và theo lịch (vệ sinh cảm biến và béc phun, hiệu chuẩn). Khoảng ≤ 0 trả 422; technician tạo kế hoạch trả 403 (OPS-FR-005). *(`3eff6f7`)*
+- [x] **Không tự đặt chu kỳ bảo trì.** Chu kỳ do Farm Owner nhập theo khuyến cáo của nhà sản xuất hoặc người nuôi. Dữ liệu demo ghi rõ nguồn. *(`3eff6f7`: `source` bắt buộc khi tạo kế hoạch; code không có chu kỳ mặc định nào)*
+- [x] `runHours.job` mỗi giờ (BR-45): tính giờ chạy khi relay ON; bộ điều khiển có đo dòng thì chỉ tính khi dòng trên 50 % dòng bình thường. *(`3eff6f7`: dùng lại `relayUsage.job` đếm theo relay; phần chỉ tính khi dòng trên 50 % mức bình thường làm sau khi G-13 (#156) merge và firmware báo mức đã học)*
+- [x] `maintenanceDue.job` mỗi giờ, và lúc 07:00 cho kế hoạch theo lịch: *(`3eff6f7`: phút 10 mỗi giờ cho kế hoạch theo giờ chạy, số lần đóng cắt và quá hạn; 07:00 giờ VN cho kế hoạch theo lịch; tải có kế hoạch thì bỏ mốc mặc định `RELAY_SERVICE_LIMITS`)*
   - đến hạn thì tạo `MAINTENANCE_DUE` (mức LOW) và một Work Order phòng ngừa cho technician (ALERT-FR-016);
   - quá hạn thêm `maintenance_grace_days` (7 ngày) thì báo Farm Owner một lần (`OVERDUE`).
-- [ ] Ghi bảo trì: đặt bộ đếm về 0, đóng `MAINTENANCE_DUE`, tính hạn kế tiếp. Ghi hiệu chuẩn thì lưu ngày hiệu chuẩn kế tiếp (OPS-FR-008).
-- [ ] Checklist kiểm tra (bồn nước, béc phun, quạt, cửa, dấu vết chuột hoặc rắn): mục nào ghi "defect" thì mở Work Order sửa chữa (OPS-FR-007).
+- [x] Ghi bảo trì: đặt bộ đếm về 0, đóng `MAINTENANCE_DUE`, tính hạn kế tiếp. Ghi hiệu chuẩn thì lưu ngày hiệu chuẩn kế tiếp (OPS-FR-008). *(`3eff6f7`: Farm Owner duyệt Work Order phòng ngừa = một lần ghi; checklist phải đủ mới báo xong (BR-41); xác nhận `MAINTENANCE_DUE` của kế hoạch không đặt bộ đếm về 0)*
+- [x] Checklist kiểm tra (bồn nước, béc phun, quạt, cửa, dấu vết chuột hoặc rắn): mục nào ghi "defect" thì mở Work Order sửa chữa (OPS-FR-007). *(`3eff6f7`)*
 
 **Giao diện:**
 - [ ] Len: làm checklist kèm ảnh, ghi bảo trì và hiệu chuẩn trên mobile.
-- [ ] Nhi: tạo và sửa kế hoạch bảo trì, xem danh sách đến hạn và quá hạn trên web.
+- [x] Nhi: tạo và sửa kế hoạch bảo trì, xem danh sách đến hạn và quá hạn trên web. *(Nhi, 13/11, nhánh `feat/g22-maintenance`: trang `/maintenance` "Lịch bảo trì" (menu Farm Owner và chuyên gia), 2 tab: "Cần bảo trì" (mặc định, kèm số kế hoạch) theo `GET /maintenance/due` (đến hạn từ ngày nào, số phiếu công việc đang mở) và "Kế hoạch bảo trì" — bảng phân trang lọc theo farm/nhà và trạng thái; Farm Owner tạo kế hoạch cho nhà đang lọc (bơm, quạt theo giờ chạy hoặc số lần đóng cắt; vệ sinh, hiệu chuẩn theo lịch; chu kỳ > 0, checklist 1–30 mục, nguồn bắt buộc — `maintenancePlan.validation.test.ts`), sửa chu kỳ, checklist, nguồn, ghi chú, xoá (`RETIRED`); chuyên gia xem và góp ý (`POST …/comments`); ngăn chi tiết có checklist, lịch sử bảo trì và góp ý. Màn duyệt Work Order phòng ngừa kèm checklist dùng màn Work Order của G-21 sau khi #155 merge.)* *(Sửa theo review #157, 16/11: màn Work Order không còn nút Huỷ cho phiếu phòng ngừa (backend 409, SM-20; `ownerActions` nhận `kind`), ngăn chi tiết gợi ý xoá kế hoạch ở Lịch bảo trì và hiện checklist (kết quả, ghi chú, ảnh, phiếu sửa chữa mở từ mục hỏng); hộp duyệt phiếu phòng ngừa nói đúng việc duyệt làm (ghi bảo trì, đặt lại bộ đếm hoặc tính hạn kế tiếp); web có nguồn `PLAN`/`CHECKLIST`, kết quả `DONE`; tiêu đề trang thành "Phiếu công việc" vì có cả phiếu bảo trì.)*
 
 **Test:** TC-F25-01…03; TC-ST-64…68.
 
@@ -169,24 +169,25 @@ G-27 (giả lập): không phụ thuộc gì, làm sớm nhất để có dữ l
 
 ### G-23 — Bù phun sương theo thời tiết (Bảo, Tuấn) — hạn 02/12
 
-- [ ] Spec: luật bù thời tiết của nhà nằm trong `/farms` (houses); topic retained `swiftletcare/dev/{deviceId}/compensation` với `offset_pct` (−10…+10), `expires_at`, `rule_id`, QoS 1 (Report 4 §7.2).
-- [ ] Backend: luật theo nhà (ENV-FR-030):
+- [x] Spec: luật bù thời tiết của nhà nằm trong `/farms` (houses); topic retained `swiftletcare/dev/{deviceId}/compensation` với `offset_pct` (−10…+10), `expires_at`, `rule_id`, QoS 1 (Report 4 §7.2). *(`GET/PUT /farms/houses/{houseId}/weather-rules`, schema `WeatherRule`; `expires_at` là epoch ms như `issuedAt` của `cmd`)*
+- [x] Backend: luật theo nhà (ENV-FR-030):
   - điều kiện dự báo: nhiệt độ ≥, độ ẩm ngoài trời ≥, hoặc có mưa;
   - offset ngoài ±10 hoặc thời hạn quá 2 giờ trả 400;
   - Farm Owner (ở farm có chuyên gia) hoặc technician gửi luật thì 403.
-- [ ] `weatherCompensation.job` chạy mỗi giờ, sau `weather.job` của G-11 (ENV-FR-028):
+- [x] `weatherCompensation.job` chạy mỗi giờ, sau `weather.job` của G-11 (ENV-FR-028):
   - lấy dự báo 2 giờ tới; khi nhiều luật cùng đúng thì lấy offset có trị tuyệt đối lớn nhất;
   - gửi offset kèm hạn, tối đa 2 giờ;
   - không có luật hoặc không có dự báo thì gửi 0.
-- [ ] Firmware (ENV-FR-029):
+- [x] Firmware (ENV-FR-029):
   - cộng offset vào nhu cầu phun của bộ mờ cho tới khi hết hạn, kẹp kết quả trong 0–100 %;
   - hết hạn, hoặc mất broker 2 giờ, thì offset về 0;
   - không đụng quạt, bật tay hay chốt phun.
   - Hằng số: `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS` ở backend; `WEATHER_COMP_OFFLINE_MS` ở firmware (Report 4 §5.5).
-- [ ] Ghi vào nhật ký mỗi lần áp offset, để đo hiệu quả trên những ngày có và không có bù (NFR-16, không cam kết, nhưng nên có số liệu).
-- [ ] Tuấn: màn luật bù thời tiết trên web chuyên gia.
+  - *(firmware 2.2.0, `pid/WeatherCompensation.{h,cpp}`: chỉ cộng khi số đo hợp lệ, nên cảm biến hỏng vẫn tắt bơm (THREAT-FR-013); chưa có NTP thì bỏ tin vì không biết hạn)*
+- [x] Ghi vào nhật ký mỗi lần áp offset, để đo hiệu quả trên những ngày có và không có bù (NFR-16, không cam kết, nhưng nên có số liệu). *(collection `weathercompensations`, một dòng mỗi lần gửi offset khác 0 kèm luật và dự báo)*
+- [x] Tuấn: màn luật bù thời tiết trên web chuyên gia. *(`b1819a03`, 14/11/2026: `/domain-expert/weather-rules`, WeatherRuleRow + WeatherRuleAddForm + DomainExpertWeatherRulesPage)*
 
-**Test:** TC-F26-01, TC-F26-03 (jest); TC-F26-02 (`pio test -e native`).
+**Test:** TC-F26-01, TC-F26-03 (jest, `weatherCompensation.test.ts`); TC-F26-02 (`pio test -e native`, `test_weather_compensation`). *(Xong, PR #152)*
 
 **Demo:** DS-01 (Bảo trình bày).
 
@@ -226,7 +227,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [x] **Giai đoạn nhà** (FARM-FR-014, BR-46): *(backend: Kiệt, 12/11, `78ada1a` + `e5ebd08`, làm trong PR #126 của G-11; màn đặt giai đoạn trên web: Nhi)*
   - Farm Owner hoặc chuyên gia đặt `ATTRACTING` / `OCCUPIED`, có lịch sử; technician đặt thì 403;
   - nhà `ATTRACTING` không đánh giá chỉ số đàn, không tạo `LOW_RETURN_RATE`, lý do ghi "attracting stage".
-- [ ] **Profile** (EXPERT-FR-014, 015; SM-23):
+- [x] **Profile** (EXPERT-FR-014, 015; SM-23): *(Bảo, 12/11/2026, PR #153: spec `/profiles` và collection `configprofiles` xong; giai đoạn nhà do Kiệt làm trong PR #126; luật khuyến nghị chờ G-11 và G-21. Nhóm nào trong hồ sơ cũng tuỳ chọn, nhưng đã có thì đủ khoá; chỉ Domain Expert soạn và duyệt, Farm Owner kể cả ở farm chưa có chuyên gia chỉ xem và áp (Report 3 §2.4, BR-22; sửa theo tự review 16/11); áp hệ số mờ thì đề xuất hệ số đang chờ của zone thành `SUPERSEDED`, mục duyệt đang chờ của Farm Owner thành `ADJUSTED`; danh sách có phân trang)*
   - chuyên gia tạo profile `DRAFT` (ngưỡng, hệ số mờ, tham số phát hiện, lịch loa) rồi duyệt thành `APPROVED`;
   - giá trị ngoài khoảng trả 400; người không phải chuyên gia duyệt thì 403;
   - Farm Owner áp profile cho các nhà: mỗi zone nhận một thay đổi có lịch sử (nguồn `PROFILE`) và một phiên bản cấu hình mới (cần G-08);
@@ -239,8 +240,8 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 - [ ] **Không tự viết luật.** Phải có ít nhất 3 luật thật từ chuyên gia (phỏng vấn, mục 4); luật trong dữ liệu demo ghi rõ nguồn.
 
 **Giao diện:**
-- [ ] Tuấn (web chuyên gia): soạn và duyệt profile; soạn luật; trang hiệu quả theo luật (số khuyến nghị đã tạo, đã chấp nhận, đã cải thiện).
-- [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng.
+- [x] Tuấn (web chuyên gia): soạn và duyệt profile. *(14/11/2026, `86cab267`; 16/11/2026 `feat/g24-config-profiles`: sửa các lỗi chặn merge từ review — confirm dialog trước Duyệt/Lưu trữ, error hiển thị trong drawer, accessibility, màu token; màn luật khuyến nghị thay bằng `ComingSoon` chờ backend `/recommendations` và G-24 phần 2)*
+- [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng. *(16/11, nhánh `feat/g24-config-profiles`: xong đặt giai đoạn nhà — khung "Giai đoạn nhà" ở trang chi tiết nhà, Farm Owner chọn "Đang dẫn dụ" / "Đã có chim ở" có xác nhận nói rõ hệ quả BR-46, `PUT /farms/houses/{houseId}/stage`; xong áp profile — nút "Áp hồ sơ" trên hàng trang trại mở popup chọn 1 hồ sơ `APPROVED` (hiện các nhóm hồ sơ đổi) và nhiều nhà, `POST /profiles/{id}/apply`, báo số zone đã áp. Còn danh sách khuyến nghị, chờ backend `/recommendations`.)*
 
 **Test:** TC-F27-01…03; TC-F28-01…03; TC-ST-69…74.
 

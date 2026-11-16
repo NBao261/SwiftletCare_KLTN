@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
-import type { Coordinates, FuzzyTuning, Zone, FarmMemberRole, RosterShift } from '@/types'
+import type { Coordinates, FuzzyTuning, HouseStage, Zone, FarmMemberRole, RosterShift } from '@/types'
 
 const isMongoId = (id: string | undefined): boolean => Boolean(id && /^[0-9a-fA-F]{24}$/.test(id))
 
@@ -73,6 +73,15 @@ export function useCreateHouse(farmId: string) {
   return useMutation({
     mutationFn: (input: { name: string; floors?: number }) => farmApi.createHouse(farmId, input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['houses', farmId] }),
+  })
+}
+
+// FARM-FR-014 — đổi giai đoạn nhà rồi làm mới danh sách nhà (mọi trang đọc giai đoạn từ đó)
+export function useSetHouseStage(houseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (stage: HouseStage) => farmApi.setHouseStage(houseId, stage),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['houses'] }),
   })
 }
 
