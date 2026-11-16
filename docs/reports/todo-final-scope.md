@@ -240,7 +240,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 **Giao diện:**
 - [x] Tuấn (web chuyên gia): soạn và duyệt profile. *(14/11/2026, `86cab267`; 16/11/2026 `feat/g24-config-profiles`: sửa các lỗi chặn merge từ review — confirm dialog trước Duyệt/Lưu trữ, error hiển thị trong drawer, accessibility, màu token; màn luật khuyến nghị thay bằng `ComingSoon` chờ backend `/recommendations` và G-24 phần 2)*
-- [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng.
+- [ ] Nhi (web Owner): áp profile cho nhiều nhà; đặt giai đoạn nhà; danh sách khuyến nghị với nút chấp nhận / từ chối kèm bằng chứng. *(16/11, nhánh `feat/g24-config-profiles`: xong đặt giai đoạn nhà — khung "Giai đoạn nhà" ở trang chi tiết nhà, Farm Owner chọn "Đang dẫn dụ" / "Đã có chim ở" có xác nhận nói rõ hệ quả BR-46, `PUT /farms/houses/{houseId}/stage`; xong áp profile — nút "Áp hồ sơ" trên hàng trang trại mở popup chọn 1 hồ sơ `APPROVED` (hiện các nhóm hồ sơ đổi) và nhiều nhà, `POST /profiles/{id}/apply`, báo số zone đã áp. Còn danh sách khuyến nghị, chờ backend `/recommendations`.)*
 
 **Test:** TC-F27-01…03; TC-F28-01…03; TC-ST-69…74.
 
