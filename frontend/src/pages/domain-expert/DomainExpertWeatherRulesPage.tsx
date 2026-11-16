@@ -95,6 +95,8 @@ export default function DomainExpertWeatherRulesPage() {
     if (isLoading) return <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />
     if (isError) return null
     if (data?.last_compensation) return <LastCompensationBadge data={data.last_compensation} />
+    // Không hiện hộp "chưa có bù" khi chưa có luật nào — EmptyState bên dưới đã đủ
+    if (!rules.length) return null
     return (
       <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
         <Info className="w-4 h-4 shrink-0" />
@@ -163,8 +165,10 @@ export default function DomainExpertWeatherRulesPage() {
         <>
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-charcoal">Danh sách luật ({rules.length}/{MAX_RULES})</h2>
-              {rules.length >= MAX_RULES && (
+              <h2 className="text-sm font-semibold text-charcoal">
+                Danh sách luật ({isLoading ? '…' : rules.length}/{MAX_RULES})
+              </h2>
+              {!isLoading && rules.length >= MAX_RULES && (
                 <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
                   Đã đạt tối đa 10 luật
                 </span>
