@@ -1,3 +1,4 @@
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { ActionsMenu, Badge, type ActionsMenuItem, type BadgeTone, type DataTableColumn } from '@/components/ui'
 import { formatDateOnly } from '@/lib/helpers'
 import { t } from '@/i18n'
@@ -40,7 +41,12 @@ export function buildStockColumns(
     },
     {
       key: 'device_id', header: 'Thiết bị', className: 'w-[14%]',
-      render: d => <span className="block truncate font-bold text-charcoal" title={d.device_id}>{d.device_id}</span>,
+      render: d => (
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-bold text-charcoal" title={d.device_id}>{d.device_id}</span>
+          <SimulatedBadge simulated={d.simulated} />
+        </div>
+      ),
     },
     {
       key: 'kind', header: 'Loại', className: 'w-[16%]',
