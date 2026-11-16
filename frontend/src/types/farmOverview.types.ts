@@ -44,7 +44,10 @@ export interface HouseComparisonRow {
   mttr_min: number | null;
   // Ước tính (BR-45); null = không có dòng đo
   energy_kwh: number | null;
+  energy: { misting_kwh: number | null; ventilation_kwh: number | null };
   last_cycle_yield_g: number | null;
+  // Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004)
+  simulated: boolean;
 }
 
 export interface HouseComparison {

@@ -70,13 +70,9 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
     return { from: new Date(to.getTime() - periodDays * DAY_MS).toISOString(), to: to.toISOString() };
   }, [periodDays]);
 
-  // Tổng quan dùng cho cả 2 tab: thẻ từng nhà và nhãn "Giả lập" trong bảng so sánh
-  const overview = useFarmOverview(farmId || undefined);
+  // Mỗi tab chỉ tải dữ liệu của mình; hàng so sánh tự mang nhãn "Giả lập"
+  const overview = useFarmOverview(tab === 'houses' && farmId ? farmId : undefined);
   const comparison = useHouseComparison(tab === 'comparison' && farmId ? farmId : undefined, { ...period, sort, order });
-  const simulatedHouseIds = useMemo(
-    () => new Set((overview.data?.houses ?? []).filter(house => house.simulated).map(house => house.house_id)),
-    [overview.data],
-  );
 
   // Lọc đúng trại và nhà ở khung lọc chung rồi mở trang Phân tích (không đưa mã nhà lên URL)
   const openAnalytics = (house: HouseOverview) => {
@@ -151,7 +147,7 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
         <p className="text-sm text-warmGray">
           {t('comparison.range', { from: date(comparison.data.from), to: date(lastDay) })}
         </p>
-        <HouseComparisonTable rows={comparison.data.rows} simulatedHouseIds={simulatedHouseIds} sort={sort} />
+        <HouseComparisonTable rows={comparison.data.rows} sort={sort} />
         <p className="text-xs text-warmGray">{t('comparison.note')}</p>
       </>
     );

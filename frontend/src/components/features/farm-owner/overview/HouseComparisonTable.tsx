@@ -30,14 +30,12 @@ function trendStyle(value: number) {
 
 interface HouseComparisonTableProps {
   rows: HouseComparisonRow[];
-  // Nhà mà mọi thiết bị là giả lập (lấy từ tổng quan trại)
-  simulatedHouseIds: Set<string>;
   // Chỉ số đang dùng để sắp: nhãn tô xanh đậm
   sort: ComparisonSortKey;
 }
 
 // ANALYTICS-FR-016, BR-44 — mỗi hàng 1 nhà, mỗi nhóm cột là các ô số nhỏ (số trên, nhãn dưới); backend sắp; không có điểm tổng hay xếp hạng
-export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: HouseComparisonTableProps): JSX.Element {
+export default function HouseComparisonTable({ rows, sort }: HouseComparisonTableProps): JSX.Element {
   const { t, num, exact } = useTranslation(farmOverviewDict);
 
   const columns = useMemo((): DataTableColumn<HouseComparisonRow>[] => {
@@ -92,7 +90,7 @@ export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: 
         render: row => (
           <div className="flex flex-col items-start gap-1.5">
             <span className="w-full truncate font-semibold text-charcoal" title={row.name}>{row.name}</span>
-            <SimulatedBadge simulated={simulatedHouseIds.has(row.house_id)} />
+            <SimulatedBadge simulated={row.simulated} />
           </div>
         ),
       },
@@ -106,7 +104,7 @@ export default function HouseComparisonTable({ rows, simulatedHouseIds, sort }: 
         ),
       })),
     ];
-  }, [t, num, exact, simulatedHouseIds, sort]);
+  }, [t, num, exact, sort]);
 
   return <DataTable columns={columns} rows={rows} getRowKey={row => row.house_id} minTableWidth={960} />;
 }
