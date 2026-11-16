@@ -9,7 +9,7 @@ import { useToastStore } from '@/stores/toastStore'
 import type { FuzzyNumericKey, RecommendationIndicator, RecommendationRule } from '@/types'
 import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation'
 import {
-  RULE_NAME_MAX_LENGTH, RULE_SOURCE_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULE_VALUE_LIMITS, draftOfRule, ruleInputOf, validateRuleDraft, type RuleDraft,
+  RULE_NAME_MAX_LENGTH, RULE_SOURCE_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULE_VALUE_LIMITS, RULE_WINDOW_MAX_DAYS, RULE_WINDOW_MIN_DAYS, draftOfRule, ruleInputOf, validateRuleDraft, type RuleDraft,
 } from '@/validations/common/recommendationRule.validation'
 
 const INDICATORS = Object.keys(RULE_VALUE_LIMITS) as RecommendationIndicator[]
@@ -128,8 +128,8 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
               required
               type="number"
               inputMode="numeric"
-              min={1}
-              max={30}
+              min={RULE_WINDOW_MIN_DAYS}
+              max={RULE_WINDOW_MAX_DAYS}
               step={1}
               value={draft.window_days}
               onChange={event => set('window_days', event.target.value)}

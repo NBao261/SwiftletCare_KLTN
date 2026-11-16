@@ -24,10 +24,10 @@ export function useRecommendationActions() {
     void queryClient.invalidateQueries({ queryKey: [RECOMMENDATIONS_KEY] });
     void queryClient.invalidateQueries({ queryKey: ['work-orders'] });
   };
-  // Chấp nhận đổi tham số sửa ngưỡng hoặc hệ số mờ của mọi zone trong nhà
+  // Chấp nhận đổi tham số sửa ngưỡng hoặc hệ số mờ của mọi zone trong nhà: cùng các key như khi tự sửa ngưỡng và hệ số
   const refreshZones = () => {
-    void queryClient.invalidateQueries({ queryKey: ['zones'] });
-    void queryClient.invalidateQueries({ queryKey: ['zone'] });
+    for (const key of ['zones', 'zone', 'all-zones']) void queryClient.invalidateQueries({ queryKey: [key] });
+    void queryClient.invalidateQueries({ queryKey: ['analytics', 'control-performance'] });
   };
   return {
     accept: useMutation({ mutationFn: (id: string) => recommendationsApi.accept(id), onSuccess: refreshZones, onSettled: refresh }),
