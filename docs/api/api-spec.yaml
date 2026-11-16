@@ -1423,8 +1423,8 @@ paths:
         đầu lùi đúng `days` ngày, để mọi cột cùng một khoảng (mặc định 30 ngày là 30 ngày gồm cả hôm nay); tối đa 366
         ngày (Report 3 §4.5), quá thì 400.
       parameters:
-        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 30 ngày" }
-        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 30 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
         - name: sort
           in: query
           schema:
@@ -4751,8 +4751,8 @@ paths:
         trọn ngày giờ VN, tối đa 366 ngày. Quyền: FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN ở nhà được giao.
       parameters:
         - { name: houseId, in: query, required: true, schema: { type: string, format: objectId } }
-        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 90 ngày" }
-        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này)" }
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 90 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
       responses:
         "200":
           description: OK
@@ -6162,6 +6162,7 @@ components:
         energy_kwh: { type: number, nullable: true, description: "Ước tính (BR-45); null = not available" }
         energy: { type: object, properties: { misting_kwh: { type: number, nullable: true }, ventilation_kwh: { type: number, nullable: true } } }
         last_cycle_yield_g: { type: number, nullable: true, description: "Sản lượng chu kỳ đã đóng gần nhất (BR-43); null tới khi có G-26" }
+        simulated: { type: boolean, description: "Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004), cùng cách tính với tổng quan" }
     EnergyMonth:
       type: object
       properties:

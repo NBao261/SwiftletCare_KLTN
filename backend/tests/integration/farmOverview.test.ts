@@ -156,6 +156,24 @@ describe('tổng quan trại (ANALYTICS-FR-015) — TC-F29-01', () => {
     expect(res.body.data.houses.find((h: { house_id: string }) => h.house_id === String(house._id)).latest_return_rate).toBeNull()
   })
 
+  it('cửa sổ tỷ lệ chim về gồm cả ngày thứ 30 trước, không gồm ngày thứ 31', async () => {
+    const { farm, token, house, house2 } = await seedFarm()
+    await sessions(house._id, new mongoose.Types.ObjectId(), vnDay(-30), 100, 70)
+    await sessions(house2._id, new mongoose.Types.ObjectId(), vnDay(-31), 100, 70)
+    const res = await request(app).get(`/farms/${farm._id}/overview`).set('Authorization', `Bearer ${token}`).expect(200)
+    const byId = (id: unknown) => res.body.data.houses.find((h: { house_id: string }) => h.house_id === String(id))
+    expect(byId(house._id).latest_return_rate).toEqual({ date: vnDay(-30), value: 70 })
+    expect(byId(house2._id).latest_return_rate).toBeNull()
+  })
+
+  it('thiết bị đã gỡ không tính khi xét nhà giả lập: nhà chỉ còn camera giả lập là nhà giả lập', async () => {
+    const { farm, token, house } = await seedFarm()
+    await SensorNode.updateMany({ zone_id: { $in: (await Zone.find({ house_id: house._id }).lean()).map(z => z._id) } }, { decommissioned_at: new Date() })
+    await CameraNode.create({ device_id: `SIMCAM-1-${++seq}`, house_id: house._id, status: 'ONLINE', simulated: true })
+    const res = await request(app).get(`/farms/${farm._id}/overview`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data.houses.find((h: { house_id: string }) => h.house_id === String(house._id)).simulated).toBe(true)
+  })
+
   it('nhà sắp theo tên tiếng Việt ("Đông" trước "Em"), không theo thứ tự nhị phân', async () => {
     const { farm, token, house2, house3 } = await seedFarm()
     await House.updateOne({ _id: house2._id }, { name: 'Em' })
@@ -218,6 +236,22 @@ describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
     const week = await request(app).get(`/farms/${farm._id}/comparison?from=${new Date(to.getTime() - 7 * DAY).toISOString()}&to=${to.toISOString()}`)
       .set('Authorization', `Bearer ${token}`).expect(200)
     expect(week.body.data.days).toBe(7)
+  })
+
+  it('mỗi hàng có cờ giả lập riêng (SYSTEM-FR-004), không phụ thuộc request tổng quan', async () => {
+    const { farm, token, house, house2, house3 } = await seedFarm()
+    const res = await request(app).get(`/farms/${farm._id}/comparison`).set('Authorization', `Bearer ${token}`).expect(200)
+    const flag = (id: unknown) => res.body.data.rows.find((r: { house_id: string }) => r.house_id === String(id)).simulated
+    expect([flag(house._id), flag(house2._id), flag(house3._id)]).toEqual([false, true, true])
+  })
+
+  it('from, to chỉ có ngày là đầu ngày giờ VN: 01/11 tới 08/11 là đúng 7 ngày đó, cả so sánh lẫn điện năng', async () => {
+    const { farm, token, house } = await seedFarm()
+    const expected = { from: '2026-10-31T17:00:00.000Z', to: '2026-11-07T17:00:00.000Z' }
+    const comparison = await request(app).get(`/farms/${farm._id}/comparison?from=2026-11-01&to=2026-11-08`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(comparison.body.data).toMatchObject({ ...expected, days: 7 })
+    const energy = await request(app).get(`/analytics/energy?houseId=${house._id}&from=2026-11-01&to=2026-11-08`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(energy.body.data).toMatchObject(expected)
   })
 
   it('ô bằng nhau thì theo house_id, cả khi sắp giảm dần; ô trống vẫn xuống cuối', () => {
@@ -316,6 +350,15 @@ describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 00
     expect(await houseEnergyByMonth(house2._id, ...range)).toEqual([{ month: month.label, misting_kwh: null, ventilation_kwh: 0.012 }])
   })
 
+  it('điện năng: chủ farm khác → 403; nhà không tồn tại → 404; from không trước to → 400', async () => {
+    const { token, house } = await seedFarm()
+    const other = await seedOwnerFarm()
+    await request(app).get(`/analytics/energy?houseId=${house._id}`).set('Authorization', `Bearer ${other.token}`).expect(403)
+    await request(app).get(`/analytics/energy?houseId=${new mongoose.Types.ObjectId()}`).set('Authorization', `Bearer ${token}`).expect(404)
+    const now = new Date().toISOString()
+    await request(app).get(`/analytics/energy?houseId=${house._id}&from=${now}&to=${now}`).set('Authorization', `Bearer ${token}`).expect(400)
+  })
+
   it('thợ được giao nhà xem điện năng của nhà đó; nhà chưa được giao → 403', async () => {
     const { farm, house, house2 } = await seedFarm()
     const technician = await memberUser(farm, 'FARM_TECHNICIAN')
@@ -381,6 +424,21 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     expect(alert.message).toContain('không có dữ liệu thời tiết')
     expect(alert.message).not.toContain('0 mm')
     expect(alert.metadata).toMatchObject({ rainMm: null })
+  })
+
+  it('đo được 0 mm trong khung phiên → ghi "mưa trong phiên đếm 0 mm"; giờ không có số đo (null) bị bỏ qua', async () => {
+    const { farm, house } = await seedFarm()
+    await dropToday(house._id)
+    const today = vnDay(0)
+    await BirdCountBucket.create({ camera_node_id: new mongoose.Types.ObjectId(), house_id: house._id, bucket_start: new Date(`${today}T17:30:00+07:00`), entry_count: 5, exit_count: 0 })
+    await WeatherObservation.create([
+      { farm_id: farm._id, hour: new Date(`${today}T17:00:00+07:00`), precipitation_mm: 0 },
+      { farm_id: farm._id, hour: new Date(`${today}T18:00:00+07:00`), precipitation_mm: null },
+    ])
+    expect(await checkReturnRateDrops(today)).toBe(1)
+    const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
+    expect(alert.message).toContain('mưa trong phiên đếm 0 mm')
+    expect(alert.metadata).toMatchObject({ rainMm: 0 })
   })
 
   it('chưa biết khung phiên (chưa có số đếm 5 phút) → ghi mưa cả ngày, không ghi "trong phiên đếm"', async () => {

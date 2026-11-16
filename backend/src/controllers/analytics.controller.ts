@@ -5,6 +5,7 @@ import * as energyService from '@/services/energy.service'
 import * as forecastService from '@/services/forecast.service'
 import * as tuningSuggestionService from '@/services/tuningSuggestion.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
+import { parsePeriodParam } from '@/utils/period.util'
 
 /** GET /analytics/env/summary – ANALYTICS-FR-001 (biểu đồ lịch sử môi trường) */
 export const envSummary = asyncHandler(async (req: Request, res: Response) => {
@@ -102,7 +103,7 @@ const DEFAULT_ENERGY_DAYS = 90
 
 /** GET /analytics/energy – ANALYTICS-FR-017, BR-45 */
 export const energy = asyncHandler(async (req: Request, res: Response) => {
-  const to = req.query.to ? new Date(req.query.to as string) : new Date()
-  const from = req.query.from ? new Date(req.query.from as string) : new Date(to.getTime() - DEFAULT_ENERGY_DAYS * 86_400_000)
+  const to = parsePeriodParam(req.query.to) ?? new Date()
+  const from = parsePeriodParam(req.query.from) ?? new Date(to.getTime() - DEFAULT_ENERGY_DAYS * 86_400_000)
   res.json({ success: true, data: await energyService.getHouseEnergy(req.user, { houseId: req.query.houseId as string, from, to }) })
 })

@@ -2,7 +2,7 @@ import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { House } from '@/models/houseZone.model'
 import { houseDailyCounts, vnDate, type HouseDayCounts } from '@/services/birdCount.service'
 import { houseEnergyByMonth, totalEnergy } from '@/services/energy.service'
-import { openAlertCounts, type FarmHouse } from '@/services/farmOverview.service'
+import { openAlertCounts, simulatedHouses, type FarmHouse } from '@/services/farmOverview.service'
 import { isFlockDayComplete } from '@/services/healthAssessment.service'
 import { collectAlertSamples, opsRow } from '@/services/opsMetrics.service'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
@@ -34,6 +34,8 @@ export interface ComparisonRow {
   energy: { misting_kwh: number | null; ventilation_kwh: number | null }
   /** Sản lượng chu kỳ đã đóng gần nhất (BR-43) — chưa có tới khi có chu kỳ thu hoạch (G-26) */
   last_cycle_yield_g: number | null
+  /** SYSTEM-FR-004 — mọi thiết bị của nhà là thiết bị giả lập (cùng cách tính với tổng quan) */
+  simulated: boolean
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
@@ -64,7 +66,7 @@ async function houseRow(
   house: FarmHouse, period: { from: Date; to: Date; fromDate: string; toDate: string; prevFromDate: string },
   health: Map<string, Array<{ status: string; environment: number | null }>>,
   samples: Map<string, Parameters<typeof opsRow>[0]>, openAlerts: Map<string, number>,
-): Promise<ComparisonRow> {
+): Promise<Omit<ComparisonRow, 'simulated'>> {
   const id = String(house._id)
   const [counts, energyMonths] = await Promise.all([
     houseDailyCounts(id, { from: period.prevFromDate, to: period.toDate }),
@@ -119,13 +121,15 @@ export async function getHouseComparison(
     collectAlertSamples(farm._id, houseIds, range.from, range.to),
     openAlertCounts(farm._id, houses),
   ])
+  const simulated = await simulatedHouses(houses)
   const health = new Map<string, Array<{ status: string; environment: number | null }>>()
   for (const d of days) {
     const id = String(d.house_id)
     health.set(id, [...(health.get(id) ?? []), { status: d.current_status, environment: d.indicators?.environment?.value ?? null }])
   }
 
-  const rows = await Promise.all(houses.map(h => houseRow(h, period, health, byHouse, openAlerts)))
+  const rows = (await Promise.all(houses.map(h => houseRow(h, period, health, byHouse, openAlerts))))
+    .map(row => ({ ...row, simulated: simulated.has(row.house_id) }))
   return {
     farm_id: String(farm._id), from: range.from, to: range.to, days: range.days,
     sort: query.sort ?? 'name', order: query.order ?? 'asc',

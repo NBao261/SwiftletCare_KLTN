@@ -2,7 +2,7 @@
  * Report 3 §4.5 — khoảng của bảng so sánh nhà và điện năng ước tính: trọn ngày giờ VN, giữ đúng số ngày yêu cầu,
  * tối đa 366 ngày (ANALYTICS-FR-016, 017).
  */
-import { MAX_PERIOD_DAYS, vnDayPeriod } from '@/utils/period.util'
+import { MAX_PERIOD_DAYS, parsePeriodParam, vnDayPeriod } from '@/utils/period.util'
 
 const DAY = 86_400_000
 const vn = (iso: string) => new Date(`${iso}+07:00`)
@@ -30,5 +30,15 @@ describe('vnDayPeriod', () => {
     expect(() => vnDayPeriod(to, to)).toThrow(expect.objectContaining({ statusCode: 400 }))
     expect(() => vnDayPeriod(new Date(to.getTime() - 367 * DAY), to)).toThrow(expect.objectContaining({ statusCode: 400 }))
     expect(vnDayPeriod(new Date(to.getTime() - MAX_PERIOD_DAYS * DAY), to).days).toBe(MAX_PERIOD_DAYS)
+  })
+})
+
+describe('parsePeriodParam', () => {
+  it('chỉ có ngày là đầu ngày giờ VN; có giờ thì đọc như ISO; rỗng hoặc không phải chuỗi thì undefined', () => {
+    expect(parsePeriodParam('2026-11-01')).toEqual(new Date('2026-10-31T17:00:00.000Z'))
+    expect(parsePeriodParam('2026-11-01T10:00:00Z')).toEqual(new Date('2026-11-01T10:00:00.000Z'))
+    expect(parsePeriodParam('')).toBeUndefined()
+    expect(parsePeriodParam(undefined)).toBeUndefined()
+    expect(parsePeriodParam(['2026-11-01'])).toBeUndefined()
   })
 })

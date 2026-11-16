@@ -39,7 +39,7 @@ export async function openAlertCounts(farmId: unknown, houses: FarmHouse[]): Pro
  * SYSTEM-FR-004 — nhà có thiết bị và mọi thiết bị (controller của các zone, camera của nhà) đều là thiết bị giả lập
  * thì hiện là nhà giả lập; nhà trộn thiết bị thật và giả lập thì không.
  */
-async function simulatedHouses(houses: FarmHouse[]): Promise<Set<string>> {
+export async function simulatedHouses(houses: FarmHouse[]): Promise<Set<string>> {
   const houseIds = houses.map(h => h._id)
   const zones = await Zone.find({ house_id: { $in: houseIds } }).select('house_id').lean()
   const houseOfZone = new Map(zones.map(z => [String(z._id), String(z.house_id)]))

@@ -5,6 +5,7 @@ import * as farmOverviewService from '@/services/farmOverview.service'
 import * as houseComparisonService from '@/services/houseComparison.service'
 import type { ComparisonSortKey } from '@/services/houseComparison.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
+import { parsePeriodParam } from '@/utils/period.util'
 
 /** GET /farms – FARM-FR-001 */
 export const list = asyncHandler(async (req: Request, res: Response) => {
@@ -201,8 +202,8 @@ export const overview = asyncHandler(async (req: Request, res: Response) => {
 
 /** GET /farms/:id/comparison – ANALYTICS-FR-016, BR-44 */
 export const comparison = asyncHandler(async (req: Request, res: Response) => {
-  const to = req.query.to ? new Date(req.query.to as string) : new Date()
-  const from = req.query.from ? new Date(req.query.from as string) : new Date(to.getTime() - DEFAULT_COMPARISON_DAYS * 86_400_000)
+  const to = parsePeriodParam(req.query.to) ?? new Date()
+  const from = parsePeriodParam(req.query.from) ?? new Date(to.getTime() - DEFAULT_COMPARISON_DAYS * 86_400_000)
   const data = await houseComparisonService.getHouseComparison(req.user, {
     farmId: req.params.id, from, to,
     sort: req.query.sort as ComparisonSortKey | undefined,

@@ -6,6 +6,15 @@ const VN_OFFSET_MS = 7 * 3_600_000
 /** Report 3 §4.5 — khoảng dài nhất của bảng so sánh nhà và điện năng ước tính: 1 năm, như một mùa vụ dài nhất */
 export const MAX_PERIOD_DAYS = 366
 
+/**
+ * Tham số `from`/`to` của khoảng: chỉ có ngày ('YYYY-MM-DD') là đầu ngày giờ VN (không phải 00:00 UTC = 07:00 VN, vốn
+ * làm khoảng lệch một ngày); có giờ thì đọc như ISO 8601.
+ */
+export function parsePeriodParam(value: unknown): Date | undefined {
+  if (typeof value !== 'string' || value === '') return undefined
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00+07:00`) : new Date(value)
+}
+
 /** Đầu ngày giờ VN chứa `at` */
 const vnDayStartOf = (at: Date) =>
   new Date(Math.floor((at.getTime() + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS)
