@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import ScopeFilter from '@/components/common/ScopeFilter';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import { Button, ConfirmModal, EmptyState, LoadingSkeleton } from '@/components/ui';
-import HarvestDetailModal from '@/components/features/farm-owner/harvest/HarvestDetailModal';
+import HarvestCyclesCard from '@/components/features/farm-owner/harvest/HarvestCyclesCard';
+import HarvestDetailModal from'@/components/features/farm-owner/harvest/HarvestDetailModal';
 import HarvestStatsCards from '@/components/features/farm-owner/harvest/HarvestStatsCards';
 import HarvestFormModal from '@/components/features/farm-owner/harvest/HarvestFormModal';
 import HarvestTable from '@/components/features/farm-owner/harvest/HarvestTable';
@@ -234,6 +235,9 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
       </div>
 
       <HarvestYearChart batches={confirmedBatches} />
+
+      {/* HARVEST-FR-007 — chu kỳ do backend đóng khi xác nhận lần thu */}
+      <HarvestCyclesCard key={`${farmId}-${scope.houseId}`} farmId={farmId} houseId={scope.houseId} zones={zones} />
 
       {/* Popup chỉ dựng khi mở nên mỗi lần mở là form mới */}
       {isCreateOpen && !createBlockedReason && <HarvestFormModal scope={scope} creatorName={user?.full_name ?? NO_VALUE} onClose={() => setIsCreateOpen(false)} />}
