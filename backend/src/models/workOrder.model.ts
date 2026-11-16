@@ -13,7 +13,7 @@ export type SiteCause = typeof SITE_CAUSES[number]
 
 /** Nguồn mở Work Order (BR-39, OPS-FR-001) */
 /** PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006); CHECKLIST: mục checklist ghi DEFECT (OPS-FR-007) */
-export const WORK_ORDER_ORIGINS = ['ALERT', 'OUTAGE', 'EXPERT', 'ONSITE_CHECK', 'MANUAL', 'PLAN', 'CHECKLIST'] as const
+export const WORK_ORDER_ORIGINS = ['ALERT', 'OUTAGE', 'EXPERT', 'ONSITE_CHECK', 'MANUAL', 'PLAN', 'CHECKLIST', 'RECOMMENDATION'] as const
 export type WorkOrderOrigin = typeof WORK_ORDER_ORIGINS[number]
 
 /** OPS-FR-007 — một mục checklist của Work Order phòng ngừa */
@@ -50,6 +50,8 @@ export interface IWorkOrder extends Document {
   /** PREVENTIVE: bảo trì phòng ngừa theo kế hoạch (OPS-FR-006) */
   kind: 'REPAIR' | 'PREVENTIVE'
   plan_id?: Types.ObjectId
+  /** EXPERT-FR-018 — khuyến nghị đã được Farm Owner chấp nhận thành Work Order này */
+  recommendation_id?: Types.ObjectId
   checklist: ChecklistItem[]
   origin: WorkOrderOrigin
   title: string
@@ -93,6 +95,7 @@ const workOrderSchema = new Schema<IWorkOrder>(
     alert_type:  { type: String },
     kind:        { type: String, enum: ['REPAIR', 'PREVENTIVE'], default: 'REPAIR' },
     plan_id:     { type: Schema.Types.ObjectId, ref: 'MaintenancePlan' },
+    recommendation_id: { type: Schema.Types.ObjectId, ref: 'Recommendation' },
     checklist: [{
       item:   { type: String, required: true },
       result: { type: String, enum: ['OK', 'DEFECT'] },

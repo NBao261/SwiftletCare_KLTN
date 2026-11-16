@@ -6,6 +6,7 @@ import cron from 'node-cron'
 import { checkReturnRateDrops } from '@/services/birdCount.service'
 import { assessAllHouses } from '@/services/healthAssessment.service'
 import { generateDailyReports } from '@/services/houseHealthReport.service'
+import { evaluateRecommendationRules } from '@/services/recommendation.service'
 import logger from '@/utils/logger.util'
 
 /** ponytail: 19:15 = hết phiên chiều + 15 phút chờ tin cuối, chọn tay (SRS §0.5); đổi cùng khung giờ phiên */
@@ -24,6 +25,10 @@ export function startReturnRateJob(): void {
       .then(() => generateDailyReports())
       .then(count => { if (count > 0) logger.info(`Đã tạo ${count} báo cáo ngày theo nhà (EXPERT-FR-005)`) })
       .catch((err: Error) => logger.error('house daily reports failed', { err }))
+      // EXPERT-FR-017, BR-42 — luật khuyến nghị xét sau đánh giá ngày
+      .then(() => evaluateRecommendationRules())
+      .then(count => { if (count && count > 0) logger.info(`Đã mở ${count} khuyến nghị (EXPERT-FR-017)`) })
+      .catch((err: Error) => logger.error('recommendation rules failed', { err }))
   }, { timezone: 'Asia/Ho_Chi_Minh' })
   logger.info('Return-rate drop job scheduled (19:15 Asia/Ho_Chi_Minh)')
 }

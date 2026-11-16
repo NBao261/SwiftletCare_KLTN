@@ -10,6 +10,7 @@ import { connectDB }    from './config/db.config'
 import { initSocket }   from './socket'
 import { connectMQTT }  from './mqtt/mqtt.client'
 import { startWeatherCompensationJob } from './jobs/weatherCompensation.job'
+import { startRecommendationEffectJob } from './jobs/recommendationEffect.job'
 import { startDeviceOfflineJob } from './jobs/deviceOffline.job'
 import { startAlertEscalationJob } from './jobs/alertEscalation.job'
 import { startRecoveryCheckJob } from './jobs/recoveryCheck.job'
@@ -48,6 +49,8 @@ async function bootstrap(): Promise<void> {
   // chưa xác nhận (ALERT-FR-015), hết hạn Manual Override (ENV-FR-018)
   // ENV-FR-028 — bù phun sương theo dự báo, mỗi giờ
   startWeatherCompensationJob()
+  // EXPERT-FR-017, 019 — khuyến nghị hết hạn và đo hiệu quả, mỗi ngày
+  startRecommendationEffectJob()
   startDeviceOfflineJob()
   startAlertEscalationJob()
   startRecoveryCheckJob()
