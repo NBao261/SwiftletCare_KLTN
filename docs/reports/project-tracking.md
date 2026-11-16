@@ -66,7 +66,7 @@ Counts are pull requests only; reviewing, testing and field work are not counted
 | F-26 | Weather compensation | Nguyễn Chí Bảo | In progress | #152; TC-F26-01..03 | Firmware 2.2.0 tried on a board (G-23) | 2 |
 | F-27 | Recommendation rules | Thái Minh Tuấn | In progress | — | Rules, daily evaluation, effect (G-24): backend Bảo (after G-21), web screen replaced with ComingSoon 16/11 (pending `/recommendations` endpoint) | 2–3 |
 | F-28 | Configuration profiles and house stage | Thái Minh Tuấn | In progress | #126, #153; TC-F28-01, 02 | Profile expert web screens done (86cab267); blocking review issues fixed 16/11: confirm dialog, drawer error display, accessibility, color tokens; applying on owner web Nhi (G-24); house stage screens on web and mobile (`HouseStage` type not yet on the clients) | 2 |
-| F-29 | Farm overview and house comparison | Nguyễn Thị Yến Nhi | In progress | backend in PR #159 (Kiệt, for Bảo); TC-F29-01…03 (Jest) | Web overview and comparison pages (Nhi); yield column waits for G-26 | 3 |
+| F-29 | Farm overview and house comparison | Nguyễn Thị Yến Nhi | In progress | backend (Kiệt, for Bảo) and web (Nhi) in PR #159; TC-F29-01…03 (Jest) | Yield column waits for G-26 | 3 |
 | F-30 | Harvest cycles and season conclusion (supporting, SF-06) | Nguyễn Thị Yến Nhi | Planned | — | Technician entry, confirmation, cycles, conclusion (G-26): backend Bảo, web Nhi, mobile Len, conclusion Tuấn | 3 |
 
 Summary: 5 Done, 23 In progress, 2 Planned (F-23…F-30 added with the final scope of Review 2).

@@ -40,8 +40,9 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000
  * mức dòng bình thường firmware học được, nên mọi mẫu relay BẬT có dòng đều được cộng (tải kẹt hút ít dòng vẫn góp điện).
  * Sẽ áp mức 50 % khi firmware báo mức đã học.
  *
- * Lọc theo `zone_id` của chính dòng telemetry (zone lúc đo), không theo zone hiện tại của controller: controller dời sang
- * nhà khác thì điện đã dùng vẫn thuộc nhà cũ, và controller đã gỡ vẫn được tính.
+ * Lọc theo `zone_id` ghi trên từng dòng telemetry, không theo zone hiện tại của controller: controller dời sang nhà khác
+ * thì điện đã dùng vẫn thuộc nhà cũ, và controller đã gỡ vẫn được tính. Mẫu gửi bù mang zone lúc backend nhận
+ * (telemetry.service), nên mẫu đo ở nhà cũ mà gửi bù sau khi dời controller offline thì tính cho nhà mới.
  */
 export async function houseEnergyByMonth(houseId: unknown, from: Date, to: Date): Promise<EnergyMonth[]> {
   const zoneIds = await Zone.find({ house_id: houseId }).distinct('_id')

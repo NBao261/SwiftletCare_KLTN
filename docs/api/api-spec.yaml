@@ -4742,8 +4742,10 @@ paths:
       summary: "Điện năng ước tính của bơm và quạt của 1 nhà theo tháng (ANALYTICS-FR-017, BR-45)"
       description: |
         Σ điện áp × dòng đo × thời gian: mỗi mẫu telemetry lúc relay BẬT và có dòng đo được tính tới mẫu kế tiếp
-        của cùng controller (khoảng quá 30 giây là mất kết nối, không tính, Report 3 §4.5). Tính theo zone lúc
-        đo: controller dời sang nhà khác thì điện đã dùng vẫn thuộc nhà cũ. Điện áp theo tải DC demo của board
+        của cùng controller (khoảng quá 30 giây là mất kết nối, không tính, Report 3 §4.5). Tính theo `zone_id` ghi
+        trên từng mẫu: controller dời sang nhà khác thì điện đã dùng vẫn thuộc nhà cũ. Mẫu gửi bù (đo lúc mất mạng)
+        mang zone lúc backend nhận, nên mẫu đo ở nhà cũ mà gửi bù sau khi đã dời controller offline sang nhà mới thì
+        tính cho nhà mới. Điện áp theo tải DC demo của board
         nhóm: bơm 5 V, quạt 12 V (A-9); tải nguồn lưới chưa hỗ trợ. Tải không có dòng đo trong tháng → `null`
         ("not available"). Là số ước tính, không phải công tơ. **Lệch BR-45 đã biết:** BR-45 chỉ tính tải chạy khi
         dòng trên 50 % dòng bình thường, nhưng backend chưa biết mức đã học của firmware nên mọi mẫu relay BẬT có
