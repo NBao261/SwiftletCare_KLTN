@@ -1263,12 +1263,13 @@ export async function getSystemStatus() {
       ...sensorNodes.map(n => ({
         _id: String(n._id), device_id: n.device_id, type: 'sensor' as const, status: n.status,
         last_heartbeat: n.last_heartbeat, rssi: n.rssi, firmware_version: n.firmware_version,
-        registered_at: n.registered_at, ...resolveLocation(String(n.zone_id)),
+        registered_at: n.registered_at, simulated: n.simulated ?? false, ...resolveLocation(String(n.zone_id)),
       })),
       // Camera không có firmware_version/rssi trên model
       ...cameraNodes.map(n => ({
         _id: String(n._id), device_id: n.device_id, type: 'camera' as const, status: n.status,
-        last_heartbeat: n.last_heartbeat, registered_at: n.registered_at, ...resolveHouseLocation(String(n.house_id)),
+        last_heartbeat: n.last_heartbeat, registered_at: n.registered_at, simulated: n.simulated ?? false,
+        ...resolveHouseLocation(String(n.house_id)),
       })),
     ],
   }

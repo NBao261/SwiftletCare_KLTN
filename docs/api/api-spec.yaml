@@ -3345,6 +3345,7 @@ paths:
                                 rssi: { type: number, nullable: true, description: "Chỉ có với sensor" }
                                 firmware_version: { type: string, nullable: true, example: "1.2.0", description: "Chỉ có với sensor" }
                                 registered_at: { type: string, format: date-time }
+                                simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập; mọi màn hình phải ghi rõ" }
                                 zone_id: { type: string }
                                 farm_id: { type: string }
                                 farm_name: { type: string }
@@ -5916,6 +5917,9 @@ components:
           type: object
           description: "Chỉ có ở GET /farms/:id — tên/email Primary Owner (tra thêm từ users, không đổi owner_id)"
           properties: { full_name: { type: string }, email: { type: string, format: email } }
+        has_active_expert:
+          type: boolean
+          description: "Chỉ có ở GET /farms — farm có ít nhất một Domain Expert còn hoạt động (chuyên gia bị khoá không tính). false thì Farm Owner làm thay các quyết định của chuyên gia (BR-22), như xem ngày lệch (EXPERT-FR-022)"
         members:
           type: array
           description: "GET /farms/:id với DOMAIN_EXPERT chỉ trả bản ghi của chính người đó (không lộ email thành viên khác)"

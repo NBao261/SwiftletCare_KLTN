@@ -176,6 +176,16 @@ describe('getSystemStatus (OPS-NFR-004)', () => {
     expect(status.summary).toEqual((await getHealthOverview()).devices)
   })
 
+  it('marks the devices of the simulator (SYSTEM-FR-004)', async () => {
+    const live = await seedFarm('sim')
+    await SensorNode.create({ device_id: 'S-sim', zone_id: live.zone._id, status: 'ONLINE', simulated: true })
+    await SensorNode.create({ device_id: 'S-real', zone_id: live.zone._id, status: 'ONLINE' })
+    await CameraNode.create({ device_id: 'C-sim', house_id: live.zone.house_id, status: 'ONLINE', simulated: true })
+
+    const byId = new Map((await getSystemStatus()).nodes.map(n => [n.device_id, n.simulated]))
+    expect(Object.fromEntries(byId)).toEqual({ 'S-sim': true, 'S-real': false, 'C-sim': true })
+  })
+
   it('returns an empty list when every farm is soft-deleted', async () => {
     const gone = await seedFarm('gone', true)
     await SensorNode.create({ device_id: 'S-gone', zone_id: gone.zone._id, status: 'ONLINE' })

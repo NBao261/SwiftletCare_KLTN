@@ -9,6 +9,7 @@ import { OPEN_STATUSES, resolveHouseAlerts } from '@/services/alert.service'
 import {
   hasFarmAccess, hasDeviceAccess, isPrimaryOwner, isFarmTechnician, canAccessHouse, listAssignedHouseIds,
   findFarmOrThrow, findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertExpertDecision,
+  farmHasActiveExpert,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { releaseTechnicianWorkOrders } from '@/services/workOrder.service'
@@ -54,12 +55,17 @@ async function assertUniqueName(
  * FARM-FR-001 — farm mình sở hữu hoặc là thành viên; Farm Technician thấy farm mình là thành viên
  * (để tới các nhà được giao, AUTH-FR-013); Administrator không thấy farm nào (Report 3 §2.4).
  */
-export async function listFarms(user: CurrentUser): Promise<Array<IFarm | FarmDetail>> {
+export async function listFarms(user: CurrentUser): Promise<Array<FarmDetail & { has_active_expert: boolean }>> {
   if (user.role === 'ADMIN') return []
   const filter = { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
 
   const farms = await Farm.find(filter).sort({ created_at: -1 })
-  return user.role === 'FARM_OWNER' ? farms : farms.map(farm => onlyOwnMembership(farm, user))
+  // BR-22 — client biết farm có chuyên gia còn hoạt động (chuyên gia bị khoá không tính) để hiện các việc
+  // Farm Owner làm thay, như tab ngày lệch (EXPERT-FR-022); cùng cách tính với assertExpertDecision
+  return Promise.all(farms.map(async farm => ({
+    ...(user.role === 'FARM_OWNER' ? (farm.toObject() as unknown as FarmDetail) : onlyOwnMembership(farm, user)),
+    has_active_expert: await farmHasActiveExpert(farm),
+  })))
 }
 
 /**

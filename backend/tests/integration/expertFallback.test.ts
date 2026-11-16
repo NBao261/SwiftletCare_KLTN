@@ -134,6 +134,15 @@ describe('BR-22 — Farm Owner làm thay chuyên gia', () => {
     expect(await Notification.countDocuments({ user_id: owner._id })).toBe(0)
   })
 
+  it('GET /farms cho biết farm có chuyên gia còn hoạt động (chuyên gia bị khoá không tính)', async () => {
+    const { owner, expert, farm } = await seed({ withExpert: true })
+    const list = () => request(app).get('/farms').set('Authorization', `Bearer ${tokenFor(owner._id, 'FARM_OWNER')}`)
+    const flagOf = async () => (await list()).body.data.find((f: { _id: string }) => f._id === String(farm._id))?.has_active_expert
+    expect(await flagOf()).toBe(true)
+    await User.updateOne({ _id: expert._id }, { is_active: false })
+    expect(await flagOf()).toBe(false)
+  })
+
   it('chuyên gia duy nhất bị khoá: Farm Owner làm thay cả 4 quyết định và nhận thông báo chờ kiểm chứng', async () => {
     const { owner, expert, farm, zone, alert, decisions } = await seed({ withExpert: true })
     await User.updateOne({ _id: expert._id }, { is_active: false })
