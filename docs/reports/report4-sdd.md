@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.3 (Review 2, final scope) |
+| Document version | 2.2.4 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -318,7 +318,7 @@ Background jobs:
 | Maintenance | `maintenance.service` (plans, checklists, records, calibration); `runHours.job` hourly from the relay state and, where measured, the current (BR-45); `maintenanceDue.job` hourly and at 07:00 for calendar plans | OPS-FR-005…008, ALERT-FR-016 |
 | Operational indicators | `opsMetrics.service` (MTTA, MTTR, on-time maintenance); `houseComparison.service` (BR-44, energy BR-45); `farmOverview.service` | OPS-FR-009, ANALYTICS-FR-015…017 |
 | Weather compensation | `weatherCompensation.job` hourly after `weather.job`; rules embedded in the house | ENV-FR-028, 030 |
-| Knowledge | `configProfile.service` (draft, approve, apply as one change per zone); `recommendation.service`; `recommendation.job` daily after the assessment; `recommendationEffect.job` daily | EXPERT-FR-014…019 |
+| Knowledge | `configProfile.service` (draft, approve, apply as one change per zone); `recommendation.service`, rules evaluated at the end of `returnRate.job` right after the daily assessment; `recommendationEffect.job` daily at 06:30 | EXPERT-FR-014…019 |
 | Harvest cycles | `harvestCycle.service` (close on confirmation, comparisons, completeness) | HARVEST-FR-006, 007, EXPERT-FR-020 |
 | House stage and assignment | `house.service` (stage with history, technicians and roster) | FARM-FR-014, AUTH-FR-013, 014 |
 
@@ -783,25 +783,29 @@ erDiagram
     ObjectId _id PK
     ObjectId farm_id FK
     ObjectId author_id FK
+    string name
     string indicator
     string comparison
     number value
     number window_days
     object action "work order type or parameter change"
+    string source "where the rule comes from"
     bool active
   }
   RECOMMENDATION {
     ObjectId _id PK
     ObjectId rule_id FK
     ObjectId house_id FK
+    object rule_snapshot "the rule when raised"
     string status "OPEN | ACCEPTED | REJECTED | EXPIRED | MEASURED"
     object evidence
     string reject_reason
     ObjectId work_order_id FK
-    ObjectId review_id FK
+    array review_ids "one review item per zone"
     object effect "before, after, change"
     date raised_at
     date decided_at
+    date expired_at
   }
   CONFIG_PROFILE {
     ObjectId _id PK
@@ -1870,6 +1874,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3) |
 | 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |
 | 2.2.2 | 12/11/2026 | Configuration sync as built (G-08): the heartbeat field is named `appliedConfigVersion`, like the other heartbeat fields; the ERD stores `config_sync` (Report 3 §6.12) on the controller |
 | 2.2.1 | 10/11/2026 | BM02 items due 11/11/2026: SMTP e-mail provider in the Section 2.1 diagram (A-03); mobile versions and Jest from `mobile/package.json` in Section 3.2 (A-06); mDNS broker discovery named as a development aid in Section 3.4 (A-01); services and the `deletionRequestReminder` job of the code listed in Section 5.3 (A-07); every transition of Section 8 names its requirement (ST-06); SM-06 restore within 24 h (ST-01), SM-08 "not evaluated" (ST-07), SM-12 starts at `PENDING` and leaves `UNKNOWN` (ST-03), following SRS 4.2.1; the `alertEscalation` job runs every minute as in DF-13 and the operations modules |
