@@ -396,7 +396,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Weather compensation limits and rule inputs | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `MAX_WEATHER_RULES`, `WEATHER_METRIC_LIMITS` (`utils/weatherCompensation.util.ts`); firmware `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `WEATHER_COMP_OFFLINE_MS` (`pid/WeatherCompensation.h`) |
 | Automatic Work Order for offline devices | backend `WORK_ORDER_OFFLINE_DELAY_MIN` |
 | On-site photos | backend `MAX_PHOTO_BYTES`, `MAX_WORK_ORDER_PHOTOS` (`workOrder.service.ts`) |
-| Recommendation expiry and effect window | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS` |
+| Recommendation expiry and effect window, rule inputs | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS`, `RULE_VALUE_LIMITS`, `RULE_WINDOW_MIN_DAYS`, `RULE_WINDOW_MAX_DAYS` (`utils/recommendationRule.util.ts`); daily 06:30 job `recommendationEffect.job.ts` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
 | Same period of the previous year, complete cycle | backend `HARVEST_SAME_PERIOD_DAYS`, `HARVEST_CYCLE_MIN_COMPLETENESS` |
 

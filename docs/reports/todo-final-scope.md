@@ -222,8 +222,8 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 ### G-24 — Giai đoạn nhà, profile, luật khuyến nghị (Bảo, Tuấn, Nhi) — hạn 23/12
 
 **Backend (Bảo):**
-- [ ] Spec `/profiles` (draft, approve, archive, apply), `/recommendations` (luật, khuyến nghị của nhà, chấp nhận, từ chối, hiệu quả theo luật), giai đoạn nhà trong `/farms`.
-- [ ] Collections `configprofiles`, `recommendationrules`, `recommendations` (unique `rule_id + house_id` khi đang `OPEN`). Chạy `npm run db:script`.
+- [x] Spec `/profiles` (draft, approve, archive, apply), `/recommendations` (luật, khuyến nghị của nhà, chấp nhận, từ chối, hiệu quả theo luật), giai đoạn nhà trong `/farms`. *(`/profiles` PR #153; `/recommendations` PR #163; giai đoạn nhà PR #126)*
+- [x] Collections `configprofiles`, `recommendationrules`, `recommendations` (unique `rule_id + house_id` khi đang `OPEN`). Chạy `npm run db:script`. *(PR #153 và #163)*
 - [x] **Giai đoạn nhà** (FARM-FR-014, BR-46): *(backend: Kiệt, 12/11, `78ada1a` + `e5ebd08`, làm trong PR #126 của G-11; màn đặt giai đoạn trên web: Nhi)*
   - Farm Owner hoặc chuyên gia đặt `ATTRACTING` / `OCCUPIED`, có lịch sử; technician đặt thì 403;
   - nhà `ATTRACTING` không đánh giá chỉ số đàn, không tạo `LOW_RETURN_RATE`, lý do ghi "attracting stage".
@@ -232,7 +232,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
   - giá trị ngoài khoảng trả 400; người không phải chuyên gia duyệt thì 403;
   - Farm Owner áp profile cho các nhà: mỗi zone nhận một thay đổi có lịch sử (nguồn `PROFILE`) và một phiên bản cấu hình mới (cần G-08);
   - áp profile `DRAFT` hoặc `ARCHIVED` trả 409.
-- [ ] **Luật khuyến nghị** (EXPERT-FR-016…019, BR-42):
+- [x] **Luật khuyến nghị** (EXPERT-FR-016…019, BR-42): *(Bảo, 16/11/2026, nhánh `feat/g24-recommendation-rules`, PR #163. Chỉ số: `TIME_IN_RANGE`, `AIR_HOURS_OVER`, `RETURN_RATE`, `NOISE_EPISODES` lấy từ ngày sức khỏe của G-11, `MISTING_INEFFECTIVE` đếm cảnh báo trong ngày; luật thoả khi mọi ngày trong cửa sổ đều đạt, thiếu ngày thì không; mỗi luật bắt buộc ghi nguồn. Chấp nhận: Work Order sửa chữa nguồn `RECOMMENDATION`, hoặc sửa ngưỡng/hệ số mờ mọi zone của nhà như Farm Owner tự sửa nên có mục duyệt cho chuyên gia (một mục mỗi zone). Work Order phòng ngừa không có ở đây vì cần checklist của kế hoạch. Job xét luật chạy ngay sau đánh giá ngày (`returnRate.job`), hết hạn và đo hiệu quả lúc 06:30.)*
   - luật = chỉ số nhà + cửa sổ 1–30 ngày + hành động (loại Work Order hoặc thay đổi tham số);
   - `recommendation.job` chạy mỗi ngày sau đánh giá ngày, mỗi luật và nhà chỉ có một khuyến nghị đang mở; khuyến nghị mở quá 7 ngày thì `EXPIRED`;
   - Farm Owner chấp nhận thì tạo đúng một Work Order (cần G-21) hoặc một mục duyệt (G-04); từ chối thiếu lý do trả 422;
