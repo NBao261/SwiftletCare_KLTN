@@ -16,6 +16,8 @@ npm run test:int     # jest tests/integration
 npx jest path/to/file.test.ts
 npm run lint         # eslint src/**/*.ts
 npm run seed         # 1 Farm Owner + 1 Domain Expert + 1 Farm Technician (assigned to the house) + Farm/House/Zone/SensorNode
+npm run seed:demo    # after seed: drops and rebuilds the two demo farms of DS-01…16 (Design Brief A2) through the real services; prints the demo device keys (docs/deploy/staging.md §5)
+npm run job:run -- <job>  # run one background job now: health, recommendations, effects, expire [days ahead], maintenance, relay-usage, recovery, escalation
 npm run migrate:retention     # sync TTL/indexes + merge duplicate open alerts (idempotent; rerun after changing a TTL)
 npm run migrate:remove-sales  # one-off after SRS v1.23.0 (idempotent)
 npm run migrate:data-model    # one-off, BEFORE deploying v1.23.0 code (idempotent)

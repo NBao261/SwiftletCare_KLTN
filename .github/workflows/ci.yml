@@ -150,6 +150,8 @@ jobs:
       JWT_REFRESH_SECRET: e2e-refresh-secret
       # Không có broker trong job: backend ghi lỗi MQTT và tự thử nối lại, API vẫn chạy
       MQTT_BROKER_URL: mqtt://localhost:1883
+      # Mọi lời gọi của test ra từ một IP: không để giới hạn 300 lần/phút làm hỏng test
+      RATE_LIMIT_MAX: '2000'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -164,6 +166,8 @@ jobs:
         run: |
           npm ci
           npm run seed
+          # Dữ liệu của 16 kịch bản demo DS-01…16 cho e2e/ds-*.spec.ts (Design Brief Phụ lục A2)
+          npm run seed:demo
           nohup npx tsx src/index.ts > backend.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:3000/health && exit 0; sleep 1; done
           cat backend.log; exit 1
