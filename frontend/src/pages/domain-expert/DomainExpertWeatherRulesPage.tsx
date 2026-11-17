@@ -145,7 +145,7 @@ export default function DomainExpertWeatherRulesPage() {
       <SectionCard
         icon={<CloudRain className="w-5 h-5" />}
         title="Luật bù phun sương theo thời tiết"
-        description="Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ."
+        description="Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất."
         action={!isLoading && rules.length >= MAX_RULES ? (
           <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
             Đã đạt tối đa 10 luật
