@@ -139,8 +139,10 @@ export async function forgotPassword(email: string): Promise<void> {
   user.password_reset_expires_at = expiresAt
   await user.save()
 
-  // Gửi qua e-mail (SF-03); mã không bao giờ ghi log. Thư lỗi thì người dùng gửi lại yêu cầu
-  await sendMail(resetCodeMail({ to: user.email, code: token, expiresAt }))
+  // Gửi qua e-mail (SF-03); mã không bao giờ ghi log. Không chờ SMTP trong request: chờ thì email có tài khoản trả
+  // chậm hơn email không có (một vòng SMTP), lộ tài khoản qua thời gian phản hồi (Flow 11 case 1a). sendMail không
+  // throw; thư lỗi thì người dùng gửi lại yêu cầu
+  void sendMail(resetCodeMail({ to: user.email, code: token, expiresAt }))
 }
 
 /**

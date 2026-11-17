@@ -46,14 +46,6 @@ export async function listUsers(query: ListUsersQuery) {
   return { records, total, page, limit }
 }
 
-
-/**
- * AUTH-FR-011 — khoá/mở khoá tài khoản. Lý do bắt buộc khi khoá (không bắt buộc
- * khi mở khoá). Middleware `authenticate` đã tự chặn is_active=false ở request
- * kế tiếp, nên không cần thu hồi refresh_tokens riêng ở đây — vẫn xoá cho chắc,
- * để user không giữ được phiên nào nếu quay lại dùng refresh token cũ. Kết nối
- * Socket.io đang mở cũng bị ngắt ngay (JWT còn hạn không đủ để giữ realtime).
- */
 export interface CreateFarmOwnerInput {
   email: string
   full_name: string
@@ -86,6 +78,13 @@ export async function createFarmOwner(
   return { ...(user.toJSON() as Record<string, unknown>), temporary_password_emailed: emailed }
 }
 
+/**
+ * AUTH-FR-011 — khoá/mở khoá tài khoản. Lý do bắt buộc khi khoá (không bắt buộc
+ * khi mở khoá). Middleware `authenticate` đã tự chặn is_active=false ở request
+ * kế tiếp, nên không cần thu hồi refresh_tokens riêng ở đây — vẫn xoá cho chắc,
+ * để user không giữ được phiên nào nếu quay lại dùng refresh token cũ. Kết nối
+ * Socket.io đang mở cũng bị ngắt ngay (JWT còn hạn không đủ để giữ realtime).
+ */
 export async function setUserStatus(
   adminId: string, userId: string, isActive: boolean, reason?: string,
 ): Promise<IUser> {

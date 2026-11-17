@@ -7,6 +7,7 @@ const sendMailMock = jest.fn()
 jest.mock('nodemailer', () => ({ __esModule: true, default: { createTransport: jest.fn(() => ({ sendMail: sendMailMock })) } }))
 
 import express, { type Request, type Response } from 'express'
+import nodemailer from 'nodemailer'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import adminRoutes from '@/routes/admin.route'
@@ -16,7 +17,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { User } from '@/models/user.model'
 import { forgotPassword, resetPassword } from '@/services/auth.service'
 import { inviteMember } from '@/services/farm.service'
-import { resetMailTransport } from '@/services/mail.service'
+import { SMTP_TIMEOUT_MS, resetMailTransport } from '@/services/mail.service'
 import logger from '@/utils/logger.util'
 import type { Role } from '@/types'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
@@ -109,6 +110,16 @@ describe('Administrator tạo Farm Owner (AUTH-FR-005c)', () => {
     warn.mockRestore()
   })
 
+  it('SMTP có thời gian chờ ngắn (Report 3 §4.5): máy chủ treo không giữ request vài phút', async () => {
+    const admin = await account('ADMIN')
+    await request(app).post('/admin/farm-owners').set('Authorization', `Bearer ${admin.token}`)
+      .send({ email: 'timeout@test.vn', full_name: 'Timeout' }).expect(201)
+    expect(nodemailer.createTransport).toHaveBeenCalledWith(expect.objectContaining({
+      connectionTimeout: SMTP_TIMEOUT_MS, greetingTimeout: SMTP_TIMEOUT_MS, socketTimeout: SMTP_TIMEOUT_MS,
+    }))
+    expect(SMTP_TIMEOUT_MS).toBe(10_000)
+  })
+
   it('máy chủ SMTP lỗi: tài khoản vẫn tạo, báo chưa gửi được thư, log không kèm nội dung thư', async () => {
     sendMailMock.mockRejectedValueOnce(new Error('connection refused'))
     const error = jest.spyOn(logger, 'error')
@@ -128,6 +139,7 @@ describe('mã đặt lại mật khẩu qua e-mail (AUTH-FR-009)', () => {
     const { user } = await account('FARM_OWNER')
 
     await forgotPassword(user.email.toUpperCase())
+    await new Promise(setImmediate)
     const mails = sentMails()
     expect(mails).toHaveLength(1)
     expect(mails[0]).toMatchObject({ to: user.email, subject: 'Mã đặt lại mật khẩu SwiftletCare' })
@@ -140,6 +152,19 @@ describe('mã đặt lại mật khẩu qua e-mail (AUTH-FR-009)', () => {
 
     consoleLog.mockRestore()
     for (const spy of spies) spy.mockRestore()
+  })
+
+  it('trả về mà không chờ SMTP: email có tài khoản không chậm hơn email không có (Flow 11 case 1a)', async () => {
+    // Máy chủ SMTP treo: thư không bao giờ xong, nhưng yêu cầu vẫn trả về ngay
+    sendMailMock.mockImplementation(() => new Promise(() => undefined))
+    const { user } = await account('FARM_OWNER')
+    const done = jest.fn()
+    await Promise.race([
+      forgotPassword(user.email).then(done),
+      new Promise(resolve => setTimeout(resolve, 1000)),
+    ])
+    expect(done).toHaveBeenCalled()
+    expect(sendMailMock).toHaveBeenCalledTimes(1)
   })
 
   it('email không có tài khoản: không gửi thư (không lộ tài khoản nào tồn tại)', async () => {

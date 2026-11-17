@@ -15,6 +15,11 @@ export interface MailMessage {
 
 /** Giá trị mẫu của `.env.example` coi như chưa cấu hình */
 const PLACEHOLDER = 'CHANGE_ME'
+/**
+ * Report 3 §4.5 — thời gian chờ SMTP (kết nối, chào, socket). Mặc định của nodemailer là 2 phút và 10 phút, đủ để một
+ * máy chủ SMTP treo giữ request tạo tài khoản hay lời mời rất lâu
+ */
+export const SMTP_TIMEOUT_MS = 10_000
 
 let transporter: Transporter | null | undefined
 
@@ -38,6 +43,9 @@ function getTransporter(): Transporter | null {
       // 465 là SMTPS; 587 và cổng khác nâng lên TLS bằng STARTTLS
       secure: config.port === 465,
       auth: { user: config.user, pass: config.pass },
+      connectionTimeout: SMTP_TIMEOUT_MS,
+      greetingTimeout: SMTP_TIMEOUT_MS,
+      socketTimeout: SMTP_TIMEOUT_MS,
     })
     : null
   return transporter

@@ -16,7 +16,6 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
-/** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 /** POST /admin/farm-owners – AUTH-FR-005c */
 export const createFarmOwner = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.createFarmOwner(req.user._id, {
@@ -25,6 +24,7 @@ export const createFarmOwner = asyncHandler(async (req: Request, res: Response) 
   res.status(201).json({ success: true, data: user })
 })
 
+/** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
