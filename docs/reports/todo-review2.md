@@ -456,9 +456,9 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-17 — Staging (P0-Demo) — cả team, Bảo chịu trách nhiệm chính; điều kiện DS và test E2E: chủ từng workflow
 
-- [ ] **Bảo:** VPS, `deploy/docker-compose.staging.yml`, Nginx + Certbot (`nginx.conf`: HTTPS, `stream` 8883 MQTT, 8322 RTSPS), file auth/authz EMQX, AI node nối vào staging, rollback theo tag.
-- [ ] **Kiệt:** Dockerfile backend, `.env.staging.example`, chạy migration và seed trên staging, `mongodump` hằng ngày chép ra ngoài VPS.
-- [ ] **Nhi:** Dockerfile và bản build web; kiểm tra nhanh các màn Farm Owner và Admin trên web staging sau mỗi lần triển khai.
+- [ ] **Bảo:** VPS, `deploy/docker-compose.staging.yml`, Nginx + Certbot (`nginx.conf`: HTTPS, `stream` 8883 MQTT, 8322 RTSPS), file auth/authz EMQX, AI node nối vào staging, rollback theo tag. *(18/11/2026, nhánh `chore/g17-staging`: compose, `deploy/nginx/` (build web + Nginx, template HTTPS và `stream`), `deploy/staging-cert.sh`, `backend/Dockerfile`, `deploy/.env.staging.example`; một tên miền; file lưu ở volume backend vì ảnh MinIO không còn phát; backend không ghi log `/internal/*`. Chạy thử trên máy với `DOMAIN=localhost` (`docs/deploy/staging.md` §3). Còn: thuê VPS, tên miền, AI node và ESP32 nối vào.)*
+- [ ] **Kiệt:** ~~Dockerfile backend, `.env.staging.example`~~ (Bảo làm cùng compose, 18/11 — Kiệt xem lại), chạy migration và seed trên staging, `mongodump` hằng ngày chép ra ngoài VPS.
+- [ ] **Nhi:** ~~Dockerfile và bản build web~~ (Bảo làm trong `deploy/nginx/Dockerfile`, 18/11 — Nhi xem lại `VITE_*`); kiểm tra nhanh các màn Farm Owner và Admin trên web staging sau mỗi lần triển khai.
 - [ ] **Len:** bản build mobile (EAS profile `preview`) trỏ tới staging; kiểm tra nhanh đăng nhập, push và các màn Farm Owner trên mobile.
 - [ ] **Tuấn:** kiểm tra nhanh màn chuyên gia và màn thiết bị của Admin; chạy bộ E2E trên staging trước mỗi buổi tổng duyệt.
 - [ ] Seed demo đủ 22 kịch bản Phụ lục A2 (Kiệt, Bảo), theo điều kiện chủ workflow ghi.

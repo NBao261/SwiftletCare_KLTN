@@ -1,6 +1,6 @@
 # Môi trường staging — đề xuất cho Review 2 và Defense 1.1
 
-Tài liệu này giải thích **staging là gì**, cấu hình nhóm chọn và các bước dựng nó. Report 4 §3.4, §11 và quyết định D5 là bản chính thức bằng tiếng Anh. Phần Dockerfile và compose mẫu nằm ở `docs/bird-counting-plan.md` §15.3–15.5 (bản thiết kế, **chưa chạy thử**); mẫu ở đó còn dùng Caddy, nay đổi sang **Nginx + Certbot** (mục 2.2). Mục 15.2 và mục 18 của plan còn giả định model chạy trên VPS. Tài liệu này thay hai mục đó: **model chạy trên PC cũ đặt tại nhà một thành viên**. PC kéo hình camera qua Internet, nhờ IP tĩnh của đường VNPT ở nhà yến.
+Tài liệu này giải thích **staging là gì**, cấu hình nhóm chọn và các bước dựng nó. Report 4 §3.4, §11 và quyết định D5 là bản chính thức bằng tiếng Anh. Các file chạy thật nằm ở `deploy/` và `backend/Dockerfile` (mục 3); mẫu cũ ở `docs/bird-counting-plan.md` §15.3–15.5 dùng Caddy và bốn tên miền, nay thay bằng **Nginx + Certbot** và **một tên miền**. Mục 15.2 và mục 18 của plan còn giả định model chạy trên VPS. Tài liệu này thay hai mục đó: **model chạy trên PC cũ đặt tại nhà một thành viên**. PC kéo hình camera qua Internet, nhờ IP tĩnh của đường VNPT ở nhà yến.
 
 ## 1. Staging là gì, vì sao phải có
 
@@ -20,7 +20,7 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
  (web/mobile)  ─8189/udp──────────► MediaMTX (WebRTC)
                 │  Nginx 8883 ─► EMQX ◄─1883 nội bộ─ backend
                 │  Nginx 8322 ─► MediaMTX (nhận video)
-                │  MongoDB, MinIO: chỉ trong mạng Docker
+                │  MongoDB, file (volume backend): chỉ trong mạng Docker
                 └────────────────────────────────────────┘
                         ▲ 8883 MQTT TLS     ▲ 8322 RTSPS
  Nhà yến ──────── ESP32 ┘                   │
@@ -40,18 +40,19 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
   3. VPS trả phí trong nước.
 
   Kiểm tra ưu đãi còn hiệu lực ở `education.github.com/pack`, vì gói sinh viên duyệt mất vài ngày.
-- **Tên miền:** một tên miền có 4 bản ghi A trỏ về IP của VPS: `app.`, `api.`, `stream.`, `mqtt.`. Có thể dùng chung một tên cho `app` và `api`, như plan §15.1.
+- **Tên miền:** **một** tên (`DOMAIN`), một bản ghi A trỏ về IP của VPS. Web ở `/`, API ở `/api`, Socket.io ở `/socket.io`, WHEP ở `/stream`; MQTT TLS ở cổng 8883 và RTSPS ở cổng 8322 của cùng tên. Một chứng chỉ, một lần xin.
 
 ### 2.2. Các service trên VPS
 
 | Service | Vai trò | Cổng mở ra Internet |
 | --- | --- | --- |
-| Nginx | Reverse proxy: phục vụ web đã build; chuyển `/api`, `/socket.io` (WebSocket) vào backend; chuyển trang WHEP sang MediaMTX; chặn `/internal/*`. Module `stream` bọc TLS cho MQTT (8883 → EMQX 1883) và cho luồng đẩy video (8322 → MediaMTX 8554). Một chứng chỉ Let's Encrypt cho mọi tên miền | 80, 443, 8883, 8322 |
-| Certbot | Xin và gia hạn chứng chỉ Let's Encrypt (webroot qua cổng 80); cron nạp lại Nginx sau mỗi lần gia hạn | không |
+| Nginx | Reverse proxy: phục vụ web đã build; chuyển `/api`, `/socket.io` (WebSocket) vào backend; chuyển trang WHEP sang MediaMTX; chặn `/internal/*`. Module `stream` bọc TLS cho MQTT (8883 → EMQX 1883) và cho luồng đẩy video (8322 → MediaMTX 8554). Một chứng chỉ Let's Encrypt cho `DOMAIN` | 80, 443, 8883, 8322 |
+| Certbot | Xin chứng chỉ lần đầu bằng `deploy/staging-cert.sh`; container `certbot` gia hạn mỗi 12 giờ (webroot qua cổng 80); cron trên VPS nạp lại Nginx (mục 3) | không |
 | backend | API, Socket.io, job nền; nối EMQX qua `mqtt://emqx:1883` trong mạng Docker | không |
 | EMQX | Broker; xác thực qua `/internal/mqtt-auth`, quyền theo `deploy/emqx/acl.conf`, tắt anonymous; dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua Nginx 8883) |
 | EMQX, biến môi trường | `EMQX_AUTHENTICATION__1__URL=http://backend:3000/internal/mqtt-auth?key=<MQTT_AUTH_KEY>`; `MQTT_USERNAME` của backend phải là `backend-service` như `deploy/emqx/acl.conf` | không |
-| MongoDB, MinIO | Dữ liệu, file âm thanh | không |
+| MongoDB | Dữ liệu | không |
+| File (âm thanh, ảnh Work Order, ảnh mùa vụ) | `STORAGE_DRIVER=local`: volume `backend_storage` của backend, tải qua `/api/files/<key>`. Không dùng MinIO vì ảnh `minio/minio` và `minio/mc` không còn phát công khai (Docker Hub, Quay). Key có UUID ngẫu nhiên nên link không đoán được, nhưng **không hết hạn** như URL ký của MinIO | không |
 | MediaMTX | Nhận video có khung từ PC cũ (AI node); phát WebRTC; hỏi backend `/internal/stream-auth` ở mỗi lần đẩy hoặc xem | 8189 TCP + UDP (WebRTC tự mã hoá) |
 
 Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 không mở ra ngoài**, trừ phương án lùi ở mục 4.
@@ -82,8 +83,8 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
   - `stream.py` chạy như một service: Ubuntu dùng `systemd` với `Restart=always`; Windows dùng NSSM hoặc Task Scheduler "At startup".
   - Model ONNX tải về máy, không commit vào repo.
 - **Kết nối lên VPS:**
-  - MQTT TLS tới `mqtt.<tên miền>:8883` (số đếm, số đếm 5 phút, heartbeat). Nhận vòng đếm qua `config` retained của thiết bị.
-  - Đẩy video có khung bằng RTSPS tới `<tên miền>:8322`, xác thực bằng `STREAM_PUBLISH_SECRET`.
+  - MQTT TLS tới `<DOMAIN>:8883` (số đếm, số đếm 5 phút, heartbeat). Nhận vòng đếm qua `config` retained của thiết bị.
+  - Đẩy video có khung bằng RTSPS tới `<DOMAIN>:8322`, xác thực bằng `STREAM_PUBLISH_SECRET`.
 - **Tự chạy lại sau sự cố:**
   - Bật BIOS "Restore on AC power loss = Power On".
   - Tắt sleep/hibernate.
@@ -96,7 +97,7 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
 
 ### 2.4. ESP32
 
-- **Broker:** nhập `mqtt.<tên miền>` vào trang AP-mode, hoặc đặt trong `Secrets.h`. mDNS chỉ dùng trong LAN dev.
+- **Broker:** `DOMAIN` của staging, nạp cùng device ID lúc flash (`flash_identity.py`, FARM-FR-003c). mDNS chỉ dùng trong LAN dev.
 - **TLS:** build bằng `pio run -e esp32prod` (cổng 8883, CA ISRG Root X1), broker phải là tên miền, không dùng IP.
 - **Tài khoản:** nạp device ID và broker secret bằng `firmware/tools/flash_identity.py`.
 
@@ -104,30 +105,56 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
 
 ## 3. Triển khai, rollback, sao lưu
 
-Còn thiếu trong repo, cần làm trước khi dựng (gap #40):
+File trong repo (G-17):
 
-- `deploy/docker-compose.staging.yml`, gồm Nginx, Certbot, backend, MongoDB, EMQX, MinIO, MediaMTX; **không có** Redis vì chưa module nào dùng.
-- `backend/Dockerfile`, `frontend/Dockerfile` hoặc bản build tĩnh.
-- `deploy/nginx.conf` (các site HTTPS và khối `stream` cho 8883, 8322).
-- `deploy/.env.staging.example`, trong đó mọi mật khẩu là placeholder.
-- Script seed demo.
+| File | Nội dung |
+| --- | --- |
+| `deploy/docker-compose.staging.yml` | MongoDB, EMQX, backend, MediaMTX, Nginx, Certbot; không Redis (chưa module nào dùng), không MinIO (mục 2.2) |
+| `backend/Dockerfile` | Backend chạy bằng `tsx` như lúc dev, kèm `docs/api/api-spec.yaml` (Swagger, kiểm tra route) |
+| `deploy/nginx/Dockerfile`, `nginx.conf`, `templates/` | Build web (`VITE_STREAM_URL=/stream`) rồi phục vụ bằng Nginx; site HTTPS và khối `stream` (8883, 8322) điền `DOMAIN` lúc khởi động |
+| `deploy/.env.staging.example` | Mọi biến, mật khẩu là placeholder; chép thành `deploy/.env.staging` trên VPS (bị `.gitignore`) |
+| `deploy/staging-cert.sh` | Chứng chỉ lần đầu: tạo chứng chỉ tạm, bật Nginx, xin chứng chỉ Let's Encrypt, nạp lại Nginx |
+| `deploy/secrets/` | Chỗ đặt `firebase-service-account.json` trên VPS; chỉ có `.gitignore` trong repo |
 
-Bản mẫu của các file này nằm ở plan §15.3–15.5.
+Backend không ghi `/internal/*` vào log truy cập, vì khoá EMQX và MediaMTX nằm trong query `?key=`.
+
+Lần đầu trên VPS (mở cổng 80, 443, 8883, 8322, 8189 TCP + UDP; bản ghi A của `DOMAIN` đã trỏ về VPS):
 
 ```bash
-# Trên VPS, triển khai một tag
-git fetch --tags && git checkout review-2
-docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging exec -T mongodb \
-  mongodump -u "$MONGO_USER" -p "$MONGO_PASSWORD" --authenticationDatabase admin --archive --gzip > ~/backup/pre-deploy-$(date +%F).gz
-docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging up -d --build
-docker compose -f deploy/docker-compose.staging.yml exec backend npm run migrate:retention   # và các migrate:* còn chờ
-docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed                # chỉ khi DB trống
+git clone <repo> swiftletcare && cd swiftletcare && git checkout <tag>
+cp deploy/.env.staging.example deploy/.env.staging   # điền mọi CHANGE_ME (openssl rand -hex 32)
+C="docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging"
+$C up -d --build mongodb emqx backend mediamtx
+sh deploy/staging-cert.sh                            # thử trên máy: --self-signed, DOMAIN=localhost
+$C up -d certbot
+$C exec backend npm run seed                         # chỉ khi DB trống
+# cron của VPS: Nginx đọc chứng chỉ đã gia hạn
+# 0 4 * * * cd ~/swiftletcare && docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging exec -T nginx nginx -s reload
 ```
+
+Docker Desktop trên Windows với Compose v5 build qua bake và báo lỗi quyền `--allow=fs.read=...`; khi đó build từng ảnh rồi bật không build:
+
+```bash
+docker build -f backend/Dockerfile -t swiftletcare-staging-backend .
+docker build -f deploy/nginx/Dockerfile -t swiftletcare-staging-nginx .
+$C up -d --no-build
+```
+
+Triển khai một tag mới:
+
+```bash
+git fetch --tags && git checkout review-2
+$C exec -T mongodb mongodump -u "$MONGO_USER" -p "$MONGO_PASSWORD" --authenticationDatabase admin   --archive --gzip > ~/backup/pre-deploy-$(date +%F).gz
+$C up -d --build
+$C exec backend npm run migrate:retention   # và các migrate:* còn chờ
+```
+
+Đã chạy thử trên máy (18/11/2026, `DOMAIN=localhost`, chứng chỉ tự ký): web và đường dẫn SPA trả 200; `/api/health`, Swagger, đăng nhập và cookie refresh qua HTTPS; Socket.io; `/api/internal/*` trả 404; HTTP chuyển 301 sang HTTPS; WHEP tới được MediaMTX; MQTT TLS 8883 nhận `backend-service`, từ chối mật khẩu sai và thiết bị lạ; RTSPS 8322 bắt tay TLS 1.3; cổng 1883, 3000, 8554, 8889 không mở ra ngoài; ảnh backend không chứa `.env`. Chưa chạy trên VPS thật, chưa thử AI node và ESP32 nối vào.
 
 | Việc | Cách làm |
 | --- | --- |
-| Kiểm tra sau triển khai | Chạy 10 bước ở plan §15.9 (HTTPS, cookie refresh, Socket.io, cổng nội bộ không lộ, `/internal` bị chặn, MQTT từ AI node, đẩy video, chặn xem không token, xem video, thử từ Wi-Fi của trường) |
-| Rollback | Checkout tag trước, chạy lại `up -d --build`; nếu dữ liệu đã đổi thì `mongorestore` bản `pre-deploy` |
+| Kiểm tra sau triển khai | Như lần thử trên máy ở trên, cộng các bước ở plan §15.9 (HTTPS, cookie refresh, Socket.io, cổng nội bộ không lộ, `/internal` bị chặn, MQTT từ AI node, đẩy video, chặn xem không token, xem video, thử từ Wi-Fi của trường) |
+| Rollback | Checkout tag trước, chạy lại `$C up -d --build`; nếu dữ liệu đã đổi thì `mongorestore` bản `pre-deploy` |
 | Sao lưu | Cron 03:00 mỗi ngày, giữ 7 bản (plan §15.9), cộng một bản trước mỗi lần triển khai; chép ra ngoài VPS `[TEAM: nơi lưu]` |
 | Bí mật | `deploy/.env.staging` chỉ nằm trên VPS, không commit; đổi mật khẩu các tài khoản seed trước khi đưa link cho người ngoài |
 | Push FCM (ALERT-FR-002) | Đặt file service account Firebase lên VPS (không commit), mount vào container backend và trỏ `FIREBASE_SERVICE_ACCOUNT_PATH` tới nó; thiếu thì backend không gửi push, các kênh khác vẫn chạy |
@@ -143,7 +170,7 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 
 ## 5. Dữ liệu demo
 
-`npm run seed` hiện tạo 1 Farm Owner, 1 Technician, 1 Domain Expert, 1 Farm/House/Zone/SensorNode. Như vậy **chưa đủ** cho mọi kịch bản ở Phụ lục A2 của Design Brief. Cần một script seed demo (gap #40) tạo thêm:
+`npm run seed` hiện tạo 1 Farm Owner, 1 Farm Technician, 1 Domain Expert và 1 Farm/House/Zone/SensorNode. Như vậy **chưa đủ** cho mọi kịch bản ở Phụ lục A2 của Design Brief. Cần một script seed demo (G-17, Kiệt và Bảo) tạo thêm:
 
 - tài khoản Administrator;
 - một farm **không** có chuyên gia (BR-22);

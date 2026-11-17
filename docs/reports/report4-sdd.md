@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.9 (Review 2, final scope) |
+| Document version | 2.2.11 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -173,7 +173,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs, firebase-admin (FCM) | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
 | Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `react-native-gifted-charts` | Expo ~58.0, React Native 0.88.0, React 19.3.0, expo-router ~58.0, expo-camera ~58.0, expo-notifications ~58.1, expo-video ~58.0, react-native-mmkv ^4.3, react-native-gifted-charts ^1.4 |
-| Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1, nginx 1.27, certbot latest |
+| Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest (development only), mediamtx 1.21.1, nginx 1.27, certbot v3.1.0 |
 | Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Playwright (web end to end against the seeded backend, CI job `e2e`), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6, Playwright 1.64.1 |
 
 ### 3.3 Source Code and DevOps
@@ -193,7 +193,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
 | Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA. Development aid only: `npm run mdns` announces the laptop broker as `swiftletcare-broker.local` and a development build of the firmware finds it by mDNS, so a changed laptop IP needs no reflash; staging and production firmware use the broker domain set at flashing (FARM-FR-003c) | — |
-| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain and four names: `app.`, `api.`, `stream.`, `mqtt.`. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f docker-compose.staging.yml up -d --build` (backend and web built into images, Nginx with a Let's Encrypt certificate renewed by Certbot, serving HTTPS and the TLS ports of MQTT and the video publish, EMQX, MongoDB, MinIO, MediaMTX); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
+| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain name: the web at `/`, the API at `/api`, Socket.io at `/socket.io`, WHEP at `/stream`, MQTT over TLS on port 8883 and the RTSPS publish on port 8322 of the same name. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging up -d --build` (backend and web built into images by `backend/Dockerfile` and `deploy/nginx/Dockerfile`, Nginx with a Let's Encrypt certificate obtained by `deploy/staging-cert.sh` and renewed by Certbot, serving HTTPS and the TLS ports of MQTT and the video publish, EMQX, MongoDB, MediaMTX; files are kept on a volume of the backend, `STORAGE_DRIVER=local`, because the MinIO images are no longer published); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
 | Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (FARM-FR-013) |
 
 Defense 1.1 demonstrations run on staging with seeded data (guideline §9.2).
@@ -1843,7 +1843,7 @@ flowchart LR
     RP -- MQTT TLS 8883<br/>to 1883 --> EMQX[(EMQX)]
     API --> MONGO[(MongoDB<br/>internal only)]
     API -- MQTT 1883<br/>Docker network --> EMQX
-    API --> MINIO[(MinIO<br/>internal only)]
+    API --> FILES[(file volume<br/>internal only)]
     MTX -- stream auth --> API
   end
   subgraph HOUSE[Test house - VNPT line, static public IP]
@@ -1862,7 +1862,7 @@ flowchart LR
   API -- outbound HTTPS --> EXT[[Telegram, FCM,<br/>Open-Meteo]]
 ```
 
-Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (HTTPS), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only), all served by Nginx with one Let's Encrypt certificate renewed by Certbot, and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, MinIO, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH.
+Why this split: users, the panel's network and the controllers need one stable public address with TLS that does not go down with the house's power or line (the house's VNPT line has a static public IP, but on a consumer modem in a borrowed house), so the backend runs on a VPS. The AI node runs on a spare PC at a member's home and pulls the camera's RTSP feed over the Internet through the one port forwarded on the house modem (D5); it sends counts and the annotated stream on to the VPS. Only ports 80/443 (HTTPS), 8883 (MQTT over TLS) and 8322 (RTSPS publish, AI node only), all served by Nginx with one Let's Encrypt certificate renewed by Certbot, and 8189 (WebRTC media, encrypted by WebRTC itself) are open on the VPS; MongoDB, the EMQX dashboard and `/internal/*` are reachable only inside the Docker network or over SSH, and the backend does not write `/internal/*` requests to its access log because their key is in the query string. Staging keeps files (audio tracks, Work Order and harvest photos) on a volume of the backend and serves them at `/api/files/<key>`: the key holds a random UUID, so a link cannot be guessed, but unlike a signed MinIO URL it does not expire.
 
 | Operation | Procedure |
 | --- | --- |
@@ -1882,6 +1882,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.11 | 18/11/2026 | Staging as built (G-17): one domain name instead of four, files on a backend volume instead of MinIO (the MinIO images are no longer published), Certbot v3.1.0, the compose, Dockerfile and certificate script paths; `/internal/*` kept out of the access log (Sections 3.2, 3.4, 11) |
 | 2.2.9 | 17/11/2026 | Playwright 1.64.1 in the Testing row of the Technology Declaration (Section 3): web end-to-end tests run in CI against the seeded backend (G-17) |
 | 2.2.8 | 17/11/2026 | Counting schedule as built (G-12): the house keeps the history of its schedule and the date of its last evening check, a session record its computation time; the `returnRate` job runs every 5 minutes and takes each house once a day after its own evening window; the rain of the counting sessions uses the windows of the schedule (Sections 5.3, 5.5, 6) |
 | 2.2.6 | 17/11/2026 | Section 5.5: code home of the temporary password and of the SMTP time-outs (Report 3 4.2.9; G-02) |
