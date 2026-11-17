@@ -461,7 +461,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 - [ ] **Len:** bản build mobile (EAS profile `preview`) trỏ tới staging; kiểm tra nhanh đăng nhập, push và các màn Farm Owner trên mobile.
 - [ ] **Tuấn:** kiểm tra nhanh màn chuyên gia và màn thiết bị của Admin; chạy bộ E2E trên staging trước mỗi buổi tổng duyệt.
 - [ ] Seed demo đủ 22 kịch bản Phụ lục A2 (Kiệt, Bảo), theo điều kiện chủ workflow ghi.
-- [ ] Test E2E Playwright cho từng DS (chủ workflow; FE_Design §13.17); Bảo thêm job E2E vào CI (test chỉ được tính là tự động khi chạy trong CI, hướng dẫn mục 9.4) và đọc kết quả JUnit vào Report 5 (`gen_report5.py --playwright`); PR cài Playwright ghi tên và phiên bản vào dòng Testing của Report 4 §3 (Technology Declaration).
+- [ ] Test E2E Playwright cho từng DS (chủ workflow; FE_Design §13.17); Bảo thêm job E2E vào CI (test chỉ được tính là tự động khi chạy trong CI, hướng dẫn mục 9.4) và đọc kết quả JUnit vào Report 5 (`gen_report5.py --playwright`); PR cài Playwright ghi tên và phiên bản vào dòng Testing của Report 4 §3 (Technology Declaration). *(Phần của Bảo xong 17/11/2026, nhánh `test/g17-e2e-playwright`, PR #NNN: Playwright 1.64.1, `frontend/playwright.config.ts`, job CI `e2e` (MongoDB, backend đã seed, web), test đăng nhập từng role `e2e/login.spec.ts`, `gen_report5.py --playwright` với loại nguồn `E` trong `tc.py` (tên test phải có nguyên văn trong file spec), dòng Testing của Report 4 §3. Còn: test DS của từng chủ workflow, `e2e/ds-xx.spec.ts`.)*
 - [ ] Theo `docs/deploy/staging.md`; mỗi người ghi phần mình vào đó (Bảo duyệt), để ai cũng trả lời được "staging hỏng thì làm gì" ở phần mình.
 
 ### G-18 — Việc nhỏ (P2) — Kiệt

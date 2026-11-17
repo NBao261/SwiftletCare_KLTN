@@ -19,9 +19,10 @@ npm run build    # tsc && vite build
 npm run lint     # eslint src --ext ts,tsx
 npm test         # vitest (CI runs `npx vitest run`)
 npx tsc --noEmit
+npm run test:e2e # Playwright, e2e/*.spec.ts — needs the backend on :3000 with `npm run seed`; starts the dev server itself
 ```
 
-CI (`.github/workflows/ci.yml`, job Frontend) runs `npm ci`, `lint`, `tsc --noEmit`, `vitest run` and `build` on every PR that touches `frontend/`.
+CI (`.github/workflows/ci.yml`, job Frontend) runs `npm ci`, `lint`, `tsc --noEmit`, `vitest run` and `build` on every PR that touches `frontend/`; job E2E runs `npx playwright test` against a seeded backend when `frontend/` or `backend/` changes and keeps `e2e-junit.xml` for Report 5.
 
 ## Structure today
 

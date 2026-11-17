@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.4 (Review 2, final scope) |
+| Document version | 2.2.5 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -174,7 +174,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
 | Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `react-native-gifted-charts` | Expo ~58.0, React Native 0.88.0, React 19.3.0, expo-router ~58.0, expo-camera ~58.0, expo-notifications ~58.1, expo-video ~58.0, react-native-mmkv ^4.3, react-native-gifted-charts ^1.4 |
 | Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1, nginx 1.27, certbot latest |
-| Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6 |
+| Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Playwright (web end to end against the seeded backend, CI job `e2e`), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6, Playwright 1.64.1 |
 
 ### 3.3 Source Code and DevOps
 
@@ -1874,6 +1874,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.5 | 17/11/2026 | Playwright 1.64.1 in the Testing row of the Technology Declaration (Section 3): web end-to-end tests run in CI against the seeded backend (G-17) |
 | 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3); room and payload of `RECOMMENDATION_NEW` (Section 7.3) |
 | 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |
 | 2.2.2 | 12/11/2026 | Configuration sync as built (G-08): the heartbeat field is named `appliedConfigVersion`, like the other heartbeat fields; the ERD stores `config_sync` (Report 3 §6.12) on the controller |
