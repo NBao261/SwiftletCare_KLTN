@@ -193,8 +193,11 @@ paths:
       security: []
       description: |
         Luôn trả 200 kể cả khi email không tồn tại, để không lộ thông tin tài
-        khoản (Flow 11 case 1a). Mã có TTL 15 phút, dùng 1 lần. Dev hiện chỉ
-        log ra console (`[DEV RESET]`), chưa nối SMTP/Zalo thật.
+        khoản (Flow 11 case 1a). Mã 6 chữ số có TTL 15 phút, dùng 1 lần, gửi qua
+        e-mail (SMTP, Report 4 §2.1); mã không bao giờ được ghi log. Response trả về
+        trước khi thư đi (không chờ SMTP), để thời gian phản hồi giống nhau dù email có
+        tài khoản hay không. Máy chủ chưa cấu hình SMTP thì không gửi được thư (chỉ ghi
+        một cảnh báo không kèm mã). SMTP chờ tối đa 10 giây mỗi bước (Report 3 §4.5).
       requestBody:
         required: true
         content:
@@ -457,6 +460,47 @@ paths:
                   - properties:
                       data: { type: array, items: { $ref: "#/components/schemas/User" } }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/farm-owners:
+    post:
+      tags: [Admin]
+      summary: "Tạo tài khoản Farm Owner với mật khẩu tạm (AUTH-FR-005c) — chỉ ADMIN"
+      description: |
+        Không có đăng ký công khai (Report 3 §1.2): Administrator tạo tài khoản Farm Owner. Hệ thống sinh mật khẩu tạm
+        12 ký tự ngẫu nhiên (Report 3 §4.5), bật `must_change_password` và gửi mật khẩu tạm qua e-mail tới `email`;
+        mật khẩu tạm không bao giờ có trong response hay log. Tới khi đổi mật khẩu (`PUT /auth/password`), mọi request
+        khác ngoài đổi mật khẩu và đăng xuất trả 403 `PASSWORD_CHANGE_REQUIRED`. Email đã có tài khoản (mọi role) → 409.
+        Ghi audit `FARM_OWNER_CREATED`. Máy chủ chưa cấu hình SMTP thì tài khoản vẫn được tạo nhưng thư không đi:
+        `temporary_password_emailed: false`; khi đã có SMTP, Farm Owner đặt mật khẩu bằng "quên mật khẩu".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, full_name]
+              properties:
+                email: { type: string, format: email }
+                full_name: { type: string }
+                phone: { type: string }
+      responses:
+        "201":
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/User"
+                          - type: object
+                            properties:
+                              temporary_password_emailed: { type: boolean, description: "Thư mật khẩu tạm đã được máy chủ SMTP nhận" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Email đã có tài khoản", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /admin/users/{id}/status:
     put:
@@ -1070,6 +1114,8 @@ paths:
         - `FARM_TECHNICIAN`: thợ của chủ farm, sau khi nhận lời mời chưa làm được gì cho tới khi Farm Owner
           gán vào nhà (`PUT /farms/houses/{houseId}/technicians/{userId}`, AUTH-FR-013).
         - 1 email = 1 role: email đã là tài khoản role khác (Admin, hoặc khác role được mời) → 409, cần dùng email khác.
+        - Gửi e-mail lời mời tới `email`, kèm link `{APP_PUBLIC_URL}/invitations/{token}` (trang nhận lời mời hoặc tạo
+          tài khoản, AUTH-FR-010) và hạn 7 ngày; token không ghi log. Thư không gửi được thì lời mời vẫn được tạo.
         - Ghi audit `FARM_MEMBER_INVITED`.
       parameters: [{ $ref: "#/components/parameters/FarmId" }]
       requestBody:
