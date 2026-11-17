@@ -2,7 +2,7 @@ import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, His
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 import { IconSettings } from '@/components/ui/icons';
-import { BasketIcon, BirdIcon, CalendarCheckIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, LightbulbIcon, SquaresFourIcon, WrenchIcon } from '@phosphor-icons/react';
+import { BasketIcon, BirdIcon, BuildingsIcon, CalendarCheckIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, LightbulbIcon, SquaresFourIcon, WrenchIcon } from '@phosphor-icons/react';
 
 /**
  * Layout cho vai trò Chuyên gia nuôi yến (DOMAIN_EXPERT) — FE_Design §12.5.
@@ -44,6 +44,7 @@ const menuSections: MenuSection[] = [
     title: 'Vận hành (chỉ đọc)',
     items: [
       { label: 'Tổng quan nhà yến', path: '/dashboard', icon: SquaresFourIcon },
+      { label: 'Tổng quan trại', path: '/overview', icon: BuildingsIcon },
       { label: 'Giám sát đàn chim', path: '/vision', icon: BirdIcon },
       { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
       { label: 'Sức khỏe nhà yến', path: '/health', icon: HeartbeatIcon },

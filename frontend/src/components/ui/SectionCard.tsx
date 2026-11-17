@@ -29,9 +29,9 @@ export default function SectionCard({ icon, title, description, action, classNam
             </span>
           )}
           <div className="min-w-0">
-            <h2 className="flex flex-wrap items-center gap-2 text-h2 text-charcoal">{tr(title)}</h2>
+            <h2 className="flex flex-wrap items-center gap-2 break-words text-h2 text-charcoal">{tr(title)}</h2>
             {/* Cùng kiểu tiêu đề card "Chỉ số vận hành toàn hệ thống" (Tổng quan) và EnvSensorPanel (Dashboard Farm Owner) */}
-            {description && <div className="mt-1 text-sm text-warmGray">{tr(description)}</div>}
+            {description && <div className="mt-1 break-words text-sm text-warmGray">{tr(description)}</div>}
           </div>
         </div>
         {action}

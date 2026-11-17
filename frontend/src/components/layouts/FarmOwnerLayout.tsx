@@ -1,5 +1,5 @@
 import {
-  BasketIcon, BirdIcon, CalendarCheckIcon, ChartBarIcon, CpuIcon, GearSixIcon, HeartbeatIcon, HouseIcon, LightbulbIcon, SquaresFourIcon, WarningIcon,
+  BasketIcon, BirdIcon, BuildingsIcon, CalendarCheckIcon, ChartBarIcon, CpuIcon, GearSixIcon, HeartbeatIcon, HouseIcon, LightbulbIcon, SquaresFourIcon, WarningIcon,
   WrenchIcon,
 } from '@phosphor-icons/react'
 import AppShell from '@/components/layouts/AppShell'
@@ -47,6 +47,11 @@ const menuSections: MenuSection[] = [
         label: 'Trang trại',
         path: '/farms',
         icon: HouseIcon
+      },
+      {
+        label: 'Tổng quan trại',
+        path: '/overview',
+        icon: BuildingsIcon
       },
       {
         label: 'Thống kê sản lượng',

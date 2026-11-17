@@ -20,8 +20,10 @@ export default function FilterChip({ active, label, onClick, size = 'sm' }: Filt
     <button
       type="button"
       onClick={onClick}
+      // Chữ dài (VD tên nhà, Zone) không kéo chip quá khung chứa: cắt "…", rê chuột xem đủ
+      title={typeof label === 'string' ? tr(label) : undefined}
       className={cn(
-        'rounded-full font-semibold transition-colors',
+        'max-w-full truncate rounded-full font-semibold transition-colors',
         SIZE_CLASS[size],
         active ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20',
       )}

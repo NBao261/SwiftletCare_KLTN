@@ -11,6 +11,10 @@ const vi = {
   'page.noZoneDesc': 'Thêm nhà yến và Zone ở mục Trang trại để bắt đầu thu thập dữ liệu.',
   'page.goFarms': 'Đi tới Trang trại',
   'page.errorTitle': 'Không tải được danh sách Zone',
+  'page.tabs': 'Nhóm phân tích',
+  'tab.env': 'Môi trường',
+  'tab.birds': 'Đàn chim',
+  'tab.ops': 'Vận hành',
 
   // Dùng chung
   'common.retry': 'Thử lại',
@@ -160,6 +164,31 @@ const vi = {
   'bird.drop': 'Tỷ lệ chim về mới nhất giảm {drop}% so với trung bình các ngày trước, vượt mức {threshold}% chuyên gia đặt cho nhà yến này. Nên xem lại môi trường và thiết bị quanh thời điểm đó.',
   'bird.empty': 'Chưa có dữ liệu đếm chim — camera AI chưa gửi số đếm.',
 
+  // Xu hướng đàn (ANALYTICS-FR-002)
+  'flock.title': 'Xu hướng đàn',
+  'flock.subtitle': '{house} · số chim ra buổi sáng trung bình mỗi kỳ, 90 ngày gần nhất; ngày thiếu phiên đếm không tính',
+  'flock.weekly': 'Theo tuần',
+  'flock.monthly': 'Theo tháng',
+  'flock.latest': 'Kỳ gần nhất',
+  'flock.latestWeekSub': 'Tuần từ {date} · {n} ngày đủ phiên',
+  'flock.latestMonthSub': 'Tháng {month} · {n} ngày đủ phiên',
+  'flock.change': 'So với kỳ trước',
+  'flock.changeSub': 'Phần trăm thay đổi',
+  'flock.chartLabel': 'Số chim ra buổi sáng trung bình',
+  'flock.empty': 'Chưa có ngày nào đủ 2 phiên đếm trong 90 ngày gần nhất.',
+
+  // Điện năng ước tính (ANALYTICS-FR-017, BR-45)
+  'energy.title': 'Điện năng ước tính',
+  'energy.subtitle': '{house} · bơm và quạt theo tháng trong 90 ngày gần nhất. Số ước tính từ dòng đo, không phải số công tơ.',
+  'energy.voltage': 'Điện áp dùng để tính: bơm {misting} V, quạt {ventilation} V.',
+  'energy.misting': 'Bơm phun sương',
+  'energy.ventilation': 'Quạt thông gió',
+  'energy.total': 'Tổng',
+  'energy.kwhSub': 'Cộng các tháng',
+  'energy.notAvailable': 'Không đo được dòng điện',
+  'energy.chartAxis': 'kWh',
+  'energy.empty': 'Bơm và quạt của nhà này chưa có dòng đo trong 90 ngày gần nhất.',
+
   // Tương quan
   'correlation.title': 'Tương quan môi trường và tỷ lệ chim về',
   'correlation.subtitle': 'Mỗi điểm là 1 ngày: trung bình môi trường của Zone so với tỷ lệ chim về của cả nhà yến cùng ngày',
@@ -228,6 +257,10 @@ const en: Record<AnalyticsKey, string> = {
   'page.noZoneDesc': 'Add a house and a zone under Farms to start collecting data.',
   'page.goFarms': 'Go to Farms',
   'page.errorTitle': 'Could not load the zone list',
+  'page.tabs': 'Analytics groups',
+  'tab.env': 'Environment',
+  'tab.birds': 'Flock',
+  'tab.ops': 'Operations',
 
   'common.retry': 'Retry',
   'common.allHouses': 'All houses',
@@ -367,6 +400,29 @@ const en: Record<AnalyticsKey, string> = {
   'bird.changeSub': 'Difference in percentage points',
   'bird.drop': 'The latest return rate is {drop}% below the average of the previous days, beyond the {threshold}% set by the Domain Expert for this house. Review the climate and devices around that time.',
   'bird.empty': 'No bird count yet — the AI camera has not sent counts.',
+
+  'flock.title': 'Flock trend',
+  'flock.subtitle': '{house} · mean morning exit count per period over the last 90 days; days missing a counting session are left out',
+  'flock.weekly': 'Weekly',
+  'flock.monthly': 'Monthly',
+  'flock.latest': 'Latest period',
+  'flock.latestWeekSub': 'Week of {date} · {n} complete days',
+  'flock.latestMonthSub': 'Month {month} · {n} complete days',
+  'flock.change': 'Versus previous period',
+  'flock.changeSub': 'Percentage change',
+  'flock.chartLabel': 'Mean morning exit count',
+  'flock.empty': 'No day with both counting sessions in the last 90 days.',
+
+  'energy.title': 'Estimated energy',
+  'energy.subtitle': '{house} · pump and fan per month over the last 90 days. Estimated from the measured current, not a meter reading.',
+  'energy.voltage': 'Supply voltage used: pump {misting} V, fan {ventilation} V.',
+  'energy.misting': 'Misting pump',
+  'energy.ventilation': 'Ventilation fan',
+  'energy.total': 'Total',
+  'energy.kwhSub': 'Sum of the months',
+  'energy.notAvailable': 'No measured current',
+  'energy.chartAxis': 'kWh',
+  'energy.empty': 'The pump and the fan of this house have no measured current in the last 90 days.',
 
   'correlation.title': 'Climate and return rate correlation',
   'correlation.subtitle': 'Each point is one day: the zone climate average against the whole house return rate on the same day',

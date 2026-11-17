@@ -2,11 +2,12 @@ import type { ReactNode } from 'react'
 import type { Icon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
-type KpiTone = 'neutral' | 'orange'
+type KpiTone = 'neutral' | 'orange' | 'green'
 
 const TONE_CLASS: Record<KpiTone, string> = {
   neutral: 'bg-warmGray/10 text-charcoal',
   orange: 'bg-safetyOrange/15 text-safetyOrange',
+  green: 'bg-accent-100 text-accent-700',
 }
 
 interface KpiTileProps {
@@ -15,7 +16,7 @@ interface KpiTileProps {
   value: string | number
   unit?: string
   sub: string
-  /** Màu vòng tròn icon (không tô cả ô): neutral xám · orange = có cảnh báo */
+  /** Màu vòng tròn icon (không tô cả ô): neutral xám · orange = có cảnh báo · green = ổn, không có gì cần xử lý */
   tone?: KpiTone
   /** Huy hiệu nhỏ cạnh số chính (VD so sánh với kỳ trước) — không truyền thì ô giữ nguyên như cũ */
   badge?: ReactNode

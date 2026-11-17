@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.7 (Review 2, final scope) |
+| Document version | 4.2.8 (Review 2, final scope) |
 | Date | 10/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -735,6 +735,8 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Weather compensation computation | Every hour at minute 10; forecast of the next 2 h summarised as the highest temperature, the highest outdoor humidity and the total rain (0.1 mm); an offset is not 0 and lasts 1–120 min; of two rules with the same largest absolute offset the one listed first applies; the last 100 rule changes are kept on the house | How ENV-FR-028 and BR-38 are computed; picked by the team (A-4) |
 | Automatic Work Order for offline devices | after 30 min open | A short outage that recovers by itself opens no job (BR-39) |
 | On-site photos | JPEG, PNG or WebP, at most 5 MB each; at most 5 per Work Order, 1 per on-site check | Input check; a phone photo fits after the app's compression (ALERT-FR-018, EXPERT-FR-021) |
+| Gap between two telemetry samples | more than 30 s = connection lost, the interval is not counted | Run hours (ALERT-FR-016) and the energy estimate (BR-45) do not guess what the relay did while the controller was silent |
+| Farm overview and house comparison | latest return rate looked up over the last 30 days; comparison period 30 days by default and energy estimate 90 days by default (telemetry kept 90 days, BR-36), both in whole Vietnam days, at most 366 days | Page load stays bounded on a farm with years of counts (ANALYTICS-FR-015…017) |
 | Work Order and alert text | title ≤ 200 characters; description and work note ≤ 2,000; reopen note, cancel reason, acknowledgement note, verdict note and on-site check note ≤ 1,000 | Input check; a work note is a short report, not a document (OPS-FR-001, 002, 004) |
 | Recommendation expiry and effect window | 7 days; 7 days before against 7 days after acceptance | BR-42 |
 | Recommendation rule inputs | A rule holds when every day of its window has a value meeting the condition (a missing day does not hold); value entered within 0–100 % in range, 0–24 h of NH3 or CO2 over the limit, 0–200 % return rate, 0–1000 noise episodes or misting-ineffective alerts a day; source of the rule required (up to 500 characters); Work Order title up to 200 characters; a parameter change is checked against every zone of the house before any zone is changed; the misting-ineffective count of a day not yet assessed is missing, not 0; a recommendation keeps the rule as it was when raised; reject reason up to 1000 characters; rules evaluated right after the daily assessment, expiry and effect checked daily at 06:30; the effect is measured on the 9th day after acceptance, once the 7th day has been recomputed with late data; no minimum number of days with data: a side without any value gives no change and no improvement; a change of 0 is not an improvement | How EXPERT-FR-016, 017 are computed; input limits against typing errors, not farming advice (A-4) |
@@ -1150,6 +1152,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.8 | 17/11/2026 | Telemetry gap, overview look-up, comparison period (30 days) and energy period (90 days) constants in Section 4.5 (ANALYTICS-FR-015…017, BR-45; G-25) |
 | 4.2.7 | 17/11/2026 | Recommendation rules as built (G-24): EXPERT-FR-018 one review item per zone on a farm with a Domain Expert; effect measured once the 7th day is recomputed; BR-42 a new recommendation of the same rule and house waits for a whole window after the last decision or expiry; rule inputs in Section 4.5 |
 | 4.2.6 | 15/11/2026 | Length of the source of a default-threshold change in Section 4.5 (ENV-FR-007; G-18) |
 | 4.2.5 | 15/11/2026 | Length of the maintenance plan and checklist texts in Section 4.5 (OPS-FR-005, 007; G-22); Section 6.19: a preventive Work Order is cancelled only by retiring its plan (G-22) |
