@@ -254,6 +254,16 @@ describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
     expect(energy.body.data).toMatchObject(expected)
   })
 
+  it('from, to dạng năm-tháng hay ngày giờ không múi giờ → 422 (sẽ lệch ngày hoặc phụ thuộc máy chủ)', async () => {
+    const { farm, token, house } = await seedFarm()
+    for (const q of ['from=2026-11&to=2026-12', 'from=2026&to=2027', 'from=2026-11-01T10:00&to=2026-11-08T10:00']) {
+      await request(app).get(`/farms/${farm._id}/comparison?${q}`).set('Authorization', `Bearer ${token}`).expect(422)
+      await request(app).get(`/analytics/energy?houseId=${house._id}&${q}`).set('Authorization', `Bearer ${token}`).expect(422)
+    }
+    await request(app).get(`/farms/${farm._id}/comparison?from=2026-11-01T10:00:00%2B07:00&to=2026-11-08T10:00:00Z`)
+      .set('Authorization', `Bearer ${token}`).expect(200)
+  })
+
   it('ô bằng nhau thì theo house_id, cả khi sắp giảm dần; ô trống vẫn xuống cuối', () => {
     const row = (house_id: string, alerts_raised: number, mttr_min: number | null) =>
       ({ house_id, name: house_id, alerts_raised, mttr_min }) as unknown as ComparisonRow
@@ -430,7 +440,12 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const { farm, house } = await seedFarm()
     await dropToday(house._id)
     const today = vnDay(0)
-    await BirdCountBucket.create({ camera_node_id: new mongoose.Types.ObjectId(), house_id: house._id, bucket_start: new Date(`${today}T17:30:00+07:00`), entry_count: 5, exit_count: 0 })
+    // Khung phiên chiều [17:55, 18:05): giờ 17:00 (0 mm) và giờ 18:00 (null) đều trùng khung
+    const camera = new mongoose.Types.ObjectId()
+    await BirdCountBucket.create([
+      { camera_node_id: camera, house_id: house._id, bucket_start: new Date(`${today}T17:55:00+07:00`), entry_count: 5, exit_count: 0 },
+      { camera_node_id: camera, house_id: house._id, bucket_start: new Date(`${today}T18:00:00+07:00`), entry_count: 3, exit_count: 0 },
+    ])
     await WeatherObservation.create([
       { farm_id: farm._id, hour: new Date(`${today}T17:00:00+07:00`), precipitation_mm: 0 },
       { farm_id: farm._id, hour: new Date(`${today}T18:00:00+07:00`), precipitation_mm: null },
@@ -439,6 +454,22 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
     expect(alert.message).toContain('mưa trong phiên đếm 0 mm')
     expect(alert.metadata).toMatchObject({ rainMm: 0 })
+  })
+
+  it('giờ duy nhất trùng khung phiên có precipitation_mm null → ghi không có dữ liệu, không coi null là 0 mm', async () => {
+    const { farm, house } = await seedFarm()
+    await dropToday(house._id)
+    const today = vnDay(0)
+    // Khung phiên chiều [18:00, 18:05): chỉ giờ 18:00 trùng khung, và giờ đó không có số đo
+    await BirdCountBucket.create({ camera_node_id: new mongoose.Types.ObjectId(), house_id: house._id, bucket_start: new Date(`${today}T18:00:00+07:00`), entry_count: 5, exit_count: 0 })
+    await WeatherObservation.create([
+      { farm_id: farm._id, hour: new Date(`${today}T18:00:00+07:00`), precipitation_mm: null },
+      { farm_id: farm._id, hour: new Date(`${today}T10:00:00+07:00`), precipitation_mm: 2 },
+    ])
+    expect(await checkReturnRateDrops(today)).toBe(1)
+    const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
+    expect(alert.message).toContain('không có dữ liệu thời tiết')
+    expect(alert.metadata).toMatchObject({ rainMm: null })
   })
 
   it('chưa biết khung phiên (chưa có số đếm 5 phút) → ghi mưa cả ngày, không ghi "trong phiên đếm"', async () => {

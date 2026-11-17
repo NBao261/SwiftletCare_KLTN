@@ -7,6 +7,7 @@ import { MAX_HOUSE_FLOORS, MAX_NAME_LENGTH } from '@/services/farm.service'
 import { COMPARISON_SORT_KEYS } from '@/services/houseComparison.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { isPeriodParam } from '@/utils/period.util'
 import * as weatherCompensationController from '@/controllers/weatherCompensation.controller'
 import { MAX_WEATHER_RULES, WEATHER_METRICS } from '@/utils/weatherCompensation.util'
 
@@ -50,8 +51,9 @@ router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(),
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
 
 // ANALYTICS-FR-015, 016 — tổng quan trại và so sánh nhà: Farm Owner, Domain Expert đọc (Report 3 §2.4); thợ và Admin không
+// YYYY-MM-DD (đầu ngày giờ VN) hoặc ngày giờ ISO có múi giờ; dạng khác (2026-11, giờ không múi giờ) → 422
 const periodRule = ['from', 'to'].map(name =>
-  query(name).optional().isString().isISO8601().custom((v: string) => !Number.isNaN(Date.parse(v))).withMessage(`${name} không phải ngày hợp lệ`))
+  query(name).optional().isString().bail().custom(isPeriodParam).withMessage(`${name} phải là YYYY-MM-DD hoặc ngày giờ ISO có múi giờ`))
 router.get ('/:id/overview',   requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(), validate, farmController.overview)
 router.get ('/:id/comparison', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(), ...periodRule,
   query('sort').optional().isString().isIn(COMPARISON_SORT_KEYS), query('order').optional().isString().isIn(['asc', 'desc']),

@@ -2,7 +2,7 @@
  * Report 3 §4.5 — khoảng của bảng so sánh nhà và điện năng ước tính: trọn ngày giờ VN, giữ đúng số ngày yêu cầu,
  * tối đa 366 ngày (ANALYTICS-FR-016, 017).
  */
-import { MAX_PERIOD_DAYS, parsePeriodParam, vnDayPeriod } from '@/utils/period.util'
+import { MAX_PERIOD_DAYS, isPeriodParam, parsePeriodParam, vnDayPeriod } from '@/utils/period.util'
 
 const DAY = 86_400_000
 const vn = (iso: string) => new Date(`${iso}+07:00`)
@@ -40,5 +40,16 @@ describe('parsePeriodParam', () => {
     expect(parsePeriodParam('')).toBeUndefined()
     expect(parsePeriodParam(undefined)).toBeUndefined()
     expect(parsePeriodParam(['2026-11-01'])).toBeUndefined()
+  })
+})
+
+describe('isPeriodParam', () => {
+  it('nhận YYYY-MM-DD và ngày giờ có Z hoặc offset; từ chối năm, năm-tháng, ngày giờ không múi giờ và ngày sai', () => {
+    for (const ok of ['2026-11-01', '2026-11-01T10:00:00Z', '2026-11-01T10:00+07:00', '2026-11-01T10:00:00.123-05:00']) {
+      expect(isPeriodParam(ok)).toBe(true)
+    }
+    for (const bad of ['2026', '2026-11', '2026-11-01T10:00', '2026-13-45', '', 20261101, undefined]) {
+      expect(isPeriodParam(bad)).toBe(false)
+    }
   })
 })

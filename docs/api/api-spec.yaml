@@ -1425,8 +1425,8 @@ paths:
         đầu lùi đúng `days` ngày, để mọi cột cùng một khoảng (mặc định 30 ngày là 30 ngày gồm cả hôm nay); tối đa 366
         ngày (Report 3 §4.5), quá thì 400.
       parameters:
-        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 30 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
-        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: from, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định `to` − 30 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: to, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN; ngày giờ phải có `Z` hoặc offset, khác → 422" }
         - name: sort
           in: query
           schema:
@@ -4977,8 +4977,8 @@ paths:
         trọn ngày giờ VN, tối đa 366 ngày. Quyền: FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN ở nhà được giao.
       parameters:
         - { name: houseId, in: query, required: true, schema: { type: string, format: objectId } }
-        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Mặc định `to` − 90 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
-        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: from, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định `to` − 90 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: to, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN; ngày giờ phải có `Z` hoặc offset, khác → 422" }
       responses:
         "200":
           description: OK

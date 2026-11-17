@@ -15,6 +15,19 @@ export function parsePeriodParam(value: unknown): Date | undefined {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00+07:00`) : new Date(value)
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+const DATE_TIME_WITH_OFFSET = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/
+
+/**
+ * Giá trị hợp lệ cho `from`/`to` của khoảng: ngày `YYYY-MM-DD` (đầu ngày giờ VN) hoặc ngày giờ ISO 8601 có `Z` hay
+ * offset. Không nhận `2026`, `2026-11` (sẽ bị đọc là 07:00 VN và lệch một ngày) hay ngày giờ không múi giờ (phụ thuộc
+ * múi giờ của máy chủ).
+ */
+export function isPeriodParam(value: unknown): boolean {
+  if (typeof value !== 'string' || !(DATE_ONLY.test(value) || DATE_TIME_WITH_OFFSET.test(value))) return false
+  return !Number.isNaN(parsePeriodParam(value)!.getTime())
+}
+
 /** Đầu ngày giờ VN chứa `at` */
 const vnDayStartOf = (at: Date) =>
   new Date(Math.floor((at.getTime() + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS)
