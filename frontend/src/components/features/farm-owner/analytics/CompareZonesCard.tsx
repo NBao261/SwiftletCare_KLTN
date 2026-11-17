@@ -24,6 +24,9 @@ import type { AnalyticsRange, EnvCompareZone } from '@/apis/farm-owner/analytics
 
 // Bảng 6 cột trong khung rộng toàn trang
 const TABLE_MIN_WIDTH = 760;
+// Nhãn trục ngang của biểu đồ: tên dài cắt còn chừng này ký tự để cột không bị ép; tooltip vẫn hiện đủ
+const AXIS_LABEL_MAX = 20;
+const shortLabel = (text: string) => (text.length > AXIS_LABEL_MAX ? `${text.slice(0, AXIS_LABEL_MAX - 1)}…` : text);
 
 // Đơn vị theo chỉ số so sánh
 const UNIT_BY_METRIC = new Map<CompareMetricKey, string>(COMPARE_METRICS.map(metric => [metric.key, metric.unit]));
@@ -88,7 +91,16 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
     scales: {
-      x: baseChartOptions.scales.x,
+      x: {
+        ...baseChartOptions.scales.x,
+        ticks: {
+          ...baseChartOptions.scales.x.ticks,
+          maxRotation: 0,
+          callback(this: { getLabelForValue: (value: number) => string }, value: number | string) {
+            return shortLabel(this.getLabelForValue(Number(value)));
+          },
+        },
+      },
       y: { ...baseChartOptions.scales.y, title: axisTitle(metricUnit) },
     },
   } as ChartOptions<'bar'>), [metricUnit]);
@@ -178,7 +190,11 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
             <FilterChip
               key={zone._id}
               active={selectedSet.has(zone._id)}
-              label={zoneLabelById.get(zone._id) ?? zone.name}
+              label={(
+                <span className="block max-w-[18rem] truncate" title={zoneLabelById.get(zone._id) ?? zone.name}>
+                  {zoneLabelById.get(zone._id) ?? zone.name}
+                </span>
+              )}
               onClick={() => handleToggleZone(zone._id)}
             />
           ))}

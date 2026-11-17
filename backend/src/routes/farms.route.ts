@@ -4,8 +4,10 @@ import * as farmController from '@/controllers/farms.controller'
 import { HOUSE_STAGES } from '@/utils/houseStage.util'
 import { HHMM_PATTERN, ROSTER_ROLES } from '@/utils/roster.util'
 import { MAX_HOUSE_FLOORS, MAX_NAME_LENGTH } from '@/services/farm.service'
+import { COMPARISON_SORT_KEYS } from '@/services/houseComparison.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { isPeriodParam } from '@/utils/period.util'
 import * as weatherCompensationController from '@/controllers/weatherCompensation.controller'
 import { MAX_WEATHER_RULES, WEATHER_METRICS } from '@/utils/weatherCompensation.util'
 
@@ -47,6 +49,15 @@ router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
   validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
+
+// ANALYTICS-FR-015, 016 — tổng quan trại và so sánh nhà: Farm Owner, Domain Expert đọc (Report 3 §2.4); thợ và Admin không
+// YYYY-MM-DD (đầu ngày giờ VN) hoặc ngày giờ ISO có múi giờ; dạng khác (2026-11, giờ không múi giờ) → 422
+const periodRule = ['from', 'to'].map(name =>
+  query(name).optional().isString().bail().custom(isPeriodParam).withMessage(`${name} phải là YYYY-MM-DD hoặc ngày giờ ISO có múi giờ`))
+router.get ('/:id/overview',   requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(), validate, farmController.overview)
+router.get ('/:id/comparison', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(), ...periodRule,
+  query('sort').optional().isString().isIn(COMPARISON_SORT_KEYS), query('order').optional().isString().isIn(['asc', 'desc']),
+  validate, farmController.comparison)
 
 // AUTH-FR-013 — Farm Owner gán/bỏ gán Farm Technician vào nhà; mỗi nhà tối đa 1 thợ chính
 router.put   ('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),

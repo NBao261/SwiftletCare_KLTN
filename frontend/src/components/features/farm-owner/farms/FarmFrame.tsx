@@ -22,8 +22,9 @@ export default function FarmFrame({ title, description, action, top, className, 
       {/* Tiêu đề + mô tả chiếm phần còn lại (mô tả dài thì xuống dòng trong cột), nút cùng hàng bên phải; điện thoại cho nút xuống hàng */}
       <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
         <div className="min-w-0 flex-1">
-          <h2 className="flex flex-wrap items-center gap-2 text-h2 text-charcoal">{title}</h2>
-          {description && <div className="mt-1 text-sm text-warmGray">{description}</div>}
+          {/* break-words: tên nhà, Zone dài không dấu cách không tràn khung */}
+          <h2 className="flex flex-wrap items-center gap-2 break-words text-h2 text-charcoal">{title}</h2>
+          {description && <div className="mt-1 break-words text-sm text-warmGray">{description}</div>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
