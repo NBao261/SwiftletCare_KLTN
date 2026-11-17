@@ -1377,6 +1377,88 @@ paths:
               },
           }
 
+  /farms/{id}/overview:
+    parameters: [{ $ref: "#/components/parameters/FarmId" }]
+    get:
+      tags: [Farms]
+      summary: "Tổng quan trại (ANALYTICS-FR-015) — FARM_OWNER, DOMAIN_EXPERT (đọc); thợ và Admin → 403"
+      description: |
+        Mỗi nhà (sắp theo tên): giai đoạn, trạng thái hôm nay (ngày giờ VN), số cảnh báo đang mở (`ACTIVE`,
+        `ACKNOWLEDGED`; cảnh báo bị bác bỏ không tính), số Work Order chưa đóng, tỷ lệ chim về gần nhất kèm ngày.
+        Nhà chưa có trạng thái hôm nay có `status: null` và `status_reason`: `NOT_COMPUTED` (chưa đánh giá
+        ngày) hoặc `INSUFFICIENT_DATA` (đã đánh giá nhưng không đủ dữ liệu). Tỷ lệ chim về gần nhất tìm trong 30
+        ngày gần nhất (Report 3 §4.5); không có ngày nào có tỷ lệ thì `null`. Nhà sắp theo tên tiếng Việt.
+        `simulated: true` khi mọi thiết bị của nhà đều là thiết bị giả lập (SYSTEM-FR-004).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          farm_id: { type: string }
+                          date: { type: string, example: "2026-11-14", description: "Ngày hôm nay giờ VN" }
+                          houses: { type: array, items: { $ref: "#/components/schemas/HouseOverview" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /farms/{id}/comparison:
+    parameters: [{ $ref: "#/components/parameters/FarmId" }]
+    get:
+      tags: [Farms]
+      summary: "So sánh các nhà của trại (ANALYTICS-FR-016, BR-44) — FARM_OWNER, DOMAIN_EXPERT (đọc); thợ và Admin → 403"
+      description: |
+        Một hàng mỗi nhà trong khoảng [from, to): thời gian trong ngưỡng (trung bình chỉ số môi trường BR-28),
+        % ngày `GOOD` trên số ngày đã đánh giá đủ dữ liệu, tỷ lệ chim về trung bình (ngày đủ 2 phiên), xu hướng đàn
+        (% đổi của trung bình chim ra buổi sáng so với kỳ liền trước cùng độ dài), số cảnh báo đã có trong kỳ (không
+        tính báo động giả) và đang mở, MTTR (BR-40), điện năng ước tính (BR-45; `null` = not available), sản lượng
+        chu kỳ gần nhất (`null` tới khi có chu kỳ thu hoạch, G-26). Sắp theo `sort`/`order`, ô trống luôn xuống cuối,
+        bằng nhau thì theo `house_id`. **Không có điểm tổng hay xếp hạng.** Khoảng được đưa về trọn ngày giờ VN mà
+        giữ đúng số ngày yêu cầu (`to` − `from`, làm tròn lên): kết thúc ở hết ngày VN chứa mốc ngay trước `to`, bắt
+        đầu lùi đúng `days` ngày, để mọi cột cùng một khoảng (mặc định 30 ngày là 30 ngày gồm cả hôm nay); tối đa 366
+        ngày (Report 3 §4.5), quá thì 400.
+      parameters:
+        - { name: from, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định `to` − 30 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: to, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN; ngày giờ phải có `Z` hoặc offset, khác → 422" }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: name
+            enum: [name, time_in_range_pct, good_days_pct, return_rate_avg, flock_trend_pct, alerts_raised, alerts_open, mttr_min, energy_kwh, last_cycle_yield_g]
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          farm_id: { type: string }
+                          from: { type: string, format: date-time, description: "Đầu ngày giờ VN: `to` lùi `days` ngày" }
+                          to: { type: string, format: date-time, description: "Hết ngày giờ VN chứa mốc ngay trước `to` gửi lên (không gồm mốc này)" }
+                          days: { type: integer }
+                          sort: { type: string }
+                          order: { type: string, enum: [asc, desc] }
+                          rows: { type: array, items: { $ref: "#/components/schemas/HouseComparisonRow" } }
+        "400": { description: "from không trước to, hoặc khoảng quá 366 ngày" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /farms/{id}/houses:
     parameters: [{ $ref: "#/components/parameters/FarmId" }]
     post:
@@ -4827,6 +4909,17 @@ paths:
                           house_id: { type: string }
                           days: { type: integer }
                           records: { type: array, items: { $ref: "#/components/schemas/BirdCountDay" } }
+                          flock_trend:
+                            type: object
+                            description: |
+                              ANALYTICS-FR-002 — trung bình số chim ra buổi sáng (ra − vào của phiên sáng) theo tuần (từ thứ
+                              Hai, giờ VN) và theo tháng trong khoảng `days`, kèm % đổi so với kỳ liền trước; ngày thiếu
+                              phiên (VISION-FR-020) không tính. Muốn đủ trung bình tháng thì gửi `days` dài hơn (vd 90).
+                              Tuần, tháng đầu của khoảng có thể chỉ có vài ngày (xem `days` của kỳ) nhưng vẫn là mốc so
+                              sánh của kỳ sau.
+                            properties:
+                              weekly: { type: array, items: { $ref: "#/components/schemas/FlockPeriod" } }
+                              monthly: { type: array, items: { $ref: "#/components/schemas/FlockPeriod" } }
                           avg_return_rate: { type: number, nullable: true }
                           latest_return_rate: { type: number, nullable: true }
                           drop_percent: { type: number, nullable: true }
@@ -4866,6 +4959,54 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }   # from/to không đọc được thành ngày, thiếu houseId/zoneId
+
+  /analytics/energy:
+    get:
+      tags: [Analytics]
+      summary: "Điện năng ước tính của bơm và quạt của 1 nhà theo tháng (ANALYTICS-FR-017, BR-45)"
+      description: |
+        Σ điện áp × dòng đo × thời gian: mỗi mẫu telemetry lúc relay BẬT và có dòng đo được tính tới mẫu kế tiếp
+        của cùng controller (khoảng quá 30 giây là mất kết nối, không tính, Report 3 §4.5). Tính theo `zone_id` ghi
+        trên từng mẫu: controller dời sang nhà khác thì điện đã dùng vẫn thuộc nhà cũ. Mẫu gửi bù (đo lúc mất mạng)
+        mang zone lúc backend nhận, nên mẫu đo ở nhà cũ mà gửi bù sau khi đã dời controller offline sang nhà mới thì
+        tính cho nhà mới. Điện áp theo tải DC demo của board
+        nhóm: bơm 5 V, quạt 12 V (A-9); tải nguồn lưới chưa hỗ trợ. Tải không có dòng đo trong tháng → `null`
+        ("not available"). Là số ước tính, không phải công tơ. **Lệch BR-45 đã biết:** BR-45 chỉ tính tải chạy khi
+        dòng trên 50 % dòng bình thường, nhưng backend chưa biết mức đã học của firmware nên mọi mẫu relay BẬT có
+        dòng đều được cộng. Telemetry giữ 90 ngày (BR-36) nên mặc định là 90 ngày gần nhất; khoảng làm tròn ra
+        trọn ngày giờ VN, tối đa 366 ngày. Quyền: FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN ở nhà được giao.
+      parameters:
+        - { name: houseId, in: query, required: true, schema: { type: string, format: objectId } }
+        - { name: from, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định `to` − 90 ngày; chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN" }
+        - { name: to, in: query, schema: { type: string, anyOf: [{ format: date }, { format: date-time }] }, description: "Mặc định hiện tại (không gồm mốc này); chỉ có ngày (`YYYY-MM-DD`) là đầu ngày giờ VN; ngày giờ phải có `Z` hoặc offset, khác → 422" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                          supply_voltage: { type: object, properties: { misting: { type: number, example: 5 }, ventilation: { type: number, example: 12 } } }
+                          estimated: { type: boolean, example: true }
+                          months: { type: array, items: { $ref: "#/components/schemas/EnergyMonth" } }
+                          total:
+                            type: object
+                            properties:
+                              misting_kwh: { type: number, nullable: true }
+                              ventilation_kwh: { type: number, nullable: true }
+                              total_kwh: { type: number, nullable: true }
+        "400": { description: "from không trước to, hoặc khoảng quá 366 ngày" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /analytics/correlation:
     get:
@@ -6311,6 +6452,52 @@ components:
         start: { type: string, example: "06:00", description: "HH:mm giờ VN" }
         end: { type: string, example: "18:00", description: "HH:mm giờ VN; end trước start là ca qua nửa đêm, tính cho ngày bắt đầu" }
 
+    HouseOverview:
+      type: object
+      description: "Một nhà trong tổng quan trại (ANALYTICS-FR-015)"
+      properties:
+        house_id: { type: string }
+        name: { type: string }
+        stage: { type: string, enum: [ATTRACTING, OCCUPIED] }
+        status: { type: string, enum: [GOOD, WATCH, ACTION], nullable: true }
+        status_reason: { type: string, enum: [NOT_COMPUTED, INSUFFICIENT_DATA], nullable: true }
+        open_alerts: { type: integer }
+        open_work_orders: { type: integer }
+        latest_return_rate:
+          type: object
+          nullable: true
+          properties: { date: { type: string, example: "2026-11-13" }, value: { type: number } }
+        simulated: { type: boolean, description: "Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004)" }
+    HouseComparisonRow:
+      type: object
+      description: "Một hàng của bảng so sánh nhà (BR-44); không có điểm tổng hay xếp hạng"
+      properties:
+        house_id: { type: string }
+        name: { type: string }
+        time_in_range_pct: { type: number, nullable: true }
+        good_days_pct: { type: number, nullable: true }
+        return_rate_avg: { type: number, nullable: true }
+        flock_trend_pct: { type: number, nullable: true }
+        alerts_raised: { type: integer }
+        alerts_open: { type: integer }
+        mttr_min: { type: number, nullable: true }
+        energy_kwh: { type: number, nullable: true, description: "Ước tính (BR-45); null = not available" }
+        energy: { type: object, properties: { misting_kwh: { type: number, nullable: true }, ventilation_kwh: { type: number, nullable: true } } }
+        last_cycle_yield_g: { type: number, nullable: true, description: "Sản lượng chu kỳ đã đóng gần nhất (BR-43); null tới khi có G-26" }
+        simulated: { type: boolean, description: "Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004), cùng cách tính với tổng quan" }
+    EnergyMonth:
+      type: object
+      properties:
+        month: { type: string, example: "2026-10", description: "Tháng giờ VN" }
+        misting_kwh: { type: number, nullable: true, description: "null = not available (không có dòng đo)" }
+        ventilation_kwh: { type: number, nullable: true }
+    FlockPeriod:
+      type: object
+      properties:
+        period: { type: string, description: "Tuần: thứ Hai đầu tuần (YYYY-MM-DD); tháng: YYYY-MM" }
+        days: { type: integer, description: "Số ngày đủ 2 phiên trong kỳ" }
+        mean_morning_exit: { type: number }
+        change_pct: { type: number, nullable: true, description: "% đổi so với kỳ liền trước; null khi kỳ trước không có số" }
     WeatherRule:
       type: object
       description: "ENV-FR-030, BR-38 — dự báo 2 giờ tới ≥ min thì cộng offset_pct vào nhu cầu phun, trong duration_min phút"
@@ -6322,7 +6509,6 @@ components:
         offset_pct: { type: number, minimum: -10, maximum: 10, example: 5, description: "Điểm % của nhu cầu phun, khác 0" }
         duration_min: { type: integer, minimum: 1, maximum: 120, example: 120 }
         active: { type: boolean, default: true }
-
     DefaultThresholdsView:
       description: "Ngưỡng mặc định hệ thống kèm nguồn và lịch sử đổi (ENV-FR-007, SYSTEM-FR-002)"
       allOf:

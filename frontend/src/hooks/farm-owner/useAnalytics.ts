@@ -181,3 +181,12 @@ export function useCorrelation(zoneId: string | undefined, days: number) {
     enabled: !!zoneId,
   })
 }
+
+// ANALYTICS-FR-017 — điện năng ước tính theo tháng của 1 nhà (90 ngày gần nhất)
+export function useHouseEnergy(houseId: string | undefined) {
+  return useQuery({
+    queryKey: ['analytics', 'energy', houseId],
+    queryFn: () => analyticsApi.energy(houseId!).then(response => response.data.data),
+    enabled: Boolean(houseId),
+  })
+}

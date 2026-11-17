@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.4 (Review 2, final scope) |
+| Document version | 2.2.5 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -396,9 +396,12 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Weather compensation limits and rule inputs | backend `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `MAX_WEATHER_RULES`, `WEATHER_METRIC_LIMITS` (`utils/weatherCompensation.util.ts`); firmware `WEATHER_COMP_MAX_PCT`, `WEATHER_COMP_MAX_MS`, `WEATHER_COMP_OFFLINE_MS` (`pid/WeatherCompensation.h`) |
 | Automatic Work Order for offline devices | backend `WORK_ORDER_OFFLINE_DELAY_MIN` |
 | On-site photos | backend `MAX_PHOTO_BYTES`, `MAX_WORK_ORDER_PHOTOS` (`workOrder.service.ts`) |
+| Supply voltage of the demo loads (A-9) | backend `LOAD_SUPPLY_VOLTAGE` (`energy.service.ts`): 5 V misting, 12 V fan, as the controller board of Section 3 |
 | Recommendation expiry and effect window, rule inputs | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS`, `RULE_VALUE_LIMITS`, `RULE_WINDOW_MIN_DAYS`, `RULE_WINDOW_MAX_DAYS`, `RULE_WORK_ORDER_TITLE_MAX` (`utils/recommendationRule.util.ts`); daily 06:30 job `recommendationEffect.job.ts` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
 | Same period of the previous year, complete cycle | backend `HARVEST_SAME_PERIOD_DAYS`, `HARVEST_CYCLE_MIN_COMPLETENESS` |
+| Gap between two telemetry samples | backend `MAX_GAP_MS` (`relayUsage.service.ts`), shared by the run hours and the energy estimate |
+| Farm overview and house comparison | backend `LATEST_RETURN_RATE_DAYS` (`farmOverview.service.ts`), `DEFAULT_COMPARISON_DAYS` (`farms.controller.ts`), `DEFAULT_ENERGY_DAYS` (`analytics.controller.ts`), `MAX_PERIOD_DAYS` (`utils/period.util.ts`) |
 
 ---
 
@@ -1874,6 +1877,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.5 | 17/11/2026 | Section 5.5 lists the code home of the G-25 constants: telemetry gap, latest return-rate look-up, comparison and energy periods, longest period (Report 3 4.2.8) |
 | 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3); room and payload of `RECOMMENDATION_NEW` (Section 7.3) |
 | 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |
 | 2.2.2 | 12/11/2026 | Configuration sync as built (G-08): the heartbeat field is named `appliedConfigVersion`, like the other heartbeat fields; the ERD stores `config_sync` (Report 3 §6.12) on the controller |

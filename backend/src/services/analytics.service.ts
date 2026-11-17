@@ -2,7 +2,8 @@ import { Types } from 'mongoose'
 import { Telemetry } from '@/models/telemetry.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { RELAY_SERVICE_LIMITS } from '@/services/relayUsage.service'
-import { houseDailyCounts, vnDate } from '@/services/birdCount.service'
+import { houseDailyCounts, vnDate, type HouseDayCounts } from '@/services/birdCount.service'
+import { isFlockDayComplete } from '@/services/healthAssessment.service'
 import { assertHouseAccessByParams, assertZoneAccess } from '@/utils/farmAccess.util'
 import { resolveBirdCountTuning } from '@/utils/detectionTuning.util'
 import { manualTimeInZone } from '@/services/relayOverrideLog.service'
@@ -292,11 +293,62 @@ export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScop
     house_id: String(house._id),
     days: query.days,
     records,
+    flock_trend: flockTrend(records),
     avg_return_rate: avg ? +avg.toFixed(1) : null,
     latest_return_rate: latest,
     drop_percent: dropPercent,
     drop_threshold_pct: dropThreshold,
     is_significant_drop: dropPercent !== null && dropPercent > dropThreshold,
+  }
+}
+
+export interface FlockPeriod {
+  /** Tuần: ngày thứ Hai đầu tuần ('YYYY-MM-DD'); tháng: 'YYYY-MM' */
+  period: string
+  days: number
+  mean_morning_exit: number
+  /** % đổi so với kỳ liền trước; null khi kỳ liền trước không có ngày đủ phiên */
+  change_pct: number | null
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10
+const DAY_MS = 86_400_000
+const mondayOf = (date: string) => {
+  const d = new Date(`${date}T00:00:00Z`)
+  return new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * DAY_MS).toISOString().slice(0, 10)
+}
+const previousWeek = (monday: string) => new Date(Date.parse(`${monday}T00:00:00Z`) - 7 * DAY_MS).toISOString().slice(0, 10)
+const previousMonth = (month: string) => {
+  const [y, m] = month.split('-').map(Number)
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+}
+
+type FlockDay = Pick<HouseDayCounts, 'date' | 'net_exit' | 'has_morning' | 'has_evening' | 'return_rate'>
+
+function meanByPeriod(days: FlockDay[], keyOf: (date: string) => string, prevOf: (key: string) => string): FlockPeriod[] {
+  const groups = new Map<string, number[]>()
+  for (const d of days) groups.set(keyOf(d.date), [...(groups.get(keyOf(d.date)) ?? []), d.net_exit])
+  const means = new Map([...groups].map(([k, v]) => [k, v.reduce((a, b) => a + b, 0) / v.length]))
+  return [...groups.keys()].sort().map(period => {
+    const mean = means.get(period) as number
+    const prev = means.get(prevOf(period))
+    return {
+      period, days: groups.get(period)!.length, mean_morning_exit: round1(mean),
+      change_pct: prev ? round1(((mean - prev) / prev) * 100) : null,
+    }
+  })
+}
+
+/**
+ * ANALYTICS-FR-002 — xu hướng đàn: trung bình số chim ra buổi sáng (số ròng ra − vào của phiên sáng, cùng nguồn với
+ * ước tính đàn khi thu hoạch) theo tuần (từ thứ Hai, ngày giờ VN) và theo tháng, kèm % đổi so với kỳ trước. Ngày
+ * thiếu phiên (VISION-FR-020) không vào trung bình.
+ */
+export function flockTrend(days: FlockDay[]): { weekly: FlockPeriod[]; monthly: FlockPeriod[] } {
+  const complete = days.filter(isFlockDayComplete)
+  return {
+    weekly: meanByPeriod(complete, mondayOf, previousWeek),
+    monthly: meanByPeriod(complete, date => date.slice(0, 7), previousMonth),
   }
 }
 

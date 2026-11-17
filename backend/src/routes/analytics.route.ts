@@ -3,6 +3,7 @@ import { query } from 'express-validator'
 import * as analyticsController from '@/controllers/analytics.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { isPeriodParam } from '@/utils/period.util'
 
 const router = Router()
 router.use(authenticate)
@@ -42,6 +43,11 @@ router.get('/bird-count/current', ...birdScope, validate, analyticsController.bi
 router.get('/bird-count/buckets',
   ...birdScope, ...dateRange, validate,
   analyticsController.birdCountBuckets)
+// ANALYTICS-FR-017, BR-45 — điện năng ước tính của bơm và quạt của 1 nhà theo tháng
+// Khoảng của điện năng: YYYY-MM-DD (đầu ngày giờ VN) hoặc ngày giờ ISO có múi giờ (cùng quy tắc bảng so sánh)
+const energyPeriod = ['from', 'to'].map(name =>
+  query(name).optional().isString().bail().custom(isPeriodParam).withMessage(`${name} phải là YYYY-MM-DD hoặc ngày giờ ISO có múi giờ`))
+router.get('/energy', query('houseId').isString().bail().isMongoId(), ...energyPeriod, validate, analyticsController.energy)
 // Môi trường đo theo Zone, tỷ lệ chim về lấy của nhà yến chứa Zone
 router.get('/correlation',       query('zoneId').isMongoId(), validate, analyticsController.envBirdCorrelation)
 
