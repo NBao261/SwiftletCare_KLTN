@@ -118,9 +118,12 @@ export async function houseDailyCounts(houseId: string, range: { from?: string; 
   return rows.map(toDayCounts)
 }
 
-/** Trung bình tỷ lệ chim về theo ngày (mỗi ngày có tỷ lệ tính một lần); null khi không ngày nào có tỷ lệ */
+/**
+ * Trung bình tỷ lệ chim về theo ngày (mỗi ngày có tỷ lệ tính một lần); null khi không ngày nào có tỷ lệ. Ngày không
+ * đầy đủ (VISION-FR-020) không tính, như nền của LOW_RETURN_RATE: báo cáo sức khỏe và ảnh chụp đàn khi thu hoạch
+ */
 export function averageReturnRate(days: HouseDayCounts[]): number | null {
-  const rates = days.map(d => d.return_rate).filter((r): r is number => r !== null)
+  const rates = days.filter(d => !d.incomplete).map(d => d.return_rate).filter((r): r is number => r !== null)
   return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
 }
 
@@ -143,8 +146,9 @@ function emptyDay(date: string): HouseDayCounts {
 }
 
 /**
- * VISION-FR-006/008/009/017 — gọi từ mqtt/handlers/birdCount.handler.ts. Tin của phiên trả nhà và ngày
- * của nó để handler tính lại sức khỏe ngày khi số đếm về trễ (SM-17); tin BUCKET trả null.
+ * VISION-FR-006/008/009/017 — gọi từ mqtt/handlers/birdCount.handler.ts. Trả nhà và ngày để handler tính lại
+ * sức khỏe ngày khi số đếm về trễ (SM-17): tin của phiên chưa được backend tính, hoặc số 5 phút về muộn nằm trong
+ * khung của một phiên đã tính; mọi trường hợp khác trả null.
  */
 export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ houseId: string; sessionDate: string } | null> {
   const { deviceId, entry_count, exit_count } = payload
@@ -169,10 +173,17 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
       { $set: { house_id: node.house_id }, ...counts },
       { upsert: true },
     )
-    // SM-17 — số 5 phút về trễ (nút AI nối lại) cho ngày đã tính phiên: tính lại phiên theo khung đã lưu
+    // SM-17 — số 5 phút về trễ (nút AI nối lại) cho ngày đã tính phiên: tính lại phiên theo khung đã lưu, chỉ khi
+    // khoảng đó nằm trong khung của một phiên (VISION-FR-017 gửi cả ngày, số ngoài khung không đổi phiên nào)
     const bucketDate = vnDate(new Date(bucketStart))
     const houseId = String(node.house_id)
-    if (!(await BirdCountRecord.exists({ house_id: node.house_id, session_date: bucketDate, computed_at: { $exists: true } }))) return null
+    const computed = await BirdCountRecord.find({ house_id: node.house_id, session_date: bucketDate, computed_at: { $exists: true } })
+      .select('window_start window_end').lean()
+    const inWindow = computed.some(record => {
+      const { start, end } = windowInterval(bucketDate, { start: record.window_start as string, end: record.window_end as string })
+      return bucketStart >= start.getTime() && bucketStart < end.getTime()
+    })
+    if (!inWindow) return null
     await computeHouseSessions(houseId, bucketDate)
     return { houseId, sessionDate: bucketDate }
   }

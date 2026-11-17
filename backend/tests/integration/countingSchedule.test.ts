@@ -13,13 +13,16 @@ import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
-import { House } from '@/models/houseZone.model'
+import { House, Zone } from '@/models/houseZone.model'
+import { Telemetry } from '@/models/telemetry.model'
 import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
 import {
-  checkReturnRateDrops, claimDueHouses, computeHouseSessions, houseDailyCounts, ingestBirdCount,
+  averageReturnRate, checkReturnRateDrops, claimDueHouses, computeHouseSessions, houseDailyCounts, ingestBirdCount,
 } from '@/services/birdCount.service'
+import { getBirdCountTrends, getEnvBirdCorrelation } from '@/services/analytics.service'
 import { addDays } from '@/utils/countingSchedule.util'
+import { Types } from 'mongoose'
 import type { Role } from '@/types'
 import { useTestDb } from '../helpers/ownerFarm'
 
@@ -157,6 +160,10 @@ describe('VISION-FR-008, 020 — sessions from the 5-minute counts', () => {
     await ingestBirdCount({ deviceId: s.camA.device_id, kind: 'BUCKET', bucket_start: vnAt(DAY, '07:20').getTime(), exit_count: 20, entry_count: 0 })
     ;[day] = await houseDailyCounts(String(s.house._id), { from: DAY, to: DAY })
     expect(day.morning_exit).toBe(320)
+    // Số 5 phút giữa ngày (ngoài cả hai khung) không tính lại phiên nào
+    const before = (await BirdCountRecord.findOne({ house_id: s.house._id, session_type: 'MORNING_EXIT' }).lean())?.computed_at
+    expect(await ingestBirdCount({ deviceId: s.camA.device_id, kind: 'BUCKET', bucket_start: vnAt(DAY, '12:00').getTime(), exit_count: 5, entry_count: 5 })).toBeNull()
+    expect((await BirdCountRecord.findOne({ house_id: s.house._id, session_type: 'MORNING_EXIT' }).lean())?.computed_at).toEqual(before)
     expect((await BirdCountRecord.findOne({ house_id: s.house._id, session_type: 'EVENING_ENTRY' }).lean())?.window_start).toBe('17:00')
   })
 
@@ -188,6 +195,8 @@ describe('VISION-FR-008, 020 — sessions from the 5-minute counts', () => {
     for (const date of days) await computeHouseSessions(String(s.house._id), date)
     const counts = await houseDailyCounts(String(s.house._id), { from: days[0], to: DAY })
     expect(counts.map(d => d.incomplete)).toEqual([false, false, false, true, true])
+    // Trung bình của báo cáo sức khỏe và ảnh chụp đàn bỏ hai ngày không đầy đủ: 3 ngày 95 %
+    expect(averageReturnRate(counts)).toBeCloseTo(95, 5)
     // Hôm nay không đầy đủ: không mở cảnh báo dù tỷ lệ giảm (70 % so với 95 %)
     expect(await checkReturnRateDrops(DAY)).toBe(0)
 
@@ -196,6 +205,31 @@ describe('VISION-FR-008, 020 — sessions from the 5-minute counts', () => {
     await BirdCountRecord.deleteMany({ house_id: s.house._id, session_date: DAY })
     await computeHouseSessions(String(s.house._id), DAY)
     expect(await checkReturnRateDrops(DAY)).toBe(1)
+  })
+})
+
+describe('VISION-FR-020 — incomplete days in charts', () => {
+  it('trends keep the incomplete day with its flag but leave it out of the average; the correlation leaves it out', async () => {
+    const s = await seed()
+    const zone = await Zone.create({ house_id: s.house._id, name: 'Tầng 1' })
+    const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10)
+    const days = [-3, -2, -1].map(n => addDays(today, n))
+    for (const date of days) {
+      const incomplete = date === days[2]
+      for (const [session_type, exit_count, entry_count] of [['MORNING_EXIT', 1000, 0], ['EVENING_ENTRY', 0, incomplete ? 300 : 900]] as const) {
+        await BirdCountRecord.create({
+          camera_node_id: s.camA._id, house_id: s.house._id, session_date: date, session_type, exit_count, entry_count,
+          timestamp: vnAt(date, '19:00'), window_start: '05:30', window_end: '07:00', complete: !incomplete, computed_at: new Date(),
+        })
+      }
+      await Telemetry.create({ node_id: new Types.ObjectId(), zone_id: zone._id, timestamp: vnAt(date, '12:00'), temperature: 29, humidity: 85 })
+    }
+    const user = { _id: String(s.owner._id), email: s.owner.email, role: 'FARM_OWNER' as const }
+    const trends = await getBirdCountTrends(user, { houseId: String(s.house._id) }, { days: 7 })
+    expect(trends.records.map(r => r.incomplete)).toEqual([false, false, true])
+    expect(trends.avg_return_rate).toBe(90)
+    const correlation = await getEnvBirdCorrelation(user, String(zone._id), { days: 7 })
+    expect(correlation.points.map(p => p.date)).toEqual(days.slice(0, 2))
   })
 })
 

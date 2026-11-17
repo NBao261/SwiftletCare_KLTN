@@ -276,7 +276,8 @@ export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScop
     from: new Date(Date.now() - query.days * 86400_000).toISOString(),
   })
 
-  const rates = records.map(r => r.return_rate).filter((v): v is number => typeof v === 'number')
+  // VISION-FR-020 — ngày không đầy đủ vẫn có trong `records` (kèm cờ) nhưng không vào trung bình và mốc giảm
+  const rates = records.filter(r => !r.incomplete).map(r => r.return_rate).filter((v): v is number => typeof v === 'number')
   const avg = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
   const latest = rates.at(-1) ?? null
   // VISION-FR-011/EXPERT-FR-008: so với trung bình 7 ngày CÓ DỮ LIỆU trước ngày mới nhất (không
@@ -325,7 +326,8 @@ export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, q
     houseDailyCounts(String(house._id), { from: vnDate(from) }),
   ])
 
-  const birdByDate = new Map(birdDaily.map(b => [b.date, b.return_rate]))
+  // VISION-FR-020 — ngày không đầy đủ (nút AI mất kết nối trong khung) không ghép cặp: tỷ lệ của ngày đó thấp vì thiếu số
+  const birdByDate = new Map(birdDaily.filter(b => !b.incomplete).map(b => [b.date, b.return_rate]))
   const points = envDaily
     .map(e => ({
       date: e._id as string,

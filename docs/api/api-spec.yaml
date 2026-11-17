@@ -1937,7 +1937,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/CountingScheduleView" }
-        "400": { description: "Giờ không có dạng HH:mm, khung có giờ bắt đầu không trước giờ kết thúc, khung sáng không kết thúc trước khung chiều, ngày không có thật, hồ sơ chồng ngày, khung tạm chồng ngày, quá 12 hồ sơ hoặc 60 khung tạm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "Giờ không có dạng HH:mm; khung có giờ bắt đầu không trước giờ kết thúc; khung sáng không kết thúc trước khung chiều; tên hồ sơ rỗng hoặc quá 50 ký tự; ngày hồ sơ không có dạng MM-DD hoặc không có thật; ngày khung tạm không có dạng YYYY-MM-DD hoặc `from` sau `to`; hồ sơ chồng ngày; khung tạm chồng ngày; quá 12 hồ sơ hoặc 60 khung tạm", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { description: "profiles hoặc temporary không phải danh sách", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
