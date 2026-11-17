@@ -152,3 +152,37 @@ docker compose -f deploy/docker-compose.staging.yml exec backend npm run seed   
 - số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-03);
 - telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-02, MF-06);
 - một bơm đã quá giới hạn giờ chạy (cảnh báo `MAINTENANCE_DUE`).
+
+## 6. Điều kiện seed cho DS-07, DS-08, DS-15, DS-16 (WF-04 và WF-08 — Thái Minh Tuấn)
+
+Kiệt và Bảo cần đảm bảo script seed tạo đủ các bản ghi sau để Tuấn chạy E2E trên staging:
+
+### WF-04 — Thẩm định cảnh báo suy luận (DS-07, DS-08)
+
+| Bản ghi | Điều kiện |
+| --- | --- |
+| Cảnh báo `NOISE_ANOMALY` | `status: ACTIVE`, `farm_id` = farm "Nhà Yến Demo", `house_id` = nhà "Nhà chính"; **chưa có** `expert_verdict`; đã có `onsite_checks[0]` với nội dung quan sát (ví dụ: "Tiếng ồn từ bên ngoài") do tài khoản `tech@swiftletcare.dev` ghi |
+| Dữ liệu đường nền tiếng ồn | `telemetry` có trường `noise_level` trong ≥ 7 ngày trước cho zone "Tầng 1", để trang bằng chứng hiển thị được biểu đồ |
+| Farm có Domain Expert | `expert@swiftletcare.dev` phải là thành viên `DOMAIN_EXPERT` của farm "Nhà Yến Demo" (đã có trong `seed.script.ts`) |
+
+**Lưu ý DS-08:** test này chạy API trực tiếp, không cần dữ liệu UI. Yêu cầu duy nhất là cảnh báo `NOISE_ANOMALY` tồn tại và farm có chuyên gia.
+
+### WF-08 — Vòng lặp khuyến nghị (DS-15, DS-16)
+
+| Bản ghi | Điều kiện |
+| --- | --- |
+| Luật khuyến nghị | `enabled: true`, chỉ số `NH3`, loại `above`, hành động `WORK_ORDER`; điều kiện: vượt ngưỡng ≥ 4 giờ/ngày trong 3 ngày liên tiếp |
+| Ngày đủ điều kiện | ≥ 3 bản ghi `househealthdays` có NH3 vượt ngưỡng ≥ 4 giờ, house = "Nhà chính", trong 7 ngày gần nhất |
+| Khuyến nghị OPEN | `status: OPEN`, tạo bởi job đánh giá hằng ngày (hoặc insert thẳng), house = "Nhà chính" — dùng cho DS-15 và DS-16 nhánh A |
+| Khuyến nghị EXPIRED | `status: EXPIRED`, `created_at` ≥ 8 ngày trước, job `recommendationEffect.job` đã chạy và chuyển trạng thái — dùng cho DS-16 nhánh B; nếu chưa chạy job thì insert trực tiếp `status: EXPIRED` |
+
+### Checklist kiểm tra nhanh của Tuấn sau mỗi deploy lên staging
+
+Chạy sau khi nhận tín hiệu "staging đã lên" từ Bảo/Kiệt:
+
+- [ ] Đăng nhập bằng `expert@swiftletcare.dev` → vào `/domain-expert/alert-verdicts` → thấy danh sách cảnh báo tải được
+- [ ] Đăng nhập bằng `expert@swiftletcare.dev` → vào `/domain-expert/recommendation-rules` → thấy luật NH3
+- [ ] Đăng nhập bằng `owner@swiftletcare.dev` → vào `/recommendations` → thấy khuyến nghị
+- [ ] Đăng nhập bằng `admin@swiftletcare.dev` → vào `/system/devices` → thấy danh sách thiết bị
+- [ ] Đăng nhập bằng `admin@swiftletcare.dev` → vào `/system/device-stock` → thấy kho thiết bị
+- [ ] Chạy `npm run test:e2e -- e2e/ds-07 e2e/ds-08 e2e/ds-15 e2e/ds-16` với `E2E_BASE_URL=https://app.<tên-miền>` → ghi kết quả vào `docs/evidence-register.md`
