@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.6 (Review 2, final scope) |
+| Document version | 2.2.8 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -384,7 +384,8 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Account deletion reminder | backend `DELETION_REMIND_DAYS_BEFORE` |
 | Repeat of an unacknowledged alert | backend `jobs/alertEscalation.job.ts` |
 | Service limits of the pump and the fan | backend `RELAY_SERVICE_LIMITS` |
-| Temporary password | backend account-creation service of AUTH-FR-005c |
+| Temporary password | backend `TEMPORARY_PASSWORD_LENGTH` (`utils/password.util.ts`), used by `admin.service#createFarmOwner` (AUTH-FR-005c) |
+| SMTP time-outs of account mails | backend `SMTP_TIMEOUT_MS` (`mail.service.ts`) |
 | Live-data label, zone balance bands | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`, `ZoneBalanceCard` |
 | Health-indicator level defaults | backend `DEFAULT_HEALTH_LEVELS` (`detectionTuning.util.ts`), `COMPLETENESS_MIN_PCT` (`healthAssessment.service.ts`) |
 | Rain confounder, rating window | backend `RAIN_MM_PER_HOUR`, `RATING_WINDOW_DAYS` (`healthAssessment.service.ts`) |
@@ -1881,7 +1882,8 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 2.2.6 | 17/11/2026 | Counting schedule as built (G-12): the house keeps the history of its schedule and the date of its last evening check, a session record its computation time; the `returnRate` job runs every 5 minutes and takes each house once a day after its own evening window; the rain of the counting sessions uses the windows of the schedule (Sections 5.3, 5.5, 6) |
+| 2.2.8 | 17/11/2026 | Counting schedule as built (G-12): the house keeps the history of its schedule and the date of its last evening check, a session record its computation time; the `returnRate` job runs every 5 minutes and takes each house once a day after its own evening window; the rain of the counting sessions uses the windows of the schedule (Sections 5.3, 5.5, 6) |
+| 2.2.6 | 17/11/2026 | Section 5.5: code home of the temporary password and of the SMTP time-outs (Report 3 4.2.9; G-02) |
 | 2.2.5 | 17/11/2026 | Section 5.5 lists the code home of the G-25 constants: telemetry gap, latest return-rate look-up, comparison and energy periods, longest period (Report 3 4.2.8) |
 | 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3); room and payload of `RECOMMENDATION_NEW` (Section 7.3) |
 | 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |

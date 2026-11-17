@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.9 (Review 2, final scope) |
+| Document version | 4.2.10 (Review 2, final scope) |
 | Date | 10/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -718,6 +718,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Repeat of an unacknowledged alert | once, 15 min after it was raised (CRITICAL, HIGH); 1 h for `NODE_OFFLINE` | The owner is told again when nobody reacted (ALERT-FR-015) |
 | Service limits of the pump and the fan | 500 h (pump) and 2 000 h (fan) of ON time, 100 000 switchings each, since the last service | `MAINTENANCE_DUE` (ALERT-FR-016); to be replaced by the makers' figures of the installed pump, fan and relay |
 | Temporary password of an account created by the Administrator | 12 random characters, changed at the first sign-in | AUTH-FR-005c |
+| SMTP time-outs of account mails | 10 s each for the connection, the greeting and the socket | An SMTP server that hangs never holds the request that creates an account or an invitation for minutes (SF-03, AUTH-FR-005c, 010) |
 | Live-data label on the dashboard | latest reading older than 20 s shows the controller as disconnected | Display only; the device status itself follows BR-10 |
 | Zone balance score bands | ≥ 90 / ≥ 80 / ≥ 65 of 100 | Colour and label of the zone comparison card only; no alert depends on them |
 | Health-indicator level defaults | in range 90 % / 75 %; air quality 1 h / 4 h; noise 1 / 3 episodes; completeness 80 % of valid samples per source | Daily health status until the Domain Expert sets confirmed levels (BR-28) |
@@ -1153,7 +1154,8 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 4.2.9 | 17/11/2026 | Counting schedule and sessions as built (G-12): input limits, kept schedule changes, session membership of a 5-minute count, incomplete days left out of the averages and the correlation, and the time of the evening check in Section 4.5 (VISION-FR-008, 019, 020, BR-21) |
+| 4.2.10 | 17/11/2026 | Counting schedule and sessions as built (G-12): input limits, kept schedule changes, session membership of a 5-minute count, incomplete days left out of the averages and the correlation, and the time of the evening check in Section 4.5 (VISION-FR-008, 019, 020, BR-21) |
+| 4.2.9 | 17/11/2026 | SMTP time-outs of the account mails in Section 4.5 (SF-03; G-02) |
 | 4.2.8 | 17/11/2026 | Telemetry gap, overview look-up, comparison period (30 days) and energy period (90 days) constants in Section 4.5 (ANALYTICS-FR-015…017, BR-45; G-25) |
 | 4.2.7 | 17/11/2026 | Recommendation rules as built (G-24): EXPERT-FR-018 one review item per zone on a farm with a Domain Expert; effect measured once the 7th day is recomputed; BR-42 a new recommendation of the same rule and house waits for a whole window after the last decision or expiry; rule inputs in Section 4.5 |
 | 4.2.6 | 15/11/2026 | Length of the source of a default-threshold change in Section 4.5 (ENV-FR-007; G-18) |

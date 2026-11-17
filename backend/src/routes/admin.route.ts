@@ -25,6 +25,12 @@ router.get('/users',
   ...paginationQuery, validate,
   adminController.listUsers,
 )
+// AUTH-FR-005c — không có đăng ký công khai: Administrator tạo Farm Owner, mật khẩu tạm gửi qua e-mail
+router.post('/farm-owners',
+  body('email').isString().bail().trim().isEmail(), body('full_name').isString().bail().trim().notEmpty(),
+  body('phone').optional().isString().bail().trim(), validate,
+  adminController.createFarmOwner,
+)
 // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false"/"0" lọt xuống service là truthy
 router.put('/users/:id/status',
   param('id').isMongoId(), body('is_active').isBoolean().toBoolean(), validate,
