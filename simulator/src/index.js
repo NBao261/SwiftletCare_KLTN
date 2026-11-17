@@ -13,6 +13,7 @@ import mqtt from 'mqtt'
 import {
   BUCKET_MS, INITIAL_READING, activeSession, bucketCounts, bucketStartOf, cameraHeartbeat, heartbeat, nextReading, telemetry,
 } from './payloads.js'
+import { measureNfr15 } from './nfr15.js'
 
 const { values: opt } = parseArgs({
   options: {
@@ -28,6 +29,7 @@ const { values: opt } = parseArgs({
     offline: { type: 'string', default: '0' },
     'offline-after-min': { type: 'string', default: '5' },
     alerts: { type: 'string', default: '0' },
+    'work-orders': { type: 'string', default: '0' },
     prefix: { type: 'string', default: 'SIM' },
   },
 })
@@ -51,9 +53,10 @@ async function api(token, method, path, body) {
   return json.data
 }
 
-async function login(role) {
+async function login(role, { optional = false } = {}) {
   const email = process.env[`SIM_${role}_EMAIL`]
   const password = process.env[`SIM_${role}_PASSWORD`]
+  if (optional && !email) return null
   if (!email || !password) throw new Error(`Thiếu SIM_${role}_EMAIL / SIM_${role}_PASSWORD (xem simulator/README.md)`)
   return (await api(null, 'POST', '/auth/login', { email, password })).accessToken
 }
@@ -153,6 +156,9 @@ function injectAlerts(controllers, count) {
 
 async function main() {
   const [admin, owner] = [await login('ADMIN'), await login('OWNER')]
+  // NFR-15: thợ của mọi nhà giả lập nhận cảnh báo trước, nên cảnh báo không ai xác nhận sẽ leo thang (BR-40)
+  const technician = await login('TECHNICIAN', { optional: true })
+  const technicianId = technician && JSON.parse(Buffer.from(technician.split('.')[1], 'base64url').toString()).sub
   const farms = await api(owner, 'GET', '/farms')
   const farm = opt.farm ? farms.find(f => f._id === opt.farm) : farms[0]
   if (!farm) throw new Error('Farm Owner chưa có farm nào (hoặc --farm sai)')
@@ -166,6 +172,7 @@ async function main() {
 
   for (let h = 1; h <= num('houses'); h++) {
     const house = await api(owner, 'POST', `/farms/${farm._id}/houses`, { name: `${tag} H${h}`, floors: num('zones') || 1 })
+    if (technician) await api(owner, 'PUT', `/farms/houses/${house._id}/technicians/${technicianId}`, { primary: true })
     for (let c = 1; c <= num('cameras'); c++) {
       const id = `${tag}-H${h}-A${c}`
       cameras.push(startCamera(id, await provision(admin, owner, 'CAMERA', id, { house_id: house._id })))
@@ -182,6 +189,20 @@ async function main() {
   console.log(`Đang chạy ${controllers.length} controller và ${cameras.length} camera giả lập. Ctrl+C để dừng.`)
 
   if (num('alerts') > 0 && controllers.length > 0) injectAlerts(controllers, num('alerts'))
+  if (num('work-orders') > 0) {
+    if (!technician) throw new Error('--work-orders cần SIM_TECHNICIAN_EMAIL / SIM_TECHNICIAN_PASSWORD (thành viên của farm)')
+    // Token truy cập hết hạn sau 15 phút, phép đo kéo dài khoảng 30 phút: đăng nhập lại khi bắt đầu đo
+    setTimeout(async () => {
+      try {
+        await measureNfr15({
+          api, owner: await login('OWNER'), technician: await login('TECHNICIAN'), farmId: farm._id, tag,
+          alertCount: num('alerts'), workOrderCount: num('work-orders'),
+        })
+      } catch (err) {
+        console.error(`Đo NFR-15 thất bại: ${err.message}`)
+      }
+    }, 16 * 60_000)
+  }
   const offline = controllers.slice(0, Math.round(controllers.length * num('offline')))
   if (offline.length > 0) {
     setTimeout(() => {

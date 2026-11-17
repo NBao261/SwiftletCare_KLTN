@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.9 (Review 2, final scope) |
+| Document version | 2.2.12 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -174,7 +174,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
 | Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `react-native-gifted-charts` | Expo ~58.0, React Native 0.88.0, React 19.3.0, expo-router ~58.0, expo-camera ~58.0, expo-notifications ~58.1, expo-video ~58.0, react-native-mmkv ^4.3, react-native-gifted-charts ^1.4 |
 | Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1, nginx 1.27, certbot latest |
-| Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Playwright (web end to end against the seeded backend, CI job `e2e`), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6, Playwright 1.64.1 |
+| Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Playwright (web end to end against the seeded backend, CI job `e2e`), Unity on host `pio test -e native` (firmware), pytest (AI pipeline), k6 (NFR-03 load test, `simulator/load/nfr03.k6.js`, Docker image) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6, Playwright 1.64.1, k6 1.3.0 |
 
 ### 3.3 Source Code and DevOps
 
@@ -1882,6 +1882,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.12 | 18/11/2026 | k6 1.3.0 in the Testing row of the Technology Declaration (Section 3): the NFR-03 load script runs from a Docker image beside the device simulator (G-27) |
 | 2.2.9 | 17/11/2026 | Playwright 1.64.1 in the Testing row of the Technology Declaration (Section 3): web end-to-end tests run in CI against the seeded backend (G-17) |
 | 2.2.8 | 17/11/2026 | Counting schedule as built (G-12): the house keeps the history of its schedule and the date of its last evening check, a session record its computation time; the `returnRate` job runs every 5 minutes and takes each house once a day after its own evening window; the rain of the counting sessions uses the windows of the schedule (Sections 5.3, 5.5, 6) |
 | 2.2.6 | 17/11/2026 | Section 5.5: code home of the temporary password and of the SMTP time-outs (Report 3 4.2.9; G-02) |

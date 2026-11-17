@@ -295,6 +295,8 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
   - NFR-15: 30 cảnh báo và 10 Work Order, đo độ trễ leo thang và độ trễ xác minh phục hồi;
   - demo nhiều nhà ở WF-06.
 
+  *(Bảo, 18/11/2026, nhánh `test/g27-nfr03-nfr15`: `simulator/load/nfr03.k6.js` (k6 1.3.0) và `simulator/src/nfr15.js` (`--work-orders`, thợ của seed làm thợ chính mọi nhà giả lập). Chạy thử trên staging dựng trên máy (`DOMAIN=localhost`, cỡ A-7: 120 controller, 20 camera; `RATE_LIMIT_MAX` nâng tạm): NFR-03 P95 61 ms trên 17.024 request, 0 lỗi, 100 socket giữ 5 phút; NFR-15 (a) P95 57,3 s (max 59,3 s, sát ngưỡng vì job leo thang chạy mỗi phút), (b) P95 30,1 s. Chưa phải số đo trên VPS: đo lại khi có staging thật.)*
+
 ## 4. Việc ngoài code (cả nhóm cùng làm)
 
 | Việc | Cần cho | Hạn |
