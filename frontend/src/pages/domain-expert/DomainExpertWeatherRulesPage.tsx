@@ -4,6 +4,7 @@ import { CloudRain, Info, Zap, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
+import SectionCard from '@/components/ui/SectionCard'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useWeatherRules, useUpdateWeatherRules } from '@/hooks/domain-expert/useWeatherRules'
@@ -140,47 +141,44 @@ export default function DomainExpertWeatherRulesPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
-      {/* Header */}
-      <div>
-        <h1 className="text-lg font-bold text-charcoal">Luật bù phun sương theo thời tiết</h1>
-        <p className="mt-0.5 text-sm text-warmGray">
-          ENV-FR-028…030, BR-38 — Job mỗi giờ chọn luật có |bù| lớn nhất và gửi xuống controller (tối đa ±10%, 2 giờ)
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-screen-xl space-y-5">
+      <SectionCard
+        icon={<CloudRain className="w-5 h-5" />}
+        title="Luật bù phun sương theo thời tiết"
+        description="Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ."
+        action={!isLoading && rules.length >= MAX_RULES ? (
+          <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
+            Đã đạt tối đa 10 luật
+          </span>
+        ) : undefined}
+      >
+        <div className="space-y-4">
+          {/* Lỗi tải dữ liệu */}
+          {isError && !isLoading && (
+            <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Không thể tải luật bù thời tiết. Vui lòng thử lại.</span>
+            </div>
+          )}
 
-      {/* Lỗi tải dữ liệu */}
-      {isError && !isLoading && (
-        <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>Không thể tải luật bù thời tiết. Vui lòng thử lại.</span>
-        </div>
-      )}
+          {/* Lần bù gần nhất */}
+          {renderLastCompensation()}
 
-      {/* Lần bù gần nhất */}
-      {renderLastCompensation()}
-
-      {/* Danh sách luật và form thêm — ẩn khi GET lỗi */}
-      {!isError && (
-        <>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
+          {/* Danh sách luật — ẩn khi GET lỗi */}
+          {!isError && (
+            <>
               <h2 className="text-sm font-semibold text-charcoal">
                 Danh sách luật ({isLoading ? '…' : rules.length}/{MAX_RULES})
               </h2>
-              {!isLoading && rules.length >= MAX_RULES && (
-                <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
-                  Đã đạt tối đa 10 luật
-                </span>
-              )}
-            </div>
-            {renderRulesList()}
-          </div>
-
-          {!isLoading && rules.length < MAX_RULES && (
-            <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
+              {renderRulesList()}
+            </>
           )}
-        </>
+        </div>
+      </SectionCard>
+
+      {/* Form thêm luật */}
+      {!isError && !isLoading && rules.length < MAX_RULES && (
+        <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
       )}
 
       {saveError && (

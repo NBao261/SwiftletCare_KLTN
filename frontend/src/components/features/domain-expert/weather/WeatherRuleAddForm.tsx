@@ -1,8 +1,9 @@
 // ENV-FR-030, BR-38 — Form thêm luật bù thời tiết: metric, min, offset_pct (−10…+10 ≠ 0), duration_min (1…120)
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
+import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
+import { Input } from '@/components/ui/Input'
 import type { WeatherRule } from '@/types/expert.types'
 import { validateWeatherRule, isWeatherRuleValid, METRIC_MIN_RANGE } from '@/validations/common/weatherRule.validation'
 
@@ -10,7 +11,10 @@ type DraftRule = Omit<Partial<WeatherRule>, 'metric'> & { metric: WeatherRule['m
 
 const BLANK = { metric: '' as DraftRule['metric'], min: undefined as number | undefined, offset_pct: undefined as number | undefined, duration_min: 60, active: true } satisfies DraftRule
 
-const METRIC_OPTIONS: { value: WeatherRule['metric']; label: string }[] = [
+type MetricValue = WeatherRule['metric'] | ''
+
+const METRIC_OPTIONS: SelectMenuOption<MetricValue>[] = [
+  { value: '', label: '— Chọn chỉ số —' },
   { value: 'temperature', label: 'Nhiệt độ cao nhất (°C)' },
   { value: 'humidity',    label: 'Độ ẩm ngoài trời cao nhất (%)' },
   { value: 'rain',        label: 'Tổng lượng mưa (mm)' },
@@ -38,79 +42,60 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
     setTouched(false)
   }
 
-  const inputClass = (error?: string) => cn(
-    'w-full rounded-lg border px-2.5 py-1.5 text-sm text-charcoal bg-white outline-none transition-colors',
-    error ? 'border-alertRed focus:ring-1 focus:ring-alertRed/30' : 'border-warmGray/15 focus:border-charcoal focus:ring-1 focus:ring-charcoal/20',
-    disabled && 'opacity-50 cursor-not-allowed',
-  )
-
   return (
-    <div className="rounded-2xl border border-dashed border-warmGray/30 bg-warmGray/5 p-4 space-y-3">
+    <div className="rounded-2xl border border-warmGray/15 bg-white shadow-card p-5 space-y-4">
       <p className="text-sm font-semibold text-charcoal">Thêm luật mới</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="sm:col-span-2 space-y-1">
-          <label htmlFor="wr-metric" className="text-xs text-warmGray font-medium">Chỉ số thời tiết</label>
-          <select
-            id="wr-metric"
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2 flex flex-col gap-1.5">
+          <label className="label-caption">Chỉ số thời tiết</label>
+          <SelectMenu
             value={draft.metric}
-            onChange={event => setDraft(current => ({ ...current, metric: event.target.value as WeatherRule['metric'], min: undefined }))}
+            options={METRIC_OPTIONS}
+            onChange={value => setDraft(current => ({ ...current, metric: value, min: undefined }))}
+            ariaLabel="Chọn chỉ số thời tiết"
+            field
+            invalid={!!errors.metric}
             disabled={disabled}
-            className={cn(inputClass(errors.metric), 'appearance-none')}
-          >
-            <option value="">— Chọn chỉ số —</option>
-            {METRIC_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          {errors.metric && <p className="text-xs text-alertRed">{errors.metric}</p>}
+            highlightFiltered={false}
+          />
+          {errors.metric && <span className="text-xs text-alertRed">{errors.metric}</span>}
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="wr-min" className="text-xs text-warmGray font-medium">
-            Ngưỡng {metaRange ? `(${metaRange.min}…${metaRange.max} ${metaRange.unit})` : ''}
-          </label>
-          <input
-            id="wr-min"
-            type="number"
-            value={draft.min ?? ''}
-            onChange={event => setDraft(current => ({ ...current, min: event.target.value === '' ? undefined : Number(event.target.value) }))}
-            disabled={disabled || !draft.metric}
-            placeholder={metaRange ? `vd. ${metaRange.max * 0.7 | 0}` : '—'}
-            className={inputClass(errors.min)}
-          />
-          {errors.min && <p className="text-xs text-alertRed">{errors.min}</p>}
-        </div>
+        <Input
+          id="wr-min"
+          type="number"
+          label={metaRange ? `Ngưỡng (${metaRange.min}…${metaRange.max} ${metaRange.unit})` : 'Ngưỡng'}
+          value={draft.min ?? ''}
+          onChange={event => setDraft(current => ({ ...current, min: event.target.value === '' ? undefined : Number(event.target.value) }))}
+          disabled={disabled || !draft.metric}
+          placeholder={metaRange ? `vd. ${metaRange.max * 0.7 | 0}` : '—'}
+          error={errors.min}
+        />
 
-        <div className="space-y-1">
-          <label htmlFor="wr-offset" className="text-xs text-warmGray font-medium">Mức bù phun (−10…+10, ≠ 0)</label>
-          <input
-            id="wr-offset"
-            type="number"
-            value={draft.offset_pct ?? ''}
-            onChange={event => setDraft(current => ({ ...current, offset_pct: event.target.value === '' ? undefined : Number(event.target.value) }))}
-            disabled={disabled}
-            step={1}
-            placeholder="vd. +5 hoặc −3"
-            className={inputClass(errors.offset_pct)}
-          />
-          {errors.offset_pct && <p className="text-xs text-alertRed">{errors.offset_pct}</p>}
-        </div>
+        <Input
+          id="wr-offset"
+          type="number"
+          label="Mức bù phun (−10…+10, ≠ 0)"
+          value={draft.offset_pct ?? ''}
+          onChange={event => setDraft(current => ({ ...current, offset_pct: event.target.value === '' ? undefined : Number(event.target.value) }))}
+          disabled={disabled}
+          step={1}
+          placeholder="vd. +5 hoặc −3"
+          error={errors.offset_pct}
+        />
 
-        <div className="space-y-1">
-          <label htmlFor="wr-duration" className="text-xs text-warmGray font-medium">Thời hạn (1…120 phút)</label>
-          <input
-            id="wr-duration"
-            type="number"
-            value={draft.duration_min ?? ''}
-            onChange={event => setDraft(current => ({ ...current, duration_min: event.target.value === '' ? undefined : Number(event.target.value) }))}
-            disabled={disabled}
-            step={1}
-            placeholder="vd. 60"
-            className={inputClass(errors.duration_min)}
-          />
-          {errors.duration_min && <p className="text-xs text-alertRed">{errors.duration_min}</p>}
-        </div>
+        <Input
+          id="wr-duration"
+          type="number"
+          label="Thời hạn (1…120 phút)"
+          value={draft.duration_min ?? ''}
+          onChange={event => setDraft(current => ({ ...current, duration_min: event.target.value === '' ? undefined : Number(event.target.value) }))}
+          disabled={disabled}
+          step={1}
+          placeholder="vd. 60"
+          error={errors.duration_min}
+        />
       </div>
 
       <Button variant="primary" size="sm" onClick={handleSubmit} disabled={disabled}>
