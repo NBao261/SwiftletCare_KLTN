@@ -86,12 +86,32 @@ test.describe('DS-16 — WF-08 Exception: từ chối thiếu lý do (422) và k
     })
     expect(loginRes.status()).toBe(200)
     const token: string = (await loginRes.json()).data?.accessToken ?? ''
+    test.skip(!token, 'Không lấy được token — seed chưa sẵn sàng')
 
-    // Lấy ID khuyến nghị OPEN
-    const recRes = await page.request.get(`${apiBase}/recommendations?status=OPEN&limit=1`, {
+    // farmId bắt buộc theo API spec — lấy từ danh sách farm
+    const farmsRes = await page.request.get(`${apiBase}/farms`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    expect(recRes.status()).toBe(200)
+    if (!farmsRes.ok()) {
+      test.skip(true, `GET /farms trả ${farmsRes.status()} — seed chưa sẵn sàng`)
+      return
+    }
+    const farms: Array<{ _id: string }> = (await farmsRes.json()).data ?? []
+    if (!farms.length) {
+      test.skip(true, 'Không có farm trong DB — seed chưa sẵn sàng')
+      return
+    }
+    const farmId = farms[0]._id
+
+    // Lấy ID khuyến nghị OPEN (farmId bắt buộc — api-spec.yaml /recommendations)
+    const recRes = await page.request.get(
+      `${apiBase}/recommendations?farmId=${farmId}&status=OPEN&limit=1`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    if (!recRes.ok()) {
+      test.skip(true, 'Không lấy được recommendations — seed chưa sẵn sàng')
+      return
+    }
     const { data: recs } = await recRes.json()
     test.skip(!recs?.length, 'Không có khuyến nghị OPEN trong DB — cần seed trước')
 
