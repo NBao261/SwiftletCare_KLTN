@@ -4,8 +4,9 @@ import type { AlertType, OnsiteObservation, PersonRef, SiteCause } from '@/types
 export type WorkOrderStatus = 'OPEN' | 'IN_PROGRESS' | 'VERIFYING' | 'AWAITING_APPROVAL' | 'CLOSED' | 'CANCELLED'
 
 // Nguồn mở Work Order (BR-39): cảnh báo thiết bị, thiết bị mất kết nối quá 30 phút, chuyên gia cần tới nhà, thợ thấy cảm biến
-// hỏng khi kiểm tra tại chỗ, Farm Owner mở tay; G-22: kế hoạch bảo trì đến hạn (PLAN), mục checklist ghi hỏng (CHECKLIST)
-export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL' | 'PLAN' | 'CHECKLIST'
+// hỏng khi kiểm tra tại chỗ, Farm Owner mở tay; G-22: kế hoạch bảo trì đến hạn (PLAN), mục checklist ghi hỏng (CHECKLIST);
+// G-24: Farm Owner chấp nhận khuyến nghị (RECOMMENDATION)
+export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL' | 'PLAN' | 'CHECKLIST' | 'RECOMMENDATION'
 
 // Kết quả một mục checklist của Work Order phòng ngừa (OPS-FR-007)
 export type ChecklistResult = 'OK' | 'DEFECT'

@@ -10,6 +10,8 @@ export interface Farm {
   owner?: { full_name?: string; email?: string }
   /** role: FARM_OWNER = đồng sở hữu, DOMAIN_EXPERT = chuyên gia (SRS v2.0.0); member cũ không có field → đồng sở hữu */
   members: Array<{ user_id: string; is_primary: boolean; joined_at: string; full_name?: string; email?: string; role?: FarmMemberRole }>
+  /** Chỉ có ở GET /farms — có ít nhất một Domain Expert còn hoạt động (chuyên gia bị khoá không tính); false thì Farm Owner làm thay (BR-22) */
+  has_active_expert?: boolean
   is_deleted: boolean
   created_at: string
 }

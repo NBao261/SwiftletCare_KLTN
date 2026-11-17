@@ -15,6 +15,7 @@ const FarmOwnerFarmZonesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFa
 const FarmOwnerFarmZoneDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerFarmZoneDetailPage'))
 const FarmOwnerHarvestPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHarvestPage'))
 const FarmOwnerMaintenancePage = lazy(() => import('@/pages/farm-owner/FarmOwnerMaintenancePage'))
+const FarmOwnerRecommendationsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerRecommendationsPage'))
 const FarmOwnerHealthPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthPage'))
 const FarmOwnerHealthReportPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthReportPage'))
 const FarmOwnerWorkOrdersPage = lazy(() => import('@/pages/farm-owner/FarmOwnerWorkOrdersPage'))
@@ -115,6 +116,15 @@ export const farmOwnerRoutes = (
       element={
         <RequireRole allow={FARM_SIDE_ROLES}>
           <FarmOwnerMaintenancePage />
+        </RequireRole>
+      }
+    />
+    {/* MF-08 — khuyến nghị: Farm Owner chấp nhận hoặc từ chối, Domain Expert xem (EXPERT-FR-017, 018) */}
+    <Route
+      path="recommendations"
+      element={
+        <RequireRole allow={FARM_SIDE_ROLES}>
+          <FarmOwnerRecommendationsPage />
         </RequireRole>
       }
     />

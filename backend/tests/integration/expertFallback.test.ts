@@ -134,6 +134,23 @@ describe('BR-22 — Farm Owner làm thay chuyên gia', () => {
     expect(await Notification.countDocuments({ user_id: owner._id })).toBe(0)
   })
 
+  it('GET /farms cho biết farm có chuyên gia còn hoạt động (chuyên gia bị khoá không tính)', async () => {
+    const { owner, expert, farm } = await seed({ withExpert: true })
+    const tech = await User.create({ email: `tech-${farm._id}@test.vn`, password_hash: 'password123', full_name: 'T', role: 'FARM_TECHNICIAN' })
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: tech._id, role: 'FARM_TECHNICIAN' } } })
+    const flagOf = async (token: string) => (await request(app).get('/farms').set('Authorization', `Bearer ${token}`))
+      .body.data.find((f: { _id: string }) => f._id === String(farm._id))?.has_active_expert
+    const asOwner = tokenFor(owner._id, 'FARM_OWNER')
+    const asTech = tokenFor(tech._id, 'FARM_TECHNICIAN')
+    expect(await flagOf(asOwner)).toBe(true)
+    // Thợ và chuyên gia chỉ thấy dòng thành viên của chính mình, nhưng cờ vẫn tính trên mọi thành viên của farm
+    expect(await flagOf(asTech)).toBe(true)
+    expect(await flagOf(tokenFor(expert._id, 'DOMAIN_EXPERT'))).toBe(true)
+    await User.updateOne({ _id: expert._id }, { is_active: false })
+    expect(await flagOf(asOwner)).toBe(false)
+    expect(await flagOf(asTech)).toBe(false)
+  })
+
   it('chuyên gia duy nhất bị khoá: Farm Owner làm thay cả 4 quyết định và nhận thông báo chờ kiểm chứng', async () => {
     const { owner, expert, farm, zone, alert, decisions } = await seed({ withExpert: true })
     await User.updateOne({ _id: expert._id }, { is_active: false })

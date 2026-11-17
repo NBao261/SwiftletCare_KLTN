@@ -1661,6 +1661,113 @@ ensureCollection("pushtokens", {
 db.getCollection("pushtokens").createIndex({"user_id":1})
 db.getCollection("pushtokens").createIndex({"token":1}, {"unique":true})
 
+// ── recommendationrules (model RecommendationRule) ──
+ensureCollection("recommendationrules", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "author_id": {
+      "bsonType": "objectId"
+    },
+    "name": {
+      "bsonType": "string"
+    },
+    "indicator": {
+      "bsonType": "string",
+      "enum": ["TIME_IN_RANGE", "AIR_HOURS_OVER", "RETURN_RATE", "NOISE_EPISODES", "MISTING_INEFFECTIVE"]
+    },
+    "comparison": {
+      "bsonType": "string",
+      "enum": ["GTE", "LTE"]
+    },
+    "value": {
+      "bsonType": "number"
+    },
+    "window_days": {
+      "bsonType": "number"
+    },
+    "action": {},
+    "source": {
+      "bsonType": "string"
+    },
+    "active": {
+      "bsonType": ["bool", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "updated_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["farm_id", "author_id", "name", "indicator", "comparison", "value", "window_days", "action", "source"]
+})
+db.getCollection("recommendationrules").createIndex({"farm_id":1,"active":1})
+
+// ── recommendations (model Recommendation) ──
+ensureCollection("recommendations", {
+  "bsonType": "object",
+  "properties": {
+    "farm_id": {
+      "bsonType": "objectId"
+    },
+    "house_id": {
+      "bsonType": "objectId"
+    },
+    "rule_id": {
+      "bsonType": "objectId"
+    },
+    "rule_snapshot": {},
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["OPEN", "ACCEPTED", "REJECTED", "EXPIRED", "MEASURED", null]
+    },
+    "evidence": {},
+    "raised_at": {
+      "bsonType": "date"
+    },
+    "raised_for": {
+      "bsonType": "string"
+    },
+    "decided_by": {
+      "bsonType": ["objectId", "null"]
+    },
+    "decided_at": {
+      "bsonType": ["date", "null"]
+    },
+    "expired_at": {
+      "bsonType": ["date", "null"]
+    },
+    "reject_reason": {
+      "bsonType": ["string", "null"]
+    },
+    "work_order_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "review_ids": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "objectId"
+      }
+    },
+    "effect": {},
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    }
+  },
+  "required": ["farm_id", "house_id", "rule_id", "evidence", "raised_at", "raised_for"]
+})
+db.getCollection("recommendations").createIndex({"rule_id":1,"house_id":1}, {"unique":true,"partialFilterExpression":{"status":"OPEN"}})
+db.getCollection("recommendations").createIndex({"house_id":1,"status":1})
+db.getCollection("recommendations").createIndex({"farm_id":1,"status":1,"raised_at":-1})
+db.getCollection("recommendations").createIndex({"status":1,"raised_at":1})
+db.getCollection("recommendations").createIndex({"status":1,"decided_at":1})
+
 // ── relayoverridelogs (model RelayOverrideLog) ──
 ensureCollection("relayoverridelogs", {
   "bsonType": "object",
@@ -2365,6 +2472,9 @@ ensureCollection("workorders", {
     "plan_id": {
       "bsonType": ["objectId", "null"]
     },
+    "recommendation_id": {
+      "bsonType": ["objectId", "null"]
+    },
     "checklist": {
       "bsonType": ["array", "null"],
       "items": {
@@ -2398,7 +2508,7 @@ ensureCollection("workorders", {
     },
     "origin": {
       "bsonType": "string",
-      "enum": ["ALERT", "OUTAGE", "EXPERT", "ONSITE_CHECK", "MANUAL", "PLAN", "CHECKLIST"]
+      "enum": ["ALERT", "OUTAGE", "EXPERT", "ONSITE_CHECK", "MANUAL", "PLAN", "CHECKLIST", "RECOMMENDATION"]
     },
     "title": {
       "bsonType": "string"

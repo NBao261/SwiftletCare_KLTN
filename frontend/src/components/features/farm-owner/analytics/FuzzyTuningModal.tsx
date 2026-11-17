@@ -65,11 +65,8 @@ export default function FuzzyTuningModal({ zoneId, zoneName, current, onClose }:
   const farm = useMemo(() => {
     return farms?.find(item => item._id === farmId);
   }, [farms, farmId]);
-  const hasExpert = Boolean(
-    farm?.members?.some(
-      member => member.role === 'DOMAIN_EXPERT' && (member as { is_active?: boolean }).is_active !== false,
-    ),
-  );
+  // BR-22 — chuyên gia bị khoá không tính (GET /farms tính sẵn)
+  const hasExpert = farm?.has_active_expert === true;
 
   // Gửi gợi ý hiện tại cho Chuyên gia miền phê duyệt (EXPERT-FR-011, Report 3 §6.11)
   async function handleSubmitProposal(): Promise<void> {

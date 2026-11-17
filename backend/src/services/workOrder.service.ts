@@ -265,9 +265,13 @@ export async function openPreventiveWorkOrder(input: PreventiveWorkOrderInput): 
   }
 }
 
-/** OPS-FR-001 — Farm Owner mở tay (route chỉ FARM_OWNER) */
+/**
+ * OPS-FR-001 — Farm Owner mở tay (route chỉ FARM_OWNER); EXPERT-FR-018 — cũng là đường Farm Owner chấp nhận một
+ * khuyến nghị, khi đó Work Order mang `recommendation_id` và nguồn `RECOMMENDATION`
+ */
 export async function createManualWorkOrder(
-  user: CurrentUser, input: { house_id: string; title: string; description?: string; alert_id?: string },
+  user: CurrentUser,
+  input: { house_id: string; title: string; description?: string; alert_id?: string; recommendation_id?: string },
 ): Promise<IWorkOrder> {
   const { house, farm } = await assertHouseAccess(input.house_id, user)
   let alert: IAlert | null = null
@@ -282,7 +286,8 @@ export async function createManualWorkOrder(
   let wo: IWorkOrder
   try {
     wo = await WorkOrder.create({
-      farm_id: farm._id, house_id: house._id, origin: 'MANUAL', kind: 'REPAIR',
+      farm_id: farm._id, house_id: house._id, origin: input.recommendation_id ? 'RECOMMENDATION' : 'MANUAL', kind: 'REPAIR',
+      ...(input.recommendation_id && { recommendation_id: input.recommendation_id }),
       title: input.title.trim(), description: input.description?.trim() || undefined,
       ...(alert && { alert_id: alert._id, alert_type: alert.type, zone_id: alert.zone_id, node_id: alert.node_id }),
       assignee_id: assignee ?? undefined, ...(assignee && { assigned_at: new Date() }), opened_by: user._id,
@@ -293,7 +298,7 @@ export async function createManualWorkOrder(
     throw err
   }
   await logAction(user._id, 'WORK_ORDER_OPENED', 'work_order', String(wo._id), {
-    house_id: String(house._id), alert_id: input.alert_id, assignee_id: assignee ?? undefined,
+    house_id: String(house._id), alert_id: input.alert_id, recommendation_id: input.recommendation_id, assignee_id: assignee ?? undefined,
   }, { farmId: String(farm._id) })
   if (assignee) await notifyAll([assignee], wo, `Work Order mới: ${wo.title}`, wo.description ?? '')
   return presentWorkOrder(wo, true)

@@ -1,22 +1,18 @@
-// EXPERT-FR-016…019, BR-42 — Luật khuyến nghị
-// Backend chưa sẵn (G-24 tuần 4); hook sẽ fallback về mock data khi nhận lỗi 404/500.
 import api from '@/lib/axios'
-import type { ApiResponse } from '@/types'
-import type { RecommendationRule, RecommendationEffect } from '@/types/expert.types'
+import type { ApiResponse, RecommendationRule, RecommendationRuleEffect, RecommendationRuleInput } from '@/types'
 
+// EXPERT-FR-016, 019 — luật khuyến nghị của farm: chuyên gia viết, sửa, bật/tắt; hiệu quả theo luật
 export const recommendationRulesApi = {
-  listRules: (farmId: string) =>
-    api.get<ApiResponse<RecommendationRule[]>>('/recommendation-rules', { params: { farmId } }),
+  list: (farmId: string, page: number, limit: number) =>
+    api.get<ApiResponse<RecommendationRule[]>>('/recommendations/rules', { params: { farmId, page, limit } }),
 
-  createRule: (farmId: string, rule: Omit<RecommendationRule, '_id'>) =>
-    api.post<ApiResponse<RecommendationRule>>('/recommendation-rules', { farm_id: farmId, ...rule }),
+  create: (farmId: string, input: RecommendationRuleInput) =>
+    api.post<ApiResponse<RecommendationRule>>('/recommendations/rules', { farm_id: farmId, ...input }),
 
-  updateRule: (id: string, rule: Omit<RecommendationRule, '_id'>) =>
-    api.put<ApiResponse<RecommendationRule>>(`/recommendation-rules/${id}`, rule),
+  // Thay toàn bộ nội dung luật; bật/tắt cũng gửi cả luật với `active` mới
+  update: (id: string, input: RecommendationRuleInput) =>
+    api.put<ApiResponse<RecommendationRule>>(`/recommendations/rules/${id}`, input),
 
-  deleteRule: (id: string) =>
-    api.delete<ApiResponse<void>>(`/recommendation-rules/${id}`),
-
-  listEffects: (farmId: string) =>
-    api.get<ApiResponse<RecommendationEffect[]>>('/recommendation-rules/effects', { params: { farmId } }),
+  effects: (farmId: string) =>
+    api.get<ApiResponse<RecommendationRuleEffect[]>>('/recommendations/rules/effects', { params: { farmId } }),
 }

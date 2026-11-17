@@ -4,8 +4,8 @@ import type { AlertType } from '@/types/alert.types';
 export type WorkOrderStatus = 'OPEN' | 'IN_PROGRESS' | 'VERIFYING' | 'AWAITING_APPROVAL' | 'CLOSED' | 'CANCELLED';
 
 // ALERT: cảnh báo thiết bị (BR-39) · OUTAGE: mất kết nối quá 30 phút · EXPERT: chuyên gia xác nhận cần tới nhà · ONSITE_CHECK: thợ thấy cảm biến hỏng · MANUAL: Farm Owner mở
-// PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006) · CHECKLIST: mục checklist bảo trì ghi hỏng (OPS-FR-007)
-export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL' | 'PLAN' | 'CHECKLIST';
+// PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006) · CHECKLIST: mục checklist bảo trì ghi hỏng (OPS-FR-007) · RECOMMENDATION: Farm Owner chấp nhận khuyến nghị (EXPERT-FR-018)
+export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL' | 'PLAN' | 'CHECKLIST' | 'RECOMMENDATION';
 
 // ALERT-FR-018 — nguyên nhân thợ tìm thấy tại chỗ
 export type SiteCause = 'WATER' | 'NOZZLE' | 'PUMP' | 'FAN' | 'DOOR' | 'SENSOR' | 'SPEAKER' | 'OTHER';
@@ -55,6 +55,8 @@ export interface WorkOrder {
   origin: WorkOrderOrigin;
   // Kế hoạch bảo trì của Work Order phòng ngừa
   plan_id?: string | null;
+  // Khuyến nghị đã mở Work Order này (nguồn RECOMMENDATION)
+  recommendation_id?: string | null;
   // Work Order phòng ngừa: checklist chép từ mẫu của kế hoạch; sửa chữa thì rỗng
   checklist?: WorkOrderChecklistItem[];
   title: string;

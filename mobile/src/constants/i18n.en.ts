@@ -1333,6 +1333,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   '{n} ngày': '{n} days',
   'Mở tự động: kế hoạch bảo trì đến hạn': 'Opened automatically: a maintenance plan came due',
   'Mục checklist bảo trì ghi hỏng': 'A maintenance checklist item was marked defective',
+  'Chủ trại chấp nhận khuyến nghị': 'The farm owner accepted a recommendation',
   'Bảo trì bơm phun sương': 'Misting pump service',
   'Bảo trì quạt thông gió': 'Fan service',
   'Vệ sinh cảm biến': 'Sensor cleaning',

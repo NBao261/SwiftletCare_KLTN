@@ -199,9 +199,9 @@ TC=[
 ('TC-F26-02','F-26','Controller with fuzzy misting demand 40 %','Receive +5 %; let it expire; receive +80 % in a forged message','—','45 %; 40 % after expiry; demand clamped to 0–100 % and offset clamped to ±10; ventilation unchanged',[(P,'test_weather_compensation','test_offset_added_to_fuzzy_demand'),(P,'test_weather_compensation','test_offset_zero_after_expiry'),(P,'test_weather_compensation','test_forged_offset_and_duration_are_clamped'),(P,'test_weather_compensation','test_invalid_readings_keep_misting_off')]),
 ('TC-F26-03','F-26','Farm with a Domain Expert','Expert saves offset 12 %; expert saves a duration of 3 h; technician saves a rule','—','400; 400; 403',(J,I+'weatherCompensation.test.ts','TC-F26-03')),
 # F-27
-('TC-F27-01','F-27','Active rule: NH3 above the limit ≥ 4 h a day for 3 days','Seed 3 such days; run the daily job twice','—','One OPEN recommendation with its evidence; no second one while it is open',(T,'backend jest (G-24)')),
-('TC-F27-02','F-27','OPEN recommendation','Farm Owner accepts; another is rejected without a reason','—','Exactly one Work Order linked; 422',(T,'backend jest (G-24)')),
-('TC-F27-03','F-27','One ACCEPTED 7 days ago; one OPEN for 7 days','Run the effect and expiry jobs','Seeded indicator values','MEASURED with the change equal to after − before; the other EXPIRED',(T,'backend jest (G-24)')),
+('TC-F27-01','F-27','Active rule: NH3 above the limit ≥ 4 h a day for 3 days','Seed 3 such days; run the daily job twice','—','One OPEN recommendation with its evidence; no second one while it is open',(J,I+'recommendations.test.ts','TC-F27-01')),
+('TC-F27-02','F-27','OPEN recommendation','Farm Owner accepts; another is rejected without a reason','—','Exactly one Work Order linked; 422',(J,I+'recommendations.test.ts','TC-F27-02')),
+('TC-F27-03','F-27','One ACCEPTED 7 days ago; one OPEN for 7 days','Run the effect and expiry jobs','Seeded indicator values','MEASURED with the change equal to after − before; the other EXPIRED',(J,I+'recommendations.test.ts','TC-F27-03')),
 # F-28
 ('TC-F28-01','F-28','Farm with a Domain Expert','Expert creates and approves a profile; saves one with humidity_min out of range; Farm Owner approves a draft','—','DRAFT then APPROVED; 400; 403',(J,I+'configProfiles.test.ts','TC-F28-01')),
 ('TC-F28-02','F-28','APPROVED profile; DRAFT profile','Farm Owner applies the approved one to two houses; applies the draft','—','Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409',(J,I+'configProfiles.test.ts','TC-F28-02')),
@@ -294,12 +294,12 @@ ST=[
 ('6.20 MaintenancePlan','DUE → OVERDUE','7 days without the record','OVERDUE; Farm Owners notified',(J,I+'maintenancePlan.test.ts','TC-F25-03 — còn đến hạn 7 ngày')),
 ('6.20 MaintenancePlan','DUE/OVERDUE → SCHEDULED','Maintenance recorded','SCHEDULED; counter reset; next due point',(J,I+'maintenancePlan.test.ts','TC-F25-02 — thiếu checklist báo xong')),
 ('6.20 MaintenancePlan','any → RETIRED','Farm Owner deletes the plan','RETIRED; no further due point',(J,I+'maintenancePlan.test.ts','xoá kế hoạch → RETIRED')),
-('6.21 Recommendation','(new) → OPEN','Active rule holds for a house','OPEN with evidence',(T,'backend jest (G-24)')),
-('6.21 Recommendation','OPEN → ACCEPTED','Farm Owner accepts','ACCEPTED; Work Order or review item created',(T,'backend jest (G-24)')),
-('6.21 Recommendation','OPEN → REJECTED','Farm Owner rejects with a reason','REJECTED; reason stored',(T,'backend jest (G-24)')),
-('6.21 Recommendation','OPEN → EXPIRED','7 days without a decision','EXPIRED',(T,'backend jest (G-24)')),
-('6.21 Recommendation','ACCEPTED → MEASURED','7 days after acceptance','Effect stored; rule statistics updated',(T,'backend jest (G-24)')),
-('6.21 Recommendation','closed → (rejected)','Accept a rejected or expired one','409',(T,'backend jest (G-24)')),
+('6.21 Recommendation','(new) → OPEN','Active rule holds for a house','OPEN with evidence',(J,I+'recommendations.test.ts','TC-F27-01')),
+('6.21 Recommendation','OPEN → ACCEPTED','Farm Owner accepts','ACCEPTED; Work Order or review item created',(J,I+'recommendations.test.ts','TC-F27-02')),
+('6.21 Recommendation','OPEN → REJECTED','Farm Owner rejects with a reason','REJECTED; reason stored',(J,I+'recommendations.test.ts','TC-F27-02')),
+('6.21 Recommendation','OPEN → EXPIRED','7 days without a decision','EXPIRED',(J,I+'recommendations.test.ts','TC-F27-03')),
+('6.21 Recommendation','ACCEPTED → MEASURED','7 days after acceptance','Effect stored; rule statistics updated',(J,I+'recommendations.test.ts','TC-F27-03')),
+('6.21 Recommendation','closed → (rejected)','Accept a rejected or expired one','409',(J,I+'recommendations.test.ts','a closed recommendation cannot be accepted')),
 ]
 NFR=[
 ('NFR-01','Script publishes 200 telemetry messages over MQTT on staging with the send time; a Socket.io client records receive times','P95 ≤ 2 s',(M,'script `scripts/nfr01-latency` to write; staging')),
