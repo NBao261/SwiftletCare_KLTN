@@ -63,7 +63,7 @@ export default function DomainExpertCountingRingPage() {
         {!isLoading && !isError && camera && (
           <div className="space-y-2">
             {camera.simulated && (
-              <span className="inline-block text-xs px-2 py-0.5 rounded-full font-semibold border bg-amber-50 text-amber-700 border-amber-200">
+              <span className="inline-block text-xs px-2 py-0.5 rounded-full font-semibold border bg-statusYellow/10 text-charcoal border-statusYellow/40">
                 Thiết bị giả lập
               </span>
             )}
