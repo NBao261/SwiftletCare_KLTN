@@ -8,16 +8,18 @@ interface ScopeFilterProps {
   scope: ScopeFilterState;
   // Trang chỉ tính theo nhà (VD Giám sát đàn chim): ô Zone luôn khoá xám ở "Tất cả Zone"
   lockZone?: boolean;
+  // Trang chỉ tính theo trang trại (VD Tổng quan trại): ô Nhà và ô Zone luôn khoá
+  lockHouse?: boolean;
 }
 
 // Ô khoá: nền xám, không bấm được
 const LOCKED_CLASS = 'cursor-not-allowed border-warmGray/15 bg-warmGray/10 text-warmGray hover:border-warmGray/15';
 
 // Khung lọc Trang trại → Nhà → Zone luôn đủ 3 ô (ô chưa chọn được khoá xám), chấm cam ở farm / nhà / Zone có sự cố
-export default function ScopeFilter({ scope, lockZone = false }: ScopeFilterProps): JSX.Element {
+export default function ScopeFilter({ scope, lockZone = false, lockHouse = false }: ScopeFilterProps): JSX.Element {
   const { t } = useTranslation(dashboardDict);
-  const isHouseLocked = !scope.farmId;
-  const isZoneLocked = lockZone || !scope.houseId;
+  const isHouseLocked = lockHouse || !scope.farmId;
+  const isZoneLocked = lockHouse || lockZone || !scope.houseId;
   const hasHouseIssue = scope.houses.some(house => scope.issueHouseIds.has(house._id));
   const hasZoneIssue = scope.zones.some(zone => scope.issueZoneIds.has(zone._id));
 
@@ -50,7 +52,7 @@ export default function ScopeFilter({ scope, lockZone = false }: ScopeFilterProp
       />
       <SelectMenu
         ariaLabel={t('page.houseLabel')}
-        value={scope.houseId}
+        value={isHouseLocked ? '' : scope.houseId}
         options={houseOptions}
         onChange={scope.setHouseId}
         warningLabel={t('scope.warning')}

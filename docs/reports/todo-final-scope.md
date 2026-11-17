@@ -249,15 +249,15 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
 
 ### G-25 — Tổng quan trại, so sánh nhà, điện năng (Bảo, Nhi) — hạn 23/12
 
-- [ ] Spec `/farms/{id}/overview`, `/farms/{id}/comparison`.
-- [ ] `farmOverview.service` (ANALYTICS-FR-015): mỗi nhà hiện giai đoạn, trạng thái hôm nay, cảnh báo đang mở, Work Order đang mở, tỷ lệ về gần nhất. Nhà chưa có trạng thái thì ghi lý do.
-- [ ] `houseComparison.service` (ANALYTICS-FR-016, BR-44):
+- [x] Spec `/farms/{id}/overview`, `/farms/{id}/comparison`. *(Kiệt làm thay Bảo, 14/11, PR #159, nhánh `feat/g25-farm-overview` nối tiếp G-21; sửa theo review của Bảo cùng ngày: thêm `GET /analytics/energy` và `flock_trend` trong `/analytics/bird-count/trends`)*
+- [x] `farmOverview.service` (ANALYTICS-FR-015): mỗi nhà hiện giai đoạn, trạng thái hôm nay, cảnh báo đang mở, Work Order đang mở, tỷ lệ về gần nhất. Nhà chưa có trạng thái thì ghi lý do. *(`998d30b3`; `status_reason`: `NOT_COMPUTED` hoặc `INSUFFICIENT_DATA`)*
+- [x] `houseComparison.service` (ANALYTICS-FR-016, BR-44): *(`998d30b3`: MTTR dùng chung công thức của `opsMetrics.service`; sản lượng chu kỳ trả `null` tới khi có G-26)*
   - các cột: thời gian trong ngưỡng, tỷ lệ ngày `GOOD`, tỷ lệ về trung bình, xu hướng đàn, cảnh báo, MTTR, điện năng ước tính, sản lượng chu kỳ gần nhất;
   - sắp xếp được theo từng cột; **không có điểm tổng hay xếp hạng**.
-- [ ] Điện năng (ANALYTICS-FR-017, BR-45): điện áp × dòng trung bình × thời gian chạy, theo tải và theo tháng; tải không đo dòng thì hiện "not available". Phải có G-13 mới có số thật.
-- [ ] Xu hướng đàn theo tuần và tháng từ số chim ra buổi sáng (ANALYTICS-FR-002); lượng mưa của phiên ghi trên cảnh báo `LOW_RETURN_RATE` (VISION-FR-011).
-- [ ] Thiết bị giả lập luôn có nhãn "simulated" trên mọi màn hình (SYSTEM-FR-004).
-- [ ] Nhi: trang tổng quan trại và bảng so sánh nhà trên web.
+- [x] Điện năng (ANALYTICS-FR-017, BR-45): điện áp × dòng trung bình × thời gian chạy, theo tải và theo tháng; tải không đo dòng thì hiện "not available". Phải có G-13 mới có số thật. *(`998d30b3`, `energy.service`: điện áp tải DC demo 5 V bơm, 12 V quạt (A-9); tải nguồn lưới chưa hỗ trợ)*
+- [x] Xu hướng đàn theo tuần và tháng từ số chim ra buổi sáng (ANALYTICS-FR-002); lượng mưa của phiên ghi trên cảnh báo `LOW_RETURN_RATE` (VISION-FR-011). *(`998d30b3`: số ròng ra của phiên sáng, bỏ ngày thiếu phiên; `92f88236`: mưa trong khung phiên ở `sessionRain.service`)*
+- [ ] Thiết bị giả lập luôn có nhãn "simulated" trên mọi màn hình (SYSTEM-FR-004). *(Backend: tổng quan và từng hàng của bảng so sánh trả `simulated` theo nhà (17/11). Web: nhãn "Giả lập" ở thẻ nhà và bảng so sánh (Nhi). Còn nhãn trên các màn web khác và mobile)*
+- [x] Nhi: trang tổng quan trại và bảng so sánh nhà trên web. *(Nhi, 16/11, nhánh `feat/g25-farm-overview`: trang `/overview` "Tổng quan trại" (Farm Owner, Domain Expert đọc) có tab "Các nhà" — thẻ mỗi nhà: giai đoạn, trạng thái hôm nay hoặc lý do chưa có, cảnh báo và phiếu đang mở, tỷ lệ về gần nhất, nhãn "Giả lập" — và tab "So sánh nhà": 9 chỉ số BR-44 gộp thành 4 nhóm cột (môi trường, đàn chim, cảnh báo, điện năng và sản lượng), sắp theo 1 chỉ số chọn ở ô sắp xếp (backend sắp), khoảng 30/7/90 ngày, nút Hủy lọc, không điểm tổng hay xếp hạng, điện năng ghi "ước tính"; đầu tab Các nhà có 4 ô đếm của cả trại. Trang Phân tích thêm khung "Xu hướng đàn" theo tuần/tháng (ANALYTICS-FR-002) và "Điện năng ước tính" theo tháng (ANALYTICS-FR-017, tải không đo dòng ghi "không đo được") khi lọc 1 nhà. Trang Phân tích chia 3 tab "Môi trường", "Đàn chim", "Vận hành" (tab trên URL `?tab=`), khung tóm tắt và kết luận lên trước, nhật ký chi tiết xuống cuối, để bớt cuộn.)*
 
 **Test:** TC-F29-01…03.
 
