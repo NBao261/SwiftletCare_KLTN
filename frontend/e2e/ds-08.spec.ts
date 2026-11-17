@@ -43,7 +43,7 @@ test.describe('DS-08 — WF-04 Exception: Farm Owner bị chặn ghi verdict (40
     })
     expect(loginRes.status()).toBe(200)
     const { data: loginData } = await loginRes.json()
-    const token: string = loginData?.access_token ?? ''
+    const token: string = loginData?.accessToken ?? ''
     expect(token).toBeTruthy()
 
     // 2. Lấy ID của một cảnh báo NOISE_ANOMALY đang ACTIVE

@@ -40,7 +40,7 @@ test.describe('DS-15 — WF-08 Main: Farm Owner chấp nhận khuyến nghị �
     const apiBase = process.env.E2E_API_URL ?? 'http://localhost:3000'
     const loginRes = await request.post(`${apiBase}/auth/login`, { data: SEED_USERS.owner })
     if (!loginRes.ok()) return
-    const token: string = (await loginRes.json()).data?.access_token ?? ''
+    const token: string = (await loginRes.json()).data?.accessToken ?? ''
     if (!token) return
     const res = await request.get(`${apiBase}/recommendations?status=OPEN&limit=1`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -118,7 +118,7 @@ test.describe('DS-15 — WF-08 Main: Farm Owner chấp nhận khuyến nghị �
       data: { email, password },
     })
     expect(loginRes.status()).toBe(200)
-    const token: string = (await loginRes.json()).data?.access_token ?? ''
+    const token: string = (await loginRes.json()).data?.accessToken ?? ''
 
     const recRes = await page.request.get(`${apiBase}/recommendations?status=ACCEPTED&limit=1`, {
       headers: { Authorization: `Bearer ${token}` },

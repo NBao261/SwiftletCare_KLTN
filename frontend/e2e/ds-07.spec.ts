@@ -39,7 +39,7 @@ test.describe('DS-07 — WF-04 Main: Expert bác bỏ NOISE_ANOMALY → DISMISSE
     const apiBase = process.env.E2E_API_URL ?? 'http://localhost:3000'
     const loginRes = await request.post(`${apiBase}/auth/login`, { data: SEED_USERS.expert })
     if (!loginRes.ok()) return
-    const token: string = (await loginRes.json()).data?.access_token ?? ''
+    const token: string = (await loginRes.json()).data?.accessToken ?? ''
     if (!token) return
     const res = await request.get(`${apiBase}/alerts?type=NOISE_ANOMALY&status=ACTIVE&limit=1`, {
       headers: { Authorization: `Bearer ${token}` },

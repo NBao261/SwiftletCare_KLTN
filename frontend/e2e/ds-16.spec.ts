@@ -85,7 +85,7 @@ test.describe('DS-16 — WF-08 Exception: từ chối thiếu lý do (422) và k
       data: { email, password },
     })
     expect(loginRes.status()).toBe(200)
-    const token: string = (await loginRes.json()).data?.access_token ?? ''
+    const token: string = (await loginRes.json()).data?.accessToken ?? ''
 
     // Lấy ID khuyến nghị OPEN
     const recRes = await page.request.get(`${apiBase}/recommendations?status=OPEN&limit=1`, {

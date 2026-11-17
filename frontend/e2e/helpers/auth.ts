@@ -41,6 +41,6 @@ export async function loginViaApi(page: Page, role: SeedRole): Promise<string> {
   })
   expect(res.status()).toBe(200)
   const body = await res.json()
-  const token: string = body.data?.access_token ?? ''
+  const token: string = body.data?.accessToken ?? ''
   return token
 }
