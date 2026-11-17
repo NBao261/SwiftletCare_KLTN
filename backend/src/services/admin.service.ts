@@ -4,11 +4,13 @@ import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
 import { softDeleteFarm } from '@/services/farm.service'
+import { sendMail, temporaryPasswordMail } from '@/services/mail.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { removeUserPushTokens } from '@/services/push.service'
 import { disconnectUser } from '@/socket'
 import { escapeRegex, paginate } from '@/utils/helpers.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { generateTemporaryPassword } from '@/utils/password.util'
 import type { Role } from '@/types'
 
 // ── Quản lý tài khoản — AUTH-FR-011, AUTH-FR-012, Flow 19 ──────────────────────
@@ -44,6 +46,37 @@ export async function listUsers(query: ListUsersQuery) {
   return { records, total, page, limit }
 }
 
+export interface CreateFarmOwnerInput {
+  email: string
+  full_name: string
+  phone?: string
+}
+
+/**
+ * AUTH-FR-005c — Administrator tạo tài khoản Farm Owner (không có đăng ký công khai, Report 3 §1.2): mật khẩu tạm
+ * 12 ký tự ngẫu nhiên (Report 3 §4.5) gửi qua e-mail, `must_change_password` bật nên mọi request khác ngoài đổi mật
+ * khẩu và đăng xuất bị 403 `PASSWORD_CHANGE_REQUIRED` tới khi đổi. Mật khẩu tạm không trả về và không ghi log.
+ */
+export async function createFarmOwner(
+  adminId: string, input: CreateFarmOwnerInput,
+): Promise<Record<string, unknown> & { temporary_password_emailed: boolean }> {
+  const email = input.email.toLowerCase().trim()
+  // 1 email = 1 tài khoản, mọi role (kể cả tài khoản đã bị khoá hay chờ xoá)
+  if (await User.exists({ email })) throw ConflictError('Email này đã có tài khoản')
+
+  const temporaryPassword = generateTemporaryPassword()
+  const user = await User.create({
+    email,
+    full_name: input.full_name.trim(),
+    ...(input.phone?.trim() && { phone: input.phone.trim() }),
+    role: 'FARM_OWNER',
+    password_hash: temporaryPassword, // pre-save hook tự hash (SEC-NFR-003)
+    must_change_password: true,
+  })
+  await logAction(adminId, 'FARM_OWNER_CREATED', 'user', String(user._id), { email })
+  const emailed = await sendMail(temporaryPasswordMail({ to: email, fullName: user.full_name, temporaryPassword }))
+  return { ...(user.toJSON() as Record<string, unknown>), temporary_password_emailed: emailed }
+}
 
 /**
  * AUTH-FR-011 — khoá/mở khoá tài khoản. Lý do bắt buộc khi khoá (không bắt buộc

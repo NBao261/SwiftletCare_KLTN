@@ -22,6 +22,11 @@ describe('formatHealthReason', () => {
     expect(formatHealthReason(env, vi, plain)).toBe('Thiếu dữ liệu môi trường: mẫu nhiệt độ, độ ẩm hợp lệ dưới 80 % (Tầng 1 42.5 %)');
     expect(formatHealthReason(reason('MISSING_DATA', 'environment', { no_zones: true }), en, plain)).toBe('Missing environment data: the house has no zone');
     expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'EVENING' }), vi, plain)).toBe('Thiếu dữ liệu đàn chim: thiếu phiên chiều');
+    // VISION-FR-020 — nút AI mất kết nối trong khung phiên
+    expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'INCOMPLETE' }), vi, plain))
+      .toBe('Thiếu dữ liệu đàn chim: phiên đếm không đầy đủ vì nút AI mất kết nối');
+    // Giá trị lạ không được hiện thành "thiếu phiên sáng"
+    expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'SOMETHING_NEW' }), en, plain)).toBe('Missing flock data');
   });
 
   it('nguồn tuỳ chọn không xét, thời tiết, mưa', () => {

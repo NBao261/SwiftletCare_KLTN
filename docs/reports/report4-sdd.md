@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.5 (Review 2, final scope) |
+| Document version | 2.2.9 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -174,7 +174,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `html5-qrcode` (scanning in the browser), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, html5-qrcode ^2.3.8, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
 | Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `react-native-gifted-charts` | Expo ~58.0, React Native 0.88.0, React 19.3.0, expo-router ~58.0, expo-camera ~58.0, expo-notifications ~58.1, expo-video ~58.0, react-native-mmkv ^4.3, react-native-gifted-charts ^1.4 |
 | Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest, mediamtx 1.21.1, nginx 1.27, certbot latest |
-| Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6 |
+| Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Playwright (web end to end against the seeded backend, CI job `e2e`), Unity on host `pio test -e native` (firmware), pytest (AI pipeline) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6, Playwright 1.64.1 |
 
 ### 3.3 Source Code and DevOps
 
@@ -300,7 +300,7 @@ Background jobs:
 | `configSync` | every 1 min | Controllers still reporting an old configuration version: republish; 3 heartbeats behind while online → `CONFIG_MISMATCH` (BR-24) |
 | `sensorAnomaly` | every 10 min | Stuck, jumping and drifting sensors → `SENSOR_ANOMALY` |
 | `forecast` | every 10 min | 60-minute forecast → `FORECAST_BREACH` |
-| `returnRate` | daily, 15 min after the evening window of each house (BR-21) | Sessions from the 5-minute buckets of that day's windows, completeness (VISION-FR-020), return rate vs previous days → `LOW_RETURN_RATE` |
+| `returnRate` | every 5 min; each house once a day, 15 min after its evening window (BR-21), claimed through `last_session_check` | Sessions from the 5-minute buckets of that day's windows, completeness (VISION-FR-020), return rate vs previous days → `LOW_RETURN_RATE` |
 | `healthAssessment` | daily, after `returnRate`; again when late data or a verdict touches a day of the last 7 | Current daily status of every house (ANALYTICS-FR-012, BR-28…30) |
 | `healthReport` | BR-33 | Daily, weekly and monthly reports per house with a section per zone; notifications |
 | `weather` | hourly | Weather of every farm with coordinates (ANALYTICS-FR-013) |
@@ -367,6 +367,7 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | AI node frame rate that raises `EDGE_AI_DEGRADED` | AI node `config.yaml`, backend `CAMERA_MIN_FPS` |
 | Default session windows | AI node `config.yaml`, backend `DEFAULT_SESSION_WINDOWS` |
 | Return-rate check | backend `jobs/returnRate.job.ts`, `MIN_BASELINE_DAYS` |
+| Counting schedule | backend `DEFAULT_WINDOWS`, `RETURN_RATE_CHECK_DELAY_MIN`, `MAX_SCHEDULE_PROFILES`, `MAX_TEMPORARY_WINDOWS`, `PROFILE_NAME_MAX_LENGTH` (`utils/countingSchedule.util.ts`) |
 | One read of 5-minute counts | backend `MAX_BUCKET_RANGE_MS`, `DEFAULT_BUCKET_RANGE_MS` |
 | Points of a telemetry chart | backend `MAX_BUCKETS` (`analytics.service.ts`) |
 | Noise baseline learned | firmware `NoiseAnomalyDetector::READY_SAMPLES` |
@@ -383,7 +384,8 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Account deletion reminder | backend `DELETION_REMIND_DAYS_BEFORE` |
 | Repeat of an unacknowledged alert | backend `jobs/alertEscalation.job.ts` |
 | Service limits of the pump and the fan | backend `RELAY_SERVICE_LIMITS` |
-| Temporary password | backend account-creation service of AUTH-FR-005c |
+| Temporary password | backend `TEMPORARY_PASSWORD_LENGTH` (`utils/password.util.ts`), used by `admin.service#createFarmOwner` (AUTH-FR-005c) |
+| SMTP time-outs of account mails | backend `SMTP_TIMEOUT_MS` (`mail.service.ts`) |
 | Live-data label, zone balance bands | web `LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`, `ZoneBalanceCard` |
 | Health-indicator level defaults | backend `DEFAULT_HEALTH_LEVELS` (`detectionTuning.util.ts`), `COMPLETENESS_MIN_PCT` (`healthAssessment.service.ts`) |
 | Rain confounder, rating window | backend `RAIN_MM_PER_HOUR`, `RATING_WINDOW_DAYS` (`healthAssessment.service.ts`) |
@@ -552,6 +554,8 @@ erDiagram
     string name
     object bird_count_tuning "return_rate_drop_pct"
     object counting_schedule "seasonal profiles, temporary windows"
+    array counting_schedule_history "schedule, effective_from (next day), changed_by, role"
+    string last_session_check "VN date of the last evening check"
     object health_levels "BR-28 level boundaries"
     string stage "ATTRACTING | OCCUPIED"
     array stage_history
@@ -684,6 +688,7 @@ erDiagram
     number entry_count
     number exit_count
     bool complete
+    date computed_at
   }
   BIRD_COUNT_BUCKET {
     ObjectId camera_node_id FK
@@ -1877,6 +1882,9 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.9 | 17/11/2026 | Playwright 1.64.1 in the Testing row of the Technology Declaration (Section 3): web end-to-end tests run in CI against the seeded backend (G-17) |
+| 2.2.8 | 17/11/2026 | Counting schedule as built (G-12): the house keeps the history of its schedule and the date of its last evening check, a session record its computation time; the `returnRate` job runs every 5 minutes and takes each house once a day after its own evening window; the rain of the counting sessions uses the windows of the schedule (Sections 5.3, 5.5, 6) |
+| 2.2.6 | 17/11/2026 | Section 5.5: code home of the temporary password and of the SMTP time-outs (Report 3 4.2.9; G-02) |
 | 2.2.5 | 17/11/2026 | Section 5.5 lists the code home of the G-25 constants: telemetry gap, latest return-rate look-up, comparison and energy periods, longest period (Report 3 4.2.8) |
 | 2.2.4 | 17/11/2026 | Recommendation rules as built (G-24): the ERD gives the rule its `name` and `source`, and the recommendation its `rule_snapshot`, `review_ids` (one per zone) and `expired_at`; the rules are evaluated at the end of `returnRate.job` (Section 5.3); room and payload of `RECOMMENDATION_NEW` (Section 7.3) |
 | 2.2.3 | 13/11/2026 | Routing and Work Orders as built (G-21): `escalation_min` and `recovery_verify_min` are constants of the code, the same for every farm (Section 5.5); on-site photo limits; `ALERT.routing` and `site_cause` hold the recipients at creation and the cause found on site |

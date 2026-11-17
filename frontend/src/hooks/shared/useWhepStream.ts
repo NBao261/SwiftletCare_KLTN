@@ -1,6 +1,6 @@
 import { useEffect, useState, type RefObject } from 'react';
 
-import { cameraApi } from '@/apis/farm-owner/camera.api';
+import { streamApi } from '@/apis/shared/stream.api';
 
 export type StreamStatus = 'idle' | 'connecting' | 'playing' | 'failed';
 
@@ -20,7 +20,8 @@ function waitIceGathering(peer: RTCPeerConnection): Promise<void> {
   });
 }
 
-// VISION-FR-013 — xin token rồi mở WebRTC (WHEP) tới MediaMTX, gắn hình vào thẻ <video>; khung nhận diện đã vẽ sẵn trong hình
+// VISION-FR-013 — xin token rồi mở WebRTC (WHEP) tới MediaMTX, gắn hình vào thẻ <video>; khung nhận diện đã vẽ sẵn trong hình.
+// Dùng cho live stream của Farm Owner và khung vẽ vòng đếm của chuyên gia
 export function useWhepStream(videoRef: RefObject<HTMLVideoElement>, cameraNodeId: string | undefined) {
   const [status, setStatus] = useState<StreamStatus>('idle');
   // Tăng lên để mở lại kết nối (nút Thử lại)
@@ -49,7 +50,7 @@ export function useWhepStream(videoRef: RefObject<HTMLVideoElement>, cameraNodeI
     };
 
     void (async () => {
-      const { path, token } = (await cameraApi.streamToken(cameraNodeId)).data.data;
+      const { path, token } = (await streamApi.token(cameraNodeId)).data.data;
       await peer.setLocalDescription(await peer.createOffer());
       await waitIceGathering(peer);
       if (isCancelled) return;

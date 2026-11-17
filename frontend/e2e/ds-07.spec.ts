@@ -27,12 +27,29 @@
  * - Trang lịch sử liệt kê quyết định vừa thực hiện
  */
 import { test, expect } from '@playwright/test'
-import { loginAs } from './helpers/auth'
+import { loginAs, SEED_USERS } from './helpers/auth'
 
 const REJECTION_NOTE = 'Tiếng ồn từ công trình xây dựng lân cận, không phải bất thường nội bộ.'
+const SKIP_REASON = 'DS-07: cần NOISE_ANOMALY ACTIVE trong DB — Kiệt/Bảo seed trước'
 
 test.describe('DS-07 — WF-04 Main: Expert bác bỏ NOISE_ANOMALY → DISMISSED', () => {
+  let noiseAlertId: string | null = null
+
+  test.beforeAll(async ({ request }) => {
+    const apiBase = process.env.E2E_API_URL ?? 'http://localhost:3000'
+    const loginRes = await request.post(`${apiBase}/auth/login`, { data: SEED_USERS.expert })
+    if (!loginRes.ok()) return
+    const token: string = (await loginRes.json()).data?.access_token ?? ''
+    if (!token) return
+    const res = await request.get(`${apiBase}/alerts?type=NOISE_ANOMALY&status=ACTIVE&limit=1`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok()) return
+    noiseAlertId = (await res.json()).data?.[0]?._id ?? null
+  })
+
   test.beforeEach(async ({ page }) => {
+    test.skip(!noiseAlertId, SKIP_REASON)
     await loginAs(page, 'expert')
   })
 

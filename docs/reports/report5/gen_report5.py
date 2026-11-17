@@ -1,14 +1,16 @@
 """Generate Report 5 from tc.py.
 
 Usage (from the repository root):
-  python3 docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md [--jest jest.json] [--pio pio-junit.xml] [--pytest pytest-junit.xml]
+  python3 docs/reports/report5/gen_report5.py docs/reports/report5/template.md docs/reports/report5-test.md [--jest jest.json] [--pio pio-junit.xml] [--pytest pytest-junit.xml] [--playwright e2e-junit.xml]
 
 Every automated case is checked to exist in the test sources. Without result files it is reported
 "Not run on the tag". With the reports of the CI run on the tag, backend cases get Pass/Fail from
 the Jest JSON report (npx jest --json --outputFile=jest.json) and firmware cases from the
 PlatformIO JUnit report (pio test -e native --junit-output-path pio-junit.xml) and AI-pipeline
-cases from the pytest JUnit report (pytest --junitxml=pytest-junit.xml). CI uploads all three
-as artifacts of the run on a review-* tag.
+cases from the pytest JUnit report (pytest --junitxml=pytest-junit.xml) and web end-to-end cases
+from the Playwright JUnit report (frontend `npx playwright test`, e2e-junit.xml). CI uploads all
+four as artifacts of the run on a review-* tag. An e2e case names its spec file under frontend/e2e/
+and a part of the test title that appears literally in that file.
 """
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -34,6 +36,7 @@ def junit(path):
     return out
 pio=junit(opts['--pio']) if '--pio' in opts else None
 pyt=junit(opts['--pytest']) if '--pytest' in opts else None
+pw=junit(opts['--playwright']) if '--playwright' in opts else None
 def from_junit(results, suite, name, how):
     if results is None: return 'Not run on the tag', how
     hits=[v for k,v in results.items() if suite in k.split('::')[0] and k.endswith('::'+name)]
@@ -65,6 +68,14 @@ def actual(src):
     if kind=='pytest':
         assert exists(os.path.join(ROOT,'ai-pipeline','tests',src[1]+'.py'),'def '+src[2]), ('no pytest test', src)
         return from_junit(pyt, src[1], src[2], f"Auto (CI) – AI pipeline `pytest` `tests/{src[1]}.py` › `{src[2]}`")
+    if kind=='e2e':
+        assert exists(os.path.join(ROOT,'frontend','e2e',src[1]),src[2]), ('no e2e test', src)
+        how=f"Auto (CI) – web E2E Playwright `e2e/{src[1]}` › “{src[2]}”"
+        if pw is None: return 'Not run on the tag', how
+        # Playwright JUnit: classname = spec file, name = "describe › test title"
+        hits=[v for k,v in pw.items() if k.split('::')[0]==src[1] and src[2].lower() in k.split('::',1)[1].lower()]
+        if not hits: return 'Not run on the tag', how
+        return ('Pass' if all(h=='Pass' for h in hits) else 'Fail'), how
     if kind=='todo-auto':
         return 'Not run – test to be written', f"Auto (CI, to be written) – {src[1]}"
     return 'Not run', f"Manual – {src[1]}"
@@ -73,7 +84,7 @@ def add(id_,ref,pre,steps,data,exp,src):
     a,run=actual(src)
     st=sup if ref in SUPPORTING else stats
     k=src[0] if not isinstance(src,list) else ('todo-auto' if any(x[0]=='todo-auto' for x in src) else src[0][0])
-    st[{'jest':'written','pio':'written','pytest':'written','todo-auto':'todo','manual':'manual'}[k]]+=1
+    st[{'jest':'written','pio':'written','pytest':'written','e2e':'written','todo-auto':'todo','manual':'manual'}[k]]+=1
     if a=='Pass': st['pass']+=1
     esc=lambda x: x.replace('|','\\|')
     rows.append('| '+' | '.join(esc(x) for x in [id_,ref,pre,steps,data,exp,run,a])+' |')
@@ -143,7 +154,7 @@ tpl=tpl.replace('{{NST}}',str(len(ST))).replace('{{TOTAL}}',str(total)).replace(
 auto=stats['written']+stats['todo']
 summ=f"""| Test cases | Automated, test written | Automated, to be written | Manual | Passed on the tag |
 | --- | --- | --- | --- | --- |
-| {total} | {stats['written']} ({100*stats['written']//total} %) | {stats['todo']} (automated in total: {auto}, {100*auto//total} %) | {stats['manual']} | {stats['pass'] if (res is not None or pio is not None or pyt is not None) else '— (no run on the tag yet)'} |"""
+| {total} | {stats['written']} ({100*stats['written']//total} %) | {stats['todo']} (automated in total: {auto}, {100*auto//total} %) | {stats['manual']} | {stats['pass'] if (res is not None or pio is not None or pyt is not None or pw is not None) else '— (no run on the tag yet)'} |"""
 tpl=tpl.replace('{{SUMMARY}}',summ)
 open(sys.argv[2],'w',encoding='utf-8',newline='\n').write(tpl)
 print(total, stats, 'supporting', sup)

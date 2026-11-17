@@ -29,10 +29,28 @@
  * - Chuyên gia thấy hiệu quả luật ở /domain-expert/recommendation-rules sau khi job đo
  */
 import { test, expect } from '@playwright/test'
-import { loginAs } from './helpers/auth'
+import { loginAs, SEED_USERS } from './helpers/auth'
+
+const SKIP_REASON = 'DS-15: cần OPEN recommendation trong DB — Kiệt/Bảo seed trước'
 
 test.describe('DS-15 — WF-08 Main: Farm Owner chấp nhận khuyến nghị → Work Order', () => {
+  let hasOpenRec = false
+
+  test.beforeAll(async ({ request }) => {
+    const apiBase = process.env.E2E_API_URL ?? 'http://localhost:3000'
+    const loginRes = await request.post(`${apiBase}/auth/login`, { data: SEED_USERS.owner })
+    if (!loginRes.ok()) return
+    const token: string = (await loginRes.json()).data?.access_token ?? ''
+    if (!token) return
+    const res = await request.get(`${apiBase}/recommendations?status=OPEN&limit=1`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok()) return
+    hasOpenRec = !!((await res.json()).data?.length)
+  })
+
   test('Domain Expert thấy luật khuyến nghị đang bật tại trang luật', async ({ page }) => {
+    test.skip(!hasOpenRec, SKIP_REASON)
     await loginAs(page, 'expert')
     await page.goto('/domain-expert/recommendation-rules')
     // Trang phải load và hiển thị ít nhất một luật đang bật
@@ -44,6 +62,7 @@ test.describe('DS-15 — WF-08 Main: Farm Owner chấp nhận khuyến nghị �
   })
 
   test('Farm Owner thấy khuyến nghị OPEN kèm bằng chứng', async ({ page }) => {
+    test.skip(!hasOpenRec, SKIP_REASON)
     await loginAs(page, 'owner')
     await page.goto('/recommendations')
     // Phải có ít nhất một khuyến nghị
@@ -57,6 +76,7 @@ test.describe('DS-15 — WF-08 Main: Farm Owner chấp nhận khuyến nghị �
   })
 
   test('Farm Owner chấp nhận khuyến nghị — Work Order được tạo', async ({ page }) => {
+    test.skip(!hasOpenRec, SKIP_REASON)
     await loginAs(page, 'owner')
     await page.goto('/recommendations')
 

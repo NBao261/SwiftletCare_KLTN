@@ -152,7 +152,7 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
     // Giữ nguyên các trường frontend đang đọc (morning_exit, evening_entry, return_rate), thêm số ròng
     expect(res.body.data.records).toEqual([{
       date: '2026-10-15', morning_entry: 0, morning_exit: 100, evening_entry: 90, evening_exit: 0,
-      net_exit: 100, net_entry: 90, return_rate: 90, has_morning: true, has_evening: true,
+      net_exit: 100, net_entry: 90, return_rate: 90, has_morning: true, has_evening: true, incomplete: false,
     }])
   })
 })
@@ -174,7 +174,7 @@ describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
   }
   const EXPECTED = {
     morning_entry: 10, morning_exit: 110, evening_entry: 90, evening_exit: 5,
-    net_exit: 100, net_entry: 85, return_rate: 85, has_morning: true, has_evening: true,
+    net_exit: 100, net_entry: 85, return_rate: 85, has_morning: true, has_evening: true, incomplete: false,
   }
 
   it('/current, socket và /daily cho cùng một con số, cộng mọi camera của nhà trước khi lấy số ròng', async () => {

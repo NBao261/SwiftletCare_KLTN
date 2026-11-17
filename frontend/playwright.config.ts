@@ -1,48 +1,26 @@
-/**
- * playwright.config.ts — Cấu hình E2E Playwright cho SwiftletCare web
- *
- * Chủ file: Nguyễn Thị Yến Nhi (§0.2 rule 3, todo-review2.md G-17)
- * File này được tạo lần đầu bởi Thái Minh Tuấn (PR G-17) như một base skeleton
- * để các test DS-07/08/15/16 có thể chạy; Nhi sẽ bổ sung CI job, retries và
- * các project/device khác trong PR E2E tiếp theo.
- *
- * Biến môi trường:
- *   E2E_BASE_URL   — URL staging, ví dụ https://app.swiftletcare.vn (mặc định: http://localhost:5173)
- *
- * Chạy:
- *   npm run test:e2e               — toàn bộ bộ test
- *   npm run test:e2e -- e2e/ds-07  — chỉ DS-07
- *   npm run test:e2e:report        — xem báo cáo HTML
- */
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
+// G-17, FE_Design 13.17 — test E2E chạy trên web thật nối backend thật (đã seed); CI job `e2e` dựng backend trước rồi chạy file này
 export default defineConfig({
   testDir: './e2e',
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
-  fullyParallel: false,
-  retries: process.env.CI ? 1 : 0,
+  // Một backend dùng chung cho mọi test: chạy tuần tự để test không giẫm dữ liệu của nhau
   workers: 1,
-
-  reporter: [
-    ['list'],
-    ['junit', { outputFile: 'e2e-results.xml' }],
-    ['html', { open: 'never', outputFolder: 'playwright-report' }],
-  ],
-
+  fullyParallel: false,
+  forbidOnly: Boolean(process.env.CI),
+  retries: process.env.CI ? 1 : 0,
+  // JUnit cho Report 5 (gen_report5.py --playwright e2e-junit.xml)
+  reporter: [['list'], ['junit', { outputFile: 'e2e-junit.xml' }]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
     trace: 'retain-on-failure',
-    locale: 'vi-VN',
-    timezoneId: 'Asia/Ho_Chi_Minh',
+    screenshot: 'only-on-failure',
   },
-
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
-})
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Web dev server (proxy /api sang backend :3000); backend phải chạy sẵn
+  webServer: {
+    command: 'npm run dev -- --port 5173 --strictPort',
+    url: 'http://localhost:5173/login',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
+});

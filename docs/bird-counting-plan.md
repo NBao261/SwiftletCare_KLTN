@@ -1516,7 +1516,7 @@ Thay đổi chính trong `LiveCameraCard`:
 Hook WebRTC (giao thức WHEP, không cần thêm thư viện):
 
 ```ts
-// hooks/farm-owner/useWhepStream.ts
+// hooks/shared/useWhepStream.ts
 import { useEffect, type RefObject } from 'react'
 import { getStreamToken } from '@/apis/farm-owner/camera.api'   // GET /devices/camera-nodes/:id/stream-token
 

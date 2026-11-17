@@ -2,7 +2,7 @@
 # source: ('jest', file, title-substring) | ('pio', suite, test) | ('pytest', module, test) | ('todo-auto', where) | ('manual', where)
 # A source may also be a list of sources (the case passes when all of them pass).
 # A jest, pio or pytest source must name a test that exists: gen_report5.py checks it.
-J='jest'; P='pio'; Y='pytest'; T='todo-auto'; M='manual'
+J='jest'; P='pio'; Y='pytest'; E='e2e'; T='todo-auto'; M='manual'
 I='tests/integration/'
 # Features of supporting flow SF-01 (device setup): built and tested, not counted in the committed minimum
 SUPPORTING={'F-18','F-19','F-30'}

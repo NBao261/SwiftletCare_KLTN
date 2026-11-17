@@ -1,4 +1,6 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
@@ -40,6 +42,10 @@ export default defineConfig({
       },
     }),
   ],
+  // e2e/*.spec.ts là test Playwright (npm run test:e2e), không phải của vitest
+  test: {
+    exclude: [...configDefaults.exclude, 'e2e/**'],
+  },
   server: {
     port: 5173,
     proxy: {

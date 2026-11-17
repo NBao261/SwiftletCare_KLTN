@@ -127,8 +127,66 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
+      # Test E2E và cấu hình Playwright nằm ngoài src/ nên kiểm kiểu riêng
+      - run: npx tsc -p tsconfig.e2e.json
       - run: npx vitest run
       - run: npm run build
+
+  # ── Job 5b: E2E — Playwright trên web thật nối backend đã seed (G-17) ───
+  # Test E2E chỉ được tính là tự động khi chạy ở đây (Report 5); kết quả JUnit lưu làm artifact
+  e2e:
+    name: E2E (Playwright)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports: ['27017:27017']
+    env:
+      MONGODB_URI: mongodb://localhost:27017/swiftletcare_e2e
+      # Chỉ dùng trong job này, không phải secret thật
+      JWT_ACCESS_SECRET: e2e-access-secret
+      JWT_REFRESH_SECRET: e2e-refresh-secret
+      # Không có broker trong job: backend ghi lỗi MQTT và tự thử nối lại, API vẫn chạy
+      MQTT_BROKER_URL: mqtt://localhost:1883
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Backend — cài, seed, chạy nền
+        working-directory: backend
+        run: |
+          npm ci
+          npm run seed
+          nohup npx tsx src/index.ts > backend.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/health && exit 0; sleep 1; done
+          cat backend.log; exit 1
+      - name: Web — cài và trình duyệt Chromium
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps --only-shell chromium
+      - name: Playwright
+        working-directory: frontend
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-e2e-junit
+          path: frontend/e2e-junit.xml
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-failure-details
+          path: |
+            frontend/test-results/
+            backend/backend.log
 
   # ── Job 6: Firmware — unit test trên host (env native) ──────────────────
   firmware:

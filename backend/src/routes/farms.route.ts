@@ -114,6 +114,11 @@ router.put ('/zones/:zoneId/detection-tuning', requireRole('FARM_OWNER','DOMAIN_
 // EXPERT-FR-008 (v2.1.8) — mức giảm tỷ lệ chim về theo nhà yến (camera ở cửa ra vào của cả nhà): Domain Expert
 // sửa; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22)
 router.put ('/houses/:houseId/bird-count-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateBirdCountTuning)
+// VISION-FR-019 — lịch đếm của nhà: Farm Owner, Domain Expert và thợ của nhà xem; Domain Expert sửa, Farm Owner chỉ khi
+// farm chưa có chuyên gia (BR-22, service kiểm). Hình dạng ở đây (422), luật giờ và chồng ngày ở service (400)
+router.get ('/houses/:houseId/counting-schedule', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('houseId').isMongoId(), validate, farmController.getCountingSchedule)
+router.put ('/houses/:houseId/counting-schedule', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(),
+  body('profiles').optional().isArray(), body('temporary').optional().isArray(), validate, farmController.updateCountingSchedule)
 // ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà yến: Farm Owner và Domain Expert xem; Domain Expert
 // sửa, Farm Owner chỉ khi farm chưa có chuyên gia (BR-22, service kiểm)
 router.get ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.getHealthLevels)
