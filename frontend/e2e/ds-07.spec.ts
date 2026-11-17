@@ -101,7 +101,7 @@ test.describe('DS-07 — WF-04 Main: Expert bác bỏ NOISE_ANOMALY → DISMISSE
     ).toBeVisible({ timeout: 15_000 })
   })
 
-  test('Chủ farm nhận thông báo in-app sau khi chuyên gia bác bỏ', async ({ page, context }) => {
+  test('Chủ farm nhận thông báo in-app sau khi chuyên gia bác bỏ', async ({ page: _page, context }) => {
     // Mở trang Farm Owner trong tab mới để kiểm tra thông báo
     const ownerPage = await context.newPage()
     await loginAs(ownerPage, 'owner')

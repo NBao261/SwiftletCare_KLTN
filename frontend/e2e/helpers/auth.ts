@@ -34,7 +34,6 @@ export async function loginAs(page: Page, role: SeedRole): Promise<void> {
  */
 export async function loginViaApi(page: Page, role: SeedRole): Promise<string> {
   const { email, password } = SEED_USERS[role]
-  const baseURL = page.context().browser()?.contexts()[0]?.pages()[0]?.url() ?? ''
   const apiBase = process.env.E2E_API_URL ?? 'http://localhost:3000'
 
   const res = await page.request.post(`${apiBase}/auth/login`, {

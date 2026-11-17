@@ -20,7 +20,7 @@
  * - API: 403 Forbidden khi cố ghi verdict
  */
 import { test, expect } from '@playwright/test'
-import { loginAs, loginViaApi, SEED_USERS } from './helpers/auth'
+import { loginAs, SEED_USERS } from './helpers/auth'
 
 test.describe('DS-08 — WF-04 Exception: Farm Owner bị chặn ghi verdict (403)', () => {
   test('Farm Owner không thể truy cập trang thẩm định của Domain Expert', async ({ page }) => {
