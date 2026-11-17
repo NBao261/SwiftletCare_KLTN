@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.9 (Review 2, final scope) |
+| Document version | 4.2.10 (Review 2, final scope) |
 | Date | 10/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -741,6 +741,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Work Order and alert text | title ≤ 200 characters; description and work note ≤ 2,000; reopen note, cancel reason, acknowledgement note, verdict note and on-site check note ≤ 1,000 | Input check; a work note is a short report, not a document (OPS-FR-001, 002, 004) |
 | Recommendation expiry and effect window | 7 days; 7 days before against 7 days after acceptance | BR-42 |
 | Recommendation rule inputs | A rule holds when every day of its window has a value meeting the condition (a missing day does not hold); value entered within 0–100 % in range, 0–24 h of NH3 or CO2 over the limit, 0–200 % return rate, 0–1000 noise episodes or misting-ineffective alerts a day; source of the rule required (up to 500 characters); Work Order title up to 200 characters; a parameter change is checked against every zone of the house before any zone is changed; the misting-ineffective count of a day not yet assessed is missing, not 0; a recommendation keeps the rule as it was when raised; reject reason up to 1000 characters; rules evaluated right after the daily assessment, expiry and effect checked daily at 06:30; the effect is measured on the 9th day after acceptance, once the 7th day has been recomputed with late data; no minimum number of days with data: a side without any value gives no change and no improvement; a change of 0 is not an improvement | How EXPERT-FR-016, 017 are computed; input limits against typing errors, not farming advice (A-4) |
+| Counting schedule and sessions | At most 12 seasonal profiles and 60 temporary windows a house, profile name up to 50 characters; windows are half-open [start, end) in Vietnam time; a 5-minute count belongs to a session when it starts inside the window; the evening check of each house runs within 5 minutes after its due time (15 min after the evening window), at 23:59 at the latest; the last 100 changes of a schedule are kept; an incomplete day keeps its flag in the daily counts and is left out of every average of the return rate (trends, health reports, harvest flock snapshot) and of the environment–return-rate correlation; a 5-minute count arriving late recomputes a computed session only when it starts inside that session's window | VISION-FR-008, 019, 020, BR-21; input limits against typing errors, not farming advice (A-4) |
 | Grace before an overdue plan escalates (`maintenance_grace_days`) | 7 days | OPS-FR-006 |
 | Maintenance plan and checklist text | 1–30 checklist items of at most 200 characters; source of the interval at most 300 characters; plan note, expert comment and checklist item note at most 1,000 characters each | Input check, the same in the applications; enough for a short inspection list (OPS-FR-005, 007) |
 | Same period of the previous year | ±30 days | BR-43 |
@@ -1153,6 +1154,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.10 | 17/11/2026 | Counting schedule and sessions as built (G-12): input limits, kept schedule changes, session membership of a 5-minute count, incomplete days left out of the averages and the correlation, and the time of the evening check in Section 4.5 (VISION-FR-008, 019, 020, BR-21) |
 | 4.2.9 | 17/11/2026 | SMTP time-outs of the account mails in Section 4.5 (SF-03; G-02) |
 | 4.2.8 | 17/11/2026 | Telemetry gap, overview look-up, comparison period (30 days) and energy period (90 days) constants in Section 4.5 (ANALYTICS-FR-015…017, BR-45; G-25) |
 | 4.2.7 | 17/11/2026 | Recommendation rules as built (G-24): EXPERT-FR-018 one review item per zone on a farm with a Domain Expert; effect measured once the 7th day is recomputed; BR-42 a new recommendation of the same rule and house waits for a whole window after the last decision or expiry; rule inputs in Section 4.5 |

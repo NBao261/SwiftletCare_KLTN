@@ -154,10 +154,10 @@ async function notifyReportReady(report: IHouseHealthReport): Promise<void> {
 
 /** Sinh báo cáo của mọi nhà đang hoạt động cho 1 kỳ; lỗi ở một nhà không làm bỏ qua các nhà sau */
 async function generateForAllHouses(
-  kind: HouseReportKind, from: string, to: string, now: Date, opts: { notify: boolean },
+  kind: HouseReportKind, from: string, to: string, now: Date, opts: { notify: boolean }, onlyHouseIds?: string[],
 ): Promise<number> {
   let created = 0
-  for (const id of await listActiveHouseIds()) {
+  for (const id of onlyHouseIds ?? await listActiveHouseIds()) {
     try {
       const result = await generateHouseReport(kind, String(id), from, to, now)
       if (result?.created) {
@@ -175,10 +175,10 @@ async function generateForAllHouses(
  * BR-33 — báo cáo ngày, gọi từ jobs/returnRate.job.ts ngay sau đánh giá ngày. Tính lại báo cáo hôm qua (đã
  * có) cho đủ cả ngày. Không gửi thông báo riêng: thông báo "ngày đã sẵn sàng" của đánh giá ngày đi cùng lúc.
  */
-export async function generateDailyReports(date = vnDate(new Date()), now = new Date()): Promise<number> {
-  const created = await generateForAllHouses('DAILY', date, date, now, { notify: false })
+export async function generateDailyReports(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
+  const created = await generateForAllHouses('DAILY', date, date, now, { notify: false }, onlyHouseIds)
   const yesterday = addDays(date, -1)
-  for (const id of await listActiveHouseIds()) {
+  for (const id of onlyHouseIds ?? await listActiveHouseIds()) {
     try {
       if (await HouseHealthReport.exists({ house_id: id, kind: 'DAILY', period_start: yesterday })) {
         await generateHouseReport('DAILY', String(id), yesterday, yesterday, now)

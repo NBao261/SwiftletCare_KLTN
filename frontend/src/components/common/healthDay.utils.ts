@@ -40,8 +40,11 @@ export function formatHealthReason(reason: HealthReason, t: HealthTranslate, for
     case 'MISSING_DATA': {
       if (reason.source === 'flock') {
         const missing = values.missing;
-        if (missing === 'MORNING' || missing === 'EVENING' || missing === 'NO_DEPARTURES') return t(`reason.MISSING_DATA.${missing}`);
-        return t('reason.MISSING_DATA.MORNING');
+        if (missing === 'MORNING' || missing === 'EVENING' || missing === 'NO_DEPARTURES' || missing === 'INCOMPLETE') {
+          return t(`reason.MISSING_DATA.${missing}`);
+        }
+        // Giá trị backend thêm sau mà web chưa biết: câu chung, không đoán là thiếu phiên sáng
+        return t('reason.MISSING_DATA.flock');
       }
       if (values.no_zones) return t('reason.MISSING_DATA.noZones');
       const zones = Array.isArray(values.zones)

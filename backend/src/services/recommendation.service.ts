@@ -284,13 +284,14 @@ async function indicatorDays(indicator: RuleIndicator, house: Pick<IHouse, '_id'
  * farm; thoả mà chưa có khuyến nghị mở thì mở một khuyến nghị kèm bằng chứng và báo Farm Owner trong app. Lỗi ở một
  * luật hay một nhà không chặn các luật và nhà khác. Trả số khuyến nghị mới.
  */
-export async function evaluateRecommendationRules(date = vnDate(new Date()), now = new Date()): Promise<number> {
+export async function evaluateRecommendationRules(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
   const rules = await RecommendationRule.find({ active: true }).lean()
   // Farm đã xoá (mềm) không xét nữa: Farm.find ẩn farm is_deleted
   const liveFarms = new Set((await Farm.find({ _id: { $in: rules.map(r => r.farm_id) } }).select('_id').lean()).map(f => String(f._id)))
   let raised = 0
   for (const rule of rules.filter(r => liveFarms.has(String(r.farm_id)))) {
-    const houses = await House.find({ farm_id: rule.farm_id }).select('_id name').lean()
+    // BR-21 — job buổi tối xét từng nhà sau khung chiều của chính nhà đó
+    const houses = await House.find({ farm_id: rule.farm_id, ...(onlyHouseIds && { _id: { $in: onlyHouseIds } }) }).select('_id name').lean()
     const windowStart = dayOffset(date, -(rule.window_days - 1))
     for (const house of houses) {
       try {

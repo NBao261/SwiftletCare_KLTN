@@ -22,7 +22,10 @@ const VI: Record<HealthReasonCode, Phrase> = {
   ALL_NORMAL: () => 'Các chỉ số đã đánh giá đều bình thường',
   MISSING_DATA: (v, _l, source) => {
     if (source === 'flock') {
-      const missing = { MORNING: 'thiếu phiên sáng', EVENING: 'thiếu phiên chiều', NO_DEPARTURES: 'phiên sáng không có chim ra' }
+      const missing = {
+        MORNING: 'thiếu phiên sáng', EVENING: 'thiếu phiên chiều', NO_DEPARTURES: 'phiên sáng không có chim ra',
+        INCOMPLETE: 'phiên đếm không đầy đủ vì nút AI mất kết nối',
+      }
       return `Thiếu dữ liệu đàn chim: ${missing[v.missing as keyof typeof missing] ?? ''}`
     }
     return v.no_zones
@@ -46,7 +49,10 @@ const EN: Record<HealthReasonCode, Phrase> = {
   ALL_NORMAL: () => 'All assessed indicators are normal',
   MISSING_DATA: (v, _l, source) => {
     if (source === 'flock') {
-      const missing = { MORNING: 'no morning session', EVENING: 'no evening session', NO_DEPARTURES: 'no birds left in the morning session' }
+      const missing = {
+        MORNING: 'no morning session', EVENING: 'no evening session', NO_DEPARTURES: 'no birds left in the morning session',
+        INCOMPLETE: 'counting session incomplete, the AI node was offline',
+      }
       return `Missing flock data: ${missing[v.missing as keyof typeof missing] ?? ''}`
     }
     return v.no_zones

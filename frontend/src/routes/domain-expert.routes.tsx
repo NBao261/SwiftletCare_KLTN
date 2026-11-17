@@ -30,6 +30,8 @@ const DomainExpertReviewsPage = lazy(() => import('@/pages/domain-expert/DomainE
 const DomainExpertWeatherRulesPage = lazy(() => import('@/pages/domain-expert/DomainExpertWeatherRulesPage'));
 const DomainExpertProfilesPage = lazy(() => import('@/pages/domain-expert/DomainExpertProfilesPage'));
 const DomainExpertRecommendationRulesPage = lazy(() => import('@/pages/domain-expert/DomainExpertRecommendationRulesPage'));
+const DomainExpertCountingSchedulePage = lazy(() => import('@/pages/domain-expert/DomainExpertCountingSchedulePage'));
+const DomainExpertCountingRingPage = lazy(() => import('@/pages/domain-expert/DomainExpertCountingRingPage'));
 
 // ── Redirect helpers giữ nguyên query parameters (ví dụ: ?alertId=...) ─────────
 function RedirectToVerdicts() {
@@ -98,6 +100,12 @@ export const domainExpertRoutes = (
 
       {/* Duyệt tham số & Đề xuất hệ số mờ (G-04) */}
       <Route path="reviews" element={<DomainExpertReviewsPage />} />
+
+      {/* Lịch đếm chim của nhà (VISION-FR-019, G-12) */}
+      <Route path="counting-schedule" element={<DomainExpertCountingSchedulePage />} />
+
+      {/* Vòng đếm chim trên khung live (VISION-FR-018, G-12) */}
+      <Route path="counting-ring" element={<DomainExpertCountingRingPage />} />
 
       {/* Luật bù phun sương theo thời tiết (ENV-FR-030, G-23) */}
       <Route path="weather-rules" element={<DomainExpertWeatherRulesPage />} />
