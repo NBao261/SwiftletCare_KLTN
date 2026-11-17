@@ -8,15 +8,14 @@ import type { CurrentUser } from '@/types'
 
 /**
  * EXPERT-FR-009 — các quyết định của Domain Expert trên 1 farm, theo tên hành động trong audit log:
- * tham số, kết luận, và kết quả mục duyệt / đề xuất hệ số (EXPERT-FR-010/011). Lịch đếm (VISION-FR-019,
- * G-12) thêm vào đây khi gap đó làm.
+ * tham số, kết luận, kết quả mục duyệt / đề xuất hệ số (EXPERT-FR-010/011) và lịch đếm (VISION-FR-019).
  */
 export const EXPERT_DECISION_ACTIONS = [
   'CONFIG_PROFILE_APPROVED',
   'THRESHOLD_UPDATED', 'FUZZY_TUNING_UPDATED', 'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED',
   'COUNTING_RING_UPDATED', 'ALERT_VERDICT_SET', 'HEALTH_REPORT_CONCLUDED',
   'REVIEW_ACCEPTED', 'REVIEW_REVERTED', 'PROPOSAL_APPROVED', 'PROPOSAL_REJECTED', 'HEALTH_LEVELS_UPDATED',
-  'WEATHER_RULES_UPDATED',
+  'WEATHER_RULES_UPDATED', 'COUNTING_SCHEDULE_UPDATED',
 ] as const
 export type ExpertDecisionAction = typeof EXPERT_DECISION_ACTIONS[number]
 
@@ -26,7 +25,7 @@ export type ExpertDecisionAction = typeof EXPERT_DECISION_ACTIONS[number]
  */
 export const BR22_ACTIONS: ExpertDecisionAction[] = [
   'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED', 'COUNTING_RING_UPDATED', 'ALERT_VERDICT_SET',
-  'HEALTH_LEVELS_UPDATED', 'WEATHER_RULES_UPDATED',
+  'HEALTH_LEVELS_UPDATED', 'WEATHER_RULES_UPDATED', 'COUNTING_SCHEDULE_UPDATED',
 ]
 
 const VN_TIME = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })

@@ -76,12 +76,29 @@ export interface AudioTrack {
   uploaded_by: string; uploaded_at: string
 }
 
+// VISION-FR-018 — vòng đếm quanh miệng lỗ ra vào: 3–12 đỉnh [x, y] theo tỉ lệ khung hình 0–1
+export interface CountingRing {
+  points: Array<[number, number]>
+  into_ring_is_exit: boolean
+}
+
+// VISION-FR-018 — một lần đổi vòng đếm (người sửa, vai trò, giá trị cũ/mới)
+export interface CountingRingHistoryEntry {
+  changed_by: string
+  changed_by_role: string
+  changed_at: string
+  old_value: CountingRing | null
+  new_value: CountingRing
+}
+
 export interface CameraNode {
   _id: string; device_id: string; rtsp_url?: string
   // SRS v2.1.8 — camera ở cửa ra vào của cả nhà yến; zone_id chỉ còn ở bản ghi cũ
   house_id?: string; zone_id?: string
   /** VISION-FR-018 — vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml */
-  counting_ring?: { points: Array<[number, number]>; into_ring_is_exit: boolean; updated_at?: string } | null
+  counting_ring?: (CountingRing & { updated_at?: string; updated_by?: string }) | null
+  /** VISION-FR-018 — lịch sử đổi vòng đếm, mới nhất tuỳ backend sắp xếp */
+  counting_ring_history?: CountingRingHistoryEntry[]
   status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
   /** SYSTEM-FR-004 — thiết bị của bộ giả lập */
   simulated?: boolean

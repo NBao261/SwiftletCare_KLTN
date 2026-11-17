@@ -379,7 +379,7 @@ describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 00
 
   it('8 tuần số đếm: trung bình chim ra buổi sáng theo tuần và theo tháng đúng seed; ngày thiếu phiên bị bỏ', () => {
     const day = (date: string, netExit: number, complete = true) => ({
-      date, net_exit: netExit, has_morning: true, has_evening: complete, return_rate: complete ? 90 : null,
+      date, net_exit: netExit, has_morning: true, has_evening: complete, return_rate: complete ? 90 : null, incomplete: false,
     })
     // Thứ Hai 2026-09-07 … 8 tuần; mỗi tuần 2 ngày, tuần k có 100 + 10k chim ra
     const days = Array.from({ length: 8 }, (_, k) => {
@@ -440,7 +440,7 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const { farm, house } = await seedFarm()
     await dropToday(house._id)
     const today = vnDay(0)
-    // Khung phiên chiều [17:55, 18:05): giờ 17:00 (0 mm) và giờ 18:00 (null) đều trùng khung
+    // Khung chiều mặc định 17:30–19:00 (BR-13): giờ 17:00 (0 mm) và giờ 18:00 (null) đều trùng khung
     const camera = new mongoose.Types.ObjectId()
     await BirdCountBucket.create([
       { camera_node_id: camera, house_id: house._id, bucket_start: new Date(`${today}T17:55:00+07:00`), entry_count: 5, exit_count: 0 },
@@ -460,7 +460,7 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const { farm, house } = await seedFarm()
     await dropToday(house._id)
     const today = vnDay(0)
-    // Khung phiên chiều [18:00, 18:05): chỉ giờ 18:00 trùng khung, và giờ đó không có số đo
+    // Khung mặc định 05:30–07:00, 17:30–19:00: giờ 10:00 ngoài khung, giờ 18:00 trùng khung nhưng không có số đo
     await BirdCountBucket.create({ camera_node_id: new mongoose.Types.ObjectId(), house_id: house._id, bucket_start: new Date(`${today}T18:00:00+07:00`), entry_count: 5, exit_count: 0 })
     await WeatherObservation.create([
       { farm_id: farm._id, hour: new Date(`${today}T18:00:00+07:00`), precipitation_mm: null },
@@ -472,7 +472,7 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     expect(alert.metadata).toMatchObject({ rainMm: null })
   })
 
-  it('chưa biết khung phiên (chưa có số đếm 5 phút) → ghi mưa cả ngày, không ghi "trong phiên đếm"', async () => {
+  it('không có số đếm 5 phút: khung lấy từ lịch đếm (mặc định 05:30–07:00, 17:30–19:00), giờ ngoài khung không tính', async () => {
     const { farm, house } = await seedFarm()
     await dropToday(house._id)
     const today = vnDay(0)
@@ -482,8 +482,26 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     ])
     expect(await checkReturnRateDrops(today)).toBe(1)
     const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
-    expect(alert.message).toContain('mưa cả ngày 3.5 mm')
-    expect(alert.message).not.toContain('trong phiên đếm')
+    expect(alert.message).toContain('mưa trong phiên đếm 2 mm')
+  })
+
+  it('khung tạm của lịch đếm (VISION-FR-019) quyết định giờ mưa nào thuộc phiên', async () => {
+    const { farm, house } = await seedFarm()
+    await dropToday(house._id)
+    const today = vnDay(0)
+    await House.updateOne({ _id: house._id }, {
+      counting_schedule_history: [{
+        schedule: { profiles: [], temporary: [{ from: today, to: today, morning: { start: '08:30', end: '10:00' }, evening: { start: '18:00', end: '19:00' } }] },
+        effective_from: vnDay(-10), changed_by: new mongoose.Types.ObjectId(), changed_by_role: 'DOMAIN_EXPERT', changed_at: new Date(),
+      }],
+    })
+    await WeatherObservation.create([
+      { farm_id: farm._id, hour: new Date(`${today}T09:00:00+07:00`), precipitation_mm: 1.5 },
+      { farm_id: farm._id, hour: new Date(`${today}T17:00:00+07:00`), precipitation_mm: 2 },
+    ])
+    expect(await checkReturnRateDrops(today)).toBe(1)
+    const alert = (await Alert.findOne({ type: 'LOW_RETURN_RATE' }).lean())!
+    expect(alert.message).toContain('mưa trong phiên đếm 1.5 mm')
   })
 
   it('không có dữ liệu thời tiết thì ghi rõ', async () => {

@@ -319,6 +319,18 @@ ensureCollection("birdcountrecords", {
     "confidence_avg": {
       "bsonType": ["number", "null"]
     },
+    "window_start": {
+      "bsonType": ["string", "null"]
+    },
+    "window_end": {
+      "bsonType": ["string", "null"]
+    },
+    "complete": {
+      "bsonType": ["bool", "null"]
+    },
+    "computed_at": {
+      "bsonType": ["date", "null"]
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }
@@ -1246,6 +1258,32 @@ ensureCollection("houses", {
           }
         }
       }
+    },
+    "counting_schedule": {},
+    "counting_schedule_history": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "schedule": {},
+          "effective_from": {
+            "bsonType": "string"
+          },
+          "changed_by": {
+            "bsonType": "objectId"
+          },
+          "changed_by_role": {
+            "bsonType": "string"
+          },
+          "changed_at": {
+            "bsonType": "date"
+          }
+        },
+        "required": ["schedule", "effective_from", "changed_by", "changed_by_role", "changed_at"]
+      }
+    },
+    "last_session_check": {
+      "bsonType": ["string", "null"]
     },
     "health_levels": {
       "bsonType": ["object", "null"],

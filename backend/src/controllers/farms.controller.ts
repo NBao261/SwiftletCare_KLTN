@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import * as farmService from '@/services/farm.service'
 import * as coefficientProposalService from '@/services/coefficientProposal.service'
+import * as countingScheduleService from '@/services/countingSchedule.service'
 import * as farmOverviewService from '@/services/farmOverview.service'
 import * as houseComparisonService from '@/services/houseComparison.service'
 import type { ComparisonSortKey } from '@/services/houseComparison.service'
@@ -166,6 +167,18 @@ export const updateDetectionTuning = asyncHandler(async (req: Request, res: Resp
 export const updateBirdCountTuning = asyncHandler(async (req: Request, res: Response) => {
   const house = await farmService.updateHouseBirdCountTuning(req.params.houseId, req.user, req.body)
   res.json({ success: true, data: house })
+})
+
+/** GET /farms/houses/:houseId/counting-schedule – VISION-FR-019 */
+export const getCountingSchedule = asyncHandler(async (req: Request, res: Response) => {
+  const schedule = await countingScheduleService.getCountingSchedule(req.params.houseId, req.user)
+  res.json({ success: true, data: schedule })
+})
+
+/** PUT /farms/houses/:houseId/counting-schedule – VISION-FR-019 */
+export const updateCountingSchedule = asyncHandler(async (req: Request, res: Response) => {
+  const schedule = await countingScheduleService.updateCountingSchedule(req.params.houseId, req.user, req.body)
+  res.json({ success: true, data: schedule })
 })
 
 /** GET /farms/houses/:houseId/health-levels – ANALYTICS-FR-012, BR-28 */

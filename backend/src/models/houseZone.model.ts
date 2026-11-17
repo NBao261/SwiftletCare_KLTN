@@ -5,6 +5,7 @@ import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, House
 import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
 import { currentConfigVersion } from '@/utils/configSync.util'
 import { WEATHER_METRICS, type WeatherRuleInput } from '@/utils/weatherCompensation.util'
+import type { CountingSchedule } from '@/utils/countingSchedule.util'
 
 /**
  * House + Zone Documents – SRS §8.2, FARM-FR-002
@@ -33,6 +34,14 @@ export interface IHouse extends Document {
   /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
+  /** VISION-FR-019 — lịch đếm hiện tại (hồ sơ theo mùa, khung tạm); chưa đặt thì dùng khung mặc định BR-13 */
+  counting_schedule?: CountingSchedule
+  /** Mỗi lần sửa lịch áp từ ngày hôm sau (`effective_from`); khung của một ngày lấy theo lịch sử này */
+  counting_schedule_history: Array<{
+    schedule: CountingSchedule; effective_from: string; changed_by: Types.ObjectId; changed_by_role: Role; changed_at: Date
+  }>
+  /** BR-21 — ngày (giờ VN) đã chạy kiểm tra buổi tối của nhà; job nhận việc một lần mỗi ngày qua trường này */
+  last_session_check?: string
   /** ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà; thiếu trường nào thì dùng mặc định */
   health_levels: HealthLevels
   /** FARM-FR-014, BR-46 — giai đoạn nhà; lịch sử dùng để đánh giá lại ngày cũ đúng giai đoạn lúc ấy */
@@ -128,6 +137,17 @@ const houseSchema = new Schema<IHouse>(
       old_values: { type: Schema.Types.Mixed },
       new_values: { type: Schema.Types.Mixed },
     }],
+    counting_schedule: { type: Schema.Types.Mixed },
+    counting_schedule_history: [{
+      // Mixed: đã kiểm ở countingSchedule.util#parseCountingSchedule
+      schedule:        { type: Schema.Types.Mixed, required: true },
+      effective_from:  { type: String, required: true },
+      changed_by:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      changed_by_role: { type: String, required: true },
+      changed_at:      { type: Date, required: true },
+      _id: false,
+    }],
+    last_session_check: { type: String },
     health_levels: {
       in_range_slight_pct: { type: Number, default: DEFAULT_HEALTH_LEVELS.in_range_slight_pct },
       in_range_clear_pct:  { type: Number, default: DEFAULT_HEALTH_LEVELS.in_range_clear_pct },
