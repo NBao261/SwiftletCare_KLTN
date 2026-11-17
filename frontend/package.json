@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext ts,tsx",
+    "lint": "eslint src e2e playwright.config.ts --ext ts,tsx",
     "test": "vitest",
     "test:e2e": "playwright test"
   },

@@ -127,6 +127,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
+      # Test E2E và cấu hình Playwright nằm ngoài src/ nên kiểm kiểu riêng
+      - run: npx tsc -p tsconfig.e2e.json
       - run: npx vitest run
       - run: npm run build
 
