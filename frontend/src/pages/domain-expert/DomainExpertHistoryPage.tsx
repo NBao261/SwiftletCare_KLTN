@@ -7,77 +7,28 @@
  *
  * Bucket: pages/domain-expert/ — §12.4.
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   History,
-  ShieldCheck,
-  SlidersHorizontal,
-  FileText,
-  Activity,
-  UserCheck,
   CheckCircle2,
   XCircle,
-  Clock,
-  Layers,
-  CalendarClock,
 } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
+import { DataTable, SectionCard, type DataTableColumn } from '@/components/ui'
+import { NO_VALUE } from '@/constants/display'
+import { THRESHOLD_FIELDS } from '@/constants/thresholds'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import { useZoneStore } from '@/stores/zoneStore'
+import { alertTypeDict } from '@/constants/enumLabels.i18n'
+import { useAllZones, useHouses } from '@/hooks/shared/useFarms'
 import { useExpertActivity } from '@/hooks/domain-expert/useExpertAlerts'
-import type { ExpertActivityEntry } from '@/types/expert.types'
-import { formatDate } from '@/lib/helpers'
+import type { AlertType } from '@/types'
+import type { CountingSchedule, ExpertActivityEntry } from '@/types/expert.types'
+import { formatDateOnly, formatTimeOnly } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
-
-const ACTION_CONFIG: Record<
-  string,
-  { label: string; icon: typeof Activity; badgeClass: string }
-> = {
-  ALERT_VERDICT_SET: {
-    label: 'Thẩm định cảnh báo',
-    icon: ShieldCheck,
-    badgeClass: 'bg-red-50 text-red-700 border-red-200',
-  },
-  THRESHOLD_UPDATED: {
-    label: 'Ngưỡng vi khí hậu',
-    icon: SlidersHorizontal,
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  FUZZY_TUNING_UPDATED: {
-    label: 'Hệ số điều khiển mờ',
-    icon: SlidersHorizontal,
-    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  },
-  DETECTION_TUNING_UPDATED: {
-    label: 'Tham số phát hiện lỗi',
-    icon: Activity,
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
-  },
-  BIRD_COUNT_TUNING_UPDATED: {
-    label: 'Sụt giảm đàn chim',
-    icon: Activity,
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
-  },
-  COUNTING_RING_UPDATED: {
-    label: 'Vòng đếm camera',
-    icon: Layers,
-    badgeClass: 'bg-teal-50 text-teal-700 border-teal-200',
-  },
-  COUNTING_SCHEDULE_UPDATED: {
-    label: 'Lịch đếm chim',
-    icon: CalendarClock,
-    badgeClass: 'bg-accent-50 text-accent-800 border-accent-200',
-  },
-  HEALTH_REPORT_CONCLUDED: {
-    label: 'Kết luận báo cáo',
-    icon: FileText,
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  },
-}
 
 const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'ALL', label: 'Tất cả hành động' },
@@ -89,7 +40,72 @@ const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'COUNTING_RING_UPDATED', label: 'Vòng đếm camera' },
   { value: 'COUNTING_SCHEDULE_UPDATED', label: 'Lịch đếm chim' },
   { value: 'HEALTH_REPORT_CONCLUDED', label: 'Kết luận báo cáo' },
+  { value: 'HEALTH_LEVELS_UPDATED', label: 'Mức chỉ số sức khỏe' },
+  { value: 'WEATHER_RULES_UPDATED', label: 'Luật bù thời tiết' },
+  { value: 'REVIEW_ACCEPTED', label: 'Chấp nhận thay đổi của Chủ nhà yến' },
+  { value: 'REVIEW_REVERTED', label: 'Hoàn lại thay đổi của Chủ nhà yến' },
+  { value: 'PROPOSAL_APPROVED', label: 'Duyệt đề xuất hệ số mờ' },
+  { value: 'PROPOSAL_REJECTED', label: 'Từ chối đề xuất hệ số mờ' },
+  { value: 'CONFIG_PROFILE_APPROVED', label: 'Duyệt hồ sơ cấu hình' },
 ]
+// Tên loại quyết định lấy từ chính danh sách của ô lọc
+const ACTION_LABELS = new Map(ACTION_OPTIONS.map(option => [option.value, option.label]))
+
+// Tên tham số trong before/after → nhãn (ngưỡng lấy từ THRESHOLD_FIELDS); tham số chưa có nhãn hiện "Tham số khác"
+const FIELD_LABELS: Record<string, string> = {
+  ...Object.fromEntries(THRESHOLD_FIELDS.map(field => [field.key, field.label])),
+  fuzzy_humidity_band: 'Dải chuyển độ ẩm (%RH)',
+  fuzzy_temp_band: 'Dải chuyển nhiệt độ (°C)',
+  fuzzy_fan_dry_level: 'Mức quạt khi khô (%)',
+  fuzzy_window_sec: 'Cửa sổ lọc (giây)',
+  fuzzy_input_filter: 'Lọc nhiễu cảm biến',
+  noise_margin_db: 'Biên độ ồn vượt nền (dB)',
+  noise_min_sec: 'Thời gian ồn tối thiểu (giây)',
+  pump_dry_on_sec: 'Thời gian bơm chạy không tăng ẩm (giây)',
+  pump_dry_min_rise_pct: 'Độ ẩm cần tăng tối thiểu (%)',
+  speaker_drop_pct: 'Độ sụt âm lượng báo hỏng loa (%)',
+  return_rate_drop_pct: 'Mức giảm tỷ lệ chim về (%)',
+  in_range_slight_pct: 'Môi trường lệch nhẹ',
+  in_range_clear_pct: 'Môi trường lệch rõ',
+  air_slight_h: 'Không khí lệch nhẹ',
+  air_clear_h: 'Không khí lệch rõ',
+  noise_slight: 'Tiếng ồn lệch nhẹ',
+  noise_clear: 'Tiếng ồn lệch rõ',
+}
+
+// Giá trị trong before/after: số, chữ in ra; danh sách ghi số mục; object không in thẳng (tránh "[object Object]")
+function formatChangeValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—'
+  if (Array.isArray(value)) return `${value.length} mục`
+  if (typeof value === 'object') return 'đã đổi'
+  return String(value)
+}
+
+// 'YYYY-MM-DD' → 'DD/MM/YYYY', 'MM-DD' → 'DD/MM'
+const dayText = (value: string) => value.split('-').reverse().join('/')
+
+// VISION-FR-019 — một lần sửa lịch đếm: ngày áp và từng hồ sơ, khung tạm của lịch mới
+function renderCountingSchedule(metadata: Record<string, unknown>) {
+  const schedule = metadata.after as CountingSchedule | undefined
+  // Gọn: ngày dạng ngày/tháng, khung một ngày ghi một ngày; giờ hai phiên xem khi rê chuột
+  const shortDay = (value: string) => dayText(value.slice(-5))
+  const span = (from: string, to: string) => (from === to ? shortDay(from) : `${shortDay(from)}–${shortDay(to)}`)
+  const hours = (windows: { morning: { start: string; end: string }; evening: { start: string; end: string } }) =>
+    `Sáng ${windows.morning.start}–${windows.morning.end}, chiều ${windows.evening.start}–${windows.evening.end}`
+  const profiles = schedule?.profiles ?? []
+  const temporary = schedule?.temporary ?? []
+  return (
+    <ul className="flex flex-col gap-0.5 text-sm text-charcoal">
+      {temporary.map(window => (
+        <li key={`temporary-${window.from}`} title={hours(window)}>Khung tạm {span(window.from, window.to)}</li>
+      ))}
+      {profiles.map(profile => (
+        <li key={`profile-${profile.name}-${profile.from}`} title={hours(profile)}>Hồ sơ {profile.name} {span(profile.from, profile.to)}</li>
+      ))}
+      {profiles.length === 0 && temporary.length === 0 && <li className="text-warmGray">Khung mặc định</li>}
+    </ul>
+  )
+}
 
 function renderActivityDetails(item: ExpertActivityEntry) {
   const m = item.metadata ?? {}
@@ -97,7 +113,7 @@ function renderActivityDetails(item: ExpertActivityEntry) {
   if (item.action === 'ALERT_VERDICT_SET') {
     const isConfirmed = m.result === 'CONFIRMED'
     const note = m.note as string | undefined
-    const alertType = m.type ? String(m.type) : undefined
+    const alertType = m.type ? alertTypeDict.vi[m.type as AlertType] ?? 'Cảnh báo' : undefined
 
     return (
       <div className="flex flex-col gap-1 text-xs">
@@ -118,7 +134,7 @@ function renderActivityDetails(item: ExpertActivityEntry) {
             ) : (
               <>
                 <XCircle className="w-3 h-3 text-warmGray" />
-                Bác bỏ báo động giả (DISMISSED)
+                Bác bỏ báo động giả
               </>
             )}
           </span>
@@ -143,6 +159,8 @@ function renderActivityDetails(item: ExpertActivityEntry) {
     )
   }
 
+  if (item.action === 'COUNTING_SCHEDULE_UPDATED') return renderCountingSchedule(m)
+
   // Before / After changes
   if (m.before || m.after) {
     const before = (m.before ?? {}) as Record<string, unknown>
@@ -153,18 +171,19 @@ function renderActivityDetails(item: ExpertActivityEntry) {
 
     if (changedKeys.length > 0) {
       return (
-        <div className="flex flex-wrap gap-1.5 text-xs">
-          {changedKeys.map(k => (
-            <span
-              key={k}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-100 border border-neutral-200 text-[11px]"
-            >
-              <strong className="text-charcoal font-mono">{k}:</strong>
-              <span className="text-neutral-400 line-through">{String(before[k] ?? '—')}</span>
-              <span className="text-charcoal font-semibold">→ {String(after[k] ?? '—')}</span>
-            </span>
-          ))}
-        </div>
+        <ul className="flex flex-col gap-0.5 text-xs">
+          {changedKeys.map(k => {
+            const oldText = formatChangeValue(before[k])
+            const newText = formatChangeValue(after[k])
+            // Chưa có giá trị cũ: chỉ ghi giá trị mới; có thì "cũ → mới" trên một dòng
+            return (
+              <li key={k} className="text-charcoal">
+                <span className="text-graphite">{FIELD_LABELS[k] ?? 'Tham số khác'}: </span>
+                <span className="whitespace-nowrap font-semibold">{oldText === '—' ? newText : `${oldText} → ${newText}`}</span>
+              </li>
+            )
+          })}
+        </ul>
       )
     }
   }
@@ -177,15 +196,20 @@ function renderActivityDetails(item: ExpertActivityEntry) {
 }
 
 export default function DomainExpertHistoryPage() {
-  const { selectedFarmId, selectedZoneId, selectedHouseId } = useZoneStore()
+  const { selectedFarmId, selectedHouseId } = useZoneStore()
+  // Tra tên nhà và tên Zone để không hiện id nội bộ (FE_Design 13.16)
+  const { data: houses = [] } = useHouses(selectedFarmId ?? undefined)
+  const { data: allZones = [] } = useAllZones()
+  const houseNames = useMemo(() => new Map(houses.map(house => [house._id, house.name])), [houses])
+  const zoneNames = useMemo(() => new Map(allZones.map(zone => [zone._id, `${zone.houseName} · ${zone.name}`])), [allZones])
   const [actionType, setActionType] = useState<string>('ALL')
   const [page, setPage] = useState(1)
   const pageSize = 10
 
   const { data, isLoading } = useExpertActivity({
     farmId: selectedFarmId ?? undefined,
-    houseId: selectedHouseId ?? undefined,
-    zoneId: selectedZoneId ?? undefined,
+    // Lọc tới nhà, không tới Zone: quyết định cấp nhà (lịch đếm, luật thời tiết) không có zone_id, cấp Zone vẫn có house_id
+    houseId: selectedHouseId || undefined,
     type: actionType !== 'ALL' ? actionType : undefined,
     page,
     limit: pageSize,
@@ -195,153 +219,110 @@ export default function DomainExpertHistoryPage() {
   const total = data?.total ?? 0
   const isFiltered = actionType !== 'ALL'
 
-  return (
-    <div className="w-full max-w-screen-xl mx-auto flex flex-col gap-6">
-      {/* Tiêu đề & Giới thiệu */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-h1 text-charcoal flex items-center gap-2.5">
-          <History className="h-7 w-7 text-graphite" />
-          Lịch sử hoạt động chuyên môn
-        </h1>
-        <p className="text-sm text-warmGray">
-          Nhật ký kiểm toán toàn bộ quyết định, phán quyết thẩm định và hiệu chỉnh tham số trên trang trại (EXPERT-FR-009).
-        </p>
-      </div>
-
-      {/* Khung Card nội dung chính */}
-      <Card size="lg" className="flex flex-col gap-4">
-        {/* Bộ lọc và Tiêu đề danh sách */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-warmGray/10">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-base font-bold text-charcoal shrink-0">Nhật ký quyết định</h2>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-charcoal border border-warmGray/15">
-              {total} bản ghi
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <SelectMenu
-              value={actionType}
-              options={ACTION_OPTIONS}
-              onChange={val => {
-                setActionType(val)
-                setPage(1)
-              }}
-              ariaLabel="Lọc theo loại hành động"
-            />
-            {isFiltered && (
-              <ClearFiltersButton
-                onClick={() => {
-                  setActionType('ALL')
-                  setPage(1)
-                }}
-              />
-            )}
-          </div>
+  const columns: DataTableColumn<ExpertActivityEntry>[] = [
+    {
+      key: 'index',
+      header: 'STT',
+      className: 'w-16',
+      render: (_item, index) => <span className="text-sm text-warmGray">{(page - 1) * pageSize + index + 1}</span>,
+    },
+    {
+      key: 'action',
+      header: 'Quyết định',
+      className: 'w-52',
+      render: item => <span className="text-sm font-semibold text-charcoal">{ACTION_LABELS.get(item.action) ?? 'Quyết định khác'}</span>,
+    },
+    {
+      key: 'time',
+      header: 'Thời gian',
+      className: 'w-32 whitespace-nowrap',
+      // Hai dòng: giờ phía trên, ngày xám phía dưới
+      render: item => (
+        <div className="flex flex-col tabular-nums">
+          <span className="text-sm text-charcoal">{formatTimeOnly(item.created_at)}</span>
+          <span className="text-xs text-warmGray">{formatDateOnly(item.created_at)}</span>
         </div>
-
-        {/* Nội dung danh sách */}
-        {isLoading ? (
-          <div className="space-y-3 py-2">
-            <LoadingSkeleton count={4} className="h-16 w-full rounded-xl" />
+      ),
+    },
+    {
+      key: 'actor',
+      header: 'Người quyết định',
+      className: 'w-48',
+      render: item => {
+        const isOwner = item.actor_role === 'FARM_OWNER'
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm text-charcoal">{item.actor?.full_name || (isOwner ? 'Chủ nhà yến' : 'Chuyên gia')}</span>
+            <span className="text-xs text-warmGray">{isOwner ? 'Chủ nhà yến, làm thay chuyên gia' : 'Chuyên gia'}</span>
           </div>
-        ) : !selectedFarmId ? (
-          <div className="p-8">
-            <EmptyState
-              icon={<History className="w-8 h-8 text-warmGray" />}
-              title="Chưa chọn trang trại"
-              description="Vui lòng chọn trang trại ở thanh điều khiển phía trên để xem lịch sử hoạt động."
-            />
-          </div>
-        ) : records.length === 0 ? (
-          <div className="p-8">
-            <EmptyState
-              icon={<History className="w-8 h-8 text-warmGray" />}
-              title="Không có bản ghi hoạt động nào"
-              description={
-                isFiltered
-                  ? 'Không tìm thấy quyết định nào phù hợp với bộ lọc đã chọn.'
-                  : 'Chưa có quyết định hoặc thay đổi tham số nào được ghi nhận cho trang trại này.'
-              }
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col divide-y divide-neutral-100">
-            {records.map(item => {
-              const cfg = ACTION_CONFIG[item.action] ?? {
-                label: item.action,
-                icon: Activity,
-                badgeClass: 'bg-neutral-100 text-neutral-700 border-neutral-200',
-              }
-              const IconComp = cfg.icon
-              const isOwner = item.actor_role === 'FARM_OWNER'
-              const actorName = item.actor?.full_name || (isOwner ? 'Chủ nhà yến' : 'Chuyên gia')
+        )
+      },
+    },
+    { key: 'details', header: 'Nội dung', render: item => renderActivityDetails(item) },
+    {
+      key: 'place',
+      header: 'Vị trí',
+      className: 'w-44',
+      render: item => {
+        const place = (item.zone_id && zoneNames.get(item.zone_id)) || (item.house_id && houseNames.get(item.house_id))
+        return <span className="text-sm text-charcoal">{place || NO_VALUE}</span>
+      },
+    },
+  ]
 
-              return (
-                <div
-                  key={item._id}
-                  className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors hover:bg-neutral-50/50 rounded-xl px-2 -mx-2"
-                >
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div
-                      className={cn(
-                        'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border mt-0.5',
-                        cfg.badgeClass,
-                      )}
-                    >
-                      <IconComp className="w-4 h-4" />
-                    </div>
+  // Chưa chọn trại → nhắc chọn; tải → khung chờ; rỗng → khung rỗng; còn lại là bảng và phân trang
+  let body = (
+    <EmptyState
+      icon={<History className="h-8 w-8 text-warmGray" />}
+      title="Chưa chọn trang trại"
+      description="Chọn trang trại ở thanh trên để xem lịch sử hoạt động."
+    />
+  )
+  if (selectedFarmId && isLoading) body = <LoadingSkeleton count={4} className="h-14 w-full rounded-xl" />
+  if (selectedFarmId && !isLoading && records.length === 0) {
+    body = (
+      <EmptyState
+        icon={<History className="h-8 w-8 text-warmGray" />}
+        title="Không có bản ghi hoạt động nào"
+        description={isFiltered ? 'Không có quyết định nào khớp bộ lọc đã chọn.' : 'Chưa có quyết định hoặc thay đổi tham số nào được ghi nhận cho trang trại này.'}
+      />
+    )
+  }
+  if (selectedFarmId && !isLoading && records.length > 0) {
+    body = (
+      <>
+        <DataTable columns={columns} rows={records} getRowKey={item => item._id} minTableWidth={1000} />
+        <Pagination page={page} limit={pageSize} total={total} onChange={setPage} variant="full" />
+      </>
+    )
+  }
 
-                    <div className="flex flex-col gap-1 min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-charcoal">{cfg.label}</span>
-                        <span
-                          className={cn(
-                            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium border',
-                            isOwner
-                              ? 'bg-neutral-100 text-neutral-700 border-neutral-200'
-                              : 'bg-[#ECFFA9]/60 text-charcoal border-[#B5D32C]/60',
-                          )}
-                        >
-                          <UserCheck className="w-3 h-3" />
-                          {actorName} ({isOwner ? 'Chủ nhà yến • BR-22' : 'Chuyên gia'})
-                        </span>
-                      </div>
-
-                      {renderActivityDetails(item)}
-                    </div>
-                  </div>
-
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto text-xs text-warmGray shrink-0 gap-1 pl-12 sm:pl-0">
-                    <span className="flex items-center gap-1 whitespace-nowrap">
-                      <Clock className="w-3 h-3" />
-                      {formatDate(item.created_at)}
-                    </span>
-                    {(item.zone_id || item.house_id) && (
-                      <span className="text-[11px] text-neutral-400">
-                        {item.zone_id ? `Vùng: ${item.zone_id}` : `Nhà: ${item.house_id}`}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+  return (
+    <SectionCard
+      title="Nhật ký quyết định"
+      description={`${total} bản ghi`}
+    >
+      {/* Ô lọc bên trái, danh sách mở sang phải không bị mép trang che */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <SelectMenu
+          value={actionType}
+          options={ACTION_OPTIONS}
+          onChange={value => {
+            setActionType(value)
+            setPage(1)
+          }}
+          ariaLabel="Lọc theo loại hành động"
+        />
+        {isFiltered && (
+          <ClearFiltersButton
+            onClick={() => {
+              setActionType('ALL')
+              setPage(1)
+            }}
+          />
         )}
-
-        {/* Phân trang */}
-        {total > pageSize && (
-          <div className="pt-2 border-t border-warmGray/10">
-            <Pagination
-              page={page}
-              limit={pageSize}
-              total={total}
-              onChange={setPage}
-              variant="full"
-            />
-          </div>
-        )}
-      </Card>
-    </div>
+      </div>
+      {body}
+    </SectionCard>
   )
 }

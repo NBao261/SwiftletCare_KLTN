@@ -1,21 +1,31 @@
 // VISION-FR-019, BR-13, BR-21 — Lịch đếm chim của nhà: hồ sơ theo mùa, khung tạm, khung đang áp hôm nay và lịch sử (G-12)
 import { useState } from 'react'
-import { CalendarClock, Plus, Trash2 } from 'lucide-react'
+import { CalendarClock, Moon, Plus, Sunrise, Trash2 } from 'lucide-react'
+import DatePicker from '@/components/ui/DatePicker'
+import ScheduleHistoryList from '@/components/features/domain-expert/counting-schedule/ScheduleHistoryList'
 import ScheduleWindowsFields from '@/components/features/domain-expert/counting-schedule/ScheduleWindowsFields'
-import { Badge, Button, EmptyState, Input, LoadingSkeleton, SectionCard } from '@/components/ui'
+import { Badge, Button, EmptyState, Input, LoadingSkeleton, SectionCard, type BadgeTone } from '@/components/ui'
 import { countingScheduleDict, type CountingScheduleKey } from '@/constants/countingSchedule.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useCountingSchedule, useUpdateCountingSchedule } from '@/hooks/domain-expert/useCountingSchedule'
 import { useToastStore } from '@/stores/toastStore'
 import { useZoneStore } from '@/stores/zoneStore'
-import type { CountingSchedule, DayWindows, TimeWindow } from '@/types/expert.types'
+import type { CountingSchedule, CountingWindowSource, DayWindows, TimeWindow } from '@/types/expert.types'
 import {
   MAX_SCHEDULE_PROFILES, MAX_TEMPORARY_WINDOWS, PROFILE_NAME_MAX_LENGTH, validateCountingSchedule, type ScheduleError,
 } from '@/validations/common/countingSchedule.validation'
 
 // "05:30–07:00"
 const span = (window: TimeWindow) => `${window.start}–${window.end}`
+// Hồ sơ theo mùa lặp lại hằng năm nên chỉ lưu 'MM-DD'; lịch ẩn năm, chọn trong năm nhuận 2024 để có 29/02
+const LEAP_YEAR_FIRST = '2024-01-01'
+const LEAP_YEAR_LAST = '2024-12-31'
+const toLeapDate = (monthDay: string) => (/^\d{2}-\d{2}$/.test(monthDay) ? `2024-${monthDay}` : '')
+// Nhãn nguồn của khung hôm nay: khung tạm cam (ngày đặc biệt), hồ sơ mùa xanh dương, mặc định xám
+const SOURCE_TONE: Record<CountingWindowSource, BadgeTone> = { TEMPORARY: 'warning', PROFILE: 'info', DEFAULT: 'neutral' }
+// Nút xoá dòng: tông đỏ như nút Hủy lọc của Farm Owner (ClearFiltersButton tone danger)
+const REMOVE_BUTTON_CLASS = 'border-red-500/20 bg-red-500/10 text-red-600 hover:bg-red-500/15'
 
 // Lỗi của 1 dòng, đặt ngay dưới dòng đó
 function RowError({ error }: { error: ScheduleError | null }) {
@@ -25,7 +35,7 @@ function RowError({ error }: { error: ScheduleError | null }) {
 }
 
 export default function DomainExpertCountingSchedulePage() {
-  const { t, date, dateTime } = useTranslation(countingScheduleDict)
+  const { t, date } = useTranslation(countingScheduleDict)
   const apiErrorMessage = useApiErrorMessage()
   const push = useToastStore(state => state.push)
   const houseId = useZoneStore(state => state.selectedHouseId) || undefined
@@ -73,15 +83,30 @@ export default function DomainExpertCountingSchedulePage() {
   return (
     <div className="flex flex-col gap-5">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
-        {/* Khung đang áp hôm nay và khung mặc định */}
-        <div className="flex flex-col gap-1.5 rounded-2xl border border-warmGray/15 bg-warmGray/5 p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
-            <Badge tone={data.today.source === 'DEFAULT' ? 'neutral' : 'info'}>{t(`today.source.${data.today.source}`)}</Badge>
+        {/* Khung đang áp hôm nay — màn rộng: tiêu đề và ghi chú bên trái, hai phiên bên phải; màn hẹp xếp dọc */}
+        <div className="flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-600 text-charcoal">
+                <CalendarClock className="h-4 w-4" aria-hidden />
+              </span>
+              <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
+              <Badge tone={SOURCE_TONE[data.today.source]}>{t(`today.source.${data.today.source}`)}</Badge>
+            </div>
+            <p className="text-sm text-graphite">{t('today.default', { morning: span(defaults.morning), evening: span(defaults.evening) })}</p>
+            {data.effective_from && <p className="text-sm font-semibold text-charcoal">{t('today.effective', { date: date(data.effective_from) })}</p>}
           </div>
-          <p className="text-sm text-charcoal">{t('today.windows', { morning: span(data.today.morning), evening: span(data.today.evening) })}</p>
-          <p className="text-xs text-warmGray">{t('today.default', { morning: span(defaults.morning), evening: span(defaults.evening) })}</p>
-          {data.effective_from && <p className="text-xs text-warmGray">{t('today.effective', { date: date(data.effective_from) })}</p>}
+          {/* Hai phiên của hôm nay: sáng mặt trời mọc, chiều mặt trăng */}
+          <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
+            <span className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-white px-3 py-2 text-sm font-semibold text-accent-800">
+              <Sunrise className="h-4 w-4 text-climateOrange" aria-hidden />
+              {t('today.morning', { window: span(data.today.morning) })}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-white px-3 py-2 text-sm font-semibold text-accent-800">
+              <Moon className="h-4 w-4 text-graphite" aria-hidden />
+              {t('today.evening', { window: span(data.today.evening) })}
+            </span>
+          </div>
         </div>
 
         {/* Hồ sơ theo mùa */}
@@ -104,7 +129,7 @@ export default function DomainExpertCountingSchedulePage() {
           {schedule.profiles.length === 0 && <p className="text-sm italic text-warmGray">{t('profiles.empty')}</p>}
           {schedule.profiles.map((profile, index) => (
             <div key={index} className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
-              <div className="grid gap-3 sm:grid-cols-[1fr_9rem_9rem_auto] sm:items-end">
+              <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_auto] lg:items-end">
                 <Input
                   id={`profile-${index}-name`}
                   label={t('profiles.name')}
@@ -114,27 +139,28 @@ export default function DomainExpertCountingSchedulePage() {
                   disabled={save.isPending}
                   onChange={event => edit({ ...schedule, profiles: schedule.profiles.map((item, at) => (at === index ? { ...item, name: event.target.value } : item)) })}
                 />
-                <Input
+                <DatePicker
                   id={`profile-${index}-from`}
                   label={t('profiles.from')}
-                  placeholder="09-01"
-                  maxLength={5}
-                  value={profile.from}
-                  disabled={save.isPending}
-                  onChange={event => edit({ ...schedule, profiles: schedule.profiles.map((item, at) => (at === index ? { ...item, from: event.target.value } : item)) })}
+                  value={toLeapDate(profile.from)}
+                  min={LEAP_YEAR_FIRST}
+                  max={LEAP_YEAR_LAST}
+                  hideYear
+                  onChange={value => edit({ ...schedule, profiles: schedule.profiles.map((item, at) => (at === index ? { ...item, from: value.slice(5) } : item)) })}
                 />
-                <Input
+                <DatePicker
                   id={`profile-${index}-to`}
                   label={t('profiles.to')}
-                  placeholder="01-14"
-                  maxLength={5}
-                  value={profile.to}
-                  disabled={save.isPending}
-                  onChange={event => edit({ ...schedule, profiles: schedule.profiles.map((item, at) => (at === index ? { ...item, to: event.target.value } : item)) })}
+                  value={toLeapDate(profile.to)}
+                  min={LEAP_YEAR_FIRST}
+                  max={LEAP_YEAR_LAST}
+                  hideYear
+                  onChange={value => edit({ ...schedule, profiles: schedule.profiles.map((item, at) => (at === index ? { ...item, to: value.slice(5) } : item)) })}
                 />
                 <Button
                   variant="secondary"
                   size="sm"
+                  className={REMOVE_BUTTON_CLASS}
                   disabled={save.isPending}
                   onClick={() => edit({ ...schedule, profiles: schedule.profiles.filter((_, at) => at !== index) })}
                 >
@@ -193,6 +219,7 @@ export default function DomainExpertCountingSchedulePage() {
                 <Button
                   variant="secondary"
                   size="sm"
+                  className={REMOVE_BUTTON_CLASS}
                   disabled={save.isPending}
                   onClick={() => edit({ ...schedule, temporary: schedule.temporary.filter((_, at) => at !== index) })}
                 >
@@ -223,22 +250,7 @@ export default function DomainExpertCountingSchedulePage() {
 
       {/* Lịch sử các lần sửa, mới nhất trước */}
       <SectionCard title={t('history.title')}>
-        {data.history.length === 0 && <p className="text-sm italic text-warmGray">{t('history.empty')}</p>}
-        <ul className="flex flex-col divide-y divide-warmGray/10">
-          {[...data.history].reverse().map(entry => (
-            <li key={entry.changed_at} className="flex flex-col gap-0.5 py-2.5">
-              <span className="text-sm text-charcoal">
-                {t('history.row', { date: date(entry.effective_from), profiles: entry.schedule.profiles.length, temporary: entry.schedule.temporary.length })}
-              </span>
-              <span className="text-xs text-warmGray">
-                {t('history.by', {
-                  role: entry.changed_by_role === 'FARM_OWNER' ? t('role.FARM_OWNER') : t('role.DOMAIN_EXPERT'),
-                  time: dateTime(entry.changed_at),
-                })}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <ScheduleHistoryList history={data.history} />
       </SectionCard>
     </div>
   )

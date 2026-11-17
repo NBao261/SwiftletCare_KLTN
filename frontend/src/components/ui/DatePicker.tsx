@@ -13,25 +13,28 @@ const pad = (value: number): string => String(value).padStart(2, '0');
 // Khoá ngày yyyy-mm-dd (so sánh chuỗi được trực tiếp)
 const dateKey = (year: number, month: number, day: number): string => `${year}-${pad(month + 1)}-${pad(day)}`;
 
-// yyyy-mm-dd → dd/mm/yyyy để hiển thị
-function toDisplay(value: string): string {
+// yyyy-mm-dd → dd/mm/yyyy để hiển thị (dd/mm khi ẩn năm)
+function toDisplay(value: string, hideYear: boolean): string {
   const [year, month, day] = value.split('-');
-  return value ? `${day}/${month}/${year}` : '';
+  if (!value) return '';
+  return hideYear ? `${day}/${month}` : `${day}/${month}/${year}`;
 }
 
-// Chữ đang gõ (chỉ giữ số) → dd/mm/yyyy, tự chèn dấu /
-function maskTyping(text: string): string {
-  const digits = text.replace(/\D/g, '').slice(0, 8);
+// Chữ đang gõ (chỉ giữ số) → dd/mm/yyyy (dd/mm khi ẩn năm), tự chèn dấu /
+function maskTyping(text: string, hideYear: boolean): string {
+  const digits = text.replace(/\D/g, '').slice(0, hideYear ? 4 : 8);
   if (digits.length <= 2) return digits;
   if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
-// dd/mm/yyyy đủ 8 số và là ngày có thật → yyyy-mm-dd, ngược lại ''
-function parseDisplay(text: string): string {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+// dd/mm/yyyy (dd/mm kèm năm cố định khi ẩn năm) đủ số và là ngày có thật → yyyy-mm-dd, ngược lại ''
+function parseDisplay(text: string, fixedYear: number | null): string {
+  const match = fixedYear === null ? /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text) : /^(\d{2})\/(\d{2})$/.exec(text);
   if (!match) return '';
-  const [, day, month, year] = match.map(Number);
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = fixedYear ?? Number(match[3]);
   const date = new Date(year, month - 1, day);
   const isReal = date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
   return isReal ? dateKey(year, month - 1, day) : '';
@@ -49,12 +52,15 @@ interface DatePickerProps {
   error?: string;
   // Dấu * đỏ sau nhãn như các ô bắt buộc khác của form
   required?: boolean;
+  // Ngày lặp lại hằng năm (VD hồ sơ theo mùa): ô và lịch không hiện năm, năm lấy theo max; min, max nên cùng một năm
+  hideYear?: boolean;
 }
 
 // Ô ngày dd/mm/yyyy (FE_Design 6.1): gõ tay tự chèn "/" hoặc chọn trên lịch tháng; ngày ngoài min–max bị mờ
-export default function DatePicker({ id, label, value, onChange, min = '', max, error, required = false }: DatePickerProps): JSX.Element {
+export default function DatePicker({ id, label, value, onChange, min = '', max, error, required = false, hideYear = false }: DatePickerProps): JSX.Element {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [text, setText] = useState(() => toDisplay(value));
+  const fixedYear = hideYear ? Number(max.slice(0, 4)) : null;
+  const [text, setText] = useState(() => toDisplay(value, hideYear));
   const [isOpen, setIsOpen] = useState(false);
   const initialMonth = (value || max).split('-').map(Number);
   const [viewYear, setViewYear] = useState(initialMonth[0]);
@@ -62,8 +68,8 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
 
   // Chọn từ lịch thì ô chữ đổi theo
   useEffect(() => {
-    if (value) setText(toDisplay(value));
-  }, [value]);
+    if (value) setText(toDisplay(value, hideYear));
+  }, [value, hideYear]);
 
   // Bấm ra ngoài hoặc Esc thì đóng lịch
   useEffect(() => {
@@ -92,7 +98,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
     return Array.from({ length: DAYS_PER_WEEK }, (_, index) =>
       formatter.format(new Date(MONDAY_REFERENCE.getFullYear(), MONDAY_REFERENCE.getMonth(), MONDAY_REFERENCE.getDate() + index)));
   }, [locale]);
-  const monthTitle = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(viewYear, viewMonth, 1));
+  const monthTitle = new Intl.DateTimeFormat(locale, hideYear ? { month: 'long' } : { month: 'long', year: 'numeric' }).format(new Date(viewYear, viewMonth, 1));
 
   // Ô lịch: chỗ trống đầu tháng (tuần bắt đầu thứ Hai) + các ngày trong tháng
   const leadingBlanks = (new Date(viewYear, viewMonth, 1).getDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
@@ -109,9 +115,9 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
   }
 
   function handleTyping(event: ChangeEvent<HTMLInputElement>): void {
-    const masked = maskTyping(event.target.value);
+    const masked = maskTyping(event.target.value, hideYear);
     setText(masked);
-    onChange(parseDisplay(masked));
+    onChange(parseDisplay(masked, fixedYear));
   }
 
   function selectDay(day: number): void {
@@ -131,7 +137,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          placeholder="dd/mm/yyyy"
+          placeholder={hideYear ? 'dd/mm' : 'dd/mm/yyyy'}
           value={text}
           onChange={handleTyping}
           aria-invalid={Boolean(error)}
