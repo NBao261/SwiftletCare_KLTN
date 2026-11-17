@@ -17,6 +17,14 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 })
 
 /** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
+/** POST /admin/farm-owners – AUTH-FR-005c */
+export const createFarmOwner = asyncHandler(async (req: Request, res: Response) => {
+  const user = await adminService.createFarmOwner(req.user._id, {
+    email: req.body.email as string, full_name: req.body.full_name as string, phone: req.body.phone as string | undefined,
+  })
+  res.status(201).json({ success: true, data: user })
+})
+
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
