@@ -52,6 +52,16 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
+    # HLS của MediaMTX cho app mobile (EXPO_PUBLIC_STREAM_URL=https://<DOMAIN>/hls, Report 4 DF-7)
+    location /hls/ {
+        proxy_pass http://mediamtx:8888/;
+        # MediaMTX chuyển hướng kiểm cookie về /cam-…: giữ tiền tố /hls
+        proxy_redirect / /hls/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_buffering off;
+    }
     # Trang web một trang: đường dẫn lạ trả index.html
     location / {
         try_files $uri $uri/ /index.html;

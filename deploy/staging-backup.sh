@@ -1,0 +1,29 @@
+#!/bin/sh
+# Sao lưu MongoDB của staging (G-17, docs/deploy/staging.md §3). Chạy từ gốc repo trên VPS:
+#   sh deploy/staging-backup.sh                 # cron 03:00 mỗi ngày, và ngay trước mỗi lần triển khai
+#   BACKUP_REMOTE=gdrive:swiftletcare sh deploy/staging-backup.sh   # chép thêm ra ngoài VPS bằng rclone
+# Giữ BACKUP_KEEP bản mới nhất (mặc định 7) trong BACKUP_DIR (mặc định ~/backup). Khôi phục: staging.md §3.
+set -eu
+cd "$(dirname "$0")/.."
+
+DIR=${BACKUP_DIR:-$HOME/backup}
+KEEP=${BACKUP_KEEP:-7}
+FILE="$DIR/swiftletcare-$(date +%F-%H%M).gz"
+mkdir -p "$DIR"
+
+# Mật khẩu đọc trong container, không hiện trên dòng lệnh của VPS
+docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging exec -T mongodb sh -c \
+  'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db swiftletcare --archive --gzip' \
+  > "$FILE"
+# Bản rỗng nghĩa là dump hỏng: báo lỗi để cron gửi thư, không xoá các bản cũ còn tốt
+if [ ! -s "$FILE" ]; then
+  rm -f "$FILE"
+  echo "Sao lưu thất bại: file rỗng" >&2
+  exit 1
+fi
+
+ls -1t "$DIR"/swiftletcare-*.gz | tail -n +$((KEEP + 1)) | xargs -r rm --
+if [ -n "${BACKUP_REMOTE:-}" ]; then
+  rclone copy "$FILE" "$BACKUP_REMOTE"
+fi
+echo "Đã sao lưu: $FILE"
