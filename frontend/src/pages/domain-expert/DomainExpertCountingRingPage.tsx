@@ -1,4 +1,5 @@
-// VISION-FR-018 — Chuyên gia vẽ vòng đếm chim trên khung live (Farm Owner khi farm chưa có chuyên gia, BR-22)
+// VISION-FR-018 — Chuyên gia vẽ vòng đếm chim trên khung live. Backend còn cho Farm Owner (farm chưa có chuyên gia, BR-22)
+// và Farm Technician của nhà; web chưa mở trang này cho hai vai đó (route chỉ EXPERT_ROLES), thợ vẽ trên mobile
 import { useState, useEffect } from 'react'
 import { Crosshair, History, AlertTriangle } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'
@@ -9,6 +10,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 import { useHouseCameras } from '@/hooks/domain-expert/useCountingRing'
 import CountingRingEditor from '@/components/features/domain-expert/counting-ring/CountingRingEditor'
 import CountingRingHistory from '@/components/features/domain-expert/counting-ring/CountingRingHistory'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 
 export default function DomainExpertCountingRingPage() {
   const { selectedHouseId } = useZoneStore()
@@ -62,11 +64,7 @@ export default function DomainExpertCountingRingPage() {
 
         {!isLoading && !isError && camera && (
           <div className="space-y-2">
-            {camera.simulated && (
-              <span className="inline-block text-xs px-2 py-0.5 rounded-full font-semibold border bg-amber-50 text-amber-700 border-amber-200">
-                Thiết bị giả lập
-              </span>
-            )}
+            <SimulatedBadge simulated={camera.simulated} />
             <CountingRingEditor key={camera._id} camera={camera} houseId={houseId} />
           </div>
         )}

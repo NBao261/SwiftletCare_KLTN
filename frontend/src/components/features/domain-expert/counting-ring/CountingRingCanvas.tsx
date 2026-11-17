@@ -32,10 +32,10 @@ export default function CountingRingCanvas({ videoRef, points, isEditing, onAddP
       <div className={`absolute inset-0 ${isEditing ? 'cursor-crosshair' : ''}`} onClick={handleClick}>
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
           {points.length >= 2 && (
+            // Màu token accent-600 (FE_Design 2.1, 13.7): xanh chanh dễ thấy trên khung hình camera tối
             <polygon
               points={polygonPoints}
-              fill="rgba(74,124,89,0.18)"
-              stroke="#4a7c59"
+              className="fill-accent-600/20 stroke-accent-600"
               strokeWidth={2}
               strokeDasharray="4 3"
               vectorEffect="non-scaling-stroke"
@@ -51,8 +51,8 @@ export default function CountingRingCanvas({ videoRef, points, isEditing, onAddP
               event.stopPropagation()
               if (isEditing) onRemovePoint(index)
             }}
-            className="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow disabled:cursor-default"
-            style={{ left: `${x * 100}%`, top: `${y * 100}%`, backgroundColor: '#4a7c59' }}
+            className="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-accent-600 shadow disabled:cursor-default"
+            style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
             aria-label={`Đỉnh ${index + 1}${isEditing ? ' — chạm để xoá' : ''}`}
           />
         ))}

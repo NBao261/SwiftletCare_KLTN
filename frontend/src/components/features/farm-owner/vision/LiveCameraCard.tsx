@@ -8,7 +8,7 @@ import { dashboardDict } from '@/constants/dashboard.i18n'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useHousesBirdCountCurrent } from '@/hooks/farm-owner/useAnalytics'
 import { useHouseCameras } from '@/hooks/farm-owner/useHouseCameras'
-import { useWhepStream } from '@/hooks/farm-owner/useWhepStream'
+import { useWhepStream } from '@/hooks/shared/useWhepStream'
 import { cn } from '@/lib/cn'
 import type { DeviceStatus } from '@/types'
 

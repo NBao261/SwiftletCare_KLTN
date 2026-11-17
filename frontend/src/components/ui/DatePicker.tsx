@@ -62,7 +62,11 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
   const fixedYear = hideYear ? Number(max.slice(0, 4)) : null;
   const [text, setText] = useState(() => toDisplay(value, hideYear));
   const [isOpen, setIsOpen] = useState(false);
-  const initialMonth = (value || max).split('-').map(Number);
+  // Ô trống thì mở ở tháng hôm nay, kẹp trong min–max (max rất xa như '9999-12-31' không làm lịch mở ở năm đó)
+  const now = new Date();
+  const nowKey = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
+  const emptyStart = min && nowKey < min ? min : nowKey > max ? max : nowKey;
+  const initialMonth = (value || emptyStart).split('-').map(Number);
   const [viewYear, setViewYear] = useState(initialMonth[0]);
   const [viewMonth, setViewMonth] = useState(initialMonth[1] - 1);
 

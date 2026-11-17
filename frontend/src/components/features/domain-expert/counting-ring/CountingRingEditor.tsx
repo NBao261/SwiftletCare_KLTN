@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { Undo2, Trash2, Save, X, Pencil, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
-import { useCameraStream } from '@/hooks/domain-expert/useCameraStream'
+import { useWhepStream } from '@/hooks/shared/useWhepStream'
 import { useUpdateCountingRing } from '@/hooks/domain-expert/useCountingRing'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
@@ -26,7 +26,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
-  const { status, retry } = useCameraStream(videoRef, camera._id)
+  const { status, retry } = useWhepStream(videoRef, camera._id)
   const mutation = useUpdateCountingRing(houseId)
   const getErrorMessage = useApiErrorMessage()
   const pushToast = useToastStore(state => state.push)
