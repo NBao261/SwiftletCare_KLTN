@@ -19,6 +19,7 @@ import {
   XCircle,
   Clock,
   Layers,
+  CalendarClock,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
@@ -66,6 +67,11 @@ const ACTION_CONFIG: Record<
     icon: Layers,
     badgeClass: 'bg-teal-50 text-teal-700 border-teal-200',
   },
+  COUNTING_SCHEDULE_UPDATED: {
+    label: 'Lịch đếm chim',
+    icon: CalendarClock,
+    badgeClass: 'bg-accent-50 text-accent-800 border-accent-200',
+  },
   HEALTH_REPORT_CONCLUDED: {
     label: 'Kết luận báo cáo',
     icon: FileText,
@@ -81,6 +87,7 @@ const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'DETECTION_TUNING_UPDATED', label: 'Tham số phát hiện lỗi' },
   { value: 'BIRD_COUNT_TUNING_UPDATED', label: 'Sụt giảm đàn chim' },
   { value: 'COUNTING_RING_UPDATED', label: 'Vòng đếm camera' },
+  { value: 'COUNTING_SCHEDULE_UPDATED', label: 'Lịch đếm chim' },
   { value: 'HEALTH_REPORT_CONCLUDED', label: 'Kết luận báo cáo' },
 ]
 

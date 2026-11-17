@@ -122,6 +122,7 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/domain-expert/alert-verdicts',  roles: EXPERT_ROLES },
   { path: '/domain-expert/reviews',         roles: EXPERT_ROLES },
   { path: '/domain-expert/tuning',          roles: EXPERT_ROLES },
+  { path: '/domain-expert/counting-schedule',     roles: EXPERT_ROLES },
   { path: '/domain-expert/weather-rules',         roles: EXPERT_ROLES },
   { path: '/domain-expert/reports',               roles: EXPERT_ROLES },
   { path: '/domain-expert/profiles',              roles: EXPERT_ROLES },
