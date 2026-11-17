@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { User, IUser } from '@/models/user.model'
 import { logAction } from '@/services/auditLog.service'
+import { resetCodeMail, sendMail } from '@/services/mail.service'
 import { notifyAdmins } from '@/services/notification.service'
 import { criticalHasOutsideChannel } from '@/utils/notificationChannels.util'
 import type { AlertSeverity, ChannelChoice, JwtAccessPayload, NotificationPreferences } from '@/types'
@@ -133,13 +134,15 @@ export async function forgotPassword(email: string): Promise<void> {
   if (!user) return
 
   const token = crypto.randomInt(100000, 999999).toString()
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS)
   user.password_reset_token_hash = hashToken(token)
-  user.password_reset_expires_at = new Date(Date.now() + RESET_TOKEN_TTL_MS)
+  user.password_reset_expires_at = expiresAt
   await user.save()
 
-  // TODO(G-02 P1): gửi thật qua SMTP — hiện chỉ log ở dev
-  // eslint-disable-next-line no-console
-  console.log(`[DEV RESET] ${email} → ${token}`)
+  // Gửi qua e-mail (SF-03); mã không bao giờ ghi log. Không chờ SMTP trong request: chờ thì email có tài khoản trả
+  // chậm hơn email không có (một vòng SMTP), lộ tài khoản qua thời gian phản hồi (Flow 11 case 1a). sendMail không
+  // throw; thư lỗi thì người dùng gửi lại yêu cầu
+  void sendMail(resetCodeMail({ to: user.email, code: token, expiresAt }))
 }
 
 /**

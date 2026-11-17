@@ -149,7 +149,8 @@ async function sendPush(userId: string, title: string, body: string, ref?: UserN
 }
 
 async function sendEmail(email: string | undefined, subject: string, body: string): Promise<void> {
-  // TODO(E6): nối SMTP bằng nodemailer (đã có trong dependencies) — cùng chỗ với luồng OTP/đặt lại mật khẩu.
+  // Thông báo nghiệp vụ chưa gửi e-mail thật (kênh ngoài ứng dụng là push và Telegram, ALERT-FR-002, 013). Thư tài khoản
+  // (lời mời, mã đặt lại mật khẩu, mật khẩu tạm) gửi thật qua mail.service
   logger.info('[notify:email] (chưa nối SMTP thật)', { email, subject, body })
 }
 

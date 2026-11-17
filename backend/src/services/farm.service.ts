@@ -12,6 +12,7 @@ import {
   farmHasActiveExpert,
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
+import { invitationMail, sendMail } from '@/services/mail.service'
 import { releaseTechnicianWorkOrders } from '@/services/workOrder.service'
 import { assertValidRoster, type RosterShift } from '@/utils/roster.util'
 import { DEFAULT_HOUSE_STAGE } from '@/utils/houseStage.util'
@@ -238,6 +239,11 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
   await logAction(user._id, 'FARM_MEMBER_INVITED', 'farm', String(farm._id), {
     email: normalizedEmail, role,
   })
+  // AUTH-FR-010 — người được mời nhận link qua e-mail (kể cả khi chưa có tài khoản); thư lỗi không làm hỏng lời mời
+  await sendMail(invitationMail({
+    to: normalizedEmail, farmName: farm.name, roleLabel: MEMBER_ROLE_LABEL[role],
+    token: invitation.token, expiresAt: invitation.expires_at,
+  }))
   return invitation
 }
 
