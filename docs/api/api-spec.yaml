@@ -194,8 +194,10 @@ paths:
       description: |
         Luôn trả 200 kể cả khi email không tồn tại, để không lộ thông tin tài
         khoản (Flow 11 case 1a). Mã 6 chữ số có TTL 15 phút, dùng 1 lần, gửi qua
-        e-mail (SMTP, Report 4 §2.1); mã không bao giờ được ghi log. Máy chủ chưa
-        cấu hình SMTP thì không gửi được thư (chỉ ghi một cảnh báo không kèm mã).
+        e-mail (SMTP, Report 4 §2.1); mã không bao giờ được ghi log. Response trả về
+        trước khi thư đi (không chờ SMTP), để thời gian phản hồi giống nhau dù email có
+        tài khoản hay không. Máy chủ chưa cấu hình SMTP thì không gửi được thư (chỉ ghi
+        một cảnh báo không kèm mã). SMTP chờ tối đa 10 giây mỗi bước (Report 3 §4.5).
       requestBody:
         required: true
         content:
