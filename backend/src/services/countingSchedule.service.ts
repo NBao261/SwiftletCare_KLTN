@@ -1,6 +1,7 @@
 import type { IHouse } from '@/models/houseZone.model'
 import { logAction } from '@/services/auditLog.service'
 import { vnDate } from '@/services/birdCount.service'
+import { pushHouseCameraConfigs } from '@/services/device.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import {
   DEFAULT_WINDOWS, addDays, parseCountingSchedule, scheduleOn, windowsOn, type CountingSchedule,
@@ -54,6 +55,8 @@ export async function updateCountingSchedule(houseId: string, user: CurrentUser,
   const overflow = house.counting_schedule_history.length - THRESHOLD_HISTORY_LIMIT
   if (overflow > 0) house.counting_schedule_history.splice(0, overflow)
   await house.save()
+  // Nút AI nhận khung mới ngay (áp từ ngày mai) để số trực tiếp theo đúng khung; mất kết nối thì nhận khi nối lại
+  await pushHouseCameraConfigs(house._id)
 
   const auditId = await logAction(user._id, 'COUNTING_SCHEDULE_UPDATED', 'house', String(house._id), {
     before, after: schedule, effective_from: effectiveFrom, house_id: String(house._id),
