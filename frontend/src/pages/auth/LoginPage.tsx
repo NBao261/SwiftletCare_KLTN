@@ -29,6 +29,7 @@ export default function LoginPage(): JSX.Element {
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <Input
           label="Email"
+          name="email"
           type="email"
           required
           autoComplete="email"
@@ -37,6 +38,7 @@ export default function LoginPage(): JSX.Element {
         />
         <Input
           label="Mật khẩu"
+          name="password"
           type="password"
           required
           autoComplete="current-password"
@@ -50,7 +52,7 @@ export default function LoginPage(): JSX.Element {
           Quên mật khẩu?
         </Link>
         {errorMessage && (
-          <p className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{errorMessage}</p>
+          <p role="alert" className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{errorMessage}</p>
         )}
         <Button type="submit" size="lg" loading={login.isPending} className="mt-2 w-full">
           Đăng nhập

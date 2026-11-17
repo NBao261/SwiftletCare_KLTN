@@ -1481,7 +1481,7 @@ Quy tắc định dạng ở đầu tài liệu phải do máy bắt, không tr�
 |---|---|---|---|
 | Logic thuần (validator, helper, hàm tính trong `*.ts` của feature, cấu hình chung như `severity.ts`) | vitest, file `*.test.ts` cạnh file nguồn | **[Bắt buộc]** mỗi hàm logic mới hoặc sửa hành vi | Có (7 file) |
 | Hook React Query, component có logic (bảng, form, badge dùng chung) | vitest + `@testing-library/react` + `jsdom` | **[Nên]** với component dùng chung ở `common/`, form có validate | Chưa cài |
-| Luồng chính end-to-end | Playwright | **[Nên]** trước mỗi vòng review hội đồng | Chưa cài |
+| Luồng chính end-to-end | Playwright 1.64.1, `e2e/*.spec.ts` (`npm run test:e2e`, job CI `e2e` trên backend đã seed) | **[Nên]** trước mỗi vòng review hội đồng | Đã cài; có luồng đăng nhập từng role (`e2e/login.spec.ts`) |
 
 Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và về đúng trang chủ · Farm Owner xác nhận cảnh báo · Farm Owner can thiệp tay relay có thời hạn · Domain Expert kiểm chứng cảnh báo (khi có màn) · Domain Expert duyệt thay đổi ngưỡng của chủ farm (khi có endpoint) · đổi VI/EN trên 1 màn có từ điển. Thiết lập thiết bị bằng QR (SF-01) kiểm trên mobile.
 
