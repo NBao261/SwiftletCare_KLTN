@@ -1,4 +1,5 @@
 import type { Dictionary } from '@/lib/i18n'
+import { prefixLabels, roleDict } from '@/constants/enumLabels.i18n'
 
 // Từ điển trang Lịch đếm chim của Domain Expert — VISION-FR-019, BR-13, BR-21
 const vi = {
@@ -41,6 +42,7 @@ const vi = {
   'error.monthDay': 'Chọn ngày bắt đầu và kết thúc có thật',
   'error.date': 'Chọn ngày bắt đầu và kết thúc',
   'error.dateOrder': 'Ngày bắt đầu không được sau ngày kết thúc',
+  'error.overlap': 'Trùng ngày với một dòng phía trên',
   'error.fixRows': 'Sửa các dòng báo lỗi trước khi lưu.',
   'save.discard': 'Huỷ thay đổi',
   'save.submit': 'Lưu lịch',
@@ -60,8 +62,7 @@ const vi = {
   'history.state.SUPERSEDED': 'Không được áp',
   'history.state.APPLIED': 'Đã áp',
   'history.supersededHint': 'Bị lần sửa sau trong cùng ngày thay trước khi áp',
-  'role.DOMAIN_EXPERT': 'Chuyên gia',
-  'role.FARM_OWNER': 'Chủ nhà yến',
+  ...prefixLabels('role.', roleDict.vi),
 }
 
 export type CountingScheduleKey = keyof typeof vi
@@ -106,6 +107,7 @@ const en: Record<CountingScheduleKey, string> = {
   'error.monthDay': 'Choose real start and end dates',
   'error.date': 'Choose the start and end dates',
   'error.dateOrder': 'The start date cannot be after the end date',
+  'error.overlap': 'Overlaps the dates of a row above',
   'error.fixRows': 'Fix the rows with errors before saving.',
   'save.discard': 'Discard changes',
   'save.submit': 'Save schedule',
@@ -125,8 +127,7 @@ const en: Record<CountingScheduleKey, string> = {
   'history.state.SUPERSEDED': 'Not applied',
   'history.state.APPLIED': 'Applied',
   'history.supersededHint': 'Replaced by a later change on the same day before it applied',
-  'role.DOMAIN_EXPERT': 'Expert',
-  'role.FARM_OWNER': 'Farm Owner',
+  ...prefixLabels('role.', roleDict.en),
 }
 
 export const countingScheduleDict: Dictionary<CountingScheduleKey> = { vi, en }

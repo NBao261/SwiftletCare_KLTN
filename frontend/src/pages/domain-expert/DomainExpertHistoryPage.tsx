@@ -27,7 +27,7 @@ import { useAllZones, useHouses } from '@/hooks/shared/useFarms'
 import { useExpertActivity } from '@/hooks/domain-expert/useExpertAlerts'
 import type { AlertType } from '@/types'
 import type { CountingSchedule, ExpertActivityEntry } from '@/types/expert.types'
-import { formatDateOnly, formatTimeOnly } from '@/lib/helpers'
+import { formatHourMinute, formatStandardDate } from '@/lib/i18n'
 import { cn } from '@/lib/cn'
 
 const ACTION_OPTIONS: SelectMenuOption<string>[] = [
@@ -239,8 +239,8 @@ export default function DomainExpertHistoryPage() {
       // Hai dòng: giờ phía trên, ngày xám phía dưới
       render: item => (
         <div className="flex flex-col tabular-nums">
-          <span className="text-sm text-charcoal">{formatTimeOnly(item.created_at)}</span>
-          <span className="text-xs text-warmGray">{formatDateOnly(item.created_at)}</span>
+          <span className="text-sm text-charcoal">{formatHourMinute(item.created_at)}</span>
+          <span className="text-xs text-warmGray">{formatStandardDate(item.created_at)}</span>
         </div>
       ),
     },

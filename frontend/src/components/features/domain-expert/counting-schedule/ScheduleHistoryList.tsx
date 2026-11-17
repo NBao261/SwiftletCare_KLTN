@@ -3,12 +3,8 @@ import { NO_VALUE } from '@/constants/display'
 import { countingScheduleDict } from '@/constants/countingSchedule.i18n'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { cn } from '@/lib/cn'
-import type { CountingScheduleView, TimeWindow } from '@/types/expert.types'
-
-type HistoryEntry = CountingScheduleView['history'][number]
-// LATEST: lần sửa cuối · SUPERSEDED: bị lần sau cùng ngày thay trước khi áp · APPLIED: đã áp một thời gian rồi mới bị thay
-type HistoryState = 'LATEST' | 'SUPERSEDED' | 'APPLIED'
-interface HistoryRow { entry: HistoryEntry; state: HistoryState }
+import { historyRows, type HistoryEntry, type HistoryRow, type HistoryState } from '@/components/features/domain-expert/counting-schedule/scheduleHistory.utils'
+import type { TimeWindow } from '@/types/expert.types'
 
 const STATE_TONE: Record<HistoryState, BadgeTone> = { LATEST: 'positive', SUPERSEDED: 'neutral', APPLIED: 'info' }
 
@@ -16,15 +12,6 @@ const STATE_TONE: Record<HistoryState, BadgeTone> = { LATEST: 'positive', SUPERS
 const span = (window: TimeWindow) => `${window.start}–${window.end}`
 // 'MM-DD' → 'DD/MM'
 const monthDay = (value: string) => value.split('-').reverse().join('/')
-
-// Backend trả cũ trước; mỗi ngày chỉ dùng lần sửa cuối của ngày đó, nên lần có lần sau cùng ngày áp là không được áp
-function historyRows(history: HistoryEntry[]): HistoryRow[] {
-  return history.map((entry, index): HistoryRow => {
-    if (index === history.length - 1) return { entry, state: 'LATEST' }
-    const isSuperseded = history.slice(index + 1).some(later => later.effective_from === entry.effective_from)
-    return { entry, state: isSuperseded ? 'SUPERSEDED' : 'APPLIED' }
-  }).reverse()
-}
 
 // VISION-FR-019 — bảng các lần sửa lịch đếm, mới nhất trước: ngày áp, người sửa, lúc sửa, hồ sơ, khung tạm, trạng thái
 export default function ScheduleHistoryList({ history }: { history: HistoryEntry[] }) {

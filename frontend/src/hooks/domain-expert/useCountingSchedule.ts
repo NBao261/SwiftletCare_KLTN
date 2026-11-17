@@ -18,6 +18,9 @@ export function useUpdateCountingSchedule(houseId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (schedule: CountingSchedule) => countingScheduleApi.update(houseId!, schedule).then(response => response.data.data),
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: COUNTING_SCHEDULE_KEY(houseId) }) },
+    onSuccess: saved => {
+      queryClient.setQueryData(COUNTING_SCHEDULE_KEY(houseId), saved)
+      void queryClient.invalidateQueries({ queryKey: COUNTING_SCHEDULE_KEY(houseId) })
+    },
   })
 }

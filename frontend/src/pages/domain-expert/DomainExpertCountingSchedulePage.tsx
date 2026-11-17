@@ -14,7 +14,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 import type { CountingSchedule, CountingWindowSource, DayWindows, TimeWindow } from '@/types/expert.types'
 import {
   MAX_SCHEDULE_PROFILES, MAX_TEMPORARY_WINDOWS, PROFILE_NAME_MAX_LENGTH, validateCountingSchedule, type ScheduleError,
-} from '@/validations/common/countingSchedule.validation'
+} from '@/validations/domain-expert/countingSchedule.validation'
 
 // "05:30–07:00"
 const span = (window: TimeWindow) => `${window.start}–${window.end}`
@@ -22,6 +22,10 @@ const span = (window: TimeWindow) => `${window.start}–${window.end}`
 const LEAP_YEAR_FIRST = '2024-01-01'
 const LEAP_YEAR_LAST = '2024-12-31'
 const toLeapDate = (monthDay: string) => (/^\d{2}-\d{2}$/.test(monthDay) ? `2024-${monthDay}` : '')
+// Khung tạm không có giới hạn ngày cuối (backend không đặt); DatePicker cần max nên dùng một ngày rất xa
+const NO_LAST_DATE = '9999-12-31'
+// 'YYYY-MM-DD' + 1 ngày
+const nextDay = (date: string) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
 // Nhãn nguồn của khung hôm nay: khung tạm cam (ngày đặc biệt), hồ sơ mùa xanh dương, mặc định xám
 const SOURCE_TONE: Record<CountingWindowSource, BadgeTone> = { TEMPORARY: 'warning', PROFILE: 'info', DEFAULT: 'neutral' }
 // Nút xoá dòng: tông đỏ như nút Hủy lọc của Farm Owner (ClearFiltersButton tone danger)
@@ -64,8 +68,8 @@ export default function DomainExpertCountingSchedulePage() {
   const edit = (next: CountingSchedule) => setDraftState({ houseId, schedule: next })
   // Dòng mới lấy sẵn khung mặc định để chỉ cần sửa giờ khác
   const defaults: DayWindows = data.default_windows
-  // Ngày hôm nay theo giờ VN do backend tính
-  const today = data.today.date
+  // Lịch mới áp từ ngày mai (giờ VN, backend tính hôm nay), nên khung tạm bắt đầu sớm nhất từ ngày mai
+  const tomorrow = nextDay(data.today.date)
 
   function submit() {
     setShowErrors(true)
@@ -190,7 +194,7 @@ export default function DomainExpertCountingSchedulePage() {
               variant="secondary"
               size="sm"
               disabled={schedule.temporary.length >= MAX_TEMPORARY_WINDOWS || save.isPending}
-              onClick={() => edit({ ...schedule, temporary: [...schedule.temporary, { from: today, to: today, ...defaults }] })}
+              onClick={() => edit({ ...schedule, temporary: [...schedule.temporary, { from: tomorrow, to: tomorrow, ...defaults }] })}
             >
               <Plus className="h-3.5 w-3.5" aria-hidden />
               {t('temporary.add')}
@@ -200,21 +204,21 @@ export default function DomainExpertCountingSchedulePage() {
           {schedule.temporary.map((window, index) => (
             <div key={index} className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
               <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                <Input
+                <DatePicker
                   id={`temporary-${index}-from`}
-                  type="date"
                   label={t('temporary.from')}
                   value={window.from}
-                  disabled={save.isPending}
-                  onChange={event => edit({ ...schedule, temporary: schedule.temporary.map((item, at) => (at === index ? { ...item, from: event.target.value } : item)) })}
+                  min={tomorrow}
+                  max={NO_LAST_DATE}
+                  onChange={value => edit({ ...schedule, temporary: schedule.temporary.map((item, at) => (at === index ? { ...item, from: value } : item)) })}
                 />
-                <Input
+                <DatePicker
                   id={`temporary-${index}-to`}
-                  type="date"
                   label={t('temporary.to')}
                   value={window.to}
-                  disabled={save.isPending}
-                  onChange={event => edit({ ...schedule, temporary: schedule.temporary.map((item, at) => (at === index ? { ...item, to: event.target.value } : item)) })}
+                  min={tomorrow}
+                  max={NO_LAST_DATE}
+                  onChange={value => edit({ ...schedule, temporary: schedule.temporary.map((item, at) => (at === index ? { ...item, to: value } : item)) })}
                 />
                 <Button
                   variant="secondary"
