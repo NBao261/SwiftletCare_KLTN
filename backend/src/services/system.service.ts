@@ -2,7 +2,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { Farm } from '@/models/farm.model'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
-import { User } from '@/models/user.model'
+import { User, canSignIn, type UserStatus } from '@/models/user.model'
 import { Zone } from '@/models/houseZone.model'
 import { summarizeByStatus } from '@/services/device.service'
 import { logAction } from '@/services/auditLog.service'
@@ -220,15 +220,9 @@ export async function getHealthOverview() {
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
     CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).select('status').lean(),   // camera gắn House (v2.1.8)
 
-    // Tài khoản xoá theo yêu cầu cũng is_active=false nhưng không phải "đang bị khoá" —
-    // tách riêng, nếu không số tài khoản bị khoá Admin thấy cứ tăng theo mỗi lần xoá
-    User.aggregate<{ _id: { role: string | null; is_active: boolean; deleted: boolean }; count: number }>([
-      {
-        $group: {
-          _id: { role: '$role', is_active: '$is_active', deleted: { $ne: [{ $ifNull: ['$deleted_at', null] }, null] } },
-          count: { $sum: 1 },
-        },
-      },
+    // SM-14: DELETED tách khỏi LOCKED, nếu không số tài khoản bị khoá Admin thấy cứ tăng theo mỗi lần xoá
+    User.aggregate<{ _id: { role: string | null; status: UserStatus | null }; count: number }>([
+      { $group: { _id: { role: '$role', status: '$status' }, count: { $sum: 1 } } },
     ]),
   ])
 
@@ -240,10 +234,10 @@ export async function getHealthOverview() {
   for (const g of userGroups) {
     const role = g._id.role ?? 'NONE'
     users.byRole[role] ??= { active: 0, inactive: 0, deleted: 0 }
-    if (g._id.deleted) {
+    if (g._id.status === 'DELETED') {
       users.byRole[role].deleted += g.count
       users.deleted += g.count
-    } else if (g._id.is_active) {
+    } else if (canSignIn({ status: g._id.status ?? 'ACTIVE' })) {
       users.byRole[role].active += g.count
       users.active += g.count
     } else {

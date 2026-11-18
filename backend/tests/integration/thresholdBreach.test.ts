@@ -89,6 +89,26 @@ const settle = () => new Promise(r => setTimeout(r, 150))
 const breaches = (zoneId: unknown) => Alert.find({ zone_id: zoneId, type: 'THRESHOLD_BREACH' }).lean()
 const LOW_HUMIDITY = { humidity: DEFAULT_THRESHOLDS.humidity_min - 5 }
 
+describe('trường hợp lệ của mẫu telemetry (ENV-FR-004, 024; Report 4 §6.1)', () => {
+  it('ghi cảm biến báo cũ (null) vào stale_fields, chỉ số vượt ngưỡng vào anomaly_fields, mẫu buffer có buffered', async () => {
+    const { node, t0 } = await seed()
+    const base = {
+      deviceId: node.device_id, temperature: 28, light_lux: 0.1, nh3_ppm: 5, co2_ppm: 800, sound_db: 40,
+      relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO' as const,
+    }
+    // Firmware gửi NaN thành null: cảm biến độ ẩm không đọc được
+    await ingestTelemetry({ ...base, humidity: null as unknown as number, nh3_ppm: DEFAULT_THRESHOLDS.nh3_max + 10, timestamp: t0 }, t0)
+    await ingestTelemetry({ ...base, humidity: 85, timestamp: t0 - 3 * MIN, buffered: true }, t0 + 1000)
+    const [buffered, live] = await Telemetry.find({ node_id: node._id }).sort({ timestamp: 1 }).lean()
+    expect(live).toMatchObject({ stale_fields: ['humidity'], anomaly_fields: ['nh3_ppm'], is_anomaly: true })
+    expect(live.humidity).toBeUndefined()
+    expect(live.buffered).toBeUndefined()
+    expect(buffered).toMatchObject({ buffered: true, is_anomaly: false })
+    expect(buffered.stale_fields).toBeUndefined()
+    expect(buffered.anomaly_fields).toBeUndefined()
+  })
+})
+
 describe('THRESHOLD_BREACH có thời gian chờ (TC-F07-02)', () => {
   it('độ ẩm thấp hơn humidity_min 5 %RH: 9 phút không có cảnh báo, 10 phút có 1 cảnh báo mang chi tiết', async () => {
     const { zone, t0, run } = await seed()

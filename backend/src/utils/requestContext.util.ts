@@ -7,6 +7,10 @@ import type { Role } from '@/types'
  */
 interface RequestContext {
   ip?: string
+  /** Report 4 §6.1 AUDIT_LOG.client — User-Agent của web/mobile */
+  client?: string
+  /** Report 4 §6.1 AUDIT_LOG.correlation_id — một mã cho mọi dòng audit của cùng request */
+  correlationId?: string
   /** Vai trò người đã đăng nhập — `authenticate` ghi vào sau khi xác thực token */
   actorRole?: Role
 }
@@ -20,6 +24,12 @@ export function runWithRequestContext<T>(context: RequestContext, fn: () => T): 
 /** IP client của request hiện tại; undefined khi chạy ngoài request (job nền, MQTT handler, test). */
 export function getRequestIp(): string | undefined {
   return storage.getStore()?.ip
+}
+
+/** User-Agent và mã của request hiện tại cho audit log; rỗng ngoài request */
+export function getRequestClient(): { client?: string; correlationId?: string } {
+  const store = storage.getStore()
+  return { client: store?.client, correlationId: store?.correlationId }
 }
 
 /** Ghi vai trò người gọi vào ngữ cảnh request hiện tại; ngoài request thì bỏ qua */

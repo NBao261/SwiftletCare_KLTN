@@ -72,9 +72,9 @@ describe('setUserStatus', () => {
 
     const user = await setUserStatus(String(admin._id), String(target._id), false, '  Spam đơn hàng  ')
 
-    expect(user.is_active).toBe(false)
-    expect(user.deactivated_reason).toBe('Spam đơn hàng')
-    expect(user.deactivated_at).toBeInstanceOf(Date)
+    expect(user.status).toBe('LOCKED')
+    expect(user.locked_reason).toBe('Spam đơn hàng')
+    expect(user.locked_at).toBeInstanceOf(Date)
     expect(user.refresh_tokens).toHaveLength(0)
     expect(disconnectUser).toHaveBeenCalledWith(String(target._id))
     expect(await auditActions('ACCOUNT_LOCKED')).toHaveLength(1)
@@ -89,12 +89,12 @@ describe('setUserStatus', () => {
 
   it('unlocks without a reason, clears lock fields and keeps sockets alone', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
-    const target = await mkUser('victim@test.vn', 'FARM_OWNER', { is_active: false, deactivated_reason: 'x', deactivated_at: new Date() })
+    const target = await mkUser('victim@test.vn', 'FARM_OWNER', { status: 'LOCKED', locked_reason: 'x', locked_at: new Date() })
 
     const user = await setUserStatus(String(admin._id), String(target._id), true)
 
-    expect(user.is_active).toBe(true)
-    expect(user.deactivated_reason).toBeUndefined()
+    expect(user.status).toBe('ACTIVE')
+    expect(user.locked_reason).toBeUndefined()
     expect(disconnectUser).not.toHaveBeenCalled()
     expect(await auditActions('ACCOUNT_UNLOCKED')).toHaveLength(1)
   })
@@ -102,6 +102,29 @@ describe('setUserStatus', () => {
   it('refuses self-lock', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     await expect(setUserStatus(String(admin._id), String(admin._id), false, 'x')).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it('SM-14: refuses to lock an account waiting for deletion (409) and keeps its status', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn')
+    await requestAccountDeletion(String(target._id))
+    await expect(setUserStatus(String(admin._id), String(target._id), false, 'Vi phạm điều khoản')).rejects.toMatchObject({ statusCode: 409 })
+    expect((await User.findById(target._id))!.status).toBe('DELETION_REQUESTED')
+  })
+
+  it('SM-14: unlocking an account waiting for deletion keeps DELETION_REQUESTED', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn')
+    await requestAccountDeletion(String(target._id))
+    const user = await setUserStatus(String(admin._id), String(target._id), true)
+    expect(user.status).toBe('DELETION_REQUESTED')
+  })
+
+  it('keeps the old field names in the API (is_active, deactivated_*) derived from status for web and mobile', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn')
+    const json = (await setUserStatus(String(admin._id), String(target._id), false, 'Spam đơn hàng')).toJSON() as Record<string, unknown>
+    expect(json).toMatchObject({ status: 'LOCKED', is_active: false, deactivated_reason: 'Spam đơn hàng' })
   })
 })
 
@@ -111,9 +134,11 @@ describe('cancelAccountDeletion', () => {
     const user = await mkUser('user@test.vn')
     await requestAccountDeletion(String(user._id))
 
+    expect((await User.findById(user._id))!.status).toBe('DELETION_REQUESTED')
     const after = await cancelAccountDeletion(String(user._id))
 
     expect(after.deletion_requested_at).toBeUndefined()
+    expect(after.status).toBe('ACTIVE')
     expect(await auditActions('DELETION_CANCELLED')).toHaveLength(1)
     expect(notifyAdmins).toHaveBeenCalledWith(expect.objectContaining({ title: 'Yêu cầu xoá tài khoản đã được huỷ' }))
     // gửi lại được yêu cầu mới sau khi huỷ
@@ -137,7 +162,7 @@ describe('rejectDeletionRequest', () => {
 
     expect(after.deletion_requested_at).toBeUndefined()
     expect(after.deletion_reminder_sent_at).toBeUndefined()
-    expect(after.is_active).toBe(true) // tài khoản giữ nguyên
+    expect(after.status).toBe('ACTIVE') // tài khoản về hoạt động (SM-14)
     const [audit] = await auditActions('DELETION_REJECTED')
     expect(audit.metadata).toMatchObject({ reason: 'Còn hồ sơ thu hoạch phải lưu' })
     expect(notifyUser).toHaveBeenCalledWith(String(user._id), expect.objectContaining({
@@ -251,7 +276,7 @@ describe('completeDeletionRequest', () => {
     expect(user.phone).toBeUndefined()
     expect(user.avatar_url).toBeUndefined()
     expect(user.full_name).toBe('Tài khoản đã xoá')
-    expect(user.is_active).toBe(false)
+    expect(user.status).toBe('DELETED')
     expect(user.refresh_tokens).toHaveLength(0)
     expect(user.deletion_requested_at).toBeUndefined()
     expect(disconnectUser).toHaveBeenCalledWith(String(leaver._id))
@@ -315,7 +340,7 @@ describe('completeDeletionRequest', () => {
 
       expect(user.deleted_at).toBeInstanceOf(Date)
       await expect(setUserStatus(String(admin._id), String(leaver._id), true)).rejects.toMatchObject({ statusCode: 409 })
-      expect((await User.findById(leaver._id))!.is_active).toBe(false)
+      expect((await User.findById(leaver._id))!.status).toBe('DELETED')
     })
 
     it('expires the pending invitations the deleted user had sent', async () => {

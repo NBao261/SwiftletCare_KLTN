@@ -118,7 +118,7 @@ describe('notifyUser', () => {
 describe('notifyAdmins', () => {
   it('notifies only active administrators', async () => {
     await User.create({ email: 'admin1@test.vn', password_hash: 'password123', full_name: 'A1', role: 'ADMIN' })
-    await User.create({ email: 'admin2@test.vn', password_hash: 'password123', full_name: 'A2', role: 'ADMIN', is_active: false })
+    await User.create({ email: 'admin2@test.vn', password_hash: 'password123', full_name: 'A2', role: 'ADMIN', status: 'LOCKED' })
     await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'O', role: 'FARM_OWNER' })
 
     await notifyAdmins(message)

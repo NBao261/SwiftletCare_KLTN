@@ -1,5 +1,7 @@
 import { Router } from 'express'
 import { body, param, query } from 'express-validator'
+import multer from 'multer'
+import { MAX_PHOTO_BYTES } from '@/services/workOrder.service'
 import * as harvestController from '@/controllers/harvests.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
@@ -16,6 +18,8 @@ router.use(authenticate)
  */
 const canRead  = requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN')
 const canWrite = requireRole('FARM_OWNER', 'FARM_TECHNICIAN')
+// HARVEST-FR-001 — một ảnh mỗi lô, giữ trong RAM rồi lưu lên kho file (như ảnh Work Order)
+const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } })
 
 /**
  * HARVEST-FR-001 — lô thiếu hoặc sai ngày, số tổ, cân nặng → 422. Lúc tạo các trường đều bắt buộc; lúc sửa
@@ -50,6 +54,7 @@ router.post  ('/',    canWrite,
 router.get   ('/',    canRead,  harvestController.list)
 router.get   ('/:id', canRead,  param('id').isMongoId(), validate, harvestController.getOne)
 router.put   ('/:id', canWrite, param('id').isMongoId(), ...harvestFields(true), validate, harvestController.update)
+router.put   ('/:id/photo', canWrite, photoUpload.single('photo'), param('id').isMongoId(), validate, harvestController.setPhoto)
 router.delete('/:id', canWrite, param('id').isMongoId(), validate, harvestController.remove)
 router.post  ('/:id/confirm', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, harvestController.confirm)
 

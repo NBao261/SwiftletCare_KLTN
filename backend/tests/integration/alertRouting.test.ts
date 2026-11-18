@@ -109,14 +109,14 @@ describe('định tuyến cảnh báo (ALERT-FR-017)', () => {
     const second = await technician(farm)
     house.technicians = [{ user_id: tech!._id, primary: true }, { user_id: second._id, primary: false }] as never
     await house.save()
-    await User.updateOne({ _id: tech!._id }, { is_active: false })
+    await User.updateOne({ _id: tech!._id }, { status: 'LOCKED' })
     await raise('UNEXPECTED_RESTART')
     expect(lastDispatch()[1].recipientIds).toEqual([String(second._id)])
   })
 
   it('thợ bị khoá hoặc đã rời farm không nhận: Farm Owner nhận', async () => {
     const { owner, tech, raise } = await seed()
-    await User.updateOne({ _id: tech!._id }, { is_active: false })
+    await User.updateOne({ _id: tech!._id }, { status: 'LOCKED' })
     await raise('UNEXPECTED_RESTART')
     expect(lastDispatch()[1].recipientIds).toEqual([String(owner._id)])
   })

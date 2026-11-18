@@ -1,6 +1,6 @@
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
-import { User } from '@/models/user.model'
+import { User, SIGN_IN_STATUSES } from '@/models/user.model'
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/utils/appError.util'
 import { technicianOnDuty } from '@/utils/roster.util'
 import type { CurrentUser } from '@/types'
@@ -71,7 +71,7 @@ export function isPrimaryOwner(farm: Pick<IFarm, 'owner_id'>, user: CurrentUser)
 export async function activeExpertIds(farm: Pick<IFarm, 'members'>): Promise<string[]> {
   const ids = farm.members.filter(m => m.role === 'DOMAIN_EXPERT').map(m => m.user_id)
   if (ids.length === 0) return []
-  const active = await User.find({ _id: { $in: ids }, is_active: true }).select('_id').lean()
+  const active = await User.find({ _id: { $in: ids }, status: { $in: SIGN_IN_STATUSES } }).select('_id').lean()
   return active.map(u => String(u._id))
 }
 
@@ -218,7 +218,7 @@ export async function activeHouseTechnicianIds(
   const members = new Set(farm.members.filter(m => m.role === 'FARM_TECHNICIAN').map(m => String(m.user_id)))
   const assigned = (house.technicians ?? []).map(t => String(t.user_id)).filter(id => members.has(id))
   if (assigned.length === 0) return []
-  const active = await User.find({ _id: { $in: assigned }, role: 'FARM_TECHNICIAN', is_active: true }).select('_id').lean()
+  const active = await User.find({ _id: { $in: assigned }, role: 'FARM_TECHNICIAN', status: { $in: SIGN_IN_STATUSES } }).select('_id').lean()
   return active.map(u => String(u._id))
 }
 

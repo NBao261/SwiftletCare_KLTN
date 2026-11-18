@@ -397,12 +397,20 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-14 — Mô hình dữ liệu theo ERD (P1) — Kiệt; trường của gap nào thì làm trong PR gap đó; Nhi làm form thu hoạch web, Len trên mobile
 
-- [ ] `users.status` thay `is_active` (+ `locked_reason`, `locked_at`, `deletion_requested_at`, `deleted_at`).
-- [ ] `auditlogs`: `actor_role`, `farm_id`, `before`, `after`, `source_ip`, `client`, `correlation_id`.
-- [ ] `harvestbatches`: `nest_type`, `photo_object_key` (MinIO); `flock_snapshot` của House (HARVEST-FR-003).
-- [ ] `notifications.ref.type` mở rộng (SDD 6.1).
-- [ ] `telemetries`: `stale_fields`, `anomaly_fields`, `buffered`.
-- [ ] Migration theo SDD 6.4; `npm run db:script`; test `dbScript`/`databaseScript` xanh.
+- [x] `users.status` thay `is_active` (+ `locked_reason`, `locked_at`, `deletion_requested_at`, `deleted_at`).
+- [x] `auditlogs`: `actor_role`, `farm_id`, `before`, `after`, `source_ip`, `client`, `correlation_id`.
+- [x] `harvestbatches`: `nest_type`, `photo_object_key` (MinIO); `flock_snapshot` của House (HARVEST-FR-003).
+- [x] `notifications.ref.type` mở rộng (SDD 6.1).
+- [x] `telemetries`: `stale_fields`, `anomaly_fields`, `buffered`.
+- [x] Migration theo SDD 6.4; `npm run db:script`; test `dbScript`/`databaseScript` xanh.
+
+*(Bảo làm thay Kiệt, 18/11/2026, nhánh `feat/g14-erd-fields`:*
+- *`status` theo SM-14, khoá chỉ từ `ACTIVE` (đang chờ xoá thì 409), API vẫn trả `is_active`, `deactivated_*` suy ra cho web/mobile;*
+- *audit có `before`/`after` chép từ `metadata`, `source_ip`, `client` (User-Agent), `correlation_id` (header `X-Request-Id`);*
+- *telemetry ghi cảm biến null vào `stale_fields`, chỉ số vượt ngưỡng vào `anomaly_fields`, mẫu `telemetry/buffered` có `buffered`;*
+- *ảnh lô `PUT /harvests/{id}/photo` → `photo_object_key`, `photo_url` ở chi tiết; thông báo thao tác thiết bị có `ref.kind = device_action`;*
+- *`npm run migrate:erd-fields`; `db:script` chạy lại; cột sản lượng của so sánh nhà đọc chu kỳ đóng gần nhất (G-26).*
+- *Còn: nút chọn ảnh lô trên web (Nhi) và mobile (Len); web, mobile chuyển sang đọc `status`.)*
 
 ### G-15 — Dọn web (P1) — Tuấn (chuyên gia, Technician), Nhi (ma trận quyền), Bảo (`/stream/:id`)
 

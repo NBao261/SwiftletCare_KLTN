@@ -13,7 +13,15 @@ export interface IAuditLog extends Document {
   target_type: string       // 'user' | 'farm' | 'sensor_node' | ...
   target_id?: Types.ObjectId
   metadata?: Record<string, unknown>
-  ip_address?: string
+  /** Report 4 §6.1 — giá trị trước và sau của thay đổi, chép từ `metadata.before`/`after` khi có */
+  before?: unknown
+  after?: unknown
+  /** IP client (trước G-14 tên là `ip_address`, `npm run migrate:erd-fields`) */
+  source_ip?: string
+  /** User-Agent của web/mobile */
+  client?: string
+  /** Mã request: các dòng audit của cùng một thao tác có cùng mã */
+  correlation_id?: string
   created_at: Date
 }
 
@@ -27,7 +35,11 @@ const auditLogSchema = new Schema<IAuditLog>(
     target_type: { type: String, required: true },
     target_id:   { type: Schema.Types.ObjectId },
     metadata:    { type: Schema.Types.Mixed },
-    ip_address:  { type: String },
+    before:      { type: Schema.Types.Mixed },
+    after:       { type: Schema.Types.Mixed },
+    source_ip:   { type: String },
+    client:      { type: String },
+    correlation_id: { type: String },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: false }, versionKey: false },
 )

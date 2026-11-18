@@ -515,6 +515,10 @@ paths:
 
         Khi khoá: thu hồi mọi refresh token và ngắt các kết nối Socket.io đang
         mở của user (kết nối mới bằng access token còn hạn cũng bị từ chối).
+
+        Trạng thái theo SM-14 (Report 3 §6.14): khoá ACTIVE → LOCKED, mở khoá LOCKED → ACTIVE; tài khoản
+        DELETION_REQUESTED không khoá được (409, xử lý hoặc từ chối yêu cầu xoá trước), tài khoản DELETED
+        không khoá hay mở khoá được (409).
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -546,6 +550,7 @@ paths:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Tài khoản đã xoá, hoặc đang chờ xoá mà bị khoá", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /admin/delete-requests:
@@ -5327,6 +5332,37 @@ paths:
         "409": { description: "Chu kỳ chưa đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /harvests/{id}/photo:
+    parameters:
+      [{ name: id, in: path, required: true, schema: { type: string } }]
+    put:
+      tags: [Harvests]
+      summary: Đặt ảnh của lô (HARVEST-FR-001)
+      description: |
+        Một ảnh JPEG, PNG hoặc WebP tối đa 5 MB ở trường `photo` (multipart); ảnh mới thay ảnh cũ. Farm Owner, hoặc Farm
+        Technician với lô DRAFT do chính mình nhập (HARVEST-FR-005). Trả lô kèm `photo_url`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo: { type: string, format: binary }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/HarvestBatch" } }
+        "400": { description: "Không phải ảnh JPEG/PNG/WebP hoặc quá 5 MB", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { description: "Domain Expert, thợ không được giao nhà hoặc lô không phải DRAFT của mình", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { description: "Thiếu trường `photo`", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
   /harvests/{id}:
     parameters:
       [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -6382,7 +6418,11 @@ components:
         target_id: { type: string, nullable: true }
         target_name: { type: string, nullable: true, description: "Chỉ GET /system/audit-logs — tên tài khoản khi target_type=user (để UI không hiện ObjectId); null với loại khác hoặc tài khoản không còn" }
         metadata: { type: object, description: "Chi tiết thay đổi, thường có before/after" }
-        ip_address: { type: string, nullable: true, description: "IP client của request; null khi hệ thống tự thực hiện ngoài request (job nền, MQTT). Đặt TRUST_PROXY khi chạy sau proxy để có IP thật" }
+        before: { nullable: true, description: "Report 4 §6.1 — giá trị trước thay đổi, chép từ `metadata.before` khi có" }
+        after: { nullable: true, description: "Report 4 §6.1 — giá trị sau thay đổi, chép từ `metadata.after` khi có" }
+        source_ip: { type: string, nullable: true, description: "IP client của request (trước G-14 tên là `ip_address`); null khi hệ thống tự thực hiện ngoài request (job nền, MQTT). Đặt TRUST_PROXY khi chạy sau proxy để có IP thật" }
+        client: { type: string, nullable: true, description: "User-Agent của request (tối đa 200 ký tự)" }
+        correlation_id: { type: string, nullable: true, description: "Mã request, cũng trả ở header `X-Request-Id` của response; client gửi `X-Request-Id` dạng `[A-Za-z0-9_-]{1,64}` thì dùng mã đó" }
         created_at: { type: string, format: date-time }
 
     User:
@@ -6394,7 +6434,15 @@ components:
         full_name: { type: string }
         role: { $ref: "#/components/schemas/Role" }
         avatar_url: { type: string }
-        is_active: { type: boolean }
+        status:
+          {
+            type: string,
+            enum: [ACTIVE, LOCKED, DELETION_REQUESTED, DELETED],
+            description: "Report 3 §6.14 (SM-14) — trạng thái tài khoản; đăng nhập được khi ACTIVE hoặc DELETION_REQUESTED",
+          }
+        locked_at: { type: string, format: date-time, nullable: true, description: "AUTH-FR-011 — thời điểm Admin khoá tài khoản" }
+        locked_reason: { type: string, nullable: true, description: "AUTH-FR-011 — lý do bắt buộc khi khoá tài khoản" }
+        is_active: { type: boolean, deprecated: true, description: "Tên cũ, suy ra từ `status` (ACTIVE hoặc DELETION_REQUESTED); đọc `status`" }
         must_change_password:
           {
             type: boolean,
@@ -6405,13 +6453,15 @@ components:
             type: string,
             format: date-time,
             nullable: true,
-            description: "AUTH-FR-011 — thời điểm Admin khoá tài khoản",
+            deprecated: true,
+            description: "Tên cũ của `locked_at`",
           }
         deactivated_reason:
           {
             type: string,
             nullable: true,
-            description: "AUTH-FR-011 — lý do bắt buộc khi khoá tài khoản, ghi cùng audit_logs",
+            deprecated: true,
+            description: "Tên cũ của `locked_reason`",
           }
         telegram_linked: { type: boolean, description: "ALERT-FR-013 — tài khoản đã liên kết bot Telegram (chat id không trả ra API)" }
         notification_preferences:
@@ -6577,7 +6627,7 @@ components:
         mttr_min: { type: number, nullable: true }
         energy_kwh: { type: number, nullable: true, description: "Ước tính (BR-45); null = not available" }
         energy: { type: object, properties: { misting_kwh: { type: number, nullable: true }, ventilation_kwh: { type: number, nullable: true } } }
-        last_cycle_yield_g: { type: number, nullable: true, description: "Sản lượng chu kỳ đã đóng gần nhất (BR-43); null tới khi có G-26" }
+        last_cycle_yield_g: { type: number, nullable: true, description: "BR-44 — sản lượng (g) chu kỳ đã đóng gần nhất: tổng của chu kỳ CLOSED hoặc CONCLUDED mới nhất ở mỗi tầng của nhà (chu kỳ là của tầng, BR-43); null khi nhà chưa có chu kỳ đóng" }
         simulated: { type: boolean, description: "Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004), cùng cách tính với tổng quan" }
     EnergyMonth:
       type: object
@@ -6975,7 +7025,7 @@ components:
           nullable: true
           description: "Đối tượng để client mở tới"
           properties:
-            kind: { type: string, enum: [alert, health_report, health_day, expert_decision, parameter_review, coefficient_proposal, work_order], description: "`health_day`: ngày đánh giá mới của nhà yến, mở `GET /health-reports/days/{dayId}` (thông báo không kèm trạng thái, BR-31); `expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007); `work_order`: Work Order được giao, cần duyệt, bị mở lại (OPS-FR-001…004); `alert` cũng dùng cho yêu cầu kiểm tra tại chỗ (EXPERT-FR-021)" }
+            kind: { type: string, enum: [alert, health_report, health_day, expert_decision, parameter_review, coefficient_proposal, work_order, device_action], description: "`device_action`: Administrator hoặc Farm Technician vừa thao tác trên thiết bị của farm, `id` là thiết bị; `health_day`: ngày đánh giá mới của nhà yến, mở `GET /health-reports/days/{dayId}` (thông báo không kèm trạng thái, BR-31); `expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007); `work_order`: Work Order được giao, cần duyệt, bị mở lại (OPS-FR-001…004); `alert` cũng dùng cho yêu cầu kiểm tra tại chỗ (EXPERT-FR-021)" }
             id: { type: string }
         read_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
@@ -7537,6 +7587,9 @@ components:
         pump_current_a: { type: number, nullable: true, minimum: 0, description: "THREAT-FR-014 — dòng đo của bơm phun sương (A); chỉ controller có đo dòng (board của nhóm, G-13) gửi; số âm không được lưu" }
         fan_current_a: { type: number, nullable: true, minimum: 0, description: "THREAT-FR-014 — dòng đo của quạt (A), như `pump_current_a`" }
         is_anomaly: { type: boolean }
+        stale_fields: { type: array, items: { type: string }, description: "ENV-FR-004 — cảm biến controller báo cũ hoặc lỗi (gửi null); số đo đó lưu là thiếu" }
+        anomaly_fields: { type: array, items: { type: string }, description: "ENV-FR-004 — chỉ số ngoài ngưỡng của Zone làm mẫu thành bất thường" }
+        buffered: { type: boolean, description: "ENV-FR-024 — mẫu từ bộ đệm offline (`telemetry/buffered`)" }
 
     AlertType:
       type: string
@@ -8038,6 +8091,7 @@ components:
         weight_grams: { type: number }
         nest_type: { type: string, enum: [RAW, CLEANED, PREMIUM] }
         product_images: { type: array, items: { type: string } }
+        photo_url: { type: string, nullable: true, description: "HARVEST-FR-001 — link ký sẵn tới ảnh của lô (chỉ ở GET /harvests/{id} và PUT /harvests/{id}/photo); khoá ảnh không trả ra" }
         env_snapshot:
           type: object
           description: "HARVEST-FR-002 — trung bình môi trường 7 ngày trước thu hoạch"
