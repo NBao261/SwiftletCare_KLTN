@@ -19,6 +19,17 @@ export function useDeleteRequestsList(query: QueuePageQuery = {}) {
  * PUT /admin/delete-requests/:id/complete — backend tự cascade (chuyển owner /
  * soft-delete farm / ẩn danh PII).
  */
+export function useRejectDeleteRequest() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => adminApi.rejectDeleteRequest(id, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-delete-requests'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+    },
+  })
+}
+
 export function useCompleteDeleteRequest() {
   const queryClient = useQueryClient()
   return useMutation({
