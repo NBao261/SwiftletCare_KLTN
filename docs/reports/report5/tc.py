@@ -143,7 +143,7 @@ TC=[
 ('TC-F15-03','F-15','Farm with an expert; a suggestion','Owner applies the suggestion directly','—','403; coefficients unchanged',(J,I+'coefficientProposal.test.ts','farm có chuyên gia: Farm Owner → 403')),
 # F-16
 ('TC-F16-01','F-16','Health report; expert and another expert','Write a conclusion; edit it; another expert edits it','—','Owner notified; author can edit; the other expert gets 403',
- (J,I+'healthReport.test.ts','chỉ Domain Expert viết; Farm Owner được báo')),
+ (J,I+'houseHealthReport.test.ts','GENERATED → CONCLUDED, Farm Owner được báo')),
 ('TC-F16-02','F-16','User with notifications','Notify, list, read one, read all','—','Inbox entry with socket event; unread count correct',
  (J,I+'inAppNotification.test.ts','notifyUser ghi vào hộp + phát socket')),
 ('TC-F16-03','F-16','Farm with an expert','Expert changes thresholds, tuning, ring and a verdict','—','Each Farm Owner receives one in-app notification per decision; the activity history lists the same four entries',
@@ -205,7 +205,7 @@ TC=[
 # F-28
 ('TC-F28-01','F-28','Farm with a Domain Expert','Expert creates and approves a profile; saves one with humidity_min out of range; Farm Owner approves a draft','—','DRAFT then APPROVED; 400; 403',(J,I+'configProfiles.test.ts','TC-F28-01')),
 ('TC-F28-02','F-28','APPROVED profile; DRAFT profile','Farm Owner applies the approved one to two houses; applies the draft','—','Every zone of both houses holds the values with history source PROFILE and a new configuration version; 409',(J,I+'configProfiles.test.ts','TC-F28-02')),
-('TC-F28-03','F-28','House with a seeded return-rate drop','Set the house ATTRACTING; run the daily assessment; technician sets the stage','—','Flock indicator not assessed, reasons say "attracting stage", no LOW_RETURN_RATE; 403',(T,'backend jest (G-24)')),
+('TC-F28-03','F-28','House with a seeded return-rate drop','Set the house ATTRACTING; run the daily assessment; technician sets the stage','—','Flock indicator not assessed, reasons say "attracting stage", no LOW_RETURN_RATE; 403',[(J,I+'healthAssessment.test.ts','nhà ATTRACTING: không đánh giá đàn chim'), (J,I+'birdCount.test.ts','BR-46 — nhà ATTRACTING không có LOW_RETURN_RATE'), (J,I+'healthDays.test.ts','sang ATTRACTING thì đóng LOW_RETURN_RATE đang mở')]),
 # F-29
 ('TC-F29-01','F-29','Seeded farm of 3 houses (2 simulated)','GET the farm overview','—','Each house shows stage, today\'s status, open alerts and Work Orders, latest return rate equal to the seed; simulated houses marked',
  (J,I+'farmOverview.test.ts','mỗi nhà: giai đoạn, trạng thái hôm nay hoặc lý do')),
@@ -268,11 +268,11 @@ ST=[
 ('6.11 CoefficientProposal','PROPOSED → REJECTED','Expert rejects with a note','REJECTED; without a note 422',(J,I+'coefficientProposal.test.ts','từ chối thiếu lý do')),
 ('6.11 CoefficientProposal','PROPOSED → SUPERSEDED','Newer proposal for the zone','Older proposal SUPERSEDED',(J,I+'coefficientProposal.test.ts','gửi lần nữa → đề xuất cũ SUPERSEDED')),
 ('6.11 CoefficientProposal','closed → (rejected)','Approve a closed proposal','409',(J,I+'coefficientProposal.test.ts','đề xuất đã đóng → 409')),
-('6.17 DailyHealthStatus','(new) → COMPUTED','Daily assessment','One day record with current status and reasons; one pending rating per assigned Farm Technician and Farm Owner, none for the Domain Expert',(T,'backend jest (G-11)')),
+('6.17 DailyHealthStatus','(new) → COMPUTED','Daily assessment','One day record with current status and reasons; one pending rating per assigned Farm Technician and Farm Owner, none for the Domain Expert',[(J,I+'healthAssessment.test.ts','ngày mới: ghi 1 bản ghi'), (J,I+'healthAssessment.test.ts','báo cả Farm Technician được giao nhà'), (J,I+'healthDays.test.ts','chuyên gia không có lượt chấm')]),
 ('6.17 DailyHealthStatus','COMPUTED → COMPUTED','Late count arrives after one assessor rated','Current status recomputed; the stored snapshot unchanged',(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên')),
-('6.18 DailyRating','PENDING → RATED','Farm Technician rates','Rating and snapshot stored in one write; status returned',(T,'backend jest (G-11)')),
+('6.18 DailyRating','PENDING → RATED','Farm Technician rates','Rating and snapshot stored in one write; status returned',(J,I+'healthDays.test.ts','chấm riêng với Farm Owner: chưa chấm thì bị che')),
 ('6.18 DailyRating','PENDING → SKIPPED','Farm Owner not at the house skips','Status returned; no rating counted for NFR-14',(J,I+'healthDays.test.ts','SKIPPED: hiện trạng thái, không có điểm')),
-('6.18 DailyRating','PENDING → EXPIRED','7 days pass; the technician rated, the Farm Owner did not','Farm Owner\'s rating EXPIRED and the status shown to the Farm Owner; the technician\'s rating kept',(T,'backend jest (G-11)')),
+('6.18 DailyRating','PENDING → EXPIRED','7 days pass; the technician rated, the Farm Owner did not','Farm Owner\'s rating EXPIRED and the status shown to the Farm Owner; the technician\'s rating kept',[(J,I+'healthDays.test.ts','EXPIRED theo từng người'), (J,I+'healthDays.test.ts','quá 7 ngày thì EXPIRED')]),
 ('6.18 DailyRating','RATED → RATED','Rated assessor adds a note','Note stored; rating unchanged',(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên')),
 ('6.18 DailyRating','RATED/SKIPPED/EXPIRED → (rejected)','Rate again after rating, skipping or expiry','409; nothing changed',[(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên'),(J,I+'healthDays.test.ts','SKIPPED: hiện trạng thái, không có điểm'),(J,I+'healthDays.test.ts','ngày cũ 8 ngày → 409')]),
 ('6.9 HealthReport','(new) → GENERATED','Daily, weekly or monthly report job','One report per house and period, with a section per zone (the current per-zone weekly test does not count)',[(J,I+'houseHealthReport.test.ts','báo cáo ngày: 1 bản mỗi nhà'),(J,I+'houseHealthReport.test.ts','tuần: thứ Hai tới Chủ nhật tuần trước')]),

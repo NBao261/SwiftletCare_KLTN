@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.14 (Review 2, final scope) |
-| Date | 12/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
+| Document version | 2.2.15 (Review 2, final scope) |
+| Date | 18/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.11 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -1016,7 +1016,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/devices` | Sensor nodes (register and move, also by the Farm Owner for SF-01; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
 | `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
-| `/analytics` | Charts, comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
+| `/analytics` | Charts (with the farm's hourly outdoor weather on the same buckets, ANALYTICS-FR-013), comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
 | `/health-reports` | Daily, weekly and monthly reports per house and conclusions; disagreeing days and house levels (EXPERT-FR-022); daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (days not yet rated or skipped by the caller are returned without status, BR-31) |
 | `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
 | `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
@@ -1883,6 +1883,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.15 | 18/11/2026 | ANALYTICS-FR-013 as built: the environment chart of `/analytics` carries the farm's hourly outdoor weather on the buckets of the indoor series (Section 7.1); the weekly zone report job is gone, as the migration table of Section 6.4 already said, so weekly reports exist only per house (BR-33); header baseline SRS 4.2.11 |
 | 2.2.14 | 18/11/2026 | Run hours as built (G-22, BR-45): the heartbeat carries the learned normal current (`actuatorBaseline`, Section 7.2), kept as the controller's `actuator_baseline`; an interval counts as running only when the current is above 50 % of it |
 | 2.2.13 | 18/11/2026 | Data model as built (G-14): `users.status` with the lock fields replaces `is_active` (the API keeps `is_active` and `deactivated_*` as derived names for the clients); audit rows carry `before`, `after`, `source_ip`, `client`, `correlation_id` (`X-Request-Id`); telemetry `stale_fields`, `anomaly_fields`, `buffered`; harvest `photo_object_key` (`PUT /harvests/{id}/photo`); notification `ref.kind` names as in the code, with `device_action`; migration row for the audit fields (Sections 6.1, 6.4) |
 | 2.2.12 | 18/11/2026 | k6 1.3.0 in the Testing row of the Technology Declaration (Section 3): the NFR-03 load script runs from a Docker image beside the device simulator (G-27) |
