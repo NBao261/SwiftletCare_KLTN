@@ -26,6 +26,13 @@ if [ "${1:-}" = "--self-signed" ]; then
   exit 0
 fi
 
+# Chạy lại trên VPS đã có chứng chỉ thật thì dừng: xoá rồi xin lại dễ chạm giới hạn của Let's Encrypt, và xin lỗi thì
+# Nginx mất chứng chỉ (cả MQTT 8883, RTSPS 8322). File renewal chỉ có khi certbot đã cấp; gia hạn là việc của container certbot
+if $COMPOSE run --rm --no-deps --entrypoint sh certbot -c "test -f /etc/letsencrypt/renewal/$DOMAIN.conf"; then
+  echo "Đã có chứng chỉ Let's Encrypt cho $DOMAIN, không xin lại."
+  exit 0
+fi
+
 echo "Xin chứng chỉ Let's Encrypt cho $DOMAIN"
 # Bỏ chứng chỉ tạm để certbot ghi bản thật vào đúng thư mục live/$DOMAIN
 $COMPOSE run --rm --no-deps --entrypoint sh certbot -c "

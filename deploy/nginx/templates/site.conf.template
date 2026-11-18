@@ -24,8 +24,9 @@ server {
 
     root /usr/share/nginx/html;
 
-    # Endpoint nội bộ cho EMQX và MediaMTX: không cho gọi từ Internet (backend/CLAUDE.md, Live stream)
-    location ^~ /api/internal/ {
+    # Endpoint nội bộ cho EMQX và MediaMTX: không cho gọi từ Internet (backend/CLAUDE.md, Live stream). Không phân biệt
+    # hoa thường như router của Express (/api/Internal/… cũng tới route nội bộ); regex thắng location /api/ bên dưới
+    location ~* ^/api/internal(/|$) {
         return 404;
     }
     # Như proxy của Vite: bỏ tiền tố /api rồi chuyển vào backend (TRUST_PROXY=1 đọc X-Forwarded-For)
