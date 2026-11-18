@@ -123,7 +123,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   const [imageLinks, setImageLinks] = useState<string[]>(() => group?.product_images ?? []);
   // Ảnh lần thu (HARVEST-FR-001): gửi lên mọi đợt của lần thu sau khi lưu xong số liệu
   const [photo, setPhoto] = useState<File | null>(null);
-  const savedPhotoUrl = useHarvestPhotoUrl(group?.batches[0]?._id).data;
+  const savedPhotoUrl = useHarvestPhotoUrl(group?.batches.map(batch => batch._id) ?? []);
   const uploadPhoto = useUploadHarvestPhoto();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

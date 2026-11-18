@@ -29,7 +29,7 @@ export default function HarvestDetailModal({ group, houseName, creatorName, onCl
   const { t, num, exact } = useTranslation(harvestDict);
   const batchByType = new Map(group.batches.map(batch => [batch.nest_type, batch]));
   // HARVEST-FR-001 — các đợt của lần thu cùng một ảnh, lấy của đợt đầu
-  const photoUrl = useHarvestPhotoUrl(group.batches[0]?._id).data;
+  const photoUrl = useHarvestPhotoUrl(group.batches.map(batch => batch._id));
 
   return (
     <Modal open onClose={onClose} title={t('detail.title')} className="max-w-2xl">
