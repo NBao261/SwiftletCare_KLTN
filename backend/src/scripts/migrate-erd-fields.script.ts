@@ -3,8 +3,9 @@
  *
  * Chạy: npm run migrate:erd-fields   (chạy lại nhiều lần vẫn an toàn)
  *
- * 1. `users`: `is_active` → `status` (SM-14): đã xoá theo yêu cầu → DELETED; đang chờ xoá → DELETION_REQUESTED;
- *    bị khoá → LOCKED với `locked_reason`, `locked_at` lấy từ `deactivated_*`; còn lại ACTIVE. Bỏ `is_active`,
+ * 1. `users`: `is_active` → `status` (SM-14): đã xoá theo yêu cầu → DELETED; bị khoá → LOCKED với `locked_reason`,
+ *    `locked_at` lấy từ `deactivated_*`, kể cả khi đang chờ xoá (mã cũ cho Admin khoá tài khoản đó, khoá phải thắng);
+ *    đang chờ xoá → DELETION_REQUESTED; còn lại ACTIVE. Bỏ `is_active`,
  *    `deactivated_reason`, `deactivated_at`. Chỉ đụng tài khoản chưa có `status`.
  * 2. `auditlogs`: `ip_address` → `source_ip`; `metadata.before`/`after` chép ra `before`/`after` của dòng.
  */
@@ -18,12 +19,12 @@ export async function migrateErdFields() {
   const users = db.collection('users')
   const noStatus = { status: { $exists: false } }
   const deleted = await users.updateMany({ ...noStatus, deleted_at: { $ne: null } }, { $set: { status: 'DELETED' } })
-  const deletionRequested = await users.updateMany(
-    { ...noStatus, deletion_requested_at: { $ne: null } }, { $set: { status: 'DELETION_REQUESTED' } },
-  )
   const locked = await users.updateMany(
     { ...noStatus, is_active: false },
     [{ $set: { status: 'LOCKED', locked_reason: '$deactivated_reason', locked_at: '$deactivated_at' } }],
+  )
+  const deletionRequested = await users.updateMany(
+    { ...noStatus, deletion_requested_at: { $ne: null } }, { $set: { status: 'DELETION_REQUESTED' } },
   )
   const active = await users.updateMany(noStatus, { $set: { status: 'ACTIVE' } })
   await users.updateMany(

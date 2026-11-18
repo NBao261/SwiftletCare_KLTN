@@ -170,6 +170,18 @@ describe('rejectDeletionRequest', () => {
     }))
   })
 
+  it('SM-14: rejecting the request of a locked account keeps it LOCKED (no silent unlock)', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn', 'FARM_OWNER', {
+      status: 'LOCKED', locked_reason: 'Gian lận', deletion_requested_at: new Date(),
+    })
+    await rejectDeletionRequest(String(admin._id), String(target._id), 'Còn nghĩa vụ lưu hồ sơ')
+    const after = (await User.findById(target._id))!
+    expect(after.status).toBe('LOCKED')
+    expect(after.locked_reason).toBe('Gian lận')
+    expect(after.deletion_requested_at).toBeUndefined()
+  })
+
   it('refuses a user without a pending request and the admin\'s own request', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN', { deletion_requested_at: new Date() })
     const user = await mkUser('user@test.vn')

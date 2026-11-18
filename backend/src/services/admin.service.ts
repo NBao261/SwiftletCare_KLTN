@@ -1,4 +1,4 @@
-import { User, IUser, SIGN_IN_STATUSES } from '@/models/user.model'
+import { User, IUser, SIGN_IN_FILTER } from '@/models/user.model'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
@@ -28,7 +28,7 @@ export interface ListUsersQuery extends ListQuery {
 export async function listUsers(query: ListUsersQuery) {
   const filter: Record<string, unknown> = {}
   if (query.role) filter.role = query.role
-  if (query.status === 'active') filter.status = { $in: SIGN_IN_STATUSES }
+  if (query.status === 'active') Object.assign(filter, SIGN_IN_FILTER)
   if (query.status === 'inactive') filter.status = 'LOCKED'
   if (query.status === 'deleted') filter.status = 'DELETED'
   const term = query.q?.trim()
@@ -80,7 +80,7 @@ export async function createFarmOwner(
 
 /**
  * AUTH-FR-011 — khoá/mở khoá tài khoản. Lý do bắt buộc khi khoá (không bắt buộc
- * khi mở khoá). Middleware `authenticate` đã tự chặn is_active=false ở request
+ * khi mở khoá). Middleware `authenticate` đã tự chặn tài khoản LOCKED ở request
  * kế tiếp, nên không cần thu hồi refresh_tokens riêng ở đây — vẫn xoá cho chắc,
  * để user không giữ được phiên nào nếu quay lại dùng refresh token cũ. Kết nối
  * Socket.io đang mở cũng bị ngắt ngay (JWT còn hạn không đủ để giữ realtime).
@@ -256,8 +256,8 @@ export async function rejectDeletionRequest(adminId: string, userId: string, rea
   if (!user.deletion_requested_at) throw BadRequestError('Người dùng này chưa gửi yêu cầu xoá tài khoản')
 
   const requestedAt = user.deletion_requested_at
-  // SM-14 DELETION_REQUESTED → ACTIVE (Admin từ chối có lý do)
-  user.status = 'ACTIVE'
+  // SM-14 DELETION_REQUESTED → ACTIVE (Admin từ chối có lý do); tài khoản đang bị khoá vẫn khoá
+  if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
   await user.save()

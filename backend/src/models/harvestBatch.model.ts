@@ -50,7 +50,8 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
     weight_grams:{ type: Number, required: true },
     nest_type:   { type: String, enum: ['RAW','CLEANED','PREMIUM'] satisfies NestType[], required: true },
     product_images: [{ type: String }],
-    photo_object_key: { type: String },
+    // select: false — khoá kho file không ra API; chỉ chi tiết lô và đặt ảnh đọc nó (ra photo_url)
+    photo_object_key: { type: String, select: false },
     env_snapshot: {
       avg_temperature: { type: Number },
       avg_humidity:    { type: Number },

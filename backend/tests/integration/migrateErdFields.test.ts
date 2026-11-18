@@ -27,6 +27,8 @@ describe('migrateErdFields', () => {
       { email: 'r@test.vn', is_active: true, deletion_requested_at: new Date() },
       { email: 'd@test.vn', is_active: false, deleted_at: new Date() },
       { email: 'new@test.vn', status: 'LOCKED', locked_reason: 'giữ nguyên' },
+      // Mã cũ cho Admin khoá tài khoản đang chờ xoá: khoá phải thắng, không thành DELETION_REQUESTED (đăng nhập được)
+      { email: 'lr@test.vn', is_active: false, deactivated_reason: 'Gian lận', deletion_requested_at: new Date() },
     ])
     await db().collection('auditlogs').insertMany([
       { action: 'THRESHOLDS_UPDATED', ip_address: '1.2.3.4', metadata: { before: { a: 1 }, after: { a: 2 } } },
@@ -34,10 +36,11 @@ describe('migrateErdFields', () => {
     ])
 
     expect(await migrateErdFields()).toEqual({
-      usersDeleted: 1, usersDeletionRequested: 1, usersLocked: 1, usersActive: 1, auditIpRenamed: 1, auditBeforeAfter: 1,
+      usersDeleted: 1, usersDeletionRequested: 1, usersLocked: 2, usersActive: 1, auditIpRenamed: 1, auditBeforeAfter: 1,
     })
     const users = await db().collection('users').find().sort({ _id: 1 }).toArray()
-    expect(users.map(u => u.status)).toEqual(['ACTIVE', 'LOCKED', 'DELETION_REQUESTED', 'DELETED', 'LOCKED'])
+    expect(users.map(u => u.status)).toEqual(['ACTIVE', 'LOCKED', 'DELETION_REQUESTED', 'DELETED', 'LOCKED', 'LOCKED'])
+    expect(users[5].locked_reason).toBe('Gian lận')
     expect(users[1]).toMatchObject({ locked_reason: 'Spam', locked_at: lockedAt })
     expect(users[4].locked_reason).toBe('giữ nguyên')
     for (const user of users) {

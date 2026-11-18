@@ -125,4 +125,10 @@ describe('notifyAdmins', () => {
 
     expect(sentTo('email').map(e => e.email)).toEqual(['admin1@test.vn'])
   })
+
+  it('still notifies an administrator whose account has no status yet (before migrate:erd-fields)', async () => {
+    await User.collection.insertOne({ email: 'old-admin@test.vn', password_hash: 'x', full_name: 'Old', role: 'ADMIN' })
+    await notifyAdmins(message)
+    expect(sentTo('email').map(e => e.email)).toContain('old-admin@test.vn')
+  })
 })
