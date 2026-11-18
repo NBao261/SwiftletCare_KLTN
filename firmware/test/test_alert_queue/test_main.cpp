@@ -43,6 +43,20 @@ void test_same_type_waiting_is_not_added_twice() {
   TEST_ASSERT_EQUAL(1, queue.size());
 }
 
+// THREAT-FR-014 — lỗi của bơm và lỗi của quạt là hai cảnh báo, cùng tải thì vẫn gộp
+void test_actuator_faults_of_two_loads_are_both_queued() {
+  AlertQueue queue;
+  QueuedAlert pump = alertOf("ACTUATOR_FAULT");
+  strcpy(pump.load, "misting");
+  QueuedAlert fan = alertOf("ACTUATOR_FAULT");
+  strcpy(fan.load, "ventilation");
+  TEST_ASSERT_TRUE(queue.push(pump));
+  TEST_ASSERT_TRUE(queue.push(fan));
+  TEST_ASSERT_TRUE(queue.push(pump));
+  TEST_ASSERT_EQUAL(2, queue.size());
+  TEST_ASSERT_EQUAL_STRING("ventilation", queue.at(1).load);
+}
+
 void test_full_queue_refuses_and_keeps_what_it_has() {
   AlertQueue queue;
   char type[24];
@@ -71,6 +85,7 @@ int main(int, char **) {
   RUN_TEST(test_alert_stays_until_its_puback);
   RUN_TEST(test_lost_connection_sends_again);
   RUN_TEST(test_same_type_waiting_is_not_added_twice);
+  RUN_TEST(test_actuator_faults_of_two_loads_are_both_queued);
   RUN_TEST(test_full_queue_refuses_and_keeps_what_it_has);
   RUN_TEST(test_order_is_kept_after_a_middle_ack);
   return UNITY_END();

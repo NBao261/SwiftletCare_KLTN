@@ -30,6 +30,10 @@ void saveMqttBroker(const String &broker);
 bool loadEverConnected();
 void markEverConnected();
 
+// NVS – dòng bình thường đã học của tải (THREAT-FR-014): load 0 = bơm phun sương, 1 = quạt; ≤ 0 = chưa học
+float loadLearnedCurrent(int load);
+void saveLearnedCurrent(int load, float normalA);
+
 // NVS – device ID và mật khẩu broker do tools/flash_identity.py ghi (namespace `identity`). false nếu chưa flash
 bool loadDeviceIdentity(String &deviceId, String &brokerSecret);
 // NVS – địa chỉ broker nạp lúc flash (`flash_identity.py --broker`, namespace `identity`, FARM-FR-003c). false nếu không nạp
