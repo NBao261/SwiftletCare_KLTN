@@ -16,6 +16,10 @@ export const authApi = {
   updateNotificationPreferences: (prefs: NotificationPreferencesInput) =>
     api.put<ApiResponse<User>>('/auth/notification-preferences', prefs),
 
+  // AUTH-FR-005c — đổi mật khẩu khi đang đăng nhập; là cách duy nhất bỏ mật khẩu tạm Admin cấp
+  changePassword: (input: { current_password: string; new_password: string }) =>
+    api.put<ApiResponse<{ message: string }>>('/auth/password', input),
+
   // AUTH-FR-012 — yêu cầu xoá tài khoản (Administrator xử lý trong ≤30 ngày)
   requestDeletion: () => api.post<ApiResponse<{ message: string }>>('/auth/delete-request'),
 }

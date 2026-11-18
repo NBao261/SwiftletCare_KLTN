@@ -35,6 +35,16 @@
 > - bản `esp32dev` vẫn tìm được broker trên laptop qua `npm run mdns` và vẫn có ô broker; mạng Wi-Fi không tới được broker thì trang AP mở lại để đổi Wi-Fi;
 > - board còn chạy 2.0.0 với backend mới: hiện `UNKNOWN`, không có cảnh báo `CONFIG_MISMATCH`.
 >
+> **2.3.0 (đo dòng tải G-13, THREAT-FR-014, BR-32) — chưa thử trên board, cần board rev B2 có ADS1115.** Đã làm 18/11/2026: `pio run -e esp32dev` và `pio run -e esp32prod` build được, `pio test -e native` 99/99 (`test_actuator_current`, `test_alert_queue`). Board không có ADS1115 (bo dev hiện tại) chạy như 2.2.0: log `[CURRENT] Không có ADS1115`, không gửi dòng. Còn phải thử trên board rev B2:
+> - log `[CURRENT] ADS1115 OK`; telemetry có `pump_current_a`, `fan_current_a`; đo bằng đồng hồ vạn năng nối tiếp tải, lệch ≤ 5 %;
+> - bơm bật liên tục 30 s lần đầu: mức học được lưu NVS (`curNormMist`), khởi động lại không học lại;
+> - rút dây bơm khi relay BẬT: sau 30 s BẬT cộng dồn có `ACTUATOR_FAULT` `NO_CURRENT_WHILE_ON` với `load: misting`, gửi lại mỗi 15 phút; cắm lại 30 s thì không gửi nữa và backend tự đóng sau 60 phút;
+> - bật tải bằng dây nối tắt khi relay TẮT: `CURRENT_WHILE_OFF`; lỗi của bơm và quạt cùng lúc là hai cảnh báo;
+> - rút dây SDA khi đang chạy: log không còn số dòng, không có `ACTUATOR_FAULT` sai (đọc kiểm ACK của ADS1115 trước, không ACK thì bỏ qua lần đo);
+> - chân relay K4 trên board rev B2 là GPIO23, firmware vẫn đặt `PIN_RELAY_SPARE` = 14 (relay dự phòng, chưa dùng): đổi khi dùng K4.
+>
+> Giới hạn đã biết của 2.3.0: mức dòng đã học lưu NVS và chưa có cách học lại (`relearn()` chưa có chỗ gọi). Lần BẬT đầu tiên mà tải đã hỏng (bơm rút dây, chỉ có nhiễu vài mA) vẫn được học thành mức bình thường, và từ đó tải này không bao giờ báo lỗi, kể cả sau khi khởi động lại; chỉ xoá NVS (`pio run -t erase` rồi nạp lại danh tính) mới học lại. Khi thử trên board: lần học đầu phải có tải chạy thật.
+
 > **2.2.0 (bù phun sương theo thời tiết G-23, ENV-FR-029, BR-38) — chưa thử trên board.** Đã làm 12/11/2026: `pio run -e esp32dev` và `pio run -e esp32prod` build được, `pio test -e native` 98/98 (`test_weather_compensation`). Còn phải thử trên board:
 > - publish tay retained `swiftletcare/dev/{deviceId}/compensation` với `{"offset_pct":5,"expires_at":<epoch ms + 10 phút>}`: log `[FUZZY] MISTING` có `weather=5.0%`, nhu cầu phun tăng 5 điểm; quá hạn thì về như cũ;
 > - tin có `expires_at` đã qua (tin retained cũ khi kết nối lại) và tin trước khi có NTP: offset 0;

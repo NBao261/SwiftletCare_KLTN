@@ -133,7 +133,7 @@ routes/*.route.ts (express-validator + requireRole)
 
 | Where | Out of line | How to pay it |
 |---|---|---|
-| Report 3 requirements not in code yet | Missing: `ACTUATOR_FAULT` on the controller (THREAT-FR-014: the backend stores the currents and the alert, the firmware detection logic exists, the ADS1115 reading waits for the board) | `docs/reports/project-tracking.md` §6 has one row per gap; a PR closing one names the FR and updates that row |
+| Report 3 requirements not in code yet | Not yet run on hardware: `ACTUATOR_FAULT` (THREAT-FR-014: the backend stores the currents and the alert, firmware 2.3.0 reads the ADS1115 and sends it; the team's board rev B2 is not built) | `docs/reports/project-tracking.md` §6 has one row per gap; a PR closing one names the FR and updates that row |
 | Low coverage areas (`jobs/` 0%, `mqtt/` ~30%, `analytics.service.ts` ~70%, `farm.service.ts` ~74%, `auth.controller.ts` ~39%) | Little test coverage; total line coverage is ~83% against the 80% `coverageThreshold` in `package.json`, so a PR that adds untested code can tip CI red | Add tests when touching them |
 
 A PR that touches a file in this table **should** pay the debt; it **must** when it makes the debt worse.

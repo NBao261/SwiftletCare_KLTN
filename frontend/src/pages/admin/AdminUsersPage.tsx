@@ -4,7 +4,7 @@
 // (constants.ts) và từng modal (*Modal.tsx) nằm ở file riêng trong cùng thư mục.
 import { useState } from 'react'
 import { useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
-import { ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
+import { Button, ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import DataTable from '@/components/ui/DataTable'
@@ -18,6 +18,7 @@ import UserDetailModal from '@/components/features/admin/users/UserDetailModal'
 import LockUserModal from '@/components/features/admin/users/LockUserModal'
 import UnlockUserModal from '@/components/features/admin/users/UnlockUserModal'
 import UserStats from '@/components/features/admin/users/UserStats'
+import CreateFarmOwnerModal from '@/components/features/admin/users/CreateFarmOwnerModal'
 import type { Role, User, SortDirection } from '@/types'
 
 const PAGE_SIZE = 10
@@ -51,6 +52,7 @@ export default function AdminUsersPage() {
   const [viewTarget, setViewTarget] = useState<User | null>(null)
   const [lockTarget, setLockTarget] = useState<User | null>(null)
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
+  const [creatingOwner, setCreatingOwner] = useState(false)
 
   const { records, total, limit, isLoading } = useUsersList({
     // Lọc vai trò ở client (cùng cách lọc nhóm vai trò của tab)
@@ -125,7 +127,7 @@ export default function AdminUsersPage() {
         }
       >
 
-        {/* Hàng 1: tìm kiếm. Admin không tạo tài khoản: Farm Owner mời kỹ thuật viên, chuyên gia vào farm (AUTH-FR-010) */}
+        {/* Hàng 1: tìm kiếm. Admin chỉ tạo Farm Owner (AUTH-FR-005c); kỹ thuật viên, chuyên gia do Farm Owner mời (AUTH-FR-010) */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[200px] flex-1">
             <SearchInput
@@ -134,6 +136,9 @@ export default function AdminUsersPage() {
               onChange={v => { setSearch(v); setPage(1) }}
             />
           </div>
+          {tab === 'customers' && (
+            <Button type="button" onClick={() => setCreatingOwner(true)}>Tạo Farm Owner</Button>
+          )}
         </div>
 
         {/* Hàng 2: toàn bộ bộ lọc + sắp xếp */}
@@ -186,6 +191,7 @@ export default function AdminUsersPage() {
       <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} />
       <LockUserModal user={lockTarget} onClose={() => setLockTarget(null)} />
       <UnlockUserModal user={unlockTarget} onClose={() => setUnlockTarget(null)} />
+      <CreateFarmOwnerModal open={creatingOwner} onClose={() => setCreatingOwner(false)} />
     </div>
   )
 }

@@ -19,7 +19,9 @@
 #include "config/Config.h"
 #include "config/Secrets.h"
 #include "mqtt/MQTTManager.h"
+#include "pid/ActuatorCurrentMonitor.h"
 #include "pid/PIDController.h"
+#include "sensors/CurrentSensor.h"
 #include "sensors/NoiseAnomalyDetector.h"
 #include "sensors/SensorManager.h"
 #include "sensors/SignalFilter.h"
@@ -62,6 +64,16 @@ struct FilteredEnv {
 FilteredEnv latestFiltered;
 // THREAT-FR-007: trạng thái NoiseAnomalyDetector (tính mỗi mẫu 1 Hz trong sensorTask)
 bool noiseAnomalyActive = false;
+
+// THREAT-FR-014, BR-32 — tải có chạy theo relay không: 0 = bơm phun sương, 1 = quạt. sensorTask cập nhật mỗi
+// lần đọc dòng (1 Hz), pidTask đọc trạng thái dưới dataMutex để gửi ACTUATOR_FAULT
+ActuatorCurrentMonitor actuatorMonitors[2];
+struct ActuatorStatus {
+  ActuatorCurrentMonitor::Fault fault = ActuatorCurrentMonitor::Fault::NONE;
+  float normalA = 0;
+  float currentA = 0;
+};
+ActuatorStatus actuatorStatus[2];
 
 // MQTT topic base "swiftletcare/dev/{deviceId}" — tính 1 lần trong setup() (đơn luồng,
 // trước khi tạo task nào), sau đó chỉ ĐỌC nên mqttTask và pidTask đọc an toàn không cần mutex.
@@ -123,14 +135,15 @@ struct AlertReport {
 
 static void reportOnRise(bool active, AlertReport &state, const char *type,
                          const char *severity, const char *message,
-                         unsigned long resendMs = 0) {
+                         unsigned long resendMs = 0,
+                         const MQTTManager::ActuatorDetails *actuator = nullptr) {
   // resendMs > 0: gửi lại định kỳ chừng nào sự cố còn tiếp diễn (xem
   // EPISODE_ALERT_RESEND_MS).
   unsigned long now = millis();
   if (!active) {
     state.reported = false;
   } else if (!state.reported || (resendMs > 0 && now - state.sentAt >= resendMs)) {
-    if (MQTTManager::publishAlert(type, severity, message)) {
+    if (MQTTManager::publishAlert(type, severity, message, nullptr, actuator)) {
       state.reported = true;
       state.sentAt = now;
     }
@@ -213,6 +226,10 @@ void setup() {
 
   // ── Initialize sensors (RS485 Modbus bus, Guide v3.3 §5) ─────────────────
   SensorManager::begin();
+  // THREAT-FR-014 — mức dòng đã học lưu trong NVS, không phải học lại sau mỗi lần khởi động
+  if (CurrentSensor::begin()) {
+    for (int load = 0; load < 2; load++) actuatorMonitors[load].setNormal(StorageManager::loadLearnedCurrent(load));
+  }
 
   // ── Initialize relays (all OFF) ──────────────────────────────────────────
   relayState.init();
@@ -271,6 +288,11 @@ void sensorTask(void *pvParameters) {
     esp_task_wdt_reset();
 
     SensorData data = SensorManager::readAll();
+    CurrentSensor::Reading current = CurrentSensor::read();
+    data.currentOk = current.ok;
+    data.pumpCurrentA = current.ok ? current.mistingA : NAN;
+    data.fanCurrentA = current.ok ? current.ventilationA : NAN;
+    bool learnedNow[2] = {false, false};
 
     // Bộ lọc + NoiseAnomalyDetector chạy ở nhịp đọc cảm biến (1 Hz) — pidTask 10s
     // sẽ bỏ lỡ phần lớn mẫu. static: chỉ task này dùng. Chỉ lọc nhiệt độ + độ ẩm:
@@ -306,7 +328,25 @@ void sensorTask(void *pvParameters) {
       noiseTuning.minLoud = Config::noiseMinSec;
       noiseAnomalyActive =
           noiseDetector.update(data.noiseOk ? data.soundDb : NAN, speakerActive, hour, noiseTuning);
+
+      // THREAT-FR-014 — so dòng với relay của tải; không đọc được dòng thì monitor giữ nguyên (BR-32)
+      if (CurrentSensor::present()) {
+        const bool relayOn[2] = {relayState.misting, relayState.ventilation};
+        const float amps[2] = {current.mistingA, current.ventilationA};
+        for (int load = 0; load < 2; load++) {
+          bool wasLearned = actuatorMonitors[load].learned();
+          actuatorMonitors[load].update(relayOn[load], current.ok, amps[load], millis());
+          learnedNow[load] = !wasLearned && actuatorMonitors[load].learned();
+          actuatorStatus[load].fault = actuatorMonitors[load].fault();
+          actuatorStatus[load].normalA = actuatorMonitors[load].normalA();
+          actuatorStatus[load].currentA = amps[load];
+        }
+      }
       xSemaphoreGive(dataMutex);
+    }
+    // Ghi flash ngoài dataMutex: mức vừa học xong của tải giữ qua lần khởi động sau
+    for (int load = 0; load < 2; load++) {
+      if (learnedNow[load]) StorageManager::saveLearnedCurrent(load, actuatorMonitors[load].normalA());
     }
 
     // Buffer to SPIFFS if MQTT disconnected (REL-NFR-003)
@@ -361,6 +401,7 @@ void pidTask(void *pvParameters) {
     // sẽ làm sensorTask/mqttTask bị treo chờ dataMutex không cần thiết.
     PIDController::ThreatFlags threats;
     bool haveThreats = false;
+    ActuatorStatus actuators[2];
 
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
       // Check manual override expiry (ENV-FR-018, BR-20): trước mọi relay để relay vừa hết
@@ -388,6 +429,7 @@ void pidTask(void *pvParameters) {
           data, relayState, AudioManager::isPlaying());
       threats.noiseAnomaly = noiseAnomaly;
       haveThreats = true;
+      for (int load = 0; load < 2; load++) actuators[load] = actuatorStatus[load];
 
       xSemaphoreGive(dataMutex);
     }
@@ -422,6 +464,27 @@ void pidTask(void *pvParameters) {
       reportOnRise(threats.busFailure, busReported, "RS485_BUS_FAILURE",
                    "CRITICAL",
                    "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");
+
+      // THREAT-FR-014 — tải không theo relay đủ 30 s (BR-32). Gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào lỗi còn,
+      // để backend tự đóng cảnh báo khi tải chạy đúng trở lại (alert.service#EPISODE_ALERT_TYPES)
+      static AlertReport actuatorReported[2];
+      static const char *const LOADS[2] = {"misting", "ventilation"};
+      static const char *const LOAD_NAMES[2] = {"Bơm phun sương", "Quạt"};
+      for (int load = 0; load < 2; load++) {
+        const ActuatorStatus &status = actuators[load];
+        bool noCurrent = status.fault == ActuatorCurrentMonitor::Fault::NO_CURRENT_WHILE_ON;
+        char message[96];
+        if (noCurrent) {
+          snprintf(message, sizeof message, "%s bật nhưng dòng chỉ %.2f A (bình thường %.2f A)",
+                   LOAD_NAMES[load], status.currentA, status.normalA);
+        } else {
+          snprintf(message, sizeof message, "%s tắt nhưng vẫn có dòng %.2f A", LOAD_NAMES[load], status.currentA);
+        }
+        MQTTManager::ActuatorDetails details = {
+            LOADS[load], noCurrent ? "NO_CURRENT_WHILE_ON" : "CURRENT_WHILE_OFF", status.normalA, status.currentA};
+        reportOnRise(status.fault != ActuatorCurrentMonitor::Fault::NONE, actuatorReported[load], "ACTUATOR_FAULT",
+                     "HIGH", message, EPISODE_ALERT_RESEND_MS, &details);
+      }
     }
 
     // Chờ tới chu kỳ kế tiếp, hoặc tỉnh sớm khi có lệnh nghe thử

@@ -7,7 +7,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import { THRESHOLD_KEYS, THRESHOLD_FIELDS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
-import { parseThresholdInput, validateThresholds } from '@/validations/common/threshold.validation'
+import { parseThresholdInput, validateThresholds, validateThresholdSource } from '@/validations/common/threshold.validation'
 import type { ThresholdKey } from '@/components/features/admin/system/system.constants'
 import type { SystemDefaultThresholds } from '@/types'
 
@@ -34,15 +34,18 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
   const [form, setForm] = useState<ThresholdFormState | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  // ENV-FR-007 — mỗi lần đổi ngưỡng mặc định (kể cả khôi phục gốc) ghi nguồn có mã REF-5
+  const [source, setSource] = useState('')
 
   // Modal cha không unmount giữa các lần mở (chỉ đổi `open`) — seed lại form đúng
   // giá trị server mỗi lần MỞ, không chỉ lúc mount, để bỏ dở lần sửa trước không rò sang lần sau.
   useEffect(() => {
-    if (open && data) { setForm(toThresholdForm(data)); setSubmitted(false); setShowResetConfirm(false) }
+    if (open && data) { setForm(toThresholdForm(data)); setSource(''); setSubmitted(false); setShowResetConfirm(false) }
   }, [open, data])
 
   const errors = form ? validateThresholds(parseThresholdForm(form)) : {}
-  const isValid = Object.keys(errors).length === 0
+  const sourceError = validateThresholdSource(source)
+  const isValid = Object.keys(errors).length === 0 && !sourceError
 
   function setField(key: ThresholdKey, raw: string) {
     setForm(f => (f ? { ...f, [key]: raw } : f))
@@ -52,16 +55,16 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
     e.preventDefault()
     setSubmitted(true)
     if (!form || !isValid) return
-    updateThresholds.mutate(parseThresholdForm(form), {
+    updateThresholds.mutate({ ...parseThresholdForm(form), source: source.trim() }, {
       onSuccess: () => { push('Đã lưu ngưỡng mặc định hệ thống'); onClose() },
       // 400 từ assertValidThresholds (min ≥ max, ngoài khoảng đo...) — backend trả message tiếng Việt sẵn
       onError: (err) => push(getApiErrorMessage(err, 'Lưu ngưỡng mặc định thất bại'), 'error'),
     })
   }
 
-  /** Backend không có endpoint reset — ghi đè bằng đúng 7 giá trị gốc qua PUT như một lần lưu bình thường */
+  /** Backend không có endpoint reset — ghi đè bằng đúng 7 giá trị gốc qua PUT như một lần lưu bình thường, cùng nguồn */
   function handleReset() {
-    updateThresholds.mutate(FACTORY_DEFAULT_THRESHOLDS, {
+    updateThresholds.mutate({ ...FACTORY_DEFAULT_THRESHOLDS, source: source.trim() }, {
       onSuccess: () => { setShowResetConfirm(false); push('Đã khôi phục về mặc định gốc'); onClose() },
       onError: (err) => push(getApiErrorMessage(err, 'Khôi phục mặc định gốc thất bại'), 'error'),
     })
@@ -90,7 +93,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
                 type="button"
                 variant="secondary"
                 disabled={!form || updateThresholds.isPending}
-                onClick={() => setShowResetConfirm(true)}
+                onClick={() => { setSubmitted(true); if (!sourceError) setShowResetConfirm(true) }}
               >
                 Khôi phục mặc định gốc
               </Button>
@@ -119,6 +122,21 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
                   </div>
                 </ModalSection>
               )}
+              <ModalSection title="Nguồn của lần đổi">
+                <Input
+                  label="Nguồn (mã mục REF-5)"
+                  placeholder="VD: TL-003 — tài liệu nuôi yến, chương 4"
+                  required
+                  maxLength={500}
+                  value={source}
+                  onChange={e => setSource(e.target.value)}
+                  error={submitted ? sourceError : undefined}
+                  errorInLabel
+                />
+                {data?.source && (
+                  <p className="mt-2 text-xs text-gray-500">{t('Nguồn hiện tại: {{source}}', { source: data.source })}</p>
+                )}
+              </ModalSection>
               <div className="mt-auto flex justify-end">
                 <Button type="submit" disabled={!form} loading={updateThresholds.isPending && !showResetConfirm}>Lưu</Button>
               </div>

@@ -10,6 +10,13 @@ export interface ListAdminUsersQuery {
   limit?: number
 }
 
+/** POST /admin/farm-owners — e-mail đã có tài khoản (mọi role) trả 409 */
+export interface CreateFarmOwnerInput {
+  email: string
+  full_name: string
+  phone?: string
+}
+
 /**
  * Router `/admin` (backend/src/routes/admin.route.ts) — mọi endpoint đều
  * `requireRole('ADMIN')`. Không có DELETE /admin/users/:id: xoá tài khoản chỉ đi
@@ -25,6 +32,10 @@ export const adminApi = {
   /** Khoá cần `reason` */
   setUserStatus: (id: string, isActive: boolean, reason?: string) =>
     api.put<ApiResponse<User>>(`/admin/users/${id}/status`, { is_active: isActive, reason }),
+
+  // ── Tạo Farm Owner — AUTH-FR-005c: mật khẩu tạm gửi qua e-mail, phải đổi ở lần đăng nhập đầu ──
+  createFarmOwner: (input: CreateFarmOwnerInput) =>
+    api.post<ApiResponse<User & { temporary_password_emailed: boolean }>>('/admin/farm-owners', input),
 
   // ── Yêu cầu xoá — AUTH-FR-012 / Flow 19 bước 7-8 ────────────────────────────
   listDeleteRequests: (query?: { page?: number; limit?: number }) =>
