@@ -1,6 +1,7 @@
 /**
- * EXPERT-FR-005/006/007 (SRS v2.0.0) — báo cáo sức khỏe Zone do hệ thống tự tổng hợp,
- * Domain Expert viết kết luận, Farm Owner được báo và đọc.
+ * EXPERT-FR-005/006 — báo cáo tuần theo Zone kiểu cũ: hệ thống không tạo mới nữa (báo cáo theo nhà có mục cho
+ * từng Zone, houseHealthReport.test.ts), nhưng các báo cáo đã lưu vẫn đọc và viết kết luận được; số liệu từng
+ * Zone (`buildZoneMetrics`) vẫn dùng chung.
  */
 import express from 'express'
 import jwt from 'jsonwebtoken'
@@ -18,7 +19,7 @@ import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
-import { buildZoneMetrics, generateWeeklyReports } from '@/services/healthReport.service'
+import { buildZoneMetrics } from '@/services/healthReport.service'
 import { notifyUser } from '@/services/notification.service'
 import type { Role } from '@/types'
 
@@ -99,16 +100,23 @@ async function seed(withData = true) {
   return { owner, expert, farm, zone, node, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
 }
 
-describe('tổng hợp báo cáo (EXPERT-FR-005/007)', () => {
-  it('tạo 1 báo cáo / Zone có dữ liệu với đủ số liệu, báo cho Farm Owner và Domain Expert, chạy lại không tạo trùng', async () => {
-    const { owner, expert, zone } = await seed()
-    await seed(false) // Zone chưa có telemetry → bỏ qua
+/** Báo cáo Zone đã lưu từ trước (kiểu cũ) với số liệu 7 ngày qua của Zone */
+async function storedZoneReport(zone: { _id: unknown }) {
+  const full = (await Zone.findById(zone._id))!
+  const now = new Date()
+  const from = new Date(now.getTime() - 7 * 24 * HOUR)
+  return ZoneHealthReport.create({
+    farm_id: full.farm_id, zone_id: full._id, period_start: from, period_end: now,
+    metrics: await buildZoneMetrics(full, from, now), generated_at: now,
+  })
+}
 
-    expect(await generateWeeklyReports()).toBe(1)
-    const report = (await ZoneHealthReport.findOne().lean())!
-    expect(String(report.zone_id)).toBe(String(zone._id))
-    expect(report.period_end.getTime() - report.period_start.getTime()).toBe(7 * 24 * HOUR)
-    expect(report.metrics).toMatchObject({
+describe('số liệu từng Zone (EXPERT-FR-005, dùng cho mục Zone của báo cáo theo nhà)', () => {
+  it('% trong ngưỡng, % tự động, số lần đóng cắt, cảnh báo theo loại, NH3/CO2', async () => {
+    const { zone } = await seed()
+    const now = Date.now()
+    const metrics = await buildZoneMetrics((await Zone.findById(zone._id))!, new Date(now - 7 * 24 * HOUR), new Date(now))
+    expect(metrics).toMatchObject({
       sample_count: 10,
       humidity_in_range_pct: 80,
       temp_in_range_pct: 90,
@@ -120,37 +128,6 @@ describe('tổng hợp báo cáo (EXPERT-FR-005/007)', () => {
       nh3_avg: 8.5, nh3_max: 13,
       co2_avg: 790, co2_max: 880,
     })
-
-    const notified = (notifyUser as jest.Mock).mock.calls.map(c => c[0])
-    expect(notified.sort()).toEqual([String(owner._id), String(expert._id)].sort())
-
-    expect(await generateWeeklyReports()).toBe(0)
-    expect(await ZoneHealthReport.countDocuments()).toBe(1)
-  })
-})
-
-describe('hai lần chạy chồng nhau không tạo báo cáo trùng', () => {
-  it('cùng một nhịp cron trên 2 instance: chỉ 1 báo cáo và 1 lượt thông báo', async () => {
-    await ZoneHealthReport.init() // chờ unique index tạo xong
-    await seed()
-    const tick = new Date()
-
-    const [a, b] = await Promise.all([generateWeeklyReports(tick), generateWeeklyReports(new Date(tick.getTime() + 500))])
-    expect(a + b).toBe(1)
-    expect(await ZoneHealthReport.countDocuments()).toBe(1)
-    expect((notifyUser as jest.Mock).mock.calls).toHaveLength(2) // chủ farm + chuyên gia, đúng 1 lượt
-  })
-})
-
-describe('một Zone lỗi không làm các Zone khác mất báo cáo', () => {
-  it('Zone đầu ném lỗi lúc tổng hợp, Zone sau vẫn có báo cáo', async () => {
-    await seed()
-    await seed()
-    jest.spyOn(ZoneHealthReport, 'exists').mockRejectedValueOnce(new Error('aggregate quá tải') as never)
-
-    expect(await generateWeeklyReports()).toBe(1)
-    expect(await ZoneHealthReport.countDocuments()).toBe(1)
-    jest.restoreAllMocks()
   })
 })
 
@@ -170,11 +147,10 @@ describe('số lần đóng cắt relay không bị phồng sau khi mất mạng
   })
 })
 
-describe('đọc báo cáo', () => {
+describe('đọc báo cáo Zone đã lưu', () => {
   it('Farm Owner và Domain Expert xem danh sách, chi tiết và khoảng bất kỳ; farm khác thì 403', async () => {
     const { zone, t } = await seed()
-    await generateWeeklyReports()
-    const id = String((await ZoneHealthReport.findOne())!._id)
+    const id = String((await storedZoneReport(zone))._id)
 
     const list = await call('get', `/health-reports?zoneId=${zone._id}`, t.expert).expect(200)
     expect(list.body.meta.total).toBe(1)
@@ -199,11 +175,10 @@ describe('đọc báo cáo', () => {
   })
 })
 
-describe('kết luận của chuyên gia (EXPERT-FR-006)', () => {
+describe('kết luận của chuyên gia trên báo cáo Zone đã lưu (EXPERT-FR-006)', () => {
   it('chỉ Domain Expert viết; Farm Owner được báo; người viết sửa được, chuyên gia khác thì không', async () => {
-    const { owner, expert, farm, t } = await seed()
-    await generateWeeklyReports()
-    const id = String((await ZoneHealthReport.findOne())!._id)
+    const { owner, expert, farm, zone, t } = await seed()
+    const id = String((await storedZoneReport(zone))._id)
     jest.clearAllMocks()
 
     await call('put', `/health-reports/${id}/conclusion`, t.owner, { text: 'x' }).expect(403)
