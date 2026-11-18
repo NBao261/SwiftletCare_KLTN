@@ -187,11 +187,11 @@ $C exec backend npm run migrate:retention   # và các migrate:* còn chờ
 - Activation key và broker secret của các thiết bị `demo-*` được sinh mới mỗi lần và chỉ in ra màn hình. Nạp chúng vào ESP32 thật bằng `firmware/tools/flash_identity.py`, hoặc dùng cho bộ giả lập.
 
 ```bash
-$C exec backend npm run seed:demo        # trên staging; máy dev: cd backend && npm run seed:demo
+$C exec -e DEMO_PASSWORD='<mật khẩu>' backend npm run seed:demo   # staging bắt buộc DEMO_PASSWORD; máy dev: npm run seed:demo
 $C exec backend npm run job:run -- <job> # chạy ngay một job nền thay cho chờ lịch của nó
 ```
 
-Tài khoản demo (mật khẩu `Test1234!`, đổi trước khi đưa link cho người ngoài):
+Tài khoản demo: cả 6 tài khoản dùng chung mật khẩu `DEMO_PASSWORD`, kể cả 3 tài khoản `npm run seed` đã tạo. Trên staging (`NODE_ENV=production`) script từ chối chạy khi thiếu biến này; trên máy dev và CI mặc định là `Test1234!`. Test E2E đọc cùng biến đó.
 
 | Tài khoản | Vai trò |
 | --- | --- |
@@ -222,6 +222,7 @@ Tài khoản demo (mật khẩu `Test1234!`, đổi trước khi đưa link cho 
 | 16 | Khuyến nghị đang mở ở nhà C (luật thời gian trong ngưỡng dưới 90 %) | Từ chối không lý do | `expire 8` (như đã qua 8 ngày) → `EXPIRED` | `ds-15-16` |
 
 Giới hạn đã biết:
+- DS-03: 15 phút sau seed, cảnh báo của nhà B leo thang tới Farm Owner (`alertEscalation.job`), nên muốn trình bày "thợ nhận trước" thì chạy `seed:demo` ngay trước DS-03. Test E2E chỉ kiểm điều không đổi theo thời gian.
 - DS-04: Work Order của nhà B không có telemetry, nên giữ `VERIFYING` cho tới khi cảnh báo tự đóng sau 60 phút không lặp lại (`alertEscalation.job`) cộng 10 phút kiểm. Vì vậy phải chạy `seed:demo` trong vòng 1 giờ trước DS-04.
 - DS-14: kế hoạch tự sang `OVERDUE` ở lần chạy kế của job bảo trì mỗi giờ.
 - Nhà A không có camera, nên mọi ngày của nó là `INSUFFICIENT_DATA` (thiếu số đếm). Luật NH3 chỉ đọc số giờ không khí vượt ngưỡng, không bị ảnh hưởng.
@@ -238,4 +239,4 @@ Lệnh dùng chung: `C="docker compose -f deploy/docker-compose.staging.yml --en
 | Kiệt — backend, MongoDB, migration, seed, sao lưu | `curl https://<DOMAIN>/api/health`; đăng nhập được; bản sao lưu đêm qua có trong `~/backup` và trên Drive | API 502 → `$C logs backend` (thiếu biến môi trường thì báo ngay lúc khởi động), `$C restart backend`. Dữ liệu hỏng sau triển khai → khôi phục bản trước triển khai (mục 3). Cron sao lưu báo lỗi → chạy tay `sh deploy/staging-backup.sh` xem thông báo |
 | Nhi — bản build web, màn Farm Owner và Admin | Mở trang tổng quan, cảnh báo, Work Order, bảo trì của Farm Owner; trang người dùng và kho thiết bị của Admin | Trang trắng hoặc lỗi tải file JS → build lại ảnh Nginx (`$C up -d --build nginx`), xoá cache trình duyệt (PWA giữ bản cũ). Gọi API lỗi CORS → `CORS_ORIGIN` phải là `https://<DOMAIN>` |
 | Len — bản build mobile, push | Bản APK `preview` đăng nhập được, nhận push của một cảnh báo thử, mở được live stream | App không nối được → biến `EXPO_PUBLIC_*` của môi trường `preview` trên EAS (mục 3), build lại. Không có push → backend thiếu `deploy/secrets/firebase-service-account.json` (log backend báo khi khởi động). Live stream không mở → thử `https://<DOMAIN>/hls/<path>/index.m3u8?token=…` trên trình duyệt |
-| Tuấn — màn chuyên gia, console thiết bị của Admin, E2E | Hàng chờ kết luận, tham số phát hiện, luật khuyến nghị; console thiết bị của Admin; chạy bộ E2E trước mỗi buổi tổng duyệt | E2E trên staging: chạy `npm run seed:demo` trong container backend rồi `E2E_BASE_URL=https://<DOMAIN> npx playwright test` ở `frontend/`. Test hỏng vì dữ liệu đã đổi ở lần chạy trước → chạy lại `seed:demo` |
+| Tuấn — màn chuyên gia, console thiết bị của Admin, E2E | Hàng chờ kết luận, tham số phát hiện, luật khuyến nghị; console thiết bị của Admin; chạy bộ E2E trước mỗi buổi tổng duyệt | E2E trên staging: chạy `seed:demo` trong container backend (mục 5) rồi `DEMO_PASSWORD=<mật khẩu> E2E_BASE_URL=https://<DOMAIN> npx playwright test` ở `frontend/`. Test hỏng vì dữ liệu đã đổi ở lần chạy trước → chạy lại `seed:demo` |

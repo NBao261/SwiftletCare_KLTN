@@ -38,7 +38,18 @@ import logger from '@/utils/logger.util'
 
 export const DEMO_FARM = 'Trại yến Demo A2'
 export const NO_EXPERT_FARM = 'Trại yến không chuyên gia'
-const PASSWORD = 'Test1234!'
+/**
+ * Mật khẩu của 6 tài khoản demo (cả admin@). Trên staging (NODE_ENV=production, tên miền công khai) phải đặt DEMO_PASSWORD:
+ * mật khẩu mặc định ai cũng đoán được. Máy dev và CI dùng mật khẩu của `npm run seed`.
+ */
+function demoPassword(): string {
+  const fromEnv = process.env.DEMO_PASSWORD?.trim()
+  if (fromEnv) return fromEnv
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Đặt DEMO_PASSWORD trước khi chạy seed:demo trên staging (docs/deploy/staging.md §5)')
+  }
+  return 'Test1234!'
+}
 const DEMO_COORDINATES = { lat: 10.7769, lng: 106.7009 }
 const HOUR_MS = 3_600_000
 const DAY_MS = 24 * HOUR_MS
@@ -58,11 +69,11 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 const round1 = (v: number) => Math.round(v * 10) / 10
 const asUser = (u: { _id: unknown; email: string; role: string }): CurrentUser => ({ _id: String(u._id), email: u.email, role: u.role as Role })
 
-async function ensureUser(email: string, fullName: string, role: Role) {
+async function ensureUser(email: string, fullName: string, role: Role, password: string) {
   const found = await User.findOne({ email })
   if (found) return found
   logger.info(`[seed:demo] Tạo tài khoản ${email} (${role})`)
-  return User.create({ email, password_hash: PASSWORD, full_name: fullName, role })
+  return User.create({ email, password_hash: password, full_name: fullName, role })
 }
 
 /** Xoá 2 farm demo cùng mọi bản ghi gắn với farm, nhà, tầng, thiết bị của chúng */
@@ -183,6 +194,7 @@ async function seedSessions(cameraId: unknown, houseId: unknown, date: string, c
 
 async function seedDemo(): Promise<void> {
   await connectDB()
+  const password = demoPassword()
   const now = new Date()
   const today = vnDate(now)
   const day = (n: number) => addDays(today, -n)
@@ -191,9 +203,14 @@ async function seedDemo(): Promise<void> {
   const techDoc = await User.findOne({ email: 'tech@swiftletcare.dev' })
   const expertDoc = await User.findOne({ email: 'expert@swiftletcare.dev' })
   if (!ownerDoc || !techDoc || !expertDoc) throw new Error('Chạy `npm run seed` trước (cần owner@, tech@, expert@)')
-  const adminDoc = await ensureUser('admin@swiftletcare.dev', 'Demo Administrator', 'ADMIN')
-  const tech2Doc = await ensureUser('tech2@swiftletcare.dev', 'Demo Farm Technician 2', 'FARM_TECHNICIAN')
-  const owner2Doc = await ensureUser('owner2@swiftletcare.dev', 'Demo Farm Owner 2', 'FARM_OWNER')
+  const adminDoc = await ensureUser('admin@swiftletcare.dev', 'Demo Administrator', 'ADMIN', password)
+  const tech2Doc = await ensureUser('tech2@swiftletcare.dev', 'Demo Farm Technician 2', 'FARM_TECHNICIAN', password)
+  const owner2Doc = await ensureUser('owner2@swiftletcare.dev', 'Demo Farm Owner 2', 'FARM_OWNER', password)
+  // Cả 6 tài khoản dùng chung một mật khẩu, kể cả 3 tài khoản `npm run seed` đã tạo (hook pre-save băm lại)
+  for (const doc of [ownerDoc, techDoc, expertDoc, adminDoc, tech2Doc, owner2Doc]) {
+    doc.password_hash = password
+    await doc.save()
+  }
   const [admin, owner, tech, expert, owner2] = [adminDoc, ownerDoc, techDoc, expertDoc, owner2Doc].map(asUser)
 
   await resetDemo()
@@ -332,14 +349,14 @@ async function seedDemo(): Promise<void> {
   const suggestion = await getTuningSuggestion(owner, String(zoneA._id), now)
   logger.info(`[seed:demo] Gợi ý hệ số tầng A (DS-09): ${suggestion.suggestion ? 'có' : `chưa có — ${suggestion.reason}`}`)
 
-  logger.info(`[seed:demo] Xong. Tài khoản (mật khẩu ${PASSWORD}): owner@, tech@ (nhà A, B, C), tech2@ (nhà D), expert@, admin@, owner2@ (${NO_EXPERT_FARM})`)
+  logger.info(`[seed:demo] Xong. Tài khoản (mật khẩu ${process.env.DEMO_PASSWORD ? 'DEMO_PASSWORD' : password}): owner@, tech@ (nhà A, B, C), tech2@ (nhà D), expert@, admin@, owner2@ (${NO_EXPERT_FARM})`)
   // Khoá chỉ in ra đây, không lưu ở đâu khác: nạp vào thiết bị bằng firmware/tools/flash_identity.py
   console.table(deviceKeys)
   await mongoose.disconnect()
 }
 
 seedDemo().catch(async (err: Error) => {
-  logger.error('[seed:demo] Failed', { err })
+  logger.error('[seed:demo] Failed', { err: err.message })
   await mongoose.disconnect()
   process.exit(1)
 })
