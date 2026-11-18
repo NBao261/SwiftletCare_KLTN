@@ -42,6 +42,8 @@ export interface User {
   deletion_requested_at?: string
   /** AUTH-FR-012 — Admin đã xoá/ẩn danh xong; document vẫn còn để giữ tham chiếu lịch sử */
   deleted_at?: string
+  /** AUTH-FR-005c — mật khẩu tạm do Admin cấp: phải đổi trước khi dùng hệ thống (backend chặn mọi route khác) */
+  must_change_password?: boolean
   created_at?: string
 }
 

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
-import { redirectToLogin } from '@/lib/navigation'
+import { redirectToLogin, redirectToPasswordChange } from '@/lib/navigation'
 import { queryClient } from '@/lib/queryClient'
 
 // Dev: vite.config.ts proxy '/api' -> http://localhost:3000 (bỏ prefix /api trước
@@ -54,6 +54,11 @@ api.interceptors.response.use(
         queryClient.clear() // phiên hết hạn — dọn sạch cache cũ, tránh lộ dữ liệu sang phiên đăng nhập sau
         redirectToLogin(window.location.pathname + window.location.search)
       }
+    }
+    // AUTH-FR-005c — tài khoản còn mật khẩu tạm: mọi route trừ đổi mật khẩu bị chặn, đưa về trang đổi
+    if (err.response?.status === 403 && err.response?.data?.error?.code === 'PASSWORD_CHANGE_REQUIRED') {
+      useAuthStore.getState().updateUser({ must_change_password: true })
+      redirectToPasswordChange()
     }
     return Promise.reject(err)
   }
