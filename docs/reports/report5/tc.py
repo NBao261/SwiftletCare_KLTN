@@ -308,7 +308,7 @@ NFR=[
 ('NFR-09','Test days kept out of training and tuning: detection on ≥ 200 labelled frames per lighting (IoU ≥ 0.5); counting on 20 clips of 5 min (10 daylight, 10 low light) against counts by two members','Precision ≥ 0.80, Recall ≥ 0.80; count error ≤ 10 % per direction; each per lighting',(M,'AI node, evaluation script and `tools/track_clip.py`')),
 ('NFR-13','5 people who have not set up a device before, timed from power-on to "configuration applied"','≤ 10 min in 5/5; two scans + Wi-Fi',(M,'prototype, mobile app')),
 ('NFR-14','Snapshots and independent ratings over ≥ 14 rated days (ANALYTICS-FR-014)','Agreement ≥ 70 % with its 95 % CI; weighted kappa and AC1 reported',(M,'field run, test house')),
-('NFR-15','30 alerts and 10 Work Orders injected with the device simulator on staging; times from the backend log and a Socket.io client','P95 ≤ 60 s after the escalation deadline and after the end of recovery_verify_min',(M,'staging, device simulator')),
+('NFR-15','30 alerts and 10 Work Orders injected with the device simulator on staging; times from the backend log and a Socket.io client','P95 ≤ 60 s after the escalation deadline and after the end of recovery_verify_min',(M,'staging, device simulator `--work-orders` (`simulator/src/nfr15.js`)')),
 ]
 
 # Requirements verified by committed NFR cases
