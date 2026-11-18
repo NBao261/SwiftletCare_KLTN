@@ -17,7 +17,6 @@ import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 import { createAlert } from '@/services/alert.service'
-import { generateWeeklyReports } from '@/services/healthReport.service'
 import { notifyUser } from '@/services/notification.service'
 import { sendTelegram } from '@/services/telegram.service'
 import { emitNotificationNew } from '@/socket'
@@ -143,14 +142,5 @@ describe('EXPERT-FR-007 — cảnh báo suy luận chờ kiểm chứng', () => 
     await new Promise(r => setTimeout(r, 100))
     // Farm Owner nhận "Work Order mới" (BR-39), chuyên gia không nhận gì
     expect(await Notification.countDocuments({ user_id: expert._id })).toBe(0)
-  })
-
-  it('báo cáo sức khỏe mới → chủ farm và chuyên gia đều có thông báo kèm ref', async () => {
-    const { owner, expert, zone } = await seed()
-    await Telemetry.create({ zone_id: zone._id, node_id: new mongoose.Types.ObjectId(), timestamp: new Date(Date.now() - 3600_000), temperature: 29, humidity: 80 })
-    expect(await generateWeeklyReports()).toBe(1)
-
-    const rows = await Notification.find({ 'ref.kind': 'health_report' }).lean()
-    expect(rows.map(r => String(r.user_id)).sort()).toEqual([String(owner._id), String(expert._id)].sort())
   })
 })

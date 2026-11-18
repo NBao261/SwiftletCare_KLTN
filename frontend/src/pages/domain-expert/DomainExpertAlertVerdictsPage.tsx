@@ -14,7 +14,6 @@ import { Check, Info, ArrowRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import SelectMenu from '@/components/ui/SelectMenu'
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import AlertsKpiAndStatsBar, {
   TYPE_OPTS,
   SEV_OPTS,
@@ -162,9 +161,8 @@ export default function DomainExpertAlertVerdictsPage() {
                   </p>
                 </>
               ) : (
-                <span className="text-[11.5px] text-warmGray flex items-center gap-1.5">
-                  Chưa có lịch sử phán quyết trong kỳ
-                  <MockDataTooltip reason="Tỷ lệ xác nhận sự cố thật theo từng loại cảnh báo sẽ tự động tổng hợp sau khi Chuyên gia thẩm định." />
+                <span className="text-[11.5px] text-warmGray">
+                  Chưa có lịch sử phán quyết trong kỳ — tỷ lệ xác nhận theo loại cảnh báo hiện ra khi chuyên gia đã có phán quyết
                 </span>
               )}
             </div>

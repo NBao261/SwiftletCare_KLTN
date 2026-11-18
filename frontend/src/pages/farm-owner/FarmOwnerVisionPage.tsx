@@ -5,7 +5,6 @@ import HeaderActions from '@/components/layouts/HeaderActions';
 import BirdStatsCards from '@/components/features/farm-owner/vision/BirdStatsCards';
 import BirdTrendChart from '@/components/features/farm-owner/vision/BirdTrendChart';
 import LiveCameraCard from '@/components/features/farm-owner/vision/LiveCameraCard';
-import SavedEventsTable from '@/components/features/farm-owner/vision/SavedEventsTable';
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -61,8 +60,6 @@ export default function FarmOwnerVisionPage(): JSX.Element {
         </div>
 
         <BirdTrendChart houseIds={houseIds} />
-
-        <SavedEventsTable />
       </>
     );
   }

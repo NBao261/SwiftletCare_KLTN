@@ -10,7 +10,7 @@ Node.js 22 + Express 4 + TypeScript + MongoDB + EMQX (MQTT) + Socket.io. Yêu c�
 > - `NOISE_ANOMALY` thay `BIRD_PANIC` (firmware cũ gửi tên cũ vẫn nhận); `alerts.expert_verdict`, `PUT /alerts/:id/verdict`, `GET /alerts/verdict-stats`.
 > - `zones.detection_tuning` + `PUT /farms/zones/:zoneId/detection-tuning` (EXPERT-FR-008); 5 tham số gửi xuống ESP32 qua `config/update`.
 > - `relay_override_logs` + `GET /devices/sensor-nodes/:id/relay-overrides`, `GET /analytics/autonomy`.
-> - `zone_health_reports`, job `healthReport.job.ts` và `/health-reports`.
+> - `/health-reports`: báo cáo ngày, tuần, tháng theo nhà (`househealthreports`, job `houseHealthReport.job.ts`, BR-33) có một mục cho mỗi Zone; báo cáo tuần theo Zone cũ (`zone_health_reports`) chỉ còn đọc và viết kết luận, không tạo mới.
 > - Không còn ticket, chat, SLA, lịch bảo trì và vùng của Technician (PR #104, #105; `npm run migrate:remove-tickets`, `migrate:remove-regions`): cảnh báo không ai xác nhận được gửi lại một lần (ALERT-FR-015), bơm/quạt quá giờ chạy báo `MAINTENANCE_DUE` (ALERT-FR-016); Technician thấy cấu trúc, thiết bị, cảnh báo thiết bị của mọi farm (FARM-FR-009); Admin không quản lý farm. Quyền từng route theo Report 3 §2.4 (PR #100).
 > - Kênh ngoài ứng dụng chạy thật: Telegram bot (`services/telegram.service.ts`, cần `TELEGRAM_BOT_TOKEN` + `TELEGRAM_BOT_USERNAME`). Firebase FCM vẫn chỉ ghi log dù Report 3 cam kết cả hai kênh (ALERT-FR-002); Zalo/SMS không làm.
 >
@@ -172,7 +172,7 @@ src/
 | ALERT (Alert Engine, dedup, quiet hours) | Đã code đầy đủ (`alert.service.ts`) | Telegram bot gửi thật khi có `TELEGRAM_BOT_TOKEN` (`telegram.service.ts`); kiểm chứng của Domain Expert (`PUT /alerts/:id/verdict`). **Chưa nối:** Firebase FCM (chỉ log; Report 3 bắt buộc, ALERT-FR-002); Zalo/SMS ngoài phạm vi. **Report 3 còn thiếu:** trạng thái `DISMISSED`, gói bằng chứng (ALERT-FR-014) |
 | ANALYTICS (env summary/compare, bird-count) | Đã code đầy đủ (`analytics.service.ts`) | Nhóm bird-count/return-rate/correlation trả rỗng cho tới khi module VISION (Edge AI, chưa lắp phần cứng) có dữ liệu thật — không phải lỗi |
 | HARVEST (ghi nhận thu hoạch) | Đã code đầy đủ (`harvest.service.ts`) | Farm Owner tạo/sửa/xoá mềm Harvest Batch (tự gắn snapshot môi trường + đàn chim, `trace_code`); Domain Expert chỉ xem. Marketplace ngoài phạm vi (Report 3 §8) |
-| EXPERT (báo cáo sức khỏe Zone) | Đã code đầy đủ (`healthReport.service.ts`) | Job tổng hợp theo chu kỳ (`HEALTH_REPORT_CRON`, mặc định thứ Hai 06:00), xem theo khoảng bất kỳ, Domain Expert viết kết luận, Farm Owner được báo |
+| EXPERT (báo cáo sức khỏe) | Đã code đầy đủ (`houseHealthReport.service.ts`) | Báo cáo ngày, tuần, tháng theo nhà (BR-33, job `houseHealthReport.job.ts`) có mục từng Zone, báo cáo theo yêu cầu tối đa 31 ngày, Domain Expert viết kết luận, Farm Owner được báo |
 | Lịch sử can thiệp tay + tỷ lệ tự động | Đã code đầy đủ (`relayOverrideLog.service.ts`) | Ghi ở mọi đường override bắt đầu/kết thúc; `GET /analytics/autonomy` |
 
 ### Quan trọng — topic MQTT dùng ObjectId thật

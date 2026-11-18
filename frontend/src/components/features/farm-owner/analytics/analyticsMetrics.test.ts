@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api';
 import {
+  alignOutdoorWeather,
   correlationStrength,
   groupBucketsByHour,
   mergeBirdCountBuckets,
@@ -10,6 +11,7 @@ import {
   metricThresholdRange,
   pearsonCorrelation,
   summarizeWeeklyReturnRates,
+  totalRainfall,
 } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import type { Thresholds } from '@/types';
 
@@ -138,5 +140,36 @@ describe('sumTodayBirdCounts', () => {
 
   it('chưa nhà nào đủ 2 phiên thì tỷ lệ về là null', () => {
     expect(sumTodayBirdCounts([house(100, 0, false, null)]).returnRate).toBeNull();
+  });
+});
+
+describe('thời tiết ngoài trời cạnh số đo trong nhà (ANALYTICS-FR-013)', () => {
+  const point = (timestamp: string, precipitation: number | null) =>
+    ({ timestamp, temperature: 27, humidity: 85, precipitation_mm: precipitation });
+
+  const HOUR = 3600_000;
+
+  it('mỗi mốc trong nhà nhận thời tiết của giờ phủ nó; mốc trước giờ đầu hoặc rơi vào giờ thiếu thì null', () => {
+    const outdoor = [point('2026-11-18T02:00:00.000Z', 1), point('2026-11-18T05:00:00.000Z', 0)];
+    const timestamps = ['2026-11-18T01:48:00.000Z', '2026-11-18T02:00:00.000Z', '2026-11-18T02:48:00.000Z', '2026-11-18T03:00:00.000Z', '2026-11-18T05:12:00.000Z'];
+    expect(alignOutdoorWeather(timestamps, outdoor, HOUR)).toEqual([null, outdoor[0], outdoor[0], null, outdoor[1]]);
+  });
+
+  it('khoảng 1h: giờ đã qua chứa đầu khoảng phủ các mốc trong giờ đó, giờ hiện tại chưa có thì null', () => {
+    const outdoor = [point('2026-11-18T09:00:00.000Z', 0)];
+    const aligned = alignOutdoorWeather(['2026-11-18T09:20:00.000Z', '2026-11-18T09:59:00.000Z', '2026-11-18T10:05:00.000Z'], outdoor, HOUR);
+    expect(aligned).toEqual([outdoor[0], outdoor[0], null]);
+  });
+
+  it('bucket dài hơn 1 giờ (30d): điểm phủ đúng bucket của nó', () => {
+    const sixHours = 6 * HOUR;
+    const outdoor = [point('2026-11-18T00:00:00.000Z', 2)];
+    expect(alignOutdoorWeather(['2026-11-18T00:00:00.000Z', '2026-11-18T06:00:00.000Z'], outdoor, sixHours)).toEqual([outdoor[0], null]);
+  });
+
+  it('cộng mưa các giờ có số; không giờ nào có số mưa thì null, không phải 0', () => {
+    expect(totalRainfall([point('a', 1.2), point('b', null), point('c', 0.3)])).toBeCloseTo(1.5);
+    expect(totalRainfall([point('a', null)])).toBeNull();
+    expect(totalRainfall([])).toBeNull();
   });
 });

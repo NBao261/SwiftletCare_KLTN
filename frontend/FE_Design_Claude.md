@@ -815,7 +815,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
 | Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
-| Chi tiết thiết bị `/devices/detail` — tên thiết bị con của bộ kit (do Kỹ thuật viên đặt) | FARM-FR-005/006 (phần mở rộng UI) | 🟡 Chưa có endpoint — `farmMock.api.ts#getDeviceComponentNames` đọc `src/data/deviceComponents.data.ts`; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) | **Có** |
+| Chi tiết thiết bị `/devices/detail` — thiết bị con của bộ kit | FARM-FR-005/006 (phần mở rộng UI) | 🟢 Không có tên riêng cho từng thiết bị con (không có endpoint): mỗi dòng ghi mã bộ kit; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) — dữ liệu giả `deviceComponents.data.ts` đã gỡ 18/11/2026 | Không |
 
 *Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/project-tracking.md` §6 — lệch nhau thì tin hai nguồn đó và sửa bảng này.
 

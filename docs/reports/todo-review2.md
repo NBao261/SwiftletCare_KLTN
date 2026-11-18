@@ -171,10 +171,16 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 Rà soát lại sau khi các PR trên merge (18/11/2026): backend và web còn hai việc, Bảo làm:
 - giờ chạy và điện năng chỉ tính khi tải có dòng trên 50 % mức đã học (BR-45, G-22, G-25) — firmware 2.3.1 gửi mức đã học trong heartbeat; PR #179;
-- nhãn "Giả lập" ở `/devices` của Admin, Farm Technician, Domain Expert và ở `/ota` (SYSTEM-FR-004) — nhánh `fix/simulated-labels-docs`.
+- nhãn "Giả lập" ở `/devices` của Admin, Farm Technician, Domain Expert và ở `/ota` (SYSTEM-FR-004) — nhánh `fix/simulated-labels-docs`, PR #180.
+
+Rà soát lần 2 (18/11/2026, đối chiếu từng FR của Report 3 với code, route với `api-spec.yaml` (180/180 khớp) và nguồn test của Report 5) — Bảo làm ở nhánh `fix/review-1118-leftovers`:
+- ~~ANALYTICS-FR-013: thời tiết ngoài trời chưa hiện cạnh số đo trong nhà~~ — `GET /analytics/env/summary` trả `outdoor`, biểu đồ môi trường trên web vẽ nét đứt và lượng mưa (mobile chưa);
+- ~~job báo cáo tuần theo Zone cũ vẫn chạy và báo trùng với báo cáo tuần theo nhà~~ — bỏ job, thẻ báo cáo ở Phân tích đọc báo cáo tuần của nhà;
+- ~~dữ liệu bịa trên web: bảng video sự kiện ở Vision, tên thiết bị con giả ("This data is FAKE"), dòng "Dữ liệu giả" ở thẻ tương quan, nhãn "Mock Fallback" ở màn phán quyết~~ — đã gỡ;
+- ~~`tc.py` còn 4 case `todo-auto` dù test đã có (TC-F28-03, TC-ST 6.17, 6.18 × 2)~~ — trỏ sang test thật: 152 case tự động, 0 case phải viết thêm.
 
 Còn lại không thuộc backend và web:
-- Mobile (Len): mục lịch đếm theo mùa (F-14), nhãn "Giả lập" (SYSTEM-FR-004), giai đoạn nhà (F-28); chạy thử trên máy thật và ảnh chụp cho các màn đã merge.
+- Mobile (Len): mục lịch đếm theo mùa (F-14), nhãn "Giả lập" (SYSTEM-FR-004), giai đoạn nhà (F-28), chọn ảnh lô thu hoạch (G-14), thời tiết ngoài trời cạnh số đo trong nhà (ANALYTICS-FR-013, đọc `outdoor` của `GET /analytics/env/summary`); chạy thử trên máy thật và ảnh chụp cho các màn đã merge.
 - Ngoài code: mục 3 (G-19), VPS và tên miền (G-17), project Firebase (G-10), 3 luật khuyến nghị thật (G-24).
 
 Mỗi gap: tên ở Project Tracking §6, yêu cầu ở SRS, thiết kế ở SDD. Mỗi PR có test cho logic mới (backend [Bắt buộc], firmware [Bắt buộc] cho logic điều khiển/phát hiện).

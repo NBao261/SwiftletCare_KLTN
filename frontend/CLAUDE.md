@@ -33,7 +33,7 @@ src/
                (farm-owner/farmMock.api.ts returns EMPTY data for parts the backend has no endpoint for)
   components/  auth/ (RequireRole) · common/ · features/<role>/<area>/ · layouts/ · ui/ (design system)
   constants/   roles (role groups, ROLE_HOME, MENU_ACCESS, getRoleHomePath/canAccessPath) · thresholds · severity · auditActions · *.i18n.ts dictionaries
-  data/        <name>.data.ts — the ONLY place fake data may live (FE_Design §7): deviceComponents.data.ts, expertMock.data.ts; mocks/ (expert*.mock.ts, PR #91 — known debt)
+  data/        <name>.data.ts — the ONLY place fake data may live (FE_Design §7); empty today (the sensor names of deviceComponents.data.ts were removed on 18/11/2026: no API names the parts of a kit)
   hooks/       admin/ auth/ common/ expert/ farm-owner/ shared/ — React Query wrappers over apis/ (expert/ wraps services/expert/)
   i18n/        index.ts (t · tr · trChildren · translated · intlLocale · setLang) · en.ts — i18next, keys are the Vietnamese sentences
   lib/         axios · queryClient · socket · cn · helpers · i18n · navigation · navigationState (intent passed through router state) · chartTheme · apiError

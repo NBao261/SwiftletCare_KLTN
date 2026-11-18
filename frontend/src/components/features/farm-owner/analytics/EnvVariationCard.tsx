@@ -16,6 +16,7 @@ import {
 } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
+import { alignOutdoorWeather, totalRainfall } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import { useEnvSummary } from '@/hooks/farm-owner/useAnalytics';
 import { useTelemetry } from '@/hooks/farm-owner/useTelemetry';
 import { cn } from '@/lib/cn';
@@ -24,6 +25,9 @@ import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api';
 import type { Thresholds, ZoneThresholdHistoryEntry } from '@/types';
 import { thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { NO_VALUE } from '@/constants/display';
+
+// 1 bản ghi thời tiết ngoài trời là số liệu của 1 giờ (ANALYTICS-FR-013)
+const HOUR_MS = 3600_000;
 
 // Tô nền dải ngưỡng nhiệt độ trên trục trái, kẹp trong vùng vẽ để không đè lên chú thích
 function thresholdBandPlugin(min: number, max: number): Plugin<'line'> {
@@ -77,7 +81,7 @@ type SetterRole = 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN' | 'ADMIN';
 
 // Biến thiên nhiệt độ, độ ẩm theo khoảng thời gian (ANALYTICS-FR-001) kèm số đo khí trực tiếp
 export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory }: EnvVariationCardProps): JSX.Element {
-  const { t, exact, ago, date } = useTranslation(analyticsDict);
+  const { t, exact, ago, date, num } = useTranslation(analyticsDict);
   const [range, setRange] = useState<AnalyticsRange>('24h');
   const { data, isLoading, isError, refetch } = useEnvSummary(zoneId, range);
   const telemetry = useTelemetry(zoneId);
@@ -87,12 +91,22 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
   const chartData = useMemo(() => {
     const series = data?.series ?? [];
     const line = { fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
+    // Ngoài trời (ANALYTICS-FR-013): nét đứt, cùng trục với số đo trong nhà; farm chưa có thời tiết thì không vẽ
+    // Mỗi điểm thời tiết phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ (7d, 30d)
+    const outdoor = alignOutdoorWeather(series.map(point => point.timestamp), data?.outdoor ?? [], Math.max(data?.bucketMs ?? 0, HOUR_MS));
+    const hasOutdoor = outdoor.some(point => point !== null);
+    const outdoorLine = { ...line, borderWidth: 1.5, borderDash: [6, 4] };
+    const indoorDatasets = [
+      { label: t('chart.temperature'), data: series.map(point => point.temperature ?? null), borderColor: CHART_COLORS.charcoal, yAxisID: 'y', ...line },
+      { label: t('chart.humidity'), data: series.map(point => point.humidity ?? null), borderColor: CHART_COLORS.accentGreen, yAxisID: 'y1', ...line },
+    ];
+    const outdoorDatasets = [
+      { label: t('chart.outdoorTemperature'), data: outdoor.map(point => point?.temperature ?? null), borderColor: CHART_COLORS.warmGray, yAxisID: 'y', ...outdoorLine },
+      { label: t('chart.outdoorHumidity'), data: outdoor.map(point => point?.humidity ?? null), borderColor: CHART_COLORS.accentDeep, yAxisID: 'y1', ...outdoorLine },
+    ];
     return {
       labels: series.map(point => labelForRange(point.timestamp, range)),
-      datasets: [
-        { label: t('chart.temperature'), data: series.map(point => point.temperature ?? null), borderColor: CHART_COLORS.charcoal, yAxisID: 'y', ...line },
-        { label: t('chart.humidity'), data: series.map(point => point.humidity ?? null), borderColor: CHART_COLORS.accentGreen, yAxisID: 'y1', ...line },
-      ],
+      datasets: hasOutdoor ? [...indoorDatasets, ...outdoorDatasets] : indoorDatasets,
     };
   }, [data, range, t]);
 
@@ -116,6 +130,7 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
     [thresholds],
   );
 
+  const rainfall = totalRainfall(data?.outdoor ?? []);
   const nh3 = telemetry.data.nh3_ppm;
   const co2 = telemetry.data.co2_ppm;
 
@@ -185,6 +200,14 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
       </div>
       {thresholds && <p className="text-xs text-warmGray">{sourceText}</p>}
       {chart}
+      {/* Thời tiết ngoài trời chỉ để đối chiếu, không điều khiển thiết bị (ANALYTICS-FR-013) */}
+      {data && data.series.length > 0 && (
+        <p className="text-xs text-warmGray">
+          {data.outdoor.length > 0
+            ? t('env.outdoorNote', { rain: rainfall === null ? NO_VALUE : num(rainfall, 1) })
+            : t('env.outdoorEmpty')}
+        </p>
+      )}
     </FarmFrame>
   );
 }

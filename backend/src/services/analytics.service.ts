@@ -1,5 +1,6 @@
 import { Types } from 'mongoose'
 import { Telemetry } from '@/models/telemetry.model'
+import { WeatherObservation } from '@/models/weatherObservation.model'
 import { SensorNode, IN_SERVICE } from '@/models/device.model'
 import { RELAY_SERVICE_LIMITS } from '@/services/relayUsage.service'
 import { houseDailyCounts, vnDate, type HouseDayCounts } from '@/services/birdCount.service'
@@ -25,6 +26,7 @@ const RANGE_MS: Record<string, number> = {
  * frontend vẽ (vỡ trình duyệt + PERF-NFR-003 P95 ≤ 500ms).
  */
 const MAX_BUCKETS = 120
+const HOUR_MS = 3600_000
 
 function resolveRange(range: string) {
   // Object.hasOwn: `RANGE_MS['constructor']` trả hàm của Object.prototype → ngày NaN → 500
@@ -39,7 +41,7 @@ function resolveRange(range: string) {
 
 /** ANALYTICS-FR-001 — chuỗi thời gian đã gom nhóm + min/max/avg từng chỉ số */
 export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; range: string }) {
-  await assertZoneAccess(query.zoneId, user)
+  const { zone } = await assertZoneAccess(query.zoneId, user)
   const { from, to, bucketMs } = resolveRange(query.range)
 
   const series = await Telemetry.aggregate([
@@ -74,7 +76,38 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
     },
   ])
 
-  return { range: query.range, from, to, bucketMs, series, stats: stats ?? null }
+  return { range: query.range, from, to, bucketMs, series, stats: stats ?? null, outdoor: await outdoorSeries(zone.farm_id, from, to, bucketMs) }
+}
+
+/**
+ * ANALYTICS-FR-013 — thời tiết ngoài trời theo giờ của farm, đặt cạnh số đo trong nhà: cùng mốc bucket với
+ * `series` (giờ nào cũng chia hết cho bucket dưới 1 giờ), nên vẫn tối đa MAX_BUCKETS điểm. Nhiệt, ẩm lấy
+ * trung bình, mưa cộng dồn. Farm không có toạ độ hoặc chưa lấy được thời tiết thì trả [].
+ * Bản ghi `hour` = H là số liệu của [H, H + 1 giờ) và chỉ có khi giờ đó đã qua (weather.service), nên lấy
+ * từ đầu giờ chứa `from`: không thế thì khoảng 1h không bao giờ có điểm nào.
+ */
+async function outdoorSeries(farmId: unknown, from: Date, to: Date, bucketMs: number) {
+  const firstHour = new Date(from.getTime() - (from.getTime() % HOUR_MS))
+  return WeatherObservation.aggregate([
+    { $match: { farm_id: farmId, hour: { $gte: firstHour, $lte: to } } },
+    {
+      $group: {
+        _id: { $toDate: { $subtract: [{ $toLong: '$hour' }, { $mod: [{ $toLong: '$hour' }, bucketMs] }] } },
+        temperature: { $avg: '$temperature' },
+        humidity: { $avg: '$humidity' },
+        // $sum bỏ qua giờ thiếu mưa; cả bucket thiếu thì để null, không ghi 0 mm
+        precipitation_mm: { $sum: '$precipitation_mm' },
+        rainHours: { $sum: { $cond: [{ $eq: [{ $type: '$precipitation_mm' }, 'missing'] }, 0, 1] } },
+      },
+    },
+    { $sort: { _id: 1 } },
+    {
+      $project: {
+        _id: 0, timestamp: '$_id', temperature: 1, humidity: 1,
+        precipitation_mm: { $cond: [{ $gt: ['$rainHours', 0] }, '$precipitation_mm', null] },
+      },
+    },
+  ])
 }
 
 /** Phần trăm làm tròn 1 chữ số; null khi không có mẫu nào */

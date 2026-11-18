@@ -1,6 +1,6 @@
 import { format, parseISO, startOfHour, startOfISOWeek } from 'date-fns';
 
-import type { BirdCountBucket, BirdCountCurrentResponse, BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api';
+import type { BirdCountBucket, BirdCountCurrentResponse, BirdCountDailyRecord, OutdoorWeatherPoint } from '@/apis/farm-owner/analytics.api';
 import type { CompareMetricKey } from '@/components/features/farm-owner/analytics/analytics.constants';
 import type { Thresholds } from '@/types';
 
@@ -150,4 +150,24 @@ export function sumTodayBirdCounts(list: BirdCountCurrentResponse[]): TodayBirdC
   }
   if (netExit > 0) today.returnRate = (netEntry / netExit) * 100;
   return today;
+}
+
+// Thời tiết ngoài trời cho từng mốc trong nhà (ANALYTICS-FR-013): điểm T phủ [T, T + spanMs), mốc không được phủ thì null; cả hai chuỗi tăng dần
+export function alignOutdoorWeather(timestamps: string[], outdoor: OutdoorWeatherPoint[], spanMs: number): Array<OutdoorWeatherPoint | null> {
+  let index = 0;
+  return timestamps.map(timestamp => {
+    const time = Date.parse(timestamp);
+    while (index < outdoor.length && Date.parse(outdoor[index].timestamp) + spanMs <= time) index++;
+    const point = outdoor[index];
+    return point && Date.parse(point.timestamp) <= time ? point : null;
+  });
+}
+
+// Tổng lượng mưa ngoài trời của khoảng đang xem; null khi không giờ nào có số mưa (không ghi 0 mm)
+export function totalRainfall(outdoor: OutdoorWeatherPoint[]): number | null {
+  let total: number | null = null;
+  for (const point of outdoor) {
+    if (point.precipitation_mm !== null) total = (total ?? 0) + point.precipitation_mm;
+  }
+  return total;
 }

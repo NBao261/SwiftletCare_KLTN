@@ -16,10 +16,17 @@ export interface EnvSummaryStats {
   anomalyCount: number; total: number
 }
 
+// ANALYTICS-FR-013 — thời tiết ngoài trời của farm, cùng mốc bucket với số đo trong nhà
+export interface OutdoorWeatherPoint {
+  timestamp: string
+  temperature: number | null; humidity: number | null; precipitation_mm: number | null
+}
+
 export interface EnvSummaryResponse {
   range: AnalyticsRange; from: string; to: string; bucketMs: number
   series: EnvSummaryPoint[]
   stats: EnvSummaryStats | null
+  outdoor: OutdoorWeatherPoint[]
 }
 
 export interface EnvCompareZone {

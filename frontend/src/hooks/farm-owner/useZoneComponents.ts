@@ -1,23 +1,18 @@
 import { useMemo } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { alertApi } from '@/apis/shared/alerts.api';
 import { deviceApi } from '@/apis/shared/devices.api';
-import { farmMockApi } from '@/apis/farm-owner/farmMock.api';
 import { telemetryApi } from '@/apis/farm-owner/telemetry.api';
 import type { DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
 import {
-  READING_FRESH_MS, buildZoneComponents, latestReadingByNode, type ComponentKind, type DeviceCheck,
+  READING_FRESH_MS, buildZoneComponents, latestReadingByNode, type DeviceCheck,
 } from '@/components/features/farm-owner/devices/zoneComponents';
 import type { TelemetryRecord } from '@/types';
 
 const READING_LIMIT = 200;
 const ALERT_LIMIT = '50';
 
-// Khoá tra tên thiết bị con: 1 bộ kit có 1 thiết bị mỗi loại
-export function componentNameKey(nodeId: string, kind: ComponentKind): string {
-  return `${nodeId}|${kind}`;
-}
 
 // Số đo mới nhất của Zone; Zone chưa có số đo nào thì backend trả null
 async function latestZoneReading(zoneId: string): Promise<TelemetryRecord[]> {
@@ -56,27 +51,8 @@ export function useZoneComponents(zoneId: string, nodes: DeviceItem[]) {
   const check = query.data;
   const groups = useMemo(() => buildZoneComponents(nodes, check), [nodes, check]);
 
-  // Tên Kỹ thuật viên đặt cho từng thiết bị con: khoá "id node|loại" → tên
-  const sensorNodes = useMemo(() => nodes.filter(node => node.type === 'sensor'), [nodes]);
-  const componentNames = useQueries({
-    queries: sensorNodes.map(node => ({
-      queryKey: ['device-component-names', node.deviceId],
-      queryFn: () => farmMockApi.getDeviceComponentNames(node.deviceId).then(response => response.data.data),
-      // Tên thiết bị con là dữ liệu giả cố định, không cần tải lại
-      staleTime: Infinity,
-    })),
-    combine: results => {
-      const names = new Map<string, string>();
-      results.forEach((result, index) => {
-        for (const component of result.data ?? []) names.set(componentNameKey(sensorNodes[index].id, component.kind), component.name);
-      });
-      return names;
-    },
-  });
-
   return {
     groups,
-    componentNames,
     checkedAt: check?.checkedAt,
     isChecking: query.isFetching,
     isError: query.isError,
