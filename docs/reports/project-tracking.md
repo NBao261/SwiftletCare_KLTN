@@ -135,6 +135,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 
 | Date | Change |
 | --- | --- |
+| 18/11/2026 | Tracking review (Bảo, PR #173): F-07/08/11/13/15/16/20–25/27–30 and G-22, G-26 "Remaining" checked against `develop` (dc5409d); what is still missing is listed in "Rà soát 18/11/2026". No gap closed |
 | 17/11/2026 | G-02 backend (Kiệt): Administrator creates the Farm Owner with an e-mailed temporary password (AUTH-FR-005c); invitations (AUTH-FR-010), reset codes (AUTH-FR-009) and temporary passwords sent by SMTP, never logged |
 | 16/11/2026 | G-26 mobile — harvest entry (Len, `feat/g26-harvest-cycles`): `harvests/` screen (runs of one house) + `HarvestRunSheet` (record / edit / delete a run: date, nests + grams per nest type, one batch per type via `POST`/`PUT`/`DELETE /harvests`); technician batches DRAFT, edits only its own DRAFT runs; yield row and analytics count confirmed batches only (BR-43) (HARVEST-FR-001, 005, 006) |
 | 16/11/2026 | G-26 web — season conclusion screen (Tuấn, `feat/g26-harvest-cycles`): `HarvestCyclesSection` + `CycleConclusionDrawer` + tab on `DomainExpertReportsPage`; `useHarvestCycles` / `useSubmitCycleConclusion`; i18n VI/EN (EXPERT-FR-020) |
