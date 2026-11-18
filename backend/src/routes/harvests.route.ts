@@ -37,14 +37,14 @@ const harvestFields = (optional: boolean) => {
 }
 
 // HARVEST-FR-007, ANALYTICS-FR-004, EXPERT-FR-020 — chu kỳ thu hoạch (đặt trước `/:id`). Đọc như lô thu hoạch;
-// kết luận mùa vụ của Domain Expert, Farm Owner chỉ khi farm chưa có chuyên gia (BR-22, service kiểm)
+// kết luận mùa vụ chỉ của Domain Expert, kể cả khi farm chưa có chuyên gia: BR-22 không cho viết kết luận khi không có chuyên gia (EXPERT-FR-020)
 router.get('/cycles', canRead,
   ...['zoneId', 'houseId', 'farmId'].map(name => query(name).optional().isString().bail().isMongoId()),
   query('status').optional().isString().bail().isIn(['OPEN', 'CLOSED', 'CONCLUDED']),
   query('page').optional().isInt({ min: 1 }).toInt(), query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
   validate, harvestController.listCycles)
 router.get('/cycles/:id', canRead, param('id').isMongoId(), validate, harvestController.getCycle)
-router.put('/cycles/:id/conclusion', requireRole('DOMAIN_EXPERT', 'FARM_OWNER'), param('id').isMongoId(),
+router.put('/cycles/:id/conclusion', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(),
   body('text').isString().bail().trim().notEmpty().isLength({ max: 2000 }),
   body('recommendations').optional().isString().bail().trim().isLength({ max: 2000 }),
   validate, harvestController.concludeCycle)

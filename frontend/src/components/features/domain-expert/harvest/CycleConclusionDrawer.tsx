@@ -1,4 +1,4 @@
-// EXPERT-FR-020 — Ngăn kéo kết luận mùa vụ của Chuyên gia / Chủ nhà yến (BR-22)
+// EXPERT-FR-020 — Ngăn kéo kết luận mùa vụ của Chuyên gia (Farm Owner không viết, kể cả khi farm chưa có chuyên gia — BR-22)
 import { useState, useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui'

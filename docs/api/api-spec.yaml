@@ -5321,11 +5321,12 @@ paths:
       - { name: id, in: path, required: true, schema: { type: string, format: objectId } }
     put:
       tags: [Harvests]
-      summary: "Kết luận mùa vụ (EXPERT-FR-020) — DOMAIN_EXPERT; FARM_OWNER chỉ khi farm chưa có chuyên gia (BR-22)"
+      summary: "Kết luận mùa vụ (EXPERT-FR-020) — chỉ DOMAIN_EXPERT"
       description: |
         Ghi kết luận và khuyến nghị cho mùa sau trên một chu kỳ đã đóng; chu kỳ chuyển `CONCLUDED`, sửa lại vẫn
         `CONCLUDED`. Chuyên gia viết thì mỗi Farm Owner nhận một thông báo trong ứng dụng (EXPERT-FR-009). Chu kỳ
-        `OPEN` → 409; Farm Owner khi farm có chuyên gia, Farm Technician → 403. Audit `HARVEST_CYCLE_CONCLUDED`.
+        `OPEN` → 409; Farm Owner (kể cả khi farm chưa có chuyên gia: BR-22 không cho viết kết luận khi không có
+        chuyên gia) và Farm Technician → 403. Audit `HARVEST_CYCLE_CONCLUDED`.
       requestBody:
         required: true
         content:

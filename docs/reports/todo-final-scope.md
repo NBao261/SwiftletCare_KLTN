@@ -274,7 +274,7 @@ Các bước chung của G-11 vẫn ở `todo-review2.md`. Phần đổi theo sc
   - tính sản lượng; so với chu kỳ trước và cùng kỳ năm trước (±30 ngày);
   - tính tỷ lệ ngày `GOOD`, tỷ lệ về, thời gian trong ngưỡng;
   - chu kỳ có dưới 80 % số ngày được đánh giá thì ghi "incomplete".
-- [x] Chuyên gia viết kết luận mùa vụ thì chu kỳ chuyển `CONCLUDED`, và mỗi Farm Owner nhận một thông báo (EXPERT-FR-020). *(Farm Owner viết được khi farm chưa có chuyên gia, BR-22; `d2d59b5`)*
+- [x] Chuyên gia viết kết luận mùa vụ thì chu kỳ chuyển `CONCLUDED`, và mỗi Farm Owner nhận một thông báo (EXPERT-FR-020). *(`d2d59b5`. Bản đầu cho Farm Owner viết khi farm chưa có chuyên gia; từ 19/11/2026 chỉ Domain Expert viết, đúng BR-22 "no conclusions are written without an expert" — `todo-audit-1118.md` D-04)*
 - [ ] Nhập sổ sản lượng các mùa trước của nhà thử nghiệm nếu chủ nhà còn giữ (A-8). Không có thì dữ liệu mẫu phải ghi rõ là mẫu.
 - [x] Giao diện:
   - [x] Len: nhập lô thu hoạch trên mobile; *(Len, 16/11, nhánh `feat/g26-harvest-cycles`: màn `harvests/` (các lần thu của một nhà, mở từ ô "Sản lượng tháng" ở Màn B và nút "Các lần thu" của Phân tích › Sản lượng) + `HarvestRunSheet` (ngày thu không quá hôm nay, số tổ + gram của 3 loại yến, mỗi loại một lô `POST /harvests`, gắn zone tạo sớm nhất của nhà như web; sửa `PUT`, xoá `DELETE /harvests/{id}`; lưu lỗi một phần thì giữ loại đã lưu); chủ trại sửa mọi lần thu, kỹ thuật viên chỉ lần thu `DRAFT` của mình, chuyên gia chỉ xem (`recordHarvest`, `editAnyHarvest`, `canEditHarvestRun`); ô sản lượng và tab Sản lượng chỉ tính lô đã xác nhận (BR-43); test `harvest.utils`. Xác nhận lô `DRAFT` vẫn ở web (Nhi). Chưa chạy trên emulator.)*
