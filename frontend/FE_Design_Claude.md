@@ -811,10 +811,9 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Đồng bộ cấu hình theo bộ điều khiển | ENV-FR-027 | ⬜ Chưa có (#22) | `ComingSoon` |
 | Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
 | Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ✅ API thật (`/health-reports/days*`, `/health-reports`, `/farms/houses/:id/health-levels`); màn `/health` và trang báo cáo `/health/report` (PR #126) | Không |
-| Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
+| Cấu trúc Farm — người phụ trách nhà, thiết bị, số đo, cảnh báo, thu hoạch | FARM-FR-*, AUTH-FR-013 | 🟢 API thật (người phụ trách = thợ chính của nhà). Lịch thu dự kiến, khuyến nghị AI, kỹ thuật viên lắp và firmware mới nhất đã gỡ ngày 18/11/2026 cùng `farmMock.api.ts`: Report 3 không có (dự báo sản lượng ngoài phạm vi §8; khuyến nghị thật ở `/recommendations`, EXPERT-FR-017) | Không |
 | Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
-| Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
 | Chi tiết thiết bị `/devices/detail` — thiết bị con của bộ kit | FARM-FR-005/006 (phần mở rộng UI) | 🟢 Không có tên riêng cho từng thiết bị con (không có endpoint): mỗi dòng ghi mã bộ kit; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) — dữ liệu giả `deviceComponents.data.ts` đã gỡ 18/11/2026 | Không |
 
 *Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/project-tracking.md` §6 — lệch nhau thì tin hai nguồn đó và sửa bảng này.
@@ -1593,7 +1592,6 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Đường dẫn | Quy tắc | Mục |
 |---|---|---|
 | `data/<tên>.data.ts` (tạo khi cần) | Nơi duy nhất chứa dữ liệu giả, chỉ khi prompt yêu cầu; import qua api/hook | 7 |
-| `apis/farm-owner/farmMock.api.ts` | Trả **rỗng** cho phần backend chưa có endpoint | 7 |
 
 ---
 

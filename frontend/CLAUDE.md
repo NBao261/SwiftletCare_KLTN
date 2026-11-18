@@ -29,8 +29,7 @@ CI (`.github/workflows/ci.yml`, job Frontend) runs `npm ci`, `lint`, `tsc --noEm
 
 ```
 src/
-  apis/        admin/ auth/ farm-owner/ shared/ — one <resource>.api.ts per resource, no barrel
-               (farm-owner/farmMock.api.ts returns EMPTY data for parts the backend has no endpoint for)
+  apis/        admin/ auth/ farm-owner/ shared/ — one <resource>.api.ts per resource, no barrel (no mock API: a part with no endpoint is not shown)
   components/  auth/ (RequireRole) · common/ · features/<role>/<area>/ · layouts/ · ui/ (design system)
   constants/   roles (role groups, ROLE_HOME, MENU_ACCESS, getRoleHomePath/canAccessPath) · thresholds · severity · auditActions · *.i18n.ts dictionaries
   data/        <name>.data.ts — the ONLY place fake data may live (FE_Design §7); empty today (the sensor names of deviceComponents.data.ts were removed on 18/11/2026: no API names the parts of a kit)
