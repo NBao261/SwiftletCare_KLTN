@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, AuditLogEntry, SystemDefaultThresholds, SystemHealthSummary } from '@/types'
+import type { ApiResponse, AuditLogEntry, SystemDefaultThresholds, SystemDefaultThresholdsInput, SystemDefaultThresholdsView, SystemHealthSummary } from '@/types'
 
 /** GET /system/audit-logs — mọi filter đều tuỳ chọn; sort cố định created_at desc. */
 export interface ListAuditLogsQuery {
@@ -28,10 +28,10 @@ export const systemApi = {
 
   /** SYSTEM-FR-002 — chưa cấu hình bao giờ thì backend trả giá trị gốc */
   getDefaultThresholds: () =>
-    api.get<ApiResponse<SystemDefaultThresholds>>('/system/settings/default-thresholds'),
+    api.get<ApiResponse<SystemDefaultThresholdsView>>('/system/settings/default-thresholds'),
 
-  /** SYSTEM-FR-002 — 400 nếu min ≥ max / ngoài khoảng đo cảm biến; ghi DEFAULT_THRESHOLDS_UPDATED vào audit log */
-  updateDefaultThresholds: (input: Partial<SystemDefaultThresholds>) =>
+  /** SYSTEM-FR-002 — 400 nếu min ≥ max / ngoài khoảng đo cảm biến, 422 nếu thiếu nguồn REF-5 (ENV-FR-007); ghi audit log */
+  updateDefaultThresholds: (input: SystemDefaultThresholdsInput) =>
     api.put<ApiResponse<SystemDefaultThresholds>>('/system/settings/default-thresholds', input),
 
   /** SYSTEM-FR-003 */

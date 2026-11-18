@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { systemApi, type ListAuditLogsQuery } from '@/apis/admin/system.api'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
-import type { SystemDefaultThresholds } from '@/types'
+import type { SystemDefaultThresholdsInput } from '@/types'
 
 /** SYSTEM-FR-001 — GET /system/audit-logs, phân trang server. */
 export function useAuditLogList(query: ListAuditLogsQuery) {
@@ -54,10 +54,11 @@ export function useDefaultThresholds() {
 export function useUpdateDefaultThresholds() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: SystemDefaultThresholds) =>
+    mutationFn: (input: SystemDefaultThresholdsInput) =>
       systemApi.updateDefaultThresholds(input).then(r => r.data.data),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['system-default-thresholds'], data)
+    // PUT chỉ trả 7 ngưỡng: đọc lại để có nguồn và lần đổi mới
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['system-default-thresholds'] })
       void queryClient.invalidateQueries({ queryKey: ['audit-logs'] })
     },
   })

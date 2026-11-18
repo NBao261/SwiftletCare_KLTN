@@ -19,6 +19,11 @@ export function useAuth() {
     mutationFn: ({ returnTo: _returnTo, ...input }: { email: string; password: string; returnTo?: string }) => authApi.login(input),
     onSuccess: ({ data }, variables) => {
       setAuth(data.data.user, data.data.accessToken)
+      // AUTH-FR-005c — mật khẩu tạm Admin cấp: đổi trước, chưa vào trang nào khác
+      if (data.data.user.must_change_password) {
+        navigate('/change-password', { replace: true })
+        return
+      }
       const role = data.data.user.role
       // returnTo có thể "cũ" (VD phiên trước hết hạn trên 1 trang chỉ role
       // khác được xem) — nếu role vừa đăng nhập chắc chắn không vào được, bỏ
@@ -75,5 +80,14 @@ export function useAuth() {
     onSuccess: () => updateUser({ deletion_requested_at: new Date().toISOString() }),
   })
 
-  return { login, logout, forgotPassword, resetPassword, updateNotificationPreferences, requestDeletion }
+  // AUTH-FR-005c — đổi mật khẩu tạm rồi vào trang chủ của role
+  const changePassword = useMutation({
+    mutationFn: (input: { current_password: string; new_password: string }) => authApi.changePassword(input),
+    onSuccess: () => {
+      updateUser({ must_change_password: false })
+      navigate(getRoleHomePath(useAuthStore.getState().user?.role), { replace: true })
+    },
+  })
+
+  return { login, logout, forgotPassword, resetPassword, changePassword, updateNotificationPreferences, requestDeletion }
 }

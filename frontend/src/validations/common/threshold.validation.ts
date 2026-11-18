@@ -12,6 +12,18 @@ export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: numb
   co2_max:      { min: 0,   max: 5000,    unit: 'ppm' },
 }
 
+/** ENV-FR-007 — nguồn của ngưỡng mặc định phải nêu mã một mục REF-5 (`TL-xxx`, `MC-xxx`), như `REF5_ENTRY_PATTERN` backend */
+export const REF5_ENTRY_PATTERN = /\b(TL|MC)-\d{3}\b/
+export const THRESHOLD_SOURCE_MAX_LENGTH = 500
+
+export function validateThresholdSource(raw: string): string | undefined {
+  const source = raw.trim()
+  if (!source) return 'Cần ghi nguồn của ngưỡng'
+  if (source.length > THRESHOLD_SOURCE_MAX_LENGTH) return `Nguồn tối đa ${THRESHOLD_SOURCE_MAX_LENGTH} ký tự`
+  if (!REF5_ENTRY_PATTERN.test(source)) return 'Nguồn phải có mã mục REF-5, ví dụ TL-001 hoặc MC-002'
+  return undefined
+}
+
 export function parseThresholdInput(raw: string): number {
   return raw.trim() === '' ? NaN : Number(raw)
 }
