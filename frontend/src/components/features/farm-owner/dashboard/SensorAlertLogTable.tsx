@@ -6,8 +6,10 @@ import TableEmptyState from '@/components/common/TableEmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { buildAlertRow, STATUS_BADGE_CLASS, type AlertLogRow, type SeverityGroup } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import SeverityBadge from '@/components/common/SeverityBadge'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { useCameraNodes, useHouseAlerts } from '@/hooks/farm-owner/useFarmOwnerDashboard'
+import { useSensorNodes } from '@/hooks/shared/useDevices'
 import type { AllZone } from '@/hooks/shared/useFarms'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
@@ -43,15 +45,21 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
   const { data: cameras } = useCameraNodes()
   const cameraNames = useMemo(() => new Map((cameras ?? []).map(camera => [camera._id, camera.device_id])), [cameras])
   const { records, isLoading, isError, refetch } = useHouseAlerts(farmId, zoneIds, !houseId, houseAlertsId)
+  // SYSTEM-FR-004 — controller và camera giả lập (cùng cache danh sách thiết bị)
+  const { data: nodes } = useSensorNodes()
+  const simulatedIds = useMemo(
+    () => new Set([...(nodes ?? []), ...(cameras ?? [])].filter(device => device.simulated).map(device => device._id)),
+    [nodes, cameras],
+  )
 
   const allRows = useMemo(
     () => records.map(alert => {
       const deviceName = alert.node_id ? deviceNames.get(alert.node_id) ?? cameraNames.get(alert.node_id) : undefined
       let locationName = alert.zone_id ? locationNames.get(alert.zone_id) : undefined
       if (!alert.zone_id && alert.house_id) locationName = houseNames.get(alert.house_id)
-      return buildAlertRow(alert, deviceName ?? NO_VALUE, locationName ?? NO_VALUE)
+      return { ...buildAlertRow(alert, deviceName ?? NO_VALUE, locationName ?? NO_VALUE), simulated: !!alert.node_id && simulatedIds.has(alert.node_id) }
     }),
-    [records, deviceNames, cameraNames, locationNames, houseNames],
+    [records, deviceNames, cameraNames, locationNames, houseNames, simulatedIds],
   )
   const rows = filter ? allRows.filter(row => row.group === filter) : allRows
 
@@ -92,7 +100,10 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
       render: row => (
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-charcoal">{row.locationName}</p>
-          <p className="mt-0.5 truncate text-xs text-warmGray">{row.deviceName} - {t(`sensorKind.${row.sensorKind}`)}</p>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+            <p className="truncate text-xs text-warmGray">{row.deviceName} - {t(`sensorKind.${row.sensorKind}`)}</p>
+            <SimulatedBadge simulated={row.simulated} />
+          </div>
         </div>
       ),
     },

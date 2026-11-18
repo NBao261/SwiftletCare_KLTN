@@ -165,9 +165,15 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 **Rà soát 18/11/2026** (sau PR #168–172; đối chiếu code `develop` với Report 3, Report 4 và hai file todo). Phần code còn thiếu:
 
-- Web (Nhi): màn Admin "Tạo Farm Owner", trang đổi mật khẩu tạm, ô nguồn khi Admin lưu ngưỡng mặc định (đang bị 422) — Bảo làm thay, nhánh `feat/g02-web-owner-accounts`.
-- Backend (Kiệt): G-14 (trạng thái tài khoản, trường audit, trường telemetry, ảnh lô thu hoạch, loại tham chiếu thông báo); cột sản lượng của so sánh nhà (G-26) — Bảo làm thay, nhánh `feat/g14-erd-fields`.
-- Firmware (Bảo): G-13 đọc ADS1115, lưu mức học, gửi `ACTUATOR_FAULT` — viết được, chỉ thử được khi có board.
+- ~~Web (Nhi): màn Admin "Tạo Farm Owner", trang đổi mật khẩu tạm, ô nguồn khi Admin lưu ngưỡng mặc định~~ — xong, Bảo làm thay, PR #174.
+- ~~Backend (Kiệt): G-14 và cột sản lượng của so sánh nhà (G-26)~~ — xong, Bảo làm thay, PR #175; chọn ảnh lô thu hoạch trên web: PR #177/#178.
+- ~~Firmware (Bảo): G-13 đọc ADS1115, lưu mức học, gửi `ACTUATOR_FAULT`~~ — xong ở firmware 2.3.0 (PR #176), còn thử trên board rev B2.
+
+Rà soát lại sau khi các PR trên merge (18/11/2026): backend và web còn hai việc, Bảo làm:
+- giờ chạy và điện năng chỉ tính khi tải có dòng trên 50 % mức đã học (BR-45, G-22, G-25) — firmware 2.3.1 gửi mức đã học trong heartbeat; PR #179;
+- nhãn "Giả lập" ở `/devices` của Admin, Farm Technician, Domain Expert và ở `/ota` (SYSTEM-FR-004) — nhánh `fix/simulated-labels-docs`.
+
+Còn lại không thuộc backend và web:
 - Mobile (Len): mục lịch đếm theo mùa (F-14), nhãn "Giả lập" (SYSTEM-FR-004), giai đoạn nhà (F-28); chạy thử trên máy thật và ảnh chụp cho các màn đã merge.
 - Ngoài code: mục 3 (G-19), VPS và tên miền (G-17), project Firebase (G-10), 3 luật khuyến nghị thật (G-24).
 

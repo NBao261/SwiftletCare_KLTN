@@ -1,5 +1,6 @@
 // OTASidePanel.tsx — Slide-in panel: form thông tin firmware, trạng thái chờ, thành công, thất bại
 import { Card, Button } from '@/components/ui'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { OTAProgressPanel } from './OTAProgressPanel'
 import { OTAErrorPanel } from './OTAErrorPanel'
 import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/technician/ota/otaTypes'
@@ -36,7 +37,10 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
       {/* Device info */}
       <div>
         <p className="label-caption mb-1">THIẾT BỊ ĐÃ CHỌN</p>
-        <p className="tabular-nums font-bold text-charcoal">{node.device_id}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="tabular-nums font-bold text-charcoal">{node.device_id}</p>
+          <SimulatedBadge simulated={node.simulated} />
+        </div>
         <p className="text-sm text-warmGray">Firmware hiện tại: {node.firmware_version ?? '—'}</p>
       </div>
 

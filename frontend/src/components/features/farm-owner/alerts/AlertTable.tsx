@@ -9,6 +9,7 @@ import { isAlertFinished } from '@/constants/severity';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { ALERT_PAGE_SIZE } from '@/hooks/shared/useAlerts';
 import type { Alert } from '@/types';
+import SimulatedBadge from '@/components/common/SimulatedBadge';
 
 // Cùng chiều cao dòng bảng phiếu công việc
 const ROW_HEIGHT = 72;
@@ -19,7 +20,7 @@ interface AlertTableProps {
   alerts: Alert[];
   serverPagination: { page: number; total: number; onChange: (page: number) => void };
   // Vị trí và thiết bị của từng cảnh báo, page dựng 1 lần
-  locationOf: (alert: Alert) => { location: string; device: string | null };
+  locationOf: (alert: Alert) => { location: string; device: string | null; simulated?: boolean };
   canAcknowledge: boolean;
   onAction: (action: AlertAction, alert: Alert) => void;
 }
@@ -60,7 +61,12 @@ export default function AlertTable({ alerts, serverPagination, locationOf, canAc
       key: 'device',
       header: t('col.device'),
       className: 'w-[13%]',
-      render: alert => <span className="block truncate whitespace-nowrap text-sm font-semibold text-charcoal">{locationOf(alert).device ?? NO_VALUE}</span>,
+      render: alert => (
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <span className="block truncate whitespace-nowrap text-sm font-semibold text-charcoal">{locationOf(alert).device ?? NO_VALUE}</span>
+          <SimulatedBadge simulated={locationOf(alert).simulated} />
+        </div>
+      ),
     },
     {
       key: 'status',

@@ -123,6 +123,8 @@ export interface ControlPerformanceResponse {
   service_limits: Record<'misting' | 'ventilation', { hours: number; switches: number }>
   relay_usage: Array<{
     device_id: string
+    /** SYSTEM-FR-004 */
+    simulated?: boolean
     misting: { hours: number; switches: number }
     ventilation: { hours: number; switches: number }
   }>
