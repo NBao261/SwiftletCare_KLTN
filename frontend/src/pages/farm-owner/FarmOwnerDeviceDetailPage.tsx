@@ -21,7 +21,12 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
-import { useSensorNodes } from '@/hooks/shared/useDevices';
+import { useSendNodeCommand, useSensorNodes } from '@/hooks/shared/useDevices';
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toastStore';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { canRestartController } from '@/components/features/farm-owner/devices/deviceActions';
 import { cn } from '@/lib/cn';
 import { NO_VALUE } from '@/constants/display';
 import type { House } from '@/types';
@@ -55,6 +60,25 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const sensorNodeById = useMemo(() => new Map((sensorNodes ?? []).map(node => [node._id, node])), [sensorNodes]);
   const scheduleNode = scheduleNodeId ? sensorNodeById.get(scheduleNodeId) : undefined;
   const tracksNode = tracksNodeId ? sensorNodeById.get(tracksNodeId) : undefined;
+  // FARM-FR-013 — khởi động lại bộ điều khiển (Farm Owner, thiết bị ONLINE)
+  const role = useAuthStore(state => state.user?.role);
+  const sendCommand = useSendNodeCommand();
+  const push = useToastStore(state => state.push);
+  const apiErrorMessage = useApiErrorMessage();
+  const [restartDevice, setRestartDevice] = useState<DeviceItem>();
+
+  function handleRestart(): void {
+    if (!restartDevice) return;
+    const { id, deviceId } = restartDevice;
+    sendCommand.mutate({ nodeId: id, input: { command: 'RESTART' } }, {
+      onSuccess: () => push(t('restart.sent', { id: deviceId })),
+      // Firmware dưới COMMAND_SUPPORT_SINCE (1.4.0) trả 501
+      onError: reason => push((reason as { response?: { status?: number } }).response?.status === 501
+        ? t('restart.unsupported')
+        : apiErrorMessage(reason, t('restart.failed')), 'error'),
+      onSettled: () => setRestartDevice(undefined),
+    });
+  }
 
   usePageBreadcrumb([{ label: house?.name ?? '' }]);
   usePageBack(DEVICES_PATH, t('detail.back'));
@@ -97,6 +121,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
           zoneName={zoneName}
           onOpenSchedule={canOperateSpeaker && device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
           onOpenTracks={canOperateSpeaker && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
+          onRestart={canRestartController(role, device) ? () => setRestartDevice(device) : undefined}
         />
       ))}
     </div>
@@ -186,6 +211,15 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
       {thresholdZone && <ZoneThresholdsModal zoneId={thresholdZone.id} zoneName={thresholdZone.name} onClose={() => setThresholdZone(undefined)} />}
       {scheduleNode && <SpeakerScheduleModal node={scheduleNode} onClose={() => setScheduleNodeId(undefined)} />}
       {tracksNode && <LullabyTracksModal node={tracksNode} onClose={() => setTracksNodeId(undefined)} />}
+      <ConfirmModal
+        open={restartDevice !== undefined}
+        title={t('restart.title', { id: restartDevice?.deviceId ?? '' })}
+        description={t('restart.desc')}
+        confirmLabel={t('action.restart')}
+        loading={sendCommand.isPending}
+        onConfirm={handleRestart}
+        onCancel={() => setRestartDevice(undefined)}
+      />
     </div>
   );
 }
