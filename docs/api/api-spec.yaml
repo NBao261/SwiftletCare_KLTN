@@ -4633,7 +4633,9 @@ paths:
     get:
       tags: [Analytics]
       summary: "Biểu đồ lịch sử môi trường theo khoảng thời gian (ANALYTICS-FR-001)"
-      description: Chuỗi thời gian đã gom nhóm theo bucket (tối đa 120 điểm) + min/max/avg từng chỉ số.
+      description: >-
+        Chuỗi thời gian đã gom nhóm theo bucket (tối đa 120 điểm) + min/max/avg từng chỉ số, kèm thời tiết
+        ngoài trời theo giờ của farm cùng mốc bucket để đặt cạnh số đo trong nhà (ANALYTICS-FR-013).
       parameters:
         - { name: zoneId, in: query, required: true, schema: { type: string } }
         - {
@@ -4660,6 +4662,19 @@ paths:
                           bucketMs: { type: integer }
                           series: { type: array, items: { type: object } }
                           stats: { type: object, nullable: true }
+                          outdoor:
+                            type: array
+                            description: >-
+                              ANALYTICS-FR-013 — thời tiết ngoài trời (Open-Meteo) của farm chứa Zone, gom theo
+                              cùng `bucketMs` với `series`: nhiệt, ẩm trung bình, mưa cộng dồn. Rỗng khi farm
+                              không có toạ độ hoặc chưa lấy được thời tiết. Chỉ để hiển thị (C-6).
+                            items:
+                              type: object
+                              properties:
+                                timestamp: { type: string, format: date-time }
+                                temperature: { type: number, nullable: true }
+                                humidity: { type: number, nullable: true }
+                                precipitation_mm: { type: number, nullable: true, description: "null khi cả bucket không có số mưa (không ghi 0)" }
         "400":
           {
             description: "range không hợp lệ",

@@ -5,9 +5,12 @@
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Farm } from '@/models/farm.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
+import { getEnvSummary } from '@/services/analytics.service'
 import { fetchAllFarmsWeather } from '@/services/weather.service'
+import type { CurrentUser } from '@/types'
 
 let mongod: MongoMemoryServer
 beforeAll(async () => {
@@ -20,7 +23,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.restoreAllMocks()
-  await Promise.all([Farm, User, WeatherObservation].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([Farm, House, Zone, User, WeatherObservation].map(m => (m as typeof User).deleteMany({})))
 })
 
 const NOW = new Date('2026-10-20T03:30:00Z')
@@ -80,5 +83,53 @@ describe('weather.service (ANALYTICS-FR-013)', () => {
     fetchSpy.mockRejectedValue(new Error('timeout'))
     await expect(fetchAllFarmsWeather(NOW)).resolves.toBe(0)
     expect(await WeatherObservation.countDocuments()).toBe(0)
+  })
+})
+
+describe('GET /analytics/env/summary — thời tiết ngoài trời cạnh số đo trong nhà (ANALYTICS-FR-013)', () => {
+  const HOUR = 3600_000
+  async function seedZone() {
+    const farm = await seedFarm({ lat: 10.8, lng: 106.6 })
+    const house = await House.create({ farm_id: farm._id, name: 'H' })
+    const zone = await Zone.create({ house_id: house._id, name: 'Z' })
+    const user: CurrentUser = { _id: String(farm.owner_id), email: 'o@t.vn', role: 'FARM_OWNER' }
+    return { farm, zone, user }
+  }
+
+  it('24h: mỗi giờ một điểm đúng mốc giờ; giờ thiếu mưa là null, không phải 0; farm khác không lẫn vào', async () => {
+    const { farm, zone, user } = await seedZone()
+    const other = await seedFarm({ lat: 1, lng: 2 })
+    const lastHour = Math.floor(Date.now() / HOUR) * HOUR - HOUR
+    await WeatherObservation.create([
+      { farm_id: farm._id, hour: new Date(lastHour - HOUR), temperature: 27, humidity: 85, precipitation_mm: 1.2 },
+      { farm_id: farm._id, hour: new Date(lastHour), temperature: 28 },
+      { farm_id: farm._id, hour: new Date(lastHour - 30 * HOUR), temperature: 20 }, // ngoài 24h
+      { farm_id: other._id, hour: new Date(lastHour), temperature: 35 },
+    ])
+
+    const summary = await getEnvSummary(user, { zoneId: String(zone._id), range: '24h' })
+
+    expect(summary.outdoor).toEqual([
+      { timestamp: new Date(lastHour - HOUR), temperature: 27, humidity: 85, precipitation_mm: 1.2 },
+      { timestamp: new Date(lastHour), temperature: 28, humidity: null, precipitation_mm: null },
+    ])
+  })
+
+  it('30d: các giờ gom theo đúng bucket của số đo trong nhà (≤ 120 điểm), nhiệt ẩm trung bình, mưa cộng dồn', async () => {
+    const { farm, zone, user } = await seedZone()
+    const summary0 = await getEnvSummary(user, { zoneId: String(zone._id), range: '30d' })
+    expect(summary0.outdoor).toEqual([])
+    const bucketMs = summary0.bucketMs
+    const bucket = Math.floor((Date.now() - 2 * 86400_000) / bucketMs) * bucketMs
+    await WeatherObservation.create([
+      { farm_id: farm._id, hour: new Date(bucket), temperature: 26, humidity: 80, precipitation_mm: 0.5 },
+      { farm_id: farm._id, hour: new Date(bucket + HOUR), temperature: 28, humidity: 90, precipitation_mm: 1.5 },
+      { farm_id: farm._id, hour: new Date(bucket + 2 * HOUR), temperature: 30 },
+    ])
+
+    const summary = await getEnvSummary(user, { zoneId: String(zone._id), range: '30d' })
+
+    expect(bucketMs).toBeGreaterThan(HOUR)
+    expect(summary.outdoor).toEqual([{ timestamp: new Date(bucket), temperature: 28, humidity: 85, precipitation_mm: 2 }])
   })
 })
