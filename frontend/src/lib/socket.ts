@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/authStore'
-import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent } from '@/types'
+import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent, AppNotification } from '@/types'
 
 // Dev: '' = same-origin (localhost:5173) — vite.config.ts proxy '/socket.io' ->
 // http://localhost:3000 (ws:true) chuyển tiếp handshake. Production: set VITE_WS_URL
@@ -76,6 +76,12 @@ export function onRelayUpdate(cb: (data: RelayUpdateEvent) => void) {
 export function onAlertNew(cb: (data: AlertNewEvent) => void) {
   getSocket().on('ALERT_NEW', cb)
   return () => getSocket().off('ALERT_NEW', cb)
+}
+
+// EXPERT-FR-007 — thông báo trong ứng dụng mới của người đang đăng nhập (room user:<id>)
+export function onNotificationNew(cb: (data: AppNotification) => void) {
+  getSocket().on('NOTIFICATION_NEW', cb)
+  return () => getSocket().off('NOTIFICATION_NEW', cb)
 }
 
 export function onDeviceStatusChange(cb: (data: DeviceStatusChangeEvent) => void) {

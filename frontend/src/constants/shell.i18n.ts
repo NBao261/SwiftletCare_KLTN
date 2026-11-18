@@ -17,6 +17,11 @@ const vi = {
   'notif.note': 'Ghi chú',
   'notif.openDetail': 'Mở trang chi tiết cảnh báo',
   'notif.viewAll': 'Xem tất cả thông báo →',
+  'notif.tabAlerts': 'Cảnh báo',
+  'notif.tabInbox': 'Thông báo',
+  'notif.inboxEmpty': 'Chưa có thông báo nào trong ứng dụng',
+  'notif.markAllRead': 'Đánh dấu đã đọc hết',
+  'notif.loadMore': 'Tải thêm',
   ...prefixLabels('status.', alertStatusDict.vi),
   ...prefixLabels('severity.', severityLabels(levelDict.vi)),
 
@@ -52,6 +57,11 @@ const en: Record<ShellKey, string> = {
   'notif.note': 'Note',
   'notif.openDetail': 'Open alert details',
   'notif.viewAll': 'View all notifications →',
+  'notif.tabAlerts': 'Alerts',
+  'notif.tabInbox': 'Notifications',
+  'notif.inboxEmpty': 'No in-app notifications yet',
+  'notif.markAllRead': 'Mark all as read',
+  'notif.loadMore': 'Load more',
   ...prefixLabels('status.', alertStatusDict.en),
   ...prefixLabels('severity.', severityLabels(levelDict.en)),
 
