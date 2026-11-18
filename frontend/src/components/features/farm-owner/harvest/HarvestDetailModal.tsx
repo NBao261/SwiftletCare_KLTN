@@ -7,6 +7,7 @@ import type { HarvestGroup } from '@/components/features/farm-owner/harvest/harv
 import { harvestDict } from '@/constants/harvest.i18n';
 import { LEVEL_BADGE_SIZE } from '@/constants/severity';
 import { useTranslation } from '@/hooks/common/useTranslation';
+import { useHarvestPhotoUrl } from '@/hooks/farm-owner/useHarvests';
 import { cn } from '@/lib/cn';
 import { formatStandardDate } from '@/lib/i18n';
 import { NO_VALUE } from '@/constants/display';
@@ -27,6 +28,8 @@ interface HarvestDetailModalProps {
 export default function HarvestDetailModal({ group, houseName, creatorName, onClose, onEdit, onDelete }: HarvestDetailModalProps): JSX.Element {
   const { t, num, exact } = useTranslation(harvestDict);
   const batchByType = new Map(group.batches.map(batch => [batch.nest_type, batch]));
+  // HARVEST-FR-001 — các đợt của lần thu cùng một ảnh, lấy của đợt đầu
+  const photoUrl = useHarvestPhotoUrl(group.batches.map(batch => batch._id));
 
   return (
     <Modal open onClose={onClose} title={t('detail.title')} className="max-w-2xl">
@@ -67,6 +70,15 @@ export default function HarvestDetailModal({ group, houseName, creatorName, onCl
             </span>
           </div>
         </div>
+
+        {photoUrl && (
+          <div className="flex flex-col gap-2">
+            <span className="label-caption">{t('detail.photo')}</span>
+            <a href={photoUrl} target="_blank" rel="noreferrer">
+              <img src={photoUrl} alt={t('detail.photo')} className="max-h-64 rounded-2xl border border-warmGray/15 object-cover" />
+            </a>
+          </div>
+        )}
 
         {group.product_images.length > 0 && <ProductImages urls={group.product_images} label={t('detail.images')} />}
 
