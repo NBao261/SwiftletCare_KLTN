@@ -478,12 +478,21 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
  * thời gian chạy mà không lệch khi heartbeat cũ.
  */
 function applyDiagnostics(node: ISensorNode, payload: HeartbeatPayload): void {
-  const { uptime, freeHeap, resetReason, ip } = payload as unknown as Record<string, unknown>
+  const { uptime, freeHeap, resetReason, ip, actuatorBaseline } = payload as unknown as Record<string, unknown>
   const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
   if (isCount(uptime)) node.booted_at = new Date(Date.now() - uptime)
   if (isCount(freeHeap)) node.free_heap = freeHeap
   if (typeof resetReason === 'string' && resetReason.length <= 32) node.reset_reason = resetReason
   if (typeof ip === 'string' && ip.length <= 45) node.ip = ip
+  // BR-45 — mức dòng đã học; chỉ nhận số dương, tải chưa học thì firmware không gửi
+  if (actuatorBaseline && typeof actuatorBaseline === 'object') {
+    const { misting, ventilation } = actuatorBaseline as Record<string, unknown>
+    const amps = (v: unknown) => (isCount(v) && v > 0 ? v : undefined)
+    node.actuator_baseline = {
+      misting_a: amps(misting) ?? node.actuator_baseline?.misting_a,
+      ventilation_a: amps(ventilation) ?? node.actuator_baseline?.ventilation_a,
+    }
+  }
 }
 
 /**

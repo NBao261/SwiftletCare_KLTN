@@ -7430,6 +7430,12 @@ components:
             misting: { $ref: "#/components/schemas/RelayUsage" }
             ventilation: { $ref: "#/components/schemas/RelayUsage" }
             counted_until: { type: string, format: date-time }
+        actuator_baseline:
+          type: object
+          description: "BR-32, BR-45 — dòng bình thường controller đã học của bơm và quạt (A), heartbeat firmware ≥ 2.3.1 báo. Có mức và có số đo dòng thì giờ chạy chỉ cộng khi dòng trên 50 % mức này; thiếu thì theo thời gian relay BẬT"
+          properties:
+            misting_a: { type: number }
+            ventilation_a: { type: number }
         _id: { type: string }
         device_id: { type: string, example: node_001 }
         zone_id: { type: string }

@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.13 (Review 2, final scope) |
+| Document version | 2.2.14 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -1037,7 +1037,7 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | --- | --- | --- | --- |
 | `telemetry` | controller → cloud | `deviceId`, six readings, stale sensors, `control_output`, `pump_current_a`, `fan_current_a`, timestamp | 0 |
 | `telemetry/buffered` | controller → cloud | Samples from the offline buffer, each with its own timestamp; deleted from flash on PUBACK | 1 |
-| `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0) | 0 |
+| `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0), `actuatorBaseline` (learned normal current of the pump and the fan, A, for the loads learned so far; firmware 2.3.1 or later, BR-45) | 0 |
 | `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected | 0 |
 | `relay/status` | controller → cloud | `deviceId`, per relay: state, mode, expiry; `commandId` of the command that caused the change, if any | 1 |
 | `alert` | controller → cloud | `deviceId`, `eventId`, type, severity, details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
@@ -1883,6 +1883,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.14 | 18/11/2026 | Run hours as built (G-22, BR-45): the heartbeat carries the learned normal current (`actuatorBaseline`, Section 7.2), kept as the controller's `actuator_baseline`; an interval counts as running only when the current is above 50 % of it |
 | 2.2.13 | 18/11/2026 | Data model as built (G-14): `users.status` with the lock fields replaces `is_active` (the API keeps `is_active` and `deactivated_*` as derived names for the clients); audit rows carry `before`, `after`, `source_ip`, `client`, `correlation_id` (`X-Request-Id`); telemetry `stale_fields`, `anomaly_fields`, `buffered`; harvest `photo_object_key` (`PUT /harvests/{id}/photo`); notification `ref.kind` names as in the code, with `device_action`; migration row for the audit fields (Sections 6.1, 6.4) |
 | 2.2.12 | 18/11/2026 | k6 1.3.0 in the Testing row of the Technology Declaration (Section 3): the NFR-03 load script runs from a Docker image beside the device simulator (G-27) |
 | 2.2.11 | 18/11/2026 | Staging as built (G-17): one domain name instead of four, files on a backend volume instead of MinIO (the MinIO images are no longer published), Certbot v3.1.0, the compose, Dockerfile and certificate script paths; `/internal/*` kept out of the access log (Sections 3.2, 3.4, 11) |

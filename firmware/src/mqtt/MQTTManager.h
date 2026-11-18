@@ -24,6 +24,9 @@ void processInbound();
 void publishTelemetry(const SensorData &data, const RelayState &relay);
 // publish* trả true khi đã gửi được (false: mất kết nối/buffer đầy) để caller thử lại
 bool publishHeartbeat();
+// BR-32, BR-45 — dòng bình thường đã học của tải (0 = bơm phun sương, 1 = quạt), gửi trong heartbeat để
+// backend đếm giờ chạy theo dòng; 0 = chưa học, không gửi
+void setActuatorBaseline(int load, float normalA);
 bool publishRelayState(const RelayState &relay);
 // Vào hàng đợi NVS, gửi QoS 1, xoá khi có PUBACK. resetReason: chỉ cho UNEXPECTED_RESTART
 // (THREAT-FR-012) — POWER_ON | WATCHDOG | BROWNOUT | CRASH
