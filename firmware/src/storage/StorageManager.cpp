@@ -128,6 +128,10 @@ bool loadEverConnected() { return prefs.getBool("everConn", false); }
 
 void markEverConnected() { prefs.putBool("everConn", true); }
 
+float loadLearnedCurrent(int load) { return prefs.getFloat(load == 0 ? "curNormMist" : "curNormFan", 0); }
+
+void saveLearnedCurrent(int load, float normalA) { prefs.putFloat(load == 0 ? "curNormMist" : "curNormFan", normalA); }
+
 bool loadDeviceIdentity(String &deviceId, String &brokerSecret) {
   Preferences identity;
   if (!identity.begin("identity", true)) return false;

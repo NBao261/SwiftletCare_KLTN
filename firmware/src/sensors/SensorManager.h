@@ -30,6 +30,11 @@ struct SensorData {
   bool tempHumidOk = false;
   int failedCount = 0; // number of Slave IDs that timed out this cycle
 
+  // THREAT-FR-014 — dòng bơm và quạt từ ADS1115 (CurrentSensor); currentOk = false: board không đo dòng
+  bool currentOk = false;
+  float pumpCurrentA = NAN;
+  float fanCurrentA = NAN;
+
   // Field cảm biến theo backend TelemetryPayload — định nghĩa DUY NHẤT ở đây,
   // dùng chung cho telemetry sống (MQTTManager) và buffer offline (toJson()).
   // NaN (cảm biến timeout) được ArduinoJson ghi thành null, JSON luôn hợp lệ.

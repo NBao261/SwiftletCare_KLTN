@@ -44,7 +44,7 @@ export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
 /**
  * `ACTUATOR_FAULT` (THREAT-FR-014): thiết kế cho firmware gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào tải còn không
- * theo relay, nên cảnh báo tự đóng khi tải chạy đúng trở lại. Firmware chưa gửi cảnh báo này (board đo dòng chưa làm);
+ * theo relay, nên cảnh báo tự đóng khi tải chạy đúng trở lại. Firmware 2.3.0 gửi cảnh báo này khi board có ADS1115;
  * Work Order của nó không dựa vào việc gửi lại (workOrder.service#UNVERIFIABLE_RECOVERY).
  */
 export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT']
