@@ -23,6 +23,7 @@ const SettingsPrivacyPage = lazy(() => import("@/pages/SettingsPrivacyPage"));
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const mustChangePassword = useAuthStore((s) => s.user?.must_change_password === true);
   const location = useLocation();
 
   // Chờ zustand/persist đọc xong localStorage trước khi quyết định — tránh
@@ -33,6 +34,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const returnTo = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?returnTo=${returnTo}`} replace />;
   }
+  // AUTH-FR-005c — còn mật khẩu tạm thì chỉ vào được trang đổi mật khẩu
+  if (mustChangePassword) return <Navigate to="/change-password" replace />;
   return <>{children}</>;
 }
 

@@ -22,6 +22,9 @@ export interface ITelemetry extends Document {
   pump_current_a?: number
   fan_current_a?: number
   is_anomaly: boolean
+  stale_fields?: string[]
+  anomaly_fields?: string[]
+  buffered?: boolean
 }
 
 const telemetrySchema = new Schema<ITelemetry>(
@@ -42,6 +45,12 @@ const telemetrySchema = new Schema<ITelemetry>(
     pump_current_a:  { type: Number, min: 0 },
     fan_current_a:   { type: Number, min: 0 },
     is_anomaly:  { type: Boolean, default: false },
+    /** ENV-FR-004 — cảm biến controller báo cũ hoặc lỗi (gửi null): lưu là thiếu, ghi tên ở đây */
+    stale_fields:   { type: [String], default: undefined },
+    /** ENV-FR-004 — chỉ số ngoài ngưỡng của Zone làm mẫu thành bất thường */
+    anomaly_fields: { type: [String], default: undefined },
+    /** ENV-FR-024 — mẫu lấy từ bộ đệm offline (`telemetry/buffered`), giữ timestamp gốc */
+    buffered:    { type: Boolean },
   },
   { timestamps: false, versionKey: false }
 )

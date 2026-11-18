@@ -181,6 +181,8 @@ export interface TelemetryPayload {
   pump_current_a?: number
   fan_current_a?: number
   timestamp: number   // Unix ms
+  /** ENV-FR-024 — mẫu từ bộ đệm offline (topic `telemetry/buffered`), do handler gắn theo topic */
+  buffered?: boolean
 }
 
 export interface HeartbeatPayload {

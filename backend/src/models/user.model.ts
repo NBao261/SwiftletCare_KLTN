@@ -2,6 +2,18 @@ import { Schema, model, Document, Types } from 'mongoose'
 import bcrypt from 'bcryptjs'
 import type { Role, NotificationPreferences } from '@/types'
 
+/** Report 3 §6.14 (SM-14), Report 4 §6.1 — trạng thái tài khoản; thay `is_active` (G-14, `npm run migrate:erd-fields`) */
+export const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DELETION_REQUESTED', 'DELETED'] as const
+export type UserStatus = typeof USER_STATUSES[number]
+/** AUTH-FR-012 — người đã gửi yêu cầu xoá vẫn đăng nhập được (để huỷ yêu cầu) cho tới khi Admin xử lý */
+export const SIGN_IN_STATUSES: UserStatus[] = ['ACTIVE', 'DELETION_REQUESTED']
+export const canSignIn = (user: { status?: UserStatus }): boolean => SIGN_IN_STATUSES.includes(user.status ?? 'ACTIVE')
+/**
+ * Bộ lọc Mongo cùng nghĩa với `canSignIn`: loại LOCKED, DELETED thay vì chỉ nhận ACTIVE, DELETION_REQUESTED, để tài khoản
+ * chưa có `status` (trước `migrate:erd-fields`) vẫn nhận cảnh báo, vẫn là chuyên gia, thợ đang hoạt động
+ */
+export const SIGN_IN_FILTER = { status: { $nin: ['LOCKED', 'DELETED'] as UserStatus[] } }
+
 /**
  * User Document – SRS §8.2
  * AUTH-FR-002, AUTH-FR-004, AUTH-FR-005c, SEC-NFR-003
@@ -14,15 +26,15 @@ export interface IUser extends Document {
   full_name: string
   role: Role
   avatar_url?: string
-  is_active: boolean
+  status: UserStatus
   /**
    * AUTH-FR-005c — mật khẩu do Admin đặt (tạo Technician / đặt lại mật khẩu) là mật khẩu
    * tạm: người dùng phải tự đổi trước khi dùng hệ thống (`authenticate` chặn mọi route khác).
    */
   must_change_password?: boolean
-  /** AUTH-FR-011 — bắt buộc có lý do khi Admin khoá tài khoản, ghi cùng lúc với is_active=false (Flow 19) */
-  deactivated_at?: Date
-  deactivated_reason?: string
+  /** AUTH-FR-011 — bắt buộc có lý do khi Admin khoá tài khoản (Flow 19) */
+  locked_at?: Date
+  locked_reason?: string
   notification_preferences: NotificationPreferences
   /** ALERT-FR-013 — chat id của bot Telegram, có sau khi người dùng gửi `/start <mã>` cho bot */
   telegram_chat_id?: string
@@ -39,7 +51,7 @@ export interface IUser extends Document {
   /**
    * AUTH-FR-012 — thời điểm Admin đã xoá/ẩn danh hoá xong. Document vẫn ở lại
    * để farm/audit lịch sử không vỡ tham chiếu, nên cần cờ này để phân biệt
-   * "đã xoá theo yêu cầu" với "đang bị khoá kỷ luật" (cả hai đều is_active=false).
+   * "đã xoá theo yêu cầu" (`DELETED`) với "đang bị khoá kỷ luật" (`LOCKED`).
    */
   deleted_at?: Date
   /** sha256 của refresh token (như OTP/token reset) — lộ DB cũng không dùng được để lấy access token */
@@ -61,10 +73,10 @@ const userSchema = new Schema<IUser>(
     full_name:     { type: String, required: true, trim: true },
     role:          { type: String, enum: ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] satisfies Role[], default: 'FARM_OWNER' },
     avatar_url:    { type: String },
-    is_active:     { type: Boolean, default: true },
+    status:        { type: String, enum: USER_STATUSES, default: 'ACTIVE' },
     must_change_password: { type: Boolean, default: false },
-    deactivated_at:     { type: Date },
-    deactivated_reason: { type: String },
+    locked_at:     { type: Date },
+    locked_reason: { type: String },
     notification_preferences: {
       push:  { type: Boolean, default: true },
       telegram: { type: Boolean, default: true },
@@ -124,7 +136,14 @@ userSchema.methods.toJSON = function () {
   delete obj.telegram_chat_id
   delete obj.telegram_link_code_hash
   delete obj.telegram_link_expires_at
+  // Tên cũ cho web và mobile tới khi đọc `status`, `locked_*` (G-14): chỉ suy ra, không lưu
+  obj.is_active = canSignIn(this as IUser)
+  obj.deactivated_at = obj.locked_at
+  obj.deactivated_reason = obj.locked_reason
   return obj
 }
+
+// Report 4 §6.2 — danh sách tài khoản của Admin và người nhận thông báo lọc theo trạng thái
+userSchema.index({ status: 1 })
 
 export const User = model<IUser>('User', userSchema)

@@ -379,7 +379,7 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
     expect(await canEdit(expertToken)).toBe(true)
     expect(await canEdit(ownerToken)).toBe(false)
 
-    await User.updateOne({ _id: expert!._id }, { is_active: false })
+    await User.updateOne({ _id: expert!._id }, { status: 'LOCKED' })
     expect(await canEdit(ownerToken)).toBe(true)
     expect((await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { noise_clear: 5 })).status).toBe(200)
   })

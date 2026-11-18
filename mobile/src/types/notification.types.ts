@@ -12,6 +12,7 @@ export interface NotificationRef {
     | 'parameter_review'
     | 'coefficient_proposal'
     | 'work_order'
+    | 'device_action'
   id: string
 }
 

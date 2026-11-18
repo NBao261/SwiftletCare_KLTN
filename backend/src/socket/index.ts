@@ -1,7 +1,7 @@
 ﻿import { Server, Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
-import { User } from '@/models/user.model'
+import { User, canSignIn } from '@/models/user.model'
 import type { NotificationDto } from '@/services/notification.service'
 import { assertHouseAccess, assertZoneAccess } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
@@ -12,7 +12,7 @@ let io: Server | null = null
 const userRoom = (userId: string) => `user:${userId}`
 
 /**
- * Xác thực kết nối realtime. Ngoài chữ ký JWT còn phải đọc lại `is_active`:
+ * Xác thực kết nối realtime. Ngoài chữ ký JWT còn phải đọc lại `status` (LOCKED, DELETED bị từ chối):
  * token còn hạn nhưng tài khoản đã bị Admin khoá/xoá thì vẫn phải bị từ chối,
  * giống middleware `authenticate` của REST (AUTH-FR-011).
  *
@@ -30,8 +30,8 @@ export async function verifySocketToken(token: string | undefined): Promise<Curr
     throw new Error('Unauthorized: invalid token')
   }
 
-  const user = await User.findById(payload.sub).select('is_active email role').lean()
-  if (!user?.is_active) throw new Error('Unauthorized: account inactive')
+  const user = await User.findById(payload.sub).select('status email role').lean()
+  if (!user || !canSignIn(user)) throw new Error('Unauthorized: account inactive')
   return { _id: String(user._id), email: user.email, role: user.role }
 }
 

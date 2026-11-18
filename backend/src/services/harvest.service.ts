@@ -7,6 +7,8 @@ import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds, listAccessib
 import { logAction } from '@/services/auditLog.service'
 import { rebuildZoneCyclesSafely } from '@/services/harvestCycle.service'
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
+import { presignedGetUrl, removeObject } from '@/config/minio.config'
+import { storePhotos, type UploadedPhoto } from '@/services/workOrder.service'
 import type { CurrentUser, NestType } from '@/types'
 
 /** HARVEST-FR-002 — cửa sổ lấy trung bình môi trường trước ngày thu hoạch */
@@ -145,6 +147,35 @@ export async function getHarvest(id: string, user: CurrentUser): Promise<IHarves
   if (user.role === 'FARM_TECHNICIAN') await assertZoneAccess(String(batch.zone_id), user)
   else await assertFarmAccess(String(batch.farm_id), user)
   return batch
+}
+
+/** GET /harvests/:id — lô kèm link ảnh ký sẵn (HARVEST-FR-001); khoá ảnh không ra ngoài */
+export async function getHarvestView(id: string, user: CurrentUser) {
+  await getHarvest(id, user)
+  return presentHarvest((await HarvestBatch.findById(id).select('+photo_object_key'))!)
+}
+
+async function presentHarvest(batch: IHarvestBatch) {
+  const { photo_object_key: photoKey, ...rest } = batch.toObject()
+  return { ...rest, photo_url: photoKey ? await presignedGetUrl(photoKey) : null }
+}
+
+/**
+ * HARVEST-FR-001 — ảnh của lô (một ảnh, JPEG/PNG/WebP ≤ 5 MB như ảnh Work Order). Ai sửa được lô thì đặt được ảnh:
+ * Farm Owner, Farm Technician với lô DRAFT của mình (HARVEST-FR-005). Ảnh mới thay ảnh cũ.
+ */
+export async function setHarvestPhoto(id: string, user: CurrentUser, file: UploadedPhoto | undefined) {
+  if (!file) throw new AppError(422, 'VALIDATION_ERROR', 'Cần gửi một ảnh ở trường `photo`')
+  await getHarvest(id, user).then(batch => assertTechnicianOwnDraft(batch, user))
+  const batch = (await HarvestBatch.findById(id).select('+photo_object_key'))!
+  const previousKey = batch.photo_object_key
+  const [key] = await storePhotos([file], `harvests/${String(batch._id)}`)
+  batch.photo_object_key = key
+  await batch.save()
+  // Ảnh cũ không còn ai trỏ tới: xoá khỏi kho file; xoá lỗi chỉ để lại file thừa, không làm hỏng lần đặt ảnh
+  if (previousKey) await removeObject(previousKey).catch(() => undefined)
+  await logAction(user._id, 'HARVEST_PHOTO_SET', 'harvest_batch', String(batch._id), { photo_object_key: key }, { farmId: String(batch.farm_id) })
+  return presentHarvest(batch)
 }
 
 /** HARVEST-FR-005 — Farm Technician chỉ sửa, xoá lô DRAFT do chính mình nhập */

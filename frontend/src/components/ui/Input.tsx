@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, ReactNode, forwardRef } from 'react'
+import { InputHTMLAttributes, ReactNode, forwardRef, useId } from 'react'
 import { cn } from '@/lib/cn'
 import { tr } from '@/i18n'
 
@@ -16,7 +16,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label: rawLabel, error: rawError, icon, errorInLabel, className, id, placeholder, ...props }, ref) => {
-    const inputId = id ?? props.name
+    // Không có id hay name thì nhãn vẫn phải gắn vào ô (FE_Design §6 a11y): id tự sinh
+    const generatedId = useId()
+    const inputId = id ?? props.name ?? generatedId
     // Nhãn/lỗi/placeholder tự dịch theo VI/EN (chuỗi không có bản dịch giữ nguyên)
     const label = tr(rawLabel), error = tr(rawError)
     return (

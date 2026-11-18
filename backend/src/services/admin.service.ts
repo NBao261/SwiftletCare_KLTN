@@ -1,4 +1,4 @@
-import { User, IUser } from '@/models/user.model'
+import { User, IUser, SIGN_IN_FILTER } from '@/models/user.model'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
@@ -19,7 +19,7 @@ export interface ListQuery { page?: string | number; limit?: string | number }
 
 export interface ListUsersQuery extends ListQuery {
   role?: Role
-  /** inactive = đang bị khoá; deleted = đã xoá theo yêu cầu (cũng is_active=false nhưng không mở khoá được) */
+  /** active = đăng nhập được (ACTIVE, DELETION_REQUESTED); inactive = LOCKED; deleted = DELETED (SM-14) */
   status?: 'active' | 'inactive' | 'deleted'
   /** Tìm theo tên, email hoặc SĐT (không phân biệt hoa/thường) */
   q?: string
@@ -28,9 +28,9 @@ export interface ListUsersQuery extends ListQuery {
 export async function listUsers(query: ListUsersQuery) {
   const filter: Record<string, unknown> = {}
   if (query.role) filter.role = query.role
-  if (query.status === 'active') filter.is_active = true
-  if (query.status === 'inactive') Object.assign(filter, { is_active: false, deleted_at: null })
-  if (query.status === 'deleted') filter.deleted_at = { $ne: null }
+  if (query.status === 'active') Object.assign(filter, SIGN_IN_FILTER)
+  if (query.status === 'inactive') filter.status = 'LOCKED'
+  if (query.status === 'deleted') filter.status = 'DELETED'
   const term = query.q?.trim()
   if (term) {
     const pattern = new RegExp(escapeRegex(term), 'i')
@@ -80,7 +80,7 @@ export async function createFarmOwner(
 
 /**
  * AUTH-FR-011 — khoá/mở khoá tài khoản. Lý do bắt buộc khi khoá (không bắt buộc
- * khi mở khoá). Middleware `authenticate` đã tự chặn is_active=false ở request
+ * khi mở khoá). Middleware `authenticate` đã tự chặn tài khoản LOCKED ở request
  * kế tiếp, nên không cần thu hồi refresh_tokens riêng ở đây — vẫn xoá cho chắc,
  * để user không giữ được phiên nào nếu quay lại dùng refresh token cũ. Kết nối
  * Socket.io đang mở cũng bị ngắt ngay (JWT còn hạn không đủ để giữ realtime).
@@ -100,15 +100,21 @@ export async function setUserStatus(
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
   // Tài khoản đã xoá theo Nghị định 13 thì PII đã bị ẩn danh — mở khoá lại sẽ
   // tạo ra tài khoản "sống" nhưng rỗng thông tin.
-  if (user.deleted_at) throw ConflictError('Tài khoản đã bị xoá theo yêu cầu, không thể khoá/mở khoá')
+  if (user.status === 'DELETED') throw ConflictError('Tài khoản đã bị xoá theo yêu cầu, không thể khoá/mở khoá')
+  // SM-14: khoá chỉ từ ACTIVE — đang chờ xoá thì Admin xử lý hoặc từ chối yêu cầu trước
+  if (!isActive && user.status === 'DELETION_REQUESTED') {
+    throw ConflictError('Tài khoản đang chờ xoá: xử lý hoặc từ chối yêu cầu xoá trước khi khoá')
+  }
 
-  user.is_active = isActive
   if (isActive) {
-    user.deactivated_at = undefined
-    user.deactivated_reason = undefined
+    // Mở khoá: LOCKED → ACTIVE; tài khoản đang hoạt động hay đang chờ xoá giữ nguyên trạng thái
+    if (user.status === 'LOCKED') user.status = 'ACTIVE'
+    user.locked_at = undefined
+    user.locked_reason = undefined
   } else {
-    user.deactivated_at = new Date()
-    user.deactivated_reason = trimmedReason
+    user.status = 'LOCKED'
+    user.locked_at = new Date()
+    user.locked_reason = trimmedReason
     user.refresh_tokens = [] as never
   }
   await user.save()
@@ -210,7 +216,8 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   user.telegram_chat_id = undefined
   user.telegram_link_code_hash = undefined
   user.telegram_link_expires_at = undefined
-  user.is_active = false
+  // SM-14 DELETION_REQUESTED → DELETED
+  user.status = 'DELETED'
   user.refresh_tokens = [] as never
   // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
   // không bị xử lý (chạy lại cascade) lần 2
@@ -249,6 +256,8 @@ export async function rejectDeletionRequest(adminId: string, userId: string, rea
   if (!user.deletion_requested_at) throw BadRequestError('Người dùng này chưa gửi yêu cầu xoá tài khoản')
 
   const requestedAt = user.deletion_requested_at
+  // SM-14 DELETION_REQUESTED → ACTIVE (Admin từ chối có lý do); tài khoản đang bị khoá vẫn khoá
+  if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
   await user.save()

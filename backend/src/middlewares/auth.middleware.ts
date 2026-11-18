@@ -1,6 +1,6 @@
 ﻿import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { User } from '@/models/user.model'
+import { User, canSignIn } from '@/models/user.model'
 import type { JwtAccessPayload, Role } from '@/types'
 import { AppError, UnauthorizedError, ForbiddenError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
@@ -29,7 +29,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   try {
     const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as JwtAccessPayload
     const user = await User.findById(payload.sub).lean()
-    if (!user || !user.is_active) {
+    if (!user || !canSignIn(user)) {
       next(UnauthorizedError('User not found or inactive'))
       return
     }
@@ -44,7 +44,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       email:                    user.email,
       role:                     user.role,
       full_name:                user.full_name,
-      is_active:                user.is_active,
+      is_active:                true,
       notification_preferences: user.notification_preferences,
     }
     // Audit log ghi vai trò người làm (EXPERT-FR-009) mà không phải truyền qua từng service

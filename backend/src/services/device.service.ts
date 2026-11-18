@@ -120,11 +120,15 @@ async function retireDeviceId(Model: typeof SensorNode, nodeId: unknown, deviceI
  * Farm Technician khởi động lại) được báo trong app cho các Farm Owner của farm (cùng danh sách người
  * nhận cảnh báo, không có Domain Expert). Không throw: thông báo hỏng không được làm hỏng thao tác thiết bị.
  */
-async function notifyOwnersOfTechnicianAction(user: CurrentUser, farmId: unknown, message: UserNotification): Promise<void> {
+async function notifyOwnersOfTechnicianAction(
+  user: CurrentUser, farmId: unknown, deviceId: unknown, message: UserNotification,
+): Promise<void> {
   if (user.role !== 'ADMIN' && user.role !== 'FARM_TECHNICIAN') return
   try {
     const owners = await findRecipients(String(farmId))
-    await Promise.all(owners.map(o => notifyUser(String(o._id), message)))
+    // Report 4 §6.1 NOTIFICATION.ref — mở thẳng thiết bị từ hộp thông báo
+    const withRef = { ...message, ref: { kind: 'device_action' as const, id: String(deviceId) } }
+    await Promise.all(owners.map(o => notifyUser(String(o._id), withRef)))
   } catch (err) {
     logger.warn('Báo Farm Owner về thao tác thiết bị của Technician thất bại', { err, farmId: String(farmId), title: message.title })
   }
@@ -152,7 +156,7 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
   await logAction(user._id, 'DEVICE_REGISTERED', 'sensor_node', String(node._id), {
     deviceId: input.device_id, zoneId: input.zone_id,
   })
-  await notifyOwnersOfTechnicianAction(user, farm._id, {
+  await notifyOwnersOfTechnicianAction(user, farm._id, node._id, {
     title: 'Kỹ thuật viên đã đăng ký thiết bị',
     body: `${input.device_id} đã được đăng ký vào khu vực "${zone.name}".`,
   })
@@ -368,8 +372,8 @@ export async function reassignZone(
     title: 'Kỹ thuật viên đã dời thiết bị',
     body: `${node.device_id} đã được dời từ khu vực "${sourceChain.zone.name}" sang khu vực "${destChain.zone.name}".`,
   }
-  await notifyOwnersOfTechnicianAction(user, destChain.farm._id, moved)
-  if (String(sourceChain.farm._id) !== String(destChain.farm._id)) await notifyOwnersOfTechnicianAction(user, sourceChain.farm._id, moved)
+  await notifyOwnersOfTechnicianAction(user, destChain.farm._id, node._id, moved)
+  if (String(sourceChain.farm._id) !== String(destChain.farm._id)) await notifyOwnersOfTechnicianAction(user, sourceChain.farm._id, node._id, moved)
   return { node, delivered }
 }
 
@@ -401,7 +405,7 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterCamer
   await logAction(user._id, 'DEVICE_REGISTERED', 'camera_node', String(node._id), {
     deviceId: input.device_id, houseId: String(house._id),
   })
-  await notifyOwnersOfTechnicianAction(user, farm._id, {
+  await notifyOwnersOfTechnicianAction(user, farm._id, node._id, {
     title: 'Kỹ thuật viên đã đăng ký thiết bị',
     body: `Camera ${input.device_id} đã được đăng ký vào nhà "${house.name}".`,
   })
@@ -730,7 +734,7 @@ export async function decommissionDevice(
     ...(isAlive ? { forcedWhileOnline: true } : {}),
   })
 
-  await notifyOwnersOfTechnicianAction(user, loc.farm._id, {
+  await notifyOwnersOfTechnicianAction(user, loc.farm._id, node._id, {
     title: 'Thiết bị đã được gỡ khỏi nhà yến',
     body: `Kỹ thuật viên đã gỡ ${node.device_id} khỏi ${loc.place}. Lý do: ${reason}`,
   })
@@ -790,7 +794,7 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
   await logAction(user._id, 'DEVICE_RESTORED', TARGET_TYPES[kind], String(node._id), {
     deviceId: node.device_id, ...loc.audit, reason, decommissionedForMs: elapsed,
   })
-  await notifyOwnersOfTechnicianAction(user, loc.farm._id, {
+  await notifyOwnersOfTechnicianAction(user, loc.farm._id, node._id, {
     title: 'Thiết bị đã được khôi phục',
     body: `Kỹ thuật viên đã khôi phục ${node.device_id} tại ${loc.place}. Lý do: ${reason}`,
   })
@@ -988,7 +992,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     ...(input.ota ? { version: input.ota.version, url: input.ota.url } : {}),
   })
   const actor = user.role === 'ADMIN' ? 'Quản trị viên' : 'Kỹ thuật viên'
-  await notifyOwnersOfTechnicianAction(user, chain.farm._id, {
+  await notifyOwnersOfTechnicianAction(user, chain.farm._id, node._id, {
     title: input.command === 'OTA' ? `${actor} đã cập nhật firmware` : `${actor} đã gửi lệnh tới thiết bị`,
     body: input.command === 'OTA'
       ? `${node.device_id} đang được cập nhật lên firmware ${input.ota?.version}.`

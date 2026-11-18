@@ -52,7 +52,7 @@ miniApp.use(express.json())
 miniApp.use(requestContext)
 miniApp.post('/echo-ip', (_req, res) => { res.json({ ip: getRequestIp() ?? null }) })
 miniApp.post('/log', async (_req, res) => {
-  await logAction(undefined, 'CONTEXT_TEST', 'user')
+  await logAction(undefined, 'CONTEXT_TEST', 'user', undefined, { before: { a: 1 }, after: { a: 2 }, reason: 'x' })
   res.sendStatus(204)
 })
 
@@ -63,17 +63,32 @@ describe('request IP capture', () => {
     expect(res.body.ip).not.toMatch(/^::ffff:/)
   })
 
-  it('stores ip_address on audit logs written during a request', async () => {
-    await request(miniApp).post('/log').send({ any: 'body' }).expect(204)
+  it('stores source_ip, client, correlation_id and before/after on audit logs written during a request (Report 4 §6.1)', async () => {
+    const res = await request(miniApp).post('/log').set('User-Agent', 'SwiftletCare-web/1.0').send({ any: 'body' }).expect(204)
     const log = await AuditLog.findOne({ action: 'CONTEXT_TEST' })
-    expect(log?.ip_address).toBeTruthy()
+    expect(log?.source_ip).toBeTruthy()
+    expect(log?.client).toBe('SwiftletCare-web/1.0')
+    // Cùng mã với header trả về, để báo lỗi kèm mã tra được dòng audit
+    expect(log?.correlation_id).toBe(res.headers['x-request-id'])
+    expect(log?.before).toEqual({ a: 1 })
+    expect(log?.after).toEqual({ a: 2 })
+    // metadata giữ nguyên cho các màn đang đọc nó
+    expect(log?.metadata).toMatchObject({ before: { a: 1 }, reason: 'x' })
   })
 
-  it('leaves ip_address empty for actions written outside a request (jobs, MQTT handlers)', async () => {
+  it('keeps a safe X-Request-Id from the client and replaces an unsafe one', async () => {
+    const kept = await request(miniApp).post('/log').set('X-Request-Id', 'abc-123').send({}).expect(204)
+    expect(kept.headers['x-request-id']).toBe('abc-123')
+    const replaced = await request(miniApp).post('/log').set('X-Request-Id', 'bad id; drop').send({}).expect(204)
+    expect(replaced.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  it('leaves source_ip empty for actions written outside a request (jobs, MQTT handlers)', async () => {
     await logAction(undefined, 'BACKGROUND', 'user')
     const log = await AuditLog.findOne({ action: 'BACKGROUND' })
     expect(log).not.toBeNull()
-    expect(log?.ip_address).toBeUndefined()
+    expect(log?.source_ip).toBeUndefined()
+    expect(log?.correlation_id).toBeUndefined()
   })
 })
 
@@ -85,7 +100,7 @@ describe('app.config wiring', () => {
 
     const log = await AuditLog.findOne({ action: 'LOGIN_FAILED' })
     expect(log).not.toBeNull()
-    expect(log?.ip_address).toBeTruthy()
+    expect(log?.source_ip).toBeTruthy()
   })
 })
 

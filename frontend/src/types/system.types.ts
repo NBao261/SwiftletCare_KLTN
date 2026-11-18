@@ -20,12 +20,23 @@ export interface AuditLogEntry {
   /** Tên tài khoản khi target_type='user' (backend tra sẵn); null với loại khác/tài khoản không còn */
   target_name?: string | null
   metadata?: Record<string, unknown>
-  ip_address?: string
+  source_ip?: string
+  client?: string
+  correlation_id?: string
   created_at: string
 }
 
 /** SYSTEM-FR-002 — nguồn cho ENV-FR-020 "reset về mặc định", cùng shape 7 trường với Zone.thresholds */
 export type SystemDefaultThresholds = Thresholds
+
+/** SYSTEM-FR-002 — `GET /system/settings/default-thresholds`: ngưỡng kèm nguồn và lần đổi gần nhất */
+export type SystemDefaultThresholdsView = Thresholds & {
+  source: string | null
+  updated_at: string | null
+}
+
+/** ENV-FR-007 — mỗi lần đổi ngưỡng mặc định phải kèm nguồn (mã REF-5) */
+export type SystemDefaultThresholdsInput = Thresholds & { source: string }
 
 /**
  * SYSTEM-FR-003 — đúng shape `GET /system/health-overview`: chỉ đếm theo trạng

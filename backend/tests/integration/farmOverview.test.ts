@@ -22,6 +22,7 @@ import { Alert } from '@/models/alert.model'
 import { BirdCountBucket } from '@/models/birdCountBucket.model'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { CameraNode, SensorNode } from '@/models/device.model'
+import { HarvestCycle } from '@/models/harvestCycle.model'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
@@ -236,6 +237,26 @@ describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
     const week = await request(app).get(`/farms/${farm._id}/comparison?from=${new Date(to.getTime() - 7 * DAY).toISOString()}&to=${to.toISOString()}`)
       .set('Authorization', `Bearer ${token}`).expect(200)
     expect(week.body.data.days).toBe(7)
+  })
+
+  it('sản lượng chu kỳ đã đóng gần nhất: cộng chu kỳ đóng mới nhất của mỗi tầng, bỏ chu kỳ đang mở (BR-43, 44)', async () => {
+    const { farm, token, house, house2, zone2 } = await seedFarm()
+    const zone = (await Zone.findOne({ house_id: house._id }))!
+    const zoneB = await Zone.create({ house_id: house._id, farm_id: farm._id, name: 'Tầng 2' })
+    // Chu kỳ bắt đầu 60 ngày trước lúc đóng: mỗi tầng chỉ một chu kỳ cho một ngày bắt đầu (index unique)
+    const cycle = (zoneId: unknown, houseId: unknown, end: string, grams: number, status = 'CLOSED') => ({
+      farm_id: farm._id, house_id: houseId, zone_id: zoneId, start_date: new Date(Date.parse(end) - 60 * DAY), end_date: new Date(end), status,
+      ...(status !== 'OPEN' && { closing_harvest: { date: end, nest_count: 10, weight_grams: grams } }),
+    })
+    await HarvestCycle.insertMany([
+      cycle(zone._id, house._id, '2026-05-01', 400), cycle(zone._id, house._id, '2026-09-01', 900, 'CONCLUDED'),
+      cycle(zoneB._id, house._id, '2026-08-15', 300), cycle(zone._id, house._id, '2026-12-01', 0, 'OPEN'),
+      cycle(zone2._id, house2._id, '2026-07-01', 500, 'OPEN'),
+    ])
+    const res = await request(app).get(`/farms/${farm._id}/comparison`).set('Authorization', `Bearer ${token}`).expect(200)
+    const yieldOf = (id: unknown) => res.body.data.rows.find((r: { house_id: string }) => r.house_id === String(id)).last_cycle_yield_g
+    expect(yieldOf(house._id)).toBe(1200)
+    expect(yieldOf(house2._id)).toBeNull()
   })
 
   it('mỗi hàng có cờ giả lập riêng (SYSTEM-FR-004), không phụ thuộc request tổng quan', async () => {

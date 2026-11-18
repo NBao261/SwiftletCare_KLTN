@@ -14,10 +14,17 @@ import { HarvestBatch } from '@/models/harvestBatch.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { migrateHarvestConfirmed } from '@/scripts/migrate-harvest-confirmed.script'
+import { removeObject } from '@/config/minio.config'
 import type { Role } from '@/types'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
+
+jest.mock('@/config/minio.config', () => ({
+  putObject: jest.fn().mockResolvedValue(undefined),
+  removeObject: jest.fn().mockResolvedValue(undefined),
+  presignedGetUrl: jest.fn(async (key: string) => `http://minio.test/${key}`),
+}))
 
 const app = express()
 app.use(express.json())
@@ -124,6 +131,35 @@ describe('sửa, xoá, xem theo nhà được giao (HARVEST-FR-005, AUTH-FR-013)
     expect(((await expert$.get(`/harvests?farmId=${farm._id}`).expect(200)).body.data as unknown[]).length).toBe(2)
     const unassigned = await tokenOf('FARM_TECHNICIAN')
     expect((await as(unassigned.token).get('/harvests').expect(200)).body.data).toEqual([])
+  })
+})
+
+describe('ảnh của lô (HARVEST-FR-001)', () => {
+  it('Farm Owner và thợ (lô DRAFT của mình) đặt được ảnh; chuyên gia, thợ khác, file không phải ảnh bị từ chối', async () => {
+    const { zone, token, owner$, a, b } = await seed()
+    const draft = (await as(a.token).post('/harvests', batch(zone._id)).expect(201)).body.data
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0])
+    const upload = (who: string, file = jpeg, type = 'image/jpeg') => request(app).put(`/harvests/${draft._id}/photo`)
+      .set('Authorization', `Bearer ${who}`).attach('photo', file, { filename: 'lo.jpg', contentType: type })
+
+    const set = (await upload(a.token).expect(200)).body.data
+    expect(set.photo_url).toMatch(/^http:\/\/minio\.test\/harvests\//)
+    expect(set.photo_object_key).toBeUndefined()
+    expect((await HarvestBatch.findById(draft._id).select('+photo_object_key').lean())!.photo_object_key).toMatch(/^harvests\//)
+    expect((await owner$.get(`/harvests/${draft._id}`).expect(200)).body.data.photo_url).toBeTruthy()
+
+    // Danh sách và các response khác không lộ khoá ảnh (chỉ chi tiết có photo_url)
+    const listed = (await owner$.get('/harvests').expect(200)).body.data.find((row: { _id: string }) => row._id === draft._id)
+    expect(listed).not.toHaveProperty('photo_object_key')
+    // Thay ảnh: ảnh cũ bị xoá khỏi kho file
+    const firstKey = (await HarvestBatch.findById(draft._id).select('+photo_object_key').lean())!.photo_object_key
+    await upload(a.token).expect(200)
+    expect(removeObject).toHaveBeenCalledWith(firstKey)
+
+    await upload(b.token).expect(403)
+    await upload(token, Buffer.from('not an image'), 'text/plain').expect(400)
+    await request(app).put(`/harvests/${draft._id}/photo`).set('Authorization', `Bearer ${token}`).expect(422)
+    expect(await AuditLog.countDocuments({ action: 'HARVEST_PHOTO_SET' })).toBe(2)
   })
 })
 

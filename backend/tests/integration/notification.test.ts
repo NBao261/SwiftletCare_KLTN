@@ -118,11 +118,17 @@ describe('notifyUser', () => {
 describe('notifyAdmins', () => {
   it('notifies only active administrators', async () => {
     await User.create({ email: 'admin1@test.vn', password_hash: 'password123', full_name: 'A1', role: 'ADMIN' })
-    await User.create({ email: 'admin2@test.vn', password_hash: 'password123', full_name: 'A2', role: 'ADMIN', is_active: false })
+    await User.create({ email: 'admin2@test.vn', password_hash: 'password123', full_name: 'A2', role: 'ADMIN', status: 'LOCKED' })
     await User.create({ email: 'owner@test.vn', password_hash: 'password123', full_name: 'O', role: 'FARM_OWNER' })
 
     await notifyAdmins(message)
 
     expect(sentTo('email').map(e => e.email)).toEqual(['admin1@test.vn'])
+  })
+
+  it('still notifies an administrator whose account has no status yet (before migrate:erd-fields)', async () => {
+    await User.collection.insertOne({ email: 'old-admin@test.vn', password_hash: 'x', full_name: 'Old', role: 'ADMIN' })
+    await notifyAdmins(message)
+    expect(sentTo('email').map(e => e.email)).toContain('old-admin@test.vn')
   })
 })

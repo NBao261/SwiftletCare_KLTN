@@ -188,7 +188,7 @@ describe('job đánh giá (SM-17)', () => {
   it('báo cả Farm Technician được giao nhà (BR-31), không báo thợ đã rời farm hay bị khoá', async () => {
     const { farm, house, owner } = await scenario({ rates: FLOCK_CLEAR })
     const [assigned, left, locked] = await Promise.all(['a', 'b', 'c'].map(tag => User.create({
-      email: `ft-${tag}-${house._id}@t.vn`, password_hash: 'password123', full_name: tag, role: 'FARM_TECHNICIAN', is_active: tag !== 'c',
+      email: `ft-${tag}-${house._id}@t.vn`, password_hash: 'password123', full_name: tag, role: 'FARM_TECHNICIAN', status: tag === 'c' ? 'LOCKED' : 'ACTIVE',
     })))
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { $each: [assigned, locked].map(u => ({ user_id: u._id, role: 'FARM_TECHNICIAN' })) } } })
     await House.updateOne({ _id: house._id }, {

@@ -163,6 +163,14 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 ## 4. Code theo gap
 
+**Rà soát 18/11/2026** (sau PR #168–172; đối chiếu code `develop` với Report 3, Report 4 và hai file todo). Phần code còn thiếu:
+
+- Web (Nhi): màn Admin "Tạo Farm Owner", trang đổi mật khẩu tạm, ô nguồn khi Admin lưu ngưỡng mặc định (đang bị 422) — Bảo làm thay, nhánh `feat/g02-web-owner-accounts`.
+- Backend (Kiệt): G-14 (trạng thái tài khoản, trường audit, trường telemetry, ảnh lô thu hoạch, loại tham chiếu thông báo); cột sản lượng của so sánh nhà (G-26) — Bảo làm thay, nhánh `feat/g14-erd-fields`.
+- Firmware (Bảo): G-13 đọc ADS1115, lưu mức học, gửi `ACTUATOR_FAULT` — viết được, chỉ thử được khi có board.
+- Mobile (Len): mục lịch đếm theo mùa (F-14), nhãn "Giả lập" (SYSTEM-FR-004), giai đoạn nhà (F-28); chạy thử trên máy thật và ảnh chụp cho các màn đã merge.
+- Ngoài code: mục 3 (G-19), VPS và tên miền (G-17), project Firebase (G-10), 3 luật khuyến nghị thật (G-24).
+
 Mỗi gap: tên ở Project Tracking §6, yêu cầu ở SRS, thiết kế ở SDD. Mỗi PR có test cho logic mới (backend [Bắt buộc], firmware [Bắt buộc] cho logic điều khiển/phát hiện).
 
 ### G-01 — Enum và dọn phạm vi (P0-Tag) — Kiệt, Len, Tuấn, Nhi (mục 0.3, PR A)
@@ -207,7 +215,7 @@ Một PR cho backend, web, mobile, firmware:
   - xoá `authApi.register` (`apis/auth/auth.api.ts`), mutation `register` trong `hooks/auth/useAuth.ts`, `RegisterRequest` (`types/auth.types.ts`) và các comment AUTH-FR-001;
   - `InvitationPage.tsx`: người chưa có tài khoản đặt tên và mật khẩu ngay trên trang lời mời, gọi endpoint mới, không điều hướng sang `/register`.
 - [x] **P0-Tag — mobile:** xoá `app/(auth)/register.tsx`; xoá `AUTH_REGISTER`, `AUTH_OTP_SEND`, `AUTH_OTP_VERIFY` (`constants/api.ts`) và `register`, `sendOtp`, `verifyOtp` (`services/api/auth.ts`).
-- [x] **P1 — Admin tạo Farm Owner:** *(backend: Kiệt, 17/11, nhánh `feat/g02-owner-account-email`: `POST /admin/farm-owners`, mật khẩu tạm 12 ký tự gửi qua e-mail, `must_change_password`, test quyền và 403 `PASSWORD_CHANGE_REQUIRED`. Còn web: màn Admin "Tạo Farm Owner" và trang đổi mật khẩu tạm trên web (Nhi))* `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, AUTH-FR-005c; từ G-20 Farm Technician vào bằng lời mời nên không còn tài khoản Technician tạo sẵn); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model.
+- [x] **P1 — Admin tạo Farm Owner:** *(backend: Kiệt, 17/11, nhánh `feat/g02-owner-account-email`: `POST /admin/farm-owners`, mật khẩu tạm 12 ký tự gửi qua e-mail, `must_change_password`, test quyền và 403 `PASSWORD_CHANGE_REQUIRED`. Còn web: màn Admin "Tạo Farm Owner" và trang đổi mật khẩu tạm trên web (Nhi))* `POST /admin/farm-owners` (mật khẩu tạm, đổi ở lần đăng nhập đầu, AUTH-FR-005c; từ G-20 Farm Technician vào bằng lời mời nên không còn tài khoản Technician tạo sẵn); màn Admin "Tạo Farm Owner"; test quyền và đổi mật khẩu lần đầu; sửa `api-spec.yaml`, `docs/database/` nếu đổi model. *(Web xong — Bảo làm thay Nhi, 18/11/2026, nhánh `feat/g02-web-owner-accounts`: nút "Tạo Farm Owner" ở tab Người dùng của `/users`, báo thư mật khẩu tạm đã gửi hay chưa; trang `/change-password`: đăng nhập bằng mật khẩu tạm thì vào thẳng trang này, route khác bị chặn, 403 `PASSWORD_CHANGE_REQUIRED` cũng đưa về đây; test E2E `admin-accounts.spec.ts`.)*
 - [x] **P1 — e-mail thật** *(backend: Kiệt, 17/11, cùng nhánh: `mail.service` gửi lời mời, mã đặt lại, mật khẩu tạm qua SMTP bằng nodemailer, không ghi log mã hay mật khẩu; thiếu cấu hình SMTP thì bỏ qua và ghi cảnh báo; test bằng nodemailer giả. Còn: tài khoản SMTP trên staging và gửi thử tới hộp thư thật)* cho lời mời, mã đặt lại mật khẩu và mật khẩu tạm (SF-03 chạy end-to-end; hiện `auth.service.ts` chỉ `console.log` mã reset, `notification.service.ts#sendEmail` chỉ ghi log):
   - SMTP qua `nodemailer` (đã có trong dependencies), thông tin đăng nhập SMTP bằng biến môi trường, thêm vào `.env.example`;
   - không ghi log mật khẩu tạm, mã reset hay token lời mời;
@@ -398,12 +406,20 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-14 — Mô hình dữ liệu theo ERD (P1) — Kiệt; trường của gap nào thì làm trong PR gap đó; Nhi làm form thu hoạch web, Len trên mobile
 
-- [ ] `users.status` thay `is_active` (+ `locked_reason`, `locked_at`, `deletion_requested_at`, `deleted_at`).
-- [ ] `auditlogs`: `actor_role`, `farm_id`, `before`, `after`, `source_ip`, `client`, `correlation_id`.
-- [ ] `harvestbatches`: `nest_type`, `photo_object_key` (MinIO); `flock_snapshot` của House (HARVEST-FR-003).
-- [ ] `notifications.ref.type` mở rộng (SDD 6.1).
-- [ ] `telemetries`: `stale_fields`, `anomaly_fields`, `buffered`.
-- [ ] Migration theo SDD 6.4; `npm run db:script`; test `dbScript`/`databaseScript` xanh.
+- [x] `users.status` thay `is_active` (+ `locked_reason`, `locked_at`, `deletion_requested_at`, `deleted_at`).
+- [x] `auditlogs`: `actor_role`, `farm_id`, `before`, `after`, `source_ip`, `client`, `correlation_id`.
+- [x] `harvestbatches`: `nest_type`, `photo_object_key` (MinIO); `flock_snapshot` của House (HARVEST-FR-003).
+- [x] `notifications.ref.type` mở rộng (SDD 6.1).
+- [x] `telemetries`: `stale_fields`, `anomaly_fields`, `buffered`.
+- [x] Migration theo SDD 6.4; `npm run db:script`; test `dbScript`/`databaseScript` xanh.
+
+*(Bảo làm thay Kiệt, 18/11/2026, nhánh `feat/g14-erd-fields`:*
+- *`status` theo SM-14, khoá chỉ từ `ACTIVE` (đang chờ xoá thì 409), API vẫn trả `is_active`, `deactivated_*` suy ra cho web/mobile;*
+- *audit có `before`/`after` chép từ `metadata`, `source_ip`, `client` (User-Agent), `correlation_id` (header `X-Request-Id`);*
+- *telemetry ghi cảm biến null vào `stale_fields`, chỉ số vượt ngưỡng vào `anomaly_fields`, mẫu `telemetry/buffered` có `buffered`;*
+- *ảnh lô `PUT /harvests/{id}/photo` → `photo_object_key`, `photo_url` ở chi tiết; thông báo thao tác thiết bị có `ref.kind = device_action`;*
+- *`npm run migrate:erd-fields`; `db:script` chạy lại; cột sản lượng của so sánh nhà đọc chu kỳ đóng gần nhất (G-26).*
+- *Còn: nút chọn ảnh lô trên web (Nhi) và mobile (Len); web, mobile chuyển sang đọc `status`.)*
 
 ### G-15 — Dọn web (P1) — Tuấn (chuyên gia, Technician), Nhi (ma trận quyền), Bảo (`/stream/:id`)
 
@@ -468,7 +484,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-18 — Việc nhỏ (P2) — Kiệt
 
-- [x] ENV-FR-007: bắt buộc nguồn khi Admin đổi ngưỡng mặc định (422). *Backend xong (Kiệt, 13/11, nhánh `feat/g18-small-rules`, spec 302f36f7, code 56cd7a51): `source` phải chứa mã mục REF-5 (`TL-xxx`, `MC-xxx`), audit ghi cũ, mới, nguồn; `GET` trả nguồn và lịch sử đổi (SYSTEM-FR-002). Còn ô nguồn trên trang Admin web (Nhi).*
+- [x] ENV-FR-007: bắt buộc nguồn khi Admin đổi ngưỡng mặc định (422). *Backend xong (Kiệt, 13/11, nhánh `feat/g18-small-rules`, spec 302f36f7, code 56cd7a51): `source` phải chứa mã mục REF-5 (`TL-xxx`, `MC-xxx`), audit ghi cũ, mới, nguồn; `GET` trả nguồn và lịch sử đổi (SYSTEM-FR-002). Còn ô nguồn trên trang Admin web (Nhi).* *(Web xong — Bảo làm thay Nhi, 18/11/2026, nhánh `feat/g02-web-owner-accounts`: ô nguồn có kiểm mã REF-5 ở modal ngưỡng mặc định, dùng cho cả "Lưu" và "Khôi phục mặc định gốc"; trước đó mọi lần lưu bị 422.)*
 - [x] HARVEST-FR-001: số tổ, khối lượng > 0, ngày không ở tương lai. *Backend xong (Kiệt, 13/11, d9140f82): kiểm lúc tạo và lúc sửa (422), ngày sau hôm nay theo giờ VN bị chặn.*
 - [x] (Tùy chọn) ENV-FR-026; device ID lấy từ MAC. *ENV-FR-026 xong (Kiệt, 13/11, 56cd7a51): báo trong app cho chuyên gia (Farm Owner nếu farm chưa có chuyên gia) các zone khác mặc định mới. Device ID từ MAC không làm: đổi định danh firmware, provisioning và QR nhãn.*
 
@@ -487,7 +503,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-22 — Bảo trì phòng ngừa (P1) — Kiệt (backend), Len (mobile), Nhi (web)
 
-- [ ] Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ thời gian relay ON, xác nhận bằng dòng điện nếu bộ điều khiển đo được (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008). *(Mobile — Len, 14/11, nhánh `feat/g22-maintenance`: checklist kèm ảnh trong phiếu công việc phòng ngừa (Đạt / Hỏng, ghi chú, 1 ảnh; Hỏng mở phiếu sửa chữa; đủ mục mới báo xong), màn Bảo trì (kế hoạch đến hạn / quá hạn, tiến độ giờ chạy hoặc hạn kế tiếp, lịch sử ghi bảo trì và hiệu chuẩn), khối "Bảo trì đến hạn" ở Trang chủ — chi tiết ở G-16 bước 12. Ghi bảo trì, hiệu chuẩn là chủ trại duyệt phiếu phòng ngừa trên web. Còn chờ: chạy thử trên máy, ảnh chụp cho PR)*
+- [ ] *(Kiểm 18/11/2026: backend, web `/maintenance` và mobile checklist, kế hoạch, ghi bảo trì đều đã merge; còn xác nhận giờ chạy bằng dòng điện sau G-13.)* Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ thời gian relay ON, xác nhận bằng dòng điện nếu bộ điều khiển đo được (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008). *(Mobile — Len, 14/11, nhánh `feat/g22-maintenance`: checklist kèm ảnh trong phiếu công việc phòng ngừa (Đạt / Hỏng, ghi chú, 1 ảnh; Hỏng mở phiếu sửa chữa; đủ mục mới báo xong), màn Bảo trì (kế hoạch đến hạn / quá hạn, tiến độ giờ chạy hoặc hạn kế tiếp, lịch sử ghi bảo trì và hiệu chuẩn), khối "Bảo trì đến hạn" ở Trang chủ — chi tiết ở G-16 bước 12. Ghi bảo trì, hiệu chuẩn là chủ trại duyệt phiếu phòng ngừa trên web. Còn chờ: chạy thử trên máy, ảnh chụp cho PR)*
 
 ### G-23 — Bù theo thời tiết (P1) — Bảo (firmware, backend), Tuấn (màn luật)
 
