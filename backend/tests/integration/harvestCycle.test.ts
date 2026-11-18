@@ -176,12 +176,13 @@ describe('kết luận mùa vụ (EXPERT-FR-020, BR-22) — TC-F30-03', () => {
     expect(await closedOn('2026-09-01')).toMatchObject({ status: 'CONCLUDED', conclusion: { text: body.text } })
   })
 
-  it('farm chưa có chuyên gia: Farm Owner viết kết luận được (BR-22)', async () => {
+  it('farm chưa có chuyên gia: Farm Owner vẫn không viết kết luận (BR-22), chu kỳ giữ CLOSED với đủ số liệu', async () => {
     const { owner$, harvest, closedOn } = await seed()
     await harvest('2026-09-01')
     const closed = await closedOn('2026-09-01')
-    const res = await owner$.put(`/harvests/cycles/${closed._id}/conclusion`, { text: 'Ổn định' }).expect(200)
-    expect(res.body.data).toMatchObject({ status: 'CONCLUDED', conclusion: { role: 'FARM_OWNER' } })
+    await owner$.put(`/harvests/cycles/${closed._id}/conclusion`, { text: 'Ổn định' }).expect(403)
+    expect(await closedOn('2026-09-01')).toMatchObject({ status: 'CLOSED' })
+    expect((await closedOn('2026-09-01')).conclusion).toBeFalsy()
   })
 })
 

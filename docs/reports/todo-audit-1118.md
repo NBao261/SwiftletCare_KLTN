@@ -57,9 +57,9 @@ Mức ưu tiên:
 | D-01 | Report 3 §2.4: dòng audit log của Farm Owner không có FR nào | Report 3 §2.4, SYSTEM-FR-001 | tài liệu | P1 | — |
 | D-02 | Chốt màn của Farm Technician trên web | Report 3 §1.2, §2.4; Report 4 §5.4 | tài liệu (hoặc web) | P1 | — |
 | D-03 | Thêm gap G-28 vào Project Tracking, cập nhật spec và Report 5 | `project-tracking.md` §6 | tài liệu | P1 | — |
-| D-04 | Chốt ai viết kết luận mùa vụ khi farm chưa có chuyên gia (backend đang khác Report 3) | BR-22; EXPERT-FR-020 (M) | tài liệu + backend | P1 | — (W-02 chờ việc này) |
+| D-04 | Kết luận mùa vụ chỉ do Domain Expert viết — **đã chốt Cách A và sửa backend (19/11/2026)** | BR-22; EXPERT-FR-020 (M) | backend | P1 | — |
 
-Thứ tự đề nghị: W-11 (chỉ cần PR đưa #182 vào `develop`) → W-01 → W-05 → D-04 → B-05 → W-02 → W-03 → W-12 → W-04 → B-01 → W-06, W-07 → B-06 → W-08 → W-09 → D-01, D-02, D-03 → B-02, B-03, B-04, W-10, W-13.
+Thứ tự đề nghị: W-11 (chỉ cần PR đưa #182 vào `develop`) → W-01 → W-05 → B-05 → W-02 → W-03 → W-12 → W-04 → B-01 → W-06, W-07 → B-06 → W-08 → W-09 → D-01, D-02, D-03 → B-02, B-03, B-04, W-10, W-13.
 
 ## 3. Web
 
@@ -116,7 +116,7 @@ Thứ tự đề nghị: W-11 (chỉ cần PR đưa #182 vào `develop`) → W-0
    | Ngưỡng & hệ số | sửa | ngưỡng và hệ số mờ: luôn sửa được (tạo mục duyệt); tham số phát hiện và mức giảm tỷ lệ chim về (W-01): khi `canDecide` |
    | Lịch đếm, Vòng đếm, Luật thời tiết | sửa | khi `canDecide` |
    | Duyệt & đề xuất | chấp nhận, hoàn lại, duyệt | chỉ xem; gửi đề xuất vẫn ở `FuzzyTuningModal` |
-   | Báo cáo & kết luận | viết kết luận | kết luận báo cáo: **ẩn form** (`PUT /health-reports/:id/conclusion` chỉ cho Domain Expert, EXPERT-FR-006); kết luận mùa vụ: **theo D-04** (Report 3 BR-22 và EXPERT-FR-020 không cho Farm Owner viết, kể cả khi farm chưa có chuyên gia; backend hiện vẫn cho); ngày lệch: theo `can_edit` |
+   | Báo cáo & kết luận | viết kết luận | kết luận báo cáo: **ẩn form** (`PUT /health-reports/:id/conclusion` chỉ cho Domain Expert, EXPERT-FR-006); kết luận mùa vụ: **ẩn form** (đã chốt ở D-04: chỉ Domain Expert viết, kể cả khi farm chưa có chuyên gia); ngày lệch: theo `can_edit` |
    | Hồ sơ cấu hình, Luật khuyến nghị | soạn, duyệt | chỉ xem (Report 3 §2.4) |
    | Lịch sử quyết định | xem | xem |
 
@@ -126,7 +126,7 @@ Thứ tự đề nghị: W-11 (chỉ cần PR đưa #182 vào `develop`) → W-0
 **Xong khi:**
 - Farm Owner của farm **không** có chuyên gia làm được:
   - bác bỏ một `NOISE_ANOMALY` kèm ghi chú → cảnh báo thành `DISMISSED`, lịch sử ghi role `FARM_OWNER`;
-  - sửa tham số phát hiện, lịch đếm, vòng đếm, luật thời tiết → đều 200; kết luận mùa vụ theo kết quả của D-04.
+  - sửa tham số phát hiện, lịch đếm, vòng đếm, luật thời tiết → đều 200; kết luận mùa vụ → 403 (D-04).
 - Farm Owner của farm **có** chuyên gia mở được mọi trang nói trên ở chế độ chỉ xem, không gặp lỗi 403 nào.
 - Farm Technician và Admin mở `/domain-expert/*` thì bị đưa về /403.
 
@@ -411,7 +411,7 @@ Hai cách chốt:
 2. Mỗi PR của B-xx sửa `api-spec.yaml`. Nếu thêm model hay trường thì chạy `npm run db:script`.
 3. Trong `report5/tc.py`, đổi nguồn test của các case liên quan (AUTH-FR-012, EXPERT-FR-007, 008, FARM-FR-008) sang test thật khi viết xong.
 
-### D-04 — Kết luận mùa vụ khi farm chưa có chuyên gia (P1, cần chốt)
+### D-04 — Kết luận mùa vụ khi farm chưa có chuyên gia (P1) — đã chốt Cách A, đã sửa 19/11/2026
 
 **Vấn đề:**
 - Report 3 BR-22: "No conclusions are written without an expert (EXPERT-FR-006)". EXPERT-FR-020 (M): "a non-expert request is rejected with 403 (Farm Owner without an expert, BR-22)".
@@ -430,3 +430,16 @@ Hai cách chốt:
   - W-02 ẩn form kết luận mùa vụ với Farm Owner;
   - cập nhật `api-spec.yaml`.
 - **Cách B:** giữ code. Khi đó sửa BR-22 và EXPERT-FR-020 trong Report 3 (thêm dòng Revision History), cập nhật BM03 nếu cần, và sinh lại Word.
+
+**Đã chốt Cách A (19/11/2026, Bảo).** Lý do, theo vận hành thật của một doanh nghiệp có nhiều nhà yến:
+- BR-22 chỉ để Farm Owner làm thay những quyết định mà thiếu người làm thì hệ thống bị kẹt: cảnh báo suy luận treo chờ kết luận, tham số phát hiện, vòng đếm. Kết luận mùa vụ không chặn gì: chu kỳ vẫn đóng, sản lượng, so sánh và sức khỏe chu kỳ vẫn được tính tự động.
+- Kết luận là ý kiến chuyên môn. Trộn ghi chú của chủ trại vào thì khi so các nhà, các mùa sẽ không còn biết đâu là đánh giá của chuyên gia. Kết luận báo cáo sức khỏe cũng đã chỉ cho chuyên gia viết (EXPERT-FR-006), nên hai loại kết luận giống nhau.
+- Không mất gì: chuyên gia vào sau vẫn viết được kết luận cho mọi chu kỳ đã đóng, vì không có hạn chót.
+- Giữ nguyên Report 3, BM04 và Report 5 đã nộp.
+
+**Đã làm:**
+- route chỉ cho `DOMAIN_EXPERT` (`backend/src/routes/harvests.route.ts`), bỏ `assertExpertDecision` ở `concludeCycle`;
+- test `harvestCycle.test.ts` đổi thành "Farm Owner vẫn không viết kết luận (BR-22), chu kỳ giữ CLOSED";
+- `api-spec.yaml`, chú thích của `CycleConclusionDrawer.tsx`, `todo-final-scope.md` và Change Log của Project Tracking cập nhật theo.
+
+Không client nào gọi endpoint này với vai Farm Owner (chỉ màn chuyên gia trên web), nên không phải sửa màn hình.
