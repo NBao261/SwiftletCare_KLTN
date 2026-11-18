@@ -17,6 +17,7 @@ import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.s
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { syncAfterHeartbeat } from '@/utils/configSync.util'
+import { sessionWindowsAhead, vnDateOf } from '@/utils/countingSchedule.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogFromDevice, closeRelayOverrideLog,
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
@@ -497,7 +498,7 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   if (payload.fps !== undefined) camera.fps = payload.fps
   camera.activation_overdue_at = undefined
   await camera.save()
-  if ((payload.justConnected || !wasOnline) && camera.counting_ring) await pushCountingRing(camera)
+  if (payload.justConnected || !wasOnline) await pushCameraConfig(camera)
   if (!wasOnline) {
     emitHouseDeviceStatusChange(String(camera.house_id), {
       nodeId: String(camera._id),
@@ -1004,12 +1005,39 @@ const ringOf = (ring: CountingRing): CountingRing => ({
 })
 
 /**
- * Vòng đếm là `config` retained của nút AI. Trả false khi broker chưa kết nối — không chặn việc
- * lưu: nút AI nhận lại lúc kết nối lại (recordCameraHeartbeat).
+ * `config` retained của nút AI: vòng đếm (VISION-FR-018, khi đã vẽ) và khung phiên của 7 ngày tới theo lịch đếm của nhà
+ * (VISION-FR-019, BR-13), để số trực tiếp của nút AI theo đúng khung của ngày. Trả false khi broker chưa kết nối — không
+ * chặn việc lưu: nút AI nhận lại lúc kết nối lại (recordCameraHeartbeat).
  */
-async function pushCountingRing(camera: ICameraNode): Promise<boolean> {
-  if (!camera.counting_ring) return false
-  return publishDeviceConfig(camera.device_id, { deviceId: camera.device_id, counting_ring: ringOf(camera.counting_ring) })
+async function pushCameraConfig(camera: Pick<ICameraNode, 'device_id' | 'house_id' | 'counting_ring'>, now = new Date()): Promise<boolean> {
+  const house = await House.findById(camera.house_id).select('counting_schedule_history').lean()
+  return publishDeviceConfig(camera.device_id, {
+    deviceId: camera.device_id,
+    ...(camera.counting_ring && { counting_ring: ringOf(camera.counting_ring) }),
+    session_windows: sessionWindowsAhead(house?.counting_schedule_history, vnDateOf(now)),
+  })
+}
+
+/** VISION-FR-019 — lịch đếm của nhà đổi: gửi lại `config` cho mọi camera đang dùng của nhà; trả số camera nhận được */
+export async function pushHouseCameraConfigs(houseId: unknown): Promise<number> {
+  const cameras = await CameraNode.find({ house_id: houseId, ...IN_SERVICE }).select('device_id house_id counting_ring').lean()
+  let delivered = 0
+  for (const camera of cameras) if (await pushCameraConfig(camera)) delivered++
+  return delivered
+}
+
+/** Job mỗi đêm: gửi lại `config` cho mọi camera đang dùng, để khung phiên luôn đủ 7 ngày phía trước */
+export async function refreshCameraConfigs(now = new Date()): Promise<number> {
+  const cameras = await CameraNode.find(IN_SERVICE).select('device_id house_id counting_ring').lean()
+  let delivered = 0
+  for (const camera of cameras) {
+    try {
+      if (await pushCameraConfig(camera, now)) delivered++
+    } catch (err) {
+      logger.error('Gửi config cho nút AI thất bại', { deviceId: camera.device_id, err })
+    }
+  }
+  return delivered
 }
 
 /**
@@ -1036,7 +1064,7 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   if (overflow > 0) camera.counting_ring_history.splice(0, overflow)
   await camera.save()
 
-  const delivered = await pushCountingRing(camera)
+  const delivered = await pushCameraConfig(camera)
   const auditId = await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), {
     before: before ?? null, after, delivered, house_id: String(house._id),
   }, { farmId: String(farm._id) })

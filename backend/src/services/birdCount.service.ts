@@ -9,14 +9,13 @@ import { emitBirdCountUpdate } from '@/socket'
 import { createAlert, resolveHouseAlerts } from '@/services/alert.service'
 import { sessionRainfall } from '@/services/sessionRain.service'
 import { assertHouseAccessByParams, listActiveHouseIds } from '@/utils/farmAccess.util'
-import { returnRateCheckAt, scheduleOn, windowInterval, windowsOn, type TimeWindow } from '@/utils/countingSchedule.util'
+import { returnRateCheckAt, scheduleOn, vnDateOf, windowInterval, windowsOn, type TimeWindow } from '@/utils/countingSchedule.util'
 import { resolveBirdCountTuning } from '@/utils/detectionTuning.util'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 import type { BirdCountPayload, CurrentUser, SessionType } from '@/types'
 
 const SESSION_TYPES: SessionType[] = ['MORNING_EXIT', 'EVENING_ENTRY']
-const VN_OFFSET_MS = 7 * 3600_000
 const DAY_MS = 86_400_000
 /** VISION-FR-017 — khoảng 5 phút */
 const BUCKET_MS = 5 * 60_000
@@ -32,7 +31,7 @@ const DEFAULT_BUCKET_RANGE_MS = DAY_MS
 
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
 /** Ngày theo giờ Việt Nam — phiên sáng 05:30 VN là 22:30 UTC hôm trước */
-export const vnDate = (d: Date) => new Date(d.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
+export const vnDate = vnDateOf
 /** Số ròng: chim lượn qua lại vạch đếm làm cả hai chiều phồng lên, phép trừ triệt tiêu phần đó */
 const net = (main: number, opposite: number) => Math.max(main - opposite, 0)
 
