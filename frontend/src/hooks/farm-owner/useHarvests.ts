@@ -62,3 +62,21 @@ export function useDeleteHarvest() {
     onSuccess: () => invalidateHarvests(queryClient),
   })
 }
+
+// HARVEST-FR-001 — link ảnh của lô (có ở GET /harvests/{id}); khoá dưới ['harvests'] nên lưu lần thu là đọc lại
+export function useHarvestPhotoUrl(batchId: string | undefined) {
+  return useQuery({
+    queryKey: ['harvests', 'detail', batchId],
+    queryFn: () => harvestApi.get(batchId as string).then(response => response.data.data.photo_url ?? null),
+    enabled: Boolean(batchId),
+  })
+}
+
+// HARVEST-FR-001 — gửi 1 ảnh cho 1 lô
+export function useUploadHarvestPhoto() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, photo }: { id: string; photo: File }) => harvestApi.uploadPhoto(id, photo),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['harvests'] }),
+  })
+}
