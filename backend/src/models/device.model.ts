@@ -81,6 +81,11 @@ export interface ISensorNode extends Document {
     last_misting_on?: boolean
     last_ventilation_on?: boolean
   }
+  /**
+   * BR-32, BR-45 — dòng bình thường controller đã học của bơm và quạt (A), heartbeat firmware ≥ 2.3.1 báo.
+   * Thiếu = controller không đo dòng hoặc chưa học xong: giờ chạy tính theo thời gian relay BẬT.
+   */
+  actuator_baseline?: { misting_a?: number; ventilation_a?: number }
 }
 
 export interface IRelayUsage {
@@ -215,6 +220,10 @@ const sensorNodeSchema = new Schema<ISensorNode>(
       counted_until:       { type: Date },
       last_misting_on:     { type: Boolean },
       last_ventilation_on: { type: Boolean },
+    },
+    actuator_baseline: {
+      misting_a:     { type: Number },
+      ventilation_a: { type: Number },
     },
   },
   { timestamps: false }

@@ -1,6 +1,7 @@
+import { SensorNode } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
-import { MAX_GAP_MS } from '@/services/relayUsage.service'
+import { MAX_GAP_MS, RUNNING_MIN_RATIO } from '@/services/relayUsage.service'
 import { assertHouseAccess } from '@/utils/farmAccess.util'
 import { vnDayPeriod } from '@/utils/period.util'
 import type { CurrentUser } from '@/types'
@@ -15,9 +16,9 @@ export const LOAD_SUPPLY_VOLTAGE: Record<EnergyLoad, number> = { misting: 5, ven
 
 const MS_PER_KWH = 3_600_000 * 1000
 
-const LOADS: Array<{ load: EnergyLoad; on: string; current: string }> = [
-  { load: 'misting', on: '$misting_on', current: '$pump_current_a' },
-  { load: 'ventilation', on: '$ventilation_on', current: '$fan_current_a' },
+const LOADS: Array<{ load: EnergyLoad; on: string; current: string; baseline: 'misting_a' | 'ventilation_a' }> = [
+  { load: 'misting', on: '$misting_on', current: '$pump_current_a', baseline: 'misting_a' },
+  { load: 'ventilation', on: '$ventilation_on', current: '$fan_current_a', baseline: 'ventilation_a' },
 ]
 
 export interface EnergyMonth {
@@ -32,13 +33,11 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000
 
 /**
  * ANALYTICS-FR-017, BR-45 — điện năng ước tính của bơm và quạt của 1 nhà theo tháng: Σ điện áp × dòng đo × thời gian,
- * mỗi mẫu telemetry lúc relay BẬT và có dòng đo được tính tới mẫu kế tiếp của cùng controller. Relay bật mà dòng bằng 0
- * (tải hỏng) thì góp 0. Controller không đo dòng thì tải đó "not available". Ước tính, không phải số công tơ; telemetry
- * chỉ giữ 90 ngày (BR-36) nên tháng cũ hơn không có số.
- *
- * Lệch BR-45 đã biết: BR-45 chỉ tính tải đang chạy khi dòng trên 50 % dòng bình thường (BR-32), nhưng backend chưa biết
- * mức dòng bình thường firmware học được, nên mọi mẫu relay BẬT có dòng đều được cộng (tải kẹt hút ít dòng vẫn góp điện).
- * Sẽ áp mức 50 % khi firmware báo mức đã học.
+ * mỗi mẫu telemetry lúc tải đang chạy và có dòng đo được tính tới mẫu kế tiếp của cùng controller. Đang chạy = relay BẬT
+ * và, khi controller đã báo mức dòng bình thường (`actuator_baseline`, heartbeat firmware ≥ 2.3.1), dòng trên 50 % mức đó
+ * (BR-45, như giờ chạy ở relayUsage.service). Controller không đo dòng thì tải đó "not available". Ước tính, không phải
+ * số công tơ; telemetry chỉ giữ 90 ngày (BR-36) nên tháng cũ hơn không có số. Mức đã học là mức hiện tại của controller,
+ * áp cho cả các tháng trước.
  *
  * Lọc theo `zone_id` ghi trên từng dòng telemetry, không theo zone hiện tại của controller: controller dời sang nhà khác
  * thì điện đã dùng vẫn thuộc nhà cũ, và controller đã gỡ vẫn được tính. Mẫu gửi bù mang zone lúc backend nhận
@@ -48,11 +47,24 @@ export async function houseEnergyByMonth(houseId: unknown, from: Date, to: Date)
   const zoneIds = await Zone.find({ house_id: houseId }).distinct('_id')
   if (zoneIds.length === 0) return []
 
-  const contribution = ({ load, on, current }: (typeof LOADS)[number]) => ({
+  // Mức dòng đã học của từng controller (ít controller, nên đưa thẳng vào pipeline thay vì $lookup mỗi mẫu)
+  const baselines = await SensorNode.find({ actuator_baseline: { $exists: true } }).select('_id actuator_baseline').lean()
+  const learned = (key: 'misting_a' | 'ventilation_a') => {
+    const branches = baselines.filter(n => n.actuator_baseline?.[key])
+      .map(n => ({ case: { $eq: ['$node_id', n._id] }, then: n.actuator_baseline![key]! * RUNNING_MIN_RATIO }))
+    return branches.length ? { $switch: { branches, default: null } } : null
+  }
+
+  const contribution = ({ load, on, current, baseline }: (typeof LOADS)[number]) => ({
     [`${load}_wms`]: {
       $sum: {
         $cond: [
-          { $and: [{ $eq: [on, true] }, { $isNumber: current }] },
+          {
+            $and: [
+              { $eq: [on, true] }, { $isNumber: current },
+              { $let: { vars: { min: learned(baseline) }, in: { $or: [{ $eq: ['$$min', null] }, { $gt: [current, '$$min'] }] } } },
+            ],
+          },
           { $multiply: [LOAD_SUPPLY_VOLTAGE[load], current, '$dt'] },
           0,
         ],

@@ -339,6 +339,7 @@ void sensorTask(void *pvParameters) {
           learnedNow[load] = !wasLearned && actuatorMonitors[load].learned();
           actuatorStatus[load].fault = actuatorMonitors[load].fault();
           actuatorStatus[load].normalA = actuatorMonitors[load].normalA();
+          if (actuatorMonitors[load].learned()) MQTTManager::setActuatorBaseline(load, actuatorMonitors[load].normalA());
           actuatorStatus[load].currentA = amps[load];
         }
       }

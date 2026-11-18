@@ -2129,6 +2129,17 @@ ensureCollection("sensornodes", {
         }
       }
     },
+    "actuator_baseline": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "misting_a": {
+          "bsonType": ["number", "null"]
+        },
+        "ventilation_a": {
+          "bsonType": ["number", "null"]
+        }
+      }
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }

@@ -522,6 +522,13 @@ void publishTelemetry(const SensorData &data, const RelayState &relay) {
   publish("/telemetry", payload, MQTT_QOS_LIVE);
 }
 
+// sensorTask ghi, mqttTask đọc: float 32 bit ghi/đọc nguyên khối trên ESP32, không cần mutex
+volatile float actuatorBaselineA[2] = {0, 0};
+
+void setActuatorBaseline(int load, float normalA) {
+  if (load == 0 || load == 1) actuatorBaselineA[load] = normalA;
+}
+
 bool publishHeartbeat() {
   if (!connected) return false;
   JsonDocument doc;
@@ -534,6 +541,9 @@ bool publishHeartbeat() {
   doc["resetReason"] = bootResetReason;
   doc["ip"] = WiFi.localIP().toString();
   doc["appliedConfigVersion"] = Config::configVersion; // ENV-FR-027: backend so với phiên bản của Zone
+  // BR-45 — chỉ tải đã học; backend giữ mức cũ của tải không có trong tin
+  if (actuatorBaselineA[0] > 0) doc["actuatorBaseline"]["misting"] = actuatorBaselineA[0];
+  if (actuatorBaselineA[1] > 0) doc["actuatorBaseline"]["ventilation"] = actuatorBaselineA[1];
   doc["timestamp"] = millis();
   if (justConnected) doc["justConnected"] = true;
 

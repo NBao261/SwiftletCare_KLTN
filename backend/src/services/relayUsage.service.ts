@@ -29,24 +29,42 @@ const FIRST_RUN_LOOKBACK_MS = 7 * 86400_000
 /** Mỗi lần chạy tối đa bấy nhiêu mẫu/thiết bị — còn thì lần sau (mỗi giờ) đếm tiếp */
 const BATCH = 50_000
 
-type Sample = { timestamp: Date; misting_on?: boolean; ventilation_on?: boolean }
+type Sample = { timestamp: Date; misting_on?: boolean; ventilation_on?: boolean; pump_current_a?: number; fan_current_a?: number }
+type Baseline = { misting_a?: number; ventilation_a?: number }
 
-/** Hàm thuần: cộng thời gian BẬT + số lần đổi trạng thái từ chuỗi mẫu, tiếp nối từ mẫu cuối lần trước. */
-export function tallyRelayUsage(prev: { at?: Date; misting?: boolean; ventilation?: boolean }, samples: Sample[]) {
+/** BR-45 — tải chỉ tính là đang chạy khi dòng trên 50 % dòng bình thường (cùng mức BR-32 của firmware) */
+export const RUNNING_MIN_RATIO = 0.5
+const CURRENT_KEY: Record<UsageRelay, 'pump_current_a' | 'fan_current_a'> = { misting: 'pump_current_a', ventilation: 'fan_current_a' }
+
+/**
+ * Hàm thuần: cộng thời gian chạy + số lần đổi trạng thái từ chuỗi mẫu, tiếp nối từ mẫu cuối lần trước.
+ * Một khoảng giữa hai mẫu tính là chạy khi relay BẬT ở mẫu đầu và, nếu có cả mức đã học lẫn số đo dòng
+ * của mẫu đó, dòng trên RUNNING_MIN_RATIO mức đã học (BR-45). Thiếu một trong hai thì tính theo relay.
+ */
+export function tallyRelayUsage(
+  prev: { at?: Date; misting?: boolean; ventilation?: boolean },
+  samples: Sample[],
+  baseline: Baseline = {},
+) {
   const onMs: Record<UsageRelay, number> = { misting: 0, ventilation: 0 }
   const switches: Record<UsageRelay, number> = { misting: 0, ventilation: 0 }
-  let last = prev
+  let last: { at?: Date; misting?: boolean; ventilation?: boolean; sample?: Sample } = prev
+  const running = (r: UsageRelay, sample: Sample | undefined) => {
+    const normal = baseline[`${r}_a`]
+    const amps = sample?.[CURRENT_KEY[r]]
+    return normal === undefined || amps === undefined || amps > normal * RUNNING_MIN_RATIO
+  }
   for (const s of samples) {
     const gap = last.at ? s.timestamp.getTime() - last.at.getTime() : Infinity
     for (const r of RELAYS) {
       const before = last[r]
       const now = s[`${r}_on`]
       if (gap <= MAX_GAP_MS && before !== undefined && now !== undefined) {
-        if (before) onMs[r] += gap
+        if (before && running(r, last.sample)) onMs[r] += gap
         if (before !== now) switches[r]++
       }
     }
-    last = { at: s.timestamp, misting: s.misting_on, ventilation: s.ventilation_on }
+    last = { at: s.timestamp, misting: s.misting_on, ventilation: s.ventilation_on, sample: s }
   }
   return { onHours: { misting: onMs.misting / 3600_000, ventilation: onMs.ventilation / 3600_000 }, switches, last }
 }
@@ -58,17 +76,17 @@ export function tallyRelayUsage(prev: { at?: Date; misting?: boolean; ventilatio
  * trì) mới đếm lại từ 0 (BR-16, `acknowledgeAlert`).
  */
 export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: number; alerts: number }> {
-  const nodes = await SensorNode.find(IN_SERVICE).select('_id zone_id device_id relay_usage')
+  const nodes = await SensorNode.find(IN_SERVICE).select('_id zone_id device_id relay_usage actuator_baseline')
   let alerts = 0
 
   for (const node of nodes) {
     const usage = node.relay_usage
     const since = usage.counted_until ?? new Date(now.getTime() - FIRST_RUN_LOOKBACK_MS)
     const samples = await Telemetry.find({ node_id: node._id, timestamp: { $gt: since, $lte: now }, misting_on: { $exists: true } })
-      .sort({ timestamp: 1 }).limit(BATCH).select('timestamp misting_on ventilation_on').lean<Sample[]>()
+      .sort({ timestamp: 1 }).limit(BATCH).select('timestamp misting_on ventilation_on pump_current_a fan_current_a').lean<Sample[]>()
     if (samples.length === 0) continue
 
-    const result = tallyRelayUsage({ at: usage.counted_until, misting: usage.last_misting_on, ventilation: usage.last_ventilation_on }, samples)
+    const result = tallyRelayUsage({ at: usage.counted_until, misting: usage.last_misting_on, ventilation: usage.last_ventilation_on }, samples, node.actuator_baseline ?? {})
     // $inc thay vì save(): Farm Owner xác nhận MAINTENANCE_DUE giữa lúc job chạy thì lần
     // đếm lại về 0 (acknowledgeAlert) không bị số cũ ghi đè
     const inc: Record<string, number> = {}
