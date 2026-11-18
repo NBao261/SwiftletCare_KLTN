@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from counting import RingCounter  # noqa: E402
 from counting import current_session  # noqa: E402
-from remote_config import RingStore, ScheduleStore, parse_ring, parse_windows  # noqa: E402
+from remote_config import RingStore, ScheduleStore, dispatch_config, parse_ring, parse_windows  # noqa: E402
 
 RING = [[0.379, 0.228], [0.527, 0.136], [0.575, 0.277], [0.569, 0.374], [0.427, 0.477], [0.386, 0.334]]
 SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]
@@ -132,3 +132,18 @@ def test_schedule_store_keeps_windows_across_a_restart_and_ignores_bad_input(tmp
     broken = ScheduleStore(path, "cam_01")
     broken.load()
     assert broken.windows_on("2026-11-20", DEFAULT) == DEFAULT
+
+
+def test_one_failing_store_does_not_starve_the_others():
+    class Broken:
+        def on_message(self, payload):
+            raise OSError("disk full")
+
+    received = []
+
+    class Recorder:
+        def on_message(self, payload):
+            received.append(payload)
+
+    dispatch_config([Broken(), Recorder()], b"{}")
+    assert received == [b"{}"]

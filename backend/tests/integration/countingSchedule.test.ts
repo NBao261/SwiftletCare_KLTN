@@ -113,6 +113,15 @@ describe('VISION-FR-019 — counting schedule', () => {
     expect((await s.call('put', s.t.tech, body)).status).toBe(403)
   })
 
+  it('keeps the saved schedule, its audit and the owner notification when sending it to the AI nodes fails', async () => {
+    const s = await seed()
+    ;(publishDeviceConfig as jest.Mock).mockImplementationOnce(() => { throw new Error('broker down') })
+    const saved = await s.call('put', s.t.expert, { profiles: [], temporary: [] })
+    expect(saved.status).toBe(200)
+    expect(await AuditLog.countDocuments({ action: 'COUNTING_SCHEDULE_UPDATED', target_id: s.house._id })).toBe(1)
+    expect(await Notification.countDocuments({ user_id: s.owner._id })).toBe(1)
+  })
+
   it('rejects an invalid schedule with 400 and a wrong shape with 422', async () => {
     const s = await seed()
     const overlap = { profiles: [{ name: 'A', from: '01-01', to: '03-31', ...RAINY }, { name: 'B', from: '03-01', to: '04-30', ...RAINY }] }

@@ -176,6 +176,15 @@ class ScheduleStore:
             return self._by_date.get(date, default)
 
 
+def dispatch_config(stores: Sequence[Any], payload: bytes) -> None:
+    """Hand one config message to every store; one failing (disk full while saving the ring) must not starve the others."""
+    for store in stores:
+        try:
+            store.on_message(payload)
+        except Exception:
+            logger.exception(f"{type(store).__name__} could not apply the config")
+
+
 def start_listener(mqtt_cfg: dict, stores: Sequence[Any], device_id: str) -> Any:
     """
     Subscribe to this device's retained config in a background thread; reconnects on its own. Every store
@@ -190,7 +199,7 @@ def start_listener(mqtt_cfg: dict, stores: Sequence[Any], device_id: str) -> Any
         client.tls_set()
     # Subscribing in on_connect re-subscribes after every reconnect (clean session)
     client.on_connect = lambda c, _userdata, _flags, _reason, _props: c.subscribe(topic, qos=1)
-    client.on_message = lambda _c, _userdata, msg: [store.on_message(msg.payload) for store in stores]
+    client.on_message = lambda _c, _userdata, msg: dispatch_config(stores, msg.payload)
     client.reconnect_delay_set(min_delay=1, max_delay=60)
     client.connect_async(mqtt_cfg["broker"], mqtt_cfg["port"])
     client.loop_start()

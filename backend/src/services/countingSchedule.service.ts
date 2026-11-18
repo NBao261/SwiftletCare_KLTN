@@ -9,6 +9,7 @@ import {
 import { assertExpertDecision, assertHouseAccess } from '@/utils/farmAccess.util'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import type { CurrentUser } from '@/types'
+import logger from '@/utils/logger.util'
 
 /**
  * VISION-FR-019 — lịch đếm của nhà: Domain Expert đặt hồ sơ theo mùa và khung tạm (Farm Owner làm thay khi farm chưa
@@ -55,8 +56,13 @@ export async function updateCountingSchedule(houseId: string, user: CurrentUser,
   const overflow = house.counting_schedule_history.length - THRESHOLD_HISTORY_LIMIT
   if (overflow > 0) house.counting_schedule_history.splice(0, overflow)
   await house.save()
-  // Nút AI nhận khung mới ngay (áp từ ngày mai) để số trực tiếp theo đúng khung; mất kết nối thì nhận khi nối lại
-  await pushHouseCameraConfigs(house._id)
+  // Nút AI nhận khung mới ngay (áp từ ngày mai) để số trực tiếp theo đúng khung; mất kết nối thì nhận khi nối lại.
+  // Lịch đã lưu: gửi lỗi chỉ ghi log, không làm mất audit và thông báo (job 00:05 gửi lại)
+  try {
+    await pushHouseCameraConfigs(house._id)
+  } catch (err) {
+    logger.warn('Gửi khung phiên mới cho nút AI thất bại', { houseId: String(house._id), err })
+  }
 
   const auditId = await logAction(user._id, 'COUNTING_SCHEDULE_UPDATED', 'house', String(house._id), {
     before, after: schedule, effective_from: effectiveFrom, house_id: String(house._id),
