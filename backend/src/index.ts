@@ -24,6 +24,7 @@ import { startForecastJob } from './jobs/forecast.job'
 import { startHealthReportJob } from './jobs/healthReport.job'
 import { startHouseHealthReportJob } from './jobs/houseHealthReport.job'
 import { startReturnRateJob } from './jobs/returnRate.job'
+import { startCameraConfigJob } from './jobs/cameraConfig.job'
 import { startDeletionRequestReminderJob } from './jobs/deletionRequestReminder.job'
 import { startWeatherJob } from './jobs/weather.job'
 import { startConfigSyncJob } from './jobs/configSync.job'
@@ -64,6 +65,8 @@ async function bootstrap(): Promise<void> {
   startHealthReportJob()
   startHouseHealthReportJob()
   startReturnRateJob()
+  // VISION-FR-019 — khung phiên 7 ngày tới cho nút AI, mỗi đêm
+  startCameraConfigJob()
   startDeletionRequestReminderJob()
   // ANALYTICS-FR-013 — thời tiết theo giờ cho luật mưa BR-30
   startWeatherJob()

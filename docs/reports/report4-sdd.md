@@ -1042,7 +1042,7 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | `alert` | controller → cloud | `deviceId`, `eventId`, type, severity, details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
 | `vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
 | `vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` with the frame rate | 1 |
-| `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: counting ring, `config_version` | 1 |
+| `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: counting ring, `config_version`, `session_windows` (morning and evening windows of the next 7 days of the house's counting schedule, VISION-FR-019) | 1 |
 | `compensation` | cloud → controller | Retained. `deviceId`, `offset_pct` (−10…+10, 0 when no rule holds), `expires_at` (epoch ms, like `issuedAt`), `rule_id` (null with offset 0); the controller uses 0 after `expires_at` or 2 h without the broker, and keeps a message received before its clock is set until it is (BR-38) | 1 |
 | `cmd` | cloud → device | Envelope `commandId`, `type` (`RELAY`, `CLEAR_OVERRIDE`, `AUDIO`, `RESTART`, `OTA`), `issuedAt`, payload. Applied once per `commandId`; `RELAY`, `AUDIO` and `RESTART` older than BR-35 are not applied | 1 |
 
@@ -1883,6 +1883,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 | Version | Date | Change |
 | --- | --- | --- |
 | 2.2.11 | 18/11/2026 | Staging as built (G-17): one domain name instead of four, files on a backend volume instead of MinIO (the MinIO images are no longer published), Certbot v3.1.0, the compose, Dockerfile and certificate script paths; `/internal/*` kept out of the access log (Sections 3.2, 3.4, 11) |
+| 2.2.10 | 18/11/2026 | The AI node's retained `config` carries the session windows of the next 7 days (Section 7.2; G-12) |
 | 2.2.9 | 17/11/2026 | Playwright 1.64.1 in the Testing row of the Technology Declaration (Section 3): web end-to-end tests run in CI against the seeded backend (G-17) |
 | 2.2.8 | 17/11/2026 | Counting schedule as built (G-12): the house keeps the history of its schedule and the date of its last evening check, a session record its computation time; the `returnRate` job runs every 5 minutes and takes each house once a day after its own evening window; the rain of the counting sessions uses the windows of the schedule (Sections 5.3, 5.5, 6) |
 | 2.2.6 | 17/11/2026 | Section 5.5: code home of the temporary password and of the SMTP time-outs (Report 3 4.2.9; G-02) |

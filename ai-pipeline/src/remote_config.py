@@ -1,5 +1,5 @@
 """
-SwiftletCare - counting ring sent by the backend (VISION-FR-018)
+SwiftletCare - counting ring and session windows sent by the backend (VISION-FR-018, 019)
 
 The Domain Expert draws the ring on the web; the backend publishes
 {deviceId, counting_ring: {points, into_ring_is_exit}} on
@@ -8,18 +8,30 @@ receives it again on every connection. The last ring received is kept in a
 file so a restart without the broker still counts with it; with no file, the
 ring in config.yaml is used.
 
-SRS: VISION-FR-018; plan §3.3 item 7, §19.8
+The same message carries session_windows: the morning and evening windows of the
+next 7 days of the house's counting schedule ({"YYYY-MM-DD": {"MORNING_EXIT":
+["HH:MM", "HH:MM"], "EVENING_ENTRY": [...]}}), so the live session counts follow
+the windows in force that day (BR-13). They are kept in a file too; a day the
+backend sent nothing for uses the windows in config.yaml.
+
+SRS: VISION-FR-018, 019, BR-13; plan §3.3 item 7, §19.8
 """
 import json
 import os
+import re
 import threading
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from loguru import logger
 
 Point = Tuple[float, float]
 Ring = Tuple[List[Point], bool]   # points as frame ratios, into_ring_is_exit
+Windows = Dict[str, Tuple[str, str]]   # session type -> ("HH:MM", "HH:MM"), like sessions.windows in config.yaml
+
+SESSIONS = ("MORNING_EXIT", "EVENING_ENTRY")
+TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 # 3 = smallest closed ring; 12 = the backend validator's technical limit (SRS 0.5)
 MIN_POINTS = 3
@@ -95,8 +107,89 @@ class RingStore:
         return ring
 
 
-def start_listener(mqtt_cfg: dict, store: RingStore, device_id: str) -> Any:
-    """Subscribe to this device's retained config in a background thread; reconnects on its own."""
+def parse_windows(message: Any, device_id: str) -> Optional[Dict[str, Windows]]:
+    """
+    The session windows per Vietnam date in the config message of this camera. None when the message is
+    addressed to another device or carries none; ValueError when a date or a window is malformed.
+    """
+    if not isinstance(message, dict) or message.get("deviceId") not in (None, device_id):
+        return None
+    by_date = message.get("session_windows")
+    if by_date is None:
+        return None
+    if not isinstance(by_date, dict):
+        raise ValueError("session_windows must be an object")
+    parsed: Dict[str, Windows] = {}
+    for date, windows in by_date.items():
+        if not DATE_RE.match(str(date)) or not isinstance(windows, dict):
+            raise ValueError(f"bad session windows for {date!r}")
+        day: Windows = {}
+        for session in SESSIONS:
+            window = windows.get(session)
+            ok = (isinstance(window, (list, tuple)) and len(window) == 2
+                  and all(isinstance(t, str) and TIME_RE.match(t) for t in window) and window[0] < window[1])
+            if not ok:
+                raise ValueError(f"{session} of {date} is not [start, end] in HH:MM with start before end")
+            day[session] = (window[0], window[1])
+        parsed[str(date)] = day
+    return parsed
+
+
+class ScheduleStore:
+    """Session windows per date from the backend; on_message() runs in the MQTT thread, windows_on() in the frame loop."""
+
+    def __init__(self, path: Path, device_id: str):
+        self._path = Path(path)
+        self._device_id = device_id
+        self._lock = threading.Lock()
+        self._by_date: Dict[str, Windows] = {}
+
+    def load(self) -> None:
+        """Windows saved by an earlier run, so a restart without the broker still counts in the right windows."""
+        try:
+            saved = parse_windows({"session_windows": json.loads(self._path.read_text(encoding="utf-8"))}, self._device_id)
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError) as err:
+            logger.warning(f"Ignoring saved session windows {self._path}: {err}")
+            return
+        with self._lock:
+            self._by_date = saved or {}
+
+    def on_message(self, payload: bytes) -> None:
+        try:
+            by_date = parse_windows(json.loads(payload), self._device_id)
+        except ValueError as err:   # JSONDecodeError is a ValueError
+            logger.warning(f"Ignoring session windows from the backend: {err}")
+            return
+        if by_date is None:
+            return
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(json.dumps(by_date), encoding="utf-8")
+        with self._lock:
+            self._by_date = by_date
+        logger.info(f"Session windows from the backend for {len(by_date)} days, from {min(by_date, default='-')}")
+
+    def windows_on(self, date: str, default: Windows) -> Windows:
+        """The windows of that Vietnam date, or the config.yaml windows when the backend sent none for it."""
+        with self._lock:
+            return self._by_date.get(date, default)
+
+
+def dispatch_config(stores: Sequence[Any], payload: bytes) -> None:
+    """Hand one config message to every store; one failing (disk full while saving the ring) must not starve the others."""
+    for store in stores:
+        try:
+            store.on_message(payload)
+        except Exception:
+            logger.exception(f"{type(store).__name__} could not apply the config")
+
+
+def start_listener(mqtt_cfg: dict, stores: Sequence[Any], device_id: str) -> Any:
+    """
+    Subscribe to this device's retained config in a background thread; reconnects on its own. Every store
+    (RingStore, ScheduleStore) reads its own part of each message.
+    """
     import paho.mqtt.client as mqtt   # only needed when the node talks to a broker
 
     topic = f"swiftletcare/dev/{device_id}/config"
@@ -106,9 +199,9 @@ def start_listener(mqtt_cfg: dict, store: RingStore, device_id: str) -> Any:
         client.tls_set()
     # Subscribing in on_connect re-subscribes after every reconnect (clean session)
     client.on_connect = lambda c, _userdata, _flags, _reason, _props: c.subscribe(topic, qos=1)
-    client.on_message = lambda _c, _userdata, msg: store.on_message(msg.payload)
+    client.on_message = lambda _c, _userdata, msg: dispatch_config(stores, msg.payload)
     client.reconnect_delay_set(min_delay=1, max_delay=60)
     client.connect_async(mqtt_cfg["broker"], mqtt_cfg["port"])
     client.loop_start()
-    logger.info(f"Listening for counting rings on {topic}")
+    logger.info(f"Listening for the counting ring and session windows on {topic}")
     return client

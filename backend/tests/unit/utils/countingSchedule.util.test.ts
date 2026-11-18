@@ -1,5 +1,5 @@
 import {
-  DEFAULT_WINDOWS, parseCountingSchedule, returnRateCheckAt, scheduleOn, windowsOn, type CountingSchedule,
+  DEFAULT_WINDOWS, parseCountingSchedule, returnRateCheckAt, scheduleOn, sessionWindowsAhead, vnDateOf, windowsOn, type CountingSchedule,
 } from '@/utils/countingSchedule.util'
 
 const RAINY = { morning: { start: '06:00', end: '07:30' }, evening: { start: '17:00', end: '18:30' } }
@@ -63,5 +63,22 @@ describe('windowsOn, scheduleOn (VISION-FR-019, BR-13)', () => {
     expect(returnRateCheckAt('2026-11-17', DEFAULT_WINDOWS).toISOString()).toBe('2026-11-17T12:15:00.000Z') // 19:15 VN
     const late = { ...DEFAULT_WINDOWS, evening: { start: '22:00', end: '23:55' } }
     expect(returnRateCheckAt('2026-11-17', late).toISOString()).toBe('2026-11-17T16:59:00.000Z') // 23:59 VN
+  })
+})
+
+describe('sessionWindowsAhead (VISION-FR-019, BR-13)', () => {
+  it('gives 7 days from today, each day by the schedule version in force that day, temporary windows only on their dates', () => {
+    const history = [{
+      schedule: { profiles: [], temporary: [{ from: '2026-11-20', to: '2026-11-20', ...RAINY }] }, effective_from: '2026-11-19',
+    }]
+    const ahead = sessionWindowsAhead(history, '2026-11-18')
+    expect(Object.keys(ahead)).toEqual(['2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21', '2026-11-22', '2026-11-23', '2026-11-24'])
+    expect(ahead['2026-11-18']).toEqual({ MORNING_EXIT: ['05:30', '07:00'], EVENING_ENTRY: ['17:30', '19:00'] })
+    expect(ahead['2026-11-20']).toEqual({ MORNING_EXIT: ['06:00', '07:30'], EVENING_ENTRY: ['17:00', '18:30'] })
+    expect(ahead['2026-11-21']).toEqual(ahead['2026-11-18'])
+  })
+
+  it('vnDateOf uses Vietnam time: 17:30 UTC is already the next day', () => {
+    expect(vnDateOf(new Date('2026-11-18T17:30:00Z'))).toBe('2026-11-19')
   })
 })
