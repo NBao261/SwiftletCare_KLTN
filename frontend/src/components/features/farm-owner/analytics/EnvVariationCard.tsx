@@ -26,6 +26,9 @@ import type { Thresholds, ZoneThresholdHistoryEntry } from '@/types';
 import { thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { NO_VALUE } from '@/constants/display';
 
+// 1 bản ghi thời tiết ngoài trời là số liệu của 1 giờ (ANALYTICS-FR-013)
+const HOUR_MS = 3600_000;
+
 // Tô nền dải ngưỡng nhiệt độ trên trục trái, kẹp trong vùng vẽ để không đè lên chú thích
 function thresholdBandPlugin(min: number, max: number): Plugin<'line'> {
   return {
@@ -89,7 +92,8 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
     const series = data?.series ?? [];
     const line = { fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
     // Ngoài trời (ANALYTICS-FR-013): nét đứt, cùng trục với số đo trong nhà; farm chưa có thời tiết thì không vẽ
-    const outdoor = alignOutdoorWeather(series.map(point => point.timestamp), data?.outdoor ?? []);
+    // Mỗi điểm thời tiết phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ (7d, 30d)
+    const outdoor = alignOutdoorWeather(series.map(point => point.timestamp), data?.outdoor ?? [], Math.max(data?.bucketMs ?? 0, HOUR_MS));
     const hasOutdoor = outdoor.some(point => point !== null);
     const outdoorLine = { ...line, borderWidth: 1.5, borderDash: [6, 4] };
     const indoorDatasets = [

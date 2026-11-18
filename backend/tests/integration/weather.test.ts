@@ -115,6 +115,19 @@ describe('GET /analytics/env/summary — thời tiết ngoài trời cạnh số
     ])
   })
 
+  it('1h: có giờ đã qua chứa `from` (bản ghi giờ H phủ [H, H+1h) và chỉ có khi giờ đó đã qua)', async () => {
+    const { farm, zone, user } = await seedZone()
+    const lastHour = Math.floor(Date.now() / HOUR) * HOUR - HOUR
+    await WeatherObservation.create([
+      { farm_id: farm._id, hour: new Date(lastHour), temperature: 29, humidity: 75, precipitation_mm: 0 },
+      { farm_id: farm._id, hour: new Date(lastHour - HOUR), temperature: 20 }, // giờ trước nữa, ngoài khoảng
+    ])
+
+    const summary = await getEnvSummary(user, { zoneId: String(zone._id), range: '1h' })
+
+    expect(summary.outdoor).toEqual([{ timestamp: new Date(lastHour), temperature: 29, humidity: 75, precipitation_mm: 0 }])
+  })
+
   it('30d: các giờ gom theo đúng bucket của số đo trong nhà (≤ 120 điểm), nhiệt ẩm trung bình, mưa cộng dồn', async () => {
     const { farm, zone, user } = await seedZone()
     const summary0 = await getEnvSummary(user, { zoneId: String(zone._id), range: '30d' })

@@ -4666,8 +4666,11 @@ paths:
                             type: array
                             description: >-
                               ANALYTICS-FR-013 — thời tiết ngoài trời (Open-Meteo) của farm chứa Zone, gom theo
-                              cùng `bucketMs` với `series`: nhiệt, ẩm trung bình, mưa cộng dồn. Rỗng khi farm
-                              không có toạ độ hoặc chưa lấy được thời tiết. Chỉ để hiển thị (C-6).
+                              cùng `bucketMs` với `series`: nhiệt, ẩm trung bình, mưa cộng dồn. Một bản ghi giờ H là
+                              số liệu của [H, H + 1 giờ) và chỉ có khi giờ đó đã qua, nên mảng bắt đầu từ đầu giờ chứa
+                              `from` (khoảng 1h vẫn có giờ đã qua gần nhất); mỗi điểm phủ max(`bucketMs`, 1 giờ) kể
+                              từ `timestamp`. Rỗng khi farm không có toạ độ hoặc chưa lấy được thời tiết. Chỉ để hiển
+                              thị (C-6).
                             items:
                               type: object
                               properties:

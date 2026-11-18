@@ -26,6 +26,7 @@ const RANGE_MS: Record<string, number> = {
  * frontend vẽ (vỡ trình duyệt + PERF-NFR-003 P95 ≤ 500ms).
  */
 const MAX_BUCKETS = 120
+const HOUR_MS = 3600_000
 
 function resolveRange(range: string) {
   // Object.hasOwn: `RANGE_MS['constructor']` trả hàm của Object.prototype → ngày NaN → 500
@@ -82,10 +83,13 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
  * ANALYTICS-FR-013 — thời tiết ngoài trời theo giờ của farm, đặt cạnh số đo trong nhà: cùng mốc bucket với
  * `series` (giờ nào cũng chia hết cho bucket dưới 1 giờ), nên vẫn tối đa MAX_BUCKETS điểm. Nhiệt, ẩm lấy
  * trung bình, mưa cộng dồn. Farm không có toạ độ hoặc chưa lấy được thời tiết thì trả [].
+ * Bản ghi `hour` = H là số liệu của [H, H + 1 giờ) và chỉ có khi giờ đó đã qua (weather.service), nên lấy
+ * từ đầu giờ chứa `from`: không thế thì khoảng 1h không bao giờ có điểm nào.
  */
 async function outdoorSeries(farmId: unknown, from: Date, to: Date, bucketMs: number) {
+  const firstHour = new Date(from.getTime() - (from.getTime() % HOUR_MS))
   return WeatherObservation.aggregate([
-    { $match: { farm_id: farmId, hour: { $gte: from, $lte: to } } },
+    { $match: { farm_id: farmId, hour: { $gte: firstHour, $lte: to } } },
     {
       $group: {
         _id: { $toDate: { $subtract: [{ $toLong: '$hour' }, { $mod: [{ $toLong: '$hour' }, bucketMs] }] } },

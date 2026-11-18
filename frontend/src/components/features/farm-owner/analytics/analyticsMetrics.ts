@@ -152,10 +152,15 @@ export function sumTodayBirdCounts(list: BirdCountCurrentResponse[]): TodayBirdC
   return today;
 }
 
-// Thời tiết ngoài trời đặt theo đúng mốc của chuỗi trong nhà (ANALYTICS-FR-013); mốc không có thời tiết thì null
-export function alignOutdoorWeather(timestamps: string[], outdoor: OutdoorWeatherPoint[]): Array<OutdoorWeatherPoint | null> {
-  const pointByTimestamp = new Map(outdoor.map(point => [point.timestamp, point]));
-  return timestamps.map(timestamp => pointByTimestamp.get(timestamp) ?? null);
+// Thời tiết ngoài trời cho từng mốc trong nhà (ANALYTICS-FR-013): điểm T phủ [T, T + spanMs), mốc không được phủ thì null; cả hai chuỗi tăng dần
+export function alignOutdoorWeather(timestamps: string[], outdoor: OutdoorWeatherPoint[], spanMs: number): Array<OutdoorWeatherPoint | null> {
+  let index = 0;
+  return timestamps.map(timestamp => {
+    const time = Date.parse(timestamp);
+    while (index < outdoor.length && Date.parse(outdoor[index].timestamp) + spanMs <= time) index++;
+    const point = outdoor[index];
+    return point && Date.parse(point.timestamp) <= time ? point : null;
+  });
 }
 
 // Tổng lượng mưa ngoài trời của khoảng đang xem; null khi không giờ nào có số mưa (không ghi 0 mm)
