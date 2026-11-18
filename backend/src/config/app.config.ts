@@ -2,6 +2,7 @@
 import helmet from 'helmet'
 import cors from 'cors'
 import morgan from 'morgan'
+import { isInternalRequest } from '@/utils/requestLog.util'
 import cookieParser from 'cookie-parser'
 import swaggerUi from 'swagger-ui-express'
 import YAML from 'yaml'
@@ -50,7 +51,9 @@ app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173', crede
 app.use(apiLimiter)
 
 // ── Logging & Parsing ──────────────────────────────────────────────────────────
-app.use(morgan('combined'))
+// EMQX và MediaMTX gọi /internal/* kèm khoá bí mật trong ?key=, ở mỗi lần thiết bị nối hay người xem mở video: không ghi
+// các dòng này vào log truy cập, để khoá không nằm trong log của máy chủ
+app.use(morgan('combined', { skip: isInternalRequest }))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser()) // cần cho req.cookies.refreshToken (AUTH-FR-003)

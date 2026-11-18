@@ -7,9 +7,10 @@
 authMethod: http
 authHTTPAddress: http://backend:3000/internal/stream-auth
 
-# Chỉ dùng RTSP (pipeline đẩy video lên, đọc hình gốc) và WebRTC (trình duyệt xem)
+# RTSP (pipeline đẩy video lên, đọc hình gốc), WebRTC (trình duyệt xem) và HLS ở :8888 (app mobile xem bằng expo-video,
+# Report 4 DF-7, §5.4); cùng token 60 giây, hỏi backend như WebRTC
 rtmp: false
-hls: false
+hls: true
 srt: false
 moq: false                            # 1.21 bật sẵn MoQ (cổng 8892/8893), không dùng
 rtspTransports: [tcp]                 # UDP không qua được NAT của Docker
