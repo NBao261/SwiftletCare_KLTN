@@ -66,3 +66,6 @@ coverage/
 # Editor and draw.io leftovers
 *.code-workspace
 *.bkp
+
+# Staging: biến môi trường thật chỉ nằm trên VPS (deploy/.env.staging.example là mẫu)
+deploy/.env.staging

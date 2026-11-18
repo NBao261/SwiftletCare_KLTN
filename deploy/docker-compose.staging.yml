@@ -1,0 +1,142 @@
+# SwiftletCare – staging (G-17; Report 4 §3.4, §11; docs/deploy/staging.md)
+# Chạy từ gốc repo:
+#   docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging up -d --build
+# Lần đầu xin chứng chỉ: sh deploy/staging-cert.sh (hoặc --self-signed khi thử trên máy)
+# Cổng mở ra ngoài: 80, 443 (Nginx), 8883 (MQTT TLS), 8322 (RTSPS), 8189 TCP + UDP (WebRTC). Không mở 1883, 27017.
+# Không có MinIO: ảnh minio/minio, minio/mc không còn phát công khai, nên file (âm thanh, ảnh hiện trường) lưu ở volume
+# của backend (STORAGE_DRIVER=local) và tải qua /api/files/<key>; key có UUID ngẫu nhiên nên link không đoán được.
+name: swiftletcare-staging
+
+services:
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: mongosh --quiet --eval "db.adminCommand('ping')"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  emqx:
+    image: emqx/emqx:5.7.0
+    restart: unless-stopped
+    # EMQX hỏi backend cho mọi kết nối: bật sau backend, nếu không thì lúc đầu mọi thiết bị bị từ chối (backend tự nối lại)
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      EMQX_NAME: swiftletcare
+      EMQX_NODE__COOKIE: ${EMQX_COOKIE}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD}
+      # Mọi kết nối hỏi backend (deploy/emqx/, NFR-10 d); khoá trùng MQTT_AUTH_KEY của backend
+      EMQX_AUTHENTICATION__1__URL: "http://backend:3000/internal/mqtt-auth?key=${MQTT_AUTH_KEY}"
+    ports:
+      - "127.0.0.1:18083:18083"   # dashboard: chỉ vào qua SSH tunnel
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - ./emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      - ./emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
+    healthcheck:
+      test: ["CMD", "emqx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/swiftletcare?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      # Backend nối EMQX trong mạng Docker, không qua TLS; tên phải là backend-service như deploy/emqx/acl.conf
+      MQTT_BROKER_URL: mqtt://emqx:1883
+      MQTT_USERNAME: backend-service
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      MQTT_AUTH_KEY: ${MQTT_AUTH_KEY}
+      STREAM_TOKEN_SECRET: ${STREAM_TOKEN_SECRET}
+      STREAM_AUTH_KEY: ${STREAM_AUTH_KEY}
+      STREAM_PUBLISH_SECRET: ${STREAM_PUBLISH_SECRET}
+      STORAGE_DRIVER: local
+      LOCAL_STORAGE_DIR: /app/storage
+      # Link tải file đi qua Nginx (/api/files/<key> → backend /files/<key>)
+      PUBLIC_BASE_URL: https://${DOMAIN}/api
+      CORS_ORIGIN: https://${DOMAIN}
+      APP_PUBLIC_URL: https://${DOMAIN}
+      # Đứng sau một Nginx: đọc IP người dùng từ X-Forwarded-For để giới hạn tần suất đúng người
+      TRUST_PROXY: "1"
+      # Cả hội đồng có thể ra Internet chung một IP (docs/bird-counting-plan.md §15.3)
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      OTA_ALLOWED_HOSTS: ${OTA_ALLOWED_HOSTS:-}
+      FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase-service-account.json
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes:
+      # File service account của Firebase chỉ nằm trên VPS (không commit); thiếu file thì backend không gửi push
+      - ./secrets:/run/secrets:ro
+      - backend_storage:/app/storage
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.1
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      MTX_AUTHHTTPADDRESS: http://backend:3000/internal/stream-auth?key=${STREAM_AUTH_KEY}
+      MTX_WEBRTCADDITIONALHOSTS: ${PUBLIC_IP}
+      # WebRTC qua TCP khi mạng người xem chặn UDP (Wi-Fi của trường, docs/deploy/staging.md §4)
+      MTX_WEBRTCLOCALTCPADDRESS: ":8189"
+    ports:
+      - "8189:8189/udp"
+      - "8189:8189/tcp"
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: deploy/nginx/Dockerfile
+    restart: unless-stopped
+    depends_on: [backend, emqx, mediamtx]
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8883:8883"
+      - "8322:8322"
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
+
+  # Gia hạn chứng chỉ mỗi 12 giờ; Nginx đọc lại chứng chỉ bằng `nginx -s reload` (cron ở docs/deploy/staging.md §3)
+  certbot:
+    image: certbot/certbot:v3.1.0
+    restart: unless-stopped
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+
+volumes:
+  mongo_data:
+  emqx_data:
+  backend_storage:
+  letsencrypt:
+  certbot_webroot:

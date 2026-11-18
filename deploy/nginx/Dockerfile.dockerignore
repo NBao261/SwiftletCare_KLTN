@@ -1,0 +1,10 @@
+# Context là gốc repo: chỉ gửi frontend/ và cấu hình nginx
+*
+!frontend
+!deploy/nginx
+frontend/node_modules
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+frontend/.env
+frontend/.env.*

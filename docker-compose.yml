@@ -106,6 +106,7 @@ services:
     ports:
       - "8554:8554"        # RTSP: pipeline đẩy video lên
       - "8889:8889"        # WebRTC/WHEP cho trình duyệt
+      - "8888:8888"        # HLS cho app mobile (expo-video)
       - "8189:8189/udp"    # WebRTC media
     volumes:
       - ./deploy/mediamtx.yml:/mediamtx.yml:ro

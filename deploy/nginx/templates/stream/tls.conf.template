@@ -1,0 +1,16 @@
+# TLS cho thiết bị (SEC-NFR-001, Report 4 §3.4): ESP32 và nút AI nối MQTT qua 8883, nút AI đẩy video RTSPS qua 8322.
+# Cùng chứng chỉ Let's Encrypt với site HTTPS; EMQX và MediaMTX chỉ nhận kết nối thường trong mạng Docker.
+ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+ssl_protocols TLSv1.2 TLSv1.3;
+
+server {
+    listen 8883 ssl;
+    proxy_pass emqx:1883;
+    proxy_timeout 10m;
+}
+
+server {
+    listen 8322 ssl;
+    proxy_pass mediamtx:8554;
+}
