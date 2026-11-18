@@ -191,12 +191,11 @@ async function main() {
   if (num('alerts') > 0 && controllers.length > 0) injectAlerts(controllers, num('alerts'))
   if (num('work-orders') > 0) {
     if (!technician) throw new Error('--work-orders cần SIM_TECHNICIAN_EMAIL / SIM_TECHNICIAN_PASSWORD (thành viên của farm)')
-    // Token truy cập hết hạn sau 15 phút, phép đo kéo dài khoảng 30 phút: đăng nhập lại khi bắt đầu đo
+    // Token truy cập hết hạn sau 15 phút, phép đo kéo dài khoảng 30 phút: đăng nhập lại ở đầu mỗi phần đo
     setTimeout(async () => {
       try {
         await measureNfr15({
-          api, owner: await login('OWNER'), technician: await login('TECHNICIAN'), farmId: farm._id, tag,
-          alertCount: num('alerts'), workOrderCount: num('work-orders'),
+          api, login, farmId: farm._id, tag, alertCount: num('alerts'), workOrderCount: num('work-orders'),
         })
       } catch (err) {
         console.error(`Đo NFR-15 thất bại: ${err.message}`)

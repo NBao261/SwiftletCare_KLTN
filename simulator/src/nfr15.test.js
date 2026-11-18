@@ -16,6 +16,9 @@ test('độ trễ leo thang tính từ created_at + 15 phút, đếm cảnh báo
     { created_at: new Date(created).toISOString() },
   ]
   assert.deepEqual(escalationDelays(alerts), { delays: [42_000], missing: 1 })
+  // Gộp trùng còn 2/30 cảnh báo: thiếu mẫu so với số cần đo, không đạt dù cả hai đều nhanh
+  assert.deepEqual(escalationDelays(alerts, 30), { delays: [42_000], missing: 29 })
+  assert.match(summary('a', escalationDelays(alerts.slice(0, 1), 30)), /KHÔNG ĐẠT/)
 })
 
 test('độ trễ chờ duyệt tính từ done_at + 10 phút; thiếu một Work Order thì không đạt', () => {

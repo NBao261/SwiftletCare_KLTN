@@ -19,12 +19,15 @@ export function percentile(values, p) {
 
 const ms = value => new Date(value).getTime()
 
-/** (a) — chỉ cảnh báo đã leo thang; cảnh báo chưa leo thang được đếm riêng ở `missing` */
-export function escalationDelays(alerts) {
+/**
+ * (a) — chỉ cảnh báo đã leo thang. `missing` so với số cần đo (`expected`, Report 3 NFR-15: 30), không với số đã thấy:
+ * cảnh báo bị gộp trùng hay chưa leo thang đều là thiếu mẫu, kết quả KHÔNG ĐẠT
+ */
+export function escalationDelays(alerts, expected = alerts.length) {
   const escalated = alerts.filter(a => a.escalated_at)
   return {
     delays: escalated.map(a => ms(a.escalated_at) - (ms(a.created_at) + ESCALATION_MS)),
-    missing: alerts.length - escalated.length,
+    missing: Math.max(expected - escalated.length, 0),
   }
 }
 
@@ -32,11 +35,11 @@ export function escalationDelays(alerts) {
  * (b) — hạn là done_at + RECOVERY_VERIFY_MIN: độ ẩm giả lập đi quanh 85 % nên không xuống dưới `humidity_min` (75 %)
  * sau "done"; thiết bị thật phải tính từ mẫu khô cuối cùng (workOrder.service#telemetryStaysRecovered).
  */
-export function verificationDelays(workOrders) {
+export function verificationDelays(workOrders, expected = workOrders.length) {
   const verified = workOrders.filter(w => w.done_at && w.verified_at)
   return {
     delays: verified.map(w => ms(w.verified_at) - (ms(w.done_at) + RECOVERY_VERIFY_MS)),
-    missing: workOrders.length - verified.length,
+    missing: Math.max(expected - verified.length, 0),
   }
 }
 
@@ -54,9 +57,13 @@ const sleep = t => new Promise(resolve => setTimeout(resolve, t))
  * Chạy sau khi bộ giả lập đã gửi cảnh báo (phút thứ 2). Thợ không xác nhận cảnh báo nào nên mọi cảnh báo phải
  * leo thang; sau đó thợ bắt đầu và báo xong `workOrderCount` Work Order, rồi chờ backend chuyển chờ duyệt.
  */
-export async function measureNfr15({ api, owner, technician, farmId, tag, alertCount, workOrderCount, log = console.log }) {
-  const alerts = await measureEscalation({ api, owner, farmId, tag, alertCount, log })
-  await measureVerification({ api, owner, technician, farmId, tag, alertIds: alerts.map(a => String(a._id)), workOrderCount, log })
+export async function measureNfr15({ api, login, farmId, tag, alertCount, workOrderCount, log = console.log }) {
+  const alerts = await measureEscalation({ api, owner: await login('OWNER'), farmId, tag, alertCount, log })
+  // Token truy cập sống 15 phút (JWT_ACCESS_TTL) mà (a) có thể kéo dài tới 10 phút: đăng nhập lại cho (b)
+  await measureVerification({
+    api, owner: await login('OWNER'), technician: await login('TECHNICIAN'), farmId, tag,
+    alertIds: alerts.map(a => String(a._id)), workOrderCount, log,
+  })
 }
 
 export async function measureEscalation({ api, owner, farmId, tag, alertCount, log = console.log }) {
@@ -70,7 +77,7 @@ export async function measureEscalation({ api, owner, farmId, tag, alertCount, l
     if (alerts.length >= alertCount && alerts.every(a => a.escalated_at)) break
     await sleep(30_000)
   }
-  log(summary('NFR-15 (a) leo thang tới Farm Owner', escalationDelays(alerts)))
+  log(summary('NFR-15 (a) leo thang tới Farm Owner', escalationDelays(alerts, alertCount)))
   if (alerts.length < alertCount) log(`  chỉ thấy ${alerts.length}/${alertCount} cảnh báo (gộp trùng khi ít controller hơn số cảnh báo?)`)
   return alerts
 }
@@ -93,5 +100,5 @@ export async function measureVerification({ api, owner, technician, farmId, tag,
     if (orders.every(w => w.verified_at)) break
     await sleep(15_000)
   }
-  log(summary('NFR-15 (b) chờ duyệt sau kiểm phục hồi', verificationDelays(orders)))
+  log(summary('NFR-15 (b) chờ duyệt sau kiểm phục hồi', verificationDelays(orders, workOrderCount)))
 }

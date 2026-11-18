@@ -31,6 +31,8 @@ export const options = {
   thresholds: {
     'http_req_duration{scenario:api}': ['p(95)<500'],
     'checks{scenario:api}': ['rate>0.99'],
+    // NFR-03 cần đủ 100 client WebSocket nối được trong lúc đo: một lần nâng cấp bị từ chối là không đạt
+    'checks{scenario:sockets}': ['rate==1'],
     socket_errors: ['count==0'],
   },
 }
@@ -67,7 +69,8 @@ export function socket(data) {
     s.on('error', () => socketErrors.add(1))
     s.setTimeout(() => s.close(), DURATION_SEC * 1000)
   })
-  check(res, { 'socket 101': r => r && r.status === 101 })
+  // Nối hỏng thì nghỉ trước khi VU thử lại, để không tự tạo ra cơn bão kết nối
+  if (!check(res, { 'socket 101': r => r && r.status === 101 })) sleep(1)
 }
 
 /** Farm Owner xem dashboard, cảnh báo, phân tích; nghỉ 1–3 s giữa các trang */
