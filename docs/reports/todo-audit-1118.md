@@ -7,12 +7,14 @@ Kết quả đối chiếu **backend** và **web** với Report 3 (SRS), Report 
 ## 0. Kết quả soát
 
 **Đã khớp, không cần sửa:**
-- Backend có 195 route, khớp 1–1 với `api-spec.yaml`.
+- Backend có 180 route, khớp 1–1 với `api-spec.yaml` (cùng method và path).
 - Web không gọi endpoint nào mà backend không có.
-- Nhóm role trên web (`frontend/src/constants/roles.ts`) khớp `requireRole` của backend ở mọi màn đang có. Các nút gửi lệnh đúng quyền: Restart cho Admin, Farm Owner, Farm Technician; PUSH_CONFIG và OTA chỉ cho Admin.
+- Nhóm role trên web (`frontend/src/constants/roles.ts`) khớp `requireRole` của backend ở mọi màn đang có; các nút ghi bị ẩn đúng role (đã kiểm tay các chỗ dễ lỗi: kết luận báo cáo, góp ý kế hoạch bảo trì, lịch trực, hệ số mờ, bằng chứng cảnh báo). Nút gửi lệnh: PUSH_CONFIG và OTA chỉ cho Admin, Restart cho Admin và Farm Technician. **Farm Owner có quyền Restart nhưng không trang nào của Farm Owner có nút** (W-12).
 - 157 mã FR của Report 3 đều có dấu vết trong backend. Các FR còn lại của firmware và AI node không thuộc đợt soát này.
 
-**Còn phải sửa:** 1 bug mất dữ liệu (W-01) và 4 chức năng bắt buộc chưa dùng được trên web (W-02, W-03, W-05). Ngoài ra có vài chức năng mobile đã có mà web chưa có, vài endpoint thừa và 2 chỗ tài liệu cần chốt.
+**Còn phải sửa:** 1 bug mất dữ liệu (W-01) và 3 việc P0 trên web (W-02, W-03, W-05). Hai chức năng hiện không dùng được ở cả web lẫn mobile: quản lý bài loa ru (W-04) và Restart của Farm Owner (W-12). Ngoài ra có vài chức năng mobile đã có mà web chưa có, vài endpoint và hàm thừa, và 3 chỗ tài liệu cần chốt (D-01, D-02, D-04).
+
+**Bổ sung ngày 19/11/2026** (soát lại trên `develop` sau PR #183, bằng script lần theo import từ mỗi trang web theo role tới từng hàm API rồi so với `requireRole` của backend): thêm W-04, W-12, W-13, D-04; sửa số route ở trên, câu về nút Restart, W-02 (kết luận mùa vụ) và W-11 (đã làm ở PR #182 nhưng chưa vào `develop`).
 
 **Giới hạn của đợt soát:** chỉ đọc code, không chạy test. Chỉ kiểm theo route, role và mã FR, không kiểm từng tiêu chí chấp nhận.
 
@@ -36,13 +38,16 @@ Mức ưu tiên:
 | W-01 | Sửa bug: mức giảm tỷ lệ chim về lưu sai chỗ, không bao giờ được lưu | EXPERT-FR-008 (M) | web | P0 | B-05 (phần reset) |
 | W-02 | Mở các trang quyết định chuyên gia cho Farm Owner (BR-22, quyền "read ¹", lịch sử quyết định) | BR-22; EXPERT-FR-003, 008, 009, 020; VISION-FR-018, 019; ENV-FR-030; Report 4 §5.4 | web | P0 | W-01 |
 | W-03 | Hộp thông báo trong app cho mọi role | EXPERT-FR-007 (M); EXPERT-FR-005, 006, 009, 020; ENV-FR-026; FARM-FR-009, 012; AUTH-FR-012 | web | P0 | — |
+| W-04 | Farm Owner quản lý bài loa ru (upload, xoá, đánh dấu đã chép thẻ SD) | ENV-FR-013c (O); Report 3 §2.4 | web | P1 | — |
 | W-05 | Admin từ chối yêu cầu xoá tài khoản | AUTH-FR-012 | web | P0 | — |
 | W-06 | Người dùng hủy yêu cầu xoá tài khoản của mình | AUTH-FR-012, Report 3 §6.14 | web | P1 | B-01 |
 | W-07 | Liên kết / gỡ Telegram ở trang Cài đặt | ALERT-FR-013, SF-04 | web | P1 | B-01 |
 | W-08 | Khôi phục thiết bị đã gỡ trong 24 giờ | FARM-FR-008, Report 3 §6.6 | web | P1 | B-06 |
 | W-09 | Danh sách lời mời đang chờ của farm | AUTH-FR-005, 010 | web | P1 | — |
 | W-10 | Farm Technician xem ca trực của mình | Report 3 §2.4 ("read own roster") | web | P2 | D-02 |
-| W-11 | Bỏ dữ liệu giả `farmMock.api.ts` | FE_Design §7; Report 3 §8 | web | P2 | — |
+| W-11 | Bỏ dữ liệu giả `farmMock.api.ts` — đã làm ở PR #182, chỉ còn đưa vào `develop` | FE_Design §7; Report 3 §8 | web | P2 | — |
+| W-12 | Farm Owner khởi động lại bộ điều khiển | FARM-FR-013 (S); Report 3 §2.4 | web | P1 | — |
+| W-13 | Bỏ hàm API và hook web không màn nào dùng | FE_Design §13 | web | P2 | — |
 | B-01 | `GET /auth/me` | ALERT-FR-013, AUTH-FR-012 (hỗ trợ W-06, W-07) | backend | P1 | — |
 | B-02 | Bỏ `PUT /devices/sensor-nodes/:id/thresholds` | trùng ENV-FR-006 | backend | P2 | — |
 | B-03 | Bỏ `GET /health-reports/preview` | deprecated, không client nào gọi | backend | P2 | — |
@@ -52,8 +57,9 @@ Mức ưu tiên:
 | D-01 | Report 3 §2.4: dòng audit log của Farm Owner không có FR nào | Report 3 §2.4, SYSTEM-FR-001 | tài liệu | P1 | — |
 | D-02 | Chốt màn của Farm Technician trên web | Report 3 §1.2, §2.4; Report 4 §5.4 | tài liệu (hoặc web) | P1 | — |
 | D-03 | Thêm gap G-28 vào Project Tracking, cập nhật spec và Report 5 | `project-tracking.md` §6 | tài liệu | P1 | — |
+| D-04 | Chốt ai viết kết luận mùa vụ khi farm chưa có chuyên gia (backend đang khác Report 3) | BR-22; EXPERT-FR-020 (M) | tài liệu + backend | P1 | — (W-02 chờ việc này) |
 
-Thứ tự đề nghị: W-01 → W-05 → B-05 → W-02 → W-03 → B-01 → W-06, W-07 → B-06 → W-08 → W-09 → D-01, D-02, D-03 → B-02, B-03, B-04, W-10, W-11.
+Thứ tự đề nghị: W-11 (chỉ cần PR đưa #182 vào `develop`) → W-01 → W-05 → D-04 → B-05 → W-02 → W-03 → W-12 → W-04 → B-01 → W-06, W-07 → B-06 → W-08 → W-09 → D-01, D-02, D-03 → B-02, B-03, B-04, W-10, W-13.
 
 ## 3. Web
 
@@ -110,7 +116,7 @@ Thứ tự đề nghị: W-01 → W-05 → B-05 → W-02 → W-03 → B-01 → W
    | Ngưỡng & hệ số | sửa | ngưỡng và hệ số mờ: luôn sửa được (tạo mục duyệt); tham số phát hiện và mức giảm tỷ lệ chim về (W-01): khi `canDecide` |
    | Lịch đếm, Vòng đếm, Luật thời tiết | sửa | khi `canDecide` |
    | Duyệt & đề xuất | chấp nhận, hoàn lại, duyệt | chỉ xem; gửi đề xuất vẫn ở `FuzzyTuningModal` |
-   | Báo cáo & kết luận | viết kết luận | kết luận báo cáo: **ẩn form** (`PUT /health-reports/:id/conclusion` chỉ cho Domain Expert, EXPERT-FR-006); kết luận mùa vụ: khi `canDecide`; ngày lệch: theo `can_edit` |
+   | Báo cáo & kết luận | viết kết luận | kết luận báo cáo: **ẩn form** (`PUT /health-reports/:id/conclusion` chỉ cho Domain Expert, EXPERT-FR-006); kết luận mùa vụ: **theo D-04** (Report 3 BR-22 và EXPERT-FR-020 không cho Farm Owner viết, kể cả khi farm chưa có chuyên gia; backend hiện vẫn cho); ngày lệch: theo `can_edit` |
    | Hồ sơ cấu hình, Luật khuyến nghị | soạn, duyệt | chỉ xem (Report 3 §2.4) |
    | Lịch sử quyết định | xem | xem |
 
@@ -120,7 +126,7 @@ Thứ tự đề nghị: W-01 → W-05 → B-05 → W-02 → W-03 → B-01 → W
 **Xong khi:**
 - Farm Owner của farm **không** có chuyên gia làm được:
   - bác bỏ một `NOISE_ANOMALY` kèm ghi chú → cảnh báo thành `DISMISSED`, lịch sử ghi role `FARM_OWNER`;
-  - sửa tham số phát hiện, lịch đếm, vòng đếm, luật thời tiết, kết luận mùa vụ → đều 200.
+  - sửa tham số phát hiện, lịch đếm, vòng đếm, luật thời tiết → đều 200; kết luận mùa vụ theo kết quả của D-04.
 - Farm Owner của farm **có** chuyên gia mở được mọi trang nói trên ở chế độ chỉ xem, không gặp lỗi 403 nào.
 - Farm Technician và Admin mở `/domain-expert/*` thì bị đưa về /403.
 
@@ -169,6 +175,26 @@ Thứ tự đề nghị: W-01 → W-05 → B-05 → W-02 → W-03 → B-01 → W
 **Test:**
 - Vitest: bảng `ref.kind` → path.
 - Playwright: thông báo của chuyên gia hiện sau một lần Farm Owner sửa ngưỡng.
+
+### W-04 — Farm Owner quản lý bài loa ru (P1)
+
+**Vấn đề:**
+- ENV-FR-013c và Report 3 §2.4: Farm Owner đăng ký bài đã chép vào thẻ SD, chọn bài mặc định, phát thử. Backend chỉ cho `FARM_OWNER` upload, xoá, đánh dấu đã chép (`POST/DELETE /devices/sensor-nodes/:id/audio-tracks…`, `PUT …/sync-status`).
+- Trên web, form upload, xoá và công tắc "Đã chép vào thẻ SD" nằm trong `components/features/technician/devices/AudioTracksModal.tsx`. Modal này chỉ mở từ `pages/technician/TechnicianDevicesPage.tsx:478`, tức trang `/devices` của Admin, Domain Expert và Farm Technician (`routes/technician.routes.tsx:28-30`). Trong modal, các nút ghi chỉ hiện với `FARM_OWNER` (`AudioTracksModal.tsx:25-26`), nên không ai thấy.
+- Trang `/devices` của Farm Owner dùng `components/features/farm-owner/devices/LullabyTracksModal.tsx`, chỉ chọn bài, phát thử và dừng.
+- Mobile chưa có phần này.
+- Hậu quả: không ai thêm được bài vào hệ thống. Vì "a track not marked as copied to the SD card cannot be selected or played" (400), chọn và phát thử cũng không dùng được.
+
+**Việc cần làm:**
+1. Đưa upload, xoá và công tắc "Đã chép vào thẻ SD" vào `LullabyTracksModal` của Farm Owner (hoặc mở `AudioTracksModal` từ trang thiết bị của Farm Owner).
+2. Trên `TechnicianDevicesPage`, Admin, Domain Expert và Farm Technician chỉ xem danh sách bài (`GET` cho mọi role), không có nút ghi. Bỏ câu "Kỹ thuật viên sẽ upload và chép file vào thẻ SD" (`AudioTracksModal.tsx:60`), vì không còn đúng.
+3. Chuyển modal về `components/features/farm-owner/devices/` theo FE_Design §12.
+
+**Xong khi:**
+- Farm Owner upload `0001.mp3`, bật "Đã chép", chọn làm bài mặc định và phát thử, cả 4 bước đều thành công.
+- Domain Expert, Farm Technician và Admin không thấy nút ghi nào.
+
+**Test:** Vitest cho hàm quyết định hiện nút theo role.
 
 ### W-05 — Admin từ chối yêu cầu xoá tài khoản (P0)
 
@@ -242,15 +268,50 @@ Thứ tự đề nghị: W-01 → W-05 → B-05 → W-02 → W-03 → B-01 → W
 
 Trên `pages/technician/TechnicianFarmsPage.tsx` (`TechnicianHouseRow`), hiện các ca của thợ theo từng nhà: thứ trong tuần, giờ, chính hay dự phòng.
 
-### W-11 — Bỏ dữ liệu giả (P2)
+### W-11 — Bỏ dữ liệu giả (P2) — đã làm ở PR #182, chưa có trên `develop`
 
-`apis/farm-owner/farmMock.api.ts` tạo các phần không có căn cứ trong Report 3:
-- thẻ "Ngày thu hoạch dự kiến" (`components/features/farm-owner/farms/HouseProductionCard.tsx:48`, luôn hiện `_`; dự đoán sản lượng nằm ngoài phạm vi theo Report 3 §8);
-- `useHouseAdvice` và `useDeviceProfile`, không màn nào dùng.
+PR #182 (`refactor/web-remove-farm-mock`) đã làm việc này, nhưng nó merge vào nhánh `fix/review-1118-leftovers` **sau khi** PR #181 đã vào `develop`. Vì vậy các commit `a9857363` và `f6d1bca4` chưa có trên `develop`.
 
-Việc cần làm:
-1. Bỏ `farmMock.api.ts`, `useStructureExtras`, `useHouseAdvice`, `useDeviceProfile` (`hooks/farm-owner/useFarmStructure.ts:169-191`) và prop `nextHarvestAt`.
-2. Sửa dòng nhắc tới `farmMock.api.ts` trong `frontend/CLAUDE.md`.
+PR #182 đã:
+- bỏ `apis/farm-owner/farmMock.api.ts` cùng các hook `useStructureExtras`, `useHouseAdvice`, `useDeviceProfile` và các key i18n của chúng;
+- bỏ thẻ "Khuyến nghị kỹ thuật từ hệ thống AI" ở trang nhà (`AiAdviceCard`) và ô "Gợi ý thuật toán AI" ở Dashboard (`NestingDensityCard`). Khuyến nghị thật ở `/recommendations` (EXPERT-FR-017).
+- bỏ ô "Dự kiến thu tiếp" (`HouseProductionCard`), vì dự đoán sản lượng nằm ngoài phạm vi (Report 3 §8);
+- bỏ dòng "Kỹ thuật viên lắp đặt" và nhãn "Mới nhất" của firmware (`DeviceDetailDrawer`);
+- cập nhật FE_Design, `frontend/CLAUDE.md` và Change Log của Project Tracking.
+
+(Bản trước của mục này ghi `useHouseAdvice` và `useDeviceProfile` "không màn nào dùng". Câu đó sai: `AiAdviceCard`, `NestingDensityCard` và `DeviceDetailDrawer` đều dùng hai hook này.)
+
+**Việc cần làm:** mở PR từ `fix/review-1118-leftovers` vào `develop`, rồi xem CI xanh.
+
+### W-12 — Farm Owner khởi động lại bộ điều khiển (P1)
+
+**Vấn đề:**
+- FARM-FR-013 và Report 3 §2.4 ("Remote commands … — Farm Owner: restart") cho Farm Owner restart bộ điều khiển của farm.
+- `DEVICE_RESTART_ROLES` có `FARM_OWNER`, và nút Restart nằm ở `TechnicianDevicesPage` (`canRestart`). Nhưng Farm Owner không bao giờ vào trang đó: `/devices` của Farm Owner là `FarmOwnerDevicesPage` (`routes/technician.routes.tsx:28-30`).
+- `FarmOwnerDevicesPage` và `/devices/detail` không gọi `POST /devices/sensor-nodes/:id/commands`, và mobile cũng chưa có. Vì vậy Farm Owner không restart được ở đâu.
+
+**Việc cần làm:**
+1. Thêm nút "Khởi động lại" trên trang thiết bị và trang chi tiết thiết bị của Farm Owner, chỉ khi thiết bị `ONLINE`.
+2. Dùng lại `useSendNodeCommand` với `type: 'RESTART'`, có hộp xác nhận. Firmware chưa hỗ trợ (501, `COMMAND_SUPPORT_SINCE` 1.4.0) thì báo như `rebootUnsupportedIds` của `TechnicianDevicesPage`.
+3. Domain Expert đọc chung trang này nên không thấy nút (`usePermission('FARM_OWNER')`).
+
+**Xong khi:** Farm Owner restart một bộ điều khiển `ONLINE` thành công và audit có ghi lại; Domain Expert không thấy nút.
+
+### W-13 — Hàm API và hook web không màn nào dùng (P2)
+
+Hàm API không màn nào gọi tới (lần theo import từ mọi trang):
+- `analyticsApi.birdCountDaily` (`apis/farm-owner/analytics.api.ts:179`);
+- `expertApi.compareZones` (`services/expert/expertApi.service.ts:88`);
+- `harvestCyclesApi.get` (`apis/domain-expert/harvestCycles.api.ts:24`);
+- `healthDayApi.getOne` (`apis/shared/healthDays.api.ts:19`);
+- `expertApi.getSensorNodes`, `expertApi.getRelayOverrideLogs` (chỉ hook chết `useRelayOverrideLogs` gọi);
+- `profilesApi.getOne` (chỉ hook chết `useProfile` gọi).
+
+Hook không màn nào dùng:
+- trong `hooks/domain-expert/useExpertDashboard.ts`: `useRelayOverrideLogs`, `useExpertBirdTrends`, `useExpertFuzzySuggestion`, `useSetAlertVerdict` (trang phán quyết dùng `useSubmitAlertVerdict`);
+- trong `hooks/domain-expert/useProfiles.ts`: `useProfile`.
+
+**Việc cần làm:** bỏ các hàm và hook trên. Khi bỏ, kiểm `expertDomain.service.ts` để bỏ luôn hàm bọc không còn ai gọi. Chạy lint, tsc và vitest.
 
 ## 4. Backend
 
@@ -346,6 +407,26 @@ Hai cách chốt:
 
 ### D-03 — Ghi nhận vào Project Tracking (P1)
 
-1. Thêm dòng **G-28** vào `project-tracking.md` §6, gồm W-01…W-11 và B-01…B-06, người làm Bảo, hạn theo iteration. Khi xong từng việc thì cập nhật dòng này. Thêm một dòng vào §7 Change Log.
+1. Thêm dòng **G-28** vào `project-tracking.md` §6, gồm W-01…W-13, B-01…B-06 và kết quả của D-04, người làm Bảo, hạn theo iteration. Khi xong từng việc thì cập nhật dòng này. Thêm một dòng vào §7 Change Log.
 2. Mỗi PR của B-xx sửa `api-spec.yaml`. Nếu thêm model hay trường thì chạy `npm run db:script`.
 3. Trong `report5/tc.py`, đổi nguồn test của các case liên quan (AUTH-FR-012, EXPERT-FR-007, 008, FARM-FR-008) sang test thật khi viết xong.
+
+### D-04 — Kết luận mùa vụ khi farm chưa có chuyên gia (P1, cần chốt)
+
+**Vấn đề:**
+- Report 3 BR-22: "No conclusions are written without an expert (EXPERT-FR-006)". EXPERT-FR-020 (M): "a non-expert request is rejected with 403 (Farm Owner without an expert, BR-22)".
+- Backend lại cho Farm Owner viết kết luận mùa vụ khi farm chưa có chuyên gia:
+  - route `requireRole('DOMAIN_EXPERT', 'FARM_OWNER')` (`backend/src/routes/harvests.route.ts:47`);
+  - `concludeCycle` kiểm bằng `assertExpertDecision` (`backend/src/services/harvestCycle.service.ts:291-298`);
+  - test `harvestCycle.test.ts:179` "farm chưa có chuyên gia: Farm Owner viết kết luận được (BR-22)";
+  - dòng G-26 của Project Tracking cũng ghi như vậy.
+- Kết luận báo cáo sức khỏe thì đã đúng SRS: chỉ Domain Expert (`PUT /health-reports/:id/conclusion`).
+
+**Hai cách chốt:**
+- **Cách A (đề nghị, vì code phải theo SRS — `todo-final-scope.md` §0, quy tắc 5):**
+  - route chỉ cho `DOMAIN_EXPERT`;
+  - test 179 đổi thành "Farm Owner → 403 kể cả khi farm chưa có chuyên gia";
+  - sửa comment của service và dòng G-26;
+  - W-02 ẩn form kết luận mùa vụ với Farm Owner;
+  - cập nhật `api-spec.yaml`.
+- **Cách B:** giữ code. Khi đó sửa BR-22 và EXPERT-FR-020 trong Report 3 (thêm dòng Revision History), cập nhật BM03 nếu cần, và sinh lại Word.

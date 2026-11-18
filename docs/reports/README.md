@@ -17,6 +17,7 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 | BM04 – Review 2 Commitment | Sinh bằng `tools/make_bm04.py` từ `report5/tc.py` (docx: `registration/`); chữ ký và kết luận để trống cho hội đồng |
 | [`todo-review2.md`](todo-review2.md) | Việc cần làm, theo gap của Project Tracking (tiếng Việt) |
 | [`todo-final-scope.md`](todo-final-scope.md) | Việc cần làm cho phần scope cuối (G-20…G-27), làm tiếp sau `todo-review2.md` (tiếng Việt) |
+| [`todo-audit-1118.md`](todo-audit-1118.md) | Việc cần sửa sau đợt soát web và backend 18–19/11/2026 (W-01…W-13, B-01…B-06, D-01…D-04; gap G-28) (tiếng Việt) |
 
 ## Quy tắc giữ hồ sơ nhất quán
 
