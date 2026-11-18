@@ -163,6 +163,14 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 ## 4. Code theo gap
 
+**Rà soát 18/11/2026** (sau PR #168–172; đối chiếu code `develop` với Report 3, Report 4 và hai file todo). Phần code còn thiếu:
+
+- Web (Nhi): màn Admin "Tạo Farm Owner", trang đổi mật khẩu tạm, ô nguồn khi Admin lưu ngưỡng mặc định (đang bị 422) — Bảo làm thay, nhánh `feat/g02-web-owner-accounts`.
+- Backend (Kiệt): G-14 (trạng thái tài khoản, trường audit, trường telemetry, ảnh lô thu hoạch, loại tham chiếu thông báo); cột sản lượng của so sánh nhà (G-26) — Bảo làm thay, nhánh `feat/g14-erd-fields`.
+- Firmware (Bảo): G-13 đọc ADS1115, lưu mức học, gửi `ACTUATOR_FAULT` — viết được, chỉ thử được khi có board.
+- Mobile (Len): mục lịch đếm theo mùa (F-14), nhãn "Giả lập" (SYSTEM-FR-004), giai đoạn nhà (F-28); chạy thử trên máy thật và ảnh chụp cho các màn đã merge.
+- Ngoài code: mục 3 (G-19), VPS và tên miền (G-17), project Firebase (G-10), 3 luật khuyến nghị thật (G-24).
+
 Mỗi gap: tên ở Project Tracking §6, yêu cầu ở SRS, thiết kế ở SDD. Mỗi PR có test cho logic mới (backend [Bắt buộc], firmware [Bắt buộc] cho logic điều khiển/phát hiện).
 
 ### G-01 — Enum và dọn phạm vi (P0-Tag) — Kiệt, Len, Tuấn, Nhi (mục 0.3, PR A)
@@ -495,7 +503,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-22 — Bảo trì phòng ngừa (P1) — Kiệt (backend), Len (mobile), Nhi (web)
 
-- [ ] Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ thời gian relay ON, xác nhận bằng dòng điện nếu bộ điều khiển đo được (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008). *(Mobile — Len, 14/11, nhánh `feat/g22-maintenance`: checklist kèm ảnh trong phiếu công việc phòng ngừa (Đạt / Hỏng, ghi chú, 1 ảnh; Hỏng mở phiếu sửa chữa; đủ mục mới báo xong), màn Bảo trì (kế hoạch đến hạn / quá hạn, tiến độ giờ chạy hoặc hạn kế tiếp, lịch sử ghi bảo trì và hiệu chuẩn), khối "Bảo trì đến hạn" ở Trang chủ — chi tiết ở G-16 bước 12. Ghi bảo trì, hiệu chuẩn là chủ trại duyệt phiếu phòng ngừa trên web. Còn chờ: chạy thử trên máy, ảnh chụp cho PR)*
+- [ ] *(Kiểm 18/11/2026: backend, web `/maintenance` và mobile checklist, kế hoạch, ghi bảo trì đều đã merge; còn xác nhận giờ chạy bằng dòng điện sau G-13.)* Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ thời gian relay ON, xác nhận bằng dòng điện nếu bộ điều khiển đo được (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008). *(Mobile — Len, 14/11, nhánh `feat/g22-maintenance`: checklist kèm ảnh trong phiếu công việc phòng ngừa (Đạt / Hỏng, ghi chú, 1 ảnh; Hỏng mở phiếu sửa chữa; đủ mục mới báo xong), màn Bảo trì (kế hoạch đến hạn / quá hạn, tiến độ giờ chạy hoặc hạn kế tiếp, lịch sử ghi bảo trì và hiệu chuẩn), khối "Bảo trì đến hạn" ở Trang chủ — chi tiết ở G-16 bước 12. Ghi bảo trì, hiệu chuẩn là chủ trại duyệt phiếu phòng ngừa trên web. Còn chờ: chạy thử trên máy, ảnh chụp cho PR)*
 
 ### G-23 — Bù theo thời tiết (P1) — Bảo (firmware, backend), Tuấn (màn luật)
 
