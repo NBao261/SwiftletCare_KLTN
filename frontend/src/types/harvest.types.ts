@@ -23,6 +23,8 @@ export interface HarvestBatch {
   _id: string; farm_id: string; zone_id: string; created_by?: string; trace_code: string
   harvest_date: string; nest_count: number; weight_grams: number
   nest_type: NestType; product_images: string[]
+  /** HARVEST-FR-001 — link ký sẵn tới ảnh của lô; chỉ có ở GET /harvests/{id} và PUT /harvests/{id}/photo */
+  photo_url?: string | null
   env_snapshot: EnvSnapshot; flock_snapshot: FlockSnapshot
   status: HarvestStatus
   is_deleted: boolean

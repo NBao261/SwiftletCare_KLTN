@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 
 import { Button, DatePicker, Input, Modal, SelectMenu } from '@/components/ui';
+import HarvestPhotoField from '@/components/features/farm-owner/harvest/HarvestPhotoField';
 import ImageLinksField from '@/components/features/farm-owner/harvest/ImageLinksField';
 import { GRAM_DIGITS, KILOGRAM_DIGITS, NEST_TYPE_BADGE_CLASS, NEST_TYPES } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { checkNestAmount, type HarvestGroup, type NestAmountError } from '@/components/features/farm-owner/harvest/harvestMetrics';
@@ -8,7 +9,7 @@ import { harvestDict, type HarvestKey } from '@/constants/harvest.i18n';
 import { LEVEL_BADGE_SIZE } from '@/constants/severity';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useCreateHarvest, useDeleteHarvest, useUpdateHarvest } from '@/hooks/farm-owner/useHarvests';
+import { useCreateHarvest, useDeleteHarvest, useHarvestPhotoUrl, useUpdateHarvest, useUploadHarvestPhoto } from '@/hooks/farm-owner/useHarvests';
 import { cn } from '@/lib/cn';
 import { formatStandardDate } from '@/lib/i18n';
 import { useToastStore } from '@/stores/toastStore';
@@ -120,6 +121,10 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   const [amounts, setAmounts] = useState<AmountTexts>(() => initialAmounts(group));
   // Link ảnh sản phẩm dùng chung cho các loại yến của lần thu (sửa thì lấy link đã lưu)
   const [imageLinks, setImageLinks] = useState<string[]>(() => group?.product_images ?? []);
+  // Ảnh lần thu (HARVEST-FR-001): gửi lên mọi đợt của lần thu sau khi lưu xong số liệu
+  const [photo, setPhoto] = useState<File | null>(null);
+  const savedPhotoUrl = useHarvestPhotoUrl(group?.batches.map(batch => batch._id) ?? []);
+  const uploadPhoto = useUploadHarvestPhoto();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [partialSave, setPartialSave] = useState<PartialSave | null>(null);
@@ -206,6 +211,14 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
 
     const failedTypes = operations.filter((_, index) => results[index].status === 'rejected').map(operation => operation.nestType);
     if (failedTypes.length === 0) {
+      // Số liệu đã lưu đủ: gửi ảnh cho từng đợt còn lại; ảnh lỗi không làm mất lần thu đã lưu
+      const savedBatches = results.flatMap(result => (result.status === 'fulfilled' && result.value ? [result.value] : []));
+      if (photo && savedBatches.length > 0) {
+        setIsSaving(true);
+        const uploads = await Promise.allSettled(savedBatches.map(batch => uploadPhoto.mutateAsync({ id: batch._id, photo })));
+        setIsSaving(false);
+        if (uploads.some(upload => upload.status === 'rejected')) push(t('photo.uploadFailed'), 'error');
+      }
       push(isEdit ? t('form.updated') : t('form.createdCount', { n: filledRows.length }));
       onClose();
       return;
@@ -334,6 +347,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
         </div>
 
         {/* Hàng 3: link ảnh sản phẩm dùng chung cho các loại */}
+        <HarvestPhotoField photo={photo} savedUrl={savedPhotoUrl} onChange={setPhoto} disabled={isSaving} />
         <ImageLinksField links={imageLinks} onChange={setImageLinks} disabled={isSaving} />
 
         {/* Chân popup: Huỷ / Tạo hoặc Lưu */}

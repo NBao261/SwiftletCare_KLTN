@@ -418,7 +418,8 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - *telemetry ghi cảm biến null vào `stale_fields`, chỉ số vượt ngưỡng vào `anomaly_fields`, mẫu `telemetry/buffered` có `buffered`;*
 - *ảnh lô `PUT /harvests/{id}/photo` → `photo_object_key`, `photo_url` ở chi tiết; thông báo thao tác thiết bị có `ref.kind = device_action`;*
 - *`npm run migrate:erd-fields`; `db:script` chạy lại; cột sản lượng của so sánh nhà đọc chu kỳ đóng gần nhất (G-26).*
-- *Còn: nút chọn ảnh lô trên web (Nhi) và mobile (Len); web, mobile chuyển sang đọc `status`.)*
+- *Chọn ảnh trên web xong (Bảo làm thay Nhi, 18/11/2026, nhánh `feat/g14-web-harvest-photo`): ô "Ảnh lần thu" ở form tạo/sửa, gửi lên mọi đợt của lần thu, màn chi tiết hiện ảnh.*
+- *Còn: chọn ảnh trên mobile (Len); web, mobile chuyển sang đọc `status`.)*
 
 ### G-15 — Dọn web (P1) — Tuấn (chuyên gia, Technician), Nhi (ma trận quyền), Bảo (`/stream/:id`)
 
