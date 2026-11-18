@@ -179,15 +179,55 @@ $C exec backend npm run migrate:retention   # và các migrate:* còn chờ
 
 ## 5. Dữ liệu demo
 
-`npm run seed` hiện tạo 1 Farm Owner, 1 Farm Technician, 1 Domain Expert và 1 Farm/House/Zone/SensorNode. Như vậy **chưa đủ** cho mọi kịch bản ở Phụ lục A2 của Design Brief. Cần một script seed demo (G-17, Kiệt và Bảo) tạo thêm:
+`npm run seed` tạo các tài khoản mẫu (owner@, tech@, expert@) và farm "Nhà Yến Demo" có `node_001` cho ESP32 lúc dev. Sau đó `npm run seed:demo` (`backend/src/scripts/seed-demo.script.ts`) dựng điều kiện đầu của DS-01…16 (Design Brief Phụ lục A2):
 
-- tài khoản Administrator;
-- một farm **không** có chuyên gia (BR-22);
-- thiết bị trong kho có nhãn (SF-01);
-- cảnh báo suy luận đang chờ kết luận (MF-04);
-- số đếm 5 phút và bản ghi phiên của ≥ 7 ngày (MF-03);
-- telemetry ≥ 1 ngày cho dự báo và đánh giá sức khỏe (MF-02, MF-06);
-- một bơm đã quá giới hạn giờ chạy (cảnh báo `MAINTENANCE_DUE`).
+- Mỗi lần chạy, script xoá rồi dựng lại hai farm demo. Chạy lại ngay trước mỗi buổi tổng duyệt, vì các kịch bản làm đổi dữ liệu.
+- Script đi qua service thật, như khi dùng app: Administrator nhập kho, Farm Owner tạo nhà và đăng ký thiết bị, cảnh báo qua Alert Engine, thợ báo xong Work Order.
+- Chỉ dữ liệu quá khứ được ghi thẳng vào DB: telemetry 10 giây, số đếm phiên, một khuyến nghị đã chấp nhận từ 10 ngày trước.
+- Activation key và broker secret của các thiết bị `demo-*` được sinh mới mỗi lần và chỉ in ra màn hình. Nạp chúng vào ESP32 thật bằng `firmware/tools/flash_identity.py`, hoặc dùng cho bộ giả lập.
+
+```bash
+$C exec -e DEMO_PASSWORD='<mật khẩu>' backend npm run seed:demo   # staging bắt buộc DEMO_PASSWORD; máy dev: npm run seed:demo
+$C exec backend npm run job:run -- <job> # chạy ngay một job nền thay cho chờ lịch của nó
+```
+
+Tài khoản demo: cả 6 tài khoản dùng chung mật khẩu `DEMO_PASSWORD`, kể cả 3 tài khoản `npm run seed` đã tạo. Trên staging (`NODE_ENV=production`) script từ chối chạy khi thiếu biến này; trên máy dev và CI mặc định là `Test1234!`. Test E2E đọc cùng biến đó.
+
+| Tài khoản | Vai trò |
+| --- | --- |
+| owner@ | Farm Owner của "Trại yến Demo A2" |
+| expert@ | Domain Expert của farm đó |
+| tech@ | Farm Technician, thợ chính nhà A, B, C |
+| tech2@ | Farm Technician, thợ chính nhà D |
+| admin@ | Administrator |
+| owner2@ | Farm Owner của "Trại yến không chuyên gia" (BR-22) |
+
+| DS | Seed dựng sẵn | Làm trực tiếp lúc demo | Job (`job:run`) | E2E (`frontend/e2e/`) |
+| --- | --- | --- | --- | --- |
+| 01 | Nhà A, controller `demo-ctl-a1` (nạp vào ESP32 thật) | Rút mạng router 5 phút; Farm Owner bật bơm 1 phút (cần xác nhận vì có `SENSOR_FAULT`) | — | — |
+| 02 | `SENSOR_FAULT` đang mở ở tầng A | Bơm 31 phút; bơm không xác nhận; chuyên gia bật relay | — | `ds-01-02` |
+| 03 | Nhà B có thợ chính | Bộ giả lập gửi `MISTING_INEFFECTIVE` (simulator `--alerts`), chờ 15 phút; thợ sửa, ghi nguyên nhân và ảnh | `escalation`, `recovery` nếu không muốn chờ | `ds-03-04` |
+| 04 | Work Order nhà B đang `VERIFYING` | Gửi lại `MISTING_INEFFECTIVE` của `demo-ctl-b1`; tech2@ xác nhận cảnh báo | — | `ds-03-04` |
+| 05 | Nhà B: camera `demo-cam-b1`, 7 ngày số đếm, tỷ lệ về ≈ 97 % | Đăng ký AI node thật vào nhà B, phát clip cửa ra vào trong khung phiên | — | — |
+| 06 | Như DS-05 | Tắt AI node | — | — |
+| 07 | `NOISE_ANOMALY` ở tầng A chờ kết luận, đã gửi yêu cầu kiểm tra tại chỗ cho thợ | Phát tiếng ồn cạnh cảm biến; thợ ghi kiểm tra; chuyên gia bác bỏ có lý do | — | `ds-07-08` |
+| 08 | Như DS-07 | Farm Owner ghi kết luận | — | `ds-07-08` |
+| 09 | Tầng A: 14 ngày dữ liệu phun sương, có gợi ý hệ số | Farm Owner sửa ngưỡng và gửi gợi ý; chuyên gia chỉnh và duyệt | — | `ds-09-10` |
+| 10 | Như DS-09 | Farm Owner áp gợi ý trực tiếp | — | `ds-09-10` |
+| 11 | Nhà C, ngày hôm kia: chim về 65 % so với nền 96 %, độ ẩm trong ngưỡng 85 % thời gian; đã đánh giá → `ACTION` | Thợ chấm ngày (trước khi thấy trạng thái); tải PDF, CSV | `health <ngày>` để tính lại | `ds-11-12` |
+| 12 | Nhà C, hôm qua: phiên chiều không đầy đủ → `INSUFFICIENT_DATA` | Mở ngày đó | `health <ngày>` | `ds-11-12` |
+| 13 | Kế hoạch bơm 500 giờ, bộ đếm `demo-ctl-a1` ở 499 giờ | Chạy bơm thêm 1 giờ (ESP32 thật hoặc bộ giả lập); thợ làm checklist | `relay-usage`, rồi `maintenance` | `ds-13-14` |
+| 14 | Kế hoạch béc phun đến hạn từ 7 ngày, Work Order phòng ngừa đang mở | Thợ ghi một mục checklist "hỏng" | `maintenance` → `OVERDUE` (job mỗi giờ cũng tự làm) | `ds-13-14` |
+| 15 | Luật NH3 ≥ 4 giờ/ngày trong 3 ngày; nhà A 3 ngày gần nhất 4,5 giờ; lần chấp nhận trước từ 10 ngày | Farm Owner chấp nhận khuyến nghị mới | `recommendations` (xét hôm qua) → khuyến nghị; `effects` → hiệu quả của lần trước (−3,5 giờ) | `ds-15-16` |
+| 16 | Khuyến nghị đang mở ở nhà C (luật thời gian trong ngưỡng dưới 90 %) | Từ chối không lý do | `expire 8` (như đã qua 8 ngày) → `EXPIRED` | `ds-15-16` |
+
+Giới hạn đã biết:
+- DS-03: 15 phút sau seed, cảnh báo của nhà B leo thang tới Farm Owner (`alertEscalation.job`), nên muốn trình bày "thợ nhận trước" thì chạy `seed:demo` ngay trước DS-03. Test E2E chỉ kiểm điều không đổi theo thời gian.
+- DS-04: Work Order của nhà B không có telemetry, nên giữ `VERIFYING` cho tới khi cảnh báo tự đóng sau 60 phút không lặp lại (`alertEscalation.job`) cộng 10 phút kiểm. Vì vậy phải chạy `seed:demo` trong vòng 1 giờ trước DS-04.
+- DS-14: kế hoạch tự sang `OVERDUE` ở lần chạy kế của job bảo trì mỗi giờ.
+- Nhà A không có camera, nên mọi ngày của nó là `INSUFFICIENT_DATA` (thiếu số đếm). Luật NH3 chỉ đọc số giờ không khí vượt ngưỡng, không bị ảnh hưởng.
+
+E2E: job CI `e2e` chạy `seed`, rồi `seed:demo`, rồi `npx playwright test`. Các file `ds-*.spec.ts` gọi API qua proxy `/api` của web (đúng đường app gọi) và kiểm kết quả mong đợi của từng DS. Màn hình của từng DS vẫn được kiểm bằng mắt ở buổi tổng duyệt.
 
 ## 6. Staging hỏng thì làm gì
 
@@ -199,4 +239,4 @@ Lệnh dùng chung: `C="docker compose -f deploy/docker-compose.staging.yml --en
 | Kiệt — backend, MongoDB, migration, seed, sao lưu | `curl https://<DOMAIN>/api/health`; đăng nhập được; bản sao lưu đêm qua có trong `~/backup` và trên Drive | API 502 → `$C logs backend` (thiếu biến môi trường thì báo ngay lúc khởi động), `$C restart backend`. Dữ liệu hỏng sau triển khai → khôi phục bản trước triển khai (mục 3). Cron sao lưu báo lỗi → chạy tay `sh deploy/staging-backup.sh` xem thông báo |
 | Nhi — bản build web, màn Farm Owner và Admin | Mở trang tổng quan, cảnh báo, Work Order, bảo trì của Farm Owner; trang người dùng và kho thiết bị của Admin | Trang trắng hoặc lỗi tải file JS → build lại ảnh Nginx (`$C up -d --build nginx`), xoá cache trình duyệt (PWA giữ bản cũ). Gọi API lỗi CORS → `CORS_ORIGIN` phải là `https://<DOMAIN>` |
 | Len — bản build mobile, push | Bản APK `preview` đăng nhập được, nhận push của một cảnh báo thử, mở được live stream | App không nối được → biến `EXPO_PUBLIC_*` của môi trường `preview` trên EAS (mục 3), build lại. Không có push → backend thiếu `deploy/secrets/firebase-service-account.json` (log backend báo khi khởi động). Live stream không mở → thử `https://<DOMAIN>/hls/<path>/index.m3u8?token=…` trên trình duyệt |
-| Tuấn — màn chuyên gia, console thiết bị của Admin, E2E | Hàng chờ kết luận, tham số phát hiện, luật khuyến nghị; console thiết bị của Admin; chạy bộ E2E trước mỗi buổi tổng duyệt | E2E trên staging: chạy `npm run seed:demo` trong container backend rồi `E2E_BASE_URL=https://<DOMAIN> npx playwright test` ở `frontend/`. Test hỏng vì dữ liệu đã đổi ở lần chạy trước → chạy lại `seed:demo` |
+| Tuấn — màn chuyên gia, console thiết bị của Admin, E2E | Hàng chờ kết luận, tham số phát hiện, luật khuyến nghị; console thiết bị của Admin; chạy bộ E2E trước mỗi buổi tổng duyệt | E2E trên staging: chạy `seed:demo` trong container backend (mục 5) rồi `DEMO_PASSWORD=<mật khẩu> E2E_BASE_URL=https://<DOMAIN> npx playwright test` ở `frontend/`. Test hỏng vì dữ liệu đã đổi ở lần chạy trước → chạy lại `seed:demo` |

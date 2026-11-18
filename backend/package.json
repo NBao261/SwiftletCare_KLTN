@@ -7,6 +7,8 @@
     "start": "node dist/index.js",
     "dev": "tsx watch --include \"./src/**/*\" src/index.ts",
     "seed": "tsx src/scripts/seed.script.ts",
+    "seed:demo": "tsx src/scripts/seed-demo.script.ts",
+    "job:run": "tsx src/scripts/run-job.script.ts",
     "mdns": "tsx src/scripts/mdns-responder.script.ts",
     "migrate:retention": "tsx src/scripts/migrate-retention.script.ts",
     "migrate:remove-sales": "tsx src/scripts/migrate-remove-sales.script.ts",
