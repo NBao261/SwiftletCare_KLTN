@@ -326,6 +326,33 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect(taken.body.error.message).toContain('đã được đăng ký lại')
   })
 
+  // B-06 (todo-audit-1118) — danh sách để Farm Owner tìm thiết bị gỡ nhầm, cùng điều kiện với restore
+  it('removed=recent: thiết bị gỡ trong 24 giờ có kèm hạn khôi phục; quá 24 giờ hoặc đã bị thay thì không; Admin → 403', async () => {
+    const { ownerToken, adminToken, nodeId, owner } = await installed()
+    const recent = (token: string) => request(app).get('/devices/sensor-nodes?removed=recent').set('Authorization', `Bearer ${token}`)
+    expect((await recent(ownerToken).expect(200)).body.data).toEqual([])
+
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, ownerToken, { reason: 'Bấm nhầm' }).expect(200)
+    const listed = (await recent(ownerToken).expect(200)).body.data
+    expect(listed.map((node: { _id: string }) => node._id)).toEqual([nodeId])
+    const removedAt = (await SensorNode.findById(nodeId))!.decommissioned_at!.getTime()
+    expect(new Date(listed[0].restorable_until).getTime()).toBe(removedAt + RESTORE_WINDOW_MS)
+    // Danh sách thường vẫn không có thiết bị đã gỡ
+    const live = await request(app).get('/devices/sensor-nodes').set('Authorization', `Bearer ${ownerToken}`).expect(200)
+    expect(live.body.data).toHaveLength(0)
+    await recent(adminToken).expect(403)
+    await request(app).get('/devices/sensor-nodes?removed=all').set('Authorization', `Bearer ${ownerToken}`).expect(422)
+
+    await SensorNode.updateOne({ _id: nodeId }, { decommissioned_at: new Date(Date.now() - RESTORE_WINDOW_MS - 1000) })
+    expect((await recent(ownerToken).expect(200)).body.data).toEqual([])
+
+    // Đã có thiết bị khác đang chạy thế chỗ → restore trả 409 nên không liệt kê
+    await SensorNode.updateOne({ _id: nodeId }, { decommissioned_at: null })
+    const { secret_key } = await createProvisionedDevice(String(owner._id), { device_id: 'node_400', kind: 'SENSOR' })
+    await post(`/devices/sensor-nodes/${nodeId}/replace`, ownerToken, { new_device_id: 'node_400', secret_key, reason: 'Thay' }).expect(201)
+    expect((await recent(ownerToken).expect(200)).body.data).toEqual([])
+  })
+
   it('thay thiết bị đang chạy không cần force riêng', async () => {
     const { ownerToken, nodeId, owner } = await installed()
     await SensorNode.updateOne({ _id: nodeId }, { status: 'ONLINE', last_heartbeat: new Date() })
