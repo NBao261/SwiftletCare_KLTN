@@ -30,8 +30,14 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
  * FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể, chỉ xem cấu trúc/thiết bị nhà đó + gửi RESTART.
  */
 
-/** Màn quyết định của Chuyên gia nuôi yến (/domain-expert/*). */
+/** Hàng đợi việc của Chuyên gia nuôi yến (/domain-expert/queue) — chỉ Domain Expert. */
 export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
+
+/**
+ * Các trang quyết định còn lại của /domain-expert/*: Farm Owner cũng vào (Report 4 §5.4, Report 3 §2.4 "read ¹",
+ * EXPERT-FR-009) — ghi được khi farm chưa có chuyên gia (BR-22), còn lại chỉ xem; xem useExpertDecisionRights.
+ */
+export const EXPERT_DECISION_ROLES: Role[] = ['DOMAIN_EXPERT', 'FARM_OWNER']
 
 /** Việc chỉ Farm Owner làm: điều khiển relay (/dashboard/scada). */
 export const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
@@ -120,16 +126,16 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/health',           roles: FARM_SIDE_ROLES },
   { path: '/work-orders',      roles: FARM_SIDE_ROLES },
   { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
-  { path: '/domain-expert/alert-verdicts',  roles: EXPERT_ROLES },
-  { path: '/domain-expert/reviews',         roles: EXPERT_ROLES },
-  { path: '/domain-expert/tuning',          roles: EXPERT_ROLES },
-  { path: '/domain-expert/counting-schedule',     roles: EXPERT_ROLES },
-  { path: '/domain-expert/counting-ring',         roles: EXPERT_ROLES },
-  { path: '/domain-expert/weather-rules',         roles: EXPERT_ROLES },
-  { path: '/domain-expert/reports',               roles: EXPERT_ROLES },
-  { path: '/domain-expert/profiles',              roles: EXPERT_ROLES },
-  { path: '/domain-expert/recommendation-rules',  roles: EXPERT_ROLES },
-  { path: '/domain-expert/history',               roles: EXPERT_ROLES },
+  { path: '/domain-expert/alert-verdicts',  roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/reviews',         roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/tuning',          roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/counting-schedule',     roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/counting-ring',         roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/weather-rules',         roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/reports',               roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/profiles',              roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/recommendation-rules',  roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/history',               roles: EXPERT_DECISION_ROLES },
   { path: '/settings',         roles: ALL_ROLES },
 ]
 
