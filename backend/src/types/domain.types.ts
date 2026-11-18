@@ -199,6 +199,8 @@ export interface HeartbeatPayload {
   ip?: string
   /** ENV-FR-027 — firmware ≥ 2.1.0: phiên bản cấu hình đang chạy; thiếu = firmware cũ (UNKNOWN) */
   appliedConfigVersion?: number
+  /** BR-32, BR-45 — firmware ≥ 2.3.1: dòng bình thường đã học (A) của tải nào đã học xong */
+  actuatorBaseline?: { misting?: number; ventilation?: number }
   /** Report 4 §7.2 — heartbeat của nút AI */
   modelVersion?: string
   fps?: number

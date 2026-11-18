@@ -364,6 +364,19 @@ describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 00
     expect(res.body.data).toMatchObject({ estimated: true, supply_voltage: { misting: 5, ventilation: 12 }, total: { misting_kwh: null, ventilation_kwh: 0.12, total_kwh: 0.12 } })
   })
 
+  it('BR-45: controller đã báo mức dòng bình thường thì khoảng dòng dưới 50 % mức đó không tính điện', async () => {
+    const { house, zone, node } = await seedFarm()
+    await SensorNode.updateOne({ _id: node._id }, { actuator_baseline: { ventilation_a: 1.0 } })
+    const month = previousVnMonth()
+    const start = new Date(month.start.getTime() + 6 * DAY)
+    // 1 giờ quạt chạy 1,0 A rồi 1 giờ quạt kẹt chỉ 0,3 A (dưới 50 %)
+    await Telemetry.insertMany(Array.from({ length: 241 }, (_, i) => ({
+      node_id: node._id, zone_id: zone._id, timestamp: new Date(start.getTime() + i * 30_000),
+      ventilation_on: true, fan_current_a: i < 120 ? 1.0 : 0.3,
+    })))
+    expect(await houseEnergyByMonth(house._id, month.start, month.end)).toEqual([{ month: month.label, misting_kwh: null, ventilation_kwh: 0.012 }])
+  })
+
   it('controller dời sang nhà khác: điện đã dùng vẫn thuộc nhà cũ, điện sau khi dời thuộc nhà mới', async () => {
     const { house, house2, zone, zone2, node } = await seedFarm()
     const month = previousVnMonth()
