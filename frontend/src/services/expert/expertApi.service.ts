@@ -49,6 +49,7 @@ export const expertApi = {
   getZone: (zoneId: string) =>
     api.get<ApiResponse<{
       _id: string
+      house_id: string
       name: string
       thresholds: ExpertThresholds
       fuzzy_tuning: ExpertFuzzyTuning
@@ -57,6 +58,10 @@ export const expertApi = {
 
   updateThresholds: (zoneId: string, thresholds: Partial<ExpertThresholds>) =>
     api.put<ApiResponse<{ _id: string; thresholds: ExpertThresholds }>>(`/farms/zones/${zoneId}/thresholds`, thresholds),
+
+  // EXPERT-FR-008 "reset to defaults" — backend dùng bộ mặc định của nó, web không giữ bản sao hằng số
+  resetDetectionTuning: (zoneId: string) =>
+    api.put<ApiResponse<{ _id: string; detection_tuning: ExpertDetectionTuning }>>(`/farms/zones/${zoneId}/detection-tuning/reset`),
 
   resetThresholds: (zoneId: string) =>
     api.put<ApiResponse<{ _id: string; thresholds: ExpertThresholds }>>(`/farms/zones/${zoneId}/thresholds/reset`, {}),

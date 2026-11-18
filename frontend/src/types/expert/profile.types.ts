@@ -14,8 +14,8 @@ export interface ProfileSpeakerSchedule {
   windows: SpeakerScheduleWindow[]
 }
 
-// detection_tuning trong hồ sơ bỏ return_rate_drop_pct (đó là bird counting, backend tự trừ)
-export type ProfileDetectionTuning = Omit<ExpertDetectionTuning, 'return_rate_drop_pct'>
+// detection_tuning trong hồ sơ: 5 tham số của Zone (mức giảm tỷ lệ chim về thuộc nhà, không có trong hồ sơ)
+export type ProfileDetectionTuning = ExpertDetectionTuning
 
 export interface ConfigProfileInput {
   name: string
