@@ -20,7 +20,9 @@ export interface AuditLogEntry {
   /** Tên tài khoản khi target_type='user' (backend tra sẵn); null với loại khác/tài khoản không còn */
   target_name?: string | null
   metadata?: Record<string, unknown>
-  ip_address?: string
+  source_ip?: string
+  client?: string
+  correlation_id?: string
   created_at: string
 }
 

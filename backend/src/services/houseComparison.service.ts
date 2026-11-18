@@ -1,3 +1,5 @@
+import { Types } from 'mongoose'
+import { HarvestCycle } from '@/models/harvestCycle.model'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { House } from '@/models/houseZone.model'
 import { houseDailyCounts, vnDate, type HouseDayCounts } from '@/services/birdCount.service'
@@ -32,7 +34,7 @@ export interface ComparisonRow {
   /** kWh ước tính của bơm và quạt (BR-45); null = không tải nào có dòng đo (not available) */
   energy_kwh: number | null
   energy: { misting_kwh: number | null; ventilation_kwh: number | null }
-  /** Sản lượng chu kỳ đã đóng gần nhất (BR-43) — chưa có tới khi có chu kỳ thu hoạch (G-26) */
+  /** BR-44 — sản lượng (g) chu kỳ đã đóng gần nhất: tổng của chu kỳ đóng gần nhất ở mỗi tầng (chu kỳ là của tầng, BR-43) */
   last_cycle_yield_g: number | null
   /** SYSTEM-FR-004 — mọi thiết bị của nhà là thiết bị giả lập (cùng cách tính với tổng quan) */
   simulated: boolean
@@ -62,15 +64,30 @@ export function sortComparison(rows: ComparisonRow[], key: ComparisonSortKey, or
   })
 }
 
+/**
+ * BR-44 — sản lượng chu kỳ đã đóng gần nhất của nhà. Chu kỳ thuộc từng tầng (BR-43), nên lấy chu kỳ đóng
+ * (CLOSED hoặc CONCLUDED) mới nhất của mỗi tầng rồi cộng; nhà chưa có chu kỳ đóng nào → null.
+ */
+export async function lastClosedCycleYield(houseId: unknown): Promise<number | null> {
+  const latest = await HarvestCycle.aggregate<{ weight: number }>([
+    // aggregate không tự đổi chuỗi sang ObjectId như find
+    { $match: { house_id: new Types.ObjectId(String(houseId)), status: { $in: ['CLOSED', 'CONCLUDED'] }, closing_harvest: { $exists: true } } },
+    { $sort: { end_date: -1 } },
+    { $group: { _id: '$zone_id', weight: { $first: '$closing_harvest.weight_grams' } } },
+  ])
+  return latest.length ? round1(latest.reduce((sum, row) => sum + row.weight, 0)) : null
+}
+
 async function houseRow(
   house: FarmHouse, period: { from: Date; to: Date; fromDate: string; toDate: string; prevFromDate: string },
   health: Map<string, Array<{ status: string; environment: number | null }>>,
   samples: Map<string, Parameters<typeof opsRow>[0]>, openAlerts: Map<string, number>,
 ): Promise<Omit<ComparisonRow, 'simulated'>> {
   const id = String(house._id)
-  const [counts, energyMonths] = await Promise.all([
+  const [counts, energyMonths, lastYield] = await Promise.all([
     houseDailyCounts(id, { from: period.prevFromDate, to: period.toDate }),
     houseEnergyByMonth(house._id, period.from, period.to),
+    lastClosedCycleYield(house._id),
   ])
   const days = health.get(id) ?? []
   const assessed = days.filter(d => d.status !== 'INSUFFICIENT_DATA')
@@ -90,7 +107,7 @@ async function houseRow(
     mttr_min: opsRow(samples.get(id) ?? []).mttr_min,
     energy_kwh: energy.total_kwh,
     energy: { misting_kwh: energy.misting_kwh, ventilation_kwh: energy.ventilation_kwh },
-    last_cycle_yield_g: null,
+    last_cycle_yield_g: lastYield,
   }
 }
 

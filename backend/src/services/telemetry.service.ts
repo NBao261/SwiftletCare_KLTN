@@ -12,6 +12,8 @@ import logger from '@/utils/logger.util'
 import type { TelemetryPayload, CurrentUser } from '@/types'
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+/** Sáu số đo của controller (Report 4 §7.2): thiếu hoặc null là cảm biến báo cũ hoặc lỗi */
+const SENSOR_FIELDS = ['temperature', 'humidity', 'light_lux', 'nh3_ppm', 'co2_ppm', 'sound_db'] as const
 
 /** GET /telemetry/zones/:id/latest – ENV-FR-004. Zone chưa có số đo nào → null (trạng thái rỗng, không phải lỗi) */
 export async function getLatest(zoneId: string, user: CurrentUser): Promise<ITelemetry | null> {
@@ -96,6 +98,8 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
   // tiếp — nếu cả 2 chiều đều ghi ngay, chỉ số dao động quanh ngưỡng mỗi giây
   // sẽ lại ghi mọi mẫu; như vậy dao động chỉ tốn tối đa ~2 bản ghi/10s.
   const anomaly = breaches.length > 0
+  // ENV-FR-004 — cảm biến controller không đọc được gửi null (NaN ở firmware): lưu là thiếu, ghi tên lại
+  const staleFields = SENSOR_FIELDS.filter(field => !isFiniteNumber(payload[field]))
   const last = lastPersisted.get(nodeId)
   const persist = isStale || !last || (anomaly && !last.anomaly) || sampleTime - last.at >= TELEMETRY_PERSIST_INTERVAL_MS
   if (persist) {
@@ -117,6 +121,9 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
       pump_current_a: isFiniteNumber(payload.pump_current_a) && payload.pump_current_a >= 0 ? payload.pump_current_a : undefined,
       fan_current_a:  isFiniteNumber(payload.fan_current_a) && payload.fan_current_a >= 0 ? payload.fan_current_a : undefined,
       is_anomaly: anomaly,
+      ...(staleFields.length > 0 && { stale_fields: staleFields }),
+      ...(anomaly && { anomaly_fields: [...new Set(breaches.map(b => b.metric))] }),
+      ...(payload.buffered && { buffered: true }),
     }).catch((err: { code?: number }) => {
       if (err.code === 11000) return null // bản QoS 1 giao lại, mẫu đã có
       throw err

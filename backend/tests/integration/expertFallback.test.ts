@@ -146,14 +146,14 @@ describe('BR-22 — Farm Owner làm thay chuyên gia', () => {
     // Thợ và chuyên gia chỉ thấy dòng thành viên của chính mình, nhưng cờ vẫn tính trên mọi thành viên của farm
     expect(await flagOf(asTech)).toBe(true)
     expect(await flagOf(tokenFor(expert._id, 'DOMAIN_EXPERT'))).toBe(true)
-    await User.updateOne({ _id: expert._id }, { is_active: false })
+    await User.updateOne({ _id: expert._id }, { status: 'LOCKED' })
     expect(await flagOf(asOwner)).toBe(false)
     expect(await flagOf(asTech)).toBe(false)
   })
 
   it('chuyên gia duy nhất bị khoá: Farm Owner làm thay cả 4 quyết định và nhận thông báo chờ kiểm chứng', async () => {
     const { owner, expert, farm, zone, alert, decisions } = await seed({ withExpert: true })
-    await User.updateOne({ _id: expert._id }, { is_active: false })
+    await User.updateOne({ _id: expert._id }, { status: 'LOCKED' })
 
     for (const decide of Object.values(decisions)) await decide().expect(200)
     expect((await Alert.findById(alert._id).lean())!.expert_verdict).toMatchObject({ role: 'FARM_OWNER' })

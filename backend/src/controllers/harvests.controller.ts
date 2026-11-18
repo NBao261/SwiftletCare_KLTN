@@ -18,7 +18,13 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
 
 /** GET /harvests/:id */
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
-  const batch = await harvestService.getHarvest(req.params.id, req.user)
+  const batch = await harvestService.getHarvestView(req.params.id, req.user)
+  res.json({ success: true, data: batch })
+})
+
+/** PUT /harvests/:id/photo – HARVEST-FR-001 (multipart, trường `photo`) */
+export const setPhoto = asyncHandler(async (req: Request, res: Response) => {
+  const batch = await harvestService.setHarvestPhoto(req.params.id, req.user, req.file)
   res.json({ success: true, data: batch })
 })
 

@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.12 (Review 2, final scope) |
+| Document version | 2.2.13 (Review 2, final scope) |
 | Date | 12/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -732,7 +732,7 @@ erDiagram
     ObjectId _id PK
     ObjectId user_id FK
     string title
-    object ref "type: ALERT | HEALTH_REPORT | HEALTH_DAY | EXPERT_DECISION | PARAMETER_REVIEW | COEFFICIENT_PROPOSAL | DEVICE_ACTION | INVITATION; id"
+    object ref "kind: alert | health_report | health_day | expert_decision | parameter_review | coefficient_proposal | work_order | device_action; id"
     date read_at
     date created_at
   }
@@ -987,6 +987,7 @@ The Iteration 1 database is carried into this design by idempotent scripts (`npm
 | `config_version` on zones, `applied_config_version` on controllers | `zones`, `sensornodes` | ENV-FR-027 |
 | Weekly zone reports moved into house reports with `kind` and zone sections | `zonehealthreports` → `househealthreports` | EXPERT-FR-005 |
 | Unused harvest state `ARCHIVED` removed; `nest_type`, `photo_object_key` | `harvestbatches` | HARVEST-FR-001 |
+| `ip_address` renamed `source_ip`; `before` and `after` copied out of `metadata` (`npm run migrate:erd-fields`, with the `users.status` row above) | `auditlogs` | AUTH-FR-007 |
 | `sla_hours` removed from the settings | `systemsettings` | Report 3 §8 |
 | New collections created empty | `pushtokens`, `househealthdays`, `weatherobservations`, `weathercompensations`, `parameterreviews`, `coefficientproposals` | ALERT-FR-002, ANALYTICS-FR-012, 013, ENV-FR-028, EXPERT-FR-010, 011 |
 
@@ -1882,6 +1883,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.13 | 18/11/2026 | Data model as built (G-14): `users.status` with the lock fields replaces `is_active` (the API keeps `is_active` and `deactivated_*` as derived names for the clients); audit rows carry `before`, `after`, `source_ip`, `client`, `correlation_id` (`X-Request-Id`); telemetry `stale_fields`, `anomaly_fields`, `buffered`; harvest `photo_object_key` (`PUT /harvests/{id}/photo`); notification `ref.kind` names as in the code, with `device_action`; migration row for the audit fields (Sections 6.1, 6.4) |
 | 2.2.12 | 18/11/2026 | k6 1.3.0 in the Testing row of the Technology Declaration (Section 3): the NFR-03 load script runs from a Docker image beside the device simulator (G-27) |
 | 2.2.11 | 18/11/2026 | Staging as built (G-17): one domain name instead of four, files on a backend volume instead of MinIO (the MinIO images are no longer published), Certbot v3.1.0, the compose, Dockerfile and certificate script paths; `/internal/*` kept out of the access log (Sections 3.2, 3.4, 11) |
 | 2.2.10 | 18/11/2026 | The AI node's retained `config` carries the session windows of the next 7 days (Section 7.2; G-12) |

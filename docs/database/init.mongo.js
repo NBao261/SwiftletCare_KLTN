@@ -243,7 +243,15 @@ ensureCollection("auditlogs", {
       "bsonType": ["objectId", "null"]
     },
     "metadata": {},
-    "ip_address": {
+    "before": {},
+    "after": {},
+    "source_ip": {
+      "bsonType": ["string", "null"]
+    },
+    "client": {
+      "bsonType": ["string", "null"]
+    },
+    "correlation_id": {
       "bsonType": ["string", "null"]
     },
     "_id": {
@@ -661,6 +669,9 @@ ensureCollection("harvestbatches", {
       "items": {
         "bsonType": "string"
       }
+    },
+    "photo_object_key": {
+      "bsonType": ["string", "null"]
     },
     "env_snapshot": {
       "bsonType": ["object", "null"],
@@ -1562,7 +1573,7 @@ ensureCollection("notifications", {
       "properties": {
         "kind": {
           "bsonType": "string",
-          "enum": ["alert", "health_report", "health_day", "expert_decision", "parameter_review", "coefficient_proposal", "work_order"]
+          "enum": ["alert", "health_report", "health_day", "expert_decision", "parameter_review", "coefficient_proposal", "work_order", "device_action"]
         },
         "id": {
           "bsonType": "objectId"
@@ -2234,6 +2245,21 @@ ensureCollection("telemetries", {
     "is_anomaly": {
       "bsonType": ["bool", "null"]
     },
+    "stale_fields": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "anomaly_fields": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "buffered": {
+      "bsonType": ["bool", "null"]
+    },
     "_id": {
       "bsonType": ["objectId", "null"]
     }
@@ -2267,16 +2293,17 @@ ensureCollection("users", {
     "avatar_url": {
       "bsonType": ["string", "null"]
     },
-    "is_active": {
-      "bsonType": ["bool", "null"]
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["ACTIVE", "LOCKED", "DELETION_REQUESTED", "DELETED", null]
     },
     "must_change_password": {
       "bsonType": ["bool", "null"]
     },
-    "deactivated_at": {
+    "locked_at": {
       "bsonType": ["date", "null"]
     },
-    "deactivated_reason": {
+    "locked_reason": {
       "bsonType": ["string", "null"]
     },
     "notification_preferences": {
@@ -2405,6 +2432,7 @@ ensureCollection("users", {
 })
 db.getCollection("users").createIndex({"email":1}, {"unique":true})
 db.getCollection("users").createIndex({"telegram_link_code_hash":1}, {"sparse":true})
+db.getCollection("users").createIndex({"status":1})
 
 // ── weathercompensations (model WeatherCompensation) ──
 ensureCollection("weathercompensations", {

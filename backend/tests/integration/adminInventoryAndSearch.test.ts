@@ -152,8 +152,8 @@ describe('GET /admin/users — tìm kiếm', () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     await mkUser('nguyen.van.a@test.vn', 'FARM_TECHNICIAN', { full_name: 'Nguyễn Văn A', phone: '0911111111' })
     await mkUser('tran.b@test.vn', 'FARM_TECHNICIAN', { full_name: 'Trần B' })
-    await mkUser('locked@test.vn', 'FARM_OWNER', { is_active: false })
-    await mkUser('deleted-x@swiftletcare.local', 'FARM_OWNER', { is_active: false, deleted_at: new Date() })
+    await mkUser('locked@test.vn', 'FARM_OWNER', { status: 'LOCKED' })
+    await mkUser('deleted-x@swiftletcare.local', 'FARM_OWNER', { status: 'DELETED', deleted_at: new Date() })
     return tokenFor(admin._id, 'ADMIN')
   }
   const emails = (res: request.Response) => (res.body.data as Array<{ email: string }>).map(u => u.email).sort()

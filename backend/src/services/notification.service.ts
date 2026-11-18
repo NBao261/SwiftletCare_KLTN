@@ -1,4 +1,4 @@
-import { User } from '@/models/user.model'
+import { User, SIGN_IN_FILTER, canSignIn } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { Notification, type NotificationRefKind } from '@/models/notification.model'
 import { sendPushToUser } from '@/services/push.service'
@@ -50,7 +50,7 @@ export async function findRecipients(farmId: string) {
 
   const members = farm.members.filter(m => m.role !== 'DOMAIN_EXPERT' && m.role !== 'FARM_TECHNICIAN')
   const userIds = [farm.owner_id, ...members.map(m => m.user_id)]
-  return User.find({ _id: { $in: userIds }, is_active: true }).lean()
+  return User.find({ _id: { $in: userIds }, ...SIGN_IN_FILTER }).lean()
 }
 
 /** Domain Expert của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`) */
@@ -68,7 +68,7 @@ async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   const farm = await Farm.findById(alert.farm_id).select('members')
   if (!farm) return
   const experts = await activeExpertIds(farm)
-  // findRecipients đã lọc is_active
+  // findRecipients đã bỏ tài khoản LOCKED, DELETED
   const deciders = experts.length > 0 ? experts : (await findRecipients(String(alert.farm_id))).map(u => String(u._id))
   await Promise.all(deciders.map(id => createInAppNotification(id, {
     title: `Cảnh báo chờ kiểm chứng: ${alert.title}`,
@@ -98,7 +98,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     )
   }
   const recipients = opts.recipientIds
-    ? await User.find({ _id: { $in: opts.recipientIds }, is_active: true }).lean()
+    ? await User.find({ _id: { $in: opts.recipientIds }, ...SIGN_IN_FILTER }).lean()
     : await findRecipients(String(alert.farm_id))
   if (recipients.length === 0) {
     logger.warn('Cảnh báo không có người nhận', { alertId: String(alert._id), farmId: String(alert.farm_id) })
@@ -182,12 +182,12 @@ export interface NotifyUserOptions {
  */
 export async function notifyUser(userId: string, message: UserNotification, opts: NotifyUserOptions = {}): Promise<void> {
   try {
-    const user = await User.findById(userId).select('email is_active notification_preferences telegram_chat_id').lean()
+    const user = await User.findById(userId).select('email status notification_preferences telegram_chat_id').lean()
     if (!user) return
 
     // Tài khoản bị khoá/đã xoá không nhận push hay Telegram (chat id vẫn còn sau khi khoá);
     // email thì vẫn gửi — đó là đường báo cho chính họ việc bị khoá/xoá.
-    const emailOnly = opts.emailOnly || user.is_active === false
+    const emailOnly = opts.emailOnly || !canSignIn(user)
     // Hộp thông báo lỗi không được làm mất Telegram/email phía sau
     if (!emailOnly) {
       await createInAppNotification(String(user._id), message).catch((err: Error) =>
@@ -209,7 +209,7 @@ export async function notifyUser(userId: string, message: UserNotification, opts
 /** Thông báo tới mọi Administrator đang hoạt động (VD: có yêu cầu xoá tài khoản mới) */
 export async function notifyAdmins(message: UserNotification): Promise<void> {
   try {
-    const admins = await User.find({ role: 'ADMIN', is_active: true }).select('_id').lean()
+    const admins = await User.find({ role: 'ADMIN', ...SIGN_IN_FILTER }).select('_id').lean()
     await Promise.all(admins.map(a => notifyUser(String(a._id), message)))
   } catch (err) {
     logger.warn('Gửi thông báo tới Admin thất bại', { err, title: message.title })

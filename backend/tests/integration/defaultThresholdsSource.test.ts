@@ -46,7 +46,7 @@ const tokenOf = (u: { _id: unknown; role: string }) =>
 /** Farm có 1 zone mang ngưỡng `thresholds`; `expert` thêm 1 Domain Expert vào farm */
 async function seedFarm(name: string, thresholds: Partial<typeof DEFAULT_THRESHOLDS>, opts: { expert?: boolean; expertActive?: boolean } = {}) {
   const owner = await makeUser('FARM_OWNER')
-  const expert = opts.expert ? await makeUser('DOMAIN_EXPERT', { is_active: opts.expertActive ?? true }) : undefined
+  const expert = opts.expert ? await makeUser('DOMAIN_EXPERT', { status: opts.expertActive === false ? 'LOCKED' : 'ACTIVE' }) : undefined
   const farm = await Farm.create({
     name, address: 'x', owner_id: owner._id,
     members: [{ user_id: owner._id, is_primary: true }, ...(expert ? [{ user_id: expert._id, role: 'DOMAIN_EXPERT' }] : [])],

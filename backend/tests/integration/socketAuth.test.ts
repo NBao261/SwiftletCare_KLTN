@@ -70,7 +70,7 @@ describe('verifySocketToken', () => {
     const token = sign(String(user._id))
     await verifySocketToken(token) // hợp lệ trước khi khoá
 
-    user.is_active = false
+    user.status = 'LOCKED'
     await user.save()
 
     await expect(verifySocketToken(token)).rejects.toThrow('account inactive')
@@ -104,7 +104,7 @@ describe('initSocket wiring (socket.io mocked)', () => {
   })
 
   it('the auth middleware refuses a locked account even though the token is still valid', async () => {
-    const user = await User.create({ email: 'locked@test.vn', password_hash: 'password123', full_name: 'L', role: 'FARM_OWNER', is_active: false })
+    const user = await User.create({ email: 'locked@test.vn', password_hash: 'password123', full_name: 'L', role: 'FARM_OWNER', status: 'LOCKED' })
     const err = await authenticate(socketWith(sign(String(user._id))))
     expect(err?.message).toBe('Unauthorized: account inactive')
   })

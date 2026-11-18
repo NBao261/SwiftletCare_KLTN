@@ -166,7 +166,7 @@ describe('PUT /admin/users/:id/status — boolean coercion', () => {
       .send({ is_active: 'false' })
       .expect(400)
 
-    expect((await User.findById(target._id))!.is_active).toBe(true)
+    expect((await User.findById(target._id))!.status).toBe('ACTIVE')
   })
 
   it('locks the account with reason and timestamp when is_active is the string "0"', async () => {
@@ -180,9 +180,9 @@ describe('PUT /admin/users/:id/status — boolean coercion', () => {
       .expect(200)
 
     const locked = (await User.findById(target._id))!
-    expect(locked.is_active).toBe(false)
-    expect(locked.deactivated_reason).toBe('Spam đơn hàng')
-    expect(locked.deactivated_at).toBeInstanceOf(Date)
+    expect(locked.status).toBe('LOCKED')
+    expect(locked.locked_reason).toBe('Spam đơn hàng')
+    expect(locked.locked_at).toBeInstanceOf(Date)
   })
 
   it('rejects a non-boolean is_active', async () => {
@@ -253,7 +253,7 @@ describe('PUT /admin/delete-requests/:id/complete', () => {
     await request(app)
       .put(`/admin/delete-requests/${tech._id}/complete`).set('Authorization', `Bearer ${token}`).send({})
       .expect(200)
-    expect((await User.findById(tech._id))!.is_active).toBe(false)
+    expect((await User.findById(tech._id))!.status).toBe('DELETED')
   })
 })
 

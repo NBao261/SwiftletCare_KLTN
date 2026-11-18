@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
-import { User, IUser } from '@/models/user.model'
+import { User, IUser, canSignIn } from '@/models/user.model'
 import { logAction } from '@/services/auditLog.service'
 import { resetCodeMail, sendMail } from '@/services/mail.service'
 import { notifyAdmins } from '@/services/notification.service'
@@ -58,10 +58,10 @@ export interface LoginInput { email: string; password: string }
  * tài khoản người khác.
  */
 async function assertLoginAllowed(user: IUser): Promise<void> {
-  if (user.is_active) return
+  if (canSignIn(user)) return
 
   await logAction(String(user._id), 'LOGIN_FAILED', 'user', String(user._id), { reason: 'ACCOUNT_DISABLED' })
-  const reason = user.deactivated_reason ?? null
+  const reason = user.locked_reason ?? null
   throw new AppError(
     403, 'ACCOUNT_DISABLED',
     reason ? `Tài khoản đã bị khoá. Lý do: ${reason}` : 'Tài khoản đã bị khoá',
@@ -254,6 +254,8 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
     throw new AppError(409, 'CONFLICT', 'Bạn đã gửi yêu cầu xoá tài khoản trước đó, đang chờ xử lý')
   }
 
+  // SM-14 ACTIVE → DELETION_REQUESTED
+  user.status = 'DELETION_REQUESTED'
   user.deletion_requested_at = new Date()
   await user.save()
 
@@ -277,6 +279,8 @@ export async function cancelAccountDeletion(userId: string): Promise<IUser> {
     throw new AppError(409, 'CONFLICT', 'Bạn chưa gửi yêu cầu xoá tài khoản nào')
   }
 
+  // SM-14 DELETION_REQUESTED → ACTIVE; tài khoản đang bị khoá vẫn khoá
+  if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
   await user.save()
