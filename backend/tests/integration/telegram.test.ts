@@ -145,6 +145,36 @@ describe('liên kết bot Telegram', () => {
   })
 })
 
+describe('GET /auth/me — đọc lại tài khoản sau khi đổi ngoài màn hình (todo-audit-1118 B-01)', () => {
+  const me = (user: { _id: unknown }) => request(app).get('/auth/me').set('Authorization', `Bearer ${tokenOf(user)}`)
+
+  it('telegram_linked đổi ngay sau /start của bot; không lộ chat id, mã liên kết, hash hay refresh token', async () => {
+    const user = await mkUser()
+    expect((await me(user).expect(200)).body.data.telegram_linked).toBe(false)
+
+    await start((await link(user)).code)
+
+    const body = (await me(user).expect(200)).body.data
+    expect(body).toMatchObject({ _id: String(user._id), email: user.email, telegram_linked: true })
+    for (const field of ['telegram_chat_id', 'telegram_link_code_hash', 'password_hash', 'refresh_tokens', 'password_reset_token_hash']) {
+      expect(body).not.toHaveProperty(field)
+    }
+  })
+
+  it('deletion_requested_at có khi gửi yêu cầu xoá và mất khi huỷ (AUTH-FR-012, §6.14)', async () => {
+    const user = await mkUser()
+    await request(app).post('/auth/delete-request').set('Authorization', `Bearer ${tokenOf(user)}`).expect(200)
+    expect((await me(user).expect(200)).body.data.deletion_requested_at).toEqual(expect.any(String))
+
+    await request(app).delete('/auth/delete-request').set('Authorization', `Bearer ${tokenOf(user)}`).expect(200)
+    expect((await me(user).expect(200)).body.data.deletion_requested_at ?? null).toBeNull()
+  })
+
+  it('không có token → 401', async () => {
+    await request(app).get('/auth/me').expect(401)
+  })
+})
+
 describe('gửi cảnh báo qua Telegram', () => {
   const NIGHT = { start: '00:00', end: '24:00' } // luôn trong giờ im lặng
   const DAY = { start: '00:00', end: '00:00' }   // không bao giờ im lặng

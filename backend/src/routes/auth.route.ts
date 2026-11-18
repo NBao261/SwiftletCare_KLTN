@@ -40,6 +40,8 @@ router.put(
 
 /** POST /auth/logout – AUTH-FR-006 */
 router.post('/logout', authenticate, authController.logout)
+// Đọc lại tài khoản sau khi liên kết Telegram qua bot hoặc gửi/huỷ yêu cầu xoá (todo-audit-1118 B-01)
+router.get('/me', authenticate, authController.me)
 
 /** POST /auth/forgot-password – AUTH-FR-009 */
 router.post('/forgot-password', passwordResetLimiter, [body('email').isEmail()], validate, authController.forgotPassword)

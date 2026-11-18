@@ -69,6 +69,17 @@ async function assertLoginAllowed(user: IUser): Promise<void> {
   )
 }
 
+/**
+ * GET /auth/me — tài khoản của người đang đăng nhập, cùng dạng `user` của login (`toJSON` ẩn hash, mã, chat id).
+ * Client đọc lại sau những thay đổi không đi qua màn hình của nó: liên kết Telegram qua bot (ALERT-FR-013),
+ * gửi hay huỷ yêu cầu xoá (AUTH-FR-012, Report 3 §6.14) — todo-audit-1118 B-01.
+ */
+export async function getCurrentUser(userId: string): Promise<IUser> {
+  const user = await User.findById(userId)
+  if (!user) throw UnauthorizedError('Tài khoản không còn tồn tại')
+  return user
+}
+
 /** AUTH-FR-002, AUTH-FR-003 */
 export async function loginUser(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: normalizeEmail(input.email) })
