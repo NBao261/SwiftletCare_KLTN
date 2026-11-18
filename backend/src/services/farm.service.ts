@@ -23,8 +23,9 @@ import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import {
-  assertValidBirdCountTuning, assertValidDetectionTuning, pickBirdCountTuning,
+  assertOnlyKeys, assertValidBirdCountTuning, assertValidDetectionTuning, pickBirdCountTuning,
   pickDetectionTuning, resolveBirdCountTuning, resolveDetectionTuning,
+  BIRD_COUNT_TUNING_KEYS, DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DETECTION_TUNING_KEYS,
   DEFAULT_HEALTH_LEVELS, assertValidHealthLevels, pickHealthLevels, resolveHealthLevels,
 } from '@/utils/detectionTuning.util'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
@@ -659,11 +660,15 @@ export async function applyFuzzyTuning(
  * lưu lịch sử (người sửa, role, thời điểm, cũ/mới), gửi 5 tham số xuống ESP32
  * qua config/update (firmware kẹp lại rồi lưu NVS). Mức giảm tỷ lệ chim về chỉnh theo House.
  */
-export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
+export async function updateZoneDetectionTuning(
+  zoneId: string, user: CurrentUser, updates: Record<string, unknown>, what = 'chỉnh tham số phát hiện',
+): Promise<IZone> {
   const { zone, house, farm } = await assertZoneAccess(zoneId, user)
   // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
   await assertExpertDecision(farm, user)
 
+  assertOnlyKeys(DETECTION_TUNING_KEYS, updates, keys => (keys.includes('return_rate_drop_pct')
+    ? ' — mức giảm tỷ lệ chim về chỉnh theo nhà: PUT /farms/houses/:houseId/bird-count-tuning' : ''))
   const picked = pickDetectionTuning(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
   const oldValues = resolveDetectionTuning(zone.detection_tuning)
@@ -683,9 +688,17 @@ export async function updateZoneDetectionTuning(zoneId: string, user: CurrentUse
     before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'chỉnh tham số phát hiện', place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
+    what, place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
   })
   return zone
+}
+
+/**
+ * EXPERT-FR-008 "reset to defaults" — 5 tham số của Zone về mặc định (`DEFAULT_DETECTION_TUNING`), cùng quyền,
+ * lịch sử, audit, thông báo và cấu hình mới gửi xuống thiết bị như khi sửa tay (todo-audit-1118 B-05).
+ */
+export function resetZoneDetectionTuning(zoneId: string, user: CurrentUser): Promise<IZone> {
+  return updateZoneDetectionTuning(zoneId, user, { ...DEFAULT_DETECTION_TUNING }, 'khôi phục mặc định tham số phát hiện')
 }
 
 /**
@@ -755,11 +768,14 @@ export async function setHouseStage(houseId: string, user: CurrentUser, stage: H
   return presentHouse(house, user)
 }
 
-export async function updateHouseBirdCountTuning(houseId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<HouseListItem> {
+export async function updateHouseBirdCountTuning(
+  houseId: string, user: CurrentUser, updates: Record<string, unknown>, what = 'chỉnh mức giảm tỷ lệ chim về',
+): Promise<HouseListItem> {
   const { house, farm } = await assertHouseAccess(houseId, user)
   // BR-22 — Farm Owner chỉ chỉnh thay khi farm chưa có chuyên gia
   await assertExpertDecision(farm, user)
 
+  assertOnlyKeys(BIRD_COUNT_TUNING_KEYS, updates, () => ' — tham số phát hiện của Zone: PUT /farms/zones/:zoneId/detection-tuning')
   const picked = pickBirdCountTuning(updates)
   if (Object.keys(picked).length === 0) throw BadRequestError('Không có tham số nào để cập nhật')
   const oldValues = resolveBirdCountTuning(house.bird_count_tuning)
@@ -778,7 +794,12 @@ export async function updateHouseBirdCountTuning(houseId: string, user: CurrentU
     before: oldValues, after: merged, house_id: String(house._id),
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'chỉnh mức giảm tỷ lệ chim về', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
+    what, place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
   })
   return presentHouse(house, user)
+}
+
+/** EXPERT-FR-008 "reset to defaults" — mức giảm tỷ lệ chim về của nhà về mặc định (todo-audit-1118 B-05) */
+export function resetHouseBirdCountTuning(houseId: string, user: CurrentUser): Promise<HouseListItem> {
+  return updateHouseBirdCountTuning(houseId, user, { ...DEFAULT_BIRD_COUNT_TUNING }, 'khôi phục mặc định mức giảm tỷ lệ chim về')
 }

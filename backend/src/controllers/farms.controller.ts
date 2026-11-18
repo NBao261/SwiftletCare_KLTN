@@ -169,6 +169,18 @@ export const updateBirdCountTuning = asyncHandler(async (req: Request, res: Resp
   res.json({ success: true, data: house })
 })
 
+/** PUT /farms/zones/:zoneId/detection-tuning/reset – EXPERT-FR-008 */
+export const resetDetectionTuning = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.resetZoneDetectionTuning(req.params.zoneId, req.user)
+  res.json({ success: true, data: zone })
+})
+
+/** PUT /farms/houses/:houseId/bird-count-tuning/reset – EXPERT-FR-008 */
+export const resetBirdCountTuning = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.resetHouseBirdCountTuning(req.params.houseId, req.user)
+  res.json({ success: true, data: house })
+})
+
 /** GET /farms/houses/:houseId/counting-schedule – VISION-FR-019 */
 export const getCountingSchedule = asyncHandler(async (req: Request, res: Response) => {
   const schedule = await countingScheduleService.getCountingSchedule(req.params.houseId, req.user)
