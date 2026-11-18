@@ -150,7 +150,7 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
         },
       },
     ]),
-    SensorNode.find({ zone_id: zone._id, ...IN_SERVICE }).select('device_id relay_usage').lean(),
+    SensorNode.find({ zone_id: zone._id, ...IN_SERVICE }).select('device_id relay_usage simulated').lean(),
   ])
 
   const hours = agg ? (agg.lastAt.getTime() - agg.firstAt.getTime()) / 3600_000 : 0
@@ -168,6 +168,7 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
     service_limits: RELAY_SERVICE_LIMITS,
     relay_usage: nodes.map(n => ({
       device_id: n.device_id,
+      simulated: n.simulated ?? false, // SYSTEM-FR-004
       misting: { hours: Math.round(n.relay_usage?.misting?.since_service_hours ?? 0), switches: n.relay_usage?.misting?.since_service_switches ?? 0 },
       ventilation: { hours: Math.round(n.relay_usage?.ventilation?.since_service_hours ?? 0), switches: n.relay_usage?.ventilation?.since_service_switches ?? 0 },
     })),

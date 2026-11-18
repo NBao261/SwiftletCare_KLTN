@@ -4779,6 +4779,7 @@ paths:
                               type: object
                               properties:
                                 device_id: { type: string }
+                                simulated: { type: boolean, description: "SYSTEM-FR-004 — controller của bộ giả lập" }
                                 misting: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
                                 ventilation: { type: object, properties: { hours: { type: number }, switches: { type: number } } }
         "400":

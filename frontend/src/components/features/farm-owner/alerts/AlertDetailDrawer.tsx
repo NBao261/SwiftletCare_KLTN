@@ -10,11 +10,12 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useAlert } from '@/hooks/shared/useAlerts';
 import type { Alert } from '@/types';
+import SimulatedBadge from '@/components/common/SimulatedBadge';
 
 interface AlertDetailDrawerProps {
   // null = đóng
   alertId: string | null;
-  locationOf: (alert: Alert) => { location: string; device: string | null };
+  locationOf: (alert: Alert) => { location: string; device: string | null; simulated?: boolean };
   canAcknowledge: boolean;
   onAcknowledge: (alert: Alert) => void;
   onClose: () => void;
@@ -69,7 +70,11 @@ export default function AlertDetailDrawer({ alertId, locationOf, canAcknowledge,
             </DetailRow>
             <DetailRow label={t('detail.createdAt')}>{dateTime(alert.created_at)}</DetailRow>
             <DetailRow label={t('detail.location')}>{place.location}</DetailRow>
-            {place.device && <DetailRow label={t('detail.device')}>{place.device}</DetailRow>}
+            {place.device && (
+              <DetailRow label={t('detail.device')}>
+                <span className="inline-flex flex-wrap items-center gap-2">{place.device}<SimulatedBadge simulated={place.simulated} /></span>
+              </DetailRow>
+            )}
           </dl>
 
           <DetailSection title={t('detail.content')}>

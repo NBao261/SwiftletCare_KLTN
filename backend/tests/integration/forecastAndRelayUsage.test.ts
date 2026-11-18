@@ -155,6 +155,17 @@ describe('relay usage (ALERT-FR-016)', () => {
     expect(saved.relay_usage.misting.on_hours).toBeGreaterThan(0) // tổng giờ chạy giữ nguyên
   })
 
+  it('SYSTEM-FR-004: the control performance lists the run hours of each controller with its simulated flag', async () => {
+    const { zone, node, token } = await seed()
+    await SensorNode.create({ device_id: 'SIM-B-2', zone_id: zone._id, status: 'ONLINE', simulated: true })
+    await SensorNode.updateOne({ _id: node._id }, { 'relay_usage.misting.since_service_hours': 12.4 })
+    const res = await request(app).get('/analytics/control/performance').query({ zoneId: String(zone._id), range: '24h' })
+      .set('Authorization', `Bearer ${token}`).expect(200)
+    const usage = res.body.data.relay_usage as Array<{ device_id: string; simulated: boolean; misting: { hours: number } }>
+    expect(usage.find(u => u.device_id === 'ESP32-B-1')).toMatchObject({ simulated: false, misting: { hours: 12 } })
+    expect(usage.find(u => u.device_id === 'SIM-B-2')).toMatchObject({ simulated: true })
+  })
+
   it('raises nothing below the limit', async () => {
     const { zone, node } = await seed()
     const now = Date.now()
