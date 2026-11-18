@@ -801,7 +801,7 @@ paths:
         THRESHOLD_UPDATED, DEFAULT_THRESHOLDS_UPDATED,
         RELAY_OVERRIDE, RELAY_OVERRIDE_CLEARED, SPEAKER_SCHEDULE_UPDATED,
         AUDIO_TRACK_UPLOADED/SYNC_UPDATED/SELECTED/DELETED, DEVICE_REGISTERED, DEVICE_REASSIGNED, DEVICE_COMMAND_SENT.
-        Mỗi bản ghi có `ip_address` của request gây ra hành động (rỗng nếu do hệ
+        Mỗi bản ghi có `source_ip`, `client`, `correlation_id` của request gây ra hành động (rỗng nếu do hệ
         thống tự thực hiện).
       parameters:
         - { name: actorId, in: query, schema: { type: string } }

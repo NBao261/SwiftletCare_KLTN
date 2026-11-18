@@ -279,8 +279,8 @@ export async function cancelAccountDeletion(userId: string): Promise<IUser> {
     throw new AppError(409, 'CONFLICT', 'Bạn chưa gửi yêu cầu xoá tài khoản nào')
   }
 
-  // SM-14 DELETION_REQUESTED → ACTIVE
-  user.status = 'ACTIVE'
+  // SM-14 DELETION_REQUESTED → ACTIVE; tài khoản đang bị khoá vẫn khoá
+  if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
   await user.save()

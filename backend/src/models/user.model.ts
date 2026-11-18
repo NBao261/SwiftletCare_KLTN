@@ -2,12 +2,17 @@ import { Schema, model, Document, Types } from 'mongoose'
 import bcrypt from 'bcryptjs'
 import type { Role, NotificationPreferences } from '@/types'
 
-/** Report 3 §6.14 (SM-14), Report 4 §6.1 — trạng thái tài khoản; thay `is_active` (G-14, `npm run migrate:user-status`) */
+/** Report 3 §6.14 (SM-14), Report 4 §6.1 — trạng thái tài khoản; thay `is_active` (G-14, `npm run migrate:erd-fields`) */
 export const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DELETION_REQUESTED', 'DELETED'] as const
 export type UserStatus = typeof USER_STATUSES[number]
 /** AUTH-FR-012 — người đã gửi yêu cầu xoá vẫn đăng nhập được (để huỷ yêu cầu) cho tới khi Admin xử lý */
 export const SIGN_IN_STATUSES: UserStatus[] = ['ACTIVE', 'DELETION_REQUESTED']
 export const canSignIn = (user: { status?: UserStatus }): boolean => SIGN_IN_STATUSES.includes(user.status ?? 'ACTIVE')
+/**
+ * Bộ lọc Mongo cùng nghĩa với `canSignIn`: loại LOCKED, DELETED thay vì chỉ nhận ACTIVE, DELETION_REQUESTED, để tài khoản
+ * chưa có `status` (trước `migrate:erd-fields`) vẫn nhận cảnh báo, vẫn là chuyên gia, thợ đang hoạt động
+ */
+export const SIGN_IN_FILTER = { status: { $nin: ['LOCKED', 'DELETED'] as UserStatus[] } }
 
 /**
  * User Document – SRS §8.2

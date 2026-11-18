@@ -7,7 +7,7 @@ import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds, listAccessib
 import { logAction } from '@/services/auditLog.service'
 import { rebuildZoneCyclesSafely } from '@/services/harvestCycle.service'
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
-import { presignedGetUrl } from '@/config/minio.config'
+import { presignedGetUrl, removeObject } from '@/config/minio.config'
 import { storePhotos, type UploadedPhoto } from '@/services/workOrder.service'
 import type { CurrentUser, NestType } from '@/types'
 
@@ -151,7 +151,8 @@ export async function getHarvest(id: string, user: CurrentUser): Promise<IHarves
 
 /** GET /harvests/:id — lô kèm link ảnh ký sẵn (HARVEST-FR-001); khoá ảnh không ra ngoài */
 export async function getHarvestView(id: string, user: CurrentUser) {
-  return presentHarvest(await getHarvest(id, user))
+  await getHarvest(id, user)
+  return presentHarvest((await HarvestBatch.findById(id).select('+photo_object_key'))!)
 }
 
 async function presentHarvest(batch: IHarvestBatch) {
@@ -165,11 +166,14 @@ async function presentHarvest(batch: IHarvestBatch) {
  */
 export async function setHarvestPhoto(id: string, user: CurrentUser, file: UploadedPhoto | undefined) {
   if (!file) throw new AppError(422, 'VALIDATION_ERROR', 'Cần gửi một ảnh ở trường `photo`')
-  const batch = await getHarvest(id, user)
-  assertTechnicianOwnDraft(batch, user)
+  await getHarvest(id, user).then(batch => assertTechnicianOwnDraft(batch, user))
+  const batch = (await HarvestBatch.findById(id).select('+photo_object_key'))!
+  const previousKey = batch.photo_object_key
   const [key] = await storePhotos([file], `harvests/${String(batch._id)}`)
   batch.photo_object_key = key
   await batch.save()
+  // Ảnh cũ không còn ai trỏ tới: xoá khỏi kho file; xoá lỗi chỉ để lại file thừa, không làm hỏng lần đặt ảnh
+  if (previousKey) await removeObject(previousKey).catch(() => undefined)
   await logAction(user._id, 'HARVEST_PHOTO_SET', 'harvest_batch', String(batch._id), { photo_object_key: key }, { farmId: String(batch.farm_id) })
   return presentHarvest(batch)
 }

@@ -12,7 +12,7 @@ let io: Server | null = null
 const userRoom = (userId: string) => `user:${userId}`
 
 /**
- * Xác thực kết nối realtime. Ngoài chữ ký JWT còn phải đọc lại `is_active`:
+ * Xác thực kết nối realtime. Ngoài chữ ký JWT còn phải đọc lại `status` (LOCKED, DELETED bị từ chối):
  * token còn hạn nhưng tài khoản đã bị Admin khoá/xoá thì vẫn phải bị từ chối,
  * giống middleware `authenticate` của REST (AUTH-FR-011).
  *

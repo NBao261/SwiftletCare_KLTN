@@ -1,4 +1,4 @@
-import { User, SIGN_IN_STATUSES, canSignIn } from '@/models/user.model'
+import { User, SIGN_IN_FILTER, canSignIn } from '@/models/user.model'
 import { Farm } from '@/models/farm.model'
 import { Notification, type NotificationRefKind } from '@/models/notification.model'
 import { sendPushToUser } from '@/services/push.service'
@@ -50,7 +50,7 @@ export async function findRecipients(farmId: string) {
 
   const members = farm.members.filter(m => m.role !== 'DOMAIN_EXPERT' && m.role !== 'FARM_TECHNICIAN')
   const userIds = [farm.owner_id, ...members.map(m => m.user_id)]
-  return User.find({ _id: { $in: userIds }, status: { $in: SIGN_IN_STATUSES } }).lean()
+  return User.find({ _id: { $in: userIds }, ...SIGN_IN_FILTER }).lean()
 }
 
 /** Domain Expert của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`) */
@@ -68,7 +68,7 @@ async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   const farm = await Farm.findById(alert.farm_id).select('members')
   if (!farm) return
   const experts = await activeExpertIds(farm)
-  // findRecipients đã lọc is_active
+  // findRecipients đã bỏ tài khoản LOCKED, DELETED
   const deciders = experts.length > 0 ? experts : (await findRecipients(String(alert.farm_id))).map(u => String(u._id))
   await Promise.all(deciders.map(id => createInAppNotification(id, {
     title: `Cảnh báo chờ kiểm chứng: ${alert.title}`,
@@ -98,7 +98,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     )
   }
   const recipients = opts.recipientIds
-    ? await User.find({ _id: { $in: opts.recipientIds }, status: { $in: SIGN_IN_STATUSES } }).lean()
+    ? await User.find({ _id: { $in: opts.recipientIds }, ...SIGN_IN_FILTER }).lean()
     : await findRecipients(String(alert.farm_id))
   if (recipients.length === 0) {
     logger.warn('Cảnh báo không có người nhận', { alertId: String(alert._id), farmId: String(alert.farm_id) })
@@ -209,7 +209,7 @@ export async function notifyUser(userId: string, message: UserNotification, opts
 /** Thông báo tới mọi Administrator đang hoạt động (VD: có yêu cầu xoá tài khoản mới) */
 export async function notifyAdmins(message: UserNotification): Promise<void> {
   try {
-    const admins = await User.find({ role: 'ADMIN', status: { $in: SIGN_IN_STATUSES } }).select('_id').lean()
+    const admins = await User.find({ role: 'ADMIN', ...SIGN_IN_FILTER }).select('_id').lean()
     await Promise.all(admins.map(a => notifyUser(String(a._id), message)))
   } catch (err) {
     logger.warn('Gửi thông báo tới Admin thất bại', { err, title: message.title })
