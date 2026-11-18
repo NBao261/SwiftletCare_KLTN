@@ -110,7 +110,7 @@ File trong repo (G-17):
 | File | Nội dung |
 | --- | --- |
 | `deploy/docker-compose.staging.yml` | MongoDB, EMQX, backend, MediaMTX, Nginx, Certbot; không Redis (chưa module nào dùng), không MinIO (mục 2.2) |
-| `backend/Dockerfile` | Backend chạy bằng `tsx` như lúc dev, kèm `docs/api/api-spec.yaml` (Swagger, kiểm tra route) |
+| `backend/Dockerfile` | Backend chạy bằng `tsx` như lúc dev, bằng user `node` (không phải root), kèm `docs/api/api-spec.yaml` (Swagger, kiểm tra route). Volume `backend_storage` tạo bởi ảnh cũ chạy root thì đổi quyền một lần: `docker run --rm -v swiftletcare-staging_backend_storage:/s alpine chown -R 1000:1000 /s` |
 | `deploy/nginx/Dockerfile`, `nginx.conf`, `templates/` | Build web (`VITE_STREAM_URL=/stream`) rồi phục vụ bằng Nginx; site HTTPS và khối `stream` (8883, 8322) điền `DOMAIN` lúc khởi động |
 | `deploy/.env.staging.example` | Mọi biến, mật khẩu là placeholder; chép thành `deploy/.env.staging` trên VPS (bị `.gitignore`) |
 | `deploy/staging-cert.sh` | Chứng chỉ lần đầu: tạo chứng chỉ tạm, bật Nginx, xin chứng chỉ Let's Encrypt, nạp lại Nginx |

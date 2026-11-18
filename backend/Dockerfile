@@ -9,6 +9,9 @@ COPY backend/ ./
 # app.config.ts đọc spec ở ../../../docs/api/api-spec.yaml tính từ src/config
 COPY docs/api/api-spec.yaml /app/docs/api/api-spec.yaml
 ENV NODE_ENV=production PORT=3000
+# Không chạy bằng root. Volume backend_storage lần đầu lấy quyền của thư mục này trong ảnh, nên tạo sẵn cho user node
+RUN mkdir -p /app/storage && chown node:node /app/storage
+USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 CMD wget -qO- http://127.0.0.1:3000/health > /dev/null || exit 1
 CMD ["npx", "tsx", "src/index.ts"]
