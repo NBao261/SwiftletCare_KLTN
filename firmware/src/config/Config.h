@@ -31,6 +31,11 @@
 
 // ── DFPlayer Mini (loa ru, Guide §10) ────────────────────────────────────────
 // DFPlayer RX ← ESP32 GPIO33 (qua trở 1kΩ) | DFPlayer TX → ESP32 GPIO32
+#define PIN_DFPLAYER_ESP_TX 33
+#define PIN_DFPLAYER_ESP_RX 32
+#define DFPLAYER_DEFAULT_VOLUME 20 // 0-30
+#define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
+
 // ── Đo dòng tải (THREAT-FR-014, BR-32) — board rev B2: U5 ADS1115 địa chỉ 0x48 (ADDR nối GND), shunt R20 (bơm
 // phun sương, AIN0–AIN1) và R21 (quạt, AIN2–AIN3) 0,1 Ω 1 % đặt phía âm của tải. Board không có ADS1115 thì
 // không đo dòng, telemetry không có pump_current_a/fan_current_a và không xét ACTUATOR_FAULT.
@@ -38,10 +43,6 @@
 #define PIN_I2C_SCL 22
 #define CURRENT_ADC_ADDR 0x48
 #define CURRENT_SHUNT_OHM 0.1f
-#define PIN_DFPLAYER_ESP_TX 33
-#define PIN_DFPLAYER_ESP_RX 32
-#define DFPLAYER_DEFAULT_VOLUME 20 // 0-30
-#define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
 
 // ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
 #define FIRMWARE_VERSION "2.3.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP; 1.5.0: tên cảnh báo SRS 3.1.0 (MISTING_INEFFECTIVE, UNEXPECTED_RESTART kèm lý do), báo cả mất điện; 1.6.0: hạn can thiệp tay riêng từng relay (BR-20), lọc lệnh trùng và lệnh trễ (BR-35); 2.0.0: esp-mqtt, topic và tài khoản riêng từng thiết bị, TLS (G-07), không tương thích backend trước đó; 2.1.0: báo phiên bản cấu hình đang chạy trong heartbeat (ENV-FR-027), bản production không nhận địa chỉ broker ở AP-mode (FARM-FR-003c); 2.1.1: địa chỉ broker nạp lúc flash cùng danh tính (NVS `identity`, `flash_identity.py --broker`) thay mặc định `Secrets.h`, bản production không tìm broker qua mDNS (FARM-FR-003c, BR-27); 2.2.0: bù phun sương theo thời tiết từ topic `compensation` (ENV-FR-029, BR-38); 2.3.0: đo dòng bơm và quạt qua ADS1115 (board rev B2), telemetry `pump_current_a`/`fan_current_a`, cảnh báo `ACTUATOR_FAULT` (THREAT-FR-014, BR-32)

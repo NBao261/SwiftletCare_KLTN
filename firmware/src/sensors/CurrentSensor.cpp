@@ -34,6 +34,10 @@ bool present() { return found; }
 Reading read() {
   Reading reading;
   if (!found) return reading;
+  // Thư viện không báo lỗi I2C (dây SDA/SCL lỏng, ADS1115 mất nguồn chỉ cho số gần 0): không ACK thì
+  // coi là mất số đo (ok = false), để monitor không hiểu nhầm là "không có dòng" rồi báo ACTUATOR_FAULT
+  Wire.beginTransmission(CURRENT_ADC_ADDR);
+  if (Wire.endTransmission() != 0) return reading;
   reading.mistingA = shuntAmps(ads.readADC_Differential_0_1());
   reading.ventilationA = shuntAmps(ads.readADC_Differential_2_3());
   reading.ok = true;
