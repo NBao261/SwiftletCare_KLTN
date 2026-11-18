@@ -14,8 +14,8 @@ mkdir -p "$DIR"
 # Mật khẩu đọc trong container, không hiện trên dòng lệnh của VPS
 docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging exec -T mongodb sh -c \
   'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db swiftletcare --archive --gzip' \
-  > "$FILE"
-# Bản rỗng nghĩa là dump hỏng: báo lỗi để cron gửi thư, không xoá các bản cũ còn tốt
+  > "$FILE" || { rm -f "$FILE"; echo "Sao lưu thất bại: mongodump lỗi" >&2; exit 1; }
+# Dump lỗi hay rỗng thì bỏ file, để nó không chiếm chỗ của bản tốt trong KEEP bản giữ lại; cron gửi thư báo lỗi
 if [ ! -s "$FILE" ]; then
   rm -f "$FILE"
   echo "Sao lưu thất bại: file rỗng" >&2
