@@ -4,7 +4,6 @@ import { farmApi } from '@/apis/shared/farms.api'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { alertApi } from '@/apis/shared/alerts.api'
 import { harvestApi } from '@/apis/farm-owner/harvests.api'
-import { farmMockApi } from '@/apis/farm-owner/farmMock.api'
 import { useFarmDetails, useFarms } from '@/hooks/shared/useFarms'
 import { useSensorNodes } from '@/hooks/shared/useDevices'
 import { useEnvCompareBatched } from '@/hooks/farm-owner/useAnalytics'
@@ -163,35 +162,6 @@ export function useHouseStaff(houses: House[]): Map<string, HouseStaff> {
     }
     return staffByHouse
   }, [farms, houses])
-}
-
-/** Trường backend chưa có (lịch thu dự kiến) — hiện rỗng, xem farmMock.api.ts. staleTime Infinity: chưa có nguồn thật để làm mới. */
-export function useStructureExtras(houseIds: string[]) {
-  const key = houseIds.join(',')
-  return useQuery({
-    queryKey: ['farm-mock', 'extras', key],
-    queryFn: () => farmMockApi.getStructureExtras(houseIds).then(r => r.data.data),
-    enabled: houseIds.length > 0,
-    staleTime: Infinity,
-  })
-}
-
-export function useHouseAdvice(houseId: string | undefined) {
-  return useQuery({
-    queryKey: ['farm-mock', 'advice', houseId],
-    queryFn: () => farmMockApi.getHouseAdvice(houseId!).then(r => r.data.data),
-    enabled: !!houseId,
-    staleTime: Infinity,
-  })
-}
-
-export function useDeviceProfile(deviceId: string | undefined) {
-  return useQuery({
-    queryKey: ['farm-mock', 'device-profile', deviceId],
-    queryFn: () => farmMockApi.getDeviceProfile(deviceId!).then(r => r.data.data),
-    enabled: !!deviceId,
-    staleTime: Infinity,
-  })
 }
 
 const NO_IDS: string[] = []
