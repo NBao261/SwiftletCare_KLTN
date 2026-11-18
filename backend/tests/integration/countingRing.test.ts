@@ -15,7 +15,7 @@ import { Farm } from '@/models/farm.model'
 import { House } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
-import { recordHeartbeat } from '@/services/device.service'
+import { recordHeartbeat, refreshCameraConfigs } from '@/services/device.service'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
@@ -72,8 +72,9 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
     const res = await put(t.expert, { points: RING, into_ring_is_exit: true, extra: 1 }).expect(200)
     expect(res.body.data.rtsp_url).toBeUndefined()
     expect(res.body.data.ring_delivered).toBe(true)
-    expect(publishDeviceConfig).toHaveBeenCalledWith(camera.device_id,
-      { deviceId: camera.device_id, counting_ring: { points: RING, into_ring_is_exit: true } })
+    expect(publishDeviceConfig).toHaveBeenCalledWith(camera.device_id, {
+      deviceId: camera.device_id, counting_ring: { points: RING, into_ring_is_exit: true }, session_windows: expect.any(Object),
+    })
 
     await put(t.expert, { points: RING.slice(0, 3), into_ring_is_exit: false }).expect(200)
     const saved = (await CameraNode.findById(camera._id))!.toObject()
@@ -134,10 +135,28 @@ describe('gửi lại vòng đếm khi nút AI kết nối lại', () => {
     expect((publishDeviceConfig as jest.Mock).mock.calls[0][1]).toMatchObject({ deviceId: camera.device_id, counting_ring: { points: RING } })
   })
 
-  it('camera chưa có vòng do chuyên gia vẽ thì không gửi gì (pipeline dùng config.yaml)', async () => {
+  it('camera chưa có vòng vẫn nhận khung phiên 7 ngày tới (VISION-FR-019); vòng thì dùng config.yaml', async () => {
     const { camera } = await seed()
     await CameraNode.updateOne({ _id: camera._id }, { status: 'OFFLINE' })
     await recordHeartbeat({ deviceId: camera.device_id, justConnected: true } as never)
-    expect(publishDeviceConfig).not.toHaveBeenCalled()
+    const config = (publishDeviceConfig as jest.Mock).mock.calls[0][1]
+    expect(config.counting_ring).toBeUndefined()
+    expect(Object.keys(config.session_windows)).toHaveLength(7)
+    expect(Object.values(config.session_windows)[0]).toEqual({ MORNING_EXIT: ['05:30', '07:00'], EVENING_ENTRY: ['17:30', '19:00'] })
+  })
+})
+
+describe('khung phiên cho nút AI mỗi đêm (VISION-FR-019, BR-13)', () => {
+  it('gửi lại config cho camera đang dùng, bỏ camera đã gỡ', async () => {
+    const { camera } = await seed()
+    const removed = await seed()
+    await CameraNode.updateOne({ _id: removed.camera._id }, { decommissioned_at: new Date() })
+    jest.clearAllMocks()
+    expect(await refreshCameraConfigs(new Date('2026-11-18T17:05:00Z'))).toBe(1)
+    expect(publishDeviceConfig).toHaveBeenCalledTimes(1)
+    const [deviceId, config] = (publishDeviceConfig as jest.Mock).mock.calls[0]
+    expect(deviceId).toBe(camera.device_id)
+    // 00:05 ngày 19/11 giờ VN: khung bắt đầu từ ngày 19/11
+    expect(Object.keys(config.session_windows)[0]).toBe('2026-11-19')
   })
 })

@@ -62,6 +62,8 @@ tracking:
 sessions:
   # Giờ Việt Nam cố định UTC+7 (không đổi giờ mùa hè), không dùng giờ máy: VPS thường chạy UTC.
   utc_offset_hours: 7
+  # Mặc định khi backend chưa gửi khung của ngày: backend gửi khung 7 ngày tới theo lịch đếm của nhà (VISION-FR-019)
+  windows_override_file: "state/session_windows.json"
   windows:                                  # giờ chim bay đổi theo mùa: xem lại bằng biểu đồ số đếm 5 phút
     MORNING_EXIT:  ["05:30", "07:00"]
     EVENING_ENTRY: ["17:30", "19:00"]

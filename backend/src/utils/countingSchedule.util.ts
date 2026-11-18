@@ -28,6 +28,11 @@ export const RETURN_RATE_CHECK_DELAY_MIN = 15
 export const MAX_SCHEDULE_PROFILES = 12
 export const MAX_TEMPORARY_WINDOWS = 60
 export const PROFILE_NAME_MAX_LENGTH = 50
+/**
+ * Report 3 §4.5 — số ngày khung phiên gửi trước cho nút AI (BR-13: số trực tiếp theo khung của ngày). Backend gửi lại mỗi
+ * đêm, nên 7 ngày cho nút AI mất kết nối cả tuần vẫn đếm đúng khung
+ */
+export const SESSION_WINDOW_DAYS_AHEAD = 7
 
 const DAY_MS = 86_400_000
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -35,6 +40,9 @@ const MONTH_DAY_RE = /^(\d{2})-(\d{2})$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 /** Năm nhuận để 02-29 có chỗ trong lịch theo mùa */
 const LEAP_YEAR = 2024
+
+/** Ngày 'YYYY-MM-DD' theo giờ Việt Nam (UTC+7 cố định) của một thời điểm */
+export const vnDateOf = (at: Date) => new Date(at.getTime() + 7 * 3_600_000).toISOString().slice(0, 10)
 
 export const addDays = (date: string, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)
@@ -153,4 +161,21 @@ export const windowInterval = (date: string, window: TimeWindow) => ({
 export function returnRateCheckAt(date: string, windows: DayWindows): Date {
   const due = windowInterval(date, windows.evening).end.getTime() + RETURN_RATE_CHECK_DELAY_MIN * 60_000
   return new Date(Math.min(due, new Date(`${date}T23:59:00+07:00`).getTime()))
+}
+
+/** Khung phiên của một ngày theo tên phiên của nút AI ('HH:mm' đầu, cuối), như `sessions.windows` trong config.yaml */
+export type AiSessionWindows = Record<'MORNING_EXIT' | 'EVENING_ENTRY', [string, string]>
+
+/**
+ * BR-13, VISION-FR-019 — khung của `today` và các ngày sau (SESSION_WINDOW_DAYS_AHEAD ngày), theo lịch sử lịch đếm:
+ * một lần sửa áp từ ngày hôm sau nên ngày nào cũng tính theo phiên bản của chính ngày đó
+ */
+export function sessionWindowsAhead(history: ScheduleVersion[] | undefined, today: string): Record<string, AiSessionWindows> {
+  const windows: Record<string, AiSessionWindows> = {}
+  for (let offset = 0; offset < SESSION_WINDOW_DAYS_AHEAD; offset++) {
+    const date = addDays(today, offset)
+    const { morning, evening } = windowsOn(scheduleOn(history, date), date)
+    windows[date] = { MORNING_EXIT: [morning.start, morning.end], EVENING_ENTRY: [evening.start, evening.end] }
+  }
+  return windows
 }
