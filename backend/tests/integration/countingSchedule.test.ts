@@ -21,7 +21,8 @@ import {
   averageReturnRate, checkReturnRateDrops, claimDueHouses, computeHouseSessions, houseDailyCounts, ingestBirdCount,
 } from '@/services/birdCount.service'
 import { getBirdCountTrends, getEnvBirdCorrelation } from '@/services/analytics.service'
-import { addDays } from '@/utils/countingSchedule.util'
+import { addDays, windowsOn } from '@/utils/countingSchedule.util'
+import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { Types } from 'mongoose'
 import type { Role } from '@/types'
 import { useTestDb } from '../helpers/ownerFarm'
@@ -98,11 +99,27 @@ describe('VISION-FR-019 — counting schedule', () => {
     // Hôm nay vẫn theo lịch cũ (mặc định)
     expect(saved.body.data.today.source).toBe('DEFAULT')
     expect(await AuditLog.countDocuments({ action: 'COUNTING_SCHEDULE_UPDATED' })).toBe(1)
+    // Hai camera của nhà nhận khung mới ngay, ngày mai theo lịch vừa lưu (VISION-FR-019)
+    expect(publishDeviceConfig).toHaveBeenCalledTimes(2)
+    const sent = (publishDeviceConfig as jest.Mock).mock.calls[0][1]
+    const expected = windowsOn(body, tomorrow)
+    expect(sent.session_windows[tomorrow]).toEqual({
+      MORNING_EXIT: [expected.morning.start, expected.morning.end], EVENING_ENTRY: [expected.evening.start, expected.evening.end],
+    })
     expect(await Notification.countDocuments({ user_id: s.owner._id })).toBe(1)
 
     expect((await s.call('get', s.t.tech)).body.data.schedule).toEqual(body)
     expect((await s.call('get', s.t.otherTech)).status).toBe(403)
     expect((await s.call('put', s.t.tech, body)).status).toBe(403)
+  })
+
+  it('keeps the saved schedule, its audit and the owner notification when sending it to the AI nodes fails', async () => {
+    const s = await seed()
+    ;(publishDeviceConfig as jest.Mock).mockImplementationOnce(() => { throw new Error('broker down') })
+    const saved = await s.call('put', s.t.expert, { profiles: [], temporary: [] })
+    expect(saved.status).toBe(200)
+    expect(await AuditLog.countDocuments({ action: 'COUNTING_SCHEDULE_UPDATED', target_id: s.house._id })).toBe(1)
+    expect(await Notification.countDocuments({ user_id: s.owner._id })).toBe(1)
   })
 
   it('rejects an invalid schedule with 400 and a wrong shape with 422', async () => {

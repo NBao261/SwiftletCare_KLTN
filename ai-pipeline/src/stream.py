@@ -28,7 +28,7 @@ from counting import SESSION_TYPES, BucketClock, RingCounter, current_session
 from inference import InferenceEngine
 from mjpeg_server import MjpegServer
 from pipeline import FramePipeline, draw, track_ids
-from remote_config import RingStore, start_listener
+from remote_config import RingStore, ScheduleStore, start_listener
 from stream_pusher import StreamPusher
 
 CONFIG = Path(__file__).resolve().parents[1] / "config" / "config.yaml"
@@ -216,8 +216,11 @@ def main() -> None:
     device_id = os.environ.get("CAMERA_DEVICE_ID", "")
     rings = RingStore(Path(cfg["tracking"]["ring_override_file"]), device_id)
     ring: Optional[Ring] = rings.load()
+    # VISION-FR-019, BR-13: khung phiên của ngày theo lịch đếm của nhà; ngày backend chưa gửi thì dùng config.yaml
+    schedule = ScheduleStore(Path(s["windows_override_file"]), device_id)
+    schedule.load()
     if not args.no_mqtt and device_id:
-        start_listener(cfg["mqtt"], rings, device_id)
+        start_listener(cfg["mqtt"], [rings, schedule], device_id)
 
     pipe: Optional[FramePipeline] = None
     session: Optional[str] = None
@@ -242,7 +245,7 @@ def main() -> None:
 
         now_vn = datetime.now(tz)
         today = now_vn.strftime("%Y-%m-%d")
-        now_session = args.session or current_session(s["windows"], now_vn)
+        now_session = args.session or current_session(schedule.windows_on(today, s["windows"]), now_vn)
         if not started or now_session != session:            # bắt đầu hoặc đổi phiên
             if pub and session:
                 pub.bird_count(session, counter, conf_sum / max(conf_n, 1), final=True)
