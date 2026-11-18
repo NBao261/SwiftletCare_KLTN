@@ -123,7 +123,6 @@ const vi = {
   'attn.lastSeen': 'thấy lần cuối {ago}',
   'attn.neverSeen': 'chưa từng kết nối',
   'attn.more': '+{n} thiết bị khác — xem ở tab Thiết bị',
-  // AI (mock)
   // chi tiết zone
   'zone.notFound': 'Không tìm thấy Zone',
   'zone.notFoundDesc': 'Zone có thể đã bị xoá hoặc bạn không có quyền xem.',
