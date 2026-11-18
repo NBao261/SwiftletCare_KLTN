@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api';
 import {
+  alignOutdoorWeather,
   correlationStrength,
   groupBucketsByHour,
   mergeBirdCountBuckets,
@@ -10,6 +11,7 @@ import {
   metricThresholdRange,
   pearsonCorrelation,
   summarizeWeeklyReturnRates,
+  totalRainfall,
 } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import type { Thresholds } from '@/types';
 
@@ -138,5 +140,22 @@ describe('sumTodayBirdCounts', () => {
 
   it('chưa nhà nào đủ 2 phiên thì tỷ lệ về là null', () => {
     expect(sumTodayBirdCounts([house(100, 0, false, null)]).returnRate).toBeNull();
+  });
+});
+
+describe('thời tiết ngoài trời cạnh số đo trong nhà (ANALYTICS-FR-013)', () => {
+  const point = (timestamp: string, precipitation: number | null) =>
+    ({ timestamp, temperature: 27, humidity: 85, precipitation_mm: precipitation });
+
+  it('đặt thời tiết đúng mốc của chuỗi trong nhà, mốc không có thời tiết thì null', () => {
+    const outdoor = [point('2026-11-18T02:00:00.000Z', 1), point('2026-11-18T05:00:00.000Z', 0)];
+    const aligned = alignOutdoorWeather(['2026-11-18T01:00:00.000Z', '2026-11-18T02:00:00.000Z'], outdoor);
+    expect(aligned).toEqual([null, outdoor[0]]);
+  });
+
+  it('cộng mưa các giờ có số; không giờ nào có số mưa thì null, không phải 0', () => {
+    expect(totalRainfall([point('a', 1.2), point('b', null), point('c', 0.3)])).toBeCloseTo(1.5);
+    expect(totalRainfall([point('a', null)])).toBeNull();
+    expect(totalRainfall([])).toBeNull();
   });
 });

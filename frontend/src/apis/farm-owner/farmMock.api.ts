@@ -1,7 +1,6 @@
-import { DEVICE_COMPONENT_NAMES, type DeviceComponentName } from '@/data/deviceComponents.data'
 import type { ApiResponse } from '@/types'
 
-// MOCK API cho trường swagger chưa có (lịch thu, khuyến nghị AI, kỹ thuật viên lắp, firmware mới nhất): trả rỗng đúng khuôn ApiResponse, có API thì chỉ thay thân hàm
+// MOCK API cho trường swagger chưa có (lịch thu, khuyến nghị AI, người lắp, firmware mới nhất): trả rỗng đúng khuôn ApiResponse, có API thì chỉ thay thân hàm
 const MOCK_LATENCY_MS = 120
 
 function mockResponse<T>(data: T): Promise<{ data: ApiResponse<T> }> {
@@ -23,7 +22,4 @@ export const farmMockApi = {
   getHouseAdvice: (_houseId: string) => mockResponse<HouseAdvice | null>(null),
 
   getDeviceProfile: (_deviceId: string) => mockResponse<DeviceProfile>({}),
-
-  // Tên thiết bị con của bộ kit do Kỹ thuật viên đặt — dữ liệu giả trong src/data, chờ API thật
-  getDeviceComponentNames: (deviceId: string) => mockResponse<DeviceComponentName[]>(DEVICE_COMPONENT_NAMES[deviceId] ?? []),
 }

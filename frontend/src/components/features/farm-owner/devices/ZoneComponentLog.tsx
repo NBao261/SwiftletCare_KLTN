@@ -12,7 +12,7 @@ import { METRIC_BY_KEY, thresholdRange } from '@/components/features/farm-owner/
 import { NO_VALUE } from '@/constants/display';
 import { devicesDict, type DevicesKey } from '@/constants/devices.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { componentNameKey, useZoneComponents } from '@/hooks/farm-owner/useZoneComponents';
+import { useZoneComponents } from '@/hooks/farm-owner/useZoneComponents';
 import { cn } from '@/lib/cn';
 import type { Thresholds } from '@/types';
 
@@ -50,7 +50,7 @@ interface ZoneComponentLogProps {
 // Thiết bị bộ kit gom theo loại, bấm xổ log từng thiết bị; số liệu chỉ lấy khi bấm "Kiểm tra thiết bị", không realtime
 export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComponentLogProps): JSX.Element {
   const { t, dateTime } = useTranslation(devicesDict);
-  const { groups, componentNames, checkedAt, isChecking, isError, runCheck } = useZoneComponents(zoneId, nodes);
+  const { groups, checkedAt, isChecking, isError, runCheck } = useZoneComponents(zoneId, nodes);
   const [openKinds, setOpenKinds] = useState<Set<ComponentKind>>(() => new Set());
 
   function toggleKind(kind: ComponentKind): void {
@@ -84,7 +84,6 @@ export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComp
             key={group.kind}
             group={group}
             thresholds={thresholds}
-            componentNames={componentNames}
             isOpen={openKinds.has(group.kind)}
             onToggle={() => toggleKind(group.kind)}
           />
@@ -92,8 +91,6 @@ export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComp
       </ul>
       <div className="border-t border-gray-200 px-4 py-2.5">
         <p className="text-xs text-warmGray">{t('group.note')}</p>
-        {/* Tên thiết bị con chưa có API, đang lấy từ dữ liệu giả (FE_Design 5.4, 7) */}
-        <p className="text-[11px] font-medium italic text-warmGray">This data is FAKE and has not been MOCKAPI</p>
       </div>
     </div>
   );
@@ -102,14 +99,12 @@ export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComp
 interface KindRowProps {
   group: ComponentGroup;
   thresholds?: Thresholds;
-  // Tên Kỹ thuật viên đặt cho từng thiết bị con (khoá componentNameKey)
-  componentNames: Map<string, string>;
   isOpen: boolean;
   onToggle: () => void;
 }
 
 // 1 loại thiết bị: hàng tóm tắt bấm để xổ, bên dưới mỗi thiết bị 1 dòng log kèm mục Thông số và nút Báo lỗi
-function KindRow({ group, thresholds, componentNames, isOpen, onToggle }: KindRowProps): JSX.Element {
+function KindRow({ group, thresholds, isOpen, onToggle }: KindRowProps): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
   const RowIcon = metricOf(group.kind)?.icon ?? ACTUATOR_ICON[group.kind];
   const summary = summarizeGroup(group.items);
@@ -163,17 +158,14 @@ function KindRow({ group, thresholds, componentNames, isOpen, onToggle }: KindRo
         <ul className="divide-y divide-gray-100 border-t border-gray-200 bg-gray-50/60">
           {group.items.map(item => {
             const tone = COMPONENT_STATUS_CLASS[item.status];
-            const name = componentNames.get(componentNameKey(item.nodeId, group.kind));
             return (
-              // 1 thiết bị = 1 hàng: tên (VD "Quạt thông gió 1") · thông số · trạng thái; màn hẹp thông số xuống dòng
+              // 1 thiết bị = 1 hàng: bộ kit chứa nó · thông số · trạng thái; màn hẹp thông số xuống dòng
               <li
                 key={item.nodeId}
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-2.5 pl-14 pr-4 lg:grid-cols-[11rem_minmax(0,1fr)_8.5rem]"
               >
-                {/* Tên do Kỹ thuật viên đặt; chưa đặt tên thì "_" */}
-                <span className={cn('truncate text-sm font-semibold', name ? 'text-charcoal' : 'text-warmGray')} title={t('list.kitName', { id: item.deviceId })}>
-                  {name ?? NO_VALUE}
-                </span>
+                {/* Mã bộ kit in trên nhãn thiết bị (SF-01) — chưa có tên riêng cho từng thiết bị con */}
+                <span className="truncate text-sm font-semibold text-charcoal">{t('list.kitName', { id: item.deviceId })}</span>
                 <div className="order-last col-span-full min-w-0 lg:order-none lg:col-span-1">
                   <ComponentParams kind={group.kind} item={item} thresholds={thresholds} />
                 </div>

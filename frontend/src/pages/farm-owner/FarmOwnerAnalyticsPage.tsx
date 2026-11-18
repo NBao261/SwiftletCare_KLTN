@@ -135,7 +135,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
       // Vận hành: mỗi khung 1 hàng đủ rộng; tóm tắt và kết luận trước, nhật ký chi tiết sau cùng
       body = (
         <>
-          {zone && <HealthReportCard zoneId={zone._id} />}
+          {zone && <HealthReportCard houseId={zone.house_id} zoneId={zone._id} />}
           {zone && <AutomationCard zoneId={zone._id} zoneName={zone.name} />}
           {energy}
           <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
