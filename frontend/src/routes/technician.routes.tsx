@@ -4,16 +4,16 @@ import RequireRole from '@/components/auth/RequireRole'
 import { ALERT_ROLES, DEVICE_LIST_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
-// /devices và /alerts dùng chung URL, mỗi role một trang (Farm Owner trang bọc, Admin console mọi thiết bị, Technician và Domain Expert trang Technician)
+// /devices và /alerts dùng chung URL, mỗi role một trang: Farm Owner và Domain Expert (chỉ xem) trang Farm Owner, Admin mọi thiết bị, Farm Technician nhà được giao
 const TechnicianDevicesPage = lazy(() => import('@/pages/technician/TechnicianDevicesPage'))
 const FarmOwnerDevicesPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDevicesPage'))
 const AdminDevicesPage = lazy(() => import('@/pages/admin/AdminDevicesPage'))
 const FarmOwnerAlertsPage = lazy(() => import('@/pages/farm-owner/FarmOwnerAlertsPage'))
 
 function DevicesIndexRoute() {
-  const isFarmOwner = usePermission('FARM_OWNER')
+  const isFarmSide = usePermission('FARM_OWNER', 'DOMAIN_EXPERT')
   const isAdmin = usePermission('ADMIN')
-  if (isFarmOwner) return <FarmOwnerDevicesPage />
+  if (isFarmSide) return <FarmOwnerDevicesPage />
   return isAdmin ? <AdminDevicesPage /> : <TechnicianDevicesPage />
 }
 
