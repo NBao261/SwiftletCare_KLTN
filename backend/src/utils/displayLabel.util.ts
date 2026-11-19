@@ -17,3 +17,9 @@ export const SEVERITY_LABEL: Record<AlertSeverity, string> = {
   MEDIUM: 'Thường',
   LOW: 'Thường',
 }
+
+// Giờ Việt Nam cho câu người dùng đọc (HH:mm DD/MM/YYYY), không đưa giờ ISO/UTC ra
+const VN_DATE_TIME = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric', hour12: false,
+})
+export const formatVnDateTime = (at: Date): string => VN_DATE_TIME.format(at)

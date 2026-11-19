@@ -17,6 +17,7 @@ import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.s
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { syncAfterHeartbeat } from '@/utils/configSync.util'
 import { sessionWindowsAhead, vnDateOf } from '@/utils/countingSchedule.util'
+import { formatVnDateTime } from '@/utils/displayLabel.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogFromDevice, closeRelayOverrideLog,
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
@@ -707,9 +708,9 @@ export async function decommissionDevice(
   // gửi `force` để đó là quyết định có ý thức, không phải một cú bấm nhầm.
   const isAlive = node.status === 'ONLINE'
   if (isAlive && force !== true) {
-    const lastSeen = node.last_heartbeat ? ` (kết nối lần cuối lúc ${node.last_heartbeat.toISOString()})` : ''
+    const lastSeen = node.last_heartbeat ? ` (lần cuối lúc ${formatVnDateTime(node.last_heartbeat)})` : ''
     throw ConflictError(
-      `Thiết bị đang ${node.status}${lastSeen}, gỡ sẽ mất giám sát tại ${loc.place}. ` +
+      `Thiết bị đang kết nối${lastSeen}, gỡ sẽ mất giám sát tại ${loc.place}. ` +
       'Gửi kèm force=true nếu vẫn muốn gỡ.',
     )
   }
