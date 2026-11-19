@@ -66,4 +66,4 @@ swiftletcare/dev/{deviceId}/config              → vòng đếm Domain Expert v
 
 ## Trạng thái
 
-Chạy được trên clip và camera thật với model COCO tạm; model COCO không nhận ra chim yến trong ảnh hồng ngoại, nên phải train model riêng (plan §7). Chưa triển khai lên VPS. Tiến trình phải tự khởi động lại khi crash (REL-NFR-004).
+Chạy được trên clip và camera thật với model chim yến v1 (`models/yolov8n_swiftlet_v1.onnx`, lệch khoảng 10 % so với đếm tay; v2 đang train lại). File model không commit, mỗi AI node tự chép vào `models/`. Model COCO tạm trước đây không nhận ra chim yến trong ảnh hồng ngoại. Chưa triển khai lên VPS. Tiến trình phải tự khởi động lại khi crash (REL-NFR-004).

@@ -18,8 +18,8 @@ camera:
     - [0.0, 0.0, 0.23, 0.07]
 
 model:
-  path: "models/yolo26n.onnx"     # model COCO tạm để thử đường ống; đổi thành models/swiftlet_v1.onnx sau GĐ2
-  version: "yolo26n-coco"         # gửi lên backend làm modelVersion trong heartbeat
+  path: "models/yolov8n_swiftlet_v1.onnx"   # model chim yến v1 (03/11/2026, ~10 % lệch đếm tay); v2 đang train
+  version: "yolov8n-swiftlet-v1"            # gửi lên backend làm modelVersion trong heartbeat
   input_size: 640                 # phải bằng imgsz lúc export
   confidence_threshold: 0.30      # cũng là ngưỡng mở vết của ByteTrack; plan §6.2
   nms_iou_threshold: 0.45         # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
@@ -30,7 +30,7 @@ model:
   # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
   # GPU khác trên Windows + onnxruntime-directml: ["DmlExecutionProvider", "CPUExecutionProvider"]
   classes:
-    14: swiftlet                  # COCO bird. Model tự train: đổi thành  0: swiftlet
+    0: swiftlet                   # model tự train 1 lớp (model COCO tạm: 14 = bird)
 
 tracking:
   box_pad: 2.5                    # nới box trước khi track (chim nhỏ bay nhanh), plan §6.2
