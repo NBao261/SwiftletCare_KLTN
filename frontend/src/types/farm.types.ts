@@ -35,6 +35,8 @@ export interface House {
   /** FARM-FR-014, BR-46 — giai đoạn nhà; nhà tạo trước khi có trường này coi là OCCUPIED */
   stage?: HouseStage
   stage_history?: Array<{ stage: HouseStage; changed_by?: string; changed_by_role?: string; changed_at: string }>
+  /** AUTH-FR-014 — chỉ Farm Technician nhận: các ca trực của chính mình ở nhà này */
+  roster?: RosterShift[]
 }
 
 // AUTH-FR-014 — một ca trực của nhà: 0 = Chủ nhật … 6 = thứ Bảy, giờ VN HH:mm, end trước start là ca qua nửa đêm

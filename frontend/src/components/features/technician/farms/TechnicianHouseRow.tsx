@@ -1,9 +1,10 @@
 import { ArrowRightIcon, CheckCircleIcon, HouseIcon, InfoIcon, WarningIcon } from '@phosphor-icons/react'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
-import { METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { METRIC_BY_KEY, ROSTER_DAY_LABEL, ROSTER_ROLE_LABEL } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
+import { isOvernightShift, WEEK_ORDER } from '@/validations/farm-owner/roster.validation'
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 
 interface TechnicianHouseRowProps {
@@ -44,6 +45,12 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
     issue = t('banner.offline', { n: headline.offlineDevices ?? 0, zone: zoneLabel })
   }
   const issueCount = node.zones.reduce((sum, z) => sum + z.breaches.length + z.alerts.length, 0)
+  // AUTH-FR-014 — backend chỉ trả ca của chính kỹ thuật viên này (Report 3 §2.4 "read own roster")
+  const shifts = (house.roster ?? []).map(shift => {
+    const days = WEEK_ORDER.filter(day => shift.weekdays.includes(day)).map(day => t(ROSTER_DAY_LABEL[day])).join(', ')
+    const overnight = isOvernightShift(shift) ? ` (${t('roster.overnight')})` : ''
+    return `${days} · ${shift.start}–${shift.end}${overnight} · ${t(ROSTER_ROLE_LABEL[shift.role])}`
+  })
 
   return (
     <article className="relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-warmGray/20 bg-white py-4 pl-6 pr-5 transition-shadow hover:shadow-md lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,0.9fr)_auto] lg:items-center lg:gap-6">
@@ -58,6 +65,9 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
           <h3 className="truncate text-h3 text-charcoal">{house.name}</h3>
           <p className="truncate text-small text-warmGray">
             {farm.name}
+          </p>
+          <p className="text-caption text-warmGray">
+            {shifts.length > 0 ? `${t('roster.mine')}: ${shifts.join('; ')}` : t('roster.mineNone')}
           </p>
         </div>
       </div>
