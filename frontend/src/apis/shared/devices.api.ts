@@ -38,7 +38,7 @@ export const deviceApi = {
   updateSpeakerSchedule: (id: string, input: SpeakerScheduleInput) =>
     api.put<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/speaker-schedule`, input),
 
-  // FARM-FR-007b, Flow 21 Nhánh A — chỉ khi thiết bị đang ONLINE
+  // FARM-FR-007b — dời bộ điều khiển sang Zone khác; offline thì dời khi kết nối lại (FARM-FR-003c)
   reassignZone: (id: string, newZoneId: string) =>
     api.put<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/reassign-zone`, { newZoneId }),
 
@@ -61,8 +61,9 @@ export const deviceApi = {
     api.post<ApiResponse<CameraNode>>(`/devices/camera-nodes/${id}/restore`, { reason }),
 
   // FARM-FR-008 — gỡ thiết bị (giữ lịch sử telemetry), lý do bắt buộc; khôi phục được trong 24 giờ.
-  decommissionSensorNode: (id: string, reason: string) =>
-    api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/decommission`, { reason }),
+  // force: thiết bị đang ONLINE thì backend chỉ gỡ khi người dùng xác nhận (409 nếu thiếu)
+  decommissionSensorNode: (id: string, reason: string, force = false) =>
+    api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/decommission`, force ? { reason, force: true } : { reason }),
   decommissionCameraNode: (id: string, reason: string) =>
     api.post<ApiResponse<CameraNode>>(`/devices/camera-nodes/${id}/decommission`, { reason }),
   // FARM-FR-008 — BE tạo node mới TRƯỚC rồi mới gỡ node cũ; sai secret_key thì node cũ giữ nguyên

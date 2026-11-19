@@ -26,7 +26,10 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import { canRestartController } from '@/components/features/farm-owner/devices/deviceActions';
+import { canManageController, canRestartController } from '@/components/features/farm-owner/devices/deviceActions';
+import MoveControllerModal from '@/components/features/farm-owner/devices/MoveControllerModal';
+import ReplaceControllerModal from '@/components/features/farm-owner/devices/ReplaceControllerModal';
+import RemoveControllerModal from '@/components/features/farm-owner/devices/RemoveControllerModal';
 import { cn } from '@/lib/cn';
 import { NO_VALUE } from '@/constants/display';
 import type { House } from '@/types';
@@ -66,6 +69,10 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [restartDevice, setRestartDevice] = useState<DeviceItem>();
+  // FARM-FR-007b, 008 — bộ điều khiển đang mở popup dời, thay hoặc gỡ
+  const [moveDevice, setMoveDevice] = useState<DeviceItem>();
+  const [replaceDevice, setReplaceDevice] = useState<DeviceItem>();
+  const [removeDevice, setRemoveDevice] = useState<DeviceItem>();
 
   function handleRestart(): void {
     if (!restartDevice) return;
@@ -122,6 +129,11 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
           onOpenSchedule={canOperateSpeaker && device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
           onOpenTracks={canOperateSpeaker && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
           onRestart={canRestartController(role, device) ? () => setRestartDevice(device) : undefined}
+          moreActions={canManageController(role, device) ? [
+            { label: t('action.move'), onClick: () => setMoveDevice(device) },
+            { label: t('action.replace'), onClick: () => setReplaceDevice(device) },
+            { label: t('action.remove'), onClick: () => setRemoveDevice(device), danger: true },
+          ] : []}
         />
       ))}
     </div>
@@ -173,7 +185,8 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
                 variant="secondary"
                 size="sm"
                 className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)}
-                onClick={() => openZoneTuning(group.zone._id)}
+                disabled={!openZoneTuning}
+                onClick={() => openZoneTuning?.(group.zone._id)}
               >
                 <SlidersHorizontalIcon size={14} />
                 {t('action.thresholds')}
@@ -210,6 +223,9 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
 
       {scheduleNode && <SpeakerScheduleModal node={scheduleNode} onClose={() => setScheduleNodeId(undefined)} />}
       {tracksNode && <LullabyTracksModal node={tracksNode} onClose={() => setTracksNodeId(undefined)} />}
+      {moveDevice && <MoveControllerModal device={moveDevice} onClose={() => setMoveDevice(undefined)} />}
+      {replaceDevice && <ReplaceControllerModal device={replaceDevice} onClose={() => setReplaceDevice(undefined)} />}
+      {removeDevice && <RemoveControllerModal device={removeDevice} onClose={() => setRemoveDevice(undefined)} />}
       <ConfirmModal
         open={restartDevice !== undefined}
         title={t('restart.title', { id: restartDevice?.deviceId ?? '' })}
