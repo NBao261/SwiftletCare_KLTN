@@ -83,8 +83,7 @@ describe('PUT /farms/zones/:zoneId/detection-tuning', () => {
   it('Domain Expert lưu tham số kèm lịch sử + audit, và chỉ 5 tham số của firmware được gửi xuống thiết bị', async () => {
     const { zone, node, expert, put, t } = await seed()
 
-    // return_rate_drop_pct không còn là tham số của Zone (SRS v2.1.8) → bị bỏ như key lạ
-    const res = await put(t.expert, { noise_margin_db: 12, pump_dry_on_sec: '240', return_rate_drop_pct: 30, unknown_key: 1 })
+    const res = await put(t.expert, { noise_margin_db: 12, pump_dry_on_sec: '240' })
 
     expect(res.status).toBe(200)
     const saved = (await Zone.findById(zone._id))!.toObject()
@@ -133,7 +132,7 @@ describe('PUT /farms/houses/:houseId/bird-count-tuning (SRS v2.1.8)', () => {
 
   it('Domain Expert lưu kèm lịch sử + audit, không gửi gì xuống thiết bị', async () => {
     const { house, expert, putHouse, t } = await seed()
-    const res = await putHouse(t.expert, { return_rate_drop_pct: '30', noise_margin_db: 12 })
+    const res = await putHouse(t.expert, { return_rate_drop_pct: '30' })
     expect(res.status).toBe(200)
     const saved = (await House.findById(house._id))!.toObject()
     expect(saved.bird_count_tuning).toEqual({ return_rate_drop_pct: 30 })
@@ -162,6 +161,74 @@ describe('PUT /farms/houses/:houseId/bird-count-tuning (SRS v2.1.8)', () => {
   ])('từ chối mức giảm %s', async (_label, body) => {
     const { putHouse, t } = await seed()
     expect((await putHouse(t.expert, body)).status).toBe(400)
+  })
+})
+
+describe('khoá lạ → 400, không lặng lẽ bỏ qua (todo-audit-1118 B-04, bug W-01)', () => {
+  it('mức giảm tỷ lệ chim về gửi nhầm vào Zone → 400 kèm gợi ý endpoint của nhà; không lưu, không gửi thiết bị', async () => {
+    const { zone, put, t } = await seed()
+    const res = await put(t.expert, { noise_margin_db: 12, return_rate_drop_pct: 30 })
+    expect(res.status).toBe(400)
+    expect(res.body.error.message).toContain('return_rate_drop_pct')
+    expect(res.body.error.message).toContain('/bird-count-tuning')
+    expect((await Zone.findById(zone._id))!.toObject().detection_tuning).toEqual(DEFAULT_DETECTION_TUNING)
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
+  })
+
+  it('tham số của Zone gửi vào nhà, hoặc khoá lạ bất kỳ → 400', async () => {
+    const { house, put, putHouse, t } = await seed()
+    expect((await putHouse(t.expert, { return_rate_drop_pct: 30, noise_margin_db: 12 })).status).toBe(400)
+    expect((await put(t.expert, { noise_margin_db: 12, unknown_key: 1 })).status).toBe(400)
+    expect((await House.findById(house._id))!.toObject().bird_count_tuning).toEqual(DEFAULT_BIRD_COUNT_TUNING)
+  })
+})
+
+describe('khôi phục mặc định (EXPERT-FR-008 "reset to defaults", todo-audit-1118 B-05)', () => {
+  const reset = (path: string, token: string) => request(app).put(path).set('Authorization', `Bearer ${token}`)
+
+  it('Zone: về DEFAULT_DETECTION_TUNING, thêm dòng lịch sử, audit, tăng config_version và gửi thiết bị', async () => {
+    const { zone, node, put, t } = await seed()
+    await put(t.expert, { noise_margin_db: 12 }).expect(200)
+    const versionBefore = (await Zone.findById(zone._id))!.toObject().config_version ?? 0
+    jest.clearAllMocks()
+
+    const res = await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.expert)
+
+    expect(res.status).toBe(200)
+    const saved = (await Zone.findById(zone._id))!.toObject()
+    expect(saved.detection_tuning).toEqual(DEFAULT_DETECTION_TUNING)
+    expect(saved.detection_tuning_history).toHaveLength(2)
+    expect(saved.detection_tuning_history[1]).toMatchObject({ changed_by_role: 'DOMAIN_EXPERT', new_values: DEFAULT_DETECTION_TUNING })
+    expect(saved.config_version ?? 0).toBeGreaterThan(versionBefore)
+    expect(publishDeviceConfig).toHaveBeenCalledWith(node.device_id, expect.objectContaining({ noise_margin_db: DEFAULT_DETECTION_TUNING.noise_margin_db }))
+    expect(await AuditLog.countDocuments({ action: 'DETECTION_TUNING_UPDATED' })).toBe(2)
+  })
+
+  it('nhà: về DEFAULT_BIRD_COUNT_TUNING, có lịch sử và audit, không gửi thiết bị', async () => {
+    const { house, putHouse, t } = await seed()
+    await putHouse(t.expert, { return_rate_drop_pct: 35 }).expect(200)
+    jest.clearAllMocks()
+
+    const res = await reset(`/farms/houses/${house._id}/bird-count-tuning/reset`, t.expert)
+
+    expect(res.status).toBe(200)
+    expect(res.body.data.bird_count_tuning).toEqual(DEFAULT_BIRD_COUNT_TUNING)
+    const saved = (await House.findById(house._id))!.toObject()
+    expect(saved.bird_count_tuning_history).toHaveLength(2)
+    expect(await AuditLog.countDocuments({ action: 'BIRD_COUNT_TUNING_UPDATED' })).toBe(2)
+    expect(publishDeviceConfig).not.toHaveBeenCalled()
+  })
+
+  it('Farm Owner trên farm có chuyên gia, chuyên gia farm khác → 403; farm chưa có chuyên gia thì Farm Owner reset được (BR-22)', async () => {
+    const { farm, zone, house, t } = await seed()
+    const other = await seed()
+    expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.owner)).status).toBe(403)
+    expect((await reset(`/farms/houses/${house._id}/bird-count-tuning/reset`, t.owner)).status).toBe(403)
+    expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, other.t.expert)).status).toBe(403)
+
+    await Farm.updateOne({ _id: farm._id }, { $pull: { members: { role: 'DOMAIN_EXPERT' } } })
+    expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.owner)).status).toBe(200)
+    expect((await reset(`/farms/houses/${house._id}/bird-count-tuning/reset`, t.owner)).status).toBe(200)
   })
 })
 

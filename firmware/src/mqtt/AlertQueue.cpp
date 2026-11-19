@@ -2,8 +2,9 @@
 #include <string.h>
 
 bool AlertQueue::push(const QueuedAlert &alert) {
+  // ACTUATOR_FAULT của bơm và của quạt là hai sự cố khác nhau: cùng loại nhưng khác tải thì vẫn xếp hàng
   for (uint8_t i = 0; i < count; i++)
-    if (strcmp(entries[i].alert.type, alert.type) == 0) return true;
+    if (strcmp(entries[i].alert.type, alert.type) == 0 && strcmp(entries[i].alert.load, alert.load) == 0) return true;
   if (count == ALERT_QUEUE_SIZE) return false;
   entries[count].alert = alert;
   entries[count].msgId = 0;

@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.13 (Review 2, final scope) |
-| Date | 12/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.1 (`docs/reports/report3-srs.md`) |
+| Document version | 2.2.16 (Review 2, final scope) |
+| Date | 19/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.12 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -342,7 +342,7 @@ Farm location (FARM-FR-001): the farm form takes the coordinates from the device
 
 Device setup (SF-01): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key (and, for flashing, the broker credential) only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; a scan in the web console (`html5-qrcode`) reads the same formats.
 
-**Farm Technician client.** The mobile application is the technician's main tool: alerts of the assigned houses with acknowledgement and on-site cause, Work Orders with photos, checklists, maintenance and calibration records, manual override and restart, daily rating, harvest entry. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
+**Farm Technician client.** The mobile application is the technician's main tool: alerts of the assigned houses with acknowledgement and on-site cause, Work Orders with photos, checklists, maintenance and calibration records, manual override and restart, daily rating, harvest entry. On the web the Farm Technician has only the devices of its assigned houses with restart and a read-only list of lullaby tracks, the alerts of those houses with acknowledgement and on-site cause, the houses themselves with its own duty shifts, the in-app notifications and its settings; every other task of the technician in Report 3, Section 2.4 is done in the mobile application. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
 
 ### 5.5 Engineering Constants in the Code
 
@@ -1016,7 +1016,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/devices` | Sensor nodes (register and move, also by the Farm Owner for SF-01; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
 | `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
-| `/analytics` | Charts, comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
+| `/analytics` | Charts (with the farm's hourly outdoor weather on the same buckets, ANALYTICS-FR-013), comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
 | `/health-reports` | Daily, weekly and monthly reports per house and conclusions; disagreeing days and house levels (EXPERT-FR-022); daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (days not yet rated or skipped by the caller are returned without status, BR-31) |
 | `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
 | `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
@@ -1037,7 +1037,7 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | --- | --- | --- | --- |
 | `telemetry` | controller → cloud | `deviceId`, six readings, stale sensors, `control_output`, `pump_current_a`, `fan_current_a`, timestamp | 0 |
 | `telemetry/buffered` | controller → cloud | Samples from the offline buffer, each with its own timestamp; deleted from flash on PUBACK | 1 |
-| `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0) | 0 |
+| `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0), `actuatorBaseline` (learned normal current of the pump and the fan, A, for the loads learned so far; firmware 2.3.1 or later, BR-45) | 0 |
 | `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected | 0 |
 | `relay/status` | controller → cloud | `deviceId`, per relay: state, mode, expiry; `commandId` of the command that caused the change, if any | 1 |
 | `alert` | controller → cloud | `deviceId`, `eventId`, type, severity, details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
@@ -1883,6 +1883,9 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.16 | 19/11/2026 | Section 5.4: the Farm Technician's web screens are listed (devices with restart, alerts with on-site cause, assigned houses with own shifts, notifications, settings); the rest of its work is on mobile; header baseline SRS 4.2.12 |
+| 2.2.15 | 18/11/2026 | ANALYTICS-FR-013 as built: the environment chart of `/analytics` carries the farm's hourly outdoor weather on the buckets of the indoor series (Section 7.1); the weekly zone report job is gone, as the migration table of Section 6.4 already said, so weekly reports exist only per house (BR-33); header baseline SRS 4.2.11 |
+| 2.2.14 | 18/11/2026 | Run hours as built (G-22, BR-45): the heartbeat carries the learned normal current (`actuatorBaseline`, Section 7.2), kept as the controller's `actuator_baseline`; an interval counts as running only when the current is above 50 % of it |
 | 2.2.13 | 18/11/2026 | Data model as built (G-14): `users.status` with the lock fields replaces `is_active` (the API keeps `is_active` and `deactivated_*` as derived names for the clients); audit rows carry `before`, `after`, `source_ip`, `client`, `correlation_id` (`X-Request-Id`); telemetry `stale_fields`, `anomaly_fields`, `buffered`; harvest `photo_object_key` (`PUT /harvests/{id}/photo`); notification `ref.kind` names as in the code, with `device_action`; migration row for the audit fields (Sections 6.1, 6.4) |
 | 2.2.12 | 18/11/2026 | k6 1.3.0 in the Testing row of the Technology Declaration (Section 3): the NFR-03 load script runs from a Docker image beside the device simulator (G-27) |
 | 2.2.11 | 18/11/2026 | Staging as built (G-17): one domain name instead of four, files on a backend volume instead of MinIO (the MinIO images are no longer published), Certbot v3.1.0, the compose, Dockerfile and certificate script paths; `/internal/*` kept out of the access log (Sections 3.2, 3.4, 11) |

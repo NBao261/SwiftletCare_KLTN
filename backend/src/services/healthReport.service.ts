@@ -6,19 +6,17 @@ import { Zone, IZone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { autonomyBetween, inRangeSum, pct, switchedSum } from '@/services/analytics.service'
 import { logAction } from '@/services/auditLog.service'
-import { findFarmExperts, findRecipients, notifyUser } from '@/services/notification.service'
-import { assertFarmAccess, assertZoneAccess, listActiveZoneIds } from '@/utils/farmAccess.util'
-import { BadRequestError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
+import { findRecipients, notifyUser } from '@/services/notification.service'
+import { assertFarmAccess, assertZoneAccess } from '@/utils/farmAccess.util'
+import { ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
-import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-const DAY_MS = 86400_000
-/** EXPERT-FR-005 — độ dài kỳ báo cáo tự động; lịch chạy đặt ở jobs/healthReport.job.ts */
-export const REPORT_PERIOD_DAYS = Number(process.env.HEALTH_REPORT_DAYS) > 0 ? Number(process.env.HEALTH_REPORT_DAYS) : 7
-/** Xem theo khoảng bất kỳ: chặn khoảng quá dài để 1 request không quét cả năm telemetry */
-const MAX_PREVIEW_DAYS = 30
-
+/**
+ * Báo cáo tuần theo Zone (kiểu cũ): không còn được tạo — báo cáo ngày, tuần, tháng theo nhà có một mục cho mỗi
+ * Zone (BR-33, `houseHealthReport.service`, Report 4 §6.4). Ở đây chỉ còn đọc và viết kết luận cho các báo cáo
+ * Zone đã lưu, và `buildZoneMetrics` mà báo cáo theo nhà dùng cho từng Zone.
+ */
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)
 
 /**
@@ -89,61 +87,6 @@ async function ownerIdsOf(farmId: unknown): Promise<string[]> {
   return (await findRecipients(String(farmId))).map(u => String(u._id))
 }
 
-/**
- * EXPERT-FR-005/007 — tổng hợp báo cáo cho mọi Zone của farm còn hoạt động, kỳ là
- * REPORT_PERIOD_DAYS ngày tính tới `now`. Chạy lại trong cùng kỳ không tạo trùng; Zone
- * không có mẫu telemetry nào trong kỳ thì bỏ qua (chưa lắp thiết bị/đã ngừng). Báo cho
- * Farm Owner và Domain Expert của farm. Trả số báo cáo đã tạo.
- */
-export async function generateWeeklyReports(at = new Date()): Promise<number> {
-  // Làm tròn xuống phút: hai lần chạy do cùng một nhịp cron cho cùng `period_end`, để
-  // unique index (zone_id, period_end) chặn được báo cáo trùng
-  const now = new Date(Math.floor(at.getTime() / 60_000) * 60_000)
-  const periodStart = new Date(now.getTime() - REPORT_PERIOD_DAYS * DAY_MS)
-  const zones = await Zone.find({ _id: { $in: await listActiveZoneIds() } }).select('name farm_id house_id thresholds').lean()
-
-  let created = 0
-  for (const zone of zones) {
-    // Một Zone lỗi (dữ liệu hỏng, aggregate quá tải) không được làm các Zone sau mất báo cáo kỳ này
-    try {
-      if (await generateZoneReport(zone, periodStart, now)) created++
-    } catch (err) {
-      logger.error('Tạo báo cáo sức khỏe Zone thất bại', { err, zoneId: String(zone._id) })
-    }
-  }
-  return created
-}
-
-async function generateZoneReport(
-  zone: Pick<IZone, '_id' | 'name' | 'farm_id' | 'house_id' | 'thresholds'>, periodStart: Date, now: Date,
-): Promise<boolean> {
-  // Đã có báo cáo phủ phần lớn kỳ này (job chạy 2 lần, hoặc khởi động lại) → bỏ qua
-  const recent = await ZoneHealthReport.exists({ zone_id: zone._id, period_end: { $gt: new Date(now.getTime() - (REPORT_PERIOD_DAYS - 0.5) * DAY_MS) } })
-  if (recent) return false
-
-  const metrics = await buildZoneMetrics(zone, periodStart, now)
-  if (metrics.sample_count === 0) return false
-
-  let report
-  try {
-    report = await ZoneHealthReport.create({
-      farm_id: zone.farm_id, zone_id: zone._id, period_start: periodStart, period_end: now, metrics, generated_at: now,
-    })
-  } catch (err) {
-    // Lần chạy song song đã tạo báo cáo của đúng kỳ này — nó cũng lo phần thông báo
-    if ((err as { code?: number }).code === 11000) return false
-    throw err
-  }
-
-  const recipients = [...await ownerIdsOf(zone.farm_id), ...await findFarmExperts(zone.farm_id)]
-  await Promise.all(recipients.map(id => notifyUser(id, {
-    title: `Báo cáo sức khỏe ${zone.name}`,
-    body: `Báo cáo ${REPORT_PERIOD_DAYS} ngày của ${zone.name} đã sẵn sàng: ${metrics.humidity_in_range_pct ?? '—'}% thời gian độ ẩm trong ngưỡng, ${metrics.auto_mode_pct ?? '—'}% thời gian tự động. (Mã báo cáo ${report._id})`,
-    ref: { kind: 'health_report', id: String(report._id) },
-  })))
-  return true
-}
-
 /** EXPERT-FR-005 — danh sách báo cáo của 1 Zone, mới nhất trước */
 export async function listHealthReports(user: CurrentUser, query: { zoneId: string; page?: number; limit?: number }) {
   await assertZoneAccess(query.zoneId, user)
@@ -162,18 +105,6 @@ export async function getHealthReport(id: string, user: CurrentUser): Promise<IZ
   if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
   await assertFarmAccess(String(report.farm_id), user)
   return report
-}
-
-/** EXPERT-FR-005 — xem số liệu theo khoảng bất kỳ, không lưu */
-export async function previewHealthReport(user: CurrentUser, query: { zoneId: string; from: string; to?: string }) {
-  const { zone } = await assertZoneAccess(query.zoneId, user)
-  // `to` ở tương lai thì phần chưa xảy ra bị tính vào mẫu số của tỷ lệ thời gian tự động
-  const now = new Date()
-  const to = query.to && new Date(query.to) < now ? new Date(query.to) : now
-  const from = new Date(query.from)
-  if (!(from < to)) throw BadRequestError('from phải trước to')
-  if (to.getTime() - from.getTime() > MAX_PREVIEW_DAYS * DAY_MS) throw BadRequestError(`Khoảng xem tối đa ${MAX_PREVIEW_DAYS} ngày`)
-  return { zone_id: zone._id, farm_id: zone.farm_id, period_start: from, period_end: to, metrics: await buildZoneMetrics(zone, from, to) }
 }
 
 /**

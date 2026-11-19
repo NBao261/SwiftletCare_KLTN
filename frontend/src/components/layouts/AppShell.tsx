@@ -9,6 +9,7 @@ import AppHeader from '@/components/layouts/AppHeader'
 import Toast from '@/components/common/Toast'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useAlertNotifications } from '@/hooks/shared/useAlertNotifications'
+import { useInAppNotificationListener } from '@/hooks/shared/useNotifications'
 import { useTranslation as useI18next } from 'react-i18next'
 import { t } from '@/i18n'
 
@@ -26,6 +27,8 @@ export default function AppShell({
   dockItems: MenuItem[]
 }) {
   useAlertNotifications()
+  // EXPERT-FR-007 — thông báo trong ứng dụng mới: làm mới hộp thư và hiện toast ở mọi trang
+  useInAppNotificationListener()
   const back = useBreadcrumbStore(s => s.back)
   // Ảnh nền tràn đầu trang do trang tự bật (usePageHero) — null thì khung giữ nguyên như cũ
   const heroImage = usePageHeroStore(state => state.image)

@@ -29,11 +29,10 @@ CI (`.github/workflows/ci.yml`, job Frontend) runs `npm ci`, `lint`, `tsc --noEm
 
 ```
 src/
-  apis/        admin/ auth/ farm-owner/ shared/ — one <resource>.api.ts per resource, no barrel
-               (farm-owner/farmMock.api.ts returns EMPTY data for parts the backend has no endpoint for)
+  apis/        admin/ auth/ farm-owner/ shared/ — one <resource>.api.ts per resource, no barrel (no mock API: a part with no endpoint is not shown)
   components/  auth/ (RequireRole) · common/ · features/<role>/<area>/ · layouts/ · ui/ (design system)
   constants/   roles (role groups, ROLE_HOME, MENU_ACCESS, getRoleHomePath/canAccessPath) · thresholds · severity · auditActions · *.i18n.ts dictionaries
-  data/        <name>.data.ts — the ONLY place fake data may live (FE_Design §7): deviceComponents.data.ts, expertMock.data.ts; mocks/ (expert*.mock.ts, PR #91 — known debt)
+  data/        <name>.data.ts — the ONLY place fake data may live (FE_Design §7); empty today (the sensor names of deviceComponents.data.ts were removed on 18/11/2026: no API names the parts of a kit)
   hooks/       admin/ auth/ common/ expert/ farm-owner/ shared/ — React Query wrappers over apis/ (expert/ wraps services/expert/)
   i18n/        index.ts (t · tr · trChildren · translated · intlLocale · setLang) · en.ts — i18next, keys are the Vietnamese sentences
   lib/         axios · queryClient · socket · cn · helpers · i18n · navigation · navigationState (intent passed through router state) · chartTheme · apiError
@@ -43,10 +42,10 @@ src/
   services/    expert/ (expertApi.service.ts, expertFallback.service.ts) + expert.service.ts — API calls of the Domain Expert screens outside apis/ (known debt, FE_Design §12)
   stores/      Zustand: authStore · alertStore · toastStore · zoneStore · breadcrumbStore · languageStore · pinnedHouseStore
   types/       <module>.types.ts (split by backend module, not by role) + index.ts barrel
-  validations/ admin/ · common/ · farm-owner/ · technician/ — pure form validators (+ *.test.ts)
+  validations/ admin/ · common/ · farm-owner/ — pure form validators (+ *.test.ts)
 ```
 
-- **Buckets by role.** Every concern folder splits into `admin/`, `farm-owner/`, `technician/`, `auth/`, `shared/` and `common/` (role-agnostic infrastructure). A file is in `shared/` only when two or more roles really reach it; `apis/shared/` + `hooks/shared/` hold farms, alerts, devices and audio tracks (`audioTracks` is Technician-only — known debt). There is no `components/features/shared/`.
+- **Buckets by role.** Every concern folder splits into `admin/`, `farm-owner/`, `technician/`, `auth/`, `shared/` and `common/` (role-agnostic infrastructure). A file is in `shared/` only when two or more roles really reach it; `apis/shared/` + `hooks/shared/` hold farms, alerts, devices and audio tracks (audio tracks: only the Farm Owner uploads, marks, deletes, selects and plays them in `farm-owner/devices/LullabyTracksModal`; the other roles read the list). There is no `components/features/shared/`.
 - **Pages** sit in the folder of the role that owns that business and carry the role in their name (`TechnicianDevicesPage`, `FarmOwnerHarvestPage`, `AdminUsersPage`); the exported component name matches the filename. A page's folder is **not** an access list: `allow={...}` in `routes/<role>.routes.tsx` is.
 - **Routes**: one `routes/<role>.routes.tsx` per `pages/<role>/` folder, each exporting a `<Route>` fragment (`publicRoutes`, `adminRoutes`, `expertRoutes` under `/expert/*`, `farmOwnerRoutes`, `technicianRoutes`), lazy-loading its pages and wrapping them in `<RequireRole allow={...}>`. `App.tsx` assembles them plus the index redirect and `/settings`; `RoleLayout` picks the layout from `user.role` at runtime because URLs carry no role prefix.
 - **Role groups** (`constants/roles.ts`): `OPS_ROLES` (Farm Owner, Technician, Admin), `FARM_OWNER_ONLY` (dashboard, analytics, vision, harvests), `HARVEST_ROLES` (Farm Owner, Admin), `ADMIN_ONLY`, `EXPERT_ROLES` (Domain Expert). `MENU_ACCESS` (path → roles) mirrors the layout menus and backs `canAccessPath`; it is kept apart from the layouts on purpose (`useAuth` → `canAccessPath`, layouts → `AppHeader` → `useAuth` would be an import cycle). `hooks/common/usePermission.ts` does the UI-level hide/disable check.

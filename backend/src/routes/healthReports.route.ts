@@ -51,9 +51,6 @@ router.post('/', readers,
   body('houseId').isMongoId(),
   body('from').isDate({ format: 'YYYY-MM-DD', strictMode: true }), body('to').isDate({ format: 'YYYY-MM-DD', strictMode: true }),
   validate, healthReportController.createCustom)
-// Đặt trước '/:id' để "preview" không bị hiểu là một id
-router.get('/preview', ownerOrExpert,
-  query('zoneId').isMongoId(), query('from').isISO8601(), query('to').optional().isISO8601(), validate, healthReportController.preview)
 router.get('/:id', readers, param('id').isMongoId(), validate, healthReportController.getOne)
 router.put('/:id/conclusion', requireRole('DOMAIN_EXPERT'),
   param('id').isMongoId(), body('text').isString().trim().isLength({ min: 1, max: 4000 }), validate, healthReportController.setConclusion)

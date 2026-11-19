@@ -140,3 +140,10 @@ export interface IssuedDeviceSecrets {
   device_id: string; kind: ProvisionedDeviceKind
   secret_key?: string; broker_secret?: string
 }
+
+// FARM-FR-008 — thiết bị đã gỡ còn khôi phục được (GET …?removed=recent, chỉ Farm Owner)
+export type RemovedDevice = (SensorNode | CameraNode) & {
+  decommissioned_at: string
+  decommission_reason?: string
+  restorable_until: string
+}

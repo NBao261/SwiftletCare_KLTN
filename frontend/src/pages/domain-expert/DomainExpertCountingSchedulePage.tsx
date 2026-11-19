@@ -15,6 +15,7 @@ import type { CountingSchedule, CountingWindowSource, DayWindows, TimeWindow } f
 import {
   MAX_SCHEDULE_PROFILES, MAX_TEMPORARY_WINDOWS, PROFILE_NAME_MAX_LENGTH, validateCountingSchedule, type ScheduleError,
 } from '@/validations/domain-expert/countingSchedule.validation'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
 // "05:30–07:00"
 const span = (window: TimeWindow) => `${window.start}–${window.end}`
@@ -39,6 +40,7 @@ function RowError({ error }: { error: ScheduleError | null }) {
 }
 
 export default function DomainExpertCountingSchedulePage() {
+  const { canDecide } = useExpertDecisionRights()
   const { t, date } = useTranslation(countingScheduleDict)
   const apiErrorMessage = useApiErrorMessage()
   const push = useToastStore(state => state.push)
@@ -86,6 +88,8 @@ export default function DomainExpertCountingSchedulePage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* BR-22 — Farm Owner chỉ sửa khi farm chưa có chuyên gia */}
+      <fieldset disabled={!canDecide} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
         {/* Khung đang áp hôm nay — màn rộng: tiêu đề và ghi chú bên trái, hai phiên bên phải; màn hẹp xếp dọc */}
         <div className="flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 md:flex-row md:items-center md:justify-between">
@@ -251,6 +255,7 @@ export default function DomainExpertCountingSchedulePage() {
           </div>
         )}
       </SectionCard>
+      </fieldset>
 
       {/* Lịch sử các lần sửa, mới nhất trước */}
       <SectionCard title={t('history.title')}>

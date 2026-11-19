@@ -69,6 +69,17 @@ async function assertLoginAllowed(user: IUser): Promise<void> {
   )
 }
 
+/**
+ * GET /auth/me — tài khoản của người đang đăng nhập, cùng dạng `user` của login (`toJSON` ẩn hash, mã, chat id).
+ * Client đọc lại sau những thay đổi không đi qua màn hình của nó: liên kết Telegram qua bot (ALERT-FR-013),
+ * gửi hay huỷ yêu cầu xoá (AUTH-FR-012, Report 3 §6.14) — todo-audit-1118 B-01.
+ */
+export async function getCurrentUser(userId: string): Promise<IUser> {
+  const user = await User.findById(userId)
+  if (!user) throw UnauthorizedError('Tài khoản không còn tồn tại')
+  return user
+}
+
 /** AUTH-FR-002, AUTH-FR-003 */
 export async function loginUser(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: normalizeEmail(input.email) })
@@ -263,7 +274,7 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
   // Flow 19 bước 6 — Administrator nhận thông báo để xử lý trong ≤ 30 ngày
   await notifyAdmins({
     title: 'Yêu cầu xoá tài khoản mới',
-    body: `${user.full_name} (${user.role ?? 'Buyer'}) vừa gửi yêu cầu xoá tài khoản — cần xử lý trong ≤ 30 ngày.`,
+    body: `${user.full_name} (${user.role}) vừa gửi yêu cầu xoá tài khoản — cần xử lý trong ≤ 30 ngày.`,
   })
   return user
 }
@@ -289,7 +300,7 @@ export async function cancelAccountDeletion(userId: string): Promise<IUser> {
   // Admin có thể đang mở hàng đợi — báo để không ai xử lý nhầm yêu cầu vừa rút lại
   await notifyAdmins({
     title: 'Yêu cầu xoá tài khoản đã được huỷ',
-    body: `${user.full_name} (${user.role ?? 'Buyer'}) đã huỷ yêu cầu xoá tài khoản.`,
+    body: `${user.full_name} (${user.role}) đã huỷ yêu cầu xoá tài khoản.`,
   })
   return user
 }

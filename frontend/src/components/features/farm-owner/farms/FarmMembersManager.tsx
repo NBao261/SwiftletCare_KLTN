@@ -14,11 +14,12 @@ import { farmDict, type FarmKey } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { usePermission } from '@/hooks/common/usePermission'
-import { useFarm, useHouseRoster, useHouses, useInviteFarmMember, useRemoveMember, useSetHouseTechnician } from '@/hooks/shared/useFarms'
+import { useFarm, useFarmInvitations, useHouseRoster, useHouses, useInviteFarmMember, useRemoveMember, useSetHouseTechnician } from '@/hooks/shared/useFarms'
 import { cn } from '@/lib/cn'
+import { formatDateTime } from '@/lib/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
-import type { FarmMemberRole } from '@/types'
+import type { FarmMemberRole, Invitation } from '@/types'
 
 // Vai trò hiển thị trong bảng thành viên; thêm role mới chỉ cần thêm dòng ở đây và trong INVITE_ROLES
 type MemberRoleKey = 'PRIMARY' | FarmMemberRole
@@ -39,7 +40,7 @@ const INVITE_HINT: Record<FarmMemberRole, FarmKey> = {
 }
 
 // Nhóm đang xem: farm đông người thì mỗi lần chỉ hiện 1 nhóm, đổi bằng chip thay vì cuộn qua cả 4 khung
-type MemberGroup = 'owners' | 'experts' | 'technicians' | 'roster'
+type MemberGroup = 'owners' | 'experts' | 'technicians' | 'roster' | 'invitations'
 
 interface MemberRow {
   userId: string
@@ -68,12 +69,14 @@ export default function FarmMembersManager({ farmId, houseId }: { farmId: string
   const { data: roster = [] } = useHouseRoster(isFarmOwner ? houseId : undefined)
   const [search, setSearch] = useState('')
   const query = search.trim().toLowerCase()
+  // Lời mời đang chờ: route chỉ cho Primary Owner (AUTH-FR-010), nên chỉ gọi khi đúng là chủ chính
+  const isPrimaryOwner = Boolean(farm && farm.owner_id === currentUserId)
+  const { data: invitations = [], isError: invitationsFailed } = useFarmInvitations(farmId, isPrimaryOwner)
 
   if (isLoading) return <LoadingSkeleton count={2} className="h-16 w-full" />
   if (!farm) return null
 
   // Chỉ Primary Owner (đúng owner_id) thêm/gỡ thành viên — route chỉ cho FARM_OWNER (AUTH-FR-005)
-  const isPrimaryOwner = farm.owner_id === currentUserId
   const rows: MemberRow[] = [
     { userId: farm.owner_id, name: farm.owner?.full_name, email: farm.owner?.email, role: 'PRIMARY' },
     ...farm.members
@@ -143,6 +146,7 @@ export default function FarmMembersManager({ farmId, houseId }: { farmId: string
     { key: 'experts', label: t('members.expertsTitle', { n: experts.length }) },
     { key: 'technicians', label: t('members.techniciansTitle', { n: technicians.length }) },
     ...(houseId && isFarmOwner ? [{ key: 'roster' as const, label: t('roster.title', { n: roster.length }) }] : []),
+    ...(isPrimaryOwner ? [{ key: 'invitations' as const, label: t('invites.title', { n: invitations.length }) }] : []),
   ]
 
   // Chip chọn nhóm nằm ngay trong thẻ của bảng (khe top của FarmFrame), không còn là 1 hàng rời
@@ -181,6 +185,9 @@ export default function FarmMembersManager({ farmId, houseId }: { farmId: string
       {group === 'roster' && houseId && isFarmOwner && (
         <HouseRosterSection top={groupChips} searchBox={searchBox} query={query} farmId={farmId} houseId={houseId} technicians={technicians} />
       )}
+      {group === 'invitations' && isPrimaryOwner && (
+        <InvitationSection top={groupChips} searchBox={searchBox} query={query} invitations={invitations} failed={invitationsFailed} />
+      )}
       {!isPrimaryOwner && <p className="text-xs text-warmGray">{t('members.primaryOnly')}</p>}
 
       {inviteRole && <InviteModal farmId={farmId} defaultRole={inviteRole} onClose={() => setInviteRole(null)} />}
@@ -209,6 +216,38 @@ function memberColumn(header: string): DataTableColumn<MemberRow> {
       </div>
     ),
   }
+}
+
+interface InvitationSectionProps {
+  top: ReactNode
+  searchBox: ReactNode
+  query: string
+  invitations: Invitation[]
+  failed: boolean
+}
+
+// AUTH-FR-010 — lời mời đang chờ của farm: ai được mời, vai trò, gửi lúc nào, khi nào hết hạn
+function InvitationSection({ top, searchBox, query, invitations, failed }: InvitationSectionProps) {
+  const { t } = useTranslation(farmDict)
+  const emptyKey: FarmKey = failed ? 'invites.loadFailed' : query ? 'members.noMatch' : 'invites.empty'
+  return (
+    <FarmFrame top={top} title={t('invites.title', { n: invitations.length })} description={t('invites.desc')} action={searchBox}>
+      <FixedRowsTable
+        columns={[
+          { key: 'email', header: t('invites.colEmail'), render: row => <span className="truncate text-sm text-charcoal">{row.invited_email}</span> },
+          { key: 'role', header: t('invites.colRole'), className: 'w-40', render: row => <Badge tone={row.invited_role === 'DOMAIN_EXPERT' ? 'info' : 'neutral'}>{t(ROLE_LABEL[row.invited_role])}</Badge> },
+          { key: 'sent', header: t('invites.colSent'), className: 'w-40', render: row => <span className="text-sm text-graphite">{formatDateTime(row.created_at)}</span> },
+          { key: 'expires', header: t('invites.colExpires'), className: 'w-40', render: row => <span className="text-sm text-graphite">{formatDateTime(row.expires_at)}</span> },
+        ]}
+        rows={invitations.filter(row => !query || row.invited_email.toLowerCase().includes(query))}
+        getRowKey={row => row._id}
+        rowHeight={MEMBER_ROW_HEIGHT}
+        pageSize={MEMBER_PAGE_SIZE}
+        emptyNotice={t(emptyKey)}
+        emptyContent={<TableEmptyState title={t(emptyKey)} />}
+      />
+    </FarmFrame>
+  )
 }
 
 // Popup mời thành viên: email + vai trò (chọn sẵn theo mục đang bấm, đổi được); lời mời hiệu lực 7 ngày

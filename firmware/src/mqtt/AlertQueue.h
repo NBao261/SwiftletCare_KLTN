@@ -18,11 +18,16 @@ struct QueuedAlert {
   char severity[10] = "";
   char message[160] = "";
   char resetReason[16] = "";
+  // ACTUATOR_FAULT (THREAT-FR-014): tải, loại lỗi, dòng bình thường đã học và dòng đo (A); âm = không có
+  char load[12] = "";
+  char fault[20] = "";
+  float normalCurrentA = -1;
+  float currentA = -1;
 };
 
 class AlertQueue {
 public:
-  /** false khi đầy: caller thử lại sau. Cùng loại đang chờ thì coi như đã nhận */
+  /** false khi đầy: caller thử lại sau. Cùng loại (và cùng tải) đang chờ thì coi như đã nhận */
   bool push(const QueuedAlert &alert);
   /** Vị trí cảnh báo đầu tiên chưa gửi trong phiên này, -1 nếu hết */
   int nextUnsent() const;

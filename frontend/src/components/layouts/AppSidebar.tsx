@@ -41,7 +41,7 @@ export default function AppSidebar({
   const unreadCount = useAlertStore(s => s.unreadCount)
   const isExpert = user?.role === 'DOMAIN_EXPERT'
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
-  const expertPendingCount = isExpert ? (expertAlerts?.length ?? 0) : 0
+  const expertPendingCount = isExpert ? (expertAlerts?.total ?? 0) : 0
   const { logout } = useAuth()
   // Trang hiện tại: ở trang con của 1 mục menu thì link mục đó mang state đi lên
   const { pathname } = useLocation()

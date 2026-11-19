@@ -71,12 +71,20 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
     ...(sensorNodes ?? []).map(node => [node._id, node.device_id] as const),
     ...(cameras ?? []).map(camera => [camera._id, camera.device_id] as const),
   ]), [sensorNodes, cameras]);
+  // SYSTEM-FR-004 — thiết bị giả lập ghi nhãn ở cột và ngăn chi tiết
+  const simulatedIds = useMemo(() => new Set(
+    [...(sensorNodes ?? []), ...(cameras ?? [])].filter(device => device.simulated).map(device => device._id),
+  ), [sensorNodes, cameras]);
   const locationOf = useCallback((alert: Alert) => {
     let location = NO_VALUE;
     if (alert.zone_id) location = zoneNames.get(alert.zone_id) ?? NO_VALUE;
     else if (alert.house_id) location = houseNames.get(alert.house_id) ?? NO_VALUE;
-    return { location, device: alert.node_id ? deviceNames.get(alert.node_id) ?? null : null };
-  }, [zoneNames, houseNames, deviceNames]);
+    return {
+      location,
+      device: alert.node_id ? deviceNames.get(alert.node_id) ?? null : null,
+      simulated: !!alert.node_id && simulatedIds.has(alert.node_id),
+    };
+  }, [zoneNames, houseNames, deviceNames, simulatedIds]);
 
   const closeDetail = () => {
     setDetailId(null);

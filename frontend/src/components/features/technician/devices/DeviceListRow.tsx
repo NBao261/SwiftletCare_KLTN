@@ -4,6 +4,7 @@ import type { SensorNode } from "@/types"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
 import { Badge } from "@/components/ui"
+import SimulatedBadge from "@/components/common/SimulatedBadge"
 import DeviceDiagnosticsPanel from "@/components/features/technician/devices/DeviceDiagnosticsPanel"
 
 interface DeviceListRowProps {
@@ -82,6 +83,7 @@ export default function DeviceListRow({
           <div className="min-w-0 flex flex-col">
             <p className="truncate font-mono font-bold text-charcoal">{node.device_id}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-warmGray">
+              <SimulatedBadge simulated={node.simulated} />
               <span className="font-mono">v{node.firmware_version || "—"}</span>
               {locationLabel && (
                 <>

@@ -2,6 +2,7 @@
 // Cột "Cập nhật" đọc trực tiếp ota_pending / ota_failed của node (không suy diễn "bản mới nhất" vì BE không có catalog firmware).
 import { useMemo } from 'react'
 import { Card } from '@/components/ui'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
 import { formatDate } from '@/lib/helpers'
 import { useAllZones } from '@/hooks/shared/useFarms'
@@ -49,7 +50,12 @@ function DeviceRow({ node, zoneName, selected, onSelect }: DeviceRowProps) {
         <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] transition-colors duration-200 ${accent}`} />
         <StatusDot status={node.status as DeviceStatus} />
       </td>
-      <td className="px-4 py-3 font-mono text-sm font-semibold text-charcoal">{node.device_id}</td>
+      <td className="px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-mono text-sm font-semibold text-charcoal">{node.device_id}</span>
+          <SimulatedBadge simulated={node.simulated} />
+        </div>
+      </td>
       <td className="px-4 py-3 text-warmGray">{zoneName}</td>
       <td className="px-4 py-3 font-mono text-sm">{node.firmware_version ?? '—'}</td>
       <td className="px-4 py-3 text-sm"><OtaChip node={node} /></td>

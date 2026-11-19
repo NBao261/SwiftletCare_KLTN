@@ -10,6 +10,8 @@ export const ACCOUNTS = {
   technician: 'tech@swiftletcare.dev',
   otherHouseTechnician: 'tech2@swiftletcare.dev',
   expert: 'expert@swiftletcare.dev',
+  // Farm Owner của farm demo chưa có chuyên gia (BR-22)
+  ownerWithoutExpert: 'owner2@swiftletcare.dev',
 } as const;
 
 export type Account = keyof typeof ACCOUNTS;

@@ -7,9 +7,9 @@
 | Project code | FA26SE158 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 1.5.0 (Review 2, final scope) |
-| Date | 09/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.0; Design Brief (BM01) 2.0 sections 6–7 and Appendix A |
+| Document version | 1.5.1 (Review 2, final scope) |
+| Date | 19/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.12; Design Brief (BM01) 2.1 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
 
@@ -145,7 +145,7 @@ Each owner runs the test cases of their features and workflows and records the r
 | Member | Owns and runs (counted for this member in BM04) | Writes |
 | --- | --- | --- |
 | Nguyễn Chí Bảo | F-01, 02, 03, 04, 09, 10, 11, 12, 26; WF-01, 03; configuration sync transitions; NFR-06, 09 (36 cases) | Firmware and AI-node tests; backend tests of MQTT ingestion, configuration, bird counting, push, weather compensation, knowledge rules and current sensing; DS-01, 02, 05, 06 on staging |
-| Trần Minh Kiệt | F-05, 06, 08, 23, 24; supporting F-18, 19; WF-05; device connection, device label and Work Order transitions; NFR-15 (38 cases) | Backend tests of devices, accounts, alerts, the expert module, daily health and operations (including those of F-07, 13–17, 20–22, 25); DS-09, 10 |
+| Trần Minh Kiệt | F-05, 06, 08, 23, 24; supporting F-18, 19; WF-05; device connection, device label and Work Order transitions; NFR-15 (39 cases) | Backend tests of devices, accounts, alerts, the expert module, daily health and operations (including those of F-07, 13–17, 20–22, 25); DS-09, 10 |
 | Nguyễn Vũ Len | F-07, 17, 25; WF-02, 07; alert status, relay mode and maintenance plan transitions; NFR-02 (31 cases) | E2E tests of DS-03, 04, 13, 14; mobile tests |
 | Nguyễn Thị Yến Nhi | F-20, 21, 22, 29; supporting F-30; WF-06; daily status, rating, health report and recommendation transitions; NFR-01, 13, 14 (32 cases) | E2E tests of DS-11, 12; web tests |
 | Thái Minh Tuấn | F-13, 14, 15, 16, 27, 28; WF-04, 08; verdict, review item and proposal transitions (33 cases) | E2E tests of DS-07, 08, 15, 16; web tests |
@@ -162,6 +162,7 @@ Committed test cases that are not automated yet are written in Iteration 2 toget
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.5.1 | 19/11/2026 | The restore of a removed device (SRS Section 6.6, FARM-FR-008, added in SRS 4.2.1) becomes the sixth device connection transition: 75 transitions, 171 committed cases; TC-F14-01 adds the unknown-key and reset checks of EXPERT-FR-008, TC-F16-02 the web inbox of EXPERT-FR-007 |
 | 1.5.0 | 09/11/2026 | Eight main workflows: WF-09 removed, F-30 (harvest cycles) becomes a supporting feature of SF-06, the transitions of HarvestBatch and HarvestCycle leave the committed list; F-13 covers the on-site check (EXPERT-FR-021) |
 | 1.4.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0): features F-23…F-30 (alert routing and escalation, Work Orders closed by the data, preventive maintenance, weather compensation, recommendation rules, profiles and house stage, farm overview and house comparison, harvest cycles), workflows WF-07…09 with demo scenarios DS-13…18, transitions of HarvestBatch, WorkOrder, MaintenancePlan, Recommendation and HarvestCycle, NFR-15. The results of Section 6 are still those of the run on the tag `review-2`; the new cases are written in Iterations 2 and 3 |
 | 1.3.0 | 04/11/2026 | Results of the CI run on the tag `review-2` (Section 6): 83 of the 83 automated cases with a written test pass; the generator reads the PlatformIO JUnit report, whose suite name sits on the test suite |

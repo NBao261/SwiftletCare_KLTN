@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { Button, DataTable, EmptyState, LoadingSkeleton, type DataTableColumn } from '@/components/ui';
+import SimulatedBadge from '@/components/common/SimulatedBadge';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import { OVERRIDE_HISTORY_LIMIT } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
@@ -34,7 +35,7 @@ export default function RelayOverrideHistoryCard({ zoneIds }: RelayOverrideHisto
     return (allNodes ?? []).filter(node => zoneIdSet.has(node.zone_id));
   }, [allNodes, zoneIds]);
   const nodeIds = useMemo(() => nodes.map(node => node._id), [nodes]);
-  const deviceNameById = useMemo(() => new Map(nodes.map(node => [node._id, node.device_id])), [nodes]);
+  const nodeById = useMemo(() => new Map(nodes.map(node => [node._id, node])), [nodes]);
   const overrides = useZoneRelayOverrides(nodeIds, OVERRIDE_HISTORY_LIMIT);
 
   // Nhãn vai trò chỉ khi backend trả đúng mã vai trò frontend biết, không hiện mã thô
@@ -52,9 +53,12 @@ export default function RelayOverrideHistoryCard({ zoneIds }: RelayOverrideHisto
       render: log => (
         <div className="min-w-0">
           <p className="truncate font-semibold">{t(`relay.${log.relay}`)}</p>
-          <p className="truncate text-warmGray">
-            {log.state ? t('override.forcedOn') : t('override.forcedOff')} · {deviceNameById.get(log.node_id) ?? NO_VALUE}
-          </p>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate text-warmGray">
+              {log.state ? t('override.forcedOn') : t('override.forcedOff')} · {nodeById.get(log.node_id)?.device_id ?? NO_VALUE}
+            </p>
+            <SimulatedBadge simulated={nodeById.get(log.node_id)?.simulated} />
+          </div>
         </div>
       ),
     },

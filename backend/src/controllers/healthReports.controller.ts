@@ -34,16 +34,6 @@ export const createCustom = asyncHandler(async (req: Request, res: Response) => 
   res.status(created ? 201 : 200).json({ success: true, data })
 })
 
-/** GET /health-reports/preview – EXPERT-FR-005 (xem theo khoảng bất kỳ, không lưu) */
-export const preview = asyncHandler(async (req: Request, res: Response) => {
-  const data = await healthReportService.previewHealthReport(req.user, {
-    zoneId: req.query.zoneId as string,
-    from:   req.query.from as string,
-    to:     req.query.to as string | undefined,
-  })
-  res.json({ success: true, data })
-})
-
 /** GET /health-reports/:id */
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
   const report = await houseHealthReportService.getReport(req.params.id, req.user)

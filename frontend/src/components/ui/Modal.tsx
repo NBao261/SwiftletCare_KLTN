@@ -61,10 +61,12 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
   }, [open])
 
   if (!open) return null
-  // Portal ra body: <main> của AppShell là stacking context z-10 nên modal vẽ bên trong sẽ nằm dưới header z-20
+  // Portal ra body: <main> của AppShell là stacking context z-10 nên modal vẽ bên trong sẽ nằm dưới header z-20.
+  // Lớp phủ cuộn, khung căn giữa bằng my-auto (không phải items-center): khung cao hơn màn hình
+  // (VD điện thoại 375 px) thì bắt đầu từ trên và cuộn được, không bị cắt mất tiêu đề lẫn nút cuối
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/30 p-4 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-charcoal/30 p-4 backdrop-blur-sm animate-fade-in"
       // mousedown (không phải click): kéo bôi chữ từ trong khung rồi thả ra ngoài không đóng nhầm
       onMouseDown={closeOnBackdrop ? e => { if (e.target === e.currentTarget) onClose() } : undefined}
     >
@@ -74,7 +76,7 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
         role="dialog"
         aria-modal="true"
         aria-label={tr(title ?? ariaLabel)}
-        className={cn('relative w-full rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none', SIZE_CLASS[size], className)}
+        className={cn('relative my-auto w-full rounded-3xl border border-gray-200 bg-white p-6 shadow-popover outline-none', SIZE_CLASS[size], className)}
       >
         {title ? (
           <div className="mb-4 flex items-center justify-between gap-3">

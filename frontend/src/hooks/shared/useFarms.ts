@@ -160,7 +160,19 @@ export function useInviteFarmMember(farmId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { email: string; role: FarmMemberRole }) => farmApi.inviteMember(farmId, input.email, input.role),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['farms', farmId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['farms', farmId] })
+      void queryClient.invalidateQueries({ queryKey: ['invitations', farmId] })
+    },
+  })
+}
+
+// AUTH-FR-010 — lời mời đang chờ của farm; route chỉ cho Primary Owner nên role khác không gọi
+export function useFarmInvitations(farmId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['invitations', farmId],
+    queryFn: () => farmApi.listInvitations(farmId).then(response => response.data.data),
+    enabled: enabled && isMongoId(farmId),
   })
 }
 

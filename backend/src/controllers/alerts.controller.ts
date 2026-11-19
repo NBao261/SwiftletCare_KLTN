@@ -17,7 +17,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     status:   req.query.status as string | undefined,
     severity: req.query.severity as string | undefined,
     type:     req.query.type as string | undefined,
-    verdict:  req.query.verdict as 'pending' | 'confirmed' | 'rejected' | undefined,
+    verdict:  req.query.verdict as 'any' | 'pending' | 'confirmed' | 'rejected' | undefined,
     page:     req.query.page ? Number(req.query.page) : undefined,
     limit:    req.query.limit ? Number(req.query.limit) : undefined,
   })

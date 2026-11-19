@@ -23,6 +23,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useAutonomy, useControlPerformance } from '@/hooks/farm-owner/useAnalytics';
 import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
 import type { AnalyticsRange, ControlPerformanceResponse } from '@/apis/farm-owner/analytics.api';
+import SimulatedBadge from '@/components/common/SimulatedBadge';
 
 // Vạch dọc nét đứt tại các lần chỉnh hệ số để so hành vi trước và sau
 function tuningMarkersPlugin(indices: number[], label: string): Plugin<'line'> {
@@ -208,7 +209,7 @@ export default function AutomationCard({ zoneId, zoneName }: AutomationCardProps
           <p className="label-caption">{t('automation.maintenanceTitle')}</p>
           {data.relay_usage.map(usage => (
             <div key={usage.device_id} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-small text-charcoal">
-              <span className="font-semibold">{usage.device_id}</span>
+              <span className="inline-flex items-center gap-1.5 font-semibold">{usage.device_id}<SimulatedBadge simulated={usage.simulated} /></span>
               <span>
                 {t('automation.maintenancePump', {
                   hours: num(usage.misting.hours),

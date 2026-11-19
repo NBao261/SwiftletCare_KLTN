@@ -7,9 +7,6 @@ export const profilesApi = {
   list: (farmId: string, status?: string) =>
     api.get<ApiResponse<ConfigProfile[]>>('/profiles', { params: { farmId, ...(status ? { status } : {}) } }),
 
-  getOne: (id: string) =>
-    api.get<ApiResponse<ConfigProfile>>(`/profiles/${id}`),
-
   create: (farmId: string, input: ConfigProfileInput) =>
     api.post<ApiResponse<ConfigProfile>>('/profiles', { farm_id: farmId, ...input }),
 

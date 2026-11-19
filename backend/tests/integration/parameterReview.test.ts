@@ -104,10 +104,10 @@ describe('mở mục duyệt khi Farm Owner sửa (EXPERT-FR-010)', () => {
     expect(notice?.ref).toMatchObject({ kind: 'parameter_review', id: review._id })
   })
 
-  it('sửa tiếp cùng nhóm (kể cả qua thiết bị, reset): vẫn 1 mục, giữ giá trị gốc', async () => {
-    const { zone, node, t, send } = await seed()
+  it('sửa tiếp cùng nhóm (kể cả reset): vẫn 1 mục, giữ giá trị gốc', async () => {
+    const { zone, t, send } = await seed()
     await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 78 }).expect(200)
-    await send('put', `/devices/sensor-nodes/${node._id}/thresholds`, t.owner, { humidity_min: 80 }).expect(200)
+    await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 80 }).expect(200)
     await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { temp_max: 32 }).expect(200)
 
     const reviews = await reviewsOf(zone._id)

@@ -13,6 +13,7 @@ import type { WeatherRule } from '@/types/expert.types'
 import WeatherRuleRow from '@/components/features/domain-expert/weather/WeatherRuleRow'
 import WeatherRuleAddForm from '@/components/features/domain-expert/weather/WeatherRuleAddForm'
 import { formatDate } from '@/lib/helpers'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
 const MAX_RULES = 10
 
@@ -41,6 +42,7 @@ function LastCompensationBadge({ data }: {
 }
 
 export default function DomainExpertWeatherRulesPage() {
+  const { canDecide } = useExpertDecisionRights()
   const { selectedHouseId } = useZoneStore()
   const { data, isLoading, isError } = useWeatherRules(selectedHouseId ?? undefined)
   const mutation = useUpdateWeatherRules(selectedHouseId ?? undefined)
@@ -141,6 +143,8 @@ export default function DomainExpertWeatherRulesPage() {
   }
 
   return (
+    // BR-22 — Farm Owner chỉ sửa khi farm chưa có chuyên gia
+    <fieldset disabled={!canDecide} className="contents">
     <div className="mx-auto w-full max-w-screen-xl space-y-5">
       <SectionCard
         icon={<CloudRain className="w-5 h-5" />}
@@ -177,7 +181,7 @@ export default function DomainExpertWeatherRulesPage() {
       </SectionCard>
 
       {/* Form thêm luật */}
-      {!isError && !isLoading && rules.length < MAX_RULES && (
+      {canDecide && !isError && !isLoading && rules.length < MAX_RULES && (
         <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
       )}
 
@@ -204,5 +208,6 @@ export default function DomainExpertWeatherRulesPage() {
         </div>
       )}
     </div>
+    </fieldset>
   )
 }

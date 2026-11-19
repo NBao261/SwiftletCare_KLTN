@@ -24,11 +24,22 @@ void processInbound();
 void publishTelemetry(const SensorData &data, const RelayState &relay);
 // publish* trả true khi đã gửi được (false: mất kết nối/buffer đầy) để caller thử lại
 bool publishHeartbeat();
+// BR-32, BR-45 — dòng bình thường đã học của tải (0 = bơm phun sương, 1 = quạt), gửi trong heartbeat để
+// backend đếm giờ chạy theo dòng; 0 = chưa học, không gửi
+void setActuatorBaseline(int load, float normalA);
 bool publishRelayState(const RelayState &relay);
 // Vào hàng đợi NVS, gửi QoS 1, xoá khi có PUBACK. resetReason: chỉ cho UNEXPECTED_RESTART
 // (THREAT-FR-012) — POWER_ON | WATCHDOG | BROWNOUT | CRASH
+struct ActuatorDetails {
+  const char *load;   // "misting" | "ventilation" (backend ACTUATOR_LOADS)
+  const char *fault;  // "NO_CURRENT_WHILE_ON" | "CURRENT_WHILE_OFF"
+  float normalCurrentA;
+  float currentA;
+};
+// actuator: chỉ cho ACTUATOR_FAULT (THREAT-FR-014), gửi kèm load, fault, normalCurrentA, currentA
 bool publishAlert(const char *alertType, const char *severity,
-                  const char *payload, const char *resetReason = nullptr);
+                  const char *payload, const char *resetReason = nullptr,
+                  const ActuatorDetails *actuator = nullptr);
 // Gửi 1 dòng telemetry đã buffer, nguyên văn, QoS 1; true khi broker đã xác nhận (ENV-FR-024)
 bool publishBufferedLine(const String &jsonLine);
 } // namespace MQTTManager

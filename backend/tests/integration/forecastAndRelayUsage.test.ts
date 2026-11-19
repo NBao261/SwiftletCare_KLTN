@@ -18,6 +18,8 @@ import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { scanForecastBreaches } from '@/services/forecast.service'
 import { accumulateRelayUsage, tallyRelayUsage } from '@/services/relayUsage.service'
+import { recordHeartbeat } from '@/services/device.service'
+import type { HeartbeatPayload } from '@/types/domain.types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({
@@ -123,6 +125,35 @@ describe('relay usage (ALERT-FR-016)', () => {
     expect(r.switches).toEqual({ misting: 2, ventilation: 0 })
   })
 
+  it('BR-45: with a learned normal current, an ON relay counts only while the current is above 50 % of it', () => {
+    const on = (t: number, amps?: number) => ({ timestamp: at(t), misting_on: true, ventilation_on: false, pump_current_a: amps })
+    const samples = [on(0, 0.9), on(10, 0.02), on(20, 0.6), on(30)]  // chạy, không dòng, chạy
+    expect(tallyRelayUsage({}, samples, { misting_a: 1 }).onHours.misting * 3600).toBeCloseTo(20)
+    expect(tallyRelayUsage({}, samples).onHours.misting * 3600).toBeCloseTo(30) // chưa học: theo relay
+    // mẫu không có số đo dòng (đọc ADS1115 lỗi): theo relay
+    expect(tallyRelayUsage({}, [on(0), on(10)], { misting_a: 1 }).onHours.misting * 3600).toBeCloseTo(10)
+    // số lần đóng cắt vẫn theo relay
+    expect(tallyRelayUsage({}, [on(0, 0), { ...on(10, 0), misting_on: false }], { misting_a: 1 }).switches.misting).toBe(1)
+  })
+
+  it('BR-45: the heartbeat stores the learned current and the hourly count skips a pump running dry', async () => {
+    const { zone, node } = await seed()
+    const heartbeat = (extra: object) => recordHeartbeat({ deviceId: 'ESP32-B-1', firmwareVersion: '2.3.1', rssi: -60, freeHeap: 1, uptime: 1, timestamp: 1, ...extra } as HeartbeatPayload)
+    await heartbeat({ actuatorBaseline: { misting: 1.2 } })
+    await heartbeat({ actuatorBaseline: { ventilation: 0.4, misting: -1 } }) // số âm bị bỏ, mức cũ giữ
+    expect((await SensorNode.findById(node._id).lean())!.actuator_baseline).toEqual({ misting_a: 1.2, ventilation_a: 0.4 })
+
+    const now = Date.now()
+    await Telemetry.insertMany(Array.from({ length: 60 }, (_, i) => ({
+      node_id: node._id, zone_id: zone._id, timestamp: new Date(now - (59 - i) * 10_000),
+      misting_on: true, ventilation_on: true, pump_current_a: 0.01, fan_current_a: 0.38,
+    })))
+    await accumulateRelayUsage(new Date(now))
+    const usage = (await SensorNode.findById(node._id).lean())!.relay_usage
+    expect(usage.misting.since_service_hours).toBe(0) // relay BẬT nhưng không có dòng
+    expect(usage.ventilation.since_service_hours * 3600).toBeCloseTo(590)
+  })
+
   it('raises one LOW MAINTENANCE_DUE when the pump passes its runtime limit; acknowledging it restarts the count', async () => {
     const { zone, node, token } = await seed()
     await SensorNode.updateOne({ _id: node._id }, { 'relay_usage.misting.since_service_hours': 499.9 })
@@ -153,6 +184,17 @@ describe('relay usage (ALERT-FR-016)', () => {
     expect(saved.relay_usage.misting.since_service_hours).toBe(0)
     expect(saved.relay_usage.misting.since_service_switches).toBe(0)
     expect(saved.relay_usage.misting.on_hours).toBeGreaterThan(0) // tổng giờ chạy giữ nguyên
+  })
+
+  it('SYSTEM-FR-004: the control performance lists the run hours of each controller with its simulated flag', async () => {
+    const { zone, node, token } = await seed()
+    await SensorNode.create({ device_id: 'SIM-B-2', zone_id: zone._id, status: 'ONLINE', simulated: true })
+    await SensorNode.updateOne({ _id: node._id }, { 'relay_usage.misting.since_service_hours': 12.4 })
+    const res = await request(app).get('/analytics/control/performance').query({ zoneId: String(zone._id), range: '24h' })
+      .set('Authorization', `Bearer ${token}`).expect(200)
+    const usage = res.body.data.relay_usage as Array<{ device_id: string; simulated: boolean; misting: { hours: number } }>
+    expect(usage.find(u => u.device_id === 'ESP32-B-1')).toMatchObject({ simulated: false, misting: { hours: 12 } })
+    expect(usage.find(u => u.device_id === 'SIM-B-2')).toMatchObject({ simulated: true })
   })
 
   it('raises nothing below the limit', async () => {

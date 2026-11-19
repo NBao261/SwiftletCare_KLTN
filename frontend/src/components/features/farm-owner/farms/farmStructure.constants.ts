@@ -1,6 +1,6 @@
 import type { Icon } from '@phosphor-icons/react'
 import { CloudIcon, DropIcon, SpeakerHighIcon, SunIcon, ThermometerIcon, WindIcon } from '@phosphor-icons/react'
-import type { Thresholds } from '@/types'
+import type { RosterShift, Thresholds } from '@/types'
 import type { MetricKey } from '@/components/features/farm-owner/farms/farmStructure'
 import type { farmDict } from '@/constants/farmStructure.i18n'
 
@@ -45,3 +45,7 @@ export const METRIC_BY_KEY = Object.fromEntries(ZONE_METRICS.map(m => [m.key, m]
 // Bảng thành viên, lịch trực của trang nhà: khung cố định 5 dòng, nhiều hơn thì phân trang
 export const MEMBER_PAGE_SIZE = 5
 export const MEMBER_ROW_HEIGHT = 64
+
+// AUTH-FR-014 — nhãn ngày (0 = Chủ nhật như backend) và loại ca của lịch trực
+export const ROSTER_DAY_LABEL: FarmKey[] = ['roster.day.0', 'roster.day.1', 'roster.day.2', 'roster.day.3', 'roster.day.4', 'roster.day.5', 'roster.day.6']
+export const ROSTER_ROLE_LABEL: Record<RosterShift['role'], FarmKey> = { PRIMARY: 'roster.role.PRIMARY', BACKUP: 'roster.role.BACKUP' }

@@ -11,8 +11,10 @@ import { useHouseCameras } from '@/hooks/domain-expert/useCountingRing'
 import CountingRingEditor from '@/components/features/domain-expert/counting-ring/CountingRingEditor'
 import CountingRingHistory from '@/components/features/domain-expert/counting-ring/CountingRingHistory'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
 export default function DomainExpertCountingRingPage() {
+  const { canDecide } = useExpertDecisionRights()
   const { selectedHouseId } = useZoneStore()
   const houseId = selectedHouseId || undefined
   const { data: cameras, isLoading, isError } = useHouseCameras(houseId)
@@ -65,7 +67,10 @@ export default function DomainExpertCountingRingPage() {
         {!isLoading && !isError && camera && (
           <div className="space-y-2">
             <SimulatedBadge simulated={camera.simulated} />
-            <CountingRingEditor key={camera._id} camera={camera} houseId={houseId} />
+            {/* BR-22 — Farm Owner chỉ vẽ khi farm chưa có chuyên gia */}
+            <fieldset disabled={!canDecide} className="contents">
+              <CountingRingEditor key={camera._id} camera={camera} houseId={houseId} />
+            </fieldset>
           </div>
         )}
       </SectionCard>

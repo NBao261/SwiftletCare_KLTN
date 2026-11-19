@@ -27,6 +27,8 @@ interface CoefficientProposalCardProps {
   onApprove: (proposalId: string) => Promise<void>;
   onReject: (proposalId: string, note: string) => Promise<boolean>;
   isProcessing?: boolean;
+  // Farm Owner xem mục duyệt, đề xuất nhưng không duyệt (EXPERT-FR-010, 011 chỉ của Domain Expert)
+  readOnly?: boolean;
 }
 
 const STATUS_CONFIG: Record<
@@ -95,6 +97,7 @@ export default function CoefficientProposalCard({
   onApprove,
   onReject,
   isProcessing = false,
+  readOnly = false,
 }: CoefficientProposalCardProps): JSX.Element {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const statusConfig = STATUS_CONFIG[proposal.status] || STATUS_CONFIG.PROPOSED;
@@ -253,7 +256,7 @@ export default function CoefficientProposalCard({
       )}
 
       {/* 6. Footer Actions: Chuyên gia duyệt hoặc từ chối */}
-      {isPending && (
+      {isPending && !readOnly && (
         <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-warmGray/10">
           <Button
             type="button"

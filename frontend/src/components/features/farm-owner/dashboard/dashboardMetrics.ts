@@ -331,6 +331,8 @@ export interface AlertLogRow {
   id: string
   createdAt: string
   deviceName: string
+  /** SYSTEM-FR-004 — cảnh báo của thiết bị giả lập */
+  simulated?: boolean
   locationName: string
   sensorKind: SensorKind
   type: Alert['type']

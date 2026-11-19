@@ -4,6 +4,7 @@
  */
 import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
+import { NO_VALUE } from '@/constants/display'
 import type { InferredAlertItem } from '@/types/expert.types'
 import {
   ALERT_TYPE_LABELS,
@@ -43,60 +44,11 @@ function VerdictBadge({ alert }: { alert: InferredAlertItem }) {
   return <span className={cn(BADGE_BASE, 'bg-amber-50 text-amber-800 border border-amber-200/80')}>Chờ kiểm chứng</span>
 }
 
+// Giá trị đo: message do backend ghi kèm số thật (mức ồn, dự báo, tỷ lệ chim về…), không tự đoán tên trường
 function MeasuredValueCell({ alert }: { alert: InferredAlertItem }) {
-  const m = alert.metadata ?? {}
-  if (alert.type === 'NOISE_ANOMALY') {
-    const db = (m.sound_db as number | undefined) ?? (m.db as number | undefined)
-    const thresh = db !== undefined && m.noise_margin !== undefined ? db - (m.noise_margin as number) : 75
-    return (
-      <div className="flex flex-col text-xs leading-tight">
-        <b className="text-charcoal whitespace-nowrap">{db !== undefined ? `${db} dB` : 'Tiếng ồn bất thường'}</b>
-        <span className="text-[11px] text-warmGray whitespace-nowrap">Ngưỡng: {thresh} dB</span>
-      </div>
-    )
-  }
-  if (alert.type === 'SENSOR_ANOMALY') {
-    const metric = (m.sensor_type as string) || (m.metric as string) || 'Cảm biến'
-    const delta = m.delta as number | undefined
-    const thresh = (m.threshold as number | undefined) ?? 5
-    const mainText = delta !== undefined ? `${metric} lệch ${delta > 0 ? `+${delta}` : delta}%` : (alert.title || 'Cảm biến bất thường')
-    return (
-      <div className="flex flex-col text-xs leading-tight">
-        <b className="text-charcoal whitespace-nowrap">{mainText}</b>
-        <span className="text-[11px] text-warmGray whitespace-nowrap">Ngưỡng sai lệch: ±{thresh}%</span>
-      </div>
-    )
-  }
-  if (alert.type === 'MISTING_INEFFECTIVE' || (alert.type as string) === 'PUMP_DRY') {
-    const current = m.motor_current !== undefined ? `${m.motor_current} A` : undefined
-    return (
-      <div className="flex flex-col text-xs leading-tight">
-        <b className="text-charcoal whitespace-nowrap">{current ? `Tải bơm: ${current}` : 'Phun sương không tăng ẩm'}</b>
-        <span className="text-[11px] text-warmGray whitespace-nowrap">Định mức: 4.2 A / &lt; 2.5 A</span>
-      </div>
-    )
-  }
-  if (alert.type === 'FORECAST_BREACH') {
-    const val = m.forecast_value !== undefined ? `${m.forecast_value}% RH` : '73.6% RH'
-    return (
-      <div className="flex flex-col text-xs leading-tight">
-        <b className="text-charcoal whitespace-nowrap">Dự báo 60p: {val}</b>
-        <span className="text-[11px] text-warmGray whitespace-nowrap">Ngưỡng an toàn: 75% RH</span>
-      </div>
-    )
-  }
-  if (alert.type === 'LOW_RETURN_RATE') {
-    const drop = (m.drop_pct as number | undefined) ?? (m.drop as number | undefined)
-    return (
-      <div className="flex flex-col text-xs leading-tight">
-        <b className="text-charcoal whitespace-nowrap">{drop !== undefined ? `Giảm ${drop}% đàn chim` : 'Tỉ lệ chim về sụt giảm'}</b>
-        <span className="text-[11px] text-warmGray whitespace-nowrap">Chuẩn nền: {(m.baseline_rate as number | undefined) ?? 95}%</span>
-      </div>
-    )
-  }
   return (
-    <div className="flex flex-col text-xs leading-tight max-w-[160px]">
-      <span className="text-charcoal truncate" title={alert.message}>{alert.message || '—'}</span>
+    <div className="flex flex-col text-xs leading-tight max-w-[220px]">
+      <span className="text-charcoal line-clamp-2" title={alert.message}>{alert.message || NO_VALUE}</span>
     </div>
   )
 }

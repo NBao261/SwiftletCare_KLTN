@@ -7,7 +7,7 @@ import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { alertTypeDict } from '@/constants/enumLabels.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useLatestHealthReport } from '@/hooks/farm-owner/useHealthReports';
+import { useLatestHouseWeeklyReport } from '@/hooks/farm-owner/useHealthReports';
 import type { AlertType } from '@/types';
 
 // Loại cảnh báo phát sinh nhiều nhất trong kỳ, null khi kỳ không có cảnh báo
@@ -24,14 +24,15 @@ function mostFrequentAlertType(alertsByType: Record<string, number>): string | n
 }
 
 interface HealthReportCardProps {
+  houseId: string;
   zoneId: string;
 }
 
-// Báo cáo sức khỏe Zone mới nhất và kết luận của chuyên gia (EXPERT-FR-005/006) — Farm Owner chỉ đọc
-export default function HealthReportCard({ zoneId }: HealthReportCardProps): JSX.Element {
+// Báo cáo tuần mới nhất của nhà (BR-33): mục của Zone đang xem và kết luận của chuyên gia (EXPERT-FR-005/006) — chỉ đọc
+export default function HealthReportCard({ houseId, zoneId }: HealthReportCardProps): JSX.Element {
   const { t, num, date, dateTime } = useTranslation(analyticsDict);
   const { t: translateAlertType } = useTranslation(alertTypeDict);
-  const { data: report, isLoading, isError, refetch } = useLatestHealthReport(zoneId);
+  const { data: report, isLoading, isError, refetch } = useLatestHouseWeeklyReport(houseId);
 
   // Số 1 chữ số lẻ, chưa có thì gạch ngang
   const oneDecimal = (value: number | null): string => (value === null ? NO_VALUE : num(value, 1));
@@ -62,7 +63,8 @@ export default function HealthReportCard({ zoneId }: HealthReportCardProps): JSX
   }
 
   // Chưa có báo cáo vẫn hiện đủ khung, các thông số ghi "_"
-  const metrics = report?.metrics;
+  const metrics = report?.zone_sections.find(section => section.zone_id === zoneId);
+  const averageReturnRate = report?.house_metrics.avg_return_rate ?? null;
   const conclusion = report?.expert_conclusion ?? null;
   let alertTotal = 0;
   for (const count of Object.values(metrics?.alerts_by_type ?? {})) alertTotal += count;
@@ -96,7 +98,7 @@ export default function HealthReportCard({ zoneId }: HealthReportCardProps): JSX
       <div className="flex flex-col gap-1 text-small text-graphite">
         <p>{t('health.nh3', { average: oneDecimal(metrics?.nh3_avg ?? null), max: oneDecimal(metrics?.nh3_max ?? null) })}</p>
         <p>{t('health.co2', { average: oneDecimal(metrics?.co2_avg ?? null), max: oneDecimal(metrics?.co2_max ?? null) })}</p>
-        {metrics && metrics.avg_return_rate !== null && <p>{t('health.returnRate', { value: num(metrics.avg_return_rate, 1) })}</p>}
+        {averageReturnRate !== null && <p>{t('health.returnRate', { value: num(averageReturnRate, 1) })}</p>}
       </div>
 
       {/* Kết luận của chuyên gia */}

@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { useAlertsInfinite } from '@/hooks/shared/useAlerts'
+import { useNotificationUnreadCount } from '@/hooks/shared/useNotifications'
+import NotificationInboxList from '@/components/common/NotificationInboxList'
 import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
 import { useAlertStore } from '@/stores/alertStore'
+import { useAuthStore } from '@/stores/authStore'
+import { canAccessPath } from '@/constants/roles'
 import { formatDate } from '@/lib/helpers'
 import { IconBell } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
@@ -13,10 +17,14 @@ import type { Alert } from '@/types'
 
 const PAGE_SIZE = 10
 
-// Popup chuông thông báo: cuộn tải thêm, xổ chi tiết tại chỗ là đã đọc; xác nhận kèm ghi chú làm ở trang Thông báo
+// Popup chuông: tab Cảnh báo (cuộn tải thêm, xổ chi tiết tại chỗ là đã đọc) và tab Thông báo trong ứng dụng (EXPERT-FR-007)
 export default function NotificationPopover() {
   const { t } = useTranslation(shellDict)
   const [open, setOpen] = useState(false)
+  // Role không vào được /alerts (Domain Expert) chỉ có tab Thông báo và không gọi GET /alerts
+  const showAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
+  const [tab, setTab] = useState<'alerts' | 'inbox'>(showAlerts ? 'alerts' : 'inbox')
+  const inboxUnreadCount = useNotificationUnreadCount()
   const [unreadFirst, setUnreadFirst] = useState(false)
   const [justRead, setJustRead] = useState<Map<string, Alert>>(() => new Map())
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -24,10 +32,14 @@ export default function NotificationPopover() {
   const listRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const unreadCount = useAlertStore(s => s.unreadCount)
+  const storedAlertUnread = useAlertStore(s => s.unreadCount)
+  const alertUnreadCount = showAlerts ? storedAlertUnread : 0
+  // Badge chuông = cảnh báo chưa đọc + thông báo trong ứng dụng chưa đọc
+  const unreadCount = alertUnreadCount + inboxUnreadCount
   const { readIds, markRead } = useReadAlerts()
-  const all = useAlertsInfinite(PAGE_SIZE, undefined, open)
-  const unreadOnly = useAlertsInfinite(PAGE_SIZE, 'ACTIVE', open && unreadFirst)
+  const alertsOpen = open && showAlerts && tab === 'alerts'
+  const all = useAlertsInfinite(PAGE_SIZE, undefined, alertsOpen)
+  const unreadOnly = useAlertsInfinite(PAGE_SIZE, 'ACTIVE', alertsOpen && unreadFirst)
   const isLoading = all.isLoading || (unreadFirst && unreadOnly.isLoading)
   const pager = unreadFirst && unreadOnly.hasNextPage ? unreadOnly : all
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pager
@@ -90,7 +102,7 @@ export default function NotificationPopover() {
   useEffect(() => {
     const root = listRef.current
     const sentinel = sentinelRef.current
-    if (!open || !root || !sentinel || !hasNextPage) return
+    if (!open || tab !== 'alerts' || !root || !sentinel || !hasNextPage) return
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0]?.isIntersecting && !isFetchingNextPage) void fetchNextPage()
@@ -99,7 +111,7 @@ export default function NotificationPopover() {
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [open, hasNextPage, isFetchingNextPage, fetchNextPage])
+  }, [open, tab, hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
     <div ref={containerRef} className="relative">
@@ -129,16 +141,40 @@ export default function NotificationPopover() {
         >
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-charcoal/10 px-4 py-3">
             <span className="text-base font-bold text-charcoal">{t('notif.title')}</span>
-            <button
-              type="button"
-              aria-pressed={unreadFirst}
-              onClick={() => setUnreadFirst(on => !on)}
-              className="shrink-0 text-xs text-warmGray underline transition-colors hover:text-charcoal"
-            >
-              {unreadFirst ? t('notif.sortByTime') : t('notif.unreadFirst')}
-            </button>
+            {tab === 'alerts' && (
+              <button
+                type="button"
+                aria-pressed={unreadFirst}
+                onClick={() => setUnreadFirst(on => !on)}
+                className="shrink-0 text-xs text-warmGray underline transition-colors hover:text-charcoal"
+              >
+                {unreadFirst ? t('notif.sortByTime') : t('notif.unreadFirst')}
+              </button>
+            )}
           </div>
 
+          {showAlerts && (
+          <div role="tablist" className="flex shrink-0 gap-1 border-b border-charcoal/10 px-3 py-2">
+            {([['alerts', t('notif.tabAlerts'), alertUnreadCount], ['inbox', t('notif.tabInbox'), inboxUnreadCount]] as const).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+                  tab === key ? 'bg-charcoal text-white' : 'text-graphite hover:bg-charcoal/5',
+                )}
+              >
+                {label}{count > 0 ? ` (${count > 99 ? '99+' : count})` : ''}
+              </button>
+            ))}
+          </div>
+          )}
+
+          {tab === 'inbox' ? <NotificationInboxList onNavigate={closePopover} /> : (
+          <>
           <div ref={listRef} className="max-h-[380px] overflow-y-auto [scrollbar-color:theme(colors.gray.300)_transparent] [scrollbar-width:thin]">
             {isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.loading')}</p>}
             {!isLoading && alerts.length === 0 && (
@@ -224,6 +260,8 @@ export default function NotificationPopover() {
           >
             {t('notif.viewAll')}
           </button>
+          </>
+          )}
         </div>
       )}
     </div>

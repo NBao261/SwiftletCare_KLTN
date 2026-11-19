@@ -17,6 +17,7 @@ import {
 import ProfileCard from '@/components/features/domain-expert/profiles/ProfileCard'
 import ProfileFormDrawer from '@/components/features/domain-expert/profiles/ProfileFormDrawer'
 import type { ConfigProfile, ConfigProfileInput, ConfigProfileStatus } from '@/types/expert.types'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
 const STATUS_FILTERS: { value: ConfigProfileStatus | 'ALL'; label: string }[] = [
   { value: 'ALL',      label: 'Tất cả' },
@@ -26,6 +27,7 @@ const STATUS_FILTERS: { value: ConfigProfileStatus | 'ALL'; label: string }[] = 
 ]
 
 export default function DomainExpertProfilesPage() {
+  const { isExpert } = useExpertDecisionRights()
   const { selectedFarmId } = useZoneStore()
   const farmId = selectedFarmId ?? undefined
 
@@ -103,9 +105,11 @@ export default function DomainExpertProfilesPage() {
             EXPERT-FR-014, 015 — Soạn hồ sơ bản nháp rồi duyệt; Farm Owner áp hồ sơ cho các nhà
           </p>
         </div>
-        <Button variant="primary" size="sm" onClick={openCreate}>
-          <Plus className="w-3.5 h-3.5" /> Tạo hồ sơ
-        </Button>
+        {isExpert && (
+          <Button variant="primary" size="sm" onClick={openCreate}>
+            <Plus className="w-3.5 h-3.5" /> Tạo hồ sơ
+          </Button>
+        )}
       </div>
 
       {/* Bộ lọc trạng thái */}
@@ -156,6 +160,7 @@ export default function DomainExpertProfilesPage() {
               onApprove={() => handleApprove(p._id)}
               onArchive={() => handleArchive(p._id)}
               disabled={isPending}
+              readOnly={!isExpert}
             />
           ))}
         </div>

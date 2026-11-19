@@ -10,7 +10,7 @@ import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { isFlockDayComplete } from '@/services/healthAssessment.service'
 import { ConflictError, NotFoundError } from '@/utils/appError.util'
 import {
-  assertExpertDecision, assertFarmAccess, assertHouseAccess, assertZoneAccess, listAccessibleFarmIds,
+  assertFarmAccess, assertHouseAccess, assertZoneAccess, listAccessibleFarmIds,
   listAccessibleZoneIds,
 } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
@@ -289,14 +289,14 @@ export async function getCycle(id: string, user: CurrentUser) {
 // ── Kết luận mùa vụ ─────────────────────────────────────────────────────────
 
 /**
- * EXPERT-FR-020 — Domain Expert (Farm Owner khi farm chưa có chuyên gia, BR-22) viết kết luận và khuyến nghị cho mùa
- * sau trên chu kỳ đã đóng; chu kỳ `CONCLUDED`, sửa lại vẫn `CONCLUDED`; chuyên gia viết thì mỗi Farm Owner được báo
- * (EXPERT-FR-009). Chu kỳ `OPEN` → 409.
+ * EXPERT-FR-020 — chỉ Domain Expert (route) viết kết luận và khuyến nghị cho mùa sau trên chu kỳ đã đóng. Farm Owner
+ * không viết, kể cả khi farm chưa có chuyên gia: BR-22 "no conclusions are written without an expert"; chu kỳ vẫn đóng
+ * và đủ số liệu, chuyên gia vào sau viết được cho mọi chu kỳ đã đóng. Chu kỳ `CONCLUDED`, sửa lại vẫn `CONCLUDED`; mỗi
+ * Farm Owner được báo (EXPERT-FR-009). Chu kỳ `OPEN` → 409.
  */
 export async function concludeCycle(user: CurrentUser, id: string, input: { text: string; recommendations?: string }) {
   const { cycle: found, farm } = await findCycleWithAccess(id, user)
   if (!farm) throw NotFoundError('Không tìm thấy chu kỳ thu hoạch')
-  await assertExpertDecision(farm, user)
 
   // Trong hàng đợi của zone: một lần dựng lại đang chạy xong trước, rồi mới đọc lại chu kỳ và lưu kết luận
   const cycle = await inZoneQueue(String(found.zone_id), async () => {

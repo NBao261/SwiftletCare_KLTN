@@ -14,12 +14,12 @@ import { Check, Info, ArrowRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import SelectMenu from '@/components/ui/SelectMenu'
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
-import MockDataTooltip from '@/components/shared/MockDataTooltip'
 import AlertsKpiAndStatsBar, {
   TYPE_OPTS,
   SEV_OPTS,
   TAB_INFO,
 } from '@/components/features/domain-expert/alerts/AlertsKpiAndStatsBar'
+import { useAlert } from '@/hooks/shared/useAlerts'
 import InferredAlertsTable from '@/components/features/domain-expert/alerts/InferredAlertsTable'
 import ExpertVerdictDrawer from '@/components/features/domain-expert/alerts/ExpertVerdictDrawer'
 import {
@@ -79,15 +79,18 @@ export default function DomainExpertAlertVerdictsPage() {
     }
   }, [initialTab, setTab])
 
+  // Link từ thông báo (?alertId=): cảnh báo có thể không nằm ở trang đang xem → đọc thẳng GET /alerts/:id
+  const targetOnPage = paginatedAlerts.find(a => a._id === targetAlertId)
+  const { data: targetFromApi } = useAlert(targetAlertId && !targetOnPage && !selectedAlert ? targetAlertId : null)
+
   useEffect(() => {
-    if (targetAlertId && paginatedAlerts.length > 0 && !selectedAlert) {
-      const match = paginatedAlerts.find(a => a._id === targetAlertId)
-      if (match) {
-        setSelectedAlert(match)
-        setDrawerOpen(true)
-      }
+    if (!targetAlertId || selectedAlert) return
+    const match = targetOnPage ?? (targetFromApi as InferredAlertItem | undefined)
+    if (match) {
+      setSelectedAlert(match)
+      setDrawerOpen(true)
     }
-  }, [targetAlertId, paginatedAlerts, selectedAlert])
+  }, [targetAlertId, targetOnPage, targetFromApi, selectedAlert])
 
   const openDrawer = useCallback((alert: InferredAlertItem) => {
     setSelectedAlert(alert)
@@ -162,9 +165,8 @@ export default function DomainExpertAlertVerdictsPage() {
                   </p>
                 </>
               ) : (
-                <span className="text-[11.5px] text-warmGray flex items-center gap-1.5">
-                  Chưa có lịch sử phán quyết trong kỳ
-                  <MockDataTooltip reason="Tỷ lệ xác nhận sự cố thật theo từng loại cảnh báo sẽ tự động tổng hợp sau khi Chuyên gia thẩm định." />
+                <span className="text-[11.5px] text-warmGray">
+                  Chưa có lịch sử phán quyết trong kỳ — tỷ lệ xác nhận theo loại cảnh báo hiện ra khi chuyên gia đã có phán quyết
                 </span>
               )}
             </div>

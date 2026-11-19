@@ -15,6 +15,9 @@ export const farmApi = {
     api.post<ApiResponse<Invitation>>(`/farms/${id}/members`, role ? { email, role } : { email }),
   removeMember: (id: string, userId: string) =>
     api.delete<ApiResponse<Farm>>(`/farms/${id}/members/${userId}`),
+  // AUTH-FR-010 — lời mời của farm (chỉ Primary Owner), mặc định những lời mời đang chờ
+  listInvitations: (id: string, status: Invitation['status'] = 'PENDING') =>
+    api.get<ApiResponse<Invitation[]>>(`/farms/${id}/invitations`, { params: { status, limit: 100 } }),
 
   createHouse: (farmId: string, input: { name: string; floors?: number; description?: string }) =>
     api.post<ApiResponse<House>>(`/farms/${farmId}/houses`, input),

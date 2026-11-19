@@ -74,10 +74,26 @@ export function useAuth() {
     onSuccess: ({ data }) => updateUser(data.data),
   })
 
-  // AUTH-FR-012 — API chỉ trả message, tự đánh dấu thời điểm gửi yêu cầu ở phía client
+  // Đọc lại tài khoản từ server (GET /auth/me) thay vì tự đoán giá trị phía client
+  const reloadUser = async () => updateUser((await authApi.me()).data.data)
+
+  // AUTH-FR-012 — gửi hoặc huỷ yêu cầu xoá, rồi đọc lại tài khoản
   const requestDeletion = useMutation({
     mutationFn: () => authApi.requestDeletion(),
-    onSuccess: () => updateUser({ deletion_requested_at: new Date().toISOString() }),
+    onSuccess: reloadUser,
+  })
+  const cancelDeletion = useMutation({
+    mutationFn: () => authApi.cancelDeletion(),
+    // API trả user không còn trường này; đặt null để form hiện lại nút gửi ngay cả khi updateUser chỉ gộp
+    onSuccess: async () => { updateUser({ deletion_requested_at: null }); await reloadUser() },
+  })
+
+  // ALERT-FR-013 — liên kết Telegram xảy ra ngoài web (người dùng bấm Start trong Telegram) nên kiểm lại bằng /auth/me
+  const createTelegramLink = useMutation({ mutationFn: () => authApi.createTelegramLink().then(response => response.data.data) })
+  const checkTelegramLink = useMutation({ mutationFn: reloadUser })
+  const unlinkTelegram = useMutation({
+    mutationFn: () => authApi.unlinkTelegram(),
+    onSuccess: async () => { updateUser({ telegram_linked: false }); await reloadUser() },
   })
 
   // AUTH-FR-005c — đổi mật khẩu tạm rồi vào trang chủ của role
@@ -89,5 +105,8 @@ export function useAuth() {
     },
   })
 
-  return { login, logout, forgotPassword, resetPassword, changePassword, updateNotificationPreferences, requestDeletion }
+  return {
+    login, logout, forgotPassword, resetPassword, changePassword, updateNotificationPreferences, requestDeletion,
+    cancelDeletion, createTelegramLink, checkTelegramLink, unlinkTelegram,
+  }
 }

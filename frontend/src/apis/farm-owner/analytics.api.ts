@@ -16,10 +16,17 @@ export interface EnvSummaryStats {
   anomalyCount: number; total: number
 }
 
+// ANALYTICS-FR-013 — thời tiết ngoài trời của farm, cùng mốc bucket với số đo trong nhà
+export interface OutdoorWeatherPoint {
+  timestamp: string
+  temperature: number | null; humidity: number | null; precipitation_mm: number | null
+}
+
 export interface EnvSummaryResponse {
   range: AnalyticsRange; from: string; to: string; bucketMs: number
   series: EnvSummaryPoint[]
   stats: EnvSummaryStats | null
+  outdoor: OutdoorWeatherPoint[]
 }
 
 export interface EnvCompareZone {
@@ -57,12 +64,6 @@ export interface BirdCountBucketsResponse {
 export interface BirdCountCurrentResponse extends Required<BirdCountDailyRecord> {
   house_id: string
   updated_at: string | null
-}
-
-export interface BirdCountDailyResponse {
-  from: string; to: string
-  records: BirdCountDailyRecord[]
-  note?: string
 }
 
 export interface BirdCountTrendsResponse {
@@ -123,6 +124,8 @@ export interface ControlPerformanceResponse {
   service_limits: Record<'misting' | 'ventilation', { hours: number; switches: number }>
   relay_usage: Array<{
     device_id: string
+    /** SYSTEM-FR-004 */
+    simulated?: boolean
     misting: { hours: number; switches: number }
     ventilation: { hours: number; switches: number }
   }>
@@ -167,8 +170,6 @@ export const analyticsApi = {
     api.get<ApiResponse<EnvSummaryResponse>>('/analytics/env/summary', { params: { zoneId, range } }),
   envCompare: (zoneIds: string[], range: AnalyticsRange) =>
     api.get<ApiResponse<EnvCompareResponse>>('/analytics/env/compare', { params: { zoneIds: zoneIds.join(','), range } }),
-  birdCountDaily: (zoneId: string, params?: { from?: string; to?: string }) =>
-    api.get<ApiResponse<BirdCountDailyResponse>>('/analytics/bird-count/daily', { params: { zoneId, ...params } }),
   // Đếm chim theo nhà yến (SRS v2.1.8) — houseId thay cho zoneId cũ
   houseBirdCountTrends: (houseId: string, days = 30) =>
     api.get<ApiResponse<BirdCountTrendsResponse>>('/analytics/bird-count/trends', { params: { houseId, days } }),

@@ -19,15 +19,20 @@ import { useZoneStore } from '@/stores/zoneStore';
 import ThresholdColumn from '@/components/features/domain-expert/tuning/ThresholdColumn';
 import FuzzyTuningColumn from '@/components/features/domain-expert/tuning/FuzzyTuningColumn';
 import DetectionColumn from '@/components/features/domain-expert/tuning/DetectionColumn';
+import ReturnRateDropCard from '@/components/features/domain-expert/tuning/ReturnRateDropCard';
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { useHouses } from '@/hooks/shared/useFarms';
 import {
   useExpertThresholds, useUpdateThresholds, useResetThresholds,
   useExpertFuzzyTuning, useUpdateFuzzyTuning,
   useExpertAiSuggestion,
-  useExpertDetectionTuning, useUpdateDetectionTuning,
+  useExpertDetectionTuning, useUpdateDetectionTuning, useResetDetectionTuning,
+  useZoneHouseId, useSaveReturnRateDrop,
 } from '@/hooks/domain-expert/useZoneTuning';
 import { useExpertVerdictStats } from '@/hooks/domain-expert/useExpertAlerts';
 import { useCoefficientProposals } from '@/hooks/domain-expert/useExpertReviews';
 import type { ExpertFuzzyTuning } from '@/types/expert.types';
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 
 function Toast({ show, message }: { show: boolean; message: string }) {
   if (!show) return null;
@@ -62,6 +67,16 @@ export default function DomainExpertZoneTuningPage() {
   const resetThresholds = useResetThresholds(zoneId);
   const updateFuzzy = useUpdateFuzzyTuning(zoneId);
   const updateDetection = useUpdateDetectionTuning(zoneId);
+  const resetDetection = useResetDetectionTuning(zoneId);
+  const apiErrorMessage = useApiErrorMessage();
+  // BR-22 — tham số phát hiện và mức giảm tỷ lệ chim về: Farm Owner chỉ sửa khi farm chưa có chuyên gia
+  const { canDecide } = useExpertDecisionRights();
+
+  // Mức giảm tỷ lệ chim về thuộc nhà chứa Zone đang chọn (EXPERT-FR-008)
+  const { data: houseId } = useZoneHouseId(zoneId);
+  const { data: houses } = useHouses(selectedFarmId ?? undefined);
+  const house = houses?.find(item => item._id === houseId);
+  const returnRateDrop = useSaveReturnRateDrop(selectedFarmId);
 
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const [highlightedFuzzyFields, setHighlightedFuzzyFields] = useState<Set<keyof ExpertFuzzyTuning>>(new Set());
@@ -131,19 +146,37 @@ export default function DomainExpertZoneTuningPage() {
             onReset={() => resetThresholds.mutateAsync().then(() => showToast('Đã khôi phục ngưỡng mặc định'))}
           />
 
+          <fieldset disabled={!canDecide} className="contents">
           <DetectionColumn
             data={detection.data}
             verdictStats={verdictStats}
             isLoading={detection.isLoading}
             isSaving={updateDetection.isPending}
-            isResetting={updateDetection.isPending}
-            onSave={v => updateDetection.mutateAsync(v).then(() => showToast('Đã lưu tham số phát hiện'))}
-            onReset={() => updateDetection.mutateAsync({
-              noise_margin_db: 15, noise_min_sec: 10, pump_dry_on_sec: 300,
-              pump_dry_min_rise_pct: 2.0, speaker_drop_pct: 70, return_rate_drop_pct: 20,
-            }).then(() => showToast('Đã khôi phục tham số phát hiện mặc định'))}
+            isResetting={resetDetection.isPending}
+            onSave={v => updateDetection.mutateAsync(v)
+              .then(() => showToast('Đã lưu tham số phát hiện'))
+              .catch(error => showToast(apiErrorMessage(error)))}
+            onReset={() => resetDetection.mutateAsync()
+              .then(() => showToast('Đã khôi phục tham số phát hiện mặc định'))
+              .catch(error => showToast(apiErrorMessage(error)))}
           />
+          </fieldset>
         </div>
+
+        <fieldset disabled={!canDecide} className="contents">
+        <ReturnRateDropCard
+          houseName={house?.name}
+          value={house?.bird_count_tuning?.return_rate_drop_pct}
+          isSaving={returnRateDrop.update.isPending}
+          isResetting={returnRateDrop.reset.isPending}
+          onSave={value => house && returnRateDrop.update.mutateAsync({ houseId: house._id, value })
+            .then(() => showToast('Đã lưu mức giảm tỷ lệ chim về của nhà'))
+            .catch(error => showToast(apiErrorMessage(error)))}
+          onReset={() => house && returnRateDrop.reset.mutateAsync(house._id)
+            .then(() => showToast('Đã khôi phục mức giảm tỷ lệ chim về mặc định'))
+            .catch(error => showToast(apiErrorMessage(error)))}
+        />
+        </fieldset>
       </div>
 
       <Toast show={toast.show} message={toast.message} />

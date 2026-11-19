@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import ScopeFilter from '@/components/common/ScopeFilter';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import HouseDeviceAccordion from '@/components/features/farm-owner/devices/HouseDeviceAccordion';
+import RemovedDevicesSection from '@/components/features/farm-owner/devices/RemovedDevicesSection';
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { devicesDict } from '@/constants/devices.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -43,6 +44,8 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
       </div>
 
       {body}
+      {/* FARM-FR-008 — thiết bị gỡ nhầm khôi phục được trong 24 giờ */}
+      <RemovedDevicesSection />
     </div>
   );
 }

@@ -165,10 +165,22 @@ Chỉ có 2 PR code và phần hồ sơ. Mỗi bước xong mới sang bước s
 
 **Rà soát 18/11/2026** (sau PR #168–172; đối chiếu code `develop` với Report 3, Report 4 và hai file todo). Phần code còn thiếu:
 
-- Web (Nhi): màn Admin "Tạo Farm Owner", trang đổi mật khẩu tạm, ô nguồn khi Admin lưu ngưỡng mặc định (đang bị 422) — Bảo làm thay, nhánh `feat/g02-web-owner-accounts`.
-- Backend (Kiệt): G-14 (trạng thái tài khoản, trường audit, trường telemetry, ảnh lô thu hoạch, loại tham chiếu thông báo); cột sản lượng của so sánh nhà (G-26) — Bảo làm thay, nhánh `feat/g14-erd-fields`.
-- Firmware (Bảo): G-13 đọc ADS1115, lưu mức học, gửi `ACTUATOR_FAULT` — viết được, chỉ thử được khi có board.
-- Mobile (Len): mục lịch đếm theo mùa (F-14), nhãn "Giả lập" (SYSTEM-FR-004), giai đoạn nhà (F-28); chạy thử trên máy thật và ảnh chụp cho các màn đã merge. *(Len, 19/11, nhánh `fix/mobile`, chưa commit: mục "Lịch đếm chim" trong Cài đặt nhà (hồ sơ theo mùa, khung tạm, khung hôm nay; chuyên gia sửa, Farm Owner khi farm chưa có chuyên gia) thay ô "Sắp có", khối Cài đặt zone ở Màn B hiện khung hôm nay; mục "Giai đoạn nhà" xong; nhãn "Giả lập" đang làm; còn chờ: chạy thử máy thật và ảnh chụp.)*
+- ~~Web (Nhi): màn Admin "Tạo Farm Owner", trang đổi mật khẩu tạm, ô nguồn khi Admin lưu ngưỡng mặc định~~ — xong, Bảo làm thay, PR #174.
+- ~~Backend (Kiệt): G-14 và cột sản lượng của so sánh nhà (G-26)~~ — xong, Bảo làm thay, PR #175; chọn ảnh lô thu hoạch trên web: PR #177/#178.
+- ~~Firmware (Bảo): G-13 đọc ADS1115, lưu mức học, gửi `ACTUATOR_FAULT`~~ — xong ở firmware 2.3.0 (PR #176), còn thử trên board rev B2.
+
+Rà soát lại sau khi các PR trên merge (18/11/2026): backend và web còn hai việc, Bảo làm:
+- giờ chạy và điện năng chỉ tính khi tải có dòng trên 50 % mức đã học (BR-45, G-22, G-25) — firmware 2.3.1 gửi mức đã học trong heartbeat; PR #179;
+- nhãn "Giả lập" ở `/devices` của Admin, Farm Technician, Domain Expert và ở `/ota` (SYSTEM-FR-004) — nhánh `fix/simulated-labels-docs`, PR #180.
+
+Rà soát lần 2 (18/11/2026, đối chiếu từng FR của Report 3 với code, route với `api-spec.yaml` (180/180 khớp) và nguồn test của Report 5) — Bảo làm ở nhánh `fix/review-1118-leftovers`:
+- ~~ANALYTICS-FR-013: thời tiết ngoài trời chưa hiện cạnh số đo trong nhà~~ — `GET /analytics/env/summary` trả `outdoor`, biểu đồ môi trường trên web vẽ nét đứt và lượng mưa (mobile chưa);
+- ~~job báo cáo tuần theo Zone cũ vẫn chạy và báo trùng với báo cáo tuần theo nhà~~ — bỏ job, thẻ báo cáo ở Phân tích đọc báo cáo tuần của nhà;
+- ~~dữ liệu bịa trên web: bảng video sự kiện ở Vision, tên thiết bị con giả ("This data is FAKE"), dòng "Dữ liệu giả" ở thẻ tương quan, nhãn "Mock Fallback" ở màn phán quyết~~ — đã gỡ;
+- ~~`tc.py` còn 4 case `todo-auto` dù test đã có (TC-F28-03, TC-ST 6.17, 6.18 × 2)~~ — trỏ sang test thật: 152 case tự động, 0 case phải viết thêm.
+
+Còn lại không thuộc backend và web:
+- Mobile (Len): mục lịch đếm theo mùa (F-14), nhãn "Giả lập" (SYSTEM-FR-004), giai đoạn nhà (F-28), chọn ảnh lô thu hoạch (G-14), thời tiết ngoài trời cạnh số đo trong nhà (ANALYTICS-FR-013, đọc `outdoor` của `GET /analytics/env/summary`); chạy thử trên máy thật và ảnh chụp cho các màn đã merge. *(Len, 19/11, nhánh `fix/mobile`: lịch đếm theo mùa xong (`8ad3bcdb`, mục "Lịch đếm chim" trong Cài đặt nhà thay ô "Sắp có"); giai đoạn nhà và nhãn "Giả lập" xong (`13e9b9f7`); còn chờ: chọn ảnh lô thu hoạch, thời tiết ngoài trời, chạy thử máy thật và ảnh chụp.)*
 - Ngoài code: mục 3 (G-19), VPS và tên miền (G-17), project Firebase (G-10), 3 luật khuyến nghị thật (G-24).
 
 Mỗi gap: tên ở Project Tracking §6, yêu cầu ở SRS, thiết kế ở SDD. Mỗi PR có test cho logic mới (backend [Bắt buộc], firmware [Bắt buộc] cho logic điều khiển/phát hiện).
@@ -329,7 +341,7 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 - [x] `zones.config_version` tăng mỗi lần đổi ngưỡng, hệ số hoặc tham số phát hiện; `config` retained mang version; heartbeat báo `applied_config_version`; job `configSync` publish lại khi còn version cũ, quá 3 heartbeat lúc online thì `CONFIG_MISMATCH`; firmware cũ không báo version thì `UNKNOWN`.
 - [x] Trạng thái theo SM-12 mới (SRS 4.2.1 §6.12, BM02 ST-03): controller mới đăng ký bắt đầu ở `PENDING` (FARM-FR-012), không phải `APPLIED`; `UNKNOWN` về `APPLIED` khi heartbeat báo đúng version hiện tại, về `PENDING` khi báo version cũ.
-- [x] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN). *(`config_sync`, `applied_config_version` trong `GET /devices/sensor-nodes`, `config_version` trong Zone)* *(Mobile: Len, 19/11, nhánh `fix/mobile`, chưa commit: dòng thiết bị ở Màn B, chi tiết controller và danh sách controller trong Cài đặt nhà hiện bước áp cấu hình theo `config_sync` (chờ kết nối, đang gửi, đã áp, chưa áp cấu hình mới — màu cảnh báo, không rõ phiên bản) và phiên bản đang chạy.)*
+- [x] API trả trạng thái đồng bộ theo controller (PENDING/APPLIED/MISMATCH/UNKNOWN). *(`config_sync`, `applied_config_version` trong `GET /devices/sensor-nodes`, `config_version` trong Zone)* *(Mobile: Len, 19/11, nhánh `fix/mobile`, `13e9b9f7`: dòng thiết bị ở Màn B, chi tiết controller và danh sách controller trong Cài đặt nhà hiện bước áp cấu hình theo `config_sync` (chờ kết nối, đang gửi, đã áp, chưa áp cấu hình mới — màu cảnh báo, không rõ phiên bản) và phiên bản đang chạy.)*
 - [x] Test TC-ST-28…32 (5 case config sync, Report 5); jest phủ thêm `(new) → PENDING` và lối ra của `UNKNOWN` (không thêm case vào 170).
 
 ### G-09 — Màn SF-01 (P1) — Kiệt (backend), Nhi (in nhãn ở Admin, in mã tầng trên web), Len (setup QR trên mobile), Tuấn (`/onboarding` web)
@@ -400,8 +412,9 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 
 ### G-13 — Đo dòng tải (P1, It. 3) — Bảo
 
-- [ ] Firmware: ADS1115 (Adafruit ADS1X15), học dòng bình thường 30 giây đầu mỗi tải, so với trạng thái relay (BR-32), `ACTUATOR_FAULT`; telemetry `pump_current_a`, `fan_current_a`; test native TC-F06-01..03. *(Kiệt làm thay Bảo theo phân công của Bảo, 13/11, `03528a3`, nhánh `feat/g13-current-sensing`: phần logic xong — `pid/ActuatorCurrentMonitor` học dòng 30 s đầu của một lần BẬT, báo khi relay BẬT mà dòng < 50 % hoặc TẮT mà > 20 % đủ 30 s (cộng dồn theo trạng thái relay), hết lỗi sau 30 s chạy đúng, `relearn()` sau khi thay tải; test native `test_actuator_current` 10 test gồm TC-F06-01..03. Còn chờ board có shunt: đọc ADS1115, lưu mức đã học vào NVS, gửi `ACTUATOR_FAULT` (gửi lại mỗi `EPISODE_ALERT_RESEND_MS` khi lỗi còn, kèm `load`, `fault`, `normalCurrentA`, `currentA`), đưa dòng vào telemetry, học lại theo yêu cầu, tăng `FIRMWARE_VERSION`)*
+- [x] Firmware: ADS1115 (Adafruit ADS1X15), học dòng bình thường 30 giây đầu mỗi tải, so với trạng thái relay (BR-32), `ACTUATOR_FAULT`; telemetry `pump_current_a`, `fan_current_a`; test native TC-F06-01..03. *(Kiệt làm thay Bảo theo phân công của Bảo, 13/11, `03528a3`, nhánh `feat/g13-current-sensing`: phần logic xong — `pid/ActuatorCurrentMonitor` học dòng 30 s đầu của một lần BẬT, báo khi relay BẬT mà dòng < 50 % hoặc TẮT mà > 20 % đủ 30 s (cộng dồn theo trạng thái relay), hết lỗi sau 30 s chạy đúng, `relearn()` sau khi thay tải; test native `test_actuator_current` 10 test gồm TC-F06-01..03. Phần nối với board (đọc ADS1115, NVS, gửi `ACTUATOR_FAULT`, telemetry, 2.3.0) làm ở dòng 18/11 bên dưới; còn học lại theo yêu cầu và thử trên board rev B2)*
 - [x] Backend lưu dòng, nhận cảnh báo (HIGH). *(Kiệt làm thay Bảo, 13/11, `e18a799` spec + `a0ac995` backend, nhánh `feat/g13-current-sensing`: telemetry lưu `pump_current_a`, `fan_current_a` (số âm bỏ); `ACTUATOR_FAULT` mức HIGH giữ `load`, `fault`, `normal_current_a`, `current_a` trong `details`, gộp trùng theo từng tải; thuộc nhóm cảnh báo theo đợt nên tự đóng 60 phút sau lần gửi lại cuối)*
+  *(Bảo, 18/11/2026, nhánh `feat/g13-current-sensing-wiring`, firmware 2.3.0: `sensors/CurrentSensor` đọc ADS1115 của board rev B2 (0x48, GPIO21/22, shunt 0,1 Ω), nối `ActuatorCurrentMonitor` với relay, lưu mức học vào NVS, telemetry có dòng, gửi `ACTUATOR_FAULT` kèm tải và dòng; build `esp32dev`, `esp32prod`, native 99/99. Chưa có học lại theo yêu cầu (giới hạn ghi ở `firmware/README.md`). Chưa thử trên board: chờ làm board rev B2, danh sách thử ở `firmware/README.md`.)*
 
 ### G-14 — Mô hình dữ liệu theo ERD (P1) — Kiệt; trường của gap nào thì làm trong PR gap đó; Nhi làm form thu hoạch web, Len trên mobile
 
@@ -418,7 +431,8 @@ Một PR cho firmware, backend, AI node và deploy. *(Kiệt, 07/11, nhánh `fea
 - *telemetry ghi cảm biến null vào `stale_fields`, chỉ số vượt ngưỡng vào `anomaly_fields`, mẫu `telemetry/buffered` có `buffered`;*
 - *ảnh lô `PUT /harvests/{id}/photo` → `photo_object_key`, `photo_url` ở chi tiết; thông báo thao tác thiết bị có `ref.kind = device_action`;*
 - *`npm run migrate:erd-fields`; `db:script` chạy lại; cột sản lượng của so sánh nhà đọc chu kỳ đóng gần nhất (G-26).*
-- *Còn: nút chọn ảnh lô trên web (Nhi) và mobile (Len); web, mobile chuyển sang đọc `status`.)*
+- *Chọn ảnh trên web xong (Bảo làm thay Nhi, 18/11/2026, nhánh `feat/g14-web-harvest-photo`): ô "Ảnh lần thu" ở form tạo/sửa, gửi lên mọi đợt của lần thu, màn chi tiết hiện ảnh.*
+- *Còn: chọn ảnh trên mobile (Len); web, mobile chuyển sang đọc `status`.)*
 
 ### G-15 — Dọn web (P1) — Tuấn (chuyên gia, Technician), Nhi (ma trận quyền), Bảo (`/stream/:id`)
 
@@ -504,7 +518,7 @@ Phân quyền trên mobile (backend vẫn là lớp chặn chính, nhưng app kh
 
 ### G-22 — Bảo trì phòng ngừa (P1) — Kiệt (backend), Len (mobile), Nhi (web)
 
-- [ ] *(Kiểm 18/11/2026: backend, web `/maintenance` và mobile checklist, kế hoạch, ghi bảo trì đều đã merge; còn xác nhận giờ chạy bằng dòng điện sau G-13.)* Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ thời gian relay ON, xác nhận bằng dòng điện nếu bộ điều khiển đo được (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008). *(Mobile — Len, 14/11, nhánh `feat/g22-maintenance`: checklist kèm ảnh trong phiếu công việc phòng ngừa (Đạt / Hỏng, ghi chú, 1 ảnh; Hỏng mở phiếu sửa chữa; đủ mục mới báo xong), màn Bảo trì (kế hoạch đến hạn / quá hạn, tiến độ giờ chạy hoặc hạn kế tiếp, lịch sử ghi bảo trì và hiệu chuẩn), khối "Bảo trì đến hạn" ở Trang chủ — chi tiết ở G-16 bước 12. Ghi bảo trì, hiệu chuẩn là chủ trại duyệt phiếu phòng ngừa trên web. Còn chờ: chạy thử trên máy, ảnh chụp cho PR)*
+- [ ] *(Kiểm 18/11/2026: backend, web `/maintenance` và mobile checklist, kế hoạch, ghi bảo trì đều đã merge; giờ chạy xác nhận bằng dòng điện xong 18/11/2026 ở nhánh `feat/g22-run-hours-current` (firmware 2.3.1 + backend); còn thử trên board rev B2.)* Kế hoạch theo giờ chạy, số lần đóng ngắt, lịch; checklist; `runHours.job` từ thời gian relay ON, xác nhận bằng dòng điện nếu bộ điều khiển đo được (BR-45); `maintenanceDue.job`; ghi bảo trì, hiệu chuẩn (OPS-FR-005…008). *(Mobile — Len, 14/11, nhánh `feat/g22-maintenance`: checklist kèm ảnh trong phiếu công việc phòng ngừa (Đạt / Hỏng, ghi chú, 1 ảnh; Hỏng mở phiếu sửa chữa; đủ mục mới báo xong), màn Bảo trì (kế hoạch đến hạn / quá hạn, tiến độ giờ chạy hoặc hạn kế tiếp, lịch sử ghi bảo trì và hiệu chuẩn), khối "Bảo trì đến hạn" ở Trang chủ — chi tiết ở G-16 bước 12. Ghi bảo trì, hiệu chuẩn là chủ trại duyệt phiếu phòng ngừa trên web. Còn chờ: chạy thử trên máy, ảnh chụp cho PR)*
 
 ### G-23 — Bù theo thời tiết (P1) — Bảo (firmware, backend), Tuấn (màn luật)
 

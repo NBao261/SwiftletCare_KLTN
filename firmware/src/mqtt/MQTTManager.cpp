@@ -355,6 +355,13 @@ static String alertJson(const QueuedAlert &alert) {
   doc["severity"] = alert.severity;
   doc["message"] = alert.message;
   if (alert.resetReason[0]) doc["resetReason"] = alert.resetReason; // backend lưu vào metadata.reset_reason
+  // Backend đọc thành details.load, fault, normal_current_a, current_a (alert.service#actuatorFaultDetails)
+  if (alert.load[0]) {
+    doc["load"] = alert.load;
+    doc["fault"] = alert.fault;
+    if (alert.normalCurrentA >= 0) doc["normalCurrentA"] = alert.normalCurrentA;
+    if (alert.currentA >= 0) doc["currentA"] = alert.currentA;
+  }
   String payload;
   serializeJson(doc, payload);
   return payload;
@@ -515,6 +522,13 @@ void publishTelemetry(const SensorData &data, const RelayState &relay) {
   publish("/telemetry", payload, MQTT_QOS_LIVE);
 }
 
+// sensorTask ghi, mqttTask đọc: float 32 bit ghi/đọc nguyên khối trên ESP32, không cần mutex
+volatile float actuatorBaselineA[2] = {0, 0};
+
+void setActuatorBaseline(int load, float normalA) {
+  if (load == 0 || load == 1) actuatorBaselineA[load] = normalA;
+}
+
 bool publishHeartbeat() {
   if (!connected) return false;
   JsonDocument doc;
@@ -527,6 +541,9 @@ bool publishHeartbeat() {
   doc["resetReason"] = bootResetReason;
   doc["ip"] = WiFi.localIP().toString();
   doc["appliedConfigVersion"] = Config::configVersion; // ENV-FR-027: backend so với phiên bản của Zone
+  // BR-45 — chỉ tải đã học; backend giữ mức cũ của tải không có trong tin
+  if (actuatorBaselineA[0] > 0) doc["actuatorBaseline"]["misting"] = actuatorBaselineA[0];
+  if (actuatorBaselineA[1] > 0) doc["actuatorBaseline"]["ventilation"] = actuatorBaselineA[1];
   doc["timestamp"] = millis();
   if (justConnected) doc["justConnected"] = true;
 
@@ -545,7 +562,8 @@ bool publishRelayState(const RelayState &relay) {
 
 // NFR-06 c — vào hàng đợi NVS rồi mqttTask gửi, xoá khi có PUBACK. Trả true khi đã nhận vào hàng đợi,
 // nên caller coi như đã báo; hàng đợi đầy thì false để caller thử lại.
-bool publishAlert(const char *alertType, const char *severity, const char *payload, const char *resetReason) {
+bool publishAlert(const char *alertType, const char *severity, const char *payload, const char *resetReason,
+                  const ActuatorDetails *actuator) {
   if (!alertMutex) return false; // mqttTask chưa chạy begin()
   QueuedAlert alert;
   snprintf(alert.eventId, sizeof alert.eventId, "%08lx%08lx", (unsigned long)esp_random(), (unsigned long)esp_random());
@@ -553,6 +571,12 @@ bool publishAlert(const char *alertType, const char *severity, const char *paylo
   copyText(alert.severity, sizeof alert.severity, severity);
   copyText(alert.message, sizeof alert.message, payload);
   if (resetReason) copyText(alert.resetReason, sizeof alert.resetReason, resetReason);
+  if (actuator) {
+    copyText(alert.load, sizeof alert.load, actuator->load);
+    copyText(alert.fault, sizeof alert.fault, actuator->fault);
+    alert.normalCurrentA = actuator->normalCurrentA;
+    alert.currentA = actuator->currentA;
+  }
 
   if (xSemaphoreTake(alertMutex, pdMS_TO_TICKS(100)) != pdTRUE) return false;
   uint8_t before = alertQueue.size();

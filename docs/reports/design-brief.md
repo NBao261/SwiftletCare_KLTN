@@ -11,8 +11,8 @@ Source of form BM01. The Word file `design-brief/SEP490_R2_BM01_Design_Brief_Swi
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Repository link (tag review-2) | https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2 |
-| Version | 2.0 (registration v3 final, BM03 1.3, SRS 4.2.0, SDD 2.2.0, BM02 1.0) |
-| Date | 09/11/2026 |
+| Version | 2.1 (registration v3 final, BM03 1.3, SRS 4.2.12, SDD 2.2.16, BM02 1.0) |
+| Date | 19/11/2026 |
 
 ## 1. Scope
 
@@ -177,8 +177,8 @@ Run on staging (SDD Section 3.4) with data loaded by the demo seed script (`docs
 | --- | --- | --- | --- |
 | Mandatory features | 27 | 3 | 81 |
 | Main workflows (end-to-end) | 8 | 1 | 8 |
-| State transitions of main entities | 74 | 1 | 74 |
+| State transitions of main entities | 75 | 1 | 75 |
 | Committed NFRs | 7 | 1 | 7 |
-| Total | | | 170 |
+| Total | | | 171 |
 
-Automated in CI: at least 50% of the committed total, i.e. at least 85 test cases. State transitions counted (SRS Section 6): alert status 10, alert verdict 2, relay mode 4, device connection 5, device label 6, configuration sync 5, review item 6, suggestion proposal 5, daily health status 2, assessor rating 5, health report 3, Work Order 10, maintenance plan 5, recommendation 6. Test cases are listed in Report 5.
+Automated in CI: at least 50% of the committed total, i.e. at least 86 test cases. State transitions counted (SRS Section 6): alert status 10, alert verdict 2, relay mode 4, device connection 6 (with the restore of a removed device, FARM-FR-008), device label 6, configuration sync 5, review item 6, suggestion proposal 5, daily health status 2, assessor rating 5, health report 3, Work Order 10, maintenance plan 5, recommendation 6. Test cases are listed in Report 5.

@@ -1,5 +1,6 @@
 // OTAConfirmModal.tsx — B4: Xác nhận trước khi đẩy OTA
 import { Button, Modal } from '@/components/ui'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
 import type { OtaFormValues } from '@/components/features/technician/ota/otaTypes'
 import type { SensorNode } from '@/types'
 
@@ -27,7 +28,10 @@ export function OTAConfirmModal({ node, firmware, loading, onClose, onConfirm }:
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <div>
               <dt className="label-caption">Thiết bị</dt>
-              <dd className="tabular-nums font-semibold text-charcoal">{node.device_id}</dd>
+              <dd className="flex flex-wrap items-center gap-2 tabular-nums font-semibold text-charcoal">
+                {node.device_id}
+                <SimulatedBadge simulated={node.simulated} />
+              </dd>
             </div>
             <div>
               <dt className="label-caption">Cập nhật lên</dt>

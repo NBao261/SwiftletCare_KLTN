@@ -21,7 +21,6 @@ import { startActivationOverdueJob } from './jobs/activationOverdue.job'
 import { startRelayUsageJob } from './jobs/relayUsage.job'
 import { startSensorAnomalyJob } from './jobs/sensorAnomaly.job'
 import { startForecastJob } from './jobs/forecast.job'
-import { startHealthReportJob } from './jobs/healthReport.job'
 import { startHouseHealthReportJob } from './jobs/houseHealthReport.job'
 import { startReturnRateJob } from './jobs/returnRate.job'
 import { startCameraConfigJob } from './jobs/cameraConfig.job'
@@ -62,7 +61,6 @@ async function bootstrap(): Promise<void> {
   startRelayUsageJob()
   startSensorAnomalyJob()
   startForecastJob()
-  startHealthReportJob()
   startHouseHealthReportJob()
   startReturnRateJob()
   // VISION-FR-019 — khung phiên 7 ngày tới cho nút AI, mỗi đêm

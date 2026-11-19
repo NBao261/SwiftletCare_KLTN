@@ -41,7 +41,6 @@ export interface ExpertDetectionTuning {
   pump_dry_on_sec: number
   pump_dry_min_rise_pct: number
   speaker_drop_pct: number
-  return_rate_drop_pct: number
 }
 
 export interface DetectionTuningHistoryEntry {

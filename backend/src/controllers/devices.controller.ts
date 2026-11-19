@@ -13,7 +13,9 @@ export const registerSensorNode = asyncHandler(async (req: Request, res: Respons
 
 /** GET /devices/sensor-nodes?zoneId= */
 export const listSensorNodes = asyncHandler(async (req: Request, res: Response) => {
-  const nodes = await deviceService.listSensorNodes(req.query.zoneId as string | undefined, req.user)
+  const nodes = await deviceService.listSensorNodes(
+    req.query.zoneId as string | undefined, req.user, req.query.removed as 'recent' | undefined,
+  )
   res.json({ success: true, data: nodes })
 })
 
@@ -21,12 +23,6 @@ export const listSensorNodes = asyncHandler(async (req: Request, res: Response) 
 export const getSensorNode = asyncHandler(async (req: Request, res: Response) => {
   const node = await deviceService.getSensorNode(req.params.id, req.user)
   res.json({ success: true, data: node })
-})
-
-/** PUT /devices/sensor-nodes/:id/thresholds – ENV-FR-006 */
-export const updateThresholds = asyncHandler(async (req: Request, res: Response) => {
-  const zone = await deviceService.updateNodeThresholds(req.params.id, req.user, req.body)
-  res.json({ success: true, data: zone })
 })
 
 /** PUT /devices/sensor-nodes/:id/speaker-schedule – ENV-FR-013b */
@@ -79,6 +75,7 @@ export const listCameraNodes = asyncHandler(async (req: Request, res: Response) 
   const nodes = await deviceService.listCameraNodes({
     houseId: req.query.houseId as string | undefined,
     zoneId:  req.query.zoneId as string | undefined,   // cách gửi cũ: quy ra House chứa Zone
+    removed: req.query.removed as 'recent' | undefined,
   }, req.user)
   res.json({ success: true, data: nodes })
 })

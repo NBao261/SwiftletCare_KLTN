@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, SensorNode, CameraNode, RelayName, RelayOverrideLog, SystemNodeStatus, SpeakerScheduleInput, NodeCommandInput } from '@/types'
+import type { ApiResponse, SensorNode, CameraNode, RelayName, RelayOverrideLog, SystemNodeStatus, SpeakerScheduleInput, NodeCommandInput, RemovedDevice } from '@/types'
 
 /**
  * Flow 1 bước 3–4 — BE xác thực cặp {device_id, secret_key} in trên nhãn thiết bị
@@ -50,7 +50,17 @@ export const deviceApi = {
   sendCommand: (id: string, input: NodeCommandInput) =>
     api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/commands`, input),
 
-  // FARM-FR-008 — gỡ thiết bị (giữ lịch sử telemetry), lý do bắt buộc. Gỡ rồi không hoàn tác.
+  // FARM-FR-008 — thiết bị gỡ trong 24 giờ còn khôi phục được (chỉ Farm Owner), và khôi phục kèm lý do bắt buộc
+  listRemovedSensorNodes: () =>
+    api.get<ApiResponse<RemovedDevice[]>>('/devices/sensor-nodes', { params: { removed: 'recent' } }),
+  listRemovedCameraNodes: () =>
+    api.get<ApiResponse<RemovedDevice[]>>('/devices/camera-nodes', { params: { removed: 'recent' } }),
+  restoreSensorNode: (id: string, reason: string) =>
+    api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/restore`, { reason }),
+  restoreCameraNode: (id: string, reason: string) =>
+    api.post<ApiResponse<CameraNode>>(`/devices/camera-nodes/${id}/restore`, { reason }),
+
+  // FARM-FR-008 — gỡ thiết bị (giữ lịch sử telemetry), lý do bắt buộc; khôi phục được trong 24 giờ.
   decommissionSensorNode: (id: string, reason: string) =>
     api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/decommission`, { reason }),
   decommissionCameraNode: (id: string, reason: string) =>

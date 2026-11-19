@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, RotateCcw, Save, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { detectionTuningPayload } from '@/components/features/domain-expert/tuning/tuning.utils'
 import TuningStepperInput from './TuningStepperInput'
 import type { ExpertDetectionTuning, ExpertVerdictStats } from '@/types/expert.types'
 
@@ -22,8 +23,6 @@ interface Props {
 
 const TYPE_LABELS: Record<string, string> = {
   NOISE_ANOMALY: 'Ồn bất thường',
-  PUMP_DRY: 'Phun sương kém / Bơm khô',
-  MISTING_INEFFECTIVE: 'Phun sương không hiệu quả',
   SENSOR_ANOMALY: 'Cảm biến bất thường',
   LOW_RETURN_RATE: 'Giảm tỉ lệ chim về',
 }
@@ -78,7 +77,6 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   const rejPct = Math.round((worst.rejected / total) * 100)
   const label = TYPE_LABELS[worst.type] ?? worst.type
   const hint = worst.type === 'NOISE_ANOMALY' ? 'Tăng biên độ ồn (noise_margin_db).'
-    : (worst.type === 'MISTING_INEFFECTIVE' || (worst.type as string) === 'PUMP_DRY') ? 'Tăng pump_dry_on_sec hoặc pump_dry_min_rise_pct.'
     : 'Điều chỉnh tham số phát hiện tương ứng.'
 
   return (
@@ -105,7 +103,7 @@ export default function DetectionColumn({
 }: Props) {
   const [form, setForm] = useState<ExpertDetectionTuning>({
     noise_margin_db: 15, noise_min_sec: 10, pump_dry_on_sec: 300,
-    pump_dry_min_rise_pct: 2.0, speaker_drop_pct: 70, return_rate_drop_pct: 20,
+    pump_dry_min_rise_pct: 2.0, speaker_drop_pct: 70,
   })
 
   useEffect(() => { if (data) setForm(data) }, [data])
@@ -138,17 +136,15 @@ export default function DetectionColumn({
       <div className="flex-1 py-1 divide-y divide-stone-100">
         <VerdictStatsHint stats={verdictStats} />
         <TuningStepperInput label="Biên độ ồn vượt nền P90" value={form.noise_margin_db ?? 15}
-          onChange={set('noise_margin_db')} min={0} max={30} step={1} unit="dB" rangeHint="Phạm vi: 0–30 dB" defaultHint="Mặc định: 15 dB" />
+          onChange={set('noise_margin_db')} min={5} max={30} step={1} unit="dB" rangeHint="Phạm vi: 5–30 dB" defaultHint="Mặc định: 15 dB" />
         <TuningStepperInput label="Thời gian ồn kéo dài tối thiểu" value={form.noise_min_sec ?? 10}
-          onChange={set('noise_min_sec')} min={5} max={120} step={1} unit="giây" rangeHint="Phạm vi: 5–120s" defaultHint="Mặc định: 10s" />
+          onChange={set('noise_min_sec')} min={5} max={15} step={1} unit="giây" rangeHint="Phạm vi: 5–15s" defaultHint="Mặc định: 10s" />
         <TuningStepperInput label="Thời gian bơm chạy không tăng ẩm" value={form.pump_dry_on_sec ?? 300}
           onChange={set('pump_dry_on_sec')} min={120} max={900} step={30} unit="giây" rangeHint="Phạm vi: 120–900s" defaultHint="Mặc định: 300s" />
         <TuningStepperInput label="Độ ẩm cần tăng tối thiểu" value={form.pump_dry_min_rise_pct ?? 2.0}
           onChange={set('pump_dry_min_rise_pct')} min={0.5} max={10} step={0.5} decimals={1} unit="%RH" rangeHint="Phạm vi: 0,5–10" defaultHint="Mặc định: 2 %RH" />
         <TuningStepperInput label="Độ sụt âm lượng báo hỏng loa" value={form.speaker_drop_pct ?? 70}
           onChange={set('speaker_drop_pct')} min={30} max={90} step={5} unit="%" rangeHint="Phạm vi: 30–90%" defaultHint="Mặc định: 70%" />
-        <TuningStepperInput label="Ngưỡng sụt giảm tỉ lệ chim về" value={form.return_rate_drop_pct ?? 20}
-          onChange={set('return_rate_drop_pct')} min={5} max={50} step={5} unit="%" rangeHint="Phạm vi: 5–50%" defaultHint="Mặc định: 20%" />
       </div>
 
       {updatedAt && (
@@ -159,7 +155,7 @@ export default function DetectionColumn({
       )}
 
       <div className="mt-auto pt-4 border-t border-stone-100">
-        <button type="button" onClick={() => onSave(form)} disabled={isSaving}
+        <button type="button" onClick={() => onSave(detectionTuningPayload(form))} disabled={isSaving}
           className={cn(
             'w-full py-2.5 rounded-full text-sm font-medium flex items-center justify-center gap-2 transition-all duration-150',
             isSaving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-[#27231F] text-white hover:bg-[#3D3630] shadow-sm',

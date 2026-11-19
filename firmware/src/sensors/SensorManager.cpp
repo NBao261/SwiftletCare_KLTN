@@ -192,6 +192,11 @@ void SensorData::fillJson(JsonDocument &doc) const {
   doc["nh3_ppm"] = nh3Ppm;
   doc["co2_ppm"] = co2Ppm;
   doc["sound_db"] = soundDb;
+  // Board không đo dòng thì không gửi hai trường này (backend: controller không đo thì không gửi)
+  if (currentOk) {
+    doc["pump_current_a"] = pumpCurrentA;
+    doc["fan_current_a"] = fanCurrentA;
+  }
   if (epochMs) doc["timestamp"] = epochMs; // thiếu → backend lấy giờ nhận
 }
 
