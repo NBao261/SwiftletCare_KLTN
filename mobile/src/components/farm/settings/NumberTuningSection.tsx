@@ -21,6 +21,7 @@ import {
   parseNumberDraft,
   toInputText,
   validateNumberDraft,
+  type DraftErrors,
   type NumberDraft,
   type NumberRule,
 } from '@/utils/settingsValidation.utils'
@@ -42,6 +43,8 @@ export interface NumberTuningSectionProps<K extends string> {
   footerNote?: string
   keys: readonly K[]
   rules: Record<K, NumberRule>
+  // Kiểm thêm giữa các ô (ví dụ mức "rõ" không nhẹ hơn mức "nhẹ"); không truyền thì chỉ kiểm khoảng của từng ô
+  validate?: (draft: NumberDraft<K>) => DraftErrors<K>
   values: Partial<Record<K, number>> | undefined
   getLabel: (key: K) => { label: string; unit: string }
   toggle?: TuningToggle
@@ -103,7 +106,7 @@ function ToggleRow({
 
 // Phần đang sửa: ô nhập cho từng tham số, khoảng hợp lệ ở cột phải, công tắc (nếu có); Lưu chỉ gửi mục này
 function NumberTuningEditor<K extends string>(props: NumberTuningSectionProps<K>) {
-  const { keys, rules, values, getLabel, toggle, editor, save, savedMessage, onSaved } = props
+  const { keys, rules, validate, values, getLabel, toggle, editor, save, savedMessage, onSaved } = props
   const original: Partial<Record<K, number>> = values ?? {}
   const [draft, setDraft] = useState<NumberDraft<K>>(() => {
     const initial = {} as NumberDraft<K>
@@ -113,7 +116,7 @@ function NumberTuningEditor<K extends string>(props: NumberTuningSectionProps<K>
   const [toggleValue, setToggleValue] = useState(toggle?.value)
   const [isSaving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const errors = validateNumberDraft(draft, rules)
+  const errors = validate ? validate(draft) : validateNumberDraft(draft, rules)
   const isToggleChanged = toggle !== undefined && toggleValue !== toggle.value
   const isChanged = isNumberDraftChanged(draft, original, keys) || isToggleChanged
 

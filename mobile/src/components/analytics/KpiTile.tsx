@@ -53,7 +53,7 @@ export function KpiTile({
       <Text variant="small" color={secondaryColor} numberOfLines={1}>
         {label}
       </Text>
-      <Text variant="heading" weight="semiBold" numberOfLines={1} style={styles.value}>
+      <Text variant="heading" weight="semiBold" numberOfLines={1}>
         {value}
       </Text>
       <View style={styles.captionRow}>
@@ -70,7 +70,6 @@ export function KpiTile({
 
 const styles = StyleSheet.create({
   tile: { height: KPI_TILE_HEIGHT, borderRadius: Radius.lg, padding: Spacing.lg, justifyContent: 'space-between' },
-  value: { fontVariant: ['tabular-nums'] },
   captionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   flex: { flex: 1 },
 })

@@ -62,7 +62,7 @@ export function SettingsTable({ columns, rows, emptyText }: SettingsTableProps) 
           variant="body"
           weight={index === 0 ? 'regular' : 'semiBold'}
           color={cell.isMuted ? palette.textSecondary : palette.text}
-          style={[column.align === 'right' && styles.right, styles.number]}
+          style={column.align === 'right' && styles.right}
           numberOfLines={2}
         >
           {cell.text}
@@ -156,7 +156,6 @@ const styles = StyleSheet.create({
   cell: { minWidth: 0, gap: Spacing.xs },
   caretSpace: { width: CARET_SIZE },
   right: { textAlign: 'right' },
-  number: { fontVariant: ['tabular-nums'] },
   error: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm },
   empty: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.md },
 })

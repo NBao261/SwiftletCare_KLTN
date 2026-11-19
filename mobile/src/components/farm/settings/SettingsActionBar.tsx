@@ -48,7 +48,7 @@ export function SettingsActionBar({
       {loading ? (
         <ActivityIndicator color={palette.primary} />
       ) : (
-        <Text variant="heading" weight="bold" color={palette.primary} style={styles.value} numberOfLines={1}>
+        <Text variant="heading" weight="bold" color={palette.primary} numberOfLines={1}>
           {value}
         </Text>
       )}
@@ -99,6 +99,5 @@ const styles = StyleSheet.create({
   },
   centered: { justifyContent: 'center' },
   label: { flex: 1 },
-  value: { fontVariant: ['tabular-nums'] },
   disabled: { opacity: 0.5 },
 })
