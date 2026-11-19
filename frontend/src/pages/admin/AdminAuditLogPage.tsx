@@ -92,7 +92,7 @@ export default function AdminAuditLogPage() {
             rows={table.visible}
             getRowKey={log => log._id}
             rowHeight={ROW_HEIGHT}
-            minRows={PAGE_SIZE}
+            minRows={table.total > PAGE_SIZE ? PAGE_SIZE : 0}
           />
         )}
 

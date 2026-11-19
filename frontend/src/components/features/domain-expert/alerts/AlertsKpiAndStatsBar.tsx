@@ -54,10 +54,10 @@ function KpiCard({ label, sublabel, value, accent, dotColor, badgeBg, isActive, 
 
 export const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Loại cảnh báo' },
-  { value: 'NOISE_ANOMALY', label: 'Ồn bất thường' },
+  { value: 'NOISE_ANOMALY', label: 'Tiếng ồn bất thường' },
   { value: 'SENSOR_ANOMALY', label: 'Cảm biến bất thường' },
-  { value: 'FORECAST_BREACH', label: 'Dự báo vượt ngưỡng' },
-  { value: 'LOW_RETURN_RATE', label: 'Giảm tỉ lệ chim về' },
+  { value: 'FORECAST_BREACH', label: 'Sắp vượt ngưỡng' },
+  { value: 'LOW_RETURN_RATE', label: 'Giảm tỷ lệ chim về' },
 ]
 
 // Cảnh báo suy luận chỉ ở mức MEDIUM/LOW (backend giới hạn), tức cấp P2 Cao và P3 Thường của FE_Design 2.4
@@ -111,7 +111,7 @@ export default function AlertsKpiAndStatsBar({
       />
       <KpiCard
         label={t('Chờ kiểm chứng')}
-        sublabel="Cần chuyên gia thẩm định"
+        sublabel="Chờ chuyên gia kiểm chứng"
         value={String(counts.pending).padStart(2, '0')}
         accent="text-orange-500"
         dotColor="bg-orange-500"

@@ -6,7 +6,7 @@ export default function ComingSoon({ title, note }: { title: string; note?: stri
     <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-warmGray/30 px-6 py-20 text-center">
       <h1 className="text-2xl font-bold text-charcoal">{tr(title)}</h1>
       <p className="text-sm text-warmGray">
-        {tr(note ?? 'Backend module này hiện là stub (501) — xem backend/README.md mục "Module → phạm vi".')}
+        {tr(note ?? 'Chức năng này chưa có trong phiên bản hiện tại.')}
       </p>
     </div>
   )

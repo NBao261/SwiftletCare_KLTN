@@ -40,7 +40,7 @@ const vi = {
   'status.confirmed': 'Đã xác nhận',
   'table.sortDate': 'Ngày thu hoạch',
   'table.sortWeight': 'Sản lượng',
-  'table.clearFilters': 'Hủy lọc',
+  'table.clearFilters': 'Huỷ lọc',
   'table.emptyTitle': 'Chưa có đợt thu hoạch nào',
   'table.emptyHint': 'Bấm "Ghi đợt thu hoạch" để ghi nhận đợt đầu tiên.',
   'table.emptyFilteredTitle': 'Không có đợt nào khớp bộ lọc',
@@ -55,7 +55,7 @@ const vi = {
   'cell.kilograms': '{kg} kg',
   'action.detail': 'Chi tiết',
   'action.edit': 'Sửa',
-  'action.delete': 'Xóa',
+  'action.delete': 'Xoá',
   'action.confirm': 'Xác nhận đợt thu',
 
   // Loại tổ
@@ -66,7 +66,7 @@ const vi = {
 
   // Khung phân bổ theo loại tổ
   'breakdown.title': 'Phân bổ theo loại tổ',
-  'breakdown.subtitle': 'Tỉ lệ khối lượng các loại tổ trên mọi đợt thu',
+  'breakdown.subtitle': 'Tỷ lệ khối lượng các loại tổ trên mọi đợt thu',
   'breakdown.totalItem': 'Tổng',
   'breakdown.kilograms': '{kg} kg',
   'breakdown.percent': '{percent}%',
@@ -78,7 +78,7 @@ const vi = {
   'detail.creator': 'Người nhập: {name}',
   'detail.images': 'Ảnh sản phẩm',
   'detail.photo': 'Ảnh lần thu',
-  'photo.label': 'Ảnh lần thu (tùy chọn)',
+  'photo.label': 'Ảnh lần thu (tuỳ chọn)',
   'photo.hint': 'JPEG, PNG hoặc WebP, tối đa 5 MB; lưu vào mọi loại yến của lần thu',
   'photo.pick': 'Chọn ảnh',
   'photo.change': 'Đổi ảnh',
@@ -97,13 +97,13 @@ const vi = {
   'detail.co2': 'CO2',
   'detail.flockTitle': 'Đàn chim TB 30 ngày',
   'detail.flockEmpty': 'Chưa có dữ liệu đếm chim',
-  'detail.returnRate': 'Tỉ lệ chim về',
+  'detail.returnRate': 'Tỷ lệ chim về',
   'detail.population': 'Số lượng ước tính',
 
   // Xoá
-  'delete.title': 'Xóa đợt thu hoạch?',
+  'delete.title': 'Xoá đợt thu hoạch?',
   'delete.description': 'Hành động này không thể hoàn tác.',
-  'delete.confirm': 'Xóa',
+  'delete.confirm': 'Xoá',
   'delete.done': 'Đã xoá đợt thu hoạch',
   'delete.failed': 'Xoá thất bại',
   'confirm.title': 'Xác nhận đợt thu hoạch?',
@@ -142,7 +142,7 @@ const vi = {
   'form.date': 'Ngày thu hoạch',
   'form.nests': 'Số tổ',
   'form.weight': 'Trọng lượng (gram)',
-  'form.imagesOptional': 'Ảnh sản phẩm (tùy chọn)',
+  'form.imagesOptional': 'Ảnh sản phẩm (tuỳ chọn)',
   'form.create': 'Tạo',
   'form.save': 'Lưu',
   'form.createFailed': 'Tạo thất bại',
@@ -187,7 +187,7 @@ const vi = {
 
   // HARVEST-FR-007 — chu kỳ thu hoạch (chỉ xem; kết luận mùa vụ viết ở màn chuyên gia)
   'cycle.title': 'Chu kỳ thu hoạch',
-  'cycle.subtitle': 'Mỗi lần thu đã xác nhận đóng một chu kỳ của khu vực',
+  'cycle.subtitle': 'Mỗi lần thu đã xác nhận đóng một chu kỳ của Zone',
   'cycle.colHouse': 'Nhà yến',
   'cycle.colPeriod': 'Thời gian',
   'cycle.colYield': 'Sản lượng',
@@ -212,9 +212,9 @@ const vi = {
   'cycle.lastYear': 'Cùng kỳ năm trước',
   'cycle.noCompare': 'Không có chu kỳ để so sánh',
   'cycle.changeWeight': 'Khối lượng {change}%',
-  'cycle.health': 'Sức khỏe trong chu kỳ',
+  'cycle.health': 'Sức khoẻ trong chu kỳ',
   'cycle.goodDays': 'Ngày tốt',
-  'cycle.returnRate': 'Tỉ lệ chim về TB',
+  'cycle.returnRate': 'Tỷ lệ chim về TB',
   'cycle.timeInRange': 'Thời gian trong ngưỡng',
   'cycle.completeness': 'Số ngày có trạng thái',
   'cycle.incompleteNote': 'Dưới 80 % số ngày có trạng thái nên các chỉ số trên chưa đủ tin cậy.',

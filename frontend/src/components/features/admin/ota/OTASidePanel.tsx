@@ -66,7 +66,7 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
               autoComplete="off"
             />
           </Field>
-          <Field id="ota-sha256" label="SHA-256 của file" hint="64 ký tự hex — thiết bị dùng để kiểm tra toàn vẹn" error={errors.sha256}>
+          <Field id="ota-sha256" label="SHA-256 của file" hint="64 ký tự hex, thiết bị dùng để kiểm tra toàn vẹn" error={errors.sha256}>
             <input
               id="ota-sha256"
               value={form.sha256}

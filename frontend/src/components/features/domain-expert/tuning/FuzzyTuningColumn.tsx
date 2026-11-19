@@ -96,7 +96,7 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
         <div>
           <h3 className="text-base font-bold text-charcoal">{t('1. Hệ số điều khiển mờ')}</h3>
-          <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của khu vực')}</p>
+          <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của Zone')}</p>
         </div>
         <button type="button" onClick={handleSave} disabled={isSaving}
           className={cn(
@@ -137,13 +137,13 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
       {/* ENV-FR-022 — cờ lọc nhiễu đầu vào */}
       <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
         <div>
-          <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu đầu vào (median + Kalman)')}</p>
-          <p className="text-[11px] text-warmGray mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để relay ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.')}</p>
+          <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu số đo')}</p>
+          <p className="text-[11px] text-warmGray mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.')}</p>
         </div>
         <Toggle
           checked={form.fuzzy_input_filter}
           onChange={checked => setForm(previous => ({ ...previous, fuzzy_input_filter: checked }))}
-          aria-label={t('Lọc nhiễu đầu vào (median + Kalman)')}
+          aria-label={t('Lọc nhiễu số đo')}
         />
       </div>
     </div>

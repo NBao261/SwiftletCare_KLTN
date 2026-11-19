@@ -41,11 +41,11 @@ export function Step1Location({ data, patch, onNext }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold text-charcoal">Bước 1 — Chọn loại thiết bị & vị trí</h2>
+        <h2 className="text-lg font-bold text-charcoal">Bước 1: Chọn loại thiết bị & vị trí</h2>
         <p className="mt-1 text-sm text-warmGray">
           {isCamera
             ? 'Chọn trang trại và nhà mà camera sẽ được gán vào.'
-            : 'Chọn trang trại, nhà và zone mà thiết bị sẽ được gán vào.'}
+            : 'Chọn trang trại, nhà và Zone mà thiết bị sẽ được gán vào.'}
         </p>
       </div>
 
@@ -122,9 +122,9 @@ export function Step1Location({ data, patch, onNext }: Props) {
               field
               disabled={isRegistered || !data.location.houseId || loadingZones}
               value={data.location.zoneId ?? ''}
-              ariaLabel="Chọn zone"
+              ariaLabel="Chọn Zone"
               options={[
-                { value: '', label: data.location.houseId ? '-- Chọn zone --' : 'Chọn nhà trước' },
+                { value: '', label: data.location.houseId ? '-- Chọn Zone --' : 'Chọn nhà trước' },
                 ...(zones?.map(z => ({ value: z._id, label: z.name })) ?? []),
               ]}
               onChange={val => patch({ location: { ...data.location, zoneId: val || undefined } })}

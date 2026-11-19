@@ -176,7 +176,7 @@ export default function DomainExpertAlertVerdictsPage() {
                 </>
               ) : (
                 <span className="text-[11.5px] text-warmGray">
-                  {t('Chưa có lịch sử phán quyết trong kỳ — tỷ lệ xác nhận theo loại cảnh báo hiện ra khi chuyên gia đã có phán quyết')}
+                  {t('Chưa có kết luận nào trong kỳ. Tỷ lệ xác nhận đúng theo loại cảnh báo hiện khi đã có kết luận.')}
                 </span>
               )}
             </div>

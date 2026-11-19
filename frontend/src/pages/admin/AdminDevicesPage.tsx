@@ -20,19 +20,19 @@ const ROW_HEIGHT = 64
 const STATUS_OPTIONS: { value: DeviceStatus | ''; label: string }[] = [
   { value: '', label: 'Tất cả trạng thái' },
   { value: 'ONLINE', label: 'Online' },
-  { value: 'OFFLINE', label: 'Offline' },
+  { value: 'OFFLINE', label: 'Mất kết nối' },
   // ERROR/DEGRADED đã bỏ theo SRS 3.1.0
   { value: 'PENDING', label: 'Chờ kết nối' },
 ]
 const TYPE_OPTIONS: { value: SystemNodeStatusItem['type'] | ''; label: string }[] = [
   { value: '', label: 'Tất cả loại' },
-  { value: 'sensor', label: 'Cảm biến' },
-  { value: 'camera', label: 'Camera' },
+  { value: 'sensor', label: 'Bộ điều khiển' },
+  { value: 'camera', label: 'Camera đếm chim' },
 ]
 
 type DeviceSortKey = 'last_heartbeat' | 'device_id' | 'status'
 const SORT_FIELDS: { key: DeviceSortKey; label: string }[] = [
-  { key: 'last_heartbeat', label: 'Heartbeat' },
+  { key: 'last_heartbeat', label: 'Kết nối cuối' },
   { key: 'device_id', label: 'Tên thiết bị' },
   { key: 'status', label: 'Trạng thái' },
 ]
@@ -113,10 +113,10 @@ export default function AdminDevicesPage() {
       <DeviceStats status={data} />
 
       {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}
-      <SectionCard title="Danh sách thiết bị" description="Cảm biến và camera toàn hệ thống">
+      <SectionCard title="Danh sách thiết bị" description="Bộ điều khiển và camera đếm chim toàn hệ thống">
 
         {/* Hàng 1: tìm kiếm — không có nút tạo: thiết bị mới nhập ở Kho thiết bị, Farm Owner đăng ký từ nhãn */}
-        <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, phòng..." value={search} onChange={withReset(setSearch)} />
+        <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, Zone..." value={search} onChange={withReset(setSearch)} />
 
         {/* Hàng 2: bộ lọc + sắp xếp */}
         <div className="flex flex-wrap items-center gap-3">
@@ -128,17 +128,17 @@ export default function AdminDevicesPage() {
         </div>
 
         <DataTable
-          columns={buildDeviceColumns((page - 1) * PAGE_SIZE, setViewTarget)}
+          columns={buildDeviceColumns(setViewTarget)}
           rows={rows}
           getRowKey={n => `${n.type}-${n._id}`}
           // Bấm dòng hoặc nút "Chi tiết" mở drawer chi tiết (Admin chỉ xem thiết bị)
           onRowClick={setViewTarget}
           // Cố định khung 10 dòng — ít thiết bị/trang cuối vẫn giữ chiều cao, lọc không làm card co giãn
           rowHeight={ROW_HEIGHT}
-          minRows={PAGE_SIZE}
+          minRows={filtered.length > PAGE_SIZE ? PAGE_SIZE : 0}
           emptyMessage={hasActiveFilters
-            ? 'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
-            : 'Chưa có thiết bị nào — thiết bị xuất hiện ở đây khi chủ nhà yến đăng ký từ nhãn QR.'}
+            ? 'Không có thiết bị nào khớp bộ lọc. Thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
+            : 'Chưa có thiết bị nào. Thiết bị xuất hiện ở đây khi chủ nhà yến đăng ký từ nhãn QR.'}
         />
 
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}

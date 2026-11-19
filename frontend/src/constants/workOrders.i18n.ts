@@ -14,7 +14,7 @@ const vi = {
 
   // Bảng phiếu công việc
   'list.title': 'Phiếu công việc',
-  'list.subtitle': 'Việc sửa chữa và bảo trì tại nhà yến: tạo tự động từ cảnh báo thiết bị, kế hoạch bảo trì đến hạn hoặc do bạn tạo; bạn duyệt sau khi thợ báo xong.',
+  'list.subtitle': 'Việc sửa chữa và bảo trì tại nhà yến: tạo tự động từ cảnh báo thiết bị, kế hoạch bảo trì đến hạn hoặc do bạn tạo; bạn duyệt sau khi kỹ thuật viên báo xong.',
   'list.subtitleExpert': 'Việc sửa chữa và bảo trì tại nhà yến và tình trạng xử lý; chủ nhà yến duyệt, mở lại, huỷ hoặc giao lại.',
   'list.filterStatus': 'Lọc trạng thái',
   'filter.open': 'Chưa đóng',
@@ -47,8 +47,8 @@ const vi = {
   'done.notePlaceholder': 'VD: Thông béc phun tầng 2, châm đầy bồn nước',
   'done.photos': 'Ảnh tại nhà (còn chọn được {n} ảnh)',
   'done.photoInvalid': 'Ảnh phải là JPEG, PNG hoặc WebP, mỗi ảnh tối đa 5 MB.',
-  'done.doneVerifying': 'Đã báo xong — hệ thống kiểm dữ liệu phục hồi rồi chờ bạn duyệt',
-  'done.doneAwaiting': 'Đã báo xong — phiếu chờ bạn duyệt',
+  'done.doneVerifying': 'Đã báo xong, hệ thống kiểm dữ liệu phục hồi rồi chờ bạn duyệt',
+  'done.doneAwaiting': 'Đã báo xong, phiếu chờ bạn duyệt',
   'checklist.saved': 'Đã ghi kết quả mục checklist',
   'action.approve': 'Duyệt và đóng',
   'action.reopen': 'Mở lại',
@@ -75,14 +75,14 @@ const vi = {
   'reassign.desc': 'Chọn kỹ thuật viên đang được giao nhà {house}. Người mới nhận thông báo.',
   'reassign.label': 'Kỹ thuật viên',
   'reassign.choose': 'Chọn kỹ thuật viên',
-  'reassign.none': 'Nhà này chưa có kỹ thuật viên nào khác để giao. Giao thợ cho nhà ở tab Thành viên farm của trang nhà.',
+  'reassign.none': 'Nhà này chưa có kỹ thuật viên nào khác để giao. Giao kỹ thuật viên cho nhà ở tab Thành viên trang trại của trang nhà.',
   'reassign.done': 'Đã giao lại phiếu công việc',
   'form.cancel': 'Huỷ',
   'form.save': 'Lưu',
   'form.required': 'Chưa nhập {field}',
 
   // Popup tạo tay (OPS-FR-001)
-  'create.title': 'Tạo phiếu công việc — {house}',
+  'create.title': 'Tạo phiếu công việc · {house}',
   'create.hint': 'Phiếu công việc được giao cho kỹ thuật viên đang trực của nhà; nhà chưa có kỹ thuật viên thì bạn tự xử lý.',
   'create.titleLabel': 'Việc cần làm',
   'create.titlePlaceholder': 'VD: Thay béc phun tầng 3',

@@ -93,7 +93,7 @@ export default function AdminUsersPage() {
     onView: setViewTarget,
     onLock: setLockTarget,
     onUnlock: setUnlockTarget,
-  }, (page - 1) * limit, currentUserId)
+  }, currentUserId)
 
   return (
     // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
@@ -137,7 +137,7 @@ export default function AdminUsersPage() {
             />
           </div>
           {tab === 'customers' && (
-            <Button type="button" onClick={() => setCreatingOwner(true)}>Tạo Farm Owner</Button>
+            <Button type="button" onClick={() => setCreatingOwner(true)}>Tạo chủ nhà yến</Button>
           )}
         </div>
 
@@ -178,10 +178,10 @@ export default function AdminUsersPage() {
             onSortChange={handleSortChange}
             // Cố định khung 10 dòng như bảng Trang trại/Thiết bị — ít tài khoản/trang cuối vẫn giữ chiều cao
             rowHeight={ROW_HEIGHT}
-            minRows={PAGE_SIZE}
+            minRows={total > limit ? PAGE_SIZE : 0}
             // Admin không có trang chi tiết người dùng riêng — bấm dòng mở popup chi tiết (UserDetailModal)
             onRowClick={setViewTarget}
-            emptyMessage="Không tìm thấy tài khoản nào — thử đổi bộ lọc hoặc từ khoá tìm kiếm."
+            emptyMessage="Không tìm thấy tài khoản nào, thử đổi bộ lọc hoặc từ khoá tìm kiếm."
           />
         )}
 

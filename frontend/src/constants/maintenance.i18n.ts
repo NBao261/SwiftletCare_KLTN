@@ -74,8 +74,8 @@ const vi = {
   'comment.done': 'Đã gửi góp ý',
 
   // Popup tạo, sửa
-  'form.createTitle': 'Tạo kế hoạch bảo trì — {house}',
-  'form.editTitle': 'Sửa kế hoạch — {house}',
+  'form.createTitle': 'Tạo kế hoạch bảo trì · {house}',
+  'form.editTitle': 'Sửa kế hoạch · {house}',
   'form.equipment': 'Việc bảo trì',
   'form.basis': 'Cách tính hạn',
   'form.interval': 'Chu kỳ',

@@ -4,7 +4,7 @@ import type { Dictionary } from '@/lib/i18n';
 // Từ điển màn Sức khỏe nhà yến (/health) — trạng thái ngày, đánh giá ngày, mức chỉ số (MF-06, BR-28…31)
 const vi = {
   // Đầu trang
-  'page.title': 'Sức khỏe nhà yến',
+  'page.title': 'Sức khoẻ nhà yến',
   'page.subtitle': 'Mỗi ngày hệ thống tính trạng thái từng nhà yến từ môi trường, không khí, đàn chim và tiếng ồn. Đây là chỉ báo, không phải chẩn đoán.',
   'page.noFarmTitle': 'Chưa có trang trại',
   'page.noFarmDesc': 'Tạo trang trại và nhà yến ở trang Trang trại để hệ thống bắt đầu tính trạng thái.',
@@ -27,8 +27,8 @@ const vi = {
   // Bảng ngày
   'table.title': 'Đánh giá theo ngày',
   'disagreements.title': 'Ngày đánh giá lệch',
-  'table.subtitle': 'Hãy đánh giá ngày theo quan sát của bạn trước, trạng thái của hệ thống chỉ hiện sau khi đánh giá hoặc bỏ qua.',
-  'table.subtitleExpert': 'Trạng thái hệ thống tính cho từng ngày, kèm đánh giá của Farm Owner theo quan sát tại nhà yến.',
+  'table.subtitle': 'Đánh giá ngày theo quan sát của bạn trước; trạng thái của hệ thống chỉ hiện sau khi bạn đánh giá hoặc bỏ qua.',
+  'table.subtitleExpert': 'Trạng thái hệ thống tính cho từng ngày, kèm đánh giá của chủ nhà yến theo quan sát tại nhà yến.',
   'table.loading': 'Đang tải các ngày…',
   'table.emptyTitle': 'Chưa có ngày nào',
   'table.emptyHint': 'Hệ thống tính trạng thái mỗi tối sau khi kiểm tra tỷ lệ chim về.',
@@ -137,7 +137,7 @@ const vi = {
   'reason.MISSING_DATA.MORNING': 'Thiếu dữ liệu đàn chim: thiếu phiên sáng',
   'reason.MISSING_DATA.EVENING': 'Thiếu dữ liệu đàn chim: thiếu phiên chiều',
   'reason.MISSING_DATA.NO_DEPARTURES': 'Thiếu dữ liệu đàn chim: phiên sáng không có chim ra',
-  'reason.MISSING_DATA.INCOMPLETE': 'Thiếu dữ liệu đàn chim: phiên đếm không đầy đủ vì nút AI mất kết nối',
+  'reason.MISSING_DATA.INCOMPLETE': 'Thiếu dữ liệu đàn chim: phiên đếm không đầy đủ vì camera đếm chim mất kết nối',
   'reason.MISSING_DATA.flock': 'Thiếu dữ liệu đàn chim',
   'reason.NOT_ASSESSED.air': 'Chưa xét không khí (thiếu mẫu NH3, CO2)',
   'reason.NOT_ASSESSED.noise': 'Chưa xét tiếng ồn (thiếu mẫu độ ồn)',
@@ -180,7 +180,7 @@ const vi = {
   'levels.errInteger': 'Nhập số nguyên',
 
   // Báo cáo theo nhà (EXPERT-FR-005, 013; BR-33)
-  'report.title': 'Báo cáo sức khỏe',
+  'report.title': 'Báo cáo sức khoẻ',
   'report.subtitle': 'Hệ thống tự tạo: ngày (mỗi tối), tuần (sáng thứ Hai), tháng (sáng ngày 1). Bạn tạo thêm được, tối đa 31 ngày.',
   'report.create': 'Tạo báo cáo',
   'report.needFarm': 'Chọn một trang trại để xem báo cáo',
@@ -274,7 +274,7 @@ const vi = {
   'rd.saved': 'Đã lưu kết luận, Chủ nhà yến đã được thông báo',
   'rd.placeholder': 'Nhận xét về các ngày trong kỳ và khuyến nghị cho Chủ nhà yến…',
   'rd.otherExpert': 'Kết luận do chuyên gia khác viết, chỉ người viết sửa được.',
-  'pdf.title': 'Báo cáo sức khỏe nhà yến',
+  'pdf.title': 'Báo cáo sức khoẻ nhà yến',
   'pdf.failed': 'Không tạo được file PDF',
   'pdf.page': 'Trang {page}/{total}',
   ...prefixLabels('alertType.', alertTypeDict.vi),

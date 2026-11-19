@@ -24,7 +24,7 @@ describe('formatHealthReason', () => {
     expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'EVENING' }), vi, plain)).toBe('Thiếu dữ liệu đàn chim: thiếu phiên chiều');
     // VISION-FR-020 — nút AI mất kết nối trong khung phiên
     expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'INCOMPLETE' }), vi, plain))
-      .toBe('Thiếu dữ liệu đàn chim: phiên đếm không đầy đủ vì nút AI mất kết nối');
+      .toBe('Thiếu dữ liệu đàn chim: phiên đếm không đầy đủ vì camera đếm chim mất kết nối');
     // Giá trị lạ không được hiện thành "thiếu phiên sáng"
     expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'SOMETHING_NEW' }), en, plain)).toBe('Missing flock data');
   });

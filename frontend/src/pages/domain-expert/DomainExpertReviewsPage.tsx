@@ -176,7 +176,7 @@ export default function DomainExpertReviewsPage() {
           <EmptyState
             icon={<AlertTriangle className="h-8 w-8 text-alertRed" />}
             title={t('Không thể tải danh sách thay đổi tham số')}
-            description={t('Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại.')}
+            description={t('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')}
             action={
               <Button
                 variant="secondary"
@@ -200,7 +200,7 @@ export default function DomainExpertReviewsPage() {
             description={
               isReviewFiltered
                 ? t('Không tìm thấy thay đổi tham số nào phù hợp với bộ lọc đã chọn.')
-                : t('Khi Chủ trang trại cập nhật ngưỡng vi khí hậu hoặc hệ số điều khiển, các bản ghi sẽ xuất hiện tại đây để Chuyên gia thẩm định.')
+                : t('Thay đổi ngưỡng hoặc hệ số mờ của chủ nhà yến hiện ở đây để bạn duyệt.')
             }
           />
         </div>
@@ -235,7 +235,7 @@ export default function DomainExpertReviewsPage() {
           <EmptyState
             icon={<AlertTriangle className="h-8 w-8 text-alertRed" />}
             title={t('Không thể tải danh sách đề xuất hệ số')}
-            description={t('Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại.')}
+            description={t('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')}
             action={
               <Button
                 variant="secondary"
@@ -259,7 +259,7 @@ export default function DomainExpertReviewsPage() {
             description={
               isProposalFiltered
                 ? t('Không tìm thấy đề xuất hệ số mờ nào phù hợp với bộ lọc đã chọn.')
-                : t('Khi Chủ trang trại gửi gợi ý hệ số mờ của hệ thống, các đề xuất sẽ xuất hiện tại đây để Chuyên gia xem xét và phê duyệt.')
+                : t('Gợi ý hệ số mờ chủ nhà yến gửi lên hiện ở đây để bạn duyệt.')
             }
           />
         </div>
@@ -318,7 +318,7 @@ export default function DomainExpertReviewsPage() {
               }`}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              <span>{t('Đề xuất hệ số Fuzzy')}</span>
+              <span>{t('Đề xuất hệ số mờ')}</span>
               {pendingProposalsCount > 0 && (
                 <span className="rounded-full bg-limeMist px-2 py-0.5 text-[10px] font-bold text-charcoal">
                   {pendingProposalsCount}
@@ -360,8 +360,8 @@ export default function DomainExpertReviewsPage() {
         {/* Header hàng 2: Mô tả nhiệm vụ nghiệp vụ gọn gàng */}
         <p className="-mt-1 pb-1 text-xs text-warmGray">
           {activeTab === 'reviews'
-            ? t('Thẩm định các thay đổi vi khí hậu do Chủ trang trại cập nhật và chấp thuận hoặc hoàn nguyên về giá trị an toàn.')
-            : t('Xem xét các gợi ý hệ số mờ Chủ trang trại gửi lên và phê duyệt áp dụng xuống thiết bị.')}
+            ? t('Giữ hoặc hoàn tác thay đổi ngưỡng, hệ số mờ của chủ nhà yến.')
+            : t('Duyệt hoặc từ chối gợi ý hệ số mờ chủ nhà yến gửi lên.')}
         </p>
 
         {/* Nội dung danh sách theo Tab */}

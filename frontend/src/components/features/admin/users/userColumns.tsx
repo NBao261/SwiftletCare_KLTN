@@ -17,24 +17,19 @@ export interface UserColumnHandlers {
 
 /**
  * Cấu hình cột bảng Người dùng — tách riêng khỏi AdminUsersPage.tsx để trang chính
- * chỉ lo state/layout. `startIndex` là (page-1)*limit — để STT tính liên tục
- * qua các trang thay vì luôn bắt đầu lại từ 1 ở mỗi trang. `currentUserId` là
+ * chỉ lo state/layout. Không có cột STT (FE_Design §1.1). `currentUserId` là
  * Admin đang đăng nhập — không cho tự khoá chính mình (backend cũng chặn, nhưng
  * ẩn nút thì khỏi phải ăn lỗi mới biết).
  */
-export function buildUserColumns(handlers: UserColumnHandlers, startIndex: number, currentUserId?: string): DataTableColumn<User>[] {
+export function buildUserColumns(handlers: UserColumnHandlers, currentUserId?: string): DataTableColumn<User>[] {
   return [
     // Width theo % (bảng đang table-fixed) = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa
-    // chữ cột này và cột sau đều nhau. Tổng = 100% (6+15+25+17+15+12+10), vẫn đủ chỗ ở min-w 960px.
+    // chữ cột này và cột sau đều nhau. Tổng = 100% (21+25+17+15+12+10), vẫn đủ chỗ ở min-w 960px.
     // Không thêm padding trái riêng cho cột nào (từng có `pl-12` ở Trạng thái làm badge lệch khỏi mép cột).
     // Mỗi ô 1 dòng (tên và email tách 2 cột): lý do khoá xem ở modal chi tiết.
     {
-      key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
-      render: (_user, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
-    },
-    {
       // Sort theo tên/email đặt ở nút "Sắp xếp" cùng hàng filter (không phải click header), như trước khi tách cột
-      key: 'full_name', header: 'Họ tên', className: 'w-[15%]',
+      key: 'full_name', header: 'Họ tên', className: 'w-[21%]',
       // Tên dài mờ dần ở đuôi (text-fade) thay vì "…"; rê chuột xem đủ
       render: (user) => <p className="text-fade font-semibold text-charcoal" title={user.full_name}>{user.full_name}</p>,
     },

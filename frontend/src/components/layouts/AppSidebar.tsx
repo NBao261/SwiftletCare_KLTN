@@ -11,10 +11,27 @@ import { ROLE_LABEL } from '@/constants/roles'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
 
+// Trang con của một mục menu: hiện thành tab trên đầu trang (SectionTabs), mục menu sáng khi ở bất kỳ trang con nào
+export interface MenuTab {
+  label: string
+  path: string
+}
+
 export interface MenuItem {
   label: string
   path: string
   icon: ComponentType<SVGProps<SVGSVGElement>>
+  tabs?: MenuTab[]
+}
+
+// Đường dẫn thuộc một trang (chính nó hoặc trang chi tiết bên dưới)
+export function isPathWithin(pathname: string, path: string): boolean {
+  return pathname === path || pathname.startsWith(`${path}/`)
+}
+
+// Mục menu đang mở: trùng đường dẫn của mục hoặc của một tab
+export function isMenuItemActive(item: MenuItem, pathname: string): boolean {
+  return isPathWithin(pathname, item.path) || (item.tabs ?? []).some(tab => isPathWithin(pathname, tab.path))
 }
 
 export interface MenuSection {
@@ -80,12 +97,13 @@ export default function AppSidebar({
                       // Cảnh báo: số chờ xác nhận (ACTIVE); Thẩm định: số cảnh báo suy luận chờ chuyên gia kết luận, chỉ chuyên gia
                       const badgeByPath: Record<string, number> = { '/alerts': pendingAlertCount, '/domain-expert/alert-verdicts': expertPendingCount }
                       const badgeCount = badgeByPath[item.path] ?? 0
+                      const isActive = isMenuItemActive(item, pathname)
                       return (
                         <NavLink
                           key={item.path}
                           to={item.path}
                           state={menuLinkState(item.path, pathname)}
-                          className={({ isActive }) =>
+                          className={() =>
                             cn(
                               'flex items-center gap-2 rounded-full px-3 text-sm transition-colors',
                               isActive
@@ -94,7 +112,7 @@ export default function AppSidebar({
                             )
                           }
                         >
-                          {({ isActive }) => (
+                          {() => (
                             <>
                               {isActive ? (
                                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-600 text-charcoal">
@@ -150,17 +168,15 @@ export default function AppSidebar({
               to={item.path}
               state={menuLinkState(item.path, pathname)}
               aria-label={navigationLabel(item.label)}
-              className={({ isActive }) =>
-                cn(
-                  'flex h-12 items-center gap-2 rounded-full px-3.5 transition-colors',
-                  isActive ? 'bg-charcoal text-white' : 'text-warmGray hover:bg-warmGray/10',
-                )
-              }
+              className={cn(
+                'flex h-12 items-center gap-2 rounded-full px-3.5 transition-colors',
+                isMenuItemActive(item, pathname) ? 'bg-charcoal text-white' : 'text-warmGray hover:bg-warmGray/10',
+              )}
             >
-              {({ isActive }) => (
+              {() => (
                 <>
                   <item.icon width={20} height={20} className="shrink-0" />
-                  {isActive && <span className="text-sm font-semibold">{navigationLabel(item.label)}</span>}
+                  {isMenuItemActive(item, pathname) && <span className="text-sm font-semibold">{navigationLabel(item.label)}</span>}
                 </>
               )}
             </NavLink>

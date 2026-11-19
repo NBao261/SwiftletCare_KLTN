@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.14.0 · **Cập nhật:** 19/11/2026 · **Thay thế:** v2.13.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.15.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.14.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,17 @@
 ---
 
 ## 0. Changelog
+
+### v2.14.0 → v2.15.0 (bố cục Farm Technician và Admin, `docs/reports/todo-ui-layout-1120.md` §3.3, §3.4)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Mục menu có tab.** `MenuItem.tabs` (`{ label, path }[]`) gộp nhiều trang vào một mục menu: sidebar sáng mục đó ở mọi trang con, header lấy tên mục làm tên trang, `common/SectionTabs` vẽ hàng tab pill trên nội dung (lọc bằng `canAccessPath`). Route cũ giữ nguyên. Ngoại lệ thứ ba của vùng đóng băng 4.1. Admin: Người dùng = Tài khoản (`/users`) + Yêu cầu xoá tài khoản (`/account-requests`). |
+| 2 | **Bảng:** `FixedRowsTable` và `DataTable minRows` chỉ đệm dòng trống khi có từ 2 trang trở lên; 1 trang thì bảng cao vừa dữ liệu, bảng rỗng cao 4 dòng. Bỏ cột STT (giữ ở Nhật ký hệ thống, nơi thứ tự có nghĩa). |
+| 3 | **Một card một trang thì card không lặp tên trang:** `SectionCard` cho bỏ `title`, chỉ còn dòng mô tả (Cảnh báo, Kho thiết bị, OTA Firmware, Yêu cầu xoá tài khoản). Trang OTA vào khung `SectionCard` như các trang Admin khác. |
+| 4 | **Farm Technician:** menu Cảnh báo · Thiết bị & Cảm biến · Nhà được giao · Cài đặt, trang chủ là `/alerts` (MF-02). Trang Thiết bị dùng khung lọc `ScopeFilter` trên header như trang Farm Owner (bỏ card "Vị trí:"); trang Nhà được giao mở Thiết bị đã lọc đúng nhà qua `zoneStore.setScopePath`, không đưa mã vào URL. |
+| 5 | **Bảng thuật ngữ 6.2 viết lại** (người · thiết bị · chuyên môn, có cột "Không dùng") và **mục mới 6.4 Cách viết chữ tiếng Việt**: dấu kiểu mới (khoẻ, xoá, huỷ), "tỷ lệ", Chủ nhà yến, Kỹ thuật viên, Zone viết hoa, Bộ điều khiển, Camera đếm chim (thay "Nút AI"), Mất kết nối (thay Offline), Kết nối cuối (thay heartbeat), Kiểm chứng cảnh báo và Kết luận (thay thẩm định, phán quyết), Điều khiển tay (thay SCADA); không gạch dài nối câu, không "Vui lòng", không tên kỹ thuật. Sửa toàn bộ chữ hiển thị của web (khoảng 550 chuỗi, khoá `en.ts` đổi theo, tên loại cảnh báo viết lại). |
+| 6 | **Kiểm tự động thuật ngữ:** `src/i18n/wording.test.ts` quét mọi chuỗi tiếng Việt trong `src` (trừ test) và báo chữ thuộc cột "Không dùng" của 6.2. |
 
 ### v2.13.0 → v2.14.0 (soát lại sau PR #197, G-29, `todo-audit-1119.md` §9)
 
@@ -206,7 +217,7 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 
 1. **Nền xám là sân khấu, nền trắng là diễn viên.** `#EAEAEA` (canvas) không bao giờ là nơi đặt nội dung trực tiếp — mọi text/số liệu/control đều nằm trong 1 khung trắng nổi lên trên.
 2. **Không pha màu ngoài hệ thống — tuyệt đối.** Kể cả các sắc xám/đen cũng phải nằm trong đúng 1 hue ấm (~28°) đã chốt ở mục 2 — không dùng lại bất kỳ mã xám/đen "mặc định của framework" (VD `#000`, `#333`, Tailwind `slate/zinc` mặc định) vì các mã đó thường có tông lạnh khác hue hệ thống.
-3. **Sidebar/Topbar là vùng đóng băng.** Layout, kích thước giữ nguyên 100% theo code hiện tại. Chỉ 2 việc được phép chạm: (a) logo ảnh (mục 3), (b) token màu ngữ nghĩa đổi giá trị hex — sidebar/topbar tự ăn theo token mới, không cần và không được sửa CSS/kích thước của chính nó.
+3. **Sidebar/Topbar là vùng đóng băng.** Layout, kích thước giữ nguyên 100% theo code hiện tại. Chỉ 3 việc được phép chạm: (a) logo ảnh (mục 3), (b) token màu ngữ nghĩa đổi giá trị hex — sidebar/topbar tự ăn theo token mới, không cần và không được sửa CSS/kích thước của chính nó, (c) mục menu có `tabs` (4.1).
 4. **Không có gì "giả" mà không được gắn nhãn.** Số liệu chưa có API thật phải tự khai báo (mục 7).
 5. **Một ngôn ngữ chữ, một hệ bo góc, một hệ shadow, một hệ xám** — dùng xuyên suốt, không phát sinh biến thể lẻ tẻ giữa các trang/role (mục 9).
 
@@ -221,7 +232,7 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 | Card | `Card size="md"` = `rounded-2xl p-5`; `Card size="lg"` = `rounded-3xl p-6`; nền trắng + `shadow-card` | `ui/Card.tsx` |
 | Khung section | Card lớn, tiêu đề `text-h2 text-charcoal` + mô tả `text-sm text-warmGray`, nút bên phải header, không icon vuông | `features/farm-owner/farms/FarmFrame.tsx` |
 | Ô chỉ số (KPI) | `rounded-2xl border border-warmGray/15 bg-white p-4`, nhãn `.label-caption`, icon tròn 28px, số `text-2xl font-extrabold`, dòng phụ 16px | `features/farm-owner/farms/KpiTile.tsx` |
-| Bảng | **Chỉ dùng `DataTable`** (hoặc `FixedRowsTable` — bảng danh sách luôn giữ đủ 10 dòng, thiếu thì đệm dòng trống; dữ liệu phân trang ở server thì truyền `serverPagination={{ page, total, onChange }}`; **ngoại lệ:** bảng đợt thu ở trang Thu hoạch nằm trong cột 8/12 cạnh khung phân bổ loại tổ nên dùng `DataTable visibleRows={4} fillHeight`: màn xl hai khung khoá cứng cao `556px`, bảng lấp phần còn lại của khung (màn hẹp cao cố định 4 dòng), dòng còn lại cuộn dọc với tiêu đề cột đứng yên, không phân trang, không đệm dòng trống, `minTableWidth` 640, ô đệm ngang `px-3`): khung `rounded-2xl border-warmGray/15 shadow-card`, header `bg-warmGray/5`, `table-fixed` chia cột theo %, hover dòng `bg-warmGray/5` (chỉ nổi nền, chữ không đổi màu), ô 2 tầng (dòng chính đậm + dòng phụ xám). **Thao tác qua menu ⋯ ở cột cuối (`ActionsMenu`: Xem chi tiết, …) — bấm vào dòng không chuyển trang** | `ui/DataTable.tsx`; mẫu cột: `features/farm-owner/harvest/HarvestTable.tsx` |
+| Bảng | **Chỉ dùng `DataTable`** (hoặc `FixedRowsTable` — bảng danh sách 10 dòng mỗi trang; có từ 2 trang trở lên thì trang cuối đệm dòng trống để khung không nhảy khi lật trang, 1 trang thì bảng cao vừa dữ liệu, bảng rỗng cao 4 dòng; `DataTable minRows` theo cùng quy tắc; không có cột STT, trừ Nhật ký hệ thống; dữ liệu phân trang ở server thì truyền `serverPagination={{ page, total, onChange }}`; **ngoại lệ:** bảng đợt thu ở trang Thu hoạch nằm trong cột 8/12 cạnh khung phân bổ loại tổ nên dùng `DataTable visibleRows={4} fillHeight`: màn xl hai khung khoá cứng cao `556px`, bảng lấp phần còn lại của khung (màn hẹp cao cố định 4 dòng), dòng còn lại cuộn dọc với tiêu đề cột đứng yên, không phân trang, không đệm dòng trống, `minTableWidth` 640, ô đệm ngang `px-3`): khung `rounded-2xl border-warmGray/15 shadow-card`, header `bg-warmGray/5`, `table-fixed` chia cột theo %, hover dòng `bg-warmGray/5` (chỉ nổi nền, chữ không đổi màu), ô 2 tầng (dòng chính đậm + dòng phụ xám). **Thao tác qua menu ⋯ ở cột cuối (`ActionsMenu`: Xem chi tiết, …) — bấm vào dòng không chuyển trang** | `ui/DataTable.tsx`; mẫu cột: `features/farm-owner/harvest/HarvestTable.tsx` |
 | Phân trang | `Pagination variant="full"` đặt dưới bảng, nút tròn `h-9` | `ui/Pagination.tsx` |
 | Lọc + tìm | Bảng danh sách: `SelectMenu` cho từng điều kiện (Trạng thái kèm số đếm, Mức độ, Trang trại…) + `ClearFiltersButton tone="danger" count` bên trái — cùng cao `h-9`, ô lọc rộng theo chữ `min-w-[80px] max-w-[220px]` (dài hơn thì cắt "…"), `px-3.5 text-xs font-medium`, cách nhau `gap-2`; `SearchInput` `lg:w-72` bên phải. `FilterChip` chỉ dùng khi ít lựa chọn và cần thấy hết cùng lúc (VD bộ lọc Nhật ký cảnh báo Dashboard) | `ui/SelectMenu.tsx`, `ui/ClearFiltersButton.tsx`, `ui/SearchInput.tsx` |
 | Nút | `Button` bo tròn hoàn toàn: `sm` `h-9 px-4`, `md` `h-12 px-5`; nút phụ trong card dùng `CAPSULE_ACTION_CLASS`; nút "Chi tiết" dùng `DETAIL_BUTTON_CLASS` | `ui/Button.tsx`, `farmStructure.constants.ts`, `harvest.constants.ts` |
@@ -373,7 +384,7 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 |---|---|---|
 | `ONLINE` | Đang gửi heartbeat | `--accent-600` `#B5D32C` |
 | `PENDING` | Đã đăng ký, chưa có heartbeat đầu tiên (đang thiết lập, SF-01) | `--orange-500` `#ED8F50` |
-| `OFFLINE` | Mất heartbeat (bộ điều khiển 30 giây, nút AI 90 giây — BR-10) | `--gray-400` `#A5A3A1` |
+| `OFFLINE` | Mất kết nối: không có tín hiệu (bộ điều khiển 30 giây, camera đếm chim 90 giây — BR-10) | `--gray-400` `#A5A3A1` |
 | Đã gỡ (`decommissioned_at`) | Không còn hoạt động, lịch sử vẫn xem được | `--gray-400` `#A5A3A1` + chữ "Đã gỡ" |
 
 `ERROR` và `DEGRADED` có trong enum backend nhưng không chỗ nào gán (Report 3 §6.6) — giao diện không dựng màu/nhãn riêng cho hai giá trị này. Màu đỏ `--red-500` `#D53F35` dành cho giá trị vượt ngưỡng và lỗi, không phải trạng thái thiết bị.
@@ -524,7 +535,7 @@ Ticket, chat ticket, SLA và thanh tiến độ ticket đã gỡ (Report 3 §8, 
 
 ### 4.1. Sidebar & Topbar — đóng băng
 
-Layout/kích thước giữ nguyên 100%. Chỉ đổi: (1) logo (mục 3), (2) giá trị hex của token màu mà sidebar/topbar đang tham chiếu (avatar, nav active pill, dot trạng thái... vốn đang dùng biến `--gray-900`/`--success`/`--danger` — nay các biến này tự mang giá trị mới, sidebar không cần sửa code).
+Layout/kích thước giữ nguyên 100%. Chỉ đổi: (1) logo (mục 3), (2) giá trị hex của token màu mà sidebar/topbar đang tham chiếu (avatar, nav active pill, dot trạng thái... vốn đang dùng biến `--gray-900`/`--success`/`--danger` — nay các biến này tự mang giá trị mới, sidebar không cần sửa code), (3) mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung, không nằm trong header.
 
 ### 4.2. Content Canvas System — nền cố định 1 màu phẳng
 
@@ -730,49 +741,69 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 
 ### 6.2. Bảng thuật ngữ VI / EN
 
-Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới thêm vào bảng trước khi dùng:
+**[Bắt buộc]** Mọi chữ hiển thị (từ điển Hệ 2, khoá Hệ 1, nhãn trong component) dùng đúng cột "Dùng"; cột "Không dùng" là các biến thể đã gặp trong code và đã sửa hết ở v2.15.0. `src/i18n/wording.test.ts` chặn cột "Không dùng" trong CI; thuật ngữ mới thêm vào bảng (và vào test nếu có biến thể dễ lẫn) trước khi dùng. Báo cáo (Report 3, 4) và backend vẫn dùng tên tiếng Anh (Farm Owner, Work Order, AI node); bảng này chỉ cho giao diện.
 
-| VI | EN | Ghi chú |
-|---|---|---|
-| Trang trại / Farm | Farm | Giữ "Farm" trong câu ngắn |
-| Nhà yến | House | |
-| Zone | Zone | Không dịch |
-| Thiết bị | Device | |
-| Cảm biến | Sensor | |
-| Cảnh báo | Alert | |
-| Xác nhận (cảnh báo) | Acknowledge | Trạng thái: Mới / New · Tiếp nhận / Received · Đã bác bỏ / Dismissed · Đã xử lý / Resolved |
-| Kiểm chứng · Xác nhận đúng · Bác bỏ (cảnh báo suy luận) | Verdict · Confirm · Reject | Việc của chuyên gia (EXPERT-FR-003), khác "Xác nhận (cảnh báo)" của chủ farm |
-| Cảnh báo suy luận | Inferred alert | `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` |
-| Trạng thái sức khỏe theo ngày: Tốt · Cần theo dõi · Cần xử lý · Không đủ dữ liệu | Daily health status: Good · Watch · Action needed · Insufficient data | MF-06, BR-29; là chỉ báo, không phải chẩn đoán |
-| Chỉ số sức khỏe: Bình thường · Lệch nhẹ · Lệch rõ | Health indicator: Normal · Slight · Clear | BR-28 |
-| Đánh giá ngày (của người nuôi) | Daily rating | EXPERT-FR-012 |
-| Bằng chứng | Evidence | Số đo, số đếm chim, cảnh báo thiết bị quanh 1 cảnh báo suy luận (ALERT-FR-014) |
-| Mức độ | Level | 3 cấp: Khẩn cấp / Urgent · Cao / High · Thường / Normal (2.4) |
-| Kỹ thuật viên | Technician | |
-| Chủ nhà yến | Farm Owner | |
-| Chuyên gia | Domain Expert | |
-| Quản trị viên | Administrator | |
-| Ngưỡng | Threshold | |
-| Hệ số logic mờ | Fuzzy coefficient | |
-| Duyệt thay đổi · Giữ · Hoàn tác | Review · Accept · Revert | Chuyên gia duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010) |
-| Đề xuất hệ số · Duyệt · Từ chối | Proposal · Approve · Reject | Gợi ý hệ số chủ farm gửi chuyên gia (EXPERT-FR-011) |
-| Tham số phát hiện | Detection parameter | EXPERT-FR-008 |
-| Đồng bộ cấu hình · Đã áp dụng · Đang chờ · Lệch cấu hình | Configuration sync · Applied · Pending · Mismatch | ENV-FR-027 |
-| Bộ điều khiển | Controller | Bộ ESP32 ở mỗi Zone; không dùng chữ "PLC" ở màn mới |
-| Nút AI | AI node | Máy chạy đếm chim cho camera cửa ra vào của nhà yến |
-| Thiết lập thiết bị | Device setup | SF-01 |
-| Nhãn thiết bị · Mã kích hoạt | Device label · Activation key | Nhãn QR trên thiết bị (FARM-FR-010) |
-| Mã QR tầng | Floor code | QR dán ở mỗi tầng, chọn Zone khi thiết lập (FARM-FR-011) |
-| Kho thiết bị | Device stock | Admin thêm thiết bị, in nhãn |
-| Can thiệp tay | Manual override | |
-| Phun sương · Thông gió | Misting · Ventilation | |
-| Loa dẫn dụ (loa ru) | Attractant speaker | Thuật ngữ của Report 3; chữ EN "Lullaby" cũ đổi khi sửa màn |
-| Đếm chim · Tỷ lệ chim về | Bird count · Return rate | |
-| Vòng đếm · Lịch đếm (theo mùa, tạm thời) | Counting ring · Counting schedule (seasonal, temporary) | VISION-FR-018, 019 |
-| Thu hoạch | Harvest | |
-| Phiếu công việc · Tạo · Chưa đóng · Duyệt · Mở lại · Huỷ · Giao lại | Work order · Create · Open · Approve · Reopen · Cancel · Reassign | MF-02, OPS-FR-001…004; tài liệu và backend gọi "Work Order" và "open", giao diện tiếng Việt dùng "phiếu công việc", "tạo" (không dùng "mở phiếu") |
-| Thời gian xác nhận TB · Thời gian xử lý TB | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR (OPS-FR-009, BR-40) |
-| Vị trí (farm) · Vĩ độ · Kinh độ | Location · Latitude · Longitude | Một farm là một địa điểm (FARM-FR-001, A-5); không có "khu vực" |
+**Người và vai trò**
+
+| Dùng (VI) | EN | Không dùng | Ghi chú |
+|---|---|---|---|
+| Chủ nhà yến | Farm Owner | Farm Owner, chủ trang trại, chủ trại, chủ farm | Giữa câu viết thường: "báo cho chủ nhà yến" |
+| Chủ chính · Đồng sở hữu | Primary owner · Co-owner | Primary Owner | |
+| Kỹ thuật viên · Kỹ thuật viên chính | Technician · Primary technician | thợ, thợ chính, Kỹ thuật viên nhà yến | Người được giao nhà (AUTH-FR-013) |
+| Chuyên gia | Domain Expert | Domain Expert | |
+| Quản trị viên | Administrator | Administrator | |
+
+**Trang trại và thiết bị**
+
+| Dùng (VI) | EN | Không dùng | Ghi chú |
+|---|---|---|---|
+| Trang trại | Farm | farm, Farm, trại (đứng một mình) | Tên do người dùng đặt ("Trại yến Demo") giữ nguyên |
+| Nhà yến · Nhà | House | | |
+| Zone | Zone | khu vực, khu, zone, phòng | Luôn viết hoa; một Zone là một tầng có bộ điều khiển |
+| Tầng · Mã QR tầng | Floor · Floor code | | QR dán ở mỗi tầng (FARM-FR-011) |
+| Thiết bị | Device | | Gọi chung bộ điều khiển và camera đếm chim |
+| Bộ điều khiển | Controller | node, Node cảm biến môi trường, bộ kit, ESP32, PLC | Bộ đo và điều khiển ở mỗi Zone |
+| Cảm biến | Sensor | | Chỉ đầu đo (nhiệt độ, độ ẩm…), không gọi bộ điều khiển là cảm biến |
+| Camera đếm chim · Camera | Bird-count camera | Nút AI, camera AI, máy AI, AI | Report 4 gọi là AI node; trên màn chỉ cần biết nó đếm chim |
+| Online · Mất kết nối · Chờ kết nối | Online · Offline · Awaiting connection | Offline, offline | 3 trạng thái thiết bị (`deviceStatusDict`) |
+| Lần kết nối cuối · Kết nối cuối | Last seen | Heartbeat, heartbeat | |
+| Mật khẩu kết nối · Mã kích hoạt | Connection password · Activation key | mật khẩu broker | Admin in trên nhãn thiết bị (FARM-FR-010) |
+| Cập nhật firmware | Firmware update | OTA, OTA Firmware, đẩy OTA | |
+| Kho thiết bị · Nhãn thiết bị | Device stock · Device label | | |
+| Thiết lập thiết bị | Device setup | | SF-01 |
+| Rơ-le | Relay | relay | Khi nói được tên tải thì gọi tên tải: bơm phun sương, quạt, loa |
+| Phun sương · Thông gió | Misting · Ventilation | | |
+| Loa dẫn dụ (loa ru) | Attractant speaker | Lullaby | Thuật ngữ của Report 3 |
+
+**Điều khiển, cảnh báo, chuyên môn**
+
+| Dùng (VI) | EN | Không dùng | Ghi chú |
+|---|---|---|---|
+| Tự động · Điều khiển tay | Automatic · Manual override | SCADA, "Logic mờ" làm nhãn chế độ | |
+| Trực tiếp | Live | realtime, thời gian thực | |
+| Ngưỡng | Threshold | | |
+| Hệ số mờ | Fuzzy coefficient | Fuzzy, hệ số Fuzzy, hệ số logic mờ | |
+| Lọc nhiễu số đo | Reading noise filter | median + Kalman | |
+| Tham số phát hiện · Mức ồn vượt nền | Detection parameter · Noise above baseline | P90 | EXPERT-FR-008 |
+| Cảnh báo | Alert | | |
+| Xác nhận (cảnh báo) | Acknowledge | | Trạng thái: Mới · Tiếp nhận · Bác bỏ · Đã xử lý |
+| Cảnh báo suy luận | Inferred alert | AI | `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` |
+| Kiểm chứng cảnh báo · Kết luận · Xác nhận đúng · Bác bỏ | Verdict · Conclusion · Confirm · Reject | thẩm định, phán quyết, đối soát | Việc của chuyên gia (EXPERT-FR-003), khác "Xác nhận (cảnh báo)" |
+| Duyệt thay đổi · Giữ · Hoàn tác | Review · Accept · Revert | thẩm định, hoàn nguyên | Chuyên gia duyệt thay đổi ngưỡng, hệ số của chủ nhà yến (EXPERT-FR-010) |
+| Đề xuất hệ số · Duyệt · Từ chối | Proposal · Approve · Reject | | EXPERT-FR-011 |
+| Bằng chứng | Evidence | | ALERT-FR-014 |
+| Mức độ: Khẩn cấp · Cao · Thường | Level: Urgent · High · Normal | CRITICAL (chữ enum) | 2.4 |
+| Đồng bộ cấu hình · Đã áp dụng · Đang chờ · Lệch cấu hình | Configuration sync · Applied · Pending · Mismatch | | ENV-FR-027 |
+| Trạng thái sức khoẻ: Tốt · Cần theo dõi · Cần xử lý · Không đủ dữ liệu | Good · Watch · Action needed · Insufficient data | | MF-06; là chỉ báo, không phải chẩn đoán |
+| Chỉ số sức khoẻ: Bình thường · Lệch nhẹ · Lệch rõ | Normal · Slight · Clear | | BR-28 |
+| Đánh giá ngày | Daily rating | chấm thực địa | EXPERT-FR-012 |
+| Đếm chim · Tỷ lệ chim về · Vòng đếm · Lịch đếm | Bird count · Return rate · Counting ring · Counting schedule | tỉ lệ, vạch đếm | |
+| Thu hoạch | Harvest | | |
+| Phiếu công việc · Tạo · Chưa đóng · Duyệt · Mở lại · Huỷ · Giao lại | Work order · Create · Open · Approve · Reopen · Cancel · Reassign | Work Order, mở phiếu | MF-02 |
+| Thời gian xác nhận TB · Thời gian xử lý TB | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR | OPS-FR-009 |
+| Vị trí (trang trại) · Vĩ độ · Kinh độ | Location · Latitude · Longitude | | Một trang trại là một địa điểm (FARM-FR-001) |
+
+**Tên loại cảnh báo** (`alertTypeDict`, nguồn duy nhất): Vượt ngưỡng môi trường · Thiết bị mất kết nối · Lỗi loa ru · Phun sương không hiệu quả · Tiếng ồn bất thường · Tỷ lệ chim về thấp · Camera đếm chim gặp sự cố · Thiết bị tự khởi động lại · Lỗi cảm biến · Lỗi đường truyền cảm biến · Cảm biến bất thường · Sắp vượt ngưỡng · Đến hạn bảo trì bơm/quạt · Bơm, quạt hoặc loa không chạy · Thiết bị chưa nhận cấu hình mới. Tên viết theo điều người nuôi thấy, không theo tên linh kiện (không "bus RS485", "cơ cấu chấp hành", "suy giảm").
 
 ### 6.3. Quy ước key i18n
 
@@ -783,6 +814,21 @@ Mọi từ điển dùng đúng các cặp dưới đây; thuật ngữ mới th
 - Nhãn dùng chung nhiều màn (3 cấp mức độ, tên menu) chỉ khai ở 1 từ điển chung (`navigation.i18n.ts`; `severity.i18n.ts`) rồi import, không khai lại ở từ điển màn.
 - **[Bắt buộc] Nhãn của mã backend chỉ khai 1 lần** ở `constants/enumLabels.i18n.ts`: `alertTypeDict` (thêm `CONFIG_MISMATCH` khi backend có), `alertStatusDict` (thêm `DISMISSED` khi backend có), `deviceStatusDict`, `roleDict` (VI/EN). Mức độ ở `severity.i18n.ts` (`levelDict`; `severityLabels()` quy key 4 mức backend về 3 cấp). Từ điển màn cần key riêng (`status.ACTIVE`, `alert.NODE_OFFLINE`) thì lấy lại bằng `...prefixLabels('status.', alertStatusDict.vi)` — không gõ lại nhãn. Đang áp: `dashboard.i18n.ts`, `farmStructure.i18n.ts`, `shell.i18n.ts` (popup thông báo mọi role).
 - Nội dung do người dùng hoặc backend sinh ra (ghi chú, tin nhắn, tên farm) không dịch, hiện nguyên văn.
+
+### 6.4. Cách viết chữ tiếng Việt trên màn hình
+
+**[Bắt buộc]** Người đọc là người nuôi yến và kỹ thuật viên, không phải lập trình viên. Viết như người trong nghề nói với nhau, ngắn và cụ thể. `src/i18n/wording.test.ts` kiểm các mục máy kiểm được (chính tả, chữ cấm, gạch dài); phần còn lại kiểm khi review.
+
+1. **Chính tả:** dấu đặt kiểu mới, thống nhất cả giao diện: hoà, xoá, huỷ, tuỳ, khoẻ, thuỷ, toạ (không hòa, xóa, hủy, tùy, khỏe). Viết "tỷ lệ", không "tỉ lệ". "Zone" luôn viết hoa.
+2. **Câu ngắn:** mô tả dưới tiêu đề tối đa 1 dòng; giải thích quy tắc dài thì để trong (i) hoặc bỏ. Mỗi câu một ý.
+3. **Nút và lệnh:** động từ + đối tượng ("Tạo phiếu công việc", "Lưu ngưỡng", "Xem thiết bị"). Câu nhắc bắt đầu bằng động từ ("Nhập lý do khoá"); không "Vui lòng", không "Hãy" ở đầu câu.
+4. **Dấu câu:** không dùng " — " để nối câu; tách bằng dấu chấm, phẩy hoặc hai chấm. Cặp "việc · đối tượng" trong tiêu đề dùng " · " ("Tạo phiếu công việc · Nhà A"), bước dùng hai chấm ("Bước 1: Chọn vị trí"). Không dấu chấm than, không viết hoa mỗi chữ, không IN HOA (trừ nhãn nhóm menu sidebar, 4.1). Chữ mono (`font-mono`) chỉ cho mã người dùng phải chép (mã kích hoạt, mật khẩu kết nối); số cần thẳng cột dùng `tabular-nums`. Class `uppercase` chỉ ở nhãn nhóm menu sidebar.
+5. **Chủ ngữ rõ:** viết ai làm gì ("Chuyên gia duyệt lại sau", "Bộ điều khiển nhận khi kết nối lại"). Tránh "Hệ thống sẽ…" khi không cần và các từ sáo: tối ưu, thông minh, liền mạch, toàn diện, nâng cao, đảm bảo, giúp bạn, một cách.
+6. **Không tên kỹ thuật:** không ESP32, RS485, MQTT, broker, token, API, backend, SCADA, heartbeat, P90, median, Kalman, Feedback Loop, mã enum (CRITICAL, ACTIVE) hay mã yêu cầu (FR, BR, G-xx). Màn chuyên gia được ghi R² trong ngoặc để chuyên gia biết độ tin cậy của gợi ý.
+7. **Chữ tiếng Anh:** chỉ các từ đã quen trong tiếng Việt và có trong 6.2: Online, Zone, firmware, Wi-Fi, email, QR, Telegram, PDF, CSV, NH3, CO2 và đơn vị đo. Còn lại viết tiếng Việt.
+8. **Báo lỗi:** nói điều gì xảy ra rồi làm gì tiếp: "Không tải được danh sách camera. Thử lại." Không "Đã xảy ra lỗi…", không mã HTTP (13.16).
+9. **Trạng thái rỗng:** nói chưa có gì và cách có: "Chưa có Zone nào. Thêm Zone để gắn thiết bị."
+10. **Đổi chữ:** đổi một câu Hệ 1 thì đổi cả khoá trong `en.ts` / `en.expert.ts` (khoá là câu tiếng Việt). Không sửa tên test đang dùng trong Report 5 (`report5/tc.py` tra theo nguyên văn).
 
 ---
 
@@ -1185,8 +1231,8 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
 ### 12.5. `layouts/` — mỗi role một layout, menu viết trong file
 
-- 4 file `<Role>Layout.tsx` **khai mảng `menuSections` đầy đủ ngay đầu file**, mỗi mục là `{ label, path, icon }` viết literal — không tra từ bảng nav dùng chung. Mở `AdminLayout.tsx` là thấy trọn menu của Admin.
-- `dockItems` khai thêm khi dock mobile cần chọn tay (Admin có 10 mục nên phải chọn); các role khác dùng `firstDockItems(menuSections)` lấy 4 mục đầu.
+- 4 file `<Role>Layout.tsx` **khai mảng `menuSections` đầy đủ ngay đầu file**, mỗi mục là `{ label, path, icon, tabs? }` viết literal — không tra từ bảng nav dùng chung. Mở `AdminLayout.tsx` là thấy trọn menu của Admin. `tabs` gộp nhiều trang cùng một việc vào một mục menu (4.1); mỗi tab vẫn cần dòng `MENU_ACCESS` và nhãn trong `navigation.i18n.ts`.
+- `dockItems` khai thêm khi dock mobile cần chọn tay (Admin có 9 mục nên phải chọn); các role khác dùng `firstDockItems(menuSections)` lấy 4 mục đầu.
 - `AppShell` giữ toàn bộ khung (sidebar + header + nội dung + Toast) và mount listener socket cảnh báo. `AppSidebar` thuần trình bày, render cùng menu ở 2 breakpoint (rail `w-64` desktop + dock nổi mobile). `AppHeader` giữ breadcrumb + zone + chuông + ngôn ngữ.
 - `RoleLayout` trong `App.tsx` chọn layout theo `user.role` **lúc chạy**, vì URL của SwiftletCare không có tiền tố role (`/devices` dùng chung 3 role) nên không gắn layout theo nhánh route được.
 - **Thêm/bớt mục menu của một role: sửa đúng file layout của role đó, không đụng chỗ nào khác.** Nếu mục đó cũng cần chặn `returnTo` sau đăng nhập thì thêm một dòng vào bảng `MENU_ACCESS` trong `constants/roles.ts`.

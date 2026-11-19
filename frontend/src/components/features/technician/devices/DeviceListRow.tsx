@@ -74,10 +74,10 @@ export default function DeviceListRow({
             <IconDevice />
           </div>
           <div className="min-w-0 flex flex-col">
-            <p className="truncate font-mono font-bold text-charcoal">{node.device_id}</p>
+            <p className="truncate font-bold text-charcoal">{node.device_id}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-warmGray">
               <SimulatedBadge simulated={node.simulated} />
-              <span className="font-mono">v{node.firmware_version || "—"}</span>
+              <span>v{node.firmware_version || "—"}</span>
               {locationLabel && (
                 <>
                   <span>·</span>

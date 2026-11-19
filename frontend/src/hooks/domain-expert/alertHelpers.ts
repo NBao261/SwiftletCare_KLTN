@@ -7,10 +7,10 @@ import { translated } from '@/i18n'
 
 // ── Label / Badge maps ─────────────────────────────────────────────────────────
 export const ALERT_TYPE_LABELS: Record<string, string> = translated({
-  NOISE_ANOMALY: 'Ồn bất thường',
+  NOISE_ANOMALY: 'Tiếng ồn bất thường',
   SENSOR_ANOMALY: 'Cảm biến bất thường',
   FORECAST_BREACH: 'Dự báo vượt ngưỡng độ ẩm',
-  LOW_RETURN_RATE: 'Giảm tỉ lệ chim về tổ',
+  LOW_RETURN_RATE: 'Giảm tỷ lệ chim về tổ',
 })
 
 // ── Verdict stats text summary ─────────────────────────────────────────────────

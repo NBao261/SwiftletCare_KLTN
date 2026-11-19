@@ -13,9 +13,9 @@ interface Props {
 }
 
 const STEPS = [
-  'Đã gửi lệnh OTA tới thiết bị',
+  'Đã gửi bản cập nhật tới thiết bị',
   'Thiết bị tải & ghi firmware, khởi động lại…',
-  'Xác nhận firmware mới qua heartbeat',
+  'Chờ thiết bị báo phiên bản mới',
 ]
 
 /** "mm:ss" đã trôi qua kể từ requestedAt; tự cập nhật mỗi giây khi còn đang chờ */

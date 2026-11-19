@@ -1,4 +1,4 @@
-import { Badge, Button } from '@/components/ui'
+import { Button } from '@/components/ui'
 import { type DataTableColumn } from '@/components/ui/DataTable'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
@@ -51,27 +51,26 @@ export function HeartbeatTime({ at, plainDate = false }: { at?: string; plainDat
 /**
  * Cột bảng Thiết bị của Admin (AdminDevicesPage) — chỉ XEM: SRS RACI cho Admin "I (audit)" với gán/kích hoạt/
  * dời thiết bị và "–" với điều khiển relay, nên thao tác duy nhất là "Chi tiết" (popup chỉ đọc). Width %
- * (DataTable table-fixed), tổng 100: 5+19+15+13+14+9+14+11 — Thiết bị đủ chỗ mã + nhãn loại, Vị trí
+ * (DataTable table-fixed), tổng 100: 19+20+13+14+9+14+11 — Thiết bị đủ chỗ mã + nhãn loại, Vị trí
  * chỉ còn tên farm nên hẹp lại.
  */
-export function buildDeviceColumns(startIndex: number, onView: (n: SystemNodeStatusItem) => void): DataTableColumn<SystemNodeStatusItem>[] {
+export function buildDeviceColumns(onView: (n: SystemNodeStatusItem) => void): DataTableColumn<SystemNodeStatusItem>[] {
   return [
     {
-      key: 'stt', header: 'STT', align: 'center', className: 'w-[5%]',
-      render: (_n, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
-    },
-    {
       key: 'device_id', header: 'Thiết bị', className: 'w-[19%]',
+      // Ô 2 tầng: mã thiết bị đậm, loại thiết bị chữ xám bên dưới (nhãn dài không chèn mất mã)
       render: n => (
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-bold text-charcoal" title={n.device_id}>{n.device_id}</span>
-          <Badge tone="neutral" className="shrink-0">{n.type === 'sensor' ? 'Cảm biến' : 'Camera'}</Badge>
-          <SimulatedBadge simulated={n.simulated} />
+        <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-bold text-charcoal" title={n.device_id}>{n.device_id}</span>
+            <SimulatedBadge simulated={n.simulated} />
+          </div>
+          <span className="text-small text-warmGray">{n.type === 'sensor' ? t('Bộ điều khiển') : t('Camera đếm chim')}</span>
         </div>
       ),
     },
     {
-      key: 'location', header: 'Vị trí', className: 'w-[15%]',
+      key: 'location', header: 'Vị trí', className: 'w-[20%]',
       // Chỉ tên farm (in đậm) — nhà | tầng | zone xem ở popup Chi tiết; rê chuột vẫn thấy đủ vị trí.
       // Ô tìm kiếm vẫn khớp cả chuỗi vị trí đầy đủ (nodeLocation)
       render: n => (
@@ -89,7 +88,7 @@ export function buildDeviceColumns(startIndex: number, onView: (n: SystemNodeSta
         ? <span className="font-medium text-charcoal">v{n.firmware_version}</span>
         : <span className="text-warmGray">—</span>,
     },
-    { key: 'last_heartbeat', header: 'Heartbeat', className: 'w-[14%] whitespace-nowrap', render: n => <HeartbeatTime at={n.last_heartbeat} /> },
+    { key: 'last_heartbeat', header: 'Kết nối cuối', className: 'w-[14%] whitespace-nowrap', render: n => <HeartbeatTime at={n.last_heartbeat} /> },
     {
       key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[11%] whitespace-nowrap',
       render: n => (

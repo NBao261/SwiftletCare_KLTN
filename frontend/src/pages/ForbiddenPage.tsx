@@ -17,7 +17,7 @@ export default function ForbiddenPage() {
       <div className="w-full max-w-md">
         <EmptyState
           title="Bạn không có quyền truy cập trang này"
-          description="Tài khoản của bạn không có vai trò phù hợp để xem nội dung này. Nếu đây là nhầm lẫn, hãy liên hệ chủ trang trại hoặc quản trị viên."
+          description="Tài khoản của bạn không có vai trò phù hợp để xem nội dung này. Nếu đây là nhầm lẫn, hãy liên hệ chủ nhà yến hoặc quản trị viên."
           action={
             <Link to={homePath}>
               <Button variant="secondary">Về trang chính</Button>

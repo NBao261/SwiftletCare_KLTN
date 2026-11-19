@@ -108,7 +108,7 @@ export default function ParameterReviewCard({
   const authorName =
     typeof review.changed_by === 'object' && review.changed_by?.full_name
       ? review.changed_by.full_name
-      : t('Chủ trang trại');
+      : t('Chủ nhà yến');
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card border border-warmGray/15 flex flex-col gap-4 transition-all hover:border-warmGray/30">
@@ -131,7 +131,7 @@ export default function ParameterReviewCard({
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-warmGray mt-0.5">
               <span className="flex items-center gap-1 font-semibold text-charcoal">
                 <MapPin className="w-3 h-3 text-accent-700" />
-                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Khu vực không xác định')}
+                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
@@ -156,7 +156,7 @@ export default function ParameterReviewCard({
 
       {/* Diff Table: So sánh giá trị cũ vs mới */}
       <div className="rounded-xl border border-warmGray/10 bg-warmGray/5 p-3 overflow-hidden">
-        <p className="text-[11px] font-semibold text-warmGray uppercase tracking-wider mb-2">
+        <p className="text-[11px] font-semibold text-warmGray mb-2">
           {t('Chi tiết tham số thay đổi ({{n}} chỉ số):', { n: changedKeys.length })}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -171,7 +171,7 @@ export default function ParameterReviewCard({
                 <span className="text-charcoal font-medium truncate max-w-[140px]">
                   {FIELD_LABELS[key] || key}
                 </span>
-                <div className="flex items-center gap-1.5 font-mono shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <span className="text-warmGray line-through">
                     {formatParamValue(oldValue, key)}
                   </span>
@@ -218,7 +218,7 @@ export default function ParameterReviewCard({
       <ConfirmModal
         open={showConfirmRevert}
         title={t('Xác nhận hoàn nguyên giá trị cũ')}
-        description={t('Hệ thống sẽ gửi lệnh cập nhật giá trị an toàn ban đầu xuống thiết bị và chuyển trạng thái mục duyệt sang Đã hoàn nguyên.')}
+        description={t('Giá trị cũ được gửi lại xuống bộ điều khiển và mục này chuyển sang Đã hoàn tác.')}
         confirmLabel={t('Hoàn nguyên')}
         danger
         loading={isProcessing}

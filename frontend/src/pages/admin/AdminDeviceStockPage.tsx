@@ -26,7 +26,7 @@ const ROW_HEIGHT = 56
 const KIND_OPTIONS: { value: ProvisionedDeviceKind | ''; label: string }[] = [
   { value: '', label: 'Tất cả loại' },
   { value: 'SENSOR', label: 'Bộ điều khiển' },
-  { value: 'CAMERA', label: 'Nút AI' },
+  { value: 'CAMERA', label: 'Camera đếm chim' },
 ]
 const STATUS_OPTIONS: { value: StockStatus | ''; label: string }[] = [
   { value: '', label: 'Tất cả trạng thái nhãn' },
@@ -47,8 +47,8 @@ const ROTATE_TEXT = {
     description: 'Nhãn cũ bị từ chối ngay khi cấp. In nhãn mới và dán đè lên nhãn cũ.',
   },
   'rotate-broker': {
-    title: 'Cấp lại mật khẩu broker cho {{id}}?',
-    description: 'Mật khẩu cũ hết dùng ở lần kết nối sau; thiết bị chỉ nối lại được broker sau khi flash mật khẩu mới.',
+    title: 'Cấp lại mật khẩu kết nối cho {{id}}?',
+    description: 'Mật khẩu cũ hết hiệu lực. Thiết bị chỉ kết nối lại được sau khi nạp mật khẩu mới.',
   },
 } as const
 
@@ -132,7 +132,7 @@ export default function AdminDeviceStockPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionCard title="Kho thiết bị" description="Thiết bị đã nhập kho và trạng thái nhãn — in nhãn ngay khi thêm">
+      <SectionCard description="Thiết bị đã nhập kho và trạng thái nhãn. In nhãn ngay khi thêm.">
         {/* Hàng 1: tìm kiếm + thêm thiết bị */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[200px] flex-1">
@@ -150,14 +150,14 @@ export default function AdminDeviceStockPage() {
         </div>
 
         <DataTable
-          columns={buildStockColumns((page - 1) * PAGE_SIZE, (action, device) => setPending({ action, device }))}
+          columns={buildStockColumns((action, device) => setPending({ action, device }))}
           rows={rows}
           getRowKey={d => d._id}
           rowHeight={ROW_HEIGHT}
-          minRows={PAGE_SIZE}
+          minRows={filtered.length > PAGE_SIZE ? PAGE_SIZE : 0}
           emptyMessage={hasActiveFilters
-            ? 'Không có thiết bị nào khớp bộ lọc — thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
-            : 'Kho chưa có thiết bị nào — bấm "Thêm thiết bị" để nhập và in nhãn.'}
+            ? 'Không có thiết bị nào khớp bộ lọc. Thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
+            : 'Kho chưa có thiết bị nào, bấm "Thêm thiết bị" để nhập và in nhãn.'}
         />
 
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
@@ -182,7 +182,7 @@ export default function AdminDeviceStockPage() {
         title={pending ? t('Thu hồi {{id}}', { id: pending.device.device_id }) : ''}
         label="Lý do"
         placeholder="VD: mất nhãn trước khi lắp, hàng lỗi"
-        hint="Thiết bị đã thu hồi không kích hoạt được nữa và không nối được broker. Không hoàn tác."
+        hint="Thiết bị đã thu hồi không kích hoạt và không kết nối được nữa. Không hoàn tác được."
         submitLabel="Thu hồi"
         required
         danger

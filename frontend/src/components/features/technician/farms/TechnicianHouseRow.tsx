@@ -114,7 +114,7 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         onClick={onOpen}
         className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-charcoal px-4 text-xs font-semibold text-white transition-colors hover:bg-charcoal/85 lg:self-center"
       >
-        {t('card.open')}
+        {t('card.openDevices')}
         <ArrowRightIcon size={12} weight="bold" />
       </button>
     </article>

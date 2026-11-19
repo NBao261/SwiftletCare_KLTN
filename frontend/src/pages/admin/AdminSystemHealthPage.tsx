@@ -35,7 +35,7 @@ export default function AdminSystemHealthPage() {
   const hasDevices = devices.total > 0
   // Liệt kê mọi trạng thái khác ONLINE đang có (bỏ số 0); ERROR/DEGRADED đã bỏ theo SRS 3.1.0
   const deviceIssues = ([
-    [devices.offline, 'offline'],
+    [devices.offline, 'mất kết nối'],
     [devices.pending, 'chờ kết nối'],
   ] as const).filter(([n]) => n > 0).map(([n, label]) => `${n} ${i18nT(label)}`)
   const deviceSub = !hasDevices
@@ -49,7 +49,7 @@ export default function AdminSystemHealthPage() {
       <Card className="flex flex-col gap-4">
         <div>
           <h2 className="text-h2 text-charcoal">{i18nT('Chỉ số vận hành toàn hệ thống')}</h2>
-          <p className="mt-1 text-sm text-warmGray">{i18nT('Trang trại, thiết bị, tài khoản và cảnh báo khẩn cấp trên mọi Farm')}</p>
+          <p className="mt-1 text-sm text-warmGray">{i18nT('Trang trại, thiết bị, tài khoản và cảnh báo khẩn cấp trên mọi trang trại')}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -59,7 +59,7 @@ export default function AdminSystemHealthPage() {
             iconClass={ICON_NORMAL}
             label="Trang trại hoạt động"
             value={farms.total}
-            sub={i18nT('Gồm {{n}} phòng', { n: zones.total })}
+            sub={i18nT('Gồm {{n}} Zone', { n: zones.total })}
           />
           <StatTile
             className="shadow-none"
@@ -87,7 +87,7 @@ export default function AdminSystemHealthPage() {
             // chữ "chờ xác nhận" khiến Admin tưởng việc đó của mình
             label="Cảnh báo CRITICAL"
             value={String(criticalAlerts.total)}
-            sub={criticalAlerts.total > 0 ? 'Farm Owner chưa phản hồi' : 'Không có cảnh báo mới'}
+            sub={criticalAlerts.total > 0 ? 'Chủ nhà yến chưa phản hồi' : 'Không có cảnh báo mới'}
           />
         </div>
       </Card>

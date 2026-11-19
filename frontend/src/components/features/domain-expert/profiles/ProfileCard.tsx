@@ -145,7 +145,7 @@ function FieldRow({ label, value }: { label: string; value: string | number | bo
 function GroupBox({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-warmGray/5 border border-warmGray/10 p-3 space-y-1.5">
-      <p className="text-xs font-semibold text-warmGray uppercase tracking-wide">{title}</p>
+      <p className="text-xs font-semibold text-warmGray">{title}</p>
       {children}
     </div>
   )

@@ -127,7 +127,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         <div className="space-y-3">
           <div className="rounded-xl border border-neutral-200 bg-white p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-charcoal">
                 {t('% Thời gian trong ngưỡng theo từng Zone trong ngày')}
               </h4>
             </div>
@@ -151,7 +151,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-warmGray italic">{t('Không có dữ liệu zone trong ngày')}</p>
+              <p className="text-xs text-warmGray italic">{t('Không có dữ liệu Zone trong ngày')}</p>
             )}
           </div>
 
@@ -221,7 +221,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
             <div className="p-3 rounded-xl border border-red-200 bg-red-50/40 text-xs text-charcoal">
               <div className="flex items-center gap-1.5 font-semibold text-red-700 mb-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                <span>{t('Thiết bị đang có cảnh báo mở tại khu vực này:')}</span>
+                <span>{t('Thiết bị đang có cảnh báo mở tại Zone này:')}</span>
               </div>
               <ul className="list-disc list-inside space-y-0.5 text-warmGray text-xs">
                 {evidence.device_alerts.map(da => (
@@ -255,8 +255,8 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-charcoal" />
-            <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
-              {t('Kết luận trước đây cùng loại tại khu vực')}
+            <h4 className="text-xs font-bold text-charcoal">
+              {t('Kết luận trước đây cùng loại tại Zone')}
             </h4>
           </div>
           <span className="text-xs font-medium text-warmGray">
@@ -308,7 +308,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
           </div>
         ) : (
           <p className="text-xs text-warmGray italic py-1">
-            {t('Khu vực chưa có kết luận nào cho loại cảnh báo này; kết luận của bạn sẽ được lưu lại.')}
+            {t('Zone chưa có kết luận nào cho loại cảnh báo này; kết luận của bạn sẽ được lưu lại.')}
           </p>
         )}
       </div>

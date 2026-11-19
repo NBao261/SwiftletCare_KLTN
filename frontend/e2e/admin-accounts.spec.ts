@@ -17,7 +17,7 @@ test.describe('Administrator', () => {
     await signInAsAdmin(page);
     await page.goto('/users');
     await page.getByRole('tab', { name: 'Người dùng' }).click();
-    await page.getByRole('button', { name: 'Tạo Farm Owner' }).click();
+    await page.getByRole('button', { name: 'Tạo chủ nhà yến' }).click();
 
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Email').fill(email);
@@ -67,7 +67,7 @@ test.describe('Administrator', () => {
 
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('button', { name: 'Từ chối yêu cầu' }).click();
-    await expect(dialog.getByText('Hãy nhập lý do từ chối')).toBeVisible();
+    await expect(dialog.getByText('Nhập lý do từ chối')).toBeVisible();
     await dialog.getByLabel('Lý do từ chối').fill('Còn nghĩa vụ lưu hồ sơ thu hoạch');
     await dialog.getByRole('button', { name: 'Từ chối yêu cầu' }).click();
 

@@ -18,7 +18,7 @@ export default function OnsiteCheckSection({ checks }: Props) {
     <div className="rounded-2xl border border-infoBlue/20 bg-infoBlue/5 p-3.5 space-y-2.5">
       <div className="flex items-center gap-2">
         <ClipboardList className="w-4 h-4 text-infoBlue shrink-0" />
-        <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
+        <h4 className="text-xs font-bold text-charcoal">
           {t('Kiểm tra tại chỗ của Kỹ thuật viên')}
         </h4>
       </div>
@@ -38,7 +38,7 @@ export default function OnsiteCheckSection({ checks }: Props) {
                 )}
                 <span className="font-semibold text-charcoal">{techName}</span>
                 {isPending && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-statusYellow/15 text-charcoal border border-statusYellow/40 uppercase">
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-statusYellow/15 text-charcoal border border-statusYellow/40">
                     {t('Chờ phản hồi')}
                   </span>
                 )}

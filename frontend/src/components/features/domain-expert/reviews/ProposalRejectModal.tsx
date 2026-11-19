@@ -23,7 +23,7 @@ export default function ProposalRejectModal({
       title={t('Từ chối đề xuất hệ số mờ')}
       label={t('Lý do từ chối chuyên môn')}
       placeholder={t('VD: Biên độ ẩm quá hẹp có thể gây bật tắt bơm liên tục trong mùa khô...')}
-      hint={t('Vui lòng ghi rõ căn cứ kỹ thuật khi từ chối để Chủ trang trại nắm rõ lý do và có phương án hiệu chỉnh phù hợp.')}
+      hint={t('Ghi lý do từ chối để chủ nhà yến biết cần chỉnh gì.')}
       submitLabel="Xác nhận từ chối"
       required
       minLength={1}

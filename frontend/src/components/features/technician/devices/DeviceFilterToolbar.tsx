@@ -5,9 +5,9 @@ import type { SortDirection } from '@/types'
 export type DeviceSortKey = 'last_heartbeat' | 'device_id' | 'rssi'
 
 export const DEVICE_SORT_FIELDS: SortChipField<DeviceSortKey>[] = [
-  { key: 'last_heartbeat', label: 'Heartbeat' },
+  { key: 'last_heartbeat', label: 'Lần kết nối cuối' },
   { key: 'device_id', label: 'Mã thiết bị' },
-  { key: 'rssi', label: 'Tín hiệu' },
+  { key: 'rssi', label: 'Sóng Wi-Fi' },
 ]
 
 const FILTER_OPTIONS = [

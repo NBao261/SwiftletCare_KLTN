@@ -16,7 +16,7 @@ const SECTIONS_VI: PolicySection[] = [
     // §1.2, C-5
     title: '1. Phạm vi',
     paragraphs: [
-      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản Chủ trại và Kỹ thuật viên; người đồng sở hữu và Chuyên gia tham gia qua lời mời.',
+      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản chủ nhà yến và Kỹ thuật viên; người đồng sở hữu và Chuyên gia tham gia qua lời mời.',
       'Dữ liệu cá nhân được xử lý theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân.',
     ],
   },
@@ -26,15 +26,15 @@ const SECTIONS_VI: PolicySection[] = [
       // AUTH-FR-002, NFR-10b
       'Tài khoản: họ tên, e-mail, vai trò và mật khẩu (chỉ lưu dạng băm bcrypt, không lưu mật khẩu gốc).',
       // §3.1, §3.4, §3.11
-      'Dữ liệu nhà yến: số đo cảm biến (nhiệt độ, độ ẩm, ánh sáng, NH3, CO2, tiếng ồn), trạng thái relay, lịch sử điều khiển tay, thông tin thiết bị và các đợt thu hoạch.',
+      'Dữ liệu nhà yến: số đo cảm biến (nhiệt độ, độ ẩm, ánh sáng, NH3, CO2, tiếng ồn), trạng thái rơ-le, lịch sử điều khiển tay, thông tin thiết bị và các đợt thu hoạch.',
       // §3.8, VISION-FR-008, 017
-      'Đếm chim: camera ở cửa nhà yến được xử lý trên máy AI để đếm chim ra vào; hệ thống lưu số đếm theo từng 5 phút và theo phiên sáng, chiều của mỗi nhà.',
+      'Đếm chim: hình camera ở cửa nhà yến được xử lý trên máy đếm chim; hệ thống lưu số chim ra vào theo từng 5 phút và theo phiên sáng, chiều của mỗi nhà.',
       // ALERT-FR-013
-      'Thông báo: thông báo trong app, và tài khoản Telegram nếu Chủ trại tự liên kết.',
+      'Thông báo: thông báo trong ứng dụng và Telegram, nếu chủ nhà yến tự liên kết.',
       // AUTH-FR-007, NFR-10c
       'Nhật ký: lần đăng nhập và mọi thay đổi cấu hình (người thực hiện, thời điểm); địa chỉ IP khi đăng nhập dùng để chặn đăng nhập sai liên tục.',
       // FARM-FR-001
-      'Vị trí: tọa độ trang trại do Chủ trại nhập.',
+      'Vị trí: toạ độ trang trại do chủ nhà yến nhập.',
     ],
   },
   {
@@ -53,9 +53,9 @@ const SECTIONS_VI: PolicySection[] = [
     // §2.4
     title: '4. Ai được xem dữ liệu',
     items: [
-      'Chủ trại và người đồng sở hữu: toàn bộ dữ liệu trang trại của mình.',
-      'Chuyên gia của trang trại: xem dữ liệu vận hành, số đếm chim và báo cáo; không điều khiển relay.',
-      'Kỹ thuật viên: nhà, khu, thiết bị và cảnh báo thiết bị; không xem số đo môi trường, số đếm chim, luồng camera, thu hoạch hay báo cáo. Mọi thao tác trên thiết bị đều được ghi nhật ký và báo cho Chủ trại.',
+      'Chủ nhà yến và người đồng sở hữu: toàn bộ dữ liệu trang trại của mình.',
+      'Chuyên gia của trang trại: xem dữ liệu vận hành, số đếm chim và báo cáo; không điều khiển rơ-le.',
+      'Kỹ thuật viên: nhà, Zone, thiết bị và cảnh báo thiết bị; không xem số đo môi trường, số đếm chim, luồng camera, thu hoạch hay báo cáo. Mọi thao tác trên thiết bị đều được ghi nhật ký và báo cho Chủ nhà yến.',
       'Quản trị viên: tài khoản, nhật ký hệ thống và số liệu tổng quan; không xem dữ liệu của trang trại nào.',
     ],
   },
@@ -63,14 +63,14 @@ const SECTIONS_VI: PolicySection[] = [
     // ALERT-FR-013
     title: '5. Dịch vụ bên ngoài',
     items: [
-      'Telegram: gửi cảnh báo cho Chủ trại đã liên kết tài khoản.',
+      'Telegram: gửi cảnh báo cho chủ nhà yến đã liên kết tài khoản.',
     ],
   },
   {
     // BR-36
     title: '6. Thời gian lưu trữ',
     items: [
-      '90 ngày: số đo cảm biến, số đếm chim theo 5 phút và thông báo trong app.',
+      '90 ngày: số đo cảm biến, số đếm chim theo 5 phút và thông báo trong ứng dụng.',
       '180 ngày sau khi xử lý: cảnh báo.',
       'Suốt thời gian dùng hệ thống: số đếm theo phiên, thu hoạch, lịch sử điều khiển tay, lịch sử thay đổi và nhật ký hệ thống.',
     ],
@@ -79,18 +79,18 @@ const SECTIONS_VI: PolicySection[] = [
     // NFR-10, AUTH-FR-003, VISION-FR-013
     title: '7. Bảo mật',
     items: [
-      'Mọi API không công khai đều yêu cầu token; phiên đăng nhập dùng token truy cập 15 phút và token làm mới 30 ngày.',
+      'Mọi yêu cầu tới máy chủ đều phải đăng nhập. Phiên đăng nhập tự gia hạn trong 30 ngày.',
       'Đăng nhập sai quá 10 lần trong 15 phút từ một địa chỉ IP sẽ bị chặn tạm thời.',
-      'Luồng camera chỉ mở được bằng token xem 60 giây, cấp cho Chủ trại hoặc Chuyên gia của trang trại.',
+      'Luồng camera chỉ mở được bằng mã xem có hạn 60 giây, cấp cho chủ nhà yến hoặc chuyên gia của trang trại.',
     ],
   },
   {
     // AUTH-FR-009, 012, ALERT-FR-013
     title: '8. Quyền của người dùng',
     items: [
-      'Yêu cầu xóa tài khoản và dữ liệu cá nhân: Quản trị viên xử lý trong 30 ngày. Khi xóa, quyền sở hữu trang trại chuyển cho người đồng sở hữu sớm nhất (hoặc trang trại bị xóa mềm nếu không có), dữ liệu cá nhân được ẩn danh.',
+      'Yêu cầu xoá tài khoản và dữ liệu cá nhân: Quản trị viên xử lý trong 30 ngày. Khi xoá, quyền sở hữu trang trại chuyển cho người đồng sở hữu sớm nhất (hoặc trang trại bị xoá mềm nếu không có), dữ liệu cá nhân được ẩn danh.',
       'Đặt lại mật khẩu bằng mã dùng một lần có hiệu lực 15 phút; sau khi đặt lại, mọi phiên cũ bị thu hồi.',
-      'Hủy liên kết Telegram bất kỳ lúc nào.',
+      'Huỷ liên kết Telegram bất kỳ lúc nào.',
     ],
   },
   {
@@ -99,7 +99,7 @@ const SECTIONS_VI: PolicySection[] = [
       'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt.',
       'Khi chính sách thay đổi, phiên bản và ngày hiệu lực ở đầu trang được cập nhật.',
       // ALERT-FR-002, MF-11 — chưa có trong code (gap G-10, G-11)
-      'Thông báo push trên app mobile (Firebase Cloud Messaging), thời tiết theo tọa độ trang trại (Open-Meteo) và đánh giá tình trạng mỗi nhà theo ngày sẽ được bổ sung sau; chính sách này được cập nhật trước khi các tính năng đó hoạt động.',
+      'Thông báo đẩy trên ứng dụng điện thoại (Firebase Cloud Messaging), thời tiết theo toạ độ trang trại (Open-Meteo) và đánh giá tình trạng mỗi nhà theo ngày sẽ được bổ sung sau; chính sách này được cập nhật trước khi các tính năng đó hoạt động.',
     ],
   },
 ];

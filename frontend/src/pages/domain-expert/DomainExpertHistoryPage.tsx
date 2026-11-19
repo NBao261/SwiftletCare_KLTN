@@ -34,7 +34,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 
 const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'ALL', label: 'Tất cả hành động' },
-  { value: 'ALERT_VERDICT_SET', label: 'Thẩm định cảnh báo' },
+  { value: 'ALERT_VERDICT_SET', label: 'Kiểm chứng cảnh báo' },
   { value: 'THRESHOLD_UPDATED', label: 'Ngưỡng vi khí hậu' },
   { value: 'FUZZY_TUNING_UPDATED', label: 'Hệ số điều khiển mờ' },
   { value: 'DETECTION_TUNING_UPDATED', label: 'Tham số phát hiện lỗi' },
@@ -42,7 +42,7 @@ const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'COUNTING_RING_UPDATED', label: 'Vòng đếm camera' },
   { value: 'COUNTING_SCHEDULE_UPDATED', label: 'Lịch đếm chim' },
   { value: 'HEALTH_REPORT_CONCLUDED', label: 'Kết luận báo cáo' },
-  { value: 'HEALTH_LEVELS_UPDATED', label: 'Mức chỉ số sức khỏe' },
+  { value: 'HEALTH_LEVELS_UPDATED', label: 'Mức chỉ số sức khoẻ' },
   { value: 'WEATHER_RULES_UPDATED', label: 'Luật bù thời tiết' },
   { value: 'REVIEW_ACCEPTED', label: 'Chấp nhận thay đổi của Chủ nhà yến' },
   { value: 'REVIEW_REVERTED', label: 'Hoàn lại thay đổi của Chủ nhà yến' },

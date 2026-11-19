@@ -18,7 +18,7 @@ function formatRelativeTime(dateStr: string): string {
   const diffMin = Math.floor((Date.now() - date.getTime()) / 60_000)
   if (diffMin < 2) return t('Vừa xong')
   if (diffMin < 60) return t('{{n}} phút trước', { n: diffMin })
-  if (Math.floor(diffMin / 60) < 24) return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} — ${t('Hôm nay')}`
+  if (Math.floor(diffMin / 60) < 24) return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} · ${t('Hôm nay')}`
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} — ${date.getDate()}/${date.getMonth() + 1}`
 }
 
@@ -127,7 +127,7 @@ export default function InferredAlertsTable({
     },
     {
       key: 'verdict',
-      header: 'Phán quyết',
+      header: 'Kết luận',
       align: 'center',
       className: 'w-[135px]',
       render: alert => <VerdictBadge alert={alert} />,

@@ -3,6 +3,8 @@ import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import Pagination, { type PaginationLabels } from '@/components/ui/Pagination'
 
 const DEFAULT_PAGE_SIZE = 10
+// Bảng rỗng cao bằng chừng này dòng — đủ chỗ cho hình minh hoạ trạng thái rỗng, không chiếm cả trang
+const EMPTY_ROWS = 4
 
 interface PlaceholderRow {
   placeholder: true
@@ -34,8 +36,8 @@ interface FixedRowsTableProps<T> {
 }
 
 /**
- * DataTable có khung cố định `pageSize` dòng (mặc định 10) × `rowHeight` px: thiếu dữ liệu thì bù dòng trống,
- * nhiều hơn thì phân trang — bảng không co/giãn theo lượng dữ liệu (cùng cách HarvestTable).
+ * DataTable phân trang `pageSize` dòng (mặc định 10) × `rowHeight` px. Có từ 2 trang trở lên thì trang cuối bù dòng trống
+ * để khung không nhảy khi lật trang; chỉ 1 trang thì bảng cao vừa dữ liệu (FE_Design §1.1).
  */
 export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, emptyContent, paginationLabels, serverPagination }: FixedRowsTableProps<T>) {
   const [page, setPage] = useState(1)
@@ -43,16 +45,20 @@ export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
   const safePage = Math.min(page, totalPages)
 
+  const totalRows = serverPagination?.total ?? rows.length
+  const hasManyPages = totalRows > pageSize
+
   const displayRows = useMemo<PaddedRow<T>[]>(() => {
     const slice = serverPagination ? rows.slice(0, pageSize) : rows.slice((safePage - 1) * pageSize, safePage * pageSize)
     const out: PaddedRow<T>[] = [...slice]
-    // Bảng rỗng: 1 dòng đệm cao bằng cả trang — không kẻ vạch chia, chỉ hiện trạng thái rỗng ở giữa
+    // Bảng rỗng: 1 dòng đệm — không kẻ vạch chia, chỉ hiện trạng thái rỗng ở giữa
     if (slice.length === 0) return [{ placeholder: true, id: 'placeholder-empty' }]
+    if (!hasManyPages) return out
     for (let i = slice.length; i < pageSize; i += 1) {
       out.push({ placeholder: true, id: `placeholder-${i}` })
     }
     return out
-  }, [rows, safePage, pageSize, serverPagination])
+  }, [rows, safePage, pageSize, serverPagination, hasManyPages])
 
   const paddedColumns = useMemo<DataTableColumn<PaddedRow<T>>[]>(
     () => columns.map(col => ({
@@ -74,7 +80,7 @@ export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick
         rows={displayRows}
         getRowKey={row => (isPlaceholder(row) ? row.id : getRowKey(row))}
         onRowClick={onRowClick ? row => { if (!isPlaceholder(row)) onRowClick(row) } : undefined}
-        rowHeight={rows.length === 0 ? rowHeight * pageSize : rowHeight}
+        rowHeight={rows.length === 0 ? rowHeight * Math.min(pageSize, EMPTY_ROWS) : rowHeight}
       />
       {rows.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
@@ -85,7 +91,7 @@ export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick
       <Pagination
         page={serverPagination?.page ?? safePage}
         limit={pageSize}
-        total={serverPagination?.total ?? rows.length}
+        total={totalRows}
         onChange={serverPagination?.onChange ?? setPage}
         variant="full"
         labels={paginationLabels}

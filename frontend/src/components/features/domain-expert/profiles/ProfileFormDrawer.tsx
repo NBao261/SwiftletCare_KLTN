@@ -111,7 +111,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
               value={name}
               maxLength={50}
               onChange={e => setName(e.target.value)}
-              placeholder={t('vd. Nhà dẫn dụ — mùa hè')}
+              placeholder={t('vd. Nhà dẫn dụ · mùa hè')}
               className="w-full rounded-lg border border-warmGray/15 px-2.5 py-1.5 text-sm text-charcoal bg-white outline-none focus:border-charcoal focus:ring-1 focus:ring-charcoal/20"
             />
           </label>
@@ -123,7 +123,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
               onChange={e => setStage(e.target.value as HouseStage | '')}
               className="w-full rounded-lg border border-warmGray/15 px-2.5 py-1.5 text-sm text-charcoal bg-white outline-none focus:border-charcoal appearance-none"
             >
-              <option value="">{t('— Không chỉ định —')}</option>
+              <option value="">{t('Không chỉ định')}</option>
               <option value="ATTRACTING">{t('Dẫn dụ')}</option>
               <option value="OCCUPIED">{t('Đang nuôi')}</option>
             </select>
@@ -170,7 +170,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
               onChange={e => setFuzzy(f => ({ ...f, fuzzy_input_filter: e.target.checked }))}
               className="w-4 h-4 rounded accent-charcoal"
             />
-            <span className="text-sm text-charcoal">{t('Lọc đầu vào (median + Kalman)')}</span>
+            <span className="text-sm text-charcoal">{t('Lọc nhiễu số đo')}</span>
           </label>
         </GroupToggle>
 
@@ -205,7 +205,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
             {speaker.windows.map((w, i) => (
               <div key={i} className="grid grid-cols-2 gap-2">
                 <label className="flex flex-col gap-0.5">
-                  <span className="text-xs text-warmGray">{t('Khung {{n}} — Từ', { n: i + 1 })}</span>
+                  <span className="text-xs text-warmGray">{t('Khung {{n}} · Từ', { n: i + 1 })}</span>
                   <input type="time" step="3600" value={w.start} onChange={e => setSpeaker(s => ({ ...s, windows: s.windows.map((x, j) => j === i ? { ...x, start: e.target.value } : x) }))} className="rounded-lg border border-warmGray/15 px-2 py-1.5 text-sm text-charcoal" />
                 </label>
                 <label className="flex flex-col gap-0.5">

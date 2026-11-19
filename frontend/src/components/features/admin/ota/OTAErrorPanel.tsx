@@ -21,7 +21,7 @@ export function OTAErrorPanel({ failedVersion, failedAt, runningVersion, onRetry
           <p className="text-sm text-alertRed/80">
             Thiết bị không xác nhận được bản <span className="tabular-nums">{failedVersion}</span>
             {failedAt ? ` (lúc ${formatDate(failedAt)})` : ''}
-            {runningVersion ? <> — đang chạy <span className="tabular-nums">{runningVersion}</span>, dữ liệu an toàn.</> : '.'}
+            {runningVersion ? <> · đang chạy <span className="tabular-nums">{runningVersion}</span>, dữ liệu an toàn.</> : '.'}
           </p>
         </div>
       </div>

@@ -211,7 +211,7 @@ function ChartTooltipContent({
                         <span className="text-warmGray">{itemConfig?.label ?? item.name}</span>
                       </div>
                       {item.value != null && (
-                        <span className="font-mono font-medium tabular-nums text-charcoal">
+                        <span className="font-medium tabular-nums text-charcoal">
                           {typeof item.value === 'number' ? item.value.toLocaleString() : String(item.value)}
                         </span>
                       )}

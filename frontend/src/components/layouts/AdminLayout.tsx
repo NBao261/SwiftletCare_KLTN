@@ -1,7 +1,7 @@
 import AppShell from '@/components/layouts/AppShell'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import {
-  IconAlert, IconAnalytics, IconBell, IconDashboard,
+  IconAlert, IconAnalytics, IconDashboard,
   IconDevice, IconOTA, IconOnboarding, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
@@ -19,16 +19,22 @@ const menuSections: MenuSection[] = [
     items: [
       { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
       { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
-      { label: 'OTA Firmware', path: '/ota', icon: IconOTA },
+      { label: 'Cập nhật firmware', path: '/ota', icon: IconOTA },
     ],
   },
   {
     title: 'Quản lý',
     items: [
-      // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4)
-      { label: 'Người dùng', path: '/users', icon: IconUsers },
-      // AUTH-FR-012 (hàng đợi xoá tài khoản)
-      { label: 'Yêu cầu tài khoản', path: '/account-requests', icon: IconBell },
+      // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4); AUTH-FR-012 hàng đợi xoá tài khoản là tab thứ hai
+      {
+        label: 'Người dùng',
+        path: '/users',
+        icon: IconUsers,
+        tabs: [
+          { label: 'Tài khoản', path: '/users' },
+          { label: 'Yêu cầu xoá tài khoản', path: '/account-requests' },
+        ],
+      },
     ],
   },
   {

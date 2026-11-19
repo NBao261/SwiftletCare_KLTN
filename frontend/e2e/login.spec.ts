@@ -5,7 +5,7 @@ import { PASSWORD } from './helpers/demoApi';
 const ROLES = [
   { role: 'Farm Owner', email: 'owner@swiftletcare.dev', home: '/dashboard' },
   { role: 'Domain Expert', email: 'expert@swiftletcare.dev', home: '/domain-expert/queue' },
-  { role: 'Farm Technician', email: 'tech@swiftletcare.dev', home: '/devices' },
+  { role: 'Farm Technician', email: 'tech@swiftletcare.dev', home: '/alerts' },
 ];
 
 test.describe('Đăng nhập', () => {

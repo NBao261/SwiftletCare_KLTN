@@ -162,7 +162,7 @@ export default function DomainExpertWeatherRulesPage() {
           {isError && !isLoading && (
             <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{t('Không thể tải luật bù thời tiết. Vui lòng thử lại.')}</span>
+              <span>{t('Không tải được luật bù thời tiết. Thử lại.')}</span>
             </div>
           )}
 

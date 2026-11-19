@@ -21,7 +21,7 @@ export default function RejectDeletionModal({ user, onClose }: { user: User | nu
       hint="Tài khoản giữ nguyên và rời khỏi danh sách; người yêu cầu nhận thông báo kèm lý do này."
       submitLabel="Từ chối yêu cầu"
       required
-      emptyMessage="Hãy nhập lý do từ chối"
+      emptyMessage="Nhập lý do từ chối"
       loading={rejectDeleteRequest.isPending}
       onSubmit={(reason) => {
         if (!user) return
