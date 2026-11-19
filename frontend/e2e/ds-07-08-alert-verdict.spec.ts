@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { demoFarm, signIn } from './helpers/demoApi';
+import { ACCOUNTS, PASSWORD, demoFarm, signIn } from './helpers/demoApi';
 
 interface Alert { _id: string; status: string; onsite_checks: Array<{ observation: string | null }> }
 
@@ -37,5 +37,19 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
     const detail = await owner.data<Alert>(await owner.get(`/alerts/${alert._id}`));
     expect(detail.status).toBe('DISMISSED');
     expect(detail.onsite_checks[0].observation).toBe('WORK_OR_PEOPLE_NEARBY');
+  });
+
+  // EXPERT-FR-003 — trang kết luận chỉ có 4 loại cảnh báo suy luận của Report 3; MISTING_INEFFECTIVE của nhà B
+  // (DS-04) là cảnh báo đo trực tiếp, không được hiện cho chuyên gia kết luận (backend trả 400 nếu gửi kết luận)
+  test('trang kết luận hiện cảnh báo ồn bất thường, không hiện cảnh báo phun sương đo trực tiếp', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('Email').fill(ACCOUNTS.expert);
+    await page.getByLabel('Mật khẩu').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Đăng nhập' }).click();
+    await expect(page).toHaveURL(/\/domain-expert\/queue$/);
+
+    await page.goto('/domain-expert/alert-verdicts');
+    await expect(page.getByText('mức ồn cao hơn nền', { exact: false }).first()).toBeVisible();
+    await expect(page.getByText('độ ẩm không tăng', { exact: false })).toHaveCount(0);
   });
 });

@@ -13,7 +13,6 @@
  * - Font chữ: Plus Jakarta Sans (đồng nhất toàn hệ thống).
  */
 
-import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   SlidersHorizontal,
@@ -27,7 +26,6 @@ import {
 } from 'lucide-react'
 import {
   useAlertsWithFilters,
-  useAllInferredAlerts,
   ALERT_TYPE_LABELS,
   SEVERITY_LABELS,
   SEVERITY_BADGE_CLASS,
@@ -41,17 +39,9 @@ import {
   useCoefficientProposals,
 } from '@/hooks/domain-expert/useExpertReviews'
 import { useZoneStore } from '@/stores/zoneStore'
+import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ExpertQueueEmptyState from '@/components/features/domain-expert/ExpertQueueEmptyState'
-
-const INFERRED_TYPES: Set<string> = new Set([
-  'NOISE_ANOMALY',
-  'SENSOR_ANOMALY',
-  'FORECAST_BREACH',
-  'LOW_RETURN_RATE',
-  'MISTING_INEFFECTIVE',
-  'PUMP_DRY',
-])
 
 /**
  * Chuẩn hóa tiêu đề cảnh báo — loại bỏ enum thô và khắc phục triệt để chuỗi lỗi "tại undefined"
@@ -68,8 +58,6 @@ function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZone
 
   // Chuyển đổi mã enum kỹ thuật sang thuật ngữ chuyên môn tiếng Việt
   return title
-    .replace('PUMP_DRY', 'Bơm khô bất thường')
-    .replace('MISTING_INEFFECTIVE', 'Phun sương kém hiệu quả')
     .replace('NOISE_ANOMALY', 'Tiếng ồn bất thường')
     .replace('SENSOR_ANOMALY', 'Cảm biến bất thường')
     .replace('FORECAST_BREACH', 'Dự báo vi phạm ngưỡng')
@@ -86,7 +74,8 @@ export default function DomainExpertQueuePage() {
     selectedZoneId ?? undefined,
   )
 
-  const { data: allAlerts = [] } = useAllInferredAlerts(
+  // Cảnh báo suy luận chờ kết luận mới nhất (backend lọc và đếm, EXPERT-FR-003)
+  const { data: pendingAlerts } = useExpertPendingAlerts(
     selectedFarmId ?? undefined,
     selectedZoneId ?? undefined,
   )
@@ -123,13 +112,8 @@ export default function DomainExpertQueuePage() {
   })
 
   // ── Tính toán các chỉ số thực chất từ Backend ─────────────────────────────
-  const pendingAlerts = useMemo(
-    () => allAlerts.filter(a => INFERRED_TYPES.has(a.type) && !a.expert_verdict),
-    [allAlerts],
-  )
-
-  const pendingCount = kpiCounts?.pending ?? pendingAlerts.length
-  const activeAlert = pendingAlerts[0]
+  const pendingCount = kpiCounts?.pending ?? pendingAlerts?.total ?? 0
+  const activeAlert = pendingAlerts?.records[0]
 
   const hasAiTuningSuggestion = Boolean(aiSuggestion?.suggestion)
 

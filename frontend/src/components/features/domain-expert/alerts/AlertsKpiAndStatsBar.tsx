@@ -57,7 +57,6 @@ export const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string 
   { value: 'SENSOR_ANOMALY', label: 'Cảm biến bất thường' },
   { value: 'FORECAST_BREACH', label: 'Dự báo vượt ngưỡng' },
   { value: 'LOW_RETURN_RATE', label: 'Giảm tỉ lệ chim về' },
-  { value: 'MISTING_INEFFECTIVE', label: 'Phun sương kém' },
 ]
 
 export const SEV_OPTS: Array<{ value: AlertSeverity | 'ALL'; label: string }> = [

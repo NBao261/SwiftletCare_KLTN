@@ -3,29 +3,14 @@ import type {
   ExpertVerdictStats, InferredAlertItem, ExpertThresholds,
   ExpertFuzzyTuning, ExpertDetectionTuning, FuzzySuggestionResponse,
   AutonomyResponse,
-  AlertEvidence, ExpertActivityEntry, ExpertActivityQuery,
+  AlertEvidence, ExpertActivityEntry, ExpertActivityQuery, InferredAlertQuery,
 } from '@/types/expert.types'
-
-const INFERRED_TYPES: Set<string> = new Set([
-  'NOISE_ANOMALY',
-  'SENSOR_ANOMALY',
-  'FORECAST_BREACH',
-  'LOW_RETURN_RATE',
-  'MISTING_INEFFECTIVE',
-])
 
 export const expertService = {
   // ── Đọc dữ liệu (Chỉ lấy cảnh báo suy luận theo SRS EXPERT-FR-003) ───────
-  async getPendingAlerts(params?: { farmId?: string; zoneId?: string }): Promise<InferredAlertItem[]> {
-    const res = await expertApi.getPendingAlerts(params)
-    const list = Array.isArray(res.data?.data) ? res.data.data : []
-    return list.filter(item => INFERRED_TYPES.has(item.type))
-  },
-
-  async getAllAlerts(params?: { farmId?: string; zoneId?: string }): Promise<InferredAlertItem[]> {
-    const res = await expertApi.getAllAlerts(params)
-    const list = Array.isArray(res.data?.data) ? res.data.data : []
-    return list.filter(item => INFERRED_TYPES.has(item.type))
+  async getInferredAlerts(params: InferredAlertQuery): Promise<{ records: InferredAlertItem[]; total: number }> {
+    const res = await expertApi.listInferredAlerts(params)
+    return { records: res.data.data ?? [], total: res.data.meta?.total ?? 0 }
   },
 
   async getVerdictStats(params?: { farmId?: string; zoneId?: string }): Promise<ExpertVerdictStats[]> {

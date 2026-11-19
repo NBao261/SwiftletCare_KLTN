@@ -7,11 +7,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { expertService } from '@/services/expert.service'
 
-// ── 1. Cảnh báo suy luận đang chờ kiểm chứng (tóm tắt cho Dashboard) ─────────
+// ── 1. Cảnh báo suy luận chờ kiểm chứng: tổng số (meta.total) và cảnh báo mới nhất ──
 export function useExpertPendingAlerts(farmId?: string, zoneId?: string, enabled = true) {
   return useQuery({
     queryKey: ['expert', 'pending-alerts', farmId, zoneId],
-    queryFn: () => expertService.getPendingAlerts({ farmId, zoneId }),
+    queryFn: () => expertService.getInferredAlerts({ farmId, zoneId, verdict: 'pending', limit: 1 }),
     staleTime: 60_000,
     refetchInterval: 120_000,
     enabled,

@@ -19,6 +19,7 @@ import AlertsKpiAndStatsBar, {
   SEV_OPTS,
   TAB_INFO,
 } from '@/components/features/domain-expert/alerts/AlertsKpiAndStatsBar'
+import { useAlert } from '@/hooks/shared/useAlerts'
 import InferredAlertsTable from '@/components/features/domain-expert/alerts/InferredAlertsTable'
 import ExpertVerdictDrawer from '@/components/features/domain-expert/alerts/ExpertVerdictDrawer'
 import {
@@ -78,15 +79,18 @@ export default function DomainExpertAlertVerdictsPage() {
     }
   }, [initialTab, setTab])
 
+  // Link từ thông báo (?alertId=): cảnh báo có thể không nằm ở trang đang xem → đọc thẳng GET /alerts/:id
+  const targetOnPage = paginatedAlerts.find(a => a._id === targetAlertId)
+  const { data: targetFromApi } = useAlert(targetAlertId && !targetOnPage && !selectedAlert ? targetAlertId : null)
+
   useEffect(() => {
-    if (targetAlertId && paginatedAlerts.length > 0 && !selectedAlert) {
-      const match = paginatedAlerts.find(a => a._id === targetAlertId)
-      if (match) {
-        setSelectedAlert(match)
-        setDrawerOpen(true)
-      }
+    if (!targetAlertId || selectedAlert) return
+    const match = targetOnPage ?? (targetFromApi as InferredAlertItem | undefined)
+    if (match) {
+      setSelectedAlert(match)
+      setDrawerOpen(true)
     }
-  }, [targetAlertId, paginatedAlerts, selectedAlert])
+  }, [targetAlertId, targetOnPage, targetFromApi, selectedAlert])
 
   const openDrawer = useCallback((alert: InferredAlertItem) => {
     setSelectedAlert(alert)
