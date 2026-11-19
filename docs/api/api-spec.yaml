@@ -2008,7 +2008,8 @@ paths:
         Farm Owner và vào lịch sử hoạt động (EXPERT-FR-009).
         Chim ra vào ở cửa của cả nhà yến nên số đếm, tỷ lệ chim về và cảnh báo `LOW_RETURN_RATE` tính theo
         House; mức giảm cho phép đặt ở đây (mặc định 20%, khoảng 5–50%). Lưu `bird_count_tuning_history`,
-        ghi audit `BIRD_COUNT_TUNING_UPDATED`. Backend dùng, không gửi xuống thiết bị.
+        ghi audit `BIRD_COUNT_TUNING_UPDATED`. Backend dùng, không gửi xuống thiết bị. Khoá khác
+        `return_rate_drop_pct` → 400. "Về mặc định": `PUT /farms/houses/{houseId}/bird-count-tuning/reset`.
       parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -2024,7 +2025,29 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/House" }
-        "400": { description: "Ngoài khoảng 5–50 / không phải số / body không có tham số nào" }
+        "400": { description: "Ngoài khoảng 5–50 / không phải số / body không có tham số nào / có khoá lạ" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /farms/houses/{houseId}/bird-count-tuning/reset:
+    put:
+      tags: [Farms]
+      summary: "Đưa mức giảm tỷ lệ chim về của nhà về mặc định 20 % (EXPERT-FR-008) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Như `PUT /farms/houses/{houseId}/bird-count-tuning` với mức mặc định cố định của backend (20 %): thêm một dòng
+        `bird_count_tuning_history`, audit `BIRD_COUNT_TUNING_UPDATED`, báo Farm Owner khi chuyên gia làm
+        (EXPERT-FR-009). Không có body.
+      parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/House" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -2136,9 +2159,9 @@ paths:
         (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `detection_tuning_history`
         (người sửa, role, thời điểm, cũ/mới), ghi audit `DETECTION_TUNING_UPDATED` rồi publish
         MQTT `config` với 5 tham số chạy trên ESP32 (firmware ≥ 1.3.0 kẹp lại và lưu
-        NVS). "Về mặc định" = gửi lại bộ giá trị mặc định. Farm Owner xem qua `GET /farms/zones/{zoneId}`.
-        SRS v2.1.8: mức giảm tỷ lệ chim về (`return_rate_drop_pct`) chuyển sang House —
-        `PUT /farms/houses/{houseId}/bird-count-tuning`; gửi khoá này ở đây bị bỏ qua như khoá lạ.
+        NVS). "Về mặc định": `PUT /farms/zones/{zoneId}/detection-tuning/reset`. Farm Owner xem qua
+        `GET /farms/zones/{zoneId}`. Khoá ngoài 5 tham số → 400 nêu tên khoá; riêng mức giảm tỷ lệ chim về
+        (`return_rate_drop_pct`) thuộc House (SRS v2.1.8) — `PUT /farms/houses/{houseId}/bird-count-tuning`.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -2155,11 +2178,35 @@ paths:
                   - properties:
                       data: { $ref: "#/components/schemas/Zone" }
         "400":
-          description: "Tham số ngoài khoảng hợp lệ / không phải số / body không có tham số nào"
+          description: "Tham số ngoài khoảng hợp lệ / không phải số / body không có tham số nào / có khoá lạ"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /farms/zones/{zoneId}/detection-tuning/reset:
+    put:
+      tags: [Farms]
+      summary: "Đưa 5 tham số phát hiện của Zone về mặc định (EXPERT-FR-008) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Như `PUT /farms/zones/{zoneId}/detection-tuning` với bộ mặc định cố định của backend
+        (`DEFAULT_DETECTION_TUNING`: `noise_margin_db` 15, `noise_min_sec` 10, `pump_dry_on_sec` 300,
+        `pump_dry_min_rise_pct` 2, `speaker_drop_pct` 70; không phải ngưỡng mặc định của Administrator): thêm một dòng
+        `detection_tuning_history`, audit `DETECTION_TUNING_UPDATED`, báo Farm Owner khi chuyên gia làm
+        (EXPERT-FR-009), tăng `config_version` và publish `config`. Không có body.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Zone" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion:
     post:

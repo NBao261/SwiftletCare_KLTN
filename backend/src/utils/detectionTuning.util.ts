@@ -70,6 +70,15 @@ function resolve<T>(keys: ReadonlyArray<keyof T>, defaults: T, saved?: Partial<T
   return resolved
 }
 
+/**
+ * Khoá ngoài danh sách → 400 thay vì lặng lẽ bỏ qua: web từng gửi `return_rate_drop_pct` vào tham số của Zone,
+ * backend bỏ qua mà vẫn trả 200 nên mức giảm tỷ lệ chim về không bao giờ được lưu (todo-audit-1118 W-01, B-04).
+ */
+export function assertOnlyKeys(keys: ReadonlyArray<string>, input: Record<string, unknown>, hint?: (unknownKeys: string[]) => string): void {
+  const unknownKeys = Object.keys(input).filter(key => !keys.includes(key))
+  if (unknownKeys.length > 0) throw BadRequestError(`Tham số không hợp lệ: ${unknownKeys.join(', ')}${hint?.(unknownKeys) ?? ''}`)
+}
+
 export const pickDetectionTuning = (input: Record<string, unknown>) => pick<DetectionTuning>(DETECTION_TUNING_KEYS, input)
 export const assertValidDetectionTuning = (t: DetectionTuning) => assertValid(DETECTION_TUNING_KEYS, DETECTION_TUNING_LIMITS, t)
 export const resolveDetectionTuning = (saved?: Partial<DetectionTuning> | null) =>

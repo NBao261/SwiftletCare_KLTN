@@ -101,4 +101,9 @@ export const expertService = {
     const res = await expertApi.updateDetectionTuning(zoneId, tuning)
     return res.data.data.detection_tuning
   },
+
+  async resetDetectionTuning(zoneId: string): Promise<ExpertDetectionTuning> {
+    const res = await expertApi.resetDetectionTuning(zoneId)
+    return res.data.data.detection_tuning
+  },
 }
