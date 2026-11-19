@@ -6,6 +6,8 @@
 
 **Giới hạn:** chỉ đọc code. Sau khi sửa thì chạy lint, tsc, Vitest, build của web và lint, build:check, Jest của backend.
 
+**Tiến độ (19/11/2026): đã làm hết trên nhánh `fix/audit-1119-web-backend`**, trừ các mục ghi ở "Không sửa". Chưa chạy thử trên trình duyệt; E2E chạy trong CI.
+
 ## 1. Cách làm
 
 - Spec trước, code sau: tham số mới của route thì sửa `api-spec.yaml` trong cùng commit với backend.
@@ -31,12 +33,12 @@ Mức ưu tiên giữ như đợt 18/11: **P0** bug hoặc FR mức M không dù
 | W-07 | Số chim đếm hôm nay trên thẻ camera tự làm mới 30 giây/lần | VISION-FR-012, VISION-FR-006 (30 s) | web | P1 |
 | W-08 | Admin thấy vị trí (farm, nhà, khu vực) của thiết bị và cảnh báo thiết bị | FARM-FR-009, Report 3 §2.4 ² | web | P1 |
 | W-09 | Tổng quan hệ thống của Admin có số tài khoản theo role và trạng thái | SYSTEM-FR-003 | web | P2 |
-| U-01 | Popup avatar: bỏ mục "Cài đặt thông báo" (trùng đích `/settings`) và mục "Trợ giúp" bị khoá | — | web | P2 |
+| U-01 | Popup avatar: bỏ mục "Cài đặt thông báo" (trùng đích `/settings`) và mục "Trợ giúp" bị khoá; trang Cài đặt bỏ nút Đăng xuất thứ ba (đã có ở sidebar và popup avatar) | — | web | P2 |
 | U-02 | Sidebar: chữ "Role:" chưa dịch; bỏ comment mồ côi trong `AppHeader` | FE_Design §6 | web | P2 |
 | U-03 | Menu Farm Owner: Cảnh báo, Phân tích, Sức khỏe chuyển lên nhóm Vận hành; dock mobile có Cảnh báo | MF-02 | web | P1 |
 | U-04 | Farm Owner xem báo cáo và ngày lệch ở 2 nơi: bỏ "Báo cáo & kết luận" khỏi menu Farm Owner (đã có ở `/health`) | — | web | P2 |
 | U-05 | Hàng KPI của `/farms` trùng hàng KPI của Tổng quan: bỏ; thẻ "Trạng thái nhà yến" luôn hiện nhãn xanh "Ổn định" kể cả khi có nhà lỗi | — | web | P1 |
-| U-06 | Menu Domain Expert dùng 3 bộ icon; cùng một trang mang 2 tên ("Lịch sử hoạt động" / "Lịch sử quyết định"); viết hoa không đều | FE_Design §2.9 | web | P2 |
+| U-06 | Menu Domain Expert dùng 3 bộ icon; cùng một trang mang 2 tên ("Lịch sử hoạt động" / "Lịch sử quyết định"); viết hoa không đều; 13 nhãn menu (nhóm Chuyên môn của Farm Owner, Kho thiết bị, Console thiết bị…) thiếu trong `navigation.i18n.ts` nên bản EN vẫn hiện tiếng Việt | FE_Design §2.9, §6 | web | P2 |
 | U-07 | Admin có 2 danh sách thiết bị (`/system/devices` chỉ xem, có vị trí và camera; `/devices` có lệnh, thiếu vị trí và camera): gộp làm một | FARM-FR-009, 013 | web | P1 |
 | U-08 | Trang Cài đặt hiện thẻ Thông báo và Telegram cho Admin, trong khi Report 3 §2.4 không cho Admin cấu hình kênh | ALERT-FR-005, 006, 013, Report 3 §2.4 | web | P2 |
 | U-09 | Trang lắp đặt (`/onboarding`) không nằm dưới mục menu nào nên tiêu đề header là "SwiftletCare": chuyển sang `/devices/onboarding` | — | web | P2 |
@@ -99,19 +101,19 @@ Mức ưu tiên giữ như đợt 18/11: **P0** bug hoặc FR mức M không dù
 ### W-08, U-07 — Thiết bị và cảnh báo của Admin
 - `/devices` của Admin mở trang thiết bị của Admin (danh sách từ `GET /devices/system-status`: bộ điều khiển và camera kèm farm, nhà, khu vực); ngăn chi tiết có thêm nút Khởi động lại và Đẩy cấu hình (bộ điều khiển), như trang cũ.
 - Bỏ mục menu "Trạng thái Node" và route `/system/devices` (route cũ chuyển về `/devices`).
-- Hook `useAlertLocations()` (hooks/shared): Admin lấy vị trí từ `system-status`, các role khác từ cấu trúc farm; trang `/alerts` dùng hook này.
+- Trang `/alerts`: Admin lấy vị trí theo thiết bị của cảnh báo từ `system-status` (`useSystemNodeStatus(isAdmin)`), các role khác từ cấu trúc farm như cũ.
 
 ### W-09 — Số tài khoản trên tổng quan Admin
 - `AdminSystemHealthPage`: ô thứ tư "Tài khoản" = số tài khoản đang hoạt động, dòng phụ là số bị khoá; bỏ khoá `NONE` (buyer) khỏi chú thích kiểu `byRole`.
 
 ## 5. Web — giao diện thừa
 
-- **U-01** `ProfilePopover`: còn Cài đặt tài khoản, Quyền riêng tư, Đăng xuất.
+- **U-01** `ProfilePopover`: còn Cài đặt tài khoản, Quyền riêng tư, Đăng xuất; `SettingsPage` bỏ nút Đăng xuất.
 - **U-02** `AppSidebar`: "Role:" qua `navigationLabel`; `AppHeader` bỏ comment mồ côi dòng 81.
 - **U-03** `FarmOwnerLayout`: Vận hành = Tổng quan, Cảnh báo, Thiết bị & Cảm biến, Giám sát đàn chim, Sức khỏe nhà yến, Phân tích, Phiếu công việc, Khuyến nghị; Khác = Cài đặt. Dock = 4 mục đầu.
 - **U-04** `FarmOwnerLayout` bỏ "Báo cáo & kết luận"; `/domain-expert/reports` chỉ còn Domain Expert (`MENU_ACCESS`, `RequireRole`); viên KPI báo cáo trên thanh chuyên gia dẫn Farm Owner tới `/health?tab=report`.
 - **U-05** `FarmOwnerFarmsPage` bỏ `HouseKpiRow`; `EcoHealthCard` hiện "Ổn định" (xanh) khi không nhà nào lỗi, "Có sự cố" (cam) khi có.
-- **U-06** `DomainExpertLayout` dùng icon Phosphor như Farm Owner; cùng tên "Lịch sử quyết định", viết hoa kiểu câu ở cả hai menu.
+- **U-06** `DomainExpertLayout` dùng icon Phosphor như Farm Owner; cùng tên "Lịch sử quyết định", viết hoa kiểu câu ở cả hai menu; `navigation.i18n.ts` có đủ mọi nhãn menu của 4 role.
 - **U-08** `SettingsPage`: Admin không có thẻ Thông báo và Telegram.
 - **U-09** Route `/devices/onboarding` (Farm Owner); `MENU_ACCESS` thêm dòng trước `/devices`; nút "Lắp đặt" trỏ đường mới.
 
