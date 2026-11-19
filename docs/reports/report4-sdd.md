@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.15 (Review 2, final scope) |
-| Date | 18/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.11 (`docs/reports/report3-srs.md`) |
+| Document version | 2.2.16 (Review 2, final scope) |
+| Date | 19/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.12 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -342,7 +342,7 @@ Farm location (FARM-FR-001): the farm form takes the coordinates from the device
 
 Device setup (SF-01): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key (and, for flashing, the broker credential) only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; a scan in the web console (`html5-qrcode`) reads the same formats.
 
-**Farm Technician client.** The mobile application is the technician's main tool: alerts of the assigned houses with acknowledgement and on-site cause, Work Orders with photos, checklists, maintenance and calibration records, manual override and restart, daily rating, harvest entry. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
+**Farm Technician client.** The mobile application is the technician's main tool: alerts of the assigned houses with acknowledgement and on-site cause, Work Orders with photos, checklists, maintenance and calibration records, manual override and restart, daily rating, harvest entry. On the web the Farm Technician has only the devices of its assigned houses with restart and a read-only list of lullaby tracks, the alerts of those houses with acknowledgement and on-site cause, the houses themselves with its own duty shifts, the in-app notifications and its settings; every other task of the technician in Report 3, Section 2.4 is done in the mobile application. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
 
 ### 5.5 Engineering Constants in the Code
 
@@ -1883,6 +1883,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.16 | 19/11/2026 | Section 5.4: the Farm Technician's web screens are listed (devices with restart, alerts with on-site cause, assigned houses with own shifts, notifications, settings); the rest of its work is on mobile; header baseline SRS 4.2.12 |
 | 2.2.15 | 18/11/2026 | ANALYTICS-FR-013 as built: the environment chart of `/analytics` carries the farm's hourly outdoor weather on the buckets of the indoor series (Section 7.1); the weekly zone report job is gone, as the migration table of Section 6.4 already said, so weekly reports exist only per house (BR-33); header baseline SRS 4.2.11 |
 | 2.2.14 | 18/11/2026 | Run hours as built (G-22, BR-45): the heartbeat carries the learned normal current (`actuatorBaseline`, Section 7.2), kept as the controller's `actuator_baseline`; an interval counts as running only when the current is above 50 % of it |
 | 2.2.13 | 18/11/2026 | Data model as built (G-14): `users.status` with the lock fields replaces `is_active` (the API keeps `is_active` and `deactivated_*` as derived names for the clients); audit rows carry `before`, `after`, `source_ip`, `client`, `correlation_id` (`X-Request-Id`); telemetry `stale_fields`, `anomaly_fields`, `buffered`; harvest `photo_object_key` (`PUT /harvests/{id}/photo`); notification `ref.kind` names as in the code, with `device_action`; migration row for the audit fields (Sections 6.1, 6.4) |

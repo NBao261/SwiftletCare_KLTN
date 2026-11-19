@@ -12,6 +12,8 @@ Kết quả đối chiếu **backend** và **web** với Report 3 (SRS), Report 
 - Nhóm role trên web (`frontend/src/constants/roles.ts`) khớp `requireRole` của backend ở mọi màn đang có; các nút ghi bị ẩn đúng role (đã kiểm tay các chỗ dễ lỗi: kết luận báo cáo, góp ý kế hoạch bảo trì, lịch trực, hệ số mờ, bằng chứng cảnh báo). Nút gửi lệnh: PUSH_CONFIG và OTA chỉ cho Admin, Restart cho Admin và Farm Technician. **Farm Owner có quyền Restart nhưng không trang nào của Farm Owner có nút** (W-12).
 - 157 mã FR của Report 3 đều có dấu vết trong backend. Các FR còn lại của firmware và AI node không thuộc đợt soát này.
 
+**Tiến độ (19/11/2026):** mọi mục đã có PR. D-04 đã merge (#185). Các PR đang mở: #186 (W-11), #187 (W-01, B-04, B-05), #188 (B-01, W-05, W-06, W-07), #189 (W-03), #190 (W-02, merge sau #187), #191 (W-04, W-12), #192 (B-06, W-08), #193 (W-09, W-10), #194 (B-02, B-03, W-13) và PR tài liệu D-01, D-02, D-03 (merge sau cùng: `tc.py` trỏ tới test của #187 và #189). Gap G-28 trong `project-tracking.md` §6 đóng khi tất cả đã merge.
+
 **Còn phải sửa:** 1 bug mất dữ liệu (W-01) và 3 việc P0 trên web (W-02, W-03, W-05). Hai chức năng hiện không dùng được ở cả web lẫn mobile: quản lý bài loa ru (W-04) và Restart của Farm Owner (W-12). Ngoài ra có vài chức năng mobile đã có mà web chưa có, vài endpoint và hàm thừa, và 3 chỗ tài liệu cần chốt (D-01, D-02, D-04).
 
 **Bổ sung ngày 19/11/2026** (soát lại trên `develop` sau PR #183, bằng script lần theo import từ mỗi trang web theo role tới từng hàm API rồi so với `requireRole` của backend): thêm W-04, W-12, W-13, D-04; sửa số route ở trên, câu về nút Restart, W-02 (kết luận mùa vụ) và W-11 (đã làm ở PR #182 nhưng chưa vào `develop`).
@@ -387,7 +389,7 @@ Hook không màn nào dùng:
 
 ## 5. Tài liệu
 
-### D-01 — Audit log của Farm Owner (P1)
+### D-01 — Audit log của Farm Owner (P1) — đã sửa 19/11/2026 (Report 3 4.2.12, chú thích ³)
 
 Report 3 §2.4, dòng "View the audit log and the technical overview", cho Farm Owner "read own farm". Nhưng không FR nào yêu cầu (SYSTEM-FR-001 chỉ cho Administrator) và `GET /system/audit-logs` chỉ cho `ADMIN`.
 
@@ -395,7 +397,7 @@ Report 3 §2.4, dòng "View the audit log and the technical overview", cho Farm 
 
 Nếu muốn giữ quyền này thì phải viết thêm FR và endpoint audit lọc theo farm. Việc này lớn hơn và không có trong phiếu đăng ký v3.
 
-### D-02 — Màn của Farm Technician trên web (P1, cần chốt)
+### D-02 — Màn của Farm Technician trên web (P1) — đã chốt Cách A 19/11/2026 (Report 4 2.2.16 §5.4)
 
 Report 3 §1.2 ghi web phục vụ cả Farm Technician, và §2.4 cho thợ dashboard, analytics, xem chim, sức khỏe và chấm ngày, Work Order, bảo trì, khuyến nghị, nhập thu hoạch, can thiệp tay, vẽ vòng đếm, kiểm tra tại chỗ. Report 4 §5.4 lại ghi mobile là "công cụ chính" của thợ.
 
@@ -405,7 +407,7 @@ Hai cách chốt:
 - **Cách A (đề nghị):** ghi rõ trong Report 4 §5.4 rằng trên web, Farm Technician có thiết bị, cảnh báo (xác nhận kèm nguyên nhân), cấu trúc nhà được giao, ca trực của mình (W-10) và cài đặt; mọi việc còn lại của thợ làm trên mobile. Không cần code thêm ngoài W-10. Sinh lại Word.
 - **Cách B:** mở các trang `FARM_SIDE_ROLES`, `/health`, `/harvests`, `/work-orders` (bắt đầu, xong, checklist có ảnh) cho thợ, giới hạn ở nhà được giao. Khoảng 1–2 tuần web, và phải soát lại mọi nút ghi theo §2.4.
 
-### D-03 — Ghi nhận vào Project Tracking (P1)
+### D-03 — Ghi nhận vào Project Tracking (P1) — đã làm 19/11/2026
 
 1. Thêm dòng **G-28** vào `project-tracking.md` §6, gồm W-01…W-13, B-01…B-06 và kết quả của D-04, người làm Bảo, hạn theo iteration. Khi xong từng việc thì cập nhật dòng này. Thêm một dòng vào §7 Change Log.
 2. Mỗi PR của B-xx sửa `api-spec.yaml`. Nếu thêm model hay trường thì chạy `npm run db:script`.
