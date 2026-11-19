@@ -81,6 +81,8 @@ export default function RootLayout() {
               <Stack.Screen name="maintenance/index" />
               {/* Thu hoạch (SF-04, G-26): các lần thu của một nhà, ghi và sửa lần thu, ngoài các tab */}
               <Stack.Screen name="harvests/index" />
+              {/* Khuyến nghị của nhà (MF-08, G-24): chủ trại chấp nhận hoặc từ chối, ngoài các tab */}
+              <Stack.Screen name="recommendations/index" />
             </Stack>
             {/* Báo mất mạng / mất kết nối máy chủ trên mọi màn, nằm ngay dưới thanh trạng thái */}
             <ConnectionBanner />

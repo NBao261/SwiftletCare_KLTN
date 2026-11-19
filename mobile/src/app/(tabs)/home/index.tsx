@@ -22,6 +22,7 @@ import { OverviewStats } from '@/components/home/OverviewStats'
 import { PendingTasksCard } from '@/components/home/PendingTasksCard'
 import { MaintenanceDueCard } from '@/components/home/MaintenanceDueCard'
 import { WorkOrderTasksCard } from '@/components/home/WorkOrderTasksCard'
+import { RecommendationTasksCard } from '@/components/home/RecommendationTasksCard'
 import { RelayOverrideStrip } from '@/components/home/RelayOverrideStrip'
 import { UrgentAlertBanner } from '@/components/home/UrgentAlertBanner'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
@@ -110,12 +111,13 @@ export default function HomeScreen() {
             <UrgentAlertBanner />
             {/* Nhóm việc cần làm, xếp sát nhau (khoảng cách nhỏ hơn giữa các khối khác): việc chờ (ngày chờ chấm — chủ trại và
                 kỹ thuật viên), Work Order sửa chữa (G-21: kỹ thuật viên — việc giao cho mình, chủ trại — việc còn mở của farm),
-                bảo trì đến hạn (G-22) */}
+                bảo trì đến hạn (G-22), khuyến nghị chờ chủ trại quyết định (MF-08) */}
             {(canViewPendingTasks || canWorkOnWorkOrders) && (
               <View style={styles.taskGroup}>
                 {canViewPendingTasks && <PendingTasksCard />}
                 {canWorkOnWorkOrders && <WorkOrderTasksCard />}
                 {canWorkOnWorkOrders && canPerform(user, 'viewMaintenance') && <MaintenanceDueCard />}
+                {canPerform(user, 'decideRecommendation') && <RecommendationTasksCard />}
               </View>
             )}
             <RelayOverrideStrip />

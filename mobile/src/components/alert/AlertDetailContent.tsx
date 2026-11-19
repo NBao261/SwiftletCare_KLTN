@@ -188,6 +188,12 @@ export function AlertDetailContent({
             houseName={location?.houseName ?? '_'}
             enabled={isReady}
             onLeave={onLeave}
+            // Chủ trại mở phiếu bằng tay cho cảnh báo còn hiệu lực mà chưa có phiếu (OPS-FR-001)
+            createPrefill={
+              houseId && canPerform(user, 'createWorkOrder') && (alert.status === 'ACTIVE' || alert.status === 'ACKNOWLEDGED')
+                ? { houseId, title: getAlertTypeLabel(alert.type) }
+                : undefined
+            }
           />
         )}
 
