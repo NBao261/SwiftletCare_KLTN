@@ -9,7 +9,6 @@ import ZoneCard from '@/components/features/farm-owner/farms/ZoneCard'
 import HouseProductionCard from '@/components/features/farm-owner/farms/HouseProductionCard'
 import HouseStageCard from '@/components/features/farm-owner/farms/HouseStageCard'
 import AttentionDevicesCard from '@/components/features/farm-owner/farms/AttentionDevicesCard'
-import AiAdviceCard from '@/components/features/farm-owner/farms/AiAdviceCard'
 import DeviceListTable from '@/components/features/farm-owner/farms/DeviceListTable'
 import DeviceDetailDrawer from '@/components/features/farm-owner/farms/DeviceDetailDrawer'
 import FarmMembersManager from '@/components/features/farm-owner/farms/FarmMembersManager'
@@ -18,7 +17,7 @@ import HouseOpsMetricsCard from '@/components/features/farm-owner/work-orders/Ho
 import StructureEditModal from '@/components/features/farm-owner/farms/StructureEditModal'
 import ActionsMenu from '@/components/ui/ActionsMenu'
 import { NO_VALUE } from '@/constants/display'
-import { useFarmStructure, useHouseStaff, useHouseZoneIds, useStructureExtras } from '@/hooks/farm-owner/useFarmStructure'
+import { useFarmStructure, useHouseStaff, useHouseZoneIds } from '@/hooks/farm-owner/useFarmStructure'
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { usePermission } from '@/hooks/common/usePermission'
@@ -44,7 +43,6 @@ export default function FarmOwnerFarmZonesPage() {
   const liveZoneIds = useHouseZoneIds(houseId)
   const { structure, isLoading, isError, metricsLoading, canViewHarvest, refetch } = useFarmStructure({ liveZoneIds })
   const node = houseId ? structure.houseById.get(houseId) : undefined
-  const { data: extras } = useStructureExtras(houseId ? [houseId] : [])
   const pageHouses = useMemo(() => (node ? [node.house] : []), [node])
   const staffByHouse = useHouseStaff(pageHouses)
   // FARM-FR-002 — chỉ Farm Owner tạo Zone
@@ -82,20 +80,18 @@ export default function FarmOwnerFarmZonesPage() {
   usePageBack(FARMS_PATH, t('page.farms'), UP_FROM_CHILD_STATE)
   usePageBreadcrumb(node ? [{ label: node.house.name }] : [], UP_FROM_CHILD_STATE)
 
-  // Gom thiết bị của nhà trong 1 lượt duyệt: tất cả / không online / camera đầu tiên
-  const { devices, problems, camera, zoneNameById, zoneById } = useMemo(() => {
+  // Gom thiết bị của nhà trong 1 lượt duyệt: tất cả / không online
+  const { devices, problems, zoneNameById, zoneById } = useMemo(() => {
     const devices: DeviceRow[] = []
     const problems: DeviceRow[] = []
     const zoneNameById = new Map<string, string>()
     const zoneById = new Map<string, ZoneNode>()
-    let camera: DeviceRow | undefined
     for (const z of node?.zones ?? []) {
       zoneNameById.set(z.zone._id, z.zone.name)
       zoneById.set(z.zone._id, z)
       for (const d of z.devices) {
         devices.push(d)
         if (d.status !== 'ONLINE') problems.push(d)
-        if (!camera && d.type === 'camera') camera = d
       }
     }
     // Camera gắn cả nhà (SRS v2.1.8): cột Zone ghi "Cả nhà"
@@ -103,9 +99,8 @@ export default function FarmOwnerFarmZonesPage() {
     for (const d of node?.cameraDevices ?? []) {
       devices.push(d)
       if (d.status !== 'ONLINE') problems.push(d)
-      camera ??= d
     }
-    return { devices, problems, camera, zoneNameById, zoneById }
+    return { devices, problems, zoneNameById, zoneById }
   }, [node, t])
 
   if (isError) {
@@ -213,7 +208,6 @@ export default function FarmOwnerFarmZonesPage() {
                     ))}
                   </div>
                 )}
-                <AiAdviceCard houseId={house._id} camera={camera} />
               </FarmFrame>
 
               {/* Cài đặt đàn chim của cả nhà, đặt dưới danh sách Zone (cột trái còn trống) để cột phải không quá dài */}
@@ -234,7 +228,7 @@ export default function FarmOwnerFarmZonesPage() {
 
             {/* Khung cuối giãn khi cột trái cao hơn, 2 cột luôn bằng đáy */}
             <aside className="flex flex-col gap-6 [&>*:last-child]:flex-1">
-              {canViewHarvest && <HouseProductionCard node={node} recent={node.recent} nextHarvestAt={extras?.nextHarvest[house._id]} />}
+              {canViewHarvest && <HouseProductionCard node={node} recent={node.recent} />}
               <AttentionDevicesCard counts={node.counts} problems={problems} zoneNameById={zoneNameById} onSelect={setSelected} />
               {canViewOpsMetrics && <HouseOpsMetricsCard farmId={farm._id} houseId={house._id} />}
             </aside>

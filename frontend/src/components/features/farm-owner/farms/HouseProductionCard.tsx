@@ -16,11 +16,10 @@ interface HouseProductionCardProps {
   node: HouseNode
   /** 3 đợt thu hoạch gần nhất của nhà (đã lọc theo zone của nhà) */
   recent: HarvestBatch[]
-  nextHarvestAt?: string
 }
 
-/** Sản lượng nhà yến trong tháng — số liệu tính từ /harvests thật; "dự kiến thu tiếp" là mock. Không hiện mã truy xuất (ẩn khỏi UI theo quyết định bảo mật). */
-export default function HouseProductionCard({ node, recent, nextHarvestAt }: HouseProductionCardProps) {
+/** Sản lượng nhà yến trong tháng — số liệu tính từ /harvests thật; không dự báo lần thu tới (Report 3 §8). Không hiện mã truy xuất (ẩn khỏi UI theo quyết định bảo mật). */
+export default function HouseProductionCard({ node, recent }: HouseProductionCardProps) {
   const { t, num, exact, day } = useTranslation(farmDict)
   const navigate = useNavigate()
   const { month, year } = vnYearMonth(new Date())
@@ -38,15 +37,9 @@ export default function HouseProductionCard({ node, recent, nextHarvestAt }: Hou
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-warmGray/5 px-3 py-2.5">
-          <p className="label-caption">{t('prod.last')}</p>
-          <p className="mt-0.5 text-small font-semibold text-charcoal">{last ? `${day(last.harvest_date)} · ${zoneName(last.zone_id)}` : NO_VALUE}</p>
-        </div>
-        <div className="rounded-xl bg-warmGray/5 px-3 py-2.5">
-          <p className="label-caption">{t('prod.next')}</p>
-          <p className="mt-0.5 text-small font-semibold text-charcoal">{nextHarvestAt ? day(nextHarvestAt) : t('prod.noSchedule')}</p>
-        </div>
+      <div className="rounded-xl bg-warmGray/5 px-3 py-2.5">
+        <p className="label-caption">{t('prod.last')}</p>
+        <p className="mt-0.5 text-small font-semibold text-charcoal">{last ? `${day(last.harvest_date)} · ${zoneName(last.zone_id)}` : NO_VALUE}</p>
       </div>
 
       <div className="flex flex-col gap-2">
