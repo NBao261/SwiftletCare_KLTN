@@ -2350,7 +2350,21 @@ paths:
                                       type: array,
                                       items:
                                         {
-                                          $ref: "#/components/schemas/SensorNode",
+                                          allOf:
+                                            [
+                                              { $ref: "#/components/schemas/SensorNode" },
+                                              {
+                                                properties:
+                                                  {
+                                                    restorable_until:
+                                                      {
+                                                        type: string,
+                                                        format: date-time,
+                                                        description: "Chỉ có khi removed=recent: hạn chót khôi phục (gỡ lúc + 24 giờ)",
+                                                      },
+                                                  },
+                                              },
+                                            ],
                                         },
                                     },
                                 },
@@ -2360,6 +2374,10 @@ paths:
                   },
               },
           }
+        "403":
+          description: "removed=recent khi không phải Farm Owner"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}:
     get:
@@ -2889,7 +2907,21 @@ paths:
                                       type: array,
                                       items:
                                         {
-                                          $ref: "#/components/schemas/CameraNode",
+                                          allOf:
+                                            [
+                                              { $ref: "#/components/schemas/CameraNode" },
+                                              {
+                                                properties:
+                                                  {
+                                                    restorable_until:
+                                                      {
+                                                        type: string,
+                                                        format: date-time,
+                                                        description: "Chỉ có khi removed=recent: hạn chót khôi phục (gỡ lúc + 24 giờ)",
+                                                      },
+                                                  },
+                                              },
+                                            ],
                                         },
                                     },
                                 },
@@ -2899,6 +2931,10 @@ paths:
                   },
               },
           }
+        "403":
+          description: "removed=recent khi không phải Farm Owner"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}/decommission:
     post:

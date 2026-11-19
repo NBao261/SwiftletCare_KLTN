@@ -16,13 +16,26 @@ import { useToastStore } from '@/stores/toastStore';
 export default function RemovedDevicesSection(): JSX.Element | null {
   const { t, dateTime } = useTranslation(devicesDict);
   const isFarmOwner = usePermission('FARM_OWNER');
-  const { data: rows } = useRemovedDevices(isFarmOwner);
+  const { data: rows, isError, error, refetch } = useRemovedDevices(isFarmOwner);
   const restore = useRestoreDevice();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [target, setTarget] = useState<RemovedDeviceRow | null>(null);
 
-  if (!isFarmOwner || !rows || rows.length === 0) return null;
+  if (!isFarmOwner) return null;
+  // Tải lỗi: vẫn hiện khung kèm câu lỗi và nút thử lại, không giả như chưa gỡ thiết bị nào (FE_Design 13.5)
+  if (isError) {
+    return (
+      <FarmFrame title={t('removed.title')} description={t('removed.subtitle')}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-warmGray">{apiErrorMessage(error, t('removed.loadFailed'))}</p>
+          <Button size="sm" variant="secondary" onClick={() => void refetch()}>{t('list.retry')}</Button>
+        </div>
+      </FarmFrame>
+    );
+  }
+  // Chỉ ẩn khung khi đã tải xong và không có thiết bị nào gỡ trong 24 giờ
+  if (!rows || rows.length === 0) return null;
 
   return (
     <FarmFrame title={t('removed.title')} description={t('removed.subtitle')}>
@@ -60,7 +73,7 @@ export default function RemovedDevicesSection(): JSX.Element | null {
           restore.mutate({ kind: target.kind, id: target.device._id, reason }, {
             onSuccess: () => { push(t('removed.restored', { id: target.device.device_id })); setTarget(null); },
             // 409: quá 24 giờ, device_id đã đăng ký lại, hoặc đã có thiết bị khác thế chỗ
-            onError: reason => { push(apiErrorMessage(reason, t('removed.failed')), 'error'); setTarget(null); },
+            onError: restoreError => { push(apiErrorMessage(restoreError, t('removed.failed')), 'error'); setTarget(null); },
           });
         }}
       />

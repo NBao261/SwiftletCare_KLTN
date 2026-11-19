@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { deviceApi } from '@/apis/shared/devices.api'
 import type { RemovedDevice } from '@/types'
 
-const REMOVED_KEY = ['removed-devices']
+// Dưới tiền tố ['sensor-nodes']: gỡ hay thay bộ điều khiển (useDecommissionDevice, useReplaceSensorNode) làm mới cả danh sách này
+const REMOVED_KEY = ['sensor-nodes', 'removed']
 
 export interface RemovedDeviceRow {
   kind: 'sensor' | 'camera'
@@ -31,7 +32,8 @@ export function useRestoreDevice() {
       if (kind === 'sensor') await deviceApi.restoreSensorNode(id, reason)
       else await deviceApi.restoreCameraNode(id, reason)
     },
-    onSuccess: () => {
+    // Cả khi lỗi: 409 nghĩa là dòng đó không còn khôi phục được, danh sách phải bỏ nó đi
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: REMOVED_KEY })
       void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] })
       void queryClient.invalidateQueries({ queryKey: ['camera-nodes'] })

@@ -763,13 +763,6 @@ export const RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000
 const RETIRED_SUFFIX = '#retired-'
 
 /**
- * FARM-FR-008 — khôi phục thiết bị vừa bị gỡ nhầm. Chỉ trong 24 giờ và chỉ khi
- * chỗ của nó chưa bị ai chiếm: đăng ký lại `device_id` cũ sẽ đổi tên bản ghi này
- * thành `<device_id>#retired-…` và tạo node mới, còn `replace` thì trỏ
- * `replaced_by` sang node thay thế — khôi phục trong 2 trường hợp đó sẽ tạo ra 2
- * thiết bị "sống" cùng một device_id trong cùng Zone.
- */
-/**
  * B-06, FARM-FR-008 — thiết bị đã gỡ mà `restoreDevice` còn khôi phục được, cùng điều kiện với nó: gỡ chưa quá
  * RESTORE_WINDOW_MS, `device_id` chưa bị đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ. Mỗi dòng kèm
  * `restorable_until`. Chỉ Farm Owner, người khôi phục (route restore là FARM_OWNER).
@@ -791,6 +784,13 @@ async function listRestorableDevices(kind: DeviceKind, scope: Record<string, unk
     .map(node => ({ ...node, restorable_until: new Date((node.decommissioned_at as Date).getTime() + RESTORE_WINDOW_MS) }))
 }
 
+/**
+ * FARM-FR-008 — khôi phục thiết bị vừa bị gỡ nhầm. Chỉ trong 24 giờ và chỉ khi
+ * chỗ của nó chưa bị ai chiếm: đăng ký lại `device_id` cũ sẽ đổi tên bản ghi này
+ * thành `<device_id>#retired-…` và tạo node mới, còn `replace` thì trỏ
+ * `replaced_by` sang node thay thế — khôi phục trong 2 trường hợp đó sẽ tạo ra 2
+ * thiết bị "sống" cùng một device_id trong cùng Zone.
+ */
 export async function restoreDevice(kind: DeviceKind, nodeId: string, user: CurrentUser, reason: string) {
   const Model = DEVICE_MODELS[kind]
   const node = await Model.findById(nodeId)

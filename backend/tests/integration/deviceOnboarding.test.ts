@@ -353,6 +353,37 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect((await recent(ownerToken).expect(200)).body.data).toEqual([])
   })
 
+  it('removed=recent: camera theo nhà, không trả rtsp_url; ID đã đăng ký lại không hiện; Farm Owner farm khác không thấy; chuyên gia, thợ → 403', async () => {
+    const { ownerToken, owner, a } = await seed()
+    const justNow = new Date()
+    await CameraNode.create({
+      device_id: 'cam_1', house_id: a.zone.house_id, registered_at: justNow, registered_by: owner._id,
+      decommissioned_at: justNow, rtsp_url: 'rtsp://secret@cam', status: 'OFFLINE',
+    })
+    // Bản ghi cũ đã đổi tên khi device_id được đăng ký lại: restore trả 409 nên không liệt kê
+    await SensorNode.create({ device_id: 'node_9#retired-1', zone_id: a.zone._id, status: 'OFFLINE', decommissioned_at: justNow })
+
+    const cameras = (await request(app).get('/devices/camera-nodes?removed=recent')
+      .set('Authorization', `Bearer ${ownerToken}`).expect(200)).body.data
+    expect(cameras.map((node: { device_id: string }) => node.device_id)).toEqual(['cam_1'])
+    expect(cameras[0]).not.toHaveProperty('rtsp_url')
+    expect(cameras[0].restorable_until).toBeDefined()
+    const sensors = await request(app).get('/devices/sensor-nodes?removed=recent').set('Authorization', `Bearer ${ownerToken}`).expect(200)
+    expect(sensors.body.data).toEqual([])
+
+    const otherOwner = await User.create({ email: 'owner2@test.vn', password_hash: 'password123', full_name: 'O2', role: 'FARM_OWNER' })
+    await zoneIn(otherOwner._id, 'Farm C')
+    const otherList = await request(app).get('/devices/camera-nodes?removed=recent')
+      .set('Authorization', `Bearer ${tokenFor(otherOwner._id, 'FARM_OWNER')}`).expect(200)
+    expect(otherList.body.data).toEqual([])
+
+    for (const role of ['DOMAIN_EXPERT', 'FARM_TECHNICIAN'] as const) {
+      const user = await User.create({ email: `${role.toLowerCase()}@test.vn`, password_hash: 'password123', full_name: role, role })
+      await request(app).get('/devices/sensor-nodes?removed=recent').set('Authorization', `Bearer ${tokenFor(user._id, role)}`).expect(403)
+      await request(app).get('/devices/camera-nodes?removed=recent').set('Authorization', `Bearer ${tokenFor(user._id, role)}`).expect(403)
+    }
+  })
+
   it('thay thiết bị đang chạy không cần force riêng', async () => {
     const { ownerToken, nodeId, owner } = await installed()
     await SensorNode.updateOne({ _id: nodeId }, { status: 'ONLINE', last_heartbeat: new Date() })
