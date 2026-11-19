@@ -79,7 +79,7 @@ const SECTIONS_VI: PolicySection[] = [
     // NFR-10, AUTH-FR-003, VISION-FR-013
     title: '7. Bảo mật',
     items: [
-      'Mọi yêu cầu tới máy chủ đều phải đăng nhập. Phiên đăng nhập tự gia hạn trong 30 ngày.',
+      'Ngoài đăng nhập và lời mời, mọi thao tác đều cần đăng nhập. Phiên đăng nhập tự gia hạn trong 30 ngày.',
       'Đăng nhập sai quá 10 lần trong 15 phút từ một địa chỉ IP sẽ bị chặn tạm thời.',
       'Luồng camera chỉ mở được bằng mã xem có hạn 60 giây, cấp cho chủ nhà yến hoặc chuyên gia của trang trại.',
     ],

@@ -35,10 +35,7 @@ interface FixedRowsTableProps<T> {
   serverPagination?: { page: number; total: number; onChange: (page: number) => void }
 }
 
-/**
- * DataTable phân trang `pageSize` dòng (mặc định 10) × `rowHeight` px. Có từ 2 trang trở lên thì trang cuối bù dòng trống
- * để khung không nhảy khi lật trang; chỉ 1 trang thì bảng cao vừa dữ liệu (FE_Design §1.1).
- */
+// DataTable phân trang: từ 2 trang trở lên thì trang cuối bù dòng trống, 1 trang thì bảng cao vừa dữ liệu (FE_Design §1.1)
 export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, emptyContent, paginationLabels, serverPagination }: FixedRowsTableProps<T>) {
   const [page, setPage] = useState(1)
   // Kẹp trang theo số trang còn lại — lọc/xoá làm ít đi thì không rơi vào trang không tồn tại

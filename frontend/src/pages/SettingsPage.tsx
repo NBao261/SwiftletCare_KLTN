@@ -167,12 +167,12 @@ function NotificationPreferencesCard() {
               <span className="min-w-0 flex-1 text-body font-semibold text-charcoal">{levelLabel(level)}</span>
               <label className="flex items-center gap-2 text-small text-warmGray">
                 {t('Push')}
-                <Toggle checked={levels[level].push} onChange={value => setLevelChannel(level, 'push', value)} aria-label={`${levelLabel(level)} — ${t('Push')}`} />
+                <Toggle checked={levels[level].push} onChange={value => setLevelChannel(level, 'push', value)} aria-label={`${levelLabel(level)} · ${t('Push')}`} />
               </label>
               {telegramLinked && (
                 <label className="flex items-center gap-2 text-small text-warmGray">
                   {t('Telegram')}
-                  <Toggle checked={levels[level].telegram} onChange={value => setLevelChannel(level, 'telegram', value)} aria-label={`${levelLabel(level)} — ${t('Telegram')}`} />
+                  <Toggle checked={levels[level].telegram} onChange={value => setLevelChannel(level, 'telegram', value)} aria-label={`${levelLabel(level)} · ${t('Telegram')}`} />
                 </label>
               )}
             </div>

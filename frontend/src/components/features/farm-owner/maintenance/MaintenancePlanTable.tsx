@@ -35,9 +35,6 @@ export default function MaintenancePlanTable({
   plans, serverPagination, houseNames, canManage, canComment, emptyNotice, onAction,
 }: MaintenancePlanTableProps): JSX.Element {
   const { t, num, date } = useTranslation(maintenanceDict);
-  const firstIndex = serverPagination ? (serverPagination.page - 1) * MAINTENANCE_PAGE_SIZE : 0;
-  // Số thứ tự tra Map dựng 1 lần (FE_Design 13.12)
-  const rowNumbers = useMemo(() => new Map(plans.map((plan, index) => [plan._id, firstIndex + index + 1])), [plans, firstIndex]);
 
   const columns = useMemo<DataTableColumn<MaintenancePlan>[]>(() => {
     // Hạn: đang đến hạn thì từ lúc nào; theo lịch thì ngày kế tiếp; bơm, quạt thì theo bộ đếm của bộ điều khiển
@@ -67,7 +64,6 @@ export default function MaintenancePlanTable({
     }
 
     return [
-      { key: 'index', header: t('col.index'), className: 'w-16', render: plan => <span className="text-sm text-warmGray">{rowNumbers.get(plan._id)}</span> },
       {
         key: 'equipment',
         header: t('col.equipment'),
@@ -117,7 +113,7 @@ export default function MaintenancePlanTable({
         ),
       },
     ];
-  }, [t, num, date, rowNumbers, houseNames, canManage, canComment, onAction]);
+  }, [t, num, date, houseNames, canManage, canComment, onAction]);
 
   return (
     <FixedRowsTable

@@ -83,7 +83,7 @@ export function Step3ConnectAP({ data, onNext, onBack }: Props) {
         </Button>
       ) : (
         <Button onClick={onNext} className="w-full justify-center">
-          Tiếp theo — Chờ thiết bị kết nối
+          Tiếp theo: chờ thiết bị kết nối
           <ArrowRight className="h-4 w-4" />
         </Button>
       )}

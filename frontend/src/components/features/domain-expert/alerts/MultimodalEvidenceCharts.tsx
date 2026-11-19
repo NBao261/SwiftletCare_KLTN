@@ -226,7 +226,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
               <ul className="list-disc list-inside space-y-0.5 text-warmGray text-xs">
                 {evidence.device_alerts.map(da => (
                   <li key={da._id}>
-                    <span className="font-medium text-charcoal">{da.title}</span> — {da.message}
+                    <span className="font-medium text-charcoal">{da.title}</span>: {da.message}
                   </li>
                 ))}
               </ul>

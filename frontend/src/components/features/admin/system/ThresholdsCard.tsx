@@ -38,7 +38,7 @@ export default function ThresholdsCard() {
 
         {!isLoading && error && (
           <p className="rounded-2xl border border-dashed border-warmGray/30 px-4 py-6 text-center text-sm text-warmGray">
-            {t('Không tải được ngưỡng mặc định')} — {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
+            {t('Không tải được ngưỡng mặc định')}. {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
           </p>
         )}
 

@@ -70,7 +70,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const tStart = new Date(baseDate.getTime() - 30 * 60_000), tEnd = new Date(baseDate.getTime() + 30 * 60_000)
   const pad = (n: number) => n.toString().padStart(2, '0')
   const windowLabel = t('Khung giờ ±30 phút ({{from}} – {{to}})', { from: `${pad(tStart.getHours())}:${pad(tStart.getMinutes())}`, to: `${pad(tEnd.getHours())}:${pad(tEnd.getMinutes())}` })
-  const dateLabel = alertDate ? `${pad(alertDate.getHours())}:${pad(alertDate.getMinutes())} — ${alertDate.getDate()}/${alertDate.getMonth() + 1}/${alertDate.getFullYear()}` : ''
+  const dateLabel = alertDate ? `${pad(alertDate.getHours())}:${pad(alertDate.getMinutes())} · ${alertDate.getDate()}/${alertDate.getMonth() + 1}/${alertDate.getFullYear()}` : ''
 
   const zoneLabel = useMemo(() => {
     if (!alert?.zone_id) return null

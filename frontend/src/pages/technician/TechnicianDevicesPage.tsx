@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { useScopeFilter } from "@/hooks/farm-owner/useScopeFilter";
-import { Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import ScopeFilter from "@/components/common/ScopeFilter";
 import HeaderActions from "@/components/layouts/HeaderActions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -25,10 +25,15 @@ export default function TechnicianDevicesPage() {
   const zoneById = useMemo(() => new Map(scope.zones.map(zone => [zone._id, zone])), [scope.zones]);
 
   // Chọn 1 Zone thì backend lọc theo Zone; còn lại lấy mọi thiết bị của các nhà được giao rồi lọc theo phạm vi
-  const { data: nodes, isLoading } = useSensorNodes(zoneId);
+  const { data: nodes, isLoading, isError, refetch } = useSensorNodes(zoneId);
   const scopedNodes = useMemo(() => (nodes ?? []).filter(node => zoneById.has(node.zone_id)), [nodes, zoneById]);
   const loading = isLoading || scope.isLoading;
-
+  // Lỗi tải Zone làm mất cả danh sách (lọc theo Zone), nên báo lỗi thay vì báo "chưa có thiết bị" (FE_Design 13.5)
+  const failed = isError || scope.isError;
+  function retry() {
+    void refetch();
+    scope.refetch();
+  }
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -101,7 +106,12 @@ export default function TechnicianDevicesPage() {
     );
   }
 
-  const hasLocationFilter = Boolean(scope.farmId);
+  // Câu trạng thái rỗng theo bậc đang lọc: Zone, nhà hay trang trại
+  let emptyTitle = "Chưa có thiết bị nào";
+  let emptyDescription = "Các nhà được giao cho bạn chưa có bộ điều khiển nào. Chủ nhà yến lắp thiết bị cho từng Zone.";
+  if (scope.zone) [emptyTitle, emptyDescription] = ["Zone này chưa có thiết bị", "Zone đang chọn chưa có bộ điều khiển nào."];
+  else if (scope.houseId) [emptyTitle, emptyDescription] = ["Nhà này chưa có thiết bị", "Nhà đang chọn chưa có bộ điều khiển nào."];
+  else if (scope.farmId) [emptyTitle, emptyDescription] = ["Trang trại này chưa có thiết bị", "Các nhà được giao ở trang trại này chưa có bộ điều khiển nào."];
 
   return (
     <div className="flex flex-col gap-6">
@@ -118,18 +128,17 @@ export default function TechnicianDevicesPage() {
       <Card size="lg" className="pb-10 flex flex-col gap-5">
         {loading && <LoadingSkeleton count={2} className="h-40 w-full" />}
 
-        {!loading && scopedNodes.length === 0 && (
+        {!loading && failed && (
           <EmptyState
-            title={hasLocationFilter ? "Zone này chưa có thiết bị" : "Chưa có thiết bị nào"}
-            description={
-              hasLocationFilter
-                ? "Zone đang lọc chưa có bộ điều khiển nào."
-                : "Các nhà được giao cho bạn chưa có bộ điều khiển nào. Chủ nhà yến lắp thiết bị cho từng Zone."
-            }
+            title="Không tải được thiết bị"
+            description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+            action={<Button variant="secondary" size="sm" onClick={retry}>Thử lại</Button>}
           />
         )}
 
-        {!loading && scopedNodes.length > 0 && (
+        {!loading && !failed && scopedNodes.length === 0 && <EmptyState title={emptyTitle} description={emptyDescription} />}
+
+        {!loading && !failed && scopedNodes.length > 0 && (
           <div className="flex w-full flex-col gap-5 mb-4 animate-fade-in">
             <SystemHealthBar nodes={scopedNodes} />
             <DeviceFilterToolbar
@@ -146,7 +155,7 @@ export default function TechnicianDevicesPage() {
           </div>
         )}
 
-        <div className="flex flex-col pb-8">
+        {!loading && !failed && scopedNodes.length > 0 && <div className="flex flex-col pb-8">
           <div className="bg-white border border-warmGray/15 rounded-2xl shadow-sm overflow-hidden flex flex-col">
             {filteredNodes?.map((node, i) => {
               const zone = zoneById.get(node.zone_id);
@@ -167,13 +176,13 @@ export default function TechnicianDevicesPage() {
                 />
               );
             })}
-            {filteredNodes?.length === 0 && !loading && scopedNodes.length > 0 && (
+            {filteredNodes.length === 0 && (
               <div className="text-center p-8 text-warmGray">
                 Không tìm thấy thiết bị nào khớp với bộ lọc.
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {audioNode && (
           <LullabyTracksModal

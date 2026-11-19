@@ -6,11 +6,7 @@ import type { SensorNode } from '@/types'
 export const needsAttention = (n: SensorNode) =>
   !!n.activation_overdue_at || !!n.ota_failed
 
-/**
- * Hàng KPI đầu trang Thiết bị — cùng StatTile với Admin/Farm Owner, đặt thẳng trong card trang (không lồng thêm khung).
- * Đếm theo thiết bị trong phạm vi đang chọn.
- * "Cần xử lý" gộp lỗi + suy giảm + quá hạn kích hoạt + OTA lỗi (không gộp "Chờ kết nối" bình thường).
- */
+// Hàng KPI đầu trang Thiết bị theo phạm vi đang chọn; "Cần xử lý" là quá hạn kích hoạt hoặc cập nhật firmware lỗi
 export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }) {
   const total = nodes.length
   const online = nodes.filter(n => n.status === 'ONLINE').length

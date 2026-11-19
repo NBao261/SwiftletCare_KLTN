@@ -20,11 +20,7 @@ type Filter = 'all' | HouseHealth
 /** Nhà cần xử lý lên đầu, rồi bình thường, cuối cùng là nhà chưa có thiết bị */
 const HEALTH_ORDER: Record<HouseHealth, number> = { ALERT: 0, NORMAL: 1, EMPTY: 2 }
 
-/**
- * Nhà được giao (/farms) của Farm Technician (AUTH-FR-013): các nhà được giao với thiết bị và cảnh báo đang mở.
- * Không dashboard, không phân tích, không sản lượng/thu hoạch, không tạo farm/nhà/zone. Thợ mở trang để trả lời:
- * "nhà nào đang có sự cố, ở zone nào, bao nhiêu thiết bị mất kết nối?" → bấm vào để xem thiết bị của nhà đó.
- */
+// Nhà được giao (/farms) của Farm Technician (AUTH-FR-013): thiết bị và cảnh báo đang mở của từng nhà, bấm để xem thiết bị
 export default function TechnicianFarmsPage() {
   const { t, num } = useTranslation(farmDict)
   useScrollToTop()

@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { isMenuItemActive, isPathWithin, type MenuSection } from '@/components/layouts/AppSidebar'
+import type { MenuSection } from '@/components/layouts/AppSidebar'
+import { isMenuItemActive, isPathWithin } from '@/lib/menuMatch'
 import { canAccessPath } from '@/constants/roles'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import { cn } from '@/lib/cn'

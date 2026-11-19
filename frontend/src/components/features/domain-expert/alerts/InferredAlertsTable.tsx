@@ -19,7 +19,7 @@ function formatRelativeTime(dateStr: string): string {
   if (diffMin < 2) return t('Vừa xong')
   if (diffMin < 60) return t('{{n}} phút trước', { n: diffMin })
   if (Math.floor(diffMin / 60) < 24) return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} · ${t('Hôm nay')}`
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} — ${date.getDate()}/${date.getMonth() + 1}`
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} · ${date.getDate()}/${date.getMonth() + 1}`
 }
 
 function StatusDot({ alert }: { alert: InferredAlertItem }) {

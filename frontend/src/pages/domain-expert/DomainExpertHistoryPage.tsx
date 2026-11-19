@@ -223,12 +223,6 @@ export default function DomainExpertHistoryPage() {
 
   const columns: DataTableColumn<ExpertActivityEntry>[] = [
     {
-      key: 'index',
-      header: 'STT',
-      className: 'w-16',
-      render: (_item, index) => <span className="text-sm text-warmGray">{(page - 1) * pageSize + index + 1}</span>,
-    },
-    {
       key: 'action',
       header: 'Quyết định',
       className: 'w-52',

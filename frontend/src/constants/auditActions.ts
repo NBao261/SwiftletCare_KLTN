@@ -53,9 +53,9 @@ export const USER_AUDIT_ACTIONS = [
 /** Nhãn cho `target_type` (chuỗi backend, snake_case) — thiếu thì hiện nguyên mã */
 export const AUDIT_TARGET_LABEL: Record<string, string> = translated({
   user: 'Người dùng',
-  farm: 'Farm',
-  zone: 'Phòng',
-  sensor_node: 'Sensor node',
-  camera_node: 'Camera node',
+  farm: 'Trang trại',
+  zone: 'Zone',
+  sensor_node: 'Bộ điều khiển',
+  camera_node: 'Camera đếm chim',
   system_settings: 'Cấu hình hệ thống',
 })

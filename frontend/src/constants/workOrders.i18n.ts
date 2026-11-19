@@ -25,7 +25,6 @@ const vi = {
   'list.emptyTitle': 'Không có phiếu công việc nào',
   'list.emptyHint': 'Phiếu công việc được tạo tự động khi có cảnh báo thiết bị cần tới nhà hoặc kế hoạch bảo trì đến hạn, hoặc do bạn tạo.',
 
-  'col.index': 'STT',
   'col.title': 'Việc cần làm',
   'col.house': 'Nhà yến',
   'col.assignee': 'Người làm',
@@ -162,7 +161,6 @@ const en: Record<WorkOrderKey, string> = {
   'list.emptyTitle': 'No work orders',
   'list.emptyHint': 'A work order opens automatically when an equipment alert needs a visit or a maintenance plan falls due, or when you open one.',
 
-  'col.index': 'No.',
   'col.title': 'Job',
   'col.house': 'House',
   'col.assignee': 'Assignee',

@@ -49,7 +49,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           className="shadow-none"
           icon={WifiSlashIcon}
           iconClass={ICON}
-          label="Offline"
+          label="Mất kết nối"
           value={summary.offline}
           // Có thiết bị offline → ô nổi cam (mất dữ liệu nhà yến, cần kiểm tra nguồn/mạng)
           tone={summary.offline > 0 ? 'warning' : undefined}

@@ -359,7 +359,7 @@ const en: Record<AnalyticsKey, string> = {
   'forecast.errorSub': 'At 60 min: {value}',
 
   'hourly.title': 'Birds in and out by hour',
-  'hourly.subtitle': '{house} · birds crossing the AI camera counting line, grouped by hour over the last 24 hours',
+  'hourly.subtitle': '{house} · birds crossing the counting ring, grouped by hour over the last 24 hours',
   'hourly.exitToday': 'Birds out today',
   'hourly.entryToday': 'Birds in today',
   'hourly.returnToday': 'Return rate today',
@@ -367,10 +367,10 @@ const en: Record<AnalyticsKey, string> = {
   'hourly.updated': 'Updated {ago}',
   'hourly.noToday': 'No count yet today',
   'hourly.returnPending': 'Needs both morning and evening sessions',
-  'hourly.empty': 'No count in the last 24 hours — the AI camera has not sent counts.',
+  'hourly.empty': 'No count in the last 24 hours. The bird-count camera has not sent counts.',
 
   'bird.title': 'Weekly return rate',
-  'bird.subtitle': '{house} · average weekly share of birds returning to the nest from the AI camera count',
+  'bird.subtitle': '{house} · average return rate by week',
   'bird.average': 'Period average',
   'bird.averageSub': '{n} days with counts',
   'bird.latestWeek': 'Latest week',
@@ -378,7 +378,7 @@ const en: Record<AnalyticsKey, string> = {
   'bird.change': 'Versus previous week',
   'bird.changeSub': 'Difference in percentage points',
   'bird.drop': 'The latest return rate is {drop}% below the average of the previous days, beyond the {threshold}% set by the Domain Expert for this house. Review the climate and devices around that time.',
-  'bird.empty': 'No bird count yet — the AI camera has not sent counts.',
+  'bird.empty': 'No bird count yet. The bird-count camera has not sent counts.',
 
   'flock.title': 'Flock trend',
   'flock.subtitle': '{house} · mean morning exit count per period over the last 90 days; days missing a counting session are left out',
@@ -413,7 +413,7 @@ const en: Record<AnalyticsKey, string> = {
   'correlation.positive': 'positive',
   'correlation.negative': 'negative',
   'correlation.sample': '{n} days with complete data in the last {days} days',
-  'correlation.emptyDesc': 'At least 2 days with both climate readings and AI camera bird counts are needed.',
+  'correlation.emptyDesc': 'At least 2 days with both climate readings and bird counts are needed.',
 
   'compare.title': 'Zone comparison',
   'compare.subtitle': 'Average values in the selected range; orange bars are zones outside their own threshold',

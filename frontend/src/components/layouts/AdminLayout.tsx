@@ -5,6 +5,17 @@ import {
   IconDevice, IconOTA, IconOnboarding, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
+// AUTH-FR-011 quản lý tài khoản, AUTH-FR-012 hàng đợi xoá tài khoản là tab thứ hai; dock dùng cùng mục để sáng ở cả hai tab
+const usersItem: MenuItem = {
+  label: 'Người dùng',
+  path: '/users',
+  icon: IconUsers,
+  tabs: [
+    { label: 'Tài khoản', path: '/users' },
+    { label: 'Yêu cầu xoá tài khoản', path: '/account-requests' },
+  ],
+}
+
 // Khung Admin: Tổng quan hệ thống là trang nhà (SYSTEM-FR-003); Console thiết bị /devices, /alerts, /ota cho mọi farm (FARM-FR-009, 013); không có trang farm
 const menuSections: MenuSection[] = [
   {
@@ -25,16 +36,7 @@ const menuSections: MenuSection[] = [
   {
     title: 'Quản lý',
     items: [
-      // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4); AUTH-FR-012 hàng đợi xoá tài khoản là tab thứ hai
-      {
-        label: 'Người dùng',
-        path: '/users',
-        icon: IconUsers,
-        tabs: [
-          { label: 'Tài khoản', path: '/users' },
-          { label: 'Yêu cầu xoá tài khoản', path: '/account-requests' },
-        ],
-      },
+      usersItem,
     ],
   },
   {
@@ -60,7 +62,7 @@ const dockItems: MenuItem[] = [
   { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
   { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
   { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
-  { label: 'Người dùng', path: '/users', icon: IconUsers },
+  usersItem,
 ]
 
 export default function AdminLayout() {
