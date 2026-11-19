@@ -1025,7 +1025,7 @@ Technician (luồng phụ — vai trò kỹ thuật, thấy MỌI farm) — mô 
 └── KHÔNG: relay, ngưỡng/hệ số, xác nhận cảnh báo, Dashboard/Analytics/đếm chim/live stream/thu hoạch (Report 3 FARM-FR-009)
 
 Administrator (luồng phụ)
-├── Riêng:     /system/health (tổng quan kỹ thuật) · /system/devices (kho, in nhãn) · /users
+├── Riêng:     /system/health (tổng quan kỹ thuật) · /system/device-stock (kho, in nhãn) · /users
 │              /account-requests · /system/settings (ngưỡng mặc định) · /system/audit-log
 └── KHÔNG xem farm nào, không relay, không xác nhận cảnh báo; chỉ tạo tài khoản Kỹ thuật viên (AUTH-FR-005c)
 
@@ -1246,7 +1246,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `types/` | `<module>.types.ts` | `auth.types.ts` · `device.types.ts` |
 | `validations/<bucket>/` | `<resource>.validation.ts` | `user.validation.ts` · `threshold.validation.ts` |
 | `routes/` | `<role>.routes.tsx` | `admin.routes.tsx` · `farm-owner.routes.tsx` |
-| `stores/` | `<tên>Store.ts` — camelCase | `authStore.ts` · `alertStore.ts` |
+| `stores/` | `<tên>Store.ts` — camelCase | `authStore.ts` · `toastStore.ts` |
 | `constants/` · `lib/` · `providers/` | camelCase, tên nói đúng nội dung | `auditActions.ts` · `chartTheme.ts` · `AppProviders.tsx` |
 | Thư mục | **kebab-case** cho tên role nhiều từ | `farm-owner/` · `domain-expert/` |
 
@@ -1315,7 +1315,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 ### 13.3. Client state — Zustand
 
-- **[Bắt buộc]** Store chỉ giữ trạng thái **thuần client** dùng ở nhiều màn: `authStore`, `zoneStore` (zone đang chọn), `alertStore` (cảnh báo realtime), `toastStore`, `breadcrumbStore`. Thêm store mới phải trả lời được "vì sao không phải React Query / state cục bộ".
+- **[Bắt buộc]** Store chỉ giữ trạng thái **thuần client** dùng ở nhiều màn: `authStore`, `zoneStore` (zone đang chọn), `toastStore`, `breadcrumbStore`. Thêm store mới phải trả lời được "vì sao không phải React Query / state cục bộ".
 - **[Nên]** Đọc store bằng selector (`useToastStore(s => s.push)`), không lấy cả object để tránh re-render thừa.
 
 ### 13.4. Realtime — Socket.io
