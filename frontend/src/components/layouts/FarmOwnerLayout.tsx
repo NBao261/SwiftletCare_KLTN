@@ -6,10 +6,7 @@ import {
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
 
-/**
- * Khung ứng dụng cho Farm Owner. Nhóm Vận hành chứa việc hằng ngày (MF-01, 02, 03, 06), 4 mục đầu là dock mobile
- * nên Cảnh báo đứng thứ hai. Báo cáo và ngày lệch nằm ở Sức khỏe nhà yến, không lặp ở nhóm Chuyên môn.
- */
+// Khung Farm Owner: Vận hành là việc hằng ngày (4 mục đầu là dock mobile, Cảnh báo thứ hai); báo cáo và ngày lệch ở Sức khỏe nhà yến
 const menuSections: MenuSection[] = [
   {
     title: 'Vận hành',

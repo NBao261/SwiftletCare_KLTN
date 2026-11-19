@@ -1,6 +1,6 @@
 // Logic thuần của wizard cài thiết bị: điều kiện xác thực và body đăng ký (FARM-FR-004, FARM-FR-010)
 import type { RegisterCameraInput, RegisterDeviceInput } from '@/apis/shared/devices.api'
-import type { OnboardingState } from '@/components/features/technician/onboarding/onboardingTypes'
+import type { OnboardingState } from '@/components/features/farm-owner/onboarding/onboardingTypes'
 
 // Camera cần nhà, bộ điều khiển cần Zone; cả hai cần mã thiết bị và mã kích hoạt
 export function canValidateDevice(data: OnboardingState): boolean {

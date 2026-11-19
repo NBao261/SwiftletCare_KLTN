@@ -5,7 +5,6 @@ import TableEmptyState from '@/components/common/TableEmptyState';
 import AcknowledgeAlertModal from '@/components/features/farm-owner/alerts/AcknowledgeAlertModal';
 import AlertDetailDrawer from '@/components/features/farm-owner/alerts/AlertDetailDrawer';
 import AlertTable, { type AlertAction } from '@/components/features/farm-owner/alerts/AlertTable';
-import { nodeLocation } from '@/components/features/admin/devices/deviceColumns';
 import { Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
 import { alertsDict } from '@/constants/alerts.i18n';
 import { NO_VALUE } from '@/constants/display';
@@ -14,11 +13,11 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useCameraNodes } from '@/hooks/farm-owner/useFarmOwnerDashboard';
-import { ALERT_PAGE_SIZE, useAlertsList } from '@/hooks/shared/useAlerts';
+import { ALERT_PAGE_SIZE, useAlertsList, usePendingAlertTotal } from '@/hooks/shared/useAlerts';
 import { useSensorNodes, useSystemNodeStatus } from '@/hooks/shared/useDevices';
 import { useAllZones } from '@/hooks/shared/useFarms';
+import { nodeLocation } from '@/lib/deviceLocation';
 import { lastPage } from '@/lib/helpers';
-import { useAlertStore } from '@/stores/alertStore';
 import type { Alert, AlertStatus, SeverityLevel } from '@/types';
 
 const ALERT_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED', 'RESOLVED'];
@@ -36,7 +35,12 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
   const subtitleKey = isAdmin ? 'list.subtitleAdmin' : isTechnician ? 'list.subtitleTechnician' : 'list.subtitle';
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
-  const pendingCount = useAlertStore(state => state.pendingCount);
+  const pendingCount = usePendingAlertTotal();
+  // Câu số chờ xác nhận chỉ hiện khi đã có số; Admin không xác nhận cảnh báo nên dùng câu trung tính
+  let pendingKey: 'list.noPending' | 'list.pending' | 'list.pendingAdmin' = 'list.pending';
+  if (pendingCount === 0) pendingKey = 'list.noPending';
+  else if (isAdmin) pendingKey = 'list.pendingAdmin';
+  const pendingText = pendingCount === undefined ? '' : ` ${t(pendingKey, { n: pendingCount })}`;
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all');
   // Đổi trạng thái hay mức độ thì về trang 1
   const filterKey = `${statusFilter}|${levelFilter}`;
@@ -115,7 +119,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
       <SectionCard
         className="flex-1"
         title={t('list.title')}
-        description={`${t(subtitleKey)} ${pendingCount > 0 ? t('list.pending', { n: pendingCount }) : t('list.noPending')}`}
+        description={`${t(subtitleKey)}${pendingText}`}
       >
         <div className="flex flex-wrap items-center gap-3">
           <SelectMenu

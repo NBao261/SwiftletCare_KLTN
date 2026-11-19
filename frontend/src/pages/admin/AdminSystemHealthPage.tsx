@@ -69,14 +69,14 @@ export default function AdminSystemHealthPage() {
             // Số thiết bị online / tổng thiết bị đang phục vụ (thay cho % — 0% với 2 thiết bị khó hình dung)
             value={hasDevices ? `${devices.online}/${devices.total}` : '--'}            sub={deviceSub}
           />
-          {/* SYSTEM-FR-003 — tài khoản theo trạng thái; chi tiết theo role ở trang Người dùng */}
+          {/* SYSTEM-FR-003 — tài khoản đăng nhập được (gồm chờ xoá) và bị khoá; chi tiết theo role ở trang Người dùng */}
           <StatTile
             className="shadow-none"
             icon={UsersIcon}
             iconClass={ICON_NORMAL}
             label="Tài khoản hoạt động"
             value={users.active}
-            sub={i18nT('{{n}} bị khoá hoặc chờ xoá', { n: users.inactive })}
+            sub={i18nT('{{n}} bị khoá', { n: users.inactive })}
           />
           <StatTile
             className="shadow-none"

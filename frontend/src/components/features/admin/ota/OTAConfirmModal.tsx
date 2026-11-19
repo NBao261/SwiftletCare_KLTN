@@ -1,7 +1,7 @@
 // OTAConfirmModal.tsx — B4: Xác nhận trước khi đẩy OTA
 import { Button, Modal } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
-import type { OtaFormValues } from '@/components/features/technician/ota/otaTypes'
+import type { OtaFormValues } from '@/components/features/admin/ota/otaTypes'
 import type { SensorNode } from '@/types'
 
 interface Props {

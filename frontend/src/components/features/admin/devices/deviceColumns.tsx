@@ -4,6 +4,7 @@ import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
 import { formatRelativeTime, wifiQuality } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
+import { nodeLocation } from '@/lib/deviceLocation'
 import { t, translated } from '@/i18n'
 import type { SystemNodeStatusItem } from '@/types'
 
@@ -30,13 +31,6 @@ export function WifiSignal({ node }: { node: SystemNodeStatusItem }) {
   }
   return <span className={cn('font-bold', WIFI_COLOR[q])}>{node.rssi} dBm · {WIFI_LABEL[q]}</span>
 }
-
-/**
- * "Farm A | Nhà chính | Tầng 1 | Phòng 2" — luôn đủ 4 phần, kể cả khi tên zone trùng nhãn tầng; chỉ bỏ phần trống
- * (backend cũ chưa trả `floor`)
- */
-export const nodeLocation = (n: SystemNodeStatusItem) =>
-  [n.farm_name, n.house_name, n.floor != null && t('Tầng {{n}}', { n: n.floor }), n.zone_name].filter(Boolean).join(' | ')
 
 /**
  * Ngày + giờ heartbeat 2 dòng (giờ đậm trên, ngày chữ thường dưới). `plainDate`: ngày màu chữ chính thay vì xám

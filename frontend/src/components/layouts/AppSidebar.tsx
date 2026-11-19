@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useAlertStore } from '@/stores/alertStore'
+import { usePendingAlertTotal } from '@/hooks/shared/useAlerts'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
 import { cn } from '@/lib/cn'
@@ -38,7 +38,7 @@ export default function AppSidebar({
   dockItems: MenuItem[]
 }) {
   const user = useAuthStore(s => s.user)
-  const pendingAlertCount = useAlertStore(s => s.pendingCount)
+  const pendingAlertCount = usePendingAlertTotal() ?? 0
   const isExpert = user?.role === 'DOMAIN_EXPERT'
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
   const expertPendingCount = isExpert ? (expertAlerts?.total ?? 0) : 0
@@ -78,9 +78,8 @@ export default function AppSidebar({
                   <div className="space-y-1">
                     {section.items.map(item => {
                       // Cảnh báo: số chờ xác nhận (ACTIVE); Thẩm định: số cảnh báo suy luận chờ chuyên gia kết luận, chỉ chuyên gia
-                      const badgeCount = item.path === '/alerts'
-                        ? pendingAlertCount
-                        : item.path === '/domain-expert/alert-verdicts' ? expertPendingCount : 0
+                      const badgeByPath: Record<string, number> = { '/alerts': pendingAlertCount, '/domain-expert/alert-verdicts': expertPendingCount }
+                      const badgeCount = badgeByPath[item.path] ?? 0
                       return (
                         <NavLink
                           key={item.path}

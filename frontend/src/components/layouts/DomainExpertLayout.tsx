@@ -7,11 +7,7 @@ import {
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 
-/**
- * Khung ứng dụng cho Domain Expert (FE_Design §12.5): đăng nhập vào Hàng đợi việc; nhóm Chuyên môn là các màn quyết
- * định, nhóm Vận hành trỏ thẳng tới trang của Farm Owner ở chế độ chỉ đọc (Report 4 §5.4). Cùng tên và icon Phosphor
- * với menu Farm Owner cho cùng một trang. Dock mobile là 4 màn quyết định đầu.
- */
+// Khung Domain Expert (FE_Design §12.5): Chuyên môn là màn quyết định, Vận hành trỏ tới trang Farm Owner chỉ đọc (Report 4 §5.4); cùng tên, icon với menu Farm Owner
 const menuSections: MenuSection[] = [
   {
     title: 'Chuyên môn',

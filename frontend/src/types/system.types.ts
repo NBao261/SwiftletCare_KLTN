@@ -40,7 +40,8 @@ export type SystemDefaultThresholdsInput = Thresholds & { source: string }
 
 /**
  * SYSTEM-FR-003 — đúng shape `GET /system/health-overview`: chỉ đếm theo trạng
- * thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; `inactive` = tài khoản bị khoá hoặc chờ xoá, `deleted` = đã xoá (SM-14).
+ * thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; `active` = đăng nhập được (ACTIVE, DELETION_REQUESTED), `inactive` = bị khoá,
+ * `deleted` = đã xoá (SM-14).
  */
 export interface SystemHealthSummary {
   farms: { total: number }

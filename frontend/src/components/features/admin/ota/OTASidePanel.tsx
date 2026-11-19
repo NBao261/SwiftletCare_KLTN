@@ -3,7 +3,7 @@ import { Card, Button } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { OTAProgressPanel } from './OTAProgressPanel'
 import { OTAErrorPanel } from './OTAErrorPanel'
-import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/technician/ota/otaTypes'
+import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/admin/ota/otaTypes'
 import type { SensorNode } from '@/types'
 
 interface Props {

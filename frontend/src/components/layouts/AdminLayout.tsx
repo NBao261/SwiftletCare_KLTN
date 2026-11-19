@@ -5,13 +5,7 @@ import {
   IconDevice, IconOTA, IconOnboarding, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
-/**
- * Khung ứng dụng cho Admin. "Tổng quan hệ thống" đặt ngay đầu sidebar vì là
- * trang nhà sau đăng nhập (SYSTEM-FR-003).
- * G-20: Admin có Console thiết bị (/devices, /alerts, /ota) — thiết bị mọi farm qua GET /devices/system-status,
- * cảnh báo thiết bị, gửi RESTART/PUSH_CONFIG/OTA.
- * Không có Thu hoạch hay Trang trại (Admin không xem GET /farms).
- */
+// Khung Admin: Tổng quan hệ thống là trang nhà (SYSTEM-FR-003); Console thiết bị /devices, /alerts, /ota cho mọi farm (FARM-FR-009, 013); không có trang farm
 const menuSections: MenuSection[] = [
   {
     title: 'Vận hành',

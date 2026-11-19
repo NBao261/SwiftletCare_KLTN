@@ -3,7 +3,8 @@ import { CpuIcon, VideoCameraIcon } from '@phosphor-icons/react'
 import { Badge, Button, ConfirmModal, type BadgeTone } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { Drawer } from '@/components/ui/Drawer'
-import { HeartbeatTime, WifiSignal, nodeLocation } from '@/components/features/admin/devices/deviceColumns'
+import { HeartbeatTime, WifiSignal } from '@/components/features/admin/devices/deviceColumns'
+import { nodeLocation } from '@/lib/deviceLocation'
 import { useFarm } from '@/hooks/shared/useFarms'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
 import { useSendNodeCommand } from '@/hooks/shared/useDevices'
@@ -42,12 +43,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 const Muted = ({ children }: { children: ReactNode }) => <span className="font-normal text-warmGray">{children}</span>
 
-/**
- * Drawer chi tiết thiết bị của Admin — khung giống drawer Farm Owner nhưng nội dung theo việc của Admin (FARM-FR-006, 009):
- * thiết bị thuộc ai (farm + chủ để liên hệ), tình trạng kết nối và cảnh báo đang mở của chính thiết bị; bộ điều khiển có
- * lệnh từ xa Khởi động lại, Đẩy cấu hình (FARM-FR-013; OTA ở trang OTA Firmware). Không hiện số đo môi trường — đó là
- * việc vận hành của Farm Owner.
- */
+// Chi tiết thiết bị của Admin (FARM-FR-006, 009): chủ farm, kết nối, cảnh báo đang mở; Khởi động lại, Đẩy cấu hình (FARM-FR-013); không số đo môi trường
 export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNodeStatusItem | null; onClose: () => void }) {
   const farmId = node?.farm_id || undefined
   const { data: farm } = useFarm(farmId)
@@ -75,6 +71,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
   if (!node) return <Drawer open={false} onClose={onClose}>{null}</Drawer>
 
   const isSensor = node.type === 'sensor'
+  const isOnline = node.status === 'ONLINE'
   const nodeAlerts = alerts.records.filter(a => a.node_id === node._id)
   // "Farm › Nhà yến › Tầng › Zone" — cùng các phần vị trí của bảng, ngăn bằng › kiểu đường dẫn
   const place = nodeLocation(node).replace(/ \| /g, ' › ')
@@ -136,12 +133,16 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
 
       <div className="flex flex-col gap-2 pt-4">
         {isSensor && (
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" loading={sendCommand.isPending} onClick={() => send('PUSH_CONFIG', 'Đã gửi cấu hình tới {{device}}')}>
-              {t('Đẩy cấu hình')}
-            </Button>
-            <Button variant="secondary" disabled={sendCommand.isPending} onClick={() => setConfirmRestart(true)}>{t('Khởi động lại')}</Button>
-          </div>
+          <>
+            {/* Lệnh từ xa chỉ tới được thiết bị ONLINE (backend 409) */}
+            {!isOnline && <p className="text-small text-warmGray">{t('Lệnh từ xa chỉ gửi được khi thiết bị đang online.')}</p>}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" disabled={!isOnline} loading={sendCommand.isPending} onClick={() => send('PUSH_CONFIG', 'Đã gửi cấu hình tới {{device}}')}>
+                {t('Đẩy cấu hình')}
+              </Button>
+              <Button variant="secondary" disabled={!isOnline || sendCommand.isPending} onClick={() => setConfirmRestart(true)}>{t('Khởi động lại')}</Button>
+            </div>
+          </>
         )}
         <Button variant="secondary" className="w-full" onClick={onClose}>{t('Đóng')}</Button>
       </div>

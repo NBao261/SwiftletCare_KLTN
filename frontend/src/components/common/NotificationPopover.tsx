@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, ChevronDown } from 'lucide-react'
-import { useAlertsInfinite } from '@/hooks/shared/useAlerts'
+import { useAlertsInfinite, usePendingAlertTotal } from '@/hooks/shared/useAlerts'
 import { useNotificationUnreadCount } from '@/hooks/shared/useNotifications'
 import NotificationInboxList from '@/components/common/NotificationInboxList'
-import { useAlertStore } from '@/stores/alertStore'
 import { useAuthStore } from '@/stores/authStore'
 import { canAccessPath } from '@/constants/roles'
 import { formatDate } from '@/lib/helpers'
@@ -31,8 +30,7 @@ export default function NotificationPopover() {
   const listRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const storedPendingCount = useAlertStore(s => s.pendingCount)
-  const alertPendingCount = showAlerts ? storedPendingCount : 0
+  const alertPendingCount = usePendingAlertTotal() ?? 0
   // Badge chuông = cảnh báo chờ xác nhận + thông báo trong ứng dụng chưa đọc
   const badgeCount = alertPendingCount + inboxUnreadCount
   const alertsOpen = open && showAlerts && tab === 'alerts'

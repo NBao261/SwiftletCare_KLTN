@@ -1,16 +1,4 @@
-/**
- * domain-expert.routes.tsx — Routes chuyên gia nuôi yến (DOMAIN_EXPERT)
- *
- * FE_Design §12.0 c dòng 1 — Chốt 27/10/2026:
- *   Khu /domain-expert/* CHỈ chứa các màn QUYẾT ĐỊNH của chuyên gia.
- *   Màn vận hành (dashboard, analytics, vision, harvests) dùng chung với
- *   Farm Owner — không nhân bản, ẩn nút ghi bằng usePermission.
- *
- * Farm Owner vào các trang quyết định (quyết định thay khi farm chưa có chuyên gia, BR-22), trừ Hàng đợi việc và
- * Báo cáo & kết luận (Farm Owner xem báo cáo và ngày lệch ở /health).
- *
- * Bucket: routes/ — §12.2.
- */
+// Màn quyết định của chuyên gia (FE_Design §12.0 c); Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận (xem ở /health)
 import { lazy } from 'react';
 import { Route, Navigate, Outlet } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';

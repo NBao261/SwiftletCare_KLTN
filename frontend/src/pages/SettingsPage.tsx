@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react'
 import { useAuthStore } from '@/stores/authStore'
 import { useAuth } from '@/hooks/auth/useAuth'
+import { usePermission } from '@/hooks/common/usePermission'
 import { Avatar, Button, Input, Toggle } from '@/components/ui'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
@@ -27,15 +28,13 @@ import {
 } from '@/validations/common/notificationChannels.validation'
 import type { SeverityLevel } from '@/types'
 
-/**
- * Settings Page — hồ sơ, thông báo (ALERT-FR-005/006) và Telegram (ALERT-FR-013), bảo mật (AUTH-FR-009), xoá tài khoản
- * (AUTH-FR-012). Admin không cấu hình kênh thông báo (Report 3 §2.4). Đăng xuất ở sidebar và popup avatar, không lặp ở đây.
- */
+// Cài đặt: hồ sơ, thông báo và Telegram (ALERT-FR-005, 006, 013; không có với Admin), bảo mật (AUTH-FR-009), xoá tài khoản (AUTH-FR-012)
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
+  // ALERT-FR-005, 006, 013 — kênh thông báo và Telegram của người nhận cảnh báo; Admin không có (Report 3 §2.4)
+  const hasNotificationSettings = usePermission('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN')
 
   if (!user) return null
-  const hasNotificationSettings = user.role !== 'ADMIN'
 
   return (
     <div className="flex flex-col gap-5">

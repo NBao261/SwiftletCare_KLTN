@@ -3,10 +3,7 @@ import { Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
 import { ADMIN_ONLY } from '@/constants/roles'
 
-/**
- * Route chỉ Admin: quản lý tài khoản toàn hệ thống (AUTH-FR-011), hàng đợi xoá
- * tài khoản (AUTH-FR-012), kho thiết bị (FARM-FR-010), OTA (FARM-FR-013) và Module SYSTEM (SYSTEM-FR-001…003).
- */
+// Route chỉ Admin: tài khoản (AUTH-FR-011, 012), kho thiết bị (FARM-FR-010), OTA (FARM-FR-013), SYSTEM-FR-001…003
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
 const AdminAccountRequestsPage = lazy(() => import('@/pages/admin/AdminAccountRequestsPage'))
 const AdminSystemHealthPage = lazy(() => import('@/pages/admin/AdminSystemHealthPage'))

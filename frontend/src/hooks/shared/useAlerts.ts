@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { alertApi } from '@/apis/shared/alerts.api'
-import { useAlertStore } from '@/stores/alertStore'
+import { canAccessPath } from '@/constants/roles'
+import { useAuthStore } from '@/stores/authStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import { newestFirstPage } from '@/lib/helpers'
 import type { Alert, AlertStatus, SiteCause } from '@/types'
@@ -54,19 +54,16 @@ async function listAlerts(query: AlertsListQuery) {
   }
 }
 
-// ALERT-FR-007 — badge chuông và mục Cảnh báo: số cảnh báo ACTIVE (chờ xác nhận) trong phạm vi người dùng
-export function usePendingAlertCount() {
-  const setPendingCount = useAlertStore(s => s.setPendingCount)
-
+// ALERT-FR-007 — số cảnh báo ACTIVE (chờ xác nhận) trong phạm vi người dùng, cho chuông, menu và trang Cảnh báo; undefined khi
+// chưa tải xong, lỗi hoặc role không vào được /alerts. Cache xoá khi đăng xuất (queryClient.clear) nên không mang số sang phiên sau
+export function usePendingAlertTotal(): number | undefined {
+  const canSeeAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
   const result = useQuery({
     queryKey: ['alerts', 'pending-count'],
     queryFn: () => alertApi.list({ status: 'ACTIVE', limit: '1' }),
+    enabled: canSeeAlerts,
   })
-
-  useEffect(() => {
-    const total = result.data?.data?.meta?.unreadCount
-    if (typeof total === 'number') setPendingCount(total)
-  }, [result.data, setPendingCount])
+  return canSeeAlerts ? result.data?.data?.meta?.unreadCount : undefined
 }
 
 /**
