@@ -18,7 +18,6 @@
     "chart.js": "^4.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
-    "html5-qrcode": "^2.3.8",
     "i18next": "^23.16.8",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
@@ -32,7 +31,6 @@
     "recharts": "^3.10.1",
     "socket.io-client": "^4.7.5",
     "tailwind-merge": "^2.3.0",
-    "video.js": "^8.12.0",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
