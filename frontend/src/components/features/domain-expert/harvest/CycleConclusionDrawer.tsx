@@ -105,7 +105,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
           {/* Thông tin sản lượng */}
           <div className="rounded-xl border border-warmGray/15 bg-warmGray/5 p-3.5 space-y-1.5">
-            <p className="text-xs font-bold text-charcoal uppercase tracking-wider">{t('drawer.yieldLabel')}</p>
+            <p className="text-xs font-bold text-charcoal">{t('drawer.yieldLabel')}</p>
             {closing ? (
               <p className="text-sm text-charcoal">
                 {t('drawer.yieldValue', {
@@ -125,7 +125,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
           {/* So sánh */}
           {comp && (
             <div className="rounded-xl border border-warmGray/15 bg-warmGray/5 p-3.5 space-y-2">
-              <p className="text-xs font-bold text-charcoal uppercase tracking-wider">{t('drawer.compLabel')}</p>
+              <p className="text-xs font-bold text-charcoal">{t('drawer.compLabel')}</p>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <p className="text-warmGray mb-1">{t('drawer.compPrev')}</p>
@@ -157,7 +157,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
           {/* Sức khỏe */}
           <div className="rounded-xl border border-warmGray/15 bg-warmGray/5 p-3.5 space-y-1">
-            <p className="text-xs font-bold text-charcoal uppercase tracking-wider mb-1.5">{t('drawer.healthLabel')}</p>
+            <p className="text-xs font-bold text-charcoal mb-1.5">{t('drawer.healthLabel')}</p>
             {health ? (
               <>
                 <StatRow
@@ -181,7 +181,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
           {/* Kết luận hiện có (đọc — chỉ hiện khi đã kết luận và form chưa sửa) */}
           {cycle?.conclusion && (
             <div className="rounded-xl border border-infoBlue/20 bg-infoBlue/5 p-3.5 space-y-2">
-              <p className="text-xs font-bold text-charcoal uppercase tracking-wider">{t('drawer.existingTitle')}</p>
+              <p className="text-xs font-bold text-charcoal">{t('drawer.existingTitle')}</p>
               <p className="text-xs text-warmGray">
                 {t('drawer.existingBy', {
                   role: cycle.conclusion.role === 'DOMAIN_EXPERT' ? t('drawer.roleExpert') : t('drawer.roleOwner'),
@@ -193,7 +193,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
           {/* Form */}
           <div className="space-y-3">
-            <p className="text-xs font-bold text-charcoal uppercase tracking-wider">{t('drawer.formTitle')}</p>
+            <p className="text-xs font-bold text-charcoal">{t('drawer.formTitle')}</p>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-charcoal">{t('drawer.textLabel')}</label>

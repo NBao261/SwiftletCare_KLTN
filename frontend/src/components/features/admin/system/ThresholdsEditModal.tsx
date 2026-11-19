@@ -76,7 +76,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
           Lỗi cùng hàng nhãn (errorInLabel) — hiện lỗi không làm popup cao thêm */}
       <Modal open={open && !showResetConfirm} onClose={onClose} size="xl" ariaLabel="Ngưỡng môi trường mặc định">
         <form onSubmit={handleSave} noValidate className="flex flex-col gap-5">
-          <ModalHeader title="Ngưỡng môi trường mặc định" description="Áp dụng khi tạo phòng mới và khi Farm Owner đặt lại về mặc định" />
+          <ModalHeader title="Ngưỡng môi trường mặc định" description="Dùng cho Zone mới tạo và khi chủ nhà yến đặt lại ngưỡng mặc định" />
 
           <div className="flex gap-6">
             <div className="flex w-60 shrink-0 flex-col gap-4 border-r border-gray-200 pr-5">
@@ -125,7 +125,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
               <ModalSection title="Nguồn của lần đổi">
                 <Input
                   label="Nguồn (mã mục REF-5)"
-                  placeholder="VD: TL-003 — tài liệu nuôi yến, chương 4"
+                  placeholder="VD: TL-003, tài liệu nuôi yến, chương 4"
                   required
                   maxLength={500}
                   value={source}
@@ -148,7 +148,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
       <ConfirmModal
         open={open && showResetConfirm}
         title="Khôi phục mặc định gốc?"
-        description={t('Ngưỡng trở về mặc định — Nhiệt độ {{tMin}}–{{tMax}} °C · Độ ẩm {{hMin}}–{{hMax}} % · Ánh sáng ≤ {{light}} lux · NH3 ≤ {{nh3}} ppm · CO2 ≤ {{co2}} ppm. Không thể hoàn tác.', {
+        description={t('Ngưỡng trở về mặc định. Nhiệt độ {{tMin}}–{{tMax}} °C · Độ ẩm {{hMin}}–{{hMax}} % · Ánh sáng ≤ {{light}} lux · NH3 ≤ {{nh3}} ppm · CO2 ≤ {{co2}} ppm. Không thể hoàn tác.', {
           tMin: FACTORY_DEFAULT_THRESHOLDS.temp_min, tMax: FACTORY_DEFAULT_THRESHOLDS.temp_max,
           hMin: FACTORY_DEFAULT_THRESHOLDS.humidity_min, hMax: FACTORY_DEFAULT_THRESHOLDS.humidity_max,
           light: FACTORY_DEFAULT_THRESHOLDS.light_max, nh3: FACTORY_DEFAULT_THRESHOLDS.nh3_max, co2: FACTORY_DEFAULT_THRESHOLDS.co2_max,

@@ -2,7 +2,7 @@ import SelectMenu from '@/components/ui/SelectMenu';
 import { cn } from '@/lib/cn';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import type { ScopeFilterState } from '@/hooks/farm-owner/useScopeFilter';
+import type { ScopeFilterState } from '@/hooks/shared/useScopeFilter';
 
 interface ScopeFilterProps {
   scope: ScopeFilterState;

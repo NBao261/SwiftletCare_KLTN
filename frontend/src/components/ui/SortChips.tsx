@@ -33,7 +33,7 @@ export default function SortChips<K extends string>({ fields, sortBy, sortDir, o
             key={f.key}
             type="button"
             aria-pressed={active}
-            title={active ? t(sortDir === 'asc' ? 'Đang xếp tăng dần — bấm để đảo chiều' : 'Đang xếp giảm dần — bấm để đảo chiều') : undefined}
+            title={active ? t(sortDir === 'asc' ? 'Đang xếp tăng dần · bấm để đảo chiều' : 'Đang xếp giảm dần · bấm để đảo chiều') : undefined}
             onClick={() => onChange(f.key)}
             className={cn(
               'inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold',

@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn'
 import AppSidebar, { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
 import AppHeader from '@/components/layouts/AppHeader'
 import Toast from '@/components/common/Toast'
+import SectionTabs from '@/components/common/SectionTabs'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useAlertNotifications } from '@/hooks/shared/useAlertNotifications'
 import { useInAppNotificationListener } from '@/hooks/shared/useNotifications'
@@ -82,6 +83,8 @@ export default function AppShell({
                 {t('Quay lại {{page}}', { page: t(back.label) })}
               </Link>
             )}
+            {/* Mục menu gộp nhiều trang: tab của các trang con, ngay trên nội dung */}
+            <SectionTabs menuSections={menuSections} />
             {/* Suspense đặt SÁT Outlet (không bọc ở App.tsx cấp cao hơn) — chunk
                 lazy-load lần đầu chỉ thay skeleton trong khung nội dung này,
                 sidebar/header/dock không bị unmount nên không còn nháy toàn

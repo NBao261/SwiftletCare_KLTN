@@ -5,7 +5,8 @@ import { tr } from '@/i18n'
 interface SectionCardProps {
   /** Icon trong ô vuông bo góc nền charcoal — ở các trang Admin là icon của mục menu sidebar tương ứng. Bỏ trống = không có ô icon */
   icon?: ReactNode
-  title: ReactNode
+  /** Bỏ trống khi trang chỉ có 1 card: tên trang đã ở header (FE_Design §1.1), card chỉ còn dòng mô tả */
+  title?: ReactNode
   /** Dòng mô tả dưới tiêu đề — có thể nhiều dòng (VD địa chỉ + chủ sở hữu farm) */
   description?: ReactNode
   /** Nút/link bên phải header (VD "Xem tất cả", "Thiết bị & Cảm biến") */
@@ -29,9 +30,9 @@ export default function SectionCard({ icon, title, description, action, classNam
             </span>
           )}
           <div className="min-w-0">
-            <h2 className="flex flex-wrap items-center gap-2 break-words text-h2 text-charcoal">{tr(title)}</h2>
+            {title && <h2 className="flex flex-wrap items-center gap-2 break-words text-h2 text-charcoal">{tr(title)}</h2>}
             {/* Cùng kiểu tiêu đề card "Chỉ số vận hành toàn hệ thống" (Tổng quan) và EnvSensorPanel (Dashboard Farm Owner) */}
-            {description && <div className="mt-1 break-words text-sm text-warmGray">{tr(description)}</div>}
+            {description && <div className={cn('break-words text-sm text-warmGray', title && 'mt-1')}>{tr(description)}</div>}
           </div>
         </div>
         {action}

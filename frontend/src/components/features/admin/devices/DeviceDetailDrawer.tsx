@@ -17,7 +17,7 @@ const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
   ONLINE: 'positive', OFFLINE: 'neutral', PENDING: 'warning', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 }
 const STATUS_LABEL: Record<DeviceStatus, string> = translated({
-  ONLINE: 'Online', OFFLINE: 'Offline', PENDING: 'Chờ kết nối', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
+  ONLINE: 'Online', OFFLINE: 'Mất kết nối', PENDING: 'Chờ kết nối', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 })
 
 const DAY = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
@@ -91,7 +91,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
               </div>
               <p className="truncate text-small text-warmGray">
                 {/* SRS v2.0.0: camera là camera IP phát RTSP, AI đếm chim chạy trên AI node (PC) */}
-                {t(isSensor ? 'ESP32 · 5 cảm biến RS485' : 'Camera IP · RTSP Stream')}
+                {t(isSensor ? '5 cảm biến' : 'Camera IP · RTSP Stream')}
               </p>
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
         <Section title="Thông tin">
           <Row label="Trang trại">{node.farm_name || '—'}</Row>
           {/* 1 dòng, giá trị 2 tầng: tên đậm trên, email xám dưới */}
-          <Row label="Chủ trang trại">
+          <Row label="Chủ nhà yến">
             {farm?.owner?.full_name ? (
               <span className="flex flex-col">
                 <span className="truncate">{farm.owner.full_name}</span>
@@ -114,7 +114,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
 
         <Section title="Kết nối">
           {/* 2 dòng giờ:phút:giây (đậm) / ngày (chữ thường, không xám) */}
-          <Row label="Heartbeat gần nhất"><HeartbeatTime at={node.last_heartbeat} plainDate /></Row>
+          <Row label="Lần kết nối cuối"><HeartbeatTime at={node.last_heartbeat} plainDate /></Row>
           <Row label="Wi-Fi"><WifiSignal node={node} /></Row>
           <Row label="Firmware">{node.firmware_version ? `v${node.firmware_version}` : <Muted>—</Muted>}</Row>
           <Row label="Ngày kích hoạt">{node.registered_at ? DAY.format(new Date(node.registered_at)) : <Muted>—</Muted>}</Row>
@@ -149,7 +149,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
       <ConfirmModal
         open={confirmRestart}
         title={t('Khởi động lại')}
-        description={t('Bộ điều khiển {{device}} khởi động lại và chạy tiếp với cấu hình đã lưu; Farm Owner được báo trong ứng dụng.', { device: node.device_id })}
+        description={t('Bộ điều khiển {{device}} khởi động lại và chạy tiếp với cấu hình đã lưu; Chủ nhà yến được báo trong ứng dụng.', { device: node.device_id })}
         confirmLabel={t('Khởi động lại')}
         loading={sendCommand.isPending}
         onConfirm={() => send('RESTART', 'Đã gửi lệnh khởi động lại tới {{device}}')}

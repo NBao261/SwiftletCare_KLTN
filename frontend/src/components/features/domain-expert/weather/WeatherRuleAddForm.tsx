@@ -16,7 +16,7 @@ const BLANK = { metric: '' as DraftRule['metric'], min: undefined as number | un
 type MetricValue = WeatherRule['metric'] | ''
 
 const METRIC_OPTIONS: SelectMenuOption<MetricValue>[] = [
-  { value: '', label: '— Chọn chỉ số —' },
+  { value: '', label: 'Chọn chỉ số' },
   { value: 'temperature', label: 'Nhiệt độ cao nhất (°C)' },
   { value: 'humidity',    label: 'Độ ẩm ngoài trời cao nhất (%)' },
   { value: 'rain',        label: 'Tổng lượng mưa (mm)' },

@@ -1,17 +1,16 @@
 // DeviceTable.tsx — Bảng danh sách thiết bị với nút "Đẩy OTA"
 // Cột "Cập nhật" đọc trực tiếp ota_pending / ota_failed của node (không suy diễn "bản mới nhất" vì BE không có catalog firmware).
 import { useMemo } from 'react'
-import { Card } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
-import { formatDate } from '@/lib/helpers'
-import { useAllZones } from '@/hooks/shared/useFarms'
+import { HeartbeatTime } from '@/components/features/admin/devices/deviceColumns'
+import { useSystemNodeStatus } from '@/hooks/shared/useDevices'
 import type { SensorNode, DeviceStatus } from '@/types'
 
 interface DeviceRowProps {
   node: SensorNode
-  // Tên Zone kèm nhà; chưa tải xong thì '—'
-  zoneName: string
+  // Trang trại · nhà · Zone (GET /devices/system-status; tên Zone đã có tầng); chưa tải xong thì '—'
+  location: string
   selected: boolean
   onSelect: () => void
 }
@@ -39,7 +38,7 @@ function OtaChip({ node }: { node: SensorNode }) {
   return <span className="text-warmGray">—</span>
 }
 
-function DeviceRow({ node, zoneName, selected, onSelect }: DeviceRowProps) {
+function DeviceRow({ node, location, selected, onSelect }: DeviceRowProps) {
   // DEGRADED đã bỏ (SRS 3.1.0): chỉ node ONLINE mới nhận lệnh từ xa
   const isOffline = node.status !== 'ONLINE'
   // Viền trái: đang chọn → đen; OTA đang chờ → cam; OTA lỗi → đỏ; còn lại không viền
@@ -52,21 +51,21 @@ function DeviceRow({ node, zoneName, selected, onSelect }: DeviceRowProps) {
       </td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-sm font-semibold text-charcoal">{node.device_id}</span>
+          <span className="text-sm font-semibold text-charcoal">{node.device_id}</span>
           <SimulatedBadge simulated={node.simulated} />
         </div>
       </td>
-      <td className="px-4 py-3 text-warmGray">{zoneName}</td>
-      <td className="px-4 py-3 font-mono text-sm">{node.firmware_version ?? '—'}</td>
+      <td className="px-4 py-3 text-graphite">{location}</td>
+      <td className="px-4 py-3 text-sm">{node.firmware_version ?? '—'}</td>
       <td className="px-4 py-3 text-sm"><OtaChip node={node} /></td>
-      <td className="px-4 py-3 text-xs text-warmGray">
-        {node.last_heartbeat ? formatDate(node.last_heartbeat) : '—'}
+      <td className="px-4 py-3 text-sm">
+        <HeartbeatTime at={node.last_heartbeat} />
       </td>
       <td className="px-4 py-3">
         <button
           onClick={onSelect}
           disabled={isOffline}
-          title={isOffline ? 'Thiết bị không ONLINE — không thể đẩy OTA' : ''}
+          title={isOffline ? 'Chỉ thiết bị đang online mới nhận được bản cập nhật' : ''}
           className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
             isOffline
               ? 'cursor-not-allowed bg-graphite/15 text-warmGray opacity-40'
@@ -87,16 +86,19 @@ interface Props {
 }
 
 export function DeviceTable({ nodes, selectedId, onSelect }: Props) {
-  // Tên Zone thay cho mã cắt từ id (FE_Design 13.16 a)
-  const { data: zones } = useAllZones()
-  const zoneNameById = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, `${zone.houseName} · ${zone.name}`])), [zones])
+  // Vị trí theo tên (FE_Design 13.16 a) từ danh sách thiết bị toàn hệ thống của Admin — Admin không đọc cấu trúc farm
+  const { data: systemStatus } = useSystemNodeStatus()
+  const locationById = useMemo(
+    () => new Map((systemStatus?.nodes ?? []).map(item => [item._id, [item.farm_name, item.house_name, item.zone_name].filter(Boolean).join(' · ')])),
+    [systemStatus],
+  )
 
   return (
-    <Card className="!p-0 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-warmGray/15">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-graphite/10 bg-graphite/[0.03]">
-            {['Trạng thái', 'Device ID', 'Zone', 'Firmware', 'Cập nhật', 'Heartbeat', ''].map((h, i) => (
+          <tr className="border-b border-warmGray/15 bg-warmGray/5">
+            {['Trạng thái', 'Thiết bị', 'Vị trí', 'Firmware', 'Cập nhật', 'Kết nối cuối', ''].map((h, i) => (
               <th key={h || `col-${i}`} className="px-4 py-3 text-left label-caption">
                 {h}
               </th>
@@ -108,13 +110,13 @@ export function DeviceTable({ nodes, selectedId, onSelect }: Props) {
             <DeviceRow
               key={node._id}
               node={node}
-              zoneName={zoneNameById.get(node.zone_id) ?? '—'}
+              location={locationById.get(node._id) || '—'}
               selected={selectedId === node._id}
               onSelect={() => onSelect(node)}
             />
           ))}
         </tbody>
       </table>
-    </Card>
+    </div>
   )
 }

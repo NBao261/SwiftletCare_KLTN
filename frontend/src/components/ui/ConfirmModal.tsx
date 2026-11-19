@@ -25,7 +25,7 @@ export default function ConfirmModal({
       {description && <p className="mb-6 text-sm text-warmGray">{typeof description === 'string' ? tr(description) : description}</p>}
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onCancel} disabled={loading}>
-          {t('Hủy')}
+          {t('Huỷ')}
         </Button>
         <Button variant={danger ? 'danger' : 'primary'} className="flex-1" onClick={onConfirm} loading={loading}>
           {tr(confirmLabel)}

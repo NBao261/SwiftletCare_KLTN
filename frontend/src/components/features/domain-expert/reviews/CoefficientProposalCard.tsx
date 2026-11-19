@@ -110,7 +110,7 @@ export default function CoefficientProposalCard({
   const authorName =
     typeof proposal.submitted_by === 'object' && proposal.submitted_by?.full_name
       ? proposal.submitted_by.full_name
-      : t('Chủ trang trại');
+      : t('Chủ nhà yến');
 
   const deciderName =
     typeof proposal.decided_by === 'object' && proposal.decided_by?.full_name
@@ -126,7 +126,7 @@ export default function CoefficientProposalCard({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-accent-50 text-accent-900 border border-accent-600/30">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>{t('Đề xuất hệ số Fuzzy')}</span>
+            <span>{t('Đề xuất hệ số mờ')}</span>
           </div>
           <span
             className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
@@ -138,7 +138,7 @@ export default function CoefficientProposalCard({
         <div className="flex flex-wrap items-center gap-2.5 text-xs text-warmGray">
           <div className="flex items-center gap-1 font-semibold text-charcoal">
             <MapPin className="w-3.5 h-3.5 text-accent-700" />
-            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Khu vực không xác định')}</span>
+            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
@@ -157,7 +157,7 @@ export default function CoefficientProposalCard({
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-charcoal">
           <Sliders className="w-3.5 h-3.5 text-accent-700" />
-          <span>{t('Thông số hệ số đề xuất tối ưu:')}</span>
+          <span>{t('Hệ số đề xuất:')}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

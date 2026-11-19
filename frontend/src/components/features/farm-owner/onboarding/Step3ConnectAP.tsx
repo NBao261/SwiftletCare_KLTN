@@ -26,7 +26,7 @@ export function Step3ConnectAP({ data, onNext, onBack }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold text-charcoal">Bước 3 — Kết nối AP & cấu hình WiFi</h2>
+        <h2 className="text-lg font-bold text-charcoal">Bước 3: Kết nối AP & cấu hình WiFi</h2>
         <p className="mt-1 text-sm text-warmGray">
           Dùng điện thoại/laptop kết nối vào WiFi AP của thiết bị, sau đó mở trang cấu hình để nhập WiFi nhà yến.
         </p>
@@ -64,7 +64,7 @@ export function Step3ConnectAP({ data, onNext, onBack }: Props) {
           `Vào Settings → WiFi, kết nối vào mạng "${ssidAP}"`,
           'Mở trình duyệt, truy cập http://192.168.4.1',
           'Nhập tên & mật khẩu WiFi nhà yến vào trang vừa mở, bấm Lưu cấu hình',
-          'Thiết bị tự khởi động lại — MQTT credentials đã được flash sẵn, không cần nhập thêm',
+          'Thiết bị tự khởi động lại. Thông tin kết nối máy chủ đã nạp sẵn, không cần nhập.',
         ].map((s, i) => (
           <li key={i} className="flex items-start gap-3">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-charcoal text-xs font-bold text-white">
@@ -83,7 +83,7 @@ export function Step3ConnectAP({ data, onNext, onBack }: Props) {
         </Button>
       ) : (
         <Button onClick={onNext} className="w-full justify-center">
-          Tiếp theo — Chờ thiết bị kết nối
+          Tiếp theo: chờ thiết bị kết nối
           <ArrowRight className="h-4 w-4" />
         </Button>
       )}

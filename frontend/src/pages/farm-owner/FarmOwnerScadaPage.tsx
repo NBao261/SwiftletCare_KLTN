@@ -16,7 +16,7 @@ import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useZoneRelayOverrides } from '@/hooks/farm-owner/useAnalytics';
 import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useSensorNodes } from '@/hooks/shared/useDevices';
 import { cn } from '@/lib/cn';
 import type { SensorNode } from '@/types';

@@ -8,7 +8,7 @@ import LiveCameraCard from '@/components/features/farm-owner/vision/LiveCameraCa
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { cn } from '@/lib/cn';
 
 // Giám sát đàn chim — VISION-FR-006/008/009/010/011/013; camera và số đếm chim tính theo nhà yến (SRS v2.1.8)

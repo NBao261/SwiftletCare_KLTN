@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useMemo } from "react";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
-import { useFarms, useHouses, useZones, useAllZones } from "@/hooks/shared/useFarms";
-import { Button, Card, SelectMenu } from "@/components/ui";
-import { Home } from "lucide-react";
+import { useScopeFilter } from "@/hooks/shared/useScopeFilter";
+import { Button, Card } from "@/components/ui";
+import ScopeFilter from "@/components/common/ScopeFilter";
+import HeaderActions from "@/components/layouts/HeaderActions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
 import SystemHealthBar, { needsAttention } from "@/components/features/technician/devices/SystemHealthBar";
@@ -17,52 +17,23 @@ import { getApiErrorMessage } from "@/lib/helpers";
 
 // Thiết bị của Farm Technician (Report 4 §5.4): thiết bị các nhà được giao, chẩn đoán, khởi động lại, danh sách bài loa chỉ xem
 export default function TechnicianDevicesPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  // Phạm vi Trang trại → Nhà → Zone trên header, chung store với các trang khác (trang Nhà được giao mở sẵn đúng nhà)
+  const scope = useScopeFilter();
+  const zoneId = scope.zone?._id;
 
-  // Bộ lọc vị trí độc lập (Local state) — khởi tạo từ searchParams nếu có điều hướng từ trang Trang trại
-  const [filterFarmId, setFilterFarmId] = useState<string>(searchParams.get("farmId") || "");
-  const [filterHouseId, setFilterHouseId] = useState<string>(searchParams.get("houseId") || "");
-  const [filterZoneId, setFilterZoneId] = useState<string>(searchParams.get("zoneId") || "");
+  // Zone trong phạm vi đang chọn, kèm tên để ghi vị trí từng thiết bị
+  const zoneById = useMemo(() => new Map(scope.zones.map(zone => [zone._id, zone])), [scope.zones]);
 
-  useEffect(() => {
-    const fId = searchParams.get("farmId") || "";
-    const hId = searchParams.get("houseId") || "";
-    const zId = searchParams.get("zoneId") || "";
-    if (fId) setFilterFarmId(fId);
-    if (hId) setFilterHouseId(hId);
-    if (zId) setFilterZoneId(zId);
-  }, [searchParams]);
-
-  const { data: farms, isLoading: loadingFarms } = useFarms();
-  const { data: houses, isLoading: loadingHouses } = useHouses(filterFarmId || undefined);
-  const { data: zones, isLoading: loadingZones } = useZones(filterHouseId || undefined);
-  const { data: allZones } = useAllZones();
-
-  // Tra cứu vị trí (Farm -> Nhà -> Zone) cho từng node
-  const zoneLocationMap = useMemo(() => {
-    const map = new Map<string, { zoneName: string; houseName: string; farmName: string; farmId: string; houseId: string }>();
-    allZones?.forEach(z => {
-      map.set(z._id, { zoneName: z.name, houseName: z.houseName, farmName: z.farmName, farmId: z.farmId, houseId: z.house_id });
-    });
-    return map;
-  }, [allZones]);
-
-  // Nếu chọn zone cụ thể, BE filter theo zone; nếu không, lấy toàn bộ thiết bị mà technician có quyền
-  const { data: nodes, isLoading } = useSensorNodes(filterZoneId || undefined);
-
-  // Lọc theo Farm/House khi chưa chọn tới Zone
-  const scopedNodes = useMemo(() => {
-    if (!nodes) return [];
-    if (filterZoneId) return nodes;
-    if (filterHouseId) {
-      return nodes.filter(n => zoneLocationMap.get(n.zone_id)?.houseId === filterHouseId);
-    }
-    if (filterFarmId) {
-      return nodes.filter(n => zoneLocationMap.get(n.zone_id)?.farmId === filterFarmId);
-    }
-    return nodes;
-  }, [nodes, filterZoneId, filterHouseId, filterFarmId, zoneLocationMap]);
-
+  // Chọn 1 Zone thì backend lọc theo Zone; còn lại lấy mọi thiết bị của các nhà được giao rồi lọc theo phạm vi
+  const { data: nodes, isLoading, isError, refetch } = useSensorNodes(zoneId);
+  const scopedNodes = useMemo(() => (nodes ?? []).filter(node => zoneById.has(node.zone_id)), [nodes, zoneById]);
+  const loading = isLoading || scope.isLoading;
+  // Lỗi tải Zone làm mất cả danh sách (lọc theo Zone), nên báo lỗi thay vì báo "chưa có thiết bị" (FE_Design 13.5)
+  const failed = isError || scope.isError;
+  function retry() {
+    void refetch();
+    scope.refetch();
+  }
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -135,100 +106,39 @@ export default function TechnicianDevicesPage() {
     );
   }
 
-  const hasLocationFilter = Boolean(filterFarmId || filterHouseId || filterZoneId);
+  // Câu trạng thái rỗng theo bậc đang lọc: Zone, nhà hay trang trại
+  let emptyTitle = "Chưa có thiết bị nào";
+  let emptyDescription = "Các nhà được giao cho bạn chưa có bộ điều khiển nào. Chủ nhà yến lắp thiết bị cho từng Zone.";
+  if (scope.zone) [emptyTitle, emptyDescription] = ["Zone này chưa có thiết bị", "Zone đang chọn chưa có bộ điều khiển nào."];
+  else if (scope.houseId) [emptyTitle, emptyDescription] = ["Nhà này chưa có thiết bị", "Nhà đang chọn chưa có bộ điều khiển nào."];
+  else if (scope.farmId) [emptyTitle, emptyDescription] = ["Trang trại này chưa có thiết bị", "Các nhà được giao ở trang trại này chưa có bộ điều khiển nào."];
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Thanh bộ lọc Vị trí (Farm - Nhà - Zone) + Nút thao tác */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-warmGray/15 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-sm font-bold text-charcoal shrink-0 mr-1">
-            <Home size={18} className="text-warmGray" />
-            <span>Vị trí:</span>
-          </div>
-
-          <div className="w-full sm:w-48">
-            <SelectMenu
-              field
-              disabled={loadingFarms}
-              ariaLabel="Lọc theo trang trại"
-              value={filterFarmId}
-              options={[
-                { value: '', label: 'Tất cả trang trại' },
-                ...(farms?.map(f => ({ value: f._id, label: f.name })) ?? [])
-              ]}
-              onChange={val => {
-                setFilterFarmId(val);
-                setFilterHouseId('');
-                setFilterZoneId('');
-              }}
-            />
-          </div>
-
-          <div className="w-full sm:w-44">
-            <SelectMenu
-              field
-              disabled={!filterFarmId || loadingHouses}
-              ariaLabel="Lọc theo nhà"
-              value={filterHouseId}
-              options={[
-                { value: '', label: 'Tất cả nhà' },
-                ...(houses?.map(h => ({ value: h._id, label: h.name })) ?? [])
-              ]}
-              onChange={val => {
-                setFilterHouseId(val);
-                setFilterZoneId('');
-              }}
-            />
-          </div>
-
-          <div className="w-full sm:w-44">
-            <SelectMenu
-              field
-              disabled={!filterHouseId || loadingZones}
-              ariaLabel="Lọc theo zone"
-              value={filterZoneId}
-              options={[
-                { value: '', label: 'Tất cả zone' },
-                ...(zones?.map(z => ({ value: z._id, label: z.name })) ?? [])
-              ]}
-              onChange={val => setFilterZoneId(val)}
-            />
-          </div>
-
-          {hasLocationFilter && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setFilterFarmId('');
-                setFilterHouseId('');
-                setFilterZoneId('');
-                setSearchParams({});
-              }}
-              className="text-xs"
-            >
-              Xoá lọc vị trí
-            </Button>
-          )}
+      {/* Khung lọc nằm trên header từ sm trở lên như các trang Farm Owner; mobile header chật nên đặt đầu trang */}
+      <HeaderActions>
+        <div className="hidden sm:block">
+          <ScopeFilter scope={scope} />
         </div>
+      </HeaderActions>
+      <div className="sm:hidden">
+        <ScopeFilter scope={scope} />
       </div>
 
       <Card size="lg" className="pb-10 flex flex-col gap-5">
-        {isLoading && <LoadingSkeleton count={2} className="h-40 w-full" />}
+        {loading && <LoadingSkeleton count={2} className="h-40 w-full" />}
 
-        {!isLoading && scopedNodes.length === 0 && (
+        {!loading && failed && (
           <EmptyState
-            title={hasLocationFilter ? "Khu vực này chưa có thiết bị" : "Chưa có thiết bị nào"}
-            description={
-              hasLocationFilter
-                ? "Khu vực đang lọc chưa có bộ điều khiển nào."
-                : "Các nhà được giao cho bạn chưa có bộ điều khiển nào. Chủ trang trại lắp thiết bị cho từng khu vực."
-            }
+            title="Không tải được thiết bị"
+            description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+            action={<Button variant="secondary" size="sm" onClick={retry}>Thử lại</Button>}
           />
         )}
 
-        {!isLoading && scopedNodes.length > 0 && (
+        {!loading && !failed && scopedNodes.length === 0 && <EmptyState title={emptyTitle} description={emptyDescription} />}
+
+        {!loading && !failed && scopedNodes.length > 0 && (
           <div className="flex w-full flex-col gap-5 mb-4 animate-fade-in">
             <SystemHealthBar nodes={scopedNodes} />
             <DeviceFilterToolbar
@@ -245,11 +155,11 @@ export default function TechnicianDevicesPage() {
           </div>
         )}
 
-        <div className="flex flex-col pb-8">
+        {!loading && !failed && scopedNodes.length > 0 && <div className="flex flex-col pb-8">
           <div className="bg-white border border-warmGray/15 rounded-2xl shadow-sm overflow-hidden flex flex-col">
             {filteredNodes?.map((node, i) => {
-              const loc = zoneLocationMap.get(node.zone_id);
-              const locationLabel = loc ? `${loc.farmName} · ${loc.houseName} · ${loc.zoneName}` : undefined;
+              const zone = zoneById.get(node.zone_id);
+              const locationLabel = zone ? `${zone.farmName} · ${zone.houseName} · ${zone.name}` : undefined;
 
               return (
                 <DeviceListRow
@@ -266,13 +176,13 @@ export default function TechnicianDevicesPage() {
                 />
               );
             })}
-            {filteredNodes?.length === 0 && !isLoading && scopedNodes.length > 0 && (
+            {filteredNodes.length === 0 && (
               <div className="text-center p-8 text-warmGray">
                 Không tìm thấy thiết bị nào khớp với bộ lọc.
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {audioNode && (
           <LullabyTracksModal

@@ -6,10 +6,7 @@ import type { SensorNode } from '@/types'
 export const needsAttention = (n: SensorNode) =>
   !!n.activation_overdue_at || !!n.ota_failed
 
-/**
- * Hàng KPI đầu trang Thiết bị — cùng StatTile với Admin/Farm Owner. Đếm theo node của zone đang chọn.
- * "Cần xử lý" gộp lỗi + suy giảm + quá hạn kích hoạt + OTA lỗi (không gộp "Chờ kết nối" bình thường).
- */
+// Hàng KPI đầu trang Thiết bị theo phạm vi đang chọn; "Cần xử lý" là quá hạn kích hoạt hoặc cập nhật firmware lỗi
 export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }) {
   const total = nodes.length
   const online = nodes.filter(n => n.status === 'ONLINE').length
@@ -19,15 +16,14 @@ export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }
   const pct = total > 0 ? Math.round((online / total) * 100) : 0
 
   return (
-    <section className="w-full rounded-[24px] border border-warmGray/15 bg-white p-4 shadow-sm">
-      <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile
+    <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-5">
+      <StatTile
         className="col-span-2 lg:col-span-1"
         icon={CpuIcon}
         iconClass="bg-warmGray/10 text-charcoal"
         label="Tổng thiết bị"
         value={total}
-        sub="Trong zone đang chọn"
+        sub="Trong phạm vi đang chọn"
       />
       <StatTile icon={WifiHighIcon} iconClass="bg-warmGray/10 text-success" label="Online" value={online} sub={`${pct}% tổng số`} />
       <StatTile
@@ -35,7 +31,7 @@ export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }
         iconClass={offline > 0 ? 'bg-warmGray/10 text-orange-600' : 'bg-warmGray/10 text-charcoal'}
         label="Mất kết nối"
         value={offline}
-        sub="Mất heartbeat"
+        sub="Không còn gửi tín hiệu"
       />
       <StatTile
         icon={WarningIcon}
@@ -43,16 +39,15 @@ export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }
         alert={attention > 0}
         label="Cần xử lý"
         value={attention}
-        sub="Lỗi · suy giảm · OTA lỗi · quá hạn"
+        sub="Quá hạn kích hoạt hoặc cập nhật lỗi"
       />
       <StatTile
         icon={HourglassIcon}
         iconClass="bg-warmGray/10 text-charcoal"
         label="Chờ kết nối"
         value={pending}
-        sub="Đã kích hoạt, chưa có heartbeat"
+        sub="Đã kích hoạt, chưa gửi tín hiệu"
       />
-      </div>
-    </section>
+    </div>
   )
 }

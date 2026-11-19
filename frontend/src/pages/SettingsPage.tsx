@@ -167,12 +167,12 @@ function NotificationPreferencesCard() {
               <span className="min-w-0 flex-1 text-body font-semibold text-charcoal">{levelLabel(level)}</span>
               <label className="flex items-center gap-2 text-small text-warmGray">
                 {t('Push')}
-                <Toggle checked={levels[level].push} onChange={value => setLevelChannel(level, 'push', value)} aria-label={`${levelLabel(level)} — ${t('Push')}`} />
+                <Toggle checked={levels[level].push} onChange={value => setLevelChannel(level, 'push', value)} aria-label={`${levelLabel(level)} · ${t('Push')}`} />
               </label>
               {telegramLinked && (
                 <label className="flex items-center gap-2 text-small text-warmGray">
                   {t('Telegram')}
-                  <Toggle checked={levels[level].telegram} onChange={value => setLevelChannel(level, 'telegram', value)} aria-label={`${levelLabel(level)} — ${t('Telegram')}`} />
+                  <Toggle checked={levels[level].telegram} onChange={value => setLevelChannel(level, 'telegram', value)} aria-label={`${levelLabel(level)} · ${t('Telegram')}`} />
                 </label>
               )}
             </div>
@@ -187,7 +187,7 @@ function NotificationPreferencesCard() {
         <p className="mb-2 flex items-center gap-1.5 text-body font-semibold text-charcoal">
           <MoonIcon size={16} weight="bold" />
           {t('Giờ im lặng')}
-          <span className="text-small font-normal text-warmGray">{t('— không nhận thông báo, trừ CRITICAL')}</span>
+          <span className="text-small font-normal text-warmGray">{t('(không nhận thông báo, trừ cảnh báo Khẩn cấp)')}</span>
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Input label="Từ" type="time" value={quietStart} onChange={e => setQuietStart(e.target.value)} />
@@ -232,7 +232,7 @@ function SecurityCard() {
   function handleSend() {
     if (!user?.email) return
     forgotPassword.mutate(user.email, {
-      onSuccess: () => { setSent(true); push('Đã gửi mã đặt lại (xem console log backend ở dev)') },
+      onSuccess: () => { setSent(true); push('Đã gửi mã đặt lại tới email của bạn') },
     })
   }
 
@@ -240,7 +240,7 @@ function SecurityCard() {
     e.preventDefault()
     if (!user?.email) return
     resetPassword.mutate({ email: user.email, token, newPassword }, {
-      onSuccess: () => { push('Đã đổi mật khẩu — vui lòng đăng nhập lại ở các thiết bị khác'); setSent(false); setToken(''); setNewPassword('') },
+      onSuccess: () => { push('Đã đổi mật khẩu. Đăng nhập lại trên các thiết bị khác.'); setSent(false); setToken(''); setNewPassword('') },
       onError: (err) => push(getApiErrorMessage(err, 'Đặt lại mật khẩu thất bại'), 'error'),
     })
   }
@@ -298,7 +298,7 @@ function TelegramCard() {
           setLink(null)
           setQrImage(null)
         } else {
-          push('Chưa thấy liên kết — hãy bấm Start trong Telegram rồi kiểm tra lại', 'error')
+          push('Chưa thấy liên kết. Bấm Start trong Telegram rồi kiểm tra lại.', 'error')
         }
       },
       onError: (err) => push(apiErrorMessage(err), 'error'),
@@ -337,7 +337,7 @@ function TelegramCard() {
       <ConfirmModal
         open={showUnlink} title="Gỡ liên kết Telegram?" danger
         description={urgentPushOff
-          ? 'Push của cảnh báo Khẩn cấp đang tắt: gỡ Telegram thì cảnh báo Khẩn cấp không còn kênh ngoài ứng dụng nào, nên hệ thống sẽ từ chối. Hãy bật push cho mức Khẩn cấp trước.'
+          ? 'Thông báo đẩy cho cảnh báo Khẩn cấp đang tắt. Gỡ Telegram thì cảnh báo Khẩn cấp không còn kênh nào ngoài ứng dụng, nên chưa gỡ được. Bật thông báo đẩy cho mức Khẩn cấp trước.'
           : 'Bạn sẽ không nhận cảnh báo qua Telegram nữa cho tới khi liên kết lại.'}
         loading={unlinkTelegram.isPending}
         onConfirm={handleUnlink} onCancel={() => setShowUnlink(false)}
@@ -380,7 +380,7 @@ function DeletionCard() {
       {user?.deletion_requested_at ? (
         <div className="flex flex-col gap-3">
           <p className="rounded-xl bg-warmGray/10 px-4 py-3 text-body text-charcoal">
-            {t('Đã gửi yêu cầu xoá tài khoản ngày {{date}}, hạn xử lý {{deadline}} — Administrator sẽ xử lý trong tối đa 30 ngày.', {
+            {t('Đã gửi yêu cầu xoá tài khoản ngày {{date}}. Quản trị viên xử lý trước {{deadline}}.', {
               date: formatDate(user.deletion_requested_at),
               deadline: formatDate(new Date(new Date(user.deletion_requested_at).getTime() + DELETION_DEADLINE_DAYS * DAY_MS).toISOString()),
             })}
@@ -396,7 +396,7 @@ function DeletionCard() {
 
       <ConfirmModal
         open={showConfirm} title="Yêu cầu xoá tài khoản?" danger
-        description="Administrator sẽ xử lý yêu cầu trong tối đa 30 ngày. Nếu bạn là Primary Owner của farm còn thành viên khác, quyền sở hữu sẽ được chuyển tự động."
+        description="Quản trị viên xử lý yêu cầu trong tối đa 30 ngày. Nếu bạn là chủ chính và trang trại còn thành viên khác, quyền sở hữu tự chuyển cho người đó."
         loading={requestDeletion.isPending}
         onConfirm={handleConfirm} onCancel={() => setShowConfirm(false)}
       />

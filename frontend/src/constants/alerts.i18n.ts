@@ -10,7 +10,6 @@ const vi = {
   'page.retry': 'Thử lại',
   'page.loadFailed': 'Không tải được danh sách trang trại',
 
-  'list.title': 'Cảnh báo',
   'list.subtitle': 'Cảnh báo môi trường, thiết bị và đàn chim của các nhà yến. Bạn xác nhận cảnh báo mới và ghi nguyên nhân khi đã kiểm tra tại nhà.',
   'list.subtitleTechnician': 'Cảnh báo của các nhà bạn được giao. Bạn xác nhận cảnh báo mới và ghi nguyên nhân tìm thấy tại chỗ.',
   'list.subtitleAdmin': 'Cảnh báo thiết bị của mọi trang trại: mất kết nối, cảm biến lỗi, khởi động lại bất thường. Chủ nhà yến và kỹ thuật viên xác nhận.',
@@ -26,7 +25,6 @@ const vi = {
   'list.emptyTitle': 'Không có cảnh báo nào',
   'list.emptyHint': 'Khi môi trường vượt ngưỡng, thiết bị lỗi hoặc mất kết nối, cảnh báo hiện ở đây.',
 
-  'col.index': 'STT',
   'col.level': 'Mức',
   'col.alert': 'Cảnh báo',
   'col.location': 'Vị trí',
@@ -83,7 +81,6 @@ const en: Record<AlertsKey, string> = {
   'page.retry': 'Retry',
   'page.loadFailed': 'Could not load the farm list',
 
-  'list.title': 'Alerts',
   'list.subtitle': 'Environment, device and flock alerts of your swiftlet houses. Acknowledge new alerts and record the cause once you have checked at the house.',
   'list.subtitleTechnician': 'Alerts of the houses assigned to you. Acknowledge new alerts and record the cause you find on site.',
   'list.subtitleAdmin': 'Device alerts of every farm: offline devices, sensor faults, unexpected restarts. Farm owners and technicians acknowledge them.',
@@ -99,7 +96,6 @@ const en: Record<AlertsKey, string> = {
   'list.emptyTitle': 'No alerts',
   'list.emptyHint': 'Alerts show here when the environment leaves its range or a device fails or goes offline.',
 
-  'col.index': 'No.',
   'col.level': 'Level',
   'col.alert': 'Alert',
   'col.location': 'Location',

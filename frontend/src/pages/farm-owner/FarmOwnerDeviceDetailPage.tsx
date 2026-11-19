@@ -19,7 +19,7 @@ import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useSendNodeCommand, useSensorNodes } from '@/hooks/shared/useDevices';
 import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';

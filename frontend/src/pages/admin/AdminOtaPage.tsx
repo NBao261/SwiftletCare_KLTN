@@ -14,6 +14,7 @@ import { getApiErrorMessage } from '@/lib/helpers'
 import { useToastStore } from '@/stores/toastStore'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
+import SectionCard from '@/components/ui/SectionCard'
 import { IconOTA } from '@/components/ui/icons'
 import { DeviceTable }     from '@/components/features/admin/ota/DeviceTable'
 import { OTASidePanel }   from '@/components/features/admin/ota/OTASidePanel'
@@ -25,8 +26,8 @@ import type { SensorNode } from '@/types'
 function otaErrorMessage(err: unknown): string {
   const status = (err as { response?: { status?: number } })?.response?.status
   if (status === 501) return 'Firmware trên thiết bị chưa hỗ trợ cập nhật từ xa. Nạp bản 1.4.0 trở lên tại chỗ (ElegantOTA trong mạng LAN hoặc cáp USB) trước.'
-  if (status === 503) return 'Mất kết nối MQTT broker — chưa thể gửi lệnh tới thiết bị. Thử lại sau.'
-  if (status === 403) return 'Bạn không có quyền gửi lệnh cho thiết bị này (ngoài khu vực phụ trách).'
+  if (status === 503) return 'Máy chủ chưa kết nối được tới thiết bị. Thử lại sau.'
+  if (status === 403) return 'Bạn không có quyền gửi lệnh cho thiết bị này.'
   return getApiErrorMessage(err, 'Gửi lệnh OTA thất bại')
 }
 
@@ -91,7 +92,7 @@ export default function AdminOtaPage() {
           setConfirmOpen(false)
           setSentVersion(payload.version)
           setApiError(null)
-          push('Đã gửi lệnh OTA tới thiết bị')
+          push('Đã gửi bản cập nhật tới thiết bị')
         },
         onError: err => {
           setConfirmOpen(false)
@@ -110,14 +111,10 @@ export default function AdminOtaPage() {
   const runState: OTARunState = selectedNode ? deriveState(selectedNode) : 'idle'
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-charcoal">OTA Firmware</h1>
-        <p className="mt-0.5 text-sm text-warmGray">Cập nhật firmware không dây cho các thiết bị ESP32</p>
-      </div>
-
-      {/* 2-col layout: table + side panel */}
+    <SectionCard
+      description="Cập nhật firmware từ xa cho bộ điều khiển. Chỉ thiết bị đang online nhận được bản cập nhật."
+    >
+      {/* Tên trang ở header; bảng bên trái, ngăn gửi bản cập nhật bên phải khi chọn thiết bị */}
       <div className="flex gap-5">
         {/* Device table */}
         <div className="min-w-0 flex-1">
@@ -127,7 +124,7 @@ export default function AdminOtaPage() {
             <EmptyState
               icon={<IconOTA width={28} height={28} />}
               title="Không có thiết bị nào"
-              description="Chưa có SensorNode nào được đăng ký trong hệ thống."
+              description="Chưa có bộ điều khiển nào được đăng ký trong hệ thống."
             />
           )}
 
@@ -168,6 +165,6 @@ export default function AdminOtaPage() {
           onConfirm={startOTA}
         />
       )}
-    </div>
+    </SectionCard>
   )
 }

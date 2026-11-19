@@ -14,7 +14,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { MAINTENANCE_PAGE_SIZE, useDueMaintenancePlans, useMaintenancePlanActions, useMaintenancePlans } from '@/hooks/farm-owner/useMaintenance';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
 import type { MaintenancePlan, MaintenancePlanState } from '@/types';

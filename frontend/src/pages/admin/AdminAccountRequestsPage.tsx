@@ -52,12 +52,11 @@ function useClampedPage(page: number, setPage: (page: number) => void, total: nu
   return beyondLastPage
 }
 
-/** Không lặp tiêu đề "Yêu cầu tài khoản" — AppHeader đã hiện tên trang. 1 card (SectionCard) như các trang Admin khác */
+/** Tab "Yêu cầu xoá tài khoản" của mục Người dùng — tên ở header và tab nên card chỉ còn dòng mô tả */
 export default function AdminAccountRequestsPage() {
   return (
     <SectionCard
-      title={tr('Yêu cầu xoá tài khoản')}
-      description={tr(`Người dùng xin xoá tài khoản — xử lý trong ${DELETE_DEADLINE_DAYS} ngày`)}
+      description={tr(`Người dùng xin xoá tài khoản, xử lý trong ${DELETE_DEADLINE_DAYS} ngày`)}
     >
       <DeleteRequestsTab />
     </SectionCard>
@@ -86,12 +85,10 @@ function DeleteRequestsTab() {
   }
 
   if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
-  const startIndex = (page - 1) * PAGE_SIZE
 
-  // STT · Người dùng · Email · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác — tổng 6+20+28+16+16+14 = 100
+  // Người dùng · Email · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác — tổng 26+28+16+16+14 = 100
   const columns: DataTableColumn<User>[] = [
-    { key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]', render: (_u, i) => <span className="text-warmGray">{startIndex + i + 1}</span> },
-    { key: 'name', header: 'Người dùng', className: 'w-[20%]', render: u => <p className="text-fade font-semibold text-charcoal" title={u.full_name}>{u.full_name}</p> },
+    { key: 'name', header: 'Người dùng', className: 'w-[26%]', render: u => <p className="text-fade font-semibold text-charcoal" title={u.full_name}>{u.full_name}</p> },
     { key: 'email', header: 'Email', className: 'w-[28%]', render: u => <p className="truncate text-graphite" title={u.email}>{u.email}</p> },
     { key: 'requested', header: 'Thời gian yêu cầu', className: 'w-[16%] whitespace-nowrap', render: u => <TimeCell at={u.deletion_requested_at ?? undefined} /> },
     {
@@ -122,19 +119,17 @@ function DeleteRequestsTab() {
         rows={requests}
         getRowKey={u => u._id}
         rowHeight={ROW_HEIGHT}
-        minRows={PAGE_SIZE}
-        emptyMessage="Không có yêu cầu xoá tài khoản nào — yêu cầu (quyền được xoá dữ liệu, Nghị định 13/2023/NĐ-CP) sẽ hiện ở đây."
+        minRows={total > limit ? PAGE_SIZE : 0}
+        emptyMessage="Chưa có yêu cầu xoá tài khoản nào. Yêu cầu theo Nghị định 13/2023/NĐ-CP sẽ hiện ở đây."
       />
 
-      {/* Hàng phân trang (Pagination tự ẩn khi chỉ 1 trang) */}
-      <div className="min-h-11">
-        <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
-      </div>
+      {/* Pagination tự ẩn khi chỉ 1 trang — không giữ chỗ trống dưới bảng */}
+      <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
 
       <ConfirmModal
         open={!!target}
-        title={`${i18nT('Xoá tài khoản')} — ${target?.full_name ?? ''}`}
-        description="Hệ thống sẽ tự động: chuyển quyền sở hữu farm cho thành viên tham gia sớm nhất (nếu còn thành viên khác) hoặc soft-delete farm (nếu không còn ai), gỡ khỏi các farm khác, huỷ các phân công/đề xuất liên quan, rồi ẩn danh thông tin cá nhân. Không thể hoàn tác."
+        title={`${i18nT('Xoá tài khoản')} · ${target?.full_name ?? ''}`}
+        description="Quyền sở hữu trang trại chuyển cho thành viên vào sớm nhất; không còn ai thì trang trại bị ẩn. Tài khoản rời các trang trại khác, các phân công và đề xuất liên quan bị huỷ, thông tin cá nhân được xoá danh tính. Không hoàn tác được."
         confirmLabel="Xác nhận xoá"
         danger
         loading={completeDeleteRequest.isPending}

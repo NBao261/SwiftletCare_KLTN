@@ -102,7 +102,7 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
       <ConfirmModal
         open={resetOpen}
         title={t('Khôi phục ngưỡng mặc định?')}
-        description={t('Thao tác sẽ ghi đè toàn bộ ngưỡng hiện tại của khu vực bằng ngưỡng mặc định hiện hành do Quản trị viên đặt. Không thể hoàn tác.')}
+        description={t('Thao tác sẽ ghi đè toàn bộ ngưỡng hiện tại của Zone bằng ngưỡng mặc định hiện hành do Quản trị viên đặt. Không thể hoàn tác.')}
         confirmLabel={t('Xác nhận khôi phục')}
         danger
         loading={isResetting}

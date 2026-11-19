@@ -70,14 +70,14 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const tStart = new Date(baseDate.getTime() - 30 * 60_000), tEnd = new Date(baseDate.getTime() + 30 * 60_000)
   const pad = (n: number) => n.toString().padStart(2, '0')
   const windowLabel = t('Khung giờ ±30 phút ({{from}} – {{to}})', { from: `${pad(tStart.getHours())}:${pad(tStart.getMinutes())}`, to: `${pad(tEnd.getHours())}:${pad(tEnd.getMinutes())}` })
-  const dateLabel = alertDate ? `${pad(alertDate.getHours())}:${pad(alertDate.getMinutes())} — ${alertDate.getDate()}/${alertDate.getMonth() + 1}/${alertDate.getFullYear()}` : ''
+  const dateLabel = alertDate ? `${pad(alertDate.getHours())}:${pad(alertDate.getMinutes())} · ${alertDate.getDate()}/${alertDate.getMonth() + 1}/${alertDate.getFullYear()}` : ''
 
   const zoneLabel = useMemo(() => {
     if (!alert?.zone_id) return null
     if (zone?.floor && zone?.name) return zone.name.toLowerCase().includes('tầng') ? zone.name : `${t('Tầng {{n}}', { n: zone.floor })} • ${zone.name}`
     if (zone?.name) return zone.name
     if (selectedZoneId === alert.zone_id && selectedZoneName) return selectedZoneName.replace(/\s*-\s*/g, ' • ')
-    return t('Khu vực nuôi yến')
+    return t('Zone')
   }, [alert?.zone_id, zone, selectedZoneId, selectedZoneName])
 
   if (typeof document === 'undefined') return null
@@ -111,16 +111,16 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-[#27231F]">{t('Bước 1 — Dữ liệu đối chiếu chéo (±30 phút)')}</h3>
+              <h3 className="text-sm font-semibold text-[#27231F]">{t('Bước 1: Số liệu quanh cảnh báo (±30 phút)')}</h3>
               <span className="text-xs text-[#878380]">{windowLabel}</span>
             </div>
             {alert && <MultimodalEvidenceCharts alert={alert} />}
           </section>
           <section>
-            <h3 className="text-sm font-semibold text-[#27231F] mb-3">{t('Bước 2 — Kết luận thẩm định của Chuyên gia')}</h3>
+            <h3 className="text-sm font-semibold text-[#27231F] mb-3">{t('Bước 2: Kết luận của chuyên gia')}</h3>
             {canDecide
               ? <VerdictForm alert={alert} verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
-              : <p className="text-sm text-[#878380]">{t('Farm đã có chuyên gia — kết luận do chuyên gia ghi, bạn chỉ xem bằng chứng.')}</p>}
+              : <p className="text-sm text-[#878380]">{t('Trang trại đã có chuyên gia nên kết luận do chuyên gia ghi. Bạn xem được bằng chứng.')}</p>}
           </section>
         </div>
 
@@ -148,7 +148,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
                 ? 'bg-[#27231F] text-white hover:bg-[#3D3630] shadow-md'
                 : 'bg-neutral-200 text-neutral-400 cursor-not-allowed')}
           >
-            {mutation.isPending ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t('Đang lưu...')}</> : t('Lưu kết luận thẩm định')}
+            {mutation.isPending ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t('Đang lưu...')}</> : t('Lưu kết luận')}
           </button>}
         </div>
       </aside>

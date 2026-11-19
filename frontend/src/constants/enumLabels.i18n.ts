@@ -14,34 +14,34 @@ export const alertTypeDict: Dictionary<AlertType> = {
     NODE_OFFLINE:        'Thiết bị mất kết nối',
     SPEAKER_FAILURE:     'Lỗi loa ru',
     MISTING_INEFFECTIVE: 'Phun sương không hiệu quả', // THREAT-FR-011, trước là PUMP_DRY
-    NOISE_ANOMALY:       'Ồn bất thường',
-    LOW_RETURN_RATE:     'Tỉ lệ chim về thấp',
-    EDGE_AI_DEGRADED:    'Camera AI suy giảm',
-    UNEXPECTED_RESTART:  'Khởi động đột ngột',   // THREAT-FR-012, trước là POWER_OUTAGE
+    NOISE_ANOMALY:       'Tiếng ồn bất thường',
+    LOW_RETURN_RATE:     'Tỷ lệ chim về thấp',
+    EDGE_AI_DEGRADED:    'Camera đếm chim gặp sự cố',
+    UNEXPECTED_RESTART:  'Thiết bị tự khởi động lại',   // THREAT-FR-012, trước là POWER_OUTAGE
     SENSOR_FAULT:        'Lỗi cảm biến',
-    RS485_BUS_FAILURE:   'Lỗi bus RS485',
+    RS485_BUS_FAILURE:   'Lỗi đường truyền cảm biến',
     SENSOR_ANOMALY:      'Cảm biến bất thường',
-    FORECAST_BREACH:     'Dự báo vượt ngưỡng',
+    FORECAST_BREACH:     'Sắp vượt ngưỡng',
     MAINTENANCE_DUE:     'Đến hạn bảo trì bơm/quạt',
-    ACTUATOR_FAULT:      'Lỗi cơ cấu chấp hành',      // THREAT-FR-014
-    CONFIG_MISMATCH:     'Sai cấu hình thiết bị',      // ENV-FR-027
+    ACTUATOR_FAULT:      'Bơm, quạt hoặc loa không chạy',      // THREAT-FR-014
+    CONFIG_MISMATCH:     'Thiết bị chưa nhận cấu hình mới',      // ENV-FR-027
   },
   en: {
     THRESHOLD_BREACH:    'Environment threshold breach',
     NODE_OFFLINE:        'Device offline',
     SPEAKER_FAILURE:     'Lullaby speaker fault',
     MISTING_INEFFECTIVE: 'Misting ineffective',
-    NOISE_ANOMALY:       'Noise anomaly',
+    NOISE_ANOMALY:       'Abnormal noise',
     LOW_RETURN_RATE:     'Low bird return rate',
-    EDGE_AI_DEGRADED:    'AI camera degraded',
-    UNEXPECTED_RESTART:  'Unexpected restart',
+    EDGE_AI_DEGRADED:    'Bird-count camera fault',
+    UNEXPECTED_RESTART:  'Device restarted unexpectedly',
     SENSOR_FAULT:        'Sensor fault',
-    RS485_BUS_FAILURE:   'RS485 bus failure',
+    RS485_BUS_FAILURE:   'Sensor wiring fault',
     SENSOR_ANOMALY:      'Sensor anomaly',
-    FORECAST_BREACH:     'Forecast threshold breach',
+    FORECAST_BREACH:     'About to breach threshold',
     MAINTENANCE_DUE:     'Pump/fan service due',
-    ACTUATOR_FAULT:      'Actuator fault',
-    CONFIG_MISMATCH:     'Config mismatch',
+    ACTUATOR_FAULT:      'Pump, fan or speaker not running',
+    CONFIG_MISMATCH:     'New configuration not applied',
   },
 };
 
@@ -53,7 +53,7 @@ export const alertStatusDict: Dictionary<AlertStatus> = {
 
 // Trạng thái thiết bị — ERROR/DEGRADED đã bỏ theo SRS 3.1.0
 export const deviceStatusDict: Dictionary<DeviceStatus> = {
-  vi: { PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Offline' },
+  vi: { PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Mất kết nối' },
   en: { PENDING: 'Awaiting connection', ONLINE: 'Online', OFFLINE: 'Offline' },
 };
 
@@ -62,7 +62,7 @@ export const roleDict: Dictionary<Role> = {
   vi: {
     ADMIN: 'Quản trị viên',
     FARM_OWNER: 'Chủ nhà yến',
-    FARM_TECHNICIAN: 'Kỹ thuật viên nhà yến',
+    FARM_TECHNICIAN: 'Kỹ thuật viên',
     DOMAIN_EXPERT: 'Chuyên gia',
   },
   en: {

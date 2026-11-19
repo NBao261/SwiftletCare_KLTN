@@ -23,7 +23,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
     <Card className="flex flex-col gap-4">
       <div>
         <h2 className="text-h2 text-charcoal">{t('Thống kê thiết bị')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('Cảm biến và camera trên mọi trang trại')}</p>
+        <p className="mt-1 text-sm text-warmGray">{t('Bộ điều khiển và camera đếm chim trên mọi trang trại')}</p>
       </div>
 
       {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
@@ -34,7 +34,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           iconClass={ICON}
           label="Tổng thiết bị"
           value={summary.total}
-          sub={t('{{sensors}} cảm biến · {{cameras}} camera', { sensors, cameras: nodes.length - sensors })}
+          sub={t('{{sensors}} bộ điều khiển · {{cameras}} camera đếm chim', { sensors, cameras: nodes.length - sensors })}
         />
         <StatTile
           className="shadow-none"
@@ -49,7 +49,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           className="shadow-none"
           icon={WifiSlashIcon}
           iconClass={ICON}
-          label="Offline"
+          label="Mất kết nối"
           value={summary.offline}
           // Có thiết bị offline → ô nổi cam (mất dữ liệu nhà yến, cần kiểm tra nguồn/mạng)
           tone={summary.offline > 0 ? 'warning' : undefined}

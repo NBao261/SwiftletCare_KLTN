@@ -10,7 +10,7 @@ const STATUS_CLASS: Record<DeviceStatus, string> = {
 
 const STATUS_LABEL: Record<DeviceStatus, string> = translated({
   // PENDING = đã khai báo nhưng chưa từng gửi heartbeat (Flow 1 bước 4→8)
-  PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Offline', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
+  PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Mất kết nối', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
 })
 
 /** Màu chữ cùng tông chấm nhưng đậm hơn 1–2 nấc cho đọc được trên nền trắng (dùng khi `colored`) */

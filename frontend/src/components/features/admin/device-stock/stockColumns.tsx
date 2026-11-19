@@ -8,7 +8,7 @@ import type { ProvisionedDevice, StockStatus } from '@/types'
 export const STOCK_STATUS: Record<StockStatus, { label: string; tone: BadgeTone }> = {
   IN_STOCK: { label: 'Trong kho', tone: 'info' },
   IN_SERVICE: { label: 'Đang dùng', tone: 'positive' },
-  RELEASED: { label: 'Đã gỡ khỏi farm', tone: 'warning' },
+  RELEASED: { label: 'Đã gỡ khỏi trang trại', tone: 'warning' },
   REVOKED: { label: 'Đã thu hồi', tone: 'critical' },
 }
 
@@ -19,7 +19,7 @@ function actionsFor(d: ProvisionedDevice, onAction: (a: StockAction, d: Provisio
   const notInService = d.stock_status === 'IN_STOCK' || d.stock_status === 'RELEASED'
   const items: ActionsMenuItem[] = []
   if (notInService) items.push({ label: t('Cấp lại mã kích hoạt'), onClick: () => onAction('rotate-key', d) })
-  if (d.stock_status !== 'REVOKED') items.push({ label: t('Cấp lại mật khẩu broker'), onClick: () => onAction('rotate-broker', d) })
+  if (d.stock_status !== 'REVOKED') items.push({ label: t('Cấp lại mật khẩu kết nối'), onClick: () => onAction('rotate-broker', d) })
   if (notInService) items.push({ label: t('Thu hồi'), danger: true, onClick: () => onAction('revoke', d) })
   return items
 }
@@ -30,17 +30,13 @@ function note(d: ProvisionedDevice) {
   return '—'
 }
 
-/** Width % (DataTable table-fixed), tổng 100: 6+14+16+16+14+24+10 — Thiết bị vừa mã dài nhất thường gặp, Loại đủ chỗ nhãn "Bộ điều khiển" */
+/** Width % (DataTable table-fixed), tổng 100: 20+16+16+14+24+10 — Thiết bị vừa mã dài nhất thường gặp, Loại đủ chỗ nhãn "Bộ điều khiển" */
 export function buildStockColumns(
-  startIndex: number, onAction: (a: StockAction, d: ProvisionedDevice) => void,
+  onAction: (a: StockAction, d: ProvisionedDevice) => void,
 ): DataTableColumn<ProvisionedDevice>[] {
   return [
     {
-      key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
-      render: (_d, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
-    },
-    {
-      key: 'device_id', header: 'Thiết bị', className: 'w-[14%]',
+      key: 'device_id', header: 'Thiết bị', className: 'w-[20%]',
       render: d => (
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate font-bold text-charcoal" title={d.device_id}>{d.device_id}</span>
@@ -50,7 +46,7 @@ export function buildStockColumns(
     },
     {
       key: 'kind', header: 'Loại', className: 'w-[16%]',
-      render: d => <Badge tone="neutral">{d.kind === 'SENSOR' ? 'Bộ điều khiển' : 'Nút AI'}</Badge>,
+      render: d => <Badge tone="neutral">{d.kind === 'SENSOR' ? 'Bộ điều khiển' : 'Camera đếm chim'}</Badge>,
     },
     {
       key: 'status', header: 'Trạng thái nhãn', className: 'w-[16%]',

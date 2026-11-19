@@ -87,7 +87,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <h2 className="text-lg font-bold text-charcoal">Bước 2 — Xác thực thiết bị</h2>
+          <h2 className="text-lg font-bold text-charcoal">Bước 2: Xác thực thiết bị</h2>
           <p className="mt-1 text-sm text-warmGray">Nhập mã thiết bị và mã kích hoạt in trên nhãn dán mặt sau thiết bị.</p>
         </div>
         {/* I-01: Read-only badge hiển thị device type đã chọn ở Step 1 */}
@@ -160,7 +160,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
           placeholder="VD: ABCD-EFGH-JKMN"
           autoComplete="off"
           spellCheck={false}
-          className="input w-full tabular-nums uppercase"
+          className="input w-full tabular-nums"
         />
       </div>
 
@@ -177,7 +177,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         <div className="flex items-start gap-3 rounded-xl border border-limeMist/30 bg-limeMist/10 px-4 py-3">
           <CheckCircle2 className="h-6 w-6 text-success shrink-0" />
           <div>
-            <p className="font-semibold text-charcoal">Thiết bị hợp lệ!</p>
+            <p className="font-semibold text-charcoal">Thiết bị hợp lệ</p>
             <p className="text-sm text-charcoal/70">Model: {validatedModel}</p>
           </div>
         </div>
@@ -190,7 +190,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             <span>Thiết bị đã tồn tại trên hệ thống</span>
           </p>
           <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-sm text-climateOrange/80">
-            <li>Thiết bị đang được gán cho một Farm khác</li>
+            <li>Thiết bị đang thuộc một trang trại khác</li>
             <li>Có thể mã thiết bị bị nhập sai chữ hoa/thường</li>
           </ul>
           <p className="mt-2 text-sm text-climateOrange/70">Liên hệ Admin để gỡ gán thiết bị.</p>

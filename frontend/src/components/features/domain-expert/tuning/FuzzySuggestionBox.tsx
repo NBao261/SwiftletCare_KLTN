@@ -71,7 +71,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
             <Sparkles className="w-3.5 h-3.5 text-charcoal" />
           </div>
           <span className="text-stone-700">
-            {t('Hệ thống gợi ý hệ số mờ khi có đủ 3 ngày dữ liệu và R² ≥ 0,3.')}
+            {t('Có gợi ý hệ số mờ khi đủ 3 ngày dữ liệu và độ khớp R² từ 0,3 trở lên.')}
           </span>
         </div>
         <span className="bg-white text-stone-600 border border-stone-200/80 text-[11px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap self-start sm:self-center shrink-0">
@@ -93,7 +93,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
           <h3 className="text-sm font-bold text-charcoal">{t('Gợi ý hệ số điều khiển mờ từ dữ liệu')}</h3>
         </div>
         <p className="text-xs text-warmGray">
-          {t('Hồi quy trên {{days}} ngày qua ({{samples}} mẫu đo) • R² = {{r2}}', {
+          {t('Tính từ {{days}} ngày qua ({{samples}} lần đo) · độ khớp R² = {{r2}}', {
             days: model.days,
             samples: model.samples.toLocaleString(),
             r2: model.r2.toFixed(2),

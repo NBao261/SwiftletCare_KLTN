@@ -116,11 +116,8 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <SectionCard
-        className="flex-1"
-        title={t('list.title')}
-        description={`${t(subtitleKey)}${pendingText}`}
-      >
+      {/* Một card: tên trang đã ở header nên card không lặp tiêu đề */}
+      <SectionCard description={`${t(subtitleKey)}${pendingText}`}>
         <div className="flex flex-wrap items-center gap-3">
           <SelectMenu
             ariaLabel={t('list.filterStatus')}

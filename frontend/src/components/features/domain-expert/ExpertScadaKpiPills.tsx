@@ -24,7 +24,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         className="group flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-accent-600/30 bg-accent-50/80 px-2.5 sm:px-3 transition-all hover:border-accent-600/50 hover:bg-accent-100/70 active:scale-[0.98]"
       >
         <Cpu size={13} className="shrink-0 text-accent-800" />
-        <span className="font-mono text-xs font-bold tabular-nums text-accent-900">
+        <span className="text-xs font-bold tabular-nums text-accent-900">
           {autoModePct.toFixed(0)}%
         </span>
         <span className="text-[11px] font-semibold text-accent-800">{t('Tự động')}</span>
@@ -43,7 +43,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         {hasPendingAlerts ? (
           <>
             <AlertTriangle size={13} className="shrink-0 text-amber-600" />
-            <span className="font-mono text-xs font-bold tabular-nums text-amber-900">
+            <span className="text-xs font-bold tabular-nums text-amber-900">
               {pendingCount}
             </span>
             <span className="text-[11px] font-semibold text-amber-800">{t('Cảnh báo chờ')}</span>
@@ -51,7 +51,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         ) : (
           <>
             <CheckCircle2 size={13} className="shrink-0 text-accent-700" />
-            <span className="font-mono text-xs font-medium tabular-nums text-graphite">
+            <span className="text-xs font-medium tabular-nums text-graphite">
               0
             </span>
             <span className="text-[11px] text-warmGray">{t('Cảnh báo tồn')}</span>
@@ -70,7 +70,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         }`}
       >
         <FileText size={13} className={`shrink-0 ${hasPendingReports ? 'text-sky-600' : 'text-warmGray'}`} />
-        <span className={`font-mono text-xs tabular-nums ${hasPendingReports ? 'font-bold text-sky-900' : 'font-medium text-graphite'}`}>
+        <span className={`text-xs tabular-nums ${hasPendingReports ? 'font-bold text-sky-900' : 'font-medium text-graphite'}`}>
           {pendingReports}
         </span>
         <span className={`text-[11px] ${hasPendingReports ? 'font-semibold text-sky-800' : 'text-warmGray'}`}>

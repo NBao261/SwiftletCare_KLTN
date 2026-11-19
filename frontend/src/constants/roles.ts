@@ -5,7 +5,7 @@ import { t, translated } from '@/i18n'
 export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
-  FARM_TECHNICIAN: 'Kỹ thuật viên nhà yến',
+  FARM_TECHNICIAN: 'Kỹ thuật viên',
   DOMAIN_EXPERT: 'Chuyên gia',
 })
 
@@ -86,7 +86,7 @@ const ALL_ROLES: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN', 'ADMIN', 'DOMAIN_EXP
 const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
-  FARM_TECHNICIAN: '/devices',
+  FARM_TECHNICIAN: '/alerts',
   DOMAIN_EXPERT: '/domain-expert/queue',
 }
 

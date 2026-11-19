@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn'
  * trong `onClick`.
  */
 // count: số điều kiện lọc đang bật (hiện sau chữ) · tone danger: nền red-500/10, viền red-500/20, chữ red-600 (mẫu Farm Owner)
-export default function ClearFiltersButton({ onClick, label = 'Hủy lọc', count, tone = 'neutral', className }: {
+export default function ClearFiltersButton({ onClick, label = 'Huỷ lọc', count, tone = 'neutral', className }: {
   onClick: () => void
   label?: string
   count?: number

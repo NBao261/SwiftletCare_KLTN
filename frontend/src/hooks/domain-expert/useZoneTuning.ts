@@ -36,7 +36,7 @@ export function useUpdateThresholds(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (thresholds: Partial<ExpertThresholds>) => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.updateThresholds(zoneId, thresholds)
     },
     onSuccess: () => {
@@ -50,7 +50,7 @@ export function useResetThresholds(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.resetThresholds(zoneId)
     },
     onSuccess: () => {
@@ -78,7 +78,7 @@ export function useUpdateFuzzyTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (tuning: Partial<ExpertFuzzyTuning>) => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.updateFuzzyTuning(zoneId, tuning)
     },
     onSuccess: () => {
@@ -117,7 +117,7 @@ export function useUpdateDetectionTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (tuning: Partial<ExpertDetectionTuning>) => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.updateDetectionTuning(zoneId, tuning)
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),
@@ -128,7 +128,7 @@ export function useResetDetectionTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.resetDetectionTuning(zoneId)
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),

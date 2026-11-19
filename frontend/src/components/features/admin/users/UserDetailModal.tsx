@@ -110,8 +110,8 @@ export default function UserDetailModal({ user, onClose }: { user: User | null; 
                     ? (user.deactivated_at ? t('Từ {{date}}', { date: formatDateOnly(user.deactivated_at) }) : t('Đang bị khoá'))
                     : <Empty>Không</Empty>}
                 </Row>
-                {/* Yêu cầu xoá / đã xoá (AUTH-FR-012) — xử lý ở trang Yêu cầu tài khoản */}
-                <Row label="Xoá tài khoản" hint={user.deletion_requested_at && !user.deleted_at ? 'Xử lý ở trang Yêu cầu tài khoản' : undefined}>
+                {/* Yêu cầu xoá / đã xoá (AUTH-FR-012) — xử lý ở tab Yêu cầu xoá tài khoản của menu Người dùng */}
+                <Row label="Xoá tài khoản" hint={user.deletion_requested_at && !user.deleted_at ? 'Xử lý ở tab Yêu cầu xoá tài khoản' : undefined}>
                   {user.deleted_at
                     ? t('Đã xoá {{date}}', { date: formatDateOnly(user.deleted_at) })
                     : user.deletion_requested_at

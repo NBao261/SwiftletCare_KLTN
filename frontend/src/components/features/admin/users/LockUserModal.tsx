@@ -25,7 +25,7 @@ export default function LockUserModal({ user, onClose }: { user: User | null; on
       // Backend chỉ bắt buộc không rỗng; 10 ký tự là ngưỡng UI để lý do đủ nghĩa khi
       // hiện lại cho user lúc đăng nhập bị chặn (Flow 19 bước 4) và trong audit log.
       minLength={10}
-      emptyMessage="Hãy nhập lý do khoá"
+      emptyMessage="Nhập lý do khoá"
       danger
       loading={setStatus.isPending}
       onSubmit={(reason) => {

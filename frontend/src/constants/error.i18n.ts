@@ -5,8 +5,8 @@ import type { ApiErrorGroup } from '@/lib/apiError';
 const vi: Record<ApiErrorGroup, string> = {
   permission: 'Bạn không có quyền thực hiện thao tác này hoặc phiên đăng nhập đã hết hạn.',
   notFound: 'Không tìm thấy dữ liệu hoặc dữ liệu đã bị xoá.',
-  invalid: 'Thông tin chưa hợp lệ hoặc đã thay đổi. Vui lòng kiểm tra lại.',
-  system: 'Không kết nối được hệ thống. Vui lòng thử lại sau.',
+  invalid: 'Thông tin chưa hợp lệ hoặc đã thay đổi. Kiểm tra lại.',
+  system: 'Không kết nối được máy chủ. Thử lại sau.',
 };
 
 const en: Record<ApiErrorGroup, string> = {

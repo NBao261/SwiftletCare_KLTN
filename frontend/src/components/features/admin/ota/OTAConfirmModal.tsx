@@ -14,7 +14,7 @@ interface Props {
 
 export function OTAConfirmModal({ node, firmware, loading, onClose, onConfirm }: Props) {
   return (
-    <Modal open onClose={onClose} title="Xác nhận đẩy OTA Firmware">
+    <Modal open onClose={onClose} title="Xác nhận gửi bản cập nhật firmware">
       <div className="flex flex-col gap-4">
         {/* Icon */}
         <div className="flex justify-center">

@@ -28,7 +28,7 @@ import { farmDict } from '@/constants/farmStructure.i18n'
 import type { DeviceRow, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
-import { FARMS_PATH, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { FARMS_PATH, useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
 import { useZoneStore } from '@/stores/zoneStore'
 

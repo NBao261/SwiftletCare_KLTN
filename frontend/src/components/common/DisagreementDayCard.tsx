@@ -80,12 +80,12 @@ function DisagreementItemBlock({
               {item.assessor.full_name || t('dis.rater')}
             </span>
             <span className="text-warmGray">•</span>
-            <span className="rounded-md border border-warmGray/15 bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-white px-2 py-0.5 text-[11px] font-semibold text-graphite">
               {t(`role.${item.assessor.role}`)}
             </span>
           </div>
         </div>
-        <span className="font-mono text-[11px] text-warmGray">
+        <span className="text-[11px] text-warmGray">
           {t('dis.ratedAt', { time: dateTime(item.at) })}
         </span>
       </div>
@@ -105,7 +105,7 @@ function DisagreementItemBlock({
             className="flex flex-col items-center px-1 text-warmGray"
           >
             <ArrowLeftRight className="h-4 w-4 text-orange-700" />
-            <span className="font-mono text-[10px] font-bold uppercase text-orange-900">
+            <span className="text-[10px] font-bold text-orange-900">
               {t('dis.compare')}
             </span>
           </div>
@@ -221,7 +221,7 @@ export default function DisagreementDayCard({
       {/* Header của ngày lệch: Ngày + Nhà yến + Trạng thái hiện tại + Liên kết mức chỉ số cấp nhà */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warmGray/15 pb-3.5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 rounded-lg bg-charcoal px-2.5 py-1 font-mono text-xs font-bold tabular-nums text-white">
+          <div className="flex items-center gap-1.5 rounded-lg bg-charcoal px-2.5 py-1 text-xs font-bold tabular-nums text-white">
             <Calendar className="h-3.5 w-3.5 text-limeMist" aria-hidden="true" />
             <span>{date(day.date)}</span>
           </div>
@@ -230,7 +230,7 @@ export default function DisagreementDayCard({
             {day.house_name}
           </span>
 
-          <Badge tone="warning" className="font-mono tabular-nums">
+          <Badge tone="warning" className="tabular-nums">
             {t('dis.count', { n: day.disagreements.length })}
           </Badge>
         </div>
@@ -298,7 +298,7 @@ export default function DisagreementDayCard({
                       : t('level.notAssessed')}
                   </Badge>
                 </div>
-                <span className="font-mono text-base font-bold tabular-nums text-charcoal sm:text-lg">
+                <span className="text-base font-bold tabular-nums text-charcoal sm:text-lg">
                   {value === null || value === undefined
                     ? NO_VALUE
                     : t(`unit.${source}`, { value: format(value) })}

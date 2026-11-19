@@ -68,7 +68,7 @@ export default function DomainExpertZoneTuningPage() {
     suggestionAction = {
       label: t('Áp dụng gợi ý'),
       loading: applySuggestion.isPending,
-      onClick: () => notify(applySuggestion.mutateAsync(zoneId), 'Đã áp dụng gợi ý hệ số cho khu vực'),
+      onClick: () => notify(applySuggestion.mutateAsync(zoneId), 'Đã áp dụng gợi ý hệ số cho Zone'),
     };
   }
   if (zoneId && ownerReadOnly) {
@@ -86,7 +86,7 @@ export default function DomainExpertZoneTuningPage() {
           <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-sm">
             <div className="flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>{t('Khu vực này có {{n}} đề xuất hệ số mờ của Chủ trang trại đang chờ chuyên gia duyệt.', { n: pendingProposalsCount })}</span>
+              <span>{t('Zone này có {{n}} đề xuất hệ số mờ của chủ nhà yến đang chờ chuyên gia duyệt.', { n: pendingProposalsCount })}</span>
             </div>
             <Link
               to="/domain-expert/reviews"

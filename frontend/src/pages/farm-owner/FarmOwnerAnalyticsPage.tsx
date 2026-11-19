@@ -18,7 +18,7 @@ import RelayOverrideHistoryCard from '@/components/features/farm-owner/analytics
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
 

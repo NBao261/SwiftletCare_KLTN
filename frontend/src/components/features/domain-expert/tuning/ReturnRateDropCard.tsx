@@ -27,7 +27,7 @@ export default function ReturnRateDropCard({ houseName, value, isSaving, isReset
         <div>
           <h3 className="text-sm font-bold text-[#27231F]">{t('4. Mức giảm tỷ lệ chim về của nhà')}</h3>
           <p className="text-[11px] text-[#878380] mt-0.5">
-            {houseName ? t('Áp cho cả nhà "{{house}}" — cảnh báo tỷ lệ chim về giảm', { house: houseName }) : t('Chọn một khu vực để biết nhà cần chỉnh')}
+            {houseName ? t('Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm', { house: houseName }) : t('Chọn một Zone để biết nhà cần chỉnh')}
           </p>
         </div>
         {houseName && (
@@ -41,7 +41,7 @@ export default function ReturnRateDropCard({ houseName, value, isSaving, isReset
 
       {houseName && (
         <>
-          <TuningStepperInput label={t('Ngưỡng sụt giảm tỉ lệ chim về')} value={draft}
+          <TuningStepperInput label={t('Ngưỡng sụt giảm tỷ lệ chim về')} value={draft}
             onChange={setDraft} min={5} max={50} step={5} unit="%" rangeHint="Phạm vi: 5–50%" defaultHint={`Mặc định: ${DEFAULT_RETURN_RATE_DROP_PCT}%`} />
           <button type="button" onClick={() => onSave(draft)} disabled={isSaving}
             className={cn(

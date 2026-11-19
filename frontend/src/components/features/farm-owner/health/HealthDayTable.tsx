@@ -27,12 +27,9 @@ interface HealthDayTableProps {
 export default function HealthDayTable({ days, canRate, onRate, onView }: HealthDayTableProps): JSX.Element {
   const { t, date } = useTranslation(healthDict);
 
-  // STT theo vị trí trong cả danh sách (không reset khi sang trang)
-  const orderById = useMemo(() => new Map(days.map((day, index) => [day._id, index + 1])), [days]);
 
   const columns = useMemo(() => {
     const all: DataTableColumn<HouseHealthDay>[] = [
-      { key: 'index', header: t('col.index'), className: 'w-16', render: day => <span className="text-sm text-warmGray">{orderById.get(day._id)}</span> },
       // Ngày và nhà là khoá của dòng nên in đậm, như HarvestTable
       { key: 'date', header: t('col.date'), render: day => <span className="text-sm font-semibold text-charcoal">{date(day.date)}</span> },
       { key: 'house', header: t('col.house'), render: day => <span title={day.house_name} className="block truncate text-sm font-semibold text-charcoal">{day.house_name}</span> },
@@ -70,7 +67,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       },
     ];
     return canRate ? all : all.filter(column => column.key !== 'myRating');
-  }, [t, date, canRate, onRate, onView, orderById]);
+  }, [t, date, canRate, onRate, onView]);
 
   return (
     <FixedRowsTable

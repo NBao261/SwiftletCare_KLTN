@@ -183,7 +183,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
           </div>
 
           {/* Khoảng ngày cụ thể — luôn hiển thị trên mọi kích thước màn hình */}
-          <span className="font-mono text-xs tabular-nums text-warmGray">
+          <span className="text-xs tabular-nums text-warmGray">
             {t('dis.period', { from: date(from), to: date(to) })}
           </span>
         </div>
@@ -222,7 +222,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                 {t('dis.ratedCount')}
               </span>
               <div className="mt-1 flex flex-col">
-                <span className="font-mono text-lg font-bold leading-tight tabular-nums text-charcoal">
+                <span className="text-lg font-bold leading-tight tabular-nums text-charcoal">
                   {evaluation.rated_count}
                 </span>
                 <span className="mt-0.5 text-[11px] text-warmGray">
@@ -236,10 +236,10 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                 {t('dis.agreement')}
               </span>
               <div className="mt-1 flex flex-col">
-                <span className="font-mono text-lg font-bold leading-tight tabular-nums text-charcoal">
+                <span className="text-lg font-bold leading-tight tabular-nums text-charcoal">
                   {percent(evaluation.agreement?.value)}
                 </span>
-                <span className="mt-0.5 font-mono text-[11px] tabular-nums text-warmGray">
+                <span className="mt-0.5 text-[11px] tabular-nums text-warmGray">
                   {evaluation.agreement
                     ? `${percent(evaluation.agreement.ci_low)} – ${percent(evaluation.agreement.ci_high)}`
                     : t('dis.noCi')}
@@ -252,7 +252,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                 Kappa / Gwet&apos;s AC1
               </span>
               <div className="mt-1 flex flex-col">
-                <div className="flex items-baseline gap-1.5 font-mono text-sm font-bold leading-tight tabular-nums text-charcoal">
+                <div className="flex items-baseline gap-1.5 text-sm font-bold leading-tight tabular-nums text-charcoal">
                   <span>κ {agreementIndex(evaluation.weighted_kappa)}</span>
                   <span className="text-warmGray">·</span>
                   <span>AC1 {agreementIndex(evaluation.gwet_ac1)}</span>
@@ -269,7 +269,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                   <BarChart3 className="h-3 w-3" aria-hidden="true" />
                   <span>{t('dis.falseAlarm')}</span>
                 </span>
-                <span className="font-mono text-[11px] font-semibold tabular-nums text-charcoal">
+                <span className="text-[11px] font-semibold tabular-nums text-charcoal">
                   {t('dis.combined', { value: percent(evaluation.false_alarm_rate.combined) })}
                 </span>
               </div>
@@ -280,7 +280,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                     className="flex items-center justify-between rounded-lg border border-warmGray/10 bg-white px-2 py-1 text-[11px]"
                   >
                     <span className="text-warmGray">{t(`source.${source}`)}</span>
-                    <span className="font-mono font-bold tabular-nums text-charcoal">
+                    <span className="font-bold tabular-nums text-charcoal">
                       {percent(evaluation.false_alarm_rate[source])}
                     </span>
                   </div>
@@ -350,10 +350,10 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Badge tone="warning" className="font-mono tabular-nums">
+                        <Badge tone="warning" className="tabular-nums">
                           {t('level.SLIGHT')} &lt; {house.health_levels.in_range_slight_pct} {t('levels.unit.environment')}
                         </Badge>
-                        <Badge tone="critical" className="font-mono tabular-nums">
+                        <Badge tone="critical" className="tabular-nums">
                           {t('level.CLEAR')} &lt; {house.health_levels.in_range_clear_pct} {t('levels.unit.environment')}
                         </Badge>
                       </div>
@@ -370,10 +370,10 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Badge tone="warning" className="font-mono tabular-nums">
+                        <Badge tone="warning" className="tabular-nums">
                           {t('level.SLIGHT')} ≥ {house.health_levels.air_slight_h} {t('levels.unit.air')}
                         </Badge>
-                        <Badge tone="critical" className="font-mono tabular-nums">
+                        <Badge tone="critical" className="tabular-nums">
                           {t('level.CLEAR')} ≥ {house.health_levels.air_clear_h} {t('levels.unit.air')}
                         </Badge>
                       </div>
@@ -390,10 +390,10 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Badge tone="warning" className="font-mono tabular-nums">
+                        <Badge tone="warning" className="tabular-nums">
                           {t('level.SLIGHT')} ≥ {house.health_levels.noise_slight} {t('levels.unit.noise')}
                         </Badge>
-                        <Badge tone="critical" className="font-mono tabular-nums">
+                        <Badge tone="critical" className="tabular-nums">
                           {t('level.CLEAR')} ≥ {house.health_levels.noise_clear} {t('levels.unit.noise')}
                         </Badge>
                       </div>

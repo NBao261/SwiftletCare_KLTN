@@ -59,8 +59,8 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
       setIsEditing(false)
       pushToast(
         result.ring_delivered
-          ? t('Đã lưu vòng đếm và gửi tới nút AI.')
-          : t('Đã lưu vòng đếm. Nút AI sẽ nhận khi kết nối lại.'),
+          ? t('Đã lưu vòng đếm và gửi tới camera đếm chim.')
+          : t('Đã lưu vòng đếm. Camera đếm chim sẽ nhận khi kết nối lại.'),
         'success',
       )
     } catch (error) {
@@ -85,7 +85,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
             <span>
               {status === 'connecting'
                 ? t('Đang kết nối luồng…')
-                : t('Chưa có luồng — nền đen, vẫn đặt điểm và lưu được')}
+                : t('Chưa có luồng, nền đen, vẫn đặt điểm và lưu được')}
             </span>
             {status === 'failed' && (
               <button type="button" onClick={retry} className="inline-flex items-center gap-1 underline">
@@ -155,7 +155,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           <p className="text-sm text-warmGray">
             {hasRing
               ? t('Vòng hiện tại có {{n}} đỉnh.', { n: points.length })
-              : t('Chưa có vòng đếm — nút AI dùng vòng mặc định trong cấu hình.')}
+              : t('Chưa có vòng đếm, camera đếm chim dùng vòng mặc định trong cấu hình.')}
           </p>
           <Button variant="primary" size="sm" onClick={handleStartEditing}>
             <Pencil className="w-4 h-4" /> {hasRing ? t('Vẽ lại vòng') : t('Vẽ vòng đếm')}

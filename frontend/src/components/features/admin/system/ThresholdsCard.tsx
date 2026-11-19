@@ -14,7 +14,7 @@ import ThresholdsEditModal from '@/components/features/admin/system/ThresholdsEd
 const ICON = 'bg-warmGray/10 text-charcoal'
 
 /**
- * Ngưỡng môi trường mặc định (SYSTEM-FR-002) — nguồn cho "Reset về mặc định" (ENV-FR-020) và ngưỡng khởi tạo phòng mới.
+ * Ngưỡng môi trường mặc định (SYSTEM-FR-002) — nguồn cho "Reset về mặc định" (ENV-FR-020) và ngưỡng khởi tạo Zone mới.
  * Cùng kiểu card "Chỉ số vận hành toàn hệ thống": card trắng + 5 ô StatTile (icon xám). Chỉ ĐỌC — "Chỉnh sửa" mở
  * ThresholdsEditModal.
  */
@@ -28,7 +28,7 @@ export default function ThresholdsCard() {
       <Card className="flex flex-col gap-4">
         <SettingsCardHeader
           title="Ngưỡng môi trường mặc định"
-          description="Áp dụng khi tạo phòng mới và khi Farm Owner bấm “Reset về mặc định”."
+          description="Dùng cho Zone mới tạo và khi chủ nhà yến đặt lại ngưỡng mặc định."
           isDefault={isDefault}
           onEdit={() => setIsEditing(true)}
           editLabel="Chỉnh sửa ngưỡng môi trường mặc định"
@@ -38,7 +38,7 @@ export default function ThresholdsCard() {
 
         {!isLoading && error && (
           <p className="rounded-2xl border border-dashed border-warmGray/30 px-4 py-6 text-center text-sm text-warmGray">
-            {t('Không tải được ngưỡng mặc định')} — {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
+            {t('Không tải được ngưỡng mặc định')}. {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
           </p>
         )}
 

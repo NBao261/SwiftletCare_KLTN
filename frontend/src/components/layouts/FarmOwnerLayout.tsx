@@ -15,7 +15,7 @@ const menuSections: MenuSection[] = [
       { label: 'Cảnh báo', path: '/alerts', icon: WarningIcon },
       { label: 'Thiết bị & Cảm biến', path: '/devices', icon: CpuIcon },
       { label: 'Giám sát đàn chim', path: '/vision', icon: BirdIcon },
-      { label: 'Sức khỏe nhà yến', path: '/health', icon: HeartbeatIcon },
+      { label: 'Sức khoẻ nhà yến', path: '/health', icon: HeartbeatIcon },
       { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
       { label: 'Phiếu công việc', path: '/work-orders', icon: WrenchIcon },
       { label: 'Khuyến nghị', path: '/recommendations', icon: LightbulbIcon },
@@ -25,7 +25,7 @@ const menuSections: MenuSection[] = [
     title: 'Quản lý',
     items: [
       { label: 'Trang trại', path: '/farms', icon: HouseIcon },
-      { label: 'Tổng quan trại', path: '/overview', icon: BuildingsIcon },
+      { label: 'Tổng quan trang trại', path: '/overview', icon: BuildingsIcon },
       { label: 'Thống kê sản lượng', path: '/harvests', icon: BasketIcon },
       { label: 'Lịch bảo trì', path: '/maintenance', icon: CalendarCheckIcon },
     ],
@@ -35,7 +35,7 @@ const menuSections: MenuSection[] = [
     // farm đã có thì xem; lịch sử quyết định của chuyên gia (EXPERT-FR-009)
     title: 'Chuyên môn',
     items: [
-      { label: 'Thẩm định cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheckIcon },
+      { label: 'Kiểm chứng cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheckIcon },
       { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning', icon: SlidersHorizontalIcon },
       { label: 'Lịch đếm chim', path: '/domain-expert/counting-schedule', icon: CalendarBlankIcon },
       { label: 'Vòng đếm camera', path: '/domain-expert/counting-ring', icon: CrosshairIcon },

@@ -19,14 +19,14 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = translated({
   LOGIN_FAILED: 'Đăng nhập thất bại',
 
   // ── Farm / thiết bị / ngưỡng (farm, device, zone service) ──────────────────
-  FARM_OWNERSHIP_TRANSFERRED: 'Chuyển quyền sở hữu farm',
-  FARM_SOFT_DELETED: 'Xoá mềm farm',
+  FARM_OWNERSHIP_TRANSFERRED: 'Chuyển quyền sở hữu trang trại',
+  FARM_SOFT_DELETED: 'Xoá mềm trang trại',
   DEVICE_REGISTERED: 'Đăng ký thiết bị',
-  DEVICE_REASSIGNED: 'Chuyển thiết bị sang phòng khác',
-  THRESHOLD_UPDATED: 'Cập nhật ngưỡng phòng',
-  FUZZY_TUNING_UPDATED: 'Chỉnh hệ số logic mờ',
-  RELAY_OVERRIDE: 'Điều khiển relay thủ công',
-  RELAY_OVERRIDE_CLEARED: 'Trả relay về tự động',
+  DEVICE_REASSIGNED: 'Chuyển thiết bị sang Zone khác',
+  THRESHOLD_UPDATED: 'Cập nhật ngưỡng Zone',
+  FUZZY_TUNING_UPDATED: 'Chỉnh hệ số mờ',
+  RELAY_OVERRIDE: 'Điều khiển tay',
+  RELAY_OVERRIDE_CLEARED: 'Trả rơ-le về tự động',
   SPEAKER_SCHEDULE_UPDATED: 'Cập nhật lịch loa ru',
   AUDIO_TRACK_UPLOADED: 'Upload file loa ru',
   AUDIO_TRACK_SYNC_UPDATED: 'Đánh dấu chép file loa ru vào thẻ SD',
@@ -53,9 +53,9 @@ export const USER_AUDIT_ACTIONS = [
 /** Nhãn cho `target_type` (chuỗi backend, snake_case) — thiếu thì hiện nguyên mã */
 export const AUDIT_TARGET_LABEL: Record<string, string> = translated({
   user: 'Người dùng',
-  farm: 'Farm',
-  zone: 'Phòng',
-  sensor_node: 'Sensor node',
-  camera_node: 'Camera node',
+  farm: 'Trang trại',
+  zone: 'Zone',
+  sensor_node: 'Bộ điều khiển',
+  camera_node: 'Camera đếm chim',
   system_settings: 'Cấu hình hệ thống',
 })

@@ -118,7 +118,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
           <AlertTriangle size={30} strokeWidth={1.8} />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-charcoal">Thiết bị đã kết nối nhưng chưa áp cấu hình của khu vực</h2>
+          <h2 className="text-lg font-bold text-charcoal">Thiết bị đã kết nối nhưng chưa áp cấu hình của Zone</h2>
           <p className="mt-1 text-sm text-warmGray">
             Hệ thống vẫn gửi lại cấu hình; nếu không khớp, cảnh báo CONFIG_MISMATCH sẽ hiện ở trang Cảnh báo. Kiểm tra lại phiên bản firmware của thiết bị.
           </p>
@@ -162,9 +162,9 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   const progress = Math.min(1, elapsed / TIMEOUT_MS)
   let heading = 'Đang chờ thiết bị kết nối…'
   if (ready) heading = 'Thiết bị đã sẵn sàng'
-  else if (online) heading = 'Đang áp cấu hình của khu vực…'
+  else if (online) heading = 'Đang áp cấu hình của Zone…'
   const hint = configSync === 'UNKNOWN'
-    ? 'Firmware cũ không báo phiên bản cấu hình — kiểm tra lại sau khi cập nhật firmware'
+    ? 'Firmware cũ không báo phiên bản cấu hình. Kiểm tra lại sau khi cập nhật firmware.'
     : 'Tự động chuyển bước khi thiết bị sẵn sàng'
 
   return (
@@ -204,7 +204,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
               { label: 'Đã nhận cấu hình WiFi', done: true },
               { label: 'Kết nối WiFi nhà yến', done: wifiConnecting || online },
               { label: 'Kết nối máy chủ', done: online },
-              { label: 'Áp cấu hình của khu vực', done: configApplied },
+              { label: 'Áp cấu hình của Zone', done: configApplied },
             ]}
       />
     </div>

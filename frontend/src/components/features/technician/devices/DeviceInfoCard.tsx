@@ -5,7 +5,7 @@ import type { SensorNode } from "@/types"
 // FARM-FR-006 — lý do khởi động lại do ESP32 báo (esp_reset_reason), firmware ≥ 1.4.0
 const RESET_REASON_LABEL: Record<string, string> = {
   POWERON: "Cấp nguồn",
-  EXT: "Nút reset",
+  EXT: "Nút khởi động lại",
   SW: "Lệnh khởi động lại / cập nhật firmware",
   PANIC: "Lỗi phần mềm",
   INT_WDT: "Watchdog (treo)",

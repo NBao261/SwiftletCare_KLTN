@@ -9,6 +9,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { shellDict } from '@/constants/shell.i18n'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import type { MenuSection } from '@/components/layouts/AppSidebar'
+import { isMenuItemActive, isPathWithin } from '@/lib/menuMatch'
 import NotificationPopover from '@/components/common/NotificationPopover'
 import ProfilePopover from '@/components/common/ProfilePopover'
 import { IconLogout } from '@/components/ui/icons'
@@ -17,9 +18,11 @@ import { IconLogout } from '@/components/ui/icons'
 function usePageTitle(menuSections: MenuSection[]): { label: string; to: string } {
   const { pathname } = useLocation()
   const navigationLabel = useNavigationLabel()
-  const items = menuSections.flatMap(s => s.items)
-  const match = items.find(i => pathname === i.path || pathname.startsWith(`${i.path}/`))
-  return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: match?.path ?? pathname }
+  const items = menuSections.flatMap(section => section.items)
+  const match = items.find(item => isMenuItemActive(item, pathname))
+  // Ở một tab: tên trang là tên mục menu, gốc breadcrumb là tab đang mở (không bấm được)
+  const tab = match?.tabs?.find(menuTab => isPathWithin(pathname, menuTab.path))
+  return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: tab?.path ?? match?.path ?? pathname }
 }
 
 /** Toggle ngôn ngữ hiển thị — ghi vào languageStore; màn nào có từ điển (useTranslation) sẽ đổi theo, màn khác giữ tiếng Việt. */

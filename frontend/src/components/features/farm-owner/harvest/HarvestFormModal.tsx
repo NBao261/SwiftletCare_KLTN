@@ -13,7 +13,7 @@ import { useCreateHarvest, useDeleteHarvest, useHarvestPhotoUrl, useUpdateHarves
 import { cn } from '@/lib/cn';
 import { formatStandardDate } from '@/lib/i18n';
 import { useToastStore } from '@/stores/toastStore';
-import type { ScopeFilterState } from '@/hooks/farm-owner/useScopeFilter';
+import type { ScopeFilterState } from '@/hooks/shared/useScopeFilter';
 import type { HarvestBatch, NestType } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
@@ -312,7 +312,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
                       min={0}
                       step={1}
                       placeholder="0"
-                      aria-label={`${t(`nestType.${check.nestType}`)} — ${t('form.nests')}`}
+                      aria-label={`${t(`nestType.${check.nestType}`)} · ${t('form.nests')}`}
                       value={amounts[check.nestType].nests}
                       onKeyDown={blockSignKeys}
                       onChange={event => setAmount(check.nestType, 'nests', event.target.value)}
@@ -324,7 +324,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
                       min={0}
                       step="0.1"
                       placeholder="0"
-                      aria-label={`${t(`nestType.${check.nestType}`)} — ${t('form.weight')}`}
+                      aria-label={`${t(`nestType.${check.nestType}`)} · ${t('form.weight')}`}
                       value={amounts[check.nestType].grams}
                       onKeyDown={blockSignKeys}
                       onChange={event => setAmount(check.nestType, 'grams', event.target.value)}

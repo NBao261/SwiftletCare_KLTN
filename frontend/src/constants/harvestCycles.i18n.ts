@@ -65,13 +65,13 @@ const vi = {
   'drawer.compPrev': 'Chu kỳ trước',
   'drawer.compSameYear': 'Cùng kỳ năm ngoái',
   'drawer.compNoData': 'Không có chu kỳ để so sánh',
-  'drawer.healthLabel': 'Chỉ số sức khỏe',
+  'drawer.healthLabel': 'Chỉ số sức khoẻ',
   'drawer.healthGoodDays': '% ngày tốt',
-  'drawer.healthReturnRate': 'Tỉ lệ chim về TB',
+  'drawer.healthReturnRate': 'Tỷ lệ chim về TB',
   'drawer.healthTimeInRange': 'Thời gian trong ngưỡng',
-  'drawer.healthNone': 'Chưa có dữ liệu sức khỏe',
+  'drawer.healthNone': 'Chưa có dữ liệu sức khoẻ',
   'drawer.incomplete': 'Chu kỳ thiếu dữ liệu (<80% ngày được đánh giá)',
-  'drawer.openWarning': 'Chu kỳ đang mở — chưa thể viết kết luận',
+  'drawer.openWarning': 'Chu kỳ đang mở, chưa thể viết kết luận',
 
   // Drawer — form kết luận
   'drawer.existingTitle': 'Kết luận hiện tại',
@@ -82,8 +82,8 @@ const vi = {
   'drawer.textLabel': 'Nhận xét tổng quát mùa vụ *',
   'drawer.textPlaceholder': 'Nhận xét tổng quát mùa vụ...',
   'drawer.textHint': '{count}/2000 ký tự',
-  'drawer.recsLabel': 'Khuyến nghị cho mùa sau (tùy chọn)',
-  'drawer.recsPlaceholder': 'Khuyến nghị cho mùa sau (tùy chọn)...',
+  'drawer.recsLabel': 'Khuyến nghị cho mùa sau (tuỳ chọn)',
+  'drawer.recsPlaceholder': 'Khuyến nghị cho mùa sau (tuỳ chọn)...',
   'drawer.recsHint': '{count}/2000 ký tự',
 
   // Drawer — footer

@@ -100,7 +100,7 @@ export function buildTelemetryEvidenceSource(
       refY: avgSound,
       refLabel: t('TB: {{value}}', { value: `${avgSound} dB` }),
       data,
-      anomalyTag: `${peakTime} — ${maxSound} dB (${t('đỉnh đo được trong khung giờ')})`,
+      anomalyTag: `${peakTime} · ${maxSound} dB (${t('đỉnh đo được trong khung giờ')})`,
     }
   }
 
@@ -178,7 +178,7 @@ export function buildTelemetryEvidenceSource(
     refY: Math.round(avgVal * 10) / 10,
     refLabel: t('TB: {{value}}', { value: `${Math.round(avgVal * 10) / 10}${unit}` }),
     data,
-    anomalyTag: `${peakTime} — ${peakVal}${unit} (${t('lệch {{value}} so với TB', { value: `${maxDev.toFixed(1)}${unit}` })})`,
+    anomalyTag: `${peakTime} · ${peakVal}${unit} (${t('lệch {{value}} so với TB', { value: `${maxDev.toFixed(1)}${unit}` })})`,
   }
 }
 
@@ -219,7 +219,7 @@ export function buildBirdCountEvidenceSource(
   const closestTime = safeFormatHM(closestBucket.bucket_start)
 
   return {
-    title: t('Nguồn 2: số chim ra/vào mỗi 5 phút (nút AI)'),
+    title: t('Nguồn 2: số chim ra, vào mỗi 5 phút'),
     badge1: t('Chim vào: {{n}} con', { n: totalEntry }),
     badge2: t('Chim ra: {{n}} con', { n: totalExit }),
     highlight: t('Tại mốc: {{n}} vào', { n: closestBucket.entry_count }),
@@ -229,7 +229,7 @@ export function buildBirdCountEvidenceSource(
     refY: Math.round(avgEntry),
     refLabel: t('TB: {{value}}', { value: Math.round(avgEntry) }),
     data,
-    anomalyTag: `${closestTime} — ${t('{{in}} vào / {{out}} ra', { in: closestBucket.entry_count, out: closestBucket.exit_count })}`,
+    anomalyTag: `${closestTime} · ${t('{{in}} vào / {{out}} ra', { in: closestBucket.entry_count, out: closestBucket.exit_count })}`,
     barColor: '#8BAF2A',
   }
 }
@@ -276,7 +276,7 @@ export function buildAlertEvidence(
       correlation = t('Không có số đo trong khung giờ ±30 phút quanh cảnh báo dự báo.')
     }
   } else {
-    correlation = alert.message || t('Dữ liệu đối chiếu quanh thời điểm xảy ra sự cố để chuyên gia thẩm định.')
+    correlation = alert.message || t('Số liệu quanh thời điểm có cảnh báo để chuyên gia kiểm chứng.')
   }
 
   return {

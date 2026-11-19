@@ -146,7 +146,7 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
           <p className="text-[11px] text-[#878380] italic leading-relaxed flex-1">
             {t('Lưu ý: bác bỏ cảnh báo sẽ đóng cảnh báo và lưu lại lý do. Xác nhận lại sẽ khôi phục trạng thái ban đầu.')}
           </p>
-          <span className="text-xs text-[#878380] flex-shrink-0 font-mono">
+          <span className="text-xs text-[#878380] flex-shrink-0">
             {t('{{n}}/{{max}} ký tự', { n: note.length, max: MAX_NOTE })}
           </span>
         </div>

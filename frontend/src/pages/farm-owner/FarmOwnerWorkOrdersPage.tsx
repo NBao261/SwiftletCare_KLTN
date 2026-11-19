@@ -18,7 +18,7 @@ import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { WORK_ORDER_PAGE_SIZE, useWorkOrderActions, useWorkOrders } from '@/hooks/farm-owner/useWorkOrders';
 import { lastPage } from '@/lib/helpers';
 import { useFarmDetails } from '@/hooks/shared/useFarms';

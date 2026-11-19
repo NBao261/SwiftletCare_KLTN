@@ -23,9 +23,9 @@ interface Props {
 }
 
 const TYPE_LABELS: Record<string, string> = translated({
-  NOISE_ANOMALY: 'Ồn bất thường',
+  NOISE_ANOMALY: 'Tiếng ồn bất thường',
   SENSOR_ANOMALY: 'Cảm biến bất thường',
-  LOW_RETURN_RATE: 'Giảm tỉ lệ chim về',
+  LOW_RETURN_RATE: 'Giảm tỷ lệ chim về',
 })
 
 function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
@@ -34,18 +34,18 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   if (totalVerdicts === 0) {
     return (
       <div className="mb-3 rounded-xl border border-stone-200/90 border-l-4 border-l-[#8BAF2A] bg-[#FAF9F5] px-3.5 py-2.5 shadow-2xs"
-        title={t('Cơ chế tự động đối soát dựa trên phán quyết thẩm định cảnh báo (Feedback Loop)')}>
+        title={t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <ShieldCheck className="w-4 h-4 text-[#4A5C00] shrink-0" />
-            <span className="font-bold text-xs text-[#27231F] whitespace-nowrap">{t('Đối soát phán quyết')}</span>
+            <span className="font-bold text-xs text-[#27231F] whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
           </div>
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-stone-200/70 text-stone-700 whitespace-nowrap shrink-0">
             {t('Mặc định (0/0)')}
           </span>
         </div>
         <p className="mt-1 text-xs text-stone-600 leading-snug">
-          {t('Chưa có phán quyết trong kỳ. Đang duy trì tham số chuẩn an toàn.')}
+          {t('Chưa có kết luận nào trong kỳ.')}
         </p>
       </div>
     )
@@ -57,18 +57,18 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   if (!worst) {
     return (
       <div className="mb-3 rounded-xl border border-emerald-200/90 border-l-4 border-l-emerald-600 bg-emerald-50/60 px-3.5 py-2.5 shadow-2xs"
-        title={t('Cơ chế tự động đối soát dựa trên phán quyết thẩm định cảnh báo (Feedback Loop)')}>
+        title={t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-bold text-xs text-emerald-900 whitespace-nowrap">{t('Đối soát phán quyết')}</span>
+            <span className="font-bold text-xs text-emerald-900 whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
           </div>
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap shrink-0">
             {t('100% chuẩn xác ({{n}}/{{n}})', { n: totalVerdicts })}
           </span>
         </div>
         <p className="mt-1 text-xs text-emerald-800 leading-snug">
-          {t('Toàn bộ cảnh báo đều được xác nhận chuẩn. Tham số đang hoạt động tối ưu.')}
+          {t('Mọi cảnh báo trong kỳ đều được xác nhận đúng.')}
         </p>
       </div>
     )
@@ -82,7 +82,7 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
 
   return (
     <div className="mb-3 rounded-xl border border-amber-300 border-l-4 border-l-amber-500 bg-amber-50/80 px-3.5 py-2.5 shadow-2xs"
-      title={t('Cơ chế tự động đối soát dựa trên phán quyết thẩm định cảnh báo (Feedback Loop)')}>
+      title={t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
@@ -136,7 +136,7 @@ export default function DetectionColumn({
 
       <div className="flex-1 py-1 divide-y divide-stone-100">
         <VerdictStatsHint stats={verdictStats} />
-        <TuningStepperInput label={t('Biên độ ồn vượt nền P90')} value={form.noise_margin_db ?? 15}
+        <TuningStepperInput label={t('Mức ồn vượt nền')} value={form.noise_margin_db ?? 15}
           onChange={set('noise_margin_db')} min={5} max={30} step={1} unit="dB" rangeHint="Phạm vi: 5–30 dB" defaultHint="Mặc định: 15 dB" />
         <TuningStepperInput label={t('Thời gian ồn kéo dài tối thiểu')} value={form.noise_min_sec ?? 10}
           onChange={set('noise_min_sec')} min={5} max={15} step={1} unit="giây" rangeHint="Phạm vi: 5–15s" defaultHint="Mặc định: 10s" />
