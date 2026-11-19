@@ -1612,7 +1612,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `SeverityBadge` | Badge mức cảnh báo (đổi 4 mức backend → 3 cấp, xám khi `isMuted`) | 2.4 |
 | `TableEmptyState` | Trạng thái rỗng chuẩn của bảng (truyền vào `FixedRowsTable emptyContent`) | 1.1 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
-| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/farm-owner/useScopeFilter`) | — |
+| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/shared/useScopeFilter`) | — |
 | `NotificationPopover` · `ProfilePopover` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
 
 **Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, đóng băng 4.1) · `components/auth/RequireRole.tsx` (chặn route).

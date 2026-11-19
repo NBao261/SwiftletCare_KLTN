@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
-import { useScopeFilter } from "@/hooks/farm-owner/useScopeFilter";
+import { useScopeFilter } from "@/hooks/shared/useScopeFilter";
 import { Button, Card } from "@/components/ui";
 import ScopeFilter from "@/components/common/ScopeFilter";
 import HeaderActions from "@/components/layouts/HeaderActions";

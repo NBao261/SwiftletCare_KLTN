@@ -25,7 +25,7 @@ import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
-import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
 import { printQrLabels, zoneCode } from '@/lib/qrCode'
 

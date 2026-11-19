@@ -13,7 +13,7 @@ import { useCreateHarvest, useDeleteHarvest, useHarvestPhotoUrl, useUpdateHarves
 import { cn } from '@/lib/cn';
 import { formatStandardDate } from '@/lib/i18n';
 import { useToastStore } from '@/stores/toastStore';
-import type { ScopeFilterState } from '@/hooks/farm-owner/useScopeFilter';
+import type { ScopeFilterState } from '@/hooks/shared/useScopeFilter';
 import type { HarvestBatch, NestType } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 

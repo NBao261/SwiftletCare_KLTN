@@ -13,7 +13,7 @@ import { farmOverviewDict } from '@/constants/farmOverview.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useFarmOverview, useHouseComparison } from '@/hooks/farm-owner/useFarmOverview';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { cn } from '@/lib/cn';
 import type { ComparisonSortKey, HouseOverview } from '@/types';
 

@@ -17,7 +17,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useConfirmHarvest, useDeleteHarvest, useHarvests } from '@/hooks/farm-owner/useHarvests';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { formatStandardDate } from '@/lib/i18n';
 import { useAuthStore } from '@/stores/authStore';

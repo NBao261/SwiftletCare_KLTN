@@ -8,7 +8,7 @@ import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { devicesDict } from '@/constants/devices.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 
 // Trang Thiết bị & Cảm biến của Farm Owner — chỉ xem (FARM-FR-005): bảng cha - con Nhà yến → Zone → thiết bị theo khung lọc Nhà + Zone chung
 export default function FarmOwnerDevicesPage(): JSX.Element {
