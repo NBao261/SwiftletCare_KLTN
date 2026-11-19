@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, useId, FormEvent } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
@@ -35,6 +35,8 @@ interface NoteActionModalProps {
 export default function NoteActionModal({
   open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, maxLength, emptyMessage, danger, loading, onSubmit,
 }: NoteActionModalProps) {
+  // Gắn <label> với ô nhập (a11y; trình đọc màn hình và getByLabel tìm được ô)
+  const fieldId = useId()
   const [note, setNote] = useState('')
   const [error, setError] = useState<string>()
 
@@ -64,6 +66,7 @@ export default function NoteActionModal({
     <Modal open={open} onClose={onClose} title={title}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <Textarea
+          id={fieldId}
           label={label}
           placeholder={placeholder /* Textarea tự dịch label/placeholder */}
           required={required}

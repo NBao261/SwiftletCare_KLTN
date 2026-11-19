@@ -319,7 +319,7 @@ function TelegramCard() {
     <SettingsCard icon={TelegramLogoIcon} title="Telegram" subtitle="Nhận cảnh báo qua bot Telegram của hệ thống">
       {linked ? (
         <div className="flex flex-col gap-3">
-          <p className="rounded-xl bg-limeMist/60 px-4 py-3 text-body text-charcoal">{t('Tài khoản đã liên kết Telegram.')}</p>
+          <p className="rounded-xl bg-accent-600/20 px-4 py-3 text-body text-charcoal">{t('Tài khoản đã liên kết Telegram.')}</p>
           <Button variant="secondary" className="w-full" onClick={() => setShowUnlink(true)}>{t('Gỡ liên kết')}</Button>
         </div>
       ) : link ? (
