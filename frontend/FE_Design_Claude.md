@@ -1034,7 +1034,7 @@ Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile
 | 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin), trỏ tới stub `FarmOwnerLiveStreamPage` (ghi RPi) | Chỉ Farm Owner + Domain Expert | **Đã chốt 27/10/2026:** xoá route và trang stub; xem live ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây). ✅ Đã xoá 01/11/2026 (G-15) |
 | 4 | `/harvests` | `HARVEST_ROLES` (Farm Owner + Admin) | Farm Owner R, Domain Expert I, Admin – | Bỏ Admin, thêm Domain Expert chỉ xem |
 | 5 | `/ota` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (`/maintenance` đã gỡ ở PR #106) | Tạo nhóm quyền riêng cho Technician |
-| 5b | `/onboarding` | Màn nhập tay Device ID + khoá của Technician | Farm Owner + Technician, quét nhãn QR và mã QR tầng (SF-01, FARM-FR-003…012) | Thêm quét QR (`html5-qrcode`) và tiến trình setup; mobile là nơi làm chính |
+| 5b | `/devices/onboarding` | Màn nhập tay Device ID + khoá của Technician | Farm Owner + Technician, quét nhãn QR và mã QR tầng (SF-01, FARM-FR-003…012) | Dán nội dung QR hoặc gõ mã, tiến trình setup 3 bước (FARM-FR-012); quét QR chỉ ở mobile, nơi làm chính |
 | 6 | ~~Ticket ở mọi role: `/tickets`, `/support`, `/system/tickets`~~ | Đã gỡ route, menu (PR #101) và xoá trang, component, API (PR #106) | Ngoài phạm vi (Report 3 §8, BM03 dòng 9) | ✅ Đã gỡ |
 | 7 | `/alerts`, nút relay ở `/devices` | Nút xác nhận và nút relay chỉ Farm Owner thấy (PR #101); backend chỉ trả cảnh báo thiết bị cho Technician (PR #105) | Chỉ Farm Owner xác nhận và bật/tắt relay; Technician chỉ xem cảnh báo thiết bị; Admin không | ✅ Đã xong |
 | 8 | ~~`/marketplace`, `/marketplace/:id`~~ | Đã gỡ route, trang và API (PR #93) | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ |
