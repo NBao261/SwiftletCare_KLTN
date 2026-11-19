@@ -128,3 +128,11 @@ export function getDeviceRestoreErrorMessage(error: unknown): string {
     409: t('Không khôi phục được: đã quá 24 giờ, thiết bị đã được đăng ký lại hoặc đã có thiết bị thay'),
   })
 }
+
+// Câu báo lỗi khi khởi động lại controller từ xa (FARM-FR-013): 409 thiết bị không trực tuyến, 403 không phải nhà được giao
+export function getDeviceRestartErrorMessage(error: unknown): string {
+  return getSettingsErrorMessage(error, {
+    409: t('Thiết bị đang không trực tuyến nên chưa nhận được lệnh. Thử lại khi thiết bị kết nối'),
+    403: t('Chỉ chủ trại hoặc kỹ thuật viên được giao nhà này mới khởi động lại được'),
+  })
+}

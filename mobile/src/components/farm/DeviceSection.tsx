@@ -1,11 +1,13 @@
 import { Pressable, StyleSheet, View } from 'react-native'
 import { CaretRightIcon } from 'phosphor-react-native'
+import { SimulatedBadge } from '@/components/common/SimulatedBadge'
 import { CollapsibleSection } from '@/components/farm/CollapsibleSection'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { CameraNode, DeviceStatus, SensorNode } from '@/types'
-import { getDeviceStatusLabel } from '@/utils/label.utils'
+import { getConfigApplyStep, withSimulatedLabel } from '@/utils/device.utils'
+import { getConfigApplyLabel, getDeviceStatusLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
 const DOT_SIZE = 8
@@ -51,21 +53,32 @@ export function DeviceSection({ controllers, cameras, onSelect }: DeviceSectionP
       {devices.map((selected, index) => {
         const typeLabel = selected.kind === 'controller' ? t('Controller') : t('Camera AI')
         const statusLabel = getDeviceStatusLabel(selected.device.status)
+        // Controller kèm bước áp cấu hình khu vực (ENV-FR-027); camera không có cấu hình khu vực
+        const configStep =
+          selected.kind === 'controller' ? getConfigApplyStep(selected.device.status, selected.device.config_sync) : null
+        const rowCaption = configStep ? `${typeLabel} · ${getConfigApplyLabel(configStep)}` : typeLabel
         return (
           <Pressable
             key={selected.device._id}
             style={[styles.row, index > 0 && { borderTopWidth: BorderWidth.hairline, borderTopColor: palette.divider }]}
             onPress={() => onSelect(selected)}
             accessibilityRole="button"
-            accessibilityLabel={`${selected.device.device_id}, ${typeLabel}, ${statusLabel}`}
+            accessibilityLabel={`${selected.device.device_id}, ${withSimulatedLabel(rowCaption, selected.device.simulated)}, ${statusLabel}`}
             accessibilityHint={t('Xem chi tiết thiết bị')}
           >
             <View style={styles.texts}>
-              <Text variant="body" weight="semiBold" numberOfLines={1}>
-                {selected.device.device_id}
-              </Text>
-              <Text variant="small" color={palette.textSecondary}>
-                {typeLabel}
+              <View style={styles.titleRow}>
+                <Text variant="body" weight="semiBold" numberOfLines={1} style={styles.title}>
+                  {selected.device.device_id}
+                </Text>
+                <SimulatedBadge simulated={selected.device.simulated} />
+              </View>
+              <Text
+                variant="small"
+                color={configStep === 'mismatch' ? palette.alert : palette.textSecondary}
+                numberOfLines={1}
+              >
+                {rowCaption}
               </Text>
             </View>
             <View style={styles.status}>
@@ -83,6 +96,8 @@ export function DeviceSection({ controllers, cameras, onSelect }: DeviceSectionP
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
   texts: { flex: 1, minWidth: 0, gap: Spacing.xs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  title: { flexShrink: 1 },
   status: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   dot: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: Radius.full },
 })

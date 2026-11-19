@@ -108,6 +108,10 @@ export const deviceApi = {
   updateCountingRing: (cameraId: string, ring: CountingRing) =>
     apiClient.put<ApiResponse<CameraNode & { ring_delivered?: boolean }>>(ENDPOINTS.CAMERA_COUNTING_RING(cameraId), ring),
 
+  // Khởi động lại controller từ xa (FARM-FR-013); thiết bị không ONLINE thì 409
+  restartController: (sensorNodeId: string) =>
+    apiClient.post<ApiResponse<SensorNode>>(ENDPOINTS.SENSOR_NODE_COMMANDS(sensorNodeId), { command: 'RESTART' }),
+
   // Tắt override sớm, trả mọi relay của thiết bị về tự động (ENV-FR-018)
   // Có relayName thì chỉ trả relay đó về AUTO (BR-20); không có thì trả mọi relay của controller
   clearRelayOverride: (sensorNodeId: string, relayName?: keyof RelayStates) =>

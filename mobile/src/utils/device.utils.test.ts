@@ -7,7 +7,16 @@ import {
   getDeviceActions,
   isWithinRestoreWindow,
   summarizeDeviceStatuses,
+  withSimulatedLabel,
 } from '@/utils/device.utils'
+
+describe('withSimulatedLabel', () => {
+  it('thiết bị bộ giả lập nối "Giả lập", thiết bị thật hoặc chưa có cờ giữ nguyên (SYSTEM-FR-004)', () => {
+    expect(withSimulatedLabel('Đang phát', true)).toBe('Đang phát · Giả lập')
+    expect(withSimulatedLabel('Đang phát', false)).toBe('Đang phát')
+    expect(withSimulatedLabel('Đang phát', undefined)).toBe('Đang phát')
+  })
+})
 
 describe('getDeviceActions', () => {
   it('controller dời, thay, gỡ được; camera chỉ gỡ', () => {

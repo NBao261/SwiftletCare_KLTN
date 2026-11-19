@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { CaretRightIcon } from 'phosphor-react-native'
 import { SettingsInput, type SettingsInputProps } from '@/components/farm/settings/SettingsInput'
@@ -16,8 +16,12 @@ export interface SettingsTableColumn {
   flex?: number
 }
 
-// Một ô: chữ để xem, ô nhập khi đang sửa, hoặc null khi chỉ số không có giá trị đó (ánh sáng không có mức thấp)
-export type SettingsTableCell = { text: string; isMuted?: boolean } | { input: SettingsInputProps } | null
+// Một ô: chữ để xem (accessory là nhãn nhỏ dưới chữ, ví dụ "Giả lập"), ô nhập khi đang sửa, hoặc null khi chỉ số không có
+// giá trị đó (ánh sáng không có mức thấp)
+export type SettingsTableCell =
+  | { text: string; isMuted?: boolean; accessory?: ReactNode }
+  | { input: SettingsInputProps }
+  | null
 
 export interface SettingsTableRow {
   id: string
@@ -63,6 +67,7 @@ export function SettingsTable({ columns, rows, emptyText }: SettingsTableProps) 
         >
           {cell.text}
         </Text>
+        {cell.accessory}
       </View>
     )
   }
@@ -148,7 +153,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
   },
-  cell: { minWidth: 0 },
+  cell: { minWidth: 0, gap: Spacing.xs },
   caretSpace: { width: CARET_SIZE },
   right: { textAlign: 'right' },
   number: { fontVariant: ['tabular-nums'] },

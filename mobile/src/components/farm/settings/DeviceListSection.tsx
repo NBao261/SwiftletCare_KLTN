@@ -9,6 +9,7 @@ import {
   TrashIcon,
   VideoCameraIcon,
 } from 'phosphor-react-native'
+import { SimulatedBadge } from '@/components/common/SimulatedBadge'
 import { ActionMenuSheet, type MenuAction } from '@/components/farm/ActionMenuSheet'
 import { MoveDeviceSheet, type MoveDeviceTarget } from '@/components/farm/settings/MoveDeviceSheet'
 import {
@@ -24,15 +25,25 @@ import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { DeviceStatus } from '@/types'
-import { type DeviceAction, getDeviceActions, isWithinRestoreWindow } from '@/utils/device.utils'
-import { getDeviceStatusLabel } from '@/utils/label.utils'
+import type { ConfigSyncState, DeviceStatus } from '@/types'
+import {
+  type DeviceAction,
+  getConfigApplyStep,
+  getDeviceActions,
+  isWithinRestoreWindow,
+  withSimulatedLabel,
+} from '@/utils/device.utils'
+import { getConfigApplyLabel, getDeviceStatusLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
 export interface ListedDevice {
   _id: string
   device_id: string
   status: DeviceStatus
+  // SYSTEM-FR-004 — thiết bị của bộ giả lập
+  simulated?: boolean
+  // ENV-FR-027 — chỉ controller có; camera không có cấu hình khu vực
+  config_sync?: ConfigSyncState
 }
 
 // Quản lý thiết bị đã lắp (Farm Owner, SF-01): khu vực của mục (controller), các khu vực của nhà để dời, thay thiết bị (mở sheet
@@ -117,15 +128,36 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
     })
   }
 
-  const rows: SettingsTableRow[] = devices.map(device => ({
-    id: device._id,
-    cells: [
-      { text: device.device_id },
-      { text: getDeviceStatusLabel(device.status), isMuted: device.status !== 'ONLINE' },
-    ],
-    onPress: manage ? () => setMenuDevice(device) : undefined,
-    accessibilityLabel: `${device.device_id}: ${getDeviceStatusLabel(device.status)}`,
-  }))
+  const rows: SettingsTableRow[] = devices.map(device => {
+    const statusLabel = getDeviceStatusLabel(device.status)
+    // Controller kèm bước áp cấu hình khu vực dưới trạng thái (ENV-FR-027); cam khi chưa áp cấu hình mới (BR-24)
+    const configStep = isCamera ? null : getConfigApplyStep(device.status, device.config_sync)
+    const configLabel = configStep ? getConfigApplyLabel(configStep) : null
+    return {
+      id: device._id,
+      cells: [
+        { text: device.device_id, accessory: <SimulatedBadge simulated={device.simulated} /> },
+        {
+          text: statusLabel,
+          isMuted: device.status !== 'ONLINE',
+          accessory: configLabel ? (
+            <Text
+              variant="small"
+              color={configStep === 'mismatch' ? palette.alert : palette.textSecondary}
+              style={styles.rightText}
+            >
+              {configLabel}
+            </Text>
+          ) : undefined,
+        },
+      ],
+      onPress: manage ? () => setMenuDevice(device) : undefined,
+      accessibilityLabel: `${device.device_id}: ${withSimulatedLabel(
+        configLabel ? `${statusLabel}, ${configLabel}` : statusLabel,
+        device.simulated,
+      )}`,
+    }
+  })
 
   return (
     <>
@@ -203,4 +235,5 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
 const styles = StyleSheet.create({
   removedRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   flex: { flex: 1 },
+  rightText: { textAlign: 'right' },
 })

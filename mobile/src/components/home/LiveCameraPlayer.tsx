@@ -33,6 +33,7 @@ import type { CameraCardData } from '@/hooks/device/useCameraCards'
 import { useCameraStreamUrl } from '@/hooks/device/useCameraStreamUrl'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { formatBirdCountRows, getCameraStatusBadge } from '@/utils/camera.utils'
+import { withSimulatedLabel } from '@/utils/device.utils'
 import { formatTimeAgo } from '@/utils/date.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -177,7 +178,7 @@ export function LiveCameraPlayer({ card, onClose }: LiveCameraPlayerProps) {
   if (!card || !camera) return null
 
   const title = `Camera ${camera.device_id}`
-  const statusText = `${getCameraStatusBadge(camera.status)} · ${card.houseName}`
+  const statusText = `${withSimulatedLabel(getCameraStatusBadge(camera.status), camera.simulated)} · ${card.houseName}`
   const videoMessage = !isOnline
     ? t('Camera mất kết nối')
     : streamQuery.isError || status === 'error'

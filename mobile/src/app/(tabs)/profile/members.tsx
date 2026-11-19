@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Alert, ScrollView, StyleSheet, View } from 'react-native'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import { CrownIcon, EnvelopeSimpleIcon, UserIcon, UserMinusIcon, UsersIcon } from 'phosphor-react-native'
-import { MockDataBadge } from '@/components/common/MockDataBadge'
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { HomeSection } from '@/components/home/HomeSection'
@@ -17,7 +16,6 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
-import { IS_MOCK_API_ENABLED } from '@/constants/mockApi'
 import { Radius, Spacing } from '@/constants/theme'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
 import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
@@ -53,7 +51,6 @@ export default function MembersScreen() {
   const linkedFarmId = current.farms.some(item => item._id === requestedFarmId) ? requestedFarmId : undefined
   const farmId = selectedFarmId ?? linkedFarmId ?? current.farm?._id ?? ''
   const detailQuery = useFarmDetail(farmId)
-  const invitationsQuery = usePendingInvitations(farmId)
   const removeMember = useRemoveFarmMember(farmId)
   const toast = useToastMessage()
   // Số ngày còn lại của lời mời: cập nhật mỗi giờ là đủ
@@ -65,6 +62,7 @@ export default function MembersScreen() {
 
   const farm = detailQuery.data?.data ?? current.farms.find(item => item._id === farmId) ?? null
   const isPrimaryOwner = Boolean(farm && user && farm.owner_id === user._id)
+  const invitationsQuery = usePendingInvitations(farmId, isPrimaryOwner)
   const canManage = canPerform(user, 'manageFarmMembers', { isPrimaryOwner })
   const hasExpert = farm ? farmHasExpert(farm) : false
 
@@ -138,15 +136,22 @@ export default function MembersScreen() {
   }
 
   const renderInvitations = () => {
-    if (!IS_MOCK_API_ENABLED) {
-      return <EmptyState message={t('Danh sách lời mời đang chờ: Sắp có')} />
-    }
+    // Backend chỉ trả lời mời cho chủ chính (AUTH-FR-005); đồng sở hữu chỉ thấy thành viên
+    if (!isPrimaryOwner) return <EmptyState message={t('Chỉ chủ chính của farm xem được lời mời')} />
     const invitations = invitationsQuery.data ?? []
     if (invitationsQuery.isLoading) return <Skeleton width="100%" height={56} radius={Radius.md} />
+    if (invitationsQuery.isError) {
+      return (
+        <EmptyState
+          message={t('Không tải được lời mời')}
+          actionLabel={t('Thử lại')}
+          onAction={() => invitationsQuery.refetch()}
+        />
+      )
+    }
     if (invitations.length === 0) return <EmptyState message={t('Không có lời mời nào đang chờ')} />
     return (
       <Card style={styles.listCard}>
-        <MockDataBadge />
         {invitations.map((invitation, index) => (
           <ProfileRow
             key={invitation._id}

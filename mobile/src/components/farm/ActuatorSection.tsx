@@ -1,4 +1,5 @@
 import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
+import { SimulatedBadge } from '@/components/common/SimulatedBadge'
 import { CollapsibleSection } from '@/components/farm/CollapsibleSection'
 import { RelayRow } from '@/components/farm/RelayRow'
 import { Button } from '@/components/ui/button'
@@ -76,9 +77,12 @@ export function ActuatorSection({ controllers, telemetry, zoneAlerts, onSelectRe
           <View key={controller._id} style={styles.controller}>
             <View style={styles.controllerHeader}>
               <View style={styles.flex}>
-                <Text variant="small" weight="semiBold" numberOfLines={1}>
-                  {controller.device_id}
-                </Text>
+                <View style={styles.titleRow}>
+                  <Text variant="small" weight="semiBold" numberOfLines={1} style={styles.title}>
+                    {controller.device_id}
+                  </Text>
+                  <SimulatedBadge simulated={controller.simulated} />
+                </View>
                 <Text variant="small" color={manualRelays.length > 0 || !isOnline ? palette.alert : palette.textSecondary}>
                   {controllerCaption}
                 </Text>
@@ -123,4 +127,6 @@ const styles = StyleSheet.create({
   controller: { gap: Spacing.sm },
   controllerHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   flex: { flex: 1, minWidth: 0, gap: Spacing.xs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  title: { flexShrink: 1 },
 })

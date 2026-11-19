@@ -10,8 +10,16 @@ import type {
   CreateZonePayload,
   DetectionTuning,
   Farm,
+  FarmOverview,
   FuzzyTuning,
   House,
+  HouseStage,
+  CountingSchedule,
+  CountingScheduleView,
+  HealthLevels,
+  HouseHealthLevelsView,
+  WeatherRule,
+  WeatherRulesView,
   Thresholds,
   UpdateFarmPayload,
   Zone,
@@ -72,4 +80,28 @@ export const farmApi = {
   // Mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008), chỉ chuyên gia
   updateBirdCountTuning: (houseId: string, payload: BirdCountTuning) =>
     apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_BIRD_COUNT_TUNING(houseId), payload),
+
+  // Giai đoạn nhà (FARM-FR-014): đổi được lưu lịch sử, đánh giá ngày tiếp theo theo giai đoạn mới (BR-46)
+  setHouseStage: (houseId: string, stage: HouseStage) =>
+    apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_STAGE(houseId), { stage }),
+
+  // Tổng quan farm hôm nay (ANALYTICS-FR-015): giai đoạn, trạng thái ngày, cảnh báo và phiếu đang mở của từng nhà
+  getOverview: (farmId: string) => apiClient.get<ApiResponse<FarmOverview>>(ENDPOINTS.FARM_OVERVIEW(farmId)),
+
+  // Luật bù thời tiết của nhà (ENV-FR-030): đọc kèm lần bù gần nhất; lưu là thay cả danh sách (tối đa 10 luật)
+  getWeatherRules: (houseId: string) => apiClient.get<ApiResponse<WeatherRulesView>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId)),
+  updateWeatherRules: (houseId: string, rules: WeatherRule[]) =>
+    apiClient.put<ApiResponse<WeatherRulesView>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId), { rules }),
+
+  // Lịch đếm chim của nhà (VISION-FR-019): lưu là thay cả lịch, áp từ hôm nay
+  getCountingSchedule: (houseId: string) =>
+    apiClient.get<ApiResponse<CountingScheduleView>>(ENDPOINTS.HOUSE_COUNTING_SCHEDULE(houseId)),
+  updateCountingSchedule: (houseId: string, schedule: CountingSchedule) =>
+    apiClient.put<ApiResponse<CountingScheduleView>>(ENDPOINTS.HOUSE_COUNTING_SCHEDULE(houseId), schedule),
+
+  // Mức chỉ số sức khỏe của nhà (BR-28, EXPERT-FR-022)
+  getHealthLevels: (houseId: string) =>
+    apiClient.get<ApiResponse<HouseHealthLevelsView>>(ENDPOINTS.HOUSE_HEALTH_LEVELS(houseId)),
+  updateHealthLevels: (houseId: string, levels: HealthLevels) =>
+    apiClient.put<ApiResponse<HouseHealthLevelsView>>(ENDPOINTS.HOUSE_HEALTH_LEVELS(houseId), levels),
 }

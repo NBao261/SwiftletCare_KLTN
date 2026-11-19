@@ -29,6 +29,7 @@ import type { Alert, RelayName } from '@/types'
 import { buildAlertTimeline, describeAlertDetail, getAutoCloseText, isEnvironmentAlert } from '@/utils/alertDetail.utils'
 import { isInferredAlert } from '@/utils/alertList.utils'
 import { formatDateTime } from '@/utils/date.utils'
+import { withSimulatedLabel } from '@/utils/device.utils'
 import { farmHasExpert } from '@/utils/farm.utils'
 import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel, getSiteCauseLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
@@ -290,7 +291,7 @@ export function AlertDetailContent({
           RELAYS.map(relay => ({
             id: `${controller._id}|${relay}`,
             label: getRelayLabel(relay),
-            caption: controllers.length > 1 ? controller.device_id : undefined,
+            caption: controllers.length > 1 ? withSimulatedLabel(controller.device_id, controller.simulated) : undefined,
           })),
         )}
         onSelect={id => {
