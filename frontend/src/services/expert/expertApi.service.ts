@@ -7,13 +7,7 @@ import type {
   ExpertFuzzyTuning,
   ExpertDetectionTuning,
   FuzzySuggestionResponse,
-  ForecastResponse,
-  ControlPerformanceResponse,
   AutonomyResponse,
-  BirdCountTrendsResponse,
-  ZoneComparisonResponse,
-  HarvestBatchItem,
-  RelayOverrideLogItem,
   AlertEvidence,
   ExpertActivityEntry,
   ExpertActivityQuery,
@@ -78,32 +72,6 @@ export const expertApi = {
     api.put<ApiResponse<{ _id: string; detection_tuning: ExpertDetectionTuning }>>(`/farms/zones/${zoneId}/detection-tuning`, tuning),
 
   // ── 5. Phân tích, So sánh & Dự báo (ANALYTICS-FR-005/008/009/011, VISION-FR-009)
-  getForecast: (zoneId: string) =>
-    api.get<ApiResponse<ForecastResponse>>('/analytics/forecast', { params: { zoneId } }),
-
-  getControlPerformance: (zoneId: string, range = '24h') =>
-    api.get<ApiResponse<ControlPerformanceResponse>>('/analytics/control/performance', { params: { zoneId, range } }),
-
   getAutonomy: (zoneId: string, range = '24h') =>
     api.get<ApiResponse<AutonomyResponse>>('/analytics/autonomy', { params: { zoneId, range } }),
-
-  getBirdCountTrends: (zoneId: string, days = 30) =>
-    api.get<ApiResponse<BirdCountTrendsResponse>>('/analytics/bird-count/trends', { params: { zoneId, days } }),
-
-  compareZones: (zoneIds: string[], range = '24h') =>
-    api.get<ApiResponse<ZoneComparisonResponse>>('/analytics/env/compare', {
-      params: { zoneIds: zoneIds.join(','), range },
-    }),
-
-  getHarvestBatches: (params?: { farmId?: string; zoneId?: string }) =>
-    api.get<ApiResponse<HarvestBatchItem[]>>('/harvests', { params }),
-
-  // ── 6. Thiết bị & Lịch sử Can thiệp Relay (ENV-FR-019) ──────────────────────
-  getSensorNodes: (zoneId?: string) =>
-    api.get<ApiResponse<Array<{ _id: string; device_id: string; zone_id: string; status: string }>>>('/devices/sensor-nodes', {
-      params: { zoneId },
-    }),
-
-  getRelayOverrideLogs: (nodeId: string, params?: { page?: number; limit?: number }) =>
-    api.get<ApiResponse<RelayOverrideLogItem[]>>(`/devices/sensor-nodes/${nodeId}/relay-overrides`, { params }),
 }

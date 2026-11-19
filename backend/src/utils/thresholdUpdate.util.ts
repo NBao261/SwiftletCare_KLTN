@@ -10,8 +10,7 @@ import type { Thresholds, CurrentUser } from '@/types'
  * Ghi ngưỡng mới cho 1 zone + phát sinh mọi tác dụng phụ đi kèm (ENV-FR-006/020):
  * lưu threshold_history, publish MQTT config/update để ESP32 áp dụng ngay, ghi
  * audit log. Dùng chung cho farm.service.ts#updateZoneThresholds/resetZoneThresholds
- * và device.service.ts#updateNodeThresholds — trước đây 3 hàm này tự lặp lại y hệt
- * chuỗi bước này, dễ lệch nhau khi chỉ sửa 1 chỗ (VD thêm 1 field vào audit log).
+ * và expertReview.service.ts — để các đường ghi ngưỡng không lệch nhau khi chỉ sửa 1 chỗ.
  *
  * Cố tình KHÔNG đặt trong `thresholds.util.ts`: file đó được `houseZone.model.ts`
  * import để lấy `DEFAULT_THRESHOLDS` làm default cho schema — nếu hàm này (kéo

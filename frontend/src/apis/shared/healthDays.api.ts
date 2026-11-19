@@ -16,7 +16,6 @@ export interface HealthDayScope {
 export const healthDayApi = {
   list: (scope: HealthDayScope & { myRatingState?: HealthRatingState }) =>
     api.get<ApiResponse<HouseHealthDay[]>>('/health-reports/days', { params: scope }),
-  getOne: (dayId: string) => api.get<ApiResponse<HouseHealthDay>>(`/health-reports/days/${dayId}`),
   rate: (dayId: string, input: { rating: HealthRatingValue; note?: string }) =>
     api.post<ApiResponse<HouseHealthDay>>(`/health-reports/days/${dayId}/rating`, input),
   skip: (dayId: string) => api.post<ApiResponse<HouseHealthDay>>(`/health-reports/days/${dayId}/skip`),

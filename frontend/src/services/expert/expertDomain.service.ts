@@ -2,8 +2,7 @@ import { expertApi } from './expertApi.service'
 import type {
   ExpertVerdictStats, InferredAlertItem, ExpertThresholds,
   ExpertFuzzyTuning, ExpertDetectionTuning, FuzzySuggestionResponse,
-  ForecastResponse, ControlPerformanceResponse, AutonomyResponse,
-  BirdCountTrendsResponse, HarvestBatchItem,
+  AutonomyResponse,
   AlertEvidence, ExpertActivityEntry, ExpertActivityQuery,
 } from '@/types/expert.types'
 
@@ -51,29 +50,9 @@ export const expertService = {
     return res.data?.data
   },
 
-  async getForecast(zoneId: string): Promise<ForecastResponse> {
-    const res = await expertApi.getForecast(zoneId)
-    return res.data?.data
-  },
-
-  async getControlPerformance(zoneId: string, range = '24h'): Promise<ControlPerformanceResponse> {
-    const res = await expertApi.getControlPerformance(zoneId, range)
-    return res.data?.data
-  },
-
   async getAutonomy(zoneId: string, range = '24h'): Promise<AutonomyResponse> {
     const res = await expertApi.getAutonomy(zoneId, range)
     return res.data?.data
-  },
-
-  async getBirdCountTrends(zoneId: string, days = 30): Promise<BirdCountTrendsResponse> {
-    const res = await expertApi.getBirdCountTrends(zoneId, days)
-    return res.data?.data
-  },
-
-  async getHarvestBatches(params?: { farmId?: string; zoneId?: string }): Promise<HarvestBatchItem[]> {
-    const res = await expertApi.getHarvestBatches(params)
-    return Array.isArray(res.data?.data) ? res.data.data : []
   },
 
   // ── Thao tác ghi (Không nuốt lỗi - throw lỗi thật để UI hiển thị) ───────

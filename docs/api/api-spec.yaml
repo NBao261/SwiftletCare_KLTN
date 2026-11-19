@@ -2479,27 +2479,6 @@ paths:
           }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /devices/sensor-nodes/{id}/thresholds:
-    put:
-      tags: [Devices]
-      summary: "Cập nhật ngưỡng qua device (tương đương PUT /farms/zones/:zoneId/thresholds), publish MQTT config — FARM_OWNER/DOMAIN_EXPERT (Technician, Admin → 403)"
-      parameters: [{ $ref: "#/components/parameters/NodeId" }]
-      requestBody:
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/Thresholds" }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
   /devices/sensor-nodes/{id}/speaker-schedule:
     put:
       tags: [Devices]
@@ -5674,8 +5653,8 @@ paths:
       summary: "Tạo báo cáo theo yêu cầu cho khoảng bất kỳ tới 31 ngày (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN ở nhà được giao"
       description: |
         Tạo và lưu báo cáo `CUSTOM` của 1 nhà cho các ngày `from`…`to` (giờ VN, tính cả 2 đầu). Cùng nhà và
-        cùng khoảng đã có báo cáo `CUSTOM` thì tính lại và trả bản đó (200), không tạo bản thứ hai. Sẽ thay
-        `GET /health-reports/preview` (kiểu cũ, vẫn chạy). Không gửi thông báo (người tạo đang xem).
+        cùng khoảng đã có báo cáo `CUSTOM` thì tính lại và trả bản đó (200), không tạo bản thứ hai.
+        Không gửi thông báo (người tạo đang xem).
       requestBody:
         required: true
         content:
@@ -5702,29 +5681,6 @@ paths:
         "400": { description: "from sau to / quá 31 ngày / to sau hôm nay", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
-
-  /health-reports/preview:
-    get:
-      tags: [HealthReports]
-      deprecated: true
-      summary: "(Kiểu cũ) Số liệu sức khỏe Zone theo khoảng bất kỳ, không lưu (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT"
-      description: "Giữ cho các màn hiện có; báo cáo theo nhà theo yêu cầu dùng POST /health-reports."
-      parameters:
-        - { name: zoneId, in: query, required: true, schema: { type: string } }
-        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
-        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định là hiện tại; khoảng tối đa 30 ngày" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data: { $ref: "#/components/schemas/ZoneHealthReport" }
-        "400": { description: "from không trước to, hoặc khoảng quá 30 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
 
   /health-reports/days:
     get:
@@ -7386,7 +7342,7 @@ components:
     ZoneHealthReport:
       type: object
       deprecated: true
-      description: "(Kiểu cũ) EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert. Trả bởi GET /health-reports?zoneId và /health-reports/preview; báo cáo theo nhà dùng HouseHealthReport"
+      description: "(Kiểu cũ) EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert. Trả bởi GET /health-reports?zoneId; báo cáo theo nhà dùng HouseHealthReport"
       properties:
         _id: { type: string }
         farm_id: { type: string }

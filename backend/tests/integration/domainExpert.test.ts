@@ -145,11 +145,11 @@ describe('Domain Expert đọc cả farm và tinh chỉnh thông số', () => {
   })
 
   it('sửa ngưỡng và hệ số mờ ở Zone bất kỳ của farm; lịch sử lưu role người sửa', async () => {
-    const { zoneA, zoneB, nodeA, t } = await seed()
+    const { zoneA, zoneB, t } = await seed()
     await call('put', `/farms/zones/${zoneA._id}/thresholds`, t.expert, { temp_max: 32 }).expect(200)
     await call('put', `/farms/zones/${zoneB._id}/thresholds/reset`, t.expert).expect(200)
     await call('put', `/farms/zones/${zoneB._id}/fuzzy-tuning`, t.expert, { fuzzy_window_sec: 180 }).expect(200)
-    await call('put', `/devices/sensor-nodes/${nodeA._id}/thresholds`, t.expert, { humidity_min: 70 }).expect(200)
+    await call('put', `/farms/zones/${zoneA._id}/thresholds`, t.expert, { humidity_min: 70 }).expect(200)
 
     const a = (await Zone.findById(zoneA._id))!
     expect(a.threshold_history.map(h => h.changed_by_role)).toEqual(['DOMAIN_EXPERT', 'DOMAIN_EXPERT'])
