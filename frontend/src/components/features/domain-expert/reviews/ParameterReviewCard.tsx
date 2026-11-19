@@ -22,6 +22,8 @@ interface ParameterReviewCardProps {
   onAccept: (reviewId: string) => Promise<void>;
   onRevert: (reviewId: string) => Promise<void>;
   isProcessing?: boolean;
+  // Farm Owner xem mục duyệt, đề xuất nhưng không duyệt (EXPERT-FR-010, 011 chỉ của Domain Expert)
+  readOnly?: boolean;
 }
 
 const STATUS_CONFIG: Record<
@@ -92,6 +94,7 @@ export default function ParameterReviewCard({
   onAccept,
   onRevert,
   isProcessing = false,
+  readOnly = false,
 }: ParameterReviewCardProps): JSX.Element {
   const [showConfirmRevert, setShowConfirmRevert] = useState(false);
   const statusConfig = STATUS_CONFIG[review.status] || STATUS_CONFIG.PENDING_REVIEW;
@@ -183,7 +186,7 @@ export default function ParameterReviewCard({
       </div>
 
       {/* Nút hành động cho mục chờ duyệt */}
-      {isPending && (
+      {isPending && !readOnly && (
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
           <Button
             type="button"

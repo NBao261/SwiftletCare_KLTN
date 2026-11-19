@@ -8,7 +8,7 @@ import { autonomyBetween, inRangeSum, pct, switchedSum } from '@/services/analyt
 import { logAction } from '@/services/auditLog.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
 import { assertFarmAccess, assertZoneAccess } from '@/utils/farmAccess.util'
-import { BadRequestError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
+import { ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
 import type { CurrentUser } from '@/types'
 
@@ -17,10 +17,6 @@ import type { CurrentUser } from '@/types'
  * Zone (BR-33, `houseHealthReport.service`, Report 4 §6.4). Ở đây chỉ còn đọc và viết kết luận cho các báo cáo
  * Zone đã lưu, và `buildZoneMetrics` mà báo cáo theo nhà dùng cho từng Zone.
  */
-const DAY_MS = 86400_000
-/** Xem theo khoảng bất kỳ: chặn khoảng quá dài để 1 request không quét cả năm telemetry */
-const MAX_PREVIEW_DAYS = 30
-
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)
 
 /**
@@ -109,18 +105,6 @@ export async function getHealthReport(id: string, user: CurrentUser): Promise<IZ
   if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
   await assertFarmAccess(String(report.farm_id), user)
   return report
-}
-
-/** EXPERT-FR-005 — xem số liệu theo khoảng bất kỳ, không lưu */
-export async function previewHealthReport(user: CurrentUser, query: { zoneId: string; from: string; to?: string }) {
-  const { zone } = await assertZoneAccess(query.zoneId, user)
-  // `to` ở tương lai thì phần chưa xảy ra bị tính vào mẫu số của tỷ lệ thời gian tự động
-  const now = new Date()
-  const to = query.to && new Date(query.to) < now ? new Date(query.to) : now
-  const from = new Date(query.from)
-  if (!(from < to)) throw BadRequestError('from phải trước to')
-  if (to.getTime() - from.getTime() > MAX_PREVIEW_DAYS * DAY_MS) throw BadRequestError(`Khoảng xem tối đa ${MAX_PREVIEW_DAYS} ngày`)
-  return { zone_id: zone._id, farm_id: zone.farm_id, period_start: from, period_end: to, metrics: await buildZoneMetrics(zone, from, to) }
 }
 
 /**

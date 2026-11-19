@@ -111,9 +111,12 @@ router.post('/zones/:zoneId/fuzzy-tuning/apply-suggestion', requireRole('FARM_OW
 // EXPERT-FR-008 — tham số phát hiện theo Zone (ồn bất thường, bơm khô, hỏng loa): Domain Expert
 // sửa; Farm Owner chỉ sửa thay khi farm chưa có chuyên gia (BR-22, service kiểm), còn lại xem qua GET /farms/zones/:zoneId
 router.put ('/zones/:zoneId/detection-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateDetectionTuning)
+// EXPERT-FR-008 "reset to defaults" — cùng quyền với sửa; BR-22 kiểm ở service
+router.put ('/zones/:zoneId/detection-tuning/reset', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.resetDetectionTuning)
 // EXPERT-FR-008 (v2.1.8) — mức giảm tỷ lệ chim về theo nhà yến (camera ở cửa ra vào của cả nhà): Domain Expert
 // sửa; Farm Owner chỉ khi farm chưa có chuyên gia (BR-22)
 router.put ('/houses/:houseId/bird-count-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateBirdCountTuning)
+router.put ('/houses/:houseId/bird-count-tuning/reset', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.resetBirdCountTuning)
 // VISION-FR-019 — lịch đếm của nhà: Farm Owner, Domain Expert và thợ của nhà xem; Domain Expert sửa, Farm Owner chỉ khi
 // farm chưa có chuyên gia (BR-22, service kiểm). Hình dạng ở đây (422), luật giờ và chồng ngày ở service (400)
 router.get ('/houses/:houseId/counting-schedule', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('houseId').isMongoId(), validate, farmController.getCountingSchedule)

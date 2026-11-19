@@ -3,6 +3,7 @@
  * Real API First → Mock fallback | SRS v2.1.4: EXPERT-FR-004/008
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { birdCountTuningApi } from '@/apis/domain-expert/birdCountTuning.api'
 import { expertService, expertApi } from '@/services/expert.service'
 import type {
   ExpertThresholds,
@@ -109,4 +110,38 @@ export function useUpdateDetectionTuning(zoneId?: string) {
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),
   })
+}
+
+export function useResetDetectionTuning(zoneId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => {
+      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      return expertService.resetDetectionTuning(zoneId)
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),
+  })
+}
+
+// ── 4. Mức giảm tỷ lệ chim về — tham số của nhà chứa Zone đang chọn (EXPERT-FR-008) ─────
+export function useZoneHouseId(zoneId?: string) {
+  return useQuery({
+    queryKey: QK('house-of-zone', zoneId),
+    queryFn: async () => (await expertApi.getZone(zoneId!)).data.data.house_id,
+    staleTime: 5 * 60_000,
+    enabled: Boolean(zoneId),
+  })
+}
+
+// Lưu hoặc khôi phục mặc định; thành công thì đọc lại danh sách nhà (bird_count_tuning nằm trong House)
+export function useSaveReturnRateDrop(farmId?: string | null) {
+  const qc = useQueryClient()
+  const onSuccess = () => void qc.invalidateQueries({ queryKey: ['houses', farmId] })
+  return {
+    update: useMutation({
+      mutationFn: ({ houseId, value }: { houseId: string; value: number }) => birdCountTuningApi.update(houseId, value),
+      onSuccess,
+    }),
+    reset: useMutation({ mutationFn: (houseId: string) => birdCountTuningApi.reset(houseId), onSuccess }),
+  }
 }

@@ -9,6 +9,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useSubmitCycleConclusion } from '@/hooks/domain-expert/useHarvestCycles'
 import { harvestCyclesDict } from '@/constants/harvestCycles.i18n'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
 interface Props {
   cycle: HarvestCycle | null
@@ -47,7 +48,9 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
   const isOpen = cycle !== null
   const isCycleOpen = cycle?.status === 'OPEN'
-  const canWrite = !isCycleOpen
+  // D-04 — chỉ Domain Expert viết kết luận mùa vụ, kể cả khi farm chưa có chuyên gia (BR-22)
+  const { isExpert } = useExpertDecisionRights()
+  const canWrite = !isCycleOpen && isExpert
 
   // Điền lại form khi mở drawer với chu kỳ mới
   useEffect(() => {

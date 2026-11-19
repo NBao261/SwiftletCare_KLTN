@@ -4,7 +4,6 @@ import { Drawer } from '@/components/ui/Drawer'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { ZONE_METRICS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { wifiQuality, type DeviceRow, type ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
-import { useDeviceProfile } from '@/hooks/farm-owner/useFarmStructure'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
@@ -17,27 +16,24 @@ const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
 
 interface DeviceDetailDrawerProps { device: DeviceRow | null; zoneNode?: ZoneNode; onClose: () => void }
 
-// Drawer chi tiết thiết bị (Farm Owner chỉ xem); kỹ thuật viên lắp, firmware mới nhất chưa có API nên hiện NO_VALUE
+// Drawer chi tiết thiết bị (Farm Owner chỉ xem); chỉ hiện trường backend có thật
 export default function DeviceDetailDrawer({ device, zoneNode, onClose }: DeviceDetailDrawerProps) {
   const { t, num, day, ago } = useTranslation(farmDict)
-  const { data: profile } = useDeviceProfile(device?.deviceId)
 
   if (!device) return <Drawer open={false} onClose={onClose}>{null}</Drawer>
 
   const q = wifiQuality(device.rssi)
   const isSensor = device.type === 'sensor'
   const over = new Set<string>(zoneNode?.breaches.map(breach => breach.metric))
-  const isLatest = !!device.firmware && device.firmware === profile?.latestFirmware
   const location = zoneNode ? `${zoneNode.house.name} › ${zoneNode.zone.name}` : NO_VALUE
 
   const rows: Array<[string, string]> = [
     [t('drawer.location'), location],
     [t('drawer.type'), t(isSensor ? 'device.sensor.model' : 'device.camera.model')],
     ['Wi-Fi', device.rssi !== undefined && q ? `${device.rssi} dBm · ${t(`wifi.${q}`)}` : NO_VALUE],
-    ['Firmware', device.firmware ? `v${device.firmware}${isLatest ? ` · ${t('drawer.latest')}` : ''}` : NO_VALUE],
+    ['Firmware', device.firmware ? `v${device.firmware}` : NO_VALUE],
     [t('drawer.heartbeat'), ago(device.lastHeartbeat)],
     [t('drawer.activated'), day(device.registeredAt)],
-    [t('drawer.installer'), profile?.installedBy ?? NO_VALUE],
   ]
 
   return (

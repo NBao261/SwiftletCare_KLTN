@@ -32,6 +32,17 @@ const MATRIX: Record<string, Role[]> = {
   '/users': [ADMIN],
   '/account-requests': [ADMIN],
   '/domain-expert/queue': [DE],
+  // W-02 — trang quyết định của chuyên gia mở cho Farm Owner (Report 4 §5.4, BR-22; ghi hay chỉ xem do useExpertDecisionRights)
+  '/domain-expert/alert-verdicts': [DE, FO],
+  '/domain-expert/tuning': [DE, FO],
+  '/domain-expert/counting-schedule': [DE, FO],
+  '/domain-expert/counting-ring': [DE, FO],
+  '/domain-expert/weather-rules': [DE, FO],
+  '/domain-expert/reviews': [DE, FO],
+  '/domain-expert/reports': [DE, FO],
+  '/domain-expert/profiles': [DE, FO],
+  '/domain-expert/recommendation-rules': [DE, FO],
+  '/domain-expert/history': [DE, FO],
   '/settings': ROLES,
 }
 

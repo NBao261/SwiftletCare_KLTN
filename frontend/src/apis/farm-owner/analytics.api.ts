@@ -66,12 +66,6 @@ export interface BirdCountCurrentResponse extends Required<BirdCountDailyRecord>
   updated_at: string | null
 }
 
-export interface BirdCountDailyResponse {
-  from: string; to: string
-  records: BirdCountDailyRecord[]
-  note?: string
-}
-
 export interface BirdCountTrendsResponse {
   days: number
   records: BirdCountDailyRecord[]
@@ -176,8 +170,6 @@ export const analyticsApi = {
     api.get<ApiResponse<EnvSummaryResponse>>('/analytics/env/summary', { params: { zoneId, range } }),
   envCompare: (zoneIds: string[], range: AnalyticsRange) =>
     api.get<ApiResponse<EnvCompareResponse>>('/analytics/env/compare', { params: { zoneIds: zoneIds.join(','), range } }),
-  birdCountDaily: (zoneId: string, params?: { from?: string; to?: string }) =>
-    api.get<ApiResponse<BirdCountDailyResponse>>('/analytics/bird-count/daily', { params: { zoneId, ...params } }),
   // Đếm chim theo nhà yến (SRS v2.1.8) — houseId thay cho zoneId cũ
   houseBirdCountTrends: (houseId: string, days = 30) =>
     api.get<ApiResponse<BirdCountTrendsResponse>>('/analytics/bird-count/trends', { params: { houseId, days } }),

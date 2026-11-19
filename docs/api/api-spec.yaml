@@ -147,6 +147,27 @@ paths:
                   message: "Tài khoản đã bị khoá. Lý do: Vi phạm điều khoản sử dụng"
                   details: { reason: "Vi phạm điều khoản sử dụng" }
 
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: "Tài khoản đang đăng nhập (ALERT-FR-013, AUTH-FR-012)"
+      description: |
+        Trả cùng dạng `user` của `POST /auth/login`: `telegram_linked`, `notification_preferences`,
+        `deletion_requested_at`, `must_change_password`, `status` (và `is_active` suy ra). Không bao giờ trả
+        hash mật khẩu, refresh token, mã đặt lại hay mã liên kết Telegram. Client gọi lại sau khi liên kết
+        Telegram qua bot, gửi hoặc huỷ yêu cầu xoá tài khoản.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /auth/refresh:
     post:
       tags: [Auth]
@@ -2008,7 +2029,8 @@ paths:
         Farm Owner và vào lịch sử hoạt động (EXPERT-FR-009).
         Chim ra vào ở cửa của cả nhà yến nên số đếm, tỷ lệ chim về và cảnh báo `LOW_RETURN_RATE` tính theo
         House; mức giảm cho phép đặt ở đây (mặc định 20%, khoảng 5–50%). Lưu `bird_count_tuning_history`,
-        ghi audit `BIRD_COUNT_TUNING_UPDATED`. Backend dùng, không gửi xuống thiết bị.
+        ghi audit `BIRD_COUNT_TUNING_UPDATED`. Backend dùng, không gửi xuống thiết bị. Khoá khác
+        `return_rate_drop_pct` → 400. "Về mặc định": `PUT /farms/houses/{houseId}/bird-count-tuning/reset`.
       parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
       requestBody:
         content:
@@ -2024,7 +2046,29 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/House" }
-        "400": { description: "Ngoài khoảng 5–50 / không phải số / body không có tham số nào" }
+        "400": { description: "Ngoài khoảng 5–50 / không phải số / body không có tham số nào / có khoá lạ" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /farms/houses/{houseId}/bird-count-tuning/reset:
+    put:
+      tags: [Farms]
+      summary: "Đưa mức giảm tỷ lệ chim về của nhà về mặc định 20 % (EXPERT-FR-008) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Như `PUT /farms/houses/{houseId}/bird-count-tuning` với mức mặc định cố định của backend (20 %): thêm một dòng
+        `bird_count_tuning_history`, audit `BIRD_COUNT_TUNING_UPDATED`, báo Farm Owner khi chuyên gia làm
+        (EXPERT-FR-009). Không có body.
+      parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/House" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -2136,9 +2180,9 @@ paths:
         (400 nếu vi phạm hoặc không có khoá hợp lệ nào), lưu `detection_tuning_history`
         (người sửa, role, thời điểm, cũ/mới), ghi audit `DETECTION_TUNING_UPDATED` rồi publish
         MQTT `config` với 5 tham số chạy trên ESP32 (firmware ≥ 1.3.0 kẹp lại và lưu
-        NVS). "Về mặc định" = gửi lại bộ giá trị mặc định. Farm Owner xem qua `GET /farms/zones/{zoneId}`.
-        SRS v2.1.8: mức giảm tỷ lệ chim về (`return_rate_drop_pct`) chuyển sang House —
-        `PUT /farms/houses/{houseId}/bird-count-tuning`; gửi khoá này ở đây bị bỏ qua như khoá lạ.
+        NVS). "Về mặc định": `PUT /farms/zones/{zoneId}/detection-tuning/reset`. Farm Owner xem qua
+        `GET /farms/zones/{zoneId}`. Khoá ngoài 5 tham số → 400 nêu tên khoá; riêng mức giảm tỷ lệ chim về
+        (`return_rate_drop_pct`) thuộc House (SRS v2.1.8) — `PUT /farms/houses/{houseId}/bird-count-tuning`.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
       requestBody:
         content:
@@ -2155,11 +2199,35 @@ paths:
                   - properties:
                       data: { $ref: "#/components/schemas/Zone" }
         "400":
-          description: "Tham số ngoài khoảng hợp lệ / không phải số / body không có tham số nào"
+          description: "Tham số ngoài khoảng hợp lệ / không phải số / body không có tham số nào / có khoá lạ"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /farms/zones/{zoneId}/detection-tuning/reset:
+    put:
+      tags: [Farms]
+      summary: "Đưa 5 tham số phát hiện của Zone về mặc định (EXPERT-FR-008) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
+      description: |
+        Như `PUT /farms/zones/{zoneId}/detection-tuning` với bộ mặc định cố định của backend
+        (`DEFAULT_DETECTION_TUNING`: `noise_margin_db` 15, `noise_min_sec` 10, `pump_dry_on_sec` 300,
+        `pump_dry_min_rise_pct` 2, `speaker_drop_pct` 70; không phải ngưỡng mặc định của Administrator): thêm một dòng
+        `detection_tuning_history`, audit `DETECTION_TUNING_UPDATED`, báo Farm Owner khi chuyên gia làm
+        (EXPERT-FR-009), tăng `config_version` và publish `config`. Không có body.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Zone" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion:
     post:
@@ -2322,6 +2390,13 @@ paths:
           in: query
           schema: { type: string }
           description: Lọc theo Zone
+        - name: removed
+          in: query
+          schema: { type: string, enum: [recent] }
+          description: >-
+            Chỉ Farm Owner (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
+            (FARM-FR-008) — gỡ trong 24 giờ, `device_id` chưa đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ;
+            mỗi dòng kèm `restorable_until` (date-time). Cùng điều kiện với `POST …/{id}/restore`.
       responses:
         "200":
           {
@@ -2343,7 +2418,21 @@ paths:
                                       type: array,
                                       items:
                                         {
-                                          $ref: "#/components/schemas/SensorNode",
+                                          allOf:
+                                            [
+                                              { $ref: "#/components/schemas/SensorNode" },
+                                              {
+                                                properties:
+                                                  {
+                                                    restorable_until:
+                                                      {
+                                                        type: string,
+                                                        format: date-time,
+                                                        description: "Chỉ có khi removed=recent: hạn chót khôi phục (gỡ lúc + 24 giờ)",
+                                                      },
+                                                  },
+                                              },
+                                            ],
                                         },
                                     },
                                 },
@@ -2353,6 +2442,10 @@ paths:
                   },
               },
           }
+        "403":
+          description: "removed=recent khi không phải Farm Owner"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}:
     get:
@@ -2385,27 +2478,6 @@ paths:
               },
           }
         "404": { $ref: "#/components/responses/NotFound" }
-
-  /devices/sensor-nodes/{id}/thresholds:
-    put:
-      tags: [Devices]
-      summary: "Cập nhật ngưỡng qua device (tương đương PUT /farms/zones/:zoneId/thresholds), publish MQTT config — FARM_OWNER/DOMAIN_EXPERT (Technician, Admin → 403)"
-      parameters: [{ $ref: "#/components/parameters/NodeId" }]
-      requestBody:
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/Thresholds" }
-      responses:
-        "200":
-          {
-            description: OK,
-            content:
-              {
-                application/json:
-                  { schema: { $ref: "#/components/schemas/ApiSuccess" } },
-              },
-          }
-        "403": { $ref: "#/components/responses/Forbidden" }
 
   /devices/sensor-nodes/{id}/speaker-schedule:
     put:
@@ -2854,6 +2926,13 @@ paths:
           in: query
           deprecated: true
           schema: { type: string }
+        - name: removed
+          in: query
+          schema: { type: string, enum: [recent] }
+          description: >-
+            Chỉ Farm Owner (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
+            (FARM-FR-008) — gỡ trong 24 giờ, `device_id` chưa đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ;
+            mỗi dòng kèm `restorable_until` (date-time). Cùng điều kiện với `POST …/{id}/restore`.
       responses:
         "200":
           {
@@ -2875,7 +2954,21 @@ paths:
                                       type: array,
                                       items:
                                         {
-                                          $ref: "#/components/schemas/CameraNode",
+                                          allOf:
+                                            [
+                                              { $ref: "#/components/schemas/CameraNode" },
+                                              {
+                                                properties:
+                                                  {
+                                                    restorable_until:
+                                                      {
+                                                        type: string,
+                                                        format: date-time,
+                                                        description: "Chỉ có khi removed=recent: hạn chót khôi phục (gỡ lúc + 24 giờ)",
+                                                      },
+                                                  },
+                                              },
+                                            ],
                                         },
                                     },
                                 },
@@ -2885,6 +2978,10 @@ paths:
                   },
               },
           }
+        "403":
+          description: "removed=recent khi không phải Farm Owner"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}/decommission:
     post:
@@ -5556,8 +5653,8 @@ paths:
       summary: "Tạo báo cáo theo yêu cầu cho khoảng bất kỳ tới 31 ngày (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN ở nhà được giao"
       description: |
         Tạo và lưu báo cáo `CUSTOM` của 1 nhà cho các ngày `from`…`to` (giờ VN, tính cả 2 đầu). Cùng nhà và
-        cùng khoảng đã có báo cáo `CUSTOM` thì tính lại và trả bản đó (200), không tạo bản thứ hai. Sẽ thay
-        `GET /health-reports/preview` (kiểu cũ, vẫn chạy). Không gửi thông báo (người tạo đang xem).
+        cùng khoảng đã có báo cáo `CUSTOM` thì tính lại và trả bản đó (200), không tạo bản thứ hai.
+        Không gửi thông báo (người tạo đang xem).
       requestBody:
         required: true
         content:
@@ -5584,29 +5681,6 @@ paths:
         "400": { description: "from sau to / quá 31 ngày / to sau hôm nay", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
-
-  /health-reports/preview:
-    get:
-      tags: [HealthReports]
-      deprecated: true
-      summary: "(Kiểu cũ) Số liệu sức khỏe Zone theo khoảng bất kỳ, không lưu (EXPERT-FR-005) — FARM_OWNER, DOMAIN_EXPERT"
-      description: "Giữ cho các màn hiện có; báo cáo theo nhà theo yêu cầu dùng POST /health-reports."
-      parameters:
-        - { name: zoneId, in: query, required: true, schema: { type: string } }
-        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
-        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Mặc định là hiện tại; khoảng tối đa 30 ngày" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiSuccess"
-                  - properties:
-                      data: { $ref: "#/components/schemas/ZoneHealthReport" }
-        "400": { description: "from không trước to, hoặc khoảng quá 30 ngày", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
-        "403": { $ref: "#/components/responses/Forbidden" }
 
   /health-reports/days:
     get:
@@ -7268,7 +7342,7 @@ components:
     ZoneHealthReport:
       type: object
       deprecated: true
-      description: "(Kiểu cũ) EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert. Trả bởi GET /health-reports?zoneId và /health-reports/preview; báo cáo theo nhà dùng HouseHealthReport"
+      description: "(Kiểu cũ) EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert. Trả bởi GET /health-reports?zoneId; báo cáo theo nhà dùng HouseHealthReport"
       properties:
         _id: { type: string }
         farm_id: { type: string }

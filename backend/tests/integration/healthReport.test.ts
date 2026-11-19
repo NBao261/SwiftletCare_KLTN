@@ -148,7 +148,7 @@ describe('số lần đóng cắt relay không bị phồng sau khi mất mạng
 })
 
 describe('đọc báo cáo Zone đã lưu', () => {
-  it('Farm Owner và Domain Expert xem danh sách, chi tiết và khoảng bất kỳ; farm khác thì 403', async () => {
+  it('Farm Owner và Domain Expert xem danh sách và chi tiết; farm khác thì 403', async () => {
     const { zone, t } = await seed()
     const id = String((await storedZoneReport(zone))._id)
 
@@ -156,18 +156,8 @@ describe('đọc báo cáo Zone đã lưu', () => {
     expect(list.body.meta.total).toBe(1)
     expect((await call('get', `/health-reports/${id}`, t.owner).expect(200)).body.data.metrics.sample_count).toBe(10)
 
-    const from = new Date(Date.now() - 5.5 * HOUR).toISOString() // chỉ 5 mẫu cuối
-    const preview = await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${from}`, t.owner).expect(200)
-    expect(preview.body.data.metrics).toMatchObject({ sample_count: 5, humidity_in_range_pct: 80 })
-    expect(await ZoneHealthReport.countDocuments()).toBe(1) // preview không lưu
-
-    // `to` ở tương lai bị kẹp về hiện tại
-    const future = new Date(Date.now() + 24 * HOUR).toISOString()
-    const clamped = await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${from}&to=${future}`, t.owner).expect(200)
-    expect(new Date(clamped.body.data.period_end).getTime()).toBeLessThanOrEqual(Date.now())
-
-    const tooLong = new Date(Date.now() - 200 * 24 * HOUR).toISOString()
-    await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${tooLong}`, t.owner).expect(400)
+    // Đường xem khoảng bất kỳ kiểu cũ đã bỏ (B-03); báo cáo theo yêu cầu là POST /health-reports
+    await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${new Date().toISOString()}`, t.owner).expect(422)
 
     const other = await seed()
     await call('get', `/health-reports?zoneId=${zone._id}`, other.t.owner).expect(403)

@@ -29,6 +29,7 @@ import type {
   ParameterReviewStatus,
   CoefficientProposalStatus,
 } from '@/types/expert/reviews.types';
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 
 type ActiveTab = 'reviews' | 'proposals';
 
@@ -49,6 +50,7 @@ const PROPOSAL_STATUS_OPTIONS: SelectMenuOption<CoefficientProposalStatus | 'ALL
 ];
 
 export default function DomainExpertReviewsPage() {
+  const { isExpert } = useExpertDecisionRights();
   const { selectedFarmId, selectedZoneId } = useZoneStore();
   const farmId = selectedFarmId || '';
   const zoneId = selectedZoneId || undefined;
@@ -213,6 +215,7 @@ export default function DomainExpertReviewsPage() {
             onAccept={handleAcceptReview}
             onRevert={handleRevertReview}
             isProcessing={processingId === review._id}
+            readOnly={!isExpert}
           />
         ))}
       </div>
@@ -271,6 +274,7 @@ export default function DomainExpertReviewsPage() {
             onApprove={handleApproveProposal}
             onReject={handleRejectProposal}
             isProcessing={processingId === proposal._id}
+            readOnly={!isExpert}
           />
         ))}
       </div>

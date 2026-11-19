@@ -1,7 +1,5 @@
-import { LightbulbIcon, RobotIcon } from '@phosphor-icons/react'
 import { Badge, Card } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { useHouseAdvice } from '@/hooks/farm-owner/useFarmStructure'
 import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
@@ -25,11 +23,10 @@ interface NestingDensityCardProps {
   houseName: string
 }
 
-// Tỉ lệ chim về của nhà yến (SRS v2.1.8: camera ở cửa nhà nên số đếm và tỉ lệ tính theo nhà, không theo Zone) và gợi ý AI
+// Tỉ lệ chim về của nhà yến (SRS v2.1.8: camera ở cửa nhà nên số đếm và tỉ lệ tính theo nhà, không theo Zone)
 export default function NestingDensityCard({ houseId, houseName }: NestingDensityCardProps) {
   const { t, num, date } = useTranslation(dashboardDict)
   const { single: trends, isLoading } = useHousesBirdCountTrends(houseId ? [houseId] : [], TREND_DAYS)
-  const { data: advice } = useHouseAdvice(houseId || undefined)
   // Các phiên gần nhất có đủ số để tính tỉ lệ, mới nhất trên cùng
   const recent = (trends?.records ?? []).filter(record => record.return_rate !== null).slice(-RECENT_DAYS).reverse()
   const latest = trends?.latest_return_rate ?? null
@@ -91,23 +88,6 @@ export default function NestingDensityCard({ houseId, houseName }: NestingDensit
             })}
           </div>
         )}
-      </Card>
-
-      <Card variant="active" size="lg" className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/60 text-accent-700">
-          <LightbulbIcon width={18} height={18} />
-        </span>
-        <div>
-          <p className="text-sm font-bold text-charcoal">{t('ai.title')}</p>
-          {advice ? (
-            <p className="mt-1 text-sm text-charcoal/80">{advice.body}</p>
-          ) : (
-            <p className="mt-1 flex items-center gap-2 text-sm text-charcoal/70">
-              <RobotIcon width={16} height={16} className="shrink-0" />
-              {t('ai.empty')}
-            </p>
-          )}
-        </div>
       </Card>
     </div>
   )

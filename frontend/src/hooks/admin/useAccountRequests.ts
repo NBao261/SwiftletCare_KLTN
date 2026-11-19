@@ -30,3 +30,15 @@ export function useCompleteDeleteRequest() {
   })
 }
 
+/** PUT /admin/delete-requests/:id/reject — AUTH-FR-012: tài khoản về ACTIVE, lý do bắt buộc. */
+export function useRejectDeleteRequest() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => adminApi.rejectDeleteRequest(id, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-delete-requests'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+    },
+  })
+}
+

@@ -811,10 +811,9 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Đồng bộ cấu hình theo bộ điều khiển | ENV-FR-027 | ⬜ Chưa có (#22) | `ComingSoon` |
 | Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
 | Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ✅ API thật (`/health-reports/days*`, `/health-reports`, `/farms/houses/:id/health-levels`); màn `/health` và trang báo cáo `/health/report` (PR #126) | Không |
-| Cấu trúc Farm — người phụ trách nhà, lịch thu dự kiến, khuyến nghị AI, KTV lắp đặt/firmware mới nhất của thiết bị | FARM-FR-* (phần mở rộng UI) | ⬜ Chưa có endpoint — `apis/farm-owner/farmMock.api.ts` trả RỖNG, UI hiện khung trống | Không (không có số liệu giả); farm/house/zone/thiết bị/số đo/cảnh báo/thu hoạch là API thật |
+| Cấu trúc Farm — người phụ trách nhà, thiết bị, số đo, cảnh báo, thu hoạch | FARM-FR-*, AUTH-FR-013 | 🟢 API thật (người phụ trách = thợ chính của nhà). Lịch thu dự kiến, khuyến nghị AI, kỹ thuật viên lắp và firmware mới nhất đã gỡ ngày 18/11/2026 cùng `farmMock.api.ts`: Report 3 không có (dự báo sản lượng ngoài phạm vi §8; khuyến nghị thật ở `/recommendations`, EXPERT-FR-017) | Không |
 | Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
-| Dashboard Farm Owner — gợi ý thuật toán AI | — | ⬜ Chưa có endpoint, `farmMock.api.ts` trả rỗng → khung trống | Không |
 | Chi tiết thiết bị `/devices/detail` — thiết bị con của bộ kit | FARM-FR-005/006 (phần mở rộng UI) | 🟢 Không có tên riêng cho từng thiết bị con (không có endpoint): mỗi dòng ghi mã bộ kit; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) — dữ liệu giả `deviceComponents.data.ts` đã gỡ 18/11/2026 | Không |
 
 *Giới hạn:* bảng này cập nhật theo backend ngày 23/10/2026 (v2.9.0). Nguồn sự thật là backend thật cùng danh sách chỗ lệch trong `docs/reports/project-tracking.md` §6 — lệch nhau thì tin hai nguồn đó và sửa bảng này.
@@ -1063,7 +1062,7 @@ frontend/src/
 │   ├── farm-owner/            analytics.api · telemetry.api · harvests.api
 │   ├── domain-expert/         (đích) kiểm chứng cảnh báo, kết luận, duyệt thay đổi, đề xuất hệ số, tham số phát hiện, vòng đếm, lịch đếm
 │   └── shared/                farms.api · alerts.api · devices.api
-│                              audioTracks.api (⚠ chỉ Technician dùng — nợ, xem 13.14)
+│                              audioTracks.api (Farm Owner ghi, các role khác đọc — ENV-FR-013c)
 │
 ├── components/
 │   ├── auth/                  RequireRole
@@ -1114,14 +1113,13 @@ frontend/src/
 │   ├── farm-owner/            useAnalytics · useTelemetry · useHarvests
 │   ├── shared/                useFarms · useAlerts · useDevices · useReadAlerts
 │   │                          useAlertNotifications (listener socket AppShell mount)
-│   │                          useAudioTracks (⚠ chỉ Technician dùng — nợ, xem 13.14)
+│   │                          useAudioTracks (Farm Owner ghi, các role khác đọc — ENV-FR-013c)
 │   └── common/                Hạ tầng không gắn role:
 │                              usePermission · useSocket · usePaginatedListQuery · useBreadcrumb
 │
 ├── validations/               Hàm kiểm tra form, thuần logic
 │   ├── admin/                 user.validation.ts
-│   ├── farm-owner/            farm.validation.ts (vị trí farm)
-│   ├── technician/            audioTrack.validation.ts
+│   ├── farm-owner/            farm.validation.ts (vị trí farm) · audioTrack.validation.ts (bài loa ru) · …
 │   └── common/                threshold.validation.ts · fuzzyTuning.validation.ts · speakerSchedule.validation.ts
 │
 ├── types/                     Chia theo MODULE backend, không theo role (xem 12.7)
@@ -1196,7 +1194,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 |---|---|
 | `types/` chia theo **module backend**, không theo role | Type là shape thực thể mirror model Mongoose. `Zone`, `Alert`, `SensorNode` được 3 role đọc, không có chủ sở hữu duy nhất. Ép vào thư mục role thì hoặc phải nhân bản, hoặc 80% type dồn vào `types/shared/`. |
 | `constants/roles.ts` giữ bảng `MENU_ACCESS` tách rời menu trong layout | Không thể đọc ngược menu từ file layout: `useAuth` cần `canAccessPath`, mà layout lại render `AppHeader` gọi `useAuth` → import vòng, lỗi lúc chạy. |
-| `apis/shared/` + `hooks/shared/` còn tồn tại (10 file, gồm 2 file `audioTracks` đang nằm sai chỗ — xem 13.14) | Đã kiểm bằng đồ thị import: `farms`/`alerts` được cả 4 role chạm tới vì chính khung app render `NotificationPopover` (cùng các trang farm của từng role); `devices` dùng bởi Farm Owner, Admin và Technician. **Không có `components/features/shared/`.** |
+| `apis/shared/` + `hooks/shared/` còn tồn tại (10 file; `audioTracks`: Farm Owner ghi, mọi role đọc danh sách) | Đã kiểm bằng đồ thị import: `farms`/`alerts` được cả 4 role chạm tới vì chính khung app render `NotificationPopover` (cùng các trang farm của từng role); `devices` dùng bởi Farm Owner, Admin và Technician. **Không có `components/features/shared/`.** |
 
 ### 12.8. Checklist khi thêm một màn hình mới
 
@@ -1404,7 +1402,6 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 | Chỗ | Vi phạm | Cách trả nợ |
 |---|---|---|
-| `apis/shared/audioTracks.api.ts` + `hooks/shared/useAudioTracks.ts` | Chỉ Technician dùng (`features/technician/devices/AudioTracksModal`) → sai 12.1 nguyên tắc 2 | Dời về `apis/technician/` + `hooks/technician/` |
 | `pages/technician/TechnicianDevicesPage.tsx` | Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên]) | Chuyển vào `onSuccess` của mutation trong `useDevices` |
 | Mục 6 i18n | Hai hệ dịch song song (`src/i18n/` cho Admin + `ui/`; `useTranslation` + `*.i18n.ts` cho Farm Owner, Technician farms, khung app); nhiều màn vẫn hardcode tiếng Việt | PR riêng gộp về một hệ, sau đó 13.x mới yêu cầu `t('...')` |
 | `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
@@ -1583,8 +1580,8 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Nhóm | Đường dẫn | Nội dung |
 |---|---|---|
 | Hook hạ tầng | `hooks/common/` | `useTranslation` (Hệ 2: `t` `num` `day` `time` `date` `hourMinute` `dateTime` `ago`) · `usePermission` · `useSocket` · `usePaginatedListQuery` · `useBreadcrumb` (`usePageBreadcrumb`, `usePageBack`) · `useNavigationLabel` · `useScrollToTop` · `useCanScrollDown` · `useSyncedState` |
-| Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` · `useAlertNotifications` · `useReadAlerts` · `useDevices` · `useAudioTracks` (nợ: chỉ Technician) |
-| API ≥ 2 role | `apis/shared/` | `farms.api` · `alerts.api` · `devices.api` · `audioTracks.api` (nợ) |
+| Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` · `useAlertNotifications` · `useReadAlerts` · `useDevices` · `useAudioTracks` |
+| API ≥ 2 role | `apis/shared/` | `farms.api` · `alerts.api` · `devices.api` · `audioTracks.api` |
 | Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `alertStore` · `readAlertStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` |
 | Validator | `validations/common/` · `validations/farm-owner/` | `threshold.validation` · `fuzzyTuning.validation` · `speakerSchedule.validation` · `farm.validation` (vị trí farm: vĩ độ −90…90, kinh độ −180…180) |
 
@@ -1593,7 +1590,6 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Đường dẫn | Quy tắc | Mục |
 |---|---|---|
 | `data/<tên>.data.ts` (tạo khi cần) | Nơi duy nhất chứa dữ liệu giả, chỉ khi prompt yêu cầu; import qua api/hook | 7 |
-| `apis/farm-owner/farmMock.api.ts` | Trả **rỗng** cho phần backend chưa có endpoint | 7 |
 
 ---
 

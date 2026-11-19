@@ -12,7 +12,7 @@ Kết quả đối chiếu **backend** và **web** với Report 3 (SRS), Report 
 - Nhóm role trên web (`frontend/src/constants/roles.ts`) khớp `requireRole` của backend ở mọi màn đang có; các nút ghi bị ẩn đúng role (đã kiểm tay các chỗ dễ lỗi: kết luận báo cáo, góp ý kế hoạch bảo trì, lịch trực, hệ số mờ, bằng chứng cảnh báo). Nút gửi lệnh: PUSH_CONFIG và OTA chỉ cho Admin, Restart cho Admin và Farm Technician. **Farm Owner có quyền Restart nhưng không trang nào của Farm Owner có nút** (W-12).
 - 157 mã FR của Report 3 đều có dấu vết trong backend. Các FR còn lại của firmware và AI node không thuộc đợt soát này.
 
-**Tiến độ (19/11/2026):** mọi mục đã có PR. D-04 đã merge (#185). Các PR đang mở: #186 (W-11), #187 (W-01, B-04, B-05), #188 (B-01, W-05, W-06, W-07), #189 (W-03), #190 (W-02, merge sau #187), #191 (W-04, W-12), #192 (B-06, W-08), #193 (W-09, W-10), #194 (B-02, B-03, W-13) và PR tài liệu D-01, D-02, D-03 (merge sau cùng: `tc.py` trỏ tới test của #187 và #189). Gap G-28 trong `project-tracking.md` §6 đóng khi tất cả đã merge.
+**Tiến độ (19/11/2026): đã xong.** Mọi mục đã merge vào `develop`: D-04 (#185), W-11 (#186), W-01, B-04, B-05 (#187), B-01, W-05, W-06, W-07 (#188), W-03 (#189), W-02 (#190), W-04, W-12 (#191), B-06, W-08 (#192), W-09, W-10 (#193), B-02, B-03, W-13 (#194), D-01, D-02, D-03 (#195). Gap G-28 trong `project-tracking.md` §6 đã đóng. Còn ảnh chụp màn hình các màn web đã đổi cho các PR (FE_Design 13.13).
 
 **Còn phải sửa:** 1 bug mất dữ liệu (W-01) và 3 việc P0 trên web (W-02, W-03, W-05). Hai chức năng hiện không dùng được ở cả web lẫn mobile: quản lý bài loa ru (W-04) và Restart của Farm Owner (W-12). Ngoài ra có vài chức năng mobile đã có mà web chưa có, vài endpoint và hàm thừa, và 3 chỗ tài liệu cần chốt (D-01, D-02, D-04).
 

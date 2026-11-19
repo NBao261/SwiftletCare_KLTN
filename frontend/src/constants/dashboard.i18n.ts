@@ -178,8 +178,6 @@ const vi = {
   'density.average': 'Trung bình {n} ngày',
   'density.drop': 'Giảm {n}% so với trung bình — vượt mức {limit}% chuyên gia đặt cho nhà này',
   'density.empty': 'Chưa có phiên đếm chim nào của nhà này',
-  'ai.title': 'Gợi ý thuật toán AI',
-  'ai.empty': 'Chưa có gợi ý — sẽ xuất hiện khi hệ thống AI được kích hoạt cho nhà này.',
 
   'log.title': 'Nhật ký cảnh báo & giám sát cảm biến realtime',
   'log.filter': 'Lọc theo mức độ:',
@@ -393,8 +391,6 @@ const en: Record<DashboardKey, string> = {
   'density.average': '{n}-day average',
   'density.drop': 'Down {n}% from the average — above the {limit}% limit the expert set for this house',
   'density.empty': 'No bird counting session for this house yet',
-  'ai.title': 'AI algorithm suggestion',
-  'ai.empty': 'No suggestion yet — it will appear once the AI system is enabled for this house.',
 
   'log.title': 'Real-time alert & sensor monitoring log',
   'log.filter': 'Filter by severity:',

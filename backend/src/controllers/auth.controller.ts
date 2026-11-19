@@ -41,6 +41,12 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data })
 })
 
+/** GET /auth/me – tài khoản đang đăng nhập (ALERT-FR-013, AUTH-FR-012) */
+export const me = asyncHandler(async (req: Request, res: Response) => {
+  const user = await authService.getCurrentUser(req.user._id)
+  res.json({ success: true, data: user })
+})
+
 /** POST /auth/refresh – AUTH-FR-003 */
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const token = readRefreshToken(req)

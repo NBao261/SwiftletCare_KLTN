@@ -39,7 +39,7 @@ export interface User {
   /** AUTH-FR-011 — bắt buộc nhập khi khoá, backend trả lại nguyên văn */
   deactivated_reason?: string
   /** AUTH-FR-012 — đã yêu cầu xoá tài khoản, chờ Administrator xử lý trong ≤30 ngày */
-  deletion_requested_at?: string
+  deletion_requested_at?: string | null
   /** AUTH-FR-012 — Admin đã xoá/ẩn danh xong; document vẫn còn để giữ tham chiếu lịch sử */
   deleted_at?: string
   /** AUTH-FR-005c — mật khẩu tạm do Admin cấp: phải đổi trước khi dùng hệ thống (backend chặn mọi route khác) */
@@ -58,7 +58,8 @@ export interface Invitation {
   invited_email: string
   invited_role: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
   invited_by: string
-  token: string
+  // Chỉ có trong phản hồi tạo lời mời; danh sách lời mời không trả token
+  token?: string
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
   expires_at: string
   responded_at?: string

@@ -1,6 +1,6 @@
 /**
- * Chỉnh ngưỡng Zone (Farm Owner/Technician) — cả đường /farms/zones/:id/thresholds và đường
- * qua thiết bị /devices/sensor-nodes/:id/thresholds — dùng chung validate với ngưỡng mặc định hệ thống.
+ * Chỉnh ngưỡng Zone (Farm Owner/Domain Expert) qua /farms/zones/:id/thresholds — dùng chung validate
+ * với ngưỡng mặc định hệ thống. Đường cũ qua thiết bị /devices/sensor-nodes/:id/thresholds đã bỏ (B-02).
  */
 import express from 'express'
 import jwt from 'jsonwebtoken'
@@ -16,7 +16,6 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
-import { updateNodeThresholds } from '@/services/device.service'
 import { updateZoneThresholds } from '@/services/farm.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 
@@ -68,7 +67,6 @@ const thresholdsOf = async (zoneId: unknown) => (await Zone.findById(zoneId))!.t
 
 describe.each([
   ['updateZoneThresholds (zone route)', (ctx: Awaited<ReturnType<typeof seed>>, body: object) => updateZoneThresholds(String(ctx.zone._id), ctx.actor, body)],
-  ['updateNodeThresholds (device route)', (ctx: Awaited<ReturnType<typeof seed>>, body: object) => updateNodeThresholds(String(ctx.node._id), ctx.actor, body)],
 ])('%s', (_name, update) => {
   it('applies a valid partial update as numbers and leaves the rest alone', async () => {
     const ctx = await seed()
@@ -115,18 +113,16 @@ describe('HTTP', () => {
       .send({ humidity_max: 500 }).expect(400)
   })
 
-  it('PUT /devices/sensor-nodes/:id/thresholds answers 400 for the same body', async () => {
-    const { node, token } = await seed()
-    await request(app).put(`/devices/sensor-nodes/${node._id}/thresholds`).set('Authorization', `Bearer ${token}`)
-      .send({ humidity_max: 500 }).expect(400)
-  })
-
-  it('both routes accept a valid update (200)', async () => {
-    const { zone, node, token } = await seed()
+  it('accepts a valid update (200)', async () => {
+    const { zone, token } = await seed()
     await request(app).put(`/farms/zones/${zone._id}/thresholds`).set('Authorization', `Bearer ${token}`)
-      .send({ temp_max: 32 }).expect(200)
-    await request(app).put(`/devices/sensor-nodes/${node._id}/thresholds`).set('Authorization', `Bearer ${token}`)
       .send({ temp_max: 33 }).expect(200)
     expect((await thresholdsOf(zone._id)).temp_max).toBe(33)
+  })
+
+  it('the old device route is gone (404, B-02)', async () => {
+    const { node, token } = await seed()
+    await request(app).put(`/devices/sensor-nodes/${node._id}/thresholds`).set('Authorization', `Bearer ${token}`)
+      .send({ temp_max: 33 }).expect(404)
   })
 })

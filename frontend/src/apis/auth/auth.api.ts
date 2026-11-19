@@ -20,6 +20,14 @@ export const authApi = {
   changePassword: (input: { current_password: string; new_password: string }) =>
     api.put<ApiResponse<{ message: string }>>('/auth/password', input),
 
-  // AUTH-FR-012 — yêu cầu xoá tài khoản (Administrator xử lý trong ≤30 ngày)
+  // AUTH-FR-012 — yêu cầu xoá tài khoản (Administrator xử lý trong ≤30 ngày); huỷ được khi chưa xử lý (§6.14)
   requestDeletion: () => api.post<ApiResponse<{ message: string }>>('/auth/delete-request'),
+  cancelDeletion: () => api.delete<ApiResponse<{ message: string }>>('/auth/delete-request'),
+
+  // Đọc lại tài khoản sau khi đổi ngoài màn hình (liên kết Telegram qua bot, gửi/huỷ yêu cầu xoá)
+  me: () => api.get<ApiResponse<User>>('/auth/me'),
+
+  // ALERT-FR-013 — mã liên kết một lần (10 phút) mở bằng deep link; gỡ liên kết
+  createTelegramLink: () => api.post<ApiResponse<{ deep_link: string; expires_at: string }>>('/auth/telegram/link'),
+  unlinkTelegram: () => api.delete<ApiResponse<{ message: string }>>('/auth/telegram/link'),
 }
