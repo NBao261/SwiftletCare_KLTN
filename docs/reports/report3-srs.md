@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.12 (Review 2, final scope) |
-| Date | 10/11/2026 |
+| Document version | 4.2.13 (Review 2, final scope) |
+| Date | 20/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -224,7 +224,7 @@ The main flows MF-01…08 are Flows 1–8 of the registration form v3 (section D
 | SF-01 | Device setup by the Farm Owner (supporting) | Administrator, Farm Owner | — | A new controller, or a controller moved to another floor | Controller registered by scanning its label, assigned to the zone of the scanned floor code, online and running that zone's configuration, confirmed in the application | FARM-FR-003, 003b, 003c, 006, 007, 007b, 008, 010, 011, 012, ENV-FR-027 |
 | SF-02 | Remote device maintenance (supporting) | Administrator, Farm Owner, Farm Technician | — | A device alert, or a new firmware release | Device diagnosed, restarted, reconfigured or updated remotely; the Farm Owners notified of each action of the Administrator | FARM-FR-006, 009, 013, ENV-FR-013c |
 | SF-03 | Account and access management (supporting) | All users, Administrator | — | Account created by the Administrator, invitation, technician assignment, deletion request | Users hold the right role, farm access and assigned houses | AUTH-FR-002, 003, 004, 005, 005c, 007, 009, 010, 011, 012, 013, 014, FARM-FR-001, 002, EXPERT-FR-001 |
-| SF-04 | Notification settings (supporting) | Farm Owner, Farm Technician, Domain Expert | Telegram Bot API, Firebase Cloud Messaging | A user changes the channels or quiet hours, or links Telegram | Alerts reach the chosen channels at the chosen hours; a critical alert always reaches at least one channel outside the application | ALERT-FR-005, 006, 013 |
+| SF-04 | Notification settings (supporting) | Farm Owner, Farm Technician | Telegram Bot API, Firebase Cloud Messaging | A user changes the channels or quiet hours, or links Telegram | Alerts reach the chosen channels at the chosen hours; a critical alert always reaches at least one channel outside the application | ALERT-FR-005, 006, 013 |
 | SF-05 | System administration (supporting) | Administrator | — | The Administrator changes the default thresholds or reads the audit log or the technical overview | Defaults kept with their sources; every action traceable | ENV-FR-007, 026, SYSTEM-FR-001, 002, 003, 004 |
 | SF-06 | Harvest recording and season summary (supporting) | Farm Technician, Farm Owner, Domain Expert | — | A harvest is entered and confirmed (a few times a year) | The harvest cycle of the zone is closed with its yield and compared with the previous cycle and the same period of the previous year, with the health of the cycle; the expert writes a season conclusion | HARVEST-FR-001…007, ANALYTICS-FR-004, EXPERT-FR-020 |
 
@@ -269,7 +269,8 @@ A Farm Technician acts only on the houses assigned to them (AUTH-FR-013); the Do
 | Set the stage of a house (FARM-FR-014) | ✓ | read | ✓ | – |
 | Receive alerts | escalated and critical (all alerts without a technician) | first, assigned houses | inferred alerts | device alerts ² |
 | Acknowledge alerts, record the cause found on site | ✓ | assigned houses | – | – |
-| Configure own notification channels and quiet hours | ✓ | ✓ | ✓ | – |
+| Choose own out-of-app channels per alert level and link Telegram (ALERT-FR-005, 013) | ✓ | ✓ | – ⁴ | – |
+| Set quiet hours (ALERT-FR-006) | ✓ | – | – | – |
 | Confirm or reject inferred alerts | read ¹ | – | ✓ | – |
 | Open, assign, approve or reopen a Work Order | ✓ | – | read | – |
 | Carry out a Work Order, inspection checklist, maintenance and calibration record | ✓ | assigned houses | read | – |
@@ -310,6 +311,8 @@ The Administrator sees the devices of every farm with their farm, house and zone
 
 ³ The Farm Owner follows the decisions taken on its farm in the activity history and the in-app notifications of EXPERT-FR-009, not in the audit log, which only the Administrator reads (SYSTEM-FR-001).
 
+⁴ The Domain Expert receives no operational alert outside the application (EXPERT-FR-007), so it has no out-of-app channel to choose; its notifications stay in the in-app inbox.
+
 ### 2.5 Operating Environment
 
 - Controller: ESP32 on 2.4 GHz Wi-Fi, five RS485 Modbus RTU sensors on one bus, 4-channel relay module, DFPlayer Mini audio module, hardware watchdog.
@@ -332,7 +335,7 @@ The exact versions and the dev, staging and production environments are declared
 ### 2.7 Assumptions and Dependencies
 
 - A-1. The house has a working Wi-Fi network at installation time; loss of Internet afterwards is handled by MF-01.
-- A-2. Out-of-app notifications are delivered on both channels: by push to every signed-in mobile application of the Farm Owner and by Telegram when the Farm Owner has linked an account (ALERT-FR-002, 013). A Farm Owner who uses neither still sees every alert in the applications.
+- A-2. Out-of-app notifications are delivered on both channels: by push to every signed-in mobile application of the recipient (the Farm Technician on duty or the Farm Owner, ALERT-FR-017) and by Telegram when the recipient has linked an account (ALERT-FR-002, 013). A recipient who uses neither still sees every alert in the applications. The Domain Expert is notified in the app only (EXPERT-FR-007).
 - A-3. Default temperature, humidity and light thresholds are taken from the swiftlet-farming literature and reviewed by a practitioner; sources are recorded in REF-5.
 - A-4. The engineering constants marked as such in Section 4.4 and listed in Section 4.5 were chosen so that the system can run and have no domain source yet; they are confirmed or replaced by measurement.
 - A-5. Each farm has GPS coordinates, required when it is created (FARM-FR-001), and all its houses are close enough to share the weather of those coordinates. A farm created before the coordinates were required and still without them has no weather context, and the assessment says so.
@@ -421,14 +424,14 @@ Where a zone needs flock data it reads the figures of its house: the correlation
 | ID | Actor / component | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
 | ALERT-FR-001 | Backend | Classify every alert as CRITICAL, HIGH, MEDIUM or LOW by its type. | Every alert type has exactly one default severity (BR-15), and every stored alert has a severity. | M |
-| ALERT-FR-005 | Farm Owner, Farm Technician, Domain Expert | Choose per event type which channels deliver notifications (in-app, push, Telegram). A CRITICAL alert cannot be switched off on every channel outside the application. | A channel disabled for an event type receives nothing for it, while the alert is still listed in the notification centre; a setting that disables every out-of-app channel for CRITICAL alerts is rejected with 400. | M |
+| ALERT-FR-005 | Farm Owner, Farm Technician | Choose per event type which channels deliver notifications (in-app, push, Telegram). A CRITICAL alert cannot be switched off on every channel outside the application. | A channel disabled for an event type receives nothing for it, while the alert is still listed in the notification centre; a setting that disables every out-of-app channel for CRITICAL alerts is rejected with 400. | M |
 | ALERT-FR-006 | Farm Owner | Set quiet hours during which only CRITICAL alerts are sent out of the app. | During quiet hours a HIGH alert is not sent by push or Telegram but is listed in the app; a CRITICAL alert is sent on both. | M |
 | ALERT-FR-007 | Farm Owner, Domain Expert | View the alert list with the number of alerts waiting for acknowledgement (`ACTIVE`); alerts in force (`ACTIVE`, `ACKNOWLEDGED`) are shown apart from `DISMISSED` and `RESOLVED` ones. Read and unread belong to the notification inbox (EXPERT-FR-007), not to the alert. | The list shows only alerts of farms the user can access and filters by farm, zone or house, status (including `DISMISSED`), severity, type and expert verdict; a `DISMISSED` alert shows who rejected it, when and why; an invalid filter value is rejected with 422. | M |
 | ALERT-FR-008 | Backend | Keep one open alert per incident (same type and same zone and device, or same house for house-level alerts) and close alerts automatically when conditions recover (BR-16). | A repeated occurrence increments `occurrence_count` of the open alert (`ACTIVE`, `ACKNOWLEDGED` or `DISMISSED`) instead of creating a new alert, and a `DISMISSED` alert sends no notification; the same device alert message received twice (same event ID) is counted once; a threshold breach, an episodic alert and `LOW_RETURN_RATE` resolve as BR-16 states. | M |
 | ALERT-FR-009 | Farm Technician (assigned houses), Farm Owner | Acknowledge an alert with a note; when an equipment alert is closed, record the cause found on site (ALERT-FR-018). | An `ACTIVE` alert becomes `ACKNOWLEDGED` with user, time and note; acknowledging an alert that is not `ACTIVE` is rejected with 409; a Domain Expert or Administrator request, or a Farm Technician request on another house, is rejected with 403. | M |
 | ALERT-FR-011 | Backend | Raise `FORECAST_BREACH` when humidity or temperature is in range now but is forecast to cross a threshold within 60 minutes. | With a series forecast to cross `humidity_min` in 40 min, one LOW alert is raised containing the expected minutes and the forecast error; it resolves when the forecast no longer crosses or when the reading actually crosses (then `THRESHOLD_BREACH` applies). | M |
 | ALERT-FR-012 | Backend | Raise `THRESHOLD_BREACH` (MEDIUM) when a zone reading stays outside its threshold for the dwell time of BR-34: temperature below `temp_min` or above `temp_max`, humidity below `humidity_min` or above `humidity_max`, light above `light_max`, NH3 above `nh3_max`, CO2 above `co2_max`. Only temperature and humidity are acted on, by the fuzzy control; light, NH3 and CO2 never drive an actuator (C-2, BR-03, BR-04). | Humidity 5 %RH below `humidity_min` for 10 min raises one alert carrying the metric, the observed value, the threshold, the direction and the start time; the same reading for 9 min raises none; a reading that resumes outside the threshold after a silence longer than 30 s starts a new dwell time; NH3 above `nh3_max` for 5 min raises one alert stating that the limit is the zone's alert limit, and the fan output is unchanged; a stale reading never counts as a breach; the alert resolves as BR-16 states; both the Farm Owner and the Domain Expert see it. | M |
-| ALERT-FR-013 | Backend | Deliver alerts to the Farm Owner's phone through a Telegram bot after a one-time account link. | After linking with the one-time code, a CRITICAL alert produces a Telegram message within 5 s (NFR-02); after unlinking, no message is sent; the bot token is read from the environment and never stored in the repository. | M |
+| ALERT-FR-013 | Backend | Deliver alerts to the phone of their recipient (the Farm Technician on duty or the Farm Owner, ALERT-FR-017) through a Telegram bot after a one-time account link. | After linking with the one-time code, a CRITICAL alert produces a Telegram message within 5 s (NFR-02); after unlinking, no message is sent; the bot token is read from the environment and never stored in the repository. | M |
 | ALERT-FR-014 | Backend | Attach multi-modal evidence to every inferred alert (BR-23): for `NOISE_ANOMALY`, `SENSOR_ANOMALY` and `FORECAST_BREACH`, the temperature, humidity, NH3, CO2 and noise of the zone and the 5-minute bird counts of its house ±30 min around the alert, with the open device alerts of the zone; for `LOW_RETURN_RATE`, the day's % time in range of each zone of the house and that day's `NOISE_ANOMALY` and device alerts of the house. The system presents the evidence; it does not conclude. | Opening an inferred alert returns these series for the window and they equal the stored data; a source with no data in the window (for example an AI node offline) is reported as missing, not as zero; a user without access to the farm is refused (403). | M |
 | ALERT-FR-002 | Backend, Farm Owner | Deliver alerts as push notifications to the mobile application through Firebase Cloud Messaging; the app registers its device token after sign-in and removes it at sign-out. | A signed-in device receives a push for a CRITICAL alert within 5 s (NFR-02); after sign-out it receives none; an invalid token reported by FCM is removed. | M |
 | ALERT-FR-015 | Backend | Send an alert again when nobody has acknowledged it: a CRITICAL or HIGH alert other than `NODE_OFFLINE` still `ACTIVE` 15 min after it was raised, and a `NODE_OFFLINE` alert still `ACTIVE` 1 h after it was raised, are sent once more to their recipients (ALERT-FR-017) on the channels they chose (ALERT-FR-005). | An unacknowledged CRITICAL alert is sent a second time 15 min after it was raised and never a third time; an alert acknowledged, dismissed or resolved before then is not sent again; quiet hours (ALERT-FR-006) apply to the repeat as to the first message; MEDIUM and LOW alerts are never repeated. | M |
@@ -1157,6 +1160,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.13 | 20/11/2026 | Notification settings (SF-04, ALERT-FR-005, Section 2.4 with note ⁴): the Domain Expert chooses no out-of-app channel, as EXPERT-FR-007 keeps its notifications in the app; quiet hours are the Farm Owner's only (ALERT-FR-006); Telegram and push reach the alert's recipient, the Farm Technician on duty or the Farm Owner (ALERT-FR-013, A-2), as MF-02 already says |
 | 4.2.12 | 19/11/2026 | Section 2.4: the audit log is the Administrator's only (SYSTEM-FR-001); the Farm Owner follows the farm's decisions in the activity history of EXPERT-FR-009 (note ³) |
 | 4.2.11 | 18/11/2026 | Session windows sent to the AI node in Section 4.5: 7 days ahead, refreshed every night (VISION-FR-019, BR-13; G-12) |
 | 4.2.10 | 17/11/2026 | Counting schedule and sessions as built (G-12): input limits, kept schedule changes, session membership of a 5-minute count, incomplete days left out of the averages and the correlation, and the time of the evening check in Section 4.5 (VISION-FR-008, 019, 020, BR-21) |
