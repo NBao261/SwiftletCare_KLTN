@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { PASSWORD } from './helpers/demoApi';
+import { PASSWORD, demoFarm, signIn } from './helpers/demoApi';
 
 // Administrator trên web (G-02, G-18): tạo Farm Owner (AUTH-FR-005c) và lưu ngưỡng mặc định kèm nguồn REF-5 (ENV-FR-007).
 // Cần `npm run seed:demo` (tài khoản admin@); job CI không có SMTP nên thư mật khẩu tạm không gửi được.
@@ -44,5 +44,34 @@ test.describe('Administrator', () => {
     await dialog.getByLabel('Nguồn (mã mục REF-5)').fill('TL-001 kiểm thử E2E');
     await dialog.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByText('Đã lưu ngưỡng mặc định hệ thống')).toBeVisible();
+  });
+
+  // AUTH-FR-012 — Admin "completes or rejects"; lý do bắt buộc (todo-audit-1118 W-05)
+  test('từ chối yêu cầu xoá tài khoản kèm lý do, tài khoản rời danh sách', async ({ page, request }) => {
+    // Tài khoản riêng của test: Farm Owner mời một thợ, thợ tạo tài khoản từ lời mời rồi gửi yêu cầu xoá
+    const email = `delete-e2e-${Date.now()}@swiftletcare.dev`;
+    const owner = await signIn(request, 'owner');
+    const { farmId } = await demoFarm(owner);
+    const invitation = await owner.data<{ token: string }>(await owner.post(`/farms/${farmId}/members`, { email, role: 'FARM_TECHNICIAN' }));
+    const created = await request.post(`/api/invitations/${invitation.token}/create-account`, { data: { full_name: 'Thợ xoá E2E', password: PASSWORD } });
+    expect(created.ok(), await created.text()).toBe(true);
+    const login = await request.post('/api/auth/login', { data: { email, password: PASSWORD } });
+    const token = (await login.json()).data.accessToken as string;
+    const requested = await request.post('/api/auth/delete-request', { headers: { Authorization: `Bearer ${token}` } });
+    expect(requested.ok(), await requested.text()).toBe(true);
+
+    await signInAsAdmin(page);
+    await page.goto('/account-requests');
+    const row = page.getByRole('row').filter({ hasText: email });
+    await row.getByRole('button', { name: 'Từ chối' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Từ chối yêu cầu' }).click();
+    await expect(dialog.getByText('Hãy nhập lý do từ chối')).toBeVisible();
+    await dialog.getByLabel('Lý do từ chối').fill('Còn nghĩa vụ lưu hồ sơ thu hoạch');
+    await dialog.getByRole('button', { name: 'Từ chối yêu cầu' }).click();
+
+    await expect(page.getByText('Đã từ chối yêu cầu xoá tài khoản')).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: email })).toHaveCount(0);
   });
 });

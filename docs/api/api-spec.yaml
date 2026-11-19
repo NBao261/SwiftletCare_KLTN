@@ -147,6 +147,27 @@ paths:
                   message: "Tài khoản đã bị khoá. Lý do: Vi phạm điều khoản sử dụng"
                   details: { reason: "Vi phạm điều khoản sử dụng" }
 
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: "Tài khoản đang đăng nhập (ALERT-FR-013, AUTH-FR-012)"
+      description: |
+        Trả cùng dạng `user` của `POST /auth/login`: `telegram_linked`, `notification_preferences`,
+        `deletion_requested_at`, `must_change_password`, `status` (và `is_active` suy ra). Không bao giờ trả
+        hash mật khẩu, refresh token, mã đặt lại hay mã liên kết Telegram. Client gọi lại sau khi liên kết
+        Telegram qua bot, gửi hoặc huỷ yêu cầu xoá tài khoản.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /auth/refresh:
     post:
       tags: [Auth]

@@ -1,5 +1,6 @@
 // ADMIN — Yêu cầu tài khoản: xoá tài khoản (AUTH-FR-012, Flow 19) — API thật /admin/delete-requests.
 import { useState, useEffect } from 'react'
+import RejectDeletionModal from '@/components/features/admin/users/RejectDeletionModal'
 import { useDeleteRequestsList, useCompleteDeleteRequest } from '@/hooks/admin/useAccountRequests'
 import { Button, Badge, SectionCard } from '@/components/ui'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
@@ -75,6 +76,7 @@ function DeleteRequestsTab() {
   const completeDeleteRequest = useCompleteDeleteRequest()
   const push = useToastStore(s => s.push)
   const [target, setTarget] = useState<User | null>(null)
+  const [rejectTarget, setRejectTarget] = useState<User | null>(null)
 
   function complete(user: User) {
     completeDeleteRequest.mutate(user._id, {
@@ -91,7 +93,7 @@ function DeleteRequestsTab() {
     { key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]', render: (_u, i) => <span className="text-warmGray">{startIndex + i + 1}</span> },
     { key: 'name', header: 'Người dùng', className: 'w-[20%]', render: u => <p className="text-fade font-semibold text-charcoal" title={u.full_name}>{u.full_name}</p> },
     { key: 'email', header: 'Email', className: 'w-[28%]', render: u => <p className="truncate text-graphite" title={u.email}>{u.email}</p> },
-    { key: 'requested', header: 'Thời gian yêu cầu', className: 'w-[16%] whitespace-nowrap', render: u => <TimeCell at={u.deletion_requested_at} /> },
+    { key: 'requested', header: 'Thời gian yêu cầu', className: 'w-[16%] whitespace-nowrap', render: u => <TimeCell at={u.deletion_requested_at ?? undefined} /> },
     {
       key: 'deadline', header: 'Hạn xử lý', className: 'w-[16%]',
       render: u => {
@@ -103,7 +105,13 @@ function DeleteRequestsTab() {
     },
     {
       key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[14%]',
-      render: u => <Button size="sm" onClick={() => setTarget(u)}>Xử lý</Button>,
+      // AUTH-FR-012 — Admin hoàn tất hoặc từ chối
+      render: u => (
+        <div className="flex items-center justify-center gap-2">
+          <Button size="sm" onClick={() => setTarget(u)}>Xử lý</Button>
+          <Button size="sm" variant="secondary" onClick={() => setRejectTarget(u)}>Từ chối</Button>
+        </div>
+      ),
     },
   ]
 
@@ -133,6 +141,8 @@ function DeleteRequestsTab() {
         onConfirm={() => target && complete(target)}
         onCancel={() => setTarget(null)}
       />
+
+      <RejectDeletionModal user={rejectTarget} onClose={() => setRejectTarget(null)} />
 
     </div>
   )

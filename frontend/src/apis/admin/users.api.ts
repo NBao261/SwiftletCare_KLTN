@@ -43,4 +43,8 @@ export const adminApi = {
 
   completeDeleteRequest: (id: string) =>
     api.put<ApiResponse<User>>(`/admin/delete-requests/${id}/complete`),
+
+  // AUTH-FR-012 — Admin "completes or rejects"; lý do bắt buộc, gửi lại cho người yêu cầu
+  rejectDeleteRequest: (id: string, reason: string) =>
+    api.put<ApiResponse<User>>(`/admin/delete-requests/${id}/reject`, { reason }),
 }
