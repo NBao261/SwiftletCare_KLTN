@@ -80,7 +80,7 @@ Thay đổi code đi kèm: `runOnJS` → `scheduleOnRN` (`react-native-worklets`
 | `EXPO_PUBLIC_API_URL` | `http://localhost:3000` | Route không có tiền tố (`/auth/login`, `/farms`…). Emulator Android: `http://10.0.2.2:3000`; máy thật: IP LAN của máy chạy backend. |
 | `EXPO_PUBLIC_WS_URL`  | `ws://localhost:3000`   | Socket.io, đổi host giống dòng trên.                                                                                                |
 | `EXPO_PUBLIC_STREAM_URL` | `http://localhost:8888` | Gốc HLS của MediaMTX cho live stream camera AI (`expo-video`, token 60 giây — VISION-FR-013). MediaMTX phải bật HLS; đổi host giống dòng trên. |
-| `EXPO_PUBLIC_USE_MOCK_API` | tắt | `true` thì các khung Report 3 backend chưa có route hiện dữ liệu mẫu có nhãn "Dữ liệu mẫu"; mặc định (kể cả bản dev) hiện "Sắp có". |
+| `EXPO_PUBLIC_USE_MOCK_API` | tắt | `true` thì khung Report 3 nào backend chưa có route hiện dữ liệu mẫu có nhãn "Dữ liệu mẫu"; mặc định (kể cả bản dev) hiện "Sắp có". Từ 19/11/2026 không còn khung nào dùng (lời mời, kênh thông báo đã gọi API thật) — giữ cờ cho khung sau. |
 
 App khoá chiều dọc (`app/_layout.tsx`, `expo-screen-orientation`); riêng trình phát camera (`components/home/LiveCameraPlayer.tsx`) mở khoá xoay khi đang phóng to, và nút toàn màn của camera ở tab Trang trại (`components/farm/CameraFullscreenModal.tsx`) khoá ngang rồi trả lại dọc khi đóng. `expo-network` cho biết đang dùng Wi-Fi hay dữ liệu di động để quyết camera có tự phát không. Thêm `expo-video`, `expo-screen-orientation`, `expo-network` là gói native: sau khi kéo code phải `npm ci` rồi `npm run android` để build lại app.
 
@@ -136,8 +136,13 @@ mobile/
    │  └─ notifications/          # chuông — màn riêng ở stack gốc, ngoài các tab (thanh tab ẩn, tab Tài khoản không giữ màn này): index (hai mục Thông báo | Cảnh báo) ·
    │                             #   [notificationId] (chi tiết thông báo; quyết định của chuyên gia kèm Hoạt động chuyên gia bên dưới). ‹ quay về màn đã mở (useGoBackOrHome)
    │  └─ health/                 # index = các ngày của một nhà (?houseId, chọn nhà ▾) · [dayId] = chấm ngày còn chờ (BR-31, BR-37) hoặc chi tiết ngày
-   │  └─ harvests/               # index = các lần thu của một nhà (?houseId, chọn nhà ▾; ?source=analytics thì ẩn nút sang thống kê) — ghi, sửa, xoá lần thu
-   │                             #   trong HarvestRunSheet (SF-04, G-26); mở từ HouseYieldRow ở Màn B và nút "Các lần thu" của tab Sản lượng
+   │  └─ harvests/               # index = các lần thu của một nhà (?houseId, chọn nhà ▾; ?source=analytics thì ẩn nút sang thống kê) — ghi, sửa, xoá lần thu,
+   │                             #   chủ trại xác nhận lần thu DRAFT trong HarvestRunSheet (SF-04, G-26); khối "Chu kỳ thu" (HARVEST-FR-007, chỉ đọc);
+   │                             #   mở từ HouseYieldRow ở Màn B và nút "Các lần thu" của tab Sản lượng
+   │  └─ work-orders/            # index (Giao cho tôi · Chờ duyệt · Đang mở · Đã đóng; + mở phiếu bằng tay, ?create=1&houseId&alertId&title mở sẵn sheet) ·
+   │                             #   [workOrderId] (bắt đầu, báo xong; chủ trại duyệt / mở lại ở thanh dưới, ⋮ giao lại, huỷ — OPS-FR-001…004)
+   │  └─ maintenance/            # kế hoạch bảo trì đến hạn và mọi kế hoạch (G-22, chỉ xem; tạo, sửa ở web)
+   │  └─ recommendations/        # khuyến nghị của các nhà (MF-08): Chờ quyết định · Đã quyết định · Hết hạn; chủ trại chấp nhận / từ chối kèm lý do
    ├─ components/
    │  ├─ ui/                     # text · button · pressable-scale · text-field · code-input · form-message · card · icon-button · bottom-sheet · split-badge · skeleton · empty-state · loading-overlay · toast
    │  ├─ auth/                   # AuthScreenLayout.tsx (khung chung các màn xác thực, không cuộn; form nhích lên vừa đủ khi bàn phím mở) ·
@@ -157,21 +162,23 @@ mobile/
    │  ├─ alert/                  # tab Cảnh báo: SeveritySummary (dải mức = lọc nhanh) · SeverityLabel · AlertFilterChips (Tầng · Loại · Phán quyết) ·
    │  │                          #   AlertRow (vuốt trái để xác nhận) · AcknowledgeSheet (chip ghi chú nhanh) · AlertDetailSheet (toàn màn, kéo xuống để đóng) ·
    │  │                          #   AlertDetailContent · ExpertVerdictCard (kết luận của chuyên gia, đầu chi tiết) · AlertTimeline (lịch sử xử lý theo thời gian) ·
-   │  │                          #   AlertEvidence (bằng chứng ghép ±30 phút) · VerdictSheet · NotificationSettingsSheet (⚙)
+   │  │                          #   AlertEvidence (bằng chứng ghép ±30 phút) · VerdictSheet · NotificationSettingsSheet (⚙) · SeverityChannelTable (kênh theo mức, ALERT-FR-005)
    │  ├─ notification/           # chuông: NotificationInboxList (mục Thông báo) · PendingAlertList (mục Cảnh báo — chưa xác nhận, bấm mở đúng cảnh báo ở tab Cảnh báo)
-   │  ├─ common/                 # ComingSoonAction (thao tác backend chưa có API, nhãn "Sắp có") · RelayIcon (icon theo loại relay — Trang chủ và tab Trang trại) · BellButton (chuông duy nhất của Trang chủ và tab Trang trại: số = thông báo chưa đọc + cảnh báo chưa xác nhận, mở màn chuông) · ZoomableView (zoom và chạm hiện/ẩn thanh điều khiển trên khung camera)
+   │  ├─ common/                 # ReasonSheet (nhập lý do bắt buộc: mở lại, huỷ phiếu, từ chối khuyến nghị) · ComingSoonAction (thao tác backend chưa có API, nhãn "Sắp có") · RelayIcon (icon theo loại relay — Trang chủ và tab Trang trại) · BellButton (chuông duy nhất của Trang chủ và tab Trang trại: số = thông báo chưa đọc + cảnh báo chưa xác nhận, mở màn chuông) · ZoomableView (zoom và chạm hiện/ẩn thanh điều khiển trên khung camera)
    │  ├─ farm/                   # tab Trang trại — Màn A: HeaderPicker · OptionSheet (chọn farm/nhà) · FarmSummaryStrip; thẻ nhà dùng lại home/HouseStatusCard (onPress mở Màn B, nút ghim ★ như web);
    │  │                          #   Màn B: HouseCameraPanel (ghim đầu, thu gọn 48 px) · CameraFullscreenModal · CameraControlColumn (cột nút dọc mép phải, nút 40 icon 24 nét rỗng — khung nhỏ và toàn màn dùng chung) · CellularPlaybackPrompt · BirdCountStrip · ZoneTabs ·
    │  │                          #   HouseYieldRow (ô ngang sản lượng tháng của nhà, dưới dải chim ra/về; chạm mở harvests/ của nhà) · ZoneAlertRow · SensorTileGrid · CollapsibleSection · ActuatorSection · RelayControlSheet · DeviceSection · DeviceDetailSheet ·
    │  │                          #   ZoneSettingsSection (Cài đặt zone xem nhanh, ⋮ mỗi nhóm mở đúng mục trong Cài đặt nhà) · ActionMenuSheet (bảng thao tác của nút ⋮)
    │  │                          #   settings/ (trang Cài đặt nhà, Cài đặt farm, Tạo farm — khung theo ảnh mẫu dạng hoá đơn, xem 3.10): SettingsSection (khung một mục) · SettingsMetaGrid ·
    │  │                          #   SettingsTable · SettingsInput · SettingsActionBar (thanh đen) · SettingsEditActions (Cập nhật hoặc Tạo mới/Huỷ) · SettingsTileButton · ComingSoonAction ·
-   │  │                          #   ThresholdSection · NumberTuningSection (dùng cho FuzzyTuningSection · DetectionTuningSection · BirdCountTuningSection) · HouseInfoSection ·
+   │  │                          #   ThresholdSection · NumberTuningSection (dùng cho FuzzyTuningSection · DetectionTuningSection · BirdCountTuningSection · HealthLevelsSection) · HouseInfoSection ·
+   │  │                          #   HouseStageSection · WeatherRulesSection + WeatherRuleSheet · CountingScheduleSection + CountingWindowSheet ·
    │  │                          #   ZoneInfoSection · DeviceListSection · ZoneSettingsTabs · AddDeviceSheet (SF-01: quét nhãn và mã tầng thứ tự nào cũng được, chọn khu vực, đăng ký, rồi DeviceWifiGuide + DeviceSetupProgress) + QrScanner · CreateItemSheet · FarmInfoSection · FarmLocationSection ·
    │  │                          #   FarmHousesSection · LocateRow
    │  └─ home/                   # các khối của màn Trang chủ (viết chung cho hai role, hiện chỉ Farm Owner vào được) — khối chỉ một role thấy thì quyết ở màn bằng canPerform:
    │                             #   HomeHeader · HomeSection · FarmCarousel/FarmBannerCard · OverviewStats + StatTile, 3 ô, StatDetailSheet, ReturnRateBar ·
-   │                             #   UrgentAlertBanner · PendingTasksCard · RelayOverrideStrip · NewReportCard · HouseCarousel/HouseStatusCard ·
+   │                             #   UrgentAlertBanner · PendingTasksCard · WorkOrderTasksCard · MaintenanceDueCard · RecommendationTasksCard · RelayOverrideStrip · NewReportCard ·
+   │                             #   HouseCarousel/HouseStatusCard (trạng thái vận hành + trạng thái ngày hôm nay, nhãn Đang dẫn dụ) ·
    │                             #   CameraCarousel/CameraCard · LiveCameraPlayer (trình phát kiểu YouTube mở tại chỗ: phóng to, xoay ngang toàn màn, vuốt xuống thành thanh CameraMiniPlayer) · CameraVideoSurface · PlayerControlButton
    ├─ config/                    # queryClient.ts
    ├─ constants/                 # theme.ts (Colors, Radius, BorderWidth, Spacing, FontFamily, Typography)
@@ -200,24 +207,27 @@ mobile/
    │  │                          #   useBirdDaily · useBirdBuckets · useCorrelations · useEnvSummaries · useForecast · useControlPerformances · useAutonomies ·
    │  │                          #   useControlSuggestion · useZoneRelayOverrides · useHealthReports (theo nhà, theo loại kỳ) · useHouseHealthReport · useCreateHealthReport · useUpdateConclusion
    │  ├─ harvest/                # useFarmHarvests (đợt thu của farm) · useSaveHarvestRun (tạo / sửa / xoá từng loại yến song song, trả kết quả từng loại) ·
-   │  │                          #   useDeleteHarvestRun (xoá mọi đợt của một lần thu)
-   │  ├─ work-order/             # useWorkOrders (phân trang theo meta) · useWorkOrderDetail · useOpenWorkOrderCount (khối Trang chủ) · useStartWorkOrder · useRecordChecklistItem (mục checklist của Work Order phòng ngừa, G-22) · useCompleteWorkOrder (nguyên nhân, việc đã làm, ảnh multipart) — G-21
+   │  │                          #   useDeleteHarvestRun (xoá mọi đợt của một lần thu) · useConfirmHarvestRun (chủ trại xác nhận lô DRAFT) · useHarvestCycles
+   │  ├─ work-order/             # useWorkOrders (phân trang theo meta) · useWorkOrderDetail · useOpenWorkOrderCount (khối Trang chủ) · useStartWorkOrder · useRecordChecklistItem (mục checklist của Work Order phòng ngừa, G-22) · useCompleteWorkOrder (nguyên nhân, việc đã làm, ảnh multipart) — G-21 ·
+   │  │                          #   useCreateWorkOrder · useApproveWorkOrder · useReopenWorkOrder · useCancelWorkOrder · useReassignWorkOrder (chủ trại, OPS-FR-001, 004)
+   │  ├─ recommendation/         # useRecommendations (mọi farm, theo trạng thái) · useAcceptRecommendation · useRejectRecommendation (MF-08)
    │  ├─ maintenance/            # useDueMaintenance (kế hoạch đến hạn, quá hạn) · useMaintenancePlans (phân trang theo meta) · useMaintenancePlanContext (tên nhà, mức đã dùng từ bộ đếm của controller) — G-22
-   │  ├─ health/                 # useHealthDays · useHealthDay · useRateHealthDay · useSkipHealthDay · useUpdateRatingNote · usePendingHealthDays (mọi farm, trong hạn 7 ngày) · useUnreadHealthReports
+   │  ├─ health/                 # useHealthDays · useHealthDay · useRateHealthDay · useSkipHealthDay · useUpdateRatingNote · usePendingHealthDays (mọi farm, trong hạn 7 ngày) · useUnreadHealthReports ·
+   │  │                          #   useHealthDisagreements (ngày lệch, EXPERT-FR-022)
    │  ├─ notification/           # useUnreadNotificationCount · useNotifications (phân trang) · useNotificationDetail · useMarkNotificationRead · useMarkAllNotificationsRead (cả hai trừ số ngay, lỗi thì trả lại) ·
    │  │                          #   useBellCounts (số chuông = thông báo chưa đọc + cảnh báo chưa xác nhận) · useBellRealtime (NOTIFICATION_NEW, ALERT_NEW, nối lại socket) · useOpenNotification
    │  ├─ expert-activity/        # hoạt động chuyên gia (API thật /expert-activity*): useExpertActivityList · useParameterReviewList · useProposalList · usePendingExpertReviewCount · useSubmitProposal
-   │  ├─ profile/                # hook của trang Tài khoản cho mục backend chưa có route (dữ liệu mẫu): usePendingInvitations ·
-   │  │                          #   useNotificationChannels · useUpdateNotificationChannel · usePushRegistration (yêu cầu xoá và huỷ là API thật: hooks/auth/useRequestAccountDeletion, useCancelAccountDeletion)
+   │  ├─ profile/                # hook của trang Tài khoản: usePendingInvitations (GET /farms/{id}/invitations, chỉ Primary Owner) · usePushRegistration
+   │  │                          #   (yêu cầu xoá và huỷ: hooks/auth/useRequestAccountDeletion, useCancelAccountDeletion; kênh: hooks/auth/useUpdateNotificationPreferences)
    │  ├─ time/                   # useNow (mốc thời gian tự cập nhật cho chữ đếm ngược)
    │  ├─ ui/                     # useToastMessage (câu toast tự ẩn sau 3 giây)
    │  └─ theme/                  # usePalette
    ├─ services/
    │  ├─ api/                    # apiClient.ts (axios + làm mới token) · <resource>.api.ts:
-   │  │                          #   auth · farm · device · telemetry · alert · analytics · notification · healthReport · harvest
+   │  │                          #   auth · farm · device · telemetry · alert · analytics · notification · healthReport · harvest · workOrder · maintenance · recommendation · invitation
    │  ├─ socket/                 # socketClient.ts (Socket.io realtime)
    │  ├─ notification/           # pushNotification.ts (quyền, FCM device token, kênh Android alerts)
-   │  ├─ mock/                   # account.mock.ts: dữ liệu mẫu cho mục Report 3 backend chưa có route; *.api.ts tương ứng có TODO thay bằng route thật (constants/mockApi.ts, EXPO_PUBLIC_USE_MOCK_API)
+   │  ├─ mock/                   # dữ liệu mẫu cho mục Report 3 backend chưa có route (constants/mockApi.ts, EXPO_PUBLIC_USE_MOCK_API) — hiện trống, account.mock.ts đã gỡ 19/11/2026
    │  ├─ storage/                # preferenceStorage.ts: lựa chọn trên máy (không bí mật) lưu file JSON bằng expo-file-system, làm storage của Zustand persist
    │  └─ session/                # localSession.ts: startRealtimeIfReady (mở realtime khi có phiên) · clearLocalSession (đăng xuất / hết phiên: ngắt socket, xoá cache, badge, token)
    ├─ stores/                    # authStore.ts · alertStore.ts · connectionStore.ts · languageStore.ts · farmPrefsStore.ts (zustand; farmPrefs lưu file trên máy theo tài khoản:
@@ -245,7 +255,8 @@ Splash
      └─ đăng nhập xong ─► (tabs) theo ROLE_TABS; Farm Owner đăng ký FCM token
 
 Farm Owner — (tabs)
-├─ Trang chủ   home        trạng thái ngày từng nhà, số đo realtime, cảnh báo đang mở
+├─ Trang chủ   home        thẻ nhà (trạng thái vận hành, trạng thái ngày hôm nay — che khi bạn còn chưa chấm, BR-31 — nhãn Đang dẫn dụ), số đo realtime,
+│                          cảnh báo đang mở; Việc chờ bạn, Phiếu công việc, Bảo trì đến hạn, Khuyến nghị ─► recommendations/
 ├─ Trang trại  farms (Màn A: "Tất cả trang trại" = thẻ từng farm (mặc định khi thuộc từ 2 farm) ─► nhà của một farm (‹ về tất cả),
 │                đổi farm, ghim ★ nhà lên đầu, ⚙ cài đặt farm, + tạo farm) ─► farms/[houseId] (Màn B: một nhà)
 │                vào một farm thì mở thẳng nhà xem gần nhất (farm 1 nhà thì nhà đó); zone là tab, thiết bị là sheet — không có màn thứ 3
@@ -253,22 +264,28 @@ Farm Owner — (tabs)
 │                       đàn chim hôm nay, tab tầng, 6 ô cảm biến,
 │                       relay chế độ tay (MF-01), thiết bị (chỉ xem), Cài đặt zone xem nhanh (⋮ "Chỉnh sửa" ─► đúng mục, mở sẵn chế độ sửa),
 │                       ⚙ ─► [houseId]/settings
-│                Cài đặt nhà: thông tin nhà, camera AI (+ thêm), mức giảm tỷ lệ về tổ; theo tầng: thông tin tầng, ngưỡng (+ đặt lại mặc định),
-│                       hệ số fuzzy, tham số phát hiện, controller (+ thêm), + thêm tầng — mỗi mục "Sửa" / "Lưu" riêng
+│                Cài đặt nhà: thông tin nhà (kỹ thuật viên phụ trách, chỉ xem), giai đoạn nhà, camera AI (+ thêm), mức giảm tỷ lệ về tổ, lịch đếm chim,
+│                       bù phun sương theo thời tiết, mức chỉ số sức khỏe (ba mục sau: chuyên gia; chủ trại khi farm chưa có chuyên gia — BR-22;
+│                       có nút "Thêm…" ngay khi xem); theo tầng: thông tin tầng, ngưỡng (+ đặt lại mặc định), hệ số fuzzy, tham số phát hiện,
+│                       controller (+ thêm; dòng ghi bước áp cấu hình ENV-FR-027), + thêm tầng — mỗi mục "Sửa" / "Lưu" riêng
+│                Màn B › Thiết bị ─► chi tiết controller: chẩn đoán, bước áp cấu hình, "Khởi động lại" khi trực tuyến (FARM-FR-013)
 │                Cài đặt farm (farm-settings): thông tin, toạ độ (lấy vị trí hiện tại), nhà yến (+ thêm nhà), xoá farm (chủ chính); farm-create: tạo farm
-│                thêm thiết bị (SF-01): quét nhãn QR hoặc nhập tay ─► đăng ký vào nhà / tầng; còn thiếu: Wi-Fi AP-mode, tiến trình setup (FARM-FR-012)
-│                Màn B có thẻ "Trạng thái ngày" (ngày gần nhất; còn chờ chấm thì nút "Đánh giá ngày") ─► health?houseId (các ngày của nhà, lọc Cần đánh giá / 7 / 14 / 30 ngày)
+│                thêm thiết bị (SF-01): quét nhãn QR hoặc nhập tay ─► đăng ký vào nhà / tầng ─► hướng dẫn Wi-Fi AP-mode ─► tiến trình setup (FARM-FR-012)
+│                Màn B có thẻ "Trạng thái ngày" (ngày gần nhất; còn chờ chấm thì nút "Đánh giá ngày") ─► health?houseId (các ngày của nhà, lọc Cần đánh giá / 7 / 14 / 30 ngày;
+│                       "Ngày lệch" cho chuyên gia, chủ trại khi farm chưa có chuyên gia ─► "Chỉnh mức chỉ số của nhà")
 │                       ─► health/[dayId]: ngày còn chờ chấm = form chấm (hướng dẫn quan sát BR-37, 3 mức, ghi chú, "Bỏ qua" có xác nhận); chấm xong = chi tiết
 │                       (trạng thái, lý do, 4 chỉ số, thời tiết, các đánh giá, thêm ghi chú); "Việc chờ bạn" ở Trang chủ mở ngày chờ cũ nhất;
 │                       kỹ thuật viên chấm như chủ trại trên nhà được giao (BR-31)
 │                còn thiếu: sửa tên, xoá nhà và tầng (backend chưa có API)
 │                ô "Sản lượng tháng" ─► harvests?houseId (SF-04, G-26): các lần thu của nhà (mới nhất trước, lần thu còn lô DRAFT có nhãn "Chờ xác nhận"),
 │                       "Ghi lần thu" ─► sheet: ngày thu (không quá hôm nay), số tổ + gram của yến trắng / hồng / huyết — mỗi loại có số là một đợt,
-│                       gắn vào zone tạo sớm nhất của nhà như web; chủ trại ghi là CONFIRMED ngay, kỹ thuật viên ghi là DRAFT chờ chủ trại xác nhận trên web;
+│                       gắn vào zone tạo sớm nhất của nhà như web; chủ trại ghi là CONFIRMED ngay, kỹ thuật viên ghi là DRAFT, chủ trại "Xác nhận lần thu" trong sheet;
 │                       chạm lần thu ─► sửa số / xoá lần thu (chủ trại mọi lần thu, kỹ thuật viên chỉ lần thu còn DRAFT do mình ghi; ngày không đổi được);
-│                       nút biểu đồ ─► Phân tích › Sản lượng
+│                       khối "Chu kỳ thu" (so kỳ trước, cùng kỳ năm trước, sức khỏe của kỳ, kết luận mùa vụ); nút biểu đồ ─► Phân tích › Sản lượng
+│                phiếu công việc: work-orders (+ mở tay; cảnh báo chưa có phiếu có nút "Mở phiếu công việc") ─► [workOrderId] (Duyệt / Mở lại khi chờ duyệt,
+│                       nhắc kiểm tại nhà khi chưa xác minh — BR-41; ⋮ Giao lại, Huỷ phiếu); MTTA/MTTR, kế hoạch bảo trì, áp profile, giao kỹ thuật viên, so sánh nhà ở web
 ├─ Cảnh báo    alerts: phạm vi ▾ riêng của tab, mặc định tất cả: Tất cả trang trại ─► một farm (Tất cả nhà) ─► một nhà (chip Tầng);
-│                không theo farm/nhà của tab Farm, Phân tích; ⚙ cài đặt thông báo; dải mức = lọc nhanh; Đang hiệu lực · Đã đóng;
+│                không theo farm/nhà của tab Farm, Phân tích; ⚙ cài đặt thông báo (kênh chung, kênh theo mức, giờ yên lặng, Telegram); dải mức = lọc nhanh; Đang hiệu lực · Đã đóng;
 │                Tầng · Loại · Phán quyết (lọc loại không suy luận thì ẩn và không áp Phán quyết); vuốt trái để xác nhận (chip ghi chú nhanh); chạm hàng ─► sheet chi tiết toàn màn
 │                (bằng chứng ±30 phút cho cảnh báo suy luận, Đi tới tầng, Điều khiển tay); nhắc lại sau 15 phút / 1 giờ (ALERT-FR-015)
 │                "Đã đóng" gồm đã hết (RESOLVED) và bị bác bỏ (DISMISSED, đổi lại "Đúng" được); chủ trại phán quyết khi farm chưa có
@@ -279,8 +296,9 @@ Farm Owner — (tabs)
 │                          tab Báo cáo theo nhà: chip Ngày · Tuần · Tháng · Theo yêu cầu, mở rộng tại chỗ (trạng thái các ngày — ngày chưa chấm bị che, đàn chim,
 │                          thời tiết, các ngày, từng Zone, kết luận); "Tạo báo cáo" = theo yêu cầu tối đa 31 ngày; chỉ xem, PDF/CSV ở web
 │                          lối vào: ô cảm biến / dải chim ở Màn B, thẻ Báo cáo mới và tỉ lệ về tổ ở Trang chủ (tham số houseId, zoneId, tab, metric, reportId)
-│                          còn thiếu: quyết định của chuyên gia (EXPERT-FR-009), gửi gợi ý chờ duyệt, phiên thiếu (VISION-FR-020) — "Sắp có"
-└─ Tài khoản   profile     hồ sơ, đổi mật khẩu, kênh thông báo (push, Telegram), thông báo trong app, đăng xuất
+│                          còn thiếu: phiên thiếu (VISION-FR-020), mốc cảnh báo tỉ lệ về tổ thấp theo ngày — "Sắp có"
+└─ Tài khoản   profile     hồ sơ, đổi mật khẩu, kênh thông báo (push, Telegram) và kênh theo mức cảnh báo, thành viên + lời mời đang chờ (chủ chính),
+                           hoạt động chuyên gia, thông báo trong app, đăng xuất
 
 Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích như dưới, đổi trong ROLE_TABS)
 ├─ Trang chủ   home        cùng màn với Farm Owner, chỉ đọc; khối riêng mỗi role quyết bằng canPerform
@@ -301,9 +319,13 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | Chấm điểm trạng thái ngày của nhà (BR-31)                                   |                            ✓                             |  – (xem ngày lệch)   |
 | Xác nhận đã xử lý cảnh báo                                                  |                            ✓                             |          –           |
 | Work Order: bắt đầu, báo xong kèm nguyên nhân và ảnh (G-21; kỹ thuật viên: nhà được giao, cũng trả lời kiểm tra tại chỗ) |                            ✓                             |         đọc          |
+| Work Order: mở bằng tay, duyệt, mở lại, huỷ, giao lại (OPS-FR-001, 004)     |                            ✓                             |         đọc          |
+| Chấp nhận / từ chối khuyến nghị (EXPERT-FR-018)                             |                            ✓                             |         đọc          |
+| Xác nhận lô thu hoạch DRAFT (HARVEST-FR-006), đặt giai đoạn nhà (FARM-FR-014: chuyên gia cũng đặt được) |                            ✓                             |  giai đoạn: ✓        |
+| Khởi động lại controller (FARM-FR-013; kỹ thuật viên: nhà được giao)        |                            ✓                             |          –           |
 | Bảo trì: xem kế hoạch, làm checklist kèm ảnh trong Work Order phòng ngừa (G-22; tạo, sửa kế hoạch và duyệt ở web) |                            ✓                             |         đọc          |
 | Nhận push, cài kênh Telegram                                                |                            ✓                             |          –           |
-| Kiểm chứng cảnh báo suy luận, sửa tham số phát hiện, lịch đếm, mức sức khỏe | chỉ khi farm chưa có chuyên gia (BR-22), còn lại chỉ đọc |          ✓           |
+| Kiểm chứng cảnh báo suy luận, sửa tham số phát hiện, lịch đếm, luật bù thời tiết, mức sức khỏe, xem ngày lệch | chỉ khi farm chưa có chuyên gia (BR-22), còn lại chỉ đọc |          ✓           |
 | Viết kết luận, duyệt thay đổi của Farm Owner                                |                           đọc                            |          ✓           |
 | Sửa ngưỡng, hệ số fuzzy của Zone                                            |                            ✓                             |          ✓           |
 | Relay chế độ tay, lịch loa                                                  |                            ✓                             |          –           |
@@ -325,7 +347,7 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Nút, chữ, ô nhập, ô mã, dòng báo lỗi, badge, toggle, chip, hộp xác nhận, skeleton, khung rỗng | `components/ui/` (kebab-case)                                           | Một component cho một loại; khác nhau bằng `variant`/`size`, không bằng role                          |
 | Header, khung màn auth, màn tạm, nút đăng xuất                                                | `components/layout/` · `components/auth/`                               | Mọi màn bắt đầu bằng `AppHeader`; màn auth dùng `AuthScreenLayout`; đăng xuất luôn qua `LogoutButton` |
-| Mảnh nghiệp vụ ≥ 2 màn dùng                                                                   | `components/common/`                                                    | `StatusDot`, `SeverityBadge`, `AlertStatusBadge`, `MetricTile`, `card/`                               |
+| Mảnh nghiệp vụ ≥ 2 màn dùng                                                                   | `components/common/`                                                    | `StatusDot`, `SeverityBadge`, `AlertStatusBadge`, `MetricTile`, `card/`; `SimulatedBadge` ("Giả lập" cạnh mã thiết bị của bộ giả lập, SYSTEM-FR-004 — chỗ chỉ có chữ thì nối bằng `withSimulatedLabel` ở `utils/device.utils.ts`) |
 | Mảnh của một luồng                                                                            | `components/<nghiệp vụ>/`                                               | `home/`, `device-setup/`, `alert/`, `zone/`, `vision/`, `health/`, `harvest/`, `report/` — chia theo nghiệp vụ, **không** theo role (không có `farmowner/`, `expert/`); khối chỉ một role thấy thì màn quyết bằng `canPerform` |
 | Trang hồ sơ / tài khoản                                                                       | `src/app/(tabs)/profile/` + `components/profile/` (`ProfileRow`, `ProfileShortcutCard`, `ProfileAvatar` (2 chữ viết tắt như Trang chủ, `getInitials`), `LanguageFlag`, `InviteMemberSheet`, `ProfileBasicContent`, `ExpertDecisionList` (lịch sử quyết định của chuyên gia — màn Hoạt động chuyên gia và dưới chi tiết thông báo)) | Một route; trang đầy đủ theo `canPerform(user, 'viewOwnerProfile')` (Farm Owner), Domain Expert giữ trang cơ bản; mời/gỡ thành viên theo `manageFarmMembers` (Primary Owner) |
 | Form đổi mật khẩu                                                                             | `components/auth/ChangePasswordForm.tsx`                                | Đã tách: `(auth)/reset-password` (mật khẩu tạm) và `profile/change-password` dùng chung một form      |
@@ -469,6 +491,8 @@ Font **Plus Jakarta Sans** (cùng web), file `.ttf` tĩnh trong `assets/fonts/` 
 | `button`          | 14 / 20            | bold    | —        | chữ trên nút                         |
 
 Không in hoa nhãn nhỏ: dấu tiếng Việt (Ế, Ữ, Ặ) chồng nhau ở cỡ 12 (cùng quy tắc web).
+
+**Không dùng `fontVariant: ['tabular-nums']`** (người dùng yêu cầu 2026-11-19): Plus Jakarta Sans có hai glyph số 1 — `one` không chân (chữ thường) và `one.tf` có chân (chữ số đều bề rộng) — nên bật `tabular-nums` làm số 1 có chân ở chỗ này, không chân ở chỗ khác. Số và chữ dùng cùng chữ số thường; cần giữ bề rộng cho số đổi liên tục thì dùng chuỗi giữ chỗ ẩn bằng chữ số rộng nhất (8, 9) như `components/farm/BirdCountStrip.tsx`. Ô nhập, nhãn trục biểu đồ cũng phải đặt `fontFamily` của Plus Jakarta (qua `Typography`), không để font hệ thống.
 
 `<Text variant>` (`components/ui/text.tsx`) — props thêm: `weight` (ghi đè `FontFamily`), `color`, `center`.
 
@@ -650,7 +674,7 @@ const styles = StyleSheet.create({
 - **Khung một mục** (`components/farm/settings/SettingsSection.tsx`), từ trên xuống: ô icon nền lime + tên mục và dòng phụ · nhãn phạm vi viết HOA giãn chữ ở góc phải (TẦNG 2, NHÀ, TRANG TRẠI) và nút "Sửa" dưới nhãn · đường kẻ · lưới thông tin 2 cột (`SettingsMetaGrid`) · bảng có dòng tiêu đề nền Paper, cột số căn phải (`SettingsTable`) · thanh đen nền Ink chữ lime (`SettingsActionBar`: chế độ xem là con số chính có thật của mục, chế độ sửa là nút "Cập nhật" chữ căn giữa; form tạo farm / nhà / tầng dùng cùng khung đó với chữ "Tạo mới" kèm Huỷ, qua `SettingsEditActions`) · chân card: câu ai sửa được bên trái, ô vuông icon 32 bên phải (`SettingsTileButton`: quét QR, lấy vị trí, đặt lại mặc định).
 - **Chỉ trường có thật** trong api-spec; khoảng hợp lệ lấy từ schema api-spec và `THRESHOLD_LIMITS` của backend (`utils/settingsValidation.utils.ts`), không tự đặt. Thao tác chưa có API thì hiện `ComingSoonAction` ("Sắp có"), không giả lập.
 - **Tên và số tầng** (Len chốt 10/11/2026 — backend chưa kiểm, mobile chặn phía app, đề xuất cho Kiệt ở `todo-review2` G-16): tên farm / nhà / khu vực tối đa `NAME_MAX_LENGTH` = 50 ký tự (ô nhập dừng ở ký tự 50); tên nhà không trùng trong cùng farm, tên khu vực không trùng trong cùng nhà (khác farm, khác nhà thì được) — so sau khi bỏ khoảng trắng thừa và hoa thường, dấu tiếng Việt vẫn tính (`validateName`, `normalizeName`); số tầng của nhà 1–10 (`HOUSE_FLOOR_RULE`), tầng của khu vực từ 1 tới số tầng của nhà (`getZoneFloorRule`). Chip chọn khu vực / nhà hiện tối đa 30 ký tự rồi "…" (`CHIP_LABEL_MAX_LENGTH` trong `ui/choice-chip`), trình đọc màn hình vẫn đọc đủ tên.
-- **Mở thẳng một mục:** khối "Cài đặt zone" ở chi tiết nhà chỉ để xem nhanh; nút ⋮ của từng nhóm mở `[houseId]/settings?section=<thresholds|fuzzy|detection|bird-count>&zoneId=…&edit=1`. Trang mở đúng tầng, sổ sẵn mục đó, cuộn tới mục; `edit=1` chỉ mở chế độ sửa khi `canPerform` cho phép, không có quyền thì nút ⋮ chỉ có "Xem trong Cài đặt nhà".
-- **Không bịa:** mọi số ở khối xem nhanh và trang cài đặt lấy đúng từ backend (`formatStoredNumber` giữ phần lẻ); thứ backend chưa có (lịch đếm chim VISION-FR-019, sửa tên / xoá nhà và tầng) hiện "Sắp có".
+- **Mở thẳng một mục:** khối "Cài đặt zone" ở chi tiết nhà chỉ để xem nhanh; nút ⋮ của từng nhóm mở `[houseId]/settings?section=<thresholds|fuzzy|detection|bird-count|stage|weather|counting-schedule|health-levels>&zoneId=…&edit=1` (mục của cả nhà bỏ `zoneId`; loại mục ở `utils/settingsSection.utils.ts`). Trang mở đúng tầng, sổ sẵn mục đó, cuộn tới mục; `edit=1` chỉ mở chế độ sửa khi `canPerform` cho phép, không có quyền thì nút ⋮ chỉ có "Xem trong Cài đặt nhà".
+- **Không bịa:** mọi số ở khối xem nhanh và trang cài đặt lấy đúng từ backend (`formatStoredNumber` giữ phần lẻ); thứ backend chưa có (sửa tên / xoá nhà và tầng) hiện "Sắp có". Mục người xem không được sửa ghi rõ vì sao (`getViewOnlyNote`: farm đã có chuyên gia thì việc của chuyên gia — BR-22).
 - **Mã kích hoạt** trên nhãn thiết bị chỉ nằm trong ô nhập và đi một lần tới API: không lưu store, không ghi log; mutation đăng ký đặt `gcTime: 0`; sheet dựng lại (key mới) mỗi lần mở.
 - Chỉ dùng token sẵn có (`surface`, `surfaceStrong`, `divider`, `inverse`, `onInverse`, `primary`, `text`, `textSecondary`, `alert`); nhãn HOA là `small` + `textTransform: 'uppercase'` + `letterSpacing` trong style của component, không thêm variant.
