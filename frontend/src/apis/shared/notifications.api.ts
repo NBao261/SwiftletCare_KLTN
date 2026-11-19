@@ -8,5 +8,5 @@ export const notificationApi = {
       params: { page: params.page, limit: params.limit, unread: params.unread === undefined ? undefined : String(params.unread) },
     }),
   markRead: (id: string) => api.put<ApiResponse<AppNotification>>(`/notifications/${id}/read`),
-  markAllRead: () => api.put<ApiResponse<{ updated: number }>>('/notifications/read-all'),
+  markAllRead: () => api.put<ApiResponse<{ modified: number }>>('/notifications/read-all'),
 }

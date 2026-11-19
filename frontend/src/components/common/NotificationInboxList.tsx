@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
-import { formatDate } from '@/lib/helpers'
+import { formatDateTime } from '@/lib/i18n'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
+import { useToastStore } from '@/stores/toastStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { shellDict } from '@/constants/shell.i18n'
@@ -18,11 +20,14 @@ export default function NotificationInboxList({ onNavigate }: { onNavigate: () =
   const inbox = useNotificationsInfinite(PAGE_SIZE, true)
   const markRead = useMarkNotificationRead()
   const markAllRead = useMarkAllNotificationsRead()
+  const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
+  const onMarkFailed = (error: unknown) => push(apiErrorMessage(error, t('notif.markFailed')), 'error')
   const notifications = inbox.data?.pages.flatMap(page => page.data) ?? []
   const unreadCount = inbox.data?.pages[0]?.meta?.unreadCount ?? 0
 
   function open(notification: AppNotification) {
-    if (!notification.read_at) markRead.mutate(notification._id)
+    if (!notification.read_at) markRead.mutate(notification._id, { onError: onMarkFailed })
     const target = notificationTarget(notification, role)
     if (!target) return
     onNavigate()
@@ -35,7 +40,7 @@ export default function NotificationInboxList({ onNavigate }: { onNavigate: () =
         <div className="flex justify-end border-b border-charcoal/10 px-4 py-2">
           <button
             type="button"
-            onClick={() => markAllRead.mutate()}
+            onClick={() => markAllRead.mutate(undefined, { onError: onMarkFailed })}
             disabled={markAllRead.isPending}
             className="text-xs text-warmGray underline transition-colors hover:text-charcoal disabled:opacity-50"
           >
@@ -45,7 +50,16 @@ export default function NotificationInboxList({ onNavigate }: { onNavigate: () =
       )}
       <div className="max-h-[380px] overflow-y-auto [scrollbar-color:theme(colors.gray.300)_transparent] [scrollbar-width:thin]">
         {inbox.isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.loading')}</p>}
-        {!inbox.isLoading && notifications.length === 0 && (
+        {/* Lỗi tải: báo lỗi kèm thử lại, không hiện như hộp rỗng (FE_Design 13.5) */}
+        {inbox.isError && (
+          <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+            <p className="text-sm text-warmGray">{apiErrorMessage(inbox.error, t('notif.loadFailed'))}</p>
+            <button type="button" onClick={() => void inbox.refetch()} className="text-xs font-semibold text-charcoal underline">
+              {t('notif.retry')}
+            </button>
+          </div>
+        )}
+        {!inbox.isLoading && !inbox.isError && notifications.length === 0 && (
           <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.inboxEmpty')}</p>
         )}
         {notifications.map(notification => {
@@ -66,7 +80,7 @@ export default function NotificationInboxList({ onNavigate }: { onNavigate: () =
                   {notification.title}
                 </span>
                 <span className="mt-1 block whitespace-normal break-words text-xs text-gray-600">{notification.body}</span>
-                <span className="mt-1 block text-xs text-warmGray">{formatDate(notification.created_at)}</span>
+                <span className="mt-1 block text-xs text-warmGray">{formatDateTime(notification.created_at)}</span>
               </span>
             </button>
           )

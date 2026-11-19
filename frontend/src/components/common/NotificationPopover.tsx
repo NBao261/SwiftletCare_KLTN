@@ -6,6 +6,8 @@ import { useNotificationUnreadCount } from '@/hooks/shared/useNotifications'
 import NotificationInboxList from '@/components/common/NotificationInboxList'
 import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
 import { useAlertStore } from '@/stores/alertStore'
+import { useAuthStore } from '@/stores/authStore'
+import { canAccessPath } from '@/constants/roles'
 import { formatDate } from '@/lib/helpers'
 import { IconBell } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
@@ -19,7 +21,9 @@ const PAGE_SIZE = 10
 export default function NotificationPopover() {
   const { t } = useTranslation(shellDict)
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<'alerts' | 'inbox'>('alerts')
+  // Role không vào được /alerts (Domain Expert) chỉ có tab Thông báo và không gọi GET /alerts
+  const showAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
+  const [tab, setTab] = useState<'alerts' | 'inbox'>(showAlerts ? 'alerts' : 'inbox')
   const inboxUnreadCount = useNotificationUnreadCount()
   const [unreadFirst, setUnreadFirst] = useState(false)
   const [justRead, setJustRead] = useState<Map<string, Alert>>(() => new Map())
@@ -28,12 +32,14 @@ export default function NotificationPopover() {
   const listRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const alertUnreadCount = useAlertStore(s => s.unreadCount)
+  const storedAlertUnread = useAlertStore(s => s.unreadCount)
+  const alertUnreadCount = showAlerts ? storedAlertUnread : 0
   // Badge chuông = cảnh báo chưa đọc + thông báo trong ứng dụng chưa đọc
   const unreadCount = alertUnreadCount + inboxUnreadCount
   const { readIds, markRead } = useReadAlerts()
-  const all = useAlertsInfinite(PAGE_SIZE, undefined, open && tab === 'alerts')
-  const unreadOnly = useAlertsInfinite(PAGE_SIZE, 'ACTIVE', open && tab === 'alerts' && unreadFirst)
+  const alertsOpen = open && showAlerts && tab === 'alerts'
+  const all = useAlertsInfinite(PAGE_SIZE, undefined, alertsOpen)
+  const unreadOnly = useAlertsInfinite(PAGE_SIZE, 'ACTIVE', alertsOpen && unreadFirst)
   const isLoading = all.isLoading || (unreadFirst && unreadOnly.isLoading)
   const pager = unreadFirst && unreadOnly.hasNextPage ? unreadOnly : all
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pager
@@ -147,6 +153,7 @@ export default function NotificationPopover() {
             )}
           </div>
 
+          {showAlerts && (
           <div role="tablist" className="flex shrink-0 gap-1 border-b border-charcoal/10 px-3 py-2">
             {([['alerts', t('notif.tabAlerts'), alertUnreadCount], ['inbox', t('notif.tabInbox'), inboxUnreadCount]] as const).map(([key, label, count]) => (
               <button
@@ -164,6 +171,7 @@ export default function NotificationPopover() {
               </button>
             ))}
           </div>
+          )}
 
           {tab === 'inbox' ? <NotificationInboxList onNavigate={closePopover} /> : (
           <>
