@@ -21,9 +21,6 @@ export const harvestCyclesApi = {
   list: (params?: HarvestCyclesParams) =>
     api.get<ApiResponse<HarvestCycle[]>>('/harvests/cycles', { params }),
 
-  get: (id: string) =>
-    api.get<ApiResponse<HarvestCycle>>(`/harvests/cycles/${id}`),
-
   conclude: (id: string, input: CycleConclusionInput) =>
     api.put<ApiResponse<HarvestCycle>>(`/harvests/cycles/${id}/conclusion`, input),
 }
