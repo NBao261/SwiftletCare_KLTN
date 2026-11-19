@@ -14,6 +14,7 @@ import { useZone } from '@/hooks/shared/useFarms'
 import { useZoneStore } from '@/stores/zoneStore'
 import MultimodalEvidenceCharts from './MultimodalEvidenceCharts'
 import VerdictForm from './VerdictForm'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
 interface Props {
   alert: InferredAlertItem | null
@@ -48,6 +49,8 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const [verdict, setVerdict] = useState<'CONFIRMED' | 'REJECTED' | null>(null)
   const [note, setNote] = useState('')
   const mutation = useSubmitAlertVerdict()
+  // BR-22 — Farm Owner kết luận thay khi farm chưa có chuyên gia; farm có chuyên gia thì chỉ xem bằng chứng
+  const { canDecide } = useExpertDecisionRights()
   const { data: zone } = useZone(alert?.zone_id)
   const { selectedZoneId, selectedZoneName } = useZoneStore()
 
@@ -124,7 +127,9 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
           </section>
           <section>
             <h3 className="text-sm font-semibold text-[#27231F] mb-3">Bước 2 — Kết luận thẩm định của Chuyên gia</h3>
-            <VerdictForm alert={alert} verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
+            {canDecide
+              ? <VerdictForm alert={alert} verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
+              : <p className="text-sm text-[#878380]">Farm đã có chuyên gia — kết luận do Domain Expert ghi, bạn chỉ xem bằng chứng.</p>}
           </section>
         </div>
 
@@ -143,7 +148,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
               Chỉnh độ nhạy phát hiện →
             </button>
           </div>
-          <button
+          {canDecide && <button
             type="button"
             disabled={!verdict || mutation.isPending || (verdict === 'REJECTED' && !note.trim())}
             onClick={handleSave}
@@ -153,7 +158,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
                 : 'bg-neutral-200 text-neutral-400 cursor-not-allowed')}
           >
             {mutation.isPending ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Đang lưu...</> : 'Lưu kết luận thẩm định'}
-          </button>
+          </button>}
         </div>
       </aside>
     </>,

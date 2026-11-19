@@ -18,7 +18,9 @@
 import { lazy } from 'react';
 import { Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
-import { EXPERT_ROLES } from '@/constants/roles';
+import { EXPERT_DECISION_ROLES, EXPERT_ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/common/usePermission';
+import ExpertDecisionNotice from '@/components/features/domain-expert/ExpertDecisionNotice';
 import ExpertScadaBanner from '@/components/features/domain-expert/ExpertScadaBanner';
 
 const DomainExpertQueuePage = lazy(() => import('@/pages/domain-expert/DomainExpertQueuePage'));
@@ -61,6 +63,12 @@ function RedirectToDisagreements() {
   return <Navigate to={`/domain-expert/reports?${params.toString()}`} replace />;
 }
 
+// Hàng đợi việc chỉ của chuyên gia; Farm Owner vào /domain-expert thì mở trang kết luận cảnh báo
+function DomainExpertIndexRedirect() {
+  const isExpert = usePermission('DOMAIN_EXPERT');
+  return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
+}
+
 /**
  * Shell bọc toàn bộ trang domain-expert — tương tự ExpertPageShell cũ nhưng
  * import component từ đúng bucket domain-expert/.
@@ -70,6 +78,8 @@ function DomainExpertShell() {
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
       {/* Thanh banner SCADA Chuyên gia với bộ chọn Farm/House/Zone */}
       <ExpertScadaBanner />
+      {/* Farm Owner: quyết định thay khi farm chưa có chuyên gia (BR-22), còn lại chỉ xem */}
+      <ExpertDecisionNotice />
       <div className="flex w-full flex-1 flex-col">
         <Outlet />
       </div>
@@ -83,14 +93,14 @@ export const domainExpertRoutes = (
     <Route
       path="domain-expert"
       element={
-        <RequireRole allow={EXPERT_ROLES}>
+        <RequireRole allow={EXPERT_DECISION_ROLES}>
           <DomainExpertShell />
         </RequireRole>
       }
     >
       {/* Trang chủ: Hàng đợi việc cần xử lý */}
-      <Route index element={<Navigate to="queue" replace />} />
-      <Route path="queue" element={<DomainExpertQueuePage />} />
+      <Route index element={<DomainExpertIndexRedirect />} />
+      <Route path="queue" element={<RequireRole allow={EXPERT_ROLES}><DomainExpertQueuePage /></RequireRole>} />
 
       {/* Thẩm định cảnh báo AI */}
       <Route path="alert-verdicts" element={<DomainExpertAlertVerdictsPage />} />

@@ -17,12 +17,14 @@ import { useToastStore } from '@/stores/toastStore'
 import { useZoneStore } from '@/stores/zoneStore'
 import type { RecommendationRule } from '@/types'
 import { toggledRuleInput } from '@/validations/common/recommendationRule.validation'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
 const TABS = ['rules', 'effects'] as const
 type RulesTab = (typeof TABS)[number]
 const TAB_LABEL = { rules: 'rules.tabRules', effects: 'rules.tabEffects' } as const
 
 export default function DomainExpertRecommendationRulesPage() {
+  const { isExpert } = useExpertDecisionRights()
   const { t } = useTranslation(recommendationsDict)
   const apiErrorMessage = useApiErrorMessage()
   const push = useToastStore(state => state.push)
@@ -71,7 +73,7 @@ export default function DomainExpertRecommendationRulesPage() {
           <RecommendationRuleRow
             key={rule._id}
             rule={rule}
-            disabled={save.isPending}
+            disabled={save.isPending || !isExpert}
             onToggle={() => toggle(rule)}
             onEdit={() => setEditing(rule)}
           />
@@ -106,7 +108,7 @@ export default function DomainExpertRecommendationRulesPage() {
       <SectionCard
         title={t('rules.title')}
         description={t('rules.subtitle')}
-        action={tab === 'rules' && (
+        action={tab === 'rules' && isExpert && (
           <Button size="sm" onClick={() => setEditing(null)}>
             <Plus className="h-3.5 w-3.5" aria-hidden />
             {t('rules.add')}

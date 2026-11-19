@@ -1,6 +1,7 @@
 import {
-  BasketIcon, BirdIcon, BuildingsIcon, CalendarCheckIcon, ChartBarIcon, CpuIcon, GearSixIcon, HeartbeatIcon, HouseIcon, LightbulbIcon, SquaresFourIcon, WarningIcon,
-  WrenchIcon,
+  BasketIcon, BirdIcon, BooksIcon, BuildingsIcon, CalendarBlankIcon, CalendarCheckIcon, ChartBarIcon, ChecksIcon,
+  ClockCounterClockwiseIcon, CloudRainIcon, CpuIcon, CrosshairIcon, FileTextIcon, GearSixIcon, HeartbeatIcon, HouseIcon,
+  LightbulbFilamentIcon, LightbulbIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
@@ -63,6 +64,23 @@ const menuSections: MenuSection[] = [
         path: '/maintenance',
         icon: CalendarCheckIcon
       },
+    ],
+  },
+  {
+    // Trang quyết định của chuyên gia (Report 4 §5.4): farm chưa có chuyên gia thì Farm Owner quyết định thay (BR-22),
+    // farm đã có thì xem; lịch sử quyết định của chuyên gia (EXPERT-FR-009)
+    title: 'Chuyên môn',
+    items: [
+      { label: 'Thẩm định cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheckIcon },
+      { label: 'Ngưỡng & hệ số', path: '/domain-expert/tuning', icon: SlidersHorizontalIcon },
+      { label: 'Lịch đếm chim', path: '/domain-expert/counting-schedule', icon: CalendarBlankIcon },
+      { label: 'Vòng đếm camera', path: '/domain-expert/counting-ring', icon: CrosshairIcon },
+      { label: 'Luật bù thời tiết', path: '/domain-expert/weather-rules', icon: CloudRainIcon },
+      { label: 'Duyệt & đề xuất', path: '/domain-expert/reviews', icon: ChecksIcon },
+      { label: 'Báo cáo & kết luận', path: '/domain-expert/reports', icon: FileTextIcon },
+      { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles', icon: BooksIcon },
+      { label: 'Luật khuyến nghị', path: '/domain-expert/recommendation-rules', icon: LightbulbFilamentIcon },
+      { label: 'Lịch sử quyết định', path: '/domain-expert/history', icon: ClockCounterClockwiseIcon },
     ],
   },
   {

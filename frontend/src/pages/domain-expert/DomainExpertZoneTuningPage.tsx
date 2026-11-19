@@ -32,6 +32,7 @@ import {
 import { useExpertVerdictStats } from '@/hooks/domain-expert/useExpertAlerts';
 import { useCoefficientProposals } from '@/hooks/domain-expert/useExpertReviews';
 import type { ExpertFuzzyTuning } from '@/types/expert.types';
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 
 function Toast({ show, message }: { show: boolean; message: string }) {
   if (!show) return null;
@@ -68,6 +69,8 @@ export default function DomainExpertZoneTuningPage() {
   const updateDetection = useUpdateDetectionTuning(zoneId);
   const resetDetection = useResetDetectionTuning(zoneId);
   const apiErrorMessage = useApiErrorMessage();
+  // BR-22 — tham số phát hiện và mức giảm tỷ lệ chim về: Farm Owner chỉ sửa khi farm chưa có chuyên gia
+  const { canDecide } = useExpertDecisionRights();
 
   // Mức giảm tỷ lệ chim về thuộc nhà chứa Zone đang chọn (EXPERT-FR-008)
   const { data: houseId } = useZoneHouseId(zoneId);
@@ -143,6 +146,7 @@ export default function DomainExpertZoneTuningPage() {
             onReset={() => resetThresholds.mutateAsync().then(() => showToast('Đã khôi phục ngưỡng mặc định'))}
           />
 
+          <fieldset disabled={!canDecide} className="contents">
           <DetectionColumn
             data={detection.data}
             verdictStats={verdictStats}
@@ -156,8 +160,10 @@ export default function DomainExpertZoneTuningPage() {
               .then(() => showToast('Đã khôi phục tham số phát hiện mặc định'))
               .catch(error => showToast(apiErrorMessage(error)))}
           />
+          </fieldset>
         </div>
 
+        <fieldset disabled={!canDecide} className="contents">
         <ReturnRateDropCard
           houseName={house?.name}
           value={house?.bird_count_tuning?.return_rate_drop_pct}
@@ -170,6 +176,7 @@ export default function DomainExpertZoneTuningPage() {
             .then(() => showToast('Đã khôi phục mức giảm tỷ lệ chim về mặc định'))
             .catch(error => showToast(apiErrorMessage(error)))}
         />
+        </fieldset>
       </div>
 
       <Toast show={toast.show} message={toast.message} />
