@@ -52,13 +52,13 @@ Mức ưu tiên giữ như đợt 18/11: **P0** bug hoặc FR mức M không dù
 **Không sửa (có lý do):**
 - Nhóm "Chuyên môn" 10 mục của Farm Owner vẫn hiện khi farm đã có chuyên gia: Report 3 §2.4 cho Farm Owner đọc các mục này (read ¹) và Report 4 §5.4 mở các trang quyết định cho Farm Owner; ẩn đi là mất quyền đọc.
 - Gộp hẳn 3 trang Tổng quan (`/dashboard`), Tổng quan trại (`/overview`), Trang trại (`/farms`) là đổi thiết kế, cần cả nhóm thống nhất; đợt này chỉ bỏ phần trùng (U-05).
-- `RECOMMENDATION_NEW`: web nhận khuyến nghị mới qua thông báo trong app (`NOTIFICATION_NEW`), như các sự kiện của B-01.
+- `RECOMMENDATION_NEW`: web nhận khuyến nghị mới qua thông báo trong app của Farm Owner (`NOTIFICATION_NEW`, `recommendation.service`).
 - `meta.unreadCount` của `GET /alerts` thật ra là số `ACTIVE`; đổi tên sẽ làm hỏng mobile, nên chỉ ghi rõ trong spec.
 
 ## 3. Backend và tài liệu
 
 ### B-01 — Sự kiện socket của SDD
-- Leo thang (ALERT-FR-017) và mọi đổi trạng thái của Work Order đều gửi thông báo trong app (`notifyUser` → `NOTIFICATION_NEW`), không client nào nghe `ALERT_ESCALATED` hay `WORK_ORDER_UPDATE`.
+- Không client nào nghe `ALERT_ESCALATED` hay `WORK_ORDER_UPDATE`. Leo thang (ALERT-FR-017) gửi push và Telegram (`dispatchAlertNotification`), không vào hộp thông báo; Work Order mới, mở lại, giao lại, chưa ai bắt đầu và chờ duyệt báo trong app (`notifyUser` → `NOTIFICATION_NEW`); bắt đầu, duyệt, huỷ không báo ai.
 - Sửa Report 4 §7.3 (danh sách sự kiện) và DF-13 (§2.2) cho khớp; tăng phiên bản 2.2.17, ghi Revision History.
 
 ### B-02 — Lọc cảnh báo còn hiệu lực
@@ -82,7 +82,7 @@ Mức ưu tiên giữ như đợt 18/11: **P0** bug hoặc FR mức M không dù
 
 ### W-03 — Cảnh báo chờ xác nhận
 - `useUnreadAlertCount` → số `ACTIVE` từ `meta.unreadCount`, không trừ gì.
-- Bỏ `readAlertStore`, `useReadAlerts`, dấu "chưa đọc" và nút "chưa đọc trước" trong popup chuông (đọc/chưa đọc chỉ thuộc tab Thông báo).
+- Bỏ `alertStore`, `readAlertStore`, `useReadAlerts`, dấu "chưa đọc" và nút "chưa đọc trước" trong popup chuông (đọc/chưa đọc chỉ thuộc tab Thông báo); số chờ xác nhận lấy thẳng từ query (`usePendingAlertTotal`), xoá theo cache khi đăng xuất.
 - Trang `/alerts`: bộ lọc trạng thái mặc định "Đang hiệu lực" (`open=true`), thêm "Tất cả"; mô tả thẻ nêu số đang chờ xác nhận.
 
 ### W-04 — Badge "Thẩm định cảnh báo"
@@ -130,3 +130,15 @@ Mức ưu tiên giữ như đợt 18/11: **P0** bug hoặc FR mức M không dù
 - Backend: lint, build:check, Jest qua (test mới của B-02).
 - Web: lint, tsc, Vitest, build qua; `roles.test.ts` khớp bảng quyền mới.
 - `project-tracking.md` §6 có dòng G-29, §7 có dòng Change Log.
+
+## 8. Sửa sau review của PR #197
+
+- Checklist: bấm đúng kết quả đang có thì không gửi; đổi kết quả thì gửi kèm ghi chú cũ (backend xoá ghi chú khi không gửi `note`).
+- Report 4 §7.3, DF-13, changelog 2.2.17: leo thang đi qua push và Telegram, không vào hộp thông báo; chỉ Work Order mới, mở lại, giao lại, chưa ai bắt đầu, chờ duyệt báo trong app.
+- Tổng quan Admin: `inactive` chỉ là tài khoản bị khoá (`DELETION_REQUESTED` vẫn đăng nhập được, đếm vào `active`).
+- `Step5WaitOnline` đọc trạng thái qua `useSensorNode` / `useHouseCameras` (không gọi `apis/` trong component), đọc lại 10 s/lần (heartbeat 30 s); đã online mà `MISMATCH` hoặc hết giờ chưa áp cấu hình thì báo riêng lỗi cấu hình.
+- `SettingsPage` dùng `usePermission`; trang `/alerts` chỉ ghi số chờ xác nhận khi đã tải xong, câu trung tính với Admin; nút lệnh từ xa của Admin khoá khi thiết bị không ONLINE.
+- Báo xong Work Order: số ảnh còn lại lấy từ chi tiết phiếu, chỉ JPEG/PNG/WebP, timeout 120 s, câu báo theo trạng thái trả về (`VERIFYING` hoặc `AWAITING_APPROVAL`).
+- Bỏ ternary lồng và khối comment nhiều dòng ở dòng mới; `nodeLocation` sang `lib/deviceLocation.ts`; component lắp đặt sang `features/farm-owner/onboarding/`, OTA sang `features/admin/ota/`.
+- Tài liệu: `docs/reports/README.md`, `FE_Design_Claude.md` 2.13.0 (12.0, 12.2, 13.14, Phụ lục D, Changelog), `frontend/README.md`, root `CLAUDE.md`, dòng G-29 ghi PR #197.
+- Chưa làm: ảnh chụp desktop và mobile, tự kiểm bước 3 của FE_Design 13.13 trên trình duyệt; tên nhánh không theo `<type>/<module>-<role>-<tính-năng>` (đổi phải mở PR mới — chờ nhóm quyết).

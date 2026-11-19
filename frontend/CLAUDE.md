@@ -40,7 +40,7 @@ src/
   providers/   AppProviders.tsx
   routes/      admin · domain-expert · farm-owner · technician · public (.routes.tsx)
   services/    expert/ (expertApi.service.ts, expertDomain.service.ts) + expert.service.ts — older API calls of the Domain Expert screens outside apis/ (known debt, FE_Design §12; no mock fallback)
-  stores/      Zustand: authStore · alertStore (count of ACTIVE alerts) · toastStore · zoneStore · breadcrumbStore · headerSlotStore · languageStore · loginSplashStore · pageHeroStore · pinnedHouseStore
+  stores/      Zustand: authStore · toastStore · zoneStore · breadcrumbStore · headerSlotStore · languageStore · loginSplashStore · pageHeroStore · pinnedHouseStore
   types/       <module>.types.ts (split by backend module, not by role) + types/expert/ + index.ts barrel
   validations/ admin/ · common/ · farm-owner/ — pure form validators (+ *.test.ts)
 ```

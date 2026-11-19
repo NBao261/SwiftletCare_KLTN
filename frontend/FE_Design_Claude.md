@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.12.0 · **Cập nhật:** 26/10/2026 · **Thay thế:** v2.11.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.13.0 · **Cập nhật:** 19/11/2026 · **Thay thế:** v2.12.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,14 @@
 ---
 
 ## 0. Changelog
+
+### v2.12.0 → v2.13.0 (đợt soát 19/11/2026, G-29, PR #197)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Lắp thiết bị** là màn của Farm Owner ở `/devices/onboarding` (`pages/farm-owner/FarmOwnerDeviceSetupPage`, component ở `features/farm-owner/onboarding/`): dán nội dung QR hoặc gõ mã, 3 bước của FARM-FR-012; quét QR chỉ ở mobile, bỏ `html5-qrcode`. **OTA** là màn của Admin (`pages/admin/AdminOtaPage`, `features/admin/ota/`). Admin có một danh sách thiết bị ở `/devices` (bỏ `/system/devices`). 12.0, 12.2, 13.14 sửa theo. |
+| 2 | **Cảnh báo:** số trên chuông và menu là số `ACTIVE` từ `usePendingAlertTotal()` (`hooks/shared/useAlerts`); bỏ `alertStore`, `readAlertStore`, `useReadAlerts` — đọc/chưa đọc chỉ thuộc hộp thông báo (ALERT-FR-007). Nguyên nhân tại chỗ dùng chung ở `constants/siteCause.ts`; vị trí thiết bị của Admin ở `lib/deviceLocation.ts`. Phụ lục D sửa theo. |
+| 3 | **Menu:** mọi nhãn menu phải có trong `constants/navigation.i18n.ts`; cùng một trang mang cùng tên ở mọi role; Farm Owner đọc báo cáo và ngày lệch ở `/health`, `/domain-expert/reports` chỉ của chuyên gia. |
 
 ### v2.11.0 → v2.12.0 (đã xoá code ticket, SLA, vùng, Sales Staff — PR #106)
 
@@ -1011,9 +1019,8 @@ Domain Expert (luồng chính — CHƯA CÓ CODE FE; backend có một phần, x
 └── Đọc chung trang Farm Owner: dashboard · analytics · vision · live stream · thu hoạch · cấu trúc farm (chỉ xem)
     KHÔNG BAO GIỜ: relay, lịch loa, ghi thu hoạch, acknowledge cảnh báo, sửa/xoá farm, mời thành viên
 
-Technician (luồng phụ — vai trò kỹ thuật, thấy MỌI farm)
-├── Riêng:     /ota
-├── Cùng bước với Farm Owner ở mọi farm: /onboarding (SF-01); Farm Owner được báo mỗi thao tác thiết bị
+Technician (luồng phụ — vai trò kỹ thuật, thấy MỌI farm) — mô tả cũ trước G-20; Farm Technician hiện chỉ có nhà được giao (frontend/CLAUDE.md)
+├── Lắp thiết bị /devices/onboarding là của Farm Owner, OTA /ota là của Admin (G-20, G-29)
 ├── Dùng chung với Farm Owner: /devices (không nút relay) · /alerts (cảnh báo thiết bị, không nút xác nhận) · /farms (cấu trúc)
 └── KHÔNG: relay, ngưỡng/hệ số, xác nhận cảnh báo, Dashboard/Analytics/đếm chim/live stream/thu hoạch (Report 3 FARM-FR-009)
 
@@ -1033,8 +1040,8 @@ Riêng ngoài hệ thống role: Landing Page (công khai) · Mobile app (mobile
 | 2 | `/dashboard`, `/analytics`, `/vision`, `/devices`, `/harvests` | `FARM_OWNER_ONLY` / `OPS_ROLES` / `HARVEST_ROLES` | Farm Owner + Domain Expert (chỉ đọc) | Đổi sang `FARM_SIDE_ROLES`; trang giữ nguyên của Farm Owner, nút ghi đã ẩn theo role (PR #101) — kiểm lại từng nút, không tạo bản sao cho chuyên gia |
 | 3 | `/stream/:id` | `OPS_ROLES` (có Technician, Admin), trỏ tới stub `FarmOwnerLiveStreamPage` (ghi RPi) | Chỉ Farm Owner + Domain Expert | **Đã chốt 27/10/2026:** xoá route và trang stub; xem live ở `/vision` (`LiveCameraCard`/`useWhepStream`, token 60 giây). ✅ Đã xoá 01/11/2026 (G-15) |
 | 4 | `/harvests` | `HARVEST_ROLES` (Farm Owner + Admin) | Farm Owner R, Domain Expert I, Admin – | Bỏ Admin, thêm Domain Expert chỉ xem |
-| 5 | `/ota` | `OPS_ROLES` (Farm Owner vào được) | Chỉ Technician (`/maintenance` đã gỡ ở PR #106) | Tạo nhóm quyền riêng cho Technician |
-| 5b | `/devices/onboarding` | Màn nhập tay Device ID + khoá của Technician | Farm Owner + Technician, quét nhãn QR và mã QR tầng (SF-01, FARM-FR-003…012) | Dán nội dung QR hoặc gõ mã, tiến trình setup 3 bước (FARM-FR-012); quét QR chỉ ở mobile, nơi làm chính |
+| 5 | `/ota` | `ADMIN_ONLY`, trang `AdminOtaPage` | Chỉ Administrator (FARM-FR-013, G-20) | ✅ Xong (G-20; trang chuyển về `pages/admin/` ở G-29) |
+| 5b | `/devices/onboarding` | `DEVICE_SETUP_ROLES`, trang `FarmOwnerDeviceSetupPage` | Chỉ Farm Owner (SF-01, FARM-FR-003…012) | ✅ Dán nội dung QR hoặc gõ mã, tiến trình setup 3 bước (FARM-FR-012); quét QR chỉ ở mobile, nơi làm chính (G-29) |
 | 6 | ~~Ticket ở mọi role: `/tickets`, `/support`, `/system/tickets`~~ | Đã gỡ route, menu (PR #101) và xoá trang, component, API (PR #106) | Ngoài phạm vi (Report 3 §8, BM03 dòng 9) | ✅ Đã gỡ |
 | 7 | `/alerts`, nút relay ở `/devices` | Nút xác nhận và nút relay chỉ Farm Owner thấy (PR #101); backend chỉ trả cảnh báo thiết bị cho Technician (PR #105) | Chỉ Farm Owner xác nhận và bật/tắt relay; Technician chỉ xem cảnh báo thiết bị; Admin không | ✅ Đã xong |
 | 8 | ~~`/marketplace`, `/marketplace/:id`~~ | Đã gỡ route, trang và API (PR #93) | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ |
@@ -1093,12 +1100,11 @@ frontend/src/
 │   │                          FarmOwnerFarmZoneDetailPage · FarmOwnerHarvestPage · FarmOwnerLiveStreamPage
 │   │                          FarmOwnerVisionPage · FarmOwnerDevicesPage · FarmOwnerDeviceDetailPage
 │   │                          FarmOwnerAlertsPage — /alerts của Farm Owner, Farm Technician và Admin
-│   │                          (đích) FarmOwnerDeviceSetupPage — SF-01, Technician mở cùng trang ở mọi farm
+│   │                          FarmOwnerDeviceSetupPage — SF-01, /devices/onboarding
 │   ├── domain-expert/         (đích) DomainExpert<ChứcNăng>Page — kiểm chứng cảnh báo, báo cáo
 │   │                          sức khỏe Zone, duyệt thay đổi, duyệt đề xuất hệ số, tham số phát hiện,
 │   │                          vòng đếm, lịch đếm
 │   ├── technician/            TechnicianDevicesPage · TechnicianFarmsPage
-│   │                          TechnicianOnboardingPage · TechnicianOtaPage
 │   ├── auth/                  LoginPage · ForgotPasswordPage · InvitationPage (không có đăng ký công khai —
 │   │                          người được mời tạo tài khoản trên trang lời mời, G-02)
 │   └── (gốc)                  SettingsPage · ForbiddenPage
@@ -1111,7 +1117,7 @@ frontend/src/
 │   ├── admin/                 useUsers · useSystem · useAccountRequests
 │   ├── auth/                  useAuth · useInvitations
 │   ├── farm-owner/            useAnalytics · useTelemetry · useHarvests
-│   ├── shared/                useFarms · useAlerts · useDevices · useReadAlerts
+│   ├── shared/                useFarms · useAlerts (gồm usePendingAlertTotal) · useDevices
 │   │                          useAlertNotifications (listener socket AppShell mount)
 │   │                          useAudioTracks (Farm Owner ghi, các role khác đọc — ENV-FR-013c)
 │   └── common/                Hạ tầng không gắn role:
@@ -1128,13 +1134,12 @@ frontend/src/
 │                              + index.ts (barrel, giữ `@/types` chạy như cũ)
 │
 ├── constants/                 roles (nhóm role + getRoleHomePath + canAccessPath)
-│                              thresholds · auditActions · display
+│                              thresholds · auditActions · display · siteCause
 │                              <module>.i18n.ts (dashboard · farmStructure · navigation · shell)
 │                              (severity + severity.i18n — 3 cấp mức độ, 2.4 · enumLabels.i18n · error.i18n)
 │
-├── stores/                    Zustand: authStore · alertStore · toastStore
+├── stores/                    Zustand: authStore · toastStore
 │                              zoneStore · breadcrumbStore · languageStore · pinnedHouseStore
-│                              readAlertStore
 │
 ├── lib/                       axios · queryClient · socket · cn
 │                              helpers · navigation · chartTheme · i18n (Hệ 2, mục 6)
@@ -1416,7 +1421,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | ~~`MarketplacePage` · `ListingDetailPage` · route công khai marketplace · `useMarketplace` · `marketplace.api` · kiểu `NestListing`/`ContactInquiry`/`ListingStatus`~~ | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ ở PR #93; `HarvestStatus` chỉ còn `DRAFT` (bỏ `ARCHIVED` ở PR #113, G-01). Gói `qrcode` vẫn giữ cho nhãn thiết bị và mã QR tầng (SF-01) |
 | Màn `DOMAIN_EXPERT` nằm ở `expert/`, `ExpertLayout`; chưa có `FARM_SIDE_ROLES`/`EXPERT_ONLY` | Mục 12 mô tả trạng thái đích | Dời theo checklist "Thêm role mới" ở 12.10 |
 | ~~Trường `heating` trong `RelayStates` (`types/device.types.ts`), tùy chọn kênh Zalo/SMS ở `SettingsPage`~~ | Ngoài phạm vi (Report 3 §8) | ✅ Đã gỡ ở PR #113 (G-01) |
-| `/onboarding` chỉ là màn Technician nhập tay Device ID + khoá | SF-01 (12.0 c dòng 5b) | Làm `FarmOwnerDeviceSetupPage` quét QR, mở cho `SETUP_ROLES` |
+| ~~`/onboarding` chỉ là màn Technician nhập tay Device ID + khoá~~ | SF-01 (12.0 c dòng 5b) | ✅ `FarmOwnerDeviceSetupPage` ở `/devices/onboarding`, `DEVICE_SETUP_ROLES`; quét QR ở mobile (G-29) |
 | Chữ "PLC" trên Dashboard; mốc 20 giây và mốc điểm cân bằng Zone tự chọn; câu "Camera AI đếm chim, Raspberry Pi" ở `BirdTab`, `CorrelationCard` | 6.2, 2.6.1; Report 3: nút AI là PC/máy chủ, không phải Raspberry Pi | Đổi chữ thành "Bộ điều khiển", "nút AI" khi sửa màn; mốc giữ đúng giá trị ghi ở Report 3 §4.5 |
 
 PR đụng vào file trong bảng thì **nên** trả nợ luôn; bắt buộc chỉ khi PR làm nợ nặng thêm (VD thêm consumer thứ hai vẫn chỉ của Technician vào `shared/`, hoặc thêm lại ticket, SLA, vùng, Sales Staff, Marketplace, sưởi, Zalo/SMS — các phần này đã gỡ hoặc chỉ được gỡ, không được mở rộng).
@@ -1530,6 +1535,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Nhãn mã backend VI/EN | `constants/enumLabels.i18n.ts` | `alertTypeDict` · `alertStatusDict` · `deviceStatusDict` · `roleDict` · `prefixLabels()` | 6.3 |
 | Ngưỡng cảm biến | `constants/thresholds.ts` | khoảng hợp lệ ngưỡng Zone | — |
 | Giá trị trống | `constants/display.ts` | `NO_VALUE` (`_`) — thông số chưa có dữ liệu | 6.1 |
+| Nguyên nhân tại chỗ | `constants/siteCause.ts` | `SITE_CAUSES` · `CAUSE_ALERT_TYPES` (ALERT-FR-018) | — |
 | Nhóm role, trang chủ theo role, quyền menu | `constants/roles.ts` | `OPS_ROLES` · `FARM_OWNER_ONLY` · `HARVEST_ROLES` · `ADMIN_ONLY` · `ROLE_HOME` · `MENU_ACCESS` · `canAccessPath` | 12.0, 12.8 |
 | Nhãn hành động audit log | `constants/auditActions.ts` | nhãn hành động | — |
 
@@ -1566,6 +1572,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `lib/i18n.ts` | `Dictionary<K>` · `translate` · `formatStandardDate` · `formatHourMinute` · `formatDateTime` · `formatTimestampsInText` · `formatNumber` · `formatRelative` | 6, 6.1 |
 | `i18n/index.ts` · `i18n/en.ts` (có trên `develop`) | Hệ dịch 1 (Admin, `ui/`): `t` · `tr` · `trChildren` · `translated` · `intlLocale` · `setLang` | 6 |
 | `lib/cn.ts` | `cn()` ghép class (tailwind-merge) | 13.7 |
+| `lib/deviceLocation.ts` | `nodeLocation()` — "Farm | Nhà | Tầng | Zone" của thiết bị trong `GET /devices/system-status` (Admin) | — |
 | `lib/apiError.ts` · `constants/error.i18n.ts` · `hooks/common/useApiErrorMessage.ts` | `getApiErrorGroup` · `errorDict` · `useApiErrorMessage()` — câu lỗi API theo 4 nhóm | 13.16 b |
 | `lib/helpers.ts` | `getApiErrorMessage` (nợ 13.16 b) · `formatDate`/`formatDateOnly` (nợ 6.1) · `formatRelativeTime` | — |
 | `lib/axios.ts` | instance API + tự làm mới phiên 401 | 13.1 |
@@ -1580,9 +1587,9 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Nhóm | Đường dẫn | Nội dung |
 |---|---|---|
 | Hook hạ tầng | `hooks/common/` | `useTranslation` (Hệ 2: `t` `num` `day` `time` `date` `hourMinute` `dateTime` `ago`) · `usePermission` · `useSocket` · `usePaginatedListQuery` · `useBreadcrumb` (`usePageBreadcrumb`, `usePageBack`) · `useNavigationLabel` · `useScrollToTop` · `useCanScrollDown` · `useSyncedState` |
-| Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` · `useAlertNotifications` · `useReadAlerts` · `useDevices` · `useAudioTracks` |
+| Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` (`usePendingAlertTotal`: số cảnh báo ACTIVE) · `useAlertNotifications` · `useDevices` (`useSensorNode`, `useSystemNodeStatus`) · `useAudioTracks` |
 | API ≥ 2 role | `apis/shared/` | `farms.api` · `alerts.api` · `devices.api` · `audioTracks.api` |
-| Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `alertStore` · `readAlertStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` |
+| Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` (số cảnh báo lấy từ query, không có store) |
 | Validator | `validations/common/` · `validations/farm-owner/` | `threshold.validation` · `fuzzyTuning.validation` · `speakerSchedule.validation` · `farm.validation` (vị trí farm: vĩ độ −90…90, kinh độ −180…180) |
 
 ### D.5. Dữ liệu giả

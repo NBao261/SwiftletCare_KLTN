@@ -2,14 +2,7 @@
 
 React 18 + Vite + TailwindCSS + React Router v6 + Socket.io-client. Yêu cầu: Report 3 ([`docs/reports/report3-srs.md`](../docs/reports/report3-srs.md), phân quyền §2.4); thiết kế: Report 4 ([`docs/reports/report4-sdd.md`](../docs/reports/report4-sdd.md) §5.4).
 
-> **Phạm vi sau Review 1 (Report 3).** Hội đồng đánh giá theo phiếu đăng ký bản sửa. Việc phải sửa ở web (chỗ lệch theo FR ở `docs/reports/project-tracking.md` §6, quyền theo màn ở `FE_Design_Claude.md` §12.0):
->
-> - Role `DOMAIN_EXPERT` đã có màn từ PR #91 (`/expert/*`): bỏ dữ liệu giả dự phòng (`services/expert/expertFallback.service.ts`, `data/mocks/`), chuyển về bucket `domain-expert/`, `DomainExpertLayout`, `apis/` theo FE_Design §12.
-> - Farm Owner: lịch sử can thiệp tay, thẻ tỷ lệ thời gian tự động, đọc kết luận và lịch sử quyết định của chuyên gia (EXPERT-FR-009), live stream có khung và số đếm trực tiếp.
-> - Technician/Admin: Admin không có nút can thiệp tay hay xác nhận cảnh báo; Technician cũng không có hai nút đó (Report 3 §2.4). Ticket, SLA, vùng của Technician và màn quản lý farm của Admin đã ra ngoài phạm vi (Report 3 §8) và đã gỡ khỏi code.
-> - Domain Expert: màn chỉnh tham số phát hiện của Zone (EXPERT-FR-008), đặt cạnh tỷ lệ cảnh báo được xác nhận, duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010), duyệt đề xuất hệ số (EXPERT-FR-011), vòng đếm và lịch đếm theo mùa; Farm Owner chỉ xem, trừ khi farm chưa có chuyên gia (BR-22).
-> - Thiết lập thiết bị (SF-01): Farm Owner quét nhãn QR và mã QR tầng, xem tiến trình setup; Admin in nhãn QR khi thêm thiết bị vào kho; màn Zone in mã QR tầng. Gỡ chỗ sửa ngưỡng/hệ số khỏi màn Technician.
-> - Gỡ trường `heating` còn sót trong `RelayStates` (màn đã chỉ hiện 3 relay); NH3/CO2 ghi rõ là ngưỡng cảnh báo của Zone (không điều khiển quạt); nhãn `NOISE_ANOMALY` thay `BIRD_PANIC`, hiển thị kèm số đếm chim.
+> **Phạm vi hiện tại.** Web theo Report 3 cho cả 4 role (Farm Owner, Farm Technician, Domain Expert, Administrator). Chỗ còn lệch ghi ở `docs/reports/project-tracking.md` §6 (đợt soát gần nhất: G-28, G-29); quyền theo màn ở `FE_Design_Claude.md` §12.0; bản đồ code hiện tại ở `CLAUDE.md`. Màn chuyên gia nằm ở `/domain-expert/*` (bucket `domain-expert/`, `DomainExpertLayout`), mở cho Farm Owner trừ Hàng đợi việc và Báo cáo & kết luận (BR-22). Lắp thiết bị (SF-01) ở `/devices/onboarding` của Farm Owner; quét QR chỉ ở mobile.
 
 ## Chạy local
 
@@ -58,13 +51,12 @@ src/
                  auth/        LoginPage, ForgotPasswordPage, InvitationPage
                               (chưa đăng nhập, không gắn role; không có đăng ký
                               công khai — tạo tài khoản trên trang lời mời)
-                 domain-expert/ (đích) màn chuyên gia: kiểm chứng cảnh báo,
-                              kết luận, duyệt thay đổi, tham số phát hiện…
-                              (code hiện có nằm ở expert/, PR #91)
-               2 trang không thuộc role nào nằm thẳng ở pages/:
-                 SettingsPage (mọi role), ForbiddenPage
+                 domain-expert/ màn quyết định của chuyên gia: thẩm định cảnh báo,
+                              ngưỡng và hệ số, duyệt thay đổi, báo cáo và kết luận…
+               trang không thuộc role nào nằm thẳng ở pages/:
+                 SettingsPage, SettingsPrivacyPage (mọi role), PrivacyPage, ForbiddenPage
   routes/      1 file cho mỗi thư mục pages/<role>/: <role>.routes.tsx
-  stores/      Zustand (authStore, alertStore, toastStore, zoneStore, breadcrumbStore)
+  stores/      Zustand (authStore, toastStore, zoneStore, breadcrumbStore, languageStore…)
   types/       Tách theo module backend (auth, farm, device, telemetry, alert,
                harvest, vision, system, socket, common) + index.ts barrel.
                Kiểu là shape thực thể mirror model backend, dùng chung nhiều
