@@ -2034,7 +2034,7 @@ paths:
       tags: [Farms]
       summary: "Đưa mức giảm tỷ lệ chim về của nhà về mặc định 20 % (EXPERT-FR-008) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
       description: |
-        Như `PUT /farms/houses/{houseId}/bird-count-tuning` với mức mặc định: thêm một dòng
+        Như `PUT /farms/houses/{houseId}/bird-count-tuning` với mức mặc định cố định của backend (20 %): thêm một dòng
         `bird_count_tuning_history`, audit `BIRD_COUNT_TUNING_UPDATED`, báo Farm Owner khi chuyên gia làm
         (EXPERT-FR-009). Không có body.
       parameters: [{ name: houseId, in: path, required: true, schema: { type: string } }]
@@ -2189,7 +2189,9 @@ paths:
       tags: [Farms]
       summary: "Đưa 5 tham số phát hiện của Zone về mặc định (EXPERT-FR-008) — DOMAIN_EXPERT; FARM_OWNER khi farm chưa có chuyên gia (BR-22)"
       description: |
-        Như `PUT /farms/zones/{zoneId}/detection-tuning` với bộ mặc định của hệ thống: thêm một dòng
+        Như `PUT /farms/zones/{zoneId}/detection-tuning` với bộ mặc định cố định của backend
+        (`DEFAULT_DETECTION_TUNING`: `noise_margin_db` 15, `noise_min_sec` 10, `pump_dry_on_sec` 300,
+        `pump_dry_min_rise_pct` 2, `speaker_drop_pct` 70; không phải ngưỡng mặc định của Administrator): thêm một dòng
         `detection_tuning_history`, audit `DETECTION_TUNING_UPDATED`, báo Farm Owner khi chuyên gia làm
         (EXPERT-FR-009), tăng `config_version` và publish `config`. Không có body.
       parameters: [{ $ref: "#/components/parameters/ZoneId" }]
