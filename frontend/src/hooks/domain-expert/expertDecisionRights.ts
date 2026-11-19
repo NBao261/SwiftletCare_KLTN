@@ -9,6 +9,8 @@ export interface ExpertDecisionRights {
   isExpert: boolean
   // Farm Owner xem trang chuyên gia ở chế độ chỉ xem vì farm đã có chuyên gia
   ownerReadOnly: boolean
+  // Đã biết farm có chuyên gia hay chưa (GET /farms đã tải và có farm đang chọn); chưa biết thì vẫn khoá nút ghi
+  farmKnown: boolean
 }
 
 // BR-22, Report 4 §5.4 — quyền trên các trang quyết định của chuyên gia; backend vẫn là nơi quyết cuối cùng
@@ -19,5 +21,6 @@ export function expertDecisionRights(role: Role | undefined, farm: { has_active_
     canDecide: isExpert || ownerCanDecide,
     isExpert,
     ownerReadOnly: role === 'FARM_OWNER' && !ownerCanDecide,
+    farmKnown: typeof farm?.has_active_expert === 'boolean',
   }
 }

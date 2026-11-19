@@ -9,6 +9,7 @@ import HarvestCyclesSection from '@/components/features/domain-expert/harvest/Ha
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils';
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements';
 import { useHouses } from '@/hooks/shared/useFarms';
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 
 type ReportsPageTab = 'reports' | 'disagreements' | 'harvest-cycles';
 
@@ -17,10 +18,13 @@ export default function DomainExpertReportsPage() {
   const { data: farmHouses = [] } = useHouses(selectedFarmId ?? undefined);
   const house = farmHouses.find(item => item._id === selectedHouseId);
   const [searchParams, setSearchParams] = useSearchParams();
+  // Ngày lệch (EXPERT-FR-022) là việc của chuyên gia, hoặc Farm Owner khi farm chưa có chuyên gia (BR-22):
+  // Farm Owner của farm có chuyên gia không có tab này (backend trả 403), thay vì thấy lỗi
+  const { canDecide: canReviewDisagreements } = useExpertDecisionRights();
 
   const rawTab = searchParams.get('tab');
   const activeTab: ReportsPageTab =
-    rawTab === 'disagreements' ? 'disagreements'
+    rawTab === 'disagreements' && canReviewDisagreements ? 'disagreements'
     : rawTab === 'harvest-cycles' ? 'harvest-cycles'
     : 'reports';
 
@@ -43,7 +47,7 @@ export default function DomainExpertReportsPage() {
     farmId: selectedFarmId ?? undefined,
     from,
     to,
-  });
+  }, { enabled: canReviewDisagreements });
 
   // Báo cáo theo nhà đang chọn, không chọn nhà thì cả farm
   let reportScope: { houseId?: string; farmId?: string } | null = null;
@@ -73,6 +77,7 @@ export default function DomainExpertReportsPage() {
               <span>{i18nT('Báo cáo & Kết luận định kỳ')}</span>
             </button>
 
+            {canReviewDisagreements && (
             <button
               id="tab-disagreements"
               type="button"
@@ -94,6 +99,7 @@ export default function DomainExpertReportsPage() {
                 </span>
               )}
             </button>
+            )}
 
             <button
               id="tab-harvest-cycles"
