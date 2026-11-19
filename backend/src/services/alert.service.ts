@@ -444,7 +444,7 @@ export interface ListAlertsQuery {
   severity?: string
   type?: string
   /** EXPERT-FR-003 — pending = cảnh báo suy luận chưa được kiểm chứng */
-  verdict?: 'pending' | 'confirmed' | 'rejected'
+  verdict?: 'any' | 'pending' | 'confirmed' | 'rejected'
   page?: number
   limit?: number
 }
@@ -494,8 +494,9 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
       throw BadRequestError(`Chỉ lọc theo kiểm chứng cho cảnh báo suy luận (${INFERRED_ALERT_TYPES.join(', ')})`)
     }
     if (!query.type) filter.type = { $in: INFERRED_ALERT_TYPES }
+    // `any`: mọi cảnh báo suy luận, đã kết luận hay chưa (trang kết luận của chuyên gia, tab Tất cả)
     if (query.verdict === 'pending') filter.expert_verdict = { $exists: false }
-    else filter['expert_verdict.result'] = query.verdict.toUpperCase()
+    else if (query.verdict !== 'any') filter['expert_verdict.result'] = query.verdict.toUpperCase()
   }
 
   const { page, skip, limit } = paginate(query.page, query.limit)

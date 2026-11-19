@@ -191,6 +191,14 @@ describe('kiểm chứng của Domain Expert (EXPERT-FR-003)', () => {
     const pending = await call('get', '/alerts?verdict=pending', t.expert).expect(200)
     expect(pending.body.data.map((a: { type: string }) => a.type)).toEqual(['FORECAST_BREACH'])
     expect((await call('get', '/alerts?verdict=rejected', t.expert).expect(200)).body.meta.total).toBe(2)
+    // any: mọi cảnh báo suy luận đã hay chưa kết luận; cảnh báo đo trực tiếp (kể cả MISTING_INEFFECTIVE) không có
+    await mkAlert('MISTING_INEFFECTIVE')
+    const any = await call('get', '/alerts?verdict=any&limit=2', t.expert).expect(200)
+    expect(any.body.meta.total).toBe(4)
+    expect(any.body.data).toHaveLength(2)
+    const anyTypes = (await call('get', '/alerts?verdict=any', t.expert).expect(200)).body.data.map((a: { type: string }) => a.type)
+    expect(anyTypes.sort()).toEqual(['FORECAST_BREACH', 'NOISE_ANOMALY', 'NOISE_ANOMALY', 'NOISE_ANOMALY'])
+    await call('get', '/alerts?verdict=any&type=MISTING_INEFFECTIVE', t.expert).expect(400)
     expect((await call('get', '/alerts?type=NOISE_ANOMALY', t.expert).expect(200)).body.meta.total).toBe(3)
 
     const stats = await call('get', `/alerts/verdict-stats?zoneId=${zone._id}`, t.owner).expect(200)
