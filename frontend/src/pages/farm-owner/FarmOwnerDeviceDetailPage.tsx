@@ -7,7 +7,6 @@ import DeviceDetailCard from '@/components/features/farm-owner/devices/DeviceDet
 import DeviceSection from '@/components/features/farm-owner/devices/DeviceSection';
 import LullabyTracksModal from '@/components/features/farm-owner/devices/LullabyTracksModal';
 import SpeakerScheduleModal from '@/components/features/farm-owner/devices/SpeakerScheduleModal';
-import ZoneThresholdsModal from '@/components/features/farm-owner/devices/ZoneThresholdsModal';
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants';
 import KitComponentsToggle from '@/components/features/farm-owner/devices/KitComponentsToggle';
 import type { DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
@@ -22,6 +21,7 @@ import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard';
 import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
 import { useSendNodeCommand, useSensorNodes } from '@/hooks/shared/useDevices';
+import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
@@ -49,10 +49,10 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
-  // Lịch và bài loa ru chỉ Farm Owner đặt (BR-07); Domain Expert chỉ đọc, vẫn sửa được ngưỡng Zone
+  // Lịch và bài loa ru chỉ Farm Owner đặt (BR-07); Domain Expert chỉ đọc
   const canOperateSpeaker = usePermission('FARM_OWNER');
-  // Popup vận hành Farm Owner được làm: ngưỡng của 1 Zone, lịch / bài loa ru của 1 node cảm biến
-  const [thresholdZone, setThresholdZone] = useState<{ id: string; name: string }>();
+  // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning; popup ở đây là lịch và bài loa ru của 1 bộ điều khiển
+  const openZoneTuning = useOpenZoneTuning();
   const [scheduleNodeId, setScheduleNodeId] = useState<string>();
   const [tracksNodeId, setTracksNodeId] = useState<string>();
   // Bản ghi node đầy đủ (lịch, âm lượng, bài đang chọn) từ cùng cache danh sách node
@@ -173,7 +173,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
                 variant="secondary"
                 size="sm"
                 className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)}
-                onClick={() => setThresholdZone({ id: group.zone._id, name: group.zone.name })}
+                onClick={() => openZoneTuning(group.zone._id)}
               >
                 <SlidersHorizontalIcon size={14} />
                 {t('action.thresholds')}
@@ -208,7 +208,6 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
         </DeviceSection>
       )}
 
-      {thresholdZone && <ZoneThresholdsModal zoneId={thresholdZone.id} zoneName={thresholdZone.name} onClose={() => setThresholdZone(undefined)} />}
       {scheduleNode && <SpeakerScheduleModal node={scheduleNode} onClose={() => setScheduleNodeId(undefined)} />}
       {tracksNode && <LullabyTracksModal node={tracksNode} onClose={() => setTracksNodeId(undefined)} />}
       <ConfirmModal

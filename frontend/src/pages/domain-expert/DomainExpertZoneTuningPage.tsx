@@ -1,76 +1,55 @@
-/**
- * DomainExpertZoneTuningPage — Ngưỡng & Hệ số mờ
- *
- * Rename + re-bucket từ ExpertZoneTuningPage:
- *   Cũ: pages/expert/ExpertZoneTuningPage.tsx  →  /expert/tuning
- *   Mới: pages/domain-expert/DomainExpertZoneTuningPage.tsx  →  /domain-expert/tuning
- *
- * Kiến trúc Bento 2 Tầng:
- *   Tầng 1: Tham số điều khiển mờ (Fuzzy Logic) & Gợi ý AI
- *   Tầng 2: Ngưỡng vi khí hậu | Tham số phát hiện bất thường
- *
- * SRS EXPERT-FR-004/008, ENV-FR-006/020/021, ANALYTICS-FR-010.
- * Bucket: pages/domain-expert/ — §12.4.
- */
-import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
+import { useToastStore } from '@/stores/toastStore';
+import { t } from '@/i18n';
 import ThresholdColumn from '@/components/features/domain-expert/tuning/ThresholdColumn';
 import FuzzyTuningColumn from '@/components/features/domain-expert/tuning/FuzzyTuningColumn';
 import DetectionColumn from '@/components/features/domain-expert/tuning/DetectionColumn';
 import ReturnRateDropCard from '@/components/features/domain-expert/tuning/ReturnRateDropCard';
+import type { SuggestionAction } from '@/components/features/domain-expert/tuning/FuzzySuggestionBox';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useHouses } from '@/hooks/shared/useFarms';
 import {
   useExpertThresholds, useUpdateThresholds, useResetThresholds,
   useExpertFuzzyTuning, useUpdateFuzzyTuning,
-  useExpertAiSuggestion,
+  useFuzzySuggestion,
   useExpertDetectionTuning, useUpdateDetectionTuning, useResetDetectionTuning,
   useZoneHouseId, useSaveReturnRateDrop,
 } from '@/hooks/domain-expert/useZoneTuning';
 import { useExpertVerdictStats } from '@/hooks/domain-expert/useExpertAlerts';
-import { useCoefficientProposals } from '@/hooks/domain-expert/useExpertReviews';
-import type { ExpertFuzzyTuning } from '@/types/expert.types';
+import { useApplySuggestion, useCoefficientProposals, useSubmitCoefficientProposal } from '@/hooks/domain-expert/useExpertReviews';
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 
-function Toast({ show, message }: { show: boolean; message: string }) {
-  if (!show) return null;
-  return (
-    <div className="fixed bottom-6 right-6 z-[60] px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-3 bg-[#27231F] text-[#ECFFA9]">
-      <Check className="w-4 h-4 flex-shrink-0" />
-      {message}
-    </div>
-  );
-}
-
+// Ngưỡng & hệ số mờ (ENV-FR-020…022, EXPERT-FR-004/008/011): nơi duy nhất sửa ngưỡng và hệ số mờ của một Zone trên web
 export default function DomainExpertZoneTuningPage() {
   const { selectedFarmId, selectedZoneId } = useZoneStore();
   const zoneId = selectedZoneId ?? undefined;
+  const push = useToastStore(state => state.push);
+  const apiErrorMessage = useApiErrorMessage();
 
-  // Data hooks — nguồn từ domain-expert/
   const thresholds = useExpertThresholds(zoneId);
   const fuzzy = useExpertFuzzyTuning(zoneId);
-  const aiSuggestion = useExpertAiSuggestion(zoneId);
+  const suggestion = useFuzzySuggestion(zoneId);
   const detection = useExpertDetectionTuning(zoneId);
   const { data: verdictStats = [] } = useExpertVerdictStats(undefined, zoneId);
 
-  // Đề xuất hệ số mờ đang chờ duyệt của zone (EXPERT-FR-011)
+  // Đề xuất hệ số mờ đang chờ chuyên gia duyệt của Zone (EXPERT-FR-011)
   const { total: pendingProposalsCount = 0 } = useCoefficientProposals({
     farmId: selectedFarmId ?? '',
     zoneId,
     status: 'PROPOSED',
   });
 
-  // Mutation hooks
   const updateThresholds = useUpdateThresholds(zoneId);
   const resetThresholds = useResetThresholds(zoneId);
   const updateFuzzy = useUpdateFuzzyTuning(zoneId);
   const updateDetection = useUpdateDetectionTuning(zoneId);
   const resetDetection = useResetDetectionTuning(zoneId);
-  const apiErrorMessage = useApiErrorMessage();
-  // BR-22 — tham số phát hiện và mức giảm tỷ lệ chim về: Farm Owner chỉ sửa khi farm chưa có chuyên gia
-  const { canDecide } = useExpertDecisionRights();
+  const applySuggestion = useApplySuggestion();
+  const submitProposal = useSubmitCoefficientProposal();
+  // BR-22 — tham số phát hiện, mức giảm tỷ lệ chim về và áp gợi ý: Farm Owner chỉ làm khi farm chưa có chuyên gia
+  const { canDecide, ownerReadOnly } = useExpertDecisionRights();
 
   // Mức giảm tỷ lệ chim về thuộc nhà chứa Zone đang chọn (EXPERT-FR-008)
   const { data: houseId } = useZoneHouseId(zoneId);
@@ -78,108 +57,91 @@ export default function DomainExpertZoneTuningPage() {
   const house = houses?.find(item => item._id === houseId);
   const returnRateDrop = useSaveReturnRateDrop(selectedFarmId);
 
-  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
-  const [highlightedFuzzyFields, setHighlightedFuzzyFields] = useState<Set<keyof ExpertFuzzyTuning>>(new Set());
-  const [fuzzyOverride, setFuzzyOverride] = useState<Partial<ExpertFuzzyTuning>>({});
-  const [toast, setToast] = useState({ show: false, message: '' });
+  // Mọi thao tác lưu báo kết quả, kể cả lỗi (FE_Design 13.5)
+  function notify(action: Promise<unknown>, doneMessage: string) {
+    action.then(() => push(t(doneMessage))).catch(error => push(apiErrorMessage(error), 'error'));
+  }
 
-  const showToast = (message: string) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast(t => ({ ...t, show: false })), 3000);
-  };
-
-  const handleApplySuggestion = useCallback((suggestion: Partial<ExpertFuzzyTuning>) => {
-    setFuzzyOverride(suggestion);
-    setHighlightedFuzzyFields(new Set(Object.keys(suggestion) as Array<keyof ExpertFuzzyTuning>));
-    setTimeout(() => setHighlightedFuzzyFields(new Set()), 4000);
-    showToast('Đã áp dụng đề xuất hệ số mờ — Xem lại và bấm Lưu để xác nhận');
-  }, []);
+  // Gợi ý hệ số (EXPERT-FR-011): người được quyết thì áp ngay, Farm Owner ở farm có chuyên gia thì gửi chuyên gia duyệt
+  let suggestionAction: SuggestionAction | undefined;
+  if (zoneId && canDecide) {
+    suggestionAction = {
+      label: t('Áp dụng gợi ý'),
+      loading: applySuggestion.isPending,
+      onClick: () => notify(applySuggestion.mutateAsync(zoneId), 'Đã áp dụng gợi ý hệ số cho khu vực'),
+    };
+  }
+  if (zoneId && ownerReadOnly) {
+    suggestionAction = {
+      label: t('Gửi chuyên gia duyệt'),
+      loading: submitProposal.isPending,
+      onClick: () => notify(submitProposal.mutateAsync(zoneId), 'Đã gửi gợi ý hệ số cho chuyên gia duyệt'),
+    };
+  }
 
   return (
     <div className="relative w-full flex-1 flex flex-col gap-6">
       <div className="w-full max-w-screen-xl mx-auto space-y-6">
-
-        {/* Banner thông báo nếu zone đang có đề xuất hệ số mờ chờ duyệt (G-04) */}
         {pendingProposalsCount > 0 && (
           <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-sm">
             <div className="flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>
-                Khu vực này đang có <strong>{pendingProposalsCount} đề xuất hệ số mờ</strong> từ Chủ trang trại chờ chuyên gia phê duyệt.
-              </span>
+              <span>{t('Khu vực này có {{n}} đề xuất hệ số mờ của Chủ trang trại đang chờ chuyên gia duyệt.', { n: pendingProposalsCount })}</span>
             </div>
             <Link
               to="/domain-expert/reviews"
               className="flex items-center gap-1 font-semibold text-amber-800 hover:text-amber-950 underline px-3 py-1 rounded-lg bg-amber-100/60 hover:bg-amber-100 transition-colors"
             >
-              <span>Xem và duyệt</span>
+              <span>{t('Xem đề xuất')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         )}
 
-        {/* TẦNG 1: Tham số điều khiển mờ (Fuzzy Logic) & Gợi ý AI */}
         <FuzzyTuningColumn
-          data={fuzzyOverride && Object.keys(fuzzyOverride).length > 0
-            ? { ...fuzzy.data, ...fuzzyOverride } as ExpertFuzzyTuning
-            : fuzzy.data}
+          data={fuzzy.data}
           isLoading={fuzzy.isLoading}
           isSaving={updateFuzzy.isPending}
-          highlightedFields={highlightedFuzzyFields}
-          onSave={v => updateFuzzy.mutateAsync(v).then(() => { setFuzzyOverride({}); showToast('Đã lưu hệ số mờ'); })}
-          onFormChange={v => setFuzzyOverride(prev => ({ ...prev, ...v }))}
-          suggestion={aiSuggestion.data}
-          isSuggestionLoading={aiSuggestion.isLoading}
-          onApplySuggestion={handleApplySuggestion}
-          onDismissSuggestion={() => setSuggestionDismissed(true)}
-          suggestionDismissed={suggestionDismissed}
+          onSave={changed => notify(updateFuzzy.mutateAsync(changed), 'Đã lưu hệ số mờ')}
+          suggestion={suggestion.data}
+          isSuggestionLoading={suggestion.isLoading}
+          suggestionAction={suggestionAction}
         />
 
-        {/* TẦNG 2: 2 Cột 50% - 50% */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           <ThresholdColumn
             data={thresholds.data}
             isLoading={thresholds.isLoading}
             isSaving={updateThresholds.isPending}
             isResetting={resetThresholds.isPending}
-            onSave={v => updateThresholds.mutateAsync(v).then(() => showToast('Đã lưu ngưỡng môi trường'))}
-            onReset={() => resetThresholds.mutateAsync().then(() => showToast('Đã khôi phục ngưỡng mặc định'))}
+            onSave={values => notify(updateThresholds.mutateAsync(values), 'Đã lưu ngưỡng môi trường')}
+            onReset={() => notify(resetThresholds.mutateAsync(), 'Đã khôi phục ngưỡng mặc định')}
           />
 
           <fieldset disabled={!canDecide} className="contents">
-          <DetectionColumn
-            data={detection.data}
-            verdictStats={verdictStats}
-            isLoading={detection.isLoading}
-            isSaving={updateDetection.isPending}
-            isResetting={resetDetection.isPending}
-            onSave={v => updateDetection.mutateAsync(v)
-              .then(() => showToast('Đã lưu tham số phát hiện'))
-              .catch(error => showToast(apiErrorMessage(error)))}
-            onReset={() => resetDetection.mutateAsync()
-              .then(() => showToast('Đã khôi phục tham số phát hiện mặc định'))
-              .catch(error => showToast(apiErrorMessage(error)))}
-          />
+            <DetectionColumn
+              data={detection.data}
+              verdictStats={verdictStats}
+              isLoading={detection.isLoading}
+              isSaving={updateDetection.isPending}
+              isResetting={resetDetection.isPending}
+              onSave={values => notify(updateDetection.mutateAsync(values), 'Đã lưu tham số phát hiện')}
+              onReset={() => notify(resetDetection.mutateAsync(), 'Đã khôi phục tham số phát hiện mặc định')}
+            />
           </fieldset>
         </div>
 
         <fieldset disabled={!canDecide} className="contents">
-        <ReturnRateDropCard
-          houseName={house?.name}
-          value={house?.bird_count_tuning?.return_rate_drop_pct}
-          isSaving={returnRateDrop.update.isPending}
-          isResetting={returnRateDrop.reset.isPending}
-          onSave={value => house && returnRateDrop.update.mutateAsync({ houseId: house._id, value })
-            .then(() => showToast('Đã lưu mức giảm tỷ lệ chim về của nhà'))
-            .catch(error => showToast(apiErrorMessage(error)))}
-          onReset={() => house && returnRateDrop.reset.mutateAsync(house._id)
-            .then(() => showToast('Đã khôi phục mức giảm tỷ lệ chim về mặc định'))
-            .catch(error => showToast(apiErrorMessage(error)))}
-        />
+          <ReturnRateDropCard
+            houseName={house?.name}
+            value={house?.bird_count_tuning?.return_rate_drop_pct}
+            isSaving={returnRateDrop.update.isPending}
+            isResetting={returnRateDrop.reset.isPending}
+            onSave={value => house && notify(returnRateDrop.update.mutateAsync({ houseId: house._id, value }), 'Đã lưu mức giảm tỷ lệ chim về của nhà')}
+            onReset={() => house && notify(returnRateDrop.reset.mutateAsync(house._id), 'Đã khôi phục mức giảm tỷ lệ chim về mặc định')}
+          />
         </fieldset>
       </div>
-
-      <Toast show={toast.show} message={toast.message} />
     </div>
   );
 }

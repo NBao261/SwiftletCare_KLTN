@@ -32,7 +32,7 @@ import {
 import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements'
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
-import { useExpertAiSuggestion } from '@/hooks/domain-expert/useZoneTuning'
+import { useFuzzySuggestion } from '@/hooks/domain-expert/useZoneTuning'
 import {
   useParameterReviews,
   useCoefficientProposals,
@@ -79,7 +79,7 @@ export default function DomainExpertQueuePage() {
   } = useHealthReportConclusionCounts(selectedFarmId ?? '', selectedHouseId ?? '')
 
   // ── Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic ───────────────────────
-  const { data: aiSuggestion } = useExpertAiSuggestion(selectedZoneId ?? undefined)
+  const { data: aiSuggestion } = useFuzzySuggestion(selectedZoneId ?? undefined)
 
   // ── Dữ liệu mục duyệt tham số & đề xuất hệ số mờ (G-04) ────────────────────
   const { total: pendingReviewsCount } = useParameterReviews({
