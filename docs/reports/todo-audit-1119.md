@@ -158,7 +158,18 @@ Soát lại web trên `develop` sau PR #197, theo Report 3 §2.4 và Report 4 §
 | S-07 | Các màn chuyên gia không đổi sang tiếng Anh: chỉ 9/36 component có i18n. Dùng `src/i18n` (khoá là câu tiếng Việt), bản dịch để ở file riêng `i18n/en.expert.ts` | FE_Design §6 | P1 |
 | S-08 | `TechnicianDevicesPage` còn code của Farm Owner và Admin (kích hoạt, dời Zone, thay, gỡ thiết bị, đẩy cấu hình; gọi `deviceApi` ngay trong component), trong khi hai role này đã có trang riêng. Bỏ hết nhánh đó cùng `ReplaceDeviceModal` và `DecommissionDeviceModal`. Thêm thứ Farm Technician còn thiếu: danh sách bài loa ru chỉ xem | Report 4 §5.4, FE_Design 13.1 | P1 |
 | S-09 | `TechnicianLayout` còn khối comment nhiều dòng nhắc `/onboarding` cũ | FE_Design 13 | P2 |
+| S-10 | Farm Owner không dời, thay, gỡ được bộ điều khiển trên web: nút cũ nằm ở trang Technician mà Farm Owner không vào, gỡ thiết bị ONLINE thiếu `force` nên luôn bị 409. Thêm menu "Thao tác khác" trên thẻ thiết bị của trang chi tiết (Farm Owner) | FARM-FR-007b, 008, Report 3 §2.4 | P0 |
 
 Xong khi lint, tsc, Vitest và build của web đều qua, và `frontend/CLAUDE.md`, FE_Design (Phụ lục D, Changelog) cùng dòng G-29 đã ghi các thay đổi.
 
-**Tiến độ (19/11/2026): đã làm hết S-01…S-09 trên nhánh `fix/web-all-ui-audit`.** Lint, tsc, Vitest (384 test) và build của web đều qua; chưa chạy thử trên trình duyệt. Làm thêm khi sửa: nhãn mức `MEDIUM` ở trang thẩm định ghi "Trung bình" (trước ghi nhầm "Cao"); khung chọn ở Hàng đợi việc không còn tự điền "Tầng 1" khi chưa chọn khu vực.
+**Tiến độ (19/11/2026): đã làm hết S-01…S-09 trên nhánh `fix/web-all-ui-audit`.** Lint, tsc, Vitest (384 test) và build của web đều qua; chưa chạy thử trên trình duyệt. Làm thêm khi sửa: khung chọn ở Hàng đợi việc không còn tự điền "Tầng 1" khi chưa chọn khu vực.
+
+### Sửa sau review của PR #199
+
+- Khoảng ngưỡng trên trang tuning lấy từ `THRESHOLD_LIMITS` (khoảng đo cảm biến của backend) và kiểm bằng `validateThresholds`; câu khôi phục nói đúng là về ngưỡng mặc định của Quản trị viên (ENV-FR-007).
+- Mức độ cảnh báo ở màn chuyên gia dùng `SeverityBadge` và 3 cấp của FE_Design 2.4 (`MEDIUM` = P2 "Cao"); ô lọc chỉ còn `MEDIUM`, `LOW` vì cảnh báo suy luận không vượt mức này. Bỏ `SEVERITY_LABELS`, `SEVERITY_BADGE_CLASS`.
+- `en.expert.ts` bỏ 21 khoá trùng `en.ts` (bị `en.ts` ghi đè); câu có loại cảnh báo dùng khoá riêng `Cảnh báo {{type}}`; `en.expert.test.ts` chặn khoá trùng.
+- `useOpenZoneTuning` trả `undefined` khi danh sách Zone chưa tải, nút khoá lại thay vì mở trang trên Zone cũ.
+- Bỏ nhãn enum thô dưới hai lựa chọn kết luận, mã `ALERT-FR-014` và chữ `missing` ở bằng chứng; tên đại lượng viết thường nhưng giữ `CO2`, `NH3`; "% phun" của luật thời tiết dịch được; hex trong `className` của 3 file tuning đổi sang token (13.7).
+- FE_Design: dòng 12 về `TechnicianDevicesPage`, dòng nợ 13.14 và dòng nợ 2.4 đã trả; banner `detail.readOnly` nói đúng chỗ dời, thay, gỡ thiết bị.
+- Hook gỡ, thay thiết bị và `deviceApi.reassignZone` được dùng lại cho S-10; bỏ `farmApi.updateThresholds`, `resetThresholds`, `updateFuzzyTuning` không còn ai gọi.

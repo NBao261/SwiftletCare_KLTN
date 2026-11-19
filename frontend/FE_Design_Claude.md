@@ -61,8 +61,8 @@
 | # | Thay đổi |
 |---|---|
 | 1 | **Ngưỡng và hệ số mờ chỉ sửa ở `/domain-expert/tuning`.** Bỏ `ZoneThresholdsModal` và `FuzzyTuningModal`; nút ở trang khu vực, trang thiết bị và `/analytics` mở trang tuning đúng Zone qua `useOpenZoneTuning()` (`hooks/shared/`). Trang tuning có cờ lọc nhiễu (ENV-FR-022) và nút gợi ý theo quyền (áp ngay hoặc gửi chuyên gia duyệt, EXPERT-FR-011). |
-| 2 | **Thiết bị:** Domain Expert mở `/devices` thấy trang của Farm Owner ở chế độ chỉ xem; `TechnicianDevicesPage` chỉ còn của Farm Technician (khởi động lại, danh sách bài loa chỉ xem). |
-| 3 | **i18n:** các màn chuyên gia dùng Hệ 1 (`src/i18n`), bản dịch ở `i18n/en.expert.ts`. Không gọi cảnh báo suy luận hay gợi ý hệ số là "AI"; không hiện mã FR/BR/G hay tên enum trên màn hình. |
+| 2 | **Thiết bị:** Domain Expert mở `/devices` thấy trang của Farm Owner ở chế độ chỉ xem; `TechnicianDevicesPage` chỉ còn của Farm Technician (khởi động lại, danh sách bài loa chỉ xem). Farm Owner dời, thay, gỡ bộ điều khiển ở menu "Thao tác khác" của thẻ thiết bị trên trang chi tiết (FARM-FR-007b, 008; `MoveControllerModal`, `ReplaceControllerModal`, `RemoveControllerModal`). |
+| 3 | **i18n:** các màn chuyên gia dùng Hệ 1 (`src/i18n`), bản dịch ở `i18n/en.expert.ts` (không trùng khoá với `en.ts`, `en.expert.test.ts` kiểm); mức độ cảnh báo dùng `SeverityBadge` và 3 cấp của 2.4. Không gọi cảnh báo suy luận hay gợi ý hệ số là "AI"; không hiện mã FR/BR/G hay tên enum trên màn hình. |
 
 ### v2.12.0 → v2.13.0 (đợt soát 19/11/2026, G-29, PR #197)
 
@@ -345,7 +345,7 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 
 **Giao diện chỉ có 3 cấp: Khẩn cấp · Cao · Thường** (`SeverityLevel` = `P1 | P2 | P3`, `types/alert.types.ts`). Backend vẫn lưu cảnh báo theo 4 giá trị `CRITICAL | HIGH | MEDIUM | LOW` (ALERT-FR-001, `alert.model.ts`) — **không đổi backend**, giao diện gộp `CRITICAL` vào Khẩn cấp.
 
-> **Còn nợ:** `hooks/expert/alertHelpers.ts` và `features/expert/alerts/InferredAlertsTable.tsx` vẫn dùng `SEVERITY_BADGE_CLASS` riêng — đổi sang `SeverityBadge` khi sửa màn chuyên gia.
+> ~~**Còn nợ:** `alertHelpers.ts` và `InferredAlertsTable.tsx` dùng `SEVERITY_BADGE_CLASS` riêng~~ — ✅ màn chuyên gia dùng `SeverityBadge` và ô lọc 3 cấp (G-29, `todo-audit-1119.md` §9).
 
 **Nguồn duy nhất — chỉ import, không khai lại ở nơi khác:**
 
@@ -1063,7 +1063,7 @@ Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao di
 
 1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `domain-expert/` · `technician/` · `auth/` · `shared/` · `common/`. `domain-expert/` chứa các màn do chuyên gia sở hữu (kiểm chứng cảnh báo, viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số, tham số phát hiện, vòng đếm, lịch đếm — farm chưa có chuyên gia thì Farm Owner mở cùng trang, BR-22); màn chuyên gia chỉ xem (dashboard, analytics, live stream, thu hoạch) là trang Farm Owner mở với nhóm role rộng hơn, không nhân bản sang `domain-expert/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
 2. **Vào `shared/` chỉ khi từ 2 role trở lên thật sự dùng.** Một role dùng thì về thư mục role đó, dù file trông "chung chung" tới đâu. Đây là luật chống `shared/` phình thành bãi rác.
-3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** `TechnicianDevicesPage` vẫn được Farm Owner và Admin mở. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
+3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** Ví dụ `/devices` là một URL nhưng mỗi role một trang (`DevicesIndexRoute` trong `routes/technician.routes.tsx`): Farm Owner và Domain Expert mở `FarmOwnerDevicesPage`, Admin `AdminDevicesPage`, Farm Technician `TechnicianDevicesPage`. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
 4. **Mọi import dùng alias `@/`**, không dùng đường dẫn tương đối `../`. Nhờ vậy dời file chỉ phải sửa đúng đường dẫn của chính nó.
 5. **Một tính năng = một thư mục.** Component/modal/hằng số riêng của một màn hình nằm cùng chỗ trong `components/features/<role>/<area>/`, kể cả khi chỉ một trang dùng.
 
@@ -1415,7 +1415,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 | Chỗ | Vi phạm | Cách trả nợ |
 |---|---|---|
-| `pages/technician/TechnicianDevicesPage.tsx` | Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên]) | Chuyển vào `onSuccess` của mutation trong `useDevices` |
+| ~~`pages/technician/TechnicianDevicesPage.tsx`~~ | ~~Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên])~~ | ✅ Đã bỏ cùng các nhánh Farm Owner / Admin (G-29, `todo-audit-1119.md` §9) |
 | Mục 6 i18n | Hai hệ dịch song song (`src/i18n/` cho Admin + `ui/`; `useTranslation` + `*.i18n.ts` cho Farm Owner, Technician farms, khung app); nhiều màn vẫn hardcode tiếng Việt | PR riêng gộp về một hệ, sau đó 13.x mới yêu cầu `t('...')` |
 | `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
 | Chưa có `ErrorBoundary` (0 chỗ) | 13.5 | Thêm `ui/ErrorBoundary.tsx`, bọc `<Outlet />` trong `AppShell` |
