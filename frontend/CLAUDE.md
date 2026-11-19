@@ -43,7 +43,7 @@ src/
   services/    expert/ (expertApi.service.ts, expertFallback.service.ts) + expert.service.ts — API calls of the Domain Expert screens outside apis/ (known debt, FE_Design §12)
   stores/      Zustand: authStore · alertStore · toastStore · zoneStore · breadcrumbStore · languageStore · pinnedHouseStore
   types/       <module>.types.ts (split by backend module, not by role) + index.ts barrel
-  validations/ admin/ · common/ · farm-owner/ · technician/ — pure form validators (+ *.test.ts)
+  validations/ admin/ · common/ · farm-owner/ — pure form validators (+ *.test.ts)
 ```
 
 - **Buckets by role.** Every concern folder splits into `admin/`, `farm-owner/`, `technician/`, `auth/`, `shared/` and `common/` (role-agnostic infrastructure). A file is in `shared/` only when two or more roles really reach it; `apis/shared/` + `hooks/shared/` hold farms, alerts, devices and audio tracks (audio tracks: only the Farm Owner uploads, marks, deletes, selects and plays them in `farm-owner/devices/LullabyTracksModal`; the other roles read the list). There is no `components/features/shared/`.

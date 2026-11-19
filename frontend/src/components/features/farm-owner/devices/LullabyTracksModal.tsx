@@ -12,7 +12,7 @@ import {
 } from '@/hooks/shared/useAudioTracks';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
-import { validateAudioUpload, type AudioUploadField } from '@/validations/technician/audioTrack.validation';
+import { validateAudioUpload, type AudioUploadField } from '@/validations/farm-owner/audioTrack.validation';
 import type { AudioTrack, SensorNode } from '@/types';
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
