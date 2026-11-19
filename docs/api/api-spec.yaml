@@ -3957,8 +3957,11 @@ paths:
         - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
         - name: verdict
           in: query
-          description: "EXPERT-FR-003 — `pending` = cảnh báo suy luận (NOISE_ANOMALY, SENSOR_ANOMALY, FORECAST_BREACH, LOW_RETURN_RATE) chưa được kiểm chứng"
-          schema: { type: string, enum: [pending, confirmed, rejected] }
+          description: >-
+            EXPERT-FR-003 — chỉ cảnh báo suy luận (NOISE_ANOMALY, SENSOR_ANOMALY, FORECAST_BREACH, LOW_RETURN_RATE):
+            `any` = tất cả, `pending` = chưa kiểm chứng, `confirmed` / `rejected` = theo kết luận. Kèm `type` không
+            phải loại suy luận → 400.
+          schema: { type: string, enum: [any, pending, confirmed, rejected] }
         - {
             name: status,
             in: query,

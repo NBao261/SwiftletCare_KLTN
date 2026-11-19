@@ -35,15 +35,6 @@ function StatusBadge({ alert }: { alert?: InferredAlertItem | null }) {
     : <span className={cn(base, 'bg-neutral-100 text-[#878380] border border-neutral-200')}>Đã bác bỏ</span>
 }
 
-function renderActuatorStatus(type?: string) {
-  if (type === 'NOISE_ANOMALY') return <>Loa dẫn dụ: <b className="text-[#27231F]">Đang tắt</b></>
-  if (type === 'SENSOR_ANOMALY') return <>Phun sương: <b className="text-[#27231F]">Đang tắt (0%)</b></>
-  if (type === 'PUMP_DRY' || type === 'MISTING_INEFFECTIVE') return <>Bơm phun sương: <b className="text-red-600">Phun sương kém / Chạy khô</b></>
-  if (type === 'FORECAST_BREACH') return <>Phun sương đón đầu: <b className="text-[#27231F]">Sẵn sàng</b></>
-  if (type === 'LOW_RETURN_RATE') return <>Cửa thu chim: <b className="text-[#27231F]">Đang mở</b></>
-  return <>Thiết bị: <b className="text-[#27231F]">Ổn định</b></>
-}
-
 export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictSaved }: Props) {
   const navigate = useNavigate()
   const [verdict, setVerdict] = useState<'CONFIRMED' | 'REJECTED' | null>(null)
@@ -107,7 +98,6 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
             <p className="mt-1 text-xs text-[#878380] leading-relaxed">
               {dateLabel}{zoneLabel && <> &nbsp;•&nbsp; {zoneLabel}</>}
               {alert?.occurrence_count && <> &nbsp;•&nbsp; Số lần lặp: <b className="text-[#27231F]">{alert.occurrence_count} lần</b></>}
-              &nbsp;•&nbsp; {renderActuatorStatus(alert?.type)}
             </p>
           </div>
           <button onClick={onClose} aria-label="Đóng ngăn kéo"

@@ -16,7 +16,7 @@ import { t } from '@/i18n'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
-import { useAlertsWithFilters } from '@/hooks/domain-expert/useExpertAlerts'
+import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
 import { useExpertAutonomy } from '@/hooks/domain-expert/useExpertDashboard'
 import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
 import ExpertScadaKpiPills from './ExpertScadaKpiPills'
@@ -113,14 +113,14 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
   const effectiveFarmId = farmId || currentFarmId
   const effectiveZoneId = pendingZoneId || selectedZoneId || zones?.[0]?._id
 
-  // Dùng chung hook useAlertsWithFilters để số liệu cảnh báo luôn khớp chính xác với thẻ bên dưới
-  const { kpiCounts } = useAlertsWithFilters(effectiveFarmId, effectiveZoneId)
+  // Số cảnh báo suy luận chờ kết luận của phạm vi (meta.total), cùng nguồn với hàng chờ và thanh bên
+  const { data: pendingAlerts } = useExpertPendingAlerts(effectiveFarmId, effectiveZoneId)
   const { data: autonomy } = useExpertAutonomy(effectiveZoneId ?? '', '24h')
   // Báo cáo theo nhà đang chọn (chưa chọn nhà thì cả farm), như tab Báo cáo & Kết luận
   const reportHouseId = selectedHouseId && houses?.some(h => h._id === selectedHouseId) ? selectedHouseId : ''
   const { pending: pendingReports } = useHealthReportConclusionCounts(effectiveFarmId ?? '', reportHouseId)
 
-  const pendingCount = kpiCounts?.pending ?? 0
+  const pendingCount = pendingAlerts?.total ?? 0
   const autoModePct = autonomy?.auto_mode_pct ?? 100
 
   // ── Tên hiển thị trên capsule selector ─────────────────────────────────────

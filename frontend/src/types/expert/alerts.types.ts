@@ -1,6 +1,7 @@
 import type { AlertSeverity, AlertStatus } from '@/types'
 
-export type InferredAlertType = 'NOISE_ANOMALY' | 'SENSOR_ANOMALY' | 'FORECAST_BREACH' | 'LOW_RETURN_RATE' | 'MISTING_INEFFECTIVE' // PUMP_DRY → MISTING_INEFFECTIVE (SRS 3.1.0)
+// Report 3 §1 "Inferred alert" — khớp INFERRED_ALERT_TYPES của backend; MISTING_INEFFECTIVE là cảnh báo đo trực tiếp
+export type InferredAlertType = 'NOISE_ANOMALY' | 'SENSOR_ANOMALY' | 'FORECAST_BREACH' | 'LOW_RETURN_RATE'
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 
 export interface ExpertVerdict {
@@ -30,6 +31,17 @@ export interface InferredAlertItem {
   acknowledged_at?: string
   acknowledgement_note?: string
   expert_verdict?: ExpertVerdict
+}
+
+// EXPERT-FR-003 — bộ lọc danh sách cảnh báo suy luận (GET /alerts?verdict=…)
+export interface InferredAlertQuery {
+  farmId?: string
+  zoneId?: string
+  verdict: 'any' | 'pending' | 'confirmed' | 'rejected'
+  type?: InferredAlertType
+  severity?: AlertSeverity
+  page?: number
+  limit?: number
 }
 
 export interface ExpertVerdictStats {

@@ -11,16 +11,13 @@ import type {
   AlertEvidence,
   ExpertActivityEntry,
   ExpertActivityQuery,
+  InferredAlertQuery,
 } from '@/types/expert.types'
 
 export const expertApi = {
   // ── 1. Kiểm chứng Cảnh báo suy luận (EXPERT-FR-003, ALERT-FR-014) ───────────
-  getPendingAlerts: (params?: { farmId?: string; zoneId?: string }) =>
-    api.get<ApiResponse<InferredAlertItem[]>>('/alerts', {
-      params: { ...params, verdict: 'pending' },
-    }),
-
-  getAllAlerts: (params?: { farmId?: string; zoneId?: string }) =>
+  // Backend chỉ trả cảnh báo suy luận khi có `verdict` (any = mọi kết luận), lọc và phân trang ở server
+  listInferredAlerts: (params: InferredAlertQuery) =>
     api.get<ApiResponse<InferredAlertItem[]>>('/alerts', { params }),
 
   getVerdictStats: (params?: { farmId?: string; zoneId?: string }) =>

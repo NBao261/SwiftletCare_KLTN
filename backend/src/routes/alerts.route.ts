@@ -26,7 +26,7 @@ router.get('/',
   query('status').optional().isString().isIn(['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED', 'RESOLVED']),
   query('severity').optional().isString().isIn(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
   query('type').optional().isString().isIn(ALERT_TYPES),
-  query('verdict').optional().isString().isIn(['pending', 'confirmed', 'rejected']), validate, alertController.list)
+  query('verdict').optional().isString().isIn(['any', 'pending', 'confirmed', 'rejected']), validate, alertController.list)
 // EXPERT-FR-003 — đặt trước '/:id' để "verdict-stats" không bị hiểu là một id
 router.get('/verdict-stats',
   query('farmId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(), validate, alertController.verdictStats)
