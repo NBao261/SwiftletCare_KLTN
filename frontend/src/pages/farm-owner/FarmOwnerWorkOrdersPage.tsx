@@ -6,6 +6,7 @@ import ScopeFilter from '@/components/common/ScopeFilter';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import WorkOrderCreateModal from '@/components/features/farm-owner/work-orders/WorkOrderCreateModal';
 import WorkOrderDetailDrawer from '@/components/features/farm-owner/work-orders/WorkOrderDetailDrawer';
+import WorkOrderDoneModal from '@/components/features/farm-owner/work-orders/WorkOrderDoneModal';
 import WorkOrderReassignModal from '@/components/features/farm-owner/work-orders/WorkOrderReassignModal';
 import WorkOrderTable from '@/components/features/farm-owner/work-orders/WorkOrderTable';
 import {
@@ -27,7 +28,8 @@ import type { WorkOrder } from '@/types';
 // Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (Report 3 §4.5, api-spec)
 const NOTE_MAX_LENGTH = 1000;
 
-// OPS-FR-001…004 — Work Order sửa chữa của Farm Owner: lọc theo farm/nhà và trạng thái, mở tay, duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ xem
+// OPS-FR-001…004, 007 — Work Order của Farm Owner: lọc theo farm/nhà và trạng thái, mở tay, tự làm (bắt đầu, checklist, báo xong), duyệt,
+// mở lại, huỷ, giao lại; Domain Expert chỉ xem
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -75,7 +77,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const startAction = useCallback((action: OwnerAction, workOrder: WorkOrder) => setPending({ action, workOrder }), []);
   const closePending = () => setPending(null);
   // Xong thì báo và đóng popup; lỗi (VD 409 trạng thái đã đổi) báo theo nhóm lỗi
-  const callbacks = (doneKey: 'approve.done' | 'reopen.done' | 'cancel.done') => ({
+  const callbacks = (doneKey: 'start.done' | 'approve.done' | 'reopen.done' | 'cancel.done') => ({
     onSuccess: () => {
       push(t(doneKey));
       closePending();
@@ -180,6 +182,17 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         <WorkOrderCreateModal open={isCreateOpen} house={{ id: selectedHouse._id, name: selectedHouse.name }} onClose={() => setIsCreateOpen(false)} />
       )}
 
+      {/* OPS-FR-002 — Farm Owner tự làm: bắt đầu hỏi lại vì phiếu chuyển sang đang làm dưới tên mình */}
+      <ConfirmModal
+        open={pending?.action === 'start'}
+        title={t('action.start')}
+        description={pending?.workOrder.title ?? ''}
+        confirmLabel={t('action.start')}
+        loading={actions.start.isPending}
+        onConfirm={() => pending && actions.start.mutate(pending.workOrder, callbacks('start.done'))}
+        onCancel={closePending}
+      />
+      <WorkOrderDoneModal workOrder={pending?.action === 'done' ? pending.workOrder : null} onClose={closePending} />
       {/* Duyệt đóng cả cảnh báo nên hỏi lại trước (OPS-FR-004) */}
       <ConfirmModal
         open={pending?.action === 'approve'}

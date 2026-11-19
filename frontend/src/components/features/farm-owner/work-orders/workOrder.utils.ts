@@ -15,15 +15,17 @@ export const WORK_ORDER_STATUS_TONE: Record<WorkOrderStatus, BadgeTone> = {
   CANCELLED: 'neutral',
 };
 
-export type OwnerAction = 'approve' | 'reopen' | 'reassign' | 'cancel';
+export type OwnerAction = 'start' | 'done' | 'approve' | 'reopen' | 'reassign' | 'cancel';
 
 // OPS-FR-004 — chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ; đang kiểm dữ liệu: chỉ huỷ (lối ra khi dữ liệu không phục hồi); đã đóng, đã huỷ: không có.
+// OPS-FR-002 — Farm Owner cũng tự làm được (Report 3 §2.4; nhà không có thợ thì phiếu về Farm Owner, ALERT-FR-017): chưa bắt đầu thì bắt đầu, đang làm thì báo xong.
 // Work Order phòng ngừa không huỷ được (backend 409, SM-20): không cần bảo trì nữa thì xoá kế hoạch
 export function ownerActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>): OwnerAction[] {
   const { status } = workOrder;
   let actions: OwnerAction[] = [];
   if (status === 'AWAITING_APPROVAL') actions = ['approve', 'reopen'];
-  if (status === 'OPEN' || status === 'IN_PROGRESS') actions = ['reassign', 'cancel'];
+  if (status === 'OPEN') actions = ['start', 'reassign', 'cancel'];
+  if (status === 'IN_PROGRESS') actions = ['done', 'reassign', 'cancel'];
   if (status === 'VERIFYING') actions = ['cancel'];
   return workOrder.kind === 'PREVENTIVE' ? actions.filter(action => action !== 'cancel') : actions;
 }

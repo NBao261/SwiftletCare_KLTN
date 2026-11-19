@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { workOrderApi, type CreateWorkOrderInput, type WorkOrderListQuery } from '@/apis/farm-owner/workOrders.api';
+import { workOrderApi, type CompleteWorkOrderInput, type CreateWorkOrderInput, type WorkOrderListQuery } from '@/apis/farm-owner/workOrders.api';
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery';
-import type { WorkOrder } from '@/types';
+import type { ChecklistResult, WorkOrder } from '@/types';
 
 // Khoá gốc của danh sách, chi tiết, số đếm và MTTA/MTTR: thao tác ghi làm mới tất cả
 const WORK_ORDERS_KEY = 'work-orders';
@@ -53,7 +53,7 @@ export function useHouseOpsMetrics(farmId: string, houseId: string) {
   });
 }
 
-// Thao tác của Farm Owner (OPS-FR-001, 004); xong hay lỗi (409: trạng thái đã đổi) đều tải lại Work Order và cảnh báo, vì duyệt đóng luôn cảnh báo
+// Thao tác của Farm Owner (OPS-FR-001, 002, 004, 007); xong hay lỗi (409: trạng thái đã đổi) đều tải lại Work Order và cảnh báo, vì duyệt đóng luôn cảnh báo
 export function useWorkOrderActions() {
   const queryClient = useQueryClient();
   const refresh = () => {
@@ -64,6 +64,20 @@ export function useWorkOrderActions() {
   return {
     create: useMutation({
       mutationFn: (input: CreateWorkOrderInput) => workOrderApi.create(input).then(response => response.data.data),
+      ...options,
+    }),
+    start: useMutation({
+      mutationFn: (workOrder: WorkOrder) => workOrderApi.start(workOrder._id),
+      ...options,
+    }),
+    complete: useMutation({
+      mutationFn: ({ workOrder, input }: { workOrder: WorkOrder; input: CompleteWorkOrderInput }) =>
+        workOrderApi.complete(workOrder._id, input),
+      ...options,
+    }),
+    recordChecklist: useMutation({
+      mutationFn: ({ workOrder, itemIndex, result }: { workOrder: WorkOrder; itemIndex: number; result: ChecklistResult }) =>
+        workOrderApi.recordChecklist(workOrder._id, itemIndex, result),
       ...options,
     }),
     approve: useMutation({

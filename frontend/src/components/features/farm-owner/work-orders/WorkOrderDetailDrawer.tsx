@@ -7,7 +7,8 @@ import { NO_VALUE } from '@/constants/display';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useWorkOrder } from '@/hooks/farm-owner/useWorkOrders';
+import { useWorkOrder, useWorkOrderActions } from '@/hooks/farm-owner/useWorkOrders';
+import { useToastStore } from '@/stores/toastStore';
 import type { ChecklistResult, WorkOrder } from '@/types';
 
 // Một dòng nhãn — giá trị
@@ -43,6 +44,14 @@ export default function WorkOrderDetailDrawer({
   const apiErrorMessage = useApiErrorMessage();
   const { data: workOrder, isLoading, isError, error, refetch } = useWorkOrder(workOrderId);
   const actions = workOrder && canManage ? ownerActions(workOrder) : [];
+  const push = useToastStore(state => state.push);
+  const { recordChecklist } = useWorkOrderActions();
+  // OPS-FR-007 — Farm Owner ghi kết quả từng mục khi tự làm phiếu phòng ngừa (ghi chú và ảnh từng mục ở mobile)
+  const canRecordChecklist = canManage && workOrder?.status === 'IN_PROGRESS';
+  const recordItem = (itemIndex: number, result: ChecklistResult) => workOrder && recordChecklist.mutate(
+    { workOrder, itemIndex, result },
+    { onSuccess: () => push(t('checklist.saved')), onError: error => push(apiErrorMessage(error), 'error') },
+  );
 
   return (
     <Drawer open={Boolean(workOrderId)} onClose={onClose} title={t('detail.title')}>
@@ -101,6 +110,21 @@ export default function WorkOrderDetailDrawer({
                         )}
                       </div>
                       {entry.repair_work_order_id && <span className="text-xs font-semibold text-safetyOrange">{t('detail.checklistRepair')}</span>}
+                      {canRecordChecklist && (
+                        <div className="flex gap-2 pt-1">
+                          {(['OK', 'DEFECT'] as const).map(result => (
+                            <Button
+                              key={result}
+                              size="sm"
+                              variant={entry.result === result ? 'primary' : 'secondary'}
+                              disabled={recordChecklist.isPending}
+                              onClick={() => recordItem(index, result)}
+                            >
+                              {t(`checklist.${result}`)}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ol>
@@ -179,7 +203,7 @@ export default function WorkOrderDetailDrawer({
             <Button
               key={action}
               size="sm"
-              variant={action === 'approve' ? 'primary' : action === 'cancel' ? 'danger' : 'secondary'}
+              variant={['approve', 'start', 'done'].includes(action) ? 'primary' : action === 'cancel' ? 'danger' : 'secondary'}
               onClick={() => onAction(action, workOrder)}
             >
               {t(`action.${action}`)}
