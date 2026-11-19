@@ -96,7 +96,6 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
       ['put',    `/farms/zones/${zone._id}/thresholds`,       [tech, admin]],
       ['put',    `/farms/zones/${zone._id}/thresholds/reset`, [tech, admin]],
       ['put',    `/farms/zones/${zone._id}/fuzzy-tuning`,     [tech, admin]],
-      ['put',    `${n}/thresholds`,                           [tech, admin]],
       ['post',   `${n}/relay`,                                [admin]],
       ['delete', `${n}/relay-override`,                       [admin]],
       ['put',    `${n}/speaker-schedule`,                     [tech, admin]],

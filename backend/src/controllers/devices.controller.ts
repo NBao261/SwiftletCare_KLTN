@@ -23,12 +23,6 @@ export const getSensorNode = asyncHandler(async (req: Request, res: Response) =>
   res.json({ success: true, data: node })
 })
 
-/** PUT /devices/sensor-nodes/:id/thresholds – ENV-FR-006 */
-export const updateThresholds = asyncHandler(async (req: Request, res: Response) => {
-  const zone = await deviceService.updateNodeThresholds(req.params.id, req.user, req.body)
-  res.json({ success: true, data: zone })
-})
-
 /** PUT /devices/sensor-nodes/:id/speaker-schedule – ENV-FR-013b */
 export const updateSpeakerSchedule = asyncHandler(async (req: Request, res: Response) => {
   const { enabled, windows, volume, track } = req.body

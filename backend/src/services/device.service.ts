@@ -14,8 +14,7 @@ import { logAction } from '@/services/auditLog.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
-import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
-import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
+import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { syncAfterHeartbeat } from '@/utils/configSync.util'
 import { sessionWindowsAhead, vnDateOf } from '@/utils/countingSchedule.util'
 import {
@@ -24,7 +23,7 @@ import {
 } from '@/services/relayOverrideLog.service'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
-import type { AlertType, ControlMode, RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, Thresholds, WsDeviceStatusChange, CountingRing } from '@/types'
+import type { AlertType, ControlMode, RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, WsDeviceStatusChange, CountingRing } from '@/types'
 
 // SRS v2.0.0 bỏ sưởi (ENV-FR-012): kênh IN4 để dự phòng, không còn là relay điều khiển được
 export const RELAY_NAMES = ['misting', 'speaker', 'ventilation'] as const
@@ -190,22 +189,6 @@ export async function getSensorNode(nodeId: string, user: CurrentUser): Promise<
   return node
 }
 
-/** ENV-FR-006 (qua device, tương đương farmService.updateZoneThresholds — cùng validate) */
-export async function updateNodeThresholds(nodeId: string, user: CurrentUser, updates: Partial<Thresholds>) {
-  const node = await SensorNode.findById(nodeId)
-  if (!node) throw NotFoundError('Không tìm thấy thiết bị')
-  assertInService(node)
-  const chain = await assertZoneAccess(String(node.zone_id), user)
-
-  const picked = pickThresholds(updates as Record<string, unknown>)
-  const merged = { ...chain.zone.thresholds, ...picked }
-  assertValidThresholds(merged)
-
-  return applyThresholdUpdate(chain, user, {
-    thresholds: merged, historyValues: picked, source: 'MANUAL', logDetails: { viaNodeId: nodeId },
-  })
-}
-
 /** ENV-FR-016..018 (Manual Override) */
 export async function controlRelay(
   nodeId: string,
@@ -347,7 +330,7 @@ export async function reassignZone(
   }
   const destChain = await assertZoneAccess(input.newZoneId, user, 'device')
 
-  // Cập nhật lạc quan — giống pattern controlRelay/updateNodeThresholds ở trên. Override đang
+  // Cập nhật lạc quan — giống pattern controlRelay ở trên. Override đang
   // chạy thuộc về Zone cũ nên kết thúc ở đây (như decommissionDevice).
   node.zone_id = destChain.zone._id
   resetOverrides(node)

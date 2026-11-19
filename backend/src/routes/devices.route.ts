@@ -23,7 +23,6 @@ router.post('/sensor-nodes/register',        requireRole('FARM_OWNER'), body('de
 router.get ('/sensor-nodes',                 deviceController.listSensorNodes)
 router.get ('/sensor-nodes/:id',             param('id').isMongoId(), validate, deviceController.getSensorNode)
 // Ngưỡng: Farm Owner và Domain Expert (ENV-FR-006); Technician, Admin không (Report 3 §2.4)
-router.put ('/sensor-nodes/:id/thresholds',  requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('id').isMongoId(), validate, deviceController.updateThresholds)
 // Lịch loa ru (ENV-FR-013b, BR-07) — chỉ Farm Owner; firmware chỉ có 2 khung giờ, theo giờ tròn;
 // tắt lịch dùng enabled=false.
 router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), param('id').isMongoId(),

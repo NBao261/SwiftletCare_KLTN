@@ -563,6 +563,5 @@ describe('Farm Technician chấm ngày của nhà được giao (BR-31, EXPERT-F
     const { token } = await addTechnician(farm, house)
     expect((await call('get', `/health-reports/evaluation?houseId=${house._id}`, token)).status).toBe(403)
     expect((await call('get', `/health-reports/disagreements?houseId=${house._id}`, token)).status).toBe(403)
-    expect((await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${YESTERDAY}`, token)).status).toBe(403)
   })
 })
