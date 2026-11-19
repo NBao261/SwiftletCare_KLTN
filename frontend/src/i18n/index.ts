@@ -7,6 +7,7 @@ import { Children, type ReactNode } from 'react'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import en from '@/i18n/en'
+import enExpert from '@/i18n/en.expert'
 import { useLanguageStore, type Lang } from '@/stores/languageStore'
 
 export type { Lang }
@@ -14,7 +15,8 @@ export type { Lang }
 // Ngôn ngữ đang chọn lưu ở languageStore (dùng chung với useT của các màn Farm Owner) — i18next chỉ đi theo store,
 // để 1 nút VI/EN đổi cả 2 hệ dịch
 void i18n.use(initReactI18next).init({
-  resources: { en: { translation: en } },
+  // en.ts thắng khi trùng khoá với en.expert.ts
+  resources: { en: { translation: { ...enExpert, ...en } } },
   lng: useLanguageStore.getState().lang,
   fallbackLng: false, // thiếu bản dịch → trả khoá (= câu tiếng Việt), không rơi sang ngôn ngữ khác
   keySeparator: false, // khoá là câu tự nhiên, có dấu "." ":" — không tách thành đường dẫn

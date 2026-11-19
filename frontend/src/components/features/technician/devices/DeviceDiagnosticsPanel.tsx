@@ -1,9 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Badge, Button } from "@/components/ui"
 import DeviceInfoCard from "@/components/features/technician/devices/DeviceInfoCard"
-import { useSendNodeCommand } from "@/hooks/shared/useDevices"
-import { useToastStore } from "@/stores/toastStore"
-import { getApiErrorMessage } from "@/lib/helpers"
 import type { SensorNode } from "@/types"
 import { Music, Clock, ListMusic } from "lucide-react"
 
@@ -11,38 +8,16 @@ interface DeviceDiagnosticsPanelProps {
   node: SensorNode
   zoneId?: string
   onOpenAudio: () => void
-  onOpenReassign: () => void
-  onOpenReplace: () => void
-  onOpenDecommission: () => void
-  canOnboard: boolean
-  canPushConfig?: boolean
 }
 
 export default function DeviceDiagnosticsPanel({
   node,
   zoneId: _zoneId,
   onOpenAudio,
-  onOpenReassign,
-  onOpenReplace,
-  onOpenDecommission,
-  canOnboard,
-  canPushConfig = false,
 }: DeviceDiagnosticsPanelProps) {
   const [activeTab, setActiveTab] = useState<"config" | "audio">("config")
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const sendCommand = useSendNodeCommand()
-  const push = useToastStore(s => s.push)
-
-  function handlePushConfig() {
-    sendCommand.mutate(
-      { nodeId: node._id, input: { command: "PUSH_CONFIG" } },
-      {
-        onSuccess: () => push(`Đã gửi lệnh đồng bộ cấu hình tới ${node.device_id}`),
-        onError: (err) => push(getApiErrorMessage(err, "Đồng bộ cấu hình thất bại"), "error"),
-      }
-    )
-  }
 
   useEffect(() => {
     const activeIndex = activeTab === "config" ? 0 : 1;
@@ -131,19 +106,18 @@ export default function DeviceDiagnosticsPanel({
           </div>
 
           <div className="flex flex-col gap-3 flex-1">
-            {/* Lịch loa ru là của Farm Owner (§2.4, BR-07) — màn này chỉ còn quản lý bài loa (Technician, ENV-FR-013c).
-                Thiết bị PENDING chưa nhận cấu hình nên chưa cho chỉnh file loa */}
+            {/* Farm Technician chỉ xem danh sách bài loa (Report 4 §5.4); thiết bị PENDING chưa có cấu hình loa */}
             {node.status === "PENDING" ? (
               <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
-                Thiết bị chưa kết nối. File loa ru sẽ chỉnh được khi thiết bị online.
+                Thiết bị chưa kết nối. Danh sách bài loa ru có khi thiết bị online.
               </p>
-            ) : canOnboard && (
+            ) : (
               <Button variant="secondary" className="w-full justify-start h-[76px] bg-white border border-warmGray/10 shadow-sm" onClick={onOpenAudio}>
                 <div className="w-10 h-10 rounded-full bg-stone shrink-0 flex items-center justify-center mr-3">
                   <ListMusic size={20} className="text-charcoal" />
                 </div>
                 <div className="text-left">
-                  <p className="font-bold text-charcoal">Quản lý File Audio</p>
+                  <p className="font-bold text-charcoal">Danh sách bài loa ru</p>
                   <p className="text-xs text-warmGray mt-0.5">Danh sách file mp3 trên thẻ SD</p>
                 </div>
               </Button>
@@ -155,47 +129,6 @@ export default function DeviceDiagnosticsPanel({
       {activeTab === "config" && (
         <div className="flex flex-col gap-4 animate-fade-in">
         <DeviceInfoCard node={node} />
-        <div className="flex flex-col md:flex-row gap-4">
-          {(canPushConfig || canOnboard) && node.status === "ONLINE" && (
-            <div className="flex-1 p-5 bg-white border border-warmGray/10 rounded-2xl shadow-sm flex flex-col justify-between">
-              <div>
-                <h4 className="text-small font-bold text-charcoal mb-1">Thao tác thiết bị</h4>
-                <p className="text-xs text-warmGray mb-4">Đồng bộ lại cấu hình chuẩn từ Zone hoặc dời thiết bị sang Zone khác khi cần thiết.</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {canPushConfig && (
-                  <Button
-                    variant="secondary"
-                    onClick={handlePushConfig}
-                    loading={sendCommand.isPending}
-                    className="flex-1"
-                  >
-                    Đồng bộ cấu hình
-                  </Button>
-                )}
-                {canOnboard && (
-                  <Button
-                    variant="secondary"
-                    onClick={onOpenReassign}
-                    className="flex-1"
-                  >
-                    Dời Zone
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-          {canOnboard && (
-            <div className="flex-1 p-5 border border-alertRed/30 rounded-2xl bg-alertRed/5 shadow-sm">
-              <h4 className="text-small font-bold text-alertRed mb-4">Khu vực nguy hiểm</h4>
-              <p className="text-xs text-alertRed/80 mb-4">Thao tác không thể hoàn tác. Việc thay thế sẽ giữ lại ID nhưng trỏ phần cứng mới.</p>
-              <div className="flex flex-col gap-3">
-                <Button variant="secondary" onClick={onOpenReplace} className="w-full">Thay thế phần cứng</Button>
-                <Button variant="danger" onClick={onOpenDecommission} className="w-full">Gỡ vĩnh viễn thiết bị</Button>
-              </div>
-            </div>
-          )}
-        </div>
         </div>
       )}
     </div>

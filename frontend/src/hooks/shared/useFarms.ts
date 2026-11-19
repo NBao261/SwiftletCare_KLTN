@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { farmApi } from '@/apis/shared/farms.api'
-import type { Coordinates, FuzzyTuning, HouseStage, Zone, FarmMemberRole, RosterShift } from '@/types'
+import type { Coordinates, HouseStage, Zone, FarmMemberRole, RosterShift } from '@/types'
 
 const isMongoId = (id: string | undefined): boolean => Boolean(id && /^[0-9a-fA-F]{24}$/.test(id))
 
@@ -111,45 +111,6 @@ export function useZone(zoneId: string | undefined) {
     queryKey: ['zone', zoneId],
     queryFn: () => farmApi.getZone(zoneId!).then(response => response.data.data),
     enabled: isMongoId(zoneId),
-  })
-}
-
-export function useUpdateThresholds(zoneId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (thresholds: Partial<Zone['thresholds']>) => farmApi.updateThresholds(zoneId, thresholds),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['zones'] })
-      void queryClient.invalidateQueries({ queryKey: ['zone', zoneId] })
-      // Tổng quan đọc ngưỡng từ danh sách Zone phẳng (staleTime 5 phút)
-      void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
-    },
-  })
-}
-
-/** ENV-FR-021 — hệ số bộ điều khiển mờ; làm mới cả Zone lẫn biểu đồ hiệu quả điều khiển (vạch mốc lần chỉnh) */
-export function useUpdateFuzzyTuning(zoneId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (tuning: Partial<FuzzyTuning>) => farmApi.updateFuzzyTuning(zoneId, tuning),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['zone', zoneId] })
-      void queryClient.invalidateQueries({ queryKey: ['analytics', 'control-performance', zoneId] })
-    },
-  })
-}
-
-/** ENV-FR-020 */
-export function useResetThresholds(zoneId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: () => farmApi.resetThresholds(zoneId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['zones'] })
-      void queryClient.invalidateQueries({ queryKey: ['zone', zoneId] })
-      // Tổng quan đọc ngưỡng từ danh sách Zone phẳng (staleTime 5 phút)
-      void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
-    },
   })
 }
 

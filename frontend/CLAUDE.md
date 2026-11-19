@@ -6,8 +6,9 @@ Map of `frontend/` (React 18 + Vite + TailwindCSS dashboard/PWA) **as the code i
 
 The web follows Report 3 (final scope) for all four roles; open gaps are rows of `docs/reports/project-tracking.md` §6, the last audits `docs/reports/todo-audit-1118.md` (G-28) and `todo-audit-1119.md` (G-29).
 
-- Roles are `ADMIN | FARM_OWNER | FARM_TECHNICIAN | DOMAIN_EXPERT` (`types/common.types.ts`), same as the backend. The Farm Technician acts on its assigned houses only; on the web it has the devices of those houses with restart, their alerts with acknowledgement and on-site cause, the houses with its own shifts, the inbox and settings (Report 4 §5.4) — the rest of its work is on mobile.
+- Roles are `ADMIN | FARM_OWNER | FARM_TECHNICIAN | DOMAIN_EXPERT` (`types/common.types.ts`), same as the backend. The Farm Technician acts on its assigned houses only; on the web it has the devices of those houses with restart and a read-only lullaby track list (`TechnicianDevicesPage`, technician only), their alerts with acknowledgement and on-site cause, the houses with its own shifts, the inbox and settings (Report 4 §5.4) — the rest of its work is on mobile.
 - **Domain Expert** decision pages live under `/domain-expert/*` (`routes/domain-expert.routes.tsx`, `DomainExpertLayout`, pages in `pages/domain-expert/`, components in `components/features/domain-expert/`, hooks in `hooks/domain-expert/`, calls in `apis/domain-expert/` plus the older `services/expert/` — known debt, FE_Design §12). They open to a Farm Owner too (BR-22: the Farm Owner decides while the farm has no expert, otherwise reads), except the work queue and Reports & conclusions, which the Farm Owner reads on `/health`.
+- Moving, replacing and removing a controller (FARM-FR-007b, 008) is the Farm Owner's, from "More actions" on the device card of `/devices/detail` (`canManageController`).
 - Device setup (SF-01) is the Farm Owner's: `/devices/onboarding` takes the label's QR text pasted or the device ID and key typed, and shows the three setup steps (FARM-FR-012); QR scanning is mobile only. The Administrator's stock screen prints labels, the zone screen prints floor codes.
 - Out of scope (Report 3 §8), **only remove, never extend**: marketplace, tickets, SLA, Technician regions, Admin farm pages, Zalo/SMS, heating relay.
 
@@ -34,7 +35,7 @@ src/
   constants/   roles (role groups, ROLE_HOME, MENU_ACCESS, getRoleHomePath/canAccessPath) · thresholds · severity · auditActions · *.i18n.ts dictionaries
   data/        does not exist today; <name>.data.ts there is the ONLY place fake data may live (FE_Design §7)
   hooks/       admin/ auth/ common/ domain-expert/ farm-owner/ shared/ — React Query wrappers over apis/ (some domain-expert/ hooks wrap services/expert/)
-  i18n/        index.ts (t · tr · trChildren · translated · intlLocale · setLang) · en.ts — i18next, keys are the Vietnamese sentences
+  i18n/        index.ts (t · tr · trChildren · translated · intlLocale · setLang) · en.ts · en.expert.ts (expert screens; en.ts wins on a shared key) — i18next, keys are the Vietnamese sentences
   lib/         axios · queryClient · socket · cn · helpers · i18n · navigation · navigationState (intent passed through router state) · chartTheme · apiError
   pages/       admin/ auth/ domain-expert/ farm-owner/ technician/ + root pages (SettingsPage, SettingsPrivacyPage, PrivacyPage, ForbiddenPage) — ONLY *Page.tsx
   providers/   AppProviders.tsx
@@ -57,6 +58,7 @@ src/
 
 **Before writing any component, colour, label, formatter or hook, check FE_Design Appendix D (Phụ lục D) — the full list of shared items with paths.** Full text in FE_Design (top section "Quy tắc viết code TypeScript/TSX", 1.1, 2.4, 7, 12.0, 13.12–13.13). In short:
 
+- **Thresholds and fuzzy coefficients are edited only on `/domain-expert/tuning`** (todo-audit-1119 §9, S-02): the zone, device and analytics pages open it on their zone with `useOpenZoneTuning()` (`hooks/shared/`).
 - **Domain Expert screens (decided 27/10/2026, FE_Design §12.0 c rows 1–3):** the expert reads the Farm Owner's operational pages (`/dashboard`, `/analytics`, `/vision`, `/devices`, `/harvests`, …) in read-only mode through `FARM_SIDE_ROLES` — no expert copy of those pages; `/domain-expert/*` keeps only the expert's decisions (work queue home, alert verdicts, detection parameters with ring and schedule, thresholds and coefficients, reviews, weather rules, profiles, recommendation rules, reports and conclusions, decision history), and those decision pages also open to a Farm Owner (BR-22, read ¹ of Report 3 §2.4).
 - **Farm Owner UI is the template** for Admin, Technician, Domain Expert and any later role (frames, radius, `DataTable`, buttons, badges — FE_Design 1.1). Only the Landing Page and `mobile/` are designed separately.
 - **Backend enum labels** (alert type/status, device status, role) are declared once in `constants/enumLabels.i18n.ts`; screen dictionaries reuse them with `...prefixLabels('status.', alertStatusDict.vi)` — never retype a label (FE_Design 6.3).
@@ -74,8 +76,8 @@ src/
 - `lib/socket.ts` — lazy singleton (`autoConnect: false`, lifecycle owned by `hooks/common/useSocket.ts`); `auth` is a callback re-read on every (re)connect; exposes `joinZone`/`leaveZone`, `joinHouse`/`leaveHouse` (room `house:<id>`: camera status, bird counts and house alerts; both re-joined on reconnect) and `on*Update`/`onAlertNew` mirroring the backend `emit*()` events.
 - `lib/queryClient.ts` — singleton React Query client (`staleTime: 30s`, `retry: 1`) outside the React tree so the axios interceptor can clear it on logout/failed refresh.
 - **Two i18n systems run side by side** (FE_Design §6), both following `stores/languageStore.ts` so one VI/EN button switches both:
-  - `src/i18n/` — i18next; the key is the Vietnamese sentence (`t('Danh sách trang trại')`), English in `i18n/en.ts`, a missing key falls back to Vietnamese. `t` works outside components because `AppShell` remounts the content on language change; never compute labels with `t` at module top level (frozen at load) — use `translated(...)`, a getter, or build them inside the component. Used by Admin screens and `components/ui/`.
+  - `src/i18n/` — i18next; the key is the Vietnamese sentence (`t('Danh sách trang trại')`), English in `i18n/en.ts`, a missing key falls back to Vietnamese. `t` works outside components because `AppShell` remounts the content on language change; never compute labels with `t` at module top level (frozen at load) — use `translated(...)`, a getter, or build them inside the component. Used by Admin screens, the Domain Expert screens (`/domain-expert/*`, English in `i18n/en.expert.ts`) and `components/ui/`.
   - `lib/i18n.ts` + `hooks/common/useTranslation.ts` + `constants/*.i18n.ts` — per-module typed dictionaries, used by Farm Owner screens, the Technician farms screen and the app shell.
-  - Keep the system a file already uses; a new screen follows its role (Admin → `src/i18n/`, Farm Owner/Technician → dictionaries). Screens with neither stay Vietnamese.
+  - Keep the system a file already uses; a new screen follows its role (Admin, Domain Expert → `src/i18n/`, Farm Owner/Technician → dictionaries). Screens with neither stay Vietnamese.
 - Dev proxy in `vite.config.ts`; `vite-plugin-pwa` (`registerType: 'autoUpdate'`) caches static assets and does `NetworkFirst` for the `api.swiftletcare.vn` host.
 - `types/index.ts` and `backend/src/types/domain.types.ts` keep their **enums** in sync but are not a generated mirror — renaming a field on one side does not change the other.

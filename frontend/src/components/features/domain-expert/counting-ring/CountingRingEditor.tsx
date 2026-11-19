@@ -9,6 +9,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
 import CountingRingCanvas from './CountingRingCanvas'
 import type { CameraNode } from '@/types'
+import { t } from '@/i18n'
 
 const MIN_POINTS = 3
 const MAX_POINTS = 12
@@ -58,8 +59,8 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
       setIsEditing(false)
       pushToast(
         result.ring_delivered
-          ? 'Đã lưu vòng đếm và gửi tới nút AI.'
-          : 'Đã lưu vòng đếm. Nút AI sẽ nhận khi kết nối lại.',
+          ? t('Đã lưu vòng đếm và gửi tới nút AI.')
+          : t('Đã lưu vòng đếm. Nút AI sẽ nhận khi kết nối lại.'),
         'success',
       )
     } catch (error) {
@@ -83,12 +84,12 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           <div className="absolute left-1/2 top-3 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
             <span>
               {status === 'connecting'
-                ? 'Đang kết nối luồng…'
-                : 'Chưa có luồng — nền đen, vẫn đặt điểm và lưu được'}
+                ? t('Đang kết nối luồng…')
+                : t('Chưa có luồng — nền đen, vẫn đặt điểm và lưu được')}
             </span>
             {status === 'failed' && (
               <button type="button" onClick={retry} className="inline-flex items-center gap-1 underline">
-                <RefreshCw className="w-3 h-3" /> Thử lại
+                <RefreshCw className="w-3 h-3" /> {t('Thử lại')}
               </button>
             )}
           </div>
@@ -98,27 +99,27 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
       {isEditing ? (
         <>
           <p className="text-sm text-warmGray">
-            Chạm lên khung để thêm đỉnh ({points.length}/{MAX_POINTS}). Chạm vào một đỉnh để xoá. Cần tối thiểu {MIN_POINTS} đỉnh.
+            {t('Chạm lên khung để thêm đỉnh ({{n}}/{{max}}). Chạm vào một đỉnh để xoá. Cần tối thiểu {{min}} đỉnh.', { n: points.length, max: MAX_POINTS, min: MIN_POINTS })}
           </p>
 
           <div className="flex flex-col gap-2">
-            <span className="label-caption">Chiều bay qua vòng</span>
+            <span className="label-caption">{t('Chiều bay qua vòng')}</span>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setIntoRingIsExit(true)}
                 className={cn('rounded-xl border px-3 py-2 text-left text-sm', intoRingIsExit ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
               >
-                <span className="font-semibold text-charcoal">Camera trong nhà</span>
-                <span className="block text-xs text-warmGray">Chim bay VÀO vòng = RA khỏi tổ</span>
+                <span className="font-semibold text-charcoal">{t('Camera trong nhà')}</span>
+                <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = RA khỏi tổ')}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setIntoRingIsExit(false)}
                 className={cn('rounded-xl border px-3 py-2 text-left text-sm', !intoRingIsExit ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
               >
-                <span className="font-semibold text-charcoal">Camera ngoài trời</span>
-                <span className="block text-xs text-warmGray">Chim bay VÀO vòng = VỀ tổ</span>
+                <span className="font-semibold text-charcoal">{t('Camera ngoài trời')}</span>
+                <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = VỀ tổ')}</span>
               </button>
             </div>
           </div>
@@ -133,18 +134,18 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => setPoints(current => current.slice(0, -1))} disabled={points.length === 0 || mutation.isPending}>
-                <Undo2 className="w-4 h-4" /> Hoàn tác điểm
+                <Undo2 className="w-4 h-4" /> {t('Hoàn tác điểm')}
               </Button>
               <Button variant="secondary" size="sm" onClick={() => setPoints([])} disabled={points.length === 0 || mutation.isPending}>
-                <Trash2 className="w-4 h-4" /> Xoá hết
+                <Trash2 className="w-4 h-4" /> {t('Xoá hết')}
               </Button>
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={handleCancel} disabled={mutation.isPending}>
-                <X className="w-4 h-4" /> Huỷ
+                <X className="w-4 h-4" /> {t('Huỷ')}
               </Button>
               <Button variant="primary" size="sm" onClick={handleSave} disabled={!hasRing || mutation.isPending} loading={mutation.isPending}>
-                <Save className="w-4 h-4" /> Lưu vòng đếm
+                <Save className="w-4 h-4" /> {t('Lưu vòng đếm')}
               </Button>
             </div>
           </div>
@@ -153,11 +154,11 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-warmGray">
             {hasRing
-              ? `Vòng hiện tại có ${points.length} đỉnh.`
-              : 'Chưa có vòng đếm — nút AI dùng vòng mặc định trong cấu hình.'}
+              ? t('Vòng hiện tại có {{n}} đỉnh.', { n: points.length })
+              : t('Chưa có vòng đếm — nút AI dùng vòng mặc định trong cấu hình.')}
           </p>
           <Button variant="primary" size="sm" onClick={handleStartEditing}>
-            <Pencil className="w-4 h-4" /> {hasRing ? 'Vẽ lại vòng' : 'Vẽ vòng đếm'}
+            <Pencil className="w-4 h-4" /> {hasRing ? t('Vẽ lại vòng') : t('Vẽ vòng đếm')}
           </Button>
         </div>
       )}

@@ -142,3 +142,34 @@ Mức ưu tiên giữ như đợt 18/11: **P0** bug hoặc FR mức M không dù
 - Bỏ ternary lồng và khối comment nhiều dòng ở dòng mới; `nodeLocation` sang `lib/deviceLocation.ts`; component lắp đặt sang `features/farm-owner/onboarding/`, OTA sang `features/admin/ota/`.
 - Tài liệu: `docs/reports/README.md`, `FE_Design_Claude.md` 2.13.0 (12.0, 12.2, 13.14, Phụ lục D, Changelog), `frontend/README.md`, root `CLAUDE.md`, dòng G-29 ghi PR #197.
 - Chưa làm: ảnh chụp desktop và mobile, tự kiểm bước 3 của FE_Design 13.13 trên trình duyệt; tên nhánh không theo `<type>/<module>-<role>-<tính-năng>` (đổi phải mở PR mới — chờ nhóm quyết).
+
+## 9. Soát lại giao diện sau khi merge PR #197
+
+Soát lại web trên `develop` sau PR #197, theo Report 3 §2.4 và Report 4 §5.4. **Người làm: Bảo, nhánh `fix/web-all-ui-audit`, một PR.** Màn chuyên gia của Nhi và Tuấn được sửa giống các đợt trước (Bảo làm thay, ghi rõ trong PR).
+
+| ID | Việc | Căn cứ | Ưu tiên |
+|---|---|---|---|
+| S-01 | `/domain-expert/tuning`: lưu hoặc khôi phục ngưỡng và hệ số mờ lỗi thì không báo gì (thiếu `catch`). Trang tự vẽ toast riêng thay vì dùng `toastStore` | FE_Design 13.5 | P0 |
+| S-02 | Chỉ sửa ngưỡng và hệ số mờ ở `/domain-expert/tuning`. Bỏ `ZoneThresholdsModal` (trang chi tiết thiết bị, trang chi tiết khu vực) và `FuzzyTuningModal` (`/analytics`); các nút đó mở `/domain-expert/tuning` đúng khu vực. Trang tuning thêm những gì modal có mà trang chưa có: cờ lọc nhiễu đầu vào (ENV-FR-022); Farm Owner ở farm có chuyên gia thì gửi gợi ý cho chuyên gia duyệt, người được quyết thì áp gợi ý qua API của EXPERT-FR-011. Khoảng giá trị và giá trị mặc định lấy từ `FUZZY_TUNING_LIMITS` và `DEFAULT_FUZZY_TUNING`, không gõ lại | ENV-FR-020…022, EXPERT-FR-011, BR-22 | P1 |
+| S-03 | Domain Expert mở `/devices` thì thấy trang của Farm Technician; đổi sang trang Thiết bị của Farm Owner ở chế độ chỉ xem | FE_Design 12.0 c, Report 4 §5.4 | P1 |
+| S-04 | Cảnh báo suy luận và gợi ý hệ số đều bị gọi là "AI", trong khi cảnh báo chạy theo luật và gợi ý là hồi quy (ANALYTICS-FR-010). Ô gợi ý tự bịa giá trị (`?? 8`, `?? 6`…) khi API thiếu số | ANALYTICS-FR-010, FE_Design 6.1 | P1 |
+| S-05 | Hàng đợi việc ghi "Ưu tiên P0", trong khi hệ thống chỉ có 3 mức P1–P3 | FE_Design 2.4 | P2 |
+| S-06 | Mã yêu cầu `VISION-FR-018` hiện ra trên màn Vòng đếm camera | FE_Design 13.16 | P2 |
+| S-07 | Các màn chuyên gia không đổi sang tiếng Anh: chỉ 9/36 component có i18n. Dùng `src/i18n` (khoá là câu tiếng Việt), bản dịch để ở file riêng `i18n/en.expert.ts` | FE_Design §6 | P1 |
+| S-08 | `TechnicianDevicesPage` còn code của Farm Owner và Admin (kích hoạt, dời Zone, thay, gỡ thiết bị, đẩy cấu hình; gọi `deviceApi` ngay trong component), trong khi hai role này đã có trang riêng. Bỏ hết nhánh đó cùng `ReplaceDeviceModal` và `DecommissionDeviceModal`. Thêm thứ Farm Technician còn thiếu: danh sách bài loa ru chỉ xem | Report 4 §5.4, FE_Design 13.1 | P1 |
+| S-09 | `TechnicianLayout` còn khối comment nhiều dòng nhắc `/onboarding` cũ | FE_Design 13 | P2 |
+| S-10 | Farm Owner không dời, thay, gỡ được bộ điều khiển trên web: nút cũ nằm ở trang Technician mà Farm Owner không vào, gỡ thiết bị ONLINE thiếu `force` nên luôn bị 409. Thêm menu "Thao tác khác" trên thẻ thiết bị của trang chi tiết (Farm Owner) | FARM-FR-007b, 008, Report 3 §2.4 | P0 |
+
+Xong khi lint, tsc, Vitest và build của web đều qua, và `frontend/CLAUDE.md`, FE_Design (Phụ lục D, Changelog) cùng dòng G-29 đã ghi các thay đổi.
+
+**Tiến độ (19/11/2026): đã làm hết S-01…S-09 trên nhánh `fix/web-all-ui-audit`.** Lint, tsc, Vitest (384 test) và build của web đều qua; chưa chạy thử trên trình duyệt. Làm thêm khi sửa: khung chọn ở Hàng đợi việc không còn tự điền "Tầng 1" khi chưa chọn khu vực.
+
+### Sửa sau review của PR #199
+
+- Khoảng ngưỡng trên trang tuning lấy từ `THRESHOLD_LIMITS` (khoảng đo cảm biến của backend) và kiểm bằng `validateThresholds`; câu khôi phục nói đúng là về ngưỡng mặc định của Quản trị viên (ENV-FR-007).
+- Mức độ cảnh báo ở màn chuyên gia dùng `SeverityBadge` và 3 cấp của FE_Design 2.4 (`MEDIUM` = P2 "Cao"); ô lọc chỉ còn `MEDIUM`, `LOW` vì cảnh báo suy luận không vượt mức này. Bỏ `SEVERITY_LABELS`, `SEVERITY_BADGE_CLASS`.
+- `en.expert.ts` bỏ 21 khoá trùng `en.ts` (bị `en.ts` ghi đè); câu có loại cảnh báo dùng khoá riêng `Cảnh báo {{type}}`; `en.expert.test.ts` chặn khoá trùng.
+- `useOpenZoneTuning` trả `undefined` khi danh sách Zone chưa tải, nút khoá lại thay vì mở trang trên Zone cũ.
+- Bỏ nhãn enum thô dưới hai lựa chọn kết luận, mã `ALERT-FR-014` và chữ `missing` ở bằng chứng; tên đại lượng viết thường nhưng giữ `CO2`, `NH3`; "% phun" của luật thời tiết dịch được; hex trong `className` của 3 file tuning đổi sang token (13.7).
+- FE_Design: dòng 12 về `TechnicianDevicesPage`, dòng nợ 13.14 và dòng nợ 2.4 đã trả; banner `detail.readOnly` nói đúng chỗ dời, thay, gỡ thiết bị.
+- Hook gỡ, thay thiết bị và `deviceApi.reassignZone` được dùng lại cho S-10; bỏ `farmApi.updateThresholds`, `resetThresholds`, `updateFuzzyTuning` không còn ai gọi.

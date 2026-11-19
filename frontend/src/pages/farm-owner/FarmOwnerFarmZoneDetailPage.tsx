@@ -8,7 +8,7 @@ import ThresholdMetricCard from '@/components/features/farm-owner/farms/Threshol
 import DeviceListTable from '@/components/features/farm-owner/farms/DeviceListTable'
 import DeviceDetailDrawer from '@/components/features/farm-owner/farms/DeviceDetailDrawer'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
-import ZoneThresholdsModal from '@/components/features/farm-owner/devices/ZoneThresholdsModal'
+import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning'
 import DetectionTuningCard from '@/components/features/farm-owner/farms/DetectionTuningCard'
 import StructureEditModal from '@/components/features/farm-owner/farms/StructureEditModal'
 import ActionsMenu from '@/components/ui/ActionsMenu'
@@ -49,8 +49,8 @@ export default function FarmOwnerFarmZoneDetailPage() {
     if (farmId && houseId && zoneId) setScopePath(farmId, farmName, houseId, zoneId)
   }, [farmId, houseId, zoneId, farmName, setScopePath])
   const [selected, setSelected] = useState<DeviceRow | null>(null)
-  // Farm Owner chỉnh ngưỡng của Zone ngay tại trang (ENV-FR-006/020); Technician/Admin không sửa ngưỡng nên không thấy nút
-  const [isThresholdsOpen, setIsThresholdsOpen] = useState(false)
+  // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning (ENV-FR-006/020)
+  const openZoneTuning = useOpenZoneTuning()
   // Đổi tên / xoá Zone (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
 
@@ -132,7 +132,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             {isFarmOwner && (
-              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setIsThresholdsOpen(true)}>
+              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} disabled={!openZoneTuning} onClick={() => node && openZoneTuning?.(node.zone._id)}>
                 <SlidersHorizontalIcon size={14} />
                 {t('zone.thresholds')}
               </Button>
@@ -206,7 +206,6 @@ export default function FarmOwnerFarmZoneDetailPage() {
 
       <DeviceDetailDrawer device={selected} zoneNode={{ ...node, metrics, breaches }} onClose={() => setSelected(null)} />
       {editMode && <StructureEditModal kind="zone" mode={editMode} name={node.zone.name} deviceCount={node.counts.total} existingNames={structure.houseById.get(node.house._id)?.zones.map(item => item.zone.name) ?? []} onClose={() => setEditMode(null)} />}
-      {isThresholdsOpen && <ZoneThresholdsModal zoneId={node.zone._id} zoneName={node.zone.name} onClose={() => setIsThresholdsOpen(false)} />}
     </div>
   )
 }

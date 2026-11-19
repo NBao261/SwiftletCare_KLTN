@@ -2,14 +2,7 @@ import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
 import { IconAlert, IconDevice, IconFarm, IconSettings } from '@/components/ui/icons'
 
-/**
- * Khung ứng dụng cho Farm Technician (G-20: đổi từ Technician hệ thống cũ).
- * Nghiệp vụ: theo dõi thiết bị và cảnh báo của nhà yến được giao;
- * xem cấu trúc trang trại (nhà được giao), gửi RESTART.
- * Không có OTA/PUSH_CONFIG (gọi API → 403) và không có /onboarding (chỉ FARM_OWNER).
- *
- * Dock mobile: firstDockItems lấy 4 mục đầu = Devices, Alerts, Farms, Settings.
- */
+// Khung Farm Technician trên web (Report 4 §5.4): thiết bị, cảnh báo và nhà được giao, cài đặt; dock mobile là 4 mục này
 const menuSections: MenuSection[] = [
   {
     title: 'Vận hành',

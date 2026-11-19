@@ -136,7 +136,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
       body = (
         <>
           {zone && <HealthReportCard houseId={zone.house_id} zoneId={zone._id} />}
-          {zone && <AutomationCard zoneId={zone._id} zoneName={zone.name} />}
+          {zone && <AutomationCard zoneId={zone._id} />}
           {energy}
           <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
         </>

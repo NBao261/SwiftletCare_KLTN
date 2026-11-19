@@ -6,7 +6,7 @@ import { ArrowsClockwiseIcon, DropIcon, RobotIcon, ThermometerIcon } from '@phos
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
-import FuzzyTuningModal from '@/components/features/farm-owner/analytics/FuzzyTuningModal';
+import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import {
   ANALYTICS_RANGES,
@@ -66,15 +66,14 @@ function tuningMarkerIndices(data: ControlPerformanceResponse | undefined): numb
 
 interface AutomationCardProps {
   zoneId: string;
-  zoneName: string;
 }
 
 // Hiệu quả vận hành tự động: tỷ lệ tự động (ANALYTICS-FR-011), % trong ngưỡng và biểu đồ điều khiển mờ (ANALYTICS-FR-008)
-export default function AutomationCard({ zoneId, zoneName }: AutomationCardProps): JSX.Element {
+export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Element {
   const { t, num, exact } = useTranslation(analyticsDict);
   const canTune = usePermission('FARM_OWNER');
   const [range, setRange] = useState<AnalyticsRange>('24h');
-  const [isTuning, setIsTuning] = useState(false);
+  const openZoneTuning = useOpenZoneTuning();
   const autonomy = useAutonomy(zoneId, range);
   const performance = useControlPerformance(zoneId, range);
   const data = performance.data;
@@ -245,15 +244,11 @@ export default function AutomationCard({ zoneId, zoneName }: AutomationCardProps
             {stats && ` · ${t('automation.samples', { n: num(stats.sampleCount) })}`}
           </p>
           {canTune && (
-            <Button size="sm" variant="secondary" onClick={() => setIsTuning(true)}>
+            <Button size="sm" variant="secondary" disabled={!openZoneTuning} onClick={() => openZoneTuning?.(zoneId)}>
               {t('automation.tune')}
             </Button>
           )}
         </div>
-      )}
-
-      {isTuning && tuning && (
-        <FuzzyTuningModal zoneId={zoneId} zoneName={zoneName} current={tuning} onClose={() => setIsTuning(false)} />
       )}
     </FarmFrame>
   );

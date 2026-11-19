@@ -7,6 +7,7 @@ import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
 import { Input } from '@/components/ui/Input'
 import type { WeatherRule } from '@/types/expert.types'
 import { validateWeatherRule, isWeatherRuleValid, METRIC_MIN_RANGE } from '@/validations/common/weatherRule.validation'
+import { t } from '@/i18n'
 
 type DraftRule = Omit<Partial<WeatherRule>, 'metric'> & { metric: WeatherRule['metric'] | '' }
 
@@ -45,16 +46,16 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
 
   return (
     <Card className="space-y-4">
-      <p className="text-sm font-semibold text-charcoal">Thêm luật mới</p>
+      <p className="text-sm font-semibold text-charcoal">{t('Thêm luật mới')}</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2 flex flex-col gap-1.5">
-          <span className="label-caption">Chỉ số thời tiết</span>
+          <span className="label-caption">{t('Chỉ số thời tiết')}</span>
           <SelectMenu
             value={draft.metric}
             options={METRIC_OPTIONS}
             onChange={value => setDraft(current => ({ ...current, metric: value, min: undefined }))}
-            ariaLabel="Chọn chỉ số thời tiết"
+            ariaLabel={t('Chọn chỉ số thời tiết')}
             field
             invalid={!!errors.metric}
             disabled={disabled}
@@ -66,7 +67,7 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
         <Input
           id="wr-min"
           type="number"
-          label={metaRange ? `Ngưỡng (${metaRange.min}…${metaRange.max} ${metaRange.unit})` : 'Ngưỡng'}
+          label={metaRange ? t('Ngưỡng ({{min}}…{{max}} {{unit}})', { min: metaRange.min, max: metaRange.max, unit: metaRange.unit }) : t('Ngưỡng')}
           value={draft.min ?? ''}
           onChange={event => setDraft(current => ({ ...current, min: event.target.value === '' ? undefined : Number(event.target.value) }))}
           disabled={disabled || !draft.metric}
@@ -77,19 +78,19 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
         <Input
           id="wr-offset"
           type="number"
-          label="Mức bù phun (−10…+10, ≠ 0)"
+          label={t('Mức bù phun (−10…+10, ≠ 0)')}
           value={draft.offset_pct ?? ''}
           onChange={event => setDraft(current => ({ ...current, offset_pct: event.target.value === '' ? undefined : Number(event.target.value) }))}
           disabled={disabled}
           step={1}
-          placeholder="vd. +5 hoặc −3"
+          placeholder={t('vd. +5 hoặc −3')}
           error={errors.offset_pct}
         />
 
         <Input
           id="wr-duration"
           type="number"
-          label="Thời hạn (1…120 phút)"
+          label={t('Thời hạn (1…120 phút)')}
           value={draft.duration_min ?? ''}
           onChange={event => setDraft(current => ({ ...current, duration_min: event.target.value === '' ? undefined : Number(event.target.value) }))}
           disabled={disabled}
@@ -101,7 +102,7 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
 
       <Button variant="primary" size="sm" onClick={handleSubmit} disabled={disabled}>
         <Plus className="w-3.5 h-3.5" />
-        Thêm luật
+        {t('Thêm luật')}
       </Button>
     </Card>
   )

@@ -30,6 +30,7 @@ import type {
   CoefficientProposalStatus,
 } from '@/types/expert/reviews.types';
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
+import { t } from '@/i18n';
 
 type ActiveTab = 'reviews' | 'proposals';
 
@@ -174,15 +175,15 @@ export default function DomainExpertReviewsPage() {
         <div className="p-8">
           <EmptyState
             icon={<AlertTriangle className="h-8 w-8 text-alertRed" />}
-            title="Không thể tải danh sách thay đổi tham số"
-            description="Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại."
+            title={t('Không thể tải danh sách thay đổi tham số')}
+            description={t('Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại.')}
             action={
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => void refetchReviews()}
               >
-                Thử lại
+                {t('Thử lại')}
               </Button>
             }
           />
@@ -195,11 +196,11 @@ export default function DomainExpertReviewsPage() {
         <div className="p-8">
           <EmptyState
             icon={<SlidersHorizontal className="h-8 w-8 text-warmGray" />}
-            title="Không có mục thay đổi tham số nào"
+            title={t('Không có mục thay đổi tham số nào')}
             description={
               isReviewFiltered
-                ? 'Không tìm thấy thay đổi tham số nào phù hợp với bộ lọc đã chọn.'
-                : 'Khi Chủ trang trại cập nhật ngưỡng vi khí hậu hoặc hệ số điều khiển, các bản ghi sẽ xuất hiện tại đây để Chuyên gia thẩm định.'
+                ? t('Không tìm thấy thay đổi tham số nào phù hợp với bộ lọc đã chọn.')
+                : t('Khi Chủ trang trại cập nhật ngưỡng vi khí hậu hoặc hệ số điều khiển, các bản ghi sẽ xuất hiện tại đây để Chuyên gia thẩm định.')
             }
           />
         </div>
@@ -233,15 +234,15 @@ export default function DomainExpertReviewsPage() {
         <div className="p-8">
           <EmptyState
             icon={<AlertTriangle className="h-8 w-8 text-alertRed" />}
-            title="Không thể tải danh sách đề xuất hệ số"
-            description="Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại."
+            title={t('Không thể tải danh sách đề xuất hệ số')}
+            description={t('Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại.')}
             action={
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => void refetchProposals()}
               >
-                Thử lại
+                {t('Thử lại')}
               </Button>
             }
           />
@@ -254,11 +255,11 @@ export default function DomainExpertReviewsPage() {
         <div className="p-8">
           <EmptyState
             icon={<Sparkles className="h-8 w-8 text-warmGray" />}
-            title="Không có đề xuất hệ số mờ nào"
+            title={t('Không có đề xuất hệ số mờ nào')}
             description={
               isProposalFiltered
-                ? 'Không tìm thấy đề xuất hệ số mờ nào phù hợp với bộ lọc đã chọn.'
-                : 'Khi Chủ trang trại gửi gợi ý tối ưu Fuzzy Logic từ mô hình AI, các đề xuất sẽ xuất hiện tại đây để Chuyên gia xem xét và phê duyệt.'
+                ? t('Không tìm thấy đề xuất hệ số mờ nào phù hợp với bộ lọc đã chọn.')
+                : t('Khi Chủ trang trại gửi gợi ý hệ số mờ của hệ thống, các đề xuất sẽ xuất hiện tại đây để Chuyên gia xem xét và phê duyệt.')
             }
           />
         </div>
@@ -299,7 +300,7 @@ export default function DomainExpertReviewsPage() {
               }`}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>Duyệt thay đổi tham số</span>
+              <span>{t('Duyệt thay đổi tham số')}</span>
               {pendingReviewsCount > 0 && (
                 <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">
                   {pendingReviewsCount}
@@ -317,7 +318,7 @@ export default function DomainExpertReviewsPage() {
               }`}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Đề xuất hệ số Fuzzy</span>
+              <span>{t('Đề xuất hệ số Fuzzy')}</span>
               {pendingProposalsCount > 0 && (
                 <span className="rounded-full bg-limeMist px-2 py-0.5 text-[10px] font-bold text-charcoal">
                   {pendingProposalsCount}
@@ -334,7 +335,7 @@ export default function DomainExpertReviewsPage() {
                   value={reviewStatusFilter}
                   options={REVIEW_STATUS_OPTIONS}
                   onChange={(selectedValue) => setReviewStatusFilter(selectedValue)}
-                  ariaLabel="Lọc theo trạng thái duyệt tham số"
+                  ariaLabel={t('Lọc theo trạng thái duyệt tham số')}
                 />
                 {isReviewFiltered && (
                   <ClearFiltersButton onClick={() => setReviewStatusFilter('ALL')} />
@@ -346,7 +347,7 @@ export default function DomainExpertReviewsPage() {
                   value={proposalStatusFilter}
                   options={PROPOSAL_STATUS_OPTIONS}
                   onChange={(selectedValue) => setProposalStatusFilter(selectedValue)}
-                  ariaLabel="Lọc theo trạng thái đề xuất hệ số"
+                  ariaLabel={t('Lọc theo trạng thái đề xuất hệ số')}
                 />
                 {isProposalFiltered && (
                   <ClearFiltersButton onClick={() => setProposalStatusFilter('ALL')} />
@@ -359,8 +360,8 @@ export default function DomainExpertReviewsPage() {
         {/* Header hàng 2: Mô tả nhiệm vụ nghiệp vụ gọn gàng */}
         <p className="-mt-1 pb-1 text-xs text-warmGray">
           {activeTab === 'reviews'
-            ? 'Thẩm định các thay đổi vi khí hậu do Chủ trang trại cập nhật và chấp thuận hoặc hoàn nguyên về giá trị an toàn.'
-            : 'Xem xét các gợi ý tối ưu điều khiển mờ (Fuzzy Logic) gửi từ Chủ trang trại và phê duyệt áp dụng xuống thiết bị.'}
+            ? t('Thẩm định các thay đổi vi khí hậu do Chủ trang trại cập nhật và chấp thuận hoặc hoàn nguyên về giá trị an toàn.')
+            : t('Xem xét các gợi ý hệ số mờ Chủ trang trại gửi lên và phê duyệt áp dụng xuống thiết bị.')}
         </p>
 
         {/* Nội dung danh sách theo Tab */}

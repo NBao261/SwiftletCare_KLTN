@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.13.0 · **Cập nhật:** 19/11/2026 · **Thay thế:** v2.12.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.14.0 · **Cập nhật:** 19/11/2026 · **Thay thế:** v2.13.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,14 @@
 ---
 
 ## 0. Changelog
+
+### v2.13.0 → v2.14.0 (soát lại sau PR #197, G-29, `todo-audit-1119.md` §9)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Ngưỡng và hệ số mờ chỉ sửa ở `/domain-expert/tuning`.** Bỏ `ZoneThresholdsModal` và `FuzzyTuningModal`; nút ở trang khu vực, trang thiết bị và `/analytics` mở trang tuning đúng Zone qua `useOpenZoneTuning()` (`hooks/shared/`). Trang tuning có cờ lọc nhiễu (ENV-FR-022) và nút gợi ý theo quyền (áp ngay hoặc gửi chuyên gia duyệt, EXPERT-FR-011). |
+| 2 | **Thiết bị:** Domain Expert mở `/devices` thấy trang của Farm Owner ở chế độ chỉ xem; `TechnicianDevicesPage` chỉ còn của Farm Technician (khởi động lại, danh sách bài loa chỉ xem). Farm Owner dời, thay, gỡ bộ điều khiển ở menu "Thao tác khác" của thẻ thiết bị trên trang chi tiết (FARM-FR-007b, 008; `MoveControllerModal`, `ReplaceControllerModal`, `RemoveControllerModal`). |
+| 3 | **i18n:** các màn chuyên gia dùng Hệ 1 (`src/i18n`), bản dịch ở `i18n/en.expert.ts` (không trùng khoá với `en.ts`, `en.expert.test.ts` kiểm); mức độ cảnh báo dùng `SeverityBadge` và 3 cấp của 2.4. Không gọi cảnh báo suy luận hay gợi ý hệ số là "AI"; không hiện mã FR/BR/G hay tên enum trên màn hình. |
 
 ### v2.12.0 → v2.13.0 (đợt soát 19/11/2026, G-29, PR #197)
 
@@ -337,7 +345,7 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 
 **Giao diện chỉ có 3 cấp: Khẩn cấp · Cao · Thường** (`SeverityLevel` = `P1 | P2 | P3`, `types/alert.types.ts`). Backend vẫn lưu cảnh báo theo 4 giá trị `CRITICAL | HIGH | MEDIUM | LOW` (ALERT-FR-001, `alert.model.ts`) — **không đổi backend**, giao diện gộp `CRITICAL` vào Khẩn cấp.
 
-> **Còn nợ:** `hooks/expert/alertHelpers.ts` và `features/expert/alerts/InferredAlertsTable.tsx` vẫn dùng `SEVERITY_BADGE_CLASS` riêng — đổi sang `SeverityBadge` khi sửa màn chuyên gia.
+> ~~**Còn nợ:** `alertHelpers.ts` và `InferredAlertsTable.tsx` dùng `SEVERITY_BADGE_CLASS` riêng~~ — ✅ màn chuyên gia dùng `SeverityBadge` và ô lọc 3 cấp (G-29, `todo-audit-1119.md` §9).
 
 **Nguồn duy nhất — chỉ import, không khai lại ở nơi khác:**
 
@@ -692,11 +700,11 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 
 **Trạng thái: hai hệ dịch chạy song song, chưa phủ toàn app.** Nút VI/EN ở `AppHeader` ghi vào `stores/languageStore.ts`; cả hai hệ dưới đây đọc chung store này nên một nút đổi cả hai. Màn chưa dùng hệ nào vẫn tiếng Việt như cũ.
 
-**Hệ 1 — `src/i18n/` (i18next + react-i18next), khoá là câu tiếng Việt.** `t('Danh sách trang trại')` → VI trả nguyên câu, EN tra `i18n/en.ts`, thiếu bản dịch thì vẫn hiện tiếng Việt (không lỗi). Biến dạng `t('Còn {{n}} ngày', { n: 3 })`. Các helper trong `i18n/index.ts`: `t` (gọi được cả ngoài component — column builder, helper định dạng), `tr`/`trChildren` (dịch prop chữ/children của component dùng chung, bỏ qua ReactNode), `translated(labels)` (bọc bảng nhãn constants để đọc ra bản dịch hiện tại), `intlLocale()`, `setLang()`. `AppShell` remount vùng nội dung theo `key = ngôn ngữ` để mọi chỗ gọi `t` ra đúng ngôn ngữ. **Không** tính nhãn bằng `t` ở cấp module (hằng số top-level) — giá trị đóng băng theo ngôn ngữ lúc nạp; dùng `translated(...)`, getter, hoặc dựng trong component. Đang dùng ở các màn Admin và các component `ui/`. Thêm câu mới = thêm 1 dòng vào `en.ts`.
+**Hệ 1 — `src/i18n/` (i18next + react-i18next), khoá là câu tiếng Việt.** `t('Danh sách trang trại')` → VI trả nguyên câu, EN tra `i18n/en.ts`, thiếu bản dịch thì vẫn hiện tiếng Việt (không lỗi). Biến dạng `t('Còn {{n}} ngày', { n: 3 })`. Các helper trong `i18n/index.ts`: `t` (gọi được cả ngoài component — column builder, helper định dạng), `tr`/`trChildren` (dịch prop chữ/children của component dùng chung, bỏ qua ReactNode), `translated(labels)` (bọc bảng nhãn constants để đọc ra bản dịch hiện tại), `intlLocale()`, `setLang()`. `AppShell` remount vùng nội dung theo `key = ngôn ngữ` để mọi chỗ gọi `t` ra đúng ngôn ngữ. **Không** tính nhãn bằng `t` ở cấp module (hằng số top-level) — giá trị đóng băng theo ngôn ngữ lúc nạp; dùng `translated(...)`, getter, hoặc dựng trong component. Đang dùng ở các màn Admin, các màn chuyên gia (`/domain-expert/*`, bản dịch ở `i18n/en.expert.ts`; trùng khoá thì `en.ts` thắng) và các component `ui/`. Thêm câu mới = thêm 1 dòng vào `en.ts` (hoặc `en.expert.ts` cho màn chuyên gia).
 
 **Hệ 2 — từ điển theo module.** Hạ tầng tối thiểu: `lib/i18n.ts` (`Dictionary<K>` — `en` bắt buộc đủ đúng key của `vi`, thiếu là lỗi biên dịch; `translate`, định dạng số/ngày/"x giây trước" theo locale) + `hooks/common/useTranslation.ts` (`const { t, num, day, time, date, hourMinute, dateTime, ago } = useTranslation(dict)`). Từ điển mỗi module đặt ở `constants/<module>.i18n.ts`; hiện có `farmStructure.i18n.ts` (màn Cấu trúc Farm), `dashboard.i18n.ts` (Dashboard) của Farm Owner, `navigation.i18n.ts` (nhãn sidebar/dock/tiêu đề trang — tra qua `hooks/common/useNavigationLabel.ts`) và `shell.i18n.ts` (popup thông báo, tài khoản, đăng xuất, nút ngôn ngữ). Ngoài ra có `support.i18n.ts` (Ticket `/support`), `severity.i18n.ts` (`levelDict`, 2.4) và hàm `dateTime` của `useTranslation`. Tên file/hook viết đầy đủ, không viết tắt (VD `useTranslation`, không `useT`). Đơn vị đo (°C/%/ppm/lux/dB) không dịch. Màn chưa có từ điển: khi review **không** bắt buộc `t('...')`; viết tiếng Việt có dấu, giữ thuật ngữ ("Zone", "Farm", "Ticket") nhất quán với màn đã có. Đang dùng ở các màn Farm Owner, màn Trang trại của Technician và khung app (sidebar, popup thông báo/tài khoản).
 
-**Chọn hệ nào:** sửa màn đang dùng hệ nào thì giữ hệ đó, không trộn hai hệ trong một file. Màn mới theo hệ mà role đó đang dùng (Admin → Hệ 1; Farm Owner, Technician → Hệ 2). Gộp về một hệ (chuyển các `*.i18n.ts` thành namespace i18next) là PR riêng — xem nợ 13.14. Bảng thuật ngữ 6.2 áp cho cả hai hệ.
+**Chọn hệ nào:** sửa màn đang dùng hệ nào thì giữ hệ đó, không trộn hai hệ trong một file. Màn mới theo hệ mà role đó đang dùng (Admin, Domain Expert → Hệ 1; Farm Owner, Technician → Hệ 2). Gộp về một hệ (chuyển các `*.i18n.ts` thành namespace i18next) là PR riêng — xem nợ 13.14. Bảng thuật ngữ 6.2 áp cho cả hai hệ.
 
 ### 6.1. Định dạng ngày, giờ, số
 
@@ -1055,7 +1063,7 @@ Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao di
 
 1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `domain-expert/` · `technician/` · `auth/` · `shared/` · `common/`. `domain-expert/` chứa các màn do chuyên gia sở hữu (kiểm chứng cảnh báo, viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số, tham số phát hiện, vòng đếm, lịch đếm — farm chưa có chuyên gia thì Farm Owner mở cùng trang, BR-22); màn chuyên gia chỉ xem (dashboard, analytics, live stream, thu hoạch) là trang Farm Owner mở với nhóm role rộng hơn, không nhân bản sang `domain-expert/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
 2. **Vào `shared/` chỉ khi từ 2 role trở lên thật sự dùng.** Một role dùng thì về thư mục role đó, dù file trông "chung chung" tới đâu. Đây là luật chống `shared/` phình thành bãi rác.
-3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** `TechnicianDevicesPage` vẫn được Farm Owner và Admin mở. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
+3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** Ví dụ `/devices` là một URL nhưng mỗi role một trang (`DevicesIndexRoute` trong `routes/technician.routes.tsx`): Farm Owner và Domain Expert mở `FarmOwnerDevicesPage`, Admin `AdminDevicesPage`, Farm Technician `TechnicianDevicesPage`. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
 4. **Mọi import dùng alias `@/`**, không dùng đường dẫn tương đối `../`. Nhờ vậy dời file chỉ phải sửa đúng đường dẫn của chính nó.
 5. **Một tính năng = một thư mục.** Component/modal/hằng số riêng của một màn hình nằm cùng chỗ trong `components/features/<role>/<area>/`, kể cả khi chỉ một trang dùng.
 
@@ -1407,7 +1415,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 | Chỗ | Vi phạm | Cách trả nợ |
 |---|---|---|
-| `pages/technician/TechnicianDevicesPage.tsx` | Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên]) | Chuyển vào `onSuccess` của mutation trong `useDevices` |
+| ~~`pages/technician/TechnicianDevicesPage.tsx`~~ | ~~Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên])~~ | ✅ Đã bỏ cùng các nhánh Farm Owner / Admin (G-29, `todo-audit-1119.md` §9) |
 | Mục 6 i18n | Hai hệ dịch song song (`src/i18n/` cho Admin + `ui/`; `useTranslation` + `*.i18n.ts` cho Farm Owner, Technician farms, khung app); nhiều màn vẫn hardcode tiếng Việt | PR riêng gộp về một hệ, sau đó 13.x mới yêu cầu `t('...')` |
 | `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
 | Chưa có `ErrorBoundary` (0 chỗ) | 13.5 | Thêm `ui/ErrorBoundary.tsx`, bọc `<Outlet />` trong `AppShell` |
@@ -1570,7 +1578,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Đường dẫn | Xuất ra | Mục |
 |---|---|---|
 | `lib/i18n.ts` | `Dictionary<K>` · `translate` · `formatStandardDate` · `formatHourMinute` · `formatDateTime` · `formatTimestampsInText` · `formatNumber` · `formatRelative` | 6, 6.1 |
-| `i18n/index.ts` · `i18n/en.ts` (có trên `develop`) | Hệ dịch 1 (Admin, `ui/`): `t` · `tr` · `trChildren` · `translated` · `intlLocale` · `setLang` | 6 |
+| `i18n/index.ts` · `i18n/en.ts` · `i18n/en.expert.ts` | Hệ dịch 1 (Admin, Domain Expert, `ui/`): `t` · `tr` · `trChildren` · `translated` · `intlLocale` · `setLang` | 6 |
 | `lib/cn.ts` | `cn()` ghép class (tailwind-merge) | 13.7 |
 | `lib/deviceLocation.ts` | `nodeLocation()` — "Farm | Nhà | Tầng | Zone" của thiết bị trong `GET /devices/system-status` (Admin) | — |
 | `lib/apiError.ts` · `constants/error.i18n.ts` · `hooks/common/useApiErrorMessage.ts` | `getApiErrorGroup` · `errorDict` · `useApiErrorMessage()` — câu lỗi API theo 4 nhóm | 13.16 b |
@@ -1587,7 +1595,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Nhóm | Đường dẫn | Nội dung |
 |---|---|---|
 | Hook hạ tầng | `hooks/common/` | `useTranslation` (Hệ 2: `t` `num` `day` `time` `date` `hourMinute` `dateTime` `ago`) · `usePermission` · `useSocket` · `usePaginatedListQuery` · `useBreadcrumb` (`usePageBreadcrumb`, `usePageBack`) · `useNavigationLabel` · `useScrollToTop` · `useCanScrollDown` · `useSyncedState` |
-| Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` (`usePendingAlertTotal`: số cảnh báo ACTIVE) · `useAlertNotifications` · `useDevices` (`useSensorNode`, `useSystemNodeStatus`) · `useAudioTracks` |
+| Hook dữ liệu ≥ 2 role | `hooks/shared/` | `useFarms` · `useAlerts` (`usePendingAlertTotal`: số cảnh báo ACTIVE) · `useAlertNotifications` · `useDevices` (`useSensorNode`, `useSystemNodeStatus`) · `useAudioTracks` · `useOpenZoneTuning` (mở trang tuning đúng Zone — nơi duy nhất sửa ngưỡng và hệ số mờ) |
 | API ≥ 2 role | `apis/shared/` | `farms.api` · `alerts.api` · `devices.api` · `audioTracks.api` |
 | Store (Zustand) | `stores/` | `authStore` · `languageStore` · `zoneStore` · `toastStore` · `breadcrumbStore` · `pinnedHouseStore` (số cảnh báo lấy từ query, không có store) |
 | Validator | `validations/common/` · `validations/farm-owner/` | `threshold.validation` · `fuzzyTuning.validation` · `speakerSchedule.validation` · `farm.validation` (vị trí farm: vĩ độ −90…90, kinh độ −180…180) |
