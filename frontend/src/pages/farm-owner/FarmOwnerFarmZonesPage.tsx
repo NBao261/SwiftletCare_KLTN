@@ -49,6 +49,8 @@ export default function FarmOwnerFarmZonesPage() {
   const isFarmOwner = usePermission('FARM_OWNER')
   // OPS-FR-009 — MTTA, MTTR: Farm Owner và Domain Expert (kỹ thuật viên nhận 403)
   const canViewOpsMetrics = usePermission('FARM_OWNER', 'DOMAIN_EXPERT')
+  // FARM-FR-014 — Farm Owner và Domain Expert đổi giai đoạn nhà (Report 3 §2.4)
+  const canSetStage = canViewOpsMetrics
 
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'devices' ? 'devices' : 'overview')
@@ -212,7 +214,7 @@ export default function FarmOwnerFarmZonesPage() {
 
               {/* Cài đặt đàn chim của cả nhà, đặt dưới danh sách Zone (cột trái còn trống) để cột phải không quá dài */}
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <HouseStageCard house={house} canEdit={isFarmOwner} />
+                <HouseStageCard house={house} canEdit={canSetStage} />
                 {/* EXPERT-FR-008 — mức giảm tỷ lệ chim về của nhà do chuyên gia đặt, chủ nhà yến chỉ xem */}
                 <FarmFrame title={t('tuning.birdTitle')} description={t('tuning.birdDesc')}>
                   <div className="rounded-2xl border border-warmGray/15 bg-white p-4">

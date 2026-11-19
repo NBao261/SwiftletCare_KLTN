@@ -4,7 +4,6 @@ import { ArrowRight, ChevronDown } from 'lucide-react'
 import { useAlertsInfinite } from '@/hooks/shared/useAlerts'
 import { useNotificationUnreadCount } from '@/hooks/shared/useNotifications'
 import NotificationInboxList from '@/components/common/NotificationInboxList'
-import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
 import { useAlertStore } from '@/stores/alertStore'
 import { useAuthStore } from '@/stores/authStore'
 import { canAccessPath } from '@/constants/roles'
@@ -17,7 +16,8 @@ import type { Alert } from '@/types'
 
 const PAGE_SIZE = 10
 
-// Popup chuông: tab Cảnh báo (cuộn tải thêm, xổ chi tiết tại chỗ là đã đọc) và tab Thông báo trong ứng dụng (EXPERT-FR-007)
+// Popup chuông: tab Cảnh báo (cuộn tải thêm, cảnh báo ACTIVE = chờ xác nhận được đánh dấu, ALERT-FR-007) và tab Thông báo
+// trong ứng dụng, nơi duy nhất có đã đọc / chưa đọc (EXPERT-FR-007)
 export default function NotificationPopover() {
   const { t } = useTranslation(shellDict)
   const [open, setOpen] = useState(false)
@@ -25,55 +25,42 @@ export default function NotificationPopover() {
   const showAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
   const [tab, setTab] = useState<'alerts' | 'inbox'>(showAlerts ? 'alerts' : 'inbox')
   const inboxUnreadCount = useNotificationUnreadCount()
-  const [unreadFirst, setUnreadFirst] = useState(false)
-  const [justRead, setJustRead] = useState<Map<string, Alert>>(() => new Map())
+  const [pendingFirst, setPendingFirst] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const storedAlertUnread = useAlertStore(s => s.unreadCount)
-  const alertUnreadCount = showAlerts ? storedAlertUnread : 0
-  // Badge chuông = cảnh báo chưa đọc + thông báo trong ứng dụng chưa đọc
-  const unreadCount = alertUnreadCount + inboxUnreadCount
-  const { readIds, markRead } = useReadAlerts()
+  const storedPendingCount = useAlertStore(s => s.pendingCount)
+  const alertPendingCount = showAlerts ? storedPendingCount : 0
+  // Badge chuông = cảnh báo chờ xác nhận + thông báo trong ứng dụng chưa đọc
+  const badgeCount = alertPendingCount + inboxUnreadCount
   const alertsOpen = open && showAlerts && tab === 'alerts'
   const all = useAlertsInfinite(PAGE_SIZE, undefined, alertsOpen)
-  const unreadOnly = useAlertsInfinite(PAGE_SIZE, 'ACTIVE', alertsOpen && unreadFirst)
-  const isLoading = all.isLoading || (unreadFirst && unreadOnly.isLoading)
-  const pager = unreadFirst && unreadOnly.hasNextPage ? unreadOnly : all
+  const pendingOnly = useAlertsInfinite(PAGE_SIZE, 'ACTIVE', alertsOpen && pendingFirst)
+  const isLoading = all.isLoading || (pendingFirst && pendingOnly.isLoading)
+  const pager = pendingFirst && pendingOnly.hasNextPage ? pendingOnly : all
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pager
 
-  const isUnread = (alert: Alert) => alert.status === 'ACTIVE' && !readIds.has(alert._id)
+  const isPending = (alert: Alert) => alert.status === 'ACTIVE'
 
-  // Gộp các trang bỏ trùng; chế độ chưa đọc lên đầu thì tin ACTIVE đứng trước
+  // Gộp các trang bỏ trùng; chế độ chờ xác nhận lên đầu thì tin ACTIVE đứng trước
   const alerts = useMemo(() => {
     const byId = new Map<string, Alert>()
-    if (unreadFirst) {
-      const top = new Map<string, Alert>(justRead)
-      for (const page of unreadOnly.data?.pages ?? []) for (const alert of page.data) if (!readIds.has(alert._id)) top.set(alert._id, alert)
-      const sortedTop = [...top.values()].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      for (const alert of sortedTop) byId.set(alert._id, alert)
-    }
+    if (pendingFirst) for (const page of pendingOnly.data?.pages ?? []) for (const alert of page.data) byId.set(alert._id, alert)
     for (const page of all.data?.pages ?? []) for (const alert of page.data) if (!byId.has(alert._id)) byId.set(alert._id, alert)
     return [...byId.values()]
-  }, [all.data, unreadOnly.data, unreadFirst, justRead, readIds])
+  }, [all.data, pendingOnly.data, pendingFirst])
 
-  // Xổ/thu chi tiết 1 tin; tin chưa đọc thì đánh dấu đã đọc (badge tự giảm), giữ chỗ trong danh sách tới khi đóng popup
+  // Xổ/thu chi tiết 1 tin
   function toggleNotification(alert: Alert) {
-    const willExpand = expandedId !== alert._id
-    setExpandedId(willExpand ? alert._id : null)
-    if (willExpand && isUnread(alert)) {
-      markRead(alert._id)
-      setJustRead(prev => new Map(prev).set(alert._id, alert))
-    }
+    setExpandedId(current => (current === alert._id ? null : alert._id))
   }
 
-  // Đóng popup, thu gọn tin đang xổ và xếp lại danh sách
+  // Đóng popup, thu gọn tin đang xổ
   function closePopover() {
     setOpen(false)
     setExpandedId(null)
-    setJustRead(new Map())
   }
 
   // Sang trang Cảnh báo, cuộn tới đúng dòng qua highlight
@@ -123,12 +110,12 @@ export default function NotificationPopover() {
           'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-charcoal transition-colors hover:bg-white hover:shadow-icon',
           open && 'bg-white shadow-icon',
         )}
-        aria-label={unreadCount > 0 ? t('notif.ariaUnread', { count: unreadCount }) : t('notif.title')}
+        aria-label={badgeCount > 0 ? t('notif.ariaUnread', { count: badgeCount }) : t('notif.title')}
       >
         <IconBell />
-        {unreadCount > 0 && (
+        {badgeCount > 0 && (
           <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-alertRed px-1 text-[10px] font-bold text-white">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {badgeCount > 9 ? '9+' : badgeCount}
           </span>
         )}
       </button>
@@ -144,18 +131,18 @@ export default function NotificationPopover() {
             {tab === 'alerts' && (
               <button
                 type="button"
-                aria-pressed={unreadFirst}
-                onClick={() => setUnreadFirst(on => !on)}
+                aria-pressed={pendingFirst}
+                onClick={() => setPendingFirst(on => !on)}
                 className="shrink-0 text-xs text-warmGray underline transition-colors hover:text-charcoal"
               >
-                {unreadFirst ? t('notif.sortByTime') : t('notif.unreadFirst')}
+                {pendingFirst ? t('notif.sortByTime') : t('notif.pendingFirst')}
               </button>
             )}
           </div>
 
           {showAlerts && (
           <div role="tablist" className="flex shrink-0 gap-1 border-b border-charcoal/10 px-3 py-2">
-            {([['alerts', t('notif.tabAlerts'), alertUnreadCount], ['inbox', t('notif.tabInbox'), inboxUnreadCount]] as const).map(([key, label, count]) => (
+            {([['alerts', t('notif.tabAlerts'), alertPendingCount], ['inbox', t('notif.tabInbox'), inboxUnreadCount]] as const).map(([key, label, count]) => (
               <button
                 key={key}
                 type="button"
@@ -181,14 +168,14 @@ export default function NotificationPopover() {
               <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.empty')}</p>
             )}
             {alerts.map(alert => {
-              const unread = isUnread(alert)
+              const pending = isPending(alert)
               const expanded = expandedId === alert._id
               return (
                 <div
                   key={alert._id}
                   className={cn(
                     'border-b transition-colors',
-                    expanded ? 'border-charcoal/10 bg-limeMist/50' : unread ? 'border-charcoal/10 bg-charcoal/5' : 'border-charcoal/5 bg-transparent',
+                    expanded ? 'border-charcoal/10 bg-limeMist/50' : pending ? 'border-charcoal/10 bg-charcoal/5' : 'border-charcoal/5 bg-transparent',
                   )}
                 >
                   <button
@@ -197,19 +184,19 @@ export default function NotificationPopover() {
                     onClick={() => toggleNotification(alert)}
                     className={cn(
                       'flex w-full items-start gap-3 p-3.5 text-left transition-colors',
-                      !expanded && (unread ? 'hover:bg-charcoal/10' : 'hover:bg-charcoal/5'),
-                      !unread && !expanded && 'opacity-80',
+                      !expanded && (pending ? 'hover:bg-charcoal/10' : 'hover:bg-charcoal/5'),
+                      !pending && !expanded && 'opacity-80',
                     )}
                   >
-                    <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', unread ? 'bg-safetyOrange' : 'bg-transparent')} />
+                    <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', pending ? 'bg-safetyOrange' : 'bg-transparent')} />
                     <span className="min-w-0 flex-1">
-                      <span className={cn('block text-sm', expanded ? 'whitespace-normal break-words' : 'truncate', unread ? 'font-bold text-charcoal' : 'font-medium text-graphite')}>
+                      <span className={cn('block text-sm', expanded ? 'whitespace-normal break-words' : 'truncate', pending ? 'font-bold text-charcoal' : 'font-medium text-graphite')}>
                         {alert.title}
                       </span>
-                      <span className={cn('mt-1 block text-xs', expanded ? 'whitespace-normal break-words' : 'truncate', unread ? 'text-gray-600' : 'text-warmGray')}>
+                      <span className={cn('mt-1 block text-xs', expanded ? 'whitespace-normal break-words' : 'truncate', pending ? 'text-gray-600' : 'text-warmGray')}>
                         {alert.message}
                       </span>
-                      <span className={cn('mt-1 block text-xs', unread ? 'text-gray-600' : 'text-warmGray')}>
+                      <span className={cn('mt-1 block text-xs', pending ? 'text-gray-600' : 'text-warmGray')}>
                         {formatDate(alert.created_at)}
                       </span>
                     </span>

@@ -1,21 +1,12 @@
-﻿import { create } from 'zustand'
-import type { Alert } from '@/types'
+import { create } from 'zustand'
 
 interface AlertState {
-  unreadCount: number
-  latestAlert: Alert | null
-  incrementUnread: () => void
-  setLatestAlert: (alert: Alert) => void
-  resetUnread: () => void
-  /** Số cảnh báo ACTIVE chưa đọc — `useUnreadAlertCount` tính từ GET /alerts trừ tin đã đọc trong popup */
-  setUnreadCount: (n: number) => void
+  /** ALERT-FR-007 — số cảnh báo ACTIVE (chờ xác nhận) của người dùng; đọc/chưa đọc chỉ thuộc hộp thông báo, không thuộc cảnh báo */
+  pendingCount: number
+  setPendingCount: (n: number) => void
 }
 
 export const useAlertStore = create<AlertState>((set) => ({
-  unreadCount:  0,
-  latestAlert:  null,
-  incrementUnread: () => set(s => ({ unreadCount: s.unreadCount + 1 })),
-  setLatestAlert:  (alert) => set({ latestAlert: alert }),
-  resetUnread:     () => set({ unreadCount: 0 }),
-  setUnreadCount:  (n) => set({ unreadCount: n }),
+  pendingCount: 0,
+  setPendingCount: (n) => set({ pendingCount: n }),
 }))

@@ -154,12 +154,13 @@ export function useHousesBirdCountBuckets(houseIds: string[]) {
   })
 }
 
-// VISION-FR-012 — số đếm hôm nay, cộng các nhà yến
+// VISION-FR-012 — số đếm hôm nay, cộng các nhà yến; làm mới 30 giây/lần, bằng nhịp AI node gửi số đếm phiên (VISION-FR-006)
 export function useHousesBirdCountCurrent(houseIds: string[]) {
   return useQueries({
     queries: houseIds.map(houseId => ({
       queryKey: ['analytics', 'bird-count-current', houseId],
       queryFn: () => analyticsApi.houseBirdCountCurrent(houseId).then(response => response.data.data),
+      refetchInterval: 30_000,
     })),
     combine: results => {
       const list = results.flatMap(result => (result.data ? [result.data] : []))

@@ -59,11 +59,13 @@ export function useDeviceStatusEvents(
 }
 
 /** useSystemNodeStatus – OPS-NFR-004, Admin xem nhanh trạng thái mọi node toàn hệ thống */
-export function useSystemNodeStatus() {
+// FARM-FR-009 — mọi thiết bị kèm farm, nhà, khu vực; chỉ Admin gọi được (enabled = false với role khác)
+export function useSystemNodeStatus(enabled = true) {
   return useQuery({
     queryKey: ['system-node-status'],
     queryFn: () => deviceApi.getSystemStatus().then(r => r.data.data),
     refetchInterval: 30_000, // trang "xem nhanh" — tự làm mới thay vì bắt người xem F5
+    enabled,
   })
 }
 

@@ -40,14 +40,14 @@ export type SystemDefaultThresholdsInput = Thresholds & { source: string }
 
 /**
  * SYSTEM-FR-003 — đúng shape `GET /system/health-overview`: chỉ đếm theo trạng
- * thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; `users.byRole` có thể có khoá 'NONE' (buyer không mang role).
+ * thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; `inactive` = tài khoản bị khoá hoặc chờ xoá, `deleted` = đã xoá (SM-14).
  */
 export interface SystemHealthSummary {
   farms: { total: number }
   zones: { total: number }
   devices: SystemNodeStatus['summary']
   users: {
-    total: number; active: number; inactive: number
-    byRole: Partial<Record<Role | 'NONE', { active: number; inactive: number }>>
+    total: number; active: number; inactive: number; deleted: number
+    byRole: Partial<Record<Role, { active: number; inactive: number; deleted: number }>>
   }
 }
