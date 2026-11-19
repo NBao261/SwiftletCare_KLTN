@@ -412,6 +412,7 @@ Hai cách chốt:
 1. Thêm dòng **G-28** vào `project-tracking.md` §6, gồm W-01…W-13, B-01…B-06 và kết quả của D-04, người làm Bảo, hạn theo iteration. Khi xong từng việc thì cập nhật dòng này. Thêm một dòng vào §7 Change Log.
 2. Mỗi PR của B-xx sửa `api-spec.yaml`. Nếu thêm model hay trường thì chạy `npm run db:script`.
 3. Trong `report5/tc.py`, đổi nguồn test của các case liên quan (AUTH-FR-012, EXPERT-FR-007, 008, FARM-FR-008) sang test thật khi viết xong.
+   *(Đã làm 19/11/2026: TC-F14-01 (EXPERT-FR-008) và TC-F16-02 (EXPERT-FR-007) thêm test của #187, #189. FARM-FR-008: thêm chuyển trạng thái khôi phục thiết bị của SRS §6.6 vào bảng ST (Report 5 1.5.1, Design Brief 2.1: 75 chuyển trạng thái, 171 case cam kết), vì SRS có chuyển này từ 4.2.1 mà Report 5 chưa kiểm. AUTH-FR-012 thuộc luồng phụ SF-03 nên không vào danh sách cam kết, giống HarvestBatch/HarvestCycle ở Report 5 1.5.0; test của nó vẫn chạy trong Jest (#188).)*
 
 ### D-04 — Kết luận mùa vụ khi farm chưa có chuyên gia (P1) — đã chốt Cách A, đã sửa 19/11/2026
 

@@ -77,9 +77,9 @@ Results count only when they come from a CI run on the tag being reported (Repor
 
 | Item | Count |
 | --- | --- |
-| Committed test cases | 170 (Report 5 1.5.0, final scope) |
-| Automated, test written | 152 (89 %) in `report5/tc.py` on 18/11/2026, above the Defense 1.1 bar of 85; 84 at the tag `review-2`, 2 of them (TC-F17-02, TC-ST-14) merged after the tag by PR #124 |
-| Automated, to be written with its feature | 0 on 18/11/2026 (68 at the tag) |
+| Committed test cases | 171 (Report 5 1.5.1, final scope: the device restore transition added on 19/11/2026) |
+| Automated, test written | 153 (89 %) in `report5/tc.py` on 19/11/2026, above the Defense 1.1 bar of 86; 84 at the tag `review-2`, 2 of them (TC-F17-02, TC-ST-14) merged after the tag by PR #124 |
+| Automated, to be written with its feature | 0 on 19/11/2026 (68 at the tag) |
 | Mandatory requirements verified by a committed case | 97 of 139; the other 42 are only traced to their workflow's end-to-end test (Report 5, Section 4.5) |
 | Manual (staging, prototype, test house) | 18 |
 | Passed on the tag | 82 of the 82 written cases that existed at the tag (100 %); 88 not run on the tag (2 written after it, 68 to be written, 18 manual) |
@@ -136,7 +136,7 @@ Differences between Report 3 / Report 4 and the code. A pull request that closes
 
 | Date | Change |
 | --- | --- |
-| 19/11/2026 | D-01…D-03 of `todo-audit-1118.md` (Bảo, `docs/d01-audit-1118-docs`): gap G-28 added for the whole audit, with one pull request per group of items; Report 3 4.2.12 gives the audit log to the Administrator only (the Farm Owner reads the farm's decisions through EXPERT-FR-009); Report 4 2.2.16 lists the Farm Technician's web screens (Section 5.4); Report 5 sources of TC-F14-01 and TC-F16-02 add the tests of #187 and #189 |
+| 19/11/2026 | D-01…D-03 of `todo-audit-1118.md` (Bảo, `docs/d01-audit-1118-docs`): gap G-28 added for the whole audit, with one pull request per group of items; Report 3 4.2.12 gives the audit log to the Administrator only (the Farm Owner reads the farm's decisions through EXPERT-FR-009); Report 4 2.2.16 lists the Farm Technician's web screens (Section 5.4); Report 5 sources of TC-F14-01 and TC-F16-02 add the tests of #187 and #189; Report 5 1.5.1 and Design Brief 2.1 add the device restore transition of SRS Section 6.6 (FARM-FR-008), missing since SRS 4.2.1: 171 committed cases, 153 automated. AUTH-FR-012 stays outside the committed list, as the account flow SF-03 is supporting |
 | 19/11/2026 | D-04 of `todo-audit-1118.md` (Bảo, `fix/d04-season-conclusion-expert-only`): the season conclusion (EXPERT-FR-020) is written by the Domain Expert only, also on a farm without an expert, as BR-22 says no conclusion is written without one; the backend had let the Farm Owner write it there. Route, service, test and `api-spec.yaml` follow; no client wrote it as a Farm Owner. Part of G-28 |
 | 18/11/2026 | Leftovers of the 18/11 review (Bảo, `fix/review-1118-leftovers`): ANALYTICS-FR-013 outdoor weather beside the indoor readings (backend and web, G-11); the weekly zone report job removed, the web card reads the weekly house report; invented data removed from the web (saved event videos, sensor names, "sample data" and "Mock Fallback" notes); Report 5 sources of TC-F28-03, TC-ST 6.17 and 6.18 point to real tests (152 automated, 0 to write); G-10, G-16, G-19 rows brought up to date. No gap closed |
 | 18/11/2026 | SYSTEM-FR-004 on the web (Bảo for Nhi and Tuấn): "Giả lập" label on `/devices` of the Administrator, Farm Technician and Domain Expert and on `/ota` (table, side panel, confirmation), on the alert log, the alerts page, the relay-override history and the run hours (`simulated` added to `relay_usage` of `GET /analytics/control/performance`); every web screen showing a device marks it, mobile left |

@@ -286,6 +286,18 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     await post(`/devices/sensor-nodes/${nodeId}/restore`, ownerToken, { reason: 'lần 2' }).expect(409)
   })
 
+  it('thiết bị đã từng kết nối khôi phục về OFFLINE, ONLINE lại ở heartbeat kế tiếp (SRS §6.6)', async () => {
+    const { ownerToken, nodeId } = await installed()
+    // Đã từng gửi heartbeat, giờ mất kết nối
+    await SensorNode.updateOne({ _id: nodeId }, { status: 'OFFLINE', last_heartbeat: new Date(Date.now() - 3600_000) })
+    await post(`/devices/sensor-nodes/${nodeId}/decommission`, ownerToken, { reason: 'Bấm nhầm' }).expect(200)
+    await post(`/devices/sensor-nodes/${nodeId}/restore`, ownerToken, { reason: 'Gỡ nhầm thiết bị' }).expect(200)
+
+    expect((await SensorNode.findById(nodeId))!.status).toBe('OFFLINE')
+    await recordHeartbeat({ deviceId: 'node_100' } as never)
+    expect((await SensorNode.findById(nodeId))!.status).toBe('ONLINE')
+  })
+
   it('khôi phục phát đúng trạng thái đã lưu qua socket (PENDING, không phải OFFLINE)', async () => {
     const { ownerToken, nodeId } = await installed()
     await post(`/devices/sensor-nodes/${nodeId}/decommission`, ownerToken, { reason: 'Bấm nhầm' }).expect(200)
