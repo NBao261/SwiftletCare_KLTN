@@ -168,13 +168,16 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
  * theo toàn bộ zone user được quyền xem, KHÔNG trả về mọi thiết bị trong hệ
  * thống (trước đây bỏ sót — Farm Owner farm A đọc được thiết bị farm B).
  */
-export async function listSensorNodes(zoneId: string | undefined, user: CurrentUser): Promise<ISensorNode[]> {
+export async function listSensorNodes(zoneId: string | undefined, user: CurrentUser, removed?: 'recent'): Promise<ISensorNode[]> {
+  let scope: Record<string, unknown>
   if (zoneId) {
     await assertZoneAccess(zoneId, user, 'device')
-    return SensorNode.find({ zone_id: zoneId, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+    scope = { zone_id: zoneId }
+  } else {
+    scope = { zone_id: { $in: await listAccessibleZoneIds(user, 'device') } }
   }
-  const accessibleZoneIds = await listAccessibleZoneIds(user, 'device')
-  return SensorNode.find({ zone_id: { $in: accessibleZoneIds }, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
+  if (removed === 'recent') return listRestorableDevices('sensor', scope, user) as unknown as ISensorNode[]
+  return SensorNode.find({ ...scope, ...IN_SERVICE }).sort({ registered_at: -1 }).lean() as unknown as ISensorNode[]
 }
 
 /** Thiết bị đã gỡ vẫn xem được (lịch sử) nhưng không còn nhận lệnh */
@@ -416,13 +419,18 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterCamer
 const CAMERA_PUBLIC_FIELDS = '-rtsp_url'
 
 /** Camera của 1 House (`houseId`, hoặc `zoneId` cũ → House chứa Zone), không truyền thì mọi House user được xem */
-export async function listCameraNodes(params: { houseId?: string; zoneId?: string }, user: CurrentUser) {
+export async function listCameraNodes(
+  params: { houseId?: string; zoneId?: string; removed?: 'recent' }, user: CurrentUser,
+): Promise<Array<Omit<ICameraNode, 'rtsp_url'>>> {
+  let scope: Record<string, unknown>
   if (params.houseId || params.zoneId) {
     const { house } = await assertHouseAccessByParams(params, user, 'device')
-    return CameraNode.find({ house_id: house._id, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
+    scope = { house_id: house._id }
+  } else {
+    scope = { house_id: { $in: await listAccessibleHouseIds(user, 'device') } }
   }
-  const accessibleHouseIds = await listAccessibleHouseIds(user, 'device')
-  return CameraNode.find({ house_id: { $in: accessibleHouseIds }, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean()
+  if (params.removed === 'recent') return listRestorableDevices('camera', scope, user) as unknown as ICameraNode[]
+  return CameraNode.find({ ...scope, ...IN_SERVICE }).select(CAMERA_PUBLIC_FIELDS).sort({ registered_at: -1 }).lean() as unknown as ICameraNode[]
 }
 
 /** FARM-FR-005 — gọi từ mqtt/handlers/heartbeat.handler.ts. */
@@ -753,6 +761,28 @@ export async function decommissionDevice(
 /** Cửa sổ sửa sai cho thao tác gỡ nhầm — quá hạn thì đăng ký lại như thiết bị mới */
 export const RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000
 const RETIRED_SUFFIX = '#retired-'
+
+/**
+ * B-06, FARM-FR-008 — thiết bị đã gỡ mà `restoreDevice` còn khôi phục được, cùng điều kiện với nó: gỡ chưa quá
+ * RESTORE_WINDOW_MS, `device_id` chưa bị đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ. Mỗi dòng kèm
+ * `restorable_until`. Chỉ Farm Owner, người khôi phục (route restore là FARM_OWNER).
+ */
+async function listRestorableDevices(kind: DeviceKind, scope: Record<string, unknown>, user: CurrentUser) {
+  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner xem và khôi phục thiết bị đã gỡ')
+  const Model = DEVICE_MODELS[kind]
+  const removed = await Model.find({
+    ...scope,
+    decommissioned_at: { $gte: new Date(Date.now() - RESTORE_WINDOW_MS) },
+    device_id: { $not: new RegExp(RETIRED_SUFFIX) },
+  }).select(kind === 'camera' ? CAMERA_PUBLIC_FIELDS : '').sort({ decommissioned_at: -1 }).lean()
+  const replacementIds = removed.map(node => node.replaced_by).filter(Boolean)
+  const liveReplacements = new Set(
+    (await Model.find({ _id: { $in: replacementIds }, ...IN_SERVICE }).select('_id').lean()).map(node => String(node._id)),
+  )
+  return removed
+    .filter(node => !node.replaced_by || !liveReplacements.has(String(node.replaced_by)))
+    .map(node => ({ ...node, restorable_until: new Date((node.decommissioned_at as Date).getTime() + RESTORE_WINDOW_MS) }))
+}
 
 /**
  * FARM-FR-008 — khôi phục thiết bị vừa bị gỡ nhầm. Chỉ trong 24 giờ và chỉ khi

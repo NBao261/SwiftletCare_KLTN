@@ -2390,6 +2390,13 @@ paths:
           in: query
           schema: { type: string }
           description: Lọc theo Zone
+        - name: removed
+          in: query
+          schema: { type: string, enum: [recent] }
+          description: >-
+            Chỉ Farm Owner (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
+            (FARM-FR-008) — gỡ trong 24 giờ, `device_id` chưa đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ;
+            mỗi dòng kèm `restorable_until` (date-time). Cùng điều kiện với `POST …/{id}/restore`.
       responses:
         "200":
           {
@@ -2411,7 +2418,21 @@ paths:
                                       type: array,
                                       items:
                                         {
-                                          $ref: "#/components/schemas/SensorNode",
+                                          allOf:
+                                            [
+                                              { $ref: "#/components/schemas/SensorNode" },
+                                              {
+                                                properties:
+                                                  {
+                                                    restorable_until:
+                                                      {
+                                                        type: string,
+                                                        format: date-time,
+                                                        description: "Chỉ có khi removed=recent: hạn chót khôi phục (gỡ lúc + 24 giờ)",
+                                                      },
+                                                  },
+                                              },
+                                            ],
                                         },
                                     },
                                 },
@@ -2421,6 +2442,10 @@ paths:
                   },
               },
           }
+        "403":
+          description: "removed=recent khi không phải Farm Owner"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}:
     get:
@@ -2922,6 +2947,13 @@ paths:
           in: query
           deprecated: true
           schema: { type: string }
+        - name: removed
+          in: query
+          schema: { type: string, enum: [recent] }
+          description: >-
+            Chỉ Farm Owner (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
+            (FARM-FR-008) — gỡ trong 24 giờ, `device_id` chưa đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ;
+            mỗi dòng kèm `restorable_until` (date-time). Cùng điều kiện với `POST …/{id}/restore`.
       responses:
         "200":
           {
@@ -2943,7 +2975,21 @@ paths:
                                       type: array,
                                       items:
                                         {
-                                          $ref: "#/components/schemas/CameraNode",
+                                          allOf:
+                                            [
+                                              { $ref: "#/components/schemas/CameraNode" },
+                                              {
+                                                properties:
+                                                  {
+                                                    restorable_until:
+                                                      {
+                                                        type: string,
+                                                        format: date-time,
+                                                        description: "Chỉ có khi removed=recent: hạn chót khôi phục (gỡ lúc + 24 giờ)",
+                                                      },
+                                                  },
+                                              },
+                                            ],
                                         },
                                     },
                                 },
@@ -2953,6 +2999,10 @@ paths:
                   },
               },
           }
+        "403":
+          description: "removed=recent khi không phải Farm Owner"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /devices/sensor-nodes/{id}/decommission:
     post:

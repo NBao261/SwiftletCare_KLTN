@@ -20,7 +20,10 @@ const trackParams = [param('id').isMongoId(), param('trackId').isMongoId()]
 // MF-10 — Farm Owner tự setup thiết bị ở farm của mình (service kiểm farm); Farm Technician, Admin
 // không (FARM-FR-003, Report 3 §2.4). Phải kèm secretKey in trên nhãn thiết bị
 router.post('/sensor-nodes/register',        requireRole('FARM_OWNER'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
-router.get ('/sensor-nodes',                 deviceController.listSensorNodes)
+// `removed=recent` (Farm Owner): thiết bị gỡ trong 24 giờ còn khôi phục được (FARM-FR-008)
+router.get ('/sensor-nodes',
+  query('zoneId').optional().isString().isMongoId(), query('removed').optional().isString().isIn(['recent']), validate,
+  deviceController.listSensorNodes)
 router.get ('/sensor-nodes/:id',             param('id').isMongoId(), validate, deviceController.getSensorNode)
 // Ngưỡng: Farm Owner và Domain Expert (ENV-FR-006); Technician, Admin không (Report 3 §2.4)
 router.put ('/sensor-nodes/:id/thresholds',  requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('id').isMongoId(), validate, deviceController.updateThresholds)
@@ -98,7 +101,8 @@ router.post('/camera-nodes/register',        requireRole('FARM_OWNER'), body('de
   body('zone_id').optional().isString().isMongoId(),
   body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)
 router.get ('/camera-nodes',
-  query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(), validate,
+  query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(),
+  query('removed').optional().isString().isIn(['recent']), validate,
   deviceController.listCameraNodes)
 // VISION-FR-018, SRS §4.4 — vòng đếm do Domain Expert vẽ, Farm Technician ở nhà được giao (Farm Owner chỉ khi
 // farm chưa có chuyên gia, BR-22, service kiểm); 3 đỉnh là tối thiểu của một vòng kín, 12 là giới hạn kỹ thuật chống nhập nhầm

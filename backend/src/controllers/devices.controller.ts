@@ -13,7 +13,9 @@ export const registerSensorNode = asyncHandler(async (req: Request, res: Respons
 
 /** GET /devices/sensor-nodes?zoneId= */
 export const listSensorNodes = asyncHandler(async (req: Request, res: Response) => {
-  const nodes = await deviceService.listSensorNodes(req.query.zoneId as string | undefined, req.user)
+  const nodes = await deviceService.listSensorNodes(
+    req.query.zoneId as string | undefined, req.user, req.query.removed as 'recent' | undefined,
+  )
   res.json({ success: true, data: nodes })
 })
 
@@ -79,6 +81,7 @@ export const listCameraNodes = asyncHandler(async (req: Request, res: Response) 
   const nodes = await deviceService.listCameraNodes({
     houseId: req.query.houseId as string | undefined,
     zoneId:  req.query.zoneId as string | undefined,   // cách gửi cũ: quy ra House chứa Zone
+    removed: req.query.removed as 'recent' | undefined,
   }, req.user)
   res.json({ success: true, data: nodes })
 })
