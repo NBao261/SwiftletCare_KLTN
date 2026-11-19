@@ -25,8 +25,7 @@ export const ENDPOINTS = {
   // Mời và gỡ thành viên farm — chỉ Primary Owner (AUTH-FR-005, EXPERT-FR-001)
   FARM_MEMBERS: (farmId: string) => `/farms/${farmId}/members`,
   FARM_MEMBER: (farmId: string, userId: string) => `/farms/${farmId}/members/${userId}`,
-  // Lời mời đang chờ của farm (AUTH-FR-010) — CHƯA có trong api-spec lẫn backend, là đường đề xuất cho Kiệt (todo-review2
-  // G-16); invitation.api.ts vẫn trả dữ liệu mẫu cho tới khi route có trong spec
+  // Lời mời của farm (AUTH-FR-010): chỉ Primary Owner, lọc theo status (api-spec GET /farms/{id}/invitations)
   FARM_INVITATIONS: (farmId: string) => `/farms/${farmId}/invitations`,
   // Tổng quan farm (ANALYTICS-FR-015): Farm Owner, Domain Expert
   FARM_OVERVIEW: (farmId: string) => `/farms/${farmId}/overview`,

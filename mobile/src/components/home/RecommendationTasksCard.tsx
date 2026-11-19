@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
-import { useRecommendations } from '@/hooks/recommendation/useRecommendations'
+import { useOpenRecommendationCount } from '@/hooks/recommendation/useOpenRecommendationCount'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { t } from '@/utils/i18n.utils'
 
@@ -18,7 +18,8 @@ const CARD_HEIGHT = COUNT_BOX_SIZE + Spacing.lg * 2
 // danh sách. Backend không gửi thông báo khi có khuyến nghị mới nên khối này là lối vào chính. Hết việc vẫn giữ khối, số là 0
 export function RecommendationTasksCard() {
   const palette = usePalette()
-  const openQuery = useRecommendations('OPEN')
+  // Chỉ đọc meta.total mỗi farm, không tải danh sách
+  const openQuery = useOpenRecommendationCount()
 
   if (openQuery.isLoading) return <Skeleton width="100%" height={CARD_HEIGHT} />
   if (openQuery.isError) {
@@ -32,7 +33,7 @@ export function RecommendationTasksCard() {
     )
   }
 
-  const count = openQuery.recommendations.length
+  const count = openQuery.count
   const summary =
     count === 0 ? t('Không có khuyến nghị nào chờ quyết định') : t('{n} khuyến nghị chờ bạn chấp nhận hoặc từ chối', { n: count })
 

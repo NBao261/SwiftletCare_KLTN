@@ -4,15 +4,19 @@ import { Redirect, router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { ReasonSheet } from '@/components/common/ReasonSheet'
+import { HeaderPicker } from '@/components/farm/HeaderPicker'
+import { OptionSheet } from '@/components/farm/OptionSheet'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { RecommendationRow } from '@/components/recommendation/RecommendationRow'
 import { RecommendationSheet } from '@/components/recommendation/RecommendationSheet'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
+import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { useGoBackOrHome } from '@/hooks/navigation/useGoBackOrHome'
@@ -28,14 +32,15 @@ import { canPerform } from '@/utils/permission.utils'
 import { describeRecommendationAction, getRecommendationAction } from '@/utils/recommendation.utils'
 import { t } from '@/utils/i18n.utils'
 
-// Bộ lọc: chờ quyết định, đã quyết định (chấp nhận, từ chối, đã đo hiệu quả), hết hạn
-type RecommendationFilter = 'open' | 'decided' | 'expired'
-const FILTER_STATUSES: Record<RecommendationFilter, RecommendationStatus | undefined> = {
+// Bộ lọc: mỗi chip một trạng thái, vì GET /recommendations nhận một status và danh sách phân trang ở server
+type RecommendationFilter = 'open' | 'accepted' | 'measured' | 'rejected' | 'expired'
+const FILTER_STATUSES: Record<RecommendationFilter, RecommendationStatus> = {
   open: 'OPEN',
-  decided: undefined,
+  accepted: 'ACCEPTED',
+  measured: 'MEASURED',
+  rejected: 'REJECTED',
   expired: 'EXPIRED',
 }
-const DECIDED_STATUSES: ReadonlySet<RecommendationStatus> = new Set(['ACCEPTED', 'REJECTED', 'MEASURED'])
 const SKELETON_ROWS = 3
 const ROW_SKELETON_HEIGHT = 72
 
@@ -43,13 +48,14 @@ const ROW_SKELETON_HEIGHT = 72
 function getDecisionErrorMessage(error: unknown): string {
   return getSettingsErrorMessage(error, {
     409: t('Khuyến nghị không còn chờ quyết định (đã quyết định hoặc đã hết hạn)'),
-    400: t('Nhà chưa có khu vực nào để đổi tham số'),
+    400: t('Nhà chưa có khu vực, hoặc giá trị mới không hợp với ngưỡng hiện tại của một khu vực'),
   })
 }
 
 /** Khuyến nghị của các nhà (MF-08, EXPERT-FR-017…019): luật của chuyên gia thoả trên dữ liệu của nhà thì mở một khuyến nghị; chủ
- * trại chấp nhận (mở phiếu công việc hoặc đổi tham số mọi khu vực của nhà) hoặc từ chối kèm lý do; kỹ thuật viên, chuyên gia chỉ xem.
- * Khuyến nghị đang mở hết hạn sau 7 ngày. Màn riêng ở stack gốc, mở từ khối "Khuyến nghị" ở Trang chủ */
+ * trại chấp nhận (mở phiếu công việc hoặc đổi tham số mọi khu vực của nhà) hoặc từ chối kèm lý do; chuyên gia chỉ xem.
+ * Khuyến nghị đang mở hết hạn sau 7 ngày. Xem theo một farm (thuộc từ 2 farm thì đổi ở tiêu đề), tải thêm theo trang. Màn riêng ở
+ * stack gốc, mở từ khối "Khuyến nghị" ở Trang chủ */
 export default function RecommendationsScreen() {
   const palette = usePalette()
   const language = useLanguage()
@@ -65,14 +71,15 @@ export default function RecommendationsScreen() {
   const [rejectTarget, setRejectTarget] = useState<{ recommendation: Recommendation; key: number } | null>(null)
   const [isRefreshing, setRefreshing] = useState(false)
   const { houseById } = useZoneDirectory()
-  const recommendationsQuery = useRecommendations(FILTER_STATUSES[filter], canView)
+  // Farm đang xem: chọn trên màn → farm đang xem ở tab Trang trại → farm đầu tiên
+  const [pickedFarmId, setPickedFarmId] = useState<string | undefined>(undefined)
+  const [isFarmSheetOpen, setFarmSheetOpen] = useState(false)
+  const farmQuery = useCurrentFarm(pickedFarmId)
+  const farm = farmQuery.farm
+  const recommendationsQuery = useRecommendations(farm?._id ?? '', FILTER_STATUSES[filter], canView)
   const acceptRecommendation = useAcceptRecommendation()
   const rejectRecommendation = useRejectRecommendation()
-  // "Đã quyết định" tải mọi trạng thái rồi giữ chấp nhận, từ chối, đã đo
-  const recommendations =
-    filter === 'decided'
-      ? recommendationsQuery.recommendations.filter(item => DECIDED_STATUSES.has(item.status))
-      : recommendationsQuery.recommendations
+  const recommendations = recommendationsQuery.data?.pages.flatMap(page => page.data) ?? []
 
   if (!canView) return <Redirect href="/(tabs)/home" />
 
@@ -117,6 +124,8 @@ export default function RecommendationsScreen() {
   // Từ chối: đóng sheet chi tiết rồi mở sheet nhập lý do (không chồng hai bảng lên nhau)
   const openReject = () => {
     if (!selected) return
+    // Bỏ lỗi của lần từ chối trước để sheet mới không hiện dòng lỗi cũ
+    rejectRecommendation.reset()
     setRejectTarget(current => ({ recommendation: selected, key: (current?.key ?? 0) + 1 }))
     setSelected(null)
   }
@@ -135,7 +144,7 @@ export default function RecommendationsScreen() {
   }
 
   const renderList = () => {
-    if (recommendationsQuery.isLoading) {
+    if (recommendationsQuery.isLoading || farmQuery.isLoading) {
       return Array.from({ length: SKELETON_ROWS }, (_, index) => (
         <Skeleton
           key={index}
@@ -147,7 +156,7 @@ export default function RecommendationsScreen() {
         />
       ))
     }
-    if (recommendationsQuery.isError) {
+    if (recommendationsQuery.isError || farmQuery.isError) {
       return (
         <EmptyState
           message={t('Không tải được khuyến nghị')}
@@ -180,7 +189,21 @@ export default function RecommendationsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <View key={language} style={styles.screen}>
-        <AppHeader title={t('Khuyến nghị')} onBack={goBack} />
+        {/* Thuộc từ 2 farm thì tiêu đề kèm tên farm và bấm để đổi farm */}
+        {farmQuery.hasMultipleFarms && farm ? (
+          <AppHeader
+            onBack={goBack}
+            leading={
+              <HeaderPicker
+                title={`${t('Khuyến nghị')} · ${farm.name}`}
+                onPress={() => setFarmSheetOpen(true)}
+                accessibilityLabel={t('{farm}, bấm để đổi trang trại', { farm: farm.name })}
+              />
+            }
+          />
+        ) : (
+          <AppHeader title={t('Khuyến nghị')} onBack={goBack} />
+        )}
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}
@@ -196,7 +219,9 @@ export default function RecommendationsScreen() {
           <ChoiceChips
             options={[
               { id: 'open', label: t('Chờ quyết định') },
-              { id: 'decided', label: t('Đã quyết định') },
+              { id: 'accepted', label: t('Đã chấp nhận') },
+              { id: 'measured', label: t('Đã đo hiệu quả') },
+              { id: 'rejected', label: t('Đã từ chối') },
               { id: 'expired', label: t('Hết hạn') },
             ]}
             selectedId={filter}
@@ -204,6 +229,15 @@ export default function RecommendationsScreen() {
             accessibilityLabel={t('Lọc khuyến nghị')}
           />
           <Card>{renderList()}</Card>
+          {recommendationsQuery.hasNextPage && (
+            <Button
+              variant="link"
+              label={t('Xem thêm')}
+              onPress={() => recommendationsQuery.fetchNextPage()}
+              loading={recommendationsQuery.isFetchingNextPage}
+              style={styles.more}
+            />
+          )}
           <Text variant="small" color={palette.textSecondary}>
             {t(
               'Khuyến nghị mở khi luật của chuyên gia thoả trên dữ liệu của nhà. Chấp nhận thì hệ thống mở phiếu công việc hoặc đổi tham số mọi khu vực của nhà, và đo hiệu quả sau 7 ngày. Khuyến nghị chờ quá 7 ngày thì hết hạn.',
@@ -224,6 +258,17 @@ export default function RecommendationsScreen() {
           router.push({ pathname: '/work-orders/[workOrderId]', params: { workOrderId } })
         }}
         onClose={() => setSelected(null)}
+      />
+      <OptionSheet
+        visible={isFarmSheetOpen}
+        title={t('Chọn trang trại')}
+        options={farmQuery.farms.map(item => ({ id: item._id, label: item.name }))}
+        selectedId={farm?._id}
+        onSelect={farmId => {
+          setFarmSheetOpen(false)
+          setPickedFarmId(farmId)
+        }}
+        onClose={() => setFarmSheetOpen(false)}
       />
       {rejectTarget && (
         <ReasonSheet
@@ -247,4 +292,5 @@ export default function RecommendationsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, gap: Spacing.md },
+  more: { alignSelf: 'center' },
 })

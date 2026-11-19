@@ -23,8 +23,8 @@ import {
 import { t } from '@/utils/i18n.utils'
 
 const WEATHER_METRICS: readonly WeatherMetric[] = ['temperature', 'humidity', 'rain']
-// Luật mới mặc định: bù 30 phút khi trời nóng
-const DEFAULT_DURATION_MIN = 30
+// Luật mới mặc định bù 60 phút, cùng giá trị với form thêm luật trên web (WeatherRuleAddForm)
+const DEFAULT_DURATION_MIN = 60
 
 interface WeatherRuleSheetProps {
   // null: thêm luật mới

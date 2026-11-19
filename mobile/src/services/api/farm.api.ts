@@ -93,7 +93,7 @@ export const farmApi = {
   updateWeatherRules: (houseId: string, rules: WeatherRule[]) =>
     apiClient.put<ApiResponse<WeatherRulesView>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId), { rules }),
 
-  // Lịch đếm chim của nhà (VISION-FR-019): lưu là thay cả lịch, áp từ hôm nay
+  // Lịch đếm chim của nhà (VISION-FR-019): lưu là thay cả lịch, áp từ ngày hôm sau (giờ VN)
   getCountingSchedule: (houseId: string) =>
     apiClient.get<ApiResponse<CountingScheduleView>>(ENDPOINTS.HOUSE_COUNTING_SCHEDULE(houseId)),
   updateCountingSchedule: (houseId: string, schedule: CountingSchedule) =>

@@ -104,7 +104,9 @@ export function HouseStatusCard({ data, width, onPress, pin }: HouseStatusCardPr
   const { house, farmName, status, activeAlertCount } = data
   const overviewByHouseId = useFarmOverviews()
   const pendingDays = usePendingHealthDays()
-  const dayDisplay = getHouseDayDisplay(overviewByHouseId.get(house._id), pendingDays.data)
+  // Danh sách ngày chờ chấm chưa về hoặc lỗi thì chưa biết có phải che không: không hiện trạng thái ngày (BR-31)
+  const isPendingKnown = !pendingDays.isLoading && !pendingDays.isError
+  const dayDisplay = getHouseDayDisplay(overviewByHouseId.get(house._id), isPendingKnown ? pendingDays.data : null)
   const isAttracting = house.stage === 'ATTRACTING'
   const alertText = t('{count} cảnh báo', { count: activeAlertCount })
   const dayText = dayDisplay ? t('Hôm nay: {status}', { status: getDayDisplayText(dayDisplay) }) : null

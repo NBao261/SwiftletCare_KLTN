@@ -3,7 +3,6 @@ import { NumberTuningSection } from '@/components/farm/settings/NumberTuningSect
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
-import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useHealthLevels } from '@/hooks/farm/useHealthLevels'
 import { useUpdateHealthLevels } from '@/hooks/farm/useUpdateHealthLevels'
 import { useAuthStore } from '@/stores/authStore'
@@ -24,15 +23,16 @@ interface HealthLevelsSectionProps {
 }
 
 // Mục "Mức chỉ số sức khỏe" của nhà (BR-28, EXPERT-FR-022): mỗi chỉ số có mức "nhẹ" và "rõ" mà đánh giá ngày dùng. Chuyên gia
-// sửa khi thấy nhiều ngày lệch; farm chưa có chuyên gia thì chủ trại sửa thay (BR-22). Kỹ thuật viên không thấy mục này (backend 403)
+// sửa khi thấy nhiều ngày lệch; farm chưa có chuyên gia còn hoạt động thì chủ trại sửa thay (BR-22). Ai sửa được theo cờ can_edit
+// của backend (api-spec: client dùng cờ này, không tự đoán từ thành viên — danh sách thành viên còn tính chuyên gia đã bị khoá).
+// Kỹ thuật viên không thấy mục này (backend 403)
 export function HealthLevelsSection({ house, editor, onSaved }: HealthLevelsSectionProps) {
   const user = useAuthStore(state => state.user)
-  const hasExpert = useFarmHasExpert(house.farm_id)
   const canView = canPerform(user, 'viewHealthLevels')
   const levelsQuery = useHealthLevels(house._id, canView)
   const updateHealthLevels = useUpdateHealthLevels()
-  // Sửa được khi bảng quyền cho phép và backend cũng xác nhận (can_edit)
-  const canEdit = canPerform(user, 'editHealthLevels', { farmHasExpert: hasExpert }) && Boolean(levelsQuery.data?.can_edit)
+  // Sửa được theo can_edit của backend, không AND với farmHasExpert của app
+  const canEdit = canView && Boolean(levelsQuery.data?.can_edit)
 
   if (!canView) return null
   if (levelsQuery.isLoading) return <Skeleton width="100%" height={SECTION_SKELETON_HEIGHT} />
@@ -53,7 +53,7 @@ export function HealthLevelsSection({ house, editor, onSaved }: HealthLevelsSect
       title={t('Mức chỉ số sức khỏe')}
       subtitle={t('Ngưỡng nhẹ và rõ mà đánh giá ngày dùng')}
       scopeLabel={t('Nhà')}
-      footerNote={canEdit ? t('Đổi mức thì trạng thái các ngày được tính lại') : undefined}
+      footerNote={canEdit ? t('Mức mới áp từ lần đánh giá tiếp theo') : undefined}
       keys={HEALTH_LEVEL_KEYS}
       rules={HEALTH_LEVEL_RULES}
       validate={validateHealthLevelsDraft}

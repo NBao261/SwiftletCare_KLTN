@@ -1,29 +1,21 @@
-import { useQueries } from '@tanstack/react-query'
-import { useFarms } from '@/hooks/farm/useFarms'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { recommendationApi } from '@/services/api/recommendation.api'
 import type { RecommendationStatus } from '@/types'
 
-// Mỗi luật mỗi nhà chỉ một khuyến nghị đang mở (BR-42) nên mỗi farm ít khuyến nghị; tải một trang lớn thay cho phân trang
-const PAGE_LIMIT = 100
+const PAGE_SIZE = 20
 
-// Khuyến nghị của mọi farm người dùng được xem theo một trạng thái (không truyền là mọi trạng thái), mới nhất trước
-export function useRecommendations(status: RecommendationStatus | undefined, enabled = true) {
-  const farmsQuery = useFarms()
-  const farmIds = (farmsQuery.data?.data ?? []).map(farm => farm._id)
-
-  return useQueries({
-    queries: farmIds.map(farmId => ({
-      queryKey: ['recommendations', farmId, status ?? 'all'],
-      queryFn: () => recommendationApi.list({ farmId, status, limit: PAGE_LIMIT }).then(response => response.data.data),
-      enabled,
-    })),
-    combine: results => ({
-      recommendations: results
-        .flatMap(result => result.data ?? [])
-        .sort((left, right) => right.raised_at.localeCompare(left.raised_at)),
-      isLoading: farmsQuery.isLoading || results.some(result => result.isLoading),
-      isError: farmsQuery.isError || results.some(result => result.isError),
-      refetch: () => Promise.all(results.map(result => result.refetch())),
-    }),
+// Khuyến nghị của một farm theo một trạng thái (GET /recommendations nhận một farmId và một status), mới mở trước, tải thêm
+// theo meta.total như các danh sách khác — không tải hết rồi lọc trên máy
+export function useRecommendations(farmId: string, status: RecommendationStatus, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: ['recommendations', 'list', farmId, status],
+    queryFn: ({ pageParam }) =>
+      recommendationApi.list({ farmId, status, page: pageParam, limit: PAGE_SIZE }).then(response => response.data),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) => {
+      const loaded = pages.reduce((total, page) => total + page.data.length, 0)
+      return loaded < (lastPage.meta?.total ?? 0) ? pages.length + 1 : undefined
+    },
+    enabled: enabled && Boolean(farmId),
   })
 }

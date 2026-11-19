@@ -178,8 +178,8 @@ describe('canPerform', () => {
     }
   })
 
-  it('khuyến nghị: mọi role trang trại xem, chỉ chủ trại chấp nhận hoặc từ chối (EXPERT-FR-018)', () => {
-    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'viewRecommendations')).toBe(true)
+  it('khuyến nghị: chủ trại, chuyên gia xem (kỹ thuật viên chỉ xem được theo nhà, chưa mở); chỉ chủ trại quyết (EXPERT-FR-018)', () => {
+    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'viewRecommendations')).toBe(false)
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewRecommendations')).toBe(true)
     expect(canPerform(buildUser('FARM_OWNER'), 'decideRecommendation')).toBe(true)
     expect(canPerform(buildUser('FARM_TECHNICIAN'), 'decideRecommendation')).toBe(false)

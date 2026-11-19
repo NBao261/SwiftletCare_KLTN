@@ -63,9 +63,9 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   controlRelay: ['FARM_OWNER', 'FARM_TECHNICIAN'],
   // Trả relay về tự động (ENV-FR-018): cùng quyền với điều khiển tay
   clearRelayOverride: ['FARM_OWNER', 'FARM_TECHNICIAN'],
-  // Khối "Việc chờ bạn" và "Báo cáo mới" ở Trang chủ: việc của chủ trại
+  // Khối "Đánh giá ngày" và "Báo cáo mới" ở Trang chủ: việc của chủ trại
   viewOwnerTasks: ['FARM_OWNER'],
-  // Ngày chờ mình chấm trong khối "Việc chờ bạn" (BR-31): người chấm — chủ trại và kỹ thuật viên của nhà được giao
+  // Ngày chờ mình chấm trong khối "Đánh giá ngày" (BR-31): người chấm — chủ trại và kỹ thuật viên của nhà được giao
   viewPendingRatings: ['FARM_OWNER', 'FARM_TECHNICIAN'],
   // Tạo trang trại, nhà yến (FARM-FR-001, 002): chỉ chủ trại — Admin không tạo farm thay chủ (Report 3 §8)
   createFarm: ['FARM_OWNER'],
@@ -126,8 +126,9 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   createWorkOrder: ['FARM_OWNER'],
   // Duyệt, mở lại, huỷ, giao lại phiếu (OPS-FR-004): chỉ chủ trại; kỹ thuật viên làm phiếu, chuyên gia chỉ đọc
   decideWorkOrder: ['FARM_OWNER'],
-  // Xem khuyến nghị của nhà (EXPERT-FR-017): chủ trại, chuyên gia, kỹ thuật viên nhà được giao (đọc)
-  viewRecommendations: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Xem khuyến nghị của farm (EXPERT-FR-017): chủ trại, chuyên gia. Kỹ thuật viên chỉ được gọi GET /recommendations theo houseId
+  // nhà được giao (theo farmId thì 403) nên chưa mở màn này cho kỹ thuật viên
+  viewRecommendations: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Chấp nhận hoặc từ chối khuyến nghị (EXPERT-FR-018): chỉ chủ trại
   decideRecommendation: ['FARM_OWNER'],
   // Luật bù thời tiết (ENV-FR-030), lịch đếm (VISION-FR-019), mức chỉ số sức khỏe và xem ngày lệch (EXPERT-FR-022): chuyên gia;
