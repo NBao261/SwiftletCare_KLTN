@@ -25,7 +25,6 @@ import {
   Sparkles,
 } from 'lucide-react'
 import {
-  useAlertsWithFilters,
   ALERT_TYPE_LABELS,
   SEVERITY_LABELS,
   SEVERITY_BADGE_CLASS,
@@ -68,14 +67,8 @@ export default function DomainExpertQueuePage() {
   const navigate = useNavigate()
   const { selectedFarmId, selectedFarmName, selectedHouseId, selectedZoneId, selectedZoneName } = useZoneStore()
 
-  // ── Dữ liệu cảnh báo suy luận AI — đồng bộ 100% với SCADA Banner ───────────
-  const { kpiCounts, isLoading: isLoadingAlerts } = useAlertsWithFilters(
-    selectedFarmId ?? undefined,
-    selectedZoneId ?? undefined,
-  )
-
-  // Cảnh báo suy luận chờ kết luận mới nhất (backend lọc và đếm, EXPERT-FR-003)
-  const { data: pendingAlerts } = useExpertPendingAlerts(
+  // Cảnh báo suy luận chờ kết luận: mới nhất và tổng số (meta.total), cùng nguồn với số trên thanh bên (EXPERT-FR-003)
+  const { data: pendingAlerts, isLoading: isLoadingAlerts } = useExpertPendingAlerts(
     selectedFarmId ?? undefined,
     selectedZoneId ?? undefined,
   )
@@ -112,7 +105,7 @@ export default function DomainExpertQueuePage() {
   })
 
   // ── Tính toán các chỉ số thực chất từ Backend ─────────────────────────────
-  const pendingCount = kpiCounts?.pending ?? pendingAlerts?.total ?? 0
+  const pendingCount = pendingAlerts?.total ?? 0
   const activeAlert = pendingAlerts?.records[0]
 
   const hasAiTuningSuggestion = Boolean(aiSuggestion?.suggestion)
