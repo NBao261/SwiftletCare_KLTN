@@ -12,6 +12,7 @@ import CountingRingEditor from '@/components/features/domain-expert/counting-rin
 import CountingRingHistory from '@/components/features/domain-expert/counting-ring/CountingRingHistory'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
+import { t } from '@/i18n'
 
 export default function DomainExpertCountingRingPage() {
   const { canDecide } = useExpertDecisionRights()
@@ -25,7 +26,7 @@ export default function DomainExpertCountingRingPage() {
   }, [selectedHouseId])
 
   if (!selectedHouseId) {
-    return <EmptyState icon={<Crosshair className="w-8 h-8" />} title="Chọn nhà yến ở thanh trên để vẽ vòng đếm" />
+    return <EmptyState icon={<Crosshair className="w-8 h-8" />} title={t('Chọn nhà yến ở thanh trên để vẽ vòng đếm')} />
   }
 
   const list = cameras ?? []
@@ -37,15 +38,15 @@ export default function DomainExpertCountingRingPage() {
     <div className="mx-auto w-full max-w-screen-xl space-y-5">
       <SectionCard
         icon={<Crosshair className="w-5 h-5" />}
-        title="Vòng đếm camera"
-        description="VISION-FR-018 — vẽ vòng khép kín 3–12 đỉnh quanh miệng lỗ ra vào trên khung hình trực tiếp; nút AI đếm chim qua vòng này."
+        title={t('Vòng đếm camera')}
+        description={t('Vẽ vòng khép kín 3–12 đỉnh quanh miệng lỗ ra vào trên khung hình trực tiếp; nút AI đếm chim qua vòng này.')}
         action={
           list.length > 1 ? (
             <SelectMenu
               value={activeCameraId}
               options={cameraOptions}
               onChange={setSelectedCameraId}
-              ariaLabel="Chọn camera"
+              ariaLabel={t('Chọn camera')}
               field
             />
           ) : undefined
@@ -56,12 +57,12 @@ export default function DomainExpertCountingRingPage() {
         {isError && !isLoading && (
           <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>Không thể tải danh sách camera. Vui lòng thử lại.</span>
+            <span>{t('Không thể tải danh sách camera. Vui lòng thử lại.')}</span>
           </div>
         )}
 
         {!isLoading && !isError && list.length === 0 && (
-          <EmptyState icon={<Crosshair className="w-7 h-7" />} title="Nhà yến này chưa gắn camera nào." />
+          <EmptyState icon={<Crosshair className="w-7 h-7" />} title={t('Nhà yến này chưa gắn camera nào.')} />
         )}
 
         {!isLoading && !isError && camera && (
@@ -76,7 +77,7 @@ export default function DomainExpertCountingRingPage() {
       </SectionCard>
 
       {!isLoading && !isError && camera && (camera.counting_ring_history?.length ?? 0) > 0 && (
-        <SectionCard icon={<History className="w-5 h-5" />} title="Lịch sử vòng đếm">
+        <SectionCard icon={<History className="w-5 h-5" />} title={t('Lịch sử vòng đếm')}>
           <CountingRingHistory camera={camera} />
         </SectionCard>
       )}

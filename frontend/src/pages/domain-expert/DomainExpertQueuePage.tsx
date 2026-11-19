@@ -3,7 +3,7 @@
  *
  * Layout: Bento Grid 2 cột bất đối xứng bám ngay dưới thanh SCADA.
  * - Không có Header tầng phụ — thông tin ngữ cảnh tập trung ở SCADA Banner.
- * - Cột trái (7/12): Hero Action Card — Thẩm định cảnh báo suy luận AI (Ưu tiên P0).
+ * - Cột trái (7/12): Hero Action Card — Thẩm định cảnh báo suy luận.
  * - Cột phải (5/12): Cụm 2 thẻ nhiệm vụ định kỳ (Cấu hình tham số & Báo cáo tuần).
  *
  * Tiêu chuẩn thiết kế (/design-taste-frontend & Anti-Slop):
@@ -41,26 +41,28 @@ import { useZoneStore } from '@/stores/zoneStore'
 import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ExpertQueueEmptyState from '@/components/features/domain-expert/ExpertQueueEmptyState'
+import { t } from '@/i18n'
+import { NO_VALUE } from '@/constants/display'
 
 /**
  * Chuẩn hóa tiêu đề cảnh báo — loại bỏ enum thô và khắc phục triệt để chuỗi lỗi "tại undefined"
  */
 function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZoneName?: string | null): string {
-  if (!alert) return 'Cảnh báo vi khí hậu'
-  let title = alert.title || ALERT_TYPE_LABELS[alert.type ?? ''] || alert.type || 'Cảnh báo vi khí hậu'
+  if (!alert) return t('Cảnh báo vi khí hậu')
+  let title = alert.title || ALERT_TYPE_LABELS[alert.type ?? ''] || alert.type || t('Cảnh báo vi khí hậu')
 
   // Khắc phục lỗi backend khi zone chưa được nạp
   if (title.includes('undefined')) {
-    const typeLabel = ALERT_TYPE_LABELS[alert.type ?? ''] || 'Cảnh báo thiết bị'
-    title = defaultZoneName ? `${typeLabel} tại ${defaultZoneName}` : typeLabel
+    const typeLabel = ALERT_TYPE_LABELS[alert.type ?? ''] || t('Cảnh báo thiết bị')
+    title = defaultZoneName ? t('{{type}} tại {{zone}}', { type: typeLabel, zone: defaultZoneName }) : typeLabel
   }
 
   // Chuyển đổi mã enum kỹ thuật sang thuật ngữ chuyên môn tiếng Việt
   return title
-    .replace('NOISE_ANOMALY', 'Tiếng ồn bất thường')
-    .replace('SENSOR_ANOMALY', 'Cảm biến bất thường')
-    .replace('FORECAST_BREACH', 'Dự báo vi phạm ngưỡng')
-    .replace('LOW_RETURN_RATE', 'Tỷ lệ chim về giảm')
+    .replace('NOISE_ANOMALY', ALERT_TYPE_LABELS.NOISE_ANOMALY)
+    .replace('SENSOR_ANOMALY', ALERT_TYPE_LABELS.SENSOR_ANOMALY)
+    .replace('FORECAST_BREACH', ALERT_TYPE_LABELS.FORECAST_BREACH)
+    .replace('LOW_RETURN_RATE', ALERT_TYPE_LABELS.LOW_RETURN_RATE)
 }
 
 export default function DomainExpertQueuePage() {
@@ -136,39 +138,39 @@ export default function DomainExpertQueuePage() {
             {hasAiTuningSuggestion ? (
               <span className="flex items-center gap-1 rounded-md border border-accent-600/40 bg-accent-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent-900">
                 <Sparkles className="h-3 w-3 text-accent-700" />
-                <span>Có gợi ý AI tối ưu</span>
+                <span>{t('Có gợi ý hệ số mờ')}</span>
               </span>
             ) : (
               <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
-                Cấu hình vận hành
+                {t('Cấu hình vận hành')}
               </span>
             )}
           </div>
 
           <div>
             <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
-              Cấu hình Ngưỡng & Hệ số mờ
+              {t('Cấu hình Ngưỡng & Hệ số mờ')}
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
-              Thiết lập ngưỡng an toàn và tinh chỉnh hệ số điều khiển mờ cho thiết bị.
+              {t('Thiết lập ngưỡng an toàn và tinh chỉnh hệ số điều khiển mờ cho thiết bị.')}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Ngưỡng an toàn
+              {t('Ngưỡng an toàn')}
             </span>
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Hệ số Fuzzy
+              {t('Hệ số mờ')}
             </span>
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Độ nhạy AI
+              {t('Tham số phát hiện')}
             </span>
           </div>
         </div>
 
         <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
-          <span>Vào cấu hình tham số</span>
+          <span>{t('Vào cấu hình tham số')}</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
       </Link>
@@ -185,36 +187,36 @@ export default function DomainExpertQueuePage() {
             </div>
             {totalPendingReviews > 0 ? (
               <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
-                Chờ duyệt ({totalPendingReviews})
+                {t('Chờ duyệt ({{n}})', { n: totalPendingReviews })}
               </span>
             ) : (
               <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
-                Đã đồng bộ
+                {t('Đã đồng bộ')}
               </span>
             )}
           </div>
 
           <div>
             <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
-              Duyệt Tham số & Đề xuất
+              {t('Duyệt Tham số & Đề xuất')}
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
-              Thẩm định thay đổi thông số từ Chủ trang trại và phê duyệt đề xuất hệ số mờ.
+              {t('Thẩm định thay đổi thông số từ Chủ trang trại và phê duyệt đề xuất hệ số mờ.')}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Ngưỡng chờ: <strong className="font-semibold text-charcoal">{pendingReviewsCount}</strong>
+              {t('Ngưỡng chờ:')} <strong className="font-semibold text-charcoal">{pendingReviewsCount}</strong>
             </span>
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Đề xuất: <strong className="font-semibold text-charcoal">{pendingProposalsCount}</strong>
+              {t('Đề xuất:')} <strong className="font-semibold text-charcoal">{pendingProposalsCount}</strong>
             </span>
           </div>
         </div>
 
         <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
-          <span>Mở danh sách phê duyệt</span>
+          <span>{t('Mở danh sách phê duyệt')}</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
       </Link>
@@ -231,43 +233,43 @@ export default function DomainExpertQueuePage() {
             </div>
             {pendingReports > 0 ? (
               <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
-                Cần ký duyệt ({pendingReports})
+                {t('Cần ký duyệt ({{n}})', { n: pendingReports })}
               </span>
             ) : disagreeingDaysCount > 0 ? (
               <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-orange-700">
-                Ngày lệch ({disagreeingDaysCount})
+                {t('Ngày lệch ({{n}})', { n: disagreeingDaysCount })}
               </span>
             ) : (
               <span className="rounded-md border border-accent-600/30 bg-accent-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent-900">
-                Đã cập nhật tuần này
+                {t('Đã cập nhật tuần này')}
               </span>
             )}
           </div>
 
           <div>
             <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
-              Báo cáo & Ngày đánh giá lệch
+              {t('Báo cáo & Ngày đánh giá lệch')}
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
-              Ban hành kết luận báo cáo sức khỏe và đối chiếu các ngày chấm thực địa lệch với hệ thống.
+              {t('Ban hành kết luận báo cáo sức khỏe và đối chiếu các ngày chấm thực địa lệch với hệ thống.')}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Chờ duyệt: <strong className="font-semibold text-charcoal">{pendingReports}</strong>
+              {t('Chờ duyệt:')} <strong className="font-semibold text-charcoal">{pendingReports}</strong>
             </span>
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Ngày lệch: <strong className="font-semibold text-charcoal">{disagreeingDaysCount}</strong>
+              {t('Ngày lệch:')} <strong className="font-semibold text-charcoal">{disagreeingDaysCount}</strong>
             </span>
             <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
-              Đã ban hành: <strong className="font-semibold text-charcoal">{publishedReports}</strong>
+              {t('Đã ban hành:')} <strong className="font-semibold text-charcoal">{publishedReports}</strong>
             </span>
           </div>
         </div>
 
         <div className="mt-3.5 flex items-center justify-between border-t border-warmGray/10 pt-2.5 text-xs font-semibold text-charcoal transition-colors group-hover:text-black sm:text-[13px]">
-          <span>{disagreeingDaysCount > 0 && pendingReports === 0 ? 'Xem ngày đánh giá lệch' : 'Xem báo cáo & ngày lệch'}</span>
+          <span>{disagreeingDaysCount > 0 && pendingReports === 0 ? t('Xem ngày đánh giá lệch') : t('Xem báo cáo & ngày lệch')}</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
       </Link>
@@ -287,22 +289,22 @@ export default function DomainExpertQueuePage() {
                 <div className="flex items-center justify-between border-b border-amber-200/70 pb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="rounded-md border border-amber-400 bg-amber-100 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-amber-900">
-                      Ưu tiên P0 · Suy luận AI
+                      {t('Cảnh báo suy luận')}
                     </span>
-                    <span className="text-[11px] font-medium text-warmGray">Cần thẩm định</span>
+                    <span className="text-[11px] font-medium text-warmGray">{t('Cần thẩm định')}</span>
                   </div>
                   <span className="rounded-full bg-amber-500 px-2.5 py-0.5 font-mono text-xs font-bold text-white shadow-xs">
-                    {pendingCount} chờ xử lý
+                    {t('{{n}} chờ xử lý', { n: pendingCount })}
                   </span>
                 </div>
 
                 {/* Tiêu đề nhiệm vụ */}
                 <div>
                   <h2 className="text-base font-bold text-charcoal sm:text-[18px]">
-                    Thẩm định cảnh báo suy luận AI
+                    {t('Thẩm định cảnh báo suy luận')}
                   </h2>
                   <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[13px]">
-                    Mô hình AI phát hiện vi khí hậu hoặc thiết bị bất thường — Chuyên gia xem bằng chứng viễn trắc để xác nhận hoặc bác bỏ.
+                    {t('Hệ thống suy luận vi khí hậu hoặc thiết bị bất thường từ dữ liệu đo — chuyên gia xem bằng chứng để xác nhận hoặc bác bỏ.')}
                   </p>
                 </div>
 
@@ -327,13 +329,13 @@ export default function DomainExpertQueuePage() {
                   </div>
 
                   <p className="line-clamp-2 text-xs leading-relaxed text-charcoal/90 sm:text-[13px]">
-                    {activeAlert?.message || 'Hệ thống ghi nhận dấu hiệu vi khí hậu bất thường — cần chuyên gia thẩm định.'}
+                    {activeAlert?.message || t('Hệ thống ghi nhận dấu hiệu vi khí hậu bất thường — cần chuyên gia thẩm định.')}
                   </p>
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-3.5 border-t border-warmGray/10 pt-2 text-[11px] text-warmGray sm:text-xs">
                     <div className="flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-warmGray/70" />
-                      <span className="font-medium">{selectedFarmName || 'Trang trại'} › {selectedZoneName || 'Tầng 1'}</span>
+                      <span className="font-medium">{selectedFarmName || NO_VALUE} › {selectedZoneName || NO_VALUE}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3 text-warmGray/70" />
@@ -345,7 +347,7 @@ export default function DomainExpertQueuePage() {
                               day: '2-digit',
                               month: '2-digit',
                             })
-                          : 'Gần đây'}
+                          : NO_VALUE}
                       </span>
                     </div>
                   </div>
@@ -359,7 +361,7 @@ export default function DomainExpertQueuePage() {
                   onClick={() => navigate('/domain-expert/alert-verdicts')}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-charcoal px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-black active:scale-[0.98] sm:w-auto sm:px-6 sm:text-[13px] whitespace-nowrap"
                 >
-                  <span>Vào thẩm định sự cố</span>
+                  <span>{t('Vào thẩm định sự cố')}</span>
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                 </button>
               </div>
@@ -379,10 +381,10 @@ export default function DomainExpertQueuePage() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between px-1">
               <h3 className="text-xs font-bold uppercase tracking-wider text-warmGray">
-                Nhiệm vụ chuyên môn thường trực
+                {t('Nhiệm vụ chuyên môn thường trực')}
               </h3>
               <span className="text-[11px] text-warmGray">
-                3 phân hệ quản lý
+                {t('3 phân hệ quản lý')}
               </span>
             </div>
             {renderActionCards('grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5')}

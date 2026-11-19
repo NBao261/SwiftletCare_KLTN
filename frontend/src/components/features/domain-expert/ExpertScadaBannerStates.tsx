@@ -1,4 +1,5 @@
 import { Info } from 'lucide-react'
+import { t } from '@/i18n'
 
 // ─── Sub-component: Skeleton loading state ────────────────────────────────────
 export function BannerSkeleton() {
@@ -27,15 +28,15 @@ export function BannerEmpty() {
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
         </span>
         <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-charcoal">
-          Giám Sát Vận Hành SCADA
+          {t('Giám Sát Vận Hành SCADA')}
         </span>
         <span className="text-warmGray/30">•</span>
-        <span className="text-xs font-semibold text-amber-700">Chế độ Chuyên gia</span>
+        <span className="text-xs font-semibold text-amber-700">{t('Chế độ Chuyên gia')}</span>
       </div>
       <div className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5">
         <Info size={13} className="shrink-0 text-amber-600" />
         <span className="text-xs text-amber-900 font-medium">
-          Chưa được phân công trang trại. Vui lòng liên hệ Chủ trang trại để được cấp quyền giám sát.
+          {t('Chưa được phân công trang trại. Vui lòng liên hệ Chủ trang trại để được cấp quyền giám sát.')}
         </span>
       </div>
     </div>

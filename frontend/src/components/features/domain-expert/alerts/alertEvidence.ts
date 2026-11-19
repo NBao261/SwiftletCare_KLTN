@@ -6,6 +6,7 @@
  */
 import type { AlertEvidence, BirdCountBucket, InferredAlertItem, TelemetrySample } from '@/types/expert.types'
 import { formatHM } from '@/lib/helpers'
+import { t } from '@/i18n'
 
 export interface EvidenceBarPoint {
   time: string
@@ -89,17 +90,17 @@ export function buildTelemetryEvidenceSource(
     const peakTime = safeFormatHM(peakSample?.timestamp ?? alert.created_at)
 
     return {
-      title: 'Nguồn 1: Cảm biến Âm thanh (Telemetry thực tế)',
-      badge1: `Số mẫu: ${validSamples.length}`,
-      badge2: `TB mẫu: ${avgSound} dB`,
-      highlight: `Đỉnh: ${maxSound} dB`,
+      title: t('Nguồn 1: cảm biến âm thanh (số đo thực tế)'),
+      badge1: t('Số mẫu: {{n}}', { n: validSamples.length }),
+      badge2: t('TB mẫu: {{value}} dB', { value: avgSound }),
+      highlight: t('Đỉnh: {{value}} dB', { value: maxSound }),
       unit: ' dB',
       domain: [bottomDomain, topDomain],
       ticks: generateTicks(bottomDomain, topDomain, 5),
       refY: avgSound,
-      refLabel: `TB: ${avgSound} dB`,
+      refLabel: t('TB: {{value}}', { value: `${avgSound} dB` }),
       data,
-      anomalyTag: `${peakTime} — ${maxSound} dB (đỉnh đo được trong khung giờ)`,
+      anomalyTag: `${peakTime} — ${maxSound} dB (${t('đỉnh đo được trong khung giờ')})`,
     }
   }
 
@@ -112,12 +113,12 @@ export function buildTelemetryEvidenceSource(
 
   let key: keyof TelemetrySample = 'humidity'
   let unit = ' %'
-  let titleMetric = 'Độ ẩm'
+  let titleMetric = t('Độ ẩm')
 
   if (isTemp) {
     key = 'temperature'
     unit = ' °C'
-    titleMetric = 'Nhiệt độ'
+    titleMetric = t('Nhiệt độ')
   } else if (isCo2) {
     key = 'co2_ppm'
     unit = ' ppm'
@@ -167,17 +168,17 @@ export function buildTelemetryEvidenceSource(
   })
 
   return {
-    title: `Nguồn 1: Cảm biến ${titleMetric} (Telemetry thực tế)`,
-    badge1: `Số mẫu: ${validSamples.length}`,
-    badge2: `Khoảng: ${minVal} – ${maxVal}${unit}`,
-    highlight: `Lệch đỉnh: ${peakVal}${unit}`,
+    title: t('Nguồn 1: cảm biến {{metric}} (số đo thực tế)', { metric: titleMetric.toLowerCase() }),
+    badge1: t('Số mẫu: {{n}}', { n: validSamples.length }),
+    badge2: t('Khoảng: {{value}}', { value: `${minVal} – ${maxVal}${unit}` }),
+    highlight: t('Lệch đỉnh: {{value}}', { value: `${peakVal}${unit}` }),
     unit,
     domain: [domainMin, domainMax],
     ticks: generateTicks(domainMin, domainMax, 5),
     refY: Math.round(avgVal * 10) / 10,
-    refLabel: `TB: ${(Math.round(avgVal * 10) / 10)}${unit}`,
+    refLabel: t('TB: {{value}}', { value: `${Math.round(avgVal * 10) / 10}${unit}` }),
     data,
-    anomalyTag: `${peakTime} — ${peakVal}${unit} (lệch ${maxDev.toFixed(1)}${unit} so với TB)`,
+    anomalyTag: `${peakTime} — ${peakVal}${unit} (${t('lệch {{value}} so với TB', { value: `${maxDev.toFixed(1)}${unit}` })})`,
   }
 }
 
@@ -218,17 +219,17 @@ export function buildBirdCountEvidenceSource(
   const closestTime = safeFormatHM(closestBucket.bucket_start)
 
   return {
-    title: 'Nguồn 2: Camera AI chim Ra/Vào (Buckets 5 phút)',
-    badge1: `Chim vào: ${totalEntry} con`,
-    badge2: `Chim ra: ${totalExit} con`,
-    highlight: `Tại mốc: ${closestBucket.entry_count} vào`,
-    unit: ' con',
+    title: t('Nguồn 2: số chim ra/vào mỗi 5 phút (nút AI)'),
+    badge1: t('Chim vào: {{n}} con', { n: totalEntry }),
+    badge2: t('Chim ra: {{n}} con', { n: totalExit }),
+    highlight: t('Tại mốc: {{n}} vào', { n: closestBucket.entry_count }),
+    unit: ` ${t('con')}`,
     domain: [0, domainMax],
     ticks: generateTicks(0, domainMax, 5),
     refY: Math.round(avgEntry),
-    refLabel: `TB: ${Math.round(avgEntry)}`,
+    refLabel: t('TB: {{value}}', { value: Math.round(avgEntry) }),
     data,
-    anomalyTag: `${closestTime} — ${closestBucket.entry_count} vào / ${closestBucket.exit_count} ra`,
+    anomalyTag: `${closestTime} — ${t('{{in}} vào / {{out}} ra', { in: closestBucket.entry_count, out: closestBucket.exit_count })}`,
     barColor: '#8BAF2A',
   }
 }
@@ -239,13 +240,13 @@ export function buildAlertEvidence(
 ): AlertEvidenceConfig {
   let windowLabel = ''
   if (evidence?.window?.from && evidence?.window?.to) {
-    windowLabel = `Khung giờ ±30 phút (${safeFormatHM(evidence.window.from)} – ${safeFormatHM(evidence.window.to)})`
+    windowLabel = t('Khung giờ ±30 phút ({{from}} – {{to}})', { from: safeFormatHM(evidence.window.from), to: safeFormatHM(evidence.window.to) })
   } else {
     const d = new Date(alert.created_at)
     const baseTime = isNaN(d.getTime()) ? new Date() : d
     const from = new Date(baseTime.getTime() - 30 * 60_000)
     const to = new Date(baseTime.getTime() + 30 * 60_000)
-    windowLabel = `Khung giờ ±30 phút (${safeFormatHM(from)} – ${safeFormatHM(to)})`
+    windowLabel = t('Khung giờ ±30 phút ({{from}} – {{to}})', { from: safeFormatHM(from), to: safeFormatHM(to) })
   }
 
   const src1 = buildTelemetryEvidenceSource(alert, evidence?.telemetry?.samples)
@@ -254,28 +255,28 @@ export function buildAlertEvidence(
   let correlation = ''
   if (alert.type === 'NOISE_ANOMALY') {
     if (src1 && src2) {
-      correlation = `Cảm biến âm thanh ghi nhận ${src1.highlight} tại thời điểm cảnh báo; chuỗi đếm chim ghi nhận tổng ${src2.badge1} và ${src2.badge2} trong cửa sổ ±30 phút → Dữ liệu thực tế đối chiếu giữa âm thanh và phản ứng đàn chim.`
+      correlation = t('Cảm biến âm thanh ghi nhận {{peak}} lúc cảnh báo; số chim trong ±30 phút: {{entry}}, {{exit}}. Đối chiếu âm thanh với phản ứng của đàn chim.', { peak: src1.highlight, entry: src2.badge1, exit: src2.badge2 })
     } else if (src1) {
-      correlation = `Cảm biến âm thanh ghi nhận ${src1.badge1} với ${src1.highlight}. Camera AI không có dữ liệu chuỗi đếm chim trong khung giờ này (trạng thái missing).`
+      correlation = t('Cảm biến âm thanh ghi nhận {{samples}}, {{peak}}. Không có số chim đếm trong khung giờ này.', { samples: src1.badge1, peak: src1.highlight })
     } else if (src2) {
-      correlation = `Thiếu dữ liệu telemetry âm thanh (trạng thái missing). Chuỗi đếm chim ghi nhận ${src2.badge1}, ${src2.badge2}.`
+      correlation = t('Không có số đo âm thanh. Số chim đếm được: {{entry}}, {{exit}}.', { entry: src2.badge1, exit: src2.badge2 })
     } else {
-      correlation = `Không có dữ liệu đo đạc telemetry và đếm chim trong khung giờ ±30 phút (trạng thái missing). ${alert.message}`
+      correlation = `${t('Không có số đo và số chim đếm trong khung giờ ±30 phút.')} ${alert.message}`
     }
   } else if (alert.type === 'SENSOR_ANOMALY') {
     if (src1) {
-      correlation = `Chuỗi đo telemetry ghi nhận ${src1.badge1} quanh mốc cảnh báo (${src1.badge2}). ${src1.anomalyTag}.`
+      correlation = `${t('Có {{samples}} quanh mốc cảnh báo ({{range}}).', { samples: src1.badge1, range: src1.badge2 })} ${src1.anomalyTag}.`
     } else {
-      correlation = `Không có mẫu đo telemetry trong khung giờ ±30 phút để đối chiếu cảm biến (trạng thái missing). ${alert.message}`
+      correlation = `${t('Không có số đo trong khung giờ ±30 phút để đối chiếu cảm biến.')} ${alert.message}`
     }
   } else if (alert.type === 'FORECAST_BREACH') {
     if (src1) {
-      correlation = `Dữ liệu đo đạc thực tế gồm ${src1.badge1} trong cửa sổ ±30 phút quanh thời điểm phát cảnh báo dự báo vi phạm ngưỡng.`
+      correlation = t('Có {{samples}} trong ±30 phút quanh lúc phát cảnh báo dự báo vượt ngưỡng.', { samples: src1.badge1 })
     } else {
-      correlation = `Không có dữ liệu đo đạc thực tế trong khung giờ ±30 phút quanh cảnh báo dự báo (trạng thái missing).`
+      correlation = t('Không có số đo trong khung giờ ±30 phút quanh cảnh báo dự báo.')
     }
   } else {
-    correlation = alert.message || 'Hệ thống trình bày dữ liệu đối chiếu quanh thời điểm phát sinh sự cố để chuyên gia thẩm định.'
+    correlation = alert.message || t('Dữ liệu đối chiếu quanh thời điểm xảy ra sự cố để chuyên gia thẩm định.')
   }
 
   return {

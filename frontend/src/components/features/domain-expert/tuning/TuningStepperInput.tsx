@@ -3,6 +3,7 @@
  * Hỗ trợ decimal, min/max validation, unit label, sub-label
  */
 import { cn } from '@/lib/cn'
+import { t } from '@/i18n'
 
 interface Props {
   label: string
@@ -17,6 +18,11 @@ interface Props {
   rangeHint?: string
   defaultHint?: string
   highlighted?: boolean // true khi vừa áp dụng gợi ý AI
+}
+
+// "Phạm vi: …" và "Mặc định: …": chỉ dịch chữ đầu, số và đơn vị giữ nguyên
+function translateHint(hint: string): string {
+  return hint.replace(/^Phạm vi:/, t('Phạm vi:')).replace(/^Mặc định:/, t('Mặc định:')).replace(/(\d)s\b/g, '$1 s')
 }
 
 export default function TuningStepperInput({
@@ -44,9 +50,9 @@ export default function TuningStepperInput({
       {/* Label + hints */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[#27231F] leading-tight">{label}</p>
-        {subLabel && <p className="text-[11px] text-[#878380] mt-0.5 italic">{subLabel}</p>}
-        {rangeHint && <p className="text-[11px] text-[#B8B4B0] mt-0.5">{rangeHint}</p>}
-        {defaultHint && <p className="text-[11px] text-[#B8B4B0]">{defaultHint}</p>}
+        {subLabel && <p className="text-[11px] text-[#878380] mt-0.5 italic">{t(subLabel)}</p>}
+        {rangeHint && <p className="text-[11px] text-[#B8B4B0] mt-0.5">{translateHint(rangeHint)}</p>}
+        {defaultHint && <p className="text-[11px] text-[#B8B4B0]">{translateHint(defaultHint)}</p>}
       </div>
 
       {/* Stepper control */}
@@ -55,7 +61,7 @@ export default function TuningStepperInput({
           type="button"
           onClick={decrement}
           disabled={atMin}
-          aria-label={`Giảm ${label}`}
+          aria-label={t('Giảm {{label}}', { label })}
           className={cn(
             'w-7 h-7 rounded-lg text-base font-bold transition-colors duration-100 select-none',
             atMin
@@ -71,14 +77,14 @@ export default function TuningStepperInput({
           highlighted ? 'border-[#B5D32C] bg-[#ECFFA9]' : 'border-neutral-200 bg-neutral-50',
         )}>
           {decimals > 0 ? value.toFixed(decimals) : value}{' '}
-          <span className="text-xs font-normal text-[#878380]">{unit}</span>
+          <span className="text-xs font-normal text-[#878380]">{t(unit)}</span>
         </div>
 
         <button
           type="button"
           onClick={increment}
           disabled={atMax}
-          aria-label={`Tăng ${label}`}
+          aria-label={t('Tăng {{label}}', { label })}
           className={cn(
             'w-7 h-7 rounded-lg text-base font-bold transition-colors duration-100 select-none',
             atMax

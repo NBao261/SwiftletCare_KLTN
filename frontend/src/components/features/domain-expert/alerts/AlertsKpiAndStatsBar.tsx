@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn'
 import type { InferredAlertType } from '@/types/expert.types'
 import type { AlertSeverity } from '@/types'
 import type { AlertTabFilter } from '@/hooks/domain-expert/useExpertAlerts'
+import { t } from '@/i18n'
 
 export interface KpiCounts {
   total: number
@@ -38,14 +39,14 @@ function KpiCard({ label, sublabel, value, accent, dotColor, badgeBg, isActive, 
       )}
     >
       <div className="flex items-start justify-between gap-2 w-full">
-        <span className="text-xs font-medium text-warmGray leading-tight">{label}</span>
+        <span className="text-xs font-medium text-warmGray leading-tight">{t(label)}</span>
         <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', badgeBg ?? 'bg-neutral-100')}>
           <span className={cn('h-2.5 w-2.5 rounded-full', dotColor)} />
         </span>
       </div>
       <div>
         <div className={cn('text-3xl font-extrabold leading-none tabular-nums', accent)}>{value}</div>
-        <p className="mt-1.5 text-[11px] text-warmGray leading-tight">{sublabel}</p>
+        <p className="mt-1.5 text-[11px] text-warmGray leading-tight">{t(sublabel)}</p>
       </div>
     </button>
   )
@@ -104,7 +105,7 @@ export default function AlertsKpiAndStatsBar({
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <KpiCard
-        label="Tổng cảnh báo suy luận"
+        label={t('Tổng cảnh báo suy luận')}
         sublabel="30 ngày qua"
         value={String(counts.total).padStart(2, '0')}
         accent="text-charcoal"
@@ -114,7 +115,7 @@ export default function AlertsKpiAndStatsBar({
         onClick={() => onTabChange('ALL')}
       />
       <KpiCard
-        label="Chờ kiểm chứng"
+        label={t('Chờ kiểm chứng')}
         sublabel="Cần chuyên gia thẩm định"
         value={String(counts.pending).padStart(2, '0')}
         accent="text-orange-500"
@@ -124,7 +125,7 @@ export default function AlertsKpiAndStatsBar({
         onClick={() => onTabChange('PENDING')}
       />
       <KpiCard
-        label="Đã xác nhận (Sự cố thật)"
+        label={t('Đã xác nhận (Sự cố thật)')}
         sublabel="Hệ thống suy luận chính xác"
         value={String(counts.confirmed).padStart(2, '0')}
         accent="text-charcoal"
@@ -134,7 +135,7 @@ export default function AlertsKpiAndStatsBar({
         onClick={() => onTabChange('CONFIRMED')}
       />
       <KpiCard
-        label="Đã bác bỏ (Báo động giả)"
+        label={t('Đã bác bỏ (Báo động giả)')}
         sublabel="Nhiễu hoặc dao động tự nhiên"
         value={String(counts.rejected).padStart(2, '0')}
         accent="text-warmGray"

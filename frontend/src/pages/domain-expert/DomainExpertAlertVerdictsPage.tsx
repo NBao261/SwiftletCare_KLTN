@@ -31,6 +31,7 @@ import {
 import type { InferredAlertItem, InferredAlertType } from '@/types/expert.types'
 import type { AlertSeverity } from '@/types'
 import { useZoneStore } from '@/stores/zoneStore'
+import { t } from '@/i18n'
 
 function Toast({ show, message }: { show: boolean; message: string }) {
   if (!show) return null
@@ -103,7 +104,7 @@ export default function DomainExpertAlertVerdictsPage() {
   }, [])
 
   const handleVerdictSaved = useCallback((_id: string, result: 'CONFIRMED' | 'REJECTED') => {
-    const msg = result === 'CONFIRMED' ? 'Đã xác nhận sự cố thật' : 'Đã bác bỏ báo động giả'
+    const msg = result === 'CONFIRMED' ? t('Đã xác nhận sự cố thật') : t('Đã bác bỏ báo động giả')
     setToast({ show: true, message: msg })
     setTimeout(() => setToast(t => ({ ...t, show: false })), 3000)
   }, [])
@@ -127,9 +128,9 @@ export default function DomainExpertAlertVerdictsPage() {
           {/* Header hàng 1: Tiêu đề + Thẻ đếm tab + Bộ lọc SelectMenu */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-warmGray/10">
             <div className="flex items-center gap-2.5">
-              <h2 className="text-base font-bold text-charcoal shrink-0">Danh sách cảnh báo</h2>
+              <h2 className="text-base font-bold text-charcoal shrink-0">{t('Danh sách cảnh báo')}</h2>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-charcoal border border-warmGray/15">
-                {currentTab.label} • {kpiCounts[currentTab.countKey]}
+                {t(currentTab.label)} • {kpiCounts[currentTab.countKey]}
               </span>
             </div>
 
@@ -138,13 +139,13 @@ export default function DomainExpertAlertVerdictsPage() {
                 value={filters.type}
                 options={TYPE_OPTS}
                 onChange={val => setType(val as InferredAlertType | 'ALL')}
-                ariaLabel="Lọc theo loại cảnh báo"
+                ariaLabel={t('Lọc theo loại cảnh báo')}
               />
               <SelectMenu
                 value={filters.severity}
                 options={SEV_OPTS}
                 onChange={val => setSeverity(val as AlertSeverity | 'ALL')}
-                ariaLabel="Lọc theo mức độ cảnh báo"
+                ariaLabel={t('Lọc theo mức độ cảnh báo')}
               />
               {isFiltered && (
                 <ClearFiltersButton
@@ -161,12 +162,12 @@ export default function DomainExpertAlertVerdictsPage() {
                 <>
                   <Info className="w-3.5 h-3.5 text-[#B5D32C] shrink-0" />
                   <p className="truncate text-[11.5px]">
-                    <span className="font-semibold text-charcoal">Tỷ lệ xác nhận sự cố thật:</span> {statsSummary}
+                    <span className="font-semibold text-charcoal">{t('Tỷ lệ xác nhận sự cố thật:')}</span> {statsSummary}
                   </p>
                 </>
               ) : (
                 <span className="text-[11.5px] text-warmGray">
-                  Chưa có lịch sử phán quyết trong kỳ — tỷ lệ xác nhận theo loại cảnh báo hiện ra khi chuyên gia đã có phán quyết
+                  {t('Chưa có lịch sử phán quyết trong kỳ — tỷ lệ xác nhận theo loại cảnh báo hiện ra khi chuyên gia đã có phán quyết')}
                 </span>
               )}
             </div>
@@ -175,7 +176,7 @@ export default function DomainExpertAlertVerdictsPage() {
               onClick={() => navigate('/domain-expert/tuning')}
               className="inline-flex items-center gap-1 text-xs text-[#7A9A00] hover:text-[#4A5C00] font-semibold whitespace-nowrap transition-colors shrink-0 cursor-pointer"
             >
-              Chỉnh tham số phát hiện
+              {t('Chỉnh tham số phát hiện')}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
