@@ -36,13 +36,16 @@ export const workOrderApi = {
     if (input.cause) form.append('cause', input.cause);
     if (input.work_note) form.append('work_note', input.work_note);
     input.photos.forEach(photo => form.append('photos', photo));
-    return api.post<ApiResponse<WorkOrder>>(`/work-orders/${id}/done`, form);
+    // Tới 5 ảnh × 5 MB trên mạng nhà yến: timeout riêng thay cho 10 s mặc định của axios
+    return api.post<ApiResponse<WorkOrder>>(`/work-orders/${id}/done`, form, { timeout: 120_000 });
   },
-  // OPS-FR-007 — kết quả 1 mục checklist của phiếu phòng ngừa đang làm (multipart, ảnh tuỳ chọn ở mobile)
-  recordChecklist: (id: string, itemIndex: number, result: ChecklistResult) => {
+  // OPS-FR-007 — kết quả 1 mục checklist của phiếu phòng ngừa đang làm (multipart, ảnh tuỳ chọn ở mobile); backend xoá ghi chú
+  // của mục khi không gửi `note`, nên ghi lại một mục phải gửi kèm ghi chú đang có
+  recordChecklist: (id: string, itemIndex: number, result: ChecklistResult, note?: string | null) => {
     const form = new FormData();
     form.append('item_index', String(itemIndex));
     form.append('result', result);
+    if (note) form.append('note', note);
     return api.put<ApiResponse<WorkOrder>>(`/work-orders/${id}/checklist`, form);
   },
   approve: (id: string) => api.post<ApiResponse<WorkOrder>>(`/work-orders/${id}/approve`),

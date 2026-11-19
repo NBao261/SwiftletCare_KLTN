@@ -21,6 +21,11 @@ function Field({ label, children }: { label: string; children: ReactNode }): JSX
   );
 }
 
+// Nút thao tác: việc chính nổi bật, huỷ màu nguy hiểm
+const ACTION_VARIANT: Record<OwnerAction, 'primary' | 'secondary' | 'danger'> = {
+  start: 'primary', done: 'primary', approve: 'primary', reopen: 'secondary', reassign: 'secondary', cancel: 'danger',
+};
+
 // Mục checklist: đạt xanh, hỏng đỏ
 const CHECKLIST_TONE: Record<ChecklistResult, BadgeTone> = { OK: 'positive', DEFECT: 'critical' };
 
@@ -48,10 +53,14 @@ export default function WorkOrderDetailDrawer({
   const { recordChecklist } = useWorkOrderActions();
   // OPS-FR-007 — Farm Owner ghi kết quả từng mục khi tự làm phiếu phòng ngừa (ghi chú và ảnh từng mục ở mobile)
   const canRecordChecklist = canManage && workOrder?.status === 'IN_PROGRESS';
-  const recordItem = (itemIndex: number, result: ChecklistResult) => workOrder && recordChecklist.mutate(
-    { workOrder, itemIndex, result },
-    { onSuccess: () => push(t('checklist.saved')), onError: error => push(apiErrorMessage(error), 'error') },
-  );
+  // Bấm đúng kết quả đang có thì không gửi; đổi kết quả thì giữ ghi chú của người ghi trước (backend xoá ghi chú khi không gửi)
+  function recordItem(itemIndex: number, result: ChecklistResult, current: { result: ChecklistResult | null; note?: string | null }): void {
+    if (!workOrder || current.result === result) return;
+    recordChecklist.mutate(
+      { workOrder, itemIndex, result, note: current.note },
+      { onSuccess: () => push(t('checklist.saved')), onError: error => push(apiErrorMessage(error), 'error') },
+    );
+  }
 
   return (
     <Drawer open={Boolean(workOrderId)} onClose={onClose} title={t('detail.title')}>
@@ -118,7 +127,7 @@ export default function WorkOrderDetailDrawer({
                               size="sm"
                               variant={entry.result === result ? 'primary' : 'secondary'}
                               disabled={recordChecklist.isPending}
-                              onClick={() => recordItem(index, result)}
+                              onClick={() => recordItem(index, result, entry)}
                             >
                               {t(`checklist.${result}`)}
                             </Button>
@@ -203,7 +212,7 @@ export default function WorkOrderDetailDrawer({
             <Button
               key={action}
               size="sm"
-              variant={['approve', 'start', 'done'].includes(action) ? 'primary' : action === 'cancel' ? 'danger' : 'secondary'}
+              variant={ACTION_VARIANT[action]}
               onClick={() => onAction(action, workOrder)}
             >
               {t(`action.${action}`)}

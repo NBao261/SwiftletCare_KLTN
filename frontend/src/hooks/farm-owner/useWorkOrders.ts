@@ -76,8 +76,8 @@ export function useWorkOrderActions() {
       ...options,
     }),
     recordChecklist: useMutation({
-      mutationFn: ({ workOrder, itemIndex, result }: { workOrder: WorkOrder; itemIndex: number; result: ChecklistResult }) =>
-        workOrderApi.recordChecklist(workOrder._id, itemIndex, result),
+      mutationFn: ({ workOrder, itemIndex, result, note }: { workOrder: WorkOrder; itemIndex: number; result: ChecklistResult; note?: string | null }) =>
+        workOrderApi.recordChecklist(workOrder._id, itemIndex, result, note),
       ...options,
     }),
     approve: useMutation({
