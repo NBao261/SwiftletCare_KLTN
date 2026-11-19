@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CircleHelp, LogOut, ShieldCheck, UserCog } from 'lucide-react'
+import { LogOut, ShieldCheck, UserCog } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { cn } from '@/lib/cn'
@@ -8,7 +8,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { shellDict } from '@/constants/shell.i18n'
 import Avatar from '@/components/ui/Avatar'
 
-// Popup tài khoản khi bấm avatar: tên, email và lối tắt cài đặt, đăng xuất
+// Popup tài khoản khi bấm avatar: tên, email, Cài đặt (gồm thông báo), Quyền riêng tư, Đăng xuất
 export default function ProfilePopover() {
   const { t } = useTranslation(shellDict)
   const user = useAuthStore(s => s.user)
@@ -72,8 +72,6 @@ export default function ProfilePopover() {
 
           <div className="space-y-0.5 p-1.5">
             <MenuItem icon={<UserCog width={16} height={16} />} label={t('profile.accountSettings')} onClick={() => goTo('/settings')} />
-            <MenuItem icon={<Bell width={16} height={16} />} label={t('profile.notificationSettings')} onClick={() => goTo('/settings')} />
-            <MenuItem icon={<CircleHelp width={16} height={16} />} label={t('profile.help')} badge={t('profile.comingSoon')} disabled />
             <MenuItem icon={<ShieldCheck width={16} height={16} />} label={t('profile.privacy')} onClick={() => goTo('/settings/privacy')} />
           </div>
 
@@ -94,24 +92,20 @@ export default function ProfilePopover() {
   )
 }
 
-function MenuItem({ icon, label, badge, disabled, onClick }: {
+function MenuItem({ icon, label, onClick }: {
   icon: ReactNode
   label: string
-  badge?: string
-  disabled?: boolean
-  onClick?: () => void
+  onClick: () => void
 }) {
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      disabled={disabled}
-      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5 disabled:cursor-not-allowed disabled:text-warmGray disabled:hover:bg-transparent"
+      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5"
     >
       <span className="text-warmGray">{icon}</span>
       <span className="flex-1">{label}</span>
-      {badge && <span className="rounded-full bg-charcoal/5 px-2 py-0.5 text-[10px] font-semibold text-warmGray">{badge}</span>}
     </button>
   )
 }

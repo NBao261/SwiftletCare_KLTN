@@ -5,9 +5,9 @@ import { levelDict, severityLabels } from '@/constants/severity.i18n'
 // Từ điển popup thông báo, tài khoản, đăng xuất và nút ngôn ngữ
 const vi = {
   'notif.title': 'Thông báo',
-  'notif.ariaUnread': 'Thông báo ({count} chưa đọc)',
+  'notif.ariaUnread': 'Thông báo ({count} cần xem)',
   'notif.sortByTime': 'Xếp theo thời gian',
-  'notif.unreadFirst': 'Chưa đọc lên đầu',
+  'notif.pendingFirst': 'Chưa xác nhận lên đầu',
   'notif.loading': 'Đang tải...',
   'notif.loadingMore': 'Đang tải thêm...',
   'notif.empty': 'Chưa có thông báo nào',
@@ -31,9 +31,6 @@ const vi = {
   'profile.aria': 'Tài khoản',
   'profile.ariaUser': 'Tài khoản {name}',
   'profile.accountSettings': 'Cài đặt tài khoản',
-  'profile.notificationSettings': 'Cấu hình thông báo',
-  'profile.help': 'Trợ giúp & Hướng dẫn',
-  'profile.comingSoon': 'Sắp có',
   'profile.privacy': 'Chính sách quyền riêng tư',
 
   'logout.action': 'Đăng xuất',
@@ -48,9 +45,9 @@ type ShellKey = keyof typeof vi
 
 const en: Record<ShellKey, string> = {
   'notif.title': 'Notifications',
-  'notif.ariaUnread': 'Notifications ({count} unread)',
+  'notif.ariaUnread': 'Notifications ({count} to see)',
   'notif.sortByTime': 'Sort by time',
-  'notif.unreadFirst': 'Unread first',
+  'notif.pendingFirst': 'Not acknowledged first',
   'notif.loading': 'Loading...',
   'notif.loadingMore': 'Loading more...',
   'notif.empty': 'No notifications yet',
@@ -74,9 +71,6 @@ const en: Record<ShellKey, string> = {
   'profile.aria': 'Account',
   'profile.ariaUser': 'Account {name}',
   'profile.accountSettings': 'Account settings',
-  'profile.notificationSettings': 'Notification settings',
-  'profile.help': 'Help & Support',
-  'profile.comingSoon': 'Soon',
   'profile.privacy': 'Privacy policy',
 
   'logout.action': 'Log out',

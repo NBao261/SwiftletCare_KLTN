@@ -22,8 +22,9 @@ const vi = {
   'banner.synced': 'Đồng bộ {ago}',
   'banner.notSynced': 'Chưa đồng bộ',
 
-  'stability.caption': 'Trạng thái nhà yến',
+  'stability.caption': 'Thiết bị các nhà yến',
   'stability.stable': 'Ổn định',
+  'stability.issue': 'Có sự cố',
   'stability.rowStable': 'Ổn định',
   'stability.faultLine': '{name} đang lỗi {n} thiết bị',
   'stability.allNormal': 'Các nhà yến đang hoạt động bình thường',
@@ -237,8 +238,9 @@ const en: Record<DashboardKey, string> = {
   'banner.synced': 'Synced {ago}',
   'banner.notSynced': 'Not synced',
 
-  'stability.caption': 'Swiftlet house status',
+  'stability.caption': 'Devices of the houses',
   'stability.stable': 'Stable',
+  'stability.issue': 'Has issues',
   'stability.rowStable': 'Stable',
   'stability.faultLine': '{name} has {n} faulty device(s)',
   'stability.allNormal': 'All houses are running normally',

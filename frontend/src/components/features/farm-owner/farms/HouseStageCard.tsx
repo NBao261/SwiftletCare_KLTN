@@ -11,7 +11,7 @@ import type { House, HouseStage } from '@/types'
 
 const STAGES: HouseStage[] = ['ATTRACTING', 'OCCUPIED']
 
-// FARM-FR-014, BR-46 — giai đoạn nhà: Farm Owner bấm ô còn lại để chuyển (có xác nhận), người khác chỉ xem
+// FARM-FR-014, BR-46 — giai đoạn nhà: Farm Owner hoặc Domain Expert bấm ô còn lại để chuyển (có xác nhận), người khác chỉ xem
 export default function HouseStageCard({ house, canEdit }: { house: House; canEdit: boolean }) {
   const { t, date } = useTranslation(farmDict)
   const push = useToastStore(state => state.push)

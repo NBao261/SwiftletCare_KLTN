@@ -58,12 +58,26 @@ export function useDeviceStatusEvents(
   }, [houseId, zoneId, nodeId])
 }
 
-/** useSystemNodeStatus – OPS-NFR-004, Admin xem nhanh trạng thái mọi node toàn hệ thống */
-export function useSystemNodeStatus() {
+// FARM-FR-012 — 1 bộ điều khiển; pollMs: đọc lại theo chu kỳ tới khi đã áp cấu hình của Zone (config_sync APPLIED hoặc UNKNOWN)
+export function useSensorNode(id: string | undefined, pollMs?: number) {
+  return useQuery({
+    queryKey: ['sensor-nodes', 'detail', id],
+    queryFn: () => deviceApi.getSensorNode(id!).then(response => response.data.data),
+    enabled: Boolean(id),
+    refetchInterval: query => {
+      const sync = query.state.data?.config_sync
+      return pollMs && sync !== 'APPLIED' && sync !== 'UNKNOWN' ? pollMs : false
+    },
+  })
+}
+
+// FARM-FR-009, OPS-NFR-004 — mọi thiết bị kèm farm, nhà, khu vực; chỉ Admin gọi được (enabled = false với role khác)
+export function useSystemNodeStatus(enabled = true) {
   return useQuery({
     queryKey: ['system-node-status'],
     queryFn: () => deviceApi.getSystemStatus().then(r => r.data.data),
     refetchInterval: 30_000, // trang "xem nhanh" — tự làm mới thay vì bắt người xem F5
+    enabled,
   })
 }
 

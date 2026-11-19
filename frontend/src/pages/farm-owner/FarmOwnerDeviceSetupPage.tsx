@@ -1,15 +1,15 @@
-// OnboardingPage — FARM-FR-003, 004, 007, 012
+// FarmOwnerDeviceSetupPage (/devices/onboarding) — SF-01, FARM-FR-003, 004, 007, 012: Farm Owner lắp bộ điều khiển hoặc camera
 // SENSOR_NODE: 4 bước (Vị trí → Xác thực → Kết nối AP+WiFi → Đợi kết nối)
 // CAMERA_NODE:  3 bước (Vị trí → Xác thực → Đợi kết nối) — không cần AP/WiFi step
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui'
 import Stepper from '@/components/ui/Stepper'
-import { Step1Location }   from '@/components/features/technician/onboarding/Step1Location'
-import { Step2Validate }   from '@/components/features/technician/onboarding/Step2Validate'
-import { Step3ConnectAP }  from '@/components/features/technician/onboarding/Step3ConnectAP'
-import { Step5WaitOnline } from '@/components/features/technician/onboarding/Step5WaitOnline'
-import type { OnboardingState } from '@/components/features/technician/onboarding/onboardingTypes'
+import { Step1Location }   from '@/components/features/farm-owner/onboarding/Step1Location'
+import { Step2Validate }   from '@/components/features/farm-owner/onboarding/Step2Validate'
+import { Step3ConnectAP }  from '@/components/features/farm-owner/onboarding/Step3ConnectAP'
+import { Step5WaitOnline } from '@/components/features/farm-owner/onboarding/Step5WaitOnline'
+import type { OnboardingState } from '@/components/features/farm-owner/onboarding/onboardingTypes'
 
 // SENSOR_NODE: 4 bước; CAMERA_NODE: 3 bước (bỏ AP WiFi)
 const SENSOR_STEPS  = ['Vị trí', 'Xác thực', 'Kết nối AP & WiFi', 'Đợi kết nối']
@@ -23,7 +23,7 @@ const INITIAL_STATE: OnboardingState = {
   deviceDbId: '',
 }
 
-export default function OnboardingPage() {
+export default function FarmOwnerDeviceSetupPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [data, setData] = useState<OnboardingState>(INITIAL_STATE)

@@ -138,6 +138,27 @@ describe('bộ lọc GET /alerts (ALERT-FR-007, EXPERT-FR-003)', () => {
     await get('type=NOISE_ANOMALY&type=MISTING_INEFFECTIVE').expect(422)
     await get('status=ACTIVE&status=RESOLVED').expect(422)
     await get('severity=LOW&severity=HIGH').expect(422)
+    await get('open=true&open=true').expect(422)
+  })
+
+  it('open=true chỉ trả cảnh báo còn hiệu lực, unreadCount là số ACTIVE (ALERT-FR-007)', async () => {
+    const { farm, zone, node, token } = await seed()
+    const base = { farm_id: farm._id, zone_id: zone._id, node_id: node._id, severity: 'MEDIUM', title: 't', message: 'm' }
+    await Alert.create([
+      { ...base, type: 'NODE_OFFLINE', status: 'ACTIVE' },
+      { ...base, type: 'SENSOR_FAULT', status: 'ACKNOWLEDGED' },
+      { ...base, type: 'NOISE_ANOMALY', status: 'DISMISSED' },
+      { ...base, type: 'THRESHOLD_BREACH', status: 'RESOLVED' },
+    ])
+    const get = (qs: string) => request(app).get(`/alerts?${qs}`).set('Authorization', `Bearer ${token}`)
+
+    const open = await get('open=true').expect(200)
+    expect(open.body.data.map((a: { status: string }) => a.status).sort()).toEqual(['ACKNOWLEDGED', 'ACTIVE'])
+    expect(open.body.meta).toMatchObject({ total: 2, unreadCount: 1 })
+    // status đi kèm thì status thắng
+    expect((await get('open=true&status=RESOLVED').expect(200)).body.meta.total).toBe(1)
+    expect((await get('').expect(200)).body.meta.total).toBe(4)
+    await get('open=false').expect(422)
   })
 })
 

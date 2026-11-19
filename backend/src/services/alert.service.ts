@@ -60,6 +60,9 @@ const ACTUATOR_FAULT_KINDS = ['NO_CURRENT_WHILE_ON', 'CURRENT_WHILE_OFF'] as con
  */
 export const OPEN_STATUSES: AlertStatus[] = OPEN_ALERT_STATUSES
 
+/** ALERT-FR-007 — cảnh báo còn hiệu lực, hiện tách khỏi DISMISSED và RESOLVED */
+const IN_FORCE_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED']
+
 /**
  * ALERT-FR-001, BR-15 — mức độ mặc định theo loại sự kiện. Thiết bị có thể gửi kèm
  * severity riêng, khi đó giá trị gửi lên được ưu tiên (trừ loại không leo thang, xem createAlert).
@@ -441,6 +444,8 @@ export interface ListAlertsQuery {
   /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8 */
   houseId?: string
   status?: string
+  /** ALERT-FR-007 — chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED); `status` đi kèm thì `status` thắng */
+  open?: boolean
   severity?: string
   type?: string
   /** EXPERT-FR-003 — pending = cảnh báo suy luận chưa được kiểm chứng */
@@ -485,6 +490,7 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   if (query.zoneId) filter.zone_id = query.zoneId
   if (query.houseId) filter.house_id = query.houseId
   if (query.status) filter.status = query.status
+  else if (query.open) filter.status = { $in: IN_FORCE_STATUSES }
   if (query.severity) filter.severity = query.severity
   if (query.type) filter.type = query.type
   if (query.verdict) {

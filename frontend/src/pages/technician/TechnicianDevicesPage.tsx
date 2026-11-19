@@ -310,7 +310,7 @@ export default function TechnicianDevicesPage() {
           {/* G-20: chỉ FARM_OWNER lắp đặt và kích hoạt thiết bị (ADMIN, FARM_TECHNICIAN nhận 403) */}
           {canManageLifecycle && (
             <>
-              <Button variant="secondary" onClick={() => navigate('/onboarding')}>
+              <Button variant="secondary" onClick={() => navigate('/devices/onboarding')}>
                 <Wrench className="h-4 w-4" />
                 Hướng dẫn Lắp đặt
               </Button>

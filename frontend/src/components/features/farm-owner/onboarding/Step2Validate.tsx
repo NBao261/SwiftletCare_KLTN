@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
-import { canValidateDevice, cameraRegisterInput, sensorRegisterInput } from '@/components/features/technician/onboarding/onboarding.utils'
+import { canValidateDevice, cameraRegisterInput, sensorRegisterInput } from '@/components/features/farm-owner/onboarding/onboarding.utils'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { parseDeviceLabelCode } from '@/lib/qrCode'
 import { Thermometer, Camera, QrCode, CheckCircle2, X, AlertTriangle, XCircle, ArrowLeft, ArrowRight } from 'lucide-react'

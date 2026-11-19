@@ -1,9 +1,9 @@
-// OTAPage — F-TC-03 / Stitch A4 + B4 + B8
+// AdminOtaPage (/ota) — FARM-FR-013, SF-02: Administrator cập nhật firmware từ xa
 // OTA Firmware Management: layout + state management
 // Logic hiển thị được tách sang ./components/
 //
 // Kết nối BE thật: POST /devices/sensor-nodes/:id/commands { command: 'OTA', ota: { version, url, sha256 } }.
-// - BE không có catalog firmware / % tiến trình → Technician nhập version + url + sha256 của bản build.
+// - BE không có catalog firmware / % tiến trình → Administrator nhập version + url + sha256 của bản build.
 // - Trạng thái chạy lấy từ SensorNode: `ota_pending` (đang chờ, trang tự làm mới 5s) / `ota_failed`
 //   (job BE đánh dấu thất bại sau 30 phút) / `firmware_version` khớp bản yêu cầu → thành công.
 // - Lỗi BE: 400 (host không được phép / dữ liệu sai), 409 (node không ONLINE / trùng version),
@@ -15,11 +15,11 @@ import { useToastStore } from '@/stores/toastStore'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { IconOTA } from '@/components/ui/icons'
-import { DeviceTable }     from '@/components/features/technician/ota/DeviceTable'
-import { OTASidePanel }   from '@/components/features/technician/ota/OTASidePanel'
-import { OTAConfirmModal } from '@/components/features/technician/ota/OTAConfirmModal'
-import { EMPTY_OTA_FORM, validateOtaForm } from '@/components/features/technician/ota/otaTypes'
-import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/technician/ota/otaTypes'
+import { DeviceTable }     from '@/components/features/admin/ota/DeviceTable'
+import { OTASidePanel }   from '@/components/features/admin/ota/OTASidePanel'
+import { OTAConfirmModal } from '@/components/features/admin/ota/OTAConfirmModal'
+import { EMPTY_OTA_FORM, validateOtaForm } from '@/components/features/admin/ota/otaTypes'
+import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/admin/ota/otaTypes'
 import type { SensorNode } from '@/types'
 
 function otaErrorMessage(err: unknown): string {
@@ -30,7 +30,7 @@ function otaErrorMessage(err: unknown): string {
   return getApiErrorMessage(err, 'Gửi lệnh OTA thất bại')
 }
 
-export default function OTAPage() {
+export default function AdminOtaPage() {
   const push = useToastStore(s => s.push)
   const sendCommand = useSendNodeCommand()
 

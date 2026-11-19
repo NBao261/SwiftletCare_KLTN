@@ -30,7 +30,7 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
  * FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể, chỉ xem cấu trúc/thiết bị nhà đó + gửi RESTART.
  */
 
-/** Hàng đợi việc của Chuyên gia nuôi yến (/domain-expert/queue) — chỉ Domain Expert. */
+/** Hàng đợi việc và Báo cáo & kết luận của Chuyên gia (/domain-expert/queue, /domain-expert/reports) — chỉ Domain Expert; Farm Owner xem báo cáo ở /health. */
 export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 
 /**
@@ -106,10 +106,10 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },
   { path: '/dashboard',        roles: FARM_SIDE_ROLES },
   { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
+  { path: '/devices/onboarding', roles: DEVICE_SETUP_ROLES },
   { path: '/devices',          roles: DEVICE_LIST_ROLES },
   { path: '/alerts',           roles: ALERT_ROLES },
   { path: '/farms',            roles: FARM_STRUCTURE_ROLES },
-  { path: '/onboarding',       roles: DEVICE_SETUP_ROLES },
   { path: '/ota',              roles: ADMIN_ONLY },
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
@@ -118,7 +118,6 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/recommendations',  roles: FARM_SIDE_ROLES },
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
-  { path: '/system/devices',   roles: ADMIN_ONLY },
   { path: '/system/device-stock', roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_SIDE_ROLES },
   { path: '/overview',         roles: FARM_SIDE_ROLES },
@@ -132,7 +131,7 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/domain-expert/counting-schedule',     roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/counting-ring',         roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/weather-rules',         roles: EXPERT_DECISION_ROLES },
-  { path: '/domain-expert/reports',               roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/reports',               roles: EXPERT_ROLES },
   { path: '/domain-expert/profiles',              roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/recommendation-rules',  roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/history',               roles: EXPERT_DECISION_ROLES },

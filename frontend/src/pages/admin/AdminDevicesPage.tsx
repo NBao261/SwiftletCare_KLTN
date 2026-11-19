@@ -1,4 +1,4 @@
-// ADMIN — thiết bị toàn hệ thống, chỉ xem (OPS-NFR-004, GET /devices/system-status)
+// ADMIN — /devices: mọi thiết bị kèm farm, nhà, khu vực (FARM-FR-009, GET /devices/system-status); lệnh từ xa trong ngăn chi tiết (FARM-FR-013)
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
@@ -8,7 +8,8 @@ import DataTable from '@/components/ui/DataTable'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DeviceStats from '@/components/features/admin/devices/DeviceStats'
-import { buildDeviceColumns, nodeLocation } from '@/components/features/admin/devices/deviceColumns'
+import { buildDeviceColumns } from '@/components/features/admin/devices/deviceColumns'
+import { nodeLocation } from '@/lib/deviceLocation'
 import DeviceDetailDrawer from '@/components/features/admin/devices/DeviceDetailDrawer'
 import type { DeviceStatus, SortDirection, SystemNodeStatusItem } from '@/types'
 

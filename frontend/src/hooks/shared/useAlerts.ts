@@ -1,9 +1,8 @@
-import { useEffect } from 'react'
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { alertApi } from '@/apis/shared/alerts.api'
-import { useAlertStore } from '@/stores/alertStore'
+import { canAccessPath } from '@/constants/roles'
+import { useAuthStore } from '@/stores/authStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
-import { useReadAlerts } from '@/hooks/shared/useReadAlerts'
 import { newestFirstPage } from '@/lib/helpers'
 import type { Alert, AlertStatus, SiteCause } from '@/types'
 
@@ -11,6 +10,8 @@ export interface AlertsListQuery {
   farmId?: string; zoneId?: string
   // 1 mức, hoặc nhiều mức nối dấu phẩy (severityQueryOf) cho cấp Khẩn cấp
   status?: AlertStatus; severity?: string
+  // ALERT-FR-007 — 'true' = chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED)
+  open?: 'true'
   page?: number; limit?: number
 }
 
@@ -53,25 +54,16 @@ async function listAlerts(query: AlertsListQuery) {
   }
 }
 
-const ACTIVE_SAMPLE_LIMIT = 100
-
-// Badge chuông toàn cục: số cảnh báo ACTIVE trừ những tin người dùng đã xổ đọc trong popup
-export function useUnreadAlertCount() {
-  const setUnreadCount = useAlertStore(s => s.setUnreadCount)
-  const { readIds } = useReadAlerts()
-
+// ALERT-FR-007 — số cảnh báo ACTIVE (chờ xác nhận) trong phạm vi người dùng, cho chuông, menu và trang Cảnh báo; undefined khi
+// chưa tải xong, lỗi hoặc role không vào được /alerts. Cache xoá khi đăng xuất (queryClient.clear) nên không mang số sang phiên sau
+export function usePendingAlertTotal(): number | undefined {
+  const canSeeAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
   const result = useQuery({
-    queryKey: ['alerts', 'unread-count'],
-    queryFn: () => alertApi.list({ status: 'ACTIVE', limit: String(ACTIVE_SAMPLE_LIMIT) }),
+    queryKey: ['alerts', 'pending-count'],
+    queryFn: () => alertApi.list({ status: 'ACTIVE', limit: '1' }),
+    enabled: canSeeAlerts,
   })
-
-  useEffect(() => {
-    const active = result.data?.data
-    const total = active?.meta?.unreadCount
-    if (typeof total !== 'number') return
-    const readActive = (active?.data ?? []).filter(alert => readIds.has(alert._id)).length
-    setUnreadCount(Math.max(0, total - readActive))
-  }, [result.data, readIds, setUnreadCount])
+  return canSeeAlerts ? result.data?.data?.meta?.unreadCount : undefined
 }
 
 /**

@@ -3969,6 +3969,12 @@ paths:
             schema: { type: string, enum: [ACTIVE, ACKNOWLEDGED, DISMISSED, RESOLVED] },
           }
         - {
+            name: open,
+            in: query,
+            description: "`true` — chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED), tách khỏi DISMISSED và RESOLVED (ALERT-FR-007); đi kèm `status` thì `status` thắng",
+            schema: { type: string, enum: ["true"] },
+          }
+        - {
             name: severity,
             in: query,
             schema: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] },
@@ -3999,7 +4005,7 @@ paths:
                             unreadCount:
                               {
                                 type: integer,
-                                description: "Số cảnh báo ACTIVE (ALERT-FR-007)",
+                                description: "Số cảnh báo ACTIVE (chờ xác nhận) của bộ lọc, bỏ qua `status` và `open` (ALERT-FR-007); không phải trạng thái đã đọc",
                               },
                           }
 

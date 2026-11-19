@@ -24,6 +24,7 @@ router.get('/',
   query('zoneId').optional().isString().isMongoId(),
   query('houseId').optional().isString().isMongoId(),
   query('status').optional().isString().isIn(['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED', 'RESOLVED']),
+  query('open').optional().isString().isIn(['true']),
   query('severity').optional().isString().isIn(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
   query('type').optional().isString().isIn(ALERT_TYPES),
   query('verdict').optional().isString().isIn(['any', 'pending', 'confirmed', 'rejected']), validate, alertController.list)

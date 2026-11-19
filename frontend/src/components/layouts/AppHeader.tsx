@@ -78,7 +78,6 @@ export default function AppHeader({ menuSections, elevated = false, isOverHero =
   const page = usePageTitle(menuSections)
   const registeredTrail = useBreadcrumbStore(s => s.trail)
   const rootState = useBreadcrumbStore(s => s.rootState)
-  // Khớp RequireRole của /alerts (popup mở tới đó); Chuyên gia theo dõi cảnh báo qua hàng đợi kiểm chứng, Admin không thấy farm
 
   // Chỉ trang tự đăng ký breadcrumb (VD Farms drill-down) mới có cấp con —
   // header không còn ô chọn Zone nên không gắn tên Zone đang lưu vào đây nữa.

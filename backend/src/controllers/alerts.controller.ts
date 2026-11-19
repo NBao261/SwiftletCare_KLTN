@@ -15,6 +15,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     zoneId:   req.query.zoneId as string | undefined,
     houseId:  req.query.houseId as string | undefined,
     status:   req.query.status as string | undefined,
+    open:     req.query.open === 'true',
     severity: req.query.severity as string | undefined,
     type:     req.query.type as string | undefined,
     verdict:  req.query.verdict as 'any' | 'pending' | 'confirmed' | 'rejected' | undefined,

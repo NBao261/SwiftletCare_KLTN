@@ -1,66 +1,49 @@
-import { ClipboardList, ShieldCheck, SlidersHorizontal, FileCheck, FileText, History, CloudRain, BookCopy, Lightbulb, CalendarClock, Crosshair } from 'lucide-react';
+import {
+  BasketIcon, BirdIcon, BooksIcon, BuildingsIcon, CalendarBlankIcon, CalendarCheckIcon, ChartBarIcon, ChecksIcon,
+  ClipboardTextIcon, ClockCounterClockwiseIcon, CloudRainIcon, CpuIcon, CrosshairIcon, FileTextIcon, GearSixIcon,
+  HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, LightbulbIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon,
+  WrenchIcon,
+} from '@phosphor-icons/react';
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
-import { IconSettings } from '@/components/ui/icons';
-import { BasketIcon, BirdIcon, BuildingsIcon, CalendarCheckIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, LightbulbIcon, SquaresFourIcon, WrenchIcon } from '@phosphor-icons/react';
 
-/**
- * Layout cho vai trò Chuyên gia nuôi yến (DOMAIN_EXPERT) — FE_Design §12.5.
- *
- * Triết lý "Decision-first":
- *   Chuyên gia đăng nhập → thấy ngay HÀI ĐỢI VIỆC (queue), không phải dashboard số liệu.
- *   Dữ liệu vận hành (dashboard, analytics, camera, thu hoạch) Chuyên gia đọc qua trang
- *   Farm Owner ở chế độ chỉ đọc — không nhân bản giao diện.
- *
- * Nhóm "Chuyên môn" chỉ chứa các màn quyết định độc quyền của Chuyên gia:
- *   /domain-expert/queue          ← Trang chủ: việc cần xử lý
- *   /domain-expert/alert-verdicts ← Thẩm định cảnh báo AI
- *   /domain-expert/tuning         ← Ngưỡng & Hệ số mờ
- *   /domain-expert/reviews        ← Duyệt thay đổi tham số & Đề xuất hệ số mờ (G-04)
- *   /domain-expert/reports        ← Báo cáo & Kết luận
- *   /domain-expert/history        ← Lịch sử hoạt động
- *
- * Nhóm "Vận hành (chỉ đọc)" trỏ thẳng tới trang Farm Owner (Report 3 §2.4, G-15 ma trận quyền);
- * nút ghi trên các trang đó gate bằng usePermission('FARM_OWNER'). Dock mobile vẫn là 4 màn quyết định đầu.
- *
- * Bucket: components/layouts/ — theo §12.5.
- */
+// Khung Domain Expert (FE_Design §12.5): Chuyên môn là màn quyết định, Vận hành trỏ tới trang Farm Owner chỉ đọc (Report 4 §5.4); cùng tên, icon với menu Farm Owner
 const menuSections: MenuSection[] = [
   {
     title: 'Chuyên môn',
     items: [
-      { label: 'Hàng đợi việc', path: '/domain-expert/queue', icon: ClipboardList },
-      { label: 'Thẩm định Cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheck },
-      { label: 'Ngưỡng & Hệ số mờ', path: '/domain-expert/tuning', icon: SlidersHorizontal },
-      { label: 'Lịch đếm chim', path: '/domain-expert/counting-schedule', icon: CalendarClock },
-      { label: 'Vòng đếm camera', path: '/domain-expert/counting-ring', icon: Crosshair },
-      { label: 'Luật bù thời tiết', path: '/domain-expert/weather-rules', icon: CloudRain },
-      { label: 'Duyệt & Đề xuất', path: '/domain-expert/reviews', icon: FileCheck },
-      { label: 'Báo cáo & Kết luận', path: '/domain-expert/reports', icon: FileText },
-      { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles', icon: BookCopy },
-      { label: 'Luật khuyến nghị', path: '/domain-expert/recommendation-rules', icon: Lightbulb },
-      { label: 'Lịch sử hoạt động', path: '/domain-expert/history', icon: History },
+      { label: 'Hàng đợi việc', path: '/domain-expert/queue', icon: ClipboardTextIcon },
+      { label: 'Thẩm định cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheckIcon },
+      { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning', icon: SlidersHorizontalIcon },
+      { label: 'Lịch đếm chim', path: '/domain-expert/counting-schedule', icon: CalendarBlankIcon },
+      { label: 'Vòng đếm camera', path: '/domain-expert/counting-ring', icon: CrosshairIcon },
+      { label: 'Luật bù thời tiết', path: '/domain-expert/weather-rules', icon: CloudRainIcon },
+      { label: 'Duyệt & đề xuất', path: '/domain-expert/reviews', icon: ChecksIcon },
+      { label: 'Báo cáo & kết luận', path: '/domain-expert/reports', icon: FileTextIcon },
+      { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles', icon: BooksIcon },
+      { label: 'Luật khuyến nghị', path: '/domain-expert/recommendation-rules', icon: LightbulbFilamentIcon },
+      { label: 'Lịch sử quyết định', path: '/domain-expert/history', icon: ClockCounterClockwiseIcon },
     ],
   },
   {
     title: 'Vận hành (chỉ đọc)',
     items: [
-      { label: 'Tổng quan nhà yến', path: '/dashboard', icon: SquaresFourIcon },
-      { label: 'Tổng quan trại', path: '/overview', icon: BuildingsIcon },
+      { label: 'Tổng quan', path: '/dashboard', icon: SquaresFourIcon },
       { label: 'Giám sát đàn chim', path: '/vision', icon: BirdIcon },
-      { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
       { label: 'Sức khỏe nhà yến', path: '/health', icon: HeartbeatIcon },
+      { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
       { label: 'Thiết bị & Cảm biến', path: '/devices', icon: CpuIcon },
       { label: 'Phiếu công việc', path: '/work-orders', icon: WrenchIcon },
       { label: 'Khuyến nghị', path: '/recommendations', icon: LightbulbIcon },
       { label: 'Trang trại', path: '/farms', icon: HouseIcon },
+      { label: 'Tổng quan trại', path: '/overview', icon: BuildingsIcon },
       { label: 'Thống kê sản lượng', path: '/harvests', icon: BasketIcon },
       { label: 'Lịch bảo trì', path: '/maintenance', icon: CalendarCheckIcon },
     ],
   },
   {
     title: 'Khác',
-    items: [{ label: 'Cài đặt', path: '/settings', icon: IconSettings }],
+    items: [{ label: 'Cài đặt', path: '/settings', icon: GearSixIcon }],
   },
 ];
 

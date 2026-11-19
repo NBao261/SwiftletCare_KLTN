@@ -5,13 +5,8 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useAcknowledgeAlert } from '@/hooks/shared/useAlerts';
 import { useToastStore } from '@/stores/toastStore';
-import type { Alert, AlertType, SiteCause } from '@/types';
-
-// Cảnh báo thiết bị có ô nguyên nhân — khớp AUTO_WORK_ORDER_TYPES của backend và isCauseAlertType của mobile (ALERT-FR-018)
-const CAUSE_ALERT_TYPES: ReadonlySet<AlertType> = new Set<AlertType>([
-  'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'SPEAKER_FAILURE',
-]);
-const SITE_CAUSES: SiteCause[] = ['WATER', 'NOZZLE', 'PUMP', 'FAN', 'DOOR', 'SENSOR', 'SPEAKER', 'OTHER'];
+import { CAUSE_ALERT_TYPES, SITE_CAUSES } from '@/constants/siteCause';
+import type { Alert, SiteCause } from '@/types';
 // Giới hạn ghi chú của PUT /alerts/{id}/acknowledge (api-spec)
 const NOTE_MAX_LENGTH = 1000;
 

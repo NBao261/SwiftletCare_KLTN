@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Cpu, AlertTriangle, FileText, CheckCircle2 } from 'lucide-react'
 import { t } from '@/i18n'
+import { usePermission } from '@/hooks/common/usePermission'
 
 interface Props {
   autoModePct: number
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pendingReports }: Props) {
+  // Báo cáo & kết luận là trang của chuyên gia; Farm Owner đọc báo cáo ở tab Báo cáo của /health
+  const reportsPath = usePermission('DOMAIN_EXPERT') ? '/domain-expert/reports' : '/health?tab=report'
   const hasPendingAlerts = pendingCount > 0
   const hasPendingReports = pendingReports > 0
 
@@ -58,7 +61,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
 
       {/* KPI 3: Báo cáo sức khỏe zone chờ chuyên gia kết luận */}
       <Link
-        to="/domain-expert/reports"
+        to={reportsPath}
         title={hasPendingReports ? t('{{n}} báo cáo đang chờ chuyên gia kết luận', { n: pendingReports }) : t('Không có báo cáo chờ kết luận')}
         className={`group flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 sm:px-3 transition-all active:scale-[0.98] ${
           hasPendingReports

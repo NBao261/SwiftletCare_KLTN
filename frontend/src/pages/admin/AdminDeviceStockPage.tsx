@@ -1,6 +1,6 @@
 // ADMIN — Kho thiết bị (FARM-FR-010, Report 3 §6.16). Thêm thiết bị → in nhãn QR (device ID + mã kích hoạt) và chép
 // mật khẩu broker để flash, cả hai chỉ hiện 1 lần. Cấp lại mã kích hoạt / thu hồi khi thiết bị không đang dùng ở farm;
-// cấp lại mật khẩu broker khi chưa thu hồi. Thiết bị đang chạy xem ở /system/devices.
+// cấp lại mật khẩu broker khi chưa thu hồi. Thiết bị đang chạy xem ở /devices.
 // Cùng khuôn trang Người dùng: tìm kiếm + nút thêm → bộ lọc + sắp xếp → bảng → phân trang (client-side, xem useDeviceStock).
 import { useMemo, useState } from 'react'
 import { WarningCircleIcon } from '@phosphor-icons/react'

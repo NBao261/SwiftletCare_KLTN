@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useAlertStore } from '@/stores/alertStore'
+import { usePendingAlertTotal } from '@/hooks/shared/useAlerts'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
 import { cn } from '@/lib/cn'
@@ -38,7 +38,7 @@ export default function AppSidebar({
   dockItems: MenuItem[]
 }) {
   const user = useAuthStore(s => s.user)
-  const unreadCount = useAlertStore(s => s.unreadCount)
+  const pendingAlertCount = usePendingAlertTotal() ?? 0
   const isExpert = user?.role === 'DOMAIN_EXPERT'
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
   const expertPendingCount = isExpert ? (expertAlerts?.total ?? 0) : 0
@@ -62,7 +62,7 @@ export default function AppSidebar({
             <p className="truncate text-xl font-bold text-charcoal">{user?.full_name}</p>
             <p className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-warmGray">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
-              Role: {user?.role ? navigationLabel(ROLE_LABEL[user.role]) : ''}
+              {navigationLabel('Vai trò:')} {user?.role ? ROLE_LABEL[user.role] : ''}
             </p>
           </div>
 
@@ -77,11 +77,9 @@ export default function AppSidebar({
                   <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{navigationLabel(section.title)}</p>
                   <div className="space-y-1">
                     {section.items.map(item => {
-                      const badgeCount = item.path === '/domain-expert/alert-verdicts'
-                        ? (isExpert ? expertPendingCount : unreadCount)
-                        : item.path === '/alerts'
-                          ? unreadCount
-                          : 0
+                      // Cảnh báo: số chờ xác nhận (ACTIVE); Thẩm định: số cảnh báo suy luận chờ chuyên gia kết luận, chỉ chuyên gia
+                      const badgeByPath: Record<string, number> = { '/alerts': pendingAlertCount, '/domain-expert/alert-verdicts': expertPendingCount }
+                      const badgeCount = badgeByPath[item.path] ?? 0
                       return (
                         <NavLink
                           key={item.path}
