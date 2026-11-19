@@ -58,7 +58,8 @@ export interface Invitation {
   invited_email: string
   invited_role: Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
   invited_by: string
-  token: string
+  // Chỉ có trong phản hồi tạo lời mời; danh sách lời mời không trả token
+  token?: string
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
   expires_at: string
   responded_at?: string

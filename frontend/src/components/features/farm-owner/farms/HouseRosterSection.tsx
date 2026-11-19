@@ -8,9 +8,9 @@ import TableEmptyState from '@/components/common/TableEmptyState'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
-import { CAPSULE_ACTION_CLASS, MEMBER_PAGE_SIZE, MEMBER_ROW_HEIGHT } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { CAPSULE_ACTION_CLASS, MEMBER_PAGE_SIZE, MEMBER_ROW_HEIGHT, ROSTER_DAY_LABEL as DAY_LABEL, ROSTER_ROLE_LABEL as ROLE_LABEL } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { NO_VALUE } from '@/constants/display'
-import { farmDict, type FarmKey } from '@/constants/farmStructure.i18n'
+import { farmDict } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useHouseRoster, useHouses, useSetHouseRoster } from '@/hooks/shared/useFarms'
@@ -18,8 +18,6 @@ import { useToastStore } from '@/stores/toastStore'
 import { isOvernightShift, validateRosterShift, WEEK_ORDER, type RosterError } from '@/validations/farm-owner/roster.validation'
 import type { RosterShift } from '@/types'
 
-const DAY_LABEL: FarmKey[] = ['roster.day.0', 'roster.day.1', 'roster.day.2', 'roster.day.3', 'roster.day.4', 'roster.day.5', 'roster.day.6']
-const ROLE_LABEL: Record<RosterShift['role'], FarmKey> = { PRIMARY: 'roster.role.PRIMARY', BACKUP: 'roster.role.BACKUP' }
 const ROLES: RosterShift['role'][] = ['PRIMARY', 'BACKUP']
 
 // Dòng bảng: ca kèm vị trí trong lịch (sửa / xoá theo vị trí)
