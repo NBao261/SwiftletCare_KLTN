@@ -13,7 +13,7 @@ import { usePendingVerdictAlertCount } from '@/hooks/alert/usePendingVerdictAler
 import { usePendingHealthDays } from '@/hooks/health/usePendingHealthDays'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
-import { getOldestPendingDay, summarizePendingTasks } from '@/utils/healthDay.utils'
+import { summarizePendingTasks } from '@/utils/healthDay.utils'
 import { t } from '@/utils/i18n.utils'
 import { canPerform } from '@/utils/permission.utils'
 
@@ -21,8 +21,9 @@ const COUNT_BOX_SIZE = 48
 // Chiều cao khung xương / khung lỗi: ô số 48 + lề card 16×2
 const CARD_HEIGHT = COUNT_BOX_SIZE + Spacing.lg * 2
 
-// Khối "Việc chờ bạn": ngày chờ người dùng chấm (chủ trại, kỹ thuật viên) + cảnh báo chờ chủ phán quyết (chỉ chủ trại);
-// hết việc vẫn giữ khối, số là 0
+// Khối "Đánh giá ngày": ngày chờ người dùng chấm (chủ trại, kỹ thuật viên) + cảnh báo chờ chủ phán quyết (chỉ chủ trại);
+// hết việc vẫn giữ khối, số là 0. Còn việc thì bấm mở màn "Đánh giá ngày": mọi ngày chờ chấm (chia theo nhà, mới nhất trước) và
+// cảnh báo chờ phán quyết hiện ngay, không phải chọn nhà trước
 export function PendingTasksCard() {
   const palette = usePalette()
   const queryClient = useQueryClient()
@@ -36,7 +37,7 @@ export function PendingTasksCard() {
   if (pendingVerdicts.isError || pendingDaysQuery.isError) {
     return (
       <EmptyState
-        message={t('Không tải được việc chờ bạn')}
+        message={t('Không tải được việc đánh giá')}
         actionLabel={t('Thử lại')}
         onAction={() => refetchVisibleQueries(queryClient)}
         height={CARD_HEIGHT}
@@ -47,19 +48,17 @@ export function PendingTasksCard() {
   const tasks = summarizePendingTasks(pendingDaysQuery.data, pendingVerdicts.count)
   const { total } = tasks
   const summary = total === 0 ? t('Không có việc nào đang chờ') : tasks.summary
-  // Có ngày chờ chấm thì mở thẳng ngày cũ nhất (gần hết hạn nhất) để chấm (BR-31)
-  const oldestPendingDay = getOldestPendingDay(pendingDaysQuery.data)
-  const openOldestDay = oldestPendingDay
-    ? () => router.push({ pathname: '/health/[dayId]', params: { dayId: oldestPendingDay._id } })
-    : undefined
+  const openTasks = total > 0 ? () => router.push('/pending-tasks') : undefined
 
   return (
-    // shortcut: chưa có màn danh sách cảnh báo chờ phán quyết — chỉ việc chấm ngày mở được từ đây
     <Card
       style={styles.card}
-      onPress={openOldestDay}
-      accessibilityHint={openOldestDay ? t('Mở ngày chờ đánh giá cũ nhất') : undefined}
-      accessibilityLabel={t('Việc chờ bạn: {total} việc, {summary}', { total, summary })}
+      onPress={openTasks}
+      accessibilityHint={openTasks ? t('Mở danh sách đánh giá') : undefined}
+      accessibilityLabel={t('Đánh giá ngày: {total} việc, {summary}', {
+        total,
+        summary,
+      })}
     >
       {/* Lime chỉ làm chữ trên nền Ink */}
       <View style={[styles.countBox, { backgroundColor: palette.inverse }]}>
@@ -69,13 +68,13 @@ export function PendingTasksCard() {
       </View>
       <View style={styles.texts}>
         <Text variant="body" weight="semiBold">
-          {t('Việc chờ bạn')}
+          {t('Đánh giá ngày')}
         </Text>
         <Text variant="small" color={palette.textSecondary} numberOfLines={2}>
           {summary}
         </Text>
       </View>
-      {openOldestDay && <CaretRightIcon size={16} color={palette.textSecondary} />}
+      {openTasks && <CaretRightIcon size={16} color={palette.textSecondary} />}
     </Card>
   )
 }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from '@jest/globals'
 import type { CountingDayWindows } from '@/types'
 import {
+  countDays,
   dayOfYear,
   formatDateRange,
   formatDayWindows,
+  formatDayWindowsInline,
   formatMonthDay,
   formatMonthDayRange,
   formatTimeWindow,
@@ -89,9 +91,20 @@ describe('định dạng khung và ngày', () => {
     expect(formatTimeWindow(WINDOWS.morning)).toBe('05:30\u2060–\u206007:00')
   })
 
-  it('ngày dd/MM của hồ sơ và khoảng ngày của khung tạm mỗi mốc một dòng', () => {
+  it('ngày dd/MM của hồ sơ; khoảng ngày của khung tạm gọn trên một dòng', () => {
     expect(formatMonthDay('03-15')).toBe('15/03')
     expect(plain(formatMonthDayRange('12-01', '02-28'))).toBe('01/12–28/02')
-    expect(formatDateRange('2026-11-20', '2026-11-22')).toBe('20/11/2026\nđến 22/11/2026')
+    expect(formatDateRange('2026-11-17', '2026-11-17')).toBe('17/11/2026')
+    expect(plain(formatDateRange('2026-11-17', '2026-11-19'))).toBe('17/11–19/11/2026')
+    expect(plain(formatDateRange('2026-12-28', '2027-01-02'))).toBe('28/12/2026–02/01/2027')
+  })
+
+  it('số ngày của khung tạm tính cả hai đầu', () => {
+    expect(countDays('2026-11-17', '2026-11-17')).toBe(1)
+    expect(countDays('2026-12-30', '2027-01-02')).toBe(4)
+  })
+
+  it('hai khung trên một dòng ngăn bằng dấu "·"', () => {
+    expect(plain(formatDayWindowsInline(WINDOWS))).toBe('Sáng 05:30–07:00 · Chiều 17:30–19:00')
   })
 })

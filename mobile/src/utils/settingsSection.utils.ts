@@ -61,8 +61,10 @@ export function parseSettingsSectionKind(value: string | undefined): SettingsSec
   return SECTION_KINDS.find(kind => kind === value) ?? null
 }
 
-// Vì sao một mục chỉ được xem: chủ trại ở farm đã có chuyên gia thì việc đó của chuyên gia (BR-22); role khác chỉ xem
-export function getViewOnlyNote(canEditWithoutExpert: boolean, hasExpert: boolean | undefined): string {
+// Vì sao một mục chỉ được xem: chủ trại ở farm đã có chuyên gia thì việc đó của chuyên gia (BR-22); role khác chỉ xem. Chủ trại
+// mà danh sách farm chưa tải xong (chưa biết farm có chuyên gia) thì null — không nói nhầm là chỉ xem
+export function getViewOnlyNote(canEditWithoutExpert: boolean, hasExpert: boolean | undefined): string | null {
+  if (canEditWithoutExpert && hasExpert === undefined) return null
   if (canEditWithoutExpert && hasExpert) return t('Farm đã có chuyên gia: chuyên gia đặt mục này, bạn chỉ xem')
   return t('Bạn chỉ xem mục này')
 }

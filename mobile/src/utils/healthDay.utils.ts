@@ -210,15 +210,6 @@ export function getPendingRatingRange(now: number = Date.now()): { from: string;
   return { from: shiftDate(to, -RATING_WINDOW_DAYS), to }
 }
 
-// Ngày chờ chấm cũ nhất (gần hết hạn nhất) — lối tắt mở thẳng ngày này
-export function getOldestPendingDay(days: HouseHealthDay[]): HouseHealthDay | null {
-  let oldest: HouseHealthDay | null = null
-  for (const day of days) {
-    if (day.my_rating_state === 'PENDING' && (!oldest || day.date < oldest.date)) oldest = day
-  }
-  return oldest
-}
-
 // Ngày còn chờ người dùng chấm thì bị che trạng thái (BR-31)
 export function isHealthDayHidden(day: HouseHealthDay): boolean {
   return day.my_rating_state === 'PENDING' || day.current_status === undefined
@@ -258,8 +249,31 @@ export function summarizePendingTasks(pendingDays: HouseHealthDay[], pendingVerd
   }
 }
 
+// Một nhóm trên màn "Đánh giá ngày": một nhà và các ngày của nhà đó còn chờ người dùng chấm
+export interface PendingDayGroup {
+  houseId: string
+  houseName: string
+  days: HouseHealthDay[]
+}
+
+// Ngày chờ chấm chia theo nhà, mới nhất trước: nhà có ngày chờ mới nhất đứng đầu, trong mỗi nhà ngày mới nhất trước. Chỉ xếp
+// được ngày trong khoảng from…to (hạn chấm vài ngày) nên đi từng ngày từ to lùi về from, không cần sắp xếp
+export function groupPendingDaysByHouse(days: HouseHealthDay[], from: string, to: string): PendingDayGroup[] {
+  const daysByDate = new Map<string, HouseHealthDay[]>()
+  for (const day of days) daysByDate.set(day.date, [...(daysByDate.get(day.date) ?? []), day])
+  const groupByHouseId = new Map<string, PendingDayGroup>()
+  for (let date = to; date >= from; date = shiftDate(date, -1)) {
+    for (const day of daysByDate.get(date) ?? []) {
+      const group = groupByHouseId.get(day.house_id)
+      if (group) group.days.push(day)
+      else groupByHouseId.set(day.house_id, { houseId: day.house_id, houseName: day.house_name || '_', days: [day] })
+    }
+  }
+  return [...groupByHouseId.values()]
+}
+
 // Trạng thái ngày hôm nay trên thẻ nhà (ANALYTICS-FR-015): ngày còn chờ người xem chấm thì che (BR-31, backend tổng quan không tự
-// che); chưa tính hôm nay thì ghi chưa tính; thiếu dữ liệu là INSUFFICIENT_DATA
+// che, app là chỗ che duy nhất); chưa tính hôm nay thì ghi chưa tính; thiếu dữ liệu là INSUFFICIENT_DATA
 export type HouseDayDisplay =
   | { kind: 'status'; status: HealthDayStatus }
   | { kind: 'pending-rating' }
@@ -267,9 +281,10 @@ export type HouseDayDisplay =
 
 export function getHouseDayDisplay(
   overview: { house_id: string; date: string; status: HealthRatingValue | null; status_reason: string | null } | undefined,
-  pendingDays: Pick<HouseHealthDay, 'house_id' | 'date'>[],
+  // null: chưa biết người xem còn ngày nào chờ chấm (đang tải hoặc tải lỗi) thì không hiện gì, kẻo lộ trạng thái trước khi chấm
+  pendingDays: Pick<HouseHealthDay, 'house_id' | 'date'>[] | null,
 ): HouseDayDisplay | null {
-  if (!overview) return null
+  if (!overview || !pendingDays) return null
   if (pendingDays.some(day => day.house_id === overview.house_id && day.date === overview.date)) return { kind: 'pending-rating' }
   if (overview.status) return { kind: 'status', status: overview.status }
   if (overview.status_reason === 'INSUFFICIENT_DATA') return { kind: 'status', status: 'INSUFFICIENT_DATA' }

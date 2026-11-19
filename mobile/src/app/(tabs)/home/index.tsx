@@ -48,7 +48,7 @@ export default function HomeScreen() {
   const language = useLanguage()
   const user = useAuthStore(state => state.user)
   const canViewOwnerTasks = canPerform(user, 'viewOwnerTasks')
-  // Kỹ thuật viên cũng chấm ngày của nhà được giao (BR-31) nên thấy "Việc chờ bạn", chỉ phần ngày chờ chấm
+  // Kỹ thuật viên cũng chấm ngày của nhà được giao (BR-31) nên thấy "Đánh giá ngày", chỉ phần ngày chờ chấm
   const canViewPendingTasks = canViewOwnerTasks || canPerform(user, 'viewPendingRatings')
   const canWorkOnWorkOrders = canPerform(user, 'workOnWorkOrder')
   const insets = useSafeAreaInsets()

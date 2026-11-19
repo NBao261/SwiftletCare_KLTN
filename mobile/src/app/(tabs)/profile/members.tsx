@@ -27,7 +27,7 @@ import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import type { FarmMember } from '@/types'
-import { getDaysLeft, getInvitedRoleLabel, getMemberRoleLabel, sortMembers } from '@/utils/account.utils'
+import { getDaysLeft, getInvitedRoleLabel, getMemberRoleLabel, sortMembers, summarizeMembers } from '@/utils/account.utils'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { formatDate } from '@/utils/date.utils'
 import { farmHasExpert } from '@/utils/farm.utils'
@@ -106,6 +106,10 @@ export default function MembersScreen() {
     const members = sortMembers(farm.members, farm.owner_id)
     return (
       <Card style={styles.listCard}>
+        {/* Tổng theo nhóm, tự cập nhật khi mời / gỡ; danh sách đã xếp chủ chính → đồng sở hữu → chuyên gia → kỹ thuật viên */}
+        <Text variant="small" color={palette.textSecondary} style={styles.summary}>
+          {summarizeMembers(farm.members, farm.owner_id)}
+        </Text>
         {members.map((member, index) => {
           const isOwner = member.is_primary || member.user_id === farm.owner_id
           const isSelf = member.user_id === user?._id
@@ -200,8 +204,18 @@ export default function MembersScreen() {
           </Card>
         )}
 
-        <HomeSection title={t('Thành viên')}>{renderMembers()}</HomeSection>
-        <HomeSection title={t('Lời mời đang chờ')}>{renderInvitations()}</HomeSection>
+        <HomeSection title={farm ? t('Thành viên ({count})', { count: farm.members.length }) : t('Thành viên')}>
+          {renderMembers()}
+        </HomeSection>
+        <HomeSection
+          title={
+            invitationsQuery.data
+              ? t('Lời mời đang chờ ({count})', { count: invitationsQuery.data.length })
+              : t('Lời mời đang chờ')
+          }
+        >
+          {renderInvitations()}
+        </HomeSection>
 
         {canManage ? (
           <Button
@@ -255,6 +269,7 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.lg, gap: Spacing.xl },
   list: { gap: Spacing.sm },
   listCard: { paddingVertical: Spacing.xs },
+  summary: { paddingTop: Spacing.sm, paddingBottom: Spacing.xs },
   hint: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
   hintIcon: {
     width: HINT_ICON_SIZE,

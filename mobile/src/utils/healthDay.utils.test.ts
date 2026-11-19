@@ -5,8 +5,8 @@ import {
   formatIndicatorValue,
   formatLastRatingDay,
   getHouseDayDisplay,
-  getOldestPendingDay,
   getPendingRatingRange,
+  groupPendingDaysByHouse,
   isHealthDayHidden,
   shiftDate,
   summarizePendingTasks,
@@ -136,16 +136,6 @@ describe('ngày và hạn chấm', () => {
     expect(formatLastRatingDay('2026-11-08T17:00:00.000Z')).toBe('08/11')
   })
 
-  it('ngày chờ cũ nhất', () => {
-    const days = [
-      buildDay('house-a', '2026-11-09'),
-      buildDay('house-b', '2026-11-05', { my_rating_state: 'RATED', current_status: 'GOOD' }),
-      buildDay('house-b', '2026-11-07'),
-    ]
-    expect(getOldestPendingDay(days)?._id).toBe('house-b-2026-11-07')
-    expect(getOldestPendingDay([])).toBeNull()
-  })
-
   it('ngày chờ chấm bị che, ngày đã chấm thì không', () => {
     expect(isHealthDayHidden(buildDay('house-a', '2026-11-09'))).toBe(true)
     expect(isHealthDayHidden(buildDay('house-a', '2026-11-09', { my_rating_state: 'RATED', current_status: 'WATCH' }))).toBe(false)
@@ -167,11 +157,38 @@ describe('getHouseDayDisplay', () => {
     expect(getHouseDayDisplay(overview, [{ house_id: 'house-2', date: '2026-11-19' }])).toEqual({ kind: 'status', status: 'WATCH' })
   })
 
+  it('chưa biết ngày chờ chấm (đang tải hoặc lỗi) thì không hiện trạng thái (BR-31)', () => {
+    expect(getHouseDayDisplay(overview, null)).toBeNull()
+  })
+
   it('thiếu dữ liệu là INSUFFICIENT_DATA, chưa tính thì ghi chưa tính', () => {
     expect(getHouseDayDisplay({ ...overview, status: null, status_reason: 'INSUFFICIENT_DATA' }, [])).toEqual({
       kind: 'status',
       status: 'INSUFFICIENT_DATA',
     })
     expect(getHouseDayDisplay({ ...overview, status: null, status_reason: 'NOT_COMPUTED' }, [])).toEqual({ kind: 'not-computed' })
+  })
+})
+
+describe('groupPendingDaysByHouse', () => {
+  it('nhà có ngày chờ mới nhất đứng đầu, trong nhà ngày mới nhất trước, bỏ ngày ngoài khoảng', () => {
+    const groups = groupPendingDaysByHouse(
+      [
+        buildDay('house-a', '2026-11-15'),
+        buildDay('house-b', '2026-11-18'),
+        buildDay('house-a', '2026-11-17'),
+        buildDay('house-b', '2026-11-01'),
+      ],
+      '2026-11-12',
+      '2026-11-19',
+    )
+    expect(groups.map(group => [group.houseId, group.days.map(day => day.date)])).toEqual([
+      ['house-b', ['2026-11-18']],
+      ['house-a', ['2026-11-17', '2026-11-15']],
+    ])
+  })
+
+  it('không có ngày chờ thì không có nhóm', () => {
+    expect(groupPendingDaysByHouse([], '2026-11-12', '2026-11-19')).toEqual([])
   })
 })

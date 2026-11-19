@@ -72,6 +72,8 @@ export default function RootLayout() {
               {/* Chuông: màn riêng ngoài các tab (không nằm trong tab Tài khoản), thanh tab ẩn khi mở */}
               <Stack.Screen name="notifications/index" />
               <Stack.Screen name="notifications/[notificationId]" />
+              {/* Đánh giá ngày (mở từ Trang chủ): ngày chờ chấm theo nhà, cảnh báo chờ phán quyết */}
+              <Stack.Screen name="pending-tasks/index" />
               <Stack.Screen name="health/index" />
               <Stack.Screen name="health/[dayId]" />
               {/* Work Order sửa chữa (G-21): danh sách và chi tiết, ngoài các tab */}

@@ -281,7 +281,8 @@ export function AlertDetailContent({
         />
       )}
       <VerdictSheet
-        key={verdictResult ?? 'closed'}
+        // Key khác key của RelayControlSheet: hai sheet cùng đóng thì không trùng key
+        key={verdictResult ?? 'verdict-closed'}
         alertId={alert._id}
         result={verdictResult}
         onClose={() => setVerdictResult(null)}
@@ -308,7 +309,7 @@ export function AlertDetailContent({
         onClose={() => setRelayPickerOpen(false)}
       />
       <RelayControlSheet
-        key={relaySelection ? `${relaySelection.controllerId}-${relaySelection.relay}` : 'closed'}
+        key={relaySelection ? `${relaySelection.controllerId}-${relaySelection.relay}` : 'relay-closed'}
         controller={selectedController}
         relay={relaySelection?.relay ?? null}
         onClose={() => setRelaySelection(null)}

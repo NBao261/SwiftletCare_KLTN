@@ -23,6 +23,7 @@ import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { useGoBackOrHome } from '@/hooks/navigation/useGoBackOrHome'
+import { usePushOrBack } from '@/hooks/navigation/usePushOrBack'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
@@ -65,6 +66,7 @@ export default function WorkOrderDetailScreen() {
   const language = useLanguage()
   const insets = useSafeAreaInsets()
   const goBack = useGoBackOrHome()
+  const pushOrBack = usePushOrBack()
   const toast = useToastMessage()
   const { workOrderId = '' } = useLocalSearchParams<{ workOrderId?: string }>()
   const user = useAuthStore(state => state.user)
@@ -293,7 +295,8 @@ export default function WorkOrderDetailScreen() {
           <Button
             label={t('Xem cảnh báo gốc')}
             variant="secondary"
-            onPress={() => router.push({ pathname: '/alert/[alertId]', params: { alertId: workOrder.alert_id as string } })}
+            // Mở từ chi tiết cảnh báo này thì quay lại cảnh báo, không mở chồng (tránh vòng phiếu ↔ cảnh báo)
+            onPress={() => pushOrBack({ pathname: '/alert/[alertId]', params: { alertId: workOrder.alert_id as string } })}
           />
         )}
       </>
@@ -325,7 +328,11 @@ export default function WorkOrderDetailScreen() {
             icon: XCircleIcon,
             label: t('Huỷ phiếu'),
             caption: t('Ghi lý do; phiếu đóng lại, không làm nữa'),
-            onPress: () => setReasonSheet(current => ({ kind: 'cancel', key: (current?.key ?? 0) + 1 })),
+            // Bỏ lỗi của lần huỷ trước để sheet mới không hiện dòng lỗi cũ
+            onPress: () => {
+              cancelWorkOrder.reset()
+              setReasonSheet(current => ({ kind: 'cancel', key: (current?.key ?? 0) + 1 }))
+            },
           },
         ]
       : []),
@@ -368,7 +375,11 @@ export default function WorkOrderDetailScreen() {
             <Button
               label={t('Mở lại')}
               variant="secondary"
-              onPress={() => setReasonSheet(current => ({ kind: 'reopen', key: (current?.key ?? 0) + 1 }))}
+              // Bỏ lỗi của lần mở lại trước để sheet mới không hiện dòng lỗi cũ
+              onPress={() => {
+                reopenWorkOrder.reset()
+                setReasonSheet(current => ({ kind: 'reopen', key: (current?.key ?? 0) + 1 }))
+              }}
               disabled={approveWorkOrder.isPending}
               style={styles.flex}
             />

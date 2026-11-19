@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { PlantIcon } from 'phosphor-react-native'
-import { SettingsActionBar } from '@/components/farm/settings/SettingsActionBar'
 import { SettingsEditActions } from '@/components/farm/settings/SettingsEditActions'
 import { SettingsSection } from '@/components/farm/settings/SettingsSection'
 import { ChoiceChip } from '@/components/ui/choice-chip'
@@ -112,7 +111,6 @@ export function HouseStageSection({ house, editor, onSaved }: HouseStageSectionP
         <HouseStageEditor house={house} editor={editor} onSaved={onSaved} />
       ) : (
         <>
-          <SettingsActionBar label={t('Giai đoạn hiện tại')} value={getHouseStageLabel(stage)} />
           <Text variant="small" color={palette.textSecondary}>
             {getStageNote(stage)}
           </Text>

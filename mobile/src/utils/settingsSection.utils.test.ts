@@ -40,4 +40,8 @@ describe('getViewOnlyNote', () => {
     expect(getViewOnlyNote(true, true)).toBe('Farm đã có chuyên gia: chuyên gia đặt mục này, bạn chỉ xem')
     expect(getViewOnlyNote(false, false)).toBe('Bạn chỉ xem mục này')
   })
+
+  it('chủ trại khi chưa biết farm có chuyên gia hay không thì không ghi gì', () => {
+    expect(getViewOnlyNote(true, undefined)).toBeNull()
+  })
 })

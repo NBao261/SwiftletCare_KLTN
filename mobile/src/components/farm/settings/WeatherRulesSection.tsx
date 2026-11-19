@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CloudSunIcon } from 'phosphor-react-native'
 import { SettingsEditActions } from '@/components/farm/settings/SettingsEditActions'
 import { SettingsSection } from '@/components/farm/settings/SettingsSection'
-import { SettingsTable, type SettingsTableRow } from '@/components/farm/settings/SettingsTable'
+import { SettingsList, SettingsListRow } from '@/components/farm/settings/SettingsListRow'
 import { WeatherRuleSheet } from '@/components/farm/settings/WeatherRuleSheet'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -37,31 +37,30 @@ function formatCondition(rule: WeatherRule): string {
   return `${label} ≥ ${formatStoredNumber(rule.min)} ${unit}`
 }
 
-// Mức bù của luật: "+5 % · 30 phút"
+// Mức bù của luật: "Bù +5 % · 30 phút"
 function formatOffset(rule: WeatherRule): string {
   const sign = rule.offset_pct > 0 ? '+' : ''
-  return t('{offset} % · {minutes} phút', { offset: `${sign}${formatStoredNumber(rule.offset_pct)}`, minutes: rule.duration_min })
+  return t('Bù {offset} % · {minutes} phút', { offset: `${sign}${formatStoredNumber(rule.offset_pct)}`, minutes: rule.duration_min })
 }
 
-// Các dòng bảng luật; onPress chỉ có khi đang sửa
-function buildRows(rules: WeatherRule[], onPress?: (index: number) => void): SettingsTableRow[] {
-  return rules.map((rule, index) => ({
-    id: rule._id ?? `new-${index}`,
-    cells: [
-      { text: formatCondition(rule) },
-      { text: formatOffset(rule) },
-      { text: rule.active ? t('Bật') : t('Tắt'), isMuted: !rule.active },
-    ],
-    onPress: onPress ? () => onPress(index) : undefined,
-    accessibilityLabel: `${formatCondition(rule)}, ${formatOffset(rule)}, ${rule.active ? t('Bật') : t('Tắt')}`,
-  }))
+// Danh sách luật; onPress chỉ có khi đang sửa
+function RuleList({ rules, onPress }: { rules: WeatherRule[]; onPress?: (index: number) => void }) {
+  return (
+    <SettingsList isEmpty={rules.length === 0} emptyText={t('Chưa có luật nào')}>
+      {rules.map((rule, index) => (
+        <SettingsListRow
+          key={rule._id ?? `new-${index}`}
+          title={formatCondition(rule)}
+          trailing={rule.active ? t('Bật') : t('Tắt')}
+          isTrailingMuted={!rule.active}
+          caption={formatOffset(rule)}
+          hasDivider={index > 0}
+          onPress={onPress ? () => onPress(index) : undefined}
+        />
+      ))}
+    </SettingsList>
+  )
 }
-
-const COLUMNS = () => [
-  { label: t('Khi dự báo'), flex: 2 },
-  { label: t('Bù phun'), align: 'right' as const, flex: 1.3 },
-  { label: t('Dùng'), align: 'right' as const, flex: 0.7 },
-]
 
 // Phần đang sửa: bản nháp danh sách luật, chạm một luật để sửa hoặc xoá, thêm luật mới; Cập nhật gửi cả danh sách
 function WeatherRulesEditor({
@@ -102,7 +101,7 @@ function WeatherRulesEditor({
 
   return (
     <>
-      <SettingsTable columns={COLUMNS()} rows={buildRows(rules, setSheetTarget)} emptyText={t('Chưa có luật nào')} />
+      <RuleList rules={rules} onPress={setSheetTarget} />
       <Button
         label={t('Thêm luật ({count}/{max})', { count: rules.length, max: MAX_WEATHER_RULES })}
         variant="outline"
@@ -145,6 +144,7 @@ export function WeatherRulesSection({ house, editor, onSaved }: WeatherRulesSect
   const user = useAuthStore(state => state.user)
   const hasExpert = useFarmHasExpert(house.farm_id)
   const canEdit = canPerform(user, 'editWeatherRules', { farmHasExpert: hasExpert })
+  const viewOnlyNote = canEdit ? null : getViewOnlyNote(canPerform(user, 'editWeatherRules', { farmHasExpert: false }), hasExpert)
   const rulesQuery = useWeatherRules(house._id)
   const id = getSettingsSectionId('weather')
   const isEditing = editor.isEditing(id)
@@ -191,7 +191,7 @@ export function WeatherRulesSection({ house, editor, onSaved }: WeatherRulesSect
         <WeatherRulesEditor house={house} view={view} editor={editor} onSaved={onSaved} startWithAdd={startWithAdd} />
       ) : (
         <>
-          <SettingsTable columns={COLUMNS()} rows={buildRows(view.rules)} emptyText={t('Chưa có luật nào')} />
+          <RuleList rules={view.rules} />
           <Text variant="small" color={palette.textSecondary}>
             {last
               ? t('Lần bù gần nhất: {offset} % lúc {sent}, hết hạn {expires}', {
@@ -209,11 +209,11 @@ export function WeatherRulesSection({ house, editor, onSaved }: WeatherRulesSect
               onPress={startAdding}
               disabled={view.rules.length >= MAX_WEATHER_RULES}
             />
-          ) : (
+          ) : viewOnlyNote ? (
             <Text variant="small" color={palette.textSecondary}>
-              {getViewOnlyNote(canPerform(user, 'editWeatherRules'), hasExpert)}
+              {viewOnlyNote}
             </Text>
-          )}
+          ) : null}
         </>
       )}
     </SettingsSection>

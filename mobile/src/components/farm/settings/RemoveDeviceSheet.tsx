@@ -125,8 +125,7 @@ export function RemoveDeviceSheet({ target, onClose, onDone }: RemoveDeviceSheet
         <FormMessage message={errorMessage} />
         <SettingsActionBar
           label={isRestore ? t('Khôi phục thiết bị') : t('Gỡ thiết bị')}
-          value={t('GỬI')}
-          onPress={submit}
+            onPress={submit}
           disabled={reason.trim() === ''}
           loading={mutation.isPending}
           accessibilityLabel={isRestore ? t('Khôi phục thiết bị') : t('Gỡ thiết bị')}

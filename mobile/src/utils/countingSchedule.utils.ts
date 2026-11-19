@@ -134,8 +134,26 @@ export function formatMonthDayRange(from: string, to: string): string {
   return `${formatMonthDay(from)}${NO_BREAK_DASH}${formatMonthDay(to)}`
 }
 
-// Khoảng ngày của khung tạm, mỗi mốc một dòng (ngày đủ năm dài, ghép một dòng thì bị ngắt giữa số)
+// Khoảng ngày của khung tạm, gọn trên một dòng: một ngày "17/11/2026"; cùng năm "17/11–19/11/2026"; khác năm ghi đủ hai năm
 export function formatDateRange(from: string, to: string): string {
-  const format = (date: string) => date.split('-').reverse().join('/')
-  return [format(from), t('đến {date}', { date: format(to) })].join('\n')
+  const [fromYear, fromMonth, fromDay] = from.split('-')
+  const [toYear, toMonth, toDay] = to.split('-')
+  const toText = `${toDay}/${toMonth}/${toYear}`
+  if (from === to) return toText
+  if (fromYear === toYear) return `${fromDay}/${fromMonth}${NO_BREAK_DASH}${toText}`
+  return `${fromDay}/${fromMonth}/${fromYear}${NO_BREAK_DASH}${toText}`
+}
+
+// Số ngày của khung tạm, tính cả hai đầu
+export function countDays(from: string, to: string): number {
+  const dayMs = 24 * 60 * 60 * 1000
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / dayMs) + 1
+}
+
+// Hai khung của một ngày trên một dòng: "Sáng 05:30–07:00 · Chiều 17:30–19:00" (chỉ xuống hàng ở dấu "·" khi thiếu chỗ)
+export function formatDayWindowsInline(windows: CountingDayWindows): string {
+  return [
+    t('Sáng {window}', { window: formatTimeWindow(windows.morning) }),
+    t('Chiều {window}', { window: formatTimeWindow(windows.evening) }),
+  ].join(' · ')
 }

@@ -304,7 +304,6 @@ export function AddDeviceSheet({ target, onClose, onRegistered }: AddDeviceSheet
       <FormMessage message={mutation.error ? getDeviceRegisterErrorMessage(mutation.error) : null} />
       <SettingsActionBar
         label={isReplace ? t('Thay thiết bị') : t('Đăng ký thiết bị')}
-        value={t('GỬI')}
         onPress={submit}
         disabled={!isFilled}
         loading={mutation.isPending}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
-import type { House } from '@/types'
-import { resolveEntryHouseId, sortPinnedFirst } from '@/utils/houseOrder.utils'
+import type { Farm, House } from '@/types'
+import { orderHousesByFarm, resolveEntryHouseId, sortPinnedFirst } from '@/utils/houseOrder.utils'
 
 // Nhà tối thiểu cho test
 function buildHouse(id: string): House {
@@ -29,5 +29,27 @@ describe('resolveEntryHouseId', () => {
     expect(resolveEntryHouseId(houses, 'b')).toBe('b')
     expect(resolveEntryHouseId(houses, 'x')).toBeNull()
     expect(resolveEntryHouseId(houses, undefined)).toBeNull()
+  })
+})
+
+describe('orderHousesByFarm', () => {
+  const farm = (id: string, name: string): Farm => ({ _id: id, name, address: '', owner_id: 'owner', members: [], created_at: '' })
+  const house = (id: string, farmId: string): House => ({ _id: id, farm_id: farmId, name: `Nhà ${id}`, floors: 1 })
+
+  it('theo thứ tự farm, trong farm nhà ghim lên đầu, kèm tên farm', () => {
+    const choices = orderHousesByFarm(
+      [farm('farm-1', 'Farm A'), farm('farm-2', 'Farm B')],
+      [house('b1', 'farm-2'), house('a1', 'farm-1'), house('a2', 'farm-1')],
+      ['a2'],
+    )
+    expect(choices.map(choice => [choice.house._id, choice.farmName, choice.isPinned])).toEqual([
+      ['a2', 'Farm A', true],
+      ['a1', 'Farm A', false],
+      ['b1', 'Farm B', false],
+    ])
+  })
+
+  it('nhà của farm không còn trong danh sách thì bỏ', () => {
+    expect(orderHousesByFarm([farm('farm-1', 'Farm A')], [house('x1', 'farm-9')], [])).toEqual([])
   })
 })

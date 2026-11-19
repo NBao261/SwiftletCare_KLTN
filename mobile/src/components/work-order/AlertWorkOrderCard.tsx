@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
+import { usePushOrBack } from '@/hooks/navigation/usePushOrBack'
 import { useWorkOrders } from '@/hooks/work-order/useWorkOrders'
 import { t } from '@/utils/i18n.utils'
 
@@ -25,6 +26,7 @@ interface AlertWorkOrderCardProps {
 // Cảnh báo chưa có Work Order thì chỉ hiện nút "Mở phiếu công việc" cho chủ trại; lỗi tải cũng không chặn phần còn lại của chi tiết
 export function AlertWorkOrderCard({ alertId, houseName, enabled, onLeave, createPrefill }: AlertWorkOrderCardProps) {
   const workOrdersQuery = useWorkOrders({ alertId }, enabled)
+  const pushOrBack = usePushOrBack()
   const workOrders = workOrdersQuery.data?.pages.flatMap(page => page.data) ?? []
 
   if (workOrdersQuery.isLoading && enabled) return <Skeleton width="100%" height={ROW_SKELETON_HEIGHT} />
@@ -60,7 +62,8 @@ export function AlertWorkOrderCard({ alertId, houseName, enabled, onLeave, creat
           hasDivider={index < workOrders.length - 1}
           onPress={() => {
             onLeave?.()
-            router.push({ pathname: '/work-orders/[workOrderId]', params: { workOrderId: workOrder._id } })
+            // Mở từ chi tiết chính phiếu này (nút "Xem cảnh báo gốc") thì quay lại phiếu, không mở chồng
+            pushOrBack({ pathname: '/work-orders/[workOrderId]', params: { workOrderId: workOrder._id } })
           }}
         />
       ))}

@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { CalendarBlankIcon } from 'phosphor-react-native'
 import { CountingWindowSheet, type CountingWindowTarget } from '@/components/farm/settings/CountingWindowSheet'
-import { SettingsActionBar } from '@/components/farm/settings/SettingsActionBar'
 import { SettingsEditActions } from '@/components/farm/settings/SettingsEditActions'
+import { SettingsList, SettingsListRow } from '@/components/farm/settings/SettingsListRow'
 import { SettingsSection } from '@/components/farm/settings/SettingsSection'
-import { SettingsTable, type SettingsTableRow } from '@/components/farm/settings/SettingsTable'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,8 +19,9 @@ import { useAuthStore } from '@/stores/authStore'
 import type { CountingSchedule, CountingScheduleView, House } from '@/types'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import {
+  countDays,
   formatDateRange,
-  formatDayWindows,
+  formatDayWindowsInline,
   formatMonthDayRange,
   MAX_SCHEDULE_PROFILES,
   MAX_TEMPORARY_WINDOWS,
@@ -40,7 +40,7 @@ interface CountingScheduleSectionProps {
   onSaved: (message: string) => void
 }
 
-// Bảng hồ sơ theo mùa và bảng khung tạm; onPress chỉ có khi đang sửa
+// Danh sách hồ sơ theo mùa và khung tạm; onPress chỉ có khi đang sửa
 function ScheduleTables({
   schedule,
   onPressProfile,
@@ -51,46 +51,41 @@ function ScheduleTables({
   onPressTemporary?: (index: number) => void
 }) {
   const palette = usePalette()
-  const profileRows: SettingsTableRow[] = schedule.profiles.map((profile, index) => ({
-    id: `profile-${index}`,
-    cells: [
-      { text: profile.name },
-      { text: formatMonthDayRange(profile.from, profile.to) },
-      { text: formatDayWindows(profile) },
-    ],
-    onPress: onPressProfile ? () => onPressProfile(index) : undefined,
-  }))
-  const temporaryRows: SettingsTableRow[] = schedule.temporary.map((window, index) => ({
-    id: `temporary-${index}`,
-    cells: [{ text: formatDateRange(window.from, window.to) }, { text: formatDayWindows(window) }],
-    onPress: onPressTemporary ? () => onPressTemporary(index) : undefined,
-  }))
 
   return (
     <>
       <Text variant="small" weight="semiBold" color={palette.textSecondary}>
         {t('Hồ sơ theo mùa (lặp lại mỗi năm)')}
       </Text>
-      <SettingsTable
-        columns={[
-          { label: t('Tên'), flex: 1.2 },
-          { label: t('Ngày'), flex: 1.2 },
-          { label: t('Khung'), align: 'right', flex: 2 },
-        ]}
-        rows={profileRows}
-        emptyText={t('Chưa có hồ sơ, dùng khung mặc định')}
-      />
+      <SettingsList isEmpty={schedule.profiles.length === 0} emptyText={t('Chưa có hồ sơ, dùng khung mặc định')}>
+        {schedule.profiles.map((profile, index) => (
+          <SettingsListRow
+            key={`profile-${index}`}
+            title={formatMonthDayRange(profile.from, profile.to)}
+            trailing={profile.name}
+            isTrailingMuted
+            caption={formatDayWindowsInline(profile)}
+            hasDivider={index > 0}
+            onPress={onPressProfile ? () => onPressProfile(index) : undefined}
+          />
+        ))}
+      </SettingsList>
       <Text variant="small" weight="semiBold" color={palette.textSecondary}>
         {t('Khung tạm (ưu tiên hơn hồ sơ, ví dụ những ngày mưa bão)')}
       </Text>
-      <SettingsTable
-        columns={[
-          { label: t('Ngày'), flex: 1.5 },
-          { label: t('Khung'), align: 'right', flex: 2 },
-        ]}
-        rows={temporaryRows}
-        emptyText={t('Chưa có khung tạm')}
-      />
+      <SettingsList isEmpty={schedule.temporary.length === 0} emptyText={t('Chưa có khung tạm')}>
+        {schedule.temporary.map((window, index) => (
+          <SettingsListRow
+            key={`temporary-${index}`}
+            title={formatDateRange(window.from, window.to)}
+            trailing={t('{days} ngày', { days: countDays(window.from, window.to) })}
+            isTrailingMuted
+            caption={formatDayWindowsInline(window)}
+            hasDivider={index > 0}
+            onPress={onPressTemporary ? () => onPressTemporary(index) : undefined}
+          />
+        ))}
+      </SettingsList>
     </>
   )
 }
@@ -206,6 +201,7 @@ export function CountingScheduleSection({ house, editor, onSaved }: CountingSche
   const user = useAuthStore(state => state.user)
   const hasExpert = useFarmHasExpert(house.farm_id)
   const canEdit = canPerform(user, 'editCountingSchedule', { farmHasExpert: hasExpert })
+  const viewOnlyNote = canEdit ? null : getViewOnlyNote(canPerform(user, 'editCountingSchedule', { farmHasExpert: false }), hasExpert)
   const scheduleQuery = useCountingSchedule(house._id)
   const id = getSettingsSectionId('counting-schedule')
   const isEditing = editor.isEditing(id)
@@ -229,7 +225,7 @@ export function CountingScheduleSection({ house, editor, onSaved }: CountingSche
     <SettingsSection
       icon={CalendarBlankIcon}
       title={t('Lịch đếm chim')}
-      subtitle={formatDayWindows(view.today)}
+      subtitle={`${formatDayWindowsInline(view.today)}\n${t('Hôm nay dùng: {source}', { source: getCountingWindowSourceLabel(view.today.source) })}`}
       scopeLabel={t('Nhà')}
       isExpanded={editor.isExpanded(id)}
       onToggle={() => editor.toggle(id)}
@@ -241,8 +237,6 @@ export function CountingScheduleSection({ house, editor, onSaved }: CountingSche
         <CountingScheduleEditor house={house} view={view} editor={editor} onSaved={onSaved} startWith={startWith} />
       ) : (
         <>
-          {/* Khung đang áp hôm nay ở dòng phụ của mục; thanh này nói khung đó lấy từ đâu */}
-          <SettingsActionBar label={t('Hôm nay dùng')} value={getCountingWindowSourceLabel(view.today.source)} />
           <ScheduleTables schedule={view.schedule} />
           {canEdit ? (
             <View style={styles.addRow}>
@@ -255,11 +249,11 @@ export function CountingScheduleSection({ house, editor, onSaved }: CountingSche
                 style={styles.flex}
               />
             </View>
-          ) : (
+          ) : viewOnlyNote ? (
             <Text variant="small" color={palette.textSecondary}>
-              {getViewOnlyNote(canPerform(user, 'editCountingSchedule'), hasExpert)}
+              {viewOnlyNote}
             </Text>
-          )}
+          ) : null}
         </>
       )}
     </SettingsSection>
