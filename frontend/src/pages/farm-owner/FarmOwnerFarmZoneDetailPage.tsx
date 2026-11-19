@@ -132,7 +132,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             {isFarmOwner && (
-              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => node && openZoneTuning(node.zone._id)}>
+              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} disabled={!openZoneTuning} onClick={() => node && openZoneTuning?.(node.zone._id)}>
                 <SlidersHorizontalIcon size={14} />
                 {t('zone.thresholds')}
               </Button>

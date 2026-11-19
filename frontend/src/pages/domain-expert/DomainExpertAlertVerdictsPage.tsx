@@ -16,7 +16,7 @@ import SelectMenu from '@/components/ui/SelectMenu'
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
 import AlertsKpiAndStatsBar, {
   TYPE_OPTS,
-  SEV_OPTS,
+  INFERRED_SEVERITIES,
   TAB_INFO,
 } from '@/components/features/domain-expert/alerts/AlertsKpiAndStatsBar'
 import { useAlert } from '@/hooks/shared/useAlerts'
@@ -32,6 +32,9 @@ import type { InferredAlertItem, InferredAlertType } from '@/types/expert.types'
 import type { AlertSeverity } from '@/types'
 import { useZoneStore } from '@/stores/zoneStore'
 import { t } from '@/i18n'
+import { SEVERITY_TO_LEVEL } from '@/constants/severity'
+import { levelDict } from '@/constants/severity.i18n'
+import { useTranslation } from '@/hooks/common/useTranslation'
 
 function Toast({ show, message }: { show: boolean; message: string }) {
   if (!show) return null
@@ -67,6 +70,12 @@ export default function DomainExpertAlertVerdictsPage() {
     isLoading,
     isFetching,
   } = useAlertsWithFilters(farmId, zoneId)
+  // Ô lọc mức độ theo 3 cấp chung (FE_Design 2.4)
+  const { t: levelLabel } = useTranslation(levelDict)
+  const severityOptions = [
+    { value: 'ALL', label: t('Mức độ') },
+    ...INFERRED_SEVERITIES.map(severity => ({ value: severity, label: levelLabel(SEVERITY_TO_LEVEL[severity]) })),
+  ]
 
   const { data: verdictStats = [] } = useExpertVerdictStats(farmId, zoneId)
   const statsSummary = buildVerdictStatsSummary(verdictStats)
@@ -143,7 +152,7 @@ export default function DomainExpertAlertVerdictsPage() {
               />
               <SelectMenu
                 value={filters.severity}
-                options={SEV_OPTS}
+                options={severityOptions}
                 onChange={val => setSeverity(val as AlertSeverity | 'ALL')}
                 ariaLabel={t('Lọc theo mức độ cảnh báo')}
               />

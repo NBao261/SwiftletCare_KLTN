@@ -15,13 +15,12 @@ interface Props {
 }
 
 function RadioCard({
-  value, selected, onClick, title, badge, subtitle,
+  value, selected, onClick, title, subtitle,
 }: {
   value: 'CONFIRMED' | 'REJECTED'
   selected: boolean
   onClick: () => void
   title: string
-  badge: string
   subtitle: string
 }) {
   const isConfirmed = value === 'CONFIRMED'
@@ -45,9 +44,6 @@ function RadioCard({
         {selected && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
       </span>
       <span className="text-sm font-semibold text-[#27231F] pr-6">{title}</span>
-      <span className={cn('text-xs font-medium', isConfirmed ? 'text-red-600' : 'text-neutral-500')}>
-        ({badge})
-      </span>
       <span className="text-xs text-[#878380] mt-0.5">{subtitle}</span>
     </button>
   )
@@ -112,13 +108,13 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
         <RadioCard
           value="CONFIRMED" selected={verdict === 'CONFIRMED'}
           onClick={() => onVerdictChange('CONFIRMED')}
-          title={t('Xác nhận sự cố thật')} badge="CONFIRMED"
+          title={t('Xác nhận sự cố thật')}
           subtitle={t('Sự cố thực tế gây ảnh hưởng đến đàn chim hoặc vi khí hậu')}
         />
         <RadioCard
           value="REJECTED" selected={verdict === 'REJECTED'}
           onClick={() => onVerdictChange('REJECTED')}
-          title={t('Bác bỏ - Báo động giả')} badge="REJECTED"
+          title={t('Bác bỏ - Báo động giả')}
           subtitle={t('Nhiễu cảm biến hoặc dao động tự nhiên của môi trường')}
         />
       </div>

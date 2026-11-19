@@ -93,7 +93,7 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
         </span>
       </div>
       <p className="mt-1 text-xs text-amber-800 leading-snug">
-        {t('Cảnh báo')} <em>{label}</em> {t('có tỷ lệ báo giả cao. Khuyến nghị:')} {hint}
+        {t('Cảnh báo {{type}} có tỷ lệ báo giả cao. Khuyến nghị: {{hint}}', { type: label, hint })}
       </p>
     </div>
   )

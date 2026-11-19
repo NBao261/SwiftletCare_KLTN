@@ -13,20 +13,6 @@ export const ALERT_TYPE_LABELS: Record<string, string> = translated({
   LOW_RETURN_RATE: 'Giảm tỉ lệ chim về tổ',
 })
 
-export const SEVERITY_LABELS: Record<string, string> = translated({
-  CRITICAL: 'Khẩn cấp',
-  HIGH: 'Cao',
-  MEDIUM: 'Trung bình',
-  LOW: 'Thường',
-})
-
-export const SEVERITY_BADGE_CLASS: Record<string, string> = {
-  CRITICAL: 'bg-red-100 text-red-700 border border-red-300',
-  HIGH: 'bg-orange-100 text-orange-700 border border-orange-300',
-  MEDIUM: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-  LOW: 'bg-neutral-100 text-neutral-600 border border-neutral-200',
-}
-
 // ── Verdict stats text summary ─────────────────────────────────────────────────
 export function buildVerdictStatsSummary(stats: ExpertVerdictStats[]): string {
   if (!stats.length) return ''

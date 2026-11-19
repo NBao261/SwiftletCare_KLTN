@@ -93,7 +93,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-neutral-100">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold text-[#27231F] leading-tight">{t('Cảnh báo')} {alert ? ALERT_TYPE_LABELS[alert.type] : ''}</h2>
+              <h2 className="text-lg font-bold text-[#27231F] leading-tight">{t('Cảnh báo {{type}}', { type: alert ? ALERT_TYPE_LABELS[alert.type] : '' })}</h2>
               <StatusBadge alert={alert} />
             </div>
             <p className="mt-1 text-xs text-[#878380] leading-relaxed">

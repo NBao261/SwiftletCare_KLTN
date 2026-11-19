@@ -6,11 +6,8 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { NO_VALUE } from '@/constants/display'
 import type { InferredAlertItem } from '@/types/expert.types'
-import {
-  ALERT_TYPE_LABELS,
-  SEVERITY_LABELS,
-  SEVERITY_BADGE_CLASS,
-} from '@/hooks/domain-expert/useExpertAlerts'
+import { ALERT_TYPE_LABELS } from '@/hooks/domain-expert/useExpertAlerts'
+import SeverityBadge from '@/components/common/SeverityBadge'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -81,9 +78,7 @@ export default function InferredAlertsTable({
       header: 'Mức độ',
       className: 'w-[90px]',
       render: alert => (
-        <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap', SEVERITY_BADGE_CLASS[alert.severity] ?? 'bg-neutral-100 text-neutral-600')}>
-          {SEVERITY_LABELS[alert.severity] ?? alert.severity}
-        </span>
+        <SeverityBadge severity={alert.severity} />
       ),
     },
     {

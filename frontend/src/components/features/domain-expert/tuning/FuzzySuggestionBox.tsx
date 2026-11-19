@@ -30,11 +30,11 @@ const CHIPS: Array<{ key: NumericKey; label: string; unit: string }> = [
 
 function SuggestionChip({ current, next, unit, label }: { current?: number; next?: number; unit: string; label: string }) {
   return (
-    <div className="bg-white rounded-xl p-3 border border-[#B5D32C]/40 flex flex-col gap-1 min-w-[120px]">
-      <p className="text-[11px] text-[#878380] leading-tight">{label}</p>
-      <p className="text-base font-bold text-[#27231F] leading-tight">
-        {current ?? NO_VALUE} → <span className="text-[#4A5C00]">{next ?? NO_VALUE}</span>
-        <span className="text-xs font-normal text-[#878380] ml-1">{unit}</span>
+    <div className="bg-white rounded-xl p-3 border border-accent-600/40 flex flex-col gap-1 min-w-[120px]">
+      <p className="text-[11px] text-warmGray leading-tight">{label}</p>
+      <p className="text-base font-bold text-charcoal leading-tight">
+        {current ?? NO_VALUE} → <span className="text-accent-900">{next ?? NO_VALUE}</span>
+        <span className="text-xs font-normal text-warmGray ml-1">{unit}</span>
       </p>
     </div>
   )
@@ -46,9 +46,9 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-[#B5D32C]/30 bg-[#ECFFA9]/60 p-5 animate-pulse">
-        <div className="h-4 bg-[#B5D32C]/30 rounded w-1/3 mb-3" />
-        <div className="h-3 bg-[#B5D32C]/20 rounded w-2/3 mb-4" />
+      <div className="rounded-2xl border border-accent-600/30 bg-lime-300/60 p-5 animate-pulse">
+        <div className="h-4 bg-accent-600/30 rounded w-1/3 mb-3" />
+        <div className="h-3 bg-accent-600/20 rounded w-2/3 mb-4" />
         <div className="grid grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="bg-white/60 rounded-xl h-16" />
@@ -65,10 +65,10 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
 
   if (!model || !suggested) {
     return (
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#F7F6F2] border border-stone-200/80 rounded-xl px-4 py-2.5 text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 border border-stone-200/80 rounded-xl px-4 py-2.5 text-xs">
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-full bg-[#ECFFA9] flex items-center justify-center shrink-0">
-            <Sparkles className="w-3.5 h-3.5 text-[#27231F]" />
+          <div className="w-6 h-6 rounded-full bg-lime-300 flex items-center justify-center shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-charcoal" />
           </div>
           <span className="text-stone-700">
             {t('Hệ thống gợi ý hệ số mờ khi có đủ 3 ngày dữ liệu và R² ≥ 0,3.')}
@@ -86,13 +86,13 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
   const mistingSign = mistingDelta !== null && mistingDelta > 0 ? '+' : ''
 
   return (
-    <div className="rounded-2xl border border-[#B5D32C]/40 bg-[#ECFFA9] p-5 space-y-4">
+    <div className="rounded-2xl border border-accent-600/40 bg-lime-300 p-5 space-y-4">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-[#4A5C00]" />
-          <h3 className="text-sm font-bold text-[#27231F]">{t('Gợi ý hệ số điều khiển mờ từ dữ liệu')}</h3>
+          <Sparkles className="w-4 h-4 text-accent-900" />
+          <h3 className="text-sm font-bold text-charcoal">{t('Gợi ý hệ số điều khiển mờ từ dữ liệu')}</h3>
         </div>
-        <p className="text-xs text-[#878380]">
+        <p className="text-xs text-warmGray">
           {t('Hồi quy trên {{days}} ngày qua ({{samples}} mẫu đo) • R² = {{r2}}', {
             days: model.days,
             samples: model.samples.toLocaleString(),
@@ -103,15 +103,15 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
 
       {predicted && (
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-medium text-[#4A5C00]">{t('Thời gian trong ngưỡng:')}</span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-xs font-bold text-[#27231F] border border-[#B5D32C]">
-            {predicted.inRangeNow}% → <span className="text-[#4A5C00]">{predicted.inRangeSuggested}%</span>
-            {inRangeDelta && <span className="text-[#B5D32C] font-bold ml-0.5">(+{inRangeDelta}%)</span>}
+          <span className="text-xs font-medium text-accent-900">{t('Thời gian trong ngưỡng:')}</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-xs font-bold text-charcoal border border-accent-600">
+            {predicted.inRangeNow}% → <span className="text-accent-900">{predicted.inRangeSuggested}%</span>
+            {inRangeDelta && <span className="text-accent-600 font-bold ml-0.5">(+{inRangeDelta}%)</span>}
           </span>
-          <span className="text-xs font-medium text-[#4A5C00] ml-1">{t('Công suất phun sương trung bình:')}</span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-xs font-bold text-[#27231F] border border-[#B5D32C]">
-            {predicted.mistingNow}% → <span className="text-[#4A5C00]">{predicted.mistingSuggested}%</span>
-            {mistingDelta !== null && <span className="text-[#4A5C00] font-bold ml-0.5">({mistingSign}{mistingDelta}%)</span>}
+          <span className="text-xs font-medium text-accent-900 ml-1">{t('Công suất phun sương trung bình:')}</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-xs font-bold text-charcoal border border-accent-600">
+            {predicted.mistingNow}% → <span className="text-accent-900">{predicted.mistingSuggested}%</span>
+            {mistingDelta !== null && <span className="text-accent-900 font-bold ml-0.5">({mistingSign}{mistingDelta}%)</span>}
           </span>
         </div>
       )}
@@ -123,12 +123,12 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] text-[#878380] italic flex items-center gap-1">
+        <p className="text-[11px] text-warmGray italic flex items-center gap-1">
           <Info className="w-3.5 h-3.5 flex-shrink-0" />
           {t('Gợi ý không tự áp dụng; hệ số chỉ đổi khi người có quyền áp dụng.')}
         </p>
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onDismiss} className="text-xs text-[#878380] hover:text-[#27231F] transition-colors font-medium">
+          <button type="button" onClick={onDismiss} className="text-xs text-warmGray hover:text-charcoal transition-colors font-medium">
             {t('Bỏ qua')}
           </button>
           {action && (

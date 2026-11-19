@@ -50,7 +50,7 @@ export default function WeatherRuleRow({ rule, onToggle, onRemove, disabled }: P
             ? 'bg-infoBlue/5 text-infoBlue border-infoBlue/20'
             : 'bg-climateOrange/10 text-climateOrange border-climateOrange/20',
         )}>
-          {sign}{rule.offset_pct}% phun
+          {t('{{offset}}% phun', { offset: `${sign}${rule.offset_pct}` })}
         </span>
 
         <span className="text-warmGray text-xs shrink-0">{t('{{n}} phút', { n: rule.duration_min })}</span>

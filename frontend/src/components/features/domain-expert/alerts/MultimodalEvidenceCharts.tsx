@@ -94,8 +94,8 @@ function MissingBadge({ label }: { label: string }) {
         <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
         <span>{label}</span>
       </div>
-      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900 uppercase">
-        missing
+      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900">
+        {t('Thiếu dữ liệu')}
       </span>
     </div>
   )
@@ -200,7 +200,6 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-warmGray px-1">
             <span className="font-semibold text-charcoal">{cfg.windowLabel}</span>
-            <span className="text-xs uppercase tracking-wider text-warmGray">ALERT-FR-014</span>
           </div>
 
           {/* Nguồn 1: Cảm biến & Telemetry */}

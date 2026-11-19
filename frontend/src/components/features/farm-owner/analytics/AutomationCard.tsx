@@ -244,7 +244,7 @@ export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Ele
             {stats && ` · ${t('automation.samples', { n: num(stats.sampleCount) })}`}
           </p>
           {canTune && (
-            <Button size="sm" variant="secondary" onClick={() => openZoneTuning(zoneId)}>
+            <Button size="sm" variant="secondary" disabled={!openZoneTuning} onClick={() => openZoneTuning?.(zoneId)}>
               {t('automation.tune')}
             </Button>
           )}

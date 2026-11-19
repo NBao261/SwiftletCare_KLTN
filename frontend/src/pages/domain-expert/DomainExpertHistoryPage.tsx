@@ -115,7 +115,7 @@ function renderActivityDetails(item: ExpertActivityEntry) {
   if (item.action === 'ALERT_VERDICT_SET') {
     const isConfirmed = m.result === 'CONFIRMED'
     const note = m.note as string | undefined
-    const alertType = m.type ? alertTypeDict[useLanguageStore.getState().lang][m.type as AlertType] ?? t('Cảnh báo') : undefined
+    const alertType = m.type ? alertTypeDict[useLanguageStore.getState().lang][m.type as AlertType] ?? t('Cảnh báo khác') : undefined
 
     return (
       <div className="flex flex-col gap-1 text-xs">

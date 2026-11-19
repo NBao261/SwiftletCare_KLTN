@@ -113,12 +113,12 @@ export function buildTelemetryEvidenceSource(
 
   let key: keyof TelemetrySample = 'humidity'
   let unit = ' %'
-  let titleMetric = t('Độ ẩm')
+  let titleMetric = t('độ ẩm')
 
   if (isTemp) {
     key = 'temperature'
     unit = ' °C'
-    titleMetric = t('Nhiệt độ')
+    titleMetric = t('nhiệt độ')
   } else if (isCo2) {
     key = 'co2_ppm'
     unit = ' ppm'
@@ -168,7 +168,7 @@ export function buildTelemetryEvidenceSource(
   })
 
   return {
-    title: t('Nguồn 1: cảm biến {{metric}} (số đo thực tế)', { metric: titleMetric.toLowerCase() }),
+    title: t('Nguồn 1: cảm biến {{metric}} (số đo thực tế)', { metric: titleMetric }),
     badge1: t('Số mẫu: {{n}}', { n: validSamples.length }),
     badge2: t('Khoảng: {{value}}', { value: `${minVal} – ${maxVal}${unit}` }),
     highlight: t('Lệch đỉnh: {{value}}', { value: `${peakVal}${unit}` }),

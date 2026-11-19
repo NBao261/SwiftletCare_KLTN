@@ -24,11 +24,8 @@ import {
   AlertTriangle,
   Sparkles,
 } from 'lucide-react'
-import {
-  ALERT_TYPE_LABELS,
-  SEVERITY_LABELS,
-  SEVERITY_BADGE_CLASS,
-} from '@/hooks/domain-expert/useExpertAlerts'
+import { ALERT_TYPE_LABELS } from '@/hooks/domain-expert/useExpertAlerts'
+import SeverityBadge from '@/components/common/SeverityBadge'
 import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements'
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
@@ -318,13 +315,7 @@ export default function DomainExpertQueuePage() {
                       </span>
                     </div>
                     {activeAlert?.severity && (
-                      <span
-                        className={`shrink-0 rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase ${
-                          SEVERITY_BADGE_CLASS[activeAlert.severity] || 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {SEVERITY_LABELS[activeAlert.severity] || activeAlert.severity}
-                      </span>
+                      <SeverityBadge severity={activeAlert.severity} className="shrink-0" />
                     )}
                   </div>
 

@@ -37,10 +37,10 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
   const atMax = value >= max
 
   return (
-    <div className="rounded-2xl p-4 border transition-all flex flex-col justify-between gap-3 shadow-2xs bg-[#F7F6F2]/60 border-stone-200/70 hover:border-stone-300">
+    <div className="rounded-2xl p-4 border transition-all flex flex-col justify-between gap-3 shadow-2xs bg-gray-50/60 border-stone-200/70 hover:border-stone-300">
       <div>
-        <p className="text-sm font-semibold text-[#27231F] leading-tight">{label}</p>
-        <p className="text-[11px] text-[#878380] mt-1">
+        <p className="text-sm font-semibold text-charcoal leading-tight">{label}</p>
+        <p className="text-[11px] text-warmGray mt-1">
           {t('Phạm vi: {{min}}–{{max}} • Mặc định: {{value}}', { min, max, value: defaultValue })}
         </p>
       </div>
@@ -48,16 +48,16 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
         <button type="button" onClick={() => onChange(clamp(value - step))} disabled={atMin}
           aria-label={t('Giảm {{label}}', { label })}
           className={cn('w-7 h-7 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
-            atMin ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-[#27231F] border border-stone-200 hover:bg-stone-50 active:scale-95')}>
+            atMin ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           −
         </button>
-        <span className="text-sm font-bold text-[#27231F] px-2 py-0.5 rounded bg-white border border-stone-200/80 min-w-[76px] text-center">
-          {value.toFixed(decimals)} <span className="text-xs font-normal text-[#878380]">{unit}</span>
+        <span className="text-sm font-bold text-charcoal px-2 py-0.5 rounded bg-white border border-stone-200/80 min-w-[76px] text-center">
+          {value.toFixed(decimals)} <span className="text-xs font-normal text-warmGray">{unit}</span>
         </span>
         <button type="button" onClick={() => onChange(clamp(value + step))} disabled={atMax}
           aria-label={t('Tăng {{label}}', { label })}
           className={cn('w-7 h-7 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
-            atMax ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-[#27231F] border border-stone-200 hover:bg-stone-50 active:scale-95')}>
+            atMax ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           +
         </button>
       </div>
@@ -95,13 +95,13 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
     <div className="w-full bg-white rounded-[24px] p-6 border border-stone-200/80 shadow-2xs space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
         <div>
-          <h3 className="text-base font-bold text-[#27231F]">{t('1. Hệ số điều khiển mờ')}</h3>
-          <p className="text-xs text-[#878380] mt-0.5">{t('Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của khu vực')}</p>
+          <h3 className="text-base font-bold text-charcoal">{t('1. Hệ số điều khiển mờ')}</h3>
+          <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của khu vực')}</p>
         </div>
         <button type="button" onClick={handleSave} disabled={isSaving}
           className={cn(
             'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-xs font-semibold transition-all duration-150 self-start sm:self-center shrink-0',
-            isSaving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-[#27231F] text-white hover:bg-[#3D3630] shadow-sm',
+            isSaving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-charcoal text-white hover:bg-gray-800 shadow-sm',
           )}>
           {isSaving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
           <Save className="w-3.5 h-3.5" />
@@ -135,10 +135,10 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
       </div>
 
       {/* ENV-FR-022 — cờ lọc nhiễu đầu vào */}
-      <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-[#F7F6F2]/60 p-4">
+      <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
         <div>
-          <p className="text-sm font-semibold text-[#27231F]">{t('Lọc nhiễu đầu vào (median + Kalman)')}</p>
-          <p className="text-[11px] text-[#878380] mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để relay ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.')}</p>
+          <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu đầu vào (median + Kalman)')}</p>
+          <p className="text-[11px] text-warmGray mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để relay ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.')}</p>
         </div>
         <Toggle
           checked={form.fuzzy_input_filter}
