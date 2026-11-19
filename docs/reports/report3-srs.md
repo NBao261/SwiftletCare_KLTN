@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.11 (Review 2, final scope) |
+| Document version | 4.2.12 (Review 2, final scope) |
 | Date | 10/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -300,13 +300,15 @@ A Farm Technician acts only on the houses assigned to them (AUTH-FR-013); the Do
 | Remote commands (restart, configuration push), OTA | restart | restart, assigned houses | – | ✓ (every farm) ² |
 | Maintain the provisioned-device stock: add devices and issue labels, re-issue or revoke an activation key | – | – | – | ✓ |
 | Create the Farm Owner's account, lock or unlock accounts, handle data-deletion requests | – | – | – | ✓ |
-| View the audit log and the technical overview (devices and accounts) | read own farm | – | – | ✓ |
+| View the audit log and the technical overview (devices and accounts) | – ³ | – | – | ✓ |
 
 The Administrator sees the devices of every farm with their farm, house and zone, their details and their device alerts, and the counts of the system overview, never the environmental dashboard, analytics, bird counts, live stream, harvests or reports of a farm (FARM-FR-009, SYSTEM-FR-003).
 
 ¹ The Farm Owner takes this decision while the farm has no Domain Expert (BR-22). Zone thresholds and fuzzy coefficients belong to the farm: the Administrator neither edits nor resets them; the Administrator only maintains the system default thresholds (ENV-FR-007). A house without an assigned Farm Technician has its alerts and Work Orders handled by the Farm Owners (ALERT-FR-017).
 
 ² The Administrator works on the devices of any farm of the installation without being its member. Every remote command and firmware update by the Administrator is audited and notified in the app to the Farm Owners of the farm (FARM-FR-009). The Administrator never switches relays.
+
+³ The Farm Owner follows the decisions taken on its farm in the activity history and the in-app notifications of EXPERT-FR-009, not in the audit log, which only the Administrator reads (SYSTEM-FR-001).
 
 ### 2.5 Operating Environment
 
@@ -1155,6 +1157,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.12 | 19/11/2026 | Section 2.4: the audit log is the Administrator's only (SYSTEM-FR-001); the Farm Owner follows the farm's decisions in the activity history of EXPERT-FR-009 (note ³) |
 | 4.2.11 | 18/11/2026 | Session windows sent to the AI node in Section 4.5: 7 days ahead, refreshed every night (VISION-FR-019, BR-13; G-12) |
 | 4.2.10 | 17/11/2026 | Counting schedule and sessions as built (G-12): input limits, kept schedule changes, session membership of a 5-minute count, incomplete days left out of the averages and the correlation, and the time of the evening check in Section 4.5 (VISION-FR-008, 019, 020, BR-21) |
 | 4.2.9 | 17/11/2026 | SMTP time-outs of the account mails in Section 4.5 (SF-03; G-02) |

@@ -129,8 +129,8 @@ TC=[
 ('TC-F13-03','F-13','Inferred alert','PUT `REJECTED` without a note; then with a note','—','422 without note; with note the alert becomes `DISMISSED`',
  (J,I+'alertVerdict.test.ts','bác bỏ bắt buộc ghi lý do')),
 # F-14
-('TC-F14-01','F-14','Zone of a farm with an expert','PUT detection tuning as the expert','Five zone parameters','Stored with history and audit; only the five firmware parameters sent to the devices',
- (J,I+'detectionTuning.test.ts','Domain Expert lưu tham số kèm lịch sử + audit')),
+('TC-F14-01','F-14','Zone of a farm with an expert','PUT detection tuning as the expert; PUT with a key that is not a zone parameter; reset to the defaults','Five zone parameters; the return-rate drop sent to the zone','Stored with history and audit; only the five firmware parameters sent to the devices; the unknown key rejected (400) with nothing stored; the reset restores the defaults with history and audit and resends the configuration',
+ [(J,I+'detectionTuning.test.ts','Domain Expert lưu tham số kèm lịch sử + audit'),(J,I+'detectionTuning.test.ts','mức giảm tỷ lệ chim về gửi nhầm vào Zone'),(J,I+'detectionTuning.test.ts','Zone: về DEFAULT_DETECTION_TUNING')]),
 ('TC-F14-02','F-14','Camera of the house','PUT a counting ring as the expert, then as the Farm Technician of the house and of another house','Ring of 6 vertices','Stored with history and audit, sent to the AI node of the house, no RTSP address returned; the technician of the house accepted, of another house 403',
  [(J,I+'countingRing.test.ts','Domain Expert lưu vòng kèm lịch sử + audit'),(J,I+'technicianAccess.test.ts','draws the counting ring in the assigned house only')]),
 ('TC-F14-03','F-14','Farm with an expert','PUT detection tuning as the Farm Owner','Valid values','Read allowed, write rejected (403)',
@@ -144,8 +144,8 @@ TC=[
 # F-16
 ('TC-F16-01','F-16','Health report; expert and another expert','Write a conclusion; edit it; another expert edits it','—','Owner notified; author can edit; the other expert gets 403',
  (J,I+'houseHealthReport.test.ts','GENERATED → CONCLUDED, Farm Owner được báo')),
-('TC-F16-02','F-16','User with notifications','Notify, list, read one, read all','—','Inbox entry with socket event; unread count correct',
- (J,I+'inAppNotification.test.ts','notifyUser ghi vào hộp + phát socket')),
+('TC-F16-02','F-16','User with notifications','Notify, list, read one, read all; open the bell on the web','—','Inbox entry with socket event; unread count correct; the web shows the entry in the "Notifications" tab',
+ [(J,I+'inAppNotification.test.ts','notifyUser ghi vào hộp + phát socket'),(E,'notifications.spec.ts','Domain Expert thấy thông báo trong ứng dụng')]),
 ('TC-F16-03','F-16','Farm with an expert','Expert changes thresholds, tuning, ring and a verdict','—','Each Farm Owner receives one in-app notification per decision; the activity history lists the same four entries',
  (J,I+'expertActivity.test.ts','mỗi quyết định → mỗi Farm Owner có 1 thông báo')),
 # F-17
@@ -246,6 +246,8 @@ ST=[
 ('6.6 Controller/CameraNode','ONLINE → OFFLINE','No heartbeat beyond the AI-node limit of BR-10','Status OFFLINE; one EDGE_AI_DEGRADED for the house',(J,I+'birdCount.test.ts','im quá ngưỡng → OFFLINE')),
 ('6.6 Controller/CameraNode','OFFLINE → ONLINE','Heartbeat received','Status ONLINE; NODE_OFFLINE resolved',(J,I+'deviceMqttContract.test.ts','closes the NODE_OFFLINE alert when a heartbeat arrives before any telemetry')),
 ('6.6 Controller/CameraNode','→ DECOMMISSIONED','Device removed','Hidden from lists, history kept, heartbeats ignored, commands rejected',(J,I+'deviceOnboarding.test.ts','gỡ bỏ: giữ document')),
+('6.6 Controller/CameraNode','DECOMMISSIONED → OFFLINE or PENDING','Farm Owner restores the removal within 24 h (without a reason, then with one); again after 24 h, and after its ID was registered again','422 without a reason; OFFLINE for a device that had connected, PENDING for one that never did, back in the lists with an audit row, ONLINE only at its next heartbeat; 409 after 24 h or when the ID is reused',
+ [(J,I+'deviceOnboarding.test.ts','khôi phục thiết bị gỡ nhầm trong 24 giờ'),(J,I+'deviceOnboarding.test.ts','thiết bị đã từng kết nối khôi phục về OFFLINE'),(J,I+'deviceOnboarding.test.ts','không khôi phục được khi quá 24 giờ hoặc device_id đã dùng lại')]),
 ('6.16 DeviceStockItem','(new) → IN_STOCK','Admin adds the device','Activation key returned once; only its hash stored',(J,I+'deviceOnboarding.test.ts','trả secretKey 1 lần, chỉ lưu hash')),
 ('6.16 DeviceStockItem','IN_STOCK → IN_SERVICE','Registered from its label','Stock entry marked activated; device PENDING',(J,I+'deviceOnboarding.test.ts','đúng secretKey → PENDING')),
 ('6.16 DeviceStockItem','IN_SERVICE → RELEASED','Device removed','Entry no longer in service; device document kept',(J,I+'deviceOnboarding.test.ts','gỡ bỏ: giữ document')),
