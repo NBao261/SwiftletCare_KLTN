@@ -199,7 +199,7 @@ describe('dựng lại chu kỳ: zone không có mốc trước lần thu hoạc
     expect(await cycles()).toHaveLength(2)
     expect(await closedOn('2026-10-01')).toMatchObject({
       status: 'CLOSED', start_date: new Date('2026-09-01').toISOString(),
-      closing_harvest: { nest_count: 120 }, comparison: { previous: { cycle_id: null, reason: 'Chu kỳ đầu tiên của zone' } },
+      closing_harvest: { nest_count: 120 }, comparison: { previous: { cycle_id: null, reason: 'Chu kỳ đầu tiên của Zone' } },
     })
   })
 

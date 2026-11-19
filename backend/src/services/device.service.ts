@@ -157,7 +157,7 @@ export async function registerSensorNode(user: CurrentUser, input: RegisterDevic
   })
   await notifyOwnersOfTechnicianAction(user, farm._id, node._id, {
     title: 'Kỹ thuật viên đã đăng ký thiết bị',
-    body: `${input.device_id} đã được đăng ký vào khu vực "${zone.name}".`,
+    body: `${input.device_id} đã được đăng ký vào Zone "${zone.name}".`,
   })
   return node
 }
@@ -261,7 +261,7 @@ async function assertPumpOnAllowed(
   if (open.length === 0) return false
   if (input.confirmed !== true) {
     throw new AppError(409, 'CONFIRMATION_REQUIRED',
-      'Khu vực đang có cảnh báo cảm biến hoặc phun sương — xác nhận để vẫn bật bơm',
+      'Zone đang có cảnh báo cảm biến hoặc phun sương. Xác nhận để vẫn bật bơm.',
       open.map(a => ({ _id: String(a._id), type: a.type, title: a.title, created_at: a.created_at })))
   }
   return true
@@ -349,14 +349,14 @@ export async function reassignZone(
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
   // Cảnh báo cũ thuộc farm/zone nguồn — để lại thì job gửi lại cho Farm Owner farm cũ
   // về phần cứng đã chuyển đi; sự cố còn thật sẽ được báo lại ở zone mới.
-  await resolveAlertsForNode(String(node._id), 'Thiết bị đã dời sang zone khác')
+  await resolveAlertsForNode(String(node._id), 'Thiết bị đã dời sang Zone khác')
 
   await logAction(user._id, 'DEVICE_REASSIGNED', 'sensor_node', String(node._id), {
     fromZoneId: String(sourceChain.zone._id), toZoneId: String(destChain.zone._id), delivered,
   })
   const moved = {
     title: 'Kỹ thuật viên đã dời thiết bị',
-    body: `${node.device_id} đã được dời từ khu vực "${sourceChain.zone.name}" sang khu vực "${destChain.zone.name}".`,
+    body: `${node.device_id} đã được dời từ Zone "${sourceChain.zone.name}" sang Zone "${destChain.zone.name}".`,
   }
   await notifyOwnersOfTechnicianAction(user, destChain.farm._id, node._id, moved)
   if (String(sourceChain.farm._id) !== String(destChain.farm._id)) await notifyOwnersOfTechnicianAction(user, sourceChain.farm._id, node._id, moved)
@@ -509,7 +509,7 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
       status: 'ONLINE',
       timestamp: new Date().toISOString(),
     })
-    await resolveAlertsForNode(String(camera._id), 'Nút AI đã kết nối lại', 'EDGE_AI_DEGRADED').catch((err: Error) =>
+    await resolveAlertsForNode(String(camera._id), 'Camera đếm chim đã kết nối lại', 'EDGE_AI_DEGRADED').catch((err: Error) =>
       logger.error('Đóng cảnh báo EDGE_AI_DEGRADED thất bại', { nodeId: String(camera._id), err }),
     )
   }
@@ -528,7 +528,7 @@ async function checkCameraFps(cameraId: string, fps: number | undefined): Promis
   if (typeof fps !== 'number' || !Number.isFinite(fps) || fps <= 0) return
   try {
     if (fps < MIN_AI_FPS) await raiseCameraLowFpsAlert(cameraId, fps, MIN_AI_FPS)
-    else await resolveAlertsForNode(cameraId, 'Nút AI xử lý đủ khung hình trở lại', 'EDGE_AI_DEGRADED')
+    else await resolveAlertsForNode(cameraId, 'Camera đếm chim xử lý đủ khung hình trở lại', 'EDGE_AI_DEGRADED')
   } catch (err) {
     logger.error('Kiểm tra số khung hình của nút AI thất bại', { nodeId: cameraId, fps, err })
   }
@@ -679,7 +679,7 @@ async function locateDevice(kind: DeviceKind, node: { zone_id?: unknown; house_i
   const { zone, farm } = await assertZoneAccess(String(node.zone_id), user, 'device')
   const zoneId = String(zone._id)
   return {
-    farm, place: `khu vực "${zone.name}"`, audit: { zoneId },
+    farm, place: `Zone "${zone.name}"`, audit: { zoneId },
     emitStatus: (data: WsDeviceStatusChange) => emitDeviceStatusChange(zoneId, data),
   }
 }
@@ -707,9 +707,9 @@ export async function decommissionDevice(
   // gửi `force` để đó là quyết định có ý thức, không phải một cú bấm nhầm.
   const isAlive = node.status === 'ONLINE'
   if (isAlive && force !== true) {
-    const lastSeen = node.last_heartbeat ? ` (heartbeat lúc ${node.last_heartbeat.toISOString()})` : ''
+    const lastSeen = node.last_heartbeat ? ` (kết nối lần cuối lúc ${node.last_heartbeat.toISOString()})` : ''
     throw ConflictError(
-      `Thiết bị đang ${node.status}${lastSeen} — gỡ sẽ mất giám sát tại ${loc.place}. ` +
+      `Thiết bị đang ${node.status}${lastSeen}, gỡ sẽ mất giám sát tại ${loc.place}. ` +
       'Gửi kèm force=true nếu vẫn muốn gỡ.',
     )
   }
@@ -784,7 +784,7 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
   const elapsed = Date.now() - node.decommissioned_at.getTime()
   if (elapsed > RESTORE_WINDOW_MS) {
     throw ConflictError(
-      `Thiết bị đã gỡ quá ${RESTORE_WINDOW_MS / 3600_000} giờ — hãy đăng ký lại như thiết bị mới ` +
+      `Thiết bị đã gỡ quá ${RESTORE_WINDOW_MS / 3600_000} giờ, hãy đăng ký lại như thiết bị mới ` +
       '(lịch sử dữ liệu cũ vẫn tra cứu được theo bản ghi này).',
     )
   }
@@ -941,7 +941,7 @@ export async function markOtaTimeouts(): Promise<number> {
     if (requester) {
       void notifyUser(requester, {
         title: 'Cập nhật firmware không thành công',
-        body: `Thiết bị ${node.device_id} vẫn chạy ${node.firmware_version} sau 30 phút (mục tiêu ${pending.version}) — có thể đã rollback, kiểm tra log thiết bị.`,
+        body: `Thiết bị ${node.device_id} vẫn chạy ${node.firmware_version} sau 30 phút (mục tiêu ${pending.version}). Có thể thiết bị đã quay về bản cũ, kiểm tra nhật ký thiết bị.`,
       })
     }
   }
@@ -970,7 +970,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
 
   if (COMMANDS_NEED_FIRMWARE.includes(input.command) && !versionAtLeast(node.firmware_version, COMMAND_SUPPORT_SINCE)) {
     throw NotImplementedError(
-      `Firmware ${node.firmware_version} trên thiết bị chưa xử lý lệnh ${input.command} — cần firmware ${COMMAND_SUPPORT_SINCE} trở lên ` +
+      `Firmware ${node.firmware_version} trên thiết bị chưa xử lý lệnh ${input.command}. Cần firmware ${COMMAND_SUPPORT_SINCE} trở lên ` +
       '(nạp lần đầu bằng ElegantOTA trong LAN hoặc USB). PUSH_CONFIG vẫn dùng được.',
     )
   }
@@ -1018,7 +1018,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     title: input.command === 'OTA' ? `${actor} đã cập nhật firmware` : `${actor} đã gửi lệnh tới thiết bị`,
     body: input.command === 'OTA'
       ? `${node.device_id} đang được cập nhật lên firmware ${input.ota?.version}.`
-      : `Lệnh ${input.command} đã được gửi tới ${node.device_id} ở khu vực "${chain.zone.name}".`,
+      : `Lệnh ${input.command} đã được gửi tới ${node.device_id} ở Zone "${chain.zone.name}".`,
   })
   return node
 }
@@ -1130,7 +1130,7 @@ export async function markOverdueActivations(): Promise<number> {
     if (node.registered_by) {
       void notifyUser(String(node.registered_by), {
         title: 'Thiết bị kích hoạt quá hạn',
-        body: `Thiết bị ${node.device_id} chưa gửi heartbeat sau 15 phút. Kiểm tra lại AP-mode, WiFi farm và kết nối MQTT tại hiện trường.`,
+        body: `Thiết bị ${node.device_id} chưa kết nối sau 15 phút. Kiểm tra lại chế độ phát Wi-Fi của thiết bị và Wi-Fi của trang trại tại nhà yến.`,
       })
     }
   }

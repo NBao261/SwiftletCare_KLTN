@@ -34,7 +34,7 @@ function handleLimitReached(req: Request, res: Response, _next: unknown, options
     success: false,
     error: {
       code: 'RATE_LIMITED',
-      message: `Thao tác quá nhanh, vui lòng thử lại sau ${retryAfterSec} giây`,
+      message: `Thao tác quá nhanh. Thử lại sau ${retryAfterSec} giây`,
       details: { retryAfterSec },
     },
   })

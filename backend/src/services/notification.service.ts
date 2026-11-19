@@ -9,6 +9,7 @@ import { activeExpertIds } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import { channelEnabled } from '@/utils/notificationChannels.util'
+import { SEVERITY_LABEL } from '@/utils/displayLabel.util'
 import type { IAlert } from '@/models/alert.model'
 import type { CurrentUser, NotificationPreferences } from '@/types'
 
@@ -118,7 +119,8 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     }
 
     const title = opts.escalation ? `Chưa ai xác nhận: ${alert.title}` : opts.repeat ? `Nhắc lại: ${alert.title}` : alert.title
-    const body = `[${alert.severity}] ${title} — ${alert.message}`
+    // Mức theo 3 cấp của giao diện, không đưa mã enum ra tin nhắn (FE_Design §6.4)
+    const body = `${SEVERITY_LABEL[alert.severity]} · ${title}\n${alert.message}`
 
     // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
     // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot.

@@ -201,8 +201,8 @@ export async function notifyZonesDifferingFromDefaults(changedKeys: ThresholdKey
       return `${z.name}: ${differing.map(k => `${k} ${z.thresholds?.[k]} (mặc định mới ${after[k]})`).join(', ')}`
     })
     const message = {
-      title: `Ngưỡng mặc định đã đổi: ${lines.length} zone của ${farm.name} khác mặc định mới`,
-      body: `${lines.join('; ')}. Ngưỡng các zone giữ nguyên; reset hoặc sửa nếu cần.`,
+      title: `Ngưỡng mặc định đã đổi: ${lines.length} Zone của ${farm.name} khác mặc định mới`,
+      body: `${lines.join('; ')}. Ngưỡng các Zone giữ nguyên; đặt lại hoặc sửa nếu cần.`,
     }
     await Promise.all(recipients.map(id => createInAppNotification(id, message)))
   }))

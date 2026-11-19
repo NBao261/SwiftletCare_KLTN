@@ -176,7 +176,7 @@ export async function softDeleteFarm(farm: IFarm): Promise<void> {
   // không ai mở được nữa — đóng hết.
   await Alert.updateMany(
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
-    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Farm đã bị xoá' },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Trang trại đã bị xoá' },
   )
   // Lời mời còn chờ: nếu để nguyên, người được mời vẫn tạo được tài khoản từ link
   // (createAccountFromInvitation) cho một farm không ai mở được nữa
@@ -546,7 +546,7 @@ export async function createZone(houseId: string, user: CurrentUser, input: { na
   if ((input.floor ?? 1) > houseFloors) {
     throw BadRequestError(`Tầng ${input.floor} vượt số tầng của nhà (${houseFloors} tầng)`)
   }
-  await assertUniqueName(Zone, { house_id: house._id }, input.name, 'Khu vực')
+  await assertUniqueName(Zone, { house_id: house._id }, input.name, 'Zone')
   // Zone mới dùng ngưỡng mặc định hệ thống do Admin cấu hình (ENV-FR-007), cùng
   // nguồn với "Reset về mặc định" — không dùng default cứng trong schema.
   return Zone.create({
@@ -649,7 +649,7 @@ export async function applyFuzzyTuning(
 
   if (opts.notify !== false) await notifyExpertDecision(user, farm._id, auditId, {
     what: source === 'SUGGESTION_APPROVED' ? 'áp gợi ý hệ số điều khiển mờ' : 'chỉnh hệ số điều khiển mờ',
-    place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
+    place: `Zone "${zone.name}"`, detail: formatChanges(oldValues, merged),
   })
   await trackParameterChange(chain, user, 'fuzzy', oldValues, merged)
   return zone
@@ -688,7 +688,7 @@ export async function updateZoneDetectionTuning(
     before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
-    what, place: `Khu vực "${zone.name}"`, detail: formatChanges(oldValues, merged),
+    what, place: `Zone "${zone.name}"`, detail: formatChanges(oldValues, merged),
   })
   return zone
 }
@@ -737,7 +737,7 @@ export async function updateHouseHealthLevels(houseId: string, user: CurrentUser
     before: oldValues, after: merged, house_id: String(house._id),
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'chỉnh mức chỉ số sức khỏe', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
+    what: 'chỉnh mức chỉ số sức khoẻ', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
   })
   // Cùng dạng HouseHealthLevels với GET (client ghi thẳng vào cache): lưu được tức là sửa được
   return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS, can_edit: true }

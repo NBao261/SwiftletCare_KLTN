@@ -35,7 +35,7 @@ export async function runEveningChecks(now = new Date()): Promise<void> {
   }
   await step('Cảnh báo LOW_RETURN_RATE mới (VISION-FR-011)', () => checkReturnRateDrops(date, houseIds))
   // ANALYTICS-FR-012 — đánh giá sức khỏe ngày sau kiểm tra tỷ lệ chim về (BR-21)
-  await step('Nhà yến đã đánh giá sức khỏe (ANALYTICS-FR-012)', () => assessAllHouses(date, now, houseIds))
+  await step('Nhà yến đã có đánh giá sức khoẻ', () => assessAllHouses(date, now, houseIds))
   // EXPERT-FR-005, BR-33 — báo cáo ngày theo nhà ngay sau đánh giá ngày
   await step('Báo cáo ngày theo nhà (EXPERT-FR-005)', () => generateDailyReports(date, now, houseIds))
   // EXPERT-FR-017, BR-42 — luật khuyến nghị xét sau đánh giá ngày
