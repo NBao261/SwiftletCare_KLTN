@@ -61,7 +61,7 @@ async function notifyExpertsOfProposal(farmId: unknown, owner: CurrentUser, zone
     const [experts, author] = await Promise.all([findFarmExperts(farmId), User.findById(owner._id).select('full_name').lean()])
     await Promise.all(experts.map(expertId => createInAppNotification(expertId, {
       title: `Cần duyệt: ${author?.full_name ?? owner.email} đề xuất hệ số điều khiển mờ`,
-      body: `Khu vực "${zoneName}" — gợi ý của hệ thống chờ chuyên gia duyệt hoặc từ chối.`,
+      body: `Zone "${zoneName}": gợi ý của hệ thống chờ chuyên gia duyệt hoặc từ chối.`,
       ref: { kind: 'coefficient_proposal', id: proposalId },
     })))
   } catch (err) {
@@ -118,7 +118,7 @@ export async function approveProposal(proposalId: string, user: CurrentUser): Pr
     zone_id: String(chain.zone._id), house_id: String(chain.house._id), before, after: { ...before, ...suggested },
   }, { farmId: String(chain.farm._id) })
   await notifyExpertDecision(user, chain.farm._id, auditId, {
-    what: 'duyệt đề xuất hệ số điều khiển mờ', place: `Khu vực "${chain.zone.name}"`,
+    what: 'duyệt đề xuất hệ số điều khiển mờ', place: `Zone "${chain.zone.name}"`,
     detail: formatChanges(before, { ...before, ...suggested }),
   })
   return closed
@@ -133,7 +133,7 @@ export async function rejectProposal(proposalId: string, user: CurrentUser, note
     zone_id: String(chain.zone._id), house_id: String(chain.house._id), note: note.trim(),
   }, { farmId: String(chain.farm._id) })
   await notifyExpertDecision(user, chain.farm._id, auditId, {
-    what: 'từ chối đề xuất hệ số điều khiển mờ', place: `Khu vực "${chain.zone.name}"`, detail: note.trim(),
+    what: 'từ chối đề xuất hệ số điều khiển mờ', place: `Zone "${chain.zone.name}"`, detail: note.trim(),
   })
   return closed
 }

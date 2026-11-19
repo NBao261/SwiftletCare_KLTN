@@ -120,7 +120,7 @@ export function temporaryPasswordMail(input: { to: string; fullName: string; tem
   return {
     to: input.to,
     subject: 'Tài khoản SwiftletCare của bạn',
-    text: `Chào ${input.fullName},\n\nTài khoản Farm Owner của bạn trên SwiftletCare đã được tạo.\n`
+    text: `Chào ${input.fullName},\n\nTài khoản chủ nhà yến của bạn trên SwiftletCare đã được tạo.\n`
       + `Email đăng nhập: ${input.to}\nMật khẩu tạm: ${input.temporaryPassword}\n\n`
       + `Đăng nhập tại ${appPublicUrl()}/login. Ở lần đăng nhập đầu, bạn phải đổi mật khẩu tạm này `
       + `trước khi dùng được các chức năng khác.${SIGNATURE}`,

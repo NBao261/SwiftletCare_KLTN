@@ -24,7 +24,7 @@ const VI: Record<HealthReasonCode, Phrase> = {
     if (source === 'flock') {
       const missing = {
         MORNING: 'thiếu phiên sáng', EVENING: 'thiếu phiên chiều', NO_DEPARTURES: 'phiên sáng không có chim ra',
-        INCOMPLETE: 'phiên đếm không đầy đủ vì nút AI mất kết nối',
+        INCOMPLETE: 'phiên đếm không đầy đủ vì camera đếm chim mất kết nối',
       }
       return `Thiếu dữ liệu đàn chim: ${missing[v.missing as keyof typeof missing] ?? ''}`
     }
@@ -42,7 +42,7 @@ const VI: Record<HealthReasonCode, Phrase> = {
   NOISE_EPISODES: (v, l) => `Tiếng ồn: ${v.episodes} đợt ồn bất thường (mức ${l})`,
   WEATHER_UNAVAILABLE: () => 'Không có dữ liệu thời tiết',
   ATTRACTING_STAGE: () => 'Đàn chim: nhà đang ở giai đoạn dẫn dụ, không đánh giá tỷ lệ chim về',
-  RAIN_DOWNGRADE: v => `Mưa ≥ ${v.mm_per_hour} mm/giờ trùng phiên đếm và đợt ồn — hạ từ ACTION xuống WATCH (BR-30)`,
+  RAIN_DOWNGRADE: v => `Mưa ≥ ${v.mm_per_hour} mm/giờ trùng phiên đếm và đợt ồn, nên hạ từ "Cần xử lý" xuống "Cần theo dõi"`,
 }
 
 const EN: Record<HealthReasonCode, Phrase> = {

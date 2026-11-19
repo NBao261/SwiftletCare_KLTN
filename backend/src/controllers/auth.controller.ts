@@ -72,14 +72,14 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   const { email, token, newPassword } = req.body as { email: string; token: string; newPassword: string }
   await authService.resetPassword(email, token, newPassword)
-  res.json({ success: true, data: { message: 'Đã đổi mật khẩu, vui lòng đăng nhập lại' } })
+  res.json({ success: true, data: { message: 'Đã đổi mật khẩu. Đăng nhập lại.' } })
 })
 
 /** PUT /auth/password – đổi mật khẩu khi đang đăng nhập (giữ phiên hiện tại) */
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
   const { current_password, new_password } = req.body as { current_password: string; new_password: string }
   await authService.changePassword(req.user._id, current_password, new_password, readRefreshToken(req))
-  res.json({ success: true, data: { message: 'Đã đổi mật khẩu — các thiết bị khác đã bị đăng xuất' } })
+  res.json({ success: true, data: { message: 'Đã đổi mật khẩu. Các thiết bị khác đã được đăng xuất.' } })
 })
 
 /** PUT /auth/notification-preferences – ALERT-FR-005/006 */
@@ -100,7 +100,7 @@ export const createTelegramLink = asyncHandler(async (req: Request, res: Respons
 /** DELETE /auth/telegram/link – ALERT-FR-013 (hủy liên kết) */
 export const unlinkTelegram = asyncHandler(async (req: Request, res: Response) => {
   await telegramService.unlinkTelegram(req.user._id)
-  res.json({ success: true, data: { message: 'Đã hủy liên kết Telegram' } })
+  res.json({ success: true, data: { message: 'Đã huỷ liên kết Telegram' } })
 })
 
 /** POST /auth/delete-request – AUTH-FR-012, PRIV-NFR-003 */

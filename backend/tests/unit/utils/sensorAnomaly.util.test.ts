@@ -9,7 +9,7 @@ describe('findStuck', () => {
   it('flags humidity frozen for 2 hours while temperature keeps moving', () => {
     const [f] = findStuck(series(721, i => ({ humidity: 80.3, temperature: 28 + (i % 7) / 10 })))
     expect(f).toMatchObject({ kind: 'STUCK', metric: 'humidity' })
-    expect(f.detail).toContain('nghi cảm biến kẹt')
+    expect(f.detail).toContain('nghi cảm biến bị kẹt')
   })
 
   it('does not flag normal small fluctuations', () => {

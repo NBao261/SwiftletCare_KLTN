@@ -282,7 +282,7 @@ async function seedDemo(): Promise<void> {
   // DS-02: cảm biến hỏng ở tầng A (mở luôn Work Order cho thợ, BR-39)
   await createAlert({
     farmId, zoneId: String(zoneA._id), nodeId: String(nodeA._id), type: 'SENSOR_FAULT',
-    title: 'Cảm biến độ ẩm không trả số đo', message: 'demo-ctl-a1: SHT35 không trả lời trên bus RS485 (dữ liệu demo)',
+    title: 'Cảm biến độ ẩm không trả số đo', message: 'demo-ctl-a1: cảm biến độ ẩm không trả lời (dữ liệu demo)',
   })
   // DS-07, 08: ồn bất thường chờ chuyên gia kết luận (thợ được yêu cầu kiểm tra tại chỗ, EXPERT-FR-021)
   await createAlert({
@@ -304,18 +304,18 @@ async function seedDemo(): Promise<void> {
   await createPlan(owner, {
     house_id: String(houseA._id), equipment: 'PUMP', basis: 'RUN_HOURS', interval: 500,
     checklist_template: ['Kiểm tra áp suất bơm', 'Vệ sinh lưới lọc', 'Kiểm tra rò rỉ đường ống'],
-    source: 'Dữ liệu demo — Design Brief Phụ lục A2 DS-13',
+    source: 'Dữ liệu demo (Design Brief Phụ lục A2, DS-13)',
   }, now)
   const calendar = await createPlan(owner, {
     house_id: String(houseA._id), equipment: 'NOZZLE', basis: 'CALENDAR', interval: 30,
     checklist_template: ['Tháo và ngâm béc phun', 'Kiểm tra tia phun từng béc'],
-    source: 'Dữ liệu demo — Design Brief Phụ lục A2 DS-14',
+    source: 'Dữ liệu demo (Design Brief Phụ lục A2, DS-14)',
   }, now)
   const dueSince = new Date(now.getTime() - 7 * DAY_MS - HOUR_MS)
   const plan = await MaintenancePlan.findByIdAndUpdate(calendar._id, { state: 'DUE', due_since: dueSince, next_due_at: dueSince }, { new: true })
   if (plan) {
     await openPreventiveWorkOrder({
-      plan, title: 'Đến hạn Béc phun — A · Nhà điều khiển', description: 'Kế hoạch béc phun đến hạn từ 7 ngày trước (dữ liệu demo).',
+      plan, title: 'Đến hạn béc phun · A · Nhà điều khiển', description: 'Kế hoạch béc phun đến hạn từ 7 ngày trước (dữ liệu demo).',
     })
   }
 
@@ -323,12 +323,12 @@ async function seedDemo(): Promise<void> {
   const nh3Rule = await createRule(expert, {
     farm_id: farmId, name: 'NH3 vượt ngưỡng 4 giờ/ngày trong 3 ngày', indicator: 'AIR_HOURS_OVER', comparison: 'GTE',
     value: 4, window_days: 3, action: { type: 'WORK_ORDER', title: 'Kiểm tra thông gió và dọn phân chim' },
-    source: 'Dữ liệu demo — Design Brief Phụ lục A2 DS-15, chưa phải luật từ phỏng vấn', active: true,
+    source: 'Dữ liệu demo (Design Brief Phụ lục A2, DS-15), chưa phải luật từ phỏng vấn', active: true,
   })
   await createRule(expert, {
     farm_id: farmId, name: 'Thời gian trong ngưỡng dưới 90 %', indicator: 'TIME_IN_RANGE', comparison: 'LTE',
     value: 90, window_days: 1, action: { type: 'WORK_ORDER', title: 'Kiểm tra hệ thống phun sương' },
-    source: 'Dữ liệu demo — Design Brief Phụ lục A2 DS-16, chưa phải luật từ phỏng vấn', active: true,
+    source: 'Dữ liệu demo (Design Brief Phụ lục A2, DS-16), chưa phải luật từ phỏng vấn', active: true,
   })
   // Lần trước của luật NH3 ở nhà A: chấp nhận 10 ngày trước, chờ job đo hiệu quả (EXPERT-FR-019)
   const acceptedDate = day(10)

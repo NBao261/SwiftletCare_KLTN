@@ -67,10 +67,10 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
     return { ...base, suggestion: null, reason: `Cần ít nhất ${MIN_DAYS} ngày dữ liệu từ firmware ≥ 1.1.0 (hiện có ${round1(days)} ngày)` }
   }
   if (model.r2 < MIN_R2) {
-    return { ...base, suggestion: null, reason: `Mô hình giải thích dữ liệu kém (R² = ${round1(model.r2 * 100) / 100} < ${MIN_R2}) — đề xuất sẽ không đáng tin` }
+    return { ...base, suggestion: null, reason: `Dữ liệu chưa đủ khớp để gợi ý (R² = ${round1(model.r2 * 100) / 100} < ${MIN_R2}), gợi ý chưa đáng tin` }
   }
   if (model.a <= 0) {
-    return { ...base, suggestion: null, reason: 'Dữ liệu cho thấy phun sương không làm tăng độ ẩm — kiểm tra máy phun/bơm (MISTING_INEFFECTIVE) trước khi chỉnh hệ số' }
+    return { ...base, suggestion: null, reason: 'Phun sương không làm tăng độ ẩm. Kiểm tra bơm và béc phun trước khi chỉnh hệ số' }
   }
 
   const day = runs.flat().slice(-SIM_STEPS)
@@ -82,7 +82,7 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
     mistingNow: Math.round(currentSim.mistingAvgPct), mistingSuggested: Math.round(best.result.mistingAvgPct),
   }
   if (currentSim.score - best.result.score < MIN_IMPROVEMENT) {
-    return { ...base, predicted, suggestion: null, reason: 'Theo mô hình, hệ số hiện tại đã gần tốt nhất — chưa cần đổi' }
+    return { ...base, predicted, suggestion: null, reason: 'Hệ số hiện tại đã gần tốt nhất, chưa cần đổi' }
   }
   const suggestion: Partial<FuzzyTuning> = {
     fuzzy_humidity_band: best.tuning.humidityBand,

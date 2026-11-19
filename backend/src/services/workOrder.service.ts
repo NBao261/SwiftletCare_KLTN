@@ -159,7 +159,7 @@ export async function openWorkOrderForAlert(
       assignee_id: assignee ?? undefined, ...(assignee && { assigned_at: new Date() }), opened_by: openedBy,
       history: [historyEntry(undefined, 'OPEN', openedBy)],
     })
-    await notifyAll(await handlerIds(wo), wo, `Work Order mới: ${alert.title}`, alert.message)
+    await notifyAll(await handlerIds(wo), wo, `Phiếu công việc mới: ${alert.title}`, alert.message)
     return wo
   } catch (err) {
     // Hai lần mở đồng thời cho cùng cảnh báo: index unique một phần chặn lần sau (BR-39)
@@ -178,7 +178,7 @@ async function backToInProgress(wo: IWorkOrder, set: Record<string, unknown>, ti
   const recipients = new Set(await handlerIds(reopened))
   if (wo.status === 'AWAITING_APPROVAL') for (const id of await ownerIdsOf(wo.farm_id)) recipients.add(id)
   await notifyAll([...recipients], reopened, `Sự cố quay lại: ${title}`,
-    'Dữ liệu chưa phục hồi sau khi báo xong — Work Order trở lại "đang làm".')
+    'Dữ liệu chưa phục hồi sau khi báo xong. Phiếu công việc trở lại "Đang làm".')
   return reopened
 }
 
@@ -300,7 +300,7 @@ export async function createManualWorkOrder(
   await logAction(user._id, 'WORK_ORDER_OPENED', 'work_order', String(wo._id), {
     house_id: String(house._id), alert_id: input.alert_id, recommendation_id: input.recommendation_id, assignee_id: assignee ?? undefined,
   }, { farmId: String(farm._id) })
-  if (assignee) await notifyAll([assignee], wo, `Work Order mới: ${wo.title}`, wo.description ?? '')
+  if (assignee) await notifyAll([assignee], wo, `Phiếu công việc mới: ${wo.title}`, wo.description ?? '')
   return presentWorkOrder(wo, true)
 }
 
@@ -412,7 +412,7 @@ export async function updateChecklistItem(
           description: input.note?.trim() || `Kiểm tra theo checklist "${wo.title}" thấy hỏng`,
           assignee_id: wo.assignee_id, opened_by: user._id, history: [historyEntry(undefined, 'OPEN', user._id)],
         })
-        await notifyAll(await handlerIds(repair), repair, `Work Order mới: ${repair.title}`, repair.description ?? '')
+        await notifyAll(await handlerIds(repair), repair, `Phiếu công việc mới: ${repair.title}`, repair.description ?? '')
       } catch (err) {
         // Tạo lỗi thì trả chỗ giữ, lần ghi sau tạo lại được
         await WorkOrder.updateOne({ _id: wo._id, [`${prefix}.repair_work_order_id`]: claimedId },
@@ -485,9 +485,9 @@ export async function completeWorkOrder(
 }
 
 async function notifyOwnersAwaitingApproval(wo: IWorkOrder, unverified = false): Promise<void> {
-  await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chờ duyệt: ${wo.title}`, unverified
-    ? 'Đã làm xong; hệ thống chưa có dữ liệu để kiểm phục hồi — Farm Owner kiểm tại chỗ rồi duyệt để đóng.'
-    : 'Đã làm xong và dữ liệu đã phục hồi — cần Farm Owner duyệt để đóng.')
+  await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Phiếu công việc chờ duyệt: ${wo.title}`, unverified
+    ? 'Đã làm xong. Chưa có dữ liệu để kiểm phục hồi, chủ nhà yến kiểm tại nhà yến rồi duyệt để đóng phiếu.'
+    : 'Đã làm xong và dữ liệu đã phục hồi. Chủ nhà yến duyệt để đóng phiếu.')
 }
 
 // ── Farm Owner (OPS-FR-004) ─────────────────────────────────────────────────
@@ -509,7 +509,7 @@ export async function approveWorkOrder(id: string, user: CurrentUser) {
     await Alert.updateOne(
       { _id: wo.alert_id, status: { $in: OPEN_ALERT_STATUSES } },
       { $set: { status: 'RESOLVED', resolved_at: now, acknowledgement_note: preventive
-        ? 'Đã bảo trì — Farm Owner duyệt Work Order phòng ngừa' : 'Đã sửa — Farm Owner duyệt Work Order' } },
+        ? 'Đã bảo trì, chờ chủ nhà yến duyệt phiếu bảo trì' : 'Đã sửa, chờ chủ nhà yến duyệt phiếu công việc' } },
     )
   }
   // OPS-FR-008 — đặt bộ đếm về 0, tính hạn kế tiếp, ghi lịch sử bảo trì
@@ -522,7 +522,7 @@ export async function reopenWorkOrder(id: string, user: CurrentUser, note: strin
   const wo = await findWorkOrderWithAccess(id, user)
   const updated = await transition(wo, ['AWAITING_APPROVAL'], 'IN_PROGRESS', { verified_at: null, done_at: null }, user._id, note)
   await audit(user, 'WORK_ORDER_REOPENED', updated, { note })
-  await notifyAll(await handlerIds(updated), updated, `Work Order bị mở lại: ${updated.title}`, note)
+  await notifyAll(await handlerIds(updated), updated, `Phiếu công việc bị mở lại: ${updated.title}`, note)
   return presentWorkOrder(updated, true)
 }
 
@@ -580,7 +580,7 @@ export async function reassignWorkOrder(id: string, user: CurrentUser, assigneeI
   )
   if (!updated) throw ConflictError('Work Order vừa được người khác cập nhật, hãy tải lại')
   await audit(user, 'WORK_ORDER_REASSIGNED', updated, { from: wo.assignee_id ? String(wo.assignee_id) : null, to: assigneeId })
-  await notifyAll([assigneeId], updated, `Work Order được giao cho bạn: ${updated.title}`, updated.description ?? '')
+  await notifyAll([assigneeId], updated, `Phiếu công việc được giao cho bạn: ${updated.title}`, updated.description ?? '')
   return presentWorkOrder(updated, true)
 }
 
@@ -706,7 +706,7 @@ export async function verifyWorkOrders(now = new Date()): Promise<{ verified: nu
           result.verified++
         } else if (outcome === 'UNVERIFIABLE') {
           const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined,
-            'Chưa có dữ liệu để kiểm phục hồi (BR-41): Farm Owner kiểm tại chỗ khi duyệt')
+            'Chưa có dữ liệu để kiểm phục hồi: chủ nhà yến kiểm tại nhà yến khi duyệt')
           await notifyOwnersAwaitingApproval(updated, true)
           result.verified++
         }
@@ -734,8 +734,8 @@ export async function verifyWorkOrders(now = new Date()): Promise<{ verified: nu
     try {
       const { modifiedCount } = await WorkOrder.updateOne({ _id: wo._id, status: 'OPEN', escalated_at: null }, { $set: { escalated_at: now } })
       if (modifiedCount === 0) continue
-      await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Work Order chưa ai bắt đầu: ${wo.title}`,
-        `Đã quá ${ESCALATION_MS / 60_000} phút từ lúc giao mà thợ chưa bắt đầu — có thể giao lại cho người khác.`)
+      await notifyAll(await ownerIdsOf(wo.farm_id), wo, `Phiếu công việc chưa ai bắt đầu: ${wo.title}`,
+        `Đã quá ${ESCALATION_MS / 60_000} phút từ lúc giao mà kỹ thuật viên chưa bắt đầu. Có thể giao lại cho người khác.`)
       result.escalated++
     } catch (err) {
       logger.error('Báo Work Order chưa ai bắt đầu thất bại', { workOrderId: String(wo._id), err })
@@ -760,13 +760,13 @@ export async function releaseTechnicianWorkOrders(
       { _id: wo._id, assignee_id: technicianId },
       {
         $unset: { assignee_id: 1, assigned_at: 1 },
-        $push: { history: historyEntry(wo.status, wo.status, by, 'Thợ được giao bị gỡ: chuyển cho Farm Owner (AUTH-FR-005)') },
+        $push: { history: historyEntry(wo.status, wo.status, by, 'Kỹ thuật viên được giao đã rời nhà: chuyển cho chủ nhà yến') },
       },
       { new: true },
     )
     if (updated) {
-      await notifyAll(await ownerIdsOf(updated.farm_id), updated, `Work Order chuyển cho bạn: ${updated.title}`,
-        'Thợ được giao không còn ở nhà này — giao lại cho thợ khác hoặc tự xử lý.')
+      await notifyAll(await ownerIdsOf(updated.farm_id), updated, `Phiếu công việc chuyển cho bạn: ${updated.title}`,
+        'Kỹ thuật viên được giao không còn ở nhà này. Giao lại cho người khác hoặc tự xử lý.')
     }
   }
   return orders.length

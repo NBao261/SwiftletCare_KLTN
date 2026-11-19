@@ -68,8 +68,8 @@ export async function acceptReview(reviewId: string, user: CurrentUser) {
     before: review.old_values, after: review.new_values,
   }, { farmId: String(chain.farm._id) })
   await notifyExpertDecision(user, chain.farm._id, auditId, {
-    what: `chấp nhận thay đổi ${GROUP_LABEL[review.group]} của Farm Owner`,
-    place: `Khu vực "${chain.zone.name}"`,
+    what: `giữ thay đổi ${GROUP_LABEL[review.group]} của chủ nhà yến`,
+    place: `Zone "${chain.zone.name}"`,
     detail: formatChanges(review.old_values, review.new_values),
   })
   return closed
@@ -111,8 +111,8 @@ export async function revertReview(reviewId: string, user: CurrentUser) {
     before: current, after: review.old_values,
   }, { farmId: String(chain.farm._id) })
   await notifyExpertDecision(user, chain.farm._id, auditId, {
-    what: `hoàn lại thay đổi ${GROUP_LABEL[review.group]} của Farm Owner`,
-    place: `Khu vực "${chain.zone.name}"`,
+    what: `hoàn tác thay đổi ${GROUP_LABEL[review.group]} của chủ nhà yến`,
+    place: `Zone "${chain.zone.name}"`,
     detail: formatChanges(current, review.old_values),
   })
   return closed

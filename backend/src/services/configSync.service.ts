@@ -31,8 +31,8 @@ export async function syncControllerConfigs(): Promise<{ republished: number; ra
       zoneId: String(zone._id),
       nodeId: String(node._id),
       type: 'CONFIG_MISMATCH',
-      title: `Cấu hình chưa được áp — ${node.device_id}`,
-      message: `${node.device_id} (${zone.name}) vẫn chạy cấu hình cũ sau ${CONFIG_MISMATCH_HEARTBEATS} heartbeat liên tiếp; ` +
+      title: `Cấu hình chưa được áp · ${node.device_id}`,
+      message: `${node.device_id} (${zone.name}) vẫn chạy cấu hình cũ sau ${CONFIG_MISMATCH_HEARTBEATS} lần kết nối liên tiếp; ` +
         'hệ thống đang gửi lại cấu hình mỗi phút.',
       details: { zone_version: zone.config_version ?? 0, applied_version: node.applied_config_version ?? null },
     })

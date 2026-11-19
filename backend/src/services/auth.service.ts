@@ -6,6 +6,7 @@ import { logAction } from '@/services/auditLog.service'
 import { resetCodeMail, sendMail } from '@/services/mail.service'
 import { notifyAdmins } from '@/services/notification.service'
 import { criticalHasOutsideChannel } from '@/utils/notificationChannels.util'
+import { ROLE_LABEL } from '@/utils/displayLabel.util'
 import type { AlertSeverity, ChannelChoice, JwtAccessPayload, NotificationPreferences } from '@/types'
 import { AppError, BadRequestError, UnauthorizedError } from '@/utils/appError.util'
 
@@ -274,7 +275,7 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
   // Flow 19 bước 6 — Administrator nhận thông báo để xử lý trong ≤ 30 ngày
   await notifyAdmins({
     title: 'Yêu cầu xoá tài khoản mới',
-    body: `${user.full_name} (${user.role}) vừa gửi yêu cầu xoá tài khoản — cần xử lý trong ≤ 30 ngày.`,
+    body: `${user.full_name} (${ROLE_LABEL[user.role]}) vừa gửi yêu cầu xoá tài khoản. Cần xử lý trong 30 ngày.`,
   })
   return user
 }
@@ -300,7 +301,7 @@ export async function cancelAccountDeletion(userId: string): Promise<IUser> {
   // Admin có thể đang mở hàng đợi — báo để không ai xử lý nhầm yêu cầu vừa rút lại
   await notifyAdmins({
     title: 'Yêu cầu xoá tài khoản đã được huỷ',
-    body: `${user.full_name} (${user.role}) đã huỷ yêu cầu xoá tài khoản.`,
+    body: `${user.full_name} (${ROLE_LABEL[user.role]}) đã huỷ yêu cầu xoá tài khoản.`,
   })
   return user
 }

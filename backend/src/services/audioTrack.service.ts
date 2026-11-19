@@ -151,7 +151,7 @@ export async function deleteTrack(nodeId: string, trackId: string, user: Current
   // phát được nó (VD upload nhầm) nên xoá an toàn; thiết bị đã gỡ thì chỉ là dọn danh mục.
   if (!node.decommissioned_at && track.synced_to_sd && node.audio.current_track === track.track_number) {
     throw ConflictError(
-      `Bài "${track.display_name}" đang được phát theo lịch — chọn bài khác, hoặc đánh dấu chưa chép vào thẻ SD, rồi mới xoá`,
+      `Bài "${track.display_name}" đang được phát theo lịch. Chọn bài khác, hoặc đánh dấu chưa chép vào thẻ SD, rồi mới xoá.`,
     )
   }
   await track.deleteOne()

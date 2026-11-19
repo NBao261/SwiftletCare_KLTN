@@ -372,7 +372,7 @@ export function findThresholdBreaches(
  */
 const AIR_QUALITY_METRICS = new Set(['nh3_ppm', 'co2_ppm'])
 // Không ghi "do chuyên gia đặt": ngưỡng mặc định chưa ai chỉnh thì câu đó sai sự thật
-const AIR_QUALITY_NOTE = 'NH3/CO2 chỉ theo dõi và cảnh báo theo ngưỡng của Zone (chưa có giới hạn chuẩn cho nhà yến) — hệ thống không tự chạy quạt theo chỉ số này'
+const AIR_QUALITY_NOTE = 'NH3, CO2 chỉ để theo dõi và cảnh báo theo ngưỡng của Zone (chưa có giới hạn chuẩn cho nhà yến); quạt không tự chạy theo chỉ số này'
 
 const METRIC_LABEL: Record<string, string> = {
   temperature: 'Nhiệt độ',
@@ -806,7 +806,7 @@ export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<numbe
       $set: {
         status: 'RESOLVED',
         resolved_at: now,
-        acknowledgement_note: { $ifNull: ['$acknowledgement_note', 'Không còn ghi nhận lại — đợt sự cố đã qua'] },
+        acknowledgement_note: { $ifNull: ['$acknowledgement_note', 'Không còn ghi nhận lại, đợt sự cố đã qua'] },
       },
     }],
   )
@@ -890,14 +890,14 @@ export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
   // Nút AI tự báo EDGE_AI_DEGRADED (FPS thấp) dùng chung khoá dedup với cảnh báo này: đóng cái đó
   // trước, nếu không "mất kết nối" bị gộp vào cảnh báo FPS cũ và không ai được báo. Kết nối lại mà
   // FPS vẫn thấp thì nút AI tự báo lại.
-  await resolveAlertsForNode(cameraId, 'Nút AI mất kết nối — chuyển sang cảnh báo mất kết nối', 'EDGE_AI_DEGRADED')
+  await resolveAlertsForNode(cameraId, 'Camera đếm chim mất kết nối, chuyển sang cảnh báo mất kết nối', 'EDGE_AI_DEGRADED')
   await createAlert({
     farmId:  String(house.farm_id),
     houseId: String(house._id),
     nodeId:  String(camera._id),
     type:    'EDGE_AI_DEGRADED',
-    title:   `Nút AI đếm chim ${camera.device_id} mất kết nối`,
-    message: `Không nhận được heartbeat từ nút AI ${camera.device_id} tại ${house.name}; số đếm chim đang gián đoạn.`,
+    title:   `Camera đếm chim ${camera.device_id} mất kết nối`,
+    message: `Không nhận được tín hiệu từ camera đếm chim ${camera.device_id} tại ${house.name}; số đếm chim đang gián đoạn.`,
   })
 }
 
@@ -916,8 +916,8 @@ export async function raiseCameraLowFpsAlert(cameraId: string, fps: number, minF
     houseId: String(house._id),
     nodeId:  String(camera._id),
     type:    'EDGE_AI_DEGRADED',
-    title:   `Nút AI đếm chim ${camera.device_id} xử lý chậm`,
-    message: `Nút AI ${camera.device_id} tại ${house.name} chỉ xử lý ${fps} khung hình/giây (cần từ ${minFps}); số đếm chim có thể thiếu.`,
+    title:   `Camera đếm chim ${camera.device_id} xử lý chậm`,
+    message: `Camera đếm chim ${camera.device_id} tại ${house.name} chỉ xử lý ${fps} khung hình/giây (cần từ ${minFps}); số đếm chim có thể thiếu.`,
     metadata: { cause: 'LOW_FPS', fps, min_fps: minFps },
   })
 }
@@ -936,6 +936,6 @@ export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
     nodeId:  String(node._id),
     type:    'NODE_OFFLINE',
     title:   `Thiết bị ${node.device_id} mất kết nối`,
-    message: `Không nhận được heartbeat từ ${node.device_id} tại ${zone.name} quá thời gian cho phép.`,
+    message: `Không nhận được tín hiệu từ ${node.device_id} tại ${zone.name} quá thời gian cho phép.`,
   })
 }
