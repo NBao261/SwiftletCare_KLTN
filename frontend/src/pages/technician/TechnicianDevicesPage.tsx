@@ -16,7 +16,7 @@ import DeviceListRow from "@/components/features/technician/devices/DeviceListRo
 import FarmHouseZonePicker, {
   FarmHouseZonePickerValue,
 } from "@/components/features/technician/devices/FarmHouseZonePicker";
-import AudioTracksModal from "@/components/features/technician/devices/AudioTracksModal";
+import LullabyTracksModal from "@/components/features/farm-owner/devices/LullabyTracksModal";
 import DecommissionDeviceModal from "@/components/features/technician/devices/DecommissionDeviceModal";
 import ReplaceDeviceModal from "@/components/features/technician/devices/ReplaceDeviceModal";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -475,7 +475,7 @@ export default function TechnicianDevicesPage() {
         </Modal>
 
         {audioNode && (
-          <AudioTracksModal
+          <LullabyTracksModal
             node={audioNode}
             onClose={() => setAudioNodeId(null)}
           />

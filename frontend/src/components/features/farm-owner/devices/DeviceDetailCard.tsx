@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CalendarBlankIcon, CpuIcon, MusicNotesIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { ArrowClockwiseIcon, CalendarBlankIcon, CpuIcon, MusicNotesIcon, VideoCameraIcon } from '@phosphor-icons/react';
 
 import SimulatedBadge from '@/components/common/SimulatedBadge';
 import StatusDot from '@/components/common/StatusDot';
@@ -20,10 +20,12 @@ interface DeviceDetailCardProps {
   // Node cảm biến: mở popup lịch loa ru / bài loa ru (ENV-FR-013b, 013c)
   onOpenSchedule?: () => void;
   onOpenTracks?: () => void;
+  // FARM-FR-013 — Farm Owner khởi động lại bộ điều khiển đang ONLINE
+  onRestart?: () => void;
 }
 
 // Thẻ chi tiết 1 thiết bị, chỉ xem: trạng thái, heartbeat, mạng; không có nút cấu hình / thay thế / gỡ / firmware
-export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks }: DeviceDetailCardProps): JSX.Element {
+export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart }: DeviceDetailCardProps): JSX.Element {
   const { t, num, day, ago, dateTime } = useTranslation(devicesDict);
   const isSensor = device.type === 'sensor';
   const quality = wifiQuality(device.rssi);
@@ -55,6 +57,12 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
             <button type="button" className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5')} onClick={onOpenTracks}>
               <MusicNotesIcon size={14} />
               {t('action.tracks')}
+            </button>
+          )}
+          {onRestart && (
+            <button type="button" className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5')} onClick={onRestart}>
+              <ArrowClockwiseIcon size={14} />
+              {t('action.restart')}
             </button>
           )}
         </div>
