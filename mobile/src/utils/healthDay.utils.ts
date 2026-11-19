@@ -257,3 +257,21 @@ export function summarizePendingTasks(pendingDays: HouseHealthDay[], pendingVerd
     summary: parts.filter(Boolean).join(' · '),
   }
 }
+
+// Trạng thái ngày hôm nay trên thẻ nhà (ANALYTICS-FR-015): ngày còn chờ người xem chấm thì che (BR-31, backend tổng quan không tự
+// che); chưa tính hôm nay thì ghi chưa tính; thiếu dữ liệu là INSUFFICIENT_DATA
+export type HouseDayDisplay =
+  | { kind: 'status'; status: HealthDayStatus }
+  | { kind: 'pending-rating' }
+  | { kind: 'not-computed' }
+
+export function getHouseDayDisplay(
+  overview: { house_id: string; date: string; status: HealthRatingValue | null; status_reason: string | null } | undefined,
+  pendingDays: Pick<HouseHealthDay, 'house_id' | 'date'>[],
+): HouseDayDisplay | null {
+  if (!overview) return null
+  if (pendingDays.some(day => day.house_id === overview.house_id && day.date === overview.date)) return { kind: 'pending-rating' }
+  if (overview.status) return { kind: 'status', status: overview.status }
+  if (overview.status_reason === 'INSUFFICIENT_DATA') return { kind: 'status', status: 'INSUFFICIENT_DATA' }
+  return { kind: 'not-computed' }
+}

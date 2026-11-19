@@ -1,4 +1,5 @@
-import type { CreateHarvestPayload, HarvestBatch, NestType, UpdateHarvestPayload, User } from '@/types'
+import type { CreateHarvestPayload, HarvestBatch, HarvestCycleComparison, NestType, UpdateHarvestPayload, User } from '@/types'
+import { formatPercentValue } from '@/utils/number.utils'
 import { getVietnamDate } from '@/utils/date.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { parseNumberInput, validateNumber, type NumberRule } from '@/utils/settingsValidation.utils'
@@ -280,4 +281,18 @@ export function planHarvestRunOperations(draft: HarvestRunDraft): HarvestOperati
     if (batch) return [{ kind: 'remove', nestType, harvestId: batch._id }]
     return []
   })
+}
+
+// Chênh lệch một chu kỳ với chu kỳ đem so (HARVEST-FR-007): "+12 % khối lượng · −5 % số tổ"; không có chu kỳ để so thì "_"
+export function formatCycleComparison(comparison: HarvestCycleComparison | null | undefined): string {
+  if (!comparison || (comparison.weight_change_pct === null && comparison.nest_count_change_pct === null)) return '_'
+  const formatChange = (value: number) => `${value > 0 ? '+' : ''}${formatPercentValue(value, 0)}`
+  const parts: string[] = []
+  if (comparison.weight_change_pct !== null) {
+    parts.push(t('{change} khối lượng', { change: formatChange(comparison.weight_change_pct) }))
+  }
+  if (comparison.nest_count_change_pct !== null) {
+    parts.push(t('{change} số tổ', { change: formatChange(comparison.nest_count_change_pct) }))
+  }
+  return parts.join(' · ')
 }

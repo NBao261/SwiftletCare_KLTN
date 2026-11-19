@@ -11,14 +11,19 @@ import {
   WarningIcon,
   WifiSlashIcon,
 } from 'phosphor-react-native'
+import { HealthStatusBadge } from '@/components/health/HealthStatusBadge'
 import { IconButton } from '@/components/ui/icon-button'
 import { PressableScale } from '@/components/ui/pressable-scale'
 import { Text } from '@/components/ui/text'
 import type { AppColors } from '@/constants/theme'
 import { Radius, Spacing } from '@/constants/theme'
+import { useFarmOverviews } from '@/hooks/farm/useFarmOverviews'
 import type { HouseCardData } from '@/hooks/farm/useHouseStatuses'
+import { usePendingHealthDays } from '@/hooks/health/usePendingHealthDays'
 import { usePalette } from '@/hooks/theme/usePalette'
+import { getHealthStatusLabel, getHouseDayDisplay, type HouseDayDisplay } from '@/utils/healthDay.utils'
 import type { HouseStatus } from '@/utils/houseStatus.utils'
+import { getHouseStageLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
@@ -85,13 +90,32 @@ interface HouseStatusCardProps {
   pin?: { isPinned: boolean; onToggle: () => void }
 }
 
-// Thẻ một nhà yến: nền lime, 2 vòng mực trang trí ở góc dưới trái, trạng thái nặng nhất ở dòng cuối —
+// Chữ của trạng thái ngày hôm nay trên thẻ (đọc cho trình đọc màn hình)
+function getDayDisplayText(display: HouseDayDisplay): string {
+  if (display.kind === 'status') return getHealthStatusLabel(display.status)
+  return display.kind === 'pending-rating' ? t('Chờ bạn đánh giá') : t('Chưa tính')
+}
+
+// Thẻ một nhà yến: nền lime, 2 vòng mực trang trí ở góc dưới trái, trạng thái vận hành nặng nhất ở dòng cuối; giữa thẻ là trạng thái
+// ngày hôm nay (MF-06, ANALYTICS-FR-015 — che khi người xem còn chưa chấm, BR-31) và nhãn "Đang dẫn dụ" (FARM-FR-014) —
 // dùng chung cho carousel Trang chủ và danh sách nhà ở tab Trang trại
 export function HouseStatusCard({ data, width, onPress, pin }: HouseStatusCardProps) {
   const palette = usePalette()
   const { house, farmName, status, activeAlertCount } = data
+  const overviewByHouseId = useFarmOverviews()
+  const pendingDays = usePendingHealthDays()
+  const dayDisplay = getHouseDayDisplay(overviewByHouseId.get(house._id), pendingDays.data)
+  const isAttracting = house.stage === 'ATTRACTING'
   const alertText = t('{count} cảnh báo', { count: activeAlertCount })
-  const accessibilityLabel = [house.name, farmName, activeAlertCount > 0 ? alertText : null, status.message]
+  const dayText = dayDisplay ? t('Hôm nay: {status}', { status: getDayDisplayText(dayDisplay) }) : null
+  const accessibilityLabel = [
+    house.name,
+    farmName,
+    isAttracting ? getHouseStageLabel('ATTRACTING') : null,
+    dayText,
+    activeAlertCount > 0 ? alertText : null,
+    status.message,
+  ]
     .filter(Boolean)
     .join(', ')
 
@@ -135,6 +159,34 @@ export function HouseStatusCard({ data, width, onPress, pin }: HouseStatusCardPr
         )}
       </View>
 
+      {(dayDisplay || isAttracting) && (
+        <View style={styles.dayRow}>
+          {dayDisplay && (
+            <View
+              style={[styles.pill, dayDisplay.kind !== 'status' && styles.textPill, { backgroundColor: palette.surface }]}
+            >
+              <Text variant="small" color={palette.text}>
+                {t('Hôm nay')}
+              </Text>
+              {dayDisplay.kind === 'status' ? (
+                <HealthStatusBadge status={dayDisplay.status} />
+              ) : (
+                <Text variant="small" weight="semiBold" color={palette.text}>
+                  {getDayDisplayText(dayDisplay)}
+                </Text>
+              )}
+            </View>
+          )}
+          {isAttracting && (
+            <View style={[styles.pill, styles.textPill, { backgroundColor: palette.surface }]}>
+              <Text variant="small" weight="semiBold" color={palette.text}>
+                {getHouseStageLabel('ATTRACTING')}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       <View style={styles.bottomRow}>
         <Text variant="body" weight="semiBold" color={palette.onPrimary} numberOfLines={2} style={styles.message}>
           {status.message}
@@ -176,6 +228,18 @@ const styles = StyleSheet.create({
   },
   names: { flex: 1, minWidth: 0 },
   badge: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
+  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderRadius: Radius.full,
+    paddingLeft: Spacing.md,
+    paddingRight: Spacing.xs,
+    paddingVertical: Spacing.xs,
+  },
+  // Viên chỉ có chữ (không có huy hiệu ở cuối) thì lề phải bằng lề trái
+  textPill: { paddingRight: Spacing.md },
   bottomRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   message: { flex: 1 },
 })

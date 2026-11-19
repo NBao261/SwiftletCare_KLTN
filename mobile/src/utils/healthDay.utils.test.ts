@@ -4,6 +4,7 @@ import {
   formatHealthReason,
   formatIndicatorValue,
   formatLastRatingDay,
+  getHouseDayDisplay,
   getOldestPendingDay,
   getPendingRatingRange,
   isHealthDayHidden,
@@ -150,5 +151,27 @@ describe('ngày và hạn chấm', () => {
     expect(isHealthDayHidden(buildDay('house-a', '2026-11-09', { my_rating_state: 'RATED', current_status: 'WATCH' }))).toBe(false)
     // Chuyên gia không phải người chấm: my_rating_state null, thấy đủ
     expect(isHealthDayHidden(buildDay('house-a', '2026-11-09', { my_rating_state: null, current_status: 'GOOD' }))).toBe(false)
+  })
+})
+
+describe('getHouseDayDisplay', () => {
+  const overview = { house_id: 'house-1', date: '2026-11-19', status: 'WATCH' as const, status_reason: null }
+
+  it('có trạng thái thì hiện; chưa có tổng quan thì không hiện gì', () => {
+    expect(getHouseDayDisplay(overview, [])).toEqual({ kind: 'status', status: 'WATCH' })
+    expect(getHouseDayDisplay(undefined, [])).toBeNull()
+  })
+
+  it('người xem còn chưa chấm hôm nay của nhà đó thì che trạng thái (BR-31)', () => {
+    expect(getHouseDayDisplay(overview, [{ house_id: 'house-1', date: '2026-11-19' }])).toEqual({ kind: 'pending-rating' })
+    expect(getHouseDayDisplay(overview, [{ house_id: 'house-2', date: '2026-11-19' }])).toEqual({ kind: 'status', status: 'WATCH' })
+  })
+
+  it('thiếu dữ liệu là INSUFFICIENT_DATA, chưa tính thì ghi chưa tính', () => {
+    expect(getHouseDayDisplay({ ...overview, status: null, status_reason: 'INSUFFICIENT_DATA' }, [])).toEqual({
+      kind: 'status',
+      status: 'INSUFFICIENT_DATA',
+    })
+    expect(getHouseDayDisplay({ ...overview, status: null, status_reason: 'NOT_COMPUTED' }, [])).toEqual({ kind: 'not-computed' })
   })
 })
