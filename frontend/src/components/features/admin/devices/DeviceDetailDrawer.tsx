@@ -1,13 +1,16 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { CpuIcon, VideoCameraIcon } from '@phosphor-icons/react'
-import { Badge, Button, type BadgeTone } from '@/components/ui'
+import { Badge, Button, ConfirmModal, type BadgeTone } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { Drawer } from '@/components/ui/Drawer'
 import { HeartbeatTime, WifiSignal, nodeLocation } from '@/components/features/admin/devices/deviceColumns'
 import { useFarm } from '@/hooks/shared/useFarms'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
+import { useSendNodeCommand } from '@/hooks/shared/useDevices'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
+import { useToastStore } from '@/stores/toastStore'
 import { t, translated } from '@/i18n'
-import type { DeviceStatus, SystemNodeStatusItem } from '@/types'
+import type { DeviceStatus, NodeCommandInput, SystemNodeStatusItem } from '@/types'
 
 const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
   ONLINE: 'positive', OFFLINE: 'neutral', PENDING: 'warning', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
@@ -40,10 +43,10 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 const Muted = ({ children }: { children: ReactNode }) => <span className="font-normal text-warmGray">{children}</span>
 
 /**
- * Drawer chi tiết thiết bị của Admin — khung giống drawer Farm Owner nhưng nội dung theo việc của Admin (giám sát
- * toàn hệ thống, SRS RACI "I (audit)" với thiết bị): thiết bị thuộc ai (farm + chủ để liên hệ), tình trạng kết nối
- * (mất kết nối bao lâu) và cảnh báo đang mở của chính thiết bị. Không hiện số đo môi trường — đó là việc vận hành
- * của Farm Owner.
+ * Drawer chi tiết thiết bị của Admin — khung giống drawer Farm Owner nhưng nội dung theo việc của Admin (FARM-FR-006, 009):
+ * thiết bị thuộc ai (farm + chủ để liên hệ), tình trạng kết nối và cảnh báo đang mở của chính thiết bị; bộ điều khiển có
+ * lệnh từ xa Khởi động lại, Đẩy cấu hình (FARM-FR-013; OTA ở trang OTA Firmware). Không hiện số đo môi trường — đó là
+ * việc vận hành của Farm Owner.
  */
 export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNodeStatusItem | null; onClose: () => void }) {
   const farmId = node?.farm_id || undefined
@@ -51,6 +54,23 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
   // Cảnh báo đang mở của phòng → lọc đúng thiết bị (alert.node_id = _id của node); 1 phòng ít cảnh báo nên 100 là đủ
   // Chỉ gọi khi drawer đang mở (node có giá trị) — đóng drawer không tải cảnh báo
   const alerts = useAlertsList({ farmId, zoneId: node?.zone_id, status: 'ACTIVE', limit: 100 }, { enabled: !!node })
+  const sendCommand = useSendNodeCommand()
+  const apiErrorMessage = useApiErrorMessage()
+  const push = useToastStore(state => state.push)
+  const [confirmRestart, setConfirmRestart] = useState(false)
+
+  // FARM-FR-013 — lệnh từ xa; firmware trước 1.4.0 trả 501 (không hỗ trợ RESTART)
+  function send(command: NodeCommandInput['command'], doneText: string): void {
+    if (!node) return
+    sendCommand.mutate({ nodeId: node._id, input: { command } }, {
+      onSuccess: () => push(t(doneText, { device: node.device_id })),
+      onError: error => push(
+        (error as { response?: { status?: number } }).response?.status === 501 ? t('Firmware chưa hỗ trợ lệnh này') : apiErrorMessage(error),
+        'error',
+      ),
+      onSettled: () => setConfirmRestart(false),
+    })
+  }
 
   if (!node) return <Drawer open={false} onClose={onClose}>{null}</Drawer>
 
@@ -115,8 +135,25 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
       </div>
 
       <div className="flex flex-col gap-2 pt-4">
+        {isSensor && (
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" loading={sendCommand.isPending} onClick={() => send('PUSH_CONFIG', 'Đã gửi cấu hình tới {{device}}')}>
+              {t('Đẩy cấu hình')}
+            </Button>
+            <Button variant="secondary" disabled={sendCommand.isPending} onClick={() => setConfirmRestart(true)}>{t('Khởi động lại')}</Button>
+          </div>
+        )}
         <Button variant="secondary" className="w-full" onClick={onClose}>{t('Đóng')}</Button>
       </div>
+      <ConfirmModal
+        open={confirmRestart}
+        title={t('Khởi động lại')}
+        description={t('Bộ điều khiển {{device}} khởi động lại và chạy tiếp với cấu hình đã lưu; Farm Owner được báo trong ứng dụng.', { device: node.device_id })}
+        confirmLabel={t('Khởi động lại')}
+        loading={sendCommand.isPending}
+        onConfirm={() => send('RESTART', 'Đã gửi lệnh khởi động lại tới {{device}}')}
+        onCancel={() => setConfirmRestart(false)}
+      />
     </Drawer>
   )
 }

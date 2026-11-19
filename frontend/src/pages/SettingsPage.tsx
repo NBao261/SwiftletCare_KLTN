@@ -5,7 +5,7 @@
 import { useState, useEffect, FormEvent, type ReactNode } from 'react'
 import {
   BellIcon, EnvelopeIcon, MoonIcon, PhoneIcon,
-  ShieldCheckIcon, SignOutIcon, TelegramLogoIcon, TrashIcon, type Icon,
+  ShieldCheckIcon, TelegramLogoIcon, TrashIcon, type Icon,
 } from '@phosphor-icons/react'
 import { useAuthStore } from '@/stores/authStore'
 import { useAuth } from '@/hooks/auth/useAuth'
@@ -27,16 +27,19 @@ import {
 } from '@/validations/common/notificationChannels.validation'
 import type { SeverityLevel } from '@/types'
 
-/** Settings Page — hồ sơ, thông báo (ALERT-FR-005/006), bảo mật (AUTH-FR-009), xoá tài khoản (AUTH-FR-012) */
+/**
+ * Settings Page — hồ sơ, thông báo (ALERT-FR-005/006) và Telegram (ALERT-FR-013), bảo mật (AUTH-FR-009), xoá tài khoản
+ * (AUTH-FR-012). Admin không cấu hình kênh thông báo (Report 3 §2.4). Đăng xuất ở sidebar và popup avatar, không lặp ở đây.
+ */
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
-  const { logout } = useAuth()
 
   if (!user) return null
+  const hasNotificationSettings = user.role !== 'ADMIN'
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Hồ sơ: avatar + tên + vai trò, email/SĐT, đăng xuất ── */}
+      {/* ── Hồ sơ: avatar + tên + vai trò, email/SĐT ── */}
       <section className="flex flex-wrap items-center gap-x-8 gap-y-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <Avatar name={user.full_name} size="lg" />
@@ -52,19 +55,14 @@ export default function SettingsPage() {
           <InfoItem icon={EnvelopeIcon} label="Email" value={user.email} />
           <InfoItem icon={PhoneIcon} label="Số điện thoại" value={user.phone || '--'} />
         </dl>
-
-        <Button variant="danger" size="sm" onClick={() => logout.mutate()}>
-          <SignOutIcon size={14} weight="bold" />
-          Đăng xuất
-        </Button>
       </section>
 
-      {/* ── 2 cột: Thông báo | Bảo mật + Dữ liệu tài khoản ── */}
+      {/* ── 2 cột: Thông báo | Bảo mật + Telegram + Dữ liệu tài khoản (Admin: chỉ Bảo mật + Dữ liệu tài khoản) ── */}
       <div className="grid items-start gap-4 lg:grid-cols-2">
-        <NotificationPreferencesCard />
+        {hasNotificationSettings && <NotificationPreferencesCard />}
         <div className="flex flex-col gap-4">
           <SecurityCard />
-          <TelegramCard />
+          {hasNotificationSettings && <TelegramCard />}
           <DeletionCard />
         </div>
       </div>

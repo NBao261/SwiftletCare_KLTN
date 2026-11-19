@@ -7,7 +7,6 @@ import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
-import HouseKpiRow from '@/components/features/farm-owner/farms/HouseKpiRow'
 import HouseCard from '@/components/features/farm-owner/farms/HouseCard'
 import HouseTable from '@/components/features/farm-owner/farms/HouseTable'
 import AddHouseModal from '@/components/features/farm-owner/farms/AddHouseModal'
@@ -28,7 +27,6 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
-import { vnYearMonth } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { NO_VALUE } from '@/constants/display'
 import { useAuthStore } from '@/stores/authStore'
@@ -239,8 +237,6 @@ export default function FarmOwnerFarmsPage() {
     )
   }
 
-  const monthLabel = vnYearMonth(new Date()).month
-
   if (isError) {
     return (
       <EmptyState
@@ -286,8 +282,6 @@ export default function FarmOwnerFarmsPage() {
       <div className="sm:hidden">
         <ScopeFilter scope={routedScope} />
       </div>
-
-      <HouseKpiRow totals={scopeTotals} monthLabel={monthLabel} showYield={canViewHarvest} />
 
       <FarmFrame
         title={t('list.title')}

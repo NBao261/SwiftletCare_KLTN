@@ -1,4 +1,4 @@
-// ADMIN — thiết bị toàn hệ thống, chỉ xem (OPS-NFR-004, GET /devices/system-status)
+// ADMIN — /devices: mọi thiết bị kèm farm, nhà, khu vực (FARM-FR-009, GET /devices/system-status); lệnh từ xa trong ngăn chi tiết (FARM-FR-013)
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'

@@ -7,9 +7,9 @@ import {
 
 /**
  * Khung ứng dụng cho Admin. "Tổng quan hệ thống" đặt ngay đầu sidebar vì là
- * trang nhà sau đăng nhập (SYSTEM-FR-003, gộp luôn OPS-NFR-004 — trạng thái node).
- * G-20: Admin có Console thiết bị (/devices, /alerts, /ota) — xem thiết bị mọi farm
- * qua GET /devices/sensor-nodes, cảnh báo thiết bị, gửi RESTART/PUSH_CONFIG/OTA.
+ * trang nhà sau đăng nhập (SYSTEM-FR-003).
+ * G-20: Admin có Console thiết bị (/devices, /alerts, /ota) — thiết bị mọi farm qua GET /devices/system-status,
+ * cảnh báo thiết bị, gửi RESTART/PUSH_CONFIG/OTA.
  * Không có Thu hoạch hay Trang trại (Admin không xem GET /farms).
  */
 const menuSections: MenuSection[] = [
@@ -17,14 +17,11 @@ const menuSections: MenuSection[] = [
     title: 'Vận hành',
     items: [
       { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
-      // OPS-NFR-004 — bảng system-status chỉ xem (node_id, farm_name, house_name, zone_name)
-      { label: 'Trạng thái Node', path: '/system/devices', icon: IconDevice },
     ],
   },
   {
-    // G-20: Console thiết bị của Administrator
-    // ADMIN xem thiết bị mọi farm + gửi RESTART, PUSH_CONFIG, OTA (FARM-FR-009/013)
-    title: 'Console Thiết bị',
+    // FARM-FR-009, 013 — thiết bị mọi farm kèm farm, nhà, khu vực (bộ điều khiển và camera); RESTART, PUSH_CONFIG, OTA
+    title: 'Console thiết bị',
     items: [
       { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
       { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },

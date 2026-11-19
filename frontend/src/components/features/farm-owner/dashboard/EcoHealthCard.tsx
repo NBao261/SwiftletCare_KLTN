@@ -26,7 +26,8 @@ export default function EcoHealthCard({ houses }: { houses: House[] }) {
     <Card className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <p className="label-caption">{t('stability.caption')}</p>
-        <Badge tone="positive">{t('stability.stable')}</Badge>
+        {/* Nhãn theo đúng trạng thái: có nhà lỗi thiết bị thì cam, không thì xanh */}
+        {hasDevices && <Badge tone={hasFault ? 'warning' : 'positive'}>{t(hasFault ? 'stability.issue' : 'stability.stable')}</Badge>}
       </div>
 
       <div>

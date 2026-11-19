@@ -38,7 +38,7 @@ export default function AppSidebar({
   dockItems: MenuItem[]
 }) {
   const user = useAuthStore(s => s.user)
-  const unreadCount = useAlertStore(s => s.unreadCount)
+  const pendingAlertCount = useAlertStore(s => s.pendingCount)
   const isExpert = user?.role === 'DOMAIN_EXPERT'
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
   const expertPendingCount = isExpert ? (expertAlerts?.total ?? 0) : 0
@@ -62,7 +62,7 @@ export default function AppSidebar({
             <p className="truncate text-xl font-bold text-charcoal">{user?.full_name}</p>
             <p className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-warmGray">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
-              Role: {user?.role ? navigationLabel(ROLE_LABEL[user.role]) : ''}
+              {navigationLabel('Vai trò:')} {user?.role ? ROLE_LABEL[user.role] : ''}
             </p>
           </div>
 
@@ -77,11 +77,10 @@ export default function AppSidebar({
                   <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{navigationLabel(section.title)}</p>
                   <div className="space-y-1">
                     {section.items.map(item => {
-                      const badgeCount = item.path === '/domain-expert/alert-verdicts'
-                        ? (isExpert ? expertPendingCount : unreadCount)
-                        : item.path === '/alerts'
-                          ? unreadCount
-                          : 0
+                      // Cảnh báo: số chờ xác nhận (ACTIVE); Thẩm định: số cảnh báo suy luận chờ chuyên gia kết luận, chỉ chuyên gia
+                      const badgeCount = item.path === '/alerts'
+                        ? pendingAlertCount
+                        : item.path === '/domain-expert/alert-verdicts' ? expertPendingCount : 0
                       return (
                         <NavLink
                           key={item.path}
