@@ -1,4 +1,4 @@
-import { useState, type ComponentType, type SVGProps } from 'react'
+import { useEffect, useState, type ComponentType, type SVGProps } from 'react'
 import { CaretDownIcon, DotsThreeOutlineIcon } from '@phosphor-icons/react'
 import { Link, useLocation } from 'react-router-dom'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
@@ -77,6 +77,8 @@ export default function AppSidebar({
     .map(section => ({ ...section, items: section.items.filter(item => !dockPaths.has(item.path)) }))
     .filter(section => section.items.length > 0)
   const isMoreActive = moreSections.some(section => section.items.some(item => isMenuItemActive(item, pathname)))
+  // Đổi trang bằng cách khác (Back của trình duyệt, vuốt Back trên Android) cũng đóng bảng "Thêm"
+  useEffect(() => setIsMoreOpen(false), [pathname])
 
   function toggleSection(title: string): void {
     const next = collapsed.includes(title) ? collapsed.filter(item => item !== title) : [...collapsed, title]

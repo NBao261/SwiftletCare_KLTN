@@ -74,8 +74,6 @@ const vi = {
   'scope.warning': 'Có Zone vượt ngưỡng hoặc thiết bị, camera lỗi',
   'env.pickHouse': 'Chọn 1 nhà yến ở bộ lọc góc trên để xem số liệu cảm biến',
 
-  // Hàng KPI chế độ Tất cả nhà yến
-
   // Khung sản lượng thu hoạch của 1 nhà yến
   'harvest.title': 'Sản lượng thu hoạch',
   'harvest.month': 'Tháng này',
@@ -260,7 +258,6 @@ const en: Record<DashboardKey, string> = {
   'scope.linkOff': 'Click to keep this panel and the {panel} panel on the same zone',
   'scope.warning': 'A zone is outside its threshold or a device or camera is faulty',
   'env.pickHouse': 'Pick a house in the filter at the top to see sensor readings',
-
 
   'harvest.title': 'Harvest yield',
   'harvest.month': 'This month',
