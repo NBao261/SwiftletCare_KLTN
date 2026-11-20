@@ -27,7 +27,8 @@ test.describe('Administrator', () => {
     await dialog.getByRole('button', { name: 'Đóng', exact: true }).last().click();
 
     await page.getByPlaceholder('Tìm tên/email...').fill(email);
-    await expect(page.getByText(email)).toBeVisible();
+    // Tìm theo dòng bảng: thẻ điện thoại (ẩn ở màn rộng) cũng có email này
+    await expect(page.getByRole('row').filter({ hasText: email })).toBeVisible();
   });
 
   test('lưu ngưỡng mặc định cần nguồn có mã REF-5', async ({ page }) => {
