@@ -1,4 +1,4 @@
-// Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, đánh giá độc lập (MF-06; api-spec HouseHealthDay)
+// Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, đánh giá sau khi xem trạng thái (MF-06, BR-31; api-spec HouseHealthDay)
 
 import type { Role } from '@/types/common.types';
 

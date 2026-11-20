@@ -372,7 +372,7 @@ export async function assessAllHouses(date = vnDate(new Date()), now = new Date(
 }
 
 /**
- * EXPERT-FR-012 — thông báo không có trạng thái: người nhận phải chấm trước khi xem. Chỉ người chấm
+ * EXPERT-FR-012 — báo ngày mới cần chấm: người nhận mở ngày, xem trạng thái rồi xác nhận hoặc sửa (BR-31). Chỉ người chấm
  * (BR-31): Farm Owner và Farm Technician được giao nhà (còn là thợ của farm, còn hoạt động); Domain Expert không chấm nên không nhận.
  */
 async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
@@ -382,7 +382,7 @@ async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
   const recipients = [...new Set([...owners, ...technicians])]
   await Promise.all(recipients.map(id => notifyUser(id, {
     title: `Đánh giá ngày ${day.date} của ${house?.name ?? 'nhà yến'}`,
-    body: 'Hãy chấm tình trạng đàn theo quan sát của bạn trước khi xem kết quả của hệ thống.',
+    body: 'Xem trạng thái hệ thống tính cho ngày này, rồi xác nhận hoặc sửa theo quan sát của bạn tại nhà yến.',
     ref: { kind: 'health_day', id: String(day._id) },
   })))
 }

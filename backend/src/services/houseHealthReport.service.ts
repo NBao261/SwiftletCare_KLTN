@@ -104,7 +104,7 @@ export async function buildHouseReport(
   return { house_metrics: { return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend), weather }, zone_sections }
 }
 
-/** Trung bình tỷ lệ chim về của các ngày đủ phiên — dùng chung lúc tạo và lúc che theo người gọi */
+/** Trung bình tỷ lệ chim về của các ngày đủ phiên */
 function averageReturnRate(trend: HouseReportMetrics['return_rate_trend']): number | null {
   const complete = trend.filter(d => d.complete && d.return_rate !== null)
   return complete.length
