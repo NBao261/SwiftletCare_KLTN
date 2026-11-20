@@ -54,7 +54,8 @@ export default function HouseStatusCard({ node, status, sensors, overview, hideT
   const stage = overview?.stage ?? 'OCCUPIED';
   const onlineControllers = sensors.filter(sensor => sensor.status === 'ONLINE').length;
   const manualSensors = sensors.filter(sensor => sensor.control_mode === 'MANUAL');
-  const overrideEnd = Math.max(0, ...manualSensors.map(sensor => (sensor.override_expiry ? Date.parse(sensor.override_expiry) : 0)));
+  // Hạn không đọc được (NaN) coi như không có hạn
+  const overrideEnd = Math.max(0, ...manualSensors.map(sensor => (sensor.override_expiry ? Date.parse(sensor.override_expiry) || 0 : 0)));
   const minutesLeft = Math.ceil((overrideEnd - Date.now()) / MINUTE_MS);
 
   // Chế độ điều khiển: hạn điều khiển tay đã qua mà dữ liệu chưa cập nhật thì ghi "đang về tự động", không đứng ở "còn 1 phút"

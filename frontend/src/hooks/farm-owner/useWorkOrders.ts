@@ -39,12 +39,14 @@ export function useOpenWorkOrderCount(houseId: string) {
   });
 }
 
-// Phiếu đã xong chờ chủ nhà yến duyệt (OPS-FR-003): 5 phiếu đầu và tổng số, cho badge menu Công việc và Tổng quan.
-// Phạm vi như khung lọc: houseId thắng farmId, cả hai rỗng = mọi trang trại
+// Phiếu chờ chủ nhà yến duyệt (OPS-FR-003), 5 phiếu đầu và tổng số; phạm vi như khung lọc, houseId thắng farmId, rỗng = mọi trang trại
 export function useAwaitingApproval(farmId = '', houseId = '', enabled = true) {
+  let scope: { houseId?: string; farmId?: string } = {};
+  if (farmId) scope = { farmId };
+  if (houseId) scope = { houseId };
   return useQuery({
     queryKey: [WORK_ORDERS_KEY, 'awaiting', farmId, houseId],
-    queryFn: () => workOrderApi.list({ ...(houseId ? { houseId } : farmId ? { farmId } : {}), status: 'AWAITING_APPROVAL', limit: 5 })
+    queryFn: () => workOrderApi.list({ ...scope, status: 'AWAITING_APPROVAL', limit: 5 })
       .then(response => ({ items: response.data.data, total: response.data.meta?.total ?? response.data.data.length })),
     enabled,
     // Kỹ thuật viên báo xong phiếu không có sự kiện socket cho chủ: hỏi lại 2 phút một lần như badge chuyên môn
@@ -72,6 +74,7 @@ export function useWorkOrderActions() {
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: [WORK_ORDERS_KEY] });
     void queryClient.invalidateQueries({ queryKey: ['alerts'] });
+    void queryClient.invalidateQueries({ queryKey: ['farm-overview'] });
   };
   const options = { onSettled: refresh };
   return {

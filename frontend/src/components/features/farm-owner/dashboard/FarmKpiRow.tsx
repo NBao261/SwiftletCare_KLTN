@@ -10,12 +10,15 @@ interface FarmKpiRowProps {
   totals: FarmKpiTotals;
   // Cảnh báo chưa xử lý cộng từ thẻ nhà (overview); undefined = đang tải
   openAlerts: number | undefined;
+  // Overview của một trang trại tải lỗi: ô ghi lỗi kèm Thử lại thay vì đứng ở "_"
+  isOpenAlertsError: boolean;
+  onRetryOpenAlerts: () => void;
   // Phiếu chờ duyệt trong phạm vi; undefined = đang tải
   awaitingApproval: number | undefined;
 }
 
 // Hàng 4 ô của Tổng quan (FO-01): nhà, cảnh báo, thiết bị lấy cùng một nguồn với thẻ nhà bên dưới để số khớp nhau (A-03)
-export default function FarmKpiRow({ totals, openAlerts, awaitingApproval }: FarmKpiRowProps): JSX.Element {
+export default function FarmKpiRow({ totals, openAlerts, isOpenAlertsError, onRetryOpenAlerts, awaitingApproval }: FarmKpiRowProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   // Chỉ thiết bị OFFLINE; thiết bị vừa thêm còn chờ kết nối lần đầu không phải "mất kết nối"
   const offlineDevices = totals.devicesOffline;
@@ -33,8 +36,13 @@ export default function FarmKpiRow({ totals, openAlerts, awaitingApproval }: Far
         icon={WarningIcon}
         label={t('kpi.openAlerts')}
         value={openAlerts === undefined ? NO_VALUE : num(openAlerts)}
-        sub={t('kpi.openAlertsSub', { n: num(totals.alertsTotal) })}
+        sub={isOpenAlertsError ? t('kpi.openAlertsError') : t('kpi.openAlertsSub', { n: num(totals.alertsTotal) })}
         tone={totals.alertsTotal > 0 ? 'orange' : 'neutral'}
+        badge={isOpenAlertsError && (
+          <button type="button" onClick={onRetryOpenAlerts} className="text-small font-semibold text-charcoal underline underline-offset-4 max-sm:min-h-11">
+            {t('log.retry')}
+          </button>
+        )}
       />
       <KpiTile
         icon={WifiSlashIcon}

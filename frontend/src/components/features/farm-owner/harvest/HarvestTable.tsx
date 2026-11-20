@@ -18,7 +18,7 @@ import { formatStandardDate } from '@/lib/i18n';
 import type { House, NestType, SortDirection } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
-// Màn hẹp: khung bảng cao cố định 4 dòng; màn xl: khung lấp chiều cao cố định của Card, dòng còn lại cuộn dọc
+// Từ sm: khung bảng cao cố định 4 dòng; màn xl: khung lấp chiều cao cố định của Card, dòng còn lại cuộn dọc; điện thoại: thẻ cao theo nội dung
 const VISIBLE_ROWS = 4;
 const ROW_HEIGHT = 68;
 // Tiêu đề cột (~46px) + 4 dòng × 68px — chiều cao cố định của vùng bảng khi chưa tới màn xl

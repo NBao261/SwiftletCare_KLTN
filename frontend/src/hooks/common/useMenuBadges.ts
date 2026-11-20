@@ -8,16 +8,18 @@ import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard
 import { useAwaitingApproval } from '@/hooks/farm-owner/useWorkOrders'
 import { expertService } from '@/services/expert.service'
 
-// Số trên mục menu theo đường dẫn của mục (todo-ui-layout-1120 §3.1): cùng trang trại đang chọn ở khung lọc với trang mà mục đó mở
+// Số trên mục menu theo đường dẫn của mục (§3.1): Công việc và Chuyên môn theo trang trại đang chọn ở khung lọc, Cảnh báo đếm mọi trang trại như trang Cảnh báo
 export function useMenuBadges(): Record<string, number> {
   const role = useAuthStore(state => state.user?.role)
   const isExpert = role === 'DOMAIN_EXPERT'
   const isOwner = role === 'FARM_OWNER'
   const pendingAlertCount = usePendingAlertTotal() ?? 0
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
-  const scopeFarmId = useZoneStore(state => state.scopeFarmId)
-  const { data: awaitingApproval } = useAwaitingApproval(scopeFarmId, '', isOwner)
+  const storedFarmId = useZoneStore(state => state.scopeFarmId)
   const { data: farms } = useFarms()
+  // Trang trại đã xoá hoặc mất quyền thì về tất cả trang trại, như useScopeFilter (tránh hỏi lại một trang trại trả 403)
+  const scopeFarmId = farms?.find(farm => farm._id === storedFarmId)?._id ?? ''
+  const { data: awaitingApproval } = useAwaitingApproval(scopeFarmId, '', isOwner && farms !== undefined)
 
   // BR-22: trang trại chưa có chuyên gia thì chủ nhà yến kết luận thay, đếm cảnh báo chờ kết luận của các trang trại đó
   const farmsWithoutExpert = useMemo(

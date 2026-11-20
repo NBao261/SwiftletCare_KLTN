@@ -61,7 +61,7 @@
 | # | Thay đổi |
 |---|---|
 | 1 | **Menu Farm Owner 10 mục, 3 nhóm** (Theo dõi · Vận hành · Chuyên môn): Tổng quan = Tình trạng các nhà · So sánh nhà · Điều khiển tay; Công việc = Phiếu công việc · Bảo trì định kỳ · Khuyến nghị; Chuyên môn = 9 trang `/domain-expert/*`. Badge: Cảnh báo, Công việc (phiếu chờ duyệt), Chuyên môn (cảnh báo chờ kết luận ở trang trại chưa có chuyên gia, BR-22), gom ở `hooks/common/useMenuBadges`. Tab đang mở là tab có đường dẫn dài nhất chứa trang (`activeTabPath`), nên `/dashboard/scada` không sáng cả tab `/dashboard`. |
-| 2 | **Tổng quan:** 4 ô KPI (Nhà cần chú ý · Cảnh báo chờ xác nhận · Thiết bị mất kết nối · Phiếu chờ duyệt) · lưới thẻ nhà (số đo từng Zone tô theo ngưỡng kèm icon, chế độ tự động/tay, giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, chim về, ANALYTICS-FR-015) · Việc cần làm. Không ảnh, không dải tình trạng, không bảng cảnh báo lặp trang Cảnh báo. "Ổn định" chỉ khi mọi bộ điều khiển online và số đo trong ngưỡng (`houseLiveStatus`), ô "Nhà cần chú ý" đếm theo cùng luật. |
+| 2 | **Tổng quan:** 4 ô KPI (Nhà cần chú ý · Cảnh báo chưa xử lý, dòng phụ số chờ xác nhận · Thiết bị mất kết nối (chỉ OFFLINE) · Phiếu chờ duyệt) · lưới thẻ nhà (số đo từng Zone tô theo ngưỡng kèm icon, chế độ tự động/tay, giai đoạn, trạng thái hôm nay (ẩn tới khi chủ nhà đánh giá ngày, BR-31), cảnh báo chưa xử lý và phiếu đang mở, chim về, ANALYTICS-FR-015; ô KPI và thẻ cùng lấy số từ overview) · Việc cần làm. Không ảnh, không dải tình trạng, không bảng cảnh báo lặp trang Cảnh báo. "Ổn định" chỉ khi nhà có ít nhất 1 bộ điều khiển, mọi bộ online và số đo trong ngưỡng (`houseLiveStatus`), ô "Nhà cần chú ý" đếm theo cùng luật. Dock điện thoại có mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại. |
 | 3 | **Một trang không lồng tab:** So sánh nhà chỉ còn bảng so sánh (tình hình từng nhà đã ở thẻ nhà của Tổng quan). |
 | 4 | **Thanh phạm vi chỉ ở header** ở mọi khổ màn; trang không vẽ bản sao `ScopeFilter` cho điện thoại. Điện thoại: khung lọc thành lưới 2 cột, hàng tab xuống dòng. |
 | 5 | **Biểu đồ:** đường đếm chim nối thẳng các điểm (`tension: 0`); so sánh Zone chỉ còn bảng (không cột từ 0); phân bổ loại tổ là thanh ngang một màu có số kg, % ghi bên cạnh (không vòng tổng 100 %). |
@@ -260,7 +260,7 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 | Ô chỉ số (KPI) | `rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card`, nhãn `.label-caption` 13px, icon tròn 28px, số `text-2xl font-extrabold`, dòng phụ 13px; hàng KPI `grid grid-cols-2 lg:grid-cols-4`, 4 ô một hàng, không khung bao | `common/KpiTile.tsx` (mọi role) |
 | Bảng | **Chỉ dùng `DataTable`** (hoặc `FixedRowsTable` — bảng danh sách 10 dòng mỗi trang; có từ 2 trang trở lên thì trang cuối đệm dòng trống để khung không nhảy khi lật trang, 1 trang thì bảng cao vừa dữ liệu, bảng rỗng cao 4 dòng; `DataTable minRows` theo cùng quy tắc; không có cột STT, trừ Nhật ký hệ thống; dữ liệu phân trang ở server thì truyền `serverPagination={{ page, total, onChange }}`; **ngoại lệ:** bảng đợt thu ở trang Thu hoạch nằm trong cột 8/12 cạnh khung phân bổ loại tổ nên dùng `DataTable visibleRows={4} fillHeight`: màn xl hai khung khoá cứng cao `556px`, bảng lấp phần còn lại của khung (màn hẹp cao cố định 4 dòng), dòng còn lại cuộn dọc với tiêu đề cột đứng yên, không phân trang, không đệm dòng trống, `minTableWidth` 640, ô đệm ngang `px-3`): khung `rounded-2xl border-warmGray/15 shadow-card`, header `bg-warmGray/5`, `table-fixed` chia cột theo %, hover dòng `bg-warmGray/5` (chỉ nổi nền, chữ không đổi màu), ô 2 tầng (dòng chính đậm + dòng phụ xám). **Thao tác qua menu ⋯ ở cột cuối (`ActionsMenu`: Xem chi tiết, …) — bấm vào dòng không chuyển trang** | `ui/DataTable.tsx`; mẫu cột: `features/farm-owner/harvest/HarvestTable.tsx` |
 | Phân trang | `Pagination variant="full"` đặt dưới bảng, nút tròn `h-9` | `ui/Pagination.tsx` |
-| Lọc + tìm | Bảng danh sách: `SelectMenu` cho từng điều kiện (Trạng thái kèm số đếm, Mức độ, Trang trại…) + `ClearFiltersButton tone="danger" count` bên trái — cùng cao `h-9`, ô lọc rộng theo chữ `min-w-[80px] max-w-[220px]` (dài hơn thì cắt "…"), `px-3.5 text-xs font-medium`, cách nhau `gap-2`; `SearchInput` `lg:w-72` bên phải. `FilterChip` chỉ dùng khi ít lựa chọn và cần thấy hết cùng lúc (VD bộ lọc Nhật ký cảnh báo Dashboard) | `ui/SelectMenu.tsx`, `ui/ClearFiltersButton.tsx`, `ui/SearchInput.tsx` |
+| Lọc + tìm | Bảng danh sách: `SelectMenu` cho từng điều kiện (Trạng thái kèm số đếm, Mức độ, Trang trại…) + `ClearFiltersButton tone="danger" count` bên trái — cùng cao `h-9`, ô lọc rộng theo chữ `min-w-[80px] max-w-[220px]` (dài hơn thì cắt "…"), `px-3.5 text-xs font-medium`, cách nhau `gap-2`; `SearchInput` `lg:w-72` bên phải. `FilterChip` chỉ dùng khi ít lựa chọn và cần thấy hết cùng lúc (VD chọn khoảng thời gian, thời hạn điều khiển tay) | `ui/SelectMenu.tsx`, `ui/ClearFiltersButton.tsx`, `ui/SearchInput.tsx` |
 | Nút | `Button` bo tròn hoàn toàn: `sm` `h-9 px-4` (dưới `sm` cao `h-11` = 44px), `md` `h-12 px-5`; nút phụ trong card dùng `CAPSULE_ACTION_CLASS`; nút "Chi tiết" dùng `DETAIL_BUTTON_CLASS` | `ui/Button.tsx`, `farmStructure.constants.ts`, `harvest.constants.ts` |
 | Badge | Cỡ `px-2.5 py-0.5 text-small`; mức độ theo 2.4; trạng thái theo bảng 2.6.1 | `common/SeverityBadge` |
 | Khung cảnh báo | Nền cam rất nhạt `bg-orange-50` + viền dày `border-2 border-orange-300`, **không** vạch màu ở cạnh; dòng bên trong nền trắng `bg-white border-orange-100`. Không dùng nền `orange-100` trở lên cho khung — trùng màu badge mức độ Cao làm badge chìm | `features/farm-owner/dashboard/ScadaNodeCard.tsx`, `features/farm-owner/farms/StructureEditModal.tsx` |
@@ -398,7 +398,7 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`) mà rol
 | P2 | `MEDIUM` | Cao / High | nền `orange-100`, chữ `orange-800` |
 | P3 | `LOW` | Thường / Normal | nền `warmGray/15`, chữ `warmGray` |
 
-- **[Bắt buộc]** Đếm, lọc, nhóm cảnh báo theo cấp dùng `SEVERITY_TO_LEVEL` (VD bộ lọc Nhật ký cảnh báo Dashboard, ô đếm theo cấp). Không tự viết `if (severity === 'CRITICAL' || ...)`.
+- **[Bắt buộc]** Đếm, lọc, nhóm cảnh báo theo cấp dùng `SEVERITY_TO_LEVEL` (VD bộ lọc mức độ ở trang Cảnh báo, ô đếm theo cấp). Không tự viết `if (severity === 'CRITICAL' || ...)`.
 - **[Bắt buộc]** Câu chữ nhắc tên cấp lấy nhãn từ `levelDict` truyền vào làm tham số (VD "Lỗi {urgent} chưa ai xác nhận sau 15 phút…"), không gõ lại "Khẩn cấp".
 - Đổi màu/nhãn một cấp → sửa đúng 1 dòng trong `severity.ts`/`severity.i18n.ts`; mọi badge đổi theo.
 - **Cảnh báo đã xử lý** (`RESOLVED`) → badge mức độ về xám: `<SeverityBadge isMuted={isAlertFinished(alert.status)} />`, màu `LEVEL_BADGE_MUTED_CLASS` (= màu cấp Thường). Cột/nhãn của 3 cấp ghi **"Mức độ"**.
@@ -562,7 +562,7 @@ Khung dùng chung 4 role (`components/layouts/`); menu của từng role khai tr
 - **Sidebar** `w-64`: logo, rồi các nhóm menu (không khối chào, không nút đăng xuất). Menu ≤ 12 mục mỗi role, không cuộn ở 1440×900. Nhóm có `collapsible: true` thu gọn bằng mũi tên cạnh tiêu đề, nhớ trong `localStorage`; nhóm chứa trang đang mở luôn mở. Mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung. Nhãn nhóm là chỗ duy nhất được in hoa.
 - **Header:** trái là tên trang (`<h1>`, điện thoại `text-xl` xuống tối đa 2 dòng) + breadcrumb trang chi tiết; phải là VI/EN (cao 36px, không popup; dưới `sm` nằm trong menu avatar) · chuông · avatar. Khe `HeaderActions` (thanh phạm vi) cùng hàng từ 1280px, dưới 1280px xuống hàng riêng ngay dưới; `AppShell` đo chiều cao header để chừa đúng chỗ.
 - **Menu avatar** (mọi khổ màn): tên, email, vai trò · Cài đặt · Quyền riêng tư · Đăng xuất. Đây là chỗ duy nhất có Cài đặt và Đăng xuất; route `/settings` vẫn trong `MENU_ACCESS`.
-- **Dock điện thoại:** 4 mục (`firstDockItems` hoặc `dockItems` của role) và mục "Thêm" mở các mục còn lại theo nhóm, kèm badge; chấm đỏ trên "Thêm" khi một mục bên trong có badge.
+- **Dock điện thoại:** 4 mục (`firstDockItems` hoặc `dockItems` của role) và mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại theo nhóm, kèm badge; chấm đỏ trên "Thêm" khi một mục bên trong có badge. Dock có "Thêm" thì mục đang mở chỉ tô nền, không hiện nhãn, để 5 nút vừa màn 360px.
 
 **Đúng theo role** (✓ có, — không có):
 
@@ -753,7 +753,7 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 | Mất socket, đang hỏi lại định kỳ | `bg-warmGray/40` | Tự làm mới / Auto-refresh |
 
 - Đặt ở góc phải header của khối dữ liệu, `text-small font-semibold`, chấm `h-1.5 w-1.5 rounded-full`.
-- Khối có mốc thời gian dữ liệu thì thêm "Đồng bộ {ago}" như thanh SCADA (2.6.1 d).
+- Khối có mốc thời gian dữ liệu thì ghi lúc cập nhật, như "Cập nhật HH:mm" trên lưới thẻ nhà của Tổng quan.
 - **[Bắt buộc]** Mất socket thì hook tự chuyển sang hỏi lại định kỳ, không để màn đứng im mà vẫn ghi "Trực tiếp".
 
 ---

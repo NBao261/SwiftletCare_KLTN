@@ -70,7 +70,7 @@ export default function FarmOwnerDashboardPage() {
 
   // Tình hình hôm nay của từng nhà (chim về, phiếu đang mở): 1 request mỗi trang trại trong phạm vi
   const scopeFarmIds = useMemo(() => (farmId ? [farmId] : farms.map(farm => farm._id)), [farmId, farms])
-  const overviewByHouse = useFarmOverviews(scopeFarmIds)
+  const { byHouse: overviewByHouse, isError: isOverviewError, refetch: refetchOverview } = useFarmOverviews(scopeFarmIds)
   // Cảnh báo chưa xử lý (ACTIVE + ACKNOWLEDGED) lấy từ overview cho cả ô KPI lẫn thẻ nhà để tổng bằng nhau; chưa tải đủ thì chưa có số
   const openAlerts = scopedHouses.every(node => overviewByHouse.has(node.house._id))
     ? scopedHouses.reduce((sum, node) => sum + (overviewByHouse.get(node.house._id)?.open_alerts ?? 0), 0)
@@ -79,14 +79,15 @@ export default function FarmOwnerDashboardPage() {
   // Phiếu chờ duyệt cùng phạm vi khung lọc với các ô khác (A-03)
   const { data: awaiting } = useAwaitingApproval(farmId, houseId)
   const today = vietnamDate()
-  const { days: daysToRate } = useHealthDays({
+  const { days: daysToRate, isLoading: isLoadingDays, isError: isDaysError } = useHealthDays({
     farmIds: isOwner ? scopeFarmIds : [],
     houseId: isOwner ? houseId : '',
     from: shiftDate(today, -RATING_WINDOW_DAYS),
     to: today,
     myRatingState: 'PENDING',
   })
-  // BR-31: chủ nhà chưa đánh giá ngày hôm nay của nhà thì chưa thấy trạng thái hôm nay của nhà đó
+  // BR-31: chủ nhà chưa đánh giá ngày hôm nay của nhà thì chưa thấy trạng thái; chưa biết chắc (đang tải, lỗi) thì cũng ẩn
+  const isRatingUnknown = isOwner && (isLoadingDays || isDaysError)
   const statusHiddenHouseIds = useMemo(
     () => new Set(daysToRate.filter(day => day.date.slice(0, 10) === today).map(day => day.house_id)),
     [daysToRate, today],
@@ -146,7 +147,7 @@ export default function FarmOwnerDashboardPage() {
       : [{ id: 'all', title: t('grid.title'), nodes: scopedHouses }]
     body = (
       <>
-        <FarmKpiRow totals={totals} openAlerts={openAlerts} awaitingApproval={awaiting?.total} />
+        <FarmKpiRow totals={totals} openAlerts={openAlerts} isOpenAlertsError={isOverviewError} onRetryOpenAlerts={refetchOverview} awaitingApproval={awaiting?.total} />
         {isAllHouses ? groups.map((group, index) => (
           <section key={group.id} className="flex flex-col gap-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -161,7 +162,7 @@ export default function FarmOwnerDashboardPage() {
                   status={statusByHouse.get(node.house._id) ?? node.health}
                   sensors={sensorsByHouse.get(node.house._id) ?? NO_SENSORS}
                   overview={overviewByHouse.get(node.house._id)}
-                  hideTodayStatus={statusHiddenHouseIds.has(node.house._id)}
+                  hideTodayStatus={isRatingUnknown || statusHiddenHouseIds.has(node.house._id)}
                 />
               ))}
             </div>
@@ -173,6 +174,7 @@ export default function FarmOwnerDashboardPage() {
           <DashboardTodoCard
             alerts={scopedAlerts}
             approvals={awaiting?.items ?? []}
+            approvalsTotal={awaiting?.total ?? 0}
             daysToRate={daysToRate.length}
             structure={structure}
           />

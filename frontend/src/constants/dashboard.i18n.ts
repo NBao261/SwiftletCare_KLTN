@@ -75,7 +75,6 @@ const vi = {
   'env.pickHouse': 'Chọn 1 nhà yến ở bộ lọc góc trên để xem số liệu cảm biến',
 
   // Hàng KPI chế độ Tất cả nhà yến
-  'kpi.alertsSub': '{p1} {l1} · {p2} {l2} · {p3} {l3}',
 
   // Khung sản lượng thu hoạch của 1 nhà yến
   'harvest.title': 'Sản lượng thu hoạch',
@@ -152,6 +151,7 @@ const vi = {
   'kpi.attentionSub': 'Trên {n} nhà yến',
   'kpi.openAlerts': 'Cảnh báo chưa xử lý',
   'kpi.openAlertsSub': '{n} chờ xác nhận',
+  'kpi.openAlertsError': 'Không tải được số cảnh báo.',
   'kpi.offline': 'Thiết bị mất kết nối',
   'kpi.offlineSub': '{online}/{total} đang kết nối',
   'kpi.approvals': 'Phiếu chờ duyệt',
@@ -261,7 +261,6 @@ const en: Record<DashboardKey, string> = {
   'scope.warning': 'A zone is outside its threshold or a device or camera is faulty',
   'env.pickHouse': 'Pick a house in the filter at the top to see sensor readings',
 
-  'kpi.alertsSub': '{p1} {l1} · {p2} {l2} · {p3} {l3}',
 
   'harvest.title': 'Harvest yield',
   'harvest.month': 'This month',
@@ -337,6 +336,7 @@ const en: Record<DashboardKey, string> = {
   'kpi.attentionSub': 'Out of {n} houses',
   'kpi.openAlerts': 'Unresolved alerts',
   'kpi.openAlertsSub': '{n} to acknowledge',
+  'kpi.openAlertsError': 'Could not load the alert count.',
   'kpi.offline': 'Devices offline',
   'kpi.offlineSub': '{online}/{total} connected',
   'kpi.approvals': 'Work orders to approve',

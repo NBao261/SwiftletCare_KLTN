@@ -15,15 +15,16 @@ const MAX_ALERT_ROWS = 3;
 interface DashboardTodoCardProps {
   // Cảnh báo chờ xác nhận trong phạm vi, mới nhất trước
   alerts: Alert[];
-  // Phiếu chờ duyệt trong phạm vi
+  // Phiếu chờ duyệt trong phạm vi (tối đa 5 phiếu đầu) và tổng số
   approvals: WorkOrder[];
+  approvalsTotal: number;
   // Số ngày chưa đánh giá trong 7 ngày qua
   daysToRate: number;
   structure: FarmStructure;
 }
 
 // Việc cần làm của chủ nhà yến ở Tổng quan (FO-01): mỗi dòng là một việc, bấm mở trang làm việc đó
-export default function DashboardTodoCard({ alerts, approvals, daysToRate, structure }: DashboardTodoCardProps): JSX.Element {
+export default function DashboardTodoCard({ alerts, approvals, approvalsTotal, daysToRate, structure }: DashboardTodoCardProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   const { t: alertTypeLabel } = useTranslation(alertTypeDict);
 
@@ -38,8 +39,9 @@ export default function DashboardTodoCard({ alerts, approvals, daysToRate, struc
     ...(daysToRate > 0 ? [{ key: 'rate', to: '/health', text: t('todo.rate', { n: num(daysToRate) }) }] : []),
   ];
   const rows = allRows.slice(0, MAX_ROWS);
-  // Việc không hiện hết: cảnh báo vượt 3 dòng và các dòng vượt 5
-  const hiddenCount = Math.max(0, alerts.length - MAX_ALERT_ROWS) + (allRows.length - rows.length);
+  // Việc không hiện: tổng việc (cảnh báo, mọi phiếu chờ duyệt, dòng đánh giá) trừ số dòng đang hiện
+  const totalTasks = alerts.length + Math.max(approvalsTotal, approvals.length) + (daysToRate > 0 ? 1 : 0);
+  const hiddenCount = totalTasks - rows.length;
 
   return (
     <SectionCard

@@ -12,13 +12,17 @@ export function useFarmOverview(farmId: string | undefined) {
 }
 
 // ANALYTICS-FR-015 cho nhiều trang trại (Tổng quan khi xem tất cả): tình hình hôm nay theo mã nhà, chung cache với useFarmOverview
-export function useFarmOverviews(farmIds: string[]): Map<string, HouseOverview> {
+export function useFarmOverviews(farmIds: string[]): { byHouse: Map<string, HouseOverview>; isError: boolean; refetch: () => void } {
   return useQueries({
     queries: farmIds.map(farmId => ({
       queryKey: ['farm-overview', farmId],
       queryFn: () => farmOverviewApi.overview(farmId).then(response => response.data.data),
     })),
-    combine: results => new Map(results.flatMap(result => result.data?.houses ?? []).map(house => [house.house_id, house])),
+    combine: results => ({
+      byHouse: new Map(results.flatMap(result => result.data?.houses ?? []).map(house => [house.house_id, house])),
+      isError: results.some(result => result.isError),
+      refetch: () => results.forEach(result => void result.refetch()),
+    }),
   });
 }
 

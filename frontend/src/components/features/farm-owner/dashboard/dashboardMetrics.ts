@@ -1,6 +1,5 @@
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
-import type { AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, RelayStates, SeverityLevel, Thresholds, ZoneThresholdHistoryEntry } from '@/types'
-import { SEVERITY_TO_LEVEL } from '@/constants/severity'
+import type { AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, RelayStates, Thresholds, ZoneThresholdHistoryEntry } from '@/types'
 
 const DAY_MS = 86_400_000
 
@@ -43,8 +42,7 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
 // Trạng thái thiết bị tính là hư (chấm cảnh báo của khung lọc): mất kết nối; PENDING là chưa kết nối lần đầu, không tính là hư
 const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['OFFLINE'])
 
-// Trạng thái trực tiếp của 1 nhà trên Tổng quan (A-03): "Ổn định" chỉ khi có bộ điều khiển, mọi bộ đều online và số đo trong ngưỡng.
-// Khác chấm cảnh báo của khung lọc: ở đây bộ điều khiển chờ kết nối (PENDING) cũng cần chú ý vì nhà chưa được theo dõi
+// Trạng thái nhà trên Tổng quan (A-03): "Ổn định" chỉ khi có bộ điều khiển, mọi bộ online (kể cả PENDING thì cần chú ý), số đo trong ngưỡng
 export function houseLiveStatus(health: 'ALERT' | 'NORMAL' | 'EMPTY', controllerStatuses: DeviceStatus[]): 'ALERT' | 'NORMAL' | 'EMPTY' {
   if (health === 'ALERT') return 'ALERT'
   if (controllerStatuses.length === 0) return 'EMPTY'
@@ -249,14 +247,13 @@ export interface FarmKpiTotals {
   // Chỉ thiết bị OFFLINE; thiết bị chờ kết nối lần đầu (PENDING) không tính là mất kết nối
   devicesOffline: number
   alertsTotal: number
-  alertsByLevel: Record<SeverityLevel, number>
 }
 
 // Cộng số liệu các nhà của 1 farm; farmId '' = cộng mọi farm
 export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): FarmKpiTotals {
   const totals: FarmKpiTotals = {
     houses: 0, faultHouses: 0, devicesOnline: 0, devicesTotal: 0, devicesOffline: 0,
-    alertsTotal: 0, alertsByLevel: { P1: 0, P2: 0, P3: 0 },
+    alertsTotal: 0,
   }
   for (const house of houses) {
     if (farmId && house.farm._id !== farmId) continue
@@ -265,10 +262,7 @@ export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): F
     totals.devicesOnline += house.counts.online
     totals.devicesTotal += house.counts.total
     totals.devicesOffline += house.counts.offline
-    for (const alert of house.alerts) {
-      totals.alertsByLevel[SEVERITY_TO_LEVEL[alert.severity]] += 1
-      totals.alertsTotal += 1
-    }
+    totals.alertsTotal += house.alerts.length
   }
   return totals
 }

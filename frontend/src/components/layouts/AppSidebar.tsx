@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType, type SVGProps } from 'react'
+import { useState, type ComponentType, type SVGProps } from 'react'
 import { CaretDownIcon, DotsThreeOutlineIcon } from '@phosphor-icons/react'
 import { Link, useLocation } from 'react-router-dom'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn'
 import { menuLinkState } from '@/lib/navigationState'
 import { isMenuItemActive } from '@/lib/menuMatch'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
+import { Drawer } from '@/components/ui/Drawer'
 import { useMenuBadges } from '@/hooks/common/useMenuBadges'
 
 // Trang con của một mục menu: hiện thành tab trên đầu trang (SectionTabs), mục menu sáng khi ở bất kỳ trang con nào
@@ -76,14 +77,6 @@ export default function AppSidebar({
     .map(section => ({ ...section, items: section.items.filter(item => !dockPaths.has(item.path)) }))
     .filter(section => section.items.length > 0)
   const isMoreActive = moreSections.some(section => section.items.some(item => isMenuItemActive(item, pathname)))
-  // Chuyển trang thì đóng bảng "Thêm"; Esc cũng đóng
-  useEffect(() => setIsMoreOpen(false), [pathname])
-  useEffect(() => {
-    if (!isMoreOpen) return
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setIsMoreOpen(false) }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [isMoreOpen])
 
   function toggleSection(title: string): void {
     const next = collapsed.includes(title) ? collapsed.filter(item => item !== title) : [...collapsed, title]
@@ -192,7 +185,8 @@ export default function AppSidebar({
                 )}
               >
                 <item.icon width={20} height={20} className="shrink-0" />
-                {isActive && <span className="text-sm font-semibold">{navigationLabel(item.label)}</span>}
+                {/* Dock 5 nút (có "Thêm") không đủ chỗ cho nhãn ở màn 375px: chỉ nền tối, tên trang đã ở header */}
+                {isActive && moreSections.length === 0 && <span className="text-sm font-semibold">{navigationLabel(item.label)}</span>}
               </Link>
             )
           })}
@@ -217,42 +211,37 @@ export default function AppSidebar({
       </nav>
 
       {/* Bảng "Thêm" trên điện thoại: các mục không nằm trên dock, theo nhóm, kèm badge */}
-      {isMoreOpen && (
-        <div className="fixed inset-0 z-30 lg:hidden">
-          <button type="button" aria-label={navigationLabel('Đóng menu')} onClick={() => setIsMoreOpen(false)} className="absolute inset-0 bg-charcoal/20" />
-          <nav
-            aria-label={navigationLabel('Thêm')}
-            className="absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] max-h-[70vh] overflow-y-auto rounded-3xl border border-warmGray/15 bg-white p-3 shadow-dock"
-          >
-            {moreSections.map(section => (
-              <div key={section.title} className="mb-2 last:mb-0">
-                <p className="px-3 py-1 text-small font-semibold uppercase tracking-[0.08em] text-warmGray">{navigationLabel(section.title)}</p>
-                {section.items.map(item => {
-                  const badgeCount = badgeByPath[item.path] ?? 0
-                  const isActive = isMenuItemActive(item, pathname)
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      state={menuLinkState(item.path, pathname)}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={cn('flex min-h-11 items-center gap-3 rounded-2xl px-3 text-body font-medium', isActive ? 'bg-charcoal text-white' : 'text-charcoal hover:bg-warmGray/10')}
-                    >
-                      <item.icon width={18} height={18} className="shrink-0" />
-                      <span className="flex-1">{navigationLabel(item.label)}</span>
-                      {badgeCount > 0 && (
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-alertRed px-1 text-small font-bold text-white">
-                          {badgeCount > 9 ? '9+' : badgeCount}
-                        </span>
-                      )}
-                    </Link>
-                  )
-                })}
-              </div>
-            ))}
-          </nav>
-        </div>
-      )}
+      <Drawer side="bottom" open={isMoreOpen} onClose={() => setIsMoreOpen(false)} title={navigationLabel('Thêm')}>
+        <nav aria-label={navigationLabel('Thêm')}>
+          {moreSections.map(section => (
+            <div key={section.title} className="mb-2 last:mb-0">
+              <p className="px-3 py-1 text-small font-semibold uppercase tracking-[0.08em] text-warmGray">{navigationLabel(section.title)}</p>
+              {section.items.map(item => {
+                const badgeCount = badgeByPath[item.path] ?? 0
+                const isActive = isMenuItemActive(item, pathname)
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    state={menuLinkState(item.path, pathname)}
+                    onClick={() => setIsMoreOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn('flex min-h-11 items-center gap-3 rounded-2xl px-3 text-body font-medium', isActive ? 'bg-charcoal text-white' : 'text-charcoal hover:bg-warmGray/10')}
+                  >
+                    <item.icon width={18} height={18} className="shrink-0" />
+                    <span className="flex-1">{navigationLabel(item.label)}</span>
+                    {badgeCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-alertRed px-1 text-small font-bold text-white">
+                        {badgeCount > 9 ? '9+' : badgeCount}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          ))}
+        </nav>
+      </Drawer>
     </>
   )
 }
