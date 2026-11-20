@@ -7,8 +7,10 @@ import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { shellDict } from '@/constants/shell.i18n'
 import Avatar from '@/components/ui/Avatar'
+import LanguageToggle from '@/components/common/LanguageToggle'
+import { ROLE_LABEL } from '@/constants/roles'
 
-// Popup tài khoản khi bấm avatar: tên, email, Cài đặt (gồm thông báo), Quyền riêng tư, Đăng xuất
+// Popup tài khoản khi bấm avatar: tên, email, vai trò, Cài đặt, Quyền riêng tư, Đăng xuất; nơi duy nhất có các mục này ở mọi khổ màn (SH-02)
 export default function ProfilePopover() {
   const { t } = useTranslation(shellDict)
   const user = useAuthStore(s => s.user)
@@ -41,7 +43,7 @@ export default function ProfilePopover() {
   }
 
   return (
-    <div ref={containerRef} className="relative hidden lg:block">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -66,8 +68,15 @@ export default function ProfilePopover() {
             <Avatar name={user.full_name} />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-charcoal">{user.full_name}</p>
-              <p className="truncate text-xs text-warmGray">{user.email}</p>
+              <p className="truncate text-small text-warmGray">{user.email}</p>
+              <p className="truncate text-small text-warmGray">{ROLE_LABEL[user.role]}</p>
             </div>
+          </div>
+
+          {/* Điện thoại: công tắc VI/EN rời header vào đây (SH-05) */}
+          <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5 sm:hidden">
+            <span className="text-sm font-medium text-charcoal">{t('lang.label')}</span>
+            <LanguageToggle />
           </div>
 
           <div className="space-y-0.5 p-1.5">
@@ -80,7 +89,7 @@ export default function ProfilePopover() {
               type="button"
               role="menuitem"
               onClick={() => { setOpen(false); logout.mutate() }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-safetyOrange transition-colors hover:bg-safetyOrange/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 max-sm:min-h-11 text-left text-sm font-medium text-safetyOrange transition-colors hover:bg-safetyOrange/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <LogOut width={16} height={16} />
               {t('logout.action')}
@@ -102,7 +111,7 @@ function MenuItem({ icon, label, onClick }: {
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5"
+      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 max-sm:min-h-11 text-left text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5"
     >
       <span className="text-warmGray">{icon}</span>
       <span className="flex-1">{label}</span>

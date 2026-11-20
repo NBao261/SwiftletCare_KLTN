@@ -44,7 +44,7 @@ export function OTAConfirmModal({ node, firmware, loading, onClose, onConfirm }:
             <div className="col-span-2 min-w-0">
               <dt className="label-caption">Nguồn firmware</dt>
               <dd className="truncate tabular-nums text-xs text-charcoal" title={firmware.url.trim()}>{firmware.url.trim()}</dd>
-              <dd className="mt-1 truncate tabular-nums text-[10px] text-warmGray" title={firmware.sha256.trim()}>SHA-256: {firmware.sha256.trim()}</dd>
+              <dd className="mt-1 truncate tabular-nums text-small text-warmGray" title={firmware.sha256.trim()}>SHA-256: {firmware.sha256.trim()}</dd>
             </div>
           </dl>
         </div>

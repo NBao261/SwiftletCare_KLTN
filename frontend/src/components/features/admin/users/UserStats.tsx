@@ -2,7 +2,7 @@ import { GraduationCapIcon, HouseIcon, LockIcon, UsersIcon, WarningCircleIcon, W
 import { getUserStatus, useAllUsers } from '@/hooks/admin/useUsers'
 import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import { ROLE_LABEL } from '@/constants/roles'
 import { t } from '@/i18n'
 import type { Role, User } from '@/types'
@@ -20,7 +20,7 @@ function roleSub(list: User[]) {
 }
 
 /**
- * Hàng 5 ô chỉ số đầu trang Người dùng (StatTile). Số liệu TOÀN HỆ
+ * Hàng 5 ô chỉ số đầu trang Người dùng (KpiTile). Số liệu TOÀN HỆ
  * THỐNG (không theo bộ lọc bảng), đếm ở client từ useAllUsers() vì backend không có endpoint thống kê
  * tài khoản. Chỉ để xem — lọc theo vai trò/trạng thái dùng thanh công cụ của bảng.
  * - Tổng: kèm số Quản trị viên (không có ô riêng) để cộng các ô vai trò khớp tổng, + số chờ xoá nếu có.
@@ -68,7 +68,7 @@ export default function UserStats() {
 
       {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatTile
+        <KpiTile
           className="col-span-2 shadow-none lg:col-span-1"
           icon={UsersIcon}
           iconClass={ICON}
@@ -76,10 +76,10 @@ export default function UserStats() {
           value={total}
           sub={totalSub}
         />
-        <StatTile className="shadow-none" icon={HouseIcon} iconClass={ICON} label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={roleSub(byRole('FARM_OWNER'))} />
-        <StatTile className="shadow-none" icon={WrenchIcon} iconClass={ICON} label="Kỹ thuật viên" value={technicians.length} sub={roleSub(technicians)} />
-        <StatTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.DOMAIN_EXPERT} value={byRole('DOMAIN_EXPERT').length} sub={roleSub(byRole('DOMAIN_EXPERT'))} />
-        <StatTile
+        <KpiTile className="shadow-none" icon={HouseIcon} iconClass={ICON} label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={roleSub(byRole('FARM_OWNER'))} />
+        <KpiTile className="shadow-none" icon={WrenchIcon} iconClass={ICON} label="Kỹ thuật viên" value={technicians.length} sub={roleSub(technicians)} />
+        <KpiTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.DOMAIN_EXPERT} value={byRole('DOMAIN_EXPERT').length} sub={roleSub(byRole('DOMAIN_EXPERT'))} />
+        <KpiTile
           className="shadow-none"
           icon={LockIcon}
           iconClass={ICON}

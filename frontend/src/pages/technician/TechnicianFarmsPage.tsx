@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HouseIcon, WarningCircleIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from '@phosphor-icons/react'
-import { Button, EmptyState, FilterChip, SearchInput, StatTile } from '@/components/ui'
+import { Button, EmptyState, FilterChip, SearchInput } from '@/components/ui'
+import KpiTile from '@/components/common/KpiTile'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
@@ -105,7 +106,7 @@ export default function TechnicianFarmsPage() {
       <FarmFrame title="Tình trạng các nhà được giao">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map(k => (
-            <StatTile
+            <KpiTile
               key={k.label}
               icon={k.icon}
               iconClass={k.alert ? 'bg-alertRed/10 text-alertRed' : 'bg-limeMist text-charcoal'}

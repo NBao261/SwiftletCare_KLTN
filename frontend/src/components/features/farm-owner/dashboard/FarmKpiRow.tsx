@@ -1,6 +1,6 @@
 import { HouseLineIcon, PackageIcon, SquaresFourIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react';
 
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import type { FarmKpiTotals } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { levelDict } from '@/constants/severity.i18n';

@@ -112,7 +112,7 @@ export default function NotificationPopover() {
       >
         <IconBell />
         {badgeCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-alertRed px-1 text-[10px] font-bold text-white">
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-alertRed px-1 text-small font-bold text-white">
             {badgeCount > 9 ? '9+' : badgeCount}
           </span>
         )}
@@ -139,7 +139,9 @@ export default function NotificationPopover() {
           </div>
 
           {showAlerts && (
-          <div role="tablist" className="flex shrink-0 gap-1 border-b border-charcoal/10 px-3 py-2">
+          // Kiểu tab như SectionTabs: pill trắng trên nền xám, không tô đen (SH-08, C-03)
+          <div className="shrink-0 border-b border-charcoal/10 px-3 py-2">
+          <div role="tablist" className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1">
             {([['alerts', t('notif.tabAlerts'), alertPendingCount], ['inbox', t('notif.tabInbox'), inboxUnreadCount]] as const).map(([key, label, count]) => (
               <button
                 key={key}
@@ -148,13 +150,14 @@ export default function NotificationPopover() {
                 aria-selected={tab === key}
                 onClick={() => setTab(key)}
                 className={cn(
-                  'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-                  tab === key ? 'bg-charcoal text-white' : 'text-graphite hover:bg-charcoal/5',
+                  'rounded-full px-3 py-1 text-small font-semibold transition-colors',
+                  tab === key ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
                 )}
               >
                 {label}{count > 0 ? ` (${count > 99 ? '99+' : count})` : ''}
               </button>
             ))}
+          </div>
           </div>
           )}
 

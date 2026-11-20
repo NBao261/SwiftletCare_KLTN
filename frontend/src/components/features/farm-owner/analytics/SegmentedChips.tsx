@@ -15,7 +15,7 @@ export default function SegmentedChips<Value extends string | number>({
   ariaLabel,
 }: SegmentedChipsProps<Value>): JSX.Element {
   return (
-    <div role="group" aria-label={ariaLabel} className="flex shrink-0 gap-1 rounded-full border border-warmGray/15 p-1">
+    <div role="group" aria-label={ariaLabel} className="flex shrink-0 gap-1 rounded-full bg-warmGray/10 p-1">
       {options.map(option => (
         <button
           key={option.value}
@@ -23,8 +23,9 @@ export default function SegmentedChips<Value extends string | number>({
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
           className={cn(
-            'rounded-full px-3 py-1 text-xs font-semibold transition-colors duration-150',
-            option.value === value ? 'bg-charcoal text-white' : 'text-warmGray hover:bg-warmGray/10',
+            'h-8 rounded-full px-3 text-small font-semibold transition-colors duration-150 max-sm:h-10',
+            // Kiểu SectionTabs: pill trắng trên nền xám, không tô đen (C-03)
+            option.value === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
           )}
         >
           {option.label}

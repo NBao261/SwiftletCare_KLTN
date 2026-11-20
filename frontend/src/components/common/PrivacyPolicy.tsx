@@ -189,12 +189,13 @@ const POLICY_TEXT: Record<Lang, { heading: string; versionLabel: string; effecti
   en: { heading: 'Privacy policy', versionLabel: 'Version', effectiveLabel: 'Effective from', sections: SECTIONS_EN },
 };
 
-export default function PrivacyPolicy(): JSX.Element {
+// headingLevel: trang công khai không có header nên tiêu đề là h1; trong khung app tên trang đã là h1 (C-01)
+export default function PrivacyPolicy({ headingLevel: Heading = 'h1' }: { headingLevel?: 'h1' | 'h2' }): JSX.Element {
   const lang = useLanguageStore(state => state.lang);
   const text = POLICY_TEXT[lang];
   return (
     <>
-      <h1 className="text-h1 text-charcoal">{text.heading}</h1>
+      <Heading className="text-h1 text-charcoal">{text.heading}</Heading>
       <p className="mt-1 text-small text-warmGray">
         {text.versionLabel} {POLICY_VERSION} · {text.effectiveLabel} {EFFECTIVE_DATE}
       </p>

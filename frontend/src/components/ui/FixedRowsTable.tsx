@@ -33,10 +33,12 @@ interface FixedRowsTableProps<T> {
   paginationLabels?: PaginationLabels
   // Phân trang ở server: rows đã là dữ liệu của trang hiện tại, tổng số và đổi trang do màn gọi quản lý
   serverPagination?: { page: number; total: number; onChange: (page: number) => void }
+  // Điện thoại: danh sách thẻ thay bảng (DataTable mobileCard, C-09)
+  mobileCard?: (row: T) => ReactNode
 }
 
 // DataTable phân trang: từ 2 trang trở lên thì trang cuối bù dòng trống, 1 trang thì bảng cao vừa dữ liệu (FE_Design §1.1)
-export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, emptyContent, paginationLabels, serverPagination }: FixedRowsTableProps<T>) {
+export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, emptyContent, paginationLabels, serverPagination, mobileCard }: FixedRowsTableProps<T>) {
   const [page, setPage] = useState(1)
   // Kẹp trang theo số trang còn lại — lọc/xoá làm ít đi thì không rơi vào trang không tồn tại
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
@@ -78,6 +80,9 @@ export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick
         getRowKey={row => (isPlaceholder(row) ? row.id : getRowKey(row))}
         onRowClick={onRowClick ? row => { if (!isPlaceholder(row)) onRowClick(row) } : undefined}
         rowHeight={rows.length === 0 ? rowHeight * Math.min(pageSize, EMPTY_ROWS) : rowHeight}
+        mobileCard={mobileCard ? row => (isPlaceholder(row) ? null : mobileCard(row)) : undefined}
+        // Bảng rỗng: chữ rỗng nằm ở lớp phủ bên dưới, khung thẻ điện thoại để trống
+        emptyMessage=""
       />
       {rows.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center overflow-hidden">

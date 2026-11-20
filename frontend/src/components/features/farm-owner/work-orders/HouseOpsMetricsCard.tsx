@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ClockIcon, WrenchIcon } from '@phosphor-icons/react';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { Button, LoadingSkeleton } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
 import { workOrderDict } from '@/constants/workOrders.i18n';

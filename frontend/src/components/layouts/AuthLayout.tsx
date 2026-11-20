@@ -61,7 +61,7 @@ export default function AuthLayout(): JSX.Element {
 
           <div className="relative flex w-full flex-col items-center justify-between px-10 py-12 text-center">
             <div className="max-w-md">
-              <p className="text-[11px] font-semibold text-white/70">Hệ thống giám sát nhà yến</p>
+              <p className="text-small font-semibold text-white/70">Hệ thống giám sát nhà yến</p>
               <p className="mt-3 text-3xl font-bold leading-tight tracking-tight text-white">
                 Vi khí hậu ổn định,
                 <br />

@@ -6,7 +6,7 @@ import { CalendarCheckIcon, ChartLineIcon, TrendUpIcon, WarningIcon } from '@pho
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import { BIRD_WEEK_OPTIONS, axisTitle, type BirdWeekOption } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { summarizeWeeklyReturnRates } from '@/components/features/farm-owner/analytics/analyticsMetrics';

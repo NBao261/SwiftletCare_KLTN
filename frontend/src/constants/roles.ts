@@ -153,3 +153,26 @@ export function canAccessPath(role: Role | undefined, path: string): boolean {
   if (!entry) return true
   return !!role && entry.roles.includes(role)
 }
+
+// Bậc phạm vi trang cần để có dữ liệu (C-05); không có trong bảng = 'none'
+export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
+
+const SCOPE_LEVEL: { path: string; level: ScopeLevel }[] = [
+  { path: '/overview',                            level: 'farm' },
+  { path: '/recommendations',                     level: 'farm' },
+  { path: '/work-orders',                         level: 'farm' },
+  { path: '/health',                              level: 'farm' },
+  { path: '/domain-expert/alert-verdicts',        level: 'farm' },
+  { path: '/domain-expert/reviews',               level: 'farm' },
+  { path: '/domain-expert/profiles',              level: 'farm' },
+  { path: '/domain-expert/recommendation-rules',  level: 'farm' },
+  { path: '/domain-expert/history',               level: 'farm' },
+  { path: '/domain-expert/counting-schedule',     level: 'house' },
+  { path: '/domain-expert/counting-ring',         level: 'house' },
+  { path: '/domain-expert/weather-rules',         level: 'house' },
+  { path: '/domain-expert/tuning',                level: 'zone' },
+]
+
+export function scopeLevelOf(path: string): ScopeLevel {
+  return SCOPE_LEVEL.find(entry => path === entry.path || path.startsWith(`${entry.path}/`))?.level ?? 'none'
+}

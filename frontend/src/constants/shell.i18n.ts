@@ -34,10 +34,8 @@ const vi = {
   'profile.privacy': 'Chính sách quyền riêng tư',
 
   'logout.action': 'Đăng xuất',
-  'logout.actionUser': 'Đăng xuất {name}',
 
   'lang.label': 'Ngôn ngữ hiển thị',
-  'lang.current': 'Tiếng Việt',
   'lang.switch': 'Chuyển sang tiếng Anh',
 }
 
@@ -74,10 +72,8 @@ const en: Record<ShellKey, string> = {
   'profile.privacy': 'Privacy policy',
 
   'logout.action': 'Log out',
-  'logout.actionUser': 'Log out {name}',
 
   'lang.label': 'Display language',
-  'lang.current': 'English',
   'lang.switch': 'Switch to Vietnamese',
 }
 

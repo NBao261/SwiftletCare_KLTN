@@ -61,7 +61,7 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
           <div>
             <h3 className="text-sm font-bold text-charcoal">{t('2. Ngưỡng vi khí hậu & khí độc')}</h3>
-            <p className="text-[11px] text-warmGray mt-0.5">{t('Tiêu chuẩn vi khí hậu môi trường nuôi')}</p>
+            <p className="text-small text-warmGray mt-0.5">{t('Tiêu chuẩn vi khí hậu môi trường nuôi')}</p>
           </div>
           <button type="button" onClick={() => setResetOpen(true)}
             className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors">

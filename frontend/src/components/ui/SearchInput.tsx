@@ -24,7 +24,7 @@ export default function SearchInput({ value, onChange, className, ...props }: Se
         value={value}
         onChange={e => onChange(e.target.value)}
         // Có chữ = đang lọc → viền xanh như SelectMenu (khi đang gõ vẫn là viền focus charcoal)
-        className={cn('pr-9', value && 'border-accent-600', className)}
+        className={cn('pr-9 max-sm:py-3', value && 'border-accent-600', className)}
         {...props}
       />
       {value && (

@@ -23,16 +23,20 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
   const hasHouseIssue = scope.houses.some(house => scope.issueHouseIds.has(house._id));
   const hasZoneIssue = scope.zones.some(zone => scope.issueZoneIds.has(zone._id));
 
+  // Trang cần một trang trại / nhà / Zone (C-05): bỏ mục "Tất cả" của bậc đó, useScopeFilter đã tự chọn sẵn
+  const needsFarm = scope.level !== 'none';
+  const needsHouse = scope.level === 'house' || scope.level === 'zone';
+  const needsZone = scope.level === 'zone';
   const farmOptions = [
-    { value: '', label: t('scope.allFarms') },
+    ...(needsFarm ? [] : [{ value: '', label: t('scope.allFarms') }]),
     ...scope.farms.map(farm => ({ value: farm._id, label: farm.name, warning: scope.issueFarmIds.has(farm._id) })),
   ];
   const houseOptions = [
-    { value: '', label: t('page.allHouses'), warning: isHouseLocked && hasHouseIssue },
+    ...(needsHouse && !isHouseLocked ? [] : [{ value: '', label: t('page.allHouses'), warning: isHouseLocked && hasHouseIssue }]),
     ...(isHouseLocked ? [] : scope.houses).map(house => ({ value: house._id, label: house.name, warning: scope.issueHouseIds.has(house._id) })),
   ];
   const zoneOptions = [
-    { value: '', label: t('scope.allZones'), warning: isZoneLocked && hasZoneIssue },
+    ...(needsZone && !isZoneLocked ? [] : [{ value: '', label: t('scope.allZones'), warning: isZoneLocked && hasZoneIssue }]),
     ...(isZoneLocked ? [] : scope.zones).map(zone => ({ value: zone._id, label: zone.name, warning: scope.issueZoneIds.has(zone._id) })),
   ];
 

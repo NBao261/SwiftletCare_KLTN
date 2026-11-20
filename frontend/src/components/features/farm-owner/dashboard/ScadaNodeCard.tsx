@@ -113,7 +113,7 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
         </div>
         <span
           className={cn(
-            'rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+            'rounded-full px-2.5 py-0.5 text-small font-semibold',
             isManual ? 'bg-statusYellow/70 text-charcoal' : 'bg-warmGray/15 text-graphite',
           )}
         >
@@ -153,12 +153,12 @@ export default function ScadaNodeCard({ node, controlOutput, durationMinutes, du
                 <div className="min-w-0">
                   <p className="truncate text-small font-semibold text-charcoal">{t(relay.labelKey)}</p>
                   <p className="flex items-center gap-1.5 text-small text-warmGray">
-                    <span className={cn('rounded-full px-2 py-px text-[11px] font-semibold', isOn ? 'bg-accent-600 text-charcoal' : 'bg-warmGray/15 text-warmGray')}>
+                    <span className={cn('rounded-full px-2 py-px text-small font-semibold', isOn ? 'bg-accent-600 text-charcoal' : 'bg-warmGray/15 text-warmGray')}>
                       {isOn ? t('relay.on') : t('relay.off')}
                     </span>
                     {output !== undefined && !isManual && t('scada.output', { percent: output })}
                   </p>
-                  {isCapped && <p className="text-[11px] text-warmGray">{t('scada.pumpCap', { n: minutes })}</p>}
+                  {isCapped && <p className="text-small text-warmGray">{t('scada.pumpCap', { n: minutes })}</p>}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">

@@ -6,7 +6,7 @@ import { CpuIcon, HouseIcon, UsersIcon, WarningIcon } from '@phosphor-icons/reac
 import { useSystemHealth } from '@/hooks/admin/useSystem'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
 import { Card } from '@/components/ui'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import RecentActivityCard from '@/components/features/admin/dashboard/RecentActivityCard'
@@ -53,7 +53,7 @@ export default function AdminSystemHealthPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={HouseIcon}
             iconClass={ICON_NORMAL}
@@ -61,7 +61,7 @@ export default function AdminSystemHealthPage() {
             value={farms.total}
             sub={i18nT('Gồm {{n}} Zone', { n: zones.total })}
           />
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={CpuIcon}
             iconClass={ICON_NORMAL}
@@ -70,7 +70,7 @@ export default function AdminSystemHealthPage() {
             value={hasDevices ? `${devices.online}/${devices.total}` : '--'}            sub={deviceSub}
           />
           {/* SYSTEM-FR-003 — tài khoản đăng nhập được (gồm chờ xoá) và bị khoá; chi tiết theo role ở trang Người dùng */}
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={UsersIcon}
             iconClass={ICON_NORMAL}
@@ -78,7 +78,7 @@ export default function AdminSystemHealthPage() {
             value={users.active}
             sub={i18nT('{{n}} bị khoá', { n: users.inactive })}
           />
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={WarningIcon}
             iconClass={ICON_NORMAL}

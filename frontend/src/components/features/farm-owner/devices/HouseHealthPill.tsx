@@ -12,7 +12,7 @@ export default function HouseHealthPill({ tally }: { tally: DeviceTally }): JSX.
 
   return (
     <span className="flex flex-wrap items-center gap-1.5">
-      <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold', HEALTH_PILL_CLASS[tone].pill)}>
+      <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-small font-semibold', HEALTH_PILL_CLASS[tone].pill)}>
         <span className={cn('h-2 w-2 rounded-full', HEALTH_PILL_CLASS[tone].dot)} />
         {label}
       </span>

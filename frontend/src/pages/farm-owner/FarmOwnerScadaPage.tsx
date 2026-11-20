@@ -191,7 +191,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
               </div>
               <span
                 className={cn(
-                  'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                  'shrink-0 rounded-full px-2.5 py-0.5 text-small font-semibold',
                   log.ended_at ? 'bg-warmGray/15 text-warmGray' : 'bg-statusYellow/70 text-charcoal',
                 )}
               >

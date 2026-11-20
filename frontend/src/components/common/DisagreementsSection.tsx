@@ -218,28 +218,28 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
         ) : evaluation ? (
           <div className="grid grid-cols-2 gap-2.5 border-t border-warmGray/15 pt-3.5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="flex flex-col justify-between rounded-xl border border-warmGray/15 bg-stone/25 px-3 py-2.5">
-              <span className="text-[11px] font-medium text-warmGray">
+              <span className="text-small font-medium text-warmGray">
                 {t('dis.ratedCount')}
               </span>
               <div className="mt-1 flex flex-col">
                 <span className="text-lg font-bold leading-tight tabular-nums text-charcoal">
                   {evaluation.rated_count}
                 </span>
-                <span className="mt-0.5 text-[11px] text-warmGray">
+                <span className="mt-0.5 text-small text-warmGray">
                   {t('dis.ratedSub', { days: totalDays, n: totalDisagreements })}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col justify-between rounded-xl border border-warmGray/15 bg-stone/25 px-3 py-2.5">
-              <span className="text-[11px] font-medium text-warmGray">
+              <span className="text-small font-medium text-warmGray">
                 {t('dis.agreement')}
               </span>
               <div className="mt-1 flex flex-col">
                 <span className="text-lg font-bold leading-tight tabular-nums text-charcoal">
                   {percent(evaluation.agreement?.value)}
                 </span>
-                <span className="mt-0.5 text-[11px] tabular-nums text-warmGray">
+                <span className="mt-0.5 text-small tabular-nums text-warmGray">
                   {evaluation.agreement
                     ? `${percent(evaluation.agreement.ci_low)} – ${percent(evaluation.agreement.ci_high)}`
                     : t('dis.noCi')}
@@ -248,7 +248,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
             </div>
 
             <div className="col-span-2 flex flex-col justify-between rounded-xl border border-warmGray/15 bg-stone/25 px-3 py-2.5 sm:col-span-1 lg:col-span-1">
-              <span className="text-[11px] font-medium text-warmGray">
+              <span className="text-small font-medium text-warmGray">
                 Kappa / Gwet&apos;s AC1
               </span>
               <div className="mt-1 flex flex-col">
@@ -257,7 +257,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                   <span className="text-warmGray">·</span>
                   <span>AC1 {agreementIndex(evaluation.gwet_ac1)}</span>
                 </div>
-                <span className="mt-0.5 text-[11px] text-warmGray">
+                <span className="mt-0.5 text-small text-warmGray">
                   {t('dis.kappaHint')}
                 </span>
               </div>
@@ -265,11 +265,11 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
 
             <div className="col-span-2 flex flex-col justify-between rounded-xl border border-warmGray/15 bg-stone/25 px-3 py-2.5 sm:col-span-3 lg:col-span-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="flex items-center gap-1 text-[11px] font-medium text-warmGray">
+                <span className="flex items-center gap-1 text-small font-medium text-warmGray">
                   <BarChart3 className="h-3 w-3" aria-hidden="true" />
                   <span>{t('dis.falseAlarm')}</span>
                 </span>
-                <span className="text-[11px] font-semibold tabular-nums text-charcoal">
+                <span className="text-small font-semibold tabular-nums text-charcoal">
                   {t('dis.combined', { value: percent(evaluation.false_alarm_rate.combined) })}
                 </span>
               </div>
@@ -277,7 +277,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                 {FALSE_ALARM_SOURCES.map((source) => (
                   <div
                     key={source}
-                    className="flex items-center justify-between rounded-lg border border-warmGray/10 bg-white px-2 py-1 text-[11px]"
+                    className="flex items-center justify-between rounded-lg border border-warmGray/10 bg-white px-2 py-1 text-small"
                   >
                     <span className="text-warmGray">{t(`source.${source}`)}</span>
                     <span className="font-bold tabular-nums text-charcoal">
@@ -345,7 +345,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                         <p className="text-xs font-bold text-charcoal">
                           {t('levels.environment')}
                         </p>
-                        <p className="text-[11px] text-warmGray">
+                        <p className="text-small text-warmGray">
                           {t('levels.environmentHint')}
                         </p>
                       </div>
@@ -365,7 +365,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                         <p className="text-xs font-bold text-charcoal">
                           {t('levels.air')}
                         </p>
-                        <p className="text-[11px] text-warmGray">
+                        <p className="text-small text-warmGray">
                           {t('levels.airHint')}
                         </p>
                       </div>
@@ -385,7 +385,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                         <p className="text-xs font-bold text-charcoal">
                           {t('levels.noise')}
                         </p>
-                        <p className="text-[11px] text-warmGray">
+                        <p className="text-small text-warmGray">
                           {t('levels.noiseHint')}
                         </p>
                       </div>

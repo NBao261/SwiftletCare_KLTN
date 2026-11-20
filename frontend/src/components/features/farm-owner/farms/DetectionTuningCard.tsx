@@ -30,7 +30,7 @@ export default function DetectionTuningCard({ tuning }: { tuning?: DetectionTuni
                 {value === undefined ? NO_VALUE : num(value, param.decimals)}
                 {value !== undefined && <span className="ml-1 text-xs font-medium text-warmGray">{param.unit === 's' ? t('tuning.seconds') : param.unit}</span>}
               </p>
-              <p className="mt-1.5 text-[11px] font-medium text-warmGray">{t(param.hintKey)}</p>
+              <p className="mt-1.5 text-small font-medium text-warmGray">{t(param.hintKey)}</p>
             </div>
           )
         })}

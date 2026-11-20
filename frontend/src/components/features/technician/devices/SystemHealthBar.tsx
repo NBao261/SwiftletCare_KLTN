@@ -1,5 +1,5 @@
 import { CpuIcon, HourglassIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from '@phosphor-icons/react'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import type { SensorNode } from '@/types'
 
 /** Node cần Technician xử lý: quá hạn kích hoạt / OTA lỗi (ERROR/DEGRADED đã bỏ SRS 3.1.0) */
@@ -17,7 +17,7 @@ export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }
 
   return (
     <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-5">
-      <StatTile
+      <KpiTile
         className="col-span-2 lg:col-span-1"
         icon={CpuIcon}
         iconClass="bg-warmGray/10 text-charcoal"
@@ -25,15 +25,15 @@ export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }
         value={total}
         sub="Trong phạm vi đang chọn"
       />
-      <StatTile icon={WifiHighIcon} iconClass="bg-warmGray/10 text-success" label="Online" value={online} sub={`${pct}% tổng số`} />
-      <StatTile
+      <KpiTile icon={WifiHighIcon} iconClass="bg-warmGray/10 text-success" label="Online" value={online} sub={`${pct}% tổng số`} />
+      <KpiTile
         icon={WifiSlashIcon}
         iconClass={offline > 0 ? 'bg-warmGray/10 text-orange-600' : 'bg-warmGray/10 text-charcoal'}
         label="Mất kết nối"
         value={offline}
         sub="Không còn gửi tín hiệu"
       />
-      <StatTile
+      <KpiTile
         icon={WarningIcon}
         iconClass={attention > 0 ? 'bg-warmGray/10 text-alertRed' : 'bg-warmGray/10 text-charcoal'}
         alert={attention > 0}
@@ -41,7 +41,7 @@ export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }
         value={attention}
         sub="Quá hạn kích hoạt hoặc cập nhật lỗi"
       />
-      <StatTile
+      <KpiTile
         icon={HourglassIcon}
         iconClass="bg-warmGray/10 text-charcoal"
         label="Chờ kết nối"

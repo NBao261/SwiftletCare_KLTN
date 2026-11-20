@@ -29,7 +29,7 @@ export default function SettingsPrivacyPage(): JSX.Element {
         <ArrowLeftIcon size={14} weight="bold" />
         {lang === 'en' ? 'Back' : 'Quay lại'}
       </button>
-      <PrivacyPolicy />
+      <PrivacyPolicy headingLevel="h2" />
     </article>
   );
 }

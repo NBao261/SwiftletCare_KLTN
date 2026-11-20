@@ -99,7 +99,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
         {overlay && <div className="absolute inset-0 flex items-center justify-center p-6">{overlay}</div>}
 
         {/* Thanh dưới khung: nhãn Trực tiếp khi đang phát, cảnh báo AI suy giảm, nút phóng to nếu trang cho phép */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2 text-[11px] font-medium text-white">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2 text-small font-medium text-white">
           <span className="flex items-center gap-2">
             <span className={cn('inline-flex h-8 items-center gap-1.5 rounded-full bg-charcoal/60 px-3 backdrop-blur-sm', !isPlaying && 'invisible')}>
               <span className="h-1.5 w-1.5 rounded-full bg-accent-600" />

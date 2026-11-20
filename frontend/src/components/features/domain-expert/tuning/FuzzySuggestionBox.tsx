@@ -31,7 +31,7 @@ const CHIPS: Array<{ key: NumericKey; label: string; unit: string }> = [
 function SuggestionChip({ current, next, unit, label }: { current?: number; next?: number; unit: string; label: string }) {
   return (
     <div className="bg-white rounded-xl p-3 border border-accent-600/40 flex flex-col gap-1 min-w-[120px]">
-      <p className="text-[11px] text-warmGray leading-tight">{label}</p>
+      <p className="text-small text-warmGray leading-tight">{label}</p>
       <p className="text-base font-bold text-charcoal leading-tight">
         {current ?? NO_VALUE} → <span className="text-accent-900">{next ?? NO_VALUE}</span>
         <span className="text-xs font-normal text-warmGray ml-1">{unit}</span>
@@ -74,7 +74,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
             {t('Có gợi ý hệ số mờ khi đủ 3 ngày dữ liệu và độ khớp R² từ 0,3 trở lên.')}
           </span>
         </div>
-        <span className="bg-white text-stone-600 border border-stone-200/80 text-[11px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap self-start sm:self-center shrink-0">
+        <span className="bg-white text-stone-600 border border-stone-200/80 text-small font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap self-start sm:self-center shrink-0">
           {t('Đang tích lũy dữ liệu')}
         </span>
       </div>
@@ -123,7 +123,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] text-warmGray italic flex items-center gap-1">
+        <p className="text-small text-warmGray italic flex items-center gap-1">
           <Info className="w-3.5 h-3.5 flex-shrink-0" />
           {t('Gợi ý không tự áp dụng; hệ số chỉ đổi khi người có quyền áp dụng.')}
         </p>

@@ -321,8 +321,8 @@ export default function FarmOwnerFarmsPage() {
                 aria-pressed={view === key}
                 onClick={() => setView(key)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
-                  view === key ? 'bg-charcoal text-white' : 'text-warmGray hover:text-charcoal',
+                  'flex h-8 items-center gap-1.5 rounded-full px-3 text-small font-semibold transition-colors',
+                  view === key ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
                 )}
               >
                 <ViewIcon size={14} weight="bold" />

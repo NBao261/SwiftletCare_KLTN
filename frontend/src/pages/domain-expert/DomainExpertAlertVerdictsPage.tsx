@@ -170,12 +170,12 @@ export default function DomainExpertAlertVerdictsPage() {
               {statsSummary ? (
                 <>
                   <Info className="w-3.5 h-3.5 text-[#B5D32C] shrink-0" />
-                  <p className="truncate text-[11.5px]">
+                  <p className="truncate text-small">
                     <span className="font-semibold text-charcoal">{t('Tỷ lệ xác nhận sự cố thật:')}</span> {statsSummary}
                   </p>
                 </>
               ) : (
-                <span className="text-[11.5px] text-warmGray">
+                <span className="text-small text-warmGray">
                   {t('Chưa có kết luận nào trong kỳ. Tỷ lệ xác nhận đúng theo loại cảnh báo hiện khi đã có kết luận.')}
                 </span>
               )}
