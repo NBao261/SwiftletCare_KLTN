@@ -45,6 +45,8 @@ const vi = {
   'Hồ sơ cấu hình': 'Hồ sơ cấu hình',
   'Luật khuyến nghị': 'Luật khuyến nghị',
   'Lịch sử quyết định': 'Lịch sử quyết định',
+  'Tham số điều khiển': 'Tham số điều khiển',
+  'Đếm chim': 'Đếm chim',
 
   'Xin chào,': 'Xin chào,',
   'Vai trò:': 'Vai trò:',
@@ -98,6 +100,8 @@ const en: Record<NavigationKey, string> = {
   'Hồ sơ cấu hình': 'Configuration profiles',
   'Luật khuyến nghị': 'Recommendation rules',
   'Lịch sử quyết định': 'Decision history',
+  'Tham số điều khiển': 'Control parameters',
+  'Đếm chim': 'Bird counting',
 
   'Xin chào,': 'Hello,',
   'Vai trò:': 'Role:',

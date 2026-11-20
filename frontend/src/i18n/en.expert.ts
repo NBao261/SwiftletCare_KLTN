@@ -1,6 +1,8 @@
 // Bản dịch tiếng Anh của các màn chuyên gia (/domain-expert/*) — cùng quy ước với en.ts: khoá là câu tiếng Việt y hệt chỗ gọi t(...)
 const enExpert: Record<string, string> = {
   // ── Khung chung: thanh chọn khu vực, lời nhắc quyền, màn trống ─────────────────────────────────────────────────────
+  'Chỉ xem': 'Read-only',
+  'Quyết định thay': 'Deciding for expert',
   'Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.':
     'This farm has no expert: you decide in their place on alert verdicts, detection parameters, the counting schedule, the counting ring and weather rules. Report and season conclusions and profile approval are for an expert only.',
   'Trang trại đã có chuyên gia nên bạn chỉ xem các quyết định chuyên môn. Ngưỡng và hệ số mờ bạn vẫn sửa được, chuyên gia duyệt lại sau.':

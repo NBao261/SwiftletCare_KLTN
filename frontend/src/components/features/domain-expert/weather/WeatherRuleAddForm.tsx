@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
 import { Input } from '@/components/ui/Input'
 import type { WeatherRule } from '@/types/expert.types'
@@ -45,9 +44,7 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
   }
 
   return (
-    <Card className="space-y-4">
-      <p className="text-sm font-semibold text-charcoal">{t('Thêm luật mới')}</p>
-
+    <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2 flex flex-col gap-1.5">
           <span className="label-caption">{t('Chỉ số thời tiết')}</span>
@@ -104,6 +101,6 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
         <Plus className="w-3.5 h-3.5" />
         {t('Thêm luật')}
       </Button>
-    </Card>
+    </div>
   )
 }

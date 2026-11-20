@@ -102,7 +102,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Tổng cảnh báo suy luận')}
         sublabel="30 ngày qua"
-        value={String(counts.total).padStart(2, '0')}
+        value={counts.total}
         accent="text-charcoal"
         dotColor="bg-[#B5D32C]"
         badgeBg="bg-[#B5D32C]/15"
@@ -112,7 +112,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Chờ kiểm chứng')}
         sublabel="Chờ chuyên gia kiểm chứng"
-        value={String(counts.pending).padStart(2, '0')}
+        value={counts.pending}
         accent="text-orange-500"
         dotColor="bg-orange-500"
         badgeBg="bg-orange-500/15"
@@ -122,7 +122,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Đã xác nhận (Sự cố thật)')}
         sublabel="Hệ thống suy luận chính xác"
-        value={String(counts.confirmed).padStart(2, '0')}
+        value={counts.confirmed}
         accent="text-charcoal"
         dotColor="bg-emerald-500"
         badgeBg="bg-emerald-50"
@@ -132,7 +132,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Đã bác bỏ (Báo động giả)')}
         sublabel="Nhiễu hoặc dao động tự nhiên"
-        value={String(counts.rejected).padStart(2, '0')}
+        value={counts.rejected}
         accent="text-warmGray"
         dotColor="bg-neutral-400"
         badgeBg="bg-neutral-100"

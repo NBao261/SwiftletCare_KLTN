@@ -4,7 +4,6 @@ import { Lightbulb, Plus } from 'lucide-react'
 import RecommendationEffectPanel from '@/components/features/domain-expert/recommendations/RecommendationEffectPanel'
 import RecommendationRuleFormModal from '@/components/features/domain-expert/recommendations/RecommendationRuleFormModal'
 import RecommendationRuleRow from '@/components/features/domain-expert/recommendations/RecommendationRuleRow'
-import TableEmptyState from '@/components/common/TableEmptyState'
 import { Button, EmptyState, LoadingSkeleton, Pagination, SectionCard } from '@/components/ui'
 import { recommendationsDict } from '@/constants/recommendations.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
@@ -61,9 +60,7 @@ export default function DomainExpertRecommendationRulesPage() {
   }
   if (!rules.isLoading && !rules.isError && rules.records.length === 0) {
     rulesBody = (
-      <div className="rounded-2xl border border-dashed border-warmGray/30 px-6 py-10">
-        <TableEmptyState title={t('rules.emptyTitle')} description={t('rules.emptyHint')} />
-      </div>
+      <p className="py-6 text-center text-sm text-warmGray">{t('rules.emptyTitle')}</p>
     )
   }
   if (!rules.isLoading && !rules.isError && rules.records.length > 0) {

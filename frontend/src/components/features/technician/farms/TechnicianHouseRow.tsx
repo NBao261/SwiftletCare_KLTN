@@ -108,11 +108,11 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         </p>
       </div>
 
-      {/* Cột 4 — hành động */}
+      {/* FT-02: nút phụ (viền), không nút chính nào trên trang */}
       <button
         type="button"
         onClick={onOpen}
-        className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-charcoal px-4 text-xs font-semibold text-white transition-colors hover:bg-charcoal/85 lg:self-center"
+        className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-full border border-warmGray/30 bg-white px-4 text-xs font-semibold text-charcoal transition-colors hover:bg-warmGray/5 lg:self-center"
       >
         {t('card.openDevices')}
         <ArrowRightIcon size={12} weight="bold" />
