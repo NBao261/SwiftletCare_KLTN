@@ -12,6 +12,11 @@ export function useDeleteHarvestRun(farmId: string) {
       const failure = settled.find(result => result.status === 'rejected')
       if (failure) throw failure.reason
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['harvests', farmId] }),
+    // Lần thu đã xác nhận đóng chu kỳ của zone, xoá thì backend gộp chu kỳ (BR-43), nên tải lại cả chu kỳ thu
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['harvests', farmId] }),
+        queryClient.invalidateQueries({ queryKey: ['harvest-cycles'] }),
+      ]),
   })
 }

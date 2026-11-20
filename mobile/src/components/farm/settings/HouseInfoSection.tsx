@@ -39,7 +39,8 @@ export function HouseInfoSection({ house, zones, editor }: HouseInfoSectionProps
       subtitle={house.name}
       scopeLabel={t('Nhà')}
       isExpanded={editor.isExpanded(id)}
-      onToggle={() => editor.toggle(id)}    >
+      onToggle={() => editor.toggle(id)}
+    >
       <SettingsMetaGrid
         items={[
           { label: t('Tên nhà'), value: house.name },
@@ -48,8 +49,11 @@ export function HouseInfoSection({ house, zones, editor }: HouseInfoSectionProps
             ? [
                 {
                   label: t('Kỹ thuật viên phụ trách'),
-                  // Đang tải tên thì "_" để không báo nhầm là chưa giao
-                  value: farmQuery.isLoading ? undefined : technicianText || t('Chưa giao, chủ trại tự xử lý'),
+                  // Đang tải hoặc tải lỗi thành viên farm thì "_" để không báo nhầm là chưa giao
+                  value:
+                    farmQuery.isLoading || farmQuery.isError
+                      ? undefined
+                      : technicianText || t('Chưa giao, chủ trại tự xử lý'),
                   isFullWidth: true,
                 },
               ]

@@ -91,7 +91,8 @@ export const farmApi = {
   // Luật bù thời tiết của nhà (ENV-FR-030): đọc kèm lần bù gần nhất; lưu là thay cả danh sách (tối đa 10 luật)
   getWeatherRules: (houseId: string) => apiClient.get<ApiResponse<WeatherRulesView>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId)),
   updateWeatherRules: (houseId: string, rules: WeatherRule[]) =>
-    apiClient.put<ApiResponse<WeatherRulesView>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId), { rules }),
+    // PUT chỉ trả house_id và rules (api-spec), không kèm last_compensation
+    apiClient.put<ApiResponse<Omit<WeatherRulesView, 'last_compensation'>>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId), { rules }),
 
   // Lịch đếm chim của nhà (VISION-FR-019): lưu là thay cả lịch, áp từ ngày hôm sau (giờ VN)
   getCountingSchedule: (houseId: string) =>
