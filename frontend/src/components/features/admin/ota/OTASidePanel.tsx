@@ -32,7 +32,8 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
 
 export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, apiError, targetVersion, onRetry }: Props) {
   return (
-    <div className="flex flex-col gap-4">
+    // Drawer không tự cuộn: vùng cuộn đặt ở đây như DeviceDetailDrawer (bàn phím điện thoại mở vẫn tới được nút gửi)
+    <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 pb-2">
       {/* Thiết bị đang chọn */}
       <div>
         <p className="label-caption mb-1">Thiết bị đã chọn</p>

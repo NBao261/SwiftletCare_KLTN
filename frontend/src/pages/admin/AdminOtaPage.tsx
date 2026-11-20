@@ -163,8 +163,8 @@ export default function AdminOtaPage() {
         />
       )}
 
-      {/* Ngăn gửi bản cập nhật trượt từ phải; đóng thì bỏ chọn */}
-      <Drawer open={Boolean(selectedNode)} onClose={() => setSelectedId(null)} title={t('Cập nhật firmware')}>
+      {/* Ngăn gửi bản cập nhật trượt từ phải; đóng thì bỏ chọn. Hộp xác nhận đang mở thì Esc chỉ đóng hộp đó, giữ form */}
+      <Drawer open={Boolean(selectedNode)} onClose={() => { if (!confirmOpen) setSelectedId(null) }} title={t('Cập nhật firmware')}>
         {selectedNode && (
           <OTASidePanel
             node={selectedNode}

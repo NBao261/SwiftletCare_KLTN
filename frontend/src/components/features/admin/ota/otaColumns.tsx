@@ -7,7 +7,7 @@ import { t } from '@/i18n'
 import type { SensorNode } from '@/types'
 
 // Chỉ node ONLINE mới nhận lệnh từ xa (DEGRADED đã bỏ, SRS 3.1.0)
-export const canUpdate = (node: SensorNode): boolean => node.status === 'ONLINE'
+const canUpdate = (node: SensorNode): boolean => node.status === 'ONLINE'
 
 export function OtaChip({ node }: { node: SensorNode }) {
   if (node.ota_pending) {
