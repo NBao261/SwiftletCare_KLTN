@@ -264,6 +264,9 @@ const vi = {
   'rd.incomplete': 'thiếu phiên',
   'rd.conclusion': 'Kết luận của chuyên gia',
   'rd.noConclusion': 'Chưa có kết luận',
+  // BR-22 — Farm Owner nhắc chuyên gia viết kết luận
+  'rd.remind': 'Nhắc chuyên gia',
+  'rd.reminded': 'Đã nhắc chuyên gia',
   'rd.edited': 'đã sửa {time}',
   'rd.write': 'Viết kết luận',
   'rd.edit': 'Sửa kết luận',
@@ -576,6 +579,8 @@ const en: Record<HealthKey, string> = {
   'rd.incomplete': 'missing session',
   'rd.conclusion': 'Expert conclusion',
   'rd.noConclusion': 'No conclusion yet',
+  'rd.remind': 'Remind the expert',
+  'rd.reminded': 'Expert reminded',
   'rd.edited': 'edited {time}',
   'rd.write': 'Write a conclusion',
   'rd.edit': 'Edit conclusion',

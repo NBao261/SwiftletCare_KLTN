@@ -15,7 +15,7 @@ import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecision
 import { t } from '@/i18n'
 
 export default function DomainExpertCountingRingPage() {
-  const { canDecide } = useExpertDecisionRights()
+  const { canEditParameters } = useExpertDecisionRights()
   const { selectedHouseId } = useZoneStore()
   const houseId = selectedHouseId || undefined
   const { data: cameras, isLoading, isError } = useHouseCameras(houseId)
@@ -68,8 +68,8 @@ export default function DomainExpertCountingRingPage() {
         {!isLoading && !isError && camera && (
           <div className="space-y-2">
             <SimulatedBadge simulated={camera.simulated} />
-            {/* BR-22 — Farm Owner chỉ vẽ khi farm chưa có chuyên gia */}
-            <fieldset disabled={!canDecide} className="contents">
+            {/* BR-22 (Report 3 4.2.15) — Farm Owner vẽ được; farm có chuyên gia thì chuyên gia duyệt sau */}
+            <fieldset disabled={!canEditParameters} className="contents">
               <CountingRingEditor key={camera._id} camera={camera} houseId={houseId} />
             </fieldset>
           </div>

@@ -1,6 +1,6 @@
 // DomainExpertReviewsPage.tsx — Màn hình thẩm định thay đổi tham số và đề xuất hệ số mờ (G-04)
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   SlidersHorizontal,
   Sparkles,
@@ -23,7 +23,8 @@ import {
   useApproveCoefficientProposal,
   useRejectCoefficientProposal,
 } from '@/hooks/domain-expert/useExpertReviews';
-import ParameterReviewCard from '@/components/features/domain-expert/reviews/ParameterReviewCard';
+import ParameterReviewCard, { type ReviewPlaces } from '@/components/features/domain-expert/reviews/ParameterReviewCard';
+import { useAllZones, useHouses } from '@/hooks/shared/useFarms';
 import CoefficientProposalCard from '@/components/features/domain-expert/reviews/CoefficientProposalCard';
 import type {
   ParameterReviewStatus,
@@ -52,9 +53,16 @@ const PROPOSAL_STATUS_OPTIONS: SelectMenuOption<CoefficientProposalStatus | 'ALL
 
 export default function DomainExpertReviewsPage() {
   const { isExpert } = useExpertDecisionRights();
-  const { selectedFarmId, selectedZoneId } = useZoneStore();
+  // Trang ở cấp farm: mục theo nhà, theo camera không có Zone nên không lọc theo Zone đang chọn
+  const { selectedFarmId } = useZoneStore();
   const farmId = selectedFarmId || '';
-  const zoneId = selectedZoneId || undefined;
+  // Tên Zone và nhà dựng một lần cho mọi thẻ mục duyệt
+  const { data: allZones } = useAllZones();
+  const { data: houses } = useHouses(farmId || undefined);
+  const places = useMemo<ReviewPlaces>(() => ({
+    zoneNames: new Map((allZones ?? []).map(zone => [zone._id, `${zone.houseName} • ${zone.name}`])),
+    houseNames: new Map((houses ?? []).map(house => [house._id, house.name])),
+  }), [allZones, houses]);
 
   const pushToast = useToastStore((state) => state.push);
   const apiErrorMessage = useApiErrorMessage();
@@ -72,7 +80,6 @@ export default function DomainExpertReviewsPage() {
     refetch: refetchReviews,
   } = useParameterReviews({
     farmId,
-    zoneId,
     status: reviewStatusFilter === 'ALL' ? undefined : reviewStatusFilter,
   });
 
@@ -83,19 +90,16 @@ export default function DomainExpertReviewsPage() {
     refetch: refetchProposals,
   } = useCoefficientProposals({
     farmId,
-    zoneId,
     status: proposalStatusFilter === 'ALL' ? undefined : proposalStatusFilter,
   });
 
   // Query đếm tổng số pending để hiển thị badge tab
   const { total: pendingReviewsCount = 0 } = useParameterReviews({
     farmId,
-    zoneId,
     status: 'PENDING_REVIEW',
   });
   const { total: pendingProposalsCount = 0 } = useCoefficientProposals({
     farmId,
-    zoneId,
     status: 'PROPOSED',
   });
 
@@ -217,6 +221,7 @@ export default function DomainExpertReviewsPage() {
             onRevert={handleRevertReview}
             isProcessing={processingId === review._id}
             readOnly={!isExpert}
+            places={places}
           />
         ))}
       </div>

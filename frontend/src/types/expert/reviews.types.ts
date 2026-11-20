@@ -3,13 +3,19 @@
  * SRS: EXPERT-FR-010, EXPERT-FR-011; Report 3 §6.10, §6.11
  */
 
-export type ParameterReviewGroup = 'thresholds' | 'fuzzy';
+// BR-22 (Report 3 4.2.15): theo Zone, theo nhà hoặc theo camera
+export type ParameterReviewGroup =
+  | 'thresholds' | 'fuzzy' | 'detection'
+  | 'return_rate_drop' | 'health_levels' | 'counting_schedule' | 'counting_ring';
 
 export type ParameterReviewStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' | 'ADJUSTED';
 
 export interface ParameterReview {
   _id: string;
-  zone_id: string;
+  target_id?: string;
+  zone_id?: string;
+  house_id?: string;
+  camera_node_id?: string;
   farm_id: string;
   group: ParameterReviewGroup;
   old_values: Record<string, unknown>;
