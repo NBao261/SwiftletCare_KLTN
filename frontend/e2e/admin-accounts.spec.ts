@@ -16,7 +16,6 @@ test.describe('Administrator', () => {
     const email = `owner-e2e-${Date.now()}@swiftletcare.dev`;
     await signInAsAdmin(page);
     await page.goto('/users');
-    await page.getByRole('tab', { name: 'Người dùng' }).click();
     await page.getByRole('button', { name: 'Tạo chủ nhà yến' }).click();
 
     const dialog = page.getByRole('dialog');
@@ -28,7 +27,8 @@ test.describe('Administrator', () => {
     await dialog.getByRole('button', { name: 'Đóng', exact: true }).last().click();
 
     await page.getByPlaceholder('Tìm tên/email...').fill(email);
-    await expect(page.getByText(email)).toBeVisible();
+    // Tìm theo <tr>: dòng có onRowClick mang role="button", thẻ điện thoại (ẩn ở màn rộng) cũng có email này
+    await expect(page.locator('tr', { hasText: email })).toBeVisible();
   });
 
   test('lưu ngưỡng mặc định cần nguồn có mã REF-5', async ({ page }) => {

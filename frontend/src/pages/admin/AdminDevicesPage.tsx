@@ -10,6 +10,10 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DeviceStats from '@/components/features/admin/devices/DeviceStats'
 import { buildDeviceColumns } from '@/components/features/admin/devices/deviceColumns'
 import { nodeLocation } from '@/lib/deviceLocation'
+import { formatRelativeTime } from '@/lib/helpers'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
+import StatusDot from '@/components/common/StatusDot'
+import { t } from '@/i18n'
 import DeviceDetailDrawer from '@/components/features/admin/devices/DeviceDetailDrawer'
 import type { DeviceStatus, SortDirection, SystemNodeStatusItem } from '@/types'
 
@@ -109,11 +113,11 @@ export default function AdminDevicesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Hàng 0: 5 ô số toàn hệ thống — tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
+      {/* Hàng 0: 4 ô số toàn hệ thống — tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
       <DeviceStats status={data} />
 
-      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}
-      <SectionCard title="Danh sách thiết bị" description="Bộ điều khiển và camera đếm chim toàn hệ thống">
+      {/* Card danh sách duy nhất: tên trang đã ở header nên không có tiêu đề */}
+      <SectionCard description="Bộ điều khiển và camera đếm chim">
 
         {/* Hàng 1: tìm kiếm — không có nút tạo: thiết bị mới nhập ở Kho thiết bị, Farm Owner đăng ký từ nhãn */}
         <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, Zone..." value={search} onChange={withReset(setSearch)} />
@@ -129,6 +133,22 @@ export default function AdminDevicesPage() {
 
         <DataTable
           columns={buildDeviceColumns(setViewTarget)}
+          // Bấm thẻ mở ngăn chi tiết như bấm dòng
+          mobileCard={node => (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-3">
+                <p className="flex min-w-0 items-center gap-2 text-body font-semibold text-charcoal">
+                  <span className="truncate">{node.device_id}</span>
+                  <SimulatedBadge simulated={node.simulated} />
+                </p>
+                <StatusDot status={node.status} colored />
+              </div>
+              <p className="text-small text-warmGray">{t(node.type === 'sensor' ? 'Bộ điều khiển' : 'Camera đếm chim')} · {nodeLocation(node) || '—'}</p>
+              <p className="text-small text-warmGray">
+                {node.last_heartbeat ? t('Kết nối cuối {{time}}', { time: formatRelativeTime(node.last_heartbeat) }) : t('Chưa từng kết nối')}
+              </p>
+            </div>
+          )}
           rows={rows}
           getRowKey={n => `${n.type}-${n._id}`}
           // Bấm dòng hoặc nút "Chi tiết" mở drawer chi tiết (Admin chỉ xem thiết bị)

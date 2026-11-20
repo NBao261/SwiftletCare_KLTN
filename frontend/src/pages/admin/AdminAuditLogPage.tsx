@@ -2,7 +2,7 @@
 // người thực hiện / hành động / khoảng ngày (server) + ô tìm kiếm & sắp xếp (client, trên
 // TOÀN BỘ nhật ký khớp bộ lọc). Hiển thị 1 bảng DataTable như trang Người dùng.
 // Chỉ nhật ký TÀI KHOẢN (target_type='user', lọc server) — không hiện log thiết bị/cấu hình.
-// Logic lọc/sắp xếp dùng chung với card "Nhật ký hoạt động gần đây" (useAuditLogTable + AuditLogFilters).
+// Logic lọc/sắp xếp ở useAuditLogTable + AuditLogFilters; thẻ điện thoại AuditLogCard dùng chung với Tổng quan hệ thống.
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { USER_AUDIT_ACTIONS } from '@/constants/auditActions'
@@ -14,13 +14,13 @@ import Pagination from '@/components/ui/Pagination'
 import { WarningCircleIcon } from '@phosphor-icons/react'
 import { IconSearch } from '@/components/ui/icons'
 import { getApiErrorMessage } from '@/lib/helpers'
-import { buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
+import { AuditLogCard, buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
 import AuditLogStats from '@/components/features/admin/audit-log/AuditLogStats'
 import AuditLogFilters from '@/components/features/admin/audit-log/AuditLogFilters'
 import { useAuditLogTable } from '@/components/features/admin/audit-log/useAuditLogTable'
 
 const PAGE_SIZE = 10
-/** px — mọi dòng (kể cả dòng trống bù) cao bằng nhau, cùng chiều cao card "Nhật ký hoạt động gần đây" */
+/** px — mọi dòng (kể cả dòng trống bù) cao bằng nhau */
 const ROW_HEIGHT = 52
 
 export default function AdminAuditLogPage() {
@@ -44,11 +44,11 @@ export default function AdminAuditLogPage() {
   return (
     // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
     <div className="flex min-w-0 flex-col gap-5">
-      {/* Hàng 0: 5 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Người dùng */}
+      {/* Hàng 0: 4 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Người dùng */}
       <AuditLogStats />
 
-      {/* Card danh sách (SectionCard): tìm kiếm → bộ lọc → bảng → phân trang */}
-      <SectionCard title="Danh sách nhật ký" description="Ai đăng nhập, khoá, tạo hay xoá tài khoản nào và khi nào" className="min-w-0">
+      {/* Card danh sách duy nhất: tên trang đã ở header nên không có tiêu đề */}
+      <SectionCard description="Đăng nhập, thay đổi tài khoản" className="min-w-0">
 
         {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng — cùng bố cục trang Người dùng */}
         <SearchInput
@@ -93,6 +93,7 @@ export default function AdminAuditLogPage() {
             getRowKey={log => log._id}
             rowHeight={ROW_HEIGHT}
             minRows={table.total > PAGE_SIZE ? PAGE_SIZE : 0}
+            mobileCard={log => <AuditLogCard log={log} />}
           />
         )}
 

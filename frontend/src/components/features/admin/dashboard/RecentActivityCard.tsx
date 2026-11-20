@@ -2,27 +2,23 @@ import { Link } from 'react-router-dom'
 import { ArrowRightIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
-import { getApiErrorMessage } from '@/lib/helpers'
 import DataTable from '@/components/ui/DataTable'
-import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import SectionCard from '@/components/ui/SectionCard'
-import { buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
-import AuditLogFilters from '@/components/features/admin/audit-log/AuditLogFilters'
-import { useAuditLogTable } from '@/components/features/admin/audit-log/useAuditLogTable'
+import { AuditLogCard, buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
+import { AUDIT_TARGET_TYPE } from '@/constants/auditActions'
+import { useAuditLogList } from '@/hooks/admin/useSystem'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { t } from '@/i18n'
 
-const PAGE_SIZE = 6
-/** px — mọi dòng (kể cả dòng trống bù) cao bằng nhau, để khung 6 dòng cố định */
-const ROW_HEIGHT = 52
+const RECENT_COUNT = 5
 
-/**
- * "Nhật ký hoạt động gần đây" cuối trang Tổng quan hệ thống — 6 bản ghi/trang của GET /system/audit-logs
- * (SYSTEM-FR-001), dùng lại cột bảng + bộ lọc/sắp xếp của trang Nhật ký hệ thống (không có ô tìm chữ — có ở
- * /system/audit-log). Chỉ nhật ký tài khoản (lọc server theo target_type).
- */
+// AD-02 — 5 nhật ký tài khoản mới nhất ở Tổng quan hệ thống (SYSTEM-FR-001); lọc, tìm, phân trang ở /system/audit-log
 export default function RecentActivityCard() {
-  const table = useAuditLogTable(PAGE_SIZE)
+  const { records, isLoading, isError, error, refetch } = useAuditLogList({ targetType: AUDIT_TARGET_TYPE, page: 1, limit: RECENT_COUNT })
+  const apiErrorMessage = useApiErrorMessage()
+  // Thứ tự đã là mới nhất trước, không cần cột STT
+  const columns = buildAuditLogColumns(0).filter(column => column.key !== 'stt')
 
   return (
     <SectionCard
@@ -35,29 +31,24 @@ export default function RecentActivityCard() {
         </Link>
       }
     >
-      <AuditLogFilters table={table} />
-      {table.isLoading ? (
-        <LoadingSkeleton count={PAGE_SIZE} className="h-[52px] w-full" />
-      ) : table.isError ? (
-        // Lỗi tải tách khỏi "chưa có nhật ký" — kèm nút thử lại (FE_Design §13.5)
+      {isLoading ? (
+        <LoadingSkeleton count={RECENT_COUNT} className="h-[52px] w-full" />
+      ) : isError ? (
         <EmptyState
           icon={<WarningCircleIcon size={28} />}
           title="Không tải được nhật ký"
-          description={getApiErrorMessage(table.error, 'Kiểm tra kết nối tới máy chủ rồi thử lại.')}
-          action={<Button variant="secondary" size="sm" onClick={() => table.refetch()}>Thử lại</Button>}
+          description={apiErrorMessage(error)}
+          action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
         />
       ) : (
         <DataTable
-          columns={buildAuditLogColumns((table.page - 1) * PAGE_SIZE)}
-          rows={table.visible}
+          columns={columns}
+          rows={records}
           getRowKey={log => log._id}
-          emptyMessage={table.hasFilter ? 'Không có nhật ký khớp bộ lọc.' : 'Chưa có nhật ký nào.'}
-          // Trang cuối ít hơn 6 dòng vẫn giữ khung đủ 6 dòng — card không co lại khi chuyển trang/lọc
-          rowHeight={ROW_HEIGHT}
-          minRows={table.total > PAGE_SIZE ? PAGE_SIZE : 0}
+          emptyMessage="Chưa có nhật ký nào."
+          mobileCard={log => <AuditLogCard log={log} />}
         />
       )}
-      <Pagination page={table.page} limit={PAGE_SIZE} total={table.total} onChange={table.setPage} variant="full" />
     </SectionCard>
   )
 }
