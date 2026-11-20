@@ -54,12 +54,16 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const { data: zone } = useZone(alert?.zone_id)
   const { selectedZoneId, selectedZoneName } = useZoneStore()
 
+  // Theo giá trị kết luận, không theo object: trang đọc lại danh sách thì ghi chú đang gõ không mất
+  const alertId = alert?._id
+  const savedResult = alert?.expert_verdict?.result ?? null
+  const savedNote = alert?.expert_verdict?.note ?? ''
   useEffect(() => {
-    if (isOpen && alert) {
-      setVerdict(alert.expert_verdict?.result ?? null)
-      setNote(alert.expert_verdict?.note ?? '')
+    if (isOpen && alertId) {
+      setVerdict(savedResult)
+      setNote(savedNote)
     }
-  }, [isOpen, alert])
+  }, [isOpen, alertId, savedResult, savedNote])
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : ''

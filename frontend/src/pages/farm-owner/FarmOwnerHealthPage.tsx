@@ -59,7 +59,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   // Tab nằm trên URL (?tab=report) để từ trang chi tiết báo cáo quay lại đúng tab
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFarm = scope.farms.find(farm => farm._id === scope.farmId);
-  // BR-22 (Report 3 4.2.15): Farm Owner xem ngày lệch và chỉnh mức; thợ không có API này (403), chuyên gia xem ở trang của mình
+  // BR-22 (Report 3 4.2.15): chỉ Farm Owner xem ngày lệch và chỉnh mức ở đây, chuyên gia xem ở trang của mình
   const canReviewDisagreements = usePermission('FARM_OWNER');
   // Chuyên gia xem và kết luận báo cáo ở /domain-expert/reports (FE_Design §12.0 c), ở đây chỉ còn bảng ngày
   const visibleTabs = TABS.filter(value => (value !== 'report' || !isExpert) && (value !== 'disagreements' || canReviewDisagreements));

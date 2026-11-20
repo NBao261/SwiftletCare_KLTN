@@ -50,7 +50,9 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
   // Trang về 1 khi đổi farm/nhà: trang Thu hoạch gắn key theo phạm vi lọc nên khung dựng lại
   const [page, setPage] = useState(1);
   const { records: cycles, total, isLoading, isError, error, refetch } = useHarvestCycleList(farmId, houseId, page, PAGE_SIZE);
-  const [selected, setSelected] = useState<HarvestCycle | null>(null);
+  const [opened, setSelected] = useState<HarvestCycle | null>(null);
+  // Bản mới nhất trong danh sách (sau khi nhắc chuyên gia), không có trên trang thì giữ bản đã mở
+  const selected = opened && (cycles.find(cycle => cycle._id === opened._id) ?? opened);
 
   // Nhà có hơn 1 Zone thì ghi thêm tên Zone
   const placeByZone = useMemo(() => {

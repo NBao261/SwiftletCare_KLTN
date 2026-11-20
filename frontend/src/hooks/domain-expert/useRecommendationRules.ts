@@ -33,6 +33,7 @@ export function useSaveRecommendationRule(farmId: string | undefined) {
   return useMutation({
     mutationFn: ({ id, input }: { id?: string; input: RecommendationRuleInput }) =>
       id ? recommendationRulesApi.update(id, input) : recommendationRulesApi.create(farmId!, input),
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: [RULES_KEY] }) },
+    // Cả khi lỗi (409: chuyên gia vừa quyết định luật) để danh sách theo bản mới
+    onSettled: () => { void queryClient.invalidateQueries({ queryKey: [RULES_KEY] }) },
   })
 }

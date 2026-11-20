@@ -56,7 +56,8 @@ export default function DomainExpertWeatherRulesPage() {
   const mutation = ownerNeedsExpert ? propose : update
   const approve = useApproveWeatherProposal(houseId)
   const reject = useRejectWeatherProposal(houseId)
-  const [isRejectOpen, setIsRejectOpen] = useState(false)
+  // proposed_at của đề xuất lúc mở ô từ chối: đề xuất đổi trong lúc gõ thì backend trả 409
+  const [rejectingAt, setRejectingAt] = useState<string | null>(null)
   const getErrorMessage = useApiErrorMessage()
   const pushToast = useToastStore(state => state.push)
 
@@ -102,9 +103,12 @@ export default function DomainExpertWeatherRulesPage() {
 
   function decide(action: Promise<unknown>, doneMessage: string) {
     action
-      .then(() => { pushToast(t(doneMessage), 'success'); setIsRejectOpen(false) })
-      // 409: đề xuất vừa đổi hoặc đã có người xử lý, danh sách đọc lại (hook) để chuyên gia xem bản mới
-      .catch(error => { pushToast(getErrorMessage(error), 'error'); setIsRejectOpen(false) })
+      .then(() => { pushToast(t(doneMessage), 'success'); setRejectingAt(null) })
+      // 409: đề xuất vừa đổi hoặc đã có người xử lý, đóng ô để chuyên gia xem bản mới; lỗi khác giữ lý do đã gõ
+      .catch(error => {
+        pushToast(getErrorMessage(error), 'error')
+        if ((error as { response?: { status?: number } }).response?.status === 409) setRejectingAt(null)
+      })
   }
 
   // Đề xuất đang chờ của Farm Owner: chuyên gia duyệt hoặc từ chối, Farm Owner thấy mình đã gửi gì
@@ -120,7 +124,7 @@ export default function DomainExpertWeatherRulesPage() {
           </p>
           {isExpert && (
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setIsRejectOpen(true)} disabled={approve.isPending}>{t('Từ chối')}</Button>
+              <Button variant="secondary" size="sm" onClick={() => setRejectingAt(proposal.proposed_at)} disabled={approve.isPending}>{t('Từ chối')}</Button>
               <Button size="sm" loading={approve.isPending} onClick={() => decide(approve.mutateAsync(proposal.proposed_at), 'Đã duyệt, luật mới có hiệu lực từ lần tính kế tiếp.')}>
                 {t('Duyệt đề xuất')}
               </Button>
@@ -259,8 +263,8 @@ export default function DomainExpertWeatherRulesPage() {
       )}
     </div>
     <NoteActionModal
-      open={isRejectOpen}
-      onClose={() => setIsRejectOpen(false)}
+      open={rejectingAt !== null}
+      onClose={() => setRejectingAt(null)}
       title={t('Từ chối đề xuất luật bù phun sương')}
       label={t('Lý do')}
       placeholder={t('VD: mùa này chưa cần phun thêm')}
@@ -269,7 +273,7 @@ export default function DomainExpertWeatherRulesPage() {
       required
       danger
       loading={reject.isPending}
-      onSubmit={note => data?.proposal && decide(reject.mutateAsync({ note, proposedAt: data.proposal.proposed_at }), 'Đã từ chối đề xuất.')}
+      onSubmit={note => rejectingAt && decide(reject.mutateAsync({ note, proposedAt: rejectingAt }), 'Đã từ chối đề xuất.')}
     />
     </fieldset>
   )

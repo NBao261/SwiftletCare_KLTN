@@ -76,7 +76,7 @@ export default function DomainExpertRecommendationRulesPage() {
             rule={rule}
             disabled={save.isPending || !canEditParameters}
             toggleDisabled={ownerNeedsExpert}
-            editDisabled={ownerNeedsExpert && rule.active}
+            editDisabled={ownerNeedsExpert && !rule.pending_approval}
             onToggle={() => toggle(rule)}
             onEdit={() => setEditing(rule)}
           />
