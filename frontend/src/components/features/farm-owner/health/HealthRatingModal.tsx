@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import { withBold } from '@/components/common/healthDay.utils';
+import HealthStatusBadge from '@/components/common/HealthStatusBadge';
+import { formatHealthReason, withBold } from '@/components/common/healthDay.utils';
 import { Button, ConfirmModal, Modal, Textarea } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -25,13 +26,13 @@ interface HealthRatingModalProps {
   // Ngày còn PENDING; null = đóng
   day: HouseHealthDay | null;
   onClose: () => void;
-  // Backend trả ngày đầy đủ sau khi chấm hoặc bỏ qua — màn mở chi tiết ngày đó
-  onRevealed: (day: HouseHealthDay) => void;
+  // Chấm hoặc bỏ qua xong — màn mở chi tiết ngày đó
+  onDone: (day: HouseHealthDay) => void;
 }
 
-// EXPERT-FR-012, BR-31 — hỏi đánh giá của người dùng trước, chỉ hiện trạng thái hệ thống sau khi lưu hoặc bỏ qua
-export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRatingModalProps): JSX.Element | null {
-  const { t, date } = useTranslation(healthDict);
+// EXPERT-FR-012, BR-31 — hiện trạng thái và lý do của hệ thống, người dùng xác nhận hoặc sửa theo quan sát tại nhà
+export default function HealthRatingModal({ day, onClose, onDone }: HealthRatingModalProps): JSX.Element | null {
+  const { t, date, exact } = useTranslation(healthDict);
   const rate = useRateHealthDay();
   const skip = useSkipHealthDay();
   const push = useToastStore(state => state.push);
@@ -76,11 +77,11 @@ export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRa
     }
   }
 
-  function reveal(revealed: HouseHealthDay, message: string): void {
+  function finish(saved: HouseHealthDay, message: string): void {
     push(message);
     clearDraft();
     close();
-    onRevealed(revealed);
+    onDone(saved);
   }
 
   function handleSave(): void {
@@ -91,13 +92,13 @@ export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRa
     const trimmedNote = note.trim();
     rate.mutate(
       { dayId, rating, note: trimmedNote || undefined },
-      { onSuccess: revealed => reveal(revealed, t('rate.saved')), onError: showError },
+      { onSuccess: saved => finish(saved, t('rate.saved')), onError: showError },
     );
   }
 
   function handleSkip(): void {
     skip.mutate(dayId, {
-      onSuccess: revealed => reveal(revealed, t('skip.done')),
+      onSuccess: saved => finish(saved, t('skip.done')),
       onError: error => {
         setIsSkipOpen(false);
         showError(error);
@@ -120,6 +121,18 @@ export default function HealthRatingModal({ day, onClose, onRevealed }: HealthRa
           <hr className="border-gray-200" />
           {/* Thân cuộn được khi màn thấp; đầu popup và nút luôn hiện */}
           <div className="-mx-1 flex max-h-[60vh] flex-col gap-5 overflow-y-auto px-1">
+            {/* Trạng thái và lý do của hệ thống hiện trước, người dùng xác nhận hoặc sửa (BR-31) */}
+            <section className="flex flex-col gap-2 rounded-xl border border-warmGray/30 p-4" aria-label={t('detail.status')}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-charcoal">{t('detail.status')}</p>
+                <HealthStatusBadge status={day.current_status} />
+              </div>
+              <ul className="flex flex-col gap-1 border-l-2 border-warmGray/30 pl-3 text-sm text-charcoal" aria-label={t('detail.reasons')}>
+                {day.current_reasons.map((reason, index) => (
+                  <li key={`${reason.code}-${reason.source ?? ''}-${index}`}>{formatHealthReason(reason, t, value => exact(value, 1))}</li>
+                ))}
+              </ul>
+            </section>
             {/* Hướng dẫn quan sát BR-37, hiện trước khi chọn mức để mọi người đánh giá cùng một thước đo */}
             <section className="flex flex-col gap-2 rounded-xl bg-warmGray/[0.06] p-4" aria-label={t('rate.guideTitle')}>
               <p className="text-sm font-semibold text-charcoal">{t('rate.guideTitle')}</p>

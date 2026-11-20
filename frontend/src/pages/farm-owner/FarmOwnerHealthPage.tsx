@@ -45,7 +45,7 @@ function saveCsv(blob: Blob, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
-// MF-06 — trạng thái sức khỏe theo ngày của nhà yến và đánh giá ngày độc lập (BR-31); Farm Owner và Domain Expert
+// MF-06 — trạng thái sức khỏe theo ngày của nhà yến và đánh giá ngày sau khi xem trạng thái (BR-31); Farm Owner và Domain Expert
 export default function FarmOwnerHealthPage(): JSX.Element {
   const { t, lang } = useTranslation(healthDict);
   // Trạng thái tính theo nhà yến nên chỉ lọc tới nhà (ô Zone khoá)
@@ -222,7 +222,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
         />
       )}
 
-      <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onRevealed={setViewDay} />
+      <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onDone={setViewDay} />
       <HealthDayDrawer day={viewDay} onClose={() => setViewDay(null)} onChanged={setViewDay} />
       {house && (
         <HealthLevelsModal

@@ -79,19 +79,13 @@ export default function FarmOwnerDashboardPage() {
   // Phiếu chờ duyệt cùng phạm vi khung lọc với các ô khác (A-03)
   const { data: awaiting } = useAwaitingApproval(farmId, houseId)
   const today = vietnamDate()
-  const { days: daysToRate, isLoading: isLoadingDays, isError: isDaysError } = useHealthDays({
+  const { days: daysToRate } = useHealthDays({
     farmIds: isOwner ? scopeFarmIds : [],
     houseId: isOwner ? houseId : '',
     from: shiftDate(today, -RATING_WINDOW_DAYS),
     to: today,
     myRatingState: 'PENDING',
   })
-  // BR-31: chủ nhà chưa đánh giá ngày hôm nay của nhà thì chưa thấy trạng thái; chưa biết chắc (đang tải, lỗi) thì cũng ẩn
-  const isRatingUnknown = isOwner && (isLoadingDays || isDaysError)
-  const statusHiddenHouseIds = useMemo(
-    () => new Set(daysToRate.filter(day => day.date.slice(0, 10) === today).map(day => day.house_id)),
-    [daysToRate, today],
-  )
 
   // Thanh phạm vi trên header ở mọi khổ màn (dưới xl xuống hàng riêng)
   const header = (
@@ -162,7 +156,6 @@ export default function FarmOwnerDashboardPage() {
                   status={statusByHouse.get(node.house._id) ?? node.health}
                   sensors={sensorsByHouse.get(node.house._id) ?? NO_SENSORS}
                   overview={overviewByHouse.get(node.house._id)}
-                  hideTodayStatus={isRatingUnknown || statusHiddenHouseIds.has(node.house._id)}
                 />
               ))}
             </div>
