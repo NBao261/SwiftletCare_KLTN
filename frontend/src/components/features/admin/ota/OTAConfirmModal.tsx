@@ -61,7 +61,7 @@ export function OTAConfirmModal({ node, firmware, loading, onClose, onConfirm }:
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button onClick={onConfirm} loading={loading} className="flex-1 bg-charcoal text-white hover:bg-charcoal/90">
-            Đẩy OTA ngay
+            Gửi ngay
           </Button>
         </div>
       </div>
