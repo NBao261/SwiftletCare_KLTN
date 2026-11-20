@@ -8,7 +8,7 @@ import { Recommendation, type IRecommendation, type RecommendationStatus, type R
 import { RecommendationRule, type IRecommendationRule } from '@/models/recommendationRule.model'
 import { logAction } from '@/services/auditLog.service'
 import { updateZoneFuzzyTuning, updateZoneThresholds } from '@/services/farm.service'
-import { createInAppNotification, findRecipients } from '@/services/notification.service'
+import { createInAppNotification, findRecipients, notifyExpertsOfProposal } from '@/services/notification.service'
 import { createManualWorkOrder } from '@/services/workOrder.service'
 import { vnDate } from '@/services/birdCount.service'
 import { WorkOrder } from '@/models/workOrder.model'
@@ -16,7 +16,8 @@ import { emitRecommendationNew } from '@/socket'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { stageOn } from '@/utils/houseStage.util'
-import { assertFarmAccess, assertHouseAccess, findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import { assertFarmAccess, assertHouseAccess, farmHasActiveExpert, findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import type { IFarm } from '@/models/farm.model'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import {
@@ -27,7 +28,7 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@
 import type { CurrentUser } from '@/types'
 
 /**
- * EXPERT-FR-016…019, BR-42, Report 3 §6.21, Report 4 D19 / DF-15 — vòng khuyến nghị (MF-08): Domain Expert viết luật,
+ * EXPERT-FR-016…019, BR-42, Report 3 §6.21, Report 4 D19 / DF-15 — vòng khuyến nghị (MF-08): Domain Expert viết luật (Farm Owner viết thì chờ chuyên gia bật, BR-22),
  * mỗi ngày sau đánh giá ngày backend xét luật cho từng nhà, Farm Owner chấp nhận (Work Order hoặc thay đổi tham số
  * theo MF-05) hoặc từ chối, 7 ngày sau khi chấp nhận thì đo hiệu quả.
  */
@@ -36,7 +37,7 @@ const DAY_MS = 86_400_000
 /** 'YYYY-MM-DD' giờ VN → thời điểm đầu ngày đó */
 const vnDayStart = (date: string) => new Date(`${date}T00:00:00+07:00`)
 
-// ── Luật (Domain Expert) ─────────────────────────────────────────────────────
+// ── Luật (Domain Expert; Farm Owner đề xuất) ─────────────────────────────────
 
 async function loadRule(ruleId: string, user: CurrentUser) {
   const rule = await RecommendationRule.findById(ruleId)
@@ -58,27 +59,60 @@ export async function listRules(farmId: string, user: CurrentUser, query: { page
   return { records, total, page, limit }
 }
 
-/** EXPERT-FR-016 — Domain Expert viết luật (route chỉ DOMAIN_EXPERT); chỉ số không hỗ trợ, cửa sổ ngoài 1–30 → 400 */
+/**
+ * BR-22 (Report 3 4.2.15) — Farm Owner trên farm có chuyên gia: luật lưu tắt và chờ duyệt (`pending_approval`), không sửa
+ * được luật đang chạy; chuyên gia bật là duyệt, tắt là bỏ. Farm chưa có chuyên gia: Farm Owner bật được như chuyên gia.
+ */
+async function ownerNeedsApproval(farm: IFarm, user: CurrentUser): Promise<boolean> {
+  return user.role === 'FARM_OWNER' && (await farmHasActiveExpert(farm))
+}
+
+async function notifyRuleProposal(farm: IFarm, user: CurrentUser, rule: IRecommendationRule) {
+  await notifyExpertsOfProposal(farm._id, user, {
+    what: `đề xuất luật khuyến nghị "${rule.name}"`, body: 'Luật chỉ chạy khi chuyên gia bật.',
+    ref: { kind: 'recommendation_rule', id: String(rule._id) },
+  })
+}
+
+/** EXPERT-FR-016 — viết luật (Domain Expert, Farm Owner); chỉ số không hỗ trợ, cửa sổ ngoài 1–30 → 400 */
 export async function createRule(user: CurrentUser, input: Record<string, unknown>) {
   const farm = await assertFarmAccess(String(input.farm_id), user)
   const parsed = parseRuleInput(input)
-  const rule = await RecommendationRule.create({ ...parsed, farm_id: farm._id, author_id: user._id })
+  const needsApproval = await ownerNeedsApproval(farm, user)
+  const rule = await RecommendationRule.create({
+    ...parsed, farm_id: farm._id, author_id: user._id,
+    ...(needsApproval && { active: false, pending_approval: true }),
+  })
   await logAction(user._id, 'RECOMMENDATION_RULE_CREATED', 'recommendation_rule', String(rule._id), { ...parsed }, { farmId: String(farm._id) })
+  if (needsApproval) await notifyRuleProposal(farm, user, rule)
   return rule
 }
 
 /** EXPERT-FR-016 — sửa luật hoặc bật/tắt; khuyến nghị đã mở giữ nguyên bằng chứng lúc mở */
 export async function updateRule(ruleId: string, user: CurrentUser, input: Record<string, unknown>) {
   const { rule, farm } = await loadRule(ruleId, user)
+  const needsApproval = await ownerNeedsApproval(farm, user)
+  // Farm Owner trên farm có chuyên gia chỉ sửa đề xuất của mình đang chờ duyệt, không sửa luật chuyên gia đã quyết
+  if (needsApproval && !rule.pending_approval) throw ForbiddenError('Chỉ chuyên gia sửa hoặc bật, tắt luật này')
   const parsed = parseRuleInput(input, rule.active)
   const before = rule.toObject()
-  rule.set(parsed)
-  await rule.save()
+  // Farm Owner sửa đề xuất: vẫn tắt, chờ duyệt; chuyên gia bật hay tắt đều là đã quyết, hết chờ.
+  // Ghi có điều kiện: chuyên gia vừa bật hay tắt luật trong lúc đó thì 409, không để nội dung chưa duyệt chạy
+  const saved = await RecommendationRule.findOneAndUpdate(
+    needsApproval ? { _id: rule._id, pending_approval: true, active: false } : { _id: rule._id },
+    needsApproval ? { ...parsed, active: false, pending_approval: true } : { ...parsed, pending_approval: false },
+    { new: true, runValidators: true },
+  )
+  if (!saved) throw ConflictError('Chuyên gia vừa quyết định luật này, tải lại trang')
   await logAction(user._id, 'RECOMMENDATION_RULE_UPDATED', 'recommendation_rule', String(rule._id), {
-    before: { indicator: before.indicator, comparison: before.comparison, value: before.value, window_days: before.window_days, active: before.active },
+    before: {
+      name: before.name, indicator: before.indicator, comparison: before.comparison, value: before.value,
+      window_days: before.window_days, action: before.action, active: before.active,
+    },
     after: parsed,
   }, { farmId: String(farm._id) })
-  return rule
+  if (needsApproval) await notifyRuleProposal(farm, user, saved)
+  return saved
 }
 
 /** EXPERT-FR-019 — theo từng luật: số khuyến nghị đã mở, đã chấp nhận, đã đo, đã cải thiện */

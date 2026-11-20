@@ -49,6 +49,8 @@ export interface IHouseHealthReport extends Document {
   zone_sections: HouseReportZoneSection[]
   /** EXPERT-FR-006 — `at` lúc viết lần đầu, `edited_at` lần sửa gần nhất của tác giả */
   expert_conclusion?: { text: string; by: Types.ObjectId; at: Date; edited_at?: Date }
+  /** BR-22 (Report 3 4.2.15) — lần Farm Owner nhắc chuyên gia việc còn chờ (mỗi việc nhắc một lần) */
+  expert_reminded_at?: Date
 }
 
 const houseHealthReportSchema = new Schema<IHouseHealthReport>(
@@ -59,6 +61,7 @@ const houseHealthReportSchema = new Schema<IHouseHealthReport>(
     period_start: { type: String, required: true },
     period_end:   { type: String, required: true },
     generated_at: { type: Date, required: true },
+    expert_reminded_at: { type: Date },
     house_metrics: { type: Schema.Types.Mixed, required: true },
     zone_sections: [{ type: Schema.Types.Mixed }],
     expert_conclusion: {

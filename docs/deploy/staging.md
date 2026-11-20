@@ -153,6 +153,9 @@ Triển khai một tag mới:
 ```bash
 git fetch --tags && git checkout review-2
 sh deploy/staging-backup.sh                 # bản ngay trước khi triển khai
+# Migration nào đổi chỉ mục (VD migrate:review-targets của G-31) phải chạy TRƯỚC khi backend mới nhận request:
+# dựng ảnh mới, chạy migration bằng ảnh đó, rồi mới khởi động
+$C build backend && $C run --rm backend npm run migrate:review-targets
 $C up -d --build
 $C exec backend npm run migrate:retention   # và các migrate:* còn chờ
 ```

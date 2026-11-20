@@ -31,6 +31,8 @@ export interface IHouse extends Document {
   /** ENV-FR-030 — luật bù phun sương theo dự báo của nhà (BR-38); `_id` là `rule_id` gửi kèm offset */
   weather_rules: IWeatherRule[]
   weather_rules_history: Array<{ changed_by: Types.ObjectId; changed_by_role?: Role; changed_at: Date; old_values: unknown; new_values: unknown }>
+  /** BR-22, BR-38 — bộ luật Farm Owner gửi trên farm có chuyên gia, chỉ chạy khi chuyên gia duyệt; mỗi nhà một đề xuất */
+  weather_rules_proposal?: { rules: Array<WeatherRuleInput & { _id?: string }>; proposed_by: Types.ObjectId; proposed_at: Date } | null
   /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
@@ -119,6 +121,14 @@ const houseSchema = new Schema<IHouse>(
       duration_min: { type: Number, required: true },
       active:       { type: Boolean, default: true },
     }],
+    weather_rules_proposal: {
+      type: new Schema({
+        rules: { type: Schema.Types.Mixed, required: true },
+        proposed_by: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        proposed_at: { type: Date, required: true },
+      }, { _id: false }),
+      default: null,
+    },
     weather_rules_history: [{
       changed_by: { type: Schema.Types.ObjectId, ref: 'User' },
       changed_by_role: { type: String },

@@ -6,7 +6,8 @@ import { notifyExpertDecision } from '@/services/expertActivity.service'
 import {
   DEFAULT_WINDOWS, addDays, parseCountingSchedule, scheduleOn, windowsOn, type CountingSchedule,
 } from '@/utils/countingSchedule.util'
-import { assertExpertDecision, assertHouseAccess } from '@/utils/farmAccess.util'
+import { assertHouseAccess } from '@/utils/farmAccess.util'
+import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import type { CurrentUser } from '@/types'
 import logger from '@/utils/logger.util'
@@ -40,10 +41,9 @@ export async function getCountingSchedule(houseId: string, user: CurrentUser) {
   return present(house)
 }
 
-/** VISION-FR-019 — 400 khi lịch sai (countingSchedule.util), 403 khi Farm Owner sửa trên farm có chuyên gia */
-export async function updateCountingSchedule(houseId: string, user: CurrentUser, input: unknown) {
+/** VISION-FR-019 — 400 khi lịch sai (countingSchedule.util); Farm Owner trên farm có chuyên gia thì mở mục duyệt (BR-22) */
+export async function updateCountingSchedule(houseId: string, user: CurrentUser, input: unknown, opts: ReviewApplyOptions = {}) {
   const { house, farm } = await assertHouseAccess(houseId, user)
-  await assertExpertDecision(farm, user)
   const schedule = parseCountingSchedule(input)
   const before = house.counting_schedule ?? EMPTY
   const effectiveFrom = addDays(vnDate(new Date()), 1)
@@ -66,10 +66,14 @@ export async function updateCountingSchedule(houseId: string, user: CurrentUser,
 
   const auditId = await logAction(user._id, 'COUNTING_SCHEDULE_UPDATED', 'house', String(house._id), {
     before, after: schedule, effective_from: effectiveFrom, house_id: String(house._id),
+    ...(opts.fromReview && { decided_in: 'parameter_review' }),
   }, { farmId: String(farm._id) })
-  await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'đổi lịch đếm chim', place: `Nhà "${house.name}"`,
-    detail: `Áp từ ${effectiveFrom}: ${schedule.profiles.length} hồ sơ theo mùa, ${schedule.temporary.length} khung tạm`,
-  })
+  await trackParameterChange({ farm, house }, user, 'counting_schedule', before, schedule)
+  if (!opts.fromReview) {
+    await notifyExpertDecision(user, farm._id, auditId, {
+      what: 'đổi lịch đếm chim', place: `Nhà "${house.name}"`,
+      detail: `Áp từ ${effectiveFrom}: ${schedule.profiles.length} hồ sơ theo mùa, ${schedule.temporary.length} khung tạm`,
+    })
+  }
   return present(house)
 }

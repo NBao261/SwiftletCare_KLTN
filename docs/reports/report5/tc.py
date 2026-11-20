@@ -133,8 +133,8 @@ TC=[
  [(J,I+'detectionTuning.test.ts','Domain Expert lưu tham số kèm lịch sử + audit'),(J,I+'detectionTuning.test.ts','mức giảm tỷ lệ chim về gửi nhầm vào Zone'),(J,I+'detectionTuning.test.ts','Zone: về DEFAULT_DETECTION_TUNING')]),
 ('TC-F14-02','F-14','Camera of the house','PUT a counting ring as the expert, then as the Farm Technician of the house and of another house','Ring of 6 vertices','Stored with history and audit, sent to the AI node of the house, no RTSP address returned; the technician of the house accepted, of another house 403',
  [(J,I+'countingRing.test.ts','Domain Expert lưu vòng kèm lịch sử + audit'),(J,I+'technicianAccess.test.ts','draws the counting ring in the assigned house only')]),
-('TC-F14-03','F-14','Farm with an expert','PUT detection tuning as the Farm Owner','Valid values','Read allowed, write rejected (403)',
- (J,I+'detectionTuning.test.ts','Farm Owner xem được nhưng không sửa được')),
+('TC-F14-03','F-14','Farm with an expert','PUT detection tuning as the Farm Owner','Valid values','Applied at once and sent to the devices; a review item PENDING_REVIEW with the old and new values opened and the expert notified (BR-22, EXPERT-FR-010)',
+ (J,I+'detectionTuning.test.ts','Farm Owner trên farm có chuyên gia: áp ngay và mở mục duyệt')),
 # F-15
 ('TC-F15-01','F-15','≥ 3 days of telemetry of a fast-drying zone','GET the tuning suggestion','—','Suggestion keeps the zone in range longer; nothing applied',
  (J,I+'tuningSuggestion.test.ts','suggests tuning that keeps a fast-drying house in range longer')),

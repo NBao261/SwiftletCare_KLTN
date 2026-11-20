@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.18 (Review 2, final scope) |
+| Document version | 2.2.19 (Review 2, final scope) |
 | Date | 19/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.14 (`docs/reports/report3-srs.md`) |
+| Requirements baseline | Report 3 – SRS 4.2.15 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -219,7 +219,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D4 | Database | Relational (PostgreSQL); time-series DB; MongoDB | **MongoDB** with Mongoose: telemetry as documents with TTL (90 days), flexible embedded histories (thresholds, tuning), one store for the whole system; schema enforced by `$jsonSchema` validators generated from the models | Section 6 |
 | D5 | Where bird counting runs | Raspberry Pi at the house; cloud GPU server fed by the camera stream; desktop PC at the house; **the team's spare PC at a member's home** | **Spare PC at a member's home, reading the camera over the Internet**: no new hardware and more compute than a Raspberry Pi, no paid GPU server, and the machine stays dry and is maintained where the team lives instead of in a humid house nobody visits. The house's VNPT line has a static public IP, so the camera's RTSP feed (1080p, about 2 Mbps) is pulled over TCP through one forwarded port. Costs: the house's uplink carries the feed during the sessions; an outage of either line leaves the session incomplete (VISION-FR-020); the forwarded port answers only the AI node's static public IP (source-IP rule on the house modem, NFR-10 e) and the camera has a strong password. Checked by a 24-hour pull test and by counting the same clip read locally and over the Internet; throughput is measured on this PC (NFR-04). One camera per entrance, counts per house | VISION-FR-002, 020, THREAT-FR-010, NFR-04 |
 | D6 | Counting geometry | Straight virtual line; ring around the hole with tracking only near it; ring with whole-frame tracking | **Whole-frame tracking and a closed ring around the hole, with extrapolation of fast tracks**: birds leave the hole in every direction, so a line misses some; at the hole a bird is a 1–2-frame blur moving 150–200 px/frame (clip of 22/10/2026), so tracking near the hole alone never gives it an identity — tracked over the whole room it already has one, and a fast track lost just outside the ring is counted by its last velocity. Fly-pasts cancel in the net count | VISION-FR-004, 005, 009, 018, BR-25 |
-| D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Owner changes apply at once and open a review item; only the expert applies system suggestions; without an expert the owner decides** — safety on site is never blocked and every parameter is still validated | EXPERT-FR-010, 011, BR-22 |
+| D7 | Expert in the loop | Expert approval blocks every change; changes apply at once with no review | **Three groups (BR-22): the owner's parameter changes (thresholds, coefficients, detection parameters, return-rate drop, health levels, counting schedule and ring) apply at once and open a review item; weather rules, configuration profiles, recommendation rules and system suggestions wait for the expert's approval; inferred-alert verdicts and conclusions stay the expert's, with a one-time reminder from the owner; without an expert the owner decides** — safety on site is never blocked, every parameter is still validated, and what acts on the houses by itself (weather offsets, profiles, rules, machine suggestions) is checked by the expert first | EXPERT-FR-010, 011, 014, 016, ENV-FR-030, BR-22 |
 | D8 | Live video path | Through the backend; dedicated video server | **MediaMTX** with short-lived viewing tokens checked by the backend: the API never carries video, raw feed only for the pipeline | VISION-FR-013 |
 | D9 | Device identity and setup | Technician types device ID and key on a web console; QR code shown on the controller's AP-mode page; small display on the board; Bluetooth (BLE) provisioning; **printed label QR code plus a code on each floor** | **Printed label with device ID and activation key, and a floor code**: the ESP32 has no display or code of its own, and a label needs no hardware or firmware change because the key is checked only by the backend and never stored on the controller. Floors share one Wi-Fi network, so the floor cannot be told by radio; scanning its code replaces choosing from a list. Farm, house and zone are kept only by the backend (D3), so they are never entered on the device and a move, online or offline, needs no visit. A display or BLE would add hardware or much more firmware for the same two steps. Optional later: derive the device ID from the factory MAC address so every board runs one firmware image | FARM-FR-003, 003c, 007, 007b, 010, 011, 012, BR-26, 27 |
 | D10 | How the sources are combined into a house's health | Weighted health score; classifier trained on labelled days; **transparent rules with agreement between sources** | **Rules with agreement**: no source gives weights, and there are no labelled days to train on yet; each source is compared with the house's own past or with sourced ranges, a status needs two sources to reach `ACTION`, every status lists the indicators behind it, and the levels are set by the expert. The rules are judged by agreement with practitioners' on-site ratings (NFR-14); a learned model can be tried later on the rated days | ANALYTICS-FR-012, 014, BR-28…31 |
@@ -328,7 +328,7 @@ Background jobs:
 
 Both clients follow the same pattern: TanStack Query for server state, Zustand for session state, axios for REST, socket.io-client for real-time events, one route group per role, data from the API only (no mock data). The web application is a PWA with the Farm Owner, Farm Technician, Domain Expert and Administrator screens; the mobile application uses Expo Router and serves the Farm Owner, the Farm Technician and the Domain Expert with the scope of the registration form (3.2 b): monitoring, count analytics and the live stream, alerts with push, manual override, device setup by QR code, daily health status, reports and ratings, harvest logging, and expert validation and tuning.
 
-Domain Expert on the web: the expert reads the Farm Owner's operational pages (dashboard, analytics, vision, devices, harvests) in read-only mode, without a copy of them, and works in its own area for its decisions (work queue, alert verdicts, detection parameters, counting ring and schedule, thresholds and coefficients, reports and conclusions, activity history); those decision pages open to a Farm Owner while the farm has no expert (BR-22), the backend deciding who may act.
+Domain Expert on the web: the expert reads the Farm Owner's operational pages (dashboard, analytics, vision, devices, harvests) in read-only mode, without a copy of them, and works in its own area for its decisions (work queue, alert verdicts, detection parameters, counting ring and schedule, thresholds and coefficients, reports and conclusions, activity history); those decision pages open to a Farm Owner, who decides there while the farm has no expert and, on a farm with one, changes parameters with a review item, sends proposals and reminds the expert (BR-22), the backend deciding who may act.
 
 Live stream (VISION-FR-013): the web plays WebRTC (WHEP) and the mobile app plays HLS with `expo-video`, both from MediaMTX with the same 60-second token. The counting-ring editor draws the ring over a frame of the stream (web for the Domain Expert, mobile for the Farm Technician on site, VISION-FR-018).
 
@@ -561,6 +561,7 @@ erDiagram
     array stage_history
     array technicians "user_id, primary, roster shifts"
     array weather_rules "condition, offset, max duration"
+    object weather_rules_proposal "rules proposed by the Farm Owner, proposed_by, proposed_at (BR-22)"
     array tuning_history
   }
   ZONE {
@@ -732,7 +733,7 @@ erDiagram
     ObjectId _id PK
     ObjectId user_id FK
     string title
-    object ref "kind: alert | health_report | health_day | expert_decision | parameter_review | coefficient_proposal | work_order | device_action; id"
+    object ref "kind: alert | health_report | health_day | expert_decision | parameter_review | coefficient_proposal | work_order | device_action | weather_rules | config_profile | recommendation_rule | harvest_cycle; id"
     date read_at
     date created_at
   }
@@ -859,9 +860,12 @@ erDiagram
   }
   PARAMETER_REVIEW {
     ObjectId _id PK
+    ObjectId target_id "zone, house or camera of the group"
     ObjectId zone_id FK
+    ObjectId house_id FK
+    ObjectId camera_node_id FK
     ObjectId changed_by FK
-    string group "thresholds | fuzzy"
+    string group "thresholds | fuzzy | detection | return_rate_drop | health_levels | counting_schedule | counting_ring"
     object old_values
     object new_values
     string status "PENDING_REVIEW | ACCEPTED | REVERTED | ADJUSTED"
@@ -906,6 +910,7 @@ erDiagram
   ZONE ||--o{ HARVEST_BATCH : "harvested"
   USER ||--o{ AUDIT_LOG : "acts"
   ZONE ||--o{ PARAMETER_REVIEW : "owner changes"
+  HOUSE ||--o{ PARAMETER_REVIEW : "owner changes"
   ZONE ||--o{ COEFFICIENT_PROPOSAL : "suggestions"
   HOUSE ||--o{ WORK_ORDER : "work orders"
   ALERT ||--o| WORK_ORDER : "repair"
@@ -948,7 +953,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `notifications` | In-app notification | `user_id + created_at`; TTL | |
 | `harvestbatches` | Harvest | `trace_code` unique; `farm_id + harvest_date`; `zone_id + status` | `DRAFT` until confirmed; soft delete; photo in MinIO |
 | `auditlogs` | Audit entry | `actor_id + created_at`, `farm_id + created_at`, `target_type + target_id`, `action + created_at` | Source of the expert activity history |
-| `parameterreviews` | Review item | `zone_id + group + status` | One open item per zone and group |
+| `parameterreviews` | Review item | `target_id + group` (unique while `PENDING_REVIEW`), `zone_id + group + status` | One open item per zone, house or camera and group (`npm run migrate:review-targets`) |
 | `coefficientproposals` | Proposal | `zone_id + status`; `zone_id` unique while `PROPOSED` | One open proposal per zone |
 | `systemsettings` | Singleton settings | `_singleton` unique | Default thresholds and their sourced history |
 | `workorders` | Work Order | `house_id + status`; `assignee_id + status`; partial unique `alert_id` while not closed | One open Work Order per alert; photos in MinIO |
@@ -1018,13 +1023,13 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
 | `/analytics` | Charts (with the farm's hourly outdoor weather on the same buckets, ANALYTICS-FR-013), comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
 | `/health-reports` | Daily, weekly and monthly reports per house and conclusions; disagreeing days and house levels (EXPERT-FR-022); daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (with the status, whether or not the caller has rated the day, BR-31) |
-| `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
+| `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011), the Farm Owner's reminders to the expert (BR-22) |
 | `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
 | `/harvests` | Harvest batches (entry, confirmation), harvest cycles of a zone and the season conclusion |
 | `/work-orders` | Work Orders: list per house or assignee, open, start, done with cause, photos and checklist, approve, reopen, cancel, reassign |
 | `/maintenance` | Maintenance plans and checklist templates, maintenance and calibration records, due list |
-| `/recommendations` | Recommendation rules (expert), recommendations of a house, accept, reject, effect per rule |
-| `/profiles` | Configuration profiles: draft, approve, archive, apply to houses |
+| `/recommendations` | Recommendation rules (expert; the Farm Owner's wait inactive on a farm with an expert, BR-22), recommendations of a house, accept, reject, effect per rule |
+| `/profiles` | Configuration profiles: draft (expert or Farm Owner), approve and archive (expert), apply to houses (Farm Owner) |
 | `/farms/{id}/overview`, `/farms/{id}/comparison` | Farm overview and house comparison with MTTA, MTTR and energy (ANALYTICS-FR-015…017, OPS-FR-009) |
 | `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key), Farm Owner's account, lock, deletion requests, default thresholds, audit log, technical overview with every device and its device alerts |
 | `/internal/stream-auth`, `/internal/mqtt-auth` | MediaMTX authorisation and EMQX device authentication (no user token, reachable only inside the Docker network) |
@@ -1556,8 +1561,8 @@ flowchart TB
 ```mermaid
 flowchart TB
   subgraph O[Farm Owner]
-    O1[Edit thresholds or coefficients,<br/>applied at once] --> O2[Review item for the expert]
-    O3[Submit a suggestion to the expert]
+    O1[Edit thresholds, coefficients, detection parameters,<br/>health levels, counting ring or schedule,<br/>applied at once] --> O2[Review item for the expert]
+    O3[Submit a suggestion, propose weather rules,<br/>draft a profile or a recommendation rule]
     O4[Read the expert's decisions]
   end
   subgraph B[Backend]
@@ -1570,9 +1575,9 @@ flowchart TB
   subgraph E[Domain Expert - the Farm Owner on a farm without one, BR-22]
     E1{Owner change OK?} -- yes --> E2[Accept]
     E1 -- no --> E3[Revert or adjust]
-    E4{Approve suggestion?} -- yes --> E5[Apply coefficients]
+    E4{Approve the proposal?} -- yes --> E5[Apply it]
     E4 -- no --> E6[Reject with note]
-    E7[Tune detection parameters,<br/>counting ring and schedule]
+    E7[Tune detection parameters,<br/>counting ring and schedule, weather rules]
   end
   subgraph C[Controller and AI node]
     C1[Receive retained configuration,<br/>report applied version]
@@ -1883,6 +1888,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.19 | 21/11/2026 | The Farm Owner decides, the Domain Expert reviews (Report 3 4.2.15, BR-22): D7 rewritten in three groups; the review item gains the groups `detection`, `return_rate_drop`, `health_levels`, `counting_schedule`, `counting_ring` with `target_id`, `house_id`, `camera_node_id` (one open item per target and group); weather rule proposals on the house, recommendation rules awaiting approval, profile drafts by the Farm Owner and the Farm Owner's reminders (`POST /expert-activity/reminders`) added to the module table, the notification refs and the MF-05 diagram; header baseline SRS 4.2.15 |
 | 2.2.18 | 20/11/2026 | The daily rating is no longer blind (Report 3 4.2.14, BR-31): the endpoints return the status, reasons and other ratings whether or not the caller has rated; the rating screen shows the system's status and asks the assessor to confirm or correct it; the snapshot stored with each rating stays (D16); header baseline SRS 4.2.14 |
 | 2.2.17 | 19/11/2026 | WebSocket events as built (Section 7.3, DF-13): there are no `ALERT_ESCALATED` or `WORK_ORDER_UPDATE` events; an escalation goes out by push and Telegram, and the Work Order changes that notify (opened, reopened, reassigned, not started, awaiting approval) reach their people as in-app notifications (`NOTIFICATION_NEW`); the web does not scan QR codes (Sections 3.2, 5.4): `html5-qrcode` removed, scanning stays in the mobile app (FARM-FR-003), and the web setup screen shows the configuration step of FARM-FR-012 |
 | 2.2.16 | 19/11/2026 | Section 5.4: the Farm Technician's web screens are listed (devices with restart, alerts with on-site cause, assigned houses with own shifts, notifications, settings); the rest of its work is on mobile; header baseline SRS 4.2.12 |

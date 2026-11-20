@@ -6,7 +6,9 @@ import { publishDeviceCompensation } from '@/mqtt/mqtt.client'
 import { logAction } from '@/services/auditLog.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { OPEN_METEO_URL, WEATHER_FETCH_TIMEOUT_MS } from '@/services/weather.service'
-import { assertExpertDecision, assertHouseAccess } from '@/utils/farmAccess.util'
+import { assertExpertDecision, assertHouseAccess, farmHasActiveExpert } from '@/utils/farmAccess.util'
+import { ConflictError, ForbiddenError } from '@/utils/appError.util'
+import { notifyExpertsOfProposal } from '@/services/notification.service'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import {
   assertValidWeatherRules, pickCompensation, summariseForecast, WEATHER_COMP_MAX_MS,
@@ -26,13 +28,20 @@ const ruleView = (rules: IHouse['weather_rules']) => rules.map(r => ({
   _id: String(r._id), metric: r.metric, min: r.min, offset_pct: r.offset_pct, duration_min: r.duration_min, active: r.active,
 }))
 
-/** ENV-FR-030 — luật của nhà và lần bù gần nhất; Farm Owner, Domain Expert, Farm Technician của nhà đều xem */
+const proposalView = (proposal: IHouse['weather_rules_proposal']) => proposal && {
+  rules: proposal.rules.map(r => ({ ...(r._id && { _id: String(r._id) }), metric: r.metric, min: r.min, offset_pct: r.offset_pct, duration_min: r.duration_min, active: r.active !== false })),
+  proposed_by: String(proposal.proposed_by),
+  proposed_at: proposal.proposed_at,
+}
+
+/** ENV-FR-030 — luật của nhà, đề xuất đang chờ và lần bù gần nhất; Farm Owner, Domain Expert, Farm Technician của nhà đều xem */
 export async function getWeatherRules(houseId: string, user: CurrentUser) {
   const { house } = await assertHouseAccess(houseId, user)
   const last = await WeatherCompensation.findOne({ house_id: house._id }).sort({ sent_at: -1 }).lean()
   return {
     house_id: String(house._id),
     rules: ruleView(house.weather_rules),
+    proposal: proposalView(house.weather_rules_proposal) ?? null,
     last_compensation: last && {
       rule_id: String(last.rule_id), offset_pct: last.offset_pct, sent_at: last.sent_at, expires_at: last.expires_at,
       forecast: last.forecast,
@@ -45,12 +54,8 @@ export async function getWeatherRules(houseId: string, user: CurrentUser) {
  * chuyên gia đổi (EXPERT-FR-009). Luật giữ `_id` cũ khi gửi kèm, để `rule_id` trong nhật ký bù vẫn trỏ đúng;
  * `_id` không thuộc nhà này hoặc gửi trùng thì bỏ, Mongoose cấp id mới. Luật mới có hiệu lực từ lần job kế tiếp.
  */
-export async function setWeatherRules(
-  houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>,
-) {
-  const { house, farm } = await assertHouseAccess(houseId, user)
-  // BR-22 — Farm Owner chỉ đặt thay khi farm chưa có chuyên gia; Farm Technician đã bị chặn ở route
-  await assertExpertDecision(farm, user)
+/** Bộ luật mới của nhà: giữ `_id` cũ khi gửi kèm và thuộc nhà này (gửi trùng thì bỏ), kiểm khoảng BR-38 (400) */
+function buildRules(house: IHouse, rules: Array<WeatherRuleInput & { _id?: string }>) {
   const ownIds = new Set(house.weather_rules.map(r => String(r._id)))
   const keptIds = new Set<string>()
   const next = rules.map(r => {
@@ -64,9 +69,25 @@ export async function setWeatherRules(
     }
   })
   assertValidWeatherRules(next)
+  return next
+}
+
+export async function setWeatherRules(
+  houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>,
+  // Đặt từ đề xuất đã duyệt: câu thông báo cho Farm Owner nói rõ là duyệt đề xuất
+  what = 'đặt luật bù phun sương theo thời tiết',
+) {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  // BR-22, BR-38 — Farm Owner đặt trực tiếp chỉ khi farm chưa có chuyên gia; có chuyên gia thì gửi đề xuất
+  // (POST …/weather-rules/proposal). Farm Technician đã bị chặn ở route
+  await assertExpertDecision(farm, user)
+  const next = buildRules(house, rules)
 
   const before = ruleView(house.weather_rules)
   house.set('weather_rules', next)
+  // Chuyên gia tự đặt luật thì đề xuất đang chờ không còn khớp: bỏ, ghi lại trong audit và báo Farm Owner
+  const dropped = house.weather_rules_proposal ? proposalView(house.weather_rules_proposal) : null
+  house.weather_rules_proposal = null
   const after = ruleView(house.weather_rules)
   house.weather_rules_history.push({
     changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_values: before, new_values: after,
@@ -76,13 +97,74 @@ export async function setWeatherRules(
   await house.save()
 
   const auditId = await logAction(user._id, 'WEATHER_RULES_UPDATED', 'house', String(house._id), {
-    before, after, house_id: String(house._id),
+    before, after, house_id: String(house._id), ...(dropped && { dropped_proposal: dropped }),
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'đặt luật bù phun sương theo thời tiết', place: `Nhà "${house.name}"`,
-    detail: `${after.filter(r => r.active).length} luật đang bật`,
+    what, place: `Nhà "${house.name}"`,
+    detail: [`${after.filter(r => r.active).length} luật đang bật`, dropped && 'đề xuất đang chờ của chủ nhà yến đã bỏ']
+      .filter(Boolean).join(', '),
   })
   return { house_id: String(house._id), rules: after }
+}
+
+/**
+ * BR-22, BR-38 (Report 3 4.2.15) — Farm Owner trên farm có chuyên gia gửi bộ luật để chuyên gia duyệt: lưu đề xuất
+ * (gửi lại thì thay), báo chuyên gia trong ứng dụng; luật đang chạy không đổi. Farm chưa có chuyên gia → 409 (đặt
+ * trực tiếp bằng PUT).
+ */
+export async function proposeWeatherRules(houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>) {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất luật bù phun sương')
+  if (!(await farmHasActiveExpert(farm))) throw ConflictError('Farm chưa có chuyên gia: đặt luật trực tiếp')
+  house.weather_rules_proposal = { rules: buildRules(house, rules), proposed_by: user._id as never, proposed_at: new Date() }
+  await house.save()
+
+  await logAction(user._id, 'WEATHER_RULES_PROPOSED', 'house', String(house._id), {
+    rules: house.weather_rules_proposal.rules, house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertsOfProposal(farm._id, user, {
+    what: 'đề xuất luật bù phun sương', body: `Nhà "${house.name}": luật mới chỉ chạy khi chuyên gia duyệt.`,
+    ref: { kind: 'weather_rules', id: String(house._id) },
+  })
+  return proposalView(house.weather_rules_proposal)
+}
+
+/**
+ * Lấy đề xuất chuyên gia đã xem (`proposed_at` của bản trên màn) ra khỏi nhà bằng một lệnh ghi có điều kiện: Farm Owner
+ * vừa gửi lại, hoặc chuyên gia khác vừa duyệt hay từ chối thì 409, không áp nhầm bản chưa xem
+ */
+async function takeProposal(houseId: string, user: CurrentUser, seenAt: string) {
+  const { house, farm } = await assertHouseAccess(houseId, user)
+  if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ Domain Expert duyệt đề xuất luật bù phun sương')
+  const taken = await House.findOneAndUpdate(
+    { _id: house._id, 'weather_rules_proposal.proposed_at': new Date(seenAt) },
+    { weather_rules_proposal: null },
+  ).select('weather_rules_proposal').lean()
+  if (!taken?.weather_rules_proposal) throw ConflictError('Đề xuất đã đổi hoặc đã được xử lý, tải lại trang')
+  return { house, farm, proposal: taken.weather_rules_proposal }
+}
+
+/** Chuyên gia duyệt: áp bộ luật đề xuất như khi tự đặt (lịch sử, audit, báo Farm Owner — EXPERT-FR-009); áp lỗi thì trả đề xuất lại */
+export async function approveWeatherRulesProposal(houseId: string, user: CurrentUser, seenAt: string) {
+  const { house, proposal } = await takeProposal(houseId, user, seenAt)
+  try {
+    return await setWeatherRules(houseId, user, proposal.rules, 'duyệt đề xuất luật bù phun sương của chủ nhà yến')
+  } catch (err) {
+    await House.updateOne({ _id: house._id, weather_rules_proposal: null }, { weather_rules_proposal: proposal })
+    throw err
+  }
+}
+
+/** Chuyên gia từ chối kèm lý do (bắt buộc, 422 ở route): bỏ đề xuất, luật đang chạy giữ nguyên, báo Farm Owner */
+export async function rejectWeatherRulesProposal(houseId: string, user: CurrentUser, note: string, seenAt: string) {
+  const { house, farm, proposal } = await takeProposal(houseId, user, seenAt)
+  const auditId = await logAction(user._id, 'WEATHER_RULES_PROPOSAL_REJECTED', 'house', String(house._id), {
+    rules: proposal.rules, note: note.trim(), house_id: String(house._id),
+  }, { farmId: String(farm._id) })
+  await notifyExpertDecision(user, farm._id, auditId, {
+    what: 'từ chối đề xuất luật bù phun sương', place: `Nhà "${house.name}"`, detail: `Lý do: ${note.trim()}`,
+  })
+  return { house_id: String(house._id), rules: ruleView(house.weather_rules) }
 }
 
 /** ENV-FR-028 — dự báo 2 giờ tới tại toạ độ farm; lỗi mạng hoặc Open-Meteo lỗi thì null (nơi gọi gửi 0) */

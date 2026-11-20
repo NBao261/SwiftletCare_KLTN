@@ -80,6 +80,9 @@ ensureCollection("alerts", {
     "renotified_at": {
       "bsonType": ["date", "null"]
     },
+    "expert_reminded_at": {
+      "bsonType": ["date", "null"]
+    },
     "expert_verdict": {
       "bsonType": ["object", "null"],
       "properties": {
@@ -861,6 +864,9 @@ ensureCollection("harvestcycles", {
     "incomplete": {
       "bsonType": ["bool", "null"]
     },
+    "expert_reminded_at": {
+      "bsonType": ["date", "null"]
+    },
     "conclusion": {
       "bsonType": ["object", "null"],
       "properties": {
@@ -1144,6 +1150,9 @@ ensureCollection("househealthreports", {
     "generated_at": {
       "bsonType": "date"
     },
+    "expert_reminded_at": {
+      "bsonType": ["date", "null"]
+    },
     "house_metrics": {},
     "zone_sections": {
       "bsonType": ["array", "null"],
@@ -1220,6 +1229,19 @@ ensureCollection("houses", {
         },
         "required": ["metric", "min", "offset_pct", "duration_min"]
       }
+    },
+    "weather_rules_proposal": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "rules": {},
+        "proposed_by": {
+          "bsonType": "objectId"
+        },
+        "proposed_at": {
+          "bsonType": "date"
+        }
+      },
+      "required": ["rules", "proposed_by", "proposed_at"]
     },
     "weather_rules_history": {
       "bsonType": ["array", "null"],
@@ -1573,7 +1595,7 @@ ensureCollection("notifications", {
       "properties": {
         "kind": {
           "bsonType": "string",
-          "enum": ["alert", "health_report", "health_day", "expert_decision", "parameter_review", "coefficient_proposal", "work_order", "device_action"]
+          "enum": ["alert", "health_report", "health_day", "expert_decision", "parameter_review", "coefficient_proposal", "work_order", "device_action", "weather_rules", "config_profile", "recommendation_rule", "harvest_cycle"]
         },
         "id": {
           "bsonType": "objectId"
@@ -1600,15 +1622,24 @@ db.getCollection("notifications").createIndex({"created_at":1}, {"expireAfterSec
 ensureCollection("parameterreviews", {
   "bsonType": "object",
   "properties": {
-    "zone_id": {
+    "target_id": {
       "bsonType": "objectId"
+    },
+    "zone_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "house_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "camera_node_id": {
+      "bsonType": ["objectId", "null"]
     },
     "farm_id": {
       "bsonType": "objectId"
     },
     "group": {
       "bsonType": "string",
-      "enum": ["thresholds", "fuzzy"]
+      "enum": ["thresholds", "fuzzy", "detection", "return_rate_drop", "health_levels", "counting_schedule", "counting_ring"]
     },
     "old_values": {},
     "new_values": {},
@@ -1635,10 +1666,10 @@ ensureCollection("parameterreviews", {
       "bsonType": ["date", "null"]
     }
   },
-  "required": ["zone_id", "farm_id", "group", "old_values", "new_values", "changed_by"]
+  "required": ["target_id", "farm_id", "group", "old_values", "new_values", "changed_by"]
 })
 db.getCollection("parameterreviews").createIndex({"zone_id":1,"group":1,"status":1})
-db.getCollection("parameterreviews").createIndex({"zone_id":1,"group":1}, {"unique":true,"partialFilterExpression":{"status":"PENDING_REVIEW"}})
+db.getCollection("parameterreviews").createIndex({"target_id":1,"group":1}, {"unique":true,"partialFilterExpression":{"status":"PENDING_REVIEW"}})
 db.getCollection("parameterreviews").createIndex({"farm_id":1,"created_at":-1})
 
 // ── provisioneddevices (model ProvisionedDevice) ──
@@ -1742,6 +1773,9 @@ ensureCollection("recommendationrules", {
       "bsonType": "string"
     },
     "active": {
+      "bsonType": ["bool", "null"]
+    },
+    "pending_approval": {
       "bsonType": ["bool", "null"]
     },
     "_id": {
