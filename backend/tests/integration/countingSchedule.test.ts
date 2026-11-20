@@ -14,6 +14,7 @@ import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
@@ -131,11 +132,14 @@ describe('VISION-FR-019 — counting schedule', () => {
     expect((await s.call('put', s.t.expert, { profiles: 'mùa mưa' })).status).toBe(422)
   })
 
-  it('BR-22: the Farm Owner is rejected while the farm has a Domain Expert and accepted while it has none', async () => {
+  it('BR-22: the Farm Owner sets it on both farms; with a Domain Expert the change opens a review item', async () => {
     const withExpert = await seed()
-    expect((await withExpert.call('put', withExpert.t.owner, { temporary: [] })).status).toBe(403)
+    expect((await withExpert.call('put', withExpert.t.owner, { temporary: [] })).status).toBe(200)
+    expect(await ParameterReview.findOne({ target_id: withExpert.house._id, group: 'counting_schedule' }).lean())
+      .toMatchObject({ status: 'PENDING_REVIEW', house_id: withExpert.house._id })
     const withoutExpert = await seed({ withExpert: false })
     expect((await withoutExpert.call('put', withoutExpert.t.owner, { temporary: [] })).status).toBe(200)
+    expect(await ParameterReview.countDocuments({ target_id: withoutExpert.house._id })).toBe(0)
   })
 })
 

@@ -13,6 +13,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
+import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
 import { WeatherCompensation } from '@/models/weatherCompensation.model'
 import { publishDeviceCompensation } from '@/mqtt/mqtt.client'
@@ -45,7 +46,7 @@ afterAll(async () => {
 afterEach(async () => {
   jest.restoreAllMocks()
   jest.clearAllMocks()
-  await Promise.all([AuditLog, Farm, House, Zone, SensorNode, User, WeatherCompensation].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([AuditLog, Farm, House, Zone, Notification, SensorNode, User, WeatherCompensation].map(m => (m as typeof User).deleteMany({})))
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -74,8 +75,10 @@ async function seed({ withExpert = true } = {}) {
   const put = (token: string, rules: object[]) =>
     request(app).put(`/farms/houses/${house._id}/weather-rules`).set('Authorization', `Bearer ${token}`).send({ rules })
   const get = (token: string) => request(app).get(`/farms/houses/${house._id}/weather-rules`).set('Authorization', `Bearer ${token}`)
+  const proposal = (token: string, action = '', body: object = {}) =>
+    request(app).post(`/farms/houses/${house._id}/weather-rules/proposal${action}`).set('Authorization', `Bearer ${token}`).send(body)
   return {
-    farm, house, put, get,
+    farm, house, put, get, proposal, owner, expert,
     t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT'), tech: tokenFor(tech._id, 'FARM_TECHNICIAN') },
   }
 }
@@ -213,5 +216,52 @@ describe('ENV-FR-030 — PUT /farms/houses/:houseId/weather-rules', () => {
   it('lets the Farm Owner set the rules on a farm without an expert (BR-22)', async () => {
     const { put, t } = await seed({ withExpert: false })
     expect((await put(t.owner, [HOT_RULE])).status).toBe(200)
+  })
+})
+
+describe('BR-22, BR-38 — đề xuất luật bù phun sương của Farm Owner (Report 3 4.2.15)', () => {
+  it('farm có chuyên gia: đề xuất không đổi luật đang chạy, chuyên gia được báo; duyệt thì luật có hiệu lực và chủ được báo', async () => {
+    const { house, get, proposal, owner, expert, t } = await seed()
+    const sent = await proposal(t.owner, '', { rules: [HOT_RULE] })
+    expect(sent.status).toBe(201)
+    expect(sent.body.data.rules).toEqual([expect.objectContaining({ metric: 'temperature', offset_pct: 5, active: true })])
+    const before = (await get(t.owner)).body.data
+    expect(before.rules).toEqual([])
+    expect(before.proposal).toMatchObject({ rules: [expect.objectContaining({ min: 33 })] })
+    expect(await Notification.countDocuments({ user_id: expert._id, 'ref.kind': 'weather_rules' })).toBe(1)
+
+    await proposal(t.owner, '/approve').expect(403)
+    const approved = await proposal(t.expert, '/approve')
+    expect(approved.status).toBe(200)
+    expect(approved.body.data.rules).toHaveLength(1)
+    const saved = (await House.findById(house._id).lean())!
+    expect(saved.weather_rules_proposal).toBeNull()
+    expect(saved.weather_rules_history.at(-1)!.changed_by_role).toBe('DOMAIN_EXPERT')
+    expect(await Notification.countDocuments({ user_id: owner._id })).toBe(1)
+    await proposal(t.expert, '/approve').expect(409)
+  })
+
+  it('chuyên gia từ chối phải ghi lý do (422); từ chối thì bỏ đề xuất, luật đang chạy giữ nguyên, chủ được báo', async () => {
+    const { house, put, proposal, owner, t } = await seed()
+    await put(t.expert, [HOT_RULE]).expect(200)
+    await proposal(t.owner, '', { rules: [{ ...HOT_RULE, offset_pct: 8 }] }).expect(201)
+    await proposal(t.expert, '/reject', { note: ' ' }).expect(422)
+    await proposal(t.expert, '/reject', { note: 'Mùa này chưa cần phun thêm' }).expect(200)
+
+    const saved = (await House.findById(house._id).lean())!
+    expect(saved.weather_rules_proposal).toBeNull()
+    expect(saved.weather_rules).toEqual([expect.objectContaining({ offset_pct: 5 })])
+    expect(await AuditLog.countDocuments({ action: 'WEATHER_RULES_PROPOSAL_REJECTED' })).toBe(1)
+    const notice = await Notification.findOne({ user_id: owner._id }).sort({ created_at: -1 }).lean()
+    expect(notice!.body).toMatch(/Mùa này chưa cần phun thêm/)
+  })
+
+  it('farm chưa có chuyên gia: không có đề xuất, chủ đặt trực tiếp (409); thợ và chuyên gia không gửi đề xuất (403)', async () => {
+    const alone = await seed({ withExpert: false })
+    await alone.proposal(alone.t.owner, '', { rules: [HOT_RULE] }).expect(409)
+    const { proposal, t } = await seed()
+    await proposal(t.tech, '', { rules: [HOT_RULE] }).expect(403)
+    await proposal(t.expert, '', { rules: [HOT_RULE] }).expect(403)
+    await proposal(t.owner, '', { rules: [{ ...HOT_RULE, offset_pct: 12 }] }).expect(400)
   })
 })

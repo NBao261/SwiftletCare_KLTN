@@ -2,6 +2,8 @@ import { Request, Response } from 'express'
 import * as expertActivityService from '@/services/expertActivity.service'
 import * as expertReviewService from '@/services/expertReview.service'
 import * as coefficientProposalService from '@/services/coefficientProposal.service'
+import * as expertReminderService from '@/services/expertReminder.service'
+import type { ReminderKind } from '@/services/expertReminder.service'
 import type { ExpertDecisionAction } from '@/services/expertActivity.service'
 import type { ParameterReviewStatus } from '@/models/parameterReview.model'
 import type { CoefficientProposalStatus } from '@/models/coefficientProposal.model'
@@ -74,4 +76,10 @@ export const approveProposal = asyncHandler(async (req: Request, res: Response) 
 export const rejectProposal = asyncHandler(async (req: Request, res: Response) => {
   const proposal = await coefficientProposalService.rejectProposal(req.params.id, req.user, req.body.note as string)
   res.json({ success: true, data: proposal })
+})
+
+/** POST /expert-activity/reminders – BR-22 (Report 3 4.2.15): Farm Owner nhắc chuyên gia việc chỉ chuyên gia làm */
+export const remindExpert = asyncHandler(async (req: Request, res: Response) => {
+  const data = await expertReminderService.remindExpert(req.user, req.body.kind as ReminderKind, req.body.id)
+  res.status(201).json({ success: true, data })
 })

@@ -1,16 +1,24 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-export type ParameterGroup = 'thresholds' | 'fuzzy'
+// Theo Zone: thresholds, fuzzy, detection; theo nhà: return_rate_drop, health_levels, counting_schedule; theo camera: counting_ring
+export const PARAMETER_GROUPS = [
+  'thresholds', 'fuzzy', 'detection', 'return_rate_drop', 'health_levels', 'counting_schedule', 'counting_ring',
+] as const
+export type ParameterGroup = typeof PARAMETER_GROUPS[number]
 export type ParameterReviewStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' | 'ADJUSTED'
 
 /**
- * EXPERT-FR-010, Report 3 §6.10 — mục duyệt thay đổi của Farm Owner trên farm có Domain Expert.
+ * EXPERT-FR-010, BR-22, Report 3 §6.10 — mục duyệt thay đổi của Farm Owner trên farm có Domain Expert (nhóm A).
  * Thay đổi đã áp dụng ngay; mục này để chuyên gia chấp nhận, hoàn lại hoặc tự sửa (ADJUSTED).
  * `old_values` là giá trị trước lần sửa đầu tiên — Farm Owner sửa tiếp thì chỉ `new_values` đổi.
  */
 export interface IParameterReview extends Document {
   _id: Types.ObjectId
-  zone_id: Types.ObjectId
+  // Zone, nhà hoặc camera mà nhóm tham số thuộc về — khoá "một mục đang chờ"
+  target_id: Types.ObjectId
+  zone_id?: Types.ObjectId
+  house_id?: Types.ObjectId
+  camera_node_id?: Types.ObjectId
   farm_id: Types.ObjectId
   group: ParameterGroup
   old_values: Record<string, unknown>
@@ -25,9 +33,12 @@ export interface IParameterReview extends Document {
 
 const parameterReviewSchema = new Schema<IParameterReview>(
   {
-    zone_id:     { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
-    farm_id:     { type: Schema.Types.ObjectId, ref: 'Farm', required: true },
-    group:       { type: String, enum: ['thresholds', 'fuzzy'] satisfies ParameterGroup[], required: true },
+    target_id:      { type: Schema.Types.ObjectId, required: true },
+    zone_id:        { type: Schema.Types.ObjectId, ref: 'Zone' },
+    house_id:       { type: Schema.Types.ObjectId, ref: 'House' },
+    camera_node_id: { type: Schema.Types.ObjectId, ref: 'CameraNode' },
+    farm_id:        { type: Schema.Types.ObjectId, ref: 'Farm', required: true },
+    group:          { type: String, enum: PARAMETER_GROUPS, required: true },
     old_values:  { type: Schema.Types.Mixed, required: true },
     new_values:  { type: Schema.Types.Mixed, required: true },
     status:      {
@@ -42,8 +53,9 @@ const parameterReviewSchema = new Schema<IParameterReview>(
 )
 
 parameterReviewSchema.index({ zone_id: 1, group: 1, status: 1 })
-// Mỗi Zone, mỗi nhóm tham số chỉ 1 mục đang chờ — Farm Owner sửa tiếp thì cập nhật mục đó
-parameterReviewSchema.index({ zone_id: 1, group: 1 }, { unique: true, partialFilterExpression: { status: 'PENDING_REVIEW' } })
+// Mỗi đối tượng, mỗi nhóm tham số chỉ 1 mục đang chờ — Farm Owner sửa tiếp thì cập nhật mục đó
+// (thay chỉ mục cũ { zone_id, group }: npm run migrate:review-targets)
+parameterReviewSchema.index({ target_id: 1, group: 1 }, { unique: true, partialFilterExpression: { status: 'PENDING_REVIEW' } })
 // Danh sách mục duyệt của 1 farm, mới nhất trước
 parameterReviewSchema.index({ farm_id: 1, created_at: -1 })
 

@@ -20,6 +20,7 @@ import { CameraNode, SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { User } from '@/models/user.model'
 import { createAlert } from '@/services/alert.service'
 import type { Role } from '@/types'
@@ -52,7 +53,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all([Alert, AuditLog, CameraNode, SensorNode, Farm, House, Zone, Notification, User]
+  await Promise.all([Alert, AuditLog, CameraNode, SensorNode, Farm, House, Zone, Notification, ParameterReview, User]
     .map(m => (m as typeof User).deleteMany({})))
 })
 
@@ -96,11 +97,19 @@ async function waitForNotification(userId: unknown) {
 }
 
 describe('BR-22 — Farm Owner làm thay chuyên gia', () => {
-  it('farm đã có Domain Expert: Farm Owner bị 403 ở cả 4 quyết định, không gì bị ghi', async () => {
-    const { alert, zone, decisions } = await seed({ withExpert: true })
-    for (const decide of Object.values(decisions)) await decide().expect(403)
+  it('farm đã có Domain Expert: kết luận cảnh báo vẫn 403; 3 quyết định tham số áp ngay, mỗi cái một mục duyệt (Report 3 4.2.15)', async () => {
+    const { alert, zone, house, camera, expert, decisions } = await seed({ withExpert: true })
+    const { verdict, ...parameters } = decisions
+    await verdict().expect(403)
     expect((await Alert.findById(alert._id).lean())!.expert_verdict).toBeUndefined()
-    expect((await Zone.findById(zone._id).lean())!.detection_tuning_history).toHaveLength(0)
+
+    for (const decide of Object.values(parameters)) await decide().expect(200)
+    expect((await Zone.findById(zone._id).lean())!.detection_tuning_history.at(-1)!.changed_by_role).toBe('FARM_OWNER')
+    const reviews = await ParameterReview.find({ status: 'PENDING_REVIEW' }).lean()
+    expect(reviews.map(r => [r.group, String(r.target_id)]).sort()).toEqual([
+      ['counting_ring', String(camera._id)], ['detection', String(zone._id)], ['return_rate_drop', String(house._id)],
+    ])
+    expect(await Notification.countDocuments({ user_id: expert._id, 'ref.kind': 'parameter_review' })).toBe(3)
   })
 
   it('farm chưa có chuyên gia: Farm Owner làm được cả 4, mỗi quyết định ghi vai trò FARM_OWNER', async () => {

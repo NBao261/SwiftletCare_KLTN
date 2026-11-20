@@ -61,6 +61,25 @@ export async function findFarmExperts(farmId: unknown): Promise<string[]> {
 }
 
 /**
+ * BR-22 (Report 3 4.2.15) — Farm Owner gửi việc cho chuyên gia (đề xuất chờ duyệt, nhắc việc còn chờ): báo trong
+ * ứng dụng cho mọi Domain Expert của farm (EXPERT-FR-007: chuyên gia không nhận kênh ngoài ứng dụng). Không throw.
+ */
+export async function notifyExpertsOfProposal(
+  farmId: unknown, author: CurrentUser,
+  message: { what: string; body: string; ref: { kind: NotificationRefKind; id: string }; prefix?: string },
+): Promise<number> {
+  try {
+    const [experts, user] = await Promise.all([findFarmExperts(farmId), User.findById(author._id).select('full_name').lean()])
+    const title = `${message.prefix ?? 'Cần duyệt'}: ${user?.full_name ?? author.email} ${message.what}`
+    await Promise.all(experts.map(expertId => createInAppNotification(expertId, { title, body: message.body, ref: message.ref })))
+    return experts.length
+  } catch (err) {
+    logger.warn('Báo chuyên gia việc của Farm Owner thất bại', { err, farmId: String(farmId), what: message.what })
+    return 0
+  }
+}
+
+/**
  * EXPERT-FR-007 — cảnh báo suy luận mới chờ kiểm chứng. Chỉ báo trong ứng dụng: ALERT-FR-005
  * ghi Domain Expert "chỉ nhận thông báo trong ứng dụng" cho loại sự kiện này, không Telegram/push.
  * Farm chưa có chuyên gia còn hoạt động thì Farm Owner kết luận thay (BR-22), nên thông báo này tới họ.

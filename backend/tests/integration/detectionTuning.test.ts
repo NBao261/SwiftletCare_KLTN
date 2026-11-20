@@ -15,6 +15,8 @@ import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
+import { Notification } from '@/models/notification.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { getBirdCountTrends } from '@/services/analytics.service'
 import { vnDate } from '@/services/birdCount.service'
@@ -100,11 +102,16 @@ describe('PUT /farms/zones/:zoneId/detection-tuning', () => {
     expect(await AuditLog.countDocuments({ action: 'DETECTION_TUNING_UPDATED' })).toBe(1)
   })
 
-  it('Farm Owner xem được nhưng không sửa được', async () => {
+  it('Farm Owner trên farm có chuyên gia: áp ngay và mở mục duyệt cho chuyên gia (BR-22)', async () => {
     const { zone, put, t } = await seed()
-    expect((await put(t.owner, { noise_margin_db: 12 })).status).toBe(403)
+    expect((await put(t.owner, { noise_margin_db: 12 })).status).toBe(200)
     const res = await request(app).get(`/farms/zones/${zone._id}`).set('Authorization', `Bearer ${t.owner}`)
-    expect(res.body.data.detection_tuning).toEqual(DEFAULT_DETECTION_TUNING)
+    expect(res.body.data.detection_tuning).toMatchObject({ noise_margin_db: 12 })
+    expect(publishDeviceConfig).toHaveBeenCalled()
+    const review = await ParameterReview.findOne({ target_id: zone._id, group: 'detection' }).lean()
+    expect(review).toMatchObject({ status: 'PENDING_REVIEW', zone_id: zone._id, old_values: DEFAULT_DETECTION_TUNING })
+    expect(review!.new_values).toMatchObject({ noise_margin_db: 12 })
+    expect(await Notification.countDocuments({ 'ref.kind': 'parameter_review' })).toBe(1)
   })
 
   it.each([
@@ -145,12 +152,14 @@ describe('PUT /farms/houses/:houseId/bird-count-tuning (SRS v2.1.8)', () => {
     expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 
-  it('Farm Owner và chuyên gia của farm khác không sửa được', async () => {
+  it('Farm Owner sửa được và mở mục duyệt theo nhà; chuyên gia của farm khác không sửa được', async () => {
     const { house, putHouse, t } = await seed()
     const other = await seed()
-    expect((await putHouse(t.owner, { return_rate_drop_pct: 30 })).status).toBe(403)
     expect((await putHouse(other.t.expert, { return_rate_drop_pct: 30 }, house._id)).status).toBe(403)
     expect((await House.findById(house._id))!.toObject().bird_count_tuning).toEqual(DEFAULT_BIRD_COUNT_TUNING)
+    expect((await putHouse(t.owner, { return_rate_drop_pct: 30 })).status).toBe(200)
+    expect(await ParameterReview.findOne({ target_id: house._id, group: 'return_rate_drop' }).lean())
+      .toMatchObject({ status: 'PENDING_REVIEW', house_id: house._id, new_values: { return_rate_drop_pct: 30 } })
   })
 
   it.each([
@@ -219,16 +228,19 @@ describe('khôi phục mặc định (EXPERT-FR-008 "reset to defaults", todo-au
     expect(publishDeviceConfig).not.toHaveBeenCalled()
   })
 
-  it('Farm Owner trên farm có chuyên gia, chuyên gia farm khác → 403; farm chưa có chuyên gia thì Farm Owner reset được (BR-22)', async () => {
+  it('chuyên gia farm khác → 403; Farm Owner reset được, có chuyên gia thì mở mục duyệt, chưa có thì không (BR-22)', async () => {
     const { farm, zone, house, t } = await seed()
     const other = await seed()
-    expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.owner)).status).toBe(403)
-    expect((await reset(`/farms/houses/${house._id}/bird-count-tuning/reset`, t.owner)).status).toBe(403)
     expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, other.t.expert)).status).toBe(403)
+    expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.owner)).status).toBe(200)
+    expect((await reset(`/farms/houses/${house._id}/bird-count-tuning/reset`, t.owner)).status).toBe(200)
+    expect(await ParameterReview.countDocuments({ farm_id: farm._id, status: 'PENDING_REVIEW' })).toBe(2)
 
+    await ParameterReview.deleteMany({})
     await Farm.updateOne({ _id: farm._id }, { $pull: { members: { role: 'DOMAIN_EXPERT' } } })
     expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.owner)).status).toBe(200)
     expect((await reset(`/farms/houses/${house._id}/bird-count-tuning/reset`, t.owner)).status).toBe(200)
+    expect(await ParameterReview.countDocuments({})).toBe(0)
   })
 })
 

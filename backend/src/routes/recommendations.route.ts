@@ -32,9 +32,10 @@ router.get ('/rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), query('farmId'
   validate, recommendationController.listRules)
 router.get ('/rules/effects', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), query('farmId').isString().isMongoId(),
   validate, recommendationController.ruleEffects)
-router.post('/rules', requireRole('DOMAIN_EXPERT'), body('farm_id').isString().isMongoId(), ...ruleBody(),
+// EXPERT-FR-016, BR-22 (Report 3 4.2.15) — Farm Owner viết luật được; farm có chuyên gia thì luật chờ chuyên gia bật
+router.post('/rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), body('farm_id').isString().isMongoId(), ...ruleBody(),
   validate, recommendationController.createRule)
-router.put ('/rules/:id', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), ...ruleBody(),
+router.put ('/rules/:id', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(), ...ruleBody(),
   validate, recommendationController.updateRule)
 
 // Khuyến nghị — cần farmId hoặc houseId (thợ dùng houseId của nhà được giao)

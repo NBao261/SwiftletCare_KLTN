@@ -18,6 +18,7 @@ import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Farm } from '@/models/farm.model'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
 import { House } from '@/models/houseZone.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { User } from '@/models/user.model'
 import { vnDate } from '@/services/birdCount.service'
 import { addDays, assessHouseDay } from '@/services/healthAssessment.service'
@@ -349,7 +350,7 @@ describe('giai đoạn nhà: cảnh báo, lịch trực, quyền (BR-46, Report 
 })
 
 describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
-  it('chuyên gia sửa → 200; chủ trại khi farm có chuyên gia → 403; ngoài khoảng hoặc CLEAR nhẹ hơn SLIGHT → 400', async () => {
+  it('chuyên gia sửa → 200; chủ trại khi farm có chuyên gia sửa được và mở mục duyệt; ngoài khoảng hoặc CLEAR nhẹ hơn SLIGHT → 400', async () => {
     const { house, ownerToken, expertToken } = await setup()
     const get = await call('get', `/farms/houses/${house._id}/health-levels`, ownerToken)
     expect(get.body.data.health_levels).toEqual(DEFAULT_HEALTH_LEVELS)
@@ -361,7 +362,10 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
     expect(ok.body.data.can_edit).toBe(true)
     expect(await AuditLog.countDocuments({ action: 'HEALTH_LEVELS_UPDATED' })).toBe(1)
 
-    expect((await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { noise_clear: 5 })).status).toBe(403)
+    // BR-22 (Report 3 4.2.15): Farm Owner sửa được, farm có chuyên gia thì mở mục duyệt
+    expect((await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { noise_clear: 5 })).status).toBe(200)
+    expect(await ParameterReview.findOne({ target_id: house._id, group: 'health_levels' }).lean())
+      .toMatchObject({ status: 'PENDING_REVIEW', old_values: { noise_clear: 4 }, new_values: { noise_clear: 5 } })
     expect((await call('put', `/farms/houses/${house._id}/health-levels`, expertToken, { air_clear_h: 13 })).status).toBe(400)
     expect((await call('put', `/farms/houses/${house._id}/health-levels`, expertToken, { in_range_clear_pct: 95 })).status).toBe(400)
   })
@@ -376,15 +380,11 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
     expect((await House.findById(house._id).lean())!.health_levels.air_slight_h).toBe(2)
   })
 
-  it('can_edit theo đúng luật của PUT: chuyên gia true; chủ trại false khi chuyên gia hoạt động, true khi chuyên gia bị khoá', async () => {
-    const { house, expert, ownerToken, expertToken } = await setup()
+  it('can_edit theo đúng luật của PUT: chuyên gia và chủ trại đều true (BR-22, Report 3 4.2.15)', async () => {
+    const { house, ownerToken, expertToken } = await setup()
     const canEdit = async (token: string) => (await call('get', `/farms/houses/${house._id}/health-levels`, token)).body.data.can_edit
     expect(await canEdit(expertToken)).toBe(true)
-    expect(await canEdit(ownerToken)).toBe(false)
-
-    await User.updateOne({ _id: expert!._id }, { status: 'LOCKED' })
     expect(await canEdit(ownerToken)).toBe(true)
-    expect((await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { noise_clear: 5 })).status).toBe(200)
   })
 })
 
@@ -470,9 +470,9 @@ describe('ngày lệch (EXPERT-FR-022)', () => {
     expect(res.body.data.houses).toEqual([{ house_id: String(house._id), house_name: house.name, health_levels: DEFAULT_HEALTH_LEVELS }])
   })
 
-  it('chủ trại ở farm có chuyên gia → 403; farm chưa có chuyên gia thì chủ trại xem được; thiếu nhà → 400', async () => {
+  it('chủ trại xem được ở farm có hay chưa có chuyên gia (BR-22); thiếu nhà → 400', async () => {
     const { house, ownerToken, expertToken } = await setup()
-    expect((await call('get', `/health-reports/disagreements?houseId=${house._id}`, ownerToken)).status).toBe(403)
+    expect((await call('get', `/health-reports/disagreements?houseId=${house._id}`, ownerToken)).status).toBe(200)
     expect((await call('get', '/health-reports/disagreements', expertToken)).status).toBe(400)
 
     const alone = await seedHouse({ withExpert: false })

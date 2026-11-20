@@ -8,7 +8,7 @@ import { Recommendation, type IRecommendation, type RecommendationStatus, type R
 import { RecommendationRule, type IRecommendationRule } from '@/models/recommendationRule.model'
 import { logAction } from '@/services/auditLog.service'
 import { updateZoneFuzzyTuning, updateZoneThresholds } from '@/services/farm.service'
-import { createInAppNotification, findRecipients } from '@/services/notification.service'
+import { createInAppNotification, findRecipients, notifyExpertsOfProposal } from '@/services/notification.service'
 import { createManualWorkOrder } from '@/services/workOrder.service'
 import { vnDate } from '@/services/birdCount.service'
 import { WorkOrder } from '@/models/workOrder.model'
@@ -16,7 +16,8 @@ import { emitRecommendationNew } from '@/socket'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { stageOn } from '@/utils/houseStage.util'
-import { assertFarmAccess, assertHouseAccess, findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import { assertFarmAccess, assertHouseAccess, farmHasActiveExpert, findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import type { IFarm } from '@/models/farm.model'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import {
@@ -58,26 +59,50 @@ export async function listRules(farmId: string, user: CurrentUser, query: { page
   return { records, total, page, limit }
 }
 
-/** EXPERT-FR-016 — Domain Expert viết luật (route chỉ DOMAIN_EXPERT); chỉ số không hỗ trợ, cửa sổ ngoài 1–30 → 400 */
+/**
+ * BR-22 (Report 3 4.2.15) — Farm Owner trên farm có chuyên gia: luật lưu tắt và chờ duyệt (`pending_approval`), không sửa
+ * được luật đang chạy; chuyên gia bật là duyệt, tắt là bỏ. Farm chưa có chuyên gia: Farm Owner bật được như chuyên gia.
+ */
+async function ownerNeedsApproval(farm: IFarm, user: CurrentUser): Promise<boolean> {
+  return user.role === 'FARM_OWNER' && (await farmHasActiveExpert(farm))
+}
+
+async function notifyRuleProposal(farm: IFarm, user: CurrentUser, rule: IRecommendationRule) {
+  await notifyExpertsOfProposal(farm._id, user, {
+    what: `đề xuất luật khuyến nghị "${rule.name}"`, body: 'Luật chỉ chạy khi chuyên gia bật.',
+    ref: { kind: 'recommendation_rule', id: String(rule._id) },
+  })
+}
+
+/** EXPERT-FR-016 — viết luật (Domain Expert, Farm Owner); chỉ số không hỗ trợ, cửa sổ ngoài 1–30 → 400 */
 export async function createRule(user: CurrentUser, input: Record<string, unknown>) {
   const farm = await assertFarmAccess(String(input.farm_id), user)
   const parsed = parseRuleInput(input)
-  const rule = await RecommendationRule.create({ ...parsed, farm_id: farm._id, author_id: user._id })
+  const needsApproval = await ownerNeedsApproval(farm, user)
+  const rule = await RecommendationRule.create({
+    ...parsed, farm_id: farm._id, author_id: user._id,
+    ...(needsApproval && { active: false, pending_approval: true }),
+  })
   await logAction(user._id, 'RECOMMENDATION_RULE_CREATED', 'recommendation_rule', String(rule._id), { ...parsed }, { farmId: String(farm._id) })
+  if (needsApproval) await notifyRuleProposal(farm, user, rule)
   return rule
 }
 
 /** EXPERT-FR-016 — sửa luật hoặc bật/tắt; khuyến nghị đã mở giữ nguyên bằng chứng lúc mở */
 export async function updateRule(ruleId: string, user: CurrentUser, input: Record<string, unknown>) {
   const { rule, farm } = await loadRule(ruleId, user)
+  const needsApproval = await ownerNeedsApproval(farm, user)
+  if (needsApproval && rule.active) throw ForbiddenError('Luật đang chạy: chỉ chuyên gia sửa hoặc tắt')
   const parsed = parseRuleInput(input, rule.active)
   const before = rule.toObject()
-  rule.set(parsed)
+  // Farm Owner sửa đề xuất: vẫn tắt, chờ duyệt; chuyên gia bật hay tắt đều là đã quyết, hết chờ
+  rule.set(needsApproval ? { ...parsed, active: false, pending_approval: true } : { ...parsed, pending_approval: false })
   await rule.save()
   await logAction(user._id, 'RECOMMENDATION_RULE_UPDATED', 'recommendation_rule', String(rule._id), {
     before: { indicator: before.indicator, comparison: before.comparison, value: before.value, window_days: before.window_days, active: before.active },
     after: parsed,
   }, { farmId: String(farm._id) })
+  if (needsApproval) await notifyRuleProposal(farm, user, rule)
   return rule
 }
 

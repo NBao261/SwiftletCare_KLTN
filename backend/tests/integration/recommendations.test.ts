@@ -96,7 +96,30 @@ async function seedDay(house: { _id: unknown; farm_id: unknown }, date: string, 
 const TODAY = '2026-11-16'
 
 describe('EXPERT-FR-016 — rules', () => {
-  it('stores a rule of the Domain Expert; unsupported indicator 400; Farm Owner and technician 403; list is paginated', async () => {
+  it('a rule of the Farm Owner on a farm with an expert waits off until the expert turns it on (BR-22, Report 3 4.2.15)', async () => {
+    const { farm, expert, t, call } = await seed()
+    const proposed = await call('post', '/rules', t.owner, { farm_id: farm._id, ...NH3_RULE, active: true })
+    expect(proposed.status).toBe(201)
+    expect(proposed.body.data).toMatchObject({ active: false, pending_approval: true })
+    expect(await Notification.countDocuments({ user_id: expert._id, 'ref.kind': 'recommendation_rule' })).toBe(1)
+    const id = proposed.body.data._id
+    // Farm Owner sửa đề xuất: vẫn tắt, vẫn chờ
+    expect((await call('put', `/rules/${id}`, t.owner, { ...NH3_RULE, value: 5, active: true })).body.data)
+      .toMatchObject({ value: 5, active: false, pending_approval: true })
+    // Chuyên gia bật là duyệt; luật đang chạy thì Farm Owner không sửa được
+    expect((await call('put', `/rules/${id}`, t.expert, { ...NH3_RULE, value: 5, active: true })).body.data)
+      .toMatchObject({ active: true, pending_approval: false })
+    expect((await call('put', `/rules/${id}`, t.owner, { ...NH3_RULE, value: 6 })).status).toBe(403)
+  })
+
+  it('on a farm without an expert the Farm Owner turns its own rule on (BR-22)', async () => {
+    const { farm, t, call } = await seed({ withExpert: false })
+    const created = await call('post', '/rules', t.owner, { farm_id: farm._id, ...NH3_RULE })
+    expect(created.status).toBe(201)
+    expect(created.body.data).toMatchObject({ active: true, pending_approval: false })
+  })
+
+  it('stores a rule of the Domain Expert; unsupported indicator 400; technician 403; list is paginated', async () => {
     const { farm, t, call } = await seed()
     const created = await call('post', '/rules', t.expert, { farm_id: farm._id, ...NH3_RULE })
     expect(created.status).toBe(201)
@@ -108,7 +131,6 @@ describe('EXPERT-FR-016 — rules', () => {
     expect((await call('post', '/rules', t.expert, { farm_id: farm._id, ...NH3_RULE, action: nullValue })).status).toBe(400)
     const { source: _source, ...noSource } = NH3_RULE
     expect((await call('post', '/rules', t.expert, { farm_id: farm._id, ...noSource })).status).toBe(422)
-    expect((await call('post', '/rules', t.owner, { farm_id: farm._id, ...NH3_RULE })).status).toBe(403)
     expect((await call('post', '/rules', t.tech, { farm_id: farm._id, ...NH3_RULE })).status).toBe(403)
 
     const list = await call('get', `/rules?farmId=${farm._id}&limit=1`, t.owner)

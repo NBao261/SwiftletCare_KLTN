@@ -11,7 +11,7 @@ import {
   type OrderedStatus, type RatingPair,
 } from '@/utils/agreement.util'
 import { resolveHealthLevels } from '@/utils/detectionTuning.util'
-import { assertExpertDecision, assertFarmAccess, assertHouseAccess, listFarmHouseIds } from '@/utils/farmAccess.util'
+import { assertFarmAccess, assertHouseAccess, listFarmHouseIds } from '@/utils/farmAccess.util'
 import { formatReason, type ReasonLang } from '@/utils/healthReason.util'
 import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource, Role } from '@/types'
 
@@ -354,7 +354,7 @@ export async function evaluateRatings(
 /**
  * GET /health-reports/disagreements — các ngày có điểm của người chấm khác trạng thái trong ảnh chụp lúc
  * chấm, để chuyên gia xem mức chỉ số của nhà (BR-28) có hợp không rồi chỉnh bằng PUT …/health-levels.
- * Ảnh chụp INSUFFICIENT_DATA không so được nên bỏ. Quyền như mọi quyết định của chuyên gia (BR-22).
+ * Ảnh chụp INSUFFICIENT_DATA không so được nên bỏ. Farm Owner và Domain Expert (BR-22, Report 3 4.2.15; route chặn thợ).
  */
 export async function listDisagreements(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, now = new Date(),
@@ -363,7 +363,6 @@ export async function listDisagreements(
     ? (await assertHouseAccess(params.houseId, user)).farm
     : params.farmId ? await assertFarmAccess(params.farmId, user) : null
   if (!farm) throw BadRequestError('Cần houseId hoặc farmId')
-  await assertExpertDecision(farm, user)
 
   const { days, houseNames, from, to } = await findDays(user, params, MAX_EVALUATION_RANGE, now)
   const names = await userNames(days)

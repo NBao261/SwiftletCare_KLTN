@@ -15,7 +15,7 @@ import farmRoutes from '@/routes/farms.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { requestContext } from '@/middlewares/requestContext.middleware'
 import { AuditLog } from '@/models/auditLog.model'
-import { SensorNode } from '@/models/device.model'
+import { CameraNode, SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
@@ -23,6 +23,7 @@ import { ParameterReview } from '@/models/parameterReview.model'
 import { SystemSetting } from '@/models/systemSetting.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
+import { DEFAULT_DETECTION_TUNING } from '@/utils/detectionTuning.util'
 import * as thresholdUpdate from '@/utils/thresholdUpdate.util'
 import type { Role } from '@/types'
 
@@ -56,7 +57,7 @@ afterAll(async () => {
 afterEach(async () => {
   jest.restoreAllMocks()
   jest.clearAllMocks()
-  await Promise.all([AuditLog, SensorNode, Farm, House, Zone, Notification, ParameterReview, SystemSetting, User]
+  await Promise.all([AuditLog, CameraNode, SensorNode, Farm, House, Zone, Notification, ParameterReview, SystemSetting, User]
     .map(m => (m as typeof User).deleteMany({})))
 })
 
@@ -84,7 +85,7 @@ async function seed({ withExpert = true } = {}) {
   }
   const send = (method: 'get' | 'put', path: string, token: string, body: object = {}) =>
     request(app)[method](path).set('Authorization', `Bearer ${token}`).send(body)
-  return { owner, expert, farm, zone, node, t, send }
+  return { owner, expert, farm, house, zone, node, t, send }
 }
 
 const reviewsOf = (zoneId: unknown) => ParameterReview.find({ zone_id: zoneId }).lean()
@@ -243,5 +244,64 @@ describe('chuyên gia duyệt (Report 3 §6.10)', () => {
     expect(list.body.meta.total).toBe(1)
     const activity = await send('get', `/expert-activity?farmId=${farm._id}&type=REVIEW_ACCEPTED`, t.owner).expect(200)
     expect(activity.body.meta.total).toBe(1)
+  })
+})
+
+describe('nhóm tham số mới (BR-22, Report 3 4.2.15)', () => {
+  const RING = [[0.38, 0.23], [0.53, 0.14], [0.58, 0.28], [0.43, 0.48]]
+  const review = (targetId: unknown, group: string) => ParameterReview.findOne({ target_id: targetId, group }).lean()
+
+  it('tham số phát hiện: chuyên gia hoàn tác thì Zone về giá trị gốc, gửi lại thiết bị, Farm Owner được báo một lần', async () => {
+    const { owner, zone, t, send } = await seed()
+    await send('put', `/farms/zones/${zone._id}/detection-tuning`, t.owner, { noise_margin_db: 12 }).expect(200)
+    const opened = await review(zone._id, 'detection')
+    jest.clearAllMocks()
+
+    await send('put', `/expert-activity/reviews/${opened!._id}/revert`, t.expert).expect(200)
+    expect((await Zone.findById(zone._id).lean())!.detection_tuning).toEqual(DEFAULT_DETECTION_TUNING)
+    expect(publishDeviceConfig).toHaveBeenCalled()
+    expect(await review(zone._id, 'detection')).toMatchObject({ status: 'REVERTED' })
+    // Lần áp lại ghi audit nhưng không vào lịch sử (decided_in) và không báo riêng: chỉ một thông báo "hoàn tác"
+    expect(await AuditLog.findOne({ action: 'DETECTION_TUNING_UPDATED', actor_role: 'DOMAIN_EXPERT' }).lean())
+      .toMatchObject({ metadata: { decided_in: 'parameter_review' } })
+    const ownerNotices = await Notification.find({ user_id: owner._id }).lean()
+    expect(ownerNotices).toHaveLength(1)
+    expect(ownerNotices[0].title).toMatch(/hoàn tác thay đổi tham số phát hiện/)
+  })
+
+  it('mức chỉ số sức khoẻ: chuyên gia giữ thì mục ACCEPTED, mức của chủ còn nguyên', async () => {
+    const { house, t, send } = await seed()
+    await send('put', `/farms/houses/${house._id}/health-levels`, t.owner, { noise_clear: 5 }).expect(200)
+    const opened = await review(house._id, 'health_levels')
+    await send('put', `/expert-activity/reviews/${opened!._id}/accept`, t.expert).expect(200)
+    expect(await review(house._id, 'health_levels')).toMatchObject({ status: 'ACCEPTED' })
+    expect((await House.findById(house._id).lean())!.health_levels.noise_clear).toBe(5)
+  })
+
+  it('lịch đếm: hoàn tác trả về lịch trước đó', async () => {
+    const { house, t, send } = await seed()
+    const temporary = [{ from: '2026-12-01', to: '2026-12-01', morning: { start: '05:00', end: '07:00' }, evening: { start: '17:00', end: '19:00' } }]
+    await send('put', `/farms/houses/${house._id}/counting-schedule`, t.owner, { temporary }).expect(200)
+    const opened = await review(house._id, 'counting_schedule')
+    await send('put', `/expert-activity/reviews/${opened!._id}/revert`, t.expert).expect(200)
+    expect((await House.findById(house._id).lean())!.counting_schedule!.temporary).toEqual([])
+  })
+
+  it('vòng đếm: chưa có vòng cũ thì không hoàn tác được (409, mục vẫn chờ); có vòng cũ thì hoàn tác về vòng đó', async () => {
+    const { house, t, send } = await seed()
+    const camera = await CameraNode.create({ device_id: `cam-${seq}`, house_id: house._id, status: 'ONLINE' })
+    const path = `/devices/camera-nodes/${camera._id}/counting-ring`
+    await send('put', path, t.owner, { points: RING, into_ring_is_exit: true }).expect(200)
+    const first = await review(camera._id, 'counting_ring')
+    await send('put', `/expert-activity/reviews/${first!._id}/revert`, t.expert).expect(409)
+    expect(await review(camera._id, 'counting_ring')).toMatchObject({ status: 'PENDING_REVIEW' })
+
+    // Chuyên gia vẽ lại: mục cũ đóng ADJUSTED; Farm Owner đổi tiếp thì mục mới giữ vòng của chuyên gia làm giá trị gốc
+    await send('put', path, t.expert, { points: RING, into_ring_is_exit: false }).expect(200)
+    expect(await ParameterReview.findById(first!._id).lean()).toMatchObject({ status: 'ADJUSTED' })
+    await send('put', path, t.owner, { points: RING.slice(0, 3), into_ring_is_exit: true }).expect(200)
+    const second = await ParameterReview.findOne({ target_id: camera._id, status: 'PENDING_REVIEW' }).lean()
+    await send('put', `/expert-activity/reviews/${second!._id}/revert`, t.expert).expect(200)
+    expect((await CameraNode.findById(camera._id).lean())!.counting_ring).toMatchObject({ points: RING, into_ring_is_exit: false })
   })
 })

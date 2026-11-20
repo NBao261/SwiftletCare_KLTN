@@ -13,6 +13,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House } from '@/models/houseZone.model'
+import { ParameterReview } from '@/models/parameterReview.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { recordHeartbeat, refreshCameraConfigs } from '@/services/device.service'
@@ -86,12 +87,18 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
     expect(await AuditLog.countDocuments({ action: 'COUNTING_RING_UPDATED', target_id: camera._id })).toBe(2)
   })
 
-  it('Farm Owner chỉ xem; chuyên gia farm khác không sửa được', async () => {
-    const { camera, put, t } = await seed()
-    await put(t.owner, { points: RING, into_ring_is_exit: true }).expect(403)
+  it('chuyên gia farm khác không sửa được; Farm Owner vẽ được, có chuyên gia thì mở mục duyệt (BR-22)', async () => {
+    const { camera, house, put, t } = await seed()
     const other = await seed()
     await other.put(other.t.expert, { points: RING, into_ring_is_exit: true }, camera._id).expect(403)
     expect(publishDeviceConfig).not.toHaveBeenCalled()
+
+    await put(t.owner, { points: RING, into_ring_is_exit: true }).expect(200)
+    expect(publishDeviceConfig).toHaveBeenCalled()
+    // Camera chưa có vòng trước đó: giá trị cũ là null (chuyên gia vẽ lại thay vì hoàn tác)
+    expect(await ParameterReview.findOne({ target_id: camera._id, group: 'counting_ring' }).lean()).toMatchObject({
+      status: 'PENDING_REVIEW', camera_node_id: camera._id, house_id: house._id, old_values: { ring: null },
+    })
   })
 
   it.each([

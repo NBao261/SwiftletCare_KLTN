@@ -16,6 +16,7 @@ import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { ParameterReview } from '@/models/parameterReview.model'
+import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
@@ -113,15 +114,25 @@ describe('EXPERT-FR-014 — prepare and approve a configuration profile', () => 
     expect((await call('post', '', t.expert, { farm_id: farm._id, name: 'x', speaker_schedule: { enabled: true, windows: [{ start: '07:00', end: '05:00' }] } })).status).toBe(400)
   })
 
-  it('keeps preparing and approving to the Domain Expert, even on a farm without an expert (Report 3 §2.4, BR-22)', async () => {
+  it('the Farm Owner drafts and edits a profile; approving and archiving stay with the Domain Expert, even without one (BR-22)', async () => {
     const { farm, t, call } = await seed({ withExpert: false })
-    expect((await call('post', '', t.owner, { farm_id: farm._id, ...PROFILE })).status).toBe(403)
-    const draft = await ConfigProfile.create({ farm_id: farm._id, author_id: farm.owner_id, name: 'x', thresholds: PROFILE.thresholds })
-    expect((await call('put', `/${draft._id}`, t.owner, PROFILE)).status).toBe(403)
-    expect((await call('post', `/${draft._id}/approve`, t.owner)).status).toBe(403)
-    expect((await call('post', `/${draft._id}/archive`, t.owner)).status).toBe(403)
-    // Farm Owner vẫn đọc được
-    expect((await call('get', `/${draft._id}`, t.owner)).status).toBe(200)
+    const created = await call('post', '', t.owner, { farm_id: farm._id, ...PROFILE })
+    expect(created.status).toBe(201)
+    expect(created.body.data.status).toBe('DRAFT')
+    const draftId = created.body.data._id
+    expect((await call('put', `/${draftId}`, t.owner, { ...PROFILE, name: 'Mùa khô' })).status).toBe(200)
+    expect((await call('post', `/${draftId}/approve`, t.owner)).status).toBe(403)
+    expect((await call('post', `/${draftId}/archive`, t.owner)).status).toBe(403)
+    expect((await call('get', `/${draftId}`, t.owner)).status).toBe(200)
+  })
+
+  it('a draft of the Farm Owner on a farm with an expert notifies the expert in the app (BR-22, Report 3 4.2.15)', async () => {
+    const { farm, t, call } = await seed()
+    const created = await call('post', '', t.owner, { farm_id: farm._id, ...PROFILE })
+    expect(created.status).toBe(201)
+    const notice = await Notification.findOne({ 'ref.kind': 'config_profile' }).lean()
+    expect(notice).toMatchObject({ ref: { id: new mongoose.Types.ObjectId(String(created.body.data._id)) } })
+    expect(notice!.title).toMatch(/Cần duyệt/)
   })
 
   it('rejects the technician, the Administrator and the members of another farm', async () => {
@@ -212,7 +223,7 @@ describe('EXPERT-FR-015 — apply an approved profile', () => {
     const { houses, zones, t, call, profileId } = await approved()
     const owner = (await User.findOne({ role: 'FARM_OWNER' }).sort({ _id: -1 }))!
     await ParameterReview.create({
-      zone_id: zones[0]._id, farm_id: zones[0].farm_id, group: 'thresholds', old_values: { humidity_min: 75 }, new_values: { humidity_min: 78 },
+      target_id: zones[0]._id, zone_id: zones[0]._id, farm_id: zones[0].farm_id, group: 'thresholds', old_values: { humidity_min: 75 }, new_values: { humidity_min: 78 },
       changed_by: owner._id,
     })
     await call('post', `/${profileId}/apply`, t.owner, { house_ids: [houses[0]._id] })

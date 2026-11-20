@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { body, param, query } from 'express-validator'
 import * as expertActivityController from '@/controllers/expertActivity.controller'
 import { EXPERT_DECISION_ACTIONS } from '@/services/expertActivity.service'
+import { REMINDER_KINDS } from '@/services/expertReminder.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
@@ -40,5 +41,11 @@ router.put('/proposals/:id/approve', requireRole('DOMAIN_EXPERT'), param('id').i
 router.put('/proposals/:id/reject', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(),
   body('note').isString().trim().notEmpty().withMessage('Từ chối đề xuất phải ghi lý do').isLength({ max: 1000 }),
   validate, expertActivityController.rejectProposal)
+
+// BR-22 (Report 3 4.2.15) — Farm Owner nhắc chuyên gia việc chỉ chuyên gia làm: kết luận cảnh báo suy luận,
+// báo cáo sức khoẻ, mùa vụ; mỗi việc một lần
+router.post('/reminders', requireRole('FARM_OWNER'),
+  body('kind').isString().isIn([...REMINDER_KINDS]), body('id').isString().isMongoId(), validate,
+  expertActivityController.remindExpert)
 
 export default router

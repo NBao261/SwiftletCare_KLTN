@@ -66,6 +66,8 @@ export interface IAlert extends Document {
    * hoặc Farm Owner khi farm chưa có chuyên gia (BR-22); kết luận cũ trước G-03 không có `role`
    */
   expert_verdict?: { result: AlertVerdictResult; note?: string; by: Types.ObjectId; role?: FarmMemberRole; at: Date }
+  /** BR-22 (Report 3 4.2.15) — lần Farm Owner nhắc chuyên gia việc còn chờ (mỗi việc nhắc một lần) */
+  expert_reminded_at?: Date
   /**
    * ALERT-FR-017 — người nhận lúc tạo: thợ đang trực của nhà, và Farm Owner đã được báo chưa (CRITICAL, hoặc nhà
    * không có thợ). Không có = cảnh báo trước G-21, gửi lại cho Farm Owner như cũ.
@@ -112,6 +114,7 @@ const alertSchema = new Schema<IAlert>(
     acknowledged_by:     { type: Schema.Types.ObjectId, ref: 'User' },
     acknowledgement_note:{ type: String },
     renotified_at:       { type: Date },
+    expert_reminded_at: { type: Date },
     expert_verdict: {
       type: {
         result: { type: String, enum: ['CONFIRMED', 'REJECTED'] satisfies AlertVerdictResult[], required: true },
