@@ -89,7 +89,7 @@ tags:
   - name: Harvests
     description: "HARVEST-FR-001..005 (ghi nhận thu hoạch — tự gắn env/flock snapshot + trace code; Marketplace đã bỏ ở SRS v2.0.0) — ghi: Farm Owner; đọc: Farm Owner, Domain Expert; Technician, Administrator → 403 (Report 3 §2.4)"
   - name: HealthReports
-    description: "EXPERT-FR-005/006/013 (báo cáo sức khỏe theo nhà yến ngày/tuần/tháng/theo yêu cầu, mỗi Zone một mục, che theo BR-31, kết luận của Domain Expert); ANALYTICS-FR-012…014, EXPERT-FR-012/013 (trạng thái sức khỏe ngày theo nhà yến, chấm độc lập BR-31, CSV, độ khớp) — FARM_OWNER, DOMAIN_EXPERT; Technician, Administrator → 403"
+    description: "EXPERT-FR-005/006/013 (báo cáo sức khỏe theo nhà yến ngày/tuần/tháng/theo yêu cầu, mỗi Zone một mục, kết luận của Domain Expert); ANALYTICS-FR-012…014, EXPERT-FR-012/013 (trạng thái sức khỏe ngày theo nhà yến, chấm sau khi xem trạng thái BR-31, CSV, độ khớp) — FARM_OWNER, DOMAIN_EXPERT; Technician, Administrator → 403"
   - name: Notifications
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
   - name: Profiles
@@ -5698,9 +5698,9 @@ paths:
       description: |
         Mỗi nhà mỗi ngày (giờ VN) một bản ghi, do job đánh giá tạo sau kiểm tra tỷ lệ chim về (19:15,
         BR-21) và tính lại khi dữ liệu trễ hoặc kết luận cảnh báo đổi trong 7 ngày (SM-17). Mới nhất trước.
-        **BR-31:** ngày người gọi còn `PENDING` (chưa chấm, chưa bỏ qua, còn trong hạn) chỉ có nhà, ngày,
-        thời tiết, `my_rating_state`, `rating_deadline` — không có trạng thái, lý do, chỉ số, bằng chứng
-        hay điểm của người khác. Khoảng tối đa 31 ngày (400). `myRatingState` lọc theo trạng thái chấm
+        **BR-31 (Report 3 4.2.14):** mọi ngày có đủ trạng thái, lý do, chỉ số, bằng chứng và điểm của
+        người khác, kể cả ngày người gọi còn `PENDING`: người chấm xem trạng thái rồi mới chấm.
+        Khoảng tối đa 31 ngày (400). `myRatingState` lọc theo trạng thái chấm
         của chính người gọi (vd `PENDING`: các ngày còn phải chấm, cho màn "ngày cần chấm" và hàng đợi việc).
       parameters:
         - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
@@ -5729,7 +5729,7 @@ paths:
       description: |
         1 dòng mỗi nhà × ngày: tên nhà, ngày, trạng thái chấm của người gọi, giá trị và mức của 4 chỉ số,
         tỷ lệ chim về, trạng thái, lý do, điểm của từng người chấm (tên, vai trò), thời tiết. Không có id
-        nội bộ. Dòng người gọi còn `PENDING` để trống các cột bị che (BR-31). UTF-8 có BOM để Excel đọc
+        nội bộ. Mọi dòng có đủ cột, kể cả ngày người gọi còn `PENDING` (BR-31). UTF-8 có BOM để Excel đọc
         đúng tiếng Việt. Tiêu đề cột, trạng thái, mức và lý do (in từ `HealthReason`) theo `lang`. Cùng
         tham số và giới hạn với `GET /health-reports/days`.
       parameters:
@@ -5751,7 +5751,7 @@ paths:
   /health-reports/days/{dayId}:
     get:
       tags: [HealthReports]
-      summary: "Chi tiết 1 ngày (ANALYTICS-FR-012) — che theo BR-31 như danh sách"
+      summary: "Chi tiết 1 ngày (ANALYTICS-FR-012) — đủ trạng thái như danh sách (BR-31)"
       parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
       responses:
         "200":
@@ -5775,7 +5775,7 @@ paths:
         được giao nhà chấm mỗi ngày (nhà khác hoặc đã bị gỡ khỏi nhà → 403, AUTH-FR-013). Domain Expert và
         Administrator nhận 403: chuyên gia xem các ngày lệch thay vì chấm (`GET /health-reports/disagreements`).
         Điểm và ảnh chụp đánh giá (`current_status`, `current_reasons` và mức từng nguồn lúc ghi) được lưu
-        trong một lệnh ghi, rồi mới trả ngày đầy đủ. Ảnh chụp không bao giờ đổi; NFR-14 chỉ dùng ảnh chụp.
+        trong một lệnh ghi; người chấm đã thấy trạng thái này trước khi chấm (BR-31). Ảnh chụp không bao giờ đổi; NFR-14 chỉ dùng ảnh chụp.
         Mỗi người chấm riêng; chấm được tới hết 7 ngày sau ngày đó (Report 3 §4.5). Ghi audit
         `HEALTH_DAY_RATED`.
       parameters: [{ name: dayId, in: path, required: true, schema: { type: string } }]
@@ -5863,8 +5863,8 @@ paths:
         So ảnh chụp lúc chấm với điểm của người chấm trên 3 mức có thứ tự GOOD < WATCH < ACTION: tỷ lệ
         khớp kèm khoảng tin cậy Wilson 95 %, kappa Cohen trọng số tuyến tính, AC1 của Gwet, ma trận nhầm
         lẫn, tỷ lệ báo động giả của trạng thái gộp và của từng nguồn riêng (mức NORMAL/SLIGHT/CLEAR quy ra
-        GOOD/WATCH/ACTION). Ảnh chụp `INSUFFICIENT_DATA` đếm riêng, không vào độ khớp. Ngày người gọi còn
-        `PENDING` bị bỏ ra (BR-31). Chỉ tính điểm của người chấm (BR-31: Farm Owner, Farm Technician);
+        GOOD/WATCH/ACTION). Ảnh chụp `INSUFFICIENT_DATA` đếm riêng, không vào độ khớp. Chỉ tính điểm của
+        người chấm (BR-31: Farm Owner, Farm Technician);
         Farm Technician không xem độ khớp (403); điểm Domain Expert chấm trước Report 3 4.2.0 vẫn hiện trong ngày nhưng không tính.
         `ratings` liệt kê từng cặp để mọi con số tính lại được. Khoảng tối đa 366 ngày.
       parameters:
@@ -5896,8 +5896,7 @@ paths:
         có ít nhất một điểm `RATED` của người chấm khác trạng thái trong ảnh chụp lúc chấm; ảnh chụp
         `INSUFFICIENT_DATA` và điểm Domain Expert chấm trước Report 3 4.2.0 không tính. Mới nhất trước. Người
         gọi không phải người chấm nên thấy đủ trạng thái, lý do, chỉ số. Farm Owner ở farm có chuyên gia còn
-        hoạt động nhận 403 (BR-22); Farm Technician nhận 403 (Report 3 §2.4). Farm Owner xem thay chuyên gia vẫn là
-        người chấm: ngày mình còn `PENDING` không có trong danh sách (BR-31). Khoảng tối đa 366 ngày.
+        hoạt động nhận 403 (BR-22); Farm Technician nhận 403 (Report 3 §2.4). Khoảng tối đa 366 ngày.
       parameters:
         - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu cả hai)" }
         - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm" }
@@ -5922,10 +5921,9 @@ paths:
       summary: "Chi tiết 1 báo cáo theo nhà kèm các mục Zone, trạng thái ngày và kết luận (EXPERT-FR-005, 013) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN ở nhà được giao"
       description: |
         Đủ số liệu để web dựng PDF bằng `jspdf` (EXPERT-FR-013: PDF có đúng số trong ứng dụng; không có id
-        nội bộ trong file — client không in các trường `_id`). **BR-31:** `days` dựng lúc đọc từ trạng thái
-        ngày (`HouseHealthDay`) và che theo người gọi như `GET /health-reports/days` — ngày người gọi còn
-        `PENDING` không có trạng thái, lý do, chỉ số hay điểm của người khác; `status_counts` chỉ đếm các ngày
-        người gọi đã thấy (`hidden_days` là số ngày bị che).
+        nội bộ trong file — client không in các trường `_id`). `days` dựng lúc đọc từ trạng thái
+        ngày (`HouseHealthDay`) như `GET /health-reports/days`, đủ trạng thái kể cả ngày người gọi chưa chấm
+        (BR-31); `status_counts` đếm mọi ngày của kỳ.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -7128,7 +7126,7 @@ components:
           nullable: true
           description: "Đối tượng để client mở tới"
           properties:
-            kind: { type: string, enum: [alert, health_report, health_day, expert_decision, parameter_review, coefficient_proposal, work_order, device_action], description: "`device_action`: Administrator hoặc Farm Technician vừa thao tác trên thiết bị của farm, `id` là thiết bị; `health_day`: ngày đánh giá mới của nhà yến, mở `GET /health-reports/days/{dayId}` (thông báo không kèm trạng thái, BR-31); `expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007); `work_order`: Work Order được giao, cần duyệt, bị mở lại (OPS-FR-001…004); `alert` cũng dùng cho yêu cầu kiểm tra tại chỗ (EXPERT-FR-021)" }
+            kind: { type: string, enum: [alert, health_report, health_day, expert_decision, parameter_review, coefficient_proposal, work_order, device_action], description: "`device_action`: Administrator hoặc Farm Technician vừa thao tác trên thiết bị của farm, `id` là thiết bị; `health_day`: ngày đánh giá mới của nhà yến, mở `GET /health-reports/days/{dayId}` để xem trạng thái và chấm; `expert_decision`: `id` là mục trong lịch sử hoạt động (EXPERT-FR-009); `parameter_review`, `coefficient_proposal`: mục duyệt / đề xuất mới cho chuyên gia (EXPERT-FR-007); `work_order`: Work Order được giao, cần duyệt, bị mở lại (OPS-FR-001…004); `alert` cũng dùng cho yêu cầu kiểm tra tại chỗ (EXPERT-FR-021)" }
             id: { type: string }
         read_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
@@ -7192,7 +7190,7 @@ components:
         INSUFFICIENT_DATA khi môi trường hoặc đàn chim không đủ dữ liệu; ACTION khi đàn chim CLEAR và
         có nguồn khác SLIGHT/CLEAR; WATCH khi có chỉ số CLEAR hoặc ≥ 2 chỉ số SLIGHT; còn lại GOOD. BR-30:
         ACTION do đúng đàn chim + tiếng ồn hạ xuống WATCH khi mưa ≥ 1 mm/giờ trùng phiên đếm và trùng
-        đợt ồn. Khi `my_rating_state = PENDING` chỉ có các trường không đánh dấu "(ẩn khi PENDING)" (BR-31).
+        đợt ồn. Mọi trường có cả khi `my_rating_state = PENDING` (BR-31, Report 3 4.2.14).
         Người gọi không phải người chấm (Domain Expert) có `my_rating_state = null` và thấy đủ các trường.
       properties:
         _id: { type: string }
@@ -7215,7 +7213,7 @@ components:
         rating_deadline: { type: string, format: date-time, description: "Hết hạn chấm: đầu ngày thứ 8 sau ngày đó (giờ VN)" }
         indicators:
           type: object
-          description: "(ẩn khi PENDING)"
+          description: "Có cả khi PENDING"
           properties:
             environment: { $ref: "#/components/schemas/HealthIndicator" }
             air: { $ref: "#/components/schemas/HealthIndicator" }
@@ -7223,22 +7221,22 @@ components:
             noise: { $ref: "#/components/schemas/HealthIndicator" }
         completeness:
           type: object
-          description: "(ẩn khi PENDING) BR-28 — mỗi nguồn đủ khi ≥ 80 % số mẫu hợp lệ kỳ vọng (1 mẫu / 10 giây mỗi Zone); đàn chim đủ khi có cả 2 phiên"
+          description: "BR-28 — mỗi nguồn đủ khi ≥ 80 % số mẫu hợp lệ kỳ vọng (1 mẫu / 10 giây mỗi Zone); đàn chim đủ khi có cả 2 phiên"
           properties:
             environment: { type: boolean }
             air: { type: boolean }
             flock: { type: boolean }
             noise: { type: boolean }
-        current_status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA], description: "(ẩn khi PENDING)" }
-        current_reasons: { type: array, items: { $ref: "#/components/schemas/HealthReason" }, description: "(ẩn khi PENDING) Chỉ số quyết định kèm số liệu; nguồn tuỳ chọn không đánh giá; mưa; thiếu thời tiết" }
+        current_status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA], description: "Có cả khi PENDING" }
+        current_reasons: { type: array, items: { $ref: "#/components/schemas/HealthReason" }, description: "Chỉ số quyết định kèm số liệu; nguồn tuỳ chọn không đánh giá; mưa; thiếu thời tiết" }
         evidence:
           type: object
-          description: "(ẩn khi PENDING) ALERT-FR-014"
+          description: "ALERT-FR-014"
           properties:
             noise_alert_ids: { type: array, items: { type: string } }
         ratings:
           type: array
-          description: "(ẩn khi PENDING) Điểm của mọi người chấm"
+          description: "Điểm của mọi người chấm"
           items:
             type: object
             properties:
@@ -7408,14 +7406,14 @@ components:
               properties:
                 return_rate_trend:
                   type: array
-                  description: "Tỷ lệ chim về từng ngày của kỳ; ngày thiếu phiên đánh dấu `complete: false` (VISION-FR-020). Ngày người gọi còn PENDING có `return_rate: null`, như `indicators` ở API ngày (BR-31)"
+                  description: "Tỷ lệ chim về từng ngày của kỳ; ngày thiếu phiên đánh dấu `complete: false` (VISION-FR-020)"
                   items:
                     type: object
                     properties:
                       date: { type: string, format: date }
-                      return_rate: { type: number, nullable: true, description: "null khi chưa đếm đủ hoặc người gọi chưa chấm ngày đó (BR-31)" }
+                      return_rate: { type: number, nullable: true, description: "null khi chưa đếm đủ" }
                       complete: { type: boolean }
-                avg_return_rate: { type: number, nullable: true, description: "Trung bình các ngày đủ phiên mà người gọi được thấy (BR-31)" }
+                avg_return_rate: { type: number, nullable: true, description: "Trung bình các ngày đủ phiên" }
                 weather:
                   type: object
                   nullable: true
@@ -7454,7 +7452,7 @@ components:
                   co2_max: { type: number, nullable: true }
             days:
               type: array
-              description: "Trạng thái từng ngày của kỳ, che theo người gọi (BR-31) — cùng hình dạng với GET /health-reports/days"
+              description: "Trạng thái từng ngày của kỳ — cùng hình dạng với GET /health-reports/days"
               items: { $ref: "#/components/schemas/HouseHealthDay" }
             status_counts:
               type: object
@@ -7464,7 +7462,6 @@ components:
                 WATCH: { type: integer }
                 ACTION: { type: integer }
                 INSUFFICIENT_DATA: { type: integer }
-            hidden_days: { type: integer, description: "Số ngày người gọi còn PENDING (bị che)" }
             expert_conclusion:
               type: object
               nullable: true

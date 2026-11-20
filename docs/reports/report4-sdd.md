@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.17 (Review 2, final scope) |
+| Document version | 2.2.18 (Review 2, final scope) |
 | Date | 19/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.12 (`docs/reports/report3-srs.md`) |
+| Requirements baseline | Report 3 – SRS 4.2.14 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -334,7 +334,7 @@ Live stream (VISION-FR-013): the web plays WebRTC (WHEP) and the mobile app play
 
 Push (ALERT-FR-002): after sign-in the mobile app gets the FCM device token with `expo-notifications` and registers it with the API; sign-out removes it; the backend deletes a token that FCM reports invalid.
 
-Health (MF-06): web and mobile show each house's daily status with its reasons and the rating screen, which asks for the assessor's own status before revealing the system's (BR-31). The blinding is enforced by the API, not only by the screens: for a Farm Owner or Domain Expert who has neither rated nor skipped a day inside the rating window, the day, report, CSV and notification endpoints return the day without its status, reasons or the other ratings; `POST …/rating` stores the rating and its snapshot in one atomic update and returns the status in its response; `POST …/skip` reveals it without a rating; the web exports a report as PDF with `jspdf` and downloads the daily indicators as CSV from the API.
+Health (MF-06): web and mobile show each house's daily status with its reasons and the rating screen, which shows the system's status and reasons and asks the assessor to confirm or correct it (BR-31). The day, report, CSV and notification endpoints return the status, reasons and other ratings to every member who may read the day, rated or not; `POST …/rating` stores the rating and its snapshot in one atomic update; `POST …/skip` records a day the assessor does not rate; the web exports a report as PDF with `jspdf` and downloads the daily indicators as CSV from the API.
 
 Manual override (MF-01): before a pump ON, the client reads the zone's open alerts; when a `SENSOR_FAULT`, `RS485_BUS_FAILURE` or `MISTING_INEFFECTIVE` is open it shows them and sends the command with the confirmation (ENV-FR-016).
 
@@ -1017,7 +1017,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/telemetry` | Latest and history |
 | `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
 | `/analytics` | Charts (with the farm's hourly outdoor weather on the same buckets, ANALYTICS-FR-013), comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
-| `/health-reports` | Daily, weekly and monthly reports per house and conclusions; disagreeing days and house levels (EXPERT-FR-022); daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (days not yet rated or skipped by the caller are returned without status, BR-31) |
+| `/health-reports` | Daily, weekly and monthly reports per house and conclusions; disagreeing days and house levels (EXPERT-FR-022); daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (with the status, whether or not the caller has rated the day, BR-31) |
 | `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011) |
 | `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
 | `/harvests` | Harvest batches (entry, confirmation), harvest cycles of a zone and the season conclusion |
@@ -1277,9 +1277,9 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING : day computed, one per assigned Farm Technician and Farm Owner, status hidden (BR-31)
-  PENDING --> RATED : rating + snapshot stored together, status shown (EXPERT-FR-012)
-  PENDING --> SKIPPED : status shown, not in NFR-14 (EXPERT-FR-012, BR-31)
+  [*] --> PENDING : day computed, one per assigned Farm Technician and Farm Owner, status shown (BR-31)
+  PENDING --> RATED : rating + snapshot stored together (EXPERT-FR-012)
+  PENDING --> SKIPPED : not in NFR-14 (EXPERT-FR-012, BR-31)
   PENDING --> EXPIRED : 7 days without rating (EXPERT-FR-012)
   RATED --> RATED : note added (EXPERT-FR-012)
   RATED --> [*]
@@ -1825,7 +1825,7 @@ flowchart TB
 | Rate limiting | 300 requests/min per account; 10 failed sign-ins / 15 min per IP; 30 refreshes/min per IP |
 | Devices | Activation key from the provisioned stock, printed on the device label and checked only by the backend (stored hashed, compared in constant time, one message for an unknown ID and a wrong key); never stored on the controller; a device in service is never registered again (BR-26); labels and floor codes carry no Wi-Fi or broker credential. Each device has its own broker secret, flashed with its device ID and stored hashed in the stock; EMQX checks it through `/internal/mqtt-auth` and refuses it once the entry is revoked |
 | Broker | MQTT over TLS only (8883), the controller and the AI node verifying the server with the CA certificate of its issuer; a device reaches only `swiftletcare/dev/${username}/#` (NFR-10 d); commands carry a command ID and issue time and are applied once and only while fresh (BR-35); device alerts carry an event ID; OTA only over HTTPS with the CA certificate, SHA-256 verification and rollback |
-| Health and reports | Ratings limited to the Farm Technicians assigned to the house and the Farm Owners, downloads to the Farm Owners and the Domain Expert of the farm; the status of a day is hidden server-side from an assessor who has not rated or skipped it (BR-31); exported files carry names and figures, never internal identifiers; the weather service receives only the farm's coordinates |
+| Health and reports | Ratings limited to the Farm Technicians assigned to the house and the Farm Owners, downloads to the Farm Owners and the Domain Expert of the farm; the status of a day is shown to every member who may read it, rated or not (BR-31); exported files carry names and figures, never internal identifiers; the weather service receives only the farm's coordinates |
 | Camera | The RTSP port of the camera is forwarded on the house modem (VNPT static-IP plan) with a source-IP rule: only the AI node's static public IP reaches it, every other source is dropped by the modem (NFR-10 e); strong camera password, kept only in the AI node's `.env`; the rule is re-checked from a 4G connection after any change of the modem or of the AI node's line. RTSP is not encrypted between the two lines; this residual risk is accepted for the prototype, and RTSPS (if the camera supports it) or a VPN between the two modems replaces it when available (Report 3, Section 8.1) |
 | Video | Viewing tokens valid 60 s for one camera path, signed with a separate secret, for WebRTC and HLS alike; the raw feed is readable only by the pipeline |
 | Secrets | Environment variables only (`.env.example` documents them); gitleaks scan in CI |
@@ -1883,6 +1883,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.18 | 20/11/2026 | The daily rating is no longer blind (Report 3 4.2.14, BR-31): the endpoints return the status, reasons and other ratings whether or not the caller has rated; the rating screen shows the system's status and asks the assessor to confirm or correct it; the snapshot stored with each rating stays (D16); header baseline SRS 4.2.14 |
 | 2.2.17 | 19/11/2026 | WebSocket events as built (Section 7.3, DF-13): there are no `ALERT_ESCALATED` or `WORK_ORDER_UPDATE` events; an escalation goes out by push and Telegram, and the Work Order changes that notify (opened, reopened, reassigned, not started, awaiting approval) reach their people as in-app notifications (`NOTIFICATION_NEW`); the web does not scan QR codes (Sections 3.2, 5.4): `html5-qrcode` removed, scanning stays in the mobile app (FARM-FR-003), and the web setup screen shows the configuration step of FARM-FR-012 |
 | 2.2.16 | 19/11/2026 | Section 5.4: the Farm Technician's web screens are listed (devices with restart, alerts with on-site cause, assigned houses with own shifts, notifications, settings); the rest of its work is on mobile; header baseline SRS 4.2.12 |
 | 2.2.15 | 18/11/2026 | ANALYTICS-FR-013 as built: the environment chart of `/analytics` carries the farm's hourly outdoor weather on the buckets of the indoor series (Section 7.1); the weekly zone report job is gone, as the migration table of Section 6.4 already said, so weekly reports exist only per house (BR-33); header baseline SRS 4.2.11 |
