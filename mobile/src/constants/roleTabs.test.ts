@@ -30,8 +30,6 @@ describe('roleTabs', () => {
     expect(findTabTitle('verdicts')).toBe('Thẩm định')
     expect(findTabTitle('tuning')).toBe('Tham số')
 
-    const verdictsTab = tabs.find(t => t.name === 'verdicts')
-    expect(verdictsTab?.showsAlertBadge).toBe(true)
     // 4 tab đều nhau, không nút nổi: highlight chạy theo tab đang chọn (user, 2026-11-14)
     expect(tabs.some(tab => tab.isFeatured)).toBe(false)
   })

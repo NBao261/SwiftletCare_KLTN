@@ -17,8 +17,6 @@ export interface RoleTab {
   name: string
   title: string
   icon: Icon
-  // Hiện số cảnh báo chưa đọc trên tab
-  showsAlertBadge?: boolean
   // Nút tròn lớn nổi lên khỏi thanh tab (nền xanh loang); mỗi role tối đa một tab
   isFeatured?: boolean
 }
@@ -32,7 +30,7 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
   FARM_OWNER: [
     { name: 'home', title: 'Trang chủ', icon: HouseIcon },
     { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
-    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, showsAlertBadge: true, isFeatured: true },
+    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, isFeatured: true },
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
@@ -42,7 +40,7 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
   FARM_TECHNICIAN: [
     { name: 'home', title: 'Trang chủ', icon: HouseIcon },
     { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
-    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, showsAlertBadge: true, isFeatured: true },
+    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, isFeatured: true },
     { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],
@@ -50,7 +48,7 @@ export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
   // rơi vào vị trí thứ 2 (lệch trái) và khối lime đứng yên lấn át chỉ báo tab đang chọn (user, 2026-11-14)
   DOMAIN_EXPERT: [
     { name: 'queue', title: 'Hàng đợi', icon: TrayIcon },
-    { name: 'verdicts', title: 'Thẩm định', icon: ShieldCheckIcon, showsAlertBadge: true },
+    { name: 'verdicts', title: 'Thẩm định', icon: ShieldCheckIcon },
     { name: 'tuning', title: 'Tham số', icon: SlidersHorizontalIcon },
     { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
   ],

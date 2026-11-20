@@ -11,7 +11,7 @@ import { ALERT_BADGE_KEY } from '@/utils/notification.utils'
 const LIVE_REFRESH_MS = 60 * 1000
 const FALLBACK_REFRESH_MS = 30 * 1000
 
-// Badge tab Cảnh báo và mục Cảnh báo của chuông = số cảnh báo ACTIVE (chưa xác nhận) mọi farm, theo meta.total của backend;
+// Mục Cảnh báo của chuông = số cảnh báo ACTIVE (chưa xác nhận) mọi farm, theo meta.total của backend;
 // mọi lần tải lại danh sách cảnh báo (khoá bắt đầu bằng 'alerts') cũng tải lại số này
 export function useSyncAlertBadge(enabled: boolean) {
   const setUnread = useAlertStore(state => state.setUnread)
