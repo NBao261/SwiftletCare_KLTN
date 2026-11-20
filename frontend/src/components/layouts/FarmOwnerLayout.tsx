@@ -1,6 +1,6 @@
 import {
   BasketIcon, BirdIcon, BooksIcon, BuildingsIcon, CalendarBlankIcon, CalendarCheckIcon, ChartBarIcon, ChecksIcon,
-  ClockCounterClockwiseIcon, CloudRainIcon, CpuIcon, CrosshairIcon, GearSixIcon, HeartbeatIcon, HouseIcon,
+  ClockCounterClockwiseIcon, CloudRainIcon, CpuIcon, CrosshairIcon, HeartbeatIcon, HouseIcon,
   LightbulbFilamentIcon, LightbulbIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import AppShell from '@/components/layouts/AppShell'
@@ -45,10 +45,6 @@ const menuSections: MenuSection[] = [
       { label: 'Luật khuyến nghị', path: '/domain-expert/recommendation-rules', icon: LightbulbFilamentIcon },
       { label: 'Lịch sử quyết định', path: '/domain-expert/history', icon: ClockCounterClockwiseIcon },
     ],
-  },
-  {
-    title: 'Khác',
-    items: [{ label: 'Cài đặt', path: '/settings', icon: GearSixIcon }],
   },
 ]
 

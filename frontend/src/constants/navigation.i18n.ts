@@ -8,7 +8,6 @@ const vi = {
   'Hệ thống': 'Hệ thống',
   'Console thiết bị': 'Console thiết bị',
   'Chuyên môn': 'Chuyên môn',
-  'Khác': 'Khác',
 
   'Tổng quan': 'Tổng quan',
   'Tổng quan hệ thống': 'Tổng quan hệ thống',
@@ -46,9 +45,6 @@ const vi = {
   'Luật khuyến nghị': 'Luật khuyến nghị',
   'Lịch sử quyết định': 'Lịch sử quyết định',
 
-  'Xin chào,': 'Xin chào,',
-  'Vai trò:': 'Vai trò:',
-  'Đăng xuất': 'Đăng xuất',
   'Điều hướng chính': 'Điều hướng chính',
 }
 
@@ -61,7 +57,6 @@ const en: Record<NavigationKey, string> = {
   'Hệ thống': 'System',
   'Console thiết bị': 'Device console',
   'Chuyên môn': 'Expert work',
-  'Khác': 'Other',
 
   'Tổng quan': 'Overview',
   'Tổng quan hệ thống': 'System overview',
@@ -99,9 +94,6 @@ const en: Record<NavigationKey, string> = {
   'Luật khuyến nghị': 'Recommendation rules',
   'Lịch sử quyết định': 'Decision history',
 
-  'Xin chào,': 'Hello,',
-  'Vai trò:': 'Role:',
-  'Đăng xuất': 'Log out',
   'Điều hướng chính': 'Main navigation',
 }
 

@@ -1,6 +1,6 @@
 import {
   BasketIcon, BirdIcon, BooksIcon, BuildingsIcon, CalendarBlankIcon, CalendarCheckIcon, ChartBarIcon, ChecksIcon,
-  ClipboardTextIcon, ClockCounterClockwiseIcon, CloudRainIcon, CpuIcon, CrosshairIcon, FileTextIcon, GearSixIcon,
+  ClipboardTextIcon, ClockCounterClockwiseIcon, CloudRainIcon, CpuIcon, CrosshairIcon, FileTextIcon,
   HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, LightbulbIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon,
   WrenchIcon,
 } from '@phosphor-icons/react';
@@ -40,10 +40,6 @@ const menuSections: MenuSection[] = [
       { label: 'Thống kê sản lượng', path: '/harvests', icon: BasketIcon },
       { label: 'Lịch bảo trì', path: '/maintenance', icon: CalendarCheckIcon },
     ],
-  },
-  {
-    title: 'Khác',
-    items: [{ label: 'Cài đặt', path: '/settings', icon: GearSixIcon }],
   },
 ];
 

@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.15.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.14.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.16.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.15.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,22 @@
 ---
 
 ## 0. Changelog
+
+### v2.15.0 → v2.16.0 (khung chung cho 4 role, `docs/reports/todo-ui-layout-1120.md` §4)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Sidebar và header hết "đóng băng" (4.1 viết lại).** Bỏ khối "Xin chào · Vai trò" và nút Đăng xuất ở sidebar; bỏ nhóm "Khác": Cài đặt chỉ ở menu avatar. Menu avatar (tên, email, vai trò · Cài đặt · Quyền riêng tư · Đăng xuất) hiện ở mọi khổ màn và là chỗ đăng xuất duy nhất. Nhóm menu thu gọn được (`MenuSection.collapsible`). |
+| 2 | **Tên trang là `<h1>`** (gốc breadcrumb trên header); trang trong khung không tự đặt `h1`. |
+| 3 | **Không chữ nào dưới 13px:** `text-caption`, `text-xs` và `.label-caption` lên 13px; bỏ `text-[10px]`, `text-[11px]`. |
+| 4 | **Một nút tô đậm mỗi màn:** chip lọc, chip sắp xếp, tab và nút chọn đoạn đang chọn là pill trắng (`bg-white shadow-card`), không tô charcoal. |
+| 5 | **Vùng bấm điện thoại ≥ 44px:** `Button sm`, `SelectMenu`, `FilterChip`, `SortChips`, `SearchInput` cao 44px dưới `sm`, desktop giữ 36px. |
+| 6 | **Phạm vi tự chọn:** `scopeLevelOf(path)` trong `constants/roles.ts`; trang cần một trang trại / nhà / Zone thì `useScopeFilter` tự chọn bậc có dữ liệu và `ScopeFilter` bỏ mục "Tất cả" ở bậc đó. Thanh phạm vi dưới 1280px xuống hàng riêng dưới header. |
+| 7 | **Không ảnh trang trí:** bỏ `pageHeroStore`, `usePageHero` và ảnh nền Tổng quan (4.2). |
+| 8 | **Mô tả card một dòng** `text-body text-graphite`; giải thích dài vào nút (i) (`ui/InfoTip`, prop `help` của `SectionCard`, `FarmFrame`). |
+| 9 | **Bảng thành thẻ ở điện thoại:** `DataTable` / `FixedRowsTable` nhận `mobileCard`. |
+| 10 | **Một ô KPI cho 4 role:** `components/common/KpiTile` thay `ui/StatTile` và `features/farm-owner/farms/KpiTile`. |
+| 11 | **Trang Cài đặt theo role** (bảng ở 4.1): một cột; kênh cảnh báo theo mức (Thông báo đẩy · Telegram) cho Chủ nhà yến và Kỹ thuật viên, giờ im lặng 24 giờ chỉ Chủ nhà yến, chuyên gia chỉ có dòng "thông báo trong ứng dụng"; mỗi khối một nút lưu, thành nút chính khi có thay đổi. |
 
 ### v2.14.0 → v2.15.0 (bố cục Farm Technician và Admin, `docs/reports/todo-ui-layout-1120.md` §3.3, §3.4)
 
@@ -217,7 +233,7 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 
 1. **Nền xám là sân khấu, nền trắng là diễn viên.** `#EAEAEA` (canvas) không bao giờ là nơi đặt nội dung trực tiếp — mọi text/số liệu/control đều nằm trong 1 khung trắng nổi lên trên.
 2. **Không pha màu ngoài hệ thống — tuyệt đối.** Kể cả các sắc xám/đen cũng phải nằm trong đúng 1 hue ấm (~28°) đã chốt ở mục 2 — không dùng lại bất kỳ mã xám/đen "mặc định của framework" (VD `#000`, `#333`, Tailwind `slate/zinc` mặc định) vì các mã đó thường có tông lạnh khác hue hệ thống.
-3. **Sidebar/Topbar là vùng đóng băng.** Layout, kích thước giữ nguyên 100% theo code hiện tại. Chỉ 3 việc được phép chạm: (a) logo ảnh (mục 3), (b) token màu ngữ nghĩa đổi giá trị hex — sidebar/topbar tự ăn theo token mới, không cần và không được sửa CSS/kích thước của chính nó, (c) mục menu có `tabs` (4.1).
+3. **Sidebar/Topbar dùng chung cho 4 role, chỉ đổi theo 4.1.** Nội dung menu của từng role nằm trong `<Role>Layout.tsx`; khung (sidebar, header, menu avatar, dock) chỉ sửa ở `components/layouts/` và áp cho cả 4 role cùng lúc.
 4. **Không có gì "giả" mà không được gắn nhãn.** Số liệu chưa có API thật phải tự khai báo (mục 7).
 5. **Một ngôn ngữ chữ, một hệ bo góc, một hệ shadow, một hệ xám** — dùng xuyên suốt, không phát sinh biến thể lẻ tẻ giữa các trang/role (mục 9).
 
@@ -231,18 +247,18 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 | Bo góc (token thật) | `rounded-xl` 16px · `rounded-2xl` 20px · `rounded-3xl` 28px · `rounded-full` | `tailwind.config.ts` |
 | Card | `Card size="md"` = `rounded-2xl p-5`; `Card size="lg"` = `rounded-3xl p-6`; nền trắng + `shadow-card` | `ui/Card.tsx` |
 | Khung section | Card lớn, tiêu đề `text-h2 text-charcoal` + mô tả `text-sm text-warmGray`, nút bên phải header, không icon vuông | `features/farm-owner/farms/FarmFrame.tsx` |
-| Ô chỉ số (KPI) | `rounded-2xl border border-warmGray/15 bg-white p-4`, nhãn `.label-caption`, icon tròn 28px, số `text-2xl font-extrabold`, dòng phụ 16px | `features/farm-owner/farms/KpiTile.tsx` |
+| Ô chỉ số (KPI) | `rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card`, nhãn `.label-caption` 13px, icon tròn 28px, số `text-2xl font-extrabold`, dòng phụ 13px; hàng KPI `grid grid-cols-2 lg:grid-cols-4`, 4 ô một hàng, không khung bao | `common/KpiTile.tsx` (mọi role) |
 | Bảng | **Chỉ dùng `DataTable`** (hoặc `FixedRowsTable` — bảng danh sách 10 dòng mỗi trang; có từ 2 trang trở lên thì trang cuối đệm dòng trống để khung không nhảy khi lật trang, 1 trang thì bảng cao vừa dữ liệu, bảng rỗng cao 4 dòng; `DataTable minRows` theo cùng quy tắc; không có cột STT, trừ Nhật ký hệ thống; dữ liệu phân trang ở server thì truyền `serverPagination={{ page, total, onChange }}`; **ngoại lệ:** bảng đợt thu ở trang Thu hoạch nằm trong cột 8/12 cạnh khung phân bổ loại tổ nên dùng `DataTable visibleRows={4} fillHeight`: màn xl hai khung khoá cứng cao `556px`, bảng lấp phần còn lại của khung (màn hẹp cao cố định 4 dòng), dòng còn lại cuộn dọc với tiêu đề cột đứng yên, không phân trang, không đệm dòng trống, `minTableWidth` 640, ô đệm ngang `px-3`): khung `rounded-2xl border-warmGray/15 shadow-card`, header `bg-warmGray/5`, `table-fixed` chia cột theo %, hover dòng `bg-warmGray/5` (chỉ nổi nền, chữ không đổi màu), ô 2 tầng (dòng chính đậm + dòng phụ xám). **Thao tác qua menu ⋯ ở cột cuối (`ActionsMenu`: Xem chi tiết, …) — bấm vào dòng không chuyển trang** | `ui/DataTable.tsx`; mẫu cột: `features/farm-owner/harvest/HarvestTable.tsx` |
 | Phân trang | `Pagination variant="full"` đặt dưới bảng, nút tròn `h-9` | `ui/Pagination.tsx` |
 | Lọc + tìm | Bảng danh sách: `SelectMenu` cho từng điều kiện (Trạng thái kèm số đếm, Mức độ, Trang trại…) + `ClearFiltersButton tone="danger" count` bên trái — cùng cao `h-9`, ô lọc rộng theo chữ `min-w-[80px] max-w-[220px]` (dài hơn thì cắt "…"), `px-3.5 text-xs font-medium`, cách nhau `gap-2`; `SearchInput` `lg:w-72` bên phải. `FilterChip` chỉ dùng khi ít lựa chọn và cần thấy hết cùng lúc (VD bộ lọc Nhật ký cảnh báo Dashboard) | `ui/SelectMenu.tsx`, `ui/ClearFiltersButton.tsx`, `ui/SearchInput.tsx` |
 | Nút | `Button` bo tròn hoàn toàn: `sm` `h-9 px-4`, `md` `h-12 px-5`; nút phụ trong card dùng `CAPSULE_ACTION_CLASS`; nút "Chi tiết" dùng `DETAIL_BUTTON_CLASS` | `ui/Button.tsx`, `farmStructure.constants.ts`, `harvest.constants.ts` |
-| Badge | Cỡ `px-2.5 py-0.5 text-[11px]`; mức độ theo 2.4; trạng thái theo bảng 2.6.1 | `common/SeverityBadge` |
+| Badge | Cỡ `px-2.5 py-0.5 text-small`; mức độ theo 2.4; trạng thái theo bảng 2.6.1 | `common/SeverityBadge` |
 | Khung cảnh báo | Nền cam rất nhạt `bg-orange-50` + viền dày `border-2 border-orange-300`, **không** vạch màu ở cạnh; dòng bên trong nền trắng `bg-white border-orange-100`. Không dùng nền `orange-100` trở lên cho khung — trùng màu badge mức độ Cao làm badge chìm | `features/farm-owner/dashboard/ScadaNodeCard.tsx`, `features/farm-owner/farms/StructureEditModal.tsx` |
 | Ô nhập | Class `.input`: `rounded-xl border-warmGray/25 px-4 py-2.5` | `src/index.css` |
 | Popup | `Modal`/`ConfirmModal`/`NoteActionModal`: `rounded-3xl p-6 shadow-popover`, nền mờ theo 5.2. **Popup form nhiều ô**: ngang `className="max-w-3xl"`, 2 cột `md:grid-cols-[15rem_1fr]` — trái: lựa chọn loại (thẻ chọn: đang chọn `border-accent-600 bg-accent-600`, icon ô `bg-charcoal text-accent-600`) + ghi chú `bg-warmGray/5`; phải: các ô nhập. Chân popup `border-t`, canh phải: Secondary "Huỷ" + Primary "Gửi…" (không nút full width). Popup xác nhận ngắn vẫn dọc `max-w-sm/md` | `ui/Modal.tsx` |
 | Trạng thái rỗng/lỗi/tải | **Bảng rỗng:** `FixedRowsTable emptyContent={<TableEmptyState title description? />}` — hình minh hoạ chuẩn (vòng tròn mờ, chồng 3 thẻ giả với thẻ giữa viền `accent-600`, 6 icon lucide thiết bị/kỹ thuật/chim yến quanh) + tiêu đề `text-h3` + mô tả `text-small`, nằm giữa khung bảng. Khối không phải bảng: `EmptyState` (có nút Thử lại khi lỗi). Đang tải: `LoadingSkeleton` đúng chiều cao khối thật | `common/TableEmptyState.tsx`, `ui/FixedRowsTable.tsx`, `ui/` |
 
-Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTile`) mà role thứ hai cần dùng → **dời lên `components/common/`** theo 12.3 trong PR đó, không chép thành bản thứ hai. Màu chỉ lấy từ token mục 2; màu riêng Dashboard Farm Owner ở 2.6.1 là màu chuẩn cho trạng thái tương ứng ở mọi role.
+Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`) mà role thứ hai cần dùng → **dời lên `components/common/`** theo 12.3 trong PR đó, không chép thành bản thứ hai. Màu chỉ lấy từ token mục 2; màu riêng Dashboard Farm Owner ở 2.6.1 là màu chuẩn cho trạng thái tương ứng ở mọi role.
 
 ---
 
@@ -482,10 +498,12 @@ Font duy nhất: **Plus Jakarta Sans** (Google Fonts), weight 400–800.
 | `text-h3` | 16px/24px | 600 | Tiêu đề nhỏ |
 | `text-body` | 14px/22px | 400/500 | Nội dung mặc định |
 | `text-small` | 13px/18px | 400 | Label phụ, timestamp |
-| `text-caption` | 11px/16px | 600, spacing 0.04em | Nhãn nhóm nav (sidebar) |
-| `.label-caption` (class trong `index.css`) | 12px/16px | 600, `--gray-500` | Nhãn section, nhãn ô form, tiêu đề cột bảng, nhãn trước nhóm nút ("Sắp xếp:") |
+| `text-caption` · `text-xs` | 13px/18px | 600 (caption) | Giữ tên cũ; cùng cỡ `text-small` |
+| `.label-caption` (class trong `index.css`) | 13px/18px | 600, `--gray-500` | Nhãn section, nhãn ô form, tiêu đề cột bảng, nhãn trước nhóm nút ("Sắp xếp:") |
 | `text-metric` | 32px/38px | 700, tabular-nums | Số liệu lớn |
-| `text-mock-notice` | 11px/16px | 500, italic | `--gray-500` — dòng "FAKE data" |
+| `text-mock-notice` | 13px/18px | 500, italic | `--gray-500` — dòng "FAKE data" |
+
+**Không chữ nào dưới 13px (v2.16.0)**, kể cả badge và tiêu đề cột; không viết `text-[10px]`, `text-[11px]`. Chữ đọc (mô tả card, dòng phụ trong thẻ) `text-body` màu `graphite`; `warmGray` chỉ cho nhãn, ngày, đơn vị. Mỗi trang một `<h1>` (tên trang trên header); card dùng `h2`.
 
 **Không in hoa nhãn/tiêu đề (v2.5.0).** Nhãn nhỏ viết sentence case bằng `.label-caption`, không thêm `uppercase` hay `tracking-[...]` rời. Chỉ 2 chỗ được in hoa: nhãn nhóm menu sidebar (mục 4.1) và banner chế độ SCADA. Số trong cột bảng/số liệu dùng `tabular-nums` để thẳng hàng theo cột.
 
@@ -533,13 +551,40 @@ Ticket, chat ticket, SLA và thanh tiến độ ticket đã gỡ (Report 3 §8, 
 
 ## 4. Bố cục (Layout)
 
-### 4.1. Sidebar & Topbar — đóng băng
+### 4.1. Sidebar & Topbar
 
-Layout/kích thước giữ nguyên 100%. Chỉ đổi: (1) logo (mục 3), (2) giá trị hex của token màu mà sidebar/topbar đang tham chiếu (avatar, nav active pill, dot trạng thái... vốn đang dùng biến `--gray-900`/`--success`/`--danger` — nay các biến này tự mang giá trị mới, sidebar không cần sửa code), (3) mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung, không nằm trong header.
+Khung dùng chung 4 role (`components/layouts/`); menu của từng role khai trong `<Role>Layout.tsx` (12.5).
+
+- **Sidebar** `w-64`: logo, rồi các nhóm menu (không khối chào, không nút đăng xuất). Menu ≤ 12 mục mỗi role, không cuộn ở 1440×900. Nhóm có `collapsible: true` thu gọn bằng mũi tên cạnh tiêu đề, nhớ trong `localStorage`; nhóm chứa trang đang mở luôn mở. Mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung. Nhãn nhóm là chỗ duy nhất được in hoa.
+- **Header:** trái là tên trang (`<h1>`, điện thoại `text-xl` xuống tối đa 2 dòng) + breadcrumb trang chi tiết; phải là VI/EN (cao 36px, không popup; dưới `sm` nằm trong menu avatar) · chuông · avatar. Khe `HeaderActions` (thanh phạm vi) cùng hàng từ 1280px, dưới 1280px xuống hàng riêng ngay dưới; `AppShell` đo chiều cao header để chừa đúng chỗ.
+- **Menu avatar** (mọi khổ màn): tên, email, vai trò · Cài đặt · Quyền riêng tư · Đăng xuất. Đây là chỗ duy nhất có Cài đặt và Đăng xuất; route `/settings` vẫn trong `MENU_ACCESS`.
+- **Dock điện thoại:** 4 mục (`firstDockItems` hoặc `dockItems` của role).
+
+**Đúng theo role** (✓ có, — không có):
+
+| Thành phần | Chủ nhà yến | Chuyên gia | Kỹ thuật viên | Quản trị viên |
+|---|---|---|---|---|
+| Tên trang `h1` + breadcrumb trang chi tiết | ✓ | ✓ | ✓ | ✓ |
+| Thanh phạm vi Trang trại → Nhà → Zone | trang có dữ liệu trang trại | trang có dữ liệu trang trại | Thiết bị, Nhà được giao | — |
+| VI/EN | ✓ | ✓ | ✓ | ✓ |
+| Chuông · tab Cảnh báo (ALERT-FR-007) | ✓ | — | ✓ (nhà được giao) | ✓ (cảnh báo thiết bị) |
+| Chuông · tab Thông báo (EXPERT-FR-007) | ✓ | ✓ | ✓ | ✓ |
+| Menu avatar | ✓ | ✓ | ✓ | ✓ |
+
+**Trang Cài đặt theo role** (`pages/SettingsPage.tsx`, một cột `max-w-3xl`):
+
+| Khối | Chủ nhà yến | Kỹ thuật viên | Chuyên gia | Quản trị viên |
+|---|---|---|---|---|
+| Hồ sơ (chỉ xem; trống thì `_`) | ✓ | ✓ | ✓ | ✓ |
+| Kênh cảnh báo theo mức × Thông báo đẩy · Telegram (ALERT-FR-005) | ✓ | ✓ | — | — |
+| Giờ im lặng, 24 giờ (ALERT-FR-006) | ✓ | — | — | — |
+| Telegram (ALERT-FR-013) | ✓ | ✓ | — | — |
+| Dòng "Thông báo chuyên môn hiện trong hộp thông báo của ứng dụng" (EXPERT-FR-007) | — | — | ✓ | — |
+| Bảo mật (AUTH-FR-009) · Quyền riêng tư · Yêu cầu xoá tài khoản (AUTH-FR-012) | ✓ | ✓ | ✓ | ✓ |
 
 ### 4.2. Content Canvas System — nền cố định 1 màu phẳng
 
-Không còn khối blur trang trí. Nền cố định là **1 màu phẳng duy nhất `#EAEAEA`**, không hoa văn, không blob màu. Vẫn giữ nguyên cơ chế 2 lớp (nền không cuộn / nội dung cuộn riêng) — chỉ đơn giản hoá phần thị giác của lớp nền:
+Không còn khối blur trang trí, không ảnh nền đầu trang (đã bỏ `usePageHero` ở v2.16.0). Nền cố định là **1 màu phẳng duy nhất `#EAEAEA`**, không hoa văn, không blob màu. Vẫn giữ nguyên cơ chế 2 lớp (nền không cuộn / nội dung cuộn riêng) — chỉ đơn giản hoá phần thị giác của lớp nền:
 
 ```
 .content-shell (position:relative; height:100vh; overflow:hidden)
@@ -633,6 +678,8 @@ Dropdown mở trong Modal vẫn nổi đúng vì render qua portal ra `document.
 | Ghost | trong suốt | `--gray-700` |
 
 Radius `--radius-md`, height 40px.
+
+**Một nút tô đậm cho việc chính mỗi màn.** Chip lọc (`FilterChip`), chip sắp xếp (`SortChips`), tab và nút chọn đoạn đang chọn dùng pill trắng `bg-white text-charcoal shadow-card` (trên nền `bg-warmGray/10` hoặc kèm `ring-1 ring-warmGray/25`), không tô charcoal. Nút lưu của một khối là nút phụ, thành nút chính khi khối có thay đổi chưa lưu. Nút bị khoá nói lý do (`title` + dòng phụ). Vùng bấm dưới `sm` cao ≥ 44px (`Button sm`, `SelectMenu`, `FilterChip`, `SortChips`, `SearchInput` đã có sẵn).
 
 Danger chỉ dành cho hành động phá huỷ/khẩn cấp. Nút đặt lại bộ lọc dùng `ClearFiltersButton`: mẫu Farm Owner là `tone="danger"` (nền `red-500/10` → rê chuột `red-500/15`, viền `red-500/20`, chữ + icon `red-600` `font-medium`) kèm `count` = số điều kiện đang lọc → "✕ Hủy lọc 2"; chỉ hiện khi có ít nhất 1 điều kiện. Màn Admin còn kiểu cũ (Secondary trơn) tới khi chuyển.
 
@@ -1232,8 +1279,9 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 ### 12.5. `layouts/` — mỗi role một layout, menu viết trong file
 
 - 4 file `<Role>Layout.tsx` **khai mảng `menuSections` đầy đủ ngay đầu file**, mỗi mục là `{ label, path, icon, tabs? }` viết literal — không tra từ bảng nav dùng chung. Mở `AdminLayout.tsx` là thấy trọn menu của Admin. `tabs` gộp nhiều trang cùng một việc vào một mục menu (4.1); mỗi tab vẫn cần dòng `MENU_ACCESS` và nhãn trong `navigation.i18n.ts`.
+- Không có nhóm "Khác" hay mục Cài đặt trong menu: Cài đặt ở menu avatar (4.1). Nhóm dài, ít dùng khai `collapsible: true`.
 - `dockItems` khai thêm khi dock mobile cần chọn tay (Admin có 9 mục nên phải chọn); các role khác dùng `firstDockItems(menuSections)` lấy 4 mục đầu.
-- `AppShell` giữ toàn bộ khung (sidebar + header + nội dung + Toast) và mount listener socket cảnh báo. `AppSidebar` thuần trình bày, render cùng menu ở 2 breakpoint (rail `w-64` desktop + dock nổi mobile). `AppHeader` giữ breadcrumb + zone + chuông + ngôn ngữ.
+- `AppShell` giữ toàn bộ khung (sidebar + header + nội dung + Toast) và mount listener socket cảnh báo. `AppSidebar` thuần trình bày, render cùng menu ở 2 breakpoint (rail `w-64` desktop + dock nổi mobile). `AppHeader` giữ tên trang (`h1`) + breadcrumb + khe thanh phạm vi + ngôn ngữ + chuông + menu avatar.
 - `RoleLayout` trong `App.tsx` chọn layout theo `user.role` **lúc chạy**, vì URL của SwiftletCare không có tiền tố role (`/devices` dùng chung 3 role) nên không gắn layout theo nhánh route được.
 - **Thêm/bớt mục menu của một role: sửa đúng file layout của role đó, không đụng chỗ nào khác.** Nếu mục đó cũng cần chặn `returnTo` sau đăng nhập thì thêm một dòng vào bảng `MENU_ACCESS` trong `constants/roles.ts`.
 
@@ -1600,8 +1648,8 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Nhóm | Component |
 |---|---|
 | Nền tảng | `Button` · `Card` · `Badge` · `Input` · `Select` · `Textarea` · `Toggle` · `Avatar` · `DatePicker` (ô ngày dd/mm/yyyy + lịch tháng, thay `<input type="date">`) · `icons.tsx` |
-| Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
-| Khung, ô số liệu | `SectionCard` · `StatTile` · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
+| Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`, `mobileCard` cho điện thoại) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
+| Khung, ô số liệu | `SectionCard` (prop `help` mở `InfoTip`) · `InfoTip` (nút (i) giải thích dài) · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
 | Lớp nổi | `Modal` · `ConfirmModal` · `NoteActionModal` (popup nhập lý do) · `Drawer` · `ActionsMenu` · `SelectMenu` · `useFloatingMenu.ts` |
 | Trạng thái màn | `EmptyState` (lỗi tải / chưa có farm-nhà-Zone) · `LoadingSkeleton` · `ChartEmptyFrame` (khung biểu đồ khi chưa có dữ liệu, mục 8) · `ComingSoon` (tính năng chưa có API) |
 
@@ -1612,12 +1660,14 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `SeverityBadge` | Badge mức cảnh báo (đổi 4 mức backend → 3 cấp, xám khi `isMuted`) | 2.4 |
 | `TableEmptyState` | Trạng thái rỗng chuẩn của bảng (truyền vào `FixedRowsTable emptyContent`) | 1.1 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
-| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/shared/useScopeFilter`) | — |
+| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/shared/useScopeFilter`). Trang có bậc trong `scopeLevelOf` thì tự chọn bậc đó và bỏ mục "Tất cả" | — |
+| `KpiTile` | Ô chỉ số của hàng KPI mọi role (`tone`, `iconClass`, `badge`, `valueBadge`) | 1.1 |
+| `LanguageToggle` | Công tắc VI/EN (header; menu avatar dưới `sm`) | 4.1 |
 | `NotificationPopover` · `ProfilePopover` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
 
-**Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, đóng băng 4.1) · `components/auth/RequireRole.tsx` (chặn route).
+**Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, 4.1) · `components/auth/RequireRole.tsx` (chặn route).
 
-**Component của Farm Owner được phép dời lên `common/`** khi role thứ hai cần (1.1): `features/farm-owner/farms/FarmFrame.tsx` (khung section) · `features/farm-owner/farms/KpiTile.tsx` (ô KPI) · `features/farm-owner/harvest/HarvestTable.tsx` (mẫu cột bảng).
+**Component của Farm Owner được phép dời lên `common/`** khi role thứ hai cần (1.1): `features/farm-owner/farms/FarmFrame.tsx` (khung section) · `features/farm-owner/harvest/HarvestTable.tsx` (mẫu cột bảng).
 
 ### D.3. Định dạng, dịch, tiện ích (`lib/`)
 

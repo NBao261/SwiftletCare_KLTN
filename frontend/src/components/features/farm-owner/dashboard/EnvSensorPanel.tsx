@@ -113,7 +113,7 @@ function ReadingTile({ reading, isLoading, isActive }: { reading: Reading; isLoa
         <span className="ml-1 text-xs font-medium text-warmGray">{unit}</span>
       </div>
 
-      <p className="mt-1.5 h-4 text-[11px] font-medium text-warmGray">
+      <p className="mt-1.5 h-4 text-small font-medium text-warmGray">
         {isAnomaly && t(isAlertOnly ? 'env.overAlert' : 'env.outOfRange')}
         {!isAnomaly && range && t(isAlertOnly ? 'env.alertAbove' : 'env.safe', { range })}
       </p>

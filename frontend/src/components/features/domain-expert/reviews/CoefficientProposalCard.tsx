@@ -175,12 +175,12 @@ export default function CoefficientProposalCard({
                 </span>
                 <div className="flex items-center justify-between text-xs font-semibold">
                   <div className="flex items-center gap-1 text-warmGray">
-                    <span className="text-[10px] text-warmGray font-normal">{t('Hiện tại:')}</span>
+                    <span className="text-small text-warmGray font-normal">{t('Hiện tại:')}</span>
                     <span>{formatFuzzyProposalValue(key, currentVal)}</span>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-warmGray/40" />
                   <div className="flex items-center gap-1 text-accent-900">
-                    <span className="text-[10px] text-accent-700 font-normal">{t('Đề xuất:')}</span>
+                    <span className="text-small text-accent-700 font-normal">{t('Đề xuất:')}</span>
                     <span className="font-bold">{formatFuzzyProposalValue(key, suggestedVal)}</span>
                   </div>
                 </div>
@@ -200,7 +200,7 @@ export default function CoefficientProposalCard({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             {proposal.predicted.inRangeSuggested !== undefined && (
               <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-[10px] text-warmGray">{t('Thời gian đạt chuẩn')}</span>
+                <span className="text-small text-warmGray">{t('Thời gian đạt chuẩn')}</span>
                 <span className="font-bold text-charcoal">
                   {proposal.predicted.inRangeNow ?? '—'}% →{' '}
                   <span className="text-accent-700 font-bold">{proposal.predicted.inRangeSuggested}%</span>
@@ -209,7 +209,7 @@ export default function CoefficientProposalCard({
             )}
             {proposal.predicted.mistingSuggested !== undefined && (
               <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-[10px] text-warmGray">{t('Tần suất phun sương')}</span>
+                <span className="text-small text-warmGray">{t('Tần suất phun sương')}</span>
                 <span className="font-bold text-charcoal">
                   {proposal.predicted.mistingNow ?? '—'}% →{' '}
                   <span className="text-accent-900 font-bold">{proposal.predicted.mistingSuggested}%</span>
@@ -218,7 +218,7 @@ export default function CoefficientProposalCard({
             )}
             {proposal.predicted.in_range_pct !== undefined && (
               <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-[10px] text-warmGray">{t('Đạt chuẩn môi trường')}</span>
+                <span className="text-small text-warmGray">{t('Đạt chuẩn môi trường')}</span>
                 <span className="font-bold text-accent-700">
                   {proposal.predicted.in_range_pct}%
                 </span>
@@ -250,7 +250,7 @@ export default function CoefficientProposalCard({
               {t('Đã được duyệt áp dụng bởi')} <strong>{deciderName}</strong>
             </span>
           </div>
-          <span className="text-[11px] text-warmGray">
+          <span className="text-small text-warmGray">
             {formatDateTime(proposal.decided_at)}
           </span>
         </div>

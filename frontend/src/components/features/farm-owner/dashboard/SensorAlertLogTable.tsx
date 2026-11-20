@@ -122,7 +122,7 @@ export default function SensorAlertLogTable({ farmId, houseId, zones, deviceName
     },
     {
       key: 'status', header: t('log.colStatus'), className: 'w-[120px]',
-      render: row => <Badge className={cn('whitespace-nowrap px-2.5 py-0.5 text-[11px] font-medium', STATUS_BADGE_CLASS[row.status])}>{t(`alertStatus.${row.status}`)}</Badge>,
+      render: row => <Badge className={cn('whitespace-nowrap px-2.5 py-0.5 text-small font-medium', STATUS_BADGE_CLASS[row.status])}>{t(`alertStatus.${row.status}`)}</Badge>,
     },
     {
       key: 'actions', header: t('log.colActions'), align: 'center', className: 'w-[120px] whitespace-nowrap',

@@ -5,7 +5,6 @@ import type { AllZone } from '@/hooks/shared/useFarms'
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
 import { useTranslation } from '@/hooks/common/useTranslation'
-import { usePageHero } from '@/hooks/common/usePageHero'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
@@ -31,14 +30,10 @@ import { getAnomalies, summarizeFarmHouses } from '@/components/features/farm-ow
 
 const NO_ZONES: AllZone[] = []
 
-// Ảnh nhà yến làm nền tràn đầu trang Tổng quan
-const DASHBOARD_HERO_IMAGE = { src: '/Background_farm.png', width: 1376, height: 768 }
-
 // Dashboard Farm Owner
 export default function FarmOwnerDashboardPage() {
   const { t } = useTranslation(dashboardDict)
   const { t: translateFarm, num: formatFarmNumber } = useTranslation(farmDict)
-  usePageHero(DASHBOARD_HERO_IMAGE)
   // Khung lọc Nhà + Zone lưu ở store chung nên chuyển trang rồi quay lại vẫn giữ nguyên
   const scope = useScopeFilter()
   const { farmId, houses, houseId, houseName, zones, zone: scopeZone, issueZoneIds, isLoading: isLoadingHouses, isError: isHousesError, refetch: refetchHouses } = scope
@@ -160,8 +155,8 @@ export default function FarmOwnerDashboardPage() {
         <div className="hidden sm:block">{houseFilter}</div>
       </HeaderActions>
 
-      {/* Vùng đầu trang trên ảnh nền: chỉ có capsule SCADA, chiều cao tối thiểu giữ vị trí bắt đầu của khung nội dung */}
-      <section className="flex min-h-[176px] flex-col gap-3 lg:min-h-[256px]">
+      {/* Đầu trang: capsule tình trạng vận hành (không còn ảnh nền, C-06) */}
+      <section className="flex flex-col gap-3">
         <div className="sm:hidden">{houseFilter}</div>
         <ScadaModeBanner lastSyncedAt={lastSyncedAt} controlMode={controlMode} overrideExpiry={overrideExpiry} issueText={scadaIssue} />
       </section>

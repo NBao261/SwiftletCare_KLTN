@@ -1,16 +1,13 @@
-// [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Trang dùng chung MỌI role (/settings).
-// Đổi: chỉ giao diện — theo khuôn các trang Admin (card trắng, đầu card = ô icon charcoal + tiêu đề text-h2 +
-// dòng phụ). Bỏ <h1> "Cài đặt tài khoản" (AppHeader đã hiện tên trang); vai trò hiện nhãn tiếng Việt (ROLE_LABEL)
-// thay mã "ADMIN"; nút Đăng xuất chuyển lên card hồ sơ; 2 cột trên desktop. Logic/API/hook giữ nguyên.
 import { useState, useEffect, FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import {
-  BellIcon, EnvelopeIcon, MoonIcon, PhoneIcon,
-  ShieldCheckIcon, TelegramLogoIcon, TrashIcon, type Icon,
+  BellIcon, EnvelopeIcon, MoonIcon, PhoneIcon, ShieldCheckIcon, ShieldIcon,
+  TelegramLogoIcon, TrashIcon, type Icon,
 } from '@phosphor-icons/react'
 import { useAuthStore } from '@/stores/authStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { usePermission } from '@/hooks/common/usePermission'
-import { Avatar, Button, Input, Toggle } from '@/components/ui'
+import { Avatar, Button, Input, TimePicker, Toggle } from '@/components/ui'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
@@ -18,33 +15,37 @@ import { formatHourMinute } from '@/lib/i18n'
 import { qrDataUrl } from '@/lib/qrCode'
 import { cn } from '@/lib/cn'
 import { ROLE_LABEL } from '@/constants/roles'
+import { NO_VALUE } from '@/constants/display'
 import { t } from '@/i18n'
 import { LEVELS } from '@/constants/severity'
 import { levelDict } from '@/constants/severity.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import {
-  applyGeneralPush, bySeverityPayload, levelChannelsOf, urgentHasOutsideChannel, type LevelChannels,
+  bySeverityPayload, levelChannelsOf, urgentHasOutsideChannel, type LevelChannels,
 } from '@/validations/common/notificationChannels.validation'
 import type { SeverityLevel } from '@/types'
 
-// Cài đặt: hồ sơ, thông báo và Telegram (ALERT-FR-005, 006, 013; không có với Admin), bảo mật (AUTH-FR-009), xoá tài khoản (AUTH-FR-012)
+// Cài đặt theo role (todo-ui-layout-1120 §4.2): một cột, các khối xếp dọc. Kênh cảnh báo và Telegram cho người nhận cảnh báo
+// (Chủ nhà yến, Kỹ thuật viên: ALERT-FR-005, 013); giờ im lặng chỉ Chủ nhà yến (ALERT-FR-006); chuyên gia chỉ nhận trong
+// ứng dụng (EXPERT-FR-007); bảo mật (AUTH-FR-009), quyền riêng tư, xoá tài khoản (AUTH-FR-012) cho mọi người
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
-  // ALERT-FR-005, 006, 013 — kênh thông báo và Telegram của người nhận cảnh báo; Admin không có (Report 3 §2.4)
-  const hasNotificationSettings = usePermission('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN')
+  const isAlertRecipient = usePermission('FARM_OWNER', 'FARM_TECHNICIAN')
+  const isFarmOwner = usePermission('FARM_OWNER')
+  const isExpert = usePermission('DOMAIN_EXPERT')
 
   if (!user) return null
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* ── Hồ sơ: avatar + tên + vai trò, email/SĐT ── */}
+    <div className="flex w-full max-w-3xl flex-col gap-4">
+      {/* Hồ sơ: chỉ xem */}
       <section className="flex flex-wrap items-center gap-x-8 gap-y-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <Avatar name={user.full_name} size="lg" />
           <div className="min-w-0">
             <p className="truncate text-h2 text-charcoal">{user.full_name}</p>
-            <span className="mt-1 inline-block rounded-full bg-accent-300 px-2.5 py-0.5 text-caption text-charcoal">
+            <span className="mt-1 inline-block rounded-full bg-accent-300 px-2.5 py-0.5 text-small font-semibold text-charcoal">
               {ROLE_LABEL[user.role] ?? user.role}
             </span>
           </div>
@@ -52,19 +53,24 @@ export default function SettingsPage() {
 
         <dl className="flex flex-wrap gap-x-8 gap-y-3">
           <InfoItem icon={EnvelopeIcon} label="Email" value={user.email} />
-          <InfoItem icon={PhoneIcon} label="Số điện thoại" value={user.phone || '--'} />
+          <InfoItem icon={PhoneIcon} label="Số điện thoại" value={user.phone || NO_VALUE} />
         </dl>
       </section>
 
-      {/* ── 2 cột: Thông báo | Bảo mật + Telegram + Dữ liệu tài khoản (Admin: chỉ Bảo mật + Dữ liệu tài khoản) ── */}
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-        {hasNotificationSettings && <NotificationPreferencesCard />}
-        <div className="flex flex-col gap-4">
-          <SecurityCard />
-          {hasNotificationSettings && <TelegramCard />}
-          <DeletionCard />
-        </div>
-      </div>
+      {isAlertRecipient && <AlertChannelsCard />}
+      {isFarmOwner && <QuietHoursCard />}
+      {isAlertRecipient && <TelegramCard />}
+      {isExpert && (
+        <SettingsCard icon={BellIcon} title="Thông báo" subtitle="Thông báo chuyên môn hiện trong hộp thông báo của ứng dụng" />
+      )}
+      <SecurityCard />
+      <SettingsCard
+        icon={ShieldIcon}
+        title="Quyền riêng tư"
+        subtitle="Cách SwiftletCare thu thập và dùng dữ liệu của bạn"
+        action={<Link to="/settings/privacy" className="text-body font-semibold text-charcoal underline underline-offset-4">{t('Xem chính sách')}</Link>}
+      />
+      <DeletionCard />
     </div>
   )
 }
@@ -83,139 +89,143 @@ function InfoItem({ icon: ItemIcon, label, value }: { icon: Icon; label: string;
   )
 }
 
-/** Khung card + đầu card (ô icon charcoal · tiêu đề text-h2 · dòng phụ) */
-function SettingsCard({ icon: HeaderIcon, title, subtitle, danger, children }: {
-  icon: Icon; title: string; subtitle: string; danger?: boolean; children: ReactNode
+/** Khung card + đầu card (ô icon · tiêu đề text-h2 · dòng phụ 1 dòng · nút bên phải) */
+function SettingsCard({ icon: HeaderIcon, title, subtitle, danger, action, children }: {
+  icon: Icon; title: string; subtitle: string; danger?: boolean; action?: ReactNode; children?: ReactNode
 }) {
   return (
     <section className={cn('rounded-2xl border bg-white p-5 shadow-card', danger ? 'border-alertRed/30' : 'border-warmGray/15')}>
-      <div className="mb-4 flex items-center gap-2.5">
-        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', danger ? 'bg-red-100 text-alertRed' : 'bg-charcoal text-limeMist')}>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', danger ? 'bg-red-100 text-alertRed' : 'bg-warmGray/10 text-charcoal')}>
           <HeaderIcon size={20} weight="bold" />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="text-h2 text-charcoal">{t(title)}</h2>
-          <p className="text-small text-graphite">{t(subtitle)}</p>
+          <p className="text-body text-graphite">{t(subtitle)}</p>
         </div>
+        {action}
       </div>
-      {children}
+      {children && <div className="mt-4">{children}</div>}
     </section>
   )
 }
 
-// ── Thông báo (ALERT-FR-005/006) ────────────────────────────────────────────
+// Nút lưu của một khối: nút phụ, thành nút chính khi khối có thay đổi chưa lưu (ST-04)
+function SaveButton({ dirty, disabled, loading, onClick, children }: {
+  dirty: boolean; disabled?: boolean; loading: boolean; onClick: () => void; children: string
+}) {
+  return (
+    <Button variant={dirty ? 'primary' : 'secondary'} size="sm" className="mt-4 self-end" disabled={!dirty || disabled} loading={loading} onClick={onClick}>
+      {children}
+    </Button>
+  )
+}
 
-function NotificationPreferencesCard() {
+// Kênh cảnh báo theo mức (ALERT-FR-005): chỗ duy nhất bật/tắt thông báo đẩy (ST-02)
+function AlertChannelsCard() {
   const user = useAuthStore(s => s.user)
   const { updateNotificationPreferences } = useAuth()
   const push = useToastStore(s => s.push)
   const prefs = user?.notification_preferences
-
   const telegramLinked = user?.telegram_linked ?? false
   // Nhãn 3 cấp dùng chung (FE_Design 6.3); lỗi API theo nhóm, không hiện câu thô của backend (13.16)
   const { t: levelLabel } = useTranslation(levelDict)
   const apiErrorMessage = useApiErrorMessage()
 
-  const [push_, setPush] = useState(prefs?.push ?? true)
-  // zalo/sms đã bỏ theo SRS 3.1.0 (G-01) — chỉ còn kênh push
-  const [quietStart, setQuietStart] = useState(prefs?.quiet_hours?.start ?? '')
-  const [quietEnd, setQuietEnd] = useState(prefs?.quiet_hours?.end ?? '')
-  // ALERT-FR-005 — kênh ngoài ứng dụng theo cấp cảnh báo
   const [levels, setLevels] = useState(() => levelChannelsOf(prefs))
+  // user (và prefs) có thể đổi từ nơi khác (tab khác, refetch) trong lúc trang đang mở: đồng bộ lại form
+  useEffect(() => setLevels(levelChannelsOf(prefs)), [prefs])
+  const saved = levelChannelsOf(prefs)
+  const dirty = LEVELS.some(level => levels[level].push !== saved[level].push || levels[level].telegram !== saved[level].telegram)
   const urgentOk = urgentHasOutsideChannel(levels.P1, telegramLinked)
   const setLevelChannel = (level: SeverityLevel, channel: keyof LevelChannels, value: boolean) =>
     setLevels(current => ({ ...current, [level]: { ...current[level], [channel]: value } }))
-  // Push chung cũng là push của các cấp cảnh báo: đổi nó thì cả 3 cấp đổi theo
-  const changeGeneralPush = (value: boolean) => {
-    setPush(value)
-    setLevels(current => applyGeneralPush(current, value))
-  }
-
-  // user (và prefs) có thể đổi từ nơi khác (tab khác, refetch) trong lúc trang
-  // này đang mở — resync lại form thay vì chỉ seed 1 lần lúc mount.
-  useEffect(() => {
-    setPush(prefs?.push ?? true)
-    setQuietStart(prefs?.quiet_hours?.start ?? '')
-    setQuietEnd(prefs?.quiet_hours?.end ?? '')
-    setLevels(levelChannelsOf(prefs))
-  }, [prefs])
 
   function handleSave() {
-    const general = { push: push_, telegram: prefs?.telegram ?? true }
+    // Cờ push chung giữ nguyên (backend còn dùng cho thông báo không phải cảnh báo); mức khác cờ chung thì ghi đè
+    const general = { push: prefs?.push ?? true, telegram: prefs?.telegram ?? true }
     updateNotificationPreferences.mutate(
-      { push: push_, by_severity: bySeverityPayload(levels, general), quiet_hours: { start: quietStart, end: quietEnd } },
+      { by_severity: bySeverityPayload(levels, general) },
       {
-        onSuccess: () => push('Đã lưu cài đặt thông báo'),
+        onSuccess: () => push('Đã lưu kênh cảnh báo'),
         onError: (err) => push(apiErrorMessage(err, t('Lưu thất bại')), 'error'),
       },
     )
   }
 
   return (
-    <SettingsCard icon={BellIcon} title="Thông báo" subtitle="Kênh nhận cảnh báo và giờ im lặng">
-      <div className="flex flex-col gap-2">
-        <ToggleRow icon={BellIcon} label="Push notification" description="Thông báo trên trình duyệt/ứng dụng" checked={push_} onChange={changeGeneralPush} />
-        {/* Zalo ZNS và SMS đã bỏ theo SRS 3.1.0 (G-01) */}
-      </div>
-
-      {/* ALERT-FR-005 — kênh theo cấp cảnh báo; Telegram chỉ hiện khi đã liên kết bot */}
-      <div className="mt-4 border-t border-warmGray/10 pt-4">
-        <p className="mb-2 text-body font-semibold text-charcoal">{t('Kênh theo mức cảnh báo')}</p>
-        <div className="flex flex-col gap-2">
-          {LEVELS.map(level => (
-            <div key={level} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-warmGray/5 px-3 py-2.5">
-              <span className="min-w-0 flex-1 text-body font-semibold text-charcoal">{levelLabel(level)}</span>
-              <label className="flex items-center gap-2 text-small text-warmGray">
-                {t('Push')}
-                <Toggle checked={levels[level].push} onChange={value => setLevelChannel(level, 'push', value)} aria-label={`${levelLabel(level)} · ${t('Push')}`} />
-              </label>
-              {telegramLinked && (
-                <label className="flex items-center gap-2 text-small text-warmGray">
-                  {t('Telegram')}
-                  <Toggle checked={levels[level].telegram} onChange={value => setLevelChannel(level, 'telegram', value)} aria-label={`${levelLabel(level)} · ${t('Telegram')}`} />
-                </label>
-              )}
-            </div>
-          ))}
-        </div>
+    <SettingsCard icon={BellIcon} title="Kênh cảnh báo" subtitle="Kênh ngoài ứng dụng theo từng mức. Cảnh báo luôn hiện trong ứng dụng.">
+      <div className="flex flex-col">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-warmGray/15">
+              <th scope="col" className="label-caption py-2 pr-4">{t('Mức')}</th>
+              <th scope="col" className="label-caption w-28 py-2 text-center">{t('Thông báo đẩy')}</th>
+              {telegramLinked && <th scope="col" className="label-caption w-28 py-2 text-center">{t('Telegram')}</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-warmGray/10">
+            {LEVELS.map(level => (
+              <tr key={level}>
+                <th scope="row" className="py-3 pr-4 text-body font-semibold text-charcoal">{levelLabel(level)}</th>
+                <td className="py-3 text-center">
+                  <Toggle checked={levels[level].push} onChange={value => setLevelChannel(level, 'push', value)} aria-label={`${levelLabel(level)} · ${t('Thông báo đẩy')}`} />
+                </td>
+                {telegramLinked && (
+                  <td className="py-3 text-center">
+                    <Toggle checked={levels[level].telegram} onChange={value => setLevelChannel(level, 'telegram', value)} aria-label={`${levelLabel(level)} · ${t('Telegram')}`} />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
         <p className={cn('mt-2 text-small', urgentOk ? 'text-warmGray' : 'text-safetyOrange')}>
-          {t('Cảnh báo Khẩn cấp phải còn ít nhất một kênh ngoài ứng dụng. Cảnh báo mọi mức vẫn luôn hiện trong ứng dụng.')}
+          {t('Mức Khẩn cấp phải còn ít nhất một kênh ngoài ứng dụng.')}
         </p>
+        <SaveButton dirty={dirty} disabled={!urgentOk} loading={updateNotificationPreferences.isPending} onClick={handleSave}>
+          {t('Lưu kênh cảnh báo')}
+        </SaveButton>
       </div>
-
-      <div className="mt-4 border-t border-warmGray/10 pt-4">
-        <p className="mb-2 flex items-center gap-1.5 text-body font-semibold text-charcoal">
-          <MoonIcon size={16} weight="bold" />
-          {t('Giờ im lặng')}
-          <span className="text-small font-normal text-warmGray">{t('(không nhận thông báo, trừ cảnh báo Khẩn cấp)')}</span>
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="Từ" type="time" value={quietStart} onChange={e => setQuietStart(e.target.value)} />
-          <Input label="Đến" type="time" value={quietEnd} onChange={e => setQuietEnd(e.target.value)} />
-        </div>
-      </div>
-
-      <Button className="mt-4 w-full" disabled={!urgentOk} loading={updateNotificationPreferences.isPending} onClick={handleSave}>
-        Lưu cài đặt
-      </Button>
     </SettingsCard>
   )
 }
 
-function ToggleRow({ icon: RowIcon, label, description, checked, onChange }: {
-  icon: Icon; label: string; description: string; checked: boolean; onChange: (v: boolean) => void
-}) {
+// Giờ im lặng (ALERT-FR-006, chỉ Chủ nhà yến): đồng hồ 24 giờ
+function QuietHoursCard() {
+  const user = useAuthStore(s => s.user)
+  const { updateNotificationPreferences } = useAuth()
+  const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
+  const savedStart = user?.notification_preferences?.quiet_hours?.start ?? ''
+  const savedEnd = user?.notification_preferences?.quiet_hours?.end ?? ''
+  const [quietStart, setQuietStart] = useState(savedStart)
+  const [quietEnd, setQuietEnd] = useState(savedEnd)
+  useEffect(() => { setQuietStart(savedStart); setQuietEnd(savedEnd) }, [savedStart, savedEnd])
+  const dirty = quietStart !== savedStart || quietEnd !== savedEnd
+
+  function handleSave() {
+    updateNotificationPreferences.mutate(
+      { quiet_hours: { start: quietStart, end: quietEnd } },
+      {
+        onSuccess: () => push('Đã lưu giờ im lặng'),
+        onError: (err) => push(apiErrorMessage(err, t('Lưu thất bại')), 'error'),
+      },
+    )
+  }
+
   return (
-    <div className={cn('flex items-center gap-3 rounded-xl px-3 py-2.5', checked ? 'bg-limeMist/60' : 'bg-warmGray/5')}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-charcoal shadow-icon">
-        <RowIcon size={16} weight="bold" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-body font-semibold text-charcoal">{t(label)}</p>
-        <p className="text-small text-warmGray">{t(description)}</p>
+    <SettingsCard icon={MoonIcon} title="Giờ im lặng" subtitle="Trong giờ này chỉ cảnh báo Khẩn cấp được gửi ra ngoài ứng dụng">
+      <div className="flex flex-col">
+        <div className="grid grid-cols-2 gap-3">
+          <TimePicker id="quiet-start" label="Từ" value={quietStart} onChange={setQuietStart} />
+          <TimePicker id="quiet-end" label="Đến" value={quietEnd} onChange={setQuietEnd} />
+        </div>
+        <SaveButton dirty={dirty} loading={updateNotificationPreferences.isPending} onClick={handleSave}>
+          {t('Lưu giờ im lặng')}
+        </SaveButton>
       </div>
-      <Toggle checked={checked} onChange={onChange} aria-label={t(label)} />
-    </div>
+    </SettingsCard>
   )
 }
 
@@ -331,7 +341,7 @@ function TelegramCard() {
           <Button className="w-full" loading={checkTelegramLink.isPending} onClick={handleCheck}>{t('Tôi đã bấm Start')}</Button>
         </div>
       ) : (
-        <Button className="w-full" loading={createTelegramLink.isPending} onClick={handleCreate}>{t('Liên kết Telegram')}</Button>
+        <Button variant="secondary" className="w-full" loading={createTelegramLink.isPending} onClick={handleCreate}>{t('Liên kết Telegram')}</Button>
       )}
 
       <ConfirmModal
@@ -391,7 +401,7 @@ function DeletionCard() {
         </div>
       ) : (
         // context 'button': EN dịch dạng động từ ("Request…"), khác nhãn tab "Yêu cầu xoá tài khoản" ở trang Admin
-        <Button variant="danger" className="w-full" onClick={() => setShowConfirm(true)}>{t('Yêu cầu xoá tài khoản', { context: 'button' })}</Button>
+        <Button variant="secondary" className="w-full border-alertRed/40 text-alertRed hover:bg-alertRed/5" onClick={() => setShowConfirm(true)}>{t('Yêu cầu xoá tài khoản', { context: 'button' })}</Button>
       )}
 
       <ConfirmModal

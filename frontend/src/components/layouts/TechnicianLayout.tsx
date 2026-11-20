@@ -1,6 +1,6 @@
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
-import { IconAlert, IconDevice, IconFarm, IconSettings } from '@/components/ui/icons'
+import { IconAlert, IconDevice, IconFarm } from '@/components/ui/icons'
 
 // Khung Farm Technician trên web (Report 4 §5.4): cảnh báo đứng đầu (MF-02), thiết bị, nhà được giao, cài đặt; dock là 4 mục này
 const menuSections: MenuSection[] = [
@@ -11,10 +11,6 @@ const menuSections: MenuSection[] = [
       { label: 'Thiết bị & Cảm biến', path: '/devices', icon: IconDevice },
       { label: 'Nhà được giao', path: '/farms', icon: IconFarm },
     ],
-  },
-  {
-    title: 'Khác',
-    items: [{ label: 'Cài đặt', path: '/settings', icon: IconSettings }],
   },
 ]
 

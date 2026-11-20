@@ -49,10 +49,6 @@ const menuSections: MenuSection[] = [
       { label: 'Nhật ký hệ thống', path: '/system/audit-log', icon: IconAnalytics },
     ],
   },
-  {
-    title: 'Khác',
-    items: [{ label: 'Cài đặt', path: '/settings', icon: IconSettings }],
-  },
 ]
 
 /**

@@ -111,7 +111,7 @@ export default function NestTypeBreakdownCard({ batches }: { batches: HarvestBat
               <span className={cn('text-xl font-extrabold tabular-nums', isEmpty ? 'text-warmGray' : 'text-charcoal')}>
                 {isEmpty ? NO_VALUE : num(hoveredItem?.kilograms ?? totalKilograms, KILOGRAM_DIGITS)}
               </span>
-              <span className="text-[11px] text-warmGray">
+              <span className="text-small text-warmGray">
                 {isEmpty ? t('breakdown.noData') : `kg · ${hoveredItem?.label ?? t('breakdown.totalItem')}`}
               </span>
             </div>

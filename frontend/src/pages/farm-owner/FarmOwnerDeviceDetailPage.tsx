@@ -12,7 +12,7 @@ import KitComponentsToggle from '@/components/features/farm-owner/devices/KitCom
 import type { DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
 import type { DeviceDetailState } from '@/components/features/farm-owner/devices/devices.constants';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { devicesDict } from '@/constants/devices.i18n';
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb';
 import { usePermission } from '@/hooks/common/usePermission';

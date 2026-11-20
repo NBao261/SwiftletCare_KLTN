@@ -66,7 +66,9 @@ const config: Config = {
         h3:      ['16px', { lineHeight: '24px', fontWeight: '600' }],
         body:    ['14px', { lineHeight: '22px' }],
         small:   ['13px', { lineHeight: '18px' }],
-        caption: ['11px', { lineHeight: '16px', fontWeight: '600', letterSpacing: '0.04em' }],
+        // Không chữ nào dưới 13px (todo-ui-layout-1120 C-02): caption và xs mặc định của Tailwind (12px) cùng lên 13px
+        caption: ['13px', { lineHeight: '18px', fontWeight: '600' }],
+        xs:      ['13px', { lineHeight: '18px' }],
         metric:  ['32px', { lineHeight: '38px', fontWeight: '700' }],
       },
       borderRadius: {

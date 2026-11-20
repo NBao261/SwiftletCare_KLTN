@@ -128,7 +128,7 @@ export default function ParameterReviewCard({
                 ? t('Thay đổi ngưỡng vi khí hậu')
                 : t('Thay đổi hệ số điều khiển mờ')}
             </h4>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-warmGray mt-0.5">
+            <div className="flex flex-wrap items-center gap-2 text-small text-warmGray mt-0.5">
               <span className="flex items-center gap-1 font-semibold text-charcoal">
                 <MapPin className="w-3 h-3 text-accent-700" />
                 {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}
@@ -156,7 +156,7 @@ export default function ParameterReviewCard({
 
       {/* Diff Table: So sánh giá trị cũ vs mới */}
       <div className="rounded-xl border border-warmGray/10 bg-warmGray/5 p-3 overflow-hidden">
-        <p className="text-[11px] font-semibold text-warmGray mb-2">
+        <p className="text-small font-semibold text-warmGray mb-2">
           {t('Chi tiết tham số thay đổi ({{n}} chỉ số):', { n: changedKeys.length })}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

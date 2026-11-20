@@ -64,23 +64,23 @@ export default function ZoneSelectorDropdown({
         {/* Phân đoạn 1: Trang trại */}
         <div className="flex items-center gap-1 sm:gap-1.5 text-graphite transition-colors group-hover:text-charcoal">
           <Building2 className="h-3.5 w-3.5 shrink-0 text-warmGray group-hover:text-charcoal" />
-          <span className="max-w-[70px] sm:max-w-[95px] truncate text-[11px] font-medium">{resolvedFarmName}</span>
+          <span className="max-w-[70px] sm:max-w-[95px] truncate text-small font-medium">{resolvedFarmName}</span>
         </div>
 
-        <span className="select-none text-[11px] font-light text-warmGray/40">/</span>
+        <span className="select-none text-small font-light text-warmGray/40">/</span>
 
         {/* Phân đoạn 2: Nhà yến */}
         <div className="flex items-center gap-1 sm:gap-1.5 text-graphite transition-colors group-hover:text-charcoal">
           <Warehouse className="h-3.5 w-3.5 shrink-0 text-warmGray group-hover:text-charcoal" />
-          <span className="max-w-[65px] sm:max-w-[85px] truncate text-[11px] font-medium">{resolvedHouseName}</span>
+          <span className="max-w-[65px] sm:max-w-[85px] truncate text-small font-medium">{resolvedHouseName}</span>
         </div>
 
-        <span className="select-none text-[11px] font-light text-warmGray/40">/</span>
+        <span className="select-none text-small font-light text-warmGray/40">/</span>
 
         {/* Phân đoạn 3: Tầng / Zone (Vùng đang giám sát trực tiếp) */}
         <div className="flex items-center gap-1 sm:gap-1.5 font-bold text-accent-900">
           <Layers className="h-3.5 w-3.5 shrink-0 text-accent-700" />
-          <span className="max-w-[65px] sm:max-w-[80px] truncate text-[11px]">{resolvedZoneName}</span>
+          <span className="max-w-[65px] sm:max-w-[80px] truncate text-small">{resolvedZoneName}</span>
         </div>
 
         {/* Mũi tên đóng/mở */}
@@ -109,7 +109,7 @@ export default function ZoneSelectorDropdown({
                 {t('Zone đang xem')}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-warmGray">
+            <div className="flex items-center gap-1.5 text-small text-warmGray">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-500 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-600" />
@@ -122,12 +122,12 @@ export default function ZoneSelectorDropdown({
           <div className="grid grid-cols-3 gap-3 divide-x divide-warmGray/15">
             {/* Cột 1: Trang trại */}
             <div className="flex flex-col gap-1 pr-1">
-              <div className="flex items-center justify-between px-1.5 pb-1.5 text-[11px] font-bold text-warmGray">
+              <div className="flex items-center justify-between px-1.5 pb-1.5 text-small font-bold text-warmGray">
                 <div className="flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5 text-warmGray" />
                   <span>{t('Trang trại')}</span>
                 </div>
-                <span className="rounded bg-stone px-1.5 py-0.5 text-[10px] font-semibold text-graphite">
+                <span className="rounded bg-stone px-1.5 py-0.5 text-small font-semibold text-graphite">
                   {farms.length}
                 </span>
               </div>
@@ -161,12 +161,12 @@ export default function ZoneSelectorDropdown({
 
             {/* Cột 2: Nhà yến */}
             <div className="flex flex-col gap-1 pl-3 pr-1">
-              <div className="flex items-center justify-between px-1.5 pb-1.5 text-[11px] font-bold text-warmGray">
+              <div className="flex items-center justify-between px-1.5 pb-1.5 text-small font-bold text-warmGray">
                 <div className="flex items-center gap-1.5">
                   <Warehouse className="h-3.5 w-3.5 text-warmGray" />
                   <span>{t('Nhà yến')}</span>
                 </div>
-                <span className="rounded bg-stone px-1.5 py-0.5 text-[10px] font-semibold text-graphite">
+                <span className="rounded bg-stone px-1.5 py-0.5 text-small font-semibold text-graphite">
                   {houses.length}
                 </span>
               </div>
@@ -206,12 +206,12 @@ export default function ZoneSelectorDropdown({
 
             {/* Cột 3: Tầng / Vùng */}
             <div className="flex flex-col gap-1 pl-3">
-              <div className="flex items-center justify-between px-1.5 pb-1.5 text-[11px] font-bold text-warmGray">
+              <div className="flex items-center justify-between px-1.5 pb-1.5 text-small font-bold text-warmGray">
                 <div className="flex items-center gap-1.5">
                   <Layers className="h-3.5 w-3.5 text-accent-700" />
                   <span>{t('Tầng / Vùng')}</span>
                 </div>
-                <span className="rounded bg-stone px-1.5 py-0.5 text-[10px] font-semibold text-graphite">
+                <span className="rounded bg-stone px-1.5 py-0.5 text-small font-semibold text-graphite">
                   {zones.length}
                 </span>
               </div>
@@ -246,14 +246,14 @@ export default function ZoneSelectorDropdown({
           </div>
 
           {/* Footer tóm tắt lựa chọn */}
-          <div className="flex items-center justify-between border-t border-warmGray/15 px-1 pt-2.5 text-[11px]">
+          <div className="flex items-center justify-between border-t border-warmGray/15 px-1 pt-2.5 text-small">
             <div className="flex items-center gap-1.5 truncate text-warmGray">
               <span>{t('Đang chọn:')}</span>
               <span className="max-w-[360px] truncate font-semibold text-accent-900">
                 {resolvedFarmName} <span className="text-warmGray/50">&gt;</span> {resolvedHouseName} <span className="text-warmGray/50">&gt;</span> {resolvedZoneName}
               </span>
             </div>
-            <span className="shrink-0 text-[10px] text-warmGray">
+            <span className="shrink-0 text-small text-warmGray">
               {t('Nhấp vào Tầng để chuyển vùng')}
             </span>
           </div>

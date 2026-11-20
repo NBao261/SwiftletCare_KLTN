@@ -32,13 +32,14 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 }
 
 const SIZE_CLASS: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'h-9 px-4 text-sm',
+  // Điện thoại: vùng bấm 44px (C-04); desktop giữ 36px cho bảng dày
+  sm: 'h-9 px-4 text-sm max-sm:h-11',
   md: 'h-12 px-5 text-sm',
   lg: 'h-14 px-6 text-base',
 }
 
 const ICON_SIZE_CLASS: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'h-9 w-9',
+  sm: 'h-9 w-9 max-sm:h-11 max-sm:w-11',
   md: 'h-11 w-11',
   lg: 'h-12 w-12',
 }

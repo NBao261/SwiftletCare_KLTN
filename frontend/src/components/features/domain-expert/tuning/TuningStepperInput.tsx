@@ -50,9 +50,9 @@ export default function TuningStepperInput({
       {/* Label + hints */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[#27231F] leading-tight">{label}</p>
-        {subLabel && <p className="text-[11px] text-[#878380] mt-0.5 italic">{t(subLabel)}</p>}
-        {rangeHint && <p className="text-[11px] text-[#B8B4B0] mt-0.5">{translateHint(rangeHint)}</p>}
-        {defaultHint && <p className="text-[11px] text-[#B8B4B0]">{translateHint(defaultHint)}</p>}
+        {subLabel && <p className="text-small text-[#878380] mt-0.5 italic">{t(subLabel)}</p>}
+        {rangeHint && <p className="text-small text-[#B8B4B0] mt-0.5">{translateHint(rangeHint)}</p>}
+        {defaultHint && <p className="text-small text-[#B8B4B0]">{translateHint(defaultHint)}</p>}
       </div>
 
       {/* Stepper control */}

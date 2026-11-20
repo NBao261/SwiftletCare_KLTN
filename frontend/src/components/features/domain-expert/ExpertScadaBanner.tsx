@@ -159,7 +159,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-500 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-600" />
             </span>
-            <span className="text-[11px] font-bold text-accent-900">
+            <span className="text-small font-bold text-accent-900">
               {t('Trực tiếp')}
             </span>
           </div>

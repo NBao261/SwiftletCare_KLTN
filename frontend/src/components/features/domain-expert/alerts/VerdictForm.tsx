@@ -69,7 +69,7 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
             <ShieldAlert className="w-4 h-4 text-warmGray" />
             <span>{t('Cảnh báo đã bị bác bỏ')}</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-warmGray text-[11.5px] pl-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-warmGray text-small pl-6">
             <div>
               <span className="text-neutral-500">{t('Người bác bỏ:')}</span>{' '}
               <strong className="text-charcoal">{authorName}</strong> ({authorRole})
@@ -143,7 +143,7 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
           className="w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-[#27231F] placeholder-[#B8B4B0] focus:outline-none focus:ring-2 focus:ring-[#B5D32C] focus:border-transparent transition-all"
         />
         <div className="flex items-start justify-between mt-1.5 gap-2">
-          <p className="text-[11px] text-[#878380] italic leading-relaxed flex-1">
+          <p className="text-small text-[#878380] italic leading-relaxed flex-1">
             {t('Lưu ý: bác bỏ cảnh báo sẽ đóng cảnh báo và lưu lại lý do. Xác nhận lại sẽ khôi phục trạng thái ban đầu.')}
           </p>
           <span className="text-xs text-[#878380] flex-shrink-0">

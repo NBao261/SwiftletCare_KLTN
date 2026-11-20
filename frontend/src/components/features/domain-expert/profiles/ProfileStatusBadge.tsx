@@ -17,7 +17,7 @@ export default function ProfileStatusBadge({
 }) {
   const { label, cls } = CONFIG[status]
   return (
-    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', cls, className)}>
+    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-small font-semibold', cls, className)}>
       {t(label)}
     </span>
   )

@@ -26,7 +26,7 @@ export default function ReturnRateDropCard({ houseName, value, isSaving, isReset
       <div className="flex items-center justify-between pb-3 border-b border-stone-100">
         <div>
           <h3 className="text-sm font-bold text-[#27231F]">{t('4. Mức giảm tỷ lệ chim về của nhà')}</h3>
-          <p className="text-[11px] text-[#878380] mt-0.5">
+          <p className="text-small text-[#878380] mt-0.5">
             {houseName ? t('Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm', { house: houseName }) : t('Chọn một Zone để biết nhà cần chỉnh')}
           </p>
         </div>
