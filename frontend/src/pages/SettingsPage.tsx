@@ -26,9 +26,7 @@ import {
 } from '@/validations/common/notificationChannels.validation'
 import type { SeverityLevel } from '@/types'
 
-// Cài đặt theo role (todo-ui-layout-1120 §4.2): một cột, các khối xếp dọc. Kênh cảnh báo và Telegram cho người nhận cảnh báo
-// (Chủ nhà yến, Kỹ thuật viên: ALERT-FR-005, 013); giờ im lặng chỉ Chủ nhà yến (ALERT-FR-006); chuyên gia chỉ nhận trong
-// ứng dụng (EXPERT-FR-007); bảo mật (AUTH-FR-009), quyền riêng tư, xoá tài khoản (AUTH-FR-012) cho mọi người
+// Cài đặt theo role (todo-ui-layout-1120 §4.2; ALERT-FR-005, 006, 013, EXPERT-FR-007, AUTH-FR-009, 012)
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
   const isAlertRecipient = usePermission('FARM_OWNER', 'FARM_TECHNICIAN')

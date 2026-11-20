@@ -154,10 +154,7 @@ export function canAccessPath(role: Role | undefined, path: string): boolean {
   return !!role && entry.roles.includes(role)
 }
 
-/**
- * Bậc phạm vi một trang cần để có dữ liệu (C-05): 'farm' = một trang trại, 'house' = một nhà, 'zone' = một Zone.
- * Thiếu thì useScopeFilter tự chọn bậc có dữ liệu thay vì để trang trống "Chọn một trang trại"; không có trong bảng = 'none'.
- */
+// Bậc phạm vi trang cần để có dữ liệu (C-05); không có trong bảng = 'none'
 export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
 
 const SCOPE_LEVEL: { path: string; level: ScopeLevel }[] = [

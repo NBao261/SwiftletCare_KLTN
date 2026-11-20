@@ -34,10 +34,7 @@ interface DataTableProps<T> {
   visibleRows?: number
   /** Chỉ dùng với `visibleRows`: khung bảng cao bằng phần tử cha (h-full), thân bảng lấp phần còn lại và cuộn — nơi gọi tự đặt chiều cao cha */
   fillHeight?: boolean
-  /**
-   * Điện thoại (dưới sm): vẽ danh sách thẻ thay bảng, không cuộn ngang (C-09). Thẻ: cột chính in đậm, 2–3 cột phụ thành
-   * dòng xám, menu ⋯ góc phải. Trả null thì bỏ dòng đó (VD dòng đệm của FixedRowsTable)
-   */
+  // Điện thoại: danh sách thẻ thay bảng (C-09); trả null thì bỏ dòng đó (VD dòng đệm của FixedRowsTable)
   mobileCard?: (row: T) => ReactNode
 }
 
@@ -75,7 +72,12 @@ export default function DataTable<T>(props: DataTableProps<T>) {
             <li
               key={key}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={cn('rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card', onRowClick && 'cursor-pointer active:bg-warmGray/5')}
+              onKeyDown={onRowClick ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row) }
+              } : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              role={onRowClick ? 'button' : undefined}
+              className={cn('rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card', onRowClick && 'cursor-pointer active:bg-warmGray/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-charcoal')}
             >
               {card}
             </li>

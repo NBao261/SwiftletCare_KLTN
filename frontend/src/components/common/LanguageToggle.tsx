@@ -3,12 +3,12 @@ import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { shellDict } from '@/constants/shell.i18n'
 
-/** Công tắc VI/EN — ghi vào languageStore; màn nào có từ điển (useTranslation) sẽ đổi theo. Dưới sm nằm trong menu avatar (SH-05) */
+// Công tắc VI/EN, dưới sm nằm trong menu avatar (SH-05)
 export default function LanguageToggle() {
   const { t } = useTranslation(shellDict)
   const lang = useLanguageStore(s => s.lang === 'vi' ? 'VI' : 'EN')
   const setStoreLang = useLanguageStore(s => s.setLang)
-  const setLang = (l: 'VI' | 'EN') => setStoreLang(l === 'VI' ? 'vi' : 'en')
+  const setLang = (language: 'VI' | 'EN') => setStoreLang(language === 'VI' ? 'vi' : 'en')
 
   return (
     // Bấm vào bất kỳ đâu trên khung để đổi, nút đen trượt sang ngôn ngữ đang chọn; cao 36px như ô phạm vi (SH-06)
@@ -27,12 +27,12 @@ export default function LanguageToggle() {
           lang === 'EN' && 'translate-x-full',
         )}
       />
-      {(['VI', 'EN'] as const).map(l => (
+      {(['VI', 'EN'] as const).map(language => (
         <span
-          key={l}
-          className={cn('relative flex-1 text-center text-small font-bold transition-colors duration-300', lang === l ? 'text-white' : 'text-warmGray')}
+          key={language}
+          className={cn('relative flex-1 text-center text-small font-bold transition-colors duration-300', lang === language ? 'text-white' : 'text-warmGray')}
         >
-          {l}
+          {language}
         </span>
       ))}
     </button>

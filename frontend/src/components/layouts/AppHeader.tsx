@@ -39,8 +39,7 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
   ]
 
   return (
-    // Header không mang backdrop-filter: phần tử có backdrop-filter khiến kính của popup con chỉ làm nhòe được nội dung bên trong header.
-    // Kính header vẽ ở lớp nền -z-10. flex-wrap: dưới xl thanh phạm vi xuống hàng riêng (SH-07)
+    // Kính vẽ ở lớp nền -z-10 để kính của popup con không bị cắt; flex-wrap cho thanh phạm vi dưới xl (SH-07)
     <header className="relative isolate flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3 lg:px-8">
       {/* Kính trong (glassmorphism): chỉ phủ 10% trắng + blur; khi cuộn thêm viền sáng */}
       <div
@@ -64,7 +63,7 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
               : 'truncate text-sm font-semibold text-charcoal'
           const CrumbTag = isRoot ? 'h1' : 'span'
           return (
-            <CrumbTag key={i} className={cn('flex min-w-0 items-baseline gap-1.5', !isRoot && 'max-sm:hidden')}>
+            <CrumbTag key={i} className="flex min-w-0 items-baseline gap-1.5">
               {!isRoot && <span aria-hidden="true" className="shrink-0 text-lg font-medium text-warmGray/40">/</span>}
               {clickable ? (
                 <button onClick={crumb.onClick} className={cn(textClass, 'text-left transition-opacity hover:opacity-70')}>

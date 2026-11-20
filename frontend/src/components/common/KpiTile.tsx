@@ -3,10 +3,7 @@ import type { Icon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { tr } from '@/i18n'
 
-/**
- * Màu của ô: neutral/orange/green chỉ tô vòng icon (orange = có cảnh báo, green = ổn);
- * warning/critical tô cả ô (viền + nền nhạt, số và icon mang màu) khi số đang báo vấn đề.
- */
+// Màu ô: neutral/orange/green chỉ tô vòng icon, warning/critical tô cả ô khi số đang báo vấn đề
 type KpiTone = 'neutral' | 'orange' | 'green' | 'warning' | 'critical'
 
 const ICON_TONE_CLASS: Record<KpiTone, string> = {
@@ -29,21 +26,18 @@ interface KpiTileProps {
   unit?: string
   sub: string
   tone?: KpiTone
-  /** Màu vòng icon riêng (VD cùng màu badge trạng thái trong bảng) — thay màu theo `tone` */
+  // Màu vòng icon riêng (VD cùng màu badge trạng thái trong bảng), thay màu theo tone
   iconClass?: string
-  /** Huy hiệu nhỏ cạnh số chính (VD so sánh với kỳ trước) */
+  // Huy hiệu nhỏ cạnh số chính (VD so sánh với kỳ trước)
   badge?: ReactNode
-  /** Nhãn nền đỏ cùng hàng số, sát mép phải (VD "3 quá hạn") */
+  // Nhãn nền đỏ cùng hàng số, sát mép phải (VD "3 quá hạn")
   valueBadge?: string
-  /** Cách gọi cũ: `alert` = `tone="critical"` */
+  // Cách gọi cũ: alert = tone critical
   alert?: boolean
   className?: string
 }
 
-/**
- * Ô chỉ số dùng chung cho hàng KPI của cả 4 role (C-10, FE_Design §1.1): một chiều cao, nhãn 13px,
- * icon tròn 28px, số text-2xl, dòng phụ 13px. Hàng KPI: `grid grid-cols-2 lg:grid-cols-4`, không khung bao.
- */
+// Ô chỉ số dùng chung cho hàng KPI của 4 role (C-10, FE_Design §1.1)
 export default function KpiTile({ icon: TileIcon, label, value, unit, sub, tone: toneProp, iconClass, badge, valueBadge, alert, className }: KpiTileProps) {
   const tone = toneProp ?? (alert ? 'critical' : 'neutral')
   const boxTone = BOX_TONE_CLASS[tone]

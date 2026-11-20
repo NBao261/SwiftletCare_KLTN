@@ -248,7 +248,7 @@ Còn lại (Nhi): gom 5 nhóm thành 3, bỏ chữ "Console", Cài đặt vào m
 | ID | Việc | Cách làm |
 |---|---|---|
 | ST-01 | Một cột | `max-w-3xl`, các khối xếp dọc theo thứ tự bảng trên; hết nửa phải trống ở Admin và hàng lệch ở các role khác (`unevenRows = 0`) |
-| ST-02 | Bỏ khối "Push notification" chung | Bảng kênh theo mức là chỗ duy nhất bật/tắt thông báo đẩy (khối chung trùng việc với cột "Thông báo đẩy"); đổi chữ "Push" → "Thông báo đẩy" (FE_Design §6.2) |
+| ST-02 | Bỏ khối "Push notification" chung | Bảng kênh theo mức là chỗ duy nhất bật/tắt thông báo đẩy (khối chung trùng việc với cột "Thông báo đẩy"); đổi chữ "Push" → "Thông báo đẩy" (FE_Design §6.2). **Còn mở (backend, Bảo/Kiệt):** `notification.service.ts` vẫn dùng cờ `push` chung cho thông báo không phải cảnh báo, giao diện không còn đổi được cờ này; ai đã tắt nó ở bản cũ sẽ không nhận push loại đó. Backend nên bỏ cờ chung hoặc coi như bật; web lưu kênh không gửi cờ chung |
 | ST-03 | Ẩn theo role | Dùng `usePermission`: bảng kênh + Telegram cho `FARM_OWNER`, `FARM_TECHNICIAN`; giờ im lặng chỉ `FARM_OWNER`; chuyên gia chỉ thấy dòng chú thích. Không gửi trường của khối bị ẩn khi lưu |
 | ST-04 | Một nút chính | Mỗi khối có nút lưu riêng là nút phụ; chỉ khi khối có thay đổi chưa lưu thì nút đó thành nút chính. "Yêu cầu xoá tài khoản" là nút phụ viền đỏ, popup xác nhận giữ nguyên |
 | ST-05 | Giờ 24h, `_`, chữ | Ô giờ dùng `TimePicker` của `ui/` (24 giờ) thay `<input type="time">`; số điện thoại trống `NO_VALUE`; nhãn vai trò 13px (C-02) |
