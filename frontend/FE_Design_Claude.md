@@ -1316,7 +1316,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
    |---|---|---|---|
    | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị, cảnh báo, cấu trúc farm. Nút bật/tắt relay và xác nhận cảnh báo **chỉ Farm Owner** thấy (Technician, Admin: không) — ẩn bằng `usePermission`; Admin không còn màn farm (v2.11.0) | Có |
    | `SETUP_ROLES` | Farm Owner · Technician | Thiết lập thiết bị bằng QR, dời/gỡ thiết bị, in mã QR tầng (SF-01) | Tạo khi làm màn SF-01 |
-   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone, lịch sử quyết định của chuyên gia; kiểm chứng cảnh báo, tham số phát hiện, vòng đếm, lịch đếm (Farm Owner chỉ ghi khi farm chưa có chuyên gia — BR-22) | Tạo khi thêm `DOMAIN_EXPERT` |
+   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone, lịch sử quyết định của chuyên gia; kiểm chứng cảnh báo (Farm Owner chỉ kết luận khi farm chưa có chuyên gia, có chuyên gia thì nhắc), tham số phát hiện, vòng đếm, lịch đếm, mức chỉ số sức khoẻ (Farm Owner sửa được, farm có chuyên gia thì chuyên gia duyệt sau), luật thời tiết, hồ sơ, luật khuyến nghị (Farm Owner ở farm có chuyên gia gửi chuyên gia duyệt) — BR-22, Report 3 4.2.15 | Tạo khi thêm `DOMAIN_EXPERT` |
    | `EXPERT_ONLY` | Domain Expert | Viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số | Tạo khi thêm `DOMAIN_EXPERT` |
    | `FARM_OWNER_ONLY` | Farm Owner | Thành viên, cài đặt farm | Có |
    | `HARVEST_ROLES` | Farm Owner (ghi) · Domain Expert (xem) | Ghi nhận thu hoạch. Code hiện là Farm Owner · Admin — bỏ Admin, thêm chuyên gia khi thêm `DOMAIN_EXPERT` (12.0 c dòng 4) | Có (đích khác) |

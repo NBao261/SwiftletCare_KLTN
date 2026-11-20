@@ -89,7 +89,7 @@ export default function DomainExpertCountingSchedulePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* BR-22 — Farm Owner chỉ sửa khi farm chưa có chuyên gia */}
+      {/* BR-22 — Farm Owner sửa được; farm có chuyên gia thì chuyên gia duyệt sau */}
       <fieldset disabled={!canEditParameters} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
         {/* Khung đang áp hôm nay — màn rộng: tiêu đề và ghi chú bên trái, hai phiên bên phải; màn hẹp xếp dọc */}

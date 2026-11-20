@@ -1,9 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ACCOUNTS, PASSWORD, type Account } from './helpers/demoApi';
 
-// W-02 (todo-audit-1118) — trang quyết định của chuyên gia mở cho Farm Owner (Report 4 §5.4): farm chưa có chuyên gia
-// thì Farm Owner quyết định thay; farm có chuyên gia thì Farm Owner vẫn sửa tham số và chuyên gia xem lại (BR-22,
-// Report 3 4.2.15). Cần `npm run seed:demo` (owner2@ không có chuyên gia).
+// Trang quyết định của chuyên gia cho Farm Owner (BR-22, Report 3 4.2.15); cần `npm run seed:demo` (owner2@ không có chuyên gia)
 async function signInUi(page: Page, account: Account): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(ACCOUNTS[account]);

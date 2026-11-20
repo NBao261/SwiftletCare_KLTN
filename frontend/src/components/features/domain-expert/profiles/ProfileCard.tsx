@@ -22,9 +22,11 @@ interface Props {
   // BR-22 (Report 3 4.2.15): Farm Owner và chuyên gia sửa bản nháp; chỉ chuyên gia duyệt và lưu trữ
   canEditDraft?: boolean
   canApprove?: boolean
+  // Farm chưa có chuyên gia: bản nháp chưa ai duyệt được
+  farmHasExpert?: boolean
 }
 
-export default function ProfileCard({ profile, onEdit, onApprove, onArchive, disabled, canEditDraft = false, canApprove = false }: Props) {
+export default function ProfileCard({ profile, onEdit, onApprove, onArchive, disabled, canEditDraft = false, canApprove = false, farmHasExpert = true }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [confirmAction, setConfirmAction] = useState<'approve' | 'archive' | null>(null)
 
@@ -78,7 +80,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
           {profile.detection_tuning && <DetectionSection detection={profile.detection_tuning} />}
           {profile.speaker_schedule && <SpeakerSection schedule={profile.speaker_schedule} />}
 
-          {(canEditDraft || canApprove) && <div className={cn('flex flex-wrap gap-2 pt-1 border-t border-warmGray/10', disabled && 'opacity-50 pointer-events-none')}>
+          {(canApprove || (canEditDraft && profile.status === 'DRAFT')) && <div className={cn('flex flex-wrap gap-2 pt-1 border-t border-warmGray/10', disabled && 'opacity-50 pointer-events-none')}>
             {profile.status === 'DRAFT' && (
               <>
                 {canEditDraft && (
@@ -97,7 +99,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" /> {t('Duyệt hồ sơ')}
                 </Button>}
-                {!canApprove && <span className="self-center text-small text-warmGray">{t('Chờ chuyên gia duyệt')}</span>}
+                {!canApprove && <span className="self-center text-small text-warmGray">{t(farmHasExpert ? 'Chờ chuyên gia duyệt' : 'Cần mời chuyên gia để duyệt')}</span>}
               </>
             )}
             {canApprove && profile.status === 'APPROVED' && (

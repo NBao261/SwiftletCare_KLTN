@@ -1,5 +1,4 @@
-// ENV-FR-028…030, BR-38: Chuyên gia đặt tối đa 10 luật cho từng nhà; Farm Owner đặt khi farm chưa có chuyên gia,
-// có chuyên gia thì gửi đề xuất để chuyên gia duyệt (BR-22, Report 3 4.2.15)
+// ENV-FR-028…030, BR-38, BR-22 — luật bù phun sương của nhà; Farm Owner ở farm có chuyên gia gửi đề xuất
 import { useState, useEffect } from 'react'
 import { CloudRain, Info, Zap, AlertTriangle, Send } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -104,7 +103,8 @@ export default function DomainExpertWeatherRulesPage() {
   function decide(action: Promise<unknown>, doneMessage: string) {
     action
       .then(() => { pushToast(t(doneMessage), 'success'); setIsRejectOpen(false) })
-      .catch(error => pushToast(getErrorMessage(error), 'error'))
+      // 409: đề xuất vừa đổi hoặc đã có người xử lý, danh sách đọc lại (hook) để chuyên gia xem bản mới
+      .catch(error => { pushToast(getErrorMessage(error), 'error'); setIsRejectOpen(false) })
   }
 
   // Đề xuất đang chờ của Farm Owner: chuyên gia duyệt hoặc từ chối, Farm Owner thấy mình đã gửi gì
@@ -121,7 +121,7 @@ export default function DomainExpertWeatherRulesPage() {
           {isExpert && (
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => setIsRejectOpen(true)} disabled={approve.isPending}>{t('Từ chối')}</Button>
-              <Button size="sm" loading={approve.isPending} onClick={() => decide(approve.mutateAsync(), 'Đã duyệt, luật mới có hiệu lực từ lần tính kế tiếp.')}>
+              <Button size="sm" loading={approve.isPending} onClick={() => decide(approve.mutateAsync(proposal.proposed_at), 'Đã duyệt, luật mới có hiệu lực từ lần tính kế tiếp.')}>
                 {t('Duyệt đề xuất')}
               </Button>
             </div>
@@ -269,7 +269,7 @@ export default function DomainExpertWeatherRulesPage() {
       required
       danger
       loading={reject.isPending}
-      onSubmit={note => decide(reject.mutateAsync(note), 'Đã từ chối đề xuất.')}
+      onSubmit={note => data?.proposal && decide(reject.mutateAsync({ note, proposedAt: data.proposal.proposed_at }), 'Đã từ chối đề xuất.')}
     />
     </fieldset>
   )

@@ -48,8 +48,7 @@ export default function DomainExpertZoneTuningPage() {
   const resetDetection = useResetDetectionTuning(zoneId);
   const applySuggestion = useApplySuggestion();
   const submitProposal = useSubmitCoefficientProposal();
-  // BR-22 (Report 3 4.2.15) — Farm Owner sửa mọi tham số ở đây, farm có chuyên gia thì chuyên gia duyệt sau;
-  // áp gợi ý hệ số thì Farm Owner ở farm có chuyên gia gửi chuyên gia duyệt (EXPERT-FR-011)
+  // BR-22 — Farm Owner sửa mọi tham số (chuyên gia duyệt sau); gợi ý hệ số ở farm có chuyên gia thì gửi duyệt
   const { canDecide, canEditParameters, ownerNeedsExpert } = useExpertDecisionRights();
 
   // Mức giảm tỷ lệ chim về thuộc nhà chứa Zone đang chọn (EXPERT-FR-008)

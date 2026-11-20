@@ -31,7 +31,6 @@ interface HarvestCyclesCardProps {
   zones: AllZone[];
 }
 
-// HARVEST-FR-007, ANALYTICS-FR-004 — chu kỳ thu hoạch theo zone: sản lượng, so sánh, sức khỏe, kết luận mùa vụ (chỉ xem)
 // BR-22 — Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận một chu kỳ đã đóng (mỗi chu kỳ một lần)
 function CycleReminder({ cycle }: { cycle: HarvestCycle }): JSX.Element | null {
   const { t } = useTranslation(harvestDict);
@@ -44,6 +43,7 @@ function CycleReminder({ cycle }: { cycle: HarvestCycle }): JSX.Element | null {
     : <Button variant="secondary" size="sm" loading={reminder.isPending} onClick={reminder.remind}>{t('cycle.remind')}</Button>;
 }
 
+// HARVEST-FR-007, ANALYTICS-FR-004 — chu kỳ thu hoạch theo zone: sản lượng, so sánh, sức khỏe, kết luận mùa vụ (chỉ xem)
 export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyclesCardProps): JSX.Element {
   const { t, date, num, exact } = useTranslation(harvestDict);
   const apiErrorMessage = useApiErrorMessage();

@@ -556,6 +556,7 @@ const enExpert: Record<string, string> = {
   'Camera chưa có vòng cũ: vẽ lại vòng nếu cần chỉnh.': 'The camera had no ring before: redraw it if it needs a change.',
   'Giá trị cũ được gửi lại xuống thiết bị và mục này chuyển sang Đã hoàn tác.': 'The old values are sent back to the devices and this item becomes Reverted.',
   'Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kết luận cảnh báo do chuyên gia ghi, bạn nhắc được.': 'This farm has an expert: your changes to parameters, the counting schedule and ring apply at once and the expert reviews them. Weather rules, profiles and recommendation rules run once the expert approves them. The expert records alert verdicts; you can remind them.',
+  'Cần mời chuyên gia để duyệt': 'Invite an expert to approve it',
 }
 
 export default enExpert

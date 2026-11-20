@@ -14,9 +14,10 @@ export const weatherRulesApi = {
   propose: (houseId: string, rules: WeatherRule[]) =>
     api.post<ApiResponse<WeatherRulesProposal>>(`/farms/houses/${houseId}/weather-rules/proposal`, { rules }),
 
-  approveProposal: (houseId: string) =>
-    api.post<ApiResponse<WeatherRulesResponse>>(`/farms/houses/${houseId}/weather-rules/proposal/approve`),
+  // `proposedAt` của bản đang hiển thị: đề xuất đổi trong lúc đó thì backend trả 409
+  approveProposal: (houseId: string, proposedAt: string) =>
+    api.post<ApiResponse<WeatherRulesResponse>>(`/farms/houses/${houseId}/weather-rules/proposal/approve`, { proposed_at: proposedAt }),
 
-  rejectProposal: (houseId: string, note: string) =>
-    api.post<ApiResponse<WeatherRulesResponse>>(`/farms/houses/${houseId}/weather-rules/proposal/reject`, { note }),
+  rejectProposal: (houseId: string, note: string, proposedAt: string) =>
+    api.post<ApiResponse<WeatherRulesResponse>>(`/farms/houses/${houseId}/weather-rules/proposal/reject`, { note, proposed_at: proposedAt }),
 }

@@ -14,7 +14,6 @@ import {
 import { Button } from '@/components/ui';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatDateTime } from '@/lib/i18n';
-import { useAllZones } from '@/hooks/shared/useFarms';
 import type { ParameterReview, ParameterReviewGroup, ParameterReviewStatus } from '@/types/expert/reviews.types';
 import { t, translated } from '@/i18n';
 
@@ -25,6 +24,29 @@ interface ParameterReviewCardProps {
   isProcessing?: boolean;
   // Farm Owner xem mục duyệt, đề xuất nhưng không duyệt (EXPERT-FR-010, 011 chỉ của Domain Expert)
   readOnly?: boolean;
+  // Tên nơi thay đổi, trang dựng một lần cho mọi thẻ
+  places: ReviewPlaces;
+}
+
+// Tên Zone (kèm nhà) và tên nhà theo id, dựng một lần ở trang
+export interface ReviewPlaces {
+  zoneNames: Map<string, string>;
+  houseNames: Map<string, string>;
+}
+
+// Nơi của mục: Zone, nhà, hoặc nhà kèm camera; không tra được thì "Không xác định"
+export function reviewPlace(review: Pick<ParameterReview, 'group' | 'zone_id' | 'house_id'>, places: ReviewPlaces): string {
+  if (review.zone_id) return places.zoneNames.get(review.zone_id) ?? t('Không xác định');
+  const houseName = review.house_id ? places.houseNames.get(review.house_id) : undefined;
+  if (!houseName) return t('Không xác định');
+  if (review.group === 'counting_ring') return `${houseName} • ${t('Camera đếm chim')}`;
+  return houseName;
+}
+
+// Vòng đếm vẽ trên camera chưa có vòng cũ thì không có gì để hoàn tác (backend 409)
+export function canRevertReview(review: Pick<ParameterReview, 'group' | 'old_values'>): boolean {
+  const oldRing = (review.old_values as { ring?: unknown } | undefined)?.ring;
+  return review.group !== 'counting_ring' || Boolean(oldRing);
 }
 
 const STATUS_CONFIG: Record<
@@ -128,23 +150,15 @@ export default function ParameterReviewCard({
   onRevert,
   isProcessing = false,
   readOnly = false,
+  places,
 }: ParameterReviewCardProps): JSX.Element {
   const [showConfirmRevert, setShowConfirmRevert] = useState(false);
   const statusConfig = STATUS_CONFIG[review.status] || STATUS_CONFIG.PENDING_REVIEW;
   const isPending = review.status === 'PENDING_REVIEW';
   const changedKeys = getChangedParameterKeys(review.old_values, review.new_values);
 
-  const { data: allZones } = useAllZones();
-  // Mục theo Zone ghi Zone; theo nhà hoặc camera ghi nhà (mục tạo trước Report 3 4.2.15 chỉ có zone_id)
-  const zoneInfo = review.zone_id ? allZones?.find(zone => zone._id === review.zone_id) : undefined;
-  const houseZone = review.house_id ? allZones?.find(zone => zone.house_id === review.house_id) : undefined;
-  const place = zoneInfo
-    ? `${zoneInfo.farmName} • ${zoneInfo.name}`
-    : houseZone
-      ? `${houseZone.farmName} • ${houseZone.houseName}${review.group === 'counting_ring' ? ` • ${t('Camera đếm chim')}` : ''}`
-      : t('Không xác định');
-  // Vòng đếm vẽ trên camera chưa có vòng: không có gì để hoàn tác (backend 409), chuyên gia vẽ lại
-  const canRevert = !(review.group === 'counting_ring' && !(review.old_values as { ring?: unknown })?.ring);
+  const place = reviewPlace(review, places);
+  const canRevert = canRevertReview(review);
 
   const authorName =
     typeof review.changed_by === 'object' && review.changed_by?.full_name

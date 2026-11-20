@@ -46,6 +46,11 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   // BR-22 — Farm Owner kết luận thay khi farm chưa có chuyên gia; farm có chuyên gia thì xem bằng chứng và nhắc chuyên gia
   const { canDecide, ownerNeedsExpert } = useExpertDecisionRights()
   const reminder = useRemindExpert('alert', alert?._id, alert?.expert_reminded_at)
+  // Farm Owner ở farm có chuyên gia, cảnh báo chưa có kết luận: nhắc chuyên gia (mỗi cảnh báo một lần)
+  const canRemind = ownerNeedsExpert && !alert?.expert_verdict
+  const remindControl = reminder.reminded
+    ? <span className="text-small text-warmGray">{t('Đã nhắc chuyên gia')}</span>
+    : <Button variant="secondary" size="sm" loading={reminder.isPending} onClick={reminder.remind}>{t('Nhắc chuyên gia')}</Button>
   const { data: zone } = useZone(alert?.zone_id)
   const { selectedZoneId, selectedZoneName } = useZoneStore()
 
@@ -125,10 +130,8 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
               ? <VerdictForm alert={alert} verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
               : (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm text-[#878380]">{t('Trang trại đã có chuyên gia nên kết luận do chuyên gia ghi. Bạn xem được bằng chứng.')}</p>
-                  {ownerNeedsExpert && !alert?.expert_verdict && (reminder.reminded
-                    ? <span className="text-small text-warmGray">{t('Đã nhắc chuyên gia')}</span>
-                    : <Button variant="secondary" size="sm" loading={reminder.isPending} onClick={reminder.remind}>{t('Nhắc chuyên gia')}</Button>)}
+                  <p className="text-sm text-warmGray">{t('Trang trại đã có chuyên gia nên kết luận do chuyên gia ghi. Bạn xem được bằng chứng.')}</p>
+                  {canRemind && remindControl}
                 </div>
               )}
           </section>

@@ -7,8 +7,7 @@ export interface ExpertDecisionRights {
   canEditParameters: boolean
   // Farm Owner trên farm có chuyên gia: thay đổi nhóm A mở mục duyệt, việc nhóm B gửi chuyên gia duyệt, nhóm C nhắc được
   ownerNeedsExpert: boolean
-  // Việc chỉ Domain Expert làm, kể cả khi farm chưa có chuyên gia: duyệt mục duyệt và đề xuất, duyệt hồ sơ,
-  // kết luận báo cáo và mùa vụ (Report 3 §2.4, BR-22 "no conclusions without an expert")
+  // Việc chỉ Domain Expert làm, kể cả khi farm chưa có chuyên gia: duyệt, kết luận báo cáo và mùa vụ (BR-22)
   isExpert: boolean
   // Farm Owner xem kết luận cảnh báo ở chế độ chỉ xem vì farm đã có chuyên gia
   ownerReadOnly: boolean

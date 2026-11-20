@@ -29,7 +29,7 @@ const STATUS_FILTERS: { value: ConfigProfileStatus | 'ALL'; label: string }[] = 
 
 export default function DomainExpertProfilesPage() {
   // BR-22 (Report 3 4.2.15) — Farm Owner soạn bản nháp, chỉ chuyên gia duyệt
-  const { isExpert, canEditParameters, ownerNeedsExpert } = useExpertDecisionRights()
+  const { isExpert, canEditParameters, ownerNeedsExpert, farmKnown } = useExpertDecisionRights()
   const { selectedFarmId } = useZoneStore()
   const farmId = selectedFarmId ?? undefined
 
@@ -164,6 +164,7 @@ export default function DomainExpertProfilesPage() {
               disabled={isPending}
               canEditDraft={canEditParameters}
               canApprove={isExpert}
+              farmHasExpert={isExpert || ownerNeedsExpert || !farmKnown}
             />
           ))}
         </div>

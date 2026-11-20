@@ -102,6 +102,7 @@ const vi = {
   // BR-22 — luật Farm Owner viết trên farm có chuyên gia
   'rules.savedPending': 'Đã lưu luật. Luật chạy khi chuyên gia bật.',
   'rules.pending': 'Chờ chuyên gia duyệt',
+  'rules.pendingHint': 'Luật chạy khi chuyên gia duyệt và bật.',
   'rules.toggledOn': 'Đã bật luật.',
   'rules.toggledOff': 'Đã tắt luật, luật không mở khuyến nghị mới.',
   'form.createTitle': 'Thêm luật khuyến nghị',
@@ -238,6 +239,7 @@ const en: Record<RecommendationsKey, string> = {
   'rules.saved': 'Rule saved.',
   'rules.savedPending': 'Rule saved. It runs once the expert turns it on.',
   'rules.pending': 'Awaiting the expert',
+  'rules.pendingHint': 'The rule runs once the expert approves and turns it on.',
   'rules.toggledOn': 'Rule turned on.',
   'rules.toggledOff': 'Rule turned off; it opens no new recommendation.',
   'form.createTitle': 'Add a recommendation rule',

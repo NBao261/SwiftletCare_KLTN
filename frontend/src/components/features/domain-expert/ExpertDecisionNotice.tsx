@@ -3,8 +3,7 @@ import { usePermission } from '@/hooks/common/usePermission'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 import { t } from '@/i18n'
 
-// Dòng nhắc cho Farm Owner trên các trang của chuyên gia (BR-22, Report 3 4.2.15): farm chưa có chuyên gia thì quyết định
-// thay; có chuyên gia thì sửa tham số (chuyên gia xem lại), gửi đề xuất và nhắc chuyên gia
+// Dòng nhắc quyền của Farm Owner trên trang chuyên gia (BR-22)
 export default function ExpertDecisionNotice() {
   const isOwner = usePermission('FARM_OWNER')
   const { canDecide, farmKnown } = useExpertDecisionRights()
