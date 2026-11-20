@@ -6,8 +6,7 @@ import type { SystemNodeStatus } from '@/types'
 /** Vòng icon xám như các ô trang Tổng quan/Người dùng/Nhật ký (theo ReadingTile Dashboard Farm Owner) */
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-// AD-05 — 4 ô đầu trang Thiết bị của Admin, đếm từ `summary` của GET /devices/system-status (OPS-NFR-004), toàn hệ
-// thống, không theo bộ lọc bảng. Không bọc card. Chỉ ô Mất kết nối nổi cam khi > 0 (Offline là trạng thái hư duy nhất, SRS 3.1.0)
+// AD-05 — 4 ô đầu trang Thiết bị của Admin, đếm từ `summary` của GET /devices/system-status (OPS-NFR-004)
 export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
   const { summary, nodes } = status
   const sensors = nodes.filter(n => n.type === 'sensor').length

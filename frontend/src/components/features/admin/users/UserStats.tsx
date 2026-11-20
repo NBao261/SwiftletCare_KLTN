@@ -17,8 +17,7 @@ function roleSub(list: User[]) {
   return locked > 0 ? t('{{active}} hoạt động · {{locked}} đã khoá', { active: list.length - locked, locked }) : 'Tất cả đang hoạt động'
 }
 
-// AD-03 — 4 ô đầu trang Người dùng, số toàn hệ thống (không theo bộ lọc bảng), đếm ở client từ useAllUsers() vì
-// backend không có endpoint thống kê tài khoản. Không bọc card: hàng ô số không phải một khối nội dung
+// AD-03 — 4 ô đầu trang Người dùng, đếm ở client từ useAllUsers() vì backend không có endpoint thống kê tài khoản
 export default function UserStats() {
   const { data: users, isLoading, isError, refetch } = useAllUsers()
 

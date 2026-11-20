@@ -27,8 +27,7 @@ function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
   return { total, isLoading, isError, refetch }
 }
 
-// AD-06 — 4 ô đầu trang Nhật ký hệ thống, chỉ nhật ký tài khoản, không theo bộ lọc bảng, không bọc card. Tổng và 7 ngày
-// cho biết nhịp ghi nhật ký; đăng nhập thất bại (dấu hiệu dò mật khẩu) và thay đổi tài khoản trong 7 ngày là việc Admin cần để mắt
+// AD-06 — 4 ô đầu trang Nhật ký hệ thống: chỉ nhật ký tài khoản, không theo bộ lọc bảng
 export default function AuditLogStats() {
   const from7d = startOfDayIso(6)
   const all = useAuditCount({})

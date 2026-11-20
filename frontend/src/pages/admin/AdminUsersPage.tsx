@@ -42,7 +42,7 @@ export default function AdminUsersPage() {
   const [creatingOwner, setCreatingOwner] = useState(false)
 
   const { records, total, limit, isLoading } = useUsersList({
-    status, roles: role ? [role] : undefined, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
+    status, role: role || undefined, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
   })
 
   // Sắp trên toàn bộ tài khoản → đổi tiêu chí thì về trang 1
