@@ -195,7 +195,7 @@ describe('gửi cảnh báo qua Telegram', () => {
   it('gửi tới chủ farm đã liên kết; không gửi cho người chưa liên kết và Domain Expert', async () => {
     const { alert } = await farmWith(DAY)
     await dispatchAlertNotification(alert('MEDIUM'))
-    expect(sent()).toEqual([{ chat_id: '100', text: '[MEDIUM] Bơm chạy khô — Đã ngừng phun' }])
+    expect(sent()).toEqual([{ chat_id: '100', text: 'Thường · Bơm chạy khô\nĐã ngừng phun' }])
   })
 
   it('tôn trọng giờ im lặng, trừ cảnh báo CRITICAL', async () => {

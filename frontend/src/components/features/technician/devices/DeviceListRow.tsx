@@ -19,13 +19,6 @@ interface DeviceListRowProps {
   /** Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích */
   rebootUnsupported?: boolean;
   onOpenAudio: () => void;
-  onOpenReassign: () => void;
-  onOpenReplace: () => void;
-  onOpenDecommission: () => void;
-  /** G-20: Chỉ FARM_OWNER mới được đăng ký/dời/gỡ/thay thiết bị và quản lý file loa (ADMIN, FARM_TECHNICIAN → 403) */
-  canOnboard: boolean;
-  /** G-20: Chỉ ADMIN gửi được lệnh PUSH_CONFIG (FARM_OWNER, FARM_TECHNICIAN → 403) */
-  canPushConfig?: boolean;
 }
 
 const STALE_HEARTBEAT_MS = 5 * 60 * 1000
@@ -57,7 +50,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pu
 export default function DeviceListRow({
   node, zoneId, locationLabel, index = 0, isExpanded, onToggleExpand,
   onReboot, rebootUnsupported,
-  onOpenAudio, onOpenReassign, onOpenReplace, onOpenDecommission, canOnboard, canPushConfig
+  onOpenAudio,
 }: DeviceListRowProps) {
   const isOnline = node.status === "ONLINE";
   const badge = STATUS_BADGE[node.status] ?? { label: node.status, cls: "bg-stone text-charcoal", dot: "bg-warmGray", accent: "bg-transparent" };
@@ -81,10 +74,10 @@ export default function DeviceListRow({
             <IconDevice />
           </div>
           <div className="min-w-0 flex flex-col">
-            <p className="truncate font-mono font-bold text-charcoal">{node.device_id}</p>
+            <p className="truncate font-bold text-charcoal">{node.device_id}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-warmGray">
               <SimulatedBadge simulated={node.simulated} />
-              <span className="font-mono">v{node.firmware_version || "—"}</span>
+              <span>v{node.firmware_version || "—"}</span>
               {locationLabel && (
                 <>
                   <span>·</span>
@@ -175,11 +168,6 @@ export default function DeviceListRow({
                 node={node}
                 zoneId={zoneId || node.zone_id}
                 onOpenAudio={onOpenAudio}
-                onOpenReassign={onOpenReassign}
-                onOpenReplace={onOpenReplace}
-                onOpenDecommission={onOpenDecommission}
-                canOnboard={canOnboard}
-                canPushConfig={canPushConfig}
               />
             )}
           </div>

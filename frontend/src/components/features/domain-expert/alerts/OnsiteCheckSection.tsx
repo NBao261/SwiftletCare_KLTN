@@ -3,6 +3,7 @@ import { ClipboardList, CheckCircle2, Hourglass, Clock } from 'lucide-react'
 import type { OnsiteCheck } from '@/types/expert.types'
 import { onsiteObservationDict } from '@/constants/enumLabels.i18n'
 import { formatDateTime } from '@/lib/i18n'
+import { t } from '@/i18n'
 
 const OBSERVATION_LABELS = onsiteObservationDict.vi
 
@@ -17,13 +18,13 @@ export default function OnsiteCheckSection({ checks }: Props) {
     <div className="rounded-2xl border border-infoBlue/20 bg-infoBlue/5 p-3.5 space-y-2.5">
       <div className="flex items-center gap-2">
         <ClipboardList className="w-4 h-4 text-infoBlue shrink-0" />
-        <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
-          Kiểm tra tại chỗ của Kỹ thuật viên (EXPERT-FR-021)
+        <h4 className="text-xs font-bold text-charcoal">
+          {t('Kiểm tra tại chỗ của Kỹ thuật viên')}
         </h4>
       </div>
 
       {checks.map((check, idx) => {
-        const techName = check.technician_id?.full_name ?? 'Kỹ thuật viên'
+        const techName = check.technician_id?.full_name ?? t('Kỹ thuật viên')
         const isPending = check.observation === null
 
         return (
@@ -37,8 +38,8 @@ export default function OnsiteCheckSection({ checks }: Props) {
                 )}
                 <span className="font-semibold text-charcoal">{techName}</span>
                 {isPending && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-statusYellow/15 text-charcoal border border-statusYellow/40 uppercase">
-                    Chờ phản hồi
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-statusYellow/15 text-charcoal border border-statusYellow/40">
+                    {t('Chờ phản hồi')}
                   </span>
                 )}
               </div>
@@ -51,7 +52,7 @@ export default function OnsiteCheckSection({ checks }: Props) {
             {!isPending && (
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-warmGray">Quan sát:</span>
+                  <span className="text-warmGray">{t('Quan sát:')}</span>
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
                       check.observation === 'NOTHING_UNUSUAL'
@@ -76,19 +77,19 @@ export default function OnsiteCheckSection({ checks }: Props) {
                     <a href={check.photo_url} target="_blank" rel="noreferrer" className="inline-block">
                       <img
                         src={check.photo_url}
-                        alt="Ảnh kiểm tra tại chỗ"
+                        alt={t('Ảnh kiểm tra tại chỗ')}
                         className="max-h-32 rounded-xl border border-warmGray/15 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                       />
                     </a>
-                    <p className="text-xs text-warmGray mt-0.5">Ảnh tại chỗ (URL tạm 1 giờ)</p>
+                    <p className="text-xs text-warmGray mt-0.5">{t('Ảnh tại chỗ (URL tạm 1 giờ)')}</p>
                   </div>
                 )}
 
                 {check.answered_at && (
                   <p className="text-xs text-warmGray">
-                    Trả lời lúc {formatDateTime(check.answered_at)}
+                    {t('Trả lời lúc {{time}}', { time: formatDateTime(check.answered_at) })}
                     {check.answered_by?.full_name && check.answered_by._id !== check.technician_id?._id
-                      ? ` bởi ${check.answered_by.full_name}`
+                      ? ` ${t('bởi {{name}}', { name: check.answered_by.full_name })}`
                       : ''}
                   </p>
                 )}

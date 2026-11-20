@@ -74,7 +74,7 @@ describe('G-03 — Chuyển đổi dữ liệu bằng chứng chuỗi thời gia
     if (!source) return
 
     expect(source.unit).toBe(' %')
-    expect(source.title).toContain('Độ ẩm')
+    expect(source.title).toContain('độ ẩm')
     expect(source.data).toHaveLength(4)
     expect(source.highlight).toContain('93.5')
 
@@ -216,7 +216,7 @@ describe('G-03 — Chuyển đổi dữ liệu bằng chứng chuỗi thời gia
     const cfg = buildAlertEvidence(alert, evidence)
     expect(cfg.src1).toBeNull()
     expect(cfg.src2).toBeNull()
-    expect(cfg.correlation).toContain('missing')
+    expect(cfg.correlation).toContain('Không có số đo')
   })
 
   it('safeFormatHM & generateTicks: format an toàn và sinh các vạch chia đều', () => {

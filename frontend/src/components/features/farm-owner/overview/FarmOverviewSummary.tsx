@@ -1,6 +1,6 @@
 import { HouseIcon, ClipboardTextIcon, WarningIcon, FirstAidKitIcon } from '@phosphor-icons/react';
 
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { farmOverviewDict } from '@/constants/farmOverview.i18n';
 import { healthDict } from '@/constants/health.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';

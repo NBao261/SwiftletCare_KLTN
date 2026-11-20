@@ -1,20 +1,16 @@
 import { lazy } from 'react'
-import { Navigate, Route } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
 import { ADMIN_ONLY } from '@/constants/roles'
 
-/**
- * Route chỉ Admin: quản lý tài khoản toàn hệ thống (AUTH-FR-011), hàng đợi xoá
- * tài khoản (AUTH-FR-012) và Module SYSTEM
- * (mục 5.11). /system/health gộp luôn OPS-NFR-004 (trạng thái node).
- */
+// Route chỉ Admin: tài khoản (AUTH-FR-011, 012), kho thiết bị (FARM-FR-010), OTA (FARM-FR-013), SYSTEM-FR-001…003
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
 const AdminAccountRequestsPage = lazy(() => import('@/pages/admin/AdminAccountRequestsPage'))
 const AdminSystemHealthPage = lazy(() => import('@/pages/admin/AdminSystemHealthPage'))
 const AdminSystemSettingsPage = lazy(() => import('@/pages/admin/AdminSystemSettingsPage'))
 const AdminAuditLogPage = lazy(() => import('@/pages/admin/AdminAuditLogPage'))
-// OPS-NFR-004 — thiết bị toàn hệ thống, chỉ xem; thay /devices (màn làm việc của Technician) trong menu Admin
-const AdminDevicesPage = lazy(() => import('@/pages/admin/AdminDevicesPage'))
+// FARM-FR-013 — cập nhật firmware từ xa (danh sách thiết bị của Admin ở /devices, technician.routes)
+const AdminOtaPage = lazy(() => import('@/pages/admin/AdminOtaPage'))
 // FARM-FR-010 — kho thiết bị: thêm, in nhãn QR, cấp lại mã, thu hồi
 const AdminDeviceStockPage = lazy(() => import('@/pages/admin/AdminDeviceStockPage'))
 
@@ -37,10 +33,10 @@ export const adminRoutes = (
       }
     />
     <Route
-      path="system/devices"
+      path="ota"
       element={
         <RequireRole allow={ADMIN_ONLY}>
-          <AdminDevicesPage />
+          <AdminOtaPage />
         </RequireRole>
       }
     />
@@ -52,8 +48,6 @@ export const adminRoutes = (
         </RequireRole>
       }
     />
-    {/* Trang trạng thái node cũ đã gộp vào /system/health — giữ redirect cho bookmark/link cũ */}
-    <Route path="system-status" element={<Navigate to="/system/health" replace />} />
     <Route
       path="system/health"
       element={

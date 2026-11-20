@@ -11,6 +11,7 @@ import { disconnectUser } from '@/socket'
 import { escapeRegex, paginate } from '@/utils/helpers.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { generateTemporaryPassword } from '@/utils/password.util'
+import { ROLE_LABEL } from '@/utils/displayLabel.util'
 import type { Role } from '@/types'
 
 // ── Quản lý tài khoản — AUTH-FR-011, AUTH-FR-012, Flow 19 ──────────────────────
@@ -175,8 +176,8 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
         fromUserId: userId, toUserId: String(nextOwner.user_id),
       })
       await notifyUser(String(nextOwner.user_id), {
-        title: 'Bạn trở thành chủ sở hữu farm',
-        body: `Chủ farm "${farm.name}" đã xoá tài khoản, quyền chủ sở hữu đã được chuyển cho bạn.`,
+        title: 'Bạn trở thành chủ sở hữu trang trại',
+        body: `Chủ nhà yến của trang trại "${farm.name}" đã xoá tài khoản, quyền chủ sở hữu đã được chuyển cho bạn.`,
       })
     } else {
       await softDeleteFarm(farm)
@@ -294,7 +295,7 @@ export async function remindPendingDeletionRequests(now = new Date()): Promise<n
     await User.updateOne({ _id: user._id }, { $set: { deletion_reminder_sent_at: now } })
     await notifyAdmins({
       title: 'Yêu cầu xoá tài khoản sắp quá hạn',
-      body: `${user.full_name} (${user.role}) đã chờ xoá tài khoản từ ${user.deletion_requested_at!.toLocaleDateString('vi-VN')} — còn ${daysLeft} ngày trước hạn 30 ngày.`,
+      body: `${user.full_name} (${ROLE_LABEL[user.role]}) đã chờ xoá tài khoản từ ${user.deletion_requested_at!.toLocaleDateString('vi-VN')}, còn ${daysLeft} ngày trước hạn 30 ngày.`,
     })
   }
   return due.length

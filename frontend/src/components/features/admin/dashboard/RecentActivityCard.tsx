@@ -54,7 +54,7 @@ export default function RecentActivityCard() {
           emptyMessage={table.hasFilter ? 'Không có nhật ký khớp bộ lọc.' : 'Chưa có nhật ký nào.'}
           // Trang cuối ít hơn 6 dòng vẫn giữ khung đủ 6 dòng — card không co lại khi chuyển trang/lọc
           rowHeight={ROW_HEIGHT}
-          minRows={PAGE_SIZE}
+          minRows={table.total > PAGE_SIZE ? PAGE_SIZE : 0}
         />
       )}
       <Pagination page={table.page} limit={PAGE_SIZE} total={table.total} onChange={table.setPage} variant="full" />

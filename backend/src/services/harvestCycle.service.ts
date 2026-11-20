@@ -160,7 +160,7 @@ async function doRebuild(zoneId: string): Promise<void> {
       status,
       closing_harvest: { date: h.date, batch_ids: h.batchIds, nest_count: h.nestCount, weight_grams: round1(h.weightGrams) },
       comparison: {
-        previous: comparisonWith(h, closing[i - 1], docs[i - 1]?._id, 'Chu kỳ đầu tiên của zone'),
+        previous: comparisonWith(h, closing[i - 1], docs[i - 1]?._id, 'Chu kỳ đầu tiên của Zone'),
         same_period_last_year: comparisonWith(h, lastYear?.x, lastYear ? docs[lastYear.j]._id : undefined,
           `Không có chu kỳ nào đóng trong ±${HARVEST_SAME_PERIOD_DAYS} ngày của một năm trước`),
       },

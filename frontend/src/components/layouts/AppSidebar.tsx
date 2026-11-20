@@ -1,25 +1,53 @@
-import type { ComponentType, SVGProps } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useState, type ComponentType, type SVGProps } from 'react'
+import { CaretDownIcon } from '@phosphor-icons/react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useAlertStore } from '@/stores/alertStore'
-import { useAuth } from '@/hooks/auth/useAuth'
+import { usePendingAlertTotal } from '@/hooks/shared/useAlerts'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
 import { cn } from '@/lib/cn'
 import { menuLinkState } from '@/lib/navigationState'
-import { IconLogout } from '@/components/ui/icons'
-import { ROLE_LABEL } from '@/constants/roles'
+import { isMenuItemActive } from '@/lib/menuMatch'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
+
+// Trang con của một mục menu: hiện thành tab trên đầu trang (SectionTabs), mục menu sáng khi ở bất kỳ trang con nào
+export interface MenuTab {
+  label: string
+  path: string
+}
 
 export interface MenuItem {
   label: string
   path: string
   icon: ComponentType<SVGProps<SVGSVGElement>>
+  tabs?: MenuTab[]
 }
 
 export interface MenuSection {
   title: string
   items: MenuItem[]
+  // Nhóm thu gọn được bằng mũi tên cạnh tiêu đề (mặc định mở); nhóm chứa trang đang mở luôn mở (C-08)
+  collapsible?: boolean
+}
+
+// Tiêu đề các nhóm người dùng đã thu gọn, nhớ qua lần mở sau; localStorage có thể bị chặn nên bọc try/catch
+const COLLAPSED_KEY = 'swiftletcare-menu-collapsed'
+
+function readCollapsed(): string[] {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]')
+    return Array.isArray(stored) ? stored.filter((title): title is string => typeof title === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function writeCollapsed(titles: string[]): void {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify(titles))
+  } catch {
+    // Không lưu được thì chỉ mất trạng thái thu gọn ở lần mở sau
+  }
 }
 
 const DOCK_SIZE = 4
@@ -38,15 +66,21 @@ export default function AppSidebar({
   dockItems: MenuItem[]
 }) {
   const user = useAuthStore(s => s.user)
-  const unreadCount = useAlertStore(s => s.unreadCount)
+  const pendingAlertCount = usePendingAlertTotal() ?? 0
   const isExpert = user?.role === 'DOMAIN_EXPERT'
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
   const expertPendingCount = isExpert ? (expertAlerts?.total ?? 0) : 0
-  const { logout } = useAuth()
   // Trang hiện tại: ở trang con của 1 mục menu thì link mục đó mang state đi lên
   const { pathname } = useLocation()
   const navigationLabel = useNavigationLabel()
   const { scrollRef, contentRef, canScrollDown } = useCanScrollDown<HTMLElement, HTMLDivElement>()
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+
+  function toggleSection(title: string): void {
+    const next = collapsed.includes(title) ? collapsed.filter(item => item !== title) : [...collapsed, title]
+    setCollapsed(next)
+    writeCollapsed(next)
+  }
 
   return (
     <>
@@ -56,69 +90,68 @@ export default function AppSidebar({
           <img src="/Logo_SCare_Text.png" alt="SwiftletCare" className="h-8 w-auto shrink-0" />
         </div>
 
-        <div className="px-[18px]">
-          <div className="mt-6">
-            <p className="text-[13px] text-warmGray">{navigationLabel('Xin chào,')}</p>
-            <p className="truncate text-xl font-bold text-charcoal">{user?.full_name}</p>
-            <p className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-warmGray">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
-              Role: {user?.role ? navigationLabel(ROLE_LABEL[user.role]) : ''}
-            </p>
-          </div>
-
-          <div className="mt-6 border-t border-warmGray/15" />
-        </div>
-
         <div className="relative min-h-0 flex-1">
-          <nav ref={scrollRef} className="h-full overflow-y-auto px-[18px] py-[5px]">
+          <nav ref={scrollRef} className="h-full overflow-y-auto px-[18px] py-4">
             <div ref={contentRef}>
-              {menuSections.map(section => (
+              {menuSections.map(section => {
+                const hasActiveItem = section.items.some(item => isMenuItemActive(item, pathname))
+                const isOpen = !section.collapsible || hasActiveItem || !collapsed.includes(section.title)
+                const titleClass = 'px-[10px] py-1 text-small font-semibold uppercase tracking-[0.08em] text-warmGray'
+                return (
                 <div key={section.title} className="mb-4 last:mb-0">
-                  <p className="px-[10px] py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warmGray">{navigationLabel(section.title)}</p>
-                  <div className="space-y-1">
+                  {section.collapsible ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.title)}
+                      disabled={hasActiveItem}
+                      aria-expanded={isOpen}
+                      className={cn(titleClass, 'flex w-full items-center justify-between rounded-full text-left hover:text-charcoal disabled:cursor-default disabled:hover:text-warmGray')}
+                    >
+                      {navigationLabel(section.title)}
+                      <CaretDownIcon size={14} weight="bold" className={cn('shrink-0 transition-transform', !isOpen && '-rotate-90')} />
+                    </button>
+                  ) : (
+                    <p className={titleClass}>{navigationLabel(section.title)}</p>
+                  )}
+                  {isOpen && <div className="mt-1 space-y-1">
                     {section.items.map(item => {
-                      const badgeCount = item.path === '/domain-expert/alert-verdicts'
-                        ? (isExpert ? expertPendingCount : unreadCount)
-                        : item.path === '/alerts'
-                          ? unreadCount
-                          : 0
+                      // Cảnh báo: số chờ xác nhận (ACTIVE); Thẩm định: số cảnh báo suy luận chờ chuyên gia kết luận, chỉ chuyên gia
+                      const badgeByPath: Record<string, number> = { '/alerts': pendingAlertCount, '/domain-expert/alert-verdicts': expertPendingCount }
+                      const badgeCount = badgeByPath[item.path] ?? 0
+                      const isActive = isMenuItemActive(item, pathname)
                       return (
-                        <NavLink
+                        <Link
                           key={item.path}
                           to={item.path}
                           state={menuLinkState(item.path, pathname)}
-                          className={({ isActive }) =>
-                            cn(
-                              'flex items-center gap-2 rounded-full px-3 text-sm transition-colors',
-                              isActive
-                                ? 'h-11 bg-charcoal text-[13px] font-bold text-white shadow-[inset_0_1.5px_0.5px_rgba(255,255,255,0.35)]'
-                                : 'h-10 text-[13px] font-medium text-graphite hover:bg-warmGray/10',
-                            )
-                          }
-                        >
-                          {({ isActive }) => (
-                            <>
-                              {isActive ? (
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-600 text-charcoal">
-                                  <item.icon width={16} height={16} />
-                                </span>
-                              ) : (
-                                <item.icon width={16} height={16} className="shrink-0 text-warmGray ml-1" />
-                              )}
-                              <span className="flex-1 truncate tracking-tight">{navigationLabel(item.label)}</span>
-                              {badgeCount > 0 && (
-                                <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-alertRed px-1 text-[11px] font-bold text-white">
-                                  {badgeCount > 9 ? '9+' : badgeCount}
-                                </span>
-                              )}
-                            </>
+                          aria-current={isActive ? 'page' : undefined}
+                          className={cn(
+                            'flex items-center gap-2 rounded-full px-3 text-sm transition-colors',
+                            isActive
+                              ? 'h-11 bg-charcoal text-[13px] font-bold text-white shadow-[inset_0_1.5px_0.5px_rgba(255,255,255,0.35)]'
+                              : 'h-10 text-[13px] font-medium text-graphite hover:bg-warmGray/10',
                           )}
-                        </NavLink>
+                        >
+                          {isActive ? (
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-600 text-charcoal">
+                              <item.icon width={16} height={16} />
+                            </span>
+                          ) : (
+                            <item.icon width={16} height={16} className="shrink-0 text-warmGray ml-1" />
+                          )}
+                          <span className="flex-1 truncate tracking-tight">{navigationLabel(item.label)}</span>
+                          {badgeCount > 0 && (
+                            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-alertRed px-1 text-small font-bold text-white">
+                              {badgeCount > 9 ? '9+' : badgeCount}
+                            </span>
+                          )}
+                        </Link>
                       )
                     })}
-                  </div>
+                  </div>}
                 </div>
-              ))}
+                )
+              })}
             </div>
           </nav>
           <div
@@ -130,15 +163,6 @@ export default function AppSidebar({
           />
         </div>
 
-        <div className="mx-[18px] border-t border-warmGray/15 pb-6 pt-3">
-          <button
-            onClick={() => logout.mutate()}
-            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-safetyOrange transition-colors hover:bg-safetyOrange/10 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <IconLogout width={16} height={16} />
-            {navigationLabel('Đăng xuất')}
-          </button>
-        </div>
       </aside>
 
       <nav
@@ -146,27 +170,25 @@ export default function AppSidebar({
         className="fixed inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden"
       >
         <div className="flex items-center gap-1 rounded-full border border-warmGray/15 bg-white p-2 shadow-dock">
-          {dockItems.map(item => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              state={menuLinkState(item.path, pathname)}
-              aria-label={navigationLabel(item.label)}
-              className={({ isActive }) =>
-                cn(
+          {dockItems.map(item => {
+            const isActive = isMenuItemActive(item, pathname)
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                state={menuLinkState(item.path, pathname)}
+                aria-label={navigationLabel(item.label)}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
                   'flex h-12 items-center gap-2 rounded-full px-3.5 transition-colors',
                   isActive ? 'bg-charcoal text-white' : 'text-warmGray hover:bg-warmGray/10',
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <item.icon width={20} height={20} className="shrink-0" />
-                  {isActive && <span className="text-sm font-semibold">{navigationLabel(item.label)}</span>}
-                </>
-              )}
-            </NavLink>
-          ))}
+                )}
+              >
+                <item.icon width={20} height={20} className="shrink-0" />
+                {isActive && <span className="text-sm font-semibold">{navigationLabel(item.label)}</span>}
+              </Link>
+            )
+          })}
         </div>
       </nav>
     </>

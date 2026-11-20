@@ -16,6 +16,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatDateTime } from '@/lib/i18n';
 import { useAllZones } from '@/hooks/shared/useFarms';
 import type { ParameterReview, ParameterReviewStatus } from '@/types/expert/reviews.types';
+import { t, translated } from '@/i18n';
 
 interface ParameterReviewCardProps {
   review: ParameterReview;
@@ -56,7 +57,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const FIELD_LABELS: Record<string, string> = {
+const FIELD_LABELS: Record<string, string> = translated({
   temp_min: 'Nhiệt độ tối thiểu (°C)',
   temp_max: 'Nhiệt độ tối đa (°C)',
   humidity_min: 'Độ ẩm tối thiểu (%)',
@@ -69,7 +70,7 @@ const FIELD_LABELS: Record<string, string> = {
   fuzzy_fan_dry_level: 'Mức quạt hút khử ẩm (%)',
   fuzzy_window_sec: 'Chu kỳ điều khiển (giây)',
   fuzzy_input_filter: 'Lọc nhiễu cảm biến đầu vào',
-};
+});
 
 // Lấy danh sách các trường có thay đổi giữa old_values và new_values
 export function getChangedParameterKeys(
@@ -84,7 +85,7 @@ export function getChangedParameterKeys(
 // Định dạng giá trị hiển thị của tham số
 export function formatParamValue(value: unknown, _key?: string): string {
   if (value === undefined || value === null) return '—';
-  if (typeof value === 'boolean') return value ? 'Bật' : 'Tắt';
+  if (typeof value === 'boolean') return value ? t('Bật') : t('Tắt');
   return String(value);
 }
 
@@ -107,7 +108,7 @@ export default function ParameterReviewCard({
   const authorName =
     typeof review.changed_by === 'object' && review.changed_by?.full_name
       ? review.changed_by.full_name
-      : 'Chủ trang trại';
+      : t('Chủ nhà yến');
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card border border-warmGray/15 flex flex-col gap-4 transition-all hover:border-warmGray/30">
@@ -124,13 +125,13 @@ export default function ParameterReviewCard({
           <div>
             <h4 className="text-sm font-bold text-charcoal leading-tight">
               {review.group === 'thresholds'
-                ? 'Thay đổi Ngưỡng vi khí hậu'
-                : 'Thay đổi Hệ số điều khiển mờ (Fuzzy)'}
+                ? t('Thay đổi ngưỡng vi khí hậu')
+                : t('Thay đổi hệ số điều khiển mờ')}
             </h4>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-warmGray mt-0.5">
+            <div className="flex flex-wrap items-center gap-2 text-small text-warmGray mt-0.5">
               <span className="flex items-center gap-1 font-semibold text-charcoal">
                 <MapPin className="w-3 h-3 text-accent-700" />
-                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : 'Khu vực không xác định'}
+                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
@@ -149,14 +150,14 @@ export default function ParameterReviewCard({
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
         >
-          {statusConfig.label}
+          {t(statusConfig.label)}
         </span>
       </div>
 
       {/* Diff Table: So sánh giá trị cũ vs mới */}
       <div className="rounded-xl border border-warmGray/10 bg-warmGray/5 p-3 overflow-hidden">
-        <p className="text-[11px] font-semibold text-warmGray uppercase tracking-wider mb-2">
-          Chi tiết tham số thay đổi ({changedKeys.length} chỉ số):
+        <p className="text-small font-semibold text-warmGray mb-2">
+          {t('Chi tiết tham số thay đổi ({{n}} chỉ số):', { n: changedKeys.length })}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {changedKeys.map(key => {
@@ -170,7 +171,7 @@ export default function ParameterReviewCard({
                 <span className="text-charcoal font-medium truncate max-w-[140px]">
                   {FIELD_LABELS[key] || key}
                 </span>
-                <div className="flex items-center gap-1.5 font-mono shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <span className="text-warmGray line-through">
                     {formatParamValue(oldValue, key)}
                   </span>
@@ -197,7 +198,7 @@ export default function ParameterReviewCard({
             disabled={isProcessing}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Hoàn nguyên giá trị cũ
+            {t('Hoàn nguyên giá trị cũ')}
           </Button>
           <Button
             type="button"
@@ -208,7 +209,7 @@ export default function ParameterReviewCard({
             className="gap-1.5"
           >
             <CheckCircle className="w-3.5 h-3.5 text-limeMist" />
-            Chấp thuận thay đổi
+            {t('Chấp thuận thay đổi')}
           </Button>
         </div>
       )}
@@ -216,9 +217,9 @@ export default function ParameterReviewCard({
       {/* Modal xác nhận hoàn nguyên chuẩn ConfirmModal (FE_Design_Claude §13.5 & §13.16a) */}
       <ConfirmModal
         open={showConfirmRevert}
-        title="Xác nhận hoàn nguyên giá trị cũ"
-        description="Hệ thống sẽ gửi lệnh cập nhật giá trị an toàn ban đầu xuống thiết bị và chuyển trạng thái mục duyệt sang Đã hoàn nguyên."
-        confirmLabel="Hoàn nguyên"
+        title={t('Xác nhận hoàn nguyên giá trị cũ')}
+        description={t('Giá trị cũ được gửi lại xuống bộ điều khiển và mục này chuyển sang Đã hoàn tác.')}
+        confirmLabel={t('Hoàn nguyên')}
         danger
         loading={isProcessing}
         onCancel={() => setShowConfirmRevert(false)}

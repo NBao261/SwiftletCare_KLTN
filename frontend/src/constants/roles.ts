@@ -5,7 +5,7 @@ import { t, translated } from '@/i18n'
 export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
-  FARM_TECHNICIAN: 'Kỹ thuật viên nhà yến',
+  FARM_TECHNICIAN: 'Kỹ thuật viên',
   DOMAIN_EXPERT: 'Chuyên gia',
 })
 
@@ -30,7 +30,7 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
  * FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể, chỉ xem cấu trúc/thiết bị nhà đó + gửi RESTART.
  */
 
-/** Hàng đợi việc của Chuyên gia nuôi yến (/domain-expert/queue) — chỉ Domain Expert. */
+/** Hàng đợi việc và Báo cáo & kết luận của Chuyên gia (/domain-expert/queue, /domain-expert/reports) — chỉ Domain Expert; Farm Owner xem báo cáo ở /health. */
 export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 
 /**
@@ -86,7 +86,7 @@ const ALL_ROLES: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN', 'ADMIN', 'DOMAIN_EXP
 const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
-  FARM_TECHNICIAN: '/devices',
+  FARM_TECHNICIAN: '/alerts',
   DOMAIN_EXPERT: '/domain-expert/queue',
 }
 
@@ -106,10 +106,10 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },
   { path: '/dashboard',        roles: FARM_SIDE_ROLES },
   { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
+  { path: '/devices/onboarding', roles: DEVICE_SETUP_ROLES },
   { path: '/devices',          roles: DEVICE_LIST_ROLES },
   { path: '/alerts',           roles: ALERT_ROLES },
   { path: '/farms',            roles: FARM_STRUCTURE_ROLES },
-  { path: '/onboarding',       roles: DEVICE_SETUP_ROLES },
   { path: '/ota',              roles: ADMIN_ONLY },
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
@@ -118,7 +118,6 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/recommendations',  roles: FARM_SIDE_ROLES },
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
-  { path: '/system/devices',   roles: ADMIN_ONLY },
   { path: '/system/device-stock', roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_SIDE_ROLES },
   { path: '/overview',         roles: FARM_SIDE_ROLES },
@@ -132,7 +131,7 @@ const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/domain-expert/counting-schedule',     roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/counting-ring',         roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/weather-rules',         roles: EXPERT_DECISION_ROLES },
-  { path: '/domain-expert/reports',               roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/reports',               roles: EXPERT_ROLES },
   { path: '/domain-expert/profiles',              roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/recommendation-rules',  roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/history',               roles: EXPERT_DECISION_ROLES },
@@ -153,4 +152,27 @@ export function canAccessPath(role: Role | undefined, path: string): boolean {
   const entry = MENU_ACCESS.find(e => path === e.path || path.startsWith(`${e.path}/`))
   if (!entry) return true
   return !!role && entry.roles.includes(role)
+}
+
+// Bậc phạm vi trang cần để có dữ liệu (C-05); không có trong bảng = 'none'
+export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
+
+const SCOPE_LEVEL: { path: string; level: ScopeLevel }[] = [
+  { path: '/overview',                            level: 'farm' },
+  { path: '/recommendations',                     level: 'farm' },
+  { path: '/work-orders',                         level: 'farm' },
+  { path: '/health',                              level: 'farm' },
+  { path: '/domain-expert/alert-verdicts',        level: 'farm' },
+  { path: '/domain-expert/reviews',               level: 'farm' },
+  { path: '/domain-expert/profiles',              level: 'farm' },
+  { path: '/domain-expert/recommendation-rules',  level: 'farm' },
+  { path: '/domain-expert/history',               level: 'farm' },
+  { path: '/domain-expert/counting-schedule',     level: 'house' },
+  { path: '/domain-expert/counting-ring',         level: 'house' },
+  { path: '/domain-expert/weather-rules',         level: 'house' },
+  { path: '/domain-expert/tuning',                level: 'zone' },
+]
+
+export function scopeLevelOf(path: string): ScopeLevel {
+  return SCOPE_LEVEL.find(entry => path === entry.path || path.startsWith(`${entry.path}/`))?.level ?? 'none'
 }

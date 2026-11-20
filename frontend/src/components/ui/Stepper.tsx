@@ -71,7 +71,7 @@ export default function Stepper({ steps, current, completed = false, activeTone 
             >
               {done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : i + 1}
             </div>
-            <span className={cn('text-center text-[10px] font-semibold tracking-wide sm:text-[11px]', active ? 'text-charcoal' : 'text-warmGray')}>
+            <span className={cn('text-center text-small font-semibold tracking-wide sm:text-small', active ? 'text-charcoal' : 'text-warmGray')}>
               {label}
             </span>
           </div>

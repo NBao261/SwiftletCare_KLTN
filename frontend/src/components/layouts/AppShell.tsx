@@ -1,12 +1,11 @@
-import { Suspense, useRef, useState } from 'react'
+import { Suspense, useLayoutEffect, useRef, useState } from 'react'
 import { Outlet, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useBreadcrumbStore } from '@/stores/breadcrumbStore'
-import { usePageHeroStore } from '@/stores/pageHeroStore'
-import { cn } from '@/lib/cn'
 import AppSidebar, { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
 import AppHeader from '@/components/layouts/AppHeader'
 import Toast from '@/components/common/Toast'
+import SectionTabs from '@/components/common/SectionTabs'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useAlertNotifications } from '@/hooks/shared/useAlertNotifications'
 import { useInAppNotificationListener } from '@/hooks/shared/useNotifications'
@@ -30,13 +29,21 @@ export default function AppShell({
   // EXPERT-FR-007 — thông báo trong ứng dụng mới: làm mới hộp thư và hiện toast ở mọi trang
   useInAppNotificationListener()
   const back = useBreadcrumbStore(s => s.back)
-  // Ảnh nền tràn đầu trang do trang tự bật (usePageHero) — null thì khung giữ nguyên như cũ
-  const heroImage = usePageHeroStore(state => state.image)
   // Đổi VI/EN → AppShell render lại (sidebar/header theo), vùng nội dung remount (key) để mọi t() gọi trong hàm thường
   // (cột bảng, helper ngày, bảng nhãn) ra đúng ngôn ngữ mới. Mất state tạm của trang (bộ lọc đang chọn) — chấp nhận được
   const { i18n } = useI18next()
   const [scrolled, setScrolled] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
+  // Header cao 1 hàng (64px) hoặc 2 hàng khi thanh phạm vi xuống dòng dưới xl (SH-07): đo để nội dung chừa đúng chừng đó
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(64)
+  useLayoutEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+    const observer = new ResizeObserver(() => setHeaderHeight(header.offsetHeight))
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <div className="flex h-screen overflow-hidden bg-stone">
@@ -44,30 +51,16 @@ export default function AppShell({
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header nổi đè lên vùng cuộn và phủ hết bề ngang cột (cả phần thanh cuộn) — nội dung trượt bên dưới
             bị blur. Không nằm trong <main> nên lăn chuột trên header phải chuyển tiếp sang <main> */}
-        <div onWheel={e => mainRef.current?.scrollBy({ top: e.deltaY })} className="absolute inset-x-0 top-0 z-20">
-          <AppHeader menuSections={menuSections} elevated={scrolled} isOverHero={heroImage !== null && !scrolled} />
+        <div ref={headerRef} onWheel={e => mainRef.current?.scrollBy({ top: e.deltaY })} className="absolute inset-x-0 top-0 z-20">
+          <AppHeader menuSections={menuSections} elevated={scrolled} />
         </div>
-        {/* pt-16 chừa đúng chiều cao header; pb-28 trên mobile để dock nổi không che nội dung cuối trang */}
+        {/* paddingTop chừa đúng chiều cao header; pb-28 trên mobile để dock nổi không che nội dung cuối trang */}
         <main
           ref={mainRef}
           onScroll={e => setScrolled(e.currentTarget.scrollTop > 0)}
-          className={cn('relative z-10 flex flex-1 flex-col overflow-y-auto bg-stone pb-28 pt-16 lg:pb-8', heroImage && 'isolate')}
+          style={{ paddingTop: headerHeight }}
+          className="relative z-10 flex flex-1 flex-col overflow-y-auto bg-stone pb-28 lg:pb-8"
         >
-          {/* Ảnh nền đầu trang do trang bật (usePageHero): tràn sát mép, nằm sau header và khung, mép dưới tan vào nền */}
-          {heroImage && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[300px] [-webkit-mask-image:linear-gradient(to_bottom,black_66%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_66%,transparent_100%)] lg:h-[430px]"
-            >
-              <img
-                src={heroImage.src}
-                alt=""
-                width={heroImage.width}
-                height={heroImage.height}
-                className="h-full w-full object-cover object-top"
-              />
-            </div>
-          )}
           {/* Container duy nhất bọc mọi card nội dung — max-w + mx-auto để nội
               dung luôn căn giữa vùng nhìn ở màn hình rộng (Full HD/2K/4K), px-6/
               px-8 là lề 2 bên đồng nhất khi viewport hẹp hơn max-width. */}
@@ -82,6 +75,8 @@ export default function AppShell({
                 {t('Quay lại {{page}}', { page: t(back.label) })}
               </Link>
             )}
+            {/* Mục menu gộp nhiều trang: tab của các trang con, ngay trên nội dung */}
+            <SectionTabs menuSections={menuSections} />
             {/* Suspense đặt SÁT Outlet (không bọc ở App.tsx cấp cao hơn) — chunk
                 lazy-load lần đầu chỉ thay skeleton trong khung nội dung này,
                 sidebar/header/dock không bị unmount nên không còn nháy toàn

@@ -37,7 +37,7 @@ export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean;
       { email: form.email.trim(), full_name: form.fullName.trim(), ...(form.phone.trim() && { phone: form.phone.trim() }) },
       {
         onSuccess: data => {
-          push(t('Đã tạo tài khoản Farm Owner'))
+          push(t('Đã tạo tài khoản chủ nhà yến'))
           setEmailed(data.temporary_password_emailed)
         },
       },
@@ -47,11 +47,11 @@ export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean;
   const submitError = createFarmOwner.isError ? apiErrorMessage(createFarmOwner.error, t('Tạo tài khoản thất bại')) : undefined
 
   return (
-    <Modal open={open} onClose={onClose} title="Tạo tài khoản Farm Owner" size="lg">
+    <Modal open={open} onClose={onClose} title="Tạo tài khoản chủ nhà yến" size="lg">
       {emailed === null ? (
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <p className="text-sm text-warmGray">
-            {t('Hệ thống tạo mật khẩu tạm và gửi tới email này. Farm Owner phải đổi mật khẩu ở lần đăng nhập đầu.')}
+            {t('Hệ thống tạo mật khẩu tạm và gửi tới email này. Chủ nhà yến phải đổi mật khẩu ở lần đăng nhập đầu.')}
           </p>
           <Input
             label="Email"
@@ -88,7 +88,7 @@ export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean;
           <p className="text-sm text-charcoal">
             {emailed
               ? t('Đã gửi mật khẩu tạm tới {{email}}.', { email: form.email.trim() })
-              : t('Chưa gửi được email (máy chủ chưa cấu hình gửi thư). Khi đã có, Farm Owner dùng "Quên mật khẩu" với {{email}} để đặt mật khẩu.', { email: form.email.trim() })}
+              : t('Chưa gửi được email (máy chủ chưa cấu hình gửi thư). Khi đã có, chủ nhà yến dùng "Quên mật khẩu" với {{email}} để đặt mật khẩu.', { email: form.email.trim() })}
           </p>
           <div className="flex justify-end">
             <Button type="button" onClick={onClose}>Đóng</Button>

@@ -138,7 +138,7 @@ describe('THRESHOLD_BREACH có thời gian chờ (TC-F07-02)', () => {
     await settle()
     const [alert] = await breaches(zone._id)
     expect(alert.details).toMatchObject({ metric: 'nh3_ppm', direction: 'above', threshold: DEFAULT_THRESHOLDS.nh3_max })
-    expect(alert.message).toContain('không tự chạy quạt')
+    expect(alert.message).toContain('quạt không tự chạy')
   })
 
   it('1 mẫu trong ngưỡng xen giữa → phải chờ đủ 10 phút kể từ sau mẫu đó', async () => {

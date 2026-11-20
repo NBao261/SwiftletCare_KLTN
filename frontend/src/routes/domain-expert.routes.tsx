@@ -1,22 +1,6 @@
-/**
- * domain-expert.routes.tsx — Routes chuyên gia nuôi yến (DOMAIN_EXPERT)
- *
- * FE_Design §12.0 c dòng 1 — Chốt 27/10/2026:
- *   Khu /domain-expert/* CHỈ chứa các màn QUYẾT ĐỊNH của chuyên gia.
- *   Màn vận hành (dashboard, analytics, vision, harvests) dùng chung với
- *   Farm Owner — không nhân bản, ẩn nút ghi bằng usePermission.
- *
- * Xoá bỏ hoàn toàn:
- *   - /expert/dashboard    → thay bằng /domain-expert/queue (hàng đợi việc)
- *   - /expert/analytics    → Chuyên gia dùng /analytics của Farm Owner (FARM_SIDE_ROLES)
- *
- * Redirect backward-compat: /expert/* → /domain-expert/* để không gây 404 nếu
- * còn link cũ trong code (xoá sau khi toàn bộ link cũ đã cập nhật).
- *
- * Bucket: routes/ — §12.2.
- */
+// Màn quyết định của chuyên gia (FE_Design §12.0 c); Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận (xem ở /health)
 import { lazy } from 'react';
-import { Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Route, Navigate, Outlet } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
 import { EXPERT_DECISION_ROLES, EXPERT_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -35,44 +19,13 @@ const DomainExpertRecommendationRulesPage = lazy(() => import('@/pages/domain-ex
 const DomainExpertCountingSchedulePage = lazy(() => import('@/pages/domain-expert/DomainExpertCountingSchedulePage'));
 const DomainExpertCountingRingPage = lazy(() => import('@/pages/domain-expert/DomainExpertCountingRingPage'));
 
-// ── Redirect helpers giữ nguyên query parameters (ví dụ: ?alertId=...) ─────────
-function RedirectToVerdicts() {
-  const location = useLocation();
-  return <Navigate to={`/domain-expert/alert-verdicts${location.search}`} replace />;
-}
-
-function RedirectToReports() {
-  const location = useLocation();
-  return <Navigate to={`/domain-expert/reports${location.search}`} replace />;
-}
-
-function RedirectToTuning() {
-  const location = useLocation();
-  return <Navigate to={`/domain-expert/tuning${location.search}`} replace />;
-}
-
-function RedirectToReviews() {
-  const location = useLocation();
-  return <Navigate to={`/domain-expert/reviews${location.search}`} replace />;
-}
-
-function RedirectToDisagreements() {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  params.set('tab', 'disagreements');
-  return <Navigate to={`/domain-expert/reports?${params.toString()}`} replace />;
-}
-
-// Hàng đợi việc chỉ của chuyên gia; Farm Owner vào /domain-expert thì mở trang kết luận cảnh báo
+// Hàng đợi việc chỉ của chuyên gia; Farm Owner vào /domain-expert thì mở trang thẩm định cảnh báo
 function DomainExpertIndexRedirect() {
   const isExpert = usePermission('DOMAIN_EXPERT');
   return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
 }
 
-/**
- * Shell bọc toàn bộ trang domain-expert — tương tự ExpertPageShell cũ nhưng
- * import component từ đúng bucket domain-expert/.
- */
+// Khung chung của các trang /domain-expert/*: thanh trạng thái có bộ chọn Farm/Nhà/Zone và lời nhắc quyền của Farm Owner
 function DomainExpertShell() {
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
@@ -121,8 +74,7 @@ export const domainExpertRoutes = (
       <Route path="weather-rules" element={<DomainExpertWeatherRulesPage />} />
 
       {/* Báo cáo sức khỏe & Kết luận + Xem ngày đánh giá lệch (EXPERT-FR-022) */}
-      <Route path="reports" element={<DomainExpertReportsPage />} />
-      <Route path="disagreements" element={<RedirectToDisagreements />} />
+      <Route path="reports" element={<RequireRole allow={EXPERT_ROLES}><DomainExpertReportsPage /></RequireRole>} />
 
       {/* Hồ sơ cấu hình (EXPERT-FR-014, 015) */}
       <Route path="profiles" element={<DomainExpertProfilesPage />} />
@@ -130,23 +82,8 @@ export const domainExpertRoutes = (
       {/* Luật khuyến nghị & hiệu quả (EXPERT-FR-016…019) */}
       <Route path="recommendation-rules" element={<DomainExpertRecommendationRulesPage />} />
 
-      {/* Lịch sử hoạt động */}
+      {/* Lịch sử quyết định của chuyên gia (EXPERT-FR-009) */}
       <Route path="history" element={<DomainExpertHistoryPage />} />
-
-      {/* Backward-compat: audit-logs / alerts cũ → alert-verdicts mới (giữ query params) */}
-      <Route path="audit-logs" element={<RedirectToVerdicts />} />
-      <Route path="alerts" element={<RedirectToVerdicts />} />
     </Route>
-
-    {/* Backward-compat: /expert/* → /domain-expert/* (ánh xạ chính xác đích đến và giữ query params) */}
-    <Route path="expert/audit-logs" element={<RedirectToVerdicts />} />
-    <Route path="expert/alerts" element={<RedirectToVerdicts />} />
-    <Route path="expert/reports" element={<RedirectToReports />} />
-    <Route path="expert/disagreements" element={<RedirectToDisagreements />} />
-    <Route path="expert/tuning" element={<RedirectToTuning />} />
-    <Route path="expert/reviews" element={<RedirectToReviews />} />
-    <Route path="expert/dashboard" element={<Navigate to="/domain-expert/queue" replace />} />
-    <Route path="expert" element={<Navigate to="/domain-expert/queue" replace />} />
-    <Route path="expert/*" element={<Navigate to="/domain-expert/queue" replace />} />
   </>
 );

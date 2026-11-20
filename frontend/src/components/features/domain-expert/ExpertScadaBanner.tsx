@@ -159,12 +159,12 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-500 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-600" />
             </span>
-            <span className="font-mono text-[11px] font-bold tracking-wider text-accent-900">
-              SCADA LIVE
+            <span className="text-small font-bold text-accent-900">
+              {t('Trực tiếp')}
             </span>
           </div>
 
-          <span className="text-xs font-bold uppercase tracking-tight text-charcoal sm:text-sm whitespace-nowrap">
+          <span className="text-xs font-bold tracking-tight text-charcoal sm:text-sm whitespace-nowrap">
             {t('Giám sát vận hành')}
           </span>
         </div>

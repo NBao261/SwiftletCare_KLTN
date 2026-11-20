@@ -7,7 +7,6 @@ import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
-import HouseKpiRow from '@/components/features/farm-owner/farms/HouseKpiRow'
 import HouseCard from '@/components/features/farm-owner/farms/HouseCard'
 import HouseTable from '@/components/features/farm-owner/farms/HouseTable'
 import AddHouseModal from '@/components/features/farm-owner/farms/AddHouseModal'
@@ -17,7 +16,7 @@ import FarmGroupRow from '@/components/features/farm-owner/farms/FarmGroupRow'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { summarizeScope } from '@/components/features/farm-owner/farms/farmStructure'
-import { farmHousePath, farmZonePath, useFarmsScopeRouting, useScopeFilter } from '@/hooks/farm-owner/useScopeFilter'
+import { farmHousePath, farmZonePath, useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { isUpFromChildState } from '@/lib/navigationState'
 import { useDeleteFarm, useFarms } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
@@ -28,7 +27,6 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
-import { vnYearMonth } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { NO_VALUE } from '@/constants/display'
 import { useAuthStore } from '@/stores/authStore'
@@ -239,8 +237,6 @@ export default function FarmOwnerFarmsPage() {
     )
   }
 
-  const monthLabel = vnYearMonth(new Date()).month
-
   if (isError) {
     return (
       <EmptyState
@@ -287,8 +283,6 @@ export default function FarmOwnerFarmsPage() {
         <ScopeFilter scope={routedScope} />
       </div>
 
-      <HouseKpiRow totals={scopeTotals} monthLabel={monthLabel} showYield={canViewHarvest} />
-
       <FarmFrame
         title={t('list.title')}
         description={t('list.desc', { farms: num(shownFarms.length), n: num(scopeTotals.houses) })}
@@ -327,8 +321,8 @@ export default function FarmOwnerFarmsPage() {
                 aria-pressed={view === key}
                 onClick={() => setView(key)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
-                  view === key ? 'bg-charcoal text-white' : 'text-warmGray hover:text-charcoal',
+                  'flex h-8 items-center gap-1.5 rounded-full px-3 text-small font-semibold transition-colors',
+                  view === key ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
                 )}
               >
                 <ViewIcon size={14} weight="bold" />

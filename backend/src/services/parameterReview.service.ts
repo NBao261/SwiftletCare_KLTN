@@ -69,7 +69,7 @@ async function notifyExpertsOfReview(farmId: unknown, owner: CurrentUser, group:
   ])
   await Promise.all(experts.map(expertId => createInAppNotification(expertId, {
     title: `Cần duyệt: ${author?.full_name ?? owner.email} đã sửa ${GROUP_LABEL[group]}`,
-    body: `Khu vực "${zoneName}" — thay đổi đã được áp dụng, chờ chuyên gia chấp nhận, hoàn lại hoặc chỉnh lại.`,
+    body: `Zone "${zoneName}": thay đổi đã được áp dụng, chờ chuyên gia giữ, hoàn tác hoặc chỉnh lại.`,
     ref: { kind: 'parameter_review', id: reviewId },
   })))
 }

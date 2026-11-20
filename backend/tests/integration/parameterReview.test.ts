@@ -161,7 +161,7 @@ describe('chuyên gia duyệt (Report 3 §6.10)', () => {
     const res = await send('put', `/expert-activity/reviews/${review._id}/accept`, t.expert).expect(200)
     expect(res.body.data).toMatchObject({ status: 'ACCEPTED' })
     expect((await Zone.findById(zone._id).lean())!.thresholds.humidity_min).toBe(78)
-    expect(await Notification.exists({ user_id: owner._id, title: /chấp nhận thay đổi ngưỡng/ })).toBeTruthy()
+    expect(await Notification.exists({ user_id: owner._id, title: /giữ thay đổi ngưỡng/ })).toBeTruthy()
   })
 
   it('hoàn lại → giá trị gốc, gửi xuống thiết bị, lịch sử EXPERT_REVERT, REVERTED, Farm Owner được báo', async () => {

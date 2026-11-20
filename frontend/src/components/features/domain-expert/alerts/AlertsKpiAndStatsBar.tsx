@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn'
 import type { InferredAlertType } from '@/types/expert.types'
 import type { AlertSeverity } from '@/types'
 import type { AlertTabFilter } from '@/hooks/domain-expert/useExpertAlerts'
+import { t } from '@/i18n'
 
 export interface KpiCounts {
   total: number
@@ -38,14 +39,14 @@ function KpiCard({ label, sublabel, value, accent, dotColor, badgeBg, isActive, 
       )}
     >
       <div className="flex items-start justify-between gap-2 w-full">
-        <span className="text-xs font-medium text-warmGray leading-tight">{label}</span>
+        <span className="text-xs font-medium text-warmGray leading-tight">{t(label)}</span>
         <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', badgeBg ?? 'bg-neutral-100')}>
           <span className={cn('h-2.5 w-2.5 rounded-full', dotColor)} />
         </span>
       </div>
       <div>
         <div className={cn('text-3xl font-extrabold leading-none tabular-nums', accent)}>{value}</div>
-        <p className="mt-1.5 text-[11px] text-warmGray leading-tight">{sublabel}</p>
+        <p className="mt-1.5 text-small text-warmGray leading-tight">{t(sublabel)}</p>
       </div>
     </button>
   )
@@ -53,19 +54,14 @@ function KpiCard({ label, sublabel, value, accent, dotColor, badgeBg, isActive, 
 
 export const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Loại cảnh báo' },
-  { value: 'NOISE_ANOMALY', label: 'Ồn bất thường' },
+  { value: 'NOISE_ANOMALY', label: 'Tiếng ồn bất thường' },
   { value: 'SENSOR_ANOMALY', label: 'Cảm biến bất thường' },
-  { value: 'FORECAST_BREACH', label: 'Dự báo vượt ngưỡng' },
-  { value: 'LOW_RETURN_RATE', label: 'Giảm tỉ lệ chim về' },
+  { value: 'FORECAST_BREACH', label: 'Sắp vượt ngưỡng' },
+  { value: 'LOW_RETURN_RATE', label: 'Giảm tỷ lệ chim về' },
 ]
 
-export const SEV_OPTS: Array<{ value: AlertSeverity | 'ALL'; label: string }> = [
-  { value: 'ALL', label: 'Mức độ' },
-  { value: 'CRITICAL', label: 'Khẩn cấp' },
-  { value: 'HIGH', label: 'Cao' },
-  { value: 'MEDIUM', label: 'Trung bình' },
-  { value: 'LOW', label: 'Thường' },
-]
+// Cảnh báo suy luận chỉ ở mức MEDIUM/LOW (backend giới hạn), tức cấp P2 Cao và P3 Thường của FE_Design 2.4
+export const INFERRED_SEVERITIES: AlertSeverity[] = ['MEDIUM', 'LOW']
 
 export const TAB_INFO: Record<AlertTabFilter, { label: string; countKey: keyof KpiCounts }> = {
   ALL: { label: 'Tất cả', countKey: 'total' },
@@ -104,7 +100,7 @@ export default function AlertsKpiAndStatsBar({
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <KpiCard
-        label="Tổng cảnh báo suy luận"
+        label={t('Tổng cảnh báo suy luận')}
         sublabel="30 ngày qua"
         value={String(counts.total).padStart(2, '0')}
         accent="text-charcoal"
@@ -114,8 +110,8 @@ export default function AlertsKpiAndStatsBar({
         onClick={() => onTabChange('ALL')}
       />
       <KpiCard
-        label="Chờ kiểm chứng"
-        sublabel="Cần chuyên gia thẩm định"
+        label={t('Chờ kiểm chứng')}
+        sublabel="Chờ chuyên gia kiểm chứng"
         value={String(counts.pending).padStart(2, '0')}
         accent="text-orange-500"
         dotColor="bg-orange-500"
@@ -124,7 +120,7 @@ export default function AlertsKpiAndStatsBar({
         onClick={() => onTabChange('PENDING')}
       />
       <KpiCard
-        label="Đã xác nhận (Sự cố thật)"
+        label={t('Đã xác nhận (Sự cố thật)')}
         sublabel="Hệ thống suy luận chính xác"
         value={String(counts.confirmed).padStart(2, '0')}
         accent="text-charcoal"
@@ -134,7 +130,7 @@ export default function AlertsKpiAndStatsBar({
         onClick={() => onTabChange('CONFIRMED')}
       />
       <KpiCard
-        label="Đã bác bỏ (Báo động giả)"
+        label={t('Đã bác bỏ (Báo động giả)')}
         sublabel="Nhiễu hoặc dao động tự nhiên"
         value={String(counts.rejected).padStart(2, '0')}
         accent="text-warmGray"

@@ -7,26 +7,29 @@ import DeviceDetailCard from '@/components/features/farm-owner/devices/DeviceDet
 import DeviceSection from '@/components/features/farm-owner/devices/DeviceSection';
 import LullabyTracksModal from '@/components/features/farm-owner/devices/LullabyTracksModal';
 import SpeakerScheduleModal from '@/components/features/farm-owner/devices/SpeakerScheduleModal';
-import ZoneThresholdsModal from '@/components/features/farm-owner/devices/ZoneThresholdsModal';
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants';
 import KitComponentsToggle from '@/components/features/farm-owner/devices/KitComponentsToggle';
 import type { DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
 import type { DeviceDetailState } from '@/components/features/farm-owner/devices/devices.constants';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { devicesDict } from '@/constants/devices.i18n';
 import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeZones } from '@/hooks/farm-owner/useFarmOwnerDashboard';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useSendNodeCommand, useSensorNodes } from '@/hooks/shared/useDevices';
+import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import { canRestartController } from '@/components/features/farm-owner/devices/deviceActions';
+import { canManageController, canRestartController } from '@/components/features/farm-owner/devices/deviceActions';
+import MoveControllerModal from '@/components/features/farm-owner/devices/MoveControllerModal';
+import ReplaceControllerModal from '@/components/features/farm-owner/devices/ReplaceControllerModal';
+import RemoveControllerModal from '@/components/features/farm-owner/devices/RemoveControllerModal';
 import { cn } from '@/lib/cn';
 import { NO_VALUE } from '@/constants/display';
 import type { House } from '@/types';
@@ -49,10 +52,10 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
-  // Lịch và bài loa ru chỉ Farm Owner đặt (BR-07); Domain Expert chỉ đọc, vẫn sửa được ngưỡng Zone
+  // Lịch và bài loa ru chỉ Farm Owner đặt (BR-07); Domain Expert chỉ đọc
   const canOperateSpeaker = usePermission('FARM_OWNER');
-  // Popup vận hành Farm Owner được làm: ngưỡng của 1 Zone, lịch / bài loa ru của 1 node cảm biến
-  const [thresholdZone, setThresholdZone] = useState<{ id: string; name: string }>();
+  // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning; popup ở đây là lịch và bài loa ru của 1 bộ điều khiển
+  const openZoneTuning = useOpenZoneTuning();
   const [scheduleNodeId, setScheduleNodeId] = useState<string>();
   const [tracksNodeId, setTracksNodeId] = useState<string>();
   // Bản ghi node đầy đủ (lịch, âm lượng, bài đang chọn) từ cùng cache danh sách node
@@ -66,6 +69,10 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [restartDevice, setRestartDevice] = useState<DeviceItem>();
+  // FARM-FR-007b, 008 — bộ điều khiển đang mở popup dời, thay hoặc gỡ
+  const [moveDevice, setMoveDevice] = useState<DeviceItem>();
+  const [replaceDevice, setReplaceDevice] = useState<DeviceItem>();
+  const [removeDevice, setRemoveDevice] = useState<DeviceItem>();
 
   function handleRestart(): void {
     if (!restartDevice) return;
@@ -122,6 +129,11 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
           onOpenSchedule={canOperateSpeaker && device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
           onOpenTracks={canOperateSpeaker && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
           onRestart={canRestartController(role, device) ? () => setRestartDevice(device) : undefined}
+          moreActions={canManageController(role, device) ? [
+            { label: t('action.move'), onClick: () => setMoveDevice(device) },
+            { label: t('action.replace'), onClick: () => setReplaceDevice(device) },
+            { label: t('action.remove'), onClick: () => setRemoveDevice(device), danger: true },
+          ] : []}
         />
       ))}
     </div>
@@ -173,7 +185,8 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
                 variant="secondary"
                 size="sm"
                 className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)}
-                onClick={() => setThresholdZone({ id: group.zone._id, name: group.zone.name })}
+                disabled={!openZoneTuning}
+                onClick={() => openZoneTuning?.(group.zone._id)}
               >
                 <SlidersHorizontalIcon size={14} />
                 {t('action.thresholds')}
@@ -208,9 +221,11 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
         </DeviceSection>
       )}
 
-      {thresholdZone && <ZoneThresholdsModal zoneId={thresholdZone.id} zoneName={thresholdZone.name} onClose={() => setThresholdZone(undefined)} />}
       {scheduleNode && <SpeakerScheduleModal node={scheduleNode} onClose={() => setScheduleNodeId(undefined)} />}
       {tracksNode && <LullabyTracksModal node={tracksNode} onClose={() => setTracksNodeId(undefined)} />}
+      {moveDevice && <MoveControllerModal device={moveDevice} onClose={() => setMoveDevice(undefined)} />}
+      {replaceDevice && <ReplaceControllerModal device={replaceDevice} onClose={() => setReplaceDevice(undefined)} />}
+      {removeDevice && <RemoveControllerModal device={removeDevice} onClose={() => setRemoveDevice(undefined)} />}
       <ConfirmModal
         open={restartDevice !== undefined}
         title={t('restart.title', { id: restartDevice?.deviceId ?? '' })}

@@ -147,7 +147,7 @@ async function notifyReportReady(report: IHouseHealthReport): Promise<void> {
   const period = report.period_start === report.period_end ? report.period_start : `${report.period_start} – ${report.period_end}`
   await Promise.all(recipients.map(id => notifyUser(id, {
     title: `Báo cáo ${KIND_LABEL[report.kind]} của ${house?.name ?? 'nhà yến'}`,
-    body: `Báo cáo sức khỏe ${period} đã sẵn sàng.`,
+    body: `Báo cáo sức khoẻ ${period} đã sẵn sàng.`,
     ref: { kind: 'health_report', id: String(report._id) },
   })))
 }

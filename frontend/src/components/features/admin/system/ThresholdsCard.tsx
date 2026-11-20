@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDefaultThresholds } from '@/hooks/admin/useSystem'
 import { Card } from '@/components/ui'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
@@ -14,8 +14,8 @@ import ThresholdsEditModal from '@/components/features/admin/system/ThresholdsEd
 const ICON = 'bg-warmGray/10 text-charcoal'
 
 /**
- * Ngưỡng môi trường mặc định (SYSTEM-FR-002) — nguồn cho "Reset về mặc định" (ENV-FR-020) và ngưỡng khởi tạo phòng mới.
- * Cùng kiểu card "Chỉ số vận hành toàn hệ thống": card trắng + 5 ô StatTile (icon xám). Chỉ ĐỌC — "Chỉnh sửa" mở
+ * Ngưỡng môi trường mặc định (SYSTEM-FR-002) — nguồn cho "Reset về mặc định" (ENV-FR-020) và ngưỡng khởi tạo Zone mới.
+ * Cùng kiểu card "Chỉ số vận hành toàn hệ thống": card trắng + 5 ô KpiTile (icon xám). Chỉ ĐỌC — "Chỉnh sửa" mở
  * ThresholdsEditModal.
  */
 export default function ThresholdsCard() {
@@ -28,7 +28,7 @@ export default function ThresholdsCard() {
       <Card className="flex flex-col gap-4">
         <SettingsCardHeader
           title="Ngưỡng môi trường mặc định"
-          description="Áp dụng khi tạo phòng mới và khi Farm Owner bấm “Reset về mặc định”."
+          description="Dùng cho Zone mới tạo và khi chủ nhà yến đặt lại ngưỡng mặc định."
           isDefault={isDefault}
           onEdit={() => setIsEditing(true)}
           editLabel="Chỉnh sửa ngưỡng môi trường mặc định"
@@ -38,7 +38,7 @@ export default function ThresholdsCard() {
 
         {!isLoading && error && (
           <p className="rounded-2xl border border-dashed border-warmGray/30 px-4 py-6 text-center text-sm text-warmGray">
-            {t('Không tải được ngưỡng mặc định')} — {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
+            {t('Không tải được ngưỡng mặc định')}. {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
           </p>
         )}
 
@@ -46,7 +46,7 @@ export default function ThresholdsCard() {
           // 5 ô bằng nhau trên desktop; mobile 2 cột
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             {THRESHOLD_GROUPS.map(g => g.kind === 'range' ? (
-              <StatTile
+              <KpiTile
                 key={g.label}
                 className="shadow-none"
                 icon={g.icon}
@@ -56,7 +56,7 @@ export default function ThresholdsCard() {
                 sub="Khoảng an toàn"
               />
             ) : (
-              <StatTile
+              <KpiTile
                 key={g.label}
                 className="shadow-none"
                 icon={g.icon}

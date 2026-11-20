@@ -15,6 +15,7 @@ import { useAlertEvidence } from '@/hooks/domain-expert/useExpertAlerts'
 import { buildAlertEvidence, type EvidenceSource } from './alertEvidence'
 import { formatDate } from '@/lib/helpers'
 import OnsiteCheckSection from './OnsiteCheckSection'
+import { t } from '@/i18n'
 
 interface Props { alert: InferredAlertItem }
 
@@ -25,7 +26,7 @@ function ChartTooltip({ active, payload, label, unit }: {
   return (
     <div className="bg-white border border-warmGray/15 rounded-lg px-3 py-1.5 shadow-lg text-xs">
       <p className="font-semibold text-charcoal">{label}</p>
-      <p className="text-warmGray">Giá trị: <b className="text-charcoal">{payload[0].value}{unit}</b></p>
+      <p className="text-warmGray">{t('Giá trị:')} <b className="text-charcoal">{payload[0].value}{unit}</b></p>
     </div>
   )
 }
@@ -93,8 +94,8 @@ function MissingBadge({ label }: { label: string }) {
         <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
         <span>{label}</span>
       </div>
-      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900 uppercase">
-        missing
+      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900">
+        {t('Thiếu dữ liệu')}
       </span>
     </div>
   )
@@ -126,8 +127,8 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         <div className="space-y-3">
           <div className="rounded-xl border border-neutral-200 bg-white p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
-                % Thời gian trong ngưỡng theo từng Zone trong ngày
+              <h4 className="text-xs font-bold text-charcoal">
+                {t('% Thời gian trong ngưỡng theo từng Zone trong ngày')}
               </h4>
             </div>
             {evidence?.zones_in_range && evidence.zones_in_range.length > 0 ? (
@@ -137,20 +138,20 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                     <span className="font-medium text-charcoal">{z.name}</span>
                     {z.status === 'missing' ? (
                       <span className="px-2 py-0.5 rounded text-xs font-semibold bg-neutral-100 text-warmGray">
-                        Thiếu dữ liệu (missing)
+                        {t('Thiếu dữ liệu')}
                       </span>
                     ) : (
                       <div className="flex items-center gap-3 text-xs">
-                        <span>Nhiệt độ: <b className="text-charcoal">{z.temp_in_range_pct ?? '—'}%</b></span>
+                        <span>{t('Nhiệt độ:')} <b className="text-charcoal">{z.temp_in_range_pct ?? '—'}%</b></span>
                         <span className="text-neutral-300">|</span>
-                        <span>Độ ẩm: <b className="text-charcoal">{z.humidity_in_range_pct ?? '—'}%</b></span>
+                        <span>{t('Độ ẩm:')} <b className="text-charcoal">{z.humidity_in_range_pct ?? '—'}%</b></span>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-warmGray italic">Không có dữ liệu zone trong ngày</p>
+              <p className="text-xs text-warmGray italic">{t('Không có dữ liệu Zone trong ngày')}</p>
             )}
           </div>
 
@@ -159,7 +160,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
             <div className="p-3 rounded-xl border border-neutral-200 bg-neutral-50/60">
               <div className="flex items-center gap-1.5 font-semibold text-charcoal mb-1.5">
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
-                <span>Cảnh báo tiếng ồn trong ngày</span>
+                <span>{t('Cảnh báo tiếng ồn trong ngày')}</span>
               </div>
               {evidence?.noise_alerts && evidence.noise_alerts.length > 0 ? (
                 <ul className="space-y-1">
@@ -171,14 +172,14 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-warmGray text-xs">Không có sự cố tiếng ồn</p>
+                <p className="text-warmGray text-xs">{t('Không có sự cố tiếng ồn')}</p>
               )}
             </div>
 
             <div className="p-3 rounded-xl border border-neutral-200 bg-neutral-50/60">
               <div className="flex items-center gap-1.5 font-semibold text-charcoal mb-1.5">
                 <Cpu className="w-3.5 h-3.5 text-blue-600" />
-                <span>Cảnh báo thiết bị trong ngày</span>
+                <span>{t('Cảnh báo thiết bị trong ngày')}</span>
               </div>
               {evidence?.device_alerts && evidence.device_alerts.length > 0 ? (
                 <ul className="space-y-1">
@@ -190,7 +191,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-warmGray text-xs">Thiết bị vận hành ổn định</p>
+                <p className="text-warmGray text-xs">{t('Thiết bị vận hành ổn định')}</p>
               )}
             </div>
           </div>
@@ -199,19 +200,18 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-warmGray px-1">
             <span className="font-semibold text-charcoal">{cfg.windowLabel}</span>
-            <span className="text-xs uppercase tracking-wider text-warmGray">ALERT-FR-014</span>
           </div>
 
           {/* Nguồn 1: Cảm biến & Telemetry */}
           {telemetryMissing || !cfg.src1 ? (
-            <MissingBadge label="Nguồn 1 (Telemetry cảm biến ±30 phút): Không có mẫu ghi nhận" />
+            <MissingBadge label={t('Nguồn 1 (Telemetry cảm biến ±30 phút): Không có mẫu ghi nhận')} />
           ) : (
             <EvidenceBarCard src={cfg.src1} dotColor="bg-[#27231F]" />
           )}
 
           {/* Nguồn 2: Dữ liệu đối chứng / Đếm chim */}
           {birdCountsMissing || !cfg.src2 ? (
-            <MissingBadge label="Nguồn 2 (Số đếm chim 5 phút ±30 phút): Không có chuỗi đếm" />
+            <MissingBadge label={t('Nguồn 2 (Số đếm chim 5 phút ±30 phút): Không có chuỗi đếm')} />
           ) : (
             <EvidenceBarCard src={cfg.src2} dotColor="bg-[#B5D32C]" />
           )}
@@ -221,12 +221,12 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
             <div className="p-3 rounded-xl border border-red-200 bg-red-50/40 text-xs text-charcoal">
               <div className="flex items-center gap-1.5 font-semibold text-red-700 mb-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Thiết bị đang có cảnh báo mở tại khu vực này:</span>
+                <span>{t('Thiết bị đang có cảnh báo mở tại Zone này:')}</span>
               </div>
               <ul className="list-disc list-inside space-y-0.5 text-warmGray text-xs">
                 {evidence.device_alerts.map(da => (
                   <li key={da._id}>
-                    <span className="font-medium text-charcoal">{da.title}</span> — {da.message}
+                    <span className="font-medium text-charcoal">{da.title}</span>: {da.message}
                   </li>
                 ))}
               </ul>
@@ -246,7 +246,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
           <AlertTriangle className="w-4 h-4 text-amber-500" />
         </span>
         <p className="text-xs text-amber-800 leading-relaxed">
-          <strong>Tóm tắt dữ liệu:</strong> {cfg.correlation}
+          <strong>{t('Tóm tắt dữ liệu:')}</strong> {cfg.correlation}
         </p>
       </div>
 
@@ -255,12 +255,12 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-charcoal" />
-            <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">
-              Kết luận tiền lệ cùng loại tại khu vực (EXPERT-FR-003)
+            <h4 className="text-xs font-bold text-charcoal">
+              {t('Kết luận trước đây cùng loại tại Zone')}
             </h4>
           </div>
           <span className="text-xs font-medium text-warmGray">
-            {evidence?.earlier_verdicts?.length ?? 0}/10 kết luận gần nhất
+            {t('{{n}}/10 kết luận gần nhất', { n: evidence?.earlier_verdicts?.length ?? 0 })}
           </span>
         </div>
 
@@ -269,8 +269,8 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
             {evidence.earlier_verdicts.map(item => {
               const v = item.expert_verdict
               const isConfirmed = v?.result === 'CONFIRMED'
-              const authorName = typeof v?.by === 'object' ? v.by?.full_name : 'Chuyên gia'
-              const authorRole = v?.role === 'FARM_OWNER' ? 'Chủ nhà yến' : 'Chuyên gia'
+              const authorName = typeof v?.by === 'object' ? v.by?.full_name : t('Chuyên gia')
+              const authorRole = v?.role === 'FARM_OWNER' ? t('Chủ nhà yến') : t('Chuyên gia')
 
               return (
                 <div
@@ -286,7 +286,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
                             : 'bg-neutral-200 text-neutral-700 border border-neutral-300'
                         }`}
                       >
-                        {isConfirmed ? 'ĐÃ XÁC NHẬN' : 'ĐÃ BÁC BỎ'}
+                        {isConfirmed ? t('ĐÃ XÁC NHẬN') : t('ĐÃ BÁC BỎ')}
                       </span>
                       <span className="font-semibold text-charcoal">
                         {authorName} <span className="text-xs font-normal text-warmGray">({authorRole})</span>
@@ -308,7 +308,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
           </div>
         ) : (
           <p className="text-xs text-warmGray italic py-1">
-            Chưa có tiền lệ kết luận thẩm định cho loại cảnh báo này tại khu vực (hệ thống sẽ lưu lại sau khi bạn thẩm định).
+            {t('Zone chưa có kết luận nào cho loại cảnh báo này; kết luận của bạn sẽ được lưu lại.')}
           </p>
         )}
       </div>

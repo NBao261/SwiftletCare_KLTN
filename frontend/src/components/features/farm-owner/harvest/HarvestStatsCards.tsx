@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { ArrowDownIcon, ArrowUpIcon, CalendarCheckIcon, ChartBarIcon, ClockCounterClockwiseIcon, MinusIcon, type Icon } from '@phosphor-icons/react';
 
 import { Card } from '@/components/ui';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { summarizeHarvestOverview, type HarvestGroup, type PeriodSummary } from '@/components/features/farm-owner/harvest/harvestMetrics';
 import { harvestDict } from '@/constants/harvest.i18n';
@@ -31,7 +31,7 @@ function changeDirection(change: number): ChangeDirection {
 function ChangeBadge({ change, children }: { change: number; children: ReactNode }): JSX.Element {
   const ChangeIcon = CHANGE_ICON[changeDirection(change)];
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warmGray/15 bg-warmGray/10 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warmGray/15 bg-warmGray/10 px-2.5 py-0.5 text-small font-medium text-graphite">
       <ChangeIcon size={10} weight="bold" className="text-charcoal" />
       {children}
     </span>

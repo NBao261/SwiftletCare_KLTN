@@ -23,10 +23,10 @@ describe('ownerActions — thao tác của Farm Owner theo trạng thái', () =>
   const repair = (status: WorkOrderStatus) => ownerActions({ status, kind: 'REPAIR' });
   const preventive = (status: WorkOrderStatus) => ownerActions({ status, kind: 'PREVENTIVE' });
 
-  it('chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ', () => {
+  it('chờ duyệt: duyệt hoặc mở lại; chưa xong: tự làm, giao lại hoặc huỷ (OPS-FR-002, 004)', () => {
     expect(repair('AWAITING_APPROVAL')).toEqual(['approve', 'reopen']);
-    expect(repair('OPEN')).toEqual(['reassign', 'cancel']);
-    expect(repair('IN_PROGRESS')).toEqual(['reassign', 'cancel']);
+    expect(repair('OPEN')).toEqual(['start', 'reassign', 'cancel']);
+    expect(repair('IN_PROGRESS')).toEqual(['done', 'reassign', 'cancel']);
   });
 
   it('đang kiểm dữ liệu: chỉ huỷ; đã đóng, đã huỷ: không có thao tác (backend trả 409)', () => {
@@ -41,8 +41,8 @@ describe('ownerActions — thao tác của Farm Owner theo trạng thái', () =>
 
   it('phòng ngừa: không bao giờ có huỷ (backend 409, SM-20), các thao tác khác giữ nguyên', () => {
     expect(WORK_ORDER_STATUSES.some(status => preventive(status).includes('cancel'))).toBe(false);
-    expect(preventive('OPEN')).toEqual(['reassign']);
-    expect(preventive('IN_PROGRESS')).toEqual(['reassign']);
+    expect(preventive('OPEN')).toEqual(['start', 'reassign']);
+    expect(preventive('IN_PROGRESS')).toEqual(['done', 'reassign']);
     expect(preventive('AWAITING_APPROVAL')).toEqual(['approve', 'reopen']);
   });
 });

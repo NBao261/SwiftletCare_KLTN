@@ -108,7 +108,7 @@ router.get ('/camera-nodes',
 router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('points').isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
   body('points.*').isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),
-  body('points.*.*').isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỉ lệ khung hình 0-1').toFloat(),
+  body('points.*.*').isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỷ lệ khung hình 0-1').toFloat(),
   body('into_ring_is_exit').isBoolean({ strict: true }),
   validate, deviceController.updateCountingRing)
 // VISION-FR-013, SRS §4.4 — live stream cho Farm Owner và Domain Expert của farm chứa camera, Farm Technician

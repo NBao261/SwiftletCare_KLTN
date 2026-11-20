@@ -60,12 +60,12 @@ const vi = {
   'automation.humidityLabel': 'Độ ẩm trong ngưỡng',
   'automation.temperatureLabel': 'Nhiệt độ trong ngưỡng',
   'automation.rangeSub': 'Ngưỡng {min}–{max}{unit}',
-  'automation.switchLabel': 'Đóng cắt relay mỗi giờ',
+  'automation.switchLabel': 'Đóng cắt rơ-le mỗi giờ',
   'automation.switchValue': '{misting} · {ventilation}',
   'automation.switchSub': 'Phun sương · Quạt',
   'automation.noValueSub': 'Chưa đủ dữ liệu',
-  'automation.chartHint': 'Độ ẩm thực tế (trục trái) so với % phun sương và quạt do bộ điều khiển trên ESP32 quyết định (trục phải); vạch dọc là lúc chỉnh hệ số',
-  'automation.empty': 'Chưa có dữ liệu điều khiển trong khoảng này — cần thiết bị chạy firmware 1.1.0 trở lên và đang gửi số đo.',
+  'automation.chartHint': 'Độ ẩm đo được (trục trái) và mức phun sương, quạt do bộ điều khiển đặt (trục phải). Vạch dọc là lúc chỉnh hệ số.',
+  'automation.empty': 'Chưa có dữ liệu điều khiển trong khoảng này. Cần thiết bị chạy firmware 1.1.0 trở lên và đang gửi số đo.',
   'automation.maintenanceTitle': 'Thời gian chạy tới mốc bảo trì (tính từ lần bảo trì trước)',
   'automation.maintenancePump': 'Bơm {hours}/{hourLimit} giờ · {switches}/{switchLimit} lần',
   'automation.maintenanceFan': 'Quạt {hours}/{hourLimit} giờ · {switches}/{switchLimit} lần',
@@ -77,7 +77,7 @@ const vi = {
 
   // Lịch sử can thiệp tay
   'override.title': 'Lịch sử can thiệp tay',
-  'override.subtitle': 'Các lần ép relay gần nhất trong Zone — mỗi lần đều có thời hạn và được ghi lại',
+  'override.subtitle': 'Các lần điều khiển tay gần nhất trong Zone, mỗi lần có thời hạn',
   'override.colRelay': 'Relay',
   'override.colBy': 'Người thực hiện',
   'override.colStart': 'Bắt đầu',
@@ -91,11 +91,11 @@ const vi = {
   'override.end.CLEARED_EARLY': 'Tắt sớm',
   'override.end.REPLACED': 'Bấm lại',
   'override.unknownUser': 'Không rõ',
-  'override.empty': 'Chưa có lần can thiệp tay nào — Zone đang chạy tự động.',
+  'override.empty': 'Chưa có lần can thiệp tay nào. Zone đang chạy tự động.',
   'override.noDevice': 'Zone chưa có thiết bị cảm biến nào.',
 
   // Báo cáo sức khỏe tuần của nhà, mục của Zone đang xem
-  'health.title': 'Báo cáo sức khỏe tuần',
+  'health.title': 'Báo cáo sức khoẻ tuần',
   'health.period': 'Kỳ {from} – {to}',
   'health.subtitleEmpty': 'Báo cáo tuần của nhà (thứ Hai – Chủ nhật) do hệ thống tổng hợp, chuyên gia viết kết luận',
   'health.temperature': 'Nhiệt độ trong ngưỡng',
@@ -114,15 +114,15 @@ const vi = {
   'health.conclusionBy': '{name} · {time}',
   'health.expert': 'Chuyên gia',
   'health.noConclusion': 'Chuyên gia chưa viết kết luận cho kỳ này.',
-  'health.empty': 'Chưa có báo cáo tuần nào — báo cáo đầu tiên được tạo sau tuần đầu tiên của nhà.',
+  'health.empty': 'Chưa có báo cáo tuần nào. Báo cáo đầu tiên được tạo sau tuần đầu tiên của nhà.',
 
   // Biến thiên vi khí hậu
   'env.title': 'Biến thiên vi khí hậu theo thời gian',
   'env.subtitle': 'Nhiệt độ (trục trái) và độ ẩm (trục phải); dải nền là ngưỡng nhiệt độ của Zone',
   'env.lastReading': 'Số đo gần nhất {ago}',
   'env.gas': '{gas} {value} ppm · cảnh báo khi > {max} ppm',
-  'env.sourceDefault': 'Ngưỡng mặc định hệ thống — NH3, CO2 là giá trị tạm, chỉ để cảnh báo, chờ chuyên gia đặt',
-  'env.sourceManual': 'Ngưỡng do {setter} đặt ngày {date} — NH3, CO2 chỉ để cảnh báo',
+  'env.sourceDefault': 'Ngưỡng mặc định hệ thống. NH3, CO2 là giá trị tạm, chỉ để cảnh báo, chờ chuyên gia đặt.',
+  'env.sourceManual': 'Ngưỡng do {setter} đặt ngày {date}. NH3, CO2 chỉ để cảnh báo.',
   'env.setter.FARM_OWNER': 'chủ nhà yến',
   'env.setter.DOMAIN_EXPERT': 'chuyên gia',
   'env.setter.FARM_TECHNICIAN': 'kỹ thuật viên',
@@ -135,8 +135,8 @@ const vi = {
 
   // Dự báo
   'forecast.title': 'Dự báo 60 phút tới',
-  'forecast.subtitle': 'Nét liền: 6 giờ qua (gom 5 phút) · Nét đứt: dự báo — cảnh báo sớm trước khi độ ẩm, nhiệt độ vượt ngưỡng',
-  'forecast.empty': 'Chưa đủ dữ liệu để dự báo — cần ít nhất 2 giờ dữ liệu liên tục và thiết bị còn gửi trong 15 phút gần nhất.',
+  'forecast.subtitle': 'Nét liền: 6 giờ qua (gom 5 phút) · Nét đứt: dự báo. Cảnh báo sớm trước khi độ ẩm, nhiệt độ vượt ngưỡng.',
+  'forecast.empty': 'Chưa đủ dữ liệu để dự báo. Cần ít nhất 2 giờ dữ liệu liên tục và thiết bị còn gửi trong 15 phút gần nhất.',
   'forecast.breachUp': '{metric} có thể lên {value} trong khoảng {minutes} phút nữa (ngưỡng {limit}).',
   'forecast.breachDown': '{metric} có thể xuống {value} trong khoảng {minutes} phút nữa (ngưỡng {limit}).',
   'forecast.noBreach': 'Không có chỉ số nào được dự báo vượt ngưỡng trong 60 phút tới.',
@@ -146,7 +146,7 @@ const vi = {
 
   // Chim ra, vào theo giờ
   'hourly.title': 'Chim ra, vào theo giờ',
-  'hourly.subtitle': '{house} · số chim qua vạch đếm của camera AI, gộp mỗi giờ trong 24 giờ qua',
+  'hourly.subtitle': '{house} · số chim qua vòng đếm, gộp theo giờ trong 24 giờ qua',
   'hourly.exitToday': 'Chim ra hôm nay',
   'hourly.entryToday': 'Chim về hôm nay',
   'hourly.returnToday': 'Tỷ lệ chim về hôm nay',
@@ -154,11 +154,11 @@ const vi = {
   'hourly.updated': 'Cập nhật {ago}',
   'hourly.noToday': 'Hôm nay chưa có số đếm',
   'hourly.returnPending': 'Cần đủ phiên sáng và chiều',
-  'hourly.empty': 'Chưa có số đếm trong 24 giờ qua — camera AI chưa gửi số đếm.',
+  'hourly.empty': 'Chưa có số đếm trong 24 giờ qua. Camera đếm chim chưa gửi số đếm.',
 
   // Tỷ lệ chim về theo tuần
   'bird.title': 'Tỷ lệ chim về theo tuần',
-  'bird.subtitle': '{house} · trung bình tỷ lệ chim về tổ mỗi tuần từ số đếm của camera AI',
+  'bird.subtitle': '{house} · tỷ lệ chim về trung bình theo tuần',
   'bird.average': 'Trung bình cả kỳ',
   'bird.averageSub': '{n} ngày có số đếm',
   'bird.latestWeek': 'Tuần gần nhất',
@@ -166,7 +166,7 @@ const vi = {
   'bird.change': 'So với tuần trước',
   'bird.changeSub': 'Chênh lệch điểm phần trăm',
   'bird.drop': 'Tỷ lệ chim về mới nhất giảm {drop}% so với trung bình các ngày trước, vượt mức {threshold}% chuyên gia đặt cho nhà yến này. Nên xem lại môi trường và thiết bị quanh thời điểm đó.',
-  'bird.empty': 'Chưa có dữ liệu đếm chim — camera AI chưa gửi số đếm.',
+  'bird.empty': 'Chưa có số đếm chim. Camera đếm chim chưa gửi số đếm.',
 
   // Xu hướng đàn (ANALYTICS-FR-002)
   'flock.title': 'Xu hướng đàn',
@@ -204,7 +204,7 @@ const vi = {
   'correlation.positive': 'thuận',
   'correlation.negative': 'nghịch',
   'correlation.sample': '{n} ngày có đủ dữ liệu trong {days} ngày qua',
-  'correlation.emptyDesc': 'Cần ít nhất 2 ngày có cả số đo môi trường và số đếm chim từ camera AI.',
+  'correlation.emptyDesc': 'Cần ít nhất 2 ngày có cả số đo môi trường và số đếm chim.',
 
   // So sánh giữa các Zone
   'compare.title': 'So sánh giữa các Zone',
@@ -219,34 +219,6 @@ const vi = {
   'compare.colOutside': 'Mẫu ngoài ngưỡng',
   'compare.outside': '{count}/{total}',
   'compare.noData': 'Chưa có số đo',
-
-  // Popup hệ số logic mờ
-  'fuzzy.title': 'Hệ số logic mờ — {zone}',
-  'fuzzy.suggestHint': 'Học mô hình nhà yến từ dữ liệu 14 ngày qua, mô phỏng 120 bộ hệ số và đề xuất bộ tốt nhất.',
-  'fuzzy.suggest': 'Gợi ý hệ số',
-  'fuzzy.suggestFailed': 'Không lấy được gợi ý',
-  'fuzzy.suggestFilled': 'Đã điền gợi ý vào form. Theo mô hình (R² {r2}, {days} ngày dữ liệu): độ ẩm trong ngưỡng {inRangeNow}% → {inRangeSuggested}%, phun trung bình {mistingNow}% → {mistingSuggested}%. Đây là dự đoán trên mô hình, kiểm tra rồi mới bấm "Lưu và áp dụng".',
-  'fuzzy.noSuggestion': 'Chưa có gợi ý: {reason}',
-  'fuzzy.humidityBand': 'Độ rộng vùng độ ẩm (%RH)',
-  'fuzzy.humidityBandHint': 'Lớn hơn → bắt đầu phun sớm hơn và giảm dần mềm hơn quanh ngưỡng độ ẩm thấp nhất.',
-  'fuzzy.temperatureBand': 'Độ rộng vùng nóng (°C)',
-  'fuzzy.temperatureBandHint': 'Lớn hơn → quạt và phun làm mát phản ứng sớm hơn khi nhiệt độ tiến gần ngưỡng cao nhất.',
-  'fuzzy.fanDryLevel': 'Mức quạt khi nóng mà khô (%)',
-  'fuzzy.fanDryLevelHint': 'Thấp hơn → giữ hơi ẩm trong nhà, để phun sương làm mát.',
-  'fuzzy.window': 'Chu kỳ bật/tắt relay (giây)',
-  'fuzzy.windowHint': 'Dài hơn → relay và bơm ít đóng cắt hơn nhưng độ ẩm dao động lớn hơn.',
-  'fuzzy.defaultRange': 'Mặc định {default}, khoảng {min}–{max}.',
-  'fuzzy.filterTitle': 'Lọc nhiễu đầu vào (median + Kalman)',
-  'fuzzy.filterHint': 'Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để relay ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.',
-  'fuzzy.footer': 'Chỉnh từng chút một rồi theo dõi khung "Hiệu quả vận hành tự động" vài giờ trước khi chỉnh tiếp. Thiết bị firmware cũ hơn 1.1.0 bỏ qua các hệ số này.',
-  'fuzzy.reset': 'Về mặc định',
-  'fuzzy.cancel': 'Huỷ',
-  'fuzzy.save': 'Lưu và áp dụng',
-  'fuzzy.saved': 'Đã lưu hệ số — thiết bị đang online áp dụng ngay',
-  'fuzzy.saveFailed': 'Lưu hệ số thất bại',
-  'fuzzy.errorNumber': 'Chưa nhập hoặc không phải số',
-  'fuzzy.errorRange': 'Phải trong khoảng {min}–{max}',
-  'fuzzy.errorInteger': 'Phải là số giây nguyên',
 };
 
 type AnalyticsKey = keyof typeof vi;
@@ -387,7 +359,7 @@ const en: Record<AnalyticsKey, string> = {
   'forecast.errorSub': 'At 60 min: {value}',
 
   'hourly.title': 'Birds in and out by hour',
-  'hourly.subtitle': '{house} · birds crossing the AI camera counting line, grouped by hour over the last 24 hours',
+  'hourly.subtitle': '{house} · birds crossing the counting ring, grouped by hour over the last 24 hours',
   'hourly.exitToday': 'Birds out today',
   'hourly.entryToday': 'Birds in today',
   'hourly.returnToday': 'Return rate today',
@@ -395,10 +367,10 @@ const en: Record<AnalyticsKey, string> = {
   'hourly.updated': 'Updated {ago}',
   'hourly.noToday': 'No count yet today',
   'hourly.returnPending': 'Needs both morning and evening sessions',
-  'hourly.empty': 'No count in the last 24 hours — the AI camera has not sent counts.',
+  'hourly.empty': 'No count in the last 24 hours. The bird-count camera has not sent counts.',
 
   'bird.title': 'Weekly return rate',
-  'bird.subtitle': '{house} · average weekly share of birds returning to the nest from the AI camera count',
+  'bird.subtitle': '{house} · average return rate by week',
   'bird.average': 'Period average',
   'bird.averageSub': '{n} days with counts',
   'bird.latestWeek': 'Latest week',
@@ -406,7 +378,7 @@ const en: Record<AnalyticsKey, string> = {
   'bird.change': 'Versus previous week',
   'bird.changeSub': 'Difference in percentage points',
   'bird.drop': 'The latest return rate is {drop}% below the average of the previous days, beyond the {threshold}% set by the Domain Expert for this house. Review the climate and devices around that time.',
-  'bird.empty': 'No bird count yet — the AI camera has not sent counts.',
+  'bird.empty': 'No bird count yet. The bird-count camera has not sent counts.',
 
   'flock.title': 'Flock trend',
   'flock.subtitle': '{house} · mean morning exit count per period over the last 90 days; days missing a counting session are left out',
@@ -441,7 +413,7 @@ const en: Record<AnalyticsKey, string> = {
   'correlation.positive': 'positive',
   'correlation.negative': 'negative',
   'correlation.sample': '{n} days with complete data in the last {days} days',
-  'correlation.emptyDesc': 'At least 2 days with both climate readings and AI camera bird counts are needed.',
+  'correlation.emptyDesc': 'At least 2 days with both climate readings and bird counts are needed.',
 
   'compare.title': 'Zone comparison',
   'compare.subtitle': 'Average values in the selected range; orange bars are zones outside their own threshold',
@@ -456,32 +428,6 @@ const en: Record<AnalyticsKey, string> = {
   'compare.outside': '{count}/{total}',
   'compare.noData': 'No readings',
 
-  'fuzzy.title': 'Fuzzy coefficients — {zone}',
-  'fuzzy.suggestHint': 'Learns a model of the house from the last 14 days, simulates 120 coefficient sets and suggests the best one.',
-  'fuzzy.suggest': 'Suggest coefficients',
-  'fuzzy.suggestFailed': 'Could not get a suggestion',
-  'fuzzy.suggestFilled': 'The suggestion is filled in. Per the model (R² {r2}, {days} days of data): humidity within threshold {inRangeNow}% → {inRangeSuggested}%, average misting {mistingNow}% → {mistingSuggested}%. This is a model prediction — review it before pressing "Save and apply".',
-  'fuzzy.noSuggestion': 'No suggestion yet: {reason}',
-  'fuzzy.humidityBand': 'Humidity band width (%RH)',
-  'fuzzy.humidityBandHint': 'Larger → misting starts earlier and tapers more softly around the minimum humidity.',
-  'fuzzy.temperatureBand': 'Heat band width (°C)',
-  'fuzzy.temperatureBandHint': 'Larger → fan and cooling mist react earlier as temperature nears the maximum.',
-  'fuzzy.fanDryLevel': 'Fan level when hot and dry (%)',
-  'fuzzy.fanDryLevelHint': 'Lower → keeps moisture inside and lets misting do the cooling.',
-  'fuzzy.window': 'Relay on/off cycle (seconds)',
-  'fuzzy.windowHint': 'Longer → fewer relay and pump switches but wider humidity swings.',
-  'fuzzy.defaultRange': 'Default {default}, range {min}–{max}.',
-  'fuzzy.filterTitle': 'Input noise filter (median + Kalman)',
-  'fuzzy.filterHint': 'Smooths temperature and humidity before the controller so relays switch less from noise. Turn off briefly to compare switches per hour. Requires firmware 1.2.0 or later.',
-  'fuzzy.footer': 'Change a little at a time and watch "Automatic operation performance" for a few hours before changing again. Devices older than firmware 1.1.0 ignore these coefficients.',
-  'fuzzy.reset': 'Reset to default',
-  'fuzzy.cancel': 'Cancel',
-  'fuzzy.save': 'Save and apply',
-  'fuzzy.saved': 'Coefficients saved — online devices apply them right away',
-  'fuzzy.saveFailed': 'Saving coefficients failed',
-  'fuzzy.errorNumber': 'Empty or not a number',
-  'fuzzy.errorRange': 'Must be between {min} and {max}',
-  'fuzzy.errorInteger': 'Must be a whole number of seconds',
 };
 
 export const analyticsDict: Dictionary<AnalyticsKey> = { vi, en };

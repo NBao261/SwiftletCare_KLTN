@@ -18,6 +18,8 @@ export interface SensorNode {
   _id: string; device_id: string; zone_id: string
   firmware_version: string; last_heartbeat?: string
   status: DeviceStatus; rssi?: number; control_mode: ControlMode
+  /** ENV-FR-027, Report 3 §6.12 — controller đã áp cấu hình hiện hành của Zone chưa; UNKNOWN = firmware trước 2.1.0 không báo */
+  config_sync?: 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
   /** FARM-FR-006 — chẩn đoán từ heartbeat; reset_reason, ip chỉ có từ firmware 1.4.0 */
   booted_at?: string; free_heap?: number; reset_reason?: string; ip?: string
   relay_states: RelayStates

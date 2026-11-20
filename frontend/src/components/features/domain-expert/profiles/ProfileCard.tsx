@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/Button'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import type { ConfigProfile } from '@/types/expert.types'
 import ProfileStatusBadge from './ProfileStatusBadge'
+import { t, translated } from '@/i18n'
 
-const STAGE_LABEL: Record<string, string> = {
+const STAGE_LABEL: Record<string, string> = translated({
   ATTRACTING: 'Dẫn dụ',
   OCCUPIED:   'Đang nuôi',
-}
+})
 
 interface Props {
   profile: ConfigProfile
@@ -27,10 +28,10 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
   const [confirmAction, setConfirmAction] = useState<'approve' | 'archive' | null>(null)
 
   const groups = [
-    profile.thresholds ? 'Ngưỡng môi trường' : null,
-    profile.fuzzy_tuning ? 'Hệ số mờ' : null,
-    profile.detection_tuning ? 'Tham số phát hiện' : null,
-    profile.speaker_schedule ? 'Lịch phát loa' : null,
+    profile.thresholds ? t('Ngưỡng môi trường') : null,
+    profile.fuzzy_tuning ? t('Hệ số mờ') : null,
+    profile.detection_tuning ? t('Tham số phát hiện') : null,
+    profile.speaker_schedule ? t('Lịch phát loa') : null,
   ].filter(Boolean)
 
   return (
@@ -56,12 +57,12 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-warmGray">
             {groups.length > 0 && (
-              <span>Nhóm: {groups.join(', ')}</span>
+              <span>{t('Nhóm: {{groups}}', { groups: groups.join(', ') })}</span>
             )}
             {profile.applications.length > 0 && (
-              <span>Đã áp: {profile.applications.length} lần</span>
+              <span>{t('Đã áp: {{n}} lần', { n: profile.applications.length })}</span>
             )}
-            <span>Tạo {formatDate(profile.created_at)}</span>
+            <span>{t('Tạo {{date}}', { date: formatDate(profile.created_at) })}</span>
           </div>
         </div>
         <div className="shrink-0 mt-0.5 text-warmGray">
@@ -84,14 +85,14 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
                   size="sm"
                   onClick={e => { e.stopPropagation(); onEdit?.() }}
                 >
-                  <Pencil className="w-3.5 h-3.5" /> Sửa
+                  <Pencil className="w-3.5 h-3.5" /> {t('Sửa')}
                 </Button>
                 <Button
                   variant="accent"
                   size="sm"
                   onClick={e => { e.stopPropagation(); setConfirmAction('approve') }}
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt hồ sơ
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {t('Duyệt hồ sơ')}
                 </Button>
               </>
             )}
@@ -101,7 +102,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
                 size="sm"
                 onClick={e => { e.stopPropagation(); setConfirmAction('archive') }}
               >
-                <Archive className="w-3.5 h-3.5" /> Lưu trữ
+                <Archive className="w-3.5 h-3.5" /> {t('Lưu trữ')}
               </Button>
             )}
           </div>}
@@ -110,9 +111,9 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
 
       <ConfirmModal
         open={confirmAction === 'approve'}
-        title="Duyệt hồ sơ cấu hình"
-        description={`Hồ sơ "${profile.name}" sẽ chuyển sang trạng thái Đã duyệt và sẵn sàng để Farm Owner áp dụng. Tiếp tục?`}
-        confirmLabel="Duyệt"
+        title={t('Duyệt hồ sơ cấu hình')}
+        description={t('Hồ sơ "{{name}}" sẽ chuyển sang trạng thái Đã duyệt và sẵn sàng để Chủ nhà yến áp dụng. Tiếp tục?', { name: profile.name })}
+        confirmLabel={t('Duyệt')}
         loading={disabled}
         onConfirm={() => { setConfirmAction(null); onApprove?.() }}
         onCancel={() => setConfirmAction(null)}
@@ -120,9 +121,9 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
 
       <ConfirmModal
         open={confirmAction === 'archive'}
-        title="Lưu trữ hồ sơ cấu hình"
-        description={`Hồ sơ "${profile.name}" sẽ bị lưu trữ và không còn áp dụng được. Thao tác này không thể hoàn tác.`}
-        confirmLabel="Lưu trữ"
+        title={t('Lưu trữ hồ sơ cấu hình')}
+        description={t('Hồ sơ "{{name}}" sẽ bị lưu trữ và không còn áp dụng được. Thao tác này không thể hoàn tác.', { name: profile.name })}
+        confirmLabel={t('Lưu trữ')}
         danger
         loading={disabled}
         onConfirm={() => { setConfirmAction(null); onArchive?.() }}
@@ -144,7 +145,7 @@ function FieldRow({ label, value }: { label: string; value: string | number | bo
 function GroupBox({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-warmGray/5 border border-warmGray/10 p-3 space-y-1.5">
-      <p className="text-xs font-semibold text-warmGray uppercase tracking-wide">{title}</p>
+      <p className="text-xs font-semibold text-warmGray">{title}</p>
       {children}
     </div>
   )
@@ -152,10 +153,10 @@ function GroupBox({ title, children }: { title: string; children: React.ReactNod
 
 function ThresholdSection({ thresholds }: { thresholds: NonNullable<ConfigProfile['thresholds']> }) {
   return (
-    <GroupBox title="Ngưỡng môi trường">
-      <FieldRow label="Nhiệt độ" value={`${thresholds.temp_min}–${thresholds.temp_max} °C`} />
-      <FieldRow label="Độ ẩm" value={`${thresholds.humidity_min}–${thresholds.humidity_max} %`} />
-      <FieldRow label="Ánh sáng max" value={`${thresholds.light_max} lux`} />
+    <GroupBox title={t('Ngưỡng môi trường')}>
+      <FieldRow label={t('Nhiệt độ')} value={`${thresholds.temp_min}–${thresholds.temp_max} °C`} />
+      <FieldRow label={t('Độ ẩm')} value={`${thresholds.humidity_min}–${thresholds.humidity_max} %`} />
+      <FieldRow label={t('Ánh sáng max')} value={`${thresholds.light_max} lux`} />
       <FieldRow label="NH3 max" value={`${thresholds.nh3_max} ppm`} />
       <FieldRow label="CO2 max" value={`${thresholds.co2_max} ppm`} />
     </GroupBox>
@@ -164,34 +165,34 @@ function ThresholdSection({ thresholds }: { thresholds: NonNullable<ConfigProfil
 
 function FuzzySection({ fuzzy }: { fuzzy: NonNullable<ConfigProfile['fuzzy_tuning']> }) {
   return (
-    <GroupBox title="Hệ số mờ">
-      <FieldRow label="Dải độ ẩm" value={`${fuzzy.fuzzy_humidity_band} %RH`} />
-      <FieldRow label="Dải nhiệt độ" value={`${fuzzy.fuzzy_temp_band} °C`} />
-      <FieldRow label="Mức quạt khi nóng khô" value={`${fuzzy.fuzzy_fan_dry_level} %`} />
-      <FieldRow label="Cửa sổ điều khiển" value={`${fuzzy.fuzzy_window_sec} giây`} />
-      <FieldRow label="Lọc đầu vào" value={fuzzy.fuzzy_input_filter ? 'Bật' : 'Tắt'} />
+    <GroupBox title={t('Hệ số mờ')}>
+      <FieldRow label={t('Dải độ ẩm')} value={`${fuzzy.fuzzy_humidity_band} %RH`} />
+      <FieldRow label={t('Dải nhiệt độ')} value={`${fuzzy.fuzzy_temp_band} °C`} />
+      <FieldRow label={t('Mức quạt khi nóng khô')} value={`${fuzzy.fuzzy_fan_dry_level} %`} />
+      <FieldRow label={t('Cửa sổ điều khiển')} value={`${fuzzy.fuzzy_window_sec} ${t('giây')}`} />
+      <FieldRow label={t('Lọc đầu vào')} value={fuzzy.fuzzy_input_filter ? t('Bật') : t('Tắt')} />
     </GroupBox>
   )
 }
 
 function DetectionSection({ detection }: { detection: NonNullable<ConfigProfile['detection_tuning']> }) {
   return (
-    <GroupBox title="Tham số phát hiện">
-      <FieldRow label="Biên độ ồn" value={`${detection.noise_margin_db} dB`} />
-      <FieldRow label="Thời gian ồn tối thiểu" value={`${detection.noise_min_sec} giây`} />
-      <FieldRow label="Giây bơm cộng dồn" value={`${detection.pump_dry_on_sec} giây`} />
-      <FieldRow label="Độ ẩm phải tăng" value={`${detection.pump_dry_min_rise_pct} %RH`} />
-      <FieldRow label="Mức âm giảm (loa)" value={`${detection.speaker_drop_pct} %`} />
+    <GroupBox title={t('Tham số phát hiện')}>
+      <FieldRow label={t('Biên độ ồn')} value={`${detection.noise_margin_db} dB`} />
+      <FieldRow label={t('Thời gian ồn tối thiểu')} value={`${detection.noise_min_sec} ${t('giây')}`} />
+      <FieldRow label={t('Giây bơm cộng dồn')} value={`${detection.pump_dry_on_sec} ${t('giây')}`} />
+      <FieldRow label={t('Độ ẩm phải tăng')} value={`${detection.pump_dry_min_rise_pct} %RH`} />
+      <FieldRow label={t('Mức âm giảm (loa)')} value={`${detection.speaker_drop_pct} %`} />
     </GroupBox>
   )
 }
 
 function SpeakerSection({ schedule }: { schedule: NonNullable<ConfigProfile['speaker_schedule']> }) {
   return (
-    <GroupBox title="Lịch phát loa">
-      <FieldRow label="Trạng thái" value={schedule.enabled ? 'Bật' : 'Tắt'} />
+    <GroupBox title={t('Lịch phát loa')}>
+      <FieldRow label={t('Trạng thái')} value={schedule.enabled ? t('Bật') : t('Tắt')} />
       {schedule.windows.map((w, i) => (
-        <FieldRow key={i} label={`Khung ${i + 1}`} value={`${w.start} – ${w.end}`} />
+        <FieldRow key={i} label={t('Khung {{n}}', { n: i + 1 })} value={`${w.start} – ${w.end}`} />
       ))}
     </GroupBox>
   )

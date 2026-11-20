@@ -248,7 +248,7 @@ const CSV_TEXT: Record<ReasonLang, {
     status: { GOOD: 'Tốt', WATCH: 'Theo dõi', ACTION: 'Cần xử lý', INSUFFICIENT_DATA: 'Thiếu dữ liệu' },
     level: { NORMAL: 'Bình thường', SLIGHT: 'Nhẹ', CLEAR: 'Rõ' },
     notAssessed: 'Không đánh giá',
-    role: { FARM_OWNER: 'Chủ trại', DOMAIN_EXPERT: 'Chuyên gia', FARM_TECHNICIAN: 'Kỹ thuật viên' },
+    role: { FARM_OWNER: 'Chủ nhà yến', DOMAIN_EXPERT: 'Chuyên gia', FARM_TECHNICIAN: 'Kỹ thuật viên' },
     skipped: 'Bỏ qua',
   },
   en: {

@@ -6,7 +6,7 @@ import { DropIcon, ThermometerIcon, WarningIcon } from '@phosphor-icons/react';
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import {
   CHART_FONT,
   CHART_LEGEND,

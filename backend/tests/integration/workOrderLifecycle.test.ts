@@ -334,7 +334,7 @@ describe('kiểm phục hồi theo loại cảnh báo (BR-41, OPS-FR-003)', () =
       expect((await verifyWorkOrders(at(doneAt, 1))).verified).toBe(1)
       expect(await status()).toBe('AWAITING_APPROVAL')
       expect((await WorkOrder.findById(wo._id).lean())!.history.at(-1)!.note).toContain('Chưa có dữ liệu để kiểm phục hồi')
-      expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ body: expect.stringContaining('chưa có dữ liệu') }))
+      expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ body: expect.stringContaining('Chưa có dữ liệu') }))
     })
 
   it('MISTING_INEFFECTIVE được gửi lại trong lúc firmware còn chốt ngừng phun không bị coi là tái phát; độ ẩm phục hồi thì chờ duyệt', async () => {
@@ -491,7 +491,7 @@ describe('sửa theo review của Bảo (#155)', () => {
     await request(farmApp).delete(`/farms/houses/${house._id}/technicians/${tech.user._id}`).set('Authorization', `Bearer ${token}`).expect(200)
     const released = (await WorkOrder.findById(wo._id).lean())!
     expect(released.assignee_id).toBeUndefined()
-    expect(released.history.at(-1)!.note).toContain('AUTH-FR-005')
+    expect(released.history.at(-1)!.note).toContain('chuyển cho chủ nhà yến')
     expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.objectContaining({ title: expect.stringContaining('chuyển cho bạn') }))
 
     await WorkOrder.updateOne({ _id: wo._id }, { assignee_id: tech2.user._id })

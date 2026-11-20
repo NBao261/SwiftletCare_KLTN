@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn'
 import type { ConfigProfileStatus } from '@/types/expert.types'
+import { t } from '@/i18n'
 
 const CONFIG: Record<ConfigProfileStatus, { label: string; cls: string }> = {
   DRAFT:    { label: 'Bản nháp',   cls: 'bg-statusYellow/10 text-statusYellow border-statusYellow/30' },
@@ -16,8 +17,8 @@ export default function ProfileStatusBadge({
 }) {
   const { label, cls } = CONFIG[status]
   return (
-    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', cls, className)}>
-      {label}
+    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-small font-semibold', cls, className)}>
+      {t(label)}
     </span>
   )
 }

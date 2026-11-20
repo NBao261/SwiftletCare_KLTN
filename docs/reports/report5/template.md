@@ -9,7 +9,7 @@
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
 | Document version | 1.5.1 (Review 2, final scope) |
 | Date | 19/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.12; Design Brief (BM01) 2.1 sections 6–7 and Appendix A |
+| Requirements baseline | Report 3 – SRS 4.2.13; Design Brief (BM01) 2.1 sections 6–7 and Appendix A |
 
 This file is generated from the test-case list `docs/reports/report5/tc.py` by `docs/reports/report5/gen_report5.py`. Edit the list and regenerate; do not edit the tables by hand. The generator checks that every automated case names a test that exists; the "Actual result" column is filled only from a CI run on the tag named in Section 6.
 

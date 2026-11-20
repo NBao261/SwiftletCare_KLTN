@@ -3,12 +3,13 @@ import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Toggle } from '@/components/ui/Toggle'
 import type { WeatherRule } from '@/types/expert.types'
+import { t, translated } from '@/i18n'
 
-const METRIC_LABELS: Record<WeatherRule['metric'], string> = {
+const METRIC_LABELS: Record<WeatherRule['metric'], string> = translated({
   temperature: 'Nhiệt độ cao nhất',
   humidity:    'Độ ẩm ngoài trời cao nhất',
   rain:        'Tổng mưa',
-}
+})
 const METRIC_UNITS: Record<WeatherRule['metric'], string> = {
   temperature: '°C',
   humidity:    '%',
@@ -34,7 +35,7 @@ export default function WeatherRuleRow({ rule, onToggle, onRemove, disabled }: P
           checked={rule.active}
           onChange={onToggle}
           disabled={disabled}
-          aria-label={rule.active ? 'Tắt luật' : 'Bật luật'}
+          aria-label={rule.active ? t('Tắt luật') : t('Bật luật')}
         />
 
         <span className="font-medium text-charcoal truncate">
@@ -49,17 +50,17 @@ export default function WeatherRuleRow({ rule, onToggle, onRemove, disabled }: P
             ? 'bg-infoBlue/5 text-infoBlue border-infoBlue/20'
             : 'bg-climateOrange/10 text-climateOrange border-climateOrange/20',
         )}>
-          {sign}{rule.offset_pct}% phun
+          {t('{{offset}}% phun', { offset: `${sign}${rule.offset_pct}` })}
         </span>
 
-        <span className="text-warmGray text-xs shrink-0">{rule.duration_min} phút</span>
+        <span className="text-warmGray text-xs shrink-0">{t('{{n}} phút', { n: rule.duration_min })}</span>
       </div>
 
       <button
         type="button"
         onClick={onRemove}
         disabled={disabled}
-        aria-label="Xoá luật"
+        aria-label={t('Xoá luật')}
         className="shrink-0 text-warmGray hover:text-alertRed transition-colors p-1 rounded disabled:opacity-40"
       >
         <Trash2 className="w-4 h-4" />

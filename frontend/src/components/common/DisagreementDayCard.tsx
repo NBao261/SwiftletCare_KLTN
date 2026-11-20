@@ -80,12 +80,12 @@ function DisagreementItemBlock({
               {item.assessor.full_name || t('dis.rater')}
             </span>
             <span className="text-warmGray">•</span>
-            <span className="rounded-md border border-warmGray/15 bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-white px-2 py-0.5 text-small font-semibold text-graphite">
               {t(`role.${item.assessor.role}`)}
             </span>
           </div>
         </div>
-        <span className="font-mono text-[11px] text-warmGray">
+        <span className="text-small text-warmGray">
           {t('dis.ratedAt', { time: dateTime(item.at) })}
         </span>
       </div>
@@ -94,7 +94,7 @@ function DisagreementItemBlock({
       <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-stretch">
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warmGray/20 bg-white p-3 md:col-span-7">
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-warmGray">
+            <span className="text-small font-medium text-warmGray">
               {t('dis.raterSide')}
             </span>
             <HealthStatusBadge status={item.rating} />
@@ -105,13 +105,13 @@ function DisagreementItemBlock({
             className="flex flex-col items-center px-1 text-warmGray"
           >
             <ArrowLeftRight className="h-4 w-4 text-orange-700" />
-            <span className="font-mono text-[10px] font-bold uppercase text-orange-900">
+            <span className="text-small font-bold text-orange-900">
               {t('dis.compare')}
             </span>
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-warmGray">
+            <span className="text-small font-medium text-warmGray">
               {t('dis.systemSide')}
             </span>
             <HealthStatusBadge status={item.snapshot_status} />
@@ -119,7 +119,7 @@ function DisagreementItemBlock({
 
           <div className="ml-auto">
             <span
-              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
+              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-small font-semibold ${
                 direction === 'STRICTER'
                   ? 'border border-orange-200 bg-orange-50 text-orange-900'
                   : 'border border-accent-200 bg-accent-50 text-accent-900'
@@ -134,7 +134,7 @@ function DisagreementItemBlock({
 
         {/* Ghi chú quan sát tại hiện trường */}
         <div className="flex flex-col justify-center rounded-xl border border-warmGray/15 bg-white/90 p-3 md:col-span-5">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-graphite">
+          <div className="flex items-center gap-1.5 text-small font-semibold text-graphite">
             <MessageSquareText className="h-3.5 w-3.5 text-warmGray" />
             <span>{t('dis.note')}</span>
           </div>
@@ -155,7 +155,7 @@ function DisagreementItemBlock({
         <div className="flex flex-col gap-2 rounded-lg border border-warmGray/15 bg-white/85 px-3 py-2.5">
           {hasSnapshotLevels && (
             <div className="flex flex-wrap items-center gap-2 pb-1">
-              <span className="text-[11px] font-semibold text-graphite">
+              <span className="text-small font-semibold text-graphite">
                 {t('dis.sourceLevels')}
               </span>
               {SOURCES.map((source) => {
@@ -163,7 +163,7 @@ function DisagreementItemBlock({
                 return (
                   <span
                     key={source}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-warmGray/15 bg-stone/30 px-2 py-0.5 text-[11px]"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-warmGray/15 bg-stone/30 px-2 py-0.5 text-small"
                   >
                     <span className="font-medium text-graphite">
                       {t(`source.${source}`)}:
@@ -180,11 +180,11 @@ function DisagreementItemBlock({
           {item.snapshot_reasons.length > 0 && (
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-graphite">
+                <span className="text-small font-semibold text-graphite">
                   {t('dis.snapshotReasons')}
                 </span>
                 {currentStatus !== item.snapshot_status && (
-                  <span className="text-[11px] italic text-warmGray">
+                  <span className="text-small italic text-warmGray">
                     {t('detail.snapshot', {
                       status: t(`status.${item.snapshot_status}`),
                     })}
@@ -221,7 +221,7 @@ export default function DisagreementDayCard({
       {/* Header của ngày lệch: Ngày + Nhà yến + Trạng thái hiện tại + Liên kết mức chỉ số cấp nhà */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warmGray/15 pb-3.5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 rounded-lg bg-charcoal px-2.5 py-1 font-mono text-xs font-bold tabular-nums text-white">
+          <div className="flex items-center gap-1.5 rounded-lg bg-charcoal px-2.5 py-1 text-xs font-bold tabular-nums text-white">
             <Calendar className="h-3.5 w-3.5 text-limeMist" aria-hidden="true" />
             <span>{date(day.date)}</span>
           </div>
@@ -230,7 +230,7 @@ export default function DisagreementDayCard({
             {day.house_name}
           </span>
 
-          <Badge tone="warning" className="font-mono tabular-nums">
+          <Badge tone="warning" className="tabular-nums">
             {t('dis.count', { n: day.disagreements.length })}
           </Badge>
         </div>
@@ -298,12 +298,12 @@ export default function DisagreementDayCard({
                       : t('level.notAssessed')}
                   </Badge>
                 </div>
-                <span className="font-mono text-base font-bold tabular-nums text-charcoal sm:text-lg">
+                <span className="text-base font-bold tabular-nums text-charcoal sm:text-lg">
                   {value === null || value === undefined
                     ? NO_VALUE
                     : t(`unit.${source}`, { value: format(value) })}
                 </span>
-                <span className="text-[11px] leading-snug text-warmGray">
+                <span className="text-small leading-snug text-warmGray">
                   {t(`unitHint.${source}`)}
                 </span>
               </div>

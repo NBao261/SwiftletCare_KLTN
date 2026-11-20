@@ -14,6 +14,7 @@ import WeatherRuleRow from '@/components/features/domain-expert/weather/WeatherR
 import WeatherRuleAddForm from '@/components/features/domain-expert/weather/WeatherRuleAddForm'
 import { formatDate } from '@/lib/helpers'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
+import { t } from '@/i18n'
 
 const MAX_RULES = 10
 
@@ -27,14 +28,14 @@ function LastCompensationBadge({ data }: {
       <Zap className="w-4 h-4 text-infoBlue shrink-0 mt-0.5" />
       <div className="space-y-0.5 min-w-0">
         <p className="font-semibold text-charcoal">
-          Lần bù gần nhất: <span className="text-charcoal">{sign}{data.offset_pct}% phun</span>
-          <span className="ml-2 font-normal text-infoBlue/80">trong {formatDate(data.sent_at)}</span>
+          {t('Lần bù gần nhất:')} <span className="text-charcoal">{t('{{offset}}% phun', { offset: `${sign}${data.offset_pct}` })}</span>
+          <span className="ml-2 font-normal text-infoBlue/80">{t('lúc {{time}}', { time: formatDate(data.sent_at) })}</span>
         </p>
         <p className="text-infoBlue/80">
-          Hết hạn lúc {formatDate(data.expires_at)}
-          {forecast.temperature_max !== null && <> · Nhiệt: {forecast.temperature_max}°C</>}
-          {forecast.humidity_max !== null && <> · Độ ẩm: {forecast.humidity_max}%</>}
-          {forecast.rain_mm !== null && <> · Mưa: {forecast.rain_mm} mm</>}
+          {t('Hết hạn lúc {{time}}', { time: formatDate(data.expires_at) })}
+          {forecast.temperature_max !== null && <> · {t('Nhiệt:')} {forecast.temperature_max}°C</>}
+          {forecast.humidity_max !== null && <> · {t('Độ ẩm:')} {forecast.humidity_max}%</>}
+          {forecast.rain_mm !== null && <> · {t('Mưa:')} {forecast.rain_mm} mm</>}
         </p>
       </div>
     </div>
@@ -103,7 +104,7 @@ export default function DomainExpertWeatherRulesPage() {
     return (
       <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
         <Info className="w-4 h-4 shrink-0" />
-        <span>Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).</span>
+        <span>{t('Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).')}</span>
       </div>
     )
   }
@@ -114,7 +115,7 @@ export default function DomainExpertWeatherRulesPage() {
       return (
         <EmptyState
           icon={<CloudRain className="w-8 h-8" />}
-          title="Chưa có luật nào. Thêm luật đầu tiên bên dưới."
+          title={t('Chưa có luật nào. Thêm luật đầu tiên bên dưới.')}
         />
       )
     }
@@ -137,7 +138,7 @@ export default function DomainExpertWeatherRulesPage() {
     return (
       <EmptyState
         icon={<CloudRain className="w-8 h-8" />}
-        title="Chọn nhà yến ở thanh trên để xem luật bù thời tiết"
+        title={t('Chọn nhà yến ở thanh trên để xem luật bù thời tiết')}
       />
     )
   }
@@ -148,11 +149,11 @@ export default function DomainExpertWeatherRulesPage() {
     <div className="mx-auto w-full max-w-screen-xl space-y-5">
       <SectionCard
         icon={<CloudRain className="w-5 h-5" />}
-        title="Luật bù phun sương theo thời tiết"
-        description="Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất."
+        title={t('Luật bù phun sương theo thời tiết')}
+        description={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
         action={!isLoading && rules.length >= MAX_RULES ? (
           <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
-            Đã đạt tối đa 10 luật
+            {t('Đã đạt tối đa 10 luật')}
           </span>
         ) : undefined}
       >
@@ -161,7 +162,7 @@ export default function DomainExpertWeatherRulesPage() {
           {isError && !isLoading && (
             <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>Không thể tải luật bù thời tiết. Vui lòng thử lại.</span>
+              <span>{t('Không tải được luật bù thời tiết. Thử lại.')}</span>
             </div>
           )}
 
@@ -172,7 +173,7 @@ export default function DomainExpertWeatherRulesPage() {
           {!isError && (
             <>
               <h2 className="text-sm font-semibold text-charcoal">
-                Danh sách luật ({isLoading ? '…' : rules.length}/{MAX_RULES})
+                {t('Danh sách luật ({{n}}/{{max}})', { n: isLoading ? '…' : rules.length, max: MAX_RULES })}
               </h2>
               {renderRulesList()}
             </>
@@ -195,7 +196,7 @@ export default function DomainExpertWeatherRulesPage() {
       {isDirty && (
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
           <Button variant="secondary" size="sm" onClick={handleDiscard} disabled={mutation.isPending}>
-            Huỷ thay đổi
+            {t('Huỷ thay đổi')}
           </Button>
           <Button
             variant="primary"
@@ -203,7 +204,7 @@ export default function DomainExpertWeatherRulesPage() {
             onClick={handleSave}
             loading={mutation.isPending}
           >
-            Lưu luật
+            {t('Lưu luật')}
           </Button>
         </div>
       )}

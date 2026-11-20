@@ -18,8 +18,8 @@ interface SortChipsProps<K extends string> {
 }
 
 /**
- * Nhóm nút "Sắp xếp:" — dùng chung cho các trang Admin (Người dùng, Thiết bị, Audit log). Nhãn `.label-caption` + chip tròn cao bằng SelectMenu/FilterChip. Chip đang sắp: nền
- * charcoal chữ trắng + icon chiều Phosphor (bold 12px); chip khác: nền xám nhạt, hover đậm hơn. Đổi chip là
+ * Nhóm nút "Sắp xếp:" — dùng chung cho các trang Admin (Người dùng, Thiết bị, Audit log). Nhãn `.label-caption` + chip tròn cao bằng SelectMenu/FilterChip. Chip đang sắp: pill
+ * trắng viền mảnh như FilterChip + icon chiều Phosphor (bold 12px); chip khác: nền xám nhạt, hover đậm hơn. Đổi chip là
  * đổi màu ngay, không hiệu ứng động. Chỉ hiển thị — trạng thái sortBy/sortDir do trang giữ.
  */
 export default function SortChips<K extends string>({ fields, sortBy, sortDir, onChange, label = 'Sắp xếp:' }: SortChipsProps<K>) {
@@ -33,11 +33,11 @@ export default function SortChips<K extends string>({ fields, sortBy, sortDir, o
             key={f.key}
             type="button"
             aria-pressed={active}
-            title={active ? t(sortDir === 'asc' ? 'Đang xếp tăng dần — bấm để đảo chiều' : 'Đang xếp giảm dần — bấm để đảo chiều') : undefined}
+            title={active ? t(sortDir === 'asc' ? 'Đang xếp tăng dần · bấm để đảo chiều' : 'Đang xếp giảm dần · bấm để đảo chiều') : undefined}
             onClick={() => onChange(f.key)}
             className={cn(
-              'inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold',
-              active ? 'bg-charcoal text-white' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20',
+              'inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-small font-semibold max-sm:h-11',
+              active ? 'bg-white text-charcoal shadow-card ring-1 ring-warmGray/25' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal',
             )}
           >
             {tr(f.label)}

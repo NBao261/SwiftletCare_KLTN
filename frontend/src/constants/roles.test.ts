@@ -21,11 +21,10 @@ const MATRIX: Record<string, Role[]> = {
   '/farms/f1/houses/h1/zones/z1': [FO, DE, FT],
   '/devices': [ADMIN, FO, DE, FT],      // G-20: ADMIN có Console thiết bị qua /devices
   '/devices/detail': [FO, DE],
-  '/onboarding': [FO],                  // G-20: chỉ FARM_OWNER (FARM_TECHNICIAN/ADMIN gọi API → 403)
+  '/devices/onboarding': [FO],          // SF-01: chỉ FARM_OWNER (FARM_TECHNICIAN/ADMIN gọi API → 403)
   '/ota': [ADMIN],                      // G-20: OTA chỉ ADMIN (route /ota ở web là phần của Tuấn)
   '/alerts': [ADMIN, FO, FT],           // G-20: ADMIN xem cảnh báo thiết bị mọi farm
   '/system/health': [ADMIN],
-  '/system/devices': [ADMIN],
   '/system/device-stock': [ADMIN],
   '/system/settings': [ADMIN],
   '/system/audit-log': [ADMIN],
@@ -39,7 +38,7 @@ const MATRIX: Record<string, Role[]> = {
   '/domain-expert/counting-ring': [DE, FO],
   '/domain-expert/weather-rules': [DE, FO],
   '/domain-expert/reviews': [DE, FO],
-  '/domain-expert/reports': [DE, FO],
+  '/domain-expert/reports': [DE],       // Farm Owner xem báo cáo và ngày lệch ở /health
   '/domain-expert/profiles': [DE, FO],
   '/domain-expert/recommendation-rules': [DE, FO],
   '/domain-expert/history': [DE, FO],

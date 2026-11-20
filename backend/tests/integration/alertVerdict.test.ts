@@ -96,7 +96,7 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     const alert = (await Alert.findOne({ type: 'THRESHOLD_BREACH' }).lean())!
     expect(alert.severity).toBe('MEDIUM')
     expect(alert.message).toContain('NH3')
-    expect(alert.message).toContain('không tự chạy quạt')
+    expect(alert.message).toContain('quạt không tự chạy')
     expect(await renotifiedAfterEscalation()).toBe(0)
   })
 

@@ -1,6 +1,7 @@
 // ProposalRejectModal.tsx — Modal từ chối đề xuất hệ số mờ kèm lý do (EXPERT-FR-011)
 
 import NoteActionModal from '@/components/ui/NoteActionModal';
+import { t } from '@/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -19,14 +20,14 @@ export default function ProposalRejectModal({
     <NoteActionModal
       open={isOpen}
       onClose={onClose}
-      title="Từ chối đề xuất hệ số mờ"
-      label="Lý do từ chối chuyên môn"
-      placeholder="VD: Biên độ ẩm quá hẹp có thể gây bật tắt bơm liên tục trong mùa khô..."
-      hint="Vui lòng ghi rõ căn cứ kỹ thuật khi từ chối để Chủ trang trại nắm rõ lý do và có phương án hiệu chỉnh phù hợp."
+      title={t('Từ chối đề xuất hệ số mờ')}
+      label={t('Lý do từ chối chuyên môn')}
+      placeholder={t('VD: Biên độ ẩm quá hẹp có thể gây bật tắt bơm liên tục trong mùa khô...')}
+      hint={t('Ghi lý do từ chối để chủ nhà yến biết cần chỉnh gì.')}
       submitLabel="Xác nhận từ chối"
       required
       minLength={1}
-      emptyMessage="Bắt buộc phải ghi rõ lý do chuyên môn khi từ chối đề xuất."
+      emptyMessage={t('Bắt buộc phải ghi rõ lý do chuyên môn khi từ chối đề xuất.')}
       danger
       loading={isSubmitting}
       onSubmit={(note) => void onConfirm(note)}

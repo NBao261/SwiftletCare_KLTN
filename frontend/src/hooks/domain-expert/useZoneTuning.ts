@@ -1,7 +1,4 @@
-/**
- * useZoneTuning — Custom hooks cho màn hình 03_Zone_Tuning_v3
- * Real API First → Mock fallback | SRS v2.1.4: EXPERT-FR-004/008
- */
+// Hook của trang Ngưỡng & hệ số mờ (/domain-expert/tuning): ngưỡng, hệ số mờ, gợi ý hệ số, tham số phát hiện (EXPERT-FR-004/008)
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { birdCountTuningApi } from '@/apis/domain-expert/birdCountTuning.api'
 import { expertService, expertApi } from '@/services/expert.service'
@@ -12,6 +9,14 @@ import type {
 } from '@/types/expert.types'
 
 const QK = (key: string, zoneId?: string) => ['expert', 'tuning', key, zoneId]
+
+// Trang này là nơi duy nhất sửa ngưỡng và hệ số mờ, nên làm mới cả dữ liệu Zone mà các trang Farm Owner đọc
+function invalidateZoneCaches(qc: ReturnType<typeof useQueryClient>, zoneId?: string) {
+  void qc.invalidateQueries({ queryKey: ['zones'] })
+  void qc.invalidateQueries({ queryKey: ['zone', zoneId] })
+  void qc.invalidateQueries({ queryKey: ['all-zones'] })
+  void qc.invalidateQueries({ queryKey: ['analytics', 'control-performance', zoneId] })
+}
 
 // ── 1. Ngưỡng vi khí hậu (Cột 1) ─────────────────────────────────────────────
 export function useExpertThresholds(zoneId?: string) {
@@ -31,10 +36,13 @@ export function useUpdateThresholds(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (thresholds: Partial<ExpertThresholds>) => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.updateThresholds(zoneId, thresholds)
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) })
+      invalidateZoneCaches(qc, zoneId)
+    },
   })
 }
 
@@ -42,10 +50,13 @@ export function useResetThresholds(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.resetThresholds(zoneId)
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) })
+      invalidateZoneCaches(qc, zoneId)
+    },
   })
 }
 
@@ -67,18 +78,19 @@ export function useUpdateFuzzyTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (tuning: Partial<ExpertFuzzyTuning>) => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.updateFuzzyTuning(zoneId, tuning)
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: QK('fuzzy', zoneId) })
       void qc.invalidateQueries({ queryKey: ['expert', 'fuzzy-suggestion'] })
+      invalidateZoneCaches(qc, zoneId)
     },
   })
 }
 
-// ── 3. Gợi ý thuật toán AI (Banner xanh cốm) ─────────────────────────────────
-export function useExpertAiSuggestion(zoneId?: string) {
+// ── 3. Gợi ý hệ số mờ từ dữ liệu (ANALYTICS-FR-010) ─────────────────────────────────────────────────────────
+export function useFuzzySuggestion(zoneId?: string) {
   return useQuery({
     queryKey: ['expert', 'fuzzy-suggestion', zoneId],
     queryFn: () => expertService.getFuzzySuggestion(zoneId ?? ''),
@@ -105,7 +117,7 @@ export function useUpdateDetectionTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (tuning: Partial<ExpertDetectionTuning>) => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.updateDetectionTuning(zoneId, tuning)
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),
@@ -116,7 +128,7 @@ export function useResetDetectionTuning(zoneId?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => {
-      if (!zoneId) throw new Error('Chưa chọn khu vực')
+      if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.resetDetectionTuning(zoneId)
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),

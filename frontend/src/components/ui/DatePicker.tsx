@@ -185,7 +185,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 text-center">
-            {weekdayNames.map(name => <span key={name} className="py-1 text-[11px] font-medium text-warmGray">{name}</span>)}
+            {weekdayNames.map(name => <span key={name} className="py-1 text-small font-medium text-warmGray">{name}</span>)}
             {Array.from({ length: leadingBlanks }, (_, index) => <span key={`blank-${index}`} />)}
             {Array.from({ length: daysInMonth }, (_, index) => {
               const day = index + 1;

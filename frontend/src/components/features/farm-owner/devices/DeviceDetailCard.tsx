@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ArrowClockwiseIcon, CalendarBlankIcon, CpuIcon, MusicNotesIcon, VideoCameraIcon } from '@phosphor-icons/react';
 
 import SimulatedBadge from '@/components/common/SimulatedBadge';
+import { ActionsMenu, type ActionsMenuItem } from '@/components/ui';
 import StatusDot from '@/components/common/StatusDot';
 import { uptimeParts, type DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants';
@@ -22,10 +23,12 @@ interface DeviceDetailCardProps {
   onOpenTracks?: () => void;
   // FARM-FR-013 — Farm Owner khởi động lại bộ điều khiển đang ONLINE
   onRestart?: () => void;
+  // FARM-FR-007b, 008 — dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
+  moreActions?: ActionsMenuItem[];
 }
 
-// Thẻ chi tiết 1 thiết bị, chỉ xem: trạng thái, heartbeat, mạng; không có nút cấu hình / thay thế / gỡ / firmware
-export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart }: DeviceDetailCardProps): JSX.Element {
+// Thẻ chi tiết 1 thiết bị: trạng thái, heartbeat, mạng; nút loa ru, khởi động lại và menu dời / thay / gỡ theo quyền, không có cấu hình hay firmware
+export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
   const { t, num, day, ago, dateTime } = useTranslation(devicesDict);
   const isSensor = device.type === 'sensor';
   const quality = wifiQuality(device.rssi);
@@ -65,6 +68,7 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
               {t('action.restart')}
             </button>
           )}
+          {moreActions.length > 0 && <ActionsMenu items={moreActions} />}
         </div>
       </div>
 

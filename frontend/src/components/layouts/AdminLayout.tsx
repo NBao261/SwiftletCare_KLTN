@@ -1,43 +1,42 @@
 import AppShell from '@/components/layouts/AppShell'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import {
-  IconAlert, IconAnalytics, IconBell, IconDashboard,
+  IconAlert, IconAnalytics, IconDashboard,
   IconDevice, IconOTA, IconOnboarding, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
-/**
- * Khung ứng dụng cho Admin. "Tổng quan hệ thống" đặt ngay đầu sidebar vì là
- * trang nhà sau đăng nhập (SYSTEM-FR-003, gộp luôn OPS-NFR-004 — trạng thái node).
- * G-20: Admin có Console thiết bị (/devices, /alerts, /ota) — xem thiết bị mọi farm
- * qua GET /devices/sensor-nodes, cảnh báo thiết bị, gửi RESTART/PUSH_CONFIG/OTA.
- * Không có Thu hoạch hay Trang trại (Admin không xem GET /farms).
- */
+// AUTH-FR-011 quản lý tài khoản, AUTH-FR-012 hàng đợi xoá tài khoản là tab thứ hai; dock dùng cùng mục để sáng ở cả hai tab
+const usersItem: MenuItem = {
+  label: 'Người dùng',
+  path: '/users',
+  icon: IconUsers,
+  tabs: [
+    { label: 'Tài khoản', path: '/users' },
+    { label: 'Yêu cầu xoá tài khoản', path: '/account-requests' },
+  ],
+}
+
+// Khung Admin: Tổng quan hệ thống là trang nhà (SYSTEM-FR-003); Console thiết bị /devices, /alerts, /ota cho mọi farm (FARM-FR-009, 013); không có trang farm
 const menuSections: MenuSection[] = [
   {
     title: 'Vận hành',
     items: [
       { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
-      // OPS-NFR-004 — bảng system-status chỉ xem (node_id, farm_name, house_name, zone_name)
-      { label: 'Trạng thái Node', path: '/system/devices', icon: IconDevice },
     ],
   },
   {
-    // G-20: Console thiết bị của Administrator
-    // ADMIN xem thiết bị mọi farm + gửi RESTART, PUSH_CONFIG, OTA (FARM-FR-009/013)
-    title: 'Console Thiết bị',
+    // FARM-FR-009, 013 — thiết bị mọi farm kèm farm, nhà, khu vực (bộ điều khiển và camera); RESTART, PUSH_CONFIG, OTA
+    title: 'Console thiết bị',
     items: [
       { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
       { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
-      { label: 'OTA Firmware', path: '/ota', icon: IconOTA },
+      { label: 'Cập nhật firmware', path: '/ota', icon: IconOTA },
     ],
   },
   {
     title: 'Quản lý',
     items: [
-      // AUTH-FR-011 — quản lý tài khoản toàn hệ thống (RACI mục 4.4)
-      { label: 'Người dùng', path: '/users', icon: IconUsers },
-      // AUTH-FR-012 (hàng đợi xoá tài khoản)
-      { label: 'Yêu cầu tài khoản', path: '/account-requests', icon: IconBell },
+      usersItem,
     ],
   },
   {
@@ -50,10 +49,6 @@ const menuSections: MenuSection[] = [
       { label: 'Nhật ký hệ thống', path: '/system/audit-log', icon: IconAnalytics },
     ],
   },
-  {
-    title: 'Khác',
-    items: [{ label: 'Cài đặt', path: '/settings', icon: IconSettings }],
-  },
 ]
 
 /**
@@ -63,7 +58,7 @@ const dockItems: MenuItem[] = [
   { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
   { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
   { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
-  { label: 'Người dùng', path: '/users', icon: IconUsers },
+  usersItem,
 ]
 
 export default function AdminLayout() {

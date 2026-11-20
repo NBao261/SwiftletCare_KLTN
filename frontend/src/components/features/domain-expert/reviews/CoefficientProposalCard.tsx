@@ -21,6 +21,7 @@ import type {
   CoefficientProposal,
   CoefficientProposalStatus,
 } from '@/types/expert/reviews.types';
+import { t, translated } from '@/i18n';
 
 interface CoefficientProposalCardProps {
   proposal: CoefficientProposal;
@@ -61,13 +62,13 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const FUZZY_LABELS: Record<string, string> = {
+const FUZZY_LABELS: Record<string, string> = translated({
   fuzzy_humidity_band: 'Dải biên độ ẩm (%RH)',
   fuzzy_temp_band: 'Dải biên nhiệt độ (°C)',
   fuzzy_fan_dry_level: 'Mức quạt hút khử ẩm (%)',
   fuzzy_window_sec: 'Chu kỳ điều khiển (giây)',
   fuzzy_input_filter: 'Lọc nhiễu cảm biến',
-};
+});
 
 // Định dạng giá trị hệ số mờ hiển thị
 export function formatFuzzyProposalValue(keyOrValue: unknown, optionalValue?: unknown): string {
@@ -82,7 +83,7 @@ export function formatFuzzyProposalValue(keyOrValue: unknown, optionalValue?: un
   }
 
   if (value === undefined || value === null) return '—';
-  if (typeof value === 'boolean') return value ? 'Bật' : 'Tắt';
+  if (typeof value === 'boolean') return value ? t('Bật') : t('Tắt');
   if (typeof value === 'number' && key) {
     if (key.includes('humidity') || key.includes('level')) return `${value}%`;
     if (key.includes('temp')) return `${value}°C`;
@@ -109,12 +110,12 @@ export default function CoefficientProposalCard({
   const authorName =
     typeof proposal.submitted_by === 'object' && proposal.submitted_by?.full_name
       ? proposal.submitted_by.full_name
-      : 'Chủ trang trại';
+      : t('Chủ nhà yến');
 
   const deciderName =
     typeof proposal.decided_by === 'object' && proposal.decided_by?.full_name
       ? proposal.decided_by.full_name
-      : 'Chuyên gia';
+      : t('Chuyên gia');
 
   const suggestedKeys = Object.keys(proposal.suggested_values || {});
 
@@ -125,19 +126,19 @@ export default function CoefficientProposalCard({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-accent-50 text-accent-900 border border-accent-600/30">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Đề xuất hệ số Fuzzy</span>
+            <span>{t('Đề xuất hệ số mờ')}</span>
           </div>
           <span
             className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
           >
-            {statusConfig.label}
+            {t(statusConfig.label)}
           </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 text-xs text-warmGray">
           <div className="flex items-center gap-1 font-semibold text-charcoal">
             <MapPin className="w-3.5 h-3.5 text-accent-700" />
-            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : 'Khu vực không xác định'}</span>
+            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
@@ -156,7 +157,7 @@ export default function CoefficientProposalCard({
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-charcoal">
           <Sliders className="w-3.5 h-3.5 text-accent-700" />
-          <span>Thông số hệ số đề xuất tối ưu:</span>
+          <span>{t('Hệ số đề xuất:')}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -174,12 +175,12 @@ export default function CoefficientProposalCard({
                 </span>
                 <div className="flex items-center justify-between text-xs font-semibold">
                   <div className="flex items-center gap-1 text-warmGray">
-                    <span className="text-[10px] text-warmGray font-normal">Hiện tại:</span>
+                    <span className="text-small text-warmGray font-normal">{t('Hiện tại:')}</span>
                     <span>{formatFuzzyProposalValue(key, currentVal)}</span>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-warmGray/40" />
                   <div className="flex items-center gap-1 text-accent-900">
-                    <span className="text-[10px] text-accent-700 font-normal">Đề xuất:</span>
+                    <span className="text-small text-accent-700 font-normal">{t('Đề xuất:')}</span>
                     <span className="font-bold">{formatFuzzyProposalValue(key, suggestedVal)}</span>
                   </div>
                 </div>
@@ -194,12 +195,12 @@ export default function CoefficientProposalCard({
         <div className="rounded-xl border border-warmGray/10 bg-warmGray/5 p-3 flex flex-col gap-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-charcoal">
             <TrendingUp className="w-4 h-4 text-accent-700" />
-            <span>Hiệu quả dự báo mô phỏng</span>
+            <span>{t('Hiệu quả dự báo mô phỏng')}</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             {proposal.predicted.inRangeSuggested !== undefined && (
               <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-[10px] text-warmGray">Thời gian đạt chuẩn</span>
+                <span className="text-small text-warmGray">{t('Thời gian đạt chuẩn')}</span>
                 <span className="font-bold text-charcoal">
                   {proposal.predicted.inRangeNow ?? '—'}% →{' '}
                   <span className="text-accent-700 font-bold">{proposal.predicted.inRangeSuggested}%</span>
@@ -208,7 +209,7 @@ export default function CoefficientProposalCard({
             )}
             {proposal.predicted.mistingSuggested !== undefined && (
               <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-[10px] text-warmGray">Tần suất phun sương</span>
+                <span className="text-small text-warmGray">{t('Tần suất phun sương')}</span>
                 <span className="font-bold text-charcoal">
                   {proposal.predicted.mistingNow ?? '—'}% →{' '}
                   <span className="text-accent-900 font-bold">{proposal.predicted.mistingSuggested}%</span>
@@ -217,7 +218,7 @@ export default function CoefficientProposalCard({
             )}
             {proposal.predicted.in_range_pct !== undefined && (
               <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-[10px] text-warmGray">Đạt chuẩn môi trường</span>
+                <span className="text-small text-warmGray">{t('Đạt chuẩn môi trường')}</span>
                 <span className="font-bold text-accent-700">
                   {proposal.predicted.in_range_pct}%
                 </span>
@@ -233,7 +234,7 @@ export default function CoefficientProposalCard({
           <AlertTriangle className="w-4 h-4 text-alertRed shrink-0 mt-0.5" />
           <div className="flex flex-col gap-0.5 text-xs">
             <span className="font-bold text-alertRed">
-              Lý do từ chối từ chuyên gia ({deciderName}):
+              {t('Lý do từ chối của chuyên gia ({{name}}):', { name: deciderName })}
             </span>
             <p className="text-alertRed leading-relaxed italic">{proposal.note}</p>
           </div>
@@ -246,10 +247,10 @@ export default function CoefficientProposalCard({
           <div className="flex items-center gap-1.5">
             <CheckCircle className="w-4 h-4 text-accent-700" />
             <span>
-              Đã được duyệt áp dụng bởi <strong>{deciderName}</strong>
+              {t('Đã được duyệt áp dụng bởi')} <strong>{deciderName}</strong>
             </span>
           </div>
-          <span className="text-[11px] text-warmGray">
+          <span className="text-small text-warmGray">
             {formatDateTime(proposal.decided_at)}
           </span>
         </div>
@@ -267,7 +268,7 @@ export default function CoefficientProposalCard({
             className="text-warmGray hover:text-alertRed hover:bg-red-50 border-warmGray/20 font-medium"
           >
             <XCircle className="w-4 h-4 mr-1.5" />
-            Từ chối đề xuất
+            {t('Từ chối đề xuất')}
           </Button>
 
           <Button
@@ -279,7 +280,7 @@ export default function CoefficientProposalCard({
             className="font-semibold shadow-sm gap-1.5"
           >
             <CheckCircle className="w-4 h-4 text-limeMist" />
-            Duyệt & Áp dụng
+            {t('Duyệt & Áp dụng')}
           </Button>
         </div>
       )}

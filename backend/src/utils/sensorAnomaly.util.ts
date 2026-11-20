@@ -60,7 +60,7 @@ export function findStuck(samples: AnomalySample[]): AnomalyFinding[] {
       kind: 'STUCK',
       metric,
       detail: `${METRIC_LABEL[metric]} đứng yên ở ${first} suốt ${Math.round(span / 60_000)} phút` +
-        (othersMove ? ' trong khi các chỉ số khác vẫn thay đổi — nghi cảm biến kẹt' : ' — mọi chỉ số đều đứng yên, nghi thiết bị treo'),
+        (othersMove ? ' trong khi các chỉ số khác vẫn thay đổi, nghi cảm biến bị kẹt' : ', mọi chỉ số đều đứng yên, nghi bộ điều khiển bị treo'),
     })
   }
   return findings
@@ -86,7 +86,7 @@ export function findSpikes(samples: AnomalySample[]): AnomalyFinding[] {
       findings.push({
         kind: 'SPIKE',
         metric,
-        detail: `${METRIC_LABEL[metric]} nhảy bất thường ${jumps} lần (lớn nhất ${Math.round(maxJump * 10) / 10}) giữa 2 lần đo liền nhau — nghi nhiễu đường truyền RS485 hoặc cảm biến hỏng`,
+        detail: `${METRIC_LABEL[metric]} nhảy bất thường ${jumps} lần (lớn nhất ${Math.round(maxJump * 10) / 10}) giữa 2 lần đo liền nhau. Nghi nhiễu đường truyền cảm biến hoặc cảm biến hỏng.`,
       })
     }
   }
@@ -110,7 +110,7 @@ export function findDrift(nodes: Array<{ name: string; means: Partial<Record<Ano
         findings.push({
           kind: 'DRIFT',
           metric,
-          detail: `${METRIC_LABEL[metric]} của ${nodes[i].name} và ${nodes[j].name} lệch nhau ${Math.round(Math.abs(a - b) * 10) / 10} (trung bình 1 giờ) — một trong hai cảm biến có thể bị trôi`,
+          detail: `${METRIC_LABEL[metric]} của ${nodes[i].name} và ${nodes[j].name} lệch nhau ${Math.round(Math.abs(a - b) * 10) / 10} (trung bình 1 giờ), một trong hai cảm biến có thể bị trôi`,
         })
       }
     }

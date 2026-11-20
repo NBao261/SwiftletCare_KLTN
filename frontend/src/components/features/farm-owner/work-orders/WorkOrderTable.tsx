@@ -27,15 +27,8 @@ export default function WorkOrderTable({
   workOrders, page, total, onPageChange, houseNames, canManage, onView, onAction,
 }: WorkOrderTableProps): JSX.Element {
   const { t, dateTime } = useTranslation(workOrderDict);
-  const firstIndex = (page - 1) * WORK_ORDER_PAGE_SIZE;
-  // Số thứ tự tra Map dựng 1 lần, không indexOf mỗi dòng (FE_Design 13.12)
-  const rowNumbers = useMemo(
-    () => new Map(workOrders.map((workOrder, index) => [workOrder._id, firstIndex + index + 1])),
-    [workOrders, firstIndex],
-  );
 
   const columns = useMemo<DataTableColumn<WorkOrder>[]>(() => [
-    { key: 'index', header: t('col.index'), className: 'w-16', render: workOrder => <span className="text-sm text-warmGray">{rowNumbers.get(workOrder._id)}</span> },
     {
       key: 'title',
       header: t('col.title'),
@@ -93,7 +86,7 @@ export default function WorkOrderTable({
         </div>
       ),
     },
-  ], [t, dateTime, rowNumbers, houseNames, canManage, onView, onAction]);
+  ], [t, dateTime, houseNames, canManage, onView, onAction]);
 
   return (
     <FixedRowsTable

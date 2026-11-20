@@ -38,8 +38,8 @@ export default function IssuedSecretsModal({ issued, onClose }: { issued: Issued
 
   function copy(value: string) {
     navigator.clipboard.writeText(value).then(
-      () => push(t('Đã chép mật khẩu broker')),
-      () => push(t('Không chép được — hãy chọn và chép tay'), 'error'),
+      () => push(t('Đã chép mật khẩu kết nối')),
+      () => push(t('Không chép được. Chọn và chép tay.'), 'error'),
     )
   }
 
@@ -47,7 +47,7 @@ export default function IssuedSecretsModal({ issued, onClose }: { issued: Issued
   return (
     <Modal open onClose={onClose} size="lg" ariaLabel={title}>
       <div className="flex flex-col gap-5">
-        <ModalHeader title={title} description="Chỉ hiện một lần — đóng popup là không xem lại được, chỉ cấp lại được mã mới" />
+        <ModalHeader title={title} description="Chỉ hiện một lần. Đóng popup là không xem lại được, chỉ cấp lại được mã mới." />
 
         {key && (
           <section className="flex flex-col gap-3">
@@ -70,7 +70,7 @@ export default function IssuedSecretsModal({ issued, onClose }: { issued: Issued
 
         {issued.broker_secret && (
           <section className="flex flex-col gap-3">
-            <h3 className="text-body font-semibold text-charcoal">{t('Mật khẩu broker')}</h3>
+            <h3 className="text-body font-semibold text-charcoal">{t('Mật khẩu kết nối')}</h3>
             <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <code className="min-w-0 flex-1 select-all break-all font-mono text-sm font-bold text-charcoal">{issued.broker_secret}</code>
               <Button variant="secondary" size="sm" onClick={() => copy(issued.broker_secret!)}>Sao chép</Button>

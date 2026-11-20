@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HouseIcon, WarningCircleIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from '@phosphor-icons/react'
-import { Button, EmptyState, FilterChip, SearchInput, StatTile } from '@/components/ui'
+import { Button, EmptyState, FilterChip, SearchInput } from '@/components/ui'
+import KpiTile from '@/components/common/KpiTile'
 import Pagination from '@/components/ui/Pagination'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import TechnicianHouseRow from '@/components/features/technician/farms/TechnicianHouseRow'
 import { useFarms } from '@/hooks/shared/useFarms'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
+import { useZoneStore } from '@/stores/zoneStore'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -19,16 +21,12 @@ type Filter = 'all' | HouseHealth
 /** Nhà cần xử lý lên đầu, rồi bình thường, cuối cùng là nhà chưa có thiết bị */
 const HEALTH_ORDER: Record<HouseHealth, number> = { ALERT: 0, NORMAL: 1, EMPTY: 2 }
 
-/**
- * Trang trại (/farms) dành cho Technician — FARM-FR-009: xem cấu trúc Farm/House/Zone và thiết bị
- * của mọi farm (backend trả mọi farm, chỉ cấu trúc). Không dashboard, không phân tích,
- * không sản lượng/thu hoạch, không tạo farm/nhà/zone. Kỹ thuật viên mở trang để trả lời:
- * "nhà nào đang có sự cố, ở zone nào, bao nhiêu thiết bị mất kết nối?" → bấm vào để xử lý.
- */
+// Nhà được giao (/farms) của Farm Technician (AUTH-FR-013): thiết bị và cảnh báo đang mở của từng nhà, bấm để xem thiết bị
 export default function TechnicianFarmsPage() {
   const { t, num } = useTranslation(farmDict)
   useScrollToTop()
   const navigate = useNavigate()
+  const setScopePath = useZoneStore(state => state.setScopePath)
   const { data: farms } = useFarms()
   const { structure, isLoading, isError, refetch } = useFarmStructure()
 
@@ -50,6 +48,12 @@ export default function TechnicianFarmsPage() {
     visible.sort((a, b) => HEALTH_ORDER[a.health] - HEALTH_ORDER[b.health] || b.alerts.length - a.alerts.length)
     return { visible, counts }
   }, [structure.houses, search, filter])
+
+  // Mở trang Thiết bị đã lọc sẵn nhà này (phạm vi lưu trong store, không đưa mã vào URL — FE_Design 13.16)
+  function openDevices(node: HouseNode) {
+    setScopePath(node.farm._id, node.farm.name, node.house._id, '')
+    navigate('/devices')
+  }
 
   const safePage = Math.min(page, Math.max(1, Math.ceil(visible.length / PAGE_SIZE)))
   const rows = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
@@ -78,26 +82,31 @@ export default function TechnicianFarmsPage() {
     return (
       <EmptyState
         title={farms?.length ? t('empty.noHouseTitle') : 'Chưa có trang trại nào'}
-        description="Farm Owner tạo trang trại, nhà yến xong thì hiện ở đây."
+        description="Chủ nhà yến tạo trang trại, nhà yến xong thì hiện ở đây."
       />
     )
   }
 
   const { counts: dev, alerts } = structure.totals
+  // Đã kích hoạt nhưng chưa gửi tín hiệu lần nào: không online, cũng chưa mất kết nối
+  const pending = dev.total - dev.online - dev.offline
+  let connectionSub = 'Ổn định'
+  if (dev.offline > 0) connectionSub = 'Cần kiểm tra tại nhà'
+  else if (pending > 0) connectionSub = `${num(pending)} thiết bị chờ kết nối`
   const kpis = [
     { icon: HouseIcon, label: 'Nhà yến', value: num(structure.totals.houses), sub: `${num(structure.totals.zones)} zone`, alert: false },
     { icon: WarningIcon, label: 'Nhà cần xử lý', value: num(counts.ALERT), sub: alerts.total > 0 ? `${num(alerts.total)} cảnh báo đang mở` : 'Không có cảnh báo', alert: counts.ALERT > 0 },
     { icon: WifiHighIcon, label: 'Thiết bị online', value: `${num(dev.online)}/${num(dev.total)}`, sub: dev.total > 0 ? `${Math.round((dev.online / dev.total) * 100)}% hoạt động` : 'Chưa có thiết bị', alert: false },
-    { icon: WifiSlashIcon, label: 'Mất kết nối', value: num(dev.offline), sub: dev.offline > 0 ? 'Cần kiểm tra hiện trường' : 'Ổn định', alert: dev.offline > 0 },
+    { icon: WifiSlashIcon, label: 'Mất kết nối', value: num(dev.offline), sub: connectionSub, alert: dev.offline > 0 },
   ]
 
   return (
     <div className="flex max-w-screen-xl w-full flex-col gap-6">
       {/* KPI */}
-      <FarmFrame title="Tổng quan thiết bị" description="Trạng thái thiết bị của mọi trang trại">
+      <FarmFrame title="Tình trạng các nhà được giao">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map(k => (
-            <StatTile
+            <KpiTile
               key={k.label}
               icon={k.icon}
               iconClass={k.alert ? 'bg-alertRed/10 text-alertRed' : 'bg-limeMist text-charcoal'}
@@ -111,7 +120,7 @@ export default function TechnicianFarmsPage() {
       </FarmFrame>
 
       {/* Danh sách */}
-      <FarmFrame title="Danh sách Nhà yến" description="Các nhà yến của mọi trang trại">
+      <FarmFrame title="Nhà yến" description="Bấm một nhà để xem thiết bị của nhà đó">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-[220px] max-w-sm flex-1">
@@ -130,7 +139,7 @@ export default function TechnicianFarmsPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {rows.map(n => (
-                <TechnicianHouseRow key={n.house._id} node={n} onOpen={() => navigate(`/devices?farmId=${n.farm._id}&houseId=${n.house._id}`)} />
+                <TechnicianHouseRow key={n.house._id} node={n} onOpen={() => openDevices(n)} />
               ))}
               <Pagination page={safePage} limit={PAGE_SIZE} total={visible.length} onChange={setPage} variant="full" />
             </div>

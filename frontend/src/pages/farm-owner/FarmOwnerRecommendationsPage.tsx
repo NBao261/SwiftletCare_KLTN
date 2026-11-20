@@ -12,7 +12,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { RECOMMENDATIONS_PAGE_SIZE, useRecommendationActions, useRecommendations } from '@/hooks/farm-owner/useRecommendations';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useToastStore } from '@/stores/toastStore';
 import type { Recommendation, RecommendationStatus } from '@/types';
 import { REJECT_REASON_MAX_LENGTH } from '@/validations/common/recommendationRule.validation';

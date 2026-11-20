@@ -63,7 +63,7 @@ export default function DeviceListTable({ devices, zoneNameById, onSelect }: Dev
         },
       },
       { key: 'fw', header: 'Firmware', className: 'w-[9%] whitespace-nowrap', render: device => <span className="text-charcoal">{device.firmware ? `v${device.firmware}` : NO_VALUE}</span> },
-      { key: 'hb', header: 'Heartbeat', className: 'w-[10%] whitespace-nowrap', render: device => <span className="text-warmGray">{ago(device.lastHeartbeat)}</span> },
+      { key: 'hb', header: 'Kết nối cuối', className: 'w-[10%] whitespace-nowrap', render: device => <span className="text-warmGray">{ago(device.lastHeartbeat)}</span> },
       {
         key: 'actions', header: t('device.col.actions'), align: 'center', className: 'w-[11%] whitespace-nowrap',
         render: device => (

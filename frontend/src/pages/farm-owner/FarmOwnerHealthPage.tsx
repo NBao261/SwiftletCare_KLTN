@@ -17,7 +17,7 @@ import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useDownloadHealthCsv, useHealthDays } from '@/hooks/shared/useHealthDays';
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';

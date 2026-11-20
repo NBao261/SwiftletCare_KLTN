@@ -64,7 +64,7 @@ export async function applyThresholdUpdate(
   // EXPERT-FR-009 — sửa/reset ngưỡng của chuyên gia báo cho Farm Owner
   await notifyExpertDecision(user, farm._id, auditId, {
     what: params.source === 'RESET_TO_DEFAULT' ? 'đặt lại ngưỡng về mặc định' : 'sửa ngưỡng',
-    place: `Khu vực "${zone.name}"`,
+    place: `Zone "${zone.name}"`,
     detail: formatChanges(oldValues, newValues),
   })
   // EXPERT-FR-010 — Farm Owner sửa trên farm có chuyên gia mở mục duyệt; chuyên gia sửa thì đóng ADJUSTED

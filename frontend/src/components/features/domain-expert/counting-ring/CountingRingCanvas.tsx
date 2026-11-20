@@ -1,5 +1,6 @@
 // VISION-FR-018 — lớp vẽ vòng đếm phủ lên khung video: đa giác + các đỉnh chạm được
 import { type MouseEvent, type RefObject } from 'react'
+import { t } from '@/i18n'
 
 interface Props {
   videoRef: RefObject<HTMLVideoElement>
@@ -53,7 +54,7 @@ export default function CountingRingCanvas({ videoRef, points, isEditing, onAddP
             }}
             className="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-accent-600 shadow disabled:cursor-default"
             style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
-            aria-label={`Đỉnh ${index + 1}${isEditing ? ' — chạm để xoá' : ''}`}
+            aria-label={isEditing ? t('Đỉnh {{n}} · chạm để xoá', { n: index + 1 }) : t('Đỉnh {{n}}', { n: index + 1 })}
           />
         ))}
       </div>

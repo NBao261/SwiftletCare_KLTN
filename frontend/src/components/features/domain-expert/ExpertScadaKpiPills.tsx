@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Cpu, AlertTriangle, FileText, CheckCircle2 } from 'lucide-react'
 import { t } from '@/i18n'
+import { usePermission } from '@/hooks/common/usePermission'
 
 interface Props {
   autoModePct: number
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pendingReports }: Props) {
+  // Báo cáo & kết luận là trang của chuyên gia; Farm Owner đọc báo cáo ở tab Báo cáo của /health
+  const reportsPath = usePermission('DOMAIN_EXPERT') ? '/domain-expert/reports' : '/health?tab=report'
   const hasPendingAlerts = pendingCount > 0
   const hasPendingReports = pendingReports > 0
 
@@ -21,10 +24,10 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         className="group flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-accent-600/30 bg-accent-50/80 px-2.5 sm:px-3 transition-all hover:border-accent-600/50 hover:bg-accent-100/70 active:scale-[0.98]"
       >
         <Cpu size={13} className="shrink-0 text-accent-800" />
-        <span className="font-mono text-xs font-bold tabular-nums text-accent-900">
+        <span className="text-xs font-bold tabular-nums text-accent-900">
           {autoModePct.toFixed(0)}%
         </span>
-        <span className="text-[11px] font-semibold text-accent-800">{t('Tự động')}</span>
+        <span className="text-small font-semibold text-accent-800">{t('Tự động')}</span>
       </Link>
 
       {/* KPI 2: Cảnh báo AI chờ thẩm định (Chỉ đổi màu báo động khi CÓ việc chờ) */}
@@ -40,25 +43,25 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         {hasPendingAlerts ? (
           <>
             <AlertTriangle size={13} className="shrink-0 text-amber-600" />
-            <span className="font-mono text-xs font-bold tabular-nums text-amber-900">
+            <span className="text-xs font-bold tabular-nums text-amber-900">
               {pendingCount}
             </span>
-            <span className="text-[11px] font-semibold text-amber-800">{t('Cảnh báo chờ')}</span>
+            <span className="text-small font-semibold text-amber-800">{t('Cảnh báo chờ')}</span>
           </>
         ) : (
           <>
             <CheckCircle2 size={13} className="shrink-0 text-accent-700" />
-            <span className="font-mono text-xs font-medium tabular-nums text-graphite">
+            <span className="text-xs font-medium tabular-nums text-graphite">
               0
             </span>
-            <span className="text-[11px] text-warmGray">{t('Cảnh báo tồn')}</span>
+            <span className="text-small text-warmGray">{t('Cảnh báo tồn')}</span>
           </>
         )}
       </Link>
 
       {/* KPI 3: Báo cáo sức khỏe zone chờ chuyên gia kết luận */}
       <Link
-        to="/domain-expert/reports"
+        to={reportsPath}
         title={hasPendingReports ? t('{{n}} báo cáo đang chờ chuyên gia kết luận', { n: pendingReports }) : t('Không có báo cáo chờ kết luận')}
         className={`group flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 sm:px-3 transition-all active:scale-[0.98] ${
           hasPendingReports
@@ -67,10 +70,10 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         }`}
       >
         <FileText size={13} className={`shrink-0 ${hasPendingReports ? 'text-sky-600' : 'text-warmGray'}`} />
-        <span className={`font-mono text-xs tabular-nums ${hasPendingReports ? 'font-bold text-sky-900' : 'font-medium text-graphite'}`}>
+        <span className={`text-xs tabular-nums ${hasPendingReports ? 'font-bold text-sky-900' : 'font-medium text-graphite'}`}>
           {pendingReports}
         </span>
-        <span className={`text-[11px] ${hasPendingReports ? 'font-semibold text-sky-800' : 'text-warmGray'}`}>
+        <span className={`text-small ${hasPendingReports ? 'font-semibold text-sky-800' : 'text-warmGray'}`}>
           {hasPendingReports ? t('Báo cáo chờ') : t('Báo cáo tồn')}
         </span>
       </Link>

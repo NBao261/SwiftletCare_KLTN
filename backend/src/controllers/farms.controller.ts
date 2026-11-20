@@ -35,7 +35,7 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 /** DELETE /farms/:id */
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await farmService.removeFarm(req.params.id, req.user)
-  res.json({ success: true, data: { message: 'Đã xóa farm' } })
+  res.json({ success: true, data: { message: 'Đã xoá trang trại' } })
 })
 
 /** POST /farms/:id/members – AUTH-FR-005/010, Flow 12 bước 1 (mời đồng sở hữu hoặc Domain Expert) */

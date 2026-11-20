@@ -25,16 +25,11 @@ interface AlertTableProps {
   onAction: (action: AlertAction, alert: Alert) => void;
 }
 
-// ALERT-FR-007 — bảng cảnh báo: STT, mức, loại, vị trí, thiết bị, trạng thái, lúc tạo, menu thao tác
+// ALERT-FR-007 — bảng cảnh báo: mức, loại, vị trí, thiết bị, trạng thái, lúc tạo, menu thao tác
 export default function AlertTable({ alerts, serverPagination, locationOf, canAcknowledge, onAction }: AlertTableProps): JSX.Element {
   const { t, dateTime } = useTranslation(alertsDict);
-  const firstIndex = (serverPagination.page - 1) * ALERT_PAGE_SIZE;
-  // Số thứ tự tra Map dựng 1 lần, không indexOf mỗi dòng (FE_Design 13.12)
-  const rowNumbers = useMemo(() => new Map(alerts.map((alert, index) => [alert._id, firstIndex + index + 1])), [alerts, firstIndex]);
-
-  // table-fixed: cột % cộng đủ phần còn lại sau STT, Mức, Thao tác để không dư khoảng trống giữa các cột
+  // table-fixed: cột % cộng đủ phần còn lại sau Mức, Thao tác để không dư khoảng trống giữa các cột
   const columns = useMemo<DataTableColumn<Alert>[]>(() => [
-    { key: 'index', header: t('col.index'), className: 'w-16', render: alert => <span className="text-sm text-warmGray">{rowNumbers.get(alert._id)}</span> },
     {
       key: 'level',
       header: t('col.level'),
@@ -98,7 +93,7 @@ export default function AlertTable({ alerts, serverPagination, locationOf, canAc
         );
       },
     },
-  ], [t, dateTime, rowNumbers, locationOf, canAcknowledge, onAction]);
+  ], [t, dateTime, locationOf, canAcknowledge, onAction]);
 
   return (
     <FixedRowsTable

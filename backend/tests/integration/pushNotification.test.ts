@@ -127,7 +127,7 @@ describe('gửi cảnh báo qua FCM (TC-F08-03)', () => {
     expect(mockSend).toHaveBeenCalledTimes(1)
     const message = mockSend.mock.calls[0][0]
     expect([...message.tokens].sort()).toEqual(['fcm-phone', 'fcm-tablet'])
-    expect(message.notification).toEqual({ title: 'Cảm biến lỗi', body: '[CRITICAL] Cảm biến lỗi — Mất tín hiệu SHT31' })
+    expect(message.notification).toEqual({ title: 'Cảm biến lỗi', body: 'Khẩn cấp · Cảm biến lỗi\nMất tín hiệu SHT31' })
     expect(message.data).toEqual({ kind: 'alert', id: String(critical._id) })
     expect(message.android).toEqual({ priority: 'high' })
     expect(message.apns).toEqual({ headers: { 'apns-priority': '10' } })

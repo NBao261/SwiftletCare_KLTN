@@ -18,6 +18,7 @@ import ProfileCard from '@/components/features/domain-expert/profiles/ProfileCar
 import ProfileFormDrawer from '@/components/features/domain-expert/profiles/ProfileFormDrawer'
 import type { ConfigProfile, ConfigProfileInput, ConfigProfileStatus } from '@/types/expert.types'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
+import { t } from '@/i18n'
 
 const STATUS_FILTERS: { value: ConfigProfileStatus | 'ALL'; label: string }[] = [
   { value: 'ALL',      label: 'Tất cả' },
@@ -90,7 +91,7 @@ export default function DomainExpertProfilesPage() {
     return (
       <EmptyState
         icon={<BookCopy className="w-10 h-10" />}
-        title="Chọn trang trại ở thanh trên để xem hồ sơ cấu hình"
+        title={t('Chọn trang trại ở thanh trên để xem hồ sơ cấu hình')}
       />
     )
   }
@@ -100,14 +101,14 @@ export default function DomainExpertProfilesPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold text-charcoal">Hồ sơ cấu hình</h1>
+          <h1 className="text-lg font-bold text-charcoal">{t('Hồ sơ cấu hình')}</h1>
           <p className="mt-0.5 text-sm text-warmGray">
-            EXPERT-FR-014, 015 — Soạn hồ sơ bản nháp rồi duyệt; Farm Owner áp hồ sơ cho các nhà
+            {t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
           </p>
         </div>
         {isExpert && (
           <Button variant="primary" size="sm" onClick={openCreate}>
-            <Plus className="w-3.5 h-3.5" /> Tạo hồ sơ
+            <Plus className="w-3.5 h-3.5" /> {t('Tạo hồ sơ')}
           </Button>
         )}
       </div>
@@ -125,7 +126,7 @@ export default function DomainExpertProfilesPage() {
                 : 'bg-white text-warmGray border-warmGray/20 hover:border-warmGray/40'
             }`}
           >
-            {f.label}
+            {t(f.label)}
           </button>
         ))}
       </div>
@@ -142,13 +143,13 @@ export default function DomainExpertProfilesPage() {
       ) : isError ? (
         <EmptyState
           icon={<AlertTriangle className="w-9 h-9 text-alertRed" />}
-          title="Không thể tải danh sách hồ sơ. Kiểm tra kết nối và thử lại."
-          action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+          title={t('Không thể tải danh sách hồ sơ. Kiểm tra kết nối và thử lại.')}
+          action={<Button variant="secondary" size="sm" onClick={() => refetch()}>{t('Thử lại')}</Button>}
         />
       ) : !profiles || profiles.length === 0 ? (
         <EmptyState
           icon={<BookCopy className="w-9 h-9" />}
-          title={statusFilter === 'ALL' ? 'Chưa có hồ sơ nào. Tạo hồ sơ đầu tiên.' : `Không có hồ sơ ở trạng thái "${STATUS_FILTERS.find(f => f.value === statusFilter)?.label}".`}
+          title={statusFilter === 'ALL' ? t('Chưa có hồ sơ nào. Tạo hồ sơ đầu tiên.') : t('Không có hồ sơ ở trạng thái "{{status}}".', { status: t(STATUS_FILTERS.find(f => f.value === statusFilter)?.label ?? '') })}
         />
       ) : (
         <div className="space-y-3">

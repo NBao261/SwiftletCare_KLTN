@@ -29,7 +29,6 @@ const vi = {
   'list.emptyTitle': 'Chưa có kế hoạch bảo trì',
   'list.emptyHint': 'Tạo kế hoạch cho từng nhà: hệ thống báo đến hạn và giao phiếu công việc cho kỹ thuật viên.',
 
-  'col.index': 'STT',
   'col.equipment': 'Việc bảo trì',
   'col.house': 'Nhà yến',
   'col.interval': 'Chu kỳ',
@@ -74,8 +73,8 @@ const vi = {
   'comment.done': 'Đã gửi góp ý',
 
   // Popup tạo, sửa
-  'form.createTitle': 'Tạo kế hoạch bảo trì — {house}',
-  'form.editTitle': 'Sửa kế hoạch — {house}',
+  'form.createTitle': 'Tạo kế hoạch bảo trì · {house}',
+  'form.editTitle': 'Sửa kế hoạch · {house}',
   'form.equipment': 'Việc bảo trì',
   'form.basis': 'Cách tính hạn',
   'form.interval': 'Chu kỳ',
@@ -151,7 +150,6 @@ const en: Record<MaintenanceKey, string> = {
   'list.emptyTitle': 'No maintenance plan yet',
   'list.emptyHint': 'Create plans per house: the system tells you when they fall due and gives the work order to the technician.',
 
-  'col.index': 'No.',
   'col.equipment': 'Maintenance',
   'col.house': 'House',
   'col.interval': 'Interval',

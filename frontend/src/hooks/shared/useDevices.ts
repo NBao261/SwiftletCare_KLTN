@@ -58,12 +58,26 @@ export function useDeviceStatusEvents(
   }, [houseId, zoneId, nodeId])
 }
 
-/** useSystemNodeStatus – OPS-NFR-004, Admin xem nhanh trạng thái mọi node toàn hệ thống */
-export function useSystemNodeStatus() {
+// FARM-FR-012 — 1 bộ điều khiển; pollMs: đọc lại theo chu kỳ tới khi đã áp cấu hình của Zone (config_sync APPLIED hoặc UNKNOWN)
+export function useSensorNode(id: string | undefined, pollMs?: number) {
+  return useQuery({
+    queryKey: ['sensor-nodes', 'detail', id],
+    queryFn: () => deviceApi.getSensorNode(id!).then(response => response.data.data),
+    enabled: Boolean(id),
+    refetchInterval: query => {
+      const sync = query.state.data?.config_sync
+      return pollMs && sync !== 'APPLIED' && sync !== 'UNKNOWN' ? pollMs : false
+    },
+  })
+}
+
+// FARM-FR-009, OPS-NFR-004 — mọi thiết bị kèm farm, nhà, khu vực; chỉ Admin gọi được (enabled = false với role khác)
+export function useSystemNodeStatus(enabled = true) {
   return useQuery({
     queryKey: ['system-node-status'],
     queryFn: () => deviceApi.getSystemStatus().then(r => r.data.data),
     refetchInterval: 30_000, // trang "xem nhanh" — tự làm mới thay vì bắt người xem F5
+    enabled,
   })
 }
 
@@ -102,25 +116,31 @@ export function useSendNodeCommand() {
   })
 }
 
-/**
- * FARM-FR-008 — gỡ sensor node (không hoàn tác). Trang Thiết bị chỉ liệt kê sensor node;
- * camera node đã có `deviceApi.decommissionCameraNode` khi UI camera được dựng.
- */
+// FARM-FR-008 — Farm Owner gỡ bộ điều khiển (khôi phục được trong 24 giờ); đang ONLINE thì gửi force sau khi người dùng xác nhận
 export function useDecommissionDevice() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ nodeId, reason }: { nodeId: string; reason: string }) =>
-      deviceApi.decommissionSensorNode(nodeId, reason),
+    mutationFn: ({ nodeId, reason, force }: { nodeId: string; reason: string; force: boolean }) =>
+      deviceApi.decommissionSensorNode(nodeId, reason, force),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
   })
 }
 
-/** FARM-FR-008 — thay sensor node hỏng bằng node mới cùng Zone (cần secret_key trên nhãn node mới) */
+// FARM-FR-008 — Farm Owner thay bộ điều khiển hỏng bằng thiết bị mới cùng Zone (mã kích hoạt trên nhãn thiết bị mới)
 export function useReplaceSensorNode() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ nodeId, input }: { nodeId: string; input: ReplaceSensorNodeInput }) =>
       deviceApi.replaceSensorNode(nodeId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
+  })
+}
+
+// FARM-FR-007b — Farm Owner dời bộ điều khiển sang Zone khác
+export function useReassignZone() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ nodeId, zoneId }: { nodeId: string; zoneId: string }) => deviceApi.reassignZone(nodeId, zoneId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sensor-nodes'] }),
   })
 }

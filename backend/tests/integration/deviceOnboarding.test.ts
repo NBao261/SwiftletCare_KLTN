@@ -255,6 +255,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
 
     const blocked = await post(`/devices/sensor-nodes/${nodeId}/decommission`, ownerToken, { reason: 'Thu hồi' }).expect(409)
     expect(blocked.body.error.message).toContain('force=true')
+    expect(blocked.body.error.message).not.toContain('ONLINE')
     expect((await SensorNode.findById(nodeId))!.decommissioned_at).toBeUndefined() // chưa đụng gì tới document
     expect(notifyUser).not.toHaveBeenCalled()
 

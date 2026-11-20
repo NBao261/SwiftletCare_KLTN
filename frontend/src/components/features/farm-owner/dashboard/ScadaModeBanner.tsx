@@ -50,7 +50,7 @@ export default function ScadaModeBanner({ lastSyncedAt, controlMode, overrideExp
     >
       <span className="flex min-w-0 items-center gap-2">
         <span className={cn('h-2 w-2 shrink-0 rounded-full', CONTROLLER_DOT_CLASS[controllerState])} />
-        <span className="shrink-0 whitespace-nowrap font-bold uppercase tracking-[0.06em] text-charcoal">{t('banner.title')}</span>
+        <span className="shrink-0 whitespace-nowrap font-bold text-charcoal">{t('banner.title')}</span>
         <span className="shrink-0 text-warmGray" aria-hidden>•</span>
         <span className={cn('shrink-0 whitespace-nowrap font-semibold', CONTROLLER_TEXT_CLASS[controllerState])}>{controllerLabel}</span>
       </span>

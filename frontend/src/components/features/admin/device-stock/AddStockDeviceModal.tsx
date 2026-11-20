@@ -11,7 +11,7 @@ const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 
 const KIND_OPTIONS: { value: ProvisionedDeviceKind; label: string }[] = [
   { value: 'SENSOR', label: 'Bộ điều khiển' },
-  { value: 'CAMERA', label: 'Nút AI' },
+  { value: 'CAMERA', label: 'Camera đếm chim' },
 ]
 
 function validate(deviceId: string): string | undefined {
@@ -57,7 +57,7 @@ export default function AddStockDeviceModal({ open, onClose, onAdded }: {
   return (
     <Modal open={open} onClose={onClose} size="lg" ariaLabel={title}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-        <ModalHeader title={title} description="Mã kích hoạt và mật khẩu broker hiện một lần ngay sau khi thêm" />
+        <ModalHeader title={title} description="Mã kích hoạt và mật khẩu kết nối chỉ hiện một lần, ngay sau khi thêm" />
         <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2">
           <Input
             label="Mã thiết bị"

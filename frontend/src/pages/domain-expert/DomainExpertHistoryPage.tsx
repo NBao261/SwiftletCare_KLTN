@@ -29,10 +29,12 @@ import type { AlertType } from '@/types'
 import type { CountingSchedule, ExpertActivityEntry } from '@/types/expert.types'
 import { formatHourMinute, formatStandardDate } from '@/lib/i18n'
 import { cn } from '@/lib/cn'
+import { t, translated } from '@/i18n'
+import { useLanguageStore } from '@/stores/languageStore'
 
 const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'ALL', label: 'Tất cả hành động' },
-  { value: 'ALERT_VERDICT_SET', label: 'Thẩm định cảnh báo' },
+  { value: 'ALERT_VERDICT_SET', label: 'Kiểm chứng cảnh báo' },
   { value: 'THRESHOLD_UPDATED', label: 'Ngưỡng vi khí hậu' },
   { value: 'FUZZY_TUNING_UPDATED', label: 'Hệ số điều khiển mờ' },
   { value: 'DETECTION_TUNING_UPDATED', label: 'Tham số phát hiện lỗi' },
@@ -40,7 +42,7 @@ const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'COUNTING_RING_UPDATED', label: 'Vòng đếm camera' },
   { value: 'COUNTING_SCHEDULE_UPDATED', label: 'Lịch đếm chim' },
   { value: 'HEALTH_REPORT_CONCLUDED', label: 'Kết luận báo cáo' },
-  { value: 'HEALTH_LEVELS_UPDATED', label: 'Mức chỉ số sức khỏe' },
+  { value: 'HEALTH_LEVELS_UPDATED', label: 'Mức chỉ số sức khoẻ' },
   { value: 'WEATHER_RULES_UPDATED', label: 'Luật bù thời tiết' },
   { value: 'REVIEW_ACCEPTED', label: 'Chấp nhận thay đổi của Chủ nhà yến' },
   { value: 'REVIEW_REVERTED', label: 'Hoàn lại thay đổi của Chủ nhà yến' },
@@ -52,7 +54,7 @@ const ACTION_OPTIONS: SelectMenuOption<string>[] = [
 const ACTION_LABELS = new Map(ACTION_OPTIONS.map(option => [option.value, option.label]))
 
 // Tên tham số trong before/after → nhãn (ngưỡng lấy từ THRESHOLD_FIELDS); tham số chưa có nhãn hiện "Tham số khác"
-const FIELD_LABELS: Record<string, string> = {
+const FIELD_LABELS: Record<string, string> = translated({
   ...Object.fromEntries(THRESHOLD_FIELDS.map(field => [field.key, field.label])),
   fuzzy_humidity_band: 'Dải chuyển độ ẩm (%RH)',
   fuzzy_temp_band: 'Dải chuyển nhiệt độ (°C)',
@@ -71,13 +73,13 @@ const FIELD_LABELS: Record<string, string> = {
   air_clear_h: 'Không khí lệch rõ',
   noise_slight: 'Tiếng ồn lệch nhẹ',
   noise_clear: 'Tiếng ồn lệch rõ',
-}
+})
 
 // Giá trị trong before/after: số, chữ in ra; danh sách ghi số mục; object không in thẳng (tránh "[object Object]")
 function formatChangeValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
-  if (Array.isArray(value)) return `${value.length} mục`
-  if (typeof value === 'object') return 'đã đổi'
+  if (Array.isArray(value)) return t('{{n}} mục', { n: value.length })
+  if (typeof value === 'object') return t('đã đổi')
   return String(value)
 }
 
@@ -91,18 +93,18 @@ function renderCountingSchedule(metadata: Record<string, unknown>) {
   const shortDay = (value: string) => dayText(value.slice(-5))
   const span = (from: string, to: string) => (from === to ? shortDay(from) : `${shortDay(from)}–${shortDay(to)}`)
   const hours = (windows: { morning: { start: string; end: string }; evening: { start: string; end: string } }) =>
-    `Sáng ${windows.morning.start}–${windows.morning.end}, chiều ${windows.evening.start}–${windows.evening.end}`
+    t('Sáng {{morning}}, chiều {{evening}}', { morning: `${windows.morning.start}–${windows.morning.end}`, evening: `${windows.evening.start}–${windows.evening.end}` })
   const profiles = schedule?.profiles ?? []
   const temporary = schedule?.temporary ?? []
   return (
     <ul className="flex flex-col gap-0.5 text-sm text-charcoal">
       {temporary.map(window => (
-        <li key={`temporary-${window.from}`} title={hours(window)}>Khung tạm {span(window.from, window.to)}</li>
+        <li key={`temporary-${window.from}`} title={hours(window)}>{t('Khung tạm {{span}}', { span: span(window.from, window.to) })}</li>
       ))}
       {profiles.map(profile => (
-        <li key={`profile-${profile.name}-${profile.from}`} title={hours(profile)}>Hồ sơ {profile.name} {span(profile.from, profile.to)}</li>
+        <li key={`profile-${profile.name}-${profile.from}`} title={hours(profile)}>{t('Hồ sơ {{name}} {{span}}', { name: profile.name, span: span(profile.from, profile.to) })}</li>
       ))}
-      {profiles.length === 0 && temporary.length === 0 && <li className="text-warmGray">Khung mặc định</li>}
+      {profiles.length === 0 && temporary.length === 0 && <li className="text-warmGray">{t('Khung mặc định')}</li>}
     </ul>
   )
 }
@@ -113,14 +115,14 @@ function renderActivityDetails(item: ExpertActivityEntry) {
   if (item.action === 'ALERT_VERDICT_SET') {
     const isConfirmed = m.result === 'CONFIRMED'
     const note = m.note as string | undefined
-    const alertType = m.type ? alertTypeDict.vi[m.type as AlertType] ?? 'Cảnh báo' : undefined
+    const alertType = m.type ? alertTypeDict[useLanguageStore.getState().lang][m.type as AlertType] ?? t('Cảnh báo khác') : undefined
 
     return (
       <div className="flex flex-col gap-1 text-xs">
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold',
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-small font-bold',
               isConfirmed
                 ? 'bg-red-50 text-red-600 border border-red-200'
                 : 'bg-neutral-100 text-warmGray border border-neutral-200',
@@ -129,12 +131,12 @@ function renderActivityDetails(item: ExpertActivityEntry) {
             {isConfirmed ? (
               <>
                 <CheckCircle2 className="w-3 h-3 text-red-500" />
-                Xác nhận sự cố thật
+                {t('Xác nhận sự cố thật')}
               </>
             ) : (
               <>
                 <XCircle className="w-3 h-3 text-warmGray" />
-                Bác bỏ báo động giả
+                {t('Bác bỏ báo động giả')}
               </>
             )}
           </span>
@@ -153,8 +155,8 @@ function renderActivityDetails(item: ExpertActivityEntry) {
     const text = (m.text as string | undefined) ?? (m.conclusion as string | undefined)
     return (
       <div className="text-xs text-charcoal">
-        <span className="font-semibold">Kết luận: </span>
-        <span className="italic text-warmGray">"{text || 'Đã cập nhật kết luận chuyên gia'}"</span>
+        <span className="font-semibold">{t('Kết luận:')} </span>
+        <span className="italic text-warmGray">"{text || t('Đã cập nhật kết luận chuyên gia')}"</span>
       </div>
     )
   }
@@ -178,7 +180,7 @@ function renderActivityDetails(item: ExpertActivityEntry) {
             // Chưa có giá trị cũ: chỉ ghi giá trị mới; có thì "cũ → mới" trên một dòng
             return (
               <li key={k} className="text-charcoal">
-                <span className="text-graphite">{FIELD_LABELS[k] ?? 'Tham số khác'}: </span>
+                <span className="text-graphite">{FIELD_LABELS[k] ?? t('Tham số khác')}: </span>
                 <span className="whitespace-nowrap font-semibold">{oldText === '—' ? newText : `${oldText} → ${newText}`}</span>
               </li>
             )
@@ -190,7 +192,7 @@ function renderActivityDetails(item: ExpertActivityEntry) {
 
   return (
     <span className="text-xs text-warmGray">
-      Đã cập nhật thông số vận hành của trang trại
+      {t('Đã cập nhật thông số vận hành của trang trại')}
     </span>
   )
 }
@@ -221,16 +223,10 @@ export default function DomainExpertHistoryPage() {
 
   const columns: DataTableColumn<ExpertActivityEntry>[] = [
     {
-      key: 'index',
-      header: 'STT',
-      className: 'w-16',
-      render: (_item, index) => <span className="text-sm text-warmGray">{(page - 1) * pageSize + index + 1}</span>,
-    },
-    {
       key: 'action',
       header: 'Quyết định',
       className: 'w-52',
-      render: item => <span className="text-sm font-semibold text-charcoal">{ACTION_LABELS.get(item.action) ?? 'Quyết định khác'}</span>,
+      render: item => <span className="text-sm font-semibold text-charcoal">{t(ACTION_LABELS.get(item.action) ?? 'Quyết định khác')}</span>,
     },
     {
       key: 'time',
@@ -252,8 +248,8 @@ export default function DomainExpertHistoryPage() {
         const isOwner = item.actor_role === 'FARM_OWNER'
         return (
           <div className="flex flex-col">
-            <span className="text-sm text-charcoal">{item.actor?.full_name || (isOwner ? 'Chủ nhà yến' : 'Chuyên gia')}</span>
-            <span className="text-xs text-warmGray">{isOwner ? 'Chủ nhà yến, làm thay chuyên gia' : 'Chuyên gia'}</span>
+            <span className="text-sm text-charcoal">{item.actor?.full_name || (isOwner ? t('Chủ nhà yến') : t('Chuyên gia'))}</span>
+            <span className="text-xs text-warmGray">{isOwner ? t('Chủ nhà yến, làm thay chuyên gia') : t('Chuyên gia')}</span>
           </div>
         )
       },
@@ -274,8 +270,8 @@ export default function DomainExpertHistoryPage() {
   let body = (
     <EmptyState
       icon={<History className="h-8 w-8 text-warmGray" />}
-      title="Chưa chọn trang trại"
-      description="Chọn trang trại ở thanh trên để xem lịch sử hoạt động."
+      title={t('Chưa chọn trang trại')}
+      description={t('Chọn trang trại ở thanh trên để xem lịch sử hoạt động.')}
     />
   )
   if (selectedFarmId && isLoading) body = <LoadingSkeleton count={4} className="h-14 w-full rounded-xl" />
@@ -283,7 +279,7 @@ export default function DomainExpertHistoryPage() {
     body = (
       <EmptyState
         icon={<History className="h-8 w-8 text-warmGray" />}
-        title="Không có bản ghi hoạt động nào"
+        title={t('Không có bản ghi hoạt động nào')}
         description={isFiltered ? 'Không có quyết định nào khớp bộ lọc đã chọn.' : 'Chưa có quyết định hoặc thay đổi tham số nào được ghi nhận cho trang trại này.'}
       />
     )
@@ -299,8 +295,8 @@ export default function DomainExpertHistoryPage() {
 
   return (
     <SectionCard
-      title="Nhật ký quyết định"
-      description={`${total} bản ghi`}
+      title={t('Nhật ký quyết định')}
+      description={t('{{n}} bản ghi', { n: total })}
     >
       {/* Ô lọc bên trái, danh sách mở sang phải không bị mép trang che */}
       <div className="flex flex-wrap items-center gap-2.5">
@@ -311,7 +307,7 @@ export default function DomainExpertHistoryPage() {
             setActionType(value)
             setPage(1)
           }}
-          ariaLabel="Lọc theo loại hành động"
+          ariaLabel={t('Lọc theo loại hành động')}
         />
         {isFiltered && (
           <ClearFiltersButton

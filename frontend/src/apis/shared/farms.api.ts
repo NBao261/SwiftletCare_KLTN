@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, Farm, FarmMemberRole, Coordinates, FuzzyTuning, House, HouseStage, RosterShift, Zone, Invitation } from '@/types'
+import type { ApiResponse, Farm, FarmMemberRole, Coordinates, House, HouseStage, RosterShift, Zone, Invitation } from '@/types'
 
 export const farmApi = {
   list:   () => api.get<ApiResponse<Farm[]>>('/farms'),
@@ -41,13 +41,4 @@ export const farmApi = {
     api.post<ApiResponse<Zone>>(`/farms/houses/${houseId}/zones`, input),
   listZones: (houseId: string) => api.get<ApiResponse<Zone[]>>(`/farms/houses/${houseId}/zones`),
   getZone: (zoneId: string) => api.get<ApiResponse<Zone>>(`/farms/zones/${zoneId}`),
-
-  updateThresholds: (zoneId: string, thresholds: Partial<Zone['thresholds']>) =>
-    api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}/thresholds`, thresholds),
-  // ENV-FR-020 — reset về mặc định kỹ thuật cố định (xem farm.service.ts)
-  resetThresholds: (zoneId: string) =>
-    api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}/thresholds/reset`, {}),
-  // ENV-FR-021 — chỉ gửi các hệ số đã đổi; backend gộp, lưu lịch sử và đẩy config/update xuống ESP32
-  updateFuzzyTuning: (zoneId: string, tuning: Partial<FuzzyTuning>) =>
-    api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}/fuzzy-tuning`, tuning),
 }

@@ -133,6 +133,7 @@ export function useApplySuggestion() {
       void queryClient.invalidateQueries({ queryKey: ['expert', 'proposals'] });
       void queryClient.invalidateQueries({ queryKey: ['expert', 'tuning'] });
       void queryClient.invalidateQueries({ queryKey: ['farms'] });
+      void queryClient.invalidateQueries({ queryKey: ['expert', 'fuzzy-suggestion'] });
       void queryClient.invalidateQueries({ queryKey: ['zone'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },

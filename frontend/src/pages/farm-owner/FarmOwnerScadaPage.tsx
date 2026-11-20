@@ -16,7 +16,7 @@ import { usePageBack, usePageBreadcrumb } from '@/hooks/common/useBreadcrumb';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useZoneRelayOverrides } from '@/hooks/farm-owner/useAnalytics';
 import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry';
-import { useScopeFilter } from '@/hooks/farm-owner/useScopeFilter';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useSensorNodes } from '@/hooks/shared/useDevices';
 import { cn } from '@/lib/cn';
 import type { SensorNode } from '@/types';
@@ -191,7 +191,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
               </div>
               <span
                 className={cn(
-                  'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                  'shrink-0 rounded-full px-2.5 py-0.5 text-small font-semibold',
                   log.ended_at ? 'bg-warmGray/15 text-warmGray' : 'bg-statusYellow/70 text-charcoal',
                 )}
               >

@@ -91,7 +91,7 @@ export default function HouseRosterSection({ top, searchBox, query, farmId, hous
     { key: 'days', header: t('roster.colDays'), render: ({ shift }) => <span className="text-sm text-graphite">{daysText(shift.weekdays)}</span> },
     {
       key: 'time', header: t('roster.colTime'), className: 'w-48',
-      render: ({ shift }) => <span className="font-mono text-sm tabular-nums text-graphite">{timeText(shift)}</span>,
+      render: ({ shift }) => <span className="text-sm tabular-nums text-graphite">{timeText(shift)}</span>,
     },
     {
       key: 'actions', header: '', align: 'center', className: 'w-16',

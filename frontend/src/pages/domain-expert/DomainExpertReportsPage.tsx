@@ -94,7 +94,7 @@ export default function DomainExpertReportsPage() {
               <Scale className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{i18nT('Ngày đánh giá lệch & Mức chỉ số')}</span>
               {disagreeingDaysCount > 0 && (
-                <span className="rounded-full bg-orange-600 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white">
+                <span className="rounded-full bg-orange-600 px-2 py-0.5 text-small font-bold tabular-nums text-white">
                   {disagreeingDaysCount}
                 </span>
               )}

@@ -6,7 +6,7 @@ import { ArrowLineDownIcon, ArrowLineUpIcon, ChartLineIcon } from '@phosphor-ico
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { CHART_LEGEND, X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { groupBucketsByHour } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import { analyticsDict } from '@/constants/analytics.i18n';

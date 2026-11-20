@@ -1,6 +1,6 @@
 import { CpuIcon, HourglassIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from '@phosphor-icons/react'
 import { Card } from '@/components/ui'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import { t } from '@/i18n'
 import type { SystemNodeStatus } from '@/types'
 
@@ -23,20 +23,20 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
     <Card className="flex flex-col gap-4">
       <div>
         <h2 className="text-h2 text-charcoal">{t('Thống kê thiết bị')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('Cảm biến và camera trên mọi trang trại')}</p>
+        <p className="mt-1 text-sm text-warmGray">{t('Bộ điều khiển và camera đếm chim trên mọi trang trại')}</p>
       </div>
 
       {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatTile
+        <KpiTile
           className="col-span-2 shadow-none lg:col-span-1"
           icon={CpuIcon}
           iconClass={ICON}
           label="Tổng thiết bị"
           value={summary.total}
-          sub={t('{{sensors}} cảm biến · {{cameras}} camera', { sensors, cameras: nodes.length - sensors })}
+          sub={t('{{sensors}} bộ điều khiển · {{cameras}} camera đếm chim', { sensors, cameras: nodes.length - sensors })}
         />
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={WifiHighIcon}
           iconClass={ICON}
@@ -45,18 +45,18 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           // Dòng phụ ngắn (vừa 1 dòng trong ô) và theo đúng số: 0 thì nói không có, không ghi "đang gửi dữ liệu" khi chẳng thiết bị nào gửi
           sub={summary.total === 0 ? 'Chưa có thiết bị' : summary.online === 0 ? 'Chưa có thiết bị online' : summary.online === summary.total ? 'Tất cả đang hoạt động' : 'Đang gửi dữ liệu'}
         />
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={WifiSlashIcon}
           iconClass={ICON}
-          label="Offline"
+          label="Mất kết nối"
           value={summary.offline}
           // Có thiết bị offline → ô nổi cam (mất dữ liệu nhà yến, cần kiểm tra nguồn/mạng)
           tone={summary.offline > 0 ? 'warning' : undefined}
           // Flow 14: không nhận heartbeat > 30s → OFFLINE
           sub={summary.offline > 0 ? 'Mất tín hiệu quá 30 giây' : 'Tất cả đều kết nối'}
         />
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={WarningIcon}
           iconClass={ICON}
@@ -66,7 +66,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
           tone={faulty > 0 ? 'critical' : undefined}
           sub={faulty > 0 ? `${faulty} thiết bị mất kết nối` : 'Không có thiết bị lỗi'}
         />
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={HourglassIcon}
           iconClass={ICON}

@@ -88,7 +88,7 @@ export default function InvitationPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <Card size="lg" className="w-full max-w-md">
-        <p className="label-caption">Lời mời tham gia farm</p>
+        <p className="label-caption">Lời mời tham gia trang trại</p>
         <h1 className="mt-1 text-2xl font-bold text-charcoal">{farm?.name ?? 'Farm'}</h1>
         <p className="mt-1 text-sm text-warmGray">{farm?.address}</p>
 
@@ -103,7 +103,7 @@ export default function InvitationPage() {
           </p>
         ) : !userExists ? (
           <form onSubmit={handleCreateAccount} noValidate className="mt-5 flex flex-col gap-3">
-            <p className="text-sm text-warmGray">Email này chưa có tài khoản. Đặt họ tên và mật khẩu để tham gia farm.</p>
+            <p className="text-sm text-warmGray">Email này chưa có tài khoản. Đặt họ tên và mật khẩu để tham gia trang trại.</p>
             <Input
               label="Họ và tên"
               required

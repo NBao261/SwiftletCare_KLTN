@@ -63,9 +63,9 @@ export default function FarmHouseZonePicker({ value, onChange }: FarmHouseZonePi
           field
           disabled={!value.houseId || loadingZones}
           value={value.zoneId ?? ''}
-          ariaLabel="Chọn zone"
+          ariaLabel="Chọn Zone"
           options={[
-            { value: '', label: value.houseId ? '-- Chọn zone --' : 'Chọn nhà trước' },
+            { value: '', label: value.houseId ? '-- Chọn Zone --' : 'Chọn nhà trước' },
             ...(zones?.map(z => ({ value: z._id, label: z.name })) ?? [])
           ]}
           onChange={val => onChange({ ...value, zoneId: val || undefined })}

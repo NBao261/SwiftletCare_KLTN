@@ -3,7 +3,7 @@ import { useAuditLogList } from '@/hooks/admin/useSystem'
 import { AUDIT_TARGET_TYPE } from '@/constants/auditActions'
 import { Button, Card, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import { t } from '@/i18n'
 import type { ListAuditLogsQuery } from '@/apis/admin/system.api'
 
@@ -28,7 +28,7 @@ function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
 }
 
 /**
- * Hàng 5 ô chỉ số đầu trang Nhật ký hệ thống — cùng khuôn hàng KPI trang Người dùng (StatTile).
+ * Hàng 5 ô chỉ số đầu trang Nhật ký hệ thống — cùng khuôn hàng KPI trang Người dùng (KpiTile).
  * Chỉ nhật ký tài khoản, không theo bộ lọc bảng. Tổng + hôm nay cho biết nhịp ghi nhật ký; 3 ô sau đếm
  * trong 7 ngày gần nhất việc Admin cần để mắt: đăng nhập thất bại (dấu hiệu dò mật khẩu), tài khoản bị
  * khoá (AUTH-FR-011), tài khoản nhân viên mới tạo (AUTH-FR-005c). Icon xám như ReadingTile Dashboard Farm Owner.
@@ -67,7 +67,7 @@ export default function AuditLogStats() {
 
       {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatTile
+        <KpiTile
           className="col-span-2 shadow-none lg:col-span-1"
           icon={ClipboardTextIcon}
           iconClass={ICON}
@@ -75,7 +75,7 @@ export default function AuditLogStats() {
           value={all.total}
           sub={t('Hôm nay thêm {{n}} bản ghi', { n: today.total })}
         />
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={CalendarBlankIcon}
           iconClass={ICON}
@@ -83,7 +83,7 @@ export default function AuditLogStats() {
           value={week.total}
           sub={t('Trung bình {{n}} bản ghi/ngày', { n: Math.round(week.total / 7) })}
         />
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={WarningIcon}
           iconClass={ICON}
@@ -95,7 +95,7 @@ export default function AuditLogStats() {
           sub="Trong 7 ngày qua"
         />
         {/* Đếm LƯỢT Admin khoá (ACCOUNT_LOCKED), không phải số tài khoản đang bị khoá — nhãn nói rõ để khỏi nhầm */}
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={LockSimpleIcon}
           iconClass={ICON}
@@ -104,7 +104,7 @@ export default function AuditLogStats() {
           sub="Trong 7 ngày qua"
         />
         {/* USER_CREATED chỉ ghi khi Admin tạo Technician — Farm Owner tự đăng ký không ghi log này */}
-        <StatTile
+        <KpiTile
           className="shadow-none"
           icon={UserPlusIcon}
           iconClass={ICON}
