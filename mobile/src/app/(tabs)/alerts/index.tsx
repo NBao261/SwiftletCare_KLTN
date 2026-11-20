@@ -1,10 +1,9 @@
 import { useCallback, useState } from 'react'
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native'
-import { useIsFocused } from 'expo-router'
+import { router, useIsFocused } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircleIcon, GearSixIcon } from 'phosphor-react-native'
 import { AcknowledgeSheet } from '@/components/alert/AcknowledgeSheet'
-import { AlertDetailSheet } from '@/components/alert/AlertDetailSheet'
 import { AlertFilterChips } from '@/components/alert/AlertFilterChips'
 import { ALERT_ROW_HEIGHT, AlertRow } from '@/components/alert/AlertRow'
 import { NotificationSettingsSheet } from '@/components/alert/NotificationSettingsSheet'
@@ -25,7 +24,6 @@ import { useAlertLocations } from '@/hooks/alert/useAlertLocations'
 import { useAlertRooms } from '@/hooks/alert/useAlertRooms'
 import { useAlertsListData } from '@/hooks/alert/useAlertsListData'
 import { useAlertsScope } from '@/hooks/alert/useAlertsScope'
-import { useLinkedAlert } from '@/hooks/alert/useLinkedAlert'
 import { useNewAlertIds } from '@/hooks/alert/useNewAlertIds'
 import { useRefetchInvalidatedAlertLists } from '@/hooks/alert/useRefetchInvalidatedAlertLists'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
@@ -63,7 +61,6 @@ export default function AlertsScreen() {
   const returnBack = useReturnBack()
   const list = useAlertsListData(scope, isFocused)
   const newAlertIds = useNewAlertIds()
-  const [detailAlert, setDetailAlert] = useState<Alert | null>(null)
   const [acknowledgeTarget, setAcknowledgeTarget] = useState<Alert | null>(null)
   const [sheetKey, setSheetKey] = useState(0)
   const [isHouseSheetOpen, setHouseSheetOpen] = useState(false)
@@ -107,11 +104,11 @@ export default function AlertsScreen() {
     setSheetKey(key => key + 1)
     setAcknowledgeTarget(alert)
   }, [])
-  const openDetail = useCallback((alert: Alert) => setDetailAlert(alert), [])
-  // Mở từ chuông / thông báo với alertId: mở thẳng sheet chi tiết của đúng cảnh báo đó
-  const showToast = toast.show
-  const handleLinkedAlertMissing = useCallback(() => showToast(t('Không mở được cảnh báo này')), [showToast])
-  useLinkedAlert(openDetail, handleLinkedAlertMissing)
+  // Chạm hàng: mở trang chi tiết cảnh báo (chuyển trang, không mở sheet từ dưới lên); ‹ quay lại đúng chỗ đang xem của danh sách
+  const openDetail = useCallback(
+    (alert: Alert) => router.push({ pathname: '/alert/[alertId]', params: { alertId: alert._id } }),
+    [],
+  )
 
   const renderEmpty = () => {
     if (list.isListLoading) {
@@ -295,7 +292,6 @@ export default function AlertsScreen() {
             toast.show(message)
           }}
         />
-        <AlertDetailSheet alert={detailAlert} onClose={() => setDetailAlert(null)} />
         {canEditSettings && (
           <NotificationSettingsSheet
             key={isSettingsOpen ? 'open' : 'closed'}

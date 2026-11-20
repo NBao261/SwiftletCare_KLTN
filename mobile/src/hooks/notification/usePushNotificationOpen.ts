@@ -9,7 +9,7 @@ const handledResponseIds = new Set<string>()
 // Expo Go không có module push nên không bao giờ có thông báo được bấm
 const useLastNotificationResponse = notificationsModule?.useLastNotificationResponse ?? (() => null)
 
-// Bấm thông báo đẩy (ALERT-FR-002), lúc app đang chạy hoặc mở app từ thông báo: cảnh báo mở đúng sheet chi tiết ở tab Cảnh báo,
+// Bấm thông báo đẩy (ALERT-FR-002), lúc app đang chạy hoặc mở app từ thông báo: cảnh báo mở trang chi tiết của nó,
 // báo cáo mở tab Phân tích › Báo cáo, Work Order mở trang chi tiết Work Order, ngày đánh giá mở health/[dayId], còn lại mở chuông. Gắn khi đã đăng nhập (RealtimeSync) để các tab đã sẵn sàng
 export function usePushNotificationOpen() {
   const lastResponse = useLastNotificationResponse()
@@ -22,7 +22,7 @@ export function usePushNotificationOpen() {
 
     const target = getPushTarget(lastResponse.notification.request.content.data)
     if (target.kind === 'alert') {
-      router.navigate({ pathname: '/(tabs)/alerts', params: { alertId: target.alertId } })
+      router.push({ pathname: '/alert/[alertId]', params: { alertId: target.alertId } })
     } else if (target.kind === 'report') {
       router.navigate({ pathname: '/(tabs)/analytics', params: { tab: 'reports', reportId: target.reportId } })
     } else if (target.kind === 'workOrder') {

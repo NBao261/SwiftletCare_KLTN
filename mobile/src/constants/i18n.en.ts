@@ -961,7 +961,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chi tiết thông báo': 'Notification details',
   'Không tìm thấy thông báo': 'Notification not found',
   'Về hộp thông báo': 'Back to notifications',
-  'Không mở được cảnh báo này': 'Could not open this alert',
   '{count} mới': '{count} new',
   'Chuyên gia đánh giá': 'Expert verdict',
   'Kết luận kiểm chứng': 'Verdict',
