@@ -1,6 +1,6 @@
 import type { KeyboardEvent, ReactNode } from 'react'
-import { CaretDownIcon, PencilSimpleIcon, PlusIcon, SlidersHorizontalIcon, TrashIcon } from '@phosphor-icons/react'
-import { Badge, Button } from '@/components/ui'
+import { CaretDownIcon, PlusIcon } from '@phosphor-icons/react'
+import { ActionsMenu, Badge, Button, type ActionsMenuItem } from '@/components/ui'
 import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { NO_VALUE } from '@/constants/display'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -28,13 +28,21 @@ interface FarmGroupRowProps {
   children: ReactNode
 }
 
-// 1 hàng trang trại trên trang Trang trại: bấm hàng để xổ / thu các nhà yến bên trong, nút Sửa / Xoá / Thêm nhà ngay trên hàng
+// 1 hàng trang trại: bấm hàng để xổ / thu các nhà yến; nút "Thêm nhà" trên hàng, Áp hồ sơ · Sửa · Xoá trong menu ⋯ (FO-10)
 export default function FarmGroupRow({
   farm, houseCount, deviceCount, alertHouseCount, isExpanded, isPrimary, canEdit, canAddHouse,
   onToggle, onEdit, onDelete, onAddHouse, onApplyProfile, children,
 }: FarmGroupRowProps) {
   const { t, num } = useTranslation(farmDict)
   const hasDevices = deviceCount > 0
+  // Xoá bị khoá khi còn thiết bị: lý do ghi ngay dưới mục trong menu
+  const menuItems: ActionsMenuItem[] = []
+  if (onApplyProfile) menuItems.push({ label: t('profile.apply'), onClick: onApplyProfile })
+  if (canEdit) menuItems.push({ label: t('manage.edit'), onClick: onEdit })
+  if (canEdit && isPrimary) {
+    const hint = hasDevices ? t('manage.deleteBlocked', { n: num(deviceCount) }) : undefined
+    menuItems.push({ label: t('manage.delete'), onClick: onDelete, danger: true, disabled: hasDevices, hint })
+  }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
@@ -81,37 +89,13 @@ export default function FarmGroupRow({
               {t('farmGroup.addHouse')}
             </Button>
           )}
-          {onApplyProfile && (
-            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={onApplyProfile}>
-              <SlidersHorizontalIcon size={14} weight="bold" />
-              {t('profile.apply')}
-            </Button>
-          )}
-          {canEdit && (
-            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={onEdit}>
-              <PencilSimpleIcon size={14} weight="bold" />
-              {t('manage.edit')}
-            </Button>
-          )}
-          {canEdit && isPrimary && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)}
-              disabled={hasDevices}
-              title={hasDevices ? t('manage.deleteBlocked', { n: num(deviceCount) }) : undefined}
-              onClick={onDelete}
-            >
-              <TrashIcon size={14} weight="bold" />
-              {t('manage.delete')}
-            </Button>
-          )}
+          <ActionsMenu items={menuItems} />
         </div>
       </div>
 
       {isExpanded && (
         <div className="flex flex-col gap-4 border-t border-warmGray/10 bg-warmGray/5 px-4 py-4">
-          {canEdit && isPrimary && hasDevices && <p className="text-xs text-warmGray">{t('manage.deleteBlocked', { n: num(deviceCount) })}</p>}
+          {canEdit && isPrimary && hasDevices && <p className="text-small text-warmGray">{t('manage.deleteBlocked', { n: num(deviceCount) })}</p>}
           {houseCount === 0 ? <p className="text-sm text-warmGray">{t('farmGroup.noHouse')}</p> : children}
         </div>
       )}

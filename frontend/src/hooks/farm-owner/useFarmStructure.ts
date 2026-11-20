@@ -88,7 +88,11 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
     enabled: canViewHarvest,
   })
 
-  const zoneIds = useMemo(() => [...zonesByHouse.values()].flat().map(z => z._id), [zonesByHouse])
+  // Chỉ hỏi số đo khi mọi nhà đã tải xong Zone: danh sách Zone lớn dần thì mỗi lần đổi là một lần gọi env/compare (A-14)
+  const zoneIds = useMemo(
+    () => (housesQ.pending || zonesQ.pending ? [] : [...zonesByHouse.values()].flat().map(z => z._id)),
+    [housesQ.pending, zonesQ.pending, zonesByHouse],
+  )
   const envQ = useEnvCompareBatched(zoneIds, '1h')
   const live = useLiveZoneTelemetry(options?.liveZoneIds ?? [])
 

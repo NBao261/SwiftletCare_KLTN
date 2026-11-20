@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { farmOverviewApi, type HouseComparisonQuery } from '@/apis/farm-owner/farmOverview.api';
+import type { HouseOverview } from '@/types';
 
 // ANALYTICS-FR-015 — mỗi nhà của trại: giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, tỷ lệ về gần nhất
 export function useFarmOverview(farmId: string | undefined) {
@@ -7,6 +8,21 @@ export function useFarmOverview(farmId: string | undefined) {
     queryKey: ['farm-overview', farmId],
     queryFn: () => farmOverviewApi.overview(farmId!).then(response => response.data.data),
     enabled: Boolean(farmId),
+  });
+}
+
+// ANALYTICS-FR-015 cho nhiều trang trại (Tổng quan khi xem tất cả): tình hình hôm nay theo mã nhà, chung cache với useFarmOverview
+export function useFarmOverviews(farmIds: string[]): { byHouse: Map<string, HouseOverview>; isError: boolean; refetch: () => void } {
+  return useQueries({
+    queries: farmIds.map(farmId => ({
+      queryKey: ['farm-overview', farmId],
+      queryFn: () => farmOverviewApi.overview(farmId).then(response => response.data.data),
+    })),
+    combine: results => ({
+      byHouse: new Map(results.flatMap(result => result.data?.houses ?? []).map(house => [house.house_id, house])),
+      isError: results.some(result => result.isError),
+      refetch: () => results.forEach(result => void result.refetch()),
+    }),
   });
 }
 

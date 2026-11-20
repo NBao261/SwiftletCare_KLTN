@@ -31,7 +31,7 @@
         13px: không chữ nào dưới 13px (todo-ui-layout-1120 C-02) ── */
   .label-caption { @apply text-small font-semibold text-warmGray; }
 
-  /* ── Chữ dài 1 dòng mờ dần thay vì cắt "…" — cùng cách bảng SensorAlertLogTable (Dashboard Farm Owner): không tràn
+  /* ── Chữ dài 1 dòng mờ dần thay vì cắt "…": không tràn
         sang cột sau, pr-3 chừa khe trước cột kế. Đặt title ở phần tử để rê chuột vẫn đọc đủ. ── */
   .text-fade {
     @apply block overflow-hidden whitespace-nowrap pr-3;

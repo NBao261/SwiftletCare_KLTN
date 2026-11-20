@@ -69,13 +69,8 @@ export default function FarmOwnerFarmZonesPage() {
   const scopeFilter = (
     <>
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={routedScope} />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={routedScope} />
-      </div>
+      </HeaderActions>
     </>
   )
 

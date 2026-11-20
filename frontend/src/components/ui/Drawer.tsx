@@ -7,15 +7,24 @@ interface DrawerProps {
   onClose: () => void
   title?: string
   children: ReactNode
+  // 'bottom': bảng mở từ đáy màn (VD menu "Thêm" của dock điện thoại)
+  side?: 'right' | 'bottom'
 }
 
-export function Drawer({ open, onClose, title, children }: DrawerProps) {
+const PANEL_CLASS = {
+  right: 'fixed inset-y-0 right-0 z-50 w-full max-w-md animate-slide-in-right',
+  bottom: 'fixed inset-x-0 bottom-0 z-50 max-h-[80vh] rounded-t-3xl pb-[env(safe-area-inset-bottom)] animate-fade-in',
+} as const
+
+export function Drawer({ open, onClose, title, children, side = 'right' }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
+    // Đóng thì trả focus về chỗ đã mở (nút bấm), người dùng bàn phím không bị lạc
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     panelRef.current?.focus()
 
     function handleKeyDown(e: KeyboardEvent) {
@@ -33,7 +42,10 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
     }
 
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      opener?.focus()
+    }
   }, [open])
 
   if (!open) return null
@@ -52,7 +64,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl outline-none animate-slide-in-right flex flex-col"
+        className={`${PANEL_CLASS[side]} flex flex-col bg-white shadow-2xl outline-none`}
       >
         <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-warmGray/10 px-6">
           {/* Thanh tiêu đề cao cố định: tên dài cắt "…", rê chuột xem đủ */}
@@ -61,7 +73,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
             <CloseIcon />
           </Button>
         </div>
-        <div className="flex-1 flex flex-col overflow-hidden px-6 py-5">
+        <div className={side === 'bottom' ? 'flex flex-col overflow-y-auto px-3 py-3' : 'flex-1 flex flex-col overflow-hidden px-6 py-5'}>
           {children}
         </div>
       </div>

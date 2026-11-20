@@ -44,7 +44,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
     <div
       role="group"
       aria-label={t('scope.filterLabel')}
-      className="inline-flex flex-wrap items-center gap-1.5 rounded-full border border-warmGray/15 bg-white/80 p-1 shadow-icon"
+      className="inline-flex flex-wrap items-center gap-1.5 rounded-full border border-warmGray/15 bg-white/80 p-1 shadow-icon max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:rounded-3xl"
     >
       <SelectMenu
         ariaLabel={t('scope.farmLabel')}
@@ -52,7 +52,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         options={farmOptions}
         onChange={scope.setFarmId}
         warningLabel={t('scope.warning')}
-        className="h-9 w-44 justify-between"
+        className="h-9 w-44 justify-between max-sm:col-span-2 max-sm:w-full"
       />
       <SelectMenu
         ariaLabel={t('page.houseLabel')}
@@ -61,7 +61,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         onChange={scope.setHouseId}
         warningLabel={t('scope.warning')}
         disabled={isHouseLocked}
-        className={cn('h-9 w-40 justify-between', isHouseLocked && LOCKED_CLASS)}
+        className={cn('h-9 w-40 justify-between max-sm:w-full', isHouseLocked && LOCKED_CLASS)}
       />
       <SelectMenu
         ariaLabel={t('scope.zoneLabel')}
@@ -70,7 +70,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         onChange={scope.setZoneId}
         warningLabel={t('scope.warning')}
         disabled={isZoneLocked}
-        className={cn('h-9 w-36 justify-between', isZoneLocked && LOCKED_CLASS)}
+        className={cn('h-9 w-36 justify-between max-sm:w-full', isZoneLocked && LOCKED_CLASS)}
       />
     </div>
   );

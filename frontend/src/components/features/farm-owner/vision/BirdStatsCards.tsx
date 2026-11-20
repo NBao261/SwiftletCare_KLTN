@@ -1,5 +1,6 @@
-import { RepeatIcon, SignInIcon, SignOutIcon, type Icon as PhosphorIcon } from '@phosphor-icons/react'
-import { Card, Badge } from '@/components/ui'
+import { ArrowDownIcon, ArrowUpIcon, RepeatIcon, SignInIcon, SignOutIcon, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { Badge, Card } from '@/components/ui'
+import { intlLocale, t } from '@/i18n'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
 import { formatReturnRate } from '@/lib/helpers'
@@ -81,16 +82,22 @@ function StatCard({
             <p className="text-xs text-warmGray">{hint}</p>
           </div>
         </div>
-        {deltaPercent !== null && (
-          <Badge tone={deltaPercent >= 0 ? 'positive' : 'critical'}>
-            {deltaPercent >= 0 ? '+' : ''}{deltaPercent}% so với hôm qua
-          </Badge>
-        )}
       </div>
       <p className="mt-1 leading-none">
         <span className="text-3xl font-extrabold tracking-tight text-charcoal">{value}</span>
         <span className="ml-2 text-sm font-medium text-warmGray">{unit}</span>
       </p>
+      {/* So với hôm qua: dòng phụ dưới số (FO-05); 0 % màu trung tính, tăng/giảm kèm mũi tên chứ không chỉ màu (CH-05) */}
+      {deltaPercent !== null && (
+        <p className="mt-1 flex items-center gap-1 text-small font-medium text-warmGray">
+          {deltaPercent > 0 && <ArrowUpIcon size={14} weight="bold" className="text-accent-800" aria-hidden="true" />}
+          {deltaPercent < 0 && <ArrowDownIcon size={14} weight="bold" className="text-safetyOrange" aria-hidden="true" />}
+          <span className={cn('tabular-nums', deltaPercent > 0 && 'text-accent-800', deltaPercent < 0 && 'text-safetyOrange')}>
+            {deltaPercent > 0 ? '+' : ''}{deltaPercent.toLocaleString(intlLocale())} %
+          </span>
+          {t('so với hôm qua')}
+        </p>
+      )}
     </Card>
   )
 }

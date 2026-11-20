@@ -98,6 +98,17 @@ export default function WorkOrderTable({
       pageSize={WORK_ORDER_PAGE_SIZE}
       emptyNotice={t('list.emptyTitle')}
       serverPagination={{ page, total, onChange: onPageChange }}
+      mobileCard={workOrder => (
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="text-body font-semibold text-charcoal">{workOrder.title}</p>
+            <p className="text-small text-warmGray">{houseNames.get(workOrder.house_id) ?? NO_VALUE} · {dateTime(workOrder.opened_at)}</p>
+            <div><Badge tone={WORK_ORDER_STATUS_TONE[workOrder.status]}>{t(`status.${workOrder.status}`)}</Badge></div>
+          </div>
+          {/* Menu ⋯ dùng chung với cột Thao tác */}
+          {columns[columns.length - 1].render(workOrder, 0)}
+        </div>
+      )}
     />
   );
 }

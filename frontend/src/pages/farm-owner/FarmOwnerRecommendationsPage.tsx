@@ -124,18 +124,13 @@ export default function FarmOwnerRecommendationsPage(): JSX.Element {
   return (
     <div className="flex flex-1 flex-col gap-6">
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} lockZone />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} lockZone />
-      </div>
+      </HeaderActions>
 
       <SectionCard
         className="flex-1"
-        title={t('page.title')}
-        description={t('page.subtitle')}
+        description={t('page.short')}
+        help={t('page.subtitle')}
         action={(
           <SelectMenu
             ariaLabel={t('page.statusLabel')}

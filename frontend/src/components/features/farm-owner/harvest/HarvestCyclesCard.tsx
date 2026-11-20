@@ -90,6 +90,20 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
       emptyNotice={t('cycle.emptyTitle')}
       emptyContent={<TableEmptyState title={t('cycle.emptyTitle')} description={t('cycle.emptyDesc')} />}
       serverPagination={{ page, total, onChange: setPage }}
+      mobileCard={cycle => (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 text-body font-semibold text-charcoal">{placeByZone.get(cycle.zone_id) ?? NO_VALUE}</p>
+            <Badge tone={STATUS_TONE[cycle.status]}>{t(`cycleStatus.${cycle.status}`)}</Badge>
+          </div>
+          <p className="text-small text-warmGray tabular-nums">{period(cycle)}</p>
+          {cycle.closing_harvest && (
+            <p className="text-small text-graphite tabular-nums">
+              {t('cycle.yield', { nests: num(cycle.closing_harvest.nest_count), kg: kilograms(cycle.closing_harvest.weight_grams) })}
+            </p>
+          )}
+        </div>
+      )}
     />
   );
   if (isLoading) body = <LoadingSkeleton count={3} className="h-12 w-full" />;

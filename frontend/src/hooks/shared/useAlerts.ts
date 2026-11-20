@@ -92,7 +92,10 @@ export function useAcknowledgeAlert() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, note, cause }: { id: string; note?: string; cause?: SiteCause }) => alertApi.acknowledge(id, note, cause),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['alerts'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['alerts'] })
+      void queryClient.invalidateQueries({ queryKey: ['farm-overview'] })
+    },
   })
 }
 

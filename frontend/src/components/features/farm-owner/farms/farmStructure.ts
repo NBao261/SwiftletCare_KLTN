@@ -361,5 +361,6 @@ export function mergeMetrics(live: ZoneMetrics | undefined, avg: ZoneMetrics | u
     nh3: live.nh3 ?? avg.nh3,
     co2: live.co2 ?? avg.co2,
     sound: live.sound ?? avg.sound,
+    timestamp: live.timestamp ?? avg.timestamp,
   }
 }

@@ -134,6 +134,9 @@ describe('helpers', () => {
       temperature: 31, humidity: 85, light: undefined, nh3: undefined, co2: undefined, sound: undefined,
     })
     expect(mergeMetrics(undefined, { humidity: 85 })).toEqual({ humidity: 85 })
+    // Giữ thời điểm số đo để Tổng quan ghi "Cập nhật HH:mm"
+    expect(mergeMetrics({ temperature: 31, timestamp: 't1' }, { humidity: 85 })?.timestamp).toBe('t1')
+    expect(mergeMetrics({ temperature: 31 }, { humidity: 85, timestamp: 't0' })?.timestamp).toBe('t0')
   })
 
   it('wifiQuality theo RSSI', () => {

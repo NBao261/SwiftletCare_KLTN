@@ -206,19 +206,31 @@ export function useFarmZones(farmId: string | undefined) {
 
 export interface AllZone extends Zone { houseName: string; farmId: string; farmName: string }
 
+// Nhà và Zone cùng khoá cache với useFarmStructure, useScopeFilter: mỗi nhà chỉ gọi 1 lần dù nhiều hook cùng cần (A-14)
+const STRUCTURE_STALE_MS = 5 * 60 * 1000
+
 // Zone phẳng của mọi farm tài khoản xem được; backend không có API gộp nên gọi listHouses / listZones từng farm ở client
 export function useAllZones() {
   const { data: farms } = useFarms()
+  const queryClient = useQueryClient()
   return useQuery({
     queryKey: ['all-zones', farms?.map(farm => farm._id)],
     queryFn: async () => {
       const perFarm = await Promise.all(
         (farms ?? []).map(async farm => {
-          const houses = (await farmApi.listHouses(farm._id)).data.data
+          const houses = await queryClient.fetchQuery({
+            queryKey: ['houses', farm._id],
+            queryFn: () => farmApi.listHouses(farm._id).then(response => response.data.data),
+            staleTime: STRUCTURE_STALE_MS,
+          })
           const perHouse = await Promise.all(
             houses.map(house =>
-              farmApi.listZones(house._id).then(response =>
-                response.data.data.map(zone => ({ ...zone, houseName: house.name, farmId: farm._id, farmName: farm.name })),
+              queryClient.fetchQuery({
+                queryKey: ['zones', house._id],
+                queryFn: () => farmApi.listZones(house._id).then(response => response.data.data),
+                staleTime: STRUCTURE_STALE_MS,
+              }).then(zones =>
+                zones.map(zone => ({ ...zone, houseName: house.name, farmId: farm._id, farmName: farm.name })),
               ),
             ),
           )
