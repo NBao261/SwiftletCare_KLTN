@@ -304,4 +304,38 @@ describe('nhóm tham số mới (BR-22, Report 3 4.2.15)', () => {
     await send('put', `/expert-activity/reviews/${second!._id}/revert`, t.expert).expect(200)
     expect((await CameraNode.findById(camera._id).lean())!.counting_ring).toMatchObject({ points: RING, into_ring_is_exit: false })
   })
+
+  it('mức giảm tỷ lệ chim về và mức chỉ số sức khoẻ: hoàn tác trả về giá trị gốc', async () => {
+    const { house, t, send } = await seed()
+    const levelsBefore = (await send('get', `/farms/houses/${house._id}/health-levels`, t.owner).expect(200)).body.data.health_levels
+    await send('put', `/farms/houses/${house._id}/bird-count-tuning`, t.owner, { return_rate_drop_pct: 30 }).expect(200)
+    await send('put', `/farms/houses/${house._id}/health-levels`, t.owner, { noise_clear: 5 }).expect(200)
+    for (const group of ['return_rate_drop', 'health_levels']) {
+      const opened = await review(house._id, group)
+      await send('put', `/expert-activity/reviews/${opened!._id}/revert`, t.expert).expect(200)
+    }
+    const saved = (await House.findById(house._id).lean())!
+    expect(saved.bird_count_tuning.return_rate_drop_pct).toBe(20)
+    expect(saved.health_levels.noise_clear).toBe(levelsBefore.noise_clear)
+  })
+
+  it('lưu lại đúng giá trị đang có không mở mục duyệt', async () => {
+    const { zone, t, send } = await seed()
+    await send('put', `/farms/zones/${zone._id}/detection-tuning/reset`, t.owner).expect(200)
+    expect(await ParameterReview.countDocuments({})).toBe(0)
+  })
+
+  it('Farm Technician vẽ lại vòng khi mục của Farm Owner đang chờ: mục ghi vòng mới, chuyên gia duyệt đúng vòng đang chạy', async () => {
+    const { farm, house, t, send } = await seed()
+    const technician = await User.create({ email: `tech-ring-${seq}@test.vn`, password_hash: 'password123', full_name: 'KTV', role: 'FARM_TECHNICIAN' })
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: technician._id, role: 'FARM_TECHNICIAN' } } })
+    await House.updateOne({ _id: house._id }, { technicians: [{ user_id: technician._id, primary: true }] })
+    const camera = await CameraNode.create({ device_id: `cam-t-${seq}`, house_id: house._id, status: 'ONLINE' })
+    const path = `/devices/camera-nodes/${camera._id}/counting-ring`
+    await send('put', path, t.owner, { points: RING, into_ring_is_exit: true }).expect(200)
+    await send('put', path, tokenFor(technician._id, 'FARM_TECHNICIAN'), { points: RING.slice(0, 3), into_ring_is_exit: false }).expect(200)
+    expect(await review(camera._id, 'counting_ring')).toMatchObject({
+      status: 'PENDING_REVIEW', new_values: { ring: { points: RING.slice(0, 3), into_ring_is_exit: false } },
+    })
+  })
 })

@@ -83,7 +83,7 @@ tags:
   - name: Maintenance
     description: "OPS-FR-005…008, ALERT-FR-016, BR-45 (bảo trì phòng ngừa: kế hoạch theo giờ chạy, số lần đóng cắt hoặc theo lịch, kèm checklist; đến hạn thì có `MAINTENANCE_DUE` và Work Order phòng ngừa; Farm Owner duyệt Work Order là một lần ghi bảo trì). Farm Owner tạo, sửa, xoá kế hoạch; Domain Expert đọc và góp ý; Farm Technician đọc kế hoạch của nhà được giao; Administrator → 403 (Report 3 §2.4)"
   - name: ExpertActivity
-    description: "EXPERT-FR-009 — lịch sử quyết định của Domain Expert trên một farm (và của Farm Owner khi farm chưa có chuyên gia, BR-22); chỉ Farm Owner và Domain Expert của farm"
+    description: "EXPERT-FR-009 — lịch sử quyết định của Domain Expert trên một farm (và các quyết định Farm Owner cũng làm được, BR-22); mục duyệt, đề xuất, lời nhắc chuyên gia; chỉ Farm Owner và Domain Expert của farm"
   - name: Analytics
     description: "ANALYTICS-FR-001..005, VISION-FR-008..011 (biểu đồ môi trường, so sánh đa Zone, đếm chim/return-rate — chờ dữ liệu thật từ module VISION) — Farm Owner, Domain Expert của farm; Farm Technician chỉ ở nhà được giao (AUTH-FR-004, 013), trừ `/analytics/control/suggestion`; Administrator → 403 (Report 3 §2.4, FARM-FR-009)"
   - name: Harvests
@@ -93,9 +93,9 @@ tags:
   - name: Notifications
     description: EXPERT-FR-006/007 (hộp thông báo trong ứng dụng của chính người gọi — mọi role đã đăng nhập)
   - name: Profiles
-    description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: chỉ Domain Expert soạn, duyệt, lưu trữ — Report 3 §2.4, BR-22 không cho Farm Owner làm thay; Farm Owner xem và áp cho các nhà) — Farm Technician, Administrator → 403"
+    description: "EXPERT-FR-014, 015 (hồ sơ cấu hình: Domain Expert và Farm Owner soạn bản nháp, chỉ Domain Expert duyệt và lưu trữ — BR-22; Farm Owner áp cho các nhà) — Farm Technician, Administrator → 403"
   - name: Recommendations
-    description: "EXPERT-FR-016…019 (luật khuyến nghị: Domain Expert viết; khuyến nghị: Farm Owner chấp nhận hoặc từ chối, chuyên gia và thợ của nhà chỉ đọc) — Administrator → 403"
+    description: "EXPERT-FR-016…019 (luật khuyến nghị: Domain Expert viết và bật; Farm Owner viết thì luật chờ chuyên gia bật, BR-22; khuyến nghị: Farm Owner chấp nhận hoặc từ chối, chuyên gia và thợ của nhà chỉ đọc) — Administrator → 403"
 
 
 security:
@@ -2056,6 +2056,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Farm chưa có chuyên gia", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /farms/houses/{houseId}/weather-rules/proposal/approve:
     parameters:
       - { $ref: "#/components/parameters/HouseId" }
@@ -2064,7 +2065,17 @@ paths:
       summary: "Duyệt đề xuất luật bù phun sương (ENV-FR-030, BR-22) — DOMAIN_EXPERT"
       description: |
         Áp bộ luật đề xuất như khi chuyên gia tự đặt (`PUT …/weather-rules`: lịch sử, audit `WEATHER_RULES_UPDATED`,
-        báo Farm Owner) và bỏ đề xuất. Nhà không có đề xuất → 409; Farm Owner, Farm Technician → 403.
+        báo Farm Owner "duyệt đề xuất") và bỏ đề xuất. `proposed_at` là của bản chuyên gia đã xem: đề xuất bị gửi lại,
+        đã được duyệt hay từ chối trong lúc đó → 409, không áp bản chưa xem. Farm Owner, Farm Technician → 403.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [proposed_at]
+              properties:
+                proposed_at: { type: string, format: date-time, description: "`proposal.proposed_at` của GET …/weather-rules" }
       responses:
         "200":
           description: Luật mới của nhà
@@ -2081,7 +2092,8 @@ paths:
                           rules: { type: array, items: { $ref: "#/components/schemas/WeatherRule" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409": { description: "Nhà không có đề xuất đang chờ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { description: "Đề xuất đã đổi hoặc đã được xử lý", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /farms/houses/{houseId}/weather-rules/proposal/reject:
     parameters:
       - { $ref: "#/components/parameters/HouseId" }
@@ -2090,16 +2102,18 @@ paths:
       summary: "Từ chối đề xuất luật bù phun sương (ENV-FR-030, BR-22) — DOMAIN_EXPERT"
       description: |
         Bỏ đề xuất, luật đang chạy giữ nguyên; audit `WEATHER_RULES_PROPOSAL_REJECTED` (vào lịch sử hoạt động
-        chuyên gia), báo Farm Owner kèm lý do (EXPERT-FR-009). Lý do bắt buộc (422); nhà không có đề xuất → 409.
+        chuyên gia), báo Farm Owner kèm lý do (EXPERT-FR-009). Lý do bắt buộc (422); `proposed_at` của bản đã xem như
+        `…/approve`, đề xuất đổi hoặc đã được xử lý → 409.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [note]
+              required: [note, proposed_at]
               properties:
                 note: { type: string, maxLength: 1000 }
+                proposed_at: { type: string, format: date-time }
       responses:
         "200":
           description: Luật đang chạy của nhà
@@ -2116,7 +2130,7 @@ paths:
                           rules: { type: array, items: { $ref: "#/components/schemas/WeatherRule" } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409": { description: "Nhà không có đề xuất đang chờ", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { description: "Đề xuất đã đổi hoặc đã được xử lý", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
   /farms/houses/{houseId}/bird-count-tuning:
     put:
@@ -6096,8 +6110,8 @@ paths:
         (`COUNTING_SCHEDULE_UPDATED`).
         Mỗi quyết định một dòng: hoàn lại hoặc duyệt đề xuất chỉ hiện `REVIEW_REVERTED` / `PROPOSAL_APPROVED`,
         không thêm dòng đổi ngưỡng / hệ số của chính thao tác đó.
-        Quyết định mà Farm Owner làm thay khi farm chưa có chuyên gia
-        (BR-22: kết luận cảnh báo, tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, mức chỉ số sức khỏe, luật bù thời tiết) cũng được liệt kê,
+        Quyết định Farm Owner cũng làm được (BR-22, Report 3 4.2.15: kết luận cảnh báo khi farm chưa có chuyên gia,
+        tham số phát hiện, mức giảm tỷ lệ chim về, vòng đếm, lịch đếm, mức chỉ số sức khỏe, luật bù thời tiết) cũng được liệt kê,
         với `actor_role = FARM_OWNER`. Mới nhất trước. Technician, Administrator → 403.
       parameters:
         - { name: farmId, in: query, required: true, schema: { type: string } }
@@ -6107,7 +6121,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED, WEATHER_RULES_UPDATED, CONFIG_PROFILE_APPROVED, COUNTING_SCHEDULE_UPDATED]
+            enum: [THRESHOLD_UPDATED, FUZZY_TUNING_UPDATED, DETECTION_TUNING_UPDATED, BIRD_COUNT_TUNING_UPDATED, COUNTING_RING_UPDATED, ALERT_VERDICT_SET, HEALTH_REPORT_CONCLUDED, REVIEW_ACCEPTED, REVIEW_REVERTED, PROPOSAL_APPROVED, PROPOSAL_REJECTED, HEALTH_LEVELS_UPDATED, WEATHER_RULES_UPDATED, CONFIG_PROFILE_APPROVED, COUNTING_SCHEDULE_UPDATED, WEATHER_RULES_PROPOSAL_REJECTED]
         - { name: zoneId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
         - { $ref: "#/components/parameters/Page" }
@@ -6137,8 +6151,8 @@ paths:
         Kết luận một cảnh báo suy luận (`alert`, EXPERT-FR-003), viết kết luận báo cáo sức khoẻ (`health_report`) hoặc
         mùa vụ đã đóng (`harvest_cycle`, EXPERT-FR-006): báo trong ứng dụng cho mọi Domain Expert của farm
         (`ref.kind` = `kind`), ghi `expert_reminded_at` lên bản ghi, audit `EXPERT_REMINDED`. Mỗi việc nhắc một lần.
-        Cảnh báo đo trực tiếp → 400; việc đã xong, chu kỳ còn mở, farm chưa có chuyên gia, đã nhắc → 409;
-        không phải Farm Owner của farm → 403.
+        Không phải Farm Owner của farm → 403 (kiểm trước, không lộ việc của farm khác); cảnh báo đo trực tiếp → 400;
+        việc đã xong, chu kỳ còn mở, farm chưa có chuyên gia, đã nhắc → 409.
       requestBody:
         required: true
         content:
@@ -6168,6 +6182,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Việc đã xong, chưa đến lúc, farm chưa có chuyên gia hoặc đã nhắc", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { description: "Chưa gửi được thông báo nào, lượt nhắc được trả lại", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
   /expert-activity/reviews:
     get:
       tags: [ExpertActivity]
@@ -6220,9 +6236,11 @@ paths:
       tags: [ExpertActivity]
       summary: "Chuyên gia hoàn lại thay đổi của Farm Owner (EXPERT-FR-010, SM-10) — DOMAIN_EXPERT"
       description: |
-        Khôi phục giá trị gốc (trước lần sửa đầu của Farm Owner) của nhóm `thresholds` hoặc `fuzzy`, gửi
-        xuống mọi thiết bị của Zone, lịch sử ghi `source=EXPERT_REVERT`; `PENDING_REVIEW` → `REVERTED`;
-        báo Farm Owner, audit `REVIEW_REVERTED`. Farm Owner, Technician, Administrator → 403.
+        Khôi phục giá trị gốc (trước lần sửa đầu của Farm Owner) của nhóm, qua đúng hàm cập nhật của nhóm đó:
+        `thresholds`, `fuzzy`, `detection` gửi lại mọi controller của Zone (ngưỡng và hệ số ghi `source=EXPERT_REVERT`);
+        `return_rate_drop`, `health_levels`, `counting_schedule` ghi lại cho nhà (lịch đếm gửi lại nút AI của nhà);
+        `counting_ring` gửi lại nút AI của camera. `PENDING_REVIEW` → `REVERTED`; báo Farm Owner, audit `REVIEW_REVERTED`.
+        Farm Owner, Technician, Administrator → 403.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
         "200":
@@ -6234,10 +6252,10 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { $ref: "#/components/schemas/ParameterReview" }
-        "400": { description: "Giá trị không qua kiểm khoảng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "400": { description: "Giá trị gốc của ngưỡng hoặc hệ số không còn qua kiểm khoảng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409": { description: "Mục duyệt đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { description: "Mục duyệt đã đóng, hoặc vòng đếm vẽ trên camera chưa có vòng cũ (không có gì để trả về)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /expert-activity/proposals:
@@ -6760,7 +6778,7 @@ components:
           properties: { full_name: { type: string }, email: { type: string, format: email } }
         has_active_expert:
           type: boolean
-          description: "Chỉ có ở GET /farms — farm có ít nhất một Domain Expert còn hoạt động (chuyên gia bị khoá không tính). false thì Farm Owner làm thay các quyết định của chuyên gia (BR-22), như xem ngày lệch (EXPERT-FR-022)"
+          description: "Chỉ có ở GET /farms — farm có ít nhất một Domain Expert còn hoạt động (chuyên gia bị khoá không tính). true thì thay đổi của Farm Owner mở mục duyệt, luật thời tiết, hồ sơ, luật khuyến nghị chờ chuyên gia duyệt; false thì Farm Owner làm thay các quyết định của chuyên gia (BR-22)"
         members:
           type: array
           description: "GET /farms/:id với DOMAIN_EXPERT chỉ trả bản ghi của chính người đó (không lộ email thành viên khác)"
@@ -7296,7 +7314,7 @@ components:
         house_id: { type: string }
         health_levels: { $ref: "#/components/schemas/HealthLevels" }
         defaults: { $ref: "#/components/schemas/HealthLevels" }
-        can_edit: { type: boolean, description: "Người gọi sửa được mức không: Domain Expert luôn true; Farm Owner true khi farm không có chuyên gia còn hoạt động (BR-22) — đúng điều kiện của PUT" }
+        can_edit: { type: boolean, description: "Người gọi sửa được mức không: Domain Expert và Farm Owner luôn true (BR-22, Report 3 4.2.15; farm có chuyên gia thì thay đổi của Farm Owner mở mục duyệt) — đúng điều kiện của PUT" }
 
     HealthReason:
       type: object

@@ -230,23 +230,27 @@ describe('BR-22, BR-38 — đề xuất luật bù phun sương của Farm Owner
     expect(before.proposal).toMatchObject({ rules: [expect.objectContaining({ min: 33 })] })
     expect(await Notification.countDocuments({ user_id: expert._id, 'ref.kind': 'weather_rules' })).toBe(1)
 
-    await proposal(t.owner, '/approve').expect(403)
-    const approved = await proposal(t.expert, '/approve')
+    const seen = { proposed_at: sent.body.data.proposed_at }
+    await proposal(t.owner, '/approve', seen).expect(403)
+    await proposal(t.expert, '/approve').expect(422)
+    const approved = await proposal(t.expert, '/approve', seen)
     expect(approved.status).toBe(200)
     expect(approved.body.data.rules).toHaveLength(1)
     const saved = (await House.findById(house._id).lean())!
     expect(saved.weather_rules_proposal).toBeNull()
     expect(saved.weather_rules_history.at(-1)!.changed_by_role).toBe('DOMAIN_EXPERT')
-    expect(await Notification.countDocuments({ user_id: owner._id })).toBe(1)
-    await proposal(t.expert, '/approve').expect(409)
+    const notice = await Notification.findOne({ user_id: owner._id }).lean()
+    expect(notice!.title).toMatch(/duyệt đề xuất luật bù phun sương/)
+    await proposal(t.expert, '/approve', seen).expect(409)
   })
 
   it('chuyên gia từ chối phải ghi lý do (422); từ chối thì bỏ đề xuất, luật đang chạy giữ nguyên, chủ được báo', async () => {
     const { house, put, proposal, owner, t } = await seed()
     await put(t.expert, [HOT_RULE]).expect(200)
-    await proposal(t.owner, '', { rules: [{ ...HOT_RULE, offset_pct: 8 }] }).expect(201)
-    await proposal(t.expert, '/reject', { note: ' ' }).expect(422)
-    await proposal(t.expert, '/reject', { note: 'Mùa này chưa cần phun thêm' }).expect(200)
+    const sent = await proposal(t.owner, '', { rules: [{ ...HOT_RULE, offset_pct: 8 }] }).expect(201)
+    const seen = { proposed_at: sent.body.data.proposed_at }
+    await proposal(t.expert, '/reject', { ...seen, note: ' ' }).expect(422)
+    await proposal(t.expert, '/reject', { ...seen, note: 'Mùa này chưa cần phun thêm' }).expect(200)
 
     const saved = (await House.findById(house._id).lean())!
     expect(saved.weather_rules_proposal).toBeNull()
@@ -254,6 +258,40 @@ describe('BR-22, BR-38 — đề xuất luật bù phun sương của Farm Owner
     expect(await AuditLog.countDocuments({ action: 'WEATHER_RULES_PROPOSAL_REJECTED' })).toBe(1)
     const notice = await Notification.findOne({ user_id: owner._id }).sort({ created_at: -1 }).lean()
     expect(notice!.body).toMatch(/Mùa này chưa cần phun thêm/)
+  })
+
+  it('Farm Owner gửi lại trong lúc chuyên gia đang xem: duyệt bản cũ → 409, bản mới vẫn chờ, luật không đổi', async () => {
+    const { house, proposal, t } = await seed()
+    const first = await proposal(t.owner, '', { rules: [HOT_RULE] }).expect(201)
+    await new Promise(resolve => setTimeout(resolve, 5))
+    await proposal(t.owner, '', { rules: [{ ...HOT_RULE, offset_pct: 9 }] }).expect(201)
+    await proposal(t.expert, '/approve', { proposed_at: first.body.data.proposed_at }).expect(409)
+    const saved = (await House.findById(house._id).lean())!
+    expect(saved.weather_rules).toEqual([])
+    expect(saved.weather_rules_proposal!.rules).toEqual([expect.objectContaining({ offset_pct: 9 })])
+  })
+
+  it('duyệt và từ chối cùng lúc: chỉ một cái thành công, không có cả luật mới lẫn audit từ chối', async () => {
+    const { house, proposal, t } = await seed()
+    const sent = await proposal(t.owner, '', { rules: [HOT_RULE] }).expect(201)
+    const seen = { proposed_at: sent.body.data.proposed_at }
+    const [approve, reject] = await Promise.all([
+      proposal(t.expert, '/approve', seen), proposal(t.expert, '/reject', { ...seen, note: 'Chưa cần' }),
+    ])
+    expect([approve.status, reject.status].sort()).toEqual([200, 409])
+    const rules = (await House.findById(house._id).lean())!.weather_rules
+    const rejected = await AuditLog.countDocuments({ action: 'WEATHER_RULES_PROPOSAL_REJECTED' })
+    expect(rules.length + rejected).toBe(1)
+  })
+
+  it('chuyên gia đặt luật trực tiếp thì đề xuất đang chờ bị bỏ, audit ghi lại và chủ được báo', async () => {
+    const { proposal, put, owner, t } = await seed()
+    await proposal(t.owner, '', { rules: [HOT_RULE] }).expect(201)
+    await put(t.expert, [{ ...HOT_RULE, offset_pct: 3 }]).expect(200)
+    const audit = await AuditLog.findOne({ action: 'WEATHER_RULES_UPDATED' }).lean()
+    expect(audit!.metadata).toMatchObject({ dropped_proposal: { rules: [expect.objectContaining({ offset_pct: 5 })] } })
+    const notice = await Notification.findOne({ user_id: owner._id }).lean()
+    expect(notice!.body).toMatch(/đề xuất đang chờ của chủ nhà yến đã bỏ/)
   })
 
   it('farm chưa có chuyên gia: không có đề xuất, chủ đặt trực tiếp (409); thợ và chuyên gia không gửi đề xuất (403)', async () => {

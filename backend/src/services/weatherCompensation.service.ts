@@ -74,6 +74,8 @@ function buildRules(house: IHouse, rules: Array<WeatherRuleInput & { _id?: strin
 
 export async function setWeatherRules(
   houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>,
+  // Đặt từ đề xuất đã duyệt: câu thông báo cho Farm Owner nói rõ là duyệt đề xuất
+  what = 'đặt luật bù phun sương theo thời tiết',
 ) {
   const { house, farm } = await assertHouseAccess(houseId, user)
   // BR-22, BR-38 — Farm Owner đặt trực tiếp chỉ khi farm chưa có chuyên gia; có chuyên gia thì gửi đề xuất
@@ -83,7 +85,8 @@ export async function setWeatherRules(
 
   const before = ruleView(house.weather_rules)
   house.set('weather_rules', next)
-  // Chuyên gia tự đặt luật thì đề xuất đang chờ không còn khớp: bỏ
+  // Chuyên gia tự đặt luật thì đề xuất đang chờ không còn khớp: bỏ, ghi lại trong audit và báo Farm Owner
+  const dropped = house.weather_rules_proposal ? proposalView(house.weather_rules_proposal) : null
   house.weather_rules_proposal = null
   const after = ruleView(house.weather_rules)
   house.weather_rules_history.push({
@@ -94,11 +97,12 @@ export async function setWeatherRules(
   await house.save()
 
   const auditId = await logAction(user._id, 'WEATHER_RULES_UPDATED', 'house', String(house._id), {
-    before, after, house_id: String(house._id),
+    before, after, house_id: String(house._id), ...(dropped && { dropped_proposal: dropped }),
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'đặt luật bù phun sương theo thời tiết', place: `Nhà "${house.name}"`,
-    detail: `${after.filter(r => r.active).length} luật đang bật`,
+    what, place: `Nhà "${house.name}"`,
+    detail: [`${after.filter(r => r.active).length} luật đang bật`, dropped && 'đề xuất đang chờ của chủ nhà yến đã bỏ']
+      .filter(Boolean).join(', '),
   })
   return { house_id: String(house._id), rules: after }
 }
@@ -125,25 +129,35 @@ export async function proposeWeatherRules(houseId: string, user: CurrentUser, ru
   return proposalView(house.weather_rules_proposal)
 }
 
-/** Đề xuất đang chờ của nhà, đã kiểm: Domain Expert của farm */
-async function loadProposal(houseId: string, user: CurrentUser) {
+/**
+ * Lấy đề xuất chuyên gia đã xem (`proposed_at` của bản trên màn) ra khỏi nhà bằng một lệnh ghi có điều kiện: Farm Owner
+ * vừa gửi lại, hoặc chuyên gia khác vừa duyệt hay từ chối thì 409, không áp nhầm bản chưa xem
+ */
+async function takeProposal(houseId: string, user: CurrentUser, seenAt: string) {
   const { house, farm } = await assertHouseAccess(houseId, user)
   if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ Domain Expert duyệt đề xuất luật bù phun sương')
-  if (!house.weather_rules_proposal) throw ConflictError('Nhà này không có đề xuất đang chờ')
-  return { house, farm, proposal: house.weather_rules_proposal }
+  const taken = await House.findOneAndUpdate(
+    { _id: house._id, 'weather_rules_proposal.proposed_at': new Date(seenAt) },
+    { weather_rules_proposal: null },
+  ).select('weather_rules_proposal').lean()
+  if (!taken?.weather_rules_proposal) throw ConflictError('Đề xuất đã đổi hoặc đã được xử lý, tải lại trang')
+  return { house, farm, proposal: taken.weather_rules_proposal }
 }
 
-/** Chuyên gia duyệt: áp bộ luật đề xuất như khi tự đặt (lịch sử, audit, báo Farm Owner — EXPERT-FR-009) */
-export async function approveWeatherRulesProposal(houseId: string, user: CurrentUser) {
-  const { proposal } = await loadProposal(houseId, user)
-  return setWeatherRules(houseId, user, proposal.rules)
+/** Chuyên gia duyệt: áp bộ luật đề xuất như khi tự đặt (lịch sử, audit, báo Farm Owner — EXPERT-FR-009); áp lỗi thì trả đề xuất lại */
+export async function approveWeatherRulesProposal(houseId: string, user: CurrentUser, seenAt: string) {
+  const { house, proposal } = await takeProposal(houseId, user, seenAt)
+  try {
+    return await setWeatherRules(houseId, user, proposal.rules, 'duyệt đề xuất luật bù phun sương của chủ nhà yến')
+  } catch (err) {
+    await House.updateOne({ _id: house._id, weather_rules_proposal: null }, { weather_rules_proposal: proposal })
+    throw err
+  }
 }
 
 /** Chuyên gia từ chối kèm lý do (bắt buộc, 422 ở route): bỏ đề xuất, luật đang chạy giữ nguyên, báo Farm Owner */
-export async function rejectWeatherRulesProposal(houseId: string, user: CurrentUser, note: string) {
-  const { house, farm, proposal } = await loadProposal(houseId, user)
-  house.weather_rules_proposal = null
-  await house.save()
+export async function rejectWeatherRulesProposal(houseId: string, user: CurrentUser, note: string, seenAt: string) {
+  const { house, farm, proposal } = await takeProposal(houseId, user, seenAt)
   const auditId = await logAction(user._id, 'WEATHER_RULES_PROPOSAL_REJECTED', 'house', String(house._id), {
     rules: proposal.rules, note: note.trim(), house_id: String(house._id),
   }, { farmId: String(farm._id) })

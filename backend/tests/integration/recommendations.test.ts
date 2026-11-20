@@ -112,6 +112,13 @@ describe('EXPERT-FR-016 — rules', () => {
     expect((await call('put', `/rules/${id}`, t.owner, { ...NH3_RULE, value: 6 })).status).toBe(403)
   })
 
+  it('the Farm Owner cannot rewrite a rule the expert turned off (BR-22)', async () => {
+    const { farm, t, call } = await seed()
+    const rule = await call('post', '/rules', t.expert, { farm_id: farm._id, ...NH3_RULE, active: false }).expect(201)
+    await call('put', `/rules/${rule.body.data._id}`, t.owner, { ...NH3_RULE, value: 9 }).expect(403)
+    expect((await call('get', `/rules?farmId=${farm._id}`, t.owner)).body.data[0]).toMatchObject({ value: NH3_RULE.value, active: false })
+  })
+
   it('on a farm without an expert the Farm Owner turns its own rule on (BR-22)', async () => {
     const { farm, t, call } = await seed({ withExpert: false })
     const created = await call('post', '/rules', t.owner, { farm_id: farm._id, ...NH3_RULE })

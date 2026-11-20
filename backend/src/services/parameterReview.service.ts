@@ -63,6 +63,11 @@ export async function trackParameterChange(
       )
       return
     }
+    // Kỹ thuật viên vẽ lại vòng tại nhà: mục đang chờ ghi vòng mới, để chuyên gia duyệt đúng vòng đang chạy
+    if (user.role === 'FARM_TECHNICIAN') {
+      await ParameterReview.updateOne({ target_id: targetId, group, status: 'PENDING_REVIEW' }, { new_values: after })
+      return
+    }
     if (user.role !== 'FARM_OWNER' || !(await farmHasActiveExpert(farm))) return
 
     const updateOpen = () => ParameterReview.findOneAndUpdate(
@@ -70,6 +75,8 @@ export async function trackParameterChange(
       { new_values: after, changed_by: user._id },
     )
     if (await updateOpen()) return
+    // Lưu lại đúng giá trị đang có (hoặc đưa về mặc định khi đã ở mặc định): không có gì để chuyên gia duyệt
+    if (JSON.stringify(before) === JSON.stringify(after)) return
 
     let review
     try {
@@ -80,12 +87,13 @@ export async function trackParameterChange(
     } catch (err) {
       // 2 lần sửa đầu tiên tới cùng lúc: lần kia vừa mở mục (unique index) — ghi giá trị mới vào mục đó
       if ((err as { code?: number }).code !== 11000) throw err
-      await updateOpen()
-      return
+      if (await updateOpen()) return
+      // Trùng khoá mà không có mục nào của đối tượng này: chỉ mục cũ { zone_id, group } còn trong DB
+      throw new Error('Chỉ mục cũ của mục duyệt còn: chạy npm run migrate:review-targets trước khi khởi động backend')
     }
     await notifyExpertsOfReview(farm._id, user, group, place, String(review._id))
   } catch (err) {
-    logger.warn('Ghi mục duyệt thay đổi của Farm Owner thất bại', { err, farmId: String(farm._id), group })
+    logger.error('Ghi mục duyệt thay đổi của Farm Owner thất bại', { err, farmId: String(farm._id), group })
   }
 }
 

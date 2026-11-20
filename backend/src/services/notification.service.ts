@@ -54,10 +54,10 @@ export async function findRecipients(farmId: string) {
   return User.find({ _id: { $in: userIds }, ...SIGN_IN_FILTER }).lean()
 }
 
-/** Domain Expert của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`) */
+/** Domain Expert còn hoạt động của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`; chuyên gia bị khoá không nhận) */
 export async function findFarmExperts(farmId: unknown): Promise<string[]> {
-  const farm = await Farm.findById(farmId).select('members').lean()
-  return (farm?.members ?? []).filter(m => m.role === 'DOMAIN_EXPERT').map(m => String(m.user_id))
+  const farm = await Farm.findById(farmId).select('members')
+  return farm ? activeExpertIds(farm) : []
 }
 
 /**

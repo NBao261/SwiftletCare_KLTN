@@ -29,7 +29,7 @@ npm run migrate:telemetry-unique  # one-off before deploying G-07: drops duplica
 npm run migrate:relay-overrides   # one-off after deploying G-06 part 2: controllers MANUAL without `relays` get a per-relay expiry from their open override logs, else from the old `override_expiry`, else go back to AUTO (idempotent)
 npm run migrate:farm-technician   # one-off after deploying G-20: role TECHNICIAN → FARM_TECHNICIAN with no farm membership, refresh tokens revoked; audit history kept (idempotent)
 npm run migrate:harvest-confirmed # one-off after deploying G-20: DRAFT harvest batches entered by Farm Owners become CONFIRMED (confirmed_by = creator, confirmed_at = created_at); technicians' batches stay DRAFT (idempotent)
-npm run migrate:review-targets    # one-off after deploying G-31: review items get `target_id`/`house_id`, the index { zone_id, group } becomes { target_id, group } (idempotent)
+npm run migrate:review-targets    # one-off BEFORE starting the G-31 backend: review items get `target_id`/`house_id`, the index { zone_id, group } becomes { target_id, group }; with the old index left, a second house-level review of the same group fails (idempotent)
 npm run migrate:erd-fields        # one-off after deploying G-14: users `is_active` → `status` (ACTIVE, LOCKED with `locked_*`, DELETION_REQUESTED, DELETED; SM-14), audit `ip_address` → `source_ip` and `metadata.before/after` copied to `before`/`after` (idempotent)
 npm run db:script    # regenerate docs/database/init.mongo.js (collections, $jsonSchema validators, indexes) from the models — run after any model change; tests/unit/utils/dbScript.util.test.ts fails until you do
 npm run mdns         # publish mDNS "swiftletcare-broker.local" for a real ESP32 (run alongside npm run dev)

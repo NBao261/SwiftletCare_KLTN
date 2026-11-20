@@ -99,6 +99,9 @@ describe('POST /expert-activity/reminders', () => {
     const { alert, expert, remind } = await seed()
     await remind('alert', alert._id, 'DOMAIN_EXPERT', expert._id).expect(403)
     await remind('alert', alert._id, 'FARM_OWNER', alone.owner._id).expect(403)
+    // Chủ farm khác gửi id cảnh báo đo trực tiếp hay chu kỳ còn mở: 403, không lộ loại cảnh báo hay trạng thái mùa vụ
+    const other = await seed()
+    await remind('alert', other.measured._id, 'FARM_OWNER', alone.owner._id).expect(403)
     expect(await Notification.countDocuments()).toBe(0)
   })
 })

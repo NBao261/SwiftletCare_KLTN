@@ -14,12 +14,12 @@ export const proposeRules = asyncHandler(async (req: Request, res: Response) => 
 
 /** POST /farms/houses/:houseId/weather-rules/proposal/approve – chuyên gia duyệt, luật có hiệu lực */
 export const approveProposal = asyncHandler(async (req: Request, res: Response) => {
-  res.json({ success: true, data: await weatherCompensationService.approveWeatherRulesProposal(req.params.houseId, req.user) })
+  res.json({ success: true, data: await weatherCompensationService.approveWeatherRulesProposal(req.params.houseId, req.user, req.body.proposed_at) })
 })
 
 /** POST /farms/houses/:houseId/weather-rules/proposal/reject – chuyên gia từ chối kèm lý do */
 export const rejectProposal = asyncHandler(async (req: Request, res: Response) => {
-  res.json({ success: true, data: await weatherCompensationService.rejectWeatherRulesProposal(req.params.houseId, req.user, req.body.note) })
+  res.json({ success: true, data: await weatherCompensationService.rejectWeatherRulesProposal(req.params.houseId, req.user, req.body.note, req.body.proposed_at) })
 })
 
 /** PUT /farms/houses/:houseId/weather-rules – ENV-FR-030 */

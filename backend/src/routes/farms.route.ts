@@ -98,11 +98,12 @@ router.put('/houses/:houseId/weather-rules', requireRole('FARM_OWNER', 'DOMAIN_E
 router.post('/houses/:houseId/weather-rules/proposal', requireRole('FARM_OWNER'), param('houseId').isMongoId(),
   ...weatherRulesBody,
   validate, weatherCompensationController.proposeRules)
+// Gửi kèm `proposed_at` của bản đã xem: đề xuất đổi trong lúc đó thì 409
 router.post('/houses/:houseId/weather-rules/proposal/approve', requireRole('DOMAIN_EXPERT'), param('houseId').isMongoId(),
-  validate, weatherCompensationController.approveProposal)
+  body('proposed_at').isISO8601(), validate, weatherCompensationController.approveProposal)
 router.post('/houses/:houseId/weather-rules/proposal/reject', requireRole('DOMAIN_EXPERT'), param('houseId').isMongoId(),
   body('note').isString().trim().notEmpty().withMessage('Từ chối đề xuất phải ghi lý do').isLength({ max: 1000 }),
-  validate, weatherCompensationController.rejectProposal)
+  body('proposed_at').isISO8601(), validate, weatherCompensationController.rejectProposal)
 
 // Zones (under house)
 router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule(),

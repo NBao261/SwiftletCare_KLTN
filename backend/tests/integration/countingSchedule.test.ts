@@ -134,7 +134,8 @@ describe('VISION-FR-019 — counting schedule', () => {
 
   it('BR-22: the Farm Owner sets it on both farms; with a Domain Expert the change opens a review item', async () => {
     const withExpert = await seed()
-    expect((await withExpert.call('put', withExpert.t.owner, { temporary: [] })).status).toBe(200)
+    const rainy = { temporary: [{ from: '2026-12-01', to: '2026-12-01', ...RAINY }] }
+    expect((await withExpert.call('put', withExpert.t.owner, rainy)).status).toBe(200)
     expect(await ParameterReview.findOne({ target_id: withExpert.house._id, group: 'counting_schedule' }).lean())
       .toMatchObject({ status: 'PENDING_REVIEW', house_id: withExpert.house._id })
     const withoutExpert = await seed({ withExpert: false })

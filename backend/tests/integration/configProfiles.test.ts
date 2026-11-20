@@ -133,6 +133,13 @@ describe('EXPERT-FR-014 — prepare and approve a configuration profile', () => 
     const notice = await Notification.findOne({ 'ref.kind': 'config_profile' }).lean()
     expect(notice).toMatchObject({ ref: { id: new mongoose.Types.ObjectId(String(created.body.data._id)) } })
     expect(notice!.title).toMatch(/Cần duyệt/)
+
+    // Sửa bản nháp cũng báo chuyên gia; chuyên gia đã duyệt thì bản nháp không còn sửa được (409)
+    const id = created.body.data._id
+    expect((await call('put', `/${id}`, t.owner, { ...PROFILE, name: 'Mùa mưa' })).status).toBe(200)
+    expect(await Notification.countDocuments({ 'ref.kind': 'config_profile' })).toBe(2)
+    expect((await call('post', `/${id}/approve`, t.expert)).status).toBe(200)
+    expect((await call('put', `/${id}`, t.owner, PROFILE)).status).toBe(409)
   })
 
   it('rejects the technician, the Administrator and the members of another farm', async () => {

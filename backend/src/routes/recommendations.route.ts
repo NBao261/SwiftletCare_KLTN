@@ -6,7 +6,7 @@ import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 /**
- * EXPERT-FR-016…019 — vòng khuyến nghị (Report 3 §2.4): Domain Expert viết và bật/tắt luật, Farm Owner chỉ đọc luật;
+ * EXPERT-FR-016…019 — vòng khuyến nghị (Report 3 §2.4): Domain Expert viết và bật/tắt luật, Farm Owner viết luật chờ chuyên gia bật (BR-22);
  * Farm Owner chấp nhận hoặc từ chối khuyến nghị, Domain Expert và thợ của nhà chỉ đọc; Administrator → 403.
  * Khoảng giá trị và trạng thái: service kiểm (400, 409).
  */

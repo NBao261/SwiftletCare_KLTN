@@ -17,8 +17,8 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@
 import type { CurrentUser, DetectionTuning, FuzzyTuning, Thresholds } from '@/types'
 
 /**
- * EXPERT-FR-014, 015; Report 3 §6.23 — hồ sơ cấu hình của farm: Domain Expert soạn và duyệt (Farm Owner khi
- * farm chưa có chuyên gia, BR-22), Farm Owner áp cho các nhà. Áp hồ sơ là một thay đổi có lịch sử (nguồn
+ * EXPERT-FR-014, 015; Report 3 §6.23 — hồ sơ cấu hình của farm: Domain Expert và Farm Owner soạn bản nháp, chỉ Domain
+ * Expert duyệt (BR-22), Farm Owner áp cho các nhà. Áp hồ sơ là một thay đổi có lịch sử (nguồn
  * `PROFILE`) và một phiên bản cấu hình mới cho mỗi zone (ENV-FR-027); hồ sơ đã được chuyên gia duyệt nên
  * không mở mục duyệt EXPERT-FR-010.
  */
@@ -148,15 +148,33 @@ export async function createProfile(farmId: string, user: CurrentUser, input: Pr
   return profile
 }
 
-/** EXPERT-FR-014, SM-23 DRAFT → DRAFT: thay toàn bộ nội dung; hồ sơ đã duyệt hoặc lưu trữ không sửa được (409) */
+/**
+ * EXPERT-FR-014, SM-23 DRAFT → DRAFT: thay toàn bộ nội dung trong một lệnh ghi có điều kiện (chuyên gia vừa duyệt thì
+ * 409, không ghi đè hồ sơ đã duyệt); Farm Owner sửa thì báo chuyên gia để duyệt đúng bản mới (BR-22)
+ */
 export async function updateProfile(profileId: string, user: CurrentUser, input: ProfileInput) {
   const { profile, farm } = await loadProfile(profileId, user)
   assertStatus(profile, 'DRAFT', 'sửa')
   const content = parseProfileContent(input)
-  profile.set({ name: input.name ?? profile.name, thresholds: undefined, fuzzy_tuning: undefined, detection_tuning: undefined, speaker_schedule: undefined, ...content })
-  await profile.save()
-  await logAction(user._id, 'CONFIG_PROFILE_UPDATED', 'config_profile', String(profile._id), { name: profile.name }, { farmId: String(farm._id) })
-  return profile
+  // Nhóm không gửi thì bỏ khỏi hồ sơ
+  const removed = ['thresholds', 'fuzzy_tuning', 'detection_tuning', 'speaker_schedule'].filter(key => !(key in content))
+  const updated = await ConfigProfile.findOneAndUpdate(
+    { _id: profile._id, status: 'DRAFT' },
+    {
+      $set: { name: input.name ?? profile.name, ...content },
+      ...(removed.length > 0 && { $unset: Object.fromEntries(removed.map(key => [key, 1])) }),
+    },
+    { new: true },
+  )
+  if (!updated) throw ConflictError('Hồ sơ vừa đổi trạng thái, không thể sửa')
+  await logAction(user._id, 'CONFIG_PROFILE_UPDATED', 'config_profile', String(updated._id), { name: updated.name }, { farmId: String(farm._id) })
+  if (user.role === 'FARM_OWNER') {
+    await notifyExpertsOfProposal(farm._id, user, {
+      what: `sửa hồ sơ cấu hình "${updated.name}"`, body: 'Hồ sơ chỉ áp được khi chuyên gia duyệt.',
+      ref: { kind: 'config_profile', id: String(updated._id) },
+    })
+  }
+  return updated
 }
 
 /**

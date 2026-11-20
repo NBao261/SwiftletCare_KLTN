@@ -229,9 +229,12 @@ describe('khôi phục mặc định (EXPERT-FR-008 "reset to defaults", todo-au
   })
 
   it('chuyên gia farm khác → 403; Farm Owner reset được, có chuyên gia thì mở mục duyệt, chưa có thì không (BR-22)', async () => {
-    const { farm, zone, house, t } = await seed()
+    const { farm, zone, house, put, putHouse, t } = await seed()
     const other = await seed()
     expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, other.t.expert)).status).toBe(403)
+    // Chuyên gia đặt giá trị khác mặc định trước, để lần đưa về mặc định của Farm Owner là một thay đổi thật
+    expect((await put(t.expert, { noise_margin_db: 20 })).status).toBe(200)
+    expect((await putHouse(t.expert, { return_rate_drop_pct: 30 })).status).toBe(200)
     expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.owner)).status).toBe(200)
     expect((await reset(`/farms/houses/${house._id}/bird-count-tuning/reset`, t.owner)).status).toBe(200)
     expect(await ParameterReview.countDocuments({ farm_id: farm._id, status: 'PENDING_REVIEW' })).toBe(2)

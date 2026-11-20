@@ -6,8 +6,8 @@ import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 /**
- * EXPERT-FR-014, 015 — hồ sơ cấu hình (Report 3 §2.4): Farm Owner và Domain Expert của farm xem; chỉ Domain Expert
- * soạn, duyệt, lưu trữ (BR-22 không cho Farm Owner làm thay việc này); chỉ Farm Owner áp cho các nhà. Farm Technician,
+ * EXPERT-FR-014, 015 — hồ sơ cấu hình (Report 3 §2.4): Farm Owner và Domain Expert của farm xem và soạn bản nháp; chỉ
+ * Domain Expert duyệt, lưu trữ (BR-22, cả khi farm chưa có chuyên gia); chỉ Farm Owner áp cho các nhà. Farm Technician,
  * Administrator → 403. Khoảng giá trị và trạng thái: service kiểm (400, 409).
  */
 const router = Router()
