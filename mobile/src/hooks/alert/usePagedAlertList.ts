@@ -25,14 +25,14 @@ interface PagedAlertListInput {
 
 // Danh sách cảnh báo khi không lọc theo nhà (ALERT-FR-007): phân trang theo meta.total ở server, lọc farm, loại, phán quyết,
 // mức bằng tham số GET /alerts. Backend nhận một trạng thái và một mức mỗi lần nên tải theo chuỗi (buildAlertChain): xong
-// trạng thái/mức này mới sang cái sau, mỗi mắt mới nhất trước
+// trạng thái/mức này mới sang cái sau, mỗi mắt mới nhất trước; trang chưa đủ thì lấp bằng mắt sau (cảnh báo vừa xác nhận vẫn hiện)
 export function usePagedAlertList({ statuses, filter, level, enabled, refetchInterval }: PagedAlertListInput) {
   const chain = buildAlertChain(statuses, level)
 
   return useInfiniteQuery({
     queryKey: ['alerts', 'list', 'paged', statuses.join(','), filter, level],
     queryFn: ({ pageParam }) =>
-      fetchAlertChainPage(chain, pageParam, (link, page) =>
+      fetchAlertChainPage(chain, pageParam, PAGE_SIZE, (link, page) =>
         alertApi.list(toAlertQueryParams(filter, link, page, PAGE_SIZE)).then(response => ({
           items: response.data.data,
           total: response.data.meta?.total ?? 0,

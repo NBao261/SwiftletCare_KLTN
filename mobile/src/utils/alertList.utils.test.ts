@@ -159,20 +159,24 @@ describe('chuỗi trang phân trang ở server', () => {
 
   const alerts = (count: number) => Array.from({ length: count }, (_, index) => buildAlert(`a${index}`))
 
+  const PAGE_SIZE = 20
+
   it('trang kế: mắt còn thì trang sau, hết thì sang mắt sau, hết chuỗi thì dừng', () => {
+    const page = (link: number, pageNumber: number, hasMoreInLink: boolean) => ({
+      link,
+      page: pageNumber,
+      items: alerts(PAGE_SIZE),
+      total: 25,
+      hasMoreInLink,
+    })
     expect(getNextAlertChainPage(2, [])).toEqual({ link: 0, page: 1 })
-    expect(getNextAlertChainPage(2, [{ link: 0, items: alerts(20), total: 25 }])).toEqual({ link: 0, page: 2 })
-    expect(
-      getNextAlertChainPage(2, [
-        { link: 0, items: alerts(20), total: 25 },
-        { link: 0, items: alerts(5), total: 25 },
-      ]),
-    ).toEqual({ link: 1, page: 1 })
-    expect(getNextAlertChainPage(2, [{ link: 1, items: [], total: 0 }])).toBeUndefined()
+    expect(getNextAlertChainPage(2, [page(0, 1, true)])).toEqual({ link: 0, page: 2 })
+    expect(getNextAlertChainPage(2, [page(0, 1, true), page(0, 2, false)])).toEqual({ link: 1, page: 1 })
+    expect(getNextAlertChainPage(2, [page(1, 1, false)])).toBeUndefined()
   })
 
   describe('fetchAlertChainPage', () => {
-    // Giả lập backend: số cảnh báo của từng mắt theo trạng thái + mức; ghi lại các lần gọi
+    // Giả lập backend: số cảnh báo của từng mắt theo trạng thái + mức (mỗi mắt không quá một trang); ghi lại các lần gọi
     function buildFetcher(itemsPerLink: Record<string, number>) {
       const requests: string[] = []
       const fetchLinkPage = (link: AlertChainLink, page: number) => {
@@ -188,33 +192,48 @@ describe('chuỗi trang phân trang ở server', () => {
     it('mắt đầu rỗng (không có ACTIVE, có ACKNOWLEDGED): tự sang mắt sau, không cần bấm', async () => {
       const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], null)
       const { fetchLinkPage, requests } = buildFetcher({ 'ACKNOWLEDGED/null': 3 })
-      const page = await fetchAlertChainPage(chain, firstPage, fetchLinkPage)
-      expect(page).toMatchObject({ link: 1, total: 3 })
+      const page = await fetchAlertChainPage(chain, firstPage, PAGE_SIZE, fetchLinkPage)
+      expect(page).toMatchObject({ link: 1, total: 3, hasMoreInLink: false })
       expect(page.items).toHaveLength(3)
       expect(requests).toEqual(['ACTIVE/null#1', 'ACKNOWLEDGED/null#1'])
       expect(getNextAlertChainPage(chain.length, [page])).toBeUndefined()
     })
 
-    it('lọc Khẩn cấp chỉ có HIGH: bỏ qua CRITICAL rỗng', async () => {
+    it('lọc Khẩn cấp chỉ có HIGH: bỏ qua CRITICAL rỗng, lấp tiếp các mắt sau', async () => {
       const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P1')
       const { fetchLinkPage, requests } = buildFetcher({ 'ACTIVE/HIGH': 2 })
-      const page = await fetchAlertChainPage(chain, firstPage, fetchLinkPage)
-      expect(page).toMatchObject({ link: 1, total: 2 })
-      expect(requests).toEqual(['ACTIVE/CRITICAL#1', 'ACTIVE/HIGH#1'])
+      const page = await fetchAlertChainPage(chain, firstPage, PAGE_SIZE, fetchLinkPage)
+      expect(page.items).toHaveLength(2)
+      expect(requests).toEqual(['ACTIVE/CRITICAL#1', 'ACTIVE/HIGH#1', 'ACKNOWLEDGED/CRITICAL#1', 'ACKNOWLEDGED/HIGH#1'])
     })
 
-    it('mắt đầu có dữ liệu thì không gọi các mắt sau', async () => {
+    it('ACTIVE chưa đủ một trang: lấy luôn ACKNOWLEDGED, cảnh báo vừa xác nhận không biến khỏi danh sách', async () => {
       const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], null)
       const { fetchLinkPage, requests } = buildFetcher({ 'ACTIVE/null': 1, 'ACKNOWLEDGED/null': 1 })
-      expect(await fetchAlertChainPage(chain, firstPage, fetchLinkPage)).toMatchObject({ link: 0 })
-      expect(requests).toEqual(['ACTIVE/null#1'])
+      const page = await fetchAlertChainPage(chain, firstPage, PAGE_SIZE, fetchLinkPage)
+      expect(page.items).toHaveLength(2)
+      expect(requests).toEqual(['ACTIVE/null#1', 'ACKNOWLEDGED/null#1'])
+      expect(getNextAlertChainPage(chain.length, [page])).toBeUndefined()
+    })
+
+    it('ACTIVE còn trang sau: dừng ở ACTIVE, chưa gọi ACKNOWLEDGED', async () => {
+      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], null)
+      const requests: string[] = []
+      const fetchLinkPage = (link: AlertChainLink, page: number) => {
+        requests.push(`${link.status}#${page}`)
+        return Promise.resolve({ items: alerts(PAGE_SIZE), total: 30 })
+      }
+      const page = await fetchAlertChainPage(chain, firstPage, PAGE_SIZE, fetchLinkPage)
+      expect(page).toMatchObject({ link: 0, page: 1, hasMoreInLink: true })
+      expect(requests).toEqual(['ACTIVE#1'])
+      expect(getNextAlertChainPage(chain.length, [page])).toEqual({ link: 0, page: 2 })
     })
 
     it('cả chuỗi rỗng: dừng ở mắt cuối và hết trang, màn hiện trạng thái rỗng', async () => {
       const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P1')
       const { fetchLinkPage, requests } = buildFetcher({})
-      const page = await fetchAlertChainPage(chain, firstPage, fetchLinkPage)
-      expect(page).toEqual({ link: 3, items: [], total: 0 })
+      const page = await fetchAlertChainPage(chain, firstPage, PAGE_SIZE, fetchLinkPage)
+      expect(page).toEqual({ link: 3, page: 1, items: [], total: 0, hasMoreInLink: false })
       expect(requests).toHaveLength(4)
       expect(getNextAlertChainPage(chain.length, [page])).toBeUndefined()
     })
@@ -222,13 +241,19 @@ describe('chuỗi trang phân trang ở server', () => {
     it('trang sau của một mắt rỗng (dữ liệu vừa đổi): đi tiếp từ trang 1 của mắt sau', async () => {
       const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], null)
       const { fetchLinkPage, requests } = buildFetcher({ 'ACKNOWLEDGED/null': 1 })
-      expect(await fetchAlertChainPage(chain, { link: 0, page: 2 }, fetchLinkPage)).toMatchObject({ link: 1 })
+      expect(await fetchAlertChainPage(chain, { link: 0, page: 2 }, PAGE_SIZE, fetchLinkPage)).toMatchObject({ link: 1 })
       expect(requests).toEqual(['ACTIVE/null#2', 'ACKNOWLEDGED/null#1'])
     })
 
     it('vị trí ngoài chuỗi thì trả trang rỗng, không gọi API', async () => {
       const { fetchLinkPage, requests } = buildFetcher({})
-      expect(await fetchAlertChainPage([], firstPage, fetchLinkPage)).toEqual({ link: 0, items: [], total: 0 })
+      expect(await fetchAlertChainPage([], firstPage, PAGE_SIZE, fetchLinkPage)).toEqual({
+        link: 0,
+        page: 1,
+        items: [],
+        total: 0,
+        hasMoreInLink: false,
+      })
       expect(requests).toEqual([])
     })
   })
