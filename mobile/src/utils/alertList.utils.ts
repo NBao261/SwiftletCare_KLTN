@@ -248,3 +248,28 @@ export function sumLevelCounts(totals: Readonly<Record<AlertSeverity, number>>):
   for (const severity of ALERT_SEVERITIES) counts[getSeverityLevel(severity)] += totals[severity]
   return counts
 }
+
+// Một dòng của mục Cảnh báo ở chuông: tiêu đề nhóm, khung "không có gì chờ xử lý" hoặc một cảnh báo
+export type BellAlertRow =
+  | { kind: 'header'; key: string; group: 'pending' | 'acknowledged' }
+  | { kind: 'allClear'; key: string }
+  | { kind: 'alert'; key: string; alert: Alert }
+
+// Chia danh sách (ACTIVE rồi ACKNOWLEDGED) thành hai nhóm: tiêu đề "Chưa xác nhận" luôn ở đầu (cùng hàng với nút "Xem tất cả"),
+// nhóm rỗng thì hiện khung "không có gì chờ xử lý"; có cảnh báo đã xác nhận thì thêm tiêu đề "Đã xác nhận" và nhóm đó ở dưới.
+// Một lượt qua danh sách
+export function buildBellAlertRows(alerts: readonly Alert[]): BellAlertRow[] {
+  const pending: BellAlertRow[] = []
+  const acknowledged: BellAlertRow[] = []
+  for (const alert of alerts) {
+    const row: BellAlertRow = { kind: 'alert', key: alert._id, alert }
+    if (alert.status === 'ACTIVE') pending.push(row)
+    else acknowledged.push(row)
+  }
+  const rows: BellAlertRow[] = [
+    { kind: 'header', key: 'header-pending', group: 'pending' },
+    ...(pending.length > 0 ? pending : [{ kind: 'allClear', key: 'all-clear' } as const]),
+  ]
+  if (acknowledged.length === 0) return rows
+  return [...rows, { kind: 'header', key: 'header-acknowledged', group: 'acknowledged' }, ...acknowledged]
+}

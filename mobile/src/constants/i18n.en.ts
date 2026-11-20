@@ -772,6 +772,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Thiết bị chưa nhận cấu hình mới': 'Device has not applied the new configuration',
   'Mới': 'New',
   'Đã xác nhận': 'Acknowledged',
+  'Chưa xác nhận': 'Not acknowledged',
   'Bị bác bỏ': 'Dismissed',
   'Đã tự hết': 'Auto-resolved',
   'Tự đóng khi số đo trở lại trong ngưỡng 5 phút': 'Closes after readings are back in range for 5 minutes',

@@ -4,6 +4,7 @@ import {
   ACTIVE_ALERT_STATUSES,
   type AlertChainLink,
   buildAlertChain,
+  buildBellAlertRows,
   countBySeverityLevel,
   fetchAlertChainPage,
   filterAlerts,
@@ -260,5 +261,24 @@ describe('chuỗi trang phân trang ở server', () => {
 
   it('cộng số theo cấp: CRITICAL và HIGH cùng Khẩn cấp', () => {
     expect(sumLevelCounts({ CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 })).toEqual({ P1: 3, P2: 3, P3: 4 })
+  })
+})
+
+describe('buildBellAlertRows', () => {
+  const pending = buildAlert('p1')
+  const acknowledged = buildAlert('k1', { status: 'ACKNOWLEDGED' })
+  const kinds = (alerts: Alert[]) => buildBellAlertRows(alerts).map(row => row.key)
+
+  it('chỉ có cảnh báo chưa xác nhận: tiêu đề "Chưa xác nhận" rồi các dòng, không có nhóm dưới', () => {
+    expect(kinds([pending])).toEqual(['header-pending', 'p1'])
+  })
+
+  it('có cả hai: chưa xác nhận ở trên, đã xác nhận dưới tiêu đề riêng', () => {
+    expect(kinds([pending, acknowledged])).toEqual(['header-pending', 'p1', 'header-acknowledged', 'k1'])
+  })
+
+  it('đã xác nhận hết: khung "không có gì chờ xử lý" rồi nhóm đã xác nhận', () => {
+    expect(kinds([acknowledged])).toEqual(['header-pending', 'all-clear', 'header-acknowledged', 'k1'])
+    expect(kinds([])).toEqual(['header-pending', 'all-clear'])
   })
 })

@@ -9,6 +9,7 @@ import { ALERT_ROW_HEIGHT, AlertRow } from '@/components/alert/AlertRow'
 import { NotificationSettingsSheet } from '@/components/alert/NotificationSettingsSheet'
 import { SeveritySummary } from '@/components/alert/SeveritySummary'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
+import { BellButton } from '@/components/common/BellButton'
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { AppHeader } from '@/components/layout/AppHeader'
@@ -184,10 +185,14 @@ export default function AlertsScreen() {
               accessibilityLabel={t('{scope}, bấm để đổi phạm vi', { scope: scopeTitle })}
             />
           }
+          // Chuông như tab Trang trại, rồi nút cài đặt thông báo
           right={
-            canEditSettings ? (
-              <IconButton icon={GearSixIcon} label={t('Cài đặt thông báo')} onPress={() => setSettingsOpen(true)} />
-            ) : undefined
+            <View style={styles.headerActions}>
+              <BellButton />
+              {canEditSettings && (
+                <IconButton icon={GearSixIcon} label={t('Cài đặt thông báo')} onPress={() => setSettingsOpen(true)} />
+              )}
+            </View>
           }
         />
         <FlatList
@@ -307,6 +312,7 @@ export default function AlertsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
   header: { gap: Spacing.md, marginBottom: Spacing.md },
   list: { gap: ROW_GAP },
