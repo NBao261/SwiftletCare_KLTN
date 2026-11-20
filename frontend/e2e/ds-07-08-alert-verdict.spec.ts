@@ -39,12 +39,11 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
     expect(detail.onsite_checks[0].observation).toBe('WORK_OR_PEOPLE_NEARBY');
   });
 
-  // EXPERT-FR-003 — trang kết luận chỉ có 4 loại cảnh báo suy luận của Report 3. Trang xem theo một zone (thanh phạm vi):
-  // zone A có cảnh báo ồn chờ kết luận; zone B có MISTING_INEFFECTIVE của DS-04, cảnh báo đo trực tiếp, không được hiện
-  // (trước khi sửa nó nằm trong danh sách và gửi kết luận thì backend trả 400)
+  // EXPERT-FR-003 — trang kết luận chỉ có 4 loại cảnh báo suy luận của Report 3. DE-03: mặc định cả trang trại,
+  // Zone là bộ lọc trong card. Zone A có cảnh báo ồn chờ kết luận; zone B có MISTING_INEFFECTIVE của DS-04,
+  // cảnh báo đo trực tiếp, không được hiện (trước khi sửa nó nằm trong danh sách và gửi kết luận thì backend trả 400)
   test('trang kết luận hiện cảnh báo ồn ở zone A, không hiện cảnh báo phun sương đo trực tiếp ở zone B', async ({ page, request }) => {
     const farm = await demoFarm(await signIn(request, 'owner'));
-    const zoneA = await farm.zoneOf('A');
     const zoneB = await farm.zoneOf('B');
 
     await page.goto('/login');
@@ -53,20 +52,25 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
     await page.getByRole('button', { name: 'Đăng nhập' }).click();
     await expect(page).toHaveURL(/\/domain-expert\/queue$/);
 
-    // Chọn phạm vi farm → nhà → zone như thanh phạm vi lưu vào zoneStore (localStorage `swiftletcare-zone`)
-    const openVerdictsIn = async (house: 'A' | 'B', zone: { _id: string; name: string }) => {
+    // Đặt phạm vi farm vào zoneStore để trang mặc định lấy cả trang trại
+    const setFarmScope = async () => {
       const state = {
-        selectedFarmId: farm.farmId, selectedFarmName: DEMO_FARM, selectedZoneId: zone._id, selectedZoneName: zone.name,
-        scopeFarmId: '', selectedHouseId: farm.house(house)._id, scopeZoneId: '',
+        selectedFarmId: farm.farmId, selectedFarmName: DEMO_FARM, selectedZoneId: '',  selectedZoneName: '',
+        scopeFarmId: '', selectedHouseId: farm.house('A')._id, scopeZoneId: '',
       };
       await page.evaluate(value => localStorage.setItem('swiftletcare-zone', value), JSON.stringify({ state, version: 2 }));
       await page.goto('/domain-expert/alert-verdicts');
     };
 
-    await openVerdictsIn('A', zoneA);
+    // Mặc định cả trang trại: cảnh báo ồn ở zone A phải hiện
+    await setFarmScope();
     await expect(page.getByText('mức ồn cao hơn nền', { exact: false }).first()).toBeVisible();
 
-    await openVerdictsIn('B', zoneB);
+    // Lọc zone B trong card: không hiện cảnh báo phun sương đo trực tiếp
+    const zoneFilter = page.getByLabel('Lọc theo Zone');
+    await expect(zoneFilter).toBeVisible();
+    await zoneFilter.click();
+    await page.getByRole('option', { name: zoneB.name }).click();
     await expect(page.getByText('Không có cảnh báo nào phù hợp bộ lọc.')).toBeVisible();
     await expect(page.getByText('độ ẩm không tăng', { exact: false })).toHaveCount(0);
   });
