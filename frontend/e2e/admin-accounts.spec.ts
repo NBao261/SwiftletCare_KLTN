@@ -16,7 +16,6 @@ test.describe('Administrator', () => {
     const email = `owner-e2e-${Date.now()}@swiftletcare.dev`;
     await signInAsAdmin(page);
     await page.goto('/users');
-    await page.getByRole('tab', { name: 'Người dùng' }).click();
     await page.getByRole('button', { name: 'Tạo chủ nhà yến' }).click();
 
     const dialog = page.getByRole('dialog');

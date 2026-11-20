@@ -3,12 +3,14 @@
 // cấp lại mật khẩu broker khi chưa thu hồi. Thiết bị đang chạy xem ở /devices.
 // Cùng khuôn trang Người dùng: tìm kiếm + nút thêm → bộ lọc + sắp xếp → bảng → phân trang (client-side, xem useDeviceStock).
 import { useMemo, useState } from 'react'
-import { WarningCircleIcon } from '@phosphor-icons/react'
+import { PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import {
-  Button, ClearFiltersButton, ConfirmModal, DataTable, EmptyState, NoteActionModal, Pagination, SearchInput,
+  Badge, Button, ClearFiltersButton, ConfirmModal, DataTable, EmptyState, NoteActionModal, Pagination, SearchInput,
   SectionCard, SelectMenu, SortChips,
 } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
+import { formatDateOnly } from '@/lib/helpers'
 import { STOCK_STATUS, buildStockColumns, type StockAction } from '@/components/features/admin/device-stock/stockColumns'
 import AddStockDeviceModal from '@/components/features/admin/device-stock/AddStockDeviceModal'
 import IssuedSecretsModal from '@/components/features/admin/device-stock/IssuedSecretsModal'
@@ -129,16 +131,17 @@ export default function AdminDeviceStockPage() {
   }
 
   const rotateText = pending && pending.action !== 'revoke' ? ROTATE_TEXT[pending.action] : null
+  const columns = buildStockColumns((action, device) => setPending({ action, device }))
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionCard description="Thiết bị đã nhập kho và trạng thái nhãn. In nhãn ngay khi thêm.">
+      <SectionCard description="Thiết bị đã nhập và nhãn QR" help="In nhãn QR ngay khi thêm: mã kích hoạt và mật khẩu kết nối chỉ hiện một lần.">
         {/* Hàng 1: tìm kiếm + thêm thiết bị */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[200px] flex-1">
             <SearchInput placeholder="Tìm mã thiết bị..." value={search} onChange={withReset(setSearch)} />
           </div>
-          <Button onClick={() => setAdding(true)}>+ Thêm thiết bị</Button>
+          <Button onClick={() => setAdding(true)}><PlusIcon size={14} weight="bold" aria-hidden />Thêm thiết bị</Button>
         </div>
 
         {/* Hàng 2: bộ lọc + sắp xếp */}
@@ -150,7 +153,7 @@ export default function AdminDeviceStockPage() {
         </div>
 
         <DataTable
-          columns={buildStockColumns((action, device) => setPending({ action, device }))}
+          columns={columns}
           rows={rows}
           getRowKey={d => d._id}
           rowHeight={ROW_HEIGHT}
@@ -158,6 +161,22 @@ export default function AdminDeviceStockPage() {
           emptyMessage={hasActiveFilters
             ? 'Không có thiết bị nào khớp bộ lọc. Thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
             : 'Kho chưa có thiết bị nào, bấm "Thêm thiết bị" để nhập và in nhãn.'}
+          mobileCard={device => (
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="flex min-w-0 items-center gap-2 text-body font-semibold text-charcoal">
+                  <span className="truncate">{device.device_id}</span>
+                  <SimulatedBadge simulated={device.simulated} />
+                </p>
+                <p className="text-small text-warmGray">
+                  {t(device.kind === 'SENSOR' ? 'Bộ điều khiển' : 'Camera đếm chim')} · {t('Nhập {{date}}', { date: formatDateOnly(device.created_at) })}
+                </p>
+                <div><Badge tone={STOCK_STATUS[device.stock_status].tone}>{STOCK_STATUS[device.stock_status].label}</Badge></div>
+              </div>
+              {/* Menu ⋯ dùng chung với cột Thao tác */}
+              {columns[columns.length - 1].render(device, 0)}
+            </div>
+          )}
         />
 
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}

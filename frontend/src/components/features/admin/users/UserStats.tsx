@@ -1,6 +1,6 @@
-import { GraduationCapIcon, HouseIcon, LockIcon, UsersIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
+import { GraduationCapIcon, HouseIcon, UsersIcon, WarningCircleIcon, WrenchIcon } from '@phosphor-icons/react'
 import { getUserStatus, useAllUsers } from '@/hooks/admin/useUsers'
-import { Button, Card, EmptyState } from '@/components/ui'
+import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import KpiTile from '@/components/common/KpiTile'
 import { ROLE_LABEL } from '@/constants/roles'
@@ -10,8 +10,6 @@ import type { Role, User } from '@/types'
 /** Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner) */
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-const ROLES_IN_TILES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN', 'ADMIN']
-
 /** Dòng phụ ô vai trò: tình trạng hoạt động của nhóm đó (thay cho "% tổng số" — tỉ lệ không giúp Admin làm gì) */
 function roleSub(list: User[]) {
   if (list.length === 0) return 'Chưa có tài khoản nào'
@@ -19,13 +17,8 @@ function roleSub(list: User[]) {
   return locked > 0 ? t('{{active}} hoạt động · {{locked}} đã khoá', { active: list.length - locked, locked }) : 'Tất cả đang hoạt động'
 }
 
-/**
- * Hàng 5 ô chỉ số đầu trang Người dùng (KpiTile). Số liệu TOÀN HỆ
- * THỐNG (không theo bộ lọc bảng), đếm ở client từ useAllUsers() vì backend không có endpoint thống kê
- * tài khoản. Chỉ để xem — lọc theo vai trò/trạng thái dùng thanh công cụ của bảng.
- * - Tổng: kèm số Quản trị viên (không có ô riêng) để cộng các ô vai trò khớp tổng, + số chờ xoá nếu có.
- * - Đã khoá: bị khoá thuộc vai trò nào.
- */
+// AD-03 — 4 ô đầu trang Người dùng, số toàn hệ thống (không theo bộ lọc bảng), đếm ở client từ useAllUsers() vì
+// backend không có endpoint thống kê tài khoản. Không bọc card: hàng ô số không phải một khối nội dung
 export default function UserStats() {
   const { data: users, isLoading, isError, refetch } = useAllUsers()
 
@@ -41,53 +34,15 @@ export default function UserStats() {
     )
   }
 
-  const total = users.length
   const byRole = (r: Role) => users.filter(u => u.role === r)
-  const statusCount = (s: ReturnType<typeof getUserStatus>) => users.filter(u => getUserStatus(u) === s).length
-  const technicians = byRole('FARM_TECHNICIAN')
-  const pendingDeletion = statusCount('PENDING_DELETION')
-  const lockedUsers = users.filter(u => getUserStatus(u) === 'LOCKED')
-  const lockedByRole = ROLES_IN_TILES
-    .map(r => [r, lockedUsers.filter(u => u.role === r).length] as const)
-    .filter(([, n]) => n > 0)
-    .map(([r, n]) => `${n} ${ROLE_LABEL[r].toLowerCase()}`)
-  const totalSub = [
-    t('{{n}} hoạt động', { n: statusCount('ACTIVE') }),
-    t('{{n}} quản trị viên', { n: byRole('ADMIN').length }),
-    pendingDeletion > 0 && t('{{n}} chờ xoá', { n: pendingDeletion }),
-  ].filter(Boolean).join(' · ')
+  const locked = users.filter(u => getUserStatus(u) === 'LOCKED').length
 
   return (
-    // Cùng kiểu card "Chỉ số vận hành toàn hệ thống" (trang Tổng quan): bọc Card + tiêu đề, ô bên trong bỏ shadow
-    // riêng, icon xám đồng nhất
-    <Card className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-h2 text-charcoal">{t('Thống kê tài khoản')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('Số tài khoản theo vai trò và trạng thái trên toàn hệ thống')}</p>
-      </div>
-
-      {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <KpiTile
-          className="col-span-2 shadow-none lg:col-span-1"
-          icon={UsersIcon}
-          iconClass={ICON}
-          label="Tổng tài khoản"
-          value={total}
-          sub={totalSub}
-        />
-        <KpiTile className="shadow-none" icon={HouseIcon} iconClass={ICON} label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={roleSub(byRole('FARM_OWNER'))} />
-        <KpiTile className="shadow-none" icon={WrenchIcon} iconClass={ICON} label="Kỹ thuật viên" value={technicians.length} sub={roleSub(technicians)} />
-        <KpiTile className="shadow-none" icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.DOMAIN_EXPERT} value={byRole('DOMAIN_EXPERT').length} sub={roleSub(byRole('DOMAIN_EXPERT'))} />
-        <KpiTile
-          className="shadow-none"
-          icon={LockIcon}
-          iconClass={ICON}
-          label="Đã khoá"
-          value={lockedUsers.length}
-          sub={lockedByRole.length ? lockedByRole.join(' · ') : 'Không có tài khoản bị khoá'}
-        />
-      </div>
-    </Card>
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <KpiTile icon={UsersIcon} iconClass={ICON} label="Tổng tài khoản" value={users.length} sub={t('{{n}} đã khoá', { n: locked })} />
+      <KpiTile icon={HouseIcon} iconClass={ICON} label="Chủ nhà yến" value={byRole('FARM_OWNER').length} sub={roleSub(byRole('FARM_OWNER'))} />
+      <KpiTile icon={WrenchIcon} iconClass={ICON} label="Kỹ thuật viên" value={byRole('FARM_TECHNICIAN').length} sub={roleSub(byRole('FARM_TECHNICIAN'))} />
+      <KpiTile icon={GraduationCapIcon} iconClass={ICON} label={ROLE_LABEL.DOMAIN_EXPERT} value={byRole('DOMAIN_EXPERT').length} sub={roleSub(byRole('DOMAIN_EXPERT'))} />
+    </div>
   )
 }

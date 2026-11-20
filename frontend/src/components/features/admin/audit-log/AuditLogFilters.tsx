@@ -13,7 +13,7 @@ const DATE_OPTIONS: SelectMenuOption<string>[] = [
 
 /**
  * Hàng bộ lọc (người thực hiện / hành động / thời gian) + sắp xếp theo thời gian + xoá bộ lọc của bảng nhật ký —
- * cùng 1 thanh ở trang Nhật ký hệ thống và card "Nhật ký hoạt động gần đây".
+ * ở trang Nhật ký hệ thống.
  */
 export default function AuditLogFilters({ table }: { table: AuditLogTableState }) {
   const actors = useUsersPicker()

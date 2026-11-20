@@ -1,7 +1,7 @@
-import { CalendarBlankIcon, ClipboardTextIcon, LockSimpleIcon, UserPlusIcon, WarningCircleIcon, WarningIcon } from '@phosphor-icons/react'
+import { CalendarBlankIcon, ClipboardTextIcon, UserGearIcon, WarningCircleIcon, WarningIcon } from '@phosphor-icons/react'
 import { useAuditLogList } from '@/hooks/admin/useSystem'
 import { AUDIT_TARGET_TYPE } from '@/constants/auditActions'
-import { Button, Card, EmptyState } from '@/components/ui'
+import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import KpiTile from '@/components/common/KpiTile'
 import { t } from '@/i18n'
@@ -27,12 +27,8 @@ function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
   return { total, isLoading, isError, refetch }
 }
 
-/**
- * Hàng 5 ô chỉ số đầu trang Nhật ký hệ thống — cùng khuôn hàng KPI trang Người dùng (KpiTile).
- * Chỉ nhật ký tài khoản, không theo bộ lọc bảng. Tổng + hôm nay cho biết nhịp ghi nhật ký; 3 ô sau đếm
- * trong 7 ngày gần nhất việc Admin cần để mắt: đăng nhập thất bại (dấu hiệu dò mật khẩu), tài khoản bị
- * khoá (AUTH-FR-011), tài khoản nhân viên mới tạo (AUTH-FR-005c). Icon xám như ReadingTile Dashboard Farm Owner.
- */
+// AD-06 — 4 ô đầu trang Nhật ký hệ thống, chỉ nhật ký tài khoản, không theo bộ lọc bảng, không bọc card. Tổng và 7 ngày
+// cho biết nhịp ghi nhật ký; đăng nhập thất bại (dấu hiệu dò mật khẩu) và thay đổi tài khoản trong 7 ngày là việc Admin cần để mắt
 export default function AuditLogStats() {
   const from7d = startOfDayIso(6)
   const all = useAuditCount({})
@@ -40,9 +36,12 @@ export default function AuditLogStats() {
   const week = useAuditCount({ from: from7d })
   const loginFailed = useAuditCount({ action: 'LOGIN_FAILED', from: from7d })
   const locked = useAuditCount({ action: 'ACCOUNT_LOCKED', from: from7d })
-  const created = useAuditCount({ action: 'USER_CREATED', from: from7d })
+  // Tài khoản mới: Admin tạo chủ nhà yến (AUTH-FR-005c) và người nhận lời mời tự tạo (AUTH-FR-010)
+  const ownerCreated = useAuditCount({ action: 'FARM_OWNER_CREATED', from: from7d })
+  const invitedCreated = useAuditCount({ action: 'ACCOUNT_CREATED_FROM_INVITATION', from: from7d })
+  const created = ownerCreated.total + invitedCreated.total
 
-  const counts = [all, today, week, loginFailed, locked, created]
+  const counts = [all, today, week, loginFailed, locked, ownerCreated, invitedCreated]
   if (counts.some(c => c.isLoading)) return <LoadingSkeleton count={1} className="h-28 w-full" />
   // Lỗi thì không hiện ô nào — "0 đăng nhập thất bại" trông như số thật
   if (counts.some(c => c.isError)) {
@@ -57,62 +56,32 @@ export default function AuditLogStats() {
   }
 
   return (
-    // Cùng kiểu card "Chỉ số vận hành toàn hệ thống" (Tổng quan) và "Thống kê tài khoản" (Người dùng):
-    // bọc Card + tiêu đề, ô bên trong bỏ shadow riêng
-    <Card className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-h2 text-charcoal">{t('Thống kê nhật ký')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('Hoạt động tài khoản trên toàn hệ thống')}</p>
-      </div>
-
-      {/* 5 ô bằng nhau trên desktop; mobile: ô Tổng chiếm trọn hàng đầu, 4 ô còn lại xếp 2×2 */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <KpiTile
-          className="col-span-2 shadow-none lg:col-span-1"
-          icon={ClipboardTextIcon}
-          iconClass={ICON}
-          label="Tổng nhật ký"
-          value={all.total}
-          sub={t('Hôm nay thêm {{n}} bản ghi', { n: today.total })}
-        />
-        <KpiTile
-          className="shadow-none"
-          icon={CalendarBlankIcon}
-          iconClass={ICON}
-          label="Nhật ký 7 ngày qua"
-          value={week.total}
-          sub={t('Trung bình {{n}} bản ghi/ngày', { n: Math.round(week.total / 7) })}
-        />
-        <KpiTile
-          className="shadow-none"
-          icon={WarningIcon}
-          iconClass={ICON}
-          label="Đăng nhập thất bại"
-          value={loginFailed.total}
-          // Tín hiệu bảo mật duy nhất của hàng → nổi cam khi có ≥ 1 lần (SRS/backend không có ngưỡng khoá N lần nên
-          // không tự đặt số; có ngưỡng có nguồn thì đổi điều kiện ở đây)
-          tone={loginFailed.total > 0 ? 'warning' : undefined}
-          sub="Trong 7 ngày qua"
-        />
-        {/* Đếm LƯỢT Admin khoá (ACCOUNT_LOCKED), không phải số tài khoản đang bị khoá — nhãn nói rõ để khỏi nhầm */}
-        <KpiTile
-          className="shadow-none"
-          icon={LockSimpleIcon}
-          iconClass={ICON}
-          label="Lượt khoá tài khoản"
-          value={locked.total}
-          sub="Trong 7 ngày qua"
-        />
-        {/* USER_CREATED chỉ ghi khi Admin tạo Technician — Farm Owner tự đăng ký không ghi log này */}
-        <KpiTile
-          className="shadow-none"
-          icon={UserPlusIcon}
-          iconClass={ICON}
-          label="Nhân viên mới"
-          value={created.total}
-          sub="Trong 7 ngày qua"
-        />
-      </div>
-    </Card>
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <KpiTile icon={ClipboardTextIcon} iconClass={ICON} label="Tổng nhật ký" value={all.total} sub={t('Hôm nay thêm {{n}} bản ghi', { n: today.total })} />
+      <KpiTile
+        icon={CalendarBlankIcon}
+        iconClass={ICON}
+        label="Nhật ký 7 ngày qua"
+        value={week.total}
+        sub={t('Trung bình {{n}} bản ghi/ngày', { n: Math.round(week.total / 7) })}
+      />
+      <KpiTile
+        icon={WarningIcon}
+        iconClass={ICON}
+        label="Đăng nhập thất bại"
+        value={loginFailed.total}
+        // Tín hiệu bảo mật duy nhất của hàng → nổi cam khi có ≥ 1 lần (không có ngưỡng có nguồn nên không tự đặt số)
+        tone={loginFailed.total > 0 ? 'warning' : undefined}
+        sub="Trong 7 ngày qua"
+      />
+      {/* Gộp lượt khoá và tài khoản mới tạo trong 7 ngày */}
+      <KpiTile
+        icon={UserGearIcon}
+        iconClass={ICON}
+        label="Thay đổi tài khoản"
+        value={locked.total + created}
+        sub={t('7 ngày: {{locked}} khoá, {{created}} tạo mới', { locked: locked.total, created })}
+      />
+    </div>
   )
 }

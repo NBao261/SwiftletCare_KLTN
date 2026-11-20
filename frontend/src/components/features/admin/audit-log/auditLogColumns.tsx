@@ -28,14 +28,15 @@ const LOGIN_FAILED_REASON: Record<string, string> = translated({
 })
 
 /**
- * Lý do lưu ở `metadata.reason`: khoá (bắt buộc)/mở khoá tài khoản — chữ Admin tự nhập (AUTH-FR-011), hiện nguyên
+ * Lý do lưu ở `metadata.reason`: khoá (bắt buộc)/mở khoá tài khoản, từ chối yêu cầu xoá — chữ Admin tự nhập, hiện nguyên
  * văn; đăng nhập thất bại — mã backend, dịch qua LOGIN_FAILED_REASON. Hành động khác không có lý do.
  */
 export function reasonOf(log: AuditLogEntry): string | undefined {
   const reason = log.metadata?.reason
   if (typeof reason !== 'string' || !reason.trim()) return undefined
   if (log.action === 'LOGIN_FAILED') return LOGIN_FAILED_REASON[reason] ?? capitalize(reason.trim())
-  if (log.action === 'ACCOUNT_LOCKED' || log.action === 'ACCOUNT_UNLOCKED') return capitalize(reason.trim())
+  // Khoá, mở khoá (AUTH-FR-011) và từ chối yêu cầu xoá (AUTH-FR-012): lý do Admin tự nhập
+  if (['ACCOUNT_LOCKED', 'ACCOUNT_UNLOCKED', 'DELETION_REJECTED'].includes(log.action)) return capitalize(reason.trim())
   return undefined
 }
 
@@ -89,4 +90,19 @@ export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditL
       ),
     },
   ]
+}
+
+/** Thẻ 1 nhật ký trên điện thoại (AD-08): hành động đậm, người thực hiện · vai trò, lý do nếu có, giờ ngày */
+export function AuditLogCard({ log }: { log: AuditLogEntry }) {
+  const label = AUDIT_ACTION_LABEL[log.action] ?? log.action
+  const who = log.actor_id?.full_name ?? log.target_name ?? t('Không xác định')
+  const reason = reasonOf(log)
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-body font-semibold text-charcoal">{label}</p>
+      <p className="text-small text-warmGray">{log.actor_id ? `${who} · ${ROLE_LABEL[log.actor_id.role]}` : who}</p>
+      {reason && <p className="text-small text-charcoal">{reason}</p>}
+      <p className="text-small text-warmGray">{formatTimeOnly(log.created_at)} · {formatDateOnly(log.created_at)}</p>
+    </div>
+  )
 }

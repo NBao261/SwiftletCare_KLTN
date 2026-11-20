@@ -13,8 +13,14 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = translated({
   ACCOUNT_UNLOCKED: 'Mở khoá tài khoản',
   ACCOUNT_DELETED: 'Hoàn tất xoá tài khoản',
   DELETION_REQUESTED: 'Yêu cầu xoá tài khoản',
+  DELETION_CANCELLED: 'Huỷ yêu cầu xoá tài khoản',
+  DELETION_REJECTED: 'Từ chối yêu cầu xoá tài khoản',
+  FARM_OWNER_CREATED: 'Tạo tài khoản chủ nhà yến',
+  ACCOUNT_CREATED_FROM_INVITATION: 'Tạo tài khoản từ lời mời',
+  // Bản ghi cũ, backend không còn ghi mã này
   USER_CREATED: 'Tạo tài khoản nhân viên',
   PASSWORD_RESET: 'Đặt lại mật khẩu',
+  PASSWORD_CHANGED: 'Đổi mật khẩu',
   LOGIN: 'Đăng nhập',
   LOGIN_FAILED: 'Đăng nhập thất bại',
 
@@ -44,10 +50,10 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = translated({
  */
 export const AUDIT_TARGET_TYPE = 'user'
 export const USER_AUDIT_ACTIONS = [
-  'LOGIN', 'LOGIN_FAILED', 'PASSWORD_RESET',
-  'USER_CREATED',
+  'LOGIN', 'LOGIN_FAILED', 'PASSWORD_RESET', 'PASSWORD_CHANGED',
+  'FARM_OWNER_CREATED', 'ACCOUNT_CREATED_FROM_INVITATION',
   'ACCOUNT_LOCKED', 'ACCOUNT_UNLOCKED',
-  'DELETION_REQUESTED', 'ACCOUNT_DELETED',
+  'DELETION_REQUESTED', 'DELETION_CANCELLED', 'DELETION_REJECTED', 'ACCOUNT_DELETED',
 ] as const
 
 /** Nhãn cho `target_type` (chuỗi backend, snake_case) — thiếu thì hiện nguyên mã */

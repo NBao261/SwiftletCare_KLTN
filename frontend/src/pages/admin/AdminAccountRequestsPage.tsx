@@ -121,6 +121,27 @@ function DeleteRequestsTab() {
         rowHeight={ROW_HEIGHT}
         minRows={total > limit ? PAGE_SIZE : 0}
         emptyMessage="Chưa có yêu cầu xoá tài khoản nào. Yêu cầu theo Nghị định 13/2023/NĐ-CP sẽ hiện ở đây."
+        mobileCard={user => {
+          const remaining = user.deletion_requested_at ? daysRemaining(user.deletion_requested_at) : null
+          return (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="truncate text-body font-semibold text-charcoal">{user.full_name}</p>
+                  <p className="truncate text-small text-warmGray">{user.email}</p>
+                  {user.deletion_requested_at && (
+                    <p className="text-small text-warmGray">{i18nT('Yêu cầu {{time}}', { time: formatRelativeTime(user.deletion_requested_at) })}</p>
+                  )}
+                </div>
+                {remaining !== null && (
+                  <Badge tone={remaining <= 7 ? 'critical' : 'warning'} className="whitespace-nowrap">{i18nT('Còn {{n}} ngày', { n: remaining })}</Badge>
+                )}
+              </div>
+              {/* Nút của cột Thao tác: Xử lý, Từ chối */}
+              {columns[columns.length - 1].render(user, 0)}
+            </div>
+          )
+        }}
       />
 
       {/* Pagination tự ẩn khi chỉ 1 trang — không giữ chỗ trống dưới bảng */}
