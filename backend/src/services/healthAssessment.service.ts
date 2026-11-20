@@ -344,7 +344,7 @@ export async function assessHouseDay(houseId: string, date: string, now = new Da
 
 /**
  * Gọi từ jobs/returnRate.job.ts sau kiểm tra tỷ lệ chim về (BR-21): đánh giá ngày `date` của mọi nhà,
- * báo "ngày đã sẵn sàng" (không kèm trạng thái, BR-31) khi ngày mới có lần đầu, rồi tính lại 7 ngày
+ * báo "ngày đã sẵn sàng" (người nhận mở ngày để xem trạng thái và chấm) khi ngày mới có lần đầu, rồi tính lại 7 ngày
  * trước để nhận dữ liệu buffer về trễ. Lỗi ở một nhà không làm bỏ qua các nhà sau. Trả số ngày mới.
  */
 export async function assessAllHouses(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {

@@ -16,9 +16,9 @@ import { formatReason, type ReasonLang } from '@/utils/healthReason.util'
 import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource, Role } from '@/types'
 
 /**
- * EXPERT-FR-012, BR-31, SM-18 — chấm độc lập trạng thái ngày. Người chưa chấm (hoặc chưa bỏ qua) một
- * ngày còn trong hạn thì MỌI đường đọc (ngày, danh sách, CSV, độ khớp) không trả trạng thái, lý do, mức
- * của chỉ số hay điểm của người khác — che ở server, không dựa vào màn hình.
+ * EXPERT-FR-012, BR-31 (Report 3 4.2.14), SM-18 — người chấm xem trạng thái, lý do của hệ thống rồi mới chấm
+ * (xác nhận hoặc sửa); mọi đường đọc (ngày, danh sách, CSV, báo cáo, độ khớp) trả đủ cho mọi người được xem
+ * ngày đó, đã chấm hay chưa. Điểm đã gửi không sửa được; ảnh chụp lúc chấm vẫn là dữ liệu của NFR-14.
  */
 
 /**
@@ -58,10 +58,9 @@ async function userNames(days: LeanDay[]): Promise<Map<string, string>> {
   return new Map(users.map(u => [String(u._id), u.full_name]))
 }
 
-/** Bản trả cho client — đang PENDING thì chỉ còn nhà, ngày, thời tiết và hạn chấm */
+/** Bản trả cho client: đủ trạng thái, lý do, chỉ số và điểm của mọi người, kể cả khi người gọi chưa chấm (BR-31) */
 function present(day: LeanDay, houseName: string, user: CurrentUser, names: Map<string, string>, now: Date) {
-  const state = ratingState(day, user, now)
-  const base = {
+  return {
     _id: String(day._id),
     house_id: String(day.house_id),
     house_name: houseName,
@@ -69,12 +68,8 @@ function present(day: LeanDay, houseName: string, user: CurrentUser, names: Map<
     date: day.date,
     weather: day.weather ?? null,
     computed_at: day.computed_at,
-    my_rating_state: state,
+    my_rating_state: ratingState(day, user, now),
     rating_deadline: ratingDeadline(day.date),
-  }
-  if (state === 'PENDING') return base
-  return {
-    ...base,
     indicators: day.indicators,
     completeness: day.completeness,
     current_status: day.current_status,
@@ -127,7 +122,7 @@ async function findDays(user: CurrentUser, params: { houseId?: string; farmId?: 
 }
 
 /**
- * EXPERT-FR-005, BR-31 — các ngày của 1 nhà trong [from, to] dựng cho người gọi (che y như /days), cho báo
+ * EXPERT-FR-005 — các ngày của 1 nhà trong [from, to] dựng cho người gọi (giống /days), cho báo
  * cáo theo nhà. Quyền trên nhà đã kiểm ở nơi gọi.
  */
 export async function presentHouseDays(user: CurrentUser, house: { _id: unknown; name: string }, from: string, to: string, now = new Date()) {
@@ -278,7 +273,7 @@ const csvCell = (v: unknown) => {
 
 /**
  * GET /health-reports/days.csv — 1 dòng mỗi nhà × ngày: mọi chỉ số kèm mức, trạng thái và điểm, theo
- * ngôn ngữ `lang` (mặc định vi). Không có id nội bộ; dòng người gọi còn PENDING để trống phần bị che (BR-31).
+ * ngôn ngữ `lang` (mặc định vi). Không có id nội bộ; mọi dòng có đủ trạng thái, kể cả ngày người gọi chưa chấm (BR-31).
  */
 export async function healthDaysCsv(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, lang: ReasonLang = 'vi', now = new Date(),
@@ -287,22 +282,19 @@ export async function healthDaysCsv(
   const text = CSV_TEXT[lang]
   const lines = [text.header.map(csvCell).join(',')]
   for (const d of rows) {
-    const shown = 'indicators' in d
-    const ind = (s: HealthSource) => (shown ? d.indicators[s] : undefined)
+    const ind = (s: HealthSource) => d.indicators[s]
     const level = (s: HealthSource) => {
       const l = ind(s)?.level
-      return l ? text.level[l] : shown ? text.notAssessed : ''
+      return l ? text.level[l] : text.notAssessed
     }
-    const ratings = shown
-      ? d.ratings.map(r => `${r.by.full_name ?? ''} (${text.role[r.role]}): ${r.outcome === 'SKIPPED' ? text.skipped : text.status[r.rating as string]}`).join('; ')
-      : ''
+    const ratings = d.ratings.map(r => `${r.by.full_name ?? ''} (${text.role[r.role]}): ${r.outcome === 'SKIPPED' ? text.skipped : text.status[r.rating as string]}`).join('; ')
     lines.push([
       d.house_name, d.date, d.my_rating_state,
       ind('environment')?.value, level('environment'),
       ind('air')?.value, level('air'),
       ind('flock')?.value, (ind('flock')?.details as { return_rate?: number } | undefined)?.return_rate, level('flock'),
       ind('noise')?.value, level('noise'),
-      shown ? text.status[d.current_status] : '', shown ? d.current_reasons.map(r => formatReason(r, lang)).join('; ') : '', ratings,
+      text.status[d.current_status], d.current_reasons.map(r => formatReason(r, lang)).join('; '), ratings,
       d.weather?.temperature_min, d.weather?.temperature_max, d.weather?.precipitation_mm,
     ].map(csvCell).join(','))
   }
@@ -314,18 +306,15 @@ export async function healthDaysCsv(
 
 /**
  * GET /health-reports/evaluation — so ảnh chụp lúc chấm với điểm của người chấm. Ngày ảnh chụp là
- * INSUFFICIENT_DATA đếm riêng, không vào độ khớp. Ngày người gọi còn PENDING bị bỏ ra (BR-31: không lộ
- * trạng thái qua thống kê). Trả kèm từng cặp để mọi con số tính lại được.
+ * INSUFFICIENT_DATA đếm riêng, không vào độ khớp. Trả kèm từng cặp để mọi con số tính lại được.
  */
 export async function evaluateRatings(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string; role?: FarmMemberRole }, now = new Date(),
 ) {
   const { days, houseNames, from, to } = await findDays(user, params, MAX_EVALUATION_RANGE, now)
   const names = await userNames(days)
-  const visible = days.filter(d => ratingState(d, user, now) !== 'PENDING')
-
   // Chỉ điểm của người chấm (BR-31); điểm Domain Expert chấm trước Report 3 4.2.0 không tính
-  const rated = visible.flatMap(d => d.ratings
+  const rated = days.flatMap(d => d.ratings
     .filter(r => r.outcome === 'RATED' && r.rating && isAssessor(r.role) && (!params.role || r.role === params.role))
     .map(r => ({ day: d, r })))
   const insufficient = rated.filter(x => x.r.snapshot.status === 'INSUFFICIENT_DATA')
@@ -381,9 +370,6 @@ export async function listDisagreements(
   const houses = await House.find({ _id: { $in: [...houseNames.keys()] } }).select('name health_levels').lean()
 
   const result = days.flatMap(d => {
-    // BR-31 — Farm Owner xem ngày lệch thay chuyên gia (BR-22) nhưng vẫn là người chấm: ngày mình còn chờ chấm
-    // thì không lộ trạng thái, lý do hay điểm của người khác, như evaluateRatings
-    if (ratingState(d, user, now) === 'PENDING') return []
     const disagreements = d.ratings
       .filter(r => r.outcome === 'RATED' && r.rating && isAssessor(r.role)
         && r.snapshot.status !== 'INSUFFICIENT_DATA' && r.rating !== r.snapshot.status)
