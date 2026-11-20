@@ -4,9 +4,7 @@ import type { Dictionary } from '@/lib/i18n'
 const vi = {
   'Vận hành': 'Vận hành',
   'Vận hành (chỉ đọc)': 'Vận hành (chỉ đọc)',
-  'Quản lý': 'Quản lý',
   'Hệ thống': 'Hệ thống',
-  'Console thiết bị': 'Console thiết bị',
   'Chuyên môn': 'Chuyên môn',
 
   'Tổng quan': 'Tổng quan',
@@ -69,9 +67,7 @@ type NavigationKey = keyof typeof vi
 const en: Record<NavigationKey, string> = {
   'Vận hành': 'Operations',
   'Vận hành (chỉ đọc)': 'Operations (read-only)',
-  'Quản lý': 'Management',
   'Hệ thống': 'System',
-  'Console thiết bị': 'Device console',
   'Chuyên môn': 'Expert work',
 
   'Tổng quan': 'Overview',

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/apis/admin/users.api'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { User } from '@/types'
@@ -13,6 +13,19 @@ export function useDeleteRequestsList(query: QueuePageQuery = {}) {
     query.page,
     query.limit,
   )
+}
+
+/** Badge "Người dùng" (AD-09): số yêu cầu xoá đang chờ; khoá theo tiền tố 'admin-delete-requests' nên tự giảm khi xử lý xong */
+export function usePendingDeletionCount(enabled: boolean): number {
+  const { data } = useQuery({
+    queryKey: ['admin-delete-requests', 'count'],
+    queryFn: () => adminApi.listDeleteRequests({ limit: 1 }),
+    enabled,
+    // Như các badge menu khác: làm mới 2 phút một lần, không cần sát từng giây
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  })
+  return data?.data.meta?.total ?? 0
 }
 
 /**

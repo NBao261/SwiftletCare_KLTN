@@ -13,7 +13,6 @@ const en: Record<string, string> = {
   'danh sách trang trại': 'farm list',
   'trang trại': 'farm',
   'Vận hành': 'Operations',
-  'Quản lý': 'Management',
   'Hệ thống': 'System',
   'Khác': 'Other',
   'Tổng quan hệ thống': 'System overview',
