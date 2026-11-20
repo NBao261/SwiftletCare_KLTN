@@ -108,12 +108,21 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
       mobileCard={zone => (
         <div className="flex flex-col gap-1.5">
           <p className="text-body font-semibold text-charcoal">{zoneLabelById.get(zone.zoneId) ?? zone.zoneName}</p>
-          <p className="flex flex-wrap gap-x-3 gap-y-1 text-small">
-            {valueCell(zone, 'temperature', 1)}
-            {valueCell(zone, 'humidity', 1)}
-            <span>NH3 {valueCell(zone, 'nh3_ppm', 1)}</span>
-            <span>CO2 {valueCell(zone, 'co2_ppm', 0)}</span>
-          </p>
+          {zone.metrics ? (
+            <>
+              <p className="flex flex-wrap gap-x-3 gap-y-1 text-small">
+                {valueCell(zone, 'temperature', 1)}
+                {valueCell(zone, 'humidity', 1)}
+                <span>NH3 {valueCell(zone, 'nh3_ppm', 1)}</span>
+                <span>CO2 {valueCell(zone, 'co2_ppm', 0)}</span>
+              </p>
+              <p className="text-small text-warmGray tabular-nums">
+                {t('compare.outside', { count: num(zone.metrics.anomalyCount), total: num(zone.metrics.sampleCount) })}
+              </p>
+            </>
+          ) : (
+            <p className="text-small text-warmGray">{t('compare.noData')}</p>
+          )}
         </div>
       )}
     />

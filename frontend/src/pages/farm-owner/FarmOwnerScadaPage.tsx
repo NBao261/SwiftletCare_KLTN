@@ -93,11 +93,11 @@ export default function FarmOwnerScadaPage(): JSX.Element {
             overriddenRelays={history.openRelays.get(node._id)}
           />
         ))}
-        {/* Bộ điều khiển mất kết nối gộp thành 1 dòng: không gửi được lệnh tới chúng */}
+        {/* Bộ điều khiển chưa kết nối (mất kết nối hoặc chờ kết nối lần đầu) gộp thành 1 dòng, mỗi Zone ghi một lần */}
         {offlineNodes.length > 0 && (
           <p className="flex items-start gap-2 rounded-xl bg-warmGray/5 px-4 py-3 text-body text-graphite">
             <WifiSlashIcon size={18} className="mt-0.5 shrink-0 text-warmGray" aria-hidden="true" />
-            {t('scada.offlineLine', { names: offlineNodes.map(node => zoneLabelById.get(node.zone_id) ?? node.device_id).join(', ') })}
+            {t('scada.offlineLine', { names: [...new Set(offlineNodes.map(node => zoneLabelById.get(node.zone_id) ?? node.device_id))].join(', ') })}
           </p>
         )}
       </div>

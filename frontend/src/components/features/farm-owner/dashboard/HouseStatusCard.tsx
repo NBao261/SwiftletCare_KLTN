@@ -41,10 +41,12 @@ interface HouseStatusCardProps {
   sensors: SensorNode[];
   // Tình hình hôm nay của nhà (GET /farms/{id}/overview); undefined = chưa tải
   overview?: HouseOverview;
+  // BR-31: người xem chưa đánh giá ngày hôm nay của nhà thì ẩn trạng thái hôm nay
+  hideTodayStatus?: boolean;
 }
 
 // Thẻ 1 nhà ở Tổng quan (FO-01, ANALYTICS-FR-015): môi trường từng Zone, chế độ điều khiển, giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, chim về
-export default function HouseStatusCard({ node, status, sensors, overview }: HouseStatusCardProps): JSX.Element {
+export default function HouseStatusCard({ node, status, sensors, overview, hideTodayStatus = false }: HouseStatusCardProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   const { t: farmT } = useTranslation(farmDict);
   const { t: healthT } = useTranslation(healthDict);
@@ -53,19 +55,21 @@ export default function HouseStatusCard({ node, status, sensors, overview }: Hou
   const onlineControllers = sensors.filter(sensor => sensor.status === 'ONLINE').length;
   const manualSensors = sensors.filter(sensor => sensor.control_mode === 'MANUAL');
   const overrideEnd = Math.max(0, ...manualSensors.map(sensor => (sensor.override_expiry ? Date.parse(sensor.override_expiry) : 0)));
-  const minutesLeft = overrideEnd > 0 ? Math.max(1, Math.ceil((overrideEnd - Date.now()) / MINUTE_MS)) : 0;
+  const minutesLeft = Math.ceil((overrideEnd - Date.now()) / MINUTE_MS);
 
-  let controlText = t('house.noController');
-  if (sensors.length > 0) {
-    const mode = manualSensors.length === 0
-      ? t('house.auto')
-      : minutesLeft > 0 ? t('house.manual', { n: num(minutesLeft) }) : t('house.manualNoTime');
-    controlText = `${mode} · ${t('house.controllers', { online: num(onlineControllers), total: num(sensors.length) })}`;
-  }
+  // Chế độ điều khiển: hạn điều khiển tay đã qua mà dữ liệu chưa cập nhật thì ghi "đang về tự động", không đứng ở "còn 1 phút"
+  let mode = t('house.auto');
+  if (manualSensors.length > 0 && overrideEnd === 0) mode = t('house.manualNoTime');
+  if (manualSensors.length > 0 && overrideEnd > 0 && minutesLeft > 0) mode = t('house.manual', { n: num(minutesLeft) });
+  if (manualSensors.length > 0 && overrideEnd > 0 && minutesLeft <= 0) mode = t('house.manualEnding');
+  const controlText = sensors.length === 0
+    ? t('house.noController')
+    : `${mode} · ${t('house.controllers', { online: num(onlineControllers), total: num(sensors.length) })}`;
 
   const footer = [
     overview?.latest_return_rate ? t('house.returnRate', { value: `${num(overview.latest_return_rate.value, 0)} %` }) : null,
-    t('house.alerts', { n: num(overview?.open_alerts ?? node.alerts.length) }),
+    // Cùng nguồn với ô "Cảnh báo chưa xử lý" (overview), chưa tải thì chưa ghi
+    overview ? t('house.alerts', { n: num(overview.open_alerts) }) : null,
     overview ? t('house.workOrders', { n: num(overview.open_work_orders) }) : null,
   ].filter(Boolean).join(' · ');
 
@@ -98,7 +102,7 @@ export default function HouseStatusCard({ node, status, sensors, overview }: Hou
       <div className="mt-auto flex flex-col gap-1 border-t border-warmGray/10 pt-3 text-body text-graphite">
         <p>{controlText}</p>
         {/* Trạng thái sức khoẻ hôm nay (MF-06), hoặc lý do chưa có */}
-        {overview && (
+        {overview && !hideTodayStatus && (
           <p className="flex flex-wrap items-center gap-2">
             {t('house.today')}
             {overview.status

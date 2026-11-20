@@ -10,6 +10,8 @@ export interface ActionsMenuItem {
   onClick: () => void
   danger?: boolean
   disabled?: boolean
+  // Lý do mục bị khoá, hiện thành dòng phụ dưới nhãn
+  hint?: string
 }
 
 interface ActionsMenuProps {
@@ -133,6 +135,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
                   )}
                 >
                   {t(item.label)}
+                  {item.hint && <span className="mt-0.5 block text-small font-normal text-warmGray">{t(item.hint)}</span>}
                 </button>
               </Fragment>
             )

@@ -116,7 +116,10 @@ export default function AlertTable({ alerts, serverPagination, locationOf, canAc
               <Badge className={STATUS_BADGE_CLASS[alert.status]}>{t(`status.${alert.status}`)}</Badge>
             </div>
             <p className="text-body font-semibold text-charcoal">{t(`type.${alert.type}`)}</p>
-            <p className="text-small text-warmGray">{locationOf(alert).location} · {dateTime(alert.created_at)}</p>
+            <p className="flex flex-wrap items-center gap-1.5 text-small text-warmGray">
+              {locationOf(alert).location} · {dateTime(alert.created_at)}
+              <SimulatedBadge simulated={locationOf(alert).simulated} />
+            </p>
           </div>
           {rowMenu(alert, 'justify-end')}
         </div>

@@ -35,11 +35,13 @@ export default function FarmGroupRow({
 }: FarmGroupRowProps) {
   const { t, num } = useTranslation(farmDict)
   const hasDevices = deviceCount > 0
-  // Xoá bị khoá khi còn thiết bị: lý do ghi ở phần xổ của hàng
+  // Xoá bị khoá khi còn thiết bị: lý do ghi ngay dưới mục trong menu
   const menuItems: ActionsMenuItem[] = [
     ...(onApplyProfile ? [{ label: t('profile.apply'), onClick: onApplyProfile }] : []),
     ...(canEdit ? [{ label: t('manage.edit'), onClick: onEdit }] : []),
-    ...(canEdit && isPrimary ? [{ label: t('manage.delete'), onClick: onDelete, danger: true, disabled: hasDevices }] : []),
+    ...(canEdit && isPrimary
+      ? [{ label: t('manage.delete'), onClick: onDelete, danger: true, disabled: hasDevices, hint: hasDevices ? t('manage.deleteBlocked', { n: num(deviceCount) }) : undefined }]
+      : []),
   ]
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {

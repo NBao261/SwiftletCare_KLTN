@@ -40,11 +40,14 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
   }
 }
 
-// Trạng thái thiết bị tính là hư: mất kết nối (PENDING là chưa kết nối lần đầu, không tính)
+// Trạng thái thiết bị tính là hư (chấm cảnh báo của khung lọc): mất kết nối; PENDING là chưa kết nối lần đầu, không tính là hư
 const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['OFFLINE'])
 
-// Trạng thái trực tiếp của 1 nhà trên Tổng quan (A-03): "Ổn định" chỉ khi mọi bộ điều khiển online và số đo trong ngưỡng
+// Trạng thái trực tiếp của 1 nhà trên Tổng quan (A-03): "Ổn định" chỉ khi có bộ điều khiển, mọi bộ đều online và số đo trong ngưỡng.
+// Khác chấm cảnh báo của khung lọc: ở đây bộ điều khiển chờ kết nối (PENDING) cũng cần chú ý vì nhà chưa được theo dõi
 export function houseLiveStatus(health: 'ALERT' | 'NORMAL' | 'EMPTY', controllerStatuses: DeviceStatus[]): 'ALERT' | 'NORMAL' | 'EMPTY' {
+  if (health === 'ALERT') return 'ALERT'
+  if (controllerStatuses.length === 0) return 'EMPTY'
   if (controllerStatuses.some(status => status !== 'ONLINE')) return 'ALERT'
   return health
 }
@@ -234,44 +237,34 @@ export const STATUS_BADGE_CLASS: Record<AlertStatus, string> = {
 interface HouseKpiSource {
   farm: { _id: string }
   health: 'ALERT' | 'NORMAL' | 'EMPTY'
-  zones: unknown[]
-  counts: { total: number; online: number }
+  counts: { total: number; online: number; offline: number }
   alerts: Array<{ severity: AlertSeverity }>
-  monthKg: number
-  monthNests: number
-  monthBatches: number
 }
 
 export interface FarmKpiTotals {
   houses: number
   faultHouses: number
-  zones: number
   devicesOnline: number
   devicesTotal: number
+  // Chỉ thiết bị OFFLINE; thiết bị chờ kết nối lần đầu (PENDING) không tính là mất kết nối
+  devicesOffline: number
   alertsTotal: number
   alertsByLevel: Record<SeverityLevel, number>
-  monthKg: number
-  monthNests: number
-  monthBatches: number
 }
 
-// Cộng số liệu các nhà yến thuộc 1 farm (nguồn chứa nhà của mọi farm nên lọc theo farmId)
 // Cộng số liệu các nhà của 1 farm; farmId '' = cộng mọi farm
 export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): FarmKpiTotals {
   const totals: FarmKpiTotals = {
-    houses: 0, faultHouses: 0, zones: 0, devicesOnline: 0, devicesTotal: 0,
-    alertsTotal: 0, alertsByLevel: { P1: 0, P2: 0, P3: 0 }, monthKg: 0, monthNests: 0, monthBatches: 0,
+    houses: 0, faultHouses: 0, devicesOnline: 0, devicesTotal: 0, devicesOffline: 0,
+    alertsTotal: 0, alertsByLevel: { P1: 0, P2: 0, P3: 0 },
   }
   for (const house of houses) {
     if (farmId && house.farm._id !== farmId) continue
     totals.houses += 1
     if (house.health === 'ALERT') totals.faultHouses += 1
-    totals.zones += house.zones.length
     totals.devicesOnline += house.counts.online
     totals.devicesTotal += house.counts.total
-    totals.monthKg += house.monthKg
-    totals.monthNests += house.monthNests
-    totals.monthBatches += house.monthBatches
+    totals.devicesOffline += house.counts.offline
     for (const alert of house.alerts) {
       totals.alertsByLevel[SEVERITY_TO_LEVEL[alert.severity]] += 1
       totals.alertsTotal += 1

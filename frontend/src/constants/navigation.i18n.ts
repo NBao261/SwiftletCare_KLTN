@@ -59,6 +59,8 @@ const vi = {
   'Lịch đếm': 'Lịch đếm',
   'Vòng đếm': 'Vòng đếm',
   'Lịch sử': 'Lịch sử',
+  'Thêm': 'Thêm',
+  'Đóng menu': 'Đóng menu',
   'Điều hướng chính': 'Điều hướng chính',
 }
 
@@ -122,6 +124,8 @@ const en: Record<NavigationKey, string> = {
   'Lịch đếm': 'Counting schedule',
   'Vòng đếm': 'Counting ring',
   'Lịch sử': 'History',
+  'Thêm': 'More',
+  'Đóng menu': 'Close menu',
   'Điều hướng chính': 'Main navigation',
 }
 

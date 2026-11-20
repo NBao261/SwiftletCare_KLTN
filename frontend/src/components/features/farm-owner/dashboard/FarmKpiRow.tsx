@@ -3,26 +3,22 @@ import { ClipboardTextIcon, HouseLineIcon, WarningIcon, WifiSlashIcon } from '@p
 import KpiTile from '@/components/common/KpiTile';
 import type { FarmKpiTotals } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { dashboardDict } from '@/constants/dashboard.i18n';
-import { levelDict } from '@/constants/severity.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { NO_VALUE } from '@/constants/display';
 
 interface FarmKpiRowProps {
   totals: FarmKpiTotals;
+  // Cảnh báo chưa xử lý cộng từ thẻ nhà (overview); undefined = đang tải
+  openAlerts: number | undefined;
   // Phiếu chờ duyệt trong phạm vi; undefined = đang tải
   awaitingApproval: number | undefined;
 }
 
 // Hàng 4 ô của Tổng quan (FO-01): nhà, cảnh báo, thiết bị lấy cùng một nguồn với thẻ nhà bên dưới để số khớp nhau (A-03)
-export default function FarmKpiRow({ totals, awaitingApproval }: FarmKpiRowProps): JSX.Element {
+export default function FarmKpiRow({ totals, openAlerts, awaitingApproval }: FarmKpiRowProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
-  const { t: translateLevel } = useTranslation(levelDict);
-  const offlineDevices = totals.devicesTotal - totals.devicesOnline;
-  const alertsSub = t('kpi.alertsSub', {
-    p1: totals.alertsByLevel.P1, l1: translateLevel('P1'),
-    p2: totals.alertsByLevel.P2, l2: translateLevel('P2'),
-    p3: totals.alertsByLevel.P3, l3: translateLevel('P3'),
-  });
+  // Chỉ thiết bị OFFLINE; thiết bị vừa thêm còn chờ kết nối lần đầu không phải "mất kết nối"
+  const offlineDevices = totals.devicesOffline;
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -35,10 +31,10 @@ export default function FarmKpiRow({ totals, awaitingApproval }: FarmKpiRowProps
       />
       <KpiTile
         icon={WarningIcon}
-        label={t('kpi.pendingAlerts')}
-        value={num(totals.alertsTotal)}
-        sub={alertsSub}
-        tone={totals.alertsByLevel.P1 > 0 ? 'orange' : 'neutral'}
+        label={t('kpi.openAlerts')}
+        value={openAlerts === undefined ? NO_VALUE : num(openAlerts)}
+        sub={t('kpi.openAlertsSub', { n: num(totals.alertsTotal) })}
+        tone={totals.alertsTotal > 0 ? 'orange' : 'neutral'}
       />
       <KpiTile
         icon={WifiSlashIcon}

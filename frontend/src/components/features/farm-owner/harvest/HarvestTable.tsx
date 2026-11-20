@@ -22,7 +22,7 @@ import { NO_VALUE } from '@/constants/display';
 const VISIBLE_ROWS = 4;
 const ROW_HEIGHT = 68;
 // Tiêu đề cột (~46px) + 4 dòng × 68px — chiều cao cố định của vùng bảng khi chưa tới màn xl
-const TABLE_AREA_CLASS = 'h-[318px] xl:h-auto xl:min-h-0 xl:flex-1';
+const TABLE_AREA_CLASS = 'sm:h-[318px] xl:h-auto xl:min-h-0 xl:flex-1';
 // Bảng nằm trong cột 8/12 nên hạ bề rộng tối thiểu để không cuộn ngang ở màn rộng
 const TABLE_MIN_WIDTH = 640;
 // Ô đệm ngang hẹp hơn mặc định để 6 cột vừa cột 8/12
@@ -152,7 +152,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
       key: 'actions', header: t('col.actions'), align: 'center', className: cn('w-[14%] whitespace-nowrap', CELL_PADDING),
       render: group => (
         // Chặn click lan lên dòng để mở menu không mở luôn chi tiết
-        <div onClick={event => event.stopPropagation()} className="flex items-center justify-center">
+        <div onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} className="flex items-center justify-center">
           <ActionsMenu
             items={[
               { label: t('action.detail'), onClick: () => onOpenDetail(group) },
@@ -257,8 +257,9 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
             mobileCard={group => (
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-1">
-                  <p className="text-body font-semibold text-charcoal">
+                  <p className="flex flex-wrap items-center gap-2 text-body font-semibold text-charcoal">
                     {formatStandardDate(group.harvest_date)} · {zoneById.get(group.zone_id)?.houseName ?? NO_VALUE}
+                    {group.pendingIds.length > 0 && <Badge tone="warning">{t('status.pending')}</Badge>}
                   </p>
                   <NestTypeStatus nestTypes={group.nestTypes} />
                   <p className="text-small text-warmGray">

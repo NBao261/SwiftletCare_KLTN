@@ -84,6 +84,11 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
             <div className="min-w-0">
               <p className="text-body font-semibold text-charcoal">{date(day.date)} · {day.house_name}</p>
               {canRate && day.my_rating_state && <p className="text-small text-warmGray">{t(`ratingState.${day.my_rating_state}`)}</p>}
+              {canRate && day.my_rating_state === 'PENDING' && (
+                <p className={cn('text-small', isRatingDeadlineNear(day.rating_deadline) ? 'font-semibold text-climateOrange' : 'text-warmGray')}>
+                  {t('cell.deadline', { date: date(lastRatingDay(day.rating_deadline)) })}
+                </p>
+              )}
             </div>
             {day.current_status ? <HealthStatusBadge status={day.current_status} /> : <span className="text-small text-warmGray">{t('cell.hidden')}</span>}
           </div>

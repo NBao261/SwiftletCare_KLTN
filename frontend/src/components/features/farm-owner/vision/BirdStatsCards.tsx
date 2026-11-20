@@ -1,6 +1,6 @@
 import { ArrowDownIcon, ArrowUpIcon, RepeatIcon, SignInIcon, SignOutIcon, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { Badge, Card } from '@/components/ui'
-import { t } from '@/i18n'
+import { intlLocale, t } from '@/i18n'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
 import { formatReturnRate } from '@/lib/helpers'
@@ -93,7 +93,7 @@ function StatCard({
           {deltaPercent > 0 && <ArrowUpIcon size={14} weight="bold" className="text-accent-800" aria-hidden="true" />}
           {deltaPercent < 0 && <ArrowDownIcon size={14} weight="bold" className="text-safetyOrange" aria-hidden="true" />}
           <span className={cn('tabular-nums', deltaPercent > 0 && 'text-accent-800', deltaPercent < 0 && 'text-safetyOrange')}>
-            {deltaPercent > 0 ? '+' : ''}{deltaPercent} %
+            {deltaPercent > 0 ? '+' : ''}{deltaPercent.toLocaleString(intlLocale())} %
           </span>
           {t('so với hôm qua')}
         </p>

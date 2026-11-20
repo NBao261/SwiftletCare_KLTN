@@ -42,7 +42,6 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
   // Trang tính trong 1 trang trại: chưa chọn mà chỉ có 1 trang trại thì dùng luôn trang trại đó
   const farmId = scope.farmId || (scope.farms.length === 1 ? scope.farms[0]._id : '');
 
-
   const [periodDays, setPeriodDays] = useState<PeriodDays>(DEFAULT_PERIOD);
   const [sort, setSort] = useState<ComparisonSortKey>('name');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
@@ -55,7 +54,6 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
 
   // Hàng so sánh tự mang nhãn "Giả lập"
   const comparison = useHouseComparison(farmId || undefined, { ...period, sort, order });
-
 
   // Chưa có farm: đang tải thì khung chờ, tải lỗi thì báo kèm Thử lại, xong mới báo chưa có farm (FE_Design 13.5)
   if (scope.farms.length === 0 && scope.isLoading) return <LoadingSkeleton count={5} className="h-14 w-full" />;

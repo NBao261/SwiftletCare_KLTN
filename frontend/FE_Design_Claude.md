@@ -427,9 +427,9 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 
 | Token Tailwind | Hex | Dùng ở |
 |---|---|---|
-| `safetyOrange` | `#FF7426` | Khung *Trạng thái nhà yến*: chữ + chấm "Lỗi N thiết bị", dòng ghi chú lỗi. *Nhật ký cảnh báo*: nhãn mức HIGH, giá trị vượt ngưỡng (in đậm) |
+| `safetyOrange` | `#FF7426` | Thẻ nhà ở Tổng quan: nhãn "Cần chú ý", số đo vượt ngưỡng (kèm icon). Bảng *Cảnh báo*: nhãn mức HIGH, giá trị vượt ngưỡng (in đậm) |
 | `climateOrange` (= `orange-500`) | `#ED8F50` | Ô cảm biến vượt ngưỡng; relay "Quá nóng"; thanh điểm cân bằng Zone 65–79 (`ZoneBalanceCard`; dải chỉ để hiển thị — xem ghi chú dưới bảng b) |
-| `orange-100` / `orange-800` | `#FAE1D1` / `#8B400E` | Nhãn mức MEDIUM ở *Nhật ký cảnh báo* |
+| `orange-100` / `orange-800` | `#FAE1D1` / `#8B400E` | Nhãn mức MEDIUM ở bảng *Cảnh báo* |
 | `infoBlue` | `#4A89EB` | Trạng thái cảnh báo "Mới" |
 | `statusYellow` | `#FFE033` | Nhãn "Bộ điều khiển: Đang chờ kết nối" (code cũ ghi "PLC") (nền 70%, chữ charcoal) |
 
@@ -457,7 +457,7 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 
 Các mốc của điểm cân bằng Zone (`ZoneBalanceCard`: ≥ 90 "Rất tối ưu", ≥ 80 "Tối ưu" xanh, ≥ 65 "Bình thường" cam) **không có nguồn nuôi yến** — chỉ để tô màu, không phải ngưỡng cảnh báo; giao diện không tự đặt dải màu nào cho tỷ lệ chim về. Cảnh báo tỷ lệ chim về là `LOW_RETURN_RATE` theo `return_rate_drop_pct` của nhà yến (VISION-FR-011, BR-21). Các mốc này đã ghi ở Report 3 §4.5; đổi giá trị thì sửa cả ở đó.
 
-**c) Trạng thái xử lý cảnh báo** (cột *Trạng thái* ở Nhật ký cảnh báo — `status` từ BE)
+**c) Trạng thái xử lý cảnh báo** (cột *Trạng thái* ở bảng Cảnh báo — `status` từ BE)
 
 | `status` | Nhãn VI / EN | Nền | Chữ | Ý nghĩa |
 |---|---|---|---|---|
@@ -468,15 +468,9 @@ Các mốc của điểm cân bằng Zone (`ZoneBalanceCard`: ≥ 90 "Rất tố
 
 Mức độ (cột *Mức độ*): **theo 2.4**. Hiển thị 3 cấp qua `SeverityBadge`, bộ lọc "Tất cả · Khẩn cấp · Cao · Thường".
 
-**d) Trạng thái bộ điều khiển** (thanh *Giám sát vận hành SCADA*; code cũ ghi "PLC")
+**d) Trạng thái bộ điều khiển trên Tổng quan** (thanh "Giám sát vận hành SCADA" đã bỏ ở v2.17.0)
 
-| Trạng thái | Điều kiện | Nhãn VI / EN | Nền | Chữ |
-|---|---|---|---|---|
-| Online | Bản đo mới nhất cách hiện tại ≤ 20 giây | PLC: Online | `accent-600` (Badge `positive`) | charcoal |
-| Mất kết nối | Có bản đo nhưng cũ hơn 20 giây | PLC: Mất kết nối / Disconnected | `alertRed/15` (Badge `critical`) | `alertRed` |
-| Đang chờ kết nối | Chưa có bản đo nào | PLC: Đang chờ kết nối / Awaiting connection | `statusYellow/70` | charcoal |
-
-Chấm tròn đầu thanh: `success` khi Online, `warmGray` khi không. Nhãn rộng cố định 190px để đổi trạng thái không làm thanh nhảy.
+Thẻ nhà ghi "Tự động / Điều khiển tay · còn N phút · x/y bộ điều khiển online"; nhà chỉ "Ổn định" khi mọi bộ điều khiển online và số đo trong ngưỡng (`houseLiveStatus`). Tab Điều khiển tay gộp bộ điều khiển chưa kết nối (mất kết nối hoặc chờ kết nối lần đầu) thành 1 dòng. Ô "Thiết bị mất kết nối" chỉ đếm `OFFLINE`, không đếm `PENDING`.
 
 Mốc 20 giây (`LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`) là hằng số tự chọn của giao diện (Report 3 §4.5), khác mốc mất kết nối của backend (heartbeat 30 giây, BR-10). Trạng thái thiết bị chính thức là `DEVICE_STATUS_CHANGE`/`status` của backend; nhãn này chỉ nói số đo trên màn có còn mới hay không.
 
@@ -568,7 +562,7 @@ Khung dùng chung 4 role (`components/layouts/`); menu của từng role khai tr
 - **Sidebar** `w-64`: logo, rồi các nhóm menu (không khối chào, không nút đăng xuất). Menu ≤ 12 mục mỗi role, không cuộn ở 1440×900. Nhóm có `collapsible: true` thu gọn bằng mũi tên cạnh tiêu đề, nhớ trong `localStorage`; nhóm chứa trang đang mở luôn mở. Mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung. Nhãn nhóm là chỗ duy nhất được in hoa.
 - **Header:** trái là tên trang (`<h1>`, điện thoại `text-xl` xuống tối đa 2 dòng) + breadcrumb trang chi tiết; phải là VI/EN (cao 36px, không popup; dưới `sm` nằm trong menu avatar) · chuông · avatar. Khe `HeaderActions` (thanh phạm vi) cùng hàng từ 1280px, dưới 1280px xuống hàng riêng ngay dưới; `AppShell` đo chiều cao header để chừa đúng chỗ.
 - **Menu avatar** (mọi khổ màn): tên, email, vai trò · Cài đặt · Quyền riêng tư · Đăng xuất. Đây là chỗ duy nhất có Cài đặt và Đăng xuất; route `/settings` vẫn trong `MENU_ACCESS`.
-- **Dock điện thoại:** 4 mục (`firstDockItems` hoặc `dockItems` của role).
+- **Dock điện thoại:** 4 mục (`firstDockItems` hoặc `dockItems` của role) và mục "Thêm" mở các mục còn lại theo nhóm, kèm badge; chấm đỏ trên "Thêm" khi một mục bên trong có badge.
 
 **Đúng theo role** (✓ có, — không có):
 
@@ -931,7 +925,7 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
 | Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ✅ API thật (`/health-reports/days*`, `/health-reports`, `/farms/houses/:id/health-levels`); màn `/health` và trang báo cáo `/health/report` (PR #126) | Không |
 | Cấu trúc Farm — người phụ trách nhà, thiết bị, số đo, cảnh báo, thu hoạch | FARM-FR-*, AUTH-FR-013 | 🟢 API thật (người phụ trách = thợ chính của nhà). Lịch thu dự kiến, khuyến nghị AI, kỹ thuật viên lắp và firmware mới nhất đã gỡ ngày 18/11/2026 cùng `farmMock.api.ts`: Report 3 không có (dự báo sản lượng ngoài phạm vi §8; khuyến nghị thật ở `/recommendations`, EXPERT-FR-017) | Không |
-| Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
+| Dashboard Farm Owner — 4 ô KPI, thẻ từng nhà (số đo theo Zone, chế độ AUTO/MANUAL, trạng thái hôm nay), việc cần làm; chọn 1 nhà thì 6 chỉ số và rơ-le | ENV-FR-004/005, ANALYTICS-FR-015 | ✅ API thật (`/farms/{id}/overview`, `/analytics/env/compare`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`, `/work-orders`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
 | Chi tiết thiết bị `/devices/detail` — thiết bị con của bộ kit | FARM-FR-005/006 (phần mở rộng UI) | 🟢 Không có tên riêng cho từng thiết bị con (không có endpoint): mỗi dòng ghi mã bộ kit; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) — dữ liệu giả `deviceComponents.data.ts` đã gỡ 18/11/2026 | Không |
 
@@ -1483,7 +1477,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 
 ### 13.11. Accessibility tối thiểu
 
-- **[Bắt buộc]** Hành động bấm được là `<button>` (hoặc `Button`), điều hướng là `<Link>`/`NavLink` — không `div onClick` cho hành động (wrapper chỉ để `stopPropagation`, như trong `SensorAlertLogTable`, thì được).
+- **[Bắt buộc]** Hành động bấm được là `<button>` (hoặc `Button`), điều hướng là `<Link>`/`NavLink` — không `div onClick` cho hành động (wrapper chỉ để `stopPropagation`, như cột ⋯ của `AlertTable`, thì được).
 - **[Bắt buộc]** Nút chỉ có icon phải có `aria-label` tiếng Việt.
 - **[Bắt buộc]** Input trong form có label gắn đúng (`Input`/`Select`/`Textarea` của `ui/` đã hỗ trợ `label`).
 - **[Nên]** Trạng thái không chỉ truyền bằng màu — kèm chữ hoặc icon (mục 2.6 đã yêu cầu icon + label cho cảm biến).

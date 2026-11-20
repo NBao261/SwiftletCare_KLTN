@@ -135,21 +135,20 @@ describe('averageControlOutput', () => {
 
 describe('summarizeFarmHouses', () => {
   const house = (farmId: string, health: 'ALERT' | 'NORMAL' | 'EMPTY', severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>) => ({
-    farm: { _id: farmId }, health, zones: [{}, {}], counts: { total: 4, online: 3 },
-    alerts: severities.map(severity => ({ severity })), monthKg: 1.5, monthNests: 10, monthBatches: 1,
+    farm: { _id: farmId }, health, counts: { total: 4, online: 2, offline: 1 },
+    alerts: severities.map(severity => ({ severity })),
   })
 
   it('chỉ cộng nhà của farm đang chọn, quy cảnh báo về 3 cấp', () => {
     const totals = summarizeFarmHouses([house('f1', 'ALERT', ['CRITICAL', 'MEDIUM']), house('f1', 'NORMAL', ['LOW']), house('f2', 'ALERT', ['HIGH'])], 'f1')
     expect(totals.houses).toBe(2)
     expect(totals.faultHouses).toBe(1)
-    expect(totals.zones).toBe(4)
-    expect(totals.devicesOnline).toBe(6)
+    expect(totals.devicesOnline).toBe(4)
     expect(totals.devicesTotal).toBe(8)
+    // Thiết bị chờ kết nối (total − online − offline) không tính là mất kết nối
+    expect(totals.devicesOffline).toBe(2)
     expect(totals.alertsTotal).toBe(3)
     expect(totals.alertsByLevel).toEqual({ P1: 1, P2: 1, P3: 1 })
-    expect(totals.monthKg).toBe(3)
-    expect(totals.monthBatches).toBe(2)
   })
 
   it('tất cả trang trại (farmId rỗng) cộng nhà của mọi farm', () => {
@@ -157,7 +156,6 @@ describe('summarizeFarmHouses', () => {
     expect(totals.houses).toBe(2)
     expect(totals.alertsTotal).toBe(3)
     expect(totals.alertsByLevel).toEqual({ P1: 2, P2: 0, P3: 1 })
-    expect(totals.monthKg).toBe(3)
   })
 })
 
@@ -214,6 +212,11 @@ describe('houseLiveStatus', () => {
   it('mọi bộ điều khiển online thì theo số đo của nhà', () => {
     expect(houseLiveStatus('NORMAL', ['ONLINE'])).toBe('NORMAL')
     expect(houseLiveStatus('ALERT', ['ONLINE'])).toBe('ALERT')
+  })
+
+  it('nhà chưa có bộ điều khiển không bao giờ "Ổn định", trừ khi đang có sự cố (VD camera hỏng)', () => {
+    expect(houseLiveStatus('NORMAL', [])).toBe('EMPTY')
     expect(houseLiveStatus('EMPTY', [])).toBe('EMPTY')
+    expect(houseLiveStatus('ALERT', [])).toBe('ALERT')
   })
 })

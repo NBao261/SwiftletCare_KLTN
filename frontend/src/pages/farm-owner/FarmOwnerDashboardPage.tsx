@@ -1,12 +1,11 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { useQueries } from '@tanstack/react-query'
-import { farmOverviewApi } from '@/apis/farm-owner/farmOverview.api'
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { useSensorNodes } from '@/hooks/shared/useDevices'
 import { useHealthDays } from '@/hooks/shared/useHealthDays'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
 import { useAwaitingApproval } from '@/hooks/farm-owner/useWorkOrders'
+import { useFarmOverviews } from '@/hooks/farm-owner/useFarmOverview'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
@@ -21,7 +20,7 @@ import HouseDetailPanels from '@/components/features/farm-owner/dashboard/HouseD
 import DashboardTodoCard from '@/components/features/farm-owner/dashboard/DashboardTodoCard'
 import { houseLiveStatus, latestTimestamp, summarizeFarmHouses } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
-import type { HouseOverview, SensorNode } from '@/types'
+import type { SensorNode } from '@/types'
 
 // Ngày chưa đánh giá tính trong 7 ngày qua (hạn đánh giá D+7)
 const RATING_WINDOW_DAYS = 7
@@ -71,15 +70,14 @@ export default function FarmOwnerDashboardPage() {
 
   // Tình hình hôm nay của từng nhà (chim về, phiếu đang mở): 1 request mỗi trang trại trong phạm vi
   const scopeFarmIds = useMemo(() => (farmId ? [farmId] : farms.map(farm => farm._id)), [farmId, farms])
-  const overviewByHouse = useQueries({
-    queries: scopeFarmIds.map(id => ({
-      queryKey: ['farm-overview', id],
-      queryFn: () => farmOverviewApi.overview(id).then(response => response.data.data),
-    })),
-    combine: results => new Map<string, HouseOverview>(results.flatMap(result => result.data?.houses ?? []).map(house => [house.house_id, house])),
-  })
+  const overviewByHouse = useFarmOverviews(scopeFarmIds)
+  // Cảnh báo chưa xử lý (ACTIVE + ACKNOWLEDGED) lấy từ overview cho cả ô KPI lẫn thẻ nhà để tổng bằng nhau; chưa tải đủ thì chưa có số
+  const openAlerts = scopedHouses.every(node => overviewByHouse.has(node.house._id))
+    ? scopedHouses.reduce((sum, node) => sum + (overviewByHouse.get(node.house._id)?.open_alerts ?? 0), 0)
+    : undefined
 
-  const { data: awaiting } = useAwaitingApproval(farmId)
+  // Phiếu chờ duyệt cùng phạm vi khung lọc với các ô khác (A-03)
+  const { data: awaiting } = useAwaitingApproval(farmId, houseId)
   const today = vietnamDate()
   const { days: daysToRate } = useHealthDays({
     farmIds: isOwner ? scopeFarmIds : [],
@@ -88,6 +86,11 @@ export default function FarmOwnerDashboardPage() {
     to: today,
     myRatingState: 'PENDING',
   })
+  // BR-31: chủ nhà chưa đánh giá ngày hôm nay của nhà thì chưa thấy trạng thái hôm nay của nhà đó
+  const statusHiddenHouseIds = useMemo(
+    () => new Set(daysToRate.filter(day => day.date.slice(0, 10) === today).map(day => day.house_id)),
+    [daysToRate, today],
+  )
 
   // Thanh phạm vi trên header ở mọi khổ màn (dưới xl xuống hàng riêng)
   const header = (
@@ -143,7 +146,7 @@ export default function FarmOwnerDashboardPage() {
       : [{ id: 'all', title: t('grid.title'), nodes: scopedHouses }]
     body = (
       <>
-        <FarmKpiRow totals={totals} awaitingApproval={awaiting?.total} />
+        <FarmKpiRow totals={totals} openAlerts={openAlerts} awaitingApproval={awaiting?.total} />
         {isAllHouses ? groups.map((group, index) => (
           <section key={group.id} className="flex flex-col gap-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -158,6 +161,7 @@ export default function FarmOwnerDashboardPage() {
                   status={statusByHouse.get(node.house._id) ?? node.health}
                   sensors={sensorsByHouse.get(node.house._id) ?? NO_SENSORS}
                   overview={overviewByHouse.get(node.house._id)}
+                  hideTodayStatus={statusHiddenHouseIds.has(node.house._id)}
                 />
               ))}
             </div>

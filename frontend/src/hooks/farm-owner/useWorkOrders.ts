@@ -39,13 +39,16 @@ export function useOpenWorkOrderCount(houseId: string) {
   });
 }
 
-// Phiếu đã xong chờ chủ nhà yến duyệt (OPS-FR-003): 5 phiếu đầu và tổng số, cho badge menu Công việc và Tổng quan; farmId '' = mọi trang trại
-export function useAwaitingApproval(farmId = '', enabled = true) {
+// Phiếu đã xong chờ chủ nhà yến duyệt (OPS-FR-003): 5 phiếu đầu và tổng số, cho badge menu Công việc và Tổng quan.
+// Phạm vi như khung lọc: houseId thắng farmId, cả hai rỗng = mọi trang trại
+export function useAwaitingApproval(farmId = '', houseId = '', enabled = true) {
   return useQuery({
-    queryKey: [WORK_ORDERS_KEY, 'awaiting', farmId],
-    queryFn: () => workOrderApi.list({ ...(farmId ? { farmId } : {}), status: 'AWAITING_APPROVAL', limit: 5 })
+    queryKey: [WORK_ORDERS_KEY, 'awaiting', farmId, houseId],
+    queryFn: () => workOrderApi.list({ ...(houseId ? { houseId } : farmId ? { farmId } : {}), status: 'AWAITING_APPROVAL', limit: 5 })
       .then(response => ({ items: response.data.data, total: response.data.meta?.total ?? response.data.data.length })),
     enabled,
+    // Kỹ thuật viên báo xong phiếu không có sự kiện socket cho chủ: hỏi lại 2 phút một lần như badge chuyên môn
+    refetchInterval: 120_000,
   });
 }
 

@@ -8,8 +8,9 @@ import { alertTypeDict } from '@/constants/enumLabels.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import type { Alert, WorkOrder } from '@/types';
 
-// Tối đa 5 dòng, phần còn lại ở trang Cảnh báo, Công việc, Sức khoẻ
+// Tối đa 5 dòng; cảnh báo chiếm tối đa 3 để phiếu chờ duyệt và ngày cần đánh giá vẫn có chỗ
 const MAX_ROWS = 5;
+const MAX_ALERT_ROWS = 3;
 
 interface DashboardTodoCardProps {
   // Cảnh báo chờ xác nhận trong phạm vi, mới nhất trước
@@ -26,8 +27,8 @@ export default function DashboardTodoCard({ alerts, approvals, daysToRate, struc
   const { t, num } = useTranslation(dashboardDict);
   const { t: alertTypeLabel } = useTranslation(alertTypeDict);
 
-  const rows = [
-    ...alerts.map(alert => {
+  const allRows = [
+    ...alerts.slice(0, MAX_ALERT_ROWS).map(alert => {
       const zone = alert.zone_id ? structure.zoneById.get(alert.zone_id) : undefined;
       const house = zone?.house ?? (alert.house_id ? structure.houseById.get(alert.house_id)?.house : undefined);
       const place = [house?.name, zone?.zone.name].filter(Boolean).join(' · ');
@@ -35,7 +36,10 @@ export default function DashboardTodoCard({ alerts, approvals, daysToRate, struc
     }),
     ...approvals.map(order => ({ key: order._id, to: '/work-orders', text: t('todo.approve', { title: order.title }) })),
     ...(daysToRate > 0 ? [{ key: 'rate', to: '/health', text: t('todo.rate', { n: num(daysToRate) }) }] : []),
-  ].slice(0, MAX_ROWS);
+  ];
+  const rows = allRows.slice(0, MAX_ROWS);
+  // Việc không hiện hết: cảnh báo vượt 3 dòng và các dòng vượt 5
+  const hiddenCount = Math.max(0, alerts.length - MAX_ALERT_ROWS) + (allRows.length - rows.length);
 
   return (
     <SectionCard
@@ -54,6 +58,7 @@ export default function DashboardTodoCard({ alerts, approvals, daysToRate, struc
               </Link>
             </li>
           ))}
+          {hiddenCount > 0 && <li className="px-2 pt-1 text-small text-warmGray">{t('todo.more', { n: num(hiddenCount) })}</li>}
         </ul>
       )}
     </SectionCard>
