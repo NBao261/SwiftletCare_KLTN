@@ -8,16 +8,21 @@
 //   (job BE đánh dấu thất bại sau 30 phút) / `firmware_version` khớp bản yêu cầu → thành công.
 // - Lỗi BE: 400 (host không được phép / dữ liệu sai), 409 (node không ONLINE / trùng version),
 //   501 (thiết bị chạy firmware trước 1.4.0, chưa xử lý lệnh từ xa), 503 (mất MQTT).
-import { useState } from 'react'
-import { useSensorNodes, useSendNodeCommand } from '@/hooks/shared/useDevices'
+import { useMemo, useState } from 'react'
+import { useSensorNodes, useSendNodeCommand, useSystemNodeStatus } from '@/hooks/shared/useDevices'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { useToastStore } from '@/stores/toastStore'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import SectionCard from '@/components/ui/SectionCard'
+import DataTable from '@/components/ui/DataTable'
+import { Drawer } from '@/components/ui/Drawer'
 import { IconOTA } from '@/components/ui/icons'
-import { DeviceTable }     from '@/components/features/admin/ota/DeviceTable'
-import { OTASidePanel }   from '@/components/features/admin/ota/OTASidePanel'
+import SimulatedBadge from '@/components/common/SimulatedBadge'
+import StatusDot from '@/components/common/StatusDot'
+import { OtaChip, UpdateButton, buildOtaColumns } from '@/components/features/admin/ota/otaColumns'
+import { OTASidePanel } from '@/components/features/admin/ota/OTASidePanel'
+import { t } from '@/i18n'
 import { OTAConfirmModal } from '@/components/features/admin/ota/OTAConfirmModal'
 import { EMPTY_OTA_FORM, validateOtaForm } from '@/components/features/admin/ota/otaTypes'
 import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/admin/ota/otaTypes'
@@ -49,6 +54,14 @@ export default function AdminOtaPage() {
   const [sentVersion, setSentVersion] = useState('')
   // failed_at của lỗi đã được Technician bấm "Thử lại" (ẩn panel lỗi, không xoá dữ liệu BE)
   const [dismissedFailedAt, setDismissedFailedAt] = useState<string | null>(null)
+
+  // Vị trí theo tên (FE_Design 13.16 a) từ danh sách thiết bị toàn hệ thống của Admin — Admin không đọc cấu trúc farm
+  const { data: systemStatus } = useSystemNodeStatus()
+  const locationById = useMemo(
+    () => new Map((systemStatus?.nodes ?? []).map(item => [item._id, [item.farm_name, item.house_name, item.zone_name].filter(Boolean).join(' · ')])),
+    [systemStatus],
+  )
+  const locationOf = (node: SensorNode) => locationById.get(node._id) || '—'
 
   // Luôn lấy node mới nhất từ cache để thấy ota_pending / firmware_version cập nhật
   const selectedNode: SensorNode | null = nodes?.find(n => n._id === selectedId) ?? null
@@ -112,50 +125,61 @@ export default function AdminOtaPage() {
 
   return (
     <SectionCard
-      description="Cập nhật firmware từ xa cho bộ điều khiển. Chỉ thiết bị đang online nhận được bản cập nhật."
+      description="Cập nhật firmware từ xa cho bộ điều khiển"
+      help="Chỉ thiết bị đang online nhận được bản cập nhật. Chọn thiết bị để nhập phiên bản, đường dẫn file và mã kiểm tra."
     >
-      {/* Tên trang ở header; bảng bên trái, ngăn gửi bản cập nhật bên phải khi chọn thiết bị */}
-      <div className="flex gap-5">
-        {/* Device table */}
-        <div className="min-w-0 flex-1">
-          {isLoading && <LoadingSkeleton count={4} className="h-14 w-full" />}
+      {isLoading && <LoadingSkeleton count={4} className="h-14 w-full" />}
 
-          {!isLoading && (!nodes || nodes.length === 0) && (
-            <EmptyState
-              icon={<IconOTA width={28} height={28} />}
-              title="Không có thiết bị nào"
-              description="Chưa có bộ điều khiển nào được đăng ký trong hệ thống."
-            />
+      {!isLoading && (!nodes || nodes.length === 0) && (
+        <EmptyState
+          icon={<IconOTA width={28} height={28} />}
+          title="Không có thiết bị nào"
+          description="Chưa có bộ điều khiển nào được đăng ký trong hệ thống."
+        />
+      )}
+
+      {!isLoading && nodes && nodes.length > 0 && (
+        <DataTable
+          columns={buildOtaColumns(locationOf, openPanel)}
+          rows={nodes}
+          getRowKey={node => node._id}
+          mobileCard={node => (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-3">
+                <p className="flex min-w-0 items-center gap-2 text-body font-semibold text-charcoal">
+                  <span className="truncate">{node.device_id}</span>
+                  <SimulatedBadge simulated={node.simulated} />
+                </p>
+                <StatusDot status={node.status} />
+              </div>
+              <p className="text-small text-warmGray">{locationOf(node)}</p>
+              <p className="flex flex-wrap items-center gap-2 text-small text-warmGray">
+                {t('Firmware {{version}}', { version: node.firmware_version ?? '—' })}
+                <OtaChip node={node} />
+              </p>
+              <UpdateButton node={node} onSelect={openPanel} className="w-full" />
+            </div>
           )}
+        />
+      )}
 
-          {!isLoading && nodes && nodes.length > 0 && (
-            <DeviceTable
-              nodes={nodes}
-              selectedId={selectedNode?._id}
-              onSelect={openPanel}
-            />
-          )}
-        </div>
-
-        {/* Side panel — slide in khi chọn node */}
+      {/* Ngăn gửi bản cập nhật trượt từ phải; đóng thì bỏ chọn */}
+      <Drawer open={Boolean(selectedNode)} onClose={() => setSelectedId(null)} title={t('Cập nhật firmware')}>
         {selectedNode && (
-          <div className="w-80 shrink-0 animate-[slideInRight_0.2s_ease-out]">
-            <OTASidePanel
-              node={selectedNode}
-              state={runState}
-              form={form}
-              errors={errors}
-              onFormChange={handleFormChange}
-              onPush={handlePush}
-              apiError={apiError}
-              targetVersion={sentVersion}
-              onRetry={handleRetry}
-            />
-          </div>
+          <OTASidePanel
+            node={selectedNode}
+            state={runState}
+            form={form}
+            errors={errors}
+            onFormChange={handleFormChange}
+            onPush={handlePush}
+            apiError={apiError}
+            targetVersion={sentVersion}
+            onRetry={handleRetry}
+          />
         )}
-      </div>
+      </Drawer>
 
-      {/* B4: OTA Confirm Modal */}
       {confirmOpen && selectedNode && (
         <OTAConfirmModal
           node={selectedNode}

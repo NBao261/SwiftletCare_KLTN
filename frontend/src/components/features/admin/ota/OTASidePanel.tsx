@@ -1,5 +1,5 @@
-// OTASidePanel.tsx — Slide-in panel: form thông tin firmware, trạng thái chờ, thành công, thất bại
-import { Card, Button } from '@/components/ui'
+// OTASidePanel.tsx — nội dung ngăn Cập nhật firmware (Drawer): form thông tin firmware, trạng thái chờ, thành công, thất bại
+import { Button } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { OTAProgressPanel } from './OTAProgressPanel'
 import { OTAErrorPanel } from './OTAErrorPanel'
@@ -32,11 +32,10 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
 
 export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, apiError, targetVersion, onRetry }: Props) {
   return (
-    // top-[88px] = header h-16 (nổi đè lên vùng cuộn) + 24px khoảng cách cũ
-    <Card className="sticky top-[88px] flex flex-col gap-4 !p-5">
-      {/* Device info */}
+    <div className="flex flex-col gap-4">
+      {/* Thiết bị đang chọn */}
       <div>
-        <p className="label-caption mb-1">THIẾT BỊ ĐÃ CHỌN</p>
+        <p className="label-caption mb-1">Thiết bị đã chọn</p>
         <div className="flex flex-wrap items-center gap-2">
           <p className="tabular-nums font-bold text-charcoal">{node.device_id}</p>
           <SimulatedBadge simulated={node.simulated} />
@@ -82,7 +81,7 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
           )}
 
           <Button onClick={onPush} className="w-full justify-center">
-            Đẩy OTA cho thiết bị này
+            Gửi bản cập nhật
           </Button>
         </>
       )}
@@ -103,6 +102,6 @@ export function OTASidePanel({ node, state, form, errors, onFormChange, onPush, 
           onRetry={onRetry}
         />
       )}
-    </Card>
+    </div>
   )
 }
