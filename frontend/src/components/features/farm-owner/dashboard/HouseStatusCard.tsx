@@ -41,12 +41,10 @@ interface HouseStatusCardProps {
   sensors: SensorNode[];
   // Tình hình hôm nay của nhà (GET /farms/{id}/overview); undefined = chưa tải
   overview?: HouseOverview;
-  // BR-31: người xem chưa đánh giá ngày hôm nay của nhà thì ẩn trạng thái hôm nay
-  hideTodayStatus?: boolean;
 }
 
 // Thẻ 1 nhà ở Tổng quan (FO-01, ANALYTICS-FR-015): môi trường từng Zone, chế độ điều khiển, giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, chim về
-export default function HouseStatusCard({ node, status, sensors, overview, hideTodayStatus = false }: HouseStatusCardProps): JSX.Element {
+export default function HouseStatusCard({ node, status, sensors, overview }: HouseStatusCardProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   const { t: farmT } = useTranslation(farmDict);
   const { t: healthT } = useTranslation(healthDict);
@@ -103,7 +101,7 @@ export default function HouseStatusCard({ node, status, sensors, overview, hideT
       <div className="mt-auto flex flex-col gap-1 border-t border-warmGray/10 pt-3 text-body text-graphite">
         <p>{controlText}</p>
         {/* Trạng thái sức khoẻ hôm nay (MF-06), hoặc lý do chưa có */}
-        {overview && !hideTodayStatus && (
+        {overview && (
           <p className="flex flex-wrap items-center gap-2">
             {t('house.today')}
             {overview.status

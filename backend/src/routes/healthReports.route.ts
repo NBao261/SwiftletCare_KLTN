@@ -15,7 +15,7 @@ router.use(authenticate)
 const readers = requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN')
 const ownerOrExpert = requireRole('FARM_OWNER', 'DOMAIN_EXPERT')
 
-// ANALYTICS-FR-012…014, EXPERT-FR-012/013 — trạng thái ngày theo nhà yến, chấm độc lập (BR-31), CSV,
+// ANALYTICS-FR-012…014, EXPERT-FR-012/013 — trạng thái ngày theo nhà yến, chấm sau khi xem trạng thái (BR-31), CSV,
 // độ khớp. Đặt trước '/:id' để "days", "evaluation" không bị hiểu là một id.
 const dayScope = [
   query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),

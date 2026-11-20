@@ -12,7 +12,7 @@ export interface HealthDayScope {
   to?: string
 }
 
-// MF-06 — trạng thái ngày, đánh giá độc lập (BR-31), CSV, mức chỉ số, báo cáo theo nhà
+// MF-06 — trạng thái ngày, đánh giá sau khi xem trạng thái (BR-31), CSV, mức chỉ số, báo cáo theo nhà
 export const healthDayApi = {
   list: (scope: HealthDayScope & { myRatingState?: HealthRatingState }) =>
     api.get<ApiResponse<HouseHealthDay[]>>('/health-reports/days', { params: scope }),

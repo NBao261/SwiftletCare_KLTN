@@ -95,7 +95,7 @@ The main flows of the registration form v3 (Report 3, Section 2.2):
 | MF-03 | Bird counting session | Birds crossing a ring around the entrance hole are counted per session; the return rate is computed; the annotated video is streamed |
 | MF-04 | Expert validation of inferred alerts | Abnormal noise, implausible readings, early warnings and return-rate drops are shown with their evidence; the house's technician checks each one on site, then the expert confirms or rejects it |
 | MF-05 | Control-parameter tuning | The expert reviews the owner's changes and approves coefficient suggestions; the new configuration reaches the controllers and is confirmed applied |
-| MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV, independent ratings, a farm overview and a comparison of houses |
+| MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV, on-site ratings that confirm or correct the status, a farm overview and a comparison of houses |
 | MF-07 | Preventive maintenance | Plans by run hours or calendar make preventive Work Orders due for the technician, with checklists; overdue plans escalate |
 | MF-08 | Recommendation loop | The expert's rules turn patterns in the data into recommendations that the owner accepts or rejects; their effect is measured after 7 days |
 

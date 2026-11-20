@@ -41,7 +41,7 @@ FEATURES = [  # id, name, actors, acceptance criteria, workflows, owner (Project
     ('F-17', 'Manual override', f'{FO}, {FT}', 'Each relay keeps its own expiry and returns to AUTO; pump ON for 31 min 422', ['WF-01'], L),
     ('F-20', 'Daily health status', 'Backend (automatic)', 'Return rate CLEAR and humidity SLIGHT give ACTION with both reasons', ['WF-06'], N),
     ('F-21', 'Reports, PDF and CSV', f'{FO}, {DE}', 'Daily, weekly and monthly report per house; the files show the same figures as the screen', ['WF-06'], N),
-    ('F-22', 'Independent rating and disagreement review', f'{FT}, {FO}, {DE}', 'The day is rated on site before the status is shown; the expert reviews the days that disagree', ['WF-06'], N),
+    ('F-22', 'Daily rating and disagreement review', f'{FT}, {FO}, {DE}', 'The day is rated on site after the status is shown, confirming or correcting it; the expert reviews the days that disagree', ['WF-06'], N),
     ('F-23', 'Alert routing and escalation', f'{FT}, {FO}', 'A HIGH alert goes to the technician of the house, to the Farm Owners after 15 min without acknowledgement', ['WF-02'], K),
     ('F-24', 'Work Orders closed by the data', f'{FT}, {FO}', 'Closes only after 10 min of recovered data and the Farm Owner’s approval', ['WF-02'], K),
     ('F-25', 'Preventive maintenance', f'{FT}, {FO}', 'A 500 h pump plan becomes due and opens a Work Order; the record resets the counter', ['WF-07'], L),

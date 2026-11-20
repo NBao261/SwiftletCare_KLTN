@@ -116,7 +116,6 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
                 );
               })}
             </dl>
-            {report.hidden_days > 0 && <p className="text-xs text-warmGray">{t('rd.hiddenDays', { n: report.hidden_days })}</p>}
           </Group>
           <Group title={t('rd.flock')} grow="flex-[2_1_20rem]">
             <Figures

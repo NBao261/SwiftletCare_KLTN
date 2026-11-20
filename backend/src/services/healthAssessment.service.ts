@@ -344,7 +344,7 @@ export async function assessHouseDay(houseId: string, date: string, now = new Da
 
 /**
  * Gọi từ jobs/returnRate.job.ts sau kiểm tra tỷ lệ chim về (BR-21): đánh giá ngày `date` của mọi nhà,
- * báo "ngày đã sẵn sàng" (không kèm trạng thái, BR-31) khi ngày mới có lần đầu, rồi tính lại 7 ngày
+ * báo "ngày đã sẵn sàng" (người nhận mở ngày để xem trạng thái và chấm) khi ngày mới có lần đầu, rồi tính lại 7 ngày
  * trước để nhận dữ liệu buffer về trễ. Lỗi ở một nhà không làm bỏ qua các nhà sau. Trả số ngày mới.
  */
 export async function assessAllHouses(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
@@ -372,7 +372,7 @@ export async function assessAllHouses(date = vnDate(new Date()), now = new Date(
 }
 
 /**
- * EXPERT-FR-012 — thông báo không có trạng thái: người nhận phải chấm trước khi xem. Chỉ người chấm
+ * EXPERT-FR-012 — báo ngày mới cần chấm: người nhận mở ngày, xem trạng thái rồi xác nhận hoặc sửa (BR-31). Chỉ người chấm
  * (BR-31): Farm Owner và Farm Technician được giao nhà (còn là thợ của farm, còn hoạt động); Domain Expert không chấm nên không nhận.
  */
 async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
@@ -382,7 +382,7 @@ async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
   const recipients = [...new Set([...owners, ...technicians])]
   await Promise.all(recipients.map(id => notifyUser(id, {
     title: `Đánh giá ngày ${day.date} của ${house?.name ?? 'nhà yến'}`,
-    body: 'Hãy chấm tình trạng đàn theo quan sát của bạn trước khi xem kết quả của hệ thống.',
+    body: 'Xem trạng thái hệ thống tính cho ngày này, rồi xác nhận hoặc sửa theo quan sát của bạn tại nhà yến.',
     ref: { kind: 'health_day', id: String(day._id) },
   })))
 }

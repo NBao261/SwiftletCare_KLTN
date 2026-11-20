@@ -28,7 +28,7 @@ async function fontBase64(file: string): Promise<string> {
   return btoa(binary);
 }
 
-// EXPERT-FR-013 — PDF có đúng số trên màn (cùng healthReport.utils), không in id nội bộ; ngày chưa đánh giá vẫn che (BR-31)
+// EXPERT-FR-013 — PDF có đúng số trên màn (cùng healthReport.utils), không in id nội bộ
 export async function downloadHealthReportPdf(report: HouseHealthReport, format: ReportFormat): Promise<void> {
   // Tải thư viện và font lúc bấm, không nằm trong bundle đầu
   const [{ jsPDF }, { default: autoTable }, regular, bold] = await Promise.all([
@@ -108,7 +108,6 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
   heading(t('rd.statusCounts'));
   // Mỗi trạng thái 1 dòng (bảng 2 cột như Thời tiết) thay vì nối trên 1 dòng chữ
   factsTable(REPORT_STATUSES.map(status => ({ label: t(`status.${status}`), value: String(report.status_counts[status] ?? 0) })));
-  if (report.hidden_days > 0) text(t('rd.hiddenDays', { n: report.hidden_days }), { size: 9, color: GRAY });
 
   heading(t('rd.flock'));
   const average = report.house_metrics.avg_return_rate;

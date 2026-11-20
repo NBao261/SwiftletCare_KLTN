@@ -23,13 +23,10 @@ interface HealthDayTableProps {
   onView: (day: HouseHealthDay) => void;
 }
 
-// Bảng các ngày: ngày chưa đánh giá không có trạng thái (BR-31), chỉ có nút Đánh giá
+// Bảng các ngày: trạng thái hiện ở mọi ngày (BR-31); ngày chưa đánh giá có nút Đánh giá
 export default function HealthDayTable({ days, canRate, onRate, onView }: HealthDayTableProps): JSX.Element {
   const { t, date } = useTranslation(healthDict);
 
-
-  // Trạng thái ẩn tới khi đánh giá (BR-31): ghi một lần trên tiêu đề cột thay vì ở mỗi dòng (FO-07)
-  const hasHiddenStatus = days.some(day => !day.current_status);
 
   const columns = useMemo(() => {
     const all: DataTableColumn<HouseHealthDay>[] = [
@@ -38,8 +35,8 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       { key: 'house', header: t('col.house'), render: day => <span title={day.house_name} className="block truncate text-sm font-semibold text-charcoal">{day.house_name}</span> },
       {
         key: 'status',
-        header: hasHiddenStatus ? t('col.statusHidden') : t('col.status'),
-        render: day => (day.current_status ? <HealthStatusBadge status={day.current_status} /> : <span className="text-warmGray">{NO_VALUE}</span>),
+        header: t('col.status'),
+        render: day => <HealthStatusBadge status={day.current_status} />,
       },
       {
         key: 'myRating',
@@ -68,7 +65,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       },
     ];
     return canRate ? all : all.filter(column => column.key !== 'myRating');
-  }, [t, date, canRate, onRate, onView, hasHiddenStatus]);
+  }, [t, date, canRate, onRate, onView]);
 
   return (
     <FixedRowsTable
@@ -90,7 +87,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
                 </p>
               )}
             </div>
-            {day.current_status ? <HealthStatusBadge status={day.current_status} /> : <span className="text-small text-warmGray">{t('cell.hidden')}</span>}
+            <HealthStatusBadge status={day.current_status} />
           </div>
           {day.my_rating_state === 'PENDING'
             ? <Button size="sm" className="w-full" onClick={() => onRate(day)}>{t('action.rate')}</Button>

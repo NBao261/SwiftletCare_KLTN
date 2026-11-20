@@ -109,7 +109,7 @@ export function useHouseHealthReports(
   )
 }
 
-// Chi tiết đọc lại mỗi lần mở: các ngày che theo trạng thái đánh giá hiện tại (BR-31)
+// Chi tiết đọc lại mỗi lần mở: các ngày kèm trạng thái đánh giá hiện tại
 export function useHouseHealthReport(reportId: string | undefined) {
   return useQuery({
     queryKey: [HEALTH_REPORTS_KEY, 'detail', reportId],

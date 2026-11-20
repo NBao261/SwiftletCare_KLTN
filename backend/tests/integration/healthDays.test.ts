@@ -1,5 +1,5 @@
 /**
- * EXPERT-FR-012/013, BR-31, SM-18, ANALYTICS-FR-014 — chấm độc lập trạng thái ngày (TC-F22-01…03,
+ * EXPERT-FR-012/013, BR-31, SM-18, ANALYTICS-FR-014 — chấm trạng thái ngày sau khi xem trạng thái của hệ thống (TC-F22-01…03,
  * TC-ST §6.18), CSV (TC-F21-02), mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22), độ khớp, ngày lệch
  * (EXPERT-FR-022). Người chấm theo Report 3 4.2.0: Farm Owner và Farm Technician được giao nhà; Domain
  * Expert không chấm.
@@ -97,14 +97,15 @@ async function addCoOwner(farm: { _id: unknown }) {
   return { coOwner, coOwnerToken: tokenFor(coOwner._id, 'FARM_OWNER') }
 }
 
-const HIDDEN = ['current_status', 'current_reasons', 'indicators', 'completeness', 'evidence', 'ratings']
+// BR-31 (Report 3 4.2.14): người chấm thấy đủ các trường này trước khi chấm
+const SHOWN = ['current_status', 'current_reasons', 'indicators', 'completeness', 'evidence', 'ratings']
 
-describe('TC-F22-01 — chưa chấm thì mọi kênh che trạng thái (BR-31)', () => {
-  it('ngày, danh sách và CSV không có trạng thái, lý do, điểm người khác; chấm xong 201 kèm trạng thái và ảnh chụp', async () => {
+describe('TC-F22-01 — chưa chấm vẫn thấy trạng thái, chấm lưu kèm ảnh chụp (BR-31)', () => {
+  it('ngày, danh sách và CSV có trạng thái, lý do, điểm người khác trước khi chấm; chấm xong 201 kèm ảnh chụp', async () => {
     const { farm, house, ownerToken, expertToken } = await setup()
     const { coOwnerToken } = await addCoOwner(farm)
     const day = await mkDay(house, YESTERDAY)
-    // Chủ đồng sở hữu chấm trước — điểm của người đó không được lộ cho chủ trại chưa chấm
+    // Chủ đồng sở hữu chấm trước: chủ trại chưa chấm vẫn thấy điểm đó
     expect((await call('post', `/health-reports/days/${day._id}/rating`, coOwnerToken, { rating: 'WATCH' })).status).toBe(201)
 
     // Chuyên gia không phải người chấm: thấy đủ trạng thái ngay, my_rating_state null (BR-31)
@@ -113,15 +114,17 @@ describe('TC-F22-01 — chưa chấm thì mọi kênh che trạng thái (BR-31)'
 
     const one = await call('get', `/health-reports/days/${day._id}`, ownerToken)
     expect(one.status).toBe(200)
-    expect(one.body.data.my_rating_state).toBe('PENDING')
-    for (const key of HIDDEN) expect(one.body.data).not.toHaveProperty(key)
+    expect(one.body.data).toMatchObject({ my_rating_state: 'PENDING', current_status: 'ACTION', current_reasons: [FLOCK_REASON] })
+    for (const key of SHOWN) expect(one.body.data).toHaveProperty(key)
+    expect(one.body.data.ratings).toEqual([expect.objectContaining({ rating: 'WATCH' })])
 
     const list = await call('get', `/health-reports/days?houseId=${house._id}`, ownerToken)
     expect(list.body.data).toHaveLength(1)
-    for (const key of HIDDEN) expect(list.body.data[0]).not.toHaveProperty(key)
+    for (const key of SHOWN) expect(list.body.data[0]).toHaveProperty(key)
 
     const csv = await call('get', `/health-reports/days.csv?houseId=${house._id}`, ownerToken)
-    expect(csv.text).not.toMatch(/Cần xử lý|Theo dõi|giảm 30 %|CG \d/)
+    expect(csv.text).toMatch(/Cần xử lý/)
+    expect(csv.text).toMatch(/Theo dõi/)
 
     const rated = await call('post', `/health-reports/days/${day._id}/rating`, ownerToken, { rating: 'GOOD', note: 'Chim về đều' })
     expect(rated.status).toBe(201)
@@ -386,14 +389,14 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
 })
 
 describe('độ khớp (ANALYTICS-FR-014, NFR-14)', () => {
-  it('so ảnh chụp với điểm; INSUFFICIENT_DATA đếm riêng; ngày người gọi còn PENDING bị bỏ ra', async () => {
+  it('so ảnh chụp với điểm; INSUFFICIENT_DATA đếm riêng; ngày người gọi còn PENDING vẫn tính điểm người khác', async () => {
     const { house, owner, expert, ownerToken } = await setup()
     const rating = (by: { _id: unknown }, role: string, snap: HealthStatus, value: string) =>
       ({ by: by._id, role, outcome: 'RATED', rating: value, at: new Date(), snapshot: { status: snap, reasons: [], levels } })
     await mkDay(house, addDays(TODAY, -3), 'GOOD', { ratings: [rating(owner, 'FARM_OWNER', 'GOOD', 'GOOD'), rating(expert!, 'DOMAIN_EXPERT', 'GOOD', 'GOOD')] })
     await mkDay(house, addDays(TODAY, -2), 'WATCH', { ratings: [rating(owner, 'FARM_OWNER', 'WATCH', 'GOOD')] })
     await mkDay(house, addDays(TODAY, -1), 'INSUFFICIENT_DATA', { ratings: [rating(owner, 'FARM_OWNER', 'INSUFFICIENT_DATA', 'WATCH')] })
-    // Chủ trại chưa chấm ngày này: chuyên gia đã chấm nhưng không được tính khi chủ trại xem
+    // Chủ trại chưa chấm ngày này; điểm chuyên gia chấm trước Report 3 4.2.0 không tính
     await mkDay(house, TODAY, 'ACTION', { ratings: [rating(expert!, 'DOMAIN_EXPERT', 'ACTION', 'ACTION')] })
 
     const res = await call('get', `/health-reports/evaluation?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}`, ownerToken)
@@ -425,15 +428,14 @@ describe('ngày lệch (EXPERT-FR-022)', () => {
     snapshot: { status: snap, reasons: [FLOCK_REASON], levels },
   })
 
-  it('Farm Owner xem thay chuyên gia (BR-22) không thấy ngày mình còn chờ chấm (BR-31)', async () => {
+  it('Farm Owner xem thay chuyên gia (BR-22) thấy cả ngày mình còn chờ chấm (BR-31)', async () => {
     const { farm, house, owner } = await seedHouse({ withExpert: false })
     const ownerToken = tokenFor(owner._id, 'FARM_OWNER')
     const { technician } = await addTechnician(farm, house)
-    const day = await mkDay(house, YESTERDAY, 'ACTION', { ratings: [rated(technician, 'FARM_TECHNICIAN', 'ACTION', 'WATCH', 'Chim về đều')] })
+    await mkDay(house, YESTERDAY, 'ACTION', { ratings: [rated(technician, 'FARM_TECHNICIAN', 'ACTION', 'WATCH', 'Chim về đều')] })
     const path = `/health-reports/disagreements?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}`
 
-    expect((await call('get', path, ownerToken).expect(200)).body.data.days).toEqual([])
-    await call('post', `/health-reports/days/${day._id}/rating`, ownerToken, { rating: 'ACTION' }).expect(201)
+    // Chủ chưa chấm ngày này vẫn thấy điểm lệch của thợ
     const listed = (await call('get', path, ownerToken).expect(200)).body.data.days
     expect(listed).toHaveLength(1)
     expect(listed[0].disagreements).toEqual([expect.objectContaining({ assessor: { full_name: 'Thợ', role: 'FARM_TECHNICIAN' }, rating: 'WATCH' })])
@@ -504,14 +506,13 @@ async function addTechnician(farm: { _id: unknown }, house?: { _id: unknown }) {
 }
 
 describe('Farm Technician chấm ngày của nhà được giao (BR-31, EXPERT-FR-012, AUTH-FR-013)', () => {
-  it('chấm riêng với Farm Owner: chưa chấm thì bị che, chấm xong mới thấy trạng thái; mỗi người một lượt', async () => {
+  it('chấm riêng với Farm Owner: thấy trạng thái trước khi chấm; mỗi người một lượt', async () => {
     const { farm, house, ownerToken } = await setup()
     const { technician, token } = await addTechnician(farm, house)
     const day = await mkDay(house, YESTERDAY)
 
     const before = (await call('get', `/health-reports/days?houseId=${house._id}`, token)).body.data[0]
-    expect(before).toMatchObject({ my_rating_state: 'PENDING' })
-    expect(before).not.toHaveProperty('current_status')
+    expect(before).toMatchObject({ my_rating_state: 'PENDING', current_status: 'ACTION' })
     expect((await call('get', `/health-reports/days?houseId=${house._id}&myRatingState=PENDING`, token)).body.data).toHaveLength(1)
 
     const rated = await call('post', `/health-reports/days/${day._id}/rating`, token, { rating: 'WATCH' })
@@ -522,10 +523,10 @@ describe('Farm Technician chấm ngày của nhà được giao (BR-31, EXPERT-F
     ])
     expect((await call('post', `/health-reports/days/${day._id}/rating`, token, { rating: 'GOOD' })).status).toBe(409)
 
-    // Lượt của thợ không mở trạng thái cho Farm Owner: chủ vẫn chấm riêng
+    // Lượt của thợ không thay lượt của Farm Owner: chủ vẫn chấm riêng, và thấy điểm của thợ
     const ownerView = (await call('get', `/health-reports/days/${day._id}`, ownerToken)).body.data
     expect(ownerView).toMatchObject({ my_rating_state: 'PENDING' })
-    expect(ownerView).not.toHaveProperty('ratings')
+    expect(ownerView.ratings).toEqual([expect.objectContaining({ role: 'FARM_TECHNICIAN', rating: 'WATCH' })])
     expect((await call('post', `/health-reports/days/${day._id}/skip`, ownerToken)).status).toBe(201)
     expect((await HouseHealthDay.findById(day._id).lean())!.ratings.map(r => r.role)).toEqual(['FARM_TECHNICIAN', 'FARM_OWNER'])
     // Lệnh ghi dạng pipeline bỏ qua validator của Mongoose: schema (và $jsonSchema của init.mongo.js) phải nhận vai thợ

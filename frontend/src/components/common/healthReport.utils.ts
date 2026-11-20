@@ -131,18 +131,17 @@ export function incompleteDayCount(report: HouseHealthReport): number {
   return report.house_metrics.return_rate_trend.filter(day => !day.complete).length;
 }
 
-// Một dòng mỗi ngày của kỳ, cũ trước; ngày người xem chưa đánh giá không có trạng thái, lý do, đánh giá (BR-31)
+// Một dòng mỗi ngày của kỳ, cũ trước
 export function reportDayRows(report: HouseHealthReport, format: ReportFormat): ReportDayRow[] {
   const { t } = format;
   const returnByDate = new Map(report.house_metrics.return_rate_trend.map(day => [day.date, day]));
   return [...report.days].sort((left, right) => left.date.localeCompare(right.date)).map(day => {
     const flock = returnByDate.get(day.date);
     const rate = flock?.return_rate ?? null;
-    // Ngày người xem chưa đánh giá (không có trạng thái) che luôn tỷ lệ chim về, như mọi chỉ số khác (BR-31)
-    const returnRate = !day.current_status || rate === null
+    const returnRate = rate === null
       ? NO_VALUE
       : `${format.number(rate)} %${flock?.complete ? '' : ` (${t('rd.incomplete')})`}`;
-    const ratingItems: ReportRatingItem[] = (day.ratings ?? []).map(rating => ({
+    const ratingItems: ReportRatingItem[] = day.ratings.map(rating => ({
       name: rating.by.full_name ?? NO_VALUE,
       role: t(`role.${rating.role}`),
       rating: rating.outcome === 'RATED' ? rating.rating : null,
@@ -156,10 +155,10 @@ export function reportDayRows(report: HouseHealthReport, format: ReportFormat): 
     return {
       date: format.date(day.date),
       computedAt: day.computed_at,
-      status: day.current_status ?? null,
-      statusText: day.current_status ? t(`status.${day.current_status}`) : t('ratingState.PENDING'),
+      status: day.current_status,
+      statusText: t(`status.${day.current_status}`),
       returnRate,
-      reasons: (day.current_reasons ?? []).map(reason => formatHealthReason(reason, t, format.number)),
+      reasons: day.current_reasons.map(reason => formatHealthReason(reason, t, format.number)),
       ratings,
       ratingItems,
     };

@@ -33,7 +33,7 @@ export interface HouseReportMetrics {
 /**
  * HouseHealthReport — EXPERT-FR-005/006, SM-09. Báo cáo sức khỏe 1 nhà yến trong 1 kỳ (ngày, tuần, tháng
  * theo BR-33, hoặc khoảng tự chọn), mỗi Zone một mục. Trạng thái các ngày của kỳ không lưu ở đây: dựng
- * lúc đọc từ `househealthdays` để che theo người gọi (BR-31). Thay báo cáo tuần theo Zone khi màn mới
+ * lúc đọc từ `househealthdays`. Thay báo cáo tuần theo Zone khi màn mới
  * dùng xong; tới lúc đó báo cáo Zone cũ vẫn chạy song song.
  */
 export interface IHouseHealthReport extends Document {

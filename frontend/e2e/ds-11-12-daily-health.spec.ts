@@ -16,16 +16,16 @@ const sortedDays = (days: HealthDay[]) => [...days].sort((left, right) => left.d
 const nextDate = (date: string) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 test.describe('DS-11, DS-12 Đánh giá sức khỏe ngày', () => {
-  test('DS-11 thợ chấm trước khi thấy trạng thái; trạng thái ACTION kèm hai lý do', async ({ request }) => {
+  test('DS-11 thợ thấy trạng thái ACTION kèm hai lý do rồi chấm', async ({ request }) => {
     const owner = await signIn(request, 'owner');
     const technician = await signIn(request, 'technician');
     const farm = await demoFarm(owner);
     const houseId = farm.house('C')._id;
     const [actionDay] = sortedDays(await technician.data<HealthDay[]>(await technician.get(`/health-reports/days?houseId=${houseId}`)));
 
+    // BR-31: thấy trạng thái và lý do trước khi chấm
+    expect(actionDay.current_status).toBe('ACTION');
     if (actionDay.my_rating_state === 'PENDING') {
-      // BR-31: chưa chấm thì không thấy trạng thái
-      expect(actionDay.current_status).toBeUndefined();
       const rating = await technician.post(`/health-reports/days/${actionDay._id}/rating`, { rating: 'ACTION', note: 'Chim về ít, trưa nóng khô' });
       expect(rating.ok()).toBe(true);
     }
