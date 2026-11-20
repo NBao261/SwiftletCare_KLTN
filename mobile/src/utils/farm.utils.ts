@@ -1,7 +1,9 @@
 import type { Farm, FarmMember, House } from '@/types'
 
-// Farm có Domain Expert không — không có thì Farm Owner quyết thay (BR-22)
+// Farm có Domain Expert còn hoạt động không — không có thì Farm Owner quyết thay (BR-22). Dùng has_active_expert của GET /farms
+// (cùng cách tính với backend, chuyên gia bị khoá không tính); farm từ GET /farms/{id} không có cờ này thì đếm thành viên
 export function farmHasExpert(farm: Farm): boolean {
+  if (typeof farm.has_active_expert === 'boolean') return farm.has_active_expert
   return farm.members.some(member => member.role === 'DOMAIN_EXPERT')
 }
 

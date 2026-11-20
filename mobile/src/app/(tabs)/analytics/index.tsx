@@ -203,11 +203,14 @@ export default function AnalyticsScreen() {
         <OptionSheet
           visible={isHouseSheetOpen}
           title={t('Chọn trang trại')}
-          options={scope.farms.map(item => ({
-            id: item._id,
-            label: item.name,
-            caption: t('{count} nhà yến', { count: houseCountByFarmId.get(item._id) ?? 0 }),
-          }))}
+          // Farm chưa có nhà thì không có gì để chọn ở bước sau nên không liệt kê
+          options={scope.farms
+            .filter(item => houseCountByFarmId.has(item._id))
+            .map(item => ({
+              id: item._id,
+              label: item.name,
+              caption: t('{count} nhà yến', { count: houseCountByFarmId.get(item._id) ?? 0 }),
+            }))}
           selectedId={scope.farm?._id}
           onSelect={setSheetFarmId}
           onClose={() => setHouseSheetOpen(false)}

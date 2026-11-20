@@ -14,6 +14,13 @@ describe('farmHasExpert', () => {
     expect(farmHasExpert(buildFarm([owner, expert]))).toBe(true)
     expect(farmHasExpert(buildFarm([owner]))).toBe(false)
   })
+
+  it('có has_active_expert của GET /farms thì theo cờ đó, kể cả khi chuyên gia duy nhất đã bị khoá', () => {
+    const owner: FarmMember = { user_id: 'owner', is_primary: true, role: 'FARM_OWNER', joined_at: '' }
+    const lockedExpert: FarmMember = { user_id: 'expert', is_primary: false, role: 'DOMAIN_EXPERT', joined_at: '' }
+    expect(farmHasExpert({ ...buildFarm([owner, lockedExpert]), has_active_expert: false })).toBe(false)
+    expect(farmHasExpert({ ...buildFarm([owner]), has_active_expert: true })).toBe(true)
+  })
 })
 
 describe('getHouseTechnicianNames', () => {

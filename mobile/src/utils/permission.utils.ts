@@ -181,7 +181,7 @@ const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set([
 const PRIMARY_OWNER_ONLY: ReadonlySet<PermissionAction> = new Set(['manageFarmMembers'])
 
 export interface PermissionContext {
-  // Farm đang xem có thành viên DOMAIN_EXPERT (utils/farm.utils farmHasExpert)
+  // Farm đang xem có Domain Expert còn hoạt động (utils/farm.utils farmHasExpert, has_active_expert của GET /farms)
   farmHasExpert?: boolean
   // Người dùng là Primary Owner của farm đang xem (farm.owner_id === user._id)
   isPrimaryOwner?: boolean

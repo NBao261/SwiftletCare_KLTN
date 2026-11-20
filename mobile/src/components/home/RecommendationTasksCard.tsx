@@ -15,7 +15,8 @@ const COUNT_BOX_SIZE = 48
 const CARD_HEIGHT = COUNT_BOX_SIZE + Spacing.lg * 2
 
 // Khối "Khuyến nghị" ở Trang chủ của chủ trại (MF-08, EXPERT-FR-018): số khuyến nghị đang chờ quyết định ở mọi farm; chạm để mở
-// danh sách. Backend không gửi thông báo khi có khuyến nghị mới nên khối này là lối vào chính. Hết việc vẫn giữ khối, số là 0
+// danh sách ở farm đầu tiên còn khuyến nghị mở (màn danh sách xem theo một farm, đổi farm ở tiêu đề). Backend không gửi thông
+// báo khi có khuyến nghị mới nên khối này là lối vào chính. Hết việc vẫn giữ khối, số là 0
 export function RecommendationTasksCard() {
   const palette = usePalette()
   // Chỉ đọc meta.total mỗi farm, không tải danh sách
@@ -40,7 +41,13 @@ export function RecommendationTasksCard() {
   return (
     <Card
       style={styles.card}
-      onPress={() => router.push('/recommendations')}
+      onPress={() =>
+        router.push(
+          openQuery.firstOpenFarmId
+            ? { pathname: '/recommendations', params: { farmId: openQuery.firstOpenFarmId } }
+            : '/recommendations',
+        )
+      }
       accessibilityLabel={`${t('Khuyến nghị')}: ${summary}`}
       accessibilityHint={t('Mở danh sách khuyến nghị')}
     >

@@ -18,6 +18,7 @@ import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
+import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
 import { useRemoveFarmMember } from '@/hooks/farm/useRemoveFarmMember'
 import { useReturnBack } from '@/hooks/navigation/useReturnBack'
@@ -64,7 +65,8 @@ export default function MembersScreen() {
   const isPrimaryOwner = Boolean(farm && user && farm.owner_id === user._id)
   const invitationsQuery = usePendingInvitations(farmId, isPrimaryOwner)
   const canManage = canPerform(user, 'manageFarmMembers', { isPrimaryOwner })
-  const hasExpert = farm ? farmHasExpert(farm) : false
+  // Theo has_active_expert của GET /farms như tab Trang trại (GET /farms/{id} không có cờ này); chưa có danh sách thì đếm thành viên
+  const hasExpert = useFarmHasExpert(farmId) ?? (farm ? farmHasExpert(farm) : false)
 
   if (!canPerform(user, 'viewFarmMembers')) return <Redirect href="/(tabs)/profile" />
 

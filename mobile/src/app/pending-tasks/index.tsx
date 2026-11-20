@@ -120,7 +120,7 @@ export default function PendingTasksScreen() {
         </Text>
       )
     }
-    return pendingVerdicts.alerts.map(alert => {
+    const rows = pendingVerdicts.alerts.map(alert => {
       const location = locate(alert)
       return (
         <AlertRow
@@ -132,6 +132,17 @@ export default function PendingTasksScreen() {
         />
       )
     })
+    // Mỗi farm chỉ tải một trang (PENDING_VERDICT_PAGE_SIZE) nên tiêu đề (meta.total) có thể lớn hơn số dòng: nói rõ phần còn lại ở đâu
+    if (pendingVerdicts.total <= pendingVerdicts.alerts.length) return rows
+    return [
+      ...rows,
+      <Text key="more-in-alerts-tab" variant="small" color={palette.textSecondary}>
+        {t('Đang hiện {shown}/{total} cảnh báo, phần còn lại xem ở tab Cảnh báo', {
+          shown: pendingVerdicts.alerts.length,
+          total: pendingVerdicts.total,
+        })}
+      </Text>,
+    ]
   }
 
   return (

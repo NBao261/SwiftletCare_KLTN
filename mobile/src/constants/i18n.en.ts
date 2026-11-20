@@ -1208,6 +1208,8 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Ngày chờ đánh giá ({count})': 'Days waiting for a rating ({count})',
   'Cảnh báo chờ phán quyết ({count})': 'Alerts waiting for a verdict ({count})',
   'Không có cảnh báo nào chờ phán quyết': 'No alert is waiting for a verdict',
+  'Đang hiện {shown}/{total} cảnh báo, phần còn lại xem ở tab Cảnh báo':
+    'Showing {shown}/{total} alerts, see the rest in the Alerts tab',
   'Báo cáo {period} · {house} đã sẵn sàng': 'Report {period} · {house} is ready',
   // Ảnh tại chỗ (ALERT-FR-018, EXPERT-FR-021)
   'Cần quyền camera để chụp ảnh tại chỗ': 'Camera access is needed to take on-site photos',

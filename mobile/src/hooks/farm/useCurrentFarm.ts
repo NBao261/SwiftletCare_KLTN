@@ -19,5 +19,6 @@ export function useCurrentFarm(requestedFarmId?: string) {
     hasMultipleFarms: farms.length > 1,
     isLoading: farmsQuery.isLoading,
     isError: farmsQuery.isError,
+    refetch: farmsQuery.refetch,
   }
 }

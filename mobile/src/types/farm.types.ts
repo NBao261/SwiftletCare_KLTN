@@ -26,6 +26,8 @@ export interface Farm {
   // Bắt buộc khi tạo từ A-5; farm tạo trước đó có thể chưa có
   coordinates?: Coordinates
   owner_id: string
+  // Chỉ có ở GET /farms: farm có ít nhất một Domain Expert còn hoạt động (chuyên gia bị khoá không tính, BR-22)
+  has_active_expert?: boolean
   members: FarmMember[]
   created_at: string
 }

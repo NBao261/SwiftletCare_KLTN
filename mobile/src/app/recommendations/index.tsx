@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Alert as NativeAlert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
-import { Redirect, router } from 'expo-router'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { ReasonSheet } from '@/components/common/ReasonSheet'
@@ -71,8 +71,9 @@ export default function RecommendationsScreen() {
   const [rejectTarget, setRejectTarget] = useState<{ recommendation: Recommendation; key: number } | null>(null)
   const [isRefreshing, setRefreshing] = useState(false)
   const { houseById } = useZoneDirectory()
-  // Farm đang xem: chọn trên màn → farm đang xem ở tab Trang trại → farm đầu tiên
-  const [pickedFarmId, setPickedFarmId] = useState<string | undefined>(undefined)
+  // Farm đang xem: chọn trên màn → farm truyền từ khối ở Trang chủ → farm đang xem ở tab Trang trại → farm đầu tiên
+  const params = useLocalSearchParams<{ farmId?: string }>()
+  const [pickedFarmId, setPickedFarmId] = useState<string | undefined>(params.farmId)
   const [isFarmSheetOpen, setFarmSheetOpen] = useState(false)
   const farmQuery = useCurrentFarm(pickedFarmId)
   const farm = farmQuery.farm
@@ -85,10 +86,13 @@ export default function RecommendationsScreen() {
 
   const houseNameOf = (recommendation: Recommendation) => houseById.get(recommendation.house_id)?.name ?? '_'
 
+  // Chưa có farm thì query khuyến nghị đang tắt (refetch() bỏ qua enabled, gọi farmId rỗng sẽ nhận 422), nên thử lại danh sách farm
+  const retry = () => (farm ? recommendationsQuery.refetch() : farmQuery.refetch())
+
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      await recommendationsQuery.refetch()
+      await retry()
     } finally {
       setRefreshing(false)
     }
@@ -161,7 +165,7 @@ export default function RecommendationsScreen() {
         <EmptyState
           message={t('Không tải được khuyến nghị')}
           actionLabel={t('Thử lại')}
-          onAction={() => recommendationsQuery.refetch()}
+          onAction={retry}
         />
       )
     }
