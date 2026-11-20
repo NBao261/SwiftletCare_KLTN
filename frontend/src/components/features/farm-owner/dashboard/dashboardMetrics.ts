@@ -1,7 +1,6 @@
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
-import type { Alert, AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, House, RelayStates, Thresholds, SeverityLevel, Zone, ZoneThresholdHistoryEntry } from '@/types'
+import type { AlertSeverity, AlertStatus, ControlMode, ControlOutput, DeviceStatus, RelayStates, SeverityLevel, Thresholds, ZoneThresholdHistoryEntry } from '@/types'
 import { SEVERITY_TO_LEVEL } from '@/constants/severity'
-import { alertBreach } from '@/lib/helpers'
 
 const DAY_MS = 86_400_000
 
@@ -44,6 +43,12 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
 // Trạng thái thiết bị tính là hư: mất kết nối (PENDING là chưa kết nối lần đầu, không tính)
 const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['OFFLINE'])
 
+// Trạng thái trực tiếp của 1 nhà trên Tổng quan (A-03): "Ổn định" chỉ khi mọi bộ điều khiển online và số đo trong ngưỡng
+export function houseLiveStatus(health: 'ALERT' | 'NORMAL' | 'EMPTY', controllerStatuses: DeviceStatus[]): 'ALERT' | 'NORMAL' | 'EMPTY' {
+  if (controllerStatuses.some(status => status !== 'ONLINE')) return 'ALERT'
+  return health
+}
+
 export function isFaultDeviceStatus(status: DeviceStatus): boolean {
   return FAULT_DEVICE_STATUSES.has(status)
 }
@@ -64,85 +69,6 @@ export function zoneHasIssue({ readings, thresholds, isOnline, hasFaultDevice }:
   return anomalies.temperature || anomalies.humidity || anomalies.light || anomalies.nh3 || anomalies.co2
 }
 
-// Trạng thái các nhà yến của farm
-export type StabilityStatus = 'FAULT' | 'STABLE' | 'EMPTY'
-
-export type StabilityDeviceType = 'sensor' | 'camera'
-
-export interface HouseStability {
-  houseId: string
-  name: string
-  status: StabilityStatus
-  faultyDevices: number
-  faultZoneName?: string
-  faultDeviceType?: StabilityDeviceType
-}
-
-export interface StabilitySummary {
-  faultHouses: HouseStability[]
-  stableCount: number
-  emptyCount: number
-  hasDevices: boolean
-}
-
-interface DeviceRef {
-  // Node cảm biến theo Zone; camera theo nhà (SRS v2.1.8)
-  zone_id?: string
-  house_id?: string
-  status: DeviceStatus
-  type: StabilityDeviceType
-}
-
-interface HouseStats {
-  total: number
-  faulty: number
-  faultZoneName?: string
-  faultDeviceType?: StabilityDeviceType
-}
-
-const FAULT_STATUSES: DeviceStatus[] = ['OFFLINE']
-const STATUS_ORDER: Record<StabilityStatus, number> = { FAULT: 0, STABLE: 1, EMPTY: 2 }
-
-export function buildHouseStability(houses: House[], zones: Zone[], devices: DeviceRef[]): HouseStability[] {
-  const zoneById = new Map(zones.map(zone => [zone._id, zone]))
-  const statsByHouse = new Map<string, HouseStats>()
-
-  devices.forEach(device => {
-    const zone = device.zone_id ? zoneById.get(device.zone_id) : undefined
-    const houseId = device.house_id ?? zone?.house_id
-    if (!houseId) return
-    const stats = statsByHouse.get(houseId) ?? { total: 0, faulty: 0 }
-    stats.total += 1
-    if (FAULT_STATUSES.includes(device.status)) {
-      stats.faulty += 1
-      if (zone) stats.faultZoneName ??= zone.name
-      stats.faultDeviceType ??= device.type
-    }
-    statsByHouse.set(houseId, stats)
-  })
-
-  return houses
-    .map((house): HouseStability => {
-      const stats = statsByHouse.get(house._id) ?? { total: 0, faulty: 0 }
-      const status: StabilityStatus = stats.total === 0 ? 'EMPTY' : stats.faulty > 0 ? 'FAULT' : 'STABLE'
-      return {
-        houseId: house._id,
-        name: house.name,
-        status,
-        faultyDevices: stats.faulty,
-        faultZoneName: stats.faultZoneName,
-        faultDeviceType: stats.faultDeviceType,
-      }
-    })
-    .sort((left, right) => STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || right.faultyDevices - left.faultyDevices || left.name.localeCompare(right.name))
-}
-
-export function summarizeStability(items: HouseStability[]): StabilitySummary {
-  const faultHouses = items.filter(item => item.status === 'FAULT')
-  const stableCount = items.filter(item => item.status === 'STABLE').length
-  const emptyCount = items.filter(item => item.status === 'EMPTY').length
-  return { faultHouses, stableCount, emptyCount, hasDevices: faultHouses.length + stableCount > 0 }
-}
 
 // Chart thống kê chim
 export function mergeBirdCountRecords(lists: BirdCountDailyRecord[][]): BirdCountDailyRecord[] {
@@ -295,13 +221,6 @@ export function averageControlOutput(zoneIds: string[], live: Map<string, LiveCo
   }
 }
 
-// Bảng nhật ký cảnh báo
-export type SeverityGroup = SeverityLevel
-
-// Nhóm lọc theo 3 cấp chung (constants/severity.ts)
-export function getSeverityGroup(severity: AlertSeverity): SeverityGroup {
-  return SEVERITY_TO_LEVEL[severity]
-}
 
 export const STATUS_BADGE_CLASS: Record<AlertStatus, string> = {
   ACTIVE: 'bg-infoBlue/10 text-infoBlue',
@@ -310,65 +229,6 @@ export const STATUS_BADGE_CLASS: Record<AlertStatus, string> = {
   RESOLVED: 'bg-warmGray/15 text-warmGray',
 }
 
-export type SensorKind = 'env' | 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2' | 'camera'
-
-const SENSOR_KIND_BY_METRIC: Record<string, SensorKind> = {
-  temperature: 'temperature',
-  humidity: 'humidity',
-  light_lux: 'light',
-  nh3_ppm: 'nh3',
-  co2_ppm: 'co2',
-}
-
-export interface AlertBreach {
-  value: number
-  limit: number
-  unit: string
-  sign: '<' | '>'
-}
-
-export interface AlertLogRow {
-  id: string
-  createdAt: string
-  deviceName: string
-  /** SYSTEM-FR-004 — cảnh báo của thiết bị giả lập */
-  simulated?: boolean
-  locationName: string
-  sensorKind: SensorKind
-  type: Alert['type']
-  breach?: AlertBreach
-  severity: AlertSeverity
-  status: AlertStatus
-  group: SeverityGroup
-}
-
-// Loại cảm biến của cảnh báo: cảnh báo cả nhà (không gắn Zone) đến từ camera đếm chim, còn lại theo chỉ số vượt ngưỡng
-function alertSensorKind(alert: Alert, metric: string | undefined): SensorKind {
-  if (!alert.zone_id && alert.house_id) return 'camera'
-  return (metric && SENSOR_KIND_BY_METRIC[metric]) || 'env'
-}
-
-export function buildAlertRow(alert: Alert, deviceName: string, locationName: string): AlertLogRow {
-  const breach = alertBreach(alert)
-
-  return {
-    id: alert._id,
-    createdAt: alert.created_at,
-    deviceName,
-    locationName,
-    sensorKind: alertSensorKind(alert, breach?.metric),
-    type: alert.type,
-    breach: breach && {
-      value: breach.value,
-      limit: breach.limit,
-      unit: breach.unit,
-      sign: breach.direction === 'below' ? '>' : '<',
-    },
-    severity: alert.severity,
-    status: alert.status,
-    group: getSeverityGroup(alert.severity),
-  }
-}
 
 // Nguồn số liệu 1 nhà cho hàng KPI chế độ "Tất cả nhà yến" (HouseNode của màn Cấu trúc Farm)
 interface HouseKpiSource {

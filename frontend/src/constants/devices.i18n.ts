@@ -5,7 +5,7 @@ import { deviceStatusDict, prefixLabels } from '@/constants/enumLabels.i18n';
 const vi = {
   // Danh sách theo nhà yến
   'list.title': 'Thiết bị theo nhà yến',
-  'list.subtitle': 'Bấm vào 1 nhà để xổ danh sách thiết bị theo từng Zone, bấm lại để thu gọn.',
+  'list.subtitle': 'Bấm vào một nhà để xem thiết bị theo Zone.',
   'list.colHouse': 'Nhà yến',
   'list.colScale': 'Quy mô',
   'list.colStatus': 'Trạng thái hệ thống',
@@ -273,7 +273,7 @@ export type DevicesKey = keyof typeof vi;
 
 const en: Record<DevicesKey, string> = {
   'list.title': 'Devices by house',
-  'list.subtitle': 'Click a house to list its devices by zone, click again to collapse.',
+  'list.subtitle': 'Click a house to see its devices by Zone.',
   'list.colHouse': 'House',
   'list.colScale': 'Scale',
   'list.colStatus': 'System status',

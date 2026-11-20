@@ -31,14 +31,15 @@ export default function BirdTrendChart({ houseIds }: BirdTrendChartProps) {
           data: records.map(record => record.evening_entry),
           borderColor: CHART_COLORS.accentGreen,
           backgroundColor: 'rgba(181,211,44,0.12)',
-          fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
+          // Đường thẳng nối điểm: đường cong vẽ đỉnh không có trong số đếm (CH-01)
+          fill: true, tension: 0, pointRadius: 3, borderWidth: 2,
         },
         {
           label: 'Xuất đàn',
           data: records.map(record => record.morning_exit),
           borderColor: CHART_COLORS.climateOrange,
           backgroundColor: 'rgba(237,143,80,0.1)',
-          fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
+          fill: true, tension: 0, pointRadius: 3, borderWidth: 2,
         },
       ],
     }

@@ -45,6 +45,20 @@ const vi = {
   'Luật khuyến nghị': 'Luật khuyến nghị',
   'Lịch sử quyết định': 'Lịch sử quyết định',
 
+  'Theo dõi': 'Theo dõi',
+  'Tình trạng các nhà': 'Tình trạng các nhà',
+  'So sánh nhà': 'So sánh nhà',
+  'Điều khiển tay': 'Điều khiển tay',
+  'Đàn chim': 'Đàn chim',
+  'Sức khoẻ & báo cáo': 'Sức khoẻ & báo cáo',
+  'Công việc': 'Công việc',
+  'Bảo trì định kỳ': 'Bảo trì định kỳ',
+  'Thiết bị': 'Thiết bị',
+  'Thu hoạch': 'Thu hoạch',
+  'Bù thời tiết': 'Bù thời tiết',
+  'Lịch đếm': 'Lịch đếm',
+  'Vòng đếm': 'Vòng đếm',
+  'Lịch sử': 'Lịch sử',
   'Điều hướng chính': 'Điều hướng chính',
 }
 
@@ -94,6 +108,20 @@ const en: Record<NavigationKey, string> = {
   'Luật khuyến nghị': 'Recommendation rules',
   'Lịch sử quyết định': 'Decision history',
 
+  'Theo dõi': 'Monitoring',
+  'Tình trạng các nhà': 'House status',
+  'So sánh nhà': 'Compare houses',
+  'Điều khiển tay': 'Manual override',
+  'Đàn chim': 'Flock',
+  'Sức khoẻ & báo cáo': 'Health & reports',
+  'Công việc': 'Work',
+  'Bảo trì định kỳ': 'Preventive maintenance',
+  'Thiết bị': 'Devices',
+  'Thu hoạch': 'Harvest',
+  'Bù thời tiết': 'Weather offset',
+  'Lịch đếm': 'Counting schedule',
+  'Vòng đếm': 'Counting ring',
+  'Lịch sử': 'History',
   'Điều hướng chính': 'Main navigation',
 }
 

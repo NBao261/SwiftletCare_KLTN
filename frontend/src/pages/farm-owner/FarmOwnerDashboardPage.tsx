@@ -1,244 +1,186 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useZonesEnvironment } from '@/hooks/farm-owner/useFarmOwnerDashboard'
-import type { AllZone } from '@/hooks/shared/useFarms'
+import { useMemo, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { useQueries } from '@tanstack/react-query'
+import { farmOverviewApi } from '@/apis/farm-owner/farmOverview.api'
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter'
+import { useSensorNodes } from '@/hooks/shared/useDevices'
+import { useHealthDays } from '@/hooks/shared/useHealthDays'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
+import { useAwaitingApproval } from '@/hooks/farm-owner/useWorkOrders'
+import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
-import { farmDict } from '@/constants/farmStructure.i18n'
-import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import ScadaModeBanner from '@/components/features/farm-owner/dashboard/ScadaModeBanner'
-import EcoHealthCard from '@/components/features/farm-owner/dashboard/EcoHealthCard'
-import ControlSubsystemPanel from '@/components/features/farm-owner/dashboard/ControlSubsystemPanel'
-import EnvSensorPanel from '@/components/features/farm-owner/dashboard/EnvSensorPanel'
-import LiveCameraCard from '@/components/features/farm-owner/vision/LiveCameraCard'
-import NestingDensityCard from '@/components/features/farm-owner/dashboard/NestingDensityCard'
-import SensorAlertLogTable from '@/components/features/farm-owner/dashboard/SensorAlertLogTable'
 import FarmKpiRow from '@/components/features/farm-owner/dashboard/FarmKpiRow'
-import ZoneScopeControl from '@/components/features/farm-owner/dashboard/ZoneScopeControl'
-import { SCADA_PATH } from '@/components/features/farm-owner/dashboard/scada.constants'
-import { usePermission } from '@/hooks/common/usePermission'
-import HouseHarvestCard from '@/components/features/farm-owner/dashboard/HouseHarvestCard'
-import { houseHeadlineText } from '@/components/features/farm-owner/farms/houseHeadline'
-import { getAnomalies, summarizeFarmHouses } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import HouseStatusCard from '@/components/features/farm-owner/dashboard/HouseStatusCard'
+import HouseDetailPanels from '@/components/features/farm-owner/dashboard/HouseDetailPanels'
+import DashboardTodoCard from '@/components/features/farm-owner/dashboard/DashboardTodoCard'
+import { houseLiveStatus, latestTimestamp, summarizeFarmHouses } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
+import type { HouseOverview, SensorNode } from '@/types'
 
-const NO_ZONES: AllZone[] = []
+// Ngày chưa đánh giá tính trong 7 ngày qua (hạn đánh giá D+7)
+const RATING_WINDOW_DAYS = 7
+const NO_SENSORS: SensorNode[] = []
 
-// Dashboard Farm Owner
+// Tổng quan Farm Owner (todo-ui-layout-1120 §5.1): 4 ô KPI · lưới thẻ nhà (môi trường, chế độ điều khiển) · việc cần làm
 export default function FarmOwnerDashboardPage() {
-  const { t } = useTranslation(dashboardDict)
-  const { t: translateFarm, num: formatFarmNumber } = useTranslation(farmDict)
-  // Khung lọc Nhà + Zone lưu ở store chung nên chuyển trang rồi quay lại vẫn giữ nguyên
+  const { t, time } = useTranslation(dashboardDict)
   const scope = useScopeFilter()
-  const { farmId, houses, houseId, houseName, zones, zone: scopeZone, issueZoneIds, isLoading: isLoadingHouses, isError: isHousesError, refetch: refetchHouses } = scope
-  // Phạm vi số liệu: 1 Zone đã lọc, hoặc tất cả Zone trong phạm vi nhà
-  const scopedZones = useMemo(() => (scopeZone ? [scopeZone] : zones), [scopeZone, zones])
-  const { lastSyncedAt, controlMode, overrideExpiry, deviceNames } = useZonesEnvironment(scopedZones)
-
-  // Zone của khung Cảm biến và khung Điều khiển; đồng bộ (mặc định bật) thì 2 khung dùng chung 1 Zone
-  const [isZoneLinked, setIsZoneLinked] = useState(true)
-  const [envZoneChoice, setEnvZoneChoice] = useState('')
-  const [controlZoneChoice, setControlZoneChoice] = useState('')
-  const zoneById = useMemo(() => new Map(zones.map(zone => [zone._id, zone])), [zones])
-  const scopeZoneId = scopeZone?._id
-  // Đổi Zone trên header thì 2 khung nhảy theo Zone đó (kể cả khi đang tách đồng bộ)
-  useEffect(() => {
-    if (!scopeZoneId) return
-    setEnvZoneChoice(scopeZoneId)
-    setControlZoneChoice(scopeZoneId)
-  }, [scopeZoneId])
-  // Đã lọc 1 Zone trên header + đang đồng bộ thì 2 khung theo Zone header; còn lại mỗi khung theo Zone tự chọn, mặc định Zone header hoặc Zone đầu tiên của nhà
-  const envZone = (isZoneLinked ? scopeZone : undefined) ?? zoneById.get(envZoneChoice) ?? scopeZone ?? zones[0]
-  const controlZone = isZoneLinked ? envZone : zoneById.get(controlZoneChoice) ?? scopeZone ?? zones[0]
-  // Ô chọn Zone + nút đồng bộ luôn hiện khi nhà có từ 2 Zone, cả lúc header đang lọc 1 Zone
-  const hasPanelZonePicker = zones.length > 1
-  const controlZones = useMemo(() => (controlZone ? [controlZone] : NO_ZONES), [controlZone])
-  const control = useZonesEnvironment(controlZones)
-  // Điều khiển tay relay có thời hạn (ENV-FR-016): Farm Owner được làm, Domain Expert thì không
-  const canControlRelay = usePermission('FARM_OWNER')
-  const navigate = useNavigate()
-  // Số liệu theo từng nhà (thiết bị, cảnh báo, sản lượng tháng, sự cố nổi bật) — cùng nguồn với màn Cấu trúc Farm
-  const { structure, isLoading: isStructureLoading, isError: isStructureError, canViewHarvest, refetch: refetchStructure } = useFarmStructure()
-  const farmTotals = useMemo(() => summarizeFarmHouses(structure.houses, farmId), [structure.houses, farmId])
-  const houseNode = houseId ? structure.houseById.get(houseId) : undefined
+  const { farmId, farms, farmNames, houses, houseId, zones, zone: scopeZone } = scope
   const isAllHouses = houseId === ''
-  // Sự cố nổi bật trên capsule SCADA: 1 nhà → câu sự cố của nhà đó; tất cả → số nhà đang có sự cố
-  let scadaIssue = houseHeadlineText(houseNode?.headline, translateFarm, formatFarmNumber)
-  if (isAllHouses) scadaIssue = farmTotals.faultHouses > 0 ? t('kpi.housesIssue', { n: farmTotals.faultHouses }) : ''
+  // Duyệt phiếu, đánh giá ngày là việc của chủ nhà yến; chuyên gia xem Tổng quan chỉ đọc
+  const isOwner = usePermission('FARM_OWNER')
 
-  if (isLoadingHouses) {
-    return <LoadingSkeleton count={4} className="h-32 w-full" />
-  }
+  const liveZoneIds = useMemo(() => (scopeZone ? [scopeZone._id] : zones.map(zone => zone._id)), [scopeZone, zones])
+  const { structure, isLoading: isStructureLoading, isError: isStructureError, canViewHarvest, refetch: refetchStructure } = useFarmStructure({ liveZoneIds })
+  // Nhà trong phạm vi khung lọc: KPI, thẻ nhà và việc cần làm cùng một nguồn nên số khớp nhau (A-03)
+  const scopedHouses = useMemo(
+    () => structure.houses.filter(node => (!farmId || node.farm._id === farmId) && (!houseId || node.house._id === houseId)),
+    [structure.houses, farmId, houseId],
+  )
+  // Bộ điều khiển theo Zone: chế độ tự động/tay và số online trên thẻ nhà
+  const { data: sensors } = useSensorNodes()
+  const sensorsByHouse = useMemo(() => {
+    const zoneToHouse = new Map(scopedHouses.flatMap(node => node.zones.map(zone => [zone.zone._id, node.house._id] as const)))
+    const result = new Map<string, SensorNode[]>()
+    for (const sensor of sensors ?? []) {
+      const ownerHouseId = zoneToHouse.get(sensor.zone_id)
+      if (ownerHouseId) result.set(ownerHouseId, [...(result.get(ownerHouseId) ?? []), sensor])
+    }
+    return result
+  }, [sensors, scopedHouses])
+  // Trạng thái trực tiếp từng nhà: thẻ nhà và ô "Nhà cần chú ý" dùng cùng một luật (A-03)
+  const statusByHouse = useMemo(
+    () => new Map(scopedHouses.map(node => [node.house._id, houseLiveStatus(node.health, (sensorsByHouse.get(node.house._id) ?? NO_SENSORS).map(sensor => sensor.status))])),
+    [scopedHouses, sensorsByHouse],
+  )
+  const totals = useMemo(() => {
+    const summary = summarizeFarmHouses(scopedHouses, '')
+    return { ...summary, faultHouses: [...statusByHouse.values()].filter(status => status === 'ALERT').length }
+  }, [scopedHouses, statusByHouse])
+  const scopedAlerts = useMemo(
+    () => scopedHouses.flatMap(node => node.alerts).sort((left, right) => right.created_at.localeCompare(left.created_at)),
+    [scopedHouses],
+  )
+  const lastSyncedAt = latestTimestamp(scopedHouses.flatMap(node => node.zones.map(zone => zone.metrics?.timestamp)))
 
-  if (isHousesError) {
+  // Tình hình hôm nay của từng nhà (chim về, phiếu đang mở): 1 request mỗi trang trại trong phạm vi
+  const scopeFarmIds = useMemo(() => (farmId ? [farmId] : farms.map(farm => farm._id)), [farmId, farms])
+  const overviewByHouse = useQueries({
+    queries: scopeFarmIds.map(id => ({
+      queryKey: ['farm-overview', id],
+      queryFn: () => farmOverviewApi.overview(id).then(response => response.data.data),
+    })),
+    combine: results => new Map<string, HouseOverview>(results.flatMap(result => result.data?.houses ?? []).map(house => [house.house_id, house])),
+  })
+
+  const { data: awaiting } = useAwaitingApproval(farmId)
+  const today = vietnamDate()
+  const { days: daysToRate } = useHealthDays({
+    farmIds: isOwner ? scopeFarmIds : [],
+    houseId: isOwner ? houseId : '',
+    from: shiftDate(today, -RATING_WINDOW_DAYS),
+    to: today,
+    myRatingState: 'PENDING',
+  })
+
+  // Thanh phạm vi trên header ở mọi khổ màn (dưới xl xuống hàng riêng)
+  const header = (
+    <HeaderActions>
+      <ScopeFilter scope={scope} />
+    </HeaderActions>
+  )
+
+  if (scope.isLoading) return <LoadingSkeleton count={4} className="h-32 w-full" />
+
+  if (scope.isError) {
     return (
       <EmptyState
         title={t('page.zoneErrorTitle')}
         description={t('page.zoneErrorDesc')}
-        action={<Button variant="secondary" onClick={refetchHouses}>{t('log.retry')}</Button>}
+        action={<Button variant="secondary" onClick={scope.refetch}>{t('log.retry')}</Button>}
       />
     )
   }
-
-  // Bộ lọc nhà yến chung: đổi phạm vi là mọi khối (SCADA, cảm biến, điều khiển, đếm chim, mật độ tổ, nhật ký) lọc theo
-  const houseFilter = <ScopeFilter scope={scope} />
 
   // Phạm vi đang lọc chưa có nhà: vẫn giữ khung lọc để chọn trang trại khác
   if (houses.length === 0) {
     return (
       <div className="flex flex-col gap-5">
-        <HeaderActions>
-          <div className="hidden sm:block">{houseFilter}</div>
-        </HeaderActions>
-        <div className="sm:hidden">{houseFilter}</div>
+        {header}
         <EmptyState
           title={farmId ? t('page.noHouseInFarmTitle') : t('page.noZoneTitle')}
           description={farmId ? t('page.noHouseInFarmDesc') : t('page.noZoneDesc')}
-          action={
-            <Link to="/farms">
-              <Button>{t('page.goFarms')}</Button>
-            </Link>
-          }
+          action={<Link to="/farms"><Button>{t('page.goFarms')}</Button></Link>}
         />
       </div>
     )
   }
 
-  const controlAnomalies = control.thresholds ? getAnomalies(control.readings, control.thresholds) : undefined
-
-  // Đổi Zone ở 1 khung: đang đồng bộ thì khung kia đổi theo, header đang lọc 1 Zone thì header cũng đổi theo
-  const changeLinkedZone = (zoneId: string) => {
-    setEnvZoneChoice(zoneId)
-    setControlZoneChoice(zoneId)
-    if (scopeZone) scope.setZoneId(zoneId)
-  }
-  const handleEnvZoneChange = (zoneId: string) => {
-    if (isZoneLinked) changeLinkedZone(zoneId)
-    else setEnvZoneChoice(zoneId)
-  }
-  const handleControlZoneChange = (zoneId: string) => {
-    if (isZoneLinked) changeLinkedZone(zoneId)
-    else setControlZoneChoice(zoneId)
-  }
-  // Bật đồng bộ từ khung nào thì khung kia (và header nếu đang lọc 1 Zone) nhảy theo Zone của khung đó; tắt thì mỗi khung giữ Zone đang xem
-  const handleToggleLink = (sourceZoneId: string | undefined) => {
-    if (sourceZoneId && !isZoneLinked) changeLinkedZone(sourceZoneId)
-    if (sourceZoneId && isZoneLinked) {
-      setEnvZoneChoice(sourceZoneId)
-      setControlZoneChoice(sourceZoneId)
-    }
-    setIsZoneLinked(linked => !linked)
-  }
-  // Hàng KPI chế độ "Tất cả nhà yến": đang tải thì khung xương, lỗi thì báo lỗi, không hiện số 0 giả
-  let kpiSection: ReactNode = <FarmKpiRow totals={farmTotals} showYield={canViewHarvest} />
-  if (isStructureLoading) kpiSection = <LoadingSkeleton count={2} className="h-28 w-full" />
-  if (isStructureError) {
-    kpiSection = (
+  // Đang tải thì khung xương, lỗi thì báo lỗi, không hiện số 0 giả
+  let body: ReactNode
+  if (isStructureLoading) body = <LoadingSkeleton count={3} className="h-40 w-full" />
+  else if (isStructureError) {
+    body = (
       <EmptyState
         title={t('page.zoneErrorTitle')}
         description={t('page.zoneErrorDesc')}
         action={<Button variant="secondary" onClick={refetchStructure}>{t('log.retry')}</Button>}
       />
     )
+  } else {
+    // Tất cả trang trại: nhóm thẻ theo trang trại, tên trang trại là tiêu đề nhóm
+    const groupByFarm = !farmId && farms.length > 1
+    const groups = groupByFarm
+      ? farms
+        .map(farm => ({ id: farm._id, title: farmNames.get(farm._id) ?? '', nodes: scopedHouses.filter(node => node.farm._id === farm._id) }))
+        .filter(group => group.nodes.length > 0)
+      : [{ id: 'all', title: t('grid.title'), nodes: scopedHouses }]
+    body = (
+      <>
+        <FarmKpiRow totals={totals} awaitingApproval={awaiting?.total} />
+        {isAllHouses ? groups.map((group, index) => (
+          <section key={group.id} className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-h2 text-charcoal">{group.title}</h2>
+              {index === 0 && lastSyncedAt && <p className="text-small text-warmGray">{t('grid.updated', { time: time(lastSyncedAt) })}</p>}
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {group.nodes.map(node => (
+                <HouseStatusCard
+                  key={node.house._id}
+                  node={node}
+                  status={statusByHouse.get(node.house._id) ?? node.health}
+                  sensors={sensorsByHouse.get(node.house._id) ?? NO_SENSORS}
+                  overview={overviewByHouse.get(node.house._id)}
+                />
+              ))}
+            </div>
+          </section>
+        )) : (
+          <HouseDetailPanels scope={scope} houseNode={structure.houseById.get(houseId)} canViewHarvest={canViewHarvest} />
+        )}
+        {isOwner && (
+          <DashboardTodoCard
+            alerts={scopedAlerts}
+            approvals={awaiting?.items ?? []}
+            daysToRate={daysToRate.length}
+            structure={structure}
+          />
+        )}
+      </>
+    )
   }
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Bộ lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
-      <HeaderActions>
-        <div className="hidden sm:block">{houseFilter}</div>
-      </HeaderActions>
-
-      {/* Đầu trang: capsule tình trạng vận hành (không còn ảnh nền, C-06) */}
-      <section className="flex flex-col gap-3">
-        <div className="sm:hidden">{houseFilter}</div>
-        <ScadaModeBanner lastSyncedAt={lastSyncedAt} controlMode={controlMode} overrideExpiry={overrideExpiry} issueText={scadaIssue} />
-      </section>
-
-      {isAllHouses ? (
-        <>
-          {/* Thông tin chung mọi nhà: KPI tổng bên trái, trạng thái từng nhà bên phải */}
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-            {kpiSection}
-            <div className="flex min-h-[240px] [&>*]:flex-1">
-              <EcoHealthCard houses={houses} />
-            </div>
-          </div>
-
-          <SensorAlertLogTable farmId={farmId} houseId={houseId} zones={scopedZones} deviceNames={deviceNames} />
-        </>
-      ) : (
-        <>
-          <EnvSensorPanel
-            zone={envZone}
-            isLinked={isZoneLinked && hasPanelZonePicker}
-            scopeControl={hasPanelZonePicker && (
-              <ZoneScopeControl
-                zones={zones}
-                value={envZone?._id ?? ''}
-                onChange={handleEnvZoneChange}
-                issueZoneIds={issueZoneIds}
-                isLinked={isZoneLinked}
-                onToggleLink={() => handleToggleLink(envZone?._id)}
-                partner="control"
-              />
-            )}
-          />
-
-          {/* Khối điều khiển 3 relay, bên phải là sản lượng thu hoạch của nhà (ẩn nếu role không xem được thu hoạch) */}
-          <div className={cn('grid grid-cols-1 gap-5', houseNode && canViewHarvest && 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]')}>
-            <ControlSubsystemPanel
-              zoneName={controlZone?.name ?? houseName}
-              relayStates={control.relayStates}
-              controlMode={control.controlMode}
-              controlOutput={control.controlOutput}
-              tooHot={controlAnomalies?.tooHot ?? false}
-              isLinked={isZoneLinked && hasPanelZonePicker}
-              onOpenDetail={canControlRelay ? () => navigate(SCADA_PATH) : undefined}
-              scopeControl={hasPanelZonePicker && (
-                <ZoneScopeControl
-                  zones={zones}
-                  value={controlZone?._id ?? ''}
-                  onChange={handleControlZoneChange}
-                  issueZoneIds={issueZoneIds}
-                  isLinked={isZoneLinked}
-                  onToggleLink={() => handleToggleLink(controlZone?._id)}
-                  partner="env"
-                />
-              )}
-            />
-            {houseNode && canViewHarvest && <HouseHarvestCard node={houseNode} />}
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            {/* Camera cửa thu chim của nhà đang lọc, số đếm chi tiết ở trang Giám sát đàn chim */}
-            <LiveCameraCard
-              houseId={houseId}
-              houseName={houseName}
-              action={
-                <Link to="/vision" className="shrink-0 text-xs font-semibold text-graphite hover:text-charcoal">
-                  {t('camera.viewVision')}
-                </Link>
-              }
-            />
-            <NestingDensityCard houseId={houseId} houseName={houseName} />
-          </div>
-
-          <SensorAlertLogTable
-            farmId={farmId}
-            houseId={houseId}
-            zones={scopedZones}
-            deviceNames={deviceNames}
-            houseAlertsId={scopeZone ? '' : houseId}
-          />
-        </>
-      )}
+      {header}
+      {body}
     </div>
   )
 }

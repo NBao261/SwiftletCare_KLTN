@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { CpuIcon, InfoIcon, SlidersHorizontalIcon, SquaresFourIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react';
+import { CpuIcon, SlidersHorizontalIcon, SquaresFourIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react';
 
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import DeviceDetailCard from '@/components/features/farm-owner/devices/DeviceDetailCard';
@@ -141,7 +141,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-5">
-      <FarmFrame title={house.name} description={t('detail.subtitle', { farm: scope.farmNames.get(houseFarmId) ?? NO_VALUE })}>
+      <FarmFrame title={house.name} description={t('detail.subtitle', { farm: scope.farmNames.get(houseFarmId) ?? NO_VALUE })} help={t('detail.readOnly')}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiTile icon={SquaresFourIcon} label={t('detail.kpiZones')} value={num(item.zoneGroups.length)} sub={t('detail.kpiZonesSub')} />
           <KpiTile
@@ -159,10 +159,6 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
             tone={item.tally.faulty > 0 ? 'orange' : 'neutral'}
           />
         </div>
-        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-gray-100 px-4 py-3 text-sm text-graphite">
-          <InfoIcon size={18} className="mt-0.5 shrink-0" />
-          {t('detail.readOnly')}
-        </p>
       </FarmFrame>
 
       {item.zoneGroups.length === 0 && item.cameras.length === 0 && (

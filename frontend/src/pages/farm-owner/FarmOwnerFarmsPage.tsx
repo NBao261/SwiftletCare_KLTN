@@ -273,15 +273,10 @@ export default function FarmOwnerFarmsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={routedScope} />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={routedScope} />
-      </div>
+      </HeaderActions>
 
       <FarmFrame
         title={t('list.title')}

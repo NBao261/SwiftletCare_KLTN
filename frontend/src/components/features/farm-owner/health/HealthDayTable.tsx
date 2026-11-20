@@ -28,6 +28,9 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
   const { t, date } = useTranslation(healthDict);
 
 
+  // Trạng thái ẩn tới khi đánh giá (BR-31): ghi một lần trên tiêu đề cột thay vì ở mỗi dòng (FO-07)
+  const hasHiddenStatus = days.some(day => !day.current_status);
+
   const columns = useMemo(() => {
     const all: DataTableColumn<HouseHealthDay>[] = [
       // Ngày và nhà là khoá của dòng nên in đậm, như HarvestTable
@@ -35,10 +38,8 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       { key: 'house', header: t('col.house'), render: day => <span title={day.house_name} className="block truncate text-sm font-semibold text-charcoal">{day.house_name}</span> },
       {
         key: 'status',
-        header: t('col.status'),
-        render: day => (day.current_status
-          ? <HealthStatusBadge status={day.current_status} />
-          : <span className="text-sm italic text-warmGray">{t('cell.hidden')}</span>),
+        header: hasHiddenStatus ? t('col.statusHidden') : t('col.status'),
+        render: day => (day.current_status ? <HealthStatusBadge status={day.current_status} /> : <span className="text-warmGray">{NO_VALUE}</span>),
       },
       {
         key: 'myRating',
@@ -67,7 +68,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       },
     ];
     return canRate ? all : all.filter(column => column.key !== 'myRating');
-  }, [t, date, canRate, onRate, onView]);
+  }, [t, date, canRate, onRate, onView, hasHiddenStatus]);
 
   return (
     <FixedRowsTable
@@ -77,6 +78,20 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       rowHeight={ROW_HEIGHT}
       pageSize={ROW_COUNT}
       emptyNotice={t('table.emptyTitle')}
+      mobileCard={day => (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-body font-semibold text-charcoal">{date(day.date)} · {day.house_name}</p>
+              {canRate && day.my_rating_state && <p className="text-small text-warmGray">{t(`ratingState.${day.my_rating_state}`)}</p>}
+            </div>
+            {day.current_status ? <HealthStatusBadge status={day.current_status} /> : <span className="text-small text-warmGray">{t('cell.hidden')}</span>}
+          </div>
+          {day.my_rating_state === 'PENDING'
+            ? <Button size="sm" className="w-full" onClick={() => onRate(day)}>{t('action.rate')}</Button>
+            : <Button size="sm" variant="secondary" className="w-full" onClick={() => onView(day)}>{t('action.view')}</Button>}
+        </div>
+      )}
     />
   );
 }

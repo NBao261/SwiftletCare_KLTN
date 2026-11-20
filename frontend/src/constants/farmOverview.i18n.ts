@@ -3,7 +3,6 @@ import type { Dictionary } from '@/lib/i18n';
 // Từ điển trang Tổng quan trại (/overview) — ANALYTICS-FR-015, 016, 017, BR-44, BR-45
 const vi = {
   // Đầu trang
-  'page.tabs': 'Nội dung tổng quan trại',
   'page.loadFailed': 'Không tải được danh sách trang trại',
   'page.retry': 'Thử lại',
   'page.noFarmTitle': 'Chưa có trang trại',
@@ -11,32 +10,11 @@ const vi = {
   'page.goFarms': 'Đi tới Trang trại',
   'page.pickFarmTitle': 'Chọn một trang trại',
   'page.pickFarmHint': 'Tổng quan và so sánh tính trong từng trang trại. Chọn trang trại ở khung lọc phía trên.',
-  'tab.houses': 'Các nhà',
-  'tab.comparison': 'So sánh nhà',
 
   // Tab Các nhà (ANALYTICS-FR-015)
-  'houses.title': 'Các nhà yến của {farm}',
-  'houses.subtitle': 'Tình hình hôm nay ({date}) của từng nhà yến.',
-  'houses.errorTitle': 'Không tải được tổng quan trại',
-  'houses.emptyTitle': 'Trang trại chưa có nhà yến',
-  'houses.emptyHint': 'Thêm nhà yến ở mục Trang trại để xem tổng quan.',
-  'card.status': 'Trạng thái hôm nay',
   'reason.NOT_COMPUTED': 'Chưa có',
-  'card.openAlerts': 'Cảnh báo đang mở',
-  'card.openWorkOrders': 'Phiếu công việc đang mở',
-  'card.returnRate': 'Tỷ lệ chim về gần nhất',
-  'card.returnRateDate': 'Ngày {date}',
-  'card.noReturnRate': 'Không có số trong 30 ngày gần nhất',
-  'card.openSub': 'Chưa đóng',
-  'card.openAnalytics': 'Xem phân tích',
-  'summary.houses': 'Nhà yến',
-  'summary.attracting': '{n} nhà đang dẫn dụ',
-  'summary.watch': 'Thêm {n} nhà ở mức "{watch}"',
-  'summary.housesWithAlerts': 'Ở {n} nhà',
-  'summary.allHouses': 'Cộng mọi nhà',
 
   // Tab So sánh nhà (ANALYTICS-FR-016, BR-44)
-  'comparison.title': 'So sánh các nhà yến',
   'comparison.subtitle': 'Chọn chỉ số ở ô "Sắp theo" để sắp các nhà. Bảng không có điểm tổng hay xếp hạng.',
   'comparison.periodLabel': 'Khoảng',
   'comparison.period': 'Khoảng: {n} ngày',
@@ -79,7 +57,6 @@ const vi = {
 export type FarmOverviewKey = keyof typeof vi;
 
 const en: Record<FarmOverviewKey, string> = {
-  'page.tabs': 'Farm overview content',
   'page.loadFailed': 'Could not load the farms',
   'page.retry': 'Retry',
   'page.noFarmTitle': 'No farm yet',
@@ -87,30 +64,9 @@ const en: Record<FarmOverviewKey, string> = {
   'page.goFarms': 'Go to Farms',
   'page.pickFarmTitle': 'Choose a farm',
   'page.pickFarmHint': 'The overview and the comparison are per farm. Choose a farm in the filter above.',
-  'tab.houses': 'Houses',
-  'tab.comparison': 'Compare houses',
 
-  'houses.title': 'Swiftlet houses of {farm}',
-  'houses.subtitle': 'Today ({date}) at each swiftlet house.',
-  'houses.errorTitle': 'Could not load the farm overview',
-  'houses.emptyTitle': 'This farm has no swiftlet house yet',
-  'houses.emptyHint': 'Add a swiftlet house under Farms to see the overview.',
-  'card.status': 'Status today',
   'reason.NOT_COMPUTED': 'Not available yet',
-  'card.openAlerts': 'Open alerts',
-  'card.openWorkOrders': 'Open work orders',
-  'card.returnRate': 'Latest return rate',
-  'card.returnRateDate': 'On {date}',
-  'card.noReturnRate': 'No figure in the last 30 days',
-  'card.openSub': 'Not closed',
-  'card.openAnalytics': 'View analytics',
-  'summary.houses': 'Swiftlet houses',
-  'summary.attracting': '{n} attracting',
-  'summary.watch': 'Plus {n} at "{watch}"',
-  'summary.housesWithAlerts': 'In {n} houses',
-  'summary.allHouses': 'All houses together',
 
-  'comparison.title': 'Compare the swiftlet houses',
   'comparison.subtitle': 'Choose a figure under "Sort by" to order the houses. The table has no total score or ranking.',
   'comparison.periodLabel': 'Period',
   'comparison.period': 'Period: {n} days',

@@ -1,6 +1,6 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type { MenuSection } from '@/components/layouts/AppSidebar'
-import { isMenuItemActive, isPathWithin } from '@/lib/menuMatch'
+import { activeTabPath, isMenuItemActive } from '@/lib/menuMatch'
 import { canAccessPath } from '@/constants/roles'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import { cn } from '@/lib/cn'
@@ -15,24 +15,25 @@ export default function SectionTabs({ menuSections }: { menuSections: MenuSectio
   const item = menuSections.flatMap(section => section.items).find(entry => entry.tabs && isMenuItemActive(entry, pathname))
   const tabs = (item?.tabs ?? []).filter(tab => canAccessPath(role, tab.path))
   if (tabs.length < 2) return null
+  const activePath = activeTabPath(tabs, pathname)
 
   return (
-    <nav aria-label={item ? navigationLabel(item.label) : undefined} className="mb-5 inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1">
+    <nav aria-label={item ? navigationLabel(item.label) : undefined} className="mb-5 inline-flex max-w-full gap-1 self-start overflow-x-auto rounded-full bg-warmGray/10 p-1 max-sm:flex-wrap max-sm:rounded-3xl">
       {tabs.map(tab => {
-        const isActive = isPathWithin(pathname, tab.path)
+        const isActive = tab.path === activePath
         return (
-          <NavLink
+          <Link
             key={tab.path}
             to={tab.path}
             state={menuLinkState(tab.path, pathname)}
             aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'flex h-9 items-center whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
+              'flex h-9 items-center whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 max-sm:px-3',
               isActive ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
             )}
           >
             {navigationLabel(tab.label)}
-          </NavLink>
+          </Link>
         )
       })}
     </nav>

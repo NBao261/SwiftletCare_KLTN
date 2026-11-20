@@ -39,6 +39,16 @@ export function useOpenWorkOrderCount(houseId: string) {
   });
 }
 
+// Phiếu đã xong chờ chủ nhà yến duyệt (OPS-FR-003): 5 phiếu đầu và tổng số, cho badge menu Công việc và Tổng quan; farmId '' = mọi trang trại
+export function useAwaitingApproval(farmId = '', enabled = true) {
+  return useQuery({
+    queryKey: [WORK_ORDERS_KEY, 'awaiting', farmId],
+    queryFn: () => workOrderApi.list({ ...(farmId ? { farmId } : {}), status: 'AWAITING_APPROVAL', limit: 5 })
+      .then(response => ({ items: response.data.data, total: response.data.meta?.total ?? response.data.data.length })),
+    enabled,
+  });
+}
+
 // OPS-FR-009 — MTTA, MTTR của 1 nhà trong 30 ngày tới lúc mở trang (khoảng giữ nguyên để khoá truy vấn không đổi mỗi lần vẽ)
 export function useHouseOpsMetrics(farmId: string, houseId: string) {
   const [range] = useState(() => {

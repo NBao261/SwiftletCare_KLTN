@@ -254,6 +254,21 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
             minTableWidth={TABLE_MIN_WIDTH}
             visibleRows={VISIBLE_ROWS}
             fillHeight
+            mobileCard={group => (
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="text-body font-semibold text-charcoal">
+                    {formatStandardDate(group.harvest_date)} · {zoneById.get(group.zone_id)?.houseName ?? NO_VALUE}
+                  </p>
+                  <NestTypeStatus nestTypes={group.nestTypes} />
+                  <p className="text-small text-warmGray">
+                    {t('cell.nests', { n: num(group.nest_count) })} · {t('cell.kilograms', { kg: num(group.weight_grams / GRAMS_PER_KILOGRAM, KILOGRAM_DIGITS) })}
+                  </p>
+                </div>
+                {/* Menu ⋯ dùng chung với cột Thao tác */}
+                {columns[columns.length - 1].render(group, 0)}
+              </div>
+            )}
           />
         </div>
       )}

@@ -13,8 +13,6 @@ const vi = {
   'page.retry': 'Thử lại',
 
   // 3 thẻ thống kê
-  'stats.title': 'Tổng quan thu hoạch',
-  'stats.subtitle': 'Đợt gần nhất, quý hiện tại và cả năm',
   'stats.latestTitle': 'Đợt thu hoạch gần nhất',
   'stats.latestSub': '{farm} · {house} ({date})',
   'stats.none': 'Chưa có đợt nào',
@@ -238,8 +236,6 @@ const en: Record<HarvestKey, string> = {
   'page.errorTitle': 'Could not load the harvest log',
   'page.retry': 'Try again',
 
-  'stats.title': 'Harvest overview',
-  'stats.subtitle': 'Latest harvest, this quarter and this year',
   'stats.latestTitle': 'Latest harvest',
   'stats.latestSub': '{farm} · {house} ({date})',
   'stats.none': 'No harvests yet',

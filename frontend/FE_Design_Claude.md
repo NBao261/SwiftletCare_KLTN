@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.16.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.15.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.17.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.16.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,16 @@
 ---
 
 ## 0. Changelog
+
+### v2.16.0 → v2.17.0 (bố cục Farm Owner, `docs/reports/todo-ui-layout-1120.md` §5)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Menu Farm Owner 10 mục, 3 nhóm** (Theo dõi · Vận hành · Chuyên môn): Tổng quan = Tình trạng các nhà · So sánh nhà · Điều khiển tay; Công việc = Phiếu công việc · Bảo trì định kỳ · Khuyến nghị; Chuyên môn = 9 trang `/domain-expert/*`. Badge: Cảnh báo, Công việc (phiếu chờ duyệt), Chuyên môn (cảnh báo chờ kết luận ở trang trại chưa có chuyên gia, BR-22), gom ở `hooks/common/useMenuBadges`. Tab đang mở là tab có đường dẫn dài nhất chứa trang (`activeTabPath`), nên `/dashboard/scada` không sáng cả tab `/dashboard`. |
+| 2 | **Tổng quan:** 4 ô KPI (Nhà cần chú ý · Cảnh báo chờ xác nhận · Thiết bị mất kết nối · Phiếu chờ duyệt) · lưới thẻ nhà (số đo từng Zone tô theo ngưỡng kèm icon, chế độ tự động/tay, giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, chim về, ANALYTICS-FR-015) · Việc cần làm. Không ảnh, không dải tình trạng, không bảng cảnh báo lặp trang Cảnh báo. "Ổn định" chỉ khi mọi bộ điều khiển online và số đo trong ngưỡng (`houseLiveStatus`), ô "Nhà cần chú ý" đếm theo cùng luật. |
+| 3 | **Một trang không lồng tab:** So sánh nhà chỉ còn bảng so sánh (tình hình từng nhà đã ở thẻ nhà của Tổng quan). |
+| 4 | **Thanh phạm vi chỉ ở header** ở mọi khổ màn; trang không vẽ bản sao `ScopeFilter` cho điện thoại. Điện thoại: khung lọc thành lưới 2 cột, hàng tab xuống dòng. |
+| 5 | **Biểu đồ:** đường đếm chim nối thẳng các điểm (`tension: 0`); so sánh Zone chỉ còn bảng (không cột từ 0); phân bổ loại tổ là thanh ngang một màu có số kg, % ghi bên cạnh (không vòng tổng 100 %). |
 
 ### v2.15.0 → v2.16.0 (khung chung cho 4 role, `docs/reports/todo-ui-layout-1120.md` §4)
 

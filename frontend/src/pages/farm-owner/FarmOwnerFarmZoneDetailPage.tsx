@@ -110,13 +110,8 @@ export default function FarmOwnerFarmZoneDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={routedScope} />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={routedScope} />
-      </div>
+      </HeaderActions>
       <FarmFrame
         title={<>{zone.name}<HealthBadge health={health} /></>}
         description={

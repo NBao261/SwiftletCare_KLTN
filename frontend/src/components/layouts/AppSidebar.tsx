@@ -1,14 +1,12 @@
 import { useState, type ComponentType, type SVGProps } from 'react'
 import { CaretDownIcon } from '@phosphor-icons/react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuthStore } from '@/stores/authStore'
-import { usePendingAlertTotal } from '@/hooks/shared/useAlerts'
 import { useCanScrollDown } from '@/hooks/common/useCanScrollDown'
 import { cn } from '@/lib/cn'
 import { menuLinkState } from '@/lib/navigationState'
 import { isMenuItemActive } from '@/lib/menuMatch'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
-import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
+import { useMenuBadges } from '@/hooks/common/useMenuBadges'
 
 // Trang con của một mục menu: hiện thành tab trên đầu trang (SectionTabs), mục menu sáng khi ở bất kỳ trang con nào
 export interface MenuTab {
@@ -65,11 +63,7 @@ export default function AppSidebar({
   menuSections: MenuSection[]
   dockItems: MenuItem[]
 }) {
-  const user = useAuthStore(s => s.user)
-  const pendingAlertCount = usePendingAlertTotal() ?? 0
-  const isExpert = user?.role === 'DOMAIN_EXPERT'
-  const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
-  const expertPendingCount = isExpert ? (expertAlerts?.total ?? 0) : 0
+  const badgeByPath = useMenuBadges()
   // Trang hiện tại: ở trang con của 1 mục menu thì link mục đó mang state đi lên
   const { pathname } = useLocation()
   const navigationLabel = useNavigationLabel()
@@ -115,8 +109,6 @@ export default function AppSidebar({
                   )}
                   {isOpen && <div className="mt-1 space-y-1">
                     {section.items.map(item => {
-                      // Cảnh báo: số chờ xác nhận (ACTIVE); Thẩm định: số cảnh báo suy luận chờ chuyên gia kết luận, chỉ chuyên gia
-                      const badgeByPath: Record<string, number> = { '/alerts': pendingAlertCount, '/domain-expert/alert-verdicts': expertPendingCount }
                       const badgeCount = badgeByPath[item.path] ?? 0
                       const isActive = isMenuItemActive(item, pathname)
                       return (

@@ -33,15 +33,10 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} />
-      </div>
+      </HeaderActions>
 
       {body}
       {/* FARM-FR-008 — thiết bị gỡ nhầm khôi phục được trong 24 giờ */}

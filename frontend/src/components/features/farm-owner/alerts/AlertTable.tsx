@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import SeverityBadge from '@/components/common/SeverityBadge';
 import { STATUS_BADGE_CLASS } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { ActionsMenu, Badge, type ActionsMenuItem, type DataTableColumn } from '@/components/ui';
@@ -7,6 +7,7 @@ import { alertsDict } from '@/constants/alerts.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { isAlertFinished } from '@/constants/severity';
 import { useTranslation } from '@/hooks/common/useTranslation';
+import { cn } from '@/lib/cn';
 import { ALERT_PAGE_SIZE } from '@/hooks/shared/useAlerts';
 import type { Alert } from '@/types';
 import SimulatedBadge from '@/components/common/SimulatedBadge';
@@ -29,6 +30,19 @@ interface AlertTableProps {
 export default function AlertTable({ alerts, serverPagination, locationOf, canAcknowledge, onAction }: AlertTableProps): JSX.Element {
   const { t, dateTime } = useTranslation(alertsDict);
   // table-fixed: cột % cộng đủ phần còn lại sau Mức, Thao tác để không dư khoảng trống giữa các cột
+  // Menu ⋯ của 1 dòng (bảng và thẻ điện thoại); bấm menu, kể cả mục trong portal, không mở chi tiết của dòng
+  const rowMenu = useCallback((alert: Alert, alignClass: string) => {
+    const items: ActionsMenuItem[] = [{ label: t('action.view'), onClick: () => onAction('view', alert) }];
+    if (canAcknowledge && alert.status === 'ACTIVE') {
+      items.push({ label: t('action.acknowledge'), onClick: () => onAction('acknowledge', alert) });
+    }
+    return (
+      <div className={cn('flex items-center', alignClass)} onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+        <ActionsMenu items={items} />
+      </div>
+    );
+  }, [t, canAcknowledge, onAction]);
+
   const columns = useMemo<DataTableColumn<Alert>[]>(() => [
     {
       key: 'level',
@@ -80,20 +94,9 @@ export default function AlertTable({ alerts, serverPagination, locationOf, canAc
       header: t('col.actions'),
       align: 'center',
       className: 'w-24 whitespace-nowrap',
-      render: alert => {
-        const items: ActionsMenuItem[] = [{ label: t('action.view'), onClick: () => onAction('view', alert) }];
-        if (canAcknowledge && alert.status === 'ACTIVE') {
-          items.push({ label: t('action.acknowledge'), onClick: () => onAction('acknowledge', alert) });
-        }
-        return (
-          // Bấm menu (kể cả mục trong portal) không mở chi tiết của dòng
-          <div className="flex items-center justify-center" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-            <ActionsMenu items={items} />
-          </div>
-        );
-      },
+      render: alert => rowMenu(alert, 'justify-center'),
     },
-  ], [t, dateTime, locationOf, canAcknowledge, onAction]);
+  ], [t, dateTime, locationOf, rowMenu]);
 
   return (
     <FixedRowsTable
@@ -105,6 +108,19 @@ export default function AlertTable({ alerts, serverPagination, locationOf, canAc
       pageSize={ALERT_PAGE_SIZE}
       emptyNotice={t('list.emptyTitle')}
       serverPagination={serverPagination}
+      mobileCard={alert => (
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <SeverityBadge severity={alert.severity} isMuted={isAlertFinished(alert.status)} />
+              <Badge className={STATUS_BADGE_CLASS[alert.status]}>{t(`status.${alert.status}`)}</Badge>
+            </div>
+            <p className="text-body font-semibold text-charcoal">{t(`type.${alert.type}`)}</p>
+            <p className="text-small text-warmGray">{locationOf(alert).location} · {dateTime(alert.created_at)}</p>
+          </div>
+          {rowMenu(alert, 'justify-end')}
+        </div>
+      )}
     />
   );
 }

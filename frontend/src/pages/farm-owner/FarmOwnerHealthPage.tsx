@@ -108,13 +108,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const filter = (
     <>
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} lockZone />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} lockZone />
-      </div>
+      </HeaderActions>
     </>
   );
 
@@ -165,7 +160,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           title={t('table.title')}
           description={t(canRate ? 'table.subtitle' : 'table.subtitleExpert')}
           action={
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {!house && <span className="text-small text-warmGray">{t('page.levelsNeedHouse')}</span>}
               <Button
                 variant="secondary"
                 size="sm"

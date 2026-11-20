@@ -57,6 +57,7 @@ const en: Record<string, string> = {
   'Đang xếp giảm dần · bấm để đảo chiều': 'Sorted descending — click to reverse',
   'Thao tác khác': 'More actions',
   'Giải thích': 'Explanation',
+  'so với hôm qua': 'vs yesterday',
   'Xoá nội dung tìm kiếm': 'Clear search',
   'Chưa nhập {{field}}': 'Please enter {{field}}',
   '{{field}} cần ít nhất {{min}} ký tự (đang có {{count}})': '{{field}} needs at least {{min}} characters (currently {{count}})',

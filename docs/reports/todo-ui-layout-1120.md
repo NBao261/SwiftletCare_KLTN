@@ -255,6 +255,8 @@ Còn lại (Nhi): gom 5 nhóm thành 3, bỏ chữ "Console", Cài đặt vào m
 
 ## 5. Farm Owner — Bảo
 
+**Trạng thái (20/11/2026, nhánh `refactor/fe-farm-owner-layout`):** đã làm FO-00…FO-05, FO-07…FO-14. FO-06: chip Zone giữ dạng chip (đã thành pill trắng theo C-03), chưa làm ô chọn nhiều Zone; biểu đồ cột thay bằng bảng (CH-03). FO-01 thêm giai đoạn và trạng thái hôm nay vào thẻ nhà để giữ đủ ANALYTICS-FR-015, nên trang So sánh nhà bỏ tab con "Các nhà".
+
 | ID | Trang | Hiện tại | Sửa | Ưu tiên |
 |---|---|---|---|---|
 | FO-00 | Menu | 22 mục, phải cuộn | Theo §3.1 (`FarmOwnerLayout.tsx`, `MENU_ACCESS`, `navigation.i18n.ts`, `roles.test.ts`) | P1 |

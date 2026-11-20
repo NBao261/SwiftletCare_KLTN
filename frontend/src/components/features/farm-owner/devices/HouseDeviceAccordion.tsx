@@ -96,10 +96,8 @@ export default function HouseDeviceAccordion({ inventory, farmNames }: HouseDevi
 
   return (
     <Card size="lg" className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-h2 text-charcoal">{t('list.title')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('list.subtitle')}</p>
-      </div>
+      {/* Tên trang đã ở header: card chỉ còn 1 dòng hướng dẫn (FO-04) */}
+      <p className="text-body text-graphite">{t('list.subtitle')}</p>
 
       {/* Hàng lọc: ô tìm giãn hết chỗ trống, ô lọc tình trạng bên phải; dưới là sắp xếp + Hủy lọc (cùng mẫu bảng Thu hoạch) */}
       <div className="flex flex-col gap-3">

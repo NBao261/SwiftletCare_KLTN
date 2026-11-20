@@ -4,7 +4,7 @@ import { useHeaderSlotStore } from '@/stores/headerSlotStore'
 import { cn } from '@/lib/cn'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
-import { isMenuItemActive, isPathWithin } from '@/lib/menuMatch'
+import { activeTabPath, isMenuItemActive } from '@/lib/menuMatch'
 import NotificationPopover from '@/components/common/NotificationPopover'
 import ProfilePopover from '@/components/common/ProfilePopover'
 import LanguageToggle from '@/components/common/LanguageToggle'
@@ -19,8 +19,8 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
   const items = [...menuSections.flatMap(section => section.items), ...AVATAR_MENU_PAGES]
   const match = items.find(item => isMenuItemActive(item, pathname))
   // Ở một tab: tên trang là tên mục menu, gốc breadcrumb là tab đang mở (không bấm được)
-  const tab = match?.tabs?.find(menuTab => isPathWithin(pathname, menuTab.path))
-  return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: tab?.path ?? match?.path ?? pathname }
+  const tabPath = activeTabPath(match?.tabs ?? [], pathname)
+  return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: tabPath ?? match?.path ?? pathname }
 }
 
 /** `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung */

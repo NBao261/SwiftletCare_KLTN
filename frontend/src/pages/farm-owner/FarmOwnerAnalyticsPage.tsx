@@ -146,15 +146,10 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} />
-      </div>
+      </HeaderActions>
 
       {zones.length > 0 && (
         <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
