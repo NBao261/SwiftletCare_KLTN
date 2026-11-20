@@ -1,13 +1,17 @@
-// ENV-FR-028…030, BR-38: Chuyên gia đặt tối đa 10 luật cho từng nhà (Farm Owner khi không có chuyên gia, BR-22)
+// ENV-FR-028…030, BR-38: Chuyên gia đặt tối đa 10 luật cho từng nhà; Farm Owner đặt khi farm chưa có chuyên gia,
+// có chuyên gia thì gửi đề xuất để chuyên gia duyệt (BR-22, Report 3 4.2.15)
 import { useState, useEffect } from 'react'
-import { CloudRain, Info, Zap, AlertTriangle } from 'lucide-react'
+import { CloudRain, Info, Zap, AlertTriangle, Send } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import SectionCard from '@/components/ui/SectionCard'
+import NoteActionModal from '@/components/ui/NoteActionModal'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useToastStore } from '@/stores/toastStore'
-import { useWeatherRules, useUpdateWeatherRules } from '@/hooks/domain-expert/useWeatherRules'
+import {
+  useApproveWeatherProposal, useProposeWeatherRules, useRejectWeatherProposal, useUpdateWeatherRules, useWeatherRules,
+} from '@/hooks/domain-expert/useWeatherRules'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import type { WeatherRule } from '@/types/expert.types'
 import WeatherRuleRow from '@/components/features/domain-expert/weather/WeatherRuleRow'
@@ -43,10 +47,17 @@ function LastCompensationBadge({ data }: {
 }
 
 export default function DomainExpertWeatherRulesPage() {
-  const { canDecide } = useExpertDecisionRights()
+  const { canEditParameters, ownerNeedsExpert, isExpert } = useExpertDecisionRights()
   const { selectedHouseId } = useZoneStore()
-  const { data, isLoading, isError } = useWeatherRules(selectedHouseId ?? undefined)
-  const mutation = useUpdateWeatherRules(selectedHouseId ?? undefined)
+  const houseId = selectedHouseId ?? undefined
+  const { data, isLoading, isError } = useWeatherRules(houseId)
+  // Farm Owner trên farm có chuyên gia: bộ luật soạn ở đây gửi thành đề xuất, luật đang chạy giữ nguyên
+  const update = useUpdateWeatherRules(houseId)
+  const propose = useProposeWeatherRules(houseId)
+  const mutation = ownerNeedsExpert ? propose : update
+  const approve = useApproveWeatherProposal(houseId)
+  const reject = useRejectWeatherProposal(houseId)
+  const [isRejectOpen, setIsRejectOpen] = useState(false)
   const getErrorMessage = useApiErrorMessage()
   const pushToast = useToastStore(state => state.push)
 
@@ -84,10 +95,46 @@ export default function DomainExpertWeatherRulesPage() {
     try {
       await mutation.mutateAsync(rules)
       setLocalRules(null)
-      pushToast('Đã lưu luật bù thời tiết.', 'success')
+      pushToast(ownerNeedsExpert ? t('Đã gửi chuyên gia duyệt. Luật đang chạy giữ nguyên tới khi được duyệt.') : t('Đã lưu luật bù thời tiết.'), 'success')
     } catch (error) {
       setSaveError(getErrorMessage(error))
     }
+  }
+
+  function decide(action: Promise<unknown>, doneMessage: string) {
+    action
+      .then(() => { pushToast(t(doneMessage), 'success'); setIsRejectOpen(false) })
+      .catch(error => pushToast(getErrorMessage(error), 'error'))
+  }
+
+  // Đề xuất đang chờ của Farm Owner: chuyên gia duyệt hoặc từ chối, Farm Owner thấy mình đã gửi gì
+  function renderProposal() {
+    const proposal = data?.proposal
+    if (!proposal) return null
+    return (
+      <div className="space-y-3 p-4 rounded-2xl border border-statusYellow/40 bg-statusYellow/5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-sm font-semibold text-charcoal">
+            <Send className="w-4 h-4 shrink-0" />
+            {t('Đề xuất của chủ nhà yến đang chờ duyệt ({{n}} luật, gửi lúc {{time}})', { n: proposal.rules.length, time: formatDate(proposal.proposed_at) })}
+          </p>
+          {isExpert && (
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setIsRejectOpen(true)} disabled={approve.isPending}>{t('Từ chối')}</Button>
+              <Button size="sm" loading={approve.isPending} onClick={() => decide(approve.mutateAsync(), 'Đã duyệt, luật mới có hiệu lực từ lần tính kế tiếp.')}>
+                {t('Duyệt đề xuất')}
+              </Button>
+            </div>
+          )}
+        </div>
+        {ownerNeedsExpert && <p className="text-small text-graphite">{t('Gửi lại bộ luật mới sẽ thay đề xuất này.')}</p>}
+        <fieldset disabled className="space-y-1.5">
+          {proposal.rules.map((rule, index) => (
+            <WeatherRuleRow key={rule._id ?? index} rule={rule} onToggle={() => undefined} onRemove={() => undefined} disabled />
+          ))}
+        </fieldset>
+      </div>
+    )
   }
 
   function handleDiscard() {
@@ -144,8 +191,8 @@ export default function DomainExpertWeatherRulesPage() {
   }
 
   return (
-    // BR-22 — Farm Owner chỉ sửa khi farm chưa có chuyên gia
-    <fieldset disabled={!canDecide} className="contents">
+    // BR-22 — Farm Owner soạn được; farm có chuyên gia thì nút lưu gửi đề xuất
+    <fieldset disabled={!canEditParameters} className="contents">
     <div className="mx-auto w-full max-w-screen-xl space-y-5">
       <SectionCard
         icon={<CloudRain className="w-5 h-5" />}
@@ -169,6 +216,8 @@ export default function DomainExpertWeatherRulesPage() {
           {/* Lần bù gần nhất */}
           {renderLastCompensation()}
 
+          {renderProposal()}
+
           {/* Danh sách luật — ẩn khi GET lỗi */}
           {!isError && (
             <>
@@ -182,7 +231,7 @@ export default function DomainExpertWeatherRulesPage() {
       </SectionCard>
 
       {/* Form thêm luật */}
-      {canDecide && !isError && !isLoading && rules.length < MAX_RULES && (
+      {canEditParameters && !isError && !isLoading && rules.length < MAX_RULES && (
         <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
       )}
 
@@ -204,11 +253,24 @@ export default function DomainExpertWeatherRulesPage() {
             onClick={handleSave}
             loading={mutation.isPending}
           >
-            {t('Lưu luật')}
+            {ownerNeedsExpert ? t('Gửi chuyên gia duyệt') : t('Lưu luật')}
           </Button>
         </div>
       )}
     </div>
+    <NoteActionModal
+      open={isRejectOpen}
+      onClose={() => setIsRejectOpen(false)}
+      title={t('Từ chối đề xuất luật bù phun sương')}
+      label={t('Lý do')}
+      placeholder={t('VD: mùa này chưa cần phun thêm')}
+      hint={t('Chủ nhà yến nhận lý do này. Luật đang chạy giữ nguyên.')}
+      submitLabel={t('Từ chối')}
+      required
+      danger
+      loading={reject.isPending}
+      onSubmit={note => decide(reject.mutateAsync(note), 'Đã từ chối đề xuất.')}
+    />
     </fieldset>
   )
 }

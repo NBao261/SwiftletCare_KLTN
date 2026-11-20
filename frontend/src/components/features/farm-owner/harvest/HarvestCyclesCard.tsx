@@ -9,8 +9,11 @@ import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harves
 import { NO_VALUE } from '@/constants/display';
 import { harvestDict, type HarvestTranslate } from '@/constants/harvest.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHarvestCycleList } from '@/hooks/farm-owner/useHarvests';
+import { useFarms } from '@/hooks/shared/useFarms';
+import { useRemindExpert } from '@/hooks/shared/useRemindExpert';
 import type { AllZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
 import type { HarvestCycle, HarvestCycleComparison, HarvestCycleStatus } from '@/types/harvest.types';
@@ -29,6 +32,18 @@ interface HarvestCyclesCardProps {
 }
 
 // HARVEST-FR-007, ANALYTICS-FR-004 — chu kỳ thu hoạch theo zone: sản lượng, so sánh, sức khỏe, kết luận mùa vụ (chỉ xem)
+// BR-22 — Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận một chu kỳ đã đóng (mỗi chu kỳ một lần)
+function CycleReminder({ cycle }: { cycle: HarvestCycle }): JSX.Element | null {
+  const { t } = useTranslation(harvestDict);
+  const isOwner = usePermission('FARM_OWNER');
+  const { data: farms } = useFarms();
+  const reminder = useRemindExpert('harvest_cycle', cycle._id, cycle.expert_reminded_at);
+  if (!isOwner || farms?.find(farm => farm._id === cycle.farm_id)?.has_active_expert !== true) return null;
+  return reminder.reminded
+    ? <span className="text-xs text-warmGray">{t('cycle.reminded')}</span>
+    : <Button variant="secondary" size="sm" loading={reminder.isPending} onClick={reminder.remind}>{t('cycle.remind')}</Button>;
+}
+
 export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyclesCardProps): JSX.Element {
   const { t, date, num, exact } = useTranslation(harvestDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -194,7 +209,10 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
                   )}
                 </div>
               ) : (
-                <p className="italic text-warmGray">{t('cycle.noConclusion')}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="italic text-warmGray">{t('cycle.noConclusion')}</p>
+                  {selected.status !== 'OPEN' && <CycleReminder cycle={selected} />}
+                </div>
               )}
             </Section>
           </div>

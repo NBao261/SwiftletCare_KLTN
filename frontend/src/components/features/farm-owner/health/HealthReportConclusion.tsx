@@ -9,6 +9,8 @@ import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
 import { useSetHealthReportConclusion } from '@/hooks/shared/useHealthDays';
+import { useFarms } from '@/hooks/shared/useFarms';
+import { useRemindExpert } from '@/hooks/shared/useRemindExpert';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import type { HouseHealthReport } from '@/types';
@@ -26,6 +28,11 @@ export default function HealthReportConclusion({ report }: { report: HouseHealth
   const save = useSetHealthReportConclusion(report._id);
   const conclusion = report.expert_conclusion;
   const canWrite = isExpert && (!conclusion || conclusion.by._id === userId);
+  // BR-22 — Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận (mỗi báo cáo một lần)
+  const isOwner = usePermission('FARM_OWNER');
+  const { data: farms } = useFarms();
+  const farmHasExpert = farms?.find(farm => farm._id === report.farm_id)?.has_active_expert === true;
+  const reminder = useRemindExpert('health_report', report._id, report.expert_reminded_at);
   // null = đang xem; chuỗi = đang viết
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -82,6 +89,9 @@ export default function HealthReportConclusion({ report }: { report: HouseHealth
         </Button>
       )}
       {isExpert && !canWrite && <p className="w-full text-xs text-warmGray">{t('rd.otherExpert')}</p>}
+      {isOwner && farmHasExpert && !conclusion && (reminder.reminded
+        ? <span className="shrink-0 text-xs text-warmGray">{t('rd.reminded')}</span>
+        : <Button variant="secondary" size="sm" className="shrink-0" loading={reminder.isPending} onClick={reminder.remind}>{t('rd.remind')}</Button>)}
     </div>
   );
 }

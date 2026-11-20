@@ -29,6 +29,8 @@ export interface RecommendationRule extends RecommendationRuleInput {
   _id: string;
   farm_id: string;
   author_id: string;
+  // BR-22 — luật Farm Owner viết trên farm có chuyên gia: tắt, chờ chuyên gia bật
+  pending_approval?: boolean;
   created_at: string;
   updated_at: string;
 }

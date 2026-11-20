@@ -1,4 +1,4 @@
-// ParameterReviewCard.tsx — Thẻ duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010)
+// ParameterReviewCard.tsx — Thẻ duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010, BR-22 Report 3 4.2.15)
 
 import { useState } from 'react';
 import {
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatDateTime } from '@/lib/i18n';
 import { useAllZones } from '@/hooks/shared/useFarms';
-import type { ParameterReview, ParameterReviewStatus } from '@/types/expert/reviews.types';
+import type { ParameterReview, ParameterReviewGroup, ParameterReviewStatus } from '@/types/expert/reviews.types';
 import { t, translated } from '@/i18n';
 
 interface ParameterReviewCardProps {
@@ -57,6 +57,17 @@ const STATUS_CONFIG: Record<
   },
 };
 
+// Tên mục theo nhóm tham số (Zone, nhà hoặc camera)
+const GROUP_TITLE: Record<ParameterReviewGroup, string> = translated({
+  thresholds: 'Thay đổi ngưỡng vi khí hậu',
+  fuzzy: 'Thay đổi hệ số điều khiển mờ',
+  detection: 'Thay đổi tham số phát hiện',
+  return_rate_drop: 'Thay đổi mức giảm tỷ lệ chim về',
+  health_levels: 'Thay đổi mức chỉ số sức khoẻ',
+  counting_schedule: 'Thay đổi lịch đếm chim',
+  counting_ring: 'Vẽ lại vòng đếm',
+});
+
 const FIELD_LABELS: Record<string, string> = translated({
   temp_min: 'Nhiệt độ tối thiểu (°C)',
   temp_max: 'Nhiệt độ tối đa (°C)',
@@ -70,6 +81,21 @@ const FIELD_LABELS: Record<string, string> = translated({
   fuzzy_fan_dry_level: 'Mức quạt hút khử ẩm (%)',
   fuzzy_window_sec: 'Chu kỳ điều khiển (giây)',
   fuzzy_input_filter: 'Lọc nhiễu cảm biến đầu vào',
+  noise_margin_db: 'Biên độ ồn vượt nền (dB)',
+  noise_min_sec: 'Thời gian ồn tối thiểu (giây)',
+  pump_dry_on_sec: 'Thời gian bơm chạy không tăng ẩm (giây)',
+  pump_dry_min_rise_pct: 'Độ ẩm cần tăng tối thiểu (%)',
+  speaker_drop_pct: 'Độ sụt âm lượng báo hỏng loa (%)',
+  return_rate_drop_pct: 'Mức giảm tỷ lệ chim về (%)',
+  in_range_slight_pct: 'Môi trường lệch nhẹ',
+  in_range_clear_pct: 'Môi trường lệch rõ',
+  air_slight_h: 'Không khí lệch nhẹ',
+  air_clear_h: 'Không khí lệch rõ',
+  noise_slight: 'Tiếng ồn lệch nhẹ',
+  noise_clear: 'Tiếng ồn lệch rõ',
+  profiles: 'Hồ sơ theo mùa',
+  temporary: 'Khung tạm',
+  ring: 'Vòng đếm',
 });
 
 // Lấy danh sách các trường có thay đổi giữa old_values và new_values
@@ -82,10 +108,16 @@ export function getChangedParameterKeys(
   );
 }
 
-// Định dạng giá trị hiển thị của tham số
-export function formatParamValue(value: unknown, _key?: string): string {
+// Định dạng giá trị hiển thị của tham số; lịch đếm, vòng đếm là cấu trúc lồng nhau nên chỉ tóm tắt
+export function formatParamValue(value: unknown, key?: string): string {
+  if (key === 'ring') {
+    const points = (value as { points?: unknown[] } | null)?.points;
+    return points ? t('{{n}} đỉnh', { n: points.length }) : t('Chưa có');
+  }
   if (value === undefined || value === null) return '—';
   if (typeof value === 'boolean') return value ? t('Bật') : t('Tắt');
+  if (Array.isArray(value)) return t('{{n}} mục', { n: value.length });
+  if (typeof value === 'object') return t('đã đổi');
   return String(value);
 }
 
@@ -103,7 +135,16 @@ export default function ParameterReviewCard({
   const changedKeys = getChangedParameterKeys(review.old_values, review.new_values);
 
   const { data: allZones } = useAllZones();
-  const zoneInfo = allZones?.find(zone => zone._id === review.zone_id);
+  // Mục theo Zone ghi Zone; theo nhà hoặc camera ghi nhà (mục tạo trước Report 3 4.2.15 chỉ có zone_id)
+  const zoneInfo = review.zone_id ? allZones?.find(zone => zone._id === review.zone_id) : undefined;
+  const houseZone = review.house_id ? allZones?.find(zone => zone.house_id === review.house_id) : undefined;
+  const place = zoneInfo
+    ? `${zoneInfo.farmName} • ${zoneInfo.name}`
+    : houseZone
+      ? `${houseZone.farmName} • ${houseZone.houseName}${review.group === 'counting_ring' ? ` • ${t('Camera đếm chim')}` : ''}`
+      : t('Không xác định');
+  // Vòng đếm vẽ trên camera chưa có vòng: không có gì để hoàn tác (backend 409), chuyên gia vẽ lại
+  const canRevert = !(review.group === 'counting_ring' && !(review.old_values as { ring?: unknown })?.ring);
 
   const authorName =
     typeof review.changed_by === 'object' && review.changed_by?.full_name
@@ -124,14 +165,12 @@ export default function ParameterReviewCard({
           </div>
           <div>
             <h4 className="text-sm font-bold text-charcoal leading-tight">
-              {review.group === 'thresholds'
-                ? t('Thay đổi ngưỡng vi khí hậu')
-                : t('Thay đổi hệ số điều khiển mờ')}
+              {GROUP_TITLE[review.group] ?? t('Thay đổi tham số')}
             </h4>
             <div className="flex flex-wrap items-center gap-2 text-small text-warmGray mt-0.5">
               <span className="flex items-center gap-1 font-semibold text-charcoal">
                 <MapPin className="w-3 h-3 text-accent-700" />
-                {zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}
+                {place}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
@@ -189,17 +228,21 @@ export default function ParameterReviewCard({
       {/* Nút hành động cho mục chờ duyệt */}
       {isPending && !readOnly && (
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="text-warmGray hover:text-alertRed hover:bg-red-50 gap-1.5 font-medium"
-            onClick={() => setShowConfirmRevert(true)}
-            disabled={isProcessing}
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            {t('Hoàn nguyên giá trị cũ')}
-          </Button>
+          {canRevert ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="text-warmGray hover:text-alertRed hover:bg-red-50 gap-1.5 font-medium"
+              onClick={() => setShowConfirmRevert(true)}
+              disabled={isProcessing}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              {t('Hoàn nguyên giá trị cũ')}
+            </Button>
+          ) : (
+            <span className="mr-auto text-small text-warmGray">{t('Camera chưa có vòng cũ: vẽ lại vòng nếu cần chỉnh.')}</span>
+          )}
           <Button
             type="button"
             variant="primary"
@@ -218,7 +261,7 @@ export default function ParameterReviewCard({
       <ConfirmModal
         open={showConfirmRevert}
         title={t('Xác nhận hoàn nguyên giá trị cũ')}
-        description={t('Giá trị cũ được gửi lại xuống bộ điều khiển và mục này chuyển sang Đã hoàn tác.')}
+        description={t('Giá trị cũ được gửi lại xuống thiết bị và mục này chuyển sang Đã hoàn tác.')}
         confirmLabel={t('Hoàn nguyên')}
         danger
         loading={isProcessing}

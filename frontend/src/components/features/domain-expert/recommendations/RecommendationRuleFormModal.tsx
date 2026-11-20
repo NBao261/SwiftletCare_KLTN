@@ -57,8 +57,8 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
     setSubmitted(true)
     if (Object.keys(validateRuleDraft(draft)).length > 0) return
     save.mutate({ id: rule?._id, input: ruleInputOf(draft, active) }, {
-      onSuccess: () => {
-        push(t('rules.saved'))
+      onSuccess: saved => {
+        push(t(saved.data.data.pending_approval ? 'rules.savedPending' : 'rules.saved'))
         onClose()
       },
       onError: saveError => push(apiErrorMessage(saveError), 'error'),

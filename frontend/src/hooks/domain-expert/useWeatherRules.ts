@@ -23,3 +23,23 @@ export function useUpdateWeatherRules(houseId: string | undefined) {
     },
   })
 }
+
+// BR-22, BR-38 — đề xuất luật của Farm Owner và quyết định của chuyên gia; xong thì đọc lại luật và đề xuất của nhà
+function useWeatherProposalMutation<TInput>(houseId: string | undefined, call: (houseId: string, input: TInput) => Promise<unknown>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: TInput) => call(houseId!, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: WEATHER_RULES_KEY(houseId) })
+    },
+  })
+}
+
+export const useProposeWeatherRules = (houseId: string | undefined) =>
+  useWeatherProposalMutation(houseId, (id, rules: WeatherRule[]) => weatherRulesApi.propose(id, rules))
+
+export const useApproveWeatherProposal = (houseId: string | undefined) =>
+  useWeatherProposalMutation(houseId, (id, _input: void) => weatherRulesApi.approveProposal(id))
+
+export const useRejectWeatherProposal = (houseId: string | undefined) =>
+  useWeatherProposalMutation(houseId, (id, note: string) => weatherRulesApi.rejectProposal(id, note))

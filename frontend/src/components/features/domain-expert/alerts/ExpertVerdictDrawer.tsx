@@ -14,6 +14,8 @@ import { useZone } from '@/hooks/shared/useFarms'
 import { useZoneStore } from '@/stores/zoneStore'
 import MultimodalEvidenceCharts from './MultimodalEvidenceCharts'
 import VerdictForm from './VerdictForm'
+import { Button } from '@/components/ui/Button'
+import { useRemindExpert } from '@/hooks/shared/useRemindExpert'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 import { t } from '@/i18n'
 
@@ -41,8 +43,9 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const [verdict, setVerdict] = useState<'CONFIRMED' | 'REJECTED' | null>(null)
   const [note, setNote] = useState('')
   const mutation = useSubmitAlertVerdict()
-  // BR-22 — Farm Owner kết luận thay khi farm chưa có chuyên gia; farm có chuyên gia thì chỉ xem bằng chứng
-  const { canDecide } = useExpertDecisionRights()
+  // BR-22 — Farm Owner kết luận thay khi farm chưa có chuyên gia; farm có chuyên gia thì xem bằng chứng và nhắc chuyên gia
+  const { canDecide, ownerNeedsExpert } = useExpertDecisionRights()
+  const reminder = useRemindExpert('alert', alert?._id, alert?.expert_reminded_at)
   const { data: zone } = useZone(alert?.zone_id)
   const { selectedZoneId, selectedZoneName } = useZoneStore()
 
@@ -120,7 +123,14 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
             <h3 className="text-sm font-semibold text-[#27231F] mb-3">{t('Bước 2: Kết luận của chuyên gia')}</h3>
             {canDecide
               ? <VerdictForm alert={alert} verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
-              : <p className="text-sm text-[#878380]">{t('Trang trại đã có chuyên gia nên kết luận do chuyên gia ghi. Bạn xem được bằng chứng.')}</p>}
+              : (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-[#878380]">{t('Trang trại đã có chuyên gia nên kết luận do chuyên gia ghi. Bạn xem được bằng chứng.')}</p>
+                  {ownerNeedsExpert && !alert?.expert_verdict && (reminder.reminded
+                    ? <span className="text-small text-warmGray">{t('Đã nhắc chuyên gia')}</span>
+                    : <Button variant="secondary" size="sm" loading={reminder.isPending} onClick={reminder.remind}>{t('Nhắc chuyên gia')}</Button>)}
+                </div>
+              )}
           </section>
         </div>
 

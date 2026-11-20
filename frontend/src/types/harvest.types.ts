@@ -75,4 +75,6 @@ export interface HarvestCycle {
     role: 'DOMAIN_EXPERT' | 'FARM_OWNER'
     at: string
   } | null
+  // BR-22 — lần Farm Owner nhắc chuyên gia viết kết luận mùa vụ
+  expert_reminded_at?: string | null
 }
