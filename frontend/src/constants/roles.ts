@@ -26,7 +26,7 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
 /*
  * Nhóm role theo Report 3 §2.4 & G-20 (backend f9d9522). Khai báo một chỗ để bảng route (`routes/`), menu sidebar
  * (`components/layouts/<Role>Layout.tsx`) và MENU_ACCESS bên dưới không lệch nhau.
- * G-20 — ADMIN có Console thiết bị: xem thiết bị mọi farm (/devices), cảnh báo thiết bị (/alerts), gửi lệnh RESTART/PUSH_CONFIG/OTA.
+ * G-20 — ADMIN có nhóm Thiết bị: xem thiết bị mọi farm (/devices), cảnh báo thiết bị (/alerts), gửi lệnh RESTART/PUSH_CONFIG/OTA.
  * FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể, chỉ xem cấu trúc/thiết bị nhà đó + gửi RESTART.
  */
 

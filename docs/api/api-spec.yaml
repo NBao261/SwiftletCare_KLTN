@@ -577,7 +577,7 @@ paths:
   /admin/delete-requests:
     get:
       tags: [Admin]
-      summary: "Danh sách yêu cầu xoá tài khoản đang chờ xử lý (AUTH-FR-012) — chỉ ADMIN"
+      summary: "Danh sách yêu cầu xoá tài khoản đang chờ xử lý (AUTH-FR-012) — chỉ ADMIN; web đọc `meta.total` làm badge mục Người dùng"
       parameters:
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
@@ -591,6 +591,7 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
                       data: { type: array, items: { $ref: "#/components/schemas/User" } }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /admin/delete-requests/{id}/complete:
