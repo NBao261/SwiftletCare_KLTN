@@ -8,10 +8,10 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 | [`bm03-record-of-changes.md`](bm03-record-of-changes.md) | BM03 – Record of Changes (phiếu v2 → v3 bản cuối, 19 dòng) |
 | [`report1-introduction.md`](report1-introduction.md) | Report 1 – Introduction |
 | [`report2-project-management-plan.md`](report2-project-management-plan.md) | Report 2 – Project Management Plan |
-| [`report3-srs.md`](report3-srs.md) | Report 3 – SRS 4.2.12: chỉ yêu cầu, không ghi trạng thái code |
-| [`report4-sdd.md`](report4-sdd.md) | Report 4 – SDD 2.2.17: thiết kế cuối, không ghi trạng thái code |
+| [`report3-srs.md`](report3-srs.md) | Report 3 – SRS 4.2.16: chỉ yêu cầu, không ghi trạng thái code |
+| [`report4-sdd.md`](report4-sdd.md) | Report 4 – SDD 2.2.21: thiết kế cuối, không ghi trạng thái code |
 | [`report5-test.md`](report5-test.md) | Report 5 – Test (171 test case cam kết), **sinh** từ `report5/tc.py` bằng `report5/gen_report5.py`, không sửa tay |
-| [`project-tracking.md`](project-tracking.md) | Project Tracking — **nguồn trạng thái duy nhất**: tính năng, test, defect, danh sách gap G-01…G-29 |
+| [`project-tracking.md`](project-tracking.md) | Project Tracking — **nguồn trạng thái duy nhất**: tính năng, test, defect, danh sách gap G-01…G-32 |
 | [`design-brief.md`](design-brief.md) | Design Brief BM01 + Phụ lục A (docx: `design-brief/`) |
 | [`bm02-self-review.md`](bm02-self-review.md) | BM02 – Self-Review Report: kết quả gốc của prompt chuẩn trên tag `review-2` + Team response (docx: `registration/`) |
 | BM04 – Review 2 Commitment | Sinh bằng `tools/make_bm04.py` từ `report5/tc.py` (docx: `registration/`); chữ ký và kết luận để trống cho hội đồng |
@@ -19,6 +19,8 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 | [`todo-final-scope.md`](todo-final-scope.md) | Việc cần làm cho phần scope cuối (G-20…G-27), làm tiếp sau `todo-review2.md` (tiếng Việt) |
 | [`todo-audit-1118.md`](todo-audit-1118.md) | Việc cần sửa sau đợt soát web và backend 18–19/11/2026 (W-01…W-13, B-01…B-06, D-01…D-04; gap G-28) (tiếng Việt) |
 | [`todo-audit-1119.md`](todo-audit-1119.md) | Đợt soát thứ hai 19/11/2026, theo tiêu chí chấp nhận và giao diện web từng role (B-01…B-03, W-01…W-09, U-01…U-09, C-01…C-05, D-01; gap G-29) (tiếng Việt) |
+| [`todo-owner-expert-1121.md`](todo-owner-expert-1121.md) | Chủ nhà yến quyết, chuyên gia duyệt: BR-22 theo ba nhóm (B-01…B-12, W-01…W-06; gap G-31) (tiếng Việt) |
+| [`todo-audit-1121.md`](todo-audit-1121.md) | Đợt soát backend, web, mobile 21/11/2026 (B-01…B-13, F-01, W-01…W-20 cho Bảo, M-01…M-16 cho Len, D-01…D-07; gap G-32): yêu cầu, luồng nghiệp vụ, code thừa và giao diện (tiếng Việt) |
 
 ## Quy tắc giữ hồ sơ nhất quán
 

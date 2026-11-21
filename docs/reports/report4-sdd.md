@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.20 (Review 2, final scope) |
+| Document version | 2.2.21 (Review 2, final scope) |
 | Date | 21/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.15 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -339,7 +339,7 @@ Health (MF-06): web and mobile show each house's daily status with its reasons a
 
 Manual override (MF-01): before a pump ON, the client reads the zone's open alerts; when a `SENSOR_FAULT`, `RS485_BUS_FAILURE` or `MISTING_INEFFECTIVE` is open it shows them and sends the command with the confirmation (ENV-FR-016).
 
-Farm location (FARM-FR-001): the farm form takes the coordinates from the device's current position (browser or phone geolocation, used while standing at the house) or as typed latitude and longitude; no map library is added. The farm list marks a farm still without coordinates, because it gets no weather (A-5).
+Farm location (FARM-FR-001): the web farm form shows an OpenStreetMap map (`leaflet`, loaded with the form) where a click or a dragged pin sets the latitude and longitude, suggests addresses while typing (Photon) and keeps the button that takes the device's current position; the mobile form takes the phone's position or typed latitude and longitude (Section 3.1). The farm list marks a farm still without coordinates, because it gets no weather (A-5).
 
 Device setup (SF-01): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key (and, for flashing, the broker credential) only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; the web setup screen does not scan: it takes the label's QR text pasted or the device ID and activation key typed (FARM-FR-003), and shows the same three setup steps as the mobile app (registered, online, zone configuration applied).
 
@@ -564,6 +564,9 @@ erDiagram
     array weather_rules "condition, offset, max duration"
     object weather_rules_proposal "rules proposed by the Farm Owner, proposed_by, proposed_at (BR-22)"
     array tuning_history
+    bool is_deleted
+    date deleted_at
+    ObjectId deleted_by FK
   }
   ZONE {
     ObjectId _id PK
@@ -577,6 +580,9 @@ erDiagram
     array threshold_history
     array fuzzy_tuning_history
     array detection_tuning_history
+    bool is_deleted
+    date deleted_at
+    ObjectId deleted_by FK
   }
   SENSOR_NODE {
     ObjectId _id PK
@@ -936,8 +942,8 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `pushtokens` | Push token | `token` unique; `user_id` | Removed at sign-out and when FCM reports it invalid |
 | `farms` | Farm | `owner_id`, `members.user_id` | Members embedded with role |
 | `invitations` | Invitation | `token` unique; `farm_id + invited_email + status` | 7-day expiry by job |
-| `houses` | House | `farm_id`; `technicians.user_id` | Counting schedule, health levels, return-rate drop, stage with history, technicians and roster, weather compensation rules |
-| `zones` | Zone | `house_id`, `farm_id` | `farm_id` immutable; histories embedded; `config_version` raised by every change |
+| `houses` | House | `farm_id`; `technicians.user_id` | Counting schedule, health levels, return-rate drop, stage with history, technicians and roster, weather compensation rules; soft-deleted (`is_deleted`), name unique among the farm's houses not deleted (FARM-FR-002) |
+| `zones` | Zone | `house_id`, `farm_id` | `farm_id` immutable; histories embedded; `config_version` raised by every change; soft-deleted with its house or alone, name unique among the house's zones not deleted (FARM-FR-002) |
 | `sensornodes` | Controller | `device_id` unique; `zone_id`; `status + last_heartbeat` | Relays embedded, one expiry per relay; run hours, switch counts, weather offset; `simulated` flag |
 | `cameranodes` | AI node / camera | `device_id` unique; `house_id` | Counting ring and its history |
 | `provisioneddevices` | Device stock | `device_id` unique | Hashes of the activation key and the broker secret |
@@ -1017,7 +1023,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | Router | Main resources |
 | --- | --- |
 | `/auth` | Login, refresh, logout, first-sign-in password change, password reset, account creation from an invitation link, notification preferences, Telegram link, deletion request (no public sign-up) |
-| `/farms` | Farms, members, houses (stage, technicians and roster, weather compensation rules), zones, thresholds and reset, fuzzy tuning, detection tuning, bird-count tuning |
+| `/farms` | Farms, members, houses (edit, soft delete, stage, technicians and roster, weather compensation rules), zones (edit, soft delete), thresholds and reset, fuzzy tuning, detection tuning, bird-count tuning |
 | `/invitations` | Accept, decline |
 | `/devices` | Sensor nodes (register and move, also by the Farm Owner for SF-01; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
@@ -1889,6 +1895,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.21 | 21/11/2026 | Audit of 21/11/2026 (Report 3 4.2.16, gap G-32): Section 5.4 describes the farm location map of 2.2.20 instead of "no map library is added"; houses and zones are edited and soft-deleted (`is_deleted`, `deleted_at`, `deleted_by` in the ERD of Section 6.1 and in Section 6.2; `/farms` in Section 7.1, FARM-FR-002) |
 | 2.2.20 | 21/11/2026 | Section 3.1: OpenStreetMap map tiles and Photon address suggestions for picking the farm coordinates on a map (FARM-FR-001); the screens and the report PDF that show weather credit Open-Meteo |
 | 2.2.19 | 21/11/2026 | The Farm Owner decides, the Domain Expert reviews (Report 3 4.2.15, BR-22): D7 rewritten in three groups; the review item gains the groups `detection`, `return_rate_drop`, `health_levels`, `counting_schedule`, `counting_ring` with `target_id`, `house_id`, `camera_node_id` (one open item per target and group); weather rule proposals on the house, recommendation rules awaiting approval, profile drafts by the Farm Owner and the Farm Owner's reminders (`POST /expert-activity/reminders`) added to the module table, the notification refs and the MF-05 diagram; header baseline SRS 4.2.15 |
 | 2.2.18 | 20/11/2026 | The daily rating is no longer blind (Report 3 4.2.14, BR-31): the endpoints return the status, reasons and other ratings whether or not the caller has rated; the rating screen shows the system's status and asks the assessor to confirm or correct it; the snapshot stored with each rating stays (D16); header baseline SRS 4.2.14 |
