@@ -69,6 +69,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: 0,
-    fontVariant: ['tabular-nums'],
   },
 })

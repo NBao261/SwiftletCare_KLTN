@@ -104,6 +104,17 @@ export function sortMembers(members: FarmMember[], ownerId: string): FarmMember[
   return [...members].sort((first, second) => rank(first) - rank(second) || first.joined_at.localeCompare(second.joined_at))
 }
 
+// Đếm thành viên theo nhóm của danh sách (chủ chính, đồng sở hữu, chuyên gia, kỹ thuật viên), chỉ ghi nhóm có người:
+// "1 chủ chính · 2 kỹ thuật viên nhà yến"
+export function summarizeMembers(members: FarmMember[], ownerId: string): string {
+  const countByLabel = new Map<string, number>()
+  for (const member of sortMembers(members, ownerId)) {
+    const label = getMemberRoleLabel(member, ownerId)
+    countByLabel.set(label, (countByLabel.get(label) ?? 0) + 1)
+  }
+  return [...countByLabel].map(([label, count]) => `${count} ${label.toLowerCase()}`).join(' · ')
+}
+
 // Số ngày còn lại tới một hạn (lời mời 7 ngày, yêu cầu xoá 30 ngày); đã quá hạn thì 0
 export function getDaysLeft(deadline: string, now: number): number {
   return Math.max(0, Math.ceil((Date.parse(deadline) - now) / DAY_MS))

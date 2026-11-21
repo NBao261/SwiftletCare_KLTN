@@ -25,9 +25,10 @@ export const ENDPOINTS = {
   // Mời và gỡ thành viên farm — chỉ Primary Owner (AUTH-FR-005, EXPERT-FR-001)
   FARM_MEMBERS: (farmId: string) => `/farms/${farmId}/members`,
   FARM_MEMBER: (farmId: string, userId: string) => `/farms/${farmId}/members/${userId}`,
-  // Lời mời đang chờ của farm (AUTH-FR-010) — CHƯA có trong api-spec lẫn backend, là đường đề xuất cho Kiệt (todo-review2
-  // G-16); invitation.api.ts vẫn trả dữ liệu mẫu cho tới khi route có trong spec
+  // Lời mời của farm (AUTH-FR-010): chỉ Primary Owner, lọc theo status (api-spec GET /farms/{id}/invitations)
   FARM_INVITATIONS: (farmId: string) => `/farms/${farmId}/invitations`,
+  // Tổng quan farm (ANALYTICS-FR-015): Farm Owner, Domain Expert
+  FARM_OVERVIEW: (farmId: string) => `/farms/${farmId}/overview`,
   HOUSE_ZONES: (houseId: string) => `/farms/houses/${houseId}/zones`,
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
   ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
@@ -36,6 +37,13 @@ export const ENDPOINTS = {
   ZONE_APPLY_SUGGESTION: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning/apply-suggestion`,
   ZONE_DETECTION_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning`,
   HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
+  // Giai đoạn nhà (FARM-FR-014, BR-46): Farm Owner, Domain Expert
+  HOUSE_STAGE: (houseId: string) => `/farms/houses/${houseId}/stage`,
+  // Luật bù thời tiết (ENV-FR-030), lịch đếm (VISION-FR-019), mức chỉ số sức khỏe (BR-28) của nhà: chuyên gia sửa, Farm Owner chỉ
+  // khi farm chưa có chuyên gia (BR-22)
+  HOUSE_WEATHER_RULES: (houseId: string) => `/farms/houses/${houseId}/weather-rules`,
+  HOUSE_COUNTING_SCHEDULE: (houseId: string) => `/farms/houses/${houseId}/counting-schedule`,
+  HOUSE_HEALTH_LEVELS: (houseId: string) => `/farms/houses/${houseId}/health-levels`,
 
   // Thiết bị
   SENSOR_NODES: '/devices/sensor-nodes',
@@ -47,6 +55,8 @@ export const ENDPOINTS = {
   SENSOR_NODE_DECOMMISSION: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/decommission`,
   SENSOR_NODE_RESTORE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/restore`,
   SENSOR_NODE_REPLACE: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/replace`,
+  // Lệnh từ xa (FARM-FR-013): Farm Owner, Farm Technician chỉ gửi được RESTART, thiết bị phải ONLINE
+  SENSOR_NODE_COMMANDS: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/commands`,
   CAMERA_NODE_DECOMMISSION: (cameraId: string) => `/devices/camera-nodes/${cameraId}/decommission`,
   CAMERA_NODE_RESTORE: (cameraId: string) => `/devices/camera-nodes/${cameraId}/restore`,
   RELAY_CONTROL: (sensorNodeId: string) => `/devices/sensor-nodes/${sensorNodeId}/relay`,
@@ -74,6 +84,11 @@ export const ENDPOINTS = {
   WORK_ORDER_DETAIL: (workOrderId: string) => `/work-orders/${workOrderId}`,
   WORK_ORDER_START: (workOrderId: string) => `/work-orders/${workOrderId}/start`,
   WORK_ORDER_DONE: (workOrderId: string) => `/work-orders/${workOrderId}/done`,
+  // Farm Owner duyệt, mở lại, huỷ, giao lại (OPS-FR-004)
+  WORK_ORDER_APPROVE: (workOrderId: string) => `/work-orders/${workOrderId}/approve`,
+  WORK_ORDER_REOPEN: (workOrderId: string) => `/work-orders/${workOrderId}/reopen`,
+  WORK_ORDER_CANCEL: (workOrderId: string) => `/work-orders/${workOrderId}/cancel`,
+  WORK_ORDER_REASSIGN: (workOrderId: string) => `/work-orders/${workOrderId}/reassign`,
   // Ghi một mục checklist của Work Order phòng ngừa (OPS-FR-007, G-22)
   WORK_ORDER_CHECKLIST: (workOrderId: string) => `/work-orders/${workOrderId}/checklist`,
 
@@ -114,6 +129,8 @@ export const ENDPOINTS = {
   HEALTH_REPORTS: '/health-reports',
   // Trạng thái ngày và chấm điểm (ANALYTICS-FR-012, EXPERT-FR-012, BR-31)
   HEALTH_DAYS: '/health-reports/days',
+  // Ngày có đánh giá lệch với trạng thái hệ thống (EXPERT-FR-022): Farm Owner, Domain Expert
+  HEALTH_DISAGREEMENTS: '/health-reports/disagreements',
   HEALTH_DAY_DETAIL: (dayId: string) => `/health-reports/days/${dayId}`,
   HEALTH_DAY_RATING: (dayId: string) => `/health-reports/days/${dayId}/rating`,
   HEALTH_DAY_SKIP: (dayId: string) => `/health-reports/days/${dayId}/skip`,
@@ -124,6 +141,15 @@ export const ENDPOINTS = {
   // Thu hoạch (HARVEST-FR-001…005) — danh sách (GET) và tạo (POST) đợt thu; sửa (PUT), xoá mềm (DELETE) một đợt
   HARVESTS: '/harvests',
   HARVEST_DETAIL: (harvestId: string) => `/harvests/${harvestId}`,
+  // Chủ trại xác nhận lô DRAFT của kỹ thuật viên (HARVEST-FR-006)
+  HARVEST_CONFIRM: (harvestId: string) => `/harvests/${harvestId}/confirm`,
+  // Chu kỳ thu hoạch của zone (HARVEST-FR-007): đọc như lô thu hoạch
+  HARVEST_CYCLES: '/harvests/cycles',
+
+  // Khuyến nghị của nhà (EXPERT-FR-017, 018): Farm Owner chấp nhận hoặc từ chối kèm lý do
+  RECOMMENDATIONS: '/recommendations',
+  RECOMMENDATION_ACCEPT: (recommendationId: string) => `/recommendations/${recommendationId}/accept`,
+  RECOMMENDATION_REJECT: (recommendationId: string) => `/recommendations/${recommendationId}/reject`,
 
   // Nghiệp vụ Chuyên gia bổ sung (Domain Expert: EXPERT-FR-*)
   ALERT_VERDICT_STATS: '/alerts/verdict-stats',

@@ -192,36 +192,53 @@ export interface AlertChainPageParam {
 }
 
 export interface AlertChainPage {
+  // Mắt và trang được tải sau cùng trong lần này (một lần có thể đi qua nhiều mắt để lấp đầy trang)
   link: number
+  page: number
+  // Cảnh báo của lần tải, theo thứ tự mắt
   items: Alert[]
-  // meta.total của mắt đó
+  // meta.total của mắt sau cùng
   total: number
+  // Mắt sau cùng còn trang chưa tải
+  hasMoreInLink: boolean
 }
 
-// Tải một trang của chuỗi. Mắt rỗng thì tự đi tiếp đến khi có dữ liệu hoặc hết chuỗi: danh sách rỗng không có gì để cuộn hay
-// bấm "Xem thêm", nên dừng ở mắt rỗng sẽ hiện "Mọi thứ đang ổn" trong khi các mắt sau còn cảnh báo
+// Tải một trang của chuỗi. Mắt hết dữ liệu mà trang chưa đủ pageSize thì lấy tiếp trang 1 của mắt sau trong cùng lần tải:
+// "Đang hiệu lực" là chuỗi ACTIVE rồi ACKNOWLEDGED, nên nếu dừng ở mắt ACTIVE thì cảnh báo vừa xác nhận (sang ACKNOWLEDGED)
+// biến khỏi danh sách cho tới khi cuộn hết hoặc bấm "Xem thêm". Mắt rỗng cũng đi tiếp như vậy, nên danh sách rỗng không hiện
+// "Mọi thứ đang ổn" trong khi các mắt sau còn cảnh báo
 export async function fetchAlertChainPage(
   chain: readonly AlertChainLink[],
   pageParam: AlertChainPageParam,
-  fetchLinkPage: (link: AlertChainLink, page: number) => Promise<Pick<AlertChainPage, 'items' | 'total'>>,
+  pageSize: number,
+  fetchLinkPage: (link: AlertChainLink, page: number) => Promise<{ items: Alert[]; total: number }>,
 ): Promise<AlertChainPage> {
-  const link = chain[pageParam.link]
-  if (!link) return { link: pageParam.link, items: [], total: 0 }
-  const result = await fetchLinkPage(link, pageParam.page)
-  if (result.items.length > 0 || pageParam.link + 1 >= chain.length) return { link: pageParam.link, ...result }
-  return fetchAlertChainPage(chain, { link: pageParam.link + 1, page: 1 }, fetchLinkPage)
+  const items: Alert[] = []
+  let { link, page } = pageParam
+  for (;;) {
+    const chainLink = chain[link]
+    if (!chainLink) return { link, page, items, total: 0, hasMoreInLink: false }
+    const result = await fetchLinkPage(chainLink, page)
+    items.push(...result.items)
+    const loadedInLink = (page - 1) * pageSize + result.items.length
+    const hasMoreInLink = result.items.length > 0 && loadedInLink < result.total
+    const isLastLink = link + 1 >= chain.length
+    if (hasMoreInLink || isLastLink || items.length >= pageSize) {
+      return { link, page, items, total: result.total, hasMoreInLink }
+    }
+    link += 1
+    page = 1
+  }
 }
 
-// Trang kế tiếp theo meta.total: mắt hiện tại còn thì trang sau, hết thì sang mắt sau; hết chuỗi thì undefined
+// Trang kế tiếp: mắt sau cùng còn thì trang sau của nó, hết thì trang 1 của mắt sau; hết chuỗi thì undefined
 export function getNextAlertChainPage(
   chainLength: number,
   pages: readonly AlertChainPage[],
 ): AlertChainPageParam | undefined {
   const lastPage = pages[pages.length - 1]
   if (!lastPage) return { link: 0, page: 1 }
-  const linkPages = pages.filter(page => page.link === lastPage.link)
-  const loaded = linkPages.reduce((total, page) => total + page.items.length, 0)
-  if (loaded < lastPage.total && lastPage.items.length > 0) return { link: lastPage.link, page: linkPages.length + 1 }
+  if (lastPage.hasMoreInLink) return { link: lastPage.link, page: lastPage.page + 1 }
   return lastPage.link + 1 < chainLength ? { link: lastPage.link + 1, page: 1 } : undefined
 }
 
@@ -230,4 +247,29 @@ export function sumLevelCounts(totals: Readonly<Record<AlertSeverity, number>>):
   const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }
   for (const severity of ALERT_SEVERITIES) counts[getSeverityLevel(severity)] += totals[severity]
   return counts
+}
+
+// Một dòng của mục Cảnh báo ở chuông: tiêu đề nhóm, khung "không có gì chờ xử lý" hoặc một cảnh báo
+export type BellAlertRow =
+  | { kind: 'header'; key: string; group: 'pending' | 'acknowledged' }
+  | { kind: 'allClear'; key: string }
+  | { kind: 'alert'; key: string; alert: Alert }
+
+// Chia danh sách (ACTIVE rồi ACKNOWLEDGED) thành hai nhóm: tiêu đề "Chưa xác nhận" luôn ở đầu (cùng hàng với nút "Xem tất cả"),
+// nhóm rỗng thì hiện khung "không có gì chờ xử lý"; có cảnh báo đã xác nhận thì thêm tiêu đề "Đã xác nhận" và nhóm đó ở dưới.
+// Một lượt qua danh sách
+export function buildBellAlertRows(alerts: readonly Alert[]): BellAlertRow[] {
+  const pending: BellAlertRow[] = []
+  const acknowledged: BellAlertRow[] = []
+  for (const alert of alerts) {
+    const row: BellAlertRow = { kind: 'alert', key: alert._id, alert }
+    if (alert.status === 'ACTIVE') pending.push(row)
+    else acknowledged.push(row)
+  }
+  const rows: BellAlertRow[] = [
+    { kind: 'header', key: 'header-pending', group: 'pending' },
+    ...(pending.length > 0 ? pending : [{ kind: 'allClear', key: 'all-clear' } as const]),
+  ]
+  if (acknowledged.length === 0) return rows
+  return [...rows, { kind: 'header', key: 'header-acknowledged', group: 'acknowledged' }, ...acknowledged]
 }

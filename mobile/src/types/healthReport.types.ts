@@ -154,3 +154,32 @@ export interface HouseHealthReport extends HouseHealthReportSummary {
   hidden_days?: number
   expert_conclusion: ExpertConclusion | null
 }
+
+// Một lượt chấm lệch với trạng thái hệ thống lúc chấm (EXPERT-FR-022, BR-31)
+export interface HealthDisagreementItem {
+  assessor: { full_name: string | null; role: Extract<Role, 'FARM_OWNER' | 'FARM_TECHNICIAN'> }
+  rating: HealthRatingValue
+  snapshot_status: HealthRatingValue
+  snapshot_reasons: HealthReason[]
+  note: string | null
+  at: string
+}
+
+// Một ngày có ít nhất một lượt chấm lệch
+export interface HealthDisagreementDay {
+  day_id: string
+  house_id: string
+  house_name: string
+  // 'YYYY-MM-DD' giờ VN
+  date: string
+  current_status: HealthDayStatus
+  current_reasons: HealthReason[]
+  disagreements: HealthDisagreementItem[]
+}
+
+// GET /health-reports/disagreements
+export interface HealthDisagreementsResponse {
+  from: string
+  to: string
+  days: HealthDisagreementDay[]
+}

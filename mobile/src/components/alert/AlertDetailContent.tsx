@@ -23,13 +23,14 @@ import { useAlertDetail } from '@/hooks/alert/useAlertDetail'
 import { useAlertLocations } from '@/hooks/alert/useAlertLocations'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
 import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
+import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { Alert, RelayName } from '@/types'
 import { buildAlertTimeline, describeAlertDetail, getAutoCloseText, isEnvironmentAlert } from '@/utils/alertDetail.utils'
 import { isInferredAlert } from '@/utils/alertList.utils'
 import { formatDateTime } from '@/utils/date.utils'
-import { farmHasExpert } from '@/utils/farm.utils'
+import { withSimulatedLabel } from '@/utils/device.utils'
 import { getAlertStatusLabel, getAlertTypeLabel, getRelayLabel, getSiteCauseLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { getPendingOnsiteCheck } from '@/utils/workOrder.utils'
@@ -71,6 +72,8 @@ export function AlertDetailContent({
   const houseId = location?.houseId ?? null
   const farmQuery = useFarmDetail(alert?.farm_id ?? '')
   const farm = farmQuery.data?.data ?? null
+  // Theo has_active_expert của GET /farms (GET /farms/{id} không có cờ này, chuyên gia bị khoá không tính)
+  const farmHasActiveExpert = useFarmHasExpert(alert?.farm_id ?? '')
   const sensorNodesQuery = useSensorNodes()
   const [isAcknowledgeOpen, setAcknowledgeOpen] = useState(false)
   const [isOnsiteCheckOpen, setOnsiteCheckOpen] = useState(false)
@@ -101,7 +104,7 @@ export function AlertDetailContent({
   const canVerdict =
     isInferred &&
     alert.status !== 'RESOLVED' &&
-    canPerform(user, 'setAlertVerdict', { farmHasExpert: farm ? farmHasExpert(farm) : undefined })
+    canPerform(user, 'setAlertVerdict', { farmHasExpert: farmHasActiveExpert })
   // Chỉ controller ONLINE mới nhận được lệnh điều khiển tay
   const controllers = (sensorNodesQuery.data?.data ?? []).filter(
     node => node.zone_id === alert.zone_id && node.status === 'ONLINE',
@@ -187,6 +190,12 @@ export function AlertDetailContent({
             houseName={location?.houseName ?? '_'}
             enabled={isReady}
             onLeave={onLeave}
+            // Chủ trại mở phiếu bằng tay cho cảnh báo còn hiệu lực mà chưa có phiếu (OPS-FR-001)
+            createPrefill={
+              houseId && canPerform(user, 'createWorkOrder') && (alert.status === 'ACTIVE' || alert.status === 'ACKNOWLEDGED')
+                ? { houseId, title: getAlertTypeLabel(alert.type) }
+                : undefined
+            }
           />
         )}
 
@@ -274,7 +283,8 @@ export function AlertDetailContent({
         />
       )}
       <VerdictSheet
-        key={verdictResult ?? 'closed'}
+        // Key khác key của RelayControlSheet: hai sheet cùng đóng thì không trùng key
+        key={verdictResult ?? 'verdict-closed'}
         alertId={alert._id}
         result={verdictResult}
         onClose={() => setVerdictResult(null)}
@@ -290,7 +300,7 @@ export function AlertDetailContent({
           RELAYS.map(relay => ({
             id: `${controller._id}|${relay}`,
             label: getRelayLabel(relay),
-            caption: controllers.length > 1 ? controller.device_id : undefined,
+            caption: controllers.length > 1 ? withSimulatedLabel(controller.device_id, controller.simulated) : undefined,
           })),
         )}
         onSelect={id => {
@@ -301,7 +311,7 @@ export function AlertDetailContent({
         onClose={() => setRelayPickerOpen(false)}
       />
       <RelayControlSheet
-        key={relaySelection ? `${relaySelection.controllerId}-${relaySelection.relay}` : 'closed'}
+        key={relaySelection ? `${relaySelection.controllerId}-${relaySelection.relay}` : 'relay-closed'}
         controller={selectedController}
         relay={relaySelection?.relay ?? null}
         onClose={() => setRelaySelection(null)}

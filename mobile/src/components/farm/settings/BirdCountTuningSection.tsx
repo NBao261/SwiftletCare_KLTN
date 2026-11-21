@@ -1,5 +1,4 @@
 import { BirdIcon } from 'phosphor-react-native'
-import { ComingSoonAction } from '@/components/common/ComingSoonAction'
 import { NumberTuningSection } from '@/components/farm/settings/NumberTuningSection'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
@@ -45,8 +44,6 @@ export function BirdCountTuningSection({ house, editor, onSaved }: BirdCountTuni
       save={values => updateBirdCountTuning.mutateAsync({ houseId: house._id, tuning: values })}
       savedMessage={t('Đã lưu mức giảm tỷ lệ về tổ')}
       onSaved={onSaved}
-      // Lịch đếm chim theo mùa (VISION-FR-019) backend chưa có API
-      extra={<ComingSoonAction label={t('Lịch đếm chim')} />}
     />
   )
 }

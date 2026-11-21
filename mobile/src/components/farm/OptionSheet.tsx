@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { CheckIcon, PlusIcon } from 'phosphor-react-native'
+import { CheckIcon, PlusIcon, type Icon } from 'phosphor-react-native'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Spacing } from '@/constants/theme'
@@ -19,7 +19,8 @@ interface OptionSheetProps {
   onSelect: (id: string) => void
   onClose: () => void
   // Dòng thao tác cuối bảng, ví dụ "Tạo trang trại"
-  footerAction?: { label: string; onPress: () => void }
+  // icon mặc định là dấu + ("Tạo trang trại"); thao tác khác truyền icon riêng (mũi tên "Đổi trang trại")
+  footerAction?: { label: string; onPress: () => void; icon?: Icon }
 }
 
 // Bảng chọn một mục từ danh sách (đổi farm, đổi nhà): mục đang chọn có dấu tích
@@ -74,7 +75,11 @@ export function OptionSheet({
           accessibilityRole="button"
           accessibilityLabel={footerAction.label}
         >
-          <PlusIcon size={20} color={palette.text} weight="bold" />
+          {footerAction.icon ? (
+            <footerAction.icon size={20} color={palette.text} weight="bold" />
+          ) : (
+            <PlusIcon size={20} color={palette.text} weight="bold" />
+          )}
           <Text variant="body" weight="semiBold" style={styles.texts}>
             {footerAction.label}
           </Text>

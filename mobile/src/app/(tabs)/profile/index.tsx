@@ -36,7 +36,6 @@ import { Card } from '@/components/ui/card'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
-import { IS_MOCK_API_ENABLED } from '@/constants/mockApi'
 import { Spacing } from '@/constants/theme'
 import { useCancelAccountDeletion } from '@/hooks/auth/useCancelAccountDeletion'
 import { useRequestAccountDeletion } from '@/hooks/auth/useRequestAccountDeletion'
@@ -268,9 +267,9 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
             />
             <ProfileRow
               icon={SlidersHorizontalIcon}
-              label={t('Kênh theo loại cảnh báo')}
-              caption={IS_MOCK_API_ENABLED ? t('Chọn kênh cho từng loại') : t('Sắp có')}
-              onPress={IS_MOCK_API_ENABLED ? () => router.push('/(tabs)/profile/notification-channels') : undefined}
+              label={t('Kênh theo mức cảnh báo')}
+              caption={t('Push, Telegram cho từng mức Khẩn cấp, Cao, Thường')}
+              onPress={() => router.push('/(tabs)/profile/notification-channels')}
               hasDivider
             />
             <PushDeviceRow onMessage={toast.show} />

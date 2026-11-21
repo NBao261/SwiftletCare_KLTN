@@ -1,5 +1,6 @@
 import type { ConfigSyncState, DeviceStatus } from '@/types'
 import { formatElapsed } from '@/utils/date.utils'
+import { t } from '@/utils/i18n.utils'
 import { formatDecimal } from '@/utils/number.utils'
 
 export interface DeviceStatusSummary {
@@ -64,6 +65,11 @@ const BYTES_PER_KB = 1024
 export function formatUptime(bootedAt: string | undefined, now: number = Date.now()): string {
   if (!bootedAt) return '_'
   return formatElapsed(now - new Date(bootedAt).getTime())
+}
+
+// SYSTEM-FR-004 — nối "Giả lập" vào chữ trạng thái của thiết bị bộ giả lập: "Đang phát · Giả lập"; thiết bị thật giữ nguyên
+export function withSimulatedLabel(text: string, simulated: boolean | undefined): string {
+  return simulated ? `${text} · ${t('Giả lập')}` : text
 }
 
 // RAM còn trống, đổi byte sang KB: "142 KB"; chưa có thì "_"

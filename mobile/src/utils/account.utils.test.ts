@@ -10,6 +10,7 @@ import {
   humanizeChangeText,
   isReviewPending,
   sortMembers,
+  summarizeMembers,
 } from '@/utils/account.utils'
 
 function buildMember(userId: string, extra: Partial<FarmMember> = {}): FarmMember {
@@ -130,5 +131,17 @@ describe('humanizeChangeText', () => {
     )
     expect(humanizeChangeText('temp_max null → 33.5')).toBe('Nhiệt độ cao nhất: 33,5°C')
     expect(humanizeChangeText('la_ma 1 → 2')).toBe('la_ma 1 → 2')
+  })
+})
+
+describe('summarizeMembers', () => {
+  it('đếm theo nhóm, theo thứ tự chủ chính → đồng sở hữu → chuyên gia → kỹ thuật viên, bỏ nhóm không có ai', () => {
+    const members: FarmMember[] = [
+      { user_id: 'tech-1', is_primary: false, role: 'FARM_TECHNICIAN', joined_at: '2026-11-02T00:00:00.000Z' },
+      { user_id: 'owner', is_primary: true, role: 'FARM_OWNER', joined_at: '2026-11-01T00:00:00.000Z' },
+      { user_id: 'tech-2', is_primary: false, role: 'FARM_TECHNICIAN', joined_at: '2026-11-03T00:00:00.000Z' },
+      { user_id: 'expert', is_primary: false, role: 'DOMAIN_EXPERT', joined_at: '2026-11-04T00:00:00.000Z' },
+    ]
+    expect(summarizeMembers(members, 'owner')).toBe('1 chủ chính · 1 chuyên gia · 2 kỹ thuật viên nhà yến')
   })
 })

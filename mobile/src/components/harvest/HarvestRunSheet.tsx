@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
+import { useConfirmHarvestRun } from '@/hooks/harvest/useConfirmHarvestRun'
 import { useDeleteHarvestRun } from '@/hooks/harvest/useDeleteHarvestRun'
 import { useSaveHarvestRun } from '@/hooks/harvest/useSaveHarvestRun'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -72,13 +73,14 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
   const user = useAuthStore(state => state.user)
   const saveRun = useSaveHarvestRun(farmId)
   const deleteRun = useDeleteHarvestRun(farmId)
+  const confirmRun = useConfirmHarvestRun(farmId)
   const today = getVietnamDate()
   const [harvestDate, setHarvestDate] = useState(today)
   const [amounts, setAmounts] = useState(() => initialAmounts(run))
   const [partialSave, setPartialSave] = useState<PartialSave | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isEdit = run !== null
-  const isBusy = saveRun.isPending || deleteRun.isPending
+  const isBusy = saveRun.isPending || deleteRun.isPending || confirmRun.isPending
   // Sửa hoặc đã lưu một phần thì ngày thu cố định (PUT không đổi được ngày)
   const isDateLocked = isEdit || partialSave !== null
   const canGoEarlier = harvestDate > HARVEST_DATE_MIN
@@ -167,6 +169,39 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
             deleteRun.mutate(harvestIds, {
               onSuccess: () => onDone(t('Đã xoá lần thu')),
               onError: deleteError => setError(getSettingsErrorMessage(deleteError)),
+            })
+          },
+        },
+      ],
+    )
+  }
+
+  // Đợt DRAFT của lần thu mà chủ trại xác nhận được (HARVEST-FR-006)
+  const draftIds = NEST_TYPES.flatMap(nestType => {
+    const batch = existing[nestType]
+    return batch?.status === 'DRAFT' ? [batch._id] : []
+  })
+  const canConfirm = isEdit && draftIds.length > 0 && canPerform(user, 'confirmHarvest')
+  // Đang sửa số mà chưa lưu thì phải lưu trước, để xác nhận đúng số đang thấy
+  const hasUnsavedChanges = operations.length > 0
+
+  const confirmPending = () => {
+    if (!run) return
+    NativeAlert.alert(
+      t('Xác nhận lần thu?'),
+      t('Lần thu ngày {date} sẽ được tính vào sản lượng và đóng chu kỳ thu hoạch của khu vực.', {
+        date: formatVietnamDateOf(run.harvest_date),
+      }),
+      [
+        { text: t('Huỷ'), style: 'cancel' },
+        {
+          text: t('Xác nhận'),
+          onPress: () => {
+            setError(null)
+            confirmRun.mutate(draftIds, {
+              onSuccess: () => onDone(t('Đã xác nhận lần thu')),
+              onError: confirmError =>
+                setError(getSettingsErrorMessage(confirmError, { 409: t('Lần thu đã được xác nhận trước đó') })),
             })
           },
         },
@@ -294,12 +329,28 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
           </Text>
         )}
       </ScrollView>
+      {canConfirm && (
+        <View style={styles.field}>
+          <Button
+            label={t('Xác nhận lần thu')}
+            size="md"
+            onPress={confirmPending}
+            loading={confirmRun.isPending}
+            disabled={hasUnsavedChanges || saveRun.isPending || deleteRun.isPending}
+          />
+          <Text variant="small" color={palette.textSecondary}>
+            {hasUnsavedChanges
+              ? t('Lưu thay đổi trước khi xác nhận')
+              : t('Kỹ thuật viên đã ghi lần thu này, chờ bạn xác nhận')}
+          </Text>
+        </View>
+      )}
       <SettingsEditActions
         label={isEdit ? t('Cập nhật') : t('Tạo mới')}
         onSave={handleSave}
         onCancel={closeUnlessBusy}
         isSaving={saveRun.isPending}
-        isSaveDisabled={!canSave || deleteRun.isPending}
+        isSaveDisabled={!canSave || deleteRun.isPending || confirmRun.isPending}
         error={error}
       />
       {isEdit && (
@@ -309,7 +360,7 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
           color={palette.alert}
           onPress={confirmDelete}
           loading={deleteRun.isPending}
-          disabled={saveRun.isPending}
+          disabled={saveRun.isPending || confirmRun.isPending}
           style={styles.center}
         />
       )}

@@ -39,3 +39,33 @@ export interface UpdateHarvestPayload {
   nest_type?: NestType
   product_images?: string[]
 }
+
+// Chu kỳ thu hoạch của một zone (HARVEST-FR-007, BR-43): từ lần thu đã xác nhận trước tới lần thu đã xác nhận tiếp theo
+export type HarvestCycleStatus = 'OPEN' | 'CLOSED' | 'CONCLUDED'
+
+// So với một chu kỳ khác; reason có khi không có chu kỳ để so
+export interface HarvestCycleComparison {
+  cycle_id: string | null
+  nest_count: number | null
+  weight_grams: number | null
+  nest_count_change_pct: number | null
+  weight_change_pct: number | null
+  reason: string | null
+}
+
+export interface HarvestCycle {
+  _id: string
+  farm_id: string
+  house_id: string
+  zone_id: string
+  start_date: string
+  end_date: string | null
+  status: HarvestCycleStatus
+  closing_harvest: { date: string; batch_ids: string[]; nest_count: number; weight_grams: number } | null
+  comparison: { previous: HarvestCycleComparison | null; same_period_last_year: HarvestCycleComparison | null } | null
+  health: { good_days_pct: number | null; return_rate_avg: number | null; time_in_range_pct: number | null } | null
+  completeness_pct: number | null
+  // Dưới 80 % số ngày được đánh giá (BR-43)
+  incomplete: boolean
+  conclusion: { text: string; recommendations: string | null; by: string; role: 'DOMAIN_EXPERT' | 'FARM_OWNER'; at: string } | null
+}

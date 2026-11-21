@@ -6,12 +6,19 @@ import type {
   ControlMode,
   DetectionTuning,
   DeviceStatus,
+  CountingWindowSource,
   FuzzyTuning,
+  HarvestCycleStatus,
+  HealthLevels,
+  HouseStage,
+  WeatherMetric,
   ChecklistResult,
   MaintenanceBasis,
   MaintenanceEquipment,
   MaintenancePlanState,
   NestType,
+  RecommendationIndicator,
+  RecommendationStatus,
   OnsiteObservation,
   RelayName,
   Role,
@@ -20,6 +27,7 @@ import type {
   WorkOrderOrigin,
   WorkOrderStatus,
 } from '@/types'
+import type { ConfigApplyStep } from '@/utils/device.utils'
 import type { SensorMetric, ThresholdMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
 import { getSeverityLevel, getSeverityLevelLabel } from '@/utils/severity.utils'
@@ -28,6 +36,31 @@ const DEVICE_STATUS_LABELS: Record<DeviceStatus, string> = {
   PENDING: 'Chờ kết nối',
   ONLINE: 'Trực tuyến',
   OFFLINE: 'Mất kết nối',
+}
+
+// Bước áp cấu hình khu vực của controller (ENV-FR-027, Report 3 §6.12), đọc qua getConfigApplyStep
+const CONFIG_APPLY_LABELS: Record<ConfigApplyStep, string> = {
+  'waiting-connection': 'Chờ kết nối để nhận cấu hình',
+  'waiting-config': 'Đang gửi cấu hình',
+  applied: 'Đã áp cấu hình',
+  mismatch: 'Chưa áp cấu hình mới',
+  unknown: 'Không rõ phiên bản cấu hình',
+}
+
+// Nhãn tiếng Việt của bước áp cấu hình khu vực
+export function getConfigApplyLabel(step: ConfigApplyStep): string {
+  return t(CONFIG_APPLY_LABELS[step])
+}
+
+// Giai đoạn nhà (FARM-FR-014)
+const HOUSE_STAGE_LABELS: Record<HouseStage, string> = {
+  ATTRACTING: 'Đang dẫn dụ',
+  OCCUPIED: 'Đã có chim ở',
+}
+
+// Nhãn tiếng Việt của giai đoạn nhà
+export function getHouseStageLabel(stage: HouseStage): string {
+  return t(HOUSE_STAGE_LABELS[stage])
 }
 
 const METRIC_LABELS: Record<SensorMetric, string> = {
@@ -355,4 +388,80 @@ const CHECKLIST_RESULT_LABELS: Record<ChecklistResult, string> = {
 
 export function getChecklistResultLabel(result: ChecklistResult): string {
   return t(CHECKLIST_RESULT_LABELS[result])
+}
+
+// Chỉ số theo ngày mà luật khuyến nghị xét (EXPERT-FR-016) kèm đơn vị
+const RECOMMENDATION_INDICATOR_LABELS: Record<RecommendationIndicator, { label: string; unit: string }> = {
+  TIME_IN_RANGE: { label: 'Thời gian trong ngưỡng', unit: '%' },
+  AIR_HOURS_OVER: { label: 'Số giờ NH3, CO2 vượt ngưỡng', unit: 'giờ' },
+  RETURN_RATE: { label: 'Tỷ lệ về tổ', unit: '%' },
+  NOISE_EPISODES: { label: 'Số đợt tiếng ồn bất thường', unit: 'đợt' },
+  MISTING_INEFFECTIVE: { label: 'Số lần phun sương không hiệu quả', unit: 'lần' },
+}
+
+export function getRecommendationIndicatorLabel(indicator: RecommendationIndicator): { label: string; unit: string } {
+  const { label, unit } = RECOMMENDATION_INDICATOR_LABELS[indicator]
+  return { label: t(label), unit: t(unit) }
+}
+
+// Trạng thái khuyến nghị (Report 3 §6.21)
+const RECOMMENDATION_STATUS_LABELS: Record<RecommendationStatus, string> = {
+  OPEN: 'Chờ quyết định',
+  ACCEPTED: 'Đã chấp nhận',
+  REJECTED: 'Đã từ chối',
+  EXPIRED: 'Hết hạn',
+  MEASURED: 'Đã đo hiệu quả',
+}
+
+export function getRecommendationStatusLabel(status: RecommendationStatus): string {
+  return t(RECOMMENDATION_STATUS_LABELS[status])
+}
+
+// Chỉ số dự báo mà luật bù thời tiết xét (ENV-FR-030, dự báo 2 giờ tới) kèm đơn vị
+const WEATHER_METRIC_LABELS: Record<WeatherMetric, { label: string; unit: string }> = {
+  temperature: { label: 'Nhiệt độ cao nhất dự báo', unit: '°C' },
+  humidity: { label: 'Độ ẩm ngoài trời cao nhất', unit: '%' },
+  rain: { label: 'Tổng mưa dự báo', unit: 'mm' },
+}
+
+export function getWeatherMetricLabel(metric: WeatherMetric): { label: string; unit: string } {
+  const { label, unit } = WEATHER_METRIC_LABELS[metric]
+  return { label: t(label), unit }
+}
+
+// Mức chỉ số sức khỏe của nhà (BR-28) kèm đơn vị
+const HEALTH_LEVEL_LABELS: Record<keyof HealthLevels, { label: string; unit: string }> = {
+  in_range_slight_pct: { label: 'Trong ngưỡng: nhẹ khi dưới', unit: '%' },
+  in_range_clear_pct: { label: 'Trong ngưỡng: rõ khi dưới', unit: '%' },
+  air_slight_h: { label: 'Không khí vượt ngưỡng: nhẹ từ', unit: 'giờ' },
+  air_clear_h: { label: 'Không khí vượt ngưỡng: rõ từ', unit: 'giờ' },
+  noise_slight: { label: 'Tiếng ồn bất thường: nhẹ từ', unit: 'đợt' },
+  noise_clear: { label: 'Tiếng ồn bất thường: rõ từ', unit: 'đợt' },
+}
+
+export function getHealthLevelLabel(key: keyof HealthLevels): { label: string; unit: string } {
+  const { label, unit } = HEALTH_LEVEL_LABELS[key]
+  return { label: t(label), unit: t(unit) }
+}
+
+// Nguồn của khung đếm đang áp hôm nay (VISION-FR-019, BR-13)
+const COUNTING_WINDOW_SOURCE_LABELS: Record<CountingWindowSource, string> = {
+  TEMPORARY: 'Khung tạm',
+  PROFILE: 'Hồ sơ theo mùa',
+  DEFAULT: 'Khung mặc định',
+}
+
+export function getCountingWindowSourceLabel(source: CountingWindowSource): string {
+  return t(COUNTING_WINDOW_SOURCE_LABELS[source])
+}
+
+// Trạng thái chu kỳ thu hoạch (Report 3 §6.22)
+const HARVEST_CYCLE_STATUS_LABELS: Record<HarvestCycleStatus, string> = {
+  OPEN: 'Đang diễn ra',
+  CLOSED: 'Đã đóng',
+  CONCLUDED: 'Đã có kết luận',
+}
+
+export function getHarvestCycleStatusLabel(status: HarvestCycleStatus): string {
+  return t(HARVEST_CYCLE_STATUS_LABELS[status])
 }

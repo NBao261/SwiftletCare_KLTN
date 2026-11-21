@@ -5,7 +5,7 @@ import { MAX_DETAIL_ITEMS, StatDetailSheet } from '@/components/home/StatDetailS
 import { StatTile, type StatTone } from '@/components/home/StatTile'
 import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
-import { summarizeDeviceStatuses, type DeviceStatusSummary } from '@/utils/device.utils'
+import { summarizeDeviceStatuses, withSimulatedLabel, type DeviceStatusSummary } from '@/utils/device.utils'
 import { getDeviceStatusLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 import { RETURN_TO_HOME } from '@/utils/navigation.utils'
@@ -58,7 +58,7 @@ export function DeviceStatTile() {
         items={notOnlineNodes.slice(0, MAX_DETAIL_ITEMS).map(node => ({
           key: node._id,
           title: node.device_id,
-          description: getDeviceStatusLabel(node.status),
+          description: withSimulatedLabel(getDeviceStatusLabel(node.status), node.simulated),
           isProblem: node.status === 'OFFLINE',
         }))}
         hiddenCount={Math.max(0, notOnlineNodes.length - MAX_DETAIL_ITEMS)}

@@ -5,12 +5,12 @@ import type { InAppNotification } from '@/types'
 import { RETURN_TO_NOTIFICATIONS } from '@/utils/navigation.utils'
 import { getNotificationTarget } from '@/utils/notification.utils'
 
-// Mở cảnh báo đúng cảnh báo đó ở tab Cảnh báo (sheet chi tiết mở sẵn), nút ‹ quay về chuông
+// Mở trang chi tiết của đúng cảnh báo đó, chồng lên chuông nên nút ‹ quay về chuông
 export function openAlertFromBell(alertId: string) {
-  router.navigate({ pathname: '/(tabs)/alerts', params: { alertId, returnTo: RETURN_TO_NOTIFICATIONS } })
+  router.push({ pathname: '/alert/[alertId]', params: { alertId } })
 }
 
-// Bấm một thông báo: đánh dấu đã đọc (số giảm ngay) rồi mở đúng chỗ — cảnh báo ở tab Cảnh báo, báo cáo ở tab Phân tích, Work
+// Bấm một thông báo: đánh dấu đã đọc (số giảm ngay) rồi mở đúng chỗ — cảnh báo ở trang chi tiết cảnh báo, báo cáo ở tab Phân tích, Work
 // Order ở trang chi tiết Work Order, ngày đánh giá ở health/[dayId], còn lại (quyết định của chuyên gia, lệnh từ xa trên thiết bị…) ở trang chi tiết thông báo
 export function useOpenNotification() {
   const markRead = useMarkNotificationRead()

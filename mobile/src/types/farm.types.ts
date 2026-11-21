@@ -26,6 +26,8 @@ export interface Farm {
   // Bắt buộc khi tạo từ A-5; farm tạo trước đó có thể chưa có
   coordinates?: Coordinates
   owner_id: string
+  // Chỉ có ở GET /farms: farm có ít nhất một Domain Expert còn hoạt động (chuyên gia bị khoá không tính, BR-22)
+  has_active_expert?: boolean
   members: FarmMember[]
   created_at: string
 }
@@ -35,6 +37,15 @@ export interface BirdCountTuning {
   return_rate_drop_pct?: number
 }
 
+// Giai đoạn nhà (FARM-FR-014, BR-46): đang dẫn dụ thì không xét chỉ số đàn, không báo LOW_RETURN_RATE
+export type HouseStage = 'ATTRACTING' | 'OCCUPIED'
+
+// Kỹ thuật viên được giao nhà (AUTH-FR-013): tối đa một người chính
+export interface HouseTechnician {
+  user_id: string
+  primary: boolean
+}
+
 export interface House {
   _id: string
   farm_id: string
@@ -42,6 +53,9 @@ export interface House {
   floors: number
   description?: string
   bird_count_tuning?: BirdCountTuning
+  // Backend mặc định OCCUPIED; nhà tạo trước FARM-FR-014 có thể chưa có
+  stage?: HouseStage
+  technicians?: HouseTechnician[]
 }
 
 export interface Thresholds {
@@ -113,4 +127,113 @@ export interface CreateHousePayload {
 export interface CreateZonePayload {
   name: string
   floor?: number
+}
+
+// Luật bù phun sương theo thời tiết của nhà (ENV-FR-030, BR-38): dự báo 2 giờ tới vượt ngưỡng thì cộng offset vào mức phun
+export type WeatherMetric = 'temperature' | 'humidity' | 'rain'
+
+export interface WeatherRule {
+  // Có khi luật đã lưu; luật mới không gửi
+  _id?: string
+  metric: WeatherMetric
+  // Nhiệt độ tối đa ≥ min °C, độ ẩm ngoài trời tối đa ≥ min %, tổng mưa ≥ min mm
+  min: number
+  // Điểm % cộng vào mức phun, −10…+10 và khác 0
+  offset_pct: number
+  // Thời hạn của một lần bù, 1–120 phút
+  duration_min: number
+  active: boolean
+}
+
+// GET /farms/houses/{houseId}/weather-rules: luật và lần bù gần nhất (null khi chưa bù lần nào)
+export interface WeatherRulesView {
+  house_id: string
+  rules: WeatherRule[]
+  last_compensation: {
+    rule_id: string
+    offset_pct: number
+    sent_at: string
+    expires_at: string
+    forecast: { temperature_max: number | null; humidity_max: number | null; rain_mm: number | null }
+  } | null
+}
+
+// Lịch đếm chim của nhà (VISION-FR-019, BR-13): khung giờ VN 'HH:mm', nửa mở [start, end)
+export interface CountingTimeWindow {
+  start: string
+  end: string
+}
+
+export interface CountingDayWindows {
+  morning: CountingTimeWindow
+  evening: CountingTimeWindow
+}
+
+// Hồ sơ theo mùa: khoảng ngày trong năm 'MM-DD', tính cả hai đầu; from sau to là khoảng vắt qua năm mới
+export interface SeasonalCountingProfile extends CountingDayWindows {
+  name: string
+  from: string
+  to: string
+}
+
+// Khung tạm cho những ngày cụ thể 'YYYY-MM-DD', thắng hồ sơ theo mùa
+export interface TemporaryCountingWindow extends CountingDayWindows {
+  from: string
+  to: string
+}
+
+export interface CountingSchedule {
+  profiles: SeasonalCountingProfile[]
+  temporary: TemporaryCountingWindow[]
+}
+
+export type CountingWindowSource = 'TEMPORARY' | 'PROFILE' | 'DEFAULT'
+
+// GET /farms/houses/{houseId}/counting-schedule
+export interface CountingScheduleView {
+  house_id: string
+  schedule: CountingSchedule
+  // Lần sửa gần nhất áp từ ngày này; null khi chưa đặt lịch
+  effective_from: string | null
+  default_windows: CountingDayWindows
+  // Khung đang áp hôm nay (giờ VN)
+  today: CountingDayWindows & { date: string; source: CountingWindowSource }
+}
+
+// Mức của các chỉ số sức khỏe của nhà (BR-28): "nhẹ" và "rõ" của thời gian trong ngưỡng, giờ không khí vượt ngưỡng, đợt tiếng ồn
+export interface HealthLevels {
+  in_range_slight_pct: number
+  in_range_clear_pct: number
+  air_slight_h: number
+  air_clear_h: number
+  noise_slight: number
+  noise_clear: number
+}
+
+// GET /farms/houses/{houseId}/health-levels: can_edit do backend quyết (chuyên gia, chủ trại khi farm chưa có chuyên gia — BR-22)
+export interface HouseHealthLevelsView {
+  house_id: string
+  health_levels: HealthLevels
+  defaults: HealthLevels
+  can_edit: boolean
+}
+
+// Một nhà trong tổng quan farm (ANALYTICS-FR-015): trạng thái ngày hôm nay (null kèm lý do khi chưa tính hoặc thiếu dữ liệu)
+export interface HouseOverview {
+  house_id: string
+  name: string
+  stage: HouseStage
+  status: 'GOOD' | 'WATCH' | 'ACTION' | null
+  status_reason: 'NOT_COMPUTED' | 'INSUFFICIENT_DATA' | null
+  open_alerts: number
+  open_work_orders: number
+  latest_return_rate: { date: string; value: number } | null
+  simulated: boolean
+}
+
+// GET /farms/{id}/overview; date là ngày hôm nay giờ VN
+export interface FarmOverview {
+  farm_id: string
+  date: string
+  houses: HouseOverview[]
 }

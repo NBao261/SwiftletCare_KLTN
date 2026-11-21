@@ -1,13 +1,10 @@
-import { buildMockPendingInvitations, mockResponse } from '@/services/mock/account.mock'
+import { apiClient } from '@/services/api/apiClient'
+import { ENDPOINTS } from '@/constants/apiEndpoints'
+import type { ApiResponse, Invitation } from '@/types'
 
-// Lời mời đang chờ của farm (AUTH-FR-010, Report 3 §6.4).
-// TODO(AUTH-FR-010): backend chưa có route liệt kê lời mời (đã kiểm backend và develop ngày 10/11/2026). Đường đề xuất đã có sẵn
-// ở ENDPOINTS.FARM_INVITATIONS — khi route vào api-spec, thay thân hàm bằng:
-//   apiClient.get<ApiResponse<Invitation[]>>(ENDPOINTS.FARM_INVITATIONS(farmId), { params: { status: 'PENDING' } })
-// rồi bỏ cờ IS_MOCK_API_ENABLED trong usePendingInvitations và members.tsx. Phản hồi không được có token lời mời
+// Lời mời của farm (AUTH-FR-005, 010, Report 3 §6.4): chỉ Primary Owner xem được (đồng sở hữu 403); lời mời PENDING quá hạn
+// backend trả là EXPIRED, không bao giờ trả token
 export const invitationApi = {
-  listPending: (farmId: string) => {
-    const invitations = buildMockPendingInvitations(farmId)
-    return mockResponse(invitations, { total: invitations.length })
-  },
+  listPending: (farmId: string) =>
+    apiClient.get<ApiResponse<Invitation[]>>(ENDPOINTS.FARM_INVITATIONS(farmId), { params: { status: 'PENDING' } }),
 }

@@ -15,6 +15,7 @@ export * from './workOrder.types'
 export * from './maintenance.types'
 export * from './analytics.types'
 export * from './account.types'
+export * from './recommendation.types'
 export type {
   InferredAlertType,
   VerdictResult,

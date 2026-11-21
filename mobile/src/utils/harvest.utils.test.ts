@@ -3,6 +3,7 @@ import type { HarvestBatch, User } from '@/types'
 import {
   canEditHarvestRun,
   checkNestAmount,
+  formatCycleComparison,
   groupHarvestRuns,
   harvestTotalsByPeriod,
   harvestYears,
@@ -251,5 +252,20 @@ describe('planHarvestRunOperations', () => {
     expect(operations).toEqual([
       { kind: 'update', nestType: 'RAW', harvestId: 'raw-1', payload: { nest_count: 42, weight_grams: 5100 } },
     ])
+  })
+})
+
+describe('formatCycleComparison', () => {
+  const base = { cycle_id: 'cycle-0', nest_count: 100, weight_grams: 1000, reason: null }
+
+  it('ghi chênh lệch khối lượng và số tổ, tăng có dấu +', () => {
+    expect(formatCycleComparison({ ...base, weight_change_pct: 12, nest_count_change_pct: -5 })).toBe(
+      '+12% khối lượng · -5% số tổ',
+    )
+  })
+
+  it('không có chu kỳ để so thì "_"', () => {
+    expect(formatCycleComparison(null)).toBe('_')
+    expect(formatCycleComparison({ ...base, weight_change_pct: null, nest_count_change_pct: null })).toBe('_')
   })
 })

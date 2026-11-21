@@ -1,4 +1,3 @@
-import type { AlertType } from './alert.types'
 import type { Role } from './auth.types'
 
 // Lời mời thành viên farm — khớp schema Invitation của api-spec (AUTH-FR-010, Report 3 §6.4)
@@ -85,11 +84,3 @@ export interface CoefficientProposal {
   created_at: string
 }
 
-// Kênh nhận cho từng loại sự kiện (ALERT-FR-005). Tắt một kênh thì loại đó không gửi qua kênh ấy, cảnh báo vẫn có trong app
-export interface NotificationChannelSetting {
-  in_app: boolean
-  push: boolean
-  telegram: boolean
-}
-
-export type NotificationChannelPreferences = Partial<Record<AlertType, NotificationChannelSetting>>

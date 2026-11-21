@@ -4,7 +4,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { NotificationInboxList } from '@/components/notification/NotificationInboxList'
-import { PendingAlertList } from '@/components/notification/PendingAlertList'
+import { BellAlertList } from '@/components/notification/BellAlertList'
 import { Button } from '@/components/ui/button'
 import { Spacing } from '@/constants/theme'
 import { useBellCounts } from '@/hooks/notification/useBellCounts'
@@ -59,7 +59,7 @@ export default function NotificationsScreen() {
           accessibilityLabel={t('Mục của chuông')}
         />
       </View>
-      {section === 'notifications' ? <NotificationInboxList /> : <PendingAlertList />}
+      {section === 'notifications' ? <NotificationInboxList /> : <BellAlertList />}
     </View>
   )
 }

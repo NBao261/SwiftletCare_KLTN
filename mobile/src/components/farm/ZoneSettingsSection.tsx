@@ -6,6 +6,7 @@ import { CollapsibleSection } from '@/components/farm/CollapsibleSection'
 import { IconButton } from '@/components/ui/icon-button'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Spacing } from '@/constants/theme'
+import { useCountingSchedule } from '@/hooks/farm/useCountingSchedule'
 import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
@@ -14,6 +15,7 @@ import { getDetectionTuningLabel, getFuzzyTuningLabel, getMetricLabel } from '@/
 import { canPerform } from '@/utils/permission.utils'
 import { formatThresholdRange } from '@/utils/sensorTile.utils'
 import { SETTINGS_SECTION_EDIT_ACTION, type SettingsSectionKind } from '@/utils/settingsSection.utils'
+import { formatTimeWindow } from '@/utils/countingSchedule.utils'
 import { formatStoredNumber } from '@/utils/settingsValidation.utils'
 import type { ThresholdMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
@@ -102,6 +104,7 @@ export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSetting
   const user = useAuthStore(state => state.user)
   // BR-22: farm chưa có chuyên gia thì chủ trại sửa thay tham số phát hiện, mức giảm tỷ lệ về tổ
   const hasExpert = useFarmHasExpert(house.farm_id)
+  const scheduleQuery = useCountingSchedule(house._id)
   const [menuGroup, setMenuGroup] = useState<SettingGroupData | null>(null)
 
   const groups: SettingGroupData[] = [
@@ -134,8 +137,20 @@ export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSetting
       title: t('Mức giảm tỷ lệ về tổ (cả nhà)'),
       rows: [
         { label: t('Tỷ lệ về tổ giảm'), value: formatSetting(house.bird_count_tuning?.return_rate_drop_pct, '%') },
-        // Lịch đếm chim theo mùa (VISION-FR-019) backend chưa có API
-        { label: t('Lịch đếm chim'), value: t('Sắp có'), isComingSoon: true },
+      ],
+    },
+    {
+      kind: 'counting-schedule',
+      title: t('Lịch đếm chim (cả nhà)'),
+      rows: [
+        {
+          label: t('Khung sáng hôm nay'),
+          value: scheduleQuery.data ? formatTimeWindow(scheduleQuery.data.today.morning) : '_',
+        },
+        {
+          label: t('Khung chiều hôm nay'),
+          value: scheduleQuery.data ? formatTimeWindow(scheduleQuery.data.today.evening) : '_',
+        },
       ],
     },
   ]

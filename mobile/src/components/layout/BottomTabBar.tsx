@@ -4,7 +4,7 @@ import type { BottomTabBarProps as NavigatorTabBarProps } from 'expo-router/tabs
 import Svg, { Defs, FeGaussianBlur, FeOffset, Filter, Path } from 'react-native-svg'
 import { Text } from '@/components/ui/text'
 import type { RoleTab } from '@/constants/roleTabs'
-import { BorderWidth, Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { translate } from '@/utils/i18n.utils'
@@ -55,7 +55,6 @@ export const TAB_BAR_OVERLAP = EDGE_TOP
 
 interface BottomTabBarProps extends NavigatorTabBarProps {
   tabs: readonly RoleTab[]
-  unreadCount: number
 }
 
 // Màn không hiện thanh tab để nội dung chiếm cả màn — chỉ chi tiết nhà yến và Cài đặt nhà (yêu cầu của Len, chủ phần
@@ -89,18 +88,9 @@ function buildEdgePath(width: number, featuredCenterX: number | null): string {
   )
 }
 
-function TabBadge({ count }: { count: number }) {
-  const palette = usePalette()
-  if (count <= 0) return null
-  return (
-    <View style={[styles.badge, { backgroundColor: palette.primary, borderColor: palette.surface }]}>
-      <Text variant="label" color={palette.onPrimary}>{count > 99 ? '99+' : count}</Text>
-    </View>
-  )
-}
-
 // Thanh tab dùng chung mọi role: tab dựng từ ROLE_TABS, tab isFeatured thành nút tròn nổi giữa
-export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unreadCount }: BottomTabBarProps) {
+// Thanh tab chỉ có icon và tên tab, không hiện số: số cảnh báo chưa xác nhận nằm ở chuông và trong tab Cảnh báo
+export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs }: BottomTabBarProps) {
   const palette = usePalette()
   // Tên tab dịch theo ngôn ngữ đang chọn
   const language = useLanguage()
@@ -140,7 +130,6 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
           const TabIcon = tab.icon
           const isFocused = index === state.index
           const color = isFocused ? palette.tabIconSelected : palette.tabIconDefault
-          const badgeCount = tab.showsAlertBadge ? unreadCount : 0
           const handlePress = () => {
             const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
             if (!isFocused && !event.defaultPrevented) navigateToTab(route.key)
@@ -160,7 +149,6 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
                 <View style={[styles.featuredCircle, { backgroundColor: palette.primary }]}>
                   {/* Nút nổi luôn icon đặc, không đổi khi chọn — nền lime đã đủ nổi bật */}
                   <TabIcon size={FEATURED_ICON_SIZE} color={palette.onPrimary} weight="fill" />
-                  <TabBadge count={badgeCount} />
                 </View>
               ) : (
                 // Tab thường đang chọn: nền tròn lime chạy theo tab active (chỉ thanh không nút nổi), icon đặc (user, 2026-11-14)
@@ -170,7 +158,6 @@ export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs, unre
                     color={isFocused && !hasFeatured ? palette.onPrimary : color}
                     weight={isFocused ? 'fill' : 'regular'}
                   />
-                  <TabBadge count={badgeCount} />
                 </View>
               )}
               <Text variant="label" color={color} numberOfLines={1} style={styles.label}>{translate(tab.title, language)}</Text>
@@ -206,16 +193,4 @@ const styles = StyleSheet.create({
   },
   featuredCircle: { width: FEATURED_SIZE, height: FEATURED_SIZE, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   iconCircle: { width: ACTIVE_CIRCLE_SIZE, height: ACTIVE_CIRCLE_SIZE, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
-  badge: {
-    position: 'absolute',
-    top: -Spacing.xs,
-    right: -Spacing.md,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: Spacing.xs,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.strong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 })

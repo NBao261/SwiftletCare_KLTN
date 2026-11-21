@@ -4,6 +4,7 @@ import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
 import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useOrderedHouses } from '@/hooks/farm/useOrderedHouses'
+import { orderHousesByFarm } from '@/utils/houseOrder.utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useFarmPrefsStore, type AnalyticsPrefs, type AnalyticsTab } from '@/stores/farmPrefsStore'
 import type { AnalyticsRange } from '@/types'
@@ -95,11 +96,15 @@ export function useAnalyticsScope() {
     compareZones,
     birdPeriod,
     reportId: params.reportId,
+    // Bộ chọn nhà gắn với farm như tab Trang trại: nhà của mọi farm, farm tạo trước đứng đầu, nhà ghim lên đầu trong farm
+    houseChoices: orderHousesByFarm(farmQuery.farms, allHouses.houses, prefs.pinnedHouseIds),
+    hasMultipleFarms: farmQuery.hasMultipleFarms,
+    farms: farmQuery.farms,
     isLoading: farmQuery.isLoading || housesQuery.isLoading || zonesQuery.isLoading,
     isError: farmQuery.isError || housesQuery.isError || zonesQuery.isError,
-    // Đổi nhà ở đây thì tab Farm cũng mở nhà này
+    // Đổi nhà ở đây (kể cả nhà của farm khác) thì tab Farm cũng mở farm và nhà này
     selectHouse: (nextHouseId: string) => {
-      const nextHouse = houses.find(item => item._id === nextHouseId)
+      const nextHouse = allHouses.houses.find(item => item._id === nextHouseId)
       if (userId && nextHouse) {
         setLastHouse(userId, nextHouse.farm_id, nextHouseId)
         setCurrentFarm(userId, nextHouse.farm_id)

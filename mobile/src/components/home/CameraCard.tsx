@@ -6,6 +6,7 @@ import { Radius, Spacing } from '@/constants/theme'
 import type { CameraCardData } from '@/hooks/device/useCameraCards'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { getCameraCountSummary, getCameraStatusBadge } from '@/utils/camera.utils'
+import { withSimulatedLabel } from '@/utils/device.utils'
 import { truncateText } from '@/utils/name.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -27,7 +28,7 @@ export function CameraCard({ data, onOpen }: CameraCardProps) {
   const { camera, houseName, today } = data
   const title = `Camera ${camera.device_id}`
   const summary = getCameraCountSummary(today)
-  const statusBadge = getCameraStatusBadge(camera.status)
+  const statusBadge = withSimulatedLabel(getCameraStatusBadge(camera.status), camera.simulated)
   // Chấm trạng thái theo màu thiết bị có sẵn: lime khi online, xám khi mất kết nối, cam nhạt khi chờ kết nối
   const statusDotColor = {
     ONLINE: palette.primary,

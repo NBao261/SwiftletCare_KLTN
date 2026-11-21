@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChartLineIcon, PlusIcon } from 'phosphor-react-native'
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
 import { OptionSheet } from '@/components/farm/OptionSheet'
+import { HarvestCycleCard } from '@/components/harvest/HarvestCycleCard'
 import { HarvestRunRow } from '@/components/harvest/HarvestRunRow'
 import { HarvestRunSheet } from '@/components/harvest/HarvestRunSheet'
 import { AppHeader } from '@/components/layout/AppHeader'
@@ -19,6 +20,7 @@ import { Radius, Spacing } from '@/constants/theme'
 import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useFarmHarvests } from '@/hooks/harvest/useFarmHarvests'
+import { useHarvestCycles } from '@/hooks/harvest/useHarvestCycles'
 import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { useGoBackOrHome } from '@/hooks/navigation/useGoBackOrHome'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -59,6 +61,7 @@ export default function HarvestsScreen() {
     allHouses.houses.find(item => item._id === (pickedHouseId ?? params.houseId)) ?? allHouses.houses[0] ?? null
   const zonesQuery = useHouseZones(house?._id ?? '')
   const harvestsQuery = useFarmHarvests(house?.farm_id ?? '')
+  const cyclesQuery = useHarvestCycles(house?._id ?? '')
   const zones = zonesQuery.data ?? []
   const runs = groupHarvestRuns(
     harvestsQuery.data?.data ?? [],
@@ -71,7 +74,7 @@ export default function HarvestsScreen() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      await Promise.all([zonesQuery.refetch(), harvestsQuery.refetch()])
+      await Promise.all([zonesQuery.refetch(), harvestsQuery.refetch(), cyclesQuery.refetch()])
     } finally {
       setRefreshing(false)
     }
@@ -120,6 +123,31 @@ export default function HarvestsScreen() {
     ))
   }
 
+  // Chu kỳ thu của các zone trong nhà (HARVEST-FR-007): mỗi lần thu đã xác nhận đóng một kỳ
+  const renderCycles = () => {
+    if (cyclesQuery.isLoading) return <Skeleton width="100%" height={ROW_SKELETON_HEIGHT} radius={Radius.md} />
+    if (cyclesQuery.isError) {
+      return <EmptyState message={t('Không tải được chu kỳ thu')} actionLabel={t('Thử lại')} onAction={() => cyclesQuery.refetch()} />
+    }
+    const cycles = cyclesQuery.data ?? []
+    if (cycles.length === 0) {
+      return (
+        <Text variant="small" color={palette.textSecondary}>
+          {t('Chưa có chu kỳ thu: chu kỳ bắt đầu từ lần thu đã xác nhận đầu tiên của khu vực')}
+        </Text>
+      )
+    }
+    const zoneNameById = new Map(zones.map(zone => [zone._id, zone.name]))
+    return cycles.map((cycle, index) => (
+      <HarvestCycleCard
+        key={cycle._id}
+        cycle={cycle}
+        zoneName={zoneNameById.get(cycle.zone_id) ?? '_'}
+        hasDivider={index < cycles.length - 1}
+      />
+    ))
+  }
+
   const renderBody = () => {
     if (allHouses.isLoading) return <Skeleton width="100%" height={ROW_SKELETON_HEIGHT * 3} />
     if (allHouses.isError) return <EmptyState message={t('Không tải được')} />
@@ -149,9 +177,13 @@ export default function HarvestsScreen() {
         <Card>{renderList()}</Card>
         <Text variant="small" color={palette.textSecondary}>
           {t(
-            'Một lần thu là các loại yến của cùng nhà, cùng ngày. Lần thu do kỹ thuật viên ghi chờ chủ trại xác nhận trên web rồi mới tính vào sản lượng và chu kỳ thu hoạch.',
+            'Một lần thu là các loại yến của cùng nhà, cùng ngày. Lần thu do kỹ thuật viên ghi chờ chủ trại xác nhận rồi mới tính vào sản lượng và chu kỳ thu hoạch.',
           )}
         </Text>
+        <Text variant="body" weight="semiBold">
+          {t('Chu kỳ thu')}
+        </Text>
+        <Card>{renderCycles()}</Card>
       </>
     )
   }

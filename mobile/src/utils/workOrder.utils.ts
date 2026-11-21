@@ -36,6 +36,32 @@ export function getWorkOrderAction(status: WorkOrderStatus): WorkOrderAction | n
   return null
 }
 
+// Quyết định của chủ trại trên một phiếu (OPS-FR-004), theo đúng trạng thái backend nhận: duyệt, mở lại khi chờ duyệt; huỷ phiếu
+// sửa chữa khi mới mở, đang làm, đang kiểm phục hồi (phiếu phòng ngừa thì xoá kế hoạch ở web); giao lại khi mới mở, đang làm
+export type OwnerWorkOrderAction = 'approve' | 'reopen' | 'cancel' | 'reassign'
+
+export function getOwnerWorkOrderActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>): OwnerWorkOrderAction[] {
+  const { status, kind } = workOrder
+  if (status === 'AWAITING_APPROVAL') return ['approve', 'reopen']
+  const actions: OwnerWorkOrderAction[] = []
+  if (kind === 'REPAIR' && (status === 'OPEN' || status === 'IN_PROGRESS' || status === 'VERIFYING')) actions.push('cancel')
+  if (status === 'OPEN' || status === 'IN_PROGRESS') actions.push('reassign')
+  return actions
+}
+
+// Phiếu chờ duyệt mà dữ liệu chưa xác nhận phục hồi (BR-41): chủ trại phải kiểm tại nhà trước khi duyệt
+export function isApprovalUnverified(workOrder: Pick<WorkOrder, 'status' | 'verified_at'>): boolean {
+  return workOrder.status === 'AWAITING_APPROVAL' && !workOrder.verified_at
+}
+
+// Người nhận được khi giao lại: kỹ thuật viên của nhà trừ người đang giữ phiếu (backend 400 với người không phải thợ của nhà)
+export function getReassignCandidates<Candidate extends { userId: string }>(
+  technicians: Candidate[],
+  currentAssigneeId: string | undefined,
+): Candidate[] {
+  return technicians.filter(technician => technician.userId !== currentAssigneeId)
+}
+
 // Yêu cầu kiểm tra tại chỗ đã được trả lời: có điều quan sát hoặc lúc trả lời. Spec ghi observation null khi chưa trả lời, nhưng
 // bản ghi cũ có thể thiếu hẳn khoá (undefined) — cả hai đều là chưa trả lời
 export function isOnsiteCheckAnswered(check: OnsiteCheck): boolean {
