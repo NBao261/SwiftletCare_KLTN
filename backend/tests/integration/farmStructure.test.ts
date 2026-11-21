@@ -88,6 +88,16 @@ describe('sửa nhà và Zone (FARM-FR-002)', () => {
 })
 
 describe('xoá mềm nhà và Zone (FARM-FR-002, Q-01)', () => {
+  it('nhà và Zone tạo trước khi có trường is_deleted vẫn hiện (không cần migration)', async () => {
+    const { farm, owner } = await seed()
+    const raw = await House.collection.insertOne({ farm_id: farm._id, name: 'Nhà cũ', floors: 1 })
+    await Zone.collection.insertOne({ house_id: raw.insertedId, farm_id: farm._id, name: 'Tầng cũ', floor: 1 })
+    const houses = (await owner.get(`/farms/${farm._id}/houses`).expect(200)).body.data as Array<{ name: string }>
+    expect(houses.map(h => h.name)).toContain('Nhà cũ')
+    expect((await owner.get(`/farms/houses/${raw.insertedId}/zones`).expect(200)).body.data).toHaveLength(1)
+    expect((await listActiveHouseIds()).map(String)).toContain(String(raw.insertedId))
+  })
+
   it('còn thiết bị đang dùng thì 409 HAS_ACTIVE_DEVICES; gỡ xong thì xoá được', async () => {
     const { house, zone, owner, decommission } = await seed()
     const blocked = await owner.del(`/farms/houses/${house._id}`).expect(409)

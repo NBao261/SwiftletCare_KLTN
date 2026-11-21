@@ -8,7 +8,8 @@ import type { Query, Schema } from 'mongoose'
  */
 export function applySoftDeleteScope(schema: Schema): void {
   function scope(this: Query<unknown, unknown>) {
-    if (this.getFilter().is_deleted === undefined) this.where({ is_deleted: false })
+    // `$ne: true`, không phải `false`: bản ghi tạo trước khi model có trường (nhà, Zone trước G-32) không có `is_deleted`
+    if (this.getFilter().is_deleted === undefined) this.where({ is_deleted: { $ne: true } })
   }
   schema.pre(/^find/, scope)
   schema.pre('countDocuments', scope)
