@@ -148,16 +148,6 @@ export interface CreateAlertInput {
 }
 
 /**
- * Alert Engine — điểm vào DUY NHẤT để tạo cảnh báo (ALERT-FR-001/002/003/008).
- * Mọi nguồn (MQTT từ ESP32/RPi, job phát hiện offline, kiểm tra ngưỡng telemetry)
- * đều đi qua đây để đảm bảo dedup + gửi thông báo + phát socket nhất quán.
- *
- * Trả về `null` khi bị dedup: sự cố cùng farm/zone/thiết bị/loại vẫn còn alert
- * đang mở (ACTIVE hoặc ACKNOWLEDGED, không giới hạn thời gian) — khi đó chỉ cập
- * nhật `last_seen_at` + `occurrence_count` của alert đó, không tạo bản ghi và
- * không gửi thông báo lại.
- */
-/**
  * ALERT-FR-008 — sự cố còn cảnh báo mở (`ACTIVE`, `ACKNOWLEDGED` hoặc `DISMISSED`): chỉ cập nhật lần thấy cuối và đếm
  * thêm một lần (tối đa mỗi ALERT_SEEN_UPDATE_MS), không tạo bản ghi và không gửi thông báo lại. Trả `true` khi đã gộp.
  */
@@ -185,6 +175,16 @@ function isDuplicateIncident(err: unknown): boolean {
   return code === 11000 && keyPattern !== undefined && 'incident_key' in keyPattern
 }
 
+/**
+ * Alert Engine — điểm vào DUY NHẤT để tạo cảnh báo (ALERT-FR-001/002/003/008).
+ * Mọi nguồn (MQTT từ ESP32/RPi, job phát hiện offline, kiểm tra ngưỡng telemetry)
+ * đều đi qua đây để đảm bảo dedup + gửi thông báo + phát socket nhất quán.
+ *
+ * Trả về `null` khi bị dedup: sự cố cùng khoá (`incidentKeyOf`) vẫn còn alert đang mở
+ * (ACTIVE, ACKNOWLEDGED hoặc DISMISSED, không giới hạn thời gian) — khi đó chỉ cập
+ * nhật `last_seen_at` + `occurrence_count` của alert đó, không tạo bản ghi và
+ * không gửi thông báo lại.
+ */
 export async function createAlert(input: CreateAlertInput): Promise<IAlert | null> {
   const severity = DEFAULT_SEVERITY[input.type]
   const now = new Date()
