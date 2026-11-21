@@ -1,8 +1,8 @@
-import WeatherSource from '@/components/common/WeatherSource';
 import { useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import type { Chart as ChartInstance, ChartOptions, Plugin } from 'chart.js';
 
+import WeatherSource from '@/components/common/WeatherSource';
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
@@ -98,7 +98,8 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
     // Mỗi điểm thời tiết phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ (7d, 30d)
     const outdoor = alignOutdoorWeather(timeline, data?.outdoor ?? [], Math.max(data?.bucketMs ?? 0, HOUR_MS));
     const hasOutdoor = outdoor.some(point => point !== null);
-    const outdoorLine = { ...line, borderWidth: 1.5, borderDash: [6, 4] };
+    // Một điểm (1 giờ, chưa có số đo trong nhà) thì đường không vẽ gì: hiện chấm
+    const outdoorLine = { ...line, borderWidth: 1.5, borderDash: [6, 4], pointRadius: timeline.length < 2 ? 3 : 0 };
     const indoorDatasets = [
       { label: t('chart.temperature'), data: series.map(point => point.temperature ?? null), borderColor: CHART_COLORS.charcoal, yAxisID: 'y', ...line },
       { label: t('chart.humidity'), data: series.map(point => point.humidity ?? null), borderColor: CHART_COLORS.accentGreen, yAxisID: 'y1', ...line },

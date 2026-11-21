@@ -34,12 +34,20 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
   const [latitude, setLatitude] = useState(farm?.coordinates ? String(farm.coordinates.lat) : '')
   const [longitude, setLongitude] = useState(farm?.coordinates ? String(farm.coordinates.lng) : '')
   const [isLocating, setIsLocating] = useState(false)
-  // Cùng một object khi hai ô không đổi: bản đồ không kéo khung về ghim mỗi lần form vẽ lại
+  // Cùng một object khi hai ô không đổi: ghim không đặt lại mỗi lần form vẽ lại
   const pickedLocation = useMemo(() => parseFarmLocation(latitude, longitude), [latitude, longitude])
   const [error, setError] = useState<FarmKey | null>(null)
   const isSaving = createFarm.isPending || updateFarm.isPending
 
   // Bấm, kéo ghim trên bản đồ, GPS hoặc tìm địa chỉ đều điền vào hai ô vĩ độ, kinh độ
+  // Khung bản đồ tới ghim khi vị trí đến từ gợi ý, GPS hoặc gõ xong toạ độ (bấm, kéo ghim thì ghim đã trong khung)
+  const [focusRequest, setFocusRequest] = useState(0)
+  const requestMapFocus = (): void => setFocusRequest(count => count + 1)
+  function setLocationAndFocus(coordinates: Coordinates): void {
+    setLocation(coordinates)
+    requestMapFocus()
+  }
+
   function setLocation({ lat, lng }: Coordinates): void {
     setLatitude(lat.toFixed(COORDINATE_DIGITS))
     setLongitude(lng.toFixed(COORDINATE_DIGITS))
@@ -55,7 +63,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
     setIsLocating(true)
     navigator.geolocation.getCurrentPosition(
       position => {
-        setLocation({ lat: position.coords.latitude, lng: position.coords.longitude })
+        setLocationAndFocus({ lat: position.coords.latitude, lng: position.coords.longitude })
         setIsLocating(false)
       },
       reason => {
@@ -107,7 +115,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
     <Modal open onClose={onClose} title={isEdit ? t('farmForm.editTitle') : t('createFarm.title')}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <Input name="farmName" label={t('createFarm.name')} required value={name} onChange={event => setName(event.target.value)} placeholder={t('createFarm.namePlaceholder')} />
-        <AddressAutocomplete value={address} onChange={setAddress} onPick={setLocation} />
+        <AddressAutocomplete value={address} onChange={setAddress} onPick={setLocationAndFocus} />
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="label-caption">
@@ -120,7 +128,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
             </Button>
           </div>
           <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-xl bg-warmGray/10" />}>
-            <FarmLocationMap value={pickedLocation} onPick={setLocation} />
+            <FarmLocationMap value={pickedLocation} focusRequest={focusRequest} onPick={setLocation} />
           </Suspense>
           <p className="text-xs text-warmGray">{t('farmForm.mapHint')}</p>
           <div className="grid grid-cols-2 gap-3">
@@ -130,6 +138,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
               inputMode="decimal"
               value={latitude}
               onChange={event => setLatitude(event.target.value)}
+              onBlur={requestMapFocus}
               placeholder="10.762622"
               aria-invalid={isLocationError || error === 'farmForm.errorLatitude'}
             />
@@ -139,6 +148,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
               inputMode="decimal"
               value={longitude}
               onChange={event => setLongitude(event.target.value)}
+              onBlur={requestMapFocus}
               placeholder="106.660172"
               aria-invalid={isLocationError || error === 'farmForm.errorLongitude'}
             />
