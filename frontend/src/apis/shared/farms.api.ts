@@ -22,6 +22,10 @@ export const farmApi = {
   createHouse: (farmId: string, input: { name: string; floors?: number; description?: string }) =>
     api.post<ApiResponse<House>>(`/farms/${farmId}/houses`, input),
   listHouses: (farmId: string) => api.get<ApiResponse<House[]>>(`/farms/${farmId}/houses`),
+  // FARM-FR-002 — đổi tên, số tầng, mô tả; xoá mềm (409 HAS_ACTIVE_DEVICES khi còn thiết bị đang dùng)
+  updateHouse: (houseId: string, input: { name?: string; floors?: number; description?: string }) =>
+    api.put<ApiResponse<House>>(`/farms/houses/${houseId}`, input),
+  deleteHouse: (houseId: string) => api.delete<ApiResponse<null>>(`/farms/houses/${houseId}`),
   // AUTH-FR-013 — gán / bỏ gán Farm Technician vào nhà; gọi lại PUT với người đã gán chỉ đổi primary
   assignTechnician: (houseId: string, userId: string, primary: boolean) =>
     api.put<ApiResponse<House>>(`/farms/houses/${houseId}/technicians/${userId}`, { primary }),
@@ -41,4 +45,8 @@ export const farmApi = {
     api.post<ApiResponse<Zone>>(`/farms/houses/${houseId}/zones`, input),
   listZones: (houseId: string) => api.get<ApiResponse<Zone[]>>(`/farms/houses/${houseId}/zones`),
   getZone: (zoneId: string) => api.get<ApiResponse<Zone>>(`/farms/zones/${zoneId}`),
+  // FARM-FR-002 — đổi tên, tầng; xoá mềm (409 HAS_ACTIVE_DEVICES khi còn bộ điều khiển đang dùng)
+  updateZone: (zoneId: string, input: { name?: string; floor?: number }) =>
+    api.put<ApiResponse<Zone>>(`/farms/zones/${zoneId}`, input),
+  deleteZone: (zoneId: string) => api.delete<ApiResponse<null>>(`/farms/zones/${zoneId}`),
 }

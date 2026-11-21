@@ -76,6 +76,28 @@ export function useCreateHouse(farmId: string) {
   })
 }
 
+// FARM-FR-002 — đổi tên hoặc xoá nhà, Zone; xong thì làm mới cấu trúc farm (nhà, Zone, thiết bị, cảnh báo đã đóng theo)
+export function useEditStructure() {
+  const queryClient = useQueryClient()
+  const refresh = () => Promise.all(['houses', 'zones', 'all-zones', 'sensor-nodes', 'alerts'].map(key =>
+    queryClient.invalidateQueries({ queryKey: [key] })))
+  type Target = { kind: 'house' | 'zone'; id: string }
+  const rename = useMutation({
+    // Trang dùng cấu trúc tải lại, không dùng bản trả về nên bỏ kiểu House / Zone
+    mutationFn: async ({ kind, id, name }: Target & { name: string }): Promise<void> => {
+      await (kind === 'house' ? farmApi.updateHouse(id, { name }) : farmApi.updateZone(id, { name }))
+    },
+    onSuccess: refresh,
+  })
+  const remove = useMutation({
+    mutationFn: async ({ kind, id }: Target): Promise<void> => {
+      await (kind === 'house' ? farmApi.deleteHouse(id) : farmApi.deleteZone(id))
+    },
+    onSuccess: refresh,
+  })
+  return { rename, remove }
+}
+
 // FARM-FR-014 — đổi giai đoạn nhà rồi làm mới danh sách nhà (mọi trang đọc giai đoạn từ đó)
 export function useSetHouseStage(houseId: string) {
   const queryClient = useQueryClient()
