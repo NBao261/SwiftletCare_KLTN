@@ -3,14 +3,14 @@ import { alertApi } from '@/apis/shared/alerts.api'
 import { canAccessPath } from '@/constants/roles'
 import { useAuthStore } from '@/stores/authStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
-import { newestFirstPage } from '@/lib/helpers'
-import type { Alert, AlertStatus, SiteCause } from '@/types'
+import type { Alert, AlertSeverity, AlertStatus, AlertType, SiteCause } from '@/types'
 
 export interface AlertsListQuery {
-  farmId?: string; zoneId?: string
-  // 1 mức, hoặc nhiều mức nối dấu phẩy (severityQueryOf) cho cấp Khẩn cấp
-  status?: AlertStatus; severity?: string
-  // ALERT-FR-007 — 'true' = chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED)
+  // ALERT-FR-007 — lọc theo trang trại, nhà hoặc Zone, mức, loại và kết luận chuyên gia
+  farmId?: string; houseId?: string; zoneId?: string
+  status?: AlertStatus; severity?: AlertSeverity; type?: AlertType
+  verdict?: 'pending' | 'confirmed' | 'rejected'
+  // 'true' = chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED)
   open?: 'true'
   page?: number; limit?: number
 }
@@ -31,27 +31,8 @@ export function useAlertsList(query: AlertsListQuery, options?: { enabled?: bool
   )
 }
 
-// Số dòng tối đa backend trả mỗi request (paginate, maxLimit)
-const BACKEND_MAX_LIMIT = 100
-
-// GET /alerts chỉ nhận 1 mức: nhiều mức (cấp Khẩn cấp = CRITICAL,HIGH) thì gọi từng mức rồi ghép, mới nhất trước
-// ponytail: mỗi mức lấy page × limit dòng đầu, trần 100 dòng của backend nên chỉ đúng tới trang 100 / limit; backend nhận danh sách mức thì bỏ nhánh này
-async function listAlerts(query: AlertsListQuery) {
-  const severities = query.severity?.split(',') ?? []
-  if (severities.length < 2) return alertApi.list(query as Record<string, string>)
-  const page = query.page ?? 1
-  const limit = query.limit ?? 20
-  const window = Math.min(page * limit, BACKEND_MAX_LIMIT)
-  const responses = await Promise.all(severities.map(severity =>
-    alertApi.list({ ...query, severity, page: 1, limit: window } as unknown as Record<string, string>)))
-  const first = responses[0].data
-  return {
-    data: {
-      ...first,
-      data: newestFirstPage(responses.map(response => response.data.data), page, limit),
-      meta: { ...first.meta, page, limit, total: responses.reduce((sum, response) => sum + (response.data.meta?.total ?? 0), 0) },
-    },
-  }
+function listAlerts(query: AlertsListQuery) {
+  return alertApi.list(query as Record<string, string>)
 }
 
 // ALERT-FR-007 — số cảnh báo ACTIVE (chờ xác nhận) trong phạm vi người dùng, cho chuông, menu và trang Cảnh báo; undefined khi

@@ -16,13 +16,6 @@ export function lastPage(total: number, pageSize: number): number {
   return Math.max(1, Math.ceil(total / pageSize))
 }
 
-/** Ghép nhiều danh sách cảnh báo (mỗi danh sách đã mới nhất trước) rồi cắt đúng 1 trang — lọc nhiều mức của /alerts */
-export function newestFirstPage(lists: Alert[][], page: number, limit: number): Alert[] {
-  return lists.flat()
-    .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))
-    .slice((page - 1) * limit, page * limit)
-}
-
 /** Format date to Vietnamese locale */
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
