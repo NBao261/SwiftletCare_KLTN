@@ -1,6 +1,7 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
 import type {
+  HealthDisagreementsResponse,
   ApiResponse,
   HealthRatingValue,
   HouseHealthDay,
@@ -61,4 +62,8 @@ export const healthReportApi = {
   // Kết luận của chuyên gia (EXPERT-FR-006); chỉ người viết đầu tiên sửa được
   updateConclusion: (reportId: string, text: string) =>
     apiClient.put<ApiResponse<HouseHealthReport>>(ENDPOINTS.HEALTH_REPORT_CONCLUSION(reportId), { text }),
+
+  // Ngày có lượt chấm lệch với trạng thái hệ thống lúc chấm của một nhà (EXPERT-FR-022); from…to là YYYY-MM-DD giờ VN
+  listDisagreements: (houseId: string, from: string, to: string) =>
+    apiClient.get<ApiResponse<HealthDisagreementsResponse>>(ENDPOINTS.HEALTH_DISAGREEMENTS, { params: { houseId, from, to } }),
 }

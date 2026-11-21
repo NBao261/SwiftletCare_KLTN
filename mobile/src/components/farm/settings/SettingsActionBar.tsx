@@ -9,9 +9,9 @@ import { usePalette } from '@/hooks/theme/usePalette'
 const BAR_MIN_HEIGHT = BUTTON_HEIGHTS.lg
 
 interface SettingsActionBarProps {
-  // Chữ trắng bên trái ("Lưu thay đổi", "Thiết bị online")
+  // Chữ của thanh ("Cập nhật", "Đang trực tuyến")
   label: string
-  // Chữ lime đậm bên phải ("2/3", "GỬI"); không truyền thì label là một chữ lime đậm căn giữa (nút "Cập nhật", "Tạo mới")
+  // Con số / giá trị đi liền sau label trên cùng một dòng ("2/3"); không truyền thì label là chữ lime đậm (nút "Cập nhật")
   value?: string
   // Có thì cả thanh là nút bấm; không có thì chỉ để xem
   onPress?: () => void
@@ -20,8 +20,8 @@ interface SettingsActionBarProps {
   accessibilityLabel?: string
 }
 
-// Thanh đen như "Total due" trong ảnh mẫu: nền Ink, chữ lime trên nền Ink (đúng luật màu).
-// Chế độ sửa là nút Lưu; chế độ xem hiện con số chính của mục
+// Thanh đen như "Total due" trong ảnh mẫu: nền Ink, chữ lime trên nền Ink (đúng luật màu). Luôn một dòng chữ căn giữa, không
+// chia hai bên (người dùng yêu cầu 2026-11-19): nút thì một chữ lime đậm; chế độ xem thì "nhãn trắng + giá trị lime" liền nhau
 export function SettingsActionBar({
   label,
   value,
@@ -31,36 +31,28 @@ export function SettingsActionBar({
   accessibilityLabel,
 }: SettingsActionBarProps) {
   const palette = usePalette()
-  const isCentered = value === undefined
-  const content = isCentered ? (
-    loading ? (
-      <ActivityIndicator color={palette.primary} />
-    ) : (
-      <Text variant="heading" weight="bold" color={palette.primary} numberOfLines={1}>
-        {label}
+  const hasValue = value !== undefined
+  const content = loading ? (
+    <ActivityIndicator color={palette.primary} />
+  ) : hasValue ? (
+    <Text variant="body" weight="semiBold" color={palette.onInverse} numberOfLines={1} center style={styles.text}>
+      {`${label} `}
+      <Text variant="body" weight="bold" color={palette.primary}>
+        {value}
       </Text>
-    )
+    </Text>
   ) : (
-    <>
-      <Text variant="body" color={palette.onInverse} style={styles.label} numberOfLines={1}>
-        {label}
-      </Text>
-      {loading ? (
-        <ActivityIndicator color={palette.primary} />
-      ) : (
-        <Text variant="heading" weight="bold" color={palette.primary} style={styles.value} numberOfLines={1}>
-          {value}
-        </Text>
-      )}
-    </>
+    <Text variant="heading" weight="bold" color={palette.primary} numberOfLines={1} center style={styles.text}>
+      {label}
+    </Text>
   )
 
   if (!onPress) {
     return (
       <View
-        style={[styles.bar, isCentered && styles.centered, { backgroundColor: palette.inverse }]}
+        style={[styles.bar, { backgroundColor: palette.inverse }]}
         accessible
-        accessibilityLabel={accessibilityLabel ?? (isCentered ? label : `${label}: ${value}`)}
+        accessibilityLabel={accessibilityLabel ?? (hasValue ? `${label}: ${value}` : label)}
       >
         {content}
       </View>
@@ -74,7 +66,6 @@ export function SettingsActionBar({
       disabled={isDisabled}
       style={[
         styles.bar,
-        isCentered && styles.centered,
         { backgroundColor: palette.inverse },
         isDisabled && styles.disabled,
       ]}
@@ -92,13 +83,11 @@ const styles = StyleSheet.create({
     minHeight: BAR_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    justifyContent: 'center',
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.sm,
   },
-  centered: { justifyContent: 'center' },
-  label: { flex: 1 },
-  value: { fontVariant: ['tabular-nums'] },
+  text: { flexShrink: 1 },
   disabled: { opacity: 0.5 },
 })

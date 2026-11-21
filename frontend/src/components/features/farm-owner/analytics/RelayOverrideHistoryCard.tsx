@@ -17,7 +17,7 @@ import type { RelayOverrideLog, Role } from '@/types';
 const TABLE_MIN_WIDTH = 560;
 
 // Huy hiệu cùng cỡ badge chung (FE_Design 1.1)
-const BADGE_CLASS = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold';
+const BADGE_CLASS = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-small font-semibold';
 
 interface RelayOverrideHistoryCardProps {
   // 1 Zone, hoặc mọi Zone trong phạm vi đang lọc

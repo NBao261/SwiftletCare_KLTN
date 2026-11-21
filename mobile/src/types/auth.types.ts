@@ -1,14 +1,24 @@
+import type { AlertSeverity } from './alert.types'
+
 // Khớp backend/src/types/domain.types.ts (Report 3 §2.3)
 // FARM_TECHNICIAN (Report 3 4.0.0, G-20): thợ của chủ farm, thành viên farm, chỉ thao tác trên nhà được giao (AUTH-FR-013);
 // khớp backend/src/types/domain.types.ts
 export type Role = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
 
-// Kênh ngoài app: push (ALERT-FR-002) và Telegram (ALERT-FR-013)
+// Kênh ngoài app của một mức cảnh báo
+export interface ChannelChoice {
+  push: boolean
+  telegram: boolean
+}
+
+// Kênh ngoài app: push (ALERT-FR-002) và Telegram (ALERT-FR-013); by_severity ghi đè kênh chung cho từng mức (ALERT-FR-005),
+// null hoặc thiếu là theo kênh chung
 export interface NotificationPreferences {
   push: boolean
   // Chỉ có tác dụng khi tài khoản đã liên kết bot Telegram
   telegram: boolean
   quiet_hours: { start: string; end: string }
+  by_severity?: Partial<Record<AlertSeverity, ChannelChoice | null>>
 }
 
 export interface User {

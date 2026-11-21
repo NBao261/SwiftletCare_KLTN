@@ -59,7 +59,7 @@ Vai trò người dùng:
 - Cảnh báo vượt ngưỡng (có thời gian chờ để không báo khi điều khiển đang kéo về), thiết bị mất kết nối, phun không tăng ẩm, khởi động lại bất thường, tiếng ồn bất thường, cảm biến bất thường, dự báo sắp vượt ngưỡng (60 phút tới); NH3/CO2 chỉ cảnh báo, không điều khiển quạt.
 - Gửi cảnh báo ngoài ứng dụng qua **Telegram bot** và **push FCM** (Telegram đã gửi thật, FCM đang làm); khử trùng lặp theo sự cố, tự đóng khi sự cố qua.
 - Domain Expert xác nhận hoặc bác bỏ cảnh báo suy luận (bác bỏ thì cảnh báo thành `DISMISSED`).
-- Mỗi nhà yến có một trạng thái sức khỏe theo ngày (chỉ báo theo luật, không phải chẩn đoán) và báo cáo ngày/tuần/tháng theo nhà, xuất PDF/CSV; chủ farm và chuyên gia tự đánh giá ngày trước khi xem trạng thái của hệ thống để đo mức trùng khớp; chuyên gia viết kết luận.
+- Mỗi nhà yến có một trạng thái sức khỏe theo ngày (chỉ báo theo luật, không phải chẩn đoán) và báo cáo ngày/tuần/tháng theo nhà, xuất PDF/CSV; Kỹ thuật viên và chủ farm xem trạng thái của hệ thống rồi xác nhận hoặc sửa theo quan sát tại nhà yến để đo mức trùng khớp; chuyên gia xem các ngày lệch và viết kết luận.
 - Dashboard thời gian thực qua Socket.io, biểu đồ và phân tích hiệu quả điều khiển.
 
 **Thiết lập thiết bị (SF-01)**

@@ -4,7 +4,7 @@ import { Farm } from '@/models/farm.model'
 import { Alert } from '@/models/alert.model'
 import {
   findZoneChainOrThrow, findHouseChainOrThrow, assertZoneAccess, assertHouseAccess, assertHouseAccessByParams,
-  listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds, assertExpertDecision,
+  listAccessibleZoneIds, listAccessibleHouseIds, listActiveZoneIds, listActiveHouseIds,
 } from '@/utils/farmAccess.util'
 import { publishDeviceCommand, publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { publishNodeConfig, publishZoneConfig } from '@/services/deviceConfig.service'
@@ -12,6 +12,7 @@ import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } 
 import { raiseCameraLowFpsAlert, raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
+import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
@@ -1068,18 +1069,19 @@ export async function refreshCameraConfigs(now = new Date()): Promise<number> {
 }
 
 /**
- * VISION-FR-018 — Domain Expert vẽ vòng đếm của 1 camera (trước đây chép tay từ tools/pick_roi.py
- * vào config.yaml). Cùng cách làm với tham số phát hiện (EXPERT-FR-008): lưu lịch sử + audit. Đổi
- * vòng thì số đếm trước và sau không so được với nhau, nên lịch sử giữ đúng thời điểm đổi.
+ * VISION-FR-018 — vẽ vòng đếm của 1 camera (trước đây chép tay từ tools/pick_roi.py vào config.yaml). Cùng cách làm
+ * với tham số phát hiện (EXPERT-FR-008): lưu lịch sử + audit. Đổi vòng thì số đếm trước và sau không so được với
+ * nhau, nên lịch sử giữ đúng thời điểm đổi. Domain Expert, Farm Owner (farm có chuyên gia thì mở mục duyệt, BR-22)
+ * và Farm Technician của nhà đều vẽ được.
  */
-export async function updateCountingRing(cameraNodeId: string, user: CurrentUser, ring: CountingRing) {
+export async function updateCountingRing(
+  cameraNodeId: string, user: CurrentUser, ring: CountingRing, opts: ReviewApplyOptions = {},
+) {
   const camera = await CameraNode.findById(cameraNodeId)
   if (!camera) throw NotFoundError('Không tìm thấy camera')
   assertInService(camera)
   const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
-  // VISION-FR-018 — Farm Technician vẽ được vòng ở nhà được giao (assertHouseAccess đã kiểm nhà);
-  // BR-22 — Farm Owner chỉ vẽ thay khi farm chưa có chuyên gia
-  if (user.role !== 'FARM_TECHNICIAN') await assertExpertDecision(farm, user)
+  // VISION-FR-018 — Farm Technician vẽ được vòng ở nhà được giao (assertHouseAccess đã kiểm nhà)
 
   const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
   const after = ringOf(ring)
@@ -1094,11 +1096,16 @@ export async function updateCountingRing(cameraNodeId: string, user: CurrentUser
   const delivered = await pushCameraConfig(camera)
   const auditId = await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), {
     before: before ?? null, after, delivered, house_id: String(house._id),
+    ...(opts.fromReview && { decided_in: 'parameter_review' }),
   }, { farmId: String(farm._id) })
-  await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'vẽ lại vòng đếm', place: `Camera ${camera.device_id}, nhà "${house.name}"`,
-    detail: `${after.points.length} đỉnh, ${after.into_ring_is_exit ? 'trong vòng là phía ngoài trời' : 'trong vòng là phía trong nhà'}`,
-  })
+  // Chưa có vòng thì không có gì để hoàn tác: mục duyệt ghi null, chuyên gia chỉnh lại thay vì hoàn tác
+  await trackParameterChange({ farm, house, camera }, user, 'counting_ring', { ring: before ?? null }, { ring: after })
+  if (!opts.fromReview) {
+    await notifyExpertDecision(user, farm._id, auditId, {
+      what: 'vẽ lại vòng đếm', place: `Camera ${camera.device_id}, nhà "${house.name}"`,
+      detail: `${after.points.length} đỉnh, ${after.into_ring_is_exit ? 'trong vòng là phía ngoài trời' : 'trong vòng là phía trong nhà'}`,
+    })
+  }
   const { rtsp_url: _rtspUrl, ...publicFields } = camera.toObject()
   return { ...publicFields, ring_delivered: delivered }
 }

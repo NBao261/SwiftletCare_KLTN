@@ -21,8 +21,8 @@ import type { CurrentUser, HealthStatus } from '@/types'
 
 /**
  * EXPERT-FR-005, 006, 013, BR-31, BR-33, SM-09 — báo cáo sức khỏe theo nhà yến, mỗi Zone một mục: ngày, tuần,
- * tháng (job) và theo yêu cầu (tối đa 31 ngày). Trạng thái các ngày của kỳ dựng lúc đọc và che theo người
- * gọi như /health-reports/days. Báo cáo tuần theo Zone cũ (healthReport.service) vẫn chạy song song cho các
+ * tháng (job) và theo yêu cầu (tối đa 31 ngày). Trạng thái các ngày của kỳ dựng lúc đọc như
+ * /health-reports/days. Báo cáo tuần theo Zone cũ (healthReport.service) vẫn chạy song song cho các
  * màn hiện có; `getReport` và `setConclusion` nhận cả hai loại id.
  */
 
@@ -104,7 +104,7 @@ export async function buildHouseReport(
   return { house_metrics: { return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend), weather }, zone_sections }
 }
 
-/** Trung bình tỷ lệ chim về của các ngày đủ phiên — dùng chung lúc tạo và lúc che theo người gọi */
+/** Trung bình tỷ lệ chim về của các ngày đủ phiên */
 function averageReturnRate(trend: HouseReportMetrics['return_rate_trend']): number | null {
   const complete = trend.filter(d => d.complete && d.return_rate !== null)
   return complete.length
@@ -139,7 +139,7 @@ export async function generateHouseReport(
   return { report: result.value, created: !result.lastErrorObject?.updatedExisting }
 }
 
-/** EXPERT-FR-005 — báo cáo mới: báo Farm Owner và chuyên gia trong ứng dụng, không kèm trạng thái (BR-31) */
+/** EXPERT-FR-005 — báo cáo mới: báo Farm Owner và chuyên gia trong ứng dụng; trạng thái xem trong báo cáo */
 async function notifyReportReady(report: IHouseHealthReport): Promise<void> {
   const house = await House.findById(report.house_id).select('name').lean()
   const owners = (await findRecipients(String(report.farm_id))).map(u => String(u._id))
@@ -250,23 +250,15 @@ export async function listHouseReports(user: CurrentUser, query: ListHouseReport
   return { records, total, page, limit }
 }
 
-/** Báo cáo theo nhà cho người gọi: thêm các ngày của kỳ đã che (BR-31) và số ngày theo trạng thái */
+/** Báo cáo theo nhà cho người gọi: thêm các ngày của kỳ và số ngày theo trạng thái */
 async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser, now: Date) {
   const { house } = await assertHouseAccess(String(report.house_id), user)
   await report.populate('expert_conclusion.by', 'full_name')
   const days = await presentHouseDays(user, house, report.period_start, report.period_end, now)
   const status_counts: Record<HealthStatus, number> = { GOOD: 0, WATCH: 0, ACTION: 0, INSUFFICIENT_DATA: 0 }
-  const hiddenDates = new Set<string>()
-  for (const day of days) {
-    if ('current_status' in day) status_counts[day.current_status]++
-    else hiddenDates.add(day.date)
-  }
+  for (const day of days) status_counts[day.current_status]++
   const plain = report.toObject()
-  // BR-31 — tỷ lệ chim về của ngày người gọi chưa chấm cũng che như `indicators` ở API ngày (chỉ số đàn
-  // chim suy từ nó); trung bình tính lại trên các ngày người đó thấy. Dữ liệu lưu không đổi.
   const metrics: HouseReportMetrics = plain.house_metrics
-  const return_rate_trend = metrics.return_rate_trend.map(d =>
-    (hiddenDates.has(d.date) ? { ...d, return_rate: null } : d))
   // Bản lưu cũ có thể thiếu object rỗng (minimize mặc định của Mongoose): bù lại để luôn đúng api-spec
   const sections: Partial<HouseReportZoneSection>[] = plain.zone_sections ?? []
   const zone_sections = sections.map(section => ({
@@ -280,8 +272,8 @@ async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser,
     zone_sections,
     expert_conclusion: plain.expert_conclusion ?? null,
     has_conclusion: !!report.expert_conclusion,
-    house_metrics: { ...metrics, return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend) },
-    days, status_counts, hidden_days: hiddenDates.size,
+    house_metrics: metrics,
+    days, status_counts,
   }
 }
 

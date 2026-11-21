@@ -19,7 +19,7 @@ export function StatRow({ label, value, isWarning = false }: StatRowProps) {
       <Text variant="small" color={palette.textSecondary} style={styles.label}>
         {label}
       </Text>
-      <Text variant="small" weight="semiBold" color={isWarning ? palette.alert : palette.text} style={styles.value}>
+      <Text variant="small" weight="semiBold" color={isWarning ? palette.alert : palette.text}>
         {value}
       </Text>
     </View>
@@ -29,5 +29,4 @@ export function StatRow({ label, value, isWarning = false }: StatRowProps) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   label: { flex: 1 },
-  value: { fontVariant: ['tabular-nums'] },
 })

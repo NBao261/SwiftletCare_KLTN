@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native'
 import { router } from 'expo-router'
+import { CaretLeftIcon } from 'phosphor-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { refetchVisibleQueries } from '@/config/queryClient'
 import { AnalyticsFilterBar } from '@/components/analytics/AnalyticsFilterBar'
@@ -52,6 +53,8 @@ export default function AnalyticsScreen() {
   // Vị trí hàng tab trong vùng cuộn: chạm ô KPI thì cuộn tới đó
   const tabsY = useRef(0)
   const [isHouseSheetOpen, setHouseSheetOpen] = useState(false)
+  // Sheet chọn 2 bước như tab Trang trại: null = bước chọn trang trại, có id = bước chọn nhà của farm đó
+  const [sheetFarmId, setSheetFarmId] = useState<string | null>(null)
   const [isRefreshing, setRefreshing] = useState(false)
   const house = scope.house
 
@@ -164,17 +167,31 @@ export default function AnalyticsScreen() {
     )
   }
 
+  // Số nhà của từng farm cho bước chọn trang trại; nhà của farm đang chọn ở bước chọn nhà (đã xếp nhà ghim lên đầu)
+  const houseCountByFarmId = new Map<string, number>()
+  for (const choice of scope.houseChoices) {
+    houseCountByFarmId.set(choice.house.farm_id, (houseCountByFarmId.get(choice.house.farm_id) ?? 0) + 1)
+  }
+  const sheetHouseChoices = scope.houseChoices.filter(choice => choice.house.farm_id === sheetFarmId)
+  const sheetFarmName = sheetHouseChoices[0]?.farmName ?? ''
+
+  // Mở sheet: thuộc từ 2 farm thì bắt đầu ở bước chọn trang trại, 1 farm thì vào thẳng bước chọn nhà
+  const openHouseSheet = () => {
+    setSheetFarmId(scope.hasMultipleFarms ? null : (scope.farm?._id ?? null))
+    setHouseSheetOpen(true)
+  }
+
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
-      {/* Cùng kiểu header chọn nhà của màn Farm: tên nhà ▾, bấm để đổi nhà */}
+      {/* Cùng kiểu header của màn Farm: tên nhà ▾ (thuộc từ 2 farm thì kèm tên farm); bấm thì chọn trang trại trước rồi tới nhà */}
       <AppHeader
         onBack={returnBack}
         leading={
           <HeaderPicker
-            title={house?.name ?? t('Phân tích')}
-            onPress={scope.houses.length > 1 ? () => setHouseSheetOpen(true) : undefined}
+            title={house ? (scope.hasMultipleFarms && scope.farm ? `${scope.farm.name} · ${house.name}` : house.name) : t('Phân tích')}
+            onPress={scope.houseChoices.length > 1 ? openHouseSheet : undefined}
             accessibilityLabel={
-              house && scope.houses.length > 1
+              house && scope.houseChoices.length > 1
                 ? t('{house}, bấm để đổi nhà', { house: house.name })
                 : (house?.name ?? t('Phân tích'))
             }
@@ -182,17 +199,45 @@ export default function AnalyticsScreen() {
         }
       />
       {renderBody()}
-      <OptionSheet
-        visible={isHouseSheetOpen}
-        title={t('Chọn nhà yến')}
-        options={scope.houses.map(item => ({ id: item._id, label: item.name }))}
-        selectedId={house?._id}
-        onSelect={houseId => {
-          setHouseSheetOpen(false)
-          scope.selectHouse(houseId)
-        }}
-        onClose={() => setHouseSheetOpen(false)}
-      />
+      {sheetFarmId === null ? (
+        <OptionSheet
+          visible={isHouseSheetOpen}
+          title={t('Chọn trang trại')}
+          // Farm chưa có nhà thì không có gì để chọn ở bước sau nên không liệt kê
+          options={scope.farms
+            .filter(item => houseCountByFarmId.has(item._id))
+            .map(item => ({
+              id: item._id,
+              label: item.name,
+              caption: t('{count} nhà yến', { count: houseCountByFarmId.get(item._id) ?? 0 }),
+            }))}
+          selectedId={scope.farm?._id}
+          onSelect={setSheetFarmId}
+          onClose={() => setHouseSheetOpen(false)}
+        />
+      ) : (
+        <OptionSheet
+          visible={isHouseSheetOpen}
+          title={scope.hasMultipleFarms ? t('Chọn nhà yến · {farm}', { farm: sheetFarmName }) : t('Chọn nhà yến')}
+          options={sheetHouseChoices.map(choice => ({
+            id: choice.house._id,
+            label: choice.house.name,
+            // Nhà ghim lên đầu như tab Trang trại, ghi "Đã ghim"
+            caption: choice.isPinned ? t('Đã ghim') : undefined,
+          }))}
+          selectedId={house?._id}
+          onSelect={houseId => {
+            setHouseSheetOpen(false)
+            scope.selectHouse(houseId)
+          }}
+          onClose={() => setHouseSheetOpen(false)}
+          footerAction={
+            scope.hasMultipleFarms
+              ? { label: t('Đổi trang trại'), icon: CaretLeftIcon, onPress: () => setSheetFarmId(null) }
+              : undefined
+          }
+        />
+      )}
     </View>
   )
 }

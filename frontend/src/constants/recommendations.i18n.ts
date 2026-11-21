@@ -33,6 +33,7 @@ const vi = {
   // Farm Owner — danh sách khuyến nghị
   'page.title': 'Khuyến nghị',
   'page.subtitle': 'Hệ thống xét luật của chuyên gia mỗi ngày sau khi đánh giá ngày; luật thoả ở nhà nào thì mở khuyến nghị cho nhà đó.',
+  'page.short': 'Khuyến nghị mở theo luật của chuyên gia',
   'page.statusLabel': 'Trạng thái',
   'page.allStatuses': 'Mọi trạng thái',
   'page.pickFarmTitle': 'Chọn một trang trại',
@@ -167,6 +168,7 @@ const en: Record<RecommendationsKey, string> = {
 
   'page.title': 'Recommendations',
   'page.subtitle': 'The expert\'s rules are checked every day after the daily assessment; a rule met at a house opens a recommendation for it.',
+  'page.short': 'Recommendations opened by the expert rules',
   'page.statusLabel': 'Status',
   'page.allStatuses': 'All statuses',
   'page.pickFarmTitle': 'Choose a farm',

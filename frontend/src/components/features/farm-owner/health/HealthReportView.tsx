@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import {
   BirdIcon, CalendarDotsIcon, CalendarXIcon, CloudRainIcon, DropIcon, FilePdfIcon, HouseIcon, ThermometerSimpleIcon, type Icon,
 } from '@phosphor-icons/react';
+import WeatherSource from '@/components/common/WeatherSource';
 import HealthReportConclusion from '@/components/features/farm-owner/health/HealthReportConclusion';
 import HealthStatusBadge from '@/components/common/HealthStatusBadge';
 import { vietnamDate } from '@/components/common/healthDay.utils';
@@ -87,10 +88,10 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
       {/* Tên nhà là tiêu đề (dài thì "…", rê chuột xem đủ); loại báo cáo, kỳ, giờ tạo chữ nhạt ở dòng dưới; nút PDF ở góc phải */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h1 className="flex min-w-0 items-center gap-2 text-h1 text-charcoal">
+          <h2 className="flex min-w-0 items-center gap-2 text-h1 text-charcoal">
             <HouseIcon size={24} weight="bold" className="shrink-0" aria-hidden />
             <span title={report.house_name} className="truncate">{report.house_name}</span>
-          </h1>
+          </h2>
           <p className="text-base font-semibold text-warmGray">
             {t(`kindTitle.${report.kind}`)} · {reportPeriod(report, format)} · {t('rd.generatedAt', { time: generatedAt })}
           </p>
@@ -116,7 +117,6 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
                 );
               })}
             </dl>
-            {report.hidden_days > 0 && <p className="text-xs text-warmGray">{t('rd.hiddenDays', { n: report.hidden_days })}</p>}
           </Group>
           <Group title={t('rd.flock')} grow="flex-[2_1_20rem]">
             <Figures
@@ -134,6 +134,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
         </div>
         <Group title={t('detail.weather')} grow="">
           {weather ? <Figures facts={weather} icons={WEATHER_ICONS} /> : <p className="text-sm text-warmGray">{t('detail.weatherNone')}</p>}
+          {weather && <WeatherSource className="mt-2" />}
         </Group>
         <p className="text-xs italic text-warmGray">{t('detail.disclaimer')}</p>
       </section>

@@ -24,8 +24,16 @@ function toQuery(params: WorkOrderListParams): Record<string, string> {
   )
 }
 
+// Thân POST /work-orders: Farm Owner mở phiếu sửa chữa bằng tay (OPS-FR-001), có thể gắn cảnh báo
+export interface CreateWorkOrderInput {
+  houseId: string
+  title: string
+  description?: string
+  alertId?: string
+}
+
 // API Work Order sửa chữa (OPS-FR-001…004, G-21). Farm Technician chỉ thấy và làm Work Order của nhà được giao (nhà khác 403);
-// duyệt, mở lại, huỷ, giao lại chỉ Farm Owner, trên web
+// mở tay, duyệt, mở lại, huỷ, giao lại chỉ Farm Owner
 export const workOrderApi = {
   // Mới mở trước, phân trang theo meta
   list: (params: WorkOrderListParams) =>
@@ -61,4 +69,28 @@ export const workOrderApi = {
     form.append('photo', buildPhotoPart(photo, `checklist-${itemIndex + 1}`))
     return apiClient.put<ApiResponse<WorkOrder>>(url, form, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
+
+  // Mở phiếu bằng tay, giao cho kỹ thuật viên chính của nhà (không có thì chủ trại xử lý); cảnh báo đã có phiếu đang mở thì 409
+  create: ({ houseId, title, description, alertId }: CreateWorkOrderInput) =>
+    apiClient.post<ApiResponse<WorkOrder>>(ENDPOINTS.WORK_ORDERS, {
+      house_id: houseId,
+      title,
+      description: description || undefined,
+      alert_id: alertId,
+    }),
+
+  // AWAITING_APPROVAL → CLOSED, đóng cả cảnh báo gắn kèm; trạng thái khác 409
+  approve: (workOrderId: string) => apiClient.post<ApiResponse<WorkOrder>>(ENDPOINTS.WORK_ORDER_APPROVE(workOrderId)),
+
+  // Về IN_PROGRESS kèm ghi chú của chủ trại (bắt buộc)
+  reopen: (workOrderId: string, note: string) =>
+    apiClient.post<ApiResponse<WorkOrder>>(ENDPOINTS.WORK_ORDER_REOPEN(workOrderId), { note }),
+
+  // Huỷ phiếu chưa đóng kèm lý do (bắt buộc)
+  cancel: (workOrderId: string, reason: string) =>
+    apiClient.post<ApiResponse<WorkOrder>>(ENDPOINTS.WORK_ORDER_CANCEL(workOrderId), { reason }),
+
+  // Giao cho một kỹ thuật viên của nhà; người không phải thợ của nhà thì 409
+  reassign: (workOrderId: string, assigneeId: string) =>
+    apiClient.post<ApiResponse<WorkOrder>>(ENDPOINTS.WORK_ORDER_REASSIGN(workOrderId), { assignee_id: assigneeId }),
 }

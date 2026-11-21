@@ -10,6 +10,8 @@ export interface ActionsMenuItem {
   onClick: () => void
   danger?: boolean
   disabled?: boolean
+  // Lý do mục bị khoá, hiện thành dòng phụ dưới nhãn
+  hint?: string
 }
 
 interface ActionsMenuProps {
@@ -20,10 +22,12 @@ const MENU_ITEM_HEIGHT = 36
 const ITEM_GAP = 2 // space-y-0.5
 const MENU_CHROME = 14 // p-1.5 trên + dưới (12) + border (2)
 const DIVIDER_HEIGHT = 11 // my-1 + h-px (9) + 1 gap space-y-0.5 (2)
+const HINT_HEIGHT = 40 // dòng phụ lý do khoá: tối đa 2 dòng chữ 13px trong khung w-48
 
 function estimateMenuHeight(items: ActionsMenuItem[]): number {
   const dividers = items.filter((item, i) => item.danger && i > 0 && !items[i - 1].danger).length
-  return items.length * MENU_ITEM_HEIGHT + Math.max(0, items.length - 1) * ITEM_GAP + dividers * DIVIDER_HEIGHT + MENU_CHROME
+  const hints = items.filter(item => item.hint).length
+  return items.length * MENU_ITEM_HEIGHT + hints * HINT_HEIGHT + Math.max(0, items.length - 1) * ITEM_GAP + dividers * DIVIDER_HEIGHT + MENU_CHROME
 }
 
 /**
@@ -133,6 +137,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
                   )}
                 >
                   {t(item.label)}
+                  {item.hint && <span className="mt-0.5 block text-small font-normal text-warmGray">{t(item.hint)}</span>}
                 </button>
               </Fragment>
             )

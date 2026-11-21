@@ -96,7 +96,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  link: { minHeight: 32, justifyContent: 'center' },
+  // Chữ và icon đứng sau nằm cùng một hàng như các kiểu nút khác (không có row thì icon rớt xuống dưới chữ)
+  link: { minHeight: 32, flexDirection: 'row', gap: Spacing.xs, alignItems: 'center', justifyContent: 'center' },
   underline: { textDecorationLine: 'underline' },
   disabled: { opacity: 0.5 },
 })

@@ -164,44 +164,30 @@ describe('số liệu của báo cáo (EXPERT-FR-005)', () => {
   })
 })
 
-describe('BR-31 — báo cáo che ngày người gọi chưa chấm', () => {
-  it('ngày chưa chấm không có trạng thái, lý do, điểm, tỷ lệ chim về; status_counts bỏ ngày đó; chấm xong thì hiện', async () => {
-    const { farm, house, ownerToken, expertToken } = await setup()
+describe('BR-31 — báo cáo hiện cả ngày người gọi chưa chấm', () => {
+  it('ngày chưa chấm có trạng thái, lý do, điểm và tỷ lệ chim về; status_counts đếm mọi ngày', async () => {
+    const { farm, house, ownerToken } = await setup()
     await seedCounts(house, DAY, [90, 70])
-    // Người chấm thứ hai là chủ đồng sở hữu (BR-31, Report 3 4.2.0: chuyên gia không chấm)
+    // Người chấm thứ hai là chủ đồng sở hữu (Report 3 4.2.0: chuyên gia không chấm)
     const coOwner = await User.create({ email: 'co-report@t.vn', password_hash: 'password123', full_name: 'Đồng chủ', role: 'FARM_OWNER' })
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: coOwner._id, role: 'FARM_OWNER' } } })
     const coOwnerToken = tokenFor(coOwner._id, 'FARM_OWNER')
-    const shown = await mkDay(house, addDays(DAY, -1), 'WATCH')
-    const hidden = await mkDay(house, DAY, 'ACTION')
-    await call('post', `/health-reports/days/${shown._id}/rating`, ownerToken, { rating: 'GOOD' }).expect(201)
-    await call('post', `/health-reports/days/${hidden._id}/rating`, coOwnerToken, { rating: 'ACTION' }).expect(201)
-    // Chuyên gia không phải người chấm: báo cáo không che ngày nào với chuyên gia
-    const expertView = await call('get', `/health-reports/${(await generateHouseReport('CUSTOM', String(house._id), addDays(DAY, -1), DAY))!.report._id}`, expertToken).expect(200)
-    expect(expertView.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 1 }, hidden_days: 0 })
-    expect(expertView.body.data.house_metrics).toMatchObject({
-      return_rate_trend: [{ date: addDays(DAY, -1), return_rate: 90 }, { date: DAY, return_rate: 70 }], avg_return_rate: 80,
-    })
+    const rated = await mkDay(house, addDays(DAY, -1), 'WATCH')
+    const pendingDay = await mkDay(house, DAY, 'ACTION')
+    await call('post', `/health-reports/days/${rated._id}/rating`, ownerToken, { rating: 'GOOD' }).expect(201)
+    await call('post', `/health-reports/days/${pendingDay._id}/rating`, coOwnerToken, { rating: 'ACTION' }).expect(201)
     const { report } = (await generateHouseReport('CUSTOM', String(house._id), addDays(DAY, -1), DAY))!
 
     const res = await call('get', `/health-reports/${report._id}`, ownerToken).expect(200)
-    const days = res.body.data.days as { _id: string; current_status?: string; current_reasons?: unknown; ratings?: unknown }[]
-    const pending = days.find(d => d._id === String(hidden._id))!
-    expect(pending).not.toHaveProperty('current_status')
-    expect(pending).not.toHaveProperty('current_reasons')
-    expect(pending).not.toHaveProperty('ratings')
-    expect(res.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 0 }, hidden_days: 1 })
-    // Tỷ lệ chim về của ngày chưa chấm cũng che, trung bình chỉ còn ngày đã thấy (BR-31)
+    const days = res.body.data.days as { _id: string; current_status?: string; my_rating_state?: string; ratings?: unknown[] }[]
+    const pending = days.find(d => d._id === String(pendingDay._id))!
+    expect(pending).toMatchObject({ my_rating_state: 'PENDING', current_status: 'ACTION' })
+    expect(pending.ratings).toHaveLength(1)
+    expect(res.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 1 } })
+    expect(res.body.data).not.toHaveProperty('hidden_days')
     expect(res.body.data.house_metrics).toMatchObject({
-      return_rate_trend: [{ date: addDays(DAY, -1), return_rate: 90 }, { date: DAY, return_rate: null, complete: true }], avg_return_rate: 90,
+      return_rate_trend: [{ date: addDays(DAY, -1), return_rate: 90 }, { date: DAY, return_rate: 70 }], avg_return_rate: 80,
     })
-
-    await call('post', `/health-reports/days/${hidden._id}/rating`, ownerToken, { rating: 'ACTION' }).expect(201)
-    const after = await call('get', `/health-reports/${report._id}`, ownerToken).expect(200)
-    expect(after.body.data).toMatchObject({ status_counts: { WATCH: 1, ACTION: 1 }, hidden_days: 0 })
-    expect(after.body.data.house_metrics).toMatchObject({ return_rate_trend: [{ return_rate: 90 }, { return_rate: 70 }], avg_return_rate: 80 })
-    // Dữ liệu lưu không bị che
-    expect((await HouseHealthReport.findById(report._id).lean())!.house_metrics.avg_return_rate).toBe(80)
   })
 })
 
@@ -210,7 +196,7 @@ describe('POST /health-reports — báo cáo theo yêu cầu (tối đa 31 ngày
     const { house, ownerToken } = await setup()
     const body = { houseId: String(house._id), from: addDays(DAY, -6), to: DAY }
     const first = await call('post', '/health-reports', ownerToken, body).expect(201)
-    expect(first.body.data).toMatchObject({ kind: 'CUSTOM', period_start: body.from, period_end: body.to, hidden_days: 0 })
+    expect(first.body.data).toMatchObject({ kind: 'CUSTOM', period_start: body.from, period_end: body.to })
     const again = await call('post', '/health-reports', ownerToken, body).expect(200)
     expect(again.body.data._id).toBe(first.body.data._id)
     expect(await HouseHealthReport.countDocuments({ kind: 'CUSTOM' })).toBe(1)

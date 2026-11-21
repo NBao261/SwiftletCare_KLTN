@@ -34,6 +34,7 @@ import { usePalette } from '@/hooks/theme/usePalette'
 import { useFarmPrefsStore } from '@/stores/farmPrefsStore'
 import type { BirdCountToday, CameraNode } from '@/types'
 import { formatBirdCountRows, getCameraStatusBadge, isForbiddenError } from '@/utils/camera.utils'
+import { withSimulatedLabel } from '@/utils/device.utils'
 import { t } from '@/utils/i18n.utils'
 
 // Thanh camera khi thu gọn: nhường chỗ cho cảm biến
@@ -113,7 +114,7 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
     controls.keepVisible()
     action()
   }
-  const statusText = camera ? getCameraStatusBadge(camera.status) : '_'
+  const statusText = camera ? withSimulatedLabel(getCameraStatusBadge(camera.status), camera.simulated) : '_'
 
   // Mở trình vẽ vòng đếm; camera đang chờ bấm phát thì phát luôn để vẽ trên hình thật
   const openRingEditor = () => {

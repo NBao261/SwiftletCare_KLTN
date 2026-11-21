@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.15.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.14.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.17.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.16.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -56,17 +56,42 @@
 
 ## 0. Changelog
 
-### v2.14.0 → v2.15.0 (bố cục Farm Technician, Admin và Chuyên gia, `docs/reports/todo-ui-layout-1120.md` §3.2, §3.3, §3.4)
+### v2.16.0 → v2.17.0 (bố cục Farm Owner, `docs/reports/todo-ui-layout-1120.md` §5)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Menu Farm Owner 10 mục, 3 nhóm** (Theo dõi · Vận hành · Chuyên môn): Tổng quan = Tình trạng các nhà · So sánh nhà · Điều khiển tay; Công việc = Phiếu công việc · Bảo trì định kỳ · Khuyến nghị; Chuyên môn = 9 trang `/domain-expert/*`. Badge: Cảnh báo, Công việc (phiếu chờ duyệt), Chuyên môn (cảnh báo chờ kết luận ở trang trại chưa có chuyên gia, BR-22), gom ở `hooks/common/useMenuBadges`. Tab đang mở là tab có đường dẫn dài nhất chứa trang (`activeTabPath`), nên `/dashboard/scada` không sáng cả tab `/dashboard`. |
+| 2 | **Tổng quan:** 4 ô KPI (Nhà cần chú ý · Cảnh báo chưa xử lý, dòng phụ số chờ xác nhận · Thiết bị mất kết nối (chỉ OFFLINE) · Phiếu chờ duyệt) · lưới thẻ nhà (số đo từng Zone tô theo ngưỡng kèm icon, chế độ tự động/tay, giai đoạn, trạng thái hôm nay, cảnh báo chưa xử lý và phiếu đang mở, chim về, ANALYTICS-FR-015; ô KPI và thẻ cùng lấy số từ overview) · Việc cần làm. Không ảnh, không dải tình trạng, không bảng cảnh báo lặp trang Cảnh báo. "Ổn định" chỉ khi nhà có ít nhất 1 bộ điều khiển, mọi bộ online và số đo trong ngưỡng (`houseLiveStatus`), ô "Nhà cần chú ý" đếm theo cùng luật. Dock điện thoại có mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại. |
+| 3 | **Một trang không lồng tab:** So sánh nhà chỉ còn bảng so sánh (tình hình từng nhà đã ở thẻ nhà của Tổng quan). |
+| 4 | **Thanh phạm vi chỉ ở header** ở mọi khổ màn; trang không vẽ bản sao `ScopeFilter` cho điện thoại. Điện thoại: khung lọc thành lưới 2 cột, hàng tab xuống dòng. |
+| 5 | **Biểu đồ:** đường đếm chim nối thẳng các điểm (`tension: 0`); so sánh Zone chỉ còn bảng (không cột từ 0); phân bổ loại tổ là thanh ngang một màu có số kg, % ghi bên cạnh (không vòng tổng 100 %). |
+
+### v2.15.0 → v2.16.0 (khung chung cho 4 role, `docs/reports/todo-ui-layout-1120.md` §4)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Sidebar và header hết "đóng băng" (4.1 viết lại).** Bỏ khối "Xin chào · Vai trò" và nút Đăng xuất ở sidebar; bỏ nhóm "Khác": Cài đặt chỉ ở menu avatar. Menu avatar (tên, email, vai trò · Cài đặt · Quyền riêng tư · Đăng xuất) hiện ở mọi khổ màn và là chỗ đăng xuất duy nhất. Nhóm menu thu gọn được (`MenuSection.collapsible`). |
+| 2 | **Tên trang là `<h1>`** (gốc breadcrumb trên header); trang trong khung không tự đặt `h1`. |
+| 3 | **Không chữ nào dưới 13px:** `text-caption`, `text-xs` và `.label-caption` lên 13px; bỏ `text-[10px]`, `text-[11px]`. |
+| 4 | **Một nút tô đậm mỗi màn:** chip lọc, chip sắp xếp, tab và nút chọn đoạn đang chọn là pill trắng (`bg-white shadow-card`), không tô charcoal. |
+| 5 | **Vùng bấm điện thoại ≥ 44px:** `Button sm`, `SelectMenu`, `FilterChip`, `SortChips`, `SearchInput` cao 44px dưới `sm`, desktop giữ 36px. |
+| 6 | **Phạm vi tự chọn:** `scopeLevelOf(path)` trong `constants/roles.ts`; trang cần một trang trại / nhà / Zone thì `useScopeFilter` tự chọn bậc có dữ liệu và `ScopeFilter` bỏ mục "Tất cả" ở bậc đó. Thanh phạm vi dưới 1280px xuống hàng riêng dưới header. |
+| 7 | **Không ảnh trang trí:** bỏ `pageHeroStore`, `usePageHero` và ảnh nền Tổng quan (4.2). |
+| 8 | **Mô tả card một dòng** `text-body text-graphite`; giải thích dài vào nút (i) (`ui/InfoTip`, prop `help` của `SectionCard`, `FarmFrame`). |
+| 9 | **Bảng thành thẻ ở điện thoại:** `DataTable` / `FixedRowsTable` nhận `mobileCard`. |
+| 10 | **Một ô KPI cho 4 role:** `components/common/KpiTile` thay `ui/StatTile` và `features/farm-owner/farms/KpiTile`. |
+| 11 | **Trang Cài đặt theo role** (bảng ở 4.1): một cột; kênh cảnh báo theo mức (Thông báo đẩy · Telegram) cho Chủ nhà yến và Kỹ thuật viên, giờ im lặng 24 giờ chỉ Chủ nhà yến, chuyên gia chỉ có dòng "thông báo trong ứng dụng"; mỗi khối một nút lưu, thành nút chính khi có thay đổi. |
+
+### v2.14.0 → v2.15.0 (bố cục Farm Technician và Admin, `docs/reports/todo-ui-layout-1120.md` §3.3, §3.4)
 
 | # | Thay đổi |
 |---|---|
 | 1 | **Mục menu có tab.** `MenuItem.tabs` (`{ label, path }[]`) gộp nhiều trang vào một mục menu: sidebar sáng mục đó ở mọi trang con, header lấy tên mục làm tên trang, `common/SectionTabs` vẽ hàng tab pill trên nội dung (lọc bằng `canAccessPath`). Route cũ giữ nguyên. Ngoại lệ thứ ba của vùng đóng băng 4.1. Admin: Người dùng = Tài khoản (`/users`) + Yêu cầu xoá tài khoản (`/account-requests`). |
 | 2 | **Bảng:** `FixedRowsTable` và `DataTable minRows` chỉ đệm dòng trống khi có từ 2 trang trở lên; 1 trang thì bảng cao vừa dữ liệu, bảng rỗng cao 4 dòng. Bỏ cột STT (giữ ở Nhật ký hệ thống, nơi thứ tự có nghĩa). |
 | 3 | **Một card một trang thì card không lặp tên trang:** `SectionCard` cho bỏ `title`, chỉ còn dòng mô tả (Cảnh báo, Kho thiết bị, OTA Firmware, Yêu cầu xoá tài khoản). Trang OTA vào khung `SectionCard` như các trang Admin khác. |
-| 4 | **Farm Technician:** menu Cảnh báo (trang chủ `/alerts`, MF-02) · Thiết bị & Cảm biến · Nhà được giao; Cài đặt tạm giữ lại tới khi menu avatar (SH-02/SH-03) hoàn tất trên mobile. Trang Thiết bị dùng khung lọc `ScopeFilter` trên header như trang Farm Owner (bỏ card "Vị trí:"); trang Nhà được giao mở Thiết bị đã lọc đúng nhà qua `zoneStore.setScopePath`, không đưa mã vào URL. |
+| 4 | **Farm Technician:** menu Cảnh báo · Thiết bị & Cảm biến · Nhà được giao · Cài đặt, trang chủ là `/alerts` (MF-02). Trang Thiết bị dùng khung lọc `ScopeFilter` trên header như trang Farm Owner (bỏ card "Vị trí:"); trang Nhà được giao mở Thiết bị đã lọc đúng nhà qua `zoneStore.setScopePath`, không đưa mã vào URL. |
 | 5 | **Bảng thuật ngữ 6.2 viết lại** (người · thiết bị · chuyên môn, có cột "Không dùng") và **mục mới 6.4 Cách viết chữ tiếng Việt**: dấu kiểu mới (khoẻ, xoá, huỷ), "tỷ lệ", Chủ nhà yến, Kỹ thuật viên, Zone viết hoa, Bộ điều khiển, Camera đếm chim (thay "Nút AI"), Mất kết nối (thay Offline), Kết nối cuối (thay heartbeat), Kiểm chứng cảnh báo và Kết luận (thay thẩm định, phán quyết), Điều khiển tay (thay SCADA); không gạch dài nối câu, không "Vui lòng", không tên kỹ thuật. Sửa toàn bộ chữ hiển thị của web (khoảng 550 chuỗi, khoá `en.ts` đổi theo, tên loại cảnh báo viết lại). |
 | 6 | **Kiểm tự động thuật ngữ:** `src/i18n/wording.test.ts` quét mọi chuỗi tiếng Việt trong `src` (trừ test) và báo chữ thuộc cột "Không dùng" của 6.2. |
-| 7 | **Domain Expert (todo-ui-layout §3.2, DE-01…DE-11):** Chuyên môn 7 mục nhờ tab gộp: Tham số điều khiển (Ngưỡng/hệ số, Duyệt & đề xuất, Hồ sơ, Luật bù thời tiết) và Đếm chim (Lịch đếm, Vòng đếm camera); Vận hành (chỉ đọc) thu gọn mặc định, giữ `/overview` tới khi FO-11 merge; bỏ banner SCADA và thay dải nhắc quyền bằng `ExpertReadOnlyBadge`. |
 
 ### v2.13.0 → v2.14.0 (soát lại sau PR #197, G-29, `todo-audit-1119.md` §9)
 
@@ -218,7 +243,7 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 
 1. **Nền xám là sân khấu, nền trắng là diễn viên.** `#EAEAEA` (canvas) không bao giờ là nơi đặt nội dung trực tiếp — mọi text/số liệu/control đều nằm trong 1 khung trắng nổi lên trên.
 2. **Không pha màu ngoài hệ thống — tuyệt đối.** Kể cả các sắc xám/đen cũng phải nằm trong đúng 1 hue ấm (~28°) đã chốt ở mục 2 — không dùng lại bất kỳ mã xám/đen "mặc định của framework" (VD `#000`, `#333`, Tailwind `slate/zinc` mặc định) vì các mã đó thường có tông lạnh khác hue hệ thống.
-3. **Sidebar/Topbar là vùng đóng băng.** Layout, kích thước giữ nguyên 100% theo code hiện tại. Chỉ 3 việc được phép chạm: (a) logo ảnh (mục 3), (b) token màu ngữ nghĩa đổi giá trị hex — sidebar/topbar tự ăn theo token mới, không cần và không được sửa CSS/kích thước của chính nó, (c) mục menu có `tabs` (4.1).
+3. **Sidebar/Topbar dùng chung cho 4 role, chỉ đổi theo 4.1.** Nội dung menu của từng role nằm trong `<Role>Layout.tsx`; khung (sidebar, header, menu avatar, dock) chỉ sửa ở `components/layouts/` và áp cho cả 4 role cùng lúc.
 4. **Không có gì "giả" mà không được gắn nhãn.** Số liệu chưa có API thật phải tự khai báo (mục 7).
 5. **Một ngôn ngữ chữ, một hệ bo góc, một hệ shadow, một hệ xám** — dùng xuyên suốt, không phát sinh biến thể lẻ tẻ giữa các trang/role (mục 9).
 
@@ -231,19 +256,19 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 | Khung trang | Cột nội dung `max-w-[1400px] mx-auto px-6 lg:px-8`; các khối trong trang xếp `flex flex-col gap-5` (Dashboard, chi tiết) hoặc `gap-6` (danh sách) | `layouts/AppShell.tsx` |
 | Bo góc (token thật) | `rounded-xl` 16px · `rounded-2xl` 20px · `rounded-3xl` 28px · `rounded-full` | `tailwind.config.ts` |
 | Card | `Card size="md"` = `rounded-2xl p-5`; `Card size="lg"` = `rounded-3xl p-6`; nền trắng + `shadow-card` | `ui/Card.tsx` |
-| Khung section | Card lớn, tiêu đề `text-h2 text-charcoal` + mô tả `text-sm text-warmGray`, nút bên phải header, không icon vuông | `features/farm-owner/farms/FarmFrame.tsx` |
-| Ô chỉ số (KPI) | `rounded-2xl border border-warmGray/15 bg-white p-4`, nhãn `.label-caption`, icon tròn 28px, số `text-2xl font-extrabold`, dòng phụ 16px | `features/farm-owner/farms/KpiTile.tsx` |
+| Khung section | Card lớn, tiêu đề `text-h2 text-charcoal` + mô tả 1 dòng `text-body text-graphite` (giải thích dài vào prop `help`, nút (i)), nút bên phải header, không icon vuông | `features/farm-owner/farms/FarmFrame.tsx` |
+| Ô chỉ số (KPI) | `rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card`, nhãn `.label-caption` 13px, icon tròn 28px, số `text-2xl font-extrabold`, dòng phụ 13px; hàng KPI `grid grid-cols-2 lg:grid-cols-4`, 4 ô một hàng, không khung bao | `common/KpiTile.tsx` (mọi role) |
 | Bảng | **Chỉ dùng `DataTable`** (hoặc `FixedRowsTable` — bảng danh sách 10 dòng mỗi trang; có từ 2 trang trở lên thì trang cuối đệm dòng trống để khung không nhảy khi lật trang, 1 trang thì bảng cao vừa dữ liệu, bảng rỗng cao 4 dòng; `DataTable minRows` theo cùng quy tắc; không có cột STT, trừ Nhật ký hệ thống; dữ liệu phân trang ở server thì truyền `serverPagination={{ page, total, onChange }}`; **ngoại lệ:** bảng đợt thu ở trang Thu hoạch nằm trong cột 8/12 cạnh khung phân bổ loại tổ nên dùng `DataTable visibleRows={4} fillHeight`: màn xl hai khung khoá cứng cao `556px`, bảng lấp phần còn lại của khung (màn hẹp cao cố định 4 dòng), dòng còn lại cuộn dọc với tiêu đề cột đứng yên, không phân trang, không đệm dòng trống, `minTableWidth` 640, ô đệm ngang `px-3`): khung `rounded-2xl border-warmGray/15 shadow-card`, header `bg-warmGray/5`, `table-fixed` chia cột theo %, hover dòng `bg-warmGray/5` (chỉ nổi nền, chữ không đổi màu), ô 2 tầng (dòng chính đậm + dòng phụ xám). **Thao tác qua menu ⋯ ở cột cuối (`ActionsMenu`: Xem chi tiết, …) — bấm vào dòng không chuyển trang** | `ui/DataTable.tsx`; mẫu cột: `features/farm-owner/harvest/HarvestTable.tsx` |
 | Phân trang | `Pagination variant="full"` đặt dưới bảng, nút tròn `h-9` | `ui/Pagination.tsx` |
-| Lọc + tìm | Bảng danh sách: `SelectMenu` cho từng điều kiện (Trạng thái kèm số đếm, Mức độ, Trang trại…) + `ClearFiltersButton tone="danger" count` bên trái — cùng cao `h-9`, ô lọc rộng theo chữ `min-w-[80px] max-w-[220px]` (dài hơn thì cắt "…"), `px-3.5 text-xs font-medium`, cách nhau `gap-2`; `SearchInput` `lg:w-72` bên phải. `FilterChip` chỉ dùng khi ít lựa chọn và cần thấy hết cùng lúc (VD bộ lọc Nhật ký cảnh báo Dashboard) | `ui/SelectMenu.tsx`, `ui/ClearFiltersButton.tsx`, `ui/SearchInput.tsx` |
-| Nút | `Button` bo tròn hoàn toàn: `sm` `h-9 px-4`, `md` `h-12 px-5`; nút phụ trong card dùng `CAPSULE_ACTION_CLASS`; nút "Chi tiết" dùng `DETAIL_BUTTON_CLASS` | `ui/Button.tsx`, `farmStructure.constants.ts`, `harvest.constants.ts` |
-| Badge | Cỡ `px-2.5 py-0.5 text-[11px]`; mức độ theo 2.4; trạng thái theo bảng 2.6.1 | `common/SeverityBadge` |
+| Lọc + tìm | Bảng danh sách: `SelectMenu` cho từng điều kiện (Trạng thái kèm số đếm, Mức độ, Trang trại…) + `ClearFiltersButton tone="danger" count` bên trái — cùng cao `h-9`, ô lọc rộng theo chữ `min-w-[80px] max-w-[220px]` (dài hơn thì cắt "…"), `px-3.5 text-xs font-medium`, cách nhau `gap-2`; `SearchInput` `lg:w-72` bên phải. `FilterChip` chỉ dùng khi ít lựa chọn và cần thấy hết cùng lúc (VD chọn khoảng thời gian, thời hạn điều khiển tay) | `ui/SelectMenu.tsx`, `ui/ClearFiltersButton.tsx`, `ui/SearchInput.tsx` |
+| Nút | `Button` bo tròn hoàn toàn: `sm` `h-9 px-4` (dưới `sm` cao `h-11` = 44px), `md` `h-12 px-5`; nút phụ trong card dùng `CAPSULE_ACTION_CLASS`; nút "Chi tiết" dùng `DETAIL_BUTTON_CLASS` | `ui/Button.tsx`, `farmStructure.constants.ts`, `harvest.constants.ts` |
+| Badge | Cỡ `px-2.5 py-0.5 text-small`; mức độ theo 2.4; trạng thái theo bảng 2.6.1 | `common/SeverityBadge` |
 | Khung cảnh báo | Nền cam rất nhạt `bg-orange-50` + viền dày `border-2 border-orange-300`, **không** vạch màu ở cạnh; dòng bên trong nền trắng `bg-white border-orange-100`. Không dùng nền `orange-100` trở lên cho khung — trùng màu badge mức độ Cao làm badge chìm | `features/farm-owner/dashboard/ScadaNodeCard.tsx`, `features/farm-owner/farms/StructureEditModal.tsx` |
 | Ô nhập | Class `.input`: `rounded-xl border-warmGray/25 px-4 py-2.5` | `src/index.css` |
 | Popup | `Modal`/`ConfirmModal`/`NoteActionModal`: `rounded-3xl p-6 shadow-popover`, nền mờ theo 5.2. **Popup form nhiều ô**: ngang `className="max-w-3xl"`, 2 cột `md:grid-cols-[15rem_1fr]` — trái: lựa chọn loại (thẻ chọn: đang chọn `border-accent-600 bg-accent-600`, icon ô `bg-charcoal text-accent-600`) + ghi chú `bg-warmGray/5`; phải: các ô nhập. Chân popup `border-t`, canh phải: Secondary "Huỷ" + Primary "Gửi…" (không nút full width). Popup xác nhận ngắn vẫn dọc `max-w-sm/md` | `ui/Modal.tsx` |
 | Trạng thái rỗng/lỗi/tải | **Bảng rỗng:** `FixedRowsTable emptyContent={<TableEmptyState title description? />}` — hình minh hoạ chuẩn (vòng tròn mờ, chồng 3 thẻ giả với thẻ giữa viền `accent-600`, 6 icon lucide thiết bị/kỹ thuật/chim yến quanh) + tiêu đề `text-h3` + mô tả `text-small`, nằm giữa khung bảng. Khối không phải bảng: `EmptyState` (có nút Thử lại khi lỗi). Đang tải: `LoadingSkeleton` đúng chiều cao khối thật | `common/TableEmptyState.tsx`, `ui/FixedRowsTable.tsx`, `ui/` |
 
-Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTile`) mà role thứ hai cần dùng → **dời lên `components/common/`** theo 12.3 trong PR đó, không chép thành bản thứ hai. Màu chỉ lấy từ token mục 2; màu riêng Dashboard Farm Owner ở 2.6.1 là màu chuẩn cho trạng thái tương ứng ở mọi role.
+Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`) mà role thứ hai cần dùng → **dời lên `components/common/`** theo 12.3 trong PR đó, không chép thành bản thứ hai. Màu chỉ lấy từ token mục 2; màu riêng Dashboard Farm Owner ở 2.6.1 là màu chuẩn cho trạng thái tương ứng ở mọi role.
 
 ---
 
@@ -373,7 +398,7 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`, `KpiTil
 | P2 | `MEDIUM` | Cao / High | nền `orange-100`, chữ `orange-800` |
 | P3 | `LOW` | Thường / Normal | nền `warmGray/15`, chữ `warmGray` |
 
-- **[Bắt buộc]** Đếm, lọc, nhóm cảnh báo theo cấp dùng `SEVERITY_TO_LEVEL` (VD bộ lọc Nhật ký cảnh báo Dashboard, ô đếm theo cấp). Không tự viết `if (severity === 'CRITICAL' || ...)`.
+- **[Bắt buộc]** Đếm, lọc, nhóm cảnh báo theo cấp dùng `SEVERITY_TO_LEVEL` (VD bộ lọc mức độ ở trang Cảnh báo, ô đếm theo cấp). Không tự viết `if (severity === 'CRITICAL' || ...)`.
 - **[Bắt buộc]** Câu chữ nhắc tên cấp lấy nhãn từ `levelDict` truyền vào làm tham số (VD "Lỗi {urgent} chưa ai xác nhận sau 15 phút…"), không gõ lại "Khẩn cấp".
 - Đổi màu/nhãn một cấp → sửa đúng 1 dòng trong `severity.ts`/`severity.i18n.ts`; mọi badge đổi theo.
 - **Cảnh báo đã xử lý** (`RESOLVED`) → badge mức độ về xám: `<SeverityBadge isMuted={isAlertFinished(alert.status)} />`, màu `LEVEL_BADGE_MUTED_CLASS` (= màu cấp Thường). Cột/nhãn của 3 cấp ghi **"Mức độ"**.
@@ -402,9 +427,9 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 
 | Token Tailwind | Hex | Dùng ở |
 |---|---|---|
-| `safetyOrange` | `#FF7426` | Khung *Trạng thái nhà yến*: chữ + chấm "Lỗi N thiết bị", dòng ghi chú lỗi. *Nhật ký cảnh báo*: nhãn mức HIGH, giá trị vượt ngưỡng (in đậm) |
+| `safetyOrange` | `#FF7426` | Thẻ nhà ở Tổng quan: nhãn "Cần chú ý", số đo vượt ngưỡng (kèm icon). Bảng *Cảnh báo*: nhãn mức HIGH, giá trị vượt ngưỡng (in đậm) |
 | `climateOrange` (= `orange-500`) | `#ED8F50` | Ô cảm biến vượt ngưỡng; relay "Quá nóng"; thanh điểm cân bằng Zone 65–79 (`ZoneBalanceCard`; dải chỉ để hiển thị — xem ghi chú dưới bảng b) |
-| `orange-100` / `orange-800` | `#FAE1D1` / `#8B400E` | Nhãn mức MEDIUM ở *Nhật ký cảnh báo* |
+| `orange-100` / `orange-800` | `#FAE1D1` / `#8B400E` | Nhãn mức MEDIUM ở bảng *Cảnh báo* |
 | `infoBlue` | `#4A89EB` | Trạng thái cảnh báo "Mới" |
 | `statusYellow` | `#FFE033` | Nhãn "Bộ điều khiển: Đang chờ kết nối" (code cũ ghi "PLC") (nền 70%, chữ charcoal) |
 
@@ -432,7 +457,7 @@ Màu **không** gắn với loại cảm biến — gắn với **trạng thái 
 
 Các mốc của điểm cân bằng Zone (`ZoneBalanceCard`: ≥ 90 "Rất tối ưu", ≥ 80 "Tối ưu" xanh, ≥ 65 "Bình thường" cam) **không có nguồn nuôi yến** — chỉ để tô màu, không phải ngưỡng cảnh báo; giao diện không tự đặt dải màu nào cho tỷ lệ chim về. Cảnh báo tỷ lệ chim về là `LOW_RETURN_RATE` theo `return_rate_drop_pct` của nhà yến (VISION-FR-011, BR-21). Các mốc này đã ghi ở Report 3 §4.5; đổi giá trị thì sửa cả ở đó.
 
-**c) Trạng thái xử lý cảnh báo** (cột *Trạng thái* ở Nhật ký cảnh báo — `status` từ BE)
+**c) Trạng thái xử lý cảnh báo** (cột *Trạng thái* ở bảng Cảnh báo — `status` từ BE)
 
 | `status` | Nhãn VI / EN | Nền | Chữ | Ý nghĩa |
 |---|---|---|---|---|
@@ -443,15 +468,9 @@ Các mốc của điểm cân bằng Zone (`ZoneBalanceCard`: ≥ 90 "Rất tố
 
 Mức độ (cột *Mức độ*): **theo 2.4**. Hiển thị 3 cấp qua `SeverityBadge`, bộ lọc "Tất cả · Khẩn cấp · Cao · Thường".
 
-**d) Trạng thái bộ điều khiển** (thanh *Giám sát vận hành SCADA*; code cũ ghi "PLC")
+**d) Trạng thái bộ điều khiển trên Tổng quan** (thanh "Giám sát vận hành SCADA" đã bỏ ở v2.17.0)
 
-| Trạng thái | Điều kiện | Nhãn VI / EN | Nền | Chữ |
-|---|---|---|---|---|
-| Online | Bản đo mới nhất cách hiện tại ≤ 20 giây | PLC: Online | `accent-600` (Badge `positive`) | charcoal |
-| Mất kết nối | Có bản đo nhưng cũ hơn 20 giây | PLC: Mất kết nối / Disconnected | `alertRed/15` (Badge `critical`) | `alertRed` |
-| Đang chờ kết nối | Chưa có bản đo nào | PLC: Đang chờ kết nối / Awaiting connection | `statusYellow/70` | charcoal |
-
-Chấm tròn đầu thanh: `success` khi Online, `warmGray` khi không. Nhãn rộng cố định 190px để đổi trạng thái không làm thanh nhảy.
+Thẻ nhà ghi "Tự động / Điều khiển tay · còn N phút · x/y bộ điều khiển online"; nhà chỉ "Ổn định" khi mọi bộ điều khiển online và số đo trong ngưỡng (`houseLiveStatus`). Tab Điều khiển tay gộp bộ điều khiển chưa kết nối (mất kết nối hoặc chờ kết nối lần đầu) thành 1 dòng. Ô "Thiết bị mất kết nối" chỉ đếm `OFFLINE`, không đếm `PENDING`.
 
 Mốc 20 giây (`LIVE_MAX_AGE_MS`, `STALE_TIMEOUT_MS`) là hằng số tự chọn của giao diện (Report 3 §4.5), khác mốc mất kết nối của backend (heartbeat 30 giây, BR-10). Trạng thái thiết bị chính thức là `DEVICE_STATUS_CHANGE`/`status` của backend; nhãn này chỉ nói số đo trên màn có còn mới hay không.
 
@@ -483,10 +502,12 @@ Font duy nhất: **Plus Jakarta Sans** (Google Fonts), weight 400–800.
 | `text-h3` | 16px/24px | 600 | Tiêu đề nhỏ |
 | `text-body` | 14px/22px | 400/500 | Nội dung mặc định |
 | `text-small` | 13px/18px | 400 | Label phụ, timestamp |
-| `text-caption` | 11px/16px | 600, spacing 0.04em | Nhãn nhóm nav (sidebar) |
-| `.label-caption` (class trong `index.css`) | 12px/16px | 600, `--gray-500` | Nhãn section, nhãn ô form, tiêu đề cột bảng, nhãn trước nhóm nút ("Sắp xếp:") |
+| `text-caption` · `text-xs` | 13px/18px | 600 (caption) | Giữ tên cũ; cùng cỡ `text-small` |
+| `.label-caption` (class trong `index.css`) | 13px/18px | 600, `--gray-500` | Nhãn section, nhãn ô form, tiêu đề cột bảng, nhãn trước nhóm nút ("Sắp xếp:") |
 | `text-metric` | 32px/38px | 700, tabular-nums | Số liệu lớn |
-| `text-mock-notice` | 11px/16px | 500, italic | `--gray-500` — dòng "FAKE data" |
+| `text-mock-notice` | 13px/18px | 500, italic | `--gray-500` — dòng "FAKE data" |
+
+**Không chữ nào dưới 13px (v2.16.0)**, kể cả badge và tiêu đề cột; không viết `text-[10px]`, `text-[11px]`. Chữ đọc (mô tả card, dòng phụ trong thẻ) `text-body` màu `graphite`; `warmGray` chỉ cho nhãn, ngày, đơn vị. Mỗi trang một `<h1>` (tên trang trên header); card dùng `h2`.
 
 **Không in hoa nhãn/tiêu đề (v2.5.0).** Nhãn nhỏ viết sentence case bằng `.label-caption`, không thêm `uppercase` hay `tracking-[...]` rời. Chỉ 2 chỗ được in hoa: nhãn nhóm menu sidebar (mục 4.1) và banner chế độ SCADA. Số trong cột bảng/số liệu dùng `tabular-nums` để thẳng hàng theo cột.
 
@@ -534,13 +555,40 @@ Ticket, chat ticket, SLA và thanh tiến độ ticket đã gỡ (Report 3 §8, 
 
 ## 4. Bố cục (Layout)
 
-### 4.1. Sidebar & Topbar — đóng băng
+### 4.1. Sidebar & Topbar
 
-Layout/kích thước giữ nguyên 100%. Chỉ đổi: (1) logo (mục 3), (2) giá trị hex của token màu mà sidebar/topbar đang tham chiếu (avatar, nav active pill, dot trạng thái... vốn đang dùng biến `--gray-900`/`--success`/`--danger` — nay các biến này tự mang giá trị mới, sidebar không cần sửa code), (3) mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung, không nằm trong header.
+Khung dùng chung 4 role (`components/layouts/`); menu của từng role khai trong `<Role>Layout.tsx` (12.5).
+
+- **Sidebar** `w-64`: logo, rồi các nhóm menu (không khối chào, không nút đăng xuất). Menu ≤ 12 mục mỗi role, không cuộn ở 1440×900. Nhóm có `collapsible: true` thu gọn bằng mũi tên cạnh tiêu đề, nhớ trong `localStorage`; nhóm chứa trang đang mở luôn mở. Mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung. Nhãn nhóm là chỗ duy nhất được in hoa.
+- **Header:** trái là tên trang (`<h1>`, điện thoại `text-xl` xuống tối đa 2 dòng) + breadcrumb trang chi tiết; phải là VI/EN (cao 36px, không popup; dưới `sm` nằm trong menu avatar) · chuông · avatar. Khe `HeaderActions` (thanh phạm vi) cùng hàng từ 1280px, dưới 1280px xuống hàng riêng ngay dưới; `AppShell` đo chiều cao header để chừa đúng chỗ.
+- **Menu avatar** (mọi khổ màn): tên, email, vai trò · Cài đặt · Quyền riêng tư · Đăng xuất. Đây là chỗ duy nhất có Cài đặt và Đăng xuất; route `/settings` vẫn trong `MENU_ACCESS`.
+- **Dock điện thoại:** 4 mục (`firstDockItems` hoặc `dockItems` của role) và mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại theo nhóm, kèm badge; chấm đỏ trên "Thêm" khi một mục bên trong có badge. Dock có "Thêm" thì mục đang mở chỉ tô nền, không hiện nhãn, để 5 nút vừa màn 360px.
+
+**Đúng theo role** (✓ có, — không có):
+
+| Thành phần | Chủ nhà yến | Chuyên gia | Kỹ thuật viên | Quản trị viên |
+|---|---|---|---|---|
+| Tên trang `h1` + breadcrumb trang chi tiết | ✓ | ✓ | ✓ | ✓ |
+| Thanh phạm vi Trang trại → Nhà → Zone | trang có dữ liệu trang trại | trang có dữ liệu trang trại | Thiết bị, Nhà được giao | — |
+| VI/EN | ✓ | ✓ | ✓ | ✓ |
+| Chuông · tab Cảnh báo (ALERT-FR-007) | ✓ | — | ✓ (nhà được giao) | ✓ (cảnh báo thiết bị) |
+| Chuông · tab Thông báo (EXPERT-FR-007) | ✓ | ✓ | ✓ | ✓ |
+| Menu avatar | ✓ | ✓ | ✓ | ✓ |
+
+**Trang Cài đặt theo role** (`pages/SettingsPage.tsx`, một cột `max-w-3xl`):
+
+| Khối | Chủ nhà yến | Kỹ thuật viên | Chuyên gia | Quản trị viên |
+|---|---|---|---|---|
+| Hồ sơ (chỉ xem; trống thì `_`) | ✓ | ✓ | ✓ | ✓ |
+| Kênh cảnh báo theo mức × Thông báo đẩy · Telegram (ALERT-FR-005) | ✓ | ✓ | — | — |
+| Giờ im lặng, 24 giờ (ALERT-FR-006) | ✓ | — | — | — |
+| Telegram (ALERT-FR-013) | ✓ | ✓ | — | — |
+| Dòng "Thông báo chuyên môn hiện trong hộp thông báo của ứng dụng" (EXPERT-FR-007) | — | — | ✓ | — |
+| Bảo mật (AUTH-FR-009) · Quyền riêng tư · Yêu cầu xoá tài khoản (AUTH-FR-012) | ✓ | ✓ | ✓ | ✓ |
 
 ### 4.2. Content Canvas System — nền cố định 1 màu phẳng
 
-Không còn khối blur trang trí. Nền cố định là **1 màu phẳng duy nhất `#EAEAEA`**, không hoa văn, không blob màu. Vẫn giữ nguyên cơ chế 2 lớp (nền không cuộn / nội dung cuộn riêng) — chỉ đơn giản hoá phần thị giác của lớp nền:
+Không còn khối blur trang trí, không ảnh nền đầu trang (đã bỏ `usePageHero` ở v2.16.0). Nền cố định là **1 màu phẳng duy nhất `#EAEAEA`**, không hoa văn, không blob màu. Vẫn giữ nguyên cơ chế 2 lớp (nền không cuộn / nội dung cuộn riêng) — chỉ đơn giản hoá phần thị giác của lớp nền:
 
 ```
 .content-shell (position:relative; height:100vh; overflow:hidden)
@@ -633,7 +681,9 @@ Dropdown mở trong Modal vẫn nổi đúng vì render qua portal ra `document.
 | Danger | `--red-500` | trắng |
 | Ghost | trong suốt | `--gray-700` |
 
-Radius `--radius-md`, height 40px.
+Radius `--radius-md`, height 40px. Trong code: `Button sm` cao 36px, dưới `sm` 44px; `md` 48px.
+
+**Một nút tô đậm cho việc chính mỗi màn.** Chip lọc (`FilterChip`), chip sắp xếp (`SortChips`), tab và nút chọn đoạn đang chọn dùng pill trắng `bg-white text-charcoal shadow-card` (trên nền `bg-warmGray/10` hoặc kèm `ring-1 ring-warmGray/25`), không tô charcoal. Nút lưu của một khối là nút phụ, thành nút chính khi khối có thay đổi chưa lưu. Nút bị khoá nói lý do (`title` + dòng phụ). Vùng bấm dưới `sm` cao ≥ 44px (`Button sm`, `SelectMenu`, `FilterChip`, `SortChips`, `SearchInput` đã có sẵn).
 
 Danger chỉ dành cho hành động phá huỷ/khẩn cấp. Nút đặt lại bộ lọc dùng `ClearFiltersButton`: mẫu Farm Owner là `tone="danger"` (nền `red-500/10` → rê chuột `red-500/15`, viền `red-500/20`, chữ + icon `red-600` `font-medium`) kèm `count` = số điều kiện đang lọc → "✕ Hủy lọc 2"; chỉ hiện khi có ít nhất 1 điều kiện. Màn Admin còn kiểu cũ (Secondary trơn) tới khi chuyển.
 
@@ -703,7 +753,7 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 | Mất socket, đang hỏi lại định kỳ | `bg-warmGray/40` | Tự làm mới / Auto-refresh |
 
 - Đặt ở góc phải header của khối dữ liệu, `text-small font-semibold`, chấm `h-1.5 w-1.5 rounded-full`.
-- Khối có mốc thời gian dữ liệu thì thêm "Đồng bộ {ago}" như thanh SCADA (2.6.1 d).
+- Khối có mốc thời gian dữ liệu thì ghi lúc cập nhật, như "Cập nhật HH:mm" trên lưới thẻ nhà của Tổng quan.
 - **[Bắt buộc]** Mất socket thì hook tự chuyển sang hỏi lại định kỳ, không để màn đứng im mà vẫn ghi "Trực tiếp".
 
 ---
@@ -873,9 +923,9 @@ component                   ← không biết dữ liệu là thật hay giả, 
 | Trạng thái `DISMISSED`, gói bằng chứng của cảnh báo suy luận | EXPERT-FR-003, ALERT-FR-014 | ⬜ Chưa có ở backend (#19, #23) | `ComingSoon` cho phần bằng chứng |
 | Đồng bộ cấu hình theo bộ điều khiển | ENV-FR-027 | ⬜ Chưa có (#22) | `ComingSoon` |
 | Lịch đếm theo mùa / tạm thời, phiên không đầy đủ | VISION-FR-019, 020 | ⬜ Chưa có (#20, #24) | `ComingSoon` |
-| Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hỏi đánh giá của người dùng trước rồi mới hiện trạng thái — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ✅ API thật (`/health-reports/days*`, `/health-reports`, `/farms/houses/:id/health-levels`); màn `/health` và trang báo cáo `/health/report` (PR #126) | Không |
+| Trạng thái sức khỏe nhà yến theo ngày (lý do, thời tiết), màn đánh giá ngày (hiện trạng thái và lý do, người dùng xác nhận hoặc sửa — BR-31), báo cáo ngày/tuần/tháng, tải PDF (`jspdf`) và CSV | ANALYTICS-FR-012, 013, EXPERT-FR-005, 012, 013 (MF-06) | ✅ API thật (`/health-reports/days*`, `/health-reports`, `/farms/houses/:id/health-levels`); màn `/health` và trang báo cáo `/health/report` (PR #126) | Không |
 | Cấu trúc Farm — người phụ trách nhà, thiết bị, số đo, cảnh báo, thu hoạch | FARM-FR-*, AUTH-FR-013 | 🟢 API thật (người phụ trách = thợ chính của nhà). Lịch thu dự kiến, khuyến nghị AI, kỹ thuật viên lắp và firmware mới nhất đã gỡ ngày 18/11/2026 cùng `farmMock.api.ts`: Report 3 không có (dự báo sản lượng ngoài phạm vi §8; khuyến nghị thật ở `/recommendations`, EXPERT-FR-017) | Không |
-| Dashboard Farm Owner — độ ổn định các nhà yến (theo trạng thái thiết bị), 6 chỉ số, relay + chế độ AUTO/MANUAL, nhật ký cảnh báo của zone | ENV-FR-004/005, ALERT-FR-007 | ✅ API thật (`/analytics/env/summary`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`) | Không |
+| Dashboard Farm Owner — 4 ô KPI, thẻ từng nhà (số đo theo Zone, chế độ AUTO/MANUAL, trạng thái hôm nay), việc cần làm; chọn 1 nhà thì 6 chỉ số và rơ-le | ENV-FR-004/005, ANALYTICS-FR-015 | ✅ API thật (`/farms/{id}/overview`, `/analytics/env/compare`, telemetry + socket, `/devices/sensor-nodes`, `/alerts`, `/work-orders`) | Không |
 | Dashboard Farm Owner — đếm chim (7/14/30/90 ngày), tỉ lệ chim về theo Zone | VISION-FR-008/009/010, ANALYTICS-FR-002 | 🟡 API thật nhưng chưa có dữ liệu (AI Vision chưa triển khai) → khung trống, không số giả | Không (không có số liệu giả) |
 | Chi tiết thiết bị `/devices/detail` — thiết bị con của bộ kit | FARM-FR-005/006 (phần mở rộng UI) | 🟢 Không có tên riêng cho từng thiết bị con (không có endpoint): mỗi dòng ghi mã bộ kit; trạng thái/thông số là API thật (`/devices/sensor-nodes/:id`, telemetry, `/alerts`) — dữ liệu giả `deviceComponents.data.ts` đã gỡ 18/11/2026 | Không |
 
@@ -1233,8 +1283,9 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 ### 12.5. `layouts/` — mỗi role một layout, menu viết trong file
 
 - 4 file `<Role>Layout.tsx` **khai mảng `menuSections` đầy đủ ngay đầu file**, mỗi mục là `{ label, path, icon, tabs? }` viết literal — không tra từ bảng nav dùng chung. Mở `AdminLayout.tsx` là thấy trọn menu của Admin. `tabs` gộp nhiều trang cùng một việc vào một mục menu (4.1); mỗi tab vẫn cần dòng `MENU_ACCESS` và nhãn trong `navigation.i18n.ts`.
+- Không có nhóm "Khác" hay mục Cài đặt trong menu: Cài đặt ở menu avatar (4.1). Nhóm dài, ít dùng khai `collapsible: true`.
 - `dockItems` khai thêm khi dock mobile cần chọn tay (Admin có 9 mục nên phải chọn); các role khác dùng `firstDockItems(menuSections)` lấy 4 mục đầu.
-- `AppShell` giữ toàn bộ khung (sidebar + header + nội dung + Toast) và mount listener socket cảnh báo. `AppSidebar` thuần trình bày, render cùng menu ở 2 breakpoint (rail `w-64` desktop + dock nổi mobile). `AppHeader` giữ breadcrumb + zone + chuông + ngôn ngữ.
+- `AppShell` giữ toàn bộ khung (sidebar + header + nội dung + Toast) và mount listener socket cảnh báo. `AppSidebar` thuần trình bày, render cùng menu ở 2 breakpoint (rail `w-64` desktop + dock nổi mobile). `AppHeader` giữ tên trang (`h1`) + breadcrumb + khe thanh phạm vi + ngôn ngữ + chuông + menu avatar.
 - `RoleLayout` trong `App.tsx` chọn layout theo `user.role` **lúc chạy**, vì URL của SwiftletCare không có tiền tố role (`/devices` dùng chung 3 role) nên không gắn layout theo nhánh route được.
 - **Thêm/bớt mục menu của một role: sửa đúng file layout của role đó, không đụng chỗ nào khác.** Nếu mục đó cũng cần chặn `returnTo` sau đăng nhập thì thêm một dòng vào bảng `MENU_ACCESS` trong `constants/roles.ts`.
 
@@ -1421,12 +1472,12 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 ### 13.10. Routing & hiệu năng
 
 - **[Bắt buộc]** Trang mới được `lazy()` trong file `routes/` của role (code-splitting; hiện mọi trang đều lazy, kể cả `SettingsPage` trong `App.tsx`). Không import tĩnh trang vào `App.tsx` hay file route.
-- **[Bắt buộc]** Không import thư viện nặng (`chart.js`, `react-chartjs-2`, `recharts`, `date-fns`, `video.js`) vào file nằm trong bundle chính: `App.tsx`, `components/layouts/`, `components/common/`, `components/ui/`, `stores/`, `lib/` (trừ `lib/chartTheme.ts`).
+- **[Bắt buộc]** Không import thư viện nặng (`chart.js`, `react-chartjs-2`, `recharts`, `date-fns`, `video.js`, `leaflet`) vào file nằm trong bundle chính: `App.tsx`, `components/layouts/`, `components/common/`, `components/ui/`, `stores/`, `lib/` (trừ `lib/chartTheme.ts`).
 - **[Nên]** Danh sách dài dùng phân trang server (`usePaginatedListQuery` + `Pagination`), không tải hết rồi cắt ở client.
 
 ### 13.11. Accessibility tối thiểu
 
-- **[Bắt buộc]** Hành động bấm được là `<button>` (hoặc `Button`), điều hướng là `<Link>`/`NavLink` — không `div onClick` cho hành động (wrapper chỉ để `stopPropagation`, như trong `SensorAlertLogTable`, thì được).
+- **[Bắt buộc]** Hành động bấm được là `<button>` (hoặc `Button`), điều hướng là `<Link>`/`NavLink` — không `div onClick` cho hành động (wrapper chỉ để `stopPropagation`, như cột ⋯ của `AlertTable`, thì được).
 - **[Bắt buộc]** Nút chỉ có icon phải có `aria-label` tiếng Việt.
 - **[Bắt buộc]** Input trong form có label gắn đúng (`Input`/`Select`/`Textarea` của `ui/` đã hỗ trợ `label`).
 - **[Nên]** Trạng thái không chỉ truyền bằng màu — kèm chữ hoặc icon (mục 2.6 đã yêu cầu icon + label cho cảm biến).
@@ -1601,8 +1652,8 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Nhóm | Component |
 |---|---|
 | Nền tảng | `Button` · `Card` · `Badge` · `Input` · `Select` · `Textarea` · `Toggle` · `Avatar` · `DatePicker` (ô ngày dd/mm/yyyy + lịch tháng, thay `<input type="date">`) · `icons.tsx` |
-| Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
-| Khung, ô số liệu | `SectionCard` · `StatTile` · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
+| Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`, `mobileCard` cho điện thoại) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
+| Khung, ô số liệu | `SectionCard` (prop `help` mở `InfoTip`) · `InfoTip` (nút (i) giải thích dài) · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
 | Lớp nổi | `Modal` · `ConfirmModal` · `NoteActionModal` (popup nhập lý do) · `Drawer` · `ActionsMenu` · `SelectMenu` · `useFloatingMenu.ts` |
 | Trạng thái màn | `EmptyState` (lỗi tải / chưa có farm-nhà-Zone) · `LoadingSkeleton` · `ChartEmptyFrame` (khung biểu đồ khi chưa có dữ liệu, mục 8) · `ComingSoon` (tính năng chưa có API) |
 
@@ -1613,12 +1664,14 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `SeverityBadge` | Badge mức cảnh báo (đổi 4 mức backend → 3 cấp, xám khi `isMuted`) | 2.4 |
 | `TableEmptyState` | Trạng thái rỗng chuẩn của bảng (truyền vào `FixedRowsTable emptyContent`) | 1.1 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
-| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/shared/useScopeFilter`) | — |
+| `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/shared/useScopeFilter`). Trang có bậc trong `scopeLevelOf` thì tự chọn bậc đó và bỏ mục "Tất cả" | — |
+| `KpiTile` | Ô chỉ số của hàng KPI mọi role (`tone`, `iconClass`, `badge`, `valueBadge`) | 1.1 |
+| `LanguageToggle` | Công tắc VI/EN (header; menu avatar dưới `sm`) | 4.1 |
 | `NotificationPopover` · `ProfilePopover` · `Toast` | Khung app: chuông, tài khoản, đăng xuất, thông báo nổi | 5.2.1 |
 
-**Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, đóng băng 4.1) · `components/auth/RequireRole.tsx` (chặn route).
+**Khung app và phân quyền:** `components/layouts/AppShell.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` (dùng chung, 4.1) · `components/auth/RequireRole.tsx` (chặn route).
 
-**Component của Farm Owner được phép dời lên `common/`** khi role thứ hai cần (1.1): `features/farm-owner/farms/FarmFrame.tsx` (khung section) · `features/farm-owner/farms/KpiTile.tsx` (ô KPI) · `features/farm-owner/harvest/HarvestTable.tsx` (mẫu cột bảng).
+**Component của Farm Owner được phép dời lên `common/`** khi role thứ hai cần (1.1): `features/farm-owner/farms/FarmFrame.tsx` (khung section) · `features/farm-owner/harvest/HarvestTable.tsx` (mẫu cột bảng).
 
 ### D.3. Định dạng, dịch, tiện ích (`lib/`)
 

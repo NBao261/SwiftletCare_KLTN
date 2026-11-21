@@ -150,6 +150,51 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewBell')).toBe(false)
   })
 
+  it('xác nhận lô thu hoạch DRAFT và xem kỹ thuật viên phụ trách: chỉ chủ trại (HARVEST-FR-006, AUTH-FR-013)', () => {
+    for (const action of ['confirmHarvest', 'viewHouseTechnicians'] as const) {
+      expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(true)
+      expect(canPerform(buildUser('FARM_TECHNICIAN'), action)).toBe(false)
+      expect(canPerform(buildUser('DOMAIN_EXPERT'), action)).toBe(false)
+    }
+  })
+
+  it('khởi động lại controller: chủ trại và kỹ thuật viên nhà được giao, chuyên gia không (FARM-FR-013)', () => {
+    expect(canPerform(buildUser('FARM_OWNER'), 'restartController')).toBe(true)
+    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'restartController')).toBe(true)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'restartController')).toBe(false)
+  })
+
+  it('giai đoạn nhà: chủ trại và chuyên gia đổi, kỹ thuật viên chỉ xem (FARM-FR-014)', () => {
+    expect(canPerform(buildUser('FARM_OWNER'), 'setHouseStage')).toBe(true)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'setHouseStage')).toBe(true)
+    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'setHouseStage')).toBe(false)
+  })
+
+  it('phiếu công việc: chỉ chủ trại mở tay và duyệt, mở lại, huỷ, giao lại (OPS-FR-001, 004)', () => {
+    for (const action of ['createWorkOrder', 'decideWorkOrder'] as const) {
+      expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(true)
+      expect(canPerform(buildUser('FARM_TECHNICIAN'), action)).toBe(false)
+      expect(canPerform(buildUser('DOMAIN_EXPERT'), action)).toBe(false)
+    }
+  })
+
+  it('khuyến nghị: chủ trại, chuyên gia xem (kỹ thuật viên chỉ xem được theo nhà, chưa mở); chỉ chủ trại quyết (EXPERT-FR-018)', () => {
+    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'viewRecommendations')).toBe(false)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'viewRecommendations')).toBe(true)
+    expect(canPerform(buildUser('FARM_OWNER'), 'decideRecommendation')).toBe(true)
+    expect(canPerform(buildUser('FARM_TECHNICIAN'), 'decideRecommendation')).toBe(false)
+    expect(canPerform(buildUser('DOMAIN_EXPERT'), 'decideRecommendation')).toBe(false)
+  })
+
+  it('luật thời tiết, lịch đếm, mức chỉ số, ngày lệch: chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)', () => {
+    for (const action of ['editWeatherRules', 'editCountingSchedule', 'editHealthLevels', 'reviewDisagreements'] as const) {
+      expect(canPerform(buildUser('DOMAIN_EXPERT'), action, { farmHasExpert: true })).toBe(true)
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(true)
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(false)
+      expect(canPerform(buildUser('FARM_TECHNICIAN'), action, { farmHasExpert: false })).toBe(false)
+    }
+  })
+
   it('chưa đăng nhập thì không được thao tác nào', () => {
     expect(canPerform(null, 'setupDevice')).toBe(false)
   })

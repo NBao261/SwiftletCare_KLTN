@@ -26,16 +26,6 @@ export function levelChannelsOf(prefs: NotificationPreferences | undefined): Rec
   return result;
 }
 
-// Đổi công tắc Push chung thì mọi cấp theo cùng giá trị, để khi lưu không còn ghi đè nào giữ giá trị cũ
-export function applyGeneralPush(
-  levels: Record<SeverityLevel, LevelChannels>,
-  push: boolean,
-): Record<SeverityLevel, LevelChannels> {
-  const result = {} as Record<SeverityLevel, LevelChannels>;
-  for (const level of LEVELS) result[level] = { ...levels[level], push };
-  return result;
-}
-
 // by_severity gửi lên: mức giống cài đặt chung thì null (bỏ ghi đè), khác thì ghi đè cả 2 kênh
 export function bySeverityPayload(
   levels: Record<SeverityLevel, LevelChannels>,

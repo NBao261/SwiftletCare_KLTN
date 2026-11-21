@@ -117,13 +117,8 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   return (
     <div className="flex flex-1 flex-col gap-6">
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} lockZone />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} lockZone />
-      </div>
+      </HeaderActions>
 
       {/* Tab pill như trang Sức khỏe nhà yến: mỗi lúc 1 thẻ; tab Cần bảo trì kèm số kế hoạch đến hạn */}
       <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
@@ -147,7 +142,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
 
       {tab === 'due' ? (
         // Kế hoạch đến hạn và quá hạn (OPS-FR-006)
-        <SectionCard className="flex-1" title={t('due.title')} description={t('due.subtitle')}>
+        <SectionCard className="flex-1" title={t('due.title')} description={t('due.short')} help={t('due.subtitle')}>
           {due.isLoading ? (
             <LoadingSkeleton count={3} className="h-14 w-full" />
           ) : due.isError ? (
@@ -171,7 +166,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
         </SectionCard>
       ) : (
         // Danh sách kế hoạch (OPS-FR-005)
-        <SectionCard className="flex-1" title={t('list.title')} description={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
+        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SelectMenu
               ariaLabel={t('list.filterState')}
@@ -193,6 +188,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
                 {t('list.create')}
               </Button>
             )}
+            {canManage && !scope.houseId && <span className="text-small text-warmGray">{t('list.needHouseShort')}</span>}
           </div>
 
           {isLoading ? (

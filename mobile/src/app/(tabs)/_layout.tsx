@@ -3,17 +3,17 @@ import { BottomTabBar } from '@/components/layout/BottomTabBar'
 import { RealtimeSync } from '@/components/layout/RealtimeSync'
 import { getRoleTabs } from '@/constants/roleTabs'
 import { useSyncAlertBadge } from '@/hooks/alert/useSyncAlertBadge'
-import { useAlertStore } from '@/stores/alertStore'
 import { useAuthStore } from '@/stores/authStore'
+import { canPerform } from '@/utils/permission.utils'
 
 // Thanh tab theo role, dựng từ ROLE_TABS (src/constants/roleTabs.ts); route không thuộc role thì ẩn
 export default function TabsLayout() {
   const user = useAuthStore(state => state.user)
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
-  const unreadCount = useAlertStore(state => state.unreadCount)
-  // Số trên badge tab Cảnh báo, chỉ role có badge; gọi trước các lệnh return để thứ tự hook không đổi
   const tabs = user ? getRoleTabs(user.role) : []
-  useSyncAlertBadge(isAuthenticated && tabs.some(tab => tab.showsAlertBadge))
+  // Số cảnh báo chưa xác nhận cho chuông (useBellCounts), chỉ role xác nhận được cảnh báo mới đếm; thanh tab không hiện số.
+  // Gọi trước các lệnh return để thứ tự hook không đổi
+  useSyncAlertBadge(isAuthenticated && canPerform(user, 'acknowledgeAlert'))
 
   if (!isAuthenticated || !user) return <Redirect href="/(auth)/login" />
   if (user.must_change_password) {
@@ -26,7 +26,7 @@ export default function TabsLayout() {
       <RealtimeSync key={user._id} />
       <Tabs
         // Thanh tab tự vẽ (components/layout/BottomTabBar.tsx): bo góc, bóng, nút nổi giữa
-        tabBar={props => <BottomTabBar {...props} tabs={tabs} unreadCount={unreadCount} />}
+        tabBar={props => <BottomTabBar {...props} tabs={tabs} />}
         screenOptions={{
           headerShown: false,
           // Mặc định ẩn mọi route trong (tabs); chỉ tab của role được bật lại bên dưới

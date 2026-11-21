@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Alert, ScrollView, StyleSheet, View } from 'react-native'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import { CrownIcon, EnvelopeSimpleIcon, UserIcon, UserMinusIcon, UsersIcon } from 'phosphor-react-native'
-import { MockDataBadge } from '@/components/common/MockDataBadge'
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { HomeSection } from '@/components/home/HomeSection'
@@ -17,9 +16,9 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
-import { IS_MOCK_API_ENABLED } from '@/constants/mockApi'
 import { Radius, Spacing } from '@/constants/theme'
 import { useCurrentFarm } from '@/hooks/farm/useCurrentFarm'
+import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useFarmDetail } from '@/hooks/farm/useFarmDetail'
 import { useRemoveFarmMember } from '@/hooks/farm/useRemoveFarmMember'
 import { useReturnBack } from '@/hooks/navigation/useReturnBack'
@@ -29,7 +28,7 @@ import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import type { FarmMember } from '@/types'
-import { getDaysLeft, getInvitedRoleLabel, getMemberRoleLabel, sortMembers } from '@/utils/account.utils'
+import { getDaysLeft, getInvitedRoleLabel, getMemberRoleLabel, sortMembers, summarizeMembers } from '@/utils/account.utils'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { formatDate } from '@/utils/date.utils'
 import { farmHasExpert } from '@/utils/farm.utils'
@@ -53,7 +52,6 @@ export default function MembersScreen() {
   const linkedFarmId = current.farms.some(item => item._id === requestedFarmId) ? requestedFarmId : undefined
   const farmId = selectedFarmId ?? linkedFarmId ?? current.farm?._id ?? ''
   const detailQuery = useFarmDetail(farmId)
-  const invitationsQuery = usePendingInvitations(farmId)
   const removeMember = useRemoveFarmMember(farmId)
   const toast = useToastMessage()
   // Số ngày còn lại của lời mời: cập nhật mỗi giờ là đủ
@@ -65,8 +63,10 @@ export default function MembersScreen() {
 
   const farm = detailQuery.data?.data ?? current.farms.find(item => item._id === farmId) ?? null
   const isPrimaryOwner = Boolean(farm && user && farm.owner_id === user._id)
+  const invitationsQuery = usePendingInvitations(farmId, isPrimaryOwner)
   const canManage = canPerform(user, 'manageFarmMembers', { isPrimaryOwner })
-  const hasExpert = farm ? farmHasExpert(farm) : false
+  // Theo has_active_expert của GET /farms như tab Trang trại (GET /farms/{id} không có cờ này); chưa có danh sách thì đếm thành viên
+  const hasExpert = useFarmHasExpert(farmId) ?? (farm ? farmHasExpert(farm) : false)
 
   if (!canPerform(user, 'viewFarmMembers')) return <Redirect href="/(tabs)/profile" />
 
@@ -108,6 +108,10 @@ export default function MembersScreen() {
     const members = sortMembers(farm.members, farm.owner_id)
     return (
       <Card style={styles.listCard}>
+        {/* Tổng theo nhóm, tự cập nhật khi mời / gỡ; danh sách đã xếp chủ chính → đồng sở hữu → chuyên gia → kỹ thuật viên */}
+        <Text variant="small" color={palette.textSecondary} style={styles.summary}>
+          {summarizeMembers(farm.members, farm.owner_id)}
+        </Text>
         {members.map((member, index) => {
           const isOwner = member.is_primary || member.user_id === farm.owner_id
           const isSelf = member.user_id === user?._id
@@ -138,15 +142,22 @@ export default function MembersScreen() {
   }
 
   const renderInvitations = () => {
-    if (!IS_MOCK_API_ENABLED) {
-      return <EmptyState message={t('Danh sách lời mời đang chờ: Sắp có')} />
-    }
+    // Backend chỉ trả lời mời cho chủ chính (AUTH-FR-005); đồng sở hữu chỉ thấy thành viên
+    if (!isPrimaryOwner) return <EmptyState message={t('Chỉ chủ chính của farm xem được lời mời')} />
     const invitations = invitationsQuery.data ?? []
     if (invitationsQuery.isLoading) return <Skeleton width="100%" height={56} radius={Radius.md} />
+    if (invitationsQuery.isError) {
+      return (
+        <EmptyState
+          message={t('Không tải được lời mời')}
+          actionLabel={t('Thử lại')}
+          onAction={() => invitationsQuery.refetch()}
+        />
+      )
+    }
     if (invitations.length === 0) return <EmptyState message={t('Không có lời mời nào đang chờ')} />
     return (
       <Card style={styles.listCard}>
-        <MockDataBadge />
         {invitations.map((invitation, index) => (
           <ProfileRow
             key={invitation._id}
@@ -195,8 +206,18 @@ export default function MembersScreen() {
           </Card>
         )}
 
-        <HomeSection title={t('Thành viên')}>{renderMembers()}</HomeSection>
-        <HomeSection title={t('Lời mời đang chờ')}>{renderInvitations()}</HomeSection>
+        <HomeSection title={farm ? t('Thành viên ({count})', { count: farm.members.length }) : t('Thành viên')}>
+          {renderMembers()}
+        </HomeSection>
+        <HomeSection
+          title={
+            invitationsQuery.data
+              ? t('Lời mời đang chờ ({count})', { count: invitationsQuery.data.length })
+              : t('Lời mời đang chờ')
+          }
+        >
+          {renderInvitations()}
+        </HomeSection>
 
         {canManage ? (
           <Button
@@ -250,6 +271,7 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.lg, gap: Spacing.xl },
   list: { gap: Spacing.sm },
   listCard: { paddingVertical: Spacing.xs },
+  summary: { paddingTop: Spacing.sm, paddingBottom: Spacing.xs },
   hint: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
   hintIcon: {
     width: HINT_ICON_SIZE,

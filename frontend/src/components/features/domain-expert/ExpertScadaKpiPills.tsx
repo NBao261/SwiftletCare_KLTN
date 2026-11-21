@@ -27,7 +27,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         <span className="text-xs font-bold tabular-nums text-accent-900">
           {autoModePct.toFixed(0)}%
         </span>
-        <span className="text-[11px] font-semibold text-accent-800">{t('Tự động')}</span>
+        <span className="text-small font-semibold text-accent-800">{t('Tự động')}</span>
       </Link>
 
       {/* KPI 2: Cảnh báo AI chờ thẩm định (Chỉ đổi màu báo động khi CÓ việc chờ) */}
@@ -46,7 +46,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
             <span className="text-xs font-bold tabular-nums text-amber-900">
               {pendingCount}
             </span>
-            <span className="text-[11px] font-semibold text-amber-800">{t('Cảnh báo chờ')}</span>
+            <span className="text-small font-semibold text-amber-800">{t('Cảnh báo chờ')}</span>
           </>
         ) : (
           <>
@@ -54,7 +54,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
             <span className="text-xs font-medium tabular-nums text-graphite">
               0
             </span>
-            <span className="text-[11px] text-warmGray">{t('Cảnh báo tồn')}</span>
+            <span className="text-small text-warmGray">{t('Cảnh báo tồn')}</span>
           </>
         )}
       </Link>
@@ -73,7 +73,7 @@ export default function ExpertScadaKpiPills({ autoModePct, pendingCount, pending
         <span className={`text-xs tabular-nums ${hasPendingReports ? 'font-bold text-sky-900' : 'font-medium text-graphite'}`}>
           {pendingReports}
         </span>
-        <span className={`text-[11px] ${hasPendingReports ? 'font-semibold text-sky-800' : 'text-warmGray'}`}>
+        <span className={`text-small ${hasPendingReports ? 'font-semibold text-sky-800' : 'text-warmGray'}`}>
           {hasPendingReports ? t('Báo cáo chờ') : t('Báo cáo tồn')}
         </span>
       </Link>

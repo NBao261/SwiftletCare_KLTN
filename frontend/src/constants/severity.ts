@@ -32,4 +32,4 @@ export function isAlertFinished(status: AlertStatus): boolean {
 }
 
 // Cỡ badge mức độ
-export const LEVEL_BADGE_SIZE = 'whitespace-nowrap px-2.5 py-0.5 text-[11px]';
+export const LEVEL_BADGE_SIZE = 'whitespace-nowrap px-2.5 py-0.5 text-small';

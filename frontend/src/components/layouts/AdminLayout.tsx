@@ -16,48 +16,36 @@ const usersItem: MenuItem = {
   ],
 }
 
-// Khung Admin: Tổng quan hệ thống là trang nhà (SYSTEM-FR-003); Console thiết bị /devices, /alerts, /ota cho mọi farm (FARM-FR-009, 013); không có trang farm
+// Khung Admin (§3.4): Tổng quan hệ thống là trang nhà (SYSTEM-FR-003); thiết bị mọi farm (FARM-FR-009, 013); không có trang farm
 const menuSections: MenuSection[] = [
   {
-    title: 'Vận hành',
+    title: 'Theo dõi',
     items: [
       { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
+      { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
     ],
   },
   {
-    // FARM-FR-009, 013 — thiết bị mọi farm kèm farm, nhà, khu vực (bộ điều khiển và camera); RESTART, PUSH_CONFIG, OTA
-    title: 'Console thiết bị',
+    // FARM-FR-009, 010, 013 — thiết bị mọi farm (bộ điều khiển và camera), kho và nhãn QR, RESTART, PUSH_CONFIG, OTA
+    title: 'Thiết bị',
     items: [
       { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
-      { label: 'Cảnh báo', path: '/alerts', icon: IconAlert },
+      { label: 'Kho thiết bị', path: '/system/device-stock', icon: IconOnboarding },
       { label: 'Cập nhật firmware', path: '/ota', icon: IconOTA },
     ],
   },
   {
-    title: 'Quản lý',
-    items: [
-      usersItem,
-    ],
-  },
-  {
-    // Module SYSTEM (mục 5.11) — "control center" chỉ Admin
+    // Module SYSTEM (mục 5.11) và tài khoản (AUTH-FR-011, 012)
     title: 'Hệ thống',
     items: [
-      // FARM-FR-010 — nhập thiết bị, in nhãn QR, cấp lại mã, thu hồi
-      { label: 'Kho thiết bị', path: '/system/device-stock', icon: IconOnboarding },
+      usersItem,
       { label: 'Cấu hình mặc định', path: '/system/settings', icon: IconSettings },
       { label: 'Nhật ký hệ thống', path: '/system/audit-log', icon: IconAnalytics },
     ],
   },
-  {
-    title: 'Khác',
-    items: [{ label: 'Cài đặt', path: '/settings', icon: IconSettings }],
-  },
 ]
 
-/**
- * Dock mobile: ưu tiên Console Thiết bị (trang nhà G-20) và Quản lý người dùng.
- */
+// Dock điện thoại: 4 mục dùng nhiều nhất, 4 mục còn lại vào "Thêm"
 const dockItems: MenuItem[] = [
   { label: 'Tổng quan hệ thống', path: '/system/health', icon: IconDashboard },
   { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },

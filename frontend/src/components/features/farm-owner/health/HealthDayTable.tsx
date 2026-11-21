@@ -23,7 +23,7 @@ interface HealthDayTableProps {
   onView: (day: HouseHealthDay) => void;
 }
 
-// Bảng các ngày: ngày chưa đánh giá không có trạng thái (BR-31), chỉ có nút Đánh giá
+// Bảng các ngày: trạng thái hiện ở mọi ngày (BR-31); ngày chưa đánh giá có nút Đánh giá
 export default function HealthDayTable({ days, canRate, onRate, onView }: HealthDayTableProps): JSX.Element {
   const { t, date } = useTranslation(healthDict);
 
@@ -36,9 +36,7 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       {
         key: 'status',
         header: t('col.status'),
-        render: day => (day.current_status
-          ? <HealthStatusBadge status={day.current_status} />
-          : <span className="text-sm italic text-warmGray">{t('cell.hidden')}</span>),
+        render: day => <HealthStatusBadge status={day.current_status} />,
       },
       {
         key: 'myRating',
@@ -77,6 +75,25 @@ export default function HealthDayTable({ days, canRate, onRate, onView }: Health
       rowHeight={ROW_HEIGHT}
       pageSize={ROW_COUNT}
       emptyNotice={t('table.emptyTitle')}
+      mobileCard={day => (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-body font-semibold text-charcoal">{date(day.date)} · {day.house_name}</p>
+              {canRate && day.my_rating_state && <p className="text-small text-warmGray">{t(`ratingState.${day.my_rating_state}`)}</p>}
+              {canRate && day.my_rating_state === 'PENDING' && (
+                <p className={cn('text-small', isRatingDeadlineNear(day.rating_deadline) ? 'font-semibold text-climateOrange' : 'text-warmGray')}>
+                  {t('cell.deadline', { date: date(lastRatingDay(day.rating_deadline)) })}
+                </p>
+              )}
+            </div>
+            <HealthStatusBadge status={day.current_status} />
+          </div>
+          {day.my_rating_state === 'PENDING'
+            ? <Button size="sm" className="w-full" onClick={() => onRate(day)}>{t('action.rate')}</Button>
+            : <Button size="sm" variant="secondary" className="w-full" onClick={() => onView(day)}>{t('action.view')}</Button>}
+        </div>
+      )}
     />
   );
 }

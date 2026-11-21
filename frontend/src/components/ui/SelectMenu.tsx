@@ -50,7 +50,7 @@ const FIELD_VISIBLE_OPTIONS = 4
 /**
  * Dropdown chọn 1 giá trị, thay cho <select> native ở các hàng filter: <select>
  * không style được phần danh sách (màu hover option do hệ điều hành vẽ) nên
- * không theo được bảng màu §2 (highlight = LIME MIST). Trigger là pill h-8 cùng
+ * không theo được bảng màu §2 (highlight = LIME MIST). Trigger là pill h-9 (điện thoại h-11) cùng
  * chiều cao chip/nút sort; danh sách portal ra body (useFloatingMenu). Hỗ trợ
  * bàn phím: ↑/↓ di chuyển, Enter/Space chọn, Esc đóng.
  * `options[0]` phải là giá trị mặc định ("Mọi …"): chọn option khác thì trigger
@@ -115,7 +115,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
           field
             ? cn('input relative flex items-center justify-between gap-2 text-left', open ? 'border-charcoal' : invalid && 'border-alertRed')
             : cn(
-                'relative inline-flex h-8 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-xs font-semibold text-charcoal transition-colors',
+                'relative inline-flex h-9 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-small font-semibold max-sm:h-11 text-charcoal transition-colors',
                 open ? 'border-charcoal' : isFiltered ? 'border-accent-600' : 'border-warmGray/25 hover:border-warmGray/50',
               ),
           className,
@@ -128,7 +128,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
         {hasWarning && !open && (
           <span
             title={warningLabel ? tr(warningLabel) : undefined}
-            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-safetyOrange text-[10px] font-bold leading-none text-white ring-2 ring-white"
+            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-safetyOrange text-small font-bold leading-none text-white ring-2 ring-white"
           >
             !
             {warningLabel && <span className="sr-only">{tr(warningLabel)}</span>}
@@ -160,7 +160,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => select(index)}
                 className={cn(
-                  'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors duration-150',
+                  'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors duration-150 max-sm:min-h-11',
                   isActive ? 'bg-charcoal/5' : 'bg-transparent',
                   isSelected && 'font-semibold',
                 )}

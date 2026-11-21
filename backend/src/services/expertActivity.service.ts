@@ -15,13 +15,13 @@ export const EXPERT_DECISION_ACTIONS = [
   'THRESHOLD_UPDATED', 'FUZZY_TUNING_UPDATED', 'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED',
   'COUNTING_RING_UPDATED', 'ALERT_VERDICT_SET', 'HEALTH_REPORT_CONCLUDED',
   'REVIEW_ACCEPTED', 'REVIEW_REVERTED', 'PROPOSAL_APPROVED', 'PROPOSAL_REJECTED', 'HEALTH_LEVELS_UPDATED',
-  'WEATHER_RULES_UPDATED', 'COUNTING_SCHEDULE_UPDATED',
+  'WEATHER_RULES_UPDATED', 'COUNTING_SCHEDULE_UPDATED', 'WEATHER_RULES_PROPOSAL_REJECTED',
 ] as const
 export type ExpertDecisionAction = typeof EXPERT_DECISION_ACTIONS[number]
 
 /**
- * BR-22 — quyết định Farm Owner làm thay khi farm chưa có chuyên gia; lịch sử liệt kê cả khi
- * Farm Owner làm (role FARM_OWNER). Ngưỡng và hệ số mờ Farm Owner luôn sửa được nên không thuộc nhóm này.
+ * BR-22 (Report 3 4.2.15) — quyết định Farm Owner cũng làm được (farm có chuyên gia thì kèm mục duyệt hoặc đề xuất);
+ * lịch sử liệt kê cả khi Farm Owner làm (role FARM_OWNER). Ngưỡng và hệ số mờ của Farm Owner không vào lịch sử.
  */
 export const BR22_ACTIONS: ExpertDecisionAction[] = [
   'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED', 'COUNTING_RING_UPDATED', 'ALERT_VERDICT_SET',

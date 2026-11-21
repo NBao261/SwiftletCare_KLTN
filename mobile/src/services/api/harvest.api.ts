@@ -1,6 +1,6 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
-import type { ApiResponse, CreateHarvestPayload, HarvestBatch, UpdateHarvestPayload } from '@/types'
+import type { ApiResponse, CreateHarvestPayload, HarvestBatch, HarvestCycle, UpdateHarvestPayload } from '@/types'
 
 // API thu hoạch (HARVEST-FR-001…005) — Farm Owner, Farm Technician ghi và sửa; Domain Expert chỉ đọc
 export const harvestApi = {
@@ -13,4 +13,9 @@ export const harvestApi = {
     apiClient.put<ApiResponse<HarvestBatch>>(ENDPOINTS.HARVEST_DETAIL(harvestId), payload),
   // Xoá mềm một đợt
   remove: (harvestId: string) => apiClient.delete<ApiResponse<unknown>>(ENDPOINTS.HARVEST_DETAIL(harvestId)),
+  // Chủ trại xác nhận một đợt DRAFT (HARVEST-FR-006): đóng chu kỳ thu của zone (BR-43); đợt đã xác nhận thì 409
+  confirm: (harvestId: string) => apiClient.post<ApiResponse<HarvestBatch>>(ENDPOINTS.HARVEST_CONFIRM(harvestId)),
+  // Chu kỳ thu của các zone trong một nhà (HARVEST-FR-007)
+  listCycles: (houseId: string, limit: number) =>
+    apiClient.get<ApiResponse<HarvestCycle[]>>(ENDPOINTS.HARVEST_CYCLES, { params: { houseId, limit } }),
 }

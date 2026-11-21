@@ -2,8 +2,8 @@ import { Schema, model, Document, Types } from 'mongoose'
 import { RULE_COMPARISONS, RULE_INDICATORS, type RuleAction, type RuleComparison, type RuleIndicator } from '@/utils/recommendationRule.util'
 
 /**
- * Luật khuyến nghị — EXPERT-FR-016, BR-42; Report 4 ERD `RECOMMENDATION_RULE`. Domain Expert viết: điều kiện trên một
- * chỉ số của nhà trong `window_days` ngày và một hành động. `source` ghi luật lấy từ đâu (không tự viết luật).
+ * Luật khuyến nghị — EXPERT-FR-016, BR-42; Report 4 ERD `RECOMMENDATION_RULE`. Domain Expert viết, Farm Owner cũng viết
+ * được (BR-22): điều kiện trên một chỉ số của nhà trong `window_days` ngày và một hành động. `source` ghi luật lấy từ đâu.
  */
 export interface IRecommendationRule extends Document {
   _id: Types.ObjectId
@@ -17,6 +17,8 @@ export interface IRecommendationRule extends Document {
   action: RuleAction
   source: string
   active: boolean
+  // BR-22 — luật Farm Owner viết trên farm có chuyên gia: tắt, chờ chuyên gia bật (duyệt) hoặc tắt hẳn
+  pending_approval: boolean
   created_at: Date
   updated_at: Date
 }
@@ -34,6 +36,7 @@ const recommendationRuleSchema = new Schema<IRecommendationRule>(
     action:      { type: Schema.Types.Mixed, required: true },
     source:      { type: String, required: true, trim: true },
     active:      { type: Boolean, default: true },
+    pending_approval: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } },
 )

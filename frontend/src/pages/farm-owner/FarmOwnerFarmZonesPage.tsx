@@ -69,13 +69,8 @@ export default function FarmOwnerFarmZonesPage() {
   const scopeFilter = (
     <>
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={routedScope} />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={routedScope} />
-      </div>
+      </HeaderActions>
     </>
   )
 
@@ -156,8 +151,8 @@ export default function FarmOwnerFarmZonesPage() {
         }
       />
 
-      {/* Tab của trang nhà: 1 hàng trong thẻ trắng riêng, 3 ô bằng nhau; ô đang chọn nền đen */}
-      <div role="tablist" aria-label={house.name} className="grid grid-cols-3 gap-1.5 rounded-3xl border border-warmGray/15 bg-white p-1.5 shadow-card">
+      {/* Tab của trang nhà: 3 ô bằng nhau, kiểu SectionTabs (pill trắng trên nền xám, C-03) */}
+      <div role="tablist" aria-label={house.name} className="grid grid-cols-3 gap-1 rounded-full bg-warmGray/10 p-1">
         {houseTabs.map(item => {
           const isActive = tab === item.key
           return (
@@ -168,8 +163,8 @@ export default function FarmOwnerFarmZonesPage() {
               aria-selected={isActive}
               onClick={() => setTab(item.key)}
               className={cn(
-                'flex h-14 min-w-0 items-center justify-center gap-2 rounded-[1.25rem] px-3 text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal',
-                isActive ? 'bg-charcoal text-white' : 'text-graphite hover:bg-warmGray/10 hover:text-charcoal',
+                'flex h-11 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal',
+                isActive ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
               )}
             >
               <item.icon size={20} className="shrink-0" />
@@ -222,7 +217,7 @@ export default function FarmOwnerFarmZonesPage() {
                     <p className={cn('mt-2 text-2xl font-extrabold leading-none tracking-tight', returnRateDrop === undefined ? 'text-warmGray' : 'text-charcoal')}>
                       {returnRateDrop === undefined ? NO_VALUE : `${returnRateDrop}%`}
                     </p>
-                    <p className="mt-1.5 text-[11px] font-medium text-warmGray">{t('tuning.birdDropHint')}</p>
+                    <p className="mt-1.5 text-small font-medium text-warmGray">{t('tuning.birdDropHint')}</p>
                   </div>
                 </FarmFrame>
               </div>

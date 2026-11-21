@@ -169,7 +169,7 @@ describe('TC-F20-03 — thiếu dữ liệu (DS-22)', () => {
 })
 
 describe('job đánh giá (SM-17)', () => {
-  it('ngày mới: ghi 1 bản ghi và báo "ngày đã sẵn sàng" không kèm trạng thái cho người chấm, không báo chuyên gia; chạy lại không trùng, không báo lại', async () => {
+  it('ngày mới: ghi 1 bản ghi và báo người chấm mở ngày để xem trạng thái rồi chấm (BR-31), không báo chuyên gia; chạy lại không trùng, không báo lại', async () => {
     const { house, owner, expert } = await scenario({ humidityOutSlots: HUMIDITY_SLIGHT, rates: FLOCK_CLEAR })
     expect(await assessAllHouses(DATE, NOW)).toBe(1)
     expect(await assessAllHouses(DATE, NOW)).toBe(0)
@@ -180,7 +180,10 @@ describe('job đánh giá (SM-17)', () => {
     expect(recipients).toEqual([String(owner._id)])
     expect(recipients).not.toContain(String(expert!._id))
     for (const [, message] of (notifyUser as jest.Mock).mock.calls) {
+      // Trạng thái có thể đổi khi dữ liệu trễ về nên thông báo không chép trạng thái, chỉ mời xem rồi xác nhận hoặc sửa
       expect(JSON.stringify(message)).not.toMatch(/ACTION|WATCH|GOOD|Cần xử lý/)
+      expect(message.body).toMatch(/xác nhận hoặc sửa/)
+      expect(message.body).not.toMatch(/trước khi xem/)
       expect(message.ref.kind).toBe('health_day')
     }
   })

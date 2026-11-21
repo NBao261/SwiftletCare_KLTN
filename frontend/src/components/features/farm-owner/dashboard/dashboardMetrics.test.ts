@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { averageReadings, buildAlertRow, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, buildHouseStability, getAnomalies, getSeverityGroup, isFaultDeviceStatus, zoneHasIssue, mergeBirdCountRecords, summarizeBirdCount, summarizeStability, summarizeFarmHouses, thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { averageReadings, houseLiveStatus, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, getAnomalies, isFaultDeviceStatus, zoneHasIssue, mergeBirdCountRecords, summarizeBirdCount, summarizeFarmHouses, thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
-import type { Alert, House, Thresholds, Zone } from '@/types'
+import type { Thresholds } from '@/types'
 
 const limits: Thresholds = { temp_min: 26, temp_max: 31, humidity_min: 75, humidity_max: 95, light_max: 0.2, nh3_max: 25, co2_max: 1500 }
 
@@ -21,42 +21,6 @@ describe('getAnomalies', () => {
     expect(getAnomalies({}, limits)).toEqual({
       tooCold: false, tooHot: false, temperature: false, humidity: false, light: false, nh3: false, co2: false,
     })
-  })
-})
-
-describe('house stability', () => {
-  const houses = [{ _id: 'h1', name: 'Nhà chính' }, { _id: 'h2', name: 'Nhà phụ' }, { _id: 'h3', name: 'Nhà trống' }] as House[]
-  const zones = [{ _id: 'z1', house_id: 'h1', name: 'Tầng 1' }, { _id: 'z2', house_id: 'h2', name: 'Tầng 2' }, { _id: 'z3', house_id: 'h3', name: 'Tầng 3' }] as Zone[]
-
-  it('puts houses with faulty devices first and counts the faulty devices', () => {
-    const devices = [
-      { zone_id: 'z2', status: 'ONLINE' as const, type: 'sensor' as const },
-      { zone_id: 'z1', status: 'ONLINE' as const, type: 'sensor' as const },
-      { zone_id: 'z1', status: 'OFFLINE' as const, type: 'camera' as const },
-      { zone_id: 'z1', status: 'OFFLINE' as const, type: 'sensor' as const }, // ERROR đã bỏ (SRS 3.1.0)
-    ]
-    const items = buildHouseStability(houses, zones, devices)
-    expect(items.map(item => [item.name, item.status, item.faultyDevices])).toEqual([
-      ['Nhà chính', 'FAULT', 2],
-      ['Nhà phụ', 'STABLE', 0],
-      ['Nhà trống', 'EMPTY', 0],
-    ])
-    expect(items[0]).toMatchObject({ faultZoneName: 'Tầng 1', faultDeviceType: 'camera' })
-  })
-
-  it('counts a camera attached to the house without a zone (SRS v2.1.8)', () => {
-    const items = buildHouseStability(houses, zones, [{ house_id: 'h2', status: 'OFFLINE', type: 'camera' }])
-    expect(items.find(item => item.houseId === 'h2')).toMatchObject({ status: 'FAULT', faultyDevices: 1, faultDeviceType: 'camera' })
-  })
-
-  it('treats waiting devices as normal and summarizes', () => {
-    const items = buildHouseStability(houses, zones, [{ zone_id: 'z1', status: 'PENDING', type: 'sensor' }, { zone_id: 'z2', status: 'ONLINE', type: 'sensor' }])
-    expect(summarizeStability(items)).toMatchObject({ stableCount: 2, emptyCount: 1, hasDevices: true })
-    expect(summarizeStability(items).faultHouses).toEqual([])
-  })
-
-  it('has no devices when every house is empty', () => {
-    expect(summarizeStability(buildHouseStability(houses, zones, [])).hasDevices).toBe(false)
   })
 })
 
@@ -158,38 +122,6 @@ describe('summarizeBirdCount', () => {
   })
 })
 
-describe('alert log row', () => {
-  const base = {
-    _id: 'a1', farm_id: 'f1', type: 'THRESHOLD_BREACH', severity: 'HIGH', title: 'x', message: 'y',
-    status: 'ACTIVE', created_at: '2026-10-10T05:00:00Z',
-  } as Alert
-
-  it('groups severity', () => {
-    expect([getSeverityGroup('CRITICAL'), getSeverityGroup('HIGH'), getSeverityGroup('MEDIUM'), getSeverityGroup('LOW')])
-      .toEqual(['P1', 'P1', 'P2', 'P3'])
-  })
-
-  it('reads value and limit from the breach metadata', () => {
-    const row = buildAlertRow({ ...base, metadata: { breaches: [{ metric: 'temperature', value: 33.5, limit: 31, direction: 'above' }] } }, 'node_001', 'Nhà chính | Tầng 1')
-    expect(row).toMatchObject({ deviceName: 'node_001', locationName: 'Nhà chính | Tầng 1', sensorKind: 'temperature', breach: { value: 33.5, limit: 31, unit: '°C', sign: '<' }, group: 'P1' })
-  })
-
-  it('prefers the dwell details over the breach metadata (G-05)', () => {
-    const row = buildAlertRow({
-      ...base,
-      // metadata có cả chỉ số chưa đủ thời gian chờ; details là chỉ số cảnh báo thật sự báo
-      metadata: { breaches: [{ metric: 'humidity', value: 60, limit: 70, direction: 'below' }, { metric: 'temperature', value: 35.2, limit: 33, direction: 'above' }] },
-      details: { metric: 'temperature', observed: 35.2, threshold: 33, direction: 'above', started_at: '2026-10-10T04:48:00Z' },
-    }, 'node_001', 'Tầng 1')
-    expect(row).toMatchObject({ sensorKind: 'temperature', breach: { value: 35.2, limit: 33, unit: '°C', sign: '<' } })
-  })
-
-  it('shows a dash when the alert has no breach data', () => {
-    const row = buildAlertRow({ ...base, type: 'SENSOR_FAULT' }, 'node_001', 'Tầng 1')
-    expect(row).toMatchObject({ sensorKind: 'env', breach: undefined })
-  })
-})
-
 describe('averageControlOutput', () => {
   it('averages the fuzzy output of zones that have live telemetry', () => {
     const live = new Map([['z1', { controlOutput: { misting: 40, ventilation: 10 } }], ['z2', { controlOutput: { misting: 61, ventilation: 30 } }]])
@@ -203,29 +135,25 @@ describe('averageControlOutput', () => {
 
 describe('summarizeFarmHouses', () => {
   const house = (farmId: string, health: 'ALERT' | 'NORMAL' | 'EMPTY', severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>) => ({
-    farm: { _id: farmId }, health, zones: [{}, {}], counts: { total: 4, online: 3 },
-    alerts: severities.map(severity => ({ severity })), monthKg: 1.5, monthNests: 10, monthBatches: 1,
+    farm: { _id: farmId }, health, counts: { total: 4, online: 2, offline: 1 },
+    alerts: severities.map(severity => ({ severity })),
   })
 
   it('chỉ cộng nhà của farm đang chọn, quy cảnh báo về 3 cấp', () => {
     const totals = summarizeFarmHouses([house('f1', 'ALERT', ['CRITICAL', 'MEDIUM']), house('f1', 'NORMAL', ['LOW']), house('f2', 'ALERT', ['HIGH'])], 'f1')
     expect(totals.houses).toBe(2)
     expect(totals.faultHouses).toBe(1)
-    expect(totals.zones).toBe(4)
-    expect(totals.devicesOnline).toBe(6)
+    expect(totals.devicesOnline).toBe(4)
     expect(totals.devicesTotal).toBe(8)
+    // Thiết bị chờ kết nối (total − online − offline) không tính là mất kết nối
+    expect(totals.devicesOffline).toBe(2)
     expect(totals.alertsTotal).toBe(3)
-    expect(totals.alertsByLevel).toEqual({ P1: 1, P2: 1, P3: 1 })
-    expect(totals.monthKg).toBe(3)
-    expect(totals.monthBatches).toBe(2)
   })
 
   it('tất cả trang trại (farmId rỗng) cộng nhà của mọi farm', () => {
     const totals = summarizeFarmHouses([house('f1', 'ALERT', ['CRITICAL']), house('f2', 'NORMAL', ['HIGH', 'LOW'])], '')
     expect(totals.houses).toBe(2)
     expect(totals.alertsTotal).toBe(3)
-    expect(totals.alertsByLevel).toEqual({ P1: 2, P2: 0, P3: 1 })
-    expect(totals.monthKg).toBe(3)
   })
 })
 
@@ -269,5 +197,24 @@ describe('thresholdSource', () => {
       { source: 'MANUAL', changed_by_role: 'DOMAIN_EXPERT', changed_at: '2026-10-09T00:00:00Z' },
       { source: 'MANUAL', changed_by_role: 'FARM_OWNER', changed_at: '2026-10-02T00:00:00Z' },
     ])).toEqual({ isDefault: false, role: 'DOMAIN_EXPERT', changedAt: '2026-10-09T00:00:00Z' })
+  })
+})
+
+// A-03: thẻ nhà và ô "Nhà cần chú ý" cùng một luật
+describe('houseLiveStatus', () => {
+  it('bộ điều khiển chưa online thì nhà cần chú ý dù số đo trong ngưỡng', () => {
+    expect(houseLiveStatus('NORMAL', ['ONLINE', 'PENDING'])).toBe('ALERT')
+    expect(houseLiveStatus('NORMAL', ['OFFLINE'])).toBe('ALERT')
+  })
+
+  it('mọi bộ điều khiển online thì theo số đo của nhà', () => {
+    expect(houseLiveStatus('NORMAL', ['ONLINE'])).toBe('NORMAL')
+    expect(houseLiveStatus('ALERT', ['ONLINE'])).toBe('ALERT')
+  })
+
+  it('nhà chưa có bộ điều khiển không bao giờ "Ổn định", trừ khi đang có sự cố (VD camera hỏng)', () => {
+    expect(houseLiveStatus('NORMAL', [])).toBe('EMPTY')
+    expect(houseLiveStatus('EMPTY', [])).toBe('EMPTY')
+    expect(houseLiveStatus('ALERT', [])).toBe('ALERT')
   })
 })

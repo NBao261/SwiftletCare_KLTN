@@ -19,6 +19,10 @@ import { DetectionTuningSection } from '@/components/farm/settings/DetectionTuni
 import { DeviceListSection } from '@/components/farm/settings/DeviceListSection'
 import { FuzzyTuningSection } from '@/components/farm/settings/FuzzyTuningSection'
 import { HouseInfoSection } from '@/components/farm/settings/HouseInfoSection'
+import { CountingScheduleSection } from '@/components/farm/settings/CountingScheduleSection'
+import { HealthLevelsSection } from '@/components/farm/settings/HealthLevelsSection'
+import { HouseStageSection } from '@/components/farm/settings/HouseStageSection'
+import { WeatherRulesSection } from '@/components/farm/settings/WeatherRulesSection'
 import { ThresholdSection } from '@/components/farm/settings/ThresholdSection'
 import { ZoneInfoSection } from '@/components/farm/settings/ZoneInfoSection'
 import { ZoneSettingsTabs } from '@/components/farm/settings/ZoneSettingsTabs'
@@ -30,6 +34,7 @@ import { Toast } from '@/components/ui/toast'
 import { Spacing } from '@/constants/theme'
 import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
+import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { useCreateZone } from '@/hooks/farm/useCreateZone'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
@@ -42,6 +47,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { canPerform } from '@/utils/permission.utils'
 import {
   getSettingsSectionId,
+  isHouseSectionKind,
   parseSettingsSectionKind,
   SETTINGS_SECTION_EDIT_ACTION,
 } from '@/utils/settingsSection.utils'
@@ -64,6 +70,10 @@ export default function HouseSettingsScreen() {
   const params = useLocalSearchParams<{ houseId: string; section?: string; zoneId?: string; edit?: string }>()
   const houseId = params.houseId
   const user = useAuthStore(state => state.user)
+  const housesQuery = useAllHouses()
+  const house = housesQuery.houses.find(item => item._id === houseId) ?? null
+  // Mục BR-22 (tham số phát hiện, lịch đếm, luật thời tiết…): chủ trại chỉ sửa khi farm chưa có chuyên gia
+  const hasExpert = useFarmHasExpert(house?.farm_id ?? '')
   // Mở từ nút ⋮ "Chỉnh sửa" ở chi tiết nhà: mục đó sổ sẵn, có quyền thì mở sẵn chế độ sửa
   const targetKind = parseSettingsSectionKind(params.section)
   const targetSectionId = targetKind ? getSettingsSectionId(targetKind, params.zoneId) : null
@@ -71,7 +81,9 @@ export default function HouseSettingsScreen() {
     targetKind && targetSectionId
       ? {
           sectionId: targetSectionId,
-          isEditing: params.edit === '1' && canPerform(user, SETTINGS_SECTION_EDIT_ACTION[targetKind]),
+          isEditing:
+            params.edit === '1' &&
+            canPerform(user, SETTINGS_SECTION_EDIT_ACTION[targetKind], { farmHasExpert: hasExpert }),
         }
       : null,
   )
@@ -79,8 +91,6 @@ export default function HouseSettingsScreen() {
   // Vị trí của mục cần mở trong vùng cuộn: mục theo tầng nằm trong khối tầng nên cộng vị trí khối
   const focusLayout = useRef({ groupY: 0, sectionY: null as number | null, isUserScrolled: false })
   const toast = useToastMessage()
-  const housesQuery = useAllHouses()
-  const house = housesQuery.houses.find(item => item._id === houseId) ?? null
   const zonesQuery = useHouseZones(houseId)
   const zones = zonesQuery.data ?? []
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(params.zoneId ?? null)
@@ -123,7 +133,7 @@ export default function HouseSettingsScreen() {
   const scrollToTarget = () => {
     const layout = focusLayout.current
     if (layout.isUserScrolled || layout.sectionY === null) return
-    const isZoneSection = targetKind !== 'bird-count'
+    const isZoneSection = targetKind !== null && !isHouseSectionKind(targetKind)
     const y = (isZoneSection ? layout.groupY : 0) + layout.sectionY - Spacing.sm
     scrollRef.current?.scrollTo({ y: Math.max(0, y), animated: true })
   }
@@ -241,6 +251,9 @@ export default function HouseSettingsScreen() {
               {house.name}
             </Text>
             <HouseInfoSection house={house} zones={zones} editor={editor} />
+            <View onLayout={event => handleSectionLayout(getSettingsSectionId('stage'), event)}>
+              <HouseStageSection house={house} editor={editor} onSaved={toast.show} />
+            </View>
             <DeviceListSection
               id="cameras"
               kind="camera"
@@ -257,6 +270,15 @@ export default function HouseSettingsScreen() {
             />
             <View onLayout={event => handleSectionLayout(getSettingsSectionId('bird-count'), event)}>
               <BirdCountTuningSection house={house} editor={editor} onSaved={toast.show} />
+            </View>
+            <View onLayout={event => handleSectionLayout(getSettingsSectionId('counting-schedule'), event)}>
+              <CountingScheduleSection house={house} editor={editor} onSaved={toast.show} />
+            </View>
+            <View onLayout={event => handleSectionLayout(getSettingsSectionId('weather'), event)}>
+              <WeatherRulesSection house={house} editor={editor} onSaved={toast.show} />
+            </View>
+            <View onLayout={event => handleSectionLayout(getSettingsSectionId('health-levels'), event)}>
+              <HealthLevelsSection house={house} editor={editor} onSaved={toast.show} />
             </View>
 
             <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.groupLabel}>

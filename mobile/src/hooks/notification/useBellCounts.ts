@@ -12,8 +12,8 @@ export interface BellCounts {
   total: number
 }
 
-// Số của chuông: tổng thông báo chưa đọc và cảnh báo chưa xác nhận. Cảnh báo lấy từ alertStore (useSyncAlertBadge, cùng số
-// với badge tab Cảnh báo); chuyên gia không xác nhận cảnh báo nên phần này là 0
+// Số của chuông: tổng thông báo chưa đọc và cảnh báo chưa xác nhận. Cảnh báo lấy từ alertStore (useSyncAlertBadge, chỉ
+// chạy cho role xác nhận được cảnh báo); chuyên gia không xác nhận cảnh báo nên phần này là 0
 export function useBellCounts(): BellCounts {
   const user = useAuthStore(state => state.user)
   const { data: notificationCount = 0 } = useUnreadNotificationCount()

@@ -6,7 +6,7 @@ import { CpuIcon, HouseIcon, UsersIcon, WarningIcon } from '@phosphor-icons/reac
 import { useSystemHealth } from '@/hooks/admin/useSystem'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
 import { Card } from '@/components/ui'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import RecentActivityCard from '@/components/features/admin/dashboard/RecentActivityCard'
@@ -49,11 +49,11 @@ export default function AdminSystemHealthPage() {
       <Card className="flex flex-col gap-4">
         <div>
           <h2 className="text-h2 text-charcoal">{i18nT('Chỉ số vận hành toàn hệ thống')}</h2>
-          <p className="mt-1 text-sm text-warmGray">{i18nT('Trang trại, thiết bị, tài khoản và cảnh báo khẩn cấp trên mọi trang trại')}</p>
+          <p className="mt-1 text-sm text-warmGray">{i18nT('Số liệu trên mọi trang trại')}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={HouseIcon}
             iconClass={ICON_NORMAL}
@@ -61,16 +61,17 @@ export default function AdminSystemHealthPage() {
             value={farms.total}
             sub={i18nT('Gồm {{n}} Zone', { n: zones.total })}
           />
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={CpuIcon}
             iconClass={ICON_NORMAL}
             label="Thiết bị online"
             // Số thiết bị online / tổng thiết bị đang phục vụ (thay cho % — 0% với 2 thiết bị khó hình dung)
-            value={hasDevices ? `${devices.online}/${devices.total}` : '--'}            sub={deviceSub}
+            value={hasDevices ? `${devices.online}/${devices.total}` : '--'}
+            sub={deviceSub}
           />
           {/* SYSTEM-FR-003 — tài khoản đăng nhập được (gồm chờ xoá) và bị khoá; chi tiết theo role ở trang Người dùng */}
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={UsersIcon}
             iconClass={ICON_NORMAL}
@@ -78,14 +79,14 @@ export default function AdminSystemHealthPage() {
             value={users.active}
             sub={i18nT('{{n}} bị khoá', { n: users.inactive })}
           />
-          <StatTile
+          <KpiTile
             className="shadow-none"
             icon={WarningIcon}
             iconClass={ICON_NORMAL}
             // Query chỉ lấy status ACTIVE — không ghi "đang mở" vì ACKNOWLEDGED cũng là đang mở (ALERT-FR-008/009).
             // Admin không xác nhận cảnh báo (chỉ Farm Owner, ALERT-FR-009) → dòng phụ nói ai chưa phản hồi, tránh
             // chữ "chờ xác nhận" khiến Admin tưởng việc đó của mình
-            label="Cảnh báo CRITICAL"
+            label="Cảnh báo khẩn cấp"
             value={String(criticalAlerts.total)}
             sub={criticalAlerts.total > 0 ? 'Chủ nhà yến chưa phản hồi' : 'Không có cảnh báo mới'}
           />

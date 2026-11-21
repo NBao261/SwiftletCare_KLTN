@@ -50,7 +50,7 @@ export default function FarmOwnerDeviceSetupPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-charcoal">Lắp đặt thiết bị mới</h1>
+        <h2 className="text-2xl font-bold text-charcoal">Lắp đặt thiết bị mới</h2>
         <p className="mt-0.5 text-sm text-warmGray">Hướng dẫn từng bước kết nối thiết bị vào hệ thống SwiftletCare</p>
       </div>
 

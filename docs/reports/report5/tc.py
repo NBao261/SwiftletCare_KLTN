@@ -29,7 +29,7 @@ FEATURES=[
 ('F-19','Device lifecycle, diagnostics and setup progress','FARM-FR-005, 006, 007, 007b, 008, 012, ENV-FR-027'),
 ('F-20','Daily health status','ANALYTICS-FR-012, 013'),
 ('F-21','Reports, PDF/CSV','EXPERT-FR-005, 013'),
-('F-22','Independent rating and disagreement review','EXPERT-FR-012, 022, ANALYTICS-FR-014'),
+('F-22','Daily rating and disagreement review','EXPERT-FR-012, 022, ANALYTICS-FR-014'),
 ('F-23','Alert routing and escalation','ALERT-FR-005, 009, 017, 018, AUTH-FR-013'),
 ('F-24','Work Orders closed by the data','OPS-FR-001, 002, 003, 004, 009'),
 ('F-25','Preventive maintenance','OPS-FR-005, 006, 007, 008, ALERT-FR-016'),
@@ -133,8 +133,8 @@ TC=[
  [(J,I+'detectionTuning.test.ts','Domain Expert lưu tham số kèm lịch sử + audit'),(J,I+'detectionTuning.test.ts','mức giảm tỷ lệ chim về gửi nhầm vào Zone'),(J,I+'detectionTuning.test.ts','Zone: về DEFAULT_DETECTION_TUNING')]),
 ('TC-F14-02','F-14','Camera of the house','PUT a counting ring as the expert, then as the Farm Technician of the house and of another house','Ring of 6 vertices','Stored with history and audit, sent to the AI node of the house, no RTSP address returned; the technician of the house accepted, of another house 403',
  [(J,I+'countingRing.test.ts','Domain Expert lưu vòng kèm lịch sử + audit'),(J,I+'technicianAccess.test.ts','draws the counting ring in the assigned house only')]),
-('TC-F14-03','F-14','Farm with an expert','PUT detection tuning as the Farm Owner','Valid values','Read allowed, write rejected (403)',
- (J,I+'detectionTuning.test.ts','Farm Owner xem được nhưng không sửa được')),
+('TC-F14-03','F-14','Farm with an expert','PUT detection tuning as the Farm Owner','Valid values','Applied at once and sent to the devices; a review item PENDING_REVIEW with the old and new values opened and the expert notified (BR-22, EXPERT-FR-010)',
+ (J,I+'detectionTuning.test.ts','Farm Owner trên farm có chuyên gia: áp ngay và mở mục duyệt')),
 # F-15
 ('TC-F15-01','F-15','≥ 3 days of telemetry of a fast-drying zone','GET the tuning suggestion','—','Suggestion keeps the zone in range longer; nothing applied',
  (J,I+'tuningSuggestion.test.ts','suggests tuning that keeps a fast-drying house in range longer')),
@@ -179,7 +179,7 @@ TC=[
 ('TC-F21-02','F-21','Seeded month','GET the CSV of daily indicators','—','One row per house and day with every indicator, level, status and ratings; no internal IDs',(J,I+'healthDays.test.ts','1 dòng mỗi nhà × ngày')),
 ('TC-F21-03','F-21','A daily report in the web app','Download the PDF and compare with the screen','—','Same figures; no internal IDs',(M,'web, staging')),
 # F-22
-('TC-F22-01','F-22','Computed day; Farm Technician of the house who has not rated it','GET the day, the daily report and the CSV; then POST a rating','—','No status, reasons or other ratings before the rating; the rating and its snapshot stored together, and the status returned only in the rating response',[(J,I+'healthDays.test.ts','chấm riêng với Farm Owner: chưa chấm thì bị che'),(J,I+'healthDays.test.ts','chỉ ở nhà được giao: nhà khác 403')]),
+('TC-F22-01','F-22','Computed day; Farm Technician of the house who has not rated it','GET the day, the daily report and the CSV; then POST a rating','—','Status, reasons and other ratings returned before the rating (BR-31); the rating and its snapshot stored together',[(J,I+'healthDays.test.ts','chấm riêng với Farm Owner: thấy trạng thái trước khi chấm'),(J,I+'healthDays.test.ts','chỉ ở nhà được giao: nhà khác 403')]),
 ('TC-F22-02','F-22','Rated day','Ingest a late count that changes the status; then try to change the rating','—','Current status recomputed, snapshot unchanged; rating change rejected, a note accepted',(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên')),
 ('TC-F22-03','F-22','Administrator and Domain Expert; a day 8 days ago; seeded disagreeing days','Rate as each; rate the old day; expert opens the disagreeing days','—','403 for both; old day rejected; the list shows exactly the disagreeing days',[(J,I+'healthDays.test.ts','Domain Expert, Administrator, Farm Technician ngoài farm → 403'),(J,I+'healthDays.test.ts','ngày cũ 8 ngày → 409'),(J,I+'healthDays.test.ts','chỉ trả ngày có điểm của người chấm khác ảnh chụp')]),
 # F-23
@@ -272,7 +272,7 @@ ST=[
 ('6.11 CoefficientProposal','closed → (rejected)','Approve a closed proposal','409',(J,I+'coefficientProposal.test.ts','đề xuất đã đóng → 409')),
 ('6.17 DailyHealthStatus','(new) → COMPUTED','Daily assessment','One day record with current status and reasons; one pending rating per assigned Farm Technician and Farm Owner, none for the Domain Expert',[(J,I+'healthAssessment.test.ts','ngày mới: ghi 1 bản ghi'), (J,I+'healthAssessment.test.ts','báo cả Farm Technician được giao nhà'), (J,I+'healthDays.test.ts','chuyên gia không có lượt chấm')]),
 ('6.17 DailyHealthStatus','COMPUTED → COMPUTED','Late count arrives after one assessor rated','Current status recomputed; the stored snapshot unchanged',(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên')),
-('6.18 DailyRating','PENDING → RATED','Farm Technician rates','Rating and snapshot stored in one write; status returned',(J,I+'healthDays.test.ts','chấm riêng với Farm Owner: chưa chấm thì bị che')),
+('6.18 DailyRating','PENDING → RATED','Farm Technician rates','Rating and snapshot stored in one write',(J,I+'healthDays.test.ts','chấm riêng với Farm Owner: thấy trạng thái trước khi chấm')),
 ('6.18 DailyRating','PENDING → SKIPPED','Farm Owner not at the house skips','Status returned; no rating counted for NFR-14',(J,I+'healthDays.test.ts','SKIPPED: hiện trạng thái, không có điểm')),
 ('6.18 DailyRating','PENDING → EXPIRED','7 days pass; the technician rated, the Farm Owner did not','Farm Owner\'s rating EXPIRED and the status shown to the Farm Owner; the technician\'s rating kept',[(J,I+'healthDays.test.ts','EXPIRED theo từng người'), (J,I+'healthDays.test.ts','quá 7 ngày thì EXPIRED')]),
 ('6.18 DailyRating','RATED → RATED','Rated assessor adds a note','Note stored; rating unchanged',(J,I+'healthDays.test.ts','số đếm về trễ đổi current_status, snapshot giữ nguyên')),
@@ -309,7 +309,7 @@ NFR=[
 ('NFR-06','Router uplink cut for 30 min on the prototype with one sensor fault forced; decision log, stored samples and stored alerts','100 % of decisions; 0 samples lost; the alert delivered once',(M,'prototype, test house')),
 ('NFR-09','Test days kept out of training and tuning: detection on ≥ 200 labelled frames per lighting (IoU ≥ 0.5); counting on 20 clips of 5 min (10 daylight, 10 low light) against counts by two members','Precision ≥ 0.80, Recall ≥ 0.80; count error ≤ 10 % per direction; each per lighting',(M,'AI node, evaluation script and `tools/track_clip.py`')),
 ('NFR-13','5 people who have not set up a device before, timed from power-on to "configuration applied"','≤ 10 min in 5/5; two scans + Wi-Fi',(M,'prototype, mobile app')),
-('NFR-14','Snapshots and independent ratings over ≥ 14 rated days (ANALYTICS-FR-014)','Agreement ≥ 70 % with its 95 % CI; weighted kappa and AC1 reported',(M,'field run, test house')),
+('NFR-14','Snapshots and assessor ratings over ≥ 14 rated days (ANALYTICS-FR-014)','Agreement ≥ 70 % with its 95 % CI; weighted kappa and AC1 reported',(M,'field run, test house')),
 ('NFR-15','30 alerts and 10 Work Orders injected with the device simulator on staging; times from the backend log and a Socket.io client','P95 ≤ 60 s after the escalation deadline and after the end of recovery_verify_min',(M,'staging, device simulator `--work-orders` (`simulator/src/nfr15.js`)')),
 ]
 

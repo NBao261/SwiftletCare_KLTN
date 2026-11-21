@@ -127,7 +127,6 @@ export function MoveDeviceSheet({ target, onClose, onMoved }: MoveDeviceSheetPro
       <FormMessage message={reassignZone.error ? getDeviceMoveErrorMessage(reassignZone.error) : null} />
       <SettingsActionBar
         label={t('Dời thiết bị')}
-        value={t('GỬI')}
         onPress={submit}
         disabled={!newZoneId}
         loading={reassignZone.isPending}

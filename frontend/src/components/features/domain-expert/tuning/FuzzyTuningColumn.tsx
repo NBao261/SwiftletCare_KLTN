@@ -40,7 +40,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
     <div className="rounded-2xl p-4 border transition-all flex flex-col justify-between gap-3 shadow-2xs bg-gray-50/60 border-stone-200/70 hover:border-stone-300">
       <div>
         <p className="text-sm font-semibold text-charcoal leading-tight">{label}</p>
-        <p className="text-[11px] text-warmGray mt-1">
+        <p className="text-small text-warmGray mt-1">
           {t('Phạm vi: {{min}}–{{max}} • Mặc định: {{value}}', { min, max, value: defaultValue })}
         </p>
       </div>
@@ -138,7 +138,7 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
       <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
         <div>
           <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu số đo')}</p>
-          <p className="text-[11px] text-warmGray mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.')}</p>
+          <p className="text-small text-warmGray mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.')}</p>
         </div>
         <Toggle
           checked={form.fuzzy_input_filter}

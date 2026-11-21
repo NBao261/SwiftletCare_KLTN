@@ -195,15 +195,10 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} lockZone />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} lockZone />
-      </div>
+      </HeaderActions>
 
       <HarvestStatsCards
         groups={confirmedGroups}

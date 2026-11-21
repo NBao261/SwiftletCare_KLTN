@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import type { Chart as ChartInstance, ChartOptions, Plugin } from 'chart.js';
 
+import WeatherSource from '@/components/common/WeatherSource';
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
@@ -90,12 +91,15 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
 
   const chartData = useMemo(() => {
     const series = data?.series ?? [];
+    // Chưa có số đo trong nhà (thiết bị chưa gửi) thì trục thời gian lấy theo giờ thời tiết, vẫn thấy ngoài trời
+    const timeline = series.length > 0 ? series.map(point => point.timestamp) : (data?.outdoor ?? []).map(point => point.timestamp);
     const line = { fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
     // Ngoài trời (ANALYTICS-FR-013): nét đứt, cùng trục với số đo trong nhà; farm chưa có thời tiết thì không vẽ
     // Mỗi điểm thời tiết phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ (7d, 30d)
-    const outdoor = alignOutdoorWeather(series.map(point => point.timestamp), data?.outdoor ?? [], Math.max(data?.bucketMs ?? 0, HOUR_MS));
+    const outdoor = alignOutdoorWeather(timeline, data?.outdoor ?? [], Math.max(data?.bucketMs ?? 0, HOUR_MS));
     const hasOutdoor = outdoor.some(point => point !== null);
-    const outdoorLine = { ...line, borderWidth: 1.5, borderDash: [6, 4] };
+    // Một điểm (1 giờ, chưa có số đo trong nhà) thì đường không vẽ gì: hiện chấm
+    const outdoorLine = { ...line, borderWidth: 1.5, borderDash: [6, 4], pointRadius: timeline.length < 2 ? 3 : 0 };
     const indoorDatasets = [
       { label: t('chart.temperature'), data: series.map(point => point.temperature ?? null), borderColor: CHART_COLORS.charcoal, yAxisID: 'y', ...line },
       { label: t('chart.humidity'), data: series.map(point => point.humidity ?? null), borderColor: CHART_COLORS.accentGreen, yAxisID: 'y1', ...line },
@@ -104,10 +108,8 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
       { label: t('chart.outdoorTemperature'), data: outdoor.map(point => point?.temperature ?? null), borderColor: CHART_COLORS.warmGray, yAxisID: 'y', ...outdoorLine },
       { label: t('chart.outdoorHumidity'), data: outdoor.map(point => point?.humidity ?? null), borderColor: CHART_COLORS.accentDeep, yAxisID: 'y1', ...outdoorLine },
     ];
-    return {
-      labels: series.map(point => labelForRange(point.timestamp, range)),
-      datasets: hasOutdoor ? [...indoorDatasets, ...outdoorDatasets] : indoorDatasets,
-    };
+    const datasets = [...(series.length > 0 ? indoorDatasets : []), ...(hasOutdoor ? outdoorDatasets : [])];
+    return { labels: timeline.map(timestamp => labelForRange(timestamp, range)), datasets };
   }, [data, range, t]);
 
   const chartOptions = useMemo(() => ({
@@ -152,10 +154,11 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
       />
     );
   }
-  if (!isLoading && !isError && (!data || data.series.length === 0)) {
+  const hasChartData = Boolean(data && (data.series.length > 0 || data.outdoor.length > 0));
+  if (!isLoading && !isError && !hasChartData) {
     chart = <ChartEmptyFrame message={t('env.empty')} className="h-72" />;
   }
-  if (!isLoading && !isError && data && data.series.length > 0) {
+  if (!isLoading && !isError && hasChartData) {
     chart = (
       <div className="h-72">
         {/* react-chartjs-2 chỉ đọc plugins lúc tạo chart nên remount khi ngưỡng đổi */}
@@ -201,13 +204,15 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
       {thresholds && <p className="text-xs text-warmGray">{sourceText}</p>}
       {chart}
       {/* Thời tiết ngoài trời chỉ để đối chiếu, không điều khiển thiết bị (ANALYTICS-FR-013) */}
-      {data && data.series.length > 0 && (
+      {data && hasChartData && (
         <p className="text-xs text-warmGray">
+          {data.series.length === 0 && `${t('env.indoorEmpty')} · `}
           {data.outdoor.length > 0
             ? t('env.outdoorNote', { rain: rainfall === null ? NO_VALUE : num(rainfall, 1) })
             : t('env.outdoorEmpty')}
         </p>
       )}
+      {data && data.outdoor.length > 0 && <WeatherSource />}
     </FarmFrame>
   );
 }

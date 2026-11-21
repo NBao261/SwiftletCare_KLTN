@@ -2,6 +2,9 @@ import { describe, expect, it } from '@jest/globals'
 import type { OnsiteCheck, WorkOrder } from '@/types'
 import {
   buildPhotoPart,
+  getOwnerWorkOrderActions,
+  getReassignCandidates,
+  isApprovalUnverified,
   getPendingOnsiteCheck,
   getRemainingPhotoSlots,
   getWorkOrderAction,
@@ -139,5 +142,42 @@ describe('buildPhotoPart', () => {
     expect(buildPhotoPart({ uri: 'file:///cache/b.PNG' }, 'onsite-check').type).toBe('image/png')
     expect(buildPhotoPart({ uri: 'file:///cache/c.webp?x=1' }, 'onsite-check').name).toBe('onsite-check.webp')
     expect(buildPhotoPart({ uri: 'content://media/42' }, 'onsite-check').type).toBe('image/jpeg')
+  })
+})
+
+describe('getOwnerWorkOrderActions', () => {
+  it('chờ duyệt thì duyệt hoặc mở lại', () => {
+    expect(getOwnerWorkOrderActions({ status: 'AWAITING_APPROVAL', kind: 'REPAIR' })).toEqual(['approve', 'reopen'])
+  })
+
+  it('phiếu sửa chữa mới mở, đang làm: huỷ và giao lại; đang kiểm phục hồi chỉ huỷ', () => {
+    expect(getOwnerWorkOrderActions({ status: 'OPEN', kind: 'REPAIR' })).toEqual(['cancel', 'reassign'])
+    expect(getOwnerWorkOrderActions({ status: 'IN_PROGRESS', kind: 'REPAIR' })).toEqual(['cancel', 'reassign'])
+    expect(getOwnerWorkOrderActions({ status: 'VERIFYING', kind: 'REPAIR' })).toEqual(['cancel'])
+  })
+
+  it('phiếu phòng ngừa không huỷ được, vẫn giao lại được', () => {
+    expect(getOwnerWorkOrderActions({ status: 'OPEN', kind: 'PREVENTIVE' })).toEqual(['reassign'])
+  })
+
+  it('phiếu đã đóng hoặc đã huỷ thì không còn thao tác', () => {
+    expect(getOwnerWorkOrderActions({ status: 'CLOSED', kind: 'REPAIR' })).toEqual([])
+    expect(getOwnerWorkOrderActions({ status: 'CANCELLED', kind: 'REPAIR' })).toEqual([])
+  })
+})
+
+describe('isApprovalUnverified', () => {
+  it('chờ duyệt mà chưa có mốc xác minh thì chưa xác minh', () => {
+    expect(isApprovalUnverified({ status: 'AWAITING_APPROVAL', verified_at: null })).toBe(true)
+    expect(isApprovalUnverified({ status: 'AWAITING_APPROVAL', verified_at: '2026-11-19T01:00:00.000Z' })).toBe(false)
+    expect(isApprovalUnverified({ status: 'IN_PROGRESS', verified_at: null })).toBe(false)
+  })
+})
+
+describe('getReassignCandidates', () => {
+  it('bỏ người đang giữ phiếu', () => {
+    const technicians = [{ userId: 'a' }, { userId: 'b' }]
+    expect(getReassignCandidates(technicians, 'a')).toEqual([{ userId: 'b' }])
+    expect(getReassignCandidates(technicians, undefined)).toEqual(technicians)
   })
 })

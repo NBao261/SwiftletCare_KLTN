@@ -8,7 +8,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { useToastStore } from '@/stores/toastStore'
 import type { HouseHealthReport } from '@/types'
 
-// EXPERT-FR-013 — tải PDF của 1 báo cáo theo ngôn ngữ màn; từ danh sách thì đọc chi tiết trước (ngày che theo người xem, BR-31)
+// EXPERT-FR-013 — tải PDF của 1 báo cáo theo ngôn ngữ màn; từ danh sách thì đọc chi tiết trước (danh sách không có các ngày)
 export function useHealthReportPdf() {
   const { t, date, dateTime, exact } = useTranslation(healthDict)
   const push = useToastStore(state => state.push)

@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Bar } from 'react-chartjs-2';
-import type { ChartOptions } from 'chart.js';
 
-import { Button, ChartEmptyFrame, DataTable, EmptyState, FilterChip, LoadingSkeleton, type DataTableColumn } from '@/components/ui';
+import { Button, DataTable, EmptyState, FilterChip, LoadingSkeleton, type DataTableColumn } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import {
   ANALYTICS_RANGES,
   COMPARE_METRICS,
   MAX_COMPARE_ZONES,
-  axisTitle,
   type CompareMetricKey,
 } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { isOutsideRange, metricThresholdRange } from '@/components/features/farm-owner/analytics/analyticsMetrics';
@@ -19,15 +16,10 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useEnvCompare } from '@/hooks/farm-owner/useAnalytics';
 import type { FlatZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
 import type { AnalyticsRange, EnvCompareZone } from '@/apis/farm-owner/analytics.api';
 
 // Bảng 6 cột trong khung rộng toàn trang
 const TABLE_MIN_WIDTH = 760;
-// Nhãn trục ngang của biểu đồ: tên dài cắt còn chừng này ký tự để cột không bị ép; tooltip vẫn hiện đủ
-const AXIS_LABEL_MAX = 20;
-const shortLabel = (text: string) => (text.length > AXIS_LABEL_MAX ? `${text.slice(0, AXIS_LABEL_MAX - 1)}…` : text);
-
 // Đơn vị theo chỉ số so sánh
 const UNIT_BY_METRIC = new Map<CompareMetricKey, string>(COMPARE_METRICS.map(metric => [metric.key, metric.unit]));
 
@@ -35,11 +27,10 @@ interface CompareZonesCardProps {
   zones: FlatZone[];
 }
 
-// So sánh môi trường giữa các Zone của farm (ANALYTICS-FR-005), đối chiếu ngưỡng riêng của từng Zone
+// So sánh môi trường giữa các Zone của farm (ANALYTICS-FR-005) bằng bảng, số ngoài ngưỡng riêng của từng Zone tô cam; không vẽ cột từ 0 (CH-03)
 export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.Element {
   const { t, num, exact } = useTranslation(analyticsDict);
   const [range, setRange] = useState<AnalyticsRange>('24h');
-  const [metric, setMetric] = useState<CompareMetricKey>('temperature');
   // null = chưa tự chọn, mặc định so sánh tối đa 6 Zone đầu tiên
   const [pickedZoneIds, setPickedZoneIds] = useState<string[] | null>(null);
 
@@ -55,7 +46,6 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
   const { data, isLoading, isError, refetch } = useEnvCompare(selectedZoneIds, range);
 
   const rangeOptions = ANALYTICS_RANGES.map(value => ({ value, label: t(`range.${value}`) }));
-  const metricUnit = UNIT_BY_METRIC.get(metric) ?? '';
 
   function handleToggleZone(zoneId: string): void {
     if (selectedSet.has(zoneId)) {
@@ -68,42 +58,6 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
 
   // Giá trị trung bình 1 chỉ số của Zone, null khi chưa có số đo
   const metricValue = (zone: EnvCompareZone, key: CompareMetricKey): number | null => zone.metrics?.[key] ?? null;
-
-  const chartData = useMemo(() => {
-    const compareZones = data?.zones ?? [];
-    return {
-      labels: compareZones.map(zone => zoneLabelById.get(zone.zoneId) ?? zone.zoneName),
-      datasets: [{
-        label: t(`metric.${metric}`),
-        data: compareZones.map(zone => zone.metrics?.[metric] ?? null),
-        // Cột cam khi Zone đang ngoài ngưỡng của chính nó
-        backgroundColor: compareZones.map(zone => {
-          const value = zone.metrics?.[metric];
-          if (value === undefined) return CHART_COLORS.gray300;
-          return isOutsideRange(value, metricThresholdRange(metric, zone.thresholds)) ? CHART_COLORS.climateOrange : CHART_COLORS.accentGreen;
-        }),
-        borderRadius: 8,
-        maxBarThickness: 48,
-      }],
-    };
-  }, [data, metric, zoneLabelById, t]);
-
-  const chartOptions = useMemo(() => ({
-    ...baseChartOptions,
-    scales: {
-      x: {
-        ...baseChartOptions.scales.x,
-        ticks: {
-          ...baseChartOptions.scales.x.ticks,
-          maxRotation: 0,
-          callback(this: { getLabelForValue: (value: number) => string }, value: number | string) {
-            return shortLabel(this.getLabelForValue(Number(value)));
-          },
-        },
-      },
-      y: { ...baseChartOptions.scales.y, title: axisTitle(metricUnit) },
-    },
-  } as ChartOptions<'bar'>), [metricUnit]);
 
   // Ô giá trị trung bình, cam đậm khi ngoài ngưỡng của Zone
   const valueCell = (zone: EnvCompareZone, key: CompareMetricKey, digits: number): JSX.Element => {
@@ -145,21 +99,35 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
 
   // Thân khung theo trạng thái chưa chọn, tải, lỗi
   let body = (
-    <>
-      <div className="h-72">
-        <Bar data={chartData} options={chartOptions} />
-      </div>
-      <DataTable
-        columns={columns}
-        rows={data?.zones ?? []}
-        getRowKey={zone => zone.zoneId}
-        emptyMessage={t('compare.noData')}
-        minTableWidth={TABLE_MIN_WIDTH}
-      />
-    </>
+    <DataTable
+      columns={columns}
+      rows={selectedZoneIds.length === 0 ? [] : data?.zones ?? []}
+      getRowKey={zone => zone.zoneId}
+      emptyMessage={selectedZoneIds.length === 0 ? t('compare.empty') : t('compare.noData')}
+      minTableWidth={TABLE_MIN_WIDTH}
+      mobileCard={zone => (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-body font-semibold text-charcoal">{zoneLabelById.get(zone.zoneId) ?? zone.zoneName}</p>
+          {zone.metrics ? (
+            <>
+              <p className="flex flex-wrap gap-x-3 gap-y-1 text-small">
+                {valueCell(zone, 'temperature', 1)}
+                {valueCell(zone, 'humidity', 1)}
+                <span>NH3 {valueCell(zone, 'nh3_ppm', 1)}</span>
+                <span>CO2 {valueCell(zone, 'co2_ppm', 0)}</span>
+              </p>
+              <p className="text-small text-warmGray tabular-nums">
+                {t('compare.outside', { count: num(zone.metrics.anomalyCount), total: num(zone.metrics.sampleCount) })}
+              </p>
+            </>
+          ) : (
+            <p className="text-small text-warmGray">{t('compare.noData')}</p>
+          )}
+        </div>
+      )}
+    />
   );
-  if (selectedZoneIds.length === 0) body = <ChartEmptyFrame message={t('compare.empty')} className="h-72" />;
-  if (selectedZoneIds.length > 0 && isLoading) body = <LoadingSkeleton className="h-72 w-full" />;
+  if (selectedZoneIds.length > 0 && isLoading) body = <LoadingSkeleton count={3} className="h-12 w-full" />;
   if (selectedZoneIds.length > 0 && isError) {
     body = (
       <EmptyState
@@ -175,15 +143,8 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
       description={t('compare.subtitle')}
       action={<SegmentedChips options={rangeOptions} value={range} onChange={setRange} ariaLabel={t('range.label')} />}
     >
-      {/* Chọn chỉ số */}
-      <div className="flex flex-wrap gap-2">
-        {COMPARE_METRICS.map(option => (
-          <FilterChip key={option.key} active={metric === option.key} label={t(`metric.${option.key}`)} onClick={() => setMetric(option.key)} />
-        ))}
-      </div>
-
-      {/* Chọn Zone so sánh */}
-      <div className="flex flex-col gap-2 rounded-2xl border border-warmGray/15 p-4">
+      {/* Chọn Zone so sánh (không hộp lồng trong card) */}
+      <div className="flex flex-col gap-2">
         <p className="label-caption">{t('compare.pick', { max: MAX_COMPARE_ZONES })}</p>
         <div className="flex flex-wrap gap-2">
           {zones.map(zone => (

@@ -2,7 +2,7 @@ import { BellIcon, DropIcon, RobotIcon, ThermometerIcon, UserCircleIcon } from '
 
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { alertTypeDict } from '@/constants/enumLabels.i18n';

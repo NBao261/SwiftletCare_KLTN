@@ -74,12 +74,13 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
 
       <div className="grid grid-cols-1 gap-4 border-t border-gray-200 pt-4 sm:grid-cols-3">
         <InfoSection title={t('detail.sectionStatus')}>
-          <InfoRow label={t('detail.location')} value={isSensor ? zoneName ?? NO_VALUE : t('detail.wholeHouse')} />
-          <InfoRow label={t(isSensor ? 'device.firmware' : 'device.model')} value={device.version ? `v${device.version}` : NO_VALUE} />
+          <InfoRow keep label={t('detail.location')} value={isSensor ? zoneName ?? NO_VALUE : t('detail.wholeHouse')} />
+          <InfoRow keep label={t(isSensor ? 'device.firmware' : 'device.model')} value={device.version ? `v${device.version}` : NO_VALUE} />
           <InfoRow label={t('detail.activated')} value={day(device.registeredAt)} />
         </InfoSection>
         <InfoSection title={t('detail.sectionHeartbeat')}>
           <InfoRow
+            keep
             label={t('detail.lastHeartbeat')}
             value={ago(device.lastHeartbeat)}
             sub={device.lastHeartbeat ? dateTime(device.lastHeartbeat) : undefined}
@@ -91,13 +92,14 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
             value={device.freeHeap !== undefined ? t('detail.freeHeapValue', { kb: num(device.freeHeap / BYTES_PER_KILOBYTE) }) : NO_VALUE}
           />
         </InfoSection>
-        <InfoSection title={t('detail.sectionNetwork')}>
+        {/* Thiết bị chưa kết nối lần nào: không có Wi-Fi, IP nên bỏ cả nhóm (FO-04) */}
+        {(device.ip || (quality && device.rssi !== undefined)) && <InfoSection title={t('detail.sectionNetwork')}>
           <InfoRow
             label={t('detail.wifi')}
             value={quality && device.rssi !== undefined ? `${device.rssi} dBm · ${t(`wifi.${quality}`)}` : NO_VALUE}
           />
           <InfoRow label={t('detail.ip')} value={device.ip ?? NO_VALUE} />
-        </InfoSection>
+        </InfoSection>}
       </div>
     </div>
   );
@@ -112,12 +114,14 @@ function InfoSection({ title, children }: { title: string; children: ReactNode }
   );
 }
 
-function InfoRow({ label, value, sub }: { label: string; value: string; sub?: string }): JSX.Element {
+// Hàng không có số (chỉ "_") thì không vẽ, trừ hàng luôn cần thấy (vị trí, phiên bản, kết nối cuối)
+function InfoRow({ label, value, sub, keep = false }: { label: string; value: string; sub?: string; keep?: boolean }): JSX.Element | null {
+  if (value === NO_VALUE && !sub && !keep) return null;
   return (
     <div>
-      <dt className="text-xs text-warmGray">{label}</dt>
-      <dd className={cn('text-sm font-semibold', value === NO_VALUE ? 'text-warmGray' : 'text-charcoal')}>{value}</dd>
-      {sub && <dd className="text-xs text-warmGray">{sub}</dd>}
+      <dt className="text-small text-warmGray">{label}</dt>
+      <dd className={cn('text-body font-semibold', value === NO_VALUE ? 'text-warmGray' : 'text-charcoal')}>{value}</dd>
+      {sub && <dd className="text-small text-warmGray">{sub}</dd>}
     </div>
   );
 }

@@ -18,7 +18,7 @@ function runOperation(operation: HarvestOperation): Promise<HarvestBatch | null>
 }
 
 // Ghi hoặc sửa một lần thu (HARVEST-FR-001, 005): backend lưu mỗi loại yến một đợt nên gửi song song từng loại, không dừng khi một
-// loại lỗi — màn giữ lại loại đã lưu để lần bấm sau chỉ gửi loại lỗi (như form web). Xong thì tải lại đợt thu của farm
+// loại lỗi — màn giữ lại loại đã lưu để lần bấm sau chỉ gửi loại lỗi (như form web). Xong thì tải lại đợt thu của farm và chu kỳ thu
 export function useSaveHarvestRun(farmId: string) {
   const queryClient = useQueryClient()
 
@@ -31,6 +31,11 @@ export function useSaveHarvestRun(farmId: string) {
           : { operation: operations[index], isSaved: false, error: result.reason },
       )
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['harvests', farmId] }),
+    // Lần thu đã xác nhận đóng chu kỳ của zone, xoá thì backend gộp chu kỳ (BR-43), nên tải lại cả chu kỳ thu
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['harvests', farmId] }),
+        queryClient.invalidateQueries({ queryKey: ['harvest-cycles'] }),
+      ]),
   })
 }

@@ -54,10 +54,29 @@ export async function findRecipients(farmId: string) {
   return User.find({ _id: { $in: userIds }, ...SIGN_IN_FILTER }).lean()
 }
 
-/** Domain Expert của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`) */
+/** Domain Expert còn hoạt động của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`; chuyên gia bị khoá không nhận) */
 export async function findFarmExperts(farmId: unknown): Promise<string[]> {
-  const farm = await Farm.findById(farmId).select('members').lean()
-  return (farm?.members ?? []).filter(m => m.role === 'DOMAIN_EXPERT').map(m => String(m.user_id))
+  const farm = await Farm.findById(farmId).select('members')
+  return farm ? activeExpertIds(farm) : []
+}
+
+/**
+ * BR-22 (Report 3 4.2.15) — Farm Owner gửi việc cho chuyên gia (đề xuất chờ duyệt, nhắc việc còn chờ): báo trong
+ * ứng dụng cho mọi Domain Expert của farm (EXPERT-FR-007: chuyên gia không nhận kênh ngoài ứng dụng). Không throw.
+ */
+export async function notifyExpertsOfProposal(
+  farmId: unknown, author: CurrentUser,
+  message: { what: string; body: string; ref: { kind: NotificationRefKind; id: string }; prefix?: string },
+): Promise<number> {
+  try {
+    const [experts, user] = await Promise.all([findFarmExperts(farmId), User.findById(author._id).select('full_name').lean()])
+    const title = `${message.prefix ?? 'Cần duyệt'}: ${user?.full_name ?? author.email} ${message.what}`
+    await Promise.all(experts.map(expertId => createInAppNotification(expertId, { title, body: message.body, ref: message.ref })))
+    return experts.length
+  } catch (err) {
+    logger.warn('Báo chuyên gia việc của Farm Owner thất bại', { err, farmId: String(farmId), what: message.what })
+    return 0
+  }
 }
 
 /**

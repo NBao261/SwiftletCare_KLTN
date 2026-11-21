@@ -9,11 +9,11 @@ interface AlertState {
   // Số ACTIVE backend trả (useSyncAlertBadge)
   setUnread: (count: number) => void
   setLatestAlert: (alert: Alert) => void
-  // Xoá hết khi kết thúc phiên, không để badge của tài khoản trước sang tài khoản sau
+  // Xoá hết khi kết thúc phiên, không để số của tài khoản trước sang tài khoản sau
   clearAlerts: () => void
 }
 
-// Cảnh báo realtime phía client — số chưa đọc cho badge tab Cảnh báo
+// Cảnh báo realtime phía client — unreadCount là số cảnh báo chưa xác nhận (ACTIVE) cho chuông; thanh tab không hiện số
 export const useAlertStore = create<AlertState>(set => ({
   unreadCount: 0,
   latestAlert: null,

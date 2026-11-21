@@ -1,8 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { ArrowDownIcon, ArrowUpIcon, CalendarCheckIcon, ChartBarIcon, ClockCounterClockwiseIcon, MinusIcon, type Icon } from '@phosphor-icons/react';
 
-import { Card } from '@/components/ui';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { summarizeHarvestOverview, type HarvestGroup, type PeriodSummary } from '@/components/features/farm-owner/harvest/harvestMetrics';
 import { harvestDict } from '@/constants/harvest.i18n';
@@ -31,7 +30,7 @@ function changeDirection(change: number): ChangeDirection {
 function ChangeBadge({ change, children }: { change: number; children: ReactNode }): JSX.Element {
   const ChangeIcon = CHANGE_ICON[changeDirection(change)];
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warmGray/15 bg-warmGray/10 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warmGray/15 bg-warmGray/10 px-2.5 py-0.5 text-small font-medium text-graphite">
       <ChangeIcon size={10} weight="bold" className="text-charcoal" />
       {children}
     </span>
@@ -46,7 +45,7 @@ interface HarvestStatsCardsProps {
   zones: AllZone[];
 }
 
-// Khung tổng quan (Card lg) 3 ô KPI chuẩn (KpiTile, FE_Design 1.1) theo tầng quản lý: đợt gần nhất · quý hiện tại · cả năm, tính từ lần thu thật
+// Hàng 3 ô KPI (KpiTile, không khung bao, FO-09): đợt gần nhất · quý hiện tại · cả năm, tính từ lần thu thật
 export default function HarvestStatsCards({ groups, farmNames, zones }: HarvestStatsCardsProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const houseIdByZone = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone.house_id])), [zones]);
@@ -61,17 +60,12 @@ export default function HarvestStatsCards({ groups, farmNames, zones }: HarvestS
     t('stats.periodSub', { nests: num(summary.nests), houses: num(summary.houses), runs: num(summary.runs) });
 
   return (
-    <Card size="lg" className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-h2 text-charcoal">{t('stats.title')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('stats.subtitle')}</p>
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiTile
           icon={ClockCounterClockwiseIcon}
           label={t('stats.latestTitle')}
           value={latest ? num(latest.kilograms, KILOGRAM_DIGITS) : NO_VALUE}
-          unit="kg"
+          unit={latest ? 'kg' : undefined}
           sub={latest
             ? t('stats.latestSub', {
               farm: farmNames.get(farmIdByZone.get(latest.group.zone_id) ?? '') ?? NO_VALUE,
@@ -103,7 +97,6 @@ export default function HarvestStatsCards({ groups, farmNames, zones }: HarvestS
             <ChangeBadge change={year.changePercent}>{t('stats.vsPreviousYear', { change: signed(year.changePercent) })}</ChangeBadge>
           )}
         />
-      </div>
-    </Card>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-// Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, đánh giá độc lập (MF-06; api-spec HouseHealthDay)
+// Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, đánh giá sau khi xem trạng thái (MF-06, BR-31; api-spec HouseHealthDay)
 
 import type { Role } from '@/types/common.types';
 
@@ -48,7 +48,7 @@ export interface HealthDayRating {
   snapshot: { status: HealthStatus; reasons: HealthReason[] };
 }
 
-// Ngày người gọi còn PENDING chỉ có phần chung (BR-31): không trạng thái, lý do, chỉ số hay điểm của người khác
+// Ngày của 1 nhà: đủ trạng thái, lý do, chỉ số và điểm của mọi người, kể cả khi người xem chưa đánh giá (BR-31)
 export interface HouseHealthDay {
   _id: string;
   house_id: string;
@@ -61,12 +61,12 @@ export interface HouseHealthDay {
   // null = người xem không phải người chấm (Domain Expert, SRS 4.2.0): thấy đủ trạng thái, không có hạn chấm
   my_rating_state: HealthRatingState | null;
   rating_deadline: string;
-  indicators?: Record<HealthSource, HealthIndicator>;
-  completeness?: Record<HealthSource, boolean>;
-  current_status?: HealthStatus;
-  current_reasons?: HealthReason[];
-  evidence?: { noise_alert_ids: string[] };
-  ratings?: HealthDayRating[];
+  indicators: Record<HealthSource, HealthIndicator>;
+  completeness: Record<HealthSource, boolean>;
+  current_status: HealthStatus;
+  current_reasons: HealthReason[];
+  evidence: { noise_alert_ids: string[] };
+  ratings: HealthDayRating[];
 }
 
 // BR-28 — mức chỉ số sức khỏe của nhà yến
@@ -121,7 +121,7 @@ export interface HealthReportZoneSection {
   co2_max: number | null;
 }
 
-// Chi tiết báo cáo: days che theo người gọi (BR-31), status_counts chỉ đếm ngày đã thấy
+// Chi tiết báo cáo: các ngày của kỳ và số ngày theo trạng thái
 export interface HouseHealthReport extends HouseHealthReportSummary {
   house_metrics: {
     return_rate_trend: Array<{ date: string; return_rate: number | null; complete: boolean }>;
@@ -137,7 +137,6 @@ export interface HouseHealthReport extends HouseHealthReportSummary {
   zone_sections: HealthReportZoneSection[];
   days: HouseHealthDay[];
   status_counts: Record<HealthStatus, number>;
-  hidden_days: number;
   // Chỉ có ở chi tiết (api-spec HouseHealthReport), danh sách chỉ có has_conclusion
   expert_conclusion: {
     text: string;

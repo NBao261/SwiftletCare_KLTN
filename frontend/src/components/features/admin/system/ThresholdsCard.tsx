@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDefaultThresholds } from '@/hooks/admin/useSystem'
 import { Card } from '@/components/ui'
-import StatTile from '@/components/ui/StatTile'
+import KpiTile from '@/components/common/KpiTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
@@ -15,7 +15,7 @@ const ICON = 'bg-warmGray/10 text-charcoal'
 
 /**
  * Ngưỡng môi trường mặc định (SYSTEM-FR-002) — nguồn cho "Reset về mặc định" (ENV-FR-020) và ngưỡng khởi tạo Zone mới.
- * Cùng kiểu card "Chỉ số vận hành toàn hệ thống": card trắng + 5 ô StatTile (icon xám). Chỉ ĐỌC — "Chỉnh sửa" mở
+ * Cùng kiểu card "Chỉ số vận hành toàn hệ thống": card trắng + 5 ô KpiTile (icon xám). Chỉ ĐỌC — "Chỉnh sửa" mở
  * ThresholdsEditModal.
  */
 export default function ThresholdsCard() {
@@ -46,7 +46,7 @@ export default function ThresholdsCard() {
           // 5 ô bằng nhau trên desktop; mobile 2 cột
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             {THRESHOLD_GROUPS.map(g => g.kind === 'range' ? (
-              <StatTile
+              <KpiTile
                 key={g.label}
                 className="shadow-none"
                 icon={g.icon}
@@ -56,7 +56,7 @@ export default function ThresholdsCard() {
                 sub="Khoảng an toàn"
               />
             ) : (
-              <StatTile
+              <KpiTile
                 key={g.label}
                 className="shadow-none"
                 icon={g.icon}

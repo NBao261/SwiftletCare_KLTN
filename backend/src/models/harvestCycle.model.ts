@@ -40,6 +40,8 @@ export interface IHarvestCycle extends Document {
   completeness_pct?: number | null
   incomplete: boolean
   conclusion?: { text: string; recommendations?: string; by: Types.ObjectId; role: FarmMemberRole; at: Date }
+  /** BR-22 (Report 3 4.2.15) — lần Farm Owner nhắc chuyên gia việc còn chờ (mỗi việc nhắc một lần) */
+  expert_reminded_at?: Date
   created_at: Date
   updated_at: Date
 }
@@ -83,6 +85,7 @@ const harvestCycleSchema = new Schema<IHarvestCycle>(
     },
     completeness_pct: { type: Number, default: null },
     incomplete:       { type: Boolean, default: false },
+    expert_reminded_at: { type: Date },
     conclusion: {
       type: {
         text:            { type: String, required: true },

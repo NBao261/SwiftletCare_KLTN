@@ -34,6 +34,8 @@ interface DataTableProps<T> {
   visibleRows?: number
   /** Chỉ dùng với `visibleRows`: khung bảng cao bằng phần tử cha (h-full), thân bảng lấp phần còn lại và cuộn — nơi gọi tự đặt chiều cao cha */
   fillHeight?: boolean
+  // Điện thoại: danh sách thẻ thay bảng (C-09); trả null thì bỏ dòng đó (VD dòng đệm của FixedRowsTable)
+  mobileCard?: (row: T) => ReactNode
 }
 
 const ALIGN_CLASS: Record<NonNullable<DataTableColumn<unknown>['align']>, string> = {
@@ -48,7 +50,46 @@ const ALIGN_CLASS: Record<NonNullable<DataTableColumn<unknown>['align']>, string
  * bo góc/shadow hiện có (border-warmGray/15, rounded-2xl, shadow-card), không
  * phát sinh màu/bo góc mới.
  */
-export default function DataTable<T>({
+export default function DataTable<T>(props: DataTableProps<T>) {
+  const { mobileCard, rows, getRowKey, onRowClick, emptyMessage = 'Không có dữ liệu', fillHeight = false } = props
+  if (!mobileCard) return <TableView {...props} />
+  const cards = rows.flatMap(row => {
+    const card = mobileCard(row)
+    return card === null ? [] : [{ key: getRowKey(row), row, card }]
+  })
+  return (
+    <>
+      <div className={cn('max-sm:hidden', fillHeight && 'h-full')}>
+        <TableView {...props} />
+      </div>
+      {cards.length === 0 ? (
+        <div className="flex min-h-48 items-center justify-center rounded-2xl border border-warmGray/15 bg-white px-4 text-center text-small text-warmGray shadow-card sm:hidden">
+          {tr(emptyMessage)}
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-2 sm:hidden">
+          {cards.map(({ key, row, card }) => (
+            <li
+              key={key}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onKeyDown={onRowClick ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row) }
+              } : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              role={onRowClick ? 'button' : undefined}
+              className={cn('rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card', onRowClick && 'cursor-pointer active:bg-warmGray/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-charcoal')}
+            >
+              {card}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}
+
+// Bảng HTML (từ sm trở lên, hoặc mọi khổ khi không có mobileCard)
+function TableView<T>({
   columns, rows, getRowKey, sortKey, sortDirection = 'asc', onSortChange, emptyMessage = 'Không có dữ liệu', onRowClick, rowHeight, minRows = 0, minTableWidth = 960, visibleRows, fillHeight = false,
 }: DataTableProps<T>) {
   const headerScrollRef = useRef<HTMLDivElement>(null)

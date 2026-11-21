@@ -1,5 +1,4 @@
-// Trạng thái lọc/sắp xếp/phân trang bảng nhật ký tài khoản — dùng chung cho trang Nhật ký hệ thống (AdminAuditLogPage)
-// và card "Nhật ký hoạt động gần đây" (trang Tổng quan), để 2 nơi lọc giống hệt nhau mà không chép code.
+// Trạng thái lọc/sắp xếp/phân trang bảng nhật ký tài khoản của trang Nhật ký hệ thống (AdminAuditLogPage)
 import { useEffect, useState } from 'react'
 import { useAuditLogList, useAllAuditLogs } from '@/hooks/admin/useSystem'
 import { AUDIT_ACTION_LABEL, AUDIT_TARGET_TYPE } from '@/constants/auditActions'

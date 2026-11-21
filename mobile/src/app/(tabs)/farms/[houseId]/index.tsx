@@ -34,7 +34,7 @@ import { useLanguage } from '@/hooks/i18n/useLanguage'
 import { useReturnBack } from '@/hooks/navigation/useReturnBack'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useFarmPrefsStore } from '@/stores/farmPrefsStore'
-import type { RelayName } from '@/types'
+import type { CameraNode, RelayName, SensorNode } from '@/types'
 import type { SettingsSectionKind } from '@/utils/settingsSection.utils'
 import { t } from '@/utils/i18n.utils'
 import { buildHouseReturnTo } from '@/utils/navigation.utils'
@@ -48,6 +48,21 @@ interface RelaySelection {
 }
 
 /** Màn B – một nhà yến: camera ghim đầu, đàn chim hôm nay, tab tầng, 6 ô cảm biến, thiết bị (VISION-FR-012/013, ENV-FR-005) */
+// Thiết bị đang mở trong sheet, tra theo id trong danh sách hiện tại; thiết bị không còn trong nhà (gỡ, chuyển) thì null, sheet đóng
+function findSelectedDevice(
+  key: { kind: SelectedDevice['kind']; id: string } | null,
+  controllers: SensorNode[],
+  cameras: CameraNode[],
+): SelectedDevice | null {
+  if (!key) return null
+  if (key.kind === 'controller') {
+    const device = controllers.find(controller => controller._id === key.id)
+    return device ? { kind: 'controller', device } : null
+  }
+  const device = cameras.find(camera => camera._id === key.id)
+  return device ? { kind: 'camera', device } : null
+}
+
 export default function HouseDetailScreen() {
   const palette = usePalette()
   // Đổi ngôn ngữ thì dựng lại cả màn (key = ngôn ngữ) để mọi chữ ra đúng ngôn ngữ
@@ -70,9 +85,12 @@ export default function HouseDetailScreen() {
   const { houses: farmHouses } = useOrderedHouses(detail.house?.farm_id ?? '')
   const [isHouseSheetOpen, setHouseSheetOpen] = useState(false)
   const [relaySelection, setRelaySelection] = useState<RelaySelection | null>(null)
-  const [selectedDevice, setSelectedDevice] = useState<SelectedDevice | null>(null)
+  // Chỉ giữ loại + id thiết bị đang mở; sheet tra lại thiết bị từ danh sách mới nhất mỗi lần vẽ nên trạng thái, cấu hình, heartbeat
+  // cập nhật (socket, tải lại) hiện ngay trong sheet, không đứng ở bản chụp lúc bấm
+  const [selectedDeviceKey, setSelectedDeviceKey] = useState<{ kind: SelectedDevice['kind']; id: string } | null>(null)
   const [isRefreshing, setRefreshing] = useState(false)
 
+  const selectedDevice = findSelectedDevice(selectedDeviceKey, detail.controllers, detail.cameras)
   const isSheetOpen = isHouseSheetOpen || relaySelection !== null || selectedDevice !== null
   const selectedController = relaySelection
     ? (detail.controllers.find(controller => controller._id === relaySelection.controllerId) ?? null)
@@ -241,7 +259,11 @@ export default function HouseDetailScreen() {
           zoneAlerts={detail.zoneAlerts}
           onSelectRelay={(controller, relay) => setRelaySelection({ controllerId: controller._id, relay })}
         />
-        <DeviceSection controllers={detail.controllers} cameras={detail.cameras} onSelect={setSelectedDevice} />
+        <DeviceSection
+          controllers={detail.controllers}
+          cameras={detail.cameras}
+          onSelect={selected => setSelectedDeviceKey({ kind: selected.kind, id: selected.device._id })}
+        />
         {detail.zone && <ZoneSettingsSection zone={detail.zone} house={house} onOpenSettings={openSettingsSection} />}
       </ScrollView>
 
@@ -260,7 +282,7 @@ export default function HouseDetailScreen() {
         relay={relaySelection?.relay ?? null}
         onClose={() => setRelaySelection(null)}
       />
-      <DeviceDetailSheet selected={selectedDevice} onClose={() => setSelectedDevice(null)} />
+      <DeviceDetailSheet selected={selectedDevice} onClose={() => setSelectedDeviceKey(null)} />
     </View>
   )
 }

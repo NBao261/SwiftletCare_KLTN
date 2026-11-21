@@ -68,6 +68,8 @@ export interface SensorNode {
   // FARM-FR-008 — thời điểm gỡ (danh sách chỉ trả thiết bị đang dùng, trường này có ở bản ghi gỡ/khôi phục trả về) và node lắp thay
   decommissioned_at?: string | null
   replaced_by?: string | null
+  // SYSTEM-FR-004 — thiết bị của bộ giả lập (simulator/), chép từ kho lúc đăng ký; màn nào hiện thiết bị cũng ghi rõ
+  simulated?: boolean
 }
 
 // Vòng đếm khép kín quanh miệng lỗ ra vào (VISION-FR-018, CountingRing trong api-spec): 3–12 đỉnh [x, y] theo tỉ lệ khung hình
@@ -93,6 +95,8 @@ export interface CameraNode {
   activation_overdue_at?: string | null
   // FARM-FR-008 — thời điểm gỡ, có ở bản ghi gỡ/khôi phục trả về
   decommissioned_at?: string | null
+  // SYSTEM-FR-004 — camera của bộ giả lập, chép từ kho lúc đăng ký
+  simulated?: boolean
 }
 
 export type RelayName = keyof RelayStates

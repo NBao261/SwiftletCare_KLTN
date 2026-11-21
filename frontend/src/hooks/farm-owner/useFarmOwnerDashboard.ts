@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { alertApi } from '@/apis/shared/alerts.api'
 import { telemetryApi } from '@/apis/farm-owner/telemetry.api'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { useAllZones, type AllZone } from '@/hooks/shared/useFarms'
@@ -10,7 +9,6 @@ import { useSocketConnected } from '@/hooks/common/useSocketConnected'
 import type { House, TelemetryRecord } from '@/types'
 import {
   averageReadings,
-  buildHouseStability,
   latestTimestamp,
   summarizeNodes,
   withLiveRelays,
@@ -19,7 +17,6 @@ import {
   zoneHasIssue,
 } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 
-const ALERT_LOG_LIMIT = 50
 // Mất socket thì hỏi lại số đo, relay mỗi 15 giây (FE_Design 5.5)
 const FALLBACK_POLL_MS = 15_000
 
@@ -45,28 +42,6 @@ export function useCameraNodes() {
     queryKey: ['camera-nodes'],
     queryFn: () => deviceApi.listCameraNodes().then(response => response.data.data),
   })
-}
-
-// Trạng thái các nhà yến trong phạm vi khung lọc (1 farm hoặc mọi farm)
-export function useHouseStability(houses: House[]) {
-  const { data: zones, isLoading: isLoadingZones } = useAllZones()
-  const { data: sensors, isLoading: isLoadingSensors } = useSensorNodes()
-  const { data: cameras, isLoading: isLoadingCameras } = useCameraNodes()
-
-  const items = useMemo(
-    () => {
-      const devices = [
-        ...(sensors ?? []).map(device => ({ zone_id: device.zone_id, status: device.status, type: 'sensor' as const })),
-        // Camera gắn nhà (SRS v2.1.8), bỏ camera đã gỡ
-        ...(cameras ?? []).filter(device => !device.decommissioned_at)
-          .map(device => ({ house_id: device.house_id, zone_id: device.zone_id, status: device.status, type: 'camera' as const })),
-      ]
-      return buildHouseStability(houses, zones ?? [], devices)
-    },
-    [houses, zones, sensors, cameras],
-  )
-
-  return { items, isLoading: isLoadingZones || isLoadingSensors || isLoadingCameras }
 }
 
 // Các Zone trong phạm vi đang chọn: cả farm hoặc 1 nhà yến
@@ -180,24 +155,3 @@ export function useScopeIssues(zones: AllZone[], houses: House[]) {
   }, [zones, houses, cameras, issueZoneIds])
 }
 
-// Nhật ký cảnh báo: cả farm (farmId '' = mọi farm) 1 request; 1 nhà thì theo từng Zone, thêm cảnh báo cấp nhà (camera, SRS v2.1.8) khi không lọc 1 Zone
-export function useHouseAlerts(farmId: string, zoneIds: string[], wholeFarm: boolean, houseAlertsId = '') {
-  let scopes = zoneIds.map(zoneId => ({ key: zoneId, filter: { zoneId } as Record<string, string> }))
-  if (houseAlertsId) scopes.push({ key: `house-${houseAlertsId}`, filter: { houseId: houseAlertsId } })
-  if (wholeFarm) scopes = [farmId ? { key: farmId, filter: { farmId } } : { key: 'all-farms', filter: {} }]
-  return useQueries({
-    queries: scopes.map(scope => ({
-      queryKey: ['alerts', 'house-log', scope.key],
-      queryFn: () => alertApi.list({ ...scope.filter, limit: String(ALERT_LOG_LIMIT) }).then(response => response.data.data),
-    })),
-    combine: results => ({
-      isLoading: results.some(result => result.isLoading),
-      isError: results.some(result => result.isError),
-      records: results
-        .flatMap(result => result.data ?? [])
-        .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
-        .slice(0, ALERT_LOG_LIMIT),
-      refetch: () => results.forEach(result => void result.refetch()),
-    }),
-  })
-}

@@ -133,12 +133,12 @@ export default function DomainExpertQueuePage() {
               <SlidersHorizontal className="h-4 w-4" />
             </div>
             {hasAiTuningSuggestion ? (
-              <span className="flex items-center gap-1 rounded-md border border-accent-600/40 bg-accent-50 px-2 py-0.5 text-[11px] font-semibold text-accent-900">
+              <span className="flex items-center gap-1 rounded-md border border-accent-600/40 bg-accent-50 px-2 py-0.5 text-small font-semibold text-accent-900">
                 <Sparkles className="h-3 w-3 text-accent-700" />
                 <span>{t('Có gợi ý hệ số mờ')}</span>
               </span>
             ) : (
-              <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 text-[11px] font-semibold text-graphite">
+              <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 text-small font-semibold text-graphite">
                 {t('Cấu hình vận hành')}
               </span>
             )}
@@ -148,19 +148,19 @@ export default function DomainExpertQueuePage() {
             <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
               {t('Cấu hình ngưỡng và hệ số mờ')}
             </h3>
-            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
+            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-small">
               {t('Thiết lập ngưỡng an toàn và tinh chỉnh hệ số điều khiển mờ cho thiết bị.')}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Ngưỡng an toàn')}
             </span>
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Hệ số mờ')}
             </span>
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Tham số phát hiện')}
             </span>
           </div>
@@ -183,11 +183,11 @@ export default function DomainExpertQueuePage() {
               <FileCheck className="h-4 w-4" />
             </div>
             {totalPendingReviews > 0 ? (
-              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700">
+              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-small font-semibold text-orange-700">
                 {t('Chờ duyệt ({{n}})', { n: totalPendingReviews })}
               </span>
             ) : (
-              <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 text-[11px] font-semibold text-graphite">
+              <span className="rounded-md border border-warmGray/20 bg-stone/50 px-2 py-0.5 text-small font-semibold text-graphite">
                 {t('Đã đồng bộ')}
               </span>
             )}
@@ -197,16 +197,16 @@ export default function DomainExpertQueuePage() {
             <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
               {t('Duyệt tham số và đề xuất')}
             </h3>
-            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
+            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-small">
               {t('Duyệt thay đổi tham số và đề xuất hệ số mờ của chủ nhà yến.')}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Ngưỡng chờ:')} <strong className="font-semibold text-charcoal">{pendingReviewsCount}</strong>
             </span>
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Đề xuất:')} <strong className="font-semibold text-charcoal">{pendingProposalsCount}</strong>
             </span>
           </div>
@@ -229,15 +229,15 @@ export default function DomainExpertQueuePage() {
               <FileText className="h-4 w-4" />
             </div>
             {pendingReports > 0 ? (
-              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700">
+              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-small font-semibold text-orange-700">
                 {t('Cần ký duyệt ({{n}})', { n: pendingReports })}
               </span>
             ) : disagreeingDaysCount > 0 ? (
-              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700">
+              <span className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-small font-semibold text-orange-700">
                 {t('Ngày lệch ({{n}})', { n: disagreeingDaysCount })}
               </span>
             ) : (
-              <span className="rounded-md border border-accent-600/30 bg-accent-50 px-2 py-0.5 text-[11px] font-semibold text-accent-900">
+              <span className="rounded-md border border-accent-600/30 bg-accent-50 px-2 py-0.5 text-small font-semibold text-accent-900">
                 {t('Đã cập nhật tuần này')}
               </span>
             )}
@@ -247,19 +247,19 @@ export default function DomainExpertQueuePage() {
             <h3 className="text-sm font-bold text-charcoal transition-colors group-hover:text-black sm:text-[15px]">
               {t('Báo cáo và ngày đánh giá lệch')}
             </h3>
-            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-[12.5px]">
+            <p className="mt-1 text-xs leading-relaxed text-warmGray sm:text-small">
               {t('Viết kết luận cho báo cáo sức khoẻ và xem các ngày đánh giá lệch với hệ thống.')}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Chờ duyệt:')} <strong className="font-semibold text-charcoal">{pendingReports}</strong>
             </span>
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Ngày lệch:')} <strong className="font-semibold text-charcoal">{disagreeingDaysCount}</strong>
             </span>
-            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-[11px] font-medium text-graphite">
+            <span className="rounded-md border border-warmGray/15 bg-stone/40 px-2.5 py-0.5 text-small font-medium text-graphite">
               {t('Đã ban hành:')} <strong className="font-semibold text-charcoal">{publishedReports}</strong>
             </span>
           </div>
@@ -285,10 +285,10 @@ export default function DomainExpertQueuePage() {
                 {/* Nhãn phân loại & đếm số lượng */}
                 <div className="flex items-center justify-between border-b border-amber-200/70 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md border border-amber-400 bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                    <span className="rounded-md border border-amber-400 bg-amber-100 px-2 py-0.5 text-small font-bold text-amber-900">
                       {t('Cảnh báo suy luận')}
                     </span>
-                    <span className="text-[11px] font-medium text-warmGray">{t('Cần kiểm chứng')}</span>
+                    <span className="text-small font-medium text-warmGray">{t('Cần kiểm chứng')}</span>
                   </div>
                   <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-xs">
                     {t('{{n}} chờ xử lý', { n: pendingCount })}
@@ -323,7 +323,7 @@ export default function DomainExpertQueuePage() {
                     {activeAlert?.message || t('Có dấu hiệu bất thường, cần chuyên gia kiểm chứng.')}
                   </p>
 
-                  <div className="mt-2.5 flex flex-wrap items-center gap-3.5 border-t border-warmGray/10 pt-2 text-[11px] text-warmGray sm:text-xs">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-3.5 border-t border-warmGray/10 pt-2 text-small text-warmGray sm:text-xs">
                     <div className="flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-warmGray/70" />
                       <span className="font-medium">{selectedFarmName || NO_VALUE} › {selectedZoneName || NO_VALUE}</span>
@@ -374,7 +374,7 @@ export default function DomainExpertQueuePage() {
               <h3 className="text-xs font-bold text-warmGray">
                 {t('Nhiệm vụ chuyên môn thường trực')}
               </h3>
-              <span className="text-[11px] text-warmGray">
+              <span className="text-small text-warmGray">
                 {t('3 phân hệ quản lý')}
               </span>
             </div>

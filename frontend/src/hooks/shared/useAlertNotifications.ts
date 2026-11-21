@@ -19,6 +19,8 @@ export function useAlertNotifications(): void {
     const off = onAlertNew(alert => {
       push(`[${alert.severity}] ${alert.title}`, alert.severity === 'CRITICAL' || alert.severity === 'HIGH' ? 'error' : 'success')
       void queryClient.invalidateQueries({ queryKey: ['alerts'] })
+      // Số cảnh báo chưa xử lý của Tổng quan (overview) đổi theo cảnh báo mới
+      void queryClient.invalidateQueries({ queryKey: ['farm-overview'] })
     })
     return () => { off() }
   }, [push, queryClient])

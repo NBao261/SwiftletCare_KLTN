@@ -1,12 +1,14 @@
-import { useMemo } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { deviceApi } from '@/apis/shared/devices.api';
 import { farmApi } from '@/apis/shared/farms.api';
 import { sortPinnedFirst } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses';
 import { useScopeIssues } from '@/hooks/farm-owner/useFarmOwnerDashboard';
 import { useAllZones, useFarms, type AllZone } from '@/hooks/shared/useFarms';
+import { scopeLevelOf, type ScopeLevel } from '@/constants/roles';
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState';
 import { useZoneStore } from '@/stores/zoneStore';
 import type { Farm, House } from '@/types';
@@ -16,6 +18,8 @@ const HOUSES_STALE_MS = 5 * 60 * 1000;
 const NO_ZONES: AllZone[] = [];
 
 export interface ScopeFilterState {
+  // Bậc phạm vi trang đang mở cần (C-05): khác 'none' thì khung lọc không có "Tất cả" ở bậc đó
+  level: ScopeLevel;
   // Mọi trang trại của tài khoản, tạo trước đứng trước
   farms: Farm[];
   // Trang trại đang lọc; '' = tất cả trang trại
@@ -44,8 +48,56 @@ export interface ScopeFilterState {
   refetch: () => void;
 }
 
+export interface AutoScopeInput {
+  level: ScopeLevel;
+  farmIds: string[];
+  // Trang trại mở gần nhất (zoneStore.selectedFarmId)
+  lastFarmId: string | null;
+  farmId: string;
+  houseId: string;
+  zoneId: string;
+  houses: Pick<House, '_id' | 'farm_id'>[];
+  zones: Pick<AllZone, '_id' | 'house_id' | 'farmId'>[];
+  // Bộ điều khiển của mọi Zone (chỉ cần khi level 'zone')
+  nodes: { zone_id: string; status: string }[];
+}
+
+// Phạm vi tự chọn khi trang cần một bậc mà khung lọc còn trống (C-05); null = giữ nguyên lựa chọn hiện tại
+export function pickAutoScope(input: AutoScopeInput): { farmId: string; houseId: string; zoneId: string } | null {
+  const { level, farmIds, lastFarmId, farmId, houseId, zoneId, houses, zones, nodes } = input;
+  if (level === 'none' || farmIds.length === 0) return null;
+  // Trang trại: đang chọn, hoặc trang trại duy nhất / mở gần nhất / tạo trước nhất
+  const farm = farmId || (lastFarmId && farmIds.includes(lastFarmId) ? lastFarmId : farmIds[0]);
+  const farmOnly = farmId ? null : { farmId: farm, houseId: '', zoneId: '' };
+  if (level === 'farm') return farmOnly;
+
+  if (level === 'zone' && !zoneId) {
+    // Zone đầu tiên có bộ điều khiển online, rồi Zone có thiết bị, rồi Zone đầu tiên (trong nhà đang chọn nếu có)
+    const statusByZone = new Map<string, string>();
+    for (const node of nodes) {
+      if (statusByZone.get(node.zone_id) !== 'ONLINE') statusByZone.set(node.zone_id, node.status);
+    }
+    const candidates = zones.filter(zone => zone.farmId === farm && (!houseId || zone.house_id === houseId));
+    const rank = (zone: (typeof candidates)[number]): number => {
+      const status = statusByZone.get(zone._id);
+      if (status === 'ONLINE') return 0;
+      return status ? 1 : 2;
+    };
+    const best = candidates.reduce<(typeof candidates)[number] | undefined>((picked, zone) => (!picked || rank(zone) < rank(picked) ? zone : picked), undefined);
+    if (best) return { farmId: farm, houseId: best.house_id, zoneId: best._id };
+  }
+
+  if (houseId) return farmOnly;
+  // Nhà: nhà đầu tiên của trang trại (đã xếp nhà ghim lên đầu)
+  const house = houses.find(item => item.farm_id === farm);
+  return house ? { farmId: farm, houseId: house._id, zoneId: '' } : farmOnly;
+}
+
 // Khung lọc Trang trại → Nhà → Zone dùng chung các trang Farm Owner, lựa chọn lưu trong store nên chuyển trang không bị trả về
 export function useScopeFilter(): ScopeFilterState {
+  const level = scopeLevelOf(useLocation().pathname);
+  const lastFarmId = useZoneStore(state => state.selectedFarmId);
+  const setScopePath = useZoneStore(state => state.setScopePath);
   const scopeFarmId = useZoneStore(state => state.scopeFarmId);
   const selectedHouseId = useZoneStore(state => state.selectedHouseId);
   const scopeZoneId = useZoneStore(state => state.scopeZoneId);
@@ -98,6 +150,27 @@ export function useScopeFilter(): ScopeFilterState {
   const zone = houseId ? zones.find(item => item._id === scopeZoneId) : undefined;
   const everyHouse = useMemo(() => housesQuery.lists.flat(), [housesQuery.lists]);
   const { issueFarmIds, issueHouseIds, issueZoneIds } = useScopeIssues(allZones ?? NO_ZONES, everyHouse);
+  // Bộ điều khiển mọi Zone, chỉ tải khi trang cần một Zone (chung cache với useSensorNodes())
+  const { data: nodes } = useQuery({
+    queryKey: ['sensor-nodes', undefined],
+    queryFn: () => deviceApi.listSensorNodes().then(response => response.data.data),
+    enabled: level === 'zone',
+  });
+  const isLoading = isLoadingFarms || housesQuery.isLoading || isLoadingZones;
+
+  // Trang cần một trang trại / nhà / Zone mà khung lọc còn trống: tự chọn bậc có dữ liệu (C-05)
+  const autoScope = useMemo(
+    () => (isLoading || (level === 'zone' && !nodes)
+      ? null
+      : pickAutoScope({ level, farmIds: farms.map(item => item._id), lastFarmId, farmId, houseId, zoneId: houseId ? scopeZoneId : '', houses, zones: allZones ?? NO_ZONES, nodes: nodes ?? [] })),
+    [isLoading, level, nodes, farms, lastFarmId, farmId, houseId, scopeZoneId, houses, allZones],
+  );
+  useEffect(() => {
+    if (!autoScope) return;
+    setScopePath(autoScope.farmId, farmNames.get(autoScope.farmId) ?? '', autoScope.houseId, autoScope.zoneId);
+    const autoZone = allZones?.find(item => item._id === autoScope.zoneId);
+    if (autoZone) setZone(autoScope.farmId, farmNames.get(autoScope.farmId) ?? '', autoZone._id, autoZone.name);
+  }, [autoScope, setScopePath, setZone, farmNames, allZones]);
 
   // Đổi farm thì bỏ lọc nhà và Zone của farm cũ
   function setFarmId(nextFarmId: string): void {
@@ -112,6 +185,7 @@ export function useScopeFilter(): ScopeFilterState {
   }
 
   return {
+    level,
     farms,
     farmId,
     farmName: farm?.name ?? '',
@@ -127,7 +201,7 @@ export function useScopeFilter(): ScopeFilterState {
     setFarmId,
     setHouseId: setHouse,
     setZoneId,
-    isLoading: isLoadingFarms || housesQuery.isLoading || isLoadingZones,
+    isLoading,
     isError: isFarmsError || housesQuery.isError || isZonesError,
     refetch: () => {
       void refetchFarms();

@@ -109,15 +109,10 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   return (
     <div className="flex flex-1 flex-col gap-6">
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} lockZone />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} lockZone />
-      </div>
+      </HeaderActions>
 
-      <SectionCard title={t('list.title')} description={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
+      <SectionCard description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
         {/* Lọc trạng thái bên trái, nút mở tay bên phải (chỉ Farm Owner) */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SelectMenu
@@ -141,6 +136,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
               {t('list.create')}
             </Button>
           )}
+          {canManage && !selectedHouse && <span className="text-small text-warmGray">{t('list.needHouseShort')}</span>}
         </div>
 
         {isLoading ? (

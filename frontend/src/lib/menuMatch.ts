@@ -13,3 +13,10 @@ export function isPathWithin(pathname: string, path: string): boolean {
 export function isMenuItemActive(item: MatchableMenuItem, pathname: string): boolean {
   return isPathWithin(pathname, item.path) || (item.tabs ?? []).some(tab => isPathWithin(pathname, tab.path))
 }
+
+// Tab đang mở: tab có đường dẫn dài nhất chứa trang hiện tại (/dashboard/scada thuộc tab "Điều khiển tay", không thuộc /dashboard)
+export function activeTabPath(tabs: { path: string }[], pathname: string): string | undefined {
+  return tabs
+    .filter(tab => isPathWithin(pathname, tab.path))
+    .reduce<string | undefined>((longest, tab) => (!longest || tab.path.length > longest.length ? tab.path : longest), undefined)
+}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Alert as NativeAlert, StyleSheet, Switch, View } from 'react-native'
-import { ComingSoonAction } from '@/components/common/ComingSoonAction'
+import { SeverityChannelTable } from '@/components/alert/SeverityChannelTable'
 import { SettingsInput } from '@/components/farm/settings/SettingsInput'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { useUpdateNotificationPreferences } from '@/hooks/auth/useUpdateNotifica
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
+import { applyGeneralPush, buildBySeverityPayload, getGeneralChannels, getLevelChannels } from '@/utils/notificationChannel.utils'
 import { isValidClockTime } from '@/utils/validation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -57,8 +58,8 @@ function ChannelRow({
   )
 }
 
-// Cài đặt thông báo ngay từ tab Cảnh báo (đặc tả §7, chỉ chủ trại): kênh push, Telegram (ALERT-FR-005), giờ yên lặng
-// (ALERT-FR-006), liên kết bot Telegram (ALERT-FR-013). Backend chỉ có kênh chung, chưa có kênh theo từng loại sự kiện
+// Cài đặt thông báo ngay từ tab Cảnh báo (đặc tả §7): kênh push, Telegram chung và theo mức cảnh báo (ALERT-FR-005, by_severity
+// như web), giờ yên lặng (ALERT-FR-006), liên kết bot Telegram (ALERT-FR-013)
 export function NotificationSettingsSheet({ visible, onClose }: NotificationSettingsSheetProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
@@ -90,7 +91,16 @@ export function NotificationSettingsSheet({ visible, onClose }: NotificationSett
         label={t('Thông báo đẩy')}
         caption={t('Cảnh báo gửi tới điện thoại')}
         value={preferences?.push ?? false}
-        onChange={next => updatePreferences.mutate({ push: next })}
+        // Đổi push chung thì mọi mức theo cùng giá trị, không để ghi đè cũ giữ lại
+        onChange={next =>
+          updatePreferences.mutate({
+            push: next,
+            by_severity: buildBySeverityPayload(applyGeneralPush(getLevelChannels(preferences), next), {
+              ...getGeneralChannels(preferences),
+              push: next,
+            }),
+          })
+        }
         disabled={updatePreferences.isPending}
       />
       <ChannelRow
@@ -169,8 +179,12 @@ export function NotificationSettingsSheet({ visible, onClose }: NotificationSett
         )}
         <FormMessage message={telegramMessage} />
       </View>
-      {/* ALERT-FR-005 kênh theo từng loại sự kiện: backend chỉ có push, telegram dùng chung */}
-      <ComingSoonAction label={t('Kênh theo từng loại cảnh báo')} />
+      <View style={[styles.section, { borderTopColor: palette.divider }]}>
+        <Text variant="body" weight="semiBold">
+          {t('Kênh theo mức cảnh báo')}
+        </Text>
+        <SeverityChannelTable />
+      </View>
     </BottomSheet>
   )
 }

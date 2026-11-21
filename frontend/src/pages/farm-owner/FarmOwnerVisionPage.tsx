@@ -66,11 +66,10 @@ export default function FarmOwnerVisionPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Bộ lọc nhà nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
-        <div className="hidden sm:block">{houseFilter}</div>
+        {houseFilter}
       </HeaderActions>
-      <div className="sm:hidden">{houseFilter}</div>
 
       {body}
     </div>

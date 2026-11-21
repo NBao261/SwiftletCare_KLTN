@@ -124,7 +124,7 @@ export default function DomainExpertReportsPage() {
             >
               {i18nT('Ngày lệch')}
               {disagreeingDaysCount > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-alertRed px-1.5 text-micro font-bold text-white">
+                <span className="rounded-full bg-orange-600 px-2 py-0.5 text-small font-bold tabular-nums text-white">
                   {disagreeingDaysCount}
                 </span>
               )}

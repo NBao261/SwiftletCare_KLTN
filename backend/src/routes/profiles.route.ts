@@ -6,8 +6,8 @@ import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 /**
- * EXPERT-FR-014, 015 — hồ sơ cấu hình (Report 3 §2.4): Farm Owner và Domain Expert của farm xem; chỉ Domain Expert
- * soạn, duyệt, lưu trữ (BR-22 không cho Farm Owner làm thay việc này); chỉ Farm Owner áp cho các nhà. Farm Technician,
+ * EXPERT-FR-014, 015 — hồ sơ cấu hình (Report 3 §2.4): Farm Owner và Domain Expert của farm xem và soạn bản nháp; chỉ
+ * Domain Expert duyệt, lưu trữ (BR-22, cả khi farm chưa có chuyên gia); chỉ Farm Owner áp cho các nhà. Farm Technician,
  * Administrator → 403. Khoảng giá trị và trạng thái: service kiểm (400, 409).
  */
 const router = Router()
@@ -23,9 +23,10 @@ const content = () => [
 router.get ('/', requireRole(...READERS), query('farmId').isString().isMongoId(),
   query('status').optional().isString().isIn(['DRAFT', 'APPROVED', 'ARCHIVED']),
   query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 }), validate, profileController.list)
-router.post('/', requireRole('DOMAIN_EXPERT'), body('farm_id').isString().isMongoId(), ...content(), validate, profileController.create)
+// BR-22 (Report 3 4.2.15) — Farm Owner soạn bản nháp để chuyên gia duyệt; duyệt và lưu trữ chỉ chuyên gia
+router.post('/', requireRole(...READERS), body('farm_id').isString().isMongoId(), ...content(), validate, profileController.create)
 router.get ('/:id', requireRole(...READERS), param('id').isMongoId(), validate, profileController.getOne)
-router.put ('/:id', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), ...content(), validate, profileController.update)
+router.put ('/:id', requireRole(...READERS), param('id').isMongoId(), ...content(), validate, profileController.update)
 router.post('/:id/approve', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), validate, profileController.approve)
 router.post('/:id/archive', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), validate, profileController.archive)
 router.post('/:id/apply', requireRole('FARM_OWNER'), param('id').isMongoId(),

@@ -40,7 +40,7 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
             <ShieldCheck className="w-4 h-4 text-[#4A5C00] shrink-0" />
             <span className="font-bold text-xs text-[#27231F] whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
           </div>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-stone-200/70 text-stone-700 whitespace-nowrap shrink-0">
+          <span className="text-small font-semibold px-2 py-0.5 rounded-full bg-stone-200/70 text-stone-700 whitespace-nowrap shrink-0">
             {t('Mặc định (0/0)')}
           </span>
         </div>
@@ -63,7 +63,7 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span className="font-bold text-xs text-emerald-900 whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
           </div>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap shrink-0">
+          <span className="text-small font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap shrink-0">
             {t('100% chuẩn xác ({{n}}/{{n}})', { n: totalVerdicts })}
           </span>
         </div>
@@ -88,7 +88,7 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
           <span className="font-bold text-xs text-amber-950 whitespace-nowrap">{t('Khuyến nghị độ nhạy')}</span>
         </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 whitespace-nowrap shrink-0">
+        <span className="text-small font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 whitespace-nowrap shrink-0">
           {t('{{pct}}% báo giả ({{n}}/{{total}})', { pct: rejPct, n: worst.rejected, total })}
         </span>
       </div>
@@ -123,9 +123,9 @@ export default function DetectionColumn({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-[#27231F]">{t('3. Tham số phát hiện bất thường')}</h3>
-            <span className="bg-[#27231F] text-[#ECFFA9] text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">{t('Chuyên gia')}</span>
+            <span className="bg-[#27231F] text-[#ECFFA9] text-small px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">{t('Chuyên gia')}</span>
           </div>
-          <p className="text-[11px] text-[#878380] mt-0.5">{t('Cấu hình tham số nhận diện sự cố')}</p>
+          <p className="text-small text-[#878380] mt-0.5">{t('Cấu hình tham số nhận diện sự cố')}</p>
         </div>
         <button type="button" onClick={onReset} disabled={isResetting}
           className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-[#27231F] whitespace-nowrap shrink-0 transition-colors disabled:opacity-50">
@@ -149,7 +149,7 @@ export default function DetectionColumn({
       </div>
 
       {updatedAt && (
-        <p className="inline-flex items-center gap-1.5 pt-2 text-[11px] text-stone-500">
+        <p className="inline-flex items-center gap-1.5 pt-2 text-small text-stone-500">
           <Clock className="w-3.5 h-3.5 shrink-0" />
           {t('Cập nhật gần nhất: {{time}}', { time: updatedAt })}
         </p>

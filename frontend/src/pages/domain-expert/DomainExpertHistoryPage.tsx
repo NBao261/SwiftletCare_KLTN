@@ -117,7 +117,7 @@ function renderActivityDetails(item: ExpertActivityEntry) {
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold',
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-small font-bold',
               isConfirmed
                 ? 'bg-red-50 text-red-600 border border-red-200'
                 : 'bg-neutral-100 text-warmGray border border-neutral-200',

@@ -130,6 +130,7 @@ const vi = {
   'env.setter.other': 'người dùng',
   'env.range': 'Ngưỡng Zone: {temperatureMin}–{temperatureMax}°C · {humidityMin}–{humidityMax}%',
   'env.empty': 'Chưa có dữ liệu trong khoảng thời gian này',
+  'env.indoorEmpty': 'Chưa có số đo trong nhà trong khoảng này',
   'env.outdoorNote': 'Nét đứt: thời tiết ngoài trời theo giờ tại toạ độ trang trại (Open-Meteo), chỉ để đối chiếu · Mưa trong khoảng: {rain} mm',
   'env.outdoorEmpty': 'Chưa có thời tiết ngoài trời cho khoảng này (hệ thống lấy mỗi giờ theo toạ độ trang trại)',
 
@@ -208,7 +209,7 @@ const vi = {
 
   // So sánh giữa các Zone
   'compare.title': 'So sánh giữa các Zone',
-  'compare.subtitle': 'Giá trị trung bình trong khoảng đã chọn; cột cam là Zone đang ngoài ngưỡng của chính Zone đó',
+  'compare.subtitle': 'Trung bình trong khoảng đã chọn; số cam là ngoài ngưỡng của Zone',
   'compare.pick': 'Chọn tối đa {max} Zone',
   'compare.empty': 'Chọn ít nhất 1 Zone để so sánh.',
   'compare.colZone': 'Zone',
@@ -345,6 +346,7 @@ const en: Record<AnalyticsKey, string> = {
   'env.setter.other': 'user',
   'env.range': 'Zone threshold: {temperatureMin}–{temperatureMax}°C · {humidityMin}–{humidityMax}%',
   'env.empty': 'No data in this time range',
+  'env.indoorEmpty': 'No indoor readings in this range',
   'env.outdoorNote': 'Dashed: hourly outdoor weather at the farm coordinates (Open-Meteo), for comparison only · Rain in this range: {rain} mm',
   'env.outdoorEmpty': 'No outdoor weather for this range yet (fetched every hour from the farm coordinates)',
 
@@ -416,7 +418,7 @@ const en: Record<AnalyticsKey, string> = {
   'correlation.emptyDesc': 'At least 2 days with both climate readings and bird counts are needed.',
 
   'compare.title': 'Zone comparison',
-  'compare.subtitle': 'Average values in the selected range; orange bars are zones outside their own threshold',
+  'compare.subtitle': 'Averages in the selected range; orange values are outside the Zone threshold',
   'compare.pick': 'Select up to {max} zones',
   'compare.empty': 'Select at least 1 zone to compare.',
   'compare.colZone': 'Zone',

@@ -282,7 +282,7 @@ export default function DomainExpertReviewsPage() {
             >
               <span>{t('Duyệt thay đổi tham số')}</span>
               {pendingReviewsCount > 0 && (
-                <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <span className="rounded-full bg-orange-500 px-2 py-0.5 text-small font-bold text-white">
                   {pendingReviewsCount}
                 </span>
               )}
@@ -299,7 +299,7 @@ export default function DomainExpertReviewsPage() {
             >
               <span>{t('Đề xuất hệ số mờ')}</span>
               {pendingProposalsCount > 0 && (
-                <span className="rounded-full bg-limeMist px-1.5 py-0.5 text-[10px] font-bold text-charcoal">
+                <span className="rounded-full bg-limeMist px-2 py-0.5 text-small font-bold text-charcoal">
                   {pendingProposalsCount}
                 </span>
               )}

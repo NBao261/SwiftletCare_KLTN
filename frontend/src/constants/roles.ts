@@ -26,7 +26,7 @@ export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPE
 /*
  * Nhóm role theo Report 3 §2.4 & G-20 (backend f9d9522). Khai báo một chỗ để bảng route (`routes/`), menu sidebar
  * (`components/layouts/<Role>Layout.tsx`) và MENU_ACCESS bên dưới không lệch nhau.
- * G-20 — ADMIN có Console thiết bị: xem thiết bị mọi farm (/devices), cảnh báo thiết bị (/alerts), gửi lệnh RESTART/PUSH_CONFIG/OTA.
+ * G-20 — ADMIN có nhóm Thiết bị: xem thiết bị mọi farm (/devices), cảnh báo thiết bị (/alerts), gửi lệnh RESTART/PUSH_CONFIG/OTA.
  * FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể, chỉ xem cấu trúc/thiết bị nhà đó + gửi RESTART.
  */
 
@@ -152,4 +152,27 @@ export function canAccessPath(role: Role | undefined, path: string): boolean {
   const entry = MENU_ACCESS.find(e => path === e.path || path.startsWith(`${e.path}/`))
   if (!entry) return true
   return !!role && entry.roles.includes(role)
+}
+
+// Bậc phạm vi trang cần để có dữ liệu (C-05); không có trong bảng = 'none'
+export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
+
+const SCOPE_LEVEL: { path: string; level: ScopeLevel }[] = [
+  { path: '/overview',                            level: 'farm' },
+  { path: '/recommendations',                     level: 'farm' },
+  { path: '/work-orders',                         level: 'farm' },
+  { path: '/health',                              level: 'farm' },
+  { path: '/domain-expert/alert-verdicts',        level: 'farm' },
+  { path: '/domain-expert/reviews',               level: 'farm' },
+  { path: '/domain-expert/profiles',              level: 'farm' },
+  { path: '/domain-expert/recommendation-rules',  level: 'farm' },
+  { path: '/domain-expert/history',               level: 'farm' },
+  { path: '/domain-expert/counting-schedule',     level: 'house' },
+  { path: '/domain-expert/counting-ring',         level: 'house' },
+  { path: '/domain-expert/weather-rules',         level: 'house' },
+  { path: '/domain-expert/tuning',                level: 'zone' },
+]
+
+export function scopeLevelOf(path: string): ScopeLevel {
+  return SCOPE_LEVEL.find(entry => path === entry.path || path.startsWith(`${entry.path}/`))?.level ?? 'none'
 }

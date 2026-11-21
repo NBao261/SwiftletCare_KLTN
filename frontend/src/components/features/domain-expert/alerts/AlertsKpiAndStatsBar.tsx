@@ -46,7 +46,7 @@ function KpiCard({ label, sublabel, value, accent, dotColor, badgeBg, isActive, 
       </div>
       <div>
         <div className={cn('text-3xl font-extrabold leading-none tabular-nums', accent)}>{value}</div>
-        <p className="mt-1.5 text-[11px] text-warmGray leading-tight">{t(sublabel)}</p>
+        <p className="mt-1.5 text-small text-warmGray leading-tight">{t(sublabel)}</p>
       </div>
     </button>
   );

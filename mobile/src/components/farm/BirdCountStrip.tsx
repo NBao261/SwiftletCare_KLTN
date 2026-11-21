@@ -11,7 +11,8 @@ import { t } from '@/utils/i18n.utils'
 // Chỗ chừa sẵn cho số lớn nhất của một nhà yến: chim ra/về 5 chữ số ("00.000"), tỷ lệ về tổ "000%" —
 // số thật luôn nằm gọn trong khoảng này nên không tràn, không đẩy cột khác
 const COUNT_PLACEHOLDER = 99_999
-const RATE_PLACEHOLDER = 100
+// Chuỗi giữ chỗ dùng chữ số rộng nhất (8, 9) để số thật nào cũng lọt, không cần chữ số đều bề rộng (làm số 1 có chân)
+const RATE_PLACEHOLDER = 888
 
 interface BirdCountStripProps {
   // Chưa tải xong hoặc nhà chưa có số đếm thì không có — các số hiện "_"
@@ -64,7 +65,7 @@ export function BirdCountStrip({ today, onPress }: BirdCountStripProps) {
           </Text>
           {/* Chuỗi giữ chỗ ẩn quyết định bề rộng; số thật đè lên đúng chỗ đó */}
           <View style={styles.valueBox}>
-            <Text variant="heading" weight="bold" style={[styles.digits, styles.placeholder]} importantForAccessibility="no">
+            <Text variant="heading" weight="bold" style={styles.placeholder} importantForAccessibility="no">
               {column.placeholder}
             </Text>
             <Text
@@ -72,7 +73,7 @@ export function BirdCountStrip({ today, onPress }: BirdCountStripProps) {
               weight="bold"
               color={palette.text}
               numberOfLines={1}
-              style={[styles.digits, styles.value]}
+              style={styles.value}
             >
               {column.value}
             </Text>
@@ -87,8 +88,6 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', gap: 0, paddingHorizontal: 0, paddingVertical: Spacing.md },
   column: { flex: 1, minWidth: 0, gap: Spacing.xs, paddingHorizontal: Spacing.md },
   valueBox: { alignSelf: 'flex-start' },
-  // Chữ số cùng bề rộng để chuỗi giữ chỗ đo đúng mọi số
-  digits: { fontVariant: ['tabular-nums'] },
   placeholder: { opacity: 0 },
   value: { position: 'absolute', top: 0, left: 0, right: 0 },
 })

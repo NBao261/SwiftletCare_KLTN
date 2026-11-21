@@ -45,7 +45,7 @@ function saveCsv(blob: Blob, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
-// MF-06 — trạng thái sức khỏe theo ngày của nhà yến và đánh giá ngày độc lập (BR-31); Farm Owner và Domain Expert
+// MF-06 — trạng thái sức khỏe theo ngày của nhà yến và đánh giá ngày sau khi xem trạng thái (BR-31); Farm Owner và Domain Expert
 export default function FarmOwnerHealthPage(): JSX.Element {
   const { t, lang } = useTranslation(healthDict);
   // Trạng thái tính theo nhà yến nên chỉ lọc tới nhà (ô Zone khoá)
@@ -108,13 +108,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   const filter = (
     <>
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={scope} lockZone />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={scope} lockZone />
-      </div>
+      </HeaderActions>
     </>
   );
 
@@ -165,7 +160,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           title={t('table.title')}
           description={t(canRate ? 'table.subtitle' : 'table.subtitleExpert')}
           action={
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {!house && <span className="text-small text-warmGray">{t('page.levelsNeedHouse')}</span>}
               <Button
                 variant="secondary"
                 size="sm"
@@ -226,7 +222,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
         />
       )}
 
-      <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onRevealed={setViewDay} />
+      <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onDone={setViewDay} />
       <HealthDayDrawer day={viewDay} onClose={() => setViewDay(null)} onChanged={setViewDay} />
       {house && (
         <HealthLevelsModal

@@ -6,7 +6,7 @@ import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 /**
- * EXPERT-FR-016…019 — vòng khuyến nghị (Report 3 §2.4): Domain Expert viết và bật/tắt luật, Farm Owner chỉ đọc luật;
+ * EXPERT-FR-016…019 — vòng khuyến nghị (Report 3 §2.4): Domain Expert viết và bật/tắt luật, Farm Owner viết luật chờ chuyên gia bật (BR-22);
  * Farm Owner chấp nhận hoặc từ chối khuyến nghị, Domain Expert và thợ của nhà chỉ đọc; Administrator → 403.
  * Khoảng giá trị và trạng thái: service kiểm (400, 409).
  */
@@ -32,9 +32,10 @@ router.get ('/rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), query('farmId'
   validate, recommendationController.listRules)
 router.get ('/rules/effects', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), query('farmId').isString().isMongoId(),
   validate, recommendationController.ruleEffects)
-router.post('/rules', requireRole('DOMAIN_EXPERT'), body('farm_id').isString().isMongoId(), ...ruleBody(),
+// EXPERT-FR-016, BR-22 (Report 3 4.2.15) — Farm Owner viết luật được; farm có chuyên gia thì luật chờ chuyên gia bật
+router.post('/rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), body('farm_id').isString().isMongoId(), ...ruleBody(),
   validate, recommendationController.createRule)
-router.put ('/rules/:id', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), ...ruleBody(),
+router.put ('/rules/:id', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(), ...ruleBody(),
   validate, recommendationController.updateRule)
 
 // Khuyến nghị — cần farmId hoặc houseId (thợ dùng houseId của nhà được giao)

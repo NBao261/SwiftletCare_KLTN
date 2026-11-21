@@ -39,6 +39,21 @@ export function useOpenWorkOrderCount(houseId: string) {
   });
 }
 
+// Phiếu chờ chủ nhà yến duyệt (OPS-FR-003), 5 phiếu đầu và tổng số; phạm vi như khung lọc, houseId thắng farmId, rỗng = mọi trang trại
+export function useAwaitingApproval(farmId = '', houseId = '', enabled = true) {
+  let scope: { houseId?: string; farmId?: string } = {};
+  if (farmId) scope = { farmId };
+  if (houseId) scope = { houseId };
+  return useQuery({
+    queryKey: [WORK_ORDERS_KEY, 'awaiting', farmId, houseId],
+    queryFn: () => workOrderApi.list({ ...scope, status: 'AWAITING_APPROVAL', limit: 5 })
+      .then(response => ({ items: response.data.data, total: response.data.meta?.total ?? response.data.data.length })),
+    enabled,
+    // Kỹ thuật viên báo xong phiếu không có sự kiện socket cho chủ: hỏi lại 2 phút một lần như badge chuyên môn
+    refetchInterval: 120_000,
+  });
+}
+
 // OPS-FR-009 — MTTA, MTTR của 1 nhà trong 30 ngày tới lúc mở trang (khoảng giữ nguyên để khoá truy vấn không đổi mỗi lần vẽ)
 export function useHouseOpsMetrics(farmId: string, houseId: string) {
   const [range] = useState(() => {
@@ -59,6 +74,7 @@ export function useWorkOrderActions() {
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: [WORK_ORDERS_KEY] });
     void queryClient.invalidateQueries({ queryKey: ['alerts'] });
+    void queryClient.invalidateQueries({ queryKey: ['farm-overview'] });
   };
   const options = { onSettled: refresh };
   return {

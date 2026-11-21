@@ -273,15 +273,10 @@ export default function FarmOwnerFarmsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Khung lọc nằm trên header từ sm trở lên; mobile header chật nên đặt đầu trang */}
+      {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
-        <div className="hidden sm:block">
-          <ScopeFilter scope={routedScope} />
-        </div>
-      </HeaderActions>
-      <div className="sm:hidden">
         <ScopeFilter scope={routedScope} />
-      </div>
+      </HeaderActions>
 
       <FarmFrame
         title={t('list.title')}
@@ -321,8 +316,8 @@ export default function FarmOwnerFarmsPage() {
                 aria-pressed={view === key}
                 onClick={() => setView(key)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
-                  view === key ? 'bg-charcoal text-white' : 'text-warmGray hover:text-charcoal',
+                  'flex h-8 items-center gap-1.5 rounded-full px-3 text-small font-semibold transition-colors',
+                  view === key ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
                 )}
               >
                 <ViewIcon size={14} weight="bold" />

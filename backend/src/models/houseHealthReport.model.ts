@@ -33,7 +33,7 @@ export interface HouseReportMetrics {
 /**
  * HouseHealthReport — EXPERT-FR-005/006, SM-09. Báo cáo sức khỏe 1 nhà yến trong 1 kỳ (ngày, tuần, tháng
  * theo BR-33, hoặc khoảng tự chọn), mỗi Zone một mục. Trạng thái các ngày của kỳ không lưu ở đây: dựng
- * lúc đọc từ `househealthdays` để che theo người gọi (BR-31). Thay báo cáo tuần theo Zone khi màn mới
+ * lúc đọc từ `househealthdays`. Thay báo cáo tuần theo Zone khi màn mới
  * dùng xong; tới lúc đó báo cáo Zone cũ vẫn chạy song song.
  */
 export interface IHouseHealthReport extends Document {
@@ -49,6 +49,8 @@ export interface IHouseHealthReport extends Document {
   zone_sections: HouseReportZoneSection[]
   /** EXPERT-FR-006 — `at` lúc viết lần đầu, `edited_at` lần sửa gần nhất của tác giả */
   expert_conclusion?: { text: string; by: Types.ObjectId; at: Date; edited_at?: Date }
+  /** BR-22 (Report 3 4.2.15) — lần Farm Owner nhắc chuyên gia việc còn chờ (mỗi việc nhắc một lần) */
+  expert_reminded_at?: Date
 }
 
 const houseHealthReportSchema = new Schema<IHouseHealthReport>(
@@ -59,6 +61,7 @@ const houseHealthReportSchema = new Schema<IHouseHealthReport>(
     period_start: { type: String, required: true },
     period_end:   { type: String, required: true },
     generated_at: { type: Date, required: true },
+    expert_reminded_at: { type: Date },
     house_metrics: { type: Schema.Types.Mixed, required: true },
     zone_sections: [{ type: Schema.Types.Mixed }],
     expert_conclusion: {

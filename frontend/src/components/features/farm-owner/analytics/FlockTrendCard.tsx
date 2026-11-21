@@ -5,7 +5,7 @@ import { BirdIcon, TrendUpIcon } from '@phosphor-icons/react';
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/features/farm-owner/farms/KpiTile';
+import KpiTile from '@/components/common/KpiTile';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';

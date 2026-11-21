@@ -10,7 +10,7 @@ File này chỉ đổi **bố cục, điều hướng và cách trình bày**: k
 |---|---|---|---|
 | **Bảo** | Farm Owner + phần dùng chung: sidebar, header, trang Cài đặt, `components/ui/`, `common/` | `refactor/web-farm-owner-layout` | §4 (chung, §4.1 khung, §4.2 Cài đặt), §5 |
 | **Tuấn** | Domain Expert + Farm Technician | `refactor/web-expert-technician-layout` | §6, §7 |
-| **Nhi** | Admin | `refactor/web-admin-layout` | §8 |
+| **Nhi** | Admin | `refactor/fe-admin-menu`, `refactor/fe-admin-pages`, `refactor/fe-admin-ota` (§8.1) | §8 |
 
 1. **PR nền (đã làm, Bảo):** nhánh `refactor/web-technician-admin-layout`. Gồm mục menu có tab (`SectionTabs`), quy tắc bảng mới (`FixedRowsTable`, `DataTable minRows`, bỏ STT), menu Technician/Admin, trang OTA, toàn bộ thuật ngữ tiếng Việt (FE_Design §6.2, §6.4, `src/i18n/wording.test.ts`), FE_Design 2.15.0. **Merge PR này trước, ba nhánh trên tạo từ `develop` sau khi merge.**
 2. **Bảo làm §4 (phần chung) trước**, một PR nhỏ: các thay đổi ở `components/ui/` và khung trang ảnh hưởng mọi role. Tuấn và Nhi bắt đầu được ngay những mục không đụng §4; mục có ghi "sau C-xx" thì chờ PR đó merge.
@@ -165,12 +165,12 @@ Còn lại (Nhi): gom 5 nhóm thành 3, bỏ chữ "Console", Cài đặt vào m
 | ID | Việc | File | Cách làm | Xong khi |
 |---|---|---|---|---|
 | C-01 | **Tên trang là `<h1>`** | `components/layouts/AppHeader.tsx` | Phần tử gốc breadcrumb (`isRoot`) đổi `<span>` → `<h1>`, giữ class. Tiêu đề card trong `SectionCard`, `FarmFrame` vẫn `h2` | Đo `h1 = 1` mọi trang |
-| C-02 | **Không chữ dưới 13px** | `src/index.css` (`.label-caption` 12 → 13px), `tailwind.config.ts` (`caption` 11 → 13px, bỏ `letterSpacing`), thay `text-[10px]`/`text-[11px]` → `text-small` (13px) ở 115 chỗ (`grep -rn "text-\[1[01]px\]" src`) | Đổi token trước, rồi thay class; badge giữ 12px chỉ khi nằm trong pill có viền (`Badge`) | Đo `tiny = 0` (trừ chữ trong `Badge`) |
+| C-02 | **Không chữ dưới 13px** | `src/index.css` (`.label-caption` 12 → 13px), `tailwind.config.ts` (`caption` 11 → 13px, bỏ `letterSpacing`), thay `text-[10px]`/`text-[11px]` → `text-small` (13px) ở 116 chỗ (`grep -rn "text-\[1[01]px\]" src`); **`text-xs` (12px, 451 chỗ) cũng dưới 13px**: đổi token `xs` trong `tailwind.config.ts` thành 13px thay vì sửa từng chỗ | Đổi token trước, rồi thay class; badge cũng 13px (không còn ngoại lệ 12px) | Đo `tiny = 0` (trừ chữ trong `Badge`) |
 | C-03 | **Chip đang chọn không tô đen** | `components/ui/FilterChip.tsx`, `SortChips.tsx`, tab trong trang Sức khoẻ, Bảo trì, Phân tích | Kiểu đang chọn = `bg-white text-charcoal shadow-card` trên nền `bg-warmGray/10` (giống `SectionTabs`); chưa chọn giữ `text-warmGray` | Đo `darkButtons ≤ 1` ở Phân tích, Thu hoạch |
 | C-04 | **Vùng bấm trên điện thoại ≥ 44px** | `ui/Button.tsx` (`sm`: `h-9 max-sm:h-11`), `ui/SelectMenu.tsx`, `ui/FilterChip.tsx`, `ui/SearchInput.tsx` | Chỉ tăng ở `max-sm`, desktop giữ 36px cho bảng dày | Đo `smallTargets` ở 390 ≤ 4 |
 | C-05 | **Phạm vi tự chọn có dữ liệu** | `hooks/shared/useScopeFilter.ts`, `stores/zoneStore.ts`, `constants/roles.ts` (`scopeLevel` mỗi route) | Thêm `SCOPE_LEVEL: Record<path, 'none' \| 'farm' \| 'house' \| 'zone'>`; khi trang cần farm mà scope rỗng: chọn farm duy nhất hoặc farm mở gần nhất; cần zone: chọn Zone đầu tiên có bộ điều khiển online, rồi Zone có thiết bị. Nút khoá vì thiếu phạm vi hiện `title` "Chọn một trang trại để …" | Không còn "Chọn một trang trại" khi chỉ có 1 trang trại; trang chuyên gia không mở vào Zone rỗng |
 | C-06 | **Bỏ ảnh nền** | `stores/pageHeroStore.ts`, `components/layouts/AppShell.tsx`, `AppHeader` (`isOverHero`), `FarmOwnerDashboardPage` | Xoá store, prop `isOverHero`, khối `<img>` trong `AppShell`; xoá ảnh trong `public/` nếu không trang nào dùng | Đo `bigImages = 0` |
-| C-07 | **Mô tả card ngắn, chữ đọc được** | `ui/SectionCard.tsx`, `features/farm-owner/farms/FarmFrame.tsx` | Mô tả `text-body` (14–16px) `text-graphite`, `line-clamp-1`; thêm prop `help` (icon (i) mở popover) cho giải thích dài | Đo `greyPara = 0` |
+| C-07 | **Mô tả card ngắn, chữ đọc được** | `ui/SectionCard.tsx`, `features/farm-owner/farms/FarmFrame.tsx` | Mô tả `text-body` (14px) `text-graphite`, chuỗi `line-clamp-1`; prop `help` (`ui/InfoTip`, nút (i)) cho giải thích dài. Lưu ý: `greyPara` đếm chữ **≤ 14px** dài > 60 ký tự, kể cả phần bị `line-clamp` ẩn, nên mô tả 14px dài vẫn bị đếm: mỗi trang phải rút mô tả ≤ 60 ký tự hoặc chuyển vào `help` | Đo `greyPara = 0` sau khi từng trang rút mô tả (§5–§8) |
 | C-08 | **Nhóm menu thu gọn được** | `components/layouts/AppSidebar.tsx` | `MenuSection.collapsible?: boolean` (mặc định mở); nút mũi tên cạnh tiêu đề nhóm, nhớ trạng thái trong `localStorage` (try/catch); nhóm chứa trang đang mở luôn mở | Tuấn dùng ở DE-01 |
 | C-09 | **Bảng thành thẻ ở điện thoại** | `ui/DataTable.tsx` | Prop `mobileCard?: (row) => ReactNode`; dưới `sm` vẽ danh sách thẻ thay bảng; cột chính in đậm, 2–3 cột phụ thành dòng xám, menu ⋯ góc phải | Đo `spill = 0`, `hScroll = 0` ở 390 với bảng có `mobileCard` |
 | C-10 | **KPI dùng chung** | `features/farm-owner/farms/KpiTile.tsx` → `components/common/KpiTile.tsx` | Dời lên `common/` (FE_Design §1.1), gộp `ui/StatTile` vào một component; một chiều cao, số `text-2xl`, nhãn 13px, dòng phụ 13px | Mọi hàng KPI của 4 role dùng chung |
@@ -199,7 +199,7 @@ Còn lại (Nhi): gom 5 nhóm thành 3, bỏ chữ "Console", Cài đặt vào m
 |---|---|---|---|
 | SH-01 | Bỏ khối chào trong sidebar | `components/layouts/AppSidebar.tsx` | Xoá khối tên + vai trò; logo nằm sát nhóm menu đầu. Tên, email, vai trò chỉ ở menu avatar |
 | SH-02 | Một chỗ đăng xuất | `AppSidebar.tsx`, `AppHeader.tsx`, `common/ProfilePopover.tsx` | Bỏ nút đăng xuất ở cuối sidebar và nút đăng xuất riêng trên header điện thoại. Menu avatar (Cài đặt · Quyền riêng tư · Đăng xuất) là nơi duy nhất, **hiện ở mọi khổ màn** (bỏ `hidden lg:block`) |
-| SH-03 | Bỏ nhóm "Khác" | 4 file `<Role>Layout.tsx` | "Cài đặt" chỉ ở menu avatar; dock điện thoại không cần mục Cài đặt vì avatar luôn hiện. Giữ route và `MENU_ACCESS` của `/settings` |
+| SH-03 | Bỏ nhóm "Khác" (làm cho cả 4 role trong PR §4; FT-05, DE-11, AD-09 chỉ còn kiểm) | 4 file `<Role>Layout.tsx` | "Cài đặt" chỉ ở menu avatar; dock điện thoại không cần mục Cài đặt vì avatar luôn hiện. Giữ route và `MENU_ACCESS` của `/settings` |
 | SH-04 | Tên trang là `h1` | `AppHeader.tsx` | Trùng C-01 |
 | SH-05 | Header điện thoại | `AppHeader.tsx` | Bỏ ô chữ "S"; tên trang `text-xl` dưới `sm`, không cắt (xuống dòng tối đa 2 dòng); bên phải: chuông + avatar; VI/EN vào menu avatar dưới `sm` |
 | SH-06 | VI/EN gọn | `AppHeader.tsx` (`LanguageToggle`) | Giữ công tắc 2 nấc, bỏ popup rê chuột; cao 36px như ô phạm vi |
@@ -225,7 +225,7 @@ Còn lại (Nhi): gom 5 nhóm thành 3, bỏ chữ "Console", Cài đặt vào m
 **Hiện tại:** mọi role trừ Admin thấy cùng một bộ: khối "Push notification" chung + bảng kênh theo mức + giờ im lặng + nút "Lưu cài đặt" tô đen, cột phải là Bảo mật, Telegram, Dữ liệu tài khoản (nút đỏ tô đặc). Admin chỉ có cột trái nên nửa phải trống. Số điện thoại trống hiện "--" (phải là `_`, FE_Design 6.1); ô giờ hiện "10:00 PM" (phải 24 giờ "22:00"); nhãn vai trò 11px; "Push notification" tiếng Anh.
 
 **Đối chiếu Report 3:**
-- ALERT-FR-005: chọn kênh ngoài ứng dụng theo loại/mức. Áp cho Farm Owner, Farm Technician. EXPERT-FR-007 nói **không bao giờ gửi cảnh báo vận hành ra ngoài ứng dụng cho chuyên gia**, và backend chỉ báo chuyên gia trong ứng dụng, nên chuyên gia không có bảng kênh. (ALERT-FR-005 còn ghi Domain Expert ở cột tác nhân: Bảo sửa Report 3 cho khớp EXPERT-FR-007.)
+- ALERT-FR-005: chọn kênh ngoài ứng dụng theo loại/mức. Áp cho Farm Owner, Farm Technician. EXPERT-FR-007 nói **không bao giờ gửi cảnh báo vận hành ra ngoài ứng dụng cho chuyên gia**, và backend chỉ báo chuyên gia trong ứng dụng, nên chuyên gia không có bảng kênh. (ALERT-FR-005, SF-04 đã sửa ở PR #201: tác nhân chỉ còn Farm Owner, Farm Technician.)
 - ALERT-FR-006: giờ im lặng **chỉ của Farm Owner**.
 - ALERT-FR-013 + MF-02: Telegram cho Farm Owner và Farm Technician của nhà.
 - AUTH-FR-009: đổi mật khẩu cho mọi người. AUTH-FR-012: yêu cầu xoá tài khoản cho mọi người.
@@ -248,12 +248,14 @@ Còn lại (Nhi): gom 5 nhóm thành 3, bỏ chữ "Console", Cài đặt vào m
 | ID | Việc | Cách làm |
 |---|---|---|
 | ST-01 | Một cột | `max-w-3xl`, các khối xếp dọc theo thứ tự bảng trên; hết nửa phải trống ở Admin và hàng lệch ở các role khác (`unevenRows = 0`) |
-| ST-02 | Bỏ khối "Push notification" chung | Bảng kênh theo mức là chỗ duy nhất bật/tắt thông báo đẩy (khối chung trùng việc với cột "Thông báo đẩy"); đổi chữ "Push" → "Thông báo đẩy" (FE_Design §6.2) |
+| ST-02 | Bỏ khối "Push notification" chung | Bảng kênh theo mức là chỗ duy nhất bật/tắt thông báo đẩy (khối chung trùng việc với cột "Thông báo đẩy"); đổi chữ "Push" → "Thông báo đẩy" (FE_Design §6.2). **Còn mở (backend, Bảo/Kiệt):** `notification.service.ts` vẫn dùng cờ `push` chung cho thông báo không phải cảnh báo, giao diện không còn đổi được cờ này; ai đã tắt nó ở bản cũ sẽ không nhận push loại đó. Backend nên bỏ cờ chung hoặc coi như bật; web lưu kênh không gửi cờ chung |
 | ST-03 | Ẩn theo role | Dùng `usePermission`: bảng kênh + Telegram cho `FARM_OWNER`, `FARM_TECHNICIAN`; giờ im lặng chỉ `FARM_OWNER`; chuyên gia chỉ thấy dòng chú thích. Không gửi trường của khối bị ẩn khi lưu |
 | ST-04 | Một nút chính | Mỗi khối có nút lưu riêng là nút phụ; chỉ khi khối có thay đổi chưa lưu thì nút đó thành nút chính. "Yêu cầu xoá tài khoản" là nút phụ viền đỏ, popup xác nhận giữ nguyên |
 | ST-05 | Giờ 24h, `_`, chữ | Ô giờ dùng `TimePicker` của `ui/` (24 giờ) thay `<input type="time">`; số điện thoại trống `NO_VALUE`; nhãn vai trò 13px (C-02) |
 
 ## 5. Farm Owner — Bảo
+
+**Trạng thái (20/11/2026, nhánh `refactor/fe-farm-owner-layout`):** đã làm FO-00…FO-05, FO-07…FO-14, trừ một phần FO-10 (lưới Zone ở chi tiết nhà chưa co theo số Zone). Dock điện thoại thêm mục "Thêm" (sau 4 mục) mở các mục còn lại theo nhóm, có badge, cho mọi role. FO-06: chip Zone giữ dạng chip (đã thành pill trắng theo C-03), chưa làm ô chọn nhiều Zone; biểu đồ cột thay bằng bảng (CH-03). FO-01 thêm giai đoạn và trạng thái hôm nay vào thẻ nhà để giữ đủ ANALYTICS-FR-015, nên trang So sánh nhà bỏ tab con "Các nhà".
 
 | ID | Trang | Hiện tại | Sửa | Ưu tiên |
 |---|---|---|---|---|
@@ -329,19 +331,56 @@ Phần lớn đã làm ở PR nền (menu, trang chủ Cảnh báo, `ScopeFilter
 
 ## 8. Admin — Nhi
 
-Đã làm ở PR nền: menu tab Người dùng, trang OTA vào card + cột tiếng Việt + vị trí theo tên, bỏ STT, bảng không đệm dòng, thuật ngữ. Còn lại:
+Đã làm ở PR nền: menu tab Người dùng, trang OTA vào card + cột tiếng Việt + vị trí theo tên, bỏ STT, bảng không đệm dòng, thuật ngữ. Đã có sẵn từ #205, #206 (dùng lại, không viết mới): `DataTable`/`FixedRowsTable` prop `mobileCard` (C-09), `common/KpiTile` (C-10), `ui/InfoTip` và prop `help` của `SectionCard` (C-07), `ui/Drawer` (có `side="bottom"`, trả focus khi đóng), `ActionsMenuItem.hint` (lý do mục bị khoá), `hooks/common/useMenuBadges` (badge theo đường dẫn), mục "Thêm" của dock điện thoại (tự có khi menu dài hơn 4 mục).
 
-| ID | Trang | Hiện tại | Sửa | Ưu tiên |
-|---|---|---|---|---|
-| AD-01 | Cập nhật firmware `/ota` | **44 phần tử tràn ở 390**; bảng tự viết (`features/admin/ota/DeviceTable.tsx`) không theo `DataTable`; nút "Cập nhật" xám mờ khi thiết bị không online | Đổi sang `DataTable` + `mobileCard` (sau C-09); ngăn bên phải (`OTASidePanel`) thành `Drawer` như trang Thiết bị; nút khoá có `title` (đã có) và dòng phụ "Chỉ thiết bị đang online" ở đầu bảng (đã có) | P1 |
-| AD-02 | Tổng quan hệ thống `/system/health` | KPI + "Nhật ký hoạt động gần đây" lặp trang Nhật ký hệ thống (bộ lọc, sắp xếp, phân trang đầy đủ) | Giữ 4 KPI; nhật ký gần đây chỉ 5 dòng, không bộ lọc, không phân trang, link "Xem tất cả" | P1 |
-| AD-03 | Người dùng `/users` | Tab trong card "Nhân viên hệ thống / Người dùng" chồng dưới tab trang "Tài khoản / Yêu cầu xoá" → 2 hàng tab | Bỏ tab trong card, thay bằng `SelectMenu` "Vai trò" trong hàng bộ lọc (Tất cả · Quản trị viên · Chủ nhà yến · Kỹ thuật viên · Chuyên gia); nút "Tạo chủ nhà yến" là nút chính duy nhất | P1 |
-| AD-04 | Kho thiết bị | Nút "+ Thêm thiết bị" dùng ký tự "+" thay icon; 30 chữ < 13px; 3 khối tô đen | Icon `Plus` của Lucide; sau C-02, C-03 | P2 |
-| AD-05 | Danh sách thiết bị `/devices` | 5 ô KPI (lệch luật 4 ô một hàng); "Offline" và "Cần xử lý" cùng đếm thiết bị mất kết nối | 4 ô: Tổng · Online · Mất kết nối · Chờ kết nối; bỏ "Cần xử lý" trùng nghĩa | P2 |
-| AD-06 | Nhật ký hệ thống | 5 ô KPI; bảng giữ STT (đúng, thứ tự có nghĩa) | 4 ô (bỏ "Nhân viên mới" nếu luôn 0, hoặc gộp với "Lượt khoá tài khoản" thành "Thay đổi tài khoản 7 ngày") | P2 |
-| AD-07 | Cấu hình mặc định | 1 card 5 ô, ổn | Không đổi; chỉ C-02 | — |
-| AD-08 | Điện thoại 390 | Bảng cuộn ngang ở Người dùng, Kho, Thiết bị, Nhật ký | `mobileCard` cho 4 bảng (sau C-09) | P1 |
-| AD-09 | Menu và khung | 5 nhóm cho 9 mục, chữ "Console" | Gom 3 nhóm theo §3.4 (`AdminLayout.tsx`, `dockItems`), thêm badge số yêu cầu xoá chờ ở "Người dùng"; kiểm bảng §4.1 cột Admin | P1 |
+**Số đo hiện tại (Phụ lục A, sau #206):** mọi trang Admin `h1 = 1`, `tiny = 0`. Còn: `/ota` `spill = 35` ở 390; `hScroll = 1` ở Tổng quan hệ thống, Thiết bị, Cảnh báo, Người dùng, Kho, Nhật ký; `darkButtons = 1` ở Kho, Cấu hình mặc định (nút chính, đạt).
+
+### 8.1 Thứ tự PR
+
+| PR | Nhánh | Mục | Phụ thuộc |
+|---|---|---|---|
+| 1 | `refactor/fe-admin-menu` | AD-09 (menu, dock, badge) | Không |
+| 2 | `refactor/fe-admin-pages` | AD-02, AD-03, AD-04, AD-05, AD-06, AD-08 | Không (có thể song song PR 1) |
+| 3 | `refactor/fe-admin-ota` | AD-01 | Không |
+
+Mỗi PR chạy checklist §9; ảnh trước/sau 1440 và 390 kéo vào mô tả PR (review của #205, #206 chặn khi thiếu ảnh). Tên nhánh theo FE_Design 13.13: `<type>/fe-admin-<việc>`.
+
+### 8.2 PR 1 — Menu và badge (AD-09)
+
+| Bước | File | Cách làm | Xong khi |
+|---|---|---|---|
+| 1 | `components/layouts/AdminLayout.tsx` | 3 nhóm theo §3.4: **Theo dõi** (Tổng quan hệ thống `/system/health` · Cảnh báo `/alerts`) · **Thiết bị** (Danh sách thiết bị `/devices` · Kho thiết bị `/system/device-stock` · Cập nhật firmware `/ota`) · **Hệ thống** (Người dùng = `usersItem` có tab · Cấu hình mặc định `/system/settings` · Nhật ký hệ thống `/system/audit-log`). Bỏ chữ "Console". `dockItems` giữ: Tổng quan hệ thống · Danh sách thiết bị · Cảnh báo · Người dùng; mục "Thêm" tự hiện cho 4 mục còn lại | Sidebar 8 mục, 3 nhóm; dock 4 mục + "Thêm" |
+| 2 | `constants/navigation.i18n.ts`, `i18n/en.ts` | Nhãn nhóm "Theo dõi", "Thiết bị", "Hệ thống" đã có. Hôm nay "Console thiết bị" và "Quản lý" chỉ còn ở `AdminLayout.tsx` (dòng 29, 37); sau bước 1 xoá khoá của cả hai ở `navigation.i18n.ts` (bản vi và en) và khoá `'Quản lý'` ở `i18n/en.ts:16`. Comment "Console thiết bị" ở `constants/roles.ts`, `roles.test.ts` đổi thành "Thiết bị". Giữ "Vận hành" (Farm Owner, Kỹ thuật viên còn dùng) | `grep -rn "'Quản lý'" src` và `grep -rn "Console thiết bị" src` không còn kết quả (`tsc` không bắt khoá thừa) |
+| 3 | `hooks/admin/useAccountRequests.ts` | Thêm `usePendingDeletionCount(enabled)`: `adminApi.listDeleteRequests({ limit: 1 })` lấy `meta.total`, `refetchInterval: 120_000` kèm comment lý do (13.2, như các badge khác). Khoá query bắt đầu bằng `'admin-delete-requests'` (VD `['admin-delete-requests', 'count']`) để `useCompleteDeleteRequest`, `useRejectDeleteRequest` (đang invalidate theo tiền tố đó) làm số tự giảm sau khi xử lý | Có test hoặc ít nhất không gọi khi `enabled = false` |
+| 4 | `hooks/common/useMenuBadges.ts` (file chung, của Bảo) | Khoảng 4 dòng: `import { usePendingDeletionCount } from '@/hooks/admin/useAccountRequests'`, `const isAdmin = role === 'ADMIN'`, `const pendingDeletion = usePendingDeletionCount(isAdmin)` và mục `'/users': isAdmin ? pendingDeletion : 0`. Báo Bảo trong mô tả PR vì file dùng chung 4 role | Badge "Người dùng" hiện số yêu cầu xoá chờ xử lý; role khác không gọi API |
+| 5 | `constants/roles.ts` | Không đổi `MENU_ACCESS` (đường dẫn giữ nguyên); chạy `roles.test.ts` | Test xanh |
+
+### 8.3 PR 2 — Các trang (AD-02…AD-08)
+
+| ID | File | Cách làm | Xong khi |
+|---|---|---|---|
+| AD-02 | `components/features/admin/dashboard/RecentActivityCard.tsx`, `pages/admin/AdminSystemHealthPage.tsx` | Nhật ký gần đây: bỏ `AuditLogFilters` và `Pagination`, chỉ 5 dòng mới nhất (`useAuditLogList({ page: 1, limit: 5 })`), giữ link "Xem tất cả" → `/system/audit-log`. Ô KPI "Cảnh báo CRITICAL" đổi nhãn thành "Cảnh báo khẩn cấp" (FE_Design 6.4 mục 6: không chữ enum) | Trang không còn bộ lọc, phân trang; `wording.test.ts` xanh |
+| AD-03 | `pages/admin/AdminUsersPage.tsx`, `components/features/admin/users/UserStats.tsx`, `e2e/admin-accounts.spec.ts` | Bỏ tab pill "Nhân viên hệ thống / Người dùng" trong card; thay bằng `SelectMenu` "Vai trò" trong hàng bộ lọc: Tất cả · Quản trị viên · Chủ nhà yến · Kỹ thuật viên · Chuyên gia (mặc định Tất cả, `roles` = mọi vai trò). Nút "Tạo chủ nhà yến" luôn hiện, là nút chính duy nhất. Card một mình trên trang nên bỏ `title`, mô tả 1 dòng. `UserStats`: bỏ `Card` bao và tiêu đề "Thống kê tài khoản", thành hàng 4 ô `grid grid-cols-2 lg:grid-cols-4` (Tổng tài khoản, dòng phụ "N đã khoá" · Chủ nhà yến · Kỹ thuật viên · Chuyên gia), bỏ `className="shadow-none"`. **E2E:** xoá dòng `page.getByRole('tab', { name: 'Người dùng' }).click()` trong test "tạo tài khoản Farm Owner…"; **không đổi tên test** (Report 5) | Không còn 2 hàng tab; E2E xanh; `unevenRows = 0` |
+| AD-04 | `pages/admin/AdminDeviceStockPage.tsx` | Nút "+ Thêm thiết bị" → `<Button><PlusIcon size={14} weight="bold" aria-hidden />Thêm thiết bị</Button>` (Phosphor, như nút "Tạo phiếu" ở Công việc). Mô tả card ≤ 1 dòng: "Thiết bị đã nhập kho và trạng thái nhãn", câu "In nhãn ngay khi thêm" chuyển vào `help` | Không còn ký tự "+" trong nhãn nút |
+| AD-05 | `components/features/admin/devices/DeviceStats.tsx` | 4 ô: Tổng thiết bị · Online · Mất kết nối · Chờ kết nối; bỏ "Cần xử lý" (trùng nghĩa Mất kết nối). Hàng `grid-cols-2 lg:grid-cols-4`. Trang `/devices` của Admin còn card "Danh sách thiết bị" + hàng KPI: KPI không phải card nên card bỏ `title` (chỉ một card) | 4 ô một hàng, không ô thừa |
+| AD-06 | `components/features/admin/audit-log/AuditLogStats.tsx`, `pages/admin/AdminAuditLogPage.tsx` | 4 ô: Tổng nhật ký · Nhật ký 7 ngày qua · Đăng nhập thất bại · Thay đổi tài khoản 7 ngày (gộp "Lượt khoá tài khoản" và "Nhân viên mới"). Card "Danh sách nhật ký" bỏ `title` (một card), mô tả 1 dòng. Bảng giữ STT (thứ tự có nghĩa, FE_Design 1.1) | 4 ô; không tiêu đề lặp |
+| AD-07 | `pages/admin/AdminSystemSettingsPage.tsx` | Không đổi | — |
+| AD-08 | `pages/admin/AdminUsersPage.tsx`, `AdminDeviceStockPage.tsx`, `AdminDevicesPage.tsx`, `AdminAuditLogPage.tsx`, `AdminAccountRequestsPage.tsx`, `RecentActivityCard.tsx` | Mỗi `DataTable` thêm `mobileCard`: cột chính in đậm (tên tài khoản / mã thiết bị / hành động), 2–3 cột phụ thành dòng `text-small text-warmGray`, menu ⋯ góc phải lấy lại từ cột Thao tác (`columns[columns.length - 1].render(row, 0)`), wrapper menu chặn cả `onClick` lẫn `onKeyDown` (mẫu: `features/farm-owner/work-orders/WorkOrderTable.tsx`, `alerts/AlertTable.tsx`). Thiết bị giả lập giữ `SimulatedBadge` trên thẻ (SYSTEM-FR-004). Bảng nằm trong khung chiều cao cố định thì chỉ cố định từ `sm:` (bài học ở `HarvestTable`) | `hScroll = 0`, `spill = 0` ở 390 cho cả 6 trang |
+
+Mô tả card (C-07): mỗi `SectionCard` chỉ một dòng ≤ 60 ký tự; câu dài (VD trang Yêu cầu xoá tài khoản: "Quyền sở hữu trang trại chuyển cho…") vào prop `help`. Đo `greyPara = 0`.
+
+### 8.4 PR 3 — Cập nhật firmware (AD-01)
+
+| Bước | File | Cách làm | Xong khi |
+|---|---|---|---|
+| 1 | `components/features/admin/ota/DeviceTable.tsx` → `otaColumns.tsx` | Thay bảng tự viết bằng `DataTable` (`columns` khai trong `otaColumns.tsx` như `deviceColumns.tsx`), `onRowClick` mở ngăn gửi; giữ trạng thái chọn (dòng đang chọn nền `bg-charcoal/5` qua cột đầu) và nhãn đang cập nhật / lỗi lần trước. Xoá `DeviceTable.tsx` | Không còn `<table>` tự viết |
+| 2 | `pages/admin/AdminOtaPage.tsx` | `OTASidePanel` vào `Drawer` (`side` mặc định phải), mở khi chọn thiết bị, đóng thì bỏ chọn; bỏ cột `w-80` cố định cạnh bảng. `OTAConfirmModal` giữ nguyên | Màn 390 không còn cột ngăn tràn |
+| 3 | cùng file | `mobileCard`: mã thiết bị · vị trí · phiên bản hiện tại · trạng thái online; nút "Cập nhật" khoá khi không online vẫn có `title` và dòng phụ "Chỉ thiết bị đang online" ở đầu danh sách (đã có) | `spill = 0`, `hScroll = 0` ở 390 |
+| 4 | — | Mô tả card một dòng ("Cập nhật firmware từ xa cho bộ điều khiển"), câu "Chỉ thiết bị đang online…" vào `help` | `greyPara = 0` |
+
+### 8.5 Kiểm theo role Admin
+
+Đăng nhập `admin@swiftletcare.dev`, đối chiếu bảng "đúng theo role" §4.1 cột Quản trị viên (không thanh phạm vi, chuông có tab Cảnh báo thiết bị và Thông báo, menu avatar đủ 3 mục) và §4.2 (Cài đặt chỉ Hồ sơ · Bảo mật · Quyền riêng tư · Yêu cầu xoá tài khoản). Chạy Phụ lục A với `ROLE = 'admin'`: 8 mục menu đạt cột "Mục tiêu" §2.2.
 
 ## 9. Checklist mỗi PR
 
@@ -360,6 +399,21 @@ Phần lớn đã làm ở PR nền (menu, trang chủ Cảnh báo, `ScopeFilter
 - Không đổi route đang có; không đổi URL mang `_id` của trang nhà/Zone (ghi nợ FE_Design §13.16).
 - Không đổi bảng màu, font, logo (FE_Design §2, §3).
 - Không đụng `mobile/`.
+
+## 11. Còn lại sau §4, §5 (20/11/2026)
+
+§4 đã merge ở #205, §5 ở #206. Việc còn lại:
+
+| Người | Việc | Ghi chú |
+|---|---|---|
+| Bảo (web) | FO-06: ô chọn nhiều Zone ở so sánh Zone (Phân tích) | `SelectMenu` chưa có chế độ chọn nhiều; chip đã là pill trắng nên không còn khối tô đen |
+| Bảo (web) | FO-10: lưới Zone ở chi tiết nhà co theo số Zone | Nhà 1 Zone còn trống 70 % khung |
+| Bảo | **BR-31 bỏ đánh giá mù**, nhóm chốt ngày 20/11/2026 (Bảo, trưởng nhóm, quyết định trong buổi làm việc): người đánh giá xem trạng thái của hệ thống rồi xác nhận hoặc sửa; trạng thái luôn hiển thị ở mọi kênh. PR #208 sửa Report 3 4.2.14 (BR-31, EXPERT-FR-012, NFR-14, §6.18), Report 4 2.2.18, `api-spec.yaml`, backend bỏ che, web bỏ ẩn, và đóng G-30 trong `project-tracking.md` §6 | Mobile (Len) còn phải bỏ phần ẩn trạng thái trước khi đánh giá |
+| Bảo, Kiệt (backend) | `PUT /auth/notification-preferences` nhận mọi role và giờ im lặng áp cho mọi người, trong khi ALERT-FR-005 chỉ cho Chủ nhà yến, Kỹ thuật viên và ALERT-FR-006 chỉ cho Chủ nhà yến | Giao diện đã ẩn theo role (ST-03); backend nên chặn hoặc bỏ qua trường không thuộc role |
+| Bảo, Kiệt (backend) | Cờ `push` chung (ST-02) | Giao diện không còn đổi được; backend bỏ cờ hoặc coi như bật |
+| Bảo | ALERT-FR-007: không phải đổi yêu cầu mà là Report 3 tự lệch. Bảng quyền §2.4, dòng "Receive alerts": Chủ nhà yến nhận cảnh báo leo thang và khẩn cấp, Kỹ thuật viên nhận trước ở nhà được giao, chuyên gia chỉ nhận cảnh báo suy luận để xác nhận hoặc bác ở hàng chờ Kiểm chứng (EXPERT-FR-003); dòng "Acknowledge alerts" chỉ có Chủ nhà yến và Kỹ thuật viên. Riêng dòng ALERT-FR-007 ghi "Farm Owner, Domain Expert" và thiếu Kỹ thuật viên. Code đã theo §2.4 (`ALERT_ROLES` không có chuyên gia) | Đã sửa trong PR #208: actor của ALERT-FR-007 thành Farm Owner, Farm Technician (assigned houses); code giữ nguyên |
+| Tuấn | §6, §7 | Các mục đã dùng được component chung của #205, #206 |
+| Nhi | §8 | Plan chi tiết ở §8.1…§8.5 |
 
 ## Phụ lục A. Script đo theo taste-skill
 

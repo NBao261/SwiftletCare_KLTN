@@ -1,4 +1,4 @@
-import type { BirdCountTuning, Coordinates, DetectionTuning, FuzzyTuning, Thresholds } from '@/types'
+import type { BirdCountTuning, Coordinates, DetectionTuning, FuzzyTuning, HealthLevels, Thresholds, WeatherMetric } from '@/types'
 import { formatDecimal } from '@/utils/number.utils'
 import { getCurrentLanguage, t } from '@/utils/i18n.utils'
 
@@ -187,4 +187,62 @@ export function hasDraftErrors<K extends string>(errors: DraftErrors<K>): boolea
 export function formatStoredNumber(value: number): string {
   const decimals = Math.min(3, (String(value).split('.')[1] ?? '').length)
   return formatDecimal(value, decimals)
+}
+
+// Khoảng mức chỉ số sức khỏe của nhà (backend HEALTH_LEVEL_LIMITS, BR-28)
+export const HEALTH_LEVEL_RULES: Record<keyof HealthLevels, NumberRule> = {
+  in_range_slight_pct: { min: 50, max: 100 },
+  in_range_clear_pct: { min: 50, max: 100 },
+  air_slight_h: { min: 0.5, max: 12 },
+  air_clear_h: { min: 0.5, max: 12 },
+  noise_slight: { min: 1, max: 10, integer: true },
+  noise_clear: { min: 1, max: 10, integer: true },
+}
+
+// Lỗi bản nháp mức chỉ số: từng ô trong khoảng, rồi mức "rõ" không được nhẹ hơn mức "nhẹ" (thời gian trong ngưỡng càng thấp càng
+// nặng; giờ vượt ngưỡng, số đợt tiếng ồn càng cao càng nặng)
+export function validateHealthLevelsDraft(draft: NumberDraft<keyof HealthLevels>): DraftErrors<keyof HealthLevels> {
+  const errors = validateNumberDraft(draft, HEALTH_LEVEL_RULES)
+  const valueOf = (key: keyof HealthLevels) => parseNumberInput(draft[key]) as number
+  if (!errors.in_range_slight_pct && !errors.in_range_clear_pct && valueOf('in_range_clear_pct') > valueOf('in_range_slight_pct')) {
+    errors.in_range_clear_pct = t('Không được lớn hơn mức nhẹ')
+  }
+  if (!errors.air_slight_h && !errors.air_clear_h && valueOf('air_clear_h') < valueOf('air_slight_h')) {
+    errors.air_clear_h = t('Không được nhỏ hơn mức nhẹ')
+  }
+  if (!errors.noise_slight && !errors.noise_clear && valueOf('noise_clear') < valueOf('noise_slight')) {
+    errors.noise_clear = t('Không được nhỏ hơn mức nhẹ')
+  }
+  return errors
+}
+
+// Luật bù thời tiết (backend weatherCompensation.util, BR-38): tối đa 10 luật; ngưỡng theo chỉ số; offset −10…+10 khác 0;
+// thời hạn 1–120 phút
+export const MAX_WEATHER_RULES = 10
+export const WEATHER_METRIC_RULES: Record<WeatherMetric, NumberRule> = {
+  temperature: { min: 0, max: 50 },
+  humidity: { min: 0, max: 100 },
+  rain: { min: 0.1, max: 50 },
+}
+export const WEATHER_OFFSET_RULE: NumberRule = { min: -10, max: 10 }
+export const WEATHER_DURATION_RULE: NumberRule = { min: 1, max: 120, integer: true }
+
+export interface WeatherRuleDraft {
+  metric: WeatherMetric
+  min: string
+  offset: string
+  duration: string
+}
+
+// Lỗi từng ô của một luật bù thời tiết đang nhập
+export function validateWeatherRuleDraft(draft: WeatherRuleDraft): Partial<Record<'min' | 'offset' | 'duration', string>> {
+  const errors: Partial<Record<'min' | 'offset' | 'duration', string>> = {}
+  const minError = validateNumber(draft.min, WEATHER_METRIC_RULES[draft.metric])
+  if (minError) errors.min = minError
+  const offsetError = validateNumber(draft.offset, WEATHER_OFFSET_RULE)
+  if (offsetError) errors.offset = offsetError
+  else if (parseNumberInput(draft.offset) === 0) errors.offset = t('Phải khác 0')
+  const durationError = validateNumber(draft.duration, WEATHER_DURATION_RULE)
+  if (durationError) errors.duration = durationError
+  return errors
 }
