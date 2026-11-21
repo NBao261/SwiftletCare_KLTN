@@ -1,16 +1,39 @@
 import type { Coordinates } from '@/types'
 
-// Nominatim (OpenStreetMap): tìm toạ độ của địa chỉ, gọi thẳng từ trình duyệt khi người dùng bấm tìm.
-// Chính sách của Nominatim: tối đa 1 yêu cầu/giây, không gọi theo từng phím gõ
-const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
+// Photon (komoot, dữ liệu OpenStreetMap): gợi ý địa chỉ khi gõ, gọi thẳng từ trình duyệt, không cần key.
+// Nominatim cấm tự gợi ý theo phím gõ nên không dùng ở đây
+const PHOTON_URL = 'https://photon.komoot.io/api/'
+const SUGGESTION_LIMIT = 5
+// Ưu tiên kết quả gần Việt Nam (không loại kết quả nước khác)
+const BIAS = { lat: '16', lon: '106' }
+
+export interface AddressSuggestion {
+  label: string
+  coordinates: Coordinates
+}
+
+interface PhotonFeature {
+  properties: Record<string, string | undefined>
+  geometry: { coordinates: [number, number] }
+}
+
+// "Tên, số nhà + đường, khu phố, quận, thành phố, tỉnh, nước" — bỏ phần trống và phần trùng
+export function suggestionLabel(properties: PhotonFeature['properties']): string {
+  const street = [properties.housenumber, properties.street].filter(Boolean).join(' ')
+  const parts = [properties.name, street, properties.locality, properties.district, properties.city, properties.county, properties.state, properties.country]
+  return [...new Set(parts.filter((part): part is string => Boolean(part?.trim())))].join(', ')
+}
 
 export const geocodingApi = {
-  // Kết quả gần đúng nhất, không thấy thì null
-  search: async (address: string, language: string): Promise<Coordinates | null> => {
-    const params = new URLSearchParams({ q: address, format: 'jsonv2', limit: '1', 'accept-language': language })
-    const response = await fetch(`${NOMINATIM_URL}?${params}`)
-    if (!response.ok) throw new Error(`Nominatim ${response.status}`)
-    const [first] = (await response.json()) as { lat: string; lon: string }[]
-    return first ? { lat: Number(first.lat), lng: Number(first.lon) } : null
+  // Photon không có tiếng Việt: 'default' là tên địa phương (tiếng Việt ở Việt Nam), không theo ngôn ngữ của trình duyệt
+  suggest: async (query: string, lang: 'vi' | 'en', signal: AbortSignal): Promise<AddressSuggestion[]> => {
+    const params = new URLSearchParams({ q: query, limit: String(SUGGESTION_LIMIT), lang: lang === 'en' ? 'en' : 'default', ...BIAS })
+    const response = await fetch(`${PHOTON_URL}?${params}`, { signal })
+    if (!response.ok) throw new Error(`Photon ${response.status}`)
+    const { features } = (await response.json()) as { features: PhotonFeature[] }
+    return features.map(feature => ({
+      label: suggestionLabel(feature.properties),
+      coordinates: { lat: feature.geometry.coordinates[1], lng: feature.geometry.coordinates[0] },
+    }))
   },
 }

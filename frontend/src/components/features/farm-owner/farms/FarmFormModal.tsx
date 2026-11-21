@@ -1,13 +1,12 @@
 import { Suspense, lazy, useMemo, useState, type FormEvent } from 'react'
-import { MagnifyingGlassIcon, MapPinIcon } from '@phosphor-icons/react'
-import { geocodingApi } from '@/apis/shared/geocoding.api'
+import { MapPinIcon } from '@phosphor-icons/react'
+import AddressAutocomplete from '@/components/features/farm-owner/farms/AddressAutocomplete'
 import { Button, Input, Modal } from '@/components/ui'
 import { farmDict, type FarmKey } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useCreateFarm, useUpdateFarm } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
-import { useLanguageStore } from '@/stores/languageStore'
 import { parseFarmLocation, validateFarmLocation } from '@/validations/farm-owner/farm.validation'
 import type { Coordinates, Farm } from '@/types'
 
@@ -35,10 +34,8 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
   const [latitude, setLatitude] = useState(farm?.coordinates ? String(farm.coordinates.lat) : '')
   const [longitude, setLongitude] = useState(farm?.coordinates ? String(farm.coordinates.lng) : '')
   const [isLocating, setIsLocating] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
   // Cùng một object khi hai ô không đổi: bản đồ không kéo khung về ghim mỗi lần form vẽ lại
   const pickedLocation = useMemo(() => parseFarmLocation(latitude, longitude), [latitude, longitude])
-  const lang = useLanguageStore(state => state.lang)
   const [error, setError] = useState<FarmKey | null>(null)
   const isSaving = createFarm.isPending || updateFarm.isPending
 
@@ -47,24 +44,6 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
     setLatitude(lat.toFixed(COORDINATE_DIGITS))
     setLongitude(lng.toFixed(COORDINATE_DIGITS))
     setError(null)
-  }
-
-  // Tìm địa chỉ trên OpenStreetMap: kết quả gần đúng, người dùng kéo ghim tới đúng nhà yến
-  async function handleSearchAddress(): Promise<void> {
-    if (!address.trim()) {
-      setError('farmForm.errorRequired')
-      return
-    }
-    setIsSearching(true)
-    try {
-      const found = await geocodingApi.search(address.trim(), lang)
-      if (found) setLocation(found)
-      else setError('farmForm.addressNotFound')
-    } catch {
-      setError('farmForm.searchFailed')
-    } finally {
-      setIsSearching(false)
-    }
   }
 
   // Lấy tọa độ GPS của máy — dùng khi đang đứng ở nhà yến
@@ -128,30 +107,17 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
     <Modal open onClose={onClose} title={isEdit ? t('farmForm.editTitle') : t('createFarm.title')}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <Input name="farmName" label={t('createFarm.name')} required value={name} onChange={event => setName(event.target.value)} placeholder={t('createFarm.namePlaceholder')} />
-        <Input
-          name="farmAddress"
-          label={t('farmForm.address')}
-          required
-          value={address}
-          onChange={event => setAddress(event.target.value)}
-          placeholder={t('farmForm.addressPlaceholder')}
-        />
+        <AddressAutocomplete value={address} onChange={setAddress} onPick={setLocation} />
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="label-caption">
               {t('farmForm.location')}
               {!isEdit && <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>}
             </span>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" size="sm" loading={isSearching} onClick={() => void handleSearchAddress()}>
-                <MagnifyingGlassIcon size={14} weight="bold" />
-                {t('farmForm.searchAddress')}
-              </Button>
-              <Button type="button" variant="secondary" size="sm" loading={isLocating} onClick={handleUseCurrentLocation}>
-                <MapPinIcon size={14} weight="bold" />
-                {t('farmForm.useCurrentLocation')}
-              </Button>
-            </div>
+            <Button type="button" variant="secondary" size="sm" loading={isLocating} onClick={handleUseCurrentLocation}>
+              <MapPinIcon size={14} weight="bold" />
+              {t('farmForm.useCurrentLocation')}
+            </Button>
           </div>
           <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-xl bg-warmGray/10" />}>
             <FarmLocationMap value={pickedLocation} onPick={setLocation} />

@@ -65,7 +65,7 @@ const SECTIONS_VI: PolicySection[] = [
     items: [
       'Telegram: gửi cảnh báo cho chủ nhà yến đã liên kết tài khoản.',
       'Open-Meteo: thời tiết theo giờ và dự báo; hệ thống chỉ gửi vĩ độ, kinh độ của trang trại.',
-      'OpenStreetMap: bản đồ để chọn vị trí trang trại. Trình duyệt tải ô bản đồ của vùng đang xem; khi bấm "Tìm theo địa chỉ", địa chỉ đã nhập được gửi tới dịch vụ tìm kiếm Nominatim.',
+      'OpenStreetMap: bản đồ để chọn vị trí trang trại. Trình duyệt tải ô bản đồ của vùng đang xem; khi gõ địa chỉ trang trại, phần đã gõ được gửi tới dịch vụ gợi ý địa chỉ Photon (komoot) để hiện gợi ý.',
     ],
   },
   {
@@ -151,7 +151,7 @@ const SECTIONS_EN: PolicySection[] = [
     items: [
       'Telegram: sends alerts to a Farm Owner who has linked an account.',
       'Open-Meteo: hourly weather and forecast; the system sends only the latitude and longitude of the farm.',
-      'OpenStreetMap: the map for choosing the farm location. The browser loads the map tiles of the area in view; "Find the address" sends the typed address to the Nominatim search service.',
+      'OpenStreetMap: the map for choosing the farm location. The browser loads the map tiles of the area in view; while the farm address is typed, the typed text is sent to the Photon address service (komoot) to show suggestions.',
     ],
   },
   {
