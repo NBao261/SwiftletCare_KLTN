@@ -15,3 +15,9 @@ export function validateFarmLocation(latitude: string, longitude: string, isRequ
   if (!isInRange(longitude, 180)) return 'farmForm.errorLongitude'
   return null
 }
+
+// Hai ô đang hợp lệ thì trả toạ độ để đặt ghim trên bản đồ, chưa hợp lệ thì null
+export function parseFarmLocation(latitude: string, longitude: string): { lat: number; lng: number } | null {
+  if (!isInRange(latitude, 90) || !isInRange(longitude, 180)) return null
+  return { lat: Number(latitude.trim()), lng: Number(longitude.trim()) }
+}

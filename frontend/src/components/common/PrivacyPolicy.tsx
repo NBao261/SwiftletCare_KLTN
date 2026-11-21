@@ -2,8 +2,8 @@
 // Mỗi câu lấy từ Report 3 (mã yêu cầu ghi ở comment); đổi nội dung thì sửa cả 2 bản VI/EN, tăng POLICY_VERSION và ngày hiệu lực.
 import { useLanguageStore, type Lang } from '@/stores/languageStore';
 
-const POLICY_VERSION = '1.0';
-const EFFECTIVE_DATE = '30/10/2026';
+const POLICY_VERSION = '1.1';
+const EFFECTIVE_DATE = '21/11/2026';
 
 interface PolicySection {
   title: string;
@@ -60,10 +60,12 @@ const SECTIONS_VI: PolicySection[] = [
     ],
   },
   {
-    // ALERT-FR-013
+    // ALERT-FR-013, ANALYTICS-FR-013, FARM-FR-001 (Report 4 §3.1)
     title: '5. Dịch vụ bên ngoài',
     items: [
       'Telegram: gửi cảnh báo cho chủ nhà yến đã liên kết tài khoản.',
+      'Open-Meteo: thời tiết theo giờ và dự báo; hệ thống chỉ gửi vĩ độ, kinh độ của trang trại.',
+      'OpenStreetMap: bản đồ để chọn vị trí trang trại. Trình duyệt tải ô bản đồ của vùng đang xem; khi gõ địa chỉ trang trại, phần đã gõ được gửi tới dịch vụ gợi ý địa chỉ Photon (komoot) để hiện gợi ý.',
     ],
   },
   {
@@ -98,8 +100,8 @@ const SECTIONS_VI: PolicySection[] = [
     paragraphs: [
       'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt.',
       'Khi chính sách thay đổi, phiên bản và ngày hiệu lực ở đầu trang được cập nhật.',
-      // ALERT-FR-002, MF-11 — chưa có trong code (gap G-10, G-11)
-      'Thông báo đẩy trên ứng dụng điện thoại (Firebase Cloud Messaging), thời tiết theo toạ độ trang trại (Open-Meteo) và đánh giá tình trạng mỗi nhà theo ngày sẽ được bổ sung sau; chính sách này được cập nhật trước khi các tính năng đó hoạt động.',
+      // ALERT-FR-002 — chưa gửi thật (gap G-10)
+      'Thông báo đẩy trên ứng dụng điện thoại (Firebase Cloud Messaging) sẽ được bổ sung sau; chính sách này được cập nhật trước khi tính năng đó hoạt động.',
     ],
   },
 ];
@@ -148,6 +150,8 @@ const SECTIONS_EN: PolicySection[] = [
     title: '5. External services',
     items: [
       'Telegram: sends alerts to a Farm Owner who has linked an account.',
+      'Open-Meteo: hourly weather and forecast; the system sends only the latitude and longitude of the farm.',
+      'OpenStreetMap: the map for choosing the farm location. The browser loads the map tiles of the area in view; while the farm address is typed, the typed text is sent to the Photon address service (komoot) to show suggestions.',
     ],
   },
   {
@@ -179,7 +183,7 @@ const SECTIONS_EN: PolicySection[] = [
     paragraphs: [
       'Send any question or request about personal data to the Administrator of your installation.',
       'When the policy changes, the version and effective date at the top of the page are updated.',
-      'Push notifications in the mobile app (Firebase Cloud Messaging), weather by farm coordinates (Open-Meteo) and the daily status of each house will be added later; this policy is updated before those features go live.',
+      'Push notifications in the mobile app (Firebase Cloud Messaging) will be added later; this policy is updated before that feature goes live.',
     ],
   },
 ];

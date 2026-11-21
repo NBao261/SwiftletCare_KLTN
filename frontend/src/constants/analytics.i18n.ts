@@ -130,6 +130,7 @@ const vi = {
   'env.setter.other': 'người dùng',
   'env.range': 'Ngưỡng Zone: {temperatureMin}–{temperatureMax}°C · {humidityMin}–{humidityMax}%',
   'env.empty': 'Chưa có dữ liệu trong khoảng thời gian này',
+  'env.indoorEmpty': 'Chưa có số đo trong nhà trong khoảng này',
   'env.outdoorNote': 'Nét đứt: thời tiết ngoài trời theo giờ tại toạ độ trang trại (Open-Meteo), chỉ để đối chiếu · Mưa trong khoảng: {rain} mm',
   'env.outdoorEmpty': 'Chưa có thời tiết ngoài trời cho khoảng này (hệ thống lấy mỗi giờ theo toạ độ trang trại)',
 
@@ -345,6 +346,7 @@ const en: Record<AnalyticsKey, string> = {
   'env.setter.other': 'user',
   'env.range': 'Zone threshold: {temperatureMin}–{temperatureMax}°C · {humidityMin}–{humidityMax}%',
   'env.empty': 'No data in this time range',
+  'env.indoorEmpty': 'No indoor readings in this range',
   'env.outdoorNote': 'Dashed: hourly outdoor weather at the farm coordinates (Open-Meteo), for comparison only · Rain in this range: {rain} mm',
   'env.outdoorEmpty': 'No outdoor weather for this range yet (fetched every hour from the farm coordinates)',
 

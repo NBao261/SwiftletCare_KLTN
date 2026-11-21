@@ -624,6 +624,7 @@ const en: Record<string, string> = {
   'Ngày đánh giá lệch & Mức chỉ số': 'Disagreeing days & indicator levels',
   'Mở một báo cáo để viết kết luận gửi Chủ nhà yến': 'Open a report to write a conclusion for the farm owner',
   'Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống và chỉnh mức chỉ số của nhà': 'Compare on-site ratings with the system status and tune the indicator levels of each house',
+  'Dữ liệu thời tiết:': 'Weather data:',
 }
 
 export default en

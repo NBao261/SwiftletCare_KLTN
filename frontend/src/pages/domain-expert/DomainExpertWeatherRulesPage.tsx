@@ -12,6 +12,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import type { WeatherRule } from '@/types/expert.types'
 import WeatherRuleRow from '@/components/features/domain-expert/weather/WeatherRuleRow'
 import WeatherRuleAddForm from '@/components/features/domain-expert/weather/WeatherRuleAddForm'
+import WeatherSource from '@/components/common/WeatherSource'
 import { formatDate } from '@/lib/helpers'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 import { t } from '@/i18n'
@@ -37,6 +38,7 @@ function LastCompensationBadge({ data }: {
           {forecast.humidity_max !== null && <> · {t('Độ ẩm:')} {forecast.humidity_max}%</>}
           {forecast.rain_mm !== null && <> · {t('Mưa:')} {forecast.rain_mm} mm</>}
         </p>
+        <WeatherSource />
       </div>
     </div>
   )

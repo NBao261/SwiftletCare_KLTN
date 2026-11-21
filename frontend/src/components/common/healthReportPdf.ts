@@ -117,8 +117,11 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
 
   heading(t('detail.weather'));
   const weather = weatherFacts(report, format);
-  if (weather) factsTable(weather);
-  else text(t('detail.weatherNone'));
+  if (weather) {
+    factsTable(weather);
+    // Ghi nguồn theo giấy phép CC BY 4.0 của Open-Meteo
+    text(t('rd.weatherSource'), { size: 9, color: GRAY });
+  } else text(t('detail.weatherNone'));
 
   heading(t('rd.conclusion'));
   const conclusion = report.expert_conclusion;

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 
 import { CloudRainIcon, DropIcon, PencilSimpleIcon, PlusIcon, ThermometerIcon } from '@phosphor-icons/react';
+import WeatherSource from '@/components/common/WeatherSource';
 import HealthStatusBadge from '@/components/common/HealthStatusBadge';
 import { formatHealthReason } from '@/components/common/healthDay.utils';
 import { Badge, Button, Textarea, type BadgeTone } from '@/components/ui';
@@ -146,6 +147,7 @@ export default function HealthDayDrawer({ day, onClose, onChanged }: HealthDayDr
             ) : (
               <p className="text-sm text-warmGray">{t('detail.weatherNone')}</p>
             )}
+            {day.weather && <WeatherSource />}
           </section>
 
           <section className="flex flex-col gap-2">

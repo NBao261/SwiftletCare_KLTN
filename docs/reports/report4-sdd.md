@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.19 (Review 2, final scope) |
-| Date | 19/11/2026 |
+| Document version | 2.2.20 (Review 2, final scope) |
+| Date | 21/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.15 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -155,6 +155,7 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 | Telegram Bot API | Out-of-app alert channel (ALERT-FR-013) | Chat ID of the linked user, alert title, message, farm and zone names |
 | Firebase Cloud Messaging | Mobile push notifications (ALERT-FR-002) | Device token, alert title and message |
 | Open-Meteo | Weather context: hourly outdoor temperature, humidity, rainfall (ANALYTICS-FR-013), and the forecast of the next hours for the weather compensation (ENV-FR-028, BR-38) | Latitude and longitude of the farm only. Free API for non-commercial use, no key; data under CC BY 4.0, credited on the screens that show weather |
+| OpenStreetMap (map tiles) and Photon (komoot, address suggestions on OpenStreetMap data) | Map on the farm form, where the Farm Owner clicks or drags a pin onto the farm to set its coordinates (FARM-FR-001), and address suggestions while typing; picking one fills the address and places the pin near it | From the browser only: the tiles of the area in view, and the typed address (from 3 characters, 400 ms after the last key); data © OpenStreetMap contributors (ODbL), credited on the map. Nominatim is not used: its policy forbids suggestions while typing |
 | NTP (`pool.ntp.org`) | Clock of the ESP32 for the speaker schedule, the hourly noise baseline and command freshness (BR-35) | Time request only, no user data |
 | SMTP e-mail provider | Invitation links, temporary passwords and password-reset codes | E-mail address, link or one-time code |
 | Roboflow | Annotation of the training images: draft labels from motion tracks are uploaded and corrected by hand | Frames extracted from the team's own entrance clips (masked, no people, no personal data) |
@@ -171,7 +172,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Controller board | Team-designed PCB: ESP32, RS485 transceiver, relay drivers, ADS1115 16-bit ADC reading two 0.1 Ω low-side shunt resistors on the 5 V misting and 12 V fan outputs, which the board switches for the team's DC demo loads (no mains on the board) | Not built yet (gap G-13, Iteration 3); the prototype uses an ESP32-WROOM-32D with a 4-channel relay module (`docs/hardware/BOM.md`) |
 | AI pipeline | Python, OpenCV, NumPy, ONNX Runtime, supervision (ByteTrack), paho-mqtt, PyYAML, loguru; detection model YOLOv8n or YOLO11n, whichever has the lower counting error at the camera's frame rate on the team's own test days, exported to ONNX (one class, trained on Colab; `torch`/`ultralytics` are not runtime dependencies) | Python 3.11–3.12; opencv-python ≥ 4.14 < 5; numpy ≥ 1.26 < 3; onnxruntime 1.30; supervision 0.30; paho-mqtt 2.x |
 | Backend | Node.js, TypeScript, Express, Mongoose, mqtt.js, Socket.io, node-cron, jsonwebtoken, bcryptjs, firebase-admin (FCM) | Node 22, TypeScript ^5.4, Express ^4.19, Mongoose ^8.3, mqtt ^5.6, Socket.io ^4.7, node-cron ^3.0 |
-| Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `jspdf` + `jspdf-autotable` (health report PDF) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
+| Web | React, Vite, TailwindCSS, TanStack Query, Zustand, axios, socket.io-client, React Router; `qrcode` (device labels, floor codes), `jspdf` + `jspdf-autotable` (health report PDF), `leaflet` (farm location map) | React ^18.3, Vite ^5.3, Tailwind ^3.4, TanStack Query ^5.40, Zustand ^4.5, React Router ^6.23, qrcode ^1.5.4, jspdf ^2.5.1, jspdf-autotable ^3.8.2 |
 | Mobile | Expo (Router), React Native; `expo-camera` (device labels, floor codes), `expo-notifications` (FCM device token), `expo-video` (HLS live stream), `react-native-mmkv`, `react-native-gifted-charts` | Expo ~58.0, React Native 0.88.0, React 19.3.0, expo-router ~58.0, expo-camera ~58.0, expo-notifications ~58.1, expo-video ~58.0, react-native-mmkv ^4.3, react-native-gifted-charts ^1.4 |
 | Database and infrastructure | MongoDB, EMQX (HTTP authentication against the backend, file-based authorisation), MinIO, MediaMTX, Nginx with Certbot (reverse proxy and TLS) (Docker images) | mongo 7.0, emqx 5.7.0, minio latest (development only), mediamtx 1.21.1, nginx 1.27, certbot v3.1.0 |
 | Testing | Jest + mongodb-memory-server (backend), Jest (mobile), Vitest (web), Playwright (web end to end against the seeded backend, CI job `e2e`), Unity on host `pio test -e native` (firmware), pytest (AI pipeline), k6 (NFR-03 load test, `simulator/load/nfr03.k6.js`, Docker image) | Jest ^29.7 (backend), ~30.5 (mobile), Vitest ^1.6, Playwright 1.64.1, k6 1.3.0 |
@@ -1888,6 +1889,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.20 | 21/11/2026 | Section 3.1: OpenStreetMap map tiles and Photon address suggestions for picking the farm coordinates on a map (FARM-FR-001); the screens and the report PDF that show weather credit Open-Meteo |
 | 2.2.19 | 21/11/2026 | The Farm Owner decides, the Domain Expert reviews (Report 3 4.2.15, BR-22): D7 rewritten in three groups; the review item gains the groups `detection`, `return_rate_drop`, `health_levels`, `counting_schedule`, `counting_ring` with `target_id`, `house_id`, `camera_node_id` (one open item per target and group); weather rule proposals on the house, recommendation rules awaiting approval, profile drafts by the Farm Owner and the Farm Owner's reminders (`POST /expert-activity/reminders`) added to the module table, the notification refs and the MF-05 diagram; header baseline SRS 4.2.15 |
 | 2.2.18 | 20/11/2026 | The daily rating is no longer blind (Report 3 4.2.14, BR-31): the endpoints return the status, reasons and other ratings whether or not the caller has rated; the rating screen shows the system's status and asks the assessor to confirm or correct it; the snapshot stored with each rating stays (D16); header baseline SRS 4.2.14 |
 | 2.2.17 | 19/11/2026 | WebSocket events as built (Section 7.3, DF-13): there are no `ALERT_ESCALATED` or `WORK_ORDER_UPDATE` events; an escalation goes out by push and Telegram, and the Work Order changes that notify (opened, reopened, reassigned, not started, awaiting approval) reach their people as in-app notifications (`NOTIFICATION_NEW`); the web does not scan QR codes (Sections 3.2, 5.4): `html5-qrcode` removed, scanning stays in the mobile app (FARM-FR-003), and the web setup screen shows the configuration step of FARM-FR-012 |

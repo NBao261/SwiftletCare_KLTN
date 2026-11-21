@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import {
   BirdIcon, CalendarDotsIcon, CalendarXIcon, CloudRainIcon, DropIcon, FilePdfIcon, HouseIcon, ThermometerSimpleIcon, type Icon,
 } from '@phosphor-icons/react';
+import WeatherSource from '@/components/common/WeatherSource';
 import HealthReportConclusion from '@/components/features/farm-owner/health/HealthReportConclusion';
 import HealthStatusBadge from '@/components/common/HealthStatusBadge';
 import { vietnamDate } from '@/components/common/healthDay.utils';
@@ -133,6 +134,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
         </div>
         <Group title={t('detail.weather')} grow="">
           {weather ? <Figures facts={weather} icons={WEATHER_ICONS} /> : <p className="text-sm text-warmGray">{t('detail.weatherNone')}</p>}
+          {weather && <WeatherSource className="mt-2" />}
         </Group>
         <p className="text-xs italic text-warmGray">{t('detail.disclaimer')}</p>
       </section>
