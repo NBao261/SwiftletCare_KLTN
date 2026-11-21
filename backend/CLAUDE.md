@@ -104,7 +104,7 @@ routes/*.route.ts (express-validator + requireRole)
 
 ### Data access and permissions
 - **[Bắt buộc]** Farm access goes through `utils/farmAccess.util.ts` (`hasFarmAccess`, `hasDeviceAccess`, `canAccessHouse`, `isPrimaryOwner`, `assertFarmAccess`, `assertZoneAccess`, `assertZoneInFarm`, `findFarmOrThrow`, `findZoneChainOrThrow`, `listAccessibleFarmIds`/`listAccessibleZoneIds`) — never reimplemented in a service. There is no per-Zone scope, only the per-house scope of the Farm Technician (AUTH-FR-013); what a role may *do* is decided by `requireRole` on the route, so a route opened to `FARM_TECHNICIAN` must check a house or zone, never only the farm. The `device` scope (Administrator on every farm) is passed only for structure, devices and device alerts — never for telemetry, analytics, bird counts, live stream, harvests or health reports (FARM-FR-009).
-- **[Bắt buộc]** Soft-deleted farms/harvests stay hidden: query through the models (the `applySoftDeleteScope` hook), delete a farm only via `farm.service#softDeleteFarm`.
+- **[Bắt buộc]** Soft-deleted farms, harvests, houses and zones stay hidden: query through the models (the `applySoftDeleteScope` hook), delete a farm only via `farm.service#softDeleteFarm`.
 - **[Bắt buộc]** `Zone.farm_id` is immutable; zone→farm lookups use it, not `House`.
 - **[Bắt buộc]** Sensitive state changes (users, roles, members, thresholds, tuning, overrides, system settings, remote device commands) write an audit row with `logAction()`.
 
