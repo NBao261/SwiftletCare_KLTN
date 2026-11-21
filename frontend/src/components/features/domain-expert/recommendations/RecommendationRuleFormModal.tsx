@@ -5,6 +5,7 @@ import { recommendationsDict, type RecommendationsKey } from '@/constants/recomm
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useSaveRecommendationRule } from '@/hooks/domain-expert/useRecommendationRules'
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 import { useToastStore } from '@/stores/toastStore'
 import type { FuzzyNumericKey, RecommendationIndicator, RecommendationRule } from '@/types'
 import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation'
@@ -36,6 +37,8 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
   const save = useSaveRecommendationRule(farmId)
   const [draft, setDraft] = useState<RuleDraft>(BLANK)
   const [active, setActive] = useState(true)
+  // BR-22 — luật của Farm Owner ở farm có chuyên gia luôn tắt tới khi chuyên gia bật
+  const { ownerNeedsExpert } = useExpertDecisionRights()
   const [submitted, setSubmitted] = useState(false)
 
   // Mở popup thì nạp luật đang sửa hoặc ô trống
@@ -57,8 +60,8 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
     setSubmitted(true)
     if (Object.keys(validateRuleDraft(draft)).length > 0) return
     save.mutate({ id: rule?._id, input: ruleInputOf(draft, active) }, {
-      onSuccess: () => {
-        push(t('rules.saved'))
+      onSuccess: saved => {
+        push(t(saved.data.data.pending_approval ? 'rules.savedPending' : 'rules.saved'))
         onClose()
       },
       onError: saveError => push(apiErrorMessage(saveError), 'error'),
@@ -217,10 +220,14 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
             error={errorText('source')}
           />
 
-          <label className="flex items-center gap-3 text-small text-charcoal">
-            <Toggle checked={active} onChange={setActive} aria-label={t('form.active')} />
-            {t('form.active')}
-          </label>
+          {ownerNeedsExpert ? (
+            <p className="text-small text-warmGray">{t('rules.pendingHint')}</p>
+          ) : (
+            <label className="flex items-center gap-3 text-small text-charcoal">
+              <Toggle checked={active} onChange={setActive} aria-label={t('form.active')} />
+              {t('form.active')}
+            </label>
+          )}
         </div>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} disabled={save.isPending}>{t('form.cancel')}</Button>

@@ -81,9 +81,9 @@ export default function DomainExpertQueuePage() {
   const { data: aiSuggestion } = useFuzzySuggestion(selectedZoneId ?? undefined)
 
   // ── Dữ liệu mục duyệt tham số & đề xuất hệ số mờ (G-04) ────────────────────
+  // Mục duyệt ở cấp farm (có mục theo nhà, camera), không lọc theo Zone
   const { total: pendingReviewsCount } = useParameterReviews({
     farmId: selectedFarmId ?? '',
-    zoneId: selectedZoneId ?? undefined,
     status: 'PENDING_REVIEW',
   })
   const { total: pendingProposalsCount } = useCoefficientProposals({

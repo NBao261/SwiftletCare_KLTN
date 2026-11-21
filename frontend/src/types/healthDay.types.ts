@@ -137,6 +137,8 @@ export interface HouseHealthReport extends HouseHealthReportSummary {
   zone_sections: HealthReportZoneSection[];
   days: HouseHealthDay[];
   status_counts: Record<HealthStatus, number>;
+  // BR-22 — lần Farm Owner nhắc chuyên gia viết kết luận
+  expert_reminded_at?: string | null;
   // Chỉ có ở chi tiết (api-spec HouseHealthReport), danh sách chỉ có has_conclusion
   expert_conclusion: {
     text: string;

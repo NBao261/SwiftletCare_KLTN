@@ -48,8 +48,8 @@ export default function DomainExpertZoneTuningPage() {
   const resetDetection = useResetDetectionTuning(zoneId);
   const applySuggestion = useApplySuggestion();
   const submitProposal = useSubmitCoefficientProposal();
-  // BR-22 — tham số phát hiện, mức giảm tỷ lệ chim về và áp gợi ý: Farm Owner chỉ làm khi farm chưa có chuyên gia
-  const { canDecide, ownerReadOnly } = useExpertDecisionRights();
+  // BR-22 — Farm Owner sửa mọi tham số (chuyên gia duyệt sau); gợi ý hệ số ở farm có chuyên gia thì gửi duyệt
+  const { canDecide, canEditParameters, ownerNeedsExpert } = useExpertDecisionRights();
 
   // Mức giảm tỷ lệ chim về thuộc nhà chứa Zone đang chọn (EXPERT-FR-008)
   const { data: houseId } = useZoneHouseId(zoneId);
@@ -57,9 +57,10 @@ export default function DomainExpertZoneTuningPage() {
   const house = houses?.find(item => item._id === houseId);
   const returnRateDrop = useSaveReturnRateDrop(selectedFarmId);
 
-  // Mọi thao tác lưu báo kết quả, kể cả lỗi (FE_Design 13.5)
-  function notify(action: Promise<unknown>, doneMessage: string) {
-    action.then(() => push(t(doneMessage))).catch(error => push(apiErrorMessage(error), 'error'));
+  // Mọi thao tác lưu báo kết quả, kể cả lỗi (FE_Design 13.5); thay đổi của Farm Owner ở farm có chuyên gia mở mục duyệt
+  function notify(action: Promise<unknown>, doneMessage: string, reviewed = true) {
+    const message = ownerNeedsExpert && reviewed ? `${t(doneMessage)}. ${t('Chuyên gia sẽ xem lại thay đổi này.')}` : t(doneMessage);
+    action.then(() => push(message)).catch(error => push(apiErrorMessage(error), 'error'));
   }
 
   // Gợi ý hệ số (EXPERT-FR-011): người được quyết thì áp ngay, Farm Owner ở farm có chuyên gia thì gửi chuyên gia duyệt
@@ -68,14 +69,14 @@ export default function DomainExpertZoneTuningPage() {
     suggestionAction = {
       label: t('Áp dụng gợi ý'),
       loading: applySuggestion.isPending,
-      onClick: () => notify(applySuggestion.mutateAsync(zoneId), 'Đã áp dụng gợi ý hệ số cho Zone'),
+      onClick: () => notify(applySuggestion.mutateAsync(zoneId), 'Đã áp dụng gợi ý hệ số cho Zone', false),
     };
   }
-  if (zoneId && ownerReadOnly) {
+  if (zoneId && ownerNeedsExpert) {
     suggestionAction = {
       label: t('Gửi chuyên gia duyệt'),
       loading: submitProposal.isPending,
-      onClick: () => notify(submitProposal.mutateAsync(zoneId), 'Đã gửi gợi ý hệ số cho chuyên gia duyệt'),
+      onClick: () => notify(submitProposal.mutateAsync(zoneId), 'Đã gửi gợi ý hệ số cho chuyên gia duyệt', false),
     };
   }
 
@@ -118,7 +119,7 @@ export default function DomainExpertZoneTuningPage() {
             onReset={() => notify(resetThresholds.mutateAsync(), 'Đã khôi phục ngưỡng mặc định')}
           />
 
-          <fieldset disabled={!canDecide} className="contents">
+          <fieldset disabled={!canEditParameters} className="contents">
             <DetectionColumn
               data={detection.data}
               verdictStats={verdictStats}
@@ -131,7 +132,7 @@ export default function DomainExpertZoneTuningPage() {
           </fieldset>
         </div>
 
-        <fieldset disabled={!canDecide} className="contents">
+        <fieldset disabled={!canEditParameters} className="contents">
           <ReturnRateDropCard
             houseName={house?.name}
             value={house?.bird_count_tuning?.return_rate_drop_pct}
