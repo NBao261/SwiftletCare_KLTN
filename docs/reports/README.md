@@ -20,7 +20,7 @@ Bản tiếng Anh của các hồ sơ nộp ở Review 2, theo "Hướng dẫn c
 | [`todo-audit-1118.md`](todo-audit-1118.md) | Việc cần sửa sau đợt soát web và backend 18–19/11/2026 (W-01…W-13, B-01…B-06, D-01…D-04; gap G-28) (tiếng Việt) |
 | [`todo-audit-1119.md`](todo-audit-1119.md) | Đợt soát thứ hai 19/11/2026, theo tiêu chí chấp nhận và giao diện web từng role (B-01…B-03, W-01…W-09, U-01…U-09, C-01…C-05, D-01; gap G-29) (tiếng Việt) |
 | [`todo-owner-expert-1121.md`](todo-owner-expert-1121.md) | Chủ nhà yến quyết, chuyên gia duyệt: BR-22 theo ba nhóm (B-01…B-12, W-01…W-06; gap G-31) (tiếng Việt) |
-| [`todo-audit-1121.md`](todo-audit-1121.md) | Đợt soát backend, web, mobile 21/11/2026 (B-01…B-09, W-01…W-12 cho Bảo, M-01…M-14 cho Len, D-01…D-05; gap G-32) (tiếng Việt) |
+| [`todo-audit-1121.md`](todo-audit-1121.md) | Đợt soát backend, web, mobile 21/11/2026 (B-01…B-13, F-01, W-01…W-20 cho Bảo, M-01…M-16 cho Len, D-01…D-07; gap G-32): yêu cầu, luồng nghiệp vụ, code thừa và giao diện (tiếng Việt) |
 
 ## Quy tắc giữ hồ sơ nhất quán
 
