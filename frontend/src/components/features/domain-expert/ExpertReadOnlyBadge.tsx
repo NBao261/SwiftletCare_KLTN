@@ -3,7 +3,7 @@ import { usePermission } from '@/hooks/common/usePermission';
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 import { t } from '@/i18n';
 
-// Badge nhỏ "Chỉ xem" cho Farm Owner trên trang chuyên gia (DE-10, todo-ui-layout §6): thay dải ExpertDecisionNotice
+// Badge nhỏ "Chỉ xem" cho Farm Owner trên trang chuyên gia (DE-10, todo-ui-layout §6)
 export default function ExpertReadOnlyBadge() {
   const isOwner = usePermission('FARM_OWNER');
   const { canDecide, farmKnown } = useExpertDecisionRights();
