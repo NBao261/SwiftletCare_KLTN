@@ -9,7 +9,7 @@ import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreem
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
 import { useParameterReviews, useCoefficientProposals } from '@/hooks/domain-expert/useExpertReviews'
 import { useZoneStore } from '@/stores/zoneStore'
-import { useExpertPendingAlerts } from '@/hooks/domain-expert/useExpertDashboard'
+import { useExpertQueueAlerts } from '@/hooks/domain-expert/useExpertDashboard'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import SectionCard from '@/components/ui/SectionCard'
@@ -33,11 +33,9 @@ function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZone
 export default function DomainExpertQueuePage() {
   const { selectedFarmId, selectedHouseId, selectedZoneId, selectedZoneName } = useZoneStore()
 
-  const { data: pendingAlerts, isLoading: isLoadingAlerts } = useExpertPendingAlerts(
+  const { data: pendingAlerts, isLoading: isLoadingAlerts } = useExpertQueueAlerts(
     selectedFarmId ?? undefined,
     selectedZoneId ?? undefined,
-    true,
-    10,
   )
 
   const { pending: pendingReports, isLoading: isLoadingReports } = useHealthReportConclusionCounts(
@@ -45,12 +43,12 @@ export default function DomainExpertQueuePage() {
     selectedHouseId ?? '',
   )
 
-  const { total: pendingReviewsCount } = useParameterReviews({
+  const { total: pendingReviewsCount, isLoading: isLoadingReviews } = useParameterReviews({
     farmId: selectedFarmId ?? '',
     zoneId: selectedZoneId ?? undefined,
     status: 'PENDING_REVIEW',
   })
-  const { total: pendingProposalsCount } = useCoefficientProposals({
+  const { total: pendingProposalsCount, isLoading: isLoadingProposals } = useCoefficientProposals({
     farmId: selectedFarmId ?? '',
     zoneId: selectedZoneId ?? undefined,
     status: 'PROPOSED',
@@ -59,14 +57,15 @@ export default function DomainExpertQueuePage() {
 
   const to = vietnamDate()
   const from = shiftDate(to, -13)
-  const { totalDays: disagreeingDaysCount } = useHealthDisagreements({
+  const { totalDays: disagreeingDaysCount, isLoading: isLoadingDisagreements } = useHealthDisagreements({
     farmId: selectedFarmId ?? undefined,
     from,
     to,
   })
 
   const pendingCount = pendingAlerts?.total ?? 0
-  const isLoading = isLoadingAlerts || isLoadingReports
+  // Chờ đủ 5 nguồn: ba nguồn dưới trả 0 khi chưa tải xong, thiếu một nguồn là trang hiện "không có việc" rồi mới đổi
+  const isLoading = isLoadingAlerts || isLoadingReports || isLoadingReviews || isLoadingProposals || isLoadingDisagreements
 
   if (isLoading) {
     return (
