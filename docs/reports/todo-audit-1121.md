@@ -23,7 +23,7 @@ Phân công: **backend, web và firmware do Bảo làm, mobile do Len làm** (th
 | 10 | Tài liệu tự mâu thuẫn (Report 4 §5.4 về bản đồ, VISION-FR-012/013 về Farm Technician, §6.1 về người xác nhận, `CLAUDE.md` gốc mô tả mobile đã cũ) | — | docs | Chưa (sửa trong PR 1) |
 | 11 | **Mức cảnh báo do thiết bị gửi đè lên BR-15.** `createAlert` lấy `severity` của tin MQTT nếu có (chỉ hạ các loại suy luận xuống MEDIUM). Firmware gửi `SPEAKER_FAILURE` là `CRITICAL` (BR-15: HIGH), nên cảnh báo này tới Farm Owner ngay cùng lúc với thợ, vượt giờ im lặng và được gửi lại sau 15 phút như một sự cố nghiêm trọng nhất | ALERT-FR-001, 006, 017, BR-15, BR-40 | backend, firmware | Chưa |
 | 12 | Trang cảnh báo web chỉ lọc theo trạng thái và cấp; không lọc theo trang trại, nhà, Zone, loại cảnh báo hay kết luận chuyên gia, và không có bộ lọc phạm vi ở đầu trang như các trang khác | ALERT-FR-007 | web | Chưa |
-| 13 | `GET /alerts` chỉ nhận một mức; web lọc cấp "Khẩn cấp" (CRITICAL + HIGH) bằng hai lần gọi rồi ghép, nên phân trang sai từ trang 6 trở đi (trần 100 dòng mỗi lần gọi) | ALERT-FR-007 | backend, web | Chưa |
+| 13 | `GET /alerts` chỉ nhận một mức; web lọc cấp "Khẩn cấp" (CRITICAL + HIGH) bằng hai lần gọi rồi ghép, nên phân trang sai từ trang 6 trở đi (trần 100 dòng mỗi lần gọi) | ALERT-FR-007 | web | Chưa (hết khi hiện bốn cấp, Q-07) |
 | 14 | Web và mobile gộp CRITICAL và HIGH thành một cấp "Khẩn cấp" và gọi MEDIUM là "Cao": người dùng không phân biệt được cảnh báo CRITICAL (tới cả chủ ngay, vượt giờ im lặng) với HIGH, trong khi màn cài đặt thông báo chọn kênh theo đủ 4 mức | ALERT-FR-001, 005, 006, BR-15 | web, mobile, FE_Design 2.4 | Chưa |
 | 15 | Kỹ thuật viên trên web: thẻ "Nhà cần xử lý" ghi "Không có cảnh báo" trong khi danh sách cảnh báo của chính người đó có 3 cảnh báo đang mở (số đếm lấy từ cấu trúc nhà, không từ `GET /alerts?open=true`); các câu trên trang viết cứng tiếng Việt nên không đổi khi bấm EN | ALERT-FR-007; FE_Design §6 | web | Chưa |
 | 16 | Cùng một trang mang tên khác nhau theo role: "Đàn chim" / "Giám sát đàn chim", "Sức khoẻ & báo cáo" / "Sức khoẻ nhà yến", "Thiết bị" / "Thiết bị & Cảm biến", "Công việc" / "Phiếu công việc", "Thu hoạch" / "Thống kê sản lượng", "So sánh nhà" / "Tổng quan trang trại"; Farm Owner vào tab nào của "Chuyên môn" tiêu đề cũng là "Chuyên môn" | FE_Design §6.2 | web | Chưa |
@@ -32,7 +32,7 @@ Phân công: **backend, web và firmware do Bảo làm, mobile do Len làm** (th
 | 19 | Phân tích, tab Môi trường: khi đang chọn "Tất cả Zone" chỉ thấy bảng so sánh, không có biểu đồ theo thời gian và không có lời nhắc chọn một Zone | ANALYTICS-FR-001 | web | Chưa |
 | 20 | Mobile: Farm Technician không có tab "Công việc"; Work Order và bảo trì chỉ mở được từ thẻ ở Trang chủ, trong khi Report 4 §5.4 coi mobile là công cụ chính của thợ (cảnh báo, Work Order, checklist, bảo trì) | OPS-FR-002, 007, 008; Report 4 §5.4 | mobile | Chưa |
 | 21 | Backend tạo cảnh báo theo kiểu tìm rồi tạo, không nguyên tử: hai tin cùng sự cố tới cùng lúc có thể ra hai cảnh báo (code đã ghi `ponytail:`) | ALERT-FR-008 | backend | Chưa |
-| 22 | Đường đọc báo cáo sức khoẻ theo Zone cũ (`healthReport.service.ts`, `zoneHealthReport.model.ts`, nhánh dự phòng trong `houseHealthReport.service.ts`) vẫn còn dù job đã bỏ từ 18/11 | EXPERT-FR-005 | backend | Chưa |
+| 22 | Đường đọc báo cáo sức khoẻ theo Zone cũ (`healthReport.service.ts`, `zoneHealthReport.model.ts`, nhánh dự phòng trong `houseHealthReport.service.ts`) vẫn còn dù job đã bỏ từ 18/11; Report 4 §6.4 ghi đã có migration chuyển báo cáo Zone sang báo cáo nhà, nhưng `package.json` không có script nào như vậy | EXPERT-FR-005, BR-36; Report 4 §6.4 | backend | Chưa |
 | 23 | Report 4 §5.3 liệt kê job `healthAssessment`, `healthReport`, `runHours` không có trong code (code chạy trong `returnRate`, `houseHealthReport`, `relayUsage`) và thiếu job `cameraConfig` | Report 4 §5.3 | docs | Chưa |
 
 ## 2. Quyết định
@@ -51,13 +51,17 @@ Phân công: **backend, web và firmware do Bảo làm, mobile do Len làm** (th
 
 Các quy tắc 409 và 400 ở Q-01, Q-03 đã vào tiêu chí chấp nhận của FARM-FR-002. Q-05 không đổi tài liệu: §2.4, ALERT-FR-005, 006 đã ghi như vậy, chỉ code chưa theo.
 
-### 2.2 Cần chốt trước khi làm (đề xuất)
+### 2.2 Chốt sau lượt rà thứ hai (Bảo, 21/11/2026)
 
-| ID | Câu hỏi | Đề xuất |
-|---|---|---|
-| Q-06 | Mức cảnh báo có lấy theo tin của thiết bị không? (#11) | Không. Mức luôn theo loại (BR-15, ALERT-FR-001 "exactly one default severity"); backend bỏ qua `severity` trong tin MQTT, firmware vẫn gửi nhưng gửi đúng BR-15. Không đổi Report 3 |
-| Q-07 | Hiện mấy cấp cảnh báo trên web và mobile? (#14) | Bốn cấp như BR-15: "Khẩn cấp" (CRITICAL), "Cao" (HIGH), "Trung bình" (MEDIUM), "Thấp" (LOW), mỗi cấp một màu; sửa FE_Design 2.4 và `MOBILE_GUIDE.md` trong cùng PR. Nếu giữ ba cấp thì ít nhất CRITICAL phải có nhãn riêng và MEDIUM không được gọi là "Cao" |
-| Q-08 | Bỏ hẳn báo cáo theo Zone cũ? (#22) | Có: chạy một script chuyển các báo cáo Zone đã lưu sang báo cáo nhà (hoặc xác nhận cơ sở dữ liệu staging không còn bản nào), rồi xoá service, model và nhánh dự phòng; Report 4 §6.4 bỏ dòng `zonehealthreports` |
+Chọn theo luồng nghiệp vụ của Report 3; không đổi yêu cầu nào của Report 3. Tài liệu thiết kế đi cùng PR code (D-06, D-07).
+
+| ID | Câu hỏi | Quyết định | Lý do theo nghiệp vụ |
+|---|---|---|---|
+| Q-06 | Mức cảnh báo có lấy theo tin của thiết bị không? (#11) | **Không.** Backend là nơi duy nhất đặt mức: luôn `DEFAULT_SEVERITY[type]` theo BR-15, bỏ qua `severity` trong tin MQTT. Firmware vẫn gửi trường này (tương thích ngược, dễ đọc log) nhưng gửi đúng BR-15 | ALERT-FR-001 ghi mỗi loại có đúng một mức. Mức quyết định ai nhận và khi nào: CRITICAL tới cả Farm Owner ngay (ALERT-FR-017), vượt giờ im lặng (ALERT-FR-006), CRITICAL và HIGH được gửi lại sau 15 phút (ALERT-FR-015). Một thiết bị không được tự nâng tầm quan trọng của cảnh báo của chính nó; đổi mức của một loại chỉ cần cập nhật backend, không phải nạp lại firmware cho mọi bộ điều khiển |
+| Q-07 | Hiện mấy cấp cảnh báo trên web và mobile? (#14) | **Bốn cấp đúng BR-15**: "Khẩn cấp" (CRITICAL), "Cao" (HIGH), "Trung bình" (MEDIUM), "Thấp" (LOW), mỗi cấp một màu theo token; bộ lọc, dải đếm và badge đều theo bốn cấp. FE_Design 2.4 và `MOBILE_GUIDE.md` sửa theo | Mỗi cấp có hành vi riêng mà người dùng cần thấy: CRITICAL tới cả chủ và thợ ngay, vượt giờ im lặng; HIGH tới thợ trước, lên chủ sau 15 phút; MEDIUM không gửi lại; LOW là thông tin (dự báo, đến hạn bảo trì, tỷ lệ về). Màn cài đặt thông báo đã chọn kênh theo đủ bốn mức (ALERT-FR-005), nên danh sách phải nói cùng ngôn ngữ đó. Lý do gộp ba cấp lúc trước là dùng chung với ưu tiên ticket, mà ticket đã bị bỏ (BM03 dòng 9) |
+| Q-08 | Xử lý báo cáo sức khoẻ theo Zone cũ thế nào? (#22) | **Chuyển rồi mới xoá.** Viết migration mà Report 4 §6.4 đã thiết kế nhưng code chưa có: `npm run migrate:zone-reports` gộp mỗi báo cáo tuần của Zone vào báo cáo nhà `WEEKLY` cùng kỳ, thành một phần theo Zone, giữ nguyên kết luận chuyên gia (người viết, thời gian, lần sửa); chạy lại không nhân đôi. Sau đó xoá service, model, nhánh dự phòng và collection khỏi database script | BR-36 giữ báo cáo sức khoẻ suốt đời cài đặt, và kết luận là việc của người (EXPERT-FR-006), nên không được xoá dữ liệu cũ. Một đường đọc duy nhất (báo cáo nhà, EXPERT-FR-005) thì màn hình, PDF và quyền đọc chỉ phải đúng ở một chỗ |
+
+Hệ quả: với bốn cấp, mỗi lựa chọn trong bộ lọc là đúng một mức, nên `GET /alerts` không cần nhận danh sách mức nữa (B-11 bỏ); web chỉ cần bỏ nhánh gọi nhiều lần rồi ghép (W-13).
 
 ## 3. Backend và firmware (Bảo)
 
@@ -69,13 +73,13 @@ Các quy tắc 409 và 400 ở Q-01, Q-03 đã vào tiêu chí chấp nhận c�
 | B-04 | `utils/farmAccess.util.ts` và các nơi gọi `House.find`, `Zone.find` (22 file) | Bỏ nhà, Zone đã xoá khỏi: `listHouses`, `listZones`, `listActiveHouseIds`, các job (`returnRate`, `houseHealthReport`, `weatherCompensation`, `maintenanceDue`, `relayUsage`, `cameraConfig`, recommendation), tổng quan và so sánh nhà; đăng ký hoặc chuyển thiết bị vào Zone đã xoá: 404; mã tầng của Zone đã xoá: 404 (FARM-FR-011) | Sau khi xoá, không job nào chạy trên nhà đó |
 | B-05 | `services/houseComparison.service.ts`, `controllers/farms.controller.ts` | `GET /farms/{id}/comparison` thêm `site_causes: Record<SiteCause, number>` mỗi nhà trong kỳ: đếm `alerts.site_cause.cause` và `workOrders.cause`, mỗi cảnh báo chỉ một lần (lấy nguyên nhân của Work Order nếu có, không thì của cảnh báo); không có trong `COMPARISON_SORT_KEYS` (Q-04) | Test seed: 2 `NOZZLE`, 1 `PUMP` ra đúng số |
 | B-06 | `services/auth.service.ts` (`updateNotificationPreferences`) | Theo Q-05: `DOMAIN_EXPERT`, `ADMIN` gọi thì 403; `FARM_TECHNICIAN` gửi `quiet_hours` thì 403, kênh vẫn đổi được. `notification.service` chỉ áp giờ im lặng cho Farm Owner. Script `npm run migrate:quiet-hours-owner-only` xoá `quiet_hours` đã lưu của người không phải Farm Owner | Test từng role |
-| B-07 | `docs/api/api-spec.yaml` | 4 route mới (B-02, B-03) với 400, 403, 404, 409, 422; `site_causes` trong `HouseComparisonRow`; 403 của B-06 trên `PUT /auth/notification-preferences`; `severity` của `GET /alerts` nhận danh sách (B-11) | Route ↔ spec vẫn khớp (189/189) |
-| B-08 | `tests/integration/farmStructure.test.ts` (mới), `houseComparison.test.ts`, `auth.test.ts`, `alert*.test.ts` | Test cho B-02…B-06, B-10…B-12; giữ tên test mà `report5/tc.py` đang trỏ | `npm test` xanh |
+| B-07 | `docs/api/api-spec.yaml` | 4 route mới (B-02, B-03) với 400, 403, 404, 409, 422; `site_causes` trong `HouseComparisonRow`; 403 của B-06 trên `PUT /auth/notification-preferences`; mô tả `severity` trong tin `alert` của thiết bị chỉ để tham khảo (Q-06) | Route ↔ spec vẫn khớp (189/189) |
+| B-08 | `tests/integration/farmStructure.test.ts` (mới), `houseComparison.test.ts`, `auth.test.ts`, `alert*.test.ts`, `houseHealthReport.test.ts` | Test cho B-02…B-06, B-10, B-12, B-13; giữ tên test mà `report5/tc.py` đang trỏ | `npm test` xanh |
 | B-09 | `npm run db:script` | Sinh lại `docs/database/init.mongo.js` sau B-01 và B-12 | Script có trường và chỉ mục mới |
-| B-10 | `services/alert.service.ts` (`createAlert` và hàm nhận cảnh báo thiết bị, dòng truyền `severity: message.severity`) | Theo Q-06: mức luôn là `DEFAULT_SEVERITY[type]`, bỏ `input.severity` từ thiết bị (giữ tham số cho job nội bộ nếu cần, nhưng không cho MQTT); bỏ `NEVER_ESCALATE` vì không còn cần. Script `npm run migrate:alert-severity` đặt lại mức của cảnh báo đang mở theo BR-15 | Tin `SPEAKER_FAILURE` gửi `CRITICAL` vẫn lưu `HIGH`; test cho mọi loại của BR-15 |
-| B-11 | `routes/alerts.route.ts`, `services/alert.service.ts` | `GET /alerts?severity=CRITICAL,HIGH`: nhận danh sách mức cách nhau dấu phẩy (mỗi giá trị kiểm `isIn`), lọc `$in`, phân trang một lần ở backend; thêm lọc `type` nhiều giá trị nếu web cần | Trang 6 trở đi của cấp "Khẩn cấp" đúng thứ tự, không thiếu dòng |
+| B-10 | `services/alert.service.ts` (`createAlert` và hàm nhận cảnh báo thiết bị, dòng truyền `severity: message.severity`) | Theo Q-06: mức luôn là `DEFAULT_SEVERITY[type]`; bỏ trường `severity` khỏi `CreateAlertInput` và khỏi dòng nhận tin MQTT (không job nào cần mức khác BR-15); bỏ `NEVER_ESCALATE` vì không còn cần. Script `npm run migrate:alert-severity` đặt lại mức của cảnh báo đang mở theo BR-15 | Tin `SPEAKER_FAILURE` gửi `CRITICAL` vẫn lưu `HIGH`; test cho mọi loại của BR-15 |
+| B-11 | — | **Bỏ** theo Q-07: bộ lọc bốn cấp gửi đúng một mức, `GET /alerts` giữ nguyên | — |
 | B-12 | `models/alert.model.ts`, `services/alert.service.ts` | Chống tạo trùng (ALERT-FR-008): thêm `incident_key` (loại + farm + nhà + Zone + thiết bị + `details.load` với `ACTUATOR_FAULT`) và chỉ mục duy nhất một phần trên `incident_key` khi `status` thuộc `ACTIVE`, `ACKNOWLEDGED`, `DISMISSED`; `createAlert` bắt lỗi trùng khoá rồi cộng `occurrence_count` vào bản đã có; script điền `incident_key` cho cảnh báo đang mở. Bỏ dòng `ponytail:` | Test hai `createAlert` song song chỉ ra một cảnh báo |
-| B-13 | `services/healthReport.service.ts`, `models/zoneHealthReport.model.ts`, `services/houseHealthReport.service.ts`, `controllers/healthReports.controller.ts`, `utils/dbScript.util.ts` | Theo Q-08: script chuyển hoặc xác nhận không còn báo cáo Zone, rồi xoá đường đọc cũ | Không còn import `ZoneHealthReport` |
+| B-13 | `scripts/migrate-zone-reports.script.ts` (mới), `package.json`, rồi `services/healthReport.service.ts`, `models/zoneHealthReport.model.ts`, `services/houseHealthReport.service.ts`, `controllers/healthReports.controller.ts`, `utils/dbScript.util.ts` | Theo Q-08: `npm run migrate:zone-reports` gộp mỗi báo cáo tuần của Zone vào báo cáo nhà `WEEKLY` cùng nhà và cùng kỳ (tạo nếu chưa có), thêm phần của Zone đó, chép kết luận chuyên gia (`by`, `at`, `edited_at`) nếu báo cáo nhà chưa có kết luận, còn nếu đã có thì nối vào phần của Zone; ghi `migrated_from` để chạy lại không nhân đôi; in số báo cáo đã chuyển. Chạy trên mọi cơ sở dữ liệu đang dùng, rồi mới xoá service, model, nhánh dự phòng trong `setConclusion` và đọc báo cáo, và collection khỏi database script | Chạy hai lần ra cùng kết quả; test có báo cáo Zone kèm kết luận chuyển đúng sang báo cáo nhà; không còn import `ZoneHealthReport` |
 | F-01 | `firmware/src/main.cpp`, `firmware/src/config/Config.h` | Gửi mức đúng BR-15 (`SPEAKER_FAILURE` → `HIGH`); kiểm lại mọi `reportOnRise`; tăng `FIRMWARE_VERSION` lên 2.3.2 kèm ghi chú | `pio test -e native` xanh; không còn loại nào gửi mức khác BR-15 |
 
 ## 4. Web (Bảo)
@@ -89,8 +93,8 @@ Các quy tắc 409 và 400 ở Q-01, Q-03 đã vào tiêu chí chấp nhận c�
 | W-10 | Tab so sánh nhà trên `/overview` | Cột "Nguyên nhân tại chỗ": các loại có số > 0, nhãn từ `constants/siteCause.ts`; trống thì `_` | B-05 |
 | W-11 | `pages/SettingsPage.tsx` | Kiểm lại: giờ im lặng chỉ hiện cho Farm Owner (đã có `isFarmOwner`), Domain Expert không thấy mục kênh; lỗi 403 hiện theo `useApiErrorMessage` | B-06 |
 | W-12 | Test | Vitest cho map nhóm duyệt, loại thông báo, cấp cảnh báo và tên trang theo role; E2E `ds-*` nếu kịch bản có xoá nhà; `lint`, `tsc --noEmit`, `vitest run`, `build` | — |
-| W-13 | `pages/farm-owner/FarmOwnerAlertsPage.tsx`, `hooks/shared/useAlerts.ts` | ALERT-FR-007: thêm `ScopeFilter` (trang trại → nhà → Zone) ở đầu trang như các trang khác, bộ lọc loại cảnh báo và kết luận chuyên gia (với cảnh báo suy luận); bỏ nhánh gọi nhiều lần rồi ghép trong `listAlerts` (dòng `ponytail:`) và gửi một lần `severity=CRITICAL,HIGH` | B-11 |
-| W-14 | `constants/severity.ts`, `severity.i18n.ts`, `common/SeverityBadge`, `FE_Design_Claude.md` 2.4 | Theo Q-07: bốn cấp đúng BR-15, nhãn và màu riêng cho CRITICAL; dải tóm tắt và bộ lọc theo bốn cấp; khớp với các mức ở màn cài đặt thông báo | Q-07 |
+| W-13 | `pages/farm-owner/FarmOwnerAlertsPage.tsx`, `hooks/shared/useAlerts.ts` | ALERT-FR-007: thêm `ScopeFilter` (trang trại → nhà → Zone) ở đầu trang như các trang khác, bộ lọc loại cảnh báo và kết luận chuyên gia (chỉ hiện khi chọn loại suy luận hoặc "mọi loại"); bỏ nhánh gọi nhiều lần rồi ghép trong `listAlerts` (dòng `ponytail:`), mỗi bộ lọc mức gửi đúng một `severity` | W-14 |
+| W-14 | `constants/severity.ts`, `severity.i18n.ts`, `common/SeverityBadge`, mọi chỗ dùng `SEVERITY_TO_LEVEL` | Theo Q-07: bỏ lớp `P1/P2/P3`, dùng thẳng bốn mức của backend; nhãn "Khẩn cấp", "Cao", "Trung bình", "Thấp" (EN: Critical, High, Medium, Low); màu: CRITICAL nền `safetyOrange` đặc chữ trắng, HIGH nền cam nhạt chữ cam đậm, MEDIUM nền vàng nhạt, LOW nền `warmGray`; dải tóm tắt, bộ lọc, chuông và popup thông báo đều theo bốn mức, cùng thứ tự với màn cài đặt thông báo | — |
 | W-15 | `pages/technician/TechnicianFarmsPage.tsx` | Thẻ "Nhà cần xử lý" và câu phụ lấy số cảnh báo đang mở từ `GET /alerts?open=true` (như badge chuông), không từ cấu trúc nhà; hai thẻ "Thiết bị online" và "Mất kết nối" nói cùng một việc nên gộp thành một thẻ (online / tổng, câu phụ số mất kết nối); đưa mọi câu trên trang vào từ điển `farmStructure.i18n.ts` để đổi được EN | — |
 | W-16 | `components/layouts/*Layout.tsx`, `constants/navigation.i18n.ts`, `AppHeader` | Một tên cho mỗi trang ở mọi role theo bảng thuật ngữ FE_Design §6.2 (đề xuất: "Đàn chim", "Sức khoẻ & báo cáo", "Thiết bị", "Công việc", "Thu hoạch", "So sánh nhà"); tiêu đề `h1` là tên tab đang mở, không phải tên nhóm ("Chuyên môn") | — |
 | W-17 | `pages/farm-owner/FarmOwnerVisionPage.tsx` và thẻ camera | Bỏ hàng số dưới khung camera (đã có ở ba thẻ bên phải), giữ trạng thái camera và lần kết nối cuối; bỏ tên mô hình và chữ "AI Vision" khỏi màn của chủ (tên mô hình để ở chi tiết thiết bị); nhãn không bị cắt; trục số lượt chỉ có số nguyên | — |
@@ -119,7 +123,7 @@ Các quy tắc 409 và 400 ở Q-01, Q-03 đã vào tiêu chí chấp nhận c�
 | M-13 | Test, chạy thật | Jest cho `healthDay.utils` (M-01), map nhóm duyệt, loại thông báo và cấp cảnh báo; `npm run lint`, `typecheck`, `test`; chạy trên điện thoại thật với dữ liệu seed, đi qua mọi tab của 3 role và chụp màn hình (G-16); soát giao diện như web: nhãn bị cắt, số liệu lặp, chữ kỹ thuật, trạng thái trống | — |
 | M-14 | `mobile/CLAUDE.md` | Cập nhật mục "Where mobile stands": BR-31 không còn chấm mù (bỏ "ask the user's own status first… the API itself hides the status"); Domain Expert đã có tab queue, verdicts, tuning (bỏ "placeholder tab"); `FARM_TECHNICIAN` đã merge (bỏ "not merged into `develop` yet"); Known debt theo §5 của file này | M-01 |
 | M-15 | `constants/roleTabs.ts`, `app/(tabs)/` | Farm Technician: thay tab "Phân tích" bằng tab "Công việc" (Work Order được giao, bảo trì đến hạn, checklist), vì đây là việc hằng ngày của thợ; phân tích của nhà vẫn mở từ trang nhà. Farm Owner giữ nguyên | — |
-| M-16 | `utils/alertList.utils.ts`, `utils/alert.utils.ts`, badge cấp cảnh báo, `MOBILE_GUIDE.md` | Theo Q-07: cấp cảnh báo giống web (W-14) | Q-07 |
+| M-16 | `utils/alertList.utils.ts`, `utils/alert.utils.ts`, badge cấp cảnh báo, `MOBILE_GUIDE.md` | Theo Q-07: bốn cấp giống web (W-14): bỏ gộp CRITICAL với HIGH trong dải đếm và bộ lọc, nhãn và màu như web | — |
 
 ## 6. Tài liệu (Bảo)
 
@@ -132,23 +136,23 @@ D-01…D-04 làm xong trong PR của file này; D-05 đi cùng PR có test mới
 | D-03 | `CLAUDE.md` gốc | Trạng thái từng module theo code hiện nay: mobile đã gọi API thật, có FCM và quét QR, hết Zalo/SMS; backend khớp spec, còn G-32; firmware 2.3.1 chưa chạy trên board (DF-4); bỏ danh sách việc backend đã xong từ lâu. `mobile/CLAUDE.md` là của Len (M-14) |
 | D-04 | `project-tracking.md` §6, §7 | Thêm dòng G-32 trỏ file này (ghi rõ phần mobile của G-31 là M-02…M-06, việc mobile còn mở của G-16 là M-08, M-09) và một dòng changelog; dòng G-16, G-31 do PR đóng chúng cập nhật |
 | D-05 | Report 5 (`report5/tc.py`) | Ca kiểm thử cho sửa, xoá nhà và Zone (supporting SF, không cam kết) và cho mức cảnh báo theo BR-15 (B-10) nếu thêm test có tên mới |
-| D-06 | `report4-sdd.md` §5.3 | Bảng job theo code: `returnRate` chạy cả đánh giá ngày và báo cáo ngày, `houseHealthReport` (tuần, tháng), `relayUsage` (giờ chạy), thêm `cameraConfig` (gửi khung phiên cho nút AI lúc 00:05); bỏ `healthReport.service` cũ khỏi bảng service sau B-13; §6.4 bỏ `zonehealthreports` (Q-08); §7.2 ghi `severity` trong tin `alert` chỉ để tham khảo, backend lấy mức theo BR-15 (Q-06) |
-| D-07 | `frontend/FE_Design_Claude.md` 2.4, §6.2 | Cấp cảnh báo theo Q-07; bảng thuật ngữ thêm tên trang thống nhất của W-16 |
+| D-06 | `report4-sdd.md` §5.3 | Bảng job theo code: `returnRate` chạy cả đánh giá ngày và báo cáo ngày, `houseHealthReport` (tuần, tháng), `relayUsage` (giờ chạy), thêm `cameraConfig` (gửi khung phiên cho nút AI lúc 00:05); bỏ `healthReport.service` cũ khỏi bảng service sau B-13; §6.4 dòng `zonehealthreports` ghi tên script `migrate:zone-reports` (Q-08); §7.2 ghi `severity` trong tin `alert` chỉ để tham khảo, backend lấy mức theo BR-15 (Q-06) |
+| D-07 | `frontend/FE_Design_Claude.md` 2.4, §6.2, Phụ lục D | 2.4 viết lại thành "Mức độ cảnh báo, bốn cấp" theo Q-07 (bảng mức → nhãn → màu, bỏ `SeverityLevel`, bỏ câu "dùng chung với ưu tiên ticket"); bảng thuật ngữ thêm tên trang thống nhất của W-16; Phụ lục D đổi dòng "3 cấp mức độ" |
 
 ## 7. Thứ tự PR
 
 | PR | Nhánh | Người | Nội dung | Phụ thuộc |
 |---|---|---|---|---|
 | 1 | `docs/audit-1121-plan` | Bảo | File này, D-01…D-04 | — |
-| 2 | `fix/g32-alert-severity` | Bảo | Q-06: B-10, B-11, B-12, F-01, D-06 phần §7.2, test | PR 1 |
+| 2 | `fix/g32-alert-severity` | Bảo | Q-06: B-10, B-12, F-01, D-06 phần §7.2, test | PR 1 |
 | 3 | `feat/g32-house-zone-edit-delete` | Bảo | B-01…B-04, B-07…B-09 phần nhà, Zone | PR 1 |
-| 4 | `feat/g32-site-causes-quiet-hours` | Bảo | B-05, B-06, B-13 (sau Q-08), D-06 phần còn lại | PR 1 |
+| 4 | `feat/g32-site-causes-quiet-hours` | Bảo | B-05, B-06, B-13, D-06 phần còn lại | PR 1 |
 | 5 | `feat/web-owner-decides` | Bảo | W-01…W-08 (G-31 và enum) | — |
-| 6 | `fix/web-g32-alerts-ui` | Bảo | W-13…W-20, D-07 | PR 2, Q-07 |
+| 6 | `fix/web-g32-alerts-ui` | Bảo | W-13…W-20, D-07 | PR 2 |
 | 7 | `feat/web-g32-farm-structure` | Bảo | W-09…W-12 | PR 3, 4 |
 | 8 | `fix/mobile-br31-enums` | Len | M-01, M-02, M-03, M-12, M-14, M-13 (phần test) | — |
 | 9 | `feat/mobile-owner-decides` | Len | M-04…M-07 | — |
-| 10 | `feat/mobile-technician-work` | Len | M-15, M-16 | Q-07 |
+| 10 | `feat/mobile-technician-work` | Len | M-15, M-16 | — |
 | 11 | `feat/mobile-harvest-photo-weather` | Len | M-08, M-09 | — |
 | 12 | `feat/mobile-g32-structure-settings` | Len | M-10, M-11 | PR 3, 4 |
 
