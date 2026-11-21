@@ -1641,7 +1641,7 @@ paths:
               properties:
                 name: { type: string, maxLength: 50 }
                 floors: { type: integer, minimum: 1, maximum: 10 }
-                description: { type: string, maxLength: 1000 }
+                description: { type: string }
       responses:
         "200":
           description: OK
@@ -1683,6 +1683,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /farms/houses/{houseId}/technicians/{userId}:
     parameters:
       - { $ref: "#/components/parameters/HouseId" }
@@ -2062,6 +2063,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /farms/zones/{zoneId}/fuzzy-tuning:
     put:
       tags: [Farms]

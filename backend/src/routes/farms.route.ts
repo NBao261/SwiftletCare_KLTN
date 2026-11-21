@@ -52,7 +52,8 @@ router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.l
 // FARM-FR-002 — sửa, xoá mềm nhà (chỉ Farm Owner); còn thiết bị đang dùng thì 409, service kiểm số tầng (400)
 router.put   ('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule().optional(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
-  body('description').optional().isString().isLength({ max: 1000 }), validate, farmController.updateHouse)
+  // Mô tả không giới hạn độ dài, như lúc tạo nhà (Report 3 §4.5 không có giới hạn cho mô tả)
+  body('description').optional().isString(), validate, farmController.updateHouse)
 router.delete('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), validate, farmController.deleteHouse)
 
 // ANALYTICS-FR-015, 016 — tổng quan trại và so sánh nhà: Farm Owner, Domain Expert đọc (Report 3 §2.4); thợ và Admin không
