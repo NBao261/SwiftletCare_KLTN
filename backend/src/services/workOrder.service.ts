@@ -540,6 +540,38 @@ export async function cancelWorkOrder(id: string, user: CurrentUser, reason: str
 }
 
 /**
+ * FARM-FR-002, Report 3 §6.19 — nhà hoặc Zone bị xoá: mọi Work Order chưa đóng của nó (cả phòng ngừa và đang chờ duyệt)
+ * bị huỷ có lý do, vì không còn nơi để làm, để kiểm phục hồi hay để nghiệm thu; người được giao được báo. Work Order vừa
+ * đổi trạng thái giữa lúc đọc và lúc huỷ (thợ báo xong, job kiểm phục hồi) thì đọc lại và huỷ từ trạng thái mới.
+ * Trả về số Work Order đã huỷ.
+ */
+export async function cancelWorkOrdersOfPlace(
+  place: { house_id: Types.ObjectId } | { zone_id: Types.ObjectId }, user: CurrentUser, reason: string,
+): Promise<number> {
+  const pending = await WorkOrder.find({ ...place, is_open: true })
+  let cancelled = 0
+  for (const found of pending) {
+    let updated: IWorkOrder | null = null
+    for (let attempt = 0; attempt < 2 && !updated; attempt++) {
+      const wo = attempt === 0 ? found : await WorkOrder.findById(found._id)
+      if (!wo?.is_open) break
+      try {
+        updated = await transition(wo, OPEN_WORK_ORDER_STATUSES, 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
+      } catch (err) {
+        if (!(err instanceof AppError) || attempt === 1) throw err
+      }
+    }
+    if (!updated) continue
+    await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason })
+    if (updated.assignee_id) {
+      await notifyAll([String(updated.assignee_id)], updated, `Phiếu công việc đã huỷ: ${updated.title}`, reason)
+    }
+    cancelled++
+  }
+  return cancelled
+}
+
+/**
  * SM-20 — kế hoạch bảo trì bị xoá: Work Order phòng ngừa chưa làm xong (OPEN, IN_PROGRESS) của nó bị huỷ; cái đã báo
  * xong (AWAITING_APPROVAL) vẫn chờ Farm Owner duyệt như một lần ghi bảo trì. Trả về số Work Order đã huỷ.
  */
