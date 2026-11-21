@@ -1,3 +1,4 @@
+import WeatherSource from '@/components/common/WeatherSource';
 import { useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import type { Chart as ChartInstance, ChartOptions, Plugin } from 'chart.js';
@@ -208,6 +209,7 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
             : t('env.outdoorEmpty')}
         </p>
       )}
+      {data && data.outdoor.length > 0 && <WeatherSource />}
     </FarmFrame>
   );
 }

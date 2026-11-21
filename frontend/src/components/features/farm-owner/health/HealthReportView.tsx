@@ -1,3 +1,4 @@
+import WeatherSource from '@/components/common/WeatherSource';
 import { useMemo, type ReactNode } from 'react';
 
 import {
@@ -133,6 +134,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
         </div>
         <Group title={t('detail.weather')} grow="">
           {weather ? <Figures facts={weather} icons={WEATHER_ICONS} /> : <p className="text-sm text-warmGray">{t('detail.weatherNone')}</p>}
+          {weather && <WeatherSource className="mt-2" />}
         </Group>
         <p className="text-xs italic text-warmGray">{t('detail.disclaimer')}</p>
       </section>

@@ -1472,7 +1472,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 ### 13.10. Routing & hiệu năng
 
 - **[Bắt buộc]** Trang mới được `lazy()` trong file `routes/` của role (code-splitting; hiện mọi trang đều lazy, kể cả `SettingsPage` trong `App.tsx`). Không import tĩnh trang vào `App.tsx` hay file route.
-- **[Bắt buộc]** Không import thư viện nặng (`chart.js`, `react-chartjs-2`, `recharts`, `date-fns`, `video.js`) vào file nằm trong bundle chính: `App.tsx`, `components/layouts/`, `components/common/`, `components/ui/`, `stores/`, `lib/` (trừ `lib/chartTheme.ts`).
+- **[Bắt buộc]** Không import thư viện nặng (`chart.js`, `react-chartjs-2`, `recharts`, `date-fns`, `video.js`, `leaflet`) vào file nằm trong bundle chính: `App.tsx`, `components/layouts/`, `components/common/`, `components/ui/`, `stores/`, `lib/` (trừ `lib/chartTheme.ts`).
 - **[Nên]** Danh sách dài dùng phân trang server (`usePaginatedListQuery` + `Pagination`), không tải hết rồi cắt ở client.
 
 ### 13.11. Accessibility tối thiểu

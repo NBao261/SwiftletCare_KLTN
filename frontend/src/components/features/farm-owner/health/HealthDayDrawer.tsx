@@ -1,3 +1,4 @@
+import WeatherSource from '@/components/common/WeatherSource';
 import { useState, type ReactNode } from 'react';
 
 import { CloudRainIcon, DropIcon, PencilSimpleIcon, PlusIcon, ThermometerIcon } from '@phosphor-icons/react';
@@ -146,6 +147,7 @@ export default function HealthDayDrawer({ day, onClose, onChanged }: HealthDayDr
             ) : (
               <p className="text-sm text-warmGray">{t('detail.weatherNone')}</p>
             )}
+            {day.weather && <WeatherSource />}
           </section>
 
           <section className="flex flex-col gap-2">
