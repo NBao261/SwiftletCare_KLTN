@@ -1,30 +1,31 @@
 import type { AlertSeverity, AlertStatus, SeverityLevel } from '@/types';
 
-// 3 cấp mức độ cảnh báo: P1 Khẩn cấp, P2 Cao, P3 Thường
-export const LEVELS: SeverityLevel[] = ['P1', 'P2', 'P3'];
+// 4 cấp mức độ cảnh báo như BR-15: P1 Khẩn cấp, P2 Cao, P3 Trung bình, P4 Thấp (mỗi cấp một cách gửi, ALERT-FR-006, 015, 017)
+export const LEVELS: SeverityLevel[] = ['P1', 'P2', 'P3', 'P4'];
 
-// Backend gửi 4 mức cảnh báo, giao diện gộp CRITICAL và HIGH vào P1
+// Mỗi mức backend là một cấp: CRITICAL tới cả chủ và thợ ngay và vượt giờ im lặng, HIGH tới thợ trước (G-32, Q-07)
 export const SEVERITY_TO_LEVEL: Record<AlertSeverity, SeverityLevel> = {
   CRITICAL: 'P1',
-  HIGH: 'P1',
-  MEDIUM: 'P2',
-  LOW: 'P3',
+  HIGH: 'P2',
+  MEDIUM: 'P3',
+  LOW: 'P4',
 };
 
-// Các mức backend của 1 cấp, nối bằng dấu phẩy cho tham số severity của GET /alerts (P1 → "CRITICAL,HIGH")
-export function severityQueryOf(level: SeverityLevel): string {
-  return (Object.keys(SEVERITY_TO_LEVEL) as AlertSeverity[]).filter(severity => SEVERITY_TO_LEVEL[severity] === level).join(',');
+// Mức backend của 1 cấp, cho tham số severity của GET /alerts
+export function severityQueryOf(level: SeverityLevel): AlertSeverity {
+  return (Object.keys(SEVERITY_TO_LEVEL) as AlertSeverity[]).find(severity => SEVERITY_TO_LEVEL[severity] === level)!;
 }
 
-// Màu badge của 3 cấp
+// Màu badge của 4 cấp
 export const LEVEL_BADGE_CLASS: Record<SeverityLevel, string> = {
-  P1: 'bg-safetyOrange text-white',
-  P2: 'bg-orange-100 text-orange-800',
-  P3: 'bg-warmGray/15 text-warmGray',
+  P1: 'bg-alertRed text-white',
+  P2: 'bg-safetyOrange text-white',
+  P3: 'bg-orange-100 text-orange-800',
+  P4: 'bg-warmGray/15 text-warmGray',
 };
 
-// Màu badge khi cảnh báo đã xử lý: xám trung tính, dùng lại màu cấp Thường
-export const LEVEL_BADGE_MUTED_CLASS = LEVEL_BADGE_CLASS.P3;
+// Màu badge khi cảnh báo đã xử lý: xám trung tính, dùng lại màu cấp Thấp
+export const LEVEL_BADGE_MUTED_CLASS = LEVEL_BADGE_CLASS.P4;
 
 // Cảnh báo đã kết thúc (đã xử lý) thì badge mức độ về xám
 export function isAlertFinished(status: AlertStatus): boolean {
