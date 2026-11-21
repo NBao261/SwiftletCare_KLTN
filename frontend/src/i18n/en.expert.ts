@@ -365,8 +365,8 @@ const enExpert: Record<string, string> = {
   '1. Hệ số điều khiển mờ': '1. Fuzzy control coefficients',
   'Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của Zone': 'Once saved, the system sends the new configuration to the zone controller',
   'Lưu hệ số mờ': 'Save fuzzy coefficients',
-  'Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.':
-    'Smooths temperature and humidity before the controller so relays switch less from noise. Turn off briefly to compare switches per hour. Requires firmware 1.2.0 or later.',
+  'Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ.':
+    'Smooths temperature and humidity before the controller so relays switch less from noise. Turn off briefly to compare switches per hour.',
   '4. Mức giảm tỷ lệ chim về của nhà': '4. Return rate drop of the house',
   'Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm': 'Applies to the whole house "{{house}}" — return rate drop alert',
   'Chọn một Zone để biết nhà cần chỉnh': 'Choose a zone to know which house to tune',

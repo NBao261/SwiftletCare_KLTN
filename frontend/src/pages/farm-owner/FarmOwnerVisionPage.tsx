@@ -54,6 +54,7 @@ export default function FarmOwnerVisionPage(): JSX.Element {
               houseName={houseName}
               expanded={isCameraExpanded}
               onToggleExpand={() => setIsCameraExpanded(expanded => !expanded)}
+              showTodayCounts={false}
             />
           )}
           <BirdStatsCards houseIds={houseIds} horizontal={isStatsHorizontal} />

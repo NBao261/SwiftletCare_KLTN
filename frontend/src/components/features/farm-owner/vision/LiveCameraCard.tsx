@@ -23,10 +23,13 @@ interface LiveCameraCardProps {
   onToggleExpand?: () => void
   // Nút phụ góc phải đầu khung (VD link sang trang Giám sát đàn chim)
   action?: ReactNode
+  // Trang Đàn chim đã có 3 thẻ số đếm bên cạnh: tắt để không lặp số trên cùng màn
+  showTodayCounts?: boolean
 }
 
-// Khung xem trực tiếp camera cửa thu chim của 1 nhà yến (VISION-FR-013) + thông số camera và số đếm hôm nay, đều lấy từ backend
-export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action }: LiveCameraCardProps) {
+// Khung xem trực tiếp camera cửa thu chim của 1 nhà yến (VISION-FR-013) + thông số camera và số đếm hôm nay, đều lấy từ backend;
+// phiên bản mô hình đếm là thông tin kỹ thuật, xem ở chi tiết thiết bị
+export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action, showTodayCounts = true }: LiveCameraCardProps) {
   const { t, num, ago, date } = useTranslation(dashboardDict)
   const videoRef = useRef<HTMLVideoElement>(null)
   const { data: cameras, isLoading, isError, refetch } = useHouseCameras(houseId)
@@ -57,14 +60,15 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   const params: Array<{ label: string; value: ReactNode }> = [
     { label: t('camera.paramStatus'), value: camera ? <StatusDot status={camera.status} /> : NO_VALUE },
     { label: t('camera.paramHeartbeat'), value: camera ? ago(camera.last_heartbeat) : NO_VALUE },
-    { label: t('camera.paramModel'), value: camera?.model_version ? `v${camera.model_version}` : NO_VALUE },
     {
       label: t('camera.paramRing'),
       value: !camera ? NO_VALUE : ring ? t('camera.ringSet', { date: ring.updated_at ? date(ring.updated_at) : NO_VALUE }) : t('camera.ringDefault'),
     },
-    { label: t('camera.paramExit'), value: hasToday ? num(today.morningExit) : NO_VALUE },
-    { label: t('camera.paramEntry'), value: hasToday ? num(today.eveningEntry) : NO_VALUE },
-    { label: t('camera.paramReturn'), value: hasToday && today.returnRate !== null ? `${num(today.returnRate, 1)}%` : NO_VALUE },
+    ...(showTodayCounts ? [
+      { label: t('camera.paramExit'), value: hasToday ? num(today.morningExit) : NO_VALUE },
+      { label: t('camera.paramEntry'), value: hasToday ? num(today.eveningEntry) : NO_VALUE },
+      { label: t('camera.paramReturn'), value: hasToday && today.returnRate !== null ? `${num(today.returnRate, 1)}%` : NO_VALUE },
+    ] : []),
   ]
 
   return (
