@@ -21,6 +21,13 @@ describe('notificationTarget (EXPERT-FR-007, todo-audit-1118 W-03)', () => {
     expect(notificationTarget(of('expert_decision'), 'DOMAIN_EXPERT')).toEqual({ path: '/domain-expert/history' })
   })
 
+  it('việc Farm Owner gửi chuyên gia duyệt hoặc nhắc mở đúng trang của chuyên gia (BR-22)', () => {
+    expect(notificationTarget(of('weather_rules'), 'DOMAIN_EXPERT')).toEqual({ path: '/domain-expert/weather-rules' })
+    expect(notificationTarget(of('config_profile'), 'DOMAIN_EXPERT')).toEqual({ path: '/domain-expert/profiles' })
+    expect(notificationTarget(of('recommendation_rule'), 'DOMAIN_EXPERT')).toEqual({ path: '/domain-expert/recommendation-rules' })
+    expect(notificationTarget(of('harvest_cycle'), 'DOMAIN_EXPERT')).toEqual({ path: '/domain-expert/reports' })
+  })
+
   it('role không vào được trang đích thì chỉ đánh dấu đã đọc (null), không đưa về /403', () => {
     expect(notificationTarget(of('work_order'), 'FARM_TECHNICIAN')).toBeNull()
     expect(notificationTarget(of('health_day'), 'ADMIN')).toBeNull()

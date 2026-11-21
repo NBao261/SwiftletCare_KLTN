@@ -53,7 +53,8 @@ export default function BirdTrendChart({ houseIds }: BirdTrendChartProps) {
     },
     scales: {
       x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
-      y: baseChartOptions.scales.y,
+      // Số lượt chim là số nguyên, không âm: trục bắt đầu ở 0 và không có vạch 0,2 … khi chưa có dữ liệu
+      y: { ...baseChartOptions.scales.y, min: 0, ticks: { ...baseChartOptions.scales.y.ticks, precision: 0 } },
     },
   } as ChartOptions<'line'>), [])
 

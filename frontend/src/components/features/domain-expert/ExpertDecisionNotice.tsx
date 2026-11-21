@@ -3,7 +3,7 @@ import { usePermission } from '@/hooks/common/usePermission'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 import { t } from '@/i18n'
 
-// Dòng nhắc cho Farm Owner trên các trang của chuyên gia: quyết định thay khi farm chưa có chuyên gia (BR-22), còn lại chỉ xem
+// Dòng nhắc quyền của Farm Owner trên trang chuyên gia (BR-22)
 export default function ExpertDecisionNotice() {
   const isOwner = usePermission('FARM_OWNER')
   const { canDecide, farmKnown } = useExpertDecisionRights()
@@ -15,7 +15,7 @@ export default function ExpertDecisionNotice() {
       <InfoIcon size={16} className="shrink-0 text-charcoal" />
       {canDecide
         ? t('Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.')
-        : t('Trang trại đã có chuyên gia nên bạn chỉ xem các quyết định chuyên môn. Ngưỡng và hệ số mờ bạn vẫn sửa được, chuyên gia duyệt lại sau.')}
+        : t('Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kết luận cảnh báo do chuyên gia ghi, bạn nhắc được.')}
     </p>
   )
 }

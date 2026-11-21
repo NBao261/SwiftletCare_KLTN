@@ -8,6 +8,7 @@ import alertRoutes from '@/routes/alerts.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
 import { SensorNode } from '@/models/device.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { EPISODE_CLEAR_MS, createAlert, ingestDeviceAlert, resolveStaleEpisodeAlerts } from '@/services/alert.service'
 import { seedOwnerFarm as seed, useTestDb } from '../helpers/ownerFarm'
 
@@ -159,6 +160,22 @@ describe('bộ lọc GET /alerts (ALERT-FR-007, EXPERT-FR-003)', () => {
     expect((await get('open=true&status=RESOLVED').expect(200)).body.meta.total).toBe(1)
     expect((await get('').expect(200)).body.meta.total).toBe(4)
     await get('open=false').expect(422)
+  })
+})
+
+describe('lọc GET /alerts theo nhà gồm cả cảnh báo của các Zone trong nhà (ALERT-FR-007)', () => {
+  it('houseId trả cảnh báo cả nhà (camera) và cảnh báo của Zone thuộc nhà, không lẫn nhà khác', async () => {
+    const { farm, zone, node, token } = await seed()
+    const otherHouse = await House.create({ farm_id: farm._id, name: 'Nhà khác' })
+    const otherZone = await Zone.create({ house_id: otherHouse._id, name: 'Tầng khác' })
+    const base = { farm_id: farm._id, severity: 'MEDIUM', title: 't', message: 'm' }
+    await Alert.create([
+      { ...base, zone_id: zone._id, node_id: node._id, type: 'SENSOR_FAULT' },
+      { ...base, house_id: zone.house_id, type: 'EDGE_AI_DEGRADED' },
+      { ...base, zone_id: otherZone._id, type: 'SENSOR_FAULT' },
+    ])
+    const res = await request(app).get(`/alerts?houseId=${zone.house_id}`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect(res.body.data.map((a: { type: string }) => a.type).sort()).toEqual(['EDGE_AI_DEGRADED', 'SENSOR_FAULT'])
   })
 })
 

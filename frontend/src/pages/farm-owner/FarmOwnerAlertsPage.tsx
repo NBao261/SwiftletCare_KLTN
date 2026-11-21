@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import ScopeFilter from '@/components/common/ScopeFilter';
 import TableEmptyState from '@/components/common/TableEmptyState';
+import HeaderActions from '@/components/layouts/HeaderActions';
 import AcknowledgeAlertModal from '@/components/features/farm-owner/alerts/AcknowledgeAlertModal';
 import AlertDetailDrawer from '@/components/features/farm-owner/alerts/AlertDetailDrawer';
 import AlertTable, { type AlertAction } from '@/components/features/farm-owner/alerts/AlertTable';
 import { Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
 import { alertsDict } from '@/constants/alerts.i18n';
+import { alertTypeDict } from '@/constants/enumLabels.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { LEVELS, severityQueryOf } from '@/constants/severity';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -16,16 +19,22 @@ import { useCameraNodes } from '@/hooks/farm-owner/useFarmOwnerDashboard';
 import { ALERT_PAGE_SIZE, useAlertsList, usePendingAlertTotal } from '@/hooks/shared/useAlerts';
 import { useSensorNodes, useSystemNodeStatus } from '@/hooks/shared/useDevices';
 import { useAllZones } from '@/hooks/shared/useFarms';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { nodeLocation } from '@/lib/deviceLocation';
 import { lastPage } from '@/lib/helpers';
-import type { Alert, AlertStatus, SeverityLevel } from '@/types';
+import type { Alert, AlertStatus, AlertType, SeverityLevel } from '@/types';
+import type { InferredAlertType } from '@/types/expert/alerts.types';
 
 const ALERT_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED', 'RESOLVED'];
 // 'open' = còn hiệu lực (ACTIVE, ACKNOWLEDGED), hiện tách khỏi DISMISSED và RESOLVED (ALERT-FR-007)
 type StatusFilter = 'open' | 'all' | AlertStatus;
 type LevelFilter = 'all' | SeverityLevel;
+type VerdictFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
+const ALERT_TYPES = Object.keys(alertTypeDict.vi) as AlertType[];
+const INFERRED_TYPES: InferredAlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'];
+const isInferred = (type: AlertType) => (INFERRED_TYPES as AlertType[]).includes(type);
 
-// ALERT-FR-007, 009, 018 — /alerts (mặc định chỉ cảnh báo còn hiệu lực, kèm số chờ xác nhận) của Farm Owner, Farm Technician (nhà được giao), Admin (chỉ xem cảnh báo thiết bị): lọc trạng thái và mức độ, chi tiết, xác nhận kèm nguyên nhân
+// ALERT-FR-007, 009, 018 — /alerts (mặc định chỉ cảnh báo còn hiệu lực, kèm số chờ xác nhận) của Farm Owner, Farm Technician (nhà được giao), Admin (chỉ xem cảnh báo thiết bị): lọc phạm vi, trạng thái, mức độ, loại và kết luận, chi tiết, xác nhận kèm nguyên nhân
 export default function FarmOwnerAlertsPage(): JSX.Element {
   const { t } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -42,13 +51,28 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
   else if (isAdmin) pendingKey = 'list.pendingAdmin';
   const pendingText = pendingCount === undefined ? '' : ` ${t(pendingKey, { n: pendingCount })}`;
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all');
-  // Đổi trạng thái hay mức độ thì về trang 1
-  const filterKey = `${statusFilter}|${levelFilter}`;
+  const [typeFilter, setTypeFilter] = useState<'all' | AlertType>('all');
+  const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
+  // Kết luận chuyên gia chỉ có ở cảnh báo suy luận: chọn loại khác thì bỏ lọc kết luận
+  const verdictApplies = typeFilter === 'all' || isInferred(typeFilter);
+  const verdict = verdictApplies && verdictFilter !== 'all' ? verdictFilter : undefined;
+  // ALERT-FR-007 — lọc theo trang trại, nhà, Zone (Admin không có cấu trúc farm nên không có bộ lọc phạm vi)
+  const scope = useScopeFilter();
+  const place = isAdmin ? {} : {
+    ...(scope.farmId && { farmId: scope.farmId }),
+    ...(scope.houseId && { houseId: scope.houseId }),
+    ...(scope.zone && { zoneId: scope.zone._id }),
+  };
+  // Đổi bộ lọc thì về trang 1
+  const filterKey = `${statusFilter}|${levelFilter}|${typeFilter}|${verdict ?? ''}|${JSON.stringify(place)}`;
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
   const page = pageState.key === filterKey ? pageState.page : 1;
   const { records: alerts, total, isLoading, isError, error, refetch } = useAlertsList({
     ...(statusFilter === 'open' ? { open: 'true' as const } : statusFilter !== 'all' && { status: statusFilter }),
     ...(levelFilter !== 'all' && { severity: severityQueryOf(levelFilter) }),
+    ...(typeFilter !== 'all' && { type: typeFilter }),
+    ...(verdict && { verdict }),
+    ...place,
     page,
     limit: ALERT_PAGE_SIZE,
   });
@@ -116,6 +140,11 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
+      {!isAdmin && (
+        <HeaderActions>
+          <ScopeFilter scope={scope} />
+        </HeaderActions>
+      )}
       {/* Một card: tên trang đã ở header nên card không lặp tiêu đề */}
       <SectionCard description={`${t(subtitleKey)}${pendingText}`}>
         <div className="flex flex-wrap items-center gap-3">
@@ -138,6 +167,28 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
               ...LEVELS.map(level => ({ value: level, label: t(`level.${level}`) })),
             ]}
           />
+          <SelectMenu
+            ariaLabel={t('list.filterType')}
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={[
+              { value: 'all', label: t('filter.allTypes') },
+              ...ALERT_TYPES.map(type => ({ value: type, label: t(`type.${type}`) })),
+            ]}
+          />
+          {verdictApplies && !isAdmin && (
+            <SelectMenu
+              ariaLabel={t('list.filterVerdict')}
+              value={verdictFilter}
+              onChange={setVerdictFilter}
+              options={[
+                { value: 'all', label: t('filter.allVerdicts') },
+                { value: 'pending', label: t('verdict.pending') },
+                { value: 'confirmed', label: t('verdict.confirmed') },
+                { value: 'rejected', label: t('verdict.rejected') },
+              ]}
+            />
+          )}
         </div>
 
         {isLoading ? (

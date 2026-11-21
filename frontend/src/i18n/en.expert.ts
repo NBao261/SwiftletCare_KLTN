@@ -3,8 +3,6 @@ const enExpert: Record<string, string> = {
   // ── Khung chung: thanh chọn khu vực, lời nhắc quyền, màn trống ─────────────────────────────────────────────────────
   'Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.':
     'This farm has no expert: you decide in their place on alert verdicts, detection parameters, the counting schedule, the counting ring and weather rules. Report and season conclusions and profile approval are for an expert only.',
-  'Trang trại đã có chuyên gia nên bạn chỉ xem các quyết định chuyên môn. Ngưỡng và hệ số mờ bạn vẫn sửa được, chuyên gia duyệt lại sau.':
-    'This farm has an expert — expert decisions are read-only for you. You can still edit thresholds and fuzzy coefficients; the expert will review them.',
   'Không có cảnh báo chờ kiểm chứng': 'No incidents awaiting review',
   'Mọi cảnh báo suy luận trong phạm vi đang xem đã có kết luận.': 'Every inferred alert in the current scope has been reviewed.',
   'Xem lịch sử hoạt động': 'View activity history',
@@ -293,7 +291,6 @@ const enExpert: Record<string, string> = {
   'Hoàn nguyên giá trị cũ': 'Revert to old values',
   'Chấp thuận thay đổi': 'Accept change',
   'Xác nhận hoàn nguyên giá trị cũ': 'Confirm revert to old values',
-  'Giá trị cũ được gửi lại xuống bộ điều khiển và mục này chuyển sang Đã hoàn tác.': 'The system sends the earlier safe values to the device and marks this review item Reverted.',
   'Hoàn nguyên': 'Revert',
   'Từ chối đề xuất hệ số mờ': 'Reject fuzzy coefficient proposal',
   'Lý do từ chối chuyên môn': 'Expert reason for rejection',
@@ -368,8 +365,8 @@ const enExpert: Record<string, string> = {
   '1. Hệ số điều khiển mờ': '1. Fuzzy control coefficients',
   'Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của Zone': 'Once saved, the system sends the new configuration to the zone controller',
   'Lưu hệ số mờ': 'Save fuzzy coefficients',
-  'Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.':
-    'Smooths temperature and humidity before the controller so relays switch less from noise. Turn off briefly to compare switches per hour. Requires firmware 1.2.0 or later.',
+  'Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ.':
+    'Smooths temperature and humidity before the controller so relays switch less from noise. Turn off briefly to compare switches per hour.',
   '4. Mức giảm tỷ lệ chim về của nhà': '4. Return rate drop of the house',
   'Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm': 'Applies to the whole house "{{house}}" — return rate drop alert',
   'Chọn một Zone để biết nhà cần chỉnh': 'Choose a zone to know which house to tune',
@@ -531,6 +528,35 @@ const enExpert: Record<string, string> = {
   '3 phân hệ quản lý': '3 areas',
   'Kết luận mùa vụ': 'Season conclusions',
   'Viết kết luận tổng thể cho chu kỳ thu hoạch đã đóng': 'Write an overall conclusion for a closed harvest cycle',
+  // G-31 — Farm Owner quyết, chuyên gia duyệt (BR-22, Report 3 4.2.15)
+  'Chuyên gia sẽ xem lại thay đổi này.': 'The expert will review this change.',
+  'Đã gửi chuyên gia duyệt. Luật đang chạy giữ nguyên tới khi được duyệt.': 'Sent to the expert. The current rules stay until approved.',
+  'Đề xuất của chủ nhà yến đang chờ duyệt ({{n}} luật, gửi lúc {{time}})': 'Farm Owner\'s proposal awaiting approval ({{n}} rules, sent {{time}})',
+  'Duyệt đề xuất': 'Approve proposal',
+  'Đã duyệt, luật mới có hiệu lực từ lần tính kế tiếp.': 'Approved. The new rules apply from the next computation.',
+  'Gửi lại bộ luật mới sẽ thay đề xuất này.': 'Sending a new rule set replaces this proposal.',
+  'Từ chối đề xuất luật bù phun sương': 'Reject the weather rule proposal',
+  'VD: mùa này chưa cần phun thêm': 'E.g. no extra misting needed this season',
+  'Chủ nhà yến nhận lý do này. Luật đang chạy giữ nguyên.': 'The Farm Owner receives this reason. The current rules stay.',
+  'Đã từ chối đề xuất.': 'Proposal rejected.',
+  'Đã tạo hồ sơ bản nháp. Chuyên gia duyệt rồi bạn mới áp được.': 'Draft profile created. You can apply it once the expert approves it.',
+  'Chờ chuyên gia duyệt': 'Awaiting the expert',
+  'Nhắc chuyên gia': 'Remind the expert',
+  'Đã nhắc chuyên gia': 'Expert reminded',
+  'Đã nhắc chuyên gia.': 'Expert reminded.',
+  'Thay đổi tham số phát hiện': 'Detection parameter change',
+  'Thay đổi mức giảm tỷ lệ chim về': 'Return-rate drop change',
+  'Thay đổi mức chỉ số sức khoẻ': 'Health level change',
+  'Thay đổi lịch đếm chim': 'Counting schedule change',
+  'Thay đổi tham số': 'Parameter change',
+  'Hồ sơ theo mùa': 'Seasonal profiles',
+  'Khung tạm': 'Temporary windows',
+  'Vòng đếm': 'Counting ring',
+  'Chưa có': 'None',
+  'Camera chưa có vòng cũ: vẽ lại vòng nếu cần chỉnh.': 'The camera had no ring before: redraw it if it needs a change.',
+  'Giá trị cũ được gửi lại xuống thiết bị và mục này chuyển sang Đã hoàn tác.': 'The old values are sent back to the devices and this item becomes Reverted.',
+  'Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kết luận cảnh báo do chuyên gia ghi, bạn nhắc được.': 'This farm has an expert: your changes to parameters, the counting schedule and ring apply at once and the expert reviews them. Weather rules, profiles and recommendation rules run once the expert approves them. The expert records alert verdicts; you can remind them.',
+  'Cần mời chuyên gia để duyệt': 'Invite an expert to approve it',
 }
 
 export default enExpert

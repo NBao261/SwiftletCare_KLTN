@@ -10,9 +10,17 @@ export interface WeatherRule {
   active: boolean
 }
 
+// BR-22, BR-38 — bộ luật Farm Owner gửi trên farm có chuyên gia, chỉ chạy khi chuyên gia duyệt
+export interface WeatherRulesProposal {
+  rules: WeatherRule[]
+  proposed_by: string
+  proposed_at: string
+}
+
 export interface WeatherRulesResponse {
   house_id: string
   rules: WeatherRule[]
+  proposal: WeatherRulesProposal | null
   last_compensation: {
     rule_id: string
     offset_pct: number

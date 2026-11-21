@@ -4,7 +4,7 @@ import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { HealthLevels, HealthRatingState, HealthRatingValue, HealthReportKind, HouseHealthDay } from '@/types'
 
 const HEALTH_DAYS_KEY = 'health-days'
-const HEALTH_REPORTS_KEY = 'house-health-reports'
+export const HEALTH_REPORTS_KEY = 'house-health-reports'
 // Số báo cáo mỗi trang, cũng là số dòng khung bảng
 export const REPORT_PAGE_SIZE = 10
 
