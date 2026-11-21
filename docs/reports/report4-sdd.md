@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.21 (Review 2, final scope) |
+| Document version | 2.2.22 (Review 2, final scope) |
 | Date | 21/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.15 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -671,8 +671,9 @@ erDiagram
     ObjectId house_id FK "house alerts"
     ObjectId node_id FK
     string event_id "device event, unique per node"
+    string incident_key "type, farm, zone or house, device (load, plan); one open alert per key"
     string type
-    string severity
+    string severity "from the type (BR-15)"
     string status "ACTIVE | ACKNOWLEDGED | DISMISSED | RESOLVED"
     string previous_status "status before DISMISSED"
     object details "metric, observed, threshold, direction, started_at, reset_reason"
@@ -950,7 +951,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `telemetries` | Telemetry | `node_id + timestamp` unique; `zone_id + timestamp`; TTL on `timestamp` | One stored sample per 10 s per device; the unique index drops a re-sent buffered sample |
 | `relayoverridelogs` | Override | `node_id + started_at`; `zone_id + started_at` | Source of the autonomy ratio |
 | `audiotracks` | Attractant track | `node_id + track_number` unique | |
-| `alerts` | Alert | `farm_id + zone_id + node_id + type + status`; partial `house_id + type + status`; partial unique `node_id + event_id`; TTL on `resolved_at` | Expert verdict embedded |
+| `alerts` | Alert | `farm_id + zone_id + node_id + type + status`; partial `house_id + type + status`; partial unique `node_id + event_id`; partial unique `incident_key` while `ACTIVE`, `ACKNOWLEDGED` or `DISMISSED` (ALERT-FR-008); TTL on `resolved_at` | Expert verdict embedded |
 | `birdcountrecords` | Session count | `camera_node_id + session_type + session_date` unique; `house_id + session_date` | Computed from the buckets of the day's windows |
 | `birdcountbuckets` | 5-minute count | `camera_node_id + bucket_start` unique; TTL | |
 | `househealthdays` | Daily health status | `house_id + date` unique; `farm_id + date` | Ratings with their snapshots embedded |
@@ -997,6 +998,7 @@ The Iteration 1 database is carried into this design by idempotent scripts (`npm
 | One `control_mode` and one `override_expiry` per controller replaced by the embedded `relays` object; `heating` relay field removed; unused device states `ERROR`, `DEGRADED` mapped to `ONLINE` | `sensornodes`, `cameranodes` | BR-20, Report 3 §6.6 |
 | Broker secret issued for every device in the stock (to be flashed), `claimed_at`, `revoked_at` | `provisioneddevices` | FARM-FR-010, BR-27 |
 | `config_version` on zones, `applied_config_version` on controllers | `zones`, `sensornodes` | ENV-FR-027 |
+| Severity of open alerts set from the type (BR-15) and `incident_key` filled, open duplicates of one incident merged into the first, then the unique index built (`npm run migrate:alert-incidents`) | `alerts` | ALERT-FR-001, 008 |
 | Weekly zone reports moved into house reports with `kind` and zone sections | `zonehealthreports` → `househealthreports` | EXPERT-FR-005 |
 | Unused harvest state `ARCHIVED` removed; `nest_type`, `photo_object_key` | `harvestbatches` | HARVEST-FR-001 |
 | `ip_address` renamed `source_ip`; `before` and `after` copied out of `metadata` (`npm run migrate:erd-fields`, with the `users.status` row above) | `auditlogs` | AUTH-FR-007 |
@@ -1052,7 +1054,7 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0), `actuatorBaseline` (learned normal current of the pump and the fan, A, for the loads learned so far; firmware 2.3.1 or later, BR-45) | 0 |
 | `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected | 0 |
 | `relay/status` | controller → cloud | `deviceId`, per relay: state, mode, expiry; `commandId` of the command that caused the change, if any | 1 |
-| `alert` | controller → cloud | `deviceId`, `eventId`, type, severity, details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
+| `alert` | controller → cloud | `deviceId`, `eventId`, type, severity (for the log only: the backend sets the severity from the type, BR-15), details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
 | `vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
 | `vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` with the frame rate | 1 |
 | `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: counting ring, `config_version`, `session_windows` (morning and evening windows of the next 7 days of the house's counting schedule, VISION-FR-019) | 1 |
@@ -1895,6 +1897,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.22 | 21/11/2026 | Alert severity and incidents (gap G-32, decision Q-06): the backend sets the severity of every alert from its type (BR-15) and ignores the value a device sends (Section 7.2); `incident_key` with a partial unique index keeps one open alert per incident (ALERT-FR-008; Sections 6.1, 6.2) and its migration in Section 6.4 |
 | 2.2.21 | 21/11/2026 | Audit of 21/11/2026 (Report 3 4.2.16, gap G-32): Section 5.4 describes the farm location map of 2.2.20 instead of "no map library is added"; houses and zones are edited and soft-deleted (`is_deleted`, `deleted_at`, `deleted_by` in the ERD of Section 6.1 and in Section 6.2; `/farms` in Section 7.1, FARM-FR-002) |
 | 2.2.20 | 21/11/2026 | Section 3.1: OpenStreetMap map tiles and Photon address suggestions for picking the farm coordinates on a map (FARM-FR-001); the screens and the report PDF that show weather credit Open-Meteo |
 | 2.2.19 | 21/11/2026 | The Farm Owner decides, the Domain Expert reviews (Report 3 4.2.15, BR-22): D7 rewritten in three groups; the review item gains the groups `detection`, `return_rate_drop`, `health_levels`, `counting_schedule`, `counting_ring` with `target_id`, `house_id`, `camera_node_id` (one open item per target and group); weather rule proposals on the house, recommendation rules awaiting approval, profile drafts by the Farm Owner and the Farm Owner's reminders (`POST /expert-activity/reminders`) added to the module table, the notification refs and the MF-05 diagram; header baseline SRS 4.2.15 |
