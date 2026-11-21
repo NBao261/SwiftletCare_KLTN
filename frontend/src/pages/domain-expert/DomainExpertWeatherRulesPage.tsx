@@ -5,6 +5,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import SectionCard from '@/components/ui/SectionCard'
+import { Modal } from '@/components/ui/Modal'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useWeatherRules, useUpdateWeatherRules } from '@/hooks/domain-expert/useWeatherRules'
@@ -54,6 +55,7 @@ export default function DomainExpertWeatherRulesPage() {
 
   const [localRules, setLocalRules] = useState<WeatherRule[] | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
     setLocalRules(null)
@@ -65,6 +67,7 @@ export default function DomainExpertWeatherRulesPage() {
 
   function handleAdd(rule: WeatherRule) {
     setLocalRules(currentRules => [...(currentRules ?? data?.rules ?? []), rule])
+    setAddOpen(false)
   }
 
   function handleRemove(index: number) {
@@ -153,11 +156,19 @@ export default function DomainExpertWeatherRulesPage() {
         icon={<CloudRain className="w-5 h-5" />}
         title={t('Luật bù phun sương theo thời tiết')}
         description={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
-        action={!isLoading && rules.length >= MAX_RULES ? (
-          <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
-            {t('Đã đạt tối đa 10 luật')}
-          </span>
-        ) : undefined}
+        action={
+          !isLoading && canDecide && !isError ? (
+            rules.length >= MAX_RULES ? (
+              <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
+                {t('Đã đạt tối đa 10 luật')}
+              </span>
+            ) : (
+              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>
+                {t('Thêm luật')}
+              </Button>
+            )
+          ) : undefined
+        }
       >
         <div className="space-y-4">
           {/* Lỗi tải dữ liệu */}
@@ -183,10 +194,16 @@ export default function DomainExpertWeatherRulesPage() {
         </div>
       </SectionCard>
 
-      {/* Form thêm luật */}
-      {canDecide && !isError && !isLoading && rules.length < MAX_RULES && (
+      {/* Modal thêm luật — DE-05 */}
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title={t('Thêm luật bù thời tiết')}
+        size="lg"
+        closeOnBackdrop
+      >
         <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
-      )}
+      </Modal>
 
       {saveError && (
         <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">

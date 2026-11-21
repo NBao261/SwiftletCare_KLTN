@@ -23,7 +23,7 @@ import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecision
 
 // Ngưỡng & hệ số mờ (ENV-FR-020…022, EXPERT-FR-004/008/011): nơi duy nhất sửa ngưỡng và hệ số mờ của một Zone trên web
 export default function DomainExpertZoneTuningPage() {
-  const { selectedFarmId, selectedZoneId } = useZoneStore();
+  const { selectedFarmId, selectedZoneId, selectedZoneName } = useZoneStore();
   const zoneId = selectedZoneId ?? undefined;
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
@@ -82,6 +82,13 @@ export default function DomainExpertZoneTuningPage() {
   return (
     <div className="relative w-full flex-1 flex flex-col gap-6">
       <div className="w-full max-w-screen-xl mx-auto space-y-6">
+        {/* DE-04a: dòng phạm vi — hiện Zone đang chọn */}
+        {selectedZoneName && (
+          <p className="text-small text-graphite">
+            {t('Áp cho Zone {{zone}}', { zone: selectedZoneName })}
+          </p>
+        )}
+
         {pendingProposalsCount > 0 && (
           <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-sm">
             <div className="flex items-center gap-2.5">

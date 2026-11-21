@@ -1,53 +1,50 @@
 // ENV-FR-030, BR-38 — Form thêm luật bù thời tiết: metric, min, offset_pct (−10…+10 ≠ 0), duration_min (1…120)
-import { useState } from 'react'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
-import { Input } from '@/components/ui/Input'
-import type { WeatherRule } from '@/types/expert.types'
-import { validateWeatherRule, isWeatherRuleValid, METRIC_MIN_RANGE } from '@/validations/common/weatherRule.validation'
-import { t } from '@/i18n'
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu';
+import { Input } from '@/components/ui/Input';
+import type { WeatherRule } from '@/types/expert.types';
+import { validateWeatherRule, isWeatherRuleValid, METRIC_MIN_RANGE } from '@/validations/common/weatherRule.validation';
+import { t } from '@/i18n';
 
-type DraftRule = Omit<Partial<WeatherRule>, 'metric'> & { metric: WeatherRule['metric'] | '' }
+type DraftRule = Omit<Partial<WeatherRule>, 'metric'> & { metric: WeatherRule['metric'] | '' };
 
-const BLANK = { metric: '' as DraftRule['metric'], min: undefined as number | undefined, offset_pct: undefined as number | undefined, duration_min: 60, active: true } satisfies DraftRule
+const BLANK = { metric: '' as DraftRule['metric'], min: undefined as number | undefined, offset_pct: undefined as number | undefined, duration_min: 60, active: true } satisfies DraftRule;
 
-type MetricValue = WeatherRule['metric'] | ''
+type MetricValue = WeatherRule['metric'] | '';
 
 const METRIC_OPTIONS: SelectMenuOption<MetricValue>[] = [
   { value: '', label: 'Chọn chỉ số' },
   { value: 'temperature', label: 'Nhiệt độ cao nhất (°C)' },
   { value: 'humidity',    label: 'Độ ẩm ngoài trời cao nhất (%)' },
   { value: 'rain',        label: 'Tổng lượng mưa (mm)' },
-]
+];
 
 interface Props {
-  onAdd: (rule: WeatherRule) => void
-  disabled?: boolean
+  onAdd: (rule: WeatherRule) => void;
+  disabled?: boolean;
 }
 
 export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
-  const [draft, setDraft] = useState<DraftRule>(BLANK)
-  const [touched, setTouched] = useState(false)
+  const [draft, setDraft] = useState<DraftRule>(BLANK);
+  const [touched, setTouched] = useState(false);
 
-  const errors = touched ? validateWeatherRule(draft as Partial<WeatherRule>) : {}
-  const canAdd = isWeatherRuleValid(draft as Partial<WeatherRule>)
+  const errors = touched ? validateWeatherRule(draft as Partial<WeatherRule>) : {};
+  const canAdd = isWeatherRuleValid(draft as Partial<WeatherRule>);
 
-  const metaRange = draft.metric ? METRIC_MIN_RANGE[draft.metric] : null
+  const metaRange = draft.metric ? METRIC_MIN_RANGE[draft.metric] : null;
 
   function handleSubmit() {
-    setTouched(true)
-    if (!canAdd) return
-    onAdd({ ...(draft as WeatherRule), active: true })
-    setDraft(BLANK)
-    setTouched(false)
+    setTouched(true);
+    if (!canAdd) return;
+    onAdd({ ...(draft as WeatherRule), active: true });
+    setDraft(BLANK);
+    setTouched(false);
   }
 
   return (
-    <Card className="space-y-4">
-      <p className="text-sm font-semibold text-charcoal">{t('Thêm luật mới')}</p>
-
+    <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2 flex flex-col gap-1.5">
           <span className="label-caption">{t('Chỉ số thời tiết')}</span>
@@ -104,6 +101,6 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
         <Plus className="w-3.5 h-3.5" />
         {t('Thêm luật')}
       </Button>
-    </Card>
-  )
+    </div>
+  );
 }

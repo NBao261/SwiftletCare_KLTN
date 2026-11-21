@@ -86,7 +86,7 @@ const vi = {
 
   // Domain Expert — luật khuyến nghị
   'rules.title': 'Luật khuyến nghị',
-  'rules.subtitle': 'Mỗi ngày sau khi đánh giá ngày, luật thoả ở nhà nào thì mở một khuyến nghị cho Chủ nhà yến. Mỗi luật phải ghi nguồn.',
+  'rules.subtitle': 'Luật thoả điều kiện hằng ngày thì mở khuyến nghị cho Chủ nhà yến.',
   'rules.pickFarm': 'Chọn trang trại ở thanh trên để xem luật khuyến nghị.',
   'rules.tabs': 'Nội dung luật khuyến nghị',
   'rules.tabRules': 'Luật',
@@ -220,7 +220,7 @@ const en: Record<RecommendationsKey, string> = {
   'reject.done': 'Recommendation rejected.',
 
   'rules.title': 'Recommendation rules',
-  'rules.subtitle': 'Every day after the daily assessment, a rule met at a house opens a recommendation for the Farm Owner. Each rule must state its source.',
+  'rules.subtitle': 'A rule met daily opens a recommendation for the Farm Owner.',
   'rules.pickFarm': 'Choose a farm in the top bar to see the recommendation rules.',
   'rules.tabs': 'Recommendation rule content',
   'rules.tabRules': 'Rules',

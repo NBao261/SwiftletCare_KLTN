@@ -2,28 +2,28 @@
  * AlertsKpiAndStatsBar — Interactive KPI filter cards
  * SRS v2.1.4: EXPERT-FR-003
  */
-import { cn } from '@/lib/cn'
-import type { InferredAlertType } from '@/types/expert.types'
-import type { AlertSeverity } from '@/types'
-import type { AlertTabFilter } from '@/hooks/domain-expert/useExpertAlerts'
-import { t } from '@/i18n'
+import { cn } from '@/lib/cn';
+import type { InferredAlertType } from '@/types/expert.types';
+import type { AlertSeverity } from '@/types';
+import type { AlertTabFilter } from '@/hooks/domain-expert/useExpertAlerts';
+import { t } from '@/i18n';
 
 export interface KpiCounts {
-  total: number
-  pending: number
-  confirmed: number
-  rejected: number
+  total: number;
+  pending: number;
+  confirmed: number;
+  rejected: number;
 }
 
 interface KpiCardProps {
-  label: string
-  sublabel: string
-  value: string | number
-  accent: string
-  dotColor: string
-  badgeBg?: string
-  isActive: boolean
-  onClick: () => void
+  label: string;
+  sublabel: string;
+  value: string | number;
+  accent: string;
+  dotColor: string;
+  badgeBg?: string;
+  isActive: boolean;
+  onClick: () => void;
 }
 
 function KpiCard({ label, sublabel, value, accent, dotColor, badgeBg, isActive, onClick }: KpiCardProps) {
@@ -49,7 +49,7 @@ function KpiCard({ label, sublabel, value, accent, dotColor, badgeBg, isActive, 
         <p className="mt-1.5 text-small text-warmGray leading-tight">{t(sublabel)}</p>
       </div>
     </button>
-  )
+  );
 }
 
 export const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string }> = [
@@ -58,23 +58,23 @@ export const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string 
   { value: 'SENSOR_ANOMALY', label: 'Cảm biến bất thường' },
   { value: 'FORECAST_BREACH', label: 'Sắp vượt ngưỡng' },
   { value: 'LOW_RETURN_RATE', label: 'Giảm tỷ lệ chim về' },
-]
+];
 
 // Cảnh báo suy luận chỉ ở mức MEDIUM/LOW (backend giới hạn), tức cấp P2 Cao và P3 Thường của FE_Design 2.4
-export const INFERRED_SEVERITIES: AlertSeverity[] = ['MEDIUM', 'LOW']
+export const INFERRED_SEVERITIES: AlertSeverity[] = ['MEDIUM', 'LOW'];
 
 export const TAB_INFO: Record<AlertTabFilter, { label: string; countKey: keyof KpiCounts }> = {
   ALL: { label: 'Tất cả', countKey: 'total' },
   PENDING: { label: 'Chờ kiểm chứng', countKey: 'pending' },
   CONFIRMED: { label: 'Đã xác nhận', countKey: 'confirmed' },
   REJECTED: { label: 'Đã bác bỏ', countKey: 'rejected' },
-}
+};
 
 interface Props {
-  counts: KpiCounts
-  isLoading: boolean
-  activeTab: AlertTabFilter
-  onTabChange: (t: AlertTabFilter) => void
+  counts: KpiCounts;
+  isLoading: boolean;
+  activeTab: AlertTabFilter;
+  onTabChange: (tab: AlertTabFilter) => void;
 }
 
 export default function AlertsKpiAndStatsBar({
@@ -86,15 +86,15 @@ export default function AlertsKpiAndStatsBar({
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl p-5 shadow-card border border-warmGray/15 animate-pulse">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="bg-white rounded-2xl p-5 shadow-card border border-warmGray/15 animate-pulse">
             <div className="h-3 bg-warmGray/15 rounded w-2/3 mb-3" />
             <div className="h-8 bg-warmGray/15 rounded w-1/3 mb-2" />
             <div className="h-3 bg-warmGray/15 rounded w-1/2" />
           </div>
         ))}
       </div>
-    )
+    );
   }
 
   return (
@@ -102,7 +102,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Tổng cảnh báo suy luận')}
         sublabel="30 ngày qua"
-        value={String(counts.total).padStart(2, '0')}
+        value={counts.total}
         accent="text-charcoal"
         dotColor="bg-[#B5D32C]"
         badgeBg="bg-[#B5D32C]/15"
@@ -112,7 +112,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Chờ kiểm chứng')}
         sublabel="Chờ chuyên gia kiểm chứng"
-        value={String(counts.pending).padStart(2, '0')}
+        value={counts.pending}
         accent="text-orange-500"
         dotColor="bg-orange-500"
         badgeBg="bg-orange-500/15"
@@ -122,7 +122,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Đã xác nhận (Sự cố thật)')}
         sublabel="Hệ thống suy luận chính xác"
-        value={String(counts.confirmed).padStart(2, '0')}
+        value={counts.confirmed}
         accent="text-charcoal"
         dotColor="bg-emerald-500"
         badgeBg="bg-emerald-50"
@@ -132,7 +132,7 @@ export default function AlertsKpiAndStatsBar({
       <KpiCard
         label={t('Đã bác bỏ (Báo động giả)')}
         sublabel="Nhiễu hoặc dao động tự nhiên"
-        value={String(counts.rejected).padStart(2, '0')}
+        value={counts.rejected}
         accent="text-warmGray"
         dotColor="bg-neutral-400"
         badgeBg="bg-neutral-100"
@@ -140,5 +140,5 @@ export default function AlertsKpiAndStatsBar({
         onClick={() => onTabChange('REJECTED')}
       />
     </div>
-  )
+  );
 }

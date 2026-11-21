@@ -91,39 +91,26 @@ export default function DomainExpertCountingSchedulePage() {
       {/* BR-22 — Farm Owner chỉ sửa khi farm chưa có chuyên gia */}
       <fieldset disabled={!canDecide} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
-        {/* Khung đang áp hôm nay — màn rộng: tiêu đề và ghi chú bên trái, hai phiên bên phải; màn hẹp xếp dọc */}
-        <div className="flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-600 text-charcoal">
-                <CalendarClock className="h-4 w-4" aria-hidden />
-              </span>
-              <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
-              <Badge tone={SOURCE_TONE[data.today.source]}>{t(`today.source.${data.today.source}`)}</Badge>
-            </div>
-            <p className="text-sm text-graphite">{t('today.default', { morning: span(defaults.morning), evening: span(defaults.evening) })}</p>
-            {data.effective_from && <p className="text-sm font-semibold text-charcoal">{t('today.effective', { date: date(data.effective_from) })}</p>}
-          </div>
-          {/* Hai phiên của hôm nay: sáng mặt trời mọc, chiều mặt trăng */}
-          <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
-            <span className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-white px-3 py-2 text-sm font-semibold text-accent-800">
-              <Sunrise className="h-4 w-4 text-climateOrange" aria-hidden />
-              {t('today.morning', { window: span(data.today.morning) })}
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-white px-3 py-2 text-sm font-semibold text-accent-800">
-              <Moon className="h-4 w-4 text-graphite" aria-hidden />
-              {t('today.evening', { window: span(data.today.evening) })}
-            </span>
-          </div>
+        {/* DE-07: Khung đang áp hôm nay — 1 dòng gọn trên đầu */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 py-2.5">
+          <CalendarClock className="h-4 w-4 text-accent-600 shrink-0" aria-hidden />
+          <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
+          <Badge tone={SOURCE_TONE[data.today.source]}>{t(`today.source.${data.today.source}`)}</Badge>
+          <span className="hidden sm:inline text-warmGray">·</span>
+          <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
+            <Sunrise className="h-3.5 w-3.5 text-climateOrange" aria-hidden />
+            {span(data.today.morning)}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
+            <Moon className="h-3.5 w-3.5 text-graphite" aria-hidden />
+            {span(data.today.evening)}
+          </span>
         </div>
 
-        {/* Hồ sơ theo mùa */}
+        {/* DE-07: Hồ sơ theo mùa — tiêu đề + nút Thêm trên 1 dòng */}
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-h3 text-charcoal">{t('profiles.title')}</h3>
-              <p className="text-xs text-warmGray">{t('profiles.hint', { max: MAX_SCHEDULE_PROFILES })}</p>
-            </div>
+            <h3 className="text-h3 text-charcoal">{t('profiles.title')} <span className="text-xs font-normal text-warmGray">({schedule.profiles.length}/{MAX_SCHEDULE_PROFILES})</span></h3>
             <Button
               variant="secondary"
               size="sm"
@@ -187,13 +174,10 @@ export default function DomainExpertCountingSchedulePage() {
           ))}
         </section>
 
-        {/* Khung tạm */}
+        {/* DE-07: Khung tạm — tiêu đề + nút Thêm trên 1 dòng */}
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-h3 text-charcoal">{t('temporary.title')}</h3>
-              <p className="text-xs text-warmGray">{t('temporary.hint', { max: MAX_TEMPORARY_WINDOWS })}</p>
-            </div>
+            <h3 className="text-h3 text-charcoal">{t('temporary.title')} <span className="text-xs font-normal text-warmGray">({schedule.temporary.length}/{MAX_TEMPORARY_WINDOWS})</span></h3>
             <Button
               variant="secondary"
               size="sm"
