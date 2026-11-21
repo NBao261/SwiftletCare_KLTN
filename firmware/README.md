@@ -35,6 +35,8 @@
 > - bản `esp32dev` vẫn tìm được broker trên laptop qua `npm run mdns` và vẫn có ô broker; mạng Wi-Fi không tới được broker thì trang AP mở lại để đổi Wi-Fi;
 > - board còn chạy 2.0.0 với backend mới: hiện `UNKNOWN`, không có cảnh báo `CONFIG_MISMATCH`.
 >
+> **2.3.2 (mức cảnh báo theo BR-15, G-32) — chưa thử trên board.** `SPEAKER_FAILURE` gửi mức `HIGH` thay vì `CRITICAL`. Backend từ G-32 tự đặt mức theo loại và bỏ qua trường `severity`, nên board còn chạy bản cũ vẫn ra cảnh báo `HIGH`; không cần kiểm gì thêm trên board ngoài các mục của 2.3.1.
+>
 > **2.3.1 (giờ chạy theo dòng, BR-45, G-22) — chưa thử trên board.** Heartbeat có `actuatorBaseline` `{misting, ventilation}` (A) của tải đã học xong; backend lưu vào `actuator_baseline` và chỉ cộng giờ chạy khi dòng trên 50 % mức đó. Thử trên board rev B2: sau lần học đầu, heartbeat có `actuatorBaseline`; rút dây bơm khi relay BẬT thì `relay_usage.misting.since_service_hours` không tăng.
 >
 > **2.3.0 (đo dòng tải G-13, THREAT-FR-014, BR-32) — chưa thử trên board, cần board rev B2 có ADS1115.** Đã làm 18/11/2026: `pio run -e esp32dev` và `pio run -e esp32prod` build được, `pio test -e native` 99/99 (`test_actuator_current`, `test_alert_queue`). Board không có ADS1115 (bo dev hiện tại) chạy như 2.2.0: log `[CURRENT] Không có ADS1115`, không gửi dòng. Còn phải thử trên board rev B2:
