@@ -1,44 +1,57 @@
 import {
-  BasketIcon, BirdIcon, BooksIcon, BuildingsIcon, CalendarBlankIcon, CalendarCheckIcon, ChartBarIcon, ChecksIcon,
-  ClipboardTextIcon, ClockCounterClockwiseIcon, CloudRainIcon, CpuIcon, CrosshairIcon, FileTextIcon,
-  HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, LightbulbIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon,
+  BasketIcon, BirdIcon, ChartBarIcon,
+  ClipboardTextIcon, ClockCounterClockwiseIcon, CpuIcon, CrosshairIcon, FileTextIcon,
+  HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon,
   WrenchIcon,
 } from '@phosphor-icons/react';
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 
-// Khung Domain Expert (FE_Design §12.5): Chuyên môn là màn quyết định, Vận hành trỏ tới trang Farm Owner chỉ đọc (Report 4 §5.4); cùng tên, icon với menu Farm Owner
+// Khung Domain Expert (FE_Design §12.5): Chuyên môn là màn quyết định, Vận hành trỏ tới trang Farm Owner chỉ đọc (Report 4 §5.4)
+// Menu: §3.2 todo-ui-layout-1120.md — 7 mục Chuyên môn (2 nhóm tab), 8 mục Vận hành thu gọn
 const menuSections: MenuSection[] = [
   {
     title: 'Chuyên môn',
     items: [
       { label: 'Hàng đợi việc', path: '/domain-expert/queue', icon: ClipboardTextIcon },
       { label: 'Kiểm chứng cảnh báo', path: '/domain-expert/alert-verdicts', icon: ShieldCheckIcon },
-      { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning', icon: SlidersHorizontalIcon },
-      { label: 'Lịch đếm chim', path: '/domain-expert/counting-schedule', icon: CalendarBlankIcon },
-      { label: 'Vòng đếm camera', path: '/domain-expert/counting-ring', icon: CrosshairIcon },
-      { label: 'Luật bù thời tiết', path: '/domain-expert/weather-rules', icon: CloudRainIcon },
-      { label: 'Duyệt & đề xuất', path: '/domain-expert/reviews', icon: ChecksIcon },
-      { label: 'Báo cáo & kết luận', path: '/domain-expert/reports', icon: FileTextIcon },
-      { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles', icon: BooksIcon },
+      {
+        label: 'Tham số điều khiển',
+        path: '/domain-expert/tuning',
+        icon: SlidersHorizontalIcon,
+        tabs: [
+          { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning' },
+          { label: 'Duyệt & đề xuất', path: '/domain-expert/reviews' },
+          { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles' },
+          { label: 'Bù thời tiết', path: '/domain-expert/weather-rules' },
+        ],
+      },
+      {
+        label: 'Đếm chim',
+        path: '/domain-expert/counting-schedule',
+        icon: CrosshairIcon,
+        tabs: [
+          { label: 'Lịch đếm', path: '/domain-expert/counting-schedule' },
+          { label: 'Vòng đếm', path: '/domain-expert/counting-ring' },
+        ],
+      },
       { label: 'Luật khuyến nghị', path: '/domain-expert/recommendation-rules', icon: LightbulbFilamentIcon },
+      { label: 'Báo cáo & kết luận', path: '/domain-expert/reports', icon: FileTextIcon },
       { label: 'Lịch sử quyết định', path: '/domain-expert/history', icon: ClockCounterClockwiseIcon },
     ],
   },
   {
     title: 'Vận hành (chỉ đọc)',
+    collapsible: true,
     items: [
       { label: 'Tổng quan', path: '/dashboard', icon: SquaresFourIcon },
-      { label: 'Giám sát đàn chim', path: '/vision', icon: BirdIcon },
-      { label: 'Sức khoẻ nhà yến', path: '/health', icon: HeartbeatIcon },
+      { label: 'Đàn chim', path: '/vision', icon: BirdIcon },
+      { label: 'Sức khoẻ', path: '/health', icon: HeartbeatIcon },
       { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
-      { label: 'Thiết bị & Cảm biến', path: '/devices', icon: CpuIcon },
-      { label: 'Phiếu công việc', path: '/work-orders', icon: WrenchIcon },
-      { label: 'Khuyến nghị', path: '/recommendations', icon: LightbulbIcon },
+      { label: 'Thiết bị', path: '/devices', icon: CpuIcon },
+      { label: 'Công việc', path: '/work-orders', icon: WrenchIcon },
       { label: 'Trang trại', path: '/farms', icon: HouseIcon },
-      { label: 'Tổng quan trang trại', path: '/overview', icon: BuildingsIcon },
-      { label: 'Thống kê sản lượng', path: '/harvests', icon: BasketIcon },
-      { label: 'Lịch bảo trì', path: '/maintenance', icon: CalendarCheckIcon },
+      { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
     ],
   },
 ];
