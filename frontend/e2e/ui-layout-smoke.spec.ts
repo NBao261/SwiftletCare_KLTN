@@ -46,7 +46,7 @@ test.describe('Bố cục trang chuyên gia & kỹ thuật viên (todo-ui-layout
     await setScope(page, { farmId, houseId: houseA });
     await page.goto('/domain-expert/weather-rules');
     await page.getByRole('button', { name: 'Thêm luật' }).click();
-    await expect(page.getByText('Chỉ số thời tiết')).toBeVisible();
+    await expect(page.getByText('Chỉ số thời tiết', { exact: true })).toBeVisible();
     expect(crashes, crashes.join('\n')).toHaveLength(0);
   });
 
