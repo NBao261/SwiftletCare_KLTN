@@ -40,10 +40,10 @@ function RssiBars({ rssi }: { rssi?: number }) {
   )
 }
 
-const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pulse?: boolean; blink?: boolean; accent: string }> = {
-  ONLINE:   { label: "Online",       cls: "bg-success/15 text-charcoal",     dot: "bg-success", pulse: true, accent: "bg-success" },
-  OFFLINE:  { label: "Mất kết nối",  cls: "bg-warmGray/15 text-graphite",    dot: "bg-warmGray", accent: "bg-warmGray/60" },
-  PENDING:  { label: "Chờ kết nối",  cls: "bg-climateOrange/15 text-charcoal", dot: "bg-climateOrange", pulse: true, accent: "bg-climateOrange/70" },
+const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pulse?: boolean; blink?: boolean }> = {
+  ONLINE:   { label: "Online",       cls: "bg-success/15 text-charcoal",     dot: "bg-success", pulse: true },
+  OFFLINE:  { label: "Mất kết nối",  cls: "bg-warmGray/15 text-graphite",    dot: "bg-warmGray" },
+  PENDING:  { label: "Chờ kết nối",  cls: "bg-climateOrange/15 text-charcoal", dot: "bg-climateOrange", pulse: true },
   // G-01: đã bỏ DEGRADED và ERROR — SRS 3.1.0 chỉ còn ACTIVE | OFFLINE | DECOMMISSIONED; PENDING cho giai đoạn chờ heartbeat đầu
 }
 
@@ -53,7 +53,7 @@ export default function DeviceListRow({
   onOpenAudio,
 }: DeviceListRowProps) {
   const isOnline = node.status === "ONLINE";
-  const badge = STATUS_BADGE[node.status] ?? { label: node.status, cls: "bg-stone text-charcoal", dot: "bg-warmGray", accent: "bg-transparent" };
+  const badge = STATUS_BADGE[node.status] ?? { label: node.status, cls: "bg-stone text-charcoal", dot: "bg-warmGray" };
 
   const hb = node.last_heartbeat ? new Date(node.last_heartbeat) : null
   const stale = hb ? Date.now() - hb.getTime() > STALE_HEARTBEAT_MS : false
@@ -63,7 +63,6 @@ export default function DeviceListRow({
       style={{ animationDelay: `${Math.min(index, 10) * 20}ms` }}
       className={`relative flex flex-col border-b last:border-b-0 border-warmGray/15 overflow-hidden animate-fade-in motion-reduce:animate-none transition-colors duration-200 ${isExpanded ? 'bg-stone/30' : 'bg-transparent hover:bg-stone/20'}`}
     >
-      <span aria-hidden className={`absolute inset-y-0 left-0 z-10 w-[3px] ${badge.accent}`} />
       <div
         className="group flex flex-col md:flex-row md:items-center gap-4 p-3 cursor-pointer"
         onClick={onToggleExpand}
