@@ -38,9 +38,9 @@ router.post('/days/:dayId/rating', assessorOnly, dayId,
 router.post('/days/:dayId/skip', assessorOnly, dayId, validate, healthDayController.skip)
 router.patch('/days/:dayId/rating/note', assessorOnly, dayId, body('note').isString().trim().isLength({ min: 1, max: 1000 }), validate, healthDayController.addNote)
 
-// EXPERT-FR-005 — báo cáo theo nhà (houseId | farmId); zoneId là kiểu cũ (báo cáo tuần theo Zone), giữ cho màn hiện có
+// EXPERT-FR-005 — báo cáo theo nhà (houseId | farmId)
 router.get('/', readers,
-  query('zoneId').optional().isMongoId(), query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),
+  query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),
   query('kind').optional().isIn(HOUSE_REPORT_KINDS),
   query('from').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
   query('to').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),

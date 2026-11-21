@@ -27,6 +27,8 @@
     "migrate:harvest-confirmed": "tsx src/scripts/migrate-harvest-confirmed.script.ts",
     "migrate:erd-fields": "tsx src/scripts/migrate-erd-fields.script.ts",
     "migrate:review-targets": "tsx src/scripts/migrate-review-targets.script.ts",
+    "migrate:quiet-hours-owner-only": "tsx src/scripts/migrate-quiet-hours-owner-only.script.ts",
+    "migrate:zone-reports": "tsx src/scripts/migrate-zone-reports.script.ts",
     "db:script": "tsx src/scripts/export-db-script.script.ts",
     "build": "tsc",
     "build:check": "tsc --noEmit",

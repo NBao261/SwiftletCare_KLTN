@@ -6,7 +6,8 @@ import { houseDailyCounts, vnDate, type HouseDayCounts } from '@/services/birdCo
 import { houseEnergyByMonth, totalEnergy } from '@/services/energy.service'
 import { openAlertCounts, simulatedHouses, type FarmHouse } from '@/services/farmOverview.service'
 import { isFlockDayComplete } from '@/services/healthAssessment.service'
-import { collectAlertSamples, opsRow } from '@/services/opsMetrics.service'
+import { collectAlertSamples, opsRow, siteCauseCounts } from '@/services/opsMetrics.service'
+import type { SiteCause } from '@/models/workOrder.model'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
 import { vnDayPeriod } from '@/utils/period.util'
 import type { CurrentUser } from '@/types'
@@ -36,6 +37,8 @@ export interface ComparisonRow {
   energy: { misting_kwh: number | null; ventilation_kwh: number | null }
   /** BR-44 — sản lượng (g) chu kỳ đã đóng gần nhất: tổng của chu kỳ đóng gần nhất ở mỗi tầng (chu kỳ là của tầng, BR-43) */
   last_cycle_yield_g: number | null
+  /** ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tìm thấy tại chỗ trong kỳ; không dùng để sắp xếp */
+  site_causes: Partial<Record<SiteCause, number>>
   /** SYSTEM-FR-004 — mọi thiết bị của nhà là thiết bị giả lập (cùng cách tính với tổng quan) */
   simulated: boolean
 }
@@ -108,12 +111,14 @@ async function houseRow(
     energy_kwh: energy.total_kwh,
     energy: { misting_kwh: energy.misting_kwh, ventilation_kwh: energy.ventilation_kwh },
     last_cycle_yield_g: lastYield,
+    site_causes: siteCauseCounts(samples.get(id) ?? []),
   }
 }
 
 /**
  * ANALYTICS-FR-016, BR-44 — so sánh các nhà của 1 farm trong [from, to): thời gian trong ngưỡng, tỷ lệ ngày GOOD, tỷ lệ
- * chim về trung bình, xu hướng đàn, số cảnh báo đã có và đang mở, MTTR, điện năng ước tính, sản lượng chu kỳ gần nhất.
+ * chim về trung bình, xu hướng đàn, số cảnh báo đã có và đang mở, MTTR, điện năng ước tính, sản lượng chu kỳ gần nhất,
+ * nguyên nhân tìm thấy tại chỗ theo loại (Report 3 4.2.16).
  * Sắp theo từng cột; không tính điểm tổng hay xếp hạng. Farm Owner và Domain Expert (đọc).
  */
 export async function getHouseComparison(

@@ -1,19 +1,27 @@
 import { Alert } from '@/models/alert.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
-import { WorkOrder } from '@/models/workOrder.model'
+import { WorkOrder, type SiteCause } from '@/models/workOrder.model'
 import { ESCALATION_MIN, ESCALATION_MS } from '@/services/alertRouting.service'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
 import { onTimeMaintenanceRate } from '@/services/maintenance.service'
 import type { CurrentUser } from '@/types'
 
-interface Sample { tta?: number; ttr?: number }
+/** `cause`: nguyên nhân tìm thấy tại chỗ (ALERT-FR-018), của Work Order nếu có, không thì của lần xác nhận cảnh báo */
+interface Sample { tta?: number; ttr?: number; cause?: SiteCause }
 
 const round1 = (ms: number) => Math.round(ms / 6_000) / 10
 const mean = (values: number[]) => (values.length ? round1(values.reduce((a, b) => a + b, 0) / values.length) : null)
 
 /** Một dòng chỉ số: số cảnh báo, MTTA, MTTR, % cảnh báo đã xác nhận mà xác nhận trong mục tiêu (phút) */
+/** ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tại chỗ, mỗi cảnh báo một lần; chỉ các nguyên nhân đã gặp */
+export function siteCauseCounts(samples: Sample[]): Partial<Record<SiteCause, number>> {
+  const counts: Partial<Record<SiteCause, number>> = {}
+  for (const { cause } of samples) if (cause) counts[cause] = (counts[cause] ?? 0) + 1
+  return counts
+}
+
 export function opsRow(samples: Sample[]) {
   const tta = samples.flatMap(s => (s.tta === undefined ? [] : [s.tta]))
   const ttr = samples.flatMap(s => (s.ttr === undefined ? [] : [s.ttr]))
@@ -68,10 +76,11 @@ export async function collectAlertSamples(farmId: unknown, houseIds: unknown[], 
     'expert_verdict.result': { $ne: 'REJECTED' },
     created_at: { $gte: from, $lt: to },
     $or: [{ house_id: { $in: houseIds } }, { zone_id: { $in: zones.map(z => z._id) } }],
-  }).select('house_id zone_id created_at acknowledged_at resolved_at routing').lean()
+  }).select('house_id zone_id created_at acknowledged_at resolved_at routing site_cause.cause').lean()
 
-  const closedAt = new Map((await WorkOrder.find({ alert_id: { $in: alerts.map(a => a._id) }, status: 'CLOSED' })
-    .select('alert_id closed_at').lean()).map(w => [String(w.alert_id), w.closed_at]))
+  const workOrders = await WorkOrder.find({ alert_id: { $in: alerts.map(a => a._id) } }).select('alert_id status closed_at cause').lean()
+  const closedAt = new Map(workOrders.filter(w => w.status === 'CLOSED').map(w => [String(w.alert_id), w.closed_at]))
+  const workOrderCause = new Map(workOrders.filter(w => w.cause).map(w => [String(w.alert_id), w.cause]))
 
   const byHouse = new Map<string, Sample[]>()
   const byTechnician = new Map<string, Sample[]>()
@@ -82,6 +91,8 @@ export async function collectAlertSamples(farmId: unknown, houseIds: unknown[], 
       ...(a.acknowledged_at && { tta: a.acknowledged_at.getTime() - a.created_at.getTime() }),
       ...(end && { ttr: end.getTime() - a.created_at.getTime() }),
     }
+    const cause = workOrderCause.get(String(a._id)) ?? a.site_cause?.cause
+    if (cause) sample.cause = cause
     all.push(sample)
     const houseId = a.house_id ? String(a.house_id) : houseOfZone.get(String(a.zone_id))
     if (houseId) byHouse.set(houseId, [...(byHouse.get(houseId) ?? []), sample])

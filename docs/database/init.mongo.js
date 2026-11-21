@@ -2718,52 +2718,6 @@ db.getCollection("workorders").createIndex({"assignee_id":1,"status":1})
 db.getCollection("workorders").createIndex({"plan_id":1,"status":1}, {"partialFilterExpression":{"plan_id":{"$exists":true}}})
 db.getCollection("workorders").createIndex({"alert_id":1}, {"unique":true,"partialFilterExpression":{"is_open":true,"alert_id":{"$exists":true}}})
 
-// ── zonehealthreports (model ZoneHealthReport) ──
-ensureCollection("zonehealthreports", {
-  "bsonType": "object",
-  "properties": {
-    "farm_id": {
-      "bsonType": "objectId"
-    },
-    "zone_id": {
-      "bsonType": "objectId"
-    },
-    "period_start": {
-      "bsonType": "date"
-    },
-    "period_end": {
-      "bsonType": "date"
-    },
-    "metrics": {},
-    "generated_at": {
-      "bsonType": ["date", "null"]
-    },
-    "expert_conclusion": {
-      "bsonType": ["object", "null"],
-      "properties": {
-        "text": {
-          "bsonType": "string"
-        },
-        "by": {
-          "bsonType": "objectId"
-        },
-        "at": {
-          "bsonType": "date"
-        },
-        "edited_at": {
-          "bsonType": ["date", "null"]
-        }
-      },
-      "required": ["text", "by", "at"]
-    },
-    "_id": {
-      "bsonType": ["objectId", "null"]
-    }
-  },
-  "required": ["farm_id", "zone_id", "period_start", "period_end", "metrics"]
-})
-db.getCollection("zonehealthreports").createIndex({"zone_id":1,"period_end":-1}, {"unique":true})
-
 // ── zones (model Zone) ──
 ensureCollection("zones", {
   "bsonType": "object",
