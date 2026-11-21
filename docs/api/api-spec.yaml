@@ -4067,7 +4067,7 @@ paths:
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
-        - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của cả nhà yến (camera đếm chim)" }
+        - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của một nhà yến: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà (ALERT-FR-007)" }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
         - name: verdict
           in: query
