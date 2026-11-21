@@ -56,16 +56,17 @@
 
 ## 0. Changelog
 
-### v2.14.0 → v2.15.0 (bố cục Farm Technician và Admin, `docs/reports/todo-ui-layout-1120.md` §3.3, §3.4)
+### v2.14.0 → v2.15.0 (bố cục Farm Technician, Admin và Chuyên gia, `docs/reports/todo-ui-layout-1120.md` §3.2, §3.3, §3.4)
 
 | # | Thay đổi |
 |---|---|
 | 1 | **Mục menu có tab.** `MenuItem.tabs` (`{ label, path }[]`) gộp nhiều trang vào một mục menu: sidebar sáng mục đó ở mọi trang con, header lấy tên mục làm tên trang, `common/SectionTabs` vẽ hàng tab pill trên nội dung (lọc bằng `canAccessPath`). Route cũ giữ nguyên. Ngoại lệ thứ ba của vùng đóng băng 4.1. Admin: Người dùng = Tài khoản (`/users`) + Yêu cầu xoá tài khoản (`/account-requests`). |
 | 2 | **Bảng:** `FixedRowsTable` và `DataTable minRows` chỉ đệm dòng trống khi có từ 2 trang trở lên; 1 trang thì bảng cao vừa dữ liệu, bảng rỗng cao 4 dòng. Bỏ cột STT (giữ ở Nhật ký hệ thống, nơi thứ tự có nghĩa). |
 | 3 | **Một card một trang thì card không lặp tên trang:** `SectionCard` cho bỏ `title`, chỉ còn dòng mô tả (Cảnh báo, Kho thiết bị, OTA Firmware, Yêu cầu xoá tài khoản). Trang OTA vào khung `SectionCard` như các trang Admin khác. |
-| 4 | **Farm Technician:** menu Cảnh báo · Thiết bị & Cảm biến · Nhà được giao · Cài đặt, trang chủ là `/alerts` (MF-02). Trang Thiết bị dùng khung lọc `ScopeFilter` trên header như trang Farm Owner (bỏ card "Vị trí:"); trang Nhà được giao mở Thiết bị đã lọc đúng nhà qua `zoneStore.setScopePath`, không đưa mã vào URL. |
+| 4 | **Farm Technician:** menu Cảnh báo (trang chủ `/alerts`, MF-02) · Thiết bị & Cảm biến · Nhà được giao; Cài đặt tạm giữ lại tới khi menu avatar (SH-02/SH-03) hoàn tất trên mobile. Trang Thiết bị dùng khung lọc `ScopeFilter` trên header như trang Farm Owner (bỏ card "Vị trí:"); trang Nhà được giao mở Thiết bị đã lọc đúng nhà qua `zoneStore.setScopePath`, không đưa mã vào URL. |
 | 5 | **Bảng thuật ngữ 6.2 viết lại** (người · thiết bị · chuyên môn, có cột "Không dùng") và **mục mới 6.4 Cách viết chữ tiếng Việt**: dấu kiểu mới (khoẻ, xoá, huỷ), "tỷ lệ", Chủ nhà yến, Kỹ thuật viên, Zone viết hoa, Bộ điều khiển, Camera đếm chim (thay "Nút AI"), Mất kết nối (thay Offline), Kết nối cuối (thay heartbeat), Kiểm chứng cảnh báo và Kết luận (thay thẩm định, phán quyết), Điều khiển tay (thay SCADA); không gạch dài nối câu, không "Vui lòng", không tên kỹ thuật. Sửa toàn bộ chữ hiển thị của web (khoảng 550 chuỗi, khoá `en.ts` đổi theo, tên loại cảnh báo viết lại). |
 | 6 | **Kiểm tự động thuật ngữ:** `src/i18n/wording.test.ts` quét mọi chuỗi tiếng Việt trong `src` (trừ test) và báo chữ thuộc cột "Không dùng" của 6.2. |
+| 7 | **Domain Expert (todo-ui-layout §3.2, DE-01…DE-11):** Chuyên môn 7 mục nhờ tab gộp: Tham số điều khiển (Ngưỡng/hệ số, Duyệt & đề xuất, Hồ sơ, Luật bù thời tiết) và Đếm chim (Lịch đếm, Vòng đếm camera); Vận hành (chỉ đọc) thu gọn mặc định, giữ `/overview` tới khi FO-11 merge; bỏ banner SCADA và thay dải nhắc quyền bằng `ExpertReadOnlyBadge`. |
 
 ### v2.13.0 → v2.14.0 (soát lại sau PR #197, G-29, `todo-audit-1119.md` §9)
 

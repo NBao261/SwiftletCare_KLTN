@@ -1,14 +1,15 @@
 import {
-  BasketIcon, BirdIcon, CalendarCheckIcon, ChartBarIcon,
+  BasketIcon, BirdIcon, BuildingsIcon, CalendarCheckIcon, ChartBarIcon,
   ClipboardTextIcon, ClockCounterClockwiseIcon, CpuIcon, CrosshairIcon,
   FileTextIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, LightbulbIcon, ShieldCheckIcon,
   SlidersHorizontalIcon, SquaresFourIcon, WrenchIcon,
-} from '@phosphor-icons/react'
-import AppShell from '@/components/layouts/AppShell'
-import { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
+} from '@phosphor-icons/react';
+import AppShell from '@/components/layouts/AppShell';
+import { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar';
 
 // Khung Domain Expert (FE_Design §12.5, todo-ui-layout §3.2):
-// Chuyên môn 7 mục (tab gộp Tham số điều khiển + Đếm chim), Vận hành (chỉ đọc) 8 mục — thu gọn mặc định (sau C-08)
+// Chuyên môn 7 mục (tab gộp Tham số điều khiển + Đếm chim), Vận hành (chỉ đọc) 9 mục — thu gọn mặc định (sau C-08)
+// Tạm giữ "Tổng quan trang trại" (/overview) cho tới khi FO-11 và C-05 merge vào develop.
 const menuSections: MenuSection[] = [
   {
     title: 'Chuyên môn',
@@ -51,11 +52,12 @@ const menuSections: MenuSection[] = [
       { label: 'Phiếu công việc', path: '/work-orders', icon: WrenchIcon },
       { label: 'Khuyến nghị', path: '/recommendations', icon: LightbulbIcon },
       { label: 'Trang trại', path: '/farms', icon: HouseIcon },
+      { label: 'Tổng quan trang trại', path: '/overview', icon: BuildingsIcon },
       { label: 'Thống kê sản lượng', path: '/harvests', icon: BasketIcon },
       { label: 'Lịch bảo trì', path: '/maintenance', icon: CalendarCheckIcon },
     ],
   },
-]
+];
 
 // Dock: §3.2 — Hàng đợi · Kiểm chứng · Tham số · Đếm chim
 const dockItems: MenuItem[] = [
@@ -63,8 +65,8 @@ const dockItems: MenuItem[] = [
   menuSections[0].items[1],
   menuSections[0].items[2],
   menuSections[0].items[3],
-]
+];
 
 export default function DomainExpertLayout() {
-  return <AppShell menuSections={menuSections} dockItems={dockItems} />
+  return <AppShell menuSections={menuSections} dockItems={dockItems} />;
 }

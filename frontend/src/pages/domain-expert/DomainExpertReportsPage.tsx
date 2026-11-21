@@ -22,17 +22,22 @@ export default function DomainExpertReportsPage() {
   const { canDecide: canReviewDisagreements } = useExpertDecisionRights();
 
   const rawTab = searchParams.get('tab');
-  const activeTab: ReportsPageTab =
-    rawTab === 'disagreements' && canReviewDisagreements ? 'disagreements'
-    : rawTab === 'harvest-cycles' ? 'harvest-cycles'
-    : 'reports';
+  let activeTab: ReportsPageTab = 'reports';
+  if (rawTab === 'disagreements' && canReviewDisagreements) {
+    activeTab = 'disagreements';
+  } else if (rawTab === 'harvest-cycles') {
+    activeTab = 'harvest-cycles';
+  }
 
   const setTab = (tab: ReportsPageTab) => {
     setSearchParams(
       prev => {
         const next = new URLSearchParams(prev);
-        if (tab === 'reports') next.delete('tab');
-        else next.set('tab', tab);
+        if (tab === 'reports') {
+          next.delete('tab');
+        } else {
+          next.set('tab', tab);
+        }
         return next;
       },
       { replace: true },
@@ -50,8 +55,42 @@ export default function DomainExpertReportsPage() {
 
   // Báo cáo theo nhà đang chọn, không chọn nhà thì cả farm
   let reportScope: { houseId?: string; farmId?: string } | null = null;
-  if (house) reportScope = { houseId: house._id };
-  else if (selectedFarmId) reportScope = { farmId: selectedFarmId };
+  if (house) {
+    reportScope = { houseId: house._id };
+  } else if (selectedFarmId) {
+    reportScope = { farmId: selectedFarmId };
+  }
+
+  function getTabDescription(tab: ReportsPageTab): string {
+    if (tab === 'reports') {
+      return i18nT('Viết kết luận gửi Chủ nhà yến');
+    }
+    if (tab === 'harvest-cycles') {
+      return i18nT('Kết luận chu kỳ thu hoạch đã đóng');
+    }
+    return i18nT('Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống');
+  }
+
+  function renderTabContent() {
+    if (activeTab === 'reports') {
+      return (
+        <HealthReportSection
+          scope={reportScope}
+          house={house ? { id: house._id, name: house.name } : null}
+        />
+      );
+    }
+    if (activeTab === 'harvest-cycles') {
+      return <HarvestCyclesSection scope={reportScope} />;
+    }
+    return (
+      <DisagreementsSection
+        farmId={selectedFarmId ?? ''}
+        farmName={selectedFarmName ?? ''}
+        houseId={selectedHouseId ?? ''}
+      />
+    );
+  }
 
   return (
     <div className="relative z-10 w-full flex-1 flex flex-col gap-5">
@@ -83,9 +122,9 @@ export default function DomainExpertReportsPage() {
                   : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              {i18nT('Ngày lệch & Mức chỉ số')}
+              {i18nT('Ngày lệch')}
               {disagreeingDaysCount > 0 && (
-                <span className="rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-alertRed px-1.5 text-micro font-bold text-white">
                   {disagreeingDaysCount}
                 </span>
               )}
@@ -106,21 +145,11 @@ export default function DomainExpertReportsPage() {
             </button>
           </nav>
           <span className="text-xs text-warmGray">
-            {activeTab === 'reports'
-              ? i18nT('Viết kết luận gửi Chủ nhà yến')
-              : activeTab === 'harvest-cycles'
-              ? i18nT('Kết luận chu kỳ thu hoạch đã đóng')
-              : i18nT('Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống')}
+            {getTabDescription(activeTab)}
           </span>
         </div>
 
-        {activeTab === 'reports' ? (
-          <HealthReportSection scope={reportScope} house={house ? { id: house._id, name: house.name } : null} />
-        ) : activeTab === 'harvest-cycles' ? (
-          <HarvestCyclesSection scope={reportScope} />
-        ) : (
-          <DisagreementsSection farmId={selectedFarmId ?? ''} farmName={selectedFarmName ?? ''} houseId={selectedHouseId ?? ''} />
-        )}
+        {renderTabContent()}
       </div>
     </div>
   );

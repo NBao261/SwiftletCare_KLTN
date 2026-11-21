@@ -1,29 +1,29 @@
 // ENV-FR-028…030, BR-38: Chuyên gia đặt tối đa 10 luật cho từng nhà (Farm Owner khi không có chuyên gia, BR-22)
-import { useState, useEffect } from 'react'
-import { CloudRain, Info, Plus, Zap, AlertTriangle } from 'lucide-react'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { Button } from '@/components/ui/Button'
-import EmptyState from '@/components/ui/EmptyState'
-import { Modal } from '@/components/ui/Modal'
-import SectionCard from '@/components/ui/SectionCard'
-import { useZoneStore } from '@/stores/zoneStore'
-import { useToastStore } from '@/stores/toastStore'
-import { useWeatherRules, useUpdateWeatherRules } from '@/hooks/domain-expert/useWeatherRules'
-import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
-import type { WeatherRule } from '@/types/expert.types'
-import WeatherRuleRow from '@/components/features/domain-expert/weather/WeatherRuleRow'
-import WeatherRuleAddForm from '@/components/features/domain-expert/weather/WeatherRuleAddForm'
-import { formatDate } from '@/lib/helpers'
-import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
-import { t } from '@/i18n'
+import { useState, useEffect } from 'react';
+import { CloudRain, Info, Plus, Zap, AlertTriangle } from 'lucide-react';
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
+import { Button } from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import { Modal } from '@/components/ui/Modal';
+import SectionCard from '@/components/ui/SectionCard';
+import { useZoneStore } from '@/stores/zoneStore';
+import { useToastStore } from '@/stores/toastStore';
+import { useWeatherRules, useUpdateWeatherRules } from '@/hooks/domain-expert/useWeatherRules';
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import type { WeatherRule } from '@/types/expert.types';
+import WeatherRuleRow from '@/components/features/domain-expert/weather/WeatherRuleRow';
+import WeatherRuleAddForm from '@/components/features/domain-expert/weather/WeatherRuleAddForm';
+import { formatDate } from '@/lib/helpers';
+import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
+import { t } from '@/i18n';
 
-const MAX_RULES = 10
+const MAX_RULES = 10;
 
 function LastCompensationBadge({ data }: {
-  data: NonNullable<import('@/types/expert.types').WeatherRulesResponse['last_compensation']>
+  data: NonNullable<import('@/types/expert.types').WeatherRulesResponse['last_compensation']>;
 }) {
-  const sign = data.offset_pct > 0 ? '+' : ''
-  const forecast = data.forecast
+  const sign = data.offset_pct > 0 ? '+' : '';
+  const forecast = data.forecast;
   return (
     <div className="flex flex-wrap items-start gap-3 p-3.5 rounded-2xl bg-infoBlue/5 border border-infoBlue/20 text-sm">
       <Zap className="w-4 h-4 text-infoBlue shrink-0 mt-0.5" />
@@ -40,86 +40,86 @@ function LastCompensationBadge({ data }: {
         </p>
       </div>
     </div>
-  )
+  );
 }
 
 export default function DomainExpertWeatherRulesPage() {
-  const { canDecide } = useExpertDecisionRights()
-  const { selectedHouseId } = useZoneStore()
-  const { data, isLoading, isError } = useWeatherRules(selectedHouseId ?? undefined)
-  const mutation = useUpdateWeatherRules(selectedHouseId ?? undefined)
-  const getErrorMessage = useApiErrorMessage()
-  const pushToast = useToastStore(state => state.push)
+  const { canDecide } = useExpertDecisionRights();
+  const { selectedHouseId } = useZoneStore();
+  const { data, isLoading, isError } = useWeatherRules(selectedHouseId ?? undefined);
+  const mutation = useUpdateWeatherRules(selectedHouseId ?? undefined);
+  const getErrorMessage = useApiErrorMessage();
+  const pushToast = useToastStore(state => state.push);
 
-  const [localRules, setLocalRules] = useState<WeatherRule[] | null>(null)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [localRules, setLocalRules] = useState<WeatherRule[] | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   useEffect(() => {
-    setLocalRules(null)
-    setSaveError(null)
-  }, [selectedHouseId])
+    setLocalRules(null);
+    setSaveError(null);
+  }, [selectedHouseId]);
 
-  const rules: WeatherRule[] = localRules ?? data?.rules ?? []
-  const isDirty = localRules !== null
+  const rules: WeatherRule[] = localRules ?? data?.rules ?? [];
+  const isDirty = localRules !== null;
 
   function handleAdd(rule: WeatherRule) {
-    setLocalRules(currentRules => [...(currentRules ?? data?.rules ?? []), rule])
+    setLocalRules(currentRules => [...(currentRules ?? data?.rules ?? []), rule]);
   }
 
   function handleRemove(index: number) {
     setLocalRules(currentRules => {
-      const base = currentRules ?? data?.rules ?? []
-      return base.filter((_, position) => position !== index)
-    })
+      const base = currentRules ?? data?.rules ?? [];
+      return base.filter((_, position) => position !== index);
+    });
   }
 
   function handleToggle(index: number) {
     setLocalRules(currentRules => {
-      const base = currentRules ?? data?.rules ?? []
-      return base.map((rule, position) => position === index ? { ...rule, active: !rule.active } : rule)
-    })
+      const base = currentRules ?? data?.rules ?? [];
+      return base.map((rule, position) => position === index ? { ...rule, active: !rule.active } : rule);
+    });
   }
 
   async function handleSave() {
-    setSaveError(null)
+    setSaveError(null);
     try {
-      await mutation.mutateAsync(rules)
-      setLocalRules(null)
-      pushToast('Đã lưu luật bù thời tiết.', 'success')
+      await mutation.mutateAsync(rules);
+      setLocalRules(null);
+      pushToast('Đã lưu luật bù thời tiết.', 'success');
     } catch (error) {
-      setSaveError(getErrorMessage(error))
+      setSaveError(getErrorMessage(error));
     }
   }
 
   function handleDiscard() {
-    setLocalRules(null)
-    setSaveError(null)
+    setLocalRules(null);
+    setSaveError(null);
   }
 
   function renderLastCompensation() {
-    if (isLoading) return <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />
-    if (isError) return null
-    if (data?.last_compensation) return <LastCompensationBadge data={data.last_compensation} />
+    if (isLoading) return <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />;
+    if (isError) return null;
+    if (data?.last_compensation) return <LastCompensationBadge data={data.last_compensation} />;
     // Không hiện hộp "chưa có bù" khi chưa có luật nào — EmptyState bên dưới đã đủ
-    if (!rules.length) return null
+    if (!rules.length) return null;
     return (
       <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
         <Info className="w-4 h-4 shrink-0" />
         <span>{t('Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).')}</span>
       </div>
-    )
+    );
   }
 
   function renderRulesList() {
-    if (isLoading) return <LoadingSkeleton count={3} className="h-12 w-full rounded-2xl" />
+    if (isLoading) return <LoadingSkeleton count={3} className="h-12 w-full rounded-2xl" />;
     if (rules.length === 0) {
       return (
         <EmptyState
           icon={<CloudRain className="w-8 h-8" />}
           title={t('Chưa có luật nào.')}
         />
-      )
+      );
     }
     return (
       <div className="space-y-1.5">
@@ -133,7 +133,26 @@ export default function DomainExpertWeatherRulesPage() {
           />
         ))}
       </div>
-    )
+    );
+  }
+
+  function renderSectionAction() {
+    if (isLoading || isError || !canDecide) {
+      return undefined;
+    }
+    if (rules.length >= MAX_RULES) {
+      return (
+        <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
+          {t('Đã đạt tối đa 10 luật')}
+        </span>
+      );
+    }
+    return (
+      <Button size="sm" onClick={() => setAddModalOpen(true)} disabled={mutation.isPending}>
+        <Plus className="w-3.5 h-3.5" />
+        {t('Thêm luật')}
+      </Button>
+    );
   }
 
   if (!selectedHouseId) {
@@ -142,7 +161,7 @@ export default function DomainExpertWeatherRulesPage() {
         icon={<CloudRain className="w-8 h-8" />}
         title={t('Chọn nhà yến ở thanh trên để xem luật bù thời tiết')}
       />
-    )
+    );
   }
 
   return (
@@ -153,18 +172,7 @@ export default function DomainExpertWeatherRulesPage() {
         icon={<CloudRain className="w-5 h-5" />}
         title={t('Luật bù phun sương theo thời tiết')}
         description={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
-        action={!isLoading ? (
-          rules.length >= MAX_RULES ? (
-            <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
-              {t('Đã đạt tối đa 10 luật')}
-            </span>
-          ) : canDecide ? (
-            <Button size="sm" onClick={() => setAddModalOpen(true)} disabled={mutation.isPending}>
-              <Plus className="w-3.5 h-3.5" />
-              {t('Thêm luật')}
-            </Button>
-          ) : undefined
-        ) : undefined}
+        action={renderSectionAction()}
       >
         <div className="space-y-4">
           {/* Lỗi tải dữ liệu */}
@@ -194,7 +202,10 @@ export default function DomainExpertWeatherRulesPage() {
       {canDecide && !isError && !isLoading && rules.length < MAX_RULES && (
         <Modal open={addModalOpen} onClose={() => setAddModalOpen(false)} title={t('Thêm luật mới')} size="lg">
           <WeatherRuleAddForm
-            onAdd={rule => { handleAdd(rule); setAddModalOpen(false) }}
+            onAdd={(newRule: WeatherRule) => {
+              handleAdd(newRule);
+              setAddModalOpen(false);
+            }}
             disabled={mutation.isPending}
           />
         </Modal>
@@ -224,5 +235,5 @@ export default function DomainExpertWeatherRulesPage() {
       )}
     </div>
     </fieldset>
-  )
+  );
 }
