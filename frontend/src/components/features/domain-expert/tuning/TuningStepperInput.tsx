@@ -63,7 +63,7 @@ export default function TuningStepperInput({
           disabled={atMin}
           aria-label={t('Giảm {{label}}', { label })}
           className={cn(
-            'w-7 h-7 rounded-lg text-base font-bold transition-colors duration-100 select-none',
+            'h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold transition-colors duration-100 select-none',
             atMin
               ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed'
               : 'bg-neutral-100 text-[#27231F] hover:bg-neutral-200 active:scale-95',
@@ -86,7 +86,7 @@ export default function TuningStepperInput({
           disabled={atMax}
           aria-label={t('Tăng {{label}}', { label })}
           className={cn(
-            'w-7 h-7 rounded-lg text-base font-bold transition-colors duration-100 select-none',
+            'h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold transition-colors duration-100 select-none',
             atMax
               ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed'
               : 'bg-neutral-100 text-[#27231F] hover:bg-neutral-200 active:scale-95',
