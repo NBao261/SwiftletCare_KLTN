@@ -540,6 +540,23 @@ export async function cancelWorkOrder(id: string, user: CurrentUser, reason: str
 }
 
 /**
+ * FARM-FR-002 — nhà hoặc Zone bị xoá: mọi Work Order chưa đóng của nó (cả phòng ngừa) bị huỷ có lý do, vì không còn
+ * nơi để làm hay để kiểm phục hồi. Trả về số Work Order đã huỷ.
+ */
+export async function cancelWorkOrdersOfPlace(
+  place: { house_id: Types.ObjectId } | { zone_id: Types.ObjectId }, user: CurrentUser, reason: string,
+): Promise<number> {
+  const pending = await WorkOrder.find({ ...place, is_open: true })
+  let cancelled = 0
+  for (const wo of pending) {
+    const updated = await transition(wo, OPEN_WORK_ORDER_STATUSES, 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
+    await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason })
+    cancelled++
+  }
+  return cancelled
+}
+
+/**
  * SM-20 — kế hoạch bảo trì bị xoá: Work Order phòng ngừa chưa làm xong (OPEN, IN_PROGRESS) của nó bị huỷ; cái đã báo
  * xong (AWAITING_APPROVAL) vẫn chờ Farm Owner duyệt như một lần ghi bảo trì. Trả về số Work Order đã huỷ.
  */

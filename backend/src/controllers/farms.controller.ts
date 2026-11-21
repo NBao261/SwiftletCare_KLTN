@@ -105,6 +105,30 @@ export const createZone = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data: zone })
 })
 
+/** PUT /farms/houses/:houseId – FARM-FR-002 */
+export const updateHouse = asyncHandler(async (req: Request, res: Response) => {
+  const house = await farmService.updateHouse(req.params.houseId, req.user, req.body)
+  res.json({ success: true, data: house })
+})
+
+/** DELETE /farms/houses/:houseId – FARM-FR-002 */
+export const deleteHouse = asyncHandler(async (req: Request, res: Response) => {
+  await farmService.deleteHouse(req.params.houseId, req.user)
+  res.json({ success: true })
+})
+
+/** PUT /farms/zones/:zoneId – FARM-FR-002 */
+export const updateZone = asyncHandler(async (req: Request, res: Response) => {
+  const zone = await farmService.updateZone(req.params.zoneId, req.user, req.body)
+  res.json({ success: true, data: zone })
+})
+
+/** DELETE /farms/zones/:zoneId – FARM-FR-002 */
+export const deleteZone = asyncHandler(async (req: Request, res: Response) => {
+  await farmService.deleteZone(req.params.zoneId, req.user)
+  res.json({ success: true })
+})
+
 /** PUT /farms/houses/:houseId/technicians/:userId – AUTH-FR-013 */
 export const assignTechnician = asyncHandler(async (req: Request, res: Response) => {
   const house = await farmService.assignTechnician(req.params.houseId, req.user, req.params.userId, req.body?.primary === true)

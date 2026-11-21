@@ -49,6 +49,11 @@ router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
   validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
+// FARM-FR-002 — sửa, xoá mềm nhà (chỉ Farm Owner); còn thiết bị đang dùng thì 409, service kiểm số tầng (400)
+router.put   ('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule().optional(),
+  body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
+  body('description').optional().isString().isLength({ max: 1000 }), validate, farmController.updateHouse)
+router.delete('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), validate, farmController.deleteHouse)
 
 // ANALYTICS-FR-015, 016 — tổng quan trại và so sánh nhà: Farm Owner, Domain Expert đọc (Report 3 §2.4); thợ và Admin không
 // YYYY-MM-DD (đầu ngày giờ VN) hoặc ngày giờ ISO có múi giờ; dạng khác (2026-11, giờ không múi giờ) → 422
@@ -112,6 +117,10 @@ router.post('/houses/:houseId/zones',    requireRole('FARM_OWNER'), param('house
   validate, farmController.createZone)
 router.get ('/houses/:houseId/zones',    param('houseId').isMongoId(), validate, farmController.listZones)
 router.get ('/zones/:zoneId',            param('zoneId').isMongoId(), validate, farmController.getZone)
+// FARM-FR-002 — sửa, xoá mềm Zone (chỉ Farm Owner); tầng không vượt số tầng của nhà (service, 400)
+router.put   ('/zones/:zoneId', requireRole('FARM_OWNER'), param('zoneId').isMongoId(), nameRule().optional(),
+  body('floor').optional().isInt({ min: 1 }).withMessage('Tầng là số nguyên từ 1').toInt(), validate, farmController.updateZone)
+router.delete('/zones/:zoneId', requireRole('FARM_OWNER'), param('zoneId').isMongoId(), validate, farmController.deleteZone)
 // Ngưỡng và hệ số mờ: Farm Owner và Domain Expert của farm (ENV-FR-006, 020, 021); Technician, Admin không
 router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateThresholds)
 // ENV-FR-020 — reset về ngưỡng mặc định hệ thống do Admin cấu hình (system_settings, SYSTEM-FR-002)
