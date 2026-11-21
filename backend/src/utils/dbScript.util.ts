@@ -31,7 +31,6 @@ import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import { WorkOrder } from '@/models/workOrder.model'
-import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 import { WeatherCompensation } from '@/models/weatherCompensation.model'
 import { ConfigProfile } from '@/models/configProfile.model'
 import { Recommendation } from '@/models/recommendation.model'
@@ -48,7 +47,6 @@ export const ALL_MODELS: AnyModel[] = [
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
   Farm, HarvestBatch, HarvestCycle, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, MaintenancePlan, Notification, ParameterReview,
   PushToken, ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, WorkOrder,
-  ZoneHealthReport,
 ]
 
 export interface JsonSchemaNode {

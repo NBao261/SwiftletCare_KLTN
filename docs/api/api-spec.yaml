@@ -375,6 +375,7 @@ paths:
           }
         "400": { description: "Cảnh báo CRITICAL không còn kênh ngoài ứng dụng nào (ALERT-FR-005)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "Report 3 §2.4: Domain Expert và Administrator chỉ nhận thông báo trong ứng dụng nên không chọn kênh; Farm Technician chọn kênh nhưng không đặt giờ im lặng (chỉ Farm Owner, ALERT-FR-006)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /auth/telegram/link:
@@ -5736,12 +5737,10 @@ paths:
         đánh giá ngày đi cùng lúc; báo cáo theo yêu cầu không báo. Mới nhất trước. Danh sách chỉ có phần tóm tắt (không có `zone_sections`,
         `days`).
 
-        **Kiểu cũ, vẫn chạy (`deprecated`):** gọi với `zoneId` (không có `houseId`/`farmId`) trả báo cáo tuần
-        theo Zone (`ZoneHealthReport`) đúng như trước — collection và job tuần cũ giữ nguyên cho các màn hiện
-        có. Khi màn báo cáo theo nhà thay thế: chuyển báo cáo cũ sang `WEEKLY` theo nhà và bỏ kiểu cũ.
+        Báo cáo tuần theo Zone kiểu cũ đã được chuyển vào báo cáo nhà `WEEKLY` cùng kỳ (`npm run migrate:zone-reports`,
+        G-32) và không còn tham số `zoneId`.
       parameters:
-        - { name: zoneId, in: query, deprecated: true, schema: { type: string }, description: "Kiểu cũ: báo cáo tuần của 1 Zone, trả ZoneHealthReport" }
-        - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId (hoặc zoneId kiểu cũ) là bắt buộc (400 nếu thiếu)" }
+        - { name: houseId, in: query, schema: { type: string }, description: "Một trong houseId, farmId là bắt buộc (400 nếu thiếu)" }
         - { name: farmId, in: query, schema: { type: string }, description: "Mọi nhà của farm; Farm Technician: chỉ các nhà được giao" }
         - { name: kind, in: query, schema: { type: string, enum: [DAILY, WEEKLY, MONTHLY, CUSTOM] } }
         - { name: from, in: query, schema: { type: string, format: date }, description: "'YYYY-MM-DD' giờ VN — báo cáo có kỳ kết thúc từ ngày này" }
@@ -5760,11 +5759,7 @@ paths:
                   - properties:
                       data:
                         type: array
-                        items:
-                          oneOf:
-                            - $ref: "#/components/schemas/HouseHealthReportSummary"
-                            - $ref: "#/components/schemas/ZoneHealthReport"
-                        description: "HouseHealthReportSummary; ZoneHealthReport khi gọi với zoneId (kiểu cũ)"
+                        items: { $ref: "#/components/schemas/HouseHealthReportSummary" }
                       meta:
                         type: object
                         properties: { page: { type: integer }, limit: { type: integer }, total: { type: integer } }
@@ -6049,11 +6044,7 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
-                      data:
-                        oneOf:
-                          - $ref: "#/components/schemas/HouseHealthReport"
-                          - $ref: "#/components/schemas/ZoneHealthReport"
-                        description: "ZoneHealthReport khi id là báo cáo tuần theo Zone cũ"
+                      data: { $ref: "#/components/schemas/HouseHealthReport" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -6086,10 +6077,7 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties:
-                      data:
-                        oneOf:
-                          - $ref: "#/components/schemas/HouseHealthReport"
-                          - $ref: "#/components/schemas/ZoneHealthReport"
+                      data: { $ref: "#/components/schemas/HouseHealthReport" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -6886,6 +6874,7 @@ components:
         energy_kwh: { type: number, nullable: true, description: "Ước tính (BR-45); null = not available" }
         energy: { type: object, properties: { misting_kwh: { type: number, nullable: true }, ventilation_kwh: { type: number, nullable: true } } }
         last_cycle_yield_g: { type: number, nullable: true, description: "BR-44 — sản lượng (g) chu kỳ đã đóng gần nhất: tổng của chu kỳ CLOSED hoặc CONCLUDED mới nhất ở mỗi tầng của nhà (chu kỳ là của tầng, BR-43); null khi nhà chưa có chu kỳ đóng" }
+        site_causes: { type: object, additionalProperties: { type: integer, minimum: 1 }, description: "ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tìm thấy tại chỗ (WATER, NOZZLE, PUMP, FAN, DOOR, SENSOR, SPEAKER, OTHER) trong kỳ, mỗi cảnh báo một lần, nguyên nhân của Work Order thắng nguyên nhân lúc xác nhận; chỉ có các nguyên nhân đã gặp; không dùng để sắp xếp" }
         simulated: { type: boolean, description: "Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004), cùng cách tính với tổng quan" }
     EnergyMonth:
       type: object
@@ -7511,41 +7500,6 @@ components:
               snapshot_status: { type: string, enum: [GOOD, WATCH, ACTION, INSUFFICIENT_DATA] }
               rating: { type: string, enum: [GOOD, WATCH, ACTION] }
               counted: { type: boolean, description: "false khi ảnh chụp là INSUFFICIENT_DATA" }
-
-    ZoneHealthReport:
-      type: object
-      deprecated: true
-      description: "(Kiểu cũ) EXPERT-FR-005/006 — số liệu sức khỏe của 1 Zone trong 1 kỳ + kết luận của Domain Expert. Trả bởi GET /health-reports?zoneId; báo cáo theo nhà dùng HouseHealthReport"
-      properties:
-        _id: { type: string }
-        farm_id: { type: string }
-        zone_id: { type: string }
-        period_start: { type: string, format: date-time }
-        period_end: { type: string, format: date-time }
-        generated_at: { type: string, format: date-time }
-        metrics:
-          type: object
-          properties:
-            sample_count: { type: integer }
-            temp_in_range_pct: { type: number, nullable: true }
-            humidity_in_range_pct: { type: number, nullable: true }
-            auto_mode_pct: { type: number, nullable: true, description: "ANALYTICS-FR-011" }
-            misting_switches: { type: integer }
-            ventilation_switches: { type: integer }
-            alerts_by_type: { type: object, additionalProperties: { type: integer }, description: "{ <AlertType>: số cảnh báo phát sinh trong kỳ }" }
-            avg_return_rate: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong kỳ; null khi chưa có dữ liệu đếm chim" }
-            nh3_avg: { type: number, nullable: true }
-            nh3_max: { type: number, nullable: true }
-            co2_avg: { type: number, nullable: true }
-            co2_max: { type: number, nullable: true }
-        expert_conclusion:
-          type: object
-          nullable: true
-          properties:
-            text: { type: string }
-            by: { type: object, properties: { _id: { type: string }, full_name: { type: string } } }
-            at: { type: string, format: date-time, description: "Lúc viết kết luận lần đầu" }
-            edited_at: { type: string, format: date-time, nullable: true, description: "Lần sửa gần nhất của tác giả (EXPERT-FR-006)" }
 
     HouseHealthReportSummary:
       type: object

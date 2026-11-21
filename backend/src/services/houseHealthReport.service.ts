@@ -5,13 +5,12 @@ import {
 } from '@/models/houseHealthReport.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
-import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 import { DEVICE_ALERT_TYPES, INFERRED_ALERT_TYPES } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
 import { houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { RAIN_MM_PER_HOUR, addDays, isFlockDayComplete, vnDayStart } from '@/services/healthAssessment.service'
 import { MAX_DAY_RANGE, presentHouseDays } from '@/services/healthDay.service'
-import { buildZoneMetrics, getHealthReport, setReportConclusion as setZoneReportConclusion } from '@/services/healthReport.service'
+import { buildZoneMetrics } from '@/services/healthReport.service'
 import { findFarmExperts, findRecipients, notifyUser } from '@/services/notification.service'
 import { assertHouseAccess, listActiveHouseIds, listFarmHouseIds } from '@/utils/farmAccess.util'
 import { BadRequestError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
@@ -277,11 +276,11 @@ async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser,
   }
 }
 
-/** GET /health-reports/:id — báo cáo theo nhà; id của báo cáo Zone cũ thì trả nguyên kiểu cũ */
+/** GET /health-reports/:id — báo cáo theo nhà */
 export async function getReport(id: string, user: CurrentUser, now = new Date()) {
   const report = await HouseHealthReport.findById(id)
-  if (report) return presentHouseReport(report, user, now)
-  return getHealthReport(id, user)
+  if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
+  return presentHouseReport(report, user, now)
 }
 
 /**
@@ -300,15 +299,11 @@ export async function createCustomReport(user: CurrentUser, input: { houseId: st
 
 /**
  * PUT /health-reports/:id/conclusion — EXPERT-FR-006, SM-09 GENERATED → CONCLUDED. Chỉ Domain Expert (route);
- * chỉ tác giả sửa được kết luận của mình (lưu `edited_at`); báo mọi Farm Owner. Id của báo cáo Zone cũ thì
- * dùng nguyên luồng cũ.
+ * chỉ tác giả sửa được kết luận của mình (lưu `edited_at`); báo mọi Farm Owner.
  */
 export async function setConclusion(id: string, user: CurrentUser, text: string, now = new Date()) {
   const report = await HouseHealthReport.findById(id)
-  if (!report) {
-    if (!(await ZoneHealthReport.exists({ _id: id }))) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
-    return setZoneReportConclusion(id, user, text)
-  }
+  if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
   const { house } = await assertHouseAccess(String(report.house_id), user)
   if (report.expert_conclusion && String(report.expert_conclusion.by) !== user._id) {
     throw ForbiddenError('Kết luận này do chuyên gia khác viết — chỉ người viết mới sửa được')

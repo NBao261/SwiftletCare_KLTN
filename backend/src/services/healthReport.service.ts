@@ -1,21 +1,14 @@
 import { Types } from 'mongoose'
-import { ZoneHealthReport, IZoneHealthReport, ZoneHealthMetrics } from '@/models/zoneHealthReport.model'
+import type { ZoneHealthMetrics } from '@/models/houseHealthReport.model'
 import { Alert } from '@/models/alert.model'
 import { averageReturnRate, houseDailyCounts, vnDate } from '@/services/birdCount.service'
-import { Zone, IZone } from '@/models/houseZone.model'
+import type { IZone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { autonomyBetween, inRangeSum, pct, switchedSum } from '@/services/analytics.service'
-import { logAction } from '@/services/auditLog.service'
-import { findRecipients, notifyUser } from '@/services/notification.service'
-import { assertFarmAccess, assertZoneAccess } from '@/utils/farmAccess.util'
-import { ForbiddenError, NotFoundError } from '@/utils/appError.util'
-import { paginate } from '@/utils/helpers.util'
-import type { CurrentUser } from '@/types'
 
 /**
- * Báo cáo tuần theo Zone (kiểu cũ): không còn được tạo — báo cáo ngày, tuần, tháng theo nhà có một mục cho mỗi
- * Zone (BR-33, `houseHealthReport.service`, Report 4 §6.4). Ở đây chỉ còn đọc và viết kết luận cho các báo cáo
- * Zone đã lưu, và `buildZoneMetrics` mà báo cáo theo nhà dùng cho từng Zone.
+ * Số liệu theo Zone của báo cáo sức khoẻ theo nhà (BR-33, `houseHealthReport.service`). Báo cáo tuần theo Zone kiểu cũ
+ * đã được chuyển vào báo cáo nhà (`npm run migrate:zone-reports`, Report 4 §6.4) và không còn đường đọc riêng.
  */
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)
 
@@ -80,67 +73,4 @@ export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'house_id' | 't
     nh3_avg: round1(tele?.nh3Avg), nh3_max: round1(tele?.nh3Max),
     co2_avg: round1(tele?.co2Avg), co2_max: round1(tele?.co2Max),
   }
-}
-
-/** Chủ farm + đồng sở hữu — cùng luật người nhận với cảnh báo vận hành (notification.findRecipients) */
-async function ownerIdsOf(farmId: unknown): Promise<string[]> {
-  return (await findRecipients(String(farmId))).map(u => String(u._id))
-}
-
-/** EXPERT-FR-005 — danh sách báo cáo của 1 Zone, mới nhất trước */
-export async function listHealthReports(user: CurrentUser, query: { zoneId: string; page?: number; limit?: number }) {
-  await assertZoneAccess(query.zoneId, user)
-  const { page, skip, limit } = paginate(query.page, query.limit)
-  const filter = { zone_id: query.zoneId }
-  const [records, total] = await Promise.all([
-    ZoneHealthReport.find(filter).sort({ period_end: -1 }).skip(skip).limit(limit)
-      .populate('expert_conclusion.by', 'full_name').lean(),
-    ZoneHealthReport.countDocuments(filter),
-  ])
-  return { records, total, page, limit }
-}
-
-export async function getHealthReport(id: string, user: CurrentUser): Promise<IZoneHealthReport> {
-  const report = await ZoneHealthReport.findById(id).populate('expert_conclusion.by', 'full_name')
-  if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
-  await assertFarmAccess(String(report.farm_id), user)
-  return report
-}
-
-/**
- * EXPERT-FR-006 — Domain Expert viết kết luận và khuyến nghị cho 1 báo cáo. Người viết
- * sửa được kết luận của mình (lưu thời điểm sửa); chuyên gia khác không ghi đè. Farm
- * Owner nhận thông báo để đọc.
- */
-export async function setReportConclusion(id: string, user: CurrentUser, text: string): Promise<IZoneHealthReport> {
-  const report = await ZoneHealthReport.findById(id)
-  if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
-  await assertFarmAccess(String(report.farm_id), user)
-  if (report.expert_conclusion && String(report.expert_conclusion.by) !== user._id) {
-    throw ForbiddenError('Kết luận này do chuyên gia khác viết — chỉ người viết mới sửa được')
-  }
-
-  const isEdit = !!report.expert_conclusion
-  const now = new Date()
-  report.expert_conclusion = isEdit
-    ? { text, by: user._id as never, at: report.expert_conclusion!.at, edited_at: now }
-    : { text, by: user._id as never, at: now }
-  await report.save()
-  const zone = await Zone.findById(report.zone_id).select('name house_id').lean()
-  // farmId, house_id: vào lịch sử hoạt động chuyên gia và lọc được theo nhà (EXPERT-FR-009); Farm Owner
-  // đã được báo ngay dưới (EXPERT-FR-006)
-  await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'zone_health_report', String(report._id), {
-    zone_id: String(report.zone_id), house_id: zone ? String(zone.house_id) : undefined, isEdit,
-  }, { farmId: String(report.farm_id) })
-
-  // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response
-  for (const ownerId of await ownerIdsOf(report.farm_id)) {
-    void notifyUser(ownerId, {
-      title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho ${zone?.name ?? 'Zone'}`,
-      body: text.length > 300 ? `${text.slice(0, 300)}…` : text,
-      ref: { kind: 'health_report', id: String(report._id) },
-    })
-  }
-  // Cùng hình dạng với GET /health-reports/:id (`by` = {_id, full_name}) để client thay cache được
-  return report.populate('expert_conclusion.by', 'full_name')
 }
