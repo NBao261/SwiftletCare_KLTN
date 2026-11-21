@@ -205,7 +205,8 @@ describe('job đánh giá (SM-17)', () => {
 
   it('chuyên gia bác bỏ NOISE_ANOMALY của ngày đã đánh giá → tính lại ngay, ACTION thành WATCH', async () => {
     const { farm, house, zone } = await scenario({ rates: FLOCK_CLEAR })
-    const noise = await seedNoise(farm, zone, DATE)
+    // Đợt ồn của ngày cũ đã đóng: cùng sự cố chỉ một cảnh báo còn mở (ALERT-FR-008)
+    const noise = await seedNoise(farm, zone, DATE, 'RESOLVED')
     // Ngày trong 7 ngày gần nhất mới được tính lại — dùng ngày thật
     const today = vnDate(new Date())
     await seedTelemetry(zone, today)
