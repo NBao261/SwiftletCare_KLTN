@@ -31,6 +31,8 @@ export interface InferredAlertItem {
   acknowledged_at?: string
   acknowledgement_note?: string
   expert_verdict?: ExpertVerdict
+  // BR-22 — lần Farm Owner nhắc chuyên gia kết luận
+  expert_reminded_at?: string | null
 }
 
 // EXPERT-FR-003 — bộ lọc danh sách cảnh báo suy luận (GET /alerts?verdict=…)
