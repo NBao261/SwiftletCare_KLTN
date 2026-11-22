@@ -8,7 +8,6 @@ import { REF5_ENTRY_PATTERN, SOURCE_MAX_LENGTH, THRESHOLD_KEYS, THRESHOLD_LIMITS
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
 
-/** Module SYSTEM – SRS §5.11 */
 router.get('/audit-logs',
   query('actorId').optional().isMongoId(),
   query('targetId').optional().isMongoId(),
@@ -19,7 +18,7 @@ router.get('/audit-logs',
 )
 
 router.get('/settings/default-thresholds', systemController.getDefaultThresholds)
-// ENV-FR-007 — đổi mặc định phải kèm nguồn chứa mã một mục của REF-5, thiếu hoặc sai → 422
+// Nguồn phải chứa mã một mục của REF-5
 router.put('/settings/default-thresholds',
   ...THRESHOLD_KEYS.map(key => body(key).optional().isFloat({ min: THRESHOLD_LIMITS[key].min, max: THRESHOLD_LIMITS[key].max })),
   body('source').isString().bail().trim().isLength({ min: 1, max: SOURCE_MAX_LENGTH }).matches(REF5_ENTRY_PATTERN),

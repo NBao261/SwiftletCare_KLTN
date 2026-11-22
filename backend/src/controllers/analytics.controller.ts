@@ -7,7 +7,6 @@ import * as tuningSuggestionService from '@/services/tuningSuggestion.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 import { parsePeriodParam } from '@/utils/period.util'
 
-/** GET /analytics/env/summary – ANALYTICS-FR-001 (biểu đồ lịch sử môi trường) */
 export const envSummary = asyncHandler(async (req: Request, res: Response) => {
   const data = await analyticsService.getEnvSummary(req.user, {
     zoneId: req.query.zoneId as string,
@@ -16,7 +15,6 @@ export const envSummary = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data })
 })
 
-/** GET /analytics/control/performance – ANALYTICS-FR-008 (hiệu quả bộ điều khiển mờ) */
 export const controlPerformance = asyncHandler(async (req: Request, res: Response) => {
   const data = await analyticsService.getControlPerformance(req.user, {
     zoneId: req.query.zoneId as string,
@@ -25,7 +23,6 @@ export const controlPerformance = asyncHandler(async (req: Request, res: Respons
   res.json({ success: true, data })
 })
 
-/** GET /analytics/autonomy – ANALYTICS-FR-011 (tỷ lệ thời gian tự động) */
 export const autonomy = asyncHandler(async (req: Request, res: Response) => {
   const data = await analyticsService.getAutonomy(req.user, {
     zoneId: req.query.zoneId as string,
@@ -34,32 +31,27 @@ export const autonomy = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data })
 })
 
-/** GET /analytics/control/suggestion – ANALYTICS-FR-010 (gợi ý hệ số mờ) */
 export const tuningSuggestion = asyncHandler(async (req: Request, res: Response) => {
   const data = await tuningSuggestionService.getTuningSuggestion(req.user, req.query.zoneId as string)
   res.json({ success: true, data })
 })
 
-/** GET /analytics/forecast – ANALYTICS-FR-009 (dự báo 60 phút tới) */
 export const forecast = asyncHandler(async (req: Request, res: Response) => {
   const data = await forecastService.getZoneForecast(req.user, req.query.zoneId as string)
   res.json({ success: true, data })
 })
 
-/** GET /analytics/env/compare – ANALYTICS-FR-005 (so sánh nhiều Zone) */
 export const envCompare = asyncHandler(async (req: Request, res: Response) => {
   const zoneIds = String(req.query.zoneIds ?? '').split(',').filter(Boolean)
   const data = await analyticsService.compareZones(req.user, zoneIds, (req.query.range as string) ?? '24h')
   res.json({ success: true, data })
 })
 
-/** Đếm chim theo nhà yến (SRS v2.1.8): `houseId`, hoặc `zoneId` cũ → House chứa Zone */
 const birdScope = (req: Request) => ({
   houseId: req.query.houseId as string | undefined,
   zoneId:  req.query.zoneId as string | undefined,
 })
 
-/** GET /analytics/bird-count/daily?houseId= – VISION-FR-008/010 */
 export const birdCountDaily = asyncHandler(async (req: Request, res: Response) => {
   const data = await analyticsService.getBirdCountDaily(req.user, birdScope(req), {
     from: req.query.from as string | undefined,
@@ -68,7 +60,6 @@ export const birdCountDaily = asyncHandler(async (req: Request, res: Response) =
   res.json({ success: true, data })
 })
 
-/** GET /analytics/bird-count/trends?houseId= – VISION-FR-009/010, ANALYTICS-FR-002 */
 export const birdCountTrends = asyncHandler(async (req: Request, res: Response) => {
   const data = await analyticsService.getBirdCountTrends(req.user, birdScope(req), {
     days: req.query.days ? Number(req.query.days) : 30,
@@ -76,12 +67,10 @@ export const birdCountTrends = asyncHandler(async (req: Request, res: Response) 
   res.json({ success: true, data })
 })
 
-/** GET /analytics/bird-count/current?houseId= — VISION-FR-012, số hôm nay của nhà yến */
 export const birdCountCurrent = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await birdCountService.getCurrentBirdCount(req.user, birdScope(req)) })
 })
 
-/** GET /analytics/bird-count/buckets?houseId= – VISION-FR-017 (số đếm theo khoảng 5 phút) */
 export const birdCountBuckets = asyncHandler(async (req: Request, res: Response) => {
   const data = await birdCountService.getBirdCountBuckets(req.user, birdScope(req), {
     from: req.query.from as string | undefined,
@@ -90,7 +79,6 @@ export const birdCountBuckets = asyncHandler(async (req: Request, res: Response)
   res.json({ success: true, data })
 })
 
-/** GET /analytics/correlation – ANALYTICS-FR-003 (môi trường vs return rate) */
 export const envBirdCorrelation = asyncHandler(async (req: Request, res: Response) => {
   const data = await analyticsService.getEnvBirdCorrelation(req.user, req.query.zoneId as string, {
     days: req.query.days ? Number(req.query.days) : 30,
@@ -98,10 +86,9 @@ export const envBirdCorrelation = asyncHandler(async (req: Request, res: Respons
   res.json({ success: true, data })
 })
 
-/** Mặc định 90 ngày: telemetry chỉ giữ chừng đó (BR-36), xa hơn không có số */
+/** Telemetry chỉ giữ 90 ngày (BR-36) */
 const DEFAULT_ENERGY_DAYS = 90
 
-/** GET /analytics/energy – ANALYTICS-FR-017, BR-45 */
 export const energy = asyncHandler(async (req: Request, res: Response) => {
   const to = parsePeriodParam(req.query.to) ?? new Date()
   const from = parsePeriodParam(req.query.from) ?? new Date(to.getTime() - DEFAULT_ENERGY_DAYS * 86_400_000)

@@ -12,21 +12,18 @@ import { validate } from '@/middlewares/validate.middleware'
 const router = Router()
 router.use(authenticate)
 
-// Giữ file trong RAM (≤10MB) rồi service đẩy thẳng lên MinIO — không ghi đĩa tạm
+// RAM, không ghi đĩa tạm
 const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_AUDIO_BYTES, files: 1 } })
 const trackParams = [param('id').isMongoId(), param('trackId').isMongoId()]
 
-// Sensor Nodes (ESP32)
-// MF-10 — Farm Owner tự setup thiết bị ở farm của mình (service kiểm farm); Farm Technician, Admin
-// không (FARM-FR-003, Report 3 §2.4). Phải kèm secretKey in trên nhãn thiết bị
+// Phải kèm secretKey in trên nhãn
 router.post('/sensor-nodes/register',        requireRole('FARM_OWNER'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
-// `removed=recent` (Farm Owner): thiết bị gỡ trong 24 giờ còn khôi phục được (FARM-FR-008)
+// Thiết bị gỡ trong 24 giờ còn khôi phục được (FARM-FR-008)
 router.get ('/sensor-nodes',
   query('zoneId').optional().isString().isMongoId(), query('removed').optional().isString().isIn(['recent']), validate,
   deviceController.listSensorNodes)
 router.get ('/sensor-nodes/:id',             param('id').isMongoId(), validate, deviceController.getSensorNode)
-// Lịch loa ru (ENV-FR-013b, BR-07) — chỉ Farm Owner; firmware chỉ có 2 khung giờ, theo giờ tròn;
-// tắt lịch dùng enabled=false.
+// Firmware chỉ có 2 khung giờ tròn
 router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('enabled').optional().isBoolean(),
   body('windows').optional().isArray({ min: 1, max: 2 }).withMessage('windows phải có 1-2 khung giờ'),
@@ -35,21 +32,16 @@ router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), par
   body('volume').optional().isInt({ min: 0, max: 30 }).toInt(),
   body('track').optional().isInt({ min: 1 }).toInt(),
   validate, deviceController.updateSpeakerSchedule)
-// Can thiệp tay relay: Farm Owner, Farm Technician ở nhà được giao (ENV-FR-016, AUTH-FR-013, service kiểm
-// nhà); Admin, Domain Expert không (Report 3 §2.4)
+// Service kiểm nhà của Farm Technician
 router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(),
-  // Không chặn thì 1 giá trị cực lớn tạo override hàng chục năm: Zone bị tính 0% tự động mãi (ANALYTICS-FR-011)
+  // Giá trị cực lớn làm Zone bị tính 0% tự động mãi (ANALYTICS-FR-011)
   body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(),
-  // ENV-FR-016 — xác nhận bật bơm khi Zone có cảnh báo cảm biến/phun sương (giới hạn 30 phút của bơm kiểm ở service)
+  // Giới hạn 30 phút của bơm kiểm ở service
   body('confirmed').optional().isBoolean().toBoolean(), validate, deviceController.controlRelay)
-// ENV-FR-018, BR-20 — huỷ sớm 1 relay (`?relayName=`) hoặc mọi relay
 router.delete('/sensor-nodes/:id/relay-override', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
   query('relayName').optional().isString().isIn([...RELAY_NAMES]), validate, deviceController.clearRelayOverride)
-// ENV-FR-019 — lịch sử can thiệp tay: Farm Owner và Domain Expert (chỉ đọc), Farm Technician ở nhà được giao
 router.get   ('/sensor-nodes/:id/relay-overrides', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(), validate, deviceController.listRelayOverrides)
 
-// File loa ru (ENV-FR-013c) — upload, chép thẻ SD, chọn bài, nghe thử đều là của Farm Owner (Report 3 4.x);
-// Farm Technician, Admin không (Report 3 §2.4).
 router.post  ('/sensor-nodes/:id/audio-tracks', requireRole('FARM_OWNER'), audioUpload.single('file'), param('id').isMongoId(),
   body('track_number').isInt({ min: 1, max: 255 }).withMessage('track_number phải là số nguyên 1-255 (0001.mp3 … 0255.mp3)').toInt(),
   body('display_name').trim().notEmpty().withMessage('Cần tên bài').isLength({ max: 100 }),
@@ -61,39 +53,33 @@ router.post  ('/sensor-nodes/:id/audio-tracks/:trackId/play-now', requireRole('F
 router.post  ('/sensor-nodes/:id/audio/stop', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, audioTrackController.stopPlayback)
 router.delete('/sensor-nodes/:id/audio-tracks/:trackId', requireRole('FARM_OWNER'), ...trackParams, validate, audioTrackController.deleteTrack)
 
-// Dời thiết bị sang Zone khác (FARM-FR-007b). Farm Owner (cả Zone nguồn và đích
-// phải thuộc farm của mình, service kiểm); Farm Technician, Admin không (Report 3 §2.4)
+// Service kiểm cả Zone nguồn và đích
 router.put ('/sensor-nodes/:id/reassign-zone', requireRole('FARM_OWNER'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
 
-// Camera Nodes (RPi)
-// FARM-FR-008 — gỡ/thay thiết bị, giữ nguyên lịch sử telemetry của thiết bị cũ
 router.post('/sensor-nodes/:id/decommission', requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('reason').trim().notEmpty(),
-  // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false" lọt xuống service là truthy
+  // toBoolean(): isBoolean() không đổi kiểu, "false" lọt xuống service là truthy
   body('force').optional().isBoolean().toBoolean(),
   validate, deviceController.decommission('sensor'))
 router.post('/sensor-nodes/:id/restore', requireRole('FARM_OWNER'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('sensor'))
 router.post('/sensor-nodes/:id/replace',      requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('new_device_id').trim().notEmpty(), body('secret_key').isString().trim().notEmpty(), body('reason').trim().notEmpty(),
   validate, deviceController.replaceSensorNode)
-// FARM-FR-013 — xử lý từ xa (khởi động lại / đẩy lại ngưỡng / OTA firmware): Administrator mọi lệnh;
-// Farm Owner, Farm Technician (nhà được giao) chỉ RESTART (service kiểm)
+// Farm Owner, Farm Technician chỉ RESTART (service kiểm)
 router.post('/sensor-nodes/:id/commands', requireRole('ADMIN','FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('command').isIn(['RESTART', 'PUSH_CONFIG', 'OTA']),
-  // Không nhận tiền tố "v": heartbeat so sánh firmware_version bằng === với
-  // FIRMWARE_VERSION của firmware ("1.0.0"), "v1.1.0" sẽ không bao giờ khớp
-  // nên OTA thành công vẫn bị markOtaTimeouts báo thất bại sau 30 phút.
+  // Không nhận tiền tố "v": heartbeat so firmware_version bằng ===
   body('ota.version').if(body('command').equals('OTA')).isString().trim().matches(/^\d+\.\d+\.\d+$/),
   body('ota.url').if(body('command').equals('OTA')).isURL({ protocols: ['https'], require_protocol: true, require_tld: false }),
   body('ota.sha256').if(body('command').equals('OTA')).isHash('sha256'),
   validate, deviceController.sendCommand)
 router.post('/camera-nodes/:id/decommission', requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('reason').trim().notEmpty(),
-  // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false" lọt xuống service là truthy
+  // toBoolean(): như trên
   body('force').optional().isBoolean().toBoolean(),
   validate, deviceController.decommission('camera'))
 router.post('/camera-nodes/:id/restore', requireRole('FARM_OWNER'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('camera'))
-// SRS v2.1.8 — camera đếm chim lắp ở cửa ra vào của cả nhà yến nên gắn House; zone_id là cách gửi cũ (quy ra House chứa Zone)
+// zone_id cũ: quy ra House chứa Zone
 router.post('/camera-nodes/register',        requireRole('FARM_OWNER'), body('device_id').trim().notEmpty(),
   body('house_id').if(body('zone_id').not().exists()).isString().isMongoId().withMessage('Cần house_id'),
   body('zone_id').optional().isString().isMongoId(),
@@ -102,20 +88,15 @@ router.get ('/camera-nodes',
   query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(),
   query('removed').optional().isString().isIn(['recent']), validate,
   deviceController.listCameraNodes)
-// VISION-FR-018, SRS §4.4 — vòng đếm do Domain Expert vẽ, Farm Technician ở nhà được giao (Farm Owner chỉ khi
-// farm chưa có chuyên gia, BR-22, service kiểm); 3 đỉnh là tối thiểu của một vòng kín, 12 là giới hạn kỹ thuật chống nhập nhầm
-// (SRS 0.5), toạ độ theo tỉ lệ khung hình
+// Farm Owner chỉ khi farm chưa có chuyên gia (BR-22); 3 đỉnh là vòng kín tối thiểu, 12 chống nhập nhầm
 router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('points').isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
   body('points.*').isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),
   body('points.*.*').isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỷ lệ khung hình 0-1').toFloat(),
   body('into_ring_is_exit').isBoolean({ strict: true }),
   validate, deviceController.updateCountingRing)
-// VISION-FR-013, SRS §4.4 — live stream cho Farm Owner và Domain Expert của farm chứa camera, Farm Technician
-// ở nhà được giao
 router.get ('/camera-nodes/:id/stream-token', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(), validate, streamController.getStreamToken)
 
-// OPS-NFR-004 — Admin dashboard trạng thái node toàn hệ thống
 router.get ('/system-status',                requireRole('ADMIN'), deviceController.getSystemStatus)
 
 export default router

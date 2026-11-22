@@ -4,8 +4,7 @@ import { mqttAuth } from '@/controllers/mqttAuth.controller'
 import * as streamController from '@/controllers/stream.controller'
 import { validate } from '@/middlewares/validate.middleware'
 
-// Chỉ cho dịch vụ trong mạng nội bộ (MediaMTX, EMQX), không có JWT người dùng: bảo vệ bằng STREAM_AUTH_KEY,
-// và reverse proxy chặn /internal từ bên ngoài (docs/bird-counting-plan.md §15.4)
+// Không có JWT: bảo vệ bằng khoá, reverse proxy chặn /internal từ ngoài
 const router = Router()
 
 const optionalString = (field: string) => body(field).optional({ values: 'null' }).isString()

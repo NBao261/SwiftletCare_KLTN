@@ -8,7 +8,6 @@ import { recomputeForAlert } from '@/services/healthAssessment.service'
 import type { AlertVerdictResult } from '@/types'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
-/** GET /alerts – ALERT-FR-007 */
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit, unreadCount } = await alertService.listAlerts(req.user, {
     farmId:   req.query.farmId as string | undefined,
@@ -25,13 +24,11 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: records, meta: { total, page, limit, unreadCount } })
 })
 
-/** GET /alerts/:id */
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
   const alert = await alertService.getAlertDetail(req.params.id, req.user)
   res.json({ success: true, data: alert })
 })
 
-/** PUT /alerts/:id/acknowledge – ALERT-FR-009, 018 */
 export const acknowledge = asyncHandler(async (req: Request, res: Response) => {
   const alert = await alertService.acknowledgeAlert(
     req.params.id, req.user, req.body.note as string | undefined, req.body.cause as SiteCause | undefined,
@@ -39,18 +36,16 @@ export const acknowledge = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: alert })
 })
 
-/** PUT /alerts/:id/verdict – EXPERT-FR-003 (Domain Expert xác nhận/bác bỏ cảnh báo suy luận) */
 export const setVerdict = asyncHandler(async (req: Request, res: Response) => {
   const alert = await alertService.setAlertVerdict(
     req.params.id, req.user, req.body.result as AlertVerdictResult, req.body.note as string | undefined,
     req.body.needs_visit === true,
   )
-  // SM-17 — NOISE_ANOMALY bị bác bỏ / xác nhận lại đổi chỉ số tiếng ồn của ngày (BR-28)
+  // SM-17: kết luận NOISE_ANOMALY đổi chỉ số tiếng ồn của ngày
   await recomputeForAlert(alert)
   res.json({ success: true, data: alert })
 })
 
-/** POST /alerts/:id/onsite-check – EXPERT-FR-021 (thợ ghi quan sát tại chỗ, ảnh tuỳ chọn) */
 export const answerOnsiteCheck = asyncHandler(async (req: Request, res: Response) => {
   const alert = await onsiteCheckService.answerOnsiteCheck(req.params.id, req.user, {
     observation: req.body.observation as OnsiteObservation,
@@ -59,7 +54,6 @@ export const answerOnsiteCheck = asyncHandler(async (req: Request, res: Response
   res.json({ success: true, data: alert })
 })
 
-/** GET /alerts/verdict-stats – EXPERT-FR-003 (tỷ lệ được xác nhận theo từng loại) */
 export const verdictStats = asyncHandler(async (req: Request, res: Response) => {
   const stats = await alertService.getVerdictStats(req.user, {
     farmId: req.query.farmId as string | undefined,
@@ -68,7 +62,6 @@ export const verdictStats = asyncHandler(async (req: Request, res: Response) => 
   res.json({ success: true, data: stats })
 })
 
-/** GET /alerts/:id/evidence – ALERT-FR-014 (dữ liệu quanh cảnh báo suy luận) */
 export const evidence = asyncHandler(async (req: Request, res: Response) => {
   const data = await alertEvidenceService.getAlertEvidence(req.params.id, req.user)
   res.json({ success: true, data })

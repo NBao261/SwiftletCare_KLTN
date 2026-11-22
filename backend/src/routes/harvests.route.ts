@@ -12,19 +12,12 @@ const NEST_TYPES = ['RAW', 'CLEANED', 'PREMIUM'] satisfies NestType[]
 const router = Router()
 router.use(authenticate)
 
-/**
- * HARVEST-FR-001..006 — Farm Owner ghi nhận và xác nhận; Farm Technician nhập lô ở nhà được giao (DRAFT, chỉ
- * sửa/xoá lô DRAFT của mình — service kiểm); Domain Expert chỉ xem (mục 4.4)
- */
+/** Farm Technician chỉ sửa/xoá lô DRAFT của mình (service kiểm) */
 const canRead  = requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN')
 const canWrite = requireRole('FARM_OWNER', 'FARM_TECHNICIAN')
-// HARVEST-FR-001 — một ảnh mỗi lô, giữ trong RAM rồi lưu lên kho file (như ảnh Work Order)
 const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } })
 
-/**
- * HARVEST-FR-001 — lô thiếu hoặc sai ngày, số tổ, cân nặng → 422. Lúc tạo các trường đều bắt buộc; lúc sửa
- * chỉ kiểm trường gửi lên. Ngày sau hôm nay (giờ VN) do service chặn.
- */
+/** Lúc sửa chỉ kiểm trường gửi lên; ngày tương lai do service chặn */
 const harvestFields = (optional: boolean) => {
   const field = (name: string) => (optional ? body(name).optional() : body(name).exists({ values: 'null' }))
   return [
@@ -36,8 +29,7 @@ const harvestFields = (optional: boolean) => {
   ]
 }
 
-// HARVEST-FR-007, ANALYTICS-FR-004, EXPERT-FR-020 — chu kỳ thu hoạch (đặt trước `/:id`). Đọc như lô thu hoạch;
-// kết luận mùa vụ chỉ của Domain Expert, kể cả khi farm chưa có chuyên gia: BR-22 không cho viết kết luận khi không có chuyên gia (EXPERT-FR-020)
+// Trước '/:id'. Kết luận chỉ của Domain Expert, kể cả farm chưa có chuyên gia (EXPERT-FR-020)
 router.get('/cycles', canRead,
   ...['zoneId', 'houseId', 'farmId'].map(name => query(name).optional().isString().bail().isMongoId()),
   query('status').optional().isString().bail().isIn(['OPEN', 'CLOSED', 'CONCLUDED']),
