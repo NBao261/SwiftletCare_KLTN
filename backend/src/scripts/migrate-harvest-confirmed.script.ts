@@ -1,13 +1,4 @@
-/**
- * migrate-harvest-confirmed.ts — lô thu hoạch có thêm trạng thái CONFIRMED (G-20, HARVEST-FR-001, 006): lô
- * của Farm Technician chờ Farm Owner xác nhận (DRAFT), lô của Farm Owner xác nhận ngay. Trước đây mọi lô
- * đều DRAFT và chỉ Farm Owner nhập được.
- *
- * Chạy: npm run migrate:harvest-confirmed   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. `harvestbatches`: lô DRAFT do tài khoản FARM_OWNER tạo → CONFIRMED, `confirmed_by` = người tạo,
- *    `confirmed_at` = lúc tạo. Lô của Farm Technician giữ DRAFT.
- */
+/** G-20: lô DRAFT do Farm Owner tạo → CONFIRMED; lô của Farm Technician giữ DRAFT. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

@@ -1,16 +1,4 @@
-/**
- * migrate-remove-sales.ts — dọn dữ liệu sau khi bỏ role Sales Staff + Module SALES
- * và thêm Farm Operator (SRS v1.23.0). Code mới không còn hiểu `SALES_STAFF`: tài
- * khoản/lời mời mang giá trị này sẽ lỗi validate khi save.
- *
- * Chạy: npm run migrate:remove-sales   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. Xoá lời mời `invited_role: SALES_STAFF` (dữ liệu cũ, không luồng nào dùng).
- * 2. User `role: SALES_STAFF` (nhân viên công ty, module không còn): gỡ khỏi
- *    `farms.members` rồi xoá hẳn.
- * 3. Drop các collection của SALES nếu còn.
- * 4. Member cũ chưa có `role` → `FARM_OWNER` (trước v1.23.0 mọi member đều là Farm Owner).
- */
+/** SRS v1.23.0: xoá lời mời và user SALES_STAFF, drop collection SALES, member thiếu role → FARM_OWNER. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'
@@ -25,7 +13,7 @@ async function migrate(): Promise<void> {
   await connectDB()
   const db = mongoose.connection.db!
 
-  // Làm việc thẳng trên collection: model đã không còn chấp nhận giá trị SALES_STAFF
+  // Thẳng trên collection: model không còn nhận SALES_STAFF
   const invitations = await db.collection('invitations').deleteMany({ invited_role: 'SALES_STAFF' })
   logger.info(`[migrate] Xoá ${invitations.deletedCount} lời mời SALES_STAFF`)
 
@@ -45,7 +33,7 @@ async function migrate(): Promise<void> {
 
   const members = await db.collection('farms').updateMany(
     { 'members.role': { $exists: false }, members: { $ne: [] } },
-    { $set: { 'members.$[m].role': 'FARM_OWNER' } }, // zone_ids đã bỏ ở SRS v2.0.0
+    { $set: { 'members.$[m].role': 'FARM_OWNER' } },
     { arrayFilters: [{ 'm.role': { $exists: false } }] },
   )
   logger.info(`[migrate] Gán role FARM_OWNER cho member cũ ở ${members.modifiedCount} farm`)

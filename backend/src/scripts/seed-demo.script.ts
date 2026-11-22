@@ -1,14 +1,4 @@
-/**
- * seed-demo — dữ liệu cho 16 kịch bản demo DS-01…16 (Design Brief Phụ lục A2, docs/deploy/staging.md §5, G-17).
- *
- * Chạy sau `npm run seed` (dùng lại owner@, tech@, expert@): `npm run seed:demo`. Mỗi lần chạy xoá rồi dựng lại
- * hai farm demo, nên chạy lại ngay trước buổi tổng duyệt để mọi điều kiện đầu đúng như Phụ lục A2.
- *
- * Đi qua service thật (Administrator nhập kho, Farm Owner tạo nhà, tầng, đăng ký thiết bị, cảnh báo qua Alert Engine,
- * Work Order qua thợ) để trạng thái hợp lệ như khi dùng app. Chỉ dữ liệu quá khứ (telemetry, số đếm chim, khuyến nghị
- * đã chấp nhận từ 10 ngày trước) được ghi thẳng vào DB. Activation key / broker secret của thiết bị demo sinh ngẫu
- * nhiên mỗi lần và chỉ in ra màn hình (nạp vào ESP32 thật hoặc bộ giả lập bằng firmware/tools/flash_identity.py).
- */
+/** DS-01…16 (Design Brief A2). Chạy sau npm run seed; xoá rồi dựng lại 2 farm demo qua service thật. Khoá thiết bị chỉ in ra màn hình */
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'
@@ -38,10 +28,7 @@ import logger from '@/utils/logger.util'
 
 export const DEMO_FARM = 'Trại yến Demo A2'
 export const NO_EXPERT_FARM = 'Trại yến không chuyên gia'
-/**
- * Mật khẩu của 6 tài khoản demo (cả admin@). Trên staging (NODE_ENV=production, tên miền công khai) phải đặt DEMO_PASSWORD:
- * mật khẩu mặc định ai cũng đoán được. Máy dev và CI dùng mật khẩu của `npm run seed`.
- */
+/** Staging phải đặt DEMO_PASSWORD: mật khẩu mặc định ai cũng đoán được */
 function demoPassword(): string {
   const fromEnv = process.env.DEMO_PASSWORD?.trim()
   if (fromEnv) return fromEnv
@@ -54,9 +41,9 @@ const DEMO_COORDINATES = { lat: 10.7769, lng: 106.7009 }
 const HOUR_MS = 3_600_000
 const DAY_MS = 24 * HOUR_MS
 const SAMPLE_MS = 10_000
-const STEP_SAMPLES = 60 // 1 bước mô phỏng 10 phút = 60 mẫu 10 giây (ENV-FR-004)
+const STEP_SAMPLES = 60 // 10 phút = 60 mẫu 10 giây
 
-/** PRNG cố định: chạy lại ra cùng số liệu */
+/** Chạy lại ra cùng số liệu */
 function prng(seed: number) {
   return () => {
     seed = (seed + 0x6d2b79f5) | 0
@@ -76,7 +63,6 @@ async function ensureUser(email: string, fullName: string, role: Role, password:
   return User.create({ email, password_hash: password, full_name: fullName, role })
 }
 
-/** Xoá 2 farm demo cùng mọi bản ghi gắn với farm, nhà, tầng, thiết bị của chúng */
 async function resetDemo(): Promise<void> {
   const farms = await Farm.find({ name: { $in: [DEMO_FARM, NO_EXPERT_FARM] }, is_deleted: { $in: [true, false] } }).select('_id').lean()
   if (farms.length === 0) return
@@ -99,7 +85,7 @@ async function resetDemo(): Promise<void> {
 
 const deviceKeys: Array<{ device_id: string; house: string; activation_key: string; broker_secret: string }> = []
 
-/** Administrator nhập kho, Farm Owner quét nhãn và đăng ký (SF-01) */
+/** SF-01 */
 async function provisionController(admin: CurrentUser, owner: CurrentUser, deviceId: string, zoneId: string, house: string) {
   const stock = await createProvisionedDevice(admin._id, { device_id: deviceId, kind: 'SENSOR' })
   const node = await registerSensorNode(owner, { device_id: deviceId, zone_id: zoneId, secret_key: stock.secret_key })
@@ -116,7 +102,6 @@ async function provisionCamera(admin: CurrentUser, owner: CurrentUser, deviceId:
 
 interface Sample { temperature: number; humidity: number; nh3_ppm: number; misting_pct: number; ventilation_pct: number; sound_db: number }
 
-/** Ghi các mẫu 10 giây của 1 ngày (giờ VN): `step(k)` cho số đo của bước 10 phút thứ k */
 async function insertDay(nodeId: unknown, zoneId: unknown, date: string, step: (k: number) => Sample, rnd: () => number) {
   const start = vnDayStart(date).getTime()
   const docs = []
@@ -137,13 +122,10 @@ async function insertDay(nodeId: unknown, zoneId: unknown, date: string, step: (
 }
 
 const temperatureAt = (k: number) => 28.5 + 2 * Math.sin(2 * Math.PI * (k / 144 - 0.375))
-/** Chim ra vào lúc sáng sớm và chiều tối: ồn hơn (Report 3 BR-13) */
+/** BR-13 */
 const soundAt = (k: number) => ((k >= 33 && k < 42) || (k >= 105 && k < 114) ? 55 : 45)
 
-/**
- * Nhà A: phun sương theo một bộ điều khiển thô trên một mô hình nhà đơn giản (Δ độ ẩm theo phun, quạt, nhiệt), đủ
- * 14 ngày cho gợi ý hệ số (ENV-FR-021, DS-09) và NH3 vượt ngưỡng `nh3Hours(date)` giờ mỗi ngày (luật DS-15).
- */
+/** 14 ngày cho gợi ý hệ số (DS-09), NH3 vượt nh3Hours(date) giờ/ngày (DS-15) */
 async function seedHouseATelemetry(nodeId: unknown, zoneId: unknown, dates: string[], nh3Hours: (date: string) => number) {
   const rnd = prng(1)
   let humidity = 85
@@ -155,7 +137,6 @@ async function seedHouseATelemetry(nodeId: unknown, zoneId: unknown, dates: stri
       const ventilation = clamp((temperature - 29.5) * 40, 0, 100)
       const sample = {
         temperature, humidity, misting_pct: misting, ventilation_pct: ventilation, sound_db: soundAt(k),
-        // NH3 vượt 25 ppm (ngưỡng mặc định) từ 01:00, đúng số giờ của ngày
         nh3_ppm: k >= 6 && k < 6 + overSteps ? 32 : 12,
       }
       humidity = clamp(humidity + 0.04 * misting - 0.02 * ventilation - 0.3 * (temperature - 28.5) - 1.2 + (rnd() - 0.5) * 0.6, 60, 99)
@@ -164,7 +145,7 @@ async function seedHouseATelemetry(nodeId: unknown, zoneId: unknown, dates: stri
   }
 }
 
-/** Nhà C: ngày `slightDate` độ ẩm dưới 75 % 3,5 giờ buổi trưa (≈ 85 % thời gian trong ngưỡng: SLIGHT), ngày khác bình thường */
+/** ~85 % trong ngưỡng: SLIGHT */
 async function seedHouseCTelemetry(nodeId: unknown, zoneId: unknown, dates: string[], slightDate: string) {
   const rnd = prng(2)
   for (const date of dates) {
@@ -176,7 +157,6 @@ async function seedHouseCTelemetry(nodeId: unknown, zoneId: unknown, dates: stri
   }
 }
 
-/** Bản ghi phiên đã tính từ số đếm 5 phút (VISION-FR-008): sáng ra, chiều về */
 async function seedSessions(cameraId: unknown, houseId: unknown, date: string, counts: { exit: number; entry: number; eveningComplete?: boolean }) {
   const at = (hhmm: string) => new Date(`${date}T${hhmm}:00+07:00`)
   await BirdCountRecord.insertMany([
@@ -206,7 +186,7 @@ async function seedDemo(): Promise<void> {
   const adminDoc = await ensureUser('admin@swiftletcare.dev', 'Demo Administrator', 'ADMIN', password)
   const tech2Doc = await ensureUser('tech2@swiftletcare.dev', 'Demo Farm Technician 2', 'FARM_TECHNICIAN', password)
   const owner2Doc = await ensureUser('owner2@swiftletcare.dev', 'Demo Farm Owner 2', 'FARM_OWNER', password)
-  // Cả 6 tài khoản dùng chung một mật khẩu, kể cả 3 tài khoản `npm run seed` đã tạo (hook pre-save băm lại)
+  // Hook pre-save băm lại
   for (const doc of [ownerDoc, techDoc, expertDoc, adminDoc, tech2Doc, owner2Doc]) {
     doc.password_hash = password
     await doc.save()
@@ -215,7 +195,6 @@ async function seedDemo(): Promise<void> {
 
   await resetDemo()
 
-  // ── Farm có chuyên gia, hai thợ ─────────────────────────────────────────────────────────────────
   const farm: IFarm = await createFarm(owner, { name: DEMO_FARM, address: 'Nhà yến thử nghiệm (dữ liệu demo)', coordinates: DEMO_COORDINATES })
   farm.members.push(
     { user_id: expertDoc._id, is_primary: false, role: 'DOMAIN_EXPERT', joined_at: now } as never,
@@ -225,41 +204,41 @@ async function seedDemo(): Promise<void> {
   await farm.save()
   const farmId = String(farm._id)
 
-  // Nhà A — điều khiển, sự cố cảm biến, ồn bất thường, gợi ý hệ số, bảo trì, luật NH3 (DS-01, 02, 07–10, 13–15)
+  // DS-01, 02, 07–10, 13–15
   const houseA = await createHouse(farmId, owner, { name: 'A · Nhà điều khiển', floors: 1 })
   const zoneA = await createZone(String(houseA._id), owner, { name: 'A · Tầng 1', floor: 1 })
   await assignTechnician(String(houseA._id), owner, tech._id, true)
   const nodeA = await provisionController(admin, owner, 'demo-ctl-a1', String(zoneA._id), 'A')
 
-  // Nhà B — đếm chim và Work Order đang kiểm phục hồi (DS-03…06)
+  // DS-03…06
   const houseB = await createHouse(farmId, owner, { name: 'B · Nhà đếm chim', floors: 1 })
   const zoneB = await createZone(String(houseB._id), owner, { name: 'B · Tầng 1', floor: 1 })
   await assignTechnician(String(houseB._id), owner, tech._id, true)
   const nodeB = await provisionController(admin, owner, 'demo-ctl-b1', String(zoneB._id), 'B')
   const cameraB = await provisionCamera(admin, owner, 'demo-cam-b1', String(houseB._id), 'B')
 
-  // Nhà C — đánh giá ngày (DS-11, 12; DS-16)
+  // DS-11, 12, 16
   const houseC = await createHouse(farmId, owner, { name: 'C · Nhà đánh giá ngày', floors: 1 })
   const zoneC = await createZone(String(houseC._id), owner, { name: 'C · Tầng 1', floor: 1 })
   await assignTechnician(String(houseC._id), owner, tech._id, true)
   const nodeC = await provisionController(admin, owner, 'demo-ctl-c1', String(zoneC._id), 'C')
   const cameraC = await provisionCamera(admin, owner, 'demo-cam-c1', String(houseC._id), 'C')
 
-  // Nhà D — thợ thứ hai (DS-04: thợ của nhà khác)
+  // DS-04: thợ của nhà khác
   const houseD = await createHouse(farmId, owner, { name: 'D · Nhà phụ', floors: 1 })
   await createZone(String(houseD._id), owner, { name: 'D · Tầng 1', floor: 1 })
   await assignTechnician(String(houseD._id), owner, String(tech2Doc._id), true)
 
-  // ── Farm không có chuyên gia (BR-22) ─────────────────────────────────────────────────────────────
+  // BR-22
   const farm2 = await createFarm(owner2, { name: NO_EXPERT_FARM, address: 'Nhà yến thử nghiệm (dữ liệu demo)', coordinates: DEMO_COORDINATES })
   const house2 = await createHouse(String(farm2._id), owner2, { name: 'Nhà 1', floors: 1 })
   await createZone(String(house2._id), owner2, { name: 'Tầng 1', floor: 1 })
 
-  // ── Nhà A: 17 ngày telemetry; NH3 vượt 5 giờ/ngày trước lần chấp nhận, 1 giờ sau, 4,5 giờ 3 ngày gần nhất ─────
+  // NH3 5 giờ/ngày trước lần chấp nhận, 1 giờ sau, 4,5 giờ 3 ngày gần nhất
   const datesA = Array.from({ length: 17 }, (_, i) => day(17 - i))
   const nh3Hours = (date: string) => (date <= day(11) ? 5 : date >= day(3) ? 4.5 : 1)
   await seedHouseATelemetry(nodeA._id, zoneA._id, datesA, nh3Hours)
-  // Bộ đếm giờ chạy bắt đầu từ bây giờ: lịch sử giả lập không được cộng vào giờ bơm (BR-45)
+  // Lịch sử giả lập không được cộng vào giờ bơm
   await SensorNode.updateOne({ _id: nodeA._id }, {
     $set: {
       'relay_usage.misting.since_service_hours': 499, 'relay_usage.misting.on_hours': 499,
@@ -268,28 +247,27 @@ async function seedDemo(): Promise<void> {
   })
   for (const date of datesA) await assessHouseDay(String(houseA._id), date, now)
 
-  // ── Nhà B: 7 ngày số đếm đủ phiên, tỷ lệ về ≈ 97 % (nền của DS-05) ───────────────────────────────
+  // Nền của DS-05, ~97 %
   for (let n = 7; n >= 1; n--) await seedSessions(cameraB._id, houseB._id, day(n), { exit: 1200, entry: 1150 })
 
-  // ── Nhà C: nền 8 ngày ≈ 96 %; ngày D-2 về 65 % (CLEAR) + độ ẩm SLIGHT → ACTION; ngày D-1 phiên chiều không đầy đủ ──
+  // Nền ~96 %; D-2 về 65 % + độ ẩm SLIGHT → ACTION; D-1 phiên chiều không đầy đủ
   for (let n = 10; n >= 3; n--) await seedSessions(cameraC._id, houseC._id, day(n), { exit: 1000, entry: 960 })
   await seedSessions(cameraC._id, houseC._id, day(2), { exit: 1000, entry: 650 })
   await seedSessions(cameraC._id, houseC._id, day(1), { exit: 1000, entry: 940, eveningComplete: false })
   await seedHouseCTelemetry(nodeC._id, zoneC._id, [day(2), day(1)], day(2))
   for (const date of [day(2), day(1)]) await assessHouseDay(String(houseC._id), date, now)
 
-  // ── Cảnh báo qua Alert Engine ───────────────────────────────────────────────────────────────────
-  // DS-02: cảm biến hỏng ở tầng A (mở luôn Work Order cho thợ, BR-39)
+  // DS-02: mở luôn Work Order cho thợ (BR-39)
   await createAlert({
     farmId, zoneId: String(zoneA._id), nodeId: String(nodeA._id), type: 'SENSOR_FAULT',
     title: 'Cảm biến độ ẩm không trả số đo', message: 'demo-ctl-a1: cảm biến độ ẩm không trả lời (dữ liệu demo)',
   })
-  // DS-07, 08: ồn bất thường chờ chuyên gia kết luận (thợ được yêu cầu kiểm tra tại chỗ, EXPERT-FR-021)
+  // DS-07, 08
   await createAlert({
     farmId, zoneId: String(zoneA._id), nodeId: String(nodeA._id), type: 'NOISE_ANOMALY',
     title: 'Ồn bất thường kéo dài', message: 'demo-ctl-a1: mức ồn cao hơn nền theo giờ (dữ liệu demo)',
   })
-  // DS-04: phun không tăng ẩm ở nhà B → Work Order → thợ báo xong → VERIFYING
+  // DS-04
   const misting = await createAlert({
     farmId, zoneId: String(zoneB._id), nodeId: String(nodeB._id), type: 'MISTING_INEFFECTIVE',
     title: 'Phun sương không tăng độ ẩm', message: 'demo-ctl-b1: bơm chạy 10 phút, độ ẩm không tăng (dữ liệu demo)',
@@ -300,7 +278,7 @@ async function seedDemo(): Promise<void> {
     await completeWorkOrder(String(verifying._id), tech, { cause: 'NOZZLE', work_note: 'Thông béc phun bị tắc (dữ liệu demo)' })
   }
 
-  // ── Bảo trì (DS-13, 14) — chu kỳ do Farm Owner nhập, ghi rõ là dữ liệu demo ────────────────────────
+  // DS-13, 14
   await createPlan(owner, {
     house_id: String(houseA._id), equipment: 'PUMP', basis: 'RUN_HOURS', interval: 500,
     checklist_template: ['Kiểm tra áp suất bơm', 'Vệ sinh lưới lọc', 'Kiểm tra rò rỉ đường ống'],
@@ -319,7 +297,7 @@ async function seedDemo(): Promise<void> {
     })
   }
 
-  // ── Luật khuyến nghị (DS-15, 16) — luật của chuyên gia, ghi rõ nguồn là dữ liệu demo ─────────────────
+  // DS-15, 16
   const nh3Rule = await createRule(expert, {
     farm_id: farmId, name: 'NH3 vượt ngưỡng 4 giờ/ngày trong 3 ngày', indicator: 'AIR_HOURS_OVER', comparison: 'GTE',
     value: 4, window_days: 3, action: { type: 'WORK_ORDER', title: 'Kiểm tra thông gió và dọn phân chim' },
@@ -330,7 +308,7 @@ async function seedDemo(): Promise<void> {
     value: 90, window_days: 1, action: { type: 'WORK_ORDER', title: 'Kiểm tra hệ thống phun sương' },
     source: 'Dữ liệu demo (Design Brief Phụ lục A2, DS-16), chưa phải luật từ phỏng vấn', active: true,
   })
-  // Lần trước của luật NH3 ở nhà A: chấp nhận 10 ngày trước, chờ job đo hiệu quả (EXPERT-FR-019)
+  // Chấp nhận 10 ngày trước, chờ job đo hiệu quả
   const acceptedDate = day(10)
   const evidenceDays = await HouseHealthDay.find({ house_id: houseA._id, date: { $gte: day(13), $lte: day(11) } }).sort({ date: 1 }).lean()
   await Recommendation.create({
@@ -343,14 +321,14 @@ async function seedDemo(): Promise<void> {
     raised_at: new Date(`${day(11)}T19:20:00+07:00`), raised_for: day(11),
     decided_by: ownerDoc._id, decided_at: new Date(`${acceptedDate}T09:00:00+07:00`),
   })
-  // DS-16: khuyến nghị đang mở ở nhà C (ngày D-2 chỉ ≈ 85 % trong ngưỡng)
+  // DS-16
   await evaluateRecommendationRules(day(2), now, [String(houseC._id)])
 
   const suggestion = await getTuningSuggestion(owner, String(zoneA._id), now)
   logger.info(`[seed:demo] Gợi ý hệ số tầng A (DS-09): ${suggestion.suggestion ? 'có' : `chưa có — ${suggestion.reason}`}`)
 
   logger.info(`[seed:demo] Xong. Tài khoản (mật khẩu ${process.env.DEMO_PASSWORD ? 'DEMO_PASSWORD' : password}): owner@, tech@ (nhà A, B, C), tech2@ (nhà D), expert@, admin@, owner2@ (${NO_EXPERT_FARM})`)
-  // Khoá chỉ in ra đây, không lưu ở đâu khác: nạp vào thiết bị bằng firmware/tools/flash_identity.py
+  // Khoá chỉ in ra đây, không lưu ở đâu khác
   console.table(deviceKeys)
   await mongoose.disconnect()
 }

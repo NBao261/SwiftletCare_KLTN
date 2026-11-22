@@ -1,16 +1,4 @@
-/**
- * migrate-retention.ts — đưa DB đang chạy về đúng index/TTL trong schema và dọn
- * alert trùng sinh ra trước khi có dedup theo sự cố (ALERT-FR-008).
- *
- * Chạy: npm run migrate:retention   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. collMod TTL telemetries.timestamp_1 → TELEMETRY_TTL_SECONDS — Mongoose không
- *    tự sửa expireAfterSeconds của index đã tồn tại.
- * 2. syncIndexes Telemetry + Alert — xoá index không còn trong schema
- *    (node_id_1_timestamp_-1, index dedup cũ của alert), tạo index mới.
- * 3. Mỗi sự cố {farm, zone, node, type} chỉ giữ 1 alert đang mở (bản mới nhất,
- *    occurrence_count = số bản trùng), các bản còn lại → RESOLVED.
- */
+/** Sửa TTL (Mongoose không sửa index đã có), syncIndexes, gộp alert mở trùng sự cố. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

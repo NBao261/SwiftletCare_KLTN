@@ -1,23 +1,10 @@
-/**
- * migrate-relay-overrides.ts — controller đang can thiệp tay từ trước G-06 phần 2 (BR-20).
- *
- * Chạy: npm run migrate:relay-overrides   (1 lần sau khi triển khai G-06 phần 2; chạy lại vẫn an toàn)
- *
- * Bản ghi cũ chỉ có `control_mode: MANUAL` + `override_expiry` cho cả thiết bị, chưa có `relays`, nên
- * Mongoose đọc lên thành 3 relay AUTO: job hết hạn bỏ qua chúng và huỷ từng relay không làm gì cho tới
- * khi thiết bị gửi `relay/status`. Script đặt `relays` cho các node đó:
- * 1. Relay có lịch sử can thiệp còn mở (`relayoverridelogs`, `ended_at: null`, mỗi relay một bản ghi
- *    từ G-06 phần 1) → MANUAL với hạn và người bật của bản ghi đó.
- * 2. Không có lịch sử mở nhưng còn `override_expiry` → cả 3 relay MANUAL với hạn đó, như firmware cũ
- *    áp cho cả thiết bị. Hạn đã qua thì job hết hạn trả về AUTO ở phút kế và gửi `clear_override`.
- * 3. Không có gì để dựa vào → về AUTO.
- */
+/** G-06: node MANUAL cũ chưa có relays được đặt từ log mở, rồi override_expiry, không có thì về AUTO. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'
 import logger from '@/utils/logger.util'
 
-/** Ảnh chụp danh sách relay lúc viết script, không import service để script không kéo MQTT theo */
+/** Không import service để script không kéo MQTT theo */
 const RELAYS = ['misting', 'speaker', 'ventilation'] as const
 
 interface OpenLog { relay: string; expires_at: Date; started_by: Types.ObjectId }
@@ -34,7 +21,7 @@ export async function migrateRelayOverrides() {
     const logs = await db.collection<OpenLog>('relayoverridelogs')
       .find({ node_id: node._id, ended_at: null, relay: { $in: [...RELAYS] } })
       .sort({ started_at: 1 }).toArray()
-    const latest = new Map(logs.map(l => [l.relay, l]))   // nhiều bản ghi mở cho 1 relay: lấy bản mới nhất
+    const latest = new Map(logs.map(l => [l.relay, l]))   // Nhiều bản ghi mở cho 1 relay: lấy bản mới nhất
 
     const set: Record<string, unknown> = {}
     if (latest.size > 0) {

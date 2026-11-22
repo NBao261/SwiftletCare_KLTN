@@ -1,16 +1,4 @@
-/**
- * Chạy một job nền ngay một lần, thay cho việc chờ lịch của nó, cho các bước "chạy job" của kịch bản demo
- * (Design Brief Phụ lục A2, docs/deploy/staging.md §5). Gọi đúng hàm mà job theo lịch gọi.
- *
- *   npm run job:run -- health [YYYY-MM-DD]          # đánh giá ngày (mặc định hôm qua), như returnRate.job
- *   npm run job:run -- recommendations [YYYY-MM-DD] # xét luật khuyến nghị (mặc định hôm qua)
- *   npm run job:run -- effects                      # đo hiệu quả khuyến nghị đã chấp nhận
- *   npm run job:run -- expire [số ngày tới]         # hết hạn khuyến nghị, như thể đã qua thêm N ngày (DS-16)
- *   npm run job:run -- maintenance                  # kế hoạch bảo trì đến hạn và quá hạn (cả kế hoạch theo lịch)
- *   npm run job:run -- relay-usage                  # cộng giờ chạy bơm, quạt từ telemetry
- *   npm run job:run -- recovery                     # kiểm phục hồi Work Order
- *   npm run job:run -- escalation                   # leo thang cảnh báo thợ chưa xác nhận
- */
+/** npm run job:run -- <health|recommendations|effects|expire|maintenance|relay-usage|recovery|escalation> [tham số] */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

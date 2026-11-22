@@ -1,14 +1,4 @@
-/**
- * migrate-remove-regions.ts — dọn khu vực phụ trách của Technician (Report 3 §8, BM03 dòng 9):
- * Technician thấy thiết bị của mọi farm (FARM-FR-009), nên farm không còn `region` và
- * Technician không còn `assigned_regions`.
- *
- * Chạy: npm run migrate:remove-regions   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. `users`: gỡ `assigned_regions`.
- * 2. `farms`: gỡ `region` và index `region_1`.
- * 3. In các farm chưa có tọa độ (bắt buộc từ nay, A-5) để chủ farm bổ sung.
- */
+/** Gỡ assigned_regions, region và index region_1; in farm chưa có tọa độ (A-5). Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

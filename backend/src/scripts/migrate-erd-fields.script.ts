@@ -1,14 +1,4 @@
-/**
- * migrate-erd-fields.ts — dữ liệu cũ theo ERD của Report 4 §6.1, §6.4 (G-14).
- *
- * Chạy: npm run migrate:erd-fields   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. `users`: `is_active` → `status` (SM-14): đã xoá theo yêu cầu → DELETED; bị khoá → LOCKED với `locked_reason`,
- *    `locked_at` lấy từ `deactivated_*`, kể cả khi đang chờ xoá (mã cũ cho Admin khoá tài khoản đó, khoá phải thắng);
- *    đang chờ xoá → DELETION_REQUESTED; còn lại ACTIVE. Bỏ `is_active`,
- *    `deactivated_reason`, `deactivated_at`. Chỉ đụng tài khoản chưa có `status`.
- * 2. `auditlogs`: `ip_address` → `source_ip`; `metadata.before`/`after` chép ra `before`/`after` của dòng.
- */
+/** G-14: users is_active → status (khoá thắng chờ xoá), auditlogs ip_address → source_ip, before/after ra trường riêng. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

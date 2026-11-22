@@ -1,17 +1,4 @@
-/**
- * migrate-zone-reports (G-32, quyết định Q-08) — báo cáo tuần theo Zone cũ (`zonehealthreports`, không còn sinh từ
- * 18/11/2026) vào báo cáo nhà `WEEKLY` cùng kỳ (EXPERT-FR-005), như Report 4 §6.4 đã thiết kế:
- *
- * - kỳ của báo cáo Zone (`period_start` … `period_end`, hết trước `period_end`) quy ra ngày giờ VN;
- * - báo cáo nhà cùng nhà và cùng kỳ đã có thì giữ nguyên số liệu, chưa có thì sinh bằng `generateHouseReport` từ dữ liệu
- *   còn lưu (một phần cho mỗi Zone của nhà); phần của Zone không còn mẫu nào (telemetry quá 90 ngày) lấy số liệu cũ;
- * - kết luận của chuyên gia (EXPERT-FR-006, BR-36: giữ suốt đời cài đặt) chép sang báo cáo nhà, mở đầu bằng tên Zone;
- *   báo cáo nhà đã có kết luận thì nối thêm, không ghi đè;
- * - báo cáo Zone đã chuyển được đánh dấu `migrated_to`, nên chạy lại không chép lần hai; khi mọi bản đã chuyển thì xoá
- *   collection, vì code không còn đọc nó.
- *
- * Chạy: npm run migrate:zone-reports   (chạy lại nhiều lần vẫn an toàn)
- */
+/** G-32: báo cáo Zone cũ vào báo cáo nhà WEEKLY cùng kỳ, chép kết luận (nối, không ghi đè), đánh dấu migrated_to rồi xoá collection. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'
@@ -35,7 +22,7 @@ export async function migrateZoneReports(now = new Date()): Promise<{ migrated: 
   const exists = (await db.listCollections({ name: 'zonehealthreports' }).toArray()).length > 0
   if (!exists) return { migrated: 0, skipped: 0, dropped: false }
   const zoneReports = db.collection<StoredZoneReport>('zonehealthreports')
-  // Đọc thẳng collection: Zone hoặc nhà đã xoá mềm vẫn phải tìm ra được
+  // Zone hoặc nhà đã xoá mềm vẫn phải tìm ra
   const zones = db.collection<{ _id: Types.ObjectId; house_id: Types.ObjectId; name: string }>('zones')
 
   let migrated = 0
@@ -51,8 +38,7 @@ export async function migrateZoneReports(now = new Date()): Promise<{ migrated: 
     const report = existing ?? (await generateHouseReport('WEEKLY', houseId, from, to, now))?.report
     if (!report) { skipped++; continue }
 
-    // Telemetry chỉ giữ 90 ngày (BR-36): báo cáo sinh lại cho kỳ cũ có phần Zone rỗng, còn số liệu đã tính lúc đó nằm
-    // trong báo cáo Zone sắp bị xoá. Phần Zone chưa có mẫu nào thì lấy lại số liệu cũ
+    // Telemetry quá 90 ngày thì phần Zone rỗng: lấy số liệu cũ
     const section = report.zone_sections.find(item => String(item.zone_id) === String(zone._id))
     if (section && !section.sample_count && old.metrics?.sample_count) {
       Object.assign(section, old.metrics, { zone_id: section.zone_id, zone_name: section.zone_name })

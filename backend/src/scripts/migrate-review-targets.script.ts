@@ -1,8 +1,4 @@
-/**
- * G-31 (Report 3 4.2.15) — mục duyệt có thêm nhóm theo nhà và camera: điền `target_id`, `house_id` cho mục cũ
- * (đều theo Zone), rồi đồng bộ chỉ mục (bỏ { zone_id, group }, tạo { target_id, group }).
- * Chạy: npm run migrate:review-targets   (chạy lại nhiều lần vẫn an toàn)
- */
+/** G-31: điền target_id, house_id cho mục duyệt cũ, đổi index { zone_id, group } → { target_id, group }. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { Zone } from '@/models/houseZone.model'

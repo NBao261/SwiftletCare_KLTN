@@ -1,14 +1,4 @@
-/**
- * migrate-remove-tickets.ts — dọn dữ liệu sau khi gỡ module ticket (Report 3 §8, BM03
- * dòng 9): không còn ticket, chat ticket, SLA, gán ticket hay lịch bảo trì định kỳ.
- * Cảnh báo chưa ai xác nhận được gửi lại (ALERT-FR-015), bảo trì bơm/quạt thành
- * cảnh báo MAINTENANCE_DUE (ALERT-FR-016).
- *
- * Chạy: npm run migrate:remove-tickets   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. Drop collection `tickets`, `ticketmessages`, `maintenanceschedules` nếu còn.
- * 2. `systemsettings`: gỡ `sla_hours`, `max_open_tickets_per_technician`.
- */
+/** Drop tickets, ticketmessages, maintenanceschedules; gỡ sla_hours, max_open_tickets_per_technician. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

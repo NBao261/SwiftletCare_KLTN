@@ -1,10 +1,4 @@
-/**
- * migrate-quiet-hours-owner-only (G-32, B-06) — Report 3 §2.4: chỉ Farm Owner đặt giờ im lặng (ALERT-FR-006). Trước
- * G-32 mọi vai trò lưu được giờ im lặng, nên giờ im lặng đã lưu của Farm Technician, Domain Expert và Administrator bị
- * gỡ; kênh đã chọn giữ nguyên. Từ nay `PUT /auth/notification-preferences` từ chối các trường hợp đó (403).
- *
- * Chạy: npm run migrate:quiet-hours-owner-only   (chạy lại nhiều lần vẫn an toàn)
- */
+/** G-32: chỉ Farm Owner đặt giờ im lặng; gỡ của role khác, giữ kênh. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

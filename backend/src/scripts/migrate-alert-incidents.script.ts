@@ -1,14 +1,4 @@
-/**
- * migrate-alert-incidents — đưa cảnh báo đang mở về hai quy tắc của G-32 trước khi chạy code mới:
- *
- * 1. Mức theo loại (ALERT-FR-001, BR-15): trước đây backend giữ mức do thiết bị gửi (firmware gửi `SPEAKER_FAILURE`
- *    là CRITICAL), nên cảnh báo đang mở được đặt lại theo `DEFAULT_SEVERITY`.
- * 2. Mỗi sự cố một cảnh báo còn mở (ALERT-FR-008): điền `incident_key`, gộp các bản trùng còn mở vào bản cũ nhất
- *    (giữ xác nhận, định tuyến và Work Order của lần báo đầu; `occurrence_count` cộng dồn), các bản còn lại → RESOLVED;
- *    sau đó mới tạo chỉ mục duy nhất, vì chỉ mục không tạo được khi còn bản trùng.
- *
- * Chạy: npm run migrate:alert-incidents   (chạy lại nhiều lần vẫn an toàn)
- */
+/** Mức theo loại (BR-15), rồi gộp cảnh báo mở trùng sự cố vào bản cũ nhất trước khi tạo unique index. Chạy lại an toàn */
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'
