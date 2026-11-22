@@ -1,7 +1,4 @@
-/**
- * ENV-FR-028, 030, BR-38 — bù phun sương theo dự báo: luật của nhà (Domain Expert, Farm Owner khi chưa có
- * chuyên gia), job mỗi giờ gửi offset có hạn trên topic `compensation` của mọi controller trong nhà.
- */
+/** ENV-FR-028, 030, BR-38 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

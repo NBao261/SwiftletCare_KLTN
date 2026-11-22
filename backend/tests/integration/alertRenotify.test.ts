@@ -1,7 +1,4 @@
-/**
- * ALERT-FR-015 — cảnh báo chưa ai xác nhận được gửi lại đúng 1 lần cho Farm Owner
- * (CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau 1 giờ), thay ticket leo thang cũ.
- */
+/** ALERT-FR-015: gửi lại đúng 1 lần (CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau 1 giờ) */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'

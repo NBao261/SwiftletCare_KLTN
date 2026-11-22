@@ -1,7 +1,4 @@
-/**
- * ALERT-FR-010 — quét cảm biến bất thường tạo SENSOR_ANOMALY mức MEDIUM (không bị
- * alertEscalation gửi lại) và tự đóng khi dữ liệu bình thường trở lại.
- */
+/** ALERT-FR-010 */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'
@@ -66,8 +63,7 @@ describe('scanSensorAnomalies', () => {
     expect(alert.severity).toBe('MEDIUM')
     expect(String(alert.node_id)).toBe(String(node._id))
 
-    // Không ai xác nhận sau 20 phút: vẫn không được gửi lại (chỉ HIGH/CRITICAL — ALERT-FR-015)
-    // collection.updateOne: bỏ qua Mongoose (created_at là timestamp bất biến)
+    // Chỉ HIGH/CRITICAL được gửi lại. collection.updateOne vì created_at bất biến
     await Alert.collection.updateOne({ _id: alert._id }, { $set: { created_at: new Date(now - 20 * 60_000) } })
     expect(await renotifyStaleAlerts()).toBe(0)
 

@@ -1,7 +1,4 @@
-/**
- * Database script (SDD §6.5): docs/database/init.mongo.js is generated from the models and
- * must stay identical to what the models produce today.
- */
+/** docs/database/init.mongo.js phải giống hệt output của model */
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { Schema } from 'mongoose'

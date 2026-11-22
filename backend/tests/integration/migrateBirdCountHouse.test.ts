@@ -1,7 +1,3 @@
-/**
- * migrate-bird-count-house (SRS v2.1.8): camera, số đếm, cảnh báo camera và mức giảm tỷ lệ chim về
- * chuyển từ Zone sang House chứa Zone; chạy lại không đổi gì thêm.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { migrateBirdCountHouse } from '@/scripts/migrate-bird-count-house.script'

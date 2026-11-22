@@ -1,4 +1,4 @@
-/** Report 3 §4.5 — mật khẩu tạm 12 ký tự ngẫu nhiên của tài khoản do Administrator tạo (AUTH-FR-005c) */
+/** AUTH-FR-005c */
 import { TEMPORARY_PASSWORD_LENGTH, generateTemporaryPassword } from '@/utils/password.util'
 
 describe('generateTemporaryPassword', () => {

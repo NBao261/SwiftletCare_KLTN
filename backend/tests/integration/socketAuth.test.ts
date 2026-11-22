@@ -1,6 +1,4 @@
-/**
- * AUTH-FR-011 — kết nối Socket.io của tài khoản bị khoá/xoá phải bị từ chối dù JWT còn hạn.
- */
+/** AUTH-FR-011 */
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
@@ -12,8 +10,7 @@ import type { CurrentUser } from '@/types'
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 
-// Thay socket.io bằng bản giả ghi lại middleware/handler mà initSocket đăng ký — kiểm tra phần nối dây
-// (io.use, phòng user:<id>, disconnectUser) mà không cần mở cổng thật hay thêm socket.io-client.
+// Socket.io giả: kiểm phần nối dây mà không mở cổng thật
 const mockHandlers: { use?: (socket: unknown, next: (err?: Error) => void) => void; connection?: (socket: unknown) => void } = {}
 const mockRoom = { disconnectSockets: jest.fn() }
 const mockIn = jest.fn(() => mockRoom)
@@ -140,10 +137,7 @@ describe('initSocket wiring (socket.io mocked)', () => {
     expect(mockRoom.disconnectSockets).toHaveBeenCalledWith(true)
   })
 
-  // Trước đây JOIN_ZONE không hề check quyền — bất kỳ user đã đăng nhập nào cũng
-  // join được room của zone thuộc farm khác và nhận telemetry/alert/relay real-time
-  // không phải của mình (IDOR qua WebSocket). 2 test dưới khoá lại hành vi đúng:
-  // chỉ join khi assertZoneAccess (cùng hàm REST dùng) cho phép.
+  // Chỉ join khi assertZoneAccess cho phép (chống IDOR)
   describe('JOIN_ZONE authorization', () => {
     afterEach(async () => {
       await Promise.all([Farm.deleteMany({}), House.deleteMany({}), Zone.deleteMany({})])
@@ -168,10 +162,7 @@ describe('initSocket wiring (socket.io mocked)', () => {
       return { socket, handler: () => joinZoneHandler! }
     }
 
-    // assertZoneAccess chạy async bên trong JOIN_ZONE (handler không trả promise cho
-    // test await) — poll cho tới khi socket.join được gọi hoặc hết timeout, thay vì
-    // đoán 1 khoảng chờ cố định (dễ flaky: mongodb-memory-server là I/O thật qua
-    // socket, không phải chỉ microtask, có thể chậm hơn 1 macrotask setTimeout(0)).
+    // Handler không trả promise: poll thay vì chờ cố định (dễ flaky)
     async function waitUntil(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
       const start = Date.now()
       while (!predicate()) {
@@ -200,16 +191,14 @@ describe('initSocket wiring (socket.io mocked)', () => {
       const { socket, handler } = fakeSocket(currentUser)
 
       handler()({ zoneId: String(zone._id) })
-      // Không có gì để chờ tới (join sẽ KHÔNG xảy ra) — chờ hết 1 khoảng đủ dài để
-      // chắc chắn chuỗi assertZoneAccess (3 lượt DB round-trip) đã chạy xong.
+      // Chờ đủ lâu để chuỗi assertZoneAccess chạy xong
       await waitUntil(() => false, 300)
 
       expect(socket.join).not.toHaveBeenCalledWith(`zone:${String(zone._id)}`)
     })
   })
 
-  // SRS v2.1.8 — số đếm chim, trạng thái camera và cảnh báo của cả nhà đi qua room house:<id>;
-  // cùng lý do với JOIN_ZONE: chỉ join khi assertHouseAccess cho phép
+  // Như JOIN_ZONE, với assertHouseAccess
   describe('JOIN_HOUSE authorization', () => {
     afterEach(async () => {
       await Promise.all([Farm.deleteMany({}), House.deleteMany({})])

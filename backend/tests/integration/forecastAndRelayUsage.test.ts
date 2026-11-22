@@ -1,7 +1,4 @@
-/**
- * Đợt B (SRS v1.24.0): dự báo 60 phút + cảnh báo sớm FORECAST_BREACH (ANALYTICS-FR-009,
- * ALERT-FR-011) và bảo trì theo thời gian chạy thật (ALERT-FR-016, MAINTENANCE_DUE).
- */
+/** ANALYTICS-FR-009, ALERT-FR-011, ALERT-FR-016 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -61,14 +58,14 @@ async function seed() {
   return { zone, node, token }
 }
 
-/** 3 giờ, 1 mẫu/phút, kết thúc ở `endAgoMin` phút trước; độ ẩm theo hàm số phút tính từ đầu */
+/** 3 giờ, 1 mẫu/phút, kết thúc endAgoMin phút trước */
 async function writeHumidity(nodeId: unknown, zoneId: unknown, humidity: (min: number) => number, endAgoMin = 0) {
   const end = Date.now() - endAgoMin * 60_000
   await Telemetry.insertMany(Array.from({ length: 180 }, (_, i) => ({
     node_id: nodeId, zone_id: zoneId, timestamp: new Date(end - (179 - i) * 60_000), humidity: humidity(i), temperature: 28,
   })))
 }
-// 2 giờ ổn định 90%, giờ cuối giảm 1%/5 phút → còn 78% (trong ngưỡng 75–95) nhưng đang lao xuống
+// Còn 78% (trong ngưỡng) nhưng đang lao xuống
 const falling = (min: number) => (min < 120 ? 90 : 90 - (min - 120) / 5)
 
 describe('forecast (ANALYTICS-FR-009)', () => {

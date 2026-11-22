@@ -1,9 +1,4 @@
-/**
- * EXPERT-FR-012/013, BR-31, SM-18, ANALYTICS-FR-014 — chấm trạng thái ngày sau khi xem trạng thái của hệ thống (TC-F22-01…03,
- * TC-ST §6.18), CSV (TC-F21-02), mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22), độ khớp, ngày lệch
- * (EXPERT-FR-022). Người chấm theo Report 3 4.2.0: Farm Owner và Farm Technician được giao nhà; Domain
- * Expert không chấm.
- */
+/** EXPERT-FR-012/013, 022, BR-31, SM-18, ANALYTICS-FR-014 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose, { Types } from 'mongoose'
@@ -449,7 +444,7 @@ describe('ngày lệch (EXPERT-FR-022)', () => {
     })
     await mkDay(house, addDays(TODAY, -3), 'WATCH', { ratings: [rated(owner, 'FARM_OWNER', 'WATCH', 'WATCH')] })
     await mkDay(house, addDays(TODAY, -4), 'INSUFFICIENT_DATA', { ratings: [rated(owner, 'FARM_OWNER', 'INSUFFICIENT_DATA', 'GOOD')] })
-    // Điểm chuyên gia chấm trước Report 3 4.2.0: không phải người chấm nên không tính là lệch
+    // Domain Expert không phải người chấm nên không tính là lệch
     await mkDay(house, addDays(TODAY, -5), 'ACTION', { ratings: [rated(expert!, 'DOMAIN_EXPERT', 'ACTION', 'GOOD')] })
     await mkDay(house, addDays(TODAY, -6), 'ACTION', {
       ratings: [{ by: owner._id, role: 'FARM_OWNER', outcome: 'SKIPPED', at: new Date(), snapshot: { status: 'ACTION', reasons: [] } }],
@@ -523,13 +518,13 @@ describe('Farm Technician chấm ngày của nhà được giao (BR-31, EXPERT-F
     ])
     expect((await call('post', `/health-reports/days/${day._id}/rating`, token, { rating: 'GOOD' })).status).toBe(409)
 
-    // Lượt của thợ không thay lượt của Farm Owner: chủ vẫn chấm riêng, và thấy điểm của thợ
+    // Chủ vẫn chấm riêng và thấy điểm của thợ
     const ownerView = (await call('get', `/health-reports/days/${day._id}`, ownerToken)).body.data
     expect(ownerView).toMatchObject({ my_rating_state: 'PENDING' })
     expect(ownerView.ratings).toEqual([expect.objectContaining({ role: 'FARM_TECHNICIAN', rating: 'WATCH' })])
     expect((await call('post', `/health-reports/days/${day._id}/skip`, ownerToken)).status).toBe(201)
     expect((await HouseHealthDay.findById(day._id).lean())!.ratings.map(r => r.role)).toEqual(['FARM_TECHNICIAN', 'FARM_OWNER'])
-    // Lệnh ghi dạng pipeline bỏ qua validator của Mongoose: schema (và $jsonSchema của init.mongo.js) phải nhận vai thợ
+    // Pipeline update bỏ qua validator Mongoose: schema và $jsonSchema phải nhận vai thợ
     await expect((await HouseHealthDay.findById(day._id))!.validate()).resolves.toBeUndefined()
     // Độ khớp tách theo vai người chấm (NFR-14)
     expect((await call('get', `/health-reports/evaluation?houseId=${house._id}&role=FARM_TECHNICIAN`, ownerToken)).status).toBe(200)

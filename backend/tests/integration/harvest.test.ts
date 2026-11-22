@@ -1,6 +1,3 @@
-/**
- * Ghi nhận mẻ thu hoạch (harvest.service): ảnh chụp môi trường và đàn chim lấy đúng Zone.
- */
 import mongoose from 'mongoose'
 import { BirdCountRecord } from '@/models/birdCountRecord.model'
 import { Telemetry } from '@/models/telemetry.model'
@@ -54,7 +51,7 @@ describe('ảnh chụp của mẻ thu hoạch (HARVEST-FR-002/003)', () => {
     })
 
     expect(batch.toObject().env_snapshot).toMatchObject({ avg_temperature: 29, avg_humidity: 82, avg_nh3_ppm: 6, insufficient_data: false })
-    // Ước tính đàn = số ròng về buổi chiều lớn nhất (90), không phải số thô lớn nhất (95)
+    // Số ròng về lớn nhất (90), không phải số thô (95)
     expect(batch.toObject().flock_snapshot).toMatchObject({ avg_return_rate_30d: 85, estimated_population: 90 })
   })
 })

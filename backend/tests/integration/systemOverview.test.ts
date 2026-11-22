@@ -1,6 +1,3 @@
-/**
- * Module SYSTEM — ngưỡng mặc định (khoảng cảm biến, khởi tạo mặc định) và tổng quan sức khỏe hệ thống.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

@@ -1,7 +1,4 @@
-/**
- * File loa ru (ENV-FR-013c) + tắt Manual Override sớm (ENV-FR-018) — qua route thật
- * (auth + requireRole + multer + validator), MinIO/MQTT/socket được mock.
- */
+/** ENV-FR-013c, ENV-FR-018 qua route thật; MinIO/MQTT/socket mock */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

@@ -1,8 +1,4 @@
-/**
- * VISION-FR-006/008/009/011/012/017, THREAT-FR-010 — số đếm chim từ nút AI qua MQTT, tỷ lệ chim
- * về trên số ròng, cảnh báo LOW_RETURN_RATE, số đếm 5 phút, heartbeat/offline của nút AI.
- * SRS v2.1.8: camera ở cửa ra vào của cả nhà yến → mọi số đếm, cảnh báo, ngưỡng theo House.
- */
+/** VISION-FR-006/008/009/011/012/017, THREAT-FR-010; mọi số đếm theo House */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -158,10 +154,7 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
 })
 
 describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
-  /**
-   * Nhà có 2 cửa ra vào, mỗi cửa 1 camera. Sáng: cửa A ra 60 vào 5, cửa B ra 50 vào 5 → ròng ra 100.
-   * Chiều: cửa A về 30, cửa B về 60 ra 5 → ròng về 85 → 85%. Tính riêng từng camera ra 54,5% và 122% — đều sai.
-   */
+  /** 2 cửa: ròng ra 100, ròng về 85 → 85%. Tính riêng từng camera ra 54,5% và 122%, đều sai */
   async function twoDoors() {
     const s = await seed()
     const doorB = await CameraNode.create({ device_id: `cam-${seq}-b`, house_id: s.house._id })
@@ -184,7 +177,7 @@ describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
     expect(current.body.data).toMatchObject({ house_id: String(house._id), date: today, ...EXPECTED })
     expect(current.body.data.updated_at).toEqual(expect.any(String))
 
-    // Tin cuối (camera cửa B, phiên chiều) phát tổng của cả nhà, không phải số của riêng cửa B
+    // Tổng của cả nhà, không phải của riêng cửa B
     expect(emitBirdCountUpdate).toHaveBeenLastCalledWith(String(house._id), {
       houseId: String(house._id), sessionDate: today, sessionType: 'EVENING_ENTRY',
       entryCount: 90, exitCount: 5, netCount: 85, returnRate: 85, timestamp: expect.any(String),

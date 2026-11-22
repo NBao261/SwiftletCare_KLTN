@@ -1,8 +1,4 @@
-/**
- * ENV-FR-007 — đổi ngưỡng mặc định phải kèm nguồn là một mục của REF-5; audit giữ giá trị cũ, mới và nguồn;
- * zone đang có không đổi và không gửi cấu hình. ENV-FR-026 — báo chuyên gia (Farm Owner khi farm chưa có
- * chuyên gia, BR-22) các zone khác mặc định mới. SYSTEM-FR-002 — GET kèm nguồn và lịch sử.
- */
+/** ENV-FR-007, 026, SYSTEM-FR-002 */
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitNotificationNew: jest.fn() }))
 

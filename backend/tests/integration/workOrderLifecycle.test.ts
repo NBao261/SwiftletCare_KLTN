@@ -1,9 +1,4 @@
-/**
- * OPS-FR-001…004, ALERT-FR-018, BR-39…41 (Report 3 §6.19, SM-19) — Work Order sửa chữa: mở tự động theo cảnh báo
- * thiết bị, giao thợ đang trực; thợ bắt đầu, báo xong kèm nguyên nhân và ảnh; hệ thống kiểm dữ liệu phục hồi
- * 10 phút; Farm Owner duyệt, mở lại, huỷ, giao lại; tự phục hồi trước khi làm; mất kết nối quá 30 phút;
- * chuyên gia xác nhận cần tới nhà.
- */
+/** OPS-FR-001…004, ALERT-FR-018, BR-39…41, SM-19 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

@@ -1,8 +1,4 @@
-/**
- * AUTH-FR-014 — lịch trực theo tuần của nhà: Farm Owner đặt, chỉ thợ đang được giao nhà, ca cùng vai không
- * chồng giờ; thợ chỉ xem ca của mình; bỏ gán thì mất ca. technicianOnDuty: trong ca thợ phụ thì thợ phụ, nhà
- * không có lịch thì thợ chính (tiêu chí của AUTH-FR-014), ca qua nửa đêm, nhà chưa có thợ thì null.
- */
+/** AUTH-FR-014 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

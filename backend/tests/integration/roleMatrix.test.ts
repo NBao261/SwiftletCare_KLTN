@@ -1,9 +1,4 @@
-/**
- * Report 3 §2.4 — ma trận quyền: Farm Technician (kể cả ở nhà được giao), Admin không sửa ngưỡng/hệ số
- * mờ, không sửa lịch loa, không xác nhận cảnh báo, không setup/dời/gỡ thiết bị, không quản lý file loa;
- * Admin không bật relay, không quản lý farm; Farm Owner tự setup thiết bị (MF-10) nhưng chỉ ở farm của
- * mình (FARM-FR-007).
- */
+/** Report 3 §2.4: ma trận quyền */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

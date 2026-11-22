@@ -1,8 +1,4 @@
-/**
- * EXPERT-FR-009 — mỗi quyết định của Domain Expert báo trong ứng dụng cho mọi Farm Owner của farm
- * (tên chuyên gia, nơi, cũ → mới) và có trong lịch sử hoạt động `GET /expert-activity`, đọc từ audit
- * log; lịch sử chỉ Farm Owner và Domain Expert của farm đọc được.
- */
+/** EXPERT-FR-009 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

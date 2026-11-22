@@ -1,7 +1,4 @@
-/**
- * SEC-NFR-004 — rate limit tách 3 suất: API đếm theo tài khoản, đăng nhập/OTP đếm
- * theo IP, refresh có suất riêng. Không cần DB: mount limiter lên app Express nhỏ.
- */
+/** SEC-NFR-004 */
 import express, { type RequestHandler } from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

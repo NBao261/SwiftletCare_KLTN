@@ -1,8 +1,4 @@
-/**
- * G-26 — HARVEST-FR-005…007, BR-43 (Report 3 §6.13, §6.22): xác nhận lô đóng chu kỳ của zone với sản lượng, so sánh
- * với chu kỳ trước và cùng kỳ năm trước, tỷ lệ ngày GOOD, tỷ lệ chim về, thời gian trong ngưỡng, độ đủ; sửa, xoá, nhập
- * lùi ngày dựng lại chu kỳ. ANALYTICS-FR-004 xu hướng sản lượng; EXPERT-FR-020 kết luận mùa vụ (BR-22).
- */
+/** HARVEST-FR-005…007, BR-43, ANALYTICS-FR-004, EXPERT-FR-020 */
 jest.mock('@/socket', () => ({ emitNotificationNew: jest.fn() }))
 
 import express from 'express'
@@ -47,7 +43,7 @@ const as = (token: string) => ({
   delete: (path: string) => request(app).delete(path).set('Authorization', `Bearer ${token}`),
 })
 
-/** Farm: nhà H (zone Z, controller đăng ký ngày `registeredAt`) giao cho thợ; nhà H2 (zone Z2) không giao; chuyên gia tuỳ chọn */
+/** Nhà H giao cho thợ, nhà H2 không giao; chuyên gia tuỳ chọn */
 async function seed(opts: { registeredAt?: string; withExpert?: boolean } = {}) {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!

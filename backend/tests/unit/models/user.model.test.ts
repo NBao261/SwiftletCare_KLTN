@@ -1,16 +1,9 @@
-/**
- * Unit tests – User Model
- * Tests: password hashing, comparePassword, toJSON masking
- *
- * Uses mongodb-memory-server to run Mongoose without a real DB connection.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { User, IUser } from '@/models/user.model'
 
 let mongod: MongoMemoryServer
 
-// ── Lifecycle ──────────────────────────────────────────────────────────────────
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
   await mongoose.connect(mongod.getUri())
@@ -26,7 +19,6 @@ afterEach(async () => {
   await User.deleteMany({})
 })
 
-// ── Tests ──────────────────────────────────────────────────────────────────────
 describe('User Model', () => {
   describe('comparePassword()', () => {
     it('returns true for the correct password', async () => {

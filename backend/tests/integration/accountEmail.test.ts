@@ -1,8 +1,4 @@
-/**
- * G-02 — AUTH-FR-005c Administrator tạo Farm Owner với mật khẩu tạm; thư tài khoản qua SMTP (SF-03): mật khẩu tạm,
- * mã đặt lại mật khẩu (AUTH-FR-009), lời mời (AUTH-FR-010). Không ghi log mã, mật khẩu hay token; chưa cấu hình SMTP
- * thì nghiệp vụ vẫn chạy, thư không đi.
- */
+/** AUTH-FR-005c, 009, 010: thư tài khoản qua SMTP; không log mã/mật khẩu; chưa cấu hình SMTP thì nghiệp vụ vẫn chạy */
 const sendMailMock = jest.fn()
 jest.mock('nodemailer', () => ({ __esModule: true, default: { createTransport: jest.fn(() => ({ sendMail: sendMailMock })) } }))
 

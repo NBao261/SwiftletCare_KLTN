@@ -1,7 +1,4 @@
-/**
- * Report 3 §4.5 — khoảng của bảng so sánh nhà và điện năng ước tính: trọn ngày giờ VN, giữ đúng số ngày yêu cầu,
- * tối đa 366 ngày (ANALYTICS-FR-016, 017).
- */
+/** Report 3 §4.5 */
 import { MAX_PERIOD_DAYS, isPeriodParam, parsePeriodParam, vnDayPeriod } from '@/utils/period.util'
 
 const DAY = 86_400_000

@@ -1,8 +1,4 @@
-/**
- * ENV-FR-019 + ANALYTICS-FR-011 (SRS v2.0.0) — mỗi lần can thiệp tay để lại 1 bản ghi
- * (ai, role, relay, trạng thái, bắt đầu/kết thúc, lý do kết thúc), và tỷ lệ thời gian
- * tự động của Zone tính từ các bản ghi đó.
- */
+/** ENV-FR-019, ANALYTICS-FR-011 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -175,8 +171,7 @@ describe('lịch sử can thiệp tay (ENV-FR-019)', () => {
     expect(expiry - Date.now()).toBeGreaterThan(29 * 60_000)
     expect(expiry - Date.now()).toBeLessThanOrEqual(30 * 60_000)
 
-    // Và job hết hạn trả được node đó về AUTO. Firmware < 1.6.0 không nói relay nào đang tay nên
-    // backend coi cả 3 relay cùng hạn, đúng với 1 hạn chung của firmware đó
+    // Firmware < 1.6.0 có 1 hạn chung nên coi cả 3 relay cùng hạn
     const past = new Date(Date.now() - 1000)
     await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.override_expiry': past, 'relays.speaker.override_expiry': past, 'relays.ventilation.override_expiry': past })
     expect(await expireManualOverrides()).toBe(3)

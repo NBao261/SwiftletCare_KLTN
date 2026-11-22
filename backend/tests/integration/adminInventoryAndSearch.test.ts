@@ -1,7 +1,4 @@
-/**
- * Admin: thu hồi / cấp lại secretKey cho thiết bị trong kho (FARM-FR-003) và tìm
- * người dùng theo tên/email/SĐT, vùng, trạng thái (AUTH-FR-011).
- */
+/** FARM-FR-003 thu hồi/cấp lại secretKey; AUTH-FR-011 tìm người dùng */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

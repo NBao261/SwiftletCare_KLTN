@@ -1,7 +1,3 @@
-/**
- * migrate-quiet-hours-owner-only (G-32): giờ im lặng của người không phải Farm Owner bị gỡ, kênh giữ nguyên; giờ im lặng
- * của Farm Owner giữ nguyên; chạy lại không đổi gì.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { migrateQuietHoursOwnerOnly } from '@/scripts/migrate-quiet-hours-owner-only.script'

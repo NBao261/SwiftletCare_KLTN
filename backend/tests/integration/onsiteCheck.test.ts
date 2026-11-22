@@ -1,8 +1,4 @@
-/**
- * EXPERT-FR-021 — thợ được giao nhà trả lời yêu cầu kiểm tra tại chỗ của cảnh báo suy luận, kèm ảnh tuỳ chọn;
- * câu trả lời nằm trong bằng chứng (ALERT-FR-014) trước khi chuyên gia kết luận; SENSOR_ANOMALY mà cảm biến
- * bẩn/hỏng mở ngay 1 Work Order (BR-39); thợ nhà khác → 403.
- */
+/** EXPERT-FR-021, ALERT-FR-014, BR-39 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -77,7 +73,7 @@ describe('kiểm tra tại chỗ (EXPERT-FR-021)', () => {
     await owner$.post(path, { observation: 'RAIN' }).expect(403)
     await expert$.post(path, { observation: 'RAIN' }).expect(403)
     await tech$.post(path, { observation: 'SOMETHING' }).expect(422)
-    // Spec: yêu cầu còn chờ có `observation: null` (mobile tìm nút "Trả lời" theo đó), không phải thiếu khoá
+    // observation: null, không phải thiếu khoá (mobile tìm theo đó)
     const pending = await tech$.get(`/alerts/${alert._id}`).expect(200)
     expect(pending.body.data.onsite_checks[0]).toMatchObject({
       observation: null, note: null, answered_by: null, answered_at: null, photo_url: null,

@@ -1,8 +1,4 @@
-/**
- * ALERT-FR-002 (G-10) — push qua FCM: đăng ký và gỡ FCM device token, gửi cảnh báo tới mọi máy của
- * người nhận kèm dữ liệu để mở chi tiết cảnh báo, xoá token FCM báo hỏng, không ghi token ra log.
- * Firebase Admin SDK được giả lập — test không gọi mạng thật (TC-F08-03).
- */
+/** ALERT-FR-002: Firebase Admin SDK giả lập, không gọi mạng thật */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -60,7 +56,7 @@ afterEach(async () => {
 })
 
 let seq = 0
-/** Không có giờ im lặng: kết quả không phụ thuộc giờ chạy test (giờ im lặng là ALERT-FR-006, có test riêng) */
+/** Không có giờ im lặng: không phụ thuộc giờ chạy test */
 const ALWAYS_ON = { push: true, telegram: false, quiet_hours: { start: '00:00', end: '00:00' } }
 const mkUser = (over: Record<string, unknown> = {}) =>
   User.create({ email: `p${++seq}@test.vn`, password_hash: 'password123', full_name: 'P', role: 'FARM_OWNER', notification_preferences: ALWAYS_ON, ...over })

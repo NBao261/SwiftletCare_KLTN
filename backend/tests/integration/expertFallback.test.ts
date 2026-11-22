@@ -1,9 +1,4 @@
-/**
- * BR-22 (Report 3 4.2.15) — farm chưa có Domain Expert thì Farm Owner làm thay quyết định của chuyên gia: kết luận
- * cảnh báo suy luận (EXPERT-FR-003), tham số phát hiện và mức giảm tỷ lệ chim về (EXPERT-FR-008), vòng đếm
- * (VISION-FR-018), thông báo chờ kiểm chứng (EXPERT-FR-007). Farm đã có chuyên gia còn hoạt động: kết luận cảnh báo
- * → 403, tham số áp ngay kèm mục duyệt; chuyên gia bị khoá không tính.
- */
+/** BR-22: farm chưa có chuyên gia thì Farm Owner làm thay; có chuyên gia thì 403 hoặc mục duyệt; chuyên gia bị khoá không tính */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

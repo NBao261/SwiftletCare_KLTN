@@ -1,7 +1,3 @@
-/**
- * migrate-remove-tickets: collection ticket/lịch bảo trì bị drop, cấu hình SLA và gán
- * ticket bị gỡ khỏi system setting, ngưỡng mặc định giữ nguyên; chạy lại không lỗi.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { migrateRemoveTickets } from '@/scripts/migrate-remove-tickets.script'

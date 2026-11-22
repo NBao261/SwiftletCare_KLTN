@@ -1,8 +1,4 @@
-/**
- * Database script (SDD §6.5): with the generated `$jsonSchema` validators enforced
- * (strict, error), documents written through the models are accepted and a document
- * missing a required field is rejected — the script and the models describe the same data.
- */
+/** SDD §6.5: dữ liệu ghi qua model qua được $jsonSchema strict */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'

@@ -18,7 +18,7 @@ const SLOT_MS = 10_000
 const HOUR = 3600_000
 let seq = 0
 
-/** Chủ trại + chuyên gia + farm (có toạ độ) + 1 nhà + 1 Zone (ngưỡng mặc định: ẩm 75–95, nhiệt 26–31) */
+/** Ngưỡng mặc định: ẩm 75–95, nhiệt 26–31 */
 export async function seedHouse(opts: { withExpert?: boolean } = {}) {
   seq++
   const owner = await User.create({ email: `ho${seq}@test.vn`, password_hash: 'password123', full_name: `Chủ ${seq}`, role: 'FARM_OWNER' })
@@ -33,10 +33,7 @@ export async function seedHouse(opts: { withExpert?: boolean } = {}) {
   return { owner, expert, farm, house, zone }
 }
 
-/**
- * Đủ 8640 mẫu (1 mẫu / 10 giây) của ngày `date`. `humidityOutSlots` mẫu đầu có độ ẩm 60 % (ngoài
- * ngưỡng); `sound: false` bỏ độ ồn (tiếng ồn không đánh giá được); `slots` < 8640 để thiếu dữ liệu.
- */
+/** 8640 mẫu/ngày; humidityOutSlots mẫu đầu ẩm 60 %; sound: false bỏ độ ồn; slots < 8640 để thiếu dữ liệu */
 export async function seedTelemetry(zone: { _id: unknown }, date: string, opts: { humidityOutSlots?: number; sound?: boolean; slots?: number } = {}) {
   const start = vnDayStart(date).getTime()
   const docs = []
@@ -50,7 +47,7 @@ export async function seedTelemetry(zone: { _id: unknown }, date: string, opts: 
   await Telemetry.insertMany(docs, { lean: true })
 }
 
-/** Số đếm 2 phiên: `rates[i]` là tỷ lệ chim về (%) của ngày date − (rates.length − 1 − i); null = thiếu phiên chiều */
+/** rates[i] là tỷ lệ của ngày date − (rates.length − 1 − i); null = thiếu phiên chiều */
 export async function seedCounts(house: { _id: unknown }, date: string, rates: (number | null)[]) {
   const camera = new Types.ObjectId()
   const docs = []

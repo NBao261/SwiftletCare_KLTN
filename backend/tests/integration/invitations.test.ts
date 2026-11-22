@@ -1,7 +1,4 @@
-/**
- * Lời mời thành viên farm (Flow 12, AUTH-FR-005/010) và tạo tài khoản từ link lời mời —
- * không còn đăng ký công khai hay đăng nhập bằng OTP (G-02, Report 3 §1.2).
- */
+/** AUTH-FR-005/010 */
 import express from 'express'
 import request from 'supertest'
 import mongoose from 'mongoose'

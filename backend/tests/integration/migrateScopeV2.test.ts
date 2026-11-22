@@ -1,7 +1,3 @@
-/**
- * npm run migrate:scope-v2 — dữ liệu theo phạm vi cũ (Farm Operator, BIRD_PANIC, relay
- * sưởi, Marketplace) được đưa về SRS v2.0.0; chạy lại lần 2 không đổi gì.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'

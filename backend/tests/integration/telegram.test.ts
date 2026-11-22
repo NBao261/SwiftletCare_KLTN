@@ -1,8 +1,4 @@
-/**
- * ALERT-FR-013 (SRS v2.0.0) — kênh Telegram: liên kết bằng mã một lần qua `/start <mã>`,
- * gửi cảnh báo theo cùng luật với push (người nhận, giờ im lặng, ngoại lệ CRITICAL).
- * `fetch` tới api.telegram.org được giả lập — test không gọi mạng thật.
- */
+/** ALERT-FR-013: fetch giả lập, không gọi mạng thật */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

@@ -14,10 +14,7 @@ import { User } from '@/models/user.model'
 import { WorkOrder } from '@/models/workOrder.model'
 import type { CurrentUser } from '@/types'
 
-/**
- * Mongo trong bộ nhớ cho cả file test; sau mỗi test trả mock về như cũ và xoá sạch dữ liệu
- * (kể cả bản ghi đã xoá mềm). Gọi ở cấp ngoài cùng của file test, sau các `jest.mock`.
- */
+/** Mongo trong bộ nhớ cho cả file; sau mỗi test trả mock và xoá dữ liệu. Gọi sau các jest.mock */
 export function useTestDb(): void {
   let mongod: MongoMemoryServer
   beforeAll(async () => {

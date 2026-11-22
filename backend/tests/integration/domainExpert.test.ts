@@ -1,9 +1,4 @@
-/**
- * Domain Expert (AUTH-FR-004/005, SRS v2.0.0 mục 4.4) — chuyên gia nuôi yến do Primary
- * Owner mời, phạm vi luôn là cả farm. Được: đọc dữ liệu vận hành, sửa ngưỡng và hệ số
- * mờ. Không được: relay/loa, ghi thu hoạch, xác nhận cảnh báo, sửa/xoá farm,
- * quản lý thành viên, tạo House/Zone.
- */
+/** AUTH-FR-004/005: Domain Expert cả farm, không relay/loa, thu hoạch, xác nhận cảnh báo, quản lý farm */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

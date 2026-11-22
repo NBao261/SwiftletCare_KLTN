@@ -1,8 +1,4 @@
-/**
- * OPS-FR-009, BR-40 — MTTA = trung bình (xác nhận − tạo); MTTR = trung bình (Work Order đóng, không có thì cảnh báo
- * đóng − tạo); theo nhà và theo thợ được định tuyến; cảnh báo bị bác bỏ không tính. ALERT-FR-005 — kênh theo mức
- * cảnh báo, CRITICAL phải còn kênh ngoài ứng dụng.
- */
+/** OPS-FR-009, BR-40, ALERT-FR-005 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

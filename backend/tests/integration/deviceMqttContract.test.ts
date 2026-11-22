@@ -1,7 +1,4 @@
-/**
- * Hợp đồng MQTT ESP32 ↔ backend: telemetry (throttle ghi DB, dữ liệu buffer offline),
- * cảnh báo thiết bị, relay/status, heartbeat resync config, API lịch loa ru.
- */
+/** Hợp đồng MQTT ESP32 ↔ backend */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -76,11 +73,7 @@ async function seed(status: 'ONLINE' | 'OFFLINE' = 'ONLINE') {
   return { farm, house, zone, node, deviceId, token, topic }
 }
 
-/**
- * ingestTelemetry gọi raiseThresholdAlert kiểu fire-and-forget (vài lượt đọc/ghi DB). Chờ
- * tới khi cảnh báo thật sự được ghi: 1 nhịp setImmediate không đủ khi máy đang tải nặng —
- * test tự nó lúc qua lúc không, và lần ghi tới trễ còn rơi vào test kế tiếp.
- */
+/** Fire-and-forget: chờ tới khi cảnh báo thật sự được ghi, 1 nhịp setImmediate không đủ khi máy tải nặng */
 async function thresholdAlertRaised() {
   for (let i = 0; i < 100; i++) {
     if (await Alert.collection.countDocuments({ type: 'THRESHOLD_BREACH' })) return
@@ -160,7 +153,7 @@ describe('ingestTelemetry', () => {
     const t0 = Date.now()
     const hot = { temperature: DEFAULT_THRESHOLDS.temp_max + 5 }
 
-    // 10 phút + 1 mẫu, mẫu cách nhau 10s; `now` đi theo mẫu để không bị coi là dữ liệu buffer cũ
+    // now đi theo mẫu để không bị coi là buffer cũ
     for (let i = 0; i <= 60; i++) await ingestTelemetry(reading(deviceId, t0 + i * 10_000, hot), t0 + i * 10_000)
     await thresholdAlertRaised()
 
@@ -353,8 +346,7 @@ describe('recordHeartbeat', () => {
     expect((await Alert.findById(offline!._id).lean())!.status).toBe('RESOLVED')
   })
 
-  // Thiết bị đã nhận cấu hình lần đầu rồi — nếu không, heartbeat nào cũng kích hoạt
-  // pushZoneConfigOnFirstContact và 2 test dưới không đo đúng điều chúng muốn đo.
+  // Đã nhận cấu hình lần đầu, không thì heartbeat nào cũng kích hoạt pushZoneConfigOnFirstContact
   const provisioned = async () => {
     const ctx = await seed()
     await SensorNode.updateOne({ _id: ctx.node._id }, { config_pushed_at: new Date() })

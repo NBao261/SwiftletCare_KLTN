@@ -1,7 +1,3 @@
-/**
- * migrate-remove-regions: `users.assigned_regions`, `farms.region` và index `region_1` bị gỡ,
- * farm chưa có tọa độ được liệt kê; chạy lại không lỗi.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { migrateRemoveRegions } from '@/scripts/migrate-remove-regions.script'

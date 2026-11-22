@@ -1,6 +1,4 @@
-/**
- * ANALYTICS-FR-012, BR-28…30 — trạng thái sức khỏe ngày của nhà yến (TC-F20-01…03, DS-21, DS-22).
- */
+/** ANALYTICS-FR-012, BR-28…30 */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
@@ -180,7 +178,7 @@ describe('job đánh giá (SM-17)', () => {
     expect(recipients).toEqual([String(owner._id)])
     expect(recipients).not.toContain(String(expert!._id))
     for (const [, message] of (notifyUser as jest.Mock).mock.calls) {
-      // Trạng thái có thể đổi khi dữ liệu trễ về nên thông báo không chép trạng thái, chỉ mời xem rồi xác nhận hoặc sửa
+      // Thông báo không chép trạng thái vì trạng thái còn đổi khi dữ liệu trễ
       expect(JSON.stringify(message)).not.toMatch(/ACTION|WATCH|GOOD|Cần xử lý/)
       expect(message.body).toMatch(/xác nhận hoặc sửa/)
       expect(message.body).not.toMatch(/trước khi xem/)

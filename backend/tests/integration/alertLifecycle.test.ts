@@ -1,7 +1,3 @@
-/**
- * Vòng đời cảnh báo: cảnh báo theo đợt tự đóng, bộ lọc GET /alerts, giới hạn mức độ và loại
- * cảnh báo thiết bị được gửi.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

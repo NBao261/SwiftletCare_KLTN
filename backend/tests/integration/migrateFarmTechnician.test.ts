@@ -1,7 +1,3 @@
-/**
- * migrate-farm-technician (G-20): tài khoản role TECHNICIAN cũ thành FARM_TECHNICIAN, mất refresh token,
- * không được thêm vào farm nào; audit cũ giữ nguyên; chạy lại không lỗi.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { migrateFarmTechnician } from '@/scripts/migrate-farm-technician.script'

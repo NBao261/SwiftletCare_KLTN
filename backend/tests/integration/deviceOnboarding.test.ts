@@ -1,8 +1,4 @@
-/**
- * Onboarding thiết bị bởi Farm Owner (lệnh từ xa: Administrator, G-20) — FARM-FR-003/004, 013, Flow 1 bước 3–4, case 3a, 8a.
- * Trọng tâm: phải có đúng cặp {device_id, secretKey} do công ty cấp; thiết bị
- * đã thuộc Farm khác báo lỗi riêng; node PENDING quá 15 phút được đánh dấu.
- */
+/** FARM-FR-003/004, 013: phải đúng cặp {device_id, secretKey}; thuộc farm khác báo riêng; PENDING quá 15 phút */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -339,7 +335,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect(taken.body.error.message).toContain('đã được đăng ký lại')
   })
 
-  // B-06 (todo-audit-1118) — danh sách để Farm Owner tìm thiết bị gỡ nhầm, cùng điều kiện với restore
+  // B-06: cùng điều kiện với restore
   it('removed=recent: thiết bị gỡ trong 24 giờ có kèm hạn khôi phục; quá 24 giờ hoặc đã bị thay thì không; Admin → 403', async () => {
     const { ownerToken, adminToken, nodeId, owner } = await installed()
     const recent = (token: string) => request(app).get('/devices/sensor-nodes?removed=recent').set('Authorization', `Bearer ${token}`)

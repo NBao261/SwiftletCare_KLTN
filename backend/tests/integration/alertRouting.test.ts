@@ -1,8 +1,4 @@
-/**
- * ALERT-FR-017, BR-40 — cảnh báo của nhà tới thợ đang trực; Farm Owner sau 15 phút chưa xác nhận, đúng 1 lần;
- * CRITICAL tới cả hai cùng lúc; nhà không có thợ thì Farm Owner. ALERT-FR-015 gửi lại cho người đã nhận.
- * EXPERT-FR-021 — cảnh báo suy luận ở nhà có thợ tạo đúng 1 yêu cầu kiểm tra tại chỗ.
- */
+/** ALERT-FR-015, 017, BR-40, EXPERT-FR-021 */
 import { Alert } from '@/models/alert.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'

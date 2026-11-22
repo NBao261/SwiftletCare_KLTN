@@ -1,7 +1,4 @@
-/**
- * Chỉnh ngưỡng Zone (Farm Owner/Domain Expert) qua /farms/zones/:id/thresholds — dùng chung validate
- * với ngưỡng mặc định hệ thống. Đường cũ qua thiết bị /devices/sensor-nodes/:id/thresholds đã bỏ (B-02).
- */
+/** Đường cũ /devices/sensor-nodes/:id/thresholds đã bỏ (B-02) */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

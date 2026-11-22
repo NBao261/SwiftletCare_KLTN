@@ -1,8 +1,4 @@
-/**
- * EXPERT-FR-005/006 — báo cáo tuần theo Zone kiểu cũ: hệ thống không tạo mới nữa (báo cáo theo nhà có mục cho
- * từng Zone, houseHealthReport.test.ts), nhưng các báo cáo đã lưu vẫn đọc và viết kết luận được; số liệu từng
- * Zone (`buildZoneMetrics`) vẫn dùng chung.
- */
+/** EXPERT-FR-005: buildZoneMetrics dùng chung cho báo cáo nhà */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -123,7 +119,7 @@ describe('số lần đóng cắt relay không bị phồng sau khi mất mạng
   it('mẫu xả từ bộ đệm offline (không có trạng thái relay) không được tính là một lần đổi', async () => {
     const { zone, node } = await seed(false)
     const now = Date.now()
-    // bật, bật, [2 mẫu offline không có misting_on], bật, tắt → đúng 1 lần đổi (bật → tắt)
+    // 2 mẫu offline không có misting_on → đúng 1 lần đổi
     const rows: Array<boolean | undefined> = [true, true, undefined, undefined, true, false]
     await Telemetry.insertMany(rows.map((on, i) => ({
       node_id: node._id, zone_id: zone._id, timestamp: new Date(now - (rows.length - i) * 60_000), humidity: 80, temperature: 28,

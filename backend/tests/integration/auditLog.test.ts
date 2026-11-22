@@ -1,6 +1,4 @@
-/**
- * AUTH-FR-007 — audit log: IP theo request, PASSWORD_RESET, DELETION_REQUESTED, DEVICE_REGISTERED.
- */
+/** AUTH-FR-007 */
 import crypto from 'crypto'
 import express from 'express'
 import mongoose from 'mongoose'

@@ -1,8 +1,4 @@
-/**
- * ALERT-FR-014, EXPERT-FR-003 — `GET /alerts/:id/evidence`: dữ liệu nhiều nguồn quanh 1 cảnh báo suy
- * luận (±30 phút, hoặc ngày của phiên cho LOW_RETURN_RATE), nguồn trống báo `missing` chứ không phải 0,
- * kèm các kết luận trước cùng loại cùng nơi. Hệ thống chỉ trình bày, không kết luận.
- */
+/** ALERT-FR-014: nguồn trống là missing, không phải 0; hệ thống chỉ trình bày */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

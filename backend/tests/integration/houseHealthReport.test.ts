@@ -1,8 +1,4 @@
-/**
- * EXPERT-FR-005, 006, 013, BR-31, BR-33, SM-09 — báo cáo sức khỏe theo nhà: ngày, tuần, tháng (TC-ST 6.9),
- * theo yêu cầu, mỗi Zone một mục; trạng thái ngày che theo người gọi; kết luận của chuyên gia; xem báo cáo
- * (TC-F21-01). Báo cáo tuần theo Zone cũ vẫn chạy song song.
- */
+/** EXPERT-FR-005, 006, 013, BR-31, BR-33, SM-09 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose, { Types } from 'mongoose'
@@ -233,7 +229,7 @@ describe('TC-F21-01 — xem báo cáo theo nhà', () => {
       const user = await User.create({ email: `${role}${Math.random()}@t.vn`, password_hash: 'password123', full_name: role, role })
       await call('get', `/health-reports/${report._id}`, tokenFor(user._id, role)).expect(403)
     }
-    // Report 3 §2.4 — thợ được giao nhà đọc báo cáo của nhà đó; lọc theo farm chỉ ra nhà được giao
+    // Thợ được giao đọc báo cáo của nhà đó; lọc theo farm chỉ ra nhà được giao
     const technician = await User.create({ email: `ft${Math.random()}@t.vn`, password_hash: 'password123', full_name: 'Thợ', role: 'FARM_TECHNICIAN' })
     const technicianToken = tokenFor(technician._id, 'FARM_TECHNICIAN')
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: technician._id, role: 'FARM_TECHNICIAN' } } })

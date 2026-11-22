@@ -1,7 +1,4 @@
-/**
- * ANALYTICS-FR-010 — gợi ý hệ số mờ: từ chối khi thiếu dữ liệu, đề xuất bộ hệ số
- * tốt hơn trên nhà yến giả lập, và không bao giờ tự ghi hệ số.
- */
+/** ANALYTICS-FR-010 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -53,10 +50,7 @@ async function seed() {
 }
 
 const STEP = 10 * 60_000
-/**
- * Nhà yến giả khô nhanh (Δh = 0.05·phun − 0.02·quạt − 2.2 mỗi 10 phút) do bộ mờ
- * mặc định điều khiển, cộng 30% bước phun ngẫu nhiên để dữ liệu đủ đa dạng cho hồi quy.
- */
+/** Δh = 0.05·phun − 0.02·quạt − 2.2 mỗi 10 phút, thêm 30% bước ngẫu nhiên cho đủ đa dạng */
 async function writeDryHouse(nodeId: unknown, zoneId: unknown, days: number) {
   const n = Math.round((days * 86400_000) / STEP)
   const start = Math.floor(Date.now() / STEP) * STEP - (n - 1) * STEP

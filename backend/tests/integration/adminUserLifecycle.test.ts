@@ -1,8 +1,4 @@
-/**
- * admin.service — khoá tài khoản, xoá tài khoản theo yêu cầu (cascade, chạy lại),
- * từ chối và nhắc hạn yêu cầu xoá.
- * Chạy trên MongoDB in-memory.
- */
+/** AUTH-FR-011, 012: khoá, xoá theo yêu cầu (cascade, chạy lại), từ chối, nhắc hạn */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
@@ -64,7 +60,6 @@ const mkFarm = (owner: { _id: unknown }, others: Array<{ user: { _id: unknown };
 
 const auditActions = async (action: string) => AuditLog.find({ action }).lean()
 
-// ── setUserStatus ──────────────────────────────────────────────────────────────
 describe('setUserStatus', () => {
   it('locks with a trimmed reason, revokes refresh tokens, drops live sockets and audits', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
@@ -128,7 +123,6 @@ describe('setUserStatus', () => {
   })
 })
 
-// ── yêu cầu xoá: user huỷ, Admin từ chối, nhắc hạn ───────────────────────────
 describe('cancelAccountDeletion', () => {
   it('withdraws a pending request, audits it and tells the admins', async () => {
     const user = await mkUser('user@test.vn')
@@ -210,7 +204,6 @@ describe('remindPendingDeletionRequests', () => {
   })
 })
 
-// ── completeDeletionRequest ───────────────────────────────────────────────────
 describe('completeDeletionRequest', () => {
   const requested = { deletion_requested_at: new Date() }
 

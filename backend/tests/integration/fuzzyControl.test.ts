@@ -1,8 +1,4 @@
-/**
- * Bộ điều khiển mờ (SRS v1.24.0): lưu đầu ra vào telemetry (ENV-FR-010/011),
- * chỉnh hệ số theo Zone qua config/update (ENV-FR-021), đo hiệu quả điều khiển
- * (ANALYTICS-FR-008).
- */
+/** ENV-FR-010/011, 021, ANALYTICS-FR-008 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

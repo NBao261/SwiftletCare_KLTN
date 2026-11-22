@@ -1,7 +1,4 @@
-/**
- * EXPERT-FR-006/007 — hộp thông báo trong ứng dụng: lưu DB + socket NOTIFICATION_NEW, đọc/đánh dấu
- * đã đọc chỉ trên thông báo của chính mình; cảnh báo suy luận mới báo Domain Expert trong ứng dụng.
- */
+/** EXPERT-FR-006/007 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

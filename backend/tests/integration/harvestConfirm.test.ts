@@ -1,8 +1,4 @@
-/**
- * HARVEST-FR-001, 005, 006 — Farm Technician nhập lô ở nhà được giao (DRAFT), chỉ sửa/xoá lô DRAFT của mình,
- * chỉ xem lô của nhà được giao; Farm Owner nhập là CONFIRMED ngay và xác nhận lô của thợ (lần hai → 409,
- * thợ → 403); Domain Expert chỉ xem. migrate:harvest-confirmed xác nhận lô cũ của Farm Owner.
- */
+/** HARVEST-FR-001, 005, 006 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

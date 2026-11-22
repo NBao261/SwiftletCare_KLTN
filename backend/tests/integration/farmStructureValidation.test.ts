@@ -1,8 +1,4 @@
-/**
- * FARM-FR-001, 002, Report 3 §4.5 — tên farm, nhà, zone tối đa 50 ký tự; nhà 1–10 tầng; tầng của zone
- * không vượt số tầng của nhà; tên nhà/zone không trùng (bỏ qua hoa thường) → 409 DUPLICATE_NAME.
- * AUTH-FR-005, 010 — Primary Owner xem lời mời của farm, không có token.
- */
+/** FARM-FR-001, 002, AUTH-FR-005, 010 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

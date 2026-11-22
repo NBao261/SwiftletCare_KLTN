@@ -1,9 +1,4 @@
-/**
- * ALERT-FR-012, BR-34, BR-16 (TC-F07-02, DF-6) — THRESHOLD_BREACH qua đường nhận telemetry thật:
- * chỉ tạo khi 1 chỉ số ở ngoài ngưỡng liên tục đủ thời gian chờ (10 phút nhiệt độ/độ ẩm, 5 phút
- * ánh sáng/NH3/CO2), mang chi tiết (chỉ số, giá trị, ngưỡng, chiều, lúc bắt đầu), còn sống khi chỉ số
- * vẫn ngoài ngưỡng và tự đóng sau 5 phút về trong ngưỡng.
- */
+/** ALERT-FR-012, BR-16, BR-34 (TC-F07-02) */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -202,8 +197,7 @@ describe('tự đóng (BR-16)', () => {
     await settle()
     const [alert] = await breaches(zone._id)
 
-    // 1 mẫu trong ngưỡng rồi lại ra ngoài: quãng chờ mới chưa đủ, nhưng cảnh báo đang mở vẫn được
-    // gia hạn (mô phỏng lần thấy cuối đã 2 phút trước), chưa coi là "về trong ngưỡng 5 phút"
+    // Quãng chờ mới chưa đủ nhưng cảnh báo mở vẫn được gia hạn
     await Alert.updateOne({ _id: alert._id }, { last_seen_at: new Date(Date.now() - 2 * MIN) })
     await at(10, {}, 5)
     await run(10.5, 11, LOW_HUMIDITY)

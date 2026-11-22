@@ -1,7 +1,4 @@
-/**
- * Mật khẩu tạm (bắt đổi trước khi dùng), PUT /auth/password. Admin không còn tạo hay cấp mật khẩu
- * cho Technician (G-20: Farm Technician vào farm qua lời mời của Farm Owner, AUTH-FR-005, 010).
- */
+/** Mật khẩu tạm và PUT /auth/password */
 import { randomBytes } from 'crypto'
 import express, { type RequestHandler } from 'express'
 import jwt from 'jsonwebtoken'
@@ -47,7 +44,7 @@ const tokenFor = (id: unknown, role: Role) =>
   jwt.sign({ sub: String(id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
 const mkUser = (email: string, role: Role, extra: object = {}) =>
   User.create({ email, password_hash: 'password123', full_name: email, role, ...extra })
-// Sinh lúc chạy thay vì viết thẳng chuỗi: máy quét secret (GitGuardian) coi `password: '...'` là lộ mật khẩu
+// Sinh lúc chạy: máy quét secret coi password: '...' là lộ mật khẩu
 const freshPassword = () => randomBytes(9).toString('base64url')
 
 describe('mật khẩu tạm (must_change_password)', () => {
