@@ -129,7 +129,7 @@ async function applyOldValues(review: IParameterReview, user: CurrentUser, curre
     case 'counting_ring': {
       // Mục duyệt cũ ghi 1 vòng (null = chưa vẽ): hoàn tác về đó, không có vòng thì về vòng mặc định
       const rings = (old.rings ?? (old.ring ? [old.ring] : [])) as CountingRing[]
-      await updateCountingRing(String(review.camera_node_id), user, rings, opts)
+      await updateCountingRing(String(review.camera_node_id), user, { rings }, opts)
     }
   }
 }

@@ -3296,8 +3296,9 @@ paths:
         `[x, y]` theo tỉ lệ khung hình 0–1, theo thứ tự quanh vòng; 3–12 đỉnh (12 là giới hạn kỹ thuật
         chống nhập nhầm). `into_ring_is_exit`: true khi trong vòng là phía ngoài trời (camera trong nhà).
         Body `{ rings: [...] }`: 0–4 vòng, mỗi vòng đếm cả chim vào lẫn ra, số đếm của các vòng cộng chung vào camera;
-        `rings: []` xoá vòng, nút AI dùng lại vòng trong `config.yaml`. Body cũ một vòng `{ points, into_ring_is_exit }`
-        (app mobile) vẫn nhận, coi như `rings` có 1 vòng.
+        `rings: []` xoá vòng, nút AI dùng lại vòng trong `config.yaml`. Hai vòng trùng nhau bị từ chối 422 (một con chim
+        bị đếm hai lần). Body cũ một vòng `{ points, into_ring_is_exit }` (app mobile) vẫn nhận và chỉ thay vòng đầu, giữ
+        các vòng còn lại. Danh sách vòng không đổi (vd xoá khi chưa vẽ) thì không ghi lịch sử, audit hay mục duyệt.
         Lưu `counting_rings` (vòng đầu kèm người sửa còn ở `counting_ring` cho app cũ), `counting_ring_history`
         (người sửa, role, danh sách vòng cũ/mới) và audit `COUNTING_RING_UPDATED`, rồi publish MQTT
         `swiftletcare/dev/{deviceId}/config` (retained) `{ deviceId, counting_rings: [{ points, into_ring_is_exit }] }`
@@ -7894,7 +7895,7 @@ components:
         default_rings:
           type: array
           maxItems: 4
-          description: "Vòng trong config.yaml của nút AI, báo qua heartbeat (`defaultRings`); web hiện như một vòng thường khi chưa vẽ vòng nào. Không có khi nút AI chưa báo"
+          description: "Vòng trong config.yaml của nút AI, báo qua heartbeat (`defaultRings`); web hiện như một vòng thường khi chưa vẽ vòng nào. Không có khi nút AI chưa báo hoặc báo danh sách rỗng"
           items: { $ref: "#/components/schemas/CountingRing" }
         counting_ring:
           nullable: true

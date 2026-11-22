@@ -93,7 +93,10 @@ const ringFields = (prefix: string, field = (path: string) => body(path)) => [
   field(`${prefix}into_ring_is_exit`).isBoolean({ strict: true }),
 ]
 router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(),
-  body('rings').optional().isArray({ max: 4 }).withMessage('tối đa 4 vòng đếm'),
+  body('rings').optional().isArray({ max: 4 }).withMessage('tối đa 4 vòng đếm')
+    // vòng trùng nhau thì một con chim bị đếm hai lần
+    .custom((rings: Array<{ points?: unknown }>) => new Set(rings.map(ring => JSON.stringify(ring?.points))).size === rings.length)
+    .withMessage('hai vòng đếm trùng nhau'),
   ...ringFields('rings.*.'),
   ...ringFields('', path => body(path).if(body('rings').not().exists())),
   validate, deviceController.updateCountingRing)

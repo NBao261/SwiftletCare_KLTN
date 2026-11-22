@@ -1055,12 +1055,12 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | `telemetry` | controller → cloud | `deviceId`, six readings, stale sensors, `control_output`, `pump_current_a`, `fan_current_a`, timestamp | 0 |
 | `telemetry/buffered` | controller → cloud | Samples from the offline buffer, each with its own timestamp; deleted from flash on PUBACK | 1 |
 | `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0), `actuatorBaseline` (learned normal current of the pump and the fan, A, for the loads learned so far; firmware 2.3.1 or later, BR-45) | 0 |
-| `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected | 0 |
+| `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected, `defaultRings` (its default counting ring, shown on the web while no ring is drawn) | 0 |
 | `relay/status` | controller → cloud | `deviceId`, per relay: state, mode, expiry; `commandId` of the command that caused the change, if any | 1 |
 | `alert` | controller → cloud | `deviceId`, `eventId`, type, severity (for the log only: the backend sets the severity from the type, BR-15), details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
 | `vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
 | `vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` with the frame rate | 1 |
-| `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: counting ring, `config_version`, `session_windows` (morning and evening windows of the next 7 days of the house's counting schedule, VISION-FR-019) | 1 |
+| `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: `counting_rings` (0–4, `[]` = its default ring), `config_version`, `session_windows` (morning and evening windows of the next 7 days of the house's counting schedule, VISION-FR-019) | 1 |
 | `compensation` | cloud → controller | Retained. `deviceId`, `offset_pct` (−10…+10, 0 when no rule holds), `expires_at` (epoch ms, like `issuedAt`), `rule_id` (null with offset 0); the controller uses 0 after `expires_at` or 2 h without the broker, and keeps a message received before its clock is set until it is (BR-38) | 1 |
 | `cmd` | cloud → device | Envelope `commandId`, `type` (`RELAY`, `CLEAR_OVERRIDE`, `AUDIO`, `RESTART`, `OTA`), `issuedAt`, payload. Applied once per `commandId`; `RELAY`, `AUDIO` and `RESTART` older than BR-35 are not applied | 1 |
 

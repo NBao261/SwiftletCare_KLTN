@@ -42,6 +42,12 @@ def default_rings(cfg: dict) -> List[Ring]:
     return [(cfg["tracking"]["ring"], cfg["tracking"]["into_ring_is_exit"])]
 
 
+def rings_changed(old: Sequence[Ring], new: Sequence[Ring]) -> bool:
+    """Backend gửi lại config mỗi lần nối lại hay đổi lịch; vòng y nguyên thì giữ các vết đang theo dõi."""
+    key = lambda rings: [([tuple(map(float, p)) for p in points], exit_) for points, exit_ in rings]  # noqa: E731
+    return key(old) != key(new)
+
+
 def make_counter(cfg: dict, width: int, height: int, rings: Optional[Sequence[Ring]] = None,
                  base: Tuple[int, int] = (0, 0)) -> MultiRingCounter:
     """rings từ backend (1–4 vòng); None = vòng trong config.yaml."""
@@ -242,10 +248,12 @@ def main() -> None:
             pipe = FramePipeline(cfg, engine, w, h)
         new_rings = ring_store.take_update()
         if new_rings is not None:                 # [] = vòng đã xoá trên web, về vòng trong config.yaml
+            old_rings = drawn_rings or default_rings(cfg)
             drawn_rings = new_rings or None
-            for c in (counter, day_counter):
-                if c is not None:
-                    c.set_rings(drawn_rings or default_rings(cfg))
+            if rings_changed(old_rings, drawn_rings or default_rings(cfg)):
+                for c in (counter, day_counter):
+                    if c is not None:
+                        c.set_rings(drawn_rings or default_rings(cfg))
 
         now_vn = datetime.now(tz)
         today = now_vn.strftime("%Y-%m-%d")

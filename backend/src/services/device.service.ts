@@ -427,7 +427,7 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   if (payload.modelVersion) camera.model_version = payload.modelVersion
   if (payload.fps !== undefined) camera.fps = payload.fps
   const defaults = parseDefaultRings(payload.defaultRings)
-  if (defaults) camera.default_rings = defaults
+  if (defaults) camera.default_rings = defaults.length ? defaults : undefined
   camera.activation_overdue_at = undefined
   await camera.save()
   if (payload.justConnected || !wasOnline) await pushCameraConfig(camera)
@@ -864,8 +864,9 @@ const isPoint = (p: unknown): p is [number, number] =>
   Array.isArray(p) && p.length === 2 && p.every(v => typeof v === 'number' && v >= 0 && v <= 1)
 
 // Cùng giới hạn với route vẽ vòng; sai thì bỏ qua, giữ vòng đã lưu
+// [] = nút AI không còn vòng mặc định
 export function parseDefaultRings(value: unknown): CountingRing[] | null {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 4) return null
+  if (!Array.isArray(value) || value.length > 4) return null
   const rings: CountingRing[] = []
   for (const ring of value as unknown[]) {
     if (typeof ring !== 'object' || ring === null) return null
@@ -916,9 +917,11 @@ export async function refreshCameraConfigs(now = new Date()): Promise<number> {
   return delivered
 }
 
-// rings: 1–2 vòng, [] = xoá để dùng vòng trong config.yaml. Đổi vòng thì số trước và sau không so được, nên giữ lịch sử
+// rings: 0–4 vòng, [] = xoá để dùng vòng trong config.yaml. Đổi vòng thì số trước và sau không so được, nên giữ lịch sử.
+// firstRing: body một vòng của app mobile cũ, chỉ thay vòng đầu để không mất các vòng vẽ trên web
 export async function updateCountingRing(
-  cameraNodeId: string, user: CurrentUser, rings: CountingRing[], opts: ReviewApplyOptions = {},
+  cameraNodeId: string, user: CurrentUser, input: { rings: CountingRing[] } | { firstRing: CountingRing },
+  opts: ReviewApplyOptions = {},
 ) {
   const camera = await CameraNode.findById(cameraNodeId)
   if (!camera) throw NotFoundError('Không tìm thấy camera')
@@ -926,7 +929,12 @@ export async function updateCountingRing(
   const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
 
   const before = ringsOf(camera)
-  const after = rings.map(ringOf)
+  const after = ('rings' in input ? input.rings : [input.firstRing, ...before.slice(1)]).map(ringOf)
+  // Không đổi gì (vd xoá khi chưa vẽ vòng) thì không ghi lịch sử, không báo ai
+  if (JSON.stringify(before) === JSON.stringify(after)) {
+    const { rtsp_url: _unchangedRtspUrl, ...unchanged } = camera.toObject()
+    return { ...unchanged, ring_delivered: await pushCameraConfig(camera) }
+  }
   camera.counting_rings = after
   camera.counting_ring = after[0] && { ...after[0], updated_at: new Date(), updated_by: user._id as never }
   camera.counting_ring_history.push({

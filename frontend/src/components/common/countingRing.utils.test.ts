@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { placePoint, ringList, ringsOfCamera, shownRings } from '@/components/common/countingRing.utils'
+import { placePoint, removeRing, ringList, ringsOfCamera, shownRings } from '@/components/common/countingRing.utils'
 import type { CountingRing } from '@/types'
 
 const RING: CountingRing = { points: [[0.1, 0.1], [0.3, 0.1], [0.2, 0.3]], into_ring_is_exit: true }
@@ -55,5 +55,15 @@ describe('placePoint', () => {
   it('đủ 4 vòng thì không mở thêm', () => {
     const full = Array(4).fill({ ...RING, points: Array(4).fill([0.1, 0.1]) })
     expect(tap({ rings: full, activeIndex: 3 }).rings).toHaveLength(4)
+  })
+})
+
+describe('removeRing', () => {
+  it('bỏ vòng 2 thì chạm tiếp mở vòng mới, không kéo dài vòng 1', () => {
+    const four = { ...RING, points: Array(4).fill([0.1, 0.1]) }
+    const removed = removeRing([four, SECOND], 1)
+    expect(removed).toEqual({ rings: [four], activeIndex: 0 })
+    const next = placePoint(removed.rings, removed.activeIndex, [0.5, 0.5], false, true)
+    expect(next.rings.map(ring => ring.points.length)).toEqual([4, 1])
   })
 })

@@ -26,6 +26,12 @@ export function ringList(value: unknown): CountingRing[] {
   return value && typeof value === 'object' && 'points' in value ? [value as CountingRing] : []
 }
 
+// Bỏ một vòng rồi chọn vòng cuối còn lại, để chạm tiếp mở vòng mới thay vì kéo dài vòng đầu
+export function removeRing(rings: CountingRing[], index: number): { rings: CountingRing[]; activeIndex: number } {
+  const next = rings.filter((_, position) => position !== index)
+  return { rings: next, activeIndex: Math.max(next.length - 1, 0) }
+}
+
 // Một chạm lên khung: thêm đỉnh vào vòng đang chọn, hoặc mở vòng mới khi vòng đó đã đủ đỉnh
 export function placePoint(
   rings: CountingRing[], activeIndex: number, point: [number, number], extending: boolean, intoRingIsExit: boolean,

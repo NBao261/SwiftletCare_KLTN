@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from counting import MultiRingCounter  # noqa: E402
 import stream  # noqa: E402
-from stream import Publisher, load_config, load_day_total, load_state, make_counter, save_state, topic_base  # noqa: E402
+from stream import Publisher, load_config, rings_changed, load_day_total, load_state, make_counter, save_state, topic_base  # noqa: E402
 
 SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]
 
@@ -64,3 +64,10 @@ def test_heartbeat_carries_the_default_ring_so_the_web_can_show_it(monkeypatch):
     topic, payload = sent[0]
     assert topic == "swiftletcare/dev/cam-1/heartbeat"
     assert payload["defaultRings"] == [{"points": [list(p) for p in SQUARE], "into_ring_is_exit": True}]
+
+
+def test_same_rings_sent_again_do_not_reset_the_tracks():
+    assert not rings_changed([([[0.25, 0.25], [0.75, 0.25], [0.5, 0.75]], True)],
+                             [([(0.25, 0.25), (0.75, 0.25), (0.5, 0.75)], True)])   # config.yaml vs MQTT
+    assert rings_changed([(SQUARE, True)], [(SQUARE, False)])
+    assert rings_changed([(SQUARE, True)], [(SQUARE, True), (SQUARE[:3], True)])

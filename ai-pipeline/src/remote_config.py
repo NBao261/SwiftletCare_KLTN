@@ -16,7 +16,7 @@ SESSIONS = ("MORNING_EXIT", "EVENING_ENTRY")
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-# 3 = smallest closed ring; 12 and 2 rings (one per entrance hole) = the backend validator's limits
+# 3 = smallest closed ring; 12 vertices and 4 rings = the backend validator's limits
 MIN_POINTS = 3
 MAX_POINTS = 12
 MAX_RINGS = 4

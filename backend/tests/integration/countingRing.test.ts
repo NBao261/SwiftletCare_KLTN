@@ -105,6 +105,7 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
     ['chiều đếm là chuỗi', { points: RING, into_ring_is_exit: 'true' }],
     ['thiếu chiều đếm', { points: RING }],
     ['5 vòng', { rings: [1, 2, 3, 4, 5].map(() => ({ points: RING, into_ring_is_exit: true })) }],
+    ['2 vòng trùng nhau', { rings: [RING, RING].map(points => ({ points, into_ring_is_exit: true })) }],
     ['vòng thứ hai 2 đỉnh', { rings: [{ points: RING, into_ring_is_exit: true }, { points: RING.slice(0, 2), into_ring_is_exit: true }] }],
     ['rings không phải danh sách', { rings: { points: RING, into_ring_is_exit: true } }],
   ])('từ chối %s', async (_name, body) => {
@@ -147,9 +148,27 @@ describe('nhiều vòng trên một camera và xoá vòng', () => {
 
   it('lưu được 4 vòng', async () => {
     const { camera, put, t } = await seed()
-    const rings = [RING, SECOND, RING, SECOND].map(points => ({ points, into_ring_is_exit: true }))
+    const shift = (dx: number) => SECOND.map(([x, y]) => [x + dx, y])
+    const rings = [RING, SECOND, shift(0.2), shift(0.4)].map(points => ({ points, into_ring_is_exit: true }))
     await put(t.expert, { rings }).expect(200)
     expect((await CameraNode.findById(camera._id).lean())!.counting_rings).toHaveLength(4)
+  })
+
+  it('body một vòng của app cũ chỉ thay vòng đầu, giữ các vòng vẽ trên web', async () => {
+    const { camera, put, t } = await seed()
+    await put(t.expert, { rings: [RING, SECOND].map(points => ({ points, into_ring_is_exit: true })) }).expect(200)
+    const redrawn = RING.map(([x, y]) => [x, y + 0.1])
+    await put(t.expert, { points: redrawn, into_ring_is_exit: true }).expect(200)
+    const saved = (await CameraNode.findById(camera._id).lean())!
+    expect(saved.counting_rings!.map(ring => ring.points)).toEqual([redrawn, SECOND])
+  })
+
+  it('xoá khi chưa vẽ vòng nào thì không ghi lịch sử, không mở mục duyệt', async () => {
+    const { camera, put, t } = await seed()
+    await put(t.owner, { rings: [] }).expect(200)
+    expect((await CameraNode.findById(camera._id).lean())!.counting_ring_history).toHaveLength(0)
+    expect(await ParameterReview.countDocuments({ camera_node_id: camera._id })).toBe(0)
+    expect(await AuditLog.countDocuments({ action: 'COUNTING_RING_UPDATED' })).toBe(0)
   })
 
   it('heartbeat của nút AI lưu vòng mặc định; vòng sai thì giữ vòng đã lưu', async () => {
@@ -158,10 +177,14 @@ describe('nhiều vòng trên một camera và xoá vòng', () => {
     await recordHeartbeat({ deviceId: camera.device_id, defaultRings: defaults } as never)
     expect((await CameraNode.findById(camera._id).lean())!.default_rings).toEqual(defaults)
 
-    for (const bad of [[], [{ points: RING.slice(0, 2), into_ring_is_exit: true }], [{ points: [[0.1, 2], ...RING], into_ring_is_exit: true }], 'x']) {
+    for (const bad of [[{ points: RING.slice(0, 2), into_ring_is_exit: true }], [{ points: [[0.1, 2], ...RING], into_ring_is_exit: true }], 'x']) {
       await recordHeartbeat({ deviceId: camera.device_id, defaultRings: bad } as never)
     }
     expect((await CameraNode.findById(camera._id).lean())!.default_rings).toEqual(defaults)
+
+    // nút AI bỏ vòng khỏi config.yaml thì web thôi hiện vòng mặc định
+    await recordHeartbeat({ deviceId: camera.device_id, defaultRings: [] } as never)
+    expect((await CameraNode.findById(camera._id).lean())!.default_rings).toBeUndefined()
   })
 
   it('camera lưu từ trước khi có nhiều vòng vẫn gửi đúng vòng cũ cho nút AI', async () => {

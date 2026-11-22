@@ -9,7 +9,7 @@ import { useUpdateCountingRing } from '@/hooks/domain-expert/useCountingRing'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
 import CountingRingCanvas from './CountingRingCanvas'
-import { MAX_POINTS, MAX_RINGS, MIN_POINTS, POINTS_BEFORE_NEXT_RING, placePoint, shownRings } from '@/components/common/countingRing.utils'
+import { MAX_POINTS, MAX_RINGS, MIN_POINTS, POINTS_BEFORE_NEXT_RING, placePoint, removeRing, shownRings } from '@/components/common/countingRing.utils'
 import type { CameraNode, CountingRing } from '@/types'
 import { t } from '@/i18n'
 
@@ -33,6 +33,8 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [confirming, setConfirming] = useState<Confirming>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Chỉ hỏi khi chưa có vòng nào cho biết chiều đếm (nút AI chưa báo vòng mặc định)
+  const [chosenDirection, setChosenDirection] = useState<boolean | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const { status, retry } = useWhepStream(videoRef, camera._id)
@@ -41,7 +43,8 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
   const pushToast = useToastStore(state => state.push)
 
   // Chiều đếm là của camera (trong nhà hay ngoài trời), vòng mới lấy theo vòng đang có
-  const intoRingIsExit = shown.rings[0]?.into_ring_is_exit ?? camera.default_rings?.[0]?.into_ring_is_exit ?? false
+  const knownDirection = shown.rings[0]?.into_ring_is_exit
+  const intoRingIsExit = knownDirection ?? chosenDirection ?? false
   const activeRing = rings[activeIndex] ?? { points: [], into_ring_is_exit: intoRingIsExit }
 
   function startEditing(draft: CountingRing[], index: number) {
@@ -56,6 +59,10 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
   }
   function handleAddPoint(point: [number, number]) {
     const next = placePoint(rings, activeIndex, point, extending, intoRingIsExit)
+    if (next.rings === rings) {
+      pushToast(t('Đã đủ {{n}} vòng. Chọn một vòng để sửa hoặc bỏ bớt vòng.', { n: MAX_RINGS }), 'error')
+      return
+    }
     if (next.activeIndex !== activeIndex) setExtending(false)
     setRings(next.rings)
     setActiveIndex(next.activeIndex)
@@ -75,9 +82,10 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
     setExtending(false)
   }
   function handleRemoveRing() {
-    setRings(current => current.filter((_, index) => index !== activeIndex))
-    setActiveIndex(0)
-    setExtending(true)
+    const next = removeRing(rings, activeIndex)
+    setRings(next.rings)
+    setActiveIndex(next.activeIndex)
+    setExtending(false)
   }
   function handleCancel() {
     setRings(draftOf(shown.rings))
@@ -122,8 +130,11 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
     void save(draftOf(shown.rings).filter((_, index) => index !== confirming.index))
   }
 
-  const drawnRings = rings.filter(ring => ring.points.length > 0)
+  const drawnRings = rings
+    .filter(ring => ring.points.length > 0)
+    .map(ring => ({ ...ring, into_ring_is_exit: intoRingIsExit }))
   const canSave = drawnRings.length > 0 && drawnRings.every(ring => ring.points.length >= MIN_POINTS)
+    && (knownDirection !== undefined || chosenDirection !== null)
 
   return (
     <div className="space-y-3">
@@ -191,6 +202,30 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           <p className="text-sm text-warmGray">
             {t('Chạm lên khung để đặt đỉnh. Đủ {{auto}} đỉnh thì chạm tiếp sẽ sang vòng mới (tối đa {{rings}} vòng). Chọn lại một vòng để thêm đỉnh, tối đa {{max}}. Chạm vào một đỉnh để xoá.', { auto: POINTS_BEFORE_NEXT_RING, rings: MAX_RINGS, max: MAX_POINTS })}
           </p>
+
+          {knownDirection === undefined && (
+            <div className="flex flex-col gap-2">
+              <span className="label-caption">{t('Camera đặt ở đâu? Camera đếm chim chưa báo vòng mặc định nên cần chọn một lần.')}</span>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setChosenDirection(true)}
+                  className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === true ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
+                >
+                  <span className="font-semibold text-charcoal">{t('Camera trong nhà')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = RA khỏi tổ')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChosenDirection(false)}
+                  className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === false ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
+                >
+                  <span className="font-semibold text-charcoal">{t('Camera ngoài trời')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = VỀ tổ')}</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-2">
