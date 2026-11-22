@@ -2,26 +2,18 @@ import { Schema, model, Document, Types } from 'mongoose'
 
 export type ProvisionedDeviceKind = 'SENSOR' | 'CAMERA'
 
-/**
- * Kho thiết bị công ty đã chuẩn bị sẵn — FARM-FR-003, Flow 1 bước 3–4.
- * Mỗi thiết bị xuất xưởng có cặp `{device_id, secretKey}` in trên vỏ. Backend chỉ
- * giữ hash của secretKey (giống OTP), bản rõ chỉ trả về đúng 1 lần lúc Admin tạo
- * để in nhãn. Technician onboarding phải nhập đúng cặp này — biết mỗi device_id
- * (vốn lộ trên topic MQTT) không đủ để chiếm thiết bị.
- */
+/** FARM-FR-003: chỉ giữ hash của secretKey; biết device_id (lộ trên topic) không đủ để chiếm thiết bị */
 export interface IProvisionedDevice extends Document {
   _id: Types.ObjectId
   device_id: string
   kind: ProvisionedDeviceKind
   secret_key_hash: string
-  /** FARM-FR-010 — mật khẩu broker của thiết bị (hash), flash cùng device ID, không in lên nhãn */
+  /** Hash; flash cùng device ID, không in lên nhãn */
   broker_secret_hash?: string
-  /** Lần đầu kích hoạt thành công qua Web Console Onboarding */
   claimed_at?: Date
-  /** Admin thu hồi (mất/lộ nhãn, hàng lỗi) — từ đó không kích hoạt được nữa */
+  /** Thu hồi thì không kích hoạt được nữa */
   revoked_at?: Date
   revoke_reason?: string
-  /** SYSTEM-FR-004 — thiết bị của bộ giả lập (`simulator/`), không phải phần cứng thật */
   simulated: boolean
   created_by?: Types.ObjectId
   created_at: Date

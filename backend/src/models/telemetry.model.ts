@@ -1,6 +1,5 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 
-/** Telemetry time-series document – SRS §8.2, ENV-FR-004, TTL: 90 ngày */
 export interface ITelemetry extends Document {
   _id: Types.ObjectId
   node_id: Types.ObjectId
@@ -12,13 +11,12 @@ export interface ITelemetry extends Document {
   nh3_ppm?: number
   co2_ppm?: number
   sound_db?: number
-  // ENV-FR-010/011 — đầu ra bộ điều khiển mờ + trạng thái relay lúc lấy mẫu,
-  // để đo hiệu quả điều khiển (ANALYTICS-FR-008). Mẫu trước firmware 1.1.0 không có.
+  // Để đo hiệu quả điều khiển (ANALYTICS-FR-008)
   misting_pct?: number
   ventilation_pct?: number
   misting_on?: boolean
   ventilation_on?: boolean
-  // THREAT-FR-014 — dòng đo của bơm và quạt (A), chỉ có ở controller đo dòng (board của nhóm, G-13)
+  // A, chỉ controller đo dòng mới có
   pump_current_a?: number
   fan_current_a?: number
   is_anomaly: boolean
@@ -45,24 +43,18 @@ const telemetrySchema = new Schema<ITelemetry>(
     pump_current_a:  { type: Number, min: 0 },
     fan_current_a:   { type: Number, min: 0 },
     is_anomaly:  { type: Boolean, default: false },
-    /** ENV-FR-004 — cảm biến controller báo cũ hoặc lỗi (gửi null): lưu là thiếu, ghi tên ở đây */
+    /** Cảm biến gửi null: lưu là thiếu */
     stale_fields:   { type: [String], default: undefined },
-    /** ENV-FR-004 — chỉ số ngoài ngưỡng của Zone làm mẫu thành bất thường */
     anomaly_fields: { type: [String], default: undefined },
-    /** ENV-FR-024 — mẫu lấy từ bộ đệm offline (`telemetry/buffered`), giữ timestamp gốc */
     buffered:    { type: Boolean },
   },
   { timestamps: false, versionKey: false }
 )
 
-// Mọi truy vấn (latest/history/analytics/market) lọc theo zone_id + khoảng thời gian (ANALYTICS-FR-001)
 telemetrySchema.index({ zone_id: 1, timestamp: -1 })
-// ENV-FR-024, Report 4 §7.2 — mẫu buffer QoS 1 giao lại không ghi 2 lần. DB đã có dữ liệu thì chạy
-// `npm run migrate:telemetry-unique` trước, vì index không tạo được khi còn bản trùng.
+// QoS 1 giao lại không ghi 2 lần. DB có bản trùng thì chạy migrate:telemetry-unique trước
 telemetrySchema.index({ node_id: 1, timestamp: 1 }, { unique: true })
-// TTL: tự xoá sau 90 ngày (§8.2) — analytics xem tối đa 30 ngày, market lấy 30 ngày
-// trước ngày thu hoạch. Đổi số này phải chạy lại `npm run migrate:retention`
-// (Mongoose không tự sửa TTL của index đã tồn tại).
+// Đổi số này phải chạy lại migrate:retention (Mongoose không sửa TTL cũ)
 export const TELEMETRY_TTL_SECONDS = 90 * 24 * 60 * 60
 telemetrySchema.index({ timestamp: 1 }, { expireAfterSeconds: TELEMETRY_TTL_SECONDS })
 

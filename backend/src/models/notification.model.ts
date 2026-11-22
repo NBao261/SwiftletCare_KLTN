@@ -1,25 +1,21 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
 export type NotificationRefKind = 'alert' | 'health_report' | 'health_day' | 'expert_decision' | 'parameter_review' | 'coefficient_proposal' | 'work_order' | 'device_action'
-  // G-31 — đề xuất của Farm Owner chờ chuyên gia duyệt (BR-22) và việc chủ nhắc chuyên gia
+  // BR-22
   | 'weather_rules' | 'config_profile' | 'recommendation_rule' | 'harvest_cycle'
 
-/**
- * Hộp thông báo trong ứng dụng (EXPERT-FR-006/007, SRS §3.2 "thông báo trong ứng dụng").
- * Lưu lại để người đang offline vẫn thấy khi mở app; bản realtime đi qua socket `NOTIFICATION_NEW`.
- */
+/** EXPERT-FR-006/007: lưu để người offline vẫn thấy; realtime qua socket */
 export interface INotification extends Document {
   _id: Types.ObjectId
   user_id: Types.ObjectId
   title: string
   body: string
-  /** Đối tượng để client mở tới (cảnh báo chờ kiểm chứng, báo cáo sức khỏe) */
   ref?: { kind: NotificationRefKind; id: Types.ObjectId }
   read_at?: Date
   created_at: Date
 }
 
-/** ponytail: 90 ngày chọn tay cho khớp telemetry, không có nguồn — SRS §0.5 bảng giả định */
+/** ponytail: 90 ngày chọn tay cho khớp telemetry, không có nguồn */
 export const NOTIFICATION_TTL_SECONDS = 90 * 24 * 60 * 60
 
 const notificationSchema = new Schema<INotification>(

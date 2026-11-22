@@ -10,26 +10,22 @@ export interface CycleComparison {
   weight_grams: number | null
   nest_count_change_pct: number | null
   weight_change_pct: number | null
-  /** Vì sao không so sánh được; null khi có số */
+  /** null khi có số */
   reason: string | null
 }
 
-/**
- * HarvestCycle — Report 3 §6.22, BR-43, Report 4 ERD `HARVEST_CYCLE`: chu kỳ thu hoạch của 1 zone, từ lần thu hoạch
- * đã xác nhận trước (hoặc lúc đăng ký controller đầu tiên) tới lần kế tiếp. Dựng lại từ các lô đã xác nhận
- * (`harvestCycle.service#rebuildZoneCycles`), chỉ kết luận mùa vụ do người viết.
- */
+/** BR-43: chỉ dựng lại từ các lô đã xác nhận (rebuildZoneCycles); chỉ kết luận do người viết */
 export interface IHarvestCycle extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   house_id: Types.ObjectId
   zone_id: Types.ObjectId
   start_date: Date
-  /** Ngày thu hoạch đóng chu kỳ; không có khi OPEN */
+  /** Không có khi OPEN */
   end_date?: Date
   status: HarvestCycleStatus
   closing_harvest?: {
-    /** 'YYYY-MM-DD' giờ VN — các lô đã xác nhận cùng ngày là một lần thu hoạch */
+    /** Giờ VN; các lô cùng ngày là một lần thu hoạch */
     date: string
     batch_ids: Types.ObjectId[]
     nest_count: number
@@ -40,7 +36,7 @@ export interface IHarvestCycle extends Document {
   completeness_pct?: number | null
   incomplete: boolean
   conclusion?: { text: string; recommendations?: string; by: Types.ObjectId; role: FarmMemberRole; at: Date }
-  /** BR-22 (Report 3 4.2.15) — lần Farm Owner nhắc chuyên gia việc còn chờ (mỗi việc nhắc một lần) */
+  /** BR-22: mỗi việc nhắc một lần */
   expert_reminded_at?: Date
   created_at: Date
   updated_at: Date
@@ -100,7 +96,6 @@ const harvestCycleSchema = new Schema<IHarvestCycle>(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }, versionKey: false },
 )
 
-// Report 4 §6.4 — một chu kỳ mỗi zone mỗi mốc bắt đầu; so sánh nhà theo ngày đóng
 harvestCycleSchema.index({ zone_id: 1, start_date: 1 }, { unique: true })
 harvestCycleSchema.index({ house_id: 1, end_date: -1 })
 

@@ -8,9 +8,6 @@ import { WEATHER_METRICS, type WeatherRuleInput } from '@/utils/weatherCompensat
 import { applySoftDeleteScope } from '@/utils/softDelete.util'
 import type { CountingSchedule } from '@/utils/countingSchedule.util'
 
-/**
- * House + Zone Documents – SRS §8.2, FARM-FR-002
- */
 export interface IWeatherRule extends WeatherRuleInput {
   _id: Types.ObjectId
 }
@@ -29,49 +26,46 @@ export interface IHouse extends Document {
   name: string
   floors: number
   description?: string
-  /** FARM-FR-002 — xoá mềm: nhà và các Zone của nó rời mọi danh sách và job, lịch sử còn trong cơ sở dữ liệu */
+  /** FARM-FR-002: xoá mềm, lịch sử giữ lại */
   is_deleted: boolean
   deleted_at?: Date
   deleted_by?: Types.ObjectId
-  /** ENV-FR-030 — luật bù phun sương theo dự báo của nhà (BR-38); `_id` là `rule_id` gửi kèm offset */
+  /** BR-38: _id là rule_id gửi kèm offset */
   weather_rules: IWeatherRule[]
   weather_rules_history: Array<{ changed_by: Types.ObjectId; changed_by_role?: Role; changed_at: Date; old_values: unknown; new_values: unknown }>
-  /** BR-22, BR-38 — bộ luật Farm Owner gửi trên farm có chuyên gia, chỉ chạy khi chuyên gia duyệt; mỗi nhà một đề xuất */
+  /** BR-22: chỉ chạy khi chuyên gia duyệt */
   weather_rules_proposal?: { rules: Array<WeatherRuleInput & { _id?: string }>; proposed_by: Types.ObjectId; proposed_at: Date } | null
-  /** EXPERT-FR-008 (v2.1.8) — tham số đếm chim của cả nhà (camera ở cửa ra vào của House) */
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
-  /** VISION-FR-019 — lịch đếm hiện tại (hồ sơ theo mùa, khung tạm); chưa đặt thì dùng khung mặc định BR-13 */
+  /** Chưa đặt thì dùng khung mặc định BR-13 */
   counting_schedule?: CountingSchedule
-  /** Mỗi lần sửa lịch áp từ ngày hôm sau (`effective_from`); khung của một ngày lấy theo lịch sử này */
+  /** Sửa lịch áp từ hôm sau (effective_from) */
   counting_schedule_history: Array<{
     schedule: CountingSchedule; effective_from: string; changed_by: Types.ObjectId; changed_by_role: Role; changed_at: Date
   }>
-  /** BR-21 — ngày (giờ VN) đã chạy kiểm tra buổi tối của nhà; job nhận việc một lần mỗi ngày qua trường này */
+  /** BR-21: job nhận việc 1 lần/ngày qua trường này */
   last_session_check?: string
-  /** ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà; thiếu trường nào thì dùng mặc định */
+  /** Thiếu trường nào thì dùng mặc định */
   health_levels: HealthLevels
-  /** FARM-FR-014, BR-46 — giai đoạn nhà; lịch sử dùng để đánh giá lại ngày cũ đúng giai đoạn lúc ấy */
+  /** Lịch sử để đánh giá lại ngày cũ đúng giai đoạn */
   stage: HouseStage
   stage_history: Array<{ stage: HouseStage; changed_by: Types.ObjectId; changed_by_role: Role; changed_at: Date }>
-  /** AUTH-FR-013 — Farm Technician được giao nhà này; tối đa 1 thợ chính (Report 4 ERD `HOUSE.technicians`) */
+  /** Tối đa 1 thợ chính */
   technicians: Array<{ user_id: Types.ObjectId; primary: boolean }>
-  /** AUTH-FR-014 — lịch trực theo tuần (giờ VN); ngoài mọi ca thì cảnh báo tới thợ chính (utils/roster.util.ts) */
+  /** Giờ VN; ngoài mọi ca thì tới thợ chính */
   roster: Array<{ technician_id: Types.ObjectId; role: 'PRIMARY' | 'BACKUP'; weekdays: number[]; start: string; end: string }>
 }
 
 export interface IThresholdHistoryEntry {
   changed_by: Types.ObjectId
-  /** Role của người sửa lúc sửa (EXPERT-FR-004) — để phân biệt chủ farm với chuyên gia */
+  /** Phân biệt chủ farm với chuyên gia (EXPERT-FR-004) */
   changed_by_role?: Role
   changed_at: Date
   old_values: Partial<Thresholds>
   new_values: Partial<Thresholds>
-  /** EXPERT_REVERT: chuyên gia hoàn lại thay đổi của Farm Owner (EXPERT-FR-010); PROFILE: áp hồ sơ cấu hình (EXPERT-FR-015) */
   source: 'MANUAL' | 'RESET_TO_DEFAULT' | 'EXPERT_REVERT' | 'PROFILE'
 }
 
-/** Nguồn 1 lần đổi hệ số mờ: sửa tay, chuyên gia hoàn lại (EXPERT-FR-010), áp gợi ý đã duyệt (EXPERT-FR-011) */
 export type FuzzyTuningSource = 'MANUAL' | 'EXPERT_REVERT' | 'SUGGESTION_APPROVED' | 'PROFILE'
 
 export interface IFuzzyTuningHistoryEntry {
@@ -80,7 +74,7 @@ export interface IFuzzyTuningHistoryEntry {
   changed_at: Date
   old_values: Partial<FuzzyTuning>
   new_values: Partial<FuzzyTuning>
-  /** Bản ghi trước G-04 không có — đều là sửa tay */
+  /** Bản ghi trước G-04 không có: sửa tay */
   source?: FuzzyTuningSource
 }
 
@@ -90,30 +84,28 @@ export interface IDetectionTuningHistoryEntry {
   changed_at: Date
   old_values: Partial<DetectionTuning>
   new_values: Partial<DetectionTuning>
-  /** Không có = sửa tay (EXPERT-FR-008); PROFILE = áp hồ sơ cấu hình (EXPERT-FR-015) */
+  /** Không có = sửa tay */
   source?: 'PROFILE'
 }
 
 export interface IZone extends Document {
   _id: Types.ObjectId
   house_id: Types.ObjectId
-  /** Lưu kèm farm của House (Zone không bao giờ đổi farm) — kiểm tra quyền/lọc theo farm không phải đi qua House */
+  /** Zone không bao giờ đổi farm: lọc theo farm khỏi đi qua House */
   farm_id: Types.ObjectId
   name: string
   floor: number
-  /** FARM-FR-002 — xoá mềm cùng nhà hoặc riêng Zone */
   is_deleted: boolean
   deleted_at?: Date
   deleted_by?: Types.ObjectId
   thresholds: Thresholds
   threshold_history: IThresholdHistoryEntry[]
-  /** ENV-FR-021 — hệ số bộ điều khiển mờ của mọi ESP32 trong Zone, gửi qua config/update */
   fuzzy_tuning: FuzzyTuning
   fuzzy_tuning_history: IFuzzyTuningHistoryEntry[]
-  /** EXPERT-FR-008 — tham số phát hiện do Domain Expert chỉnh; thiếu trường nào thì dùng mặc định */
+  /** Thiếu trường nào thì dùng mặc định */
   detection_tuning: DetectionTuning
   detection_tuning_history: IDetectionTuningHistoryEntry[]
-  /** ENV-FR-027 — tăng ở mỗi lần đổi ngưỡng, hệ số mờ hoặc tham số phát hiện (deviceConfig.service#publishZoneConfig) */
+  /** Tăng qua deviceConfig.service#publishZoneConfig */
   config_version: number
 }
 
@@ -161,7 +153,7 @@ const houseSchema = new Schema<IHouse>(
     }],
     counting_schedule: { type: Schema.Types.Mixed },
     counting_schedule_history: [{
-      // Mixed: đã kiểm ở countingSchedule.util#parseCountingSchedule
+      // Đã kiểm ở parseCountingSchedule
       schedule:        { type: Schema.Types.Mixed, required: true },
       effective_from:  { type: String, required: true },
       changed_by:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -202,7 +194,6 @@ const houseSchema = new Schema<IHouse>(
   },
   { timestamps: { createdAt: 'created_at' } }
 )
-// AUTH-FR-004 — tìm các nhà được giao của 1 thợ (phạm vi dữ liệu của Farm Technician)
 houseSchema.index({ 'technicians.user_id': 1 })
 
 const zoneSchema = new Schema<IZone>(
@@ -270,14 +261,13 @@ houseSchema.index({ farm_id: 1 })
 zoneSchema.index({ house_id: 1 })
 zoneSchema.index({ farm_id: 1 })
 
-// Nơi tạo Zone không truyền farm_id (seed, fixture test) thì lấy từ House
+// Seed, fixture không truyền farm_id
 zoneSchema.pre('validate', async function () {
   if (this.farm_id || !this.house_id) return
   const house = await House.findById(this.house_id).select('farm_id').lean()
   if (house) this.farm_id = house.farm_id
 })
 
-// FARM-FR-002 — nhà, Zone đã xoá ẩn khỏi mọi truy vấn trừ khi filter tự ghi `is_deleted`
 applySoftDeleteScope(houseSchema)
 applySoftDeleteScope(zoneSchema)
 

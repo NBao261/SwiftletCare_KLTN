@@ -1,11 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { DetectionTuning, FuzzyTuning, Thresholds } from '@/types'
 
-/**
- * Hồ sơ cấu hình — EXPERT-FR-014, 015; Report 3 §6.23 (SM-23); Report 4 ERD `CONFIG_PROFILE`. Domain Expert
- * soạn (DRAFT) rồi duyệt (APPROVED); Farm Owner áp cho nhiều nhà một lần, mỗi zone nhận một phiên bản cấu hình
- * mới. Mỗi nhóm giá trị có thể bỏ trống (áp thì không đổi nhóm đó), nhưng đã có thì đủ mọi khoá.
- */
+/** EXPERT-FR-014, 015: nhóm bỏ trống thì áp không đổi nhóm đó, đã có thì đủ mọi khoá */
 export type ConfigProfileStatus = 'DRAFT' | 'APPROVED' | 'ARCHIVED'
 export const CONFIG_PROFILE_STAGES = ['ATTRACTING', 'OCCUPIED'] as const
 export type ConfigProfileStage = typeof CONFIG_PROFILE_STAGES[number]
@@ -20,7 +16,7 @@ export interface IConfigProfile extends Document {
   farm_id: Types.ObjectId
   author_id: Types.ObjectId
   name: string
-  /** FARM-FR-014 — giai đoạn nhà mà hồ sơ dành cho; null = mọi giai đoạn */
+  /** null = mọi giai đoạn */
   stage: ConfigProfileStage | null
   thresholds?: Thresholds
   fuzzy_tuning?: FuzzyTuning
@@ -30,7 +26,6 @@ export interface IConfigProfile extends Document {
   approved_by?: Types.ObjectId
   approved_at?: Date
   archived_at?: Date
-  /** EXPERT-FR-015 — mỗi lần Farm Owner áp hồ sơ */
   applications: Array<{ house_ids: Types.ObjectId[]; zone_count: number; applied_by: Types.ObjectId; applied_at: Date }>
   created_at: Date
   updated_at: Date
@@ -42,7 +37,7 @@ const configProfileSchema = new Schema<IConfigProfile>(
     author_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     name:      { type: String, required: true, trim: true },
     stage:     { type: String, enum: [...CONFIG_PROFILE_STAGES], default: null },
-    // Mixed: nhóm vắng mặt phải là undefined (áp thì giữ nguyên), không phải object mặc định của schema lồng
+    // Mixed: nhóm vắng phải là undefined, không phải object mặc định
     thresholds:       { type: Schema.Types.Mixed },
     fuzzy_tuning:     { type: Schema.Types.Mixed },
     detection_tuning: { type: Schema.Types.Mixed },
@@ -62,7 +57,6 @@ const configProfileSchema = new Schema<IConfigProfile>(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } },
 )
 
-// Report 4 §6 — danh sách hồ sơ của farm theo trạng thái
 configProfileSchema.index({ farm_id: 1, status: 1 })
 
 export const ConfigProfile = model<IConfigProfile>('ConfigProfile', configProfileSchema)

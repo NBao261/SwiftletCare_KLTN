@@ -2,11 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose'
 
 export type PushPlatform = 'android' | 'ios'
 
-/**
- * PushToken – ALERT-FR-002, Report 4 ERD `PUSH_TOKEN`. FCM device token của 1 máy đang đăng nhập:
- * app mobile đăng ký sau khi đăng nhập, gỡ khi đăng xuất; backend xoá token mà FCM báo không còn hợp
- * lệ. Token là đường gửi tới máy thật và là dữ liệu cá nhân: `select: false`, không bao giờ ghi log.
- */
+/** ALERT-FR-002: token là dữ liệu cá nhân, select: false, không ghi log */
 export interface IPushToken extends Document {
   _id: Types.ObjectId
   user_id: Types.ObjectId

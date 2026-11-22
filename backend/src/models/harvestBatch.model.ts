@@ -2,7 +2,6 @@ import { Schema, model, Document, Types } from 'mongoose'
 import type { HarvestStatus, NestType } from '@/types'
 import { applySoftDeleteScope } from '@/utils/softDelete.util'
 
-/** HarvestBatch – SRS §8.2, HARVEST-FR-001..003 */
 export interface IHarvestBatch extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
@@ -14,7 +13,6 @@ export interface IHarvestBatch extends Document {
   weight_grams: number
   nest_type: NestType
   product_images: string[]
-  /** HARVEST-FR-001, Report 4 §6.1 — khoá ảnh của lô trên kho file (MinIO, hoặc volume khi STORAGE_DRIVER=local) */
   photo_object_key?: string
   env_snapshot: {
     avg_temperature?: number
@@ -23,7 +21,7 @@ export interface IHarvestBatch extends Document {
     avg_nh3_ppm?: number
     avg_co2_ppm?: number
     telemetry_range?: { from: Date; to: Date }
-    /** Flow 7 case 3a — Zone chưa đủ 7 ngày telemetry: số liệu (nếu có) chưa đủ tin cậy */
+    /** Zone chưa đủ 7 ngày telemetry */
     insufficient_data?: boolean
   }
   flock_snapshot: {
@@ -31,7 +29,7 @@ export interface IHarvestBatch extends Document {
     estimated_population?: number
   }
   status: HarvestStatus
-  /** HARVEST-FR-006 — Farm Owner xác nhận lô (lô của Farm Owner: chính người tạo, lúc tạo) */
+  /** HARVEST-FR-006: lô của Farm Owner tự xác nhận lúc tạo */
   confirmed_by?: Types.ObjectId
   confirmed_at?: Date
   created_at: Date
@@ -50,7 +48,7 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
     weight_grams:{ type: Number, required: true },
     nest_type:   { type: String, enum: ['RAW','CLEANED','PREMIUM'] satisfies NestType[], required: true },
     product_images: [{ type: String }],
-    // select: false — khoá kho file không ra API; chỉ chi tiết lô và đặt ảnh đọc nó (ra photo_url)
+    // Khoá kho file không ra API
     photo_object_key: { type: String, select: false },
     env_snapshot: {
       avg_temperature: { type: Number },
@@ -59,7 +57,7 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
       avg_nh3_ppm:     { type: Number },
       avg_co2_ppm:     { type: Number },
       telemetry_range: { from: Date, to: Date },
-      // Thiếu khai báo thì strict mode âm thầm bỏ cờ này khi lưu
+      // Thiếu khai báo thì strict mode bỏ cờ này khi lưu
       insufficient_data: { type: Boolean },
     },
     flock_snapshot: {

@@ -1,27 +1,24 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { AlertType } from '@/types'
 
-/** Report 3 §6.19 (SM-19) */
+/** SM-19 */
 export const WORK_ORDER_STATUSES = ['OPEN', 'IN_PROGRESS', 'VERIFYING', 'AWAITING_APPROVAL', 'CLOSED', 'CANCELLED'] as const
 export type WorkOrderStatus = typeof WORK_ORDER_STATUSES[number]
-/** Chưa đóng, chưa huỷ — BR-39: mỗi cảnh báo chỉ có 1 Work Order ở các trạng thái này */
+/** BR-39: mỗi cảnh báo chỉ 1 Work Order ở các trạng thái này */
 export const OPEN_WORK_ORDER_STATUSES: WorkOrderStatus[] = ['OPEN', 'IN_PROGRESS', 'VERIFYING', 'AWAITING_APPROVAL']
 
-/** ALERT-FR-018 — nguyên nhân tìm thấy tại chỗ */
+/** ALERT-FR-018 */
 export const SITE_CAUSES = ['WATER', 'NOZZLE', 'PUMP', 'FAN', 'DOOR', 'SENSOR', 'SPEAKER', 'OTHER'] as const
 export type SiteCause = typeof SITE_CAUSES[number]
 
-/** Nguồn mở Work Order (BR-39, OPS-FR-001) */
-/** PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006); CHECKLIST: mục checklist ghi DEFECT (OPS-FR-007) */
 export const WORK_ORDER_ORIGINS = ['ALERT', 'OUTAGE', 'EXPERT', 'ONSITE_CHECK', 'MANUAL', 'PLAN', 'CHECKLIST', 'RECOMMENDATION'] as const
 export type WorkOrderOrigin = typeof WORK_ORDER_ORIGINS[number]
 
-/** OPS-FR-007 — một mục checklist của Work Order phòng ngừa */
 export interface ChecklistItem {
   item: string
   result?: 'OK' | 'DEFECT'
   note?: string
-  /** Khoá object trên MinIO */
+  /** Khoá MinIO */
   photo?: string
   by?: Types.ObjectId
   at?: Date
@@ -31,13 +28,12 @@ export interface ChecklistItem {
 export interface WorkOrderHistoryEntry {
   from?: WorkOrderStatus
   to: WorkOrderStatus
-  /** Không có = hệ thống (mở tự động, kiểm phục hồi) */
+  /** Không có = hệ thống */
   by?: Types.ObjectId
   note?: string
   at: Date
 }
 
-/** Report 4 ERD `WORK_ORDER` — OPS-FR-001…004 */
 export interface IWorkOrder extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
@@ -45,32 +41,27 @@ export interface IWorkOrder extends Document {
   zone_id?: Types.ObjectId
   node_id?: Types.ObjectId
   alert_id?: Types.ObjectId
-  /** Loại cảnh báo lúc mở — so sự cố lặp lại và nguyên nhân bắt buộc (ALERT-FR-018) */
+  /** So sự cố lặp lại (ALERT-FR-018) */
   alert_type?: AlertType
-  /** PREVENTIVE: bảo trì phòng ngừa theo kế hoạch (OPS-FR-006) */
   kind: 'REPAIR' | 'PREVENTIVE'
   plan_id?: Types.ObjectId
-  /** EXPERT-FR-018 — khuyến nghị đã được Farm Owner chấp nhận thành Work Order này */
   recommendation_id?: Types.ObjectId
   checklist: ChecklistItem[]
   origin: WorkOrderOrigin
   title: string
   description?: string
   status: WorkOrderStatus
-  /**
-   * true khi chưa đóng/huỷ. Index unique một phần trên `alert_id` lọc theo cờ này thay vì `status: {$in}`
-   * vì partialFilterExpression của MongoDB trước 6.0 không nhận `$in`.
-   */
+  /** Index unique một phần dùng cờ này vì partialFilterExpression trước MongoDB 6.0 không nhận $in */
   is_open: boolean
-  /** Thợ được giao; không có = nhà không có thợ, Farm Owner xử lý (ALERT-FR-017) */
+  /** Không có = nhà không có thợ, Farm Owner xử lý */
   assignee_id?: Types.ObjectId
   /** Không có = hệ thống mở */
   opened_by?: Types.ObjectId
   cause?: SiteCause
   work_note?: string
-  /** Khoá object trên MinIO */
+  /** Khoá MinIO */
   photos: string[]
-  /** DONE: Work Order phòng ngừa đã duyệt, là một lần ghi bảo trì (OPS-FR-008) */
+  /** DONE: phòng ngừa đã duyệt (OPS-FR-008) */
   result?: 'REPAIRED' | 'SELF_RECOVERED' | 'DONE'
   cancel_reason?: string
   opened_at: Date
@@ -78,9 +69,9 @@ export interface IWorkOrder extends Document {
   done_at?: Date
   verified_at?: Date
   closed_at?: Date
-  /** BR-40 — lúc giao cho thợ hiện tại; quá hạn "chưa ai bắt đầu" tính từ đây */
+  /** BR-40: quá hạn tính từ đây */
   assigned_at?: Date
-  /** BR-40 — đã báo Farm Owner vì chưa ai bắt đầu sau escalation_min */
+  /** BR-40 */
   escalated_at?: Date
   history: WorkOrderHistoryEntry[]
 }
@@ -137,12 +128,10 @@ const workOrderSchema = new Schema<IWorkOrder>(
   { versionKey: false },
 )
 
-// Report 4 §6.4 — danh sách theo nhà và theo người được giao
 workOrderSchema.index({ house_id: 1, status: 1 })
 workOrderSchema.index({ assignee_id: 1, status: 1 })
-// G-22 — Work Order phòng ngừa của một kế hoạch (danh sách đến hạn, chỉ số bảo trì đúng hạn)
 workOrderSchema.index({ plan_id: 1, status: 1 }, { partialFilterExpression: { plan_id: { $exists: true } } })
-// BR-39 — một cảnh báo chỉ có 1 Work Order chưa đóng (hai lần mở đồng thời: lần sau gặp lỗi trùng khoá)
+// BR-39: lần mở đồng thời thứ hai gặp lỗi trùng khoá
 workOrderSchema.index(
   { alert_id: 1 },
   { unique: true, partialFilterExpression: { is_open: true, alert_id: { $exists: true } } },
