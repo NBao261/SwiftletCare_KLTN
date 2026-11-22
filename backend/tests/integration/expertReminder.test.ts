@@ -1,7 +1,3 @@
-/**
- * BR-22 (Report 3 4.2.15) — Farm Owner nhắc Domain Expert việc chỉ chuyên gia làm: kết luận cảnh báo suy luận,
- * kết luận báo cáo sức khoẻ, kết luận mùa vụ. Mỗi việc nhắc một lần; việc đã xong, farm chưa có chuyên gia → 409.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

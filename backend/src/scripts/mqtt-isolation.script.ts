@@ -1,14 +1,4 @@
-/**
- * NFR-10 d — kiểm trên broker thật: tài khoản thiết bị chỉ chạm được topic của chính nó, tài khoản đã
- * thu hồi không nối được. Cần EMQX chạy với deploy/emqx/ và backend chạy để trả lời /internal/mqtt-auth.
- *
- *   MQTT_TEST_URL=mqtt://localhost:1883 \
- *   DEVICE_A=node_1 DEVICE_A_SECRET=... DEVICE_B=node_2 \
- *   REVOKED_DEVICE=node_3 REVOKED_SECRET=... \
- *   npm run mqtt:isolation
- *
- * MQTT_USERNAME, MQTT_PASSWORD lấy từ .env để nghe xem tin lạ có lọt sang topic thiết bị B không.
- */
+// trên broker thật. MQTT_TEST_URL=... DEVICE_A=... DEVICE_A_SECRET=... DEVICE_B=... REVOKED_DEVICE=... REVOKED_SECRET=... npm run mqtt:isolation
 import 'dotenv/config'
 import mqtt, { MqttClient } from 'mqtt'
 
@@ -26,7 +16,7 @@ const report = (check: string, pass: boolean) => {
   console.log(`${pass ? 'ĐẠT ' : 'LỖI '} ${check}`)
 }
 
-/** true khi nối được; bị từ chối hoặc hết giờ thì false */
+// Bị từ chối hoặc hết giờ thì false
 function connect(username: string, password: string): Promise<MqttClient | null> {
   return new Promise(resolve => {
     const client = mqtt.connect(URL, { username, password, reconnectPeriod: 0, connectTimeout: WAIT_MS })

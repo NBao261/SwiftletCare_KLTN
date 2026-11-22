@@ -1,14 +1,9 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-/**
- * ANALYTICS-FR-013 — thời tiết ngoài trời theo giờ của 1 farm (Open-Meteo, chỉ gửi toạ độ). Dùng để
- * hiển thị và cho luật mưa BR-30; không bao giờ điều khiển thiết bị (C-6). Giá trị dịch vụ không trả
- * thì để trống, không ghi 0.
- */
+// không bao giờ điều khiển thiết bị; thiếu giá trị thì để trống, không ghi 0
 export interface IWeatherObservation extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
-  /** Đầu giờ (UTC) */
   hour: Date
   temperature?: number
   humidity?: number
@@ -27,7 +22,6 @@ const weatherObservationSchema = new Schema<IWeatherObservation>(
 )
 
 weatherObservationSchema.index({ farm_id: 1, hour: 1 }, { unique: true })
-// BR-36 — thời tiết theo giờ giữ 90 ngày
 export const WEATHER_TTL_SECONDS = 90 * 24 * 60 * 60
 weatherObservationSchema.index({ hour: 1 }, { expireAfterSeconds: WEATHER_TTL_SECONDS })
 

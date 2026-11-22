@@ -1,17 +1,4 @@
-/**
- * migrate-bird-count-house.ts — SRS v2.1.8: camera đếm chim lắp ở cửa ra vào của cả nhà yến nên
- * gắn House, không gắn Zone; số đếm, cảnh báo và mức giảm tỷ lệ chim về cũng theo House.
- *
- * Chạy: npm run migrate:bird-count-house   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. camera_nodes, bird_count_records, bird_count_buckets: `zone_id` → `house_id` (House chứa Zone).
- *    Bản ghi đếm bỏ luôn `return_rate` cũ lưu theo camera (giờ tính cho cả nhà lúc đọc).
- * 2. Cảnh báo của camera (EDGE_AI_DEGRADED, LOW_RETURN_RATE) đang gắn Zone → gắn House.
- * 3. `zones.detection_tuning.return_rate_drop_pct` → `houses.bird_count_tuning.return_rate_drop_pct`:
- *    các Zone của nhà cùng 1 giá trị thì lấy giá trị đó; khác nhau thì lấy của Zone từng lắp camera;
- *    vẫn không rõ thì giữ mặc định và in ra để Domain Expert đặt lại (không tự đoán).
- * 4. syncIndexes các model đổi index.
- */
+// Camera, số đếm, cảnh báo camera và return_rate_drop_pct chuyển từ Zone sang House. Không rõ giá trị thì in ra, không đoán. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'
@@ -24,14 +11,14 @@ import logger from '@/utils/logger.util'
 const CAMERA_ALERT_TYPES = ['EDGE_AI_DEGRADED', 'LOW_RETURN_RATE']
 
 export async function migrateBirdCountHouse() {
-  // Thẳng trên collection: schema mới không còn `zone_id` của camera/bản ghi đếm
+  // Thẳng trên collection: schema mới không còn zone_id
   const db = mongoose.connection.db!
   const houseOfZone = new Map<string, Types.ObjectId>()
   for (const z of await db.collection('zones').find({}, { projection: { house_id: 1 } }).toArray()) {
     houseOfZone.set(String(z._id), z.house_id as Types.ObjectId)
   }
 
-  // Zone từng lắp camera — dùng ở bước 3, phải đọc trước khi bước 1 xoá zone_id
+  // Phải đọc trước khi bước 1 xoá zone_id
   const cameraZones = new Set(
     (await db.collection('cameranodes').distinct('zone_id', { zone_id: { $exists: true } })).map(String),
   )
@@ -74,14 +61,13 @@ export async function migrateBirdCountHouse() {
 
   for (const [houseId, zones] of byHouse) {
     const house = await db.collection('houses').findOne({ _id: new Types.ObjectId(houseId) }, { projection: { name: 1, bird_count_tuning_history: 1 } })
-    // Domain Expert đã đặt mức của House qua endpoint mới thì không ghi đè. Không dựa vào việc House
-    // đã có giá trị: House lưu lại sau khi deploy tự nhận mặc định 20% của schema.
+    // Đã đặt qua endpoint mới thì không ghi đè; không dựa vào giá trị hiện có vì schema tự điền 20%
     if (!house || ((house.bird_count_tuning_history as unknown[] | undefined)?.length ?? 0) > 0) continue
     const drop = (z: (typeof zones)[number]) => z.detection_tuning.return_rate_drop_pct as number
     const values = [...new Set(zones.map(drop))]
     const fromCamera = zones.filter(z => cameraZones.has(String(z._id))).map(drop)
     const value = values.length === 1 ? values[0] : new Set(fromCamera).size === 1 ? fromCamera[0] : undefined
-    // Chạy lại sau khi bước dưới đã $unset zone thì không còn Zone nào ở đây — an toàn
+    // Chạy lại sau $unset thì không còn Zone nào: an toàn
     if (value === undefined) {
       needsExpert.push(`${house.name as string} (${houseId}): ${zones.map(z => `${z.name as string}=${drop(z)}%`).join(', ')}`)
       continue

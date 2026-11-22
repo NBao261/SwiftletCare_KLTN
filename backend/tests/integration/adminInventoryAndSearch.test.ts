@@ -1,7 +1,3 @@
-/**
- * Admin: thu hồi / cấp lại secretKey cho thiết bị trong kho (FARM-FR-003) và tìm
- * người dùng theo tên/email/SĐT, vùng, trạng thái (AUTH-FR-011).
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -62,7 +58,7 @@ describe('thu hồi thiết bị trong kho', () => {
     expect(doc.revoked_at).toBeInstanceOf(Date)
     expect(doc.revoke_reason).toBe('Mất nhãn ngoài kho')
     await expect(verifyActivationKey('ESP-001', 'SENSOR', secretKey)).rejects.toMatchObject({ statusCode: 409 })
-    // Sai key thì vẫn chỉ là "mã không đúng" — không lộ thiết bị đã bị thu hồi
+    // Sai key thì vẫn chỉ là "mã không đúng": không lộ thiết bị đã bị thu hồi
     await expect(verifyActivationKey('ESP-001', 'SENSOR', 'AAAA-BBBB-CCCC')).rejects.toMatchObject({ statusCode: 400 })
     expect(await AuditLog.countDocuments({ action: 'DEVICE_PROVISION_REVOKED' })).toBe(1)
   })

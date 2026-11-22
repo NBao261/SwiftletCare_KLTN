@@ -8,19 +8,16 @@ import { sumHouseBuckets } from '@/services/birdCount.service'
 import { BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
-/** ALERT-FR-014 — bằng chứng lấy trong khoảng này quanh lúc cảnh báo được tạo */
 export const EVIDENCE_WINDOW_MS = 30 * 60 * 1000
-/** EXPERT-FR-003 — số kết luận trước cùng loại, cùng nơi được kèm theo */
 const EARLIER_VERDICTS_LIMIT = 10
 const DAY_MS = 86_400_000
 const VN_OFFSET_MS = 7 * 3600_000
 
-/** Nguồn không có mẫu nào trong cửa sổ là `missing`, không phải 0 (ALERT-FR-014) */
+// Không có mẫu là missing, không phải 0
 type Source<K extends string, T> = { status: 'ok' | 'missing' } & Record<K, T[]>
 const source = <K extends string, T>(key: K, rows: T[]): Source<K, T> =>
   ({ status: rows.length > 0 ? 'ok' : 'missing', [key]: rows }) as Source<K, T>
 
-/** Ngày Việt Nam "YYYY-MM-DD" → [00:00, 24:00) giờ Việt Nam */
 function vnDayRange(date: string): { from: Date; to: Date } {
   const from = new Date(new Date(`${date}T00:00:00Z`).getTime() - VN_OFFSET_MS)
   return { from, to: new Date(from.getTime() + DAY_MS) }
@@ -36,21 +33,12 @@ async function earlierVerdicts(alert: IAlert) {
   }).sort({ created_at: -1 }).limit(EARLIER_VERDICTS_LIMIT).populate('expert_verdict.by', 'full_name').lean()
 }
 
-/**
- * ALERT-FR-014, BR-23 — dữ liệu nhiều nguồn quanh 1 cảnh báo suy luận để người kết luận tự xem;
- * hệ thống chỉ trình bày, không kết luận.
- * - NOISE_ANOMALY, SENSOR_ANOMALY, FORECAST_BREACH: ±30 phút — telemetry của zone, số đếm 5 phút của
- *   nhà chứa zone, cảnh báo thiết bị đang mở của zone;
- * - LOW_RETURN_RATE: ngày của phiên — % thời gian trong ngưỡng của từng zone trong nhà, NOISE_ANOMALY
- *   và cảnh báo thiết bị của nhà trong ngày.
- * Quyền như xem cảnh báo (getAlert): người không có quyền trên farm → 403.
- */
+// chỉ trình bày, không kết luận. Quyền như getAlert
 export async function getAlertEvidence(alertId: string, user: CurrentUser) {
   const alert = await getAlert(alertId, user)
   if (!INFERRED_ALERT_TYPES.includes(alert.type)) {
     throw BadRequestError(`Chỉ cảnh báo suy luận có bằng chứng (${INFERRED_ALERT_TYPES.join(', ')})`)
   }
-  // EXPERT-FR-021 — quan sát của thợ tại chỗ đi cùng dữ liệu, trước khi chuyên gia kết luận
   const base = {
     alert_id: String(alert._id), type: alert.type, earlier_verdicts: await earlierVerdicts(alert),
     onsite_checks: await presentOnsiteChecks(alert),

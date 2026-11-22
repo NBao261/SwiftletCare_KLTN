@@ -1,17 +1,11 @@
-/**
- * ANALYTICS-FR-009 (v1.24.0) — dự báo ngắn hạn bằng làm trơn hàm mũ kép Holt với
- * trend tắt dần (damped trend, Gardner): ngoại suy tuyến tính thuần 60 phút dễ
- * vọt quá với đại lượng bị chặn như độ ẩm, trend tắt dần cho đường cong tiệm cận.
- * Hàm thuần — test không cần DB.
- */
+// Holt trend tắt dần, ngoại suy tuyến tính dễ vọt quá với độ ẩm bị chặn
 export const HOLT_GRID = [0.1, 0.3, 0.5, 0.7, 0.9]
-/** ponytail: φ cố định 0.9 (giá trị hay dùng); muốn chuẩn hơn thì đưa φ vào lưới tìm */
+// φ cố định 0.9; muốn chuẩn hơn thì đưa φ vào lưới
 export const DAMPING = 0.9
 
 export interface HoltState { level: number; trend: number }
 export interface HoltFit extends HoltState { alpha: number; beta: number; oneStepMae: number }
 
-/** Chạy Holt trên chuỗi, trả trạng thái cuối + sai số dự báo 1 bước tại mỗi điểm. */
 export function runHolt(series: number[], alpha: number, beta: number): HoltState & { errors: number[] } {
   let level = series[0]
   let trend = series.length > 1 ? series[1] - series[0] : 0
@@ -38,7 +32,7 @@ export function forecastHolt(state: HoltState, steps: number): number[] {
 
 const meanAbs = (xs: number[]) => xs.reduce((a, b) => a + Math.abs(b), 0) / xs.length
 
-/** Chọn α, β trên lưới theo sai số dự báo 1 bước nhỏ nhất (bỏ 2 điểm đầu còn đang "khởi động"). */
+// Bỏ 2 điểm đầu còn đang khởi động
 export function fitHolt(series: number[]): HoltFit | null {
   if (series.length < 4) return null
   let best: HoltFit | null = null
@@ -52,11 +46,7 @@ export function fitHolt(series: number[]): HoltFit | null {
   return best
 }
 
-/**
- * Sai số tuyệt đối trung bình khi dự báo `horizon` bước tới, đánh giá lùi trên
- * chính dữ liệu đã qua (mỗi điểm chỉ dùng dữ liệu trước nó) — con số trung thực
- * để báo "dự báo 60 phút sai trung bình ±x". Null khi chuỗi quá ngắn.
- */
+// Mỗi điểm chỉ dùng dữ liệu trước nó. null khi chuỗi quá ngắn
 export function backtestMae(series: number[], horizon: number, alpha: number, beta: number, minTrain = 12): number | null {
   const errors: number[] = []
   for (let t = minTrain; t + horizon <= series.length; t++) {

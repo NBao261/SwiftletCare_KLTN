@@ -14,17 +14,13 @@ const ACCESS_TTL  = process.env.JWT_ACCESS_TTL  ?? '15m'
 const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? '30d'
 const REFRESH_TTL_MS = 30 * 86400 * 1000
 
-/** Chuẩn hoá email dùng nhất quán ở MỌI nơi tra cứu/lưu — tránh 'User@Test.com'
- *  và 'user@test.com' bị coi là 2 tài khoản khác nhau. */
+// Tránh 'User@Test.com' và 'user@test.com' thành 2 tài khoản
 const normalizeEmail = (email: string) => email.toLowerCase().trim()
 
-/** Hash 1 chiều (sha256) cho mã đặt lại mật khẩu và refresh
- *  token — dùng chung, để lộ DB đọc cũng không lấy được mã gốc còn hiệu lực. */
+// Lộ DB cũng không lấy được mã còn hiệu lực
 const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
 
-/** Hash bcrypt (cost=12) hợp lệ bất kỳ — KHÔNG phải mật khẩu thật của ai. Dùng để
- *  giữ nguyên chi phí bcrypt.compare() khi email không tồn tại, tránh lộ email có
- *  tồn tại hay không qua chênh lệch thời gian phản hồi của /auth/login. */
+// Hash giả: giữ thời gian bcrypt khi email không tồn tại, không lộ email qua thời gian phản hồi
 const DUMMY_BCRYPT_HASH = '$2a$12$CwTycUXWue0Thq9StjUM0uJ8g/qXY7jkNwptbCFmehyoNwaN9pmlq'
 
 function signAccess(userId: string, role: string): string {
@@ -32,16 +28,11 @@ function signAccess(userId: string, role: string): string {
 }
 
 function signRefresh(userId: string): string {
-  // jwtid: 2 lần đăng nhập trong cùng 1 giây không sinh ra cùng 1 token (cùng hash) —
-  // nếu trùng, logout ở máy này sẽ gỡ luôn phiên ở máy kia
+  // jwtid: 2 lần đăng nhập cùng giây không trùng token, không thì logout máy này gỡ phiên máy kia
   return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: REFRESH_TTL, jwtid: crypto.randomUUID() } as jwt.SignOptions)
 }
 
-/**
- * AUTH-FR-003 — cấp refresh token mới cho `user` (caller tự save). Chỉ lưu hash, và
- * dọn token đã hết hạn ngay lúc này: không có bước này mảng lớn dần theo số lần
- * đăng nhập vì token chỉ bị gỡ khi logout/đặt lại mật khẩu.
- */
+// Dọn token hết hạn ở đây, không thì mảng lớn dần
 function issueRefreshToken(user: IUser): string {
   const token = signRefresh(String(user._id))
   const now = Date.now()
@@ -52,12 +43,7 @@ function issueRefreshToken(user: IUser): string {
 
 export interface LoginInput { email: string; password: string }
 
-/**
- * AUTH-FR-011, Flow 19 bước 4 — chặn tài khoản bị Admin khoá khi đăng
- * nhập, kèm lý do để user biết phải liên hệ ai. Chỉ gọi sau
- * khi đã xác thực xong danh tính, để người đoán mò không dò được trạng thái
- * tài khoản người khác.
- */
+// Chỉ gọi sau khi xác thực danh tính: người đoán mò không dò được trạng thái tài khoản
 async function assertLoginAllowed(user: IUser): Promise<void> {
   if (canSignIn(user)) return
 
@@ -70,28 +56,20 @@ async function assertLoginAllowed(user: IUser): Promise<void> {
   )
 }
 
-/**
- * GET /auth/me — tài khoản của người đang đăng nhập, cùng dạng `user` của login (`toJSON` ẩn hash, mã, chat id).
- * Client đọc lại sau những thay đổi không đi qua màn hình của nó: liên kết Telegram qua bot (ALERT-FR-013),
- * gửi hay huỷ yêu cầu xoá (AUTH-FR-012, Report 3 §6.14) — todo-audit-1118 B-01.
- */
+// Client đọc lại sau thay đổi không qua màn của nó (liên kết Telegram qua bot, yêu cầu xoá)
 export async function getCurrentUser(userId: string): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw UnauthorizedError('Tài khoản không còn tồn tại')
   return user
 }
 
-/** AUTH-FR-002, AUTH-FR-003 */
 export async function loginUser(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: normalizeEmail(input.email) })
-  // Luôn chạy bcrypt.compare kể cả khi user không tồn tại (so với hash giả
-  // DUMMY_BCRYPT_HASH) — nếu bỏ qua bước này, response cho "email không tồn tại"
-  // trả về nhanh hơn đo được so với "sai mật khẩu", lộ email nào đã đăng ký.
   const passwordMatches = user
     ? await user.comparePassword(input.password)
     : await bcrypt.compare(input.password, DUMMY_BCRYPT_HASH)
   if (!user || !passwordMatches) {
-    // Email không tồn tại thì không ghi email vào log (SRS §12.3 — không lưu PII thô trong audit log)
+    // Không ghi email lạ vào log (PII)
     const userId = user ? String(user._id) : undefined
     await logAction(userId, 'LOGIN_FAILED', 'user', userId, { reason: user ? 'WRONG_PASSWORD' : 'UNKNOWN_EMAIL' })
     throw UnauthorizedError('Sai email hoặc mật khẩu')
@@ -106,7 +84,6 @@ export async function loginUser(input: LoginInput): Promise<{ user: IUser; acces
   return { user, accessToken, refreshToken }
 }
 
-/** AUTH-FR-003 */
 export async function refreshAccessToken(refreshToken: string | undefined): Promise<{ accessToken: string }> {
   if (!refreshToken) throw UnauthorizedError('Thiếu refresh token')
 
@@ -127,20 +104,15 @@ export async function refreshAccessToken(refreshToken: string | undefined): Prom
   return { accessToken: signAccess(String(user._id), user.role) }
 }
 
-/** AUTH-FR-006 */
 export async function logoutUser(userId: string, refreshToken: string | undefined): Promise<void> {
   if (refreshToken) {
     await User.updateOne({ _id: userId }, { $pull: { refresh_tokens: { token_hash: hashToken(refreshToken) } } })
   }
 }
 
-/** AUTH-FR-009 — TTL 15 phút, dùng 1 lần (Flow 11 bước 6) */
 const RESET_TOKEN_TTL_MS = 15 * 60 * 1000
 
-/**
- * AUTH-FR-009 — gửi mã đặt lại mật khẩu. Im lặng khi email không tồn tại để
- * không biến endpoint này thành công cụ dò tài khoản (Flow 11 case 1a).
- */
+// Im lặng khi email không tồn tại: không thành công cụ dò tài khoản
 export async function forgotPassword(email: string): Promise<void> {
   const user = await User.findOne({ email: normalizeEmail(email) })
   if (!user) return
@@ -151,19 +123,13 @@ export async function forgotPassword(email: string): Promise<void> {
   user.password_reset_expires_at = expiresAt
   await user.save()
 
-  // Gửi qua e-mail (SF-03); mã không bao giờ ghi log. Không chờ SMTP trong request: chờ thì email có tài khoản trả
-  // chậm hơn email không có (một vòng SMTP), lộ tài khoản qua thời gian phản hồi (Flow 11 case 1a). sendMail không
-  // throw; thư lỗi thì người dùng gửi lại yêu cầu
+  // Không chờ SMTP: chờ thì lộ tài khoản qua thời gian phản hồi. Mã không ghi log
   void sendMail(resetCodeMail({ to: user.email, code: token, expiresAt }))
 }
 
-/**
- * AUTH-FR-009 — đặt mật khẩu mới. Thu hồi TOÀN BỘ refresh token cũ: nếu tài
- * khoản bị chiếm, đổi mật khẩu phải đá kẻ kia ra khỏi mọi thiết bị, không chỉ
- * chặn đăng nhập mới (Flow 11 bước 7).
- */
+// Thu hồi mọi refresh token: tài khoản bị chiếm thì phải đá kẻ kia khỏi mọi thiết bị
 export async function resetPassword(email: string, token: string, newPassword: string): Promise<void> {
-  // 2 field này `select: false` trong schema nên phải xin lại tường minh ở đây
+  // select: false nên phải xin lại tường minh
   const user = await User.findOne({ email: normalizeEmail(email) })
     .select('+password_reset_token_hash +password_reset_expires_at')
   if (
@@ -176,10 +142,10 @@ export async function resetPassword(email: string, token: string, newPassword: s
     throw new AppError(400, 'INVALID_RESET_TOKEN', 'Mã đặt lại không đúng hoặc đã hết hạn')
   }
 
-  user.password_hash = newPassword // pre-save hook tự hash (SEC-NFR-003)
+  user.password_hash = newPassword
   user.password_reset_token_hash = undefined
   user.password_reset_expires_at = undefined
-  // Tự đặt mật khẩu qua email là mật khẩu của chính họ — hết là mật khẩu tạm
+  // Hết là mật khẩu tạm
   user.must_change_password = false
   user.refresh_tokens = [] as never
   await user.save()
@@ -187,12 +153,7 @@ export async function resetPassword(email: string, token: string, newPassword: s
   await logAction(String(user._id), 'PASSWORD_RESET', 'user', String(user._id))
 }
 
-/**
- * PUT /auth/password — người đang đăng nhập đổi mật khẩu (mọi role), và là cách duy
- * nhất để bỏ mật khẩu tạm Admin cấp. Thu hồi refresh token của các thiết bị khác như
- * resetPassword, nhưng giữ phiên đang dùng để người đổi không bị đá ra ngay.
- * Sai mật khẩu hiện tại trả 400 (không phải 401 — 401 làm frontend tưởng token hết hạn).
- */
+// Giữ phiên đang dùng. Sai mật khẩu hiện tại trả 400, vì 401 làm client tưởng token hết hạn
 export async function changePassword(
   userId: string, currentPassword: string, newPassword: string, currentRefreshToken?: string,
 ): Promise<void> {
@@ -205,7 +166,7 @@ export async function changePassword(
     throw new AppError(400, 'PASSWORD_UNCHANGED', 'Mật khẩu mới phải khác mật khẩu hiện tại')
   }
 
-  user.password_hash = newPassword // pre-save hook tự hash (SEC-NFR-003)
+  user.password_hash = newPassword
   user.must_change_password = false
   const keep = currentRefreshToken ? hashToken(currentRefreshToken) : null
   user.refresh_tokens = user.refresh_tokens.filter(t => t.token_hash === keep) as never
@@ -220,16 +181,11 @@ export interface NotificationPreferencesInput {
   push?: boolean
   telegram?: boolean
   quiet_hours?: { start?: string; end?: string }
-  /** null ở 1 mức = bỏ ghi đè, mức đó theo cài đặt chung */
+  // null = bỏ ghi đè
   by_severity?: Partial<Record<AlertSeverity, ChannelChoice | null>>
 }
 
-/**
- * ALERT-FR-005/006 — mỗi người tự chọn kênh nhận thông báo (chung, và theo mức cảnh báo) và giờ im lặng.
- * Cảnh báo CRITICAL phải còn ít nhất 1 kênh ngoài ứng dụng (push, hoặc Telegram đã liên kết), không thì 400.
- * Report 3 §2.4: Domain Expert và Administrator không nhận cảnh báo ngoài ứng dụng nên không chọn kênh (403); chỉ Farm
- * Owner đặt giờ im lặng, Farm Technician chọn kênh nhưng gửi giờ im lặng thì 403 (ALERT-FR-005, 006).
- */
+// CRITICAL phải còn 1 kênh ngoài ứng dụng (400). Domain Expert, Admin không chọn kênh; chỉ Farm Owner đặt giờ im lặng (403)
 export async function updateNotificationPreferences(userId: string, input: NotificationPreferencesInput): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
@@ -260,11 +216,7 @@ export async function updateNotificationPreferences(userId: string, input: Notif
   return user
 }
 
-/**
- * AUTH-FR-012 / PRIV-NFR-003 — user tự yêu cầu xoá tài khoản. Chỉ ĐÁNH DẤU,
- * việc xoá thật do Administrator xử lý trong ≤30 ngày (Flow 19) vì còn phải
- * xử lý Farm của họ (chuyển chủ hoặc xoá mềm) trước khi xoá.
- */
+// Chỉ đánh dấu: Admin xoá thật sau khi xử lý farm của họ
 export async function requestAccountDeletion(userId: string): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
@@ -272,13 +224,11 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
     throw new AppError(409, 'CONFLICT', 'Bạn đã gửi yêu cầu xoá tài khoản trước đó, đang chờ xử lý')
   }
 
-  // SM-14 ACTIVE → DELETION_REQUESTED
   user.status = 'DELETION_REQUESTED'
   user.deletion_requested_at = new Date()
   await user.save()
 
   await logAction(userId, 'DELETION_REQUESTED', 'user', userId)
-  // Flow 19 bước 6 — Administrator nhận thông báo để xử lý trong ≤ 30 ngày
   await notifyAdmins({
     title: 'Yêu cầu xoá tài khoản mới',
     body: `${user.full_name} (${ROLE_LABEL[user.role]}) vừa gửi yêu cầu xoá tài khoản. Cần xử lý trong 30 ngày.`,
@@ -286,10 +236,6 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
   return user
 }
 
-/**
- * AUTH-FR-012 — user đổi ý trước khi Admin xử lý. Yêu cầu đã hoàn tất thì tài
- * khoản đã bị ẩn danh và khoá, không còn đăng nhập để gọi tới đây được.
- */
 export async function cancelAccountDeletion(userId: string): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
@@ -297,14 +243,14 @@ export async function cancelAccountDeletion(userId: string): Promise<IUser> {
     throw new AppError(409, 'CONFLICT', 'Bạn chưa gửi yêu cầu xoá tài khoản nào')
   }
 
-  // SM-14 DELETION_REQUESTED → ACTIVE; tài khoản đang bị khoá vẫn khoá
+  // tài khoản đang bị khoá vẫn khoá
   if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
   await user.save()
 
   await logAction(userId, 'DELETION_CANCELLED', 'user', userId)
-  // Admin có thể đang mở hàng đợi — báo để không ai xử lý nhầm yêu cầu vừa rút lại
+  // Báo để Admin không xử lý nhầm yêu cầu vừa rút lại
   await notifyAdmins({
     title: 'Yêu cầu xoá tài khoản đã được huỷ',
     body: `${user.full_name} (${ROLE_LABEL[user.role]}) đã huỷ yêu cầu xoá tài khoản.`,

@@ -1,8 +1,3 @@
-/**
- * Lệnh relay và can thiệp tay: lịch sử override không bao giờ chặn lệnh, thời hạn hợp lệ,
- * dời thiết bị sang Zone khác thì override cũ kết thúc; bật bơm tối đa 30 phút và phải xác nhận khi
- * Zone có cảnh báo cảm biến/phun sương (BR-08, ENV-FR-016, TC-F17-02); huỷ 1 relay hoặc tất cả (BR-20).
- */
 import express from 'express'
 import mongoose from 'mongoose'
 import request from 'supertest'
@@ -62,7 +57,7 @@ describe('lịch sử can thiệp tay không được chặn lệnh điều khi�
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
     const expiry = new Date(Date.now() - 45_000) // job chạy trễ 45 giây sau hạn
     await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.override_expiry': expiry })
-    // Override bật trước hạn của nó (như thật) — ended_at không bao giờ sớm hơn started_at
+    // Override bật trước hạn của nó (như thật): ended_at không bao giờ sớm hơn started_at
     await RelayOverrideLog.updateOne({}, { started_at: new Date(expiry.getTime() - 60_000) })
 
     expect(await expireManualOverrides()).toBe(1)
@@ -298,7 +293,7 @@ describe('dời thiết bị sang Zone khác', () => {
     expect(after.control_mode).toBe('AUTO')
     expect(after.override_expiry).toBeUndefined()
     expect((await RelayOverrideLog.findOne().lean())!).toMatchObject({ end_reason: 'CLEARED_EARLY' })
-    // Thiết bị không khởi động lại: tự huỷ override đang chạy và nhận cấu hình của Zone mới
+    // Không khởi động lại: tự huỷ override và nhận cấu hình Zone mới
     expect(publishDeviceCommand).toHaveBeenCalledWith(node.device_id, 'CLEAR_OVERRIDE')
     expect(publishDeviceConfig).toHaveBeenCalledWith(node.device_id, expect.objectContaining({ deviceId: node.device_id }))
   })

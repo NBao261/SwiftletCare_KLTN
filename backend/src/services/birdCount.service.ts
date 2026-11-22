@@ -17,50 +17,37 @@ import type { BirdCountPayload, CurrentUser, SessionType } from '@/types'
 
 const SESSION_TYPES: SessionType[] = ['MORNING_EXIT', 'EVENING_ENTRY']
 const DAY_MS = 86_400_000
-/** VISION-FR-017 — khoảng 5 phút */
 const BUCKET_MS = 5 * 60_000
 
-/** VISION-FR-011 — "so với trung bình 7 ngày trước" */
 export const BASELINE_DAYS = 7
-/** ponytail: tối thiểu 3 ngày nền chọn tay, không có nguồn — ít hơn thì 1 ngày lệch đã thành cảnh báo (SRS §0.5) */
+// 3 ngày nền chọn tay; ít hơn thì 1 ngày lệch đã thành cảnh báo
 export const MIN_BASELINE_DAYS = 3
-/** ponytail: khoảng tối đa 1 lần đọc bucket chọn tay (7 ngày ≈ 2016 khoảng/camera), không có nguồn (SRS §0.5) */
+// Chọn tay (7 ngày ≈ 2016 khoảng/camera)
 const MAX_BUCKET_RANGE_MS = 7 * DAY_MS
-/** ponytail: khoảng đọc mặc định khi không gửi from (24 giờ gần nhất) chọn tay, không có nguồn (SRS §0.5) */
 const DEFAULT_BUCKET_RANGE_MS = DAY_MS
 
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
-/** Ngày theo giờ Việt Nam — phiên sáng 05:30 VN là 22:30 UTC hôm trước */
+// Phiên sáng 05:30 VN là 22:30 UTC hôm trước
 export const vnDate = vnDateOf
-/** Số ròng: chim lượn qua lại vạch đếm làm cả hai chiều phồng lên, phép trừ triệt tiêu phần đó */
+// Chim lượn qua lại vạch làm cả hai chiều phồng lên, phép trừ triệt tiêu
 const net = (main: number, opposite: number) => Math.max(main - opposite, 0)
 
-/**
- * Số đếm 1 ngày (giờ VN) của 1 nhà yến (House). Nguồn duy nhất cho `/current`, `/daily`, `/trends`,
- * `/correlation`, socket `BIRD_COUNT_UPDATE`, job `LOW_RETURN_RATE`, báo cáo sức khỏe Zone và ảnh chụp
- * đàn khi thu hoạch (Zone lấy số của House chứa nó).
- */
+// Nguồn duy nhất của số đếm theo ngày của một nhà
 export interface HouseDayCounts {
   date: string
-  /** Số thô, cộng mọi camera của nhà (1–2 cửa ra vào) */
+  // Cộng mọi camera của nhà
   morning_entry: number
   morning_exit: number
   evening_entry: number
   evening_exit: number
-  /** Ra − vào của phiên sáng, không âm */
   net_exit: number
-  /** Vào − ra của phiên chiều, không âm */
   net_entry: number
-  /** VISION-FR-009 — net_entry / net_exit × 100; null khi thiếu phiên sáng/chiều hoặc sáng không có chim ra */
+  // null khi thiếu phiên hoặc sáng không có chim ra
   return_rate: number | null
   has_morning: boolean
   has_evening: boolean
-  /**
-   * VISION-FR-020 — một phiên của ngày không đầy đủ (nút AI mất kết nối trong khung): tỷ lệ vẫn hiện nhưng có cờ, ngày
-   * không được kiểm LOW_RETURN_RATE và không vào nền của ngày sau
-   */
+  // không kiểm LOW_RETURN_RATE và không vào nền
   incomplete: boolean
-  /** Tin mới nhất của ngày (null khi chưa có tin) */
   updated_at: Date | null
 }
 
@@ -80,7 +67,7 @@ function toDayCounts(row: {
     morning_entry: row.morning_entry, morning_exit: row.morning_exit,
     evening_entry: row.evening_entry, evening_exit: row.evening_exit,
     net_exit: netExit, net_entry: netEntry,
-    // Có thể vượt 100% (chim về nhiều hơn số đã đếm ra) — không kẹp, để người xem thấy
+    // Có thể vượt 100%: không kẹp
     return_rate: hasMorning && hasEvening && netExit > 0 ? +((netEntry / netExit) * 100).toFixed(2) : null,
     has_morning: hasMorning, has_evening: hasEvening,
     incomplete: row.incompletes > 0,
@@ -88,12 +75,7 @@ function toDayCounts(row: {
   }
 }
 
-/**
- * SRS v2.1.8 — chim ra vào ở cửa của **cả nhà yến**, nên số đếm là của House, không chia theo Zone.
- * Nhà có 2 cửa thì cộng **số thô** của mọi camera rồi mới lấy số ròng: chim có thể ra cửa này về cửa
- * kia, nên số ròng hay tỷ lệ của từng camera riêng lẻ không có nghĩa. Khoảng `from`/`to` là ngày giờ
- * VN ('YYYY-MM-DD', tính cả hai đầu). Ngày không có tin nào thì không có dòng.
- */
+// Cộng số thô mọi camera rồi mới lấy số ròng: chim có thể ra cửa này về cửa kia
 export async function houseDailyCounts(houseId: string, range: { from?: string; to?: string } = {}): Promise<HouseDayCounts[]> {
   const sessionDate: Record<string, string> = {}
   if (range.from) sessionDate.$gte = range.from
@@ -118,19 +100,13 @@ export async function houseDailyCounts(houseId: string, range: { from?: string; 
   return rows.map(toDayCounts)
 }
 
-/**
- * Trung bình tỷ lệ chim về theo ngày (mỗi ngày có tỷ lệ tính một lần); null khi không ngày nào có tỷ lệ. Ngày không
- * đầy đủ (VISION-FR-020) không tính, như nền của LOW_RETURN_RATE: báo cáo sức khỏe và ảnh chụp đàn khi thu hoạch
- */
+// Bỏ ngày không đầy đủ
 export function averageReturnRate(days: HouseDayCounts[]): number | null {
   const rates = days.filter(d => !d.incomplete).map(d => d.return_rate).filter((r): r is number => r !== null)
   return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
 }
 
-/**
- * VISION-FR-012 — số hôm nay của nhà yến khi mở trang (sau đó socket `BIRD_COUNT_UPDATE` ở room
- * `house:<id>` cập nhật cùng con số). `zoneId` cũ được quy ra House chứa Zone.
- */
+// zoneId cũ: quy ra House chứa Zone
 export async function getCurrentBirdCount(user: CurrentUser, params: { houseId?: string; zoneId?: string }): Promise<HouseDayCounts & { house_id: string }> {
   const { house } = await assertHouseAccessByParams(params, user)
   const houseId = String(house._id)
@@ -145,11 +121,7 @@ function emptyDay(date: string): HouseDayCounts {
   })
 }
 
-/**
- * VISION-FR-006/008/009/017 — gọi từ mqtt/handlers/birdCount.handler.ts. Trả nhà và ngày để handler tính lại
- * sức khỏe ngày khi số đếm về trễ (SM-17): tin của phiên chưa được backend tính, hoặc số 5 phút về muộn nằm trong
- * khung của một phiên đã tính; mọi trường hợp khác trả null.
- */
+// Trả nhà và ngày khi cần tính lại sức khỏe ngày vì số về trễ, còn lại null
 export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ houseId: string; sessionDate: string } | null> {
   const { deviceId, entry_count, exit_count } = payload
   if (typeof deviceId !== 'string' || !deviceId || !isCount(entry_count) || !isCount(exit_count)) {
@@ -159,22 +131,19 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
   const node = await CameraNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('house_id').lean()
   if (!node) throw NotFoundError(`Không tìm thấy CameraNode với device_id="${deviceId}"`)
 
-  // Số đếm chỉ tăng trong một phiên/khoảng: `$max` để tin MQTT QoS 1 giao lại hoặc tới lệch thứ tự,
-  // hay tin của pipeline vừa khởi động lại mất trạng thái, không kéo số đã lưu xuống
+  // $max: QoS 1 giao lại, lệch thứ tự hay pipeline khởi động lại không kéo số xuống
   const counts = { $max: { entry_count, exit_count } }
 
-  // VISION-FR-017: số đếm theo khoảng 5 phút, có cả ngoài phiên
   if (payload.kind === 'BUCKET') {
     if (!Number.isFinite(payload.bucket_start)) throw BadRequestError('Thiếu bucket_start')
-    // Căn về đầu khoảng 5 phút: mốc lệch vài giây vẫn gộp vào cùng một dòng thay vì tạo dòng mới
+    // Mốc lệch vài giây vẫn gộp vào cùng dòng
     const bucketStart = Math.floor((payload.bucket_start as number) / BUCKET_MS) * BUCKET_MS
     await BirdCountBucket.updateOne(
       { camera_node_id: node._id, bucket_start: new Date(bucketStart) },
       { $set: { house_id: node.house_id }, ...counts },
       { upsert: true },
     )
-    // SM-17 — số 5 phút về trễ (nút AI nối lại) cho ngày đã tính phiên: tính lại phiên theo khung đã lưu, chỉ khi
-    // khoảng đó nằm trong khung của một phiên (VISION-FR-017 gửi cả ngày, số ngoài khung không đổi phiên nào)
+    // chỉ tính lại khi khoảng đó nằm trong khung của một phiên
     const bucketDate = vnDate(new Date(bucketStart))
     const houseId = String(node.house_id)
     const computed = await BirdCountRecord.find({ house_id: node.house_id, session_date: bucketDate, computed_at: { $exists: true } })
@@ -194,8 +163,7 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
   const timestamp = new Date(Number.isFinite(payload.timestamp) ? payload.timestamp as number : Date.now())
   const sessionDate = vnDate(timestamp)
 
-  // VISION-FR-008 — phiên đã được backend tính từ số 5 phút theo khung của ngày: tin cộng dồn (theo khung mặc định
-  // của nút AI) tới muộn không ghi đè
+  // Phiên đã tính từ số 5 phút: tin cộng dồn tới muộn không ghi đè
   if (await BirdCountRecord.exists({
     camera_node_id: node._id, session_type: sessionType, session_date: sessionDate, computed_at: { $exists: true },
   })) return null
@@ -207,12 +175,12 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
         house_id: node.house_id,
         ...(payload.confidence_avg !== undefined && Number.isFinite(payload.confidence_avg) && { confidence_avg: payload.confidence_avg }),
       },
-      $max: { timestamp, entry_count, exit_count }, // số thô của cả hai chiều vẫn được lưu
+      $max: { timestamp, entry_count, exit_count }, // Vẫn lưu số thô của cả hai chiều
     },
     { upsert: true },
   )
 
-  // VISION-FR-012: phát số của cả nhà (không phải của camera vừa gửi) — cùng con số với /current
+  // Số của cả nhà, cùng con số với /current
   const houseId = String(node.house_id)
   const [day] = await houseDailyCounts(houseId, { from: sessionDate, to: sessionDate })
   const morning = sessionType === 'MORNING_EXIT'
@@ -227,28 +195,20 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
   return { houseId, sessionDate }
 }
 
-/**
- * VISION-FR-011 — tỷ lệ chim về **của nhà yến** giảm quá mức của House so với trung bình 7 ngày có
- * dữ liệu trước đó. Gọi từ jobs/returnRate.job.ts sau khi phiên chiều kết thúc, không dựa vào tin
- * `final` của pipeline (pipeline khởi động lại đúng lúc đổi phiên thì tin đó không bao giờ tới).
- * Cảnh báo gắn House, không gắn camera hay Zone: chim ra vào ở cửa của cả nhà (SRS v2.1.8).
- * Chạy lại nhiều lần vẫn an toàn: `createAlert` gộp cảnh báo còn mở của cùng House.
- * Ngày đã hồi lại thì đóng cảnh báo cũ — nếu không, dedup nuốt mọi lần giảm của những ngày sau.
- * Trả số cảnh báo mới.
- */
+// Không dựa vào tin final của pipeline (có thể không bao giờ tới). Ngày hồi lại thì đóng, không thì dedup nuốt các lần sau
 export async function checkReturnRateDrops(sessionDate = vnDate(new Date()), onlyHouseIds?: string[]): Promise<number> {
   const houseIds = await BirdCountRecord.distinct('house_id', {
     session_type: 'EVENING_ENTRY', session_date: sessionDate,
     ...(onlyHouseIds && { house_id: { $in: onlyHouseIds.map(id => new Types.ObjectId(id)) } }),
   })
 
-  // "7 ngày trước" là 7 ngày lịch, không phải 7 bản ghi gần nhất: camera mất kết nối nhiều ngày thì nền ít đi
+  // 7 ngày lịch, không phải 7 bản ghi gần nhất
   const from = new Date(Date.parse(sessionDate) - BASELINE_DAYS * DAY_MS).toISOString().slice(0, 10)
 
   let created = 0
   for (const id of houseIds) {
     const houseId = String(id)
-    // Lỗi ở một nhà không được làm bỏ qua các nhà sau: job chỉ chạy một lần mỗi tối
+    // Lỗi ở một nhà không được bỏ qua các nhà sau
     try {
       if (await checkHouseReturnRate(houseId, sessionDate, from)) created++
     } catch (err) {
@@ -258,10 +218,8 @@ export async function checkReturnRateDrops(sessionDate = vnDate(new Date()), onl
   return created
 }
 
-/** Một nhà của checkReturnRateDrops; trả true khi tạo cảnh báo mới */
 async function checkHouseReturnRate(houseId: string, sessionDate: string, from: string): Promise<boolean> {
   const stage = await House.findById(houseId).select('stage_history').lean()
-  // BR-46 — nhà dẫn dụ không có LOW_RETURN_RATE; về OCCUPIED thì nền chỉ gồm các ngày sau lần chuyển
   if (stageOn(stage?.stage_history, sessionDate) === 'ATTRACTING') {
     await resolveHouseAlerts(houseId, 'LOW_RETURN_RATE', 'Nhà chuyển sang giai đoạn dẫn dụ: không xét tỷ lệ chim về (BR-46)')
     return false
@@ -269,7 +227,7 @@ async function checkHouseReturnRate(houseId: string, sessionDate: string, from: 
   const occupiedSince = baselineAfter(stage?.stage_history, sessionDate)
   const days = await houseDailyCounts(houseId, { from, to: sessionDate })
   const today = days.at(-1)
-  // VISION-FR-020 — ngày không đầy đủ không được xét (không mở, không đóng cảnh báo) và không vào nền
+  // ngày không đầy đủ không mở, không đóng cảnh báo
   if (today?.date !== sessionDate || today.return_rate === null || today.incomplete) return false
   const previous = days.slice(0, -1).filter(d => d.return_rate !== null && !d.incomplete && (!occupiedSince || d.date > occupiedSince))
   if (previous.length < MIN_BASELINE_DAYS) return false
@@ -280,17 +238,15 @@ async function checkHouseReturnRate(houseId: string, sessionDate: string, from: 
 
   const house = await House.findById(houseId).select('farm_id name bird_count_tuning').lean()
   if (!house) return false
-  // EXPERT-FR-008: Domain Expert chỉnh mức giảm theo House (mặc định 20%)
   const limit = resolveBirdCountTuning(house.bird_count_tuning).return_rate_drop_pct
 
   if (dropPct <= limit) {
-    // Đóng xong vẫn còn trong hàng chờ kiểm chứng: hàng chờ lọc theo expert_verdict, không theo trạng thái
+    // Đóng xong vẫn còn trong hàng chờ kiểm chứng: hàng chờ lọc theo expert_verdict
     await resolveHouseAlerts(houseId, 'LOW_RETURN_RATE', 'Tỷ lệ chim về đã trở lại mức bình thường')
     return false
   }
 
-  // VISION-FR-011 — ghi lượng mưa của các phiên đếm trong ngày (mưa làm chim về muộn, BR-30) hoặc ghi rõ không có
-  // dữ liệu thời tiết; chỉ để người xem cân nhắc, không đổi quyết định báo
+  // chỉ để người xem cân nhắc, không đổi quyết định báo
   const rain = await sessionRainfall(houseId, house.farm_id, sessionDate)
   const rainMm = rain?.mm ?? null
   const rainText = rain === null ? 'không có dữ liệu thời tiết' : `mưa trong phiên đếm ${rain.mm} mm`
@@ -304,11 +260,7 @@ async function checkHouseReturnRate(houseId: string, sessionDate: string, from: 
   return alert !== null
 }
 
-/**
- * VISION-FR-017 — số chim ra/vào theo khoảng 5 phút của 1 nhà yến, cộng các camera của nhà.
- * Dùng cho biểu đồ theo giờ và màn kiểm chứng cảnh báo của Domain Expert (±30 phút, EXPERT-FR-003).
- * `zoneId` cũ được quy ra House chứa Zone.
- */
+// zoneId cũ: quy ra House chứa Zone
 export async function getBirdCountBuckets(
   user: CurrentUser, params: { houseId?: string; zoneId?: string }, query: { from?: string; to?: string },
 ) {
@@ -322,10 +274,7 @@ export async function getBirdCountBuckets(
   return { house_id: String(house._id), from, to, buckets }
 }
 
-/**
- * Số chim ra/vào theo khoảng 5 phút của 1 nhà trong [from, to), cộng các camera của nhà. Không kiểm
- * quyền — người gọi đã kiểm (getBirdCountBuckets, bằng chứng cảnh báo ALERT-FR-014).
- */
+// Không kiểm quyền: người gọi đã kiểm
 export async function sumHouseBuckets(houseId: unknown, from: Date, to: Date) {
   return BirdCountBucket.aggregate<{ bucket_start: Date; entry_count: number; exit_count: number }>([
     { $match: { house_id: new Types.ObjectId(String(houseId)), bucket_start: { $gte: from, $lt: to } } },
@@ -335,20 +284,12 @@ export async function sumHouseBuckets(houseId: unknown, from: Date, to: Date) {
   ])
 }
 
-// ── Phiên theo lịch đếm (VISION-FR-008, 019, 020; BR-21) ────────────────────────────────────────────
-
-/** VISION-FR-019 — khung sáng, chiều của nhà trong ngày `date` theo lịch đếm đang áp hôm đó */
 export async function houseWindowsOn(houseId: unknown, date: string) {
   const house = await House.findById(houseId).select('counting_schedule_history').lean()
   return windowsOn(scheduleOn(house?.counting_schedule_history, date), date)
 }
 
-/**
- * VISION-FR-008, 020 — tính hai phiên của nhà trong ngày `date` từ số 5 phút của từng camera trong khung của ngày, lưu
- * kèm khung đã dùng và cờ đầy đủ. Một số 5 phút thuộc phiên khi nó bắt đầu trong khung. Ngày đã tính giữ khung cũ
- * (VISION-FR-019) nên lần tính lại do số về trễ cho cùng kết quả khung. Camera không có số 5 phút nào trong khung (chạy
- * trên clip, không phát số 5 phút) giữ số cộng dồn của nút AI, chỉ nhận khung và cờ đầy đủ.
- */
+// Số 5 phút thuộc phiên khi bắt đầu trong khung. Camera không có số 5 phút giữ số cộng dồn của nút AI
 export async function computeHouseSessions(houseId: string, date: string, now = new Date()): Promise<void> {
   const house = new Types.ObjectId(houseId)
   const scheduled = await houseWindowsOn(house, date)
@@ -357,7 +298,7 @@ export async function computeHouseSessions(houseId: string, date: string, now = 
       .select('window_start window_end').lean()
     const window: TimeWindow = stored ? { start: stored.window_start as string, end: stored.window_end as string } : planned
     const { start, end } = windowInterval(date, window)
-    // Nút AI của nhà mất kết nối lúc nào đó trong khung (cảnh báo mở trước khi khung hết và chưa đóng trước khi khung bắt đầu)
+    // Cảnh báo mở trước khi khung hết và chưa đóng trước khi khung bắt đầu
     const degraded = await Alert.exists({
       house_id: house, type: 'EDGE_AI_DEGRADED', created_at: { $lt: end },
       $or: [{ resolved_at: null }, { resolved_at: { $gt: start } }],
@@ -378,11 +319,7 @@ export async function computeHouseSessions(houseId: string, date: string, now = 
   }
 }
 
-/**
- * BR-21 — nhận việc kiểm tra buổi tối của các nhà đã tới giờ (15 phút sau khung chiều của chính nhà đó hôm nay). Mỗi
- * nhà một lần mỗi ngày: ghi `last_session_check` có điều kiện nên hai lần chạy chồng nhau không nhận trùng. Trả ngày và
- * các nhà vừa nhận.
- */
+// Ghi last_session_check có điều kiện: hai lần chạy chồng nhau không nhận trùng
 export async function claimDueHouses(now = new Date()): Promise<{ date: string; houseIds: string[] }> {
   const date = vnDate(now)
   const houses = await House.find({ _id: { $in: await listActiveHouseIds() }, last_session_check: { $ne: date } })

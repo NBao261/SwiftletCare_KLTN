@@ -1,7 +1,4 @@
-/**
- * docs/api/api-spec.yaml là nguồn của Swagger UI: app.config.ts chỉ log cảnh báo khi spec
- * lỗi, nên một dòng YAML sai làm mất /api-docs mà không test nào đỏ.
- */
+// app.config.ts chỉ log cảnh báo khi spec lỗi: YAML sai làm mất /api-docs mà không test nào đỏ
 import fs from 'fs'
 import path from 'path'
 import YAML from 'yaml'

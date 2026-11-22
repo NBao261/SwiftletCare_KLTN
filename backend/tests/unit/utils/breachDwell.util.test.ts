@@ -1,26 +1,18 @@
-/**
- * BR-34 — thời gian 1 chỉ số phải ở ngoài ngưỡng liên tục trước khi tạo THRESHOLD_BREACH:
- * 10 phút nhiệt độ/độ ẩm, 5 phút ánh sáng/NH3/CO2; mẫu trong ngưỡng xen giữa đếm lại; số đo thiếu không
- * bắt đầu, không cắt; thiết bị im lặng quá ngưỡng mất kết nối (BR-10) thì đếm lại.
- */
 import { BREACH_DWELL_MS, clearBreachDwell, trackBreachDwell } from '@/utils/breachDwell.util'
 import type { ThresholdBreach } from '@/services/alert.service'
 
 const MIN = 60_000
 const SEC = 1000
-/** Ngưỡng mất kết nối của bộ điều khiển (BR-10) — telemetry.service truyền OFFLINE_THRESHOLD_MS */
+// Ngưỡng mất kết nối của bộ điều khiển: telemetry.service truyền OFFLINE_THRESHOLD_MS
 const OFFLINE_MS = 30 * SEC
 const T0 = Date.UTC(2026, 9, 31, 3, 0)
 const humidityLow: ThresholdBreach = { metric: 'humidity', value: 70, limit: 75, direction: 'below' }
 const nh3High: ThresholdBreach = { metric: 'nh3_ppm', value: 30, limit: 25, direction: 'above' }
 
-/**
- * 1 mẫu tại phút `minute`: `breaches` là kết quả so ngưỡng của mẫu đó. Các test theo phút chỉ kiểm luật
- * đếm nên không giới hạn khoảng hở; khoảng hở thật kiểm riêng ở dưới.
- */
+// Theo phút chỉ kiểm luật đếm; khoảng hở thật kiểm riêng ở dưới
 const sample = (node: string, minute: number, readings: Record<string, number | undefined>, breaches: ThresholdBreach[]) =>
   trackBreachDwell(node, readings, breaches, T0 + minute * MIN, Number.POSITIVE_INFINITY)
-/** Mẫu mỗi 10 giây từ phút `from` tới phút `to`, với khoảng hở thật 30 giây; trả kết quả của mẫu cuối */
+// Mẫu mỗi 10 giây từ phút `from` tới phút `to`, với khoảng hở thật 30 giây; trả kết quả của mẫu cuối
 const every10s = (node: string, from: number, to: number) => {
   let last = trackBreachDwell(node, { humidity: 70 }, [humidityLow], T0 + from * MIN, OFFLINE_MS)
   for (let t = from * MIN + 10 * SEC; t <= to * MIN; t += 10 * SEC) {

@@ -14,16 +14,12 @@ export interface MqttAuthRequest {
   password: string
 }
 
-/**
- * NFR-10 d — HTTP authentication của EMQX. `key` sai là bên gọi không phải EMQX: 401. Còn lại luôn trả
- * kết quả để EMQX đọc từ thân phản hồi. Quyền theo topic nằm ở file authz của broker (deploy/emqx/),
- * nên không bao giờ trả `is_superuser: true`.
- */
+// key sai thì 401. Không bao giờ trả is_superuser: quyền topic nằm ở authz của broker
 export async function authorizeBrokerClient(key: unknown, body: MqttAuthRequest): Promise<'allow' | 'deny'> {
   if (!safeEqual(key, process.env.MQTT_AUTH_KEY)) throw UnauthorizedError('Sai khóa')
   const { MQTT_USERNAME, MQTT_PASSWORD } = process.env
   if (safeEqual(body.username, MQTT_USERNAME)) return safeEqual(body.password, MQTT_PASSWORD) ? 'allow' : 'deny'
-  // Username có ký tự đại diện của MQTT sẽ mở rộng luật ACL `swiftletcare/dev/${username}/#`: không bao giờ cho vào
+  // Ký tự đại diện MQTT sẽ mở rộng luật ACL
   if (!DEVICE_ID_PATTERN.test(body.username)) return 'deny'
   return (await verifyBrokerCredential(body.username, body.password)) ? 'allow' : 'deny'
 }

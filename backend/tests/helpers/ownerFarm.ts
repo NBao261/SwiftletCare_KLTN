@@ -14,10 +14,7 @@ import { User } from '@/models/user.model'
 import { WorkOrder } from '@/models/workOrder.model'
 import type { CurrentUser } from '@/types'
 
-/**
- * Mongo trong bộ nhớ cho cả file test; sau mỗi test trả mock về như cũ và xoá sạch dữ liệu
- * (kể cả bản ghi đã xoá mềm). Gọi ở cấp ngoài cùng của file test, sau các `jest.mock`.
- */
+// Mongo trong bộ nhớ cho cả file; sau mỗi test trả mock và xoá dữ liệu. Gọi sau các jest.mock
 export function useTestDb(): void {
   let mongod: MongoMemoryServer
   beforeAll(async () => {
@@ -39,7 +36,7 @@ export function useTestDb(): void {
 
 let seq = 0
 
-/** 1 Farm Owner + Farm/House/Zone + 1 SensorNode ONLINE, kèm token và đường dẫn relay của thiết bị */
+// 1 Farm Owner + Farm/House/Zone + 1 SensorNode ONLINE, kèm token và đường dẫn relay của thiết bị
 export async function seedOwnerFarm() {
   seq++
   const owner = await User.create({ email: `o${seq}@test.vn`, password_hash: 'password123', full_name: 'O', role: 'FARM_OWNER' })

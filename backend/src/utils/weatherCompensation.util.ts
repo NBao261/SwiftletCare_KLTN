@@ -1,25 +1,14 @@
 import { BadRequestError } from '@/utils/appError.util'
 
-/**
- * BR-38, ENV-FR-028…030 — bù phun sương theo dự báo thời tiết. Phần thuần (không DB, không MQTT) để test
- * riêng: kiểm luật của nhà và chọn offset từ dự báo 2 giờ tới. Firmware kẹp lại lần nữa
- * (`WeatherCompensation.cpp`), nên hai giới hạn dưới đây phải khớp `Config.h`.
- */
+// firmware kẹp lại (WeatherCompensation.cpp), hai giới hạn dưới phải khớp Config.h
 
-/** BR-38 — offset tối đa (điểm % của nhu cầu phun), cả hai chiều (Report 3 §4.5, A-4) */
 export const WEATHER_COMP_MAX_PCT = 10
-/** BR-38 — một offset hết hạn tối đa 2 giờ sau khi gửi (Report 3 §4.5, A-4) */
 export const WEATHER_COMP_MAX_MS = 2 * 3600_000
-/** ENV-FR-028 — cửa sổ dự báo xét luật: 2 giờ tới */
 export const FORECAST_WINDOW_MS = 2 * 3600_000
-/** Report 3 §4.5 — số luật tối đa của một nhà, để document nhà không lớn mãi */
+// Để document nhà không lớn mãi
 export const MAX_WEATHER_RULES = 10
 
-/**
- * ENV-FR-030 — điều kiện của luật luôn là "giá trị dự báo trong 2 giờ tới ≥ min": nhiệt độ cao nhất (°C),
- * độ ẩm ngoài trời cao nhất (%), tổng lượng mưa (mm). Khoảng nhập là giới hạn vật lý chống nhập nhầm,
- * không phải khuyến nghị nuôi yến.
- */
+// Giới hạn vật lý chống nhập nhầm
 export const WEATHER_METRICS = ['temperature', 'humidity', 'rain'] as const
 export type WeatherMetric = typeof WEATHER_METRICS[number]
 export const WEATHER_METRIC_LIMITS: Record<WeatherMetric, { min: number; max: number; unit: string }> = {
@@ -36,7 +25,7 @@ export interface WeatherRuleInput {
   active: boolean
 }
 
-/** Dự báo 2 giờ tới đã gộp; trường null = Open-Meteo không có số đó */
+// null = Open-Meteo không có số đó
 export interface ForecastSummary {
   temperature_max: number | null
   humidity_max: number | null
@@ -45,7 +34,6 @@ export interface ForecastSummary {
 
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
-/** ENV-FR-030 — 400 khi offset ngoài ±10, thời hạn trên 2 giờ hoặc điều kiện ngoài khoảng */
 export function assertValidWeatherRules(rules: WeatherRuleInput[]): void {
   if (rules.length > MAX_WEATHER_RULES) throw BadRequestError(`Mỗi nhà tối đa ${MAX_WEATHER_RULES} luật bù thời tiết`)
   rules.forEach((rule, i) => {
@@ -67,10 +55,7 @@ export function assertValidWeatherRules(rules: WeatherRuleInput[]): void {
 const forecastValue = (forecast: ForecastSummary, metric: WeatherMetric): number | null =>
   metric === 'temperature' ? forecast.temperature_max : metric === 'humidity' ? forecast.humidity_max : forecast.rain_mm
 
-/**
- * BR-38 — offset của nhà: trong các luật đang bật mà dự báo thoả, lấy luật có |offset| lớn nhất (bằng nhau thì
- * luật đứng trước). Không có dự báo hoặc không luật nào thoả thì null — nơi gọi gửi 0.
- */
+// Bằng nhau thì luật đứng trước; null thì nơi gọi gửi 0
 export function pickCompensation<R extends WeatherRuleInput>(rules: R[], forecast: ForecastSummary | null): R | null {
   if (!forecast) return null
   let best: R | null = null
@@ -90,10 +75,7 @@ interface OpenMeteoHourly {
   precipitation?: (number | null)[]
 }
 
-/**
- * Gộp các mốc giờ dự báo trong (now, now + 2 h] (giờ GMT của Open-Meteo): nhiệt độ và độ ẩm cao nhất, tổng mưa.
- * Lượng mưa ở mốc T là tổng của giờ trước T, nên hai mốc này phủ đủ 2 giờ tới. Không mốc nào có số thì null.
- */
+// Mưa ở mốc T là tổng giờ trước T, nên hai mốc phủ đủ 2 giờ
 export function summariseForecast(hourly: OpenMeteoHourly | undefined, now: Date): ForecastSummary | null {
   const from = now.getTime()
   const to = now.getTime() + FORECAST_WINDOW_MS

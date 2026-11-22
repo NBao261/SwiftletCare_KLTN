@@ -1,19 +1,11 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { FarmMemberRole, HealthLevel, HealthRatingValue, HealthReason, HealthReasonCode, HealthSource, HealthStatus } from '@/types'
 
-/**
- * ANALYTICS-FR-012, EXPERT-FR-012, SM-17 — trạng thái sức khỏe 1 ngày (giờ VN) của 1 nhà yến.
- * `current_*` theo dữ liệu mới nhất (tính lại khi dữ liệu trễ hoặc kết luận cảnh báo đổi); mỗi lần chấm
- * lưu ảnh chụp `snapshot` không bao giờ đổi, NFR-14 chỉ dùng ảnh chụp (BR-31, D16). Trạng thái chấm
- * của từng người suy ra từ `ratings` và ngày, không lưu riêng. Giữ suốt đời hệ thống (BR-36).
- */
+// current_* tính lại khi dữ liệu trễ; snapshot lúc chấm không đổi, chỉ dùng snapshot
 export interface IHealthIndicator {
-  /** environment: % thời gian trong ngưỡng (Zone thấp nhất); air: số giờ vượt ngưỡng (Zone cao nhất);
-   *  flock: % tỷ lệ chim về giảm so với nền; noise: số đợt NOISE_ANOMALY. null khi không tính được */
+  // environment %, air giờ, flock % giảm, noise số đợt; null khi không tính được
   value: number | null
-  /** null khi nguồn không đủ dữ liệu (không đánh giá) */
   level: HealthLevel | null
-  /** Số liệu đi kèm (vd return_rate, baseline_avg, theo từng Zone) */
   details?: Record<string, unknown>
 }
 
@@ -22,7 +14,6 @@ export type HealthIndicators = Record<HealthSource, IHealthIndicator>
 export interface IHealthSnapshot {
   status: HealthStatus
   reasons: HealthReason[]
-  /** Mức của từng nguồn lúc chấm — để tính tỷ lệ báo động giả theo từng nguồn (ANALYTICS-FR-014) */
   levels: Record<HealthSource, HealthLevel | null>
 }
 
@@ -42,7 +33,6 @@ export interface IDayWeather {
   temperature_max: number | null
   humidity_avg: number | null
   precipitation_mm: number | null
-  /** Số giờ có dữ liệu (tối đa 24) */
   hours: number
 }
 
@@ -50,17 +40,13 @@ export interface IHouseHealthDay extends Document {
   _id: Types.ObjectId
   house_id: Types.ObjectId
   farm_id: Types.ObjectId
-  /** 'YYYY-MM-DD' giờ VN */
   date: string
   indicators: HealthIndicators
-  /** Đủ dữ liệu theo từng nguồn (BR-28) */
   completeness: Record<HealthSource, boolean>
   current_status: HealthStatus
   current_reasons: HealthReason[]
-  /** ALERT-FR-014 — cảnh báo NOISE_ANOMALY được tính trong ngày */
   evidence: { noise_alert_ids: Types.ObjectId[] }
-  /** ANALYTICS-FR-013 — thời tiết ngoài trời của ngày (chỉ hiển thị); null khi không có dữ liệu.
-   *  Lưu kèm ngày vì bản ghi theo giờ chỉ giữ 90 ngày (BR-36) */
+  // Lưu kèm vì bản ghi theo giờ chỉ giữ 90 ngày
   weather: IDayWeather | null
   computed_at: Date
   ratings: IHealthRating[]

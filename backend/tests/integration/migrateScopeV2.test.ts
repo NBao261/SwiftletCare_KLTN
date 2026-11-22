@@ -1,7 +1,3 @@
-/**
- * npm run migrate:scope-v2 — dữ liệu theo phạm vi cũ (Farm Operator, BIRD_PANIC, relay
- * sưởi, Marketplace) được đưa về SRS v2.0.0; chạy lại lần 2 không đổi gì.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'
@@ -27,7 +23,7 @@ it('đổi dữ liệu cũ về phạm vi v2 và chạy lại lần 2 không đ�
   const id = () => new mongoose.Types.ObjectId()
   const [ownerId, operatorId, farmId, zoneId, nodeId, listedId, draftId] = [id(), id(), id(), id(), id(), id(), id()]
 
-  // Ghi thẳng collection như DB chạy bản v1.24.0 — model mới sẽ từ chối các giá trị này
+  // Ghi thẳng collection như DB chạy bản cũ: model mới sẽ từ chối các giá trị này
   await db.collection('users').insertMany([
     { _id: ownerId, email: 'owner@test.vn', role: 'FARM_OWNER', password_hash: 'x', full_name: 'O' },
     { _id: operatorId, email: 'op@test.vn', role: 'FARM_OPERATOR', password_hash: 'x', full_name: 'Op' },

@@ -1,22 +1,4 @@
-/**
- * migrate-scope-v2.ts — đưa DB đang chạy về phạm vi SRS v2.0.0 (sau Review 1). Code mới
- * không còn hiểu `FARM_OPERATOR`, `BIRD_PANIC`, `LISTED`: bản ghi mang các giá trị này
- * sẽ lỗi validate khi save, và tài khoản Farm Operator cũ sẽ không qua được `requireRole`.
- *
- * Chạy: npm run migrate:scope-v2   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. Role `FARM_OPERATOR` → `DOMAIN_EXPERT` ở `users`, `farms.members[]`, `invitations`
- *    (tin nhắn ticket không còn — migrate:remove-tickets xoá cả collection).
- *    LƯU Ý: đây là đổi TÊN role theo SRS — quyền thì khác hẳn (chuyên gia chỉ đọc + tinh
- *    chỉnh, không vận hành). Người vận hành cũ không phải chuyên gia thì nên gỡ khỏi farm
- *    sau khi chạy (DELETE /farms/:id/members/:userId); script in ra danh sách email, và
- *    in riêng những người trước đây bị giới hạn theo Zone (nay xem được cả farm).
- * 2. Bỏ `zone_ids` khỏi `farms.members[]` và `invitations` (không còn phạm vi theo Zone).
- * 3. `alerts.type` `BIRD_PANIC` → `NOISE_ANOMALY`.
- * 4. Bỏ `relay_states.heating` ở `sensornodes` (không còn relay sưởi).
- * 5. Mẻ thu hoạch `status: LISTED` → `DRAFT`, bỏ `listing_id` (không còn Marketplace).
- * 6. Drop collection `nestlistings`, `contactinquiries`.
- */
+// FARM_OPERATOR → DOMAIN_EXPERT (chỉ đổi tên, quyền khác hẳn: in danh sách để gỡ), bỏ zone_ids, BIRD_PANIC, heating, LISTED. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'
@@ -24,15 +6,13 @@ import logger from '@/utils/logger.util'
 
 const MARKETPLACE_COLLECTIONS = ['nestlistings', 'contactinquiries']
 
-/** Chạy trên kết nối mongoose đang mở; trả số bản ghi đã đổi ở từng bước */
 export async function migrateScopeV2() {
-  // Làm việc thẳng trên collection: model mới không còn chấp nhận các giá trị cũ
+  // Thẳng trên collection: model mới không nhận giá trị cũ
   const db = mongoose.connection.db!
 
   const operatorEmails = (await db.collection('users').find({ role: 'FARM_OPERATOR' }, { projection: { email: 1 } }).toArray())
     .map(u => u.email as string)
-  // Operator từng bị giới hạn theo Zone sẽ thành chuyên gia xem được CẢ farm — phải nói rõ
-  // là ai, trước khi bước 2 xoá mất dấu vết zone_ids.
+  // In ra trước khi bước 2 xoá mất zone_ids
   const scoped = await db.collection('farms').aggregate<{ _id: unknown; name?: string; user_id: unknown; zones: number }>([
     { $unwind: '$members' },
     { $match: { 'members.role': 'FARM_OPERATOR', 'members.zone_ids.0': { $exists: true } } },

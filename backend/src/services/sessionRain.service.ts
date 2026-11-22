@@ -8,13 +8,9 @@ const HOUR_MS = 3_600_000
 export interface Interval { start: number; end: number }
 export const overlaps = (a: Interval, b: Interval) => a.start < b.end && b.start < a.end
 
-/** Đầu ngày giờ VN của 'YYYY-MM-DD' */
 const vnDayStart = (date: string) => new Date(`${date}T00:00:00+07:00`)
 
-/**
- * VISION-FR-019 — khung 2 phiên đếm của nhà trong ngày bắt đầu lúc `start` (đầu ngày giờ VN), theo lịch đếm đang áp hôm
- * đó (khung tạm, hồ sơ theo mùa, rồi mặc định BR-13); ngày đã tính phiên có cùng khung vì lịch áp từ ngày hôm sau
- */
+// Ngày đã tính có cùng khung vì lịch áp từ ngày hôm sau
 export async function sessionWindows(houseId: unknown, start: Date): Promise<Interval[]> {
   const date = new Date(start.getTime() + 7 * HOUR_MS).toISOString().slice(0, 10)
   const house = await House.findById(houseId).select('counting_schedule_history').lean()
@@ -26,15 +22,10 @@ export async function sessionWindows(houseId: unknown, start: Date): Promise<Int
 }
 
 export interface SessionRain {
-  /** Tổng mm của các giờ trùng khung phiên đếm */
   mm: number
 }
 
-/**
- * VISION-FR-011 — lượng mưa (mm) của các giờ (theo giờ, nên cả giờ được tính dù chỉ trùng một phần) trùng khung 2 phiên
- * đếm trong ngày (giờ VN) của nhà, từ thời tiết theo giờ của farm (ANALYTICS-FR-013). null = không có số đo mưa nào
- * trong khung phiên (kể cả khi có số của giờ khác): không được ghi "0 mm" cho một khung không có dữ liệu.
- */
+// Cả giờ được tính dù chỉ trùng một phần. null thì không được ghi "0 mm"
 export async function sessionRainfall(houseId: unknown, farmId: unknown, date: string): Promise<SessionRain | null> {
   const start = vnDayStart(date)
   const rows = await WeatherObservation.find({ farm_id: farmId, hour: { $gte: start, $lt: new Date(start.getTime() + DAY_MS) } })

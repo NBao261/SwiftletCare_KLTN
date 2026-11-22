@@ -1,7 +1,3 @@
-/**
- * VISION-FR-008, 019, 020, BR-21 — lịch đếm của nhà (hồ sơ theo mùa, khung tạm), phiên tính từ số 5 phút theo khung
- * của ngày, phiên không đầy đủ khi nút AI mất kết nối, kiểm tra buổi tối theo giờ của từng nhà.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -84,7 +80,7 @@ async function seed({ withExpert = true } = {}) {
   return { owner, farm, house, camA, camB, t, call }
 }
 
-/** Số 5 phút của một camera, `hhmm` giờ VN */
+// Số 5 phút của một camera, `hhmm` giờ VN
 const bucket = (camera: { _id: unknown; house_id: unknown }, date: string, hhmm: string, exit_count: number, entry_count: number) =>
   BirdCountBucket.create({ camera_node_id: camera._id, house_id: camera.house_id, bucket_start: vnAt(date, hhmm), exit_count, entry_count })
 
@@ -100,7 +96,7 @@ describe('VISION-FR-019 — counting schedule', () => {
     // Hôm nay vẫn theo lịch cũ (mặc định)
     expect(saved.body.data.today.source).toBe('DEFAULT')
     expect(await AuditLog.countDocuments({ action: 'COUNTING_SCHEDULE_UPDATED' })).toBe(1)
-    // Hai camera của nhà nhận khung mới ngay, ngày mai theo lịch vừa lưu (VISION-FR-019)
+    // Hai camera của nhà nhận khung mới ngay, ngày mai theo lịch vừa lưu
     expect(publishDeviceConfig).toHaveBeenCalledTimes(2)
     const sent = (publishDeviceConfig as jest.Mock).mock.calls[0][1]
     const expected = windowsOn(body, tomorrow)
@@ -203,8 +199,7 @@ describe('VISION-FR-008, 020 — sessions from the 5-minute counts', () => {
   it('VISION-FR-020: an AI node offline during the evening window makes the day incomplete, left out of the check and the baseline', async () => {
     const s = await seed()
     const days = [-4, -3, -2, -1, 0].map(n => addDays(DAY, n))
-    // Nền 95 %; ngày −1 chỉ 10 % nhưng không đầy đủ; hôm nay 70 %. Nếu ngày −1 lọt vào nền thì trung bình còn 73,75 %
-    // và 70 % không còn là mức giảm quá 20 %
+    // Nếu ngày −1 lọt vào nền thì trung bình còn 73,75 % và 70 % không còn giảm quá 20 %
     const evening: Record<string, number> = { [days[3]]: 100, [DAY]: 700 }
     for (const date of days) {
       await Promise.all([bucket(s.camA, date, '06:00', 1000, 0), bucket(s.camA, date, '18:00', 0, evening[date] ?? 950)])

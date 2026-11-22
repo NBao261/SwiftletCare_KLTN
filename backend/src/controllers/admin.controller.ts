@@ -4,7 +4,6 @@ import * as provisionedDeviceService from '@/services/provisionedDevice.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 import type { Role } from '@/types'
 
-/** GET /admin/users – AUTH-FR-011 */
 export const listUsers = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit } = await adminService.listUsers({
     role:   req.query.role as Role | undefined,
@@ -16,7 +15,6 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
-/** POST /admin/farm-owners – AUTH-FR-005c */
 export const createFarmOwner = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.createFarmOwner(req.user._id, {
     email: req.body.email as string, full_name: req.body.full_name as string, phone: req.body.phone as string | undefined,
@@ -24,7 +22,6 @@ export const createFarmOwner = asyncHandler(async (req: Request, res: Response) 
   res.status(201).json({ success: true, data: user })
 })
 
-/** PUT /admin/users/:id/status – AUTH-FR-011, Flow 19 */
 export const setUserStatus = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.setUserStatus(
     req.user._id, req.params.id, req.body.is_active as boolean, req.body.reason as string | undefined,
@@ -32,7 +29,6 @@ export const setUserStatus = asyncHandler(async (req: Request, res: Response) =>
   res.json({ success: true, data: user })
 })
 
-/** GET /admin/delete-requests – AUTH-FR-012 */
 export const listDeletionRequests = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit } = await adminService.listDeletionRequests({
     page:  req.query.page as string | undefined,
@@ -41,19 +37,17 @@ export const listDeletionRequests = asyncHandler(async (req: Request, res: Respo
   res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
-/** PUT /admin/delete-requests/:id/complete – AUTH-FR-012, Flow 19 bước 7-8 */
 export const completeDeletionRequest = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.completeDeletionRequest(req.user._id, req.params.id)
   res.json({ success: true, data: user })
 })
 
-/** PUT /admin/delete-requests/:id/reject – AUTH-FR-012 */
 export const rejectDeletionRequest = asyncHandler(async (req: Request, res: Response) => {
   const user = await adminService.rejectDeletionRequest(req.user._id, req.params.id, req.body.reason as string)
   res.json({ success: true, data: user })
 })
 
-/** POST /admin/provisioned-devices – FARM-FR-003 (secret_key chỉ trả về 1 lần để in nhãn) */
+// secret_key chỉ trả về 1 lần để in nhãn
 export const createProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
   const device = await provisionedDeviceService.createProvisionedDevice(req.user._id, {
     device_id: req.body.device_id, kind: req.body.kind, simulated: req.body.simulated,
@@ -61,7 +55,6 @@ export const createProvisionedDevice = asyncHandler(async (req: Request, res: Re
   res.status(201).json({ success: true, data: device })
 })
 
-/** GET /admin/provisioned-devices – FARM-FR-003 */
 export const listProvisionedDevices = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit } = await provisionedDeviceService.listProvisionedDevices({
     kind:    req.query.kind as string | undefined,
@@ -73,18 +66,15 @@ export const listProvisionedDevices = asyncHandler(async (req: Request, res: Res
   res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
-/** PUT /admin/provisioned-devices/:id/revoke – FARM-FR-003 */
 export const revokeProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
   const device = await provisionedDeviceService.revokeProvisionedDevice(req.user._id, req.params.id, req.body.reason as string)
   res.json({ success: true, data: device })
 })
 
-/** POST /admin/provisioned-devices/:id/rotate-broker-secret – FARM-FR-010 (mật khẩu mới chỉ trả về 1 lần) */
 export const rotateBrokerSecret = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await provisionedDeviceService.rotateBrokerSecret(req.user._id, req.params.id) })
 })
 
-/** POST /admin/provisioned-devices/:id/rotate-key – FARM-FR-010, BR-26: thiết bị trong kho hoặc đã gỡ (secret_key mới chỉ trả về 1 lần) */
 export const rotateProvisionedKey = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await provisionedDeviceService.rotateProvisionedKey(req.user._id, req.params.id) })
 })

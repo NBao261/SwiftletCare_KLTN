@@ -1,7 +1,3 @@
-/**
- * Vòng đời cảnh báo: cảnh báo theo đợt tự đóng, bộ lọc GET /alerts, giới hạn mức độ và loại
- * cảnh báo thiết bị được gửi.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -46,7 +42,7 @@ describe('cảnh báo theo đợt tự đóng để lần tái phát không bị
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'MISTING_INEFFECTIVE', message: 'khô' })
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'SPEAKER_FAILURE', severity: 'HIGH', message: 'loa' })
 
-    expect(await resolveStaleEpisodeAlerts()).toBe(0) // vừa ghi nhận xong — chưa đóng
+    expect(await resolveStaleEpisodeAlerts()).toBe(0) // vừa ghi nhận xong: chưa đóng
     const later = new Date(Date.now() + EPISODE_CLEAR_MS + 60_000)
     expect(await resolveStaleEpisodeAlerts(later)).toBe(2)
     expect(await Alert.countDocuments({ status: 'RESOLVED', type: { $in: ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE'] } })).toBe(2)
@@ -241,7 +237,7 @@ describe('tên cảnh báo theo SRS 3.1.0 (G-01)', () => {
     const { node } = await seed()
     const sent = (await ingestDeviceAlert({ deviceId: node.device_id, type: 'UNEXPECTED_RESTART', resetReason: 'WATCHDOG' }))!
     expect(sent.metadata).toMatchObject({ reset_reason: 'WATCHDOG' })
-    // Report 4 §6.1 — chi tiết theo ERD (metadata giữ cho client cũ)
+    // chi tiết theo ERD (metadata giữ cho client cũ)
     expect(sent.details).toEqual({ reset_reason: 'WATCHDOG' })
 
     await Alert.deleteMany({})
@@ -260,7 +256,7 @@ describe('tên cảnh báo theo SRS 3.1.0 (G-01)', () => {
 })
 
 describe('mức của cảnh báo chỉ theo loại (ALERT-FR-001, BR-15)', () => {
-  // Chép tay từ Report 3 BR-15: đổi bảng trong code mà không đổi Report 3 thì test này đỏ
+  // Chép tay bảng mức: đổi bảng trong code mà không đổi ở đây thì test này đỏ
   const BR15: Record<string, string> = {
     RS485_BUS_FAILURE: 'CRITICAL',
     UNEXPECTED_RESTART: 'HIGH', SPEAKER_FAILURE: 'HIGH', NODE_OFFLINE: 'HIGH', ACTUATOR_FAULT: 'HIGH',

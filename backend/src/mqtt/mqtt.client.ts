@@ -11,27 +11,25 @@ import { handleRelayStatus } from '@/mqtt/handlers/relayStatus.handler'
 
 let client: MqttClient | null = null
 
-// Report 4 §7.2 — mỗi thiết bị một cây topic; farm, house, zone tra từ bản ghi thiết bị (D3)
 const HANDLERS: Record<DeviceUplink, (topicParts: string[], message: Record<string, unknown>) => Promise<void>> = {
-  telemetry: handleTelemetry,             // ENV-FR-001
-  'telemetry/buffered': handleTelemetry,  // ENV-FR-024 — mẫu buffer mang timestamp gốc
-  heartbeat: handleHeartbeat,             // FARM-FR-005, THREAT-FR-010 (nút AI)
-  'relay/status': handleRelayStatus,      // ENV-FR-015
-  alert: handleAlert,                     // THREAT-FR-006/011/012/013
-  'vision/alert': handleAlert,            // EDGE_AI_DEGRADED của nút AI
-  'vision/bird-count': handleBirdCount,   // VISION-FR-006
+  telemetry: handleTelemetry,
+  'telemetry/buffered': handleTelemetry,
+  heartbeat: handleHeartbeat,
+  'relay/status': handleRelayStatus,
+  alert: handleAlert,
+  'vision/alert': handleAlert,
+  'vision/bird-count': handleBirdCount,
 }
 
 export function connectMQTT(): void {
-  // EMQX hỏi /internal/mqtt-auth cho mọi kết nối, kể cả của backend: thiếu khoá thì chỉ thấy 401 lặp mỗi giây
+  // EMQX hỏi /internal/mqtt-auth cả với backend: thiếu khoá là 401 lặp mãi
   if (!process.env.MQTT_AUTH_KEY) {
     logger.error('Thiếu MQTT_AUTH_KEY: EMQX sẽ từ chối mọi kết nối, kể cả backend (MQTT code 5). '
       + 'Đặt cùng giá trị với khoá EMQX gửi kèm /internal/mqtt-auth (docker-compose.yml, mặc định CHANGE_ME)')
   }
   const caPath = process.env.MQTT_CA_CERT_PATH ?? ''
   const options: mqtt.IClientOptions = {
-    // Phiên bền: lệnh và tin QoS 1 của thiết bị không mất trong lúc backend khởi động lại
-    // `||`: MQTT_CLIENT_ID= để trống trong .env là chuỗi rỗng — ID rỗng với phiên bền bị broker từ chối
+    // Phiên bền giữ tin QoS 1 khi backend restart; `||` vì ID rỗng bị broker từ chối
     clientId: process.env.MQTT_CLIENT_ID || 'swiftletcare-backend',
     clean: false,
     username: process.env.MQTT_USERNAME,
@@ -57,11 +55,7 @@ export function connectMQTT(): void {
   client.on('offline', () => logger.warn('MQTT offline – reconnecting...'))
 }
 
-/**
- * Report 4 §7.2 — tin thiết bị gửi lên. Không ingest tin retained: đó là tin cũ broker phát lại mỗi lần
- * backend (re)connect, kể cả khi thiết bị đã chết. `deviceId` khác topic thì bỏ: thiết bị chỉ được nói
- * thay chính nó (broker đã chặn phần topic, phần thân tin chỉ backend kiểm được).
- */
+// Bỏ tin retained (tin cũ phát lại khi reconnect) và tin có deviceId khác topic
 export function routeDeviceMessage(topic: string, payload: Buffer, retained: boolean): void {
   if (retained) return
   const parsed = parseDeviceTopic(topic)
@@ -78,24 +72,17 @@ export function routeDeviceMessage(topic: string, payload: Buffer, retained: boo
   }
 }
 
-/**
- * Trả về false khi lệnh KHÔNG đi được tới broker (chưa kết nối lần nào, hoặc
- * đang mất kết nối). Trước đây hàm này nuốt im lặng nên API vẫn báo "đã gửi lệnh"
- * dù không có gì rời khỏi backend — Technician đứng ở farm chờ thiết bị phản hồi.
- */
+// false khi chưa kết nối broker: API không được báo đã gửi lệnh
 export function publishDeviceCommand(deviceId: string, type: DeviceCommandType, payload: object = {}): boolean {
   return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/cmd`, commandEnvelope(type, payload))
 }
 
-/** Report 4 §7.2 — cấu hình retained: tin cuối phải là bản đầy đủ, thiết bị nhận lại khi kết nối */
+// Retained: tin cuối phải là bản đầy đủ
 export function publishDeviceConfig(deviceId: string, config: object): boolean {
   return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/config`, config, true)
 }
 
-/**
- * Report 4 §7.2, BR-38 — offset bù thời tiết, retained: controller kết nối lại vẫn nhận bản cuối, và tự bỏ khi
- * `expires_at` đã qua
- */
+// retained: thiết bị tự bỏ khi qua expires_at
 export function publishDeviceCompensation(deviceId: string, compensation: object): boolean {
   return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/compensation`, compensation, true)
 }

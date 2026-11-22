@@ -4,10 +4,7 @@ import * as telegramService from '@/services/telegram.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 const REFRESH_COOKIE_MAX_AGE = 30 * 86400 * 1000
-// Dùng chung cho cả set lẫn clear — Express chỉ thực sự xoá được cookie nếu
-// options truyền vào res.clearCookie() khớp với options lúc res.cookie() set
-// nó (trừ maxAge/expires); truyền thiếu (đặc biệt secure/sameSite) có thể khiến
-// trình duyệt không nhận diện đúng cookie cần xoá, để sót refreshToken cũ lại.
+// clearCookie phải cùng options với lúc set, không thì trình duyệt không xoá
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure:   process.env.NODE_ENV === 'production',
@@ -18,21 +15,16 @@ function setRefreshCookie(res: Response, token: string): void {
   res.cookie('refreshToken', token, { ...REFRESH_COOKIE_OPTIONS, maxAge: REFRESH_COOKIE_MAX_AGE })
 }
 
-/** Mobile (Expo/React Native) không có cookie jar nên không thể dùng httpOnly
- *  cookie như web — client gửi header này để được cấp refreshToken qua JSON
- *  body thay vì chỉ qua Set-Cookie. Web không gửi header này nên không đổi gì. */
+// Mobile không có cookie jar: nhận refreshToken qua JSON body
 function isMobileClient(req: Request): boolean {
   return req.headers['x-client'] === 'mobile'
 }
 
-/** Chấp nhận refreshToken từ body (mobile) HOẶC cookie (web) — /refresh và
- *  /logout phải phục vụ cả 2 nguồn vì mobile không có cookie jar. */
 function readRefreshToken(req: Request): string | undefined {
   return (req.body as Record<string, string | undefined>)?.refreshToken ??
     (req.cookies as Record<string, string | undefined>)?.refreshToken
 }
 
-/** POST /auth/login – AUTH-FR-002 */
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { user, accessToken, refreshToken } = await authService.loginUser(req.body)
   setRefreshCookie(res, refreshToken)
@@ -41,20 +33,17 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data })
 })
 
-/** GET /auth/me – tài khoản đang đăng nhập (ALERT-FR-013, AUTH-FR-012) */
 export const me = asyncHandler(async (req: Request, res: Response) => {
   const user = await authService.getCurrentUser(req.user._id)
   res.json({ success: true, data: user })
 })
 
-/** POST /auth/refresh – AUTH-FR-003 */
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const token = readRefreshToken(req)
   const { accessToken } = await authService.refreshAccessToken(token)
   res.json({ success: true, data: { accessToken } })
 })
 
-/** POST /auth/logout – AUTH-FR-006 */
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const token = readRefreshToken(req)
   await authService.logoutUser(req.user._id, token)
@@ -62,27 +51,23 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: { message: 'Đã đăng xuất' } })
 })
 
-/** POST /auth/forgot-password – AUTH-FR-009, Flow 11 bước 6 */
 export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   await authService.forgotPassword(req.body.email as string)
   res.json({ success: true, data: { message: 'Nếu email tồn tại, mã đặt lại mật khẩu đã được gửi' } })
 })
 
-/** POST /auth/reset-password – AUTH-FR-009, Flow 11 bước 7 */
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   const { email, token, newPassword } = req.body as { email: string; token: string; newPassword: string }
   await authService.resetPassword(email, token, newPassword)
   res.json({ success: true, data: { message: 'Đã đổi mật khẩu. Đăng nhập lại.' } })
 })
 
-/** PUT /auth/password – đổi mật khẩu khi đang đăng nhập (giữ phiên hiện tại) */
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
   const { current_password, new_password } = req.body as { current_password: string; new_password: string }
   await authService.changePassword(req.user._id, current_password, new_password, readRefreshToken(req))
   res.json({ success: true, data: { message: 'Đã đổi mật khẩu. Các thiết bị khác đã được đăng xuất.' } })
 })
 
-/** PUT /auth/notification-preferences – ALERT-FR-005/006 */
 export const updateNotificationPreferences = asyncHandler(async (req: Request, res: Response) => {
   const { push, telegram, quiet_hours: quietHours, by_severity: bySeverity } = req.body as authService.NotificationPreferencesInput
   const user = await authService.updateNotificationPreferences(req.user._id, {
@@ -91,25 +76,21 @@ export const updateNotificationPreferences = asyncHandler(async (req: Request, r
   res.json({ success: true, data: user })
 })
 
-/** POST /auth/telegram/link – ALERT-FR-013 (mã liên kết một lần + deep link mở bot) */
 export const createTelegramLink = asyncHandler(async (req: Request, res: Response) => {
   const link = await telegramService.createTelegramLink(req.user._id)
   res.json({ success: true, data: link })
 })
 
-/** DELETE /auth/telegram/link – ALERT-FR-013 (hủy liên kết) */
 export const unlinkTelegram = asyncHandler(async (req: Request, res: Response) => {
   await telegramService.unlinkTelegram(req.user._id)
   res.json({ success: true, data: { message: 'Đã huỷ liên kết Telegram' } })
 })
 
-/** POST /auth/delete-request – AUTH-FR-012, PRIV-NFR-003 */
 export const requestDeletion = asyncHandler(async (req: Request, res: Response) => {
   await authService.requestAccountDeletion(req.user._id)
   res.json({ success: true, data: { message: 'Đã ghi nhận yêu cầu xoá tài khoản, sẽ xử lý trong tối đa 30 ngày' } })
 })
 
-/** DELETE /auth/delete-request – AUTH-FR-012 */
 export const cancelDeletion = asyncHandler(async (req: Request, res: Response) => {
   await authService.cancelAccountDeletion(req.user._id)
   res.json({ success: true, data: { message: 'Đã huỷ yêu cầu xoá tài khoản' } })

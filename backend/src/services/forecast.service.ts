@@ -10,8 +10,8 @@ import type { CurrentUser } from '@/types'
 const BUCKET_MS = 5 * 60_000
 const HISTORY_MS = 6 * 3600_000
 export const HORIZON_STEPS = 12      // 12 × 5 phút = 60 phút
-const MIN_POINTS = 24                // ≥ 2 giờ dữ liệu mới dự báo
-const MAX_STALENESS_MS = 15 * 60_000 // dữ liệu cũ hơn → thiết bị mất kết nối, không dự báo
+const MIN_POINTS = 24
+const MAX_STALENESS_MS = 15 * 60_000 // Cũ hơn là thiết bị mất kết nối
 
 type Metric = 'humidity' | 'temperature'
 const METRIC_LABEL: Record<Metric, string> = { humidity: 'Độ ẩm', temperature: 'Nhiệt độ' }
@@ -23,7 +23,7 @@ export interface MetricForecast {
   forecast: Array<{ timestamp: Date; value: number }>
   alpha: number
   beta: number
-  /** Sai số tuyệt đối trung bình khi dự báo 30 / 60 phút, đánh giá lùi trên 6 giờ qua */
+  // Đánh giá lùi trên 6 giờ qua
   mae30: number | null
   mae60: number | null
 }
@@ -47,7 +47,6 @@ function forecastMetric(points: Array<{ timestamp: Date; value: number }>, metri
   }
 }
 
-/** ANALYTICS-FR-009 — dự báo độ ẩm/nhiệt độ 60 phút tới của 1 Zone + vượt ngưỡng dự kiến (nếu có). */
 export async function computeZoneForecast(zone: Pick<IZone, '_id' | 'thresholds'>, now = new Date()) {
   const rows = await Telemetry.aggregate<{ _id: Date; humidity: number | null; temperature: number | null }>([
     { $match: { zone_id: new Types.ObjectId(String(zone._id)), timestamp: { $gte: new Date(now.getTime() - HISTORY_MS), $lte: now } } },
@@ -66,7 +65,7 @@ export async function computeZoneForecast(zone: Pick<IZone, '_id' | 'thresholds'
   const humidity = fresh ? forecastMetric(pointsOf('humidity'), 'humidity') : null
   const temperature = fresh ? forecastMetric(pointsOf('temperature'), 'temperature') : null
 
-  // Chỉ "sắp vượt" khi hiện tại còn trong ngưỡng — đã vượt thì THRESHOLD_BREACH lo
+  // Đã vượt thì THRESHOLD_BREACH lo
   const t = zone.thresholds
   const limits: Record<Metric, { min: number; max: number }> = {
     humidity: { min: t.humidity_min, max: t.humidity_max },
@@ -92,11 +91,7 @@ export async function getZoneForecast(user: CurrentUser, zoneId: string) {
   return computeZoneForecast(zone)
 }
 
-/**
- * ALERT-FR-011 — cảnh báo sớm FORECAST_BREACH (mức LOW, không gửi lại) cho
- * mọi Zone còn gửi telemetry trong 15 phút qua; tự đóng khi dự báo hết vượt hoặc
- * chỉ số đã vượt thật (THRESHOLD_BREACH tiếp quản). Gọi từ jobs/forecast.job.ts.
- */
+// Tự đóng khi hết vượt hoặc đã vượt thật
 export async function scanForecastBreaches(now = new Date()): Promise<{ raised: number; resolved: number }> {
   const zoneIds = await Telemetry.distinct('zone_id', { timestamp: { $gte: new Date(now.getTime() - MAX_STALENESS_MS) } })
   const zones = await Zone.find({ _id: { $in: zoneIds } }).select('_id farm_id name thresholds').lean()

@@ -1,8 +1,4 @@
-/**
- * Cấp mật khẩu broker cho thiết bị đã có trong kho (nhập trước G-07, hoặc màn Admin chưa có nút):
- *   npm run device:broker-secret -- <deviceId>
- * In mật khẩu đúng 1 lần để flash bằng firmware/tools/flash_identity.py.
- */
+// npm run device:broker-secret -- <deviceId>: in mật khẩu đúng 1 lần để flash
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'

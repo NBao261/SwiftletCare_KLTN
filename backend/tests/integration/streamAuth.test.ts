@@ -1,6 +1,3 @@
-/**
- * VISION-FR-013 — token xem live stream và MediaMTX hỏi quyền đẩy/xem (docs/bird-counting-plan.md §8.6, §18.3).
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

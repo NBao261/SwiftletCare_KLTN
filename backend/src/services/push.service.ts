@@ -4,26 +4,19 @@ import { PushToken, type PushPlatform } from '@/models/pushToken.model'
 import { AppError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 
-/**
- * Push qua Firebase Cloud Messaging — ALERT-FR-002, Report 4 §5.3 (`push`), §5.4.
- *
- * Credential là file JSON service account Firebase, đường dẫn ở biến môi trường
- * `FIREBASE_SERVICE_ACCOUNT_PATH` (file nằm trong .gitignore, không commit). Chưa cấu hình thì không gửi gì, như Telegram khi chưa có token bot. Token của máy
- * không bao giờ được ghi log (Report 4 §11): log chỉ có user, số token và mã lỗi của FCM.
- */
+// Chưa cấu hình thì không gửi. Không ghi log token
 
-/** FCM báo token không còn dùng được (gỡ app, đổi máy, token hết hạn) → xoá khỏi `pushtokens` */
 const INVALID_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
   'messaging/invalid-registration-token',
 ])
 
-/** Token của Expo Push Service, không phải FCM device token mà SDD §5.4 yêu cầu (BM02 A-02) */
+// Token Expo, không phải FCM device token
 const EXPO_TOKEN = /^Expo(nent)?PushToken\[/
 
 let firebaseApp: App | null | undefined
 
-/** Khởi tạo Firebase một lần; file thiếu hoặc sai thì coi như chưa cấu hình và báo 1 lần */
+// File thiếu hoặc sai thì coi như chưa cấu hình, báo 1 lần
 function getFirebaseApp(): App | null {
   if (firebaseApp !== undefined) return firebaseApp
   const path = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
@@ -39,15 +32,12 @@ function getFirebaseApp(): App | null {
 
 export const isPushConfigured = (): boolean => getFirebaseApp() !== null
 
-/** Chỉ dùng trong test: đọc lại biến môi trường ở lần gửi sau */
+// Cho test
 export function resetPushForTests(): void {
   firebaseApp = undefined
 }
 
-/**
- * ALERT-FR-002 — máy đăng nhập đăng ký token. Token đã thuộc tài khoản khác (máy đổi tài khoản) thì
- * chuyển sang người gọi, để tài khoản cũ không nhận push trên máy này nữa.
- */
+// Token của tài khoản khác thì chuyển sang người gọi
 export async function registerPushToken(userId: string, token: string, platform: PushPlatform): Promise<void> {
   if (EXPO_TOKEN.test(token)) {
     throw new AppError(422, 'VALIDATION_ERROR', 'Cần FCM device token (getDevicePushTokenAsync), không nhận token Expo')
@@ -60,18 +50,17 @@ export async function registerPushToken(userId: string, token: string, platform:
   try {
     await upsert()
   } catch (err) {
-    // 2 lần đăng ký cùng token tới cùng lúc: lần sau gặp unique index thì bản ghi đã có, cập nhật lại
+    // Unique index: lần sau cập nhật lại
     if ((err as { code?: number }).code !== 11000) throw err
     await upsert()
   }
 }
 
-/** Đăng xuất: chỉ gỡ token của chính người gọi; không có gì để gỡ vẫn thành công */
+// Không có gì để gỡ vẫn thành công
 export async function removePushToken(userId: string, token: string): Promise<void> {
   await PushToken.deleteOne({ token, user_id: userId })
 }
 
-/** Ẩn danh tài khoản (AUTH-FR-012): token là dữ liệu cá nhân và là đường gửi tới máy thật */
 export async function removeUserPushTokens(userId: string): Promise<void> {
   await PushToken.deleteMany({ user_id: userId })
 }
@@ -79,16 +68,12 @@ export async function removeUserPushTokens(userId: string): Promise<void> {
 export interface PushMessage {
   title: string
   body: string
-  /** App đọc để mở đúng màn hình, VD `{ kind: 'alert', id }` */
   data?: Record<string, string>
-  /** CRITICAL: ưu tiên cao để tới ngay cả khi máy đang tiết kiệm pin (NFR-02) */
+  // tới cả khi máy tiết kiệm pin
   urgent?: boolean
 }
 
-/**
- * Gửi tới mọi máy của 1 user; xoá token FCM báo hỏng. Không throw: kênh thông báo hỏng không được
- * làm hỏng luồng ghi cảnh báo. Trả số máy FCM nhận.
- */
+// Không throw. Trả số máy FCM nhận
 export async function sendPushToUser(userId: string, message: PushMessage): Promise<number> {
   const app = getFirebaseApp()
   if (!app) {

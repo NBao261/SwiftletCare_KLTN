@@ -10,16 +10,14 @@ import { MAX_PHOTO_BYTES, MAX_WORK_ORDER_PHOTOS } from '@/services/workOrder.ser
 const router = Router()
 router.use(authenticate)
 
-// Ảnh sửa chữa giữ trong RAM rồi service đẩy lên MinIO (ALERT-FR-018)
 const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: MAX_WORK_ORDER_PHOTOS } })
 const idParam = param('id').isMongoId()
 
-// Report 3 §2.4: Farm Owner mở, duyệt, mở lại, huỷ, giao lại; Farm Technician thực hiện ở nhà được giao (service
-// kiểm nhà); Domain Expert chỉ đọc; Administrator không thấy Work Order
+// Service kiểm nhà của Farm Technician; Admin không thấy Work Order
 const READERS = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] as const
 const DOERS = ['FARM_OWNER', 'FARM_TECHNICIAN'] as const
 
-// .isString() trước: tham số lặp không thành mảng, `?x[$ne]=` không thành toán tử Mongo
+// .isString() trước: tham số lặp không thành mảng, ?x[$ne]= không thành toán tử
 router.get('/',
   requireRole(...READERS),
   query('farmId').optional().isString().isMongoId(),
@@ -36,7 +34,7 @@ router.post('/',
   body('description').optional().isString().isLength({ max: 2000 }),
   body('alert_id').optional().isString().isMongoId(),
   validate, workOrderController.create)
-// OPS-FR-009 — đặt trước '/:id' để "metrics" không bị hiểu là một id
+// Trước '/:id'
 router.get('/metrics',
   requireRole('FARM_OWNER', 'DOMAIN_EXPERT'),
   query('farmId').isString().isMongoId(),
@@ -55,7 +53,6 @@ router.post('/:id/done',
   body('work_note').optional().isString().isLength({ max: 2000 }),
   validate, workOrderController.done)
 
-// OPS-FR-007 — checklist của Work Order phòng ngừa: thợ nhà được giao, Farm Owner
 const checklistPhoto = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } })
 router.put('/:id/checklist',
   requireRole(...DOERS),

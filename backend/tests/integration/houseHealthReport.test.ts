@@ -1,8 +1,3 @@
-/**
- * EXPERT-FR-005, 006, 013, BR-31, BR-33, SM-09 — báo cáo sức khỏe theo nhà: ngày, tuần, tháng (TC-ST 6.9),
- * theo yêu cầu, mỗi Zone một mục; trạng thái ngày che theo người gọi; kết luận của chuyên gia; xem báo cáo
- * (TC-F21-01). Báo cáo tuần theo Zone cũ vẫn chạy song song.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose, { Types } from 'mongoose'
@@ -64,7 +59,7 @@ const call = (method: 'get' | 'post' | 'put', path: string, token: string, body:
 
 const TODAY = vnDate(new Date())
 const DAY = addDays(TODAY, -3)
-/** 06:30 giờ VN thứ Hai 02/11/2026 và ngày 01/11/2026 */
+// 06:30 giờ VN thứ Hai 02/11/2026 và ngày 01/11/2026
 const MONDAY_0630 = new Date('2026-11-01T23:30:00Z')
 const FIRST_0630 = new Date('2026-10-31T23:30:00Z')
 
@@ -168,7 +163,7 @@ describe('BR-31 — báo cáo hiện cả ngày người gọi chưa chấm', ()
   it('ngày chưa chấm có trạng thái, lý do, điểm và tỷ lệ chim về; status_counts đếm mọi ngày', async () => {
     const { farm, house, ownerToken } = await setup()
     await seedCounts(house, DAY, [90, 70])
-    // Người chấm thứ hai là chủ đồng sở hữu (Report 3 4.2.0: chuyên gia không chấm)
+    // Người chấm thứ hai là chủ đồng sở hữu vì chuyên gia không chấm
     const coOwner = await User.create({ email: 'co-report@t.vn', password_hash: 'password123', full_name: 'Đồng chủ', role: 'FARM_OWNER' })
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: coOwner._id, role: 'FARM_OWNER' } } })
     const coOwnerToken = tokenFor(coOwner._id, 'FARM_OWNER')
@@ -233,7 +228,7 @@ describe('TC-F21-01 — xem báo cáo theo nhà', () => {
       const user = await User.create({ email: `${role}${Math.random()}@t.vn`, password_hash: 'password123', full_name: role, role })
       await call('get', `/health-reports/${report._id}`, tokenFor(user._id, role)).expect(403)
     }
-    // Report 3 §2.4 — thợ được giao nhà đọc báo cáo của nhà đó; lọc theo farm chỉ ra nhà được giao
+    // Thợ được giao đọc báo cáo của nhà đó; lọc theo farm chỉ ra nhà được giao
     const technician = await User.create({ email: `ft${Math.random()}@t.vn`, password_hash: 'password123', full_name: 'Thợ', role: 'FARM_TECHNICIAN' })
     const technicianToken = tokenFor(technician._id, 'FARM_TECHNICIAN')
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: technician._id, role: 'FARM_TECHNICIAN' } } })

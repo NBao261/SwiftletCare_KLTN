@@ -9,7 +9,7 @@ const LOOKBACK_MS = 14 * 86400_000
 const MIN_DAYS = 3
 const MIN_R2 = 0.3
 const SIM_STEPS = 144 // 24 giờ
-/** Cải thiện dưới mức này (điểm %) coi như hệ số hiện tại đã ổn — không đề xuất đổi cho có */
+// Dưới mức này coi như đã ổn, không đề xuất cho có
 const MIN_IMPROVEMENT = 1
 
 const round1 = (v: number) => Math.round(v * 10) / 10
@@ -17,14 +17,7 @@ const round1 = (v: number) => Math.round(v * 10) / 10
 const toTuning = (t: FuzzyTuning): Tuning =>
   ({ humidityBand: t.fuzzy_humidity_band, tempBand: t.fuzzy_temp_band, fanDryLevel: t.fuzzy_fan_dry_level / 100 })
 
-/**
- * ANALYTICS-FR-010 — đề xuất hệ số mờ cho 1 Zone: học mô hình phản ứng độ ẩm từ
- * ≤ 14 ngày telemetry (bucket 10 phút), mô phỏng lại 24 giờ gần nhất với từng bộ
- * hệ số trên lưới, trả bộ tốt nhất. CHỈ ĐỀ XUẤT — không ghi gì; người vận hành
- * xem rồi tự bấm "Lưu & áp dụng" (PUT /farms/zones/:zoneId/fuzzy-tuning).
- * Từ chối (suggestion = null + reason) khi dữ liệu ít, mô hình giải thích kém
- * (R² thấp) hoặc phi vật lý (phun sương không làm tăng ẩm).
- */
+// Chỉ đề xuất, không ghi. Từ chối khi dữ liệu ít, R² thấp hoặc phi vật lý
 export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now = new Date()) {
   const { zone } = await assertZoneAccess(zoneId, user)
   const t = zone.thresholds
@@ -44,7 +37,7 @@ export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now
     { $sort: { _id: 1 } },
   ])
 
-  // Tách thành các đoạn liên tục (bucket cách nhau đúng 10 phút, đủ số liệu) — mất kết nối thì cắt đoạn
+  // Mất kết nối thì cắt đoạn
   const runs: Step[][] = []
   let run: Step[] = []
   let prevAt = 0

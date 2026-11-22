@@ -1,8 +1,3 @@
-/**
- * admin.service — khoá tài khoản, xoá tài khoản theo yêu cầu (cascade, chạy lại),
- * từ chối và nhắc hạn yêu cầu xoá.
- * Chạy trên MongoDB in-memory.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
@@ -64,7 +59,6 @@ const mkFarm = (owner: { _id: unknown }, others: Array<{ user: { _id: unknown };
 
 const auditActions = async (action: string) => AuditLog.find({ action }).lean()
 
-// ── setUserStatus ──────────────────────────────────────────────────────────────
 describe('setUserStatus', () => {
   it('locks with a trimmed reason, revokes refresh tokens, drops live sockets and audits', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
@@ -128,7 +122,6 @@ describe('setUserStatus', () => {
   })
 })
 
-// ── yêu cầu xoá: user huỷ, Admin từ chối, nhắc hạn ───────────────────────────
 describe('cancelAccountDeletion', () => {
   it('withdraws a pending request, audits it and tells the admins', async () => {
     const user = await mkUser('user@test.vn')
@@ -162,7 +155,7 @@ describe('rejectDeletionRequest', () => {
 
     expect(after.deletion_requested_at).toBeUndefined()
     expect(after.deletion_reminder_sent_at).toBeUndefined()
-    expect(after.status).toBe('ACTIVE') // tài khoản về hoạt động (SM-14)
+    expect(after.status).toBe('ACTIVE') // tài khoản về hoạt động
     const [audit] = await auditActions('DELETION_REJECTED')
     expect(audit.metadata).toMatchObject({ reason: 'Còn hồ sơ thu hoạch phải lưu' })
     expect(notifyUser).toHaveBeenCalledWith(String(user._id), expect.objectContaining({
@@ -210,7 +203,6 @@ describe('remindPendingDeletionRequests', () => {
   })
 })
 
-// ── completeDeletionRequest ───────────────────────────────────────────────────
 describe('completeDeletionRequest', () => {
   const requested = { deletion_requested_at: new Date() }
 

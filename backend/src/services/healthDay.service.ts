@@ -15,33 +15,25 @@ import { assertFarmAccess, assertHouseAccess, listFarmHouseIds } from '@/utils/f
 import { formatReason, type ReasonLang } from '@/utils/healthReason.util'
 import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource, Role } from '@/types'
 
-/**
- * EXPERT-FR-012, BR-31 (Report 3 4.2.14), SM-18 — người chấm xem trạng thái, lý do của hệ thống rồi mới chấm
- * (xác nhận hoặc sửa); mọi đường đọc (ngày, danh sách, CSV, báo cáo, độ khớp) trả đủ cho mọi người được xem
- * ngày đó, đã chấm hay chưa. Điểm đã gửi không sửa được; ảnh chụp lúc chấm vẫn là dữ liệu của NFR-14.
- */
+// người chấm xem trạng thái rồi mới chấm; điểm đã gửi không sửa được
 
-/**
- * BR-31 (Report 3 4.2.0) — người chấm: Farm Owner (những ngày có mặt ở nhà) và Farm Technician của nhà
- * được giao (mỗi ngày; chỉ tới được nhà được giao, AUTH-FR-013). Domain Expert không chấm: xem các ngày lệch
- * (EXPERT-FR-022) và thấy trạng thái ngay vì không có gì để che.
- */
+// Domain Expert không chấm: xem các ngày lệch
 export const ASSESSOR_ROLES: readonly Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN']
 export const isAssessor = (role: Role) => ASSESSOR_ROLES.includes(role)
 
-/** Khoảng đọc tối đa 1 lần (EXPERT-FR-005: báo cáo theo yêu cầu tới 31 ngày) */
+// báo cáo theo yêu cầu tới 31 ngày
 export const MAX_DAY_RANGE = 31
-/** ponytail: độ khớp đọc tối đa 1 năm mỗi lần, chặn truy vấn quá lớn (giới hạn kỹ thuật, SRS §0.5) */
+// Tối đa 1 năm mỗi lần để chặn truy vấn quá lớn
 export const MAX_EVALUATION_RANGE = 366
 const SOURCES: HealthSource[] = ['environment', 'air', 'flock', 'noise']
 const LEVEL_TO_STATUS: Record<HealthLevel, OrderedStatus> = { NORMAL: 'GOOD', SLIGHT: 'WATCH', CLEAR: 'ACTION' }
 
 const ratingClosed = (message: string) => new AppError(409, 'RATING_CLOSED', message)
 
-/** Hết hạn chấm: đầu ngày thứ 8 sau ngày đó (giờ VN) — ngày D chấm được tới hết ngày D + 7 */
+// Ngày D chấm được tới hết ngày D + 7 (giờ VN)
 export const ratingDeadline = (date: string) => vnDayStart(addDays(date, RATING_WINDOW_DAYS + 1))
 
-/** SM-18 — suy ra từ ratings và ngày, không lưu; null khi người gọi không phải người chấm (BR-31) */
+// null khi người gọi không phải người chấm
 export function ratingState(day: Pick<IHouseHealthDay, 'date' | 'ratings'>, user: CurrentUser, now = new Date()): HealthRatingState | null {
   if (!isAssessor(user.role)) return null
   const mine = day.ratings.find(r => String(r.by) === user._id)
@@ -58,7 +50,7 @@ async function userNames(days: LeanDay[]): Promise<Map<string, string>> {
   return new Map(users.map(u => [String(u._id), u.full_name]))
 }
 
-/** Bản trả cho client: đủ trạng thái, lý do, chỉ số và điểm của mọi người, kể cả khi người gọi chưa chấm (BR-31) */
+// Trả đủ kể cả khi người gọi chưa chấm
 function present(day: LeanDay, houseName: string, user: CurrentUser, names: Map<string, string>, now: Date) {
   return {
     _id: String(day._id),
@@ -89,20 +81,19 @@ function present(day: LeanDay, houseName: string, user: CurrentUser, names: Map<
 }
 export type PresentedDay = ReturnType<typeof present>
 
-/** houseId hoặc farmId (một trong hai) → danh sách nhà người gọi được xem */
+// houseId hoặc farmId
 async function resolveHouses(user: CurrentUser, params: { houseId?: string; farmId?: string }) {
   if (params.houseId) {
     const { house } = await assertHouseAccess(params.houseId, user)
     return [house]
   }
   if (params.farmId) {
-    // Farm Technician: chỉ các nhà được giao trong farm
     return House.find({ _id: { $in: await listFarmHouseIds(params.farmId, user) } }).select('name farm_id').lean()
   }
   throw BadRequestError('Cần houseId hoặc farmId')
 }
 
-/** from/to 'YYYY-MM-DD'; mặc định 7 ngày tới hôm nay */
+// Mặc định 7 ngày tới hôm nay
 function resolveRange(params: { from?: string; to?: string }, max: number, now: Date) {
   const to = params.to ?? vnDate(now)
   const from = params.from ?? addDays(to, -6)
@@ -121,20 +112,14 @@ async function findDays(user: CurrentUser, params: { houseId?: string; farmId?: 
   return { days, houseNames, from, to }
 }
 
-/**
- * EXPERT-FR-005 — các ngày của 1 nhà trong [from, to] dựng cho người gọi (giống /days), cho báo
- * cáo theo nhà. Quyền trên nhà đã kiểm ở nơi gọi.
- */
+// Quyền trên nhà đã kiểm ở nơi gọi
 export async function presentHouseDays(user: CurrentUser, house: { _id: unknown; name: string }, from: string, to: string, now = new Date()) {
   const days = await HouseHealthDay.find({ house_id: house._id, date: { $gte: from, $lte: to } }).sort({ date: 1 }).lean<LeanDay[]>()
   const names = await userNames(days)
   return days.map(d => present(d, house.name, user, names, now))
 }
 
-/**
- * GET /health-reports/days — ANALYTICS-FR-012, EXPERT-FR-012. `myRatingState` lọc theo trạng thái chấm của
- * chính người gọi (vd PENDING: các ngày còn phải chấm), suy ra lúc đọc nên lọc sau khi dựng.
- */
+// myRatingState suy ra lúc đọc nên lọc sau khi dựng
 export async function listHealthDays(
   user: CurrentUser,
   params: { houseId?: string; farmId?: string; from?: string; to?: string; myRatingState?: HealthRatingState },
@@ -153,21 +138,17 @@ async function findDayForUser(dayId: string, user: CurrentUser) {
   return { day, house }
 }
 
-/** GET /health-reports/days/:dayId */
 export async function getHealthDay(dayId: string, user: CurrentUser, now = new Date()) {
   const { day, house } = await findDayForUser(dayId, user)
   return present(day, house.name, user, await userNames([day]), now)
 }
 
-/** BR-31 — chặn cả ở service, không chỉ ở route: chỉ người chấm mới chấm, bỏ qua hay ghi chú */
+// Chặn cả ở service, không chỉ route
 function assertAssessor(user: CurrentUser): void {
   if (!isAssessor(user.role)) throw ForbiddenError('Chỉ người chấm (Farm Owner, Farm Technician của nhà) mới chấm ngày này')
 }
 
-/**
- * POST …/rating và …/skip — EXPERT-FR-012: lưu điểm cùng ảnh chụp trong MỘT lệnh ghi (pipeline update
- * đọc `current_*` ngay lúc ghi), rồi mới trả trạng thái. Đã chấm / đã bỏ qua / quá hạn → 409.
- */
+// Lưu điểm cùng snapshot trong một lệnh ghi (pipeline update đọc current_*). Đã chấm hoặc quá hạn → 409
 async function submit(
   dayId: string, user: CurrentUser, input: { outcome: 'RATED' | 'SKIPPED'; rating?: HealthRatingValue; note?: string }, now: Date,
 ) {
@@ -196,7 +177,7 @@ async function submit(
     [{ $set: { ratings: { $concatArrays: [{ $ifNull: ['$ratings', []] }, [entry]] } } }],
     { new: true },
   ).lean<LeanDay>()
-  // Hai request song song của cùng người: request thua không ghi đè ảnh chụp đã lưu
+  // Request thua không ghi đè snapshot đã lưu
   if (!updated) throw ratingClosed('Bạn đã chấm hoặc bỏ qua ngày này; chỉ thêm được ghi chú')
 
   await logAction(user._id, input.outcome === 'RATED' ? 'HEALTH_DAY_RATED' : 'HEALTH_DAY_SKIPPED', 'house_health_day', String(day._id), {
@@ -211,7 +192,7 @@ export const rateHealthDay = (dayId: string, user: CurrentUser, rating: HealthRa
 export const skipHealthDay = (dayId: string, user: CurrentUser, now = new Date()) =>
   submit(dayId, user, { outcome: 'SKIPPED' }, now)
 
-/** PATCH …/rating/note — SM-18 RATED → RATED: thêm ghi chú, điểm không đổi */
+// điểm không đổi
 export async function addRatingNote(dayId: string, user: CurrentUser, note: string, now = new Date()) {
   assertAssessor(user)
   const { day, house } = await findDayForUser(dayId, user)
@@ -223,8 +204,6 @@ export async function addRatingNote(dayId: string, user: CurrentUser, note: stri
   if (!updated) throw ratingClosed('Chỉ thêm ghi chú cho ngày bạn đã chấm')
   return present(updated, house.name, user, await userNames([updated]), now)
 }
-
-// ── CSV (EXPERT-FR-013) ───────────────────────────────────────────────────────────────────────────
 
 const CSV_TEXT: Record<ReasonLang, {
   header: string[]; status: Record<string, string>; level: Record<HealthLevel, string>
@@ -266,15 +245,12 @@ const CSV_TEXT: Record<ReasonLang, {
 
 const csvCell = (v: unknown) => {
   const s = v === null || v === undefined ? '' : String(v)
-  // Chặn công thức khi mở bằng Excel (CSV injection)
+  // Chặn CSV injection
   const safe = /^[=+\-@]/.test(s) ? `'${s}` : s
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
 }
 
-/**
- * GET /health-reports/days.csv — 1 dòng mỗi nhà × ngày: mọi chỉ số kèm mức, trạng thái và điểm, theo
- * ngôn ngữ `lang` (mặc định vi). Không có id nội bộ; mọi dòng có đủ trạng thái, kể cả ngày người gọi chưa chấm (BR-31).
- */
+// Không có id nội bộ
 export async function healthDaysCsv(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, lang: ReasonLang = 'vi', now = new Date(),
 ): Promise<string> {
@@ -298,22 +274,17 @@ export async function healthDaysCsv(
       d.weather?.temperature_min, d.weather?.temperature_max, d.weather?.precipitation_mm,
     ].map(csvCell).join(','))
   }
-  // BOM để Excel đọc đúng UTF-8 (tiếng Việt)
+  // BOM để Excel đọc đúng UTF-8
   return String.fromCharCode(0xfeff) + lines.join('\r\n') + '\r\n'
 }
 
-// ── Độ khớp (ANALYTICS-FR-014, NFR-14) ────────────────────────────────────────────────────────────
-
-/**
- * GET /health-reports/evaluation — so ảnh chụp lúc chấm với điểm của người chấm. Ngày ảnh chụp là
- * INSUFFICIENT_DATA đếm riêng, không vào độ khớp. Trả kèm từng cặp để mọi con số tính lại được.
- */
+// INSUFFICIENT_DATA đếm riêng. Trả kèm từng cặp để mọi con số tính lại được
 export async function evaluateRatings(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string; role?: FarmMemberRole }, now = new Date(),
 ) {
   const { days, houseNames, from, to } = await findDays(user, params, MAX_EVALUATION_RANGE, now)
   const names = await userNames(days)
-  // Chỉ điểm của người chấm (BR-31); điểm Domain Expert chấm trước Report 3 4.2.0 không tính
+  // Điểm Domain Expert chấm từ bản cũ không tính
   const rated = days.flatMap(d => d.ratings
     .filter(r => r.outcome === 'RATED' && r.rating && isAssessor(r.role) && (!params.role || r.role === params.role))
     .map(r => ({ day: d, r })))
@@ -349,13 +320,7 @@ export async function evaluateRatings(
   }
 }
 
-// ── Ngày lệch (EXPERT-FR-022) ─────────────────────────────────────────────────────────────────────
-
-/**
- * GET /health-reports/disagreements — các ngày có điểm của người chấm khác trạng thái trong ảnh chụp lúc
- * chấm, để chuyên gia xem mức chỉ số của nhà (BR-28) có hợp không rồi chỉnh bằng PUT …/health-levels.
- * Ảnh chụp INSUFFICIENT_DATA không so được nên bỏ. Farm Owner và Domain Expert (BR-22, Report 3 4.2.15; route chặn thợ).
- */
+// Snapshot INSUFFICIENT_DATA không so được nên bỏ
 export async function listDisagreements(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, now = new Date(),
 ) {

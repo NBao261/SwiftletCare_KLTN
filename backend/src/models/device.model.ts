@@ -1,10 +1,6 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role, ConfigSyncState } from '@/types'
 
-/**
- * SensorNode + CameraNode Documents – SRS §8.2
- */
-/** BR-20 — mỗi relay có chế độ và hạn riêng (Report 4 ERD); trạng thái bật/tắt vẫn ở `relay_states` tới G-14 */
 export interface IRelayOverride {
   mode: ControlMode
   override_expiry?: Date
@@ -16,34 +12,23 @@ export interface ISensorNode extends Document {
   device_id: string
   zone_id: Types.ObjectId
   firmware_version: string
-  /**
-   * FARM-FR-013, Flow 15 — lệnh OTA đã gửi, chờ heartbeat báo đúng
-   * `firmware_version` mới để xác nhận thành công (bước 5).
-   */
   ota_pending?: { version: string; url: string; requested_at: Date; requested_by?: Types.ObjectId }
-  /** Lần OTA gần nhất quá hạn xác nhận — thiết bị vẫn chạy `running_version` (đã rollback) */
   ota_failed?: { version: string; failed_at: Date; running_version: string }
   last_heartbeat?: Date
   status: DeviceStatus
-  /** ENV-FR-027 — phiên bản cấu hình heartbeat gần nhất báo; null = firmware không báo (UNKNOWN) */
   applied_config_version?: number | null
-  /** Report 3 §6.12 — controller mới bắt đầu ở PENDING (FARM-FR-012) */
   config_sync: ConfigSyncState
-  /** BR-24 — số heartbeat liên tiếp vẫn báo phiên bản cũ */
   config_stale_heartbeats: number
   rssi?: number
-  /** FARM-FR-006 — chẩn đoán từ xa, lấy từ heartbeat (firmware ≥ 1.4.0 mới gửi reset_reason, ip) */
   booted_at?: Date
   free_heap?: number
   reset_reason?: string
   ip?: string
   relay_states: RelayStates
   relays: Record<keyof RelayStates, IRelayOverride>
-  /** Tóm tắt của `relays` cho màn hình: MANUAL khi có relay MANUAL */
+  // Tóm tắt của relays, chỉ ghi qua syncOverrideSummary
   control_mode: ControlMode
-  /** Tóm tắt của `relays`: hạn muộn nhất của các relay MANUAL */
   override_expiry?: Date
-  // ENV-FR-013b: hệ thống loa ru (Relay IN2 + DFPlayer Mini)
   speaker_schedule: {
     enabled: boolean
     windows: Array<{ start: string; end: string }>
@@ -55,25 +40,14 @@ export interface ISensorNode extends Document {
     loop: boolean
   }
   registered_at: Date
-  /** SYSTEM-FR-004 — chép từ kho lúc đăng ký: thiết bị của bộ giả lập, mọi màn hình phải ghi rõ */
   simulated: boolean
-  /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
-  /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
   activation_overdue_at?: Date
-  /**
-   * FARM-FR-008 — thiết bị đã gỡ khỏi hiện trường. Không xoá document vì
-   * telemetry/alert cũ tham chiếu node_id; chỉ loại khỏi mọi danh sách/luồng MQTT.
-   */
+  // không xoá vì telemetry/alert cũ tham chiếu node_id
   decommissioned_at?: Date
   decommission_reason?: string
-  /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
-  /**
-   * ALERT-FR-016 — thời gian chạy + số lần đóng cắt thật của bơm/quạt, cộng dồn mỗi
-   * giờ từ telemetry (relayUsage.service). `since_service_*` về 0 khi Farm Owner xác
-   * nhận cảnh báo MAINTENANCE_DUE (BR-16).
-   */
+  // since_service_* về 0 khi xác nhận MAINTENANCE_DUE
   relay_usage: {
     misting: IRelayUsage
     ventilation: IRelayUsage
@@ -81,10 +55,7 @@ export interface ISensorNode extends Document {
     last_misting_on?: boolean
     last_ventilation_on?: boolean
   }
-  /**
-   * BR-32, BR-45 — dòng bình thường controller đã học của bơm và quạt (A), heartbeat firmware ≥ 2.3.1 báo.
-   * Thiếu = controller không đo dòng hoặc chưa học xong: giờ chạy tính theo thời gian relay BẬT.
-   */
+  // thiếu thì giờ chạy tính theo thời gian relay BẬT
   actuator_baseline?: { misting_a?: number; ventilation_a?: number }
 }
 
@@ -98,30 +69,19 @@ export interface IRelayUsage {
 export interface ICameraNode extends Document {
   _id: Types.ObjectId
   device_id: string
-  /** SRS v2.1.8 — camera đếm chim đặt ở cửa ra vào của cả nhà yến: gắn House, không gắn Zone */
   house_id: Types.ObjectId
   rtsp_url?: string
   status: DeviceStatus
   last_heartbeat?: Date
   model_version?: string
-  /** Số khung hình xử lý mỗi giây ở heartbeat gần nhất */
   fps?: number
   registered_at: Date
-  /** SYSTEM-FR-004 — chép từ kho lúc đăng ký: thiết bị của bộ giả lập, mọi màn hình phải ghi rõ */
   simulated: boolean
-  /** Technician/Admin đã onboarding — nhận thông báo khi kích hoạt quá hạn (Flow 1 case 8a) */
   registered_by?: Types.ObjectId
-  /** Flow 1 case 8a — quá 15 phút từ lúc đăng ký mà chưa nhận heartbeat đầu tiên */
   activation_overdue_at?: Date
-  /**
-   * FARM-FR-008 — thiết bị đã gỡ khỏi hiện trường. Không xoá document vì
-   * telemetry/alert cũ tham chiếu node_id; chỉ loại khỏi mọi danh sách/luồng MQTT.
-   */
   decommissioned_at?: Date
   decommission_reason?: string
-  /** Node mới lắp thay vào chỗ node này (nếu gỡ theo diện thay thế) */
   replaced_by?: Types.ObjectId
-  /** VISION-FR-018 — vòng đếm do Domain Expert vẽ; chưa có thì nút AI dùng vòng trong config.yaml */
   counting_ring?: CountingRing & { updated_at: Date; updated_by: Types.ObjectId }
   counting_ring_history: ICountingRingHistoryEntry[]
 }
@@ -173,9 +133,7 @@ const sensorNodeSchema = new Schema<ISensorNode>(
       default: undefined,
     },
     last_heartbeat:   { type: Date },
-    // PENDING = Technician vừa tạo qua Web Console Onboarding, chờ heartbeat đầu
-    // tiên (Flow 1 bước 4→8). cron job `deviceOffline.job` chỉ quét node ONLINE nên node
-    // PENDING không bị nhầm thành OFFLINE khi chưa từng kết nối.
+    // deviceOffline.job chỉ quét ONLINE nên PENDING không bị thành OFFLINE
     status:           { type: String, enum: ['PENDING','ONLINE','OFFLINE'] satisfies DeviceStatus[], default: 'PENDING' },
     applied_config_version: { type: Number, default: null },
     config_sync:      { type: String, enum: ['PENDING','APPLIED','MISMATCH','UNKNOWN'] satisfies ConfigSyncState[], default: 'PENDING' },
@@ -265,19 +223,13 @@ const cameraNodeSchema = new Schema<ICameraNode>(
   { timestamps: false }
 )
 
-// `deviceOffline.job.ts` quét đúng cặp field này mỗi 10s — không có index thì
-// full collection scan lặp lại liên tục khi số thiết bị tăng lên.
 sensorNodeSchema.index({ status: 1, last_heartbeat: 1 })
-// Cùng job quét nút AI đếm chim mất heartbeat (THREAT-FR-010)
 cameraNodeSchema.index({ status: 1, last_heartbeat: 1 })
-// zone_id là filter chính của mọi danh sách thiết bị theo zone (dashboard); camera lọc theo House
 sensorNodeSchema.index({ zone_id: 1 })
 cameraNodeSchema.index({ house_id: 1 })
-// activationOverdue.job quét node PENDING theo registered_at mỗi phút
 sensorNodeSchema.index({ status: 1, registered_at: 1 })
 cameraNodeSchema.index({ status: 1, registered_at: 1 })
 
-/** FARM-FR-008 — điều kiện "thiết bị còn hoạt động", dùng chung cho mọi truy vấn */
 export const IN_SERVICE = { decommissioned_at: null } as const
 
 export const SensorNode = model<ISensorNode>('SensorNode', sensorNodeSchema)

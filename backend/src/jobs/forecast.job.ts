@@ -1,13 +1,8 @@
-/**
- * ALERT-FR-011 — dự báo 60 phút tới cho mọi Zone đang có dữ liệu, cảnh báo sớm
- * FORECAST_BREACH khi độ ẩm/nhiệt độ có thể sắp vượt ngưỡng.
- */
 import cron from 'node-cron'
 import { scanForecastBreaches } from '@/services/forecast.service'
 import logger from '@/utils/logger.util'
 
-/** Mỗi 10 phút — dữ liệu dự báo gom theo 5 phút, quét dày hơn không thêm thông tin */
-const CRON_EXPRESSION = '0 5-59/10 * * * *' // lệch 5 phút với sensorAnomaly.job để không cùng lúc truy vấn telemetry
+const CRON_EXPRESSION = '0 5-59/10 * * * *' // Lệch 5 phút với sensorAnomaly.job
 
 export function startForecastJob(): void {
   cron.schedule(CRON_EXPRESSION, () => {

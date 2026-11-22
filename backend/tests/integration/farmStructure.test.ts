@@ -1,7 +1,3 @@
-/**
- * FARM-FR-002 (Report 3 4.2.16, G-32): Farm Owner sửa và xoá mềm nhà, Zone. Còn thiết bị đang dùng thì 409; xoá thì
- * cảnh báo đang mở được đóng, Work Order chưa đóng bị huỷ, nhà và Zone rời mọi danh sách và job, lịch sử còn lại.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

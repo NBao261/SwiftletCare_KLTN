@@ -7,20 +7,12 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/**
- * Các hàm GHI ở đây không throw (cùng triết lý với `logAction`): lịch sử hỏng không
- * được làm hỏng lệnh điều khiển. Caller ghi lịch sử SAU khi đã publish lệnh — nếu ghi
- * trước mà lỗi thì DB đã đổi trạng thái nhưng thiết bị không bao giờ nhận lệnh.
- */
+// Hàm ghi không throw, và caller ghi SAU khi publish: ghi trước mà lỗi thì DB đổi mà thiết bị không nhận lệnh
 
-/**
- * ENV-FR-019 — mở 1 bản ghi can thiệp tay. Relay đó đang có bản ghi mở (người dùng
- * bấm lại trước khi hết hạn) thì bản cũ đóng với lý do REPLACED.
- */
+// Bản ghi mở cũ của relay đó đóng với REPLACED
 export async function openOverrideLog(input: {
   nodeId: unknown; zoneId: unknown; farmId: unknown
   relay: OverrideRelay; state: boolean; user: CurrentUser; expiresAt: Date
-  /** ENV-FR-016 — bật bơm lúc Zone có cảnh báo cảm biến/phun sương và đã xác nhận */
   alertConfirmed?: boolean
 }): Promise<IRelayOverrideLog | null> {
   try {
@@ -41,12 +33,11 @@ export async function openOverrideLog(input: {
   }
 }
 
-/** Đóng mọi bản ghi còn mở của các thiết bị: huỷ tất cả, dời zone, gỡ thiết bị */
 export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndReason, at = new Date()): Promise<number> {
   if (nodeIds.length === 0) return 0
   try {
     const { modifiedCount } = await RelayOverrideLog.updateMany(
-      // started_at ≤ at: override mới bật sau thời điểm đóng (job hết hạn đang chạy dở) không bị đóng theo
+      // Override mới bật sau thời điểm đóng không bị đóng theo
       { node_id: { $in: nodeIds }, ended_at: null, started_at: { $lte: at } },
       { ended_at: at, end_reason: reason },
     )
@@ -57,7 +48,7 @@ export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndR
   }
 }
 
-/** ENV-FR-018, BR-20 — huỷ sớm 1 relay: đóng bản ghi còn mở của relay đó, các relay khác giữ nguyên */
+// các relay khác giữ nguyên
 export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRelay, reason: OverrideEndReason, at = new Date()): Promise<number> {
   try {
     const { modifiedCount } = await RelayOverrideLog.updateMany(
@@ -71,18 +62,10 @@ export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRela
   }
 }
 
-/**
- * Lệnh relay tới thiết bị và trạng thái báo ngược lại mất vài giây (chu kỳ điều khiển
- * của ESP32 là 10 giây). ponytail: 30 giây là biên chọn tay cho độ trễ đó.
- */
+// Chu kỳ điều khiển ESP32 là 10 s. 30 s chọn tay
 export const DEVICE_CONFIRM_GRACE_MS = 30_000
 
-/**
- * Các bản ghi còn mở của 1 thiết bị, theo relay — cho confirmRelayStatus quyết định:
- * `fresh` = override vừa mở trong DEVICE_CONFIRM_GRACE_MS (bản tin AUTO lúc này nhiều khả
- * năng là bản tin cũ đang trên đường tới); `expiry` = hạn của override đó.
- * Không throw: đọc lỗi thì coi như không có gì đặc biệt.
- */
+// fresh: tin AUTO lúc này nhiều khả năng là tin cũ. Không throw
 export async function openOverrideStates(nodeId: unknown, now = new Date()): Promise<Partial<Record<OverrideRelay, { fresh: boolean; expiry: Date }>>> {
   try {
     const open = await RelayOverrideLog.find({ node_id: nodeId, ended_at: null }).select('relay started_at expires_at').lean()
@@ -94,11 +77,7 @@ export async function openOverrideStates(nodeId: unknown, now = new Date()): Pro
   }
 }
 
-/**
- * Thiết bị tự báo 1 relay đã về AUTO (relay/status): đóng bản ghi còn mở của relay đó — quá hạn
- * thì là EXPIRED, chưa tới hạn (thiết bị khởi động lại, bỏ lệnh trễ) thì là CLEARED_EARLY.
- * Caller (confirmRelayStatus) đã loại trường hợp bản tin AUTO cũ tới ngay sau khi bật tay.
- */
+// Quá hạn là EXPIRED, chưa tới hạn là CLEARED_EARLY
 export async function closeOverrideLogFromDevice(nodeId: unknown, relay: OverrideRelay, at = new Date()): Promise<void> {
   try {
     await RelayOverrideLog.updateMany(
@@ -111,13 +90,7 @@ export async function closeOverrideLogFromDevice(nodeId: unknown, relay: Overrid
   await closeRelayOverrideLog(nodeId, relay, 'CLEARED_EARLY', at)
 }
 
-/**
- * Lưới an toàn: đóng mọi bản ghi còn mở đã QUÁ HẠN mà relay của nó không còn đang được can
- * thiệp tay. Các đường đóng thông thường đều dựa vào trạng thái relay; nếu relay về AUTO bằng
- * đường nào đó mà bản ghi không được đóng theo (ghi lịch sử là best-effort, có thể lỗi đúng
- * lúc đóng), nó sẽ mở mãi và tỷ lệ thời gian tự động sai mãi. Đóng tại đúng `expires_at`.
- * Relay vẫn MANUAL và còn hạn (vừa gia hạn) thì để job hết hạn lo.
- */
+// Lưới an toàn: bản ghi quá hạn mà relay không còn tay thì đóng đúng expires_at, không thì tỷ lệ tự động sai mãi
 export async function closeOrphanedOverrideLogs(now = new Date()): Promise<number> {
   try {
     const overdue = await RelayOverrideLog.find({ ended_at: null, expires_at: { $lt: now } }).select('node_id relay').lean()
@@ -139,7 +112,6 @@ export async function closeOrphanedOverrideLogs(now = new Date()): Promise<numbe
   }
 }
 
-/** ENV-FR-019 — lịch sử can thiệp tay của 1 thiết bị, mới nhất trước */
 export async function listOverrideLogs(nodeId: string, user: CurrentUser, query: { page?: number; limit?: number }) {
   const node = await SensorNode.findById(nodeId).select('zone_id').lean()
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
@@ -149,20 +121,14 @@ export async function listOverrideLogs(nodeId: string, user: CurrentUser, query:
   const filter = { node_id: node._id }
   const [records, total] = await Promise.all([
     RelayOverrideLog.find(filter).sort({ started_at: -1 }).skip(skip).limit(limit)
-      // Chỉ tên: Domain Expert đọc được route này, mà email thành viên thì cố ý giấu khỏi
-      // chuyên gia ở GET /farms (onlyOwnMembership)
+      // Chỉ tên: email thành viên cố ý giấu khỏi chuyên gia
       .populate('started_by', 'full_name').lean(),
     RelayOverrideLog.countDocuments(filter),
   ])
   return { records, total, page, limit }
 }
 
-/**
- * ANALYTICS-FR-011 — tổng thời gian (ms) trong [from, to] mà Zone có ít nhất 1 relay
- * đang bị can thiệp tay. Hợp các khoảng chồng nhau (2 relay cùng bị ép chỉ tính 1 lần);
- * bản ghi còn mở tính tới `to`. Bản ghi đã đóng không bao giờ dài hơn thực tế vì
- * `ended_at` ghi đúng lúc thiết bị về AUTO.
- */
+// Hợp các khoảng chồng nhau; bản ghi còn mở tính tới to
 export async function manualTimeInZone(zoneId: string, from: Date, to: Date): Promise<{ manualMs: number; overrideCount: number }> {
   const logs = await RelayOverrideLog.find({
     zone_id: new Types.ObjectId(zoneId),

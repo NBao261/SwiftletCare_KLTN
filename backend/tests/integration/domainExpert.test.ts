@@ -1,9 +1,3 @@
-/**
- * Domain Expert (AUTH-FR-004/005, SRS v2.0.0 mục 4.4) — chuyên gia nuôi yến do Primary
- * Owner mời, phạm vi luôn là cả farm. Được: đọc dữ liệu vận hành, sửa ngưỡng và hệ số
- * mờ. Không được: relay/loa, ghi thu hoạch, xác nhận cảnh báo, sửa/xoá farm,
- * quản lý thành viên, tạo House/Zone.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -73,7 +67,7 @@ let seq = 0
 const mkUser = (role: Role, email = `u${++seq}@test.vn`) =>
   User.create({ email, password_hash: 'password123', full_name: email, role })
 
-/** Farm có 2 zone, 1 chủ và 1 Domain Expert đã là thành viên */
+// Farm có 2 zone, 1 chủ và 1 Domain Expert đã là thành viên
 async function seed() {
   const owner = await mkUser('FARM_OWNER')
   const expert = await mkUser('DOMAIN_EXPERT')

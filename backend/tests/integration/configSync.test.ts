@@ -1,7 +1,3 @@
-/**
- * ENV-FR-027, BR-24, Report 3 §6.12 (SM-12) — phiên bản cấu hình của Zone, trạng thái đồng bộ từng
- * controller và CONFIG_MISMATCH. TC-ST-28…32 (Report 5) cùng các chuyển của SRS 4.2.1.
- */
 import { Alert } from '@/models/alert.model'
 import { SensorNode } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'

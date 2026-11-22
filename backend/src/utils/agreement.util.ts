@@ -1,24 +1,20 @@
-/**
- * ANALYTICS-FR-014, NFR-14 — độ khớp giữa trạng thái hệ thống (ảnh chụp lúc chấm, BR-31) và trạng thái
- * người chấm, trên 3 mức có thứ tự GOOD < WATCH < ACTION. Hàm thuần để mọi con số tính lại được.
- */
+// độ khớp hệ thống (snapshot lúc chấm) với người chấm, GOOD < WATCH < ACTION
 export const ORDERED_STATUSES = ['GOOD', 'WATCH', 'ACTION'] as const
 export type OrderedStatus = typeof ORDERED_STATUSES[number]
 
 export interface RatingPair { system: OrderedStatus; rater: OrderedStatus }
 
-/** z của khoảng tin cậy 95 % */
 const Z95 = 1.96
 const K = ORDERED_STATUSES.length
 
-/** Hàng = hệ thống, cột = người chấm, theo thứ tự ORDERED_STATUSES */
+// Hàng = hệ thống, cột = người chấm
 export function confusionMatrix(pairs: RatingPair[]): number[][] {
   const m = ORDERED_STATUSES.map(() => ORDERED_STATUSES.map(() => 0))
   for (const p of pairs) m[ORDERED_STATUSES.indexOf(p.system)][ORDERED_STATUSES.indexOf(p.rater)]++
   return m
 }
 
-/** Tỷ lệ khớp và khoảng tin cậy Wilson 95 % (đúng hơn khoảng Wald khi n nhỏ hoặc tỷ lệ gần 0, 1) */
+// Wilson 95 %: đúng hơn Wald khi n nhỏ hoặc tỷ lệ gần 0, 1
 export function agreementWithCI(pairs: RatingPair[]): { value: number; ci_low: number; ci_high: number } | null {
   const n = pairs.length
   if (n === 0) return null
@@ -30,7 +26,7 @@ export function agreementWithCI(pairs: RatingPair[]): { value: number; ci_low: n
   return { value: p, ci_low: Math.max(0, center - half), ci_high: Math.min(1, center + half) }
 }
 
-/** Kappa của Cohen trọng số tuyến tính: w = 1 − |i − j| / (K − 1). null khi kỳ vọng ngẫu nhiên = 1 */
+// w = 1 − |i − j| / (K − 1). null khi kỳ vọng ngẫu nhiên = 1
 export function linearWeightedKappa(pairs: RatingPair[]): number | null {
   const n = pairs.length
   if (n === 0) return null
@@ -49,7 +45,7 @@ export function linearWeightedKappa(pairs: RatingPair[]): number | null {
   return pe === 1 ? null : (po - pe) / (1 - pe)
 }
 
-/** AC1 của Gwet cho 2 người chấm (ít bị kéo thấp hơn kappa khi phần lớn ngày cùng 1 mức, NFR-14) */
+// Ít bị kéo thấp hơn kappa khi phần lớn ngày cùng 1 mức
 export function gwetAC1(pairs: RatingPair[]): number | null {
   const n = pairs.length
   if (n === 0) return null
@@ -64,10 +60,7 @@ export function gwetAC1(pairs: RatingPair[]): number | null {
   return pe === 1 ? null : (pa - pe) / (1 - pe)
 }
 
-/**
- * Tỷ lệ báo động giả: trong những lần người chấm cho GOOD, phần hệ thống (hoặc 1 nguồn riêng) báo khác
- * GOOD. null khi chưa có lần nào người chấm cho GOOD.
- */
+// Trong những lần người chấm cho GOOD, phần hệ thống báo khác GOOD. null khi chưa có lần nào
 export function falseAlarmRate(pairs: { predicted: OrderedStatus; rater: OrderedStatus }[]): number | null {
   const good = pairs.filter(p => p.rater === 'GOOD')
   return good.length ? good.filter(p => p.predicted !== 'GOOD').length / good.length : null

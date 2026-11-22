@@ -18,24 +18,18 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser, HealthStatus } from '@/types'
 
-/**
- * EXPERT-FR-005, 006, 013, BR-31, BR-33, SM-09 — báo cáo sức khỏe theo nhà yến, mỗi Zone một mục: ngày, tuần,
- * tháng (job) và theo yêu cầu (tối đa 31 ngày). Trạng thái các ngày của kỳ dựng lúc đọc như
- * /health-reports/days. Báo cáo tuần theo Zone cũ (healthReport.service) vẫn chạy song song cho các
- * màn hiện có; `getReport` và `setConclusion` nhận cả hai loại id.
- */
+// mỗi Zone một mục; trạng thái các ngày dựng lúc đọc như /health-reports/days
 
 const KIND_LABEL: Record<HouseReportKind, string> = { DAILY: 'ngày', WEEKLY: 'tuần', MONTHLY: 'tháng', CUSTOM: 'theo yêu cầu' }
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)
 
-/** Các ngày 'YYYY-MM-DD' từ `from` tới `to`, tính cả 2 đầu */
+// Tính cả 2 đầu
 function datesBetween(from: string, to: string): string[] {
   const out: string[] = []
   for (let d = from; d <= to; d = addDays(d, 1)) out.push(d)
   return out
 }
 
-/** Cảnh báo suy luận theo kết luận và lỗi thiết bị theo loại của 1 Zone trong [start, end) */
 async function zoneAlertSummary(zoneId: unknown, start: Date, end: Date) {
   const rows = await Alert.aggregate<{ _id: { type: string; verdict: string | null }; count: number }>([
     { $match: { zone_id: new Types.ObjectId(String(zoneId)), created_at: { $gte: start, $lt: end } } },
@@ -55,7 +49,7 @@ async function zoneAlertSummary(zoneId: unknown, start: Date, end: Date) {
   return { inferred_alerts: inferred, device_faults: deviceFaults }
 }
 
-/** Tóm tắt thời tiết của kỳ (ANALYTICS-FR-013); null khi không có giờ nào */
+// null khi không có giờ nào
 async function periodWeather(farmId: unknown, start: Date, end: Date): Promise<HouseReportMetrics['weather']> {
   const rows = await WeatherObservation.find({ farm_id: farmId, hour: { $gte: start, $lt: end } }).lean()
   if (rows.length === 0) return null
@@ -73,10 +67,7 @@ async function periodWeather(farmId: unknown, start: Date, end: Date): Promise<H
   }
 }
 
-/**
- * EXPERT-FR-005 — số liệu của nhà cho các ngày `from`…`to` (giờ VN). Kỳ đang diễn ra thì chỉ tính tới `now`.
- * Hàm thuần đọc — không ghi gì.
- */
+// Kỳ đang diễn ra chỉ tính tới now. Không ghi
 export async function buildHouseReport(
   house: { _id: unknown; farm_id: unknown }, from: string, to: string, now = new Date(),
 ): Promise<{ house_metrics: HouseReportMetrics; zone_sections: HouseReportZoneSection[] }> {
@@ -103,7 +94,7 @@ export async function buildHouseReport(
   return { house_metrics: { return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend), weather }, zone_sections }
 }
 
-/** Trung bình tỷ lệ chim về của các ngày đủ phiên */
+// Các ngày đủ phiên
 function averageReturnRate(trend: HouseReportMetrics['return_rate_trend']): number | null {
   const complete = trend.filter(d => d.complete && d.return_rate !== null)
   return complete.length
@@ -111,10 +102,7 @@ function averageReturnRate(trend: HouseReportMetrics['return_rate_trend']): numb
     : null
 }
 
-/**
- * SM-09 (new) → GENERATED — tính rồi ghi báo cáo của nhà cho 1 kỳ. Đã có cùng nhà, loại, kỳ thì tính lại số
- * liệu và giữ kết luận. Trả bản ghi và `created` = lần đầu có báo cáo này.
- */
+// Đã có thì tính lại và giữ kết luận. created = lần đầu
 export async function generateHouseReport(
   kind: HouseReportKind, houseId: string, from: string, to: string, now = new Date(),
 ): Promise<{ report: IHouseHealthReport; created: boolean } | null> {
@@ -130,7 +118,7 @@ export async function generateHouseReport(
   try {
     result = await run(true)
   } catch (err) {
-    // Hai lần chạy song song cùng tạo báo cáo: lần thua chỉ cập nhật
+    // Hai lần chạy song song: lần thua chỉ cập nhật
     if ((err as { code?: number }).code !== 11000) throw err
     result = await run(false)
   }
@@ -138,7 +126,6 @@ export async function generateHouseReport(
   return { report: result.value, created: !result.lastErrorObject?.updatedExisting }
 }
 
-/** EXPERT-FR-005 — báo cáo mới: báo Farm Owner và chuyên gia trong ứng dụng; trạng thái xem trong báo cáo */
 async function notifyReportReady(report: IHouseHealthReport): Promise<void> {
   const house = await House.findById(report.house_id).select('name').lean()
   const owners = (await findRecipients(String(report.farm_id))).map(u => String(u._id))
@@ -151,7 +138,7 @@ async function notifyReportReady(report: IHouseHealthReport): Promise<void> {
   })))
 }
 
-/** Sinh báo cáo của mọi nhà đang hoạt động cho 1 kỳ; lỗi ở một nhà không làm bỏ qua các nhà sau */
+// Lỗi ở một nhà không bỏ qua nhà sau
 async function generateForAllHouses(
   kind: HouseReportKind, from: string, to: string, now: Date, opts: { notify: boolean }, onlyHouseIds?: string[],
 ): Promise<number> {
@@ -170,10 +157,7 @@ async function generateForAllHouses(
   return created
 }
 
-/**
- * BR-33 — báo cáo ngày, gọi từ jobs/returnRate.job.ts ngay sau đánh giá ngày. Tính lại báo cáo hôm qua (đã
- * có) cho đủ cả ngày. Không gửi thông báo riêng: thông báo "ngày đã sẵn sàng" của đánh giá ngày đi cùng lúc.
- */
+// Tính lại báo cáo hôm qua cho đủ ngày. Không gửi thông báo riêng
 export async function generateDailyReports(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
   const created = await generateForAllHouses('DAILY', date, date, now, { notify: false }, onlyHouseIds)
   const yesterday = addDays(date, -1)
@@ -189,7 +173,6 @@ export async function generateDailyReports(date = vnDate(new Date()), now = new 
   return created
 }
 
-/** BR-33 — thứ Hai 06:00: 7 ngày từ thứ Hai tới Chủ nhật tuần trước */
 export async function generateWeeklyHouseReports(now = new Date()): Promise<number> {
   const today = vnDate(now)
   const weekday = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7 // thứ Hai = 0
@@ -197,14 +180,11 @@ export async function generateWeeklyHouseReports(now = new Date()): Promise<numb
   return generateForAllHouses('WEEKLY', addDays(to, -6), to, now, { notify: true })
 }
 
-/** BR-33 — ngày 1 lúc 06:00: trọn tháng trước */
 export async function generateMonthlyHouseReports(now = new Date()): Promise<number> {
   const today = vnDate(now)
   const to = addDays(`${today.slice(0, 8)}01`, -1)
   return generateForAllHouses('MONTHLY', `${to.slice(0, 8)}01`, to, now, { notify: true })
 }
-
-// ── Đọc ──────────────────────────────────────────────────────────────────────────────────────────
 
 export interface ListHouseReportsQuery {
   houseId?: string
@@ -212,13 +192,11 @@ export interface ListHouseReportsQuery {
   kind?: HouseReportKind
   from?: string
   to?: string
-  // true: chỉ báo cáo đã có kết luận; false: chỉ báo cáo chưa có (đếm "chờ kết luận" của chuyên gia)
   hasConclusion?: boolean
   page?: number
   limit?: number
 }
 
-/** GET /health-reports?houseId|farmId — phần tóm tắt, mới nhất trước */
 export async function listHouseReports(user: CurrentUser, query: ListHouseReportsQuery) {
   let houseIds: unknown[]
   if (query.houseId) houseIds = [(await assertHouseAccess(query.houseId, user)).house._id]
@@ -249,7 +227,6 @@ export async function listHouseReports(user: CurrentUser, query: ListHouseReport
   return { records, total, page, limit }
 }
 
-/** Báo cáo theo nhà cho người gọi: thêm các ngày của kỳ và số ngày theo trạng thái */
 async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser, now: Date) {
   const { house } = await assertHouseAccess(String(report.house_id), user)
   await report.populate('expert_conclusion.by', 'full_name')
@@ -258,7 +235,7 @@ async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser,
   for (const day of days) status_counts[day.current_status]++
   const plain = report.toObject()
   const metrics: HouseReportMetrics = plain.house_metrics
-  // Bản lưu cũ có thể thiếu object rỗng (minimize mặc định của Mongoose): bù lại để luôn đúng api-spec
+  // Bản cũ có thể thiếu object rỗng: bù lại cho đúng api-spec
   const sections: Partial<HouseReportZoneSection>[] = plain.zone_sections ?? []
   const zone_sections = sections.map(section => ({
     ...section,
@@ -276,17 +253,13 @@ async function presentHouseReport(report: IHouseHealthReport, user: CurrentUser,
   }
 }
 
-/** GET /health-reports/:id — báo cáo theo nhà */
 export async function getReport(id: string, user: CurrentUser, now = new Date()) {
   const report = await HouseHealthReport.findById(id)
   if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
   return presentHouseReport(report, user, now)
 }
 
-/**
- * POST /health-reports — EXPERT-FR-005: báo cáo theo yêu cầu cho các ngày `from`…`to`, tối đa 31 ngày.
- * Cùng nhà, cùng khoảng đã có thì tính lại và trả bản đó (`created: false`). Không gửi thông báo.
- */
+// Đã có cùng khoảng thì tính lại và trả bản đó. Không gửi thông báo
 export async function createCustomReport(user: CurrentUser, input: { houseId: string; from: string; to: string }, now = new Date()) {
   await assertHouseAccess(input.houseId, user)
   if (input.from > input.to) throw BadRequestError('from phải không sau to')
@@ -297,10 +270,7 @@ export async function createCustomReport(user: CurrentUser, input: { houseId: st
   return { data: await presentHouseReport(result.report, user, now), created: result.created }
 }
 
-/**
- * PUT /health-reports/:id/conclusion — EXPERT-FR-006, SM-09 GENERATED → CONCLUDED. Chỉ Domain Expert (route);
- * chỉ tác giả sửa được kết luận của mình (lưu `edited_at`); báo mọi Farm Owner.
- */
+// Chỉ tác giả sửa được kết luận của mình
 export async function setConclusion(id: string, user: CurrentUser, text: string, now = new Date()) {
   const report = await HouseHealthReport.findById(id)
   if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
@@ -313,12 +283,12 @@ export async function setConclusion(id: string, user: CurrentUser, text: string,
     ? { text, by: user._id as never, at: report.expert_conclusion!.at, edited_at: now }
     : { text, by: user._id as never, at: now }
   await report.save()
-  // farmId, house_id: vào lịch sử hoạt động chuyên gia và lọc được theo nhà (EXPERT-FR-009)
+  // Để lọc lịch sử chuyên gia theo nhà
   await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'house_health_report', String(report._id), {
     house_id: String(report.house_id), kind: report.kind, isEdit,
   }, { farmId: String(report.farm_id) })
 
-  // Không chờ gửi: kết luận đã lưu, Telegram chậm không được giữ response
+  // Không chờ gửi: Telegram chậm không được giữ response
   for (const owner of await findRecipients(String(report.farm_id))) {
     void notifyUser(String(owner._id), {
       title: `Chuyên gia ${isEdit ? 'đã sửa' : 'đã có'} kết luận cho báo cáo ${KIND_LABEL[report.kind]} của ${house.name}`,

@@ -12,7 +12,7 @@ import { assertFarmAccess } from '@/utils/farmAccess.util'
 import { vnDayPeriod } from '@/utils/period.util'
 import type { CurrentUser } from '@/types'
 
-/** Các cột sắp xếp được của BR-44 (cùng tên trường trong mỗi hàng); không có cột điểm tổng hay xếp hạng */
+// không có cột điểm tổng hay xếp hạng
 export const COMPARISON_SORT_KEYS = [
   'name', 'time_in_range_pct', 'good_days_pct', 'return_rate_avg', 'flock_trend_pct',
   'alerts_raised', 'alerts_open', 'mttr_min', 'energy_kwh', 'last_cycle_yield_g',
@@ -22,24 +22,18 @@ export type ComparisonSortKey = typeof COMPARISON_SORT_KEYS[number]
 export interface ComparisonRow {
   house_id: string
   name: string
-  /** Trung bình theo ngày của chỉ số môi trường BR-28 (% thời gian trong ngưỡng) */
   time_in_range_pct: number | null
-  /** % ngày GOOD trên số ngày đã đánh giá đủ dữ liệu */
   good_days_pct: number | null
   return_rate_avg: number | null
-  /** % đổi của trung bình số chim ra buổi sáng so với kỳ liền trước cùng độ dài (ANALYTICS-FR-002) */
   flock_trend_pct: number | null
   alerts_raised: number
   alerts_open: number
   mttr_min: number | null
-  /** kWh ước tính của bơm và quạt (BR-45); null = không tải nào có dòng đo (not available) */
   energy_kwh: number | null
   energy: { misting_kwh: number | null; ventilation_kwh: number | null }
-  /** BR-44 — sản lượng (g) chu kỳ đã đóng gần nhất: tổng của chu kỳ đóng gần nhất ở mỗi tầng (chu kỳ là của tầng, BR-43) */
+  // Chu kỳ là của tầng: cộng chu kỳ đóng gần nhất ở mỗi tầng
   last_cycle_yield_g: number | null
-  /** ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tìm thấy tại chỗ trong kỳ; không dùng để sắp xếp */
   site_causes: Partial<Record<SiteCause, number>>
-  /** SYSTEM-FR-004 — mọi thiết bị của nhà là thiết bị giả lập (cùng cách tính với tổng quan) */
   simulated: boolean
 }
 
@@ -53,7 +47,7 @@ function flockChange(days: HouseDayCounts[], prevFrom: string, from: string): nu
   return before && during !== null ? round1(((during - before) / before) * 100) : null
 }
 
-/** Sắp theo 1 cột; ô trống (null) luôn xuống cuối dù tăng hay giảm */
+// Ô trống luôn xuống cuối
 export function sortComparison(rows: ComparisonRow[], key: ComparisonSortKey, order: 'asc' | 'desc'): ComparisonRow[] {
   const sign = order === 'asc' ? 1 : -1
   return [...rows].sort((a, b) => {
@@ -62,18 +56,15 @@ export function sortComparison(rows: ComparisonRow[], key: ComparisonSortKey, or
     const byId = a.house_id.localeCompare(b.house_id)
     if (x === null || y === null) return x === y ? byId : x === null ? 1 : -1
     const diff = typeof x === 'string' && typeof y === 'string' ? x.localeCompare(y, 'vi') : (x as number) - (y as number)
-    // Bằng nhau thì theo house_id, để thứ tự không đổi giữa các lần gọi
+    // Thứ tự không đổi giữa các lần gọi
     return diff === 0 ? byId : sign * diff
   })
 }
 
-/**
- * BR-44 — sản lượng chu kỳ đã đóng gần nhất của nhà. Chu kỳ thuộc từng tầng (BR-43), nên lấy chu kỳ đóng
- * (CLOSED hoặc CONCLUDED) mới nhất của mỗi tầng rồi cộng; nhà chưa có chu kỳ đóng nào → null.
- */
+// null khi chưa có chu kỳ đóng
 export async function lastClosedCycleYield(houseId: unknown): Promise<number | null> {
   const latest = await HarvestCycle.aggregate<{ weight: number }>([
-    // aggregate không tự đổi chuỗi sang ObjectId như find
+    // aggregate không tự đổi chuỗi sang ObjectId
     { $match: { house_id: new Types.ObjectId(String(houseId)), status: { $in: ['CLOSED', 'CONCLUDED'] }, closing_harvest: { $exists: true } } },
     { $sort: { end_date: -1 } },
     { $group: { _id: '$zone_id', weight: { $first: '$closing_harvest.weight_grams' } } },
@@ -115,16 +106,11 @@ async function houseRow(
   }
 }
 
-/**
- * ANALYTICS-FR-016, BR-44 — so sánh các nhà của 1 farm trong [from, to): thời gian trong ngưỡng, tỷ lệ ngày GOOD, tỷ lệ
- * chim về trung bình, xu hướng đàn, số cảnh báo đã có và đang mở, MTTR, điện năng ước tính, sản lượng chu kỳ gần nhất,
- * nguyên nhân tìm thấy tại chỗ theo loại (Report 3 4.2.16).
- * Sắp theo từng cột; không tính điểm tổng hay xếp hạng. Farm Owner và Domain Expert (đọc).
- */
+// Không tính điểm tổng hay xếp hạng
 export async function getHouseComparison(
   user: CurrentUser, query: { farmId: string; from: Date; to: Date; sort?: ComparisonSortKey; order?: 'asc' | 'desc' },
 ) {
-  // Trọn ngày giờ VN: mọi cột cùng một khoảng ngày, kỳ liền trước có cùng số ngày; quá 1 năm → 400
+  // Kỳ liền trước cùng số ngày; quá 1 năm → 400
   const range = vnDayPeriod(query.from, query.to)
   const farm = await assertFarmAccess(query.farmId, user)
   const houses = await House.find({ farm_id: farm._id }).select('name stage').lean<FarmHouse[]>()

@@ -5,12 +5,7 @@ import { authenticate } from '@/middlewares/auth.middleware'
 import { loginLimiter } from '@/middlewares/rateLimiter.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
-/**
- * AUTH-FR-010, Flow 12 — router riêng (không mount dưới /farms) vì xem trước
- * và từ chối lời mời là link công khai qua token, không cần đăng nhập.
- * Chỉ /accept mới yêu cầu authenticate (phải đăng nhập đúng email được mời).
- * /create-account thay cho đăng ký công khai (đã bỏ): loginLimiter chỉ đếm lần sai, chống dò token.
- */
+// Không mount dưới /farms: xem và từ chối là link công khai; chỉ /accept cần đăng nhập
 const router = Router()
 
 router.get   ('/:token',         param('token').notEmpty(), validate, farmController.getInvitation)

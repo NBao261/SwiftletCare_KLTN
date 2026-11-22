@@ -8,20 +8,19 @@ import { assertFarmAccess } from '@/utils/farmAccess.util'
 import { onTimeMaintenanceRate } from '@/services/maintenance.service'
 import type { CurrentUser } from '@/types'
 
-/** `cause`: nguyên nhân tìm thấy tại chỗ (ALERT-FR-018), của Work Order nếu có, không thì của lần xác nhận cảnh báo */
+// Của Work Order nếu có, không thì của lần xác nhận
 interface Sample { tta?: number; ttr?: number; cause?: SiteCause }
 
 const round1 = (ms: number) => Math.round(ms / 6_000) / 10
 const mean = (values: number[]) => (values.length ? round1(values.reduce((a, b) => a + b, 0) / values.length) : null)
 
-/** ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tại chỗ, mỗi cảnh báo một lần; chỉ các nguyên nhân đã gặp */
+// Mỗi cảnh báo một lần
 export function siteCauseCounts(samples: Sample[]): Partial<Record<SiteCause, number>> {
   const counts: Partial<Record<SiteCause, number>> = {}
   for (const { cause } of samples) if (cause) counts[cause] = (counts[cause] ?? 0) + 1
   return counts
 }
 
-/** Một dòng chỉ số: số cảnh báo, MTTA, MTTR, % cảnh báo đã xác nhận mà xác nhận trong mục tiêu (phút) */
 export function opsRow(samples: Sample[]) {
   const tta = samples.flatMap(s => (s.tta === undefined ? [] : [s.tta]))
   const ttr = samples.flatMap(s => (s.ttr === undefined ? [] : [s.ttr]))
@@ -33,12 +32,7 @@ export function opsRow(samples: Sample[]) {
   }
 }
 
-/**
- * OPS-FR-009, BR-40 — MTTA = trung bình (xác nhận − tạo); MTTR = trung bình (Work Order đóng, không có thì cảnh
- * báo đóng − tạo), trên cảnh báo tạo trong [from, to) của farm hoặc của 1 nhà; cảnh báo bị bác bỏ (`DISMISSED`)
- * không tính. Theo thợ: thợ được định tuyến cảnh báo (ALERT-FR-017). Số báo cáo nội bộ, không phải cam kết.
- * Tỷ lệ bảo trì đúng hạn theo BR-40 (maintenance.service#onTimeMaintenanceRate).
- */
+// DISMISSED không tính. Số báo cáo nội bộ, không phải cam kết
 export async function getOpsMetrics(
   user: CurrentUser, query: { farmId: string; houseId?: string; from: Date; to: Date },
 ) {
@@ -60,11 +54,7 @@ export async function getOpsMetrics(
   }
 }
 
-/**
- * Mẫu MTTA/MTTR của các cảnh báo tạo trong [from, to) ở các nhà cho trước (cảnh báo của nhà và của zone trong nhà),
- * gom theo nhà và theo thợ được định tuyến. Báo động giả không tính: `DISMISSED`, hoặc chuyên gia đã bác bỏ rồi job
- * tự đóng. Dùng chung cho OPS-FR-009 và bảng so sánh nhà (BR-44).
- */
+// Báo động giả không tính
 export async function collectAlertSamples(farmId: unknown, houseIds: unknown[], from: Date, to: Date) {
   const zones = await Zone.find({ house_id: { $in: houseIds } }).select('house_id').lean()
   const houseOfZone = new Map(zones.map(z => [String(z._id), String(z.house_id)]))
@@ -72,7 +62,7 @@ export async function collectAlertSamples(farmId: unknown, houseIds: unknown[], 
   const alerts = await Alert.find({
     farm_id: farmId,
     status: { $ne: 'DISMISSED' },
-    // Bị bác bỏ rồi job tự đóng (RESOLVED) vẫn là báo động giả: loại theo kết luận, không chỉ theo trạng thái hiện tại
+    // Bị bác bỏ rồi tự đóng vẫn là báo động giả
     'expert_verdict.result': { $ne: 'REJECTED' },
     created_at: { $gte: from, $lt: to },
     $or: [{ house_id: { $in: houseIds } }, { zone_id: { $in: zones.map(z => z._id) } }],

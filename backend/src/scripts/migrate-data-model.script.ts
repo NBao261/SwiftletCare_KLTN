@@ -1,19 +1,4 @@
-/**
- * migrate-data-model.ts — đưa DB đang chạy về đúng data model sau đợt rà soát DB
- * (SRS v1.23.0 §8.2). Cần chạy TRƯỚC khi deploy code mới: code đọc `zones.farm_id`
- * và `users.refresh_tokens[].token_hash`.
- *
- * Chạy: npm run migrate:data-model   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. `zones.farm_id` — điền từ House (Zone không bao giờ đổi farm).
- * 2. Refresh token cũ lưu dạng thô → `token_hash` (sha256), bỏ token đã hết hạn.
- *    Người dùng không bị đăng xuất.
- * 3. Lời mời PENDING của farm đã xoá mềm → EXPIRED (tránh auto-accept vào farm đã xoá).
- * 4. Tạo index mới trong schema (không xoá index nào).
- *
- * (Bước gộp tin đăng trùng của Marketplace đã bỏ cùng Marketplace ở SRS v2.0.0 —
- * dữ liệu tin đăng cũ do `npm run migrate:scope-v2` dọn.)
- */
+// Chạy TRƯỚC khi deploy: điền zones.farm_id, hash refresh token cũ, hết hạn lời mời của farm đã xoá, tạo index. Chạy lại an toàn
 import 'dotenv/config'
 import crypto from 'crypto'
 import mongoose from 'mongoose'
@@ -25,9 +10,8 @@ import logger from '@/utils/logger.util'
 
 type RawToken = { token?: string; token_hash?: string; expires: Date }
 
-/** Chạy trên kết nối mongoose đang mở; trả số bản ghi đã đổi ở từng bước */
 export async function migrateDataModel() {
-  // Làm việc thẳng trên collection: schema mới không còn field refresh_tokens[].token
+  // Thẳng trên collection: schema mới không còn refresh_tokens[].token
   const db = mongoose.connection.db!
   const now = new Date()
 

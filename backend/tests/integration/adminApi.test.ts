@@ -1,7 +1,3 @@
-/**
- * Route-level tests cho /admin — validation, phân quyền, ép kiểu boolean.
- * Mount riêng router trên 1 Express app nhỏ (không khởi động MQTT/Socket của server thật).
- */
 import { createHash } from 'crypto'
 import express from 'express'
 import jwt from 'jsonwebtoken'
@@ -97,11 +93,7 @@ describe('GET /admin/users — query validation & pagination', () => {
 })
 
 describe('không để lọt mã dùng 1 lần qua API', () => {
-  /**
-   * Mã đặt lại mật khẩu là 6 chữ số hash SHA-256 không salt — dò
-   * hết 900.000 khả năng mất dưới 1 giây, nên hash lọt ra ngoài là coi như mã
-   * lọt ra ngoài: ai đọc được response này đổi được mật khẩu của user đó.
-   */
+  // Mã 6 số hash không salt dò được dưới 1 giây: lộ hash là lộ mã
   const secretKeys = ['password_hash', 'refresh_tokens',
     'password_reset_token_hash', 'password_reset_expires_at']
 

@@ -10,13 +10,10 @@ import { REASON_LANGS } from '@/utils/healthReason.util'
 
 const router = Router()
 router.use(authenticate)
-// Report 3 §2.4 — ngày và báo cáo sức khỏe, CSV: Farm Owner, Domain Expert, Farm Technician (nhà được giao,
-// kiểm ở service); độ khớp và ngày lệch: Farm Owner, Domain Expert; kết luận: chỉ Domain Expert; Admin không
 const readers = requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN')
 const ownerOrExpert = requireRole('FARM_OWNER', 'DOMAIN_EXPERT')
 
-// ANALYTICS-FR-012…014, EXPERT-FR-012/013 — trạng thái ngày theo nhà yến, chấm sau khi xem trạng thái (BR-31), CSV,
-// độ khớp. Đặt trước '/:id' để "days", "evaluation" không bị hiểu là một id.
+// Trước '/:id'
 const dayScope = [
   query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),
   query('from').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
@@ -27,10 +24,8 @@ router.get('/days', readers, ...dayScope, query('myRatingState').optional().isIn
   validate, healthDayController.listDays)
 router.get('/days.csv', readers, ...dayScope, query('lang').optional().isIn(REASON_LANGS), validate, healthDayController.exportCsv)
 router.get('/evaluation', ownerOrExpert, ...dayScope, query('role').optional().isIn([...ASSESSOR_ROLES]), validate, healthDayController.evaluation)
-// EXPERT-FR-022 — chuyên gia xem các ngày người chấm đánh giá khác hệ thống (quyền BR-22 kiểm ở service)
 router.get('/disagreements', ownerOrExpert, ...dayScope, validate, healthDayController.disagreements)
 router.get('/days/:dayId', readers, dayId, validate, healthDayController.getDay)
-// BR-31 (Report 3 4.2.0) — chỉ người chấm: Farm Owner, Farm Technician của nhà
 const assessorOnly = requireRole(...ASSESSOR_ROLES)
 router.post('/days/:dayId/rating', assessorOnly, dayId,
   body('rating').isIn(['GOOD', 'WATCH', 'ACTION']), body('note').optional().isString().trim().isLength({ max: 1000 }),
@@ -38,13 +33,12 @@ router.post('/days/:dayId/rating', assessorOnly, dayId,
 router.post('/days/:dayId/skip', assessorOnly, dayId, validate, healthDayController.skip)
 router.patch('/days/:dayId/rating/note', assessorOnly, dayId, body('note').isString().trim().isLength({ min: 1, max: 1000 }), validate, healthDayController.addNote)
 
-// EXPERT-FR-005 — báo cáo theo nhà (houseId | farmId)
 router.get('/', readers,
   query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),
   query('kind').optional().isIn(HOUSE_REPORT_KINDS),
   query('from').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
   query('to').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
-  // toBoolean(): isBoolean() chỉ kiểm tra, không đổi kiểu — chuỗi "false" lọt xuống service là truthy
+  // toBoolean(): isBoolean() không đổi kiểu
   query('hasConclusion').optional().isBoolean().toBoolean(),
   validate, healthReportController.list)
 router.post('/', readers,

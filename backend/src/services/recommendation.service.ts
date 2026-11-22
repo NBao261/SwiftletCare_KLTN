@@ -27,28 +27,20 @@ import {
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
-/**
- * EXPERT-FR-016…019, BR-42, Report 3 §6.21, Report 4 D19 / DF-15 — vòng khuyến nghị (MF-08): Domain Expert viết luật (Farm Owner viết thì chờ chuyên gia bật, BR-22),
- * mỗi ngày sau đánh giá ngày backend xét luật cho từng nhà, Farm Owner chấp nhận (Work Order hoặc thay đổi tham số
- * theo MF-05) hoặc từ chối, 7 ngày sau khi chấp nhận thì đo hiệu quả.
- */
+// xét luật mỗi ngày sau đánh giá ngày, đo hiệu quả 7 ngày sau khi chấp nhận
 
 const DAY_MS = 86_400_000
-/** 'YYYY-MM-DD' giờ VN → thời điểm đầu ngày đó */
 const vnDayStart = (date: string) => new Date(`${date}T00:00:00+07:00`)
-
-// ── Luật (Domain Expert; Farm Owner đề xuất) ─────────────────────────────────
 
 async function loadRule(ruleId: string, user: CurrentUser) {
   const rule = await RecommendationRule.findById(ruleId)
   if (!rule) throw NotFoundError('Không tìm thấy luật khuyến nghị')
   const farm = await findFarmOrThrow(String(rule.farm_id))
-  // Farm Owner và Domain Expert của farm (Report 3 §2.4); thợ và Administrator đã bị chặn ở route
+  // Thợ và Admin đã bị chặn ở route
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
   return { rule, farm }
 }
 
-/** EXPERT-FR-016 — luật của farm, mới sửa trước */
 export async function listRules(farmId: string, user: CurrentUser, query: { page?: string; limit?: string } = {}) {
   const farm = await assertFarmAccess(farmId, user)
   const { page, skip, limit } = paginate(query.page, query.limit)
@@ -59,10 +51,7 @@ export async function listRules(farmId: string, user: CurrentUser, query: { page
   return { records, total, page, limit }
 }
 
-/**
- * BR-22 (Report 3 4.2.15) — Farm Owner trên farm có chuyên gia: luật lưu tắt và chờ duyệt (`pending_approval`), không sửa
- * được luật đang chạy; chuyên gia bật là duyệt, tắt là bỏ. Farm chưa có chuyên gia: Farm Owner bật được như chuyên gia.
- */
+// farm có chuyên gia thì luật của Farm Owner lưu tắt, chờ chuyên gia bật
 async function ownerNeedsApproval(farm: IFarm, user: CurrentUser): Promise<boolean> {
   return user.role === 'FARM_OWNER' && (await farmHasActiveExpert(farm))
 }
@@ -74,7 +63,6 @@ async function notifyRuleProposal(farm: IFarm, user: CurrentUser, rule: IRecomme
   })
 }
 
-/** EXPERT-FR-016 — viết luật (Domain Expert, Farm Owner); chỉ số không hỗ trợ, cửa sổ ngoài 1–30 → 400 */
 export async function createRule(user: CurrentUser, input: Record<string, unknown>) {
   const farm = await assertFarmAccess(String(input.farm_id), user)
   const parsed = parseRuleInput(input)
@@ -88,16 +76,15 @@ export async function createRule(user: CurrentUser, input: Record<string, unknow
   return rule
 }
 
-/** EXPERT-FR-016 — sửa luật hoặc bật/tắt; khuyến nghị đã mở giữ nguyên bằng chứng lúc mở */
+// Khuyến nghị đã mở giữ nguyên bằng chứng lúc mở
 export async function updateRule(ruleId: string, user: CurrentUser, input: Record<string, unknown>) {
   const { rule, farm } = await loadRule(ruleId, user)
   const needsApproval = await ownerNeedsApproval(farm, user)
-  // Farm Owner trên farm có chuyên gia chỉ sửa đề xuất của mình đang chờ duyệt, không sửa luật chuyên gia đã quyết
+  // Farm Owner chỉ sửa đề xuất của mình đang chờ duyệt
   if (needsApproval && !rule.pending_approval) throw ForbiddenError('Chỉ chuyên gia sửa hoặc bật, tắt luật này')
   const parsed = parseRuleInput(input, rule.active)
   const before = rule.toObject()
-  // Farm Owner sửa đề xuất: vẫn tắt, chờ duyệt; chuyên gia bật hay tắt đều là đã quyết, hết chờ.
-  // Ghi có điều kiện: chuyên gia vừa bật hay tắt luật trong lúc đó thì 409, không để nội dung chưa duyệt chạy
+  // Ghi có điều kiện: chuyên gia vừa bật/tắt thì 409, không để nội dung chưa duyệt chạy
   const saved = await RecommendationRule.findOneAndUpdate(
     needsApproval ? { _id: rule._id, pending_approval: true, active: false } : { _id: rule._id },
     needsApproval ? { ...parsed, active: false, pending_approval: true } : { ...parsed, pending_approval: false },
@@ -115,7 +102,6 @@ export async function updateRule(ruleId: string, user: CurrentUser, input: Recor
   return saved
 }
 
-/** EXPERT-FR-019 — theo từng luật: số khuyến nghị đã mở, đã chấp nhận, đã đo, đã cải thiện */
 export async function ruleEffects(farmId: string, user: CurrentUser) {
   const farm = await assertFarmAccess(farmId, user)
   const rules = await RecommendationRule.find({ farm_id: farm._id }).select('name indicator active').lean()
@@ -139,12 +125,7 @@ export async function ruleEffects(farmId: string, user: CurrentUser) {
   })
 }
 
-// ── Khuyến nghị (Farm Owner quyết định) ──────────────────────────────────────
-
-/**
- * Khuyến nghị của một nhà (cả thợ được giao nhà, chỉ đọc) hoặc của cả farm (Farm Owner, Domain Expert). Report 3 §2.4:
- * thợ và chuyên gia chỉ đọc.
- */
+// Thợ và chuyên gia chỉ đọc
 export async function listRecommendations(
   user: CurrentUser, query: { farmId?: string; houseId?: string; status?: string; page?: string; limit?: string },
 ) {
@@ -172,25 +153,19 @@ export async function getRecommendation(id: string, user: CurrentUser) {
   return (await loadRecommendation(id, user)).recommendation
 }
 
-/** Chuyển khỏi OPEN trong một lần ghi có điều kiện: hai quyết định cùng lúc thì quyết định sau nhận 409 */
+// Ghi có điều kiện: quyết định sau nhận 409
 async function decide(id: Types.ObjectId, set: Partial<IRecommendation>) {
   const updated = await Recommendation.findOneAndUpdate({ _id: id, status: 'OPEN' }, set, { new: true })
   if (!updated) throw ConflictError('Khuyến nghị không còn mở (đã quyết định hoặc đã hết hạn)')
   return updated
 }
 
-/**
- * EXPERT-FR-018 — Farm Owner chấp nhận (route chỉ FARM_OWNER): hành động Work Order mở đúng một Work Order sửa chữa
- * nối với khuyến nghị (MF-02); hành động thay đổi tham số sửa ngưỡng hoặc hệ số mờ của các zone trong nhà như Farm
- * Owner tự sửa, nên farm có chuyên gia có mục duyệt (MF-05, EXPERT-FR-010). Lỗi khi thực hiện thì khuyến nghị mở lại.
- */
+// Thay đổi tham số đi như Farm Owner tự sửa, nên có mục duyệt. Lỗi thì khuyến nghị mở lại
 export async function acceptRecommendation(id: string, user: CurrentUser) {
   const { recommendation: current, house, farm } = await loadRecommendation(id, user)
   const rule = await snapshotOf(current)
   const action = rule.action
-  // Kiểm giá trị mới với ngưỡng hay hệ số hiện tại của MỌI zone trước khi đổi gì: một zone sai thì không zone nào bị
-  // sửa (400) và khuyến nghị vẫn mở, thay vì sửa dở một nửa nhà
-  // Document đầy đủ (không lean) để có giá trị mặc định của schema, như đường cập nhật thật
+  // Kiểm mọi zone trước khi đổi: một zone sai thì không sửa dở nửa nhà. Không lean để có default của schema
   const zones = action.type === 'PARAMETER_CHANGE' ? await Zone.find({ house_id: house._id }) : []
   if (action.type === 'PARAMETER_CHANGE') {
     if (zones.length === 0) throw BadRequestError('Nhà chưa có zone nào để đổi tham số')
@@ -201,13 +176,12 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
     }
   }
   const acceptStart = new Date()
-  // Zone đã đổi xong: giá trị đã được kiểm trước nên chỉ lỗi hạ tầng (DB, MQTT) mới dừng giữa chừng; khi đó ghi log
-  // các zone đã đổi để người vận hành biết nhà đang đổi dở, vì không hoàn tác cấu hình đã gửi xuống controller
+  // Chỉ lỗi hạ tầng mới dừng giữa chừng: ghi log các zone đã đổi vì không hoàn tác được cấu hình đã gửi
   const applied: string[] = []
   const recommendation = await decide(current._id, { status: 'ACCEPTED', decided_by: user._id as never, decided_at: acceptStart })
   try {
     if (action.type === 'WORK_ORDER') {
-      // Lần chấp nhận trước có thể đã mở Work Order rồi lỗi ở bước sau: dùng lại, không mở cái thứ hai (EXPERT-FR-018)
+      // Lần trước có thể đã mở Work Order rồi lỗi: dùng lại
       const wo = await WorkOrder.findOne({ recommendation_id: recommendation._id }).select('_id').lean()
         ?? await createManualWorkOrder(user, {
           house_id: String(house._id), title: action.title, recommendation_id: String(recommendation._id),
@@ -221,7 +195,7 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
         else await updateZoneFuzzyTuning(String(zone._id), user, updates)
         applied.push(String(zone._id))
       }
-      // Chỉ các mục duyệt vừa mở hoặc vừa cập nhật bởi lần chấp nhận này (một mục mỗi zone, EXPERT-FR-010)
+      // Chỉ các mục duyệt của lần chấp nhận này
       const reviews = await ParameterReview.find({
         zone_id: { $in: zones.map(z => z._id) }, group: action.group, status: 'PENDING_REVIEW', updated_at: { $gte: acceptStart },
       }).select('_id').lean()
@@ -244,10 +218,7 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
   return recommendation
 }
 
-/**
- * Lỗi khi thực hiện: mở lại khuyến nghị, chỉ khi nó vẫn là ACCEPTED của lần này. Không mở lại được (trùng index
- * một-khuyến-nghị-mở, DB lỗi) thì chỉ ghi log, để người gọi nhận đúng lỗi gốc.
- */
+// Chỉ mở lại khi vẫn là ACCEPTED của lần này; không được thì ghi log để người gọi nhận lỗi gốc
 async function reopen(id: Types.ObjectId) {
   try {
     await Recommendation.updateOne({ _id: id, status: 'ACCEPTED' }, { status: 'OPEN', $unset: { decided_by: 1, decided_at: 1 } })
@@ -256,7 +227,7 @@ async function reopen(id: Types.ObjectId) {
   }
 }
 
-/** Luật lúc khuyến nghị mở; khuyến nghị cũ chưa có bản chụp thì đọc luật hiện tại */
+// Bản cũ chưa có snapshot thì đọc luật hiện tại
 async function snapshotOf(recommendation: Pick<IRecommendation, 'rule_id' | 'rule_snapshot'>): Promise<RuleSnapshot> {
   if (recommendation.rule_snapshot) return recommendation.rule_snapshot
   const rule = await RecommendationRule.findById(recommendation.rule_id).lean()
@@ -264,7 +235,7 @@ async function snapshotOf(recommendation: Pick<IRecommendation, 'rule_id' | 'rul
   return rule
 }
 
-/** EXPERT-FR-018 — từ chối kèm lý do (route chặn lý do rỗng: 422) */
+// Route chặn lý do rỗng (422)
 export async function rejectRecommendation(id: string, user: CurrentUser, reason: string) {
   const { recommendation: current, house, farm } = await loadRecommendation(id, user)
   const recommendation = await decide(current._id, {
@@ -276,19 +247,16 @@ export async function rejectRecommendation(id: string, user: CurrentUser, reason
   return recommendation
 }
 
-// ── Job ──────────────────────────────────────────────────────────────────────
-
 const describeCondition = (rule: Pick<IRecommendationRule, 'indicator' | 'comparison' | 'value' | 'window_days'>) =>
   `${rule.indicator} ${rule.comparison === 'GTE' ? '≥' : '≤'} ${rule.value} trong ${rule.window_days} ngày`
 
-/** Giá trị theo ngày của một chỉ số ở một nhà, từ `from` tới `to` (giờ VN, gồm cả hai đầu) */
+// Giờ VN, gồm cả hai đầu
 async function indicatorDays(indicator: RuleIndicator, house: Pick<IHouse, '_id'>, from: string, to: string): Promise<DayValue[]> {
   const dates = lastDates(to, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1)
-  // Chỉ số của đánh giá ngày (ANALYTICS-FR-012): thiếu ngày hoặc nguồn không đủ dữ liệu thì null
+  // Thiếu ngày hoặc nguồn không đủ dữ liệu thì null
   const days = await HouseHealthDay.find({ house_id: house._id, date: { $gte: from, $lte: to } }).select('date indicators').lean()
   if (indicator === 'MISTING_INEFFECTIVE') {
-    // Đếm cảnh báo phun không hiệu quả mở trong từng ngày ở các zone của nhà. Ngày chưa được đánh giá (nhà chưa chạy,
-    // mất dữ liệu) là null, không phải 0, để luật "≤" không thoả trên những ngày không có số liệu
+    // Ngày chưa đánh giá là null, không phải 0, để luật "≤" không thoả trên ngày không có số
     const assessed = new Set(days.map(day => day.date))
     const zoneIds = (await Zone.find({ house_id: house._id }).select('_id').lean()).map(z => z._id)
     const alerts = await Alert.find({
@@ -299,7 +267,7 @@ async function indicatorDays(indicator: RuleIndicator, house: Pick<IHouse, '_id'
     for (const alert of alerts) counts.set(vnDate(alert.created_at), (counts.get(vnDate(alert.created_at)) ?? 0) + 1)
     return dates.map(date => ({ date, value: assessed.has(date) ? counts.get(date) ?? 0 : null }))
   }
-  // BR-46 — nhà đang dẫn dụ (ATTRACTING) không có tỷ lệ chim về: ngày đó là null theo giai đoạn của chính ngày ấy
+  // theo giai đoạn của chính ngày ấy
   const stages = indicator === 'RETURN_RATE' ? (await House.findById(house._id).select('stage_history').lean())?.stage_history : undefined
   const byDate = new Map(days.map(day => {
     const i = day.indicators
@@ -313,25 +281,19 @@ async function indicatorDays(indicator: RuleIndicator, house: Pick<IHouse, '_id'
   return dates.map(date => ({ date, value: byDate.get(date) ?? null }))
 }
 
-/**
- * EXPERT-FR-017, BR-42 — gọi mỗi ngày sau đánh giá ngày (jobs/returnRate.job.ts). Mỗi luật đang bật xét từng nhà của
- * farm; thoả mà chưa có khuyến nghị mở thì mở một khuyến nghị kèm bằng chứng và báo Farm Owner trong app. Lỗi ở một
- * luật hay một nhà không chặn các luật và nhà khác. Trả số khuyến nghị mới.
- */
+// Lỗi ở một luật hay nhà không chặn cái khác
 export async function evaluateRecommendationRules(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
   const rules = await RecommendationRule.find({ active: true }).lean()
-  // Farm đã xoá (mềm) không xét nữa: Farm.find ẩn farm is_deleted
+  // Farm.find ẩn farm đã xoá
   const liveFarms = new Set((await Farm.find({ _id: { $in: rules.map(r => r.farm_id) } }).select('_id').lean()).map(f => String(f._id)))
   let raised = 0
   for (const rule of rules.filter(r => liveFarms.has(String(r.farm_id)))) {
-    // BR-21 — job buổi tối xét từng nhà sau khung chiều của chính nhà đó
     const houses = await House.find({ farm_id: rule.farm_id, ...(onlyHouseIds && { _id: { $in: onlyHouseIds } }) }).select('_id name').lean()
     const windowStart = dayOffset(date, -(rule.window_days - 1))
     for (const house of houses) {
       try {
         if (await Recommendation.exists({ rule_id: rule._id, house_id: house._id, status: 'OPEN' })) continue
-        // BR-42 — thời gian chờ: sau khi khuyến nghị trước của luật và nhà này đã được quyết định hoặc hết hạn, chỉ mở
-        // khuyến nghị mới khi mọi ngày bằng chứng đều sau ngày đó; không thì bị từ chối hôm nay, mai lại mở đúng ngần ấy ngày
+        // chỉ mở khi mọi ngày bằng chứng đều sau lần quyết định trước
         const last = await Recommendation.findOne({ rule_id: rule._id, house_id: house._id, status: { $ne: 'OPEN' } })
           .sort({ raised_at: -1 }).select('decided_at expired_at raised_at').lean()
         if (last && windowStart <= vnDate(last.decided_at ?? last.expired_at ?? last.raised_at)) continue
@@ -356,7 +318,7 @@ export async function evaluateRecommendationRules(date = vnDate(new Date()), now
           })
         }
       } catch (err) {
-        // Trùng index unique một phần (job chạy chồng) là bình thường; lỗi khác ghi log rồi qua nhà sau
+        // Trùng unique index (job chạy chồng) là bình thường
         if ((err as { code?: number }).code !== 11000) {
           logger.error('Xét luật khuyến nghị thất bại', { ruleId: String(rule._id), houseId: String(house._id), err: (err as Error).message })
         }
@@ -366,7 +328,6 @@ export async function evaluateRecommendationRules(date = vnDate(new Date()), now
   return raised
 }
 
-/** SM-21 OPEN → EXPIRED — 7 ngày không ai quyết định (BR-42) */
 export async function expireRecommendations(now = new Date()): Promise<number> {
   const { modifiedCount } = await Recommendation.updateMany(
     { status: 'OPEN', raised_at: { $lte: new Date(now.getTime() - RECOMMENDATION_EXPIRY_DAYS * DAY_MS) } },
@@ -375,10 +336,6 @@ export async function expireRecommendations(now = new Date()): Promise<number> {
   return modifiedCount
 }
 
-/**
- * SM-21 ACCEPTED → MEASURED, EXPERT-FR-019 — 7 ngày sau ngày chấp nhận: trung bình chỉ số của luật 7 ngày sau trừ 7
- * ngày trước. Trả số khuyến nghị vừa đo.
- */
 export async function measureRecommendationEffects(now = new Date()): Promise<number> {
   const due = await Recommendation.find({
     status: 'ACCEPTED', decided_at: { $lte: new Date(now.getTime() - RECOMMENDATION_EFFECT_DAYS * DAY_MS) },
@@ -387,8 +344,7 @@ export async function measureRecommendationEffects(now = new Date()): Promise<nu
   for (const recommendation of due) {
     try {
       const acceptedDate = vnDate(recommendation.decided_at!)
-      // Ngày thứ 7 sau ngày chấp nhận được đánh giá lúc 19:15 hôm đó rồi tính lại đủ dữ liệu trễ lúc 19:15 hôm sau
-      // (assessAllHouses tính lại 7 ngày trước), nên chỉ đo từ sáng ngày thứ 9
+      // Ngày thứ 7 được tính lại đủ dữ liệu trễ hôm sau, nên đo từ ngày thứ 9
       if (vnDate(now) <= dayOffset(acceptedDate, RECOMMENDATION_EFFECT_DAYS + 1)) continue
       const rule = await snapshotOf(recommendation)
       const days = await indicatorDays(

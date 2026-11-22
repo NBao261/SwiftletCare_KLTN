@@ -1,7 +1,4 @@
-/**
- * EXPERT-FR-005, BR-33 — báo cáo sức khỏe theo nhà: tuần (thứ Hai 06:00) và tháng (ngày 1 lúc 06:00), giờ
- * Việt Nam. Báo cáo ngày chạy ngay sau đánh giá ngày, trong jobs/returnRate.job.ts.
- */
+// Tuần: thứ Hai 06:00, tháng: ngày 1 06:00. Báo cáo ngày chạy trong returnRate.job
 import cron from 'node-cron'
 import { generateMonthlyHouseReports, generateWeeklyHouseReports } from '@/services/houseHealthReport.service'
 import logger from '@/utils/logger.util'

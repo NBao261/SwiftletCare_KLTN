@@ -1,8 +1,3 @@
-/**
- * Bộ điều khiển mờ (SRS v1.24.0): lưu đầu ra vào telemetry (ENV-FR-010/011),
- * chỉnh hệ số theo Zone qua config/update (ENV-FR-021), đo hiệu quả điều khiển
- * (ANALYTICS-FR-008).
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -144,7 +139,7 @@ describe('GET /analytics/control/performance', () => {
         node_id: node._id, zone_id: zone._id, timestamp: new Date(t0 + i * 10 * 60_000), humidity: h, temperature: 28,
         misting_pct: 50, ventilation_pct: 0, misting_on: mistingOn[i], ventilation_on: false,
       })),
-      // Mẫu firmware cũ (không có misting_pct) — không được tính
+      // Mẫu firmware cũ (không có misting_pct): không được tính
       { node_id: node._id, zone_id: zone._id, timestamp: new Date(t0 + 5 * 60_000), humidity: 50, temperature: 40 },
     ])
 

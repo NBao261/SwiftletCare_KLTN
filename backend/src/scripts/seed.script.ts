@@ -1,17 +1,4 @@
-/**
- * seed.ts – Tạo dữ liệu test tối thiểu để xem telemetry từ ESP32 lên web,
- * mà chưa cần chờ AUTH/FARM API hoàn chỉnh.
- *
- * Chạy: npm run seed
- *
- * Tạo: 1 Farm Owner + 1 Technician (phụ trách khu vực của farm) + 1 Farm +
- * 1 House + 1 Zone + 1 SensorNode với device_id khớp firmware/src/config/Secrets.h
- * (node_001) để telemetry.handler tìm thấy đúng Zone khi ESP32 publish MQTT.
- *
- * Technician được seed vì từ SRS v1.12.0, đăng ký/kích hoạt thiết bị là việc của
- * Technician chứ không phải Farm Owner (FARM-FR-003) — muốn test luồng onboarding
- * phải đăng nhập bằng tài khoản này.
- */
+// npm run seed: Farm Owner, Farm Technician, Domain Expert, farm, nhà, zone, node_001 (khớp firmware Secrets.h)
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'
@@ -23,18 +10,16 @@ import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisio
 import { hashBrokerSecret, hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
-/** Tọa độ farm demo (Quận 1, TP.HCM) — bắt buộc khi tạo farm (FARM-FR-001, A-5) */
 const DEMO_COORDINATES = { lat: 10.7769, lng: 106.7009 }
 
 async function seed(): Promise<void> {
   await connectDB()
 
-  // ── User (Farm Owner) ────────────────────────────────────────────────────
   let user = await User.findOne({ email: 'owner@swiftletcare.dev' })
   if (!user) {
     user = await User.create({
       email: 'owner@swiftletcare.dev',
-      password_hash: 'Test1234!', // bị hash tự động bởi pre-save hook trong User.ts
+      password_hash: 'Test1234!',
       full_name: 'Demo Farm Owner',
       role: 'FARM_OWNER',
     })
@@ -43,7 +28,6 @@ async function seed(): Promise<void> {
     logger.info(`[seed] User already exists: ${user.email}`)
   }
 
-  // ── User (Farm Technician) — thợ của chủ farm, gán vào nhà chính ở dưới (AUTH-FR-013) ────
   let technician = await User.findOne({ email: 'tech@swiftletcare.dev' })
   if (!technician) {
     technician = await User.create({
@@ -54,7 +38,7 @@ async function seed(): Promise<void> {
     })
     logger.info(`[seed] Created farm technician: ${technician.email} (password: Test1234!)`)
   } else if ((technician.role as string) === 'TECHNICIAN') {
-    // DB seed từ trước G-20: role Technician cũ
+    // DB seed từ bản cũ còn role TECHNICIAN
     technician.role = 'FARM_TECHNICIAN'
     await technician.save()
     logger.info(`[seed] Converted ${technician.email} to FARM_TECHNICIAN`)
@@ -62,7 +46,6 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Farm technician already exists: ${technician.email}`)
   }
 
-  // ── Farm ──────────────────────────────────────────────────────────────────
   let farm = await Farm.findOne({ name: 'Nhà Yến Demo' })
   if (!farm) {
     farm = await Farm.create({
@@ -73,7 +56,7 @@ async function seed(): Promise<void> {
     })
     logger.info(`[seed] Created farm: ${farm._id}`)
   } else if (!farm.coordinates?.lat) {
-    // Farm seed từ bản cũ chưa có tọa độ → không có thời tiết (A-5)
+    // Farm cũ chưa có tọa độ
     farm.coordinates = DEMO_COORDINATES
     await farm.save()
     logger.info(`[seed] Backfilled coordinates cho farm cũ: ${farm._id}`)
@@ -81,7 +64,6 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Farm already exists: ${farm._id}`)
   }
 
-  // ── User (Domain Expert) — chuyên gia nuôi yến được mời vào farm (AUTH-FR-005, v2.0.0) ──
   let expert = await User.findOne({ email: 'expert@swiftletcare.dev' })
   if (!expert) {
     expert = await User.create({
@@ -98,7 +80,6 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Added ${expert.email} to farm ${farm._id} as DOMAIN_EXPERT`)
   }
 
-  // ── House ─────────────────────────────────────────────────────────────────
   let house = await House.findOne({ farm_id: farm._id })
   if (!house) {
     house = await House.create({ farm_id: farm._id, name: 'Nhà chính', floors: 2 })
@@ -117,7 +98,6 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Assigned ${technician.email} to house ${house._id} (primary)`)
   }
 
-  // ── Zone ──────────────────────────────────────────────────────────────────
   let zone = await Zone.findOne({ house_id: house._id })
   if (!zone) {
     zone = await Zone.create({ house_id: house._id, name: 'Tầng 1', floor: 1 })
@@ -126,7 +106,7 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Zone already exists: ${zone._id}`)
   }
 
-  // ── SensorNode – device_id PHẢI khớp SECRET_DEVICE_ID trong Secrets.h ──────
+  // device_id phải khớp SECRET_DEVICE_ID trong Secrets.h
   const deviceId = 'node_001'
   let node = await SensorNode.findOne({ device_id: deviceId })
   if (!node) {
@@ -136,8 +116,7 @@ async function seed(): Promise<void> {
     logger.info(`[seed] Sensor node already exists: ${node.device_id}`)
   }
 
-  // ── Kho thiết bị xuất xưởng (FARM-FR-003) — secretKey cố định CHỈ cho dev ──
-  // node_001 đã gắn sẵn vào zone ở trên; node_002/cam_001 để thử luồng onboarding thật.
+  // secretKey cố định chỉ cho dev; node_002/cam_001 để thử onboarding
   const demoDevices: Array<[string, ProvisionedDeviceKind, string, boolean]> = [
     [deviceId,   'SENSOR', 'DEMO-NODE-0001', true],
     ['node_002', 'SENSOR', 'DEMO-NODE-0002', false],
@@ -145,7 +124,7 @@ async function seed(): Promise<void> {
   ]
   for (const [id, kind, secretKey, claimed] of demoDevices) {
     if (await ProvisionedDevice.exists({ device_id: id })) continue
-    // Chỉ cho dev: mật khẩu broker bằng activation key demo, đặt vào SECRET_MQTT_PASSWORD hoặc .env của AI node
+    // Chỉ cho dev
     await ProvisionedDevice.create({
       device_id: id, kind, secret_key_hash: hashKey(secretKey), broker_secret_hash: hashBrokerSecret(secretKey).toString('hex'),
       ...(claimed ? { claimed_at: new Date() } : {}),

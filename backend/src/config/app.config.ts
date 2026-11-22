@@ -36,36 +36,27 @@ import internalRoutes from '@/routes/internal.route'
 
 const app: Application = express()
 
-// Sau reverse proxy/tunnel (Cloudflare, nginx) req.ip mặc định là IP của proxy —
-// audit log và rate limit sẽ gom mọi client về 1 địa chỉ. Đặt TRUST_PROXY=<số hop>
-// (hoặc loopback/danh sách IP proxy) khi triển khai sau proxy; bỏ trống = không tin header.
+// Sau reverse proxy đặt TRUST_PROXY=<số hop>, nếu không req.ip là IP của proxy
 const trustProxy = parseTrustProxy(process.env.TRUST_PROXY)
 if (trustProxy !== false) app.set('trust proxy', trustProxy)
 
-// ── Security ───────────────────────────────────────────────────────────────────
 app.use(helmet())
-// credentials:true bắt buộc để trình duyệt lưu/gửi cookie refreshToken (AUTH-FR-003)
-// cross-origin (frontend :5173 -> backend :3000) — không dùng được origin '*' khi bật credentials.
+// credentials: cookie refreshToken cross-origin, nên không dùng được origin '*'
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173', credentials: true }))
-// Đếm theo tài khoản; đăng nhập/OTP/refresh có suất riêng trong auth.route.ts (SEC-NFR-004)
 app.use(apiLimiter)
 
-// ── Logging & Parsing ──────────────────────────────────────────────────────────
-// EMQX và MediaMTX gọi /internal/* kèm khoá bí mật trong ?key=, ở mỗi lần thiết bị nối hay người xem mở video: không ghi
-// các dòng này vào log truy cập, để khoá không nằm trong log của máy chủ
+// /internal/* mang khoá trong ?key=, không ghi vào log truy cập
 app.use(morgan('combined', { skip: isInternalRequest }))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
-app.use(cookieParser()) // cần cho req.cookies.refreshToken (AUTH-FR-003)
-app.use(requestContext) // IP client cho audit_logs — phải đứng trước các router
+app.use(cookieParser())
+app.use(requestContext) // Phải đứng trước các router (audit log cần IP)
 
-// ── Health Check ───────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// ── File lưu cục bộ (chỉ khi STORAGE_DRIVER=local, thay MinIO lúc dev) ────────
-// helmet mặc định chặn tài nguyên khác origin; <audio> ở frontend :5173 cần đọc được.
+// STORAGE_DRIVER=local: cho <audio> ở origin khác đọc file
 if (isLocalStorage()) {
   app.use('/files', express.static(localStorageDir(), {
     setHeaders: res => res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'),
@@ -73,7 +64,6 @@ if (isLocalStorage()) {
   logger.warn(`STORAGE_DRIVER=local — file lưu tại ${localStorageDir()}, phục vụ công khai ở /files (chỉ dùng cho dev)`)
 }
 
-// ── API Docs (Swagger UI đọc trực tiếp docs/api/api-spec.yaml) ───────────────
 try {
   const specPath = path.resolve(__dirname, '../../../docs/api/api-spec.yaml')
   const openApiSpec = YAML.parse(fs.readFileSync(specPath, 'utf-8')) as Record<string, unknown>
@@ -83,7 +73,6 @@ try {
   logger.warn('Swagger spec không load được — /api-docs sẽ không khả dụng', { err })
 }
 
-// ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/auth',      authRoutes)
 app.use('/admin',     adminRoutes)
 app.use('/system',    systemRoutes)
@@ -94,32 +83,23 @@ app.use('/telemetry', telemetryRoutes)
 app.use('/alerts',    alertRoutes)
 app.use('/analytics', analyticsRoutes)
 
-// Module HARVEST (§5.8) — chỉ ghi nhận thu hoạch; Marketplace đã bỏ ở SRS v2.0.0
 app.use('/harvests',    harvestRoutes)
 
-// Module EXPERT (§5.12) — báo cáo sức khỏe Zone + kết luận của chuyên gia
 app.use('/health-reports', healthReportRoutes)
 app.use('/expert-activity', expertActivityRoutes)
-// Hộp thông báo trong ứng dụng (EXPERT-FR-006/007)
 app.use('/notifications', notificationRoutes)
-// OPS-FR-001…004, 009 — Work Order sửa chữa và MTTA/MTTR (G-21)
 app.use('/work-orders', workOrderRoutes)
-// OPS-FR-005…008 — kế hoạch bảo trì phòng ngừa (G-22)
 app.use('/maintenance', maintenanceRoutes)
-// EXPERT-FR-014, 015 — hồ sơ cấu hình của farm
 app.use('/profiles', profileRoutes)
-// EXPERT-FR-016…019 — luật và khuyến nghị (MF-08)
 app.use('/recommendations', recommendationRoutes)
 
-// MediaMTX hỏi quyền đẩy/xem live stream (VISION-FR-013) — dịch vụ nội bộ, không phải người dùng
 app.use('/internal', internalRoutes)
 
-// ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found' })
 })
 
-// ── Error Handler (must be last, 4-arg signature) ─────────────────────────────
+// Phải đứng cuối
 app.use(errorHandler)
 
 export default app

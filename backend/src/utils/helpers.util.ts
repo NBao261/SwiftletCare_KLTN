@@ -1,20 +1,14 @@
 ﻿import { Types } from 'mongoose'
 
-/** Validate MongoDB ObjectId string */
 export function isValidObjectId(id: string): boolean {
   return Types.ObjectId.isValid(id)
 }
 
-/**
- * Escape ký tự đặc biệt để đưa chuỗi người dùng nhập vào RegExp như văn bản
- * thường — không escape thì `.*` khớp mọi thứ, còn mẫu lồng nhau như `(a+)+`
- * làm Mongo quét rất lâu.
- */
+// Không escape thì `.*` khớp mọi thứ, `(a+)+` làm Mongo quét rất lâu
 export function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/** Safe JSON parse – returns null on failure */
 export function safeParse<T>(json: string): T | null {
   try {
     return JSON.parse(json) as T
@@ -23,13 +17,7 @@ export function safeParse<T>(json: string): T | null {
   }
 }
 
-/**
- * Paginate a Mongoose query — trả cả `page` đã chuẩn hoá (không chỉ skip/limit)
- * để service dùng thẳng cho response `meta`, khỏi tính `page` riêng ở nơi gọi.
- * Giá trị không hợp lệ (NaN, ≤ 0, không phải số) rơi về mặc định thay vì lọt
- * xuống Mongo — `skip` âm hoặc `limit(NaN)` làm request nổ 500, `limit(0)`
- * lại nghĩa là "không giới hạn".
- */
+// Giá trị sai về mặc định: skip âm, limit(NaN) nổ 500, limit(0) là không giới hạn
 export function paginate(
   page: number | string | undefined,
   limit: number | string | undefined,

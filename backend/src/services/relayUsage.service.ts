@@ -8,39 +8,26 @@ type UsageRelay = 'misting' | 'ventilation'
 const RELAYS: UsageRelay[] = ['misting', 'ventilation']
 const RELAY_LABEL: Record<UsageRelay, string> = { misting: 'bơm phun sương', ventilation: 'quạt thông gió' }
 
-/**
- * ALERT-FR-016 — ngưỡng bảo trì theo thời gian chạy thật (Report 3 §4.5).
- * ponytail: số tham khảo chung (bơm màng ~500 giờ thay màng/lọc, quạt ~2.000 giờ
- * vệ sinh/tra dầu, relay cơ ~100.000 lần đóng cắt) — thay bằng số trong datasheet
- * thiết bị thật đã lắp.
- */
+// Số tham khảo chung, thay bằng datasheet thiết bị thật
 export const RELAY_SERVICE_LIMITS: Record<UsageRelay, { hours: number; switches: number }> = {
   misting:     { hours: 500,  switches: 100_000 },
   ventilation: { hours: 2000, switches: 100_000 },
 }
 
-/**
- * Report 3 §4.5 — 2 mẫu telemetry cách nhau quá chừng này là mất kết nối, không biết relay có chạy không → không tính.
- * Dùng chung cho giờ chạy (ALERT-FR-016) và điện năng (BR-45, energy.service).
- */
+// quá chừng này là mất kết nối, không tính
 export const MAX_GAP_MS = 30_000
-/** Lần đầu (chưa có counted_until) chỉ đếm 7 ngày gần nhất — telemetry giữ 90 ngày, đếm hết quá nặng */
+// Telemetry giữ 90 ngày, đếm hết quá nặng
 const FIRST_RUN_LOOKBACK_MS = 7 * 86400_000
-/** Mỗi lần chạy tối đa bấy nhiêu mẫu/thiết bị — còn thì lần sau (mỗi giờ) đếm tiếp */
 const BATCH = 50_000
 
 type Sample = { timestamp: Date; misting_on?: boolean; ventilation_on?: boolean; pump_current_a?: number; fan_current_a?: number }
 type Baseline = { misting_a?: number; ventilation_a?: number }
 
-/** BR-45 — tải chỉ tính là đang chạy khi dòng trên 50 % dòng bình thường (cùng mức BR-32 của firmware) */
+// cùng mức của firmware
 export const RUNNING_MIN_RATIO = 0.5
 const CURRENT_KEY: Record<UsageRelay, 'pump_current_a' | 'fan_current_a'> = { misting: 'pump_current_a', ventilation: 'fan_current_a' }
 
-/**
- * Hàm thuần: cộng thời gian chạy + số lần đổi trạng thái từ chuỗi mẫu, tiếp nối từ mẫu cuối lần trước.
- * Một khoảng giữa hai mẫu tính là chạy khi relay BẬT ở mẫu đầu và, nếu có cả mức đã học lẫn số đo dòng
- * của mẫu đó, dòng trên RUNNING_MIN_RATIO mức đã học (BR-45). Thiếu một trong hai thì tính theo relay.
- */
+// Thiếu mức đã học hoặc số đo dòng thì tính theo relay
 export function tallyRelayUsage(
   prev: { at?: Date; misting?: boolean; ventilation?: boolean },
   samples: Sample[],
@@ -69,12 +56,7 @@ export function tallyRelayUsage(
   return { onHours: { misting: onMs.misting / 3600_000, ventilation: onMs.ventilation / 3600_000 }, switches, last }
 }
 
-/**
- * Chạy mỗi giờ (jobs/relayUsage.job.ts): cộng dồn giờ chạy/số lần đóng
- * cắt của bơm và quạt từ telemetry mới, vượt RELAY_SERVICE_LIMITS thì báo cảnh báo
- * MAINTENANCE_DUE. Bộ đếm KHÔNG reset ở đây: Farm Owner xác nhận cảnh báo (đã bảo
- * trì) mới đếm lại từ 0 (BR-16, `acknowledgeAlert`).
- */
+// Không reset ở đây: xác nhận cảnh báo mới đếm lại
 export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: number; alerts: number }> {
   const nodes = await SensorNode.find(IN_SERVICE).select('_id zone_id device_id relay_usage actuator_baseline')
   let alerts = 0
@@ -87,8 +69,7 @@ export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: n
     if (samples.length === 0) continue
 
     const result = tallyRelayUsage({ at: usage.counted_until, misting: usage.last_misting_on, ventilation: usage.last_ventilation_on }, samples, node.actuator_baseline ?? {})
-    // $inc thay vì save(): Farm Owner xác nhận MAINTENANCE_DUE giữa lúc job chạy thì lần
-    // đếm lại về 0 (acknowledgeAlert) không bị số cũ ghi đè
+    // $inc: lần xác nhận giữa lúc job chạy không bị số cũ ghi đè
     const inc: Record<string, number> = {}
     for (const r of RELAYS) {
       inc[`relay_usage.${r}.on_hours`] = result.onHours[r]
@@ -109,16 +90,11 @@ export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: n
   return { nodes: nodes.length, alerts }
 }
 
-/**
- * Một cảnh báo cho mỗi controller, liệt kê mọi tải đã quá mốc (khoá dedup của cảnh báo là
- * thiết bị + loại). Mỗi giờ còn quá mốc thì gọi lại: cảnh báo đang mở được cập nhật số
- * mới và danh sách tải (`metadata.loads`) mà lúc xác nhận sẽ được đếm lại.
- */
+// Một cảnh báo mỗi controller; metadata.loads là các tải sẽ được đếm lại khi xác nhận
 async function raiseMaintenanceDueIfDue(node: ISensorNode): Promise<boolean> {
   const zone = await Zone.findById(node.zone_id).select('farm_id name house_id').lean()
   if (!zone) return false
-  // ALERT-FR-016 — mốc mặc định chỉ cho tải chưa có kế hoạch bảo trì; tải đã có kế hoạch do maintenance.service lo,
-  // không báo hai lần
+  // Tải đã có kế hoạch do maintenance.service lo, không báo hai lần
   const planned = new Set((await MaintenancePlan.find({
     house_id: zone.house_id, state: { $ne: 'RETIRED' }, equipment: { $in: ['PUMP', 'FAN'] },
   }).select('equipment').lean()).map(p => (p.equipment === 'PUMP' ? 'misting' : 'ventilation')))

@@ -1,9 +1,3 @@
-/**
- * EXPERT-FR-011, Report 3 §6.11 — đề xuất hệ số: trên farm có Domain Expert chỉ chuyên gia áp gợi ý
- * của hệ thống; Farm Owner gửi đề xuất (PROPOSED), chuyên gia duyệt (APPROVED, lịch sử
- * SUGGESTION_APPROVED) hoặc từ chối có lý do (REJECTED); đề xuất mới hơn hoặc chuyên gia tự sửa hệ số
- * thì đề xuất cũ SUPERSEDED. Farm chưa có chuyên gia: Farm Owner áp trực tiếp (BR-22).
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

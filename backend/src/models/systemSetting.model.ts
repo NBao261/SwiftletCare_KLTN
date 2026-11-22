@@ -1,13 +1,10 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { Thresholds } from '@/types'
 
-/** SystemSetting – SRS §8.2, SYSTEM-FR-002. Singleton: collection chỉ có 1 document. */
 export interface ISystemSetting extends Document {
   _id: Types.ObjectId
-  /** Khoá ép singleton — xem ghi chú ở schema */
   _singleton: boolean
   default_thresholds: Thresholds
-  /** ENV-FR-007 — nguồn (mã mục REF-5) và thời điểm của lần đổi ngưỡng mặc định gần nhất */
   default_thresholds_source?: string
   default_thresholds_updated_at?: Date
 
@@ -18,13 +15,7 @@ export interface ISystemSetting extends Document {
 
 const systemSettingSchema = new Schema<ISystemSetting>(
   {
-    /**
-     * MongoDB chỉ đảm bảo upsert atomic khi filter trỏ vào 1 unique index. Nếu
-     * upsert bằng filter rỗng, 2 request đồng thời vào collection trống đều
-     * không tìm thấy gì nên cùng insert → sinh nhiều document, ngưỡng mặc định
-     * trả về trở nên không xác định. Field này luôn bằng true + unique index
-     * nên document thứ 2 bị DB từ chối (E11000).
-     */
+    // Upsert chỉ atomic khi filter trỏ vào unique index: thiếu thì 2 request đồng thời tạo 2 document
     _singleton: { type: Boolean, default: true, unique: true, immutable: true },
     default_thresholds: {
       temp_min:     { type: Number, required: true },
