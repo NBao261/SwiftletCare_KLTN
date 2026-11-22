@@ -28,10 +28,16 @@ export interface ListReviewsQuery {
 /** EXPERT-FR-010 — mục duyệt của 1 farm, mới nhất trước; chỉ Farm Owner và Domain Expert của farm */
 export async function listReviews(user: CurrentUser, query: ListReviewsQuery) {
   const farm = await assertFarmAccess(query.farmId, user)
+  // FARM-FR-002 — mục duyệt của nhà hoặc Zone đã xoá không còn gì để giữ hay hoàn tác: không hiện trong hàng đợi
+  const [deletedZones, deletedHouses] = await Promise.all([
+    Zone.find({ farm_id: farm._id, is_deleted: true }).distinct('_id'),
+    House.find({ farm_id: farm._id, is_deleted: true }).distinct('_id'),
+  ])
   const filter = {
     farm_id: farm._id,
     ...(query.zoneId && { zone_id: query.zoneId }),
     ...(query.status && { status: query.status }),
+    $nor: [{ zone_id: { $in: deletedZones } }, { house_id: { $in: deletedHouses } }],
   }
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [records, total] = await Promise.all([

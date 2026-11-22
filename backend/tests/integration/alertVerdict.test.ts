@@ -73,8 +73,14 @@ async function seed() {
   const house = await House.create({ farm_id: farm._id, name: 'H' })
   const zone = await Zone.create({ house_id: house._id, name: 'Z' })
   const node = await SensorNode.create({ device_id: `ESP-${seq}`, zone_id: zone._id, status: 'ONLINE' })
-  const mkAlert = (type: AlertType) =>
-    Alert.create({ farm_id: farm._id, zone_id: zone._id, node_id: node._id, type, severity: 'MEDIUM', title: 't', message: 'm' })
+  // Cảnh báo thứ hai trở đi cùng loại gắn thiết bị khác: mỗi sự cố chỉ một cảnh báo còn mở (ALERT-FR-008)
+  const madeOfType = new Map<AlertType, number>()
+  const mkAlert = (type: AlertType) => {
+    const count = madeOfType.get(type) ?? 0
+    madeOfType.set(type, count + 1)
+    const nodeId = count === 0 ? node._id : new mongoose.Types.ObjectId()
+    return Alert.create({ farm_id: farm._id, zone_id: zone._id, node_id: nodeId, type, severity: 'MEDIUM', title: 't', message: 'm' })
+  }
   return { owner, expert, farm, zone, node, mkAlert, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
 }
 
@@ -127,11 +133,17 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     expect(await Alert.countDocuments()).toBe(0)
   })
 
-  it('loại cảnh báo phần cứng vẫn giữ mức thiết bị gửi và vẫn được gửi lại', async () => {
+  it('mức luôn theo BR-15, không theo thiết bị: SPEAKER_FAILURE gửi CRITICAL được lưu HIGH và vẫn được gửi lại', async () => {
     const { node } = await seed()
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'SPEAKER_FAILURE', severity: 'CRITICAL', message: 'x' })
-    expect((await Alert.findOne().lean())!.severity).toBe('CRITICAL')
+    expect((await Alert.findOne().lean())!.severity).toBe('HIGH')
     expect(await renotifiedAfterEscalation()).toBe(1)
+  })
+
+  it('thiết bị gửi mức thấp hơn BR-15 cũng không hạ được mức: RS485_BUS_FAILURE gửi LOW vẫn là CRITICAL', async () => {
+    const { node } = await seed()
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'RS485_BUS_FAILURE', severity: 'LOW', message: 'bus' })
+    expect((await Alert.findOne().lean())!.severity).toBe('CRITICAL')
   })
 })
 

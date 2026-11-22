@@ -1624,6 +1624,67 @@ paths:
               },
           }
 
+  /farms/houses/{houseId}:
+    parameters: [{ $ref: "#/components/parameters/HouseId" }]
+    put:
+      tags: [Farms]
+      summary: Sửa nhà yến — FARM_OWNER (FARM-FR-002)
+      description: |
+        Đổi tên, số tầng, mô tả; gửi trường nào đổi trường đó, có audit cũ → mới. Domain Expert, Farm Technician,
+        Administrator → 403 (Report 3 §2.4). `name` tối đa 50 ký tự, `floors` 1–10 (422). Số tầng thấp hơn tầng cao
+        nhất của các Zone → 400. Tên trùng một nhà khác của farm (không phân biệt hoa thường) → 409 `DUPLICATE_NAME`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 50 }
+                floors: { type: integer, minimum: 1, maximum: 10 }
+                description: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/House" }
+        "400":
+          description: "`floors` thấp hơn tầng cao nhất của các Zone của nhà"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "DUPLICATE_NAME — trùng tên một nhà khác của farm"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Farms]
+      summary: Xoá mềm nhà yến cùng các Zone — FARM_OWNER (FARM-FR-002)
+      description: |
+        Còn bộ điều khiển hoặc camera chưa gỡ (`DECOMMISSIONED`) → 409 `HAS_ACTIVE_DEVICES`: gỡ thiết bị trước
+        (FARM-FR-008). Xoá mềm nhà và các Zone (`is_deleted`): rời mọi danh sách, job, tổng quan và so sánh nhà; cảnh báo
+        đang mở → `RESOLVED`; Work Order chưa đóng → `CANCELLED`; kế hoạch bảo trì → `RETIRED`; khuyến nghị đang mở →
+        `EXPIRED`; telemetry, lượt đếm, báo cáo và thu hoạch giữ nguyên trong cơ sở dữ liệu. Mã tầng của Zone đã xoá
+        không chọn được Zone nữa (404, FARM-FR-011). Tên của nhà đã xoá dùng lại được.
+      responses:
+        "200": { description: Đã xoá, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "HAS_ACTIVE_DEVICES — nhà còn thiết bị đang dùng"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /farms/houses/{houseId}/technicians/{userId}:
     parameters:
       - { $ref: "#/components/parameters/HouseId" }
@@ -1948,6 +2009,62 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+    put:
+      tags: [Farms]
+      summary: Sửa Zone — FARM_OWNER (FARM-FR-002)
+      description: |
+        Đổi tên, tầng; có audit cũ → mới. Domain Expert, Farm Technician, Administrator → 403. `name` tối đa 50 ký tự,
+        `floor` số nguyên ≥ 1 (422); `floor` vượt số tầng của nhà → 400; tên trùng một Zone khác của nhà → 409.
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 50 }
+                floor: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Zone" }
+        "400":
+          description: "`floor` vượt số tầng (`floors`) của House"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "DUPLICATE_NAME — trùng tên một Zone khác của nhà"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Farms]
+      summary: Xoá mềm Zone — FARM_OWNER (FARM-FR-002)
+      description: |
+        Còn bộ điều khiển chưa gỡ → 409 `HAS_ACTIVE_DEVICES`. Xoá mềm: Zone rời mọi danh sách và job, cảnh báo đang
+        mở → `RESOLVED`, Work Order chưa đóng → `CANCELLED`; lịch sử giữ nguyên; mã tầng không chọn được Zone nữa (404).
+      parameters: [{ $ref: "#/components/parameters/ZoneId" }]
+      responses:
+        "200": { description: Đã xoá, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "HAS_ACTIVE_DEVICES — Zone còn bộ điều khiển đang dùng"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /farms/zones/{zoneId}/fuzzy-tuning:
     put:
       tags: [Farms]
@@ -7852,7 +7969,8 @@ components:
         house_id: { type: string, nullable: true, description: "Cảnh báo của cả nhà yến (camera đếm chim: EDGE_AI_DEGRADED, LOW_RETURN_RATE) — SRS v2.1.8; khi đó không có zone_id" }
         node_id: { type: string, nullable: true }
         type: { $ref: "#/components/schemas/AlertType" }
-        severity: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
+        severity: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW], description: "Mức theo loại cảnh báo (BR-15, ALERT-FR-001); backend đặt, bỏ qua mức thiết bị gửi kèm" }
+        incident_key: { type: string, readOnly: true, description: "Khoá sự cố (loại, farm, Zone hoặc nhà, thiết bị; tải với ACTUATOR_FAULT; kế hoạch với MAINTENANCE_DUE). Mỗi khoá chỉ một cảnh báo còn mở (ALERT-FR-008)" }
         title: { type: string }
         message: { type: string }
         snapshot_url: { type: string, nullable: true }
