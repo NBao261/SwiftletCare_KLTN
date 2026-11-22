@@ -25,10 +25,9 @@ export interface ListReviewsQuery {
   limit?: string | number
 }
 
-/** EXPERT-FR-010 — mục duyệt của 1 farm, mới nhất trước; chỉ Farm Owner và Domain Expert của farm */
 export async function listReviews(user: CurrentUser, query: ListReviewsQuery) {
   const farm = await assertFarmAccess(query.farmId, user)
-  // FARM-FR-002 — mục duyệt của nhà hoặc Zone đã xoá không còn gì để giữ hay hoàn tác: không hiện trong hàng đợi
+  // Nhà, Zone đã xoá không còn gì để duyệt
   const [deletedZones, deletedHouses] = await Promise.all([
     Zone.find({ farm_id: farm._id, is_deleted: true }).distinct('_id'),
     House.find({ farm_id: farm._id, is_deleted: true }).distinct('_id'),
@@ -47,7 +46,6 @@ export async function listReviews(user: CurrentUser, query: ListReviewsQuery) {
   return { records, total, page, limit }
 }
 
-/** Mục duyệt đã kiểm: Domain Expert của farm, mục còn chờ (Report 3 §6.10) */
 async function loadPendingReview(reviewId: string, user: CurrentUser) {
   const review = await ParameterReview.findById(reviewId)
   if (!review) throw NotFoundError('Không tìm thấy mục duyệt')
@@ -57,18 +55,17 @@ async function loadPendingReview(reviewId: string, user: CurrentUser) {
   return { review, farm }
 }
 
-/** Nơi của mục duyệt trong thông báo: Zone, camera hoặc nhà */
 async function placeOf(review: IParameterReview): Promise<string> {
   if (review.zone_id) return `Zone "${(await Zone.findById(review.zone_id).select('name').lean())?.name ?? ''}"`
   if (review.camera_node_id) return `Camera ${(await CameraNode.findById(review.camera_node_id).select('device_id').lean())?.device_id ?? ''}`
   return `Nhà "${(await House.findById(review.house_id).select('name').lean())?.name ?? ''}"`
 }
 
-// Lịch đếm và vòng đếm là cấu trúc lồng nhau: thông báo không liệt kê từng giá trị
+// Cấu trúc lồng: không liệt kê từng giá trị
 const detailOf = (review: IParameterReview, before: object, after: object) =>
   (review.group === 'counting_schedule' || review.group === 'counting_ring' ? undefined : formatChanges(before, after))
 
-/** Đóng mục đang chờ — có điều kiện để 2 thao tác cùng lúc chỉ 1 cái thành công */
+/** Có điều kiện: 2 thao tác cùng lúc chỉ 1 cái thành công */
 async function closeReview(review: IParameterReview, user: CurrentUser, status: ParameterReviewStatus) {
   const closed = await ParameterReview.findOneAndUpdate(
     { _id: review._id, status: 'PENDING_REVIEW' },
@@ -85,7 +82,6 @@ const targetIds = (review: IParameterReview) => ({
   ...(review.camera_node_id && { camera_node_id: String(review.camera_node_id) }),
 })
 
-/** EXPERT-FR-010 — chuyên gia chấp nhận thay đổi của Farm Owner: PENDING_REVIEW → ACCEPTED, báo Farm Owner */
 export async function acceptReview(reviewId: string, user: CurrentUser) {
   const { review, farm } = await loadPendingReview(reviewId, user)
   const closed = await closeReview(review, user, 'ACCEPTED')
@@ -101,12 +97,12 @@ export async function acceptReview(reviewId: string, user: CurrentUser) {
   return closed
 }
 
-/** Áp lại giá trị gốc của mục bằng chính hàm cập nhật của nhóm, với vai trò chuyên gia (thiết bị nhận lại cấu hình) */
+/** Dùng chính hàm cập nhật của nhóm để thiết bị nhận lại cấu hình */
 async function applyOldValues(review: IParameterReview, user: CurrentUser, current: object) {
   const old = review.old_values
   const opts = { fromReview: true }
   const what = `hoàn tác ${GROUP_LABEL[review.group]}`
-  // Lịch sử hoạt động chuyên gia chỉ hiện REVIEW_REVERTED, không thêm dòng đổi Zone (EXPERT-FR-009)
+  // Lịch sử chỉ hiện REVIEW_REVERTED
   const logDetails = { decided_in: 'parameter_review' }
   switch (review.group) {
     case 'thresholds': {
@@ -135,11 +131,7 @@ async function applyOldValues(review: IParameterReview, user: CurrentUser, curre
   }
 }
 
-/**
- * EXPERT-FR-010 — chuyên gia hoàn lại thay đổi của Farm Owner: khôi phục giá trị gốc (trước lần sửa đầu tiên), gửi
- * xuống thiết bị (controller của Zone hoặc nút AI của camera); PENDING_REVIEW → REVERTED, báo Farm Owner. Kiểm giá trị
- * trước, đóng mục rồi mới áp: chuyên gia khác vừa chấp nhận thì 409 và không bị hoàn tác; áp lỗi thì mở lại mục.
- */
+/** Kiểm giá trị, đóng mục rồi mới áp: người khác vừa chấp nhận thì 409; áp lỗi thì mở lại */
 export async function revertReview(reviewId: string, user: CurrentUser) {
   const { review, farm } = await loadPendingReview(reviewId, user)
   let current: object = review.new_values
@@ -149,7 +141,7 @@ export async function revertReview(reviewId: string, user: CurrentUser) {
     if (review.group === 'thresholds') assertValidThresholds({ ...current, ...pickThresholds(review.old_values) } as Thresholds)
     else assertValidFuzzyTuning({ ...zone.fuzzy_tuning, ...pickFuzzyTuning(review.old_values) })
   }
-  // Camera chưa có vòng trước lần vẽ của Farm Owner: không có gì để trả về, chuyên gia vẽ lại thay vì hoàn tác
+  // Chưa có vòng trước: không có gì để trả về
   if (review.group === 'counting_ring' && !review.old_values.ring) {
     throw ConflictError('Camera chưa có vòng đếm trước thay đổi này, hãy vẽ lại vòng thay vì hoàn tác')
   }

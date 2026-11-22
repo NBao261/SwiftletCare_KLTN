@@ -12,10 +12,7 @@ import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import type { CurrentUser } from '@/types'
 import logger from '@/utils/logger.util'
 
-/**
- * VISION-FR-019 — lịch đếm của nhà: Domain Expert đặt hồ sơ theo mùa và khung tạm (Farm Owner làm thay khi farm chưa
- * có chuyên gia, BR-22); Farm Owner, Domain Expert và thợ của nhà xem. Lịch mới áp từ ngày hôm sau, ngày đã tính giữ khung cũ.
- */
+/** Lịch mới áp từ ngày hôm sau */
 
 const EMPTY: CountingSchedule = { profiles: [], temporary: [] }
 
@@ -25,7 +22,7 @@ function present(house: IHouse) {
   return {
     house_id: String(house._id),
     schedule: house.counting_schedule ?? EMPTY,
-    // Lần sửa gần nhất áp từ ngày này; null khi nhà chưa đặt lịch (dùng khung mặc định)
+    // null khi nhà chưa đặt lịch
     effective_from: history.at(-1)?.effective_from ?? null,
     default_windows: DEFAULT_WINDOWS,
     today: { date: today, ...windowsOn(scheduleOn(history, today), today) },
@@ -41,7 +38,6 @@ export async function getCountingSchedule(houseId: string, user: CurrentUser) {
   return present(house)
 }
 
-/** VISION-FR-019 — 400 khi lịch sai (countingSchedule.util); Farm Owner trên farm có chuyên gia thì mở mục duyệt (BR-22) */
 export async function updateCountingSchedule(houseId: string, user: CurrentUser, input: unknown, opts: ReviewApplyOptions = {}) {
   const { house, farm } = await assertHouseAccess(houseId, user)
   const schedule = parseCountingSchedule(input)
@@ -56,8 +52,7 @@ export async function updateCountingSchedule(houseId: string, user: CurrentUser,
   const overflow = house.counting_schedule_history.length - THRESHOLD_HISTORY_LIMIT
   if (overflow > 0) house.counting_schedule_history.splice(0, overflow)
   await house.save()
-  // Nút AI nhận khung mới ngay (áp từ ngày mai) để số trực tiếp theo đúng khung; mất kết nối thì nhận khi nối lại.
-  // Lịch đã lưu: gửi lỗi chỉ ghi log, không làm mất audit và thông báo (job 00:05 gửi lại)
+  // Gửi lỗi chỉ ghi log: lịch đã lưu, job 00:05 gửi lại
   try {
     await pushHouseCameraConfigs(house._id)
   } catch (err) {

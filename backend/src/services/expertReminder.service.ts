@@ -13,10 +13,9 @@ import type { CurrentUser } from '@/types'
 export const REMINDER_KINDS = ['alert', 'health_report', 'harvest_cycle'] as const
 export type ReminderKind = typeof REMINDER_KINDS[number]
 
-// Ghi có điều kiện: hai lần bấm cùng lúc chỉ một lần thành công
+// Có điều kiện: hai lần bấm cùng lúc chỉ một lần thành công
 const notYet = (id: string) => ({ _id: new Types.ObjectId(id), expert_reminded_at: { $exists: false } })
 
-/** Đánh dấu đã nhắc hoặc gỡ dấu (không gửi được thông báo nào) trên đúng collection của việc */
 function reminderMarks(model: typeof Alert | typeof HouseHealthReport | typeof HarvestCycle, id: string) {
   const collection = model.collection
   return {
@@ -25,10 +24,7 @@ function reminderMarks(model: typeof Alert | typeof HouseHealthReport | typeof H
   }
 }
 
-/**
- * Việc chỉ chuyên gia làm (nhóm C) mà Farm Owner nhắc được: farm, nơi, câu nhắc; `check` ném 400/409 khi không cần nhắc,
- * gọi SAU khi đã kiểm quyền để không lộ loại cảnh báo hay trạng thái mùa vụ của farm khác
- */
+/** Gọi sau khi kiểm quyền để không lộ trạng thái của farm khác */
 async function loadTask(kind: ReminderKind, id: string) {
   if (kind === 'alert') {
     const alert = await Alert.findById(id).select('farm_id house_id type expert_verdict').lean()
@@ -56,18 +52,13 @@ async function loadTask(kind: ReminderKind, id: string) {
   return {
     farmId: cycle.farm_id, houseId: cycle.house_id, what: 'nhờ viết kết luận mùa vụ', ...reminderMarks(HarvestCycle, id),
     check: () => {
-      // Chỉ chu kỳ đã đóng mới chờ kết luận (SF-06)
       if (cycle.status === 'OPEN') throw ConflictError('Chu kỳ chưa đóng, chưa cần kết luận')
       if (cycle.conclusion) throw ConflictError('Chuyên gia đã làm việc này')
     },
   }
 }
 
-/**
- * BR-22 (Report 3 4.2.15) — Farm Owner nhắc Domain Expert một việc chỉ chuyên gia làm (kết luận cảnh báo suy luận,
- * kết luận báo cáo sức khoẻ, kết luận mùa vụ): báo trong ứng dụng cho chuyên gia của farm, mỗi việc nhắc một lần.
- * Việc đã xong, farm chưa có chuyên gia hoặc đã nhắc → 409; không gửi được thông báo nào → 503 và lượt nhắc được trả lại.
- */
+/** Không gửi được thông báo nào → 503 và trả lại lượt nhắc */
 export async function remindExpert(user: CurrentUser, kind: ReminderKind, id: string) {
   const task = await loadTask(kind, id)
   const farm = await assertFarmAccess(String(task.farmId), user)

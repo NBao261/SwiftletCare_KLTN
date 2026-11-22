@@ -2,14 +2,10 @@ import { Farm } from '@/models/farm.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import logger from '@/utils/logger.util'
 
-/**
- * ANALYTICS-FR-013, DF-11 — thời tiết ngoài trời theo giờ của mỗi farm có toạ độ, lấy từ Open-Meteo.
- * Chỉ toạ độ rời hệ thống (Report 4 §10). Farm không có toạ độ hoặc lần gọi lỗi thì không ghi gì —
- * giá trị thiếu hiện là thiếu, không bao giờ là 0. Chỉ dùng để hiển thị và cho luật mưa BR-30 (C-6).
- */
-/** Dùng chung với bù thời tiết (weatherCompensation.service): staging hay proxy đặt một biến cho cả hai luồng */
+/** Chỉ toạ độ rời hệ thống. Thiếu thì để trống, không bao giờ 0 */
+/** Một biến cho cả hai luồng */
 export const OPEN_METEO_URL = () => process.env.OPEN_METEO_URL || 'https://api.open-meteo.com/v1/forecast'
-/** ponytail: Open-Meteo treo thì bỏ sau 10 giây, giờ sau gọi lại (hằng số kỹ thuật, Report 3 §4.5) */
+/** ponytail: bỏ sau 10 s, giờ sau gọi lại */
 export const WEATHER_FETCH_TIMEOUT_MS = 10_000
 const HOUR_MS = 3600_000
 
@@ -25,11 +21,7 @@ const valueAt = (arr: (number | null)[] | undefined, i: number) => {
   return typeof v === 'number' && Number.isFinite(v) ? v : undefined
 }
 
-/**
- * Lấy hôm qua và hôm nay của 1 farm rồi upsert các giờ đã qua (giờ sau ghi đè giờ trước — mất mạng
- * dưới 1 ngày vẫn bù được). Lượng mưa của Open-Meteo ở mốc T là tổng của giờ trước đó, nên bản ghi
- * `hour` = T − 1 giờ; nhiệt độ, độ ẩm là giá trị lúc cuối giờ đó. Trả số giờ đã ghi.
- */
+/** Mưa ở mốc T là tổng giờ trước nên bản ghi hour = T − 1 giờ */
 export async function fetchFarmWeather(farm: { _id: unknown; coordinates?: { lat: number; lng: number } }, now = new Date()): Promise<number> {
   if (!farm.coordinates) return 0
   const url = new URL(OPEN_METEO_URL())
@@ -68,7 +60,7 @@ export async function fetchFarmWeather(farm: { _id: unknown; coordinates?: { lat
   return ops.length
 }
 
-/** Gọi mỗi giờ từ jobs/weather.job.ts. Lỗi ở một farm không làm bỏ qua các farm sau */
+/** Lỗi ở một farm không bỏ qua farm sau */
 export async function fetchAllFarmsWeather(now = new Date()): Promise<number> {
   const farms = await Farm.find({ 'coordinates.lat': { $exists: true } }).select('coordinates').lean()
   let written = 0

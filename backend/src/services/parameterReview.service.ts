@@ -7,13 +7,12 @@ import type { IFarm } from '@/models/farm.model'
 import type { IZone } from '@/models/houseZone.model'
 import type { CurrentUser } from '@/types'
 
-/** Áp lại từ mục duyệt (chuyên gia hoàn tác): không báo Farm Owner hai lần, lịch sử chỉ hiện REVIEW_REVERTED */
+/** Không báo Farm Owner hai lần */
 export interface ReviewApplyOptions { fromReview?: boolean }
 
 const ZONE_GROUPS: ParameterGroup[] = ['thresholds', 'fuzzy', 'detection']
 const HOUSE_GROUPS: ParameterGroup[] = ['return_rate_drop', 'health_levels', 'counting_schedule']
 
-/** Đối tượng của thay đổi: Zone (kèm nhà), nhà, hoặc camera (kèm nhà) — theo nhóm tham số */
 export interface ReviewTarget {
   farm: IFarm
   zone?: Pick<IZone, '_id' | 'name'>
@@ -34,18 +33,7 @@ function targetOf(target: ReviewTarget, group: ParameterGroup) {
   return { id: target.camera._id, place: `Camera ${target.camera.device_id}` }
 }
 
-/**
- * Gọi SAU khi một thay đổi nhóm A (BR-22, Report 3 4.2.15) đã được áp dụng: ngưỡng, hệ số mờ, tham số phát hiện
- * của Zone; mức giảm tỷ lệ chim về, mức chỉ số sức khoẻ, lịch đếm của nhà; vòng đếm của camera. Cố tình không
- * import nơi áp giá trị để không tạo import vòng — phần hoàn lại nằm ở expertReview.service.
- *
- * EXPERT-FR-010, Report 3 §6.10:
- * - Farm Owner sửa trên farm có Domain Expert → mở 1 mục PENDING_REVIEW (báo chuyên gia trong ứng
- *   dụng); đã có mục đang chờ cùng đối tượng và nhóm thì chỉ cập nhật giá trị mới, giữ giá trị gốc;
- * - Domain Expert sửa cùng nhóm → mục đang chờ đóng ADJUSTED;
- * - farm chưa có chuyên gia, hoặc người sửa là Farm Technician (vòng đếm) → không mở gì.
- * Không throw: mục duyệt hỏng không được làm hỏng thay đổi đã áp dụng.
- */
+/** Gọi sau khi áp. Không import nơi áp giá trị để tránh import vòng (hoàn lại ở expertReview.service). Không throw */
 export async function trackParameterChange(
   target: ReviewTarget,
   user: CurrentUser,
@@ -63,7 +51,7 @@ export async function trackParameterChange(
       )
       return
     }
-    // Kỹ thuật viên vẽ lại vòng tại nhà: mục đang chờ ghi vòng mới, để chuyên gia duyệt đúng vòng đang chạy
+    // Chuyên gia duyệt đúng vòng đang chạy
     if (user.role === 'FARM_TECHNICIAN') {
       await ParameterReview.updateOne({ target_id: targetId, group, status: 'PENDING_REVIEW' }, { new_values: after })
       return
@@ -75,7 +63,7 @@ export async function trackParameterChange(
       { new_values: after, changed_by: user._id },
     )
     if (await updateOpen()) return
-    // Lưu lại đúng giá trị đang có (hoặc đưa về mặc định khi đã ở mặc định): không có gì để chuyên gia duyệt
+    // Không đổi gì thì không có gì để duyệt
     if (JSON.stringify(before) === JSON.stringify(after)) return
 
     let review
@@ -85,10 +73,10 @@ export async function trackParameterChange(
         farm_id: farm._id, group, old_values: before, new_values: after, changed_by: user._id,
       })
     } catch (err) {
-      // 2 lần sửa đầu tiên tới cùng lúc: lần kia vừa mở mục (unique index) — ghi giá trị mới vào mục đó
+      // 2 lần sửa đầu tới cùng lúc: ghi vào mục lần kia vừa mở
       if ((err as { code?: number }).code !== 11000) throw err
       if (await updateOpen()) return
-      // Trùng khoá mà không có mục nào của đối tượng này: chỉ mục cũ { zone_id, group } còn trong DB
+      // Chỉ mục cũ { zone_id, group } còn trong DB
       throw new Error('Chỉ mục cũ của mục duyệt còn: chạy npm run migrate:review-targets trước khi khởi động backend')
     }
     await notifyExpertsOfReview(farm._id, user, group, place, String(review._id))
@@ -107,7 +95,7 @@ export const GROUP_LABEL: Record<ParameterGroup, string> = {
   counting_ring: 'vòng đếm',
 }
 
-/** EXPERT-FR-007 — mục duyệt mới chỉ báo trong ứng dụng cho Domain Expert của farm */
+/** EXPERT-FR-007 */
 async function notifyExpertsOfReview(farmId: unknown, owner: CurrentUser, group: ParameterGroup, place: string, reviewId: string) {
   const [experts, author] = await Promise.all([
     findFarmExperts(farmId), User.findById(owner._id).select('full_name').lean(),

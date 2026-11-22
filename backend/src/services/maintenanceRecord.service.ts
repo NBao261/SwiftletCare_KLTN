@@ -2,7 +2,7 @@ import { SensorNode } from '@/models/device.model'
 import { MaintenancePlan, type MaintenanceEquipment } from '@/models/maintenancePlan.model'
 import { WorkOrder, type IWorkOrder } from '@/models/workOrder.model'
 
-/** Bơm và quạt có bộ đếm theo relay (BR-45); thiết bị khác bảo trì theo lịch */
+/** BR-45 */
 export const LOAD_OF_EQUIPMENT: Partial<Record<MaintenanceEquipment, 'misting' | 'ventilation'>> = {
   PUMP: 'misting',
   FAN: 'ventilation',
@@ -10,13 +10,7 @@ export const LOAD_OF_EQUIPMENT: Partial<Record<MaintenanceEquipment, 'misting' |
 
 const DAY_MS = 86_400_000
 
-/**
- * OPS-FR-008 — Farm Owner duyệt một Work Order phòng ngừa là một lần ghi bảo trì: đặt bộ đếm của tải về 0 (kế hoạch
- * theo giờ chạy hoặc số lần đóng cắt), tính điểm đến hạn kế tiếp (kế hoạch theo lịch; hiệu chuẩn thì là ngày hiệu
- * chuẩn kế tiếp), ghi vào lịch sử, và đưa kế hoạch về SCHEDULED khi không còn Work Order phòng ngừa nào đang mở
- * (SM-20). Gọi sau khi Work Order đã CLOSED; tách khỏi maintenance.service để workOrder.service gọi được mà không
- * import vòng.
- */
+/** Tách khỏi maintenance.service để workOrder.service gọi được mà không import vòng */
 export async function recordMaintenance(wo: IWorkOrder, userId: string, now = new Date()): Promise<void> {
   if (!wo.plan_id) return
   const plan = await MaintenancePlan.findById(wo.plan_id)

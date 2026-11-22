@@ -19,12 +19,11 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/** OPS-FR-006, Report 3 §4.5 — kế hoạch còn đến hạn quá chừng này thì báo Farm Owner (OVERDUE) */
+/** Report 3 §4.5 */
 export const MAINTENANCE_GRACE_DAYS = 7
 const DAY_MS = 86_400_000
 const VN_OFFSET_MS = 7 * 3600_000
 
-/** Hết ngày hôm nay theo giờ Việt Nam: kế hoạch theo lịch "đến hạn hôm nay" là có điểm đến hạn trước lúc này */
 function endOfVnDay(now: Date): Date {
   const vnDayStart = Math.floor((now.getTime() + VN_OFFSET_MS) / DAY_MS) * DAY_MS
   return new Date(vnDayStart + DAY_MS - VN_OFFSET_MS)
@@ -47,7 +46,6 @@ export interface MaintenancePlanInput {
 
 const invalid = (message: string) => new AppError(422, 'VALIDATION_ERROR', message)
 
-/** OPS-FR-005 — bơm, quạt tính theo giờ chạy hoặc số lần đóng cắt; thiết bị khác theo lịch; khoảng phải dương */
 function assertPlanShape(equipment: MaintenanceEquipment, basis: MaintenanceBasis, interval: number): void {
   const counted = equipment in LOAD_OF_EQUIPMENT
   if (counted && basis === 'CALENDAR') throw invalid('Bơm và quạt bảo trì theo giờ chạy hoặc số lần đóng cắt')
@@ -55,16 +53,14 @@ function assertPlanShape(equipment: MaintenanceEquipment, basis: MaintenanceBasi
   if (!(interval > 0)) throw invalid('Khoảng bảo trì phải lớn hơn 0')
 }
 
-/** Điểm đến hạn của kế hoạch theo lịch; `interval` lớn tới mức ngày vượt giới hạn của Date → 422, không lưu Invalid Date */
+/** interval quá lớn → 422, không lưu Invalid Date */
 function calendarDueFrom(from: Date, interval: number): Date {
   const due = new Date(from.getTime() + interval * DAY_MS)
   if (Number.isNaN(due.getTime())) throw invalid('Khoảng bảo trì quá lớn')
   return due
 }
 
-// ── Kế hoạch (OPS-FR-005) ───────────────────────────────────────────────────
-
-/** Farm Owner, Domain Expert theo farm; Farm Technician theo nhà được giao (chỉ đọc) */
+/** Farm Technician chỉ đọc */
 async function findPlanWithAccess(id: string, user: CurrentUser): Promise<IMaintenancePlan> {
   const plan = await MaintenancePlan.findById(id)
   if (!plan) throw NotFoundError('Không tìm thấy kế hoạch bảo trì')
@@ -100,13 +96,12 @@ export async function listPlans(
   return { records, total, page, limit }
 }
 
-/** OPS-FR-006 — kế hoạch DUE và OVERDUE, quá hạn trước, kèm Work Order phòng ngừa đang mở */
 export async function listDuePlans(
   user: CurrentUser, query: { farmId?: string; houseId?: string; page?: number; limit?: number },
 ): Promise<{ records: Array<Record<string, unknown> & { open_work_orders: string[] }>; total: number; page: number; limit: number }> {
   const filter = await scopeFilter(user, query)
   filter.state = { $in: ['DUE', 'OVERDUE'] }
-  // Mặc định 100 dòng: mỗi nhà có tối đa một kế hoạch cho mỗi loại thiết bị, nên một trang thường là đủ
+  // Mỗi nhà tối đa 1 kế hoạch mỗi loại nên một trang thường đủ
   const { page, skip, limit } = paginate(query.page, query.limit, { defaultLimit: 100 })
   const [plans, total] = await Promise.all([
     MaintenancePlan.find(filter).sort({ state: -1, due_since: 1, _id: 1 }).skip(skip).limit(limit).lean(),
@@ -122,8 +117,7 @@ export async function listDuePlans(
 export async function createPlan(user: CurrentUser, input: MaintenancePlanInput, now = new Date()) {
   const { house, farm } = await assertHouseAccess(input.house_id, user)
   assertPlanShape(input.equipment, input.basis, input.interval)
-  // OPS-FR-005 — một kế hoạch cho mỗi nhà và loại thiết bị: hai kế hoạch bơm (hay quạt) dùng chung một bộ đếm của tải,
-  // ghi bảo trì theo kế hoạch này sẽ đặt lại bộ đếm của kế hoạch kia
+  // Hai kế hoạch cùng tải dùng chung bộ đếm: ghi bảo trì cái này sẽ reset cái kia
   if (await MaintenancePlan.exists({ house_id: house._id, equipment: input.equipment, state: { $ne: 'RETIRED' } })) {
     throw ConflictError('Nhà này đã có kế hoạch cho loại thiết bị này, hãy sửa kế hoạch đó')
   }
@@ -131,7 +125,6 @@ export async function createPlan(user: CurrentUser, input: MaintenancePlanInput,
     farm_id: farm._id, house_id: house._id, equipment: input.equipment, basis: input.basis, interval: input.interval,
     checklist_template: input.checklist_template.map(i => i.trim()).filter(Boolean),
     source: input.source.trim(), note: input.note?.trim() || undefined, created_by: user._id, created_at: now,
-    // SM-20 — kế hoạch theo lịch có điểm đến hạn đầu ngay khi tạo
     ...(input.basis === 'CALENDAR' && { next_due_at: calendarDueFrom(now, input.interval) }),
   })
   await logAction(user._id, 'MAINTENANCE_PLAN_CREATED', 'maintenance_plan', String(plan._id), {
@@ -163,10 +156,7 @@ export async function updatePlan(
   return plan
 }
 
-/**
- * SM-20 — xoá kế hoạch: RETIRED; Work Order phòng ngừa chưa làm xong bị huỷ và cảnh báo `MAINTENANCE_DUE` của kế hoạch
- * không còn Work Order nào đang mở thì đóng, để không còn cảnh báo không ai đóng được (chỉ duyệt Work Order mới đóng nó).
- */
+/** Đóng MAINTENANCE_DUE không còn Work Order mở, không thì không ai đóng được */
 export async function retirePlan(id: string, user: CurrentUser) {
   const plan = await findPlanWithAccess(id, user)
   if (plan.state !== 'RETIRED') {
@@ -187,7 +177,6 @@ export async function retirePlan(id: string, user: CurrentUser) {
   return plan
 }
 
-/** Report 3 §2.4 — Domain Expert góp ý kế hoạch; Farm Owner được báo */
 export async function addComment(id: string, user: CurrentUser, text: string) {
   const plan = await findPlanWithAccess(id, user)
   plan.comments.push({ by: user._id as never, text: text.trim(), at: new Date() })
@@ -199,8 +188,6 @@ export async function addComment(id: string, user: CurrentUser, text: string) {
   return plan
 }
 
-// ── Đến hạn và quá hạn (OPS-FR-006, ALERT-FR-016) ───────────────────────────
-
 async function markDue(plan: IMaintenancePlan, now: Date): Promise<void> {
   if (plan.state !== 'SCHEDULED') return
   plan.state = 'DUE'
@@ -208,7 +195,6 @@ async function markDue(plan: IMaintenancePlan, now: Date): Promise<void> {
   await plan.save()
 }
 
-/** Kế hoạch theo giờ chạy hoặc số lần đóng cắt: mỗi controller của nhà có tải vượt khoảng → cảnh báo + Work Order */
 async function checkCountedPlan(plan: IMaintenancePlan, now: Date): Promise<number> {
   const load = LOAD_OF_EQUIPMENT[plan.equipment]
   if (!load) return 0
@@ -242,9 +228,8 @@ async function checkCountedPlan(plan: IMaintenancePlan, now: Date): Promise<numb
   return opened
 }
 
-/** Kế hoạch theo lịch: đến điểm đến hạn → cảnh báo của nhà + Work Order */
 async function checkCalendarPlan(plan: IMaintenancePlan, now: Date): Promise<number> {
-  // OPS-FR-006 — "đến hạn hôm nay thì báo lúc 07:00": so với hết ngày VN, không với giờ của lượt chạy
+  // So với hết ngày VN, không với giờ của lượt chạy
   if (!plan.next_due_at || plan.next_due_at >= endOfVnDay(now)) return 0
   if (await WorkOrder.exists({ plan_id: plan._id, is_open: true })) return 0
   await markDue(plan, now)
@@ -258,7 +243,7 @@ async function checkCalendarPlan(plan: IMaintenancePlan, now: Date): Promise<num
   return (await openPreventiveWorkOrder({ plan, title, description: message, alertId: alert?._id })) ? 1 : 0
 }
 
-/** OPS-FR-006 — còn đến hạn quá MAINTENANCE_GRACE_DAYS: OVERDUE và báo Farm Owner đúng 1 lần */
+/** Báo đúng 1 lần */
 async function escalateOverdue(now: Date): Promise<number> {
   const plans = await MaintenancePlan.find({
     state: 'DUE', due_since: { $lte: new Date(now.getTime() - MAINTENANCE_GRACE_DAYS * DAY_MS) }, overdue_notified_at: null,
@@ -279,10 +264,7 @@ async function escalateOverdue(now: Date): Promise<number> {
   return notified
 }
 
-/**
- * maintenanceDue.job — mỗi giờ: kế hoạch theo giờ chạy và số lần đóng cắt (bộ đếm do relayUsage.job cộng dồn, BR-45)
- * và kế hoạch quá hạn; `calendar` (07:00 giờ VN): kế hoạch theo lịch (Report 3 OPS-FR-006).
- */
+/** calendar: lượt 07:00 */
 export async function checkDuePlans(now = new Date(), opts: { calendar?: boolean } = {}) {
   const plans = await MaintenancePlan.find({
     state: { $in: ['SCHEDULED', 'DUE', 'OVERDUE'] },
@@ -299,11 +281,7 @@ export async function checkDuePlans(now = new Date(), opts: { calendar?: boolean
   return { opened, overdue: await escalateOverdue(now) }
 }
 
-/**
- * BR-40 — tỷ lệ bảo trì đúng hạn = Work Order phòng ngừa đóng trước lúc mở (điểm đến hạn) cộng MAINTENANCE_GRACE_DAYS /
- * Work Order phòng ngừa đến hạn, mở trong [from, to). Mẫu số chỉ gồm cái đã đóng hoặc đã quá hạn chót: cái còn trong
- * hạn chưa trễ, cái bị huỷ (kế hoạch bị xoá, hay đã có cái thay thế) không phải một lần đến hạn. null khi không có.
- */
+/** Mẫu số chỉ gồm cái đã đóng hoặc quá hạn chót; bị huỷ không tính. null khi không có */
 export async function onTimeMaintenanceRate(
   houseIds: Types.ObjectId[], from: Date, to: Date, now = new Date(),
 ): Promise<number | null> {

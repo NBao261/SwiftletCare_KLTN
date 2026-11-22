@@ -17,14 +17,7 @@ async function resolveOpen(filter: { node_id?: Types.ObjectId | null; zone_id?: 
   return modifiedCount
 }
 
-/**
- * ALERT-FR-010 — quét telemetry 2 giờ gần nhất của mọi thiết bị ONLINE: kẹt /
- * nhảy phi vật lý theo từng thiết bị, lệch giữa các thiết bị cùng Zone. Có phát
- * hiện → SENSOR_ANOMALY (MEDIUM, không gửi lại; dedup theo thiết bị);
- * hết phát hiện → tự đóng. Gọi từ jobs/sensorAnomaly.job.ts mỗi 10 phút.
- * ponytail: mỗi thiết bị 1 truy vấn ~720 mẫu — đủ cho vài chục thiết bị; nhiều
- * hơn thì gộp thành 1 aggregation theo node_id.
- */
+/** ponytail: 1 truy vấn ~720 mẫu mỗi thiết bị; nhiều thiết bị thì gộp 1 aggregation */
 export async function scanSensorAnomalies(now = new Date()): Promise<{ raised: number; resolved: number }> {
   const nodes = await SensorNode.find({ status: 'ONLINE', ...IN_SERVICE }).select('_id zone_id device_id').lean()
   const zones = await Zone.find({ _id: { $in: nodes.map(n => n.zone_id) } }).select('_id farm_id name').lean()
@@ -58,7 +51,7 @@ export async function scanSensorAnomalies(now = new Date()): Promise<{ raised: n
     byZone.set(String(zone._id), list)
   }
 
-  // Lệch giữa các thiết bị: cảnh báo cấp Zone (không gắn thiết bị nào — chưa biết cái nào sai)
+  // Cấp Zone: chưa biết thiết bị nào sai
   for (const [zoneId, list] of byZone) {
     if (list.length < 2) continue
     const zone = zoneById.get(zoneId)!

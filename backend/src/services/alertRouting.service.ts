@@ -6,11 +6,10 @@ import { createInAppNotification, dispatchAlertNotification, findRecipients } fr
 import { activeHouseTechnicianIds, activeTechnicianOnDuty } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
 
-/** BR-40, Report 3 §4.5 — thời gian người nhận đầu tiên có để xác nhận trước khi Farm Owner được báo (5–60, mặc định 15) */
+/** BR-40 (5–60) */
 export const ESCALATION_MIN = 15
 export const ESCALATION_MS = ESCALATION_MIN * 60_000
 
-/** Nhà của 1 cảnh báo: cảnh báo của nhà (camera đếm chim) hoặc nhà chứa zone */
 export async function findAlertHouse(alert: Pick<IAlert, 'house_id' | 'zone_id'>): Promise<IHouse | null> {
   if (alert.house_id) return House.findById(alert.house_id)
   if (!alert.zone_id) return null
@@ -20,18 +19,13 @@ export async function findAlertHouse(alert: Pick<IAlert, 'house_id' | 'zone_id'>
 
 const ownerIds = async (farmId: unknown): Promise<string[]> => (await findRecipients(String(farmId))).map(u => String(u._id))
 
-/**
- * ALERT-FR-017, BR-40 — người nhận cảnh báo mới: thợ đang trực của nhà (AUTH-FR-014); CRITICAL tới cả thợ lẫn
- * Farm Owner cùng lúc; nhà không có thợ thì Farm Owner. Ghi `routing` để job leo thang biết Farm Owner đã được
- * báo chưa. Cảnh báo suy luận còn tạo yêu cầu kiểm tra tại chỗ cho thợ (EXPERT-FR-021); chuyên gia được báo
- * trong ứng dụng ở dispatchAlertNotification (EXPERT-FR-007). Trả về id người nhận để createAlert gửi.
- */
+/** CRITICAL tới thợ và Farm Owner cùng lúc. Ghi routing để job leo thang biết Farm Owner đã được báo chưa */
 export async function routeNewAlert(alert: IAlert, opts: { awaitsVerdict: boolean }): Promise<string[]> {
   const house = await findAlertHouse(alert)
   const farm = house ? await Farm.findById(alert.farm_id).select('members') : null
   const technicianId = house && farm ? await activeTechnicianOnDuty(house, farm) : null
   const ownersNotified = !technicianId || alert.severity === 'CRITICAL'
-  // Tìm đủ người nhận rồi mới ghi `routing`: lỗi giữa chừng thì cảnh báo không mang định tuyến dở dang
+  // Tìm đủ người nhận rồi mới ghi: lỗi giữa chừng thì không có định tuyến dở dang
   const recipientIds = [...(technicianId ? [technicianId] : []), ...(ownersNotified ? await ownerIds(alert.farm_id) : [])]
 
   alert.routing = { ...(technicianId && { technician_id: technicianId as never }), owners_notified: ownersNotified }
@@ -41,13 +35,7 @@ export async function routeNewAlert(alert: IAlert, opts: { awaitsVerdict: boolea
   return recipientIds
 }
 
-/**
- * SM-01 — cảnh báo bị bác bỏ nhầm được chuyên gia xác nhận lại: báo lại như cảnh báo mới, cho thợ đang trực của nhà
- * lúc này (ALERT-FR-017) và cả Farm Owner. Ghi `owners_notified` để job leo thang không báo Farm Owner lần nữa
- * (BR-40: một lần); không tạo thêm yêu cầu kiểm tra tại chỗ. Giữ `technician_id` ban đầu: MTTA/MTTR theo thợ
- * (OPS-FR-009) tính từ lúc tạo nên thuộc về thợ được định tuyến lúc đó, không phải thợ trực lúc xác nhận lại.
- * Không tự lưu: nơi gọi lưu cùng lần đổi trạng thái.
- */
+/** Giữ technician_id ban đầu cho MTTA/MTTR (OPS-FR-009). Không tự lưu: nơi gọi lưu cùng lần đổi trạng thái */
 export async function rerouteReconfirmedAlert(alert: IAlert): Promise<string[]> {
   const house = await findAlertHouse(alert)
   const farm = house ? await Farm.findById(alert.farm_id).select('members') : null
@@ -58,11 +46,7 @@ export async function rerouteReconfirmedAlert(alert: IAlert): Promise<string[]> 
   return recipientIds
 }
 
-/**
- * ALERT-FR-015 — người nhận lần gửi lại: những ai đã nhận lần đầu. Farm Owner đã nhận bản leo thang (BR-40) thì
- * không nhận thêm bản "Nhắc lại" cùng lúc. Thợ bị gỡ khỏi nhà, khỏi farm hay bị khoá từ lúc đó thì thôi
- * (AUTH-FR-013). Cảnh báo trước G-21 (không có `routing`) gửi Farm Owner như cũ.
- */
+/** Farm Owner đã nhận bản leo thang thì không nhận "Nhắc lại". Cảnh báo trước G-21 gửi Farm Owner */
 export async function repeatRecipientIds(alert: IAlert): Promise<string[] | undefined> {
   if (!alert.routing) return undefined
   const technician = alert.routing.technician_id && await stillHouseTechnician(alert, String(alert.routing.technician_id))
@@ -78,10 +62,7 @@ async function stillHouseTechnician(alert: IAlert, technicianId: string): Promis
   return !!house && !!farm && (await activeHouseTechnicianIds(house, farm)).includes(technicianId)
 }
 
-/**
- * BR-40 — cảnh báo thợ chưa xác nhận sau ESCALATION_MIN được báo Farm Owner đúng 1 lần (đánh dấu trước rồi mới
- * gửi: 2 lượt job chồng nhau chỉ 1 lượt gửi). Cảnh báo đã xác nhận, bác bỏ hoặc đã đóng thì không leo thang.
- */
+/** Đánh dấu trước rồi mới gửi: 2 lượt job chồng nhau chỉ 1 lượt gửi */
 export async function escalateUnacknowledgedAlerts(now = new Date()): Promise<number> {
   const due = await Alert.find({
     status: 'ACTIVE',
@@ -105,10 +86,7 @@ export async function escalateUnacknowledgedAlerts(now = new Date()): Promise<nu
   return sent
 }
 
-/**
- * EXPERT-FR-021 — cảnh báo suy luận ở nhà có thợ: đúng 1 yêu cầu kiểm tra tại chỗ cho thợ đang trực, báo trong
- * ứng dụng. Gọi 1 lần lúc tạo cảnh báo (lần gặp lại cùng sự cố bị dedup, không tạo thêm).
- */
+/** Gọi 1 lần lúc tạo cảnh báo */
 async function requestOnsiteCheck(alert: IAlert, technicianId: string): Promise<void> {
   const check = { technician_id: technicianId as never, requested_at: new Date() }
   alert.onsite_checks = [check]
@@ -120,7 +98,7 @@ async function requestOnsiteCheck(alert: IAlert, technicianId: string): Promise<
       ref: { kind: 'alert', id: String(alert._id) },
     })
   } catch (err) {
-    // Yêu cầu đã lưu trong cảnh báo; thợ vẫn thấy khi mở cảnh báo
+    // Yêu cầu đã lưu trong cảnh báo; thợ vẫn thấy
     logger.warn('Báo yêu cầu kiểm tra tại chỗ thất bại', { alertId: String(alert._id), err })
   }
 }
