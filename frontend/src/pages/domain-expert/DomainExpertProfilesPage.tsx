@@ -30,7 +30,8 @@ const STATUS_FILTERS: { value: ConfigProfileStatus | 'ALL'; label: string }[] = 
 ]
 
 export default function DomainExpertProfilesPage() {
-  const { isExpert } = useExpertDecisionRights()
+  // BR-22 (Report 3 4.2.15) — Farm Owner soạn bản nháp, chỉ chuyên gia duyệt
+  const { isExpert, canEditParameters, ownerNeedsExpert, farmKnown } = useExpertDecisionRights()
   const { selectedFarmId } = useZoneStore()
   const farmId = selectedFarmId ?? undefined
 
@@ -61,7 +62,7 @@ export default function DomainExpertProfilesPage() {
         pushToast('Đã cập nhật hồ sơ.', 'success')
       } else {
         await createMut.mutateAsync(input)
-        pushToast('Đã tạo hồ sơ bản nháp.', 'success')
+        pushToast(ownerNeedsExpert ? t('Đã tạo hồ sơ bản nháp. Chuyên gia duyệt rồi bạn mới áp được.') : t('Đã tạo hồ sơ bản nháp.'), 'success')
       }
       setDrawerOpen(false)
     } catch (err) {
@@ -128,7 +129,9 @@ export default function DomainExpertProfilesPage() {
             onApprove={() => handleApprove(p._id)}
             onArchive={() => handleArchive(p._id)}
             disabled={isPending}
-            readOnly={!isExpert}
+            canEditDraft={canEditParameters}
+            canApprove={isExpert}
+            farmHasExpert={isExpert || ownerNeedsExpert || !farmKnown}
           />
         ))}
       </div>
@@ -143,7 +146,7 @@ export default function DomainExpertProfilesPage() {
         title={t('Hồ sơ cấu hình')}
         description={t('Bộ ngưỡng và hệ số mẫu để áp cho nhiều nhà')}
         help={t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
-        action={isExpert ? (
+        action={canEditParameters ? (
           <Button variant="primary" size="sm" onClick={openCreate}>
             <Plus className="w-3.5 h-3.5" /> {t('Tạo hồ sơ')}
           </Button>

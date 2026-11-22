@@ -40,7 +40,8 @@ function RowError({ error }: { error: ScheduleError | null }) {
 }
 
 export default function DomainExpertCountingSchedulePage() {
-  const { canDecide } = useExpertDecisionRights()
+  // BR-22 (Report 3 4.2.15) — Farm Owner đặt được; farm có chuyên gia thì chuyên gia duyệt sau
+  const { canEditParameters } = useExpertDecisionRights()
   const { t, date } = useTranslation(countingScheduleDict)
   const apiErrorMessage = useApiErrorMessage()
   const push = useToastStore(state => state.push)
@@ -88,8 +89,8 @@ export default function DomainExpertCountingSchedulePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* BR-22 — Farm Owner chỉ sửa khi farm chưa có chuyên gia */}
-      <fieldset disabled={!canDecide} className="contents">
+      {/* BR-22 — Farm Owner sửa được; farm có chuyên gia thì chuyên gia duyệt sau */}
+      <fieldset disabled={!canEditParameters} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
         {/* DE-07: Khung đang áp hôm nay — 1 dòng gọn trên đầu */}
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 py-2.5">

@@ -2,6 +2,7 @@
 
 // Giai đoạn nhà dùng chung với hồ sơ cấu hình (G-24), không khai báo lại để barrel `@/types` không xuất trùng
 import type { HouseStage } from '@/types/expert/profile.types';
+import type { SiteCause } from '@/types/workOrder.types';
 
 // NOT_COMPUTED: chưa xét ngày hôm nay · INSUFFICIENT_DATA: đã xét nhưng thiếu dữ liệu
 export type OverviewStatusReason = 'NOT_COMPUTED' | 'INSUFFICIENT_DATA';
@@ -46,6 +47,8 @@ export interface HouseComparisonRow {
   energy_kwh: number | null;
   energy: { misting_kwh: number | null; ventilation_kwh: number | null };
   last_cycle_yield_g: number | null;
+  // ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tìm thấy tại chỗ trong kỳ (chỉ nguyên nhân đã gặp); không để sắp xếp
+  site_causes?: Partial<Record<SiteCause, number>>;
   // Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004)
   simulated: boolean;
 }

@@ -139,7 +139,7 @@ describe('summarizeFarmHouses', () => {
     alerts: severities.map(severity => ({ severity })),
   })
 
-  it('chỉ cộng nhà của farm đang chọn, quy cảnh báo về 3 cấp', () => {
+  it('chỉ cộng nhà của farm đang chọn, đếm mọi cảnh báo của các nhà đó', () => {
     const totals = summarizeFarmHouses([house('f1', 'ALERT', ['CRITICAL', 'MEDIUM']), house('f1', 'NORMAL', ['LOW']), house('f2', 'ALERT', ['HIGH'])], 'f1')
     expect(totals.houses).toBe(2)
     expect(totals.faultHouses).toBe(1)

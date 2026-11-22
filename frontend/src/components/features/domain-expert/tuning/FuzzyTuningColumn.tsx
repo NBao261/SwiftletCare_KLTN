@@ -1,5 +1,6 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Toggle } from '@/components/ui'
+import InfoTip from '@/components/ui/InfoTip'
 import { DEFAULT_FUZZY_TUNING } from '@/constants/thresholds'
 import { t } from '@/i18n'
 import { cn } from '@/lib/cn'
@@ -141,7 +142,11 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
         {/* ENV-FR-022 — cờ lọc nhiễu đầu vào */}
         <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
           <div>
-            <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu số đo')}</p>
+            {/* Câu ngắn trên thẻ (C-07), giải thích đầy đủ của W-20 trong nút (i) */}
+            <p className="flex items-center gap-1 text-sm font-semibold text-charcoal">
+              {t('Lọc nhiễu số đo')}
+              <InfoTip>{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ.')}</InfoTip>
+            </p>
             <p className="text-small text-warmGray mt-1">{t('Làm mượt số đo để rơ-le ít đóng cắt vì nhiễu')}</p>
           </div>
           <Toggle

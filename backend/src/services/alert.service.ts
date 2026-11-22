@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import { Alert, IAlert, OPEN_ALERT_STATUSES, type OnsiteCheck } from '@/models/alert.model'
+import { Alert, IAlert, OPEN_ALERT_STATUSES, incidentKeyOf, type OnsiteCheck } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
@@ -64,10 +64,11 @@ export const OPEN_STATUSES: AlertStatus[] = OPEN_ALERT_STATUSES
 const IN_FORCE_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED']
 
 /**
- * ALERT-FR-001, BR-15 — mức độ mặc định theo loại sự kiện. Thiết bị có thể gửi kèm
- * severity riêng, khi đó giá trị gửi lên được ưu tiên (trừ loại không leo thang, xem createAlert).
+ * ALERT-FR-001, BR-15 — mỗi loại có đúng một mức, và chỉ backend đặt mức: mức quyết định ai nhận và khi nào (CRITICAL
+ * tới cả Farm Owner ngay và vượt giờ im lặng, CRITICAL và HIGH được gửi lại — ALERT-FR-006, 015, 017), nên thiết bị
+ * không được tự nâng mức cảnh báo của chính nó. `severity` trong tin MQTT chỉ để tham khảo, bị bỏ qua (Report 4 §7.2).
  */
-const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
+export const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   RS485_BUS_FAILURE: 'CRITICAL',
   UNEXPECTED_RESTART: 'HIGH',
   SPEAKER_FAILURE:   'HIGH',
@@ -119,9 +120,6 @@ export const DEVICE_ALERT_TYPES: AlertType[] = [
 /** Loại nút AI đếm chim được tự báo qua `vision/alert` (THREAT-FR-010: tốc độ xử lý < 10 FPS) */
 const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 
-/** Cảnh báo không bao giờ được ở mức gửi lại (ALERT-FR-015): mọi loại suy luận + vượt ngưỡng (ALERT-FR-012) */
-const NEVER_ESCALATE = new Set<AlertType>([...INFERRED_ALERT_TYPES, 'THRESHOLD_BREACH'])
-
 /** Tên loại cảnh báo firmware cũ còn gửi → tên hiện hành (SRS 3.1.0 không giữ alias nào khác) */
 const ALERT_TYPE_ALIAS: Record<string, AlertType> = {
   BIRD_PANIC:   'NOISE_ANOMALY',        // firmware < 1.3.0
@@ -141,7 +139,6 @@ export interface CreateAlertInput {
   houseId?: string
   nodeId?: string
   type: AlertType
-  severity?: AlertSeverity
   title: string
   message: string
   snapshotUrl?: string
@@ -151,75 +148,81 @@ export interface CreateAlertInput {
 }
 
 /**
+ * ALERT-FR-008 — sự cố còn cảnh báo mở (`ACTIVE`, `ACKNOWLEDGED` hoặc `DISMISSED`): chỉ cập nhật lần thấy cuối và đếm
+ * thêm một lần (tối đa mỗi ALERT_SEEN_UPDATE_MS), không tạo bản ghi và không gửi thông báo lại. Trả `true` khi đã gộp.
+ */
+async function absorbIntoOpenAlert(incidentKey: string, input: CreateAlertInput, now: Date): Promise<boolean> {
+  const open = await Alert.findOne({ incident_key: incidentKey, status: { $in: OPEN_STATUSES } })
+    .select('_id created_at last_seen_at').lean()
+  if (!open) return false
+  // Giữ `eventId` mới nhất: bản QoS 1 giao lại của lần báo này cũng bị bỏ
+  if (input.eventId) await Alert.updateOne({ _id: open._id }, { $set: { event_id: input.eventId } })
+  const lastSeen = (open.last_seen_at ?? open.created_at).getTime()
+  if (now.getTime() - lastSeen >= ALERT_SEEN_UPDATE_MS) {
+    await Alert.updateOne({ _id: open._id }, {
+      $set: { last_seen_at: now, message: input.message, metadata: input.metadata, ...(input.details && { details: input.details }) },
+      $inc: { occurrence_count: 1 },
+    })
+  }
+  logger.debug('Alert bị dedup (ALERT-FR-008)', { type: input.type, zoneId: input.zoneId })
+  return true
+}
+
+/** Lỗi trùng khoá của chỉ mục `incident_key` (không phải của `event_id`) */
+function isDuplicateIncident(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false
+  const { code, keyPattern } = err as { code?: unknown; keyPattern?: Record<string, unknown> }
+  return code === 11000 && keyPattern !== undefined && 'incident_key' in keyPattern
+}
+
+/**
  * Alert Engine — điểm vào DUY NHẤT để tạo cảnh báo (ALERT-FR-001/002/003/008).
  * Mọi nguồn (MQTT từ ESP32/RPi, job phát hiện offline, kiểm tra ngưỡng telemetry)
  * đều đi qua đây để đảm bảo dedup + gửi thông báo + phát socket nhất quán.
  *
- * Trả về `null` khi bị dedup: sự cố cùng farm/zone/thiết bị/loại vẫn còn alert
- * đang mở (ACTIVE hoặc ACKNOWLEDGED, không giới hạn thời gian) — khi đó chỉ cập
+ * Trả về `null` khi bị dedup: sự cố cùng khoá (`incidentKeyOf`) vẫn còn alert đang mở
+ * (ACTIVE, ACKNOWLEDGED hoặc DISMISSED, không giới hạn thời gian) — khi đó chỉ cập
  * nhật `last_seen_at` + `occurrence_count` của alert đó, không tạo bản ghi và
  * không gửi thông báo lại.
  */
 export async function createAlert(input: CreateAlertInput): Promise<IAlert | null> {
-  // Loại không được gửi lại (ALERT-FR-012 + cảnh báo suy luận) giữ tối đa MEDIUM dù
-  // nguồn nào gửi mức cao hơn — đặt ở điểm vào duy nhất để không producer nào
-  // (firmware cấu hình sai, job mới) làm cảnh báo có thể báo nhầm bị gửi lại.
-  const requested = input.severity ?? DEFAULT_SEVERITY[input.type]
-  const severity: AlertSeverity =
-    NEVER_ESCALATE.has(input.type) && (requested === 'CRITICAL' || requested === 'HIGH') ? 'MEDIUM' : requested
+  const severity = DEFAULT_SEVERITY[input.type]
   const now = new Date()
 
   // Farm đã xoá mềm mà thiết bị vẫn cắm điện: không sinh cảnh báo mà
   // không ai mở được. Pre-hook findOne của Farm đã loại is_deleted.
   if (!(await Farm.exists({ _id: input.farmId }))) return null
 
-  // ponytail: tìm-rồi-tạo không nguyên tử — 2 mẫu cùng sự cố tới đồng thời có
-  // thể ra 1 bản trùng; thêm unique partial index nếu thấy xảy ra thật.
-  const open = await Alert.findOne({
-    farm_id: input.farmId,
-    zone_id: input.zoneId,
-    house_id: input.houseId,
-    node_id: input.nodeId,
-    type: input.type,
-    // THREAT-FR-014 — bơm hỏng và quạt hỏng trên cùng controller là hai sự cố, mỗi tải một cảnh báo
-    ...(input.type === 'ACTUATOR_FAULT' && typeof input.details?.load === 'string' && { 'details.load': input.details.load }),
-    // OPS-FR-006 — mỗi kế hoạch bảo trì đến hạn là một sự cố riêng, kể cả hai kế hoạch trên cùng controller; cảnh báo
-    // theo mốc mặc định (không kế hoạch, ALERT-FR-016) không gộp vào cảnh báo của một kế hoạch trên cùng controller
-    ...(input.type === 'MAINTENANCE_DUE' && {
-      'details.plan_id': typeof input.details?.plan_id === 'string' ? input.details.plan_id : { $exists: false },
-    }),
-    status: { $in: OPEN_STATUSES },
-  }).select('_id created_at last_seen_at').lean()
-  if (open) {
-    // Giữ `eventId` mới nhất: bản QoS 1 giao lại của lần báo này cũng bị bỏ
-    if (input.eventId) await Alert.updateOne({ _id: open._id }, { $set: { event_id: input.eventId } })
-    const lastSeen = (open.last_seen_at ?? open.created_at).getTime()
-    if (now.getTime() - lastSeen >= ALERT_SEEN_UPDATE_MS) {
-      await Alert.updateOne({ _id: open._id }, {
-        $set: { last_seen_at: now, message: input.message, metadata: input.metadata, ...(input.details && { details: input.details }) },
-        $inc: { occurrence_count: 1 },
-      })
-    }
-    logger.debug('Alert bị dedup (ALERT-FR-008)', { type: input.type, zoneId: input.zoneId })
+  const incidentKey = incidentKeyOf({
+    type: input.type, farm_id: input.farmId, zone_id: input.zoneId, house_id: input.houseId, node_id: input.nodeId,
+    details: input.details,
+  })
+  if (await absorbIntoOpenAlert(incidentKey, input, now)) return null
+
+  let alert: IAlert
+  try {
+    alert = await Alert.create({
+      last_seen_at: now,
+      farm_id:      input.farmId,
+      zone_id:      input.zoneId,
+      house_id:     input.houseId,
+      node_id:      input.nodeId,
+      type:         input.type,
+      severity,
+      title:        input.title,
+      message:      input.message,
+      snapshot_url: input.snapshotUrl,
+      metadata:     input.metadata,
+      details:      input.details,
+      event_id:     input.eventId,
+      status:       'ACTIVE',
+    })
+  } catch (err) {
+    // Tin khác của cùng sự cố vừa tạo cảnh báo giữa lúc tìm và lúc tạo: chỉ mục duy nhất chặn bản thứ hai (ALERT-FR-008)
+    if (!isDuplicateIncident(err)) throw err
+    await absorbIntoOpenAlert(incidentKey, input, now)
     return null
   }
-
-  const alert = await Alert.create({
-    last_seen_at: now,
-    farm_id:      input.farmId,
-    zone_id:      input.zoneId,
-    house_id:     input.houseId,
-    node_id:      input.nodeId,
-    type:         input.type,
-    severity,
-    title:        input.title,
-    message:      input.message,
-    snapshot_url: input.snapshotUrl,
-    metadata:     input.metadata,
-    details:      input.details,
-    event_id:     input.eventId,
-    status:       'ACTIVE',
-  })
 
   const wsAlert = {
     alertId:     String(alert._id),
@@ -277,7 +280,6 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
   const common = {
     eventId,
     type:        type as AlertType,
-    severity:    message.severity as AlertSeverity | undefined, // createAlert giới hạn mức cho loại không leo thang
     message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
     snapshotUrl: message.snapshotUrl as string | undefined,
     metadata:    { raw: message } as Record<string, unknown>,
@@ -441,7 +443,7 @@ async function keepThresholdAlertAlive(zoneId: string, nodeId: string, metrics: 
 export interface ListAlertsQuery {
   farmId?: string
   zoneId?: string
-  /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8 */
+  /** ALERT-FR-007 — cảnh báo của một nhà: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà */
   houseId?: string
   status?: string
   /** ALERT-FR-007 — chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED); `status` đi kèm thì `status` thắng */
@@ -488,7 +490,13 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
     filter.farm_id = query.farmId
   }
   if (query.zoneId) filter.zone_id = query.zoneId
-  if (query.houseId) filter.house_id = query.houseId
+  if (query.houseId) {
+    // ALERT-FR-007 — lọc theo nhà gồm cảnh báo của cả nhà (camera) và của các Zone trong nhà; $and để không đè $or
+    // phạm vi của thợ
+    const zoneIds = await Zone.find({ house_id: query.houseId }).distinct('_id')
+    const house = { $or: [{ house_id: query.houseId }, { zone_id: { $in: zoneIds } }] }
+    filter.$and = [...((filter.$and as unknown[] | undefined) ?? []), house]
+  }
   if (query.status) filter.status = query.status
   else if (query.open) filter.status = { $in: IN_FORCE_STATUSES }
   if (query.severity) filter.severity = query.severity

@@ -339,6 +339,32 @@ describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
     await request(app).get(`/farms/${farm._id}/comparison?sort=score`).set('Authorization', `Bearer ${token}`).expect(422)
     await request(app).get(`/farms/${farm._id}/comparison?from=${to.toISOString()}&to=${from.toISOString()}`).set('Authorization', `Bearer ${token}`).expect(400)
   })
+
+  it('nguyên nhân tại chỗ đếm theo loại, mỗi cảnh báo một lần, nguyên nhân của Work Order thắng (ALERT-FR-018, BR-44)', async () => {
+    const { farm, owner, token, house, zone, zone2 } = await seedFarm()
+    const to = new Date()
+    const by = { by: owner._id, at: to, photos: [] }
+    const base = { farm_id: farm._id, severity: 'MEDIUM', title: 't', message: 'm', status: 'RESOLVED', created_at: new Date(to.getTime() - DAY) }
+    const [, pumpOverride] = await Alert.create([
+      { ...base, zone_id: zone._id, type: 'MISTING_INEFFECTIVE', site_cause: { cause: 'NOZZLE', ...by } },
+      { ...base, zone_id: zone._id, type: 'ACTUATOR_FAULT', site_cause: { cause: 'OTHER', ...by } },
+      { ...base, zone_id: zone._id, type: 'SENSOR_FAULT', site_cause: { cause: 'NOZZLE', ...by } },
+      { ...base, zone_id: zone._id, type: 'SPEAKER_FAILURE' },
+      { ...base, zone_id: zone2._id, type: 'SENSOR_FAULT', site_cause: { cause: 'SENSOR', ...by } },
+    ])
+    // Work Order ghi nguyên nhân khác lần xác nhận: tính nguyên nhân của Work Order, không tính hai lần
+    await WorkOrder.create({
+      farm_id: farm._id, house_id: house._id, zone_id: zone._id, alert_id: pumpOverride._id, origin: 'ALERT', title: 'Sửa bơm',
+      status: 'CLOSED', is_open: false, cause: 'PUMP', closed_at: to,
+    })
+
+    const q = `from=${new Date(to.getTime() - 30 * DAY).toISOString()}&to=${to.toISOString()}`
+    const rows = (await request(app).get(`/farms/${farm._id}/comparison?${q}`).set('Authorization', `Bearer ${token}`).expect(200)).body.data.rows
+    const of = (id: unknown) => rows.find((r: { house_id: string }) => r.house_id === String(id)).site_causes
+    expect(of(house._id)).toEqual({ NOZZLE: 2, PUMP: 1 })
+    expect(Object.values(of(zone2.house_id)).reduce((a, b) => (a as number) + (b as number), 0)).toBe(1)
+    await request(app).get(`/farms/${farm._id}/comparison?sort=site_causes`).set('Authorization', `Bearer ${token}`).expect(422)
+  })
 })
 
 describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 002) — TC-F29-03', () => {

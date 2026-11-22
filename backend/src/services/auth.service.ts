@@ -8,7 +8,7 @@ import { notifyAdmins } from '@/services/notification.service'
 import { criticalHasOutsideChannel } from '@/utils/notificationChannels.util'
 import { ROLE_LABEL } from '@/utils/displayLabel.util'
 import type { AlertSeverity, ChannelChoice, JwtAccessPayload, NotificationPreferences } from '@/types'
-import { AppError, BadRequestError, UnauthorizedError } from '@/utils/appError.util'
+import { AppError, BadRequestError, ForbiddenError, UnauthorizedError } from '@/utils/appError.util'
 
 const ACCESS_TTL  = process.env.JWT_ACCESS_TTL  ?? '15m'
 const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? '30d'
@@ -227,10 +227,16 @@ export interface NotificationPreferencesInput {
 /**
  * ALERT-FR-005/006 — mỗi người tự chọn kênh nhận thông báo (chung, và theo mức cảnh báo) và giờ im lặng.
  * Cảnh báo CRITICAL phải còn ít nhất 1 kênh ngoài ứng dụng (push, hoặc Telegram đã liên kết), không thì 400.
+ * Report 3 §2.4: Domain Expert và Administrator không nhận cảnh báo ngoài ứng dụng nên không chọn kênh (403); chỉ Farm
+ * Owner đặt giờ im lặng, Farm Technician chọn kênh nhưng gửi giờ im lặng thì 403 (ALERT-FR-005, 006).
  */
 export async function updateNotificationPreferences(userId: string, input: NotificationPreferencesInput): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
+  if (user.role !== 'FARM_OWNER' && user.role !== 'FARM_TECHNICIAN') {
+    throw ForbiddenError('Tài khoản này chỉ nhận thông báo trong ứng dụng nên không chọn kênh')
+  }
+  if (input.quiet_hours && user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Chủ nhà yến đặt giờ im lặng')
 
   const current = user.toObject().notification_preferences
   const bySeverity: Partial<Record<AlertSeverity, ChannelChoice>> = { ...current.by_severity }

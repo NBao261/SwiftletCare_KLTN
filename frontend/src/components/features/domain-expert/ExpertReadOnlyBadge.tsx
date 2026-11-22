@@ -1,23 +1,24 @@
-import { InfoIcon } from '@phosphor-icons/react';
+import InfoTip from '@/components/ui/InfoTip';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 import { t } from '@/i18n';
 
-// Badge nhỏ "Chỉ xem" cho Farm Owner trên trang chuyên gia (DE-10, todo-ui-layout §6)
+// Badge quyền của Farm Owner trên trang chuyên gia (DE-10, BR-22 Report 3 4.2.15); câu đầy đủ nằm trong nút (i) vì điện thoại không rê chuột được
 export default function ExpertReadOnlyBadge() {
   const isOwner = usePermission('FARM_OWNER');
   const { canDecide, farmKnown } = useExpertDecisionRights();
+  // Chưa biết farm có chuyên gia hay chưa (đang tải): không hiện gì kẻo nói sai
   if (!isOwner || !farmKnown) return null;
 
-  const label = canDecide ? t('Quyết định thay') : t('Chỉ xem');
-  const tooltip = canDecide
+  const label = canDecide ? t('Quyết định thay') : t('Chuyên gia duyệt lại');
+  const explanation = canDecide
     ? t('Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.')
-    : t('Trang trại đã có chuyên gia nên bạn chỉ xem các quyết định chuyên môn. Ngưỡng và hệ số mờ bạn vẫn sửa được, chuyên gia duyệt lại sau.');
+    : t('Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kết luận cảnh báo do chuyên gia ghi, bạn nhắc được.');
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-warmGray/20 bg-warmGray/5 px-2.5 py-1" title={tooltip}>
-      <InfoIcon size={14} className="shrink-0 text-warmGray" />
+    <span className="inline-flex items-center gap-0.5 rounded-full border border-warmGray/20 bg-warmGray/5 py-0.5 pl-2.5 pr-0.5">
       <span className="text-small font-medium text-graphite">{label}</span>
+      <InfoTip>{explanation}</InfoTip>
     </span>
   );
 }

@@ -62,14 +62,14 @@ export default function DomainExpertQueuePage() {
     selectedHouseId ?? '',
   )
 
+  // Mục duyệt ở cấp farm (có mục theo nhà, camera), không lọc theo Zone
   const { total: pendingReviewsCount, isLoading: isLoadingReviews } = useParameterReviews({
     farmId: selectedFarmId ?? '',
-    zoneId: selectedZoneId ?? undefined,
     status: 'PENDING_REVIEW',
   })
+  // Cùng phạm vi với trang Duyệt & đề xuất (cả farm), để số trên thẻ khớp số trong trang
   const { total: pendingProposalsCount, isLoading: isLoadingProposals } = useCoefficientProposals({
     farmId: selectedFarmId ?? '',
-    zoneId: selectedZoneId ?? undefined,
     status: 'PROPOSED',
   })
   const totalPendingReviews = pendingReviewsCount + pendingProposalsCount

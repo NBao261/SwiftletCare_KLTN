@@ -35,6 +35,8 @@ export interface IAlert extends Document {
   node_id?: Types.ObjectId
   /** Report 4 §7.2 — `eventId` mới nhất thiết bị gửi cho cảnh báo này */
   event_id?: string
+  /** ALERT-FR-008 — khoá của sự cố, tính trong hook `validate`; mỗi khoá chỉ một cảnh báo còn mở (chỉ mục duy nhất) */
+  incident_key?: string
   type: AlertType
   severity: AlertSeverity
   title: string
@@ -88,6 +90,7 @@ const alertSchema = new Schema<IAlert>(
     house_id: { type: Schema.Types.ObjectId, ref: 'House' },
     node_id:  { type: Schema.Types.ObjectId },
     event_id: { type: String },
+    incident_key: { type: String },
     type: {
       type: String,
       enum: [
@@ -156,8 +159,37 @@ const alertSchema = new Schema<IAlert>(
   { versionKey: false }
 )
 
+/**
+ * ALERT-FR-008 — một sự cố là cùng loại, cùng farm, Zone hoặc nhà và thiết bị. Bơm và quạt hỏng trên một controller là
+ * hai sự cố (THREAT-FR-014, `details.load`); mỗi kế hoạch bảo trì đến hạn là một sự cố riêng, cảnh báo theo mốc mặc
+ * định không kế hoạch là sự cố khác (OPS-FR-006, `details.plan_id`).
+ */
+export function incidentKeyOf(alert: {
+  type: string
+  farm_id: unknown
+  zone_id?: unknown
+  house_id?: unknown
+  node_id?: unknown
+  details?: Record<string, unknown>
+}): string {
+  const part = (value: unknown) => (value === undefined || value === null ? '' : String(value))
+  const load = alert.type === 'ACTUATOR_FAULT' ? part(alert.details?.load) : ''
+  const plan = alert.type === 'MAINTENANCE_DUE' ? part(alert.details?.plan_id) : ''
+  return [alert.type, alert.farm_id, alert.zone_id, alert.house_id, alert.node_id, load, plan].map(part).join('|')
+}
+
+// Mọi cách tạo cảnh báo (createAlert, seed, test) đều có khoá; vị trí của cảnh báo không đổi sau khi tạo
+alertSchema.pre('validate', function setIncidentKey() {
+  this.incident_key = incidentKeyOf(this)
+})
+
 // Tìm alert đang mở của cùng 1 sự cố (ALERT-FR-008)
 alertSchema.index({ farm_id: 1, zone_id: 1, node_id: 1, type: 1, status: 1 })
+// ALERT-FR-008 — hai tin của cùng sự cố tới cùng lúc không tạo được hai cảnh báo còn mở
+alertSchema.index(
+  { incident_key: 1 },
+  { unique: true, partialFilterExpression: { incident_key: { $type: 'string' }, status: { $in: OPEN_ALERT_STATUSES } } },
+)
 // Cảnh báo của cả nhà (camera đếm chim) — lọc GET /alerts?houseId= và dedup theo House
 alertSchema.index({ house_id: 1, type: 1, status: 1 }, { partialFilterExpression: { house_id: { $exists: true } } })
 // Alert đã đóng tự xoá sau 180 ngày; alert đang mở không có resolved_at nên không bao giờ hết hạn

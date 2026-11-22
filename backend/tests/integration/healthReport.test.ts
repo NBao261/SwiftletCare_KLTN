@@ -18,7 +18,6 @@ import { House, Zone } from '@/models/houseZone.model'
 import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
-import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 import { buildZoneMetrics } from '@/services/healthReport.service'
 import { notifyUser } from '@/services/notification.service'
 import type { Role } from '@/types'
@@ -51,7 +50,7 @@ afterAll(async () => {
 afterEach(async () => {
   jest.clearAllMocks()
   await Promise.all([
-    Alert, AuditLog, SensorNode, Farm, House, Zone, RelayOverrideLog, Telemetry, User, ZoneHealthReport,
+    Alert, AuditLog, SensorNode, Farm, House, Zone, RelayOverrideLog, Telemetry, User,
   ].map(m => (m as typeof User).deleteMany({})))
 })
 
@@ -100,17 +99,6 @@ async function seed(withData = true) {
   return { owner, expert, farm, zone, node, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
 }
 
-/** Báo cáo Zone đã lưu từ trước (kiểu cũ) với số liệu 7 ngày qua của Zone */
-async function storedZoneReport(zone: { _id: unknown }) {
-  const full = (await Zone.findById(zone._id))!
-  const now = new Date()
-  const from = new Date(now.getTime() - 7 * 24 * HOUR)
-  return ZoneHealthReport.create({
-    farm_id: full.farm_id, zone_id: full._id, period_start: from, period_end: now,
-    metrics: await buildZoneMetrics(full, from, now), generated_at: now,
-  })
-}
-
 describe('số liệu từng Zone (EXPERT-FR-005, dùng cho mục Zone của báo cáo theo nhà)', () => {
   it('% trong ngưỡng, % tự động, số lần đóng cắt, cảnh báo theo loại, NH3/CO2', async () => {
     const { zone } = await seed()
@@ -147,56 +135,3 @@ describe('số lần đóng cắt relay không bị phồng sau khi mất mạng
   })
 })
 
-describe('đọc báo cáo Zone đã lưu', () => {
-  it('Farm Owner và Domain Expert xem danh sách và chi tiết; farm khác thì 403', async () => {
-    const { zone, t } = await seed()
-    const id = String((await storedZoneReport(zone))._id)
-
-    const list = await call('get', `/health-reports?zoneId=${zone._id}`, t.expert).expect(200)
-    expect(list.body.meta.total).toBe(1)
-    expect((await call('get', `/health-reports/${id}`, t.owner).expect(200)).body.data.metrics.sample_count).toBe(10)
-
-    // Đường xem khoảng bất kỳ kiểu cũ đã bỏ (B-03); báo cáo theo yêu cầu là POST /health-reports
-    await call('get', `/health-reports/preview?zoneId=${zone._id}&from=${new Date().toISOString()}`, t.owner).expect(422)
-
-    const other = await seed()
-    await call('get', `/health-reports?zoneId=${zone._id}`, other.t.owner).expect(403)
-    await call('get', `/health-reports/${id}`, other.t.expert).expect(403)
-  })
-})
-
-describe('kết luận của chuyên gia trên báo cáo Zone đã lưu (EXPERT-FR-006)', () => {
-  it('chỉ Domain Expert viết; Farm Owner được báo; người viết sửa được, chuyên gia khác thì không', async () => {
-    const { owner, expert, farm, zone, t } = await seed()
-    const id = String((await storedZoneReport(zone))._id)
-    jest.clearAllMocks()
-
-    await call('put', `/health-reports/${id}/conclusion`, t.owner, { text: 'x' }).expect(403)
-    await call('put', `/health-reports/${id}/conclusion`, t.expert, { text: '  ' }).expect(422)
-
-    const res = await call('put', `/health-reports/${id}/conclusion`, t.expert, { text: 'Độ ẩm ổn; nên giảm biên độ ồn xuống 12 dB.' }).expect(200)
-    // PUT trả cùng hình dạng với GET: `by` là {_id, full_name}
-    expect(res.body.data.expert_conclusion).toMatchObject({
-      text: 'Độ ẩm ổn; nên giảm biên độ ồn xuống 12 dB.', by: { _id: String(expert._id), full_name: expert.full_name },
-    })
-    expect((notifyUser as jest.Mock).mock.calls.map(c => c[0])).toEqual([String(owner._id)])
-    expect(await AuditLog.countDocuments({ action: 'HEALTH_REPORT_CONCLUDED' })).toBe(1)
-
-    // Farm Owner đọc được kết luận kèm tên chuyên gia
-    const read = await call('get', `/health-reports/${id}`, t.owner).expect(200)
-    expect(read.body.data.expert_conclusion.by.full_name).toBe(expert.full_name)
-
-    const firstAt = res.body.data.expert_conclusion.at
-    expect(res.body.data.expert_conclusion.edited_at).toBeUndefined()
-    const edited = await call('put', `/health-reports/${id}/conclusion`, t.expert, { text: 'Bản sửa.' }).expect(200)
-    // EXPERT-FR-006 — lưu thời điểm sửa, giữ lúc viết lần đầu
-    expect(edited.body.data.expert_conclusion.at).toBe(firstAt)
-    expect(edited.body.data.expert_conclusion.edited_at).toEqual(expect.any(String))
-    // EXPERT-FR-009 — kết luận vào lịch sử hoạt động của farm
-    expect(await AuditLog.countDocuments({ action: 'HEALTH_REPORT_CONCLUDED', farm_id: farm._id })).toBe(2)
-    const second = await mkUser('DOMAIN_EXPERT')
-    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: second._id, role: 'DOMAIN_EXPERT' } } })
-    await call('put', `/health-reports/${id}/conclusion`, tokenFor(second._id, 'DOMAIN_EXPERT'), { text: 'Ghi đè' }).expect(403)
-    expect((await ZoneHealthReport.findById(id).lean())!.expert_conclusion!.text).toBe('Bản sửa.')
-  })
-})

@@ -23,7 +23,8 @@ type RulesTab = (typeof TABS)[number]
 const TAB_LABEL = { rules: 'rules.tabRules', effects: 'rules.tabEffects' } as const
 
 export default function DomainExpertRecommendationRulesPage() {
-  const { isExpert } = useExpertDecisionRights()
+  // BR-22 (Report 3 4.2.15) — Farm Owner viết luật; farm có chuyên gia thì luật chờ chuyên gia bật
+  const { canEditParameters, ownerNeedsExpert } = useExpertDecisionRights()
   const { t } = useTranslation(recommendationsDict)
   const apiErrorMessage = useApiErrorMessage()
   const push = useToastStore(state => state.push)
@@ -70,7 +71,9 @@ export default function DomainExpertRecommendationRulesPage() {
           <RecommendationRuleRow
             key={rule._id}
             rule={rule}
-            disabled={save.isPending || !isExpert}
+            disabled={save.isPending || !canEditParameters}
+            toggleDisabled={ownerNeedsExpert}
+            editDisabled={ownerNeedsExpert && !rule.pending_approval}
             onToggle={() => toggle(rule)}
             onEdit={() => setEditing(rule)}
           />
@@ -105,7 +108,7 @@ export default function DomainExpertRecommendationRulesPage() {
       <SectionCard
         title={t('rules.title')}
         description={t('rules.subtitle')}
-        action={tab === 'rules' && isExpert && (
+        action={tab === 'rules' && canEditParameters && (
           <Button size="sm" onClick={() => setEditing(null)}>
             <Plus className="h-3.5 w-3.5" aria-hidden />
             {t('rules.add')}
