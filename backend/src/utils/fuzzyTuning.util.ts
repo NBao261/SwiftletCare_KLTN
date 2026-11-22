@@ -2,12 +2,7 @@ import { BadRequestError } from '@/utils/appError.util'
 import { toNumber } from '@/utils/thresholds.util'
 import type { FuzzyTuning } from '@/types'
 
-/**
- * ENV-FR-021/022 — 4 hệ số số + cờ lọc đầu vào của bộ điều khiển mờ trên ESP32 (firmware/src/pid/FuzzyControl.h).
- * Mặc định phải khớp firmware Config.h (DEFAULT_FUZZY_*) và cho ra đúng hàm thuộc
- * gốc. Khoảng hợp lệ cũng khớp firmware `Config::update()` (nó kẹp lại lần nữa).
- * Tách khỏi thresholds.util vì houseZone.model import file này làm default schema.
- */
+/** Mặc định và khoảng phải khớp firmware Config.h. Tách file vì houseZone.model import làm default */
 export const FUZZY_TUNING_KEYS = [
   'fuzzy_humidity_band', 'fuzzy_temp_band', 'fuzzy_fan_dry_level', 'fuzzy_window_sec',
 ] as const satisfies ReadonlyArray<keyof FuzzyTuning>
@@ -28,10 +23,7 @@ export const FUZZY_TUNING_LIMITS: Record<NumericKey, { min: number; max: number;
   fuzzy_window_sec:    { min: 60, max: 600, unit: 'giây' },
 }
 
-/**
- * Chỉ giữ các khoá hệ số — chặn body chèn field lạ. Số không hợp lệ thành NaN,
- * `fuzzy_input_filter` giữ nguyên giá trị gửi lên — assert sẽ từ chối nếu không phải boolean.
- */
+/** Chặn field lạ; số sai thành NaN để assert từ chối */
 export function pickFuzzyTuning(input: Record<string, unknown>): Partial<FuzzyTuning> {
   const picked: Partial<FuzzyTuning> = {}
   for (const key of FUZZY_TUNING_KEYS) {

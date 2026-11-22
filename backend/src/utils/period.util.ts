@@ -3,13 +3,10 @@ import { BadRequestError } from '@/utils/appError.util'
 const DAY_MS = 86_400_000
 const VN_OFFSET_MS = 7 * 3_600_000
 
-/** Report 3 §4.5 — khoảng dài nhất của bảng so sánh nhà và điện năng ước tính: 1 năm, như một mùa vụ dài nhất */
+/** Report 3 §4.5 */
 export const MAX_PERIOD_DAYS = 366
 
-/**
- * Tham số `from`/`to` của khoảng: chỉ có ngày ('YYYY-MM-DD') là đầu ngày giờ VN (không phải 00:00 UTC = 07:00 VN, vốn
- * làm khoảng lệch một ngày); có giờ thì đọc như ISO 8601.
- */
+/** Chỉ có ngày thì là đầu ngày giờ VN (00:00 UTC làm lệch một ngày) */
 export function parsePeriodParam(value: unknown): Date | undefined {
   if (typeof value !== 'string' || value === '') return undefined
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00+07:00`) : new Date(value)
@@ -18,25 +15,16 @@ export function parsePeriodParam(value: unknown): Date | undefined {
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 const DATE_TIME_WITH_OFFSET = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/
 
-/**
- * Giá trị hợp lệ cho `from`/`to` của khoảng: ngày `YYYY-MM-DD` (đầu ngày giờ VN) hoặc ngày giờ ISO 8601 có `Z` hay
- * offset. Không nhận `2026`, `2026-11` (sẽ bị đọc là 07:00 VN và lệch một ngày) hay ngày giờ không múi giờ (phụ thuộc
- * múi giờ của máy chủ).
- */
+/** Không nhận '2026', '2026-11' (lệch một ngày) hay giờ không múi giờ (phụ thuộc máy chủ) */
 export function isPeriodParam(value: unknown): boolean {
   if (typeof value !== 'string' || !(DATE_ONLY.test(value) || DATE_TIME_WITH_OFFSET.test(value))) return false
   return !Number.isNaN(parsePeriodParam(value)!.getTime())
 }
 
-/** Đầu ngày giờ VN chứa `at` */
 const vnDayStartOf = (at: Date) =>
   new Date(Math.floor((at.getTime() + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS)
 
-/**
- * Đưa [from, to) về trọn ngày giờ VN mà giữ đúng số ngày yêu cầu (`to` − `from`, làm tròn lên): khoảng kết thúc ở hết
- * ngày VN chứa mili giây trước `to` và lùi đúng chừng ấy ngày, để mọi cột (cảnh báo, MTTR, điện năng, trạng thái ngày,
- * chim về) mô tả cùng một khoảng và "30 ngày" là 30 ngày, không 31. `from` không trước `to` → 400; quá MAX_PERIOD_DAYS → 400.
- */
+/** Về trọn ngày giờ VN, giữ đúng số ngày: "30 ngày" là 30, không 31 */
 export function vnDayPeriod(from: Date, to: Date): { from: Date; to: Date; days: number } {
   if (from >= to) throw BadRequestError('`from` phải trước `to`')
   const days = Math.ceil((to.getTime() - from.getTime()) / DAY_MS)

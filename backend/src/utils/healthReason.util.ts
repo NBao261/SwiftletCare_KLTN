@@ -1,9 +1,6 @@
 import type { HealthReason, HealthReasonCode, HealthSource } from '@/types'
 
-/**
- * ANALYTICS-FR-012, EXPERT-FR-013 — câu của 1 lý do trạng thái ngày theo ngôn ngữ. Lý do lưu dạng mã
- * (HealthReason); web và mobile tự dịch bằng i18n của mình, backend chỉ cần câu cho CSV.
- */
+/** Client tự dịch; backend chỉ cần câu cho CSV */
 export type ReasonLang = 'vi' | 'en'
 export const REASON_LANGS: ReasonLang[] = ['vi', 'en']
 

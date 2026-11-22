@@ -2,15 +2,7 @@ import { BadRequestError } from '@/utils/appError.util'
 import { toNumber } from '@/utils/thresholds.util'
 import type { BirdCountTuning, DetectionTuning, HealthLevels } from '@/types'
 
-/**
- * EXPERT-FR-008 — tham số phát hiện Domain Expert chỉnh. Mặc định là các hằng số dùng trước
- * SRS v2.1.0; khoảng hợp lệ là giới hạn kỹ thuật (tránh nhập nhầm làm tắt hẳn việc phát hiện),
- * không phải khuyến nghị nuôi yến.
- * - Theo Zone: năm tham số chạy trên ESP32 — mặc định và khoảng phải khớp firmware `Config.h` /
- *   `Config::update()` (nó kẹp lại lần nữa).
- * - Theo House (SRS v2.1.8): mức giảm tỷ lệ chim về — chim ra vào ở cửa của cả nhà, backend dùng.
- * Tách file riêng vì houseZone.model import mặc định ở đây làm default schema.
- */
+/** EXPERT-FR-008: khoảng là giới hạn kỹ thuật, phải khớp firmware Config.h. Tách file vì houseZone.model import làm default */
 type Limits<T> = Record<keyof T, { min: number; max: number; unit: string; integer?: boolean }>
 
 export const DETECTION_TUNING_KEYS = [
@@ -41,7 +33,7 @@ export const BIRD_COUNT_TUNING_LIMITS: Limits<BirdCountTuning> = {
   return_rate_drop_pct: { min: 5, max: 50, unit: '%' },
 }
 
-/** Chỉ giữ các khoá tham số — chặn body chèn field lạ; số không hợp lệ thành NaN để assert từ chối */
+/** Chặn field lạ; số sai thành NaN để assert từ chối */
 function pick<T>(keys: ReadonlyArray<keyof T>, input: Record<string, unknown>): Partial<T> {
   const picked: Partial<T> = {}
   for (const key of keys) {
@@ -60,7 +52,7 @@ function assertValid<T>(keys: ReadonlyArray<keyof T>, limits: Limits<T>, t: T): 
   }
 }
 
-/** Bản ghi tạo trước khi có tham số (hoặc thiếu trường) → dùng mặc định */
+/** Bản ghi cũ hoặc thiếu trường thì dùng mặc định */
 function resolve<T>(keys: ReadonlyArray<keyof T>, defaults: T, saved?: Partial<T> | null): T {
   const resolved = { ...defaults }
   for (const key of keys) {
@@ -70,10 +62,7 @@ function resolve<T>(keys: ReadonlyArray<keyof T>, defaults: T, saved?: Partial<T
   return resolved
 }
 
-/**
- * Khoá ngoài danh sách → 400 thay vì lặng lẽ bỏ qua: web từng gửi `return_rate_drop_pct` vào tham số của Zone,
- * backend bỏ qua mà vẫn trả 200 nên mức giảm tỷ lệ chim về không bao giờ được lưu (todo-audit-1118 W-01, B-04).
- */
+/** 400 thay vì lặng lẽ bỏ qua khoá lạ */
 export function assertOnlyKeys(keys: ReadonlyArray<string>, input: Record<string, unknown>, hint?: (unknownKeys: string[]) => string): void {
   const unknownKeys = Object.keys(input).filter(key => !keys.includes(key))
   if (unknownKeys.length > 0) throw BadRequestError(`Tham số không hợp lệ: ${unknownKeys.join(', ')}${hint?.(unknownKeys) ?? ''}`)
@@ -89,10 +78,7 @@ export const assertValidBirdCountTuning = (t: BirdCountTuning) => assertValid(BI
 export const resolveBirdCountTuning = (saved?: Partial<BirdCountTuning> | null) =>
   resolve(BIRD_COUNT_TUNING_KEYS, DEFAULT_BIRD_COUNT_TUNING, saved)
 
-/**
- * BR-28 — mức của chỉ số sức khỏe theo House. Mặc định là hằng số kỹ thuật (A-4, Report 3 §4.5);
- * khoảng là khoảng BR-28 cho Domain Expert đặt.
- */
+/** BR-28: mặc định là A-4 */
 export const HEALTH_LEVEL_KEYS = [
   'in_range_slight_pct', 'in_range_clear_pct', 'air_slight_h', 'air_clear_h', 'noise_slight', 'noise_clear',
 ] as const satisfies ReadonlyArray<keyof HealthLevels>
@@ -118,7 +104,7 @@ export const HEALTH_LEVEL_LIMITS: Limits<HealthLevels> = {
 export const pickHealthLevels = (input: Record<string, unknown>) => pick<HealthLevels>(HEALTH_LEVEL_KEYS, input)
 export const resolveHealthLevels = (saved?: Partial<HealthLevels> | null) =>
   resolve(HEALTH_LEVEL_KEYS, DEFAULT_HEALTH_LEVELS, saved)
-/** Ngoài khoảng, hoặc mức CLEAR nhẹ hơn mức SLIGHT (CLEAR sẽ không bao giờ xảy ra trước SLIGHT) → 400 */
+/** CLEAR nhẹ hơn SLIGHT thì không bao giờ xảy ra → 400 */
 export function assertValidHealthLevels(t: HealthLevels): void {
   assertValid(HEALTH_LEVEL_KEYS, HEALTH_LEVEL_LIMITS, t)
   if (t.in_range_clear_pct > t.in_range_slight_pct) throw BadRequestError('in_range_clear_pct không được lớn hơn in_range_slight_pct')
@@ -126,7 +112,7 @@ export function assertValidHealthLevels(t: HealthLevels): void {
   if (t.noise_clear < t.noise_slight) throw BadRequestError('noise_clear không được nhỏ hơn noise_slight')
 }
 
-/** Phần gửi xuống ESP32 qua config/update — tên field = tên key MQTT */
+/** Tên field = key MQTT */
 export function firmwareDetectionConfig(t: DetectionTuning): DetectionTuning {
   return Object.fromEntries(DETECTION_TUNING_KEYS.map(key => [key, t[key]])) as unknown as DetectionTuning
 }
