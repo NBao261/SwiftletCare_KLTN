@@ -1,13 +1,4 @@
-"""
-SwiftletCare - frame preparation shared by the live pipeline and the dataset tools
-
-The model must see exactly the same pixels in training and in production, so
-masking the camera's date overlay and cutting the frame into tiles live here
-once, used by src/stream.py, tools/extract_frames.py and tools/track_clip.py.
-
-Plan §19.8: birds circle the whole room, so the whole frame is tracked; it is cut
-into two overlapping tiles so a bird keeps >= 15 px after the 640 px model input.
-"""
+"""Masking and tiling shared by the live pipeline and the dataset tools, so training and production see the same pixels."""
 from typing import List, Sequence, Tuple
 
 import numpy as np

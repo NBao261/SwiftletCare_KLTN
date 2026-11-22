@@ -9,7 +9,9 @@ Python + OpenCV + YOLO (YOLOv8n hoặc YOLO11n, chọn theo số đo ở plan §
 ```bash
 cd ai-pipeline
 python -m venv .venv && source .venv/bin/activate   # hoặc .venv\Scripts\activate trên Windows
-pip install -r requirements.txt
+pip install -r requirements.txt                       # cần GPU NVIDIA: chỉ chạy CUDA, không lùi về CPU
+# GPU GTX 10xx (Pascal, vd nút AI GTX 1050 Ti): bản 1.30 không hỗ trợ, cài đè bản 1.26 sau dòng trên
+pip install "onnxruntime-gpu[cuda,cudnn]>=1.26,<1.27"
 cp .env.example .env                                  # điền CAMERA_RTSP_URL, ID thiết bị/farm/nhà
 python src/stream.py                                  # camera thật; xem http://127.0.0.1:8090/stream
 python src/stream.py --source D:/SwiftletCare/clips/20261022_morning_01.mp4 --session MORNING_EXIT --no-mqtt
@@ -60,8 +62,8 @@ Từ clip đến file ONNX: `docs/bird-counting-plan.md` mục 7 (tách frame �
 
 ```
 swiftletcare/dev/{deviceId}/vision/bird-count   ← số đếm phiên (30 giây/lần) và số đếm 5 phút (kind: BUCKET)
-swiftletcare/dev/{deviceId}/heartbeat           ← {deviceId, modelVersion, fps}; im 90 giây là EDGE_AI_DEGRADED
-swiftletcare/dev/{deviceId}/config              → vòng đếm Domain Expert vẽ (VISION-FR-018)
+swiftletcare/dev/{deviceId}/heartbeat           ← {deviceId, modelVersion, fps, defaultRings}; im 90 giây là EDGE_AI_DEGRADED
+swiftletcare/dev/{deviceId}/config              → counting_rings: 0–4 vòng vẽ trên web, [] = vòng mặc định (VISION-FR-018)
 ```
 
 ## Trạng thái

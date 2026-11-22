@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.23 (Review 2, final scope) |
-| Date | 21/11/2026 |
+| Document version | 2.2.24 (Review 2, final scope) |
+| Date | 23/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.15 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -614,6 +614,8 @@ erDiagram
     date last_heartbeat
     number fps
     string model_version
+    array counting_rings
+    array default_rings
     object counting_ring
     array counting_ring_history
   }
@@ -1053,12 +1055,12 @@ Every device has its own topic tree `swiftletcare/dev/{deviceId}/…` and its ow
 | `telemetry` | controller → cloud | `deviceId`, six readings, stale sensors, `control_output`, `pump_current_a`, `fan_current_a`, timestamp | 0 |
 | `telemetry/buffered` | controller → cloud | Samples from the offline buffer, each with its own timestamp; deleted from flash on PUBACK | 1 |
 | `heartbeat` | controller → cloud | `deviceId`, firmware version, RSSI, free heap, uptime, reset reason, IP, `appliedConfigVersion` (the `config_version` last applied; absent from firmware before 2.1.0), `actuatorBaseline` (learned normal current of the pump and the fan, A, for the loads learned so far; firmware 2.3.1 or later, BR-45) | 0 |
-| `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected | 0 |
+| `heartbeat` | AI node → cloud | `deviceId`, model version, processed frames per second, camera connected, `defaultRings` (its default counting ring, shown on the web while no ring is drawn) | 0 |
 | `relay/status` | controller → cloud | `deviceId`, per relay: state, mode, expiry; `commandId` of the command that caused the change, if any | 1 |
 | `alert` | controller → cloud | `deviceId`, `eventId`, type, severity (for the log only: the backend sets the severity from the type, BR-15), details (reset reason for `UNEXPECTED_RESTART`); kept in NVS until PUBACK | 1 |
 | `vision/bird-count` | AI node → cloud | Session counts every 30 s, or `kind: BUCKET` 5-minute counts | 1 |
 | `vision/alert` | AI node → cloud | `EDGE_AI_DEGRADED` with the frame rate | 1 |
-| `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: counting ring, `config_version`, `session_windows` (morning and evening windows of the next 7 days of the house's counting schedule, VISION-FR-019) | 1 |
+| `config` | cloud → device | Retained. Controller: thresholds, fuzzy and detection parameters, speaker settings, `config_version`. AI node: `counting_rings` (0–4, `[]` = its default ring), `config_version`, `session_windows` (morning and evening windows of the next 7 days of the house's counting schedule, VISION-FR-019) | 1 |
 | `compensation` | cloud → controller | Retained. `deviceId`, `offset_pct` (−10…+10, 0 when no rule holds), `expires_at` (epoch ms, like `issuedAt`), `rule_id` (null with offset 0); the controller uses 0 after `expires_at` or 2 h without the broker, and keeps a message received before its clock is set until it is (BR-38) | 1 |
 | `cmd` | cloud → device | Envelope `commandId`, `type` (`RELAY`, `CLEAR_OVERRIDE`, `AUDIO`, `RESTART`, `OTA`), `issuedAt`, payload. Applied once per `commandId`; `RELAY`, `AUDIO` and `RESTART` older than BR-35 are not applied | 1 |
 
@@ -1898,6 +1900,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.24 | 23/11/2026 | Up to four counting rings per camera (Report 3 4.2.18, VISION-FR-018): `CAMERA_NODE` gains `counting_rings` (the first ring stays in `counting_ring` for older apps) and `default_rings`, the AI node's default ring reported in its heartbeat (`defaultRings`); the retained `config` always carries `counting_rings`, an empty list sends the AI node back to its default ring |
 | 2.2.22 | 21/11/2026 | Alert severity and incidents (gap G-32, decision Q-06): the backend sets the severity of every alert from its type (BR-15) and ignores the value a device sends (Section 7.2); `incident_key` with a partial unique index keeps one open alert per incident (ALERT-FR-008; Sections 6.1, 6.2) and its migration in Section 6.4 |
 | 2.2.23 | 21/11/2026 | Gap G-32 (decision Q-08, item D-06): the job table of Section 5.3 follows the code (`returnRate` runs the daily assessment, the daily report and the recommendation rules of each house; `houseHealthReport` for the weekly and monthly reports; run hours in `relayUsage`; `cameraConfig` added); the weekly zone reports are moved into house reports by `migrate:zone-reports` and no longer read (Section 6.4) |
 | 2.2.21 | 21/11/2026 | Audit of 21/11/2026 (Report 3 4.2.16, gap G-32): Section 5.4 describes the farm location map of 2.2.20 instead of "no map library is added"; houses and zones are edited and soft-deleted (`is_deleted`, `deleted_at`, `deleted_by` in the ERD of Section 6.1 and in Section 6.2; `/farms` in Section 7.1, FARM-FR-002) |

@@ -19,9 +19,10 @@ export interface DeviceStatusChangeEvent {
   nodeId: string; status: DeviceStatus; timestamp: string
 }
 
+// Số của cả nhà yến cho phiên vừa có tin (backend WsBirdCountUpdate)
 export interface BirdCountUpdateEvent {
-  zoneId: string; entryCount: number; exitCount: number
-  sessionType: SessionType; timestamp: string
+  houseId: string; sessionDate: string; sessionType: SessionType
+  entryCount: number; exitCount: number; netCount: number; returnRate: number | null; timestamp: string
 }
 
 export interface AlertNewEvent {

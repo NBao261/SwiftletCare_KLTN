@@ -1,30 +1,40 @@
-// trình vẽ vòng đếm trên khung live: đặt 3–12 đỉnh, chọn chiều bay, lưu
+// trình vẽ vòng đếm trên khung live: tối đa 4 vòng, mỗi vòng đếm cả chim vào lẫn ra; xoá hoặc vẽ lại từng vòng
 import { useRef, useState } from 'react'
-import { Undo2, Trash2, Save, X, Pencil, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Undo2, Trash2, Save, X, Pencil, AlertTriangle, RefreshCw, Plus, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useWhepStream } from '@/hooks/shared/useWhepStream'
 import { useUpdateCountingRing } from '@/hooks/domain-expert/useCountingRing'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
 import CountingRingCanvas from './CountingRingCanvas'
-import type { CameraNode } from '@/types'
+import { MAX_POINTS, MAX_RINGS, MIN_POINTS, POINTS_BEFORE_NEXT_RING, placePoint, removeRing, shownRings } from '@/components/common/countingRing.utils'
+import type { CameraNode, CountingRing } from '@/types'
 import { t } from '@/i18n'
-
-const MIN_POINTS = 3
-const MAX_POINTS = 12
 
 interface Props {
   camera: CameraNode
   houseId: string | undefined
 }
 
+type Confirming = { kind: 'delete'; index: number } | { kind: 'default' } | null
+
+// Chỉ giữ đỉnh và chiều: bản từ API còn kèm người sửa, lúc sửa
+const draftOf = (rings: CountingRing[]): CountingRing[] =>
+  rings.map(ring => ({ points: ring.points, into_ring_is_exit: ring.into_ring_is_exit }))
+
 export default function CountingRingEditor({ camera, houseId }: Props) {
-  const ring = camera.counting_ring
-  const [points, setPoints] = useState<Array<[number, number]>>(ring?.points ?? [])
-  const [intoRingIsExit, setIntoRingIsExit] = useState<boolean>(ring?.into_ring_is_exit ?? false)
+  const shown = shownRings(camera)
+  const [rings, setRings] = useState<CountingRing[]>(() => draftOf(shown.rings))
+  const [activeIndex, setActiveIndex] = useState(0)
+  // true khi đang thêm đỉnh vào vòng đã chọn lại (tới 12 đỉnh), false khi đang vẽ vòng mới (4 đỉnh rồi sang vòng sau)
+  const [extending, setExtending] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [confirming, setConfirming] = useState<Confirming>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Chỉ hỏi khi chưa có vòng nào cho biết chiều đếm (nút AI chưa báo vòng mặc định)
+  const [chosenDirection, setChosenDirection] = useState<boolean | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const { status, retry } = useWhepStream(videoRef, camera._id)
@@ -32,31 +42,75 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
   const getErrorMessage = useApiErrorMessage()
   const pushToast = useToastStore(state => state.push)
 
-  function handleAddPoint(point: [number, number]) {
-    setPoints(current => (current.length >= MAX_POINTS ? current : [...current, point]))
-  }
-  function handleRemovePoint(index: number) {
-    setPoints(current => current.filter((_, position) => position !== index))
-  }
-  function handleStartEditing() {
+  // Chiều đếm là của camera (trong nhà hay ngoài trời), vòng mới lấy theo vòng đang có
+  const knownDirection = shown.rings[0]?.into_ring_is_exit
+  const intoRingIsExit = knownDirection ?? chosenDirection ?? false
+  const activeRing = rings[activeIndex] ?? { points: [], into_ring_is_exit: intoRingIsExit }
+
+  function startEditing(draft: CountingRing[], index: number) {
+    setRings(draft)
+    setActiveIndex(index)
+    setExtending(false)
     setIsEditing(true)
     setSaveError(null)
   }
+  function handleRedraw(index: number) {
+    startEditing(draftOf(shown.rings).map((ring, position) => (position === index ? { ...ring, points: [] } : ring)), index)
+  }
+  function handleAddPoint(point: [number, number]) {
+    const next = placePoint(rings, activeIndex, point, extending, intoRingIsExit)
+    if (next.rings === rings) {
+      pushToast(t('Đã đủ {{n}} vòng. Chọn một vòng để sửa hoặc bỏ bớt vòng.', { n: MAX_RINGS }), 'error')
+      return
+    }
+    if (next.activeIndex !== activeIndex) setExtending(false)
+    setRings(next.rings)
+    setActiveIndex(next.activeIndex)
+  }
+  function updateActive(change: (ring: CountingRing) => CountingRing) {
+    setRings(current => current.map((ring, index) => (index === activeIndex ? change(ring) : ring)))
+  }
+  function handleRemovePoint(pointIndex: number) {
+    updateActive(ring => ({ ...ring, points: ring.points.filter((_, position) => position !== pointIndex) }))
+  }
+  function handleSelectRing(index: number) {
+    setActiveIndex(index)
+    setExtending(true)
+  }
+  function handleNewRing() {
+    setActiveIndex(rings.length)
+    setExtending(false)
+  }
+  function handleRemoveRing() {
+    const next = removeRing(rings, activeIndex)
+    setRings(next.rings)
+    setActiveIndex(next.activeIndex)
+    setExtending(false)
+  }
   function handleCancel() {
-    setPoints(ring?.points ?? [])
-    setIntoRingIsExit(ring?.into_ring_is_exit ?? false)
+    setRings(draftOf(shown.rings))
+    setActiveIndex(0)
     setIsEditing(false)
     setSaveError(null)
   }
-  async function handleSave() {
-    if (points.length < MIN_POINTS) return
+
+  async function save(next: CountingRing[]) {
     setSaveError(null)
     try {
-      const result = await mutation.mutateAsync({
-        cameraId: camera._id,
-        ring: { points, into_ring_is_exit: intoRingIsExit },
-      })
+      const result = await mutation.mutateAsync({ cameraId: camera._id, rings: next })
+      setRings(next)
+      setActiveIndex(0)
       setIsEditing(false)
+      setConfirming(null)
+      if (next.length === 0) {
+        pushToast(
+          result.ring_delivered
+            ? t('Camera đếm chim dùng lại vòng mặc định.')
+            : t('Camera đếm chim dùng lại vòng mặc định khi kết nối lại.'),
+          'success',
+        )
+        return
+      }
       pushToast(
         result.ring_delivered
           ? t('Đã lưu vòng đếm và gửi tới camera đếm chim.')
@@ -64,18 +118,31 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
         'success',
       )
     } catch (error) {
+      setConfirming(null)
       setSaveError(getErrorMessage(error))
     }
   }
 
-  const hasRing = points.length >= MIN_POINTS
+  function handleConfirm() {
+    if (!confirming) return
+    if (confirming.kind === 'default') return void save([])
+    // Xoá vòng cuối cùng thì camera về vòng mặc định
+    void save(draftOf(shown.rings).filter((_, index) => index !== confirming.index))
+  }
+
+  const drawnRings = rings
+    .filter(ring => ring.points.length > 0)
+    .map(ring => ({ ...ring, into_ring_is_exit: intoRingIsExit }))
+  const canSave = drawnRings.length > 0 && drawnRings.every(ring => ring.points.length >= MIN_POINTS)
+    && (knownDirection !== undefined || chosenDirection !== null)
 
   return (
     <div className="space-y-3">
       <div className="relative">
         <CountingRingCanvas
           videoRef={videoRef}
-          points={points}
+          rings={(isEditing ? rings : shown.rings).map(ring => ring.points)}
+          activeIndex={activeIndex}
           isEditing={isEditing}
           onAddPoint={handleAddPoint}
           onRemovePoint={handleRemovePoint}
@@ -96,47 +163,76 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
         )}
       </div>
 
+      {saveError && (
+        <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{saveError}</span>
+        </div>
+      )}
+
       {isEditing ? (
         <>
-          <p className="text-sm text-warmGray">
-            {t('Chạm lên khung để thêm đỉnh ({{n}}/{{max}}). Chạm vào một đỉnh để xoá. Cần tối thiểu {{min}} đỉnh.', { n: points.length, max: MAX_POINTS, min: MIN_POINTS })}
-          </p>
-
-          <div className="flex flex-col gap-2">
-            <span className="label-caption">{t('Chiều bay qua vòng')}</span>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {rings.map((ring, index) => (
               <button
+                key={index}
                 type="button"
-                onClick={() => setIntoRingIsExit(true)}
-                className={cn('rounded-xl border px-3 py-2 text-left text-sm', intoRingIsExit ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
+                onClick={() => handleSelectRing(index)}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-sm',
+                  index === activeIndex ? 'border-charcoal bg-charcoal text-white' : 'border-warmGray/20 text-charcoal',
+                )}
               >
-                <span className="font-semibold text-charcoal">{t('Camera trong nhà')}</span>
-                <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = RA khỏi tổ')}</span>
+                {t('Vòng {{n}}', { n: index + 1 })}
+                <span className="ml-1 text-xs opacity-70">({ring.points.length})</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setIntoRingIsExit(false)}
-                className={cn('rounded-xl border px-3 py-2 text-left text-sm', !intoRingIsExit ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
-              >
-                <span className="font-semibold text-charcoal">{t('Camera ngoài trời')}</span>
-                <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = VỀ tổ')}</span>
-              </button>
-            </div>
+            ))}
+            {rings.length < MAX_RINGS && activeIndex < rings.length && (
+              <Button variant="secondary" size="sm" onClick={handleNewRing} disabled={mutation.isPending}>
+                <Plus className="w-4 h-4" /> {t('Vòng mới')}
+              </Button>
+            )}
+            {activeIndex < rings.length && (
+              <Button variant="secondary" size="sm" onClick={handleRemoveRing} disabled={mutation.isPending}>
+                <Trash2 className="w-4 h-4" /> {t('Bỏ vòng này')}
+              </Button>
+            )}
           </div>
 
-          {saveError && (
-            <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{saveError}</span>
+          <p className="text-sm text-warmGray">
+            {t('Chạm lên khung để đặt đỉnh. Đủ {{auto}} đỉnh thì chạm tiếp sẽ sang vòng mới (tối đa {{rings}} vòng). Chọn lại một vòng để thêm đỉnh, tối đa {{max}}. Chạm vào một đỉnh để xoá.', { auto: POINTS_BEFORE_NEXT_RING, rings: MAX_RINGS, max: MAX_POINTS })}
+          </p>
+
+          {knownDirection === undefined && (
+            <div className="flex flex-col gap-2">
+              <span className="label-caption">{t('Camera đặt ở đâu? Camera đếm chim chưa báo vòng mặc định nên cần chọn một lần.')}</span>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setChosenDirection(true)}
+                  className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === true ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
+                >
+                  <span className="font-semibold text-charcoal">{t('Camera trong nhà')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = RA khỏi tổ')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChosenDirection(false)}
+                  className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === false ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
+                >
+                  <span className="font-semibold text-charcoal">{t('Camera ngoài trời')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = VỀ tổ')}</span>
+                </button>
+              </div>
             </div>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setPoints(current => current.slice(0, -1))} disabled={points.length === 0 || mutation.isPending}>
+              <Button variant="secondary" size="sm" onClick={() => updateActive(ring => ({ ...ring, points: ring.points.slice(0, -1) }))} disabled={activeRing.points.length === 0 || mutation.isPending}>
                 <Undo2 className="w-4 h-4" /> {t('Hoàn tác điểm')}
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => setPoints([])} disabled={points.length === 0 || mutation.isPending}>
+              <Button variant="secondary" size="sm" onClick={() => updateActive(ring => ({ ...ring, points: [] }))} disabled={activeRing.points.length === 0 || mutation.isPending}>
                 <Trash2 className="w-4 h-4" /> {t('Xoá hết')}
               </Button>
             </div>
@@ -144,24 +240,66 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
               <Button variant="secondary" size="sm" onClick={handleCancel} disabled={mutation.isPending}>
                 <X className="w-4 h-4" /> {t('Huỷ')}
               </Button>
-              <Button variant="primary" size="sm" onClick={handleSave} disabled={!hasRing || mutation.isPending} loading={mutation.isPending}>
+              <Button variant="primary" size="sm" onClick={() => void save(drawnRings)} disabled={!canSave || mutation.isPending} loading={mutation.isPending}>
                 <Save className="w-4 h-4" /> {t('Lưu vòng đếm')}
               </Button>
             </div>
           </div>
         </>
       ) : (
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm text-warmGray">
-            {hasRing
-              ? t('Vòng hiện tại có {{n}} đỉnh.', { n: points.length })
-              : t('Chưa có vòng đếm, camera đếm chim dùng vòng mặc định trong cấu hình.')}
-          </p>
-          <Button variant="primary" size="sm" onClick={handleStartEditing}>
-            <Pencil className="w-4 h-4" /> {hasRing ? t('Vẽ lại vòng') : t('Vẽ vòng đếm')}
-          </Button>
+        <div className="space-y-2">
+          {shown.rings.length === 0 && (
+            <p className="text-sm text-warmGray">{t('Chưa có vòng đếm, camera đếm chim dùng vòng mặc định trong cấu hình.')}</p>
+          )}
+          {shown.rings.map((ring, index) => (
+            <div key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warmGray/15 bg-white px-3 py-2 text-sm">
+              <span className="font-semibold text-charcoal">
+                {t('Vòng {{n}}', { n: index + 1 })}
+                <span className="ml-2 font-normal text-warmGray">
+                  {shown.isDefault ? t('Vòng mặc định') : t('{{n}} đỉnh', { n: ring.points.length })}
+                </span>
+              </span>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => handleRedraw(index)} disabled={mutation.isPending}>
+                  <Pencil className="w-4 h-4" /> {t('Vẽ lại')}
+                </Button>
+                {!shown.isDefault && (
+                  <Button variant="secondary" size="sm" onClick={() => setConfirming({ kind: 'delete', index })} disabled={mutation.isPending}>
+                    <Trash2 className="w-4 h-4" /> {t('Xoá')}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+          <div className="flex flex-wrap justify-end gap-2">
+            {!shown.isDefault && (
+              <Button variant="secondary" size="sm" onClick={() => setConfirming({ kind: 'default' })} disabled={mutation.isPending}>
+                <RotateCcw className="w-4 h-4" /> {t('Dùng lại vòng mặc định')}
+              </Button>
+            )}
+            {shown.rings.length < MAX_RINGS && (
+              <Button variant="primary" size="sm" onClick={() => startEditing(draftOf(shown.rings), shown.rings.length)} disabled={mutation.isPending}>
+                <Plus className="w-4 h-4" /> {shown.rings.length > 0 ? t('Vẽ thêm vòng') : t('Vẽ vòng đếm')}
+              </Button>
+            )}
+          </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirming !== null}
+        title={confirming?.kind === 'default' ? 'Dùng lại vòng mặc định?' : 'Xoá vòng này?'}
+        description={
+          confirming?.kind === 'delete' && shown.rings.length > 1
+            ? 'Camera đếm chim chỉ đếm bằng các vòng còn lại. Số đếm trước và sau khi đổi vòng không so được với nhau.'
+            : 'Camera đếm chim sẽ dùng lại vòng mặc định trong cấu hình. Số đếm trước và sau khi đổi vòng không so được với nhau.'
+        }
+        confirmLabel={confirming?.kind === 'default' ? 'Dùng lại vòng mặc định' : 'Xoá vòng'}
+        danger
+        loading={mutation.isPending}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirming(null)}
+      />
     </div>
   )
 }

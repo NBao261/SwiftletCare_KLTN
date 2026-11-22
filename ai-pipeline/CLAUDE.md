@@ -22,7 +22,7 @@ python tools/pick_roi.py [image|clip|rtsp] --margin 60  # click the hole outline
 python tools/track_clip.py <clip> --start 425 --seconds 20 [--detector motion]  # video with green boxes → D:/SwiftletCare/clips/annotated
 ```
 
-`stream.py` takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY`, `--realtime` (play a file at real speed, camera demo) and `--no-mqtt`. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). CI runs `pytest` for PRs that touch `ai-pipeline/`.
+`stream.py` takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY`, `--realtime` (play a file at real speed, camera demo) and `--no-mqtt`. Python 3.11–3.12 (`onnxruntime-gpu` 1.30 needs ≥ 3.11; versions pinned in plan §4). CI runs `pytest` for PRs that touch `ai-pipeline/`.
 
 ## Structure
 
@@ -34,13 +34,13 @@ pytest.ini
 requirements.txt
 src/
   stream.py           live loop: latest-frame reader, sessions in Vietnam time, state.json, MQTT publisher, 5-minute buckets
-  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack; draw() green boxes, ring, counts
+  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack; draw() green boxes, rings, day total
   mjpeg_server.py     MJPEG preview on 127.0.0.1 (encodes only while someone watches)
   stream_pusher.py    pushes the annotated frames to MediaMTX with ffmpeg; masks the password in its logs
   frame_prep.py       mask + tiles, shared with the dataset tools so training and production see the same pixels
   inference.py        ONNX inference, YOLO26 (300, 6) and YOLOv8/11 outputs, per-tile run + merge
-  counting.py         RingCounter (ring crossings + extrapolation at the hole; set_ring() swaps it live), sessions, BucketClock
-  remote_config.py    VISION-FR-018: ring drawn by the Domain Expert, from the retained config topic → state/counting_ring.json
+  counting.py         RingCounter (ring crossings + extrapolation at the hole), MultiRingCounter (1–4 rings summed; set_rings() swaps them live), sessions, BucketClock
+  remote_config.py    VISION-FR-018: 1–4 rings drawn on the web, from the retained config topic → state/counting_ring.json
 tools/pick_roi.py     calibration: hole outline → ring (offset by --margin), printed as YAML
 tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels from motion tracks (--draft tracks) or blobs
 tools/track_clip.py  clip segment → video with green boxes + counts; --detector motion until a trained model exists
@@ -57,7 +57,7 @@ Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `
 - **[Bắt buộc]** One detection class, `swiftlet`. Nothing new for predators (rat/snake/owl) or `PREDATOR_DETECTED`; code a PR touches that still refers to them is removed, not extended. `vision/alert` carries only `EDGE_AI_DEGRADED` (THREAT-FR-010), the one alert type the backend accepts from a camera.
 - **[Bắt buộc]** Class map, confidence/NMS thresholds, tiles and mask, counting ring and direction, tracking and extrapolation limits, session windows, publish intervals and model path come from `config/config.yaml` — no magic numbers in `src/`. A new tunable goes into the config with a comment.
 - **[Bắt buộc]** No threshold or behaviour invented without a source (Report 3, plan, Domain Expert, a measured result). A value picked by hand is labelled as such in the config comment and listed in Report 3 §4.5 (engineering constants, A-4) in the same PR.
-- **[Bắt buộc]** Runtime targets the plan's stack: `onnxruntime` + `supervision` (ByteTrack) — no `torch`/`ultralytics` in `requirements.txt` (they are for training on Colab only). New dependencies are pinned with a lower bound like the existing ones.
+- **[Bắt buộc]** Runtime targets the plan's stack: `onnxruntime-gpu` (CUDA only, no CPU fallback) + `supervision` (ByteTrack) — no `torch`/`ultralytics` in `requirements.txt` (they are for training on Colab only). New dependencies are pinned with a lower bound like the existing ones.
 
 ### Secrets, data and models
 - **[Bắt buộc]** Camera RTSP URL (it carries the camera password), MQTT credentials, `STREAM_PUSH_URL` and the/device IDs come from `.env` (`CAMERA_RTSP_URL`, `MQTT_PASSWORD` (the device's broker secret; the user name is the device ID), `STREAM_PUSH_URL`, `CAMERA_DEVICE_ID`), never from `config.yaml` or code. A new variable is added to an `.env.example` with a placeholder.
@@ -65,10 +65,10 @@ Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `
 - **[Bắt buộc]** Anything leaving the machine uses TLS in deploy mode (MQTT 8883, `rtsps://` push). The MJPEG preview binds to `127.0.0.1` only; remote viewers go through MediaMTX with backend-checked access.
 
 ### MQTT contract with the backend
-- **[Bắt buộc]** Topics are per device (Report 4 §7.2): `swiftletcare/dev/{deviceId}/vision/bird-count`, `…/heartbeat` (`{deviceId, modelVersion, fps}`) and `…/vision/alert`. The backend keeps the node's house, so no farm or house ID appears here. The broker refuses any other topic (NFR-10 d).
+- **[Bắt buộc]** Topics are per device (Report 4 §7.2): `swiftletcare/dev/{deviceId}/vision/bird-count`, `…/heartbeat` (`{deviceId, modelVersion, fps, defaultRings}`, `defaultRings` = the `config.yaml` ring so the web shows it as an ordinary ring) and `…/vision/alert`. The backend keeps the node's house, so no farm or house ID appears here. The broker refuses any other topic (NFR-10 d).
 - **[Bắt buộc]** Every payload carries `deviceId` = the CameraNode `device_id` registered in the backend; the backend drops a message whose `deviceId` differs from its topic.
 - **[Bắt buộc]** Payload shapes follow the plan (§6.6) and the backend's `BirdCountPayload` (`backend/src/types/domain.types.ts`, extended per plan §8.2): session message `{deviceId, session_type, entry_count, exit_count, confidence_avg, final, timestamp}`; bucket message `{deviceId, kind: "BUCKET", bucket_start, bucket_minutes, entry_count, exit_count, timestamp}`; heartbeat `{deviceId, firmwareVersion}`. Timestamps are epoch milliseconds. Counts are non-negative integers. A field change lands together with the backend type, the handler and `docs/api/api-spec.yaml` (or names the PR that does).
-- **[Bắt buộc]** The one message the node receives is the retained `swiftletcare/dev/{deviceId}/config` with `{deviceId, counting_ring: {points, into_ring_is_exit}}` (VISION-FR-018, `remote_config.py`): drop it when `deviceId` names another camera, validate it with the same limits as the backend route (3–12 vertices in 0–1), and keep counting with the old ring when it is malformed.
+- **[Bắt buộc]** The one message the node receives is the retained `swiftletcare/dev/{deviceId}/config` with `{deviceId, counting_rings: [{points, into_ring_is_exit}]}` (0–4 rings, `[]` = deleted, back to the `config.yaml` ring; an older backend's single `counting_ring` is still read; VISION-FR-018, `remote_config.py`): drop it when `deviceId` names another camera, validate it with the same limits as the backend route (3–12 vertices in 0–1), and keep counting with the old ring when it is malformed.
 - **[Bắt buộc]** The pipeline sends raw entry/exit counts; the backend computes the return rate on **net** counts (VISION-FR-009). Do not compute or send `return_rate` from the pipeline.
 - **[Nên]** Publish with QoS 1 for counts and QoS 0 for heartbeats; reconnect with `connect_async` + `loop_start` so a broker outage does not stop counting.
 

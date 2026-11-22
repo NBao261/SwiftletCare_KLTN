@@ -281,18 +281,17 @@ describe('nhóm tham số mới (BR-22, Report 3 4.2.15)', () => {
     expect((await House.findById(house._id).lean())!.counting_schedule!.temporary).toEqual([])
   })
 
-  it('vòng đếm: chưa có vòng cũ thì không hoàn tác được (409, mục vẫn chờ); có vòng cũ thì hoàn tác về vòng đó', async () => {
+  it('vòng đếm: chưa có vòng cũ thì hoàn tác về vòng mặc định; có vòng cũ thì hoàn tác về vòng đó', async () => {
     const { house, t, send } = await seed()
     const camera = await CameraNode.create({ device_id: `cam-${seq}`, house_id: house._id, status: 'ONLINE' })
     const path = `/devices/camera-nodes/${camera._id}/counting-ring`
     await send('put', path, t.owner, { points: RING, into_ring_is_exit: true }).expect(200)
     const first = await review(camera._id, 'counting_ring')
-    await send('put', `/expert-activity/reviews/${first!._id}/revert`, t.expert).expect(409)
-    expect(await review(camera._id, 'counting_ring')).toMatchObject({ status: 'PENDING_REVIEW' })
+    await send('put', `/expert-activity/reviews/${first!._id}/revert`, t.expert).expect(200)
+    expect((await CameraNode.findById(camera._id).lean())!.counting_rings).toEqual([])
 
     // Mục mới giữ vòng của chuyên gia làm giá trị gốc
     await send('put', path, t.expert, { points: RING, into_ring_is_exit: false }).expect(200)
-    expect(await ParameterReview.findById(first!._id).lean()).toMatchObject({ status: 'ADJUSTED' })
     await send('put', path, t.owner, { points: RING.slice(0, 3), into_ring_is_exit: true }).expect(200)
     const second = await ParameterReview.findOne({ target_id: camera._id, status: 'PENDING_REVIEW' }).lean()
     await send('put', `/expert-activity/reviews/${second!._id}/revert`, t.expert).expect(200)
@@ -329,7 +328,7 @@ describe('nhóm tham số mới (BR-22, Report 3 4.2.15)', () => {
     await send('put', path, t.owner, { points: RING, into_ring_is_exit: true }).expect(200)
     await send('put', path, tokenFor(technician._id, 'FARM_TECHNICIAN'), { points: RING.slice(0, 3), into_ring_is_exit: false }).expect(200)
     expect(await review(camera._id, 'counting_ring')).toMatchObject({
-      status: 'PENDING_REVIEW', new_values: { ring: { points: RING.slice(0, 3), into_ring_is_exit: false } },
+      status: 'PENDING_REVIEW', new_values: { rings: [{ points: RING.slice(0, 3), into_ring_is_exit: false }] },
     })
   })
 })

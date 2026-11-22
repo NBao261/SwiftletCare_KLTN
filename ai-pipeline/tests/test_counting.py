@@ -66,7 +66,7 @@ def test_crossing_while_the_tracker_lost_the_bird_still_counts():
     assert (c.entry_count, c.exit_count) == (1, 0)
 
 
-# ── Luật ngoại suy (plan §19.8): chim qua lỗ 150–200 px/frame, frame trong vòng thường không được phát hiện ──
+# Luật ngoại suy: chim qua lỗ 150–200 px/frame, frame trong vòng thường không được phát hiện
 HOLE = [(0.4, 0.4), (0.6, 0.4), (0.6, 0.6), (0.4, 0.6)]   # 1000x1000 frame -> 400..600 px
 
 
@@ -147,7 +147,7 @@ def test_new_ring_forgets_tracks():
     assert (c.entry_count, c.exit_count) == (0, 0)
 
 
-# ── Phiên theo giờ VN và số đếm 5 phút (VISION-FR-006/017) ──
+# Phiên theo giờ VN và số đếm 5 phút
 WINDOWS = {"MORNING_EXIT": ["05:30", "07:00"], "EVENING_ENTRY": ["17:30", "19:00"]}
 
 

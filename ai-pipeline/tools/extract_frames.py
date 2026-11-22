@@ -1,17 +1,4 @@
-"""SwiftletCare – tách frame từ clip theo 2 ô của camera.tiles và sinh nhãn nháp YOLO cho Roboflow (plan §7.2).
-
-  python tools/extract_frames.py D:/SwiftletCare/clips/20261022_morning_01.mp4 --out D:/SwiftletCare/dataset/raw --start 240 --seconds 1260
-  Get-ChildItem D:\\SwiftletCare\\clips\\*.mp4 | ForEach-Object { python tools/extract_frames.py $_.FullName --out D:\\SwiftletCare\\dataset\\raw }
-
-Che dòng ngày giờ (camera.mask) và cắt 2 ô (camera.tiles) bằng đúng src/frame_prep.py mà pipeline dùng lúc chạy:
-model train trên ảnh nào thì chạy thật trên đúng ảnh đó. Mỗi frame ra `<clip>_<frame>_t0.jpg` và `_t1.jpg`.
-
-Nhãn nháp (--draft):
-- tracks (mặc định): vật chuyển động → ByteTrack như tools/track_clip.py --detector motion, chỉ giữ vết sống
-  ≥ --min-track-frames frame và dời ≥ --min-track-move px. Lọc được nhiễu nhấp nháy; chạy 2 lượt qua clip.
-- blobs: đốm chuyển động của từng frame, không qua tracker (cách cũ, nhiễu hơn).
-Nhãn nháp vẫn sót chim đứng yên, gộp 2 con sát nhau, bắt cả côn trùng — phải sửa trên Roboflow, không train thẳng (§7.3).
-"""
+"""Tách frame theo 2 ô của camera.tiles và sinh nhãn nháp YOLO; nhãn nháp phải sửa trên Roboflow."""
 import argparse
 import math
 import sys
@@ -28,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from frame_prep import apply_mask, tile_rects  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parents[1] / "config" / "config.yaml"
-# Roboflow đọc tên class của nhãn YOLO từ file này; thiếu thì class hiện là "0" (plan §7.3)
+# Roboflow đọc tên class từ file này; thiếu thì class hiện là "0"
 ROBOFLOW_YAML = "nc: 1\nnames: [swiftlet]\n"
 KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
 Box = Tuple[float, float, float, float]
@@ -119,8 +106,7 @@ def main() -> None:
     ap.add_argument("--min-track-frames", type=int, default=3, help="tracks: bỏ vết sống ít hơn ngần này frame")
     # 20 px: chim lượn dời 20–35 px mỗi frame, sống ≥ 3 frame thì đi ≥ 40 px; đốm đứng yên thì ~0. Chọn tay.
     ap.add_argument("--min-track-move", type=float, default=20, help="tracks: bỏ vết dời (đầu → cuối) ít hơn ngần này px")
-    # 150: nhiễu cảm biến dưới IR ra đốm 49–108 px² sau dilate (đo trên clip 21/10); chim ≥ 15 px trong ảnh
-    # đầu vào model ≈ 25×25 px trong ô cao 1080 px (tỉ lệ 640/1080), nên 150 không bỏ sót chim nào model cần thấy
+    # 150: nhiễu IR ra đốm 49–108 px² (clip 21/10); chim ≥ 15 px ở đầu vào model nên không bị bỏ sót
     ap.add_argument("--min-area", type=int, default=150, help="blobs: bỏ đốm nhỏ hơn (px²) — nhiễu IR")
     # 60000 (~245×245 px): chim bay sát ống kính thành vệt ~180×180 px (clip 22/10), phải còn trong nhãn nháp
     ap.add_argument("--max-area", type=int, default=60000, help="blobs: bỏ đốm lớn hơn (px²) — đổi sáng, người")

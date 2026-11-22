@@ -1,8 +1,4 @@
-"""SwiftletCare – phát frame dưới dạng MJPEG để hiệu chỉnh ROI và vạch đếm (VISION-FR-013/014, chỉ dùng khi dev).
-
-GET /stream           → có ô xanh, ROI, vạch đếm
-GET /stream?boxes=0   → hình gốc
-"""
+"""Phát frame dạng MJPEG để hiệu chỉnh vòng đếm khi dev: /stream có khung, /stream?boxes=0 hình gốc."""
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional

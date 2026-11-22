@@ -3,9 +3,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+import inference  # noqa: E402
 from inference import Detection, InferenceEngine, decode, merge_tiles  # noqa: E402
 
 BIRD = {14: "swiftlet"}
@@ -47,3 +49,17 @@ def test_preprocess_gives_rgb_nchw_in_0_1_with_grey_letterbox():
     assert (scale, pad_x, pad_y) == (0.32, 0, 16)
     assert np.allclose(blob[0, :, 32, 32], [0, 0, 1])          # image: R=0, G=0, B=1
     assert np.allclose(blob[0, :, 0, 32], 114 / 255)           # letterbox band above the image
+
+
+def test_missing_cuda_stops_instead_of_running_on_the_cpu(monkeypatch):
+    class CpuOnlySession:
+        def __init__(self, *args, **kwargs): pass
+        def get_inputs(self): return [SimpleNamespace(name="images")]
+        def get_outputs(self): return [SimpleNamespace(name="output0")]
+        def get_providers(self): return ["CPUExecutionProvider"]
+
+    monkeypatch.setattr(inference.ort, "InferenceSession", CpuOnlySession)
+    monkeypatch.setattr(inference.ort, "preload_dlls", lambda: None, raising=False)
+    with pytest.raises(RuntimeError):
+        InferenceEngine("m.onnx", 640, 0.3, 0.45, BIRD, providers=["CUDAExecutionProvider"])
+    InferenceEngine("m.onnx", 640, 0.3, 0.45, BIRD)   # tools và test mặc định CPU vẫn chạy

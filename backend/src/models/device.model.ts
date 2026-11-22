@@ -82,7 +82,12 @@ export interface ICameraNode extends Document {
   decommissioned_at?: Date
   decommission_reason?: string
   replaced_by?: Types.ObjectId
+  // Vòng đầu tiên kèm người sửa; app cũ chỉ đọc trường này
   counting_ring?: CountingRing & { updated_at: Date; updated_by: Types.ObjectId }
+  // 1–4 vòng; [] = đã xoá, nút AI dùng vòng trong config.yaml; bản ghi cũ không có
+  counting_rings?: CountingRing[]
+  // Vòng trong config.yaml do nút AI báo qua heartbeat, để web hiện như một vòng thường
+  default_rings?: CountingRing[]
   counting_ring_history: ICountingRingHistoryEntry[]
 }
 
@@ -90,8 +95,9 @@ export interface ICountingRingHistoryEntry {
   changed_by: Types.ObjectId
   changed_by_role?: Role
   changed_at: Date
-  old_value?: CountingRing
-  new_value: CountingRing
+  // Bản ghi cũ là 1 vòng, bản ghi mới là danh sách vòng
+  old_value?: CountingRing | CountingRing[]
+  new_value: CountingRing | CountingRing[]
 }
 
 const relayUsageSchema = {
@@ -210,6 +216,20 @@ const cameraNodeSchema = new Schema<ICameraNode>(
         updated_at: { type: Date, required: true },
         updated_by: { type: Schema.Types.ObjectId, ref: 'User', required: true },
       }, { _id: false }),
+      default: undefined,
+    },
+    counting_rings: {
+      type: [new Schema({
+        points:            { type: [[Number]], required: true },
+        into_ring_is_exit: { type: Boolean, required: true },
+      }, { _id: false })],
+      default: undefined,
+    },
+    default_rings: {
+      type: [new Schema({
+        points:            { type: [[Number]], required: true },
+        into_ring_is_exit: { type: Boolean, required: true },
+      }, { _id: false })],
       default: undefined,
     },
     counting_ring_history: [{

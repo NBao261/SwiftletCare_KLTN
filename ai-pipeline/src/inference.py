@@ -1,13 +1,4 @@
-﻿"""
-SwiftletCare - YOLO ONNX inference engine
-
-Reads both output layouts so models can be swapped from config.yaml alone
-(plan §6.3, §7.9): YOLO26 exported with nms=False gives (1, 300, 6) rows of
-x1, y1, x2, y2, confidence, class_id; YOLOv8/YOLO11 give (1, 4 + classes, N)
-columns of cx, cy, w, h, class scores and need NMS.
-
-SRS: VISION-FR-001, VISION-FR-002, VISION-FR-003
-"""
+﻿"""YOLO ONNX inference; reads both the YOLO26 (nms=False) and the YOLOv8/11 output layouts."""
 import time
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -53,11 +44,7 @@ def decode(out: np.ndarray, conf_thresh: float, iou_thresh: float, class_names: 
 
 
 def merge_tiles(dets: List[Detection], max_overlap: float) -> List[Detection]:
-    """
-    Drop duplicates from the overlap between tiles. A bird cut by one tile's edge gives a partial box
-    lying inside the full box from the other tile, so overlap is measured on the smaller box
-    (intersection / smaller area), not IoU. Highest confidence wins.
-    """
+    """Drop duplicates between overlapping tiles: overlap is intersection / smaller area, not IoU; highest confidence wins."""
     kept: List[Detection] = []
     for d in sorted(dets, key=lambda d: d.confidence, reverse=True):
         x1, y1, x2, y2 = d.bbox
@@ -84,21 +71,21 @@ class InferenceEngine:
         self.class_names = {int(k): v for k, v in class_names.items()}
 
         sess_opts = ort.SessionOptions()
-        # Không đặt intra_op_num_threads = os.cpu_count(): số luồng logic (gấp đôi số nhân khi có SMT) làm
-        # suy luận chậm gấp đôi (45 ms so với 21 ms trên Ryzen 7 6800H, đo 20/10). Để mặc định của ONNX Runtime.
+        # Không đặt intra_op_num_threads = os.cpu_count(): suy luận chậm gấp đôi với SMT (45 ms so với 21 ms trên Ryzen 7 6800H)
         sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         wanted = list(providers or ["CPUExecutionProvider"])
         if "CUDAExecutionProvider" in wanted:
-            # CUDA/cuDNN cài qua pip (onnxruntime-gpu[cuda,cudnn]) không nằm trong PATH: không nạp trước thì
-            # ONNX Runtime âm thầm chạy CPU (đo 03/11/2026, plan §18.4 bước 0). Gói CPU thì hàm này không làm gì.
+            # CUDA/cuDNN cài qua pip không nằm trong PATH: không nạp trước thì ONNX Runtime âm thầm chạy CPU
             ort.preload_dlls()
         self.session = ort.InferenceSession(model_path, sess_opts, providers=wanted)
         self.input_name  = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
         used = self.session.get_providers()
         logger.info(f"Model loaded: {model_path} | providers: {used}")
+        # Không lùi về CPU: CPU không đủ khung hình/giây để đếm chim bay nhanh
         if used[0] != wanted[0]:
-            logger.warning(f"Không dùng được {wanted[0]}, đang chạy {used[0]} (plan §18.4 bước 0)")
+            raise RuntimeError(f"Không chạy được trên {wanted[0]} (đang có {used[0]}): kiểm tra driver GPU "
+                               f"và gói onnxruntime-gpu[cuda,cudnn] trong requirements.txt")
 
     def preprocess(self, image: np.ndarray) -> Tuple[np.ndarray, float, int, int]:
         """Letterbox to input_size, BGR -> RGB (the model trains on RGB), NCHW float."""

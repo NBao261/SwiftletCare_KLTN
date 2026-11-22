@@ -1,10 +1,4 @@
-"""SwiftletCare – chia dataset theo NGÀY quay (8 chữ số đầu tên file) và ghi data.yaml (plan §7.4).
-
-  python tools/split_by_day.py D:/SwiftletCare/dataset/roboflow D:/SwiftletCare/dataset/final --val 20261024 --test 20261025
-
-Nhận mọi cấu trúc có cặp .../images/x.jpg và .../labels/x.txt (kể cả bản export của Roboflow).
-Frame liên tiếp gần như giống hệt nhau: chia theo frame thì ảnh "sinh đôi" lọt vào cả train lẫn test.
-"""
+"""Chia dataset theo ngày quay để frame gần giống nhau không lọt vào cả train lẫn test."""
 import argparse
 import re
 import shutil

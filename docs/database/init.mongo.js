@@ -426,6 +426,48 @@ ensureCollection("cameranodes", {
       },
       "required": ["points", "into_ring_is_exit", "updated_at", "updated_by"]
     },
+    "counting_rings": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "points": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "number"
+              }
+            }
+          },
+          "into_ring_is_exit": {
+            "bsonType": "bool"
+          }
+        },
+        "required": ["points", "into_ring_is_exit"]
+      }
+    },
+    "default_rings": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "points": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "number"
+              }
+            }
+          },
+          "into_ring_is_exit": {
+            "bsonType": "bool"
+          }
+        },
+        "required": ["points", "into_ring_is_exit"]
+      }
+    },
     "counting_ring_history": {
       "bsonType": ["array", "null"],
       "items": {

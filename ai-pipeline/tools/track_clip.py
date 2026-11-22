@@ -1,11 +1,4 @@
-"""SwiftletCare – chạy pipeline (2 ô → YOLO → ByteTrack → vòng đếm) trên một đoạn clip, ghi video có ô xanh (plan §6.8).
-
-  python tools/track_clip.py D:/SwiftletCare/clips/20261022_morning_01.mp4 --start 420 --seconds 20
-  python tools/track_clip.py <clip> --model D:/models/swiftlet_v1.onnx --out D:/SwiftletCare/clips/annotated
-
-Xử lý từng frame giống hệt luồng camera (src/pipeline.py), nên số RA/VÀO in ra là số pipeline sẽ đếm.
-Dùng để xem ô xanh có bám chim không và để đo sai số trên clip đã đếm tay (plan §7.7).
-"""
+"""Chạy pipeline trên một đoạn clip và ghi video có khung, để xem khung bám chim và đo sai số so với đếm tay."""
 import argparse
 import sys
 import time
@@ -21,14 +14,9 @@ from stream import load_config, make_counter, make_engine  # noqa: E402
 
 
 class MotionDetector:
-    """
-    Chỉ để dev, khi chưa có model tự train: model COCO không nhận ra chim yến trong ảnh IR (22/10 thử tới
-    conf 0,02 vẫn 0 lần ra class bird). Lấy vật chuyển động (MOG2, nửa độ phân giải) làm "phát hiện" để xem
-    ByteTrack và bộ đếm chạy trên clip thật. Bắt cả côn trùng và nhiễu, nên số đếm chỉ để tham khảo.
-    """
+    """Chỉ để dev: lấy vật chuyển động làm phát hiện vì model COCO không thấy chim yến trong ảnh IR."""
 
-    # max_fg_fraction 0,02: frame thường có 0,05% điểm ảnh "chuyển động" (trung vị), chim sát ống kính
-    # (~180×180 px) ~1,6%, còn lúc camera tự chỉnh phơi sáng vọt lên 14% (clip 22/10, 05:31:50). Chọn tay.
+    # max_fg_fraction 0,02: thường 0,05%, chim sát ống kính ~1,6%, lúc tự chỉnh phơi sáng 14% (clip 22/10). Chọn tay.
     def __init__(self, min_side_px: int = 8, max_side_px: int = 260, max_fg_fraction: float = 0.02):
         self.bg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
@@ -88,7 +76,7 @@ def main() -> None:
             break
         tracks, _, _ = pipe.track(frame)
         counter.update(track_ids(tracks), tracks.xyxy)
-        writer.write(draw(frame.copy(), tracks, counter, n / max(time.perf_counter() - t0, 1e-6)))
+        writer.write(draw(frame.copy(), tracks, counter, counter.entry_count + counter.exit_count))
         max_tracks = max(max_tracks, len(tracks))
         n += 1
     cap.release()

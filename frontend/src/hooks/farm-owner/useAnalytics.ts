@@ -1,5 +1,7 @@
-import { useMemo } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSocket } from '@/hooks/common/useSocket'
+import { joinHouse, leaveHouse, onBirdCountUpdate } from '@/lib/socket'
 import { analyticsApi } from '@/apis/farm-owner/analytics.api'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { mergeBirdCountRecords } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
@@ -162,6 +164,23 @@ export function useHousesBirdCountCurrent(houseIds: string[]) {
       }
     },
   })
+}
+
+// Nút AI gửi số phiên qua socket: đọc lại số hôm nay ngay, không chờ nhịp 30 giây
+export function useLiveBirdCount(houseId: string | undefined) {
+  useSocket()
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    if (!houseId) return
+    joinHouse(houseId)
+    const off = onBirdCountUpdate(event => {
+      if (event.houseId === houseId) void queryClient.invalidateQueries({ queryKey: ['analytics', 'bird-count-current', houseId] })
+    })
+    return () => {
+      off()
+      leaveHouse(houseId)
+    }
+  }, [houseId, queryClient])
 }
 
 // Tỷ lệ chim về chờ hệ thống đếm chim nên nơi dùng gắn nhãn dữ liệu giả

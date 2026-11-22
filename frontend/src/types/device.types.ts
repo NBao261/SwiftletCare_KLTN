@@ -86,15 +86,20 @@ export interface CountingRingHistoryEntry {
   changed_by: string
   changed_by_role: string
   changed_at: string
-  old_value: CountingRing | null
-  new_value: CountingRing
+  // bản ghi cũ là 1 vòng, bản ghi mới là danh sách vòng
+  old_value: CountingRing | CountingRing[] | null
+  new_value: CountingRing | CountingRing[]
 }
 
 export interface CameraNode {
   _id: string; device_id: string; rtsp_url?: string
   // camera ở cửa ra vào của cả nhà yến; zone_id chỉ còn ở bản ghi cũ
   house_id?: string; zone_id?: string
-  // vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml
+  // 1–4 vòng đã vẽ; trống thì nút AI dùng vòng trong config.yaml. Bản ghi cũ chỉ có counting_ring
+  counting_rings?: CountingRing[]
+  // vòng trong config.yaml do nút AI báo lên
+  default_rings?: CountingRing[]
+  // vòng đầu tiên kèm người sửa và lúc sửa
   counting_ring?: (CountingRing & { updated_at?: string; updated_by?: string }) | null
   // lịch sử đổi vòng đếm, mới nhất tuỳ backend sắp xếp
   counting_ring_history?: CountingRingHistoryEntry[]

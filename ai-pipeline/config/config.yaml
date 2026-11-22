@@ -1,10 +1,10 @@
 ﻿# SwiftletCare AI Pipeline Configuration
-# SRS: §9.2, §11.2, §11.3. Địa chỉ RTSP (có mật khẩu camera) và ID thiết bị nằm trong .env, không ở đây.
+# Địa chỉ RTSP (có mật khẩu camera) và ID thiết bị nằm trong .env, không ở đây.
 
 camera:
   source: "clips/sample.mp4"      # bị --source hoặc CAMERA_RTSP_URL trong .env ghi đè
-  fps: 25                         # VIGI C320I, đã kiểm tra 20/10/2026 (plan §19.7); ByteTrack dùng số này
-  # Theo dõi cả khung (plan §19.8): chim lượn khắp phòng, có id từ trước khi lao vào lỗ.
+  fps: 25                         # VIGI C320I, đã kiểm tra 20/10/2026; ByteTrack dùng số này
+  # Theo dõi cả khung: chim lượn khắp phòng, có id từ trước khi lao vào lỗ.
   # 2 ô chồng nhau 160 px (x1,y1,x2,y2 theo tỉ lệ; trên 1920x1080: x 0–1040 và 880–1920). Mỗi ô thu về
   # model.input_size, tỉ lệ 640/1080 = 0,59 → chim lượn 25–40 px còn 15–24 px (cổng 5: ≥ 15 px).
   # Chồng 160 px > cỡ chim lượn (~40 px) nên con nào ở mép ô cũng nằm trọn trong ô kia. Chọn tay.
@@ -21,22 +21,21 @@ model:
   path: "models/yolov8n_swiftlet_v1.onnx"   # model chim yến v1 (03/11/2026, ~10 % lệch đếm tay); v2 đang train
   version: "yolov8n-swiftlet-v1"            # gửi lên backend làm modelVersion trong heartbeat
   input_size: 640                 # phải bằng imgsz lúc export
-  confidence_threshold: 0.30      # cũng là ngưỡng mở vết của ByteTrack; plan §6.2
+  confidence_threshold: 0.30      # cũng là ngưỡng mở vết của ByteTrack
   nms_iou_threshold: 0.45         # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
   # Gộp ô trùng ở dải chồng giữa 2 ô: bỏ ô có phần giao / diện tích ô nhỏ hơn vượt mức này. Chọn tay.
   tile_merge_overlap: 0.6
-  # Thử lần lượt (plan §18.4 bước 0). Máy cài gói onnxruntime CPU thì bỏ qua CUDA, chạy CPU và log cảnh báo.
-  providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]   # GPU NVIDIA + onnxruntime-gpu[cuda,cudnn]
-  # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
-  # GPU khác trên Windows + onnxruntime-directml: ["DmlExecutionProvider", "CPUExecutionProvider"]
+  # Chỉ chạy trên GPU: provider đầu không nạp được thì pipeline dừng, không lùi về CPU
+  providers: ["CUDAExecutionProvider"]   # GPU NVIDIA + onnxruntime-gpu[cuda,cudnn]
+  # GPU khác trên Windows + onnxruntime-directml: ["DmlExecutionProvider"]
   classes:
     0: swiftlet                   # model tự train 1 lớp (model COCO tạm: 14 = bird)
 
 tracking:
-  box_pad: 2.5                    # nới box trước khi track (chim nhỏ bay nhanh), plan §6.2
+  box_pad: 2.5                    # nới box trước khi track (chim nhỏ bay nhanh)
   lost_track_buffer: 15           # frame giữ vết đã mất (0,6 s ở 25 fps); bộ đếm chốt vết sau ngần này frame
   minimum_matching_threshold: 0.8
-  # Vòng đếm khép kín quanh miệng lỗ ra vào, các điểm (x, y) theo tỉ lệ khung hình (plan §3.3 mục 6).
+  # Vòng đếm khép kín quanh miệng lỗ ra vào, các điểm (x, y) theo tỉ lệ khung hình.
   # = viền ngoài hộp gỗ đo 21/10/2026 (±3 px) nới đều 60 px. Chọn tay; vẽ lại bằng tools/pick_roi.py --margin.
   ring:
     - [0.379, 0.228]
@@ -48,21 +47,21 @@ tracking:
   # Camera trong nhà nhìn vào lỗ: trong vòng là phía ngoài trời, nên chim đi vào vòng = RA (EXIT).
   # Camera đặt ngoài nhà nhìn vào lỗ thì đổi thành false.
   into_ring_is_exit: true
-  # Chim qua lỗ dời 150–200 px/frame và chỉ là vệt mờ 1–2 frame (clip 22/10, plan §19.8), nên frame
+  # Chim qua lỗ dời 150–200 px/frame và chỉ là vệt mờ 1–2 frame (clip 22/10), nên frame
   # trong vòng thường không được phát hiện. Vết mất ngay ngoài vòng mà đi tiếp ngần này frame theo vận
   # tốc cuối thì vào vòng → RA; vết mới mà lùi lại thì ra từ vòng → VÀO. 2 = số frame vệt mờ thấy được.
   extrapolate_frames: 2
   # Chỉ ngoại suy vết nhanh: chim lượn dời 20–35 px/frame, chim qua lỗ 150–200 px/frame (clip 22/10).
   # 60 nằm giữa hai mức, chọn tay; đo lại khi có clip với thời gian phơi sáng ngắn hơn.
   extrapolate_min_speed_px: 60
-  # VISION-FR-018: vòng Domain Expert vẽ trên web (backend gửi qua `config` retained của thiết bị) được lưu
+  # Vòng Domain Expert vẽ trên web (backend gửi qua `config` retained của thiết bị) được lưu
   # vào file này và thắng ring/into_ring_is_exit ở trên, kể cả sau khi khởi động lại.
   ring_override_file: "state/counting_ring.json"
 
 sessions:
   # Giờ Việt Nam cố định UTC+7 (không đổi giờ mùa hè), không dùng giờ máy: VPS thường chạy UTC.
   utc_offset_hours: 7
-  # Mặc định khi backend chưa gửi khung của ngày: backend gửi khung 7 ngày tới theo lịch đếm của nhà (VISION-FR-019)
+  # Mặc định khi backend chưa gửi khung của ngày: backend gửi khung 7 ngày tới theo lịch đếm của nhà
   windows_override_file: "state/session_windows.json"
   windows:                                  # giờ chim bay đổi theo mùa: xem lại bằng biểu đồ số đếm 5 phút
     MORNING_EXIT:  ["05:30", "07:00"]
@@ -72,11 +71,11 @@ sessions:
 mqtt:
   broker: "localhost"                       # cloud: tên miền của VPS; trong Docker trên VPS: emqx
   port: 1883                                # cloud: 8883
-  tls: false                                # cloud: true (SEC-NFR-001), dùng CA có sẵn của hệ điều hành
-  publish_interval_sec: 30                  # số đếm của phiên + heartbeat (VISION-FR-006); backend coi im 90 giây là mất kết nối
-  bucket_minutes: 5                         # số đếm theo khoảng, gửi cả ngoài phiên (VISION-FR-017)
+  tls: false                                # cloud: true, dùng CA có sẵn của hệ điều hành
+  publish_interval_sec: 30                  # số đếm của phiên + heartbeat; backend coi im 90 giây là mất kết nối
+  bucket_minutes: 5                         # số đếm theo khoảng, gửi cả ngoài phiên
 
-push:                                       # đẩy hình đã vẽ khung lên MediaMTX; chỉ chạy khi có STREAM_PUSH_URL trong .env (plan 6.2, 15.6)
+push:                                       # đẩy hình đã vẽ khung lên MediaMTX; chỉ chạy khi có STREAM_PUSH_URL trong .env
   width: 1280                               # thu từ 1080p để nén nhẹ CPU và băng thông người xem
   height: 720
   fps: 15                                   # chỉ là tốc độ phát cho người xem; việc đếm vẫn chạy đủ camera.fps
