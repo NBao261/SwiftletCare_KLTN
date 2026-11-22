@@ -15,7 +15,6 @@ import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
-import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
 import { createAlert } from '@/services/alert.service'
 import { notifyUser } from '@/services/notification.service'
 import { sendTelegram } from '@/services/telegram.service'
@@ -44,7 +43,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all([Alert, Farm, House, Zone, Notification, Telemetry, User, ZoneHealthReport]
+  await Promise.all([Alert, Farm, House, Zone, Notification, Telemetry, User]
     .map(m => (m as typeof User).deleteMany({})))
 })
 

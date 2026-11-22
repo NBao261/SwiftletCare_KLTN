@@ -14,6 +14,7 @@ import { House } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { WorkOrder } from '@/models/workOrder.model'
 import { channelEnabled } from '@/services/notification.service'
+import type { Role } from '@/types'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
 
 jest.mock('@/socket', () => ({ emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitNotificationNew: jest.fn() }))
@@ -29,6 +30,7 @@ app.use(errorHandler)
 useTestDb()
 
 const T0 = new Date('2026-11-10T00:00:00Z')
+const tokenFor = (id: unknown, role: Role) => jwt.sign({ sub: String(id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
 const at = (min: number) => new Date(T0.getTime() + min * 60_000)
 
 describe('MTTA, MTTR (OPS-FR-009)', () => {
@@ -89,6 +91,18 @@ describe('kênh theo mức cảnh báo (ALERT-FR-005)', () => {
     expect(channelEnabled(prefs, 'LOW', 'push')).toBe(false)
     expect(channelEnabled(prefs, 'LOW', 'telegram')).toBe(true)
     expect(channelEnabled(prefs, 'HIGH', 'push')).toBe(true)
+  })
+
+  it('PUT /auth/notification-preferences theo vai trò (Report 3 §2.4): thợ chọn kênh nhưng không đặt giờ im lặng; chuyên gia, Admin → 403', async () => {
+    const { farm } = await seedOwnerFarm()
+    const accountOf = async (role: Role) => {
+      const user = await User.create({ email: `${role}-${String(farm._id)}@test.vn`, password_hash: 'password123', full_name: role, role })
+      return (body: object) => request(app).put('/auth/notification-preferences').set('Authorization', `Bearer ${tokenFor(user._id, role)}`).send(body)
+    }
+    const technician = await accountOf('FARM_TECHNICIAN')
+    await technician({ by_severity: { LOW: { push: false } } }).expect(200)
+    await technician({ quiet_hours: { start: '22:00', end: '06:00' } }).expect(403)
+    for (const role of ['DOMAIN_EXPERT', 'ADMIN'] as Role[]) await (await accountOf(role))({ push: true }).expect(403)
   })
 
   it('PUT /auth/notification-preferences: lưu theo mức, bỏ ghi đè bằng null, CRITICAL không còn kênh ngoài ứng dụng → 400', async () => {
