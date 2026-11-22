@@ -8,6 +8,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
 import TechnicianHouseRow from '@/components/features/technician/farms/TechnicianHouseRow'
 import { useFarms } from '@/hooks/shared/useFarms'
+import { usePendingAlertTotal } from '@/hooks/shared/useAlerts'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
@@ -29,6 +30,8 @@ export default function TechnicianFarmsPage() {
   const setScopePath = useZoneStore(state => state.setScopePath)
   const { data: farms } = useFarms()
   const { structure, isLoading, isError, refetch } = useFarmStructure()
+  // Cùng số với chuông và menu: cảnh báo ACTIVE của các nhà được giao (ALERT-FR-007), không tính từ cấu trúc nhà
+  const pendingAlerts = usePendingAlertTotal()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
@@ -87,7 +90,7 @@ export default function TechnicianFarmsPage() {
     )
   }
 
-  const { counts: dev, alerts } = structure.totals
+  const { counts: dev } = structure.totals
   // Đã kích hoạt nhưng chưa gửi tín hiệu lần nào: không online, cũng chưa mất kết nối
   const pending = dev.total - dev.online - dev.offline
   let connectionSub = 'Ổn định'
@@ -95,7 +98,7 @@ export default function TechnicianFarmsPage() {
   else if (pending > 0) connectionSub = `${num(pending)} thiết bị chờ kết nối`
   const kpis = [
     { icon: HouseIcon, label: 'Nhà yến', value: num(structure.totals.houses), sub: `${num(structure.totals.zones)} zone`, alert: false },
-    { icon: WarningIcon, label: 'Nhà cần xử lý', value: num(counts.ALERT), sub: alerts.total > 0 ? `${num(alerts.total)} cảnh báo đang mở` : 'Không có cảnh báo', alert: counts.ALERT > 0 },
+    { icon: WarningIcon, label: 'Nhà cần xử lý', value: num(counts.ALERT), sub: pendingAlerts ? `${num(pendingAlerts)} cảnh báo chờ xác nhận` : 'Không có cảnh báo chờ xác nhận', alert: counts.ALERT > 0 },
     { icon: WifiHighIcon, label: 'Thiết bị online', value: `${num(dev.online)}/${num(dev.total)}`, sub: dev.total > 0 ? `${Math.round((dev.online / dev.total) * 100)}% hoạt động` : 'Chưa có thiết bị', alert: false },
     { icon: WifiSlashIcon, label: 'Mất kết nối', value: num(dev.offline), sub: connectionSub, alert: dev.offline > 0 },
   ]

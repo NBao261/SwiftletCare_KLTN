@@ -443,7 +443,7 @@ async function keepThresholdAlertAlive(zoneId: string, nodeId: string, metrics: 
 export interface ListAlertsQuery {
   farmId?: string
   zoneId?: string
-  /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8 */
+  /** ALERT-FR-007 — cảnh báo của một nhà: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà */
   houseId?: string
   status?: string
   /** ALERT-FR-007 — chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED); `status` đi kèm thì `status` thắng */
@@ -490,7 +490,13 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
     filter.farm_id = query.farmId
   }
   if (query.zoneId) filter.zone_id = query.zoneId
-  if (query.houseId) filter.house_id = query.houseId
+  if (query.houseId) {
+    // ALERT-FR-007 — lọc theo nhà gồm cảnh báo của cả nhà (camera) và của các Zone trong nhà; $and để không đè $or
+    // phạm vi của thợ
+    const zoneIds = await Zone.find({ house_id: query.houseId }).distinct('_id')
+    const house = { $or: [{ house_id: query.houseId }, { zone_id: { $in: zoneIds } }] }
+    filter.$and = [...((filter.$and as unknown[] | undefined) ?? []), house]
+  }
   if (query.status) filter.status = query.status
   else if (query.open) filter.status = { $in: IN_FORCE_STATUSES }
   if (query.severity) filter.severity = query.severity

@@ -12,7 +12,7 @@ interface SeverityBadgeProps {
   className?: string;
 }
 
-// Badge mức độ cảnh báo, hiện theo 3 cấp chung
+// Badge mức độ cảnh báo, hiện theo 4 cấp chung (BR-15, FE_Design 2.4)
 export default function SeverityBadge({ severity, isMuted = false, className }: SeverityBadgeProps): JSX.Element {
   const { t } = useTranslation(levelDict);
   const level = SEVERITY_TO_LEVEL[severity];

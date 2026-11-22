@@ -60,7 +60,7 @@ export const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string 
   { value: 'LOW_RETURN_RATE', label: 'Giảm tỷ lệ chim về' },
 ]
 
-// Cảnh báo suy luận chỉ ở mức MEDIUM/LOW (backend giới hạn), tức cấp P2 Cao và P3 Thường của FE_Design 2.4
+// Cảnh báo suy luận chỉ ở mức MEDIUM/LOW (BR-15), tức cấp P3 Trung bình và P4 Thấp của FE_Design 2.4
 export const INFERRED_SEVERITIES: AlertSeverity[] = ['MEDIUM', 'LOW']
 
 export const TAB_INFO: Record<AlertTabFilter, { label: string; countKey: keyof KpiCounts }> = {

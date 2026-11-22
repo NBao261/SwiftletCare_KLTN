@@ -121,7 +121,6 @@ const en: Record<string, string> = {
   'Đã đóng': 'Closed',
   'Khẩn cấp': 'Urgent',
   'Cao': 'High',
-  'Thường': 'Normal',
   'Lỗi cảm biến': 'Sensor fault',
   'Lỗi đường truyền cảm biến': 'Sensor wiring fault',
   'Thiết bị mất kết nối': 'Device offline',

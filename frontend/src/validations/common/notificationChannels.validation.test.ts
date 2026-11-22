@@ -8,7 +8,7 @@ import type { NotificationPreferences } from '@/types';
 const quiet = { start: '22:00', end: '06:00' };
 
 describe('levelChannelsOf', () => {
-  it('mức không ghi đè thì theo cài đặt chung; Khẩn cấp đọc theo CRITICAL', () => {
+  it('mức không ghi đè thì theo cài đặt chung; mỗi cấp đọc đúng một mức (BR-15)', () => {
     const prefs: NotificationPreferences = {
       push: true, telegram: false, quiet_hours: quiet,
       by_severity: { CRITICAL: { telegram: true }, LOW: { push: false } },
@@ -16,7 +16,8 @@ describe('levelChannelsOf', () => {
     expect(levelChannelsOf(prefs)).toEqual({
       P1: { push: true, telegram: true },
       P2: { push: true, telegram: false },
-      P3: { push: false, telegram: false },
+      P3: { push: true, telegram: false },
+      P4: { push: false, telegram: false },
     });
   });
 
@@ -26,16 +27,17 @@ describe('levelChannelsOf', () => {
 });
 
 describe('bySeverityPayload', () => {
-  it('giống cài đặt chung thì null, khác thì ghi đè; Khẩn cấp ghi cho cả CRITICAL và HIGH', () => {
+  it('giống cài đặt chung thì null, khác thì ghi đè; HIGH không còn đi theo CRITICAL', () => {
     const general = { push: true, telegram: true };
     const payload = bySeverityPayload({
       P1: { push: true, telegram: true },
       P2: { push: false, telegram: true },
-      P3: { push: false, telegram: false },
+      P3: { push: false, telegram: true },
+      P4: { push: false, telegram: false },
     }, general);
     expect(payload).toEqual({
       CRITICAL: null,
-      HIGH: null,
+      HIGH: { push: false, telegram: true },
       MEDIUM: { push: false, telegram: true },
       LOW: { push: false, telegram: false },
     });
