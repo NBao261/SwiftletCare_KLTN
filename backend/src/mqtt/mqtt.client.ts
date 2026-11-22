@@ -44,7 +44,7 @@ export function connectMQTT(): void {
 
   client.on('connect', () => {
     logger.info('MQTT broker connected')
-    DEVICE_UPLINKS.forEach(uplink => client!.subscribe(`${DEVICE_TOPIC_ROOT}/+/${uplink}`, { qos: 1 }))
+    subscribeUplinks(client!)
   })
 
   client.on('message', (topic: string, payload: Buffer, packet: mqtt.IPublishPacket) => {
@@ -56,6 +56,17 @@ export function connectMQTT(): void {
 }
 
 // Bỏ tin retained (tin cũ phát lại khi reconnect) và tin có deviceId khác topic
+// Broker vừa khởi động có thể từ chối (SUBACK 128) trước khi nạp xong ACL; không thử lại thì backend không nhận tin nào
+function subscribeUplinks(mqttClient: MqttClient): void {
+  const topics = DEVICE_UPLINKS.map(uplink => `${DEVICE_TOPIC_ROOT}/+/${uplink}`)
+  mqttClient.subscribe(topics, { qos: 1 }, (err, granted) => {
+    const refused = (granted ?? []).filter(grant => grant.qos === 128).map(grant => grant.topic)
+    if (!err && refused.length === 0) return
+    logger.error('MQTT subscribe bị từ chối, thử lại', { err, refused })
+    setTimeout(() => { if (mqttClient.connected) subscribeUplinks(mqttClient) }, mqttClient.options.reconnectPeriod ?? 1000)
+  })
+}
+
 export function routeDeviceMessage(topic: string, payload: Buffer, retained: boolean): void {
   if (retained) return
   const parsed = parseDeviceTopic(topic)

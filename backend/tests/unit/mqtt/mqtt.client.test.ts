@@ -33,3 +33,48 @@ describe('connectMQTT client ID', () => {
     expect(connectWith('swiftletcare-backend-2')).toBe('swiftletcare-backend-2')
   })
 })
+
+describe('connectMQTT subscriptions', () => {
+  type Grant = { topic: string; qos: number }
+  type SubscribeCallback = (err: Error | null, granted?: Grant[]) => void
+
+  beforeAll(() => { process.env.MQTT_AUTH_KEY = 'test-key' })
+  afterAll(() => { delete process.env.MQTT_AUTH_KEY })
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => jest.useRealTimers())
+
+  // Client giả: giữ handler `connect` và mọi lần subscribe để test tự trả SUBACK
+  const fakeClient = () => {
+    const handlers: Record<string, () => void> = {}
+    const subscribe = jest.fn((_topics: string[], _opts: object, _callback: SubscribeCallback) => undefined)
+    const client = {
+      connected: true,
+      options: { reconnectPeriod: 1000 },
+      subscribe,
+      on: jest.fn((event: string, handler: () => void) => { handlers[event] = handler }),
+    }
+    mockConnect.mockReturnValueOnce(client as unknown as { on: jest.Mock })
+    connectMQTT()
+    handlers.connect()
+    const answer = (call: number, granted: Grant[]) => subscribe.mock.calls[call][2](null, granted)
+    return { subscribe, answer }
+  }
+
+  it('subscribes again when the broker refuses a topic, e.g. before its ACL is loaded', () => {
+    const { subscribe, answer } = fakeClient()
+    const topics = subscribe.mock.calls[0][0]
+    answer(0, topics.map(topic => ({ topic, qos: 128 })))
+
+    jest.advanceTimersByTime(1000)
+    expect(subscribe).toHaveBeenCalledTimes(2)
+    expect(subscribe.mock.calls[1][0]).toEqual(topics)
+  })
+
+  it('does not subscribe again when every topic is granted', () => {
+    const { subscribe, answer } = fakeClient()
+    answer(0, subscribe.mock.calls[0][0].map(topic => ({ topic, qos: 1 })))
+
+    jest.advanceTimersByTime(5000)
+    expect(subscribe).toHaveBeenCalledTimes(1)
+  })
+})
