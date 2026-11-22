@@ -2,14 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MENU_ACCESS } from '@/constants/roles';
 import type { Role } from '@/types';
 
-/**
- * MENU_ACCESS (constants/roles.ts) và menu trong `<Role>Layout.tsx` phải khớp nhau, nhưng là hai
- * chỗ khai báo riêng (import vòng: layout → AppHeader → useAuth → canAccessPath). Test này nối hai
- * chỗ lại: một trang vào được mà không có mục menu hay tab là trang không ai mở tới được, còn một
- * mục menu trỏ tới trang role không có quyền thì bấm vào là văng sang /403.
- * Đọc nguyên văn file layout thay vì nạp component: menu viết thẳng trong file nên lấy path bằng
- * chuỗi là đủ, mà không phải dựng React trong môi trường test.
- */
+// MENU_ACCESS và menu của <Role>Layout khai riêng (tránh import vòng): đọc nguyên văn file layout để hai chỗ luôn khớp
 const sources = import.meta.glob('/src/components/layouts/*Layout.tsx', {
   query: '?raw',
   import: 'default',
@@ -23,8 +16,7 @@ const LAYOUT_FILE: Record<Role, string> = {
   DOMAIN_EXPERT: '/src/components/layouts/DomainExpertLayout.tsx',
 };
 
-// Trang mở từ chỗ khác, cố ý không có mục menu: chi tiết thiết bị mở từ danh sách, lắp thiết bị mở
-// bằng nút trên trang thiết bị, cài đặt tài khoản mở từ menu ảnh đại diện (FE_Design §4)
+// Trang mở từ chỗ khác nên không có mục menu: chi tiết, lắp thiết bị (từ trang thiết bị), cài đặt (menu ảnh đại diện)
 const OPENED_ELSEWHERE = ['/devices/detail', '/devices/onboarding', '/settings'];
 
 function menuPaths(role: Role): Set<string> {

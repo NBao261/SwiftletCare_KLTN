@@ -94,7 +94,7 @@ export default function DomainExpertReportsPage() {
   return (
     <div className="relative z-10 w-full flex-1 flex flex-col gap-5">
       <div className="w-full max-w-screen-xl mx-auto flex flex-col gap-5">
-        {/* DE-08: Tabs kiểu SectionTabs + mô tả 1 dòng */}
+        {/* Tabs kiểu SectionTabs, mô tả 1 dòng */}
         <div className="flex flex-wrap items-center gap-4">
           <nav aria-label={i18nT('Báo cáo và ngày đánh giá lệch')} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-warmGray/10 p-1 max-sm:flex-wrap max-sm:rounded-3xl">
             <button

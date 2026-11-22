@@ -70,13 +70,7 @@ export function getRoleHomePath(role: Role | undefined): string {
   return role ? ROLE_HOME[role] : '/dashboard'
 }
 
-/**
- * Path nào nằm trên menu của role nào. Phải khớp `menuSections` trong
- * `components/layouts/<Role>Layout.tsx` — cố ý để ở đây chứ không đọc ngược từ
- * layout, vì `useAuth` dùng bảng này mà layout lại dựng ra `AppHeader` gọi
- * `useAuth`, import vòng sẽ lỗi lúc chạy.
- */
-// Path con cụ thể đặt TRƯỚC path cha: canAccessPath lấy dòng khớp đầu tiên
+// Phải khớp menuSections của <Role>Layout; không đọc từ layout vì sẽ import vòng. Path con đặt trước path cha
 export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
   { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },

@@ -16,9 +16,7 @@ export interface UiScope {
   zoneId?: string;
 }
 
-// Đặt phạm vi của khung lọc trước khi mở trang, để test không phụ thuộc nhà/Zone mà useScopeFilter tự chọn.
-// Chưa chọn Zone thì zoneStore thật để null, không phải chuỗi rỗng: đặt sai kiểu là trang gửi `zoneId=`
-// lên máy chủ, bị trả 422 và ô đếm ra 0 trong khi huy hiệu menu vẫn đếm đúng
+// Đặt phạm vi trước khi mở trang; Zone chưa chọn phải là null như zoneStore thật, chuỗi rỗng làm trang gửi `zoneId=` và bị 422
 export async function setScope(page: Page, scope: UiScope): Promise<void> {
   const state = {
     selectedFarmId: scope.farmId,

@@ -7,8 +7,7 @@ import {
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 
-// Khung Domain Expert (FE_Design §12.5): Chuyên môn là màn quyết định, Vận hành trỏ tới trang Farm Owner chỉ đọc (Report 4 §5.4)
-// Menu: §3.2 todo-ui-layout-1120.md — 7 mục Chuyên môn (2 nhóm tab), 8 mục Vận hành thu gọn
+// Khung Domain Expert: 7 mục Chuyên môn có tab, nhóm Vận hành chỉ đọc trỏ tới trang Farm Owner
 const menuSections: MenuSection[] = [
   {
     title: 'Chuyên môn',
@@ -43,7 +42,7 @@ const menuSections: MenuSection[] = [
   {
     title: 'Vận hành (chỉ đọc)',
     collapsible: true,
-    // Tab như menu Farm Owner (§3.1), bỏ tab "Điều khiển tay" (§3.2): chuyên gia đọc so sánh nhà, góp ý kế hoạch bảo trì, đọc khuyến nghị (Report 3 §2.4)
+    // Tab như menu Farm Owner nhưng bỏ "Điều khiển tay": chuyên gia đọc so sánh nhà, kế hoạch bảo trì, khuyến nghị
     items: [
       {
         label: 'Tổng quan',

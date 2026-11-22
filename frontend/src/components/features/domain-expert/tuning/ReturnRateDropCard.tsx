@@ -15,11 +15,11 @@ interface Props {
   isResetting: boolean
   onSave: (returnRateDropPct: number) => void
   onReset: () => void
-  // DE-04: báo có đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  // Báo có đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
 }
 
-// EXPERT-FR-008 — mức giảm tỷ lệ chim về là tham số của cả nhà yến (camera ở cửa nhà), đặt riêng với 5 tham số của Zone
+// mức giảm tỷ lệ chim về là tham số của cả nhà yến (camera ở cửa nhà), đặt riêng với 5 tham số của Zone
 const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnRateDropCard(
   { houseName, value, isSaving, isResetting, onSave, onReset, onDirtyChange }, ref,
 ) {
@@ -58,7 +58,7 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
         )}
       </div>
 
-      {/* Nút Lưu chung ở thanh dính đáy của trang (DE-04) */}
+      {/* Nút Lưu chung ở thanh dính đáy của trang */}
       {houseName && (
         <fieldset disabled={isSaving} className="contents">
           <TuningStepperInput label={t('Ngưỡng sụt giảm tỷ lệ chim về')} value={draft}

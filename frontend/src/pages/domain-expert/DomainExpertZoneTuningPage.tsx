@@ -60,7 +60,7 @@ export default function DomainExpertZoneTuningPage() {
   const house = houses?.find(item => item._id === houseId);
   const returnRateDrop = useSaveReturnRateDrop(selectedFarmId);
 
-  // DE-04: thanh lưu dính đáy chung, mỗi khối tự đếm số trường đã đổi và tự validate, gọi API qua ref
+  // Thanh lưu dính đáy chung: mỗi khối tự đếm số trường đã đổi và tự validate, gọi API qua ref
   const fuzzyRef = useRef<TuningBlockHandle>(null);
   const thresholdRef = useRef<TuningBlockHandle>(null);
   const detectionRef = useRef<TuningBlockHandle>(null);
@@ -117,7 +117,7 @@ export default function DomainExpertZoneTuningPage() {
   return (
     <div className="relative w-full flex-1 flex flex-col gap-6">
       <div className="w-full max-w-screen-xl mx-auto space-y-6">
-        {/* DE-04a: dòng phạm vi — hiện Zone đang chọn */}
+        {/* Dòng phạm vi: hiện Zone đang chọn */}
         {selectedZoneName && (
           <p className="text-small text-graphite">
             {t('Áp cho Zone {{zone}}', { zone: selectedZoneName })}
@@ -197,7 +197,7 @@ export default function DomainExpertZoneTuningPage() {
         </fieldset>
       </div>
 
-      {/* DE-04: thanh lưu dính đáy chung cho 4 khối, nằm trên dock ở điện thoại; mỗi khối tự validate và gọi API của mình */}
+      {/* Thanh lưu dính đáy chung cho 4 khối, nằm trên dock ở điện thoại; mỗi khối tự validate và gọi API của mình */}
       {totalDirty > 0 && (
         <div className="sticky bottom-4 z-10 mx-auto flex w-full max-w-screen-xl items-center justify-between gap-3 rounded-2xl border border-warmGray/15 bg-white px-4 py-3 shadow-dock max-lg:bottom-24">
           <span className="text-sm font-medium text-charcoal">

@@ -1,13 +1,4 @@
-/**
- * DomainExpertAlertVerdictsPage — Thẩm định Cảnh báo Suy luận
- *
- * Rename + re-bucket từ ExpertAuditLogsPage:
- *   Cũ: pages/expert/ExpertAuditLogsPage.tsx  →  expert/audit-logs
- *   Mới: pages/domain-expert/DomainExpertAlertVerdictsPage.tsx  →  domain-expert/alert-verdicts
- *
- * SRS EXPERT-FR-003, ENV-FR-019.
- * Bucket: pages/domain-expert/ — §12.4.
- */
+// Thẩm định cảnh báo suy luận
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Check, Info, ArrowRight } from 'lucide-react';
@@ -53,7 +44,7 @@ export default function DomainExpertAlertVerdictsPage() {
   const { selectedFarmId } = useZoneStore();
   const farmId = selectedFarmId ?? undefined;
 
-  // DE-03: mặc định cả trang trại, Zone là bộ lọc trong card — mọi zone của farm (không giới hạn 1 nhà)
+  // Mặc định cả trang trại, Zone là bộ lọc trong card: mọi zone của farm (không giới hạn 1 nhà)
   const [filterZoneId, setFilterZoneId] = useState<string | undefined>(undefined);
   const { data: allZones } = useAllZones();
   const zoneOptions = [

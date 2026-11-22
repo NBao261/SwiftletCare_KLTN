@@ -1,8 +1,4 @@
-/**
- * DetectionColumn — Cột 3: Tham số phát hiện bất thường (Độc quyền Chuyên gia)
- * Hộp verdict_stats chuẩn Real Data + 6 stepper fields + reset trên header + save w-full
- * SRS v2.1.4: EXPERT-FR-003/008
- */
+// Cột tham số phát hiện bất thường
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { AlertTriangle, RotateCcw, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { detectionTuningPayload, type TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
@@ -11,7 +7,7 @@ import TuningRangeTip from './TuningRangeTip'
 import type { ExpertDetectionTuning, ExpertVerdictStats } from '@/types/expert.types'
 import { t, translated } from '@/i18n'
 
-// 5 tham số phát hiện của Zone (EXPERT-FR-008); khoảng và mặc định khớp backend detectionTuning.util.ts
+// 5 tham số phát hiện của Zone; khoảng và mặc định khớp backend detectionTuning.util.ts
 const FIELDS: Array<{
   key: keyof ExpertDetectionTuning; label: string; min: number; max: number; step: number; decimals?: number
   unit: string; range: string; defaultHint: string
@@ -32,7 +28,7 @@ interface Props {
   onSave: (v: Partial<ExpertDetectionTuning>) => void
   onReset: () => void
   updatedAt?: string
-  // DE-04: báo số tham số đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  // Báo số tham số đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
 }
 
@@ -163,7 +159,7 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
         </button>
       </div>
 
-      {/* Nút Lưu chung ở thanh dính đáy của trang (DE-04) */}
+      {/* Nút Lưu chung ở thanh dính đáy của trang */}
       <fieldset disabled={isSaving} className="flex-1 py-1 divide-y divide-stone-100">
         <VerdictStatsHint stats={verdictStats} />
         {FIELDS.map(field => (

@@ -273,7 +273,7 @@ export default function DomainExpertReviewsPage() {
       <Card size="lg" className="flex flex-col gap-4">
         {/* Header hàng 1: Tabs phân loại nghiệp vụ + Bộ lọc SelectMenu */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warmGray/10 pb-3">
-          {/* DE-06: Tabs kiểu SectionTabs (rounded pill, bg warmGray/10) */}
+          {/* Tabs kiểu SectionTabs (rounded pill, bg warmGray/10) */}
           <nav aria-label={t('Duyệt & đề xuất')} className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1">
             <button
               type="button"

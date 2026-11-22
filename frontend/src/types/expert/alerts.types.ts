@@ -16,7 +16,7 @@ export interface InferredAlertItem {
   _id: string
   farm_id: string
   zone_id?: string
-  // Cảnh báo đếm chim thuộc cả nhà, không có Zone (Report 3 §2.8)
+  // Cảnh báo đếm chim thuộc cả nhà, không có Zone
   house_id?: string
   node_id?: string
   type: InferredAlertType

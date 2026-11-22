@@ -241,7 +241,7 @@ const enExpert: Record<string, string> = {
   'Bộ ngưỡng và hệ số mẫu để áp cho nhiều nhà': 'Threshold and coefficient sets to apply to many houses',
   'Tự chỉnh mức phun sương theo dự báo thời tiết': 'Adjusts misting to the weather forecast',
   'Chim bay qua vòng quanh lỗ ra vào mới được đếm': 'Only birds crossing the ring at the entrance are counted',
-  // Hàng đợi việc (DE-02)
+  // Hàng đợi việc
   'Cảnh báo chờ kết luận': 'Alerts awaiting verdict',
   'cảnh báo suy luận': 'inferred alerts',
   'Thay đổi chờ duyệt': 'Changes awaiting review',
@@ -254,12 +254,12 @@ const enExpert: Record<string, string> = {
   'Xem tất cả {{n}} cảnh báo': 'View all {{n}} alerts',
   'Không có cảnh báo chờ kết luận. Xem chi tiết ở các ô trên.': 'No alerts awaiting a verdict. See the tiles above for details.',
   'Không có việc gì đang chờ': 'Nothing is waiting',
-  // Kiểm chứng cảnh báo (DE-03), Tham số (DE-04), Bù thời tiết (DE-05)
+  // Kiểm chứng cảnh báo, Tham số, Bù thời tiết
   'Tất cả Zone': 'All zones',
   'Lọc theo Zone': 'Filter by zone',
   'Áp cho Zone {{zone}}': 'Applies to zone {{zone}}',
   'Thêm luật bù thời tiết': 'Add weather rule',
-  // Duyệt & đề xuất (DE-06), Báo cáo & kết luận (DE-08), Lịch sử (DE-09)
+  // Duyệt & đề xuất, Báo cáo & kết luận, Lịch sử
   'Duyệt & đề xuất': 'Reviews & proposals',
   'Không tìm thấy mục nào phù hợp bộ lọc.': 'No items match the filter.',
   'Chưa có thay đổi tham số nào cần duyệt.': 'No parameter changes to review.',

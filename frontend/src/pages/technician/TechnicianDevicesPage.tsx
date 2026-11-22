@@ -159,7 +159,7 @@ export default function TechnicianDevicesPage() {
           <div className="bg-white border border-warmGray/15 rounded-2xl shadow-sm overflow-hidden flex flex-col">
             {filteredNodes?.map((node, i) => {
               const zone = zoneById.get(node.zone_id);
-              // FT-01: chỉ "Nhà · Zone" — trang trại đã có ở thanh phạm vi
+              // Chỉ "Nhà · Zone": trang trại đã có ở thanh phạm vi
               const locationLabel = zone ? `${zone.houseName} · ${zone.name}` : undefined;
 
               return (

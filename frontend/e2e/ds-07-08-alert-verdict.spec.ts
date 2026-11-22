@@ -23,8 +23,7 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
     const expert = await signIn(request, 'expert');
     const farm = await demoFarm(owner);
     const [alert] = await owner.data<Alert[]>(await owner.get(`/alerts?farmId=${farm.farmId}&type=NOISE_ANOMALY`));
-    // Dữ liệu demo chỉ có một cảnh báo suy luận, và B2 của expert-flow cũng ghi kết luận lên nó: đã có
-    // kết luận thì bước này không còn gì để bác bỏ, phải seed lại mới chạy được
+    // Dữ liệu demo chỉ có một cảnh báo suy luận và expert-flow cũng kết luận nó: đã có kết luận thì phải seed lại
     test.skip(Boolean(alert.expert_verdict), 'cảnh báo đã có kết luận ở lần chạy trước: chạy lại `npm run seed:demo`');
 
     if (alert.onsite_checks[0]?.observation === null) {
@@ -45,9 +44,7 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
     expect(detail.onsite_checks[0].observation).toBe('WORK_OR_PEOPLE_NEARBY');
   });
 
-  // EXPERT-FR-003 — trang kết luận chỉ có 4 loại cảnh báo suy luận của Report 3. DE-03: mặc định cả trang trại,
-  // Zone là bộ lọc trong card. Zone A có cảnh báo ồn chờ kết luận; zone B có MISTING_INEFFECTIVE của DS-04,
-  // cảnh báo đo trực tiếp, không được hiện (trước khi sửa nó nằm trong danh sách và gửi kết luận thì backend trả 400)
+  // Trang kết luận chỉ hiện 4 loại cảnh báo suy luận, Zone là bộ lọc trong card; MISTING_INEFFECTIVE ở zone B không được hiện
   test('trang kết luận hiện cảnh báo ồn ở zone A, không hiện cảnh báo phun sương đo trực tiếp ở zone B', async ({ page, request }) => {
     const farm = await demoFarm(await signIn(request, 'owner'));
     const zoneB = await farm.zoneOf('B');

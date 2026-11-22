@@ -2,14 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { demoFarm, signIn, type DemoApi } from './helpers/demoApi';
 import { setScope, sidebar, signInUi, trackCrashes, type UiScope } from './helpers/ui';
 
-/**
- * Luồng chuyên môn của Chuyên gia từ đầu đến cuối trên web thật (Report 3 §2.4, EXPERT-FR-003…019).
- * Mỗi test là một bước của một lượt làm việc: thao tác bằng chuột trên UI như người dùng, rồi đọc
- * lại bằng API để chắc dữ liệu đã lưu. Dữ liệu của `npm run seed:demo`; mỗi test tự dọn thứ nó tạo
- * nên chạy lại nhiều lần vẫn đúng. Riêng B2 ghi kết luận lên cảnh báo suy luận duy nhất của dữ liệu
- * demo, cũng là cảnh báo của DS-07 (`ds-07-08-alert-verdict.spec.ts`): kết luận không xoá được nên
- * DS-07 tự bỏ qua khi cảnh báo đã có kết luận, và cả hai chỉ cùng chạy đủ trên dữ liệu vừa seed.
- */
+// Luồng của Chuyên gia trên web thật (seed:demo): thao tác UI rồi đọc lại bằng API; B2 kết luận cảnh báo của ds-07-08 nên phải seed lại mới chạy lại cả hai
 test.describe.configure({ mode: 'serial' });
 
 interface Alert { _id: string; type: string; expert_verdict?: { result: string } }
@@ -19,7 +12,7 @@ interface Profile { _id: string; name: string; status: string }
 interface WeatherRulesView { rules: Array<{ metric: string; min: number; offset_pct: number }> }
 interface Rule { _id: string; name: string; active: boolean }
 
-// Luật khuyến nghị không xoá được (EXPERT-FR-016) nên test dùng lại một luật mang tên này
+// Luật khuyến nghị không xoá được nên test dùng lại một luật mang tên này
 const RECOMMENDATION_RULE_NAME = 'E2E luật tỷ lệ chim về';
 
 let farmId = '';
@@ -56,7 +49,7 @@ test('B1 — đăng nhập vào hàng đợi việc, 4 ô việc hiện, menu m�
   await signInUi(page, 'expert');
   await expect(page).toHaveURL(/\/domain-expert\/queue$/);
 
-  // 4 ô việc của DE-02: cảnh báo, thay đổi chờ duyệt, ngày lệch, báo cáo chờ kết luận
+  // 4 ô việc: cảnh báo, thay đổi chờ duyệt, ngày lệch, báo cáo chờ kết luận
   for (const label of ['Cảnh báo chờ kết luận', 'Thay đổi chờ duyệt', 'Ngày lệch', 'Báo cáo chờ kết luận']) {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   }
@@ -77,8 +70,7 @@ test('B2 — kiểm chứng cảnh báo suy luận: bác bỏ thiếu lý do b�
   // Cảnh báo đã có kết luận ở lần chạy trước thì nút là "Chi tiết"; ngăn kéo vẫn cho ghi lại kết luận
   await page.locator(`#btn-verdict-${noise._id}, #btn-detail-${noise._id}`).click();
 
-  // EXPERT-FR-003 — bác bỏ phải có lý do: thiếu ghi chú thì nút lưu khoá.
-  // Ngăn kéo điền lại ghi chú của kết luận cũ nên phải xoá trước khi kiểm.
+  // Bác bỏ phải có lý do: thiếu ghi chú thì nút lưu khoá; ngăn kéo điền lại ghi chú cũ nên xoá trước khi kiểm
   await page.getByRole('button', { name: 'Bác bỏ - Báo động giả' }).click();
   await page.locator('#expert-note').fill('');
   await expect(page.getByRole('button', { name: 'Lưu kết luận' })).toBeDisabled();
@@ -105,17 +97,16 @@ test('B3 — sửa ngưỡng khí CO2 của Zone rồi khôi phục, quyền s�
   const crashes = await openAsExpert(page, '/domain-expert/tuning', { farmId, houseId: houseA, zoneId: zoneA });
   await expect(page.getByRole('heading', { name: '2. Ngưỡng vi khí hậu & khí độc' })).toBeVisible();
 
-  // DE-04 — cả 4 khối dùng một thanh lưu dính đáy, chỉ hiện khi có thay đổi
+  // Cả 4 khối dùng một thanh lưu dính đáy, chỉ hiện khi có thay đổi
   const saveBar = page.getByRole('button', { name: 'Lưu', exact: true });
   await expect(saveBar).toBeHidden();
 
-  // Mốc chờ là phản hồi của máy chủ: đang lưu thì nút "Lưu" đổi thành vòng xoay nên mất tên, còn lời
-  // nhắn "Đã lưu" của lần trước vẫn còn trên màn hình
+  // Mốc chờ là phản hồi của máy chủ: nút "Lưu" đang quay thì mất tên, còn lời nhắn "Đã lưu" cũ vẫn trên màn hình
   const savingThresholds = () => page.waitForResponse(
     response => response.url().includes(`/farms/zones/${zoneA}/thresholds`) && response.request().method() === 'PUT',
   );
 
-  // ENV-FR-006 — một bước + của ô CO2 là 50 ppm
+  // Một bước + của ô CO2 là 50 ppm
   await page.getByRole('button', { name: 'Tăng Ngưỡng cảnh báo khí CO2' }).click();
   await expect(page.getByText('1 thay đổi')).toBeVisible();
   const firstSave = savingThresholds();
@@ -126,7 +117,7 @@ test('B3 — sửa ngưỡng khí CO2 của Zone rồi khôi phục, quyền s�
   const after = await readThresholds(expertApi, zoneA);
   expect(after.co2_max).toBe(before.co2_max + 50);
 
-  // EXPERT-FR-008, BR-22 — tham số phát hiện là quyết định của chuyên gia nên ô sửa không bị khoá
+  // Tham số phát hiện là quyết định của chuyên gia nên ô sửa không bị khoá
   await expect(page.getByRole('button', { name: 'Tăng Mức ồn vượt nền' })).toBeEnabled();
 
   // Trả ngưỡng về giá trị của seed để lần chạy sau không bị trôi
@@ -144,8 +135,7 @@ test('B4 — duyệt thay đổi ngưỡng của chủ nhà yến (BR-22, EXPERT
   const owner = await signIn(request, 'owner');
   const expertApi = await signIn(request, 'expert');
 
-  // Chủ nhà yến sửa ngưỡng NH3: áp ngay và mở một mục chờ chuyên gia duyệt.
-  // Đổi qua lại giữa hai giá trị nên chạy lại nhiều lần giá trị không trôi.
+  // Chủ nhà yến sửa ngưỡng NH3: áp ngay và mở một mục chờ duyệt; đổi qua lại hai giá trị nên chạy lại không trôi
   const current = await readThresholds(expertApi, zoneA);
   const nextNh3 = current.nh3_max === 25 ? 26 : 25;
   expect((await owner.put(`/farms/zones/${zoneA}/thresholds`, { ...current, nh3_max: nextNh3 })).ok()).toBe(true);
@@ -214,8 +204,7 @@ test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR
   // Khớp đúng cả tên: lời nhắn "Đã lưu luật bù thời tiết." cũng là một nút, tên nó chứa "Lưu luật"
   const saveRules = page.getByRole('button', { name: 'Lưu luật', exact: true });
 
-  // Mốc chờ là lời nhắn: nút "Lưu luật" đổi thành vòng xoay nên mất tên ngay khi bấm, và bản nháp chỉ
-  // được xoá sau khi máy chủ trả lời, nên bấm "Xoá luật" sớm hơn là thao tác bị mất
+  // Mốc chờ là lời nhắn: nút "Lưu luật" quay mất tên ngay khi bấm, bản nháp chỉ xoá sau khi máy chủ trả lời
   await saveRules.click();
   await expect(page.getByText('Đã lưu luật bù thời tiết.')).toBeVisible();
 
@@ -261,8 +250,7 @@ test('B8 — thêm hoặc sửa luật khuyến nghị rồi tắt, xem tab hi�
   // Chờ danh sách luật tải xong: trang trại demo luôn có luật sẵn, nên đã có nút "Sửa" là đã có danh sách
   await expect(page.getByRole('button', { name: 'Sửa' }).first()).toBeVisible();
 
-  // EXPERT-FR-016 chỉ cho thêm, sửa, bật và tắt luật — không có xoá. Nên test dùng một tên cố định:
-  // lần đầu thì thêm, các lần sau sửa đúng luật đó, trang trại không phình thêm luật mỗi lần chạy.
+  // Luật chỉ thêm, sửa, bật, tắt được, không xoá được: test dùng một tên cố định để không phình thêm luật mỗi lần chạy
   const ruleRow = page.locator('div')
     .filter({ hasText: RECOMMENDATION_RULE_NAME })
     .filter({ has: page.getByRole('button', { name: 'Sửa' }) })

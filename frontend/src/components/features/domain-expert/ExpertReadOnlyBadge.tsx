@@ -3,7 +3,7 @@ import { usePermission } from '@/hooks/common/usePermission';
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 import { t } from '@/i18n';
 
-// Badge quyền của Farm Owner trên trang chuyên gia (DE-10, BR-22 Report 3 4.2.15); câu đầy đủ nằm trong nút (i) vì điện thoại không rê chuột được
+// Badge quyền của Farm Owner trên trang chuyên gia; câu đầy đủ nằm trong nút (i) vì điện thoại không rê chuột được
 export default function ExpertReadOnlyBadge() {
   const isOwner = usePermission('FARM_OWNER');
   const { canDecide, farmKnown } = useExpertDecisionRights();

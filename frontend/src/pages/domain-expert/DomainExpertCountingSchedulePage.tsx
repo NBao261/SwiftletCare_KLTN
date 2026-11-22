@@ -92,7 +92,7 @@ export default function DomainExpertCountingSchedulePage() {
       {/* Farm Owner sửa được; farm có chuyên gia thì chuyên gia duyệt sau */}
       <fieldset disabled={!canEditParameters} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
-        {/* DE-07: Khung đang áp hôm nay — 1 dòng gọn trên đầu */}
+        {/* Khung đang áp hôm nay: 1 dòng gọn trên đầu */}
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 py-2.5">
           <CalendarClock className="h-4 w-4 text-accent-600 shrink-0" aria-hidden />
           <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
@@ -109,7 +109,7 @@ export default function DomainExpertCountingSchedulePage() {
         </div>
       </SectionCard>
 
-      {/* DE-07: Hồ sơ theo mùa — khung riêng, nút Thêm ở tiêu đề, quy tắc dài nằm trong nút (i) */}
+      {/* Hồ sơ theo mùa: khung riêng, nút Thêm ở tiêu đề, quy tắc dài nằm trong nút (i) */}
       <SectionCard
         title={t('profiles.title')}
         description={t('profiles.count', { n: schedule.profiles.length, max: MAX_SCHEDULE_PROFILES })}
@@ -181,7 +181,7 @@ export default function DomainExpertCountingSchedulePage() {
         </div>
       </SectionCard>
 
-      {/* DE-07: Khung tạm — khung riêng, nút Thêm ở tiêu đề */}
+      {/* Khung tạm: khung riêng, nút Thêm ở tiêu đề */}
       <SectionCard
         title={t('temporary.title')}
         description={t('temporary.count', { n: schedule.temporary.length, max: MAX_TEMPORARY_WINDOWS })}

@@ -105,7 +105,7 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         </p>
       </div>
 
-      {/* FT-02: nút phụ (viền), không nút chính nào trên trang */}
+      {/* Nút phụ (viền), không nút chính nào trên trang */}
       <button
         type="button"
         onClick={onOpen}

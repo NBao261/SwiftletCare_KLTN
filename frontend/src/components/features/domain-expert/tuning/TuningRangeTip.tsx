@@ -12,7 +12,7 @@ function translateHint(hint: string): string {
   return hint.replace(/^Phạm vi:/, t('Phạm vi:')).replace(/^Mặc định:/, t('Mặc định:')).replace(/(\d)s\b/g, '$1 s');
 }
 
-// DE-04: "Phạm vi · Mặc định" của cả khối trong một nút (i), thay một nút cho mỗi ô số
+// "Phạm vi · Mặc định" của cả khối trong một nút (i), thay một nút cho mỗi ô số
 export default function TuningRangeTip({ hints }: { hints: TuningHint[] }) {
   return (
     <InfoTip>

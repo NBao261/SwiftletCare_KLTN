@@ -2,8 +2,7 @@ import { expect, test } from '@playwright/test';
 import { demoFarm, signIn } from './helpers/demoApi';
 import { setScope, signInUi, trackCrashes } from './helpers/ui';
 
-// Smoke cho các trang đổi bố cục ở todo-ui-layout-1120 §6/§7 mà chưa có E2E chạm tới:
-// mở trang + chạy tương tác mới (Modal/tab/nút) + bắt lỗi JS chưa bắt (crash thật). Không kiểm layout bằng mắt.
+// Smoke cho các trang đổi bố cục chưa có E2E: mở trang, chạy tương tác mới, bắt lỗi JS chưa bắt; không kiểm layout bằng mắt
 
 // Lấy ID một lần cho cả nhóm, tránh đăng nhập lặp (backend giới hạn số lần đăng nhập)
 let farmId = '';

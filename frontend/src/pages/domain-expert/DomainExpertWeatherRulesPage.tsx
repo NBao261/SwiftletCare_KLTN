@@ -252,7 +252,7 @@ export default function DomainExpertWeatherRulesPage() {
         </div>
       </SectionCard>
 
-      {/* Modal thêm luật — DE-05 */}
+      {/* Modal thêm luật */}
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}

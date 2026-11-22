@@ -16,7 +16,7 @@ interface Props {
   isResetting: boolean
   onSave: (v: Partial<ExpertThresholds>) => void
   onReset: () => void
-  // DE-04: báo số ngưỡng đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  // Báo số ngưỡng đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
 }
 
@@ -31,7 +31,7 @@ const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: str
   { key: 'co2_max', label: 'Ngưỡng cảnh báo khí CO2', subLabel: 'Chỉ cảnh báo', step: 50, decimals: 0 },
 ]
 
-// Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống (ENV-FR-020)
+// Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống
 const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdColumn(
   { data, isLoading, isSaving, isResetting, onSave, onReset, onDirtyChange }, ref,
 ) {
@@ -103,7 +103,7 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
           })}
         </fieldset>
 
-        {/* Lỗi kiểm ngưỡng; nút Lưu chung ở thanh dính đáy của trang (DE-04) */}
+        {/* Lỗi kiểm ngưỡng; nút Lưu chung ở thanh dính đáy của trang */}
         {error && <p className="mt-auto pt-4 border-t border-stone-100 text-xs text-red-600">{error}</p>}
       </div>
 

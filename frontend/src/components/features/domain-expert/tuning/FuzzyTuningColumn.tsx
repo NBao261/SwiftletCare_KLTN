@@ -17,7 +17,7 @@ interface Props {
   suggestion?: FuzzySuggestionResponse
   isSuggestionLoading?: boolean
   suggestionAction?: SuggestionAction
-  // DE-04: báo số hệ số đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  // Báo số hệ số đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
 }
 
@@ -68,7 +68,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
   )
 }
 
-// Hệ số mờ của Zone (ENV-FR-021/022) và gợi ý từ dữ liệu (ANALYTICS-FR-010); chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
+// Hệ số mờ của Zone và gợi ý từ dữ liệu; chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
 const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTuningColumn(
   { data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, onDirtyChange }, ref,
 ) {
@@ -122,7 +122,7 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
         dismissed={suggestionDismissed}
       />
 
-      {/* Nút Lưu chung ở thanh dính đáy của trang (DE-04) */}
+      {/* Nút Lưu chung ở thanh dính đáy của trang */}
       <fieldset disabled={isSaving} className="contents">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
           {TILES.map(tile => (
@@ -141,10 +141,10 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
           ))}
         </div>
 
-        {/* ENV-FR-022 — cờ lọc nhiễu đầu vào */}
+        {/* cờ lọc nhiễu đầu vào */}
         <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
           <div>
-            {/* Câu ngắn trên thẻ (C-07), giải thích đầy đủ của W-20 trong nút (i) */}
+            {/* Câu ngắn trên thẻ, giải thích đầy đủ trong nút (i) */}
             <p className="flex items-center gap-1 text-sm font-semibold text-charcoal">
               {t('Lọc nhiễu số đo')}
               <InfoTip>{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ.')}</InfoTip>

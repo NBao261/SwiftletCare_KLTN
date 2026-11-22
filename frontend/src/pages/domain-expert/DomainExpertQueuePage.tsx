@@ -1,4 +1,4 @@
-// DE-02: Trang chủ Chuyên gia — 4 KpiTile + danh sách việc phẳng (todo-ui-layout-1120 §6)
+// Trang chủ Chuyên gia: 4 KpiTile và danh sách việc phẳng
 import { Link } from 'react-router-dom'
 import { CalendarCheckIcon, ChecksIcon, FileTextIcon, ShieldCheckIcon, ClipboardTextIcon } from '@phosphor-icons/react'
 import { ALERT_TYPE_LABELS } from '@/hooks/domain-expert/useExpertAlerts'

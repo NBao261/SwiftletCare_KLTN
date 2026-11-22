@@ -2,12 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { demoFarm, signIn, type DemoApi } from './helpers/demoApi';
 import { setScope, sidebar, signInUi, trackCrashes, type UiScope } from './helpers/ui';
 
-/**
- * Luồng của Kỹ thuật viên trên web từ đầu đến cuối (Report 4 §5.4, todo-ui-layout-1120 §7): cảnh báo
- * của nhà được giao, thiết bị của những nhà đó, nhà được giao kèm ca trực của chính mình. Phần việc
- * còn lại (phiếu công việc, bảo trì, thu hoạch, chấm ngày) nằm trên điện thoại, không có ở đây.
- * Dữ liệu của `npm run seed:demo`; mỗi bước tự chịu được lần chạy thứ hai.
- */
+// Luồng của Kỹ thuật viên trên web (seed:demo): cảnh báo, thiết bị và ca trực ở nhà được giao; phần việc còn lại ở điện thoại
 test.describe.configure({ mode: 'serial' });
 
 interface Alert {
@@ -17,7 +12,7 @@ interface Alert {
   site_cause?: { cause: string };
 }
 
-// Cảnh báo thiết bị có ô "nguyên nhân tìm thấy tại chỗ" (ALERT-FR-018, constants/siteCause.ts)
+// Cảnh báo thiết bị có ô "nguyên nhân tìm thấy tại chỗ" (constants/siteCause.ts)
 const CAUSE_ALERT_TYPES = ['MISTING_INEFFECTIVE', 'ACTUATOR_FAULT', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'SPEAKER_FAILURE'];
 
 let farmId = '';
@@ -62,7 +57,7 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await signInUi(page, 'technician');
   await expect(page).toHaveURL(/\/alerts$/);
 
-  // Report 4 §5.4 — 3 mục: cảnh báo, thiết bị, nhà được giao; FT-05: không còn nhóm "Khác"
+  // 3 mục: cảnh báo, thiết bị, nhà được giao; không còn nhóm "Khác"
   for (const label of ['Cảnh báo', 'Thiết bị & Cảm biến', 'Nhà được giao']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
@@ -130,7 +125,7 @@ test('T3 — xác nhận cảnh báo kèm nguyên nhân tìm thấy tại chỗ 
 test('T4 — thiết bị của nhà được giao: hàng ghi "Nhà · Zone", gửi được lệnh khởi động lại (FARM-FR-013)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/devices', { farmId, houseId: houseA, zoneId: zoneA });
 
-  // FT-01 — vị trí chỉ ghi "Nhà · Zone", trang trại đã có ở thanh phạm vi
+  // Vị trí chỉ ghi "Nhà · Zone", trang trại đã có ở thanh phạm vi
   await expect(page.getByText('A · Nhà điều khiển · A · Tầng 1').first()).toBeVisible();
 
   // Kỹ thuật viên được khởi động lại bộ điều khiển của nhà được giao; hộp xác nhận ghi rõ mã thiết bị
@@ -140,8 +135,7 @@ test('T4 — thiết bị của nhà được giao: hàng ghi "Nhà · Zone", g�
   await expect(page.getByText(/Thiết bị demo-ctl-a1 sẽ mất kết nối/)).toBeVisible();
   await page.getByRole('button', { name: 'Khởi động lại', exact: true }).click();
 
-  // Bộ điều khiển của dữ liệu demo chưa từng kết nối nên máy chủ từ chối lệnh; có bảng thật thì lệnh
-  // gửi được. Điều cần kiểm ở đây là màn hình luôn trả lời, không im lặng sau khi bấm.
+  // Bộ điều khiển demo chưa từng kết nối nên máy chủ từ chối lệnh; chỉ kiểm màn hình luôn trả lời sau khi bấm
   await expect(page.getByText(/Đã gửi lệnh khởi động lại|chỉ gửi được khi thiết bị ONLINE/)).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
@@ -150,7 +144,7 @@ test('T5 — nhà được giao: ca trực của chính mình, nút Xem thiết 
   const crashes = await openAsTechnician(page, '/farms');
   await expect(page.getByRole('heading', { name: 'A · Nhà điều khiển' })).toBeVisible();
 
-  // AUTH-FR-014 — mỗi nhà ghi ca trực của chính kỹ thuật viên này, hoặc ghi rõ là chưa có ca
+  // Mỗi nhà ghi ca trực của chính kỹ thuật viên này, hoặc ghi rõ là chưa có ca
   await expect(page.getByText(/Ca trực của bạn|Chưa có ca trực ở nhà này/).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Xem thiết bị' }).first().click();

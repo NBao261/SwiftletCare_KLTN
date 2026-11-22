@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 import { DEMO_FARM, signIn, type Account } from './helpers/demoApi';
 import { setScope, signInUi } from './helpers/ui';
 
-// Trang quyết định của chuyên gia cho Farm Owner (BR-22, Report 3 4.2.15); cần `npm run seed:demo` (owner2@ không có chuyên gia)
+// Trang quyết định của chuyên gia cho Farm Owner; cần `npm run seed:demo` (owner2@ không có chuyên gia)
 
 interface FarmInfo { _id: string; name: string; has_active_expert?: boolean }
 
@@ -14,7 +14,7 @@ async function farmOf(request: APIRequestContext, account: Account, withExpert: 
   return farm!;
 }
 
-// DE-10: badge quyền ở đầu trang, câu BR-22 đầy đủ nằm trong nút (i) của chính badge đó
+// Badge quyền ở đầu trang, câu đầy đủ nằm trong nút (i) của chính badge đó
 async function openBadgeExplanation(page: Page, label: string): Promise<void> {
   await expect(page.getByText(label, { exact: true })).toBeVisible();
   await page.locator('span').filter({ has: page.getByText(label, { exact: true }) }).getByRole('button', { name: 'Giải thích' }).click();
@@ -28,7 +28,7 @@ test.describe('Trang quyết định của chuyên gia cho Farm Owner (BR-22)', 
     await page.goto('/domain-expert/tuning');
     await openBadgeExplanation(page, 'Quyết định thay');
     await expect(page.getByText('Trang trại chưa có chuyên gia', { exact: false })).toBeVisible();
-    // DE-04: nút Lưu riêng từng khối đã gộp vào thanh lưu dính đáy, nên kiểm nút +/- của tham số phát hiện
+    // Nút Lưu riêng từng khối đã gộp vào thanh lưu dính đáy, nên kiểm nút +/- của tham số phát hiện
     await expect(page.getByRole('button', { name: 'Tăng Mức ồn vượt nền' })).toBeEnabled();
   });
 

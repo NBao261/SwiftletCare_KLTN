@@ -27,7 +27,7 @@ function DomainExpertIndexRedirect() {
   return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
 }
 
-// Khung chung /domain-expert/*: DE-01 bỏ banner SCADA, ScopeFilter trên header thay thế (C-05); DE-10 badge nhỏ thay dải nhắc quyền
+// Khung chung của /domain-expert/*
 function DomainExpertShell() {
   const scope = useScopeFilter();
   return (
