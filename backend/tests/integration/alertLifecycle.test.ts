@@ -205,12 +205,10 @@ describe('lọc theo nhà vẫn trong phạm vi của Farm Technician (AUTH-FR-0
 })
 
 describe('mức độ và loại cảnh báo: cảnh báo suy luận không lên HIGH, loại lạ bị từ chối', () => {
-  it('giới hạn mức độ nằm ở createAlert: nguồn nào cũng không đẩy được cảnh báo suy luận lên HIGH', async () => {
-    const { farm, zone, node } = await seed()
-    const input = { farmId: String(farm._id), zoneId: String(zone._id), nodeId: String(node._id), title: 't', message: 'm' }
-    expect((await createAlert({ ...input, type: 'LOW_RETURN_RATE', severity: 'CRITICAL' }))!.severity).toBe('MEDIUM')
-    expect((await createAlert({ ...input, type: 'FORECAST_BREACH' }))!.severity).toBe('LOW') // mặc định thấp hơn thì giữ nguyên
-    expect((await createAlert({ ...input, type: 'UNEXPECTED_RESTART', severity: 'CRITICAL' }))!.severity).toBe('CRITICAL')
+  it('thiết bị không đẩy được cảnh báo suy luận lên HIGH: mức gửi kèm bị bỏ qua (BR-15)', async () => {
+    const { node } = await seed()
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'NOISE_ANOMALY', severity: 'CRITICAL', message: 'ồn' })
+    expect((await Alert.findOne().lean())!.severity).toBe('MEDIUM')
   })
 
   it('thiết bị gửi loại cảnh báo không hợp lệ (kể cả tên thuộc tính của Object) bị từ chối', async () => {
@@ -258,5 +256,63 @@ describe('tên cảnh báo theo SRS 3.1.0 (G-01)', () => {
     await expect(ingestDeviceAlert({ deviceId: node.device_id, type: 'CONFIG_MISMATCH' })).rejects.toMatchObject({ statusCode: 400 })
     await expect(ingestDeviceAlert({ deviceId: node.device_id, type: 'PREDATOR_DETECTED' })).rejects.toMatchObject({ statusCode: 400 })
     expect((await ingestDeviceAlert({ deviceId: node.device_id, type: 'ACTUATOR_FAULT' }))!.type).toBe('ACTUATOR_FAULT')
+  })
+})
+
+describe('mức của cảnh báo chỉ theo loại (ALERT-FR-001, BR-15)', () => {
+  // Chép tay từ Report 3 BR-15: đổi bảng trong code mà không đổi Report 3 thì test này đỏ
+  const BR15: Record<string, string> = {
+    RS485_BUS_FAILURE: 'CRITICAL',
+    UNEXPECTED_RESTART: 'HIGH', SPEAKER_FAILURE: 'HIGH', NODE_OFFLINE: 'HIGH', ACTUATOR_FAULT: 'HIGH',
+    THRESHOLD_BREACH: 'MEDIUM', CONFIG_MISMATCH: 'MEDIUM', NOISE_ANOMALY: 'MEDIUM', SENSOR_FAULT: 'MEDIUM',
+    SENSOR_ANOMALY: 'MEDIUM', MISTING_INEFFECTIVE: 'MEDIUM', EDGE_AI_DEGRADED: 'MEDIUM',
+    LOW_RETURN_RATE: 'LOW', FORECAST_BREACH: 'LOW', MAINTENANCE_DUE: 'LOW',
+  }
+
+  it('mỗi loại được lưu đúng mức của BR-15', async () => {
+    const { farm, zone, node } = await seed()
+    for (const type of Object.keys(BR15)) {
+      await createAlert({
+        farmId: String(farm._id), zoneId: String(zone._id), nodeId: String(node._id),
+        type: type as never, title: type, message: 'x',
+      })
+    }
+    const stored = await Alert.find().select('type severity').lean()
+    expect(stored).toHaveLength(Object.keys(BR15).length)
+    for (const alert of stored) expect([alert.type, alert.severity]).toEqual([alert.type, BR15[alert.type]])
+  })
+})
+
+describe('mỗi sự cố chỉ một cảnh báo còn mở, kể cả khi tin tới cùng lúc (ALERT-FR-008)', () => {
+  it('chỉ mục duy nhất chặn bản thứ hai còn mở của cùng sự cố; sự cố đã đóng thì tạo lại được', async () => {
+    const { farm, zone, node } = await seed()
+    await Alert.init()
+    const doc = {
+      farm_id: farm._id, zone_id: zone._id, node_id: node._id, type: 'SENSOR_FAULT', severity: 'MEDIUM', title: 't', message: 'm',
+    }
+    const first = await Alert.create(doc)
+    await expect(Alert.create(doc)).rejects.toMatchObject({ code: 11000 })
+    await Alert.updateOne({ _id: first._id }, { status: 'RESOLVED', resolved_at: new Date() })
+    await expect(Alert.create(doc)).resolves.toBeDefined()
+  })
+
+  it('hai tin cùng sự cố tới cùng lúc chỉ ra một cảnh báo, tin kia được gộp vào', async () => {
+    const { node } = await seed()
+    await Alert.init()
+    const results = await Promise.all([1, 2, 3].map(() =>
+      ingestDeviceAlert({ deviceId: node.device_id, type: 'SENSOR_FAULT', message: 'timeout' })))
+    expect(results.filter(Boolean)).toHaveLength(1)
+    expect(await Alert.countDocuments({ type: 'SENSOR_FAULT' })).toBe(1)
+  })
+
+  it('bơm và quạt hỏng trên cùng controller vẫn là hai sự cố (THREAT-FR-014)', async () => {
+    const { farm, zone, node } = await seed()
+    const fault = (load: string) => createAlert({
+      farmId: String(farm._id), zoneId: String(zone._id), nodeId: String(node._id),
+      type: 'ACTUATOR_FAULT', title: load, message: 'x', details: { load },
+    })
+    expect(await fault('misting')).not.toBeNull()
+    expect(await fault('ventilation')).not.toBeNull()
+    expect(await fault('misting')).toBeNull()
   })
 })

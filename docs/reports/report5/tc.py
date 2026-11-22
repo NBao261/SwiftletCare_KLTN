@@ -290,6 +290,7 @@ ST=[
 ('6.19 WorkOrder','AWAITING_APPROVAL → CLOSED','Farm Owner approves','CLOSED; alert RESOLVED; MTTR recorded',(J,I+'workOrderLifecycle.test.ts','thợ bắt đầu, báo xong kèm nguyên nhân và ảnh')),
 ('6.19 WorkOrder','AWAITING_APPROVAL → IN_PROGRESS','Farm Owner reopens with a note','IN_PROGRESS with the note',(J,I+'workOrderLifecycle.test.ts','Farm Owner mở lại kèm ghi chú')),
 ('6.19 WorkOrder','OPEN/IN_PROGRESS → CANCELLED','Farm Owner cancels with a reason','CANCELLED; without a reason 422',(J,I+'workOrderLifecycle.test.ts','Farm Owner mở lại kèm ghi chú')),
+('6.19 WorkOrder','open → CANCELLED (place deleted)','The Farm Owner deletes the zone of a Work Order awaiting approval','CANCELLED and no longer open; the alert RESOLVED; the assignee notified',(J,I+'farmStructure.test.ts','xoá một Zone đóng cảnh báo và huỷ Work Order của Zone đó')),
 ('6.19 WorkOrder','OPEN → OPEN (escalated)','Not started within escalation_min','Farm Owners notified once; still OPEN',(J,I+'workOrderLifecycle.test.ts','chưa ai bắt đầu sau 15 phút')),
 ('6.20 MaintenancePlan','(new) → SCHEDULED','Farm Owner defines a plan','SCHEDULED with its first due point',(J,I+'maintenancePlan.test.ts','Farm Owner tạo kế hoạch SCHEDULED')),
 ('6.20 MaintenancePlan','SCHEDULED → DUE','Run hours reach the interval','DUE; MAINTENANCE_DUE and a preventive Work Order',(J,I+'maintenancePlan.test.ts','TC-F25-01 — bơm 500 giờ')),

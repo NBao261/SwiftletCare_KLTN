@@ -5,6 +5,7 @@ import type { BirdCountTuning, DetectionTuning, FuzzyTuning, HealthLevels, House
 import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
 import { currentConfigVersion } from '@/utils/configSync.util'
 import { WEATHER_METRICS, type WeatherRuleInput } from '@/utils/weatherCompensation.util'
+import { applySoftDeleteScope } from '@/utils/softDelete.util'
 import type { CountingSchedule } from '@/utils/countingSchedule.util'
 
 /**
@@ -28,6 +29,10 @@ export interface IHouse extends Document {
   name: string
   floors: number
   description?: string
+  /** FARM-FR-002 — xoá mềm: nhà và các Zone của nó rời mọi danh sách và job, lịch sử còn trong cơ sở dữ liệu */
+  is_deleted: boolean
+  deleted_at?: Date
+  deleted_by?: Types.ObjectId
   /** ENV-FR-030 — luật bù phun sương theo dự báo của nhà (BR-38); `_id` là `rule_id` gửi kèm offset */
   weather_rules: IWeatherRule[]
   weather_rules_history: Array<{ changed_by: Types.ObjectId; changed_by_role?: Role; changed_at: Date; old_values: unknown; new_values: unknown }>
@@ -96,6 +101,10 @@ export interface IZone extends Document {
   farm_id: Types.ObjectId
   name: string
   floor: number
+  /** FARM-FR-002 — xoá mềm cùng nhà hoặc riêng Zone */
+  is_deleted: boolean
+  deleted_at?: Date
+  deleted_by?: Types.ObjectId
   thresholds: Thresholds
   threshold_history: IThresholdHistoryEntry[]
   /** ENV-FR-021 — hệ số bộ điều khiển mờ của mọi ESP32 trong Zone, gửi qua config/update */
@@ -114,6 +123,9 @@ const houseSchema = new Schema<IHouse>(
     name:        { type: String, required: true, trim: true },
     floors:      { type: Number, default: 1 },
     description: { type: String },
+    is_deleted:  { type: Boolean, default: false },
+    deleted_at:  { type: Date },
+    deleted_by:  { type: Schema.Types.ObjectId, ref: 'User' },
     weather_rules: [{
       metric:       { type: String, enum: [...WEATHER_METRICS], required: true },
       min:          { type: Number, required: true },
@@ -199,6 +211,9 @@ const zoneSchema = new Schema<IZone>(
     farm_id:  { type: Schema.Types.ObjectId, ref: 'Farm', required: true, immutable: true },
     name:     { type: String, required: true },
     floor:    { type: Number, default: 1 },
+    is_deleted: { type: Boolean, default: false },
+    deleted_at: { type: Date },
+    deleted_by: { type: Schema.Types.ObjectId, ref: 'User' },
     thresholds: {
       temp_min:     { type: Number, default: DEFAULT_THRESHOLDS.temp_min },
       temp_max:     { type: Number, default: DEFAULT_THRESHOLDS.temp_max },
@@ -261,6 +276,10 @@ zoneSchema.pre('validate', async function () {
   const house = await House.findById(this.house_id).select('farm_id').lean()
   if (house) this.farm_id = house.farm_id
 })
+
+// FARM-FR-002 — nhà, Zone đã xoá ẩn khỏi mọi truy vấn trừ khi filter tự ghi `is_deleted`
+applySoftDeleteScope(houseSchema)
+applySoftDeleteScope(zoneSchema)
 
 export const House = model<IHouse>('House', houseSchema)
 export const Zone  = model<IZone>('Zone', zoneSchema)
