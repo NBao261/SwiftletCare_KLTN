@@ -1,12 +1,13 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { ArrowsInIcon, ArrowsOutIcon, HourglassIcon, VideoCameraSlashIcon, WifiSlashIcon } from '@phosphor-icons/react'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
+import { ringsOfCamera } from '@/components/common/countingRing.utils'
 import StatusDot from '@/components/common/StatusDot'
 import { Button, Card, SelectMenu } from '@/components/ui'
 import { NO_VALUE } from '@/constants/display'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { useTranslation } from '@/hooks/common/useTranslation'
-import { useHousesBirdCountCurrent } from '@/hooks/farm-owner/useAnalytics'
+import { useHousesBirdCountCurrent, useLiveBirdCount } from '@/hooks/farm-owner/useAnalytics'
 import { useHouseCameras } from '@/hooks/farm-owner/useHouseCameras'
 import { useWhepStream } from '@/hooks/shared/useWhepStream'
 import { cn } from '@/lib/cn'
@@ -33,6 +34,8 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   const videoRef = useRef<HTMLVideoElement>(null)
   const { data: cameras, isLoading, isError, refetch } = useHouseCameras(houseId)
   const { today } = useHousesBirdCountCurrent(houseId ? [houseId] : [])
+  // Số VÀO/RA hiện ở thẻ, không vẽ lên video: cập nhật ngay khi nút AI gửi số mới
+  useLiveBirdCount(showTodayCounts ? houseId : undefined)
   const [pickedCameraId, setPickedCameraId] = useState('')
   const camera = cameras?.find(item => item._id === pickedCameraId) ?? cameras?.[0]
   const canStream = camera !== undefined && STREAMABLE_STATUSES.has(camera.status)
@@ -53,7 +56,8 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   const expandLabel = expanded ? t('camera.collapse') : t('camera.expand')
   // Số đếm hôm nay: nhà chưa có tin đếm (updated_at null) thì "_", không hiện 0
   const hasToday = today?.updatedAt != null
-  const ring = camera?.counting_ring
+  const ringCount = camera ? ringsOfCamera(camera).length : 0
+  const ringUpdatedAt = camera?.counting_ring?.updated_at
 
   // Thông số camera + đếm hôm nay; mọi giá trị từ GET /devices/camera-nodes và /analytics/bird-count/current
   const params: Array<{ label: string; value: ReactNode }> = [
@@ -61,7 +65,9 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
     { label: t('camera.paramHeartbeat'), value: camera ? ago(camera.last_heartbeat) : NO_VALUE },
     {
       label: t('camera.paramRing'),
-      value: !camera ? NO_VALUE : ring ? t('camera.ringSet', { date: ring.updated_at ? date(ring.updated_at) : NO_VALUE }) : t('camera.ringDefault'),
+      value: !camera ? NO_VALUE : ringCount > 0
+        ? t('camera.ringSet', { n: ringCount, date: ringUpdatedAt ? date(ringUpdatedAt) : NO_VALUE })
+        : t('camera.ringDefault'),
     },
     ...(showTodayCounts ? [
       { label: t('camera.paramExit'), value: hasToday ? num(today.morningExit) : NO_VALUE },

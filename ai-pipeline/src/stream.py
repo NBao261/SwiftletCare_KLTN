@@ -6,7 +6,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterator, Optional, Sequence, Tuple
+from typing import Iterator, List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -15,7 +15,7 @@ import yaml
 from dotenv import load_dotenv
 from loguru import logger
 
-from counting import SESSION_TYPES, BucketClock, RingCounter, current_session
+from counting import SESSION_TYPES, BucketClock, MultiRingCounter, Ring, current_session
 from inference import InferenceEngine
 from mjpeg_server import MjpegServer
 from pipeline import FramePipeline, draw, track_ids
@@ -26,8 +26,6 @@ CONFIG = Path(__file__).resolve().parents[1] / "config" / "config.yaml"
 STATE_FILE = Path("state.json")
 RECONNECT_MAX_SEC = 30
 STALL_TIMEOUT_MS = 10_000   # luồng đứng hình quá lâu thì nối lại (mặc định của OpenCV là 30 giây)
-
-Ring = Tuple[Sequence[Sequence[float]], bool]
 
 
 def load_config(path: Path = CONFIG) -> dict:
@@ -40,13 +38,16 @@ def make_engine(cfg: dict, model_path: Optional[str] = None) -> InferenceEngine:
                            m["nms_iou_threshold"], m["classes"], m["providers"])
 
 
-def make_counter(cfg: dict, width: int, height: int, ring: Optional[Ring] = None,
-                 base: Tuple[int, int] = (0, 0)) -> RingCounter:
-    """ring = (points, into_ring_is_exit) từ backend; None = vòng trong config.yaml."""
+def default_rings(cfg: dict) -> List[Ring]:
+    return [(cfg["tracking"]["ring"], cfg["tracking"]["into_ring_is_exit"])]
+
+
+def make_counter(cfg: dict, width: int, height: int, rings: Optional[Sequence[Ring]] = None,
+                 base: Tuple[int, int] = (0, 0)) -> MultiRingCounter:
+    """rings từ backend (1–2 vòng); None = vòng trong config.yaml."""
     t = cfg["tracking"]
-    points, into_ring_is_exit = ring or (t["ring"], t["into_ring_is_exit"])
-    return RingCounter(points, width, height, into_ring_is_exit, *base, lost_frames=t["lost_track_buffer"],
-                       extrapolate_frames=t["extrapolate_frames"], min_speed_px=t["extrapolate_min_speed_px"])
+    return MultiRingCounter(rings or default_rings(cfg), width, height, *base, lost_frames=t["lost_track_buffer"],
+                            extrapolate_frames=t["extrapolate_frames"], min_speed_px=t["extrapolate_min_speed_px"])
 
 
 class FrameGrabber(threading.Thread):
@@ -115,9 +116,21 @@ def load_state(session: str, today: str, path: Path = STATE_FILE) -> Tuple[int, 
     return 0, 0
 
 
-def save_state(session: str, today: str, counter: RingCounter, path: Path = STATE_FILE) -> None:
-    path.write_text(json.dumps({"session": session, "date": today,
-                                "entry": counter.entry_count, "exit": counter.exit_count}), encoding="utf-8")
+def load_day_total(today: str, path: Path = STATE_FILE) -> int:
+    """Tổng chim qua vòng đã đếm trong ngày, để khởi động lại không đếm lại từ 0."""
+    try:
+        s = json.loads(path.read_text(encoding="utf-8"))
+        if s["date"] == today:
+            return int(s.get("day_total", 0))
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return 0
+
+
+def save_state(session: Optional[str], today: str, counter: MultiRingCounter, path: Path = STATE_FILE,
+               day_total: int = 0) -> None:
+    path.write_text(json.dumps({"session": session, "date": today, "entry": counter.entry_count,
+                                "exit": counter.exit_count, "day_total": day_total}), encoding="utf-8")
 
 
 def topic_base(env) -> str:
@@ -143,7 +156,7 @@ class Publisher:
         self.client.connect_async(cfg["broker"], cfg["port"])   # tự kết nối lại khi rớt
         self.client.loop_start()
 
-    def bird_count(self, session: str, counter: RingCounter, conf_avg: float, final: bool = False) -> None:
+    def bird_count(self, session: str, counter: MultiRingCounter, conf_avg: float, final: bool = False) -> None:
         self.client.publish(self.topic_count, json.dumps({
             "deviceId": self.device_id,
             "session_type": session,
@@ -200,18 +213,19 @@ def main() -> None:
 
     # Vòng vẽ trên web thắng vòng trong config.yaml và đổi được khi đang chạy
     device_id = os.environ.get("CAMERA_DEVICE_ID", "")
-    rings = RingStore(Path(cfg["tracking"]["ring_override_file"]), device_id)
-    ring: Optional[Ring] = rings.load()
+    ring_store = RingStore(Path(cfg["tracking"]["ring_override_file"]), device_id)
+    drawn_rings: Optional[List[Ring]] = ring_store.load()
     # Khung phiên của ngày theo lịch đếm của nhà; ngày backend chưa gửi thì dùng config.yaml
     schedule = ScheduleStore(Path(s["windows_override_file"]), device_id)
     schedule.load()
     if not args.no_mqtt and device_id:
-        start_listener(cfg["mqtt"], [rings, schedule], device_id)
+        start_listener(cfg["mqtt"], [ring_store, schedule], device_id)
 
     pipe: Optional[FramePipeline] = None
     session: Optional[str] = None
-    counter: Optional[RingCounter] = None
-    day_counter: Optional[RingCounter] = None  # đếm liên tục, làm nguồn cho số đếm 5 phút
+    counter: Optional[MultiRingCounter] = None
+    day_counter: Optional[MultiRingCounter] = None  # đếm liên tục, làm nguồn cho số đếm 5 phút
+    day_date, day_base, day_mark = "", 0, 0         # tổng trong ngày = day_base + số đếm từ mốc day_mark
     buckets = BucketClock(cfg["mqtt"]["bucket_minutes"], time.time())
     started = False
     conf_sum, conf_n = 0.0, 0
@@ -222,12 +236,12 @@ def main() -> None:
         h, w = frame.shape[:2]
         if pipe is None:
             pipe = FramePipeline(cfg, engine, w, h)
-        new_ring = rings.take_update()
-        if new_ring:
-            ring = new_ring
+        new_rings = ring_store.take_update()
+        if new_rings is not None:                 # [] = vòng đã xoá trên web, về vòng trong config.yaml
+            drawn_rings = new_rings or None
             for c in (counter, day_counter):
                 if c is not None:
-                    c.set_ring(ring[0], w, h, ring[1])
+                    c.set_rings(drawn_rings or default_rings(cfg))
 
         now_vn = datetime.now(tz)
         today = now_vn.strftime("%Y-%m-%d")
@@ -237,9 +251,9 @@ def main() -> None:
                 pub.bird_count(session, counter, conf_sum / max(conf_n, 1), final=True)
             session, started = now_session, True
             base = load_state(session, today) if session and live else (0, 0)
-            counter = make_counter(cfg, w, h, ring, base)
+            counter = make_counter(cfg, w, h, drawn_rings, base)
             if day_counter is None:
-                day_counter = make_counter(cfg, w, h, ring)
+                day_counter = make_counter(cfg, w, h, drawn_rings)
             conf_sum, conf_n = 0.0, 0
             logger.info(f"Phiên: {session or 'ngoài phiên'} (đã đếm trước đó: vào {base[0]}, ra {base[1]})")
 
@@ -248,8 +262,12 @@ def main() -> None:
         ids = track_ids(tracks)
         counter.update(ids, tracks.xyxy)
         day_counter.update(ids, tracks.xyxy)
+        day_now = day_counter.entry_count + day_counter.exit_count
+        if today != day_date:                     # khởi động hoặc qua nửa đêm
+            day_date, day_base, day_mark = today, load_day_total(today) if live else 0, day_now
+        day_total = day_base + day_now - day_mark
 
-        annotated = draw(frame.copy(), tracks, counter, fps, session) if server.watching_boxes or pusher else None
+        annotated = draw(frame.copy(), tracks, day_counter, day_total) if server.watching_boxes or pusher else None
         server.publish(annotated, frame)
         if pusher:
             pusher.update(annotated)
@@ -267,8 +285,8 @@ def main() -> None:
                 pub.heartbeat(fps)
                 if session:
                     pub.bird_count(session, counter, conf_sum / max(conf_n, 1))
-            if session and live:
-                save_state(session, today, counter)
+            if live:
+                save_state(session, today, counter, day_total=day_total)
         if live:
             done = buckets.roll(now, (day_counter.entry_count, day_counter.exit_count))
             if done and pub:

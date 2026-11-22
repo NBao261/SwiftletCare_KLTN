@@ -8,7 +8,7 @@ import numpy as np  # noqa: E402
 import supervision as sv  # noqa: E402
 import yaml  # noqa: E402
 
-from counting import RingCounter  # noqa: E402
+from counting import MultiRingCounter  # noqa: E402
 from inference import Detection  # noqa: E402
 from pipeline import GREEN, LABEL_HEIGHT, YELLOW, FramePipeline, draw, label_origin  # noqa: E402
 
@@ -21,8 +21,11 @@ def blank() -> np.ndarray:
     return np.zeros((H, W, 3), np.uint8)
 
 
-def counter() -> RingCounter:
-    return RingCounter(CONFIG["tracking"]["ring"], W, H)
+def counter() -> MultiRingCounter:
+    return MultiRingCounter([(CONFIG["tracking"]["ring"], True)], W, H)
+
+
+SECOND_HOLE = [(0.05, 0.05), (0.2, 0.05), (0.2, 0.2), (0.05, 0.2)]
 
 
 def has_color(img: np.ndarray, color, x1: int, y1: int, x2: int, y2: int) -> bool:
@@ -35,11 +38,12 @@ def tracks(boxes, ids) -> sv.Detections:
     return sv.Detections(xyxy=np.array(boxes, np.float32), tracker_id=np.array(ids, int))
 
 
-def assert_ring(img: np.ndarray, ring: RingCounter) -> None:
-    pts = ring.polygon.astype(int)
-    for a, b in zip(pts, np.roll(pts, -1, axis=0)):
-        mx, my = (a + b) // 2
-        assert has_color(img, YELLOW, mx - 2, my - 2, mx + 3, my + 3), f"ring edge {a}-{b} not drawn"
+def assert_ring(img: np.ndarray, counter: MultiRingCounter) -> None:
+    for polygon in counter.polygons:
+        pts = polygon.astype(int)
+        for a, b in zip(pts, np.roll(pts, -1, axis=0)):
+            mx, my = (a + b) // 2
+            assert has_color(img, YELLOW, mx - 2, my - 2, mx + 3, my + 3), f"ring edge {a}-{b} not drawn"
 
 
 def assert_box_and_label(img: np.ndarray, box) -> None:
@@ -52,19 +56,31 @@ def assert_box_and_label(img: np.ndarray, box) -> None:
     assert has_color(img, GREEN, lx, ly - LABEL_HEIGHT + 2, lx + 30, ly + 1), f"no #id label for {box}"
 
 
-def test_draw_shows_the_ring_each_box_with_its_id_and_the_counts():
+def test_draw_shows_the_ring_each_box_with_its_id_and_the_total():
     ring = counter()
     boxes = [(100, 200, 120, 220), (400, 150, 425, 172)]
-    img = draw(blank(), tracks(boxes, [3, 7]), ring, fps=24.6, session="EVENING_ENTRY")
+    img = draw(blank(), tracks(boxes, [3, 7]), ring, total=42)
     assert_ring(img, ring)
     for box in boxes:
         assert_box_and_label(img, box)
-    assert has_color(img, WHITE, 10, H - 40, 600, H - 5), "counts line not drawn"
+    assert has_color(img, WHITE, 10, H - 40, 600, H - 5), "total not drawn"
 
 
-def test_frame_without_birds_still_shows_the_ring_and_the_counts():
+def test_total_is_the_only_text_left_on_the_frame():
+    # Chỉ "Tong N": không còn VÀO/RA, FPS hay tên phiên, nên dòng chữ ngắn
+    img = draw(blank(), sv.Detections.empty(), counter(), total=7)
+    assert has_color(img, WHITE, 10, H - 40, 120, H - 5)
+    assert not has_color(img, WHITE, 160, H - 40, W, H - 5), "text longer than the total"
+
+
+def test_both_rings_of_a_two_hole_camera_are_drawn():
+    two = MultiRingCounter([(CONFIG["tracking"]["ring"], True), (SECOND_HOLE, False)], W, H)
+    assert_ring(draw(blank(), sv.Detections.empty(), two, total=0), two)
+
+
+def test_frame_without_birds_still_shows_the_ring_and_the_total():
     ring = counter()
-    img = draw(blank(), sv.Detections.empty(), ring, fps=25, session=None)
+    img = draw(blank(), sv.Detections.empty(), ring, total=0)
     assert_ring(img, ring)
     assert has_color(img, WHITE, 10, H - 40, 600, H - 5)
     assert not has_color(img, GREEN, 0, 0, W, H), "no bird, so no box"
@@ -74,7 +90,7 @@ def test_bird_at_the_top_edge_keeps_its_id_inside_the_frame():
     box = (300, 2, 318, 20)
     assert label_origin(box, (H, W, 3)) == (300, 20 + LABEL_HEIGHT + 2)   # below the box
     assert label_origin((300, 100, 318, 118), (H, W, 3)) == (300, 96)     # above when there is room
-    img = draw(blank(), tracks([box], [12]), counter(), fps=25)
+    img = draw(blank(), tracks([box], [12]), counter(), total=0)
     assert_box_and_label(img, box)
 
 
@@ -86,7 +102,7 @@ def test_label_stays_inside_a_frame_edge():
 def test_label_of_a_bird_at_the_right_edge_is_not_cut():
     # "#1234" is wider than the 8 px between the box and the right edge: it moves left, whole
     assert label_origin((632, 100, 639, 118), (H, W, 3), text_width=40)[0] == W - 1 - 40
-    img = draw(blank(), tracks([(632, 100, 639, 118)], [1234]), counter(), fps=25)
+    img = draw(blank(), tracks([(632, 100, 639, 118)], [1234]), counter(), total=0)
     assert has_color(img, GREEN, W - 45, 80, W - 9, 97), "the #id label of a bird at the right edge is cut"
 
 
@@ -117,7 +133,7 @@ def test_every_published_frame_has_the_ring_and_a_box_with_id_per_tracked_bird()
     for _ in range(20):
         frame = blank()
         tracked, _, _ = pipeline.track(frame)
-        img = draw(frame.copy(), tracked, ring, fps=25)
+        img = draw(frame.copy(), tracked, ring, total=0)
         assert_ring(img, ring)
         for box, tid in zip(tracked.xyxy, tracked.tracker_id if tracked.tracker_id is not None else []):
             assert_box_and_label(img, box)

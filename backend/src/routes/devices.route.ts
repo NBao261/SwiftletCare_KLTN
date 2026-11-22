@@ -84,12 +84,18 @@ router.get ('/camera-nodes',
   query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(),
   query('removed').optional().isString().isIn(['recent']), validate,
   deviceController.listCameraNodes)
-// Farm Owner chỉ khi farm chưa có chuyên gia; 3 đỉnh là vòng kín tối thiểu, 12 chống nhập nhầm
+// 0–2 vòng (mỗi lỗ ra vào một vòng, rings: [] = dùng vòng mặc định); 3 đỉnh là vòng kín tối thiểu, 12 chống nhập nhầm.
+// Không gửi rings thì là body cũ một vòng của app mobile
+const ringFields = (prefix: string, field = (path: string) => body(path)) => [
+  field(`${prefix}points`).isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
+  field(`${prefix}points.*`).isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),
+  field(`${prefix}points.*.*`).isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỷ lệ khung hình 0-1').toFloat(),
+  field(`${prefix}into_ring_is_exit`).isBoolean({ strict: true }),
+]
 router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(),
-  body('points').isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
-  body('points.*').isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),
-  body('points.*.*').isFloat({ min: 0, max: 1 }).withMessage('toạ độ theo tỷ lệ khung hình 0-1').toFloat(),
-  body('into_ring_is_exit').isBoolean({ strict: true }),
+  body('rings').optional().isArray({ max: 2 }).withMessage('tối đa 2 vòng đếm'),
+  ...ringFields('rings.*.'),
+  ...ringFields('', path => body(path).if(body('rings').not().exists())),
   validate, deviceController.updateCountingRing)
 router.get ('/camera-nodes/:id/stream-token', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(), validate, streamController.getStreamToken)
 

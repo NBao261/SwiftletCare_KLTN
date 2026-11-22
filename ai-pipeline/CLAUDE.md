@@ -34,13 +34,13 @@ pytest.ini
 requirements.txt
 src/
   stream.py           live loop: latest-frame reader, sessions in Vietnam time, state.json, MQTT publisher, 5-minute buckets
-  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack; draw() green boxes, ring, counts
+  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack; draw() green boxes, rings, day total
   mjpeg_server.py     MJPEG preview on 127.0.0.1 (encodes only while someone watches)
   stream_pusher.py    pushes the annotated frames to MediaMTX with ffmpeg; masks the password in its logs
   frame_prep.py       mask + tiles, shared with the dataset tools so training and production see the same pixels
   inference.py        ONNX inference, YOLO26 (300, 6) and YOLOv8/11 outputs, per-tile run + merge
-  counting.py         RingCounter (ring crossings + extrapolation at the hole; set_ring() swaps it live), sessions, BucketClock
-  remote_config.py    VISION-FR-018: ring drawn by the Domain Expert, from the retained config topic → state/counting_ring.json
+  counting.py         RingCounter (ring crossings + extrapolation at the hole), MultiRingCounter (1–2 rings summed; set_rings() swaps them live), sessions, BucketClock
+  remote_config.py    VISION-FR-018: 1–2 rings drawn on the web, from the retained config topic → state/counting_ring.json
 tools/pick_roi.py     calibration: hole outline → ring (offset by --margin), printed as YAML
 tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels from motion tracks (--draft tracks) or blobs
 tools/track_clip.py  clip segment → video with green boxes + counts; --detector motion until a trained model exists
@@ -68,7 +68,7 @@ Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `
 - **[Bắt buộc]** Topics are per device (Report 4 §7.2): `swiftletcare/dev/{deviceId}/vision/bird-count`, `…/heartbeat` (`{deviceId, modelVersion, fps}`) and `…/vision/alert`. The backend keeps the node's house, so no farm or house ID appears here. The broker refuses any other topic (NFR-10 d).
 - **[Bắt buộc]** Every payload carries `deviceId` = the CameraNode `device_id` registered in the backend; the backend drops a message whose `deviceId` differs from its topic.
 - **[Bắt buộc]** Payload shapes follow the plan (§6.6) and the backend's `BirdCountPayload` (`backend/src/types/domain.types.ts`, extended per plan §8.2): session message `{deviceId, session_type, entry_count, exit_count, confidence_avg, final, timestamp}`; bucket message `{deviceId, kind: "BUCKET", bucket_start, bucket_minutes, entry_count, exit_count, timestamp}`; heartbeat `{deviceId, firmwareVersion}`. Timestamps are epoch milliseconds. Counts are non-negative integers. A field change lands together with the backend type, the handler and `docs/api/api-spec.yaml` (or names the PR that does).
-- **[Bắt buộc]** The one message the node receives is the retained `swiftletcare/dev/{deviceId}/config` with `{deviceId, counting_ring: {points, into_ring_is_exit}}` (VISION-FR-018, `remote_config.py`): drop it when `deviceId` names another camera, validate it with the same limits as the backend route (3–12 vertices in 0–1), and keep counting with the old ring when it is malformed.
+- **[Bắt buộc]** The one message the node receives is the retained `swiftletcare/dev/{deviceId}/config` with `{deviceId, counting_rings: [{points, into_ring_is_exit}]}` (0–2 rings, `[]` = deleted, back to the `config.yaml` ring; an older backend's single `counting_ring` is still read; VISION-FR-018, `remote_config.py`): drop it when `deviceId` names another camera, validate it with the same limits as the backend route (3–12 vertices in 0–1), and keep counting with the old ring when it is malformed.
 - **[Bắt buộc]** The pipeline sends raw entry/exit counts; the backend computes the return rate on **net** counts (VISION-FR-009). Do not compute or send `return_rate` from the pipeline.
 - **[Nên]** Publish with QoS 1 for counts and QoS 0 for heartbeats; reconnect with `connect_async` + `loop_start` so a broker outage does not stop counting.
 

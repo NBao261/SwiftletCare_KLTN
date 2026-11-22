@@ -76,7 +76,7 @@ def main() -> None:
             break
         tracks, _, _ = pipe.track(frame)
         counter.update(track_ids(tracks), tracks.xyxy)
-        writer.write(draw(frame.copy(), tracks, counter, n / max(time.perf_counter() - t0, 1e-6)))
+        writer.write(draw(frame.copy(), tracks, counter, counter.entry_count + counter.exit_count))
         max_tracks = max(max_tracks, len(tracks))
         n += 1
     cap.release()

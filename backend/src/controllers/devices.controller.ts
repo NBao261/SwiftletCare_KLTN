@@ -71,7 +71,9 @@ export const listCameraNodes = asyncHandler(async (req: Request, res: Response) 
 })
 
 export const updateCountingRing = asyncHandler(async (req: Request, res: Response) => {
-  const camera = await deviceService.updateCountingRing(req.params.id, req.user, req.body)
+  // Body cũ một vòng (app mobile) vẫn nhận
+  const rings = req.body.rings ?? [{ points: req.body.points, into_ring_is_exit: req.body.into_ring_is_exit }]
+  const camera = await deviceService.updateCountingRing(req.params.id, req.user, rings)
   res.json({ success: true, data: camera })
 })
 

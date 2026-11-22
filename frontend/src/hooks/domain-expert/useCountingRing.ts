@@ -21,8 +21,8 @@ export function useHouseCameras(houseId: string | undefined) {
 export function useUpdateCountingRing(houseId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ cameraId, ring }: { cameraId: string; ring: CountingRing }) =>
-      countingRingApi.update(cameraId, ring).then(response => response.data.data),
+    mutationFn: ({ cameraId, rings }: { cameraId: string; rings: CountingRing[] }) =>
+      countingRingApi.update(cameraId, rings).then(response => response.data.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: HOUSE_CAMERAS_KEY(houseId) })
     },

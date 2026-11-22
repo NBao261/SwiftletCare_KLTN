@@ -1,11 +1,11 @@
 """One frame through the pipeline: mask, 2 tiles, YOLO, ByteTrack, and drawing; shared by the live loop and track_clip.py."""
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 import cv2
 import numpy as np
 import supervision as sv
 
-from counting import RingCounter
+from counting import MultiRingCounter
 from frame_prep import apply_mask, tile_rects
 from inference import Detection, InferenceEngine
 
@@ -74,17 +74,15 @@ def label_origin(box: Sequence[int], frame_shape: Tuple[int, ...], text_width: i
     return x, min(y, height - 1)
 
 
-def draw(frame: np.ndarray, tracks: sv.Detections, counter: RingCounter, fps: float,
-         session: Optional[str] = None) -> np.ndarray:
-    """Green box + #id per bird, the counting ring and the counts; text at the bottom (the camera's clock is top-left)."""
-    cv2.polylines(frame, [counter.polygon.astype(np.int32)], True, YELLOW, 2)
+def draw(frame: np.ndarray, tracks: sv.Detections, counter: MultiRingCounter, total: int) -> np.ndarray:
+    """Green box + #id per bird, the counting rings and today's total; in/out per session are on the web."""
+    cv2.polylines(frame, [p.astype(np.int32) for p in counter.polygons], True, YELLOW, 2)
     for box, tid in zip(tracks.xyxy.astype(int), track_ids(tracks)):
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), GREEN, 2)
         label = f"#{tid}"
         (text_width, _), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
         cv2.putText(frame, label, label_origin(box, frame.shape, text_width), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
-    text = (f"VAO {counter.entry_count}  RA {counter.exit_count}  ?{counter.ambiguous}  {fps:.0f} FPS"
-            f"  {session or 'ngoai phien'}")
+    text = f"Tong {total}"   # the camera's clock is top-left, so the text sits at the bottom
     org = (10, frame.shape[0] - 16)
     cv2.putText(frame, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 4)
     cv2.putText(frame, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)

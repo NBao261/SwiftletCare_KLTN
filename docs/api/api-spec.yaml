@@ -3287,7 +3287,7 @@ paths:
   /devices/camera-nodes/{id}/counting-ring:
     put:
       tags: [Devices]
-      summary: "Vẽ vòng đếm chim của 1 camera (VISION-FR-018) — DOMAIN_EXPERT, FARM_OWNER của farm (farm có chuyên gia thì mở mục duyệt, BR-22); FARM_TECHNICIAN ở nhà được giao"
+      summary: "Vẽ, sửa hoặc xoá vòng đếm chim của 1 camera, tối đa 2 vòng (VISION-FR-018) — DOMAIN_EXPERT, FARM_OWNER của farm (farm có chuyên gia thì mở mục duyệt, BR-22); FARM_TECHNICIAN ở nhà được giao"
       description: |
         Farm Technician vẽ hoặc chỉnh được vòng của camera ở nhà được giao (VISION-FR-018, Report 3 §2.4);
         nhà khác → 403. Farm Owner trên farm có Domain Expert: áp ngay và mở mục duyệt cho chuyên gia (EXPERT-FR-010, BR-22). Thay đổi của Domain Expert báo trong app cho mọi
@@ -3295,18 +3295,30 @@ paths:
         Vòng khép kín quanh miệng lỗ ra vào (`docs/bird-counting-plan.md` 3.3 ý 7, 19.8), các đỉnh
         `[x, y]` theo tỉ lệ khung hình 0–1, theo thứ tự quanh vòng; 3–12 đỉnh (12 là giới hạn kỹ thuật
         chống nhập nhầm). `into_ring_is_exit`: true khi trong vòng là phía ngoài trời (camera trong nhà).
-        Lưu `counting_ring` + `counting_ring_history` (người sửa, role, giá trị cũ/mới) và audit
-        `COUNTING_RING_UPDATED`, rồi publish MQTT `swiftletcare/dev/{deviceId}/config` (retained)
-        `{ deviceId, counting_ring: { points, into_ring_is_exit } }` cho nút AI; nút AI kết nối lại
-        sẽ nhận lại từ broker. Broker chưa kết nối thì vẫn lưu,
-        `ring_delivered=false`. Đổi vòng thì số đếm trước và sau không so được với nhau. Camera chưa có vòng
-        trước lần vẽ của Farm Owner thì mục duyệt có `old_values.ring = null` và không hoàn tác được (409).
+        Body `{ rings: [...] }`: 0–2 vòng, mỗi lỗ ra vào một vòng, số đếm của các vòng cộng chung vào camera;
+        `rings: []` xoá vòng, nút AI dùng lại vòng trong `config.yaml`. Body cũ một vòng `{ points, into_ring_is_exit }`
+        (app mobile) vẫn nhận, coi như `rings` có 1 vòng.
+        Lưu `counting_rings` (vòng đầu kèm người sửa còn ở `counting_ring` cho app cũ), `counting_ring_history`
+        (người sửa, role, danh sách vòng cũ/mới) và audit `COUNTING_RING_UPDATED`, rồi publish MQTT
+        `swiftletcare/dev/{deviceId}/config` (retained) `{ deviceId, counting_rings: [{ points, into_ring_is_exit }] }`
+        cho nút AI (luôn có `counting_rings`, `[]` khi đã xoá); nút AI kết nối lại sẽ nhận lại từ broker. Broker chưa
+        kết nối thì vẫn lưu, `ring_delivered=false`. Đổi vòng thì số đếm trước và sau không so được với nhau. Mục duyệt
+        của Farm Owner ghi `old_values.rings`, `new_values.rings`; hoàn tác về `[]` là về vòng mặc định.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/CountingRing" }
+            schema:
+              oneOf:
+                - type: object
+                  required: [rings]
+                  properties:
+                    rings:
+                      type: array
+                      maxItems: 2
+                      items: { $ref: "#/components/schemas/CountingRing" }
+                - $ref: "#/components/schemas/CountingRing"
       responses:
         "200":
           description: Đã lưu
@@ -6344,7 +6356,7 @@ paths:
         Khôi phục giá trị gốc (trước lần sửa đầu của Farm Owner) của nhóm, qua đúng hàm cập nhật của nhóm đó:
         `thresholds`, `fuzzy`, `detection` gửi lại mọi controller của Zone (ngưỡng và hệ số ghi `source=EXPERT_REVERT`);
         `return_rate_drop`, `health_levels`, `counting_schedule` ghi lại cho nhà (lịch đếm gửi lại nút AI của nhà);
-        `counting_ring` gửi lại nút AI của camera. `PENDING_REVIEW` → `REVERTED`; báo Farm Owner, audit `REVIEW_REVERTED`.
+        `counting_ring` gửi lại nút AI của camera (camera chưa có vòng cũ thì về vòng mặc định). `PENDING_REVIEW` → `REVERTED`; báo Farm Owner, audit `REVIEW_REVERTED`.
         Farm Owner, Technician, Administrator → 403.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -6360,7 +6372,7 @@ paths:
         "400": { description: "Giá trị gốc của ngưỡng hoặc hệ số không còn qua kiểm khoảng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409": { description: "Mục duyệt đã đóng, hoặc vòng đếm vẽ trên camera chưa có vòng cũ (không có gì để trả về)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { description: "Mục duyệt đã đóng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
   /expert-activity/proposals:
@@ -7874,9 +7886,14 @@ components:
         decommissioned_at: { type: string, format: date-time, nullable: true, description: "FARM-FR-008 — đã gỡ khỏi hệ thống" }
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
+        counting_rings:
+          type: array
+          maxItems: 2
+          description: "VISION-FR-018 — các vòng đã vẽ (mỗi lỗ ra vào một vòng); [] hoặc không có = nút AI dùng vòng trong config.yaml. Bản ghi cũ chỉ có counting_ring"
+          items: { $ref: "#/components/schemas/CountingRing" }
         counting_ring:
           nullable: true
-          description: "VISION-FR-018 — vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml"
+          description: "Vòng đầu tiên kèm người sửa và lúc sửa; không có khi chưa vẽ hoặc đã xoá vòng"
           allOf:
             - $ref: "#/components/schemas/CountingRing"
             - properties:
@@ -7890,8 +7907,15 @@ components:
               changed_by: { type: string }
               changed_by_role: { type: string }
               changed_at: { type: string, format: date-time }
-              old_value: { $ref: "#/components/schemas/CountingRing" }
-              new_value: { $ref: "#/components/schemas/CountingRing" }
+              old_value:
+                description: "Bản ghi cũ là 1 vòng, bản ghi mới là danh sách vòng"
+                oneOf:
+                  - { $ref: "#/components/schemas/CountingRing" }
+                  - { type: array, items: { $ref: "#/components/schemas/CountingRing" } }
+              new_value:
+                oneOf:
+                  - { $ref: "#/components/schemas/CountingRing" }
+                  - { type: array, items: { $ref: "#/components/schemas/CountingRing" } }
 
     CountingRing:
       type: object

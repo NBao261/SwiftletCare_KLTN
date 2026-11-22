@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canRevertReview,
   getChangedParameterKeys,
   formatParamValue,
   reviewPlace,
@@ -145,8 +144,10 @@ describe('nhóm mục duyệt mới (BR-22, Report 3 4.2.15)', () => {
   };
 
   it('formatParamValue tóm tắt vòng đếm, danh sách và object lồng nhau', () => {
-    expect(formatParamValue({ points: [[0, 0], [1, 0], [1, 1]] }, 'ring')).toBe('3 đỉnh');
-    expect(formatParamValue(null, 'ring')).toBe('Chưa có');
+    expect(formatParamValue({ points: [[0, 0], [1, 0], [1, 1]] }, 'ring')).toBe('1 vòng');
+    expect(formatParamValue(null, 'ring')).toBe('Vòng mặc định');
+    expect(formatParamValue([{ points: [[0, 0], [1, 0], [1, 1]] }, { points: [[0, 0], [1, 0], [1, 1]] }], 'rings')).toBe('2 vòng');
+    expect(formatParamValue([], 'rings')).toBe('Vòng mặc định');
     expect(formatParamValue([{ from: '2026-12-01' }, { from: '2026-12-02' }], 'temporary')).toBe('2 mục');
     expect(formatParamValue({ start: '05:00' }, 'morning')).toBe('đã đổi');
     expect(formatParamValue(12, 'noise_margin_db')).toBe('12');
@@ -157,11 +158,5 @@ describe('nhóm mục duyệt mới (BR-22, Report 3 4.2.15)', () => {
     expect(reviewPlace({ group: 'health_levels', house_id: 'h1' }, places)).toBe('Nhà chính');
     expect(reviewPlace({ group: 'counting_ring', house_id: 'h1' }, places)).toBe('Nhà chính • Camera đếm chim');
     expect(reviewPlace({ group: 'counting_schedule', house_id: 'h9' }, places)).toBe('Không xác định');
-  });
-
-  it('canRevertReview: vòng đếm chưa có vòng cũ thì không hoàn tác; nhóm khác luôn hoàn tác được', () => {
-    expect(canRevertReview({ group: 'counting_ring', old_values: { ring: null } })).toBe(false);
-    expect(canRevertReview({ group: 'counting_ring', old_values: { ring: { points: [] } } })).toBe(true);
-    expect(canRevertReview({ group: 'detection', old_values: {} })).toBe(true);
   });
 });

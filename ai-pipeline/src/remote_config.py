@@ -16,22 +16,32 @@ SESSIONS = ("MORNING_EXIT", "EVENING_ENTRY")
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-# 3 = smallest closed ring; 12 = the backend validator's technical limit
+# 3 = smallest closed ring; 12 and 2 rings (one per entrance hole) = the backend validator's limits
 MIN_POINTS = 3
 MAX_POINTS = 12
+MAX_RINGS = 2
 
 
-def parse_ring(message: Any, device_id: str) -> Optional[Ring]:
-    """This camera's ring, or None; ValueError when the ring is malformed."""
+def parse_rings(message: Any, device_id: str) -> Optional[List[Ring]]:
+    """This camera's rings; [] = deleted, use the config.yaml ring; None = the message says nothing about rings."""
     if not isinstance(message, dict):
         return None
     if message.get("deviceId") not in (None, device_id):  # same rule as the ESP32
         return None
-    ring = message.get("counting_ring")
-    if ring is None:
-        return None
+    if "counting_rings" in message:
+        rings = message["counting_rings"]
+        if not isinstance(rings, list) or len(rings) > MAX_RINGS:
+            raise ValueError(f"counting_rings needs 0-{MAX_RINGS} rings")
+        return [parse_ring(ring) for ring in rings]
+    if message.get("counting_ring") is not None:   # older backend: one ring
+        return [parse_ring(message["counting_ring"])]
+    return None
+
+
+def parse_ring(ring: Any) -> Ring:
+    """One ring object; ValueError when it is malformed."""
     if not isinstance(ring, dict):
-        raise ValueError("counting_ring must be an object")
+        raise ValueError("a counting ring must be an object")
     points = ring.get("points")
     if not isinstance(points, list) or not MIN_POINTS <= len(points) <= MAX_POINTS:
         raise ValueError(f"points needs {MIN_POINTS}-{MAX_POINTS} vertices")
@@ -55,36 +65,44 @@ class RingStore:
         self._path = Path(path)
         self._device_id = device_id
         self._lock = threading.Lock()
-        self._pending: Optional[Ring] = None
+        self._pending: Optional[List[Ring]] = None
 
-    def load(self) -> Optional[Ring]:
-        """The ring saved by an earlier run, or None (no file, or a file that no longer parses)."""
+    def load(self) -> Optional[List[Ring]]:
+        """The rings saved by an earlier run, or None to use the config.yaml ring."""
         try:
-            return parse_ring({"counting_ring": json.loads(self._path.read_text(encoding="utf-8"))}, self._device_id)
+            saved = json.loads(self._path.read_text(encoding="utf-8"))
+            # A file from before multiple rings holds one ring object
+            message = {"counting_rings": saved["rings"]} if isinstance(saved, dict) and "rings" in saved else {"counting_ring": saved}
+            return parse_rings(message, self._device_id) or None
         except FileNotFoundError:
             return None
         except (OSError, ValueError) as err:
-            logger.warning(f"Ignoring saved counting ring {self._path}: {err}")
+            logger.warning(f"Ignoring saved counting rings {self._path}: {err}")
             return None
 
     def on_message(self, payload: bytes) -> None:
         try:
-            ring = parse_ring(json.loads(payload), self._device_id)
+            rings = parse_rings(json.loads(payload), self._device_id)
         except ValueError as err:   # JSONDecodeError is a ValueError
-            logger.warning(f"Ignoring counting ring from the backend: {err}")
+            logger.warning(f"Ignoring counting rings from the backend: {err}")
             return
-        if ring is None:
+        if rings is None:
             return
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps({"points": ring[0], "into_ring_is_exit": ring[1]}), encoding="utf-8")
+        if rings:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            saved = [{"points": points, "into_ring_is_exit": into} for points, into in rings]
+            self._path.write_text(json.dumps({"rings": saved}), encoding="utf-8")
+        else:
+            self._path.unlink(missing_ok=True)
         with self._lock:
-            self._pending = ring
-        logger.info(f"New counting ring from the backend: {len(ring[0])} vertices, into_ring_is_exit={ring[1]}")
+            self._pending = rings
+        logger.info(f"Counting rings from the backend: {len(rings) or 'none, back to the config.yaml ring'}")
 
-    def take_update(self) -> Optional[Ring]:
+    def take_update(self) -> Optional[List[Ring]]:
+        """None = nothing new; [] = rings deleted, use the config.yaml ring."""
         with self._lock:
-            ring, self._pending = self._pending, None
-        return ring
+            rings, self._pending = self._pending, None
+        return rings
 
 
 def parse_windows(message: Any, device_id: str) -> Optional[Dict[str, Windows]]:

@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/authStore'
-import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent, AppNotification } from '@/types'
+import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent, AppNotification, BirdCountUpdateEvent } from '@/types'
 
 // Dev: '' = same-origin qua proxy của Vite. Production: VITE_WS_URL trỏ thẳng backend
 const SOCKET_URL = import.meta.env.VITE_WS_URL || ''
@@ -79,6 +79,12 @@ export function onAlertNew(cb: (data: AlertNewEvent) => void) {
 export function onNotificationNew(cb: (data: AppNotification) => void) {
   getSocket().on('NOTIFICATION_NEW', cb)
   return () => getSocket().off('NOTIFICATION_NEW', cb)
+}
+
+// Số đếm của cả nhà yến mỗi lần nút AI gửi tin phiên (room house:<houseId>)
+export function onBirdCountUpdate(cb: (data: BirdCountUpdateEvent) => void) {
+  getSocket().on('BIRD_COUNT_UPDATE', cb)
+  return () => getSocket().off('BIRD_COUNT_UPDATE', cb)
 }
 
 export function onDeviceStatusChange(cb: (data: DeviceStatusChangeEvent) => void) {

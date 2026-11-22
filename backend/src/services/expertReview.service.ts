@@ -126,8 +126,11 @@ async function applyOldValues(review: IParameterReview, user: CurrentUser, curre
     case 'counting_schedule':
       await updateCountingSchedule(String(review.house_id), user, old, opts)
       return
-    case 'counting_ring':
-      await updateCountingRing(String(review.camera_node_id), user, old.ring as CountingRing, opts)
+    case 'counting_ring': {
+      // Mục duyệt cũ ghi 1 vòng (null = chưa vẽ): hoàn tác về đó, không có vòng thì về vòng mặc định
+      const rings = (old.rings ?? (old.ring ? [old.ring] : [])) as CountingRing[]
+      await updateCountingRing(String(review.camera_node_id), user, rings, opts)
+    }
   }
 }
 
@@ -140,10 +143,6 @@ export async function revertReview(reviewId: string, user: CurrentUser) {
     current = review.group === 'thresholds' ? zone.thresholds : zone.fuzzy_tuning
     if (review.group === 'thresholds') assertValidThresholds({ ...current, ...pickThresholds(review.old_values) } as Thresholds)
     else assertValidFuzzyTuning({ ...zone.fuzzy_tuning, ...pickFuzzyTuning(review.old_values) })
-  }
-  // Chưa có vòng trước: không có gì để trả về
-  if (review.group === 'counting_ring' && !review.old_values.ring) {
-    throw ConflictError('Camera chưa có vòng đếm trước thay đổi này, hãy vẽ lại vòng thay vì hoàn tác')
   }
 
   const closed = await closeReview(review, user, 'REVERTED')

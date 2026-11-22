@@ -16,6 +16,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatDateTime } from '@/lib/i18n';
 import type { ParameterReview, ParameterReviewGroup, ParameterReviewStatus } from '@/types/expert/reviews.types';
 import { t, translated } from '@/i18n';
+import { ringList } from '@/components/common/countingRing.utils';
 
 interface ParameterReviewCardProps {
   review: ParameterReview;
@@ -41,12 +42,6 @@ export function reviewPlace(review: Pick<ParameterReview, 'group' | 'zone_id' | 
   if (!houseName) return t('Không xác định');
   if (review.group === 'counting_ring') return `${houseName} • ${t('Camera đếm chim')}`;
   return houseName;
-}
-
-// Vòng đếm vẽ trên camera chưa có vòng cũ thì không có gì để hoàn tác (backend 409)
-export function canRevertReview(review: Pick<ParameterReview, 'group' | 'old_values'>): boolean {
-  const oldRing = (review.old_values as { ring?: unknown } | undefined)?.ring;
-  return review.group !== 'counting_ring' || Boolean(oldRing);
 }
 
 const STATUS_CONFIG: Record<
@@ -118,6 +113,7 @@ const FIELD_LABELS: Record<string, string> = translated({
   profiles: 'Hồ sơ theo mùa',
   temporary: 'Khung tạm',
   ring: 'Vòng đếm',
+  rings: 'Vòng đếm',
 });
 
 // Lấy danh sách các trường có thay đổi giữa old_values và new_values
@@ -132,9 +128,10 @@ export function getChangedParameterKeys(
 
 // Định dạng giá trị hiển thị của tham số; lịch đếm, vòng đếm là cấu trúc lồng nhau nên chỉ tóm tắt
 export function formatParamValue(value: unknown, key?: string): string {
-  if (key === 'ring') {
-    const points = (value as { points?: unknown[] } | null)?.points;
-    return points ? t('{{n}} đỉnh', { n: points.length }) : t('Chưa có');
+  // Mục duyệt cũ ghi 1 vòng (ring), mục mới ghi danh sách (rings); không có vòng là vòng mặc định
+  if (key === 'ring' || key === 'rings') {
+    const rings = ringList(value);
+    return rings.length > 0 ? t('{{n}} vòng', { n: rings.length }) : t('Vòng mặc định');
   }
   if (value === undefined || value === null) return '—';
   if (typeof value === 'boolean') return value ? t('Bật') : t('Tắt');
@@ -158,7 +155,6 @@ export default function ParameterReviewCard({
   const changedKeys = getChangedParameterKeys(review.old_values, review.new_values);
 
   const place = reviewPlace(review, places);
-  const canRevert = canRevertReview(review);
 
   const authorName =
     typeof review.changed_by === 'object' && review.changed_by?.full_name
@@ -242,21 +238,17 @@ export default function ParameterReviewCard({
       {/* Nút hành động cho mục chờ duyệt */}
       {isPending && !readOnly && (
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
-          {canRevert ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="text-warmGray hover:text-alertRed hover:bg-red-50 gap-1.5 font-medium"
-              onClick={() => setShowConfirmRevert(true)}
-              disabled={isProcessing}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              {t('Hoàn nguyên giá trị cũ')}
-            </Button>
-          ) : (
-            <span className="mr-auto text-small text-warmGray">{t('Camera chưa có vòng cũ: vẽ lại vòng nếu cần chỉnh.')}</span>
-          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="text-warmGray hover:text-alertRed hover:bg-red-50 gap-1.5 font-medium"
+            onClick={() => setShowConfirmRevert(true)}
+            disabled={isProcessing}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            {t('Hoàn nguyên giá trị cũ')}
+          </Button>
           <Button
             type="button"
             variant="primary"

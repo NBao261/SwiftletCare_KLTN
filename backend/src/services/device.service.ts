@@ -858,25 +858,34 @@ const ringOf = (ring: CountingRing): CountingRing => ({
   into_ring_is_exit: ring.into_ring_is_exit,
 })
 
-// false khi broker chưa kết nối: không chặn việc lưu, nút AI nhận lại khi kết nối
-async function pushCameraConfig(camera: Pick<ICameraNode, 'device_id' | 'house_id' | 'counting_ring'>, now = new Date()): Promise<boolean> {
+// Bản ghi trước khi có nhiều vòng chỉ có counting_ring
+export function ringsOf(camera: Pick<ICameraNode, 'counting_ring' | 'counting_rings'>): CountingRing[] {
+  if (camera.counting_rings) return camera.counting_rings.map(ringOf)
+  return camera.counting_ring ? [ringOf(camera.counting_ring)] : []
+}
+
+const CAMERA_CONFIG_FIELDS = 'device_id house_id counting_ring counting_rings'
+
+// Luôn gửi counting_rings: [] để nút AI biết vòng đã xoá. false khi broker chưa kết nối, nút AI nhận lại khi kết nối
+async function pushCameraConfig(camera: Pick<ICameraNode, 'device_id' | 'house_id' | 'counting_ring' | 'counting_rings'>,
+  now = new Date()): Promise<boolean> {
   const house = await House.findById(camera.house_id).select('counting_schedule_history').lean()
   return publishDeviceConfig(camera.device_id, {
     deviceId: camera.device_id,
-    ...(camera.counting_ring && { counting_ring: ringOf(camera.counting_ring) }),
+    counting_rings: ringsOf(camera),
     session_windows: sessionWindowsAhead(house?.counting_schedule_history, vnDateOf(now)),
   })
 }
 
 export async function pushHouseCameraConfigs(houseId: unknown): Promise<number> {
-  const cameras = await CameraNode.find({ house_id: houseId, ...IN_SERVICE }).select('device_id house_id counting_ring').lean()
+  const cameras = await CameraNode.find({ house_id: houseId, ...IN_SERVICE }).select(CAMERA_CONFIG_FIELDS).lean()
   let delivered = 0
   for (const camera of cameras) if (await pushCameraConfig(camera)) delivered++
   return delivered
 }
 
 export async function refreshCameraConfigs(now = new Date()): Promise<number> {
-  const cameras = await CameraNode.find(IN_SERVICE).select('device_id house_id counting_ring').lean()
+  const cameras = await CameraNode.find(IN_SERVICE).select(CAMERA_CONFIG_FIELDS).lean()
   let delivered = 0
   for (const camera of cameras) {
     try {
@@ -888,18 +897,19 @@ export async function refreshCameraConfigs(now = new Date()): Promise<number> {
   return delivered
 }
 
-// Đổi vòng thì số trước và sau không so được, nên giữ lịch sử
+// rings: 1–2 vòng, [] = xoá để dùng vòng trong config.yaml. Đổi vòng thì số trước và sau không so được, nên giữ lịch sử
 export async function updateCountingRing(
-  cameraNodeId: string, user: CurrentUser, ring: CountingRing, opts: ReviewApplyOptions = {},
+  cameraNodeId: string, user: CurrentUser, rings: CountingRing[], opts: ReviewApplyOptions = {},
 ) {
   const camera = await CameraNode.findById(cameraNodeId)
   if (!camera) throw NotFoundError('Không tìm thấy camera')
   assertInService(camera)
   const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
 
-  const before = camera.counting_ring ? ringOf(camera.counting_ring) : undefined
-  const after = ringOf(ring)
-  camera.counting_ring = { ...after, updated_at: new Date(), updated_by: user._id as never }
+  const before = ringsOf(camera)
+  const after = rings.map(ringOf)
+  camera.counting_rings = after
+  camera.counting_ring = after[0] && { ...after[0], updated_at: new Date(), updated_by: user._id as never }
   camera.counting_ring_history.push({
     changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date(), old_value: before, new_value: after,
   } as never)
@@ -909,15 +919,14 @@ export async function updateCountingRing(
 
   const delivered = await pushCameraConfig(camera)
   const auditId = await logAction(user._id, 'COUNTING_RING_UPDATED', 'camera_node', String(camera._id), {
-    before: before ?? null, after, delivered, house_id: String(house._id),
+    before, after, delivered, house_id: String(house._id),
     ...(opts.fromReview && { decided_in: 'parameter_review' }),
   }, { farmId: String(farm._id) })
-  // Chưa có vòng thì mục duyệt ghi null
-  await trackParameterChange({ farm, house, camera }, user, 'counting_ring', { ring: before ?? null }, { ring: after })
+  await trackParameterChange({ farm, house, camera }, user, 'counting_ring', { rings: before }, { rings: after })
   if (!opts.fromReview) {
     await notifyExpertDecision(user, farm._id, auditId, {
-      what: 'vẽ lại vòng đếm', place: `Camera ${camera.device_id}, nhà "${house.name}"`,
-      detail: `${after.points.length} đỉnh, ${after.into_ring_is_exit ? 'trong vòng là phía ngoài trời' : 'trong vòng là phía trong nhà'}`,
+      what: after.length ? 'vẽ lại vòng đếm' : 'xoá vòng đếm', place: `Camera ${camera.device_id}, nhà "${house.name}"`,
+      detail: after.length ? `${after.length} vòng` : 'Camera dùng lại vòng mặc định',
     })
   }
   const { rtsp_url: _rtspUrl, ...publicFields } = camera.toObject()
