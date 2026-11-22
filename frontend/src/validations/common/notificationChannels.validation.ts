@@ -1,4 +1,4 @@
-// ALERT-FR-005 — kênh ngoài ứng dụng theo mức cảnh báo ở trang Cài đặt: 3 cấp giao diện ↔ by_severity 4 mức của backend
+// ALERT-FR-005 — kênh ngoài ứng dụng theo mức cảnh báo ở trang Cài đặt: mỗi cấp giao diện là một mức by_severity của backend
 import { LEVELS, SEVERITY_TO_LEVEL } from '@/constants/severity';
 import type { AlertSeverity, ChannelChoice, NotificationPreferences, SeverityLevel } from '@/types';
 
@@ -14,7 +14,7 @@ function generalChannels(prefs: NotificationPreferences | undefined): LevelChann
   return { push: prefs?.push ?? true, telegram: prefs?.telegram ?? true };
 }
 
-// Kênh đang dùng của mỗi cấp; cấp Khẩn cấp đọc theo CRITICAL (mức đầu của cấp)
+// Kênh đang dùng của mỗi cấp
 export function levelChannelsOf(prefs: NotificationPreferences | undefined): Record<SeverityLevel, LevelChannels> {
   const general = generalChannels(prefs);
   const result = {} as Record<SeverityLevel, LevelChannels>;

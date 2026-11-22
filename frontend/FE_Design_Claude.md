@@ -378,31 +378,30 @@ Component Farm Owner nằm trong `features/farm-owner/` (VD `FarmFrame`) mà rol
 
 > **Không tạo token `--ink-*` mới.** Bất kỳ chỗ nào cần "màu đậm/quyền lực" (nút Primary, avatar, logo box, nav active...) đều dùng `--gray-900` (Charcoal) — kể cả bên trong sidebar/topbar, thông qua token, không hardcode lại `#111728`.
 
-### 2.4. Mức độ cảnh báo — 3 cấp hiển thị
+### 2.4. Mức độ cảnh báo — 4 cấp như BR-15
 
-**Giao diện chỉ có 3 cấp: Khẩn cấp · Cao · Thường** (`SeverityLevel` = `P1 | P2 | P3`, `types/alert.types.ts`). Backend vẫn lưu cảnh báo theo 4 giá trị `CRITICAL | HIGH | MEDIUM | LOW` (ALERT-FR-001, `alert.model.ts`) — **không đổi backend**, giao diện gộp `CRITICAL` vào Khẩn cấp.
-
-> ~~**Còn nợ:** `alertHelpers.ts` và `InferredAlertsTable.tsx` dùng `SEVERITY_BADGE_CLASS` riêng~~ — ✅ màn chuyên gia dùng `SeverityBadge` và ô lọc 3 cấp (G-29, `todo-audit-1119.md` §9).
+**Giao diện có 4 cấp đúng 4 mức của backend: Khẩn cấp · Cao · Trung bình · Thấp** (`SeverityLevel` = `P1 | P2 | P3 | P4`, `types/alert.types.ts`; `CRITICAL | HIGH | MEDIUM | LOW`, ALERT-FR-001, BR-15). Từ G-32 (quyết định Q-07, `docs/reports/todo-audit-1121.md`) không gộp mức nữa: mỗi mức được gửi khác nhau (`CRITICAL` tới cả Farm Owner và thợ ngay và vượt giờ im lặng; `HIGH` tới thợ trước rồi lên Farm Owner sau 15 phút; `CRITICAL` và `HIGH` được gửi lại khi chưa ai xác nhận; `MEDIUM` không gửi lại; `LOW` là thông tin; ALERT-FR-006, 015, 017), và trang Cài đặt chọn kênh theo đúng 4 mức đó. Lý do gộp 3 cấp lúc trước (dùng chung với ưu tiên ticket) đã hết khi bỏ ticket.
 
 **Nguồn duy nhất — chỉ import, không khai lại ở nơi khác:**
 
 | File | Xuất ra | Nội dung |
 |---|---|---|
-| `src/constants/severity.ts` | `LEVELS`, `SEVERITY_TO_LEVEL`, `LEVEL_BADGE_CLASS`, `LEVEL_BADGE_MUTED_CLASS`, `LEVEL_BADGE_SIZE`, `isAlertFinished()` | Thứ tự 3 cấp, bảng đổi mức backend → cấp, màu badge, cỡ badge |
-| `src/constants/severity.i18n.ts` | `levelDict`, `severityLabels()` | Nhãn VI/EN của 3 cấp |
+| `src/constants/severity.ts` | `LEVELS`, `SEVERITY_TO_LEVEL`, `severityQueryOf()`, `LEVEL_BADGE_CLASS`, `LEVEL_BADGE_MUTED_CLASS`, `LEVEL_BADGE_SIZE`, `isAlertFinished()` | Thứ tự 4 cấp, bảng mức backend ↔ cấp, màu badge, cỡ badge |
+| `src/constants/severity.i18n.ts` | `levelDict`, `severityLabels()` | Nhãn VI/EN của 4 cấp |
 | `src/components/common/SeverityBadge.tsx` | badge mức cảnh báo | Nhận `severity` từ backend, đổi qua `SEVERITY_TO_LEVEL`; props `isMuted?`, `className?` |
 
-| Cấp | Mức backend gộp vào | Nhãn VI / EN | Màu badge |
+| Cấp | Mức backend | Nhãn VI / EN | Màu badge |
 |---|---|---|---|
-| P1 | `CRITICAL`, `HIGH` | Khẩn cấp / Urgent | nền `safetyOrange` đặc, chữ trắng |
-| P2 | `MEDIUM` | Cao / High | nền `orange-100`, chữ `orange-800` |
-| P3 | `LOW` | Thường / Normal | nền `warmGray/15`, chữ `warmGray` |
+| P1 | `CRITICAL` | Khẩn cấp / Critical | nền `alertRed` đặc, chữ trắng |
+| P2 | `HIGH` | Cao / High | nền `safetyOrange` đặc, chữ trắng |
+| P3 | `MEDIUM` | Trung bình / Medium | nền `orange-100`, chữ `orange-800` |
+| P4 | `LOW` | Thấp / Low | nền `warmGray/15`, chữ `warmGray` |
 
-- **[Bắt buộc]** Đếm, lọc, nhóm cảnh báo theo cấp dùng `SEVERITY_TO_LEVEL` (VD bộ lọc mức độ ở trang Cảnh báo, ô đếm theo cấp). Không tự viết `if (severity === 'CRITICAL' || ...)`.
+- **[Bắt buộc]** Đếm, lọc, nhóm cảnh báo theo cấp dùng `LEVELS` và `SEVERITY_TO_LEVEL` (VD bộ lọc mức độ ở trang Cảnh báo, ô đếm theo cấp). Không tự viết `if (severity === 'CRITICAL' || ...)`.
 - **[Bắt buộc]** Câu chữ nhắc tên cấp lấy nhãn từ `levelDict` truyền vào làm tham số (VD "Lỗi {urgent} chưa ai xác nhận sau 15 phút…"), không gõ lại "Khẩn cấp".
 - Đổi màu/nhãn một cấp → sửa đúng 1 dòng trong `severity.ts`/`severity.i18n.ts`; mọi badge đổi theo.
-- **Cảnh báo đã xử lý** (`RESOLVED`) → badge mức độ về xám: `<SeverityBadge isMuted={isAlertFinished(alert.status)} />`, màu `LEVEL_BADGE_MUTED_CLASS` (= màu cấp Thường). Cột/nhãn của 3 cấp ghi **"Mức độ"**.
-- Cảnh báo `CRITICAL`/`HIGH` chưa xác nhận sau 15 phút được backend **gửi lại** cho Farm Owner (ALERT-FR-015) = toàn bộ cấp Khẩn cấp.
+- **Cảnh báo đã xử lý** (`RESOLVED`) → badge mức độ về xám: `<SeverityBadge isMuted={isAlertFinished(alert.status)} />`, màu `LEVEL_BADGE_MUTED_CLASS` (= màu cấp Thấp). Cột/nhãn ghi **"Mức độ"**.
+- Cảnh báo `CRITICAL`/`HIGH` chưa xác nhận sau 15 phút được backend **gửi lại** cho người nhận đầu (ALERT-FR-015) = cấp Khẩn cấp và Cao.
 
 ### 2.5. Trạng thái an toàn / thiết bị
 
@@ -466,7 +465,7 @@ Các mốc của điểm cân bằng Zone (`ZoneBalanceCard`: ≥ 90 "Rất tố
 | `DISMISSED` ⏳ backend | Đã bác bỏ / Dismissed | `warmGray/10` | `graphite` | Chuyên gia (hoặc chủ farm khi farm chưa có chuyên gia) bác bỏ cảnh báo suy luận: không còn hiệu lực, không báo lại; đổi kết luận sang xác nhận thì về trạng thái trước (Report 3 §6.1, EXPERT-FR-003). Hiện người bác bỏ, lúc nào, lý do |
 | `RESOLVED` | Đã xử lý / Resolved | `warmGray/15` | `warmGray` | Sự cố đã hết (vượt ngưỡng không lặp lại 5 phút, thiết bị online lại, hoặc thiết bị bị gỡ) |
 
-Mức độ (cột *Mức độ*): **theo 2.4**. Hiển thị 3 cấp qua `SeverityBadge`, bộ lọc "Tất cả · Khẩn cấp · Cao · Thường".
+Mức độ (cột *Mức độ*): **theo 2.4**. Hiển thị 4 cấp qua `SeverityBadge`, bộ lọc "Mọi mức độ · Khẩn cấp · Cao · Trung bình · Thấp".
 
 **d) Trạng thái bộ điều khiển trên Tổng quan** (thanh "Giám sát vận hành SCADA" đã bỏ ở v2.17.0)
 
@@ -862,8 +861,8 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 - **Hệ 2** (`*.i18n.ts`): key dạng `<khu-vực>.<tên>` camelCase, khu vực là khối trên màn: `list.title`, `kpi.openSub`, `farmForm.location`, `form.errFarm`. Giá trị enum từ backend ghép thẳng: `status.ACTIVE`, `alert.SENSOR_FAULT`.
 - **[Bắt buộc]** Không ghép câu bằng cộng chuỗi (`t('a') + ' ' + n + t('b')`) — dùng tham số: `'kpi.openSub': '{n} cảnh báo chờ xác nhận'`.
 - **[Bắt buộc]** Bản `en` đủ đúng key của `vi` (kiểu `Dictionary<K>` đã bắt lỗi biên dịch); không để chuỗi tiếng Việt trong bản `en`.
-- Nhãn dùng chung nhiều màn (3 cấp mức độ, tên menu) chỉ khai ở 1 từ điển chung (`navigation.i18n.ts`; `severity.i18n.ts`) rồi import, không khai lại ở từ điển màn.
-- **[Bắt buộc] Nhãn của mã backend chỉ khai 1 lần** ở `constants/enumLabels.i18n.ts`: `alertTypeDict` (thêm `CONFIG_MISMATCH` khi backend có), `alertStatusDict` (thêm `DISMISSED` khi backend có), `deviceStatusDict`, `roleDict` (VI/EN). Mức độ ở `severity.i18n.ts` (`levelDict`; `severityLabels()` quy key 4 mức backend về 3 cấp). Từ điển màn cần key riêng (`status.ACTIVE`, `alert.NODE_OFFLINE`) thì lấy lại bằng `...prefixLabels('status.', alertStatusDict.vi)` — không gõ lại nhãn. Đang áp: `dashboard.i18n.ts`, `farmStructure.i18n.ts`, `shell.i18n.ts` (popup thông báo mọi role).
+- Nhãn dùng chung nhiều màn (4 cấp mức độ, tên menu) chỉ khai ở 1 từ điển chung (`navigation.i18n.ts`; `severity.i18n.ts`) rồi import, không khai lại ở từ điển màn.
+- **[Bắt buộc] Nhãn của mã backend chỉ khai 1 lần** ở `constants/enumLabels.i18n.ts`: `alertTypeDict` (thêm `CONFIG_MISMATCH` khi backend có), `alertStatusDict` (thêm `DISMISSED` khi backend có), `deviceStatusDict`, `roleDict` (VI/EN). Mức độ ở `severity.i18n.ts` (`levelDict`; `severityLabels()` cho nhãn theo key 4 mức backend). Từ điển màn cần key riêng (`status.ACTIVE`, `alert.NODE_OFFLINE`) thì lấy lại bằng `...prefixLabels('status.', alertStatusDict.vi)` — không gõ lại nhãn. Đang áp: `dashboard.i18n.ts`, `farmStructure.i18n.ts`, `shell.i18n.ts` (popup thông báo mọi role).
 - Nội dung do người dùng hoặc backend sinh ra (ghi chú, tin nhắn, tên farm) không dịch, hiện nguyên văn.
 
 ### 6.4. Cách viết chữ tiếng Việt trên màn hình
@@ -1082,7 +1081,7 @@ module.exports = {
 | Lịch sử quyết định của chuyên gia (EXPERT-FR-009) | R (xem, được báo từng quyết định) | R | – | – |
 | Trạng thái sức khỏe nhà yến theo ngày, đánh giá ngày từ quan sát của mình (MF-06) | R | R | – | – |
 | Báo cáo ngày/tuần/tháng, tải PDF/CSV | R | R | – | – |
-| Mức của chỉ số sức khỏe theo nhà yến (BR-28) | I (R khi farm chưa có chuyên gia) | R | – | – |
+| Mức của chỉ số sức khỏe theo nhà yến (BR-28) | R (farm có chuyên gia: mở mục duyệt, BR-22) | R (xem lại thay đổi của chủ farm) | – | – |
 | Duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010) | I | R | – | – |
 | Thông báo ngoài ứng dụng (Telegram, push) | R | – (chỉ trong ứng dụng) | – | – |
 | Xác nhận (acknowledge) cảnh báo | R | – | – (chỉ xem cảnh báo thiết bị) | – |
@@ -1090,7 +1089,8 @@ module.exports = {
 | Can thiệp tay relay có thời hạn | R | – | – | – |
 | Ngưỡng Zone, reset mặc định | R | R | – | I |
 | Hệ số logic mờ | R (áp gợi ý chỉ khi farm chưa có chuyên gia) | R (duyệt thay đổi của chủ farm, áp gợi ý) | – | I |
-| Tham số phát hiện, vòng đếm, lịch đếm theo mùa | I (R khi farm chưa có chuyên gia, BR-22) | R | – | I |
+| Tham số phát hiện, vòng đếm, lịch đếm theo mùa | R (farm có chuyên gia: mở mục duyệt, BR-22) | R (xem lại thay đổi của chủ farm) | – | I |
+| Luật bù thời tiết, hồ sơ cấu hình (nháp), luật khuyến nghị | R (farm có chuyên gia: gửi đề xuất, chỉ có hiệu lực khi chuyên gia duyệt, BR-22) | R (duyệt đề xuất của chủ farm) | – | – |
 | Đăng ký thiết bị bằng nhãn QR, gán Zone bằng mã QR tầng, dời, gỡ (SF-01) | R (farm mình) | – | R (mọi farm; Farm Owner được báo) | – |
 | Lệnh từ xa, OTA, file loa | – (chỉ xem) | – | R (mọi farm; Farm Owner được báo) | – |
 | Kho thiết bị: thêm, in nhãn QR, cấp lại/thu hồi khoá | – | – | – | R |
@@ -1103,7 +1103,7 @@ module.exports = {
 | Lịch loa của bộ điều khiển (BR-07) | R | – | – | – |
 | Lịch sử can thiệp tay, tỷ lệ thời gian tự động (ENV-FR-019, ANALYTICS-FR-011) | R | I | – | – |
 
-Nguồn: Report 3 §2.4. Farm chưa có chuyên gia (BR-22): Farm Owner làm thay các việc R của Domain Expert ở bảng trên, trừ viết kết luận và duyệt thay đổi của chính mình.
+Nguồn: Report 3 §2.4. Farm chưa có chuyên gia (BR-22): Farm Owner làm thay các việc R của Domain Expert ở bảng trên, trừ viết kết luận, duyệt thay đổi của chính mình và duyệt hồ sơ cấu hình. Farm có chuyên gia: Farm Owner nhắc chuyên gia một lần mỗi kết luận còn chờ.
 
 **b) Cây màn theo role** — màn nào dùng chung, màn nào riêng
 
@@ -1241,7 +1241,7 @@ frontend/src/
 ├── constants/                 roles (nhóm role + getRoleHomePath + canAccessPath)
 │                              thresholds · auditActions · display · siteCause
 │                              <module>.i18n.ts (dashboard · farmStructure · navigation · shell)
-│                              (severity + severity.i18n — 3 cấp mức độ, 2.4 · enumLabels.i18n · error.i18n)
+│                              (severity + severity.i18n — 4 cấp mức độ, 2.4 · enumLabels.i18n · error.i18n)
 │
 ├── stores/                    Zustand: authStore · toastStore
 │                              zoneStore · breadcrumbStore · languageStore · pinnedHouseStore
@@ -1316,8 +1316,8 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
    |---|---|---|---|
    | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị, cảnh báo, cấu trúc farm. Nút bật/tắt relay và xác nhận cảnh báo **chỉ Farm Owner** thấy (Technician, Admin: không) — ẩn bằng `usePermission`; Admin không còn màn farm (v2.11.0) | Có |
    | `SETUP_ROLES` | Farm Owner · Technician | Thiết lập thiết bị bằng QR, dời/gỡ thiết bị, in mã QR tầng (SF-01) | Tạo khi làm màn SF-01 |
-   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone, lịch sử quyết định của chuyên gia; kiểm chứng cảnh báo, tham số phát hiện, vòng đếm, lịch đếm (Farm Owner chỉ ghi khi farm chưa có chuyên gia — BR-22) | Tạo khi thêm `DOMAIN_EXPERT` |
-   | `EXPERT_ONLY` | Domain Expert | Viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số | Tạo khi thêm `DOMAIN_EXPERT` |
+   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone, lịch sử quyết định của chuyên gia; kiểm chứng cảnh báo (Farm Owner chỉ kết luận khi farm chưa có chuyên gia, có chuyên gia thì nhắc), tham số phát hiện, vòng đếm, lịch đếm, mức chỉ số sức khoẻ (Farm Owner sửa được, farm có chuyên gia thì chuyên gia duyệt sau), luật thời tiết, hồ sơ, luật khuyến nghị (Farm Owner ở farm có chuyên gia gửi chuyên gia duyệt) — BR-22, Report 3 4.2.15 | Tạo khi thêm `DOMAIN_EXPERT` |
+   | `EXPERT_ONLY` | Domain Expert | Viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số, duyệt hồ sơ cấu hình, duyệt đề xuất luật thời tiết và luật khuyến nghị | Tạo khi thêm `DOMAIN_EXPERT` |
    | `FARM_OWNER_ONLY` | Farm Owner | Thành viên, cài đặt farm | Có |
    | `HARVEST_ROLES` | Farm Owner (ghi) · Domain Expert (xem) | Ghi nhận thu hoạch. Code hiện là Farm Owner · Admin — bỏ Admin, thêm chuyên gia khi thêm `DOMAIN_EXPERT` (12.0 c dòng 4) | Có (đích khác) |
    | `ADMIN_ONLY` | Admin | Quản trị hệ thống, kho thiết bị và in nhãn | Có |
@@ -1636,8 +1636,8 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 |---|---|---|---|
 | Token màu, bo góc, bóng, cỡ chữ | `../tailwind.config.ts` | `charcoal` `graphite` `warmGray` `limeMist` `success` `climateOrange` `safetyOrange` `infoBlue` `statusYellow` `alertRed` · `rounded-xl/2xl/3xl` · `shadow-card/popover/glass` · `text-h1…text-metric` | 2, 2.8, 4.3 |
 | Class CSS chung | `index.css` | `.input` · `.label-caption` · `.glass-panel` | 1.1, 2.8, 5.2.1 |
-| 3 cấp mức độ — màu | `constants/severity.ts` | `LEVELS` · `SEVERITY_TO_LEVEL` · `LEVEL_BADGE_CLASS` · `LEVEL_BADGE_MUTED_CLASS` · `LEVEL_BADGE_SIZE` · `isAlertFinished` | 2.4 |
-| 3 cấp mức độ — nhãn VI/EN | `constants/severity.i18n.ts` | `levelDict` · `severityLabels()` | 2.4 |
+| 4 cấp mức độ — màu | `constants/severity.ts` | `LEVELS` · `SEVERITY_TO_LEVEL` · `LEVEL_BADGE_CLASS` · `LEVEL_BADGE_MUTED_CLASS` · `LEVEL_BADGE_SIZE` · `isAlertFinished` | 2.4 |
+| 4 cấp mức độ — nhãn VI/EN | `constants/severity.i18n.ts` | `levelDict` · `severityLabels()` | 2.4 |
 | Nhãn mã backend VI/EN | `constants/enumLabels.i18n.ts` | `alertTypeDict` · `alertStatusDict` · `deviceStatusDict` · `roleDict` · `prefixLabels()` | 6.3 |
 | Ngưỡng cảm biến | `constants/thresholds.ts` | khoảng hợp lệ ngưỡng Zone | — |
 | Giá trị trống | `constants/display.ts` | `NO_VALUE` (`_`) — thông số chưa có dữ liệu | 6.1 |
@@ -1661,7 +1661,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 
 | Component | Dùng để | Mục |
 |---|---|---|
-| `SeverityBadge` | Badge mức cảnh báo (đổi 4 mức backend → 3 cấp, xám khi `isMuted`) | 2.4 |
+| `SeverityBadge` | Badge mức cảnh báo (mỗi mức backend một cấp, xám khi `isMuted`) | 2.4 |
 | `TableEmptyState` | Trạng thái rỗng chuẩn của bảng (truyền vào `FixedRowsTable emptyContent`) | 1.1 |
 | `StatusDot` | Chấm + chữ trạng thái thiết bị | 2.5 |
 | `ScopeFilter` | Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner (mặc định tất cả trang trại; ô Nhà khoá khi chưa chọn farm, ô Zone chỉ hiện khi đã chọn nhà), lưu khi chuyển trang (`hooks/shared/useScopeFilter`). Trang có bậc trong `scopeLevelOf` thì tự chọn bậc đó và bỏ mục "Tất cả" | — |

@@ -4,6 +4,7 @@ import type { Dictionary } from '@/lib/i18n';
 const vi = {
   // Đầu trang và chọn Zone
   'page.zoneOption': '{house} · {zone}',
+  'page.pickZoneHint': 'Chọn một Zone ở bộ lọc phía trên để xem biểu đồ theo thời gian, dự báo, báo cáo sức khoẻ và tỷ lệ thời gian tự động.',
   'page.noFarmTitle': 'Chưa có trang trại',
   'page.noFarmDesc': 'Tạo trang trại, nhà yến và Zone ở mục Trang trại để xem phân tích.',
   'page.noZoneTitle': 'Trang trại chưa có Zone',
@@ -65,7 +66,7 @@ const vi = {
   'automation.switchSub': 'Phun sương · Quạt',
   'automation.noValueSub': 'Chưa đủ dữ liệu',
   'automation.chartHint': 'Độ ẩm đo được (trục trái) và mức phun sương, quạt do bộ điều khiển đặt (trục phải). Vạch dọc là lúc chỉnh hệ số.',
-  'automation.empty': 'Chưa có dữ liệu điều khiển trong khoảng này. Cần thiết bị chạy firmware 1.1.0 trở lên và đang gửi số đo.',
+  'automation.empty': 'Chưa có dữ liệu điều khiển trong khoảng này. Bộ điều khiển cần đang gửi số đo.',
   'automation.maintenanceTitle': 'Thời gian chạy tới mốc bảo trì (tính từ lần bảo trì trước)',
   'automation.maintenancePump': 'Bơm {hours}/{hourLimit} giờ · {switches}/{switchLimit} lần',
   'automation.maintenanceFan': 'Quạt {hours}/{hourLimit} giờ · {switches}/{switchLimit} lần',
@@ -226,6 +227,7 @@ type AnalyticsKey = keyof typeof vi;
 
 const en: Record<AnalyticsKey, string> = {
   'page.zoneOption': '{house} · {zone}',
+  'page.pickZoneHint': 'Choose a zone in the filter above to see its charts over time, forecast, health report and automatic-time share.',
   'page.noFarmTitle': 'No farm yet',
   'page.noFarmDesc': 'Create a farm, house and zone under Farms to see analytics.',
   'page.noZoneTitle': 'This farm has no zone',
@@ -284,7 +286,7 @@ const en: Record<AnalyticsKey, string> = {
   'automation.switchSub': 'Misting · Fan',
   'automation.noValueSub': 'Not enough data',
   'automation.chartHint': 'Actual humidity (left axis) against the misting and fan output decided by the ESP32 controller (right axis); vertical lines mark coefficient changes',
-  'automation.empty': 'No control data in this range — the device needs firmware 1.1.0 or later and must be sending readings.',
+  'automation.empty': 'No control data in this range. The controller must be sending readings.',
   'automation.maintenanceTitle': 'Run time until the maintenance mark (since the last service)',
   'automation.maintenancePump': 'Pump {hours}/{hourLimit} h · {switches}/{switchLimit} switches',
   'automation.maintenanceFan': 'Fan {hours}/{hourLimit} h · {switches}/{switchLimit} switches',

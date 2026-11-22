@@ -105,6 +105,10 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     const birdLabel = zone ? zone.houseName : scopeLabel;
     const flockTrend = houseId ? <FlockTrendCard houseId={houseId} houseName={houseName} /> : null;
     const energy = houseId ? <EnergyCard houseId={houseId} houseName={houseName} /> : null;
+    // ANALYTICS-FR-001 — biểu đồ theo thời gian là của một Zone: chưa chọn Zone thì nói rõ chỗ chọn, không để trống
+    const pickZoneHint = zone ? null : (
+      <p className="rounded-2xl border border-dashed border-warmGray/30 px-6 py-5 text-sm text-warmGray">{t('page.pickZoneHint')}</p>
+    );
 
     if (tab === 'env') {
       body = (
@@ -120,6 +124,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
             </>
           )}
           <CompareZonesCard zones={zones} />
+          {pickZoneHint}
         </>
       );
     } else if (tab === 'birds') {
@@ -137,6 +142,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
         <>
           {zone && <HealthReportCard houseId={zone.house_id} zoneId={zone._id} />}
           {zone && <AutomationCard zoneId={zone._id} />}
+          {pickZoneHint}
           {energy}
           <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
         </>

@@ -70,7 +70,7 @@ export default function DomainExpertAlertVerdictsPage() {
     isLoading,
     isFetching,
   } = useAlertsWithFilters(farmId, zoneId)
-  // Ô lọc mức độ theo 3 cấp chung (FE_Design 2.4)
+  // Ô lọc mức độ theo cấp chung (FE_Design 2.4)
   const { t: levelLabel } = useTranslation(levelDict)
   const severityOptions = [
     { value: 'ALL', label: t('Mức độ') },
@@ -101,6 +101,9 @@ export default function DomainExpertAlertVerdictsPage() {
       setDrawerOpen(true)
     }
   }, [targetAlertId, targetOnPage, targetFromApi, selectedAlert])
+
+  // Bản mới nhất trong danh sách (sau khi nhắc hoặc kết luận), không có trên trang thì giữ bản đã mở
+  const liveSelectedAlert = paginatedAlerts.find(alert => alert._id === selectedAlert?._id) ?? selectedAlert
 
   const openDrawer = useCallback((alert: InferredAlertItem) => {
     setSelectedAlert(alert)
@@ -206,7 +209,7 @@ export default function DomainExpertAlertVerdictsPage() {
       </div>
 
       <ExpertVerdictDrawer
-        alert={selectedAlert}
+        alert={liveSelectedAlert}
         isOpen={drawerOpen}
         onClose={closeDrawer}
         onVerdictSaved={handleVerdictSaved}

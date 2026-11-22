@@ -29,6 +29,9 @@ ensureCollection("alerts", {
     "event_id": {
       "bsonType": ["string", "null"]
     },
+    "incident_key": {
+      "bsonType": ["string", "null"]
+    },
     "type": {
       "bsonType": "string",
       "enum": ["THRESHOLD_BREACH", "NODE_OFFLINE", "SPEAKER_FAILURE", "MISTING_INEFFECTIVE", "NOISE_ANOMALY", "UNEXPECTED_RESTART", "LOW_RETURN_RATE", "EDGE_AI_DEGRADED", "SENSOR_FAULT", "RS485_BUS_FAILURE", "SENSOR_ANOMALY", "FORECAST_BREACH", "MAINTENANCE_DUE", "ACTUATOR_FAULT", "CONFIG_MISMATCH"]
@@ -181,6 +184,7 @@ ensureCollection("alerts", {
   "required": ["farm_id", "type", "severity", "title", "message"]
 })
 db.getCollection("alerts").createIndex({"farm_id":1,"zone_id":1,"node_id":1,"type":1,"status":1})
+db.getCollection("alerts").createIndex({"incident_key":1}, {"unique":true,"partialFilterExpression":{"incident_key":{"$type":"string"},"status":{"$in":["ACTIVE","ACKNOWLEDGED","DISMISSED"]}}})
 db.getCollection("alerts").createIndex({"house_id":1,"type":1,"status":1}, {"partialFilterExpression":{"house_id":{"$exists":true}}})
 db.getCollection("alerts").createIndex({"node_id":1,"event_id":1}, {"unique":true,"partialFilterExpression":{"event_id":{"$type":"string"}}})
 db.getCollection("alerts").createIndex({"resolved_at":1}, {"expireAfterSeconds":15552000})
@@ -1201,6 +1205,15 @@ ensureCollection("houses", {
     },
     "description": {
       "bsonType": ["string", "null"]
+    },
+    "is_deleted": {
+      "bsonType": ["bool", "null"]
+    },
+    "deleted_at": {
+      "bsonType": ["date", "null"]
+    },
+    "deleted_by": {
+      "bsonType": ["objectId", "null"]
     },
     "weather_rules": {
       "bsonType": ["array", "null"],
@@ -2718,52 +2731,6 @@ db.getCollection("workorders").createIndex({"assignee_id":1,"status":1})
 db.getCollection("workorders").createIndex({"plan_id":1,"status":1}, {"partialFilterExpression":{"plan_id":{"$exists":true}}})
 db.getCollection("workorders").createIndex({"alert_id":1}, {"unique":true,"partialFilterExpression":{"is_open":true,"alert_id":{"$exists":true}}})
 
-// ── zonehealthreports (model ZoneHealthReport) ──
-ensureCollection("zonehealthreports", {
-  "bsonType": "object",
-  "properties": {
-    "farm_id": {
-      "bsonType": "objectId"
-    },
-    "zone_id": {
-      "bsonType": "objectId"
-    },
-    "period_start": {
-      "bsonType": "date"
-    },
-    "period_end": {
-      "bsonType": "date"
-    },
-    "metrics": {},
-    "generated_at": {
-      "bsonType": ["date", "null"]
-    },
-    "expert_conclusion": {
-      "bsonType": ["object", "null"],
-      "properties": {
-        "text": {
-          "bsonType": "string"
-        },
-        "by": {
-          "bsonType": "objectId"
-        },
-        "at": {
-          "bsonType": "date"
-        },
-        "edited_at": {
-          "bsonType": ["date", "null"]
-        }
-      },
-      "required": ["text", "by", "at"]
-    },
-    "_id": {
-      "bsonType": ["objectId", "null"]
-    }
-  },
-  "required": ["farm_id", "zone_id", "period_start", "period_end", "metrics"]
-})
-db.getCollection("zonehealthreports").createIndex({"zone_id":1,"period_end":-1}, {"unique":true})
-
 // ── zones (model Zone) ──
 ensureCollection("zones", {
   "bsonType": "object",
@@ -2779,6 +2746,15 @@ ensureCollection("zones", {
     },
     "floor": {
       "bsonType": ["number", "null"]
+    },
+    "is_deleted": {
+      "bsonType": ["bool", "null"]
+    },
+    "deleted_at": {
+      "bsonType": ["date", "null"]
+    },
+    "deleted_by": {
+      "bsonType": ["objectId", "null"]
     },
     "thresholds": {
       "bsonType": ["object", "null"],
