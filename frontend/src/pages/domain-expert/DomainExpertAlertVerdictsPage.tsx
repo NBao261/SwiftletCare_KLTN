@@ -102,6 +102,9 @@ export default function DomainExpertAlertVerdictsPage() {
     }
   }, [targetAlertId, targetOnPage, targetFromApi, selectedAlert])
 
+  // Bản mới nhất trong danh sách (sau khi nhắc hoặc kết luận), không có trên trang thì giữ bản đã mở
+  const liveSelectedAlert = paginatedAlerts.find(alert => alert._id === selectedAlert?._id) ?? selectedAlert
+
   const openDrawer = useCallback((alert: InferredAlertItem) => {
     setSelectedAlert(alert)
     setDrawerOpen(true)
@@ -206,7 +209,7 @@ export default function DomainExpertAlertVerdictsPage() {
       </div>
 
       <ExpertVerdictDrawer
-        alert={selectedAlert}
+        alert={liveSelectedAlert}
         isOpen={drawerOpen}
         onClose={closeDrawer}
         onVerdictSaved={handleVerdictSaved}

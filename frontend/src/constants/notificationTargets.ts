@@ -26,6 +26,16 @@ export function notificationTarget(notification: Pick<AppNotification, 'ref'>, r
     target = { path: '/domain-expert/history' }
   } else if (ref.kind === 'parameter_review' || ref.kind === 'coefficient_proposal') {
     target = { path: '/domain-expert/reviews' }
+  } else if (ref.kind === 'weather_rules') {
+    // BR-22 — đề xuất luật của Farm Owner chờ duyệt; trang chọn nhà ở thanh lọc
+    target = { path: '/domain-expert/weather-rules' }
+  } else if (ref.kind === 'config_profile') {
+    target = { path: '/domain-expert/profiles' }
+  } else if (ref.kind === 'recommendation_rule') {
+    target = { path: '/domain-expert/recommendation-rules' }
+  } else if (ref.kind === 'harvest_cycle') {
+    // Lời nhắc viết kết luận mùa vụ: chuyên gia viết ở trang báo cáo và kết luận
+    target = { path: '/domain-expert/reports' }
   } else if (ref.kind === 'work_order') {
     target = { path: '/work-orders' }
   } else if (ref.kind === 'device_action') {

@@ -86,9 +86,9 @@ Hệ quả: với bốn cấp, mỗi lựa chọn trong bộ lọc là đúng m�
 
 | ID | Trang / file | Việc | Chờ |
 |---|---|---|---|
-| W-01…W-06 | Theo `todo-owner-expert-1121.md` §3 | Farm Owner sửa nhóm A có dòng "Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại"; gửi đề xuất luật thời tiết, hồ sơ nháp, luật khuyến nghị (tắt); nút "Nhắc chuyên gia"; mục duyệt hiện đúng nhóm mới | Backend G-31 (đã xong) |
-| W-07 | `types/expert/reviews.types.ts`, `types/notification.types.ts` | `ParameterReviewGroup` đủ 7 nhóm như `PARAMETER_GROUPS`; `NotificationRefKind` đủ 12 loại; bấm thông báo `weather_rules`, `config_profile`, `recommendation_rule`, `harvest_cycle` mở đúng trang | — |
-| W-08 | `components/features/domain-expert/reviews/ParameterReviewCard.tsx`, `constants/enumLabels.i18n.ts` | Nhãn VI/EN cho 5 nhóm mới; tên đối tượng (Zone, nhà hoặc camera) và giá trị cũ → mới; vòng đếm hiện số điểm và chiều bay thay vì toạ độ thô | W-07 |
+| W-01…W-06 | Theo `todo-owner-expert-1121.md` §3 | Farm Owner sửa nhóm A có dòng "Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại"; gửi đề xuất luật thời tiết, hồ sơ nháp, luật khuyến nghị (tắt); nút "Nhắc chuyên gia"; mục duyệt hiện đúng nhóm mới | **Xong**: đã viết ở #213 nhưng #213 merge vào nhánh của #212 sau khi #212 vào `develop`, nên chưa tới `develop`; PR 5 (`fix/web-g31-to-develop`) đưa vào |
+| W-07 | `types/expert/reviews.types.ts`, `types/notification.types.ts` | `ParameterReviewGroup` đủ 7 nhóm như `PARAMETER_GROUPS`; `NotificationRefKind` đủ 12 loại; bấm thông báo `weather_rules`, `config_profile`, `recommendation_rule`, `harvest_cycle` mở đúng trang | — (**xong** trong #213, vào `develop` bằng PR 5) |
+| W-08 | `components/features/domain-expert/reviews/ParameterReviewCard.tsx`, `constants/enumLabels.i18n.ts` | Nhãn VI/EN cho 5 nhóm mới; tên đối tượng (Zone, nhà hoặc camera) và giá trị cũ → mới; vòng đếm hiện số điểm và chiều bay thay vì toạ độ thô | W-07 (**xong** trong #213, vào `develop` bằng PR 5) |
 | W-09 | Trang cấu trúc farm (`FarmOwnerFarmZonesPage`, `FarmOwnerFarmZoneDetailPage`) | Nút "Sửa" và "Xoá" cho nhà và Zone, chỉ Farm Owner (`usePermission('FARM_OWNER')`); popup sửa dùng lại validator của form tạo (tên ≤ 50, số tầng 1–10); xoá có xác nhận nói rõ lịch sử được giữ; lỗi 409 `HAS_ACTIVE_DEVICES` hiện "Gỡ các thiết bị của nhà trước khi xoá" và nút sang trang thiết bị | B-02, B-03 |
 | W-10 | Tab so sánh nhà trên `/overview` | Cột "Nguyên nhân tại chỗ": các loại có số > 0, nhãn từ `constants/siteCause.ts`; trống thì `_` | B-05 |
 | W-11 | `pages/SettingsPage.tsx` | Kiểm lại: giờ im lặng chỉ hiện cho Farm Owner (đã có `isFarmOwner`), Domain Expert không thấy mục kênh; lỗi 403 hiện theo `useApiErrorMessage` | B-06 |
@@ -147,7 +147,7 @@ D-01…D-04 làm xong trong PR của file này; D-05 đi cùng PR có test mới
 | 2 | `fix/g32-alert-severity` | Bảo | Q-06: B-10, B-12, F-01, D-06 phần §7.2, test | PR 1 |
 | 3 | `feat/g32-house-zone-edit-delete` | Bảo | B-01…B-04, B-07…B-09 phần nhà, Zone | PR 1 |
 | 4 | `feat/g32-site-causes-quiet-hours` | Bảo | B-05, B-06, B-13, D-06 phần còn lại | PR 1 |
-| 5 | `feat/web-owner-decides` | Bảo | W-01…W-08 (G-31 và enum) | — |
+| 5 | `fix/web-g31-to-develop` | Bảo | W-01…W-08 (G-31 và enum): merge #213 vào `develop` | — |
 | 6 | `fix/web-g32-alerts-ui` | Bảo | W-13…W-20, D-07 | PR 2 |
 | 7 | `feat/web-g32-farm-structure` | Bảo | W-09…W-12 | PR 3, 4 |
 | 8 | `fix/mobile-br31-enums` | Len | M-01, M-02, M-03, M-12, M-14, M-13 (phần test) | — |

@@ -21,7 +21,7 @@ import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useDownloadHealthCsv, useHealthDays } from '@/hooks/shared/useHealthDays';
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
-import type { Farm, HouseHealthDay } from '@/types';
+import type { HouseHealthDay } from '@/types';
 
 // Khoảng ngày xem được (thêm hôm nay, tối đa 31 ngày một lần đọc)
 const RANGE_DAYS = [7, 14, 30] as const;
@@ -29,11 +29,6 @@ type RangeDays = (typeof RANGE_DAYS)[number];
 // Tên tab trùng tiền tố khoá tiêu đề thẻ (table.title, report.title, disagreements.title)
 const TABS = ['table', 'report', 'disagreements'] as const;
 type HealthTab = (typeof TABS)[number];
-
-// BR-22 — farm không còn chuyên gia hoạt động (chưa mời hoặc đã bị khoá) thì Farm Owner xem ngày lệch thay chuyên gia (EXPERT-FR-022)
-function hasExpert(farm: Farm): boolean {
-  return farm.has_active_expert === true;
-}
 
 // Tải blob CSV backend trả về (đã có BOM, ngôn ngữ theo lang)
 function saveCsv(blob: Blob, fileName: string): void {
@@ -64,8 +59,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   // Tab nằm trên URL (?tab=report) để từ trang chi tiết báo cáo quay lại đúng tab
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFarm = scope.farms.find(farm => farm._id === scope.farmId);
-  // Đang xem 1 farm: farm đó chưa có chuyên gia; xem tất cả: có ít nhất 1 farm chưa có (chọn farm trong tab)
-  const canReviewDisagreements = !isExpert && (selectedFarm ? !hasExpert(selectedFarm) : scope.farms.some(farm => !hasExpert(farm)));
+  // BR-22 (Report 3 4.2.15): chỉ Farm Owner xem ngày lệch và chỉnh mức ở đây, chuyên gia xem ở trang của mình
+  const canReviewDisagreements = usePermission('FARM_OWNER');
   // Chuyên gia xem và kết luận báo cáo ở /domain-expert/reports (FE_Design §12.0 c), ở đây chỉ còn bảng ngày
   const visibleTabs = TABS.filter(value => (value !== 'report' || !isExpert) && (value !== 'disagreements' || canReviewDisagreements));
   const tabParam = searchParams.get('tab');

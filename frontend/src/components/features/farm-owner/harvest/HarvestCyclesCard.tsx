@@ -9,8 +9,11 @@ import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harves
 import { NO_VALUE } from '@/constants/display';
 import { harvestDict, type HarvestTranslate } from '@/constants/harvest.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHarvestCycleList } from '@/hooks/farm-owner/useHarvests';
+import { useFarms } from '@/hooks/shared/useFarms';
+import { useRemindExpert } from '@/hooks/shared/useRemindExpert';
 import type { AllZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
 import type { HarvestCycle, HarvestCycleComparison, HarvestCycleStatus } from '@/types/harvest.types';
@@ -28,6 +31,18 @@ interface HarvestCyclesCardProps {
   zones: AllZone[];
 }
 
+// BR-22 — Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận một chu kỳ đã đóng (mỗi chu kỳ một lần)
+function CycleReminder({ cycle }: { cycle: HarvestCycle }): JSX.Element | null {
+  const { t } = useTranslation(harvestDict);
+  const isOwner = usePermission('FARM_OWNER');
+  const { data: farms } = useFarms();
+  const reminder = useRemindExpert('harvest_cycle', cycle._id, cycle.expert_reminded_at);
+  if (!isOwner || farms?.find(farm => farm._id === cycle.farm_id)?.has_active_expert !== true) return null;
+  return reminder.reminded
+    ? <span className="text-xs text-warmGray">{t('cycle.reminded')}</span>
+    : <Button variant="secondary" size="sm" loading={reminder.isPending} onClick={reminder.remind}>{t('cycle.remind')}</Button>;
+}
+
 // HARVEST-FR-007, ANALYTICS-FR-004 — chu kỳ thu hoạch theo zone: sản lượng, so sánh, sức khỏe, kết luận mùa vụ (chỉ xem)
 export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyclesCardProps): JSX.Element {
   const { t, date, num, exact } = useTranslation(harvestDict);
@@ -35,7 +50,9 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
   // Trang về 1 khi đổi farm/nhà: trang Thu hoạch gắn key theo phạm vi lọc nên khung dựng lại
   const [page, setPage] = useState(1);
   const { records: cycles, total, isLoading, isError, error, refetch } = useHarvestCycleList(farmId, houseId, page, PAGE_SIZE);
-  const [selected, setSelected] = useState<HarvestCycle | null>(null);
+  const [opened, setSelected] = useState<HarvestCycle | null>(null);
+  // Bản mới nhất trong danh sách (sau khi nhắc chuyên gia), không có trên trang thì giữ bản đã mở
+  const selected = opened && (cycles.find(cycle => cycle._id === opened._id) ?? opened);
 
   // Nhà có hơn 1 Zone thì ghi thêm tên Zone
   const placeByZone = useMemo(() => {
@@ -194,7 +211,10 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
                   )}
                 </div>
               ) : (
-                <p className="italic text-warmGray">{t('cycle.noConclusion')}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="italic text-warmGray">{t('cycle.noConclusion')}</p>
+                  {selected.status !== 'OPEN' && <CycleReminder cycle={selected} />}
+                </div>
               )}
             </Section>
           </div>
