@@ -33,6 +33,15 @@ function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZone
     .replace('LOW_RETURN_RATE', ALERT_TYPE_LABELS.LOW_RETURN_RATE)
 }
 
+// Dòng đầu: loại cảnh báo, kèm tiêu đề khi tiêu đề nói thêm điều gì đó; tiêu đề tự sinh "<loại> tại <Zone>" thì bỏ vì vị trí đã ở dòng dưới
+function alertHeadline(alert: { title?: string; type?: string }): string {
+  const typeLabel = ALERT_TYPE_LABELS[alert.type ?? '']
+  const title = formatAlertTitle(alert)
+  if (!typeLabel) return title
+  if (!alert.title || title.startsWith(typeLabel)) return typeLabel
+  return `${typeLabel} · ${title}`
+}
+
 // Cảnh báo của một Zone ghi "Nhà > Zone"; cảnh báo cả nhà (camera đếm chim) chỉ ghi tên nhà
 function placeOf(
   alert: { zone_id?: string; house_id?: string },
@@ -45,7 +54,7 @@ function placeOf(
 }
 
 export default function DomainExpertQueuePage() {
-  const { selectedFarmId, selectedHouseId, selectedZoneId, selectedZoneName } = useZoneStore()
+  const { selectedFarmId, selectedHouseId, selectedZoneId } = useZoneStore()
 
   // Vị trí của mỗi việc: "Nhà > Zone", hoặc tên nhà với cảnh báo cả nhà (camera) — như trang Cảnh báo
   const { data: allZones } = useAllZones()
@@ -166,7 +175,7 @@ export default function DomainExpertQueuePage() {
                 <SeverityBadge severity={alert.severity} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-charcoal">
-                    {ALERT_TYPE_LABELS[alert.type] ?? alert.type} · {formatAlertTitle(alert, selectedZoneName)}
+                    {alertHeadline(alert)}
                   </p>
                   <p className="truncate text-small text-warmGray">
                     {placeOf(alert, zoneNames, houseNames)} · {formatDateTime(alert.created_at)}
