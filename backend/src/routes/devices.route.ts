@@ -84,7 +84,7 @@ router.get ('/camera-nodes',
   query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(),
   query('removed').optional().isString().isIn(['recent']), validate,
   deviceController.listCameraNodes)
-// 0–2 vòng (mỗi lỗ ra vào một vòng, rings: [] = dùng vòng mặc định); 3 đỉnh là vòng kín tối thiểu, 12 chống nhập nhầm.
+// 0–4 vòng, mỗi vòng đếm cả vào lẫn ra (rings: [] = dùng vòng mặc định); 3 đỉnh là vòng kín tối thiểu, 12 chống nhập nhầm.
 // Không gửi rings thì là body cũ một vòng của app mobile
 const ringFields = (prefix: string, field = (path: string) => body(path)) => [
   field(`${prefix}points`).isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
@@ -93,7 +93,7 @@ const ringFields = (prefix: string, field = (path: string) => body(path)) => [
   field(`${prefix}into_ring_is_exit`).isBoolean({ strict: true }),
 ]
 router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(),
-  body('rings').optional().isArray({ max: 2 }).withMessage('tối đa 2 vòng đếm'),
+  body('rings').optional().isArray({ max: 4 }).withMessage('tối đa 4 vòng đếm'),
   ...ringFields('rings.*.'),
   ...ringFields('', path => body(path).if(body('rings').not().exists())),
   validate, deviceController.updateCountingRing)

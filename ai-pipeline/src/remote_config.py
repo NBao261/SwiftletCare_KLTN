@@ -19,7 +19,7 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # 3 = smallest closed ring; 12 and 2 rings (one per entrance hole) = the backend validator's limits
 MIN_POINTS = 3
 MAX_POINTS = 12
-MAX_RINGS = 2
+MAX_RINGS = 4
 
 
 def parse_rings(message: Any, device_id: str) -> Optional[List[Ring]]:

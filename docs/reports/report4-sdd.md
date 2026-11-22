@@ -615,6 +615,7 @@ erDiagram
     number fps
     string model_version
     array counting_rings
+    array default_rings
     object counting_ring
     array counting_ring_history
   }
@@ -1899,7 +1900,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 2.2.24 | 23/11/2026 | One or two counting rings per camera (Report 3 4.2.18, VISION-FR-018): `CAMERA_NODE` gains `counting_rings` (the first ring stays in `counting_ring` for older apps); the retained `config` always carries `counting_rings`, an empty list sends the AI node back to its default ring |
+| 2.2.24 | 23/11/2026 | Up to four counting rings per camera (Report 3 4.2.18, VISION-FR-018): `CAMERA_NODE` gains `counting_rings` (the first ring stays in `counting_ring` for older apps) and `default_rings`, the AI node's default ring reported in its heartbeat (`defaultRings`); the retained `config` always carries `counting_rings`, an empty list sends the AI node back to its default ring |
 | 2.2.22 | 21/11/2026 | Alert severity and incidents (gap G-32, decision Q-06): the backend sets the severity of every alert from its type (BR-15) and ignores the value a device sends (Section 7.2); `incident_key` with a partial unique index keeps one open alert per incident (ALERT-FR-008; Sections 6.1, 6.2) and its migration in Section 6.4 |
 | 2.2.23 | 21/11/2026 | Gap G-32 (decision Q-08, item D-06): the job table of Section 5.3 follows the code (`returnRate` runs the daily assessment, the daily report and the recommendation rules of each house; `houseHealthReport` for the weekly and monthly reports; run hours in `relayUsage`; `cameraConfig` added); the weekly zone reports are moved into house reports by `migrate:zone-reports` and no longer read (Section 6.4) |
 | 2.2.21 | 21/11/2026 | Audit of 21/11/2026 (Report 3 4.2.16, gap G-32): Section 5.4 describes the farm location map of 2.2.20 instead of "no map library is added"; houses and zones are edited and soft-deleted (`is_deleted`, `deleted_at`, `deleted_by` in the ERD of Section 6.1 and in Section 6.2; `/farms` in Section 7.1, FARM-FR-002) |

@@ -84,8 +84,10 @@ export interface ICameraNode extends Document {
   replaced_by?: Types.ObjectId
   // Vòng đầu tiên kèm người sửa; app cũ chỉ đọc trường này
   counting_ring?: CountingRing & { updated_at: Date; updated_by: Types.ObjectId }
-  // 1–2 vòng (mỗi lỗ ra vào một vòng); [] = đã xoá, nút AI dùng vòng trong config.yaml; bản ghi cũ không có
+  // 1–4 vòng; [] = đã xoá, nút AI dùng vòng trong config.yaml; bản ghi cũ không có
   counting_rings?: CountingRing[]
+  // Vòng trong config.yaml do nút AI báo qua heartbeat, để web hiện như một vòng thường
+  default_rings?: CountingRing[]
   counting_ring_history: ICountingRingHistoryEntry[]
 }
 
@@ -217,6 +219,13 @@ const cameraNodeSchema = new Schema<ICameraNode>(
       default: undefined,
     },
     counting_rings: {
+      type: [new Schema({
+        points:            { type: [[Number]], required: true },
+        into_ring_is_exit: { type: Boolean, required: true },
+      }, { _id: false })],
+      default: undefined,
+    },
+    default_rings: {
       type: [new Schema({
         points:            { type: [[Number]], required: true },
         into_ring_is_exit: { type: Boolean, required: true },

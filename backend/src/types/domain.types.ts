@@ -165,6 +165,7 @@ export interface HeartbeatPayload {
   actuatorBaseline?: { misting?: number; ventilation?: number }
   modelVersion?: string
   fps?: number
+  defaultRings?: unknown
 }
 
 // Tỉ lệ khung hình 0–1

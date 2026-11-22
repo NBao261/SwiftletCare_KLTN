@@ -426,6 +426,8 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   camera.last_heartbeat = new Date()
   if (payload.modelVersion) camera.model_version = payload.modelVersion
   if (payload.fps !== undefined) camera.fps = payload.fps
+  const defaults = parseDefaultRings(payload.defaultRings)
+  if (defaults) camera.default_rings = defaults
   camera.activation_overdue_at = undefined
   await camera.save()
   if (payload.justConnected || !wasOnline) await pushCameraConfig(camera)
@@ -857,6 +859,23 @@ const ringOf = (ring: CountingRing): CountingRing => ({
   points: ring.points.map(([x, y]) => [x, y]),
   into_ring_is_exit: ring.into_ring_is_exit,
 })
+
+const isPoint = (p: unknown): p is [number, number] =>
+  Array.isArray(p) && p.length === 2 && p.every(v => typeof v === 'number' && v >= 0 && v <= 1)
+
+// Cùng giới hạn với route vẽ vòng; sai thì bỏ qua, giữ vòng đã lưu
+export function parseDefaultRings(value: unknown): CountingRing[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 4) return null
+  const rings: CountingRing[] = []
+  for (const ring of value as unknown[]) {
+    if (typeof ring !== 'object' || ring === null) return null
+    const { points, into_ring_is_exit } = ring as Record<string, unknown>
+    if (!Array.isArray(points) || points.length < 3 || points.length > 12 || !points.every(isPoint)) return null
+    if (typeof into_ring_is_exit !== 'boolean') return null
+    rings.push({ points: points.map(([x, y]) => [x, y]), into_ring_is_exit })
+  }
+  return rings
+}
 
 // Bản ghi trước khi có nhiều vòng chỉ có counting_ring
 export function ringsOf(camera: Pick<ICameraNode, 'counting_ring' | 'counting_rings'>): CountingRing[] {

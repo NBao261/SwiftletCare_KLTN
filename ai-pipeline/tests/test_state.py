@@ -1,10 +1,12 @@
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from counting import MultiRingCounter  # noqa: E402
-from stream import load_config, load_day_total, load_state, make_counter, save_state, topic_base  # noqa: E402
+import stream  # noqa: E402
+from stream import Publisher, load_config, load_day_total, load_state, make_counter, save_state, topic_base  # noqa: E402
 
 SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]
 
@@ -44,3 +46,21 @@ def test_day_total_survives_a_restart_on_the_same_day_only(tmp_path):
     assert load_day_total("2026-11-24", path) == 0     # sang ngày mới đếm lại
     path.write_text("{not json", encoding="utf-8")
     assert load_day_total("2026-11-23", path) == 0
+
+
+def test_heartbeat_carries_the_default_ring_so_the_web_can_show_it(monkeypatch):
+    sent = []
+
+    class FakeClient:
+        def __init__(self, *a, **k): pass
+        def __getattr__(self, name): return lambda *a, **k: None
+        def publish(self, topic, payload, qos): sent.append((topic, json.loads(payload)))
+
+    monkeypatch.setattr(stream.mqtt, "Client", FakeClient)
+    monkeypatch.setenv("CAMERA_DEVICE_ID", "cam-1")
+    monkeypatch.setenv("MQTT_PASSWORD", "x")
+    pub = Publisher({"broker": "localhost", "port": 1883}, "v1", [(SQUARE, True)])
+    pub.heartbeat(25.0)
+    topic, payload = sent[0]
+    assert topic == "swiftletcare/dev/cam-1/heartbeat"
+    assert payload["defaultRings"] == [{"points": [list(p) for p in SQUARE], "into_ring_is_exit": True}]

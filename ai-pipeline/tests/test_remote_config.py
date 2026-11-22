@@ -47,7 +47,7 @@ def test_other_device_or_no_ring_is_ignored():
     msg(points=[[0.1], [0.2, 0.2], [0.5, 0.9]]),
     msg(points=[[True, 0.1], [0.2, 0.2], [0.5, 0.9]]),
     msg(into_ring_is_exit="true"),
-    rings_msg(*[{"points": RING, "into_ring_is_exit": True}] * 3),
+    rings_msg(*[{"points": RING, "into_ring_is_exit": True}] * 5),
     {"deviceId": "cam_01", "counting_rings": {"points": RING}},
 ])
 def test_malformed_rings_raise(message):

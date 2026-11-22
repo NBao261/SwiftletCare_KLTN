@@ -44,7 +44,7 @@ def default_rings(cfg: dict) -> List[Ring]:
 
 def make_counter(cfg: dict, width: int, height: int, rings: Optional[Sequence[Ring]] = None,
                  base: Tuple[int, int] = (0, 0)) -> MultiRingCounter:
-    """rings từ backend (1–2 vòng); None = vòng trong config.yaml."""
+    """rings từ backend (1–4 vòng); None = vòng trong config.yaml."""
     t = cfg["tracking"]
     return MultiRingCounter(rings or default_rings(cfg), width, height, *base, lost_frames=t["lost_track_buffer"],
                             extrapolate_frames=t["extrapolate_frames"], min_speed_px=t["extrapolate_min_speed_px"])
@@ -141,9 +141,12 @@ def topic_base(env) -> str:
 class Publisher:
     """Payload theo BirdCountPayload của backend (backend/src/types/domain.types.ts)."""
 
-    def __init__(self, cfg: dict, model_version: str):
+    def __init__(self, cfg: dict, model_version: str, default_rings: Sequence[Ring] = ()):
         self.device_id = os.environ["CAMERA_DEVICE_ID"]
         self.model_version = model_version
+        # web hiện vòng mặc định như một vòng thường để xoá hoặc vẽ lại
+        self.default_rings = [{"points": [list(p) for p in points], "into_ring_is_exit": exit_}
+                              for points, exit_ in default_rings]
         base = topic_base(os.environ)
         self.topic_count = f"{base}/vision/bird-count"
         self.topic_heartbeat = f"{base}/heartbeat"
@@ -179,6 +182,7 @@ class Publisher:
     def heartbeat(self, fps: float) -> None:
         self.client.publish(self.topic_heartbeat, json.dumps({
             "deviceId": self.device_id, "modelVersion": self.model_version, "fps": round(fps, 1),
+            "defaultRings": self.default_rings,
         }), qos=0)
 
 
@@ -202,7 +206,7 @@ def main() -> None:
 
     engine = make_engine(cfg)
     server = MjpegServer(cfg["stream"]["host"], cfg["stream"]["port"], cfg["stream"]["jpeg_quality"])
-    pub = None if args.no_mqtt else Publisher(cfg["mqtt"], m["version"])
+    pub = None if args.no_mqtt else Publisher(cfg["mqtt"], m["version"], default_rings(cfg))
     pusher = None
     if os.getenv("STREAM_PUSH_URL"):                          # có máy chủ video (MediaMTX): đẩy hình đã vẽ khung
         p = cfg["push"]

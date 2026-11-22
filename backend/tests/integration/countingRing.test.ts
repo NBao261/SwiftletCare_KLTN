@@ -104,7 +104,7 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
     ['đỉnh không phải [x, y]', { points: [[0.1], [0.2, 0.2], [0.5, 0.9]], into_ring_is_exit: true }],
     ['chiều đếm là chuỗi', { points: RING, into_ring_is_exit: 'true' }],
     ['thiếu chiều đếm', { points: RING }],
-    ['3 vòng', { rings: [1, 2, 3].map(() => ({ points: RING, into_ring_is_exit: true })) }],
+    ['5 vòng', { rings: [1, 2, 3, 4, 5].map(() => ({ points: RING, into_ring_is_exit: true })) }],
     ['vòng thứ hai 2 đỉnh', { rings: [{ points: RING, into_ring_is_exit: true }, { points: RING.slice(0, 2), into_ring_is_exit: true }] }],
     ['rings không phải danh sách', { rings: { points: RING, into_ring_is_exit: true } }],
   ])('từ chối %s', async (_name, body) => {
@@ -125,7 +125,7 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
   })
 })
 
-describe('2 vòng trên một camera và xoá vòng', () => {
+describe('nhiều vòng trên một camera và xoá vòng', () => {
   const SECOND = [[0.05, 0.05], [0.2, 0.05], [0.2, 0.2], [0.05, 0.2]]
 
   it('lưu 2 vòng, vòng đầu vẫn ở counting_ring cho app cũ; xoá thì nút AI nhận [] và dùng vòng mặc định', async () => {
@@ -143,6 +143,25 @@ describe('2 vòng trên một camera và xoá vòng', () => {
     expect(saved.counting_rings).toEqual([])
     expect(saved.counting_ring).toBeUndefined()
     expect(saved.counting_ring_history.at(-1)).toMatchObject({ old_value: rings, new_value: [] })
+  })
+
+  it('lưu được 4 vòng', async () => {
+    const { camera, put, t } = await seed()
+    const rings = [RING, SECOND, RING, SECOND].map(points => ({ points, into_ring_is_exit: true }))
+    await put(t.expert, { rings }).expect(200)
+    expect((await CameraNode.findById(camera._id).lean())!.counting_rings).toHaveLength(4)
+  })
+
+  it('heartbeat của nút AI lưu vòng mặc định; vòng sai thì giữ vòng đã lưu', async () => {
+    const { camera } = await seed()
+    const defaults = [{ points: RING, into_ring_is_exit: true }]
+    await recordHeartbeat({ deviceId: camera.device_id, defaultRings: defaults } as never)
+    expect((await CameraNode.findById(camera._id).lean())!.default_rings).toEqual(defaults)
+
+    for (const bad of [[], [{ points: RING.slice(0, 2), into_ring_is_exit: true }], [{ points: [[0.1, 2], ...RING], into_ring_is_exit: true }], 'x']) {
+      await recordHeartbeat({ deviceId: camera.device_id, defaultRings: bad } as never)
+    }
+    expect((await CameraNode.findById(camera._id).lean())!.default_rings).toEqual(defaults)
   })
 
   it('camera lưu từ trước khi có nhiều vòng vẫn gửi đúng vòng cũ cho nút AI', async () => {

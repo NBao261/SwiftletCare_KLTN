@@ -95,8 +95,10 @@ export interface CameraNode {
   _id: string; device_id: string; rtsp_url?: string
   // camera ở cửa ra vào của cả nhà yến; zone_id chỉ còn ở bản ghi cũ
   house_id?: string; zone_id?: string
-  // 1–2 vòng đã vẽ (mỗi lỗ ra vào một vòng); trống thì nút AI dùng vòng trong config.yaml. Bản ghi cũ chỉ có counting_ring
+  // 1–4 vòng đã vẽ; trống thì nút AI dùng vòng trong config.yaml. Bản ghi cũ chỉ có counting_ring
   counting_rings?: CountingRing[]
+  // vòng trong config.yaml do nút AI báo lên
+  default_rings?: CountingRing[]
   // vòng đầu tiên kèm người sửa và lúc sửa
   counting_ring?: (CountingRing & { updated_at?: string; updated_by?: string }) | null
   // lịch sử đổi vòng đếm, mới nhất tuỳ backend sắp xếp
