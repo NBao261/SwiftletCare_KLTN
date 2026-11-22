@@ -2,7 +2,7 @@
 import type { SiteCause } from '@/types/workOrder.types'
 
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-// 3 cấp hiển thị của mức cảnh báo: P1 Khẩn cấp, P2 Cao, P3 Thường
+// 4 cấp hiển thị của mức cảnh báo, mỗi cấp một mức backend (BR-15): P1 Khẩn cấp, P2 Cao, P3 Trung bình, P4 Thấp
 export type SeverityLevel = 'P1' | 'P2' | 'P3' | 'P4'
 // DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (Report 3 §6.1, EXPERT-FR-003)
 export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'

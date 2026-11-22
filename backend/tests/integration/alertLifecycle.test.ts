@@ -3,10 +3,13 @@
  * cảnh báo thiết bị được gửi.
  */
 import express from 'express'
+import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import alertRoutes from '@/routes/alerts.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert } from '@/models/alert.model'
+import { User } from '@/models/user.model'
+import { Farm } from '@/models/farm.model'
 import { SensorNode } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { EPISODE_CLEAR_MS, createAlert, ingestDeviceAlert, resolveStaleEpisodeAlerts } from '@/services/alert.service'
@@ -176,6 +179,28 @@ describe('lọc GET /alerts theo nhà gồm cả cảnh báo của các Zone tro
     ])
     const res = await request(app).get(`/alerts?houseId=${zone.house_id}`).set('Authorization', `Bearer ${token}`).expect(200)
     expect(res.body.data.map((a: { type: string }) => a.type).sort()).toEqual(['EDGE_AI_DEGRADED', 'SENSOR_FAULT'])
+  })
+})
+
+describe('lọc theo nhà vẫn trong phạm vi của Farm Technician (AUTH-FR-013, ALERT-FR-007)', () => {
+  it('thợ được giao nhà A: houseId của A trả cảnh báo cả nhà và của Zone; houseId của nhà B không trả gì', async () => {
+    const { farm, zone, node } = await seed()
+    const technician = await User.create({ email: `tech${String(farm._id)}@test.vn`, password_hash: 'password123', full_name: 'T', role: 'FARM_TECHNICIAN' })
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: technician._id, role: 'FARM_TECHNICIAN' } } })
+    await House.updateOne({ _id: zone.house_id }, { $set: { technicians: [{ user_id: technician._id, primary: true }] } })
+    const otherHouse = await House.create({ farm_id: farm._id, name: 'Nhà B' })
+    const otherZone = await Zone.create({ house_id: otherHouse._id, name: 'Tầng B' })
+    const base = { farm_id: farm._id, severity: 'MEDIUM', title: 't', message: 'm' }
+    await Alert.create([
+      { ...base, zone_id: zone._id, node_id: node._id, type: 'SENSOR_FAULT' },
+      { ...base, house_id: zone.house_id, type: 'EDGE_AI_DEGRADED' },
+      { ...base, zone_id: otherZone._id, type: 'SENSOR_FAULT' },
+      { ...base, house_id: otherHouse._id, type: 'EDGE_AI_DEGRADED' },
+    ])
+    const token = jwt.sign({ sub: String(technician._id), role: 'FARM_TECHNICIAN' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
+    const get = (houseId: unknown) => request(app).get(`/alerts?houseId=${houseId}`).set('Authorization', `Bearer ${token}`).expect(200)
+    expect((await get(zone.house_id)).body.data.map((a: { type: string }) => a.type).sort()).toEqual(['EDGE_AI_DEGRADED', 'SENSOR_FAULT'])
+    expect((await get(otherHouse._id)).body.data).toHaveLength(0)
   })
 })
 

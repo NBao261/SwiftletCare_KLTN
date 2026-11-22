@@ -441,7 +441,7 @@ async function keepThresholdAlertAlive(zoneId: string, nodeId: string, metrics: 
 export interface ListAlertsQuery {
   farmId?: string
   zoneId?: string
-  /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8 */
+  /** ALERT-FR-007 — cảnh báo của một nhà: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà */
   houseId?: string
   status?: string
   /** ALERT-FR-007 — chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED); `status` đi kèm thì `status` thắng */

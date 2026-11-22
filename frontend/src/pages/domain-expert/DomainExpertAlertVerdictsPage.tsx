@@ -70,7 +70,7 @@ export default function DomainExpertAlertVerdictsPage() {
     isLoading,
     isFetching,
   } = useAlertsWithFilters(farmId, zoneId)
-  // Ô lọc mức độ theo 3 cấp chung (FE_Design 2.4)
+  // Ô lọc mức độ theo cấp chung (FE_Design 2.4)
   const { t: levelLabel } = useTranslation(levelDict)
   const severityOptions = [
     { value: 'ALL', label: t('Mức độ') },

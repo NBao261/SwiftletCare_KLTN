@@ -126,7 +126,7 @@ function AlertChannelsCard() {
   const push = useToastStore(s => s.push)
   const prefs = user?.notification_preferences
   const telegramLinked = user?.telegram_linked ?? false
-  // Nhãn 3 cấp dùng chung (FE_Design 6.3); lỗi API theo nhóm, không hiện câu thô của backend (13.16)
+  // Nhãn 4 cấp dùng chung (FE_Design 6.3); lỗi API theo nhóm, không hiện câu thô của backend (13.16)
   const { t: levelLabel } = useTranslation(levelDict)
   const apiErrorMessage = useApiErrorMessage()
 

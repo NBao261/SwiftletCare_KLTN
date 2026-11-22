@@ -19,7 +19,7 @@ const en: Record<SeverityLevel, string> = {
 
 export const levelDict: Dictionary<SeverityLevel> = { vi, en };
 
-// Nhãn theo mã mức backend (4 mức) quy về 3 cấp — cho từ điển màn đang tra theo mã backend
+// Nhãn theo mã mức backend, mỗi mức một cấp — cho từ điển màn đang tra theo mã backend
 export function severityLabels(labels: Record<SeverityLevel, string>): Record<AlertSeverity, string> {
   return {
     CRITICAL: labels[SEVERITY_TO_LEVEL.CRITICAL],

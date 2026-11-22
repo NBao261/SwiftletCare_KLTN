@@ -31,6 +31,11 @@ type StatusFilter = 'open' | 'all' | AlertStatus;
 type LevelFilter = 'all' | SeverityLevel;
 type VerdictFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
 const ALERT_TYPES = Object.keys(alertTypeDict.vi) as AlertType[];
+// Report 3 §1.3 "Device alert", khớp DEVICE_ALERT_TYPES của backend: Admin chỉ thấy các loại này (FARM-FR-009)
+const DEVICE_ALERT_TYPES: AlertType[] = [
+  'NODE_OFFLINE', 'EDGE_AI_DEGRADED', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'UNEXPECTED_RESTART',
+  'SPEAKER_FAILURE', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT', 'CONFIG_MISMATCH', 'MAINTENANCE_DUE',
+];
 const INFERRED_TYPES: InferredAlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'];
 const isInferred = (type: AlertType) => (INFERRED_TYPES as AlertType[]).includes(type);
 
@@ -173,7 +178,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
             onChange={setTypeFilter}
             options={[
               { value: 'all', label: t('filter.allTypes') },
-              ...ALERT_TYPES.map(type => ({ value: type, label: t(`type.${type}`) })),
+              ...(isAdmin ? DEVICE_ALERT_TYPES : ALERT_TYPES).map(type => ({ value: type, label: t(`type.${type}`) })),
             ]}
           />
           {verdictApplies && !isAdmin && (
