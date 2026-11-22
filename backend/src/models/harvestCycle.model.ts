@@ -10,7 +10,6 @@ export interface CycleComparison {
   weight_grams: number | null
   nest_count_change_pct: number | null
   weight_change_pct: number | null
-  // null khi có số
   reason: string | null
 }
 
@@ -21,7 +20,6 @@ export interface IHarvestCycle extends Document {
   house_id: Types.ObjectId
   zone_id: Types.ObjectId
   start_date: Date
-  // Không có khi OPEN
   end_date?: Date
   status: HarvestCycleStatus
   closing_harvest?: {
@@ -36,7 +34,6 @@ export interface IHarvestCycle extends Document {
   completeness_pct?: number | null
   incomplete: boolean
   conclusion?: { text: string; recommendations?: string; by: Types.ObjectId; role: FarmMemberRole; at: Date }
-  // mỗi việc nhắc một lần
   expert_reminded_at?: Date
   created_at: Date
   updated_at: Date

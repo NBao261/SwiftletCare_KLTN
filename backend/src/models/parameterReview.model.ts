@@ -9,7 +9,6 @@ export type ParameterReviewStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' |
 // thay đổi đã áp ngay; old_values là giá trị trước lần sửa đầu tiên
 export interface IParameterReview extends Document {
   _id: Types.ObjectId
-  // Khoá "một mục đang chờ"
   target_id: Types.ObjectId
   zone_id?: Types.ObjectId
   house_id?: Types.ObjectId

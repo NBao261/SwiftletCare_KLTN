@@ -13,7 +13,7 @@ export const BREACH_DWELL_MS: Record<BreachMetric, number> = {
 
 export interface DwelledBreach extends ThresholdBreach { started_at: Date }
 
-// ponytail: in-memory theo process, restart thì đếm lại; nhiều instance thì chuyển Redis
+// In-memory theo process, restart thì đếm lại; nhiều instance thì chuyển Redis
 const startedAt = new Map<string, number>()
 const lastSampleAt = new Map<string, number>()
 

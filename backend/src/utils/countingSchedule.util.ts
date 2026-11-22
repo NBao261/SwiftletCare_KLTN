@@ -6,7 +6,6 @@ export interface TimeWindow { start: string; end: string }
 export interface DayWindows { morning: TimeWindow; evening: TimeWindow }
 // 'MM-DD', tính cả hai đầu; from sau to là vắt qua năm mới
 export interface SeasonalProfile extends DayWindows { name: string; from: string; to: string }
-// Tính cả hai đầu
 export interface TemporaryWindow extends DayWindows { from: string; to: string }
 export interface CountingSchedule { profiles: SeasonalProfile[]; temporary: TemporaryWindow[] }
 // Áp từ ngày hôm sau lần sửa

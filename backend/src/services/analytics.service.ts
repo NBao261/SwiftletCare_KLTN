@@ -295,7 +295,6 @@ export interface FlockPeriod {
   period: string
   days: number
   mean_morning_exit: number
-  // null khi kỳ trước không có ngày đủ phiên
   change_pct: number | null
 }
 

@@ -104,7 +104,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     : 'Mã kết nối không đúng hoặc đã hết hạn. Hãy bấm "Kết nối Telegram" trong ứng dụng để lấy mã mới.')
 }
 
-// Long polling: chạy được không cần URL công khai. ponytail: chỉ đúng với 1 instance, nhiều instance thì dùng webhook
+// Long polling: chạy được không cần URL công khai. Chỉ đúng với 1 instance, nhiều instance thì dùng webhook
 export function startTelegramPolling(): void {
   if (!isTelegramConfigured() || process.env.NODE_ENV === 'test') {
     if (!isTelegramConfigured()) logger.info('TELEGRAM_BOT_TOKEN chưa đặt — không bật kênh Telegram (ALERT-FR-013)')

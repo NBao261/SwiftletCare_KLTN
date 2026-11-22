@@ -1,4 +1,3 @@
-// khoá, xoá theo yêu cầu (cascade, chạy lại), từ chối, nhắc hạn
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'

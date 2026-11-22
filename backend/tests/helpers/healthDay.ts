@@ -10,7 +10,6 @@ import { User } from '@/models/user.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import { addDays, vnDayStart } from '@/services/healthAssessment.service'
 
-// Dữ liệu cho test đánh giá sức khỏe ngày
 export const HEALTH_MODELS = [Alert, BirdCountBucket, BirdCountRecord, Farm, HouseHealthDay, House, Zone, Telemetry, User, WeatherObservation]
 
 export const SLOTS_PER_DAY = 8640

@@ -3,9 +3,8 @@ import type { Role } from '@/types'
 
 export interface IAuditLog extends Document {
   _id: Types.ObjectId
-  actor_id?: Types.ObjectId // rỗng khi hệ thống tự ghi
+  actor_id?: Types.ObjectId
   actor_role?: Role | 'TECHNICIAN'
-  // Nguồn lịch sử hoạt động chuyên gia
   farm_id?: Types.ObjectId
   action: string
   target_type: string
@@ -15,7 +14,6 @@ export interface IAuditLog extends Document {
   after?: unknown
   source_ip?: string
   client?: string
-  // Cùng một thao tác thì cùng mã
   correlation_id?: string
   created_at: Date
 }

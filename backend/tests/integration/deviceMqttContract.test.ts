@@ -1,4 +1,3 @@
-// Hợp đồng MQTT ESP32 ↔ backend
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

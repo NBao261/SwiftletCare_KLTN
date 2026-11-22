@@ -16,7 +16,6 @@ export interface ChecklistItem {
   item: string
   result?: 'OK' | 'DEFECT'
   note?: string
-  // Khoá MinIO
   photo?: string
   by?: Types.ObjectId
   at?: Date
@@ -26,7 +25,6 @@ export interface ChecklistItem {
 export interface WorkOrderHistoryEntry {
   from?: WorkOrderStatus
   to: WorkOrderStatus
-  // Không có = hệ thống
   by?: Types.ObjectId
   note?: string
   at: Date
@@ -39,7 +37,6 @@ export interface IWorkOrder extends Document {
   zone_id?: Types.ObjectId
   node_id?: Types.ObjectId
   alert_id?: Types.ObjectId
-  // So sự cố lặp lại
   alert_type?: AlertType
   kind: 'REPAIR' | 'PREVENTIVE'
   plan_id?: Types.ObjectId
@@ -53,13 +50,10 @@ export interface IWorkOrder extends Document {
   is_open: boolean
   // Không có = nhà không có thợ, Farm Owner xử lý
   assignee_id?: Types.ObjectId
-  // Không có = hệ thống mở
   opened_by?: Types.ObjectId
   cause?: SiteCause
   work_note?: string
-  // Khoá MinIO
   photos: string[]
-  // DONE: phòng ngừa đã duyệt
   result?: 'REPAIRED' | 'SELF_RECOVERED' | 'DONE'
   cancel_reason?: string
   opened_at: Date
@@ -67,7 +61,6 @@ export interface IWorkOrder extends Document {
   done_at?: Date
   verified_at?: Date
   closed_at?: Date
-  // quá hạn tính từ đây
   assigned_at?: Date
   escalated_at?: Date
   history: WorkOrderHistoryEntry[]

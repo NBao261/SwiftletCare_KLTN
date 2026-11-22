@@ -264,7 +264,7 @@ export async function createAccountFromInvitation(token: string, input: CreateAc
   try {
     user = await User.create({
       email: invitation.invited_email, // Đã chuẩn hoá lúc mời
-      password_hash: input.password,   // pre-save hook tự hash
+      password_hash: input.password,
       full_name: input.full_name.trim(),
       role: invitation.invited_role,
     })

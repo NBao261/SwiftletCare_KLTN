@@ -2,7 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import type S3 from 'aws-sdk/clients/s3'
 
-// Nạp lười: boot/test không cần MinIO. ponytail: aws-sdk v2 hết hỗ trợ, chuyển sang v3 nếu cần vá bảo mật
+// Nạp lười: boot/test không cần MinIO. Aws-sdk v2 hết hỗ trợ, chuyển sang v3 nếu cần vá bảo mật
 // Chỉ dùng khi dev: file ở /files/<key> không cần đăng nhập, không hết hạn
 export const isLocalStorage = () => process.env.STORAGE_DRIVER === 'local'
 export const localStorageDir = () => path.resolve(process.env.LOCAL_STORAGE_DIR ?? 'storage')

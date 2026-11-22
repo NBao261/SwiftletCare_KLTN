@@ -192,7 +192,6 @@ export interface ListHouseReportsQuery {
   kind?: HouseReportKind
   from?: string
   to?: string
-  // false: chưa có kết luận (đếm "chờ kết luận")
   hasConclusion?: boolean
   page?: number
   limit?: number

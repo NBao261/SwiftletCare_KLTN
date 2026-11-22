@@ -1,4 +1,3 @@
-// nguồn trống là missing, không phải 0; hệ thống chỉ trình bày
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

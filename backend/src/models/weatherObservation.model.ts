@@ -4,7 +4,6 @@ import { Schema, model, Document, Types } from 'mongoose'
 export interface IWeatherObservation extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
-  // UTC
   hour: Date
   temperature?: number
   humidity?: number

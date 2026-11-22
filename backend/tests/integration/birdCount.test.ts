@@ -1,4 +1,3 @@
-// mọi số đếm theo House
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

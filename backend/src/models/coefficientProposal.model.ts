@@ -13,7 +13,6 @@ export interface ICoefficientProposal extends Document {
   current_values: FuzzyTuning
   predicted?: Record<string, number>
   status: CoefficientProposalStatus
-  // Bắt buộc khi REJECTED
   note?: string
   decided_by?: Types.ObjectId
   decided_at?: Date
@@ -41,7 +40,6 @@ const coefficientProposalSchema = new Schema<ICoefficientProposal>(
 )
 
 coefficientProposalSchema.index({ zone_id: 1, status: 1 })
-// Mỗi Zone chỉ 1 đề xuất đang chờ
 coefficientProposalSchema.index({ zone_id: 1 }, { unique: true, partialFilterExpression: { status: 'PROPOSED' } })
 coefficientProposalSchema.index({ farm_id: 1, created_at: -1 })
 

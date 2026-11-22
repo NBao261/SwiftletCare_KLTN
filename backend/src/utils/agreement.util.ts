@@ -4,7 +4,6 @@ export type OrderedStatus = typeof ORDERED_STATUSES[number]
 
 export interface RatingPair { system: OrderedStatus; rater: OrderedStatus }
 
-// z của khoảng tin cậy 95 %
 const Z95 = 1.96
 const K = ORDERED_STATUSES.length
 

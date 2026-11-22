@@ -62,7 +62,7 @@ export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRela
   }
 }
 
-// Chu kỳ điều khiển ESP32 là 10 s. ponytail: 30 s chọn tay
+// Chu kỳ điều khiển ESP32 là 10 s. 30 s chọn tay
 export const DEVICE_CONFIRM_GRACE_MS = 30_000
 
 // fresh: tin AUTO lúc này nhiều khả năng là tin cũ. Không throw

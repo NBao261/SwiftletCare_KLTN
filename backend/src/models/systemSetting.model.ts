@@ -1,7 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { Thresholds } from '@/types'
 
-// Singleton: collection chỉ có 1 document
 export interface ISystemSetting extends Document {
   _id: Types.ObjectId
   _singleton: boolean

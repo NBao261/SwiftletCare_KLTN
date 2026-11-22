@@ -110,7 +110,6 @@ export async function logoutUser(userId: string, refreshToken: string | undefine
   }
 }
 
-// dùng 1 lần
 const RESET_TOKEN_TTL_MS = 15 * 60 * 1000
 
 // Im lặng khi email không tồn tại: không thành công cụ dò tài khoản
@@ -143,7 +142,7 @@ export async function resetPassword(email: string, token: string, newPassword: s
     throw new AppError(400, 'INVALID_RESET_TOKEN', 'Mã đặt lại không đúng hoặc đã hết hạn')
   }
 
-  user.password_hash = newPassword // pre-save hook tự hash
+  user.password_hash = newPassword
   user.password_reset_token_hash = undefined
   user.password_reset_expires_at = undefined
   // Hết là mật khẩu tạm
@@ -167,7 +166,7 @@ export async function changePassword(
     throw new AppError(400, 'PASSWORD_UNCHANGED', 'Mật khẩu mới phải khác mật khẩu hiện tại')
   }
 
-  user.password_hash = newPassword // pre-save hook tự hash
+  user.password_hash = newPassword
   user.must_change_password = false
   const keep = currentRefreshToken ? hashToken(currentRefreshToken) : null
   user.refresh_tokens = user.refresh_tokens.filter(t => t.token_hash === keep) as never

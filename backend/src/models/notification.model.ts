@@ -14,7 +14,7 @@ export interface INotification extends Document {
   created_at: Date
 }
 
-// ponytail: 90 ngày chọn tay cho khớp telemetry, không có nguồn
+// 90 ngày chọn tay cho khớp telemetry, không có nguồn
 export const NOTIFICATION_TTL_SECONDS = 90 * 24 * 60 * 60
 
 const notificationSchema = new Schema<INotification>(

@@ -63,7 +63,7 @@ export async function createFarmOwner(
     full_name: input.full_name.trim(),
     ...(input.phone?.trim() && { phone: input.phone.trim() }),
     role: 'FARM_OWNER',
-    password_hash: temporaryPassword, // pre-save hook tự hash
+    password_hash: temporaryPassword,
     must_change_password: true,
   })
   await logAction(adminId, 'FARM_OWNER_CREATED', 'user', String(user._id), { email })

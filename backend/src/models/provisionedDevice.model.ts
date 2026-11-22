@@ -11,7 +11,6 @@ export interface IProvisionedDevice extends Document {
   // Hash; flash cùng device ID, không in lên nhãn
   broker_secret_hash?: string
   claimed_at?: Date
-  // Thu hồi thì không kích hoạt được nữa
   revoked_at?: Date
   revoke_reason?: string
   simulated: boolean

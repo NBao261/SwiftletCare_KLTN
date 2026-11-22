@@ -54,7 +54,6 @@ router.put(
   validate,
   alertController.setVerdict,
 )
-// Service kiểm nhà
 router.post(
   '/:id/onsite-check',
   requireRole('FARM_TECHNICIAN'),

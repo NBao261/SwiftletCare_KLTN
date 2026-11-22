@@ -5,7 +5,7 @@ import logger from '@/utils/logger.util'
 // Chỉ toạ độ rời hệ thống. Thiếu thì để trống, không bao giờ 0
 // Một biến cho cả hai luồng
 export const OPEN_METEO_URL = () => process.env.OPEN_METEO_URL || 'https://api.open-meteo.com/v1/forecast'
-// ponytail: bỏ sau 10 s, giờ sau gọi lại
+// Bỏ sau 10 s, giờ sau gọi lại
 export const WEATHER_FETCH_TIMEOUT_MS = 10_000
 const HOUR_MS = 3600_000
 

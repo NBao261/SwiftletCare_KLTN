@@ -1,6 +1,6 @@
 // Holt trend tắt dần, ngoại suy tuyến tính dễ vọt quá với độ ẩm bị chặn
 export const HOLT_GRID = [0.1, 0.3, 0.5, 0.7, 0.9]
-// ponytail: φ cố định 0.9; muốn chuẩn hơn thì đưa φ vào lưới
+// φ cố định 0.9; muốn chuẩn hơn thì đưa φ vào lưới
 export const DAMPING = 0.9
 
 export interface HoltState { level: number; trend: number }

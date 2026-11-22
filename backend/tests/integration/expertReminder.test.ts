@@ -1,4 +1,3 @@
-// mỗi việc nhắc một lần; việc đã xong hoặc farm chưa có chuyên gia → 409
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

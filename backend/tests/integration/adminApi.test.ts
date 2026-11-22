@@ -1,4 +1,3 @@
-// /admin: validation, phân quyền, ép kiểu boolean
 import { createHash } from 'crypto'
 import express from 'express'
 import jwt from 'jsonwebtoken'

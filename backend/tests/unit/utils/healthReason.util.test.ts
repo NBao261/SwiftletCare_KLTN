@@ -1,4 +1,3 @@
-// Mỗi mã phải có câu VI và EN kèm số liệu
 import { HEALTH_REASON_CODES } from '@/models/houseHealthDay.model'
 import { REASON_LANGS, formatReason } from '@/utils/healthReason.util'
 import type { HealthReason } from '@/types'

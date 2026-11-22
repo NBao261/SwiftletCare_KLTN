@@ -63,7 +63,7 @@ async function refreshOverrideSummary(nodeId: unknown): Promise<void> {
   ])
 }
 const DEFAULT_OVERRIDE_MS = 30 * 60 * 1000
-// ponytail: 24 giờ chọn tay. Tối thiểu 2 × DEVICE_CONFIRM_GRACE_MS, ngắn hơn thì tin AUTO lúc hết hạn bị coi là cũ
+// 24 giờ chọn tay. Tối thiểu 2 × DEVICE_CONFIRM_GRACE_MS, ngắn hơn thì tin AUTO lúc hết hạn bị coi là cũ
 export const MIN_OVERRIDE_MS = 2 * DEVICE_CONFIRM_GRACE_MS
 export const MAX_OVERRIDE_MS = 24 * 60 * 60 * 1000
 // lệnh bị quên không được chạy bơm hàng giờ trên cảm biến hỏng
@@ -72,7 +72,7 @@ export const MAX_PUMP_ON_OVERRIDE_MS = 30 * 60 * 1000
 export const PUMP_CONFIRM_ALERT_TYPES: AlertType[] = ['SENSOR_FAULT', 'RS485_BUS_FAILURE', 'MISTING_INEFFECTIVE']
 
 export const OFFLINE_THRESHOLD_MS = 30_000
-// Heartbeat mỗi 30 s. ponytail: 90 s = 3 nhịp liền mất, chọn tay
+// Heartbeat mỗi 30 s. 90 s = 3 nhịp liền mất, chọn tay
 export const CAMERA_OFFLINE_THRESHOLD_MS = 90_000
 export const MIN_AI_FPS = 10
 
@@ -310,7 +310,6 @@ export async function reassignZone(
 export interface RegisterCameraInput {
   device_id: string; secret_key: string; rtsp_url?: string
   house_id?: string
-  // Cũ: quy ra House chứa Zone
   zone_id?: string
 }
 

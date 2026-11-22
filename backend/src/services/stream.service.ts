@@ -43,7 +43,6 @@ export async function issueStreamToken(cameraNodeId: string, user: CurrentUser) 
   return { path, token, expires_in: STREAM_TOKEN_TTL_SEC }
 }
 
-// MediaMTX 1.21
 export interface MediaMtxAuthRequest {
   action?: string
   path?: string

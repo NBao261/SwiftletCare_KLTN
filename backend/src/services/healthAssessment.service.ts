@@ -39,7 +39,7 @@ export const addDays = (date: string, days: number) =>
 interface ZoneSampleStats {
   zone_id: string
   zone_name: string
-  env_pct: number      // % mẫu hợp lệ / kỳ vọng
+  env_pct: number
   in_range_pct: number | null
   air_pct: number
   air_hours: number | null

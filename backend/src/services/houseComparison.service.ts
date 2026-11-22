@@ -23,20 +23,16 @@ export interface ComparisonRow {
   house_id: string
   name: string
   time_in_range_pct: number | null
-  // Trên số ngày đánh giá đủ dữ liệu
   good_days_pct: number | null
   return_rate_avg: number | null
-  // So với kỳ liền trước cùng độ dài
   flock_trend_pct: number | null
   alerts_raised: number
   alerts_open: number
   mttr_min: number | null
-  // null = không tải nào có dòng đo
   energy_kwh: number | null
   energy: { misting_kwh: number | null; ventilation_kwh: number | null }
   // Chu kỳ là của tầng: cộng chu kỳ đóng gần nhất ở mỗi tầng
   last_cycle_yield_g: number | null
-  // Không dùng để sắp xếp
   site_causes: Partial<Record<SiteCause, number>>
   simulated: boolean
 }

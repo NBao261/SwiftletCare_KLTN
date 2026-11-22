@@ -21,19 +21,16 @@ export interface IUser extends Document {
   status: UserStatus
   // authenticate chặn mọi route khác tới khi đổi
   must_change_password?: boolean
-  // Bắt buộc có lý do
   locked_at?: Date
   locked_reason?: string
   notification_preferences: NotificationPreferences
   telegram_chat_id?: string
-  // 10 phút
   telegram_link_code_hash?: string
   telegram_link_expires_at?: Date
   // Lưu hash: lộ DB cũng không đặt lại được mật khẩu
   password_reset_token_hash?: string
   password_reset_expires_at?: Date
   deletion_requested_at?: Date
-  // Nhắc đúng 1 lần
   deletion_reminder_sent_at?: Date
   // Document giữ lại để không vỡ tham chiếu
   deleted_at?: Date
@@ -87,7 +84,6 @@ const userSchema = new Schema<IUser>(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
 
-// bcrypt cost=12
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password_hash')) return next()
   this.password_hash = await bcrypt.hash(this.password_hash, 12)

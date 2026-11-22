@@ -12,7 +12,6 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     kind:    req.query.kind as HouseReportKind | undefined,
     from:    req.query.from as string | undefined,
     to:      req.query.to as string | undefined,
-    // Route đã đổi sang boolean
     hasConclusion: req.query.hasConclusion as unknown as boolean | undefined,
     page, limit,
   })

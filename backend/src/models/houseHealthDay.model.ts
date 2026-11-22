@@ -5,7 +5,6 @@ import type { FarmMemberRole, HealthLevel, HealthRatingValue, HealthReason, Heal
 export interface IHealthIndicator {
   // environment %, air giờ, flock % giảm, noise số đợt; null khi không tính được
   value: number | null
-  // null khi không đủ dữ liệu
   level: HealthLevel | null
   details?: Record<string, unknown>
 }
@@ -15,7 +14,6 @@ export type HealthIndicators = Record<HealthSource, IHealthIndicator>
 export interface IHealthSnapshot {
   status: HealthStatus
   reasons: HealthReason[]
-  // Để tính báo động giả theo nguồn
   levels: Record<HealthSource, HealthLevel | null>
 }
 
@@ -35,7 +33,6 @@ export interface IDayWeather {
   temperature_max: number | null
   humidity_avg: number | null
   precipitation_mm: number | null
-  // Tối đa 24
   hours: number
 }
 
@@ -43,7 +40,6 @@ export interface IHouseHealthDay extends Document {
   _id: Types.ObjectId
   house_id: Types.ObjectId
   farm_id: Types.ObjectId
-  // Giờ VN
   date: string
   indicators: HealthIndicators
   completeness: Record<HealthSource, boolean>

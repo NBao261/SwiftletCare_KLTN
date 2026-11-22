@@ -1,4 +1,3 @@
-// thư tài khoản qua SMTP; không log mã/mật khẩu; chưa cấu hình SMTP thì nghiệp vụ vẫn chạy
 const sendMailMock = jest.fn()
 jest.mock('nodemailer', () => ({ __esModule: true, default: { createTransport: jest.fn(() => ({ sendMail: sendMailMock })) } }))
 

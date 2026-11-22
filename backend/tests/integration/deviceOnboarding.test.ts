@@ -1,4 +1,3 @@
-// phải đúng cặp {device_id, secretKey}; thuộc farm khác báo riêng; PENDING quá 15 phút
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

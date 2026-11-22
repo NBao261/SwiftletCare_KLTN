@@ -19,9 +19,7 @@ const LOADS: Array<{ load: EnergyLoad; on: string; current: string; baseline: 'm
 ]
 
 export interface EnergyMonth {
-  // Giờ VN
   month: string
-  // null = tải không có dòng đo trong tháng
   misting_kwh: number | null
   ventilation_kwh: number | null
 }

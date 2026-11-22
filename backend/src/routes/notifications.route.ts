@@ -5,7 +5,6 @@ import { authenticate } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
-// Service lọc theo user
 router.use(authenticate)
 
 router.get('/', query('unread').optional().isString().isIn(['true', 'false']), validate, notificationController.list)

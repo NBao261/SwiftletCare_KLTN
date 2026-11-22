@@ -7,7 +7,6 @@ import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
-// Service kiểm thành viên farm
 router.use(authenticate, requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
 
 const pageQuery = [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 })]

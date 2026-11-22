@@ -16,7 +16,6 @@ export interface IConfigProfile extends Document {
   farm_id: Types.ObjectId
   author_id: Types.ObjectId
   name: string
-  // null = mọi giai đoạn
   stage: ConfigProfileStage | null
   thresholds?: Thresholds
   fuzzy_tuning?: FuzzyTuning

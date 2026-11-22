@@ -10,7 +10,7 @@ import type { CurrentUser } from '@/types'
 const BUCKET_MS = 5 * 60_000
 const HISTORY_MS = 6 * 3600_000
 export const HORIZON_STEPS = 12      // 12 × 5 phút = 60 phút
-const MIN_POINTS = 24                // >= 2 giờ dữ liệu
+const MIN_POINTS = 24
 const MAX_STALENESS_MS = 15 * 60_000 // Cũ hơn là thiết bị mất kết nối
 
 type Metric = 'humidity' | 'temperature'

@@ -16,10 +16,8 @@ export interface IRelayOverrideLog extends Document {
   started_by_role: Role
   started_at: Date
   expires_at: Date
-  // null khi đang override
   ended_at?: Date | null
   end_reason?: OverrideEndReason
-  // Farm Owner đã xác nhận bật bơm khi có cảnh báo
   alert_confirmed: boolean
 }
 

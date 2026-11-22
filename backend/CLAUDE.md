@@ -131,7 +131,7 @@ routes/*.route.ts (express-validator + requireRole)
 - **[Bắt buộc]** A new env var is added to `.env.example` with a comment, and read with a safe default or a clear startup error.
 - **[Bắt buộc]** File naming `<resource>.<layer>.ts` with the layer spelled out (`.service`, `.controller`, `.route`, `.model`, `.middleware`, `.util`, `.handler`, `.job`, `.script`) — never `farmService.ts`.
 - **[Nên]** Test files: a unit test mirrors its source file (`tests/unit/<src folder>/<file>.test.ts`, e.g. `tests/unit/utils/thresholds.util.test.ts`); an integration test is named after the feature it covers in camelCase (`tests/integration/<feature>.test.ts`, e.g. `alertLifecycle.test.ts`) — never after a PR or review round. Shared fixtures go in `tests/helpers/` (`ownerFarm.ts`: in-memory DB + a seeded farm); `jest.mock` calls stay in each test file.
-- **[Nên]** Comments explain *why* (business reason, FR code from Report 3), not what the code does.
+- **[Nên]** Comments are short `//` lines that explain *why* (a business reason, a pitfall), not what the code does. No requirement codes (FR, BR, SM, SRS, Report §) and no `/** */` blocks in code: traceability lives in Report 3/4 and the tests.
 
 ## Known debt — not held against PRs that don't touch it
 

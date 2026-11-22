@@ -5,7 +5,6 @@ export interface IWeatherCompensation extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   house_id: Types.ObjectId
-  // Luật có |offset| lớn nhất
   rule_id: Types.ObjectId
   offset_pct: number
   sent_at: Date

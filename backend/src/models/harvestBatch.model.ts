@@ -21,7 +21,6 @@ export interface IHarvestBatch extends Document {
     avg_nh3_ppm?: number
     avg_co2_ppm?: number
     telemetry_range?: { from: Date; to: Date }
-    // Zone chưa đủ 7 ngày telemetry
     insufficient_data?: boolean
   }
   flock_snapshot: {
@@ -29,7 +28,6 @@ export interface IHarvestBatch extends Document {
     estimated_population?: number
   }
   status: HarvestStatus
-  // lô của Farm Owner tự xác nhận lúc tạo
   confirmed_by?: Types.ObjectId
   confirmed_at?: Date
   created_at: Date
@@ -48,7 +46,6 @@ const harvestBatchSchema = new Schema<IHarvestBatch>(
     weight_grams:{ type: Number, required: true },
     nest_type:   { type: String, enum: ['RAW','CLEANED','PREMIUM'] satisfies NestType[], required: true },
     product_images: [{ type: String }],
-    // Khoá kho file không ra API
     photo_object_key: { type: String, select: false },
     env_snapshot: {
       avg_temperature: { type: Number },

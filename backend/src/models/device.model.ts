@@ -12,13 +12,10 @@ export interface ISensorNode extends Document {
   device_id: string
   zone_id: Types.ObjectId
   firmware_version: string
-  // chờ heartbeat báo đúng firmware_version mới
   ota_pending?: { version: string; url: string; requested_at: Date; requested_by?: Types.ObjectId }
-  // Quá hạn xác nhận: thiết bị đã rollback về running_version
   ota_failed?: { version: string; failed_at: Date; running_version: string }
   last_heartbeat?: Date
   status: DeviceStatus
-  // null = firmware không báo (UNKNOWN)
   applied_config_version?: number | null
   config_sync: ConfigSyncState
   config_stale_heartbeats: number
@@ -43,9 +40,7 @@ export interface ISensorNode extends Document {
     loop: boolean
   }
   registered_at: Date
-  // thiết bị giả lập, màn hình phải ghi rõ
   simulated: boolean
-  // Nhận thông báo khi kích hoạt quá hạn
   registered_by?: Types.ObjectId
   activation_overdue_at?: Date
   // không xoá vì telemetry/alert cũ tham chiếu node_id
@@ -74,7 +69,6 @@ export interface IRelayUsage {
 export interface ICameraNode extends Document {
   _id: Types.ObjectId
   device_id: string
-  // Camera ở cửa của cả nhà: gắn House, không gắn Zone
   house_id: Types.ObjectId
   rtsp_url?: string
   status: DeviceStatus
@@ -88,7 +82,6 @@ export interface ICameraNode extends Document {
   decommissioned_at?: Date
   decommission_reason?: string
   replaced_by?: Types.ObjectId
-  // chưa có thì nút AI dùng vòng trong config.yaml
   counting_ring?: CountingRing & { updated_at: Date; updated_by: Types.ObjectId }
   counting_ring_history: ICountingRingHistoryEntry[]
 }

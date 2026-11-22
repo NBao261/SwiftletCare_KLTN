@@ -5,7 +5,6 @@ import type { Role } from '@/types'
 interface RequestContext {
   ip?: string
   client?: string
-  // Một mã cho mọi dòng audit của cùng request
   correlationId?: string
   // authenticate ghi vào
   actorRole?: Role

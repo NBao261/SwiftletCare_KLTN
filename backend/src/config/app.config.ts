@@ -43,7 +43,6 @@ if (trustProxy !== false) app.set('trust proxy', trustProxy)
 app.use(helmet())
 // credentials: cookie refreshToken cross-origin, nên không dùng được origin '*'
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173', credentials: true }))
-// Đếm theo tài khoản; auth có limiter riêng
 app.use(apiLimiter)
 
 // /internal/* mang khoá trong ?key=, không ghi vào log truy cập
@@ -94,7 +93,6 @@ app.use('/maintenance', maintenanceRoutes)
 app.use('/profiles', profileRoutes)
 app.use('/recommendations', recommendationRoutes)
 
-// Dịch vụ nội bộ (EMQX, MediaMTX), không phải người dùng
 app.use('/internal', internalRoutes)
 
 app.use((_req: Request, res: Response) => {

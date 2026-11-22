@@ -23,7 +23,6 @@ const coordinates = (required: boolean) => {
   ]
 }
 
-// Service lọc; Admin không thấy farm nào
 router.get   ('/',             farmController.list)
 const nameRule = () => body('name').trim().notEmpty().withMessage('Cần tên')
   .isLength({ max: MAX_NAME_LENGTH }).withMessage(`Tên tối đa ${MAX_NAME_LENGTH} ký tự`)
@@ -44,7 +43,6 @@ router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
   validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
-// Còn thiết bị đang dùng thì 409
 router.put   ('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule().optional(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
   // không giới hạn mô tả
@@ -63,7 +61,6 @@ router.put   ('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'),
   body('primary').optional().isBoolean({ strict: true }), validate, farmController.assignTechnician)
 router.delete('/houses/:houseId/technicians/:userId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), param('userId').isMongoId(),
   validate, farmController.unassignTechnician)
-// Thợ chỉ xem ca của mình (service lọc)
 router.get   ('/houses/:houseId/roster', requireRole('FARM_OWNER', 'FARM_TECHNICIAN'), param('houseId').isMongoId(),
   validate, farmController.getRoster)
 router.put   ('/houses/:houseId/roster', requireRole('FARM_OWNER'), param('houseId').isMongoId(),

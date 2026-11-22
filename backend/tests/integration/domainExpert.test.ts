@@ -1,4 +1,3 @@
-// Domain Expert cả farm, không relay/loa, thu hoạch, xác nhận cảnh báo, quản lý farm
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

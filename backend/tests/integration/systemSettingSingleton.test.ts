@@ -1,4 +1,3 @@
-// 2 upsert đồng thời vào collection trống không được tạo 2 document
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { SystemSetting } from '@/models/systemSetting.model'

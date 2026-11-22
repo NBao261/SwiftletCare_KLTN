@@ -8,7 +8,7 @@ type UsageRelay = 'misting' | 'ventilation'
 const RELAYS: UsageRelay[] = ['misting', 'ventilation']
 const RELAY_LABEL: Record<UsageRelay, string> = { misting: 'bơm phun sương', ventilation: 'quạt thông gió' }
 
-// ponytail: số tham khảo chung, thay bằng datasheet thiết bị thật
+// Số tham khảo chung, thay bằng datasheet thiết bị thật
 export const RELAY_SERVICE_LIMITS: Record<UsageRelay, { hours: number; switches: number }> = {
   misting:     { hours: 500,  switches: 100_000 },
   ventilation: { hours: 2000, switches: 100_000 },
@@ -18,7 +18,6 @@ export const RELAY_SERVICE_LIMITS: Record<UsageRelay, { hours: number; switches:
 export const MAX_GAP_MS = 30_000
 // Telemetry giữ 90 ngày, đếm hết quá nặng
 const FIRST_RUN_LOOKBACK_MS = 7 * 86400_000
-// Còn thì lần sau đếm tiếp
 const BATCH = 50_000
 
 type Sample = { timestamp: Date; misting_on?: boolean; ventilation_on?: boolean; pump_current_a?: number; fan_current_a?: number }

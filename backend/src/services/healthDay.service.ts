@@ -23,7 +23,7 @@ export const isAssessor = (role: Role) => ASSESSOR_ROLES.includes(role)
 
 // báo cáo theo yêu cầu tới 31 ngày
 export const MAX_DAY_RANGE = 31
-// ponytail: tối đa 1 năm mỗi lần để chặn truy vấn quá lớn
+// Tối đa 1 năm mỗi lần để chặn truy vấn quá lớn
 export const MAX_EVALUATION_RANGE = 366
 const SOURCES: HealthSource[] = ['environment', 'air', 'flock', 'noise']
 const LEVEL_TO_STATUS: Record<HealthLevel, OrderedStatus> = { NORMAL: 'GOOD', SLIGHT: 'WATCH', CLEAR: 'ACTION' }

@@ -46,7 +46,6 @@ export async function getHistory(zoneId: string, user: CurrentUser, query: Histo
   return { records: records as unknown as ITelemetry[], total, page, limit }
 }
 
-// deviceId trong payload để tra zone_id, không dùng slug trong topic
 // Firmware gửi ~1s cho dashboard; DB chỉ cần 1 mẫu/khoảng này
 export const TELEMETRY_PERSIST_INTERVAL_MS = 10_000
 // Cũ hơn mức này là dữ liệu buffer offline flush lại
@@ -54,7 +53,7 @@ export const STALE_TELEMETRY_MS = 60_000
 const MAX_BACKDATE_MS = 7 * 24 * 60 * 60 * 1000
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000
 
-// ponytail: in-memory theo process; nhiều instance thì chuyển Redis
+// In-memory theo process; nhiều instance thì chuyển Redis
 const lastPersisted = new Map<string, { at: number; anomaly: boolean }>()
 
 // Thiếu hoặc vô lý (chưa sync NTP) thì lấy giờ nhận

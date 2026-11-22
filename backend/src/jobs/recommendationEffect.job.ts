@@ -3,7 +3,6 @@ import cron from 'node-cron'
 import { expireRecommendations, measureRecommendationEffects } from '@/services/recommendation.service'
 import logger from '@/utils/logger.util'
 
-// Sau báo cáo 06:00
 const CRON_EXPRESSION = '0 30 6 * * *'
 
 export function startRecommendationEffectJob(): void {

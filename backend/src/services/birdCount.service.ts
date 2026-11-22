@@ -20,11 +20,10 @@ const DAY_MS = 86_400_000
 const BUCKET_MS = 5 * 60_000
 
 export const BASELINE_DAYS = 7
-// ponytail: 3 ngày nền chọn tay; ít hơn thì 1 ngày lệch đã thành cảnh báo
+// 3 ngày nền chọn tay; ít hơn thì 1 ngày lệch đã thành cảnh báo
 export const MIN_BASELINE_DAYS = 3
-// ponytail: chọn tay (7 ngày ≈ 2016 khoảng/camera)
+// Chọn tay (7 ngày ≈ 2016 khoảng/camera)
 const MAX_BUCKET_RANGE_MS = 7 * DAY_MS
-// ponytail: chọn tay
 const DEFAULT_BUCKET_RANGE_MS = DAY_MS
 
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
@@ -41,9 +40,7 @@ export interface HouseDayCounts {
   morning_exit: number
   evening_entry: number
   evening_exit: number
-  // Không âm
   net_exit: number
-  // Không âm
   net_entry: number
   // null khi thiếu phiên hoặc sáng không có chim ra
   return_rate: number | null

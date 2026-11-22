@@ -15,7 +15,6 @@ export interface OnsiteCheck {
   requested_at: Date
   observation?: OnsiteObservation
   note?: string
-  // Khoá MinIO
   photo?: string
   answered_by?: Types.ObjectId
   answered_at?: Date
@@ -25,10 +24,8 @@ export interface IAlert extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   zone_id?: Types.ObjectId
-  // Cảnh báo của cả nhà (camera), không gắn Zone
   house_id?: Types.ObjectId
   node_id?: Types.ObjectId
-  // eventId mới nhất của thiết bị
   event_id?: string
   // tính trong hook validate, unique khi còn mở
   incident_key?: string
@@ -44,22 +41,18 @@ export interface IAlert extends Document {
   // đổi kết luận sang CONFIRMED thì trở về đây
   previous_status?: Extract<AlertStatus, 'ACTIVE' | 'ACKNOWLEDGED'>
   created_at: Date
-  // Cập nhật tối đa 1 lần/phút
   last_seen_at?: Date
   occurrence_count: number
   acknowledged_at?: Date
   resolved_at?: Date
   acknowledged_by?: Types.ObjectId
   acknowledgement_note?: string
-  // có rồi thì không gửi lại nữa
   renotified_at?: Date
   // không có = chờ kiểm chứng; role là Farm Owner khi farm chưa có chuyên gia
   expert_verdict?: { result: AlertVerdictResult; note?: string; by: Types.ObjectId; role?: FarmMemberRole; at: Date }
-  // mỗi việc nhắc một lần
   expert_reminded_at?: Date
   // Không có = cảnh báo cũ, gửi Farm Owner
   routing?: { technician_id?: Types.ObjectId; owners_notified: boolean }
-  // có rồi thì không báo nữa
   escalated_at?: Date
   site_cause?: { cause: SiteCause; photos: string[]; by: Types.ObjectId; at: Date }
   onsite_checks: OnsiteCheck[]

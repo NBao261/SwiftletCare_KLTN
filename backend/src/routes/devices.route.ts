@@ -12,11 +12,9 @@ import { validate } from '@/middlewares/validate.middleware'
 const router = Router()
 router.use(authenticate)
 
-// RAM, không ghi đĩa tạm
 const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_AUDIO_BYTES, files: 1 } })
 const trackParams = [param('id').isMongoId(), param('trackId').isMongoId()]
 
-// Phải kèm secretKey in trên nhãn
 router.post('/sensor-nodes/register',        requireRole('FARM_OWNER'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
 // Thiết bị gỡ trong 24 giờ còn khôi phục được
 router.get ('/sensor-nodes',
@@ -32,7 +30,6 @@ router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), par
   body('volume').optional().isInt({ min: 0, max: 30 }).toInt(),
   body('track').optional().isInt({ min: 1 }).toInt(),
   validate, deviceController.updateSpeakerSchedule)
-// Service kiểm nhà của Farm Technician
 router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(),
   // Giá trị cực lớn làm Zone bị tính 0% tự động mãi
   body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(),
@@ -53,7 +50,6 @@ router.post  ('/sensor-nodes/:id/audio-tracks/:trackId/play-now', requireRole('F
 router.post  ('/sensor-nodes/:id/audio/stop', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, audioTrackController.stopPlayback)
 router.delete('/sensor-nodes/:id/audio-tracks/:trackId', requireRole('FARM_OWNER'), ...trackParams, validate, audioTrackController.deleteTrack)
 
-// Service kiểm cả Zone nguồn và đích
 router.put ('/sensor-nodes/:id/reassign-zone', requireRole('FARM_OWNER'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
 
 router.post('/sensor-nodes/:id/decommission', requireRole('FARM_OWNER'), param('id').isMongoId(),

@@ -1,4 +1,3 @@
-// farm chưa có chuyên gia thì Farm Owner làm thay; có chuyên gia thì 403 hoặc mục duyệt; chuyên gia bị khoá không tính
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

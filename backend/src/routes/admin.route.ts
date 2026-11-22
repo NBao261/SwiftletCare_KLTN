@@ -41,7 +41,6 @@ router.put('/delete-requests/:id/complete',
   param('id').isMongoId(), validate,
   adminController.completeDeletionRequest,
 )
-// Người yêu cầu được báo lại lý do
 router.put('/delete-requests/:id/reject',
   param('id').isMongoId(), body('reason').isString().trim().notEmpty(), validate,
   adminController.rejectDeletionRequest,

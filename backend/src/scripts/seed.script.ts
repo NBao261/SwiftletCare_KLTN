@@ -10,7 +10,6 @@ import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisio
 import { hashBrokerSecret, hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
-// Bắt buộc khi tạo farm
 const DEMO_COORDINATES = { lat: 10.7769, lng: 106.7009 }
 
 async function seed(): Promise<void> {
@@ -20,7 +19,7 @@ async function seed(): Promise<void> {
   if (!user) {
     user = await User.create({
       email: 'owner@swiftletcare.dev',
-      password_hash: 'Test1234!', // pre-save hook tự hash
+      password_hash: 'Test1234!',
       full_name: 'Demo Farm Owner',
       role: 'FARM_OWNER',
     })

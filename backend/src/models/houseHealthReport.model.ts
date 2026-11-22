@@ -7,7 +7,6 @@ export interface ZoneHealthMetrics {
   auto_mode_pct: number | null
   misting_switches: number
   ventilation_switches: number
-  // Gồm cả lỗi thiết bị
   alerts_by_type: Record<string, number>
   avg_return_rate: number | null
   nh3_avg: number | null
@@ -27,10 +26,8 @@ export interface HouseReportZoneSection extends ZoneHealthMetrics {
 }
 
 export interface HouseReportMetrics {
-  // Ngày thiếu phiên: complete false
   return_rate_trend: { date: string; return_rate: number | null; complete: boolean }[]
   avg_return_rate: number | null
-  // null khi không có dữ liệu
   weather: {
     temperature_min: number | null
     temperature_max: number | null
@@ -46,14 +43,12 @@ export interface IHouseHealthReport extends Document {
   house_id: Types.ObjectId
   farm_id: Types.ObjectId
   kind: HouseReportKind
-  // Giờ VN, tính cả 2 đầu
   period_start: string
   period_end: string
   generated_at: Date
   house_metrics: HouseReportMetrics
   zone_sections: HouseReportZoneSection[]
   expert_conclusion?: { text: string; by: Types.ObjectId; at: Date; edited_at?: Date }
-  // mỗi việc nhắc một lần
   expert_reminded_at?: Date
 }
 

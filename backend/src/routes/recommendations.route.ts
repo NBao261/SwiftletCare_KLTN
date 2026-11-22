@@ -5,7 +5,6 @@ import { MAX_NAME_LENGTH } from '@/services/farm.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
-// Khoảng giá trị và trạng thái: service kiểm (400, 409)
 const router = Router()
 router.use(authenticate)
 
@@ -33,7 +32,6 @@ router.post('/rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), body('farm_id'
 router.put ('/rules/:id', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('id').isMongoId(), ...ruleBody(),
   validate, recommendationController.updateRule)
 
-// Cần farmId hoặc houseId
 router.get ('/', requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'),
   query('farmId').if(query('houseId').not().exists()).isString().isMongoId(),
   query('houseId').optional().isString().isMongoId(),

@@ -6,7 +6,7 @@ import { generateDailyReports } from '@/services/houseHealthReport.service'
 import { evaluateRecommendationRules } from '@/services/recommendation.service'
 import logger from '@/utils/logger.util'
 
-// ponytail: quét 5 phút nên trễ tối đa 5 phút
+// Quét 5 phút nên trễ tối đa 5 phút
 const CRON_EXPRESSION = '0 */5 * * * *'
 
 // Bước sau vẫn chạy khi bước trước lỗi

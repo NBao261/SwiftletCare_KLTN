@@ -11,12 +11,10 @@ export interface ITelemetry extends Document {
   nh3_ppm?: number
   co2_ppm?: number
   sound_db?: number
-  // Để đo hiệu quả điều khiển
   misting_pct?: number
   ventilation_pct?: number
   misting_on?: boolean
   ventilation_on?: boolean
-  // A, chỉ controller đo dòng mới có
   pump_current_a?: number
   fan_current_a?: number
   is_anomaly: boolean

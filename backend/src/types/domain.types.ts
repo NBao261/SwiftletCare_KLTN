@@ -4,7 +4,6 @@ export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FAR
 // PENDING: đã đăng ký, chưa có heartbeat đầu tiên
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận
 export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'
 export type AlertType =
   | 'THRESHOLD_BREACH' | 'NODE_OFFLINE'
@@ -16,7 +15,7 @@ export type AlertType =
   | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'
   | 'MAINTENANCE_DUE'
   | 'ACTUATOR_FAULT'
-  | 'CONFIG_MISMATCH'                         // backend tự tính
+  | 'CONFIG_MISMATCH'
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
@@ -24,7 +23,6 @@ export type ConfigSyncState = 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
 
 
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-// Lô của Farm Technician chờ Farm Owner xác nhận
 export type HarvestStatus = 'DRAFT' | 'CONFIRMED'
 
 export interface JwtAccessPayload {
@@ -97,7 +95,6 @@ export interface DetectionTuning {
   speaker_drop_pct: number       // % giảm so với nền
 }
 
-// Theo House: chim ra vào ở cửa của cả nhà
 export interface BirdCountTuning {
   return_rate_drop_pct: number   // % giảm so với trung bình kỳ trước
 }
@@ -149,7 +146,6 @@ export interface TelemetryPayload {
   pump_current_a?: number
   fan_current_a?: number
   timestamp: number
-  // Handler gắn theo topic
   buffered?: boolean
 }
 
@@ -162,12 +158,10 @@ export interface HeartbeatPayload {
   timestamp: number
   // Heartbeat đầu sau mỗi lần reconnect: backend đẩy lại config
   justConnected?: boolean
-  // firmware >= 1.4.0
   resetReason?: string
   ip?: string
   // firmware >= 2.1.0; thiếu = UNKNOWN
   appliedConfigVersion?: number
-  // dòng bình thường đã học (A)
   actuatorBaseline?: { misting?: number; ventilation?: number }
   modelVersion?: string
   fps?: number
@@ -199,7 +193,6 @@ export interface BirdCountPayload {
   confidence_avg?: number
   // Chỉ tham khảo, job LOW_RETURN_RATE không dựa vào
   final?: boolean
-  // epoch ms
   bucket_start?: number
   bucket_minutes?: number
   timestamp?: number
@@ -230,7 +223,6 @@ export interface WsRelayUpdate {
 // Số của cả House, cùng con số với GET /analytics/bird-count/current
 export interface WsBirdCountUpdate {
   houseId: string
-  // Giờ Việt Nam
   sessionDate: string
   sessionType: SessionType
   entryCount: number

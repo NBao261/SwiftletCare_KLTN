@@ -28,7 +28,7 @@ export const ALERT_SEEN_UPDATE_MS = 60 * 1000
 // Không ghi nhận lại trong khoảng này = đã bình thường, tự đóng
 export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
 
-// Firmware gửi lại mỗi 15 phút khi sự cố còn, nên mốc này phải dài hơn. ponytail: 60 phút chọn tay
+// Firmware gửi lại mỗi 15 phút khi sự cố còn, nên mốc này phải dài hơn. 60 phút chọn tay
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
 // Tự đóng khi tải chạy đúng lại; Work Order của nó không dựa vào việc gửi lại
 export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT']
@@ -64,7 +64,6 @@ export const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
 
 export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
 
-// có thể báo nhầm nên cần kiểm chứng
 export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
 
 // Thiết bị gửi lên thì từ chối: làm sai thống kê kiểm chứng
@@ -80,7 +79,6 @@ export const DEVICE_ALERT_TYPES: AlertType[] = [
 
 const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 
-// Firmware cũ
 const ALERT_TYPE_ALIAS: Record<string, AlertType> = {
   BIRD_PANIC:   'NOISE_ANOMALY',
   PUMP_DRY:     'MISTING_INEFFECTIVE',
@@ -95,7 +93,6 @@ export interface CreateAlertInput {
   eventId?: string
   farmId: string
   zoneId?: string
-  // Cảnh báo cả nhà (camera), không có zoneId
   houseId?: string
   nodeId?: string
   type: AlertType
@@ -352,14 +349,12 @@ async function keepThresholdAlertAlive(zoneId: string, nodeId: string, metrics: 
 export interface ListAlertsQuery {
   farmId?: string
   zoneId?: string
-  // Cảnh báo cả nhà và của các Zone trong nhà
   houseId?: string
   status?: string
   // status đi kèm thì status thắng
   open?: boolean
   severity?: string
   type?: string
-  // pending = suy luận chưa kiểm chứng
   verdict?: 'any' | 'pending' | 'confirmed' | 'rejected'
   page?: number
   limit?: number

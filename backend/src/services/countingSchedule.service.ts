@@ -22,7 +22,6 @@ function present(house: IHouse) {
   return {
     house_id: String(house._id),
     schedule: house.counting_schedule ?? EMPTY,
-    // null khi nhà chưa đặt lịch
     effective_from: history.at(-1)?.effective_from ?? null,
     default_windows: DEFAULT_WINDOWS,
     today: { date: today, ...windowsOn(scheduleOn(history, today), today) },

@@ -1,4 +1,3 @@
-// gửi lại khi nút AI vừa kết nối lại
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

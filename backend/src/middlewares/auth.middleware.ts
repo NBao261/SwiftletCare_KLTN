@@ -6,7 +6,6 @@ import { AppError, UnauthorizedError, ForbiddenError } from '@/utils/appError.ut
 import logger from '@/utils/logger.util'
 import { setRequestActorRole } from '@/utils/requestContext.util'
 
-// Route vẫn dùng được khi tài khoản đang giữ mật khẩu tạm (`must_change_password`)
 const PASSWORD_CHANGE_ALLOWED = new Set(['PUT /auth/password', 'POST /auth/logout'])
 
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {

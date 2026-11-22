@@ -1,4 +1,3 @@
-// Đường cũ /devices/sensor-nodes/:id/thresholds đã bỏ
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

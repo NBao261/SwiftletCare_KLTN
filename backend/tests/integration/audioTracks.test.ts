@@ -1,4 +1,3 @@
-// qua route thật; MinIO/MQTT/socket mock
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

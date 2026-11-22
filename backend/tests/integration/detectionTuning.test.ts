@@ -1,4 +1,3 @@
-// 5 tham số theo Zone gửi ESP32; mức giảm tỷ lệ chim về theo House
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

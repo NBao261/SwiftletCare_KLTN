@@ -5,7 +5,6 @@ import { applySoftDeleteScope } from '@/utils/softDelete.util'
 export interface IFarmMember {
   user_id:    Types.ObjectId
   is_primary: boolean
-  // FARM_TECHNICIAN chỉ các nhà được giao (houses.technicians)
   role:       FarmMemberRole
   joined_at:  Date
 }

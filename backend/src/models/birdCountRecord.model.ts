@@ -12,10 +12,8 @@ export interface IBirdCountRecord extends Document {
   entry_count: number
   exit_count: number
   confidence_avg?: number
-  // 'HH:mm' giờ VN; chưa tính thì không có
   window_start?: string
   window_end?: string
-  // false khi EDGE_AI_DEGRADED mở trong khung
   complete?: boolean
   // Từ đây tin cộng dồn của nút AI không ghi đè nữa
   computed_at?: Date

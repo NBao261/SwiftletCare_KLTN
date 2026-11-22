@@ -1,4 +1,3 @@
-// thu hồi/cấp lại secretKey; tìm người dùng
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

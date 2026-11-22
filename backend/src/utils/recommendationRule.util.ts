@@ -4,7 +4,6 @@ import { FUZZY_TUNING_KEYS, FUZZY_TUNING_LIMITS } from '@/utils/fuzzyTuning.util
 
 export const RECOMMENDATION_EXPIRY_DAYS = 7
 export const RECOMMENDATION_EFFECT_DAYS = 7
-// Như route /work-orders
 export const RULE_WORK_ORDER_TITLE_MAX = 200
 export const RULE_WINDOW_MIN_DAYS = 1
 export const RULE_WINDOW_MAX_DAYS = 30
