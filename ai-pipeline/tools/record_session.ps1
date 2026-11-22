@@ -1,7 +1,7 @@
-﻿# Quay clip RTSP của camera nhà yến cho tới giờ -End (HH:mm hôm nay), plan 7.1.
+﻿# Quay clip RTSP của camera nhà yến cho tới giờ -End (HH:mm hôm nay)
 # Task Scheduler gọi mỗi ngày lúc 05:15 và 17:15 (WakeToRun; máy phải cắm sạc và ở Sleep, không Shut down):
 #   powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File <ai-pipeline>\tools\record_session.ps1 -Label morning -End 07:15
-# Mật khẩu camera đọc từ ai-pipeline\.env lúc chạy, không chép vào đây. Clip và log để ở ổ D (plan 7.1).
+# Mật khẩu camera đọc từ ai-pipeline\.env lúc chạy, không chép vào đây. Clip và log để ở ổ D.
 # File lưu UTF-8 có BOM: PowerShell 5.1 đọc file không BOM theo bảng mã ANSI, chữ tiếng Việt trong log sẽ hỏng.
 param(
     [Parameter(Mandatory)] [string] $Label,
@@ -47,7 +47,7 @@ while (($left = [int]($endTime - (Get-Date)).TotalSeconds) -gt 5) {
         -map 0:v -c copy -t $left -movflags +frag_keyframe+empty_moov $part
     Log "ffmpeg thoát mã $LASTEXITCODE, $([math]::Round((Get-Item $part -ErrorAction SilentlyContinue).Length / 1MB)) MB"
     # Fragmented mp4 không có chỉ mục nên không tua được: đóng gói lại thành mp4 thường (vài giây, không nén lại).
-    # Lỗi thì giữ nguyên file .part.mp4 — vẫn xem được, chỉ không tua.
+    # Lỗi thì giữ nguyên file .part.mp4: vẫn xem được, chỉ không tua.
     if (Test-Path $part) {
         & ffmpeg -nostdin -loglevel error -i $part -c copy -movflags +faststart $out
         if ($LASTEXITCODE -eq 0 -and (Test-Path $out)) { Remove-Item $part; Log "đóng gói lại xong: $out" }

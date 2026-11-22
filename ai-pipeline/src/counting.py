@@ -1,27 +1,4 @@
-﻿"""
-SwiftletCare - Entrance ring counter
-Counts swiftlets crossing a closed ring drawn around the entrance hole.
-
-The camera looks at the hole from inside the house, so birds go through it
-roughly towards the lens and can leave in any direction: a single straight
-line would miss whoever flies off the other way. A ring catches every
-direction; a bird that only flies past the hole crosses the ring in and out,
-which cancels in the net count the backend computes (VISION-FR-009).
-
-Birds are tracked over the whole frame while they circle (plan §19.8), but at
-the hole they move 150-200 px per frame and show as a blur for 1-2 frames, so
-the frame inside the ring is often never detected. Two rules cover that, both
-only for fast tracks (circling birds move 20-35 px per frame):
-- a track lost just outside the ring whose last velocity carries it into the
-  ring went into the hole;
-- a new track first seen just outside the ring whose first velocity, run
-  backwards, comes from inside the ring came out of the hole.
-A track born and lost inside the ring without ever leaving it cannot be told
-apart (in or out) and is only counted in `ambiguous`. A track lost anywhere
-else, e.g. at the frame edge, counts nothing.
-
-SRS: VISION-FR-005; plan §3.3 items 6-7, §6.4, §19.8
-"""
+﻿"""Counts swiftlets crossing a closed ring around the entrance hole; fast tracks lost at the hole are extrapolated."""
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Iterable, Optional, Sequence, Tuple
@@ -45,15 +22,7 @@ class _Track:
 
 
 class RingCounter:
-    """
-    ring: polygon points as frame ratios [(x, y), ...] (0.0–1.0), in order.
-    into_ring_is_exit: True when the inside of the ring is the hole leading
-    outdoors (camera inside the house): going into the ring = EXIT.
-    base_entry/base_exit: counts already made in this session before a restart.
-    lost_frames: frames without a sighting before a track is final (= the tracker's lost_track_buffer).
-    extrapolate_frames: how many frames of motion to extrapolate at a track's ends; 0 turns it off.
-    min_speed_px: extrapolate only tracks at least this fast (px per frame).
-    """
+    """ring: frame-ratio points; into_ring_is_exit: going into the ring = EXIT; lost_frames = the tracker's lost_track_buffer."""
 
     def __init__(self, ring: Sequence[Sequence[float]], width: int, height: int,
                  into_ring_is_exit: bool = True, base_entry: int = 0, base_exit: int = 0, *,
@@ -65,17 +34,12 @@ class RingCounter:
         self._extrapolate = extrapolate_frames
         self._min_speed = min_speed_px
         self._frame = 0
-        # kept until lost_frames have passed, so a track the tracker loses for a few frames
-        # still counts if it crossed meanwhile
+        # Kept until lost_frames have passed, so a track lost for a few frames still counts
         self._tracks: Dict[int, _Track] = {}
         self.set_ring(ring, width, height, into_ring_is_exit)
 
     def set_ring(self, ring: Sequence[Sequence[float]], width: int, height: int, into_ring_is_exit: bool) -> None:
-        """
-        Swap in a new ring (the Domain Expert redrew it, VISION-FR-018) without losing the session's
-        counts. Where each track stood is forgotten: a bird sitting between the old and the new ring
-        would otherwise count as a crossing it never made.
-        """
+        """Swap in a redrawn ring without losing the session's counts; track positions are forgotten."""
         if len(ring) < 3:
             raise ValueError("ring needs at least 3 points")
         self.polygon = np.array([(x * width, y * height) for x, y in ring], np.float32)
@@ -101,10 +65,7 @@ class RingCounter:
                    for k in range(1, self._extrapolate + 1))
 
     def update(self, track_ids: Iterable[int], boxes: Iterable[Sequence[float]]) -> Tuple[int, int]:
-        """
-        One frame of tracks: ids and (x1, y1, x2, y2) boxes in full-frame pixels. Call it for every
-        frame, also with no tracks, so lost tracks get finalised. Returns (new_entries, new_exits).
-        """
+        """One frame of tracks (ids, full-frame pixel boxes); call it every frame so lost tracks get finalised."""
         self._frame += 1
         entries = exits = 0
         for tid, (x1, y1, x2, y2) in zip(track_ids, boxes):
@@ -149,11 +110,7 @@ def current_session(windows: Dict[str, Sequence[str]], now: datetime) -> Optiona
 
 
 class BucketClock:
-    """VISION-FR-017 — cắt số đếm cả ngày thành từng khoảng, căn theo đồng hồ (…:00, …:05).
-
-    Nhận tổng cộng dồn của bộ đếm cả ngày; trả số của khoảng vừa hết. Mất hình giữa chừng thì
-    khoảng đó dài hơn bình thường nhưng vẫn mang mốc đầu của nó, số trong lúc mất hình là 0.
-    """
+    """Cắt số đếm cả ngày thành khoảng căn theo đồng hồ; mất hình thì khoảng dài hơn nhưng giữ mốc đầu."""
 
     def __init__(self, minutes: int, now: float, total: Tuple[int, int] = (0, 0)):
         self.length = minutes * 60

@@ -1,13 +1,4 @@
-﻿"""SwiftletCare – pipeline đếm chim.
-RTSP/file → tô đen + 2 ô → YOLO (ONNX) → ByteTrack → vòng đếm quanh miệng lỗ → MJPEG + MediaMTX + MQTT
-
-Chạy trong thư mục ai-pipeline:
-  python src/stream.py                                                    # nguồn: CAMERA_RTSP_URL trong .env
-  python src/stream.py --source D:/SwiftletCare/clips/x.mp4 --session EVENING_ENTRY --no-mqtt
-  python src/stream.py --source D:/SwiftletCare/clips/x.mp4 --session EVENING_ENTRY --realtime   # camera demo (plan 15.8)
-Xem: http://127.0.0.1:8090/stream
-SRS: VISION-FR-001..006, 012..014, 017, 018
-"""
+﻿"""Pipeline đếm chim. Chạy: python src/stream.py [--source clip.mp4 --session EVENING_ENTRY --no-mqtt]"""
 import argparse
 import json
 import os
@@ -51,14 +42,13 @@ def make_engine(cfg: dict, model_path: Optional[str] = None) -> InferenceEngine:
 
 def make_counter(cfg: dict, width: int, height: int, ring: Optional[Ring] = None,
                  base: Tuple[int, int] = (0, 0)) -> RingCounter:
-    """ring = (points, into_ring_is_exit) từ backend (VISION-FR-018); None = vòng trong config.yaml."""
+    """ring = (points, into_ring_is_exit) từ backend; None = vòng trong config.yaml."""
     t = cfg["tracking"]
     points, into_ring_is_exit = ring or (t["ring"], t["into_ring_is_exit"])
     return RingCounter(points, width, height, into_ring_is_exit, *base, lost_frames=t["lost_track_buffer"],
                        extrapolate_frames=t["extrapolate_frames"], min_speed_px=t["extrapolate_min_speed_px"])
 
 
-# ── Nguồn hình ───────────────────────────────────────────────────────────────
 class FrameGrabber(threading.Thread):
     """Đọc RTSP liên tục, chỉ giữ frame mới nhất để hình không trễ dần."""
 
@@ -114,7 +104,6 @@ def frames(source: str, live: bool, realtime: bool = False) -> Iterator[np.ndarr
         yield frame
 
 
-# ── Số đếm của phiên qua lần khởi động lại ───────────────────────────────────
 def load_state(session: str, today: str, path: Path = STATE_FILE) -> Tuple[int, int]:
     """Số đã đếm của đúng phiên + ngày, để khởi động lại giữa phiên không mất số."""
     try:
@@ -131,10 +120,8 @@ def save_state(session: str, today: str, counter: RingCounter, path: Path = STAT
                                 "entry": counter.entry_count, "exit": counter.exit_count}), encoding="utf-8")
 
 
-# ── MQTT ─────────────────────────────────────────────────────────────────────
 def topic_base(env) -> str:
-    """Report 4 §7.2 — mỗi thiết bị một cây topic, nhà yến của camera do backend giữ:
-    swiftletcare/dev/{deviceId}/heartbeat | vision/bird-count | vision/alert | config."""
+    """Mỗi thiết bị một cây topic, nhà yến của camera do backend giữ."""
     return f"swiftletcare/dev/{env['CAMERA_DEVICE_ID']}"
 
 
@@ -168,7 +155,7 @@ class Publisher:
         }), qos=1)
 
     def bucket(self, start_ts: float, minutes: int, entry: int, exit_: int) -> None:
-        """VISION-FR-017 — số chim qua vòng đếm trong một khoảng thời gian, gửi cả ngoài phiên."""
+        """Số chim qua vòng đếm trong một khoảng thời gian, gửi cả ngoài phiên."""
         self.client.publish(self.topic_count, json.dumps({
             "deviceId": self.device_id, "kind": "BUCKET",
             "bucket_start": int(start_ts * 1000), "bucket_minutes": minutes,
@@ -182,7 +169,6 @@ class Publisher:
         }), qos=0)
 
 
-# ── Vòng lặp chính ───────────────────────────────────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=str(CONFIG))
@@ -212,11 +198,11 @@ def main() -> None:
     logger.info(f"Nguồn: {'camera RTSP' if live else source} | xem http://{cfg['stream']['host']}:{cfg['stream']['port']}/stream"
                 f" | đẩy lên máy chủ video: {'có' if pusher else 'không'}")
 
-    # VISION-FR-018: vòng Domain Expert vẽ trên web thắng vòng trong config.yaml và đổi được khi đang chạy
+    # Vòng vẽ trên web thắng vòng trong config.yaml và đổi được khi đang chạy
     device_id = os.environ.get("CAMERA_DEVICE_ID", "")
     rings = RingStore(Path(cfg["tracking"]["ring_override_file"]), device_id)
     ring: Optional[Ring] = rings.load()
-    # VISION-FR-019, BR-13: khung phiên của ngày theo lịch đếm của nhà; ngày backend chưa gửi thì dùng config.yaml
+    # Khung phiên của ngày theo lịch đếm của nhà; ngày backend chưa gửi thì dùng config.yaml
     schedule = ScheduleStore(Path(s["windows_override_file"]), device_id)
     schedule.load()
     if not args.no_mqtt and device_id:

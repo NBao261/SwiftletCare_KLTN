@@ -1,9 +1,4 @@
-"""
-TC-F11-01 (VISION-FR-014): every frame sent to the viewers shows the counting ring, and every tracked
-bird has a green box with its track id. draw() is the one function that annotates both the live
-stream (src/stream.py) and recorded clips (tools/track_clip.py). No model or camera is needed: a fake
-engine returns detections and the real ByteTrack gives the ids.
-"""
+"""Every frame sent to viewers shows the ring, and every tracked bird a green box with its id."""
 import sys
 from pathlib import Path
 
