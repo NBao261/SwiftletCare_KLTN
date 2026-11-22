@@ -39,7 +39,8 @@ export default function DomainExpertCountingRingPage() {
       <SectionCard
         icon={<Crosshair className="w-5 h-5" />}
         title={t('Vòng đếm camera')}
-        description={t('Vẽ vòng khép kín 3–12 đỉnh quanh miệng lỗ ra vào trên khung hình trực tiếp; chim bay qua vòng này mới được đếm.')}
+        description={t('Chim bay qua vòng quanh lỗ ra vào mới được đếm')}
+        help={t('Vẽ vòng khép kín 3–12 đỉnh quanh miệng lỗ ra vào trên khung hình trực tiếp; chim bay qua vòng này mới được đếm.')}
         action={
           list.length > 1 ? (
             <SelectMenu

@@ -141,7 +141,8 @@ export default function DomainExpertProfilesPage() {
       <SectionCard
         icon={<BookCopy className="w-5 h-5" />}
         title={t('Hồ sơ cấu hình')}
-        description={t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
+        description={t('Bộ ngưỡng và hệ số mẫu để áp cho nhiều nhà')}
+        help={t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
         action={isExpert ? (
           <Button variant="primary" size="sm" onClick={openCreate}>
             <Plus className="w-3.5 h-3.5" /> {t('Tạo hồ sơ')}

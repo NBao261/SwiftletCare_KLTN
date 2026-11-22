@@ -86,7 +86,7 @@ const vi = {
 
   // Domain Expert — luật khuyến nghị
   'rules.title': 'Luật khuyến nghị',
-  'rules.subtitle': 'Luật thoả điều kiện hằng ngày thì mở khuyến nghị cho Chủ nhà yến.',
+  'rules.subtitle': 'Luật thoả hằng ngày thì mở khuyến nghị cho Chủ nhà yến.',
   'rules.pickFarm': 'Chọn trang trại ở thanh trên để xem luật khuyến nghị.',
   'rules.tabs': 'Nội dung luật khuyến nghị',
   'rules.tabRules': 'Luật',

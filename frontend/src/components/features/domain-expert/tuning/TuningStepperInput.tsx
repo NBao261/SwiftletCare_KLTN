@@ -4,7 +4,6 @@
  */
 import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
-import InfoTip from '@/components/ui/InfoTip'
 
 interface Props {
   label: string
@@ -16,19 +15,12 @@ interface Props {
   step?: number
   decimals?: number
   unit: string
-  rangeHint?: string
-  defaultHint?: string
   highlighted?: boolean // true khi vừa áp dụng gợi ý AI
-}
-
-// "Phạm vi: …" và "Mặc định: …": chỉ dịch chữ đầu, số và đơn vị giữ nguyên
-function translateHint(hint: string): string {
-  return hint.replace(/^Phạm vi:/, t('Phạm vi:')).replace(/^Mặc định:/, t('Mặc định:')).replace(/(\d)s\b/g, '$1 s')
 }
 
 export default function TuningStepperInput({
   label, subLabel, value, onChange, min, max,
-  step = 1, decimals = 0, unit, rangeHint, defaultHint, highlighted,
+  step = 1, decimals = 0, unit, highlighted,
 }: Props) {
   const clamp = (v: number) => {
     const rounded = Math.round(v * 10 ** decimals) / 10 ** decimals
@@ -48,17 +40,10 @@ export default function TuningStepperInput({
       'flex items-center justify-between gap-3 py-2.5 px-0 border-b border-stone-100 last:border-b-0 transition-colors duration-300',
       highlighted && 'bg-[#ECFFA9]/40 rounded-lg px-2 -mx-2',
     )}>
-      {/* DE-04: "Phạm vi · Mặc định" vào tooltip, chỉ còn nhãn và dòng phụ hiện thẳng */}
-      <div className="flex-1 min-w-0 flex items-start gap-1">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-charcoal leading-tight">{label}</p>
-          {subLabel && <p className="text-small text-warmGray mt-0.5 italic">{t(subLabel)}</p>}
-        </div>
-        {(rangeHint || defaultHint) && (
-          <InfoTip>
-            {[rangeHint, defaultHint].filter(Boolean).map(hint => translateHint(hint as string)).join(' · ')}
-          </InfoTip>
-        )}
+      {/* DE-04: "Phạm vi · Mặc định" ở nút (i) đầu khối (TuningRangeTip), ô chỉ còn nhãn và dòng phụ */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-charcoal leading-tight">{label}</p>
+        {subLabel && <p className="text-small text-warmGray mt-0.5 italic">{t(subLabel)}</p>}
       </div>
 
       {/* Stepper control */}

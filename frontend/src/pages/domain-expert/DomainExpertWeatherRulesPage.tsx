@@ -171,7 +171,8 @@ export default function DomainExpertWeatherRulesPage() {
       <SectionCard
         icon={<CloudRain className="w-5 h-5" />}
         title={t('Luật bù phun sương theo thời tiết')}
-        description={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
+        description={t('Tự chỉnh mức phun sương theo dự báo thời tiết')}
+        help={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
         action={renderHeaderAction()}
       >
         <div className="space-y-4">
@@ -189,9 +190,9 @@ export default function DomainExpertWeatherRulesPage() {
           {/* Danh sách luật — ẩn khi GET lỗi */}
           {!isError && (
             <>
-              <h2 className="text-sm font-semibold text-charcoal">
+              <h3 className="text-base font-semibold text-charcoal">
                 {t('Danh sách luật ({{n}}/{{max}})', { n: isLoading ? '…' : rules.length, max: MAX_RULES })}
-              </h2>
+              </h3>
               {renderRulesList()}
             </>
           )}

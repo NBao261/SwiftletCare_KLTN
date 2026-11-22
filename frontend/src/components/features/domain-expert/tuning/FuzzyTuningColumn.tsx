@@ -49,7 +49,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-200/50">
         <button type="button" onClick={() => onChange(clamp(value - step))} disabled={atMin}
           aria-label={t('Giảm {{label}}', { label })}
-          className={cn('w-7 h-7 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
+          className={cn('h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
             atMin ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           −
         </button>
@@ -58,7 +58,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
         </span>
         <button type="button" onClick={() => onChange(clamp(value + step))} disabled={atMax}
           aria-label={t('Tăng {{label}}', { label })}
-          className={cn('w-7 h-7 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
+          className={cn('h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
             atMax ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           +
         </button>
@@ -96,7 +96,7 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
   }))
 
   if (isLoading) return (
-    <div className="w-full bg-white rounded-[24px] border border-stone-200/80 shadow-sm p-6 animate-pulse space-y-4">
+    <div className="w-full bg-white rounded-2xl border border-stone-200/80 shadow-sm p-6 animate-pulse space-y-4">
       <div className="h-6 bg-stone-100 rounded w-1/4" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-28 bg-stone-100 rounded-2xl" />)}
@@ -105,10 +105,10 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
   )
 
   return (
-    <div className="w-full bg-white rounded-[24px] p-6 border border-stone-200/80 shadow-2xs space-y-4">
+    <div className="w-full bg-white rounded-2xl p-6 border border-stone-200/80 shadow-2xs space-y-4">
       <div className="pb-3 border-b border-stone-100">
         <h3 className="text-base font-bold text-charcoal">{t('1. Hệ số điều khiển mờ')}</h3>
-        <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của Zone')}</p>
+        <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, cấu hình gửi xuống bộ điều khiển của Zone')}</p>
       </div>
 
       <FuzzySuggestionBox
@@ -142,7 +142,7 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
         <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
           <div>
             <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu số đo')}</p>
-            <p className="text-small text-warmGray mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ. Cần firmware 1.2.0 trở lên.')}</p>
+            <p className="text-small text-warmGray mt-1">{t('Làm mượt số đo để rơ-le ít đóng cắt vì nhiễu')}</p>
           </div>
           <Toggle
             checked={form.fuzzy_input_filter}

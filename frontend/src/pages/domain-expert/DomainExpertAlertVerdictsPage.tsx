@@ -145,7 +145,7 @@ export default function DomainExpertAlertVerdictsPage() {
           {/* Header hàng 1: Tiêu đề + Thẻ đếm tab + Bộ lọc SelectMenu */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-warmGray/10">
             <div className="flex items-center gap-2.5">
-              <h2 className="text-base font-bold text-charcoal shrink-0">{t('Danh sách cảnh báo')}</h2>
+              <h2 className="text-h2 text-charcoal shrink-0">{t('Danh sách cảnh báo')}</h2>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-charcoal border border-warmGray/15">
                 {t(currentTab.label)} • {kpiCounts[currentTab.countKey]}
               </span>
@@ -201,7 +201,7 @@ export default function DomainExpertAlertVerdictsPage() {
                 </>
               ) : (
                 <span className="text-small text-warmGray">
-                  {t('Chưa có kết luận nào trong kỳ. Tỷ lệ xác nhận đúng theo loại cảnh báo hiện khi đã có kết luận.')}
+                  {t('Tỷ lệ xác nhận sẽ hiện khi có kết luận đầu tiên.')}
                 </span>
               )}
             </div>

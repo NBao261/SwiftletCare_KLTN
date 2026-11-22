@@ -71,7 +71,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
             <Sparkles className="w-3.5 h-3.5 text-charcoal" />
           </div>
           <span className="text-stone-700">
-            {t('Có gợi ý hệ số mờ khi đủ 3 ngày dữ liệu và độ khớp R² từ 0,3 trở lên.')}
+            {t('Có gợi ý khi đủ 3 ngày dữ liệu và độ khớp R² từ 0,3.')}
           </span>
         </div>
         <span className="bg-white text-stone-600 border border-stone-200/80 text-small font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap self-start sm:self-center shrink-0">

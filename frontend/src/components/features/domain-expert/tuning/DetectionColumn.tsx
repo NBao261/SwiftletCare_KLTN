@@ -7,11 +7,20 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { AlertTriangle, RotateCcw, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { detectionTuningPayload, type TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
 import TuningStepperInput from './TuningStepperInput'
+import TuningRangeTip from './TuningRangeTip'
 import type { ExpertDetectionTuning, ExpertVerdictStats } from '@/types/expert.types'
 import { t, translated } from '@/i18n'
 
-const FIELD_KEYS: Array<keyof ExpertDetectionTuning> = [
-  'noise_margin_db', 'noise_min_sec', 'pump_dry_on_sec', 'pump_dry_min_rise_pct', 'speaker_drop_pct',
+// 5 tham số phát hiện của Zone (EXPERT-FR-008); khoảng và mặc định khớp backend detectionTuning.util.ts
+const FIELDS: Array<{
+  key: keyof ExpertDetectionTuning; label: string; min: number; max: number; step: number; decimals?: number
+  unit: string; range: string; defaultHint: string
+}> = [
+  { key: 'noise_margin_db', label: 'Mức ồn vượt nền', min: 5, max: 30, step: 1, unit: 'dB', range: 'Phạm vi: 5–30 dB', defaultHint: 'Mặc định: 15 dB' },
+  { key: 'noise_min_sec', label: 'Thời gian ồn kéo dài tối thiểu', min: 5, max: 15, step: 1, unit: 'giây', range: 'Phạm vi: 5–15s', defaultHint: 'Mặc định: 10s' },
+  { key: 'pump_dry_on_sec', label: 'Thời gian bơm chạy không tăng ẩm', min: 120, max: 900, step: 30, unit: 'giây', range: 'Phạm vi: 120–900s', defaultHint: 'Mặc định: 300s' },
+  { key: 'pump_dry_min_rise_pct', label: 'Độ ẩm cần tăng tối thiểu', min: 0.5, max: 10, step: 0.5, decimals: 1, unit: '%RH', range: 'Phạm vi: 0,5–10', defaultHint: 'Mặc định: 2 %RH' },
+  { key: 'speaker_drop_pct', label: 'Độ sụt âm lượng báo hỏng loa', min: 30, max: 90, step: 5, unit: '%', range: 'Phạm vi: 30–90%', defaultHint: 'Mặc định: 70%' },
 ]
 
 interface Props {
@@ -118,7 +127,7 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
   const set = (key: keyof ExpertDetectionTuning) => (v: number) => setForm(f => ({ ...f, [key]: v }))
 
   const base = data ?? DEFAULT_DETECTION
-  const dirtyCount = FIELD_KEYS.filter(key => form[key] !== base[key]).length
+  const dirtyCount = FIELDS.filter(field => form[field.key] !== base[field.key]).length
   useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   useImperativeHandle(ref, () => ({
@@ -127,24 +136,27 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
   }))
 
   if (isLoading) return (
-    <div className="bg-white rounded-[24px] border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-3 h-full">
+    <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-3 h-full">
       <div className="h-14 bg-stone-100 rounded-xl" />
       {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 bg-neutral-100 rounded-xl" />)}
     </div>
   )
 
   return (
-    <div className="h-full flex flex-col justify-between bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-2xs">
-      <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+    <div className="h-full flex flex-col justify-between bg-white rounded-2xl p-5 border border-stone-200/80 shadow-2xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-[#27231F]">{t('3. Tham số phát hiện bất thường')}</h3>
-            <span className="bg-[#27231F] text-[#ECFFA9] text-small px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">{t('Chuyên gia')}</span>
+            <h3 className="flex items-center gap-1 text-base font-bold text-charcoal">
+              {t('3. Tham số phát hiện bất thường')}
+              <TuningRangeTip hints={FIELDS.map(field => ({ label: t(field.label), range: field.range, defaultValue: field.defaultHint }))} />
+            </h3>
+            <span className="bg-charcoal text-limeMist text-small px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">{t('Chuyên gia')}</span>
           </div>
-          <p className="text-small text-[#878380] mt-0.5">{t('Cấu hình tham số nhận diện sự cố')}</p>
+          <p className="text-small text-warmGray mt-0.5">{t('Cấu hình tham số nhận diện sự cố')}</p>
         </div>
         <button type="button" onClick={onReset} disabled={isResetting}
-          className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-[#27231F] whitespace-nowrap shrink-0 transition-colors disabled:opacity-50">
+          className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-stone-500 hover:bg-warmGray/10 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors disabled:opacity-50 max-sm:h-11">
           <RotateCcw className="w-3.5 h-3.5" />
           {t('Khôi phục mặc định')}
         </button>
@@ -153,16 +165,10 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
       {/* Nút Lưu chung ở thanh dính đáy của trang (DE-04) */}
       <fieldset disabled={isSaving} className="flex-1 py-1 divide-y divide-stone-100">
         <VerdictStatsHint stats={verdictStats} />
-        <TuningStepperInput label={t('Mức ồn vượt nền')} value={form.noise_margin_db ?? 15}
-          onChange={set('noise_margin_db')} min={5} max={30} step={1} unit="dB" rangeHint="Phạm vi: 5–30 dB" defaultHint="Mặc định: 15 dB" />
-        <TuningStepperInput label={t('Thời gian ồn kéo dài tối thiểu')} value={form.noise_min_sec ?? 10}
-          onChange={set('noise_min_sec')} min={5} max={15} step={1} unit="giây" rangeHint="Phạm vi: 5–15s" defaultHint="Mặc định: 10s" />
-        <TuningStepperInput label={t('Thời gian bơm chạy không tăng ẩm')} value={form.pump_dry_on_sec ?? 300}
-          onChange={set('pump_dry_on_sec')} min={120} max={900} step={30} unit="giây" rangeHint="Phạm vi: 120–900s" defaultHint="Mặc định: 300s" />
-        <TuningStepperInput label={t('Độ ẩm cần tăng tối thiểu')} value={form.pump_dry_min_rise_pct ?? 2.0}
-          onChange={set('pump_dry_min_rise_pct')} min={0.5} max={10} step={0.5} decimals={1} unit="%RH" rangeHint="Phạm vi: 0,5–10" defaultHint="Mặc định: 2 %RH" />
-        <TuningStepperInput label={t('Độ sụt âm lượng báo hỏng loa')} value={form.speaker_drop_pct ?? 70}
-          onChange={set('speaker_drop_pct')} min={30} max={90} step={5} unit="%" rangeHint="Phạm vi: 30–90%" defaultHint="Mặc định: 70%" />
+        {FIELDS.map(field => (
+          <TuningStepperInput key={field.key} label={t(field.label)} value={form[field.key] ?? DEFAULT_DETECTION[field.key]}
+            onChange={set(field.key)} min={field.min} max={field.max} step={field.step} decimals={field.decimals} unit={field.unit} />
+        ))}
       </fieldset>
 
       {updatedAt && (

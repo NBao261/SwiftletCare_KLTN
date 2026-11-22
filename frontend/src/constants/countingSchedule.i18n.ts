@@ -4,7 +4,7 @@ import { prefixLabels, roleDict } from '@/constants/enumLabels.i18n'
 // Từ điển trang Lịch đếm chim của Domain Expert — VISION-FR-019, BR-13, BR-21
 const vi = {
   'page.title': 'Lịch đếm chim',
-  'page.subtitle': 'Khung giờ hai phiên đếm của nhà. Hệ thống tính phiên từ số đếm 5 phút trong khung và kiểm tỷ lệ chim về 15 phút sau khung chiều. Lịch sửa hôm nay áp từ ngày mai.',
+  'page.subtitle': 'Khung giờ hai phiên đếm; lịch sửa hôm nay áp từ ngày mai.',
   'page.pickHouse': 'Chọn nhà yến ở thanh trên để xem lịch đếm chim.',
   'page.loadError': 'Không tải được lịch đếm chim',
   'page.retry': 'Thử lại',
@@ -69,7 +69,7 @@ export type CountingScheduleKey = keyof typeof vi
 
 const en: Record<CountingScheduleKey, string> = {
   'page.title': 'Counting schedule',
-  'page.subtitle': 'Time windows of the house\'s two counting sessions. Sessions are built from the 5-minute counts in each window and the return rate is checked 15 minutes after the evening window. A change made today applies from tomorrow.',
+  'page.subtitle': 'The two counting windows; a change made today applies from tomorrow.',
   'page.pickHouse': 'Choose a swiftlet house in the top bar to see its counting schedule.',
   'page.loadError': 'Could not load the counting schedule',
   'page.retry': 'Retry',

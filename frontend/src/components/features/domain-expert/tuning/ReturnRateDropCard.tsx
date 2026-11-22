@@ -1,6 +1,7 @@
 import { useEffect, useState, forwardRef, useImperativeHandle } from 'react'
 import { RotateCcw } from 'lucide-react'
 import TuningStepperInput from '@/components/features/domain-expert/tuning/TuningStepperInput'
+import TuningRangeTip from '@/components/features/domain-expert/tuning/TuningRangeTip'
 import type { TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
 import { t } from '@/i18n'
 
@@ -35,17 +36,22 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
   }))
 
   return (
-    <div className="flex flex-col gap-3 bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-2xs">
-      <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+    <div className="flex flex-col gap-3 bg-white rounded-2xl p-5 border border-stone-200/80 shadow-2xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
         <div>
-          <h3 className="text-sm font-bold text-[#27231F]">{t('4. Mức giảm tỷ lệ chim về của nhà')}</h3>
-          <p className="text-small text-[#878380] mt-0.5">
+          <h3 className="flex items-center gap-1 text-base font-bold text-charcoal">
+            {t('4. Mức giảm tỷ lệ chim về của nhà')}
+            {houseName && (
+              <TuningRangeTip hints={[{ label: t('Ngưỡng sụt giảm tỷ lệ chim về'), range: 'Phạm vi: 5–50%', defaultValue: `Mặc định: ${DEFAULT_RETURN_RATE_DROP_PCT}%` }]} />
+            )}
+          </h3>
+          <p className="text-small text-warmGray mt-0.5">
             {houseName ? t('Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm', { house: houseName }) : t('Chọn một Zone để biết nhà cần chỉnh')}
           </p>
         </div>
         {houseName && (
           <button type="button" onClick={onReset} disabled={isResetting}
-            className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-[#27231F] whitespace-nowrap shrink-0 transition-colors disabled:opacity-50">
+            className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-stone-500 hover:bg-warmGray/10 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors disabled:opacity-50 max-sm:h-11">
             <RotateCcw className="w-3.5 h-3.5" />
             {t('Khôi phục mặc định')}
           </button>
@@ -56,7 +62,7 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
       {houseName && (
         <fieldset disabled={isSaving} className="contents">
           <TuningStepperInput label={t('Ngưỡng sụt giảm tỷ lệ chim về')} value={draft}
-            onChange={setDraft} min={5} max={50} step={5} unit="%" rangeHint="Phạm vi: 5–50%" defaultHint={`Mặc định: ${DEFAULT_RETURN_RATE_DROP_PCT}%`} />
+            onChange={setDraft} min={5} max={50} step={5} unit="%" />
         </fieldset>
       )}
     </div>
