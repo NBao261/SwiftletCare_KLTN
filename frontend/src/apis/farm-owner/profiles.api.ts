@@ -1,4 +1,4 @@
-// EXPERT-FR-015 — Farm Owner xem hồ sơ cấu hình đã duyệt và áp cho các nhà (soạn, duyệt ở apis/domain-expert/profiles.api.ts)
+// Farm Owner xem hồ sơ cấu hình đã duyệt và áp cho các nhà (soạn, duyệt ở apis/domain-expert/profiles.api.ts)
 import api from '@/lib/axios'
 import type { ApiResponse, ConfigProfile } from '@/types'
 

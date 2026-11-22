@@ -6,7 +6,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { t } from '@/i18n'
 import type { IssuedDeviceSecrets, ProvisionedDeviceKind } from '@/types'
 
-/** Cùng mẫu với backend (DEVICE_ID_PATTERN): device ID là username và một đoạn topic trên broker */
+// Cùng mẫu với backend (DEVICE_ID_PATTERN): device ID là username và một đoạn topic trên broker
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 
 const KIND_OPTIONS: { value: ProvisionedDeviceKind; label: string }[] = [
@@ -21,7 +21,7 @@ function validate(deviceId: string): string | undefined {
   return undefined
 }
 
-/** FARM-FR-010 — thêm thiết bị vào kho; thành công thì trả mã (chỉ 1 lần) cho trang mở popup in nhãn */
+// thêm thiết bị vào kho; thành công thì trả mã (chỉ 1 lần) cho trang mở popup in nhãn
 export default function AddStockDeviceModal({ open, onClose, onAdded }: {
   open: boolean; onClose: () => void; onAdded: (issued: IssuedDeviceSecrets) => void
 }) {

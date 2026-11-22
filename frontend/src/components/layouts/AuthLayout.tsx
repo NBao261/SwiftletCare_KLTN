@@ -13,7 +13,7 @@ const HALF_PANE_CLASS = 'lg:absolute lg:inset-y-3 lg:w-[calc(50%-1.125rem)]';
 // Hiệu ứng trượt giữa 2 nửa khung (quãng trượt = rộng 1 nửa + khe 12px)
 const SLIDE_TRANSITION_CLASS = 'transition-transform duration-300 ease-in-out motion-reduce:transition-none';
 
-// Khung chung của Đăng nhập / Đăng ký / Quên mật khẩu: đăng nhập thì form trái, ảnh phải; trang khác thì ảnh trượt sang trái, form sang phải
+// Khung chung của các trang đăng nhập
 export default function AuthLayout(): JSX.Element {
   const { pathname } = useLocation();
   const isLogin = pathname === '/login';
@@ -46,7 +46,7 @@ export default function AuthLayout(): JSX.Element {
           </div>
         </div>
 
-        {/* Nửa ảnh — ẩn trên mobile để form chiếm trọn khung */}
+        {/* Nửa ảnh: ẩn trên mobile để form chiếm trọn khung */}
         <div
           className={cn(
             'hidden overflow-hidden rounded-2xl lg:right-3 lg:flex',
@@ -73,7 +73,7 @@ export default function AuthLayout(): JSX.Element {
               </p>
             </div>
 
-            {/* Thẻ kính mờ nêu 3 chỉ số được giám sát — không ghi số vì ngưỡng do Domain Expert đặt riêng từng nhà */}
+            {/* Thẻ kính mờ nêu 3 chỉ số được giám sát: không ghi số vì ngưỡng do Domain Expert đặt riêng từng nhà */}
             <div className="glass-panel grid w-full max-w-md grid-cols-3 gap-3 rounded-2xl p-3 shadow-glass backdrop-blur-xl">
               <StatChip icon={<IconTemp width={16} height={16} />} label="Nhiệt độ" />
               <StatChip icon={<IconHumidity width={16} height={16} />} label="Độ ẩm" />

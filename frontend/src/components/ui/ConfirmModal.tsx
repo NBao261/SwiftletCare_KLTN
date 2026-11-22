@@ -6,7 +6,7 @@ import { t, tr } from '@/i18n'
 interface ConfirmModalProps {
   open: boolean
   title: string
-  /** Chữ (tự dịch qua tr) hoặc nội dung đã dịch sẵn có định dạng (VD cụm in đậm) — truyền nguyên */
+  // Chữ (tự dịch qua tr) hoặc nội dung đã dịch sẵn có định dạng (VD cụm in đậm): truyền nguyên
   description?: ReactNode
   confirmLabel?: string
   danger?: boolean
@@ -15,7 +15,7 @@ interface ConfirmModalProps {
   onCancel: () => void
 }
 
-/** ConfirmModal – xác nhận hành động phá hủy (xóa farm, gỡ thiết bị...). Chữ truyền vào tự dịch theo VI/EN (tr) */
+// ConfirmModal – xác nhận hành động phá hủy (xóa farm, gỡ thiết bị...). Chữ truyền vào tự dịch theo VI/EN (tr)
 export default function ConfirmModal({
   open, title, description, confirmLabel = 'Xác nhận', danger, loading, onConfirm, onCancel,
 }: ConfirmModalProps) {

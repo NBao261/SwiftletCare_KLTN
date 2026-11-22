@@ -13,21 +13,13 @@ import { HARVEST_ROLES } from '@/constants/roles'
 import { buildFarmStructure, mergeMetrics, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import type { House, Zone } from '@/types'
 
-/** Cấu trúc House/Zone hiếm khi đổi — cùng staleTime với useFarmZones/useAllZones để dùng chung cache */
+// Cấu trúc House/Zone hiếm khi đổi: cùng staleTime với useFarmZones/useAllZones để dùng chung cache
 const STRUCTURE_STALE_MS = 5 * 60 * 1000
 
-/**
- * Cây Farm → House → Zone → Device cho màn "Cấu trúc Farm".
- *
- * Độ trễ: thiết bị / camera / cảnh báo / thu hoạch đều là 1 request gộp theo quyền truy
- * cập (không lọc zone) và chạy SONG SONG với chuỗi farms → houses → zones, thay vì gọi
- * lần lượt theo từng zone. Số đo môi trường lấy theo lô 6 zone/request (/analytics/env/
- * compare) thay vì 1 request/zone. `liveZoneIds` (nếu có) mới join room socket — màn tổng
- * quan không join hàng loạt zone, chỉ trang nhà/zone mới theo dõi realtime.
- */
+// Request gộp chạy song song với chuỗi farms → houses → zones; số đo lấy theo lô 6 zone; chỉ liveZoneIds mới join socket
 export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
   const queryClient = useQueryClient()
-  // GET /harvests chỉ cho FARM_OWNER/DOMAIN_EXPERT — Technician cũng mở được màn này nên không gọi, tránh 403 rồi hiện 0 kg sai
+  // Technician cũng mở màn này nên không gọi /harvests, tránh 403 rồi hiện 0 kg sai
   const canViewHarvest = usePermission(...HARVEST_ROLES)
   const farmsQ = useFarms()
   const farms = farmsQ.data
@@ -88,7 +80,7 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
     enabled: canViewHarvest,
   })
 
-  // Chỉ hỏi số đo khi mọi nhà đã tải xong Zone: danh sách Zone lớn dần thì mỗi lần đổi là một lần gọi env/compare (A-14)
+  // Chỉ hỏi số đo khi mọi nhà đã tải xong Zone: danh sách Zone lớn dần thì mỗi lần đổi là một lần gọi env/compare
   const zoneIds = useMemo(
     () => (housesQ.pending || zonesQ.pending ? [] : [...zonesByHouse.values()].flat().map(z => z._id)),
     [housesQ.pending, zonesQ.pending, zonesByHouse],
@@ -131,17 +123,17 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
 
   const isLoading = farmsQ.isLoading || housesQ.pending || zonesQ.pending
     || sensorsQ.isLoading || camerasQ.isLoading || alertsQ.isLoading || harvestsQ.isLoading
-  // Cảnh báo/camera/thu hoạch lỗi mà vẫn dựng cây thì màn báo sai "0 cảnh báo, Bình thường" — coi là lỗi cả trang (FE_Design 13.5)
+  // Lỗi phần phụ thì coi là lỗi cả trang, không hiện sai "0 cảnh báo"
   const isError = farmsQ.isError || housesQ.error || zonesQ.error || sensorsQ.isError
     || camerasQ.isError || alertsQ.isError || (canViewHarvest && harvestsQ.isError)
 
   return {
     structure, isLoading, isError,
-    /** Số đo trung bình đang tải — card hiện "--" thay vì chặn cả trang */
+    // Số đo trung bình đang tải: card hiện "--" thay vì chặn cả trang
     metricsLoading: envQ.isLoading,
-    /** Có quyền xem thu hoạch không — role không có quyền thì UI ẩn mọi khối sản lượng thay vì hiện 0 */
+    // Có quyền xem thu hoạch không: role không có quyền thì UI ẩn mọi khối sản lượng thay vì hiện 0
     canViewHarvest,
-    /** Tải lại mọi nguồn của cây, kể cả houses/zones (useQueries không có refetch chung) */
+    // Tải lại mọi nguồn của cây, kể cả houses/zones (useQueries không có refetch chung)
     refetch: () => {
       for (const key of ['farms', 'houses', 'zones', 'sensor-nodes', 'camera-nodes', 'alerts']) void queryClient.refetchQueries({ queryKey: [key] })
       if (canViewHarvest) void harvestsQ.refetch()
@@ -151,7 +143,7 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
 
 export interface HouseStaff { name: string; initials: string }
 
-// "Phụ trách" của mỗi nhà: thợ chính (AUTH-FR-013), tên tra trong thành viên farm — chỉ Farm Owner nhận được tên
+// "Phụ trách" của mỗi nhà: thợ chính, tên tra trong thành viên farm: chỉ Farm Owner nhận được tên
 export function useHouseStaff(houses: House[]): Map<string, HouseStaff> {
   const farmIds = useMemo(() => [...new Set(houses.map(house => house.farm_id))], [houses])
   const farms = useFarmDetails(farmIds)
@@ -170,7 +162,7 @@ export function useHouseStaff(houses: House[]): Map<string, HouseStaff> {
 
 const NO_IDS: string[] = []
 
-/** Id các zone của 1 nhà — dùng cache ['zones', houseId] của useFarmStructure (cùng staleTime) để trang nhà biết zone nào cần join socket */
+// Dùng cache ['zones', houseId] để biết zone nào cần join socket
 export function useHouseZoneIds(houseId: string | undefined): string[] {
   const { data } = useQuery({
     queryKey: ['zones', houseId],

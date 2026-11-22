@@ -16,7 +16,7 @@ interface Props {
   onReset: () => void
 }
 
-// EXPERT-FR-008 — mức giảm tỷ lệ chim về là tham số của cả nhà yến (camera ở cửa nhà), đặt riêng với 5 tham số của Zone
+// mức giảm tỷ lệ chim về là tham số của cả nhà yến (camera ở cửa nhà), đặt riêng với 5 tham số của Zone
 export default function ReturnRateDropCard({ houseName, value, isSaving, isResetting, onSave, onReset }: Props) {
   const [draft, setDraft] = useState(value ?? DEFAULT_RETURN_RATE_DROP_PCT)
   useEffect(() => { setDraft(value ?? DEFAULT_RETURN_RATE_DROP_PCT) }, [value])

@@ -13,7 +13,7 @@ const span = (window: TimeWindow) => `${window.start}–${window.end}`
 // 'MM-DD' → 'DD/MM'
 const monthDay = (value: string) => value.split('-').reverse().join('/')
 
-// VISION-FR-019 — bảng các lần sửa lịch đếm, mới nhất trước: ngày áp, người sửa, lúc sửa, hồ sơ, khung tạm, trạng thái
+// bảng các lần sửa lịch đếm, mới nhất trước: ngày áp, người sửa, lúc sửa, hồ sơ, khung tạm, trạng thái
 export default function ScheduleHistoryList({ history }: { history: HistoryEntry[] }) {
   const { t, date, dateTime } = useTranslation(countingScheduleDict)
 

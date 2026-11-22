@@ -2,7 +2,7 @@ import type { Dictionary } from '@/lib/i18n';
 import type { AlertSeverity, SeverityLevel } from '@/types';
 import { SEVERITY_TO_LEVEL } from '@/constants/severity';
 
-// Nhãn VI/EN của 4 cấp mức độ (BR-15)
+// Nhãn VI/EN của 4 cấp mức độ
 const vi: Record<SeverityLevel, string> = {
   P1: 'Khẩn cấp',
   P2: 'Cao',
@@ -19,7 +19,7 @@ const en: Record<SeverityLevel, string> = {
 
 export const levelDict: Dictionary<SeverityLevel> = { vi, en };
 
-// Nhãn theo mã mức backend, mỗi mức một cấp — cho từ điển màn đang tra theo mã backend
+// Nhãn theo mã mức backend, mỗi mức một cấp: cho từ điển màn đang tra theo mã backend
 export function severityLabels(labels: Record<SeverityLevel, string>): Record<AlertSeverity, string> {
   return {
     CRITICAL: labels[SEVERITY_TO_LEVEL.CRITICAL],

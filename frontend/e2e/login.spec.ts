@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { PASSWORD } from './helpers/demoApi';
 
-// FE_Design 13.17 luồng 1 — đăng nhập từng role và về đúng trang chủ (ROLE_HOME); tài khoản của `npm run seed` ở backend
+// Đăng nhập từng role và về đúng ROLE_HOME; tài khoản của `npm run seed`
 const ROLES = [
   { role: 'Farm Owner', email: 'owner@swiftletcare.dev', home: '/dashboard' },
   { role: 'Domain Expert', email: 'expert@swiftletcare.dev', home: '/domain-expert/queue' },

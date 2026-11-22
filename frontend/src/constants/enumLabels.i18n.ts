@@ -5,7 +5,7 @@ import type {
 } from '@/types';
 import type { HarvestCycleStatus } from '@/types/harvest.types';
 
-// Nhãn VI/EN của mã backend — nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
+// Nhãn VI/EN của mã backend: nguồn duy nhất, từ điển màn chỉ lấy lại qua prefixLabels
 
 // Loại cảnh báo
 export const alertTypeDict: Dictionary<AlertType> = {
@@ -13,18 +13,18 @@ export const alertTypeDict: Dictionary<AlertType> = {
     THRESHOLD_BREACH:    'Vượt ngưỡng môi trường',
     NODE_OFFLINE:        'Thiết bị mất kết nối',
     SPEAKER_FAILURE:     'Lỗi loa ru',
-    MISTING_INEFFECTIVE: 'Phun sương không hiệu quả', // THREAT-FR-011, trước là PUMP_DRY
+    MISTING_INEFFECTIVE: 'Phun sương không hiệu quả', // trước là PUMP_DRY
     NOISE_ANOMALY:       'Tiếng ồn bất thường',
     LOW_RETURN_RATE:     'Tỷ lệ chim về thấp',
     EDGE_AI_DEGRADED:    'Camera đếm chim gặp sự cố',
-    UNEXPECTED_RESTART:  'Thiết bị tự khởi động lại',   // THREAT-FR-012, trước là POWER_OUTAGE
+    UNEXPECTED_RESTART:  'Thiết bị tự khởi động lại',   // trước là POWER_OUTAGE
     SENSOR_FAULT:        'Lỗi cảm biến',
     RS485_BUS_FAILURE:   'Lỗi đường truyền cảm biến',
     SENSOR_ANOMALY:      'Cảm biến bất thường',
     FORECAST_BREACH:     'Sắp vượt ngưỡng',
     MAINTENANCE_DUE:     'Đến hạn bảo trì bơm/quạt',
-    ACTUATOR_FAULT:      'Bơm, quạt hoặc loa không chạy',      // THREAT-FR-014
-    CONFIG_MISMATCH:     'Thiết bị chưa nhận cấu hình mới',      // ENV-FR-027
+    ACTUATOR_FAULT:      'Bơm, quạt hoặc loa không chạy',
+    CONFIG_MISMATCH:     'Thiết bị chưa nhận cấu hình mới',
   },
   en: {
     THRESHOLD_BREACH:    'Environment threshold breach',
@@ -51,7 +51,7 @@ export const alertStatusDict: Dictionary<AlertStatus> = {
   en: { ACTIVE: 'New', ACKNOWLEDGED: 'Received', DISMISSED: 'Dismissed', RESOLVED: 'Resolved' },
 };
 
-// Trạng thái thiết bị — ERROR/DEGRADED đã bỏ theo SRS 3.1.0
+// Trạng thái thiết bị: ERROR/DEGRADED đã bỏ theo
 export const deviceStatusDict: Dictionary<DeviceStatus> = {
   vi: { PENDING: 'Chờ kết nối', ONLINE: 'Online', OFFLINE: 'Mất kết nối' },
   en: { PENDING: 'Awaiting connection', ONLINE: 'Online', OFFLINE: 'Offline' },
@@ -73,7 +73,7 @@ export const roleDict: Dictionary<Role> = {
   },
 };
 
-// Trạng thái Work Order (Report 3 §6.19, SM-19)
+// Trạng thái Work Order
 export const workOrderStatusDict: Dictionary<WorkOrderStatus> = {
   vi: {
     OPEN: 'Chưa bắt đầu',
@@ -93,7 +93,7 @@ export const workOrderStatusDict: Dictionary<WorkOrderStatus> = {
   },
 };
 
-// Nguồn mở Work Order (OPS-FR-001, BR-39)
+// Nguồn mở Work Order
 export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
   vi: {
     ALERT: 'Cảnh báo thiết bị',
@@ -117,7 +117,7 @@ export const workOrderOriginDict: Dictionary<WorkOrderOrigin> = {
   },
 };
 
-// Chỉ số theo ngày mà luật khuyến nghị xét (EXPERT-FR-016)
+// Chỉ số theo ngày mà luật khuyến nghị xét
 export const recommendationIndicatorDict: Dictionary<RecommendationIndicator> = {
   vi: {
     TIME_IN_RANGE: 'Thời gian trong ngưỡng (%)',
@@ -135,7 +135,7 @@ export const recommendationIndicatorDict: Dictionary<RecommendationIndicator> = 
   },
 };
 
-// Trạng thái khuyến nghị (Report 3 §6.21, SM-21)
+// Trạng thái khuyến nghị
 export const recommendationStatusDict: Dictionary<RecommendationStatus> = {
   vi: {
     OPEN: 'Chờ quyết định',
@@ -153,13 +153,13 @@ export const recommendationStatusDict: Dictionary<RecommendationStatus> = {
   },
 };
 
-// Nguyên nhân tìm thấy tại chỗ (ALERT-FR-018)
+// Nguyên nhân tìm thấy tại chỗ
 export const siteCauseDict: Dictionary<SiteCause> = {
   vi: { WATER: 'Nước', NOZZLE: 'Béc phun', PUMP: 'Bơm', FAN: 'Quạt', DOOR: 'Cửa', SENSOR: 'Cảm biến', SPEAKER: 'Loa', OTHER: 'Khác' },
   en: { WATER: 'Water', NOZZLE: 'Nozzle', PUMP: 'Pump', FAN: 'Fan', DOOR: 'Door', SENSOR: 'Sensor', SPEAKER: 'Speaker', OTHER: 'Other' },
 };
 
-// Quan sát tại chỗ của Kỹ thuật viên (EXPERT-FR-021)
+// Quan sát tại chỗ của Kỹ thuật viên
 export const onsiteObservationDict: Dictionary<OnsiteObservation> = {
   vi: {
     BIRDS_DISTURBED:        'Chim bị động',
@@ -185,13 +185,13 @@ export const workOrderResultDict: Dictionary<WorkOrderResult> = {
   en: { REPAIRED: 'Repaired', SELF_RECOVERED: 'Recovered on its own before the repair', DONE: 'Maintenance done' },
 };
 
-// Kết quả 1 mục checklist bảo trì (OPS-FR-007), cùng chữ với mobile
+// Kết quả 1 mục checklist bảo trì, cùng chữ với mobile
 export const checklistResultDict: Dictionary<ChecklistResult> = {
   vi: { OK: 'Đạt', DEFECT: 'Hỏng' },
   en: { OK: 'OK', DEFECT: 'Defective' },
 };
 
-// Trạng thái chu kỳ thu hoạch (HARVEST-FR-007, EXPERT-FR-020)
+// Trạng thái chu kỳ thu hoạch
 export const harvestCycleStatusDict: Dictionary<HarvestCycleStatus> = {
   vi: { OPEN: 'Đang mở', CLOSED: 'Đã đóng', CONCLUDED: 'Đã kết luận' },
   en: { OPEN: 'Open', CLOSED: 'Closed', CONCLUDED: 'Concluded' },

@@ -19,10 +19,10 @@ import type { HouseHealth, HouseNode } from '@/components/features/farm-owner/fa
 const PAGE_SIZE = 8
 type Filter = 'all' | HouseHealth
 
-/** Nhà cần xử lý lên đầu, rồi bình thường, cuối cùng là nhà chưa có thiết bị */
+// Nhà cần xử lý lên đầu, rồi bình thường, cuối cùng là nhà chưa có thiết bị
 const HEALTH_ORDER: Record<HouseHealth, number> = { ALERT: 0, NORMAL: 1, EMPTY: 2 }
 
-// Nhà được giao (/farms) của Farm Technician (AUTH-FR-013): thiết bị và cảnh báo đang mở của từng nhà, bấm để xem thiết bị
+// Nhà được giao (/farms) của Farm Technician: thiết bị và cảnh báo đang mở của từng nhà, bấm để xem thiết bị
 export default function TechnicianFarmsPage() {
   const { t, num } = useTranslation(farmDict)
   useScrollToTop()
@@ -30,7 +30,7 @@ export default function TechnicianFarmsPage() {
   const setScopePath = useZoneStore(state => state.setScopePath)
   const { data: farms } = useFarms()
   const { structure, isLoading, isError, refetch } = useFarmStructure()
-  // Cùng số với chuông và menu: cảnh báo ACTIVE của các nhà được giao (ALERT-FR-007), không tính từ cấu trúc nhà
+  // Cùng số với chuông và menu: cảnh báo ACTIVE của các nhà được giao, không tính từ cấu trúc nhà
   const pendingAlerts = usePendingAlertTotal()
 
   const [search, setSearch] = useState('')
@@ -52,7 +52,7 @@ export default function TechnicianFarmsPage() {
     return { visible, counts }
   }, [structure.houses, search, filter])
 
-  // Mở trang Thiết bị đã lọc sẵn nhà này (phạm vi lưu trong store, không đưa mã vào URL — FE_Design 13.16)
+  // Mở trang Thiết bị đã lọc sẵn nhà này (phạm vi lưu trong store, không đưa mã vào URL: FE_Design 13.16)
   function openDevices(node: HouseNode) {
     setScopePath(node.farm._id, node.farm.name, node.house._id, '')
     navigate('/devices')

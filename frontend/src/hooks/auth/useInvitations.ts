@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { invitationApi } from '@/apis/auth/invitations.api'
 
-/** AUTH-FR-010, Flow 12 — xem trước lời mời qua token, không cần đăng nhập */
+// xem trước lời mời qua token, không cần đăng nhập
 export function useInvitationPreview(token: string | undefined) {
   return useQuery({
     queryKey: ['invitation', token],
@@ -19,7 +19,7 @@ export function useAcceptInvitation() {
   })
 }
 
-/** AUTH-FR-010 — thay đăng ký công khai: tạo tài khoản từ link lời mời, tài khoản vào ngay farm của lời mời */
+// thay đăng ký công khai: tạo tài khoản từ link lời mời, tài khoản vào ngay farm của lời mời
 export function useCreateAccountFromInvitation() {
   return useMutation({
     mutationFn: ({ token, ...input }: { token: string; full_name: string; password: string }) =>

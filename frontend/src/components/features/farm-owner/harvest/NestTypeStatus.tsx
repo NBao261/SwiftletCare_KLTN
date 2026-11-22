@@ -5,7 +5,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
 import type { NestType } from '@/types';
 
-// Loại yến của 1 lần thu: 1 loại → badge có tên; từ 2 loại → mỗi loại có 1 chấm tròn màu, xếp trái sang phải theo thứ tự trắng → hồng → huyết
+// 1 loại thì badge có tên, nhiều loại thì mỗi loại 1 chấm màu
 export default function NestTypeStatus({ nestTypes }: { nestTypes: NestType[] }): JSX.Element {
   const { t } = useTranslation(harvestDict);
   const labels = nestTypes.map(nestType => t(`nestType.${nestType}`)).join(', ');

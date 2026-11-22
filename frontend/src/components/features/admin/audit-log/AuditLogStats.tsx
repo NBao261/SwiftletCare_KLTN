@@ -9,7 +9,7 @@ import type { ListAuditLogsQuery } from '@/apis/admin/system.api'
 
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-/** Nửa đêm (giờ máy người dùng) `daysAgo` ngày trước, dạng ISO cho tham số `from` */
+// Nửa đêm (giờ máy người dùng) `daysAgo` ngày trước, dạng ISO cho tham số `from`
 function startOfDayIso(daysAgo: number) {
   const d = new Date()
   d.setDate(d.getDate() - daysAgo)
@@ -17,17 +17,14 @@ function startOfDayIso(daysAgo: number) {
   return d.toISOString()
 }
 
-/**
- * Chỉ đếm — gọi GET /system/audit-logs với limit=1 và đọc `meta.total`, để backend tự đếm theo bộ lọc
- * thay vì tải hết nhật ký về client (bảng nhật ký chỉ tăng). Mỗi ô = 1 request rất nhẹ.
- */
+// limit=1 và đọc meta.total: backend tự đếm, không tải hết nhật ký
 function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
   // Cùng phạm vi bảng bên dưới: chỉ nhật ký tài khoản
   const { total, isLoading, isError, refetch } = useAuditLogList({ ...query, targetType: AUDIT_TARGET_TYPE, page: 1, limit: 1 })
   return { total, isLoading, isError, refetch }
 }
 
-// AD-06 — 4 ô đầu trang Nhật ký hệ thống: chỉ nhật ký tài khoản, không theo bộ lọc bảng
+// 4 ô đầu trang Nhật ký hệ thống: chỉ nhật ký tài khoản, không theo bộ lọc bảng
 export default function AuditLogStats() {
   const from7d = startOfDayIso(6)
   const all = useAuditCount({})
@@ -35,14 +32,14 @@ export default function AuditLogStats() {
   const week = useAuditCount({ from: from7d })
   const loginFailed = useAuditCount({ action: 'LOGIN_FAILED', from: from7d })
   const locked = useAuditCount({ action: 'ACCOUNT_LOCKED', from: from7d })
-  // Tài khoản mới: Admin tạo chủ nhà yến (AUTH-FR-005c) và người nhận lời mời tự tạo (AUTH-FR-010)
+  // Tài khoản mới: Admin tạo chủ nhà yến và người nhận lời mời tự tạo
   const ownerCreated = useAuditCount({ action: 'FARM_OWNER_CREATED', from: from7d })
   const invitedCreated = useAuditCount({ action: 'ACCOUNT_CREATED_FROM_INVITATION', from: from7d })
   const created = ownerCreated.total + invitedCreated.total
 
   const counts = [all, today, week, loginFailed, locked, ownerCreated, invitedCreated]
   if (counts.some(c => c.isLoading)) return <LoadingSkeleton count={1} className="h-28 w-full" />
-  // Lỗi thì không hiện ô nào — "0 đăng nhập thất bại" trông như số thật
+  // Lỗi thì không hiện ô nào: "0 đăng nhập thất bại" trông như số thật
   if (counts.some(c => c.isError)) {
     return (
       <EmptyState

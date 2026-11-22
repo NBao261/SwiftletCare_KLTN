@@ -21,7 +21,7 @@ import { cn } from '@/lib/cn';
 
 const HISTORY_LIMIT = 8;
 
-// Tab Điều khiển tay của Tổng quan (FO-02): mỗi Zone một hàng, bật/tắt rơ-le có thời hạn (ENV-FR-016..019)
+// Tab Điều khiển tay của Tổng quan (FO-02): mỗi Zone một hàng, bật/tắt rơ-le có thời hạn
 export default function FarmOwnerScadaPage(): JSX.Element {
   const { t, dateTime } = useTranslation(dashboardDict);
   const scope = useScopeFilter();
@@ -121,7 +121,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
         {devices}
       </SectionCard>
 
-      {/* Lần can thiệp tay gần nhất (ENV-FR-019) */}
+      {/* Lần can thiệp tay gần nhất */}
       <SectionCard title={t('scada.historyTitle')}>
         {history.logs.length === 0 && !history.isLoading && <p className="text-body text-warmGray">{t('scada.historyEmpty')}</p>}
         {history.isLoading && <LoadingSkeleton count={3} className="h-12 w-full" />}

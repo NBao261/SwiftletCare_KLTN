@@ -11,7 +11,7 @@ import { NO_VALUE } from '@/constants/display'
 interface BirdStatsCardsProps {
   // 1 nhà, hoặc mọi nhà của farm khi lọc tất cả nhà yến (số đếm cộng theo ngày)
   houseIds: string[]
-  /** true khi LiveCameraCard đang phóng to — 3 card xếp ngang bên dưới thay vì xếp dọc bên cạnh */
+  // true khi LiveCameraCard đang phóng to: 3 card xếp ngang bên dưới thay vì xếp dọc bên cạnh
   horizontal?: boolean
 }
 
@@ -20,7 +20,7 @@ function percentDelta(current: number, previous: number): number | null {
   return +(((current - previous) / previous) * 100).toFixed(1)
 }
 
-// BirdStatsCards – Entry/Exit/Return rate ngày gần nhất — API thật (GET /analytics/bird-count/trends)
+// BirdStatsCards – Entry/Exit/Return rate ngày gần nhất: API thật (GET /analytics/bird-count/trends)
 export default function BirdStatsCards({ houseIds, horizontal }: BirdStatsCardsProps) {
   const { records, single, isLoading } = useHousesBirdCountTrends(houseIds, 7)
 

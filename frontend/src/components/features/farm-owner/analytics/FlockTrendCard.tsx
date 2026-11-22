@@ -25,7 +25,7 @@ function periodLabel(period: string, granularity: Granularity): string {
   return granularity === 'monthly' ? `${month}/${year}` : `${day}/${month}`;
 }
 
-// ANALYTICS-FR-002 — số chim ra buổi sáng trung bình theo tuần hoặc tháng của 1 nhà, kèm % đổi so với kỳ trước
+// số chim ra buổi sáng trung bình theo tuần hoặc tháng của 1 nhà, kèm % đổi so với kỳ trước
 export default function FlockTrendCard({ houseId, houseName }: { houseId: string; houseName: string }): JSX.Element {
   const { t, num, date } = useTranslation(analyticsDict);
   const [granularity, setGranularity] = useState<Granularity>('weekly');

@@ -6,7 +6,7 @@ interface TableEmptyStateProps {
   description?: string;
 }
 
-// Icon nhỏ quanh hình minh hoạ: đối xứng trái/phải theo 3 hàng (trên, giữa, dưới), hàng giữa đẩy ra xa hơn tạo vòng cung
+// Icon quanh hình minh hoạ, đối xứng 3 hàng
 const FLOATING_ICONS: Array<{ icon: LucideIcon; positionClass: string }> = [
   { icon: Bird, positionClass: 'left-3 top-2' },
   { icon: Thermometer, positionClass: '-left-6 top-1/2 -translate-y-1/2' },
@@ -45,7 +45,7 @@ function PlaceholderCard({ isHighlighted }: { isHighlighted: boolean }): JSX.Ele
   );
 }
 
-// Trạng thái rỗng chuẩn của bảng: vòng tròn mờ, chồng 3 thẻ giả (thẻ giữa nổi bật), icon thiết bị/chim yến quanh, tiêu đề + mô tả
+// Trạng thái rỗng chuẩn của bảng
 export default function TableEmptyState({ title, description }: TableEmptyStateProps): JSX.Element {
   return (
     <div className="flex flex-col items-center gap-4 px-4 text-center">

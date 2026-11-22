@@ -1,4 +1,4 @@
-// DisagreementDayCard.tsx — Thẻ chi tiết 1 ngày có đánh giá thực địa lệch với hệ thống (EXPERT-FR-022, BR-28)
+// DisagreementDayCard.tsx: Thẻ chi tiết 1 ngày có đánh giá thực địa lệch với hệ thống
 
 import {
   Calendar,
@@ -150,7 +150,7 @@ function DisagreementItemBlock({
         </div>
       </div>
 
-      {/* Hàng 3: Mức đánh giá từng nguồn trong ảnh chụp lúc chấm (snapshot_levels) + Lý do hệ thống lúc chấm (snapshot_reasons) */}
+      {/* Mức từng nguồn và lý do hệ thống lúc chấm */}
       {(hasSnapshotLevels || item.snapshot_reasons.length > 0) && (
         <div className="flex flex-col gap-2 rounded-lg border border-warmGray/15 bg-white/85 px-3 py-2.5">
           {hasSnapshotLevels && (

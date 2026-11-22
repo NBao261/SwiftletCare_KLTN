@@ -9,7 +9,7 @@ export function useTranslation<K extends string>(dict: Dictionary<K>) {
     (key: K, params?: Record<string, string | number>) => translate(dict, lang, key, params),
     [dict, lang],
   )
-  // Hàm định dạng phụ thuộc duy nhất vào ngôn ngữ — giữ identity ổn định để dùng làm dependency của useMemo/useCallback
+  // Giữ identity ổn định để dùng làm dependency
   const formatters = useMemo(() => ({
     num: (value: number, digits = 0) => formatNumber(value, lang, digits),
     // Không làm tròn số liệu đo (VD sản lượng tính từ gram): chỉ cắt sau maxDigits chữ số lẻ

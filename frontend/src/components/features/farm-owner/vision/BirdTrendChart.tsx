@@ -17,7 +17,7 @@ interface BirdTrendChartProps {
   houseIds: string[]
 }
 
-// BirdTrendChart – Entry vs Exit theo ngày — API thật (GET /analytics/bird-count/trends)
+// BirdTrendChart – Entry vs Exit theo ngày: API thật (GET /analytics/bird-count/trends)
 export default function BirdTrendChart({ houseIds }: BirdTrendChartProps) {
   const [days, setDays] = useState<DayOption>(7)
   const { records, isLoading } = useHousesBirdCountTrends(houseIds, days)

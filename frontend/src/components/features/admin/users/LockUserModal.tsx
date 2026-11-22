@@ -5,7 +5,7 @@ import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import type { User } from '@/types'
 
-/** AUTH-FR-011 — PUT /admin/users/:id/status {is_active:false, reason}; lý do bắt buộc. */
+// PUT /admin/users/:id/status {is_active:false, reason}; lý do bắt buộc.
 export default function LockUserModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   const setStatus = useSetUserStatus()
   const push = useToastStore(s => s.push)
@@ -17,13 +17,11 @@ export default function LockUserModal({ user, onClose }: { user: User | null; on
       title={`${t('Khoá tài khoản')} · ${user?.full_name ?? ''}`}
       label="Lý do khoá"
       placeholder="VD: Vi phạm điều khoản sử dụng"
-      // AUTH-FR-011: authenticate đọc lại is_active mỗi request + Socket.io ngắt kết nối → bị chặn ngay; lý do hiện
-      // khi đăng nhập (Flow 19); mở khoá lại được (UnlockUserModal)
+      // Bị chặn ngay ở request kế tiếp và ngắt socket
       hint="Người dùng bị đăng xuất ngay và sẽ thấy lý do này khi đăng nhập. Có thể mở khoá lại bất cứ lúc nào."
       submitLabel="Khoá tài khoản"
       required
-      // Backend chỉ bắt buộc không rỗng; 10 ký tự là ngưỡng UI để lý do đủ nghĩa khi
-      // hiện lại cho user lúc đăng nhập bị chặn (Flow 19 bước 4) và trong audit log.
+      // 10 ký tự là ngưỡng UI để lý do đủ nghĩa
       minLength={10}
       emptyMessage="Nhập lý do khoá"
       danger

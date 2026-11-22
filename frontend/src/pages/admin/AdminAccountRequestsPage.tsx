@@ -1,4 +1,4 @@
-// ADMIN — Yêu cầu tài khoản: xoá tài khoản (AUTH-FR-012, Flow 19) — API thật /admin/delete-requests.
+// ADMIN: Yêu cầu tài khoản: xoá tài khoản, API thật /admin/delete-requests.
 import { useState, useEffect } from 'react'
 import RejectDeletionModal from '@/components/features/admin/users/RejectDeletionModal'
 import { useDeleteRequestsList, useCompleteDeleteRequest } from '@/hooks/admin/useAccountRequests'
@@ -9,15 +9,12 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import Pagination from '@/components/ui/Pagination'
 import { useToastStore } from '@/stores/toastStore'
 import { formatRelativeTime, getApiErrorMessage } from '@/lib/helpers'
-// `t` là biến lặp TABS trong file này — hàm dịch đặt tên khác
+// `t` là biến lặp TABS trong file này: hàm dịch đặt tên khác
 import { t as i18nT, tr } from '@/i18n'
 import type { User } from '@/types'
 
 const DELETE_DEADLINE_DAYS = 30
-/**
- * Dạng log như bảng Nhật ký hệ thống: DataTable cố định 10 dòng (dòng trống bù cao bằng dòng thật) + phân trang,
- * mỗi yêu cầu 1 dòng, nút xử lý ở cột Thao tác. 64px vừa ô Thời gian 2 dòng (giờ/ngày)
- */
+// DataTable cố định 10 dòng; 64px vừa ô thời gian 2 dòng
 const PAGE_SIZE = 10
 const ROW_HEIGHT = 64
 const FRAME = 'flex flex-col gap-3'
@@ -25,7 +22,7 @@ const FRAME = 'flex flex-col gap-3'
 const DAY = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
 const TIME = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 
-/** Ô thời gian 2 dòng — giờ:phút:giây đậm trên, ngày xám dưới (cùng kiểu cột Thời gian Nhật ký hệ thống) */
+// Ô thời gian 2 dòng: giờ:phút:giây đậm trên, ngày xám dưới (cùng kiểu cột Thời gian Nhật ký hệ thống)
 function TimeCell({ at }: { at?: string }) {
   if (!at) return <span className="text-warmGray">—</span>
   const d = new Date(at)
@@ -38,11 +35,7 @@ function TimeCell({ at }: { at?: string }) {
 }
 
 
-/**
- * Xử lý xong mục cuối của trang N (N > 1) thì trang đó trống trong khi các trang trước
- * vẫn còn — kéo `page` lùi về trang cuối còn dữ liệu, thay vì để người dùng kẹt ở
- * trang rỗng (không có Pagination để quay lại). Trả true khi đang ở trang vượt quá.
- */
+// Xử lý xong mục cuối của trang thì lùi về trang cuối còn dữ liệu
 function useClampedPage(page: number, setPage: (page: number) => void, total: number, limit: number, isLoading: boolean): boolean {
   const lastPage = Math.max(1, Math.ceil(total / limit))
   const beyondLastPage = !isLoading && page > lastPage
@@ -52,7 +45,7 @@ function useClampedPage(page: number, setPage: (page: number) => void, total: nu
   return beyondLastPage
 }
 
-/** Tab "Yêu cầu xoá tài khoản" của mục Người dùng — tên ở header và tab nên card chỉ còn dòng mô tả */
+// Tab "Yêu cầu xoá tài khoản" của mục Người dùng: tên ở header và tab nên card chỉ còn dòng mô tả
 export default function AdminAccountRequestsPage() {
   return (
     <SectionCard
@@ -86,7 +79,7 @@ function DeleteRequestsTab() {
 
   if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
 
-  // Người dùng · Email · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác — tổng 26+28+16+16+14 = 100
+  // Người dùng · Email · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác: tổng 26+28+16+16+14 = 100
   const columns: DataTableColumn<User>[] = [
     { key: 'name', header: 'Người dùng', className: 'w-[26%]', render: u => <p className="text-fade font-semibold text-charcoal" title={u.full_name}>{u.full_name}</p> },
     { key: 'email', header: 'Email', className: 'w-[28%]', render: u => <p className="truncate text-graphite" title={u.email}>{u.email}</p> },
@@ -102,7 +95,7 @@ function DeleteRequestsTab() {
     },
     {
       key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[14%]',
-      // AUTH-FR-012 — Admin hoàn tất hoặc từ chối
+      // Admin hoàn tất hoặc từ chối
       render: u => (
         <div className="flex items-center justify-center gap-2">
           <Button size="sm" onClick={() => setTarget(u)}>Xử lý</Button>
@@ -144,7 +137,7 @@ function DeleteRequestsTab() {
         }}
       />
 
-      {/* Pagination tự ẩn khi chỉ 1 trang — không giữ chỗ trống dưới bảng */}
+      {/* Pagination tự ẩn khi chỉ 1 trang: không giữ chỗ trống dưới bảng */}
       <Pagination page={page} limit={limit} total={total} onChange={setPage} variant="full" />
 
       <ConfirmModal

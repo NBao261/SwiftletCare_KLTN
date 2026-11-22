@@ -4,7 +4,7 @@ import RequireRole from '@/components/auth/RequireRole'
 import { DEVICE_SETUP_ROLES, FARM_OWNER_ONLY, FARM_SIDE_ROLES, FARM_STRUCTURE_ROLES, HARVEST_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
-// Màn nuôi yến của Farm Owner; allow quyết định ai vào (Report 3 §2.4): Domain Expert đọc qua chính các trang này, Technician chỉ Trang trại
+// allow quyết định ai vào; Technician chỉ Trang trại
 const FarmOwnerDashboardPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDashboardPage'))
 const FarmOwnerScadaPage = lazy(() => import('@/pages/farm-owner/FarmOwnerScadaPage'))
 const FarmOwnerDeviceDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDeviceDetailPage'))
@@ -23,7 +23,7 @@ const FarmOwnerWorkOrdersPage = lazy(() => import('@/pages/farm-owner/FarmOwnerW
 const FarmOwnerOverviewPage = lazy(() => import('@/pages/farm-owner/FarmOwnerOverviewPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
-/** /farms dùng chung URL nhưng Farm Technician có trang riêng (chỉ cấu trúc + thiết bị nhà được giao) */
+// /farms dùng chung URL nhưng Farm Technician có trang riêng (chỉ cấu trúc + thiết bị nhà được giao)
 function FarmsIndexRoute() {
   const isFarmTechnician = usePermission('FARM_TECHNICIAN')
   return isFarmTechnician ? <TechnicianFarmsPage /> : <FarmOwnerFarmsPage />
@@ -55,7 +55,7 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* SF-01 — lắp thiết bị: chỉ Farm Owner (ADMIN và FARM_TECHNICIAN gọi API → 403); nằm dưới /devices để header hiện mục Thiết bị */}
+    {/* Chỉ Farm Owner; nằm dưới /devices để header hiện mục Thiết bị */}
     <Route
       path="devices/onboarding"
       element={
@@ -120,7 +120,7 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* MF-07 — kế hoạch bảo trì phòng ngừa: Farm Owner tạo, sửa, xoá; Domain Expert xem và góp ý (OPS-FR-005) */}
+    {/* kế hoạch bảo trì phòng ngừa: Farm Owner tạo, sửa, xoá; Domain Expert xem và góp ý */}
     <Route
       path="maintenance"
       element={
@@ -129,7 +129,7 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* MF-08 — khuyến nghị: Farm Owner chấp nhận hoặc từ chối, Domain Expert xem (EXPERT-FR-017, 018) */}
+    {/* khuyến nghị: Farm Owner chấp nhận hoặc từ chối, Domain Expert xem */}
     <Route
       path="recommendations"
       element={
@@ -138,7 +138,7 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* MF-06 — trạng thái ngày và đánh giá ngày: Farm Owner đánh giá, Domain Expert chỉ xem (SRS 4.2.0, BR-31) */}
+    {/* trạng thái ngày và đánh giá ngày: Farm Owner đánh giá, Domain Expert chỉ xem */}
     <Route
       path="health"
       element={
@@ -155,7 +155,7 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* MF-02 — Work Order sửa chữa: Farm Owner mở, duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ đọc (Report 3 §2.4) */}
+    {/* Work Order sửa chữa: Farm Owner mở, duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ đọc */}
     <Route
       path="work-orders"
       element={

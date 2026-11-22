@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn'
 import { menuLinkState } from '@/lib/navigationState'
 import { useAuthStore } from '@/stores/authStore'
 
-// Tab trên đầu trang cho mục menu gộp nhiều trang (MenuItem.tabs): mỗi tab là một route, kiểu pill như trang Sức khỏe nhà yến
+// Tab cho mục menu gộp nhiều trang, mỗi tab là một route
 export default function SectionTabs({ menuSections }: { menuSections: MenuSection[] }) {
   const { pathname } = useLocation()
   const role = useAuthStore(state => state.user?.role)

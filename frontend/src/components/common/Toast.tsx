@@ -2,7 +2,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { cn } from '@/lib/cn'
 import { tr } from '@/i18n'
 
-/** Toast – container hiển thị toàn bộ thông báo, mount 1 lần ở MainLayout */
+// Toast – container hiển thị toàn bộ thông báo, mount 1 lần ở MainLayout
 export default function Toast() {
   const toasts = useToastStore(s => s.toasts)
   const dismiss = useToastStore(s => s.dismiss)

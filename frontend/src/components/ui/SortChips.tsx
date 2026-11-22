@@ -12,16 +12,12 @@ interface SortChipsProps<K extends string> {
   fields: SortChipField<K>[]
   sortBy: K
   sortDir: SortDirection
-  /** Bấm chip đang chọn → trang tự đảo chiều; bấm chip khác → trang tự chọn trường đó (chiều mặc định do trang quyết) */
+  // Bấm chip đang chọn thì đảo chiều
   onChange: (key: K) => void
   label?: string
 }
 
-/**
- * Nhóm nút "Sắp xếp:" — dùng chung cho các trang Admin (Người dùng, Thiết bị, Audit log). Nhãn `.label-caption` + chip tròn cao bằng SelectMenu/FilterChip. Chip đang sắp: pill
- * trắng viền mảnh như FilterChip + icon chiều Phosphor (bold 12px); chip khác: nền xám nhạt, hover đậm hơn. Đổi chip là
- * đổi màu ngay, không hiệu ứng động. Chỉ hiển thị — trạng thái sortBy/sortDir do trang giữ.
- */
+// Nhóm nút sắp xếp; trạng thái do trang giữ
 export default function SortChips<K extends string>({ fields, sortBy, sortDir, onChange, label = 'Sắp xếp:' }: SortChipsProps<K>) {
   return (
     <div className="flex flex-wrap items-center gap-2">

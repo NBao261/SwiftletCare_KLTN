@@ -8,10 +8,7 @@ import { t } from '@/i18n'
 
 const EMPTY_FORM: FarmOwnerForm = { email: '', fullName: '', phone: '' }
 
-/**
- * AUTH-FR-005c, Report 3 §1.2 — Administrator tạo tài khoản Farm Owner của cài đặt (không có đăng ký công khai).
- * Backend sinh mật khẩu tạm, gửi qua e-mail và buộc đổi ở lần đăng nhập đầu; Admin không bao giờ thấy mật khẩu.
- */
+// Backend sinh mật khẩu tạm và gửi e-mail; Admin không bao giờ thấy mật khẩu
 export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createFarmOwner = useCreateFarmOwner()
   const apiErrorMessage = useApiErrorMessage()

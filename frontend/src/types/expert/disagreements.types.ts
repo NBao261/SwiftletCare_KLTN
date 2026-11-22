@@ -1,4 +1,4 @@
-// Types cho màn hình Chuyên gia xem các ngày đánh giá lệch, độ đồng thuận và chỉnh mức chỉ số sức khỏe của nhà (EXPERT-FR-022, ANALYTICS-FR-014, BR-28)
+// Types cho màn hình Chuyên gia xem các ngày đánh giá lệch, độ đồng thuận và chỉnh mức chỉ số sức khỏe của nhà
 import type {
   HealthIndicator,
   HealthLevel,
@@ -9,7 +9,7 @@ import type {
   HealthStatus,
 } from '@/types/healthDay.types';
 
-// Người chấm điểm thực địa tại nhà yến (BR-31, EXPERT-FR-012)
+// Người chấm điểm thực địa tại nhà yến
 export type HealthDisagreementAssessorRole = 'FARM_OWNER' | 'FARM_TECHNICIAN';
 
 // Một lượt chấm điểm lệch với trạng thái ảnh chụp của hệ thống lúc chấm
@@ -38,7 +38,7 @@ export interface HealthDisagreementDay {
   disagreements: HealthDisagreementItem[];
 }
 
-// Tóm tắt mức chỉ số sức khỏe hiện tại của từng nhà yến trong phạm vi truy vấn (BR-28)
+// Tóm tắt mức chỉ số sức khỏe hiện tại của từng nhà yến trong phạm vi truy vấn
 export interface HealthDisagreementHouseSummary {
   house_id: string;
   house_name: string;
@@ -53,7 +53,7 @@ export interface HealthDisagreementsResponse {
   days: HealthDisagreementDay[];
 }
 
-// Phản hồi từ GET /health-reports/evaluation (api-spec HealthEvaluation — ANALYTICS-FR-014, NFR-14)
+// Phản hồi từ GET /health-reports/evaluation (api-spec HealthEvaluation —)
 export interface HealthEvaluationResponse {
   from: string;
   to: string;
@@ -93,7 +93,7 @@ export interface HealthEvaluationResponse {
   }>;
 }
 
-// Tham số truy vấn GET /health-reports/disagreements & GET /health-reports/evaluation (bắt buộc có houseId hoặc farmId, tối đa 366 ngày)
+// Bắt buộc houseId hoặc farmId, tối đa 366 ngày
 export interface HealthDisagreementsQueryParams {
   houseId?: string;
   farmId?: string;

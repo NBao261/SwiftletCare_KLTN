@@ -21,7 +21,7 @@ interface BirdHourlyCardProps {
   scopeLabel: string;
 }
 
-// Chim ra, vào theo giờ trong 24 giờ qua (VISION-FR-017) và số đếm hôm nay (VISION-FR-012) của các nhà yến đang lọc
+// Chim ra, vào theo giờ trong 24 giờ qua và số đếm hôm nay của các nhà yến đang lọc
 export default function BirdHourlyCard({ houseIds, scopeLabel }: BirdHourlyCardProps): JSX.Element {
   const { t, num, ago } = useTranslation(analyticsDict);
   const buckets = useHousesBirdCountBuckets(houseIds);

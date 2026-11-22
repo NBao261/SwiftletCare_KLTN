@@ -5,18 +5,15 @@ import { tr } from '@/i18n'
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
-  /** Icon trái trong ô input (VD kính lúp cho ô tìm kiếm) — không truyền thì input giữ nguyên như cũ. */
+  // Icon trái trong ô input (VD kính lúp cho ô tìm kiếm): không truyền thì input giữ nguyên như cũ.
   icon?: ReactNode
-  /**
-   * Hiện lỗi cùng hàng với nhãn (nhãn trái, lỗi phải, 1 dòng cắt "…") thay vì dòng riêng dưới ô — dùng trong popup
-   * canh giữa: lỗi hiện/ẩn không làm popup đổi chiều cao (không trượt lên/xuống) mà cũng không phải chừa dòng trống.
-   */
+  // Lỗi cùng hàng nhãn để popup không đổi chiều cao
   errorInLabel?: boolean
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label: rawLabel, error: rawError, icon, errorInLabel, className, id, placeholder, ...props }, ref) => {
-    // Không có id hay name thì nhãn vẫn phải gắn vào ô (FE_Design §6 a11y): id tự sinh
+    // Không có id hay name thì nhãn vẫn phải gắn vào ô (FE_Design a11y): id tự sinh
     const generatedId = useId()
     const inputId = id ?? props.name ?? generatedId
     // Nhãn/lỗi/placeholder tự dịch theo VI/EN (chuỗi không có bản dịch giữ nguyên)

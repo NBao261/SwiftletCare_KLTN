@@ -7,7 +7,7 @@ import { mergeBirdCountBuckets, sumTodayBirdCounts } from '@/components/features
 import type { AnalyticsRange, EnvCompareZone } from '@/apis/farm-owner/analytics.api'
 import type { RelayOverrideLog } from '@/types'
 
-/** ANALYTICS-FR-009 — dự báo 60 phút tới; tự làm mới 5 phút/lần (bằng 1 bucket dữ liệu) */
+// dự báo 60 phút tới; tự làm mới 5 phút/lần (bằng 1 bucket dữ liệu)
 export function useForecast(zoneId: string | undefined) {
   return useQuery({
     queryKey: ['analytics', 'forecast', zoneId],
@@ -17,7 +17,7 @@ export function useForecast(zoneId: string | undefined) {
   })
 }
 
-/** ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ (dữ liệu để chỉnh hệ số ENV-FR-021) */
+// hiệu quả bộ điều khiển mờ (dữ liệu để chỉnh hệ số)
 export function useControlPerformance(zoneId: string | undefined, range: AnalyticsRange) {
   return useQuery({
     queryKey: ['analytics', 'control-performance', zoneId, range],
@@ -26,7 +26,7 @@ export function useControlPerformance(zoneId: string | undefined, range: Analyti
   })
 }
 
-// ANALYTICS-FR-011 — tỷ lệ thời gian tự động của Zone
+// tỷ lệ thời gian tự động của Zone
 export function useAutonomy(zoneId: string | undefined, range: AnalyticsRange) {
   return useQuery({
     queryKey: ['analytics', 'autonomy', zoneId, range],
@@ -35,7 +35,7 @@ export function useAutonomy(zoneId: string | undefined, range: AnalyticsRange) {
   })
 }
 
-// ENV-FR-019 — các lần can thiệp tay gần nhất của mọi thiết bị trong Zone, gộp và xếp mới nhất trước
+// các lần can thiệp tay gần nhất của mọi thiết bị trong Zone, gộp và xếp mới nhất trước
 export function useZoneRelayOverrides(nodeIds: string[], limit: number) {
   return useQueries({
     queries: nodeIds.map(nodeId => ({
@@ -45,7 +45,7 @@ export function useZoneRelayOverrides(nodeIds: string[], limit: number) {
     combine: results => {
       const logs = results.flatMap(result => result.data ?? [])
       logs.sort((first, second) => second.started_at.localeCompare(first.started_at))
-      // G-06 — relay đang can thiệp tay của từng thiết bị: log chưa có ended_at (huỷ từng relay)
+      // relay đang can thiệp tay của từng thiết bị: log chưa có ended_at (huỷ từng relay)
       const openRelays = new Map<string, Set<RelayOverrideLog['relay']>>()
       for (const log of logs) {
         if (log.ended_at) continue
@@ -64,7 +64,7 @@ export function useZoneRelayOverrides(nodeIds: string[], limit: number) {
   })
 }
 
-/** ANALYTICS-FR-001 — biểu đồ lịch sử môi trường theo khoảng thời gian */
+// biểu đồ lịch sử môi trường theo khoảng thời gian
 export function useEnvSummary(zoneId: string | undefined, range: AnalyticsRange) {
   return useQuery({
     queryKey: ['analytics', 'env-summary', zoneId, range],
@@ -73,7 +73,7 @@ export function useEnvSummary(zoneId: string | undefined, range: AnalyticsRange)
   })
 }
 
-/** ANALYTICS-FR-005 — so sánh môi trường nhiều Zone (tối đa 6, xem useEnvCompareBatched cho >6) */
+// so sánh môi trường nhiều Zone (tối đa 6, xem useEnvCompareBatched cho >6)
 export function useEnvCompare(zoneIds: string[], range: AnalyticsRange) {
   return useQuery({
     queryKey: ['analytics', 'env-compare', zoneIds, range],
@@ -88,10 +88,10 @@ function chunk<T>(items: T[], size: number): T[][] {
   return out
 }
 
-// ANALYTICS-FR-005 cho mọi Zone của farm: backend chặn quá 6 Zone mỗi lần nên chia lô 6, gọi song song rồi gộp (ZoneBalanceCard)
+// cho mọi Zone của farm: backend chặn quá 6 Zone mỗi lần nên chia lô 6, gọi song song rồi gộp (ZoneBalanceCard)
 export function useEnvCompareBatched(zoneIds: string[], range: AnalyticsRange) {
   const batches = useMemo(() => chunk(zoneIds, 6), [zoneIds])
-  // Gộp bằng combine (kết quả được structural-share) để zones chỉ đổi tham chiếu khi dữ liệu đổi, useMemo trên results không giữ được
+  // combine để zones chỉ đổi tham chiếu khi dữ liệu đổi
   return useQueries({
     queries: batches.map(ids => ({
       queryKey: ['analytics', 'env-compare', ids, range],
@@ -106,7 +106,7 @@ export function useEnvCompareBatched(zoneIds: string[], range: AnalyticsRange) {
   })
 }
 
-// ANALYTICS-FR-002, VISION-FR-011 — xu hướng đàn chim của 1 hoặc nhiều nhà yến; nhiều nhà thì cộng số đếm theo ngày
+// xu hướng đàn chim của 1 hoặc nhiều nhà yến; nhiều nhà thì cộng số đếm theo ngày
 export function useHousesBirdCountTrends(houseIds: string[], days: number) {
   return useQueries({
     queries: houseIds.map(houseId => ({
@@ -128,7 +128,7 @@ export function useHousesBirdCountTrends(houseIds: string[], days: number) {
   })
 }
 
-// VISION-FR-017 — số chim ra, vào mỗi 5 phút trong 24 giờ gần nhất, cộng các nhà yến
+// số chim ra, vào mỗi 5 phút trong 24 giờ gần nhất, cộng các nhà yến
 export function useHousesBirdCountBuckets(houseIds: string[]) {
   return useQueries({
     queries: houseIds.map(houseId => ({
@@ -144,7 +144,7 @@ export function useHousesBirdCountBuckets(houseIds: string[]) {
   })
 }
 
-// VISION-FR-012 — số đếm hôm nay, cộng các nhà yến; làm mới 30 giây/lần, bằng nhịp AI node gửi số đếm phiên (VISION-FR-006)
+// số đếm hôm nay, cộng các nhà yến; làm mới 30 giây/lần, bằng nhịp AI node gửi số đếm phiên
 export function useHousesBirdCountCurrent(houseIds: string[]) {
   return useQueries({
     queries: houseIds.map(houseId => ({
@@ -164,7 +164,7 @@ export function useHousesBirdCountCurrent(houseIds: string[]) {
   })
 }
 
-// ANALYTICS-FR-003 tương quan môi trường × tỷ lệ chim về: tỷ lệ chim về chờ hệ thống đếm chim nên nơi dùng gắn nhãn dữ liệu giả (FE_Design 5.4)
+// Tỷ lệ chim về chờ hệ thống đếm chim nên nơi dùng gắn nhãn dữ liệu giả
 export function useCorrelation(zoneId: string | undefined, days: number) {
   return useQuery({
     queryKey: ['analytics', 'correlation', zoneId, days],
@@ -173,7 +173,7 @@ export function useCorrelation(zoneId: string | undefined, days: number) {
   })
 }
 
-// ANALYTICS-FR-017 — điện năng ước tính theo tháng của 1 nhà (90 ngày gần nhất)
+// điện năng ước tính theo tháng của 1 nhà (90 ngày gần nhất)
 export function useHouseEnergy(houseId: string | undefined) {
   return useQuery({
     queryKey: ['analytics', 'energy', houseId],

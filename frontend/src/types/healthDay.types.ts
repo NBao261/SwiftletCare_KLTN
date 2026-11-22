@@ -1,4 +1,4 @@
-// Module ANALYTICS / EXPERT — trạng thái sức khỏe ngày của nhà yến, đánh giá sau khi xem trạng thái (MF-06, BR-31; api-spec HouseHealthDay)
+// Trạng thái sức khỏe ngày của nhà yến
 
 import type { Role } from '@/types/common.types';
 
@@ -6,7 +6,7 @@ export type HealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA';
 export type HealthRatingValue = 'GOOD' | 'WATCH' | 'ACTION';
 export type HealthLevel = 'NORMAL' | 'SLIGHT' | 'CLEAR';
 export type HealthSource = 'environment' | 'air' | 'flock' | 'noise';
-// SM-18 — trạng thái chấm của chính người gọi
+// trạng thái chấm của chính người gọi
 export type HealthRatingState = 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED';
 
 export type HealthReasonCode =
@@ -48,7 +48,7 @@ export interface HealthDayRating {
   snapshot: { status: HealthStatus; reasons: HealthReason[] };
 }
 
-// Ngày của 1 nhà: đủ trạng thái, lý do, chỉ số và điểm của mọi người, kể cả khi người xem chưa đánh giá (BR-31)
+// Ngày của 1 nhà: đủ trạng thái, lý do, chỉ số và điểm của mọi người, kể cả khi người xem chưa đánh giá
 export interface HouseHealthDay {
   _id: string;
   house_id: string;
@@ -58,7 +58,7 @@ export interface HouseHealthDay {
   date: string;
   weather: HealthDayWeather | null;
   computed_at: string;
-  // null = người xem không phải người chấm (Domain Expert, SRS 4.2.0): thấy đủ trạng thái, không có hạn chấm
+  // null = người xem không phải người chấm (Domain Expert): thấy đủ trạng thái, không có hạn chấm
   my_rating_state: HealthRatingState | null;
   rating_deadline: string;
   indicators: Record<HealthSource, HealthIndicator>;
@@ -69,7 +69,7 @@ export interface HouseHealthDay {
   ratings: HealthDayRating[];
 }
 
-// BR-28 — mức chỉ số sức khỏe của nhà yến
+// mức chỉ số sức khỏe của nhà yến
 export interface HealthLevels {
   in_range_slight_pct: number;
   in_range_clear_pct: number;
@@ -83,11 +83,11 @@ export interface HouseHealthLevels {
   house_id: string;
   health_levels: HealthLevels;
   defaults: HealthLevels;
-  // Người gọi sửa được không, cùng luật PUT (BR-22, chỉ đếm chuyên gia còn hoạt động)
+  // Người gọi sửa được không, cùng luật PUT (chỉ đếm chuyên gia còn hoạt động)
   can_edit: boolean;
 }
 
-// EXPERT-FR-005 — báo cáo sức khỏe theo nhà yến (api-spec HouseHealthReportSummary, BR-33; CUSTOM do người dùng tạo)
+// báo cáo sức khỏe theo nhà yến (api-spec HouseHealthReportSummary; CUSTOM do người dùng tạo)
 export type HealthReportKind = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
 
 export interface HouseHealthReportSummary {
@@ -137,7 +137,7 @@ export interface HouseHealthReport extends HouseHealthReportSummary {
   zone_sections: HealthReportZoneSection[];
   days: HouseHealthDay[];
   status_counts: Record<HealthStatus, number>;
-  // BR-22 — lần Farm Owner nhắc chuyên gia viết kết luận
+  // lần Farm Owner nhắc chuyên gia viết kết luận
   expert_reminded_at?: string | null;
   // Chỉ có ở chi tiết (api-spec HouseHealthReport), danh sách chỉ có has_conclusion
   expert_conclusion: {

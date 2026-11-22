@@ -11,7 +11,7 @@ export const COMMENT_MAX_LENGTH = 1000;
 
 export const EQUIPMENTS: MaintenanceEquipment[] = ['PUMP', 'FAN', 'SENSOR', 'NOZZLE', 'CALIBRATION'];
 
-// OPS-FR-005 — bơm, quạt tính theo giờ chạy hoặc số lần đóng cắt; vệ sinh, hiệu chuẩn theo lịch (cùng luật backend)
+// bơm, quạt tính theo giờ chạy hoặc số lần đóng cắt; vệ sinh, hiệu chuẩn theo lịch (cùng luật backend)
 export function basesFor(equipment: MaintenanceEquipment): MaintenanceBasis[] {
   return equipment === 'PUMP' || equipment === 'FAN' ? ['RUN_HOURS', 'SWITCHES'] : ['CALENDAR'];
 }

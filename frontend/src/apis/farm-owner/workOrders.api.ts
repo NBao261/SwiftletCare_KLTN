@@ -1,7 +1,7 @@
 import api from '@/lib/axios';
 import type { ApiResponse, ChecklistResult, OpsMetrics, SiteCause, WorkOrder, WorkOrderStatus } from '@/types';
 
-// GET /work-orders — houseId hoặc farmId; không truyền cả hai = mọi farm của người gọi
+// GET /work-orders: houseId hoặc farmId; không truyền cả hai = mọi farm của người gọi
 export interface WorkOrderListQuery {
   farmId?: string;
   houseId?: string;
@@ -12,7 +12,7 @@ export interface WorkOrderListQuery {
   limit?: number;
 }
 
-// OPS-FR-002, ALERT-FR-018 — báo xong: nguyên nhân tìm thấy tại chỗ, việc đã làm, ảnh (multipart `photos`)
+// báo xong: nguyên nhân tìm thấy tại chỗ, việc đã làm, ảnh (multipart `photos`)
 export interface CompleteWorkOrderInput {
   cause?: SiteCause;
   work_note?: string;
@@ -25,7 +25,7 @@ export interface CreateWorkOrderInput {
   description?: string;
 }
 
-// OPS-FR-001…004, 007, 009 — Work Order: Farm Owner mở tay, tự làm (bắt đầu, checklist, báo xong), duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ đọc
+// Domain Expert chỉ đọc
 export const workOrderApi = {
   list: (query: WorkOrderListQuery) => api.get<ApiResponse<WorkOrder[]>>('/work-orders', { params: query }),
   getOne: (id: string) => api.get<ApiResponse<WorkOrder>>(`/work-orders/${id}`),
@@ -39,8 +39,7 @@ export const workOrderApi = {
     // Tới 5 ảnh × 5 MB trên mạng nhà yến: timeout riêng thay cho 10 s mặc định của axios
     return api.post<ApiResponse<WorkOrder>>(`/work-orders/${id}/done`, form, { timeout: 120_000 });
   },
-  // OPS-FR-007 — kết quả 1 mục checklist của phiếu phòng ngừa đang làm (multipart, ảnh tuỳ chọn ở mobile); backend xoá ghi chú
-  // của mục khi không gửi `note`, nên ghi lại một mục phải gửi kèm ghi chú đang có
+  // Backend xoá ghi chú khi không gửi `note`, nên ghi lại một mục phải gửi kèm ghi chú đang có
   recordChecklist: (id: string, itemIndex: number, result: ChecklistResult, note?: string | null) => {
     const form = new FormData();
     form.append('item_index', String(itemIndex));
@@ -53,7 +52,7 @@ export const workOrderApi = {
   cancel: (id: string, reason: string) => api.post<ApiResponse<WorkOrder>>(`/work-orders/${id}/cancel`, { reason }),
   reassign: (id: string, assigneeId: string) =>
     api.post<ApiResponse<WorkOrder>>(`/work-orders/${id}/reassign`, { assignee_id: assigneeId }),
-  // MTTA, MTTR trên cảnh báo tạo trong [from, to) của farm hoặc nhà (BR-40)
+  // MTTA, MTTR trên cảnh báo tạo trong [from, to) của farm hoặc nhà
   metrics: (query: { farmId: string; houseId?: string; from: string; to: string }) =>
     api.get<ApiResponse<OpsMetrics>>('/work-orders/metrics', { params: query }),
 };

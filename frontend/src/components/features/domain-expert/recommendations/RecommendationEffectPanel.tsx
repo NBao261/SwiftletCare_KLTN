@@ -3,7 +3,7 @@ import { recommendationsDict } from '@/constants/recommendations.i18n'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import type { RecommendationRuleEffect } from '@/types'
 
-// EXPERT-FR-019 — mỗi luật: số khuyến nghị đã mở, đã chấp nhận, đã đo hiệu quả, có cải thiện
+// mỗi luật: số khuyến nghị đã mở, đã chấp nhận, đã đo hiệu quả, có cải thiện
 export default function RecommendationEffectPanel({ effects }: { effects: RecommendationRuleEffect[] }) {
   const { t, num } = useTranslation(recommendationsDict)
   const countCell = (value: number) => <span className="text-small tabular-nums text-charcoal">{num(value)}</span>

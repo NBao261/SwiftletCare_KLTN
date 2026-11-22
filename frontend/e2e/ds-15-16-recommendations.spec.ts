@@ -3,9 +3,7 @@ import { demoFarm, signIn } from './helpers/demoApi';
 
 interface Recommendation { _id: string; status: string; work_order_id?: string }
 
-// WF-08 — DS-15, DS-16 (Design Brief Phụ lục A2): nhà C có một khuyến nghị đang mở theo luật "thời gian trong ngưỡng dưới
-// 90 %" (`npm run seed:demo`). Xét luật, đo hiệu quả và hết hạn chạy bằng `npm run job:run` ở buổi tổng duyệt
-// (docs/deploy/staging.md §5).
+// Cần `npm run seed:demo`. Xét luật và đo hiệu quả chạy bằng `npm run job:run` ở buổi tổng duyệt
 test.describe('DS-15, DS-16 Vòng khuyến nghị', () => {
   test('DS-16 từ chối không lý do 422, khuyến nghị vẫn mở', async ({ request }) => {
     const owner = await signIn(request, 'owner');

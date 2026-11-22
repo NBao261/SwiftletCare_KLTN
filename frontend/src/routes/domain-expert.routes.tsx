@@ -1,4 +1,4 @@
-// Màn quyết định của chuyên gia (FE_Design §12.0 c); Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận (xem ở /health)
+// Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận
 import { lazy } from 'react';
 import { Route, Navigate, Outlet } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
@@ -25,13 +25,13 @@ function DomainExpertIndexRedirect() {
   return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
 }
 
-// Khung chung của các trang /domain-expert/*: thanh trạng thái có bộ chọn Farm/Nhà/Zone và lời nhắc quyền của Farm Owner
+// Khung chung của /domain-expert/*
 function DomainExpertShell() {
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
       {/* Thanh banner SCADA Chuyên gia với bộ chọn Farm/House/Zone */}
       <ExpertScadaBanner />
-      {/* Farm Owner: quyết định thay khi farm chưa có chuyên gia (BR-22), còn lại chỉ xem */}
+      {/* Farm Owner: quyết định thay khi farm chưa có chuyên gia, còn lại chỉ xem */}
       <ExpertDecisionNotice />
       <div className="flex w-full flex-1 flex-col">
         <Outlet />
@@ -61,28 +61,28 @@ export const domainExpertRoutes = (
       {/* Ngưỡng & Hệ số mờ + Tham số phát hiện */}
       <Route path="tuning" element={<DomainExpertZoneTuningPage />} />
 
-      {/* Duyệt tham số & Đề xuất hệ số mờ (G-04) */}
+      {/* Duyệt tham số & Đề xuất hệ số mờ */}
       <Route path="reviews" element={<DomainExpertReviewsPage />} />
 
-      {/* Lịch đếm chim của nhà (VISION-FR-019, G-12) */}
+      {/* Lịch đếm chim của nhà */}
       <Route path="counting-schedule" element={<DomainExpertCountingSchedulePage />} />
 
-      {/* Vòng đếm chim trên khung live (VISION-FR-018, G-12) */}
+      {/* Vòng đếm chim trên khung live */}
       <Route path="counting-ring" element={<DomainExpertCountingRingPage />} />
 
-      {/* Luật bù phun sương theo thời tiết (ENV-FR-030, G-23) */}
+      {/* Luật bù phun sương theo thời tiết */}
       <Route path="weather-rules" element={<DomainExpertWeatherRulesPage />} />
 
-      {/* Báo cáo sức khỏe & Kết luận + Xem ngày đánh giá lệch (EXPERT-FR-022) */}
+      {/* Báo cáo sức khỏe & Kết luận + Xem ngày đánh giá lệch */}
       <Route path="reports" element={<RequireRole allow={EXPERT_ROLES}><DomainExpertReportsPage /></RequireRole>} />
 
-      {/* Hồ sơ cấu hình (EXPERT-FR-014, 015) */}
+      {/* Hồ sơ cấu hình */}
       <Route path="profiles" element={<DomainExpertProfilesPage />} />
 
-      {/* Luật khuyến nghị & hiệu quả (EXPERT-FR-016…019) */}
+      {/* Luật khuyến nghị & hiệu quả */}
       <Route path="recommendation-rules" element={<DomainExpertRecommendationRulesPage />} />
 
-      {/* Lịch sử quyết định của chuyên gia (EXPERT-FR-009) */}
+      {/* Lịch sử quyết định của chuyên gia */}
       <Route path="history" element={<DomainExpertHistoryPage />} />
     </Route>
   </>

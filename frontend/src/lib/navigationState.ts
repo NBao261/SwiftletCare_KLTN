@@ -1,4 +1,4 @@
-// State gắn vào lượt chuyển trang từ trang con lên trang cha cùng mục menu (nút Quay lại, breadcrumb gốc, menu bên trái, đổi khung lọc)
+// State của lượt chuyển từ trang con lên trang cha cùng mục menu
 export interface UpFromChildState {
   fromChildPage: true
 }

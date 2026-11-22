@@ -1,7 +1,7 @@
 import type { Dictionary } from '@/lib/i18n'
 import { prefixLabels, alertTypeDict, deviceStatusDict } from '@/constants/enumLabels.i18n'
 
-/** Từ điển màn "Cấu trúc Farm" (Farm → House → Zone → Device). Đơn vị đo (°C, %, ppm, lux, dB) không dịch — FE_Design §6. */
+// Đơn vị đo không dịch
 const vi = {
   // trang / điều hướng
   'page.farms': 'Cấu trúc trang trại',
@@ -236,7 +236,7 @@ const vi = {
   'members.assignFailed': 'Cập nhật giao nhà thất bại',
   'members.assignOwnerOnly': 'Chỉ chủ nhà yến giao nhà cho kỹ thuật viên.',
   'members.groups': 'Nhóm thành viên',
-  // AUTH-FR-010 — lời mời đang chờ (chỉ Primary Owner)
+  // lời mời đang chờ (chỉ Primary Owner)
   'invites.title': 'Lời mời đang chờ ({n})',
   'invites.desc': 'Lời mời chưa ai nhận; quá 7 ngày thì tự hết hạn.',
   'invites.colEmail': 'Email được mời',
@@ -245,7 +245,7 @@ const vi = {
   'invites.colExpires': 'Hết hạn',
   'invites.empty': 'Không có lời mời nào đang chờ.',
   'invites.loadFailed': 'Không tải được danh sách lời mời',
-  // AUTH-FR-014 — lịch trực của nhà
+  // lịch trực của nhà
   'roster.title': 'Lịch trực ({n} ca)',
   'roster.desc': 'Ca trực theo tuần, giờ Việt Nam. Cảnh báo của nhà gửi trước tới kỹ thuật viên đang trực.',
   'roster.add': 'Thêm ca',
@@ -259,7 +259,7 @@ const vi = {
   'roster.role.PRIMARY': 'Trực chính',
   'roster.role.BACKUP': 'Trực phụ',
   'roster.overnight': 'qua đêm',
-  // AUTH-FR-014 — ca trực của chính kỹ thuật viên ở trang Trang trại
+  // ca trực của chính kỹ thuật viên ở trang Trang trại
   'roster.mine': 'Ca trực của bạn',
   'roster.mineNone': 'Chưa có ca trực ở nhà này',
   'roster.day.0': 'CN',
@@ -335,7 +335,7 @@ const vi = {
   // Đổi tên / xoá nhà, Zone (chờ API)
   'structure.house': 'nhà yến',
   'structure.zone': 'Zone',
-  // FARM-FR-011 — mã QR dán ở tầng, quét trên mobile để chọn Zone khi thiết lập bộ điều khiển
+  // mã QR dán ở tầng, quét trên mobile để chọn Zone khi thiết lập bộ điều khiển
   'zone.printFloorCode': 'In mã QR tầng',
   'zone.floorCodeHint': 'Quét để chọn tầng khi thiết lập bộ điều khiển',
   'structure.rename': 'Đổi tên {target}',
@@ -349,7 +349,7 @@ const vi = {
   'structure.deleteBlockedServer': '{target} còn thiết bị đang dùng (kể cả camera). Gỡ các thiết bị ở trang Thiết bị trước khi xoá.',
   'structure.save': 'Lưu',
   'structure.cancel': 'Huỷ',
-  // Tham số do chuyên gia đặt (EXPERT-FR-008)
+  // Tham số do chuyên gia đặt
   'tuning.title': 'Tham số phát hiện',
   'tuning.desc': 'Chuyên gia chỉnh theo Zone; bộ điều khiển dùng các tham số này để phát hiện tiếng ồn bất thường, phun sương không tăng ẩm và hỏng loa. Chủ nhà yến chỉ xem.',
   'tuning.seconds': 'giây',
@@ -367,7 +367,7 @@ const vi = {
   'tuning.birdDesc': 'Chuyên gia đặt cho cả nhà yến; chủ nhà yến chỉ xem.',
   'tuning.birdDrop': 'Báo khi tỷ lệ chim về giảm',
   'tuning.birdDropHint': 'So với trung bình kỳ trước',
-  // FARM-FR-014, BR-46 — giai đoạn nhà
+  // giai đoạn nhà
   'stage.title': 'Giai đoạn nhà',
   'stage.desc': 'Nhà đang dẫn dụ thì trạng thái hằng ngày không xét tỷ lệ chim về và không báo tỷ lệ về thấp.',
   'stage.ATTRACTING': 'Đang dẫn dụ',
@@ -382,7 +382,7 @@ const vi = {
   'stage.confirm': 'Chuyển giai đoạn',
   'stage.saved': 'Đã đổi giai đoạn nhà',
   'stage.saveFailed': 'Đổi giai đoạn nhà thất bại',
-  // EXPERT-FR-015 — áp hồ sơ cấu hình cho các nhà
+  // áp hồ sơ cấu hình cho các nhà
   'profile.apply': 'Áp hồ sơ',
   'profile.applyTitle': 'Áp hồ sơ cấu hình · {farm}',
   'profile.applyIntro': 'Mọi Zone của các nhà đã chọn nhận giá trị của hồ sơ; thiết bị hiện "Đang chờ" tới khi áp xong.',

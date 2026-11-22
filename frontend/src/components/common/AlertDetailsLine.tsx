@@ -16,11 +16,7 @@ const METRIC_LABEL: Record<string, string> = {
 const formatMeasure = (value: number, unit: string): string =>
   formatSensor(value, unit, Number.isInteger(value) ? 0 : 1)
 
-/**
- * Dòng chi tiết của 1 cảnh báo — dùng chung cho Farm Owner và Technician (trang /alerts):
- * vượt ngưỡng (G-05, ALERT-FR-012): chỉ số, giá trị đo, ngưỡng, hướng, vượt liên tục từ lúc nào;
- * khởi động lại bất thường (THREAT-FR-012): lý do. Cảnh báo không có chi tiết thì không hiện gì.
- */
+// Dòng chi tiết cảnh báo: vượt ngưỡng hoặc lý do khởi động lại; không có chi tiết thì không hiện
 export default function AlertDetailsLine({ alert }: { alert: Alert }) {
   const breach = alertBreach(alert)
   const resetReason = alert.details?.reset_reason

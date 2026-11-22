@@ -9,14 +9,14 @@ import type { RecommendationRule } from '@/types'
 interface Props {
   rule: RecommendationRule
   disabled?: boolean
-  // BR-22 — Farm Owner trên farm có chuyên gia không bật/tắt, không sửa luật đang chạy
+  // Farm Owner trên farm có chuyên gia không bật/tắt, không sửa luật đang chạy
   toggleDisabled?: boolean
   editDisabled?: boolean
   onToggle: () => void
   onEdit: () => void
 }
 
-// EXPERT-FR-016 — một luật: công tắc bật/tắt, tên, điều kiện, đề xuất khi chấp nhận, nguồn
+// một luật: công tắc bật/tắt, tên, điều kiện, đề xuất khi chấp nhận, nguồn
 export default function RecommendationRuleRow({ rule, disabled, toggleDisabled, editDisabled, onToggle, onEdit }: Props) {
   const { t } = useTranslation(recommendationsDict)
   const text = useRecommendationText()

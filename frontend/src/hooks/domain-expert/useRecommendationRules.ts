@@ -7,7 +7,7 @@ import type { RecommendationRuleInput } from '@/types'
 const RULES_KEY = 'recommendation-rules'
 export const RULES_PAGE_SIZE = 10
 
-// EXPERT-FR-016 — luật của farm, mới sửa trước, phân trang server
+// luật của farm, mới sửa trước, phân trang server
 export function useRecommendationRules(farmId: string | undefined, page: number) {
   return usePaginatedListQuery(
     [RULES_KEY, 'list', farmId, page],
@@ -18,7 +18,7 @@ export function useRecommendationRules(farmId: string | undefined, page: number)
   )
 }
 
-// EXPERT-FR-019 — số khuyến nghị đã mở, chấp nhận, đo, cải thiện theo từng luật
+// số khuyến nghị đã mở, chấp nhận, đo, cải thiện theo từng luật
 export function useRecommendationRuleEffects(farmId: string | undefined) {
   return useQuery({
     queryKey: [RULES_KEY, 'effects', farmId],

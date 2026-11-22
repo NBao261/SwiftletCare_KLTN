@@ -2,7 +2,7 @@ import { recommendationsDict } from '@/constants/recommendations.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import type { RecommendationAction, RecommendationComparison, RecommendationIndicator } from '@/types';
 
-// Câu điều kiện và câu đề xuất của luật khuyến nghị, dùng ở trang Khuyến nghị (Farm Owner) và trang Luật khuyến nghị (Domain Expert)
+// Câu điều kiện và câu đề xuất của luật khuyến nghị
 export function useRecommendationText() {
   const { t, exact } = useTranslation(recommendationsDict);
   const condition = (rule: { indicator: RecommendationIndicator; comparison: RecommendationComparison; value: number; window_days: number }) =>

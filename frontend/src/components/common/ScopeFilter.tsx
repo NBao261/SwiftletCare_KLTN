@@ -15,7 +15,7 @@ interface ScopeFilterProps {
 // Ô khoá: nền xám, không bấm được
 const LOCKED_CLASS = 'cursor-not-allowed border-warmGray/15 bg-warmGray/10 text-warmGray hover:border-warmGray/15';
 
-// Khung lọc Trang trại → Nhà → Zone luôn đủ 3 ô (ô chưa chọn được khoá xám), chấm cam ở farm / nhà / Zone có sự cố
+// Luôn đủ 3 ô (ô chưa chọn được thì khoá), chấm cam ở nơi có sự cố
 export default function ScopeFilter({ scope, lockZone = false, lockHouse = false }: ScopeFilterProps): JSX.Element {
   const { t } = useTranslation(dashboardDict);
   const isHouseLocked = lockHouse || !scope.farmId;
@@ -23,7 +23,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
   const hasHouseIssue = scope.houses.some(house => scope.issueHouseIds.has(house._id));
   const hasZoneIssue = scope.zones.some(zone => scope.issueZoneIds.has(zone._id));
 
-  // Trang cần một trang trại / nhà / Zone (C-05): bỏ mục "Tất cả" của bậc đó, useScopeFilter đã tự chọn sẵn
+  // Trang cần một trang trại / nhà / Zone: bỏ mục "Tất cả" của bậc đó, useScopeFilter đã tự chọn sẵn
   const needsFarm = scope.level !== 'none';
   const needsHouse = scope.level === 'house' || scope.level === 'zone';
   const needsZone = scope.level === 'zone';

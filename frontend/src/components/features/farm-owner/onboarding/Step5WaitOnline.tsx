@@ -1,5 +1,4 @@
-// Step5WaitOnline — bước cuối (FARM-FR-012): chờ thiết bị kết nối máy chủ trong 15 phút (socket DEVICE_STATUS_CHANGE + đọc trạng thái một lần);
-// bộ điều khiển còn chờ tới khi áp cấu hình của Zone (config_sync, ENV-FR-027) — cùng các bước với màn lắp đặt của mobile
+// Bước cuối: chờ thiết bị kết nối trong 15 phút; controller chờ thêm tới khi áp cấu hình của Zone
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Check, Loader2, AlertTriangle, Circle, RotateCcw } from 'lucide-react'
 import { useDeviceStatusEvents, useSensorNode } from '@/hooks/shared/useDevices'
@@ -10,7 +9,7 @@ import type { OnboardingState } from './onboardingTypes'
 
 // 15 phút
 const TIMEOUT_MS = 15 * 60 * 1000
-// Đọc lại trạng thái: controller gửi heartbeat 30 s/lần (MQTT_HEARTBEAT_MS) và backend so phiên bản cấu hình ở mỗi heartbeat
+// Controller gửi heartbeat 30 s/lần, backend so phiên bản cấu hình ở mỗi heartbeat
 const CONFIG_POLL_MS = 10_000
 
 // Vòng đếm ngược: bán kính 52 trong viewBox 120 → chu vi để tính stroke-dashoffset
@@ -65,12 +64,12 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   const startRef      = useRef(Date.now())
   const successTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Trạng thái đọc từ API (thiết bị đã ONLINE từ trước thì socket không còn sự kiện nào): controller đọc lại tới khi áp xong cấu hình
+  // Thiết bị đã ONLINE từ trước thì socket không còn sự kiện nào: đọc trạng thái từ API
   const { data: sensor } = useSensorNode(isCamera ? undefined : data.deviceDbId, CONFIG_POLL_MS)
   const { data: cameras } = useHouseCameras(isCamera ? data.location.houseId : undefined)
   const fetchedStatus = isCamera ? cameras?.find(camera => camera._id === data.deviceDbId)?.status : sensor?.status
   const online = socketOnline || fetchedStatus === 'ONLINE'
-  // ENV-FR-027 — APPLIED, hoặc UNKNOWN (firmware trước 2.1.0 không báo phiên bản) thì coi như xong; camera không có bước này
+  // APPLIED, hoặc UNKNOWN (firmware trước 2.1.0 không báo phiên bản) thì coi như xong; camera không có bước này
   const configSync = sensor?.config_sync
   const configApplied = configSync === 'APPLIED' || configSync === 'UNKNOWN'
   const ready = online && (isCamera || configApplied)
@@ -87,7 +86,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
 
   useEffect(() => { if (ready) handleSuccess() }, [ready, handleSuccess])
 
-  // Camera gắn nhà nên nghe ở room house:<houseId> (FARM-FR-004), bộ điều khiển ở room zone:<zoneId>
+  // Camera gắn nhà nên nghe ở room house:<houseId>, bộ điều khiển ở room zone:<zoneId>
   useDeviceStatusEvents(
     isCamera ? { houseId: data.location.houseId } : { zoneId: data.location.zoneId },
     data.deviceDbId,
@@ -169,7 +168,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      {/* Vòng đếm ngược 15' — chạy ngược theo thời gian còn lại; chấm "radar" lan ra khi chưa online */}
+      {/* Vòng đếm ngược 15': chạy ngược theo thời gian còn lại; chấm "radar" lan ra khi chưa online */}
       <div className="relative flex h-36 w-36 items-center justify-center">
         {!online && <span aria-hidden className="absolute inset-3 animate-ping-soft rounded-full bg-limeMist motion-reduce:animate-none" />}
         <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden>

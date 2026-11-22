@@ -1,4 +1,4 @@
-// EXPERT-FR-014, 015 — React Query hooks cho hồ sơ cấu hình
+// React Query hooks cho hồ sơ cấu hình
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { profilesApi } from '@/apis/domain-expert/profiles.api'
 import type { ConfigProfileInput, ConfigProfileStatus } from '@/types/expert.types'

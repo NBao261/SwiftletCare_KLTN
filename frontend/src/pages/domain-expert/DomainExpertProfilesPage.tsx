@@ -1,4 +1,4 @@
-// EXPERT-FR-014, 015 — Soạn và duyệt hồ sơ cấu hình (G-24)
+// Soạn và duyệt hồ sơ cấu hình
 import { useState } from 'react'
 import { BookCopy, Plus, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -28,7 +28,7 @@ const STATUS_FILTERS: { value: ConfigProfileStatus | 'ALL'; label: string }[] = 
 ]
 
 export default function DomainExpertProfilesPage() {
-  // BR-22 (Report 3 4.2.15) — Farm Owner soạn bản nháp, chỉ chuyên gia duyệt
+  // Farm Owner soạn bản nháp, chỉ chuyên gia duyệt
   const { isExpert, canEditParameters, ownerNeedsExpert, farmKnown } = useExpertDecisionRights()
   const { selectedFarmId } = useZoneStore()
   const farmId = selectedFarmId ?? undefined

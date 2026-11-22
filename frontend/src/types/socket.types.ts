@@ -1,10 +1,10 @@
-// Payload sự kiện WebSocket (§9.3) — khớp các emit*() bên backend socket/index.ts.
+// Payload sự kiện WebSocket: khớp các emit*() bên backend socket/index.ts.
 
 import type { ControlMode, ControlOutput, DeviceStatus, RelayName, RelayStates } from '@/types/device.types'
 import type { AlertSeverity, AlertType } from '@/types/alert.types'
 import type { SessionType } from '@/types/vision.types'
 
-// ── WebSocket Event Payloads (§9.3) ───────────────────────────────────────────
+// WebSocket Event Payloads
 export interface TelemetryUpdateEvent {
   zoneId: string; temperature: number; humidity: number
   light: number; nh3: number; co2: number; sound: number

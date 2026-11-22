@@ -1,10 +1,7 @@
 import { useQuery, type keepPreviousData } from '@tanstack/react-query'
 import type { ApiResponse } from '@/types'
 
-/**
- * Unwrap chung envelope phân trang `{success,data:{data,meta:{total,page,limit}}}` — trước đây
- * bị viết lại y hệt ở `useAlertsList`/`useAuditLogList`. Dùng cho mọi danh sách phân trang.
- */
+// Unwrap envelope phân trang dùng chung
 export function usePaginatedListQuery<T>(
   queryKey: readonly unknown[],
   queryFn: () => Promise<{ data: ApiResponse<T[]> }>,

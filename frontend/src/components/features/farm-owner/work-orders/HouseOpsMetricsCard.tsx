@@ -14,14 +14,14 @@ interface HouseOpsMetricsCardProps {
   houseId: string;
 }
 
-// OPS-FR-009, BR-40 — MTTA, MTTR của nhà trong 30 ngày và số Work Order đang mở; Farm Owner và Domain Expert xem
+// MTTA, MTTR của nhà trong 30 ngày và số Work Order đang mở; Farm Owner và Domain Expert xem
 export default function HouseOpsMetricsCard({ farmId, houseId }: HouseOpsMetricsCardProps): JSX.Element {
   const { t, num } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
   const metrics = useHouseOpsMetrics(farmId, houseId);
   const openCount = useOpenWorkOrderCount(houseId);
   const overall = metrics.data?.overall;
-  // Số liệu và số phiếu chưa đóng chung 1 trạng thái tải/lỗi: lỗi thì không hiện "_" thay cho số chưa tải được (FE_Design 13.16 b)
+  // Chung 1 trạng thái tải/lỗi để không hiện "_" thay cho số chưa tải được
   const isLoading = metrics.isLoading || openCount.isLoading;
   const loadError = metrics.error ?? openCount.error;
   const retry = () => {

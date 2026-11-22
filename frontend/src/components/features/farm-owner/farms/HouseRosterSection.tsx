@@ -38,7 +38,7 @@ interface HouseRosterSectionProps {
 // Trạng thái popup: thêm ca mới (index null) hoặc sửa ca thứ index
 type Editing = { index: number | null } | null
 
-// AUTH-FR-014 — lịch trực theo tuần của 1 nhà, Farm Owner thêm / sửa / xoá ca
+// lịch trực theo tuần của 1 nhà, Farm Owner thêm / sửa / xoá ca
 export default function HouseRosterSection({ top, searchBox, query, farmId, houseId, technicians }: HouseRosterSectionProps) {
   const { t } = useTranslation(farmDict)
   const { data: houses } = useHouses(farmId)

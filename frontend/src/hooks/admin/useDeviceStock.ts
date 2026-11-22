@@ -3,14 +3,10 @@ import { deviceStockApi } from '@/apis/admin/deviceStock.api'
 import type { ProvisionedDevice, ProvisionedDeviceKind } from '@/types'
 
 const KEY = ['admin-device-stock']
-/** Trần `limit` của backend (paginate) */
+// Trần `limit` của backend (paginate)
 const PAGE_LIMIT = 100
 
-/**
- * FARM-FR-010 — toàn bộ kho. Backend chỉ lọc theo loại / đã kích hoạt / đã thu hồi, không tìm kiếm, không lọc
- * theo trạng thái nhãn và sắp cố định theo ngày nhập, nên trang tải hết rồi tìm, lọc, sắp, cắt trang ở client.
- * ponytail: tải cả kho mỗi lần mở trang — đủ cho vài trăm thiết bị; nhiều hơn thì thêm search/sort vào backend.
- */
+// Backend không tìm và sắp được nên tải cả kho rồi xử lý ở client; nhiều thiết bị thì thêm search/sort vào backend
 export function useDeviceStock() {
   return useQuery({
     queryKey: KEY,
@@ -26,7 +22,7 @@ export function useDeviceStock() {
   })
 }
 
-/** Mọi thao tác kho đều làm mới danh sách; kết quả (mã chỉ trả 1 lần) trả về cho nơi gọi hiện ngay */
+// Mọi thao tác kho đều làm mới danh sách; kết quả (mã chỉ trả 1 lần) trả về cho nơi gọi hiện ngay
 function useStockMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
   const queryClient = useQueryClient()
   return useMutation({

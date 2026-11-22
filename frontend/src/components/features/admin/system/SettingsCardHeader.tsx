@@ -2,14 +2,11 @@ import { Button } from '@/components/ui'
 import { IconEdit } from '@/components/ui/icons'
 import { t } from '@/i18n'
 
-/**
- * Đầu card cấu hình (ngưỡng mặc định): tiêu đề + nhãn "Mặc định gốc / Đã tuỳ chỉnh" + mô tả, nút "Chỉnh sửa"
- * bên phải — cùng kiểu tiêu đề card "Chỉ số vận hành toàn hệ thống" (Tổng quan), màu trung tính.
- */
+// Đầu card cấu hình
 export default function SettingsCardHeader({ title, description, isDefault, onEdit, editLabel }: {
   title: string
   description: string
-  /** undefined = chưa tải xong → ẩn nhãn + nút */
+  // undefined = chưa tải xong → ẩn nhãn + nút
   isDefault: boolean | undefined
   onEdit: () => void
   editLabel: string
@@ -31,7 +28,7 @@ export default function SettingsCardHeader({ title, description, isDefault, onEd
         <p className="mt-1 text-sm text-warmGray">{t(description)}</p>
       </div>
       {isDefault !== undefined && (
-        // Nền đen chữ trắng (primary) — hành động chính của card, nổi hơn nút viền
+        // Nền đen chữ trắng (primary): hành động chính của card, nổi hơn nút viền
         <Button type="button" variant="primary" size="sm" className="shrink-0" aria-label={t(editLabel)} onClick={onEdit}>
           <IconEdit width={16} height={16} />
           Chỉnh sửa

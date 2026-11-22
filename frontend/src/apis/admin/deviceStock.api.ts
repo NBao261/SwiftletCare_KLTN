@@ -7,10 +7,7 @@ export interface ListDeviceStockQuery {
   limit?: number
 }
 
-/**
- * Kho thiết bị — `/admin/provisioned-devices` (FARM-FR-010), chỉ ADMIN. Mã kích hoạt và mật khẩu broker chỉ có
- * trong response của lần thêm / cấp lại; backend chỉ lưu hash nên không có endpoint xem lại.
- */
+// Mã kích hoạt và mật khẩu broker chỉ có trong response lần cấp; backend chỉ lưu hash
 export const deviceStockApi = {
   list: (query?: ListDeviceStockQuery) =>
     api.get<ApiResponse<ProvisionedDevice[]>>('/admin/provisioned-devices', { params: query }),
@@ -21,11 +18,11 @@ export const deviceStockApi = {
   revoke: (id: string, reason: string) =>
     api.put<ApiResponse<ProvisionedDevice>>(`/admin/provisioned-devices/${id}/revoke`, { reason }),
 
-  /** Nhãn cũ bị từ chối ngay; 409 khi thiết bị đang dùng ở farm hoặc đã thu hồi */
+  // Nhãn cũ bị từ chối ngay; 409 khi thiết bị đang dùng ở farm hoặc đã thu hồi
   rotateKey: (id: string) =>
     api.post<ApiResponse<IssuedDeviceSecrets>>(`/admin/provisioned-devices/${id}/rotate-key`),
 
-  /** Thiết bị phải flash lại mật khẩu mới; 409 khi đã thu hồi */
+  // Thiết bị phải flash lại mật khẩu mới; 409 khi đã thu hồi
   rotateBrokerSecret: (id: string) =>
     api.post<ApiResponse<IssuedDeviceSecrets>>(`/admin/provisioned-devices/${id}/rotate-broker-secret`),
 }

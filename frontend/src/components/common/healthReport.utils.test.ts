@@ -33,7 +33,7 @@ const report: HouseHealthReport = {
     weather: null,
   },
   zone_sections: [],
-  // Backend trả mới trước; ngày 27 người xem chưa đánh giá vẫn có trạng thái (BR-31)
+  // Backend trả mới trước; ngày 27 người xem chưa đánh giá vẫn có trạng thái
   days: [
     day('2026-10-27', { my_rating_state: 'PENDING', current_status: 'ACTION' }),
     day('2026-10-26', {

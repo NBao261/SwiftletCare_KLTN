@@ -18,7 +18,7 @@ import type { HouseHealthReport } from '@/types';
 // Giới hạn của PUT /health-reports/{id}/conclusion
 const CONCLUSION_MAX_LENGTH = 4000;
 
-// EXPERT-FR-006 — kết luận của chuyên gia trên 1 báo cáo; Domain Expert viết, người viết sửa được bản của mình
+// kết luận của chuyên gia trên 1 báo cáo; Domain Expert viết, người viết sửa được bản của mình
 export default function HealthReportConclusion({ report }: { report: HouseHealthReport }): JSX.Element {
   const { t, dateTime } = useTranslation(healthDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -28,7 +28,7 @@ export default function HealthReportConclusion({ report }: { report: HouseHealth
   const save = useSetHealthReportConclusion(report._id);
   const conclusion = report.expert_conclusion;
   const canWrite = isExpert && (!conclusion || conclusion.by._id === userId);
-  // BR-22 — Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận (mỗi báo cáo một lần)
+  // Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận (mỗi báo cáo một lần)
   const isOwner = usePermission('FARM_OWNER');
   const { data: farms } = useFarms();
   const farmHasExpert = farms?.find(farm => farm._id === report.farm_id)?.has_active_expert === true;

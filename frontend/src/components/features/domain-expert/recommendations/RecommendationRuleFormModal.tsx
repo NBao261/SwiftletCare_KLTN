@@ -29,7 +29,7 @@ interface RecommendationRuleFormModalProps {
   onClose: () => void
 }
 
-// EXPERT-FR-016 — thêm hoặc sửa luật: chỉ số, so sánh, giá trị, số ngày liền, việc khi chấp nhận, nguồn
+// thêm hoặc sửa luật: chỉ số, so sánh, giá trị, số ngày liền, việc khi chấp nhận, nguồn
 export default function RecommendationRuleFormModal({ open, farmId, rule, onClose }: RecommendationRuleFormModalProps) {
   const { t } = useTranslation(recommendationsDict)
   const apiErrorMessage = useApiErrorMessage()
@@ -37,7 +37,7 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
   const save = useSaveRecommendationRule(farmId)
   const [draft, setDraft] = useState<RuleDraft>(BLANK)
   const [active, setActive] = useState(true)
-  // BR-22 — luật của Farm Owner ở farm có chuyên gia luôn tắt tới khi chuyên gia bật
+  // luật của Farm Owner ở farm có chuyên gia luôn tắt tới khi chuyên gia bật
   const { ownerNeedsExpert } = useExpertDecisionRights()
   const [submitted, setSubmitted] = useState(false)
 

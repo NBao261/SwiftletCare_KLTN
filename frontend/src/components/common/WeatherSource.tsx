@@ -5,7 +5,7 @@ interface WeatherSourceProps {
   className?: string;
 }
 
-// Giấy phép CC BY 4.0 của Open-Meteo: màn nào hiện thời tiết cũng ghi nguồn (Report 4 §3.1)
+// Giấy phép CC BY 4.0 của Open-Meteo: màn nào hiện thời tiết cũng ghi nguồn
 export default function WeatherSource({ className }: WeatherSourceProps): JSX.Element {
   return (
     <p className={cn('text-xs text-warmGray', className)}>

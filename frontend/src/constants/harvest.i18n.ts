@@ -1,7 +1,7 @@
 import { harvestCycleStatusDict, prefixLabels } from '@/constants/enumLabels.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển màn Thu hoạch của Farm Owner (/harvests) — chỉ ghi nhận thu hoạch theo SRS v2 (HARVEST-FR-001..005)
+// Từ điển màn Thu hoạch của Farm Owner (/harvests): chỉ ghi nhận thu hoạch theo
 const vi = {
   // Đầu trang
   'page.export': 'Xuất dữ liệu',
@@ -33,7 +33,7 @@ const vi = {
   'table.allNestTypes': 'Tất cả loại tổ',
   'table.filterStatus': 'Lọc theo trạng thái xác nhận',
   'table.allStatuses': 'Tất cả trạng thái',
-  // HARVEST-FR-006 — lô do kỹ thuật viên nhập chờ chủ nhà yến xác nhận
+  // lô do kỹ thuật viên nhập chờ chủ nhà yến xác nhận
   'status.pending': 'Chờ xác nhận',
   'status.confirmed': 'Đã xác nhận',
   'table.sortDate': 'Ngày thu hoạch',
@@ -56,8 +56,7 @@ const vi = {
   'action.delete': 'Xoá',
   'action.confirm': 'Xác nhận đợt thu',
 
-  // Loại tổ
-  // Tên gọi hiển thị theo màu tổ; backend vẫn lưu RAW / CLEANED / PREMIUM
+  // Loại tổ Tên gọi hiển thị theo màu tổ; backend vẫn lưu RAW / CLEANED / PREMIUM
   'nestType.RAW': 'Yến trắng',
   'nestType.CLEANED': 'Yến hồng',
   'nestType.PREMIUM': 'Yến huyết',
@@ -183,7 +182,7 @@ const vi = {
   'csv.weight': 'Khối lượng (g)',
   'csv.status': 'Trạng thái',
 
-  // HARVEST-FR-007 — chu kỳ thu hoạch (chỉ xem; kết luận mùa vụ viết ở màn chuyên gia)
+  // chu kỳ thu hoạch (chỉ xem; kết luận mùa vụ viết ở màn chuyên gia)
   'cycle.title': 'Chu kỳ thu hoạch',
   'cycle.subtitle': 'Mỗi lần thu đã xác nhận đóng một chu kỳ của Zone',
   'cycle.colHouse': 'Nhà yến',

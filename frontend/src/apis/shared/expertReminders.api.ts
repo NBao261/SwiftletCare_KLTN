@@ -1,7 +1,7 @@
 import api from '@/lib/axios'
 import type { ApiResponse } from '@/types'
 
-// BR-22 (Report 3 4.2.15) — việc chỉ chuyên gia làm mà Farm Owner nhắc được, mỗi việc một lần
+// việc chỉ chuyên gia làm mà Farm Owner nhắc được, mỗi việc một lần
 export type ExpertReminderKind = 'alert' | 'health_report' | 'harvest_cycle'
 
 export const expertRemindersApi = {

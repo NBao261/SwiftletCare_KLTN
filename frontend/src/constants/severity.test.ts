@@ -1,4 +1,4 @@
-// Test đổi 4 cấp giao diện sang mức backend cho bộ lọc /alerts (BR-15, ALERT-FR-007)
+// Test đổi 4 cấp giao diện sang mức backend cho bộ lọc /alerts
 import { describe, expect, it } from 'vitest';
 import { severityQueryOf } from '@/constants/severity';
 

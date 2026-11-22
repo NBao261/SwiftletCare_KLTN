@@ -3,7 +3,7 @@ import { deviceApi } from '@/apis/shared/devices.api'
 import { countingRingApi } from '@/apis/domain-expert/countingRing.api'
 import type { CountingRing } from '@/types'
 
-// Camera đang lắp của 1 nhà (bỏ camera đã gỡ) — dùng API thiết bị dùng chung đa vai trò
+// Camera đang lắp của 1 nhà (bỏ camera đã gỡ): dùng API thiết bị dùng chung đa vai trò
 export const HOUSE_CAMERAS_KEY = (houseId: string | undefined) =>
   ['camera-nodes', 'house', houseId] as const
 

@@ -37,14 +37,14 @@ interface KpiTileProps {
   className?: string
 }
 
-// Ô chỉ số dùng chung cho hàng KPI của 4 role (C-10, FE_Design §1.1)
+// Ô chỉ số dùng chung cho hàng KPI của 4 role (FE_Design)
 export default function KpiTile({ icon: TileIcon, label, value, unit, sub, tone: toneProp, iconClass, badge, valueBadge, alert, className }: KpiTileProps) {
   const tone = toneProp ?? (alert ? 'critical' : 'neutral')
   const boxTone = BOX_TONE_CLASS[tone]
   return (
     <div className={cn('flex flex-col rounded-2xl border border-warmGray/15 bg-white p-4 shadow-card', boxTone?.box, className)}>
       <div className="mb-2 flex items-start justify-between gap-2">
-        {/* Xuống dòng thay vì cắt "…" — ô hẹp (điện thoại 2×2) vẫn đọc đủ nhãn */}
+        {/* Xuống dòng thay vì cắt "…": ô hẹp (điện thoại 2×2) vẫn đọc đủ nhãn */}
         <span className="label-caption min-w-0">{tr(label)}</span>
         <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', iconClass ?? ICON_TONE_CLASS[tone], boxTone && ICON_TONE_CLASS[tone])}>
           <TileIcon size={14} weight="bold" />

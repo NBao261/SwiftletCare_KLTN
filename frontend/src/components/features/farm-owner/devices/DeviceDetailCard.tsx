@@ -18,16 +18,16 @@ interface DeviceDetailCardProps {
   device: DeviceItem;
   // Tên Zone của node cảm biến; camera thuộc cả nhà
   zoneName?: string;
-  // Node cảm biến: mở popup lịch loa ru / bài loa ru (ENV-FR-013b, 013c)
+  // Node cảm biến: mở popup lịch loa ru / bài loa ru
   onOpenSchedule?: () => void;
   onOpenTracks?: () => void;
-  // FARM-FR-013 — Farm Owner khởi động lại bộ điều khiển đang ONLINE
+  // Farm Owner khởi động lại bộ điều khiển đang ONLINE
   onRestart?: () => void;
-  // FARM-FR-007b, 008 — dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
+  // dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
   moreActions?: ActionsMenuItem[];
 }
 
-// Thẻ chi tiết 1 thiết bị: trạng thái, heartbeat, mạng; nút loa ru, khởi động lại và menu dời / thay / gỡ theo quyền, không có cấu hình hay firmware
+// Thẻ chi tiết 1 thiết bị, nút theo quyền
 export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
   const { t, num, day, ago, dateTime } = useTranslation(devicesDict);
   const isSensor = device.type === 'sensor';

@@ -1,4 +1,4 @@
-// ENV-FR-028…030, BR-38, BR-22 — luật bù phun sương của nhà; Farm Owner ở farm có chuyên gia gửi đề xuất
+// luật bù phun sương của nhà; Farm Owner ở farm có chuyên gia gửi đề xuất
 import { useState, useEffect } from 'react'
 import { CloudRain, Info, Zap, AlertTriangle, Send } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -152,7 +152,7 @@ export default function DomainExpertWeatherRulesPage() {
     if (isLoading) return <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />
     if (isError) return null
     if (data?.last_compensation) return <LastCompensationBadge data={data.last_compensation} />
-    // Không hiện hộp "chưa có bù" khi chưa có luật nào — EmptyState bên dưới đã đủ
+    // Không hiện hộp "chưa có bù" khi chưa có luật nào: EmptyState bên dưới đã đủ
     if (!rules.length) return null
     return (
       <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
@@ -197,7 +197,7 @@ export default function DomainExpertWeatherRulesPage() {
   }
 
   return (
-    // BR-22 — Farm Owner soạn được; farm có chuyên gia thì nút lưu gửi đề xuất
+    // Farm Owner soạn được; farm có chuyên gia thì nút lưu gửi đề xuất
     <fieldset disabled={!canEditParameters} className="contents">
     <div className="mx-auto w-full max-w-screen-xl space-y-5">
       <SectionCard
@@ -224,7 +224,7 @@ export default function DomainExpertWeatherRulesPage() {
 
           {renderProposal()}
 
-          {/* Danh sách luật — ẩn khi GET lỗi */}
+          {/* Danh sách luật: ẩn khi GET lỗi */}
           {!isError && (
             <>
               <h2 className="text-sm font-semibold text-charcoal">

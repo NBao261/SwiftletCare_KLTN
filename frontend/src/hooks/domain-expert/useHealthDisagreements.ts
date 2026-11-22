@@ -6,7 +6,7 @@ import type {
   HealthEvaluationResponse,
 } from '@/types/expert/disagreements.types';
 
-// Query key đồng bộ cho danh sách ngày đánh giá lệch (EXPERT-FR-022)
+// Query key đồng bộ cho danh sách ngày đánh giá lệch
 export const DISAGREEMENTS_QUERY_KEY = (
   params: Partial<HealthDisagreementsQueryParams>,
 ) => [
@@ -17,7 +17,7 @@ export const DISAGREEMENTS_QUERY_KEY = (
   params.to ?? '',
 ];
 
-// Query key đồng bộ cho thống kê độ đồng thuận & tỷ lệ báo động giả (ANALYTICS-FR-014)
+// Query key đồng bộ cho thống kê độ đồng thuận & tỷ lệ báo động giả
 export const EVALUATION_QUERY_KEY = (
   params: Partial<HealthDisagreementsQueryParams>,
 ) => [
@@ -29,7 +29,7 @@ export const EVALUATION_QUERY_KEY = (
   params.role ?? '',
 ];
 
-// EXPERT-FR-022 — ngày người chấm đánh giá lệch ảnh chụp hệ thống, kèm mức chỉ số của từng nhà (BR-28)
+// ngày người chấm đánh giá lệch ảnh chụp hệ thống, kèm mức chỉ số của từng nhà
 export function useHealthDisagreements(
   params: HealthDisagreementsQueryParams,
   options?: { enabled?: boolean },
@@ -62,7 +62,7 @@ export function useHealthDisagreements(
   };
 }
 
-// ANALYTICS-FR-014 — độ đồng thuận (CI 95%, Kappa, AC1) và tỷ lệ báo động giả theo nguồn (NFR-14)
+// độ đồng thuận (CI 95%, Kappa, AC1) và tỷ lệ báo động giả theo nguồn
 export function useHealthEvaluation(
   params: HealthDisagreementsQueryParams,
   options?: { enabled?: boolean },

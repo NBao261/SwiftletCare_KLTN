@@ -19,18 +19,18 @@ const SELECTED_CLASS: Record<HealthRatingValue, string> = {
   ACTION: 'border-alertRed bg-alertRed/10',
 };
 const NOTE_MAX_LENGTH = 1000;
-// BR-37: những gì người đánh giá quan sát tại nhà (không lặp lại số cảm biến); dấu hiệu nặng tô đỏ
+// những gì người đánh giá quan sát tại nhà (không lặp lại số cảm biến); dấu hiệu nặng tô đỏ
 const GUIDE = ['flock', 'environment', 'air', 'disturbance', 'equipment', 'severe'] as const;
 
 interface HealthRatingModalProps {
   // Ngày còn PENDING; null = đóng
   day: HouseHealthDay | null;
   onClose: () => void;
-  // Chấm hoặc bỏ qua xong — màn mở chi tiết ngày đó
+  // Chấm hoặc bỏ qua xong: màn mở chi tiết ngày đó
   onDone: (day: HouseHealthDay) => void;
 }
 
-// EXPERT-FR-012, BR-31 — hiện trạng thái và lý do của hệ thống, người dùng xác nhận hoặc sửa theo quan sát tại nhà
+// hiện trạng thái và lý do của hệ thống, người dùng xác nhận hoặc sửa theo quan sát tại nhà
 export default function HealthRatingModal({ day, onClose, onDone }: HealthRatingModalProps): JSX.Element | null {
   const { t, date, exact } = useTranslation(healthDict);
   const rate = useRateHealthDay();
@@ -68,7 +68,7 @@ export default function HealthRatingModal({ day, onClose, onDone }: HealthRating
     setIsPickError(false);
   }
 
-  // Câu lỗi chung theo nhóm (13.16 b); 409 (đã đánh giá nơi khác, vừa quá hạn) thì đóng popup, danh sách tự làm mới
+  // 409 (đã chấm nơi khác hoặc vừa quá hạn) thì đóng popup
   function showError(error: unknown): void {
     push(apiErrorMessage(error), 'error');
     if ((error as { response?: { status?: number } }).response?.status === 409) {
@@ -110,7 +110,7 @@ export default function HealthRatingModal({ day, onClose, onDone }: HealthRating
     <>
       <Modal open={!isSkipOpen} onClose={close} ariaLabel={t('rate.title', { date: date(day.date), house: day.house_name })} size="xl" closeOnBackdrop>
         <div className="flex flex-col gap-5">
-          {/* Đầu popup: tiêu đề in đậm (chừa chỗ nút ✕) + câu nhắc ngay dưới, phần **…** in đậm chữ đen; luôn hiện, không cuộn */}
+          {/* Đầu popup luôn hiện, không cuộn */}
           <div className="flex flex-col gap-1">
             <h2 className="flex min-h-9 items-center pr-12 text-lg font-bold text-charcoal [overflow-wrap:anywhere]">
               {t('rate.title', { date: date(day.date), house: day.house_name })}
@@ -121,7 +121,7 @@ export default function HealthRatingModal({ day, onClose, onDone }: HealthRating
           <hr className="border-gray-200" />
           {/* Thân cuộn được khi màn thấp; đầu popup và nút luôn hiện */}
           <div className="-mx-1 flex max-h-[60vh] flex-col gap-5 overflow-y-auto px-1">
-            {/* Trạng thái và lý do của hệ thống hiện trước, người dùng xác nhận hoặc sửa (BR-31) */}
+            {/* Trạng thái và lý do của hệ thống hiện trước, người dùng xác nhận hoặc sửa */}
             <section className="flex flex-col gap-2 rounded-xl border border-warmGray/30 p-4" aria-label={t('detail.status')}>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-charcoal">{t('detail.status')}</p>
@@ -133,10 +133,10 @@ export default function HealthRatingModal({ day, onClose, onDone }: HealthRating
                 ))}
               </ul>
             </section>
-            {/* Hướng dẫn quan sát BR-37, hiện trước khi chọn mức để mọi người đánh giá cùng một thước đo */}
+            {/* Hướng dẫn quan sát, hiện trước khi chọn mức để mọi người đánh giá cùng một thước đo */}
             <section className="flex flex-col gap-2 rounded-xl bg-warmGray/[0.06] p-4" aria-label={t('rate.guideTitle')}>
               <p className="text-sm font-semibold text-charcoal">{t('rate.guideTitle')}</p>
-              {/* Bảng 1 cột: nhãn trái cố định, nội dung phải — mỗi nhóm thường gọn 1 dòng */}
+              {/* Bảng 1 cột: nhãn trái cố định, nội dung phải: mỗi nhóm thường gọn 1 dòng */}
               <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5 text-xs">
                 {GUIDE.map(item => (
                   <div key={item} className="contents">

@@ -12,17 +12,14 @@ interface TechnicianHouseRowProps {
   onOpen: () => void
 }
 
-/** Thanh trái + tông nền hàng theo tình trạng — kỹ thuật viên quét dọc danh sách là thấy ngay nhà nào cần xử lý */
+// Thanh trái + tông nền hàng theo tình trạng: kỹ thuật viên quét dọc danh sách là thấy ngay nhà nào cần xử lý
 const ACCENT: Record<HouseNode['health'], string> = {
   ALERT: 'bg-orange-500',
   NORMAL: 'bg-success',
   EMPTY: 'bg-warmGray/30',
 }
 
-/**
- * Hàng 1 nhà yến trong màn Trang trại của Technician. Chỉ hiện thứ phục vụ xử lý kỹ thuật:
- * tình trạng, sự cố nổi bật (kèm zone), tỉ lệ thiết bị online, số zone. KHÔNG có sản lượng/thu hoạch/ghim.
- */
+// Chỉ thông tin kỹ thuật, không có sản lượng hay thu hoạch
 export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowProps) {
   const { t, num } = useTranslation(farmDict)
   const { house, farm, headline, counts } = node
@@ -45,14 +42,14 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
     issue = t('banner.offline', { n: headline.offlineDevices ?? 0, zone: zoneLabel })
   }
   const issueCount = node.zones.reduce((sum, z) => sum + z.breaches.length + z.alerts.length, 0)
-  // AUTH-FR-014 — backend chỉ trả ca của chính kỹ thuật viên này (Report 3 §2.4 "read own roster")
+  // backend chỉ trả ca của chính kỹ thuật viên này ("read own roster")
   const shifts = ownShiftLines(house.roster ?? [], key => t(key))
 
   return (
     <article className="relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-warmGray/20 bg-white py-4 pl-6 pr-5 transition-shadow hover:shadow-md lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,0.9fr)_auto] lg:items-center lg:gap-6">
       <span aria-hidden="true" className={cn('absolute inset-y-0 left-0 w-1.5', ACCENT[node.health])} />
 
-      {/* Cột 1 — danh tính nhà */}
+      {/* Cột 1: danh tính nhà */}
       <div className="flex min-w-0 items-center gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warmGray/10 text-charcoal">
           <HouseIcon size={20} />
@@ -68,7 +65,7 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         </div>
       </div>
 
-      {/* Cột 2 — tình trạng + sự cố cần xử lý */}
+      {/* Cột 2: tình trạng + sự cố cần xử lý */}
       <div className="flex min-w-0 flex-col items-start gap-1.5">
         <div className="flex items-center gap-2">
           <HealthBadge health={node.health} />
@@ -86,7 +83,7 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         </p>
       </div>
 
-      {/* Cột 3 — thiết bị online */}
+      {/* Cột 3: thiết bị online */}
       <div className="min-w-0">
         <div className="flex items-baseline justify-between gap-2">
           <span className="label-caption">{t('stat.online')}</span>
@@ -108,7 +105,7 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         </p>
       </div>
 
-      {/* Cột 4 — hành động */}
+      {/* Cột 4: hành động */}
       <button
         type="button"
         onClick={onOpen}

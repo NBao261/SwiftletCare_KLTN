@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { deviceApi } from '@/apis/shared/devices.api'
 import type { RemovedDevice } from '@/types'
 
-// Dưới tiền tố ['sensor-nodes']: gỡ hay thay bộ điều khiển (useDecommissionDevice, useReplaceSensorNode) làm mới cả danh sách này
+// Dưới tiền tố ['sensor-nodes'] để gỡ hay thay thiết bị làm mới luôn danh sách này
 const REMOVED_KEY = ['sensor-nodes', 'removed']
 
 export interface RemovedDeviceRow {
@@ -10,7 +10,7 @@ export interface RemovedDeviceRow {
   device: RemovedDevice
 }
 
-// FARM-FR-008 — bộ điều khiển và camera gỡ trong 24 giờ còn khôi phục được (backend lọc cùng điều kiện với restore)
+// bộ điều khiển và camera gỡ trong 24 giờ còn khôi phục được (backend lọc cùng điều kiện với restore)
 export function useRemovedDevices(enabled: boolean) {
   return useQuery({
     queryKey: REMOVED_KEY,

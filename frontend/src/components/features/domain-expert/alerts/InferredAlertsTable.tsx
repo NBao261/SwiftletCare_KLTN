@@ -1,7 +1,4 @@
-/**
- * InferredAlertsTable — Bảng danh sách cảnh báo suy luận dùng DataTable và Pagination chuẩn hệ thống
- * SRS v2.1.4: EXPERT-FR-003
- */
+// InferredAlertsTable: Bảng danh sách cảnh báo suy luận dùng DataTable và Pagination chuẩn hệ thống
 import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { NO_VALUE } from '@/constants/display'

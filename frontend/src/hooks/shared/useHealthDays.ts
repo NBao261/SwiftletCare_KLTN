@@ -13,7 +13,7 @@ function byDateThenHouse(left: HouseHealthDay, right: HouseHealthDay): number {
   return right.date.localeCompare(left.date) || left.house_name.localeCompare(right.house_name)
 }
 
-// MF-06 — ngày của 1 nhà, 1 farm, hoặc mọi farm (backend cần houseId hoặc farmId nên mỗi farm 1 request)
+// ngày của 1 nhà, 1 farm, hoặc mọi farm (backend cần houseId hoặc farmId nên mỗi farm 1 request)
 export function useHealthDays(params: {
   farmIds: string[]
   houseId: string
@@ -42,7 +42,7 @@ export function useHealthDays(params: {
   })
 }
 
-// Đánh giá, bỏ qua, ghi chú: làm mới ngày và báo cáo; 409 (đã đánh giá nơi khác, vừa quá hạn) cũng làm mới danh sách ngày
+// 409 cũng làm mới danh sách ngày
 function useDayMutation<Input>(mutate: (input: Input) => Promise<HouseHealthDay>) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -78,7 +78,7 @@ export function useAddHealthRatingNote() {
     healthDayApi.addNote(input.dayId, input.note).then(response => response.data.data))
 }
 
-// BR-28 — mức chỉ số của 1 nhà
+// mức chỉ số của 1 nhà
 export function useHealthLevels(houseId: string) {
   return useQuery({
     queryKey: ['health-levels', houseId],
@@ -96,7 +96,7 @@ export function useUpdateHealthLevels(houseId: string) {
 }
 
 
-// EXPERT-FR-005 — báo cáo theo nhà hoặc farm, mới nhất trước, phân trang server; scope null = chưa chọn được phạm vi
+// báo cáo theo nhà hoặc farm, mới nhất trước, phân trang server; scope null = chưa chọn được phạm vi
 export function useHouseHealthReports(
   scope: { houseId?: string; farmId?: string } | null, kind: HealthReportKind | undefined, hasConclusion: boolean | undefined, page: number,
 ) {
@@ -127,7 +127,7 @@ export function useCreateHouseHealthReport() {
   })
 }
 
-// Hàng đợi chuyên gia — số báo cáo chưa có / đã có kết luận của nhà (houseId) hoặc cả farm; chỉ đọc meta.total
+// Hàng đợi chuyên gia: số báo cáo chưa có / đã có kết luận của nhà (houseId) hoặc cả farm; chỉ đọc meta.total
 export function useHealthReportConclusionCounts(farmId: string, houseId: string) {
   const scope = houseId ? { houseId } : { farmId }
   const count = (hasConclusion: boolean) => ({
@@ -145,7 +145,7 @@ export function useHealthReportConclusionCounts(farmId: string, houseId: string)
   })
 }
 
-// EXPERT-FR-006 — lưu kết luận: chi tiết lấy bản backend trả, danh sách đọc lại cột "Kết luận"
+// lưu kết luận: chi tiết lấy bản backend trả, danh sách đọc lại cột "Kết luận"
 export function useSetHealthReportConclusion(reportId: string) {
   const queryClient = useQueryClient()
   return useMutation({

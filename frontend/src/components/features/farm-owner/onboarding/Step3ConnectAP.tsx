@@ -1,6 +1,4 @@
-// Step3ConnectAP.tsx — Bước 3 (SENSOR_NODE): Kết nối AP + nhập WiFi nhà yến
-// Gộp Step3 (AP) và Step4 (WiFi guide) thành một bước duy nhất (FARM-FR-003c).
-// Credentials WiFi đã flash sẵn trong firmware; app chỉ hướng dẫn — không gửi qua mạng.
+// Bước 3: kết nối AP của thiết bị; app chỉ hướng dẫn, không gửi WiFi qua mạng
 import { useState } from 'react'
 import { Button } from '@/components/ui'
 import { Copy, Check, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react'

@@ -9,7 +9,7 @@ export interface RecommendationListQuery {
   limit: number;
 }
 
-// EXPERT-FR-017, 018 — khuyến nghị của nhà hoặc farm; Farm Owner chấp nhận hoặc từ chối kèm lý do
+// khuyến nghị của nhà hoặc farm; Farm Owner chấp nhận hoặc từ chối kèm lý do
 export const recommendationsApi = {
   list: (query: RecommendationListQuery) =>
     api.get<ApiResponse<Recommendation[]>>('/recommendations', { params: query }),

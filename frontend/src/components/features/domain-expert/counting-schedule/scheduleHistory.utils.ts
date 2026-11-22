@@ -1,11 +1,11 @@
 import type { CountingScheduleView } from '@/types/expert.types'
 
 export type HistoryEntry = CountingScheduleView['history'][number]
-// LATEST: lần sửa cuối · SUPERSEDED: bị lần sau cùng ngày thay trước khi áp · APPLIED: đã áp một thời gian rồi mới bị thay
+// SUPERSEDED: bị lần sau cùng ngày thay trước khi áp; APPLIED: đã áp rồi mới bị thay
 export type HistoryState = 'LATEST' | 'SUPERSEDED' | 'APPLIED'
 export interface HistoryRow { entry: HistoryEntry; state: HistoryState }
 
-// Backend trả cũ trước; mỗi ngày chỉ dùng lần sửa cuối của ngày đó. Duyệt từ mới về cũ một lượt, nhớ các ngày áp đã gặp
+// Mỗi ngày chỉ dùng lần sửa cuối của ngày đó
 export function historyRows(history: HistoryEntry[]): HistoryRow[] {
   const seenDates = new Set<string>()
   const rows: HistoryRow[] = []

@@ -1,4 +1,4 @@
-// Hook của trang Ngưỡng & hệ số mờ (/domain-expert/tuning): ngưỡng, hệ số mờ, gợi ý hệ số, tham số phát hiện (EXPERT-FR-004/008)
+// Hook của trang Ngưỡng & hệ số mờ (/domain-expert/tuning): ngưỡng, hệ số mờ, gợi ý hệ số, tham số phát hiện
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { birdCountTuningApi } from '@/apis/domain-expert/birdCountTuning.api'
 import { expertService, expertApi } from '@/services/expert.service'
@@ -18,7 +18,7 @@ function invalidateZoneCaches(qc: ReturnType<typeof useQueryClient>, zoneId?: st
   void qc.invalidateQueries({ queryKey: ['analytics', 'control-performance', zoneId] })
 }
 
-// ── 1. Ngưỡng vi khí hậu (Cột 1) ─────────────────────────────────────────────
+// 1. Ngưỡng vi khí hậu (Cột 1)
 export function useExpertThresholds(zoneId?: string) {
   return useQuery({
     queryKey: QK('thresholds', zoneId),
@@ -60,7 +60,7 @@ export function useResetThresholds(zoneId?: string) {
   })
 }
 
-// ── 2. Hệ số mờ Fuzzy (Cột 2) ────────────────────────────────────────────────
+// 2. Hệ số mờ Fuzzy (Cột 2)
 export function useExpertFuzzyTuning(zoneId?: string) {
   return useQuery({
     queryKey: QK('fuzzy', zoneId),
@@ -89,7 +89,7 @@ export function useUpdateFuzzyTuning(zoneId?: string) {
   })
 }
 
-// ── 3. Gợi ý hệ số mờ từ dữ liệu (ANALYTICS-FR-010) ─────────────────────────────────────────────────────────
+// 3. Gợi ý hệ số mờ từ dữ liệu
 export function useFuzzySuggestion(zoneId?: string) {
   return useQuery({
     queryKey: ['expert', 'fuzzy-suggestion', zoneId],
@@ -99,7 +99,7 @@ export function useFuzzySuggestion(zoneId?: string) {
   })
 }
 
-// ── 4. Tham số phát hiện bất thường (Cột 3) ──────────────────────────────────
+// 4. Tham số phát hiện bất thường (Cột 3)
 export function useExpertDetectionTuning(zoneId?: string) {
   return useQuery({
     queryKey: QK('detection', zoneId),
@@ -135,7 +135,7 @@ export function useResetDetectionTuning(zoneId?: string) {
   })
 }
 
-// ── 4. Mức giảm tỷ lệ chim về — tham số của nhà chứa Zone đang chọn (EXPERT-FR-008) ─────
+// 4. Mức giảm tỷ lệ chim về: tham số của nhà chứa Zone đang chọn
 export function useZoneHouseId(zoneId?: string) {
   return useQuery({
     queryKey: QK('house-of-zone', zoneId),

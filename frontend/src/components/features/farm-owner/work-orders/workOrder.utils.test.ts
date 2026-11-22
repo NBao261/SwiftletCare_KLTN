@@ -1,4 +1,4 @@
-// Test logic thuần của trang Work Order (G-21, OPS-FR-004, Report 3 §6.19)
+// Test logic thuần của trang Work Order
 import { describe, expect, it } from 'vitest';
 import {
   WORK_ORDER_STATUSES, approvalDescriptionKey, isRecoveryUnverified, memberNames, ownerActions, reassignCandidates, statusFilterQuery,

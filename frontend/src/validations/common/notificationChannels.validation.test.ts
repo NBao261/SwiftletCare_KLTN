@@ -1,4 +1,4 @@
-// Test kênh theo mức cảnh báo ở trang Cài đặt (ALERT-FR-005)
+// Test kênh theo mức cảnh báo ở trang Cài đặt
 import { describe, expect, it } from 'vitest';
 import {
   bySeverityPayload, levelChannelsOf, urgentHasOutsideChannel,

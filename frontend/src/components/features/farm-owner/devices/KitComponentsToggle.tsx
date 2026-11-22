@@ -17,7 +17,7 @@ interface KitComponentsToggleProps {
   defaultOpen: boolean;
 }
 
-// Bảng thiết bị của bộ kit (cảm biến, loa, relay): đầu bảng là hàng bấm để xổ / thu, tránh trang chi tiết quá dài
+// Bảng bộ phận của bộ kit, xổ ra khi bấm cho trang đỡ dài
 export default function KitComponentsToggle({ zoneId, nodes, thresholds, defaultOpen }: KitComponentsToggleProps): JSX.Element | null {
   const { t, num } = useTranslation(devicesDict);
   const [isOpen, setIsOpen] = useState(defaultOpen);

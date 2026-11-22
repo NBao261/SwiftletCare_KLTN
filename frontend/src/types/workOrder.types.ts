@@ -1,19 +1,18 @@
-// Module OPS — Work Order sửa chữa (OPS-FR-001…004, Report 3 §6.19), phòng ngừa (OPS-FR-006, 007) và MTTA/MTTR (OPS-FR-009); api-spec WorkOrder, ChecklistItem, OpsMetrics
+// Module OPS: Work Order sửa chữa, phòng ngừa và MTTA/MTTR; api-spec WorkOrder, ChecklistItem, OpsMetrics
 import type { AlertType } from '@/types/alert.types';
 
 export type WorkOrderStatus = 'OPEN' | 'IN_PROGRESS' | 'VERIFYING' | 'AWAITING_APPROVAL' | 'CLOSED' | 'CANCELLED';
 
-// ALERT: cảnh báo thiết bị (BR-39) · OUTAGE: mất kết nối quá 30 phút · EXPERT: chuyên gia xác nhận cần tới nhà · ONSITE_CHECK: thợ thấy cảm biến hỏng · MANUAL: Farm Owner mở
-// PLAN: kế hoạch bảo trì đến hạn (OPS-FR-006) · CHECKLIST: mục checklist bảo trì ghi hỏng (OPS-FR-007) · RECOMMENDATION: Farm Owner chấp nhận khuyến nghị (EXPERT-FR-018)
+// Nguồn mở Work Order
 export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL' | 'PLAN' | 'CHECKLIST' | 'RECOMMENDATION';
 
-// ALERT-FR-018 — nguyên nhân thợ tìm thấy tại chỗ
+// nguyên nhân thợ tìm thấy tại chỗ
 export type SiteCause = 'WATER' | 'NOZZLE' | 'PUMP' | 'FAN' | 'DOOR' | 'SENSOR' | 'SPEAKER' | 'OTHER';
 
-// Kết quả khi đóng: sửa chữa (REPAIRED, SELF_RECOVERED) hoặc phòng ngừa đã duyệt (DONE — một lần ghi bảo trì, OPS-FR-008)
+// Kết quả khi đóng: sửa chữa (REPAIRED, SELF_RECOVERED) hoặc phòng ngừa đã duyệt (DONE: một lần ghi bảo trì)
 export type WorkOrderResult = 'REPAIRED' | 'SELF_RECOVERED' | 'DONE';
 
-// OPS-FR-007 — kết quả 1 mục checklist; null = chưa làm
+// kết quả 1 mục checklist; null = chưa làm
 export type ChecklistResult = 'OK' | 'DEFECT';
 
 // Một mục checklist của Work Order phòng ngừa (api-spec ChecklistItem)
@@ -76,14 +75,14 @@ export interface WorkOrder {
   started_at: string | null;
   done_at: string | null;
   verified_at: string | null;
-  // Lúc giao cho thợ hiện tại; quá hạn "chưa ai bắt đầu" tính từ đây (BR-40)
+  // Lúc giao cho thợ hiện tại; quá hạn "chưa ai bắt đầu" tính từ đây
   assigned_at: string | null;
   closed_at: string | null;
   escalated_at: string | null;
   history: WorkOrderHistoryEntry[];
 }
 
-// Phút, null khi không có mẫu (BR-40)
+// Phút, null khi không có mẫu
 export interface OpsMetricRow {
   alerts: number;
   mtta_min: number | null;

@@ -12,7 +12,7 @@ import { useWhepStream } from '@/hooks/shared/useWhepStream'
 import { cn } from '@/lib/cn'
 import type { DeviceStatus } from '@/types'
 
-// Trạng thái camera backend trả về mà vẫn mở luồng xem (DEGRADED đã bỏ theo SRS 3.1.0)
+// Trạng thái camera backend trả về mà vẫn mở luồng xem (DEGRADED đã bỏ theo)
 const STREAMABLE_STATUSES = new Set<DeviceStatus>(['ONLINE'])
 
 interface LiveCameraCardProps {
@@ -27,8 +27,7 @@ interface LiveCameraCardProps {
   showTodayCounts?: boolean
 }
 
-// Khung xem trực tiếp camera cửa thu chim của 1 nhà yến (VISION-FR-013) + thông số camera và số đếm hôm nay, đều lấy từ backend;
-// phiên bản mô hình đếm là thông tin kỹ thuật, xem ở chi tiết thiết bị
+// Xem trực tiếp camera của 1 nhà, kèm thông số và số đếm hôm nay
 export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action, showTodayCounts = true }: LiveCameraCardProps) {
   const { t, num, ago, date } = useTranslation(dashboardDict)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -47,7 +46,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   else if (!camera) overlay = <StreamMessage icon={<VideoCameraSlashIcon size={28} />} title={t('camera.noCamera')} description={t('camera.noCameraDesc')} />
   else if (camera.status === 'PENDING') overlay = <StreamMessage icon={<HourglassIcon size={28} />} title={t('camera.pending')} description={t('camera.pendingDesc')} />
   else if (camera.status === 'OFFLINE') overlay = <StreamMessage icon={<WifiSlashIcon size={28} />} title={t('camera.offline')} description={t('camera.offlineDesc')} />
-  // ERROR đã bỏ theo SRS 3.1.0 — OFFLINE bao phủ mọi trường hợp mất kết nối
+  // ERROR đã bỏ theo: OFFLINE bao phủ mọi trường hợp mất kết nối
   else if (status === 'failed') overlay = <StreamMessage title={t('camera.failed')} description={t('camera.failedDesc')} action={<RetryButton label={t('camera.retry')} onClick={retry} />} />
   else if (!isPlaying) overlay = <StreamMessage title={t('camera.connecting')} />
 
@@ -109,7 +108,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
               <span className="h-1.5 w-1.5 rounded-full bg-accent-600" />
               {t('camera.live')}
             </span>
-            {/* DEGRADED đã bỏ (SRS 3.1.0): camera chỉ có ONLINE/OFFLINE/PENDING */}
+            {/* DEGRADED đã bỏ: camera chỉ có ONLINE/OFFLINE/PENDING */}
           </span>
           {onToggleExpand && (
             <button

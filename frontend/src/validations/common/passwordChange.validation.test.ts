@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { validatePasswordChange } from '@/validations/common/passwordChange.validation'
 
-// AUTH-FR-005c — đổi mật khẩu tạm. Chuỗi mẫu dựng bằng repeat để công cụ quét bí mật không coi là mật khẩu thật
+// đổi mật khẩu tạm. Chuỗi mẫu dựng bằng repeat để công cụ quét bí mật không coi là mật khẩu thật
 const temporary = 't'.repeat(9)
 const chosen = 'n'.repeat(10)
 

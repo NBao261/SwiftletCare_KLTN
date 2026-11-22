@@ -1,6 +1,6 @@
 import type { WeatherRule } from '@/types/expert.types'
 
-// Giới hạn theo API spec ENV-FR-030, BR-38
+// Giới hạn theo API spec
 const METRIC_MIN_RANGE: Record<WeatherRule['metric'], { min: number; max: number; label: string; unit: string }> = {
   temperature: { min: 0, max: 50, label: 'Nhiệt độ cao nhất', unit: '°C' },
   humidity:    { min: 0, max: 100, label: 'Độ ẩm ngoài trời cao nhất', unit: '%' },

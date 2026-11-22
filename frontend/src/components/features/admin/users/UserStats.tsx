@@ -7,17 +7,17 @@ import { ROLE_LABEL } from '@/constants/roles'
 import { t } from '@/i18n'
 import type { Role, User } from '@/types'
 
-/** Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner) */
+// Vòng icon xám như các ô trang Tổng quan (theo ReadingTile Dashboard Farm Owner)
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-/** Dòng phụ ô vai trò: tình trạng hoạt động của nhóm đó (thay cho "% tổng số" — tỉ lệ không giúp Admin làm gì) */
+// Dòng phụ ô vai trò: tình trạng hoạt động của nhóm đó (thay cho "% tổng số": tỉ lệ không giúp Admin làm gì)
 function roleSub(list: User[]) {
   if (list.length === 0) return 'Chưa có tài khoản nào'
   const locked = list.filter(u => getUserStatus(u) === 'LOCKED').length
   return locked > 0 ? t('{{active}} hoạt động · {{locked}} đã khoá', { active: list.length - locked, locked }) : 'Tất cả đang hoạt động'
 }
 
-// AD-03 — 4 ô đầu trang Người dùng, đếm ở client từ useAllUsers() vì backend không có endpoint thống kê tài khoản
+// 4 ô đầu trang Người dùng, đếm ở client từ useAllUsers() vì backend không có endpoint thống kê tài khoản
 export default function UserStats() {
   const { data: users, isLoading, isError, refetch } = useAllUsers()
 

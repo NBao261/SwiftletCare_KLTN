@@ -8,7 +8,7 @@ interface EmptyStateProps {
   action?: ReactNode
 }
 
-/** EmptyState – hiển thị khi danh sách rỗng (farm/device/alert chưa có dữ liệu). Chữ tự dịch theo VI/EN */
+// EmptyState – hiển thị khi danh sách rỗng (farm/device/alert chưa có dữ liệu). Chữ tự dịch theo VI/EN
 export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-warmGray/30 px-6 py-12 text-center">

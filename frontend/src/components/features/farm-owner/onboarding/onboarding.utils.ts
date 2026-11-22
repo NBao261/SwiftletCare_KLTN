@@ -1,4 +1,4 @@
-// Logic thuần của wizard cài thiết bị: điều kiện xác thực và body đăng ký (FARM-FR-004, FARM-FR-010)
+// Logic thuần của wizard cài thiết bị: điều kiện xác thực và body đăng ký
 import type { RegisterCameraInput, RegisterDeviceInput } from '@/apis/shared/devices.api'
 import type { OnboardingState } from '@/components/features/farm-owner/onboarding/onboardingTypes'
 

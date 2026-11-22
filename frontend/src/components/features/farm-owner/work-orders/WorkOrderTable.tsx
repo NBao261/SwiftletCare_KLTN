@@ -22,7 +22,7 @@ interface WorkOrderTableProps {
   onAction: (action: OwnerAction, workOrder: WorkOrder) => void;
 }
 
-// OPS-FR-001…004 — bảng Work Order (phân trang server): việc, nhà, người làm, trạng thái, lúc mở, menu thao tác
+// bảng Work Order (phân trang server): việc, nhà, người làm, trạng thái, lúc mở, menu thao tác
 export default function WorkOrderTable({
   workOrders, page, total, onPageChange, houseNames, canManage, onView, onAction,
 }: WorkOrderTableProps): JSX.Element {
@@ -64,7 +64,7 @@ export default function WorkOrderTable({
       render: workOrder => <Badge tone={WORK_ORDER_STATUS_TONE[workOrder.status]}>{t(`status.${workOrder.status}`)}</Badge>,
     },
     { key: 'openedAt', header: t('col.openedAt'), className: 'w-[14%] whitespace-nowrap', render: workOrder => <span className="text-sm text-charcoal">{dateTime(workOrder.opened_at)}</span> },
-    // Thao tác qua menu ⋯ (FE_Design mục 1, dòng Bảng): xem chi tiết, rồi các thao tác của Farm Owner theo trạng thái
+    // Thao tác theo trạng thái qua menu ⋯
     {
       key: 'actions',
       header: t('col.actions'),

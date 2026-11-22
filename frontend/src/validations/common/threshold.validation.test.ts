@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { validateThresholdSource } from '@/validations/common/threshold.validation'
 
-// ENV-FR-007 — nguồn của ngưỡng mặc định, cùng luật với route PUT /system/settings/default-thresholds
+// nguồn của ngưỡng mặc định, cùng luật với route PUT /system/settings/default-thresholds
 describe('validateThresholdSource', () => {
   it('nhận nguồn có mã mục REF-5', () => {
     expect(validateThresholdSource('TL-003 sách nuôi yến')).toBeUndefined()

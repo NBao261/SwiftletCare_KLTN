@@ -1,7 +1,7 @@
 import { alertTypeDict, prefixLabels, roleDict } from '@/constants/enumLabels.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển màn Sức khỏe nhà yến (/health) — trạng thái ngày, đánh giá ngày, mức chỉ số (MF-06, BR-28…31)
+// Từ điển màn Sức khỏe nhà yến (/health): trạng thái ngày, đánh giá ngày, mức chỉ số
 const vi = {
   // Đầu trang
   'page.title': 'Sức khoẻ nhà yến',
@@ -43,7 +43,7 @@ const vi = {
   'action.rate': 'Đánh giá',
   'action.view': 'Xem chi tiết',
 
-  // Trạng thái ngày (BR-29) và đánh giá của người dùng
+  // Trạng thái ngày và đánh giá của người dùng
   'status.GOOD': 'Tốt',
   'status.WATCH': 'Cần theo dõi',
   'status.ACTION': 'Cần xử lý',
@@ -56,7 +56,7 @@ const vi = {
   'ratingState.SKIPPED': 'Đã bỏ qua',
   'ratingState.EXPIRED': 'Hết hạn đánh giá',
 
-  // Popup đánh giá ngày (BR-31)
+  // Popup đánh giá ngày
   'rate.title': 'Đánh giá ngày {date} · {house}',
   // Đoạn trong **…** in đậm chữ đen (HealthRatingModal tách theo **)
   'rate.intro': 'Xem trạng thái của hệ thống, rồi **xác nhận hoặc sửa** theo quan sát tại nhà yến. Đã lưu thì **không đổi được**.',
@@ -111,7 +111,7 @@ const vi = {
   'detail.noteSaved': 'Đã lưu ghi chú',
   'detail.disclaimer': 'Trạng thái là chỉ báo từ dữ liệu, không phải chẩn đoán.',
 
-  // 4 nguồn (BR-28)
+  // 4 nguồn
   'source.environment': 'Môi trường',
   'source.air': 'Không khí',
   'source.flock': 'Đàn chim',
@@ -129,7 +129,7 @@ const vi = {
   'level.CLEAR': 'Lệch rõ',
   'level.notAssessed': 'Không xét',
 
-  // Lý do (api-spec HealthReason) — client tự dịch
+  // Lý do (api-spec HealthReason): client tự dịch
   'reason.ALL_NORMAL': 'Các chỉ số đã xét đều bình thường',
   'reason.MISSING_DATA.noZones': 'Thiếu dữ liệu môi trường: nhà chưa có Zone',
   'reason.MISSING_DATA.environment': 'Thiếu dữ liệu môi trường: mẫu nhiệt độ, độ ẩm hợp lệ dưới {pct} % ({zones})',
@@ -144,13 +144,13 @@ const vi = {
   'reason.AIR_OVER_LIMIT': 'Không khí: NH3 hoặc CO2 vượt ngưỡng {hours} giờ ở {zone} ({level})',
   'reason.FLOCK_DROP': 'Đàn chim: tỷ lệ chim về {rate} %, giảm {drop} % so với trung bình {days} ngày trước ({average} %) ({level})',
   'reason.FLOCK_NO_BASELINE': 'Đàn chim: chưa đủ {days} ngày để so sánh tỷ lệ chim về',
-  // BR-46 — nhà giai đoạn dẫn dụ
+  // nhà giai đoạn dẫn dụ
   'reason.ATTRACTING_STAGE': 'Đàn chim: nhà đang ở giai đoạn dẫn dụ, không xét tỷ lệ chim về',
   'reason.NOISE_EPISODES': 'Tiếng ồn: {episodes} đợt ồn bất thường ({level})',
   'reason.WEATHER_UNAVAILABLE': 'Không có dữ liệu thời tiết',
   'reason.RAIN_DOWNGRADE': 'Mưa từ {mm} mm/giờ trùng phiên đếm và đợt ồn nên hạ từ Cần xử lý xuống Cần theo dõi',
 
-  // Mức chỉ số của nhà (BR-28)
+  // Mức chỉ số của nhà
   'levels.title': 'Mức chỉ số · {house}',
   'levels.flockReturn': 'Đàn chim',
   'levels.intro': 'Mức để xếp từng chỉ số vào Lệch nhẹ hoặc Lệch rõ. Áp dụng từ lần tính trạng thái kế tiếp.',
@@ -178,7 +178,7 @@ const vi = {
   'levels.errAscendingOrder': 'Mức lệch rõ không được nhỏ hơn mức lệch nhẹ',
   'levels.errInteger': 'Nhập số nguyên',
 
-  // Báo cáo theo nhà (EXPERT-FR-005, 013; BR-33)
+  // Báo cáo theo nhà
   'report.title': 'Báo cáo sức khoẻ',
   'report.subtitle': 'Hệ thống tự tạo: ngày (mỗi tối), tuần (sáng thứ Hai), tháng (sáng ngày 1). Bạn tạo thêm được, tối đa 31 ngày.',
   'report.create': 'Tạo báo cáo',
@@ -265,7 +265,7 @@ const vi = {
   'rd.incomplete': 'thiếu phiên',
   'rd.conclusion': 'Kết luận của chuyên gia',
   'rd.noConclusion': 'Chưa có kết luận',
-  // BR-22 — Farm Owner nhắc chuyên gia viết kết luận
+  // Farm Owner nhắc chuyên gia viết kết luận
   'rd.remind': 'Nhắc chuyên gia',
   'rd.reminded': 'Đã nhắc chuyên gia',
   'rd.edited': 'đã sửa {time}',
@@ -284,7 +284,7 @@ const vi = {
   'action.close': 'Đóng',
   ...prefixLabels('role.', roleDict.vi),
 
-  // EXPERT-FR-022 — màn ngày đánh giá lệch của chuyên gia
+  // màn ngày đánh giá lệch của chuyên gia
   'dis.noFarmTitle': 'Chưa chọn trang trại',
   'dis.evaluationError': 'Không tải được độ đồng thuận và tỷ lệ báo động giả.',
   'dis.noFarmDesc': 'Chọn một trang trại ở bộ lọc phía trên để xem các ngày đánh giá lệch và mức chỉ số của nhà yến.',

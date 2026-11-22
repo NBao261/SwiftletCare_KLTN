@@ -2,7 +2,7 @@ import { alertStatusDict, alertTypeDict, prefixLabels, siteCauseDict } from '@/c
 import { levelDict } from '@/constants/severity.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển trang Thông báo của Farm Owner (/alerts) — ALERT-FR-007, 009, 018
+// Từ điển trang Thông báo của Farm Owner (/alerts)
 const vi = {
   'page.noFarmTitle': 'Chưa có trang trại',
   'page.noFarmDesc': 'Tạo trang trại và nhà yến ở trang Trang trại trước.',
@@ -63,7 +63,7 @@ const vi = {
   'detail.dismissedByOwner': 'Chủ nhà yến bác bỏ lúc {time}',
   'detail.reason': 'Lý do: {note}',
 
-  // Popup xác nhận (ALERT-FR-009, 018)
+  // Popup xác nhận
   'ack.title': 'Xác nhận cảnh báo',
   'ack.cause': 'Nguyên nhân tìm thấy tại chỗ',
   'ack.causeHint': 'Không bắt buộc. Chọn nếu bạn đã kiểm tra tại nhà; bấm lại để bỏ chọn.',

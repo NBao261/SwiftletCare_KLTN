@@ -16,7 +16,7 @@ export interface EnvSummaryStats {
   anomalyCount: number; total: number
 }
 
-// ANALYTICS-FR-013 — thời tiết ngoài trời của farm, cùng mốc bucket với số đo trong nhà
+// thời tiết ngoài trời của farm, cùng mốc bucket với số đo trong nhà
 export interface OutdoorWeatherPoint {
   timestamp: string
   temperature: number | null; humidity: number | null; precipitation_mm: number | null
@@ -42,7 +42,7 @@ export interface EnvCompareResponse {
   zones: EnvCompareZone[]
 }
 
-// Số đếm 1 ngày giờ Việt Nam của cả nhà yến (SRS v2.1.8); các trường thêm ở v2.1.8 để tuỳ chọn cho dữ liệu cũ
+// Số đếm 1 ngày giờ Việt Nam của cả nhà yến; các trường thêm ở để tuỳ chọn cho dữ liệu cũ
 export interface BirdCountDailyRecord {
   date: string; morning_exit: number; evening_entry: number; return_rate: number | null
   morning_entry?: number; evening_exit?: number
@@ -50,7 +50,7 @@ export interface BirdCountDailyRecord {
   has_morning?: boolean; has_evening?: boolean
 }
 
-// VISION-FR-017 — số chim qua vạch đếm trong 1 khoảng 5 phút, cộng mọi camera của nhà yến
+// số chim qua vạch đếm trong 1 khoảng 5 phút, cộng mọi camera của nhà yến
 export interface BirdCountBucket {
   bucket_start: string; entry_count: number; exit_count: number
 }
@@ -60,7 +60,7 @@ export interface BirdCountBucketsResponse {
   buckets: BirdCountBucket[]
 }
 
-// VISION-FR-012 — số đếm hôm nay của nhà yến, updated_at null khi hôm nay chưa có tin
+// số đếm hôm nay của nhà yến, updated_at null khi hôm nay chưa có tin
 export interface BirdCountCurrentResponse extends Required<BirdCountDailyRecord> {
   house_id: string
   updated_at: string | null
@@ -72,14 +72,14 @@ export interface BirdCountTrendsResponse {
   avg_return_rate: number | null
   latest_return_rate: number | null
   drop_percent: number | null
-  // Mức giảm coi là đáng kể của nhà yến (return_rate_drop_pct, Domain Expert chỉnh — EXPERT-FR-008)
+  // Mức giảm coi là đáng kể của nhà yến (return_rate_drop_pct, Domain Expert chỉnh —)
   drop_threshold_pct: number
   is_significant_drop: boolean
-  // ANALYTICS-FR-002 — số chim ra buổi sáng trung bình theo tuần và tháng; ngày thiếu phiên không tính
+  // số chim ra buổi sáng trung bình theo tuần và tháng; ngày thiếu phiên không tính
   flock_trend?: { weekly: FlockPeriod[]; monthly: FlockPeriod[] }
 }
 
-// ANALYTICS-FR-011 — tỷ lệ thời gian tự động, tính từ lịch sử can thiệp tay
+// tỷ lệ thời gian tự động, tính từ lịch sử can thiệp tay
 export interface AutonomyResponse {
   range: AnalyticsRange; from: string; to: string
   auto_mode_pct: number | null
@@ -98,7 +98,7 @@ export interface EnvBirdCorrelationResponse {
   note?: string
 }
 
-/** ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ (chỉ mẫu từ firmware ≥ 1.1.0) */
+// hiệu quả bộ điều khiển mờ (chỉ mẫu từ firmware ≥ 1.1.0)
 export interface ControlPerformancePoint {
   timestamp: string
   humidity?: number | null; temperature?: number | null
@@ -109,7 +109,7 @@ export interface ControlPerformanceStats {
   sampleCount: number
   humidityInRangePct: number | null; temperatureInRangePct: number | null
   mistingAvgPct: number | null; ventilationAvgPct: number | null
-  /** null khi dữ liệu < 15 phút — chưa đủ để quy ra /giờ */
+  // null khi dữ liệu < 15 phút: chưa đủ để quy ra /giờ
   mistingSwitchesPerHour: number | null; ventilationSwitchesPerHour: number | null
 }
 
@@ -120,18 +120,17 @@ export interface ControlPerformanceResponse {
   tuning_changes: Array<{ changed_at: string; new_values: Partial<FuzzyTuning> }>
   series: ControlPerformancePoint[]
   stats: ControlPerformanceStats | null
-  /** ALERT-FR-016 — mốc bảo trì theo thời gian chạy + tiến độ từng thiết bị (từ lần bảo trì trước) */
+  // mốc bảo trì theo thời gian chạy + tiến độ từng thiết bị (từ lần bảo trì trước)
   service_limits: Record<'misting' | 'ventilation', { hours: number; switches: number }>
   relay_usage: Array<{
     device_id: string
-    /** SYSTEM-FR-004 */
     simulated?: boolean
     misting: { hours: number; switches: number }
     ventilation: { hours: number; switches: number }
   }>
 }
 
-/** ANALYTICS-FR-009 — dự báo 60 phút tới (Holt trend tắt dần), sai số đánh giá lùi */
+// dự báo 60 phút tới (Holt trend tắt dần), sai số đánh giá lùi
 export interface MetricForecast {
   history: Array<{ timestamp: string; value: number }>
   forecast: Array<{ timestamp: string; value: number }>
@@ -147,7 +146,7 @@ export interface ForecastResponse {
   predicted: { metric: 'humidity' | 'temperature'; direction: 'above' | 'below'; limit: number; value: number; minutesAhead: number } | null
 }
 
-/** ANALYTICS-FR-001..005/008..010, VISION-FR-008..011 */
+// /008..010
 export const analyticsApi = {
   autonomy: (zoneId: string, range: AnalyticsRange) =>
     api.get<ApiResponse<AutonomyResponse>>('/analytics/autonomy', { params: { zoneId, range } }),
@@ -159,14 +158,14 @@ export const analyticsApi = {
     api.get<ApiResponse<EnvSummaryResponse>>('/analytics/env/summary', { params: { zoneId, range } }),
   envCompare: (zoneIds: string[], range: AnalyticsRange) =>
     api.get<ApiResponse<EnvCompareResponse>>('/analytics/env/compare', { params: { zoneIds: zoneIds.join(','), range } }),
-  // Đếm chim theo nhà yến (SRS v2.1.8) — houseId thay cho zoneId cũ
+  // Đếm chim theo nhà yến: houseId thay cho zoneId cũ
   houseBirdCountTrends: (houseId: string, days = 30) =>
     api.get<ApiResponse<BirdCountTrendsResponse>>('/analytics/bird-count/trends', { params: { houseId, days } }),
   houseBirdCountBuckets: (houseId: string, params?: { from?: string; to?: string }) =>
     api.get<ApiResponse<BirdCountBucketsResponse>>('/analytics/bird-count/buckets', { params: { houseId, ...params } }),
   houseBirdCountCurrent: (houseId: string) =>
     api.get<ApiResponse<BirdCountCurrentResponse>>('/analytics/bird-count/current', { params: { houseId } }),
-  // ANALYTICS-FR-017, BR-45 — điện năng ước tính của bơm và quạt theo tháng; mặc định 90 ngày gần nhất
+  // điện năng ước tính của bơm và quạt theo tháng; mặc định 90 ngày gần nhất
   energy: (houseId: string) =>
     api.get<ApiResponse<EnergyEstimate>>('/analytics/energy', { params: { houseId } }),
   correlation: (zoneId: string, days = 30) =>

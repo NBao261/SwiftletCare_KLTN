@@ -12,7 +12,7 @@ import type { AppNotification } from '@/types'
 
 const PAGE_SIZE = 10
 
-// Tab "Thông báo" của chuông: hộp thông báo trong ứng dụng (EXPERT-FR-007, 009) — bấm để đánh dấu đã đọc và mở trang liên quan
+// Tab "Thông báo" của chuông: hộp thông báo trong ứng dụng: bấm để đánh dấu đã đọc và mở trang liên quan
 export default function NotificationInboxList({ onNavigate }: { onNavigate: () => void }) {
   const { t } = useTranslation(shellDict)
   const navigate = useNavigate()

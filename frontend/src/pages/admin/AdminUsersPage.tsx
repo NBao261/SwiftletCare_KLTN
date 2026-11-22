@@ -1,7 +1,4 @@
-// ADMIN — Quản lý tài khoản người dùng (AUTH-FR-005c/005d/011, RACI mục 4.4)
-// Gọi API thật qua hooks/useUsers.ts (/admin/users, /admin/delete-requests...).
-// Trang chính chỉ lo state/layout — cột bảng (columns.tsx), nhãn dùng chung
-// (constants.ts) và từng modal (*Modal.tsx) nằm ở file riêng trong cùng thư mục.
+// Quản lý tài khoản; trang chỉ lo state và layout
 import { useState } from 'react'
 import { getUserStatus, useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
 import { Button, ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
@@ -20,12 +17,12 @@ import CreateFarmOwnerModal from '@/components/features/admin/users/CreateFarmOw
 import type { Role, User, SortDirection } from '@/types'
 
 const PAGE_SIZE = 10
-/** px — vừa ô Ngày tạo 2 dòng (giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau → khung bảng cố định 10 dòng */
+// px: vừa ô Ngày tạo 2 dòng (giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau → khung bảng cố định 10 dòng
 const ROW_HEIGHT = 64
 const DEFAULT_SORT_BY: UsersSortKey = 'created_at'
 const DEFAULT_SORT_DIR: SortDirection = 'desc'
 
-// AD-03 — một danh sách mọi vai trò, lọc vai trò bằng ô chọn thay cho 2 tab
+// một danh sách mọi vai trò, lọc vai trò bằng ô chọn thay cho 2 tab
 const ROLE_OPTIONS: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN', 'DOMAIN_EXPERT']
 
 export default function AdminUsersPage() {
@@ -75,9 +72,9 @@ export default function AdminUsersPage() {
   }, currentUserId)
 
   return (
-    // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
+    // Tiêu đề trang do AppHeader (topbar) tự tra từ menu: không lặp lại trong nội dung
     <div className="flex flex-col gap-5">
-      {/* Hàng 0: 4 ô chỉ số (chỉ xem) — số liệu toàn hệ thống */}
+      {/* Hàng 0: 4 ô chỉ số (chỉ xem): số liệu toàn hệ thống */}
       <UserStats />
 
       {/* Card một mình trên trang: tên trang đã ở header nên không có tiêu đề */}
@@ -127,10 +124,10 @@ export default function AdminUsersPage() {
             sortKey={sortBy}
             sortDirection={sortDir}
             onSortChange={handleSortChange}
-            // Cố định khung 10 dòng như bảng Trang trại/Thiết bị — ít tài khoản/trang cuối vẫn giữ chiều cao
+            // Cố định khung 10 dòng như bảng Trang trại/Thiết bị: ít tài khoản/trang cuối vẫn giữ chiều cao
             rowHeight={ROW_HEIGHT}
             minRows={total > limit ? PAGE_SIZE : 0}
-            // Admin không có trang chi tiết người dùng riêng — bấm dòng mở popup chi tiết (UserDetailModal)
+            // Admin không có trang chi tiết người dùng riêng: bấm dòng mở popup chi tiết (UserDetailModal)
             onRowClick={setViewTarget}
             emptyMessage="Không tìm thấy tài khoản nào, thử đổi bộ lọc hoặc từ khoá tìm kiếm."
             mobileCard={user => (

@@ -16,7 +16,7 @@ export interface CycleConclusionInput {
   recommendations?: string
 }
 
-// HARVEST-FR-007, EXPERT-FR-020 — Chu kỳ thu hoạch và kết luận mùa vụ
+// Chu kỳ thu hoạch và kết luận mùa vụ
 export const harvestCyclesApi = {
   list: (params?: HarvestCyclesParams) =>
     api.get<ApiResponse<HarvestCycle[]>>('/harvests/cycles', { params }),

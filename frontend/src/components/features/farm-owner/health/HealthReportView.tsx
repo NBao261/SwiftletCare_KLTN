@@ -36,7 +36,7 @@ function Part({ title, children }: { title: string; children: ReactNode }): JSX.
   );
 }
 
-// Ô nền xám nhạt của phần tóm tắt; grow = phần chiều ngang khi nằm cạnh ô khác (hẹp thì tự xuống hàng theo độ rộng thẻ)
+// Ô tóm tắt; hẹp thì tự xuống hàng
 function Group({ title, grow, children }: { title: string; grow: string; children: ReactNode }): JSX.Element {
   return (
     <div className={cn('flex min-w-0 flex-col gap-3 rounded-xl bg-warmGray/[0.06] p-4', grow)}>
@@ -72,7 +72,7 @@ interface HealthReportViewProps {
   isDownloading: boolean;
 }
 
-// EXPERT-FR-005, 006 — 1 báo cáo theo nhà: tóm tắt, kết luận, các ngày, theo Zone; cùng số liệu với PDF
+// 1 báo cáo theo nhà: tóm tắt, kết luận, các ngày, theo Zone; cùng số liệu với PDF
 export default function HealthReportView({ report, onDownload, isDownloading }: HealthReportViewProps): JSX.Element {
   const { t, date, dateTime, hourMinute, exact } = useTranslation(healthDict);
   const format = useMemo(() => ({ t, date, dateTime, number: (value: number) => exact(value, 1) }), [t, date, dateTime, exact]);
@@ -85,7 +85,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
 
   return (
     <article className="flex w-full flex-col gap-6 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card sm:p-6">
-      {/* Tên nhà là tiêu đề (dài thì "…", rê chuột xem đủ); loại báo cáo, kỳ, giờ tạo chữ nhạt ở dòng dưới; nút PDF ở góc phải */}
+      {/* Tên nhà là tiêu đề, dài thì "…"; nút PDF góc phải */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h2 className="flex min-w-0 items-center gap-2 text-h1 text-charcoal">
@@ -143,7 +143,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
         <HealthReportConclusion report={report} />
       </Part>
 
-      {/* Mỗi ngày 1 dòng 3 phần (hệ thống | lý do | đánh giá của người); thẻ hẹp thì xuống dòng và ẩn hàng tiêu đề */}
+      {/* Mỗi ngày 1 dòng 3 phần (hệ thống lý do đánh giá của người); thẻ hẹp thì xuống dòng và ẩn hàng tiêu đề */}
       <Part title={t('rd.days')}>
         {dayRows.length === 0 ? (
           <p className="text-sm italic text-warmGray">{t('rd.noDays')}</p>
@@ -178,7 +178,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
                         </ul>
                       ) : <span className="text-warmGray">{NO_VALUE}</span>}
                     </div>
-                    {/* Người · vai trò · lúc đánh giá (cùng ngày chỉ giờ phút), badge mức họ chọn (bỏ qua: chữ xám), ghi chú dòng dưới */}
+                    {/* Một lượt đánh giá */}
                     <div className={cn(DAY_RATINGS, 'flex flex-col gap-2')} aria-label={t('detail.ratings')}>
                       {row.ratingItems.length > 0 ? row.ratingItems.map((item, index) => (
                         <div key={index} className="flex flex-col gap-0.5">

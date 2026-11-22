@@ -1,7 +1,7 @@
 import api from '@/lib/axios'
 import type { ApiResponse, RecommendationRule, RecommendationRuleEffect, RecommendationRuleInput } from '@/types'
 
-// EXPERT-FR-016, 019 — luật khuyến nghị của farm: chuyên gia viết, sửa, bật/tắt; hiệu quả theo luật
+// luật khuyến nghị của farm: chuyên gia viết, sửa, bật/tắt; hiệu quả theo luật
 export const recommendationRulesApi = {
   list: (farmId: string, page: number, limit: number) =>
     api.get<ApiResponse<RecommendationRule[]>>('/recommendations/rules', { params: { farmId, page, limit } }),

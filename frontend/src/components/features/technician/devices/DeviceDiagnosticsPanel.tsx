@@ -60,7 +60,7 @@ export default function DeviceDiagnosticsPanel({
         <div className="flex flex-col lg:flex-row gap-6 animate-fade-in">
           <div className="flex-1">
             {node.audio ? (
-              /* Chỉ hiển thị dữ liệu thật từ node: bài mặc định, âm lượng (0–30), lịch phát */
+              // Chỉ hiển thị dữ liệu thật từ node: bài mặc định, âm lượng (0–30), lịch phát
               <div className="flex h-full flex-col gap-4 rounded-2xl border border-warmGray/15 bg-white p-5">
                 <div className="flex items-center justify-between gap-3">
                   <p className="label-caption">Cấu hình loa hiện tại</p>
@@ -106,7 +106,7 @@ export default function DeviceDiagnosticsPanel({
           </div>
 
           <div className="flex flex-col gap-3 flex-1">
-            {/* Farm Technician chỉ xem danh sách bài loa (Report 4 §5.4); thiết bị PENDING chưa có cấu hình loa */}
+            {/* Farm Technician chỉ xem danh sách bài loa; thiết bị PENDING chưa có cấu hình loa */}
             {node.status === "PENDING" ? (
               <p className="rounded-xl bg-orange-300/25 px-3 py-2.5 text-xs font-medium text-charcoal">
                 Thiết bị chưa kết nối. Danh sách bài loa ru có khi thiết bị online.

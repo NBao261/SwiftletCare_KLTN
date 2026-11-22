@@ -1,6 +1,6 @@
 import type { CountingSchedule, DayWindows } from '@/types/expert.types'
 
-// Khớp backend `countingSchedule.util.ts` (Report 3 §4.5): giới hạn nhập chống gõ nhầm
+// Khớp backend `countingSchedule.util.ts`: giới hạn nhập chống gõ nhầm
 export const MAX_SCHEDULE_PROFILES = 12
 export const MAX_TEMPORARY_WINDOWS = 60
 export const PROFILE_NAME_MAX_LENGTH = 50
@@ -53,7 +53,7 @@ function windowsError(windows: DayWindows): ScheduleError | null {
   return null
 }
 
-// Lỗi đầu tiên của từng dòng (null = dòng hợp lệ); dòng trùng ngày với một dòng phía trên báo 'overlap', như backend trả 400
+// Dòng trùng ngày với dòng trên báo 'overlap', như backend
 export function validateCountingSchedule(schedule: CountingSchedule): {
   profiles: Array<ScheduleError | null>
   temporary: Array<ScheduleError | null>

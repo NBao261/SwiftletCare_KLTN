@@ -7,7 +7,7 @@ import type {
 } from '@/types/expert.types'
 
 export const expertService = {
-  // ── Đọc dữ liệu (Chỉ lấy cảnh báo suy luận theo SRS EXPERT-FR-003) ───────
+  // Đọc dữ liệu (Chỉ lấy cảnh báo suy luận theo)
   async getInferredAlerts(params: InferredAlertQuery): Promise<{ records: InferredAlertItem[]; total: number }> {
     const res = await expertApi.listInferredAlerts(params)
     return { records: res.data.data ?? [], total: res.data.meta?.total ?? 0 }
@@ -40,7 +40,7 @@ export const expertService = {
     return res.data?.data
   },
 
-  // ── Thao tác ghi (Không nuốt lỗi - throw lỗi thật để UI hiển thị) ───────
+  // Thao tác ghi (Không nuốt lỗi - throw lỗi thật để UI hiển thị)
   async setAlertVerdict(alertId: string, result: 'CONFIRMED' | 'REJECTED', note?: string): Promise<InferredAlertItem> {
     const res = await expertApi.setAlertVerdict(alertId, result, note)
     return res.data.data

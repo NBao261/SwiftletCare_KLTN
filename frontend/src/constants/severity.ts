@@ -1,9 +1,9 @@
 import type { AlertSeverity, AlertStatus, SeverityLevel } from '@/types';
 
-// 4 cấp mức độ cảnh báo như BR-15: P1 Khẩn cấp, P2 Cao, P3 Trung bình, P4 Thấp (mỗi cấp một cách gửi, ALERT-FR-006, 015, 017)
+// 4 cấp mức độ cảnh báo như: P1 Khẩn cấp, P2 Cao, P3 Trung bình, P4 Thấp (mỗi cấp một cách gửi)
 export const LEVELS: SeverityLevel[] = ['P1', 'P2', 'P3', 'P4'];
 
-// Mỗi mức backend là một cấp: CRITICAL tới cả chủ và thợ ngay và vượt giờ im lặng, HIGH tới thợ trước (G-32, Q-07)
+// Mỗi mức backend là một cấp: CRITICAL tới cả chủ và thợ ngay và vượt giờ im lặng, HIGH tới thợ trước
 export const SEVERITY_TO_LEVEL: Record<AlertSeverity, SeverityLevel> = {
   CRITICAL: 'P1',
   HIGH: 'P2',

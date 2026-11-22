@@ -3,7 +3,7 @@ import type { FarmKey } from '@/constants/farmStructure.i18n'
 import { isOvernightShift, WEEK_ORDER } from '@/validations/farm-owner/roster.validation'
 import type { RosterShift } from '@/types'
 
-// AUTH-FR-014 — mỗi ca của kỹ thuật viên một dòng: các ngày (thứ Hai trước) · giờ (kèm "qua đêm") · loại ca
+// mỗi ca của kỹ thuật viên một dòng: các ngày (thứ Hai trước) · giờ (kèm "qua đêm") · loại ca
 export function ownShiftLines(shifts: RosterShift[], t: (key: FarmKey) => string): string[] {
   return shifts.map(shift => {
     const days = WEEK_ORDER.filter(day => shift.weekdays.includes(day)).map(day => t(ROSTER_DAY_LABEL[day])).join(', ')

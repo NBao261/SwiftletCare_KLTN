@@ -2,7 +2,7 @@ import type { HealthLevels } from '@/types'
 
 export type HealthLevelKey = keyof HealthLevels
 
-// Khoảng hợp lệ BR-28 — khớp kiểm tra của backend (PUT /farms/houses/{houseId}/health-levels)
+// Khoảng hợp lệ: khớp kiểm tra của backend (PUT /farms/houses/{houseId}/health-levels)
 export const HEALTH_LEVEL_LIMITS: Record<HealthLevelKey, { min: number; max: number; integer: boolean }> = {
   in_range_slight_pct: { min: 50, max: 100, integer: false },
   in_range_clear_pct:  { min: 50, max: 100, integer: false },
@@ -15,7 +15,7 @@ export const HEALTH_LEVEL_LIMITS: Record<HealthLevelKey, { min: number; max: num
 // Mã lỗi để màn tự dịch
 export type HealthLevelError = 'number' | 'range' | 'integer' | 'environmentOrder' | 'ascendingOrder'
 
-// Cùng luật với backend: từng mức trong khoảng; môi trường càng thấp càng lệch nên mức rõ ≤ mức nhẹ, không khí và tiếng ồn ngược lại
+// Cùng luật với backend: môi trường thì mức rõ ≤ mức nhẹ, không khí và tiếng ồn ngược lại
 export function validateHealthLevels(values: Record<HealthLevelKey, number>): Partial<Record<HealthLevelKey, HealthLevelError>> {
   const errors: Partial<Record<HealthLevelKey, HealthLevelError>> = {}
   for (const key of Object.keys(HEALTH_LEVEL_LIMITS) as HealthLevelKey[]) {

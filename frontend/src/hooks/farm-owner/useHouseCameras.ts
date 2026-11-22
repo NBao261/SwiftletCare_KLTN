@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { cameraApi } from '@/apis/farm-owner/camera.api';
 import type { DeviceStatus } from '@/types';
 
-// Trạng thái phát được video; DEGRADED đã bỏ theo SRS 3.1.0
+// Trạng thái phát được video; DEGRADED đã bỏ theo
 const READY_STATUSES = new Set<DeviceStatus>(['ONLINE']);
-// Chu kỳ hỏi lại khi camera chưa sẵn sàng (hằng giao diện, không có nguồn SRS)
+// Chu kỳ hỏi lại khi camera chưa sẵn sàng (hằng giao diện, không có nguồn)
 const NOT_READY_POLL_MS = 30_000;
 
 // Camera đang lắp của 1 nhà yến (bỏ camera đã gỡ)

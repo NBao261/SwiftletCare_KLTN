@@ -8,7 +8,7 @@ interface LanguageState {
   setLang: (lang: Lang) => void
 }
 
-/** Ngôn ngữ hiển thị đang chọn (nút VI/EN ở AppHeader) — thuần client, lưu localStorage để giữ qua lần mở sau */
+// Ngôn ngữ hiển thị đang chọn (nút VI/EN ở AppHeader): thuần client, lưu localStorage để giữ qua lần mở sau
 export const useLanguageStore = create<LanguageState>()(
   persist(
     (set) => ({

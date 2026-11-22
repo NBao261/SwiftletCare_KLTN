@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { deviceLabelCode, parseDeviceLabelCode, zoneCode } from '@/lib/qrCode'
 
-// Định dạng phải khớp Report 3 FARM-FR-010/011 và bộ đọc trên mobile (parseDeviceLabel, parseZoneCode)
+// Định dạng phải khớp và bộ đọc trên mobile (parseDeviceLabel, parseZoneCode)
 describe('qrCode', () => {
   it('nhãn thiết bị chứa đúng device ID và mã kích hoạt', () => {
     const code = deviceLabelCode('node_101', 'K7QM-3XPA-9RTD')

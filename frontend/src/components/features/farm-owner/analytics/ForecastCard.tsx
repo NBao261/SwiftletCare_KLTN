@@ -41,7 +41,7 @@ interface ForecastCardProps {
   zoneId: string;
 }
 
-// Dự báo độ ẩm, nhiệt độ 60 phút tới kèm sai số đánh giá lùi (ANALYTICS-FR-009)
+// Dự báo độ ẩm, nhiệt độ 60 phút tới kèm sai số đánh giá lùi
 export default function ForecastCard({ zoneId }: ForecastCardProps): JSX.Element {
   const { t, exact } = useTranslation(analyticsDict);
   const { data, isLoading, isError, refetch } = useForecast(zoneId);

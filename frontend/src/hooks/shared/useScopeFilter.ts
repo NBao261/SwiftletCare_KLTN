@@ -18,7 +18,7 @@ const HOUSES_STALE_MS = 5 * 60 * 1000;
 const NO_ZONES: AllZone[] = [];
 
 export interface ScopeFilterState {
-  // Bậc phạm vi trang đang mở cần (C-05): khác 'none' thì khung lọc không có "Tất cả" ở bậc đó
+  // Bậc phạm vi trang đang mở cần: khác 'none' thì khung lọc không có "Tất cả" ở bậc đó
   level: ScopeLevel;
   // Mọi trang trại của tài khoản, tạo trước đứng trước
   farms: Farm[];
@@ -36,7 +36,7 @@ export interface ScopeFilterState {
   zones: AllZone[];
   // Zone đang lọc; undefined = tất cả Zone (chỉ chọn được Zone khi đã chọn 1 nhà)
   zone: AllZone | undefined;
-  // Farm / nhà / Zone đang có Zone vượt ngưỡng, thiết bị hoặc camera hư — chấm cam ở khung lọc
+  // Farm / nhà / Zone đang có Zone vượt ngưỡng, thiết bị hoặc camera hư: chấm cam ở khung lọc
   issueFarmIds: Set<string>;
   issueHouseIds: Set<string>;
   issueZoneIds: Set<string>;
@@ -62,7 +62,7 @@ export interface AutoScopeInput {
   nodes: { zone_id: string; status: string }[];
 }
 
-// Phạm vi tự chọn khi trang cần một bậc mà khung lọc còn trống (C-05); null = giữ nguyên lựa chọn hiện tại
+// Phạm vi tự chọn khi trang cần một bậc mà khung lọc còn trống; null = giữ nguyên lựa chọn hiện tại
 export function pickAutoScope(input: AutoScopeInput): { farmId: string; houseId: string; zoneId: string } | null {
   const { level, farmIds, lastFarmId, farmId, houseId, zoneId, houses, zones, nodes } = input;
   if (level === 'none' || farmIds.length === 0) return null;
@@ -93,7 +93,7 @@ export function pickAutoScope(input: AutoScopeInput): { farmId: string; houseId:
   return house ? { farmId: farm, houseId: house._id, zoneId: '' } : farmOnly;
 }
 
-// Khung lọc Trang trại → Nhà → Zone dùng chung các trang Farm Owner, lựa chọn lưu trong store nên chuyển trang không bị trả về
+// Lựa chọn lưu trong store nên chuyển trang không bị mất
 export function useScopeFilter(): ScopeFilterState {
   const level = scopeLevelOf(useLocation().pathname);
   const lastFarmId = useZoneStore(state => state.selectedFarmId);
@@ -158,7 +158,7 @@ export function useScopeFilter(): ScopeFilterState {
   });
   const isLoading = isLoadingFarms || housesQuery.isLoading || isLoadingZones;
 
-  // Trang cần một trang trại / nhà / Zone mà khung lọc còn trống: tự chọn bậc có dữ liệu (C-05)
+  // Trang cần một trang trại / nhà / Zone mà khung lọc còn trống: tự chọn bậc có dữ liệu
   const autoScope = useMemo(
     () => (isLoading || (level === 'zone' && !nodes)
       ? null
@@ -222,7 +222,7 @@ export function farmZonePath(farmId: string, houseId: string, zoneId: string): s
   return `/farms/${farmId}/houses/${houseId}/zones/${zoneId}`;
 }
 
-// Khung lọc ở các trang Trang trại: đổi lựa chọn thì sang trang đúng cấp (farm → danh sách, nhà → chi tiết nhà, Zone → chi tiết Zone)
+// Đổi lựa chọn thì sang trang đúng cấp
 export function useFarmsScopeRouting(scope: ScopeFilterState): ScopeFilterState {
   const navigate = useNavigate();
   const { pathname } = useLocation();

@@ -12,7 +12,7 @@ import LanguageToggle from '@/components/common/LanguageToggle'
 // Trang không nằm trên sidebar mà mở từ menu avatar (SH-03): Cài đặt và Quyền riêng tư
 const AVATAR_MENU_PAGES: Pick<MenuItem, 'label' | 'path' | 'tabs'>[] = [{ label: 'Cài đặt', path: '/settings' }]
 
-/** Tên trang + base path theo route hiện tại, tra trong chính menu của role đang đăng nhập. */
+// Tên trang + base path theo route hiện tại, tra trong chính menu của role đang đăng nhập.
 function usePageTitle(menuSections: MenuSection[]): { label: string; to: string } {
   const { pathname } = useLocation()
   const navigationLabel = useNavigationLabel()
@@ -23,7 +23,7 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
   return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: tabPath ?? match?.path ?? pathname }
 }
 
-/** `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung */
+// `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung
 export default function AppHeader({ menuSections, elevated = false }: { menuSections: MenuSection[]; elevated?: boolean }) {
   const setHeaderSlot = useHeaderSlotStore(state => state.setSlot)
   const { pathname } = useLocation()
@@ -50,7 +50,7 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
         )}
       />
 
-      {/* Trái: tên trang (h1, C-01) → thực thể đang xem; điện thoại xuống tối đa 2 dòng thay vì cắt (SH-05) */}
+      {/* Trái: tên trang (h1) → thực thể đang xem; điện thoại xuống tối đa 2 dòng thay vì cắt (SH-05) */}
       <nav aria-label="breadcrumb" className="order-1 flex min-w-0 flex-1 items-baseline gap-1.5">
         {trail.map((crumb, i) => {
           const isRoot = i === 0
@@ -79,15 +79,15 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
         })}
       </nav>
 
-      {/* Chỗ trang đặt thanh phạm vi (HeaderActions): từ xl cùng hàng tên trang, dưới xl hàng riêng ngay dưới (SH-07); trống thì ẩn */}
+      {/* Thanh phạm vi: từ xl cùng hàng tên trang, dưới xl xuống hàng riêng */}
       <div ref={setHeaderSlot} className="order-3 flex basis-full empty:hidden xl:order-2 xl:basis-auto" />
 
-      {/* Phải: VI/EN · chuông · avatar (menu avatar là nơi duy nhất có Cài đặt, Quyền riêng tư, Đăng xuất ở mọi khổ màn, SH-02) */}
+      {/* Menu avatar là nơi duy nhất có Cài đặt, Quyền riêng tư, Đăng xuất */}
       <div className="order-2 flex shrink-0 items-center gap-3 xl:order-3">
         <div className="max-sm:hidden">
           <LanguageToggle />
         </div>
-        {/* Mọi role có hộp thông báo (EXPERT-FR-007); tab Cảnh báo chỉ cho role vào được /alerts */}
+        {/* Mọi role có hộp thông báo; tab Cảnh báo chỉ cho role vào được /alerts */}
         <NotificationPopover />
         <ProfilePopover />
       </div>

@@ -6,7 +6,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { getApiErrorMessage } from '@/lib/helpers'
 
-/** Thêm zone vào 1 nhà (POST /farms/houses/:houseId/zones) */
+// Thêm zone vào 1 nhà (POST /farms/houses/:houseId/zones)
 export default function AddZoneModal({ open, onClose, houseId }: { open: boolean; onClose: () => void; houseId: string }) {
   const { t } = useTranslation(farmDict)
   const push = useToastStore(s => s.push)

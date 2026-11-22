@@ -18,10 +18,10 @@ import { formatStandardDate } from '@/lib/i18n';
 import type { House, NestType, SortDirection } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
-// Từ sm: khung bảng cao cố định 4 dòng; màn xl: khung lấp chiều cao cố định của Card, dòng còn lại cuộn dọc; điện thoại: thẻ cao theo nội dung
+// Khung bảng cao cố định 4 dòng từ sm, cuộn dọc
 const VISIBLE_ROWS = 4;
 const ROW_HEIGHT = 68;
-// Tiêu đề cột (~46px) + 4 dòng × 68px — chiều cao cố định của vùng bảng khi chưa tới màn xl
+// Tiêu đề cột (~46px) + 4 dòng × 68px: chiều cao cố định của vùng bảng khi chưa tới màn xl
 const TABLE_AREA_CLASS = 'sm:h-[318px] xl:h-auto xl:min-h-0 xl:flex-1';
 // Bảng nằm trong cột 8/12 nên hạ bề rộng tối thiểu để không cuộn ngang ở màn rộng
 const TABLE_MIN_WIDTH = 640;
@@ -29,7 +29,7 @@ const TABLE_MIN_WIDTH = 640;
 const CELL_PADDING = 'px-3';
 const GRAMS_PER_KILOGRAM = 1000;
 type SortKey = 'date' | 'weight';
-// Lọc theo trạng thái xác nhận (HARVEST-FR-006): lần thu còn lô chờ Farm Owner xác nhận hay đã xác nhận hết
+// Lọc theo trạng thái xác nhận: lần thu còn lô chờ Farm Owner xác nhận hay đã xác nhận hết
 type StatusFilter = '' | 'PENDING' | 'CONFIRMED';
 const DEFAULT_SORT_KEY: SortKey = 'date';
 const DEFAULT_SORT_DIRECTION: SortDirection = 'desc';
@@ -60,7 +60,7 @@ interface HarvestTableProps {
   createBlockedReason?: string;
 }
 
-// Bảng lần thu (1 dòng 1 lần thu): tìm / lọc / sắp xếp ở client, khung 4 dòng cuộn dọc không bù dòng trống (ngoại lệ FE_Design 1.1)
+// Bảng lần thu, không bù dòng trống
 export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, onConfirm, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const [search, setSearch] = useState('');
@@ -80,7 +80,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
     setSortDirection('asc');
   }
 
-  // Số điều kiện lọc đang bật — hiện trên nút Hủy lọc
+  // Số điều kiện lọc đang bật: hiện trên nút Hủy lọc
   const activeFilterCount = [search, houseFilter, nestTypeFilter, statusFilter].filter(value => value !== '').length
     + (sortKey !== DEFAULT_SORT_KEY || sortDirection !== DEFAULT_SORT_DIRECTION ? 1 : 0);
   const isFiltering = activeFilterCount > 0;
@@ -183,7 +183,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
 
   return (
     <Card size="lg" className="flex h-full min-h-0 flex-col gap-4">
-      {/* Tiêu đề bên trái, nút Xuất dữ liệu + Ghi đợt thu bên phải — cùng mẫu đầu khung trang Trang trại */}
+      {/* Tiêu đề bên trái, nút Xuất dữ liệu + Ghi đợt thu bên phải: cùng mẫu đầu khung trang Trang trại */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-h2 text-charcoal">{t('table.title')}</h2>
@@ -222,7 +222,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
           <SelectMenu ariaLabel={t('table.filterNestType')} value={nestTypeFilter} onChange={setNestTypeFilter} options={nestTypeOptions} />
           <SelectMenu ariaLabel={t('table.filterStatus')} value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
         </div>
-        {/* Hàng sắp xếp bên trái, nút Hủy lọc bên phải (chỉ hiện khi đang lọc) — giữ cao cố định để bảng không nhảy */}
+        {/* Hàng sắp xếp bên trái, nút Hủy lọc bên phải (chỉ hiện khi đang lọc): giữ cao cố định để bảng không nhảy */}
         <div className="flex min-h-[2.25rem] flex-wrap items-center justify-between gap-2">
           <SortChips
             fields={[{ key: 'date', label: t('table.sortDate') }, { key: 'weight', label: t('table.sortWeight') }]}
@@ -237,7 +237,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
       </div>
 
       {filteredGroups.length === 0 ? (
-        // Khung cao 318px: thu minh hoạ còn 80%, đệm trên 32px bù vòng tròn tràn lên 40px × 0,8 — hình và chữ nằm giữa, không tràn viền
+        // Thu minh hoạ còn 80% để không tràn khung 318px
         <div className={cn('flex items-center justify-center overflow-hidden rounded-2xl border border-warmGray/15 pt-8', TABLE_AREA_CLASS)}>
           <div className="scale-[0.8]">
             <TableEmptyState title={emptyTitle} description={isFiltering ? t('table.emptyFilteredHint') : t('table.emptyHint')} />

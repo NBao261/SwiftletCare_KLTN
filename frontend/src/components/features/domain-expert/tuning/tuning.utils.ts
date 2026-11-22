@@ -1,6 +1,6 @@
 import type { ExpertDetectionTuning } from '@/types/expert.types'
 
-// 5 tham số phát hiện của Zone gửi xuống bộ điều khiển — backend trả 400 với khoá khác (EXPERT-FR-008)
+// 5 tham số phát hiện của Zone gửi xuống bộ điều khiển: backend trả 400 với khoá khác
 export const DETECTION_TUNING_KEYS: Array<keyof ExpertDetectionTuning> = [
   'noise_margin_db', 'noise_min_sec', 'pump_dry_on_sec', 'pump_dry_min_rise_pct', 'speaker_drop_pct',
 ]

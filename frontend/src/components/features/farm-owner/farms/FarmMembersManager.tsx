@@ -31,7 +31,7 @@ const ROLE_LABEL: Record<MemberRoleKey, FarmKey> = {
   FARM_TECHNICIAN: 'members.role.FARM_TECHNICIAN',
 }
 
-// Vai trò mời được (G-20: Farm Owner mời kỹ thuật viên vào farm, rồi giao nhà ở mục Kỹ thuật viên)
+// Vai trò mời được (: Farm Owner mời kỹ thuật viên vào farm, rồi giao nhà ở mục Kỹ thuật viên)
 const INVITE_ROLES: FarmMemberRole[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 const INVITE_HINT: Record<FarmMemberRole, FarmKey> = {
   FARM_OWNER: 'members.ownerHint',
@@ -53,7 +53,7 @@ interface MemberRow {
 const matchesQuery = (row: MemberRow, query: string): boolean =>
   !query || `${row.name ?? ''} ${row.email ?? ''}`.toLowerCase().includes(query)
 
-// Thành viên farm theo vai trò (AUTH-FR-005/010/013, EXPERT-FR-001)
+// Thành viên farm theo vai trò
 export default function FarmMembersManager({ farmId, houseId }: { farmId: string; houseId?: string }) {
   const { t } = useTranslation(farmDict)
   const { data: farm, isLoading } = useFarm(farmId)
@@ -69,14 +69,14 @@ export default function FarmMembersManager({ farmId, houseId }: { farmId: string
   const { data: roster = [] } = useHouseRoster(isFarmOwner ? houseId : undefined)
   const [search, setSearch] = useState('')
   const query = search.trim().toLowerCase()
-  // Lời mời đang chờ: route chỉ cho Primary Owner (AUTH-FR-010), nên chỉ gọi khi đúng là chủ chính
+  // Lời mời đang chờ: route chỉ cho Primary Owner, nên chỉ gọi khi đúng là chủ chính
   const isPrimaryOwner = Boolean(farm && farm.owner_id === currentUserId)
   const { data: invitations = [], isError: invitationsFailed } = useFarmInvitations(farmId, isPrimaryOwner)
 
   if (isLoading) return <LoadingSkeleton count={2} className="h-16 w-full" />
   if (!farm) return null
 
-  // Chỉ Primary Owner (đúng owner_id) thêm/gỡ thành viên — route chỉ cho FARM_OWNER (AUTH-FR-005)
+  // Chỉ Primary Owner (đúng owner_id) thêm/gỡ thành viên: route chỉ cho FARM_OWNER
   const rows: MemberRow[] = [
     { userId: farm.owner_id, name: farm.owner?.full_name, email: farm.owner?.email, role: 'PRIMARY' },
     ...farm.members
@@ -226,7 +226,7 @@ interface InvitationSectionProps {
   failed: boolean
 }
 
-// AUTH-FR-010 — lời mời đang chờ của farm: ai được mời, vai trò, gửi lúc nào, khi nào hết hạn
+// lời mời đang chờ của farm: ai được mời, vai trò, gửi lúc nào, khi nào hết hạn
 function InvitationSection({ top, searchBox, query, invitations, failed }: InvitationSectionProps) {
   const { t } = useTranslation(farmDict)
   const emptyKey: FarmKey = failed ? 'invites.loadFailed' : query ? 'members.noMatch' : 'invites.empty'
@@ -310,12 +310,12 @@ interface TechnicianSectionProps {
   query: string
 }
 
-// AUTH-FR-013 — kỹ thuật viên của farm, giao nhà và thợ chính
+// kỹ thuật viên của farm, giao nhà và thợ chính
 function TechnicianSection({ top, searchBox, farmId, houseId, technicians, isPrimaryOwner, onInvite, onRemove, query }: TechnicianSectionProps) {
   const { t } = useTranslation(farmDict)
   const isFarmOwner = usePermission('FARM_OWNER')
   const { data: houses } = useHouses(houseId ? farmId : undefined)
-  // Chỉ Farm Owner có quyền với lịch trực (Report 3 §2.4)
+  // Chỉ Farm Owner có quyền với lịch trực
   const { data: roster = [] } = useHouseRoster(isFarmOwner ? houseId : undefined)
   const [unassignTarget, setUnassignTarget] = useState<MemberRow | null>(null)
   const setTechnician = useSetHouseTechnician(farmId, houseId ?? '')

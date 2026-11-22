@@ -1,4 +1,4 @@
-// AUTH-FR-005c — đổi mật khẩu tạm; cùng luật với route PUT /auth/password (mật khẩu mới ≥ 8 ký tự, khác mật khẩu cũ)
+// đổi mật khẩu tạm; cùng luật với route PUT /auth/password (mật khẩu mới ≥ 8 ký tự, khác mật khẩu cũ)
 export const PASSWORD_MIN_LENGTH = 8
 
 export interface PasswordChangeInput {

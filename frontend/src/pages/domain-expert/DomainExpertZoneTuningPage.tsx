@@ -21,7 +21,7 @@ import { useExpertVerdictStats } from '@/hooks/domain-expert/useExpertAlerts';
 import { useApplySuggestion, useCoefficientProposals, useSubmitCoefficientProposal } from '@/hooks/domain-expert/useExpertReviews';
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
 
-// Ngưỡng & hệ số mờ (ENV-FR-020…022, EXPERT-FR-004/008/011): nơi duy nhất sửa ngưỡng và hệ số mờ của một Zone trên web
+// Ngưỡng & hệ số mờ: nơi duy nhất sửa ngưỡng và hệ số mờ của một Zone trên web
 export default function DomainExpertZoneTuningPage() {
   const { selectedFarmId, selectedZoneId } = useZoneStore();
   const zoneId = selectedZoneId ?? undefined;
@@ -34,7 +34,7 @@ export default function DomainExpertZoneTuningPage() {
   const detection = useExpertDetectionTuning(zoneId);
   const { data: verdictStats = [] } = useExpertVerdictStats(undefined, zoneId);
 
-  // Đề xuất hệ số mờ đang chờ chuyên gia duyệt của Zone (EXPERT-FR-011)
+  // Đề xuất hệ số mờ đang chờ chuyên gia duyệt của Zone
   const { total: pendingProposalsCount = 0 } = useCoefficientProposals({
     farmId: selectedFarmId ?? '',
     zoneId,
@@ -48,22 +48,22 @@ export default function DomainExpertZoneTuningPage() {
   const resetDetection = useResetDetectionTuning(zoneId);
   const applySuggestion = useApplySuggestion();
   const submitProposal = useSubmitCoefficientProposal();
-  // BR-22 — Farm Owner sửa mọi tham số (chuyên gia duyệt sau); gợi ý hệ số ở farm có chuyên gia thì gửi duyệt
+  // Farm Owner sửa mọi tham số (chuyên gia duyệt sau); gợi ý hệ số ở farm có chuyên gia thì gửi duyệt
   const { canDecide, canEditParameters, ownerNeedsExpert } = useExpertDecisionRights();
 
-  // Mức giảm tỷ lệ chim về thuộc nhà chứa Zone đang chọn (EXPERT-FR-008)
+  // Mức giảm tỷ lệ chim về thuộc nhà chứa Zone đang chọn
   const { data: houseId } = useZoneHouseId(zoneId);
   const { data: houses } = useHouses(selectedFarmId ?? undefined);
   const house = houses?.find(item => item._id === houseId);
   const returnRateDrop = useSaveReturnRateDrop(selectedFarmId);
 
-  // Mọi thao tác lưu báo kết quả, kể cả lỗi (FE_Design 13.5); thay đổi của Farm Owner ở farm có chuyên gia mở mục duyệt
+  // Mọi thao tác lưu báo kết quả, kể cả lỗi
   function notify(action: Promise<unknown>, doneMessage: string, reviewed = true) {
     const message = ownerNeedsExpert && reviewed ? `${t(doneMessage)}. ${t('Chuyên gia sẽ xem lại thay đổi này.')}` : t(doneMessage);
     action.then(() => push(message)).catch(error => push(apiErrorMessage(error), 'error'));
   }
 
-  // Gợi ý hệ số (EXPERT-FR-011): người được quyết thì áp ngay, Farm Owner ở farm có chuyên gia thì gửi chuyên gia duyệt
+  // Gợi ý hệ số: người được quyết thì áp ngay, Farm Owner ở farm có chuyên gia thì gửi chuyên gia duyệt
   let suggestionAction: SuggestionAction | undefined;
   if (zoneId && canDecide) {
     suggestionAction = {

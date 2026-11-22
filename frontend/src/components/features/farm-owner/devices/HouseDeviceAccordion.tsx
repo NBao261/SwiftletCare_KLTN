@@ -32,7 +32,7 @@ interface HouseDeviceAccordionProps {
   farmNames: Map<string, string>;
 }
 
-// Bảng thiết bị dạng cha - con: tìm / lọc / sắp xếp nhà yến ở client; bấm hàng nhà để xổ / thu thiết bị theo Zone; nút "Chi tiết" mới chuyển trang (chỉ xem)
+// Bảng thiết bị cha - con, tìm và lọc ở client
 export default function HouseDeviceAccordion({ inventory, farmNames }: HouseDeviceAccordionProps): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
   const navigate = useNavigate();
@@ -99,7 +99,7 @@ export default function HouseDeviceAccordion({ inventory, farmNames }: HouseDevi
       {/* Tên trang đã ở header: card chỉ còn 1 dòng hướng dẫn (FO-04) */}
       <p className="text-body text-graphite">{t('list.subtitle')}</p>
 
-      {/* Hàng lọc: ô tìm giãn hết chỗ trống, ô lọc tình trạng bên phải; dưới là sắp xếp + Hủy lọc (cùng mẫu bảng Thu hoạch) */}
+      {/* Hàng lọc */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="min-w-[12rem] flex-1">
@@ -238,7 +238,7 @@ interface DeviceGroupProps {
   onDetail: (device: DeviceItem) => void;
 }
 
-// 1 nhóm thiết bị (1 Zone hoặc camera của cả nhà) trong phần xổ của hàng nhà yến: chỉ tên bộ kit và on/off, thông tin khác ở trang chi tiết
+// Nhóm thiết bị trong phần xổ của nhà: chỉ tên và on/off
 function DeviceGroup({ title, devices, emptyText, onDetail }: DeviceGroupProps): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
 

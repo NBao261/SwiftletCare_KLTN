@@ -1,7 +1,7 @@
 import type { Dictionary } from '@/lib/i18n'
 import { prefixLabels, roleDict } from '@/constants/enumLabels.i18n'
 
-// Từ điển trang Lịch đếm chim của Domain Expert — VISION-FR-019, BR-13, BR-21
+// Từ điển trang Lịch đếm chim của Domain Expert
 const vi = {
   'page.title': 'Lịch đếm chim',
   'page.subtitle': 'Khung giờ hai phiên đếm của nhà. Hệ thống tính phiên từ số đếm 5 phút trong khung và kiểm tỷ lệ chim về 15 phút sau khung chiều. Lịch sửa hôm nay áp từ ngày mai.',

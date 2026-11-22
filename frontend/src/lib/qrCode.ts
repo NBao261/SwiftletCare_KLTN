@@ -1,8 +1,7 @@
-// Mã QR của SwiftletCare (Report 4 §5.4, FARM-FR-010/011) — sinh ở client, không có endpoint QR.
-// Cùng định dạng với bộ đọc trên mobile (`mobile/src/utils/qrCode.utils.ts`).
+// Sinh ở client; cùng định dạng với bộ đọc trên mobile (mobile/src/utils/qrCode.utils.ts)
 import QRCode from 'qrcode'
 
-/** Nhãn thiết bị: device ID + mã kích hoạt, không chứa Wi-Fi hay mật khẩu broker */
+// Nhãn thiết bị: device ID + mã kích hoạt, không chứa Wi-Fi hay mật khẩu broker
 export const deviceLabelCode = (deviceId: string, activationKey: string) =>
   `swiftletcare://claim?d=${encodeURIComponent(deviceId)}&k=${encodeURIComponent(activationKey)}`
 
@@ -20,7 +19,7 @@ export function parseDeviceLabelCode(text: string): { deviceId: string; secretKe
   }
 }
 
-/** Mã tầng: chỉ zone ID — tự nó không cho quyền gì (FARM-FR-007 vẫn kiểm quyền người quét) */
+// Mã tầng: chỉ zone ID: tự nó không cho quyền gì (vẫn kiểm quyền người quét)
 export const zoneCode = (zoneId: string) => `swiftletcare://zone?z=${encodeURIComponent(zoneId)}`
 
 export const qrDataUrl = (text: string) => QRCode.toDataURL(text, { margin: 1, width: 240 })
@@ -30,14 +29,11 @@ const escapeHtml = (s: string) =>
 
 export interface QrLabel {
   code: string
-  /** Các dòng chữ cạnh mã; `mono` cho giá trị phải gõ tay được khi camera không đọc mã */
+  // Các dòng chữ cạnh mã; `mono` cho giá trị phải gõ tay được khi camera không đọc mã
   lines: { text: string; mono?: boolean; strong?: boolean }[]
 }
 
-/**
- * In nhãn qua iframe ẩn (không bị chặn popup như window.open sau await). Mỗi nhãn 60 × 32 mm, viền đứt để cắt.
- * ponytail: khổ nhãn cố định; máy in nhãn cuộn khổ khác thì thêm tham số kích thước.
- */
+// In qua iframe ẩn vì window.open sau await bị chặn popup. Khổ nhãn cố định 60 × 32 mm
 export async function printQrLabels(title: string, labels: QrLabel[]) {
   const images = await Promise.all(labels.map(l => qrDataUrl(l.code)))
   const body = labels.map((l, i) => `

@@ -1,18 +1,12 @@
 import type { Config } from 'tailwindcss'
 
-// SwiftletCare Design System — xem FE_Design_Claude.md (nguồn sự thật duy nhất
-// cho màu sắc/bo góc/typography, §2 + §11.1). Thang màu số (gray/lime/accent/
-// orange/red) bám đúng giá trị hex của doc. Các tên ngữ nghĩa cũ (charcoal,
-// warmGray, graphite, limeMist, alertRed, climateOrange, stone, white) được
-// giữ lại làm alias trỏ đúng vào 1 bậc của thang số — tránh phải đổi tên class
-// ở hàng chục file đang dùng, hex vẫn khớp 100% với doc. Không tự thêm màu
-// ngoài thang này (nguyên tắc 2, mục 1 FE_Design_Claude.md).
+// Màu theo FE_Design_Claude.md; tên ngữ nghĩa cũ giữ làm alias để khỏi đổi class
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        // ── Thang số đúng theo FE_Design_Claude.md §2.2/§11.1 ─────────────
+        // Thang số đúng theo FE_Design_Claude.md
         gray: {
           0: '#FFFFFF', 50: '#F9F9F9', 100: '#F0F0F0', 200: '#EAEAEA',
           300: '#C5C4C3', 400: '#A5A3A1', 500: '#878380', 600: '#6D6865',
@@ -39,34 +33,31 @@ const config: Config = {
           800: '#611914', 900: '#44110E',
         },
 
-        // ── Alias ngữ nghĩa (giữ tên cũ, hex trỏ đúng thang trên) ─────────
-        white:         '#FFFFFF', // = gray-0 — nền mặc định toàn bộ màn hình & card / chữ trên nền tối
-        charcoal:      '#27231F', // = gray-900 — Chữ chính / Nút primary / Track toggle ON
-        graphite:      '#4E4A46', // = gray-700 — Card xám đậm phụ / Track toggle OFF
-        warmGray:      '#878380', // = gray-500 — Chữ phụ / Border opacity / Label caption
-        limeMist:      '#B5D32C', // = accent-600 — xanh chanh duy nhất của hệ thống (FE_Design 2.1); trước là #ECFFA9 (lime-300), nhạt quá nên đổi
-        success:       '#B5D32C', // = accent-600 — Trạng thái an toàn/ONLINE/đã kết nối (status dot)
-        climateOrange: '#ED8F50', // = orange-500 — Cảnh báo vi khí hậu / quá nhiệt
+        // Alias ngữ nghĩa (giữ tên cũ, hex trỏ đúng thang trên)
+        white:         '#FFFFFF', // = gray-0: nền mặc định toàn bộ màn hình & card / chữ trên nền tối
+        charcoal:      '#27231F', // = gray-900: Chữ chính / Nút primary / Track toggle ON
+        graphite:      '#4E4A46', // = gray-700: Card xám đậm phụ / Track toggle OFF
+        warmGray:      '#878380', // = gray-500: Chữ phụ / Border opacity / Label caption
+        limeMist:      '#B5D32C', // = accent-600: xanh chanh duy nhất của hệ thống (FE_Design 2.1); trước là #ECFFA9 (lime-300), nhạt quá nên đổi
+        success:       '#B5D32C', // = accent-600: Trạng thái an toàn/ONLINE/đã kết nối (status dot)
+        climateOrange: '#ED8F50', // = orange-500: Cảnh báo vi khí hậu / quá nhiệt
         infoBlue:      '#4A89EB', // Trạng thái cảnh báo "Mới" (bảng nhật ký Dashboard)
         statusYellow:  '#FFE033', // Nhãn "PLC: Đang chờ kết nối" trên thanh SCADA (nền, chữ charcoal)
-        safetyOrange:  '#FF7426', // Safety Orange — lỗi thiết bị (khung Trạng thái nhà yến), mức HIGH và giá trị vượt ngưỡng (Nhật ký cảnh báo) ở Dashboard
-        alertRed:      '#D53F35', // = red-500 — Cảnh báo khẩn cấp / badge mặc định
-        stone:         '#EAEAEA', // = gray-200 — Canvas nền app shell (MainLayout)
+        safetyOrange:  '#FF7426', // Safety Orange: lỗi thiết bị, mức HIGH và giá trị vượt ngưỡng
+        alertRed:      '#D53F35', // = red-500: Cảnh báo khẩn cấp / badge mặc định
+        stone:         '#EAEAEA', // = gray-200: Canvas nền app shell (MainLayout)
       },
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'],
       },
-      // ── Thang chữ FE_Design_Claude.md §2.8 — size/line-height/weight đi kèm nhau ──
-      // Dùng `text-h1`, `text-body`, `text-small`, `text-caption`... thay cho text-2xl/
-      // text-sm/text-xs mặc định (lệch 1–2px so với spec). `text-metric` cần thêm
-      // `tabular-nums` (font-variant không nằm được trong fontSize).
+      // Dùng text-h1, text-body… thay cho text-2xl/text-sm; text-metric cần thêm tabular-nums
       fontSize: {
         h1:      ['26px', { lineHeight: '34px', fontWeight: '700' }],
         h2:      ['20px', { lineHeight: '28px', fontWeight: '600' }],
         h3:      ['16px', { lineHeight: '24px', fontWeight: '600' }],
         body:    ['14px', { lineHeight: '22px' }],
         small:   ['13px', { lineHeight: '18px' }],
-        // Không chữ nào dưới 13px (todo-ui-layout-1120 C-02): caption và xs mặc định của Tailwind (12px) cùng lên 13px
+        // Không chữ nào dưới 13px (todo-ui-layout-1120): caption và xs mặc định của Tailwind (12px) cùng lên 13px
         caption: ['13px', { lineHeight: '18px', fontWeight: '600' }],
         xs:      ['13px', { lineHeight: '18px' }],
         metric:  ['32px', { lineHeight: '38px', fontWeight: '700' }],
@@ -81,13 +72,9 @@ const config: Config = {
         card: '0 8px 24px rgba(39,35,31,0.06)',
         dock: '0 12px 32px rgba(39,35,31,0.12)',
         icon: '0 2px 8px rgba(39,35,31,0.06)',
-        // Soft Elevated Shadow #56 — bóng tán mờ đa tầng dùng cho MỌI lớp phủ nổi
-        // trên nền trang (Modal, Dropdown/Popover, Confirm Dialog): tán rộng, mềm,
-        // không có cạnh cứng như shadow-dock/shadow-lg mặc định.
+        // Bóng cho mọi lớp phủ nổi (Modal, Dropdown, Confirm)
         popover: '0 20px 40px -15px rgba(0,0,0,0.08), 0 0 1px 1px rgba(39,35,31,0.04)',
-        // Biến thể tán hẹp hơn của `popover`, dùng cho menu nhỏ sát theo nút mở
-        // (ActionsMenu "...") — cùng công thức Shadow #56 nhưng tán ngắn hơn vì
-        // khung menu nhỏ, đặt bóng lan rộng như Modal sẽ trông quá nặng.
+        // Bản tán hẹp của popover cho menu nhỏ
         dropdown: '0 16px 36px -10px rgba(0,0,0,0.08), 0 0 1px 1px rgba(39,35,31,0.04)',
         // Header kính mờ khi nội dung cuộn bên dưới: vệt sáng mảnh ở mép trên + bóng tán nhẹ ở mép dưới
         glass: 'inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 20px -14px rgba(39,35,31,0.3)',
@@ -95,7 +82,7 @@ const config: Config = {
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',
         'slide-in-right': 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        // Hiệu ứng trạng thái (Ticket/Thiết bị) — luôn kèm motion-reduce:animate-none khi dùng
+        // Hiệu ứng trạng thái (Ticket/Thiết bị): luôn kèm motion-reduce:animate-none khi dùng
         'pulse-dot': 'pulseDot 1.4s ease-in-out infinite',
         'row-in': 'rowIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both',
         'ping-soft': 'pingSoft 2s cubic-bezier(0, 0, 0.2, 1) infinite',

@@ -4,10 +4,7 @@ import type { User, Role, UserStatus, SortDirection } from '@/types'
 
 export type UsersSortKey = 'full_name' | 'email' | 'role' | 'status' | 'created_at'
 
-/**
- * Trạng thái hiển thị — dẫn xuất từ 3 cờ backend (không có enum trên `users`).
- * Ưu tiên: đã xoá > đang chờ xoá > bị khoá > hoạt động.
- */
+// Ưu tiên: đã xoá > đang chờ xoá > bị khoá > hoạt động
 export function getUserStatus(user: User): UserStatus {
   if (user.deleted_at) return 'DELETED'
   if (user.deletion_requested_at) return 'PENDING_DELETION'
@@ -16,15 +13,12 @@ export function getUserStatus(user: User): UserStatus {
 }
 
 export interface ListUsersQuery {
-  /**
-   * Lọc gửi lên backend: ACTIVE → status=active, LOCKED → status=inactive.
-   * Hàng đợi chờ xoá có trang riêng (useAccountRequests → /admin/delete-requests).
-   */
+  // Hàng đợi chờ xoá có trang riêng
   status?: Extract<UserStatus, 'ACTIVE' | 'LOCKED'>
   role?: Role
-  /** Lọc CLIENT-SIDE trên TOÀN BỘ tài khoản khớp status/role — /admin/users chưa có search */
+  // Lọc CLIENT-SIDE trên TOÀN BỘ tài khoản khớp status/role: /admin/users chưa có search
   search?: string
-  /** Sort CLIENT-SIDE trên toàn bộ — /admin/users cố định created_at desc */
+  // Sort CLIENT-SIDE trên toàn bộ: /admin/users cố định created_at desc
   sortBy?: UsersSortKey
   sortDir?: SortDirection
   page?: number
@@ -51,13 +45,10 @@ function sortUsers(list: User[], sortKey?: UsersSortKey, sortDir: SortDirection 
   })
 }
 
-/** Trần `limit` backend (utils/helpers.util.ts#paginate) — không lấy được nhiều hơn trong 1 request */
+// Trần `limit` backend (utils/helpers.util.ts#paginate): không lấy được nhiều hơn trong 1 request
 const PICKER_LIMIT = 100
 
-/**
- * Toàn bộ tài khoản khớp status/role — tải hết các trang, mỗi request tối đa PICKER_LIMIT. Không truyền
- * gì = mọi tài khoản (hàng chỉ số UserStats dùng chung cache với bảng khi bảng không lọc).
- */
+// Không truyền gì = mọi tài khoản
 export function useAllUsers(status?: ListUsersQuery['status'], role?: Role) {
   return useQuery({
     queryKey: ['admin-users', 'all', status, role],
@@ -74,14 +65,7 @@ export function useAllUsers(status?: ListUsersQuery['status'], role?: Role) {
   })
 }
 
-/**
- * AUTH-FR-011 — GET /admin/users. Backend chỉ lọc được status/role và không có search/sort, nên tải
- * HẾT các trang khớp status/role (mỗi request tối đa PICKER_LIMIT) rồi tìm kiếm +
- * sắp xếp + cắt trang ở client — tìm ra bao nhiêu thì `total`/phân trang đúng bấy nhiêu, không chỉ
- * trong trang đang xem.
- * ponytail: tải toàn bộ tài khoản mỗi lần đổi status/role — đủ cho quy mô hiện tại; khi lên vài nghìn
- * tài khoản thì thêm search/sort vào backend và trả về phân trang server-side.
- */
+// Backend không tìm và sắp được nên tải hết rồi xử lý ở client; nhiều tài khoản thì thêm vào backend
 export function useUsersList(query: ListUsersQuery) {
   const page = query.page ?? 1
   const limit = query.limit ?? 20
@@ -93,7 +77,7 @@ export function useUsersList(query: ListUsersQuery) {
 
   return {
     records: all.slice((page - 1) * limit, page * limit),
-    /** Số tài khoản SAU khi tìm kiếm — mẫu số của phân trang */
+    // Số tài khoản SAU khi tìm kiếm: mẫu số của phân trang
     total: all.length,
     page,
     limit,
@@ -101,12 +85,7 @@ export function useUsersList(query: ListUsersQuery) {
   }
 }
 
-/**
- * Danh sách người dùng cho các ô chọn (lọc actor nhật ký) — 1 trang
- * tối đa PICKER_LIMIT. Backend không có search nên không phân trang dropdown
- * được; khi `truncated` (total > số lấy về) UI phải báo để Admin biết danh sách
- * chưa đủ thay vì tưởng người đó không tồn tại.
- */
+// Không phân trang được: khi truncated thì UI phải báo danh sách chưa đủ
 export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = {}) {
   const { role, activeOnly = false } = options
   const result = useQuery({
@@ -118,7 +97,7 @@ export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = 
   return { records, total, truncated: total > records.length, isLoading: result.isLoading }
 }
 
-/** AUTH-FR-005c — POST /admin/farm-owners; trả thêm `temporary_password_emailed` */
+// POST /admin/farm-owners; trả thêm `temporary_password_emailed`
 export function useCreateFarmOwner() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -127,7 +106,7 @@ export function useCreateFarmOwner() {
   })
 }
 
-/** AUTH-FR-011 — PUT /admin/users/:id/status. Khoá cần lý do, mở khoá không. */
+// PUT /admin/users/:id/status. Khoá cần lý do, mở khoá không.
 export function useSetUserStatus() {
   const queryClient = useQueryClient()
   return useMutation({

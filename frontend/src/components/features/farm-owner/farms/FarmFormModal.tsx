@@ -21,7 +21,7 @@ interface FarmFormModalProps {
   onClose: () => void
 }
 
-// Tạo / sửa trang trại (FARM-FR-001): tên, địa chỉ chi tiết, vị trí (bắt buộc khi tạo — một farm là một địa điểm)
+// Tạo / sửa trang trại: tên, địa chỉ chi tiết, vị trí (bắt buộc khi tạo: một farm là một địa điểm)
 export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
   const { t } = useTranslation(farmDict)
   const isEdit = farm !== undefined
@@ -39,8 +39,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
   const [error, setError] = useState<FarmKey | null>(null)
   const isSaving = createFarm.isPending || updateFarm.isPending
 
-  // Bấm, kéo ghim trên bản đồ, GPS hoặc tìm địa chỉ đều điền vào hai ô vĩ độ, kinh độ
-  // Khung bản đồ tới ghim khi vị trí đến từ gợi ý, GPS hoặc gõ xong toạ độ (bấm, kéo ghim thì ghim đã trong khung)
+  // Khung bản đồ tới ghim khi vị trí đến từ gợi ý, GPS hoặc gõ toạ độ
   const [focusRequest, setFocusRequest] = useState(0)
   const requestMapFocus = (): void => setFocusRequest(count => count + 1)
   function setLocationAndFocus(coordinates: Coordinates): void {
@@ -54,7 +53,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
     setError(null)
   }
 
-  // Lấy tọa độ GPS của máy — dùng khi đang đứng ở nhà yến
+  // Lấy tọa độ GPS của máy: dùng khi đang đứng ở nhà yến
   function handleUseCurrentLocation(): void {
     if (!navigator.geolocation) {
       setError('farmForm.locationUnavailable')

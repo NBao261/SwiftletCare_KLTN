@@ -1,17 +1,4 @@
-/**
- * DomainExpertQueuePage — Trang chủ Chuyên gia Miền
- *
- * Layout: Bento Grid 2 cột bất đối xứng bám ngay dưới thanh SCADA.
- * - Không có Header tầng phụ — thông tin ngữ cảnh tập trung ở SCADA Banner.
- * - Cột trái (7/12): Hero Action Card — Thẩm định cảnh báo suy luận.
- * - Cột phải (5/12): Cụm 2 thẻ nhiệm vụ định kỳ (Cấu hình tham số & Báo cáo tuần).
- *
- * Tiêu chuẩn thiết kế (/design-taste-frontend & Anti-Slop):
- * - Không hiển thị số liệu "ảo" / số bịa đặt (Zero Hallucination UI).
- * - Kích thước chữ tăng nhẹ, phân cấp thị giác rõ ràng, độ tương phản cao, dễ đọc trong ca trực.
- * - Mọi dòng chữ trên 2 thẻ bên phải đều mang mục đích nghiệp vụ cụ thể.
- * - Font chữ: Plus Jakarta Sans (đồng nhất toàn hệ thống).
- */
+// Trang chủ chuyên gia: không hiện số liệu bịa
 
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -41,9 +28,7 @@ import ExpertQueueEmptyState from '@/components/features/domain-expert/ExpertQue
 import { t } from '@/i18n'
 import { NO_VALUE } from '@/constants/display'
 
-/**
- * Chuẩn hóa tiêu đề cảnh báo — loại bỏ enum thô và khắc phục triệt để chuỗi lỗi "tại undefined"
- */
+// Chuẩn hóa tiêu đề cảnh báo: loại bỏ enum thô và khắc phục triệt để chuỗi lỗi "tại undefined"
 function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZoneName?: string | null): string {
   if (!alert) return t('Cảnh báo vi khí hậu')
   let title = alert.title || ALERT_TYPE_LABELS[alert.type ?? ''] || alert.type || t('Cảnh báo vi khí hậu')
@@ -66,22 +51,21 @@ export default function DomainExpertQueuePage() {
   const navigate = useNavigate()
   const { selectedFarmId, selectedFarmName, selectedHouseId, selectedZoneId, selectedZoneName } = useZoneStore()
 
-  // Cảnh báo suy luận chờ kết luận: mới nhất và tổng số (meta.total), cùng nguồn với số trên thanh bên (EXPERT-FR-003)
+  // Cảnh báo suy luận chờ kết luận: mới nhất và tổng số (meta.total), cùng nguồn với số trên thanh bên
   const { data: pendingAlerts, isLoading: isLoadingAlerts } = useExpertPendingAlerts(
     selectedFarmId ?? undefined,
     selectedZoneId ?? undefined,
   )
 
-  // ── Báo cáo sức khỏe theo nhà: chờ kết luận / đã kết luận (cùng phạm vi tab Báo cáo & Kết luận) ──
+  // Báo cáo sức khỏe theo nhà: chờ kết luận / đã kết luận (cùng phạm vi tab Báo cáo & Kết luận)
   const {
     pending: pendingReports, concluded: publishedReports, isLoading: isLoadingReports,
   } = useHealthReportConclusionCounts(selectedFarmId ?? '', selectedHouseId ?? '')
 
-  // ── Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic ───────────────────────
+  // Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic
   const { data: aiSuggestion } = useFuzzySuggestion(selectedZoneId ?? undefined)
 
-  // ── Dữ liệu mục duyệt tham số & đề xuất hệ số mờ (G-04) ────────────────────
-  // Mục duyệt ở cấp farm (có mục theo nhà, camera), không lọc theo Zone
+  // Mục duyệt ở cấp farm, không lọc theo Zone
   const { total: pendingReviewsCount } = useParameterReviews({
     farmId: selectedFarmId ?? '',
     status: 'PENDING_REVIEW',
@@ -94,7 +78,7 @@ export default function DomainExpertQueuePage() {
 
   const totalPendingReviews = pendingReviewsCount + pendingProposalsCount
 
-  // ── Dữ liệu ngày đánh giá lệch 14 ngày gần nhất (EXPERT-FR-022) ────────────
+  // Dữ liệu ngày đánh giá lệch 14 ngày gần nhất
   const to = vietnamDate()
   const from = shiftDate(to, -13)
   const { totalDays: disagreeingDaysCount } = useHealthDisagreements({
@@ -103,7 +87,7 @@ export default function DomainExpertQueuePage() {
     to,
   })
 
-  // ── Tính toán các chỉ số thực chất từ Backend ─────────────────────────────
+  // Tính toán các chỉ số thực chất từ Backend
   const pendingCount = pendingAlerts?.total ?? 0
   const activeAlert = pendingAlerts?.records[0]
 
@@ -119,10 +103,10 @@ export default function DomainExpertQueuePage() {
     )
   }
 
-  // ── 3 Thẻ nhiệm vụ điều vận định kỳ (Dùng chung cho cả 2 chế độ hiển thị) ──
+  // 3 Thẻ nhiệm vụ điều vận định kỳ (Dùng chung cho cả 2 chế độ hiển thị)
   const renderActionCards = (containerClassName: string) => (
     <div className={containerClassName}>
-      {/* ── Thẻ 1: Cấu hình Ngưỡng & Hệ số mờ ── */}
+      {/* Thẻ 1: Cấu hình Ngưỡng & Hệ số mờ */}
       <Link
         to="/domain-expert/tuning"
         className="group flex flex-1 flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
@@ -172,7 +156,7 @@ export default function DomainExpertQueuePage() {
         </div>
       </Link>
 
-      {/* ── Thẻ 2: Mục duyệt tham số & Đề xuất hệ số mờ (G-04) ── */}
+      {/* Thẻ 2: Mục duyệt tham số & Đề xuất hệ số mờ */}
       <Link
         to="/domain-expert/reviews"
         className="group flex flex-1 flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
@@ -218,7 +202,7 @@ export default function DomainExpertQueuePage() {
         </div>
       </Link>
 
-      {/* ── Thẻ 3: Báo cáo sức khỏe & Ngày đánh giá lệch (EXPERT-FR-005, EXPERT-FR-022) ── */}
+      {/* Thẻ 3: Báo cáo sức khỏe & Ngày đánh giá lệch */}
       <Link
         to={disagreeingDaysCount > 0 && pendingReports === 0 ? '/domain-expert/reports?tab=disagreements' : '/domain-expert/reports'}
         className="group flex flex-1 flex-col justify-between rounded-2xl border border-warmGray/20 bg-white p-4 shadow-sm transition-all hover:border-warmGray/40 hover:shadow-md sm:p-5"
@@ -276,9 +260,9 @@ export default function DomainExpertQueuePage() {
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-col gap-4 pt-4">
       {pendingCount > 0 ? (
-        /* ── KỊCH BẢN 1: CÓ SỰ CỐ P0 → Bento Grid 2 cột bất đối xứng (7/12 vs 5/12) ── */
+        // KỊCH BẢN 1: CÓ SỰ CỐ P0 → Bento Grid 2 cột bất đối xứng (7/12 vs 5/12)
         <section className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12 lg:gap-5">
-          {/* CỘT TRÁI (7/12 ≈ 58%): Hàng đợi thẩm định cảnh báo AI — Ưu tiên P0 */}
+          {/* CỘT TRÁI (7/12 ≈ 58%): Hàng đợi thẩm định cảnh báo AI: Ưu tiên P0 */}
           <div className="flex flex-col lg:col-span-7">
             <div className="group relative flex h-full flex-col justify-between rounded-2xl border border-amber-300 bg-gradient-to-b from-amber-50/70 via-white to-white p-4 shadow-sm transition-all hover:border-amber-400 hover:shadow-md sm:p-5">
               <div className="flex flex-col gap-3.5">
@@ -363,7 +347,7 @@ export default function DomainExpertQueuePage() {
           {renderActionCards('flex flex-col gap-4 lg:col-span-5')}
         </section>
       ) : (
-        /* ── KỊCH BẢN 2: KHÔNG CÓ SỰ CỐ → Empty State nghệ thuật + Grid 3 Cột tác vụ ── */
+        // KỊCH BẢN 2: KHÔNG CÓ SỰ CỐ → Empty State nghệ thuật + Grid 3 Cột tác vụ
         <section className="flex flex-col gap-5">
           {/* Component Empty State đồ họa nghệ thuật (tương tự Thống kê sản lượng) */}
           <ExpertQueueEmptyState onViewHistory={() => navigate('/domain-expert/history')} />

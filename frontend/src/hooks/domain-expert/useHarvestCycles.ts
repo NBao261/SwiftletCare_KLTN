@@ -6,7 +6,7 @@ import {
 } from '@/apis/domain-expert/harvestCycles.api'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 
-// HARVEST-FR-007, EXPERT-FR-020 — 1 trang chu kỳ theo farm/nhà/zone, khoá ['harvest', 'cycles'] chung với trang Thu hoạch
+// 1 trang chu kỳ theo farm/nhà/zone, khoá ['harvest', 'cycles'] chung với trang Thu hoạch
 export function useHarvestCycles(params: HarvestCyclesParams, enabled = true) {
   return usePaginatedListQuery(
     ['harvest', 'cycles', params.farmId, params.houseId, params.zoneId, params.status, params.page, params.limit],

@@ -20,7 +20,7 @@ interface Props {
 
 type NumericKey = Exclude<keyof ExpertFuzzyTuning, 'fuzzy_input_filter'>
 
-// 4 hệ số số học của bộ điều khiển mờ (ENV-FR-021); khoảng giá trị lấy từ luật dùng chung với backend
+// 4 hệ số số học của bộ điều khiển mờ; khoảng giá trị lấy từ luật dùng chung với backend
 const TILES: Array<{ key: NumericKey; label: string; step: number; decimals: number }> = [
   { key: 'fuzzy_humidity_band', label: 'Dải biên độ ẩm', step: 0.5, decimals: 1 },
   { key: 'fuzzy_temp_band', label: 'Dải biên nhiệt độ', step: 0.5, decimals: 1 },
@@ -65,7 +65,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
   )
 }
 
-// Hệ số mờ của Zone (ENV-FR-021/022) và gợi ý từ dữ liệu (ANALYTICS-FR-010); chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
+// Hệ số mờ của Zone và gợi ý từ dữ liệu; chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
 export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction }: Props) {
   const [form, setForm] = useState<ExpertFuzzyTuning>(DEFAULT_FUZZY_TUNING)
   const [suggestionDismissed, setSuggestionDismissed] = useState(false)
@@ -134,7 +134,7 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
         ))}
       </div>
 
-      {/* ENV-FR-022 — cờ lọc nhiễu đầu vào */}
+      {/* cờ lọc nhiễu đầu vào */}
       <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
         <div>
           <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu số đo')}</p>

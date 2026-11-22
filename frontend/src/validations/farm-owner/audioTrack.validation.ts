@@ -1,11 +1,11 @@
-/** SRS §12.4 — cùng giới hạn với backend (multer 10MB) */
+// cùng giới hạn với backend (multer 10MB)
 export const MAX_AUDIO_BYTES = 10 * 1024 * 1024
-/** DFPlayer Mini đọc tối đa 255 bài/thư mục (0001.mp3 … 0255.mp3) */
+// DFPlayer Mini đọc tối đa 255 bài/thư mục (0001.mp3 … 0255.mp3)
 export const MAX_TRACK_NUMBER = 255
 
 export type AudioUploadField = 'file' | 'trackNumber' | 'displayName'
 
-/** Validate form upload file loa ru (ENV-FR-013c(a)) — map lỗi theo field, rỗng = hợp lệ */
+// Validate form upload file loa ru: map lỗi theo field, rỗng = hợp lệ
 export function validateAudioUpload(input: { file: File | null; trackNumber: string; displayName: string }): Partial<Record<AudioUploadField, string>> {
   const errors: Partial<Record<AudioUploadField, string>> = {}
   if (!input.file) errors.file = 'Chọn 1 file .mp3'
