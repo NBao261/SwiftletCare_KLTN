@@ -11,15 +11,7 @@ let io: Server | null = null
 
 const userRoom = (userId: string) => `user:${userId}`
 
-/**
- * Xác thực kết nối realtime. Ngoài chữ ký JWT còn phải đọc lại `status` (LOCKED, DELETED bị từ chối):
- * token còn hạn nhưng tài khoản đã bị Admin khoá/xoá thì vẫn phải bị từ chối,
- * giống middleware `authenticate` của REST (AUTH-FR-011).
- *
- * Trả về `CurrentUser` đầy đủ (không chỉ payload JWT) vì `JOIN_ZONE` cần gọi
- * `assertZoneAccess` — cùng hàm check quyền mà REST dùng. Technician và Admin không qua được:
- * room zone/house mang telemetry, relay và số đếm chim, là dữ liệu vận hành (FARM-FR-009).
- */
+/** Đọc lại status: token còn hạn nhưng tài khoản đã khoá thì từ chối (AUTH-FR-011) */
 export async function verifySocketToken(token: string | undefined): Promise<CurrentUser> {
   if (!token) throw new Error('Unauthorized: missing token')
 
@@ -35,12 +27,10 @@ export async function verifySocketToken(token: string | undefined): Promise<Curr
   return { _id: String(user._id), email: user.email, role: user.role }
 }
 
-/** AUTH-FR-011 — ngắt mọi kết nối realtime của 1 user (gọi khi Admin khoá/xoá tài khoản) */
 export function disconnectUser(userId: string): void {
   io?.in(userRoom(userId)).disconnectSockets(true)
 }
 
-/** Socket event types emitted by the server (§9.3) */
 export type ServerEvents = {
   TELEMETRY_UPDATE:     (data: WsTelemetryUpdate) => void
   RELAY_UPDATE:         (data: WsRelayUpdate) => void
@@ -51,14 +41,11 @@ export type ServerEvents = {
   RECOMMENDATION_NEW:   (data: WsRecommendationNew) => void
 }
 
-/** EXPERT-FR-017 — khuyến nghị mới của một nhà (room `house:<houseId>`) */
 export interface WsRecommendationNew { _id: string; house_id: string; rule_name: string; raised_for: string }
 
-/** Socket event types received from clients */
 export type ClientEvents = {
   JOIN_ZONE:  (data: { zoneId: string }) => void
   LEAVE_ZONE: (data: { zoneId: string }) => void
-  /** SRS v2.1.8 — số đếm chim, trạng thái camera và cảnh báo của cả nhà yến */
   JOIN_HOUSE:  (data: { houseId: string }) => void
   LEAVE_HOUSE: (data: { houseId: string }) => void
 }
@@ -69,7 +56,6 @@ export function initSocket(httpServer: HttpServer): void {
     transports: ['websocket', 'polling'],
   })
 
-  // JWT authentication for Socket.io connections
   io.use((socket: Socket, next: (err?: Error) => void) => {
     verifySocketToken(socket.handshake.auth?.token as string | undefined)
       .then(user => {
@@ -78,7 +64,7 @@ export function initSocket(httpServer: HttpServer): void {
         socket.data.user   = user
         next()
       })
-      // Lỗi hạ tầng (VD mất kết nối DB) không được lộ message thô ra client
+      // Không lộ lỗi hạ tầng ra client
       .catch((err: Error) => next(err.message.startsWith('Unauthorized') ? err : new Error('Unauthorized: verification failed')))
   })
 
@@ -86,9 +72,7 @@ export function initSocket(httpServer: HttpServer): void {
     logger.info(`Socket connected: ${socket.id} [user=${socket.data.userId as string}]`)
     void socket.join(userRoom(socket.data.userId as string))
 
-    // Phải check assertZoneAccess (giống REST) trước khi cho join — thiếu bước này
-    // là 1 user đã đăng nhập bất kỳ có thể join room của zone farm khác và nhận
-    // telemetry/alert/relay real-time không thuộc quyền mình (IDOR qua WebSocket).
+    // Kiểm quyền như REST, không thì join được zone farm khác (IDOR)
     socket.on('JOIN_ZONE', ({ zoneId }: { zoneId: string }) => {
       const currentUser = socket.data.user as CurrentUser
       void assertZoneAccess(zoneId, currentUser)
@@ -105,7 +89,7 @@ export function initSocket(httpServer: HttpServer): void {
       void socket.leave(`zone:${zoneId}`)
     })
 
-    // Cùng lý do với JOIN_ZONE: kiểm quyền trên farm chứa House trước khi cho nhận số đếm chim
+    // Kiểm quyền như JOIN_ZONE
     socket.on('JOIN_HOUSE', ({ houseId }: { houseId: string }) => {
       const currentUser = socket.data.user as CurrentUser
       void assertHouseAccess(String(houseId), currentUser)
@@ -130,47 +114,39 @@ export function initSocket(httpServer: HttpServer): void {
   logger.info('Socket.io initialized')
 }
 
-/** Emit TELEMETRY_UPDATE to all clients in a zone (PERF-NFR-001: <=2s latency) */
+/** PERF-NFR-001: <= 2s */
 export function emitTelemetryUpdate(zoneId: string, data: WsTelemetryUpdate): void {
   io?.to(`zone:${zoneId}`).emit('TELEMETRY_UPDATE', data)
 }
 
-/** Emit RELAY_UPDATE to all clients in a zone */
 export function emitRelayUpdate(zoneId: string, data: WsRelayUpdate): void {
   io?.to(`zone:${zoneId}`).emit('RELAY_UPDATE', data)
 }
 
-/** VISION-FR-012 — số đếm chim của cả nhà yến, tới room `house:<houseId>` */
 export function emitBirdCountUpdate(houseId: string, data: WsBirdCountUpdate): void {
   io?.to(`house:${houseId}`).emit('BIRD_COUNT_UPDATE', data)
 }
 
-/** Emit ALERT_NEW to all clients in a zone */
 export function emitAlertNew(zoneId: string, data: WsAlertNew): void {
   io?.to(`zone:${zoneId}`).emit('ALERT_NEW', data)
 }
 
-/** Emit DEVICE_STATUS_CHANGE to all clients in a zone (FARM-FR-005) */
 export function emitDeviceStatusChange(zoneId: string, data: WsDeviceStatusChange): void {
   io?.to(`zone:${zoneId}`).emit('DEVICE_STATUS_CHANGE', data)
 }
 
-/** Trạng thái camera đếm chim (gắn House) — cùng sự kiện DEVICE_STATUS_CHANGE, tới room `house:<houseId>` */
 export function emitHouseDeviceStatusChange(houseId: string, data: WsDeviceStatusChange): void {
   io?.to(`house:${houseId}`).emit('DEVICE_STATUS_CHANGE', data)
 }
 
-/** Cảnh báo của cả nhà yến (EDGE_AI_DEGRADED, LOW_RETURN_RATE) — cùng sự kiện ALERT_NEW, tới room `house:<houseId>` */
 export function emitHouseAlertNew(houseId: string, data: WsAlertNew): void {
   io?.to(`house:${houseId}`).emit('ALERT_NEW', data)
 }
 
-/** EXPERT-FR-017, Report 4 §7.3 — khuyến nghị mới của một nhà, tới room `house:<houseId>` */
 export function emitRecommendationNew(houseId: string, data: WsRecommendationNew): void {
   io?.to(`house:${houseId}`).emit('RECOMMENDATION_NEW', data)
 }
 
-/** EXPERT-FR-006/007 — thông báo trong ứng dụng mới, tới mọi phiên đang mở của chính người nhận */
 export function emitNotificationNew(userId: string, data: NotificationDto): void {
   io?.to(userRoom(userId)).emit('NOTIFICATION_NEW', data)
 }

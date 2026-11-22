@@ -1,12 +1,9 @@
-/**
- * EXPERT-FR-017, 019, BR-42, Report 3 §6.21 — mỗi ngày: khuyến nghị mở quá 7 ngày thành EXPIRED; khuyến nghị đã chấp
- * nhận đủ 7 ngày được đo hiệu quả (MEASURED). Việc xét luật chạy sau đánh giá ngày, trong jobs/returnRate.job.ts.
- */
+/** Xét luật chạy trong returnRate.job */
 import cron from 'node-cron'
 import { expireRecommendations, measureRecommendationEffects } from '@/services/recommendation.service'
 import logger from '@/utils/logger.util'
 
-/** 06:30 giờ VN: sau báo cáo tuần/tháng (06:00), đủ dữ liệu của ngày thứ 7 sau khi chấp nhận */
+/** Sau báo cáo 06:00 */
 const CRON_EXPRESSION = '0 30 6 * * *'
 
 export function startRecommendationEffectJob(): void {

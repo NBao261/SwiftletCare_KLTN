@@ -1,12 +1,8 @@
-/**
- * ALERT-FR-010 — quét cảm biến bất thường (kẹt / nhảy phi vật lý / lệch giữa
- * thiết bị) trên telemetry đã lưu, tạo hoặc tự đóng cảnh báo SENSOR_ANOMALY.
- */
 import cron from 'node-cron'
 import { scanSensorAnomalies } from '@/services/sensorAnomaly.service'
 import logger from '@/utils/logger.util'
 
-/** Mỗi 10 phút — "kẹt" cần 2 giờ dữ liệu mới kết luận, quét dày hơn không phát hiện sớm hơn */
+/** "Kẹt" cần 2 giờ dữ liệu, quét dày hơn không sớm hơn */
 const CRON_EXPRESSION = '0 */10 * * * *'
 
 export function startSensorAnomalyJob(): void {

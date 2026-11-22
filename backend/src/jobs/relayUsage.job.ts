@@ -1,12 +1,7 @@
-/**
- * ALERT-FR-016 — cộng dồn giờ chạy/số lần đóng cắt bơm-quạt, vượt mốc thì báo
- * cảnh báo MAINTENANCE_DUE.
- */
 import cron from 'node-cron'
 import { accumulateRelayUsage } from '@/services/relayUsage.service'
 import logger from '@/utils/logger.util'
 
-/** Đầu mỗi giờ — mốc bảo trì tính bằng trăm giờ chạy, không cần quét dày hơn */
 const CRON_EXPRESSION = '0 0 * * * *'
 
 export function startRelayUsageJob(): void {

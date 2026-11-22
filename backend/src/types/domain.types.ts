@@ -1,65 +1,46 @@
-/**
- * SwiftletCare Backend – Domain Type Definitions
- * Shared enums and interfaces across models, services, and controllers.
- */
-
-// ── Domain Enums ───────────────────────────────────────────────────────────────
-// SRS AUTH-FR-004 (v2.0.0). DOMAIN_EXPERT = chuyên gia nuôi yến do Primary Owner mời,
-// phạm vi luôn là cả farm: chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo suy luận,
-// chỉnh ngưỡng/hệ số/tham số phát hiện — không relay hay ghi thu hoạch (mục 4.4).
-// FARM_TECHNICIAN (Report 3 4.0.0, AUTH-FR-004, 013) = thợ của chủ farm, thành viên farm, chỉ thao tác trên
-// nhà được giao; thay role TECHNICIAN cũ (mọi farm, lệnh từ xa — G-20).
+// DOMAIN_EXPERT: cả farm, không điều khiển relay. FARM_TECHNICIAN: chỉ nhà được giao (AUTH-FR-013)
 export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
-/** Vai trò phía khách hàng có thể là thành viên farm (`farms.members[].role`, `invitations.invited_role`) */
 export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
-// PENDING: Technician đã tạo record qua Web Console Onboarding nhưng thiết bị
-// chưa gửi heartbeat đầu tiên (SRS §8.2, Flow 1 bước 4).
-// Report 3 §6.6 — chỉ 3 trạng thái kết nối (ERROR/DEGRADED bỏ ở G-01, migrate:alert-types)
+// PENDING: đã đăng ký, chưa có heartbeat đầu tiên
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (Report 3 §6.1, EXPERT-FR-003)
+// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (EXPERT-FR-003)
 export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'
 export type AlertType =
   | 'THRESHOLD_BREACH' | 'NODE_OFFLINE'
-  | 'SPEAKER_FAILURE'  | 'MISTING_INEFFECTIVE' // THREAT-FR-011 (SRS 3.1.0, trước là PUMP_DRY)
-  | 'NOISE_ANOMALY'                           // THREAT-FR-007 (v2.0.0, trước là BIRD_PANIC)
-  | 'UNEXPECTED_RESTART'                      // THREAT-FR-012 (SRS 3.1.0, trước là POWER_OUTAGE)
+  | 'SPEAKER_FAILURE'  | 'MISTING_INEFFECTIVE'
+  | 'NOISE_ANOMALY'
+  | 'UNEXPECTED_RESTART'
   | 'LOW_RETURN_RATE'  | 'EDGE_AI_DEGRADED'
-  | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'   // THREAT-FR-013
-  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'     // v1.24.0 — ALERT-FR-010/011
-  | 'MAINTENANCE_DUE'                         // ALERT-FR-016
-  | 'ACTUATOR_FAULT'                          // THREAT-FR-014, BR-32
-  | 'CONFIG_MISMATCH'                         // ENV-FR-027, BR-24 — backend tự tính
-/** EXPERT-FR-003 — kết quả Domain Expert kiểm chứng 1 cảnh báo suy luận */
+  | 'SENSOR_FAULT'     | 'RS485_BUS_FAILURE'
+  | 'SENSOR_ANOMALY'   | 'FORECAST_BREACH'
+  | 'MAINTENANCE_DUE'
+  | 'ACTUATOR_FAULT'
+  | 'CONFIG_MISMATCH'                         // backend tự tính
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 export type SessionType  = 'MORNING_EXIT' | 'EVENING_ENTRY'
 export type ControlMode  = 'AUTO' | 'MANUAL'
-/** ENV-FR-027, Report 3 §6.12 — controller đã chạy đúng phiên bản cấu hình của Zone chưa */
 export type ConfigSyncState = 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
 
 
-// ── Module HARVEST (§5.8, §8.2) ───────────────────────────────────────────────
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-/** HARVEST-FR-001, 006 — lô của Farm Technician chờ Farm Owner xác nhận; lô của Farm Owner xác nhận ngay */
+/** Lô của Farm Technician chờ Farm Owner xác nhận (HARVEST-FR-006) */
 export type HarvestStatus = 'DRAFT' | 'CONFIRMED'
 
-// ── JWT Payload ────────────────────────────────────────────────────────────────
 export interface JwtAccessPayload {
-  sub: string   // User._id
+  sub: string
   role: Role
   iat: number
   exp: number
 }
 
-/** Người dùng đang đăng nhập, rút gọn từ req.user để truyền xuống tầng service. */
 export interface CurrentUser {
   _id: string
   email: string
   role: Role
 }
 
-// ── Sub-document interfaces ────────────────────────────────────────────────────
-/** ALERT-FR-005 — kênh ngoài ứng dụng cho 1 mức cảnh báo; trường không có thì theo cài đặt chung */
+/** Trường không có thì theo cài đặt chung */
 export interface ChannelChoice {
   push?: boolean
   telegram?: boolean
@@ -67,9 +48,9 @@ export interface ChannelChoice {
 
 export interface NotificationPreferences {
   push: boolean
-  /** ALERT-FR-013 — chỉ có tác dụng khi tài khoản đã liên kết bot Telegram */
+  /** Chỉ có tác dụng khi đã liên kết bot Telegram */
   telegram: boolean
-  /** ALERT-FR-005 — kênh theo loại sự kiện (mức cảnh báo), ghi đè `push`/`telegram` */
+  /** Ghi đè push/telegram theo mức cảnh báo */
   by_severity?: Partial<Record<AlertSeverity, ChannelChoice>>
   quiet_hours: { start: string; end: string }
 }
@@ -81,83 +62,71 @@ export interface Thresholds {
   humidity_min: number
   humidity_max: number
   light_max: number
-  nh3_max: number // ENV-FR-006, ENV-FR-011 (ES-NH3-01)
+  nh3_max: number
   co2_max: number
 }
 
-// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation.
-// IN4 để dự phòng — SRS v2.0.0 bỏ sưởi (ENV-FR-012). Không có kênh "light".
+// IN1 misting, IN2 speaker, IN3 ventilation, IN4 dự phòng
 export interface RelayStates {
   misting: boolean
   speaker: boolean
   ventilation: boolean
 }
 
-// ENV-FR-010/011 (v1.24.0): % công suất 0-100 do bộ điều khiển mờ trên ESP32
-// tính (= tỉ lệ thời gian BẬT relay trong cửa sổ 2 phút). Chỉ đi kèm telemetry,
-// không lưu DB. Firmware < 1.1.0 không gửi.
+// % công suất 0-100 do bộ mờ trên ESP32 tính; chỉ đi kèm telemetry, không lưu
 export interface ControlOutput {
   misting: number
   ventilation: number
 }
 
-// ENV-FR-021 (v1.24.0): 4 hệ số bộ điều khiển mờ theo Zone, gửi xuống ESP32 qua
-// config/update — tên field = tên key MQTT (firmware Config::update()).
+// Tên field = key MQTT (firmware Config::update())
 export interface FuzzyTuning {
-  fuzzy_humidity_band: number  // %RH — độ rộng vùng chuyển tiếp độ ẩm
-  fuzzy_temp_band: number      // °C — độ rộng vùng "nóng"
-  fuzzy_fan_dry_level: number  // % — mức quạt khi nóng mà khô
-  fuzzy_window_sec: number     // s — cửa sổ time-proportioning
-  fuzzy_input_filter: boolean  // ENV-FR-022 — lọc median+Kalman đầu vào bộ mờ (tắt để so sánh A/B)
+  fuzzy_humidity_band: number  // %RH
+  fuzzy_temp_band: number      // °C
+  fuzzy_fan_dry_level: number  // %
+  fuzzy_window_sec: number     // s
+  fuzzy_input_filter: boolean  // ENV-FR-022: lọc median+Kalman đầu vào
 }
 
-// EXPERT-FR-008 (v2.1.0): tham số phát hiện theo Zone do Domain Expert chỉnh, gửi xuống
-// ESP32 qua config/update (tên field = tên key MQTT). Mặc định + khoảng hợp lệ:
-// utils/detectionTuning.util.ts.
+// EXPERT-FR-008: tên field = key MQTT; mặc định và khoảng: utils/detectionTuning.util.ts
 export interface DetectionTuning {
-  noise_margin_db: number        // dB — ồn cao hơn mức nền của giờ đó bao nhiêu thì tính
-  noise_min_sec: number          // s — số giây ồn trong cửa sổ 15 giây
-  pump_dry_on_sec: number        // s — thời gian bơm BẬT cộng dồn trước khi xét
-  pump_dry_min_rise_pct: number  // %RH — độ ẩm phải tăng tối thiểu
-  speaker_drop_pct: number       // % — mức âm giảm so với nền thì coi là hỏng loa
+  noise_margin_db: number        // dB trên mức nền của giờ đó
+  noise_min_sec: number          // s trong cửa sổ 15 s
+  pump_dry_on_sec: number        // s bơm BẬT cộng dồn
+  pump_dry_min_rise_pct: number  // %RH
+  speaker_drop_pct: number       // % giảm so với nền
 }
 
-// EXPERT-FR-008 (v2.1.8): tham số đếm chim theo House (chim ra vào ở cửa của cả nhà, không
-// theo Zone) do Domain Expert chỉnh, backend dùng
+// Theo House: chim ra vào ở cửa của cả nhà
 export interface BirdCountTuning {
-  return_rate_drop_pct: number   // % — tỷ lệ chim về giảm so với trung bình kỳ trước
+  return_rate_drop_pct: number   // % giảm so với trung bình kỳ trước
 }
 
-// ANALYTICS-FR-012, BR-28: mức của chỉ số sức khỏe theo House do Domain Expert đặt (Farm Owner khi
-// farm chưa có chuyên gia, BR-22). Mức đàn chim lấy từ BirdCountTuning.return_rate_drop_pct.
+// BR-28: mức đàn chim lấy từ BirdCountTuning.return_rate_drop_pct
 export interface HealthLevels {
-  in_range_slight_pct: number    // % thời gian trong ngưỡng — dưới mức này là SLIGHT
-  in_range_clear_pct: number     // % — dưới mức này là CLEAR
-  air_slight_h: number           // giờ NH3/CO2 vượt ngưỡng — từ mức này là SLIGHT
-  air_clear_h: number            // giờ — từ mức này là CLEAR
-  noise_slight: number           // số đợt NOISE_ANOMALY — từ mức này là SLIGHT
-  noise_clear: number            // số đợt — từ mức này là CLEAR
+  in_range_slight_pct: number    // % thời gian trong ngưỡng, dưới là SLIGHT
+  in_range_clear_pct: number     // dưới là CLEAR
+  air_slight_h: number           // giờ vượt ngưỡng NH3/CO2, từ đây là SLIGHT
+  air_clear_h: number            // từ đây là CLEAR
+  noise_slight: number           // số đợt NOISE_ANOMALY, từ đây là SLIGHT
+  noise_clear: number            // từ đây là CLEAR
 }
 
 export type HealthLevel = 'NORMAL' | 'SLIGHT' | 'CLEAR'
 export type HealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA'
-/** Trạng thái người chấm tự chọn (EXPERT-FR-012) — không có INSUFFICIENT_DATA */
 export type HealthRatingValue = Exclude<HealthStatus, 'INSUFFICIENT_DATA'>
 export type HealthSource = 'environment' | 'air' | 'flock' | 'noise'
-/** SM-18 — suy ra từ ratings và ngày, không lưu */
+/** SM-18: suy ra, không lưu */
 export type HealthRatingState = 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED'
 
 export type HealthReasonCode =
   | 'ALL_NORMAL' | 'MISSING_DATA' | 'NOT_ASSESSED' | 'ENV_IN_RANGE' | 'AIR_OVER_LIMIT'
   | 'FLOCK_DROP' | 'FLOCK_NO_BASELINE' | 'NOISE_EPISODES' | 'WEATHER_UNAVAILABLE' | 'RAIN_DOWNGRADE'
   | 'ATTRACTING_STAGE'
-/** FARM-FR-014, BR-46 — ATTRACTING: chim chưa về ở, không đánh giá đàn chim; OCCUPIED: nhà đã có chim ở */
+/** BR-46: ATTRACTING thì không đánh giá đàn chim */
 export type HouseStage = 'ATTRACTING' | 'OCCUPIED'
 
-/**
- * ANALYTICS-FR-012 — 1 lý do của trạng thái ngày: mã + số liệu, không phải câu, để web và mobile tự dịch
- * (VI/EN) và ảnh chụp lúc chấm (không bao giờ đổi) không phụ thuộc ngôn ngữ. `values` chỉ có số và tên.
- */
+/** Mã + số, không phải câu: client tự dịch, ảnh chụp không phụ thuộc ngôn ngữ */
 export interface HealthReason {
   code: HealthReasonCode
   source: HealthSource | null
@@ -165,7 +134,6 @@ export interface HealthReason {
   values: Record<string, unknown>
 }
 
-// ── MQTT Message Payloads ──────────────────────────────────────────────────────
 export interface TelemetryPayload {
   deviceId: string
   temperature: number
@@ -177,11 +145,11 @@ export interface TelemetryPayload {
   relay_states: RelayStates
   control_mode: ControlMode
   control_output?: ControlOutput
-  /** THREAT-FR-014 — dòng đo của bơm và quạt (A); controller không đo dòng thì không gửi */
+  /** A; không đo dòng thì không gửi */
   pump_current_a?: number
   fan_current_a?: number
-  timestamp: number   // Unix ms
-  /** ENV-FR-024 — mẫu từ bộ đệm offline (topic `telemetry/buffered`), do handler gắn theo topic */
+  timestamp: number
+  /** Handler gắn theo topic */
   buffered?: boolean
 }
 
@@ -192,21 +160,20 @@ export interface HeartbeatPayload {
   freeHeap: number
   uptime: number
   timestamp: number
-  /** true ở heartbeat đầu tiên sau mỗi lần ESP32 (re)connect MQTT — backend đẩy lại config/update */
+  /** Heartbeat đầu sau mỗi lần reconnect: backend đẩy lại config */
   justConnected?: boolean
-  /** FARM-FR-006 — firmware ≥ 1.4.0: lý do lần khởi động gần nhất (POWERON, BROWNOUT, TASK_WDT…) và IP LAN */
+  /** firmware >= 1.4.0 */
   resetReason?: string
   ip?: string
-  /** ENV-FR-027 — firmware ≥ 2.1.0: phiên bản cấu hình đang chạy; thiếu = firmware cũ (UNKNOWN) */
+  /** firmware >= 2.1.0; thiếu = UNKNOWN */
   appliedConfigVersion?: number
-  /** BR-32, BR-45 — firmware ≥ 2.3.1: dòng bình thường đã học (A) của tải nào đã học xong */
+  /** BR-32: dòng bình thường đã học (A) */
   actuatorBaseline?: { misting?: number; ventilation?: number }
-  /** Report 4 §7.2 — heartbeat của nút AI */
   modelVersion?: string
   fps?: number
 }
 
-/** VISION-FR-018 — vòng đếm quanh lỗ ra vào, các đỉnh (x, y) theo tỉ lệ khung hình 0–1 */
+/** Tỉ lệ khung hình 0–1 */
 export interface CountingRing {
   points: Array<[number, number]>
   into_ring_is_exit: boolean
@@ -217,33 +184,27 @@ export interface RelayStatusPayload {
   relay_states: RelayStates
   control_mode: ControlMode
   override_expiry?: number
-  /** Firmware ≥ 1.6.0 (BR-20): chế độ và thời gian còn lại của từng relay */
   relays?: Partial<Record<keyof RelayStates, { mode: ControlMode; remaining_ms?: number }>>
 }
 
-/**
- * `vision/bird-count` của nút AI (docs/bird-counting-plan.md §6.6). Hai loại tin trên cùng topic:
- * tin của phiên (có `session_type`, số cộng dồn của phiên, gửi mỗi 30 giây) và tin `kind: 'BUCKET'`
- * (số của 1 khoảng 5 phút, VISION-FR-017). `return_rate` do backend tự tính (VISION-FR-009).
- */
+/** Tin phiên (có session_type, cộng dồn) hoặc kind 'BUCKET' (5 phút, VISION-FR-017) */
 export interface BirdCountPayload {
   deviceId: string
   kind?: 'BUCKET'
   session_type?: SessionType
   entry_count: number
   exit_count: number
-  /** Bỏ qua nếu nút AI gửi — backend tính cho cả House trên số ròng */
+  /** Bỏ qua: backend tự tính trên số ròng */
   return_rate?: number
   confidence_avg?: number
-  /** Tin cuối của phiên — chỉ để tham khảo, job LOW_RETURN_RATE không dựa vào nó */
+  /** Chỉ tham khảo, job LOW_RETURN_RATE không dựa vào */
   final?: boolean
-  /** epoch ms, đầu khoảng của tin BUCKET */
+  /** epoch ms */
   bucket_start?: number
   bucket_minutes?: number
   timestamp?: number
 }
 
-// ── WebSocket Event Payloads (§9.3) ───────────────────────────────────────────
 export interface WsTelemetryUpdate {
   zoneId: string
   temperature: number
@@ -266,21 +227,17 @@ export interface WsRelayUpdate {
   overrideExpiry?: string
 }
 
-/**
- * VISION-FR-012 — số của **cả House** (cộng mọi camera của nhà) cho phiên vừa có tin, phát vào room
- * `house:<houseId>`, cùng con số với `GET /analytics/bird-count/current` (birdCount.service#houseDailyCounts).
- */
+/** Số của cả House, cùng con số với GET /analytics/bird-count/current */
 export interface WsBirdCountUpdate {
   houseId: string
-  /** 'YYYY-MM-DD' giờ Việt Nam */
+  /** Giờ Việt Nam */
   sessionDate: string
   sessionType: SessionType
-  /** Số thô của phiên, cộng mọi camera của House */
   entryCount: number
   exitCount: number
-  /** Số ròng của phiên: ra − vào (sáng) hoặc vào − ra (chiều), không âm */
+  /** ra − vào (sáng) hoặc vào − ra (chiều), không âm */
   netCount: number
-  /** % chim về trong ngày; null khi chưa có phiên sáng hoặc phiên sáng không có chim ra */
+  /** null khi chưa có phiên sáng hoặc sáng không có chim ra */
   returnRate: number | null
   timestamp: string
 }
@@ -300,7 +257,6 @@ export interface WsAlertNew {
   snapshotUrl?: string
 }
 
-// ── API Response Wrappers ──────────────────────────────────────────────────────
 export interface ApiSuccess<T = unknown> {
   data: T
   meta?: {
@@ -316,7 +272,6 @@ export interface ApiError {
   code?: string
 }
 
-// ── Pagination Query Params ────────────────────────────────────────────────────
 export interface PaginationQuery {
   page?: string
   limit?: string

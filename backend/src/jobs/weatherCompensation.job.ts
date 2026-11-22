@@ -1,12 +1,8 @@
-/**
- * ENV-FR-028, BR-38, Report 4 DF-12 — mỗi giờ: dự báo 2 giờ tới × luật của nhà → offset phun sương có hạn,
- * gửi retained cho mọi controller.
- */
 import cron from 'node-cron'
 import { runWeatherCompensation } from '@/services/weatherCompensation.service'
 import logger from '@/utils/logger.util'
 
-/** Phút 10 mỗi giờ (Report 3 §4.5); service tự gọi dự báo của Open-Meteo, không phụ thuộc job thời tiết ở phút 5 */
+/** Không phụ thuộc weather.job ở phút 5 */
 const CRON_EXPRESSION = '0 10 * * * *'
 
 export function startWeatherCompensationJob(): void {

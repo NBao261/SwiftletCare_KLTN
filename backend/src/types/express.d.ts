@@ -1,9 +1,4 @@
-/**
- * Express Request augmentation – adds `user` property to all requests
- * after authenticate() middleware runs.
- *
- * This file must be a .d.ts module (not .ts) and must be included via tsconfig.
- */
+/** Phải là .d.ts và nằm trong tsconfig */
 import type { Role, NotificationPreferences } from './domain.types'
 
 declare global {

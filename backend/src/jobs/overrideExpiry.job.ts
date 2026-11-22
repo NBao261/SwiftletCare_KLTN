@@ -1,13 +1,8 @@
-/**
- * ENV-FR-018 — Manual Override hết hạn thì trả relay về chế độ AUTO.
- * Xem ghi chú trong device.service.expireManualOverrides về lý do backend phải
- * tự làm việc này thay vì tin tưởng hoàn toàn vào firmware.
- */
+/** Backend tự trả về AUTO, không chỉ tin firmware (xem expireManualOverrides) */
 import cron from 'node-cron'
 import { expireManualOverrides } from '@/services/device.service'
 import logger from '@/utils/logger.util'
 
-/** Mỗi phút — override tính bằng phút nên không cần dày hơn */
 const CRON_EXPRESSION = '0 * * * * *'
 
 export function startOverrideExpiryJob(): void {

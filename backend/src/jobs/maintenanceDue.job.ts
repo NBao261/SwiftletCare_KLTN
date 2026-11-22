@@ -1,8 +1,4 @@
-/**
- * OPS-FR-006, ALERT-FR-016 — kế hoạch bảo trì đến hạn mở `MAINTENANCE_DUE` và Work Order phòng ngừa; còn đến hạn quá
- * maintenance_grace_days thì OVERDUE, báo Farm Owner. Mỗi giờ (phút 10, sau relayUsage.job cộng dồn giờ chạy lúc phút
- * 0) cho kế hoạch theo giờ chạy và số lần đóng cắt; 07:00 giờ Việt Nam cho kế hoạch theo lịch (Report 3 OPS-FR-006).
- */
+/** Phút 10 mỗi giờ (sau relayUsage.job) cho kế hoạch theo giờ chạy; 07:00 cho kế hoạch theo lịch */
 import cron from 'node-cron'
 import { checkDuePlans } from '@/services/maintenance.service'
 import logger from '@/utils/logger.util'
