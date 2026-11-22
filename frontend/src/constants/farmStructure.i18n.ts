@@ -346,6 +346,7 @@ const vi = {
   'structure.errorDuplicate': 'Đã có {target} tên này',
   'structure.deleteDesc': 'Xoá {target} này khỏi trang trại. Cảnh báo đang mở được đóng, phiếu công việc chưa xong bị huỷ. Dữ liệu lịch sử vẫn được giữ.',
   'structure.deleteBlocked': '{target} còn {n} thiết bị đang dùng. Gỡ các thiết bị ở trang Thiết bị trước khi xoá.',
+  'structure.deleteBlockedServer': '{target} còn thiết bị đang dùng (kể cả camera). Gỡ các thiết bị ở trang Thiết bị trước khi xoá.',
   'structure.save': 'Lưu',
   'structure.cancel': 'Huỷ',
   // Tham số do chuyên gia đặt (EXPERT-FR-008)
@@ -732,6 +733,7 @@ const en: Record<Key, string> = {
   'structure.errorDuplicate': 'A {target} with this name already exists',
   'structure.deleteDesc': 'Remove this {target} from the farm. Open alerts are closed and unfinished work orders cancelled. History is kept.',
   'structure.deleteBlocked': 'The {target} still has {n} devices in service. Remove them on the Devices page before deleting.',
+  'structure.deleteBlockedServer': 'The {target} still has devices in service (cameras included). Remove them on the Devices page before deleting.',
   'structure.save': 'Save',
   'structure.cancel': 'Cancel',
   'tuning.title': 'Detection parameters',

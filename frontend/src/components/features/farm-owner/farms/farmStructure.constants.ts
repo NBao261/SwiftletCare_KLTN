@@ -49,3 +49,6 @@ export const MEMBER_ROW_HEIGHT = 64
 // AUTH-FR-014 — nhãn ngày (0 = Chủ nhật như backend) và loại ca của lịch trực
 export const ROSTER_DAY_LABEL: FarmKey[] = ['roster.day.0', 'roster.day.1', 'roster.day.2', 'roster.day.3', 'roster.day.4', 'roster.day.5', 'roster.day.6']
 export const ROSTER_ROLE_LABEL: Record<RosterShift['role'], FarmKey> = { PRIMARY: 'roster.role.PRIMARY', BACKUP: 'roster.role.BACKUP' }
+
+// Report 3 §4.5 — tên trang trại, nhà, Zone tối đa 50 ký tự, cùng giới hạn với backend (FARM-FR-001, 002)
+export const STRUCTURE_NAME_MAX_LENGTH = 50

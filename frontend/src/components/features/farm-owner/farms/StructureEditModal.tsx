@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useEditStructure } from '@/hooks/shared/useFarms'
 import { isNameTaken } from '@/components/features/farm-owner/farms/farmStructure'
+import { STRUCTURE_NAME_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants'
 
 interface StructureEditModalProps {
   kind: 'house' | 'zone'
@@ -33,10 +34,21 @@ export default function StructureEditModal({ kind, mode, id, name, deviceCount, 
   const mutation = mode === 'rename' ? rename : remove
   const trimmed = newName.trim()
   const canSubmit = mode === 'rename' ? trimmed !== '' && trimmed !== name && !isDuplicate : !isDeleteBlocked
-  function handleSubmit() {
-    if (mode === 'rename') rename.mutate({ kind, id, name: trimmed }, { onSuccess: onClose })
-    else remove.mutate({ kind, id }, { onSuccess: () => { onClose(); onDeleted?.() } })
+  // Nhà, Zone vừa xoá biến khỏi danh sách nên trang gọi gỡ modal trước khi callback của mutate chạy: dùng mutateAsync để
+  // điều hướng vẫn chạy sau khi modal đã gỡ
+  async function handleSubmit() {
+    try {
+      if (mode === 'rename') await rename.mutateAsync({ kind, id, name: trimmed })
+      else await remove.mutateAsync({ kind, id })
+    } catch {
+      return // lỗi hiện ngay trong modal
+    }
+    onClose()
+    if (mode === 'delete') onDeleted?.()
   }
+  // Backend còn đếm cả camera và thiết bị web chưa thấy: nói đúng lý do thay vì câu chung "dữ liệu không hợp lệ"
+  const errorCode = (mutation.error as { response?: { data?: { error?: { code?: string } } } } | null)?.response?.data?.error?.code
+  const errorText = errorCode === 'HAS_ACTIVE_DEVICES' ? t('structure.deleteBlockedServer', { target }) : apiErrorMessage(mutation.error)
 
   return (
     <Modal
@@ -48,6 +60,7 @@ export default function StructureEditModal({ kind, mode, id, name, deviceCount, 
         {mode === 'rename' && (
           <Input
             label={t('structure.newName')}
+            maxLength={STRUCTURE_NAME_MAX_LENGTH}
             value={newName}
             onChange={event => setNewName(event.target.value)}
             error={isDuplicate ? t('structure.errorDuplicate', { target }) : undefined}
@@ -60,7 +73,7 @@ export default function StructureEditModal({ kind, mode, id, name, deviceCount, 
             {t('structure.deleteBlocked', { target, n: num(deviceCount) })}
           </p>
         )}
-        {mutation.isError && <p role="alert" className="text-sm text-alertRed">{apiErrorMessage(mutation.error)}</p>}
+        {mutation.isError && <p role="alert" className="text-sm text-alertRed">{errorText}</p>}
         <div className="flex justify-end gap-2 border-t border-warmGray/10 pt-4">
           <Button type="button" variant="secondary" className="min-w-[8rem]" onClick={onClose}>{t('structure.cancel')}</Button>
           <Button
@@ -68,7 +81,7 @@ export default function StructureEditModal({ kind, mode, id, name, deviceCount, 
             className="min-w-[8rem]"
             variant={mode === 'delete' ? 'danger' : undefined}
             disabled={!canSubmit || mutation.isPending}
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
           >
             {mode === 'rename' ? t('structure.save') : t('structure.delete', { target })}
           </Button>

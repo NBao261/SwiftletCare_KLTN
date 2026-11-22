@@ -79,7 +79,7 @@ export function useCreateHouse(farmId: string) {
 // FARM-FR-002 — đổi tên hoặc xoá nhà, Zone; xong thì làm mới cấu trúc farm (nhà, Zone, thiết bị, cảnh báo đã đóng theo)
 export function useEditStructure() {
   const queryClient = useQueryClient()
-  const refresh = () => Promise.all(['houses', 'zones', 'all-zones', 'sensor-nodes', 'alerts'].map(key =>
+  const refresh = () => Promise.all(['farms', 'houses', 'zones', 'farm-zones', 'all-zones', 'sensor-nodes', 'alerts', 'work-orders', 'maintenance', 'recommendations'].map(key =>
     queryClient.invalidateQueries({ queryKey: [key] })))
   type Target = { kind: 'house' | 'zone'; id: string }
   const rename = useMutation({
