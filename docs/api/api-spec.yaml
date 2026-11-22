@@ -7898,7 +7898,8 @@ components:
         house_id: { type: string, nullable: true, description: "Cảnh báo của cả nhà yến (camera đếm chim: EDGE_AI_DEGRADED, LOW_RETURN_RATE) — SRS v2.1.8; khi đó không có zone_id" }
         node_id: { type: string, nullable: true }
         type: { $ref: "#/components/schemas/AlertType" }
-        severity: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW] }
+        severity: { type: string, enum: [CRITICAL, HIGH, MEDIUM, LOW], description: "Mức theo loại cảnh báo (BR-15, ALERT-FR-001); backend đặt, bỏ qua mức thiết bị gửi kèm" }
+        incident_key: { type: string, readOnly: true, description: "Khoá sự cố (loại, farm, Zone hoặc nhà, thiết bị; tải với ACTUATOR_FAULT; kế hoạch với MAINTENANCE_DUE). Mỗi khoá chỉ một cảnh báo còn mở (ALERT-FR-008)" }
         title: { type: string }
         message: { type: string }
         snapshot_url: { type: string, nullable: true }

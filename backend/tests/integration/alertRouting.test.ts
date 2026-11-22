@@ -43,9 +43,9 @@ async function seed(withTechnician = true) {
     house.technicians = [{ user_id: tech._id, primary: true }] as never
     await house.save()
   }
-  const raise = (type: AlertType, severity?: 'CRITICAL' | 'HIGH') => createAlert({
+  const raise = (type: AlertType) => createAlert({
     farmId: String(ctx.farm._id), zoneId: String(ctx.zone._id), nodeId: String(ctx.node._id),
-    type, severity, title: `${type} tại Z`, message: 'chi tiết',
+    type, title: `${type} tại Z`, message: 'chi tiết',
   })
   return { ...ctx, house, tech, raise }
 }

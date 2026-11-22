@@ -29,6 +29,9 @@ ensureCollection("alerts", {
     "event_id": {
       "bsonType": ["string", "null"]
     },
+    "incident_key": {
+      "bsonType": ["string", "null"]
+    },
     "type": {
       "bsonType": "string",
       "enum": ["THRESHOLD_BREACH", "NODE_OFFLINE", "SPEAKER_FAILURE", "MISTING_INEFFECTIVE", "NOISE_ANOMALY", "UNEXPECTED_RESTART", "LOW_RETURN_RATE", "EDGE_AI_DEGRADED", "SENSOR_FAULT", "RS485_BUS_FAILURE", "SENSOR_ANOMALY", "FORECAST_BREACH", "MAINTENANCE_DUE", "ACTUATOR_FAULT", "CONFIG_MISMATCH"]
@@ -181,6 +184,7 @@ ensureCollection("alerts", {
   "required": ["farm_id", "type", "severity", "title", "message"]
 })
 db.getCollection("alerts").createIndex({"farm_id":1,"zone_id":1,"node_id":1,"type":1,"status":1})
+db.getCollection("alerts").createIndex({"incident_key":1}, {"unique":true,"partialFilterExpression":{"incident_key":{"$type":"string"},"status":{"$in":["ACTIVE","ACKNOWLEDGED","DISMISSED"]}}})
 db.getCollection("alerts").createIndex({"house_id":1,"type":1,"status":1}, {"partialFilterExpression":{"house_id":{"$exists":true}}})
 db.getCollection("alerts").createIndex({"node_id":1,"event_id":1}, {"unique":true,"partialFilterExpression":{"event_id":{"$type":"string"}}})
 db.getCollection("alerts").createIndex({"resolved_at":1}, {"expireAfterSeconds":15552000})

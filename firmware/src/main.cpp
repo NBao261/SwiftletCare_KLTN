@@ -438,8 +438,9 @@ void pidTask(void *pvParameters) {
     if (haveThreats) {
       static AlertReport speakerReported, pumpReported, sensorReported,
           busReported, noiseReported;
+      // Mức theo BR-15 (HIGH); backend tự đặt mức theo loại, trường này chỉ để đọc log
       reportOnRise(threats.speakerFailure, speakerReported, "SPEAKER_FAILURE",
-                   "CRITICAL", "Amplitude dB không tăng khi loa ru đang phát");
+                   "HIGH", "Amplitude dB không tăng khi loa ru đang phát");
       // pumpDry giữ true suốt lúc đang chốt ngừng phun: gửi thất bại (MQTT
       // rớt) thì reportOnRise thử lại ở chu kỳ sau; gửi được rồi thì không lặp.
       // THREAT-FR-011 — không đoán nguyên nhân (hết nước, tắc béc, mở cửa…): nêu việc cần kiểm tra
