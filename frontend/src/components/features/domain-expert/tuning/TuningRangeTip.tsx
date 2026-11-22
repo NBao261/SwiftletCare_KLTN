@@ -1,15 +1,15 @@
-import InfoTip from '@/components/ui/InfoTip'
-import { t } from '@/i18n'
+import InfoTip from '@/components/ui/InfoTip';
+import { t } from '@/i18n';
 
 export interface TuningHint {
-  label: string
-  range: string
-  defaultValue?: string
+  label: string;
+  range: string;
+  defaultValue?: string;
 }
 
 // "Phạm vi: …" và "Mặc định: …": chỉ dịch chữ đầu, số và đơn vị giữ nguyên
 function translateHint(hint: string): string {
-  return hint.replace(/^Phạm vi:/, t('Phạm vi:')).replace(/^Mặc định:/, t('Mặc định:')).replace(/(\d)s\b/g, '$1 s')
+  return hint.replace(/^Phạm vi:/, t('Phạm vi:')).replace(/^Mặc định:/, t('Mặc định:')).replace(/(\d)s\b/g, '$1 s');
 }
 
 // DE-04: "Phạm vi · Mặc định" của cả khối trong một nút (i), thay một nút cho mỗi ô số
@@ -25,5 +25,5 @@ export default function TuningRangeTip({ hints }: { hints: TuningHint[] }) {
         ))}
       </ul>
     </InfoTip>
-  )
+  );
 }
