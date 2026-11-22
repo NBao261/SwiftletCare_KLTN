@@ -39,7 +39,8 @@ test.describe('Trang quyết định của chuyên gia cho Farm Owner (BR-22)', 
     await page.goto('/domain-expert/tuning');
     // DE-10: badge nhỏ thay dải thông báo; câu giải thích nằm trong tooltip (title)
     await expect(page.getByText('Quyết định thay', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Lưu tham số phát hiện' })).toBeEnabled();
+    // DE-04: nút Lưu riêng từng khối đã gộp vào thanh lưu dính đáy, nên kiểm nút +/- của tham số phát hiện
+    await expect(page.getByRole('button', { name: 'Tăng Mức ồn vượt nền' })).toBeEnabled();
   });
 
   test('farm có chuyên gia: Farm Owner chỉ xem tham số phát hiện, vẫn sửa được ngưỡng', async ({ page, request }) => {
@@ -49,7 +50,7 @@ test.describe('Trang quyết định của chuyên gia cho Farm Owner (BR-22)', 
     await page.goto('/domain-expert/tuning');
     // DE-10: badge "Chỉ xem"; câu giải thích nằm trong tooltip (title)
     await expect(page.getByText('Chỉ xem', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Lưu tham số phát hiện' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Tăng Mức ồn vượt nền' })).toBeDisabled();
     await page.goto('/domain-expert/history');
     await expect(page).toHaveURL(/\/domain-expert\/history$/);
   });

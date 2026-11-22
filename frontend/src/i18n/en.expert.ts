@@ -239,6 +239,7 @@ const enExpert: Record<string, string> = {
   'Khung {{n}} · Từ': 'Window {{n}} — From',
   '+ Thêm khung 2': '+ Add window 2',
   'Lưu thay đổi': 'Save changes',
+  '{{n}} thay đổi': '{{n}} changes',
   'Tạo hồ sơ': 'Create profile',
   'Bật nhóm: {{label}}': 'Enable group: {{label}}',
   'Thu gọn {{label}}': 'Collapse {{label}}',

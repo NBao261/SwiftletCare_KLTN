@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Save, RotateCcw } from 'lucide-react'
-import { cn } from '@/lib/cn'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { RotateCcw } from 'lucide-react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import TuningStepperInput from './TuningStepperInput'
+import type { TuningBlockHandle } from './tuning.utils'
 import type { ExpertThresholds } from '@/types/expert.types'
 import { t } from '@/i18n'
 import { FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
@@ -15,6 +15,8 @@ interface Props {
   isResetting: boolean
   onSave: (v: Partial<ExpertThresholds>) => void
   onReset: () => void
+  // DE-04: báo số ngưỡng đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  onDirtyChange?: (count: number) => void
 }
 
 // 7 ngưỡng của Zone (ENV-FR-006); khoảng giá trị là khoảng đo cảm biến của backend (THRESHOLD_LIMITS), không tự chọn
@@ -29,12 +31,18 @@ const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: str
 ]
 
 // Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống (ENV-FR-020)
-export default function ThresholdColumn({ data, isLoading, isSaving, isResetting, onSave, onReset }: Props) {
+const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdColumn(
+  { data, isLoading, isSaving, isResetting, onSave, onReset, onDirtyChange }, ref,
+) {
   const [form, setForm] = useState<ExpertThresholds>(FACTORY_DEFAULT_THRESHOLDS)
   const [resetOpen, setResetOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { if (data) setForm(data) }, [data])
+
+  const base = data ?? FACTORY_DEFAULT_THRESHOLDS
+  const dirtyCount = FIELDS.filter(field => form[field.key] !== base[field.key]).length
+  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   const set = (key: keyof ExpertThresholds) => (v: number) => {
     setForm(f => ({ ...f, [key]: v }))
@@ -47,6 +55,11 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
     setError(null)
     onSave(form)
   }
+
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+    cancel: () => { setForm(base); setError(null) },
+  }))
 
   if (isLoading) return (
     <div className="bg-white rounded-[24px] border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-4 h-full">
@@ -71,7 +84,7 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
         </div>
 
         {/* Fields */}
-        <div className="flex-1 py-1 divide-y divide-stone-100">
+        <fieldset disabled={isSaving} className="flex-1 py-1 divide-y divide-stone-100">
           {FIELDS.map(field => {
             const limit = THRESHOLD_LIMITS[field.key]
             return (
@@ -80,23 +93,10 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
                 rangeHint={`Phạm vi: ${limit.min}–${limit.max} ${limit.unit}`} />
             )
           })}
-        </div>
+        </fieldset>
 
-        {/* Error */}
-        {error && <p className="pt-2 text-xs text-red-600">{error}</p>}
-
-        {/* Save button */}
-        <div className="mt-auto pt-4 border-t border-stone-100">
-          <button type="button" onClick={handleSave} disabled={isSaving}
-            className={cn(
-              'w-full py-2.5 rounded-full text-sm font-medium flex items-center justify-center gap-2 transition-all duration-150',
-              isSaving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-charcoal text-white hover:bg-gray-800 shadow-sm',
-            )}>
-            {isSaving && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            <Save className="w-4 h-4" />
-            {t('Lưu ngưỡng môi trường')}
-          </button>
-        </div>
+        {/* Lỗi kiểm ngưỡng; nút Lưu chung ở thanh dính đáy của trang (DE-04) */}
+        {error && <p className="mt-auto pt-4 border-t border-stone-100 text-xs text-red-600">{error}</p>}
       </div>
 
       <ConfirmModal
@@ -111,4 +111,6 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
       />
     </>
   )
-}
+})
+
+export default ThresholdColumn

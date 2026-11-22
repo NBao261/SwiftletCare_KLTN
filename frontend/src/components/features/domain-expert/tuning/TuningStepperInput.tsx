@@ -4,6 +4,7 @@
  */
 import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
+import InfoTip from '@/components/ui/InfoTip'
 
 interface Props {
   label: string
@@ -47,12 +48,17 @@ export default function TuningStepperInput({
       'flex items-center justify-between gap-3 py-2.5 px-0 border-b border-stone-100 last:border-b-0 transition-colors duration-300',
       highlighted && 'bg-[#ECFFA9]/40 rounded-lg px-2 -mx-2',
     )}>
-      {/* Label + hints */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#27231F] leading-tight">{label}</p>
-        {subLabel && <p className="text-small text-[#878380] mt-0.5 italic">{t(subLabel)}</p>}
-        {rangeHint && <p className="text-small text-[#B8B4B0] mt-0.5">{translateHint(rangeHint)}</p>}
-        {defaultHint && <p className="text-small text-[#B8B4B0]">{translateHint(defaultHint)}</p>}
+      {/* DE-04: "Phạm vi · Mặc định" vào tooltip, chỉ còn nhãn và dòng phụ hiện thẳng */}
+      <div className="flex-1 min-w-0 flex items-start gap-1">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-charcoal leading-tight">{label}</p>
+          {subLabel && <p className="text-small text-warmGray mt-0.5 italic">{t(subLabel)}</p>}
+        </div>
+        {(rangeHint || defaultHint) && (
+          <InfoTip>
+            {[rangeHint, defaultHint].filter(Boolean).map(hint => translateHint(hint as string)).join(' · ')}
+          </InfoTip>
+        )}
       </div>
 
       {/* Stepper control */}

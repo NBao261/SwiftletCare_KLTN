@@ -3,13 +3,16 @@
  * Hộp verdict_stats chuẩn Real Data + 6 stepper fields + reset trên header + save w-full
  * SRS v2.1.4: EXPERT-FR-003/008
  */
-import { useState, useEffect } from 'react'
-import { AlertTriangle, RotateCcw, Save, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
-import { cn } from '@/lib/cn'
-import { detectionTuningPayload } from '@/components/features/domain-expert/tuning/tuning.utils'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { AlertTriangle, RotateCcw, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import { detectionTuningPayload, type TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
 import TuningStepperInput from './TuningStepperInput'
 import type { ExpertDetectionTuning, ExpertVerdictStats } from '@/types/expert.types'
 import { t, translated } from '@/i18n'
+
+const FIELD_KEYS: Array<keyof ExpertDetectionTuning> = [
+  'noise_margin_db', 'noise_min_sec', 'pump_dry_on_sec', 'pump_dry_min_rise_pct', 'speaker_drop_pct',
+]
 
 interface Props {
   data: ExpertDetectionTuning | undefined
@@ -20,6 +23,13 @@ interface Props {
   onSave: (v: Partial<ExpertDetectionTuning>) => void
   onReset: () => void
   updatedAt?: string
+  // DE-04: báo số tham số đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  onDirtyChange?: (count: number) => void
+}
+
+const DEFAULT_DETECTION: ExpertDetectionTuning = {
+  noise_margin_db: 15, noise_min_sec: 10, pump_dry_on_sec: 300,
+  pump_dry_min_rise_pct: 2.0, speaker_drop_pct: 70,
 }
 
 const TYPE_LABELS: Record<string, string> = translated({
@@ -99,16 +109,22 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   )
 }
 
-export default function DetectionColumn({
-  data, verdictStats, isLoading, isSaving, isResetting, onSave, onReset, updatedAt,
-}: Props) {
-  const [form, setForm] = useState<ExpertDetectionTuning>({
-    noise_margin_db: 15, noise_min_sec: 10, pump_dry_on_sec: 300,
-    pump_dry_min_rise_pct: 2.0, speaker_drop_pct: 70,
-  })
+const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionColumn(
+  { data, verdictStats, isLoading, isSaving, isResetting, onSave, onReset, updatedAt, onDirtyChange }, ref,
+) {
+  const [form, setForm] = useState<ExpertDetectionTuning>(DEFAULT_DETECTION)
 
   useEffect(() => { if (data) setForm(data) }, [data])
   const set = (key: keyof ExpertDetectionTuning) => (v: number) => setForm(f => ({ ...f, [key]: v }))
+
+  const base = data ?? DEFAULT_DETECTION
+  const dirtyCount = FIELD_KEYS.filter(key => form[key] !== base[key]).length
+  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
+
+  useImperativeHandle(ref, () => ({
+    save: () => onSave(detectionTuningPayload(form)),
+    cancel: () => setForm(base),
+  }))
 
   if (isLoading) return (
     <div className="bg-white rounded-[24px] border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-3 h-full">
@@ -134,7 +150,8 @@ export default function DetectionColumn({
         </button>
       </div>
 
-      <div className="flex-1 py-1 divide-y divide-stone-100">
+      {/* Nút Lưu chung ở thanh dính đáy của trang (DE-04) */}
+      <fieldset disabled={isSaving} className="flex-1 py-1 divide-y divide-stone-100">
         <VerdictStatsHint stats={verdictStats} />
         <TuningStepperInput label={t('Mức ồn vượt nền')} value={form.noise_margin_db ?? 15}
           onChange={set('noise_margin_db')} min={5} max={30} step={1} unit="dB" rangeHint="Phạm vi: 5–30 dB" defaultHint="Mặc định: 15 dB" />
@@ -146,26 +163,16 @@ export default function DetectionColumn({
           onChange={set('pump_dry_min_rise_pct')} min={0.5} max={10} step={0.5} decimals={1} unit="%RH" rangeHint="Phạm vi: 0,5–10" defaultHint="Mặc định: 2 %RH" />
         <TuningStepperInput label={t('Độ sụt âm lượng báo hỏng loa')} value={form.speaker_drop_pct ?? 70}
           onChange={set('speaker_drop_pct')} min={30} max={90} step={5} unit="%" rangeHint="Phạm vi: 30–90%" defaultHint="Mặc định: 70%" />
-      </div>
+      </fieldset>
 
       {updatedAt && (
-        <p className="inline-flex items-center gap-1.5 pt-2 text-small text-stone-500">
+        <p className="mt-auto inline-flex items-center gap-1.5 pt-4 border-t border-stone-100 text-small text-stone-500">
           <Clock className="w-3.5 h-3.5 shrink-0" />
           {t('Cập nhật gần nhất: {{time}}', { time: updatedAt })}
         </p>
       )}
-
-      <div className="mt-auto pt-4 border-t border-stone-100">
-        <button type="button" onClick={() => onSave(detectionTuningPayload(form))} disabled={isSaving}
-          className={cn(
-            'w-full py-2.5 rounded-full text-sm font-medium flex items-center justify-center gap-2 transition-all duration-150',
-            isSaving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-[#27231F] text-white hover:bg-[#3D3630] shadow-sm',
-          )}>
-          {isSaving && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-          <Save className="w-4 h-4" />
-          {t('Lưu tham số phát hiện')}
-        </button>
-      </div>
     </div>
   )
-}
+})
+
+export default DetectionColumn

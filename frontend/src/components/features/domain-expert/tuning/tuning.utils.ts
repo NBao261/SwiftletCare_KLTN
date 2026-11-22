@@ -1,5 +1,11 @@
 import type { ExpertDetectionTuning } from '@/types/expert.types'
 
+// DE-04: thanh lưu dính đáy chung, mỗi khối tự validate và gọi đúng API của mình qua ref
+export interface TuningBlockHandle {
+  save: () => void
+  cancel: () => void
+}
+
 // 5 tham số phát hiện của Zone gửi xuống bộ điều khiển — backend trả 400 với khoá khác (EXPERT-FR-008)
 export const DETECTION_TUNING_KEYS: Array<keyof ExpertDetectionTuning> = [
   'noise_margin_db', 'noise_min_sec', 'pump_dry_on_sec', 'pump_dry_min_rise_pct', 'speaker_drop_pct',
