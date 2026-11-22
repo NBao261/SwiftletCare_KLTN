@@ -93,7 +93,7 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
 - **Đo NFR-04 trên đúng máy này:** fps trong log `stream.py` trên toàn bộ video đánh giá.
   - Ghi cấu hình máy (CPU, RAM, GPU nếu có) vào Report 3 §2.5 và Report 4 §3.2.
   - Trên laptop, 2 ô với model COCO mới đạt khoảng 7–12 fps (số đo chưa tin cậy), trong khi NFR-04 cần 25 fps. Đây là **rủi ro lớn nhất** của phần đếm (Design Brief R1).
-  - Nếu không đạt, có thể thử: giảm kích thước ảnh vào model, bỏ một ô, hoặc dùng GPU của PC (nếu có) qua ONNX Runtime DirectML/CUDA. Giá trị cuối cùng phải là số đo thật; không đổi ngưỡng mà không ghi lý do.
+  - Nút AI bắt buộc chạy suy luận trên GPU NVIDIA (`onnxruntime-gpu`, CUDA), không lùi về CPU: thiếu CUDA thì pipeline dừng và báo lỗi. Trên GPU RTX 3050 của máy dev, pipeline với camera thật chạy ổn định 25 fps (23/11/2026). Nếu vẫn không đạt, có thể thử giảm kích thước ảnh vào model hoặc bỏ một ô. Giá trị cuối cùng phải là số đo thật; không đổi ngưỡng mà không ghi lý do.
 
 ### 2.4. ESP32
 

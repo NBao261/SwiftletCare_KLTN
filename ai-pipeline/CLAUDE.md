@@ -22,7 +22,7 @@ python tools/pick_roi.py [image|clip|rtsp] --margin 60  # click the hole outline
 python tools/track_clip.py <clip> --start 425 --seconds 20 [--detector motion]  # video with green boxes → D:/SwiftletCare/clips/annotated
 ```
 
-`stream.py` takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY`, `--realtime` (play a file at real speed, camera demo) and `--no-mqtt`. Python 3.11–3.12 (`onnxruntime` 1.30 needs ≥ 3.11; versions pinned in plan §4). CI runs `pytest` for PRs that touch `ai-pipeline/`.
+`stream.py` takes `--source <clip|rtsp>`, `--session MORNING_EXIT|EVENING_ENTRY`, `--realtime` (play a file at real speed, camera demo) and `--no-mqtt`. Python 3.11–3.12 (`onnxruntime-gpu` 1.30 needs ≥ 3.11; versions pinned in plan §4). CI runs `pytest` for PRs that touch `ai-pipeline/`.
 
 ## Structure
 
@@ -57,7 +57,7 @@ Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `
 - **[Bắt buộc]** One detection class, `swiftlet`. Nothing new for predators (rat/snake/owl) or `PREDATOR_DETECTED`; code a PR touches that still refers to them is removed, not extended. `vision/alert` carries only `EDGE_AI_DEGRADED` (THREAT-FR-010), the one alert type the backend accepts from a camera.
 - **[Bắt buộc]** Class map, confidence/NMS thresholds, tiles and mask, counting ring and direction, tracking and extrapolation limits, session windows, publish intervals and model path come from `config/config.yaml` — no magic numbers in `src/`. A new tunable goes into the config with a comment.
 - **[Bắt buộc]** No threshold or behaviour invented without a source (Report 3, plan, Domain Expert, a measured result). A value picked by hand is labelled as such in the config comment and listed in Report 3 §4.5 (engineering constants, A-4) in the same PR.
-- **[Bắt buộc]** Runtime targets the plan's stack: `onnxruntime` + `supervision` (ByteTrack) — no `torch`/`ultralytics` in `requirements.txt` (they are for training on Colab only). New dependencies are pinned with a lower bound like the existing ones.
+- **[Bắt buộc]** Runtime targets the plan's stack: `onnxruntime-gpu` (CUDA only, no CPU fallback) + `supervision` (ByteTrack) — no `torch`/`ultralytics` in `requirements.txt` (they are for training on Colab only). New dependencies are pinned with a lower bound like the existing ones.
 
 ### Secrets, data and models
 - **[Bắt buộc]** Camera RTSP URL (it carries the camera password), MQTT credentials, `STREAM_PUSH_URL` and the/device IDs come from `.env` (`CAMERA_RTSP_URL`, `MQTT_PASSWORD` (the device's broker secret; the user name is the device ID), `STREAM_PUSH_URL`, `CAMERA_DEVICE_ID`), never from `config.yaml` or code. A new variable is added to an `.env.example` with a placeholder.
