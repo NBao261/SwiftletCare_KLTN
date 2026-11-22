@@ -9,7 +9,7 @@ import { useToastStore } from '@/stores/toastStore';
 import { MAX_SPEAKER_WINDOWS, hourLabel, validateSpeakerWindows } from '@/validations/common/speakerSchedule.validation';
 import type { SensorNode, SpeakerWindow } from '@/types';
 
-// Mặc định firmware (Config.h SPEAKER_WINDOW_*) — dùng khi thiết bị chưa từng được cấu hình lịch
+// Mặc định firmware (Config.h SPEAKER_WINDOW_*): dùng khi thiết bị chưa từng được cấu hình lịch
 const FIRMWARE_DEFAULT_WINDOWS: SpeakerWindow[] = [{ start: '05:00', end: '07:00' }, { start: '17:00', end: '19:00' }];
 const NEW_WINDOW: SpeakerWindow = { start: '17:00', end: '19:00' };
 const START_HOURS = Array.from({ length: 24 }, (_, hour) => hourLabel(hour));
@@ -17,7 +17,7 @@ const END_HOURS = Array.from({ length: 24 }, (_, hour) => hourLabel(hour + 1));
 // Âm lượng DFPlayer: số nguyên 0–30 (backend kiểm cùng khoảng)
 const MAX_VOLUME = 30;
 
-// Lịch phát loa ru của 1 bộ kit (ENV-FR-013b): tối đa 2 khung giờ tròn + âm lượng — Farm Owner được sửa
+// Lịch phát loa ru của 1 bộ kit: tối đa 2 khung giờ tròn + âm lượng: Farm Owner được sửa
 export default function SpeakerScheduleModal({ node, onClose }: { node: SensorNode; onClose: () => void }): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const updateSchedule = useUpdateSpeakerSchedule(node._id);

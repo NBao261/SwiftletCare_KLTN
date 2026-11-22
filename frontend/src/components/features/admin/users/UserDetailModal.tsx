@@ -13,7 +13,7 @@ const SECTIONS: { key: Section; label: string }[] = [
   { key: 'history', label: 'Lịch sử' },
 ]
 
-/** Khối nền xám bo góc gom các dòng cùng nhóm — có tiêu đề nhóm nhỏ phía trên */
+// Khối nền xám bo góc gom các dòng cùng nhóm: có tiêu đề nhóm nhỏ phía trên
 function Group({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <section>
@@ -23,7 +23,7 @@ function Group({ title, children }: { title?: string; children: ReactNode }) {
   )
 }
 
-/** 1 dòng: nhãn (+ chú thích nhỏ) bên trái, giá trị bên phải */
+// 1 dòng: nhãn (+ chú thích nhỏ) bên trái, giá trị bên phải
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3">
@@ -36,14 +36,10 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   )
 }
 
-/** Giá trị trống — chữ xám nghiêng (cùng kiểu "Không có" ở Nhật ký hệ thống) */
+// Giá trị trống: chữ xám nghiêng (cùng kiểu "Không có" ở Nhật ký hệ thống)
 const Empty = ({ children }: { children: ReactNode }) => <span className="italic text-warmGray">{trChildren(children)}</span>
 
-/**
- * Popup chi tiết tài khoản (AUTH-FR-011) — bố cục ngang 2 cột: trái = tên + danh mục (Thông tin / Phân công / Lịch sử),
- * phải = nội dung mục đang chọn, mỗi nhóm dòng trong 1 khối nền xám. Chiều cao cố định (h-[22rem]) nên đổi mục không
- * làm popup co giãn. Màu trung tính, chỉ nhãn trạng thái giữ màu tone.
- */
+// Chiều cao cố định để đổi mục không làm popup co giãn
 export default function UserDetailModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   const [section, setSection] = useState<Section>('info')
   // Mở tài khoản khác → về mục đầu
@@ -58,9 +54,9 @@ export default function UserDetailModal({ user, onClose }: { user: User | null; 
         {/* Tiêu đề chung "Thông tin người dùng" + dòng mô tả popup (tên, vai trò đã có ở mục Thông tin) */}
         <ModalHeader title="Thông tin người dùng" description="Liên hệ, phân công và lịch sử của tài khoản" />
 
-        {/* 22rem: vừa mục dài nhất ("Thông tin": 2 nhóm, 5 dòng) — không hiện thanh cuộn */}
+        {/* 22rem: vừa mục dài nhất ("Thông tin": 2 nhóm, 5 dòng): không hiện thanh cuộn */}
         <div className="flex h-[22rem] gap-6">
-          {/* Cột trái: danh mục — đang chọn nền đen chữ trắng như các popup Admin khác */}
+          {/* Cột trái: danh mục: đang chọn nền đen chữ trắng như các popup Admin khác */}
           <nav className="flex w-52 shrink-0 flex-col border-r border-gray-200 pr-5" aria-label={t('Mục chi tiết tài khoản')}>
             <h3 className={MODAL_SECTION_TITLE}>{t('Mục')}</h3>
             <div className="flex flex-col gap-0.5">
@@ -95,7 +91,7 @@ export default function UserDetailModal({ user, onClose }: { user: User | null; 
                 </Group>
                 <Group title="Tài khoản">
                   <Row label="Vai trò">{ROLE_LABEL[user.role]}</Row>
-                  {/* Trạng thái giữ màu tone (xanh hoạt động / đỏ khoá...) — thông tin đọc bằng màu duy nhất trong popup */}
+                  {/* Trạng thái giữ màu tone (xanh hoạt động / đỏ khoá...): thông tin đọc bằng màu duy nhất trong popup */}
                   <Row label="Trạng thái"><Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge></Row>
                 </Group>
               </>
@@ -104,13 +100,13 @@ export default function UserDetailModal({ user, onClose }: { user: User | null; 
             {section === 'history' && (
               <Group>
                 <Row label="Ngày tạo">{user.created_at ? formatDateOnly(user.created_at) : <Empty>—</Empty>}</Row>
-                {/* Khoá (AUTH-FR-011) — lý do Admin nhập lúc khoá */}
+                {/* Khoá: lý do Admin nhập lúc khoá */}
                 <Row label="Khoá tài khoản" hint={!user.is_active && user.deactivated_reason ? `${t('Lý do')}: ${user.deactivated_reason}` : undefined}>
                   {!user.is_active
                     ? (user.deactivated_at ? t('Từ {{date}}', { date: formatDateOnly(user.deactivated_at) }) : t('Đang bị khoá'))
                     : <Empty>Không</Empty>}
                 </Row>
-                {/* Yêu cầu xoá / đã xoá (AUTH-FR-012) — xử lý ở tab Yêu cầu xoá tài khoản của menu Người dùng */}
+                {/* Yêu cầu xoá / đã xoá: xử lý ở tab Yêu cầu xoá tài khoản của menu Người dùng */}
                 <Row label="Xoá tài khoản" hint={user.deletion_requested_at && !user.deleted_at ? 'Xử lý ở tab Yêu cầu xoá tài khoản' : undefined}>
                   {user.deleted_at
                     ? t('Đã xoá {{date}}', { date: formatDateOnly(user.deleted_at) })

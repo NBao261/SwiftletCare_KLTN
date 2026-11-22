@@ -26,12 +26,12 @@ import type { Alert, AlertStatus, AlertType, SeverityLevel } from '@/types';
 import type { InferredAlertType } from '@/types/expert/alerts.types';
 
 const ALERT_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED', 'RESOLVED'];
-// 'open' = còn hiệu lực (ACTIVE, ACKNOWLEDGED), hiện tách khỏi DISMISSED và RESOLVED (ALERT-FR-007)
+// 'open' = còn hiệu lực (ACTIVE, ACKNOWLEDGED), hiện tách khỏi DISMISSED và RESOLVED
 type StatusFilter = 'open' | 'all' | AlertStatus;
 type LevelFilter = 'all' | SeverityLevel;
 type VerdictFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
 const ALERT_TYPES = Object.keys(alertTypeDict.vi) as AlertType[];
-// Report 3 §1.3 "Device alert", khớp DEVICE_ALERT_TYPES của backend: Admin chỉ thấy các loại này (FARM-FR-009)
+// "Device alert", khớp DEVICE_ALERT_TYPES của backend: Admin chỉ thấy các loại này
 const DEVICE_ALERT_TYPES: AlertType[] = [
   'NODE_OFFLINE', 'EDGE_AI_DEGRADED', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'UNEXPECTED_RESTART',
   'SPEAKER_FAILURE', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT', 'CONFIG_MISMATCH', 'MAINTENANCE_DUE',
@@ -39,7 +39,7 @@ const DEVICE_ALERT_TYPES: AlertType[] = [
 const INFERRED_TYPES: InferredAlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'];
 const isInferred = (type: AlertType) => (INFERRED_TYPES as AlertType[]).includes(type);
 
-// ALERT-FR-007, 009, 018 — /alerts (mặc định chỉ cảnh báo còn hiệu lực, kèm số chờ xác nhận) của Farm Owner, Farm Technician (nhà được giao), Admin (chỉ xem cảnh báo thiết bị): lọc phạm vi, trạng thái, mức độ, loại và kết luận, chi tiết, xác nhận kèm nguyên nhân
+// Mặc định chỉ cảnh báo còn hiệu lực; Admin chỉ xem cảnh báo thiết bị
 export default function FarmOwnerAlertsPage(): JSX.Element {
   const { t } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -61,7 +61,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
   // Kết luận chuyên gia chỉ có ở cảnh báo suy luận: chọn loại khác thì bỏ lọc kết luận
   const verdictApplies = typeFilter === 'all' || isInferred(typeFilter);
   const verdict = verdictApplies && verdictFilter !== 'all' ? verdictFilter : undefined;
-  // ALERT-FR-007 — lọc theo trang trại, nhà, Zone (Admin không có cấu trúc farm nên không có bộ lọc phạm vi)
+  // lọc theo trang trại, nhà, Zone (Admin không có cấu trúc farm nên không có bộ lọc phạm vi)
   const scope = useScopeFilter();
   const place = isAdmin ? {} : {
     ...(scope.farmId && { farmId: scope.farmId }),
@@ -102,7 +102,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
   const { data: allZones } = useAllZones();
   const { data: sensorNodes } = useSensorNodes();
   const { data: cameras } = useCameraNodes();
-  // Admin không đọc được cấu trúc farm (GET /farms trả rỗng): vị trí lấy từ danh sách thiết bị toàn hệ thống (FARM-FR-009)
+  // Admin không đọc được cấu trúc farm (GET /farms trả rỗng): vị trí lấy từ danh sách thiết bị toàn hệ thống
   const { data: systemStatus } = useSystemNodeStatus(isAdmin);
   const adminLocations = useMemo(
     () => new Map((systemStatus?.nodes ?? []).map(node => [node._id, nodeLocation(node)])),
@@ -114,7 +114,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
     ...(sensorNodes ?? []).map(node => [node._id, node.device_id] as const),
     ...(cameras ?? []).map(camera => [camera._id, camera.device_id] as const),
   ]), [sensorNodes, cameras]);
-  // SYSTEM-FR-004 — thiết bị giả lập ghi nhãn ở cột và ngăn chi tiết
+  // thiết bị giả lập ghi nhãn ở cột và ngăn chi tiết
   const simulatedIds = useMemo(() => new Set(
     [...(sensorNodes ?? []), ...(cameras ?? [])].filter(device => device.simulated).map(device => device._id),
   ), [sensorNodes, cameras]);

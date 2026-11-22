@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn'
 import type { DashboardRelayStates } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import type { ControlMode, ControlOutput } from '@/types'
 
-// 3 relay: phun sương, loa, quạt (Report 3 §8: không có relay sưởi)
+// 3 relay: phun sương, loa, quạt (: không có relay sưởi)
 const RELAY_ITEMS = [
   { key: 'misting', labelKey: 'relay.misting', icon: DropIcon },
   { key: 'ventilation', labelKey: 'relay.ventilation', icon: WindIcon },

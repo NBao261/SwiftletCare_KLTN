@@ -1,7 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { FarmMemberRole } from '@/types'
 
-/** Invitation – SRS §8.2, AUTH-FR-010, Flow 12 */
 export interface IInvitation extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId

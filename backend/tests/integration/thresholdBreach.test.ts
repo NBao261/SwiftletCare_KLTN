@@ -1,9 +1,3 @@
-/**
- * ALERT-FR-012, BR-34, BR-16 (TC-F07-02, DF-6) — THRESHOLD_BREACH qua đường nhận telemetry thật:
- * chỉ tạo khi 1 chỉ số ở ngoài ngưỡng liên tục đủ thời gian chờ (10 phút nhiệt độ/độ ẩm, 5 phút
- * ánh sáng/NH3/CO2), mang chi tiết (chỉ số, giá trị, ngưỡng, chiều, lúc bắt đầu), còn sống khi chỉ số
- * vẫn ngoài ngưỡng và tự đóng sau 5 phút về trong ngưỡng.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -69,7 +63,7 @@ async function seed() {
   const zone = await Zone.create({ house_id: house._id, farm_id: farm._id, name: 'Tầng 1' })
   const node = await SensorNode.create({ device_id: `ESP-B${seq}`, zone_id: zone._id, status: 'ONLINE' })
   const t0 = Date.now()
-  /** Mẫu sống tại phút `minute` (giây `second`) tính từ t0; `now` đi theo mẫu */
+  // Mẫu sống tại phút `minute` (giây `second`) tính từ t0; `now` đi theo mẫu
   const at = (minute: number, over: Partial<TelemetryPayload> = {}, second = 0) => {
     const ts = t0 + minute * MIN + second * 1000
     return ingestTelemetry({
@@ -77,14 +71,14 @@ async function seed() {
       sound_db: 40, relay_states: { misting: false, speaker: false, ventilation: false }, control_mode: 'AUTO', ...over,
     }, ts)
   }
-  /** Gửi mẫu mỗi 10 giây từ phút `from` tới hết phút `to` */
+  // Gửi mẫu mỗi 10 giây từ phút `from` tới hết phút `to`
   const run = async (from: number, to: number, over: Partial<TelemetryPayload>) => {
     for (let s = from * 60; s <= to * 60; s += 10) await at(0, over, s)
   }
   return { owner, expert, zone, node, t0, at, run }
 }
 
-/** raiseThresholdAlert chạy không chờ — đợi các lượt ghi xong */
+// raiseThresholdAlert chạy không chờ: đợi các lượt ghi xong
 const settle = () => new Promise(r => setTimeout(r, 150))
 const breaches = (zoneId: unknown) => Alert.find({ zone_id: zoneId, type: 'THRESHOLD_BREACH' }).lean()
 const LOW_HUMIDITY = { humidity: DEFAULT_THRESHOLDS.humidity_min - 5 }
@@ -202,8 +196,7 @@ describe('tự đóng (BR-16)', () => {
     await settle()
     const [alert] = await breaches(zone._id)
 
-    // 1 mẫu trong ngưỡng rồi lại ra ngoài: quãng chờ mới chưa đủ, nhưng cảnh báo đang mở vẫn được
-    // gia hạn (mô phỏng lần thấy cuối đã 2 phút trước), chưa coi là "về trong ngưỡng 5 phút"
+    // Quãng chờ mới chưa đủ nhưng cảnh báo mở vẫn được gia hạn
     await Alert.updateOne({ _id: alert._id }, { last_seen_at: new Date(Date.now() - 2 * MIN) })
     await at(10, {}, 5)
     await run(10.5, 11, LOW_HUMIDITY)

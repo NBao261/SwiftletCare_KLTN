@@ -34,9 +34,9 @@ import { useToastStore } from '@/stores/toastStore'
 import type { Farm } from '@/types'
 import type { HouseHealth, HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 
-/** Khung kết quả cao CỨNG (px) = bảng 10 dòng × 68px + header — lưới/danh sách/trống đều chiếm đúng chừng này, tải lại hay đổi chế độ trang không đổi chiều cao */
+// Khung kết quả cao cố định để đổi chế độ không làm trang đổi chiều cao
 const RESULTS_MIN_HEIGHT = 740
-/** Lưới 2 cột × 2 hàng card trong mỗi trang trại; nhiều hơn thì phân trang thay vì kéo dài khung */
+// Lưới 2 cột × 2 hàng card trong mỗi trang trại; nhiều hơn thì phân trang thay vì kéo dài khung
 const GRID_PAGE_SIZE = 4
 
 type Filter = 'all' | HouseHealth
@@ -44,7 +44,7 @@ type Filter = 'all' | HouseHealth
 const NO_IDS = new Set<string>()
 type View = 'grid' | 'list'
 
-// Trang trại: các farm theo khung lọc Trang trại → Nhà → Zone, bấm farm xổ các nhà yến bên trong (lưới / danh sách); sửa, xoá farm và thêm nhà ngay trên hàng farm
+// Trang trại theo khung lọc, bấm farm xổ các nhà
 export default function FarmOwnerFarmsPage() {
   const { t, num } = useTranslation(farmDict)
   useScrollToTop()
@@ -79,7 +79,7 @@ export default function FarmOwnerFarmsPage() {
   const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
 
-  // Backend: POST /farms và POST /farms/:id/houses chỉ cho FARM_OWNER (FARM-FR-001, 002)
+  // Backend: POST /farms và POST /farms/:id/houses chỉ cho FARM_OWNER
   const canCreateFarm = usePermission('FARM_OWNER')
   const canAddHouse = canCreateFarm
 
@@ -93,11 +93,11 @@ export default function FarmOwnerFarmsPage() {
   const [showCreateFarm, setShowCreateFarm] = useState(false)
   const [editFarm, setEditFarm] = useState<Farm | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Farm | null>(null)
-  // EXPERT-FR-015 — farm đang mở popup áp hồ sơ cấu hình
+  // farm đang mở popup áp hồ sơ cấu hình
   const [applyProfileFarm, setApplyProfileFarm] = useState<Farm | null>(null)
   // Farm người dùng bấm xổ khi đang xem tất cả trang trại (mặc định thu hết)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
-  // Đang tìm / lọc / chọn farm ở khung lọc thì farm có kết quả tự xổ, trừ farm người dùng vừa thu lại (đổi điều kiện lọc thì xổ lại)
+  // Đang tìm hoặc lọc thì farm có kết quả tự xổ, trừ farm vừa thu lại
   const [collapsed, setCollapsed] = useState<{ key: string; ids: Set<string> }>({ key: '', ids: new Set() })
   const isFiltering = search.trim() !== '' || filter !== 'all'
   const isAutoExpand = isFiltering || scope.farmId !== ''
@@ -143,7 +143,7 @@ export default function FarmOwnerFarmsPage() {
       }
       visible.push(node)
     }
-    // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm) — chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
+    // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm): chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
     const pinnedFirst = [...visible.filter(node => pinned.has(node.house._id)), ...visible.filter(node => !pinned.has(node.house._id))]
     return { visible: pinnedFirst, counts }
   }, [scopedHouses, search, filter, staffByHouse, pinned])

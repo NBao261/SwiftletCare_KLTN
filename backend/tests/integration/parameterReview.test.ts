@@ -1,9 +1,3 @@
-/**
- * EXPERT-FR-010, Report 3 §6.10 — mục duyệt thay đổi của Farm Owner trên farm có Domain Expert:
- * thay đổi áp dụng ngay và mở 1 mục PENDING_REVIEW (cập nhật nếu sửa tiếp, giữ giá trị gốc); chuyên gia
- * chấp nhận (ACCEPTED), hoàn lại (REVERTED, lịch sử EXPERT_REVERT) hoặc tự sửa (ADJUSTED); mục đã
- * đóng → 409; Farm Owner, Technician, Administrator không duyệt được (403).
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -261,7 +255,7 @@ describe('nhóm tham số mới (BR-22, Report 3 4.2.15)', () => {
     expect((await Zone.findById(zone._id).lean())!.detection_tuning).toEqual(DEFAULT_DETECTION_TUNING)
     expect(publishDeviceConfig).toHaveBeenCalled()
     expect(await review(zone._id, 'detection')).toMatchObject({ status: 'REVERTED' })
-    // Lần áp lại ghi audit nhưng không vào lịch sử (decided_in) và không báo riêng: chỉ một thông báo "hoàn tác"
+    // Chỉ một thông báo "hoàn tác"
     expect(await AuditLog.findOne({ action: 'DETECTION_TUNING_UPDATED', actor_role: 'DOMAIN_EXPERT' }).lean())
       .toMatchObject({ metadata: { decided_in: 'parameter_review' } })
     const ownerNotices = await Notification.find({ user_id: owner._id }).lean()
@@ -296,7 +290,7 @@ describe('nhóm tham số mới (BR-22, Report 3 4.2.15)', () => {
     await send('put', `/expert-activity/reviews/${first!._id}/revert`, t.expert).expect(409)
     expect(await review(camera._id, 'counting_ring')).toMatchObject({ status: 'PENDING_REVIEW' })
 
-    // Chuyên gia vẽ lại: mục cũ đóng ADJUSTED; Farm Owner đổi tiếp thì mục mới giữ vòng của chuyên gia làm giá trị gốc
+    // Mục mới giữ vòng của chuyên gia làm giá trị gốc
     await send('put', path, t.expert, { points: RING, into_ring_is_exit: false }).expect(200)
     expect(await ParameterReview.findById(first!._id).lean()).toMatchObject({ status: 'ADJUSTED' })
     await send('put', path, t.owner, { points: RING.slice(0, 3), into_ring_is_exit: true }).expect(200)

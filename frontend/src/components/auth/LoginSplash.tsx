@@ -19,7 +19,7 @@ function transformFromOrigin(origin: LogoBox, element: HTMLElement): string {
   return `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
 
-// Màn chuyển cảnh sau khi đăng nhập thành công — gắn ở App, nằm trên mọi route để trang trong tải phía dưới
+// Màn chuyển cảnh sau khi đăng nhập thành công: gắn ở App, nằm trên mọi route để trang trong tải phía dưới
 export default function LoginSplash(): JSX.Element | null {
   const isPlaying = useLoginSplashStore(state => state.isPlaying);
   if (!isPlaying) return null;

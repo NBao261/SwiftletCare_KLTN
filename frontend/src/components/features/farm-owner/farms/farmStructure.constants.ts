@@ -14,7 +14,7 @@ export interface MetricMeta {
   icon: Icon
 }
 
-/** 6 chỉ số của Zone, đúng thứ tự hiển thị ở màn chi tiết zone (đơn vị đo không dịch — FE_Design §6) */
+// 6 chỉ số của Zone, đúng thứ tự hiển thị ở màn chi tiết zone (đơn vị đo không dịch: FE_Design)
 export const ZONE_METRICS: MetricMeta[] = [
   { key: 'temperature', labelKey: 'metric.temperature', unit: '°C', decimals: 1, icon: ThermometerIcon },
   { key: 'humidity', labelKey: 'metric.humidity', unit: '%', decimals: 0, icon: DropIcon },
@@ -24,10 +24,10 @@ export const ZONE_METRICS: MetricMeta[] = [
   { key: 'sound', labelKey: 'metric.sound', unit: 'dB', decimals: 0, icon: SpeakerHighIcon },
 ]
 
-/** Nút phụ dạng capsule của màn Cấu trúc Farm ("Chi tiết nhà", "Mở Zone"…): nền xám nhạt, rê chuột đổi sang đen chữ trắng */
+// Nút phụ dạng capsule
 export const CAPSULE_ACTION_CLASS = 'border-warmGray/15 bg-warmGray/5 font-semibold transition-all hover:bg-charcoal hover:text-white'
 
-/** Khoảng an toàn của 1 chỉ số để hiện dưới số đo; âm thanh chưa có ngưỡng trong Zone.thresholds nên trả undefined */
+// Âm thanh chưa có ngưỡng nên trả undefined
 export function thresholdRange(key: MetricMeta['key'], t: Thresholds): string | undefined {
   switch (key) {
     case 'temperature': return `${t.temp_min}–${t.temp_max} °C`
@@ -39,16 +39,16 @@ export function thresholdRange(key: MetricMeta['key'], t: Thresholds): string | 
   }
 }
 
-/** Tra nhãn/đơn vị/số lẻ theo key — mọi nơi hiện 1 chỉ số (banner, card zone, drawer) định dạng giống nhau */
+// Tra nhãn/đơn vị/số lẻ theo key: mọi nơi hiện 1 chỉ số (banner, card zone, drawer) định dạng giống nhau
 export const METRIC_BY_KEY = Object.fromEntries(ZONE_METRICS.map(m => [m.key, m])) as Record<MetricMeta['key'], MetricMeta>
 
 // Bảng thành viên, lịch trực của trang nhà: khung cố định 5 dòng, nhiều hơn thì phân trang
 export const MEMBER_PAGE_SIZE = 5
 export const MEMBER_ROW_HEIGHT = 64
 
-// AUTH-FR-014 — nhãn ngày (0 = Chủ nhật như backend) và loại ca của lịch trực
+// nhãn ngày (0 = Chủ nhật như backend) và loại ca của lịch trực
 export const ROSTER_DAY_LABEL: FarmKey[] = ['roster.day.0', 'roster.day.1', 'roster.day.2', 'roster.day.3', 'roster.day.4', 'roster.day.5', 'roster.day.6']
 export const ROSTER_ROLE_LABEL: Record<RosterShift['role'], FarmKey> = { PRIMARY: 'roster.role.PRIMARY', BACKUP: 'roster.role.BACKUP' }
 
-// Report 3 §4.5 — tên trang trại, nhà, Zone tối đa 50 ký tự, cùng giới hạn với backend (FARM-FR-001, 002)
+// tên trang trại, nhà, Zone tối đa 50 ký tự, cùng giới hạn với backend
 export const STRUCTURE_NAME_MAX_LENGTH = 50

@@ -7,7 +7,7 @@ import {
 import { NO_VALUE } from '@/constants/display';
 import type { HouseHealthReport } from '@/types';
 
-// Font mặc định của jsPDF không có dấu tiếng Việt — nhúng Plus Jakarta Sans (font của web, OFL) từ public/fonts
+// Font mặc định của jsPDF không có dấu tiếng Việt: nhúng Plus Jakarta Sans (font của web, OFL) từ public/fonts
 const FONT = 'PlusJakartaSans';
 const FONT_FILES = { normal: 'PlusJakartaSans-Regular.ttf', bold: 'PlusJakartaSans-Bold.ttf' } as const;
 const MARGIN = 14;
@@ -28,7 +28,7 @@ async function fontBase64(file: string): Promise<string> {
   return btoa(binary);
 }
 
-// EXPERT-FR-013 — PDF có đúng số trên màn (cùng healthReport.utils), không in id nội bộ
+// PDF có đúng số trên màn (cùng healthReport.utils), không in id nội bộ
 export async function downloadHealthReportPdf(report: HouseHealthReport, format: ReportFormat): Promise<void> {
   // Tải thư viện và font lúc bấm, không nằm trong bundle đầu
   const [{ jsPDF }, { default: autoTable }, regular, bold] = await Promise.all([
@@ -44,7 +44,7 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
   doc.addFont(FONT_FILES.normal, FONT, 'normal');
   doc.addFileToVFS(FONT_FILES.bold, bold);
   doc.addFont(FONT_FILES.bold, FONT, 'bold');
-  // Dấu tiếng Việt cao hơn chữ Latin — giãn dòng để dấu không chạm dòng trên (autoTable cũng đọc hệ số này)
+  // Dấu tiếng Việt cao hơn chữ Latin: giãn dòng để dấu không chạm dòng trên (autoTable cũng đọc hệ số này)
   doc.setLineHeightFactor(1.35);
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -150,7 +150,7 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
   });
   y = (doc as JsPdf & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3;
 
-  // Bảng so sánh như màn hình: hàng = chỉ số, cột = Zone; tối đa 3 Zone/bảng để chữ không bị bóp (A4 dọc), nhiều hơn thì thêm bảng
+  // Tối đa 3 Zone mỗi bảng để chữ không bị bóp trên A4 dọc
   heading(t('rd.zones'));
   if (report.zone_sections.length === 0) text(t('rd.noZones'));
   for (let start = 0; start < report.zone_sections.length; start += ZONES_PER_TABLE) {

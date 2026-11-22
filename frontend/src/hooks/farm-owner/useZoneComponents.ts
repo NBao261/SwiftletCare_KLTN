@@ -20,7 +20,7 @@ async function latestZoneReading(zoneId: string): Promise<TelemetryRecord[]> {
   return response.data.data ? [response.data.data] : [];
 }
 
-// Kiểm tra thiết bị của bộ kit trong 1 Zone: chỉ tải khi bấm nút, giữ kết quả lần bấm đó (không realtime, không tự làm mới)
+// Chỉ tải khi bấm, không realtime
 export function useZoneComponents(zoneId: string, nodes: DeviceItem[]) {
   const sensorIds = useMemo(() => nodes.filter(node => node.type === 'sensor').map(node => node.id), [nodes]);
   const query = useQuery({
@@ -42,7 +42,7 @@ export function useZoneComponents(zoneId: string, nodes: DeviceItem[]) {
         checkedAt,
       };
     },
-    // Chỉ tải khi bấm Kiểm tra thiết bị và giữ kết quả lần đó (không realtime); lỗi thì người dùng bấm lại, không tự thử lại
+    // Lỗi thì người dùng bấm lại, không tự thử lại
     enabled: false,
     staleTime: Infinity,
     gcTime: Infinity,

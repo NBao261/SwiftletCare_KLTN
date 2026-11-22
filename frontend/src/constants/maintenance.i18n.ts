@@ -1,6 +1,6 @@
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển màn Lịch bảo trì của Farm Owner (/maintenance) — OPS-FR-005, 006, 008
+// Từ điển màn Lịch bảo trì của Farm Owner (/maintenance)
 const vi = {
   // Đầu trang
   'page.noFarmTitle': 'Chưa có trang trại',

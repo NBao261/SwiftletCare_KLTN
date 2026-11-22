@@ -30,7 +30,7 @@ interface MaintenancePlanTableProps {
   onAction: (action: PlanAction, plan: MaintenancePlan) => void;
 }
 
-// OPS-FR-005, 006 — bảng kế hoạch: việc, nhà, chu kỳ, trạng thái, hạn, lần gần nhất, menu thao tác
+// bảng kế hoạch: việc, nhà, chu kỳ, trạng thái, hạn, lần gần nhất, menu thao tác
 export default function MaintenancePlanTable({
   plans, serverPagination, houseNames, canManage, canComment, emptyNotice, onAction,
 }: MaintenancePlanTableProps): JSX.Element {

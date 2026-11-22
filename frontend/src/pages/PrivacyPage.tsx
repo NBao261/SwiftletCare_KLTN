@@ -6,8 +6,7 @@ import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/authStore';
 import { useLanguageStore, type Lang } from '@/stores/languageStore';
 
-// Chính sách quyền riêng tư công khai (trang đăng nhập, URL chính sách khi đưa app mobile lên store).
-// Đã đăng nhập thì chuyển sang bản trong khung app (/settings/privacy).
+// Bản công khai; đã đăng nhập thì chuyển sang /settings/privacy
 export default function PrivacyPage(): JSX.Element | null {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   const hasHydrated = useAuthStore(s => s.hasHydrated);

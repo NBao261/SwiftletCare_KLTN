@@ -23,7 +23,7 @@ interface Props {
 
 type NumericKey = Exclude<keyof ExpertFuzzyTuning, 'fuzzy_input_filter'>
 
-// 4 hệ số số học của bộ điều khiển mờ (ENV-FR-021); khoảng giá trị lấy từ luật dùng chung với backend
+// 4 hệ số số học của bộ điều khiển mờ; khoảng giá trị lấy từ luật dùng chung với backend
 const TILES: Array<{ key: NumericKey; label: string; step: number; decimals: number }> = [
   { key: 'fuzzy_humidity_band', label: 'Dải biên độ ẩm', step: 0.5, decimals: 1 },
   { key: 'fuzzy_temp_band', label: 'Dải biên nhiệt độ', step: 0.5, decimals: 1 },

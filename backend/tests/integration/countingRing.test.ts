@@ -1,7 +1,3 @@
-/**
- * VISION-FR-018 — vòng đếm của camera do Domain Expert vẽ: kiểm dữ liệu, lịch sử + audit, gửi xuống
- * nút AI qua `config/update` của nhà, và gửi lại khi nút AI vừa kết nối lại (tin không retained).
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

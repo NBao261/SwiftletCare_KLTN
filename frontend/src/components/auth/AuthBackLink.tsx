@@ -1,7 +1,7 @@
 import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 
-// Nút quay lại đăng nhập ở hàng logo của trang Quên mật khẩu / Chính sách — khung ảnh trượt về bên phải
+// Nút quay lại đăng nhập ở hàng logo của trang Quên mật khẩu / Chính sách: khung ảnh trượt về bên phải
 export default function AuthBackLink({ label = 'Quay lại đăng nhập' }: { label?: string }): JSX.Element {
   return (
     <Link

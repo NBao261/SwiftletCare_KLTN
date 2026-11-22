@@ -12,7 +12,7 @@ interface ReplaceControllerModalProps {
   onClose: () => void;
 }
 
-// FARM-FR-008 — thay bộ điều khiển hỏng: backend đăng ký thiết bị mới trước, sai mã kích hoạt thì thiết bị cũ giữ nguyên
+// thay bộ điều khiển hỏng: backend đăng ký thiết bị mới trước, sai mã kích hoạt thì thiết bị cũ giữ nguyên
 export default function ReplaceControllerModal({ device, onClose }: ReplaceControllerModalProps): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const replace = useReplaceSensorNode();

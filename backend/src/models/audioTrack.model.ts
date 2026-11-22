@@ -1,18 +1,13 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-/**
- * AudioTrack – SRS §8.2 `audio_tracks`, ENV-FR-013c. Danh mục file loa ru đã
- * upload cho 1 thiết bị — KHÔNG phải nguồn DFPlayer phát (DFPlayer chỉ đọc thẻ
- * SD vật lý). File trên MinIO chỉ để nghe lại trên web; `synced_to_sd` do
- * Technician tự đánh dấu sau khi chép tay file vào thẻ.
- */
+// DFPlayer chỉ đọc thẻ SD; file MinIO chỉ để nghe lại, synced_to_sd do người dùng tự đánh dấu
 export interface IAudioTrack extends Document {
   _id: Types.ObjectId
   node_id: Types.ObjectId
-  /** Khớp tên file trên thẻ SD: 2 = 0002.mp3 (Technician tự nhập) */
+  // 2 = 0002.mp3 trên thẻ SD
   track_number: number
   display_name: string
-  /** Key object trên MinIO — URL nghe thử được ký tạm lúc đọc, không lưu cứng */
+  // URL nghe thử ký tạm lúc đọc
   file_key: string
   file_size_bytes: number
   synced_to_sd: boolean
@@ -34,7 +29,6 @@ const audioTrackSchema = new Schema<IAudioTrack>(
   { timestamps: false }
 )
 
-// 1 số thứ tự = 1 file trên thẻ SD của thiết bị đó
 audioTrackSchema.index({ node_id: 1, track_number: 1 }, { unique: true })
 
 export const AudioTrack = model<IAudioTrack>('AudioTrack', audioTrackSchema)

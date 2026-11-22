@@ -11,7 +11,6 @@ interface MongoError extends Error {
 export function errorHandler(err: MongoError | AppError | MulterError, req: Request, res: Response, _next: NextFunction): void {
   logger.error('Unhandled error', { err, path: req.path, method: req.method })
 
-  // Lỗi nghiệp vụ do service throw (NotFoundError/ForbiddenError/... — utils/appError.util.ts)
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
@@ -20,7 +19,6 @@ export function errorHandler(err: MongoError | AppError | MulterError, req: Requ
     return
   }
 
-  // Upload file — nhạc loa ru ≤ 10 MB (ENV-FR-013c), ảnh tại chỗ ≤ 5 MB (ALERT-FR-018, EXPERT-FR-021)
   if (err instanceof MulterError) {
     const message = err.code === 'LIMIT_FILE_SIZE'
       ? 'File vượt quá dung lượng cho phép (nhạc 10MB, ảnh 5MB)'
@@ -35,8 +33,7 @@ export function errorHandler(err: MongoError | AppError | MulterError, req: Requ
     res.status(422).json({ success: false, error: { code: 'VALIDATION_ERROR', message: err.message } })
     return
   }
-  // ObjectId sai định dạng (VD :id không phải hex 24 ký tự) — trước đây rơi
-  // xuống nhánh 500 mặc định, báo sai là lỗi server trong khi đây là lỗi input.
+  // ObjectId sai định dạng là lỗi input, không phải 500
   if (err.name === 'CastError') {
     res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'ID không hợp lệ' } })
     return

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { getSocket } from '@/lib/socket';
 
-// Socket đang kết nối hay không — màn realtime dùng để hiện "Trực tiếp / Tự làm mới" và bật hỏi lại định kỳ khi mất socket (FE_Design 5.5)
+// Mất socket thì màn realtime bật hỏi lại định kỳ
 export function useSocketConnected(): boolean {
   const [isConnected, setIsConnected] = useState(() => getSocket().connected);
 

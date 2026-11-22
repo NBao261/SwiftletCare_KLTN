@@ -12,10 +12,10 @@ import logger from '@/utils/logger.util'
 import type { TelemetryPayload, CurrentUser } from '@/types'
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
-/** Sáu số đo của controller (Report 4 §7.2): thiếu hoặc null là cảm biến báo cũ hoặc lỗi */
+// Thiếu hoặc null là cảm biến báo cũ hoặc lỗi
 const SENSOR_FIELDS = ['temperature', 'humidity', 'light_lux', 'nh3_ppm', 'co2_ppm', 'sound_db'] as const
 
-/** GET /telemetry/zones/:id/latest – ENV-FR-004. Zone chưa có số đo nào → null (trạng thái rỗng, không phải lỗi) */
+// Zone chưa có số đo thì null, không phải lỗi
 export async function getLatest(zoneId: string, user: CurrentUser): Promise<ITelemetry | null> {
   await assertZoneAccess(zoneId, user)
   const latest = await Telemetry.findOne({ zone_id: zoneId }).sort({ timestamp: -1 }).lean()
@@ -25,7 +25,6 @@ export async function getLatest(zoneId: string, user: CurrentUser): Promise<ITel
 export interface HistoryQuery { from?: string; to?: string; page?: number; limit?: number }
 export interface HistoryResult { records: ITelemetry[]; total: number; page: number; limit: number }
 
-/** GET /telemetry/zones/:id/history – ANALYTICS-FR-001 */
 export async function getHistory(zoneId: string, user: CurrentUser, query: HistoryQuery): Promise<HistoryResult> {
   await assertZoneAccess(zoneId, user)
 
@@ -47,30 +46,22 @@ export async function getHistory(zoneId: string, user: CurrentUser, query: Histo
   return { records: records as unknown as ITelemetry[], total, page, limit }
 }
 
-/**
- * ingestTelemetry – ENV-FR-001, ENV-FR-004, ENV-FR-005 (gọi từ mqtt/handlers/telemetry.handler.ts)
- *
- * `deviceId` trong payload (không phải farmId/houseId/zoneId trong topic MQTT
- * — đó chỉ là slug định danh, không phải ObjectId Mongo) dùng để tra
- * SensorNode.zone_id thật đã gán lúc onboarding (FARM-FR-003).
- */
-/** Firmware gửi telemetry mỗi ~1s cho dashboard; DB chỉ cần 1 mẫu/khoảng này (trừ lúc chuyển bình thường ↔ vượt ngưỡng) */
+// Firmware gửi ~1s cho dashboard; DB chỉ cần 1 mẫu/khoảng này
 export const TELEMETRY_PERSIST_INTERVAL_MS = 10_000
-/** Mẫu cũ hơn mức này là dữ liệu buffer offline (REL-NFR-003) được flush lại, không phải số liệu sống */
+// Cũ hơn mức này là dữ liệu buffer offline flush lại
 export const STALE_TELEMETRY_MS = 60_000
 const MAX_BACKDATE_MS = 7 * 24 * 60 * 60 * 1000
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000
 
-// ponytail: in-memory theo từng process — chạy nhiều instance backend thì mỗi
-// instance tự throttle riêng (ghi dày hơn), chuyển sang Redis nếu scale ngang.
+// In-memory theo process; nhiều instance thì chuyển Redis
 const lastPersisted = new Map<string, { at: number; anomaly: boolean }>()
 
-/** Thời điểm đo do firmware gửi (epoch ms, cần NTP) — thiếu/vô lý (đồng hồ chưa sync) thì lấy giờ nhận */
+// Thiếu hoặc vô lý (chưa sync NTP) thì lấy giờ nhận
 function resolveSampleTime(ts: unknown, now: number): number {
   return isFiniteNumber(ts) && ts >= now - MAX_BACKDATE_MS && ts <= now + MAX_CLOCK_SKEW_MS ? ts : now
 }
 
-/** `now`: giờ nhận mẫu — test truyền vào để chạy qua thời gian chờ của BR-34 mà không phải đợi thật */
+// Test truyền now để chạy qua thời gian chờ
 export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now()): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong payload telemetry')
 
@@ -81,24 +72,15 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
   const isStale = now - sampleTime > STALE_TELEMETRY_MS
   const nodeId = String(node._id)
 
-  // ENV-FR-004 — đối chiếu ngưỡng của Zone để gắn cờ bất thường + sinh cảnh báo.
-  // Zone bị xoá giữa chừng thì vẫn lưu telemetry (không mất dữ liệu), chỉ bỏ
-  // qua phần đánh giá ngưỡng.
+  // Zone bị xoá giữa chừng thì vẫn lưu telemetry, chỉ bỏ đánh giá ngưỡng
   const zone = await Zone.findById(node.zone_id).lean()
   const breaches = zone ? findThresholdBreaches(payload, zone.thresholds) : []
-  // BR-34 — quãng vượt ngưỡng tính trên MỌI mẫu sống (không chỉ mẫu được lưu) để 1 mẫu trong ngưỡng
-  // cắt được quãng chờ; mẫu buffer cũ không tham gia (tình trạng đã qua). Im lặng quá ngưỡng mất kết nối
-  // (BR-10) thì đếm lại
+  // Tính trên mọi mẫu sống để 1 mẫu trong ngưỡng cắt được quãng chờ; mẫu buffer không tham gia
   const dwell = zone && !isStale ? trackBreachDwell(nodeId, payload, breaches, sampleTime, OFFLINE_THRESHOLD_MS) : undefined
 
-  // Mẫu buffer offline luôn được ghi (mỗi dòng đã cách nhau ~10s ở firmware) và
-  // không tham gia throttle của luồng sống. Mẫu sống: tối đa 1 mẫu/TELEMETRY_PERSIST_INTERVAL_MS
-  // kể cả khi vượt ngưỡng kéo dài (trước đây ghi mọi mẫu → 1 bản ghi/giây); chỉ
-  // lúc BẮT ĐẦU vượt ngưỡng mới ghi ngay. Lúc hết vượt ngưỡng chờ mốc 10s kế
-  // tiếp — nếu cả 2 chiều đều ghi ngay, chỉ số dao động quanh ngưỡng mỗi giây
-  // sẽ lại ghi mọi mẫu; như vậy dao động chỉ tốn tối đa ~2 bản ghi/10s.
+  // Buffer luôn ghi. Sống: tối đa 1 mẫu/khoảng, chỉ lúc bắt đầu vượt ngưỡng mới ghi ngay
   const anomaly = breaches.length > 0
-  // ENV-FR-004 — cảm biến controller không đọc được gửi null (NaN ở firmware): lưu là thiếu, ghi tên lại
+  // Cảm biến lỗi gửi null: lưu là thiếu, ghi tên lại
   const staleFields = SENSOR_FIELDS.filter(field => !isFiniteNumber(payload[field]))
   const last = lastPersisted.get(nodeId)
   const persist = isStale || !last || (anomaly && !last.anomaly) || sampleTime - last.at >= TELEMETRY_PERSIST_INTERVAL_MS
@@ -117,7 +99,7 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
       ventilation_pct: isFiniteNumber(payload.control_output?.ventilation) ? payload.control_output?.ventilation : undefined,
       misting_on:      payload.relay_states?.misting,
       ventilation_on:  payload.relay_states?.ventilation,
-      // THREAT-FR-014 — dòng âm là số đo lỗi (shunt đo một chiều), không lưu
+      // Dòng âm là số đo lỗi (shunt một chiều)
       pump_current_a: isFiniteNumber(payload.pump_current_a) && payload.pump_current_a >= 0 ? payload.pump_current_a : undefined,
       fan_current_a:  isFiniteNumber(payload.fan_current_a) && payload.fan_current_a >= 0 ? payload.fan_current_a : undefined,
       is_anomaly: anomaly,
@@ -125,27 +107,20 @@ export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now(
       ...(anomaly && { anomaly_fields: [...new Set(breaches.map(b => b.metric))] }),
       ...(payload.buffered && { buffered: true }),
     }).catch((err: { code?: number }) => {
-      if (err.code === 11000) return null // bản QoS 1 giao lại, mẫu đã có
+      if (err.code === 11000) return null // QoS 1 giao lại
       throw err
     })
     if (!stored) return
     if (!isStale) lastPersisted.set(nodeId, { at: sampleTime, anomaly })
   }
 
-  // Thiết bị đang gửi dữ liệu = đang sống. Chỉ ghi khi cần (≤ 1 lần/10s, dư so
-  // với ngưỡng offline 30s) thay vì save() mỗi giây.
+  // Chỉ ghi khi cần thay vì save() mỗi giây
   if (persist || node.status !== 'ONLINE') await markNodeSeen(node)
 
-  // Dữ liệu cũ flush lại: chỉ lưu lịch sử — không bắn cảnh báo cho tình trạng
-  // đã qua, không ghi đè số liệu sống trên dashboard.
+  // Dữ liệu cũ chỉ lưu lịch sử: không cảnh báo, không ghi đè số sống
   if (isStale) return
 
-  // Không chặn luồng ghi telemetry nếu Alert Engine lỗi — dữ liệu cảm biến vẫn
-  // quan trọng hơn việc gửi được cảnh báo. Chỉ gọi ở mẫu được lưu (lúc bắt đầu
-  // vượt ngưỡng + mỗi 10s): mỗi lần gọi tốn ~3 lượt đọc DB, gọi mỗi giây là thừa
-  // khi last_seen_at chỉ cập nhật 1 lần/phút và tự đóng sau 5 phút (ALERT-FR-008).
-  // Chỉ tạo cảnh báo khi đủ thời gian chờ (BR-34, ALERT-FR-012); chưa đủ thì chỉ giữ
-  // cảnh báo đang mở còn sống (BR-16).
+  // Lỗi Alert Engine không chặn ghi telemetry. Chỉ gọi ở mẫu được lưu
   if (dwell && dwell.ongoing.length > 0 && persist) {
     void raiseThresholdAlert(String(node.zone_id), nodeId, dwell.dwelled, dwell.ongoing).catch((err: Error) =>
       logger.error('Tạo cảnh báo vượt ngưỡng thất bại', { deviceId: payload.deviceId, err }),

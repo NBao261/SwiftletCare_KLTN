@@ -39,10 +39,10 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
   }
 }
 
-// Trạng thái thiết bị tính là hư (chấm cảnh báo của khung lọc): mất kết nối; PENDING là chưa kết nối lần đầu, không tính là hư
+// PENDING là chưa kết nối lần đầu, không tính là hư
 const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['OFFLINE'])
 
-// Trạng thái nhà trên Tổng quan (A-03): "Ổn định" chỉ khi có bộ điều khiển, mọi bộ online (kể cả PENDING thì cần chú ý), số đo trong ngưỡng
+// "Ổn định" chỉ khi có bộ điều khiển, mọi bộ online và số đo trong ngưỡng
 export function houseLiveStatus(health: 'ALERT' | 'NORMAL' | 'EMPTY', controllerStatuses: DeviceStatus[]): 'ALERT' | 'NORMAL' | 'EMPTY' {
   if (health === 'ALERT') return 'ALERT'
   if (controllerStatuses.length === 0) return 'EMPTY'
@@ -57,7 +57,7 @@ export function isFaultDeviceStatus(status: DeviceStatus): boolean {
 export interface ZoneIssueInput {
   readings: EnvReadings
   thresholds?: Thresholds
-  // Có ít nhất 1 thiết bị ONLINE — chỉ khi đó số đo mới dùng để xét vượt ngưỡng (cùng luật ô cảm biến)
+  // Có ít nhất 1 thiết bị ONLINE: chỉ khi đó số đo mới dùng để xét vượt ngưỡng (cùng luật ô cảm biến)
   isOnline: boolean
   hasFaultDevice: boolean
 }
@@ -168,7 +168,7 @@ interface NodeRef {
   relay_states: RelayStates
 }
 
-// Relay hiển thị trên Dashboard: phun sương, loa, quạt (Report 3 §8: không có relay sưởi)
+// Relay hiển thị trên Dashboard: phun sương, loa, quạt (: không có relay sưởi)
 export type DashboardRelayStates = RelayStates
 
 export interface NodesSummary {
@@ -200,7 +200,7 @@ interface LiveControl {
   controlOutput?: ControlOutput
 }
 
-// Thay relay của node bằng bản socket mới nhất của zone (khi đủ 3 relay); chế độ AUTO/MANUAL giữ REST vì telemetry luôn gửi 'AUTO'
+// Relay lấy từ socket; chế độ giữ của REST vì telemetry luôn gửi 'AUTO'
 export function withLiveRelays<T extends NodeRef & { zone_id: string }>(nodes: T[], live: Map<string, LiveControl>): T[] {
   return nodes.map(node => {
     const states = live.get(node.zone_id)?.relayStates
@@ -226,7 +226,7 @@ export function averageControlOutput(zoneIds: string[], live: Map<string, LiveCo
 export const STATUS_BADGE_CLASS: Record<AlertStatus, string> = {
   ACTIVE: 'bg-infoBlue/10 text-infoBlue',
   ACKNOWLEDGED: 'bg-accent-600 text-charcoal',
-  DISMISSED: 'bg-warmGray/10 text-warmGray', // EXPERT-FR-003
+  DISMISSED: 'bg-warmGray/10 text-warmGray',
   RESOLVED: 'bg-warmGray/15 text-warmGray',
 }
 
@@ -267,7 +267,7 @@ export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): F
   return totals
 }
 
-// Ai đặt ngưỡng hiện hành của Zone, đọc từ threshold_history (ENV-FR-009/020): chưa từng sửa hoặc lần cuối là "đặt lại mặc định" → mặc định hệ thống
+// Chưa sửa hoặc lần cuối là đặt lại mặc định thì là mặc định hệ thống
 export interface ThresholdSource {
   isDefault: boolean
   role?: string

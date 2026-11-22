@@ -24,7 +24,7 @@ interface RelayOverrideHistoryCardProps {
   zoneIds: string[];
 }
 
-// Lịch sử can thiệp tay của các thiết bị trong Zone (ENV-FR-019), nguồn tính tỷ lệ thời gian tự động
+// Lịch sử can thiệp tay của các thiết bị trong Zone, nguồn tính tỷ lệ thời gian tự động
 export default function RelayOverrideHistoryCard({ zoneIds }: RelayOverrideHistoryCardProps): JSX.Element {
   const { t, dateTime, hourMinute } = useTranslation(analyticsDict);
   const { t: translateRole } = useTranslation(roleDict);

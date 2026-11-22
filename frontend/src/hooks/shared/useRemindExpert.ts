@@ -13,7 +13,7 @@ const REMINDER_QUERY_KEYS: Record<ExpertReminderKind, readonly unknown[]> = {
   harvest_cycle: ['harvest', 'cycles'],
 }
 
-// BR-22 — nút "Nhắc chuyên gia": đã nhắc theo bản ghi, hoặc vừa nhắc đúng việc này (ngăn kéo dùng lại cho việc khác)
+// nút "Nhắc chuyên gia": đã nhắc theo bản ghi, hoặc vừa nhắc đúng việc này (ngăn kéo dùng lại cho việc khác)
 export function useRemindExpert(kind: ExpertReminderKind, id: string | undefined, remindedAt: string | null | undefined) {
   const [remindedId, setRemindedId] = useState<string | null>(null)
   const queryClient = useQueryClient()

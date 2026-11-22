@@ -44,7 +44,7 @@ interface RecommendationDetailDrawerProps {
   onReject: (recommendation: Recommendation) => void;
 }
 
-// EXPERT-FR-017…019 — điều kiện, bằng chứng từng ngày, đề xuất, quyết định và hiệu quả sau 7 ngày
+// điều kiện, bằng chứng từng ngày, đề xuất, quyết định và hiệu quả sau 7 ngày
 export default function RecommendationDetailDrawer({
   recommendation, houseName, canDecide, onClose, onAccept, onReject,
 }: RecommendationDetailDrawerProps): JSX.Element {

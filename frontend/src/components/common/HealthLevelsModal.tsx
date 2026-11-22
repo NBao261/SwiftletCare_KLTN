@@ -40,7 +40,7 @@ interface HealthLevelsModalProps {
   readOnlyNote: string;
 }
 
-// ANALYTICS-FR-012, BR-28 — mức Lệch nhẹ / Lệch rõ của từng chỉ số 1 nhà, dạng bảng điều kiện
+// mức Lệch nhẹ / Lệch rõ của từng chỉ số 1 nhà, dạng bảng điều kiện
 export default function HealthLevelsModal({ open, onClose, house, readOnlyNote }: HealthLevelsModalProps): JSX.Element {
   const { t, exact } = useTranslation(healthDict);
   const { data, isLoading, isError, error, refetch } = useHealthLevels(open ? house.id : '');
@@ -49,7 +49,7 @@ export default function HealthLevelsModal({ open, onClose, house, readOnlyNote }
   const apiErrorMessage = useApiErrorMessage();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [errors, setErrors] = useState<Partial<Record<HealthLevelKey, HealthLevelError>>>({});
-  // Quyền sửa theo can_edit của backend (BR-22); lưu vẫn bị 403 thì chuyển sang chỉ xem kèm lý do backend trả về
+  // Quyền sửa theo can_edit của backend; lưu vẫn bị 403 thì chuyển sang chỉ xem kèm lý do backend trả về
   const [deniedReason, setDeniedReason] = useState<string | null>(null);
   const canEdit = Boolean(data?.can_edit) && !deniedReason;
 

@@ -1,4 +1,4 @@
-// OPS-FR-005…008 — kế hoạch bảo trì phòng ngừa (api-spec MaintenancePlan, Report 3 §6.20)
+// kế hoạch bảo trì phòng ngừa (api-spec MaintenancePlan)
 export type MaintenanceEquipment = 'PUMP' | 'FAN' | 'SENSOR' | 'NOZZLE' | 'CALIBRATION';
 export type MaintenanceBasis = 'RUN_HOURS' | 'SWITCHES' | 'CALENDAR';
 export type MaintenancePlanState = 'SCHEDULED' | 'DUE' | 'OVERDUE' | 'RETIRED';

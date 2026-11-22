@@ -20,7 +20,7 @@ interface Props {
   onDirtyChange?: (count: number) => void
 }
 
-// 7 ngưỡng của Zone (ENV-FR-006); khoảng giá trị là khoảng đo cảm biến của backend (THRESHOLD_LIMITS), không tự chọn
+// 7 ngưỡng của Zone; khoảng giá trị là khoảng đo cảm biến của backend (THRESHOLD_LIMITS), không tự chọn
 const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: string; step: number; decimals: number }> = [
   { key: 'temp_min', label: 'Nhiệt độ tối thiểu', step: 0.5, decimals: 1 },
   { key: 'temp_max', label: 'Nhiệt độ tối đa', step: 0.5, decimals: 1 },

@@ -1,7 +1,3 @@
-/**
- * ANALYTICS-FR-012, EXPERT-FR-013 — lý do trạng thái ngày lưu dạng mã; CSV in câu theo ngôn ngữ. Mỗi mã
- * phải có câu tiếng Việt và tiếng Anh, có số liệu của lý do và mức.
- */
 import { HEALTH_REASON_CODES } from '@/models/houseHealthDay.model'
 import { REASON_LANGS, formatReason } from '@/utils/healthReason.util'
 import type { HealthReason } from '@/types'

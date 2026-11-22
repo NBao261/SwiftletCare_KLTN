@@ -5,15 +5,10 @@ import { joinZone, leaveZone, onTelemetryUpdate } from '@/lib/socket'
 import { useSocket } from '@/hooks/common/useSocket'
 import type { TelemetryUpdateEvent } from '@/types'
 
-/**
- * Nếu không nhận thêm dữ liệu realtime trong khoảng này, coi badge "Live" là hết
- * hạn (thiết bị có thể đã mất kết nối/mất nguồn) — độc lập với backend, vốn chỉ
- * tự chuyển SensorNode.status sang OFFLINE sau 30s không có heartbeat (FARM-FR-005,
- * xem deviceService.markStaleDevicesOffline). Đặt ngắn hơn để UI phản ứng nhanh hơn.
- */
+// Hết hạn badge "Live" ở client, ngắn hơn 30 s offline của backend
 const STALE_TIMEOUT_MS = 20_000
 
-/** useTelemetry – giá trị mới nhất qua REST, sau đó realtime qua Socket.io (ENV-FR-004/005) */
+// useTelemetry – giá trị mới nhất qua REST, sau đó realtime qua Socket.io
 export function useTelemetry(zoneId: string | undefined) {
   useSocket()
   const queryClient = useQueryClient()

@@ -1,4 +1,4 @@
-// VISION-FR-018 — trình vẽ vòng đếm trên khung live: đặt 3–12 đỉnh, chọn chiều bay, lưu
+// trình vẽ vòng đếm trên khung live: đặt 3–12 đỉnh, chọn chiều bay, lưu
 import { useRef, useState } from 'react'
 import { Undo2, Trash2, Save, X, Pencil, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'

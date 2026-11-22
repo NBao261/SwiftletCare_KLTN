@@ -4,7 +4,7 @@ import { harvestApi } from '@/apis/farm-owner/harvests.api'
 import { harvestCyclesApi } from '@/apis/domain-expert/harvestCycles.api'
 import type { CreateHarvestInput } from '@/apis/farm-owner/harvests.api'
 
-// HARVEST-FR-001..005 — farmId undefined = đợt thu của mọi farm tài khoản xem được
+// farmId undefined = đợt thu của mọi farm tài khoản xem được
 export function useHarvests(farmId: string | undefined) {
   return useQuery({
     queryKey: ['harvests', farmId],
@@ -12,7 +12,7 @@ export function useHarvests(farmId: string | undefined) {
   })
 }
 
-// HARVEST-FR-007 — 1 trang chu kỳ (nhà, farm hoặc mọi farm), khoá ['harvest', 'cycles'] chung với màn kết luận mùa vụ
+// 1 trang chu kỳ (nhà, farm hoặc mọi farm), khoá ['harvest', 'cycles'] chung với màn kết luận mùa vụ
 export function useHarvestCycleList(farmId: string, houseId: string, page: number, limit: number) {
   return usePaginatedListQuery(
     ['harvest', 'cycles', 'list', farmId, houseId, page, limit],
@@ -24,7 +24,7 @@ export function useHarvestCycleList(farmId: string, houseId: string, page: numbe
   )
 }
 
-// Lô đổi thì backend dựng lại chu kỳ của zone (HARVEST-FR-007) nên làm mới cả đợt thu (trang Thu hoạch, Tổng quan, Trang trại) lẫn chu kỳ
+// Backend dựng lại chu kỳ khi lô đổi nên làm mới cả chu kỳ
 function invalidateHarvests(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: ['harvests'] })
   void queryClient.invalidateQueries({ queryKey: ['harvest', 'cycles'] })
@@ -63,8 +63,7 @@ export function useDeleteHarvest() {
   })
 }
 
-// HARVEST-FR-001 — link ảnh của lô (có ở GET /harvests/{id}); khoá dưới ['harvests'] nên lưu lần thu là đọc lại
-// Ảnh của lần thu = ảnh đầu tiên có trong các đợt của nó (một đợt thêm sau có thể chưa có ảnh)
+// Khoá dưới ['harvests'] nên lưu lần thu là đọc lại; ảnh lấy ở đợt đầu tiên có ảnh
 export function useHarvestPhotoUrl(batchIds: string[]): string | null {
   return useQueries({
     queries: batchIds.map(batchId => ({
@@ -74,7 +73,7 @@ export function useHarvestPhotoUrl(batchIds: string[]): string | null {
   }).find(query => query.data)?.data ?? null
 }
 
-// HARVEST-FR-001 — gửi 1 ảnh cho 1 lô
+// gửi 1 ảnh cho 1 lô
 export function useUploadHarvestPhoto() {
   const queryClient = useQueryClient()
   return useMutation({

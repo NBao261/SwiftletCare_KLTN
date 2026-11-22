@@ -1,4 +1,4 @@
-// Step1Location — bước 1: chọn loại thiết bị và vị trí lắp đặt (camera gắn nhà, không có Zone)
+// Step1Location: bước 1: chọn loại thiết bị và vị trí lắp đặt (camera gắn nhà, không có Zone)
 import { Button, SelectMenu } from '@/components/ui'
 import { useFarms, useHouses, useZones } from '@/hooks/shared/useFarms'
 import { CheckCircle2, Thermometer, Camera, ChevronRight, ArrowRight } from 'lucide-react'
@@ -74,7 +74,7 @@ export function Step1Location({ data, patch, onNext }: Props) {
         </div>
       </div>
 
-      {/* Location selectors — inline thay vì FarmHouseZonePicker để ẩn Zone cho CAMERA */}
+      {/* Location selectors: inline thay vì FarmHouseZonePicker để ẩn Zone cho CAMERA */}
       <div className={`grid grid-cols-1 gap-3 ${isCamera ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
         {/* Trang trại */}
         <div className="flex flex-col gap-1.5">
@@ -112,7 +112,7 @@ export function Step1Location({ data, patch, onNext }: Props) {
           />
         </div>
 
-        {/* Zone — chỉ hiện cho SENSOR_NODE */}
+        {/* Zone: chỉ hiện cho SENSOR_NODE */}
         {!isCamera && (
           <div className="flex flex-col gap-1.5">
             <label className="label-caption">

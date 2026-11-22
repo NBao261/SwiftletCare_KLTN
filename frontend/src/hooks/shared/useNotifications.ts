@@ -6,7 +6,7 @@ import { useToastStore } from '@/stores/toastStore'
 
 const NOTIFICATIONS_KEY = ['notifications']
 
-// EXPERT-FR-007 — hộp thông báo trong ứng dụng, tải thêm khi cuộn
+// hộp thông báo trong ứng dụng, tải thêm khi cuộn
 export function useNotificationsInfinite(pageSize: number, enabled: boolean) {
   return useInfiniteQuery({
     queryKey: [...NOTIFICATIONS_KEY, 'infinite', pageSize],
@@ -45,7 +45,7 @@ export function useMarkAllNotificationsRead() {
   })
 }
 
-// Socket NOTIFICATION_NEW (room user:<id>): làm mới hộp thư và hiện toast, ở trang nào cũng vậy — mount 1 lần trong AppShell
+// Mount 1 lần trong AppShell
 export function useInAppNotificationListener(): void {
   const queryClient = useQueryClient()
   const push = useToastStore(s => s.push)

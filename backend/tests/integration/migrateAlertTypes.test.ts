@@ -1,8 +1,3 @@
-/**
- * migrate-alert-types (G-01): tên cảnh báo cũ đổi sang tên SRS 3.1.0, cảnh báo predator bị xoá,
- * trạng thái thiết bị/mẻ thu hoạch không còn dùng được quy về giá trị hợp lệ, tuỳ chọn Zalo/SMS và
- * sla_hours bị gỡ; dữ liệu khác giữ nguyên; chạy lại không đổi gì.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { migrateAlertTypes } from '@/scripts/migrate-alert-types.script'

@@ -1,8 +1,3 @@
-/**
- * ALERT-FR-017, BR-40 — cảnh báo của nhà tới thợ đang trực; Farm Owner sau 15 phút chưa xác nhận, đúng 1 lần;
- * CRITICAL tới cả hai cùng lúc; nhà không có thợ thì Farm Owner. ALERT-FR-015 gửi lại cho người đã nhận.
- * EXPERT-FR-021 — cảnh báo suy luận ở nhà có thợ tạo đúng 1 yêu cầu kiểm tra tại chỗ.
- */
 import { Alert } from '@/models/alert.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
@@ -34,7 +29,7 @@ async function technician(farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'
   return user
 }
 
-/** Farm có 1 nhà; `withTechnician` = thợ chính được giao nhà */
+// Farm có 1 nhà; `withTechnician` = thợ chính được giao nhà
 async function seed(withTechnician = true) {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!

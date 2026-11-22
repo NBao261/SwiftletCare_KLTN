@@ -1,12 +1,9 @@
-/**
- * VISION-FR-019, BR-13 — mỗi đêm gửi lại `config` retained cho mọi nút AI, để khung phiên của 7 ngày tới luôn đủ: số trực
- * tiếp của nút AI theo khung của ngày dù không ai sửa lịch.
- */
+// gửi lại config mỗi đêm để nút AI luôn có khung phiên 7 ngày tới
 import cron from 'node-cron'
 import { refreshCameraConfigs } from '@/services/device.service'
 import logger from '@/utils/logger.util'
 
-/** ponytail: 00:05 cho mọi nhà cùng lúc; nhiều camera thì rải giờ nếu broker quá tải */
+// 00:05 cho mọi nhà cùng lúc; nhiều camera thì rải giờ nếu broker quá tải
 const CRON_EXPRESSION = '0 5 0 * * *'
 
 export function startCameraConfigJob(): void {

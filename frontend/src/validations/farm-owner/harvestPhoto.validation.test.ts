@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HARVEST_PHOTO_MAX_BYTES, validateHarvestPhoto } from '@/validations/farm-owner/harvestPhoto.validation'
 
-// HARVEST-FR-001 — ảnh của lần thu
+// ảnh của lần thu
 describe('validateHarvestPhoto', () => {
   it('nhận JPEG, PNG, WebP tới 5 MB', () => {
     expect(validateHarvestPhoto({ type: 'image/jpeg', size: 1000 })).toBeNull()

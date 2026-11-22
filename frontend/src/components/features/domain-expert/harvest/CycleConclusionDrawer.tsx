@@ -1,4 +1,4 @@
-// EXPERT-FR-020 — Ngăn kéo kết luận mùa vụ của Chuyên gia (Farm Owner không viết, kể cả khi farm chưa có chuyên gia — BR-22)
+// Ngăn kéo kết luận mùa vụ của Chuyên gia (Farm Owner không viết, kể cả khi farm chưa có chuyên gia —)
 import { useState, useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui'
@@ -48,7 +48,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
   const isOpen = cycle !== null
   const isCycleOpen = cycle?.status === 'OPEN'
-  // D-04 — chỉ Domain Expert viết kết luận mùa vụ, kể cả khi farm chưa có chuyên gia (BR-22)
+  // chỉ Domain Expert viết kết luận mùa vụ, kể cả khi farm chưa có chuyên gia
   const { isExpert } = useExpertDecisionRights()
   const canWrite = !isCycleOpen && isExpert
 
@@ -91,7 +91,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
 
   return (
     <Drawer open={isOpen} onClose={onClose} title={drawerTitle}>
-        {/* Drawer không tự cuộn — vùng cuộn đặt ở đây, nút lưu ở dưới cùng */}
+        {/* Drawer không tự cuộn: vùng cuộn đặt ở đây, nút lưu ở dưới cùng */}
         <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pb-4 space-y-4">
           <p className="text-xs text-warmGray">{subtitleText}</p>
 
@@ -178,7 +178,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
             )}
           </div>
 
-          {/* Kết luận hiện có (đọc — chỉ hiện khi đã kết luận và form chưa sửa) */}
+          {/* Kết luận hiện có (đọc: chỉ hiện khi đã kết luận và form chưa sửa) */}
           {cycle?.conclusion && (
             <div className="rounded-xl border border-infoBlue/20 bg-infoBlue/5 p-3.5 space-y-2">
               <p className="text-xs font-bold text-charcoal">{t('drawer.existingTitle')}</p>

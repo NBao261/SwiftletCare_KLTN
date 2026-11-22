@@ -5,13 +5,7 @@ import { createAlert, OPEN_STATUSES, resolveAlertsForNode } from '@/services/ale
 import { publishNodeConfig } from '@/services/deviceConfig.service'
 import { CONFIG_MISMATCH_HEARTBEATS } from '@/utils/configSync.util'
 
-/**
- * ENV-FR-027, BR-24 — chạy mỗi phút (jobs/configSync.job.ts). Controller online còn báo phiên bản cũ
- * thì nhận lại cấu hình; controller online đã `MISMATCH` (Report 3 §6.12) có một `CONFIG_MISMATCH`
- * (createAlert gộp lần sau vào cảnh báo đang mở); cảnh báo đóng khi controller không còn `MISMATCH`
- * (đã áp đúng phiên bản, firmware không báo phiên bản, hoặc thiết bị đã gỡ). Controller offline chờ
- * `config` retained khi kết nối lại nên không cần gửi và không bị cảnh báo.
- */
+// Controller offline chờ config retained khi kết nối lại nên không gửi, không cảnh báo
 export async function syncControllerConfigs(): Promise<{ republished: number; raised: number; resolved: number }> {
   const behind = await SensorNode.find({ ...IN_SERVICE, status: 'ONLINE', config_sync: { $in: ['PENDING', 'MISMATCH'] } })
     .select('device_id zone_id speaker_schedule audio config_sync applied_config_version').lean()

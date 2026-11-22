@@ -1,17 +1,4 @@
-/**
- * migrate-alert-types.ts — đưa dữ liệu cũ về enum của SRS 3.1.0 (G-01, Report 4 §6.4).
- *
- * Chạy: npm run migrate:alert-types   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. `alerts.type` `PUMP_DRY` → `MISTING_INEFFECTIVE`, `POWER_OUTAGE` → `UNEXPECTED_RESTART`
- *    (THREAT-FR-011, 012); xoá cảnh báo `PREDATOR_DETECTED` (Report 3 §8).
- * 2. `sensornodes`, `cameranodes`: trạng thái `ERROR`/`DEGRADED` → `ONLINE` (Report 3 §6.6; heartbeat
- *    kế tiếp hoặc job offline sẽ đặt lại đúng); bỏ `relay_states.heating` còn sót.
- * 3. `harvestbatches.status` `ARCHIVED` → `DRAFT`.
- * 4. `users`: bỏ `notification_preferences.zalo`, `.sms` (Report 3 §8).
- * 5. `systemsettings`: bỏ `sla_hours` (cũng có trong migrate:remove-tickets — để chạy riêng
- *    script này vẫn đủ).
- */
+// đổi tên loại cảnh báo cũ, bỏ ERROR/DEGRADED, heating, ARCHIVED, zalo/sms, sla_hours. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

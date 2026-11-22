@@ -1,7 +1,4 @@
-/**
- * useExpertAlerts — Custom hooks cho màn hình 02A & 02B
- * Real API First → Mock fallback | SRS v2.1.4: EXPERT-FR-003
- */
+// useExpertAlerts: Custom hooks cho màn hình 02A & 02B Real API First → Mock fallback
 import { useState, useMemo } from 'react'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { expertService } from '@/services/expert.service'
@@ -11,7 +8,7 @@ import type { AlertSeverity } from '@/types'
 // Re-export helpers để không vỡ import trong components
 export * from './alertHelpers'
 
-// ── Filter types ───────────────────────────────────────────────────────────────
+// Filter types
 export type AlertTabFilter = 'ALL' | 'PENDING' | 'CONFIRMED' | 'REJECTED'
 
 export interface AlertFilters {
@@ -23,7 +20,7 @@ export interface AlertFilters {
 
 const PAGE_SIZE = 5
 
-// ── 2. Thống kê tỷ lệ xác nhận theo loại ─────────────────────────────────────
+// 2. Thống kê tỷ lệ xác nhận theo loại
 export function useExpertVerdictStats(farmId?: string, zoneId?: string) {
   return useQuery<ExpertVerdictStats[]>({
     queryKey: ['expert', 'verdict-stats', farmId, zoneId],
@@ -37,7 +34,7 @@ const TAB_VERDICT: Record<AlertTabFilter, InferredAlertQuery['verdict']> = {
   ALL: 'any', PENDING: 'pending', CONFIRMED: 'confirmed', REJECTED: 'rejected',
 }
 
-// ── 3. Bộ lọc + phân trang ở backend (không cắt 20 cảnh báo đầu rồi lọc ở client) ──
+// 3. Bộ lọc + phân trang ở backend (không cắt 20 cảnh báo đầu rồi lọc ở client)
 export function useAlertsWithFilters(farmId?: string, zoneId?: string) {
   const [filters, setFilters] = useState<AlertFilters>({ tab: 'ALL', type: 'ALL', severity: 'ALL', page: 1 })
   const list = useQuery({
@@ -83,7 +80,7 @@ export function useAlertsWithFilters(farmId?: string, zoneId?: string) {
   }
 }
 
-// ── 4. Mutation: Lưu phán quyết ───────────────────────────────────────────────
+// 4. Mutation: Lưu phán quyết
 export function useSubmitAlertVerdict() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -99,7 +96,7 @@ export function useSubmitAlertVerdict() {
   })
 }
 
-// ── 5. Gói bằng chứng cảnh báo suy luận (ALERT-FR-014) ────────────────────────
+// 5. Gói bằng chứng cảnh báo suy luận
 export function useAlertEvidence(alertId?: string) {
   return useQuery({
     queryKey: ['expert', 'evidence', alertId],
@@ -109,7 +106,7 @@ export function useAlertEvidence(alertId?: string) {
   })
 }
 
-// ── 6. Lịch sử hoạt động của Chuyên gia / Farm Owner (EXPERT-FR-009) ─────────
+// 6. Lịch sử hoạt động của Chuyên gia / Farm Owner
 export function useExpertActivity(params: {
   farmId?: string
   houseId?: string

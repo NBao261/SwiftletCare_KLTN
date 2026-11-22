@@ -24,7 +24,7 @@ export default function SegmentedChips<Value extends string | number>({
           onClick={() => onChange(option.value)}
           className={cn(
             'h-8 rounded-full px-3 text-small font-semibold transition-colors duration-150 max-sm:h-10',
-            // Kiểu SectionTabs: pill trắng trên nền xám, không tô đen (C-03)
+            // Kiểu SectionTabs: pill trắng trên nền xám, không tô đen
             option.value === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
           )}
         >

@@ -17,12 +17,12 @@ export function shiftDate(date: string, days: number): string {
   return shifted.toISOString().slice(0, 10);
 }
 
-// rating_deadline là đầu ngày thứ 8 (đã hết hạn) — ngày cuối còn chấm được là ngay trước mốc đó
+// rating_deadline là đầu ngày thứ 8 (đã hết hạn): ngày cuối còn chấm được là ngay trước mốc đó
 export function lastRatingDay(deadline: string): string {
   return new Date(Date.parse(deadline) - 1).toISOString();
 }
 
-// Hạn đánh giá sắp hết: ngày cuối còn chấm là hôm nay hoặc ngày mai (giờ VN) — bảng tô cam dòng hạn
+// Hạn đánh giá sắp hết: ngày cuối còn chấm là hôm nay hoặc ngày mai (giờ VN): bảng tô cam dòng hạn
 export function isRatingDeadlineNear(deadline: string, now: Date = new Date()): boolean {
   return vietnamDate(new Date(lastRatingDay(deadline))) <= shiftDate(vietnamDate(now), 1);
 }

@@ -1,7 +1,3 @@
-/**
- * migrate-erd-fields (G-14, Report 4 §6.4): `users.is_active` → `status` (SM-14), audit `ip_address` → `source_ip`,
- * `metadata.before/after` chép ra `before`/`after`; chạy lại không đổi gì.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { migrateErdFields } from '@/scripts/migrate-erd-fields.script'
@@ -27,7 +23,7 @@ describe('migrateErdFields', () => {
       { email: 'r@test.vn', is_active: true, deletion_requested_at: new Date() },
       { email: 'd@test.vn', is_active: false, deleted_at: new Date() },
       { email: 'new@test.vn', status: 'LOCKED', locked_reason: 'giữ nguyên' },
-      // Mã cũ cho Admin khoá tài khoản đang chờ xoá: khoá phải thắng, không thành DELETION_REQUESTED (đăng nhập được)
+      // Khoá phải thắng chờ xoá
       { email: 'lr@test.vn', is_active: false, deactivated_reason: 'Gian lận', deletion_requested_at: new Date() },
     ])
     await db().collection('auditlogs').insertMany([

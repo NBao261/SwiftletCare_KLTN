@@ -4,16 +4,7 @@ import jwt from 'jsonwebtoken'
 import type { JwtAccessPayload } from '@/types'
 import logger from '@/utils/logger.util'
 
-/**
- * SEC-NFR-004 — 3 suất tách biệt, để một nhóm request không chặn lây nhóm khác:
- * - `apiLimiter`: API đã đăng nhập, đếm theo TÀI KHOẢN. Trước đây đếm theo IP nên
- *   mọi người chung mạng (hoặc sau proxy) dùng chung 1 suất, và chính trang Tổng
- *   quan (gọi API theo từng zone, ~85 request/lần mở) đã đủ chặn cả /auth/refresh.
- * - `loginLimiter` / `passwordResetLimiter`: đăng nhập, mã đặt lại mật khẩu — đếm theo IP, chặt hơn
- *   nhiều, vì đây mới là chỗ bị dò mật khẩu và spam email.
- * - `refreshLimiter`: /auth/refresh có suất riêng — hết suất API thì vẫn làm mới
- *   được token, không bị đá ra màn đăng nhập.
- */
+// API đếm theo tài khoản; login/reset đếm theo IP; refresh có suất riêng để không bị đá ra
 
 const MINUTE_MS = 60_000
 
@@ -22,7 +13,6 @@ const envNumber = (key: string, fallback: number): number => {
   return Number.isFinite(value) && value > 0 ? value : fallback
 }
 
-/** Cùng envelope `{success:false, error:{code,message}}` với errorHandler — frontend đọc được lý do */
 function handleLimitReached(req: Request, res: Response, _next: unknown, options: Options): void {
   const resetTime = (req as Request & { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime
   const retryAfterSec = resetTime
@@ -40,13 +30,9 @@ function handleLimitReached(req: Request, res: Response, _next: unknown, options
   })
 }
 
-// standardHeaders: RateLimit-*; legacyHeaders: X-RateLimit-* như SRS mục 9 ghi
 const common = { standardHeaders: true, legacyHeaders: true, handler: handleLimitReached } as const
 
-/**
- * Chỉ giải mã access token, không tra DB: token hợp lệ thì đếm theo tài khoản,
- * thiếu/sai/hết hạn thì đếm theo IP. Request đó vẫn bị `authenticate` từ chối sau.
- */
+// Chỉ giải mã token, không tra DB; token lỗi thì đếm theo IP
 function userOrIpKey(req: Request): string {
   const header = req.headers.authorization
   if (header?.startsWith('Bearer ')) {
@@ -60,7 +46,6 @@ function userOrIpKey(req: Request): string {
   return `ip:${req.ip}`
 }
 
-/** Các route đếm ở limiter riêng (đăng ký trong auth.route.ts) */
 const OWN_LIMITER_PATHS = new Set([
   '/auth/login',
   '/auth/forgot-password', '/auth/reset-password', '/auth/refresh',
@@ -69,14 +54,13 @@ const OWN_LIMITER_PATHS = new Set([
 function isExemptFromApiLimit(req: Request): boolean {
   const path = req.path
   return path === '/health'
-    || path.startsWith('/files/')   // file audio phục vụ tĩnh (STORAGE_DRIVER=local)
+    || path.startsWith('/files/')
     || path.startsWith('/api-docs')
-    // EMQX và MediaMTX gọi cho mọi kết nối từ 1 IP: bị chặn là mọi thiết bị mất kết nối theo. Có khoá riêng
+    // Mọi thiết bị gọi từ 1 IP, chặn là mất kết nối hết; đã có khoá riêng
     || path.startsWith('/internal/')
     || OWN_LIMITER_PATHS.has(path)
 }
 
-/** Mount toàn cục trong app.config.ts */
 export const apiLimiter = rateLimit({
   ...common,
   windowMs: envNumber('RATE_LIMIT_WINDOW_MS', MINUTE_MS),
@@ -88,10 +72,7 @@ export const apiLimiter = rateLimit({
 const authWindowMs = envNumber('AUTH_RATE_LIMIT_WINDOW_MS', 15 * MINUTE_MS)
 const authLimit = envNumber('AUTH_RATE_LIMIT_MAX', 10)
 
-/**
- * Đăng nhập, xác thực OTP, đặt lại mật khẩu — chỉ đếm lần SAI (chống dò), người
- * nhập đúng không bị trừ suất.
- */
+// Chỉ đếm lần sai: người nhập đúng không bị trừ suất
 export const loginLimiter = rateLimit({
   ...common,
   windowMs: authWindowMs,
@@ -99,7 +80,7 @@ export const loginLimiter = rateLimit({
   skipSuccessfulRequests: true,
 })
 
-/** Quên mật khẩu — đếm MỌI lần, vì mỗi lần thành công là 1 email gửi đi */
+// Đếm mọi lần: mỗi lần là 1 email
 export const passwordResetLimiter = rateLimit({
   ...common,
   windowMs: authWindowMs,

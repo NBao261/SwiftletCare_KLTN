@@ -1,10 +1,4 @@
-/**
- * Database script (Review 2 – SDD §6.5): build a mongosh script that creates every
- * collection with a `$jsonSchema` validator and the indexes declared in the Mongoose
- * models. Mongo has no DDL file of its own, so the models are the single source and the
- * script is generated from them — `docs/database/init.mongo.js` is checked against this
- * output in `tests/unit/utils/dbScript.util.test.ts`, so the script never drifts from code.
- */
+// Mongo không có DDL: script sinh từ model, test so với docs/database/init.mongo.js
 import type { Model, Schema, SchemaType } from 'mongoose'
 import { Alert } from '@/models/alert.model'
 import { AudioTrack } from '@/models/audioTrack.model'
@@ -57,7 +51,6 @@ export interface JsonSchemaNode {
   enum?: unknown[]
 }
 
-/** Mongoose instance name → BSON type; Mixed has no type constraint */
 const BSON_TYPES: Record<string, string> = {
   String: 'string',
   Number: 'number',
@@ -82,13 +75,11 @@ function enumOf(type: SchemaType): unknown[] | undefined {
 
 function nodeForType(type: SchemaType): JsonSchemaNode {
   const instance = type.instance
-  // A required field has its type and enum checked; an optional one may also be null
-  // (Mongoose stores `null` for cleared optional fields)
+  // Optional có thể là null (Mongoose lưu null khi xoá trường)
   const bsonType = BSON_TYPES[instance]
   const node: JsonSchemaNode = {}
   if (bsonType) node.bsonType = isRequired(type) ? bsonType : [bsonType, 'null']
 
-  // Single nested schemas report `Embedded`; arrays of subdocuments report `Array` with a `schema`
   const sub = (type as SchemaType & { schema?: Schema }).schema
   if (sub && instance === 'Embedded') {
     Object.assign(node, schemaToJson(sub), { bsonType: node.bsonType })
@@ -98,7 +89,6 @@ function nodeForType(type: SchemaType): JsonSchemaNode {
     const caster = (type as SchemaType & { caster?: SchemaType }).caster
     if (caster) {
       const item = nodeForType(caster)
-      // array elements are never null on their own
       if (Array.isArray(item.bsonType)) item.bsonType = item.bsonType[0]
       node.items = item
     }
@@ -109,7 +99,6 @@ function nodeForType(type: SchemaType): JsonSchemaNode {
   return node
 }
 
-/** Nested plain objects (`thresholds.temp_min`) become nested `properties` */
 export function schemaToJson(schema: Schema): JsonSchemaNode {
   const root: JsonSchemaNode = { bsonType: 'object', properties: {} }
   schema.eachPath((path, type) => {
@@ -129,7 +118,6 @@ export function schemaToJson(schema: Schema): JsonSchemaNode {
   return root
 }
 
-/** Pretty JSON, but arrays of plain values stay on one line so the script stays readable */
 function stringify(value: unknown): string {
   return JSON.stringify(value, null, 2).replace(
     /\[\s*((?:"[^"\n]*"|-?\d+(?:\.\d+)?|null|true|false)(?:,\s*(?:"[^"\n]*"|-?\d+(?:\.\d+)?|null|true|false))*)\s*\]/g,
@@ -146,12 +134,12 @@ export function indexesOf(schema: Schema): Array<[Record<string, unknown>, Recor
       const value = (options as Record<string, unknown>)[key]
       if (value !== undefined) kept[key] = value
     }
-    // `expires: '90d'` on a path reaches here as the number of seconds already
+    // expires: '90d' tới đây đã là số giây
     return [fields as Record<string, unknown>, kept]
   })
 }
 
-/** mongosh script: create or update each collection, then its indexes; safe to run twice */
+// Chạy hai lần vẫn an toàn
 export function buildDbScript(models: AnyModel[] = ALL_MODELS): string {
   const sorted = [...models].sort((a, b) => a.collection.collectionName.localeCompare(b.collection.collectionName))
   const lines = [

@@ -1,7 +1,7 @@
 import { findDrift, findSpikes, findStuck, type AnomalySample } from '@/utils/sensorAnomaly.util'
 
 const T0 = new Date('2026-09-30T00:00:00Z').getTime()
-/** n mẫu cách nhau 10s, giá trị theo hàm i → sample */
+// n mẫu cách nhau 10s, giá trị theo hàm i → sample
 const series = (n: number, fn: (i: number) => Omit<AnomalySample, 'timestamp'>): AnomalySample[] =>
   Array.from({ length: n }, (_, i) => ({ timestamp: new Date(T0 + i * 10_000), ...fn(i) }))
 

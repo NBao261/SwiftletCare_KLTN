@@ -3,7 +3,7 @@ import type { ApiResponse, AudioTrack, SensorNode } from '@/types'
 
 const base = (nodeId: string) => `/devices/sensor-nodes/${nodeId}`
 
-/** ENV-FR-013c — danh mục file loa ru của 1 thiết bị */
+// danh mục file loa ru của 1 thiết bị
 export const audioTrackApi = {
   list: (nodeId: string) => api.get<ApiResponse<AudioTrack[]>>(`${base(nodeId)}/audio-tracks`),
 
@@ -13,7 +13,7 @@ export const audioTrackApi = {
     form.append('file', input.file)
     form.append('track_number', String(input.track_number))
     form.append('display_name', input.display_name)
-    // File tới 10MB — timeout mặc định 10s của axios instance quá ngắn cho mạng chậm
+    // File tới 10MB: timeout mặc định 10s của axios instance quá ngắn cho mạng chậm
     return api.post<ApiResponse<AudioTrack>>(`${base(nodeId)}/audio-tracks`, form, { timeout: 120_000 })
   },
   setSyncStatus: (nodeId: string, trackId: string, synced: boolean) =>

@@ -1,20 +1,14 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-// Theo Zone: thresholds, fuzzy, detection; theo nhà: return_rate_drop, health_levels, counting_schedule; theo camera: counting_ring
 export const PARAMETER_GROUPS = [
   'thresholds', 'fuzzy', 'detection', 'return_rate_drop', 'health_levels', 'counting_schedule', 'counting_ring',
 ] as const
 export type ParameterGroup = typeof PARAMETER_GROUPS[number]
 export type ParameterReviewStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' | 'ADJUSTED'
 
-/**
- * EXPERT-FR-010, BR-22, Report 3 §6.10 — mục duyệt thay đổi của Farm Owner trên farm có Domain Expert (nhóm A).
- * Thay đổi đã áp dụng ngay; mục này để chuyên gia chấp nhận, hoàn lại hoặc tự sửa (ADJUSTED).
- * `old_values` là giá trị trước lần sửa đầu tiên — Farm Owner sửa tiếp thì chỉ `new_values` đổi.
- */
+// thay đổi đã áp ngay; old_values là giá trị trước lần sửa đầu tiên
 export interface IParameterReview extends Document {
   _id: Types.ObjectId
-  // Zone, nhà hoặc camera mà nhóm tham số thuộc về — khoá "một mục đang chờ"
   target_id: Types.ObjectId
   zone_id?: Types.ObjectId
   house_id?: Types.ObjectId
@@ -53,10 +47,8 @@ const parameterReviewSchema = new Schema<IParameterReview>(
 )
 
 parameterReviewSchema.index({ zone_id: 1, group: 1, status: 1 })
-// Mỗi đối tượng, mỗi nhóm tham số chỉ 1 mục đang chờ — Farm Owner sửa tiếp thì cập nhật mục đó
-// (thay chỉ mục cũ { zone_id, group }: npm run migrate:review-targets)
+// Mỗi đối tượng, mỗi nhóm chỉ 1 mục đang chờ
 parameterReviewSchema.index({ target_id: 1, group: 1 }, { unique: true, partialFilterExpression: { status: 'PENDING_REVIEW' } })
-// Danh sách mục duyệt của 1 farm, mới nhất trước
 parameterReviewSchema.index({ farm_id: 1, created_at: -1 })
 
 export const ParameterReview = model<IParameterReview>('ParameterReview', parameterReviewSchema)

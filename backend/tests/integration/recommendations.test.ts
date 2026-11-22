@@ -1,8 +1,3 @@
-/**
- * EXPERT-FR-016…019, BR-42, Report 3 §6.21 — vòng khuyến nghị: Domain Expert viết luật, job hằng ngày mở khuyến nghị
- * khi luật thoả, Farm Owner chấp nhận (Work Order hoặc thay đổi tham số theo MF-05) hoặc từ chối, hết hạn sau 7 ngày,
- * đo hiệu quả 7 ngày sau khi chấp nhận.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -81,7 +76,7 @@ const NH3_RULE = {
   action: { type: 'WORK_ORDER', title: 'Kiểm tra thông gió, vệ sinh sàn' }, source: 'Ví dụ của EXPERT-FR-017 (Report 3), chờ luật từ phỏng vấn',
 }
 
-/** Ngày sức khỏe của nhà với số giờ khí vượt ngưỡng `air` (và % trong ngưỡng `env`) */
+// Ngày sức khỏe của nhà với số giờ khí vượt ngưỡng `air` (và % trong ngưỡng `env`)
 async function seedDay(house: { _id: unknown; farm_id: unknown }, date: string, air: number | null, env: number | null = 90, returnRate: number | null = null) {
   await HouseHealthDay.create({
     house_id: house._id, farm_id: house.farm_id, date, computed_at: new Date(), current_status: 'WATCH', current_reasons: [],
@@ -352,7 +347,7 @@ describe('EXPERT-FR-019, BR-42 — expiry and effect', () => {
     }
 
     expect(await expireRecommendations(now)).toBe(1)
-    // Đã quá 7 × 24 giờ nhưng ngày thứ 7 (16/11) chưa được tính lại: 16/11 08:00 và 17/11 06:30 giờ VN chưa đo
+    // Ngày thứ 7 (16/11) chưa được tính lại nên chưa đo
     expect(await measureRecommendationEffects(new Date('2026-11-16T01:00:00Z'))).toBe(0)
     expect(await measureRecommendationEffects(new Date('2026-11-16T23:30:00Z'))).toBe(0)
     expect(await measureRecommendationEffects(now)).toBe(1)

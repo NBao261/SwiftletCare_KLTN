@@ -37,7 +37,7 @@ import type { House } from '@/types';
 const NO_HOUSES: House[] = [];
 const DEVICES_PATH = '/devices';
 
-// Chi tiết thiết bị của 1 nhà yến cho Farm Owner — chỉ xem (FARM-FR-005/006): trạng thái, heartbeat, mạng của từng thiết bị
+// Chi tiết thiết bị của 1 nhà yến cho Farm Owner: chỉ xem: trạng thái, heartbeat, mạng của từng thiết bị
 export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
   const location = useLocation();
@@ -52,7 +52,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
-  // Lịch và bài loa ru chỉ Farm Owner đặt (BR-07); Domain Expert chỉ đọc
+  // Lịch và bài loa ru chỉ Farm Owner đặt; Domain Expert chỉ đọc
   const canOperateSpeaker = usePermission('FARM_OWNER');
   // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning; popup ở đây là lịch và bài loa ru của 1 bộ điều khiển
   const openZoneTuning = useOpenZoneTuning();
@@ -63,13 +63,13 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const sensorNodeById = useMemo(() => new Map((sensorNodes ?? []).map(node => [node._id, node])), [sensorNodes]);
   const scheduleNode = scheduleNodeId ? sensorNodeById.get(scheduleNodeId) : undefined;
   const tracksNode = tracksNodeId ? sensorNodeById.get(tracksNodeId) : undefined;
-  // FARM-FR-013 — khởi động lại bộ điều khiển (Farm Owner, thiết bị ONLINE)
+  // khởi động lại bộ điều khiển (Farm Owner, thiết bị ONLINE)
   const role = useAuthStore(state => state.user?.role);
   const sendCommand = useSendNodeCommand();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [restartDevice, setRestartDevice] = useState<DeviceItem>();
-  // FARM-FR-007b, 008 — bộ điều khiển đang mở popup dời, thay hoặc gỡ
+  // bộ điều khiển đang mở popup dời, thay hoặc gỡ
   const [moveDevice, setMoveDevice] = useState<DeviceItem>();
   const [replaceDevice, setReplaceDevice] = useState<DeviceItem>();
   const [removeDevice, setRemoveDevice] = useState<DeviceItem>();
@@ -167,7 +167,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
         </FarmFrame>
       )}
 
-      {/* Mỗi Zone 1 bộ kit: thông tin bộ kit hiện sẵn, bảng thiết bị (cảm biến, loa, relay) bấm mới xổ; mở từ "Chi tiết" của bộ kit thì xổ sẵn */}
+      {/* Mở từ "Chi tiết" của bộ kit thì xổ sẵn bảng thiết bị */}
       {item.zoneGroups.map(group => {
         const isTarget = group.devices.some(device => device.id === state?.deviceId);
         return (

@@ -1,6 +1,6 @@
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển màn Phân tích của Farm Owner (/analytics) — ANALYTICS-FR-001..003/005/008..011, ENV-FR-019, EXPERT-FR-005/006
+// Từ điển màn Phân tích của Farm Owner (/analytics): /008..011
 const vi = {
   // Đầu trang và chọn Zone
   'page.zoneOption': '{house} · {zone}',
@@ -170,7 +170,7 @@ const vi = {
   'bird.drop': 'Tỷ lệ chim về mới nhất giảm {drop}% so với trung bình các ngày trước, vượt mức {threshold}% chuyên gia đặt cho nhà yến này. Nên xem lại môi trường và thiết bị quanh thời điểm đó.',
   'bird.empty': 'Chưa có số đếm chim. Camera đếm chim chưa gửi số đếm.',
 
-  // Xu hướng đàn (ANALYTICS-FR-002)
+  // Xu hướng đàn
   'flock.title': 'Xu hướng đàn',
   'flock.subtitle': '{house} · số chim ra buổi sáng trung bình mỗi kỳ, 90 ngày gần nhất; ngày thiếu phiên đếm không tính',
   'flock.weekly': 'Theo tuần',
@@ -183,7 +183,7 @@ const vi = {
   'flock.chartLabel': 'Số chim ra buổi sáng trung bình',
   'flock.empty': 'Chưa có ngày nào đủ 2 phiên đếm trong 90 ngày gần nhất.',
 
-  // Điện năng ước tính (ANALYTICS-FR-017, BR-45)
+  // Điện năng ước tính
   'energy.title': 'Điện năng ước tính',
   'energy.subtitle': '{house} · bơm và quạt theo tháng trong 90 ngày gần nhất. Số ước tính từ dòng đo, không phải số công tơ.',
   'energy.voltage': 'Điện áp dùng để tính: bơm {misting} V, quạt {ventilation} V.',

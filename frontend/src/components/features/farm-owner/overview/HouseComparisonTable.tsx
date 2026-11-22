@@ -13,7 +13,7 @@ import type { ComparisonSortKey, HouseComparisonRow } from '@/types';
 
 type MetricKey = Exclude<ComparisonSortKey, 'name'>;
 
-// 9 chỉ số BR-44 gộp thành 4 nhóm cột để bảng vừa màn laptop
+// 9 chỉ số gộp thành 4 nhóm cột để bảng vừa màn laptop
 const GROUPS: Array<{ key: string; header: FarmOverviewKey; metrics: MetricKey[] }> = [
   { key: 'environment', header: 'group.environment', metrics: ['time_in_range_pct', 'good_days_pct'] },
   { key: 'flock', header: 'group.flock', metrics: ['return_rate_avg', 'flock_trend_pct'] },
@@ -36,7 +36,7 @@ interface HouseComparisonTableProps {
   sort: ComparisonSortKey;
 }
 
-// ANALYTICS-FR-016, BR-44 — mỗi hàng 1 nhà, mỗi nhóm cột là các ô số nhỏ (số trên, nhãn dưới); backend sắp; không có điểm tổng hay xếp hạng
+// Mỗi hàng 1 nhà; backend sắp, không có điểm tổng hay xếp hạng
 export default function HouseComparisonTable({ rows, sort }: HouseComparisonTableProps): JSX.Element {
   const { t, num, exact } = useTranslation(farmOverviewDict);
   const { t: causeLabel } = useTranslation(siteCauseDict);
@@ -106,7 +106,7 @@ export default function HouseComparisonTable({ rows, sort }: HouseComparisonTabl
           </div>
         ),
       })),
-      // ALERT-FR-018, BR-44 — nguyên nhân đã gặp tại chỗ trong kỳ, số lần mỗi loại; không sắp theo cột này
+      // nguyên nhân đã gặp tại chỗ trong kỳ, số lần mỗi loại; không sắp theo cột này
       {
         key: 'site_causes',
         header: t('group.siteCauses'),

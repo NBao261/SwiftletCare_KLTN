@@ -7,7 +7,7 @@ import type { User } from '@/types'
 
 vi.mock('@/lib/navigation', () => ({ redirectToLogin: vi.fn(), redirectToPasswordChange: vi.fn() }))
 
-// AUTH-FR-005c — backend trả 403 PASSWORD_CHANGE_REQUIRED khi tài khoản còn mật khẩu tạm
+// backend trả 403 PASSWORD_CHANGE_REQUIRED khi tài khoản còn mật khẩu tạm
 const failWith = (status: number, code: string): AxiosAdapter => config => Promise.reject(new AxiosError(
   'fail', String(status), config, undefined,
   { status, statusText: '', headers: {}, config: config as InternalAxiosRequestConfig, data: { error: { code } } },

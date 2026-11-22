@@ -2,11 +2,11 @@ import { CpuIcon, HourglassIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from
 import KpiTile from '@/components/common/KpiTile'
 import type { SensorNode } from '@/types'
 
-/** Node cần Technician xử lý: quá hạn kích hoạt / OTA lỗi (ERROR/DEGRADED đã bỏ SRS 3.1.0) */
+// Node cần Technician xử lý: quá hạn kích hoạt / OTA lỗi (ERROR/DEGRADED đã bỏ)
 export const needsAttention = (n: SensorNode) =>
   !!n.activation_overdue_at || !!n.ota_failed
 
-// Hàng KPI đầu trang Thiết bị theo phạm vi đang chọn; "Cần xử lý" là quá hạn kích hoạt hoặc cập nhật firmware lỗi
+// "Cần xử lý" là quá hạn kích hoạt hoặc cập nhật firmware lỗi
 export default function SystemHealthBar({ nodes = [] }: { nodes?: SensorNode[] }) {
   const total = nodes.length
   const online = nodes.filter(n => n.status === 'ONLINE').length

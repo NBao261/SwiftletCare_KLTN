@@ -17,7 +17,7 @@ interface ApplyProfileModalProps {
   onClose: () => void
 }
 
-// EXPERT-FR-015 — Farm Owner chọn 1 hồ sơ đã duyệt và các nhà của farm rồi áp
+// Farm Owner chọn 1 hồ sơ đã duyệt và các nhà của farm rồi áp
 export default function ApplyProfileModal({ farm, houses, onClose }: ApplyProfileModalProps) {
   const { t, num } = useTranslation(farmDict)
   const push = useToastStore(state => state.push)

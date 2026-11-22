@@ -12,7 +12,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.u
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/** Gợi ý hiện tại của Zone (ANALYTICS-FR-010); không có gợi ý thì 409 kèm lý do của mô hình */
+// Không có gợi ý thì 409 kèm lý do
 async function currentSuggestion(user: CurrentUser, zoneId: string) {
   const result = await getTuningSuggestion(user, zoneId)
   if (!result.suggestion) throw ConflictError(result.reason ?? 'Hiện chưa có gợi ý hệ số cho khu vực này')
@@ -21,11 +21,7 @@ async function currentSuggestion(user: CurrentUser, zoneId: string) {
 
 const SUBMIT_ATTEMPTS = 3
 
-/**
- * EXPERT-FR-011 — Farm Owner gửi gợi ý hiện tại của hệ thống cho chuyên gia. Chụp gợi ý và hệ số
- * đang dùng lúc gửi; đề xuất cũ còn chờ của Zone thành SUPERSEDED; báo Domain Expert trong ứng dụng
- * (EXPERT-FR-007). Farm chưa có chuyên gia thì Farm Owner áp trực tiếp (BR-22) — gửi bị 409.
- */
+// Chụp giá trị lúc gửi. Farm chưa có chuyên gia thì 409 (Farm Owner áp trực tiếp)
 export async function submitProposal(user: CurrentUser, zoneId: string): Promise<ICoefficientProposal> {
   const { zone, farm } = await assertZoneAccess(zoneId, user)
   if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất cho chuyên gia')
@@ -34,8 +30,7 @@ export async function submitProposal(user: CurrentUser, zoneId: string): Promise
   }
   const { suggestion, predicted } = await currentSuggestion(user, zoneId)
 
-  // Mỗi Zone chỉ 1 đề xuất PROPOSED (unique index): 2 lần gửi cùng lúc thì lần tạo sau gặp E11000,
-  // chạy lại để đề xuất mới nhất thắng và cái kia thành SUPERSEDED
+  // Unique index: lần tạo sau gặp E11000, chạy lại để đề xuất mới nhất thắng
   let proposal: ICoefficientProposal | undefined
   for (let attempt = 1; !proposal; attempt++) {
     await CoefficientProposal.updateMany({ zone_id: zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
@@ -55,7 +50,6 @@ export async function submitProposal(user: CurrentUser, zoneId: string): Promise
   return proposal
 }
 
-/** EXPERT-FR-007 — đề xuất mới chỉ báo trong ứng dụng cho Domain Expert của farm */
 async function notifyExpertsOfProposal(farmId: unknown, owner: CurrentUser, zoneName: string, proposalId: string) {
   try {
     const [experts, author] = await Promise.all([findFarmExperts(farmId), User.findById(owner._id).select('full_name').lean()])
@@ -69,7 +63,6 @@ async function notifyExpertsOfProposal(farmId: unknown, owner: CurrentUser, zone
   }
 }
 
-/** Đề xuất + Zone của nó, đã kiểm: Domain Expert của farm, đề xuất còn chờ (Report 3 §6.11) */
 async function loadPendingProposal(proposalId: string, user: CurrentUser) {
   const proposal = await CoefficientProposal.findById(proposalId)
   if (!proposal) throw NotFoundError('Không tìm thấy đề xuất')
@@ -79,7 +72,7 @@ async function loadPendingProposal(proposalId: string, user: CurrentUser) {
   return { proposal, chain }
 }
 
-/** Đóng đề xuất còn chờ — có điều kiện để 2 thao tác cùng lúc chỉ 1 cái thành công */
+// Có điều kiện: 2 thao tác cùng lúc chỉ 1 cái thành công
 async function closeProposal(proposal: ICoefficientProposal, user: CurrentUser, status: CoefficientProposalStatus, note?: string) {
   const closed = await CoefficientProposal.findOneAndUpdate(
     { _id: proposal._id, status: 'PROPOSED' },
@@ -90,21 +83,16 @@ async function closeProposal(proposal: ICoefficientProposal, user: CurrentUser, 
   return closed
 }
 
-/**
- * EXPERT-FR-011 — chuyên gia duyệt: áp hệ số đã chụp lúc gửi như ENV-FR-021 (lịch sử
- * SUGGESTION_APPROVED, gửi xuống ESP32); PROPOSED → APPROVED; báo Farm Owner.
- */
 export async function approveProposal(proposalId: string, user: CurrentUser): Promise<ICoefficientProposal> {
   const { proposal, chain } = await loadPendingProposal(proposalId, user)
   const suggested = pickFuzzyTuning(proposal.suggested_values)
   const before = chain.zone.toObject().fuzzy_tuning
   assertValidFuzzyTuning({ ...before, ...suggested })
 
-  // Đóng trước rồi mới áp: 2 chuyên gia cùng duyệt thì chỉ 1 người áp, và applyFuzzyTuning chuyển mọi
-  // đề xuất PROPOSED của Zone thành SUPERSEDED. Áp lỗi thì đề xuất về lại PROPOSED để duyệt lại được.
+  // Đóng trước rồi mới áp: 2 chuyên gia cùng duyệt chỉ 1 người áp. Áp lỗi thì về PROPOSED
   const closed = await closeProposal(proposal, user, 'APPROVED')
   try {
-    // Lịch sử hoạt động chuyên gia chỉ hiện PROPOSAL_APPROVED, không thêm dòng đổi hệ số (EXPERT-FR-009)
+    // Lịch sử chỉ hiện PROPOSAL_APPROVED
     await applyFuzzyTuning(chain, user, suggested, 'SUGGESTION_APPROVED', { notify: false, logDetails: { decided_in: 'coefficient_proposal' } })
   } catch (err) {
     await CoefficientProposal.updateOne(
@@ -124,7 +112,7 @@ export async function approveProposal(proposalId: string, user: CurrentUser): Pr
   return closed
 }
 
-/** EXPERT-FR-011 — chuyên gia từ chối kèm lý do (bắt buộc, 422 ở route): PROPOSED → REJECTED, báo Farm Owner */
+// Lý do bắt buộc (422 ở route)
 export async function rejectProposal(proposalId: string, user: CurrentUser, note: string): Promise<ICoefficientProposal> {
   const { proposal, chain } = await loadPendingProposal(proposalId, user)
   const closed = await closeProposal(proposal, user, 'REJECTED', note.trim())
@@ -146,7 +134,6 @@ export interface ListProposalsQuery {
   limit?: string | number
 }
 
-/** EXPERT-FR-011 — đề xuất của 1 farm, mới nhất trước; chỉ Farm Owner và Domain Expert của farm */
 export async function listProposals(user: CurrentUser, query: ListProposalsQuery) {
   const farm = await assertFarmAccess(query.farmId, user)
   const filter = {
@@ -162,11 +149,7 @@ export async function listProposals(user: CurrentUser, query: ListProposalsQuery
   return { records, total, page, limit }
 }
 
-/**
- * EXPERT-FR-011, BR-22 — áp gợi ý hiện tại trực tiếp: Domain Expert luôn được; Farm Owner chỉ khi farm
- * chưa có chuyên gia (có chuyên gia → 403, hệ số giữ nguyên — phải gửi đề xuất). Lịch sử
- * SUGGESTION_APPROVED; đề xuất còn chờ của Zone thành SUPERSEDED.
- */
+// Farm có chuyên gia thì Farm Owner bị 403, phải gửi đề xuất
 export async function applySuggestionDirect(user: CurrentUser, zoneId: string) {
   const chain = await assertZoneAccess(zoneId, user)
   await assertExpertDecision(chain.farm, user)

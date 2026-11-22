@@ -1,7 +1,4 @@
-/**
- * Dọn mẫu trùng `node_id + timestamp` (giữ bản đầu) rồi tạo unique index của ENV-FR-024.
- * Chạy: npm run migrate:telemetry-unique   (chạy lại nhiều lần vẫn an toàn)
- */
+// Dọn mẫu trùng node_id + timestamp rồi tạo unique index. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { Telemetry } from '@/models/telemetry.model'

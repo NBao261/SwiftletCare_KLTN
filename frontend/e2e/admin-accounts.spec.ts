@@ -1,8 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PASSWORD, demoFarm, signIn } from './helpers/demoApi';
 
-// Administrator trên web (G-02, G-18): tạo Farm Owner (AUTH-FR-005c) và lưu ngưỡng mặc định kèm nguồn REF-5 (ENV-FR-007).
-// Cần `npm run seed:demo` (tài khoản admin@); job CI không có SMTP nên thư mật khẩu tạm không gửi được.
+// Admin tạo Farm Owner và lưu ngưỡng mặc định. Cần `npm run seed:demo`; CI không có SMTP nên thư không gửi
 async function signInAsAdmin(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill('admin@swiftletcare.dev');
@@ -46,7 +45,7 @@ test.describe('Administrator', () => {
     await expect(page.getByText('Đã lưu ngưỡng mặc định hệ thống')).toBeVisible();
   });
 
-  // AUTH-FR-012 — Admin "completes or rejects"; lý do bắt buộc (todo-audit-1118 W-05)
+  // Admin "completes or rejects"; lý do bắt buộc
   test('từ chối yêu cầu xoá tài khoản kèm lý do, tài khoản rời danh sách', async ({ page, request }) => {
     // Tài khoản riêng của test: Farm Owner mời một thợ, thợ tạo tài khoản từ lời mời rồi gửi yêu cầu xoá
     const email = `delete-e2e-${Date.now()}@swiftletcare.dev`;

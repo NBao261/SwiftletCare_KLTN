@@ -1,4 +1,4 @@
-// EXPERT-FR-021 — Kết quả kiểm tra tại chỗ của Kỹ thuật viên trong bảng bằng chứng
+// Kết quả kiểm tra tại chỗ của Kỹ thuật viên trong bảng bằng chứng
 import { ClipboardList, CheckCircle2, Hourglass, Clock } from 'lucide-react'
 import type { OnsiteCheck } from '@/types/expert.types'
 import { onsiteObservationDict } from '@/constants/enumLabels.i18n'

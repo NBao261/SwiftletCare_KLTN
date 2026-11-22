@@ -1,8 +1,3 @@
-/**
- * ALERT-FR-013 (SRS v2.0.0) — kênh Telegram: liên kết bằng mã một lần qua `/start <mã>`,
- * gửi cảnh báo theo cùng luật với push (người nhận, giờ im lặng, ngoại lệ CRITICAL).
- * `fetch` tới api.telegram.org được giả lập — test không gọi mạng thật.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -51,7 +46,7 @@ const mkUser = (over: Record<string, unknown> = {}) =>
 const tokenOf = (u: { _id: unknown }) => jwt.sign({ sub: String(u._id), role: 'FARM_OWNER' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
 const start = (code: string, chatId = 777, type = 'private') =>
   handleTelegramUpdate({ update_id: 1, message: { text: `/start ${code}`, chat: { id: chatId, type } } })
-/** Các tin bot đã gửi: [chat_id, text] */
+// Các tin bot đã gửi: [chat_id, text]
 const sent = () => fetchMock.mock.calls
   .filter(c => String(c[0]).endsWith('/sendMessage'))
   .map(c => JSON.parse(c[1].body as string) as { chat_id: string; text: string })

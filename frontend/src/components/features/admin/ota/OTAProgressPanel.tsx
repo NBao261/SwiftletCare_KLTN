@@ -1,5 +1,4 @@
-// OTAProgressPanel.tsx — trạng thái OTA thật: chờ thiết bị cập nhật (ota_pending) / thành công
-// BE không trả % tiến trình nên chỉ hiển thị các mốc có thể kiểm chứng + thanh vô định (không vẽ % giả).
+// Backend không trả % tiến trình nên chỉ hiện các mốc kiểm chứng được
 import { useEffect, useState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -7,7 +6,7 @@ import { formatDate } from '@/lib/helpers'
 
 interface Props {
   done: boolean
-  /** Phiên bản mục tiêu (x.y.z) */
+  // Phiên bản mục tiêu (x.y.z)
   version: string
   requestedAt?: string
 }
@@ -18,7 +17,7 @@ const STEPS = [
   'Chờ thiết bị báo phiên bản mới',
 ]
 
-/** "mm:ss" đã trôi qua kể từ requestedAt; tự cập nhật mỗi giây khi còn đang chờ */
+// "mm:ss" đã trôi qua kể từ requestedAt; tự cập nhật mỗi giây khi còn đang chờ
 function useElapsed(since: string | undefined, running: boolean): string | null {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -54,7 +53,7 @@ export function OTAProgressPanel({ done, version, requestedAt }: Props) {
             Đang chờ thiết bị cập nhật lên <span className="tabular-nums font-semibold">{version}</span>
             {requestedAt ? <span className="text-warmGray"> · gửi lúc {formatDate(requestedAt)}</span> : null}
           </p>
-          {/* Thanh vô định 2px — báo "đang chạy" mà không giả vờ biết phần trăm */}
+          {/* Thanh vô định 2px: báo "đang chạy" mà không giả vờ biết phần trăm */}
           <div className="relative h-0.5 w-full overflow-hidden rounded-full bg-warmGray/15" role="progressbar" aria-label="Đang chờ thiết bị cập nhật">
             <div className="absolute inset-y-0 left-0 w-2/5 animate-indeterminate rounded-full bg-charcoal motion-reduce:animate-none" />
           </div>

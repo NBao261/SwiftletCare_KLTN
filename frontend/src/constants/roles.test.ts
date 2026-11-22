@@ -4,11 +4,11 @@ import type { Role } from '@/types'
 
 const FO: Role = 'FARM_OWNER'
 const DE: Role = 'DOMAIN_EXPERT'
-const FT: Role = 'FARM_TECHNICIAN'  // G-20: đổi TECHNICIAN → FARM_TECHNICIAN
+const FT: Role = 'FARM_TECHNICIAN'  // đổi TECHNICIAN → FARM_TECHNICIAN
 const ADMIN: Role = 'ADMIN'
 const ROLES: Role[] = [FO, DE, FT, ADMIN]
 
-// Ma trận quyền web theo Report 3 §2.4 và G-20 (backend f9d9522): path → role được vào
+// Ma trận quyền web theo và (backend f9d9522): path → role được vào
 const MATRIX: Record<string, Role[]> = {
   '/dashboard': [FO, DE],
   '/dashboard/scada': [FO],
@@ -16,14 +16,14 @@ const MATRIX: Record<string, Role[]> = {
   '/vision': [FO, DE],
   '/health': [FO, DE],
   '/harvests': [FO, DE],
-  '/work-orders': [FO, DE],             // G-21: Farm Owner thao tác, Domain Expert chỉ đọc (Report 3 §2.4)
+  '/work-orders': [FO, DE],             // Farm Owner thao tác, Domain Expert chỉ đọc
   '/farms': [FO, DE, FT],
   '/farms/f1/houses/h1/zones/z1': [FO, DE, FT],
-  '/devices': [ADMIN, FO, DE, FT],      // G-20: ADMIN có nhóm Thiết bị qua /devices
+  '/devices': [ADMIN, FO, DE, FT],      // ADMIN có nhóm Thiết bị qua /devices
   '/devices/detail': [FO, DE],
-  '/devices/onboarding': [FO],          // SF-01: chỉ FARM_OWNER (FARM_TECHNICIAN/ADMIN gọi API → 403)
-  '/ota': [ADMIN],                      // G-20: OTA chỉ ADMIN (route /ota ở web là phần của Tuấn)
-  '/alerts': [ADMIN, FO, FT],           // G-20: ADMIN xem cảnh báo thiết bị mọi farm
+  '/devices/onboarding': [FO],          // chỉ FARM_OWNER (FARM_TECHNICIAN/ADMIN gọi API → 403)
+  '/ota': [ADMIN],                      // OTA chỉ ADMIN (route /ota ở web là phần của Tuấn)
+  '/alerts': [ADMIN, FO, FT],           // ADMIN xem cảnh báo thiết bị mọi farm
   '/system/health': [ADMIN],
   '/system/device-stock': [ADMIN],
   '/system/settings': [ADMIN],
@@ -31,7 +31,7 @@ const MATRIX: Record<string, Role[]> = {
   '/users': [ADMIN],
   '/account-requests': [ADMIN],
   '/domain-expert/queue': [DE],
-  // W-02 — trang quyết định của chuyên gia mở cho Farm Owner (Report 4 §5.4, BR-22; ghi hay chỉ xem do useExpertDecisionRights)
+  // trang quyết định của chuyên gia mở cho Farm Owner (ghi hay chỉ xem do useExpertDecisionRights)
   '/domain-expert/alert-verdicts': [DE, FO],
   '/domain-expert/tuning': [DE, FO],
   '/domain-expert/counting-schedule': [DE, FO],

@@ -1,8 +1,3 @@
-/**
- * EXPERT-FR-014, 015; Report 3 §6.23 — hồ sơ cấu hình: Domain Expert soạn và duyệt (Farm Owner khi farm chưa
- * có chuyên gia, BR-22), Farm Owner áp cho nhiều nhà; mỗi zone nhận giá trị với lịch sử nguồn PROFILE và một
- * phiên bản cấu hình mới.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

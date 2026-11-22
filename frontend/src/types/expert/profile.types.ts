@@ -1,4 +1,4 @@
-// EXPERT-FR-014, 015 — Hồ sơ cấu hình (config profiles), SM-23
+// Hồ sơ cấu hình (config profiles)
 import type { ExpertThresholds, ExpertFuzzyTuning, ExpertDetectionTuning } from './tuning.types'
 
 export type ConfigProfileStatus = 'DRAFT' | 'APPROVED' | 'ARCHIVED'

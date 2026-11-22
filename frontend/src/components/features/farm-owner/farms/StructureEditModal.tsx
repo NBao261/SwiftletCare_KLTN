@@ -13,16 +13,16 @@ interface StructureEditModalProps {
   mode: 'rename' | 'delete'
   id: string
   name: string
-  // Tên các nhà / Zone cùng cấp — không cho đổi sang tên đã có
+  // Tên các nhà / Zone cùng cấp: không cho đổi sang tên đã có
   existingNames?: string[]
-  // Số thiết bị đang lắp trong nhà / Zone — còn thiết bị thì chặn xoá
+  // Số thiết bị đang lắp trong nhà / Zone: còn thiết bị thì chặn xoá
   deviceCount: number
   onClose: () => void
   // Xoá xong: trang đang mở không còn, trang gọi điều hướng về cấp trên
   onDeleted?: () => void
 }
 
-// FARM-FR-002 — đổi tên / xoá mềm nhà yến hoặc Zone; còn thiết bị thì chặn xoá (backend cũng trả 409 HAS_ACTIVE_DEVICES)
+// đổi tên / xoá mềm nhà yến hoặc Zone; còn thiết bị thì chặn xoá (backend cũng trả 409 HAS_ACTIVE_DEVICES)
 export default function StructureEditModal({ kind, mode, id, name, deviceCount, existingNames = [], onClose, onDeleted }: StructureEditModalProps) {
   const { t, num } = useTranslation(farmDict)
   const [newName, setNewName] = useState(name)
@@ -34,8 +34,7 @@ export default function StructureEditModal({ kind, mode, id, name, deviceCount, 
   const mutation = mode === 'rename' ? rename : remove
   const trimmed = newName.trim()
   const canSubmit = mode === 'rename' ? trimmed !== '' && trimmed !== name && !isDuplicate : !isDeleteBlocked
-  // Nhà, Zone vừa xoá biến khỏi danh sách nên trang gọi gỡ modal trước khi callback của mutate chạy: dùng mutateAsync để
-  // điều hướng vẫn chạy sau khi modal đã gỡ
+  // mutateAsync: nơi xoá gỡ modal trước khi callback của mutate chạy
   async function handleSubmit() {
     try {
       if (mode === 'rename') await rename.mutateAsync({ kind, id, name: trimmed })

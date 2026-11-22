@@ -1,4 +1,4 @@
-// Module TELEMETRY (§5.4) — bản ghi đo môi trường gửi lên từ Sensor Node.
+// Module TELEMETRY: bản ghi đo môi trường gửi lên từ Sensor Node.
 
 export interface TelemetryRecord {
   _id?: string; node_id?: string; zone_id?: string

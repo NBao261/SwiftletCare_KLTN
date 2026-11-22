@@ -16,7 +16,7 @@ interface AddressAutocompleteProps {
   onPick: (coordinates: Coordinates) => void;
 }
 
-// FARM-FR-001 — ô địa chỉ có gợi ý (Photon, OpenStreetMap); danh sách nằm ngay dưới ô, không nổi, nên modal không cắt mất
+// ô địa chỉ có gợi ý (Photon, OpenStreetMap); danh sách nằm ngay dưới ô, không nổi, nên modal không cắt mất
 export default function AddressAutocomplete({ value, onChange, onPick }: AddressAutocompleteProps): JSX.Element {
   const { t, lang } = useTranslation(farmDict);
   const listId = useId();

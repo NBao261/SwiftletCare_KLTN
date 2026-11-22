@@ -26,7 +26,7 @@ import type { SensorNode } from '@/types'
 const RATING_WINDOW_DAYS = 7
 const NO_SENSORS: SensorNode[] = []
 
-// Tổng quan Farm Owner (todo-ui-layout-1120 §5.1): 4 ô KPI · lưới thẻ nhà (môi trường, chế độ điều khiển) · việc cần làm
+// Tổng quan Farm Owner
 export default function FarmOwnerDashboardPage() {
   const { t, time } = useTranslation(dashboardDict)
   const scope = useScopeFilter()
@@ -37,7 +37,7 @@ export default function FarmOwnerDashboardPage() {
 
   const liveZoneIds = useMemo(() => (scopeZone ? [scopeZone._id] : zones.map(zone => zone._id)), [scopeZone, zones])
   const { structure, isLoading: isStructureLoading, isError: isStructureError, canViewHarvest, refetch: refetchStructure } = useFarmStructure({ liveZoneIds })
-  // Nhà trong phạm vi khung lọc: KPI, thẻ nhà và việc cần làm cùng một nguồn nên số khớp nhau (A-03)
+  // Nhà trong phạm vi khung lọc: KPI, thẻ nhà và việc cần làm cùng một nguồn nên số khớp nhau
   const scopedHouses = useMemo(
     () => structure.houses.filter(node => (!farmId || node.farm._id === farmId) && (!houseId || node.house._id === houseId)),
     [structure.houses, farmId, houseId],
@@ -53,7 +53,7 @@ export default function FarmOwnerDashboardPage() {
     }
     return result
   }, [sensors, scopedHouses])
-  // Trạng thái trực tiếp từng nhà: thẻ nhà và ô "Nhà cần chú ý" dùng cùng một luật (A-03)
+  // Trạng thái trực tiếp từng nhà: thẻ nhà và ô "Nhà cần chú ý" dùng cùng một luật
   const statusByHouse = useMemo(
     () => new Map(scopedHouses.map(node => [node.house._id, houseLiveStatus(node.health, (sensorsByHouse.get(node.house._id) ?? NO_SENSORS).map(sensor => sensor.status))])),
     [scopedHouses, sensorsByHouse],
@@ -71,12 +71,12 @@ export default function FarmOwnerDashboardPage() {
   // Tình hình hôm nay của từng nhà (chim về, phiếu đang mở): 1 request mỗi trang trại trong phạm vi
   const scopeFarmIds = useMemo(() => (farmId ? [farmId] : farms.map(farm => farm._id)), [farmId, farms])
   const { byHouse: overviewByHouse, isError: isOverviewError, refetch: refetchOverview } = useFarmOverviews(scopeFarmIds)
-  // Cảnh báo chưa xử lý (ACTIVE + ACKNOWLEDGED) lấy từ overview cho cả ô KPI lẫn thẻ nhà để tổng bằng nhau; chưa tải đủ thì chưa có số
+  // Cùng nguồn cho ô KPI và thẻ nhà để tổng bằng nhau
   const openAlerts = scopedHouses.every(node => overviewByHouse.has(node.house._id))
     ? scopedHouses.reduce((sum, node) => sum + (overviewByHouse.get(node.house._id)?.open_alerts ?? 0), 0)
     : undefined
 
-  // Phiếu chờ duyệt cùng phạm vi khung lọc với các ô khác (A-03)
+  // Phiếu chờ duyệt cùng phạm vi khung lọc với các ô khác
   const { data: awaiting } = useAwaitingApproval(farmId, houseId)
   const today = vietnamDate()
   const { days: daysToRate } = useHealthDays({

@@ -16,7 +16,7 @@ import { technicianRoutes } from "@/routes/technician.routes";
 import { adminRoutes } from "@/routes/admin.routes";
 import { domainExpertRoutes } from "@/routes/domain-expert.routes";
 
-/** Cài đặt tài khoản và chính sách quyền riêng tư — route mọi role đã đăng nhập đều dùng, nên nằm ngay đây thay vì trong một file route theo role. */
+// Mọi role đã đăng nhập đều dùng nên khai ở đây
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const SettingsPrivacyPage = lazy(() => import("@/pages/SettingsPrivacyPage"));
 
@@ -26,24 +26,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const mustChangePassword = useAuthStore((s) => s.user?.must_change_password === true);
   const location = useLocation();
 
-  // Chờ zustand/persist đọc xong localStorage trước khi quyết định — tránh
-  // flash redirect về /login khi F5 một trang đã đăng nhập.
+  // Chờ zustand/persist đọc xong: tránh nháy về /login khi F5
   if (!hasHydrated) return <RouteFallback />;
 
   if (!isAuthenticated) {
     const returnTo = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?returnTo=${returnTo}`} replace />;
   }
-  // AUTH-FR-005c — còn mật khẩu tạm thì chỉ vào được trang đổi mật khẩu
+  // còn mật khẩu tạm thì chỉ vào được trang đổi mật khẩu
   if (mustChangePassword) return <Navigate to="/change-password" replace />;
   return <>{children}</>;
 }
 
-/**
- * Khung ứng dụng theo role người đang đăng nhập. Khác các dự án gắn layout theo
- * nhánh route (`/admin/*`): URL của SwiftletCare không có tiền tố role
- * (`/devices` dùng chung cho 3 role) nên phải chọn lúc chạy.
- */
+// URL không có tiền tố role (`/devices` dùng chung) nên chọn khung lúc chạy
 function RoleLayout() {
   const role = useAuthStore((s) => s.user?.role);
 
@@ -56,14 +51,13 @@ function RoleLayout() {
       return <DomainExpertLayout />;
     case "FARM_OWNER":
       return <FarmOwnerLayout />;
-    // Role lạ từ token cũ: vẫn dựng khung để Outlet render được, chỉ là chưa có
-    // menu — giống hành vi cũ khi lọc nav bằng role không khớp.
+    // Role lạ từ token cũ: vẫn dựng khung để Outlet render, chỉ chưa có menu
     default:
       return <AppShell menuSections={[]} dockItems={[]} />;
   }
 }
 
-/** Đăng ký navigate() của router vào bridge để lib/axios.ts (ngoài React tree) dùng được. */
+// Đăng ký navigate() của router vào bridge để lib/axios.ts (ngoài React tree) dùng được.
 function NavigationBridge() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -73,7 +67,7 @@ function NavigationBridge() {
   return null;
 }
 
-/** Trang mặc định sau khi vào "/" hoặc gõ URL không tồn tại — tuỳ role vì mỗi role có bộ trang riêng. */
+// Trang mặc định sau khi vào "/" hoặc gõ URL không tồn tại: tuỳ role vì mỗi role có bộ trang riêng.
 function RoleHomeRedirect() {
   const role = useAuthStore((s) => s.user?.role);
   return <Navigate to={getRoleHomePath(role)} replace />;
@@ -87,14 +81,7 @@ function RouteFallback() {
   );
 }
 
-/**
- * Bảng route gốc. Chi tiết nằm trong `routes/<role>.routes.tsx`, một file cho
- * mỗi thư mục `pages/<role>/`: file đó tự lazy-load trang của mình
- * (code-splitting theo route) và tự khai `RequireRole`. Thư mục chứa trang cho
- * biết role SỞ HỮU nghiệp vụ đó, còn `allow={...}` trong file route mới là
- * danh sách role thật sự vào được — VD trang trong `pages/technician/` vẫn mở
- * cho Farm Owner qua `allow={ALERT_ROLES}` (/alerts).
- */
+// Route chi tiết ở `routes/<role>.routes.tsx`; `allow={...}` mới là danh sách role vào được
 export default function App() {
   return (
     <>
@@ -103,7 +90,7 @@ export default function App() {
         <Routes>
           {publicRoutes}
 
-          {/* Đã đăng nhập — bọc trong khung sidebar/topbar */}
+          {/* Đã đăng nhập: bọc trong khung sidebar/topbar */}
           <Route
             path="/"
             element={
@@ -124,7 +111,7 @@ export default function App() {
           <Route path="*" element={<RoleHomeRedirect />} />
         </Routes>
       </Suspense>
-      {/* Màn chuyển cảnh sau đăng nhập — ngoài Suspense để không bị thay bằng màn chờ khi trang trong đang tải */}
+      {/* Màn chuyển cảnh sau đăng nhập: ngoài Suspense để không bị thay bằng màn chờ khi trang trong đang tải */}
       <LoginSplash />
     </>
   );

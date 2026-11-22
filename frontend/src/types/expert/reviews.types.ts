@@ -1,9 +1,6 @@
-/**
- * reviews.types.ts — Types cho mục duyệt tham số và đề xuất hệ số mờ (G-04)
- * SRS: EXPERT-FR-010, EXPERT-FR-011; Report 3 §6.10, §6.11
- */
+// reviews.types.ts: Types cho mục duyệt tham số và đề xuất hệ số mờ
 
-// BR-22 (Report 3 4.2.15): theo Zone, theo nhà hoặc theo camera
+// theo Zone, theo nhà hoặc theo camera
 export type ParameterReviewGroup =
   | 'thresholds' | 'fuzzy' | 'detection'
   | 'return_rate_drop' | 'health_levels' | 'counting_schedule' | 'counting_ring';

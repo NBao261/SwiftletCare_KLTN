@@ -1,4 +1,4 @@
-// CoefficientProposalCard.tsx — Thẻ đề xuất hệ số mờ Fuzzy của Farm Owner (EXPERT-FR-011)
+// CoefficientProposalCard.tsx: Thẻ đề xuất hệ số mờ Fuzzy của Farm Owner
 
 import { useState } from 'react';
 import {
@@ -28,7 +28,7 @@ interface CoefficientProposalCardProps {
   onApprove: (proposalId: string) => Promise<void>;
   onReject: (proposalId: string, note: string) => Promise<boolean>;
   isProcessing?: boolean;
-  // Farm Owner xem mục duyệt, đề xuất nhưng không duyệt (EXPERT-FR-010, 011 chỉ của Domain Expert)
+  // Farm Owner xem mục duyệt, đề xuất nhưng không duyệt (chỉ của Domain Expert)
   readOnly?: boolean;
 }
 
@@ -92,7 +92,7 @@ export function formatFuzzyProposalValue(keyOrValue: unknown, optionalValue?: un
   return String(value);
 }
 
-// Thẻ hiển thị đề xuất hệ số mờ Fuzzy của Farm Owner gửi lên (EXPERT-FR-011)
+// Thẻ hiển thị đề xuất hệ số mờ Fuzzy của Farm Owner gửi lên
 export default function CoefficientProposalCard({
   proposal,
   onApprove,

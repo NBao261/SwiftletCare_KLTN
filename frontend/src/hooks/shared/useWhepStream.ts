@@ -20,8 +20,7 @@ function waitIceGathering(peer: RTCPeerConnection): Promise<void> {
   });
 }
 
-// VISION-FR-013 — xin token rồi mở WebRTC (WHEP) tới MediaMTX, gắn hình vào thẻ <video>; khung nhận diện đã vẽ sẵn trong hình.
-// Dùng cho live stream của Farm Owner và khung vẽ vòng đếm của chuyên gia
+// Xin token rồi mở WHEP tới MediaMTX; khung nhận diện đã vẽ sẵn trong hình
 export function useWhepStream(videoRef: RefObject<HTMLVideoElement>, cameraNodeId: string | undefined) {
   const [status, setStatus] = useState<StreamStatus>('idle');
   // Tăng lên để mở lại kết nối (nút Thử lại)

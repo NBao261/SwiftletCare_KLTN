@@ -1,7 +1,7 @@
 import type { Dictionary } from '@/lib/i18n';
 import { prefixLabels, recommendationIndicatorDict, recommendationStatusDict } from '@/constants/enumLabels.i18n';
 
-// Từ điển khuyến nghị (Farm Owner, /recommendations) và luật khuyến nghị (Domain Expert) — EXPERT-FR-016…019, BR-42
+// Từ điển khuyến nghị (Farm Owner, /recommendations) và luật khuyến nghị (Domain Expert)
 const vi = {
   ...prefixLabels('indicator.', recommendationIndicatorDict.vi),
   ...prefixLabels('status.', recommendationStatusDict.vi),
@@ -30,7 +30,7 @@ const vi = {
   'common.retry': 'Thử lại',
   'common.loadError': 'Không tải được dữ liệu',
 
-  // Farm Owner — danh sách khuyến nghị
+  // Farm Owner: danh sách khuyến nghị
   'page.title': 'Khuyến nghị',
   'page.subtitle': 'Hệ thống xét luật của chuyên gia mỗi ngày sau khi đánh giá ngày; luật thoả ở nhà nào thì mở khuyến nghị cho nhà đó.',
   'page.short': 'Khuyến nghị mở theo luật của chuyên gia',
@@ -84,7 +84,7 @@ const vi = {
   'reject.empty': 'Nhập lý do từ chối.',
   'reject.done': 'Đã từ chối khuyến nghị.',
 
-  // Domain Expert — luật khuyến nghị
+  // Domain Expert: luật khuyến nghị
   'rules.title': 'Luật khuyến nghị',
   'rules.subtitle': 'Luật thoả hằng ngày thì mở khuyến nghị cho Chủ nhà yến.',
   'rules.pickFarm': 'Chọn trang trại ở thanh trên để xem luật khuyến nghị.',
@@ -99,7 +99,7 @@ const vi = {
   'rules.turnOn': 'Bật luật',
   'rules.turnOff': 'Tắt luật',
   'rules.saved': 'Đã lưu luật.',
-  // BR-22 — luật Farm Owner viết trên farm có chuyên gia
+  // luật Farm Owner viết trên farm có chuyên gia
   'rules.savedPending': 'Đã lưu luật. Luật chạy khi chuyên gia bật.',
   'rules.pending': 'Chờ chuyên gia duyệt',
   'rules.pendingHint': 'Luật chạy khi chuyên gia duyệt và bật.',

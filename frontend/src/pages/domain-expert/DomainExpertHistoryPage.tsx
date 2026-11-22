@@ -1,12 +1,4 @@
-/**
- * DomainExpertHistoryPage — Lịch sử hoạt động chuyên gia
- *
- * SRS EXPERT-FR-009: Lịch sử các quyết định của Chuyên gia / Farm Owner (làm thay BR-22)
- * Đọc từ audit log qua GET /expert-activity?farmId=
- * Hỗ trợ lọc theo loại quyết định, theo nhà/vùng và phân trang chuẩn hệ thống.
- *
- * Bucket: pages/domain-expert/ — §12.4.
- */
+// Lịch sử quyết định của chuyên gia, hoặc Farm Owner làm thay
 import { useMemo, useState } from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { DataTable, SectionCard, type DataTableColumn } from '@/components/ui'
@@ -48,7 +40,7 @@ const ACTION_OPTIONS: SelectMenuOption<string>[] = [
 // Tên loại quyết định lấy từ chính danh sách của ô lọc
 const ACTION_LABELS = new Map(ACTION_OPTIONS.map(option => [option.value, option.label]))
 
-// Tên tham số trong before/after → nhãn (ngưỡng lấy từ THRESHOLD_FIELDS); tham số chưa có nhãn hiện "Tham số khác"
+// Tham số chưa có nhãn hiện "Tham số khác"
 const FIELD_LABELS: Record<string, string> = translated({
   ...Object.fromEntries(THRESHOLD_FIELDS.map(field => [field.key, field.label])),
   fuzzy_humidity_band: 'Dải chuyển độ ẩm (%RH)',
@@ -70,7 +62,7 @@ const FIELD_LABELS: Record<string, string> = translated({
   noise_clear: 'Tiếng ồn lệch rõ',
 })
 
-// Giá trị trong before/after: số, chữ in ra; danh sách ghi số mục; object không in thẳng (tránh "[object Object]")
+// Object không in thẳng để tránh "[object Object]"
 function formatChangeValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (Array.isArray(value)) return t('{{n}} mục', { n: value.length })
@@ -81,7 +73,7 @@ function formatChangeValue(value: unknown): string {
 // 'YYYY-MM-DD' → 'DD/MM/YYYY', 'MM-DD' → 'DD/MM'
 const dayText = (value: string) => value.split('-').reverse().join('/')
 
-// VISION-FR-019 — một lần sửa lịch đếm: ngày áp và từng hồ sơ, khung tạm của lịch mới
+// một lần sửa lịch đếm: ngày áp và từng hồ sơ, khung tạm của lịch mới
 function renderCountingSchedule(metadata: Record<string, unknown>) {
   const schedule = metadata.after as CountingSchedule | undefined
   // Gọn: ngày dạng ngày/tháng, khung một ngày ghi một ngày; giờ hai phiên xem khi rê chuột
@@ -205,7 +197,7 @@ export default function DomainExpertHistoryPage() {
 
   const { data, isLoading } = useExpertActivity({
     farmId: selectedFarmId ?? undefined,
-    // Lọc tới nhà, không tới Zone: quyết định cấp nhà (lịch đếm, luật thời tiết) không có zone_id, cấp Zone vẫn có house_id
+    // Lọc tới nhà vì quyết định cấp nhà không có zone_id
     houseId: selectedHouseId || undefined,
     type: actionType !== 'ALL' ? actionType : undefined,
     page,

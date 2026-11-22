@@ -7,13 +7,13 @@ import { NO_VALUE } from '@/constants/display'
 interface ThresholdMetricCardProps {
   meta: MetricMeta
   value: number | undefined
-  /** Khoảng an toàn đã định dạng (VD "26–35 °C"); undefined = Zone chưa cấu hình ngưỡng cho chỉ số này */
+  // Khoảng an toàn đã định dạng (VD "26–35 °C"); undefined = Zone chưa cấu hình ngưỡng cho chỉ số này
   range?: string
-  /** true = giá trị đang ngoài ngưỡng */
+  // true = giá trị đang ngoài ngưỡng
   isAnomaly?: boolean
 }
 
-/** 1 chỉ số của Zone — cùng kiểu ReadingTile ở EnvSensorPanel (Dashboard): nhãn trái + icon tròn phải, số lớn, dòng "An toàn …" */
+// 1 chỉ số của Zone
 export default function ThresholdMetricCard({ meta, value, range, isAnomaly }: ThresholdMetricCardProps) {
   const { t, num } = useTranslation(farmDict)
   const Icon = meta.icon

@@ -7,8 +7,6 @@ import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
-// EXPERT-FR-009/010/011 — chỉ Farm Owner và Domain Expert của farm (service kiểm thành viên);
-// Technician, Administrator → 403
 router.use(authenticate, requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
 
 const pageQuery = [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 })]
@@ -25,14 +23,12 @@ router.get('/',
   expertActivityController.list,
 )
 
-// EXPERT-FR-010, Report 3 §6.10 — mục duyệt thay đổi của Farm Owner; chỉ Domain Expert chấp nhận / hoàn lại
 router.get('/reviews',
   ...farmScope, query('status').optional().isString().isIn(['PENDING_REVIEW', 'ACCEPTED', 'REVERTED', 'ADJUSTED']),
   ...pageQuery, validate, expertActivityController.listReviews)
 router.put('/reviews/:id/accept', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), validate, expertActivityController.acceptReview)
 router.put('/reviews/:id/revert', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), validate, expertActivityController.revertReview)
 
-// EXPERT-FR-011, Report 3 §6.11 — Farm Owner gửi gợi ý hệ số; chỉ Domain Expert duyệt / từ chối (từ chối phải có lý do)
 router.get('/proposals',
   ...farmScope, query('status').optional().isString().isIn(['PROPOSED', 'APPROVED', 'REJECTED', 'SUPERSEDED']),
   ...pageQuery, validate, expertActivityController.listProposals)
@@ -42,8 +38,6 @@ router.put('/proposals/:id/reject', requireRole('DOMAIN_EXPERT'), param('id').is
   body('note').isString().trim().notEmpty().withMessage('Từ chối đề xuất phải ghi lý do').isLength({ max: 1000 }),
   validate, expertActivityController.rejectProposal)
 
-// BR-22 (Report 3 4.2.15) — Farm Owner nhắc chuyên gia việc chỉ chuyên gia làm: kết luận cảnh báo suy luận,
-// báo cáo sức khoẻ, mùa vụ; mỗi việc một lần
 router.post('/reminders', requireRole('FARM_OWNER'),
   body('kind').isString().isIn([...REMINDER_KINDS]), body('id').isString().isMongoId(), validate,
   expertActivityController.remindExpert)

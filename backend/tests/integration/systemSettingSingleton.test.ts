@@ -1,10 +1,3 @@
-/**
- * SYSTEM-FR-002 — `system_settings` phải luôn là singleton.
- *
- * Trước khi có unique index `_singleton`, upsert dùng filter rỗng nên 2 request
- * đồng thời vào collection trống đều insert → sinh nhiều document và ngưỡng mặc
- * định trả về trở nên không xác định (test này chạy trên code cũ cho ra 8 document).
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { SystemSetting } from '@/models/systemSetting.model'

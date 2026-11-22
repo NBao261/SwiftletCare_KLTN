@@ -1,8 +1,3 @@
-/**
- * EXPERT-FR-008 — tham số phát hiện do Domain Expert chỉnh: 5 tham số theo Zone (SRS v2.1.0) gửi
- * xuống ESP32 qua config/update; mức giảm tỷ lệ chim về theo House (SRS v2.1.8, camera ở cửa ra vào
- * của cả nhà) thay cho hằng số 20% ở xu hướng và cảnh báo LOW_RETURN_RATE. Kiểm khoảng, lịch sử + audit.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -232,7 +227,7 @@ describe('khôi phục mặc định (EXPERT-FR-008 "reset to defaults", todo-au
     const { farm, zone, house, put, putHouse, t } = await seed()
     const other = await seed()
     expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, other.t.expert)).status).toBe(403)
-    // Chuyên gia đặt giá trị khác mặc định trước, để lần đưa về mặc định của Farm Owner là một thay đổi thật
+    // Để lần đưa về mặc định của Farm Owner là một thay đổi thật
     expect((await put(t.expert, { noise_margin_db: 20 })).status).toBe(200)
     expect((await putHouse(t.expert, { return_rate_drop_pct: 30 })).status).toBe(200)
     expect((await reset(`/farms/zones/${zone._id}/detection-tuning/reset`, t.owner)).status).toBe(200)
@@ -268,9 +263,7 @@ describe('đưa tham số vào cấu hình thiết bị và xu hướng chim v�
     const { owner, house } = await seed()
     const user: CurrentUser = { _id: String(owner._id), email: owner.email, role: 'FARM_OWNER' }
     const day = (n: number) => new Date(Date.now() - n * 86400_000)
-    // Mốc = trung bình 7 ngày trước ngày mới nhất = 90 (không gồm chính nó); mới nhất 60 → giảm 33,3%.
-    // 9 ngày: ngày xa nhất (30) nằm ngoài mốc 7 ngày nên không kéo mốc xuống.
-    // Mỗi ngày: phiên sáng ròng ra 100 con, phiên chiều ròng về `rate` con → tỷ lệ = rate %
+    // Mốc = trung bình 7 ngày trước ngày mới nhất = 90; mới nhất 60 → giảm 33,3%; ngày thứ 9 (30) ngoài mốc
     const camera = new mongoose.Types.ObjectId()
     await BirdCountRecord.create([8, 7, 6, 5, 4, 3, 2, 1, 0].flatMap((n, i) => {
       const rate = i === 8 ? 60 : i === 0 ? 30 : 90

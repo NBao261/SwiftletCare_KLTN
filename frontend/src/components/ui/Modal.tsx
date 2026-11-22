@@ -4,24 +4,21 @@ import { Button } from '@/components/ui/Button'
 import { t, tr } from '@/i18n'
 import { cn } from '@/lib/cn'
 
-/** Modal Bottom Sheet cơ bản — mục 2.1 (rounded-3xl) */
+// Modal Bottom Sheet cơ bản: mục 2.1 (rounded-3xl)
 interface ModalProps {
   open: boolean
   onClose: () => void
   title?: string
-  /** Tên cho trình đọc màn hình khi không có `title` (popup tự dựng đầu) */
+  // Tên cho trình đọc màn hình khi không có `title` (popup tự dựng đầu)
   ariaLabel?: string
   children: ReactNode
-  /**
-   * `md` (mặc định, max-w-md) · `lg` (max-w-lg) — form cần hàng nhãn rộng hơn, VD lỗi nằm cùng hàng nhãn ·
-   * `xl` (max-w-3xl) — popup bố cục ngang 2 cột (danh mục trái + nội dung phải), VD chi tiết tài khoản
-   */
+  // md, lg, xl (popup 2 cột)
   size?: 'md' | 'lg' | 'xl'
-  /** Ghi đè class của khung (VD `max-w-sm` cho popup xác nhận ngắn) — thắng `size` nhờ tailwind-merge */
+  // Ghi đè class của khung (VD `max-w-sm` cho popup xác nhận ngắn): thắng `size` nhờ tailwind-merge
   className?: string
-  /** Nhấn ra vùng tối ngoài khung thì đóng — chỉ bật cho popup không có form dễ mất dữ liệu */
+  // Nhấn ra vùng tối ngoài khung thì đóng: chỉ bật cho popup không có form dễ mất dữ liệu
   closeOnBackdrop?: boolean
-  /** Ghi đè cỡ chữ tiêu đề (VD `text-h1`) — không truyền thì giữ cỡ chung `text-lg` */
+  // Ghi đè cỡ chữ tiêu đề (VD `text-h1`): không truyền thì giữ cỡ chung `text-lg`
   titleClassName?: string
 }
 
@@ -29,15 +26,11 @@ const SIZE_CLASS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-3xl' } as const
 
 export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', className, closeOnBackdrop = false, titleClassName }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
-  // Nơi gọi hay truyền onClose inline (hàm mới mỗi render). Để onClose trong deps
-  // thì mỗi phím gõ vào input → parent render lại → effect chạy lại → focus() giật
-  // focus khỏi input. Giữ bản mới nhất trong ref, effect chỉ chạy lại khi `open` đổi.
+  // Giữ onClose mới nhất trong ref: để trong deps thì mỗi phím gõ làm focus() giật khỏi input
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
-  // A11y (mục 6): Esc đóng modal + focus trap giữ Tab/Shift+Tab quanh panel khi
-  // đang mở — dùng chung cho mọi Modal/ConfirmModal trong app (ConfirmModal bọc
-  // ngay component này) nên chỉ cần sửa 1 chỗ.
+  // Esc đóng và giữ Tab trong panel
   useEffect(() => {
     if (!open) return
     panelRef.current?.focus()
@@ -61,9 +54,7 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
   }, [open])
 
   if (!open) return null
-  // Portal ra body: <main> của AppShell là stacking context z-10 nên modal vẽ bên trong sẽ nằm dưới header z-20.
-  // Lớp phủ cuộn, khung căn giữa bằng my-auto (không phải items-center): khung cao hơn màn hình
-  // (VD điện thoại 375 px) thì bắt đầu từ trên và cuộn được, không bị cắt mất tiêu đề lẫn nút cuối
+  // Portal ra body vì <main> là stacking context z-10; my-auto để khung cao hơn màn hình vẫn cuộn được
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-charcoal/30 p-4 backdrop-blur-sm animate-fade-in"
@@ -87,8 +78,7 @@ export function Modal({ open, onClose, title, ariaLabel, children, size = 'md', 
             </Button>
           </div>
         ) : (
-          // Không tiêu đề (popup tự dựng đầu, VD 2 cột): nút đóng neo góc trên phải, không chiếm 1 hàng riêng — trước
-          // đây hàng chỉ có nút + justify-between đẩy nút sang TRÁI. Nội dung tự chừa chỗ bên phải hàng đầu.
+          // Không tiêu đề thì nút đóng neo góc trên phải
           <Button variant="icon" size="sm" onClick={onClose} aria-label={t('Đóng')} className="absolute right-6 top-6 z-10">
             <CloseIcon />
           </Button>

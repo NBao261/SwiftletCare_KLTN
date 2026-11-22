@@ -14,7 +14,7 @@ const PARAMS: Array<{ key: keyof DetectionTuning; labelKey: FarmKey; hintKey: Fa
   { key: 'speaker_drop_pct', labelKey: 'tuning.speakerDrop', hintKey: 'tuning.speakerDropHint', unit: '%', decimals: 0 },
 ]
 
-// Tham số phát hiện của Zone (EXPERT-FR-008) — Domain Expert chỉnh, Farm Owner chỉ xem; chưa đặt thì "_"
+// Tham số phát hiện của Zone: Domain Expert chỉnh, Farm Owner chỉ xem; chưa đặt thì "_"
 export default function DetectionTuningCard({ tuning }: { tuning?: DetectionTuning }) {
   const { t, num } = useTranslation(farmDict)
 

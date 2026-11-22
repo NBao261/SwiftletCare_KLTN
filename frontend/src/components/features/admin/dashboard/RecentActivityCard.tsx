@@ -13,7 +13,7 @@ import { t } from '@/i18n'
 
 const RECENT_COUNT = 5
 
-// AD-02 — 5 nhật ký tài khoản mới nhất ở Tổng quan hệ thống (SYSTEM-FR-001); lọc, tìm, phân trang ở /system/audit-log
+// 5 nhật ký tài khoản mới nhất ở Tổng quan hệ thống; lọc, tìm, phân trang ở /system/audit-log
 export default function RecentActivityCard() {
   const { records, isLoading, isError, error, refetch } = useAuditLogList({ targetType: AUDIT_TARGET_TYPE, page: 1, limit: RECENT_COUNT })
   const apiErrorMessage = useApiErrorMessage()

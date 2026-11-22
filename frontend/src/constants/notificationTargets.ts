@@ -7,12 +7,12 @@ export interface NotificationTarget {
   state?: HealthReportState
 }
 
-// Trang mở ra khi bấm một thông báo trong ứng dụng (EXPERT-FR-007, 009); null = chỉ đánh dấu đã đọc
+// Trang mở ra khi bấm một thông báo trong ứng dụng; null = chỉ đánh dấu đã đọc
 export function notificationTarget(notification: Pick<AppNotification, 'ref'>, role: Role | undefined): NotificationTarget | null {
   const ref = notification.ref
   let target: NotificationTarget | null = null
   if (!ref) {
-    // Thông báo không gắn đối tượng của Administrator là yêu cầu xoá tài khoản và lời nhắc (AUTH-FR-012)
+    // Thông báo không gắn đối tượng của Administrator là yêu cầu xoá tài khoản và lời nhắc
     target = role === 'ADMIN' ? { path: '/account-requests' } : null
   } else if (ref.kind === 'alert') {
     target = role === 'DOMAIN_EXPERT'
@@ -27,7 +27,7 @@ export function notificationTarget(notification: Pick<AppNotification, 'ref'>, r
   } else if (ref.kind === 'parameter_review' || ref.kind === 'coefficient_proposal') {
     target = { path: '/domain-expert/reviews' }
   } else if (ref.kind === 'weather_rules') {
-    // BR-22 — đề xuất luật của Farm Owner chờ duyệt; trang chọn nhà ở thanh lọc
+    // đề xuất luật của Farm Owner chờ duyệt; trang chọn nhà ở thanh lọc
     target = { path: '/domain-expert/weather-rules' }
   } else if (ref.kind === 'config_profile') {
     target = { path: '/domain-expert/profiles' }

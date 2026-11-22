@@ -1,8 +1,3 @@
-/**
- * Data model sau đợt rà soát DB (SRS v1.23.0 §8.2): refresh token lưu hash + dọn token
- * hết hạn, Zone.farm_id, soft-delete phủ mọi truy vấn,
- * xoá farm huỷ lời mời còn chờ, threshold_history có giới hạn, migration chạy lại an toàn.
- */
 import crypto from 'crypto'
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'

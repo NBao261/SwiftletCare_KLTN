@@ -1,8 +1,3 @@
-/**
- * HARVEST-FR-001, 005, 006 — Farm Technician nhập lô ở nhà được giao (DRAFT), chỉ sửa/xoá lô DRAFT của mình,
- * chỉ xem lô của nhà được giao; Farm Owner nhập là CONFIRMED ngay và xác nhận lô của thợ (lần hai → 409,
- * thợ → 403); Domain Expert chỉ xem. migrate:harvest-confirmed xác nhận lô cũ của Farm Owner.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -49,7 +44,7 @@ const as = (token: string) => ({
 
 const batch = (zoneId: unknown) => ({ zone_id: String(zoneId), harvest_date: '2026-11-01', nest_count: 120, weight_grams: 950, nest_type: 'RAW' })
 
-/** Farm có nhà H (zone của seedOwnerFarm) giao cho thợ A, nhà H2 không giao; thợ B cũng được giao H; 1 chuyên gia */
+// Farm có nhà H (zone của seedOwnerFarm) giao cho thợ A, nhà H2 không giao; thợ B cũng được giao H; 1 chuyên gia
 async function seed() {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!

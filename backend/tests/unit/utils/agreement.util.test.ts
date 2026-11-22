@@ -2,7 +2,7 @@ import {
   agreementWithCI, confusionMatrix, falseAlarmRate, gwetAC1, linearWeightedKappa, type OrderedStatus, type RatingPair,
 } from '@/utils/agreement.util'
 
-/** Bảng 3×3 tính tay (hàng = hệ thống, cột = người chấm), n = 14 */
+// Bảng 3×3 tính tay (hàng = hệ thống, cột = người chấm), n = 14
 const TABLE: [OrderedStatus, OrderedStatus, number][] = [
   ['GOOD', 'GOOD', 5], ['GOOD', 'WATCH', 1],
   ['WATCH', 'GOOD', 1], ['WATCH', 'WATCH', 2], ['WATCH', 'ACTION', 1],

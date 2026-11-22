@@ -24,7 +24,7 @@ export function useUpdateWeatherRules(houseId: string | undefined) {
   })
 }
 
-// BR-22, BR-38 — đề xuất luật của Farm Owner và quyết định của chuyên gia
+// đề xuất luật của Farm Owner và quyết định của chuyên gia
 function useWeatherProposalMutation<TInput>(houseId: string | undefined, call: (houseId: string, input: TInput) => Promise<unknown>) {
   const queryClient = useQueryClient()
   return useMutation({

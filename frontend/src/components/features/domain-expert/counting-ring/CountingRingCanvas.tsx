@@ -1,4 +1,4 @@
-// VISION-FR-018 — lớp vẽ vòng đếm phủ lên khung video: đa giác + các đỉnh chạm được
+// lớp vẽ vòng đếm phủ lên khung video: đa giác + các đỉnh chạm được
 import { type MouseEvent, type RefObject } from 'react'
 import { t } from '@/i18n'
 

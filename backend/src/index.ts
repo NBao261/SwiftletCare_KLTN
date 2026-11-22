@@ -1,8 +1,3 @@
-/**
- * SwiftletCare Backend – Entry Point
- * SRS: §7.4 — Node.js 20 LTS, Express 4.x
- */
-
 import 'dotenv/config'
 import { createServer } from 'http'
 import app              from './config/app.config'
@@ -33,23 +28,15 @@ import logger           from './utils/logger.util'
 const PORT = Number(process.env.PORT ?? 3000)
 
 async function bootstrap(): Promise<void> {
-  // 1. Connect MongoDB
   await connectDB()
 
-  // 2. Create HTTP server (needed for Socket.io)
   const httpServer = createServer(app)
 
-  // 3. Initialize Socket.io (§9.3)
   initSocket(httpServer)
 
-  // 4. Connect MQTT broker + start subscriptions (§9.2)
   connectMQTT()
 
-  // 4b. Các job nền: phát hiện offline (FARM-FR-005), gửi lại cảnh báo
-  // chưa xác nhận (ALERT-FR-015), hết hạn Manual Override (ENV-FR-018)
-  // ENV-FR-028 — bù phun sương theo dự báo, mỗi giờ
   startWeatherCompensationJob()
-  // EXPERT-FR-017, 019 — khuyến nghị hết hạn và đo hiệu quả, mỗi ngày
   startRecommendationEffectJob()
   startDeviceOfflineJob()
   startAlertEscalationJob()
@@ -63,21 +50,17 @@ async function bootstrap(): Promise<void> {
   startForecastJob()
   startHouseHealthReportJob()
   startReturnRateJob()
-  // VISION-FR-019 — khung phiên 7 ngày tới cho nút AI, mỗi đêm
   startCameraConfigJob()
   startDeletionRequestReminderJob()
-  // ANALYTICS-FR-013 — thời tiết theo giờ cho luật mưa BR-30
   startWeatherJob()
   startConfigSyncJob()
-  // ALERT-FR-013 — nhận `/start <mã>` của bot Telegram (chỉ chạy khi có TELEGRAM_BOT_TOKEN)
+  // Chỉ chạy khi có TELEGRAM_BOT_TOKEN
   startTelegramPolling()
 
-  // 5. Start HTTP server
   httpServer.listen(PORT, () => {
     logger.info(`SwiftletCare API running on port ${PORT} [${process.env.NODE_ENV}]`)
   })
 
-  // Graceful shutdown
   process.on('SIGTERM', () => {
     logger.info('SIGTERM received, shutting down...')
     httpServer.close(() => process.exit(0))

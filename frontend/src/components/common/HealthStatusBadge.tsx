@@ -3,7 +3,7 @@ import { healthDict } from '@/constants/health.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import type { HealthStatus } from '@/types';
 
-// Màu theo trạng thái ngày (BR-29): tốt xanh, theo dõi cam, xử lý đỏ, thiếu dữ liệu xám
+// Màu theo trạng thái ngày: tốt xanh, theo dõi cam, xử lý đỏ, thiếu dữ liệu xám
 const STATUS_TONE: Record<HealthStatus, BadgeTone> = {
   GOOD: 'positive',
   WATCH: 'warning',

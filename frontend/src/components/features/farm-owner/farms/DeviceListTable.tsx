@@ -13,12 +13,12 @@ import { NO_VALUE } from '@/constants/display'
 
 interface DeviceListTableProps {
   devices: DeviceRow[]
-  /** Có thì thêm cột "Zone" (tab Thiết bị của cả nhà); trang zone không cần */
+  // Có thì thêm cột "Zone" (tab Thiết bị của cả nhà); trang zone không cần
   zoneNameById?: Map<string, string>
   onSelect: (device: DeviceRow) => void
 }
 
-/** Bảng thiết bị (sensor + camera) của 1 zone hoặc 1 nhà — bấm "Chi tiết" mở drawer bên phải */
+// Bảng thiết bị (sensor + camera) của 1 zone hoặc 1 nhà: bấm "Chi tiết" mở drawer bên phải
 export default function DeviceListTable({ devices, zoneNameById, onSelect }: DeviceListTableProps) {
   const { t, ago } = useTranslation(farmDict)
 

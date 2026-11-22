@@ -11,7 +11,7 @@ interface Props {
   onChange: (value: DayWindows) => void
 }
 
-// VISION-FR-019 — giờ bắt đầu và kết thúc của phiên sáng và phiên chiều (giờ VN, ô giờ TimePicker của design system)
+// giờ bắt đầu và kết thúc của phiên sáng và phiên chiều (giờ VN, ô giờ TimePicker của design system)
 export default function ScheduleWindowsFields({ idPrefix, value, disabled, onChange }: Props) {
   const { t } = useTranslation(countingScheduleDict)
   const setTime = (session: keyof DayWindows, edge: keyof TimeWindow, time: string) =>

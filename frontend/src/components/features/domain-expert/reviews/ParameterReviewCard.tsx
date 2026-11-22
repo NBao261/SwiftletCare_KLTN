@@ -1,4 +1,4 @@
-// ParameterReviewCard.tsx — Thẻ duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010, BR-22 Report 3 4.2.15)
+// ParameterReviewCard.tsx: Thẻ duyệt thay đổi tham số của Farm Owner
 
 import { useState } from 'react';
 import {
@@ -22,7 +22,7 @@ interface ParameterReviewCardProps {
   onAccept: (reviewId: string) => Promise<void>;
   onRevert: (reviewId: string) => Promise<void>;
   isProcessing?: boolean;
-  // Farm Owner xem mục duyệt, đề xuất nhưng không duyệt (EXPERT-FR-010, 011 chỉ của Domain Expert)
+  // Farm Owner xem mục duyệt, đề xuất nhưng không duyệt (chỉ của Domain Expert)
   readOnly?: boolean;
   // Tên nơi thay đổi, trang dựng một lần cho mọi thẻ
   places: ReviewPlaces;
@@ -143,7 +143,7 @@ export function formatParamValue(value: unknown, key?: string): string {
   return String(value);
 }
 
-// Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner (EXPERT-FR-010)
+// Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner
 export default function ParameterReviewCard({
   review,
   onAccept,
@@ -271,7 +271,7 @@ export default function ParameterReviewCard({
         </div>
       )}
 
-      {/* Modal xác nhận hoàn nguyên chuẩn ConfirmModal (FE_Design_Claude §13.5 & §13.16a) */}
+      {/* Modal xác nhận hoàn nguyên chuẩn ConfirmModal (FE_Design_Claude &a) */}
       <ConfirmModal
         open={showConfirmRevert}
         title={t('Xác nhận hoàn nguyên giá trị cũ')}

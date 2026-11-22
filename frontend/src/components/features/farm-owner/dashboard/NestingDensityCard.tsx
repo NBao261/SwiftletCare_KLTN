@@ -23,7 +23,7 @@ interface NestingDensityCardProps {
   houseName: string
 }
 
-// Tỉ lệ chim về của nhà yến (SRS v2.1.8: camera ở cửa nhà nên số đếm và tỉ lệ tính theo nhà, không theo Zone)
+// Tỉ lệ chim về của nhà yến (: camera ở cửa nhà nên số đếm và tỉ lệ tính theo nhà, không theo Zone)
 export default function NestingDensityCard({ houseId, houseName }: NestingDensityCardProps) {
   const { t, num, date } = useTranslation(dashboardDict)
   const { single: trends, isLoading } = useHousesBirdCountTrends(houseId ? [houseId] : [], TREND_DAYS)

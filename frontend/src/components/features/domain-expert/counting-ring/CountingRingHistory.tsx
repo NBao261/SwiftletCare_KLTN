@@ -1,4 +1,4 @@
-// VISION-FR-018 — lịch sử đổi vòng đếm của 1 camera (ai vẽ, vai trò, thời điểm, số đỉnh)
+// lịch sử đổi vòng đếm của 1 camera (ai vẽ, vai trò, thời điểm, số đỉnh)
 import { History } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'
 import { ROLE_LABEL } from '@/constants/roles'

@@ -15,14 +15,14 @@ import type { HouseStaff } from '@/hooks/farm-owner/useFarmStructure'
 interface HouseTableProps {
   houses: HouseNode[]
   pinned: Set<string>
-  /** false = role không xem được thu hoạch → bỏ cột sản lượng */
+  // false = role không xem được thu hoạch → bỏ cột sản lượng
   showYield: boolean
   onTogglePin: (houseId: string) => void
   staffByHouse: Map<string, HouseStaff>
   onOpen: (node: HouseNode) => void
 }
 
-/** Chế độ "Danh sách" của màn Cấu trúc Farm — cùng dữ liệu với lưới card, dựng bằng DataTable dùng chung */
+// Chế độ "Danh sách" của màn Cấu trúc Farm: cùng dữ liệu với lưới card, dựng bằng DataTable dùng chung
 export default function HouseTable({ houses, staffByHouse, pinned, showYield, onTogglePin, onOpen }: HouseTableProps) {
   const { t, num } = useTranslation(farmDict)
 
@@ -59,7 +59,7 @@ export default function HouseTable({ houses, staffByHouse, pinned, showYield, on
       {
         key: 'actions', header: t('table.actions'), align: 'center', className: 'w-[7%]',
         render: node => (
-          // stopPropagation — hàng đã bấm-được (onRowClick), mở menu không được kích hoạt luôn điều hướng
+          // stopPropagation: hàng đã bấm-được (onRowClick), mở menu không được kích hoạt luôn điều hướng
           <div onClick={event => event.stopPropagation()}>
             <ActionsMenu items={[{ label: t('card.open'), onClick: () => onOpen(node) }]} />
           </div>

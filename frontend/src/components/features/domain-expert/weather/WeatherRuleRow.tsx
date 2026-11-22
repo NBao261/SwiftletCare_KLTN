@@ -1,4 +1,4 @@
-// ENV-FR-030, BR-38 — Một dòng luật bù thời tiết (xem + toggle + xoá)
+// Một dòng luật bù thời tiết (xem + toggle + xoá)
 import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Toggle } from '@/components/ui/Toggle'

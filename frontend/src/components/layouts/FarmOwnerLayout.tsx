@@ -4,7 +4,7 @@ import {
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
 
-// Khung Farm Owner (todo-ui-layout-1120 §3.1): 10 mục, trang cùng một câu hỏi gộp thành tab; 4 mục đầu là dock điện thoại
+// Khung Farm Owner; 4 mục đầu là dock điện thoại
 const menuSections: MenuSection[] = [
   {
     title: 'Theo dõi',
@@ -44,7 +44,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    // Trang quyết định của chuyên gia (Report 4 §5.4): trang trại chưa có chuyên gia thì Farm Owner quyết định thay (BR-22), có thì xem
+    // Trang quyết định của chuyên gia: trang trại chưa có chuyên gia thì Farm Owner quyết định thay, có thì xem
     title: 'Chuyên môn',
     items: [
       {

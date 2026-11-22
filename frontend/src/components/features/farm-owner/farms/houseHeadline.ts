@@ -6,7 +6,7 @@ type FarmKey = keyof typeof farmDict.vi;
 type FarmTranslate = (key: FarmKey, params?: Record<string, string | number>) => string;
 type FormatNumber = (value: number, digits?: number) => string;
 
-// Câu sự cố nổi bật nhất của 1 nhà: vượt ngưỡng → cảnh báo thật → thiết bị mất kết nối; không có sự cố thì chuỗi rỗng
+// Sự cố nổi bật nhất: vượt ngưỡng, rồi cảnh báo, rồi mất kết nối
 export function houseHeadlineText(headline: HouseNode['headline'], translate: FarmTranslate, formatNumber: FormatNumber): string {
   if (!headline) return '';
   const zoneLabel = headline.zone.name || translate('card.unknownZone');

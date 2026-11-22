@@ -8,17 +8,13 @@ import { houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
 import type { CurrentUser, HealthStatus, HouseStage } from '@/types'
 
-/**
- * Report 3 §4.5 — "tỷ lệ chim về gần nhất" tìm trong chừng này ngày: không gom toàn bộ lịch sử số đếm của mọi nhà mỗi
- * lần mở trang; nhà không có ngày nào có tỷ lệ trong khoảng này hiện `null`.
- */
+// không gom toàn bộ lịch sử mỗi lần mở trang
 export const LATEST_RETURN_RATE_DAYS = 30
-/** Cảnh báo còn chờ xử lý: bác bỏ (`DISMISSED`) là báo động giả, không tính là đang mở */
+// DISMISSED là báo động giả
 const UNHANDLED_ALERT_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
 export type FarmHouse = Pick<IHouse, '_id' | 'name' | 'stage'>
 
-/** Số cảnh báo đang mở theo nhà: cảnh báo của nhà (camera đếm chim) và của các zone trong nhà */
 export async function openAlertCounts(farmId: unknown, houses: FarmHouse[]): Promise<Map<string, number>> {
   const houseIds = houses.map(h => h._id)
   const zones = await Zone.find({ house_id: { $in: houseIds } }).select('house_id').lean()
@@ -35,10 +31,7 @@ export async function openAlertCounts(farmId: unknown, houses: FarmHouse[]): Pro
   return counts
 }
 
-/**
- * SYSTEM-FR-004 — nhà có thiết bị và mọi thiết bị (controller của các zone, camera của nhà) đều là thiết bị giả lập
- * thì hiện là nhà giả lập; nhà trộn thiết bị thật và giả lập thì không.
- */
+// Nhà trộn thiết bị thật và giả lập thì không tính là giả lập
 export async function simulatedHouses(houses: FarmHouse[]): Promise<Set<string>> {
   const houseIds = houses.map(h => h._id)
   const zones = await Zone.find({ house_id: { $in: houseIds } }).select('house_id').lean()
@@ -60,9 +53,7 @@ export interface HouseOverview {
   house_id: string
   name: string
   stage: HouseStage
-  /** Trạng thái hôm nay (giờ VN); null khi chưa có — xem `status_reason` */
   status: HealthStatus | null
-  /** NOT_COMPUTED: chưa đánh giá hôm nay; INSUFFICIENT_DATA: đã đánh giá nhưng không đủ dữ liệu */
   status_reason: 'NOT_COMPUTED' | 'INSUFFICIENT_DATA' | null
   open_alerts: number
   open_work_orders: number
@@ -70,14 +61,10 @@ export interface HouseOverview {
   simulated: boolean
 }
 
-/**
- * ANALYTICS-FR-015 — tổng quan trại: mỗi nhà với giai đoạn, trạng thái hôm nay, cảnh báo và Work Order đang mở, tỷ lệ
- * chim về gần nhất. Farm Owner và Domain Expert (đọc) theo Report 3 §2.4; Farm Technician và Administrator không.
- */
 export async function getFarmOverview(user: CurrentUser, farmId: string): Promise<{ farm_id: string; date: string; houses: HouseOverview[] }> {
   const farm = await assertFarmAccess(farmId, user)
   const today = vnDate(new Date())
-  // Sắp theo tên tiếng Việt như bảng so sánh (thứ tự nhị phân của MongoDB đặt chữ có dấu sau 'z')
+  // Thứ tự nhị phân của MongoDB đặt chữ có dấu sau 'z'
   const houses = (await House.find({ farm_id: farm._id }).select('name stage').lean<FarmHouse[]>())
     .sort((a, b) => a.name.localeCompare(b.name, 'vi') || String(a._id).localeCompare(String(b._id)))
   const recentFrom = vnDate(new Date(Date.now() - LATEST_RETURN_RATE_DAYS * 86_400_000))
@@ -91,7 +78,6 @@ export async function getFarmOverview(user: CurrentUser, farmId: string): Promis
       { $group: { _id: '$house_id', n: { $sum: 1 } } },
     ]),
     simulatedHouses(houses),
-    // Một nguồn cho số đếm của nhà (birdCount.service#houseDailyCounts), không tự gộp bird_count_records ở đây
     Promise.all(houses.map(h => houseDailyCounts(String(h._id), { from: recentFrom, to: today }))),
   ])
   const statusOf = new Map(days.map(d => [String(d.house_id), d.current_status]))

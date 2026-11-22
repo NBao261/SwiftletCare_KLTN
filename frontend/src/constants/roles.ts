@@ -1,7 +1,7 @@
 import type { Role } from '@/types'
 import { t, translated } from '@/i18n'
 
-/** Nhãn vai trò dùng chung — Sidebar (hiển thị role user hiện tại), Settings, v.v. translated(): đọc ra theo VI/EN đang chọn */
+// Nhãn vai trò dùng chung
 export const ROLE_LABEL: Record<Role, string> = translated({
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',
@@ -9,80 +9,56 @@ export const ROLE_LABEL: Record<Role, string> = translated({
   DOMAIN_EXPERT: 'Chuyên gia',
 })
 
-/**
- * Nhãn vai trò trong ngữ cảnh lời mời (InvitationPage) — chỉ 2 role mời được
- * (FARM_FR-*: FARM_OWNER mời thành viên/chuyên gia). FARM_OWNER ở đây được
- * chú thích "(thành viên)" vì người được mời KHÔNG trở thành chủ sở hữu chính
- * (isPrimaryOwner), khác với nhãn chung ở trên — cố ý không dùng lại ROLE_LABEL
- * để tránh nhầm lẫn về quyền sở hữu farm.
- */
+// Người được mời không thành chủ chính nên không dùng lại ROLE_LABEL
 export const INVITE_ROLE_LABEL: Record<Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>, string> = {
-  // getter: đọc ROLE_LABEL (dịch lúc đọc) mỗi lần dùng — gán giá trị thẳng thì nhãn đóng băng theo ngôn ngữ lúc import
+  // Getter: gán thẳng thì nhãn đóng băng theo ngôn ngữ lúc import
   get FARM_OWNER() { return `${ROLE_LABEL.FARM_OWNER} (${t('thành viên')})` },
   get DOMAIN_EXPERT() { return ROLE_LABEL.DOMAIN_EXPERT },
   get FARM_TECHNICIAN() { return ROLE_LABEL.FARM_TECHNICIAN },
 }
 
-/*
- * Nhóm role theo Report 3 §2.4 & G-20 (backend f9d9522). Khai báo một chỗ để bảng route (`routes/`), menu sidebar
- * (`components/layouts/<Role>Layout.tsx`) và MENU_ACCESS bên dưới không lệch nhau.
- * G-20 — ADMIN có nhóm Thiết bị: xem thiết bị mọi farm (/devices), cảnh báo thiết bị (/alerts), gửi lệnh RESTART/PUSH_CONFIG/OTA.
- * FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể, chỉ xem cấu trúc/thiết bị nhà đó + gửi RESTART.
- */
+// Nhóm role khai một chỗ để route, sidebar và MENU_ACCESS không lệch nhau
 
-/** Hàng đợi việc và Báo cáo & kết luận của Chuyên gia (/domain-expert/queue, /domain-expert/reports) — chỉ Domain Expert; Farm Owner xem báo cáo ở /health. */
+// Chỉ Domain Expert; Farm Owner xem báo cáo ở /health
 export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 
-/**
- * Các trang quyết định còn lại của /domain-expert/*: Farm Owner cũng vào (Report 4 §5.4, Report 3 §2.4 "read ¹",
- * EXPERT-FR-009) — ghi được khi farm chưa có chuyên gia (BR-22), còn lại chỉ xem; xem useExpertDecisionRights.
- */
+// Farm Owner cũng vào: ghi được khi farm chưa có chuyên gia (useExpertDecisionRights)
 export const EXPERT_DECISION_ROLES: Role[] = ['DOMAIN_EXPERT', 'FARM_OWNER']
 
-/** Việc chỉ Farm Owner làm: điều khiển relay (/dashboard/scada). */
+// Việc chỉ Farm Owner làm: điều khiển relay (/dashboard/scada).
 export const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
 
-/**
- * Màn vận hành của farm: Tổng quan, Phân tích, Giám sát đàn chim, Thu hoạch, chi tiết thiết bị.
- * Domain Expert đọc qua chính các trang này (nút ghi gate bằng usePermission('FARM_OWNER')).
- */
+// Màn vận hành của farm; Domain Expert chỉ đọc
 export const FARM_SIDE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
 
-/** Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc — khớp backend harvests (canRead/canWrite). */
+// Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc: khớp backend harvests (canRead/canWrite).
 export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
 
-// Trang trại (/farms, nhà, Zone) — không có Admin (Report 3 §2.4)
+// Trang trại (/farms, nhà, Zone): không có Admin
 export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 
-/** Danh sách thiết bị (/devices): các role trang trại + Admin (console thiết bị mọi farm, chỉ thiết bị và cảnh báo thiết bị — G-20). */
+// Các role trang trại và Admin
 export const DEVICE_LIST_ROLES: Role[] = ['ADMIN', ...FARM_STRUCTURE_ROLES]
 
-/** Lắp thiết bị (FARM-FR-010/011): chỉ Farm Owner (G-20: FARM_TECHNICIAN và ADMIN gọi API này nhận 403). */
+// Lắp thiết bị: chỉ Farm Owner (: FARM_TECHNICIAN và ADMIN gọi API này nhận 403).
 export const DEVICE_SETUP_ROLES: Role[] = ['FARM_OWNER']
 
-/** Cảnh báo: Farm Owner xem và xác nhận, Admin xem cảnh báo thiết bị mọi farm, Farm Technician xem nhà được giao; Domain Expert dùng hàng đợi kiểm chứng. */
+// Domain Expert dùng hàng đợi kiểm chứng thay cho trang này
 export const ALERT_ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN']
 
-/** OTA Firmware và PUSH_CONFIG (FARM-FR-013/009): chỉ Admin gửi được (G-20). */
+// OTA Firmware và PUSH_CONFIG: chỉ Admin gửi được.
 export const ADMIN_DEVICE_CMD_ROLES: Role[] = ['ADMIN']
 
-/** RESTART từ xa: Admin (mọi farm) + Farm Owner + Farm Technician (nhà được giao). */
+// RESTART từ xa: Admin (mọi farm) + Farm Owner + Farm Technician (nhà được giao).
 export const DEVICE_RESTART_ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN']
 
-/** Module SYSTEM (mục 5.11) + quản lý tài khoản toàn hệ thống. */
+// Module SYSTEM (mục 5.11) + quản lý tài khoản toàn hệ thống.
 export const ADMIN_ONLY: Role[] = ['ADMIN']
 
-/** Mọi role đã đăng nhập — mục menu ai cũng thấy (Cài đặt tài khoản). */
+// Mọi role đã đăng nhập: mục menu ai cũng thấy (Cài đặt tài khoản).
 const ALL_ROLES: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN', 'ADMIN', 'DOMAIN_EXPERT']
 
-/**
- * Trang "nhà" của mỗi role — dùng cho cả `RoleHomeRedirect` (App.tsx, khi vào
- * "/" hoặc URL không tồn tại) LẪN `useAuth.ts` (điều hướng ngay sau khi đăng
- * nhập thành công). Gộp về 1 chỗ để không lệch nhau — trước đây App.tsx tự
- * khai báo riêng còn useAuth.ts hardcode "/dashboard", khiến Technician/Admin
- * đăng nhập xong bị đưa nhầm vào trang họ không có quyền, văng
- * sang /403 ngay sau khi login.
- */
+// Dùng cho cả RoleHomeRedirect và điều hướng sau đăng nhập để không lệch nhau
 const ROLE_HOME: Record<Role, string> = {
   FARM_OWNER: '/dashboard',
   ADMIN: '/system/health',
@@ -138,23 +114,14 @@ export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/settings',         roles: ALL_ROLES },
 ]
 
-/**
- * true nếu role được phép vào path này — dùng để kiểm tra `returnTo` trước khi
- * điều hướng sau login (useAuth.ts). Không rõ path lạ (không nằm trong bảng, VD
- * `/farms/:id` con) thì mặc định tin — route thật vẫn tự chặn qua RequireRole
- * nếu sai, hàm này chỉ tránh trường hợp PHỔ BIẾN: đăng xuất account A trên 1
- * trang riêng của role A rồi đăng nhập account B (role khác) qua đúng URL đó,
- * bị đưa thẳng vào trang A không có quyền rồi văng /403 ngay. Bảo thủ theo
- * hướng an toàn: chỉ nói "không" khi CHẮC CHẮN path đó có danh sách role giới
- * hạn và role hiện tại không nằm trong đó.
- */
+// Path lạ thì mặc định tin (RequireRole vẫn chặn); chỉ nói "không" khi chắc chắn role không vào được
 export function canAccessPath(role: Role | undefined, path: string): boolean {
   const entry = MENU_ACCESS.find(e => path === e.path || path.startsWith(`${e.path}/`))
   if (!entry) return true
   return !!role && entry.roles.includes(role)
 }
 
-// Bậc phạm vi trang cần để có dữ liệu (C-05); không có trong bảng = 'none'
+// Bậc phạm vi trang cần để có dữ liệu; không có trong bảng = 'none'
 export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
 
 const SCOPE_LEVEL: { path: string; level: ScopeLevel }[] = [

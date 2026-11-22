@@ -2,22 +2,14 @@ import { Schema, model, Document, Types } from 'mongoose'
 import bcrypt from 'bcryptjs'
 import type { Role, NotificationPreferences } from '@/types'
 
-/** Report 3 §6.14 (SM-14), Report 4 §6.1 — trạng thái tài khoản; thay `is_active` (G-14, `npm run migrate:erd-fields`) */
 export const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DELETION_REQUESTED', 'DELETED'] as const
 export type UserStatus = typeof USER_STATUSES[number]
-/** AUTH-FR-012 — người đã gửi yêu cầu xoá vẫn đăng nhập được (để huỷ yêu cầu) cho tới khi Admin xử lý */
+// vẫn đăng nhập được để huỷ yêu cầu
 export const SIGN_IN_STATUSES: UserStatus[] = ['ACTIVE', 'DELETION_REQUESTED']
 export const canSignIn = (user: { status?: UserStatus }): boolean => SIGN_IN_STATUSES.includes(user.status ?? 'ACTIVE')
-/**
- * Bộ lọc Mongo cùng nghĩa với `canSignIn`: loại LOCKED, DELETED thay vì chỉ nhận ACTIVE, DELETION_REQUESTED, để tài khoản
- * chưa có `status` (trước `migrate:erd-fields`) vẫn nhận cảnh báo, vẫn là chuyên gia, thợ đang hoạt động
- */
+// Loại thay vì nhận: tài khoản chưa có status (trước migrate:erd-fields) vẫn hợp lệ
 export const SIGN_IN_FILTER = { status: { $nin: ['LOCKED', 'DELETED'] as UserStatus[] } }
 
-/**
- * User Document – SRS §8.2
- * AUTH-FR-002, AUTH-FR-004, AUTH-FR-005c, SEC-NFR-003
- */
 export interface IUser extends Document {
   _id: Types.ObjectId
   email: string
@@ -27,42 +19,28 @@ export interface IUser extends Document {
   role: Role
   avatar_url?: string
   status: UserStatus
-  /**
-   * AUTH-FR-005c — mật khẩu do Admin đặt (tạo Technician / đặt lại mật khẩu) là mật khẩu
-   * tạm: người dùng phải tự đổi trước khi dùng hệ thống (`authenticate` chặn mọi route khác).
-   */
+  // authenticate chặn mọi route khác tới khi đổi
   must_change_password?: boolean
-  /** AUTH-FR-011 — bắt buộc có lý do khi Admin khoá tài khoản (Flow 19) */
   locked_at?: Date
   locked_reason?: string
   notification_preferences: NotificationPreferences
-  /** ALERT-FR-013 — chat id của bot Telegram, có sau khi người dùng gửi `/start <mã>` cho bot */
   telegram_chat_id?: string
-  /** sha256 của mã liên kết một lần + hạn dùng (10 phút) */
   telegram_link_code_hash?: string
   telegram_link_expires_at?: Date
-  /** AUTH-FR-009 — lưu hash chứ không phải mã thô, để lộ DB cũng không đặt lại được mật khẩu người khác */
+  // Lưu hash: lộ DB cũng không đặt lại được mật khẩu
   password_reset_token_hash?: string
   password_reset_expires_at?: Date
-  /** AUTH-FR-012 — user tự yêu cầu xoá, Admin xử lý trong ≤30 ngày (PRIV-NFR-003) */
   deletion_requested_at?: Date
-  /** Lúc đã nhắc Admin yêu cầu xoá sắp quá hạn 30 ngày — nhắc đúng 1 lần cho mỗi yêu cầu */
   deletion_reminder_sent_at?: Date
-  /**
-   * AUTH-FR-012 — thời điểm Admin đã xoá/ẩn danh hoá xong. Document vẫn ở lại
-   * để farm/audit lịch sử không vỡ tham chiếu, nên cần cờ này để phân biệt
-   * "đã xoá theo yêu cầu" (`DELETED`) với "đang bị khoá kỷ luật" (`LOCKED`).
-   */
+  // Document giữ lại để không vỡ tham chiếu
   deleted_at?: Date
-  /** sha256 của refresh token (như OTP/token reset) — lộ DB cũng không dùng được để lấy access token */
+  // Lưu hash: lộ DB cũng không lấy được access token
   refresh_tokens: Array<{ token_hash: string; expires: Date }>
   created_at: Date
   updated_at: Date
-  // Methods
   comparePassword(plain: string): Promise<boolean>
 }
 
-/** ALERT-FR-005 — kênh của 1 mức cảnh báo; không có trường nào thì theo cài đặt chung */
 const channelChoiceSchema = new Schema({ push: Boolean, telegram: Boolean }, { _id: false })
 
 const userSchema = new Schema<IUser>(
@@ -92,13 +70,10 @@ const userSchema = new Schema<IUser>(
       },
     },
     telegram_chat_id: { type: String },
-    // select: false — mã liên kết chỉ luồng /start của bot cần so, không query nào khác được mang ra
-    // index sparse: bot công khai, ai cũng nhắn được /start <mã bất kỳ> — mỗi tin không được quét cả bảng users
+    // Index: bot công khai, mỗi /start không được quét cả bảng
     telegram_link_code_hash:  { type: String, select: false, index: true, sparse: true },
     telegram_link_expires_at: { type: Date, select: false },
-    // select: false — cùng lý do với `provisioned_devices.secret_key_hash`: chỉ
-    // luồng đặt lại mật khẩu cần đọc, mọi query khác (kể cả `.lean()` vốn bỏ qua
-    // toJSON) không được mang hash này ra ngoài. resetPassword xin lại bằng `+`.
+    // .lean() bỏ qua toJSON nên phải select: false
     password_reset_token_hash: { type: String, select: false },
     password_reset_expires_at: { type: Date, select: false },
     deletion_requested_at:     { type: Date },
@@ -109,7 +84,6 @@ const userSchema = new Schema<IUser>(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
 
-// Hash password before save (SEC-NFR-003: bcrypt cost=12)
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password_hash')) return next()
   this.password_hash = await bcrypt.hash(this.password_hash, 12)
@@ -120,30 +94,24 @@ userSchema.methods.comparePassword = function (plain: string): Promise<boolean> 
   return bcrypt.compare(plain, this.password_hash) as Promise<boolean>
 }
 
-// Never return sensitive fields in JSON responses
 userSchema.methods.toJSON = function () {
   const obj = this.toObject() as Partial<IUser> & Record<string, unknown>
   delete obj.password_hash
   delete obj.refresh_tokens
-  // Mã đặt lại mật khẩu là 6 chữ số hash SHA-256 không salt: dò hết
-  // 900.000 khả năng mất dưới 1 giây, nên để lọt hash ra API coi như để lọt mã.
-  // Ai đọc được response của GET /admin/users là đổi được mật khẩu của user đang
-  // trong 15 phút reset — phải ẩn cùng nhóm với password_hash.
+  // Mã 6 số hash không salt dò được dưới 1 giây: lộ hash là lộ mã
   delete obj.password_reset_token_hash
   delete obj.password_reset_expires_at
-  // Client chỉ cần biết đã liên kết Telegram hay chưa, không cần chat id
   obj.telegram_linked = !!obj.telegram_chat_id
   delete obj.telegram_chat_id
   delete obj.telegram_link_code_hash
   delete obj.telegram_link_expires_at
-  // Tên cũ cho web và mobile tới khi đọc `status`, `locked_*` (G-14): chỉ suy ra, không lưu
+  // Chỉ suy ra, không lưu
   obj.is_active = canSignIn(this as IUser)
   obj.deactivated_at = obj.locked_at
   obj.deactivated_reason = obj.locked_reason
   return obj
 }
 
-// Report 4 §6.2 — danh sách tài khoản của Admin và người nhận thông báo lọc theo trạng thái
 userSchema.index({ status: 1 })
 
 export const User = model<IUser>('User', userSchema)

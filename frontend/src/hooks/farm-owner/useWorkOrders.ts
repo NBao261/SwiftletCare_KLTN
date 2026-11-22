@@ -11,7 +11,7 @@ export const WORK_ORDER_PAGE_SIZE = 10;
 // Khoảng tính MTTA, MTTR trên trang nhà
 const METRICS_DAYS = 30;
 
-// OPS-FR-001…004 — danh sách mới mở trước, phân trang server
+// danh sách mới mở trước, phân trang server
 export function useWorkOrders(query: Omit<WorkOrderListQuery, 'page' | 'limit'>, page: number) {
   return usePaginatedListQuery(
     [WORK_ORDERS_KEY, 'list', query, page],
@@ -30,7 +30,7 @@ export function useWorkOrder(id: string | null) {
   });
 }
 
-// Số Work Order chưa đóng của 1 nhà — chỉ đọc meta.total
+// Số Work Order chưa đóng của 1 nhà: chỉ đọc meta.total
 export function useOpenWorkOrderCount(houseId: string) {
   return useQuery({
     queryKey: [WORK_ORDERS_KEY, 'open-count', houseId],
@@ -39,7 +39,7 @@ export function useOpenWorkOrderCount(houseId: string) {
   });
 }
 
-// Phiếu chờ chủ nhà yến duyệt (OPS-FR-003), 5 phiếu đầu và tổng số; phạm vi như khung lọc, houseId thắng farmId, rỗng = mọi trang trại
+// houseId thắng farmId; rỗng = mọi trang trại
 export function useAwaitingApproval(farmId = '', houseId = '', enabled = true) {
   let scope: { houseId?: string; farmId?: string } = {};
   if (farmId) scope = { farmId };
@@ -54,7 +54,7 @@ export function useAwaitingApproval(farmId = '', houseId = '', enabled = true) {
   });
 }
 
-// OPS-FR-009 — MTTA, MTTR của 1 nhà trong 30 ngày tới lúc mở trang (khoảng giữ nguyên để khoá truy vấn không đổi mỗi lần vẽ)
+// MTTA, MTTR của 1 nhà trong 30 ngày tới lúc mở trang (khoảng giữ nguyên để khoá truy vấn không đổi mỗi lần vẽ)
 export function useHouseOpsMetrics(farmId: string, houseId: string) {
   const [range] = useState(() => {
     const to = new Date();
@@ -68,7 +68,7 @@ export function useHouseOpsMetrics(farmId: string, houseId: string) {
   });
 }
 
-// Thao tác của Farm Owner (OPS-FR-001, 002, 004, 007); xong hay lỗi (409: trạng thái đã đổi) đều tải lại Work Order và cảnh báo, vì duyệt đóng luôn cảnh báo
+// Xong hay 409 đều tải lại Work Order và cảnh báo, vì duyệt đóng luôn cảnh báo
 export function useWorkOrderActions() {
   const queryClient = useQueryClient();
   const refresh = () => {

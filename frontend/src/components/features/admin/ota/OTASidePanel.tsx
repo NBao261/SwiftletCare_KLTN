@@ -1,4 +1,4 @@
-// OTASidePanel.tsx — Slide-in panel: form thông tin firmware, trạng thái chờ, thành công, thất bại
+// OTASidePanel.tsx: Slide-in panel: form thông tin firmware, trạng thái chờ, thành công, thất bại
 import { Card, Button } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { OTAProgressPanel } from './OTAProgressPanel'
@@ -13,9 +13,9 @@ interface Props {
   errors: OtaFormErrors
   onFormChange: (patch: Partial<OtaFormValues>) => void
   onPush: () => void
-  /** Lỗi từ API gửi lệnh (400/409/501/503…) */
+  // Lỗi từ API gửi lệnh (400/409/501/503…)
   apiError: string | null
-  /** Phiên bản vừa yêu cầu — dùng cho trạng thái pending/done */
+  // Phiên bản vừa yêu cầu: dùng cho trạng thái pending/done
   targetVersion: string
   onRetry: () => void
 }

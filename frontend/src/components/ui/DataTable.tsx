@@ -21,20 +21,19 @@ interface DataTableProps<T> {
   sortDirection?: SortDirection
   onSortChange?: (key: string) => void
   emptyMessage?: string
-  /** Cả dòng bấm được (VD mở trang chi tiết) — nơi gọi tự stopPropagation ở cột có nút riêng
-   *  (VD cột "Thao tác") để không vừa mở menu vừa điều hướng, DataTable không tự làm việc đó */
+  // Nơi gọi tự stopPropagation ở cột có nút riêng
   onRowClick?: (row: T) => void
-  /** px — ép mọi dòng cao bằng nhau bất kể 1 hay nhiều dòng nội dung, để khung bảng không đổi theo dữ liệu */
+  // px: ép mọi dòng cao bằng nhau bất kể 1 hay nhiều dòng nội dung, để khung bảng không đổi theo dữ liệu
   rowHeight?: number
-  /** Ít dòng hơn số này (VD trang cuối) thì chèn dòng trống cho đủ — khung bảng giữ nguyên chiều cao. Đi kèm `rowHeight` */
+  // Chèn dòng trống cho đủ để khung bảng giữ chiều cao
   minRows?: number
-  /** px — bề rộng tối thiểu của bảng trước khi cuộn ngang; bảng đặt trong cột hẹp (VD 8/12) truyền số nhỏ hơn */
+  // px: bề rộng tối thiểu của bảng trước khi cuộn ngang; bảng đặt trong cột hẹp (VD 8/12) truyền số nhỏ hơn
   minTableWidth?: number
-  /** Chỉ hiện đúng số dòng này (đi kèm `rowHeight`), dòng còn lại cuộn dọc; tiêu đề tách riêng nên đứng yên và thanh cuộn không chạy ngang tiêu đề */
+  // Chỉ hiện số dòng này, còn lại cuộn; tiêu đề đứng yên
   visibleRows?: number
-  /** Chỉ dùng với `visibleRows`: khung bảng cao bằng phần tử cha (h-full), thân bảng lấp phần còn lại và cuộn — nơi gọi tự đặt chiều cao cha */
+  // Khung bảng cao bằng phần tử cha, nơi gọi tự đặt chiều cao cha
   fillHeight?: boolean
-  // Điện thoại: danh sách thẻ thay bảng (C-09); trả null thì bỏ dòng đó (VD dòng đệm của FixedRowsTable)
+  // Điện thoại: danh sách thẻ thay bảng; trả null thì bỏ dòng đó (VD dòng đệm của FixedRowsTable)
   mobileCard?: (row: T) => ReactNode
 }
 
@@ -42,14 +41,7 @@ const ALIGN_CLASS: Record<NonNullable<DataTableColumn<unknown>['align']>, string
   left: 'text-left', right: 'text-right', center: 'text-center',
 }
 
-/**
- * Bảng dữ liệu dùng chung — FE_Design_Claude.md §9 gọi tên `<DataTable/>` làm
- * component chung cho mọi role nhưng trước đây chưa có implementation nào
- * (mọi danh sách cũ đều là Card xếp hàng). Đây là
- * `<table>` HTML ngữ nghĩa đầu tiên trong codebase — style bám đúng token màu/
- * bo góc/shadow hiện có (border-warmGray/15, rounded-2xl, shadow-card), không
- * phát sinh màu/bo góc mới.
- */
+// Bảng dữ liệu dùng chung
 export default function DataTable<T>(props: DataTableProps<T>) {
   const { mobileCard, rows, getRowKey, onRowClick, emptyMessage = 'Không có dữ liệu', fillHeight = false } = props
   if (!mobileCard) return <TableView {...props} />
@@ -96,7 +88,7 @@ function TableView<T>({
   const bodyScrollRef = useRef<HTMLDivElement>(null)
   const [scrollbarWidth, setScrollbarWidth] = useState(0)
   const isScrollable = visibleRows !== undefined && rowHeight !== undefined
-  // Đo bề rộng thanh cuộn dọc của phần thân để phần tiêu đề chừa đúng chừng đó — cột tiêu đề và cột dữ liệu thẳng hàng
+  // Đo thanh cuộn của thân để cột tiêu đề và cột dữ liệu thẳng hàng
   useLayoutEffect(() => {
     const body = bodyScrollRef.current
     if (!isScrollable || !body) return
@@ -110,15 +102,14 @@ function TableView<T>({
   // Dòng "không có dữ liệu" cũng chiếm 1 chỗ trong minRows
   const fillerCount = Math.max(0, minRows - Math.max(rows.length, 1))
 
-  // table-fixed để width khai báo qua className của từng cột (columns.tsx của trang) được tôn
-  // trọng đúng tỉ lệ, thay vì co giãn tự do theo nội dung dài nhất (VD ghi chú đỏ ở Trạng thái).
+  // table-fixed để width của từng cột được giữ đúng tỉ lệ
   const tableClass = 'w-full table-fixed border-collapse text-small'
 
   const headerCells = columns.map(col => (
     <th
       key={col.key}
       scope="col"
-      // [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Ảnh hưởng MỌI bảng của mọi role. Đổi: tiêu đề cột `text-caption uppercase` → .label-caption (12px, không in hoa — FE_Design v2.5.0 §2.8); nút sort trong <th> cũng bỏ `uppercase tracking-[0.04em]`
+      // Tiêu đề cột dùng .label-caption
       className={cn('label-caption whitespace-nowrap px-4 py-3', ALIGN_CLASS[col.align ?? 'left'], col.className)}
     >
       {col.sortable && onSortChange ? (
@@ -170,8 +161,7 @@ function TableView<T>({
     </tbody>
   )
 
-  // Chế độ cuộn dọc (visibleRows): tách tiêu đề và thân thành 2 bảng — nền tiêu đề chạy hết bề ngang khung,
-  // thanh cuộn chỉ nằm cạnh các dòng; cuộn ngang ở thân kéo theo tiêu đề
+  // Chế độ cuộn: tách tiêu đề và thân thành 2 bảng
   if (isScrollable) {
     return (
       <div className={cn('overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card', fillHeight && 'flex h-full min-h-0 flex-col')}>

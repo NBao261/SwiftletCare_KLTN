@@ -8,8 +8,7 @@ interface Alert {
   onsite_checks: Array<{ observation: string | null }>;
 }
 
-// WF-04 — DS-07, DS-08 (Design Brief Phụ lục A2): cảnh báo ồn bất thường ở nhà A chờ kết luận (`npm run seed:demo`).
-// Phát tiếng ồn thật cạnh cảm biến của DS-07 làm tại chỗ; ở đây đi tiếp từ cảnh báo đã có.
+// Cần `npm run seed:demo`: có sẵn cảnh báo ồn chờ kết luận ở nhà A
 test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
   test('DS-08 Farm Owner của farm có chuyên gia không ghi được kết luận', async ({ request }) => {
     const owner = await signIn(request, 'owner');

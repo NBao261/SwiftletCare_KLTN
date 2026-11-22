@@ -1,21 +1,15 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
 interface Options {
-  /** Cạnh nào của menu bám theo nút mở: trái (dropdown chọn) hay phải (menu "..." cuối dòng) */
+  // Cạnh nào của menu bám theo nút mở: trái (dropdown chọn) hay phải (menu "..." cuối dòng)
   align: 'left' | 'right'
-  /** Chiều cao ước lượng để quyết định mở xuống hay lật lên khi gần đáy viewport */
+  // Chiều cao ước lượng để quyết định mở xuống hay lật lên khi gần đáy viewport
   estimatedHeight: number
-  /** Menu rộng tối thiểu bằng nút mở (dropdown chọn) */
+  // Menu rộng tối thiểu bằng nút mở (dropdown chọn)
   matchTriggerWidth?: boolean
 }
 
-/**
- * Menu nổi portal ra document.body với `position: fixed` tính từ toạ độ thật của
- * nút mở — không bị `overflow-hidden`/`overflow-x-auto` của khung cha cắt (bảng,
- * card). Tự lật lên trên khi thiếu chỗ phía dưới; đóng khi click ngoài, Esc,
- * cuộn trang hoặc resize (thay vì tính lại vị trí liên tục). Dùng chung cho
- * ActionsMenu (align right) và SelectMenu (align left).
- */
+// Portal ra body với position: fixed để khung cha không cắt; tự lật lên khi thiếu chỗ
 export function useFloatingMenu({ align, estimatedHeight, matchTriggerWidth }: Options) {
   const [open, setOpen] = useState(false)
   const [style, setStyle] = useState<CSSProperties>({})

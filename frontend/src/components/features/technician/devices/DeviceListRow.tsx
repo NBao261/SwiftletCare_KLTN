@@ -15,16 +15,16 @@ interface DeviceListRowProps {
   index?: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  /** Không truyền → ẩn nút (role không có quyền gửi lệnh RESTART) */
+  // Không truyền → ẩn nút (role không có quyền gửi lệnh RESTART)
   onReboot?: () => void;
-  /** Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích */
+  // Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích
   rebootUnsupported?: boolean;
   onOpenAudio: () => void;
 }
 
 const STALE_HEARTBEAT_MS = 5 * 60 * 1000
 
-/** 4 vạch tín hiệu từ RSSI thật (dBm): > -60 mạnh, > -70 khá, > -80 yếu, còn lại rất yếu */
+// 4 vạch tín hiệu từ RSSI thật (dBm): > -60 mạnh, > -70 khá, > -80 yếu, còn lại rất yếu
 function RssiBars({ rssi }: { rssi?: number }) {
   const level = rssi === undefined || rssi === null ? 0 : rssi > -60 ? 4 : rssi > -70 ? 3 : rssi > -80 ? 2 : 1
   const tone = level >= 3 ? "bg-success" : level === 2 ? "bg-climateOrange" : "bg-alertRed"
@@ -143,7 +143,7 @@ export default function DeviceListRow({
         </div>
       </div>
 
-      {/* Panel mở rộng — animate chiều cao 220ms */}
+      {/* Panel mở rộng: animate chiều cao 220ms */}
       <div
         className={`grid transition-[grid-template-rows,opacity] duration-[220ms] ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
       >

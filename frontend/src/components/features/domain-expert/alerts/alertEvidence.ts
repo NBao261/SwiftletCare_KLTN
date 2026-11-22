@@ -1,9 +1,4 @@
-/**
- * alertEvidence.ts — Dynamic evidence config builder for MultimodalEvidenceCharts
- * SRS v2.1.4: EXPERT-FR-003, ALERT-FR-014
- * Chuyển đổi telemetry.samples và bird_counts.buckets từ GET /alerts/{id}/evidence
- * thành dữ liệu đồ thị thực tế (tuyệt đối không dùng số cứng giả lập)
- */
+// Dựng dữ liệu biểu đồ từ samples và buckets của GET /alerts/:id/evidence
 import type { AlertEvidence, BirdCountBucket, InferredAlertItem, TelemetrySample } from '@/types/expert.types'
 import { formatHM } from '@/lib/helpers'
 import { t } from '@/i18n'
@@ -63,7 +58,7 @@ export function buildTelemetryEvidenceSource(
 ): EvidenceSource | null {
   if (!samples || samples.length === 0) return null
 
-  // 1. NOISE_ANOMALY — nguồn âm thanh
+  // 1. NOISE_ANOMALY: nguồn âm thanh
   if (alert.type === 'NOISE_ANOMALY') {
     const validSamples = samples.filter(s => typeof s.sound_db === 'number' && Number.isFinite(s.sound_db))
     if (validSamples.length === 0) return null

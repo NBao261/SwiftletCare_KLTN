@@ -10,20 +10,20 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
 import type { HouseHealthDay } from '@/types';
 
-// Khung bảng cố định 10 dòng (thiếu thì bù dòng trống, nhiều hơn thì phân trang) — cùng cách HarvestTable
+// Khung bảng cố định 10 dòng (thiếu thì bù dòng trống, nhiều hơn thì phân trang): cùng cách HarvestTable
 const ROW_COUNT = 10;
 const ROW_HEIGHT = 72;
 
 interface HealthDayTableProps {
   days: HouseHealthDay[];
-  // false = Domain Expert (SRS 4.2.0): không có cột "Đánh giá của bạn", mọi dòng chỉ Xem chi tiết
+  // false = Domain Expert: không có cột "Đánh giá của bạn", mọi dòng chỉ Xem chi tiết
   canRate: boolean;
   // Ngày còn PENDING mở popup chấm, ngày khác mở chi tiết
   onRate: (day: HouseHealthDay) => void;
   onView: (day: HouseHealthDay) => void;
 }
 
-// Bảng các ngày: trạng thái hiện ở mọi ngày (BR-31); ngày chưa đánh giá có nút Đánh giá
+// Bảng các ngày: trạng thái hiện ở mọi ngày; ngày chưa đánh giá có nút Đánh giá
 export default function HealthDayTable({ days, canRate, onRate, onView }: HealthDayTableProps): JSX.Element {
   const { t, date } = useTranslation(healthDict);
 

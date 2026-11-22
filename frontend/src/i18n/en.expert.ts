@@ -1,4 +1,4 @@
-// Bản dịch tiếng Anh của các màn chuyên gia (/domain-expert/*) — cùng quy ước với en.ts: khoá là câu tiếng Việt y hệt chỗ gọi t(...)
+// Khoá là câu tiếng Việt y hệt chỗ gọi t(...)
 const enExpert: Record<string, string> = {
   // ── Khung chung: thanh chọn khu vực, lời nhắc quyền, màn trống ─────────────────────────────────────────────────────
   'Chuyên gia duyệt lại': 'Reviewed by the expert',
@@ -21,7 +21,7 @@ const enExpert: Record<string, string> = {
   'Đang chọn:': 'Selected:',
   'Nhấp vào Tầng để chuyển vùng': 'Click a floor to switch zone',
 
-  // ── Thẩm định cảnh báo ──────────────────────────────────────────────────────────────────────────────────────────────
+  // Thẩm định cảnh báo
   'Loại cảnh báo': 'Alert type',
   'Tiếng ồn bất thường': 'Abnormal noise',
   'Cảm biến bất thường': 'Sensor anomaly',
@@ -152,7 +152,7 @@ const enExpert: Record<string, string> = {
   'Tỷ lệ xác nhận sẽ hiện khi có kết luận đầu tiên.': 'The confirmation rate appears after the first verdict.',
   'Chỉnh tham số phát hiện': 'Tune detection parameters',
 
-  // ── Vòng đếm camera ────────────────────────────────────────────────────────────────────────────────────────────────
+  // Vòng đếm camera
   'Đỉnh {{n}} · chạm để xoá': 'Vertex {{n}} — tap to delete',
   'Đỉnh {{n}}': 'Vertex {{n}}',
   'Đã lưu vòng đếm và gửi tới camera đếm chim.': 'Counting ring saved and sent to the bird-count camera.',
@@ -182,7 +182,7 @@ const enExpert: Record<string, string> = {
   'Nhà yến này chưa gắn camera nào.': 'This house has no camera yet.',
   'Lịch sử vòng đếm': 'Ring history',
 
-  // ── Hồ sơ cấu hình ────────────────────────────────────────────────────────────────────────────────────────────────
+  // Hồ sơ cấu hình
   'Dẫn dụ': 'Attracting',
   'Đang nuôi': 'Occupied',
   'Ngưỡng môi trường': 'Environment thresholds',
@@ -288,7 +288,7 @@ const enExpert: Record<string, string> = {
   'Chưa có hồ sơ nào. Tạo hồ sơ đầu tiên.': 'No profiles yet. Create the first one.',
   'Không có hồ sơ ở trạng thái "{{status}}".': 'No profiles with status "{{status}}".',
 
-  // ── Duyệt & đề xuất ───────────────────────────────────────────────────────────────────────────────────────────────
+  // Duyệt & đề xuất
   'Đã duyệt áp dụng': 'Approved and applied',
   'Đã từ chối': 'Rejected',
   'Đã bị thay thế': 'Superseded',
@@ -357,7 +357,7 @@ const enExpert: Record<string, string> = {
   'Giữ hoặc hoàn tác thay đổi ngưỡng, hệ số mờ của chủ nhà yến.': 'Review the micro-climate changes made by the farm owner and accept them or revert to safe values.',
   'Duyệt hoặc từ chối gợi ý hệ số mờ chủ nhà yến gửi lên.': 'Review the fuzzy coefficient suggestions sent by the farm owner and approve them for the devices.',
 
-  // ── Ngưỡng & hệ số mờ ────────────────────────────────────────────────────────────────────────────────────────────
+  // Ngưỡng & hệ số mờ
   'Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ': 'Automatic check against alert verdicts (feedback loop)',
   'Kết luận trong kỳ': 'Verdict check',
   'Mặc định (0/0)': 'Default (0/0)',
@@ -433,7 +433,7 @@ const enExpert: Record<string, string> = {
   'Đã lưu mức giảm tỷ lệ chim về của nhà': 'House return rate drop saved',
   'Đã khôi phục mức giảm tỷ lệ chim về mặc định': 'Default return rate drop restored',
 
-  // ── Luật bù thời tiết ─────────────────────────────────────────────────────────────────────────────────────────────
+  // Luật bù thời tiết
   'Chọn chỉ số': '— Choose a metric —',
   'Nhiệt độ cao nhất (°C)': 'Highest temperature (°C)',
   'Độ ẩm ngoài trời cao nhất (%)': 'Highest outdoor humidity (%)',
@@ -473,7 +473,7 @@ const enExpert: Record<string, string> = {
   'Huỷ thay đổi': 'Discard changes',
   'Lưu luật': 'Save rules',
 
-  // ── Lịch sử quyết định ────────────────────────────────────────────────────────────────────────────────────────────
+  // Lịch sử quyết định
   'Kiểm chứng cảnh báo': 'Alert verdicts',
   'Ngưỡng vi khí hậu': 'Micro-climate thresholds',
   'Hệ số điều khiển mờ': 'Fuzzy control coefficients',
@@ -527,7 +527,7 @@ const enExpert: Record<string, string> = {
   '{{n}} bản ghi': '{{n}} records',
   'Lọc theo loại hành động': 'Filter by action',
 
-  // ── Hàng đợi việc ─────────────────────────────────────────────────────────────────────────────────────────────────
+  // Hàng đợi việc
   'Cảnh báo vi khí hậu': 'Micro-climate alert',
   'Cảnh báo thiết bị': 'Device alert',
   '{{type}} tại {{zone}}': '{{type}} in {{zone}}',
@@ -563,7 +563,7 @@ const enExpert: Record<string, string> = {
   '3 phân hệ quản lý': '3 areas',
   'Kết luận mùa vụ': 'Season conclusions',
   'Viết kết luận tổng thể cho chu kỳ thu hoạch đã đóng': 'Write an overall conclusion for a closed harvest cycle',
-  // G-31 — Farm Owner quyết, chuyên gia duyệt (BR-22, Report 3 4.2.15)
+  // Farm Owner quyết, chuyên gia duyệt
   'Chuyên gia sẽ xem lại thay đổi này.': 'The expert will review this change.',
   'Đã gửi chuyên gia duyệt. Luật đang chạy giữ nguyên tới khi được duyệt.': 'Sent to the expert. The current rules stay until approved.',
   'Đề xuất của chủ nhà yến đang chờ duyệt ({{n}} luật, gửi lúc {{time}})': 'Farm Owner\'s proposal awaiting approval ({{n}} rules, sent {{time}})',

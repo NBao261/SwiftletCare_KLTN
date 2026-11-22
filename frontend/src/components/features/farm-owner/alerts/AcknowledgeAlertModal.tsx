@@ -16,7 +16,7 @@ interface AcknowledgeAlertModalProps {
   onClose: () => void;
 }
 
-// ALERT-FR-009, 018 — Farm Owner hoặc Farm Technician (nhà được giao) xác nhận cảnh báo kèm ghi chú; cảnh báo thiết bị có thêm nguyên nhân tìm thấy tại chỗ (tuỳ chọn)
+// Cảnh báo thiết bị có thêm nguyên nhân tìm thấy tại chỗ (tuỳ chọn)
 export default function AcknowledgeAlertModal({ alert, onClose }: AcknowledgeAlertModalProps): JSX.Element {
   const { t } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -26,7 +26,7 @@ export default function AcknowledgeAlertModal({ alert, onClose }: AcknowledgeAle
   const [note, setNote] = useState('');
   const hasCause = alert ? CAUSE_ALERT_TYPES.has(alert.type) : false;
 
-  // Popup không unmount giữa các lần mở — xoá lựa chọn cũ mỗi lần mở
+  // Popup không unmount giữa các lần mở: xoá lựa chọn cũ mỗi lần mở
   useEffect(() => {
     if (!alert) return;
     setCause(null);

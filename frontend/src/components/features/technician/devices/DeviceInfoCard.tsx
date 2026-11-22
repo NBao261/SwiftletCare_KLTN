@@ -2,7 +2,7 @@ import { formatDistanceToNowStrict } from "date-fns"
 import { vi } from "date-fns/locale"
 import type { SensorNode } from "@/types"
 
-// FARM-FR-006 — lý do khởi động lại do ESP32 báo (esp_reset_reason), firmware ≥ 1.4.0
+// lý do khởi động lại do ESP32 báo (esp_reset_reason), firmware ≥ 1.4.0
 const RESET_REASON_LABEL: Record<string, string> = {
   POWERON: "Cấp nguồn",
   EXT: "Nút khởi động lại",
@@ -15,7 +15,7 @@ const RESET_REASON_LABEL: Record<string, string> = {
   BROWNOUT: "Sụt áp nguồn",
   SDIO: "SDIO",
 }
-// Khởi động lại ngoài ý muốn — đáng kiểm tra nguồn/firmware
+// Khởi động lại ngoài ý muốn: đáng kiểm tra nguồn/firmware
 const UNEXPECTED_RESETS = new Set(["PANIC", "INT_WDT", "TASK_WDT", "WDT", "BROWNOUT"])
 
 function Item({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
@@ -27,9 +27,9 @@ function Item({ label, value, warn }: { label: string; value: string; warn?: boo
   )
 }
 
-/** Thông tin chẩn đoán từ heartbeat gần nhất (FARM-FR-006); firmware cũ không gửi thì hiện "—" */
+// Thông tin chẩn đoán từ heartbeat gần nhất; firmware cũ không gửi thì hiện "—"
 export default function DeviceInfoCard({ node }: { node: SensorNode }) {
-  const online = node.status === "ONLINE" // DEGRADED đã bỏ (SRS 3.1.0)
+  const online = node.status === "ONLINE" // DEGRADED đã bỏ
   const reason = node.reset_reason
   return (
     <div className="rounded-2xl border border-warmGray/15 bg-white p-5 shadow-sm">

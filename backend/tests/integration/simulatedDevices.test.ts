@@ -1,7 +1,3 @@
-/**
- * SYSTEM-FR-004, Report 4 D20 — thiết bị của bộ giả lập: Administrator đánh dấu `simulated` khi nhập
- * kho, cờ đi theo controller và camera khi Farm Owner đăng ký bằng nhãn, để mọi màn hình ghi rõ.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

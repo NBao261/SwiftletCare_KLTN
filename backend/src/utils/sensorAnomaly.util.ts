@@ -1,9 +1,4 @@
-/**
- * ALERT-FR-010 (v1.24.0) — phát hiện cảm biến trả lời được nhưng SAI, bổ sung cho
- * SENSOR_FAULT (firmware chỉ bắt được timeout). Hàm thuần trên mẫu telemetry đã
- * lưu (~1 mẫu/10s) để unit test không cần DB. Chỉ dùng giá trị THÔ — firmware lọc
- * riêng cho điều khiển (ENV-FR-022), lọc ở đây sẽ che mất chính lỗi cần bắt.
- */
+// Bổ sung SENSOR_FAULT (firmware chỉ bắt timeout). Dùng giá trị thô: lọc sẽ che mất lỗi cần bắt
 export type AnomalyMetric = 'temperature' | 'humidity' | 'nh3_ppm' | 'co2_ppm'
 
 export interface AnomalySample {
@@ -24,21 +19,17 @@ const METRIC_LABEL: Record<AnomalyMetric, string> = {
   temperature: 'Nhiệt độ', humidity: 'Độ ẩm', nh3_ppm: 'NH3', co2_ppm: 'CO2',
 }
 
-/**
- * Kẹt: giá trị giống hệt nhau suốt ≥ 2 giờ. Chỉ xét nhiệt/ẩm (độ phân giải 0.1
- * nên ngoài đời gần như không bao giờ đứng yên tuyệt đối 2 giờ); NH3/CO2 đọc
- * số nguyên và ánh sáng ~0 lux trong nhà yến tối thì đứng yên là bình thường.
- */
+// Chỉ nhiệt/ẩm: NH3/CO2 số nguyên và lux ~0 đứng yên là bình thường
 export const STUCK_MIN_MS = 2 * 3600_000
-export const STUCK_MIN_SAMPLES = 360 // ≥ 1/2 số mẫu của 2 giờ — mất mạng một lúc vẫn xét được
+export const STUCK_MIN_SAMPLES = 360 // >= 1/2 số mẫu của 2 giờ: mất mạng một lúc vẫn xét được
 const STUCK_METRICS: AnomalyMetric[] = ['temperature', 'humidity']
 
-/** Nhảy phi vật lý giữa 2 mẫu liền nhau (≤ 30s) — nhà yến kín không đổi nhanh vậy. */
+// Nhà yến kín không đổi nhanh vậy
 export const SPIKE_LIMITS: Record<AnomalyMetric, number> = { temperature: 2, humidity: 10, nh3_ppm: 20, co2_ppm: 500 }
 export const SPIKE_MAX_GAP_MS = 30_000
-export const SPIKE_MIN_JUMPS = 3 // 1 spike = 2 lần nhảy (lên rồi xuống); 3 lần ≈ lặp lại, không phải 1 sự kiện lẻ
+export const SPIKE_MIN_JUMPS = 3 // 1 spike = 2 lần nhảy; 3 lần là lặp lại
 
-/** Lệch giữa 2 thiết bị cùng Zone (trung bình 1 giờ) — chỉ xét được khi Zone có ≥ 2 thiết bị. */
+// Chỉ xét được khi Zone có >= 2 thiết bị
 export const DRIFT_LIMITS: Partial<Record<AnomalyMetric, number>> = { temperature: 2, humidity: 8 }
 
 const finite = (v: number | null | undefined): v is number => typeof v === 'number' && Number.isFinite(v)
@@ -98,7 +89,6 @@ export function mean(samples: AnomalySample[], metric: AnomalyMetric): number | 
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
 }
 
-/** So từng cặp thiết bị cùng Zone bằng trung bình 1 giờ gần nhất. */
 export function findDrift(nodes: Array<{ name: string; means: Partial<Record<AnomalyMetric, number | null>> }>): AnomalyFinding[] {
   const findings: AnomalyFinding[] = []
   for (const [metric, limit] of Object.entries(DRIFT_LIMITS) as Array<[AnomalyMetric, number]>) {

@@ -1,8 +1,3 @@
-/**
- * migrate-relay-overrides (G-06 phần 2, BR-20): controller đang MANUAL từ trước khi có `relays` được
- * đặt hạn cho từng relay, ưu tiên lịch sử can thiệp còn mở rồi tới `override_expiry` cũ; không có gì thì
- * về AUTO; node đã có relay MANUAL giữ nguyên; chạy lại không đổi gì; job hết hạn tìm thấy node đã chuyển.
- */
 import mongoose, { Types } from 'mongoose'
 import { migrateRelayOverrides } from '@/scripts/migrate-relay-overrides.script'
 import { expireManualOverrides } from '@/services/device.service'

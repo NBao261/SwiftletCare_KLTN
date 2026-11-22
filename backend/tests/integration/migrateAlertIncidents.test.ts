@@ -1,7 +1,3 @@
-/**
- * migrate-alert-incidents (G-32): cảnh báo đang mở lấy lại mức của BR-15 và khoá sự cố; bản trùng còn mở của cùng
- * sự cố gộp vào bản cũ nhất; sau đó chỉ mục duy nhất tạo được; chạy lại không đổi gì.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'
@@ -36,7 +32,7 @@ describe('migrateAlertIncidents', () => {
     expect(await migrateAlertIncidents()).toEqual({ open: 3, reseverity: 2, keyed: 3, merged: 1 })
 
     const speaker = await Alert.find({ type: 'SPEAKER_FAILURE' }).sort({ created_at: 1 }).lean()
-    // Bản cũ nhất giữ xác nhận và cộng dồn số lần; bản mới hơn bị gộp; bản đã đóng giữ nguyên
+    // Bản cũ nhất giữ xác nhận và cộng dồn; bản đã đóng giữ nguyên
     expect(speaker.map(a => [a.status, a.severity, a.occurrence_count])).toEqual([
       ['ACKNOWLEDGED', 'HIGH', 3],
       ['RESOLVED', 'CRITICAL', 1],

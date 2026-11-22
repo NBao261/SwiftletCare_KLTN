@@ -2,12 +2,7 @@ import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 import AuthLayout from '@/components/layouts/AuthLayout'
 
-/**
- * Route không cần đăng nhập — nằm NGOÀI MainLayout nên không có sidebar/topbar.
- * Trang đăng nhập/quên mật khẩu/nhận lời mời ở `pages/auth/` — không có đăng ký công khai (Report 3 §1.2,
- * AUTH-FR-010: người được mời tạo tài khoản ngay trên trang lời mời); trang 403 và chính sách
- * quyền riêng tư (`/privacy`) nằm thẳng ở `pages/` vì không thuộc nghiệp vụ role nào. Chợ tổ yến đã gỡ theo SRS v2.0.0 (bỏ Marketplace).
- */
+// Không cần đăng nhập, nằm ngoài MainLayout; không có đăng ký công khai
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'))
 const ChangePasswordPage = lazy(() => import('@/pages/auth/ChangePasswordPage'))
@@ -21,7 +16,7 @@ export const publicRoutes = (
     <Route element={<AuthLayout />}>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      {/* AUTH-FR-005c — cần đăng nhập nhưng nằm ngoài khung role: tài khoản còn mật khẩu tạm chưa được vào trang nào */}
+      {/* cần đăng nhập nhưng nằm ngoài khung role: tài khoản còn mật khẩu tạm chưa được vào trang nào */}
       <Route path="/change-password" element={<ChangePasswordPage />} />
     </Route>
     <Route path="/invitations/:token" element={<InvitationPage />} />

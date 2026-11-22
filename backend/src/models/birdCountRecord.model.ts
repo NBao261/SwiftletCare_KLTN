@@ -1,25 +1,21 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import type { SessionType } from '@/types'
 
-/** Bird counting session record – SRS §8.2, VISION-FR-008 */
 export interface IBirdCountRecord extends Document {
   _id: Types.ObjectId
   camera_node_id: Types.ObjectId
-  /** House của camera — số đếm chim là của cả nhà (SRS v2.1.8) */
   house_id: Types.ObjectId
   timestamp: Date
-  /** 'YYYY-MM-DD' theo giờ Việt Nam — phiên sáng 05:30 VN là 22:30 UTC hôm trước nên không gom theo ngày UTC */
+  // Giờ VN: phiên sáng 05:30 VN là 22:30 UTC hôm trước
   session_date: string
   session_type: SessionType
   entry_count: number
   exit_count: number
   confidence_avg?: number
-  /** VISION-FR-008 — khung (giờ VN 'HH:mm') đã dùng khi backend tính phiên từ số đếm 5 phút; chưa tính thì không có */
   window_start?: string
   window_end?: string
-  /** VISION-FR-020 — false khi nút AI của nhà mất kết nối (EDGE_AI_DEGRADED mở) trong khung */
   complete?: boolean
-  /** Lúc backend tính phiên; từ đó tin cộng dồn của nút AI không ghi đè nữa */
+  // Từ đây tin cộng dồn của nút AI không ghi đè nữa
   computed_at?: Date
 }
 
@@ -37,14 +33,13 @@ const birdCountSchema = new Schema<IBirdCountRecord>(
     window_end:     { type: String },
     complete:       { type: Boolean },
     computed_at:    { type: Date },
-    // Không lưu return_rate theo camera: tỷ lệ chim về tính cho cả House lúc đọc (birdCount.service#houseDailyCounts)
+    // return_rate tính cho cả House lúc đọc (houseDailyCounts)
   },
   { timestamps: false }
 )
 
-// Mọi truy vấn đọc theo House + ngày giờ VN (houseDailyCounts)
 birdCountSchema.index({ house_id: 1, session_date: 1 })
-// VISION-FR-006: nút AI gửi số cộng dồn mỗi 30 giây — mỗi (camera, phiên, ngày) chỉ là 1 bản ghi, upsert theo khoá này
+// Nút AI gửi cộng dồn mỗi 30 s: upsert theo khoá này
 birdCountSchema.index({ camera_node_id: 1, session_type: 1, session_date: 1 }, { unique: true })
 
 export const BirdCountRecord = model<IBirdCountRecord>('BirdCountRecord', birdCountSchema)

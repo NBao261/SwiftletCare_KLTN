@@ -3,10 +3,10 @@ import KpiTile from '@/components/common/KpiTile'
 import { t } from '@/i18n'
 import type { SystemNodeStatus } from '@/types'
 
-/** Vòng icon xám như các ô trang Tổng quan/Người dùng/Nhật ký (theo ReadingTile Dashboard Farm Owner) */
+// Vòng icon xám như các ô trang Tổng quan/Người dùng/Nhật ký (theo ReadingTile Dashboard Farm Owner)
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-// AD-05 — 4 ô đầu trang Thiết bị của Admin, đếm từ `summary` của GET /devices/system-status (OPS-NFR-004)
+// 4 ô đầu trang Thiết bị của Admin, đếm từ `summary` của GET /devices/system-status
 export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
   const { summary, nodes } = status
   const sensors = nodes.filter(n => n.type === 'sensor').length
@@ -33,7 +33,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
         label="Mất kết nối"
         value={summary.offline}
         tone={summary.offline > 0 ? 'warning' : undefined}
-        // Flow 14: không nhận heartbeat > 30s → OFFLINE
+        // không nhận heartbeat > 30s → OFFLINE
         sub={summary.offline > 0 ? 'Mất tín hiệu quá 30 giây' : 'Tất cả đều kết nối'}
       />
       <KpiTile
@@ -41,7 +41,7 @@ export default function DeviceStats({ status }: { status: SystemNodeStatus }) {
         iconClass={ICON}
         label="Chờ kết nối"
         value={summary.pending}
-        // PENDING: đã đăng ký/kích hoạt nhưng chưa từng gửi heartbeat (FARM-FR-003)
+        // PENDING: đã đăng ký/kích hoạt nhưng chưa từng gửi heartbeat
         sub={summary.pending > 0 ? 'Chưa kết nối lần nào' : 'Không có thiết bị chờ'}
       />
     </div>

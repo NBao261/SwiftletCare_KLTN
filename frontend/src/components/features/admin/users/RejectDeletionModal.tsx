@@ -5,7 +5,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { t } from '@/i18n'
 import type { User } from '@/types'
 
-/** AUTH-FR-012 — PUT /admin/delete-requests/:id/reject {reason}; lý do bắt buộc, gửi lại cho người yêu cầu. */
+// PUT /admin/delete-requests/:id/reject {reason}; lý do bắt buộc, gửi lại cho người yêu cầu.
 export default function RejectDeletionModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   const rejectDeleteRequest = useRejectDeleteRequest()
   const push = useToastStore(s => s.push)

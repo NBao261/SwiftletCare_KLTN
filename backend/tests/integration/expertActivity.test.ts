@@ -1,8 +1,3 @@
-/**
- * EXPERT-FR-009 — mỗi quyết định của Domain Expert báo trong ứng dụng cho mọi Farm Owner của farm
- * (tên chuyên gia, nơi, cũ → mới) và có trong lịch sử hoạt động `GET /expert-activity`, đọc từ audit
- * log; lịch sử chỉ Farm Owner và Domain Expert của farm đọc được.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -91,7 +86,7 @@ async function seed({ withExpert = true } = {}) {
   return { owner, coOwner, expert, farm, house, zone, camera, alert, t, send }
 }
 
-/** Sáu quyết định của chuyên gia, mỗi loại một lần */
+// Sáu quyết định của chuyên gia, mỗi loại một lần
 async function expertDecides(s: Awaited<ReturnType<typeof seed>>, token = s.t.expert) {
   await s.send('put', `/farms/zones/${s.zone._id}/thresholds`, token, { humidity_min: 78 }).expect(200)
   await s.send('put', `/farms/zones/${s.zone._id}/fuzzy-tuning`, token, { fuzzy_humidity_band: 10 }).expect(200)

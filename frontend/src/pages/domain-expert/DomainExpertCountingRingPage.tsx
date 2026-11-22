@@ -1,5 +1,4 @@
-// VISION-FR-018 — Chuyên gia vẽ vòng đếm chim trên khung live. Backend còn cho Farm Owner (farm chưa có chuyên gia, BR-22)
-// và Farm Technician của nhà; web chưa mở trang này cho hai vai đó (route chỉ EXPERT_ROLES), thợ vẽ trên mobile
+// Web chỉ mở cho chuyên gia; thợ vẽ trên mobile
 import { useState, useEffect } from 'react'
 import { Crosshair, History, AlertTriangle } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'
@@ -69,7 +68,7 @@ export default function DomainExpertCountingRingPage() {
         {!isLoading && !isError && camera && (
           <div className="space-y-2">
             <SimulatedBadge simulated={camera.simulated} />
-            {/* BR-22 (Report 3 4.2.15) — Farm Owner vẽ được; farm có chuyên gia thì chuyên gia duyệt sau */}
+            {/* Farm Owner vẽ được; farm có chuyên gia thì chuyên gia duyệt sau */}
             <fieldset disabled={!canEditParameters} className="contents">
               <CountingRingEditor key={camera._id} camera={camera} houseId={houseId} />
             </fieldset>

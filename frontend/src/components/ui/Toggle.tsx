@@ -1,6 +1,6 @@
 import { cn } from '@/lib/cn'
 
-/** Toggle switch — mục 2.2.6: track ON=charcoal, OFF=warmGray/30%, thumb trắng */
+// Toggle switch: mục 2.2.6: track ON=charcoal, OFF=warmGray/30%, thumb trắng
 interface ToggleProps {
   checked: boolean
   onChange: (checked: boolean) => void

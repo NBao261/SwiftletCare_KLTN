@@ -1,12 +1,8 @@
-/**
- * ENV-FR-027, BR-24 — controller còn chạy cấu hình cũ: gửi lại, và mở/đóng `CONFIG_MISMATCH`
- * (Report 4 §5.3, job `configSync`).
- */
 import cron from 'node-cron'
 import { syncControllerConfigs } from '@/services/configSync.service'
 import logger from '@/utils/logger.util'
 
-/** Mỗi phút — heartbeat 30 giây một lần, nên 3 heartbeat lệch (BR-24) được thấy trong khoảng 1,5 phút */
+// Heartbeat 30 s, nên 3 lần lệch thấy trong ~1,5 phút
 const CRON_EXPRESSION = '30 * * * * *'
 
 export function startConfigSyncJob(): void {

@@ -1,12 +1,7 @@
-/**
- * AUTH-FR-010, Flow 12 case 3d — Invitation quá 7 ngày không phản hồi thì
- * tự động chuyển EXPIRED để không còn accept/decline được nữa.
- */
 import cron from 'node-cron'
 import { expireStaleInvitations } from '@/services/farm.service'
 import logger from '@/utils/logger.util'
 
-/** Mỗi giờ — hạn 7 ngày nên không cần chạy dày */
 const CRON_EXPRESSION = '0 0 * * * *'
 
 export function startInvitationExpiryJob(): void {

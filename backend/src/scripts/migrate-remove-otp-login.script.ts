@@ -1,12 +1,4 @@
-/**
- * migrate-remove-otp-login.ts — dọn dữ liệu sau khi bỏ đăng nhập bằng OTP và đăng ký công
- * khai (G-02, Report 3 §1.2, §8): chỉ còn đăng nhập bằng mật khẩu (AUTH-FR-002) và đặt lại
- * mật khẩu (AUTH-FR-009). Tài khoản do Admin tạo hoặc từ link lời mời (AUTH-FR-005c, 010).
- *
- * Chạy: npm run migrate:remove-otp-login   (chạy lại nhiều lần vẫn an toàn)
- *
- * 1. `users`: gỡ `otp_code`, `otp_expires` (hash mã OTP cũ không còn ai đọc).
- */
+// gỡ otp_code, otp_expires. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

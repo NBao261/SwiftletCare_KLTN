@@ -1,8 +1,3 @@
-/**
- * OPS-FR-005…008, ALERT-FR-016, BR-40, BR-41 (Report 3 §6.20, SM-20) — kế hoạch bảo trì theo giờ chạy, số lần đóng cắt
- * hoặc theo lịch; đến hạn thì `MAINTENANCE_DUE` và Work Order phòng ngừa cho thợ; checklist, mục hỏng mở Work Order
- * sửa chữa; Farm Owner duyệt là một lần ghi bảo trì; quá 7 ngày thì OVERDUE; tỷ lệ bảo trì đúng hạn.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -273,9 +268,9 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
     await tech$.put(`${path}/checklist`, { item_index: 0, result: 'OK' }).expect(200)
     await tech$.put(`${path}/checklist`, { item_index: 1, result: 'OK', note: 'Đã thông béc' }).expect(200)
     const done = await tech$.post(`${path}/done`, { work_note: 'Thay màng bơm' }).expect(200)
-    expect(done.body.data.status).toBe('AWAITING_APPROVAL')  // không qua kiểm dữ liệu phục hồi (BR-41)
+    expect(done.body.data.status).toBe('AWAITING_APPROVAL')  // không qua kiểm dữ liệu phục hồi
 
-    // Xác nhận cảnh báo của kế hoạch không đặt bộ đếm về 0 (chỉ duyệt Work Order mới là ghi bảo trì)
+    // Chỉ duyệt Work Order mới là ghi bảo trì
     const ownerAck = await owner$.put(`/alerts/${wo.alert_id}/acknowledge`, { note: 'đã thấy' }).expect(200)
     expect(ownerAck.body.data.status).toBe('ACKNOWLEDGED')
     expect((await SensorNode.findById(node._id).lean())!.relay_usage.misting.since_service_hours).toBe(520)
@@ -316,7 +311,7 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
     expect(repairs[0]).toMatchObject({ kind: 'REPAIR', title: 'Sửa chữa: Bồn nước', description: 'Bồn rò nước' })
     await tech$.put(`/work-orders/${repairs[0]._id}/checklist`, { item_index: 0, result: 'OK' }).expect(409)
 
-    // Hai lần ghi DEFECT gần nhau cho một mục khác (bấm đúp): vẫn đúng một Work Order sửa chữa cho mục đó
+    // Bấm đúp: vẫn đúng một Work Order sửa chữa
     const both = await Promise.all([0, 1].map(() => tech$.put(`${path}/checklist`, { item_index: 1, result: 'DEFECT' })))
     expect(both.map(r => r.status)).toEqual([200, 200])
     const second = await WorkOrder.find({ origin: 'CHECKLIST', title: 'Sửa chữa: Béc phun' }).lean()

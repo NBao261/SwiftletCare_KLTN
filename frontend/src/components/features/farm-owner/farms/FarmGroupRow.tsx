@@ -22,13 +22,13 @@ interface FarmGroupRowProps {
   onEdit: () => void
   onDelete: () => void
   onAddHouse: () => void
-  // EXPERT-FR-015 — có thì hiện nút "Áp hồ sơ" (Farm Owner, farm đã có nhà)
+  // có thì hiện nút "Áp hồ sơ" (Farm Owner, farm đã có nhà)
   onApplyProfile?: () => void
   // Các nhà yến của farm, chỉ hiện khi đang xổ
   children: ReactNode
 }
 
-// 1 hàng trang trại: bấm hàng để xổ / thu các nhà yến; nút "Thêm nhà" trên hàng, Áp hồ sơ · Sửa · Xoá trong menu ⋯ (FO-10)
+// 1 hàng trang trại, bấm để xổ các nhà
 export default function FarmGroupRow({
   farm, houseCount, deviceCount, alertHouseCount, isExpanded, isPrimary, canEdit, canAddHouse,
   onToggle, onEdit, onDelete, onAddHouse, onApplyProfile, children,

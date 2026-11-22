@@ -47,7 +47,7 @@ interface ZoneComponentLogProps {
   thresholds?: Thresholds;
 }
 
-// Thiết bị bộ kit gom theo loại, bấm xổ log từng thiết bị; số liệu chỉ lấy khi bấm "Kiểm tra thiết bị", không realtime
+// Số liệu chỉ lấy khi bấm "Kiểm tra thiết bị", không realtime
 export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComponentLogProps): JSX.Element {
   const { t, dateTime } = useTranslation(devicesDict);
   const { groups, checkedAt, isChecking, isError, runCheck } = useZoneComponents(zoneId, nodes);
@@ -164,7 +164,7 @@ function KindRow({ group, thresholds, isOpen, onToggle }: KindRowProps): JSX.Ele
                 key={item.nodeId}
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-2.5 pl-14 pr-4 lg:grid-cols-[11rem_minmax(0,1fr)_8.5rem]"
               >
-                {/* Mã bộ kit in trên nhãn thiết bị (SF-01) — chưa có tên riêng cho từng thiết bị con */}
+                {/* Mã bộ kit in trên nhãn thiết bị: chưa có tên riêng cho từng thiết bị con */}
                 <span className="truncate text-sm font-semibold text-charcoal">{t('list.kitName', { id: item.deviceId })}</span>
                 <div className="order-last col-span-full min-w-0 lg:order-none lg:col-span-1">
                   <ComponentParams kind={group.kind} item={item} thresholds={thresholds} />
@@ -182,7 +182,7 @@ function KindRow({ group, thresholds, isOpen, onToggle }: KindRowProps): JSX.Ele
   );
 }
 
-// Thông số của 1 thiết bị nằm ngay trên hàng log (nhãn · giá trị), lấy từ lần kiểm tra; chưa kiểm tra thì mọi giá trị "_"
+// Chưa kiểm tra thì mọi giá trị "_"
 function ComponentParams({ kind, item, thresholds }: { kind: ComponentKind; item: ComponentItem; thresholds?: Thresholds }): JSX.Element {
   const { t, num, dateTime } = useTranslation(devicesDict);
   const detail = item.detail;
@@ -198,7 +198,7 @@ function ComponentParams({ kind, item, thresholds }: { kind: ComponentKind; item
     const isOutside = item.value !== undefined && compareRange ? isOutsideRange(item.value, compareRange) : undefined;
     params = [
       { label: t('param.reading'), value: item.value !== undefined && metric ? `${num(item.value, metric.decimals)} ${metric.unit}` : NO_VALUE },
-      // NH3, CO2 chỉ để cảnh báo, không điều khiển quạt (ENV-FR-006/011)
+      // NH3, CO2 chỉ để cảnh báo, không điều khiển quạt
       kind === 'nh3' || kind === 'co2'
         ? { label: t('param.alertLimit'), value: thresholds ? `> ${thresholds[kind === 'nh3' ? 'nh3_max' : 'co2_max']} ppm` : NO_VALUE }
         : { label: t('param.range'), value: range ?? NO_VALUE },

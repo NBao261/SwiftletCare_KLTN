@@ -1,8 +1,3 @@
-/**
- * ALERT-FR-014, EXPERT-FR-003 — `GET /alerts/:id/evidence`: dữ liệu nhiều nguồn quanh 1 cảnh báo suy
- * luận (±30 phút, hoặc ngày của phiên cho LOW_RETURN_RATE), nguồn trống báo `missing` chứ không phải 0,
- * kèm các kết luận trước cùng loại cùng nơi. Hệ thống chỉ trình bày, không kết luận.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -81,8 +76,8 @@ describe('GET /alerts/:id/evidence — cảnh báo theo zone (±30 phút)', () =
     ])
     await BirdCountBucket.create({ camera_node_id: camera._id, house_id: house._id, bucket_start: new Date(AT.getTime() - 5 * MIN), entry_count: 3, exit_count: 12 })
     await mkAlert('SENSOR_FAULT', { node_id: node._id })
-    await mkAlert('RS485_BUS_FAILURE', { node_id: node._id, status: 'RESOLVED' }) // đã đóng — không kèm
-    // Đợt ồn 3 ngày trước đã đóng: cùng sự cố chỉ một cảnh báo còn mở (ALERT-FR-008)
+    await mkAlert('RS485_BUS_FAILURE', { node_id: node._id, status: 'RESOLVED' }) // đã đóng: không kèm
+    // Đợt ồn 3 ngày trước đã đóng: cùng sự cố chỉ một cảnh báo còn mở
     const earlier = await mkAlert('NOISE_ANOMALY', {
       status: 'RESOLVED',
       created_at: new Date(AT.getTime() - 3 * 86_400_000),

@@ -8,8 +8,6 @@ import { MAINTENANCE_BASES, MAINTENANCE_EQUIPMENT, MAINTENANCE_PLAN_STATES } fro
 const router = Router()
 router.use(authenticate)
 
-// Report 3 §2.4: Farm Owner định nghĩa kế hoạch và checklist; Farm Technician đọc (nhà được giao, service kiểm nhà);
-// Domain Expert đọc và góp ý; Administrator không thấy
 const READERS = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] as const
 const idParam = param('id').isMongoId()
 const scope = [
@@ -25,7 +23,6 @@ router.post('/plans', requireRole('FARM_OWNER'),
   body('house_id').isString().isMongoId(),
   body('equipment').isString().isIn(MAINTENANCE_EQUIPMENT),
   body('basis').isString().isIn(MAINTENANCE_BASES),
-  // OPS-FR-005 — khoảng ≤ 0 → 422
   body('interval').isFloat({ gt: 0 }).withMessage('Khoảng bảo trì phải lớn hơn 0').toFloat(),
   checklist(body('checklist_template')), body('checklist_template.*').isString().trim().notEmpty().isLength({ max: 200 }),
   body('source').isString().trim().notEmpty().withMessage('Cần ghi nguồn của chu kỳ').isLength({ max: 300 }),

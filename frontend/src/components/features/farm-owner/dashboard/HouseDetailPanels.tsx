@@ -40,7 +40,7 @@ export default function HouseDetailPanels({ scope, houseNode, canViewHarvest }: 
   const hasPanelZonePicker = zones.length > 1;
   const controlZones = useMemo(() => (controlZone ? [controlZone] : []), [controlZone]);
   const control = useZonesEnvironment(controlZones);
-  // Điều khiển tay rơ-le có thời hạn (ENV-FR-016): Farm Owner được làm, Domain Expert thì không
+  // Điều khiển tay rơ-le có thời hạn: Farm Owner được làm, Domain Expert thì không
   const canControlRelay = usePermission('FARM_OWNER');
   const navigate = useNavigate();
   const controlAnomalies = control.thresholds ? getAnomalies(control.readings, control.thresholds) : undefined;

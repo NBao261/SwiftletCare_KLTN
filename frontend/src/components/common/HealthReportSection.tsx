@@ -23,11 +23,11 @@ const ROW_HEIGHT = 72;
 interface HealthReportSectionProps {
   // houseId hoặc farmId đang lọc; null = xem nhiều farm (backend cần 1 trong 2)
   scope: { houseId?: string; farmId?: string } | null;
-  // Nhà đang lọc — tạo báo cáo theo yêu cầu cần 1 nhà
+  // Nhà đang lọc: tạo báo cáo theo yêu cầu cần 1 nhà
   house: { id: string; name: string } | null;
 }
 
-// EXPERT-FR-005, 013 — danh sách báo cáo theo nhà (phân trang server), xem chi tiết, tải PDF, tạo báo cáo theo yêu cầu
+// danh sách báo cáo theo nhà (phân trang server), xem chi tiết, tải PDF, tạo báo cáo theo yêu cầu
 export default function HealthReportSection({ scope, house }: HealthReportSectionProps): JSX.Element {
   const { t, date, dateTime, exact } = useTranslation(healthDict);
   const apiErrorMessage = useApiErrorMessage();

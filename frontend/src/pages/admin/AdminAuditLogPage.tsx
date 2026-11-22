@@ -1,8 +1,4 @@
-// ADMIN — Nhật ký hệ thống (SYSTEM-FR-001): GET /system/audit-logs, lọc theo
-// người thực hiện / hành động / khoảng ngày (server) + ô tìm kiếm & sắp xếp (client, trên
-// TOÀN BỘ nhật ký khớp bộ lọc). Hiển thị 1 bảng DataTable như trang Người dùng.
-// Chỉ nhật ký TÀI KHOẢN (target_type='user', lọc server) — không hiện log thiết bị/cấu hình.
-// Logic lọc/sắp xếp ở useAuditLogTable + AuditLogFilters; thẻ điện thoại AuditLogCard dùng chung với Tổng quan hệ thống.
+// Nhật ký hệ thống: lọc ở server, tìm và sắp ở client trên toàn bộ kết quả
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { USER_AUDIT_ACTIONS } from '@/constants/auditActions'
@@ -20,7 +16,7 @@ import AuditLogFilters from '@/components/features/admin/audit-log/AuditLogFilte
 import { useAuditLogTable } from '@/components/features/admin/audit-log/useAuditLogTable'
 
 const PAGE_SIZE = 10
-/** px — mọi dòng (kể cả dòng trống bù) cao bằng nhau */
+// px: mọi dòng (kể cả dòng trống bù) cao bằng nhau
 const ROW_HEIGHT = 52
 
 export default function AdminAuditLogPage() {
@@ -42,15 +38,15 @@ export default function AdminAuditLogPage() {
   }, [debouncedSearch, setSearchParams])
 
   return (
-    // Tiêu đề trang do AppHeader (topbar) tự tra từ menu — không lặp lại trong nội dung
+    // Tiêu đề trang do AppHeader (topbar) tự tra từ menu: không lặp lại trong nội dung
     <div className="flex min-w-0 flex-col gap-5">
-      {/* Hàng 0: 4 ô chỉ số (chỉ xem) — số liệu toàn hệ thống, cùng khuôn trang Người dùng */}
+      {/* Hàng 0: 4 ô chỉ số (chỉ xem): số liệu toàn hệ thống, cùng khuôn trang Người dùng */}
       <AuditLogStats />
 
       {/* Card danh sách duy nhất: tên trang đã ở header nên không có tiêu đề */}
       <SectionCard description="Đăng nhập, thay đổi tài khoản" className="min-w-0">
 
-        {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng — cùng bố cục trang Người dùng */}
+        {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng: cùng bố cục trang Người dùng */}
         <SearchInput
           placeholder="Tìm theo hành động, tên tài khoản..."
           aria-label="Tìm nhật ký"
@@ -64,7 +60,7 @@ export default function AdminAuditLogPage() {
 
         {table.isLoading && <div className="flex flex-col gap-2"><LoadingSkeleton count={PAGE_SIZE} className="h-[52px] w-full" /></div>}
 
-        {/* Lỗi tải (500, mất mạng…) tách khỏi "chưa có nhật ký" — kèm nút thử lại (FE_Design §13.5) */}
+        {/* Lỗi tải (500, mất mạng…) tách khỏi "chưa có nhật ký": kèm nút thử lại (FE_Design) */}
         {!table.isLoading && table.isError && (
           <EmptyState
             icon={<WarningCircleIcon size={28} />}
@@ -86,7 +82,7 @@ export default function AdminAuditLogPage() {
         )}
 
         {!table.isLoading && !table.isError && table.visible.length > 0 && (
-          // Trang ít hơn 10 dòng (trang cuối, kết quả lọc/tìm ít) vẫn giữ khung đủ 10 dòng — bảng không co lại
+          // Trang ít hơn 10 dòng (trang cuối, kết quả lọc/tìm ít) vẫn giữ khung đủ 10 dòng: bảng không co lại
           <DataTable
             columns={buildAuditLogColumns((table.page - 1) * PAGE_SIZE)}
             rows={table.visible}
@@ -97,7 +93,7 @@ export default function AdminAuditLogPage() {
           />
         )}
 
-        {/* total = số nhật ký SAU khi tìm chữ — tìm ra 3 thì hiện "1–3 trong 3" */}
+        {/* total = số nhật ký SAU khi tìm chữ: tìm ra 3 thì hiện "1–3 trong 3" */}
         <Pagination page={table.page} limit={PAGE_SIZE} total={table.total} onChange={table.setPage} variant="full" />
       </SectionCard>
     </div>

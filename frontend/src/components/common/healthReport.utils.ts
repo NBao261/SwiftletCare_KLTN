@@ -3,7 +3,7 @@ import { NO_VALUE } from '@/constants/display';
 import type { HealthTranslate } from '@/constants/health.i18n';
 import type { HealthRatingValue, HealthReportZoneSection, HealthStatus, HouseHealthReport, HouseHealthReportSummary } from '@/types';
 
-// Hàm định dạng truyền từ useTranslation — màn chi tiết và file PDF dùng chung để ra đúng một con số (EXPERT-FR-013)
+// Hàm định dạng truyền từ useTranslation: màn chi tiết và file PDF dùng chung để ra đúng một con số
 export interface ReportFormat {
   t: HealthTranslate;
   date: (iso: string) => string;
@@ -51,7 +51,7 @@ const percent = (value: number | null, format: ReportFormat): string => (value =
 const averageMax = (average: number | null, max: number | null, format: ReportFormat, unit: string): string =>
   (average === null && max === null ? NO_VALUE : `${average === null ? NO_VALUE : format.number(average)} / ${max === null ? NO_VALUE : format.number(max)} ${unit}`);
 
-// Kỳ gọn: ngày "02/11/2026", tháng "Tháng 10/2026", khoảng cùng năm "26/10 – 01/11/2026" (khác năm thì ghi đủ 2 đầu)
+// Kỳ gọn: "02/11/2026", "Tháng 10/2026", "26/10 – 01/11/2026"
 export function reportPeriod(report: HouseHealthReportSummary, format: ReportFormat): string {
   const { period_start: start, period_end: end } = report;
   if (start === end) return format.date(start);
@@ -62,7 +62,7 @@ export function reportPeriod(report: HouseHealthReportSummary, format: ReportFor
   return format.t('report.period', { from, to: format.date(end) });
 }
 
-// Mỗi loại 1 dòng, bỏ loại đếm 0, không có gì thì "—"; loại chưa có trong từ điển gom thành 1 dòng "Khác N", không in mã enum
+// Bỏ loại đếm 0; loại chưa có nhãn gom thành "Khác N"
 export function countsText(counts: Record<string, number>, format: ReportFormat): string {
   const lines: string[] = [];
   let other = 0;
@@ -93,7 +93,7 @@ export function zoneHeader(section: HealthReportZoneSection, format: ReportForma
   return `${section.zone_name} (${format.t('rd.samples', { n: section.sample_count })})`;
 }
 
-// Số liệu của 1 Zone theo đúng thứ tự EXPERT-FR-005
+// Số liệu của 1 Zone theo đúng thứ tự
 export function zoneFacts(section: HealthReportZoneSection, format: ReportFormat): ReportFact[] {
   const { t } = format;
   return [
@@ -109,7 +109,7 @@ export function zoneFacts(section: HealthReportZoneSection, format: ReportFormat
   ];
 }
 
-// Thời tiết cả kỳ (ANALYTICS-FR-013); null khi không có dữ liệu
+// Thời tiết cả kỳ; null khi không có dữ liệu
 export function weatherFacts(report: HouseHealthReport, format: ReportFormat): ReportFact[] | null {
   const weather = report.house_metrics.weather;
   if (!weather) return null;
@@ -165,7 +165,7 @@ export function reportDayRows(report: HouseHealthReport, format: ReportFormat): 
   });
 }
 
-// POST /health-reports: from ≤ to ≤ hôm nay (giờ VN), tối đa 31 ngày tính cả 2 đầu — kiểm trước khi gửi
+// POST /health-reports: from ≤ to ≤ hôm nay (giờ VN), tối đa 31 ngày tính cả 2 đầu: kiểm trước khi gửi
 export const MAX_REPORT_DAYS = 31;
 export type ReportRangeError = 'create.errRequired' | 'create.errOrder' | 'create.errFuture' | 'create.errRange';
 

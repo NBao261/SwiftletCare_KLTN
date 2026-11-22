@@ -1,7 +1,3 @@
-/**
- * ANALYTICS-FR-013 — thời tiết theo giờ từ Open-Meteo: chỉ gửi toạ độ, lưu đúng số dịch vụ trả, thiếu
- * thì để thiếu (không ghi 0), farm không toạ độ hoặc gọi lỗi thì không ghi gì.
- */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Farm } from '@/models/farm.model'

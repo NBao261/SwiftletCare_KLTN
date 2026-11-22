@@ -1,4 +1,3 @@
-/** Report 4 §7.2 — cấu hình thuộc Zone đi tới từng thiết bị, luôn là bản đầy đủ vì `config` retained */
 import { SensorNode } from '@/models/device.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { publishZoneConfig } from '@/services/deviceConfig.service'

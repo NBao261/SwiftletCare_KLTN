@@ -6,7 +6,7 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   error?: string
 }
 
-/** Select — cùng khuôn với Input.tsx, dùng lại class `.input` (index.css) */
+// Select: cùng khuôn với Input.tsx, dùng lại class `.input` (index.css)
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, className, id, children, ...props }, ref) => {
     const selectId = id ?? props.name

@@ -3,10 +3,10 @@ import { format, parseISO } from 'date-fns';
 import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api';
 import { CHART_COLORS, withAlpha } from '@/lib/chartTheme';
 
-// 5 khoảng thời gian backend hỗ trợ (ANALYTICS-FR-001/008/011)
+// 5 khoảng thời gian backend hỗ trợ
 export const ANALYTICS_RANGES: AnalyticsRange[] = ['1h', '6h', '24h', '7d', '30d'];
 
-// Chỉ số so sánh giữa các Zone — API so sánh không có âm thanh
+// Chỉ số so sánh giữa các Zone: API so sánh không có âm thanh
 export const COMPARE_METRICS = [
   { key: 'temperature', unit: '°C' },
   { key: 'humidity', unit: '%' },

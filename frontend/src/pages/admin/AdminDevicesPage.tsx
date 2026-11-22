@@ -1,4 +1,4 @@
-// ADMIN — /devices: mọi thiết bị kèm farm, nhà, khu vực (FARM-FR-009, GET /devices/system-status); lệnh từ xa trong ngăn chi tiết (FARM-FR-013)
+// Mọi thiết bị kèm vị trí; lệnh từ xa trong ngăn chi tiết
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'
@@ -18,14 +18,14 @@ import DeviceDetailDrawer from '@/components/features/admin/devices/DeviceDetail
 import type { DeviceStatus, SortDirection, SystemNodeStatusItem } from '@/types'
 
 const PAGE_SIZE = 10
-/** px — vừa dòng 2 tầng chữ (cột Heartbeat giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau */
+// px: vừa dòng 2 tầng chữ (cột Heartbeat giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau
 const ROW_HEIGHT = 64
 
 const STATUS_OPTIONS: { value: DeviceStatus | ''; label: string }[] = [
   { value: '', label: 'Tất cả trạng thái' },
   { value: 'ONLINE', label: 'Online' },
   { value: 'OFFLINE', label: 'Mất kết nối' },
-  // ERROR/DEGRADED đã bỏ theo SRS 3.1.0
+  // ERROR/DEGRADED đã bỏ theo
   { value: 'PENDING', label: 'Chờ kết nối' },
 ]
 const TYPE_OPTIONS: { value: SystemNodeStatusItem['type'] | ''; label: string }[] = [
@@ -40,7 +40,7 @@ const SORT_FIELDS: { key: DeviceSortKey; label: string }[] = [
   { key: 'device_id', label: 'Tên thiết bị' },
   { key: 'status', label: 'Trạng thái' },
 ]
-/** Sắp theo trạng thái: cần chú ý lên trước khi tăng dần; ERROR/DEGRADED đã bỏ (SRS 3.1.0) */
+// Sắp theo trạng thái: cần chú ý lên trước khi tăng dần; ERROR/DEGRADED đã bỏ
 const STATUS_RANK: Record<DeviceStatus, number> = { OFFLINE: 0, PENDING: 1, ONLINE: 2 }
 const DEFAULT_SORT_BY: DeviceSortKey = 'last_heartbeat'
 const DEFAULT_SORT_DIR: SortDirection = 'desc'
@@ -57,7 +57,7 @@ export default function AdminDevicesPage() {
   const [status, setStatus] = useState<DeviceStatus | ''>('')
   const [type, setType] = useState<SystemNodeStatusItem['type'] | ''>('')
   const [searchParams] = useSearchParams()
-  // ?farm=<tên farm> — trang Nhà yến của Admin mở sẵn đúng farm đang xem
+  // ?farm=<tên farm>: trang Nhà yến của Admin mở sẵn đúng farm đang xem
   const [farm, setFarm] = useState(() => searchParams.get('farm') ?? '')
   const [sortBy, setSortBy] = useState<DeviceSortKey>(DEFAULT_SORT_BY)
   const [sortDir, setSortDir] = useState<SortDirection>(DEFAULT_SORT_DIR)
@@ -89,7 +89,7 @@ export default function AdminDevicesPage() {
     setPage(1)
   }
 
-  /** Đổi bộ lọc/tìm kiếm thì về trang 1 */
+  // Đổi bộ lọc/tìm kiếm thì về trang 1
   function withReset<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); setPage(1) }
   }
@@ -113,13 +113,13 @@ export default function AdminDevicesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Hàng 0: 4 ô số toàn hệ thống — tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
+      {/* Hàng 0: 4 ô số toàn hệ thống: tự làm mới mỗi 30 giây (useSystemNodeStatus) */}
       <DeviceStats status={data} />
 
       {/* Card danh sách duy nhất: tên trang đã ở header nên không có tiêu đề */}
       <SectionCard description="Bộ điều khiển và camera đếm chim">
 
-        {/* Hàng 1: tìm kiếm — không có nút tạo: thiết bị mới nhập ở Kho thiết bị, Farm Owner đăng ký từ nhãn */}
+        {/* Hàng 1: tìm kiếm: không có nút tạo: thiết bị mới nhập ở Kho thiết bị, Farm Owner đăng ký từ nhãn */}
         <SearchInput placeholder="Tìm mã thiết bị, trang trại, nhà, Zone..." value={search} onChange={withReset(setSearch)} />
 
         {/* Hàng 2: bộ lọc + sắp xếp */}
@@ -153,7 +153,7 @@ export default function AdminDevicesPage() {
           getRowKey={n => `${n.type}-${n._id}`}
           // Bấm dòng hoặc nút "Chi tiết" mở drawer chi tiết (Admin chỉ xem thiết bị)
           onRowClick={setViewTarget}
-          // Cố định khung 10 dòng — ít thiết bị/trang cuối vẫn giữ chiều cao, lọc không làm card co giãn
+          // Cố định khung 10 dòng: ít thiết bị/trang cuối vẫn giữ chiều cao, lọc không làm card co giãn
           rowHeight={ROW_HEIGHT}
           minRows={filtered.length > PAGE_SIZE ? PAGE_SIZE : 0}
           emptyMessage={hasActiveFilters

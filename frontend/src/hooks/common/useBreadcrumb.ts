@@ -1,17 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 
-/**
- * Trang gọi hook này để đăng ký các cấp breadcrumb PHÍA SAU tên trang gốc — VD
- * `usePageBreadcrumb([{ label: farm.name, onClick: () => navigate(`/farms/${farmId}`) }, { label: house.name }])`
- * cho path `/farms/:farmId/houses/:houseId` sẽ ra "Trang trại / Nhà Yến Demo / Tầng 1".
- * Phần tử cuối trong mảng là vị trí hiện tại — không cần gắn onClick, AppHeader tự
- * hiển thị mờ và không cho bấm.
- *
- * Dùng `signal` (chuỗi nhãn nối lại) làm dependency thay vì mảng `crumbs` — mảng
- * literal tạo mới mỗi render nên so sánh tham chiếu sẽ chạy lại vô hạn; nhãn đổi
- * mới thực sự là lúc cần cập nhật store.
- */
+// Dùng signal (nhãn nối lại) làm dependency: mảng literal mới mỗi render sẽ chạy vô hạn
 export function usePageBreadcrumb(crumbs: Crumb[], rootState?: unknown) {
   const setTrail = useBreadcrumbStore(s => s.setTrail)
   const crumbsRef = useRef(crumbs)
@@ -25,12 +15,7 @@ export function usePageBreadcrumb(crumbs: Crumb[], rootState?: unknown) {
   }, [signal, setTrail, rootState])
 }
 
-/**
- * Trang drill-down gọi hook này để hiện "← Quay lại <label>" NGOÀI khung trắng nội
- * dung (AppShell vẽ, trên nền xám) — trang chỉ render được bên trong khung nên phải
- * đi qua store như breadcrumb. `to` là path trang cha cố định (không navigate(-1)):
- * vào thẳng bằng URL vẫn quay lại đúng chỗ.
- */
+// to là path cha cố định, không navigate(-1): vào thẳng bằng URL vẫn quay lại đúng
 export function usePageBack(to: string, label: string, state?: unknown) {
   const setBack = useBreadcrumbStore(s => s.setBack)
 

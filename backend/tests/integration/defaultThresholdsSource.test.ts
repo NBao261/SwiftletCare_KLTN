@@ -1,8 +1,3 @@
-/**
- * ENV-FR-007 — đổi ngưỡng mặc định phải kèm nguồn là một mục của REF-5; audit giữ giá trị cũ, mới và nguồn;
- * zone đang có không đổi và không gửi cấu hình. ENV-FR-026 — báo chuyên gia (Farm Owner khi farm chưa có
- * chuyên gia, BR-22) các zone khác mặc định mới. SYSTEM-FR-002 — GET kèm nguồn và lịch sử.
- */
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitNotificationNew: jest.fn() }))
 
@@ -43,7 +38,7 @@ const makeUser = (role: 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT', extra: Record<
 const tokenOf = (u: { _id: unknown; role: string }) =>
   jwt.sign({ sub: String(u._id), role: u.role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
 
-/** Farm có 1 zone mang ngưỡng `thresholds`; `expert` thêm 1 Domain Expert vào farm */
+// Farm có 1 zone mang ngưỡng `thresholds`; `expert` thêm 1 Domain Expert vào farm
 async function seedFarm(name: string, thresholds: Partial<typeof DEFAULT_THRESHOLDS>, opts: { expert?: boolean; expertActive?: boolean } = {}) {
   const owner = await makeUser('FARM_OWNER')
   const expert = opts.expert ? await makeUser('DOMAIN_EXPERT', { status: opts.expertActive === false ? 'LOCKED' : 'ACTIVE' }) : undefined
@@ -59,7 +54,7 @@ async function seedFarm(name: string, thresholds: Partial<typeof DEFAULT_THRESHO
 const put = (token: string, body: Record<string, unknown>) =>
   request(app).put('/system/settings/default-thresholds').set('Authorization', `Bearer ${token}`).send(body)
 
-/** Thông báo ENV-FR-026 chạy nền sau khi lưu: chờ tới khi đủ số thông báo hoặc hết hạn */
+// Thông báo chạy nền sau khi lưu: chờ tới khi đủ số thông báo hoặc hết hạn
 async function waitForNotifications(count: number) {
   for (let i = 0; i < 50 && (await Notification.countDocuments()) < count; i++) {
     await new Promise(r => setTimeout(r, 20))

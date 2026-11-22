@@ -1,8 +1,3 @@
-/**
- * EXPERT-FR-005/006 — báo cáo tuần theo Zone kiểu cũ: hệ thống không tạo mới nữa (báo cáo theo nhà có mục cho
- * từng Zone, houseHealthReport.test.ts), nhưng các báo cáo đã lưu vẫn đọc và viết kết luận được; số liệu từng
- * Zone (`buildZoneMetrics`) vẫn dùng chung.
- */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -63,7 +58,7 @@ const HOUR = 3600_000
 let seq = 0
 const mkUser = (role: Role) => User.create({ email: `u${++seq}@test.vn`, password_hash: 'password123', full_name: `U${seq}`, role })
 
-/** Farm có 1 Zone với 10 mẫu telemetry trong 7 ngày qua, 3 cảnh báo và 1 lần can thiệp tay dài ~16,8 giờ */
+// Farm có 1 Zone với 10 mẫu telemetry trong 7 ngày qua, 3 cảnh báo và 1 lần can thiệp tay dài ~16,8 giờ
 async function seed(withData = true) {
   const owner = await mkUser('FARM_OWNER')
   const expert = await mkUser('DOMAIN_EXPERT')
@@ -88,7 +83,7 @@ async function seed(withData = true) {
     })))
     const alert = (type: string) => ({ farm_id: farm._id, zone_id: zone._id, node_id: node._id, type, severity: 'MEDIUM', title: 't', message: 'm', created_at: new Date(now - 5 * 60_000) }) // trước mốc kỳ (làm tròn xuống phút)
     await Alert.create([alert('MISTING_INEFFECTIVE'), alert('NOISE_ANOMALY')])
-    await Alert.create({ ...alert('MISTING_INEFFECTIVE'), status: 'RESOLVED' }) // cùng loại, đã đóng — vẫn tính là đã phát sinh trong kỳ
+    await Alert.create({ ...alert('MISTING_INEFFECTIVE'), status: 'RESOLVED' }) // cùng loại, đã đóng: vẫn tính là đã phát sinh trong kỳ
     await RelayOverrideLog.create({
       node_id: node._id, zone_id: zone._id, farm_id: farm._id, relay: 'misting', state: true,
       started_by: owner._id, started_by_role: 'FARM_OWNER',
@@ -123,7 +118,7 @@ describe('số lần đóng cắt relay không bị phồng sau khi mất mạng
   it('mẫu xả từ bộ đệm offline (không có trạng thái relay) không được tính là một lần đổi', async () => {
     const { zone, node } = await seed(false)
     const now = Date.now()
-    // bật, bật, [2 mẫu offline không có misting_on], bật, tắt → đúng 1 lần đổi (bật → tắt)
+    // 2 mẫu offline không có misting_on → đúng 1 lần đổi
     const rows: Array<boolean | undefined> = [true, true, undefined, undefined, true, false]
     await Telemetry.insertMany(rows.map((on, i) => ({
       node_id: node._id, zone_id: zone._id, timestamp: new Date(now - (rows.length - i) * 60_000), humidity: 80, temperature: 28,

@@ -5,7 +5,7 @@ interface LoadingSkeletonProps {
   count?: number
 }
 
-/** LoadingSkeleton – placeholder pulse trong lúc chờ dữ liệu (React Query isLoading) */
+// LoadingSkeleton – placeholder pulse trong lúc chờ dữ liệu (React Query isLoading)
 export default function LoadingSkeleton({ className, count = 1 }: LoadingSkeletonProps) {
   return (
     <>

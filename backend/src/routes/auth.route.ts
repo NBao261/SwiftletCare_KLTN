@@ -7,12 +7,8 @@ import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 
-// SEC-NFR-004 — đếm theo IP, đứng trước validate để request sai định dạng cũng bị tính.
-// Gửi mã đặt lại mật khẩu đếm mọi lần; đăng nhập/nhập mã chỉ đếm lần sai (loginLimiter).
-// Không có đăng ký công khai, không đăng nhập bằng OTP (Report 3 §1.2, §8): tài khoản do Admin
-// tạo (AUTH-FR-005c) hoặc từ link lời mời (POST /invitations/:token/create-account, AUTH-FR-010).
+// đứng trước validate để request sai định dạng cũng bị đếm
 
-/** POST /auth/login – AUTH-FR-002 */
 router.post(
   '/login',
   loginLimiter,
@@ -21,14 +17,9 @@ router.post(
   authController.login,
 )
 
-/** POST /auth/refresh – AUTH-FR-003 */
 router.post('/refresh', refreshLimiter, authController.refresh)
 
-/**
- * PUT /auth/password — đổi mật khẩu khi đang đăng nhập; route duy nhất (cùng logout)
- * còn dùng được khi đang giữ mật khẩu tạm Admin cấp. loginLimiter: chỉ đếm lần nhập
- * sai mật khẩu hiện tại, chống dò mật khẩu bằng một phiên bị chiếm.
- */
+// Dùng được khi giữ mật khẩu tạm; loginLimiter chống dò mật khẩu hiện tại
 router.put(
   '/password',
   authenticate,
@@ -38,15 +29,11 @@ router.put(
   authController.changePassword,
 )
 
-/** POST /auth/logout – AUTH-FR-006 */
 router.post('/logout', authenticate, authController.logout)
-// Đọc lại tài khoản sau khi liên kết Telegram qua bot hoặc gửi/huỷ yêu cầu xoá (todo-audit-1118 B-01)
 router.get('/me', authenticate, authController.me)
 
-/** POST /auth/forgot-password – AUTH-FR-009 */
 router.post('/forgot-password', passwordResetLimiter, [body('email').isEmail()], validate, authController.forgotPassword)
 
-/** POST /auth/reset-password – AUTH-FR-009 */
 router.post(
   '/reset-password',
   loginLimiter,
@@ -55,12 +42,11 @@ router.post(
   authController.resetPassword,
 )
 
-/** PUT /auth/notification-preferences – ALERT-FR-005/006 (mọi role tự chỉnh kênh của mình, Report 3 §2.4) */
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
 router.put('/notification-preferences', authenticate,
   body('push').optional().isBoolean({ strict: true }),
   body('telegram').optional().isBoolean({ strict: true }),
-  // Chuỗi rỗng = tắt giờ im lặng (web gửi khi người dùng xoá hai ô giờ; isWithinQuietHours coi rỗng là không có)
+  // Chuỗi rỗng = tắt giờ im lặng
   body(['quiet_hours.start', 'quiet_hours.end']).optional().isString()
     .custom((v: string) => v === '' || HHMM.test(v)).withMessage('Giờ dạng HH:mm, hoặc rỗng để tắt giờ im lặng'),
   body('by_severity').optional().isObject(),
@@ -71,13 +57,10 @@ router.put('/notification-preferences', authenticate,
   body('by_severity.*.telegram').optional().isBoolean({ strict: true }),
   validate, authController.updateNotificationPreferences)
 
-/** ALERT-FR-013 — liên kết / hủy liên kết bot Telegram để nhận cảnh báo ngoài ứng dụng */
 router.post('/telegram/link', authenticate, authController.createTelegramLink)
 router.delete('/telegram/link', authenticate, authController.unlinkTelegram)
 
-/** POST /auth/delete-request – AUTH-FR-012 */
 router.post('/delete-request', authenticate, authController.requestDeletion)
-/** DELETE /auth/delete-request – AUTH-FR-012, đổi ý trước khi Admin xử lý */
 router.delete('/delete-request', authenticate, authController.cancelDeletion)
 
 export default router

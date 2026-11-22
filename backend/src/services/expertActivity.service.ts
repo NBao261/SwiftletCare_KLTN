@@ -6,10 +6,6 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/**
- * EXPERT-FR-009 — các quyết định của Domain Expert trên 1 farm, theo tên hành động trong audit log:
- * tham số, kết luận, kết quả mục duyệt / đề xuất hệ số (EXPERT-FR-010/011) và lịch đếm (VISION-FR-019).
- */
 export const EXPERT_DECISION_ACTIONS = [
   'CONFIG_PROFILE_APPROVED',
   'THRESHOLD_UPDATED', 'FUZZY_TUNING_UPDATED', 'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED',
@@ -19,10 +15,7 @@ export const EXPERT_DECISION_ACTIONS = [
 ] as const
 export type ExpertDecisionAction = typeof EXPERT_DECISION_ACTIONS[number]
 
-/**
- * BR-22 (Report 3 4.2.15) — quyết định Farm Owner cũng làm được (farm có chuyên gia thì kèm mục duyệt hoặc đề xuất);
- * lịch sử liệt kê cả khi Farm Owner làm (role FARM_OWNER). Ngưỡng và hệ số mờ của Farm Owner không vào lịch sử.
- */
+// Ngưỡng và hệ số mờ của Farm Owner không vào lịch sử
 export const BR22_ACTIONS: ExpertDecisionAction[] = [
   'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED', 'COUNTING_RING_UPDATED', 'ALERT_VERDICT_SET',
   'HEALTH_LEVELS_UPDATED', 'WEATHER_RULES_UPDATED', 'COUNTING_SCHEDULE_UPDATED',
@@ -30,7 +23,7 @@ export const BR22_ACTIONS: ExpertDecisionAction[] = [
 
 const VN_TIME = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
 
-/** "humidity_min 75 → 80, temp_max 32 → 33" — chỉ các khoá đổi giá trị; rỗng khi không có khoá nào đổi */
+// Chỉ các khoá đổi giá trị
 export function formatChanges(before: object = {}, after: object = {}): string {
   const b = before as Record<string, unknown>
   const a = after as Record<string, unknown>
@@ -40,11 +33,7 @@ export function formatChanges(before: object = {}, after: object = {}): string {
     .join(', ')
 }
 
-/**
- * EXPERT-FR-009 — mỗi quyết định của Domain Expert tạo 1 thông báo trong ứng dụng cho mọi Farm Owner
- * của farm: ai, lúc nào, ở đâu, cũ → mới (hoặc kết quả). Quyết định do Farm Owner làm thay (BR-22) không
- * báo cho chính họ. Không throw: thông báo hỏng không được làm hỏng quyết định đã lưu.
- */
+// Farm Owner làm thay thì không báo chính họ. Không throw
 export async function notifyExpertDecision(
   user: CurrentUser, farmId: unknown, auditId: string | undefined,
   message: { what: string; place: string; detail?: string },
@@ -75,10 +64,6 @@ export interface ExpertActivityQuery {
   limit?: string | number
 }
 
-/**
- * EXPERT-FR-009 — lịch sử hoạt động chuyên gia của 1 farm, đọc từ audit log (Report 4 §6.1).
- * Chỉ Farm Owner và Domain Expert của farm (Technician, Administrator không phải thành viên → 403).
- */
 export async function listExpertActivity(user: CurrentUser, query: ExpertActivityQuery) {
   const farm = await assertFarmAccess(query.farmId, user)
   const expertActions = query.type ? [query.type] : [...EXPERT_DECISION_ACTIONS]
@@ -86,7 +71,7 @@ export async function listExpertActivity(user: CurrentUser, query: ExpertActivit
 
   const filter: Record<string, unknown> = {
     farm_id: farm._id,
-    // Đổi Zone do duyệt mục / đề xuất đã có dòng REVIEW_* / PROPOSAL_* riêng: 1 quyết định 1 dòng
+    // Đã có dòng REVIEW_*/PROPOSAL_* riêng: 1 quyết định 1 dòng
     'metadata.decided_in': { $exists: false },
     $or: [
       { actor_role: 'DOMAIN_EXPERT', action: { $in: expertActions } },

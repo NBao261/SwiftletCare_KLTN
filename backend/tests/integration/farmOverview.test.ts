@@ -1,7 +1,3 @@
-/**
- * G-25 — ANALYTICS-FR-015 tổng quan trại, ANALYTICS-FR-016 / BR-44 so sánh nhà, ANALYTICS-FR-017 / BR-45 điện năng
- * ước tính, ANALYTICS-FR-002 xu hướng đàn, VISION-FR-011 lượng mưa trên LOW_RETURN_RATE, SYSTEM-FR-004 nhãn giả lập.
- */
 jest.mock('@/socket', () => ({
   emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitNotificationNew: jest.fn(), emitBirdCountUpdate: jest.fn(),
 }))
@@ -65,10 +61,7 @@ async function memberUser(farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'
 }
 const member = async (farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'], role: Role) => (await memberUser(farm, role)).token
 
-/**
- * Tháng giờ VN liền trước tháng hiện tại: đầu tháng, đầu tháng này và nhãn 'YYYY-MM'. Telemetry seed ở đây luôn nằm
- * trong TTL 90 ngày, không hết hạn theo năm như ngày cố định.
- */
+// Tháng VN liền trước: luôn trong TTL 90 ngày, không hết hạn như ngày cố định
 function previousVnMonth() {
   const today = vnDate(new Date())
   const [year, month] = today.split('-').map(Number)
@@ -82,16 +75,16 @@ function previousVnMonth() {
   }
 }
 
-/** Ngày giờ VN cách hôm nay `offset` ngày ('YYYY-MM-DD') */
+// Ngày giờ VN cách hôm nay `offset` ngày ('YYYY-MM-DD')
 const vnDay = (offset: number) => vnDate(new Date(Date.now() + offset * DAY))
 
-/** Phiên sáng và chiều của 1 ngày: `exit` chim ra (ròng), `back` chim về (ròng) */
+// Phiên sáng và chiều của 1 ngày: `exit` chim ra (ròng), `back` chim về (ròng)
 const sessions = (houseId: unknown, cameraId: unknown, date: string, exit: number, back: number) => BirdCountRecord.create([
   { camera_node_id: cameraId, house_id: houseId, timestamp: new Date(`${date}T06:00:00+07:00`), session_date: date, session_type: 'MORNING_EXIT', entry_count: 0, exit_count: exit },
   { camera_node_id: cameraId, house_id: houseId, timestamp: new Date(`${date}T18:00:00+07:00`), session_date: date, session_type: 'EVENING_ENTRY', entry_count: back, exit_count: 0 },
 ])
 
-/** Farm 3 nhà: H (thật, của seedOwnerFarm), H2 và H3 (mọi thiết bị đều giả lập) */
+// Farm 3 nhà: H (thật, của seedOwnerFarm), H2 và H3 (mọi thiết bị đều giả lập)
 async function seedFarm() {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!
@@ -243,7 +236,7 @@ describe('so sánh nhà (ANALYTICS-FR-016, BR-44) — TC-F29-02', () => {
     const { farm, token, house, house2, zone2 } = await seedFarm()
     const zone = (await Zone.findOne({ house_id: house._id }))!
     const zoneB = await Zone.create({ house_id: house._id, farm_id: farm._id, name: 'Tầng 2' })
-    // Chu kỳ bắt đầu 60 ngày trước lúc đóng: mỗi tầng chỉ một chu kỳ cho một ngày bắt đầu (index unique)
+    // Index unique: mỗi tầng chỉ một chu kỳ cho một ngày bắt đầu
     const cycle = (zoneId: unknown, houseId: unknown, end: string, grams: number, status = 'CLOSED') => ({
       farm_id: farm._id, house_id: houseId, zone_id: zoneId, start_date: new Date(Date.parse(end) - 60 * DAY), end_date: new Date(end), status,
       ...(status !== 'OPEN' && { closing_harvest: { date: end, nest_count: 10, weight_grams: grams } }),
@@ -372,7 +365,7 @@ describe('điện năng ước tính và xu hướng đàn (ANALYTICS-FR-017, 00
     const { token, house, zone, node } = await seedFarm()
     const month = previousVnMonth()
     const start = new Date(month.start.getTime() + 4 * DAY)
-    // 10 giờ mẫu mỗi 30 giây = 1201 mẫu; thêm 1 mẫu sau khoảng mất kết nối 2 giờ (không được tính khoảng trống)
+    // 1201 mẫu + 1 mẫu sau khoảng mất kết nối 2 giờ (không được tính)
     const tenHours = Array.from({ length: 1201 }, (_, i) => ({
       node_id: node._id, zone_id: zone._id, timestamp: new Date(start.getTime() + i * 30_000),
       ventilation_on: true, fan_current_a: 1.0, misting_on: true,
@@ -500,7 +493,7 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const { farm, house } = await seedFarm()
     await dropToday(house._id)
     const today = vnDay(0)
-    // Khung chiều mặc định 17:30–19:00 (BR-13): giờ 17:00 (0 mm) và giờ 18:00 (null) đều trùng khung
+    // Khung chiều mặc định 17:30–19:00: giờ 17:00 (0 mm) và giờ 18:00 (null) đều trùng khung
     const camera = new mongoose.Types.ObjectId()
     await BirdCountBucket.create([
       { camera_node_id: camera, house_id: house._id, bucket_start: new Date(`${today}T17:55:00+07:00`), entry_count: 5, exit_count: 0 },
@@ -520,7 +513,7 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const { farm, house } = await seedFarm()
     await dropToday(house._id)
     const today = vnDay(0)
-    // Khung mặc định 05:30–07:00, 17:30–19:00: giờ 10:00 ngoài khung, giờ 18:00 trùng khung nhưng không có số đo
+    // 10:00 ngoài khung; 18:00 trùng khung nhưng không có số đo
     await BirdCountBucket.create({ camera_node_id: new mongoose.Types.ObjectId(), house_id: house._id, bucket_start: new Date(`${today}T18:00:00+07:00`), entry_count: 5, exit_count: 0 })
     await WeatherObservation.create([
       { farm_id: farm._id, hour: new Date(`${today}T18:00:00+07:00`), precipitation_mm: null },

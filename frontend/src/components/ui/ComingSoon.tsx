@@ -1,6 +1,6 @@
 import { tr } from '@/i18n'
 
-/** ComingSoon – khung chuẩn cho trang chưa triển khai (backend module còn là stub 501). Chữ tự dịch theo VI/EN */
+// ComingSoon – khung chuẩn cho trang chưa triển khai (backend module còn là stub 501). Chữ tự dịch theo VI/EN
 export default function ComingSoon({ title, note }: { title: string; note?: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-warmGray/30 px-6 py-20 text-center">

@@ -23,7 +23,7 @@ const vi = {
   'list.errorTitle': 'Không tải được danh sách thiết bị',
   'list.errorDesc': 'Kiểm tra kết nối mạng rồi thử lại.',
   'list.retry': 'Thử lại',
-  // Thiết bị gỡ trong 24 giờ còn khôi phục được (FARM-FR-008)
+  // Thiết bị gỡ trong 24 giờ còn khôi phục được
   'removed.title': 'Đã gỡ trong 24 giờ',
   'removed.subtitle': 'Gỡ nhầm thì khôi phục được trong 24 giờ; sau đó phải đăng ký lại như thiết bị mới.',
   'removed.removedAt': 'Gỡ lúc {time} · {reason}',
@@ -109,7 +109,7 @@ const vi = {
   'trk.uploaded': 'Đã tải lên. Chép file vào thẻ SD với tên {file} rồi bật "Đã chép vào thẻ SD".',
   'trk.uploadFailed': 'Tải lên thất bại',
 
-  // Khởi động lại bộ điều khiển (FARM-FR-013)
+  // Khởi động lại bộ điều khiển
   'action.restart': 'Khởi động lại',
   'restart.title': 'Khởi động lại bộ điều khiển {id}?',
   'restart.desc': 'Bộ điều khiển mất kết nối vài giây rồi tự kết nối lại; rơ-le đang chạy chuyển về điều khiển tự động theo cấu hình đã lưu.',

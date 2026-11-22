@@ -5,7 +5,7 @@ import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 
-// Trang quên mật khẩu (AUTH-FR-009, Flow 11 bước 6-7): gửi mã → nhập mã + mật khẩu mới; khung và ảnh ở AuthLayout
+// Trang quên mật khẩu: gửi mã → nhập mã + mật khẩu mới; khung và ảnh ở AuthLayout
 export default function ForgotPasswordPage(): JSX.Element {
   const { forgotPassword, resetPassword } = useAuth();
   const navigate = useNavigate();

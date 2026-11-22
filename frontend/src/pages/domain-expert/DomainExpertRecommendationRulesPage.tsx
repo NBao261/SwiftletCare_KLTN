@@ -1,4 +1,4 @@
-// EXPERT-FR-016…019 — Luật khuyến nghị của farm: chuyên gia viết, sửa, bật/tắt luật và xem hiệu quả theo luật (G-24 phần 2)
+// Luật khuyến nghị của farm: chuyên gia viết, sửa, bật/tắt luật và xem hiệu quả theo luật (phần 2)
 import { useState } from 'react'
 import { Lightbulb, Plus } from 'lucide-react'
 import RecommendationEffectPanel from '@/components/features/domain-expert/recommendations/RecommendationEffectPanel'
@@ -23,7 +23,7 @@ type RulesTab = (typeof TABS)[number]
 const TAB_LABEL = { rules: 'rules.tabRules', effects: 'rules.tabEffects' } as const
 
 export default function DomainExpertRecommendationRulesPage() {
-  // BR-22 (Report 3 4.2.15) — Farm Owner viết luật; farm có chuyên gia thì luật chờ chuyên gia bật
+  // Farm Owner viết luật; farm có chuyên gia thì luật chờ chuyên gia bật
   const { canEditParameters, ownerNeedsExpert } = useExpertDecisionRights()
   const { t } = useTranslation(recommendationsDict)
   const apiErrorMessage = useApiErrorMessage()

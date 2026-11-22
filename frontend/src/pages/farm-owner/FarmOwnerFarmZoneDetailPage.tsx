@@ -29,7 +29,7 @@ import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFil
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
 import { printQrLabels, zoneCode } from '@/lib/qrCode'
 
-// Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
+// Chi tiết 1 Zone: số đo realtime so ngưỡng
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
@@ -49,7 +49,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
     if (farmId && houseId && zoneId) setScopePath(farmId, farmName, houseId, zoneId)
   }, [farmId, houseId, zoneId, farmName, setScopePath])
   const [selected, setSelected] = useState<DeviceRow | null>(null)
-  // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning (ENV-FR-006/020)
+  // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning
   const openZoneTuning = useOpenZoneTuning()
   // Đổi tên / xoá Zone (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
@@ -88,7 +88,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
   const zoneNameById = new Map([[zone._id, zone.name]])
   const lastBatch = node.lastBatch
 
-  // Trạng thái tín hiệu theo đúng nguồn số đo: socket đang về / socket ngừng / chỉ có bản ghi REST gần nhất / chưa có gì
+  // Trạng thái tín hiệu theo nguồn số đo
   const liveLabel = live.isLive
     ? `${t('zone.live')} · ${ago(d.timestamp)}`
     : live.hasEverReceived
@@ -142,7 +142,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
             {isFarmOwner && (
               <ActionsMenu
                 items={[
-                  // FARM-FR-011 — mã chỉ chứa zone ID, in ra để dán ở tầng
+                  // mã chỉ chứa zone ID, in ra để dán ở tầng
                   {
                     label: t('zone.printFloorCode'),
                     onClick: () => void printQrLabels(zone.name, [{
@@ -174,7 +174,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         )}
       </FarmFrame>
 
-      {/* EXPERT-FR-008 — tham số phát hiện chuyên gia đặt cho Zone, chủ nhà yến chỉ xem */}
+      {/* tham số phát hiện chuyên gia đặt cho Zone, chủ nhà yến chỉ xem */}
       <DetectionTuningCard tuning={zone.detection_tuning} />
 
       <FarmFrame

@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { audioTrackApi } from '@/apis/shared/audioTracks.api'
 
-/** useAudioTracks – danh mục file loa ru của 1 thiết bị (ENV-FR-013c) */
+// useAudioTracks – danh mục file loa ru của 1 thiết bị
 export function useAudioTracks(nodeId: string) {
   return useQuery({
     queryKey: ['audio-tracks', nodeId],
     queryFn: () => audioTrackApi.list(nodeId).then(r => r.data.data),
-    // file_url ký tạm 1 giờ — lấy lại trước khi hết hạn nếu modal mở lâu
+    // file_url ký tạm 1 giờ: lấy lại trước khi hết hạn nếu modal mở lâu
     staleTime: 30 * 60_000,
   })
 }
 
-/** Mutation thao tác trên danh mục, tự làm mới danh sách (và thiết bị khi đổi bài mặc định) */
+// Mutation thao tác trên danh mục, tự làm mới danh sách (và thiết bị khi đổi bài mặc định)
 function useTrackMutation<TVars>(nodeId: string, fn: (vars: TVars) => Promise<unknown>, refreshNodes = false) {
   const queryClient = useQueryClient()
   return useMutation({

@@ -15,9 +15,9 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
 
-// Thiết bị của Farm Technician (Report 4 §5.4): thiết bị các nhà được giao, chẩn đoán, khởi động lại, danh sách bài loa chỉ xem
+// Thiết bị của Farm Technician: thiết bị các nhà được giao, chẩn đoán, khởi động lại, danh sách bài loa chỉ xem
 export default function TechnicianDevicesPage() {
-  // Phạm vi Trang trại → Nhà → Zone trên header, chung store với các trang khác (trang Nhà được giao mở sẵn đúng nhà)
+  // Chung store phạm vi với các trang khác
   const scope = useScopeFilter();
   const zoneId = scope.zone?._id;
 

@@ -5,7 +5,7 @@ import {
 
 const LIMITS: Limits = { hMin: 75, hMax: 95, tMax: 31 }
 
-// Cùng các ca với firmware/test/test_fuzzy/test_main.cpp — bản TS phải khớp C++
+// Cùng các ca với firmware/test/test_fuzzy/test_main.cpp: bản TS phải khớp C
 describe('TS port matches the ESP32 fuzzy controller', () => {
   it('membership functions', () => {
     expect(rampDown(76, 70, 78)).toBeCloseTo(0.25)
@@ -49,7 +49,7 @@ describe('TS port matches the ESP32 fuzzy controller', () => {
   })
 })
 
-/** Nhà yến giả: Δh = 0.05·phun − 0.02·quạt − 0.1·(T−28) − 1.2 (khô dần nếu không phun) */
+// Nhà yến giả: Δh = 0.05·phun − 0.02·quạt − 0.1·(T−28) − 1.2 (khô dần nếu không phun)
 const TRUE_MODEL = { a: 0.05, b: -0.02, c: -0.1, d: -1.2 }
 function syntheticRun(n: number, seed = 1): Step[] {
   let h = 82
