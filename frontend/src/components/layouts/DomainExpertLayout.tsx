@@ -43,13 +43,31 @@ const menuSections: MenuSection[] = [
   {
     title: 'Vận hành (chỉ đọc)',
     collapsible: true,
+    // Tab như menu Farm Owner (§3.1), bỏ tab "Điều khiển tay" (§3.2): chuyên gia đọc so sánh nhà, góp ý kế hoạch bảo trì, đọc khuyến nghị (Report 3 §2.4)
     items: [
-      { label: 'Tổng quan', path: '/dashboard', icon: SquaresFourIcon },
+      {
+        label: 'Tổng quan',
+        path: '/dashboard',
+        icon: SquaresFourIcon,
+        tabs: [
+          { label: 'Tình trạng các nhà', path: '/dashboard' },
+          { label: 'So sánh nhà', path: '/overview' },
+        ],
+      },
       { label: 'Đàn chim', path: '/vision', icon: BirdIcon },
       { label: 'Sức khoẻ', path: '/health', icon: HeartbeatIcon },
       { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
       { label: 'Thiết bị', path: '/devices', icon: CpuIcon },
-      { label: 'Công việc', path: '/work-orders', icon: WrenchIcon },
+      {
+        label: 'Công việc',
+        path: '/work-orders',
+        icon: WrenchIcon,
+        tabs: [
+          { label: 'Phiếu công việc', path: '/work-orders' },
+          { label: 'Bảo trì định kỳ', path: '/maintenance' },
+          { label: 'Khuyến nghị', path: '/recommendations' },
+        ],
+      },
       { label: 'Trang trại', path: '/farms', icon: HouseIcon },
       { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
     ],

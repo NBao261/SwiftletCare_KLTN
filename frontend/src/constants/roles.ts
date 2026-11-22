@@ -101,7 +101,7 @@ export function getRoleHomePath(role: Role | undefined): string {
  * `useAuth`, import vòng sẽ lỗi lúc chạy.
  */
 // Path con cụ thể đặt TRƯỚC path cha: canAccessPath lấy dòng khớp đầu tiên
-const MENU_ACCESS: { path: string; roles: Role[] }[] = [
+export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
   { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },
   { path: '/dashboard',        roles: FARM_SIDE_ROLES },
