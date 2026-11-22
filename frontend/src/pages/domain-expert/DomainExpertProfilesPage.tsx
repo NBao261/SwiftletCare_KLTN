@@ -4,6 +4,8 @@ import { BookCopy, Plus, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
+import SectionCard from '@/components/ui/SectionCard'
+import FilterChip from '@/components/ui/FilterChip'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
@@ -96,76 +98,71 @@ export default function DomainExpertProfilesPage() {
     )
   }
 
-  return (
-    <div className="space-y-5 max-w-2xl">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-charcoal">{t('Hồ sơ cấu hình')}</h1>
-          <p className="mt-0.5 text-sm text-warmGray">
-            {t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
-          </p>
-        </div>
-        {isExpert && (
-          <Button variant="primary" size="sm" onClick={openCreate}>
-            <Plus className="w-3.5 h-3.5" /> {t('Tạo hồ sơ')}
-          </Button>
-        )}
-      </div>
-
-      {/* Bộ lọc trạng thái */}
-      <div className="flex gap-2 flex-wrap">
-        {STATUS_FILTERS.map(f => (
-          <button
-            key={f.value}
-            aria-pressed={statusFilter === f.value}
-            onClick={() => setStatusFilter(f.value)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-              statusFilter === f.value
-                ? 'bg-charcoal text-white border-charcoal'
-                : 'bg-white text-warmGray border-warmGray/20 hover:border-warmGray/40'
-            }`}
-          >
-            {t(f.label)}
-          </button>
-        ))}
-      </div>
-
-      {error && (
-        <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {isLoading ? (
-        <LoadingSkeleton count={3} className="h-16 w-full rounded-2xl" />
-      ) : isError ? (
+  // Danh sách hồ sơ theo bộ lọc; rỗng chỉ 1 dòng như các tab cùng nhóm
+  function renderProfiles() {
+    if (isLoading) return <LoadingSkeleton count={3} className="h-16 w-full rounded-2xl" />
+    if (isError) {
+      return (
         <EmptyState
           icon={<AlertTriangle className="w-9 h-9 text-alertRed" />}
           title={t('Không thể tải danh sách hồ sơ. Kiểm tra kết nối và thử lại.')}
           action={<Button variant="secondary" size="sm" onClick={() => refetch()}>{t('Thử lại')}</Button>}
         />
-      ) : !profiles || profiles.length === 0 ? (
-        <EmptyState
-          icon={<BookCopy className="w-9 h-9" />}
-          title={statusFilter === 'ALL' ? t('Chưa có hồ sơ nào. Tạo hồ sơ đầu tiên.') : t('Không có hồ sơ ở trạng thái "{{status}}".', { status: t(STATUS_FILTERS.find(f => f.value === statusFilter)?.label ?? '') })}
-        />
-      ) : (
-        <div className="space-y-3">
-          {profiles.map(p => (
-            <ProfileCard
-              key={p._id}
-              profile={p}
-              onEdit={() => openEdit(p)}
-              onApprove={() => handleApprove(p._id)}
-              onArchive={() => handleArchive(p._id)}
-              disabled={isPending}
-              readOnly={!isExpert}
-            />
+      )
+    }
+    if (!profiles || profiles.length === 0) {
+      const filterLabel = STATUS_FILTERS.find(f => f.value === statusFilter)?.label ?? ''
+      return (
+        <p className="py-6 text-center text-sm text-warmGray">
+          {statusFilter === 'ALL' ? t('Chưa có hồ sơ nào. Tạo hồ sơ đầu tiên.') : t('Không có hồ sơ ở trạng thái "{{status}}".', { status: t(filterLabel) })}
+        </p>
+      )
+    }
+    return (
+      <div className="space-y-3">
+        {profiles.map(p => (
+          <ProfileCard
+            key={p._id}
+            profile={p}
+            onEdit={() => openEdit(p)}
+            onApprove={() => handleApprove(p._id)}
+            onArchive={() => handleArchive(p._id)}
+            disabled={isPending}
+            readOnly={!isExpert}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-screen-xl space-y-5">
+      {/* Khung giống các tab cùng nhóm Tham số điều khiển: một card, tên trang đã ở header nên không có h1 riêng */}
+      <SectionCard
+        icon={<BookCopy className="w-5 h-5" />}
+        title={t('Hồ sơ cấu hình')}
+        description={t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
+        action={isExpert ? (
+          <Button variant="primary" size="sm" onClick={openCreate}>
+            <Plus className="w-3.5 h-3.5" /> {t('Tạo hồ sơ')}
+          </Button>
+        ) : undefined}
+      >
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map(f => (
+            <FilterChip key={f.value} active={statusFilter === f.value} label={t(f.label)} onClick={() => setStatusFilter(f.value)} />
           ))}
         </div>
-      )}
+
+        {error && (
+          <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {renderProfiles()}
+      </SectionCard>
 
       <ProfileFormDrawer
         open={drawerOpen}
