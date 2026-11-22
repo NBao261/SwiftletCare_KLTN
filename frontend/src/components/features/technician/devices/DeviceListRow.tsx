@@ -4,6 +4,7 @@ import type { SensorNode } from "@/types"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
 import { Badge } from "@/components/ui"
+import StatusDot from "@/components/common/StatusDot"
 import SimulatedBadge from "@/components/common/SimulatedBadge"
 import DeviceDiagnosticsPanel from "@/components/features/technician/devices/DeviceDiagnosticsPanel"
 
@@ -40,20 +41,12 @@ function RssiBars({ rssi }: { rssi?: number }) {
   )
 }
 
-const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pulse?: boolean; blink?: boolean }> = {
-  ONLINE:   { label: "Online",       cls: "bg-success/15 text-charcoal",     dot: "bg-success", pulse: true },
-  OFFLINE:  { label: "Mất kết nối",  cls: "bg-warmGray/15 text-graphite",    dot: "bg-warmGray" },
-  PENDING:  { label: "Chờ kết nối",  cls: "bg-climateOrange/15 text-charcoal", dot: "bg-climateOrange", pulse: true },
-  // G-01: đã bỏ DEGRADED và ERROR — SRS 3.1.0 chỉ còn ACTIVE | OFFLINE | DECOMMISSIONED; PENDING cho giai đoạn chờ heartbeat đầu
-}
-
 export default function DeviceListRow({
   node, zoneId, locationLabel, index = 0, isExpanded, onToggleExpand,
   onReboot, rebootUnsupported,
   onOpenAudio,
 }: DeviceListRowProps) {
   const isOnline = node.status === "ONLINE";
-  const badge = STATUS_BADGE[node.status] ?? { label: node.status, cls: "bg-stone text-charcoal", dot: "bg-warmGray" };
 
   const hb = node.last_heartbeat ? new Date(node.last_heartbeat) : null
   const stale = hb ? Date.now() - hb.getTime() > STALE_HEARTBEAT_MS : false
@@ -103,13 +96,7 @@ export default function DeviceListRow({
 
         {/* Cột 3: Trạng thái + chip phụ */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-4/12">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.cls}`}>
-            <span className="relative flex h-1.5 w-1.5">
-              {badge.pulse && <span className={`absolute inline-flex h-full w-full rounded-full ${badge.dot} animate-ping-soft motion-reduce:animate-none`} />}
-              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${badge.dot} ${badge.blink ? 'animate-pulse-dot motion-reduce:animate-none' : ''}`} />
-            </span>
-            {badge.label}
-          </span>
+          <StatusDot status={node.status} colored />
 
           {node.activation_overdue_at && (
             <Badge tone="warning">Quá hạn kích hoạt</Badge>
@@ -135,7 +122,7 @@ export default function DeviceListRow({
                 type="button"
                 disabled={rebootUnsupported}
                 onClick={(e) => { e.stopPropagation(); onReboot(); }}
-                className="relative z-10 rounded-lg border border-transparent bg-stone p-2 text-charcoal opacity-70 transition-all group-hover:opacity-100 hover:bg-white hover:text-alertRed hover:border-alertRed/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-stone disabled:hover:text-charcoal disabled:hover:border-transparent"
+                className="relative z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-transparent bg-stone text-charcoal opacity-70 transition-all max-sm:h-11 max-sm:w-11 group-hover:opacity-100 hover:bg-white hover:text-alertRed hover:border-alertRed/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-stone disabled:hover:text-charcoal disabled:hover:border-transparent"
                 title={rebootUnsupported ? "Firmware chưa hỗ trợ lệnh này" : "Khởi động lại thiết bị từ xa"}
                 aria-label="Khởi động lại thiết bị"
               >
@@ -146,7 +133,7 @@ export default function DeviceListRow({
           )}
           <button
             type="button"
-            className={`relative z-10 flex items-center justify-center rounded-lg border border-transparent p-2 transition-colors ${isExpanded ? 'bg-charcoal text-white' : 'bg-stone text-charcoal hover:bg-warmGray/20'}`}
+            className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-transparent max-sm:h-11 max-sm:w-11 transition-colors ${isExpanded ? 'bg-charcoal text-white' : 'bg-stone text-charcoal hover:bg-warmGray/20'}`}
             title="Xem chi tiết thiết bị"
             aria-expanded={isExpanded}
             aria-label="Xem chi tiết thiết bị"
