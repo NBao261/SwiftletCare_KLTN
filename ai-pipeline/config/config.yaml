@@ -25,10 +25,9 @@ model:
   nms_iou_threshold: 0.45         # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
   # Gộp ô trùng ở dải chồng giữa 2 ô: bỏ ô có phần giao / diện tích ô nhỏ hơn vượt mức này. Chọn tay.
   tile_merge_overlap: 0.6
-  # Thử lần lượt. Máy cài gói onnxruntime CPU thì bỏ qua CUDA, chạy CPU và log cảnh báo.
-  providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]   # GPU NVIDIA + onnxruntime-gpu[cuda,cudnn]
-  # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
-  # GPU khác trên Windows + onnxruntime-directml: ["DmlExecutionProvider", "CPUExecutionProvider"]
+  # Chỉ chạy trên GPU: provider đầu không nạp được thì pipeline dừng, không lùi về CPU
+  providers: ["CUDAExecutionProvider"]   # GPU NVIDIA + onnxruntime-gpu[cuda,cudnn]
+  # GPU khác trên Windows + onnxruntime-directml: ["DmlExecutionProvider"]
   classes:
     0: swiftlet                   # model tự train 1 lớp (model COCO tạm: 14 = bird)
 

@@ -82,8 +82,10 @@ class InferenceEngine:
         self.output_name = self.session.get_outputs()[0].name
         used = self.session.get_providers()
         logger.info(f"Model loaded: {model_path} | providers: {used}")
+        # Không lùi về CPU: CPU không đủ khung hình/giây để đếm chim bay nhanh
         if used[0] != wanted[0]:
-            logger.warning(f"Không dùng được {wanted[0]}, đang chạy {used[0]} (plan §18.4 bước 0)")
+            raise RuntimeError(f"Không chạy được trên {wanted[0]} (đang có {used[0]}): kiểm tra driver GPU "
+                               f"và gói onnxruntime-gpu[cuda,cudnn] trong requirements.txt")
 
     def preprocess(self, image: np.ndarray) -> Tuple[np.ndarray, float, int, int]:
         """Letterbox to input_size, BGR -> RGB (the model trains on RGB), NCHW float."""

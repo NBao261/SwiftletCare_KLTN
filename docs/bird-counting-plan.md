@@ -179,7 +179,7 @@ Xong khi: xem được hình, độ trễ dưới khoảng 1 giây, không vỡ 
 ```text
 opencv-python>=4.14,<5          # 5.x mới ra 07/2026, chưa dùng
 numpy>=1.26,<3
-onnxruntime>=1.30,<1.31         # máy chạy CPU Intel: thay bằng onnxruntime-openvino>=1.24.1,<1.25 (mục 18.4)
+onnxruntime-gpu[cuda,cudnn]>=1.30,<1.31  # chỉ chạy GPU NVIDIA (mục 18.4 bước 0); Pascal dùng >=1.26,<1.27
 supervision>=0.30.9,<0.31       # ByteTrack, LineZone; 0.31 mới ra 16/10/2026
 paho-mqtt>=2.0,<3
 PyYAML>=6.0,<7
@@ -321,7 +321,7 @@ model:
   input_size: 640                           # phải bằng imgsz lúc export; hạ 480/416 nếu thiếu FPS (mục 18.4)
   confidence_threshold: 0.30
   nms_iou_threshold: 0.45                   # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
-  providers: ["CPUExecutionProvider"]       # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
+  providers: ["CUDAExecutionProvider"]      # chỉ GPU; không nạp được thì pipeline dừng (mục 18.4 bước 0)
   classes:
     14: swiftlet                            # COCO bird. Model tự train: đổi thành  0: swiftlet
 
@@ -1627,7 +1627,7 @@ Chỉ làm khi thật sự cần.
 | Hạng mục | Khi nào cần | Cách làm |
 |---|---|---|
 | Luồng video không có khung (cho nút bật/tắt khung) | Người dùng thật sự cần xem hình gốc | Đẩy thêm một đường `cam-<id>-raw`; tốn gấp đôi băng thông upload |
-| Tăng tốc suy luận | FPS dưới mục tiêu | Theo thứ tự ở mục 18.4: `onnxruntime-openvino` (CPU Intel) → đầu vào 480/416 trên ROI hẹp → hạ camera 20 fps |
+| Tăng tốc suy luận | FPS dưới mục tiêu | Nút AI bắt buộc có GPU NVIDIA (CUDA, mục 18.4), không lùi về CPU; vẫn thiếu thì đầu vào 480/416 trên ROI hẹp → hạ camera 20 fps |
 | Phát hiện thiên địch (THREAT-FR-001) | Có dữ liệu chuột/rắn/cú và camera nhìn vào trong nhà | Thêm class, sửa `alert_publisher.py` (thêm `deviceId`), cho `ingestDeviceAlert` tra cả `CameraNode` |
 | Ghi hình sự kiện (VISION-FR-015) | Sau khi phần đếm ổn định, và khi VPS có chỗ: luồng 2 Mbps ghi cả ngày tốn khoảng 150 GB mỗi 7 ngày; thẻ nhớ camera đã ghi liên tục (19.3) | Tính năng có sẵn của MediaMTX: `record: yes` chỉ trong giờ phiên, `recordDeleteAfter: 7d`, `playback: yes` cho đường `cam-<id>` (đã vẽ khung); backend cấp token xem lại giống `stream-token` (SRS 0.5) |
 | Vẽ vòng đếm trên giao diện (VISION-FR-018) | Khi phải chỉnh vòng mà không muốn sửa `config.yaml` tay (mục 19.8) | **Đã có backend + pipeline (SRS v2.1.10):** `PUT /devices/camera-nodes/:id/counting-ring` lưu theo camera, gửi qua `swiftletcare/{farmId}/{houseId}/config/update` kèm `deviceId`; `src/remote_config.py` lưu `state/counting_ring.json` (thắng `tracking.ring`), áp ngay (từ 22/10 vùng theo dõi là cả khung nên không còn tính lại ROI theo vòng, mục 19.8). Còn màn vẽ ở web |
@@ -2647,14 +2647,14 @@ Cả YOLOv8n lẫn YOLO11n ở đầu vào 640 đều quá 40 ms, chưa tính ph
 **Máy AI node dự kiến có GPU: PC với GTX 1050 Ti (MSI Gaming X, 4 GB), chốt 03/11/2026.** Số liệu CPU ở bảng trên không áp dụng khi chạy trên GPU. Làm bước 0 trước các bước khác:
 
 0. **Chạy model trên GPU NVIDIA.** Vẫn dùng đúng file `.onnx`.
-   - `config.yaml` mặc định đặt `model.providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]`. Máy cài gói `onnxruntime` CPU sẽ bỏ qua CUDA và chạy CPU, nên cấu hình này an toàn cho mọi máy.
+   - `config.yaml` đặt `model.providers: ["CUDAExecutionProvider"]`: pipeline chỉ chạy trên GPU. CPU không đủ khung hình/giây cho 2 ô mỗi frame, nên không lùi về CPU (quyết định 23/11/2026).
    - Trong venv của máy có GPU, cài `onnxruntime-gpu[cuda,cudnn]` thay cho `onnxruntime`. CUDA và cuDNN được pip cài kèm, không cần cài CUDA Toolkit. Tạo venv trên ổ D:, vì các gói này nặng 1–2 GB.
-   - `inference.py` gọi `ort.preload_dlls()` để nạp các DLL đó. Thiếu bước này thì ONNX Runtime âm thầm chạy CPU (đã gặp 03/11/2026). Log phải ghi `providers: ['CUDAExecutionProvider', ...]`; nếu phải quay về CPU thì log có dòng cảnh báo "Không dùng được CUDAExecutionProvider".
+   - `inference.py` gọi `ort.preload_dlls()` để nạp các DLL đó. Thiếu bước này thì ONNX Runtime âm thầm chạy CPU (đã gặp 03/11/2026). Log phải ghi `providers: ['CUDAExecutionProvider', ...]`; CUDA không nạp được thì `inference.py` báo lỗi và pipeline dừng.
    - **Chọn bản theo đời GPU.** [Từ 1.27, `onnxruntime-gpu` trên PyPI dùng CUDA 13; các bản 1.21–1.26 dùng CUDA 12.8](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html). CUDA 13 bỏ Maxwell, Pascal và Volta, nên:
      - Card từ Turing trở lên (RTX), như máy dev: `onnxruntime-gpu[cuda,cudnn]>=1.30,<1.31`.
      - GTX 1050 Ti (Pascal, compute capability 6.1): `onnxruntime-gpu[cuda,cudnn]>=1.26,<1.27`.
    - [NVIDIA đã thông báo](https://www.tomshardware.com/pc-components/gpu-drivers/nvidia-to-axe-maxwell-pascal-and-volta-gpus-with-end-of-driver-support-580-series-drivers-will-be-the-last-to-support-gtx-900-and-1000-cards) nhánh driver 580 là nhánh cuối hỗ trợ Pascal. Giữ máy 1050 Ti ở nhánh 580.
-   - Chưa có nguồn chính thức xác nhận bản 1.26 còn biên dịch cho compute capability 6.1, nên phải thử trên chính máy đó. Nếu CUDA không chạy thì cài `onnxruntime-directml` và đặt `["DmlExecutionProvider", "CPUExecutionProvider"]`. DirectML chạy trên mọi card hỗ trợ DirectX 12, nhưng chậm hơn CUDA.
+   - Chưa có nguồn chính thức xác nhận bản 1.26 còn biên dịch cho compute capability 6.1, nên phải thử trên chính máy đó. Nếu CUDA không chạy thì cài `onnxruntime-directml` và đặt `["DmlExecutionProvider"]`. DirectML chạy trên mọi card hỗ trợ DirectX 12, nhưng chậm hơn CUDA.
    - Card Pascal dòng GeForce không có tensor core và chạy FP16 rất chậm, nên giữ model FP32 (không export `half=True`). Cũng không nên trông vào TensorRT trên card này.
    - **Số đo trên máy dev, 03/11/2026.** Máy dev là laptop RTX 3050 4 GB với CPU Ryzen 7 6800H. Đo với model `yolo26n` COCO 640, 2 ô mỗi frame, clip `20261022_morning_01` từ giây 420:
 
