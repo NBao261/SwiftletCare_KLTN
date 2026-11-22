@@ -179,7 +179,7 @@ Xong khi: xem được hình, độ trễ dưới khoảng 1 giây, không vỡ 
 ```text
 opencv-python>=4.14,<5          # 5.x mới ra 07/2026, chưa dùng
 numpy>=1.26,<3
-onnxruntime>=1.30,<1.31         # máy chạy CPU Intel: thay bằng onnxruntime-openvino>=1.24.1,<1.25 (mục 18.4)
+onnxruntime-gpu[cuda,cudnn]>=1.30,<1.31  # chỉ chạy GPU NVIDIA (mục 18.4 bước 0); Pascal dùng >=1.26,<1.27
 supervision>=0.30.9,<0.31       # ByteTrack, LineZone; 0.31 mới ra 16/10/2026
 paho-mqtt>=2.0,<3
 PyYAML>=6.0,<7
@@ -321,7 +321,7 @@ model:
   input_size: 640                           # phải bằng imgsz lúc export; hạ 480/416 nếu thiếu FPS (mục 18.4)
   confidence_threshold: 0.30
   nms_iou_threshold: 0.45                   # chỉ dùng với YOLOv8n/YOLO11n; YOLO26n export nms=False không cần NMS
-  providers: ["CPUExecutionProvider"]       # CPU Intel + onnxruntime-openvino: ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
+  providers: ["CUDAExecutionProvider"]      # chỉ GPU; không nạp được thì pipeline dừng (mục 18.4 bước 0)
   classes:
     14: swiftlet                            # COCO bird. Model tự train: đổi thành  0: swiftlet
 
@@ -2647,9 +2647,9 @@ Cả YOLOv8n lẫn YOLO11n ở đầu vào 640 đều quá 40 ms, chưa tính ph
 **Máy AI node dự kiến có GPU: PC với GTX 1050 Ti (MSI Gaming X, 4 GB), chốt 03/11/2026.** Số liệu CPU ở bảng trên không áp dụng khi chạy trên GPU. Làm bước 0 trước các bước khác:
 
 0. **Chạy model trên GPU NVIDIA.** Vẫn dùng đúng file `.onnx`.
-   - `config.yaml` mặc định đặt `model.providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]`. Máy cài gói `onnxruntime` CPU sẽ bỏ qua CUDA và chạy CPU, nên cấu hình này an toàn cho mọi máy.
+   - `config.yaml` đặt `model.providers: ["CUDAExecutionProvider"]`: pipeline chỉ chạy trên GPU. CPU không đủ khung hình/giây cho 2 ô mỗi frame, nên không lùi về CPU (quyết định 23/11/2026).
    - Trong venv của máy có GPU, cài `onnxruntime-gpu[cuda,cudnn]` thay cho `onnxruntime`. CUDA và cuDNN được pip cài kèm, không cần cài CUDA Toolkit. Tạo venv trên ổ D:, vì các gói này nặng 1–2 GB.
-   - `inference.py` gọi `ort.preload_dlls()` để nạp các DLL đó. Thiếu bước này thì ONNX Runtime âm thầm chạy CPU (đã gặp 03/11/2026). Log phải ghi `providers: ['CUDAExecutionProvider', ...]`; nếu phải quay về CPU thì log có dòng cảnh báo "Không dùng được CUDAExecutionProvider".
+   - `inference.py` gọi `ort.preload_dlls()` để nạp các DLL đó. Thiếu bước này thì ONNX Runtime âm thầm chạy CPU (đã gặp 03/11/2026). Log phải ghi `providers: ['CUDAExecutionProvider', ...]`; CUDA không nạp được thì `inference.py` báo lỗi và pipeline dừng.
    - **Chọn bản theo đời GPU.** [Từ 1.27, `onnxruntime-gpu` trên PyPI dùng CUDA 13; các bản 1.21–1.26 dùng CUDA 12.8](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html). CUDA 13 bỏ Maxwell, Pascal và Volta, nên:
      - Card từ Turing trở lên (RTX), như máy dev: `onnxruntime-gpu[cuda,cudnn]>=1.30,<1.31`.
      - GTX 1050 Ti (Pascal, compute capability 6.1): `onnxruntime-gpu[cuda,cudnn]>=1.26,<1.27`.
