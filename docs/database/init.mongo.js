@@ -1206,6 +1206,15 @@ ensureCollection("houses", {
     "description": {
       "bsonType": ["string", "null"]
     },
+    "is_deleted": {
+      "bsonType": ["bool", "null"]
+    },
+    "deleted_at": {
+      "bsonType": ["date", "null"]
+    },
+    "deleted_by": {
+      "bsonType": ["objectId", "null"]
+    },
     "weather_rules": {
       "bsonType": ["array", "null"],
       "items": {
@@ -2783,6 +2792,15 @@ ensureCollection("zones", {
     },
     "floor": {
       "bsonType": ["number", "null"]
+    },
+    "is_deleted": {
+      "bsonType": ["bool", "null"]
+    },
+    "deleted_at": {
+      "bsonType": ["date", "null"]
+    },
+    "deleted_by": {
+      "bsonType": ["objectId", "null"]
     },
     "thresholds": {
       "bsonType": ["object", "null"],

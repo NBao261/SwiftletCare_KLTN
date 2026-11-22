@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.16 (Review 2, final scope) |
+| Document version | 4.2.17 (Review 2, final scope) |
 | Date | 21/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -998,6 +998,7 @@ The state is derived from the day's stored ratings and its date; it is not a sep
 | `AWAITING_APPROVAL` | `IN_PROGRESS` | The Farm Owner reopens it with a note | OPS-FR-004 |
 | `AWAITING_APPROVAL` | `IN_PROGRESS` | The incident comes back before approval; the technician and the Farm Owners are notified | OPS-FR-003 |
 | `OPEN`, `IN_PROGRESS`, `VERIFYING` | `CANCELLED` | The Farm Owner cancels it with a reason (from `VERIFYING` when the condition cannot recover in a way the system measures); a preventive Work Order is not cancelled on its own: retiring its plan cancels it (Section 6.20) | OPS-FR-004, 005 |
+| `OPEN`, `IN_PROGRESS`, `VERIFYING`, `AWAITING_APPROVAL` | `CANCELLED` | Its house or zone is deleted: there is no place left to work, verify or approve; the assignee is notified | FARM-FR-002 |
 | `OPEN` | same | Not started within `escalation_min` of its assignment: escalated to the Farm Owners once (BR-40) | OPS-FR-004, 006 |
 | `OPEN`, `IN_PROGRESS` | same | Reassigned by the Farm Owner; a technician removed from the house or the farm leaves it to the Farm Owners (AUTH-FR-005) | OPS-FR-004, AUTH-FR-005 |
 
@@ -1161,6 +1162,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.17 | 22/11/2026 | Section 6.19: a Work Order whose house or zone is deleted (FARM-FR-002) is cancelled from any open state, `AWAITING_APPROVAL` included, and its assignee is notified (review of G-32 PR 3) |
 | 4.2.16 | 21/11/2026 | Audit of 21/11/2026 (`todo-audit-1121.md`, gap G-32): FARM-FR-002 states how houses and zones are edited and deleted (soft delete, refused while a device is still in service, floors kept consistent) and Section 2.4 lists editing and deleting them; BR-44 adds the causes found on site counted per kind, which ALERT-FR-018 already required; VISION-FR-012, 013 name the Farm Technician of the house, as Section 2.4 already allowed; Section 6.1 names the Farm Technician as acknowledging, as ALERT-FR-009 does |
 | 4.2.15 | 21/11/2026 | The Farm Owner decides, the Domain Expert reviews (BR-22 rewritten, decided by the team on 21/11/2026; it follows Flow 5 of the registration form v3, which already applied the Farm Owner's changes of detection parameters, counting ring and counting schedule at once with a review item; the Farm Owner adjusting health levels, drafting profiles and writing recommendation rules is change 20 of BM03 1.4): on a farm with an expert the Farm Owner's changes of detection parameters, return-rate drop, health-indicator levels, counting schedule and counting ring apply at once and open a review item (EXPERT-FR-008, 010, 022, VISION-FR-018, 019, Section 6.10); weather compensation rules, configuration profiles and recommendation rules of the Farm Owner wait for the expert's approval (ENV-FR-030, EXPERT-FR-014, 016); inferred-alert verdicts and conclusions stay the expert's, and the Farm Owner may remind the expert once per item (EXPERT-FR-003); Sections 2.3, 2.4, ANALYTICS-FR-012 and 6.23 updated |
 | 4.2.14 | 20/11/2026 | The daily rating is no longer blind (BR-31, EXPERT-FR-012, MF-06, NFR-14, Section 6.18, glossary): the assessor sees the system's status and reasons, then confirms or corrects it; the status, reasons and other ratings are shown on every channel whether or not the person has rated; the rating stays final once submitted and keeps its evaluation snapshot. ALERT-FR-007: the alert list is the Farm Owner's and the assigned Farm Technician's, as Section 2.4 says; the Domain Expert works on the verdict queue (EXPERT-FR-003) |
