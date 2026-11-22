@@ -82,7 +82,9 @@ describe('GET /alerts/:id/evidence — cảnh báo theo zone (±30 phút)', () =
     await BirdCountBucket.create({ camera_node_id: camera._id, house_id: house._id, bucket_start: new Date(AT.getTime() - 5 * MIN), entry_count: 3, exit_count: 12 })
     await mkAlert('SENSOR_FAULT', { node_id: node._id })
     await mkAlert('RS485_BUS_FAILURE', { node_id: node._id, status: 'RESOLVED' }) // đã đóng — không kèm
+    // Đợt ồn 3 ngày trước đã đóng: cùng sự cố chỉ một cảnh báo còn mở (ALERT-FR-008)
     const earlier = await mkAlert('NOISE_ANOMALY', {
+      status: 'RESOLVED',
       created_at: new Date(AT.getTime() - 3 * 86_400_000),
       expert_verdict: { result: 'REJECTED', note: 'Tiếng mưa', by: node._id, at: new Date() },
     })
@@ -119,7 +121,7 @@ describe('GET /alerts/:id/evidence — LOW_RETURN_RATE (ngày của phiên)', ()
       { temperature: 28, humidity: 80 }, { temperature: 29, humidity: 70 }, { temperature: 30, humidity: 85 }, { temperature: 33, humidity: 60 },
     ].map((v, i) => ({ node_id: node._id, zone_id: zone._id, timestamp: new Date(AT.getTime() + i * MIN), ...v })))
     await mkAlert('NOISE_ANOMALY')
-    await mkAlert('NOISE_ANOMALY', { created_at: new Date('2026-10-18T03:00:00Z') }) // ngày khác
+    await mkAlert('NOISE_ANOMALY', { created_at: new Date('2026-10-18T03:00:00Z'), status: 'RESOLVED' }) // ngày khác, đã đóng
     await mkAlert('SPEAKER_FAILURE', { node_id: node._id })
 
     const { data } = (await get(alert._id).expect(200)).body

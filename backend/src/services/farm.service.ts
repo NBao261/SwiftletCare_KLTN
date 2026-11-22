@@ -1,10 +1,14 @@
 import crypto from 'crypto'
+import { Types } from 'mongoose'
 import { Farm, IFarm, IFarmMember } from '@/models/farm.model'
 import { House, Zone, IHouse, IZone, type FuzzyTuningSource } from '@/models/houseZone.model'
 import { CoefficientProposal } from '@/models/coefficientProposal.model'
 import { User, IUser } from '@/models/user.model'
 import { Invitation, IInvitation } from '@/models/invitation.model'
 import { Alert } from '@/models/alert.model'
+import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
+import { MaintenancePlan } from '@/models/maintenancePlan.model'
+import { Recommendation } from '@/models/recommendation.model'
 import { OPEN_STATUSES, resolveHouseAlerts } from '@/services/alert.service'
 import {
   hasFarmAccess, hasDeviceAccess, isPrimaryOwner, isFarmTechnician, canAccessHouse, listAssignedHouseIds,
@@ -13,7 +17,7 @@ import {
 } from '@/utils/farmAccess.util'
 import { logAction } from '@/services/auditLog.service'
 import { invitationMail, sendMail } from '@/services/mail.service'
-import { releaseTechnicianWorkOrders } from '@/services/workOrder.service'
+import { cancelWorkOrdersOfPlace, releaseTechnicianWorkOrders } from '@/services/workOrder.service'
 import { assertValidRoster, type RosterShift } from '@/utils/roster.util'
 import { DEFAULT_HOUSE_STAGE } from '@/utils/houseStage.util'
 import { paginate } from '@/utils/helpers.util'
@@ -564,6 +568,130 @@ export async function listZones(houseId: string, user: CurrentUser) {
   const farm = await findFarmOrThrow(String(house.farm_id))
   if (!canAccessHouse(farm, house, user, 'device')) throw ForbiddenError('Không có quyền trên house này')
   return Zone.find({ house_id: house._id }).sort({ created_at: -1 })
+}
+
+/** Nhà của farm mà người gọi là chủ (route đã giới hạn Farm Owner); nhà đã xoá thì không tìm thấy */
+async function findOwnedHouse(houseId: string, user: CurrentUser): Promise<{ house: IHouse; farm: IFarm }> {
+  const house = await House.findById(houseId)
+  if (!house) throw NotFoundError('Không tìm thấy nhà yến')
+  const farm = await findFarmOrThrow(String(house.farm_id))
+  if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên nhà yến này')
+  return { house, farm }
+}
+
+/** FARM-FR-002 — đổi tên, số tầng, mô tả của nhà; số tầng không thấp hơn tầng cao nhất của các Zone (Q-03) */
+export async function updateHouse(
+  houseId: string, user: CurrentUser, input: { name?: string; floors?: number; description?: string },
+): Promise<IHouse> {
+  const { house, farm } = await findOwnedHouse(houseId, user)
+  const before = { name: house.name, floors: house.floors, description: house.description }
+  if (input.name !== undefined && input.name.trim() !== house.name) {
+    await assertUniqueName(House, { farm_id: farm._id, _id: { $ne: house._id } }, input.name, 'Nhà yến')
+    house.name = input.name.trim()
+  }
+  if (input.floors !== undefined) {
+    const highest = await Zone.findOne({ house_id: house._id }).sort({ floor: -1 }).select('floor').lean()
+    if (highest && input.floors < (highest.floor ?? 1)) {
+      throw BadRequestError(`Nhà còn khu vực ở tầng ${highest.floor}, số tầng không thể ít hơn`)
+    }
+    house.floors = input.floors
+  }
+  if (input.description !== undefined) house.description = input.description.trim() || undefined
+  const after = { name: house.name, floors: house.floors, description: house.description }
+  // Gửi lại giá trị cũ thì không có gì để ghi
+  if (JSON.stringify(after) === JSON.stringify(before)) return house
+  await house.save()
+  await logAction(user._id, 'HOUSE_UPDATED', 'house', String(house._id), { before, after }, { farmId: String(farm._id) })
+  return house
+}
+
+/** FARM-FR-002 — đổi tên, tầng của Zone; tầng không vượt số tầng của nhà */
+export async function updateZone(zoneId: string, user: CurrentUser, input: { name?: string; floor?: number }): Promise<IZone> {
+  const zone = await Zone.findById(zoneId)
+  if (!zone) throw NotFoundError('Không tìm thấy Zone')
+  const { house, farm } = await findOwnedHouse(String(zone.house_id), user)
+  const before = { name: zone.name, floor: zone.floor }
+  if (input.name !== undefined && input.name.trim() !== zone.name) {
+    await assertUniqueName(Zone, { house_id: house._id, _id: { $ne: zone._id } }, input.name, 'Zone')
+    zone.name = input.name.trim()
+  }
+  if (input.floor !== undefined) {
+    if (input.floor > (house.floors ?? 1)) throw BadRequestError(`Tầng ${input.floor} vượt số tầng của nhà (${house.floors ?? 1} tầng)`)
+    zone.floor = input.floor
+  }
+  const after = { name: zone.name, floor: zone.floor }
+  if (JSON.stringify(after) === JSON.stringify(before)) return zone
+  await zone.save()
+  await logAction(user._id, 'ZONE_UPDATED', 'zone', String(zone._id), { before, after }, { farmId: String(farm._id) })
+  return zone
+}
+
+/** Q-01 — còn bộ điều khiển hoặc camera chưa gỡ thì không xoá: chủ gỡ thiết bị trước (FARM-FR-008), lịch sử giữ */
+async function assertNoDeviceInService(where: { zoneIds: Types.ObjectId[]; houseId?: Types.ObjectId }): Promise<void> {
+  const controllers = await SensorNode.countDocuments({ zone_id: { $in: where.zoneIds }, ...IN_SERVICE })
+  const cameras = where.houseId ? await CameraNode.countDocuments({ house_id: where.houseId, ...IN_SERVICE }) : 0
+  if (controllers + cameras > 0) {
+    throw new AppError(409, 'HAS_ACTIVE_DEVICES', `Còn ${controllers + cameras} thiết bị đang dùng, hãy gỡ thiết bị trước khi xoá`)
+  }
+}
+
+/**
+ * Dọn việc còn mở của nơi sắp xoá, trước khi đánh dấu xoá: lỗi giữa chừng thì nhà, Zone vẫn còn và chủ gọi lại được
+ * (mọi bước chạy lại an toàn). Cảnh báo đang mở được đóng, Work Order chưa đóng bị huỷ, đề xuất hệ số đang chờ của các
+ * Zone thành SUPERSEDED (EXPERT-FR-011: không còn Zone để áp).
+ */
+async function closeOpenWorkOf(
+  user: CurrentUser, place: { houseId?: Types.ObjectId; zoneIds: Types.ObjectId[] }, reason: string,
+): Promise<{ alerts: number; work_orders: number }> {
+  let workOrders = 0
+  if (place.houseId) workOrders += await cancelWorkOrdersOfPlace({ house_id: place.houseId }, user, reason)
+  else for (const zoneId of place.zoneIds) workOrders += await cancelWorkOrdersOfPlace({ zone_id: zoneId }, user, reason)
+  const where = place.houseId ? { $or: [{ house_id: place.houseId }, { zone_id: { $in: place.zoneIds } }] } : { zone_id: { $in: place.zoneIds } }
+  const { modifiedCount: alerts } = await Alert.updateMany(
+    { ...where, status: { $in: OPEN_STATUSES } },
+    { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: reason },
+  )
+  await CoefficientProposal.updateMany({ zone_id: { $in: place.zoneIds }, status: 'PROPOSED' }, { $set: { status: 'SUPERSEDED' } })
+  return { alerts, work_orders: workOrders }
+}
+
+/** Đánh dấu xoá mềm, bước cuối của xoá nhà hoặc Zone */
+function softDeleteFields(user: CurrentUser) {
+  return { is_deleted: true, deleted_at: new Date(), deleted_by: new Types.ObjectId(user._id) }
+}
+
+/**
+ * FARM-FR-002 — xoá mềm một nhà cùng các Zone của nó (Q-01): kế hoạch bảo trì thôi dùng, khuyến nghị đang mở hết hạn,
+ * Work Order chưa đóng bị huỷ, cảnh báo đang mở được đóng, rồi mới đánh dấu xoá; telemetry, lượt đếm, báo cáo và thu
+ * hoạch giữ nguyên.
+ */
+export async function deleteHouse(houseId: string, user: CurrentUser): Promise<void> {
+  const { house, farm } = await findOwnedHouse(houseId, user)
+  const zoneIds = await Zone.find({ house_id: house._id }).distinct('_id') as Types.ObjectId[]
+  await assertNoDeviceInService({ zoneIds, houseId: house._id })
+
+  // Kế hoạch còn chạy thì job bảo trì sẽ tạo cảnh báo cho nhà đã xoá: thôi dùng trước tiên
+  await MaintenancePlan.updateMany({ house_id: house._id, state: { $ne: 'RETIRED' } }, { $set: { state: 'RETIRED' } })
+  // `expired_at` như recommendationEffect.job: mốc chờ của BR-42
+  await Recommendation.updateMany({ house_id: house._id, status: 'OPEN' }, { $set: { status: 'EXPIRED', expired_at: new Date() } })
+  const closed = await closeOpenWorkOf(user, { houseId: house._id, zoneIds }, 'Nhà yến đã bị xoá')
+  await Zone.updateMany({ _id: { $in: zoneIds } }, { $set: softDeleteFields(user) })
+  Object.assign(house, softDeleteFields(user))
+  await house.save()
+  await logAction(user._id, 'HOUSE_DELETED', 'house', String(house._id), {
+    name: house.name, zones: zoneIds.length, ...closed,
+  }, { farmId: String(farm._id) })
+}
+
+/** FARM-FR-002 — xoá mềm một Zone (Q-01): Work Order chưa đóng bị huỷ, cảnh báo đang mở được đóng, rồi mới đánh dấu xoá */
+export async function deleteZone(zoneId: string, user: CurrentUser): Promise<void> {
+  const zone = await Zone.findById(zoneId)
+  if (!zone) throw NotFoundError('Không tìm thấy Zone')
+  const { farm } = await findOwnedHouse(String(zone.house_id), user)
+  await assertNoDeviceInService({ zoneIds: [zone._id] })
+  const closed = await closeOpenWorkOf(user, { zoneIds: [zone._id] }, 'Zone đã bị xoá')
+  await Zone.updateOne({ _id: zone._id }, { $set: softDeleteFields(user) })
+  await logAction(user._id, 'ZONE_DELETED', 'zone', String(zone._id), { name: zone.name, ...closed }, { farmId: String(farm._id) })
 }
 
 /** ENV-FR-006, ENV-FR-009 (lưu lịch sử thay đổi) */

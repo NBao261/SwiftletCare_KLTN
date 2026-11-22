@@ -1,5 +1,23 @@
 import { Schema, model, Document, Types } from 'mongoose'
-import type { ZoneHealthMetrics } from '@/models/zoneHealthReport.model'
+
+/** EXPERT-FR-005 — số liệu của 1 Zone trong kỳ, phần theo Zone của báo cáo nhà */
+export interface ZoneHealthMetrics {
+  sample_count: number
+  temp_in_range_pct: number | null
+  humidity_in_range_pct: number | null
+  /** ANALYTICS-FR-011 */
+  auto_mode_pct: number | null
+  misting_switches: number
+  ventilation_switches: number
+  /** { <AlertType>: số cảnh báo phát sinh trong kỳ } — gồm cả lỗi thiết bị */
+  alerts_by_type: Record<string, number>
+  /** null khi chưa có dữ liệu đếm chim */
+  avg_return_rate: number | null
+  nh3_avg: number | null
+  nh3_max: number | null
+  co2_avg: number | null
+  co2_max: number | null
+}
 
 export type HouseReportKind = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM'
 export const HOUSE_REPORT_KINDS: HouseReportKind[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM']

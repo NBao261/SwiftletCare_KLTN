@@ -1,28 +1,22 @@
 import { Request, Response } from 'express'
-import * as healthReportService from '@/services/healthReport.service'
 import * as houseHealthReportService from '@/services/houseHealthReport.service'
 import type { HouseReportKind } from '@/models/houseHealthReport.model'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
-/**
- * GET /health-reports – EXPERT-FR-005. `houseId`/`farmId`: báo cáo theo nhà; `zoneId` (kiểu cũ, deprecated):
- * báo cáo tuần theo Zone cho các màn hiện có.
- */
+/** GET /health-reports – EXPERT-FR-005: báo cáo theo nhà (`houseId` hoặc `farmId`) */
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const page = req.query.page ? Number(req.query.page) : undefined
   const limit = req.query.limit ? Number(req.query.limit) : undefined
-  const result = req.query.zoneId
-    ? await healthReportService.listHealthReports(req.user, { zoneId: req.query.zoneId as string, page, limit })
-    : await houseHealthReportService.listHouseReports(req.user, {
-      houseId: req.query.houseId as string | undefined,
-      farmId:  req.query.farmId as string | undefined,
-      kind:    req.query.kind as HouseReportKind | undefined,
-      from:    req.query.from as string | undefined,
-      to:      req.query.to as string | undefined,
-      // Route đã đổi sang boolean (toBoolean)
-      hasConclusion: req.query.hasConclusion as unknown as boolean | undefined,
-      page, limit,
-    })
+  const result = await houseHealthReportService.listHouseReports(req.user, {
+    houseId: req.query.houseId as string | undefined,
+    farmId:  req.query.farmId as string | undefined,
+    kind:    req.query.kind as HouseReportKind | undefined,
+    from:    req.query.from as string | undefined,
+    to:      req.query.to as string | undefined,
+    // Route đã đổi sang boolean (toBoolean)
+    hasConclusion: req.query.hasConclusion as unknown as boolean | undefined,
+    page, limit,
+  })
   res.json({ success: true, data: result.records, meta: { total: result.total, page: result.page, limit: result.limit } })
 })
 

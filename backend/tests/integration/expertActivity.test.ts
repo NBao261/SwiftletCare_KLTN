@@ -22,7 +22,7 @@ import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Notification } from '@/models/notification.model'
 import { User } from '@/models/user.model'
-import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
+import { HouseHealthReport } from '@/models/houseHealthReport.model'
 import type { Role } from '@/types'
 
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
@@ -55,7 +55,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all([Alert, AuditLog, CameraNode, Farm, House, Zone, Notification, User, ZoneHealthReport].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([Alert, AuditLog, CameraNode, Farm, House, Zone, Notification, User, HouseHealthReport].map(m => (m as typeof User).deleteMany({})))
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -169,16 +169,15 @@ describe('GET /expert-activity (EXPERT-FR-009)', () => {
     await s.send('get', `/expert-activity?farmId=${s.farm._id}&type=ACCOUNT_LOCKED`, s.t.owner).expect(422)
   })
 
-  it('kết luận báo cáo sức khoẻ lọc được theo cả zone và nhà', async () => {
+  it('kết luận báo cáo sức khoẻ của nhà lọc được theo nhà', async () => {
     const s = await seed()
-    const report = await ZoneHealthReport.create({
-      farm_id: s.farm._id, zone_id: s.zone._id, period_start: new Date(Date.now() - 7 * 86_400_000), period_end: new Date(), metrics: { zone: 'Tầng 1' },
+    const report = await HouseHealthReport.create({
+      house_id: s.house._id, farm_id: s.farm._id, kind: 'WEEKLY', period_start: '2026-11-09', period_end: '2026-11-15',
+      generated_at: new Date(), house_metrics: { return_rate_trend: [], avg_return_rate: null, weather: null }, zone_sections: [],
     })
     await s.send('put', `/health-reports/${report._id}/conclusion`, s.t.expert, { text: 'Ổn định' }).expect(200)
-    for (const query of [`zoneId=${s.zone._id}`, `houseId=${s.house._id}`]) {
-      const res = await s.send('get', `/expert-activity?farmId=${s.farm._id}&${query}`, s.t.owner).expect(200)
-      expect(res.body.data.map((e: { action: string }) => e.action)).toEqual(['HEALTH_REPORT_CONCLUDED'])
-    }
+    const res = await s.send('get', `/expert-activity?farmId=${s.farm._id}&houseId=${s.house._id}`, s.t.owner).expect(200)
+    expect(res.body.data.map((e: { action: string }) => e.action)).toEqual(['HEALTH_REPORT_CONCLUDED'])
   })
 
   it('Technician, Administrator và chuyên gia farm khác bị 403', async () => {

@@ -18,7 +18,7 @@ import { HouseHealthReport } from '@/models/houseHealthReport.model'
 import { House } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
-import { ZoneHealthReport } from '@/models/zoneHealthReport.model'
+import { migrateZoneReports } from '@/scripts/migrate-zone-reports.script'
 import { vnDate } from '@/services/birdCount.service'
 import { addDays, vnDayStart } from '@/services/healthAssessment.service'
 import {
@@ -54,7 +54,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all([...HEALTH_MODELS, AuditLog, HouseHealthReport, ZoneHealthReport].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([...HEALTH_MODELS, AuditLog, HouseHealthReport].map(m => (m as typeof User).deleteMany({})))
 })
 
 const tokenFor = (id: unknown, role: Role) =>
@@ -310,18 +310,25 @@ describe('lọc theo kết luận (hasConclusion)', () => {
   })
 })
 
-describe('báo cáo tuần theo Zone cũ vẫn chạy (deprecated)', () => {
-  it('?zoneId trả ZoneHealthReport; id báo cáo Zone mở được và viết kết luận được', async () => {
-    const { farm, zone, ownerToken, expertToken } = await setup()
-    const old = await ZoneHealthReport.create({
-      farm_id: farm._id, zone_id: zone._id, period_start: new Date(Date.now() - 7 * 86_400_000), period_end: new Date(),
-      metrics: { sample_count: 1 },
+describe('báo cáo tuần theo Zone cũ chuyển vào báo cáo nhà (G-32, Q-08)', () => {
+  it('migrate:zone-reports tạo báo cáo nhà WEEKLY cùng kỳ, giữ kết luận kèm tên Zone, xoá collection cũ; chạy lại an toàn', async () => {
+    const { farm, zone, expert, ownerToken } = await setup()
+    const zoneReports = mongoose.connection.db!.collection('zonehealthreports')
+    const at = new Date('2026-11-10T03:00:00Z')
+    const { insertedId } = await zoneReports.insertOne({
+      farm_id: farm._id, zone_id: zone._id, period_start: new Date('2026-11-02T17:00:00Z'), period_end: new Date('2026-11-09T17:00:00Z'),
+      metrics: { sample_count: 1, temp_in_range_pct: 88 }, generated_at: at, expert_conclusion: { text: 'Ổn định', by: expert!._id, at },
     })
-    const list = await call('get', `/health-reports?zoneId=${zone._id}`, ownerToken).expect(200)
-    expect(list.body.data[0]).toMatchObject({ _id: String(old._id), zone_id: String(zone._id) })
-    const one = await call('get', `/health-reports/${old._id}`, ownerToken).expect(200)
-    expect(one.body.data).toMatchObject({ zone_id: String(zone._id) })
-    await call('put', `/health-reports/${old._id}/conclusion`, expertToken, { text: 'ok' }).expect(200)
-    await call('get', `/health-reports/${new Types.ObjectId()}`, ownerToken).expect(404)
+
+    expect(await migrateZoneReports(at)).toEqual({ migrated: 1, skipped: 0, dropped: true })
+    const report = (await HouseHealthReport.findOne({ house_id: zone.house_id, kind: 'WEEKLY' }).lean())!
+    expect(report).toMatchObject({ period_start: '2026-11-03', period_end: '2026-11-09' })
+    expect(report.expert_conclusion).toMatchObject({ text: `${zone.name}: Ổn định`, by: expert!._id })
+    // Không còn telemetry của kỳ đó: phần Zone lấy số liệu đã tính trong báo cáo Zone cũ
+    expect(report.zone_sections.find(section => String(section.zone_id) === String(zone._id))).toMatchObject({ sample_count: 1, temp_in_range_pct: 88 })
+    expect((await mongoose.connection.db!.listCollections({ name: 'zonehealthreports' }).toArray())).toHaveLength(0)
+    expect(await migrateZoneReports(at)).toEqual({ migrated: 0, skipped: 0, dropped: false })
+    // Đường đọc báo cáo Zone đã bỏ: id cũ không còn mở được
+    await call('get', `/health-reports/${insertedId}`, ownerToken).expect(404)
   })
 })
