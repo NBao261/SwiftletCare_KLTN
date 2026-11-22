@@ -998,7 +998,7 @@ The Iteration 1 database is carried into this design by idempotent scripts (`npm
 | One `control_mode` and one `override_expiry` per controller replaced by the embedded `relays` object; `heating` relay field removed; unused device states `ERROR`, `DEGRADED` mapped to `ONLINE` | `sensornodes`, `cameranodes` | BR-20, Report 3 §6.6 |
 | Broker secret issued for every device in the stock (to be flashed), `claimed_at`, `revoked_at` | `provisioneddevices` | FARM-FR-010, BR-27 |
 | `config_version` on zones, `applied_config_version` on controllers | `zones`, `sensornodes` | ENV-FR-027 |
-| Weekly zone reports moved into the house report `WEEKLY` of the same period, the expert's conclusion kept and prefixed with the zone name, then the old collection dropped (`npm run migrate:zone-reports`; no code reads zone reports any more) | `zonehealthreports` → `househealthreports` | EXPERT-FR-005, 006, BR-36 |
+| Weekly zone reports moved into the house report `WEEKLY` of the same period, the expert's conclusion kept and prefixed with the zone name, the old figures kept for a zone whose telemetry has expired (90 days), then the old collection dropped (`npm run migrate:zone-reports`; no code reads zone reports any more) | `zonehealthreports` → `househealthreports` | EXPERT-FR-005, 006, BR-36 |
 | Unused harvest state `ARCHIVED` removed; `nest_type`, `photo_object_key` | `harvestbatches` | HARVEST-FR-001 |
 | `ip_address` renamed `source_ip`; `before` and `after` copied out of `metadata` (`npm run migrate:erd-fields`, with the `users.status` row above) | `auditlogs` | AUTH-FR-007 |
 | `sla_hours` removed from the settings | `systemsettings` | Report 3 §8 |

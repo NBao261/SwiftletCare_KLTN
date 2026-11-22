@@ -317,13 +317,15 @@ describe('báo cáo tuần theo Zone cũ chuyển vào báo cáo nhà (G-32, Q-0
     const at = new Date('2026-11-10T03:00:00Z')
     const { insertedId } = await zoneReports.insertOne({
       farm_id: farm._id, zone_id: zone._id, period_start: new Date('2026-11-02T17:00:00Z'), period_end: new Date('2026-11-09T17:00:00Z'),
-      metrics: { sample_count: 1 }, generated_at: at, expert_conclusion: { text: 'Ổn định', by: expert!._id, at },
+      metrics: { sample_count: 1, temp_in_range_pct: 88 }, generated_at: at, expert_conclusion: { text: 'Ổn định', by: expert!._id, at },
     })
 
     expect(await migrateZoneReports(at)).toEqual({ migrated: 1, skipped: 0, dropped: true })
     const report = (await HouseHealthReport.findOne({ house_id: zone.house_id, kind: 'WEEKLY' }).lean())!
     expect(report).toMatchObject({ period_start: '2026-11-03', period_end: '2026-11-09' })
     expect(report.expert_conclusion).toMatchObject({ text: `${zone.name}: Ổn định`, by: expert!._id })
+    // Không còn telemetry của kỳ đó: phần Zone lấy số liệu đã tính trong báo cáo Zone cũ
+    expect(report.zone_sections.find(section => String(section.zone_id) === String(zone._id))).toMatchObject({ sample_count: 1, temp_in_range_pct: 88 })
     expect((await mongoose.connection.db!.listCollections({ name: 'zonehealthreports' }).toArray())).toHaveLength(0)
     expect(await migrateZoneReports(at)).toEqual({ migrated: 0, skipped: 0, dropped: false })
     // Đường đọc báo cáo Zone đã bỏ: id cũ không còn mở được

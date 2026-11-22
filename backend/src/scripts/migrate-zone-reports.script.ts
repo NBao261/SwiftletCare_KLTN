@@ -4,7 +4,7 @@
  *
  * - kỳ của báo cáo Zone (`period_start` … `period_end`, hết trước `period_end`) quy ra ngày giờ VN;
  * - báo cáo nhà cùng nhà và cùng kỳ đã có thì giữ nguyên số liệu, chưa có thì sinh bằng `generateHouseReport` từ dữ liệu
- *   còn lưu (một phần cho mỗi Zone của nhà);
+ *   còn lưu (một phần cho mỗi Zone của nhà); phần của Zone không còn mẫu nào (telemetry quá 90 ngày) lấy số liệu cũ;
  * - kết luận của chuyên gia (EXPERT-FR-006, BR-36: giữ suốt đời cài đặt) chép sang báo cáo nhà, mở đầu bằng tên Zone;
  *   báo cáo nhà đã có kết luận thì nối thêm, không ghi đè;
  * - báo cáo Zone đã chuyển được đánh dấu `migrated_to`, nên chạy lại không chép lần hai; khi mọi bản đã chuyển thì xoá
@@ -15,7 +15,7 @@
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'
-import { HouseHealthReport } from '@/models/houseHealthReport.model'
+import { HouseHealthReport, type ZoneHealthMetrics } from '@/models/houseHealthReport.model'
 import { vnDate } from '@/services/birdCount.service'
 import { generateHouseReport } from '@/services/houseHealthReport.service'
 import logger from '@/utils/logger.util'
@@ -25,6 +25,7 @@ interface StoredZoneReport {
   zone_id: Types.ObjectId
   period_start: Date
   period_end: Date
+  metrics?: Partial<ZoneHealthMetrics>
   expert_conclusion?: { text: string; by: Types.ObjectId; at: Date; edited_at?: Date }
   migrated_to?: Types.ObjectId
 }
@@ -49,6 +50,15 @@ export async function migrateZoneReports(now = new Date()): Promise<{ migrated: 
     const existing = await HouseHealthReport.findOne({ house_id: zone.house_id, kind: 'WEEKLY', period_start: from, period_end: to })
     const report = existing ?? (await generateHouseReport('WEEKLY', houseId, from, to, now))?.report
     if (!report) { skipped++; continue }
+
+    // Telemetry chỉ giữ 90 ngày (BR-36): báo cáo sinh lại cho kỳ cũ có phần Zone rỗng, còn số liệu đã tính lúc đó nằm
+    // trong báo cáo Zone sắp bị xoá. Phần Zone chưa có mẫu nào thì lấy lại số liệu cũ
+    const section = report.zone_sections.find(item => String(item.zone_id) === String(zone._id))
+    if (section && !section.sample_count && old.metrics?.sample_count) {
+      Object.assign(section, old.metrics, { zone_id: section.zone_id, zone_name: section.zone_name })
+      report.markModified('zone_sections')
+      await report.save()
+    }
 
     if (old.expert_conclusion) {
       const text = `${zone.name}: ${old.expert_conclusion.text}`

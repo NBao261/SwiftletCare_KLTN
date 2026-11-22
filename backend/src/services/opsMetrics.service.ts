@@ -14,7 +14,6 @@ interface Sample { tta?: number; ttr?: number; cause?: SiteCause }
 const round1 = (ms: number) => Math.round(ms / 6_000) / 10
 const mean = (values: number[]) => (values.length ? round1(values.reduce((a, b) => a + b, 0) / values.length) : null)
 
-/** Một dòng chỉ số: số cảnh báo, MTTA, MTTR, % cảnh báo đã xác nhận mà xác nhận trong mục tiêu (phút) */
 /** ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tại chỗ, mỗi cảnh báo một lần; chỉ các nguyên nhân đã gặp */
 export function siteCauseCounts(samples: Sample[]): Partial<Record<SiteCause, number>> {
   const counts: Partial<Record<SiteCause, number>> = {}
@@ -22,6 +21,7 @@ export function siteCauseCounts(samples: Sample[]): Partial<Record<SiteCause, nu
   return counts
 }
 
+/** Một dòng chỉ số: số cảnh báo, MTTA, MTTR, % cảnh báo đã xác nhận mà xác nhận trong mục tiêu (phút) */
 export function opsRow(samples: Sample[]) {
   const tta = samples.flatMap(s => (s.tta === undefined ? [] : [s.tta]))
   const ttr = samples.flatMap(s => (s.ttr === undefined ? [] : [s.ttr]))
