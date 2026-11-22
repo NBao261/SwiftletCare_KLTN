@@ -14,21 +14,18 @@ import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import logger from '@/utils/logger.util'
 import type { HealthLevel, HealthLevels, HealthReason, HealthReasonCode, HealthSource, HealthStatus, Thresholds } from '@/types'
 
-/** BR-28…30: gộp 4 nguồn theo đồng thuận. Chỉ ghi current_*, không đụng ratings và snapshot (BR-31) */
+// gộp 4 nguồn theo đồng thuận. Chỉ ghi current_*, không đụng ratings và snapshot
 
-/** Report 3 §4.5 */
 export const COMPLETENESS_MIN_PCT = 80
-/** ENV-FR-004: tối đa 1 mẫu/10 s/thiết bị */
+// tối đa 1 mẫu/10 s/thiết bị
 export const EXPECTED_SAMPLE_MS = 10_000
-/** Report 3 §4.5 */
 export const RAIN_MM_PER_HOUR = 1
-/** Report 3 §4.5 */
 export const RATING_WINDOW_DAYS = 7
 
 const DAY_MS = 86_400_000
 const HOUR_MS = 3_600_000
 const SOURCES: HealthSource[] = ['environment', 'air', 'flock', 'noise']
-/** Client tự dịch; NORMAL không ghi */
+// Client tự dịch; NORMAL không ghi
 const reason = (
   code: HealthReasonCode, source: HealthSource | null = null, values: Record<string, unknown> = {}, level: HealthLevel | null = null,
 ): HealthReason => ({ code, source, level: level === 'SLIGHT' || level === 'CLEAR' ? level : null, values })
@@ -49,7 +46,7 @@ interface ZoneSampleStats {
   sound_pct: number
 }
 
-/** Đếm theo khe 10 s để Zone nhiều thiết bị không tính trùng */
+// Đếm theo khe 10 s để Zone nhiều thiết bị không tính trùng
 async function zoneSampleStats(zone: { _id: unknown; name: string; thresholds?: Partial<Thresholds> }, start: Date, end: Date): Promise<ZoneSampleStats> {
   const t = { ...DEFAULT_THRESHOLDS, ...zone.thresholds }
   const num = (f: string) => ({ $isNumber: `$${f}` })
@@ -99,12 +96,11 @@ async function zoneSampleStats(zone: { _id: unknown; name: string; thresholds?: 
   }
 }
 
-/** Dưới mức là xấu */
+// Dưới mức là xấu
 const belowLevel = (v: number, slight: number, clear: number): HealthLevel => (v < clear ? 'CLEAR' : v < slight ? 'SLIGHT' : 'NORMAL')
-/** Từ mức trở lên là xấu */
+// Từ mức trở lên là xấu
 const fromLevel = (v: number, slight: number, clear: number): HealthLevel => (v >= clear ? 'CLEAR' : v >= slight ? 'SLIGHT' : 'NORMAL')
 
-/** VISION-FR-020 */
 export function isFlockDayComplete(
   day: Pick<HouseDayCounts, 'has_morning' | 'has_evening' | 'return_rate' | 'incomplete'> | undefined,
 ): boolean {
@@ -144,11 +140,11 @@ export interface Assessment {
   weather: IDayWeather | null
 }
 
-/** Ngày đang diễn ra thì kỳ vọng tính tới now; job tối hôm sau tính lại đủ */
+// Ngày đang diễn ra thì kỳ vọng tính tới now; job tối hôm sau tính lại đủ
 export async function computeHouseDay(houseId: string, date: string, now = new Date()): Promise<Assessment | null> {
   const house = await House.findById(houseId).select('farm_id name bird_count_tuning health_levels stage_history').lean()
   if (!house) return null
-  // BR-46: theo lịch sử để tính lại ngày cũ đúng giai đoạn
+  // theo lịch sử để tính lại ngày cũ đúng giai đoạn
   const attracting = stageOn(house.stage_history, date) === 'ATTRACTING'
   const occupiedSince = baselineAfter(house.stage_history, date)
   const levels: HealthLevels = resolveHealthLevels(house.health_levels)
@@ -172,7 +168,7 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   indicators.environment = {
     value: envValue,
     level: envValue === null ? null : belowLevel(envValue, levels.in_range_slight_pct, levels.in_range_clear_pct),
-    // Để chu kỳ thu hoạch đọc lại (BR-43)
+    // Để chu kỳ thu hoạch đọc lại
     details: { zones: zoneStats.map(z => ({ zone_id: z.zone_id, zone_name: z.zone_name, in_range_pct: z.in_range_pct === null ? null : round1(z.in_range_pct), valid_pct: round1(z.env_pct) })) },
   }
   if (!envComplete) {
@@ -197,16 +193,15 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
     reasons.push(reason('AIR_OVER_LIMIT', 'air', { zone_name: worstAir.zone_name, hours: airValue }, indicators.air.level))
   }
 
-  // So với các ngày đủ phiên trước đó (BR-21)
+  // So với các ngày đủ phiên trước đó
   const days = await houseDailyCounts(houseId, { from: addDays(date, -BASELINE_DAYS), to: date })
   const today = days.find(d => d.date === date)
   const flockComplete = isFlockDayComplete(today)
-  // BR-46
   const previous = days.filter(d => d.date < date && isFlockDayComplete(d) && (!occupiedSince || d.date > occupiedSince))
   let flockValue: number | null = null
   let flockLevel: HealthLevel | null = null
   if (attracting) {
-    // BR-46: không thành INSUFFICIENT_DATA vì thiếu số đếm
+    // không thành INSUFFICIENT_DATA vì thiếu số đếm
     reasons.push(reason('ATTRACTING_STAGE', 'flock'))
   } else if (flockComplete) {
     if (previous.length < MIN_BASELINE_DAYS) {
@@ -223,7 +218,6 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
       }
     }
   } else {
-    // VISION-FR-020
     const missing = !today?.has_morning ? 'MORNING' : !today.has_evening ? 'EVENING' : today.incomplete ? 'INCOMPLETE' : 'NO_DEPARTURES'
     missingReasons.push(reason('MISSING_DATA', 'flock', { missing }))
   }
@@ -250,7 +244,6 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
     reasons.push(reason('NOISE_EPISODES', 'noise', { episodes: episodes.length }, indicators.noise.level))
   }
 
-  // BR-29
   const lv = (s: HealthSource) => indicators[s].level
   const assessed = SOURCES.map(lv).filter((l): l is HealthLevel => l !== null)
   let status: HealthStatus
@@ -259,7 +252,7 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   else if (assessed.includes('CLEAR') || assessed.filter(l => l === 'SLIGHT').length >= 2) status = 'WATCH'
   else status = 'GOOD'
 
-  // BR-30: mưa chỉ hạ ACTION khi nguồn quyết định là đàn chim + tiếng ồn
+  // mưa chỉ hạ ACTION khi nguồn quyết định là đàn chim + tiếng ồn
   const weather = await dayWeather(house.farm_id, start)
   if (!weather.summary) reasons.push(reason('WEATHER_UNAVAILABLE'))
   const flockAndNoiseOnly = lv('noise') !== 'NORMAL' && lv('noise') !== null
@@ -291,7 +284,7 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
   }
 }
 
-/** SM-17; ratings giữ nguyên. created = lần đầu có ngày này */
+// ratings giữ nguyên. created = lần đầu có ngày này
 export async function assessHouseDay(houseId: string, date: string, now = new Date()): Promise<{ day: IHouseHealthDay; created: boolean } | null> {
   const assessment = await computeHouseDay(houseId, date, now)
   if (!assessment) return null
@@ -316,9 +309,8 @@ export async function assessHouseDay(houseId: string, date: string, now = new Da
   return { day: result.value, created: !result.lastErrorObject?.updatedExisting }
 }
 
-/** Tính lại 7 ngày trước để nhận dữ liệu trễ. Lỗi ở một nhà không bỏ qua nhà sau */
+// Tính lại 7 ngày trước để nhận dữ liệu trễ. Lỗi ở một nhà không bỏ qua nhà sau
 export async function assessAllHouses(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
-  // BR-21
   const houseIds = onlyHouseIds ?? await listActiveHouseIds()
   let created = 0
   for (const id of houseIds) {
@@ -341,7 +333,7 @@ export async function assessAllHouses(date = vnDate(new Date()), now = new Date(
   return created
 }
 
-/** BR-31: chỉ người chấm, Domain Expert không nhận */
+// chỉ người chấm, Domain Expert không nhận
 async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
   const house = await House.findById(day.house_id).select('name').lean()
   const technicians = await listActiveHouseTechnicianIds(day.house_id)
@@ -354,7 +346,7 @@ async function notifyDayReady(day: IHouseHealthDay): Promise<void> {
   })))
 }
 
-/** SM-17. Không throw: gọi sau khi việc chính đã xong */
+// Không throw: gọi sau khi việc chính đã xong
 export async function recomputeHouseDayIfAssessed(houseId: string, date: string, now = new Date()): Promise<void> {
   try {
     if (date < addDays(vnDate(now), -RATING_WINDOW_DAYS)) return

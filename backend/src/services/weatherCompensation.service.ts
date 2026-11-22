@@ -17,7 +17,7 @@ import {
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/** BR-38: chỉ dời phun sương trong ±10 điểm, không đụng quạt */
+// chỉ dời phun sương trong ±10 điểm, không đụng quạt
 
 const ruleView = (rules: IHouse['weather_rules']) => rules.map(r => ({
   _id: String(r._id), metric: r.metric, min: r.min, offset_pct: r.offset_pct, duration_min: r.duration_min, active: r.active,
@@ -43,8 +43,8 @@ export async function getWeatherRules(houseId: string, user: CurrentUser) {
   }
 }
 
-/** Giữ _id cũ để rule_id trong nhật ký vẫn trỏ đúng. Có hiệu lực từ lần job kế tiếp */
-/** _id không thuộc nhà này hoặc trùng thì bỏ */
+// Giữ _id cũ để rule_id trong nhật ký vẫn trỏ đúng. Có hiệu lực từ lần job kế tiếp
+// _id không thuộc nhà này hoặc trùng thì bỏ
 function buildRules(house: IHouse, rules: Array<WeatherRuleInput & { _id?: string }>) {
   const ownIds = new Set(house.weather_rules.map(r => String(r._id)))
   const keptIds = new Set<string>()
@@ -67,7 +67,7 @@ export async function setWeatherRules(
   what = 'đặt luật bù phun sương theo thời tiết',
 ) {
   const { house, farm } = await assertHouseAccess(houseId, user)
-  // BR-22: có chuyên gia thì Farm Owner gửi đề xuất
+  // có chuyên gia thì Farm Owner gửi đề xuất
   await assertExpertDecision(farm, user)
   const next = buildRules(house, rules)
 
@@ -95,7 +95,7 @@ export async function setWeatherRules(
   return { house_id: String(house._id), rules: after }
 }
 
-/** Luật đang chạy không đổi. Farm chưa có chuyên gia → 409 (dùng PUT) */
+// Luật đang chạy không đổi. Farm chưa có chuyên gia → 409 (dùng PUT)
 export async function proposeWeatherRules(houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>) {
   const { house, farm } = await assertHouseAccess(houseId, user)
   if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất luật bù phun sương')
@@ -113,7 +113,7 @@ export async function proposeWeatherRules(houseId: string, user: CurrentUser, ru
   return proposalView(house.weather_rules_proposal)
 }
 
-/** Ghi có điều kiện theo proposed_at đã xem: đổi trong lúc đó thì 409 */
+// Ghi có điều kiện theo proposed_at đã xem: đổi trong lúc đó thì 409
 async function takeProposal(houseId: string, user: CurrentUser, seenAt: string) {
   const { house, farm } = await assertHouseAccess(houseId, user)
   if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ Domain Expert duyệt đề xuất luật bù phun sương')
@@ -125,7 +125,7 @@ async function takeProposal(houseId: string, user: CurrentUser, seenAt: string) 
   return { house, farm, proposal: taken.weather_rules_proposal }
 }
 
-/** Áp lỗi thì trả đề xuất lại */
+// Áp lỗi thì trả đề xuất lại
 export async function approveWeatherRulesProposal(houseId: string, user: CurrentUser, seenAt: string) {
   const { house, proposal } = await takeProposal(houseId, user, seenAt)
   try {
@@ -147,7 +147,7 @@ export async function rejectWeatherRulesProposal(houseId: string, user: CurrentU
   return { house_id: String(house._id), rules: ruleView(house.weather_rules) }
 }
 
-/** Lỗi thì null, nơi gọi gửi 0 */
+// Lỗi thì null, nơi gọi gửi 0
 export async function fetchForecast(coordinates: { lat: number; lng: number }, now = new Date()): Promise<ForecastSummary | null> {
   const url = new URL(OPEN_METEO_URL())
   url.searchParams.set('latitude', String(coordinates.lat))
@@ -167,7 +167,7 @@ export async function fetchForecast(coordinates: { lat: number; lng: number }, n
   }
 }
 
-/** Mỗi farm gọi Open-Meteo một lần; không thoả thì gửi 0. Lỗi ở một nhà không chặn nhà sau */
+// Mỗi farm gọi Open-Meteo một lần; không thoả thì gửi 0. Lỗi ở một nhà không chặn nhà sau
 export async function runWeatherCompensation(now = new Date()): Promise<number> {
   const nodes = await SensorNode.find({ ...IN_SERVICE }).select('device_id zone_id').lean()
   if (!nodes.length) return 0
@@ -204,7 +204,7 @@ export async function runWeatherCompensation(now = new Date()): Promise<number> 
         rule_id: rule ? String(rule._id) : null,
       }
       const sent = devices.filter(deviceId => publishDeviceCompensation(deviceId, { deviceId, ...payload })).length
-      // NFR-16: không controller nào nhận thì giờ đó coi là không bù
+      // không controller nào nhận thì giờ đó coi là không bù
       if (!rule || sent === 0) continue
       compensated++
       await WeatherCompensation.create({

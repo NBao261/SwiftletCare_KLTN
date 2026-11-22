@@ -1,4 +1,4 @@
-/** AUTH-FR-011, 012: khoá, xoá theo yêu cầu (cascade, chạy lại), từ chối, nhắc hạn */
+// khoá, xoá theo yêu cầu (cascade, chạy lại), từ chối, nhắc hạn
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
@@ -156,7 +156,7 @@ describe('rejectDeletionRequest', () => {
 
     expect(after.deletion_requested_at).toBeUndefined()
     expect(after.deletion_reminder_sent_at).toBeUndefined()
-    expect(after.status).toBe('ACTIVE') // tài khoản về hoạt động (SM-14)
+    expect(after.status).toBe('ACTIVE') // tài khoản về hoạt động
     const [audit] = await auditActions('DELETION_REJECTED')
     expect(audit.metadata).toMatchObject({ reason: 'Còn hồ sơ thu hoạch phải lưu' })
     expect(notifyUser).toHaveBeenCalledWith(String(user._id), expect.objectContaining({

@@ -6,7 +6,7 @@ import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 router.use(authenticate)
-// Farm Technician chỉ ở nhà được giao (service kiểm); Admin không (FARM-FR-009)
+// Farm Technician chỉ ở nhà được giao (service kiểm); Admin không
 router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'))
 
 router.get('/zones/:id/latest',  param('id').isMongoId(), validate, telemetryController.getLatest)

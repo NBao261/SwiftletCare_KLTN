@@ -7,13 +7,12 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/** Hàm ghi không throw, và caller ghi SAU khi publish: ghi trước mà lỗi thì DB đổi mà thiết bị không nhận lệnh */
+// Hàm ghi không throw, và caller ghi SAU khi publish: ghi trước mà lỗi thì DB đổi mà thiết bị không nhận lệnh
 
-/** Bản ghi mở cũ của relay đó đóng với REPLACED */
+// Bản ghi mở cũ của relay đó đóng với REPLACED
 export async function openOverrideLog(input: {
   nodeId: unknown; zoneId: unknown; farmId: unknown
   relay: OverrideRelay; state: boolean; user: CurrentUser; expiresAt: Date
-  /** ENV-FR-016 */
   alertConfirmed?: boolean
 }): Promise<IRelayOverrideLog | null> {
   try {
@@ -49,7 +48,7 @@ export async function closeOverrideLogs(nodeIds: unknown[], reason: OverrideEndR
   }
 }
 
-/** BR-20: các relay khác giữ nguyên */
+// các relay khác giữ nguyên
 export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRelay, reason: OverrideEndReason, at = new Date()): Promise<number> {
   try {
     const { modifiedCount } = await RelayOverrideLog.updateMany(
@@ -63,10 +62,10 @@ export async function closeRelayOverrideLog(nodeId: unknown, relay: OverrideRela
   }
 }
 
-/** Chu kỳ điều khiển ESP32 là 10 s. ponytail: 30 s chọn tay */
+// Chu kỳ điều khiển ESP32 là 10 s. ponytail: 30 s chọn tay
 export const DEVICE_CONFIRM_GRACE_MS = 30_000
 
-/** fresh: tin AUTO lúc này nhiều khả năng là tin cũ. Không throw */
+// fresh: tin AUTO lúc này nhiều khả năng là tin cũ. Không throw
 export async function openOverrideStates(nodeId: unknown, now = new Date()): Promise<Partial<Record<OverrideRelay, { fresh: boolean; expiry: Date }>>> {
   try {
     const open = await RelayOverrideLog.find({ node_id: nodeId, ended_at: null }).select('relay started_at expires_at').lean()
@@ -78,7 +77,7 @@ export async function openOverrideStates(nodeId: unknown, now = new Date()): Pro
   }
 }
 
-/** Quá hạn là EXPIRED, chưa tới hạn là CLEARED_EARLY */
+// Quá hạn là EXPIRED, chưa tới hạn là CLEARED_EARLY
 export async function closeOverrideLogFromDevice(nodeId: unknown, relay: OverrideRelay, at = new Date()): Promise<void> {
   try {
     await RelayOverrideLog.updateMany(
@@ -91,7 +90,7 @@ export async function closeOverrideLogFromDevice(nodeId: unknown, relay: Overrid
   await closeRelayOverrideLog(nodeId, relay, 'CLEARED_EARLY', at)
 }
 
-/** Lưới an toàn: bản ghi quá hạn mà relay không còn tay thì đóng đúng expires_at, không thì tỷ lệ tự động sai mãi */
+// Lưới an toàn: bản ghi quá hạn mà relay không còn tay thì đóng đúng expires_at, không thì tỷ lệ tự động sai mãi
 export async function closeOrphanedOverrideLogs(now = new Date()): Promise<number> {
   try {
     const overdue = await RelayOverrideLog.find({ ended_at: null, expires_at: { $lt: now } }).select('node_id relay').lean()
@@ -129,7 +128,7 @@ export async function listOverrideLogs(nodeId: string, user: CurrentUser, query:
   return { records, total, page, limit }
 }
 
-/** Hợp các khoảng chồng nhau; bản ghi còn mở tính tới to */
+// Hợp các khoảng chồng nhau; bản ghi còn mở tính tới to
 export async function manualTimeInZone(zoneId: string, from: Date, to: Date): Promise<{ manualMs: number; overrideCount: number }> {
   const logs = await RelayOverrideLog.find({
     zone_id: new Types.ObjectId(zoneId),

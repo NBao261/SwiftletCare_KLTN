@@ -1,4 +1,4 @@
-/** Bản TS của firmware/src/pid/FuzzyControl.cpp, phải khớp (test dùng ca của firmware/test/test_fuzzy). Hồi quy Δh rồi mô phỏng 24 giờ trên lưới */
+// Bản TS của firmware/src/pid/FuzzyControl.cpp, phải khớp (test dùng ca của firmware/test/test_fuzzy). Hồi quy Δh rồi mô phỏng 24 giờ trên lưới
 export interface Tuning { humidityBand: number; tempBand: number; fanDryLevel: number /* 0..1 */ }
 export const DEFAULT_TUNING: Tuning = { humidityBand: 8, tempBand: 4, fanDryLevel: 0.4 }
 
@@ -7,9 +7,9 @@ export const rampUp = (x: number, a: number, b: number) => 1 - rampDown(x, a, b)
 export const tri = (x: number, a: number, b: number, c: number) =>
   x <= a || x >= c ? 0 : x <= b ? (x - a) / (b - a) : (c - x) / (c - b)
 
-/** Phải bằng FuzzyControl::HUMIDITY_SATURATION_MAX */
+// Phải bằng FuzzyControl::HUMIDITY_SATURATION_MAX
 export const HUMIDITY_SATURATION_MAX = 101
-/** Khớp FuzzyControl::inputsValid */
+// Khớp FuzzyControl::inputsValid
 export const inputsValid = (t: number, h: number) =>
   Number.isFinite(t) && Number.isFinite(h) && t >= -40 && t <= 80 && h >= 0 && h <= HUMIDITY_SATURATION_MAX
 
@@ -32,7 +32,7 @@ export function mistingDemand(h: number, t: number, hMin: number, hMax: number, 
   return defuzzify([low, Math.min(mid, hot), Math.min(mid, 1 - hot), high], [1, 0.5, 0, 0])
 }
 
-/** NH3/CO2 không là đầu vào */
+// NH3/CO2 không là đầu vào
 export function ventilationDemand(t: number, h: number, tMax: number, hMin: number, tuning: Tuning = DEFAULT_TUNING) {
   if (!inputsValid(t, h)) return 0
   const hot = isHot(t, tMax, tuning.tempBand / 4)
@@ -43,7 +43,7 @@ export function ventilationDemand(t: number, h: number, tMax: number, hMin: numb
 export interface Step { humidity: number; temperature: number; misting: number; ventilation: number }
 export interface PlantModel { a: number; b: number; c: number; d: number; tMean: number; r2: number; samples: number }
 
-/** null nếu suy biến (dữ liệu không đủ đa dạng) */
+// null nếu suy biến (dữ liệu không đủ đa dạng)
 function solve(A: number[][], y: number[]): number[] | null {
   const n = y.length
   const M = A.map((row, i) => [...row, y[i]])
@@ -61,7 +61,7 @@ function solve(A: number[][], y: number[]): number[] | null {
   return M.map((row, i) => row[n] / row[i])
 }
 
-/** XᵀX·β = Xᵀy */
+// XᵀX·β = Xᵀy
 export function fitPlantModel(steps: Step[][]): PlantModel | null {
   const rows: number[][] = []
   const ys: number[] = []
@@ -88,7 +88,7 @@ export function fitPlantModel(steps: Step[][]): PlantModel | null {
 export interface Limits { hMin: number; hMax: number; tMax: number }
 export interface SimResult { inRangePct: number; mistingAvgPct: number; score: number }
 
-/** Càng thấp càng tốt: % ngoài ngưỡng + phạt nhẹ lượng nước */
+// Càng thấp càng tốt: % ngoài ngưỡng + phạt nhẹ lượng nước
 export const WATER_PENALTY = 0.1
 
 export function simulate(model: PlantModel, day: Step[], limits: Limits, tuning: Tuning): SimResult {

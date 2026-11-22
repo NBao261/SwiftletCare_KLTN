@@ -1,4 +1,4 @@
-/** G-07 (NFR-06 c, NFR-10 d). Quyền theo topic nằm ở EMQX, script mqtt-isolation kiểm phần đó */
+// Quyền theo topic nằm ở EMQX, script mqtt-isolation kiểm phần đó
 import express from 'express'
 import request from 'supertest'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'

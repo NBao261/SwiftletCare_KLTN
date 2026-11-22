@@ -1,4 +1,4 @@
-/** Tuần: thứ Hai 06:00, tháng: ngày 1 06:00. Báo cáo ngày chạy trong returnRate.job */
+// Tuần: thứ Hai 06:00, tháng: ngày 1 06:00. Báo cáo ngày chạy trong returnRate.job
 import cron from 'node-cron'
 import { generateMonthlyHouseReports, generateWeeklyHouseReports } from '@/services/houseHealthReport.service'
 import logger from '@/utils/logger.util'

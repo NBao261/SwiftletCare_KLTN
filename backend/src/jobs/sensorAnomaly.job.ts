@@ -2,7 +2,7 @@ import cron from 'node-cron'
 import { scanSensorAnomalies } from '@/services/sensorAnomaly.service'
 import logger from '@/utils/logger.util'
 
-/** "Kẹt" cần 2 giờ dữ liệu, quét dày hơn không sớm hơn */
+// "Kẹt" cần 2 giờ dữ liệu, quét dày hơn không sớm hơn
 const CRON_EXPRESSION = '0 */10 * * * *'
 
 export function startSensorAnomalyJob(): void {

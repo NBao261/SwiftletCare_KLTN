@@ -1,4 +1,4 @@
-/** G-02: gỡ otp_code, otp_expires. Chạy lại an toàn */
+// gỡ otp_code, otp_expires. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

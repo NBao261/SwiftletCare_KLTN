@@ -1,4 +1,4 @@
-/** Hợp đồng MQTT ESP32 ↔ backend */
+// Hợp đồng MQTT ESP32 ↔ backend
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -73,7 +73,7 @@ async function seed(status: 'ONLINE' | 'OFFLINE' = 'ONLINE') {
   return { farm, house, zone, node, deviceId, token, topic }
 }
 
-/** Fire-and-forget: chờ tới khi cảnh báo thật sự được ghi, 1 nhịp setImmediate không đủ khi máy tải nặng */
+// Fire-and-forget: chờ tới khi cảnh báo thật sự được ghi, 1 nhịp setImmediate không đủ khi máy tải nặng
 async function thresholdAlertRaised() {
   for (let i = 0; i < 100; i++) {
     if (await Alert.collection.countDocuments({ type: 'THRESHOLD_BREACH' })) return
@@ -309,7 +309,7 @@ describe('confirmRelayStatus', () => {
     const { node, deviceId } = await seed('OFFLINE')
     await SensorNode.updateOne({ _id: node._id }, { control_mode: 'MANUAL', override_expiry: new Date(), 'relays.misting': { mode: 'MANUAL', override_expiry: new Date() } })
 
-    // firmware < 1.3.0 còn gửi `heating` — phải bị bỏ, không lưu và không phát socket
+    // firmware < 1.3.0 còn gửi `heating`: phải bị bỏ, không lưu và không phát socket
     await confirmRelayStatus({ deviceId, relay_states: { misting: true, speaker: false, ventilation: false, heating: true } as never, control_mode: 'AUTO' })
 
     const after = (await SensorNode.findById(node._id))!
@@ -341,7 +341,7 @@ describe('recordHeartbeat', () => {
     })
 
     await recordHeartbeat(hb(deviceId, true))
-    await ingestTelemetry(reading(deviceId, Date.now())) // node đã ONLINE — markNodeSeen không còn đóng được nữa
+    await ingestTelemetry(reading(deviceId, Date.now())) // node đã ONLINE: markNodeSeen không còn đóng được nữa
 
     expect((await Alert.findById(offline!._id).lean())!.status).toBe('RESOLVED')
   })

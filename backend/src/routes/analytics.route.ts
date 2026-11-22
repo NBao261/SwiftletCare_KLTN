@@ -7,7 +7,7 @@ import { isPeriodParam } from '@/utils/period.util'
 
 const router = Router()
 router.use(authenticate)
-// Farm Technician chỉ ở nhà được giao (service kiểm); Admin không (FARM-FR-009)
+// Farm Technician chỉ ở nhà được giao (service kiểm); Admin không
 router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'))
 
 router.get('/env/summary',       query('zoneId').isMongoId(), validate, analyticsController.envSummary)

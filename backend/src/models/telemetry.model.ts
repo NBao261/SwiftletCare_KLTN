@@ -11,7 +11,7 @@ export interface ITelemetry extends Document {
   nh3_ppm?: number
   co2_ppm?: number
   sound_db?: number
-  // Để đo hiệu quả điều khiển (ANALYTICS-FR-008)
+  // Để đo hiệu quả điều khiển
   misting_pct?: number
   ventilation_pct?: number
   misting_on?: boolean
@@ -43,7 +43,7 @@ const telemetrySchema = new Schema<ITelemetry>(
     pump_current_a:  { type: Number, min: 0 },
     fan_current_a:   { type: Number, min: 0 },
     is_anomaly:  { type: Boolean, default: false },
-    /** Cảm biến gửi null: lưu là thiếu */
+    // Cảm biến gửi null: lưu là thiếu
     stale_fields:   { type: [String], default: undefined },
     anomaly_fields: { type: [String], default: undefined },
     buffered:    { type: Boolean },

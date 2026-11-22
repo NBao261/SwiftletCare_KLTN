@@ -11,7 +11,7 @@ let io: Server | null = null
 
 const userRoom = (userId: string) => `user:${userId}`
 
-/** Đọc lại status: token còn hạn nhưng tài khoản đã khoá thì từ chối (AUTH-FR-011) */
+// Đọc lại status: token còn hạn nhưng tài khoản đã khoá thì từ chối
 export async function verifySocketToken(token: string | undefined): Promise<CurrentUser> {
   if (!token) throw new Error('Unauthorized: missing token')
 
@@ -114,7 +114,6 @@ export function initSocket(httpServer: HttpServer): void {
   logger.info('Socket.io initialized')
 }
 
-/** PERF-NFR-001: <= 2s */
 export function emitTelemetryUpdate(zoneId: string, data: WsTelemetryUpdate): void {
   io?.to(`zone:${zoneId}`).emit('TELEMETRY_UPDATE', data)
 }

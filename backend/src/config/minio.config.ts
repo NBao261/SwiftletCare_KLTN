@@ -2,12 +2,12 @@ import fs from 'fs/promises'
 import path from 'path'
 import type S3 from 'aws-sdk/clients/s3'
 
-/** Nạp lười: boot/test không cần MinIO. ponytail: aws-sdk v2 hết hỗ trợ, chuyển sang v3 nếu cần vá bảo mật */
-/** Chỉ dùng khi dev: file ở /files/<key> không cần đăng nhập, không hết hạn */
+// Nạp lười: boot/test không cần MinIO. ponytail: aws-sdk v2 hết hỗ trợ, chuyển sang v3 nếu cần vá bảo mật
+// Chỉ dùng khi dev: file ở /files/<key> không cần đăng nhập, không hết hạn
 export const isLocalStorage = () => process.env.STORAGE_DRIVER === 'local'
 export const localStorageDir = () => path.resolve(process.env.LOCAL_STORAGE_DIR ?? 'storage')
 
-/** Chặn key thoát khỏi thư mục lưu (../) */
+// Chặn key thoát khỏi thư mục lưu
 function localPath(key: string): string {
   const root = localStorageDir()
   const full = path.resolve(root, key)
@@ -67,7 +67,7 @@ export async function removeObject(key: string): Promise<void> {
   await c.deleteObject({ Bucket: bucket(), Key: key }).promise()
 }
 
-/** Bucket private: trình duyệt dùng URL ký tạm */
+// Bucket private: trình duyệt dùng URL ký tạm
 export async function presignedGetUrl(key: string, expiresSec = 3600): Promise<string> {
   if (isLocalStorage()) {
     const base = process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`

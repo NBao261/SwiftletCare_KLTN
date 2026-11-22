@@ -1,4 +1,4 @@
-/** SDD §6.5: dữ liệu ghi qua model qua được $jsonSchema strict */
+// dữ liệu ghi qua model qua được $jsonSchema strict
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'

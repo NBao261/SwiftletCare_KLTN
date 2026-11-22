@@ -1,4 +1,4 @@
-/** ALERT-FR-015: gửi lại đúng 1 lần (CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau 1 giờ) */
+// gửi lại đúng 1 lần (CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau 1 giờ)
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'

@@ -8,13 +8,13 @@ import { assertFarmAccess } from '@/utils/farmAccess.util'
 import { onTimeMaintenanceRate } from '@/services/maintenance.service'
 import type { CurrentUser } from '@/types'
 
-/** Của Work Order nếu có, không thì của lần xác nhận */
+// Của Work Order nếu có, không thì của lần xác nhận
 interface Sample { tta?: number; ttr?: number; cause?: SiteCause }
 
 const round1 = (ms: number) => Math.round(ms / 6_000) / 10
 const mean = (values: number[]) => (values.length ? round1(values.reduce((a, b) => a + b, 0) / values.length) : null)
 
-/** Mỗi cảnh báo một lần */
+// Mỗi cảnh báo một lần
 export function siteCauseCounts(samples: Sample[]): Partial<Record<SiteCause, number>> {
   const counts: Partial<Record<SiteCause, number>> = {}
   for (const { cause } of samples) if (cause) counts[cause] = (counts[cause] ?? 0) + 1
@@ -32,7 +32,7 @@ export function opsRow(samples: Sample[]) {
   }
 }
 
-/** DISMISSED không tính. Số báo cáo nội bộ, không phải cam kết */
+// DISMISSED không tính. Số báo cáo nội bộ, không phải cam kết
 export async function getOpsMetrics(
   user: CurrentUser, query: { farmId: string; houseId?: string; from: Date; to: Date },
 ) {
@@ -54,7 +54,7 @@ export async function getOpsMetrics(
   }
 }
 
-/** Báo động giả không tính */
+// Báo động giả không tính
 export async function collectAlertSamples(farmId: unknown, houseIds: unknown[], from: Date, to: Date) {
   const zones = await Zone.find({ house_id: { $in: houseIds } }).select('house_id').lean()
   const houseOfZone = new Map(zones.map(z => [String(z._id), String(z.house_id)]))

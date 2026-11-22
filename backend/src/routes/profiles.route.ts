@@ -5,7 +5,7 @@ import { MAX_NAME_LENGTH } from '@/services/farm.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
-/** Duyệt, lưu trữ chỉ Domain Expert (BR-22); khoảng giá trị và trạng thái: service kiểm */
+// Duyệt, lưu trữ chỉ Domain Expert; khoảng giá trị và trạng thái: service kiểm
 const router = Router()
 router.use(authenticate)
 

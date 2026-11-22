@@ -1,4 +1,3 @@
-/** EXPERT-FR-016…019, BR-42 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -77,7 +76,7 @@ const NH3_RULE = {
   action: { type: 'WORK_ORDER', title: 'Kiểm tra thông gió, vệ sinh sàn' }, source: 'Ví dụ của EXPERT-FR-017 (Report 3), chờ luật từ phỏng vấn',
 }
 
-/** Ngày sức khỏe của nhà với số giờ khí vượt ngưỡng `air` (và % trong ngưỡng `env`) */
+// Ngày sức khỏe của nhà với số giờ khí vượt ngưỡng `air` (và % trong ngưỡng `env`)
 async function seedDay(house: { _id: unknown; farm_id: unknown }, date: string, air: number | null, env: number | null = 90, returnRate: number | null = null) {
   await HouseHealthDay.create({
     house_id: house._id, farm_id: house.farm_id, date, computed_at: new Date(), current_status: 'WATCH', current_reasons: [],

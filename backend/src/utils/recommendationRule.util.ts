@@ -2,10 +2,9 @@ import { BadRequestError } from '@/utils/appError.util'
 import { THRESHOLD_KEYS, THRESHOLD_LIMITS, toNumber } from '@/utils/thresholds.util'
 import { FUZZY_TUNING_KEYS, FUZZY_TUNING_LIMITS } from '@/utils/fuzzyTuning.util'
 
-/** BR-42 (A-4) */
 export const RECOMMENDATION_EXPIRY_DAYS = 7
 export const RECOMMENDATION_EFFECT_DAYS = 7
-/** Như route /work-orders */
+// Như route /work-orders
 export const RULE_WORK_ORDER_TITLE_MAX = 200
 export const RULE_WINDOW_MIN_DAYS = 1
 export const RULE_WINDOW_MAX_DAYS = 30
@@ -15,7 +14,7 @@ export type RuleIndicator = typeof RULE_INDICATORS[number]
 export const RULE_COMPARISONS = ['GTE', 'LTE'] as const
 export type RuleComparison = typeof RULE_COMPARISONS[number]
 
-/** Giới hạn vật lý chống nhập nhầm */
+// Giới hạn vật lý chống nhập nhầm
 export const RULE_VALUE_LIMITS: Record<RuleIndicator, { min: number; max: number; unit: string }> = {
   TIME_IN_RANGE:       { min: 0, max: 100, unit: '%' },
   AIR_HOURS_OVER:      { min: 0, max: 24, unit: 'giờ' },
@@ -24,7 +23,7 @@ export const RULE_VALUE_LIMITS: Record<RuleIndicator, { min: number; max: number
   MISTING_INEFFECTIVE: { min: 0, max: 1000, unit: 'cảnh báo' },
 }
 
-/** Work Order phòng ngừa không có ở đây: nó cần checklist của kế hoạch bảo trì */
+// Work Order phòng ngừa không có ở đây: nó cần checklist của kế hoạch bảo trì
 export type RuleAction =
   | { type: 'WORK_ORDER'; title: string }
   | { type: 'PARAMETER_CHANGE'; group: 'thresholds' | 'fuzzy'; key: string; value: number }
@@ -36,14 +35,14 @@ export interface RuleInput {
   value: number
   window_days: number
   action: RuleAction
-  /** Không tự viết luật */
+  // Không tự viết luật
   source: string
   active: boolean
 }
 
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
-/** Sửa mà không gửi active thì giữ trạng thái cũ */
+// Sửa mà không gửi active thì giữ trạng thái cũ
 export function parseRuleInput(input: Record<string, unknown>, currentActive = true): RuleInput {
   const indicator = input.indicator as RuleIndicator
   if (!RULE_INDICATORS.includes(indicator)) throw BadRequestError('Chỉ số không được hỗ trợ (EXPERT-FR-016)')
@@ -99,7 +98,7 @@ export interface DayValue { date: string; value: number | null }
 const meets = (value: number, comparison: RuleComparison, threshold: number) =>
   comparison === 'GTE' ? value >= threshold : value <= threshold
 
-/** Thiếu số của một ngày thì không thoả */
+// Thiếu số của một ngày thì không thoả
 export function ruleHolds(
   rule: Pick<RuleInput, 'comparison' | 'value' | 'window_days'>, days: DayValue[], date: string,
 ): DayValue[] | null {
@@ -109,7 +108,7 @@ export function ruleHolds(
   return evidence.every(d => d.value !== null && meets(d.value, rule.comparison, rule.value)) ? evidence : null
 }
 
-/** Cũ trước */
+// Cũ trước
 export function lastDates(date: string, count: number): string[] {
   const end = Date.parse(`${date}T00:00:00Z`)
   return Array.from({ length: count }, (_, i) => new Date(end - (count - 1 - i) * 86_400_000).toISOString().slice(0, 10))
@@ -120,7 +119,7 @@ const mean = (values: Array<number | null>) => {
   return nums.length ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 100) / 100 : null
 }
 
-/** Cải thiện khi đi ngược điều kiện (GTE: giảm, LTE: tăng); thiếu một bên thì null */
+// Cải thiện khi đi ngược điều kiện (GTE: giảm, LTE: tăng); thiếu một bên thì null
 export function measureEffect(comparison: RuleComparison, acceptedDate: string, days: DayValue[]) {
   const byDate = new Map(days.map(d => [d.date, d.value]))
   const beforeDates = lastDates(dayOffset(acceptedDate, -1), RECOMMENDATION_EFFECT_DAYS)

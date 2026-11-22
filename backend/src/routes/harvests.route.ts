@@ -12,12 +12,12 @@ const NEST_TYPES = ['RAW', 'CLEANED', 'PREMIUM'] satisfies NestType[]
 const router = Router()
 router.use(authenticate)
 
-/** Farm Technician chỉ sửa/xoá lô DRAFT của mình (service kiểm) */
+// Farm Technician chỉ sửa/xoá lô DRAFT của mình (service kiểm)
 const canRead  = requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN')
 const canWrite = requireRole('FARM_OWNER', 'FARM_TECHNICIAN')
 const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } })
 
-/** Lúc sửa chỉ kiểm trường gửi lên; ngày tương lai do service chặn */
+// Lúc sửa chỉ kiểm trường gửi lên; ngày tương lai do service chặn
 const harvestFields = (optional: boolean) => {
   const field = (name: string) => (optional ? body(name).optional() : body(name).exists({ values: 'null' }))
   return [
@@ -29,7 +29,7 @@ const harvestFields = (optional: boolean) => {
   ]
 }
 
-// Trước '/:id'. Kết luận chỉ của Domain Expert, kể cả farm chưa có chuyên gia (EXPERT-FR-020)
+// Trước '/:id'. Kết luận chỉ của Domain Expert, kể cả farm chưa có chuyên gia
 router.get('/cycles', canRead,
   ...['zoneId', 'houseId', 'farmId'].map(name => query(name).optional().isString().bail().isMongoId()),
   query('status').optional().isString().bail().isIn(['OPEN', 'CLOSED', 'CONCLUDED']),

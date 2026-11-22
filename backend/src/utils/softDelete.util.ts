@@ -1,6 +1,6 @@
 import type { Query, Schema } from 'mongoose'
 
-/** Cả findOneAndUpdate, countDocuments, distinct. Filter tự ghi is_deleted thì giữ nguyên */
+// Cả findOneAndUpdate, countDocuments, distinct. Filter tự ghi is_deleted thì giữ nguyên
 export function applySoftDeleteScope(schema: Schema): void {
   function scope(this: Query<unknown, unknown>) {
     // $ne: true vì bản ghi cũ không có is_deleted

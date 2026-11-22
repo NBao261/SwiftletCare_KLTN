@@ -1,4 +1,4 @@
-/** SRS v2.0.0: FARM_OPERATOR → DOMAIN_EXPERT (chỉ đổi tên, quyền khác hẳn: in danh sách để gỡ), bỏ zone_ids, BIRD_PANIC, heating, LISTED. Chạy lại an toàn */
+// FARM_OPERATOR → DOMAIN_EXPERT (chỉ đổi tên, quyền khác hẳn: in danh sách để gỡ), bỏ zone_ids, BIRD_PANIC, heating, LISTED. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

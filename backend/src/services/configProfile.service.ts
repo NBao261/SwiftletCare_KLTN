@@ -16,7 +16,7 @@ import { DETECTION_TUNING_KEYS, assertValidDetectionTuning, pickDetectionTuning 
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, DetectionTuning, FuzzyTuning, Thresholds } from '@/types'
 
-/** Hồ sơ đã được chuyên gia duyệt nên không mở mục duyệt EXPERT-FR-010 */
+// Hồ sơ đã được chuyên gia duyệt nên không mở mục duyệt
 
 export interface ProfileInput {
   name?: string
@@ -43,7 +43,7 @@ function assertComplete(group: string, picked: object, keys: readonly string[]):
   if (missing.length) throw BadRequestError(`${group}: thiếu ${missing.join(', ')} — nhóm đã có trong hồ sơ phải đủ mọi giá trị`)
 }
 
-/** Cùng luật với PUT …/speaker-schedule */
+// Cùng luật với PUT …/speaker-schedule
 function parseSpeakerSchedule(input: { enabled?: unknown; windows?: unknown }): SpeakerScheduleValues {
   if (typeof input.enabled !== 'boolean') throw BadRequestError('speaker_schedule.enabled phải là true/false')
   const windows = input.windows
@@ -125,7 +125,7 @@ export async function getProfile(profileId: string, user: CurrentUser) {
   return (await loadProfile(profileId, user)).profile
 }
 
-/** Farm Owner soạn thì báo chuyên gia để duyệt (BR-22) */
+// Farm Owner soạn thì báo chuyên gia để duyệt
 export async function createProfile(farmId: string, user: CurrentUser, input: ProfileInput) {
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
@@ -141,7 +141,7 @@ export async function createProfile(farmId: string, user: CurrentUser, input: Pr
   return profile
 }
 
-/** Ghi có điều kiện: chuyên gia vừa duyệt thì 409 */
+// Ghi có điều kiện: chuyên gia vừa duyệt thì 409
 export async function updateProfile(profileId: string, user: CurrentUser, input: ProfileInput) {
   const { profile, farm } = await loadProfile(profileId, user)
   assertStatus(profile, 'DRAFT', 'sửa')
@@ -167,7 +167,7 @@ export async function updateProfile(profileId: string, user: CurrentUser, input:
   return updated
 }
 
-/** Có điều kiện: request sau nhận 409, không có hai audit, hai thông báo */
+// Có điều kiện: request sau nhận 409, không có hai audit, hai thông báo
 async function transition(profile: IConfigProfile, from: IConfigProfile['status'], set: Partial<IConfigProfile>, action: string) {
   assertStatus(profile, from, action)
   const updated = await ConfigProfile.findOneAndUpdate({ _id: profile._id, status: from }, set, { new: true })
@@ -194,7 +194,7 @@ const historyEntry = (user: CurrentUser, at: Date, oldValues: object, newValues:
   changed_by: user._id, changed_by_role: user.role, changed_at: at, old_values: oldValues, new_values: newValues, source: 'PROFILE',
 })
 
-/** DRAFT hoặc ARCHIVED → 409; nhà ngoài farm → 400 */
+// DRAFT hoặc ARCHIVED → 409; nhà ngoài farm → 400
 export async function applyProfile(profileId: string, user: CurrentUser, houseIds: string[]) {
   const { profile, farm } = await loadProfile(profileId, user)
   if (profile.status !== 'APPROVED') throw ConflictError(`Chỉ áp được hồ sơ đã duyệt (hồ sơ đang ${profile.status})`)

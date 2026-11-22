@@ -1,4 +1,4 @@
-/** /admin: validation, phân quyền, ép kiểu boolean */
+// /admin: validation, phân quyền, ép kiểu boolean
 import { createHash } from 'crypto'
 import express from 'express'
 import jwt from 'jsonwebtoken'
@@ -94,7 +94,7 @@ describe('GET /admin/users — query validation & pagination', () => {
 })
 
 describe('không để lọt mã dùng 1 lần qua API', () => {
-  /** Mã 6 số hash không salt dò được dưới 1 giây: lộ hash là lộ mã */
+  // Mã 6 số hash không salt dò được dưới 1 giây: lộ hash là lộ mã
   const secretKeys = ['password_hash', 'refresh_tokens',
     'password_reset_token_hash', 'password_reset_expires_at']
 

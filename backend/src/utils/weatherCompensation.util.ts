@@ -1,16 +1,14 @@
 import { BadRequestError } from '@/utils/appError.util'
 
-/** BR-38: firmware kẹp lại (WeatherCompensation.cpp), hai giới hạn dưới phải khớp Config.h */
+// firmware kẹp lại (WeatherCompensation.cpp), hai giới hạn dưới phải khớp Config.h
 
-/** A-4 */
 export const WEATHER_COMP_MAX_PCT = 10
-/** A-4 */
 export const WEATHER_COMP_MAX_MS = 2 * 3600_000
 export const FORECAST_WINDOW_MS = 2 * 3600_000
-/** Để document nhà không lớn mãi */
+// Để document nhà không lớn mãi
 export const MAX_WEATHER_RULES = 10
 
-/** Giới hạn vật lý chống nhập nhầm */
+// Giới hạn vật lý chống nhập nhầm
 export const WEATHER_METRICS = ['temperature', 'humidity', 'rain'] as const
 export type WeatherMetric = typeof WEATHER_METRICS[number]
 export const WEATHER_METRIC_LIMITS: Record<WeatherMetric, { min: number; max: number; unit: string }> = {
@@ -27,7 +25,7 @@ export interface WeatherRuleInput {
   active: boolean
 }
 
-/** null = Open-Meteo không có số đó */
+// null = Open-Meteo không có số đó
 export interface ForecastSummary {
   temperature_max: number | null
   humidity_max: number | null
@@ -57,7 +55,7 @@ export function assertValidWeatherRules(rules: WeatherRuleInput[]): void {
 const forecastValue = (forecast: ForecastSummary, metric: WeatherMetric): number | null =>
   metric === 'temperature' ? forecast.temperature_max : metric === 'humidity' ? forecast.humidity_max : forecast.rain_mm
 
-/** Bằng nhau thì luật đứng trước; null thì nơi gọi gửi 0 */
+// Bằng nhau thì luật đứng trước; null thì nơi gọi gửi 0
 export function pickCompensation<R extends WeatherRuleInput>(rules: R[], forecast: ForecastSummary | null): R | null {
   if (!forecast) return null
   let best: R | null = null
@@ -77,7 +75,7 @@ interface OpenMeteoHourly {
   precipitation?: (number | null)[]
 }
 
-/** Mưa ở mốc T là tổng giờ trước T, nên hai mốc phủ đủ 2 giờ */
+// Mưa ở mốc T là tổng giờ trước T, nên hai mốc phủ đủ 2 giờ
 export function summariseForecast(hourly: OpenMeteoHourly | undefined, now: Date): ForecastSummary | null {
   const from = now.getTime()
   const to = now.getTime() + FORECAST_WINDOW_MS

@@ -23,7 +23,7 @@ export interface MetricForecast {
   forecast: Array<{ timestamp: Date; value: number }>
   alpha: number
   beta: number
-  /** Đánh giá lùi trên 6 giờ qua */
+  // Đánh giá lùi trên 6 giờ qua
   mae30: number | null
   mae60: number | null
 }
@@ -91,7 +91,7 @@ export async function getZoneForecast(user: CurrentUser, zoneId: string) {
   return computeZoneForecast(zone)
 }
 
-/** Tự đóng khi hết vượt hoặc đã vượt thật */
+// Tự đóng khi hết vượt hoặc đã vượt thật
 export async function scanForecastBreaches(now = new Date()): Promise<{ raised: number; resolved: number }> {
   const zoneIds = await Telemetry.distinct('zone_id', { timestamp: { $gte: new Date(now.getTime() - MAX_STALENESS_MS) } })
   const zones = await Zone.find({ _id: { $in: zoneIds } }).select('_id farm_id name thresholds').lean()

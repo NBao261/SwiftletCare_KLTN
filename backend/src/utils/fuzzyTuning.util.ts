@@ -2,7 +2,7 @@ import { BadRequestError } from '@/utils/appError.util'
 import { toNumber } from '@/utils/thresholds.util'
 import type { FuzzyTuning } from '@/types'
 
-/** Mặc định và khoảng phải khớp firmware Config.h. Tách file vì houseZone.model import làm default */
+// Mặc định và khoảng phải khớp firmware Config.h. Tách file vì houseZone.model import làm default
 export const FUZZY_TUNING_KEYS = [
   'fuzzy_humidity_band', 'fuzzy_temp_band', 'fuzzy_fan_dry_level', 'fuzzy_window_sec',
 ] as const satisfies ReadonlyArray<keyof FuzzyTuning>
@@ -23,7 +23,7 @@ export const FUZZY_TUNING_LIMITS: Record<NumericKey, { min: number; max: number;
   fuzzy_window_sec:    { min: 60, max: 600, unit: 'giây' },
 }
 
-/** Chặn field lạ; số sai thành NaN để assert từ chối */
+// Chặn field lạ; số sai thành NaN để assert từ chối
 export function pickFuzzyTuning(input: Record<string, unknown>): Partial<FuzzyTuning> {
   const picked: Partial<FuzzyTuning> = {}
   for (const key of FUZZY_TUNING_KEYS) {

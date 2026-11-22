@@ -1,4 +1,3 @@
-/** Report 3 §4.5 */
 import { MAX_PERIOD_DAYS, isPeriodParam, parsePeriodParam, vnDayPeriod } from '@/utils/period.util'
 
 const DAY = 86_400_000

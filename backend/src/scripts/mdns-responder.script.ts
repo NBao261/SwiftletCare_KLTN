@@ -1,4 +1,4 @@
-/** npm run mdns: phát swiftletcare-broker.local cho ESP32. Chạy trên host, không trong container (multicast không lọt vào WSL2) */
+// npm run mdns: phát swiftletcare-broker.local cho ESP32. Chạy trên host, không trong container (multicast không lọt vào WSL2)
 import mdns from 'multicast-dns'
 import { networkInterfaces } from 'os'
 

@@ -1,4 +1,4 @@
-/** AUTH-FR-004/005: Domain Expert cả farm, không relay/loa, thu hoạch, xác nhận cảnh báo, quản lý farm */
+// Domain Expert cả farm, không relay/loa, thu hoạch, xác nhận cảnh báo, quản lý farm
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -68,7 +68,7 @@ let seq = 0
 const mkUser = (role: Role, email = `u${++seq}@test.vn`) =>
   User.create({ email, password_hash: 'password123', full_name: email, role })
 
-/** Farm có 2 zone, 1 chủ và 1 Domain Expert đã là thành viên */
+// Farm có 2 zone, 1 chủ và 1 Domain Expert đã là thành viên
 async function seed() {
   const owner = await mkUser('FARM_OWNER')
   const expert = await mkUser('DOMAIN_EXPERT')

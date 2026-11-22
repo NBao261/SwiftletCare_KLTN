@@ -18,7 +18,7 @@ const trackParams = [param('id').isMongoId(), param('trackId').isMongoId()]
 
 // Phải kèm secretKey in trên nhãn
 router.post('/sensor-nodes/register',        requireRole('FARM_OWNER'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
-// Thiết bị gỡ trong 24 giờ còn khôi phục được (FARM-FR-008)
+// Thiết bị gỡ trong 24 giờ còn khôi phục được
 router.get ('/sensor-nodes',
   query('zoneId').optional().isString().isMongoId(), query('removed').optional().isString().isIn(['recent']), validate,
   deviceController.listSensorNodes)
@@ -34,7 +34,7 @@ router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), par
   validate, deviceController.updateSpeakerSchedule)
 // Service kiểm nhà của Farm Technician
 router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(),
-  // Giá trị cực lớn làm Zone bị tính 0% tự động mãi (ANALYTICS-FR-011)
+  // Giá trị cực lớn làm Zone bị tính 0% tự động mãi
   body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(),
   // Giới hạn 30 phút của bơm kiểm ở service
   body('confirmed').optional().isBoolean().toBoolean(), validate, deviceController.controlRelay)
@@ -88,7 +88,7 @@ router.get ('/camera-nodes',
   query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(),
   query('removed').optional().isString().isIn(['recent']), validate,
   deviceController.listCameraNodes)
-// Farm Owner chỉ khi farm chưa có chuyên gia (BR-22); 3 đỉnh là vòng kín tối thiểu, 12 chống nhập nhầm
+// Farm Owner chỉ khi farm chưa có chuyên gia; 3 đỉnh là vòng kín tối thiểu, 12 chống nhập nhầm
 router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('points').isArray({ min: 3, max: 12 }).withMessage('points cần 3-12 đỉnh'),
   body('points.*').isArray({ min: 2, max: 2 }).withMessage('mỗi đỉnh là [x, y]'),

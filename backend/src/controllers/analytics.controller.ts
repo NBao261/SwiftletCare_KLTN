@@ -86,7 +86,7 @@ export const envBirdCorrelation = asyncHandler(async (req: Request, res: Respons
   res.json({ success: true, data })
 })
 
-/** Telemetry chỉ giữ 90 ngày (BR-36) */
+// Telemetry chỉ giữ 90 ngày
 const DEFAULT_ENERGY_DAYS = 90
 
 export const energy = asyncHandler(async (req: Request, res: Response) => {

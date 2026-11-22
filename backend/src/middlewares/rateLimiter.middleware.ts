@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 import type { JwtAccessPayload } from '@/types'
 import logger from '@/utils/logger.util'
 
-/** SEC-NFR-004: API đếm theo tài khoản; login/reset đếm theo IP; refresh có suất riêng để không bị đá ra */
+// API đếm theo tài khoản; login/reset đếm theo IP; refresh có suất riêng để không bị đá ra
 
 const MINUTE_MS = 60_000
 
@@ -32,7 +32,7 @@ function handleLimitReached(req: Request, res: Response, _next: unknown, options
 
 const common = { standardHeaders: true, legacyHeaders: true, handler: handleLimitReached } as const
 
-/** Chỉ giải mã token, không tra DB; token lỗi thì đếm theo IP */
+// Chỉ giải mã token, không tra DB; token lỗi thì đếm theo IP
 function userOrIpKey(req: Request): string {
   const header = req.headers.authorization
   if (header?.startsWith('Bearer ')) {
@@ -72,7 +72,7 @@ export const apiLimiter = rateLimit({
 const authWindowMs = envNumber('AUTH_RATE_LIMIT_WINDOW_MS', 15 * MINUTE_MS)
 const authLimit = envNumber('AUTH_RATE_LIMIT_MAX', 10)
 
-/** Chỉ đếm lần sai: người nhập đúng không bị trừ suất */
+// Chỉ đếm lần sai: người nhập đúng không bị trừ suất
 export const loginLimiter = rateLimit({
   ...common,
   windowMs: authWindowMs,
@@ -80,7 +80,7 @@ export const loginLimiter = rateLimit({
   skipSuccessfulRequests: true,
 })
 
-/** Đếm mọi lần: mỗi lần là 1 email */
+// Đếm mọi lần: mỗi lần là 1 email
 export const passwordResetLimiter = rateLimit({
   ...common,
   windowMs: authWindowMs,

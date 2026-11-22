@@ -9,7 +9,7 @@ const LOOKBACK_MS = 14 * 86400_000
 const MIN_DAYS = 3
 const MIN_R2 = 0.3
 const SIM_STEPS = 144 // 24 giờ
-/** Dưới mức này coi như đã ổn, không đề xuất cho có */
+// Dưới mức này coi như đã ổn, không đề xuất cho có
 const MIN_IMPROVEMENT = 1
 
 const round1 = (v: number) => Math.round(v * 10) / 10
@@ -17,7 +17,7 @@ const round1 = (v: number) => Math.round(v * 10) / 10
 const toTuning = (t: FuzzyTuning): Tuning =>
   ({ humidityBand: t.fuzzy_humidity_band, tempBand: t.fuzzy_temp_band, fanDryLevel: t.fuzzy_fan_dry_level / 100 })
 
-/** Chỉ đề xuất, không ghi. Từ chối khi dữ liệu ít, R² thấp hoặc phi vật lý */
+// Chỉ đề xuất, không ghi. Từ chối khi dữ liệu ít, R² thấp hoặc phi vật lý
 export async function getTuningSuggestion(user: CurrentUser, zoneId: string, now = new Date()) {
   const { zone } = await assertZoneAccess(zoneId, user)
   const t = zone.thresholds

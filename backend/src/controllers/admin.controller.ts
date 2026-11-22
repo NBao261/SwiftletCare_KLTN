@@ -47,7 +47,7 @@ export const rejectDeletionRequest = asyncHandler(async (req: Request, res: Resp
   res.json({ success: true, data: user })
 })
 
-/** secret_key chỉ trả về 1 lần để in nhãn */
+// secret_key chỉ trả về 1 lần để in nhãn
 export const createProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
   const device = await provisionedDeviceService.createProvisionedDevice(req.user._id, {
     device_id: req.body.device_id, kind: req.body.kind, simulated: req.body.simulated,

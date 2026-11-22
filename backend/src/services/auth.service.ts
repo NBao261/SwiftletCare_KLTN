@@ -14,13 +14,13 @@ const ACCESS_TTL  = process.env.JWT_ACCESS_TTL  ?? '15m'
 const REFRESH_TTL = process.env.JWT_REFRESH_TTL ?? '30d'
 const REFRESH_TTL_MS = 30 * 86400 * 1000
 
-/** Tránh 'User@Test.com' và 'user@test.com' thành 2 tài khoản */
+// Tránh 'User@Test.com' và 'user@test.com' thành 2 tài khoản
 const normalizeEmail = (email: string) => email.toLowerCase().trim()
 
-/** Lộ DB cũng không lấy được mã còn hiệu lực */
+// Lộ DB cũng không lấy được mã còn hiệu lực
 const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
 
-/** Hash giả: giữ thời gian bcrypt khi email không tồn tại, không lộ email qua thời gian phản hồi */
+// Hash giả: giữ thời gian bcrypt khi email không tồn tại, không lộ email qua thời gian phản hồi
 const DUMMY_BCRYPT_HASH = '$2a$12$CwTycUXWue0Thq9StjUM0uJ8g/qXY7jkNwptbCFmehyoNwaN9pmlq'
 
 function signAccess(userId: string, role: string): string {
@@ -32,7 +32,7 @@ function signRefresh(userId: string): string {
   return jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: REFRESH_TTL, jwtid: crypto.randomUUID() } as jwt.SignOptions)
 }
 
-/** Dọn token hết hạn ở đây, không thì mảng lớn dần */
+// Dọn token hết hạn ở đây, không thì mảng lớn dần
 function issueRefreshToken(user: IUser): string {
   const token = signRefresh(String(user._id))
   const now = Date.now()
@@ -43,7 +43,7 @@ function issueRefreshToken(user: IUser): string {
 
 export interface LoginInput { email: string; password: string }
 
-/** Chỉ gọi sau khi xác thực danh tính: người đoán mò không dò được trạng thái tài khoản */
+// Chỉ gọi sau khi xác thực danh tính: người đoán mò không dò được trạng thái tài khoản
 async function assertLoginAllowed(user: IUser): Promise<void> {
   if (canSignIn(user)) return
 
@@ -56,7 +56,7 @@ async function assertLoginAllowed(user: IUser): Promise<void> {
   )
 }
 
-/** Client đọc lại sau thay đổi không qua màn của nó (liên kết Telegram qua bot, yêu cầu xoá) */
+// Client đọc lại sau thay đổi không qua màn của nó (liên kết Telegram qua bot, yêu cầu xoá)
 export async function getCurrentUser(userId: string): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw UnauthorizedError('Tài khoản không còn tồn tại')
@@ -110,10 +110,10 @@ export async function logoutUser(userId: string, refreshToken: string | undefine
   }
 }
 
-/** AUTH-FR-009: dùng 1 lần */
+// dùng 1 lần
 const RESET_TOKEN_TTL_MS = 15 * 60 * 1000
 
-/** Im lặng khi email không tồn tại: không thành công cụ dò tài khoản */
+// Im lặng khi email không tồn tại: không thành công cụ dò tài khoản
 export async function forgotPassword(email: string): Promise<void> {
   const user = await User.findOne({ email: normalizeEmail(email) })
   if (!user) return
@@ -128,7 +128,7 @@ export async function forgotPassword(email: string): Promise<void> {
   void sendMail(resetCodeMail({ to: user.email, code: token, expiresAt }))
 }
 
-/** Thu hồi mọi refresh token: tài khoản bị chiếm thì phải đá kẻ kia khỏi mọi thiết bị */
+// Thu hồi mọi refresh token: tài khoản bị chiếm thì phải đá kẻ kia khỏi mọi thiết bị
 export async function resetPassword(email: string, token: string, newPassword: string): Promise<void> {
   // select: false nên phải xin lại tường minh
   const user = await User.findOne({ email: normalizeEmail(email) })
@@ -154,7 +154,7 @@ export async function resetPassword(email: string, token: string, newPassword: s
   await logAction(String(user._id), 'PASSWORD_RESET', 'user', String(user._id))
 }
 
-/** Giữ phiên đang dùng. Sai mật khẩu hiện tại trả 400, vì 401 làm client tưởng token hết hạn */
+// Giữ phiên đang dùng. Sai mật khẩu hiện tại trả 400, vì 401 làm client tưởng token hết hạn
 export async function changePassword(
   userId: string, currentPassword: string, newPassword: string, currentRefreshToken?: string,
 ): Promise<void> {
@@ -182,11 +182,11 @@ export interface NotificationPreferencesInput {
   push?: boolean
   telegram?: boolean
   quiet_hours?: { start?: string; end?: string }
-  /** null = bỏ ghi đè */
+  // null = bỏ ghi đè
   by_severity?: Partial<Record<AlertSeverity, ChannelChoice | null>>
 }
 
-/** CRITICAL phải còn 1 kênh ngoài ứng dụng (400). Domain Expert, Admin không chọn kênh; chỉ Farm Owner đặt giờ im lặng (403) */
+// CRITICAL phải còn 1 kênh ngoài ứng dụng (400). Domain Expert, Admin không chọn kênh; chỉ Farm Owner đặt giờ im lặng (403)
 export async function updateNotificationPreferences(userId: string, input: NotificationPreferencesInput): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
@@ -217,7 +217,7 @@ export async function updateNotificationPreferences(userId: string, input: Notif
   return user
 }
 
-/** Chỉ đánh dấu: Admin xoá thật sau khi xử lý farm của họ */
+// Chỉ đánh dấu: Admin xoá thật sau khi xử lý farm của họ
 export async function requestAccountDeletion(userId: string): Promise<IUser> {
   const user = await User.findById(userId)
   if (!user) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy người dùng')
@@ -225,7 +225,6 @@ export async function requestAccountDeletion(userId: string): Promise<IUser> {
     throw new AppError(409, 'CONFLICT', 'Bạn đã gửi yêu cầu xoá tài khoản trước đó, đang chờ xử lý')
   }
 
-  // SM-14
   user.status = 'DELETION_REQUESTED'
   user.deletion_requested_at = new Date()
   await user.save()
@@ -245,7 +244,7 @@ export async function cancelAccountDeletion(userId: string): Promise<IUser> {
     throw new AppError(409, 'CONFLICT', 'Bạn chưa gửi yêu cầu xoá tài khoản nào')
   }
 
-  // SM-14; tài khoản đang bị khoá vẫn khoá
+  // tài khoản đang bị khoá vẫn khoá
   if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined

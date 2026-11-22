@@ -1,4 +1,3 @@
-/** AUTH-FR-005c */
 import { TEMPORARY_PASSWORD_LENGTH, generateTemporaryPassword } from '@/utils/password.util'
 
 describe('generateTemporaryPassword', () => {

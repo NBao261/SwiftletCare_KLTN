@@ -1,9 +1,8 @@
-/** SEC-NFR-004 */
 import express, { type RequestHandler } from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
 
-// Limiter đọc env lúc nạp module — đặt giới hạn nhỏ TRƯỚC khi require
+// Limiter đọc env lúc nạp module: đặt giới hạn nhỏ TRƯỚC khi require
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
 process.env.RATE_LIMIT_MAX = '3'
 process.env.AUTH_RATE_LIMIT_MAX = '2'
@@ -37,7 +36,7 @@ describe('apiLimiter — đếm theo tài khoản', () => {
     expect(blocked.body.error.details.retryAfterSec).toBeGreaterThan(0)
     expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0)
 
-    // Cùng IP nhưng tài khoản khác — không bị chặn lây
+    // Cùng IP nhưng tài khoản khác: không bị chặn lây
     await request(app).get('/data').set('Authorization', bearer('user-b')).expect(200)
   })
 

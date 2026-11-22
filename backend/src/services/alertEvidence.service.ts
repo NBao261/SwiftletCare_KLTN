@@ -8,14 +8,12 @@ import { sumHouseBuckets } from '@/services/birdCount.service'
 import { BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
-/** ALERT-FR-014 */
 export const EVIDENCE_WINDOW_MS = 30 * 60 * 1000
-/** EXPERT-FR-003 */
 const EARLIER_VERDICTS_LIMIT = 10
 const DAY_MS = 86_400_000
 const VN_OFFSET_MS = 7 * 3600_000
 
-/** Không có mẫu là missing, không phải 0 */
+// Không có mẫu là missing, không phải 0
 type Source<K extends string, T> = { status: 'ok' | 'missing' } & Record<K, T[]>
 const source = <K extends string, T>(key: K, rows: T[]): Source<K, T> =>
   ({ status: rows.length > 0 ? 'ok' : 'missing', [key]: rows }) as Source<K, T>
@@ -35,13 +33,12 @@ async function earlierVerdicts(alert: IAlert) {
   }).sort({ created_at: -1 }).limit(EARLIER_VERDICTS_LIMIT).populate('expert_verdict.by', 'full_name').lean()
 }
 
-/** BR-23: chỉ trình bày, không kết luận. Quyền như getAlert */
+// chỉ trình bày, không kết luận. Quyền như getAlert
 export async function getAlertEvidence(alertId: string, user: CurrentUser) {
   const alert = await getAlert(alertId, user)
   if (!INFERRED_ALERT_TYPES.includes(alert.type)) {
     throw BadRequestError(`Chỉ cảnh báo suy luận có bằng chứng (${INFERRED_ALERT_TYPES.join(', ')})`)
   }
-  // EXPERT-FR-021
   const base = {
     alert_id: String(alert._id), type: alert.type, earlier_verdicts: await earlierVerdicts(alert),
     onsite_checks: await presentOnsiteChecks(alert),

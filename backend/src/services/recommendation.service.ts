@@ -27,7 +27,7 @@ import {
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
-/** MF-08: xét luật mỗi ngày sau đánh giá ngày, đo hiệu quả 7 ngày sau khi chấp nhận */
+// xét luật mỗi ngày sau đánh giá ngày, đo hiệu quả 7 ngày sau khi chấp nhận
 
 const DAY_MS = 86_400_000
 const vnDayStart = (date: string) => new Date(`${date}T00:00:00+07:00`)
@@ -51,7 +51,7 @@ export async function listRules(farmId: string, user: CurrentUser, query: { page
   return { records, total, page, limit }
 }
 
-/** BR-22: farm có chuyên gia thì luật của Farm Owner lưu tắt, chờ chuyên gia bật */
+// farm có chuyên gia thì luật của Farm Owner lưu tắt, chờ chuyên gia bật
 async function ownerNeedsApproval(farm: IFarm, user: CurrentUser): Promise<boolean> {
   return user.role === 'FARM_OWNER' && (await farmHasActiveExpert(farm))
 }
@@ -76,7 +76,7 @@ export async function createRule(user: CurrentUser, input: Record<string, unknow
   return rule
 }
 
-/** Khuyến nghị đã mở giữ nguyên bằng chứng lúc mở */
+// Khuyến nghị đã mở giữ nguyên bằng chứng lúc mở
 export async function updateRule(ruleId: string, user: CurrentUser, input: Record<string, unknown>) {
   const { rule, farm } = await loadRule(ruleId, user)
   const needsApproval = await ownerNeedsApproval(farm, user)
@@ -125,7 +125,7 @@ export async function ruleEffects(farmId: string, user: CurrentUser) {
   })
 }
 
-/** Thợ và chuyên gia chỉ đọc */
+// Thợ và chuyên gia chỉ đọc
 export async function listRecommendations(
   user: CurrentUser, query: { farmId?: string; houseId?: string; status?: string; page?: string; limit?: string },
 ) {
@@ -153,14 +153,14 @@ export async function getRecommendation(id: string, user: CurrentUser) {
   return (await loadRecommendation(id, user)).recommendation
 }
 
-/** Ghi có điều kiện: quyết định sau nhận 409 */
+// Ghi có điều kiện: quyết định sau nhận 409
 async function decide(id: Types.ObjectId, set: Partial<IRecommendation>) {
   const updated = await Recommendation.findOneAndUpdate({ _id: id, status: 'OPEN' }, set, { new: true })
   if (!updated) throw ConflictError('Khuyến nghị không còn mở (đã quyết định hoặc đã hết hạn)')
   return updated
 }
 
-/** Thay đổi tham số đi như Farm Owner tự sửa, nên có mục duyệt (MF-05). Lỗi thì khuyến nghị mở lại */
+// Thay đổi tham số đi như Farm Owner tự sửa, nên có mục duyệt. Lỗi thì khuyến nghị mở lại
 export async function acceptRecommendation(id: string, user: CurrentUser) {
   const { recommendation: current, house, farm } = await loadRecommendation(id, user)
   const rule = await snapshotOf(current)
@@ -218,7 +218,7 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
   return recommendation
 }
 
-/** Chỉ mở lại khi vẫn là ACCEPTED của lần này; không được thì ghi log để người gọi nhận lỗi gốc */
+// Chỉ mở lại khi vẫn là ACCEPTED của lần này; không được thì ghi log để người gọi nhận lỗi gốc
 async function reopen(id: Types.ObjectId) {
   try {
     await Recommendation.updateOne({ _id: id, status: 'ACCEPTED' }, { status: 'OPEN', $unset: { decided_by: 1, decided_at: 1 } })
@@ -227,7 +227,7 @@ async function reopen(id: Types.ObjectId) {
   }
 }
 
-/** Bản cũ chưa có snapshot thì đọc luật hiện tại */
+// Bản cũ chưa có snapshot thì đọc luật hiện tại
 async function snapshotOf(recommendation: Pick<IRecommendation, 'rule_id' | 'rule_snapshot'>): Promise<RuleSnapshot> {
   if (recommendation.rule_snapshot) return recommendation.rule_snapshot
   const rule = await RecommendationRule.findById(recommendation.rule_id).lean()
@@ -235,7 +235,7 @@ async function snapshotOf(recommendation: Pick<IRecommendation, 'rule_id' | 'rul
   return rule
 }
 
-/** Route chặn lý do rỗng (422) */
+// Route chặn lý do rỗng (422)
 export async function rejectRecommendation(id: string, user: CurrentUser, reason: string) {
   const { recommendation: current, house, farm } = await loadRecommendation(id, user)
   const recommendation = await decide(current._id, {
@@ -250,7 +250,7 @@ export async function rejectRecommendation(id: string, user: CurrentUser, reason
 const describeCondition = (rule: Pick<IRecommendationRule, 'indicator' | 'comparison' | 'value' | 'window_days'>) =>
   `${rule.indicator} ${rule.comparison === 'GTE' ? '≥' : '≤'} ${rule.value} trong ${rule.window_days} ngày`
 
-/** Giờ VN, gồm cả hai đầu */
+// Giờ VN, gồm cả hai đầu
 async function indicatorDays(indicator: RuleIndicator, house: Pick<IHouse, '_id'>, from: string, to: string): Promise<DayValue[]> {
   const dates = lastDates(to, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1)
   // Thiếu ngày hoặc nguồn không đủ dữ liệu thì null
@@ -267,7 +267,7 @@ async function indicatorDays(indicator: RuleIndicator, house: Pick<IHouse, '_id'
     for (const alert of alerts) counts.set(vnDate(alert.created_at), (counts.get(vnDate(alert.created_at)) ?? 0) + 1)
     return dates.map(date => ({ date, value: assessed.has(date) ? counts.get(date) ?? 0 : null }))
   }
-  // BR-46: theo giai đoạn của chính ngày ấy
+  // theo giai đoạn của chính ngày ấy
   const stages = indicator === 'RETURN_RATE' ? (await House.findById(house._id).select('stage_history').lean())?.stage_history : undefined
   const byDate = new Map(days.map(day => {
     const i = day.indicators
@@ -281,20 +281,19 @@ async function indicatorDays(indicator: RuleIndicator, house: Pick<IHouse, '_id'
   return dates.map(date => ({ date, value: byDate.get(date) ?? null }))
 }
 
-/** Lỗi ở một luật hay nhà không chặn cái khác */
+// Lỗi ở một luật hay nhà không chặn cái khác
 export async function evaluateRecommendationRules(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
   const rules = await RecommendationRule.find({ active: true }).lean()
   // Farm.find ẩn farm đã xoá
   const liveFarms = new Set((await Farm.find({ _id: { $in: rules.map(r => r.farm_id) } }).select('_id').lean()).map(f => String(f._id)))
   let raised = 0
   for (const rule of rules.filter(r => liveFarms.has(String(r.farm_id)))) {
-    // BR-21
     const houses = await House.find({ farm_id: rule.farm_id, ...(onlyHouseIds && { _id: { $in: onlyHouseIds } }) }).select('_id name').lean()
     const windowStart = dayOffset(date, -(rule.window_days - 1))
     for (const house of houses) {
       try {
         if (await Recommendation.exists({ rule_id: rule._id, house_id: house._id, status: 'OPEN' })) continue
-        // BR-42: chỉ mở khi mọi ngày bằng chứng đều sau lần quyết định trước
+        // chỉ mở khi mọi ngày bằng chứng đều sau lần quyết định trước
         const last = await Recommendation.findOne({ rule_id: rule._id, house_id: house._id, status: { $ne: 'OPEN' } })
           .sort({ raised_at: -1 }).select('decided_at expired_at raised_at').lean()
         if (last && windowStart <= vnDate(last.decided_at ?? last.expired_at ?? last.raised_at)) continue
@@ -329,7 +328,6 @@ export async function evaluateRecommendationRules(date = vnDate(new Date()), now
   return raised
 }
 
-/** SM-21, BR-42 */
 export async function expireRecommendations(now = new Date()): Promise<number> {
   const { modifiedCount } = await Recommendation.updateMany(
     { status: 'OPEN', raised_at: { $lte: new Date(now.getTime() - RECOMMENDATION_EXPIRY_DAYS * DAY_MS) } },
@@ -338,7 +336,6 @@ export async function expireRecommendations(now = new Date()): Promise<number> {
   return modifiedCount
 }
 
-/** SM-21, EXPERT-FR-019 */
 export async function measureRecommendationEffects(now = new Date()): Promise<number> {
   const due = await Recommendation.find({
     status: 'ACCEPTED', decided_at: { $lte: new Date(now.getTime() - RECOMMENDATION_EFFECT_DAYS * DAY_MS) },

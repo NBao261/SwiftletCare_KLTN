@@ -1,4 +1,4 @@
-/** FARM-FR-003/004, 013: phải đúng cặp {device_id, secretKey}; thuộc farm khác báo riêng; PENDING quá 15 phút */
+// phải đúng cặp {device_id, secretKey}; thuộc farm khác báo riêng; PENDING quá 15 phút
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -79,7 +79,7 @@ async function seed() {
   const b = await zoneIn(owner._id, 'Farm B')
   const adminToken = tokenFor(admin._id, 'ADMIN')
 
-  // Admin cấp thiết bị qua API — secret_key chỉ xuất hiện trong response này
+  // Admin cấp thiết bị qua API: secret_key chỉ xuất hiện trong response này
   const provisioned = await request(app).post('/admin/provisioned-devices')
     .set('Authorization', `Bearer ${adminToken}`).send({ device_id: 'node_100', kind: 'SENSOR' }).expect(201)
 
@@ -105,7 +105,7 @@ describe('kho thiết bị (Admin)', () => {
 
     await request(app).post('/admin/provisioned-devices').set('Authorization', `Bearer ${adminToken}`)
       .send({ device_id: 'node_100', kind: 'SENSOR' }).expect(409)
-    // NFR-10 d — device ID là username và đoạn topic trên broker: ký tự đại diện của MQTT bị chặn ở route
+    // device ID là username và đoạn topic trên broker: ký tự đại diện của MQTT bị chặn ở route
     for (const device_id of ['+', 'node/#', 'node 7']) {
       await request(app).post('/admin/provisioned-devices').set('Authorization', `Bearer ${adminToken}`)
         .send({ device_id, kind: 'SENSOR' }).expect(422)
@@ -212,7 +212,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect(list.body.data).toHaveLength(0)
 
     await expect(recordHeartbeat({ deviceId: 'node_100' } as never)).rejects.toThrow()
-    // Relay chỉ Farm Owner bật được (ENV-FR-016) — thiết bị đã gỡ thì 409 thay vì gửi lệnh
+    // Relay chỉ Farm Owner bật được: thiết bị đã gỡ thì 409 thay vì gửi lệnh
     await post(`/devices/sensor-nodes/${nodeId}/relay`, ownerToken, { relayName: 'misting', state: true }).expect(409)
     await post(`/devices/sensor-nodes/${nodeId}/decommission`, ownerToken, { reason: 'lần 2' }).expect(409)
     expect(await AuditLog.countDocuments({ action: 'DEVICE_DECOMMISSIONED' })).toBe(1)
@@ -259,7 +259,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect((await SensorNode.findById(nodeId))!.decommissioned_at).toBeInstanceOf(Date)
     const audit = await AuditLog.findOne({ action: 'DEVICE_DECOMMISSIONED' }).lean()
     expect(audit!.metadata).toMatchObject({ forcedWhileOnline: true })
-    // Gỡ/đăng ký/dời chỉ còn của Farm Owner (G-20): không còn ai ngoài farm làm thay để phải báo
+    // Gỡ/đăng ký/dời chỉ còn của Farm Owner: không còn ai ngoài farm làm thay để phải báo
     expect(notifyUser).not.toHaveBeenCalled()
   })
 
@@ -335,7 +335,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect(taken.body.error.message).toContain('đã được đăng ký lại')
   })
 
-  // B-06: cùng điều kiện với restore
+  // cùng điều kiện với restore
   it('removed=recent: thiết bị gỡ trong 24 giờ có kèm hạn khôi phục; quá 24 giờ hoặc đã bị thay thì không; Admin → 403', async () => {
     const { ownerToken, adminToken, nodeId, owner } = await installed()
     const recent = (token: string) => request(app).get('/devices/sensor-nodes?removed=recent').set('Authorization', `Bearer ${token}`)
@@ -544,7 +544,7 @@ describe('gỡ thiết bị thì dọn cảnh báo của nó (FARM-FR-008)', () 
     const audit = await AuditLog.findOne({ action: 'DEVICE_DECOMMISSIONED' }).lean()
     expect(audit!.metadata).toMatchObject({ closedAlerts: 1 })
 
-    // Cảnh báo cũ còn sót của thiết bị đã gỡ cũng không được gửi lại (ALERT-FR-015)
+    // Cảnh báo cũ còn sót của thiết bị đã gỡ cũng không được gửi lại
     await Alert.updateOne({ _id: alert._id }, { status: 'ACTIVE' })
     expect(await renotifyStaleAlerts()).toBe(0)
   })

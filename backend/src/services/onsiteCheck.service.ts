@@ -4,7 +4,7 @@ import { openWorkOrderForAlert, storePhotos, type UploadedPhoto } from '@/servic
 import { ConflictError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
-/** Không có yêu cầu hoặc đã trả lời → 409. SENSOR_ANOMALY mà cảm biến bẩn/hỏng thì mở Work Order (BR-39) */
+// Không có yêu cầu hoặc đã trả lời → 409. SENSOR_ANOMALY mà cảm biến bẩn/hỏng thì mở Work Order
 export async function answerOnsiteCheck(
   alertId: string, user: CurrentUser, input: { observation: OnsiteObservation; note?: string }, photo?: UploadedPhoto,
 ) {

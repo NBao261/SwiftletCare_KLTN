@@ -1,11 +1,10 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-/** VISION-FR-017 */
 export interface IBirdCountBucket extends Document {
   _id: Types.ObjectId
   camera_node_id: Types.ObjectId
   house_id: Types.ObjectId
-  /** Nút AI đã làm tròn xuống */
+  // Nút AI đã làm tròn xuống
   bucket_start: Date
   entry_count: number
   exit_count: number

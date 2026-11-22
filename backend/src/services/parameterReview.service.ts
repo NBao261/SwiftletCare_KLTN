@@ -7,7 +7,7 @@ import type { IFarm } from '@/models/farm.model'
 import type { IZone } from '@/models/houseZone.model'
 import type { CurrentUser } from '@/types'
 
-/** Không báo Farm Owner hai lần */
+// Không báo Farm Owner hai lần
 export interface ReviewApplyOptions { fromReview?: boolean }
 
 const ZONE_GROUPS: ParameterGroup[] = ['thresholds', 'fuzzy', 'detection']
@@ -33,7 +33,7 @@ function targetOf(target: ReviewTarget, group: ParameterGroup) {
   return { id: target.camera._id, place: `Camera ${target.camera.device_id}` }
 }
 
-/** Gọi sau khi áp. Không import nơi áp giá trị để tránh import vòng (hoàn lại ở expertReview.service). Không throw */
+// Gọi sau khi áp. Không import nơi áp giá trị để tránh import vòng (hoàn lại ở expertReview.service). Không throw
 export async function trackParameterChange(
   target: ReviewTarget,
   user: CurrentUser,
@@ -95,7 +95,6 @@ export const GROUP_LABEL: Record<ParameterGroup, string> = {
   counting_ring: 'vòng đếm',
 }
 
-/** EXPERT-FR-007 */
 async function notifyExpertsOfReview(farmId: unknown, owner: CurrentUser, group: ParameterGroup, place: string, reviewId: string) {
   const [experts, author] = await Promise.all([
     findFarmExperts(farmId), User.findById(owner._id).select('full_name').lean(),

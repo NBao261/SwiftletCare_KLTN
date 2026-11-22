@@ -1,7 +1,6 @@
 ﻿import { Schema, model, Document, Types } from 'mongoose'
 import type { DeviceStatus, ControlMode, RelayStates, CountingRing, Role, ConfigSyncState } from '@/types'
 
-/** BR-20 */
 export interface IRelayOverride {
   mode: ControlMode
   override_expiry?: Date
@@ -13,29 +12,26 @@ export interface ISensorNode extends Document {
   device_id: string
   zone_id: Types.ObjectId
   firmware_version: string
-  /** FARM-FR-013: chờ heartbeat báo đúng firmware_version mới */
+  // chờ heartbeat báo đúng firmware_version mới
   ota_pending?: { version: string; url: string; requested_at: Date; requested_by?: Types.ObjectId }
-  /** Quá hạn xác nhận: thiết bị đã rollback về running_version */
+  // Quá hạn xác nhận: thiết bị đã rollback về running_version
   ota_failed?: { version: string; failed_at: Date; running_version: string }
   last_heartbeat?: Date
   status: DeviceStatus
-  /** null = firmware không báo (UNKNOWN) */
+  // null = firmware không báo (UNKNOWN)
   applied_config_version?: number | null
   config_sync: ConfigSyncState
-  /** BR-24 */
   config_stale_heartbeats: number
   rssi?: number
-  /** FARM-FR-006 */
   booted_at?: Date
   free_heap?: number
   reset_reason?: string
   ip?: string
   relay_states: RelayStates
   relays: Record<keyof RelayStates, IRelayOverride>
-  /** Tóm tắt của relays, chỉ ghi qua syncOverrideSummary */
+  // Tóm tắt của relays, chỉ ghi qua syncOverrideSummary
   control_mode: ControlMode
   override_expiry?: Date
-  // ENV-FR-013b
   speaker_schedule: {
     enabled: boolean
     windows: Array<{ start: string; end: string }>
@@ -47,16 +43,16 @@ export interface ISensorNode extends Document {
     loop: boolean
   }
   registered_at: Date
-  /** SYSTEM-FR-004: thiết bị giả lập, màn hình phải ghi rõ */
+  // thiết bị giả lập, màn hình phải ghi rõ
   simulated: boolean
-  /** Nhận thông báo khi kích hoạt quá hạn */
+  // Nhận thông báo khi kích hoạt quá hạn
   registered_by?: Types.ObjectId
   activation_overdue_at?: Date
-  /** FARM-FR-008: không xoá vì telemetry/alert cũ tham chiếu node_id */
+  // không xoá vì telemetry/alert cũ tham chiếu node_id
   decommissioned_at?: Date
   decommission_reason?: string
   replaced_by?: Types.ObjectId
-  /** ALERT-FR-016: since_service_* về 0 khi xác nhận MAINTENANCE_DUE */
+  // since_service_* về 0 khi xác nhận MAINTENANCE_DUE
   relay_usage: {
     misting: IRelayUsage
     ventilation: IRelayUsage
@@ -64,7 +60,7 @@ export interface ISensorNode extends Document {
     last_misting_on?: boolean
     last_ventilation_on?: boolean
   }
-  /** BR-45: thiếu thì giờ chạy tính theo thời gian relay BẬT */
+  // thiếu thì giờ chạy tính theo thời gian relay BẬT
   actuator_baseline?: { misting_a?: number; ventilation_a?: number }
 }
 
@@ -78,7 +74,7 @@ export interface IRelayUsage {
 export interface ICameraNode extends Document {
   _id: Types.ObjectId
   device_id: string
-  /** Camera ở cửa của cả nhà: gắn House, không gắn Zone */
+  // Camera ở cửa của cả nhà: gắn House, không gắn Zone
   house_id: Types.ObjectId
   rtsp_url?: string
   status: DeviceStatus
@@ -86,15 +82,13 @@ export interface ICameraNode extends Document {
   model_version?: string
   fps?: number
   registered_at: Date
-  /** SYSTEM-FR-004 */
   simulated: boolean
   registered_by?: Types.ObjectId
   activation_overdue_at?: Date
-  /** FARM-FR-008 */
   decommissioned_at?: Date
   decommission_reason?: string
   replaced_by?: Types.ObjectId
-  /** VISION-FR-018: chưa có thì nút AI dùng vòng trong config.yaml */
+  // chưa có thì nút AI dùng vòng trong config.yaml
   counting_ring?: CountingRing & { updated_at: Date; updated_by: Types.ObjectId }
   counting_ring_history: ICountingRingHistoryEntry[]
 }

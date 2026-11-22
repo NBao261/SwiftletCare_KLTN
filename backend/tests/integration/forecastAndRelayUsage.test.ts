@@ -1,4 +1,3 @@
-/** ANALYTICS-FR-009, ALERT-FR-011, ALERT-FR-016 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -58,7 +57,7 @@ async function seed() {
   return { zone, node, token }
 }
 
-/** 3 giờ, 1 mẫu/phút, kết thúc endAgoMin phút trước */
+// 3 giờ, 1 mẫu/phút, kết thúc endAgoMin phút trước
 async function writeHumidity(nodeId: unknown, zoneId: unknown, humidity: (min: number) => number, endAgoMin = 0) {
   const end = Date.now() - endAgoMin * 60_000
   await Telemetry.insertMany(Array.from({ length: 180 }, (_, i) => ({

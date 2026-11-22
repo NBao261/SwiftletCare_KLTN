@@ -1,4 +1,4 @@
-/** Push giả lập (test riêng ở pushNotification.test.ts); email là adapter ghi log nên kiểm qua logger */
+// Push giả lập (test riêng ở pushNotification.test.ts); email là adapter ghi log nên kiểm qua logger
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { User } from '@/models/user.model'

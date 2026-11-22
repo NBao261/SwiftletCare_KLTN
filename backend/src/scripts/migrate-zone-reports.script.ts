@@ -1,4 +1,4 @@
-/** G-32: báo cáo Zone cũ vào báo cáo nhà WEEKLY cùng kỳ, chép kết luận (nối, không ghi đè), đánh dấu migrated_to rồi xoá collection. Chạy lại an toàn */
+// báo cáo Zone cũ vào báo cáo nhà WEEKLY cùng kỳ, chép kết luận (nối, không ghi đè), đánh dấu migrated_to rồi xoá collection. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'

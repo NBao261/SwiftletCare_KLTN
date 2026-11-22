@@ -1,9 +1,9 @@
-/** BR-13: gửi lại config mỗi đêm để nút AI luôn có khung phiên 7 ngày tới */
+// gửi lại config mỗi đêm để nút AI luôn có khung phiên 7 ngày tới
 import cron from 'node-cron'
 import { refreshCameraConfigs } from '@/services/device.service'
 import logger from '@/utils/logger.util'
 
-/** ponytail: 00:05 cho mọi nhà cùng lúc; nhiều camera thì rải giờ nếu broker quá tải */
+// ponytail: 00:05 cho mọi nhà cùng lúc; nhiều camera thì rải giờ nếu broker quá tải
 const CRON_EXPRESSION = '0 5 0 * * *'
 
 export function startCameraConfigJob(): void {

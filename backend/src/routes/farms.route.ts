@@ -14,7 +14,7 @@ import { MAX_WEATHER_RULES, WEATHER_METRICS } from '@/utils/weatherCompensation.
 const router = Router()
 router.use(authenticate)
 
-// A-5: bắt buộc khi tạo; sửa thì gửi mới kiểm
+// bắt buộc khi tạo; sửa thì gửi mới kiểm
 const coordinates = (required: boolean) => {
   const field = (path: string) => (required ? body(path) : body(path).if(body('coordinates').exists()))
   return [
@@ -47,7 +47,7 @@ router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.l
 // Còn thiết bị đang dùng thì 409
 router.put   ('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule().optional(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
-  // Report 3 §4.5 không giới hạn mô tả
+  // không giới hạn mô tả
   body('description').optional().isString(), validate, farmController.updateHouse)
 router.delete('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), validate, farmController.deleteHouse)
 
@@ -76,7 +76,7 @@ router.put   ('/houses/:houseId/roster', requireRole('FARM_OWNER'), param('house
   body('shifts.*.end').isString().matches(HHMM_PATTERN).withMessage('end dạng HH:mm'),
   validate, farmController.setRoster)
 
-// Farm có chuyên gia thì Farm Owner gửi đề xuất để duyệt (BR-22, service kiểm)
+// Farm có chuyên gia thì Farm Owner gửi đề xuất để duyệt (service kiểm)
 const weatherRulesBody = [
   body('rules').isArray({ max: MAX_WEATHER_RULES }),
   body('rules.*._id').optional().isString().isMongoId(),
@@ -113,9 +113,9 @@ router.delete('/zones/:zoneId', requireRole('FARM_OWNER'), param('zoneId').isMon
 router.put ('/zones/:zoneId/thresholds', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateThresholds)
 router.put ('/zones/:zoneId/thresholds/reset', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.resetThresholds)
 router.put ('/zones/:zoneId/fuzzy-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateFuzzyTuning)
-// Farm Owner chỉ khi farm chưa có chuyên gia (BR-22), còn lại gửi qua /expert-activity/proposals
+// Farm Owner chỉ khi farm chưa có chuyên gia, còn lại gửi qua /expert-activity/proposals
 router.post('/zones/:zoneId/fuzzy-tuning/apply-suggestion', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.applySuggestion)
-// Farm Owner chỉ khi farm chưa có chuyên gia (BR-22, service kiểm)
+// Farm Owner chỉ khi farm chưa có chuyên gia (service kiểm)
 router.put ('/zones/:zoneId/detection-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateDetectionTuning)
 router.put ('/zones/:zoneId/detection-tuning/reset', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.resetDetectionTuning)
 router.put ('/houses/:houseId/bird-count-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateBirdCountTuning)

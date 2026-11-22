@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { Thresholds } from '@/types'
 
-/** Singleton: collection chỉ có 1 document */
+// Singleton: collection chỉ có 1 document
 export interface ISystemSetting extends Document {
   _id: Types.ObjectId
   _singleton: boolean
@@ -16,7 +16,7 @@ export interface ISystemSetting extends Document {
 
 const systemSettingSchema = new Schema<ISystemSetting>(
   {
-    /** Upsert chỉ atomic khi filter trỏ vào unique index: thiếu thì 2 request đồng thời tạo 2 document */
+    // Upsert chỉ atomic khi filter trỏ vào unique index: thiếu thì 2 request đồng thời tạo 2 document
     _singleton: { type: Boolean, default: true, unique: true, immutable: true },
     default_thresholds: {
       temp_min:     { type: Number, required: true },

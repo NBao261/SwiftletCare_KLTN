@@ -26,39 +26,39 @@ export interface IHouse extends Document {
   name: string
   floors: number
   description?: string
-  /** FARM-FR-002: xoá mềm, lịch sử giữ lại */
+  // xoá mềm, lịch sử giữ lại
   is_deleted: boolean
   deleted_at?: Date
   deleted_by?: Types.ObjectId
-  /** BR-38: _id là rule_id gửi kèm offset */
+  // _id là rule_id gửi kèm offset
   weather_rules: IWeatherRule[]
   weather_rules_history: Array<{ changed_by: Types.ObjectId; changed_by_role?: Role; changed_at: Date; old_values: unknown; new_values: unknown }>
-  /** BR-22: chỉ chạy khi chuyên gia duyệt */
+  // chỉ chạy khi chuyên gia duyệt
   weather_rules_proposal?: { rules: Array<WeatherRuleInput & { _id?: string }>; proposed_by: Types.ObjectId; proposed_at: Date } | null
   bird_count_tuning: BirdCountTuning
   bird_count_tuning_history: IBirdCountTuningHistoryEntry[]
-  /** Chưa đặt thì dùng khung mặc định BR-13 */
+  // Chưa đặt thì dùng khung mặc định
   counting_schedule?: CountingSchedule
-  /** Sửa lịch áp từ hôm sau (effective_from) */
+  // Sửa lịch áp từ hôm sau (effective_from)
   counting_schedule_history: Array<{
     schedule: CountingSchedule; effective_from: string; changed_by: Types.ObjectId; changed_by_role: Role; changed_at: Date
   }>
-  /** BR-21: job nhận việc 1 lần/ngày qua trường này */
+  // job nhận việc 1 lần/ngày qua trường này
   last_session_check?: string
-  /** Thiếu trường nào thì dùng mặc định */
+  // Thiếu trường nào thì dùng mặc định
   health_levels: HealthLevels
-  /** Lịch sử để đánh giá lại ngày cũ đúng giai đoạn */
+  // Lịch sử để đánh giá lại ngày cũ đúng giai đoạn
   stage: HouseStage
   stage_history: Array<{ stage: HouseStage; changed_by: Types.ObjectId; changed_by_role: Role; changed_at: Date }>
-  /** Tối đa 1 thợ chính */
+  // Tối đa 1 thợ chính
   technicians: Array<{ user_id: Types.ObjectId; primary: boolean }>
-  /** Giờ VN; ngoài mọi ca thì tới thợ chính */
+  // Giờ VN; ngoài mọi ca thì tới thợ chính
   roster: Array<{ technician_id: Types.ObjectId; role: 'PRIMARY' | 'BACKUP'; weekdays: number[]; start: string; end: string }>
 }
 
 export interface IThresholdHistoryEntry {
   changed_by: Types.ObjectId
-  /** Phân biệt chủ farm với chuyên gia (EXPERT-FR-004) */
+  // Phân biệt chủ farm với chuyên gia
   changed_by_role?: Role
   changed_at: Date
   old_values: Partial<Thresholds>
@@ -74,7 +74,7 @@ export interface IFuzzyTuningHistoryEntry {
   changed_at: Date
   old_values: Partial<FuzzyTuning>
   new_values: Partial<FuzzyTuning>
-  /** Bản ghi trước G-04 không có: sửa tay */
+  // Bản ghi cũ không có: sửa tay
   source?: FuzzyTuningSource
 }
 
@@ -84,14 +84,14 @@ export interface IDetectionTuningHistoryEntry {
   changed_at: Date
   old_values: Partial<DetectionTuning>
   new_values: Partial<DetectionTuning>
-  /** Không có = sửa tay */
+  // Không có = sửa tay
   source?: 'PROFILE'
 }
 
 export interface IZone extends Document {
   _id: Types.ObjectId
   house_id: Types.ObjectId
-  /** Zone không bao giờ đổi farm: lọc theo farm khỏi đi qua House */
+  // Zone không bao giờ đổi farm: lọc theo farm khỏi đi qua House
   farm_id: Types.ObjectId
   name: string
   floor: number
@@ -102,10 +102,10 @@ export interface IZone extends Document {
   threshold_history: IThresholdHistoryEntry[]
   fuzzy_tuning: FuzzyTuning
   fuzzy_tuning_history: IFuzzyTuningHistoryEntry[]
-  /** Thiếu trường nào thì dùng mặc định */
+  // Thiếu trường nào thì dùng mặc định
   detection_tuning: DetectionTuning
   detection_tuning_history: IDetectionTuningHistoryEntry[]
-  /** Tăng qua deviceConfig.service#publishZoneConfig */
+  // Tăng qua deviceConfig.service#publishZoneConfig
   config_version: number
 }
 

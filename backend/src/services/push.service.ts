@@ -4,19 +4,19 @@ import { PushToken, type PushPlatform } from '@/models/pushToken.model'
 import { AppError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
 
-/** Chưa cấu hình thì không gửi. Không ghi log token */
+// Chưa cấu hình thì không gửi. Không ghi log token
 
 const INVALID_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
   'messaging/invalid-registration-token',
 ])
 
-/** Token Expo, không phải FCM device token (BM02 A-02) */
+// Token Expo, không phải FCM device token
 const EXPO_TOKEN = /^Expo(nent)?PushToken\[/
 
 let firebaseApp: App | null | undefined
 
-/** File thiếu hoặc sai thì coi như chưa cấu hình, báo 1 lần */
+// File thiếu hoặc sai thì coi như chưa cấu hình, báo 1 lần
 function getFirebaseApp(): App | null {
   if (firebaseApp !== undefined) return firebaseApp
   const path = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
@@ -32,12 +32,12 @@ function getFirebaseApp(): App | null {
 
 export const isPushConfigured = (): boolean => getFirebaseApp() !== null
 
-/** Cho test */
+// Cho test
 export function resetPushForTests(): void {
   firebaseApp = undefined
 }
 
-/** Token của tài khoản khác thì chuyển sang người gọi */
+// Token của tài khoản khác thì chuyển sang người gọi
 export async function registerPushToken(userId: string, token: string, platform: PushPlatform): Promise<void> {
   if (EXPO_TOKEN.test(token)) {
     throw new AppError(422, 'VALIDATION_ERROR', 'Cần FCM device token (getDevicePushTokenAsync), không nhận token Expo')
@@ -56,12 +56,11 @@ export async function registerPushToken(userId: string, token: string, platform:
   }
 }
 
-/** Không có gì để gỡ vẫn thành công */
+// Không có gì để gỡ vẫn thành công
 export async function removePushToken(userId: string, token: string): Promise<void> {
   await PushToken.deleteOne({ token, user_id: userId })
 }
 
-/** AUTH-FR-012 */
 export async function removeUserPushTokens(userId: string): Promise<void> {
   await PushToken.deleteMany({ user_id: userId })
 }
@@ -70,11 +69,11 @@ export interface PushMessage {
   title: string
   body: string
   data?: Record<string, string>
-  /** NFR-02: tới cả khi máy tiết kiệm pin */
+  // tới cả khi máy tiết kiệm pin
   urgent?: boolean
 }
 
-/** Không throw. Trả số máy FCM nhận */
+// Không throw. Trả số máy FCM nhận
 export async function sendPushToUser(userId: string, message: PushMessage): Promise<number> {
   const app = getFirebaseApp()
   if (!app) {

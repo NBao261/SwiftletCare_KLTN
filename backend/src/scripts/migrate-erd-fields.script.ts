@@ -1,4 +1,4 @@
-/** G-14: users is_active → status (khoá thắng chờ xoá), auditlogs ip_address → source_ip, before/after ra trường riêng. Chạy lại an toàn */
+// users is_active → status (khoá thắng chờ xoá), auditlogs ip_address → source_ip, before/after ra trường riêng. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

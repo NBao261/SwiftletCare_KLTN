@@ -4,7 +4,7 @@ export type DeviceCommandType = 'RELAY' | 'CLEAR_OVERRIDE' | 'AUDIO' | 'RESTART'
 
 export const DEVICE_TOPIC_ROOT = 'swiftletcare/dev'
 
-/** NFR-10 d: ID là 1 đoạn topic trong ACL, không được chứa + # / */
+// ID là 1 đoạn topic trong ACL, không được chứa +, # hay /
 export const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 
 export const DEVICE_UPLINKS = [
@@ -19,7 +19,7 @@ export function parseDeviceTopic(topic: string): { deviceId: string; uplink: Dev
   return { deviceId, uplink }
 }
 
-/** BR-35: thiết bị áp mỗi commandId 1 lần và bỏ lệnh tới trễ */
+// thiết bị áp mỗi commandId 1 lần và bỏ lệnh tới trễ
 export function commandEnvelope(type: DeviceCommandType, payload: object) {
   return { commandId: randomUUID(), type, issuedAt: Date.now(), payload }
 }

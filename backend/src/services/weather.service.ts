@@ -2,10 +2,10 @@ import { Farm } from '@/models/farm.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import logger from '@/utils/logger.util'
 
-/** Chỉ toạ độ rời hệ thống. Thiếu thì để trống, không bao giờ 0 */
-/** Một biến cho cả hai luồng */
+// Chỉ toạ độ rời hệ thống. Thiếu thì để trống, không bao giờ 0
+// Một biến cho cả hai luồng
 export const OPEN_METEO_URL = () => process.env.OPEN_METEO_URL || 'https://api.open-meteo.com/v1/forecast'
-/** ponytail: bỏ sau 10 s, giờ sau gọi lại */
+// ponytail: bỏ sau 10 s, giờ sau gọi lại
 export const WEATHER_FETCH_TIMEOUT_MS = 10_000
 const HOUR_MS = 3600_000
 
@@ -21,7 +21,7 @@ const valueAt = (arr: (number | null)[] | undefined, i: number) => {
   return typeof v === 'number' && Number.isFinite(v) ? v : undefined
 }
 
-/** Mưa ở mốc T là tổng giờ trước nên bản ghi hour = T − 1 giờ */
+// Mưa ở mốc T là tổng giờ trước nên bản ghi hour = T − 1 giờ
 export async function fetchFarmWeather(farm: { _id: unknown; coordinates?: { lat: number; lng: number } }, now = new Date()): Promise<number> {
   if (!farm.coordinates) return 0
   const url = new URL(OPEN_METEO_URL())
@@ -60,7 +60,7 @@ export async function fetchFarmWeather(farm: { _id: unknown; coordinates?: { lat
   return ops.length
 }
 
-/** Lỗi ở một farm không bỏ qua farm sau */
+// Lỗi ở một farm không bỏ qua farm sau
 export async function fetchAllFarmsWeather(now = new Date()): Promise<number> {
   const farms = await Farm.find({ 'coordinates.lat': { $exists: true } }).select('coordinates').lean()
   let written = 0

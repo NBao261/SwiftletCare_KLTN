@@ -2,7 +2,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import logger from '@/utils/logger.util'
 import { getRequestActorRole, getRequestClient, getRequestIp } from '@/utils/requestContext.util'
 
-/** Không throw: audit log không được làm hỏng nghiệp vụ. source_ip, client, actor_role lấy từ ngữ cảnh request */
+// Không throw: audit log không được làm hỏng nghiệp vụ. source_ip, client, actor_role lấy từ ngữ cảnh request
 export async function logAction(
   actorId: string | undefined,
   action: string,

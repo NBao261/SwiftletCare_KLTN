@@ -1,4 +1,4 @@
-/** BR-22: farm chưa có chuyên gia thì Farm Owner làm thay; có chuyên gia thì 403 hoặc mục duyệt; chuyên gia bị khoá không tính */
+// farm chưa có chuyên gia thì Farm Owner làm thay; có chuyên gia thì 403 hoặc mục duyệt; chuyên gia bị khoá không tính
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -81,7 +81,7 @@ async function seed({ withExpert }: { withExpert: boolean }) {
   return { owner, expert, farm, house, zone, camera, alert, decisions }
 }
 
-/** Thông báo trong ứng dụng gửi không chờ (createAlert không await) — đợi tối đa 1 giây */
+// Thông báo trong ứng dụng gửi không chờ (createAlert không await): đợi tối đa 1 giây
 async function waitForNotification(userId: unknown) {
   for (let i = 0; i < 20; i++) {
     const found = await Notification.findOne({ user_id: userId }).lean()

@@ -5,7 +5,7 @@ import { applySoftDeleteScope } from '@/utils/softDelete.util'
 export interface IFarmMember {
   user_id:    Types.ObjectId
   is_primary: boolean
-  /** FARM_TECHNICIAN chỉ các nhà được giao (houses.technicians, AUTH-FR-013) */
+  // FARM_TECHNICIAN chỉ các nhà được giao (houses.technicians)
   role:       FarmMemberRole
   joined_at:  Date
 }
@@ -14,7 +14,7 @@ export interface IFarm extends Document {
   _id: Types.ObjectId
   name: string
   address: string
-  /** A-5: bắt buộc ở route; farm cũ có thể chưa có */
+  // bắt buộc ở route; farm cũ có thể chưa có
   coordinates?: { lat: number; lng: number }
   owner_id: Types.ObjectId
   members: Types.DocumentArray<IFarmMember & Document>

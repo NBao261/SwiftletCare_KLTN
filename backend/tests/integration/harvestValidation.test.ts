@@ -1,4 +1,3 @@
-/** HARVEST-FR-001 */
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/socket', () => ({ emitNotificationNew: jest.fn() }))
 

@@ -33,7 +33,7 @@ async function loadTrack(nodeId: string, trackId: string, user: CurrentUser) {
   return { ...ctx, track }
 }
 
-/** Web không ghi được thẻ SD: chỉ chọn/phát bài đã chép tay */
+// Web không ghi được thẻ SD: chỉ chọn/phát bài đã chép tay
 function assertSynced(track: IAudioTrack) {
   if (!track.synced_to_sd) {
     throw BadRequestError(`Bài "${track.display_name}" chưa được chép vào thẻ SD của thiết bị (${sdName(track.track_number)}) — nhờ kỹ thuật viên chép file và đánh dấu "Đã chép vào thẻ SD" trước`)
@@ -90,7 +90,7 @@ export async function uploadTrack(
   return toDto(track)
 }
 
-/** URL ký tạm 1 giờ */
+// URL ký tạm 1 giờ
 export async function listTracks(nodeId: string, user: CurrentUser) {
   const { node } = await loadNode(nodeId, user)
   const tracks = await AudioTrack.find({ node_id: node._id }).sort({ track_number: 1 })
@@ -120,7 +120,7 @@ export async function selectTrack(nodeId: string, trackId: string, user: Current
   return node
 }
 
-/** Firmware tự dừng sau FORCE_PLAY_MAX_MS */
+// Firmware tự dừng sau FORCE_PLAY_MAX_MS
 export async function playNow(nodeId: string, trackId: string, user: CurrentUser) {
   const { node, track } = await loadTrack(nodeId, trackId, user)
   assertInService(node)
@@ -137,7 +137,7 @@ export async function stopPlayback(nodeId: string, user: CurrentUser) {
   publishDeviceCommand(node.device_id, 'AUDIO', { action: 'stop' })
 }
 
-/** Không xoá được file vật lý trên thẻ SD */
+// Không xoá được file vật lý trên thẻ SD
 export async function deleteTrack(nodeId: string, trackId: string, user: CurrentUser) {
   const { node, track } = await loadTrack(nodeId, trackId, user)
   // Bài đang chọn và đã trên thẻ: xoá thì thiết bị vẫn phát số đó mà web không biết là bài nào

@@ -1,4 +1,3 @@
-/** ENV-FR-028, 030, BR-38 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -82,7 +81,7 @@ async function seed({ withExpert = true } = {}) {
 
 const HOT_RULE = { metric: 'temperature', min: 33, offset_pct: 5, duration_min: 120 }
 
-/** Open-Meteo giả: mốc giờ tới có nhiệt độ `temp` (giờ GMT, như API thật) */
+// Open-Meteo giả: mốc giờ tới có nhiệt độ `temp` (giờ GMT, như API thật)
 function mockForecast(temp: number, now: Date) {
   const hour = (h: number) => new Date(now.getTime() + h * 3600_000).toISOString().slice(0, 13) + ':00'
   // Mỗi lần gọi một Response mới: body của Response chỉ đọc được một lần

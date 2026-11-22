@@ -17,7 +17,7 @@ async function resolveOpen(filter: { node_id?: Types.ObjectId | null; zone_id?: 
   return modifiedCount
 }
 
-/** ponytail: 1 truy vấn ~720 mẫu mỗi thiết bị; nhiều thiết bị thì gộp 1 aggregation */
+// ponytail: 1 truy vấn ~720 mẫu mỗi thiết bị; nhiều thiết bị thì gộp 1 aggregation
 export async function scanSensorAnomalies(now = new Date()): Promise<{ raised: number; resolved: number }> {
   const nodes = await SensorNode.find({ status: 'ONLINE', ...IN_SERVICE }).select('_id zone_id device_id').lean()
   const zones = await Zone.find({ _id: { $in: nodes.map(n => n.zone_id) } }).select('_id farm_id name').lean()

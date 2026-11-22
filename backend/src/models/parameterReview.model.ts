@@ -6,7 +6,7 @@ export const PARAMETER_GROUPS = [
 export type ParameterGroup = typeof PARAMETER_GROUPS[number]
 export type ParameterReviewStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' | 'ADJUSTED'
 
-/** BR-22: thay đổi đã áp ngay; old_values là giá trị trước lần sửa đầu tiên */
+// thay đổi đã áp ngay; old_values là giá trị trước lần sửa đầu tiên
 export interface IParameterReview extends Document {
   _id: Types.ObjectId
   // Khoá "một mục đang chờ"

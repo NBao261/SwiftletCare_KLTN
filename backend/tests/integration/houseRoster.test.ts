@@ -1,4 +1,3 @@
-/** AUTH-FR-014 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -33,7 +32,7 @@ const as = (token: string) => ({
   delete: (path: string) => request(app).delete(path).set('Authorization', `Bearer ${token}`),
 })
 
-/** Farm có 1 nhà với 2 thợ được giao (A chính, B phụ) và 1 thợ của farm chưa được giao (C) */
+// Farm có 1 nhà với 2 thợ được giao (A chính, B phụ) và 1 thợ của farm chưa được giao (C)
 async function seed() {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!
@@ -49,7 +48,7 @@ async function seed() {
 const WEEKDAYS = [1, 2, 3, 4, 5]
 const shift = (technicianId: unknown, role: 'PRIMARY' | 'BACKUP', start: string, end: string, weekdays = WEEKDAYS) =>
   ({ technician_id: String(technicianId), role, weekdays, start, end })
-/** Thời điểm theo giờ VN (UTC+7) */
+// Thời điểm theo giờ VN (UTC+7)
 const vn = (iso: string) => new Date(`${iso}+07:00`)
 
 describe('PUT/GET /farms/houses/:houseId/roster (AUTH-FR-014)', () => {
@@ -88,7 +87,7 @@ describe('PUT/GET /farms/houses/:houseId/roster (AUTH-FR-014)', () => {
 
     await as(b.token).put(path, { shifts: [] }).expect(403)
     await as(c.token).get(path).expect(403)
-    // Report 3 §2.4: Domain Expert không có quyền với lịch trực, kể cả xem
+    // Domain Expert không có quyền với lịch trực, kể cả xem
     const expert = await tokenOf('DOMAIN_EXPERT')
     await as(expert.token).get(path).expect(403)
     await as(expert.token).put(path, { shifts: [] }).expect(403)

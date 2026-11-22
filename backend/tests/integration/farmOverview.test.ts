@@ -1,4 +1,3 @@
-/** ANALYTICS-FR-002, 015, 016, 017, BR-44, BR-45, VISION-FR-011, SYSTEM-FR-004 */
 jest.mock('@/socket', () => ({
   emitAlertNew: jest.fn(), emitHouseAlertNew: jest.fn(), emitNotificationNew: jest.fn(), emitBirdCountUpdate: jest.fn(),
 }))
@@ -62,7 +61,7 @@ async function memberUser(farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'
 }
 const member = async (farm: Awaited<ReturnType<typeof seedOwnerFarm>>['farm'], role: Role) => (await memberUser(farm, role)).token
 
-/** Tháng VN liền trước: luôn trong TTL 90 ngày, không hết hạn như ngày cố định */
+// Tháng VN liền trước: luôn trong TTL 90 ngày, không hết hạn như ngày cố định
 function previousVnMonth() {
   const today = vnDate(new Date())
   const [year, month] = today.split('-').map(Number)
@@ -76,16 +75,16 @@ function previousVnMonth() {
   }
 }
 
-/** Ngày giờ VN cách hôm nay `offset` ngày ('YYYY-MM-DD') */
+// Ngày giờ VN cách hôm nay `offset` ngày ('YYYY-MM-DD')
 const vnDay = (offset: number) => vnDate(new Date(Date.now() + offset * DAY))
 
-/** Phiên sáng và chiều của 1 ngày: `exit` chim ra (ròng), `back` chim về (ròng) */
+// Phiên sáng và chiều của 1 ngày: `exit` chim ra (ròng), `back` chim về (ròng)
 const sessions = (houseId: unknown, cameraId: unknown, date: string, exit: number, back: number) => BirdCountRecord.create([
   { camera_node_id: cameraId, house_id: houseId, timestamp: new Date(`${date}T06:00:00+07:00`), session_date: date, session_type: 'MORNING_EXIT', entry_count: 0, exit_count: exit },
   { camera_node_id: cameraId, house_id: houseId, timestamp: new Date(`${date}T18:00:00+07:00`), session_date: date, session_type: 'EVENING_ENTRY', entry_count: back, exit_count: 0 },
 ])
 
-/** Farm 3 nhà: H (thật, của seedOwnerFarm), H2 và H3 (mọi thiết bị đều giả lập) */
+// Farm 3 nhà: H (thật, của seedOwnerFarm), H2 và H3 (mọi thiết bị đều giả lập)
 async function seedFarm() {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!
@@ -494,7 +493,7 @@ describe('lượng mưa trên LOW_RETURN_RATE (VISION-FR-011)', () => {
     const { farm, house } = await seedFarm()
     await dropToday(house._id)
     const today = vnDay(0)
-    // Khung chiều mặc định 17:30–19:00 (BR-13): giờ 17:00 (0 mm) và giờ 18:00 (null) đều trùng khung
+    // Khung chiều mặc định 17:30–19:00: giờ 17:00 (0 mm) và giờ 18:00 (null) đều trùng khung
     const camera = new mongoose.Types.ObjectId()
     await BirdCountBucket.create([
       { camera_node_id: camera, house_id: house._id, bucket_start: new Date(`${today}T17:55:00+07:00`), entry_count: 5, exit_count: 0 },

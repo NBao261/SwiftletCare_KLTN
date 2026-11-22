@@ -5,7 +5,7 @@ export const THRESHOLD_KEYS = [
   'temp_min', 'temp_max', 'humidity_min', 'humidity_max', 'light_max', 'nh3_max', 'co2_max',
 ] as const satisfies ReadonlyArray<keyof Thresholds>
 
-/** Phải khớp firmware Config.h; default của Zone.thresholds lấy từ đây */
+// Phải khớp firmware Config.h; default của Zone.thresholds lấy từ đây
 export const DEFAULT_THRESHOLDS: Thresholds = {
   temp_min: 26.0,
   temp_max: 31.0,
@@ -16,7 +16,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   co2_max: 1500,
 }
 
-/** Khoảng đo của cảm biến: ngoài khoảng thì không bao giờ (hoặc luôn) kích hoạt */
+// Khoảng đo của cảm biến: ngoài khoảng thì không bao giờ (hoặc luôn) kích hoạt
 export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: number; unit: string }> = {
   temp_min:     { min: -40, max: 125,     unit: '°C' },
   temp_max:     { min: -40, max: 125,     unit: '°C' },
@@ -27,7 +27,7 @@ export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: numb
   co2_max:      { min: 0,   max: 5000,    unit: 'ppm' },
 }
 
-/** Number() cho null/''/[]/false thành 0; so 2 chuỗi số theo chữ cái */
+// Number() cho null/''/[]/false thành 0; so 2 chuỗi số theo chữ cái
 export function toNumber(value: unknown): number {
   if (typeof value === 'number') return value
   if (typeof value === 'string' && value.trim() !== '') return Number(value)
@@ -54,11 +54,11 @@ export function assertValidThresholds(t: Thresholds): void {
   }
 }
 
-/** Định dạng mã của REF-5, không phải hằng số tự chọn */
+// Định dạng mã của REF-5, không phải hằng số tự chọn
 export const REF5_ENTRY_PATTERN = /\b(TL|MC)-\d{3}\b/
 export const SOURCE_MAX_LENGTH = 500
 
-/** Chặn field lạ; số sai thành NaN */
+// Chặn field lạ; số sai thành NaN
 export function pickThresholds(input: Record<string, unknown>): Partial<Thresholds> {
   const picked: Partial<Thresholds> = {}
   for (const key of THRESHOLD_KEYS) {

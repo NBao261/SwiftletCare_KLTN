@@ -4,13 +4,13 @@ import { BadRequestError, NotFoundError, ServiceUnavailableError } from '@/utils
 import { criticalHasOutsideChannel } from '@/utils/notificationChannels.util'
 import logger from '@/utils/logger.util'
 
-/** Liên kết bằng mã một lần qua deep link `/start <mã>` */
+// Liên kết bằng mã một lần qua deep link `/start <mã>`
 const API_BASE = 'https://api.telegram.org'
-/** Không để 1 request chặn thông báo của người khác */
+// Không để 1 request chặn thông báo của người khác
 const SEND_TIMEOUT_MS = 10_000
-/** getUpdates chờ tới 25 s nên hạn phải dài hơn */
+// getUpdates chờ tới 25 s nên hạn phải dài hơn
 const POLL_TIMEOUT_MS = 35_000
-/** Ngắn để mã lộ ra cũng hết hạn nhanh */
+// Ngắn để mã lộ ra cũng hết hạn nhanh
 export const LINK_CODE_TTL_MS = 10 * 60_000
 
 const botToken = () => process.env.TELEGRAM_BOT_TOKEN || ''
@@ -31,7 +31,7 @@ async function callTelegram<T = unknown>(method: string, body: Record<string, un
   return json.result as T
 }
 
-/** Không throw. false khi chưa cấu hình hoặc bị từ chối */
+// Không throw. false khi chưa cấu hình hoặc bị từ chối
 export async function sendTelegram(chatId: string, text: string): Promise<boolean> {
   if (!isTelegramConfigured()) return false
   try {
@@ -58,7 +58,7 @@ export async function createTelegramLink(userId: string): Promise<{ deep_link: s
   return { deep_link: `https://t.me/${botUsername()}?start=${code}`, expires_at: expiresAt }
 }
 
-/** Là kênh ngoài ứng dụng duy nhất của CRITICAL thì không cho huỷ (400) */
+// Là kênh ngoài ứng dụng duy nhất của CRITICAL thì không cho huỷ (400)
 export async function unlinkTelegram(userId: string): Promise<void> {
   const user = await User.findById(userId).select('notification_preferences telegram_chat_id').lean()
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
@@ -76,7 +76,7 @@ interface TelegramUpdate {
   message?: { text?: string; chat?: { id: number | string; type?: string } }
 }
 
-/** Mã dùng một lần */
+// Mã dùng một lần
 export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void> {
   const chatId = update.message?.chat?.id
   const text = update.message?.text?.trim()
@@ -104,7 +104,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     : 'Mã kết nối không đúng hoặc đã hết hạn. Hãy bấm "Kết nối Telegram" trong ứng dụng để lấy mã mới.')
 }
 
-/** Long polling: chạy được không cần URL công khai. ponytail: chỉ đúng với 1 instance, nhiều instance thì dùng webhook */
+// Long polling: chạy được không cần URL công khai. ponytail: chỉ đúng với 1 instance, nhiều instance thì dùng webhook
 export function startTelegramPolling(): void {
   if (!isTelegramConfigured() || process.env.NODE_ENV === 'test') {
     if (!isTelegramConfigured()) logger.info('TELEGRAM_BOT_TOKEN chưa đặt — không bật kênh Telegram (ALERT-FR-013)')

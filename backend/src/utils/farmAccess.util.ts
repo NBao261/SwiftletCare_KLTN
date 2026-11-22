@@ -8,7 +8,7 @@ import type { CurrentUser } from '@/types'
 type FarmScope = Pick<IFarm, 'owner_id' | 'members'>
 type HouseScope = Pick<IHouse, 'technicians'>
 
-/** Admin không qua (FARM-FR-009); Farm Technician bị chặn, đường nào mở cho thợ thì kiểm canAccessHouse */
+// Admin không qua; Farm Technician bị chặn, đường nào mở cho thợ thì kiểm canAccessHouse
 export function hasFarmAccess(farm: FarmScope, user: CurrentUser): boolean {
   if (user.role === 'FARM_TECHNICIAN') return false
   if (String(farm.owner_id) === user._id) return true
@@ -24,7 +24,7 @@ export function isAssignedTechnician(farm: Pick<IFarm, 'members'>, house: HouseS
   return isFarmTechnician(farm, user) && (house.technicians ?? []).some(t => String(t.user_id) === user._id)
 }
 
-/** FARM-FR-009: chỉ cho cấu trúc và thiết bị, không cho telemetry, phân tích, số đếm */
+// chỉ cho cấu trúc và thiết bị, không cho telemetry, phân tích, số đếm
 export function hasDeviceAccess(farm: FarmScope, user: CurrentUser): boolean {
   return user.role === 'ADMIN' || hasFarmAccess(farm, user)
 }
@@ -35,7 +35,7 @@ function canAccess(farm: FarmScope, user: CurrentUser, scope: AccessScope): bool
   return scope === 'device' ? hasDeviceAccess(farm, user) : hasFarmAccess(farm, user)
 }
 
-/** Route vẫn phải cho FARM_TECHNICIAN qua requireRole */
+// Route vẫn phải cho FARM_TECHNICIAN qua requireRole
 export function canAccessHouse(farm: FarmScope, house: HouseScope, user: CurrentUser, scope: AccessScope = 'farm'): boolean {
   return canAccess(farm, user, scope) || isAssignedTechnician(farm, house, user)
 }
@@ -44,7 +44,7 @@ export function isPrimaryOwner(farm: Pick<IFarm, 'owner_id'>, user: CurrentUser)
   return String(farm.owner_id) === user._id
 }
 
-/** BR-22: chuyên gia bị khoá không tính, Farm Owner làm thay */
+// chuyên gia bị khoá không tính, Farm Owner làm thay
 export async function activeExpertIds(farm: Pick<IFarm, 'members'>): Promise<string[]> {
   const ids = farm.members.filter(m => m.role === 'DOMAIN_EXPERT').map(m => m.user_id)
   if (ids.length === 0) return []
@@ -56,7 +56,7 @@ export async function farmHasActiveExpert(farm: Pick<IFarm, 'members'>): Promise
   return (await activeExpertIds(farm)).length > 0
 }
 
-/** BR-22: Farm Owner chỉ làm thay khi farm chưa có chuyên gia. Gọi sau assert*Access */
+// Farm Owner chỉ làm thay khi farm chưa có chuyên gia. Gọi sau assert*Access
 export async function assertExpertDecision(farm: Pick<IFarm, 'members'>, user: CurrentUser): Promise<void> {
   if (user.role === 'DOMAIN_EXPERT') return
   if (user.role === 'FARM_OWNER' && !(await farmHasActiveExpert(farm))) return
@@ -97,7 +97,7 @@ export async function assertHouseAccess(
   return chain
 }
 
-/** zoneId cũ: quy ra House chứa Zone */
+// zoneId cũ: quy ra House chứa Zone
 export async function assertHouseAccessByParams(
   params: { houseId?: string; zoneId?: string }, user: CurrentUser, scope: AccessScope = 'farm',
 ): Promise<{ house: IHouse; farm: IFarm }> {
@@ -125,7 +125,7 @@ export async function assertZoneAccess(
   return chain
 }
 
-/** Admin rỗng trừ scope device; Farm Technician rỗng, dùng listAccessibleZoneIds/HouseIds */
+// Admin rỗng trừ scope device; Farm Technician rỗng, dùng listAccessibleZoneIds/HouseIds
 export async function listAccessibleFarmIds(user: CurrentUser, scope: AccessScope = 'farm') {
   if (user.role === 'FARM_TECHNICIAN') return []
   if (user.role === 'ADMIN') return scope === 'device' ? (await Farm.find().select('_id').lean()).map(f => f._id) : []
@@ -148,14 +148,14 @@ export async function listAccessibleHouseIds(user: CurrentUser, scope: AccessSco
   return House.find({ farm_id: { $in: farmIds } }).distinct('_id')
 }
 
-/** Bị gỡ khỏi farm thì mất quyền dù lần gán còn sót */
+// Bị gỡ khỏi farm thì mất quyền dù lần gán còn sót
 export async function listAssignedHouseIds(user: CurrentUser) {
   if (user.role !== 'FARM_TECHNICIAN') return []
   const farmIds = await Farm.find({ members: { $elemMatch: { user_id: user._id, role: 'FARM_TECHNICIAN' } } }).distinct('_id')
   return House.find({ farm_id: { $in: farmIds }, 'technicians.user_id': user._id }).distinct('_id')
 }
 
-/** Bị gỡ hay bị khoá thì không nhận việc nữa dù lần gán còn sót */
+// Bị gỡ hay bị khoá thì không nhận việc nữa dù lần gán còn sót
 export async function activeHouseTechnicianIds(
   house: Pick<IHouse, 'technicians'>, farm: Pick<IFarm, 'members'>,
 ): Promise<string[]> {
@@ -166,7 +166,7 @@ export async function activeHouseTechnicianIds(
   return active.map(u => String(u._id))
 }
 
-/** Ngoài ca mà không có thợ chính hợp lệ thì lấy thợ hợp lệ đầu tiên; null = Farm Owner xử lý */
+// Ngoài ca mà không có thợ chính hợp lệ thì lấy thợ hợp lệ đầu tiên; null = Farm Owner xử lý
 export async function activeTechnicianOnDuty(
   house: Pick<IHouse, 'technicians' | 'roster'>, farm: Pick<IFarm, 'members'>, at: Date = new Date(),
 ): Promise<string | null> {
@@ -179,7 +179,7 @@ export async function activeTechnicianOnDuty(
   }, at) ?? (technicians[0] ? String(technicians[0].user_id) : null)
 }
 
-/** Farm Technician chỉ các nhà được giao; người khác 403 */
+// Farm Technician chỉ các nhà được giao; người khác 403
 export async function listFarmHouseIds(farmId: string, user: CurrentUser) {
   const farm = await findFarmOrThrow(farmId)
   if (isFarmTechnician(farm, user)) return House.find({ farm_id: farm._id, 'technicians.user_id': user._id }).distinct('_id')
@@ -199,7 +199,7 @@ export async function listActiveHouseIds() {
   return House.find({ farm_id: { $in: farmIds } }).distinct('_id')
 }
 
-/** Nguồn chung cho màn Admin để số Farm, Zone, thiết bị khớp nhau */
+// Nguồn chung cho màn Admin để số Farm, Zone, thiết bị khớp nhau
 export async function listActiveZoneIds() {
   const farmIds = await Farm.find({ is_deleted: false }).distinct('_id')
   return Zone.find({ farm_id: { $in: farmIds } }).distinct('_id')

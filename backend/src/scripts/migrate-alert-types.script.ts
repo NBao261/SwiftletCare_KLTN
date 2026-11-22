@@ -1,4 +1,4 @@
-/** G-01: đổi tên loại cảnh báo cũ, bỏ ERROR/DEGRADED, heating, ARCHIVED, zalo/sms, sla_hours. Chạy lại an toàn */
+// đổi tên loại cảnh báo cũ, bỏ ERROR/DEGRADED, heating, ARCHIVED, zalo/sms, sla_hours. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

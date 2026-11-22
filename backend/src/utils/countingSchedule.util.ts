@@ -1,46 +1,44 @@
 import { BadRequestError } from '@/utils/appError.util'
 
-/** VISION-FR-019: khung tạm thắng hồ sơ theo mùa, ngoài ra dùng mặc định. Giờ VN, khung [start, end) */
+// khung tạm thắng hồ sơ theo mùa, ngoài ra dùng mặc định. Giờ VN, khung [start, end)
 
 export interface TimeWindow { start: string; end: string }
 export interface DayWindows { morning: TimeWindow; evening: TimeWindow }
-/** 'MM-DD', tính cả hai đầu; from sau to là vắt qua năm mới */
+// 'MM-DD', tính cả hai đầu; from sau to là vắt qua năm mới
 export interface SeasonalProfile extends DayWindows { name: string; from: string; to: string }
-/** Tính cả hai đầu */
+// Tính cả hai đầu
 export interface TemporaryWindow extends DayWindows { from: string; to: string }
 export interface CountingSchedule { profiles: SeasonalProfile[]; temporary: TemporaryWindow[] }
-/** Áp từ ngày hôm sau lần sửa */
+// Áp từ ngày hôm sau lần sửa
 export interface ScheduleVersion { schedule: CountingSchedule; effective_from: string }
 export type WindowSource = 'TEMPORARY' | 'PROFILE' | 'DEFAULT'
 
-/** BR-13 */
 export const DEFAULT_WINDOWS: DayWindows = {
   morning: { start: '05:30', end: '07:00' },
   evening: { start: '17:30', end: '19:00' },
 }
-/** BR-21 */
 export const RETURN_RATE_CHECK_DELAY_MIN = 15
-/** Chống gõ nhầm, không phải lời khuyên nuôi (A-4) */
+// Chống gõ nhầm, không phải lời khuyên nuôi
 export const MAX_SCHEDULE_PROFILES = 12
 export const MAX_TEMPORARY_WINDOWS = 60
 export const PROFILE_NAME_MAX_LENGTH = 50
-/** Gửi lại mỗi đêm: nút AI mất kết nối cả tuần vẫn đếm đúng khung */
+// Gửi lại mỗi đêm: nút AI mất kết nối cả tuần vẫn đếm đúng khung
 export const SESSION_WINDOW_DAYS_AHEAD = 7
 
 const DAY_MS = 86_400_000
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const MONTH_DAY_RE = /^(\d{2})-(\d{2})$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-/** Để 02-29 có chỗ */
+// Để 02-29 có chỗ
 const LEAP_YEAR = 2024
 
-/** UTC+7 cố định */
+// UTC+7 cố định
 export const vnDateOf = (at: Date) => new Date(at.getTime() + 7 * 3_600_000).toISOString().slice(0, 10)
 
 export const addDays = (date: string, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)
 
-/** null khi không phải ngày có thật */
+// null khi không phải ngày có thật
 function dayOfYear(monthDay: string): number | null {
   const match = MONTH_DAY_RE.exec(monthDay)
   if (!match) return null
@@ -53,7 +51,7 @@ function dayOfYear(monthDay: string): number | null {
 const isDate = (value: unknown): value is string =>
   typeof value === 'string' && DATE_RE.test(value) && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value)
 
-/** Vắt qua năm mới thì hai đoạn */
+// Vắt qua năm mới thì hai đoạn
 function profileDays(profile: Pick<SeasonalProfile, 'from' | 'to'>): Set<number> {
   const from = dayOfYear(profile.from) as number
   const to = dayOfYear(profile.to) as number
@@ -121,7 +119,7 @@ export function parseCountingSchedule(input: unknown): CountingSchedule {
   return { profiles, temporary }
 }
 
-/** Chưa sửa lần nào thì không có */
+// Chưa sửa lần nào thì không có
 export function scheduleOn(history: ScheduleVersion[] | undefined, date: string): CountingSchedule | undefined {
   let schedule: CountingSchedule | undefined
   for (const version of history ?? []) {
@@ -144,16 +142,16 @@ export const windowInterval = (date: string, window: TimeWindow) => ({
   end: new Date(`${date}T${window.end}:00+07:00`),
 })
 
-/** Khung chiều sát nửa đêm thì vẫn kiểm trong ngày (23:59) */
+// Khung chiều sát nửa đêm thì vẫn kiểm trong ngày (23:59)
 export function returnRateCheckAt(date: string, windows: DayWindows): Date {
   const due = windowInterval(date, windows.evening).end.getTime() + RETURN_RATE_CHECK_DELAY_MIN * 60_000
   return new Date(Math.min(due, new Date(`${date}T23:59:00+07:00`).getTime()))
 }
 
-/** Như sessions.windows trong config.yaml */
+// Như sessions.windows trong config.yaml
 export type AiSessionWindows = Record<'MORNING_EXIT' | 'EVENING_ENTRY', [string, string]>
 
-/** Mỗi ngày theo phiên bản lịch của chính ngày đó */
+// Mỗi ngày theo phiên bản lịch của chính ngày đó
 export function sessionWindowsAhead(history: ScheduleVersion[] | undefined, today: string): Record<string, AiSessionWindows> {
   const windows: Record<string, AiSessionWindows> = {}
   for (let offset = 0; offset < SESSION_WINDOW_DAYS_AHEAD; offset++) {

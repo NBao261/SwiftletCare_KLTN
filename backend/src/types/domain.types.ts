@@ -1,10 +1,10 @@
-// DOMAIN_EXPERT: cả farm, không điều khiển relay. FARM_TECHNICIAN: chỉ nhà được giao (AUTH-FR-013)
+// DOMAIN_EXPERT: cả farm, không điều khiển relay. FARM_TECHNICIAN: chỉ nhà được giao
 export type Role         = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
 export type FarmMemberRole = Extract<Role, 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'>
 // PENDING: đã đăng ký, chưa có heartbeat đầu tiên
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
-// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận (EXPERT-FR-003)
+// DISMISSED: Domain Expert bác bỏ cảnh báo suy luận
 export type AlertStatus  = 'ACTIVE' | 'ACKNOWLEDGED' | 'DISMISSED' | 'RESOLVED'
 export type AlertType =
   | 'THRESHOLD_BREACH' | 'NODE_OFFLINE'
@@ -24,7 +24,7 @@ export type ConfigSyncState = 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
 
 
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-/** Lô của Farm Technician chờ Farm Owner xác nhận (HARVEST-FR-006) */
+// Lô của Farm Technician chờ Farm Owner xác nhận
 export type HarvestStatus = 'DRAFT' | 'CONFIRMED'
 
 export interface JwtAccessPayload {
@@ -40,7 +40,7 @@ export interface CurrentUser {
   role: Role
 }
 
-/** Trường không có thì theo cài đặt chung */
+// Trường không có thì theo cài đặt chung
 export interface ChannelChoice {
   push?: boolean
   telegram?: boolean
@@ -48,9 +48,9 @@ export interface ChannelChoice {
 
 export interface NotificationPreferences {
   push: boolean
-  /** Chỉ có tác dụng khi đã liên kết bot Telegram */
+  // Chỉ có tác dụng khi đã liên kết bot Telegram
   telegram: boolean
-  /** Ghi đè push/telegram theo mức cảnh báo */
+  // Ghi đè push/telegram theo mức cảnh báo
   by_severity?: Partial<Record<AlertSeverity, ChannelChoice>>
   quiet_hours: { start: string; end: string }
 }
@@ -85,10 +85,10 @@ export interface FuzzyTuning {
   fuzzy_temp_band: number      // °C
   fuzzy_fan_dry_level: number  // %
   fuzzy_window_sec: number     // s
-  fuzzy_input_filter: boolean  // ENV-FR-022: lọc median+Kalman đầu vào
+  fuzzy_input_filter: boolean  // lọc median+Kalman đầu vào
 }
 
-// EXPERT-FR-008: tên field = key MQTT; mặc định và khoảng: utils/detectionTuning.util.ts
+// tên field = key MQTT; mặc định và khoảng: utils/detectionTuning.util.ts
 export interface DetectionTuning {
   noise_margin_db: number        // dB trên mức nền của giờ đó
   noise_min_sec: number          // s trong cửa sổ 15 s
@@ -102,7 +102,7 @@ export interface BirdCountTuning {
   return_rate_drop_pct: number   // % giảm so với trung bình kỳ trước
 }
 
-// BR-28: mức đàn chim lấy từ BirdCountTuning.return_rate_drop_pct
+// mức đàn chim lấy từ BirdCountTuning.return_rate_drop_pct
 export interface HealthLevels {
   in_range_slight_pct: number    // % thời gian trong ngưỡng, dưới là SLIGHT
   in_range_clear_pct: number     // dưới là CLEAR
@@ -116,17 +116,17 @@ export type HealthLevel = 'NORMAL' | 'SLIGHT' | 'CLEAR'
 export type HealthStatus = 'GOOD' | 'WATCH' | 'ACTION' | 'INSUFFICIENT_DATA'
 export type HealthRatingValue = Exclude<HealthStatus, 'INSUFFICIENT_DATA'>
 export type HealthSource = 'environment' | 'air' | 'flock' | 'noise'
-/** SM-18: suy ra, không lưu */
+// suy ra, không lưu
 export type HealthRatingState = 'PENDING' | 'RATED' | 'SKIPPED' | 'EXPIRED'
 
 export type HealthReasonCode =
   | 'ALL_NORMAL' | 'MISSING_DATA' | 'NOT_ASSESSED' | 'ENV_IN_RANGE' | 'AIR_OVER_LIMIT'
   | 'FLOCK_DROP' | 'FLOCK_NO_BASELINE' | 'NOISE_EPISODES' | 'WEATHER_UNAVAILABLE' | 'RAIN_DOWNGRADE'
   | 'ATTRACTING_STAGE'
-/** BR-46: ATTRACTING thì không đánh giá đàn chim */
+// ATTRACTING thì không đánh giá đàn chim
 export type HouseStage = 'ATTRACTING' | 'OCCUPIED'
 
-/** Mã + số, không phải câu: client tự dịch, ảnh chụp không phụ thuộc ngôn ngữ */
+// Mã + số, không phải câu: client tự dịch, ảnh chụp không phụ thuộc ngôn ngữ
 export interface HealthReason {
   code: HealthReasonCode
   source: HealthSource | null
@@ -145,11 +145,11 @@ export interface TelemetryPayload {
   relay_states: RelayStates
   control_mode: ControlMode
   control_output?: ControlOutput
-  /** A; không đo dòng thì không gửi */
+  // A; không đo dòng thì không gửi
   pump_current_a?: number
   fan_current_a?: number
   timestamp: number
-  /** Handler gắn theo topic */
+  // Handler gắn theo topic
   buffered?: boolean
 }
 
@@ -160,20 +160,20 @@ export interface HeartbeatPayload {
   freeHeap: number
   uptime: number
   timestamp: number
-  /** Heartbeat đầu sau mỗi lần reconnect: backend đẩy lại config */
+  // Heartbeat đầu sau mỗi lần reconnect: backend đẩy lại config
   justConnected?: boolean
-  /** firmware >= 1.4.0 */
+  // firmware >= 1.4.0
   resetReason?: string
   ip?: string
-  /** firmware >= 2.1.0; thiếu = UNKNOWN */
+  // firmware >= 2.1.0; thiếu = UNKNOWN
   appliedConfigVersion?: number
-  /** BR-32: dòng bình thường đã học (A) */
+  // dòng bình thường đã học (A)
   actuatorBaseline?: { misting?: number; ventilation?: number }
   modelVersion?: string
   fps?: number
 }
 
-/** Tỉ lệ khung hình 0–1 */
+// Tỉ lệ khung hình 0–1
 export interface CountingRing {
   points: Array<[number, number]>
   into_ring_is_exit: boolean
@@ -187,19 +187,19 @@ export interface RelayStatusPayload {
   relays?: Partial<Record<keyof RelayStates, { mode: ControlMode; remaining_ms?: number }>>
 }
 
-/** Tin phiên (có session_type, cộng dồn) hoặc kind 'BUCKET' (5 phút, VISION-FR-017) */
+// Tin phiên (có session_type, cộng dồn) hoặc kind 'BUCKET' (5 phút)
 export interface BirdCountPayload {
   deviceId: string
   kind?: 'BUCKET'
   session_type?: SessionType
   entry_count: number
   exit_count: number
-  /** Bỏ qua: backend tự tính trên số ròng */
+  // Bỏ qua: backend tự tính trên số ròng
   return_rate?: number
   confidence_avg?: number
-  /** Chỉ tham khảo, job LOW_RETURN_RATE không dựa vào */
+  // Chỉ tham khảo, job LOW_RETURN_RATE không dựa vào
   final?: boolean
-  /** epoch ms */
+  // epoch ms
   bucket_start?: number
   bucket_minutes?: number
   timestamp?: number
@@ -227,17 +227,17 @@ export interface WsRelayUpdate {
   overrideExpiry?: string
 }
 
-/** Số của cả House, cùng con số với GET /analytics/bird-count/current */
+// Số của cả House, cùng con số với GET /analytics/bird-count/current
 export interface WsBirdCountUpdate {
   houseId: string
-  /** Giờ Việt Nam */
+  // Giờ Việt Nam
   sessionDate: string
   sessionType: SessionType
   entryCount: number
   exitCount: number
-  /** ra − vào (sáng) hoặc vào − ra (chiều), không âm */
+  // ra − vào (sáng) hoặc vào − ra (chiều), không âm
   netCount: number
-  /** null khi chưa có phiên sáng hoặc sáng không có chim ra */
+  // null khi chưa có phiên sáng hoặc sáng không có chim ra
   returnRate: number | null
   timestamp: string
 }

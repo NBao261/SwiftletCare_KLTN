@@ -1,4 +1,4 @@
-/** G-20: TECHNICIAN → FARM_TECHNICIAN, thu hồi refresh token, không thêm vào farm nào; audit giữ nguyên. Chạy lại an toàn */
+// TECHNICIAN → FARM_TECHNICIAN, thu hồi refresh token, không thêm vào farm nào; audit giữ nguyên. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

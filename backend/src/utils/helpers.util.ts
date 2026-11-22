@@ -4,7 +4,7 @@ export function isValidObjectId(id: string): boolean {
   return Types.ObjectId.isValid(id)
 }
 
-/** Không escape thì `.*` khớp mọi thứ, `(a+)+` làm Mongo quét rất lâu */
+// Không escape thì `.*` khớp mọi thứ, `(a+)+` làm Mongo quét rất lâu
 export function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -17,7 +17,7 @@ export function safeParse<T>(json: string): T | null {
   }
 }
 
-/** Giá trị sai về mặc định: skip âm, limit(NaN) nổ 500, limit(0) là không giới hạn */
+// Giá trị sai về mặc định: skip âm, limit(NaN) nổ 500, limit(0) là không giới hạn
 export function paginate(
   page: number | string | undefined,
   limit: number | string | undefined,

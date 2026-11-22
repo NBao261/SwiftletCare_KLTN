@@ -2,7 +2,7 @@ import cron from 'node-cron'
 import { openWorkOrdersForOutages, verifyWorkOrders } from '@/services/workOrder.service'
 import logger from '@/utils/logger.util'
 
-/** Giây 15 để lệch các job khác; NFR-15 b: <= 60 s */
+// Giây 15 để lệch các job khác
 const CRON_EXPRESSION = '15 * * * * *'
 
 export function startRecoveryCheckJob(): void {

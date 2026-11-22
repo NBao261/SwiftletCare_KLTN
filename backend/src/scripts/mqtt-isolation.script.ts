@@ -1,4 +1,4 @@
-/** NFR-10 d trên broker thật. MQTT_TEST_URL=... DEVICE_A=... DEVICE_A_SECRET=... DEVICE_B=... REVOKED_DEVICE=... REVOKED_SECRET=... npm run mqtt:isolation */
+// trên broker thật. MQTT_TEST_URL=... DEVICE_A=... DEVICE_A_SECRET=... DEVICE_B=... REVOKED_DEVICE=... REVOKED_SECRET=... npm run mqtt:isolation
 import 'dotenv/config'
 import mqtt, { MqttClient } from 'mqtt'
 
@@ -16,7 +16,7 @@ const report = (check: string, pass: boolean) => {
   console.log(`${pass ? 'ĐẠT ' : 'LỖI '} ${check}`)
 }
 
-/** Bị từ chối hoặc hết giờ thì false */
+// Bị từ chối hoặc hết giờ thì false
 function connect(username: string, password: string): Promise<MqttClient | null> {
   return new Promise(resolve => {
     const client = mqtt.connect(URL, { username, password, reconnectPeriod: 0, connectTimeout: WAIT_MS })

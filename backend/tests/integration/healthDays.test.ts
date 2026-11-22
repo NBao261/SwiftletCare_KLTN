@@ -1,4 +1,3 @@
-/** EXPERT-FR-012/013, 022, BR-31, SM-18, ANALYTICS-FR-014 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose, { Types } from 'mongoose'
@@ -58,12 +57,12 @@ const call = (method: 'get' | 'post' | 'put' | 'patch', path: string, token: str
 const TODAY = vnDate(new Date())
 const YESTERDAY = addDays(TODAY, -1)
 const levels = { environment: 'NORMAL', air: 'NORMAL', flock: 'CLEAR', noise: 'SLIGHT' }
-/** Lý do có cấu trúc của ngày mẫu: CSV tiếng Việt in thành "…giảm 30 %…", tiếng Anh "…30 % below…" */
+// Lý do có cấu trúc của ngày mẫu: CSV tiếng Việt in thành "…giảm 30 %…", tiếng Anh "…30 % below…"
 const FLOCK_REASON = {
   code: 'FLOCK_DROP', source: 'flock', level: 'CLEAR', values: { return_rate: 70, drop_pct: 30, baseline_avg: 100, baseline_days: 3 },
 }
 
-/** Ngày đã đánh giá (ghi thẳng — phần tính đã có ở healthAssessment.test.ts) */
+// Ngày đã đánh giá (ghi thẳng: phần tính đã có ở healthAssessment.test.ts)
 const mkDay = (house: { _id: unknown; farm_id: unknown }, date: string, status: HealthStatus = 'ACTION', extra: object = {}) =>
   HouseHealthDay.create({
     house_id: house._id, farm_id: house.farm_id, date,
@@ -86,14 +85,14 @@ async function setup() {
   }
 }
 
-/** Chủ đồng sở hữu: người chấm thứ hai (BR-31: mỗi Farm Owner chấm riêng) */
+// Chủ đồng sở hữu là người chấm thứ hai, mỗi Farm Owner chấm riêng
 async function addCoOwner(farm: { _id: unknown }) {
   const coOwner = await User.create({ email: `co${new Types.ObjectId()}@t.vn`, password_hash: 'password123', full_name: 'Đồng chủ', role: 'FARM_OWNER' })
   await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: coOwner._id, role: 'FARM_OWNER' } } })
   return { coOwner, coOwnerToken: tokenFor(coOwner._id, 'FARM_OWNER') }
 }
 
-// BR-31 (Report 3 4.2.14): người chấm thấy đủ các trường này trước khi chấm
+// người chấm thấy đủ các trường này trước khi chấm
 const SHOWN = ['current_status', 'current_reasons', 'indicators', 'completeness', 'evidence', 'ratings']
 
 describe('TC-F22-01 — chưa chấm vẫn thấy trạng thái, chấm lưu kèm ảnh chụp (BR-31)', () => {
@@ -104,7 +103,7 @@ describe('TC-F22-01 — chưa chấm vẫn thấy trạng thái, chấm lưu kè
     // Chủ đồng sở hữu chấm trước: chủ trại chưa chấm vẫn thấy điểm đó
     expect((await call('post', `/health-reports/days/${day._id}/rating`, coOwnerToken, { rating: 'WATCH' })).status).toBe(201)
 
-    // Chuyên gia không phải người chấm: thấy đủ trạng thái ngay, my_rating_state null (BR-31)
+    // Chuyên gia không phải người chấm: thấy đủ trạng thái ngay, my_rating_state null
     const expertView = await call('get', `/health-reports/days/${day._id}`, expertToken)
     expect(expertView.body.data).toMatchObject({ my_rating_state: null, current_status: 'ACTION', current_reasons: [FLOCK_REASON] })
 
@@ -357,7 +356,7 @@ describe('mức chỉ số theo nhà (ANALYTICS-FR-012, BR-22)', () => {
     expect(ok.body.data.can_edit).toBe(true)
     expect(await AuditLog.countDocuments({ action: 'HEALTH_LEVELS_UPDATED' })).toBe(1)
 
-    // BR-22 (Report 3 4.2.15): Farm Owner sửa được, farm có chuyên gia thì mở mục duyệt
+    // Farm Owner sửa được, farm có chuyên gia thì mở mục duyệt
     expect((await call('put', `/farms/houses/${house._id}/health-levels`, ownerToken, { noise_clear: 5 })).status).toBe(200)
     expect(await ParameterReview.findOne({ target_id: house._id, group: 'health_levels' }).lean())
       .toMatchObject({ status: 'PENDING_REVIEW', old_values: { noise_clear: 4 }, new_values: { noise_clear: 5 } })
@@ -391,13 +390,13 @@ describe('độ khớp (ANALYTICS-FR-014, NFR-14)', () => {
     await mkDay(house, addDays(TODAY, -3), 'GOOD', { ratings: [rating(owner, 'FARM_OWNER', 'GOOD', 'GOOD'), rating(expert!, 'DOMAIN_EXPERT', 'GOOD', 'GOOD')] })
     await mkDay(house, addDays(TODAY, -2), 'WATCH', { ratings: [rating(owner, 'FARM_OWNER', 'WATCH', 'GOOD')] })
     await mkDay(house, addDays(TODAY, -1), 'INSUFFICIENT_DATA', { ratings: [rating(owner, 'FARM_OWNER', 'INSUFFICIENT_DATA', 'WATCH')] })
-    // Chủ trại chưa chấm ngày này; điểm chuyên gia chấm trước Report 3 4.2.0 không tính
+    // Chủ trại chưa chấm ngày này; điểm chuyên gia chấm trước không tính
     await mkDay(house, TODAY, 'ACTION', { ratings: [rating(expert!, 'DOMAIN_EXPERT', 'ACTION', 'ACTION')] })
 
     const res = await call('get', `/health-reports/evaluation?houseId=${house._id}&from=${addDays(TODAY, -6)}&to=${TODAY}`, ownerToken)
     expect(res.status).toBe(200)
     const data = res.body.data
-    // Điểm chuyên gia chấm trước Report 3 4.2.0 không tính (BR-31): chỉ còn 2 điểm của chủ trại
+    // Điểm chuyên gia chấm từ bản cũ không tính: chỉ còn 2 điểm của chủ trại
     expect(data.rated_count).toBe(2)
     expect(data.insufficient_data_count).toBe(1)
     expect(data.agreement.value).toBeCloseTo(1 / 2)
@@ -490,7 +489,7 @@ describe('ngày lệch (EXPERT-FR-022)', () => {
   })
 })
 
-/** Farm Technician là thành viên farm, được giao `house` nếu có (AUTH-FR-013) */
+// Farm Technician là thành viên farm, được giao `house` nếu có
 async function addTechnician(farm: { _id: unknown }, house?: { _id: unknown }) {
   const technician = await User.create({
     email: `ft${new Types.ObjectId()}@t.vn`, password_hash: 'password123', full_name: 'Thợ', role: 'FARM_TECHNICIAN',
@@ -526,7 +525,7 @@ describe('Farm Technician chấm ngày của nhà được giao (BR-31, EXPERT-F
     expect((await HouseHealthDay.findById(day._id).lean())!.ratings.map(r => r.role)).toEqual(['FARM_TECHNICIAN', 'FARM_OWNER'])
     // Pipeline update bỏ qua validator Mongoose: schema và $jsonSchema phải nhận vai thợ
     await expect((await HouseHealthDay.findById(day._id))!.validate()).resolves.toBeUndefined()
-    // Độ khớp tách theo vai người chấm (NFR-14)
+    // Độ khớp tách theo vai người chấm
     expect((await call('get', `/health-reports/evaluation?houseId=${house._id}&role=FARM_TECHNICIAN`, ownerToken)).status).toBe(200)
   })
 

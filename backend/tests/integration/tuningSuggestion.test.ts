@@ -1,4 +1,3 @@
-/** ANALYTICS-FR-010 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -50,7 +49,7 @@ async function seed() {
 }
 
 const STEP = 10 * 60_000
-/** Δh = 0.05·phun − 0.02·quạt − 2.2 mỗi 10 phút, thêm 30% bước ngẫu nhiên cho đủ đa dạng */
+// Δh = 0.05·phun − 0.02·quạt − 2.2 mỗi 10 phút, thêm 30% bước ngẫu nhiên cho đủ đa dạng
 async function writeDryHouse(nodeId: unknown, zoneId: unknown, days: number) {
   const n = Math.round((days * 86400_000) / STEP)
   const start = Math.floor(Date.now() / STEP) * STEP - (n - 1) * STEP
@@ -94,7 +93,7 @@ describe('GET /analytics/control/suggestion', () => {
     expect(model.r2).toBeGreaterThan(0.3)
     expect(suggestion).not.toBeNull()
     expect(predicted.inRangeSuggested).toBeGreaterThan(predicted.inRangeNow)
-    // chỉ đề xuất — hệ số của Zone không đổi
+    // chỉ đề xuất: hệ số của Zone không đổi
     expect((await Zone.findById(zone._id).lean())!.fuzzy_tuning).toEqual(DEFAULT_FUZZY_TUNING)
   })
 })

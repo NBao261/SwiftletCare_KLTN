@@ -41,7 +41,7 @@ export const setVerdict = asyncHandler(async (req: Request, res: Response) => {
     req.params.id, req.user, req.body.result as AlertVerdictResult, req.body.note as string | undefined,
     req.body.needs_visit === true,
   )
-  // SM-17: kết luận NOISE_ANOMALY đổi chỉ số tiếng ồn của ngày
+  // kết luận NOISE_ANOMALY đổi chỉ số tiếng ồn của ngày
   await recomputeForAlert(alert)
   res.json({ success: true, data: alert })
 })

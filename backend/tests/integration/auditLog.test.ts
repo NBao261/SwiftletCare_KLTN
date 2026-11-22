@@ -1,4 +1,3 @@
-/** AUTH-FR-007 */
 import crypto from 'crypto'
 import express from 'express'
 import mongoose from 'mongoose'
@@ -157,7 +156,7 @@ describe('DEVICE_REGISTERED audit', () => {
     const farm = await Farm.create({ name: 'Farm', address: 'HCMC', owner_id: admin._id })
     const house = await House.create({ farm_id: farm._id, name: 'House' })
     const zone = await Zone.create({ house_id: house._id, name: 'Zone' })
-    // Onboarding bắt buộc secretKey trên nhãn (FARM-FR-003) — cấp sẵn trong kho thiết bị
+    // Onboarding bắt buộc secretKey trên nhãn: cấp sẵn trong kho thiết bị
     await ProvisionedDevice.create([
       { device_id: 'ESP32-A', kind: 'SENSOR', secret_key_hash: hashKey(KEY) },
       { device_id: 'RPI-1', kind: 'CAMERA', secret_key_hash: hashKey(KEY) },

@@ -2,16 +2,16 @@ import { Schema, model, Document, Types } from 'mongoose'
 
 export type ProvisionedDeviceKind = 'SENSOR' | 'CAMERA'
 
-/** FARM-FR-003: chỉ giữ hash của secretKey; biết device_id (lộ trên topic) không đủ để chiếm thiết bị */
+// chỉ giữ hash của secretKey; biết device_id (lộ trên topic) không đủ để chiếm thiết bị
 export interface IProvisionedDevice extends Document {
   _id: Types.ObjectId
   device_id: string
   kind: ProvisionedDeviceKind
   secret_key_hash: string
-  /** Hash; flash cùng device ID, không in lên nhãn */
+  // Hash; flash cùng device ID, không in lên nhãn
   broker_secret_hash?: string
   claimed_at?: Date
-  /** Thu hồi thì không kích hoạt được nữa */
+  // Thu hồi thì không kích hoạt được nữa
   revoked_at?: Date
   revoke_reason?: string
   simulated: boolean

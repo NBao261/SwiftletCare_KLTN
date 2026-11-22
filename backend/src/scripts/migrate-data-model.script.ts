@@ -1,4 +1,4 @@
-/** Chạy TRƯỚC khi deploy: điền zones.farm_id, hash refresh token cũ, hết hạn lời mời của farm đã xoá, tạo index. Chạy lại an toàn */
+// Chạy TRƯỚC khi deploy: điền zones.farm_id, hash refresh token cũ, hết hạn lời mời của farm đã xoá, tạo index. Chạy lại an toàn
 import 'dotenv/config'
 import crypto from 'crypto'
 import mongoose from 'mongoose'

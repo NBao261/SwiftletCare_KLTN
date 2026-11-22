@@ -18,12 +18,12 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser, HealthStatus } from '@/types'
 
-/** BR-33: mỗi Zone một mục; trạng thái các ngày dựng lúc đọc như /health-reports/days */
+// mỗi Zone một mục; trạng thái các ngày dựng lúc đọc như /health-reports/days
 
 const KIND_LABEL: Record<HouseReportKind, string> = { DAILY: 'ngày', WEEKLY: 'tuần', MONTHLY: 'tháng', CUSTOM: 'theo yêu cầu' }
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)
 
-/** Tính cả 2 đầu */
+// Tính cả 2 đầu
 function datesBetween(from: string, to: string): string[] {
   const out: string[] = []
   for (let d = from; d <= to; d = addDays(d, 1)) out.push(d)
@@ -49,7 +49,7 @@ async function zoneAlertSummary(zoneId: unknown, start: Date, end: Date) {
   return { inferred_alerts: inferred, device_faults: deviceFaults }
 }
 
-/** null khi không có giờ nào */
+// null khi không có giờ nào
 async function periodWeather(farmId: unknown, start: Date, end: Date): Promise<HouseReportMetrics['weather']> {
   const rows = await WeatherObservation.find({ farm_id: farmId, hour: { $gte: start, $lt: end } }).lean()
   if (rows.length === 0) return null
@@ -67,7 +67,7 @@ async function periodWeather(farmId: unknown, start: Date, end: Date): Promise<H
   }
 }
 
-/** Kỳ đang diễn ra chỉ tính tới now. Không ghi */
+// Kỳ đang diễn ra chỉ tính tới now. Không ghi
 export async function buildHouseReport(
   house: { _id: unknown; farm_id: unknown }, from: string, to: string, now = new Date(),
 ): Promise<{ house_metrics: HouseReportMetrics; zone_sections: HouseReportZoneSection[] }> {
@@ -94,7 +94,7 @@ export async function buildHouseReport(
   return { house_metrics: { return_rate_trend, avg_return_rate: averageReturnRate(return_rate_trend), weather }, zone_sections }
 }
 
-/** Các ngày đủ phiên */
+// Các ngày đủ phiên
 function averageReturnRate(trend: HouseReportMetrics['return_rate_trend']): number | null {
   const complete = trend.filter(d => d.complete && d.return_rate !== null)
   return complete.length
@@ -102,7 +102,7 @@ function averageReturnRate(trend: HouseReportMetrics['return_rate_trend']): numb
     : null
 }
 
-/** Đã có thì tính lại và giữ kết luận. created = lần đầu */
+// Đã có thì tính lại và giữ kết luận. created = lần đầu
 export async function generateHouseReport(
   kind: HouseReportKind, houseId: string, from: string, to: string, now = new Date(),
 ): Promise<{ report: IHouseHealthReport; created: boolean } | null> {
@@ -138,7 +138,7 @@ async function notifyReportReady(report: IHouseHealthReport): Promise<void> {
   })))
 }
 
-/** Lỗi ở một nhà không bỏ qua nhà sau */
+// Lỗi ở một nhà không bỏ qua nhà sau
 async function generateForAllHouses(
   kind: HouseReportKind, from: string, to: string, now: Date, opts: { notify: boolean }, onlyHouseIds?: string[],
 ): Promise<number> {
@@ -157,7 +157,7 @@ async function generateForAllHouses(
   return created
 }
 
-/** Tính lại báo cáo hôm qua cho đủ ngày. Không gửi thông báo riêng */
+// Tính lại báo cáo hôm qua cho đủ ngày. Không gửi thông báo riêng
 export async function generateDailyReports(date = vnDate(new Date()), now = new Date(), onlyHouseIds?: string[]): Promise<number> {
   const created = await generateForAllHouses('DAILY', date, date, now, { notify: false }, onlyHouseIds)
   const yesterday = addDays(date, -1)
@@ -260,7 +260,7 @@ export async function getReport(id: string, user: CurrentUser, now = new Date())
   return presentHouseReport(report, user, now)
 }
 
-/** Đã có cùng khoảng thì tính lại và trả bản đó. Không gửi thông báo */
+// Đã có cùng khoảng thì tính lại và trả bản đó. Không gửi thông báo
 export async function createCustomReport(user: CurrentUser, input: { houseId: string; from: string; to: string }, now = new Date()) {
   await assertHouseAccess(input.houseId, user)
   if (input.from > input.to) throw BadRequestError('from phải không sau to')
@@ -271,7 +271,7 @@ export async function createCustomReport(user: CurrentUser, input: { houseId: st
   return { data: await presentHouseReport(result.report, user, now), created: result.created }
 }
 
-/** Chỉ tác giả sửa được kết luận của mình */
+// Chỉ tác giả sửa được kết luận của mình
 export async function setConclusion(id: string, user: CurrentUser, text: string, now = new Date()) {
   const report = await HouseHealthReport.findById(id)
   if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
@@ -284,7 +284,7 @@ export async function setConclusion(id: string, user: CurrentUser, text: string,
     ? { text, by: user._id as never, at: report.expert_conclusion!.at, edited_at: now }
     : { text, by: user._id as never, at: now }
   await report.save()
-  // Để lọc lịch sử chuyên gia theo nhà (EXPERT-FR-009)
+  // Để lọc lịch sử chuyên gia theo nhà
   await logAction(user._id, 'HEALTH_REPORT_CONCLUDED', 'house_health_report', String(report._id), {
     house_id: String(report.house_id), kind: report.kind, isEdit,
   }, { farmId: String(report.farm_id) })

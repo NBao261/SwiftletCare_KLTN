@@ -3,7 +3,7 @@ import type { FuzzyTuning } from '@/types'
 
 export type CoefficientProposalStatus = 'PROPOSED' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED'
 
-/** EXPERT-FR-011: giá trị chụp lúc gửi để chuyên gia duyệt đúng cái Farm Owner đã thấy */
+// giá trị chụp lúc gửi để chuyên gia duyệt đúng cái Farm Owner đã thấy
 export interface ICoefficientProposal extends Document {
   _id: Types.ObjectId
   zone_id: Types.ObjectId
@@ -13,7 +13,7 @@ export interface ICoefficientProposal extends Document {
   current_values: FuzzyTuning
   predicted?: Record<string, number>
   status: CoefficientProposalStatus
-  /** Bắt buộc khi REJECTED */
+  // Bắt buộc khi REJECTED
   note?: string
   decided_by?: Types.ObjectId
   decided_at?: Date

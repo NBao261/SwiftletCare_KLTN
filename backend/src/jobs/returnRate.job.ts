@@ -1,4 +1,4 @@
-/** 15 phút sau khung chiều của từng nhà (VISION-FR-019) */
+// 15 phút sau khung chiều của từng nhà
 import cron from 'node-cron'
 import { checkReturnRateDrops, claimDueHouses, computeHouseSessions } from '@/services/birdCount.service'
 import { assessAllHouses } from '@/services/healthAssessment.service'
@@ -6,10 +6,10 @@ import { generateDailyReports } from '@/services/houseHealthReport.service'
 import { evaluateRecommendationRules } from '@/services/recommendation.service'
 import logger from '@/utils/logger.util'
 
-/** ponytail: quét 5 phút nên trễ tối đa 5 phút */
+// ponytail: quét 5 phút nên trễ tối đa 5 phút
 const CRON_EXPRESSION = '0 */5 * * * *'
 
-/** Bước sau vẫn chạy khi bước trước lỗi */
+// Bước sau vẫn chạy khi bước trước lỗi
 async function step(name: string, run: () => Promise<number>): Promise<void> {
   try {
     const count = await run()

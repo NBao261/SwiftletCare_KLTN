@@ -1,4 +1,4 @@
-/** FARM-FR-002: còn thiết bị thì 409; xoá thì đóng cảnh báo, huỷ Work Order, lịch sử còn */
+// còn thiết bị thì 409; xoá thì đóng cảnh báo, huỷ Work Order, lịch sử còn
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

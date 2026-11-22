@@ -4,7 +4,7 @@ import logger from '@/utils/logger.util'
 
 export async function handleTelemetry(topicParts: string[], message: Record<string, unknown>): Promise<void> {
   try {
-    // ENV-FR-024: tin buffer nhận theo topic, không tin cờ trong payload
+    // tin buffer nhận theo topic, không tin cờ trong payload
     const buffered = topicParts[topicParts.length - 1] === 'buffered'
     await telemetryService.ingestTelemetry({ ...(message as unknown as TelemetryPayload), buffered })
   } catch (err) {

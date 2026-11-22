@@ -1,4 +1,3 @@
-/** AUTH-FR-005/010 */
 import express from 'express'
 import request from 'supertest'
 import mongoose from 'mongoose'
@@ -64,7 +63,7 @@ describe('createAccountFromInvitation (AUTH-FR-010)', () => {
     expect((await Invitation.findById(invitation._id))!.status).toBe('ACCEPTED')
     const member = (await Farm.findById(farm._id))!.members.find(m => String(m.user_id) === String(user._id))!
     expect(member.role).toBe('FARM_OWNER')
-    // Đăng nhập được bằng mật khẩu vừa đặt (AUTH-FR-002)
+    // Đăng nhập được bằng mật khẩu vừa đặt
     await expect(loginUser({ email: 'invitee@test.vn', password: 'password123' })).resolves.toMatchObject({ user: { role: 'FARM_OWNER' } })
   })
 

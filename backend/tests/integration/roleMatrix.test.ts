@@ -1,4 +1,4 @@
-/** Report 3 §2.4: ma trận quyền */
+// ma trận quyền
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -107,17 +107,17 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
       ['put',    `${track}/sync-status`,                      [tech, admin]],
       ['delete', track,                                       [tech, admin]],
       ['get',    `/analytics/control/suggestion?zoneId=${zone._id}`, [tech, admin]],
-      // ALERT-FR-009 — thợ được giao nhà xác nhận được (G-21); Administrator chỉ xem
+      // thợ được giao nhà xác nhận được; Administrator chỉ xem
       ['put',    `/alerts/${alert._id}/acknowledge`,          [admin]],
       ['post',   `/alerts/${alert._id}/onsite-check`,         [admin]],
-      // OPS-FR-001, 004, 009 — chỉ Farm Owner mở, duyệt, mở lại, huỷ, giao lại; thợ thực hiện; Administrator không thấy
+      // chỉ Farm Owner mở, duyệt, mở lại, huỷ, giao lại; thợ thực hiện; Administrator không thấy
       ['get',    '/work-orders',                              [admin]],
       ['post',   '/work-orders',                              [tech, admin]],
       ['get',    `/work-orders/metrics?farmId=${farm._id}`,   [tech, admin]],
-      // ANALYTICS-FR-015, 016 — tổng quan trại và so sánh nhà: Farm Owner, chuyên gia đọc (Report 3 §2.4)
+      // tổng quan trại và so sánh nhà: Farm Owner, chuyên gia đọc
       ['get',    `/farms/${farm._id}/overview`,               [tech, admin]],
       ['get',    `/farms/${farm._id}/comparison`,             [tech, admin]],
-      // ANALYTICS-FR-017 — điện năng là phân tích: Administrator không xem dữ liệu vận hành (FARM-FR-009)
+      // điện năng là phân tích: Administrator không xem dữ liệu vận hành
       ['get',    `/analytics/energy?houseId=${zone.house_id}`, [admin]],
       ['post',   `/work-orders/${node._id}/start`,            [admin]],
       ['post',   `/work-orders/${node._id}/approve`,          [tech, admin]],
@@ -125,7 +125,7 @@ describe('Report 3 §2.4 — route từ chối role không có quyền (403)', (
       ['post',   `/work-orders/${node._id}/cancel`,           [tech, admin]],
       ['post',   `/work-orders/${node._id}/reassign`,         [tech, admin]],
       ['put',    `/work-orders/${node._id}/checklist`,        [admin]],
-      // OPS-FR-005 — Farm Owner định nghĩa kế hoạch; thợ đọc; chuyên gia góp ý; Administrator không thấy
+      // Farm Owner định nghĩa kế hoạch; thợ đọc; chuyên gia góp ý; Administrator không thấy
       ['get',    '/maintenance/plans',                        [admin]],
       ['post',   '/maintenance/plans',                        [tech, admin]],
       ['put',    `/maintenance/plans/${node._id}`,            [tech, admin]],

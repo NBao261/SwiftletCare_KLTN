@@ -1,4 +1,4 @@
-/** ENV-FR-013c, ENV-FR-018 qua route thật; MinIO/MQTT/socket mock */
+// qua route thật; MinIO/MQTT/socket mock
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

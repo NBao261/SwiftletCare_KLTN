@@ -1,4 +1,4 @@
-/** PRIV-NFR-003: xử lý trong 30 ngày; còn 7 ngày thì nhắc Admin */
+// xử lý trong 30 ngày; còn 7 ngày thì nhắc Admin
 import cron from 'node-cron'
 import { remindPendingDeletionRequests } from '@/services/admin.service'
 import logger from '@/utils/logger.util'

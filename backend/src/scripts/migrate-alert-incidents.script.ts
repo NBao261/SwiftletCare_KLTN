@@ -1,4 +1,4 @@
-/** Mức theo loại (BR-15), rồi gộp cảnh báo mở trùng sự cố vào bản cũ nhất trước khi tạo unique index. Chạy lại an toàn */
+// Mức theo loại, rồi gộp cảnh báo mở trùng sự cố vào bản cũ nhất trước khi tạo unique index. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

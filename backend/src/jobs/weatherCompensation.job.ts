@@ -2,7 +2,7 @@ import cron from 'node-cron'
 import { runWeatherCompensation } from '@/services/weatherCompensation.service'
 import logger from '@/utils/logger.util'
 
-/** Không phụ thuộc weather.job ở phút 5 */
+// Không phụ thuộc weather.job ở phút 5
 const CRON_EXPRESSION = '0 10 * * * *'
 
 export function startWeatherCompensationJob(): void {

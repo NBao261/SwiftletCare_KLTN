@@ -1,6 +1,6 @@
 import type { HealthReason, HealthReasonCode, HealthSource } from '@/types'
 
-/** Client tự dịch; backend chỉ cần câu cho CSV */
+// Client tự dịch; backend chỉ cần câu cho CSV
 export type ReasonLang = 'vi' | 'en'
 export const REASON_LANGS: ReasonLang[] = ['vi', 'en']
 

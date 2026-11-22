@@ -1,4 +1,3 @@
-/** ALERT-FR-012, THREAT-FR-007, EXPERT-FR-003 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -68,7 +67,7 @@ async function seed() {
   const house = await House.create({ farm_id: farm._id, name: 'H' })
   const zone = await Zone.create({ house_id: house._id, name: 'Z' })
   const node = await SensorNode.create({ device_id: `ESP-${seq}`, zone_id: zone._id, status: 'ONLINE' })
-  // Mỗi sự cố chỉ một cảnh báo mở (ALERT-FR-008)
+  // Mỗi sự cố chỉ một cảnh báo mở
   const madeOfType = new Map<AlertType, number>()
   const mkAlert = (type: AlertType) => {
     const count = madeOfType.get(type) ?? 0
@@ -79,7 +78,7 @@ async function seed() {
   return { owner, expert, farm, zone, node, mkAlert, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
 }
 
-/** Trả số cảnh báo được gửi lại */
+// Trả số cảnh báo được gửi lại
 async function renotifiedAfterEscalation() {
   await Alert.collection.updateMany({}, { $set: { created_at: new Date(Date.now() - 20 * 60_000) } })
   return renotifyStaleAlerts()
@@ -158,14 +157,14 @@ describe('kiểm chứng của Domain Expert (EXPERT-FR-003)', () => {
     const { expert, mkAlert, t } = await seed()
     const alert = await mkAlert('NOISE_ANOMALY')
 
-    // Farm đã có chuyên gia: Farm Owner không kết luận thay (BR-22)
+    // Farm đã có chuyên gia: Farm Owner không kết luận thay
     await call('put', `/alerts/${alert._id}/verdict`, t.owner, { result: 'CONFIRMED' }).expect(403)
     await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'MAYBE' }).expect(422)
     const res = await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'REJECTED', note: 'Chim về tổ như mọi ngày' }).expect(200)
     expect(res.body.data.expert_verdict).toMatchObject({
       result: 'REJECTED', note: 'Chim về tổ như mọi ngày', role: 'DOMAIN_EXPERT', by: { _id: String(expert._id), full_name: 'E' },
     })
-    // SM-01 — bác bỏ đưa cảnh báo ra khỏi danh sách còn hiệu lực, nhớ trạng thái cũ
+    // bác bỏ đưa cảnh báo ra khỏi danh sách còn hiệu lực, nhớ trạng thái cũ
     expect(res.body.data).toMatchObject({ status: 'DISMISSED', previous_status: 'ACTIVE' })
 
     const back = await call('put', `/alerts/${alert._id}/verdict`, t.expert, { result: 'CONFIRMED' }).expect(200)
@@ -189,7 +188,7 @@ describe('kiểm chứng của Domain Expert (EXPERT-FR-003)', () => {
     const { expert, zone, mkAlert, t } = await seed()
     const [n1, n2, n3] = await Promise.all([mkAlert('NOISE_ANOMALY'), mkAlert('NOISE_ANOMALY'), mkAlert('NOISE_ANOMALY')])
     await mkAlert('FORECAST_BREACH')
-    await mkAlert('THRESHOLD_BREACH') // đo trực tiếp — không nằm trong hàng chờ kiểm chứng
+    await mkAlert('THRESHOLD_BREACH') // đo trực tiếp: không nằm trong hàng chờ kiểm chứng
     const verdict = (result: string) => ({ expert_verdict: { result, by: expert._id, at: new Date() } })
     await Alert.updateOne({ _id: n1._id }, verdict('CONFIRMED'))
     await Alert.updateOne({ _id: n2._id }, verdict('REJECTED'))

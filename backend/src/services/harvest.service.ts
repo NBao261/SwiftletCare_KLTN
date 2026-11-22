@@ -14,7 +14,7 @@ import type { CurrentUser, NestType } from '@/types'
 const ENV_SNAPSHOT_DAYS = 7
 const FLOCK_SNAPSHOT_DAYS = 30
 
-/** Zone chưa đủ dữ liệu thì trả insufficient_data */
+// Zone chưa đủ dữ liệu thì trả insufficient_data
 async function buildEnvSnapshot(zoneId: string, harvestDate: Date) {
   const from = new Date(harvestDate.getTime() - ENV_SNAPSHOT_DAYS * 86400_000)
 
@@ -53,7 +53,7 @@ async function buildEnvSnapshot(zoneId: string, harvestDate: Date) {
   }
 }
 
-/** Ước tính đàn = số ròng về buổi chiều lớn nhất, cộng mọi camera */
+// Ước tính đàn = số ròng về buổi chiều lớn nhất, cộng mọi camera
 async function buildFlockSnapshot(houseId: string, harvestDate: Date) {
   const from = new Date(harvestDate.getTime() - FLOCK_SNAPSHOT_DAYS * 86400_000)
   const days = await houseDailyCounts(houseId, { from: vnDate(from), to: vnDate(harvestDate) })
@@ -76,7 +76,7 @@ export interface CreateHarvestInput {
   product_images?: string[]
 }
 
-/** Farm Technician chỉ ở nhà được giao, lô chờ xác nhận (DRAFT); lô của Farm Owner xác nhận ngay */
+// Farm Technician chỉ ở nhà được giao, lô chờ xác nhận (DRAFT); lô của Farm Owner xác nhận ngay
 export async function createHarvest(user: CurrentUser, input: CreateHarvestInput): Promise<IHarvestBatch> {
   const { zone, house } = await assertZoneAccess(input.zone_id, user)
   const confirmed = user.role === 'FARM_OWNER'
@@ -106,7 +106,6 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
     status: confirmed ? 'CONFIRMED' : 'DRAFT',
     ...(confirmed && { confirmed_by: user._id, confirmed_at: new Date() }),
   })
-  // HARVEST-FR-007
   if (confirmed) await rebuildZoneCyclesSafely(zone._id)
   return batch
 }
@@ -131,7 +130,7 @@ export async function getHarvest(id: string, user: CurrentUser): Promise<IHarves
   return batch
 }
 
-/** Khoá ảnh không ra ngoài */
+// Khoá ảnh không ra ngoài
 export async function getHarvestView(id: string, user: CurrentUser) {
   await getHarvest(id, user)
   return presentHarvest((await HarvestBatch.findById(id).select('+photo_object_key'))!)
@@ -142,7 +141,7 @@ async function presentHarvest(batch: IHarvestBatch) {
   return { ...rest, photo_url: photoKey ? await presignedGetUrl(photoKey) : null }
 }
 
-/** Ai sửa được lô thì đặt được ảnh */
+// Ai sửa được lô thì đặt được ảnh
 export async function setHarvestPhoto(id: string, user: CurrentUser, file: UploadedPhoto | undefined) {
   if (!file) throw new AppError(422, 'VALIDATION_ERROR', 'Cần gửi một ảnh ở trường `photo`')
   await getHarvest(id, user).then(batch => assertTechnicianOwnDraft(batch, user))
@@ -164,7 +163,7 @@ function assertTechnicianOwnDraft(batch: IHarvestBatch, user: CurrentUser): void
   }
 }
 
-/** Snapshot chỉ chụp lúc tạo, không sửa qua đây */
+// Snapshot chỉ chụp lúc tạo, không sửa qua đây
 export async function updateHarvest(
   id: string, user: CurrentUser, updates: Partial<CreateHarvestInput>,
 ): Promise<IHarvestBatch> {
@@ -175,7 +174,6 @@ export async function updateHarvest(
   if (updates.nest_type !== undefined) batch.nest_type = updates.nest_type
   if (updates.product_images !== undefined) batch.product_images = updates.product_images
   await batch.save()
-  // Report 3 §6.13
   if (batch.status === 'CONFIRMED') await rebuildZoneCyclesSafely(batch.zone_id)
   return batch
 }
@@ -189,7 +187,7 @@ export async function removeHarvest(id: string, user: CurrentUser): Promise<void
   if (batch.status === 'CONFIRMED') await rebuildZoneCyclesSafely(batch.zone_id)
 }
 
-/** Đã xác nhận → 409 */
+// Đã xác nhận → 409
 export async function confirmHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
   const batch = await getHarvest(id, user)
   if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner xác nhận lô thu hoạch')

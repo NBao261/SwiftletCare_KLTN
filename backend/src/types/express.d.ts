@@ -1,4 +1,4 @@
-/** Phải là .d.ts và nằm trong tsconfig */
+// Phải là .d.ts và nằm trong tsconfig
 import type { Role, NotificationPreferences } from './domain.types'
 
 declare global {

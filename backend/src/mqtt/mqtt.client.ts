@@ -55,7 +55,7 @@ export function connectMQTT(): void {
   client.on('offline', () => logger.warn('MQTT offline – reconnecting...'))
 }
 
-/** Bỏ tin retained (tin cũ phát lại khi reconnect) và tin có deviceId khác topic */
+// Bỏ tin retained (tin cũ phát lại khi reconnect) và tin có deviceId khác topic
 export function routeDeviceMessage(topic: string, payload: Buffer, retained: boolean): void {
   if (retained) return
   const parsed = parseDeviceTopic(topic)
@@ -72,17 +72,17 @@ export function routeDeviceMessage(topic: string, payload: Buffer, retained: boo
   }
 }
 
-/** false khi chưa kết nối broker: API không được báo đã gửi lệnh */
+// false khi chưa kết nối broker: API không được báo đã gửi lệnh
 export function publishDeviceCommand(deviceId: string, type: DeviceCommandType, payload: object = {}): boolean {
   return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/cmd`, commandEnvelope(type, payload))
 }
 
-/** Retained: tin cuối phải là bản đầy đủ */
+// Retained: tin cuối phải là bản đầy đủ
 export function publishDeviceConfig(deviceId: string, config: object): boolean {
   return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/config`, config, true)
 }
 
-/** BR-38, retained: thiết bị tự bỏ khi qua expires_at */
+// retained: thiết bị tự bỏ khi qua expires_at
 export function publishDeviceCompensation(deviceId: string, compensation: object): boolean {
   return publishTo(`${DEVICE_TOPIC_ROOT}/${deviceId}/compensation`, compensation, true)
 }

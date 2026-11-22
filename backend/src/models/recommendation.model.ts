@@ -1,10 +1,10 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { DayValue, RuleAction, RuleComparison, RuleIndicator } from '@/utils/recommendationRule.util'
 
-/** SM-21: 7 ngày sau khi chấp nhận thì đo hiệu quả */
+// 7 ngày sau khi chấp nhận thì đo hiệu quả
 export type RecommendationStatus = 'OPEN' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'MEASURED'
 
-/** Sửa luật sau đó không đổi khuyến nghị đã mở */
+// Sửa luật sau đó không đổi khuyến nghị đã mở
 export interface RuleSnapshot {
   name: string
   indicator: RuleIndicator
@@ -19,22 +19,22 @@ export interface IRecommendation extends Document {
   farm_id: Types.ObjectId
   house_id: Types.ObjectId
   rule_id: Types.ObjectId
-  /** Bản cũ không có: đọc luật hiện tại */
+  // Bản cũ không có: đọc luật hiện tại
   rule_snapshot?: RuleSnapshot
   status: RecommendationStatus
-  /** Dữ liệu cho biểu đồ */
+  // Dữ liệu cho biểu đồ
   evidence: { indicator: string; comparison: string; value: number; window_days: number; days: DayValue[] }
   raised_at: Date
-  /** Giờ VN */
+  // Giờ VN
   raised_for: string
   decided_by?: Types.ObjectId
   decided_at?: Date
-  /** Mốc chờ BR-42 như decided_at */
+  // Mốc chờ như decided_at
   expired_at?: Date
   reject_reason?: string
   work_order_id?: Types.ObjectId
   review_ids: Types.ObjectId[]
-  /** null khi thiếu số */
+  // null khi thiếu số
   effect?: { before: number | null; after: number | null; change: number | null; improved: boolean | null; measured_at: Date }
 }
 
@@ -61,7 +61,7 @@ const recommendationSchema = new Schema<IRecommendation>(
   { versionKey: false },
 )
 
-// BR-42: mỗi luật và nhà chỉ một khuyến nghị mở
+// mỗi luật và nhà chỉ một khuyến nghị mở
 recommendationSchema.index({ rule_id: 1, house_id: 1 }, { unique: true, partialFilterExpression: { status: 'OPEN' } })
 recommendationSchema.index({ house_id: 1, status: 1 })
 recommendationSchema.index({ farm_id: 1, status: 1, raised_at: -1 })

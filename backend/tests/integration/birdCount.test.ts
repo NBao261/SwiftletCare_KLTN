@@ -1,4 +1,4 @@
-/** VISION-FR-006/008/009/011/012/017, THREAT-FR-010; mọi số đếm theo House */
+// mọi số đếm theo House
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -58,7 +58,7 @@ afterEach(async () => {
 })
 
 let seq = 0
-/** 1 Farm Owner, 1 nhà yến có 2 Zone (tầng), camera ở cửa ra vào của nhà */
+// 1 Farm Owner, 1 nhà yến có 2 Zone (tầng), camera ở cửa ra vào của nhà
 async function seed() {
   seq++
   const owner = await User.create({ email: `o${seq}@test.vn`, password_hash: 'password123', full_name: 'O', role: 'FARM_OWNER' })
@@ -71,7 +71,7 @@ async function seed() {
   return { owner, farm, house, zone, upperZone, camera, token }
 }
 
-/** 2026-10-15 theo giờ VN, `hh:mm` giờ VN → epoch ms */
+// 2026-10-15 theo giờ VN, `hh:mm` giờ VN → epoch ms
 const vnAt = (date: string, hhmm: string) => new Date(`${date}T${hhmm}:00+07:00`).getTime()
 const session = (deviceId: string, session_type: 'MORNING_EXIT' | 'EVENING_ENTRY', exit_count: number, entry_count: number, timestamp: number): BirdCountPayload =>
   ({ deviceId, session_type, exit_count, entry_count, confidence_avg: 0.8, timestamp })
@@ -154,7 +154,7 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
 })
 
 describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
-  /** 2 cửa: ròng ra 100, ròng về 85 → 85%. Tính riêng từng camera ra 54,5% và 122%, đều sai */
+  // 2 cửa: ròng ra 100, ròng về 85 → 85%. Tính riêng từng camera ra 54,5% và 122%, đều sai
   async function twoDoors() {
     const s = await seed()
     const doorB = await CameraNode.create({ device_id: `cam-${seq}-b`, house_id: s.house._id })
@@ -285,7 +285,7 @@ describe('số đếm 5 phút (VISION-FR-017)', () => {
 })
 
 describe('checkReturnRateDrops (VISION-FR-011)', () => {
-  /** Mỗi ngày: sáng ròng ra 100 con, chiều ròng về `rate` con → tỷ lệ `rate` % */
+  // Mỗi ngày: sáng ròng ra 100 con, chiều ròng về `rate` con → tỷ lệ `rate` %
   async function eveningRates(cameraId: unknown, houseId: unknown, rates: Array<[string, number]>) {
     await BirdCountRecord.create(rates.flatMap(([session_date, rate]) => [
       { camera_node_id: cameraId, house_id: houseId, session_type: 'MORNING_EXIT', session_date,
@@ -332,7 +332,7 @@ describe('checkReturnRateDrops (VISION-FR-011)', () => {
     })
     expect(await checkReturnRateDrops('2026-10-15')).toBe(0)
 
-    // Không có lần chuyển nào: đủ 3 ngày nền → cảnh báo như trước BR-46
+    // Không có lần chuyển nào: đủ 3 ngày nền → cảnh báo như trước
     await House.updateOne({ _id: house._id }, { stage: 'OCCUPIED', stage_history: [] })
     expect(await checkReturnRateDrops('2026-10-15')).toBe(1)
   })

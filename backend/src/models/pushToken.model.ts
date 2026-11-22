@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose'
 
 export type PushPlatform = 'android' | 'ios'
 
-/** ALERT-FR-002: token là dữ liệu cá nhân, select: false, không ghi log */
+// token là dữ liệu cá nhân, select: false, không ghi log
 export interface IPushToken extends Document {
   _id: Types.ObjectId
   user_id: Types.ObjectId

@@ -1,4 +1,3 @@
-/** OPS-FR-005…008, ALERT-FR-016, BR-40, BR-41, SM-20 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -269,7 +268,7 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
     await tech$.put(`${path}/checklist`, { item_index: 0, result: 'OK' }).expect(200)
     await tech$.put(`${path}/checklist`, { item_index: 1, result: 'OK', note: 'Đã thông béc' }).expect(200)
     const done = await tech$.post(`${path}/done`, { work_note: 'Thay màng bơm' }).expect(200)
-    expect(done.body.data.status).toBe('AWAITING_APPROVAL')  // không qua kiểm dữ liệu phục hồi (BR-41)
+    expect(done.body.data.status).toBe('AWAITING_APPROVAL')  // không qua kiểm dữ liệu phục hồi
 
     // Chỉ duyệt Work Order mới là ghi bảo trì
     const ownerAck = await owner$.put(`/alerts/${wo.alert_id}/acknowledge`, { note: 'đã thấy' }).expect(200)

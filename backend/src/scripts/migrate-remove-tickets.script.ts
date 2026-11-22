@@ -1,4 +1,4 @@
-/** Drop tickets, ticketmessages, maintenanceschedules; gỡ sla_hours, max_open_tickets_per_technician. Chạy lại an toàn */
+// Drop tickets, ticketmessages, maintenanceschedules; gỡ sla_hours, max_open_tickets_per_technician. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

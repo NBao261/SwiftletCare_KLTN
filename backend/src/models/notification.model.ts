@@ -1,10 +1,9 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
 export type NotificationRefKind = 'alert' | 'health_report' | 'health_day' | 'expert_decision' | 'parameter_review' | 'coefficient_proposal' | 'work_order' | 'device_action'
-  // BR-22
   | 'weather_rules' | 'config_profile' | 'recommendation_rule' | 'harvest_cycle'
 
-/** EXPERT-FR-006/007: lưu để người offline vẫn thấy; realtime qua socket */
+// lưu để người offline vẫn thấy; realtime qua socket
 export interface INotification extends Document {
   _id: Types.ObjectId
   user_id: Types.ObjectId
@@ -15,7 +14,7 @@ export interface INotification extends Document {
   created_at: Date
 }
 
-/** ponytail: 90 ngày chọn tay cho khớp telemetry, không có nguồn */
+// ponytail: 90 ngày chọn tay cho khớp telemetry, không có nguồn
 export const NOTIFICATION_TTL_SECONDS = 90 * 24 * 60 * 60
 
 const notificationSchema = new Schema<INotification>(

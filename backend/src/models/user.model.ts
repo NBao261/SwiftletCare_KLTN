@@ -4,10 +4,10 @@ import type { Role, NotificationPreferences } from '@/types'
 
 export const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DELETION_REQUESTED', 'DELETED'] as const
 export type UserStatus = typeof USER_STATUSES[number]
-/** AUTH-FR-012: vẫn đăng nhập được để huỷ yêu cầu */
+// vẫn đăng nhập được để huỷ yêu cầu
 export const SIGN_IN_STATUSES: UserStatus[] = ['ACTIVE', 'DELETION_REQUESTED']
 export const canSignIn = (user: { status?: UserStatus }): boolean => SIGN_IN_STATUSES.includes(user.status ?? 'ACTIVE')
-/** Loại thay vì nhận: tài khoản chưa có status (trước migrate:erd-fields) vẫn hợp lệ */
+// Loại thay vì nhận: tài khoản chưa có status (trước migrate:erd-fields) vẫn hợp lệ
 export const SIGN_IN_FILTER = { status: { $nin: ['LOCKED', 'DELETED'] as UserStatus[] } }
 
 export interface IUser extends Document {
@@ -19,25 +19,25 @@ export interface IUser extends Document {
   role: Role
   avatar_url?: string
   status: UserStatus
-  /** AUTH-FR-005c: authenticate chặn mọi route khác tới khi đổi */
+  // authenticate chặn mọi route khác tới khi đổi
   must_change_password?: boolean
-  /** Bắt buộc có lý do */
+  // Bắt buộc có lý do
   locked_at?: Date
   locked_reason?: string
   notification_preferences: NotificationPreferences
   telegram_chat_id?: string
-  /** 10 phút */
+  // 10 phút
   telegram_link_code_hash?: string
   telegram_link_expires_at?: Date
-  /** Lưu hash: lộ DB cũng không đặt lại được mật khẩu */
+  // Lưu hash: lộ DB cũng không đặt lại được mật khẩu
   password_reset_token_hash?: string
   password_reset_expires_at?: Date
   deletion_requested_at?: Date
-  /** Nhắc đúng 1 lần */
+  // Nhắc đúng 1 lần
   deletion_reminder_sent_at?: Date
-  /** Document giữ lại để không vỡ tham chiếu */
+  // Document giữ lại để không vỡ tham chiếu
   deleted_at?: Date
-  /** Lưu hash: lộ DB cũng không lấy được access token */
+  // Lưu hash: lộ DB cũng không lấy được access token
   refresh_tokens: Array<{ token_hash: string; expires: Date }>
   created_at: Date
   updated_at: Date
@@ -87,7 +87,7 @@ const userSchema = new Schema<IUser>(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 )
 
-// SEC-NFR-003: bcrypt cost=12
+// bcrypt cost=12
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password_hash')) return next()
   this.password_hash = await bcrypt.hash(this.password_hash, 12)

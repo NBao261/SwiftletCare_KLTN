@@ -8,7 +8,7 @@ import { autonomyBetween, inRangeSum, pct, switchedSum } from '@/services/analyt
 
 const round1 = (v: number | null | undefined) => (typeof v === 'number' ? Math.round(v * 10) / 10 : null)
 
-/** Không ghi */
+// Không ghi
 export async function buildZoneMetrics(zone: Pick<IZone, '_id' | 'house_id' | 'thresholds'>, from: Date, to: Date): Promise<ZoneHealthMetrics> {
   const zoneId = new Types.ObjectId(String(zone._id))
   const t = zone.thresholds

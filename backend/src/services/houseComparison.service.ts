@@ -12,7 +12,7 @@ import { assertFarmAccess } from '@/utils/farmAccess.util'
 import { vnDayPeriod } from '@/utils/period.util'
 import type { CurrentUser } from '@/types'
 
-/** BR-44: không có cột điểm tổng hay xếp hạng */
+// không có cột điểm tổng hay xếp hạng
 export const COMPARISON_SORT_KEYS = [
   'name', 'time_in_range_pct', 'good_days_pct', 'return_rate_avg', 'flock_trend_pct',
   'alerts_raised', 'alerts_open', 'mttr_min', 'energy_kwh', 'last_cycle_yield_g',
@@ -23,20 +23,20 @@ export interface ComparisonRow {
   house_id: string
   name: string
   time_in_range_pct: number | null
-  /** Trên số ngày đánh giá đủ dữ liệu */
+  // Trên số ngày đánh giá đủ dữ liệu
   good_days_pct: number | null
   return_rate_avg: number | null
-  /** So với kỳ liền trước cùng độ dài */
+  // So với kỳ liền trước cùng độ dài
   flock_trend_pct: number | null
   alerts_raised: number
   alerts_open: number
   mttr_min: number | null
-  /** null = không tải nào có dòng đo */
+  // null = không tải nào có dòng đo
   energy_kwh: number | null
   energy: { misting_kwh: number | null; ventilation_kwh: number | null }
-  /** Chu kỳ là của tầng: cộng chu kỳ đóng gần nhất ở mỗi tầng */
+  // Chu kỳ là của tầng: cộng chu kỳ đóng gần nhất ở mỗi tầng
   last_cycle_yield_g: number | null
-  /** Không dùng để sắp xếp */
+  // Không dùng để sắp xếp
   site_causes: Partial<Record<SiteCause, number>>
   simulated: boolean
 }
@@ -51,7 +51,7 @@ function flockChange(days: HouseDayCounts[], prevFrom: string, from: string): nu
   return before && during !== null ? round1(((during - before) / before) * 100) : null
 }
 
-/** Ô trống luôn xuống cuối */
+// Ô trống luôn xuống cuối
 export function sortComparison(rows: ComparisonRow[], key: ComparisonSortKey, order: 'asc' | 'desc'): ComparisonRow[] {
   const sign = order === 'asc' ? 1 : -1
   return [...rows].sort((a, b) => {
@@ -65,7 +65,7 @@ export function sortComparison(rows: ComparisonRow[], key: ComparisonSortKey, or
   })
 }
 
-/** null khi chưa có chu kỳ đóng */
+// null khi chưa có chu kỳ đóng
 export async function lastClosedCycleYield(houseId: unknown): Promise<number | null> {
   const latest = await HarvestCycle.aggregate<{ weight: number }>([
     // aggregate không tự đổi chuỗi sang ObjectId
@@ -110,7 +110,7 @@ async function houseRow(
   }
 }
 
-/** Không tính điểm tổng hay xếp hạng */
+// Không tính điểm tổng hay xếp hạng
 export async function getHouseComparison(
   user: CurrentUser, query: { farmId: string; from: Date; to: Date; sort?: ComparisonSortKey; order?: 'asc' | 'desc' },
 ) {

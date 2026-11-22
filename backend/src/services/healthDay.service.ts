@@ -15,25 +15,25 @@ import { assertFarmAccess, assertHouseAccess, listFarmHouseIds } from '@/utils/f
 import { formatReason, type ReasonLang } from '@/utils/healthReason.util'
 import type { CurrentUser, FarmMemberRole, HealthLevel, HealthRatingState, HealthRatingValue, HealthSource, Role } from '@/types'
 
-/** BR-31: người chấm xem trạng thái rồi mới chấm; điểm đã gửi không sửa được */
+// người chấm xem trạng thái rồi mới chấm; điểm đã gửi không sửa được
 
-/** Domain Expert không chấm: xem các ngày lệch (EXPERT-FR-022) */
+// Domain Expert không chấm: xem các ngày lệch
 export const ASSESSOR_ROLES: readonly Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN']
 export const isAssessor = (role: Role) => ASSESSOR_ROLES.includes(role)
 
-/** EXPERT-FR-005: báo cáo theo yêu cầu tới 31 ngày */
+// báo cáo theo yêu cầu tới 31 ngày
 export const MAX_DAY_RANGE = 31
-/** ponytail: tối đa 1 năm mỗi lần để chặn truy vấn quá lớn */
+// ponytail: tối đa 1 năm mỗi lần để chặn truy vấn quá lớn
 export const MAX_EVALUATION_RANGE = 366
 const SOURCES: HealthSource[] = ['environment', 'air', 'flock', 'noise']
 const LEVEL_TO_STATUS: Record<HealthLevel, OrderedStatus> = { NORMAL: 'GOOD', SLIGHT: 'WATCH', CLEAR: 'ACTION' }
 
 const ratingClosed = (message: string) => new AppError(409, 'RATING_CLOSED', message)
 
-/** Ngày D chấm được tới hết ngày D + 7 (giờ VN) */
+// Ngày D chấm được tới hết ngày D + 7 (giờ VN)
 export const ratingDeadline = (date: string) => vnDayStart(addDays(date, RATING_WINDOW_DAYS + 1))
 
-/** null khi người gọi không phải người chấm */
+// null khi người gọi không phải người chấm
 export function ratingState(day: Pick<IHouseHealthDay, 'date' | 'ratings'>, user: CurrentUser, now = new Date()): HealthRatingState | null {
   if (!isAssessor(user.role)) return null
   const mine = day.ratings.find(r => String(r.by) === user._id)
@@ -50,7 +50,7 @@ async function userNames(days: LeanDay[]): Promise<Map<string, string>> {
   return new Map(users.map(u => [String(u._id), u.full_name]))
 }
 
-/** Trả đủ kể cả khi người gọi chưa chấm (BR-31) */
+// Trả đủ kể cả khi người gọi chưa chấm
 function present(day: LeanDay, houseName: string, user: CurrentUser, names: Map<string, string>, now: Date) {
   return {
     _id: String(day._id),
@@ -81,7 +81,7 @@ function present(day: LeanDay, houseName: string, user: CurrentUser, names: Map<
 }
 export type PresentedDay = ReturnType<typeof present>
 
-/** houseId hoặc farmId */
+// houseId hoặc farmId
 async function resolveHouses(user: CurrentUser, params: { houseId?: string; farmId?: string }) {
   if (params.houseId) {
     const { house } = await assertHouseAccess(params.houseId, user)
@@ -93,7 +93,7 @@ async function resolveHouses(user: CurrentUser, params: { houseId?: string; farm
   throw BadRequestError('Cần houseId hoặc farmId')
 }
 
-/** Mặc định 7 ngày tới hôm nay */
+// Mặc định 7 ngày tới hôm nay
 function resolveRange(params: { from?: string; to?: string }, max: number, now: Date) {
   const to = params.to ?? vnDate(now)
   const from = params.from ?? addDays(to, -6)
@@ -112,14 +112,14 @@ async function findDays(user: CurrentUser, params: { houseId?: string; farmId?: 
   return { days, houseNames, from, to }
 }
 
-/** Quyền trên nhà đã kiểm ở nơi gọi */
+// Quyền trên nhà đã kiểm ở nơi gọi
 export async function presentHouseDays(user: CurrentUser, house: { _id: unknown; name: string }, from: string, to: string, now = new Date()) {
   const days = await HouseHealthDay.find({ house_id: house._id, date: { $gte: from, $lte: to } }).sort({ date: 1 }).lean<LeanDay[]>()
   const names = await userNames(days)
   return days.map(d => present(d, house.name, user, names, now))
 }
 
-/** myRatingState suy ra lúc đọc nên lọc sau khi dựng */
+// myRatingState suy ra lúc đọc nên lọc sau khi dựng
 export async function listHealthDays(
   user: CurrentUser,
   params: { houseId?: string; farmId?: string; from?: string; to?: string; myRatingState?: HealthRatingState },
@@ -143,12 +143,12 @@ export async function getHealthDay(dayId: string, user: CurrentUser, now = new D
   return present(day, house.name, user, await userNames([day]), now)
 }
 
-/** Chặn cả ở service, không chỉ route */
+// Chặn cả ở service, không chỉ route
 function assertAssessor(user: CurrentUser): void {
   if (!isAssessor(user.role)) throw ForbiddenError('Chỉ người chấm (Farm Owner, Farm Technician của nhà) mới chấm ngày này')
 }
 
-/** Lưu điểm cùng snapshot trong một lệnh ghi (pipeline update đọc current_*). Đã chấm hoặc quá hạn → 409 */
+// Lưu điểm cùng snapshot trong một lệnh ghi (pipeline update đọc current_*). Đã chấm hoặc quá hạn → 409
 async function submit(
   dayId: string, user: CurrentUser, input: { outcome: 'RATED' | 'SKIPPED'; rating?: HealthRatingValue; note?: string }, now: Date,
 ) {
@@ -192,7 +192,7 @@ export const rateHealthDay = (dayId: string, user: CurrentUser, rating: HealthRa
 export const skipHealthDay = (dayId: string, user: CurrentUser, now = new Date()) =>
   submit(dayId, user, { outcome: 'SKIPPED' }, now)
 
-/** SM-18: điểm không đổi */
+// điểm không đổi
 export async function addRatingNote(dayId: string, user: CurrentUser, note: string, now = new Date()) {
   assertAssessor(user)
   const { day, house } = await findDayForUser(dayId, user)
@@ -250,7 +250,7 @@ const csvCell = (v: unknown) => {
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
 }
 
-/** Không có id nội bộ */
+// Không có id nội bộ
 export async function healthDaysCsv(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, lang: ReasonLang = 'vi', now = new Date(),
 ): Promise<string> {
@@ -278,13 +278,13 @@ export async function healthDaysCsv(
   return String.fromCharCode(0xfeff) + lines.join('\r\n') + '\r\n'
 }
 
-/** INSUFFICIENT_DATA đếm riêng. Trả kèm từng cặp để mọi con số tính lại được */
+// INSUFFICIENT_DATA đếm riêng. Trả kèm từng cặp để mọi con số tính lại được
 export async function evaluateRatings(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string; role?: FarmMemberRole }, now = new Date(),
 ) {
   const { days, houseNames, from, to } = await findDays(user, params, MAX_EVALUATION_RANGE, now)
   const names = await userNames(days)
-  // Điểm Domain Expert chấm trước Report 3 4.2.0 không tính
+  // Điểm Domain Expert chấm từ bản cũ không tính
   const rated = days.flatMap(d => d.ratings
     .filter(r => r.outcome === 'RATED' && r.rating && isAssessor(r.role) && (!params.role || r.role === params.role))
     .map(r => ({ day: d, r })))
@@ -320,7 +320,7 @@ export async function evaluateRatings(
   }
 }
 
-/** Snapshot INSUFFICIENT_DATA không so được nên bỏ */
+// Snapshot INSUFFICIENT_DATA không so được nên bỏ
 export async function listDisagreements(
   user: CurrentUser, params: { houseId?: string; farmId?: string; from?: string; to?: string }, now = new Date(),
 ) {

@@ -6,7 +6,7 @@ import logger from '@/utils/logger.util'
 export async function handleBirdCount(_topicParts: string[], message: Record<string, unknown>): Promise<void> {
   try {
     const session = await ingestBirdCount(message as unknown as BirdCountPayload)
-    // SM-17: số đếm về trễ cho ngày đã đánh giá thì tính lại
+    // số đếm về trễ cho ngày đã đánh giá thì tính lại
     if (session) await recomputeHouseDayIfAssessed(session.houseId, session.sessionDate)
   } catch (err) {
     logger.error('birdCountHandler error', { err })

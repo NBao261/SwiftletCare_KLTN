@@ -41,9 +41,9 @@ const trustProxy = parseTrustProxy(process.env.TRUST_PROXY)
 if (trustProxy !== false) app.set('trust proxy', trustProxy)
 
 app.use(helmet())
-// credentials: cookie refreshToken cross-origin (AUTH-FR-003), nên không dùng được origin '*'
+// credentials: cookie refreshToken cross-origin, nên không dùng được origin '*'
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173', credentials: true }))
-// Đếm theo tài khoản; auth có limiter riêng (SEC-NFR-004)
+// Đếm theo tài khoản; auth có limiter riêng
 app.use(apiLimiter)
 
 // /internal/* mang khoá trong ?key=, không ghi vào log truy cập

@@ -6,18 +6,18 @@ export interface IBirdCountRecord extends Document {
   camera_node_id: Types.ObjectId
   house_id: Types.ObjectId
   timestamp: Date
-  /** Giờ VN: phiên sáng 05:30 VN là 22:30 UTC hôm trước */
+  // Giờ VN: phiên sáng 05:30 VN là 22:30 UTC hôm trước
   session_date: string
   session_type: SessionType
   entry_count: number
   exit_count: number
   confidence_avg?: number
-  /** 'HH:mm' giờ VN; chưa tính thì không có */
+  // 'HH:mm' giờ VN; chưa tính thì không có
   window_start?: string
   window_end?: string
-  /** VISION-FR-020: false khi EDGE_AI_DEGRADED mở trong khung */
+  // false khi EDGE_AI_DEGRADED mở trong khung
   complete?: boolean
-  /** Từ đây tin cộng dồn của nút AI không ghi đè nữa */
+  // Từ đây tin cộng dồn của nút AI không ghi đè nữa
   computed_at?: Date
 }
 

@@ -1,4 +1,4 @@
-/** ALERT-FR-017 leo thang, ALERT-FR-015 gửi lại; cùng nhịp tự đóng cảnh báo đã hết (ALERT-FR-008) */
+// Leo thang tới Farm Owner, gửi lại cảnh báo chưa xác nhận; cùng nhịp tự đóng cảnh báo đã hết
 import cron from 'node-cron'
 import {
   renotifyStaleAlerts, resolveNodeOfflineAlertsOfOnlineNodes, resolveStaleEpisodeAlerts, resolveStaleThresholdAlerts,
@@ -6,7 +6,7 @@ import {
 import { escalateUnacknowledgedAlerts } from '@/services/alertRouting.service'
 import logger from '@/utils/logger.util'
 
-/** NFR-15 a: <= 60 s sau hạn leo thang */
+// Farm Owner được báo không quá 60 s sau hạn leo thang
 const CRON_EXPRESSION = '0 * * * * *'
 
 export function startAlertEscalationJob(): void {

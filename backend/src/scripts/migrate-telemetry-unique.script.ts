@@ -1,4 +1,4 @@
-/** Dọn mẫu trùng node_id + timestamp rồi tạo unique index (ENV-FR-024). Chạy lại an toàn */
+// Dọn mẫu trùng node_id + timestamp rồi tạo unique index. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { Telemetry } from '@/models/telemetry.model'

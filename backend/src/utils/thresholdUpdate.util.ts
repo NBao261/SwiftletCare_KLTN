@@ -6,7 +6,7 @@ import type { IZone, IHouse } from '@/models/houseZone.model'
 import type { IFarm } from '@/models/farm.model'
 import type { Thresholds, CurrentUser } from '@/types'
 
-/** Không đặt trong thresholds.util: model import file đó, sẽ thành circular require */
+// Không đặt trong thresholds.util: model import file đó, sẽ thành circular require
 export const THRESHOLD_HISTORY_LIMIT = 100
 
 export async function applyThresholdUpdate(
@@ -14,7 +14,7 @@ export async function applyThresholdUpdate(
   user: CurrentUser,
   params: {
     thresholds: Thresholds
-    /** Chỉ field thực sự đổi, hoặc cả bộ khi reset */
+    // Chỉ field thực sự đổi, hoặc cả bộ khi reset
     historyValues: Partial<Thresholds>
     source: 'MANUAL' | 'RESET_TO_DEFAULT' | 'EXPERT_REVERT'
     logDetails?: Record<string, unknown>
@@ -46,13 +46,11 @@ export async function applyThresholdUpdate(
   // Mục duyệt tự báo Farm Owner và tự đóng
   if (params.source === 'EXPERT_REVERT') return zone
 
-  // EXPERT-FR-009
   await notifyExpertDecision(user, farm._id, auditId, {
     what: params.source === 'RESET_TO_DEFAULT' ? 'đặt lại ngưỡng về mặc định' : 'sửa ngưỡng',
     place: `Zone "${zone.name}"`,
     detail: formatChanges(oldValues, newValues),
   })
-  // EXPERT-FR-010
   await trackParameterChange(chain, user, 'thresholds', oldValues, newValues)
 
   return zone

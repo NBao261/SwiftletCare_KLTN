@@ -8,7 +8,7 @@ import type { CurrentUser } from '@/types'
 
 export type EnergyLoad = 'misting' | 'ventilation'
 
-/** A-9: tải DC demo trên board của nhóm; tải 220 V chưa hỗ trợ */
+// tải DC demo trên board của nhóm; tải 220 V chưa hỗ trợ
 export const LOAD_SUPPLY_VOLTAGE: Record<EnergyLoad, number> = { misting: 5, ventilation: 12 }
 
 const MS_PER_KWH = 3_600_000 * 1000
@@ -19,16 +19,16 @@ const LOADS: Array<{ load: EnergyLoad; on: string; current: string; baseline: 'm
 ]
 
 export interface EnergyMonth {
-  /** Giờ VN */
+  // Giờ VN
   month: string
-  /** null = tải không có dòng đo trong tháng */
+  // null = tải không có dòng đo trong tháng
   misting_kwh: number | null
   ventilation_kwh: number | null
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000
 
-/** Ước tính, không phải số công tơ. Lọc theo zone_id trên từng dòng telemetry: dời controller thì điện cũ vẫn thuộc nhà cũ */
+// Ước tính, không phải số công tơ. Lọc theo zone_id trên từng dòng telemetry: dời controller thì điện cũ vẫn thuộc nhà cũ
 export async function houseEnergyByMonth(houseId: unknown, from: Date, to: Date): Promise<EnergyMonth[]> {
   const zoneIds = await Zone.find({ house_id: houseId }).distinct('_id')
   if (zoneIds.length === 0) return []
@@ -93,7 +93,7 @@ export async function houseEnergyByMonth(houseId: unknown, from: Date, to: Date)
   return rows.map(row => ({ month: row._id, misting_kwh: kwh(row, 'misting'), ventilation_kwh: kwh(row, 'ventilation') }))
 }
 
-/** null khi tải không có dòng đo ở tháng nào */
+// null khi tải không có dòng đo ở tháng nào
 export function totalEnergy(months: EnergyMonth[]): { misting_kwh: number | null; ventilation_kwh: number | null; total_kwh: number | null } {
   const sum = (load: EnergyLoad) => {
     const values = months.map(m => m[`${load}_kwh`]).filter((v): v is number => v !== null)

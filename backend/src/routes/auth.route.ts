@@ -7,7 +7,7 @@ import { validate } from '@/middlewares/validate.middleware'
 
 const router = Router()
 
-// SEC-NFR-004: đứng trước validate để request sai định dạng cũng bị đếm
+// đứng trước validate để request sai định dạng cũng bị đếm
 
 router.post(
   '/login',
@@ -19,7 +19,7 @@ router.post(
 
 router.post('/refresh', refreshLimiter, authController.refresh)
 
-/** Dùng được khi giữ mật khẩu tạm; loginLimiter chống dò mật khẩu hiện tại */
+// Dùng được khi giữ mật khẩu tạm; loginLimiter chống dò mật khẩu hiện tại
 router.put(
   '/password',
   authenticate,

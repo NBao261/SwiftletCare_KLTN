@@ -1,4 +1,4 @@
-/** Gỡ assigned_regions, region và index region_1; in farm chưa có tọa độ (A-5). Chạy lại an toàn */
+// Gỡ assigned_regions, region và index region_1; in farm chưa có tọa độ. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

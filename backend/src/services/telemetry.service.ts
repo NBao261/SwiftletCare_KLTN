@@ -12,10 +12,10 @@ import logger from '@/utils/logger.util'
 import type { TelemetryPayload, CurrentUser } from '@/types'
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
-/** Thiếu hoặc null là cảm biến báo cũ hoặc lỗi */
+// Thiếu hoặc null là cảm biến báo cũ hoặc lỗi
 const SENSOR_FIELDS = ['temperature', 'humidity', 'light_lux', 'nh3_ppm', 'co2_ppm', 'sound_db'] as const
 
-/** Zone chưa có số đo thì null, không phải lỗi */
+// Zone chưa có số đo thì null, không phải lỗi
 export async function getLatest(zoneId: string, user: CurrentUser): Promise<ITelemetry | null> {
   await assertZoneAccess(zoneId, user)
   const latest = await Telemetry.findOne({ zone_id: zoneId }).sort({ timestamp: -1 }).lean()
@@ -46,10 +46,10 @@ export async function getHistory(zoneId: string, user: CurrentUser, query: Histo
   return { records: records as unknown as ITelemetry[], total, page, limit }
 }
 
-/** deviceId trong payload để tra zone_id, không dùng slug trong topic */
-/** Firmware gửi ~1s cho dashboard; DB chỉ cần 1 mẫu/khoảng này */
+// deviceId trong payload để tra zone_id, không dùng slug trong topic
+// Firmware gửi ~1s cho dashboard; DB chỉ cần 1 mẫu/khoảng này
 export const TELEMETRY_PERSIST_INTERVAL_MS = 10_000
-/** Cũ hơn mức này là dữ liệu buffer offline flush lại */
+// Cũ hơn mức này là dữ liệu buffer offline flush lại
 export const STALE_TELEMETRY_MS = 60_000
 const MAX_BACKDATE_MS = 7 * 24 * 60 * 60 * 1000
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000
@@ -57,12 +57,12 @@ const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000
 // ponytail: in-memory theo process; nhiều instance thì chuyển Redis
 const lastPersisted = new Map<string, { at: number; anomaly: boolean }>()
 
-/** Thiếu hoặc vô lý (chưa sync NTP) thì lấy giờ nhận */
+// Thiếu hoặc vô lý (chưa sync NTP) thì lấy giờ nhận
 function resolveSampleTime(ts: unknown, now: number): number {
   return isFiniteNumber(ts) && ts >= now - MAX_BACKDATE_MS && ts <= now + MAX_CLOCK_SKEW_MS ? ts : now
 }
 
-/** Test truyền now để chạy qua thời gian chờ BR-34 */
+// Test truyền now để chạy qua thời gian chờ
 export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now()): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong payload telemetry')
 

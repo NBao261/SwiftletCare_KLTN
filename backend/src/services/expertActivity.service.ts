@@ -15,7 +15,7 @@ export const EXPERT_DECISION_ACTIONS = [
 ] as const
 export type ExpertDecisionAction = typeof EXPERT_DECISION_ACTIONS[number]
 
-/** Ngưỡng và hệ số mờ của Farm Owner không vào lịch sử */
+// Ngưỡng và hệ số mờ của Farm Owner không vào lịch sử
 export const BR22_ACTIONS: ExpertDecisionAction[] = [
   'DETECTION_TUNING_UPDATED', 'BIRD_COUNT_TUNING_UPDATED', 'COUNTING_RING_UPDATED', 'ALERT_VERDICT_SET',
   'HEALTH_LEVELS_UPDATED', 'WEATHER_RULES_UPDATED', 'COUNTING_SCHEDULE_UPDATED',
@@ -23,7 +23,7 @@ export const BR22_ACTIONS: ExpertDecisionAction[] = [
 
 const VN_TIME = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
 
-/** Chỉ các khoá đổi giá trị */
+// Chỉ các khoá đổi giá trị
 export function formatChanges(before: object = {}, after: object = {}): string {
   const b = before as Record<string, unknown>
   const a = after as Record<string, unknown>
@@ -33,7 +33,7 @@ export function formatChanges(before: object = {}, after: object = {}): string {
     .join(', ')
 }
 
-/** Farm Owner làm thay thì không báo chính họ. Không throw */
+// Farm Owner làm thay thì không báo chính họ. Không throw
 export async function notifyExpertDecision(
   user: CurrentUser, farmId: unknown, auditId: string | undefined,
   message: { what: string; place: string; detail?: string },

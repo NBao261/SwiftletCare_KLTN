@@ -19,7 +19,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: result.records, meta: { total: result.total, page: result.page, limit: result.limit } })
 })
 
-/** 201 khi mới, 200 khi đã có cùng khoảng */
+// 201 khi mới, 200 khi đã có cùng khoảng
 export const createCustom = asyncHandler(async (req: Request, res: Response) => {
   const { data, created } = await houseHealthReportService.createCustomReport(req.user, {
     houseId: req.body.houseId as string, from: req.body.from as string, to: req.body.to as string,

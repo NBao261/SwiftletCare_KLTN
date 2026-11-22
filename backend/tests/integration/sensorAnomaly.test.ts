@@ -1,4 +1,3 @@
-/** ALERT-FR-010 */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { Alert } from '@/models/alert.model'

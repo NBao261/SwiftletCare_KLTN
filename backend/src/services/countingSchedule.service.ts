@@ -12,7 +12,7 @@ import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import type { CurrentUser } from '@/types'
 import logger from '@/utils/logger.util'
 
-/** Lịch mới áp từ ngày hôm sau */
+// Lịch mới áp từ ngày hôm sau
 
 const EMPTY: CountingSchedule = { profiles: [], temporary: [] }
 

@@ -1,4 +1,4 @@
-/** npm run db:script: sinh lại docs/database/init.mongo.js sau khi đổi model */
+// npm run db:script: sinh lại docs/database/init.mongo.js sau khi đổi model
 import { writeFileSync } from 'fs'
 import { resolve } from 'path'
 import { buildDbScript } from '@/utils/dbScript.util'

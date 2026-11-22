@@ -13,9 +13,9 @@ import { SEVERITY_LABEL } from '@/utils/displayLabel.util'
 import type { IAlert } from '@/models/alert.model'
 import type { CurrentUser, NotificationPreferences } from '@/types'
 
-/** Mỗi kênh ngoài ứng dụng (Telegram, push) tự bỏ qua khi chưa cấu hình */
+// Mỗi kênh ngoài ứng dụng (Telegram, push) tự bỏ qua khi chưa cấu hình
 
-/** ALERT-FR-006: không chặn CRITICAL */
+// không chặn CRITICAL
 function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): boolean {
   const quiet = prefs?.quiet_hours
   if (!quiet?.start || !quiet?.end) return false
@@ -32,7 +32,7 @@ function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): b
   return start <= end ? nowMin >= start && nowMin < end : nowMin >= start || nowMin < end
 }
 
-/** Domain Expert không nhận cảnh báo ngoài ứng dụng (EXPERT-FR-007); chọn người nhận ở alertRouting.service */
+// Domain Expert không nhận cảnh báo ngoài ứng dụng; chọn người nhận ở alertRouting.service
 export async function findRecipients(farmId: string) {
   const farm = await Farm.findById(farmId)
   if (!farm) return []
@@ -42,13 +42,13 @@ export async function findRecipients(farmId: string) {
   return User.find({ _id: { $in: userIds }, ...SIGN_IN_FILTER }).lean()
 }
 
-/** Chuyên gia bị khoá không nhận */
+// Chuyên gia bị khoá không nhận
 export async function findFarmExperts(farmId: unknown): Promise<string[]> {
   const farm = await Farm.findById(farmId).select('members')
   return farm ? activeExpertIds(farm) : []
 }
 
-/** Chỉ trong ứng dụng (EXPERT-FR-007). Không throw */
+// Chỉ trong ứng dụng. Không throw
 export async function notifyExpertsOfProposal(
   farmId: unknown, author: CurrentUser,
   message: { what: string; body: string; ref: { kind: NotificationRefKind; id: string }; prefix?: string },
@@ -64,7 +64,7 @@ export async function notifyExpertsOfProposal(
   }
 }
 
-/** Chỉ trong ứng dụng. Farm chưa có chuyên gia thì tới Farm Owner (BR-22) */
+// Chỉ trong ứng dụng. Farm chưa có chuyên gia thì tới Farm Owner
 async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   const farm = await Farm.findById(alert.farm_id).select('members')
   if (!farm) return
@@ -82,11 +82,9 @@ export { channelEnabled } from '@/utils/notificationChannels.util'
 
 export interface DispatchAlertOptions {
   awaitsVerdict?: boolean
-  /** ALERT-FR-015 */
   repeat?: boolean
-  /** BR-40 */
   escalation?: boolean
-  /** Không có = Farm Owner của farm */
+  // Không có = Farm Owner của farm
   recipientIds?: string[]
 }
 
@@ -117,7 +115,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     }
 
     const title = opts.escalation ? `Chưa ai xác nhận: ${alert.title}` : opts.repeat ? `Nhắc lại: ${alert.title}` : alert.title
-    // Không đưa mã enum ra tin nhắn (FE_Design §6.4)
+    // Không đưa mã enum ra tin nhắn (FE_Design)
     const body = `${SEVERITY_LABEL[alert.severity]} · ${title}\n${alert.message}`
 
     // Các kênh chạy song song; kênh lỗi ghi log riêng
@@ -138,7 +136,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
   })
 }
 
-/** ref để app mở đúng màn hình */
+// ref để app mở đúng màn hình
 async function sendPush(userId: string, title: string, body: string, ref?: UserNotification['ref'], urgent = false): Promise<void> {
   await sendPushToUser(userId, { title, body, data: ref ? { kind: ref.kind, id: ref.id } : undefined, urgent })
 }
@@ -155,12 +153,12 @@ export interface UserNotification {
 }
 
 export interface NotifyUserOptions {
-  /** Khi tài khoản vừa bị ẩn danh */
+  // Khi tài khoản vừa bị ẩn danh
   email?: string
   emailOnly?: boolean
 }
 
-/** Không áp giờ im lặng và luôn gửi thêm email. Không throw. Sau khi ẩn danh thì truyền email cũ */
+// Không áp giờ im lặng và luôn gửi thêm email. Không throw. Sau khi ẩn danh thì truyền email cũ
 export async function notifyUser(userId: string, message: UserNotification, opts: NotifyUserOptions = {}): Promise<void> {
   try {
     const user = await User.findById(userId).select('email status notification_preferences telegram_chat_id').lean()
@@ -203,7 +201,7 @@ export interface NotificationDto {
   created_at: Date
 }
 
-/** Lưu trước rồi mới phát socket: người offline vẫn thấy */
+// Lưu trước rồi mới phát socket: người offline vẫn thấy
 export async function createInAppNotification(userId: string, message: UserNotification): Promise<void> {
   const doc = await Notification.create({ user_id: userId, title: message.title, body: message.body, ref: message.ref })
   emitNotificationNew(userId, {
@@ -223,7 +221,7 @@ export async function listNotifications(user: CurrentUser, query: { page?: numbe
   return { records, total, page, limit, unreadCount }
 }
 
-/** Của người khác trả 404, không lộ id có thật */
+// Của người khác trả 404, không lộ id có thật
 export async function markNotificationRead(id: string, user: CurrentUser) {
   const doc = await Notification.findOneAndUpdate(
     { _id: id, user_id: user._id, read_at: null },

@@ -1,4 +1,4 @@
-/** Bổ sung SENSOR_FAULT (firmware chỉ bắt timeout). Dùng giá trị thô: lọc sẽ che mất lỗi cần bắt */
+// Bổ sung SENSOR_FAULT (firmware chỉ bắt timeout). Dùng giá trị thô: lọc sẽ che mất lỗi cần bắt
 export type AnomalyMetric = 'temperature' | 'humidity' | 'nh3_ppm' | 'co2_ppm'
 
 export interface AnomalySample {
@@ -19,17 +19,17 @@ const METRIC_LABEL: Record<AnomalyMetric, string> = {
   temperature: 'Nhiệt độ', humidity: 'Độ ẩm', nh3_ppm: 'NH3', co2_ppm: 'CO2',
 }
 
-/** Chỉ nhiệt/ẩm: NH3/CO2 số nguyên và lux ~0 đứng yên là bình thường */
+// Chỉ nhiệt/ẩm: NH3/CO2 số nguyên và lux ~0 đứng yên là bình thường
 export const STUCK_MIN_MS = 2 * 3600_000
 export const STUCK_MIN_SAMPLES = 360 // >= 1/2 số mẫu của 2 giờ: mất mạng một lúc vẫn xét được
 const STUCK_METRICS: AnomalyMetric[] = ['temperature', 'humidity']
 
-/** Nhà yến kín không đổi nhanh vậy */
+// Nhà yến kín không đổi nhanh vậy
 export const SPIKE_LIMITS: Record<AnomalyMetric, number> = { temperature: 2, humidity: 10, nh3_ppm: 20, co2_ppm: 500 }
 export const SPIKE_MAX_GAP_MS = 30_000
 export const SPIKE_MIN_JUMPS = 3 // 1 spike = 2 lần nhảy; 3 lần là lặp lại
 
-/** Chỉ xét được khi Zone có >= 2 thiết bị */
+// Chỉ xét được khi Zone có >= 2 thiết bị
 export const DRIFT_LIMITS: Partial<Record<AnomalyMetric, number>> = { temperature: 2, humidity: 8 }
 
 const finite = (v: number | null | undefined): v is number => typeof v === 'number' && Number.isFinite(v)

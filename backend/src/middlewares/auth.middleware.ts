@@ -6,7 +6,7 @@ import { AppError, UnauthorizedError, ForbiddenError } from '@/utils/appError.ut
 import logger from '@/utils/logger.util'
 import { setRequestActorRole } from '@/utils/requestContext.util'
 
-/** Route vẫn dùng được khi tài khoản đang giữ mật khẩu tạm (`must_change_password`) */
+// Route vẫn dùng được khi tài khoản đang giữ mật khẩu tạm (`must_change_password`)
 const PASSWORD_CHANGE_ALLOWED = new Set(['PUT /auth/password', 'POST /auth/logout'])
 
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -24,7 +24,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       next(UnauthorizedError('User not found or inactive'))
       return
     }
-    // AUTH-FR-005c: mật khẩu tạm chỉ được đổi mật khẩu/đăng xuất. 403 vì 401 làm client refresh vòng lặp
+    // mật khẩu tạm chỉ được đổi mật khẩu/đăng xuất. 403 vì 401 làm client refresh vòng lặp
     if (user.must_change_password && !PASSWORD_CHANGE_ALLOWED.has(`${req.method} ${req.baseUrl}${req.path}`)) {
       next(new AppError(403, 'PASSWORD_CHANGE_REQUIRED', 'Bạn cần đổi mật khẩu tạm trước khi tiếp tục'))
       return
@@ -37,7 +37,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       is_active:                true,
       notification_preferences: user.notification_preferences,
     }
-    // Audit log ghi vai trò (EXPERT-FR-009)
+    // Audit log ghi vai trò
     setRequestActorRole(user.role)
     next()
   } catch (err) {

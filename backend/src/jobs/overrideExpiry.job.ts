@@ -1,4 +1,4 @@
-/** Backend tự trả về AUTO, không chỉ tin firmware (xem expireManualOverrides) */
+// Backend tự trả về AUTO, không chỉ tin firmware (xem expireManualOverrides)
 import cron from 'node-cron'
 import { expireManualOverrides } from '@/services/device.service'
 import logger from '@/utils/logger.util'

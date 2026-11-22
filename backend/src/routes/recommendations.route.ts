@@ -5,7 +5,7 @@ import { MAX_NAME_LENGTH } from '@/services/farm.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
-/** Khoảng giá trị và trạng thái: service kiểm (400, 409) */
+// Khoảng giá trị và trạng thái: service kiểm (400, 409)
 const router = Router()
 router.use(authenticate)
 

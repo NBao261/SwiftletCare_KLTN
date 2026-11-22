@@ -1,4 +1,3 @@
-/** BR-08, BR-20, ENV-FR-016 (TC-F17-02) */
 import express from 'express'
 import mongoose from 'mongoose'
 import request from 'supertest'
@@ -58,7 +57,7 @@ describe('lịch sử can thiệp tay không được chặn lệnh điều khi�
     await request(app).post(`${relay}/relay`).set('Authorization', `Bearer ${token}`).send({ relayName: 'misting', state: true }).expect(200)
     const expiry = new Date(Date.now() - 45_000) // job chạy trễ 45 giây sau hạn
     await SensorNode.updateOne({ _id: node._id }, { 'relays.misting.override_expiry': expiry })
-    // Override bật trước hạn của nó (như thật) — ended_at không bao giờ sớm hơn started_at
+    // Override bật trước hạn của nó (như thật): ended_at không bao giờ sớm hơn started_at
     await RelayOverrideLog.updateOne({}, { started_at: new Date(expiry.getTime() - 60_000) })
 
     expect(await expireManualOverrides()).toBe(1)

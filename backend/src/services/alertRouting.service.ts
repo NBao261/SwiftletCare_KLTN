@@ -6,7 +6,6 @@ import { createInAppNotification, dispatchAlertNotification, findRecipients } fr
 import { activeHouseTechnicianIds, activeTechnicianOnDuty } from '@/utils/farmAccess.util'
 import logger from '@/utils/logger.util'
 
-/** BR-40 (5–60) */
 export const ESCALATION_MIN = 15
 export const ESCALATION_MS = ESCALATION_MIN * 60_000
 
@@ -19,7 +18,7 @@ export async function findAlertHouse(alert: Pick<IAlert, 'house_id' | 'zone_id'>
 
 const ownerIds = async (farmId: unknown): Promise<string[]> => (await findRecipients(String(farmId))).map(u => String(u._id))
 
-/** CRITICAL tới thợ và Farm Owner cùng lúc. Ghi routing để job leo thang biết Farm Owner đã được báo chưa */
+// CRITICAL tới thợ và Farm Owner cùng lúc. Ghi routing để job leo thang biết Farm Owner đã được báo chưa
 export async function routeNewAlert(alert: IAlert, opts: { awaitsVerdict: boolean }): Promise<string[]> {
   const house = await findAlertHouse(alert)
   const farm = house ? await Farm.findById(alert.farm_id).select('members') : null
@@ -35,7 +34,7 @@ export async function routeNewAlert(alert: IAlert, opts: { awaitsVerdict: boolea
   return recipientIds
 }
 
-/** Giữ technician_id ban đầu cho MTTA/MTTR (OPS-FR-009). Không tự lưu: nơi gọi lưu cùng lần đổi trạng thái */
+// Giữ technician_id ban đầu cho MTTA/MTTR. Không tự lưu: nơi gọi lưu cùng lần đổi trạng thái
 export async function rerouteReconfirmedAlert(alert: IAlert): Promise<string[]> {
   const house = await findAlertHouse(alert)
   const farm = house ? await Farm.findById(alert.farm_id).select('members') : null
@@ -46,7 +45,7 @@ export async function rerouteReconfirmedAlert(alert: IAlert): Promise<string[]> 
   return recipientIds
 }
 
-/** Farm Owner đã nhận bản leo thang thì không nhận "Nhắc lại". Cảnh báo trước G-21 gửi Farm Owner */
+// Farm Owner đã nhận bản leo thang thì không nhận "Nhắc lại". Cảnh báo cũ chưa có routing thì gửi Farm Owner
 export async function repeatRecipientIds(alert: IAlert): Promise<string[] | undefined> {
   if (!alert.routing) return undefined
   const technician = alert.routing.technician_id && await stillHouseTechnician(alert, String(alert.routing.technician_id))
@@ -62,7 +61,7 @@ async function stillHouseTechnician(alert: IAlert, technicianId: string): Promis
   return !!house && !!farm && (await activeHouseTechnicianIds(house, farm)).includes(technicianId)
 }
 
-/** Đánh dấu trước rồi mới gửi: 2 lượt job chồng nhau chỉ 1 lượt gửi */
+// Đánh dấu trước rồi mới gửi: 2 lượt job chồng nhau chỉ 1 lượt gửi
 export async function escalateUnacknowledgedAlerts(now = new Date()): Promise<number> {
   const due = await Alert.find({
     status: 'ACTIVE',
@@ -86,7 +85,7 @@ export async function escalateUnacknowledgedAlerts(now = new Date()): Promise<nu
   return sent
 }
 
-/** Gọi 1 lần lúc tạo cảnh báo */
+// Gọi 1 lần lúc tạo cảnh báo
 async function requestOnsiteCheck(alert: IAlert, technicianId: string): Promise<void> {
   const check = { technician_id: technicianId as never, requested_at: new Date() }
   alert.onsite_checks = [check]

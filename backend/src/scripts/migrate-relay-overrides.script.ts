@@ -1,10 +1,10 @@
-/** G-06: node MANUAL cũ chưa có relays được đặt từ log mở, rồi override_expiry, không có thì về AUTO. Chạy lại an toàn */
+// node MANUAL cũ chưa có relays được đặt từ log mở, rồi override_expiry, không có thì về AUTO. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'
 import logger from '@/utils/logger.util'
 
-/** Không import service để script không kéo MQTT theo */
+// Không import service để script không kéo MQTT theo
 const RELAYS = ['misting', 'speaker', 'ventilation'] as const
 
 interface OpenLog { relay: string; expires_at: Date; started_by: Types.ObjectId }

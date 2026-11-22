@@ -1,11 +1,11 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { FarmMemberRole, HealthLevel, HealthRatingValue, HealthReason, HealthReasonCode, HealthSource, HealthStatus } from '@/types'
 
-/** SM-17: current_* tính lại khi dữ liệu trễ; snapshot lúc chấm không đổi, NFR-14 chỉ dùng snapshot */
+// current_* tính lại khi dữ liệu trễ; snapshot lúc chấm không đổi, chỉ dùng snapshot
 export interface IHealthIndicator {
-  /** environment %, air giờ, flock % giảm, noise số đợt; null khi không tính được */
+  // environment %, air giờ, flock % giảm, noise số đợt; null khi không tính được
   value: number | null
-  /** null khi không đủ dữ liệu */
+  // null khi không đủ dữ liệu
   level: HealthLevel | null
   details?: Record<string, unknown>
 }
@@ -15,7 +15,7 @@ export type HealthIndicators = Record<HealthSource, IHealthIndicator>
 export interface IHealthSnapshot {
   status: HealthStatus
   reasons: HealthReason[]
-  /** Để tính báo động giả theo nguồn (ANALYTICS-FR-014) */
+  // Để tính báo động giả theo nguồn
   levels: Record<HealthSource, HealthLevel | null>
 }
 
@@ -35,7 +35,7 @@ export interface IDayWeather {
   temperature_max: number | null
   humidity_avg: number | null
   precipitation_mm: number | null
-  /** Tối đa 24 */
+  // Tối đa 24
   hours: number
 }
 
@@ -43,15 +43,14 @@ export interface IHouseHealthDay extends Document {
   _id: Types.ObjectId
   house_id: Types.ObjectId
   farm_id: Types.ObjectId
-  /** Giờ VN */
+  // Giờ VN
   date: string
   indicators: HealthIndicators
-  /** BR-28 */
   completeness: Record<HealthSource, boolean>
   current_status: HealthStatus
   current_reasons: HealthReason[]
   evidence: { noise_alert_ids: Types.ObjectId[] }
-  /** Lưu kèm vì bản ghi theo giờ chỉ giữ 90 ngày (BR-36) */
+  // Lưu kèm vì bản ghi theo giờ chỉ giữ 90 ngày
   weather: IDayWeather | null
   computed_at: Date
   ratings: IHealthRating[]

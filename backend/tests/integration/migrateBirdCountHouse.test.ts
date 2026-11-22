@@ -18,7 +18,7 @@ afterEach(async () => {
 const db = () => mongoose.connection.db!
 const id = () => new mongoose.Types.ObjectId()
 
-/** Dữ liệu theo schema cũ (trước v2.1.8), ghi thẳng vào collection */
+// Dữ liệu theo schema cũ, ghi thẳng vào collection
 async function legacy() {
   const [farm, house, otherHouse] = [id(), id(), id()]
   const [camZone, upperZone, mixedA, mixedB] = [id(), id(), id(), id()]

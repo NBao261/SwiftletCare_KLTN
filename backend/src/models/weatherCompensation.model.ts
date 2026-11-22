@@ -1,11 +1,11 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-/** NFR-16: chỉ ghi offset khác 0, giờ không có bản ghi là giờ không bù */
+// chỉ ghi offset khác 0, giờ không có bản ghi là giờ không bù
 export interface IWeatherCompensation extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   house_id: Types.ObjectId
-  /** BR-38: |offset| lớn nhất */
+  // Luật có |offset| lớn nhất
   rule_id: Types.ObjectId
   offset_pct: number
   sent_at: Date

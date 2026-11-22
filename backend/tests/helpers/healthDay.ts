@@ -10,7 +10,7 @@ import { User } from '@/models/user.model'
 import { WeatherObservation } from '@/models/weatherObservation.model'
 import { addDays, vnDayStart } from '@/services/healthAssessment.service'
 
-/** Dữ liệu cho test đánh giá sức khỏe ngày (ANALYTICS-FR-012) */
+// Dữ liệu cho test đánh giá sức khỏe ngày
 export const HEALTH_MODELS = [Alert, BirdCountBucket, BirdCountRecord, Farm, HouseHealthDay, House, Zone, Telemetry, User, WeatherObservation]
 
 export const SLOTS_PER_DAY = 8640
@@ -18,7 +18,7 @@ const SLOT_MS = 10_000
 const HOUR = 3600_000
 let seq = 0
 
-/** Ngưỡng mặc định: ẩm 75–95, nhiệt 26–31 */
+// Ngưỡng mặc định: ẩm 75–95, nhiệt 26–31
 export async function seedHouse(opts: { withExpert?: boolean } = {}) {
   seq++
   const owner = await User.create({ email: `ho${seq}@test.vn`, password_hash: 'password123', full_name: `Chủ ${seq}`, role: 'FARM_OWNER' })
@@ -33,7 +33,7 @@ export async function seedHouse(opts: { withExpert?: boolean } = {}) {
   return { owner, expert, farm, house, zone }
 }
 
-/** 8640 mẫu/ngày; humidityOutSlots mẫu đầu ẩm 60 %; sound: false bỏ độ ồn; slots < 8640 để thiếu dữ liệu */
+// 8640 mẫu/ngày; humidityOutSlots mẫu đầu ẩm 60 %; sound: false bỏ độ ồn; slots < 8640 để thiếu dữ liệu
 export async function seedTelemetry(zone: { _id: unknown }, date: string, opts: { humidityOutSlots?: number; sound?: boolean; slots?: number } = {}) {
   const start = vnDayStart(date).getTime()
   const docs = []
@@ -47,7 +47,7 @@ export async function seedTelemetry(zone: { _id: unknown }, date: string, opts: 
   await Telemetry.insertMany(docs, { lean: true })
 }
 
-/** rates[i] là tỷ lệ của ngày date − (rates.length − 1 − i); null = thiếu phiên chiều */
+// rates[i] là tỷ lệ của ngày date − (rates.length − 1 − i); null = thiếu phiên chiều
 export async function seedCounts(house: { _id: unknown }, date: string, rates: (number | null)[]) {
   const camera = new Types.ObjectId()
   const docs = []
@@ -64,7 +64,7 @@ export async function seedCounts(house: { _id: unknown }, date: string, rates: (
   return camera
 }
 
-/** 1 đợt NOISE_ANOMALY lúc 18:05–18:20 giờ VN của ngày */
+// 1 đợt NOISE_ANOMALY lúc 18:05–18:20 giờ VN của ngày
 export const seedNoise = (farm: { _id: unknown }, zone: { _id: unknown }, date: string, status = 'ACTIVE') => {
   const at = vnDayStart(date).getTime() + 18 * HOUR + 5 * 60_000
   return Alert.create({
@@ -73,13 +73,13 @@ export const seedNoise = (farm: { _id: unknown }, zone: { _id: unknown }, date: 
   })
 }
 
-/** Phiên chiều có số đếm 5 phút lúc 18:00 và mưa `mm` trong giờ 18:00–19:00 giờ VN */
+// Phiên chiều có số đếm 5 phút lúc 18:00 và mưa `mm` trong giờ 18:00–19:00 giờ VN
 export async function seedRainOverEvening(farm: { _id: unknown }, house: { _id: unknown }, date: string, mm: number) {
   const evening = vnDayStart(date).getTime() + 18 * HOUR
   await BirdCountBucket.create({ camera_node_id: new Types.ObjectId(), house_id: house._id, bucket_start: new Date(evening), entry_count: 10, exit_count: 0 })
   await WeatherObservation.create({ farm_id: farm._id, hour: new Date(evening), temperature: 27, humidity: 90, precipitation_mm: mm })
 }
 
-/** Có thời tiết khô cả ngày (để lý do không có "Không có dữ liệu thời tiết") */
+// Có thời tiết khô cả ngày (để lý do không có "Không có dữ liệu thời tiết")
 export const seedDryWeather = (farm: { _id: unknown }, date: string) =>
   WeatherObservation.create({ farm_id: farm._id, hour: vnDayStart(date), temperature: 26, humidity: 80, precipitation_mm: 0 })

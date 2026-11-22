@@ -12,7 +12,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.u
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/** Không có gợi ý thì 409 kèm lý do */
+// Không có gợi ý thì 409 kèm lý do
 async function currentSuggestion(user: CurrentUser, zoneId: string) {
   const result = await getTuningSuggestion(user, zoneId)
   if (!result.suggestion) throw ConflictError(result.reason ?? 'Hiện chưa có gợi ý hệ số cho khu vực này')
@@ -21,7 +21,7 @@ async function currentSuggestion(user: CurrentUser, zoneId: string) {
 
 const SUBMIT_ATTEMPTS = 3
 
-/** Chụp giá trị lúc gửi. Farm chưa có chuyên gia thì 409 (Farm Owner áp trực tiếp) */
+// Chụp giá trị lúc gửi. Farm chưa có chuyên gia thì 409 (Farm Owner áp trực tiếp)
 export async function submitProposal(user: CurrentUser, zoneId: string): Promise<ICoefficientProposal> {
   const { zone, farm } = await assertZoneAccess(zoneId, user)
   if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất cho chuyên gia')
@@ -72,7 +72,7 @@ async function loadPendingProposal(proposalId: string, user: CurrentUser) {
   return { proposal, chain }
 }
 
-/** Có điều kiện: 2 thao tác cùng lúc chỉ 1 cái thành công */
+// Có điều kiện: 2 thao tác cùng lúc chỉ 1 cái thành công
 async function closeProposal(proposal: ICoefficientProposal, user: CurrentUser, status: CoefficientProposalStatus, note?: string) {
   const closed = await CoefficientProposal.findOneAndUpdate(
     { _id: proposal._id, status: 'PROPOSED' },
@@ -112,7 +112,7 @@ export async function approveProposal(proposalId: string, user: CurrentUser): Pr
   return closed
 }
 
-/** Lý do bắt buộc (422 ở route) */
+// Lý do bắt buộc (422 ở route)
 export async function rejectProposal(proposalId: string, user: CurrentUser, note: string): Promise<ICoefficientProposal> {
   const { proposal, chain } = await loadPendingProposal(proposalId, user)
   const closed = await closeProposal(proposal, user, 'REJECTED', note.trim())
@@ -149,7 +149,7 @@ export async function listProposals(user: CurrentUser, query: ListProposalsQuery
   return { records, total, page, limit }
 }
 
-/** Farm có chuyên gia thì Farm Owner bị 403, phải gửi đề xuất */
+// Farm có chuyên gia thì Farm Owner bị 403, phải gửi đề xuất
 export async function applySuggestionDirect(user: CurrentUser, zoneId: string) {
   const chain = await assertZoneAccess(zoneId, user)
   await assertExpertDecision(chain.farm, user)

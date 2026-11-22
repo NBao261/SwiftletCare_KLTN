@@ -1,4 +1,4 @@
-/** ALERT-FR-002: Firebase Admin SDK giả lập, không gọi mạng thật */
+// Firebase Admin SDK giả lập, không gọi mạng thật
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -56,7 +56,7 @@ afterEach(async () => {
 })
 
 let seq = 0
-/** Không có giờ im lặng: không phụ thuộc giờ chạy test */
+// Không có giờ im lặng: không phụ thuộc giờ chạy test
 const ALWAYS_ON = { push: true, telegram: false, quiet_hours: { start: '00:00', end: '00:00' } }
 const mkUser = (over: Record<string, unknown> = {}) =>
   User.create({ email: `p${++seq}@test.vn`, password_hash: 'password123', full_name: 'P', role: 'FARM_OWNER', notification_preferences: ALWAYS_ON, ...over })

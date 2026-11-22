@@ -16,23 +16,23 @@ export interface MaintenanceRecord {
   next_due_at?: Date
 }
 
-/** Bộ đếm nằm ở sensornodes.relay_usage */
+// Bộ đếm nằm ở sensornodes.relay_usage
 export interface IMaintenancePlan extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   house_id: Types.ObjectId
   equipment: MaintenanceEquipment
   basis: MaintenanceBasis
-  /** Farm Owner nhập, hệ thống không tự đặt */
+  // Farm Owner nhập, hệ thống không tự đặt
   interval: number
   checklist_template: string[]
   state: MaintenancePlanState
-  /** CALENDAR: điểm đến hạn kế tiếp */
+  // CALENDAR: điểm đến hạn kế tiếp
   next_due_at?: Date
   due_since?: Date
   overdue_notified_at?: Date
   last_done_at?: Date
-  /** Khuyến cáo nhà sản xuất hoặc người nuôi */
+  // Khuyến cáo nhà sản xuất hoặc người nuôi
   source: string
   note?: string
   comments: Array<{ by: Types.ObjectId; text: string; at: Date }>

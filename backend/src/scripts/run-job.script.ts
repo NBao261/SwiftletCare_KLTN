@@ -1,4 +1,4 @@
-/** npm run job:run -- <health|recommendations|effects|expire|maintenance|relay-usage|recovery|escalation> [tham số] */
+// npm run job:run -- <health|recommendations|effects|expire|maintenance|relay-usage|recovery|escalation> [tham số]
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

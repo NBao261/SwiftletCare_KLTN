@@ -1,4 +1,4 @@
-/** Sửa TTL (Mongoose không sửa index đã có), syncIndexes, gộp alert mở trùng sự cố. Chạy lại an toàn */
+// Sửa TTL (Mongoose không sửa index đã có), syncIndexes, gộp alert mở trùng sự cố. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

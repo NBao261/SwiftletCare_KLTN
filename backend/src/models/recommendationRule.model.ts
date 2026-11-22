@@ -13,7 +13,7 @@ export interface IRecommendationRule extends Document {
   action: RuleAction
   source: string
   active: boolean
-  // BR-22: chờ chuyên gia bật
+  // chờ chuyên gia bật
   pending_approval: boolean
   created_at: Date
   updated_at: Date

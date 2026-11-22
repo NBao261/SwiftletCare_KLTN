@@ -1,4 +1,4 @@
-/** G-20: lô DRAFT do Farm Owner tạo → CONFIRMED; lô của Farm Technician giữ DRAFT. Chạy lại an toàn */
+// lô DRAFT do Farm Owner tạo → CONFIRMED; lô của Farm Technician giữ DRAFT. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

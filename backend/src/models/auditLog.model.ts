@@ -5,7 +5,7 @@ export interface IAuditLog extends Document {
   _id: Types.ObjectId
   actor_id?: Types.ObjectId // rỗng khi hệ thống tự ghi
   actor_role?: Role | 'TECHNICIAN'
-  /** Nguồn lịch sử hoạt động chuyên gia (EXPERT-FR-009) */
+  // Nguồn lịch sử hoạt động chuyên gia
   farm_id?: Types.ObjectId
   action: string
   target_type: string
@@ -15,7 +15,7 @@ export interface IAuditLog extends Document {
   after?: unknown
   source_ip?: string
   client?: string
-  /** Cùng một thao tác thì cùng mã */
+  // Cùng một thao tác thì cùng mã
   correlation_id?: string
   created_at: Date
 }
@@ -23,7 +23,7 @@ export interface IAuditLog extends Document {
 const auditLogSchema = new Schema<IAuditLog>(
   {
     actor_id:    { type: Schema.Types.ObjectId, ref: 'User' },
-    // TECHNICIAN chỉ còn ở dòng ghi trước G-20: lịch sử không sửa
+    // TECHNICIAN chỉ còn ở các dòng ghi cũ: lịch sử không sửa
     actor_role:  { type: String, enum: [...(['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'] satisfies Role[]), 'TECHNICIAN'] },
     farm_id:     { type: Schema.Types.ObjectId, ref: 'Farm' },
     action:      { type: String, required: true },

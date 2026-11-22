@@ -2,7 +2,7 @@ import type { ThresholdBreach } from '@/services/alert.service'
 
 export type BreachMetric = 'temperature' | 'humidity' | 'light_lux' | 'nh3_ppm' | 'co2_ppm'
 
-/** BR-34: nhiệt, ẩm chờ lâu hơn vì bộ mờ đang tác động (A-4) */
+// nhiệt, ẩm chờ lâu hơn vì bộ mờ đang tác động
 export const BREACH_DWELL_MS: Record<BreachMetric, number> = {
   temperature: 10 * 60_000,
   humidity:    10 * 60_000,
@@ -19,7 +19,7 @@ const lastSampleAt = new Map<string, number>()
 
 const DIRECTIONS: ThresholdBreach['direction'][] = ['above', 'below']
 
-/** Số đo trong ngưỡng cắt quãng chờ, thiếu số đo thì không cắt; im lặng quá maxGapMs thì đếm lại */
+// Số đo trong ngưỡng cắt quãng chờ, thiếu số đo thì không cắt; im lặng quá maxGapMs thì đếm lại
 export function trackBreachDwell(
   nodeId: string,
   readings: Partial<Record<BreachMetric, unknown>>,
@@ -55,7 +55,7 @@ export function trackBreachDwell(
   return { dwelled, ongoing: breaches }
 }
 
-/** Cho test */
+// Cho test
 export function clearBreachDwell(): void {
   startedAt.clear()
   lastSampleAt.clear()

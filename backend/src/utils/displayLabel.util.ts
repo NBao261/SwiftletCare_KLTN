@@ -1,6 +1,6 @@
 import type { AlertSeverity, Role } from '@/types/domain.types'
 
-// Cùng tên với web (FE_Design §6.2); không đưa mã enum ra người dùng
+// Cùng tên với web (FE_Design); không đưa mã enum ra người dùng
 
 export const ROLE_LABEL: Record<Role, string> = {
   ADMIN: 'Quản trị viên',

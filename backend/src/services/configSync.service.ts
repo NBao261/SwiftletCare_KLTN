@@ -5,7 +5,7 @@ import { createAlert, OPEN_STATUSES, resolveAlertsForNode } from '@/services/ale
 import { publishNodeConfig } from '@/services/deviceConfig.service'
 import { CONFIG_MISMATCH_HEARTBEATS } from '@/utils/configSync.util'
 
-/** Controller offline chờ config retained khi kết nối lại nên không gửi, không cảnh báo */
+// Controller offline chờ config retained khi kết nối lại nên không gửi, không cảnh báo
 export async function syncControllerConfigs(): Promise<{ republished: number; raised: number; resolved: number }> {
   const behind = await SensorNode.find({ ...IN_SERVICE, status: 'ONLINE', config_sync: { $in: ['PENDING', 'MISMATCH'] } })
     .select('device_id zone_id speaker_schedule audio config_sync applied_config_version').lean()

@@ -1,4 +1,4 @@
-/** SRS v1.23.0: xoá lời mời và user SALES_STAFF, drop collection SALES, member thiếu role → FARM_OWNER. Chạy lại an toàn */
+// xoá lời mời và user SALES_STAFF, drop collection SALES, member thiếu role → FARM_OWNER. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

@@ -1,4 +1,3 @@
-/** ENV-FR-019, ANALYTICS-FR-011 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { DetectionTuning, FuzzyTuning, Thresholds } from '@/types'
 
-/** EXPERT-FR-014, 015: nhóm bỏ trống thì áp không đổi nhóm đó, đã có thì đủ mọi khoá */
+// nhóm bỏ trống thì áp không đổi nhóm đó, đã có thì đủ mọi khoá
 export type ConfigProfileStatus = 'DRAFT' | 'APPROVED' | 'ARCHIVED'
 export const CONFIG_PROFILE_STAGES = ['ATTRACTING', 'OCCUPIED'] as const
 export type ConfigProfileStage = typeof CONFIG_PROFILE_STAGES[number]
@@ -16,7 +16,7 @@ export interface IConfigProfile extends Document {
   farm_id: Types.ObjectId
   author_id: Types.ObjectId
   name: string
-  /** null = mọi giai đoạn */
+  // null = mọi giai đoạn
   stage: ConfigProfileStage | null
   thresholds?: Thresholds
   fuzzy_tuning?: FuzzyTuning

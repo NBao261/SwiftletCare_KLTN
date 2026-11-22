@@ -65,7 +65,7 @@ async function placeOf(review: IParameterReview): Promise<string> {
 const detailOf = (review: IParameterReview, before: object, after: object) =>
   (review.group === 'counting_schedule' || review.group === 'counting_ring' ? undefined : formatChanges(before, after))
 
-/** Có điều kiện: 2 thao tác cùng lúc chỉ 1 cái thành công */
+// Có điều kiện: 2 thao tác cùng lúc chỉ 1 cái thành công
 async function closeReview(review: IParameterReview, user: CurrentUser, status: ParameterReviewStatus) {
   const closed = await ParameterReview.findOneAndUpdate(
     { _id: review._id, status: 'PENDING_REVIEW' },
@@ -97,7 +97,7 @@ export async function acceptReview(reviewId: string, user: CurrentUser) {
   return closed
 }
 
-/** Dùng chính hàm cập nhật của nhóm để thiết bị nhận lại cấu hình */
+// Dùng chính hàm cập nhật của nhóm để thiết bị nhận lại cấu hình
 async function applyOldValues(review: IParameterReview, user: CurrentUser, current: object) {
   const old = review.old_values
   const opts = { fromReview: true }
@@ -131,7 +131,7 @@ async function applyOldValues(review: IParameterReview, user: CurrentUser, curre
   }
 }
 
-/** Kiểm giá trị, đóng mục rồi mới áp: người khác vừa chấp nhận thì 409; áp lỗi thì mở lại */
+// Kiểm giá trị, đóng mục rồi mới áp: người khác vừa chấp nhận thì 409; áp lỗi thì mở lại
 export async function revertReview(reviewId: string, user: CurrentUser) {
   const { review, farm } = await loadPendingReview(reviewId, user)
   let current: object = review.new_values

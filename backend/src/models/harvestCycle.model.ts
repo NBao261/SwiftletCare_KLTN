@@ -10,22 +10,22 @@ export interface CycleComparison {
   weight_grams: number | null
   nest_count_change_pct: number | null
   weight_change_pct: number | null
-  /** null khi có số */
+  // null khi có số
   reason: string | null
 }
 
-/** BR-43: chỉ dựng lại từ các lô đã xác nhận (rebuildZoneCycles); chỉ kết luận do người viết */
+// chỉ dựng lại từ các lô đã xác nhận (rebuildZoneCycles); chỉ kết luận do người viết
 export interface IHarvestCycle extends Document {
   _id: Types.ObjectId
   farm_id: Types.ObjectId
   house_id: Types.ObjectId
   zone_id: Types.ObjectId
   start_date: Date
-  /** Không có khi OPEN */
+  // Không có khi OPEN
   end_date?: Date
   status: HarvestCycleStatus
   closing_harvest?: {
-    /** Giờ VN; các lô cùng ngày là một lần thu hoạch */
+    // Giờ VN; các lô cùng ngày là một lần thu hoạch
     date: string
     batch_ids: Types.ObjectId[]
     nest_count: number
@@ -36,7 +36,7 @@ export interface IHarvestCycle extends Document {
   completeness_pct?: number | null
   incomplete: boolean
   conclusion?: { text: string; recommendations?: string; by: Types.ObjectId; role: FarmMemberRole; at: Date }
-  /** BR-22: mỗi việc nhắc một lần */
+  // mỗi việc nhắc một lần
   expert_reminded_at?: Date
   created_at: Date
   updated_at: Date

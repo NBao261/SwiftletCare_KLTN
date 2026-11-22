@@ -8,9 +8,9 @@ import { houseDailyCounts, vnDate } from '@/services/birdCount.service'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
 import type { CurrentUser, HealthStatus, HouseStage } from '@/types'
 
-/** Report 3 §4.5: không gom toàn bộ lịch sử mỗi lần mở trang */
+// không gom toàn bộ lịch sử mỗi lần mở trang
 export const LATEST_RETURN_RATE_DAYS = 30
-/** DISMISSED là báo động giả */
+// DISMISSED là báo động giả
 const UNHANDLED_ALERT_STATUSES = ['ACTIVE', 'ACKNOWLEDGED']
 
 export type FarmHouse = Pick<IHouse, '_id' | 'name' | 'stage'>
@@ -31,7 +31,7 @@ export async function openAlertCounts(farmId: unknown, houses: FarmHouse[]): Pro
   return counts
 }
 
-/** Nhà trộn thiết bị thật và giả lập thì không tính là giả lập */
+// Nhà trộn thiết bị thật và giả lập thì không tính là giả lập
 export async function simulatedHouses(houses: FarmHouse[]): Promise<Set<string>> {
   const houseIds = houses.map(h => h._id)
   const zones = await Zone.find({ house_id: { $in: houseIds } }).select('house_id').lean()

@@ -1,4 +1,4 @@
-/** npm run device:broker-secret -- <deviceId>: in mật khẩu đúng 1 lần để flash */
+// npm run device:broker-secret -- <deviceId>: in mật khẩu đúng 1 lần để flash
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'

@@ -1,4 +1,4 @@
-/** Không nhận "true": Express sẽ tin mục X-Forwarded-For do client tự đặt */
+// Không nhận "true": Express sẽ tin mục X-Forwarded-For do client tự đặt
 export function parseTrustProxy(raw: string | undefined): boolean | number | string {
   const value = raw?.trim()
   if (!value || /^(false|0)$/i.test(value)) return false

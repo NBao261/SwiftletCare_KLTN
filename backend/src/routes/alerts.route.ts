@@ -40,7 +40,7 @@ router.put(
   validate,
   alertController.acknowledge,
 )
-// Farm Owner chỉ khi farm chưa có chuyên gia (BR-22, service kiểm)
+// Farm Owner chỉ khi farm chưa có chuyên gia (service kiểm)
 router.put(
   '/:id/verdict',
   requireRole('FARM_OWNER', 'DOMAIN_EXPERT'),
@@ -48,7 +48,7 @@ router.put(
     param('id').isMongoId(), body('result').isIn(['CONFIRMED', 'REJECTED']),
     body('note').optional().isString().trim().isLength({ max: 1000 }),
     body('note').if(body('result').equals('REJECTED')).isString().trim().notEmpty().withMessage('Bác bỏ cảnh báo phải ghi lý do'),
-    // BR-39: mở Work Order
+    // mở Work Order
     body('needs_visit').optional().isBoolean({ strict: true }),
   ],
   validate,

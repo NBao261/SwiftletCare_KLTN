@@ -1,4 +1,4 @@
-/** G-32: chỉ Farm Owner đặt giờ im lặng; gỡ của role khác, giữ kênh. Chạy lại an toàn */
+// chỉ Farm Owner đặt giờ im lặng; gỡ của role khác, giữ kênh. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

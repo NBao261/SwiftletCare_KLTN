@@ -8,27 +8,27 @@ type UsageRelay = 'misting' | 'ventilation'
 const RELAYS: UsageRelay[] = ['misting', 'ventilation']
 const RELAY_LABEL: Record<UsageRelay, string> = { misting: 'bơm phun sương', ventilation: 'quạt thông gió' }
 
-/** ponytail: số tham khảo chung, thay bằng datasheet thiết bị thật */
+// ponytail: số tham khảo chung, thay bằng datasheet thiết bị thật
 export const RELAY_SERVICE_LIMITS: Record<UsageRelay, { hours: number; switches: number }> = {
   misting:     { hours: 500,  switches: 100_000 },
   ventilation: { hours: 2000, switches: 100_000 },
 }
 
-/** Report 3 §4.5: quá chừng này là mất kết nối, không tính */
+// quá chừng này là mất kết nối, không tính
 export const MAX_GAP_MS = 30_000
-/** Telemetry giữ 90 ngày, đếm hết quá nặng */
+// Telemetry giữ 90 ngày, đếm hết quá nặng
 const FIRST_RUN_LOOKBACK_MS = 7 * 86400_000
-/** Còn thì lần sau đếm tiếp */
+// Còn thì lần sau đếm tiếp
 const BATCH = 50_000
 
 type Sample = { timestamp: Date; misting_on?: boolean; ventilation_on?: boolean; pump_current_a?: number; fan_current_a?: number }
 type Baseline = { misting_a?: number; ventilation_a?: number }
 
-/** BR-45: cùng mức BR-32 của firmware */
+// cùng mức của firmware
 export const RUNNING_MIN_RATIO = 0.5
 const CURRENT_KEY: Record<UsageRelay, 'pump_current_a' | 'fan_current_a'> = { misting: 'pump_current_a', ventilation: 'fan_current_a' }
 
-/** Thiếu mức đã học hoặc số đo dòng thì tính theo relay */
+// Thiếu mức đã học hoặc số đo dòng thì tính theo relay
 export function tallyRelayUsage(
   prev: { at?: Date; misting?: boolean; ventilation?: boolean },
   samples: Sample[],
@@ -57,7 +57,7 @@ export function tallyRelayUsage(
   return { onHours: { misting: onMs.misting / 3600_000, ventilation: onMs.ventilation / 3600_000 }, switches, last }
 }
 
-/** Không reset ở đây: xác nhận cảnh báo mới đếm lại (BR-16) */
+// Không reset ở đây: xác nhận cảnh báo mới đếm lại
 export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: number; alerts: number }> {
   const nodes = await SensorNode.find(IN_SERVICE).select('_id zone_id device_id relay_usage actuator_baseline')
   let alerts = 0
@@ -91,7 +91,7 @@ export async function accumulateRelayUsage(now = new Date()): Promise<{ nodes: n
   return { nodes: nodes.length, alerts }
 }
 
-/** Một cảnh báo mỗi controller; metadata.loads là các tải sẽ được đếm lại khi xác nhận */
+// Một cảnh báo mỗi controller; metadata.loads là các tải sẽ được đếm lại khi xác nhận
 async function raiseMaintenanceDueIfDue(node: ISensorNode): Promise<boolean> {
   const zone = await Zone.findById(node.zone_id).select('farm_id name house_id').lean()
   if (!zone) return false

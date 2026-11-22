@@ -1,4 +1,3 @@
-/** OPS-FR-009, BR-40, ALERT-FR-005 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

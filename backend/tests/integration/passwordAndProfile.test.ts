@@ -1,4 +1,4 @@
-/** Mật khẩu tạm và PUT /auth/password */
+// Mật khẩu tạm và PUT /auth/password
 import { randomBytes } from 'crypto'
 import express, { type RequestHandler } from 'express'
 import jwt from 'jsonwebtoken'

@@ -1,4 +1,3 @@
-/** FARM-FR-001, 002, AUTH-FR-005, 010 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

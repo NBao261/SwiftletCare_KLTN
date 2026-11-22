@@ -1,13 +1,13 @@
 import { AsyncLocalStorage } from 'async_hooks'
 import type { Role } from '@/types'
 
-/** Để logAction đọc IP, vai trò mà không phải truyền req qua service */
+// Để logAction đọc IP, vai trò mà không phải truyền req qua service
 interface RequestContext {
   ip?: string
   client?: string
-  /** Một mã cho mọi dòng audit của cùng request */
+  // Một mã cho mọi dòng audit của cùng request
   correlationId?: string
-  /** authenticate ghi vào */
+  // authenticate ghi vào
   actorRole?: Role
 }
 

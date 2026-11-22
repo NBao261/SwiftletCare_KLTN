@@ -6,13 +6,13 @@ import { paginate } from '@/utils/helpers.util'
 import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 import { BadRequestError, ConflictError, NotFoundError } from '@/utils/appError.util'
 
-/** Gõ tay từ nhãn dán */
+// Gõ tay từ nhãn dán
 export const hashKey = (key: string) => crypto.createHash('sha256').update(key.trim().toUpperCase()).digest('hex')
 
-/** Bỏ 0/O/1/I/L để đọc nhãn không nhầm */
+// Bỏ 0/O/1/I/L để đọc nhãn không nhầm
 const KEY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
-/** ~59 bit: đủ chống dò, vẫn gõ tay được */
+// ~59 bit: đủ chống dò, vẫn gõ tay được
 function generateSecretKey(): string {
   const chars = Array.from({ length: 12 }, () => KEY_ALPHABET[crypto.randomInt(KEY_ALPHABET.length)])
   return [0, 4, 8].map(i => chars.slice(i, i + 4).join('')).join('-')
@@ -20,10 +20,10 @@ function generateSecretKey(): string {
 
 export const hashBrokerSecret = (secret: string) => crypto.createHash('sha256').update(secret).digest()
 
-/** Chỉ máy đọc nên không cần bảng chữ dễ đọc */
+// Chỉ máy đọc nên không cần bảng chữ dễ đọc
 const generateBrokerSecret = () => crypto.randomBytes(24).toString('base64url')
 
-/** secretKey bản rõ chỉ trả về đúng 1 lần để in nhãn */
+// secretKey bản rõ chỉ trả về đúng 1 lần để in nhãn
 export async function createProvisionedDevice(
   adminId: string, input: { device_id: string; kind: ProvisionedDeviceKind; simulated?: boolean },
 ): Promise<{ device_id: string; kind: ProvisionedDeviceKind; simulated: boolean; secret_key: string; broker_secret: string }> {
@@ -49,7 +49,6 @@ export async function createProvisionedDevice(
   return { device_id: deviceId, kind: input.kind, simulated, secret_key: secretKey, broker_secret: brokerSecret }
 }
 
-/** Report 3 §6.16 */
 export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
 
 type StockRecord = Pick<IProvisionedDevice,
@@ -89,7 +88,7 @@ async function isInService(device: { device_id: string; kind: ProvisionedDeviceK
   return !!(await Model.exists({ device_id: device.device_id, ...IN_SERVICE }))
 }
 
-/** Không phân biệt "không có" với "sai key" để không lộ device_id có thật */
+// Không phân biệt "không có" với "sai key" để không lộ device_id có thật
 export async function verifyActivationKey(deviceId: string, kind: ProvisionedDeviceKind, secretKey: string): Promise<{ simulated: boolean }> {
   const device = await ProvisionedDevice.findOne({ device_id: deviceId, kind }).select('+secret_key_hash').lean()
   const expected = Buffer.from(device?.secret_key_hash ?? hashKey(''), 'hex')
@@ -111,7 +110,7 @@ async function findProvisionedOrThrow(id: string) {
   return device
 }
 
-/** Thiết bị đang chạy phải gỡ trước: thu hồi chỉ chặn kích hoạt, không tắt được thiết bị */
+// Thiết bị đang chạy phải gỡ trước: thu hồi chỉ chặn kích hoạt, không tắt được thiết bị
 export async function revokeProvisionedDevice(adminId: string, id: string, reason: string) {
   const device = await findProvisionedOrThrow(id)
   if (await isInService(device)) {
@@ -127,7 +126,7 @@ export async function revokeProvisionedDevice(adminId: string, id: string, reaso
   return device
 }
 
-/** Thiết bị không lưu secretKey nên đổi không làm lệch; đang dùng thì phải gỡ trước */
+// Thiết bị không lưu secretKey nên đổi không làm lệch; đang dùng thì phải gỡ trước
 export async function rotateProvisionedKey(adminId: string, id: string) {
   const device = await findProvisionedOrThrow(id)
   if (await isInService(device)) {
@@ -143,7 +142,7 @@ export async function rotateProvisionedKey(adminId: string, id: string) {
   return { device_id: device.device_id, kind: device.kind, secret_key: secretKey }
 }
 
-/** Đổi được cả khi đã kích hoạt nhưng phải flash lại. adminId rỗng khi chạy từ script */
+// Đổi được cả khi đã kích hoạt nhưng phải flash lại. adminId rỗng khi chạy từ script
 export async function rotateBrokerSecret(adminId: string | undefined, id: string) {
   const device = await findProvisionedOrThrow(id)
   const brokerSecret = generateBrokerSecret()
@@ -153,7 +152,7 @@ export async function rotateBrokerSecret(adminId: string | undefined, id: string
   return { device_id: device.device_id, kind: device.kind, broker_secret: brokerSecret }
 }
 
-/** Không phân biệt "không có" với "sai mật khẩu": so cả khi thiếu bản ghi, cùng thời gian */
+// Không phân biệt "không có" với "sai mật khẩu": so cả khi thiếu bản ghi, cùng thời gian
 export async function verifyBrokerCredential(deviceId: string, secret: string): Promise<boolean> {
   const device = await ProvisionedDevice.findOne({ device_id: deviceId }).select('+broker_secret_hash').lean()
   const expected = device?.broker_secret_hash ? Buffer.from(device.broker_secret_hash, 'hex') : hashBrokerSecret('')
@@ -161,7 +160,7 @@ export async function verifyBrokerCredential(deviceId: string, secret: string): 
   return matches && !!device?.broker_secret_hash && !device.revoked_at
 }
 
-/** Giữ mốc cũ nếu đã có */
+// Giữ mốc cũ nếu đã có
 export async function markClaimed(deviceId: string): Promise<void> {
   await ProvisionedDevice.updateOne({ device_id: deviceId, claimed_at: null }, { claimed_at: new Date() })
 }

@@ -1,4 +1,3 @@
-/** AUTH-FR-004, 005, 013, FARM-FR-001, 009, 013 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -62,7 +61,7 @@ const as = (token: string) => ({
   delete: (path: string) => request(app).delete(path).set('Authorization', `Bearer ${token}`),
 })
 
-/** 2 nhà H, H2; 1 Farm Technician chưa được gán nhà nào */
+// 2 nhà H, H2; 1 Farm Technician chưa được gán nhà nào
 async function seedFarmWithTechnician() {
   const a = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: a.farm._id }))!
@@ -166,7 +165,7 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
       `/telemetry/zones/${zone._id}/history`,
       `/analytics/env/summary?zoneId=${zone._id}`,
       `/analytics/bird-count/daily?houseId=${house._id}`,
-      // HARVEST-FR-001 — thợ xem lô của nhà được giao (lọc ở service, harvestConfirm.test.ts)
+      // thợ xem lô của nhà được giao (lọc ở service, harvestConfirm.test.ts)
       `/harvests?farmId=${farm._id}`,
     ]) {
       expect([path, (await tech$.get(path)).status]).toEqual([path, 200])
@@ -177,7 +176,7 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
       `/telemetry/zones/${other.zone._id}/latest`,
       `/farms/${other.farm._id}`,
       `/analytics/control/suggestion?zoneId=${zone._id}`,
-      // Báo cáo sức khỏe: thợ đọc ở nhà được giao (Report 3 §2.4), nhà khác 403
+      // Báo cáo sức khỏe: thợ đọc ở nhà được giao, nhà khác 403
       `/health-reports?houseId=${house2._id}`,
     ]) {
       expect([path, (await tech$.get(path)).status]).toEqual([path, 403])
@@ -242,7 +241,7 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
     await tech$.get(`/alerts/${lowReturn._id}`).expect(200)
     await tech$.get(`/alerts/${elsewhere._id}`).expect(403)
     await tech$.get(`/alerts/${otherHouse._id}`).expect(403)
-    // ALERT-FR-009 — thợ xác nhận cảnh báo của nhà được giao (G-21), nhà khác → 403
+    // thợ xác nhận cảnh báo của nhà được giao, nhà khác → 403
     await tech$.put(`/alerts/${elsewhere._id}/acknowledge`, { note: 'x' }).expect(403)
     const acked = await tech$.put(`/alerts/${offline._id}/acknowledge`, { note: 'x', cause: 'SENSOR' }).expect(200)
     expect(acked.body.data).toMatchObject({ status: 'ACKNOWLEDGED', acknowledged_by: String(tech.user._id), site_cause: { cause: 'SENSOR' } })

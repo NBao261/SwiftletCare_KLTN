@@ -1,4 +1,3 @@
-/** ANALYTICS-FR-012, BR-28…30 */
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
@@ -35,9 +34,9 @@ afterEach(async () => {
 
 const DATE = '2026-10-20'
 const NOW = vnDayStart(addDays(DATE, 1))
-/** 15 % mẫu độ ẩm ngoài ngưỡng → 85 % trong ngưỡng: SLIGHT (dưới 90, không dưới 75) */
+// 15 % mẫu độ ẩm ngoài ngưỡng → 85 % trong ngưỡng: SLIGHT (dưới 90, không dưới 75)
 const HUMIDITY_SLIGHT = Math.round(SLOTS_PER_DAY * 0.15)
-/** Nền 3 ngày 100 %, hôm nay 70 %: giảm 30 % ≥ return_rate_drop_pct 20 → CLEAR */
+// Nền 3 ngày 100 %, hôm nay 70 %: giảm 30 % ≥ return_rate_drop_pct 20 → CLEAR
 const FLOCK_CLEAR = [100, 100, 100, 70]
 
 async function scenario(opts: { humidityOutSlots?: number; sound?: boolean; rates?: (number | null)[]; weather?: boolean } = {}) {
@@ -48,7 +47,7 @@ async function scenario(opts: { humidityOutSlots?: number; sound?: boolean; rate
   return seeded
 }
 const compute = (houseId: unknown) => computeHouseDay(String(houseId), DATE, NOW)
-/** Lý do có cấu trúc (mã + số liệu), không phải câu — web, mobile tự dịch */
+// Lý do có cấu trúc (mã + số liệu), không phải câu: web, mobile tự dịch
 const reasonOf = (code: string, fields: object = {}) => expect.objectContaining({ code, ...fields })
 
 describe('TC-F20-01 — đồng thuận giữa các nguồn', () => {
@@ -173,7 +172,7 @@ describe('job đánh giá (SM-17)', () => {
     expect(await assessAllHouses(DATE, NOW)).toBe(0)
 
     expect(await HouseHealthDay.countDocuments({ house_id: house._id })).toBe(1)
-    // Chỉ người chấm được báo (BR-31, Report 3 4.2.0): chuyên gia không chấm nên không nhận
+    // Chỉ người chấm được báo: chuyên gia không chấm nên không nhận
     const recipients = (notifyUser as jest.Mock).mock.calls.map(c => c[0])
     expect(recipients).toEqual([String(owner._id)])
     expect(recipients).not.toContain(String(expert!._id))
@@ -203,9 +202,9 @@ describe('job đánh giá (SM-17)', () => {
 
   it('chuyên gia bác bỏ NOISE_ANOMALY của ngày đã đánh giá → tính lại ngay, ACTION thành WATCH', async () => {
     const { farm, house, zone } = await scenario({ rates: FLOCK_CLEAR })
-    // Đợt ồn của ngày cũ đã đóng: cùng sự cố chỉ một cảnh báo còn mở (ALERT-FR-008)
+    // Đợt ồn của ngày cũ đã đóng: cùng sự cố chỉ một cảnh báo còn mở
     const noise = await seedNoise(farm, zone, DATE, 'RESOLVED')
-    // Ngày trong 7 ngày gần nhất mới được tính lại — dùng ngày thật
+    // Ngày trong 7 ngày gần nhất mới được tính lại: dùng ngày thật
     const today = vnDate(new Date())
     await seedTelemetry(zone, today)
     await seedCounts(house, today, FLOCK_CLEAR)
@@ -237,7 +236,7 @@ describe('job đánh giá (SM-17)', () => {
 })
 
 describe('BR-46 — nhà giai đoạn dẫn dụ (FARM-FR-014)', () => {
-  /** Đổi giai đoạn lúc 08:00 giờ VN của ngày `date` */
+  // Đổi giai đoạn lúc 08:00 giờ VN của ngày `date`
   const stageAt = (stage: 'ATTRACTING' | 'OCCUPIED', date: string) =>
     ({ stage, changed_by: new mongoose.Types.ObjectId(), changed_by_role: 'FARM_OWNER', changed_at: new Date(vnDayStart(date).getTime() + 8 * 3600_000) })
 
@@ -255,7 +254,7 @@ describe('BR-46 — nhà giai đoạn dẫn dụ (FARM-FR-014)', () => {
     const { house } = await scenario({ rates: FLOCK_CLEAR, humidityOutSlots: HUMIDITY_SLIGHT })
     await House.updateOne({ _id: house._id }, { stage: 'ATTRACTING', stage_history: [stageAt('ATTRACTING', addDays(DATE, -10))] })
     const a = await compute(house._id)
-    // Không có ATTRACTING thì đàn chim CLEAR + độ ẩm SLIGHT là ACTION (TC-F20-01); ở đây chỉ còn độ ẩm SLIGHT
+    // Không có ATTRACTING thì đàn chim CLEAR + độ ẩm SLIGHT là ACTION; ở đây chỉ còn độ ẩm SLIGHT
     expect(a?.current_status).toBe('GOOD')
     expect(a?.current_reasons).not.toContainEqual(reasonOf('FLOCK_DROP'))
   })

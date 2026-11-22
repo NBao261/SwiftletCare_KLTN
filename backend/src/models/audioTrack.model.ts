@@ -1,13 +1,13 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-/** ENV-FR-013c: DFPlayer chỉ đọc thẻ SD; file MinIO chỉ để nghe lại, synced_to_sd do người dùng tự đánh dấu */
+// DFPlayer chỉ đọc thẻ SD; file MinIO chỉ để nghe lại, synced_to_sd do người dùng tự đánh dấu
 export interface IAudioTrack extends Document {
   _id: Types.ObjectId
   node_id: Types.ObjectId
-  /** 2 = 0002.mp3 trên thẻ SD */
+  // 2 = 0002.mp3 trên thẻ SD
   track_number: number
   display_name: string
-  /** URL nghe thử ký tạm lúc đọc */
+  // URL nghe thử ký tạm lúc đọc
   file_key: string
   file_size_bytes: number
   synced_to_sd: boolean

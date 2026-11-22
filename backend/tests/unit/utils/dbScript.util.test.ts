@@ -1,4 +1,4 @@
-/** docs/database/init.mongo.js phải giống hệt output của model */
+// docs/database/init.mongo.js phải giống hệt output của model
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { Schema } from 'mongoose'

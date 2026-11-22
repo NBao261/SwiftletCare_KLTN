@@ -1,4 +1,3 @@
-/** VISION-FR-008, 019, 020, BR-21 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -81,7 +80,7 @@ async function seed({ withExpert = true } = {}) {
   return { owner, farm, house, camA, camB, t, call }
 }
 
-/** Số 5 phút của một camera, `hhmm` giờ VN */
+// Số 5 phút của một camera, `hhmm` giờ VN
 const bucket = (camera: { _id: unknown; house_id: unknown }, date: string, hhmm: string, exit_count: number, entry_count: number) =>
   BirdCountBucket.create({ camera_node_id: camera._id, house_id: camera.house_id, bucket_start: vnAt(date, hhmm), exit_count, entry_count })
 
@@ -97,7 +96,7 @@ describe('VISION-FR-019 — counting schedule', () => {
     // Hôm nay vẫn theo lịch cũ (mặc định)
     expect(saved.body.data.today.source).toBe('DEFAULT')
     expect(await AuditLog.countDocuments({ action: 'COUNTING_SCHEDULE_UPDATED' })).toBe(1)
-    // Hai camera của nhà nhận khung mới ngay, ngày mai theo lịch vừa lưu (VISION-FR-019)
+    // Hai camera của nhà nhận khung mới ngay, ngày mai theo lịch vừa lưu
     expect(publishDeviceConfig).toHaveBeenCalledTimes(2)
     const sent = (publishDeviceConfig as jest.Mock).mock.calls[0][1]
     const expected = windowsOn(body, tomorrow)

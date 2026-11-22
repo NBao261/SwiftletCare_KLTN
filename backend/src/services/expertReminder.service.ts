@@ -24,7 +24,7 @@ function reminderMarks(model: typeof Alert | typeof HouseHealthReport | typeof H
   }
 }
 
-/** Gọi sau khi kiểm quyền để không lộ trạng thái của farm khác */
+// Gọi sau khi kiểm quyền để không lộ trạng thái của farm khác
 async function loadTask(kind: ReminderKind, id: string) {
   if (kind === 'alert') {
     const alert = await Alert.findById(id).select('farm_id house_id type expert_verdict').lean()
@@ -58,7 +58,7 @@ async function loadTask(kind: ReminderKind, id: string) {
   }
 }
 
-/** Không gửi được thông báo nào → 503 và trả lại lượt nhắc */
+// Không gửi được thông báo nào → 503 và trả lại lượt nhắc
 export async function remindExpert(user: CurrentUser, kind: ReminderKind, id: string) {
   const task = await loadTask(kind, id)
   const farm = await assertFarmAccess(String(task.farmId), user)

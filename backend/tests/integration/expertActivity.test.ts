@@ -1,4 +1,3 @@
-/** EXPERT-FR-009 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -87,7 +86,7 @@ async function seed({ withExpert = true } = {}) {
   return { owner, coOwner, expert, farm, house, zone, camera, alert, t, send }
 }
 
-/** Sáu quyết định của chuyên gia, mỗi loại một lần */
+// Sáu quyết định của chuyên gia, mỗi loại một lần
 async function expertDecides(s: Awaited<ReturnType<typeof seed>>, token = s.t.expert) {
   await s.send('put', `/farms/zones/${s.zone._id}/thresholds`, token, { humidity_min: 78 }).expect(200)
   await s.send('put', `/farms/zones/${s.zone._id}/fuzzy-tuning`, token, { fuzzy_humidity_band: 10 }).expect(200)

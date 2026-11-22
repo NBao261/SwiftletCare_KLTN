@@ -1,4 +1,4 @@
-/** AUTH-FR-005c, 009, 010: thư tài khoản qua SMTP; không log mã/mật khẩu; chưa cấu hình SMTP thì nghiệp vụ vẫn chạy */
+// thư tài khoản qua SMTP; không log mã/mật khẩu; chưa cấu hình SMTP thì nghiệp vụ vẫn chạy
 const sendMailMock = jest.fn()
 jest.mock('nodemailer', () => ({ __esModule: true, default: { createTransport: jest.fn(() => ({ sendMail: sendMailMock })) } }))
 
@@ -52,7 +52,7 @@ async function account(role: Role) {
   return { user, token: tokenFor(user._id, role) }
 }
 const sentMails = () => sendMailMock.mock.calls.map(([mail]) => mail as { to: string; subject: string; text: string })
-/** Toàn bộ nội dung đã ghi log, để kiểm không lộ mã hay mật khẩu */
+// Toàn bộ nội dung đã ghi log, để kiểm không lộ mã hay mật khẩu
 const loggedText = (spies: jest.SpyInstance[]) => JSON.stringify(spies.flatMap(s => s.mock.calls))
 
 describe('Administrator tạo Farm Owner (AUTH-FR-005c)', () => {

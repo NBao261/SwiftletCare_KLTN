@@ -1,4 +1,3 @@
-/** EXPERT-FR-006/007 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -46,7 +45,7 @@ afterEach(async () => {
 
 const tokenFor = (id: unknown, role: Role) =>
   jwt.sign({ sub: String(id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
-/** Thông báo gửi kiểu "bắn rồi quên" — chờ tới khi đủ số bản ghi */
+// Thông báo gửi kiểu "bắn rồi quên": chờ tới khi đủ số bản ghi
 async function waitForNotifications(count: number) {
   for (let i = 0; i < 50 && (await Notification.countDocuments()) < count; i++) await new Promise(r => setTimeout(r, 20))
 }
@@ -136,7 +135,7 @@ describe('EXPERT-FR-007 — cảnh báo suy luận chờ kiểm chứng', () => 
     const { expert, farm, zone } = await seed()
     await alertOf(farm._id, zone._id, 'MISTING_INEFFECTIVE')
     await new Promise(r => setTimeout(r, 100))
-    // Farm Owner nhận "Work Order mới" (BR-39), chuyên gia không nhận gì
+    // Farm Owner nhận "Work Order mới", chuyên gia không nhận gì
     expect(await Notification.countDocuments({ user_id: expert._id })).toBe(0)
   })
 })

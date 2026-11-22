@@ -5,7 +5,7 @@ import { authenticate } from '@/middlewares/auth.middleware'
 import { loginLimiter } from '@/middlewares/rateLimiter.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 
-/** Không mount dưới /farms: xem và từ chối là link công khai; chỉ /accept cần đăng nhập */
+// Không mount dưới /farms: xem và từ chối là link công khai; chỉ /accept cần đăng nhập
 const router = Router()
 
 router.get   ('/:token',         param('token').notEmpty(), validate, farmController.getInvitation)

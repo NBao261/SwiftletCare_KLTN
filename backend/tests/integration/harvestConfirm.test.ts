@@ -1,4 +1,3 @@
-/** HARVEST-FR-001, 005, 006 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -45,7 +44,7 @@ const as = (token: string) => ({
 
 const batch = (zoneId: unknown) => ({ zone_id: String(zoneId), harvest_date: '2026-11-01', nest_count: 120, weight_grams: 950, nest_type: 'RAW' })
 
-/** Farm có nhà H (zone của seedOwnerFarm) giao cho thợ A, nhà H2 không giao; thợ B cũng được giao H; 1 chuyên gia */
+// Farm có nhà H (zone của seedOwnerFarm) giao cho thợ A, nhà H2 không giao; thợ B cũng được giao H; 1 chuyên gia
 async function seed() {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!

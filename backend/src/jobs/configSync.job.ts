@@ -2,7 +2,7 @@ import cron from 'node-cron'
 import { syncControllerConfigs } from '@/services/configSync.service'
 import logger from '@/utils/logger.util'
 
-/** Heartbeat 30 s, nên 3 lần lệch (BR-24) thấy trong ~1,5 phút */
+// Heartbeat 30 s, nên 3 lần lệch thấy trong ~1,5 phút
 const CRON_EXPRESSION = '30 * * * * *'
 
 export function startConfigSyncJob(): void {

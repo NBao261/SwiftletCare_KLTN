@@ -1,13 +1,11 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import type { AlertType } from '@/types'
 
-/** SM-19 */
 export const WORK_ORDER_STATUSES = ['OPEN', 'IN_PROGRESS', 'VERIFYING', 'AWAITING_APPROVAL', 'CLOSED', 'CANCELLED'] as const
 export type WorkOrderStatus = typeof WORK_ORDER_STATUSES[number]
-/** BR-39: mỗi cảnh báo chỉ 1 Work Order ở các trạng thái này */
+// mỗi cảnh báo chỉ 1 Work Order ở các trạng thái này
 export const OPEN_WORK_ORDER_STATUSES: WorkOrderStatus[] = ['OPEN', 'IN_PROGRESS', 'VERIFYING', 'AWAITING_APPROVAL']
 
-/** ALERT-FR-018 */
 export const SITE_CAUSES = ['WATER', 'NOZZLE', 'PUMP', 'FAN', 'DOOR', 'SENSOR', 'SPEAKER', 'OTHER'] as const
 export type SiteCause = typeof SITE_CAUSES[number]
 
@@ -18,7 +16,7 @@ export interface ChecklistItem {
   item: string
   result?: 'OK' | 'DEFECT'
   note?: string
-  /** Khoá MinIO */
+  // Khoá MinIO
   photo?: string
   by?: Types.ObjectId
   at?: Date
@@ -28,7 +26,7 @@ export interface ChecklistItem {
 export interface WorkOrderHistoryEntry {
   from?: WorkOrderStatus
   to: WorkOrderStatus
-  /** Không có = hệ thống */
+  // Không có = hệ thống
   by?: Types.ObjectId
   note?: string
   at: Date
@@ -41,7 +39,7 @@ export interface IWorkOrder extends Document {
   zone_id?: Types.ObjectId
   node_id?: Types.ObjectId
   alert_id?: Types.ObjectId
-  /** So sự cố lặp lại (ALERT-FR-018) */
+  // So sự cố lặp lại
   alert_type?: AlertType
   kind: 'REPAIR' | 'PREVENTIVE'
   plan_id?: Types.ObjectId
@@ -51,17 +49,17 @@ export interface IWorkOrder extends Document {
   title: string
   description?: string
   status: WorkOrderStatus
-  /** Index unique một phần dùng cờ này vì partialFilterExpression trước MongoDB 6.0 không nhận $in */
+  // Index unique một phần dùng cờ này vì partialFilterExpression trước MongoDB 6.0 không nhận $in
   is_open: boolean
-  /** Không có = nhà không có thợ, Farm Owner xử lý */
+  // Không có = nhà không có thợ, Farm Owner xử lý
   assignee_id?: Types.ObjectId
-  /** Không có = hệ thống mở */
+  // Không có = hệ thống mở
   opened_by?: Types.ObjectId
   cause?: SiteCause
   work_note?: string
-  /** Khoá MinIO */
+  // Khoá MinIO
   photos: string[]
-  /** DONE: phòng ngừa đã duyệt (OPS-FR-008) */
+  // DONE: phòng ngừa đã duyệt
   result?: 'REPAIRED' | 'SELF_RECOVERED' | 'DONE'
   cancel_reason?: string
   opened_at: Date
@@ -69,9 +67,8 @@ export interface IWorkOrder extends Document {
   done_at?: Date
   verified_at?: Date
   closed_at?: Date
-  /** BR-40: quá hạn tính từ đây */
+  // quá hạn tính từ đây
   assigned_at?: Date
-  /** BR-40 */
   escalated_at?: Date
   history: WorkOrderHistoryEntry[]
 }
@@ -131,7 +128,7 @@ const workOrderSchema = new Schema<IWorkOrder>(
 workOrderSchema.index({ house_id: 1, status: 1 })
 workOrderSchema.index({ assignee_id: 1, status: 1 })
 workOrderSchema.index({ plan_id: 1, status: 1 }, { partialFilterExpression: { plan_id: { $exists: true } } })
-// BR-39: lần mở đồng thời thứ hai gặp lỗi trùng khoá
+// lần mở đồng thời thứ hai gặp lỗi trùng khoá
 workOrderSchema.index(
   { alert_id: 1 },
   { unique: true, partialFilterExpression: { is_open: true, alert_id: { $exists: true } } },

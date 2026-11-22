@@ -1,10 +1,10 @@
 import { BadRequestError } from '@/utils/appError.util'
 
-/** Giờ VN; end trước start là ca qua nửa đêm */
+// Giờ VN; end trước start là ca qua nửa đêm
 export interface RosterShift {
   technician_id: string
   role: 'PRIMARY' | 'BACKUP'
-  /** 0 = Chủ nhật, theo ngày bắt đầu ca */
+  // 0 = Chủ nhật, theo ngày bắt đầu ca
   weekdays: number[]
   start: string
   end: string
@@ -15,12 +15,12 @@ export const HHMM_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 
 const MINUTES_PER_DAY = 1440
 const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY
-/** Không đổi giờ mùa hè */
+// Không đổi giờ mùa hè
 const VN_OFFSET_MS = 7 * 3600_000
 
 const toMinutes = (hhmm: string): number => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
 
-/** Ca qua đêm thứ Bảy tách sang đầu tuần */
+// Ca qua đêm thứ Bảy tách sang đầu tuần
 function weeklyIntervals(shift: Pick<RosterShift, 'weekdays' | 'start' | 'end'>): Array<[number, number]> {
   const start = toMinutes(shift.start)
   const end = toMinutes(shift.end)
@@ -34,7 +34,7 @@ function weeklyIntervals(shift: Pick<RosterShift, 'weekdays' | 'start' | 'end'>)
   return intervals
 }
 
-/** Hai ca cùng vai không chồng giờ (một lúc chỉ 1 thợ chính trực) */
+// Hai ca cùng vai không chồng giờ (một lúc chỉ 1 thợ chính trực)
 export function assertValidRoster(shifts: RosterShift[]): void {
   for (const shift of shifts) {
     if (shift.start === shift.end) throw BadRequestError(`Ca ${shift.start}–${shift.end}: giờ bắt đầu phải khác giờ kết thúc`)
@@ -54,7 +54,7 @@ export function shiftCovers(shift: Pick<RosterShift, 'weekdays' | 'start' | 'end
   return weeklyIntervals(shift).some(([from, to]) => minute >= from && minute < to)
 }
 
-/** Ca chính, rồi ca phụ, ngoài ca thì thợ chính; null khi nhà chưa có thợ */
+// Ca chính, rồi ca phụ, ngoài ca thì thợ chính; null khi nhà chưa có thợ
 export function technicianOnDuty(
   house: {
     technicians?: Array<{ user_id: unknown; primary: boolean }>

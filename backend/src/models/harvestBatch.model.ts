@@ -21,7 +21,7 @@ export interface IHarvestBatch extends Document {
     avg_nh3_ppm?: number
     avg_co2_ppm?: number
     telemetry_range?: { from: Date; to: Date }
-    /** Zone chưa đủ 7 ngày telemetry */
+    // Zone chưa đủ 7 ngày telemetry
     insufficient_data?: boolean
   }
   flock_snapshot: {
@@ -29,7 +29,7 @@ export interface IHarvestBatch extends Document {
     estimated_population?: number
   }
   status: HarvestStatus
-  /** HARVEST-FR-006: lô của Farm Owner tự xác nhận lúc tạo */
+  // lô của Farm Owner tự xác nhận lúc tạo
   confirmed_by?: Types.ObjectId
   confirmed_at?: Date
   created_at: Date

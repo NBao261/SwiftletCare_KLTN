@@ -1,4 +1,4 @@
-/** npm run seed: Farm Owner, Farm Technician, Domain Expert, farm, nhà, zone, node_001 (khớp firmware Secrets.h) */
+// npm run seed: Farm Owner, Farm Technician, Domain Expert, farm, nhà, zone, node_001 (khớp firmware Secrets.h)
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'
@@ -10,7 +10,7 @@ import { ProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisio
 import { hashBrokerSecret, hashKey } from '@/services/provisionedDevice.service'
 import logger from '@/utils/logger.util'
 
-/** Bắt buộc khi tạo farm (A-5) */
+// Bắt buộc khi tạo farm
 const DEMO_COORDINATES = { lat: 10.7769, lng: 106.7009 }
 
 async function seed(): Promise<void> {
@@ -39,7 +39,7 @@ async function seed(): Promise<void> {
     })
     logger.info(`[seed] Created farm technician: ${technician.email} (password: Test1234!)`)
   } else if ((technician.role as string) === 'TECHNICIAN') {
-    // DB seed trước G-20
+    // DB seed từ bản cũ còn role TECHNICIAN
     technician.role = 'FARM_TECHNICIAN'
     await technician.save()
     logger.info(`[seed] Converted ${technician.email} to FARM_TECHNICIAN`)

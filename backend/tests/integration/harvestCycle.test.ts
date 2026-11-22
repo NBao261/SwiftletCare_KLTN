@@ -1,4 +1,3 @@
-/** HARVEST-FR-005…007, BR-43, ANALYTICS-FR-004, EXPERT-FR-020 */
 jest.mock('@/socket', () => ({ emitNotificationNew: jest.fn() }))
 
 import express from 'express'
@@ -43,7 +42,7 @@ const as = (token: string) => ({
   delete: (path: string) => request(app).delete(path).set('Authorization', `Bearer ${token}`),
 })
 
-/** Nhà H giao cho thợ, nhà H2 không giao; chuyên gia tuỳ chọn */
+// Nhà H giao cho thợ, nhà H2 không giao; chuyên gia tuỳ chọn
 async function seed(opts: { registeredAt?: string; withExpert?: boolean } = {}) {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!

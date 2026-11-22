@@ -1,4 +1,3 @@
-/** ENV-FR-027, BR-24, SM-12 (TC-ST-28…32) */
 import { Alert } from '@/models/alert.model'
 import { SensorNode } from '@/models/device.model'
 import { Zone } from '@/models/houseZone.model'

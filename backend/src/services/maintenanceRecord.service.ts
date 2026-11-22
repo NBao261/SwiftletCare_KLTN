@@ -2,7 +2,6 @@ import { SensorNode } from '@/models/device.model'
 import { MaintenancePlan, type MaintenanceEquipment } from '@/models/maintenancePlan.model'
 import { WorkOrder, type IWorkOrder } from '@/models/workOrder.model'
 
-/** BR-45 */
 export const LOAD_OF_EQUIPMENT: Partial<Record<MaintenanceEquipment, 'misting' | 'ventilation'>> = {
   PUMP: 'misting',
   FAN: 'ventilation',
@@ -10,7 +9,7 @@ export const LOAD_OF_EQUIPMENT: Partial<Record<MaintenanceEquipment, 'misting' |
 
 const DAY_MS = 86_400_000
 
-/** Tách khỏi maintenance.service để workOrder.service gọi được mà không import vòng */
+// Tách khỏi maintenance.service để workOrder.service gọi được mà không import vòng
 export async function recordMaintenance(wo: IWorkOrder, userId: string, now = new Date()): Promise<void> {
   if (!wo.plan_id) return
   const plan = await MaintenancePlan.findById(wo.plan_id)

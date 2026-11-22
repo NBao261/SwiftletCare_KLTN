@@ -7,19 +7,19 @@ import {
 } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
-/** Video không đi qua backend. cam-<id>: đã vẽ khung, xem bằng token; cam-<id>-raw: chỉ pipeline đọc */
+// Video không đi qua backend. cam-<id>: đã vẽ khung, xem bằng token; cam-<id>-raw: chỉ pipeline đọc
 
-/** Ngắn để lộ ra cũng hết hạn nhanh */
+// Ngắn để lộ ra cũng hết hạn nhanh
 export const STREAM_TOKEN_TTL_SEC = 60
 const RAW_SUFFIX = '-raw'
 const STREAM_PATH = /^cam-[A-Za-z0-9_-]+$/
 
-/** Để trống = chưa dựng máy chủ video */
+// Để trống = chưa dựng máy chủ video
 function env(name: 'STREAM_TOKEN_SECRET' | 'STREAM_AUTH_KEY' | 'STREAM_PUBLISH_SECRET'): string | undefined {
   return process.env[name] || undefined
 }
 
-/** Hằng thời gian: không lộ khóa qua thời gian phản hồi */
+// Hằng thời gian: không lộ khóa qua thời gian phản hồi
 function safeEqual(a: unknown, b: string | undefined): boolean {
   if (typeof a !== 'string' || !b) return false
   const h = (s: string) => crypto.createHash('sha256').update(s).digest()
@@ -43,7 +43,7 @@ export async function issueStreamToken(cameraNodeId: string, user: CurrentUser) 
   return { path, token, expires_in: STREAM_TOKEN_TTL_SEC }
 }
 
-/** MediaMTX 1.21 */
+// MediaMTX 1.21
 export interface MediaMtxAuthRequest {
   action?: string
   path?: string
@@ -58,7 +58,7 @@ function viewerTokens(body: MediaMtxAuthRequest): string[] {
   return [body.token, fromQuery, body.password].filter((t): t is string => !!t)
 }
 
-/** MediaMTX coi mọi mã khác 2xx là từ chối */
+// MediaMTX coi mọi mã khác 2xx là từ chối
 export function authorizeStream(key: unknown, body: MediaMtxAuthRequest): void {
   if (!safeEqual(key, env('STREAM_AUTH_KEY'))) throw UnauthorizedError('Sai khóa')
 

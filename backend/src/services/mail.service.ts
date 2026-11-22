@@ -1,7 +1,7 @@
 import nodemailer, { type Transporter } from 'nodemailer'
 import logger from '@/utils/logger.util'
 
-/** Chỉ thư tài khoản đi qua e-mail. Không ghi log nội dung. Chưa cấu hình SMTP thì chỉ cảnh báo */
+// Chỉ thư tài khoản đi qua e-mail. Không ghi log nội dung. Chưa cấu hình SMTP thì chỉ cảnh báo
 
 export interface MailMessage {
   to: string
@@ -9,9 +9,9 @@ export interface MailMessage {
   text: string
 }
 
-/** Giá trị mẫu của .env.example coi như chưa cấu hình */
+// Giá trị mẫu của .env.example coi như chưa cấu hình
 const PLACEHOLDER = 'CHANGE_ME'
-/** Mặc định nodemailer 2–10 phút: SMTP treo sẽ giữ request rất lâu */
+// Mặc định nodemailer 2–10 phút: SMTP treo sẽ giữ request rất lâu
 export const SMTP_TIMEOUT_MS = 10_000
 
 let transporter: Transporter | null | undefined
@@ -25,7 +25,7 @@ function smtpConfig() {
   return { host, port, user, pass, from: process.env.SMTP_FROM?.trim() || user }
 }
 
-/** null = chưa cấu hình */
+// null = chưa cấu hình
 function getTransporter(): Transporter | null {
   if (transporter !== undefined) return transporter
   const config = smtpConfig()
@@ -43,7 +43,7 @@ function getTransporter(): Transporter | null {
   return transporter
 }
 
-/** Cho test */
+// Cho test
 export function resetMailTransport(): void {
   transporter = undefined
 }
@@ -52,7 +52,7 @@ export function isMailConfigured(): boolean {
   return smtpConfig() !== null
 }
 
-/** Không throw. true khi SMTP đã nhận thư */
+// Không throw. true khi SMTP đã nhận thư
 export async function sendMail(message: MailMessage): Promise<boolean> {
   const transport = getTransporter()
   if (!transport) {

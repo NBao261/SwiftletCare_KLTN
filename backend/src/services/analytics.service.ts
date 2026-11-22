@@ -19,7 +19,7 @@ const RANGE_MS: Record<string, number> = {
   '30d': 30 * 86400_000,
 }
 
-/** Telemetry ~10s nên 30 ngày ~260k bản ghi: phải gom bucket (PERF-NFR-003) */
+// Telemetry ~10s nên 30 ngày ~260k bản ghi: phải gom bucket
 const MAX_BUCKETS = 120
 const HOUR_MS = 3600_000
 
@@ -72,7 +72,7 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
   return { range: query.range, from, to, bucketMs, series, stats: stats ?? null, outdoor: await outdoorSeries(zone.farm_id, from, to, bucketMs) }
 }
 
-/** Cùng mốc bucket với series. Bản ghi giờ H chỉ có khi giờ đó đã qua, nên lấy từ đầu giờ chứa from */
+// Cùng mốc bucket với series. Bản ghi giờ H chỉ có khi giờ đó đã qua, nên lấy từ đầu giờ chứa from
 async function outdoorSeries(farmId: unknown, from: Date, to: Date, bucketMs: number) {
   const firstHour = new Date(from.getTime() - (from.getTime() % HOUR_MS))
   return WeatherObservation.aggregate([
@@ -97,16 +97,16 @@ async function outdoorSeries(farmId: unknown, from: Date, to: Date, bucketMs: nu
   ])
 }
 
-/** null khi không có mẫu */
+// null khi không có mẫu
 export const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
 export const inRangeSum = (field: string, min: number, max: number) =>
   ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
-/** Đếm lần đổi giữa 2 mẫu cùng ESP32 có trạng thái relay; mẫu buffer không có relay, tính vào sẽ phồng số */
+// Đếm lần đổi giữa 2 mẫu cùng ESP32 có trạng thái relay; mẫu buffer không có relay, tính vào sẽ phồng số
 const isBool = (expr: string) => ({ $eq: [{ $type: expr }, 'bool'] })
 export const switchedSum = (field: string, prev: string) =>
   ({ $sum: { $cond: [{ $and: [isBool(prev), isBool(field), { $ne: [prev, field] }] }, 1, 0] } })
 
-/** Chỉ mẫu có misting_pct (firmware >= 1.1.0) */
+// Chỉ mẫu có misting_pct (firmware >= 1.1.0)
 export async function getControlPerformance(user: CurrentUser, query: { zoneId: string; range: string }) {
   const { zone } = await assertZoneAccess(query.zoneId, user)
   const { from, to, bucketMs } = resolveRange(query.range)
@@ -223,16 +223,16 @@ export async function compareZones(user: CurrentUser, zoneIds: string[], range: 
   return { range, from, to, zones: results }
 }
 
-/** zoneId cũ: quy ra House chứa Zone */
+// zoneId cũ: quy ra House chứa Zone
 export interface BirdCountScope { houseId?: string; zoneId?: string }
 
-/** Rỗng tới khi nút AI publish, không phải lỗi */
+// Rỗng tới khi nút AI publish, không phải lỗi
 export async function getBirdCountDaily(user: CurrentUser, scope: BirdCountScope, query: { from?: string; to?: string }) {
   const { house } = await assertHouseAccessByParams(scope, user)
   return { house_id: String(house._id), ...(await dailyBirdCounts(String(house._id), query)) }
 }
 
-/** Caller đã kiểm quyền */
+// Caller đã kiểm quyền
 async function dailyBirdCounts(houseId: string, query: { from?: string; to?: string }) {
   const to = query.to ? new Date(query.to) : new Date()
   const from = query.from ? new Date(query.from) : new Date(to.getTime() - 30 * 86400_000)
@@ -243,7 +243,7 @@ async function dailyBirdCounts(houseId: string, query: { from?: string; to?: str
   return { from, to, records, note: records.length === 0 ? 'Chưa có dữ liệu đếm chim trong khoảng này' : undefined }
 }
 
-/** Override bắt đầu trước khi có lịch sử không được tính */
+// Override bắt đầu trước khi có lịch sử không được tính
 export async function getAutonomy(user: CurrentUser, query: { zoneId: string; range: string }) {
   await assertZoneAccess(query.zoneId, user)
   const { from, to } = resolveRange(query.range)
@@ -268,7 +268,6 @@ export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScop
     from: new Date(Date.now() - query.days * 86400_000).toISOString(),
   })
 
-  // VISION-FR-020
   const rates = records.filter(r => !r.incomplete).map(r => r.return_rate).filter((v): v is number => typeof v === 'number')
   const avg = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
   const latest = rates.at(-1) ?? null
@@ -292,11 +291,11 @@ export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScop
 }
 
 export interface FlockPeriod {
-  /** Tuần: thứ Hai đầu tuần; tháng: 'YYYY-MM' */
+  // Tuần: thứ Hai đầu tuần; tháng: 'YYYY-MM'
   period: string
   days: number
   mean_morning_exit: number
-  /** null khi kỳ trước không có ngày đủ phiên */
+  // null khi kỳ trước không có ngày đủ phiên
   change_pct: number | null
 }
 
@@ -328,7 +327,7 @@ function meanByPeriod(days: FlockDay[], keyOf: (date: string) => string, prevOf:
   })
 }
 
-/** Số ròng phiên sáng, theo tuần (từ thứ Hai) và tháng; bỏ ngày thiếu phiên */
+// Số ròng phiên sáng, theo tuần (từ thứ Hai) và tháng; bỏ ngày thiếu phiên
 export function flockTrend(days: FlockDay[]): { weekly: FlockPeriod[]; monthly: FlockPeriod[] } {
   const complete = days.filter(isFlockDayComplete)
   return {
@@ -337,7 +336,7 @@ export function flockTrend(days: FlockDay[]): { weekly: FlockPeriod[]; monthly: 
   }
 }
 
-/** Ghép theo ngày */
+// Ghép theo ngày
 export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, query: { days: number }) {
   const { house } = await assertZoneAccess(zoneId, user)
   const from = new Date(Date.now() - query.days * 86400_000)
@@ -358,7 +357,7 @@ export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, q
     houseDailyCounts(String(house._id), { from: vnDate(from) }),
   ])
 
-  // VISION-FR-020: tỷ lệ của ngày không đầy đủ thấp vì thiếu số
+  // tỷ lệ của ngày không đầy đủ thấp vì thiếu số
   const birdByDate = new Map(birdDaily.filter(b => !b.incomplete).map(b => [b.date, b.return_rate]))
   const points = envDaily
     .map(e => ({

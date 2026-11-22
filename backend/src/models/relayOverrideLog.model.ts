@@ -4,7 +4,7 @@ import type { Role } from '@/types'
 export type OverrideRelay = 'misting' | 'ventilation' | 'speaker'
 export type OverrideEndReason = 'EXPIRED' | 'CLEARED_EARLY' | 'REPLACED'
 
-/** Nguồn tính tỷ lệ tự động (ANALYTICS-FR-011): sensor_nodes chỉ giữ hiện tại */
+// Nguồn tính tỷ lệ tự động: sensor_nodes chỉ giữ hiện tại
 export interface IRelayOverrideLog extends Document {
   _id: Types.ObjectId
   node_id: Types.ObjectId
@@ -16,10 +16,10 @@ export interface IRelayOverrideLog extends Document {
   started_by_role: Role
   started_at: Date
   expires_at: Date
-  /** null khi đang override */
+  // null khi đang override
   ended_at?: Date | null
   end_reason?: OverrideEndReason
-  /** ENV-FR-016: Farm Owner đã xác nhận bật bơm khi có cảnh báo */
+  // Farm Owner đã xác nhận bật bơm khi có cảnh báo
   alert_confirmed: boolean
 }
 

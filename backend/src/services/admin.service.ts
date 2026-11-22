@@ -18,7 +18,6 @@ export interface ListQuery { page?: string | number; limit?: string | number }
 
 export interface ListUsersQuery extends ListQuery {
   role?: Role
-  /** SM-14 */
   status?: 'active' | 'inactive' | 'deleted'
   q?: string
 }
@@ -50,7 +49,7 @@ export interface CreateFarmOwnerInput {
   phone?: string
 }
 
-/** Mật khẩu tạm không trả về và không ghi log */
+// Mật khẩu tạm không trả về và không ghi log
 export async function createFarmOwner(
   adminId: string, input: CreateFarmOwnerInput,
 ): Promise<Record<string, unknown> & { temporary_password_emailed: boolean }> {
@@ -72,7 +71,7 @@ export async function createFarmOwner(
   return { ...(user.toJSON() as Record<string, unknown>), temporary_password_emailed: emailed }
 }
 
-/** authenticate đã chặn LOCKED, vẫn xoá refresh_tokens cho chắc; ngắt luôn socket */
+// authenticate đã chặn LOCKED, vẫn xoá refresh_tokens cho chắc; ngắt luôn socket
 export async function setUserStatus(
   adminId: string, userId: string, isActive: boolean, reason?: string,
 ): Promise<IUser> {
@@ -87,7 +86,7 @@ export async function setUserStatus(
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
   // PII đã ẩn danh: mở khoá sẽ tạo tài khoản sống mà rỗng
   if (user.status === 'DELETED') throw ConflictError('Tài khoản đã bị xoá theo yêu cầu, không thể khoá/mở khoá')
-  // SM-14: đang chờ xoá thì xử lý yêu cầu trước
+  // đang chờ xoá thì xử lý yêu cầu trước
   if (!isActive && user.status === 'DELETION_REQUESTED') {
     throw ConflictError('Tài khoản đang chờ xoá: xử lý hoặc từ chối yêu cầu xoá trước khi khoá')
   }
@@ -121,7 +120,7 @@ export async function listDeletionRequests(query: ListQuery) {
 }
 
 
-/** Không có transaction nên phải chạy lại được: cờ deletion_requested_at chỉ gỡ ở bước lưu cuối */
+// Không có transaction nên phải chạy lại được: cờ deletion_requested_at chỉ gỡ ở bước lưu cuối
 export async function completeDeletionRequest(adminId: string, userId: string): Promise<IUser> {
   if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
   const user = await User.findById(userId)
@@ -182,11 +181,9 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   user.phone = undefined
   user.full_name = 'Tài khoản đã xoá'
   user.avatar_url = undefined
-  // PRIV-NFR-003
   user.telegram_chat_id = undefined
   user.telegram_link_code_hash = undefined
   user.telegram_link_expires_at = undefined
-  // SM-14
   user.status = 'DELETED'
   user.refresh_tokens = [] as never
   // Để không chạy lại cascade lần 2
@@ -209,7 +206,7 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   return user
 }
 
-/** Lý do được gửi lại người yêu cầu */
+// Lý do được gửi lại người yêu cầu
 export async function rejectDeletionRequest(adminId: string, userId: string, reason: string): Promise<IUser> {
   if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
   const trimmedReason = reason.trim()
@@ -220,7 +217,7 @@ export async function rejectDeletionRequest(adminId: string, userId: string, rea
   if (!user.deletion_requested_at) throw BadRequestError('Người dùng này chưa gửi yêu cầu xoá tài khoản')
 
   const requestedAt = user.deletion_requested_at
-  // SM-14; tài khoản đang bị khoá vẫn khoá
+  // tài khoản đang bị khoá vẫn khoá
   if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
@@ -234,12 +231,11 @@ export async function rejectDeletionRequest(adminId: string, userId: string, rea
   return user
 }
 
-/** PRIV-NFR-003 */
 const DELETION_DEADLINE_DAYS = 30
 const DELETION_REMIND_DAYS_BEFORE = 7
 const DAY_MS = 86_400_000
 
-/** deletion_reminder_sent_at chặn nhắc lặp */
+// deletion_reminder_sent_at chặn nhắc lặp
 export async function remindPendingDeletionRequests(now = new Date()): Promise<number> {
   const remindBefore = new Date(now.getTime() - (DELETION_DEADLINE_DAYS - DELETION_REMIND_DAYS_BEFORE) * DAY_MS)
   const due = await User.find({

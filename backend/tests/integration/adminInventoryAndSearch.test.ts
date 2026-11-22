@@ -1,4 +1,4 @@
-/** FARM-FR-003 thu hồi/cấp lại secretKey; AUTH-FR-011 tìm người dùng */
+// thu hồi/cấp lại secretKey; tìm người dùng
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -59,7 +59,7 @@ describe('thu hồi thiết bị trong kho', () => {
     expect(doc.revoked_at).toBeInstanceOf(Date)
     expect(doc.revoke_reason).toBe('Mất nhãn ngoài kho')
     await expect(verifyActivationKey('ESP-001', 'SENSOR', secretKey)).rejects.toMatchObject({ statusCode: 409 })
-    // Sai key thì vẫn chỉ là "mã không đúng" — không lộ thiết bị đã bị thu hồi
+    // Sai key thì vẫn chỉ là "mã không đúng": không lộ thiết bị đã bị thu hồi
     await expect(verifyActivationKey('ESP-001', 'SENSOR', 'AAAA-BBBB-CCCC')).rejects.toMatchObject({ statusCode: 400 })
     expect(await AuditLog.countDocuments({ action: 'DEVICE_PROVISION_REVOKED' })).toBe(1)
   })

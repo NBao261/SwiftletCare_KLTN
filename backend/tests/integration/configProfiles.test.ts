@@ -1,4 +1,3 @@
-/** EXPERT-FR-014, 015, BR-22 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'

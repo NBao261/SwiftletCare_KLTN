@@ -63,13 +63,13 @@ export async function listAuditLogs(query: ListAuditLogsQuery): Promise<{
 const SINGLETON = { _singleton: true }
 const DUPLICATE_KEY = 11000
 
-/** Không ghi DB lúc đọc */
+// Không ghi DB lúc đọc
 export async function getDefaultThresholds(): Promise<Thresholds> {
   const setting = await SystemSetting.findOne(SINGLETON).lean()
   return setting?.default_thresholds ?? { ...DEFAULT_THRESHOLDS }
 }
 
-/** E11000 khi 2 request cùng insert lần đầu; chạy lại thì vào nhánh update */
+// E11000 khi 2 request cùng insert lần đầu; chạy lại thì vào nhánh update
 async function writeSetting(update: Record<string, unknown>): Promise<void> {
   const write = () => SystemSetting.findOneAndUpdate(
     SINGLETON, update, { upsert: true, new: true, setDefaultsOnInsert: true },
@@ -97,7 +97,7 @@ export type DefaultThresholdsView = Thresholds & {
   history: DefaultThresholdsChange[]
 }
 
-/** Lần đổi trước G-18 có source: null. Không cắt bớt vì danh sách nhỏ */
+// Lần đổi cũ chưa ghi nguồn thì source: null. Không cắt bớt vì danh sách nhỏ
 export async function getDefaultThresholdsView(): Promise<DefaultThresholdsView> {
   const [setting, logs] = await Promise.all([
     SystemSetting.findOne(SINGLETON).lean(),
@@ -123,7 +123,7 @@ export async function getDefaultThresholdsView(): Promise<DefaultThresholdsView>
   }
 }
 
-/** Chỉ là tham khảo: zone đang có giữ nguyên, zone tạo hoặc reset sau mới lấy (ENV-FR-020) */
+// Chỉ là tham khảo: zone đang có giữ nguyên, zone tạo hoặc reset sau mới lấy
 export async function updateDefaultThresholds(
   adminId: string, input: Record<string, unknown>,
 ): Promise<Thresholds> {
@@ -155,7 +155,7 @@ export async function updateDefaultThresholds(
 
 type ThresholdKey = typeof THRESHOLD_KEYS[number]
 
-/** Không áp gì vào zone. Farm chưa có chuyên gia thì gửi Farm Owner (BR-22) */
+// Không áp gì vào zone. Farm chưa có chuyên gia thì gửi Farm Owner
 export async function notifyZonesDifferingFromDefaults(changedKeys: ThresholdKey[], after: Thresholds): Promise<void> {
   const zones = await Zone.find({
     $or: changedKeys.map(k => ({ [`thresholds.${k}`]: { $ne: after[k] } })),
@@ -194,7 +194,7 @@ export async function getHealthOverview() {
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
     CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).select('status').lean(),
 
-    // SM-14: tách DELETED khỏi LOCKED
+    // tách DELETED khỏi LOCKED
     User.aggregate<{ _id: { role: string | null; status: UserStatus | null }; count: number }>([
       { $group: { _id: { role: '$role', status: '$status' }, count: { $sum: 1 } } },
     ]),

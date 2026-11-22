@@ -1,4 +1,3 @@
-/** OPS-FR-001…004, ALERT-FR-018, BR-39…41, SM-19 */
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'
@@ -57,7 +56,7 @@ const as = (token: string) => ({
   upload: (path: string) => request(app).post(path).set('Authorization', `Bearer ${token}`),
 })
 
-/** Farm có nhà H (thợ T chính, thợ T2 phụ), nhà H2 (thợ khác X), 1 Domain Expert */
+// Farm có nhà H (thợ T chính, thợ T2 phụ), nhà H2 (thợ khác X), 1 Domain Expert
 async function seed(withTechnician = true) {
   const ctx = await seedOwnerFarm()
   const house = (await House.findOne({ farm_id: ctx.farm._id }))!
@@ -181,7 +180,7 @@ describe('vòng đời Work Order (OPS-FR-002…004, BR-41)', () => {
   it('thợ bắt đầu, báo xong kèm nguyên nhân và ảnh → VERIFYING; dữ liệu phục hồi 10 phút → chờ duyệt; Farm Owner duyệt → CLOSED và đóng cảnh báo', async () => {
     const { owner, tech, tech$, owner$, alert, path } = await started()
     await tech$.post(`${path}/start`).expect(409)
-    // ALERT-FR-018 — thiếu nguyên nhân → 422
+    // thiếu nguyên nhân → 422
     await tech$.post(`${path}/done`, { work_note: 'đã thông béc' }).expect(422)
     const done = await tech$.upload(`${path}/done`)
       .field('cause', 'NOZZLE').field('work_note', 'Thông béc 3')
@@ -223,7 +222,7 @@ describe('vòng đời Work Order (OPS-FR-002…004, BR-41)', () => {
     const { tech2, other, owner$, tech$, alert, path } = await started()
     await tech$.post(`${path}/done`, { cause: 'WATER' }).expect(200)
     await Alert.updateOne({ _id: alert._id }, { status: 'RESOLVED', resolved_at: ago(15) })
-    // 10 phút tính từ lúc báo xong, không từ lúc cảnh báo đóng (BR-41)
+    // 10 phút tính từ lúc báo xong, không từ lúc cảnh báo đóng
     expect((await verifyWorkOrders()).verified).toBe(0)
     expect((await verifyWorkOrders(later(11))).verified).toBe(1)
     await owner$.post(`${path}/reopen`, {}).expect(422)
@@ -283,7 +282,7 @@ describe('kiểm phục hồi theo loại cảnh báo (BR-41, OPS-FR-003)', () =
     await ctx.tech$.post(`${path}/start`).expect(200)
     await ctx.tech$.post(`${path}/done`, { cause }).expect(200)
     const doneAt = (await WorkOrder.findById(wo._id).lean())!.done_at!
-    /** Mẫu telemetry mỗi phút, phút `fromMin`…`toMin` sau lúc báo xong */
+    // Mẫu telemetry mỗi phút, phút `fromMin`…`toMin` sau lúc báo xong
     const samples = (fromMin: number, toMin: number, values: (minute: number) => object = () => FULL) =>
       Telemetry.insertMany(Array.from({ length: toMin - fromMin + 1 }, (_, i) => ({
         node_id: ctx.node._id, zone_id: ctx.zone._id, timestamp: at(doneAt, fromMin + i), ...values(fromMin + i),

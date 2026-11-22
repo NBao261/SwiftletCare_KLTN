@@ -1,4 +1,4 @@
-/** Camera, số đếm, cảnh báo camera và return_rate_drop_pct chuyển từ Zone sang House. Không rõ giá trị thì in ra, không đoán. Chạy lại an toàn */
+// Camera, số đếm, cảnh báo camera và return_rate_drop_pct chuyển từ Zone sang House. Không rõ giá trị thì in ra, không đoán. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose, { Types } from 'mongoose'
 import { connectDB } from '@/config/db.config'

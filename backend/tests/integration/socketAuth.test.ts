@@ -1,4 +1,3 @@
-/** AUTH-FR-011 */
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'

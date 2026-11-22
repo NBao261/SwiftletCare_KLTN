@@ -17,9 +17,7 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser, FarmMemberRole } from '@/types'
 
-/** BR-43 (Report 3 §4.5) */
 export const HARVEST_SAME_PERIOD_DAYS = 30
-/** BR-43 (Report 3 §4.5) */
 export const HARVEST_CYCLE_MIN_COMPLETENESS = 80
 
 const DAY_MS = 86_400_000
@@ -28,11 +26,11 @@ const mean = (values: number[]) => (values.length ? values.reduce((a, b) => a + 
 const addDays = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)
 const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1
 
-/** Cách hiểu "closing harvest" của BR-43 */
+// Một lần thu hoạch: các lô đã xác nhận của zone trong cùng ngày giờ VN
 interface Harvest { date: string; at: Date; batchIds: Types.ObjectId[]; nestCount: number; weightGrams: number }
 
 async function zoneHarvests(zoneId: unknown): Promise<Harvest[]> {
-  // Lô xoá mềm tự rời khỏi chu kỳ (HARVEST-FR-005)
+  // Lô xoá mềm tự rời khỏi chu kỳ
   const batches = await HarvestBatch.find({ zone_id: zoneId, status: 'CONFIRMED' })
     .select('harvest_date nest_count weight_grams').sort({ harvest_date: 1 }).lean()
   const byDay = new Map<string, Harvest>()
@@ -61,7 +59,7 @@ function comparisonWith(current: Harvest, other: Harvest | undefined, otherId: T
   }
 }
 
-/** Đọc từ ngày sức khỏe (giữ vĩnh viễn): telemetry chỉ 90 ngày, không đủ cho chu kỳ 3–4 tháng */
+// Đọc từ ngày sức khỏe (giữ vĩnh viễn): telemetry chỉ 90 ngày, không đủ cho chu kỳ 3–4 tháng
 async function cycleHealth(zone: { _id: unknown; name: string; house_id: unknown }, from: string, to: string) {
   const totalDays = to >= from ? daysBetween(from, to) : 0
   if (totalDays === 0) {
@@ -76,7 +74,7 @@ async function cycleHealth(zone: { _id: unknown; name: string; house_id: unknown
   const zoneId = String(zone._id)
   const inRange = days.flatMap(d => {
     const zones = (d.indicators?.environment?.details?.zones ?? []) as Array<{ zone_id?: unknown; zone_name?: string; in_range_pct?: number | null }>
-    // Ngày trước G-26 chưa ghi zone_id
+    // Ngày cũ chưa ghi zone_id
     const z = zones.find(x => (x.zone_id !== undefined ? String(x.zone_id) === zoneId : x.zone_name === zone.name))
     return typeof z?.in_range_pct === 'number' ? [z.in_range_pct] : []
   })
@@ -94,7 +92,7 @@ async function cycleHealth(zone: { _id: unknown; name: string; house_id: unknown
   }
 }
 
-/** Tuần tự theo zone: hai lần dựng lại không chồng nhau, không ghi đè kết luận vừa lưu */
+// Tuần tự theo zone: hai lần dựng lại không chồng nhau, không ghi đè kết luận vừa lưu
 const zoneQueue = new Map<string, Promise<unknown>>()
 
 function inZoneQueue<T>(zoneId: string, task: () => Promise<T>): Promise<T> {
@@ -103,7 +101,7 @@ function inZoneQueue<T>(zoneId: string, task: () => Promise<T>): Promise<T> {
   return next.finally(() => { if (zoneQueue.get(zoneId) === next) zoneQueue.delete(zoneId) })
 }
 
-/** Một đường cho xác nhận, sửa, xoá, nhập lùi ngày. Không có controller trước lần thu hoạch đầu thì lần đó chỉ là mốc bắt đầu */
+// Một đường cho xác nhận, sửa, xoá, nhập lùi ngày. Không có controller trước lần thu hoạch đầu thì lần đó chỉ là mốc bắt đầu
 export function rebuildZoneCycles(zoneId: unknown): Promise<void> {
   const key = String(zoneId)
   return inZoneQueue(key, () => doRebuild(key))
@@ -162,10 +160,10 @@ async function doRebuild(zoneId: string): Promise<void> {
   await writeCycles(zoneId, existing, docs)
 }
 
-/** Ghi lại chu kỳ thì bỏ trường bản mới không có */
+// Ghi lại chu kỳ thì bỏ trường bản mới không có
 const OPTIONAL_FIELDS = ['end_date', 'closing_harvest', 'comparison', 'health', 'completeness_pct', 'conclusion'] as const
 
-/** Không bao giờ xoá kết luận trước khi ghi lại (dữ liệu duy nhất do người viết). Mốc tạm để tránh unique zone_id + start_date */
+// Không bao giờ xoá kết luận trước khi ghi lại (dữ liệu duy nhất do người viết). Mốc tạm để tránh unique zone_id + start_date
 async function writeCycles(
   zoneId: string,
   existing: Array<{ _id: Types.ObjectId; start_date: Date; conclusion?: { text?: string } | null }>,
@@ -200,7 +198,7 @@ async function writeCycles(
   }))
 }
 
-/** Lỗi chỉ ghi log: thao tác trên lô vẫn xong */
+// Lỗi chỉ ghi log: thao tác trên lô vẫn xong
 export async function rebuildZoneCyclesSafely(zoneId: unknown): Promise<void> {
   try {
     await rebuildZoneCycles(zoneId)
@@ -218,7 +216,7 @@ export interface ListCyclesQuery {
   limit?: number
 }
 
-/** Farm Technician chỉ zone của nhà được giao */
+// Farm Technician chỉ zone của nhà được giao
 export async function listCycles(user: CurrentUser, query: ListCyclesQuery) {
   const filter: Record<string, unknown> = {}
   if (query.zoneId) {
@@ -260,7 +258,7 @@ export async function getCycle(id: string, user: CurrentUser) {
   return (await findCycleWithAccess(id, user)).cycle
 }
 
-/** Farm Owner không viết kể cả khi farm chưa có chuyên gia (BR-22). OPEN → 409 */
+// Farm Owner không viết kể cả khi farm chưa có chuyên gia. OPEN → 409
 export async function concludeCycle(user: CurrentUser, id: string, input: { text: string; recommendations?: string }) {
   const { cycle: found, farm } = await findCycleWithAccess(id, user)
   if (!farm) throw NotFoundError('Không tìm thấy chu kỳ thu hoạch')

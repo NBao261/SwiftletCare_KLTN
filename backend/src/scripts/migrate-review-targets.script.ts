@@ -1,4 +1,4 @@
-/** G-31: điền target_id, house_id cho mục duyệt cũ, đổi index { zone_id, group } → { target_id, group }. Chạy lại an toàn */
+// điền target_id, house_id cho mục duyệt cũ, đổi index { zone_id, group } → { target_id, group }. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { Zone } from '@/models/houseZone.model'

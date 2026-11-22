@@ -1,4 +1,4 @@
-/** Dữ liệu cá nhân không lọt ra ngoài người được xem */
+// Dữ liệu cá nhân không lọt ra ngoài người được xem
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import request from 'supertest'

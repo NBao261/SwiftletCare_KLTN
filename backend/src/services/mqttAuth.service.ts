@@ -14,7 +14,7 @@ export interface MqttAuthRequest {
   password: string
 }
 
-/** key sai thì 401. Không bao giờ trả is_superuser: quyền topic nằm ở authz của broker */
+// key sai thì 401. Không bao giờ trả is_superuser: quyền topic nằm ở authz của broker
 export async function authorizeBrokerClient(key: unknown, body: MqttAuthRequest): Promise<'allow' | 'deny'> {
   if (!safeEqual(key, process.env.MQTT_AUTH_KEY)) throw UnauthorizedError('Sai khóa')
   const { MQTT_USERNAME, MQTT_PASSWORD } = process.env

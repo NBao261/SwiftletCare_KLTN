@@ -1,4 +1,4 @@
-/** Mongo không có DDL: script sinh từ model, test so với docs/database/init.mongo.js */
+// Mongo không có DDL: script sinh từ model, test so với docs/database/init.mongo.js
 import type { Model, Schema, SchemaType } from 'mongoose'
 import { Alert } from '@/models/alert.model'
 import { AudioTrack } from '@/models/audioTrack.model'
@@ -139,7 +139,7 @@ export function indexesOf(schema: Schema): Array<[Record<string, unknown>, Recor
   })
 }
 
-/** Chạy hai lần vẫn an toàn */
+// Chạy hai lần vẫn an toàn
 export function buildDbScript(models: AnyModel[] = ALL_MODELS): string {
   const sorted = [...models].sort((a, b) => a.collection.collectionName.localeCompare(b.collection.collectionName))
   const lines = [

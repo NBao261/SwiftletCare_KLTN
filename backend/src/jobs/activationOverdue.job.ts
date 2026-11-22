@@ -1,4 +1,4 @@
-/** Quá 15 phút chưa có heartbeat đầu tiên thì báo người đăng ký (Flow 1 case 8a) */
+// Quá 15 phút chưa có heartbeat đầu tiên thì báo người đăng ký
 import cron from 'node-cron'
 import { markOverdueActivations, markOtaTimeouts } from '@/services/device.service'
 import logger from '@/utils/logger.util'

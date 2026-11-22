@@ -1,4 +1,4 @@
-/** SRS v1.23.0 §8.2: refresh token hash, Zone.farm_id, soft-delete, migration chạy lại an toàn */
+// refresh token hash, Zone.farm_id, soft-delete, migration chạy lại an toàn
 import crypto from 'crypto'
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'

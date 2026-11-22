@@ -32,7 +32,7 @@ describe('ảnh chụp của mẻ thu hoạch (HARVEST-FR-002/003)', () => {
       ({ zone_id: zoneId, node_id: nodeId, timestamp: new Date(now - agoMs), temperature, humidity, nh3_ppm: 6, co2_ppm: 800, light_lux: 0.1 })
     await Telemetry.insertMany([
       sample(zone._id, node._id, 6.5 * DAY, 28, 80), sample(zone._id, node._id, 3 * DAY, 30, 84), sample(zone._id, node._id, 60_000, 29, 82),
-      sample(other.zone._id, other.node._id, DAY, 40, 10), // Zone khác — không được lẫn vào
+      sample(other.zone._id, other.node._id, DAY, 40, 10), // Zone khác: không được lẫn vào
     ])
     const camera = new mongoose.Types.ObjectId()
     const session = (daysAgo: number, session_type: string, entry_count: number, exit_count: number) => ({

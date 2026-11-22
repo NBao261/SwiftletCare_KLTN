@@ -19,7 +19,6 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/** Report 3 §4.5 */
 export const MAINTENANCE_GRACE_DAYS = 7
 const DAY_MS = 86_400_000
 const VN_OFFSET_MS = 7 * 3600_000
@@ -53,14 +52,14 @@ function assertPlanShape(equipment: MaintenanceEquipment, basis: MaintenanceBasi
   if (!(interval > 0)) throw invalid('Khoảng bảo trì phải lớn hơn 0')
 }
 
-/** interval quá lớn → 422, không lưu Invalid Date */
+// interval quá lớn → 422, không lưu Invalid Date
 function calendarDueFrom(from: Date, interval: number): Date {
   const due = new Date(from.getTime() + interval * DAY_MS)
   if (Number.isNaN(due.getTime())) throw invalid('Khoảng bảo trì quá lớn')
   return due
 }
 
-/** Farm Technician chỉ đọc */
+// Farm Technician chỉ đọc
 async function findPlanWithAccess(id: string, user: CurrentUser): Promise<IMaintenancePlan> {
   const plan = await MaintenancePlan.findById(id)
   if (!plan) throw NotFoundError('Không tìm thấy kế hoạch bảo trì')
@@ -156,7 +155,7 @@ export async function updatePlan(
   return plan
 }
 
-/** Đóng MAINTENANCE_DUE không còn Work Order mở, không thì không ai đóng được */
+// Đóng MAINTENANCE_DUE không còn Work Order mở, không thì không ai đóng được
 export async function retirePlan(id: string, user: CurrentUser) {
   const plan = await findPlanWithAccess(id, user)
   if (plan.state !== 'RETIRED') {
@@ -243,7 +242,7 @@ async function checkCalendarPlan(plan: IMaintenancePlan, now: Date): Promise<num
   return (await openPreventiveWorkOrder({ plan, title, description: message, alertId: alert?._id })) ? 1 : 0
 }
 
-/** Báo đúng 1 lần */
+// Báo đúng 1 lần
 async function escalateOverdue(now: Date): Promise<number> {
   const plans = await MaintenancePlan.find({
     state: 'DUE', due_since: { $lte: new Date(now.getTime() - MAINTENANCE_GRACE_DAYS * DAY_MS) }, overdue_notified_at: null,
@@ -264,7 +263,7 @@ async function escalateOverdue(now: Date): Promise<number> {
   return notified
 }
 
-/** calendar: lượt 07:00 */
+// calendar: lượt 07:00
 export async function checkDuePlans(now = new Date(), opts: { calendar?: boolean } = {}) {
   const plans = await MaintenancePlan.find({
     state: { $in: ['SCHEDULED', 'DUE', 'OVERDUE'] },
@@ -281,7 +280,7 @@ export async function checkDuePlans(now = new Date(), opts: { calendar?: boolean
   return { opened, overdue: await escalateOverdue(now) }
 }
 
-/** Mẫu số chỉ gồm cái đã đóng hoặc quá hạn chót; bị huỷ không tính. null khi không có */
+// Mẫu số chỉ gồm cái đã đóng hoặc quá hạn chót; bị huỷ không tính. null khi không có
 export async function onTimeMaintenanceRate(
   houseIds: Types.ObjectId[], from: Date, to: Date, now = new Date(),
 ): Promise<number | null> {

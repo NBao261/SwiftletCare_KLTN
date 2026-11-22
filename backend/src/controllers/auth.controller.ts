@@ -15,7 +15,7 @@ function setRefreshCookie(res: Response, token: string): void {
   res.cookie('refreshToken', token, { ...REFRESH_COOKIE_OPTIONS, maxAge: REFRESH_COOKIE_MAX_AGE })
 }
 
-/** Mobile không có cookie jar: nhận refreshToken qua JSON body */
+// Mobile không có cookie jar: nhận refreshToken qua JSON body
 function isMobileClient(req: Request): boolean {
   return req.headers['x-client'] === 'mobile'
 }
