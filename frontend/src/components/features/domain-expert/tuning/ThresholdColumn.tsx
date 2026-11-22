@@ -42,7 +42,8 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
   useEffect(() => { if (data) setForm(data) }, [data])
 
   const base = data ?? FACTORY_DEFAULT_THRESHOLDS
-  const dirtyCount = FIELDS.filter(field => form[field.key] !== base[field.key]).length
+  // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
+  const dirtyCount = !data ? 0 : FIELDS.filter(field => form[field.key] !== base[field.key]).length
   useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   const set = (key: keyof ExpertThresholds) => (v: number) => {
@@ -51,6 +52,7 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
   }
 
   const handleSave = () => {
+    if (!data) return
     const firstError = Object.values(validateThresholds(form))[0]
     if (firstError) { setError(t(firstError)); return }
     setError(null)

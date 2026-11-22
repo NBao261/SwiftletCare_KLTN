@@ -140,7 +140,9 @@ export default function DomainExpertZoneTuningPage() {
           </div>
         )}
 
+        {/* key theo Zone: đổi Zone thì khối dựng lại, không mang số chưa lưu của Zone trước sang Zone mới */}
         <FuzzyTuningColumn
+          key={zoneId ?? 'none'}
           ref={fuzzyRef}
           data={fuzzy.data}
           isLoading={fuzzy.isLoading}
@@ -154,6 +156,7 @@ export default function DomainExpertZoneTuningPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           <ThresholdColumn
+            key={zoneId ?? 'none'}
             ref={thresholdRef}
             data={thresholds.data}
             isLoading={thresholds.isLoading}
@@ -166,6 +169,7 @@ export default function DomainExpertZoneTuningPage() {
 
           <fieldset disabled={!canEditParameters} className="contents">
             <DetectionColumn
+              key={zoneId ?? 'none'}
               ref={detectionRef}
               data={detection.data}
               verdictStats={verdictStats}

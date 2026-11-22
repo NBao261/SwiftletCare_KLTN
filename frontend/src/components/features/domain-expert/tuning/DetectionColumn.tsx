@@ -127,11 +127,12 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
   const set = (key: keyof ExpertDetectionTuning) => (v: number) => setForm(f => ({ ...f, [key]: v }))
 
   const base = data ?? DEFAULT_DETECTION
-  const dirtyCount = FIELDS.filter(field => form[field.key] !== base[field.key]).length
+  // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
+  const dirtyCount = !data ? 0 : FIELDS.filter(field => form[field.key] !== base[field.key]).length
   useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   useImperativeHandle(ref, () => ({
-    save: () => onSave(detectionTuningPayload(form)),
+    save: () => { if (data) onSave(detectionTuningPayload(form)) },
     cancel: () => setForm(base),
   }))
 

@@ -78,11 +78,13 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
   useEffect(() => { if (data) setForm(data) }, [data])
 
   const base = data ?? DEFAULT_FUZZY_TUNING
-  const dirtyCount = TILES.filter(tile => form[tile.key] !== base[tile.key]).length
+  // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
+  const dirtyCount = !data ? 0 : TILES.filter(tile => form[tile.key] !== base[tile.key]).length
     + (form.fuzzy_input_filter !== base.fuzzy_input_filter ? 1 : 0)
   useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   function handleSave() {
+    if (!data) return
     const changed: Partial<ExpertFuzzyTuning> = {}
     for (const tile of TILES) {
       if (form[tile.key] !== base[tile.key]) changed[tile.key] = form[tile.key]
