@@ -75,7 +75,7 @@ function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>
 // Trang Thu hoạch của Farm Owner: chỉ ghi nhận thu hoạch theo
 export default function FarmOwnerHarvestPage(): JSX.Element {
   const { t } = useTranslation(harvestDict);
-  // Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner, lưu lại khi chuyển trang Sản lượng nhập theo nhà yến nên trang chỉ lọc tới nhà: ô Zone khoá, bỏ Zone đã lưu ở trang khác
+  // Sản lượng nhập theo nhà nên chỉ lọc tới nhà: ô Zone khoá
   const scope = { ...useScopeFilter(), zone: undefined };
   const farmId = scope.farmId;
   // Đợt thu của farm đang lọc, hoặc của mọi farm khi xem tất cả trang trại
@@ -205,7 +205,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
         farmNames={scope.farmNames}
       />
 
-      {/* Bảng lần thu bên trái (8/12), phân bổ theo loại tổ bên phải (4/12); màn xl khoá cứng chiều cao 2 khung (556px), màn hẹp xếp chồng */}
+      {/* Màn xl khoá chiều cao 2 khung, màn hẹp xếp chồng */}
       {/* Hàng lưới đặt cứng minmax(0,1fr): nội dung dài không kéo hàng cao quá 556px, bảng tự cuộn bên trong */}
       <div className="grid grid-cols-1 gap-6 xl:h-[556px] xl:grid-cols-12 xl:grid-rows-[minmax(0,1fr)]">
         <div className="min-w-0 xl:col-span-8 xl:h-full xl:min-h-0">

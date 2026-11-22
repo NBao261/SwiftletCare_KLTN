@@ -94,7 +94,7 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
     // Chưa có số đo trong nhà (thiết bị chưa gửi) thì trục thời gian lấy theo giờ thời tiết, vẫn thấy ngoài trời
     const timeline = series.length > 0 ? series.map(point => point.timestamp) : (data?.outdoor ?? []).map(point => point.timestamp);
     const line = { fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
-    // Ngoài trời: nét đứt, cùng trục với số đo trong nhà; farm chưa có thời tiết thì không vẽ Mỗi điểm thời tiết phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ (7d, 30d)
+    // Ngoài trời nét đứt; mỗi điểm phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ
     const outdoor = alignOutdoorWeather(timeline, data?.outdoor ?? [], Math.max(data?.bucketMs ?? 0, HOUR_MS));
     const hasOutdoor = outdoor.some(point => point !== null);
     // Một điểm (1 giờ, chưa có số đo trong nhà) thì đường không vẽ gì: hiện chấm

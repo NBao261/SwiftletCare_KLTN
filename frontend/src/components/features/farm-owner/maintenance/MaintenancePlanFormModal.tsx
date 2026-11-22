@@ -108,11 +108,11 @@ export default function MaintenancePlanFormModal({ open, house, plan, onClose }:
     >
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         <hr className="border-gray-200" />
-        {/* Thân popup cuộn khi checklist dài, tiêu đề và nút luôn hiện; đệm 4 phía để viền và vòng focus của ô không bị cắt, chừa chỗ thanh cuộn */}
+        {/* Thân popup cuộn khi checklist dài, tiêu đề và nút luôn hiện */}
         <div className="-mx-1 flex max-h-[60vh] flex-col gap-5 overflow-y-auto px-1 pb-1 pr-3">
           <p className="text-sm text-warmGray">{t(plan ? 'form.lockedHint' : 'form.basisHint')}</p>
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Dropdown kiểu ô form của design system thay <select> native (danh sách theo bảng màu, không do hệ điều hành vẽ) */}
+            {/* Dropdown của design system thay <select> native */}
             <div className="flex flex-col gap-1.5">
               <span className="label-caption">{t('form.equipment')}</span>
               <SelectMenu

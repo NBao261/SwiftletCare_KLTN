@@ -16,7 +16,7 @@ export function useAuditLogList(query: ListAuditLogsQuery) {
 // Trần `limit` backend (utils/helpers.util.ts#paginate)
 const ALL_PAGE_LIMIT = 100
 
-// Toàn bộ nhật ký khớp bộ lọc server (người thực hiện/hành động/khoảng ngày): tải hết các trang, mỗi request tối đa ALL_PAGE_LIMIT. Chỉ bật (`enabled`) khi trang cần tìm chữ hoặc sắp "cũ nhất trước": backend không có 2 tham số này, nên phải làm trên toàn bộ ở client. ponytail: nhật ký chỉ tăng, khi lên hàng chục nghìn dòng thì thêm `q`/`sort` vào /system/audit-logs.
+// Chỉ bật khi cần tìm chữ hoặc sắp "cũ nhất trước"; nhật ký lớn thì thêm q/sort vào backend
 export function useAllAuditLogs(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>, enabled: boolean) {
   return useQuery({
     queryKey: ['audit-logs', 'all', query],
@@ -41,7 +41,7 @@ export function useDefaultThresholds() {
   })
 }
 
-// PUT /system/settings/default-thresholds. Dùng cho cả "Lưu" lẫn "Khôi phục mặc định gốc" (gửi FACTORY_DEFAULT_THRESHOLDS): backend không có endpoint reset riêng. Ghi vào audit log nên cũng làm mới danh sách nhật ký.
+// Dùng cho cả Lưu và Khôi phục mặc định gốc
 export function useUpdateDefaultThresholds() {
   const queryClient = useQueryClient()
   return useMutation({

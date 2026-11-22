@@ -29,7 +29,7 @@ import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFil
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
 import { printQrLabels, zoneCode } from '@/lib/qrCode'
 
-// Chi tiết 1 Zone: thông số realtime so ngưỡng (REST latest + socket), danh sách thiết bị, bấm Chi tiết mở drawer
+// Chi tiết 1 Zone: số đo realtime so ngưỡng
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
@@ -88,7 +88,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
   const zoneNameById = new Map([[zone._id, zone.name]])
   const lastBatch = node.lastBatch
 
-  // Trạng thái tín hiệu theo đúng nguồn số đo: socket đang về / socket ngừng / chỉ có bản ghi REST gần nhất / chưa có gì
+  // Trạng thái tín hiệu theo nguồn số đo
   const liveLabel = live.isLive
     ? `${t('zone.live')} · ${ago(d.timestamp)}`
     : live.hasEverReceived

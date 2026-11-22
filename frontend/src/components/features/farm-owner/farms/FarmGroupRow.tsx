@@ -28,7 +28,7 @@ interface FarmGroupRowProps {
   children: ReactNode
 }
 
-// 1 hàng trang trại: bấm hàng để xổ / thu các nhà yến; nút "Thêm nhà" trên hàng, Áp hồ sơ · Sửa · Xoá trong menu ⋯ (FO-10)
+// 1 hàng trang trại, bấm để xổ các nhà
 export default function FarmGroupRow({
   farm, houseCount, deviceCount, alertHouseCount, isExpanded, isPrimary, canEdit, canAddHouse,
   onToggle, onEdit, onDelete, onAddHouse, onApplyProfile, children,

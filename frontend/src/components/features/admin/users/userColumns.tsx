@@ -15,10 +15,10 @@ export interface UserColumnHandlers {
   onUnlock: (user: User) => void
 }
 
-// Cấu hình cột bảng Người dùng: tách riêng khỏi AdminUsersPage.tsx để trang chính chỉ lo state/layout. Không có cột STT (FE_Design). `currentUserId` là Admin đang đăng nhập, không cho tự khoá chính mình (backend cũng chặn, nhưng ẩn nút thì khỏi phải ăn lỗi mới biết).
+// Ẩn nút tự khoá chính mình (backend cũng chặn)
 export function buildUserColumns(handlers: UserColumnHandlers, currentUserId?: string): DataTableColumn<User>[] {
   return [
-    // Width theo % (bảng đang table-fixed) = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa chữ cột này và cột sau đều nhau. Tổng = 100% (21+25+17+15+12+10), vẫn đủ chỗ ở min-w 960px. Không thêm padding trái riêng cho cột nào (từng có `pl-12` ở Trạng thái làm badge lệch khỏi mép cột). Mỗi ô 1 dòng (tên và email tách 2 cột): lý do khoá xem ở modal chi tiết.
+    // Width % cho table-fixed, tổng 100
     {
       // Sort theo tên/email đặt ở nút "Sắp xếp" cùng hàng filter (không phải click header), như trước khi tách cột
       key: 'full_name', header: 'Họ tên', className: 'w-[21%]',
@@ -41,7 +41,7 @@ export function buildUserColumns(handlers: UserColumnHandlers, currentUserId?: s
       },
     },
     {
-      // Sort ngày tạo cũng đặt ở nút "Sắp xếp" cùng hàng filter, xem full_name ở trên. 2 tầng: giờ:phút:giây đậm trên, ngày xám dưới
+      // Giờ trên, ngày dưới
       key: 'created_at', header: 'Ngày tạo', className: 'w-[12%] whitespace-nowrap',
       render: (user) => user.created_at
         ? (

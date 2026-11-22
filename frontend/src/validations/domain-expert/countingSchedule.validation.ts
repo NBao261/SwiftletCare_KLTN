@@ -53,7 +53,7 @@ function windowsError(windows: DayWindows): ScheduleError | null {
   return null
 }
 
-// Lỗi đầu tiên của từng dòng (null = dòng hợp lệ); dòng trùng ngày với một dòng phía trên báo 'overlap', như backend trả 400
+// Dòng trùng ngày với dòng trên báo 'overlap', như backend
 export function validateCountingSchedule(schedule: CountingSchedule): {
   profiles: Array<ScheduleError | null>
   temporary: Array<ScheduleError | null>

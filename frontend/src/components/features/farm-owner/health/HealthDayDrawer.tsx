@@ -158,7 +158,7 @@ export default function HealthDayDrawer({ day, onClose, onChanged }: HealthDayDr
               <ul className="flex flex-col gap-3">
                 {(day.ratings ?? []).map(rating => (
                   <li key={rating._id} className="flex flex-col gap-2 rounded-xl border border-warmGray/30 p-3 text-sm">
-                    {/* Hàng 1: tên (bạn) trái, · vai trò phải; hàng 2: "Chấm điểm: <mức>"; ghi chú có vạch trái; cuối sát phải: giờ chấm */}
+                    {/* Một lượt chấm */}
                     <div className="flex items-center justify-between gap-3">
                       <p className="min-w-0 font-semibold text-charcoal">
                         {rating.by.full_name ?? NO_VALUE}

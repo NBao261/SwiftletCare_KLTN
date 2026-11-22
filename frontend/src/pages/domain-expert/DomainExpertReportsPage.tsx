@@ -18,7 +18,7 @@ export default function DomainExpertReportsPage() {
   const { data: farmHouses = [] } = useHouses(selectedFarmId ?? undefined);
   const house = farmHouses.find(item => item._id === selectedHouseId);
   const [searchParams, setSearchParams] = useSearchParams();
-  // Ngày lệch là việc của chuyên gia, hoặc Farm Owner khi farm chưa có chuyên gia: Farm Owner của farm có chuyên gia không có tab này (backend trả 403), thay vì thấy lỗi
+  // Farm Owner của farm có chuyên gia không có tab này (backend trả 403)
   const { canDecide: canReviewDisagreements } = useExpertDecisionRights();
 
   const rawTab = searchParams.get('tab');

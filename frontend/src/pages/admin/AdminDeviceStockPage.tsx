@@ -1,4 +1,4 @@
-// ADMIN: Kho thiết bị. Thêm thiết bị → in nhãn QR (device ID + mã kích hoạt) và chép mật khẩu broker để flash, cả hai chỉ hiện 1 lần. Cấp lại mã kích hoạt / thu hồi khi thiết bị không đang dùng ở farm; cấp lại mật khẩu broker khi chưa thu hồi. Thiết bị đang chạy xem ở /devices. Cùng khuôn trang Người dùng: tìm kiếm + nút thêm → bộ lọc + sắp xếp → bảng → phân trang (client-side, xem useDeviceStock).
+// Kho thiết bị: mã kích hoạt và mật khẩu broker chỉ hiện 1 lần
 import { useMemo, useState } from 'react'
 import { PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import {

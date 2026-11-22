@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import { tr, trChildren } from '@/i18n'
 
-// Mảnh dựng popup ngang 2 cột (dùng với `<Modal size="xl" ariaLabel>`: không truyền `title` để Modal neo nút ✕ góc trên phải): tiêu đề + thanh ngang ngăn với thân, tiêu đề nhóm, khối nền xám, dòng tóm tắt nhãn/giá trị.
+// Mảnh dựng popup 2 cột, dùng với <Modal size="xl"> không có title
 
 // Tiêu đề popup trải ngang + dòng mô tả + thanh ngang bên dưới; pr-12 chừa nút ✕
 export function ModalHeader({ title, description }: { title: ReactNode; description?: ReactNode }) {

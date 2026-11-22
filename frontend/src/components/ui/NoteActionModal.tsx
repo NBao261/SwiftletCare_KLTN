@@ -25,7 +25,7 @@ interface NoteActionModalProps {
   onSubmit: (note: string) => void
 }
 
-// Modal 1 field (Textarea) + submit: mẫu dùng chung cho các hành động chỉ cần ghi chú (xác nhận cảnh báo, khoá tài khoản...). Không dùng cho modal nhiều field khác kiểu (mời thành viên, sửa harvest...). Tự validate (noValidate) để báo lỗi tiếng Việt dưới ô thay vì popup trình duyệt; giá trị gửi đi đã được trim.
+// Modal 1 ô ghi chú; noValidate để báo lỗi tiếng Việt dưới ô
 export default function NoteActionModal({
   open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, maxLength, emptyMessage, danger, loading, onSubmit,
 }: NoteActionModalProps) {

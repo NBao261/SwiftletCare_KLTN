@@ -39,7 +39,7 @@ const DEVICE_ALERT_TYPES: AlertType[] = [
 const INFERRED_TYPES: InferredAlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'];
 const isInferred = (type: AlertType) => (INFERRED_TYPES as AlertType[]).includes(type);
 
-// /alerts (mặc định chỉ cảnh báo còn hiệu lực, kèm số chờ xác nhận) của Farm Owner, Farm Technician (nhà được giao), Admin (chỉ xem cảnh báo thiết bị): lọc phạm vi, trạng thái, mức độ, loại và kết luận, chi tiết, xác nhận kèm nguyên nhân
+// Mặc định chỉ cảnh báo còn hiệu lực; Admin chỉ xem cảnh báo thiết bị
 export default function FarmOwnerAlertsPage(): JSX.Element {
   const { t } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();

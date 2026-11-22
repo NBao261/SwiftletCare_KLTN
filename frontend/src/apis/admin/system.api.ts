@@ -16,7 +16,7 @@ export interface ListAuditLogsQuery {
   limit?: number
 }
 
-// Router `/system` (backend/src/routes/system.route.ts): Module SYSTEM, mọi endpoint `requireRole('ADMIN')`. Không có endpoint reset ngưỡng: "khôi phục mặc định gốc" là PUT với FACTORY_DEFAULT_THRESHOLDS (constants/thresholds.ts).
+// Không có endpoint reset: khôi phục mặc định gốc là PUT với FACTORY_DEFAULT_THRESHOLDS
 export const systemApi = {
   listAuditLogs: (query?: ListAuditLogsQuery) =>
     api.get<ApiResponse<AuditLogEntry[]>>('/system/audit-logs', { params: query }),

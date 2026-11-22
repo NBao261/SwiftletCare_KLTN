@@ -10,7 +10,7 @@ import Avatar from '@/components/ui/Avatar'
 import LanguageToggle from '@/components/common/LanguageToggle'
 import { ROLE_LABEL } from '@/constants/roles'
 
-// Popup tài khoản khi bấm avatar: tên, email, vai trò, Cài đặt, Quyền riêng tư, Đăng xuất; nơi duy nhất có các mục này ở mọi khổ màn (SH-02)
+// Popup tài khoản khi bấm avatar
 export default function ProfilePopover() {
   const { t } = useTranslation(shellDict)
   const user = useAuthStore(s => s.user)

@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { extendTailwindMerge } from 'tailwind-merge'
 
-// tailwind-merge chỉ nhận diện font-size theo thang mặc định (xs…9xl): các token khai báo thêm trong tailwind.config.ts (`text-h1`, `text-body`…) nếu không đăng ký sẽ bị xếp nhầm vào nhóm "text-color" và bị xoá khi đứng cùng `text-warmGray`/`text-charcoal`. Phải liệt kê đúng danh sách key `fontSize`.
+// Phải đăng ký fontSize tự thêm, không thì tailwind-merge xoá nhầm khi đứng cùng màu chữ
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {

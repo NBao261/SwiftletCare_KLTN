@@ -152,7 +152,7 @@ const SORT_VALUE: Record<Exclude<InventorySortKey, 'name'>, (item: HouseInventor
   faulty: item => item.tally.faulty,
 };
 
-// Lọc theo tình trạng, tìm theo tên nhà / Zone / mã thiết bị, rồi sắp xếp; trả thêm nhà khớp nhờ Zone hoặc thiết bị để tự xổ ra; O(nhà + thiết bị)
+// Trả thêm nhà khớp nhờ Zone hoặc thiết bị để tự xổ ra; O(nhà + thiết bị)
 export function queryInventory(inventory: HouseInventory[], query: InventoryQuery): { items: HouseInventory[]; matchedInside: Set<string> } {
   const keyword = query.keyword.trim().toLowerCase();
   const matchedInside = new Set<string>();

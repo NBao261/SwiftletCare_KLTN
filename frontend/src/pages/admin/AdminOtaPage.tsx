@@ -1,4 +1,4 @@
-// AdminOtaPage (/ota): Administrator cập nhật firmware từ xa OTA Firmware Management: layout + state management Logic hiển thị được tách sang ./components/ Kết nối BE thật: POST /devices/sensor-nodes/:id/commands { command: 'OTA', ota: { version, url, sha256 } }. - BE không có catalog firmware / % tiến trình → Administrator nhập version + url + sha256 của bản build. - Trạng thái chạy lấy từ SensorNode: `ota_pending` (đang chờ, trang tự làm mới 5s) / `ota_failed` (job BE đánh dấu thất bại sau 30 phút) / `firmware_version` khớp bản yêu cầu → thành công. - Lỗi BE: 400 (host không được phép / dữ liệu sai), 409 (node không ONLINE / trùng version), 501 (thiết bị chạy firmware trước 1.4.0, chưa xử lý lệnh từ xa), 503 (mất MQTT).
+// Backend không có catalog firmware: Admin nhập version, url, sha256; trạng thái lấy từ ota_pending, ota_failed
 import { useState } from 'react'
 import { useSensorNodes, useSendNodeCommand } from '@/hooks/shared/useDevices'
 import { getApiErrorMessage } from '@/lib/helpers'

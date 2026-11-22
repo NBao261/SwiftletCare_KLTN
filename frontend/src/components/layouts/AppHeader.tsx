@@ -79,10 +79,10 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
         })}
       </nav>
 
-      {/* Chỗ trang đặt thanh phạm vi (HeaderActions): từ xl cùng hàng tên trang, dưới xl hàng riêng ngay dưới (SH-07); trống thì ẩn */}
+      {/* Thanh phạm vi: từ xl cùng hàng tên trang, dưới xl xuống hàng riêng */}
       <div ref={setHeaderSlot} className="order-3 flex basis-full empty:hidden xl:order-2 xl:basis-auto" />
 
-      {/* Phải: VI/EN · chuông · avatar (menu avatar là nơi duy nhất có Cài đặt, Quyền riêng tư, Đăng xuất ở mọi khổ màn, SH-02) */}
+      {/* Menu avatar là nơi duy nhất có Cài đặt, Quyền riêng tư, Đăng xuất */}
       <div className="order-2 flex shrink-0 items-center gap-3 xl:order-3">
         <div className="max-sm:hidden">
           <LanguageToggle />

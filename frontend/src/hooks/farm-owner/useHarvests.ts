@@ -24,7 +24,7 @@ export function useHarvestCycleList(farmId: string, houseId: string, page: numbe
   )
 }
 
-// Lô đổi thì backend dựng lại chu kỳ của zone nên làm mới cả đợt thu (trang Thu hoạch, Tổng quan, Trang trại) lẫn chu kỳ
+// Backend dựng lại chu kỳ khi lô đổi nên làm mới cả chu kỳ
 function invalidateHarvests(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: ['harvests'] })
   void queryClient.invalidateQueries({ queryKey: ['harvest', 'cycles'] })
@@ -63,7 +63,7 @@ export function useDeleteHarvest() {
   })
 }
 
-// link ảnh của lô (có ở GET /harvests/{id}); khoá dưới ['harvests'] nên lưu lần thu là đọc lại Ảnh của lần thu = ảnh đầu tiên có trong các đợt của nó (một đợt thêm sau có thể chưa có ảnh)
+// Khoá dưới ['harvests'] nên lưu lần thu là đọc lại; ảnh lấy ở đợt đầu tiên có ảnh
 export function useHarvestPhotoUrl(batchIds: string[]): string | null {
   return useQueries({
     queries: batchIds.map(batchId => ({

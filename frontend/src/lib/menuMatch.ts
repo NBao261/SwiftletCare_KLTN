@@ -4,7 +4,7 @@ export interface MatchableMenuItem {
   tabs?: { path: string }[]
 }
 
-// Đường dẫn thuộc một trang (chính nó hoặc trang chi tiết bên dưới), không khớp tiền tố chữ ("/users" không khớp "/users-x")
+// Không khớp tiền tố chữ ("/users" không khớp "/users-x")
 export function isPathWithin(pathname: string, path: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`)
 }
@@ -14,7 +14,7 @@ export function isMenuItemActive(item: MatchableMenuItem, pathname: string): boo
   return isPathWithin(pathname, item.path) || (item.tabs ?? []).some(tab => isPathWithin(pathname, tab.path))
 }
 
-// Tab đang mở: tab có đường dẫn dài nhất chứa trang hiện tại (/dashboard/scada thuộc tab "Điều khiển tay", không thuộc /dashboard)
+// Tab có đường dẫn dài nhất chứa trang hiện tại
 export function activeTabPath(tabs: { path: string }[], pathname: string): string | undefined {
   return tabs
     .filter(tab => isPathWithin(pathname, tab.path))

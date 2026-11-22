@@ -106,7 +106,7 @@ interface HarvestFormModalProps {
   creatorName: string;
 }
 
-// Popup tạo / sửa 1 lần thu: khu vực + ngày, sản lượng 3 loại yến, ảnh; mỗi loại có số liệu là 1 đợt cùng zone + ngày
+// Mỗi loại có số liệu là 1 đợt cùng zone + ngày
 export default function HarvestFormModal({ scope, onClose, group, houseName, creatorName }: HarvestFormModalProps): JSX.Element {
   const { t, num, exact } = useTranslation(harvestDict);
   const isEdit = group !== undefined;
@@ -148,7 +148,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
       label: scope.farmId ? house.name : `${house.name} · ${scope.farmNames.get(house.farm_id) ?? NO_VALUE}`,
     })),
   ];
-  // Backend vẫn bắt lần thu thuộc 1 Zone: tự gắn vào Zone tạo sớm nhất của nhà (mã tăng theo thời gian tạo), người dùng không chọn Zone
+  // Backend bắt lần thu thuộc 1 Zone: tự gắn vào Zone tạo sớm nhất của nhà
   const zoneId = scope.zones
     .filter(zone => zone.house_id === houseId)
     .reduce<string>((oldest, zone) => (oldest === '' || zone._id < oldest ? zone._id : oldest), '');

@@ -1,4 +1,4 @@
-// 02B_Expert_Verdict_Drawer_v3: Ngăn kéo Thẩm định Cảnh báo (Orchestrator) Slide-over từ phải, render qua createPortal ở z-50 trên toàn bộ layout và banner
+// Ngăn kéo thẩm định cảnh báo, render qua createPortal để nằm trên layout và banner
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'

@@ -1,4 +1,4 @@
-// DeviceTable.tsx: Bảng danh sách thiết bị với nút "Đẩy OTA" Cột "Cập nhật" đọc trực tiếp ota_pending / ota_failed của node (không suy diễn "bản mới nhất" vì BE không có catalog firmware).
+// Cột "Cập nhật" đọc thẳng ota_pending/ota_failed vì backend không có catalog firmware
 import { useMemo } from 'react'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
@@ -85,7 +85,7 @@ interface Props {
 }
 
 export function DeviceTable({ nodes, selectedId, onSelect }: Props) {
-  // Vị trí theo tên (FE_Design 13.16 a) từ danh sách thiết bị toàn hệ thống của Admin: Admin không đọc cấu trúc farm
+  // Admin không đọc cấu trúc farm: lấy vị trí từ danh sách thiết bị
   const { data: systemStatus } = useSystemNodeStatus()
   const locationById = useMemo(
     () => new Map((systemStatus?.nodes ?? []).map(item => [item._id, [item.farm_name, item.house_name, item.zone_name].filter(Boolean).join(' · ')])),

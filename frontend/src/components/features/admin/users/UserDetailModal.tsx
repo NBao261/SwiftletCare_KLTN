@@ -39,7 +39,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 // Giá trị trống: chữ xám nghiêng (cùng kiểu "Không có" ở Nhật ký hệ thống)
 const Empty = ({ children }: { children: ReactNode }) => <span className="italic text-warmGray">{trChildren(children)}</span>
 
-// Popup chi tiết tài khoản: bố cục ngang 2 cột: trái = tên + danh mục (Thông tin / Phân công / Lịch sử), phải = nội dung mục đang chọn, mỗi nhóm dòng trong 1 khối nền xám. Chiều cao cố định (h-[22rem]) nên đổi mục không làm popup co giãn. Màu trung tính, chỉ nhãn trạng thái giữ màu tone.
+// Chiều cao cố định để đổi mục không làm popup co giãn
 export default function UserDetailModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   const [section, setSection] = useState<Section>('info')
   // Mở tài khoản khác → về mục đầu

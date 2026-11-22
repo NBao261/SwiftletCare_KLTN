@@ -1,4 +1,4 @@
-// Step2Validate: bước 2: xác thực mã thiết bị + mã kích hoạt trên nhãn; lỗi phân theo mã HTTP (400/404 sai mã, 403 không có quyền, 409 đã đăng ký)
+// Bước 2: xác thực mã thiết bị và mã kích hoạt; lỗi theo mã HTTP
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'

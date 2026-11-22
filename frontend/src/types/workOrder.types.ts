@@ -3,7 +3,7 @@ import type { AlertType } from '@/types/alert.types';
 
 export type WorkOrderStatus = 'OPEN' | 'IN_PROGRESS' | 'VERIFYING' | 'AWAITING_APPROVAL' | 'CLOSED' | 'CANCELLED';
 
-// ALERT: cảnh báo thiết bị · OUTAGE: mất kết nối quá 30 phút · EXPERT: chuyên gia xác nhận cần tới nhà · ONSITE_CHECK: thợ thấy cảm biến hỏng · MANUAL: Farm Owner mở PLAN: kế hoạch bảo trì đến hạn · CHECKLIST: mục checklist bảo trì ghi hỏng · RECOMMENDATION: Farm Owner chấp nhận khuyến nghị
+// Nguồn mở Work Order
 export type WorkOrderOrigin = 'ALERT' | 'OUTAGE' | 'EXPERT' | 'ONSITE_CHECK' | 'MANUAL' | 'PLAN' | 'CHECKLIST' | 'RECOMMENDATION';
 
 // nguyên nhân thợ tìm thấy tại chỗ

@@ -22,7 +22,7 @@ function sdFileName(trackNumber: number): string {
   return `${String(trackNumber).padStart(4, '0')}.mp3`;
 }
 
-// Bài loa ru của 1 bộ kit: Farm Owner tải lên, đánh dấu đã chép thẻ SD, xoá, chọn bài mặc định, phát thử; role khác chỉ xem
+// Bài loa ru: Farm Owner quản lý, role khác chỉ xem
 export default function LullabyTracksModal({ node, onClose }: { node: SensorNode; onClose: () => void }): JSX.Element {
   const { t, num } = useTranslation(devicesDict);
   const push = useToastStore(state => state.push);

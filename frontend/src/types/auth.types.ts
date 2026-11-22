@@ -3,7 +3,7 @@
 import type { AlertSeverity } from '@/types/alert.types'
 import type { Role } from '@/types/common.types'
 
-// Trạng thái tài khoản dưới góc nhìn Admin: KHÔNG phải field trên `users` (backend chỉ có is_active/deletion_requested_at/deleted_at), là giá trị dẫn xuất phía UI, xem `getUserStatus()` trong hooks/admin/useUsers.ts.
+// Giá trị dẫn xuất ở UI, xem getUserStatus() trong hooks/admin/useUsers.ts
 export type UserStatus = 'ACTIVE' | 'LOCKED' | 'PENDING_DELETION' | 'DELETED'
 
 // kênh ngoài ứng dụng của 1 mức cảnh báo; trường không có thì dùng cài đặt chung

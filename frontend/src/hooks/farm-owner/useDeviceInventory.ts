@@ -6,7 +6,7 @@ import { buildDeviceInventory } from '@/components/features/farm-owner/devices/d
 import { useSensorNodes } from '@/hooks/shared/useDevices';
 import type { House, Zone } from '@/types';
 
-// Thiết bị của các nhà yến theo Nhà → Zone; node cảm biến và camera mỗi loại 1 request theo quyền truy cập (dùng chung cache với màn Trang trại)
+// Chung cache với màn Trang trại
 export function useDeviceInventory(houses: House[], zones: Zone[], zoneId?: string) {
   const sensorsQuery = useSensorNodes();
   const camerasQuery = useQuery({

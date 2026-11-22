@@ -20,7 +20,7 @@ export function useFarm(farmId: string | undefined) {
   })
 }
 
-// Chi tiết nhiều farm cùng lúc (chung cache ['farms', id] với useFarm), VD tra tên người nhập đợt thu của mọi farm
+// Chung cache ['farms', id] với useFarm
 export function useFarmDetails(farmIds: string[]) {
   return useQueries({
     queries: farmIds.map(farmId => ({
@@ -121,7 +121,7 @@ export function useCreateZone(houseId: string) {
     mutationFn: (input: { name: string; floor?: number }) => farmApi.createZone(houseId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['zones', houseId] })
-      // 2 danh sách zone phẳng có staleTime 5 phút: không làm mới thì zone mới vắng mặt ở ZonePicker và số zone ở trang Farm
+      // staleTime 5 phút: không làm mới thì zone mới vắng mặt ở ZonePicker
       void queryClient.invalidateQueries({ queryKey: ['farm-zones'] })
       void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
     },
@@ -231,7 +231,7 @@ export interface AllZone extends Zone { houseName: string; farmId: string; farmN
 // Nhà và Zone cùng khoá cache với useFarmStructure, useScopeFilter: mỗi nhà chỉ gọi 1 lần dù nhiều hook cùng cần
 const STRUCTURE_STALE_MS = 5 * 60 * 1000
 
-// Zone phẳng của mọi farm tài khoản xem được; backend không có API gộp nên gọi listHouses / listZones từng farm ở client
+// Backend không có API gộp nên gọi từng farm
 export function useAllZones() {
   const { data: farms } = useFarms()
   const queryClient = useQueryClient()

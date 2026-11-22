@@ -11,7 +11,7 @@ interface RemoveControllerModalProps {
   onClose: () => void;
 }
 
-// gỡ bộ điều khiển, giữ lịch sử, khôi phục được trong 24 giờ; thiết bị đang ONLINE thì cảnh báo trước rồi gửi force
+// Khôi phục được trong 24 giờ; thiết bị ONLINE thì cảnh báo trước rồi gửi force
 export default function RemoveControllerModal({ device, onClose }: RemoveControllerModalProps): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const decommission = useDecommissionDevice();

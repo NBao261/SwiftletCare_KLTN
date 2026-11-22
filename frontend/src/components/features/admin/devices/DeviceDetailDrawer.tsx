@@ -43,11 +43,11 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 const Muted = ({ children }: { children: ReactNode }) => <span className="font-normal text-warmGray">{children}</span>
 
-// Chi tiết thiết bị của Admin: chủ farm, kết nối, cảnh báo đang mở; Khởi động lại, Đẩy cấu hình; không số đo môi trường
+// Chi tiết thiết bị của Admin, không có số đo môi trường
 export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNodeStatusItem | null; onClose: () => void }) {
   const farmId = node?.farm_id || undefined
   const { data: farm } = useFarm(farmId)
-  // Cảnh báo đang mở của phòng → lọc đúng thiết bị (alert.node_id = _id của node); 1 phòng ít cảnh báo nên 100 là đủ Chỉ gọi khi drawer đang mở (node có giá trị): đóng drawer không tải cảnh báo
+  // Chỉ tải cảnh báo khi drawer đang mở
   const alerts = useAlertsList({ farmId, zoneId: node?.zone_id, status: 'ACTIVE', limit: 100 }, { enabled: !!node })
   const sendCommand = useSendNodeCommand()
   const apiErrorMessage = useApiErrorMessage()

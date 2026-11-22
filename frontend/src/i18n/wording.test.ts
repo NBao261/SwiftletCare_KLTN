@@ -81,7 +81,7 @@ describe('thuật ngữ giao diện tiếng Việt (FE_Design §6.2)', () => {
     expect(problems).toEqual([])
   })
 
-  // Gạch dài trong JSX nhiều dòng hoặc chữ ghép với {…} không nằm gọn trong một chuỗi; file .tsx không chứa chữ tiếng Anh của từ điển
+  // Gạch dài trong JSX nhiều dòng không nằm gọn trong một chuỗi
   it('không có gạch dài nối câu trong file giao diện', () => {
     const problems = Object.entries(sources)
       .filter(([file]) => file.endsWith('.tsx'))

@@ -132,7 +132,7 @@ export interface TodayBirdCount {
   updatedAt: string | null;
 }
 
-// Cộng số đếm hôm nay của nhiều nhà yến; tỷ lệ chim về tính lại từ số ròng như backend (net_entry / net_exit × 100)
+// Tỷ lệ chim về tính lại từ số ròng như backend
 export function sumTodayBirdCounts(list: BirdCountCurrentResponse[]): TodayBirdCount {
   const today: TodayBirdCount = { morningExit: 0, eveningExit: 0, morningEntry: 0, eveningEntry: 0, returnRate: null, updatedAt: null };
   let netExit = 0;
@@ -152,7 +152,7 @@ export function sumTodayBirdCounts(list: BirdCountCurrentResponse[]): TodayBirdC
   return today;
 }
 
-// Thời tiết ngoài trời cho từng mốc trong nhà: điểm T phủ [T, T + spanMs), mốc không được phủ thì null; cả hai chuỗi tăng dần
+// Điểm T phủ [T, T + spanMs); mốc không được phủ thì null; hai chuỗi đều tăng dần
 export function alignOutdoorWeather(timestamps: string[], outdoor: OutdoorWeatherPoint[], spanMs: number): Array<OutdoorWeatherPoint | null> {
   let index = 0;
   return timestamps.map(timestamp => {

@@ -68,7 +68,7 @@ export default function HealthRatingModal({ day, onClose, onDone }: HealthRating
     setIsPickError(false);
   }
 
-  // Câu lỗi chung theo nhóm (13.16 b); 409 (đã đánh giá nơi khác, vừa quá hạn) thì đóng popup, danh sách tự làm mới
+  // 409 (đã chấm nơi khác hoặc vừa quá hạn) thì đóng popup
   function showError(error: unknown): void {
     push(apiErrorMessage(error), 'error');
     if ((error as { response?: { status?: number } }).response?.status === 409) {
@@ -110,7 +110,7 @@ export default function HealthRatingModal({ day, onClose, onDone }: HealthRating
     <>
       <Modal open={!isSkipOpen} onClose={close} ariaLabel={t('rate.title', { date: date(day.date), house: day.house_name })} size="xl" closeOnBackdrop>
         <div className="flex flex-col gap-5">
-          {/* Đầu popup: tiêu đề in đậm (chừa chỗ nút ✕) + câu nhắc ngay dưới, phần **…** in đậm chữ đen; luôn hiện, không cuộn */}
+          {/* Đầu popup luôn hiện, không cuộn */}
           <div className="flex flex-col gap-1">
             <h2 className="flex min-h-9 items-center pr-12 text-lg font-bold text-charcoal [overflow-wrap:anywhere]">
               {t('rate.title', { date: date(day.date), house: day.house_name })}

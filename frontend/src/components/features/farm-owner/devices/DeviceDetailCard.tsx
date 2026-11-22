@@ -27,7 +27,7 @@ interface DeviceDetailCardProps {
   moreActions?: ActionsMenuItem[];
 }
 
-// Thẻ chi tiết 1 thiết bị: trạng thái, heartbeat, mạng; nút loa ru, khởi động lại và menu dời / thay / gỡ theo quyền, không có cấu hình hay firmware
+// Thẻ chi tiết 1 thiết bị, nút theo quyền
 export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
   const { t, num, day, ago, dateTime } = useTranslation(devicesDict);
   const isSensor = device.type === 'sensor';

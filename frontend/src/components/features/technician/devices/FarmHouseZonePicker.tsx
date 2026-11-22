@@ -8,7 +8,7 @@ interface FarmHouseZonePickerProps {
   onChange: (value: Partial<FarmHouseZonePickerValue>) => void
 }
 
-// 3 select lồng nhau Farm → House → Zone, dùng để chọn Zone ĐÍCH khi dời thiết bị (— xem TechnicianDevicesPage.tsx). Khác `ZonePicker` (Farm→Zone phẳng qua useFarmZones, gộp House vào label) vì ở đây cần biết rõ cả 3 cấp để người dùng dễ định vị đúng Zone trong Farm nhiều House/tầng.
+// Chọn Zone đích khi dời thiết bị: 3 cấp riêng để dễ định vị trong farm nhiều nhà
 export default function FarmHouseZonePicker({ value, onChange }: FarmHouseZonePickerProps) {
   const { data: farms, isLoading: loadingFarms } = useFarms()
   const { data: houses, isLoading: loadingHouses } = useHouses(value.farmId)

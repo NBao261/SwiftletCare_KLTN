@@ -17,7 +17,7 @@ export interface LogoOrigin {
   text: LogoBox;
 }
 
-// Màn chuyển cảnh sau đăng nhập: dùng Zustand vì useAuth bật màn này rồi chuyển trang ngay, trang đăng nhập unmount nên state cục bộ mất, React Query chỉ cho dữ liệu server
+// Zustand vì trang đăng nhập unmount ngay sau khi bật màn này
 interface LoginSplashState {
   isPlaying: boolean;
   // Vị trí logo lúc bấm đăng nhập; không đọc được thì logo hiện thẳng ở giữa

@@ -167,7 +167,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
         </FarmFrame>
       )}
 
-      {/* Mỗi Zone 1 bộ kit: thông tin bộ kit hiện sẵn, bảng thiết bị (cảm biến, loa, relay) bấm mới xổ; mở từ "Chi tiết" của bộ kit thì xổ sẵn */}
+      {/* Mở từ "Chi tiết" của bộ kit thì xổ sẵn bảng thiết bị */}
       {item.zoneGroups.map(group => {
         const isTarget = group.devices.some(device => device.id === state?.deviceId);
         return (

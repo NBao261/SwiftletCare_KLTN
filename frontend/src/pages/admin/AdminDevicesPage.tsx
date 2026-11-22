@@ -1,4 +1,4 @@
-// ADMIN: /devices: mọi thiết bị kèm farm, nhà, khu vực (GET /devices/system-status); lệnh từ xa trong ngăn chi tiết
+// Mọi thiết bị kèm vị trí; lệnh từ xa trong ngăn chi tiết
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WarningCircleIcon } from '@phosphor-icons/react'

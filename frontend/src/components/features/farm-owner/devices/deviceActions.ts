@@ -1,7 +1,7 @@
 import type { DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory'
 import type { Role } from '@/types'
 
-// chỉ Farm Owner quản lý bài loa ru (tải lên, đánh dấu đã chép thẻ SD, xoá, chọn, phát thử); role khác chỉ xem danh mục
+// Chỉ Farm Owner quản lý bài loa ru
 export function canManageLullabyTracks(role: Role | undefined): boolean {
   return role === 'FARM_OWNER'
 }

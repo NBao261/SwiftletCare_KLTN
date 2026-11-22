@@ -17,7 +17,7 @@ export interface CreateFarmOwnerInput {
   phone?: string
 }
 
-// Router `/admin` (backend/src/routes/admin.route.ts): mọi endpoint đều `requireRole('ADMIN')`. Không có DELETE /admin/users/:id: xoá tài khoản chỉ đi qua hàng đợi delete-requests. POST /admin/technicians và PUT /admin/technicians/:id/password đã bị xoá khỏi backend (f9d9522). Farm Technician được Farm Owner mời qua POST /farms/:id/members với role FARM_TECHNICIAN.
+// Không có DELETE /admin/users/:id: xoá tài khoản chỉ qua hàng đợi delete-requests
 export const adminApi = {
   // Tài khoản
   listUsers: (query?: ListAdminUsersQuery) =>

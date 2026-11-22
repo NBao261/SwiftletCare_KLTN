@@ -10,13 +10,13 @@ export interface Farm {
   owner?: { full_name?: string; email?: string }
   // role: FARM_OWNER = đồng sở hữu, DOMAIN_EXPERT = chuyên gia; member cũ không có field → đồng sở hữu
   members: Array<{ user_id: string; is_primary: boolean; joined_at: string; full_name?: string; email?: string; role?: FarmMemberRole }>
-  // Chỉ có ở GET /farms: có ít nhất một Domain Expert còn hoạt động (chuyên gia bị khoá không tính); false thì Farm Owner làm thay
+  // Chỉ có ở GET /farms; chuyên gia bị khoá không tính; false thì Farm Owner làm thay
   has_active_expert?: boolean
   is_deleted: boolean
   created_at: string
 }
 
-// Vai trò thành viên farm (POST /farms/:id/members): thêm FARM_TECHNICIAN: thợ được Farm Owner gán vào nhà cụ thể (backend f9d9522)
+// Vai trò thành viên farm
 export type FarmMemberRole = 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
 
 // Vị trí farm: một farm là một địa điểm

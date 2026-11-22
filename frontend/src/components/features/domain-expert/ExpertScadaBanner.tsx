@@ -1,4 +1,4 @@
-// ExpertScadaBanner: Thanh trạng thái SCADA cố định ở đầu mọi trang Chuyên gia 3 trạng thái UX chuẩn nghiệp vụ: 1. Loading, đang lấy danh sách trang trại từ API 2. Empty, Chuyên gia chưa được gán trang trại nào (nghiệp vụ) 3. Active, Có ≥ 1 trang trại → hiện selector + KPI pills Không dùng dữ liệu giả (FALLBACK). Mọi Farm/House/Zone ID luôn là MongoDB ObjectId thật từ API để không bao giờ gây lỗi 422 ở các hook phụ thuộc.
+// Thanh trạng thái đầu mọi trang chuyên gia; chỉ dùng ID thật từ API để hook phụ thuộc không lỗi 422
 
 import { t } from '@/i18n'
 import { useState, useRef, useEffect, useMemo } from 'react'

@@ -17,7 +17,7 @@ function startOfDayIso(daysAgo: number) {
   return d.toISOString()
 }
 
-// Chỉ đếm: gọi GET /system/audit-logs với limit=1 và đọc `meta.total`, để backend tự đếm theo bộ lọc thay vì tải hết nhật ký về client (bảng nhật ký chỉ tăng). Mỗi ô = 1 request rất nhẹ.
+// limit=1 và đọc meta.total: backend tự đếm, không tải hết nhật ký
 function useAuditCount(query: Omit<ListAuditLogsQuery, 'page' | 'limit'>) {
   // Cùng phạm vi bảng bên dưới: chỉ nhật ký tài khoản
   const { total, isLoading, isError, refetch } = useAuditLogList({ ...query, targetType: AUDIT_TARGET_TYPE, page: 1, limit: 1 })

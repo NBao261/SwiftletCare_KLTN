@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PASSWORD, demoFarm, signIn } from './helpers/demoApi';
 
-// Administrator trên web: tạo Farm Owner và lưu ngưỡng mặc định kèm nguồn REF-5. Cần `npm run seed:demo` (tài khoản admin@); job CI không có SMTP nên thư mật khẩu tạm không gửi được.
+// Admin tạo Farm Owner và lưu ngưỡng mặc định. Cần `npm run seed:demo`; CI không có SMTP nên thư không gửi
 async function signInAsAdmin(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill('admin@swiftletcare.dev');

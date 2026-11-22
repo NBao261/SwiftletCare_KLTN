@@ -34,7 +34,7 @@ export default function StructureEditModal({ kind, mode, id, name, deviceCount, 
   const mutation = mode === 'rename' ? rename : remove
   const trimmed = newName.trim()
   const canSubmit = mode === 'rename' ? trimmed !== '' && trimmed !== name && !isDuplicate : !isDeleteBlocked
-  // Nhà, Zone vừa xoá biến khỏi danh sách nên trang gọi gỡ modal trước khi callback của mutate chạy: dùng mutateAsync để điều hướng vẫn chạy sau khi modal đã gỡ
+  // mutateAsync: nơi xoá gỡ modal trước khi callback của mutate chạy
   async function handleSubmit() {
     try {
       if (mode === 'rename') await rename.mutateAsync({ kind, id, name: trimmed })

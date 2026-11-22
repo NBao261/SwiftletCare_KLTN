@@ -1,4 +1,4 @@
-// ADMIN: Nhật ký hệ thống: GET /system/audit-logs, lọc theo người thực hiện / hành động / khoảng ngày (server) + ô tìm kiếm & sắp xếp (client, trên TOÀN BỘ nhật ký khớp bộ lọc). Hiển thị 1 bảng DataTable như trang Người dùng. Chỉ nhật ký TÀI KHOẢN (target_type='user', lọc server), không hiện log thiết bị/cấu hình. Logic lọc/sắp xếp ở useAuditLogTable + AuditLogFilters; thẻ điện thoại AuditLogCard dùng chung với Tổng quan hệ thống.
+// Nhật ký hệ thống: lọc ở server, tìm và sắp ở client trên toàn bộ kết quả
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { USER_AUDIT_ACTIONS } from '@/constants/auditActions'

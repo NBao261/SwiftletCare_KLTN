@@ -4,9 +4,9 @@ import { demoFarm, signIn } from './helpers/demoApi';
 interface Alert { _id: string; routing?: { technician_id?: string; owners_notified: boolean } }
 interface WorkOrder { _id: string; status: string }
 
-// nhà B có cảnh báo phun không tăng ẩm, Work Order đã báo xong (`npm run seed:demo`). 15 phút leo thang và 10 phút kiểm phục hồi của đo bằng bộ giả lập, không chạy ở đây.
+// Cần `npm run seed:demo`. Leo thang 15 phút và kiểm phục hồi 10 phút đo bằng bộ giả lập
 test.describe('DS-03, DS-04 Xử lý sự cố', () => {
-  // Chỉ kiểm điều không đổi theo thời gian: sau 15 phút cảnh báo leo thang tới Farm Owner, sau khoảng 70 phút Work Order sang chờ duyệt (job nền chạy trên staging), nên không assert `owners_notified` hay đúng một trạng thái
+  // Job nền trên staging đổi trạng thái theo thời gian, nên không assert một trạng thái cố định
   test('DS-03 cảnh báo tới thợ của nhà trước, Work Order của nó đã báo xong', async ({ request }) => {
     const owner = await signIn(request, 'owner');
     const farm = await demoFarm(owner);

@@ -18,7 +18,7 @@ import { formatStandardDate } from '@/lib/i18n';
 import type { House, NestType, SortDirection } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
-// Từ sm: khung bảng cao cố định 4 dòng; màn xl: khung lấp chiều cao cố định của Card, dòng còn lại cuộn dọc; điện thoại: thẻ cao theo nội dung
+// Khung bảng cao cố định 4 dòng từ sm, cuộn dọc
 const VISIBLE_ROWS = 4;
 const ROW_HEIGHT = 68;
 // Tiêu đề cột (~46px) + 4 dòng × 68px: chiều cao cố định của vùng bảng khi chưa tới màn xl
@@ -60,7 +60,7 @@ interface HarvestTableProps {
   createBlockedReason?: string;
 }
 
-// Bảng lần thu (1 dòng 1 lần thu): tìm / lọc / sắp xếp ở client, khung 4 dòng cuộn dọc không bù dòng trống (ngoại lệ FE_Design 1.1)
+// Bảng lần thu, không bù dòng trống
 export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, onConfirm, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const [search, setSearch] = useState('');
@@ -237,7 +237,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
       </div>
 
       {filteredGroups.length === 0 ? (
-        // Khung cao 318px: thu minh hoạ còn 80%, đệm trên 32px bù vòng tròn tràn lên 40px × 0,8: hình và chữ nằm giữa, không tràn viền
+        // Thu minh hoạ còn 80% để không tràn khung 318px
         <div className={cn('flex items-center justify-center overflow-hidden rounded-2xl border border-warmGray/15 pt-8', TABLE_AREA_CLASS)}>
           <div className="scale-[0.8]">
             <TableEmptyState title={emptyTitle} description={isFiltering ? t('table.emptyFilteredHint') : t('table.emptyHint')} />

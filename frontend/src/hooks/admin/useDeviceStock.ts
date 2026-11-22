@@ -6,7 +6,7 @@ const KEY = ['admin-device-stock']
 // Trần `limit` của backend (paginate)
 const PAGE_LIMIT = 100
 
-// toàn bộ kho. Backend chỉ lọc theo loại / đã kích hoạt / đã thu hồi, không tìm kiếm, không lọc theo trạng thái nhãn và sắp cố định theo ngày nhập, nên trang tải hết rồi tìm, lọc, sắp, cắt trang ở client. ponytail: tải cả kho mỗi lần mở trang: đủ cho vài trăm thiết bị; nhiều hơn thì thêm search/sort vào backend.
+// Backend không tìm và sắp được nên tải cả kho rồi xử lý ở client; nhiều thiết bị thì thêm search/sort vào backend
 export function useDeviceStock() {
   return useQuery({
     queryKey: KEY,

@@ -15,7 +15,7 @@ interface ScopeFilterProps {
 // Ô khoá: nền xám, không bấm được
 const LOCKED_CLASS = 'cursor-not-allowed border-warmGray/15 bg-warmGray/10 text-warmGray hover:border-warmGray/15';
 
-// Khung lọc Trang trại → Nhà → Zone luôn đủ 3 ô (ô chưa chọn được khoá xám), chấm cam ở farm / nhà / Zone có sự cố
+// Luôn đủ 3 ô (ô chưa chọn được thì khoá), chấm cam ở nơi có sự cố
 export default function ScopeFilter({ scope, lockZone = false, lockHouse = false }: ScopeFilterProps): JSX.Element {
   const { t } = useTranslation(dashboardDict);
   const isHouseLocked = lockHouse || !scope.farmId;

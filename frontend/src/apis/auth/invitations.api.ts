@@ -7,11 +7,11 @@ export interface InvitationPreview {
   userExists: boolean
 }
 
-// router riêng `/invitations` (không mount dưới `/farms`) vì xem trước/từ chối lời mời là link công khai qua token, không cần đăng nhập.
+// Router riêng vì xem trước, từ chối lời mời là link công khai, không cần đăng nhập
 export const invitationApi = {
   getByToken: (token: string) => api.get<ApiResponse<InvitationPreview>>(`/invitations/${token}`),
   accept:     (token: string) => api.post<ApiResponse<Farm>>(`/invitations/${token}/accept`),
-  // Người được mời chưa có tài khoản: chỉ đặt tên + mật khẩu, email và role lấy từ lời mời. Không trả token → đăng nhập sau
+  // Email và role lấy từ lời mời; không trả token, phải đăng nhập sau
   createAccount: (token: string, input: { full_name: string; password: string }) =>
     api.post<ApiResponse<User>>(`/invitations/${token}/create-account`, input),
   decline:    (token: string) => api.post<ApiResponse<{ message: string }>>(`/invitations/${token}/decline`),

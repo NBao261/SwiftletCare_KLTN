@@ -1,4 +1,4 @@
-// Custom hooks cho màn hình 01_Expert_Dashboard_v3 Tuân thủ pattern: Real API First → fallback sang Mock khi empty/error
+// Hook cho màn tổng quan chuyên gia
 
 import { useQuery } from '@tanstack/react-query'
 import { expertService } from '@/services/expert.service'

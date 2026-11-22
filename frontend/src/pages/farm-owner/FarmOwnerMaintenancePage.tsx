@@ -27,7 +27,7 @@ type StateFilter = 'active' | MaintenancePlanState;
 const TABS = ['due', 'list'] as const;
 type MaintenanceTab = (typeof TABS)[number];
 
-// Khung viền đứt khi rỗng, kéo tới gần đáy thẻ; đệm trên dày hơn 40px vì vòng tròn minh hoạ tràn lên trên khung hình 40px
+// Đệm trên dày hơn vì hình minh hoạ tràn lên 40px
 function EmptyFrame({ title, hint }: { title: string; hint: string }): JSX.Element {
   return (
     <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 pb-10 pt-20">
@@ -36,7 +36,7 @@ function EmptyFrame({ title, hint }: { title: string; hint: string }): JSX.Eleme
   );
 }
 
-// Lịch bảo trì: kế hoạch đến hạn/quá hạn, danh sách kế hoạch; Farm Owner tạo, sửa, xoá; Domain Expert xem và góp ý
+// Farm Owner tạo, sửa, xoá; Domain Expert xem và góp ý
 export default function FarmOwnerMaintenancePage(): JSX.Element {
   const { t } = useTranslation(maintenanceDict);
   const apiErrorMessage = useApiErrorMessage();

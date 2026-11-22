@@ -1,7 +1,7 @@
 import api from '@/lib/axios';
 import type { ApiResponse, MaintenanceBasis, MaintenanceEquipment, MaintenancePlan, MaintenancePlanState } from '@/types';
 
-// GET /maintenance/plans: houseId hoặc farmId; không truyền = mọi farm của người gọi; RETIRED chỉ hiện khi lọc state=RETIRED
+// Không truyền houseId/farmId = mọi farm; RETIRED chỉ hiện khi lọc state=RETIRED
 export interface MaintenancePlanListQuery {
   farmId?: string;
   houseId?: string;

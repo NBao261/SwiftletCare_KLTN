@@ -34,7 +34,7 @@ function EmptyFrame({ title, hint }: { title: string; hint: string }): JSX.Eleme
   );
 }
 
-// tab So sánh nhà của Tổng quan (FO-11); tình hình hôm nay từng nhà (FR-015) ở thẻ nhà của tab Tình trạng các nhà
+// Tab So sánh nhà
 export default function FarmOwnerOverviewPage(): JSX.Element {
   const { t, date } = useTranslation(farmOverviewDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -110,7 +110,7 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
     setOrder('asc');
   };
 
-  // Hàng điều khiển của tab So sánh: Hủy lọc bên trái, khoảng, chỉ số sắp, chiều sắp: cùng cao h-9 (FE_Design 1.1, Lọc + tìm)
+  // Hàng điều khiển cùng cao h-9
   const comparisonToolbar = (
     <div className="flex flex-wrap items-center gap-2">
       {changedCount > 0 && <ClearFiltersButton tone="danger" count={changedCount} className="h-9" onClick={resetComparison} />}

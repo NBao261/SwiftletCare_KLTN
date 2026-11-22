@@ -1,4 +1,4 @@
-// Định nghĩa kiểu của frontend, tách theo module nghiệp vụ giống `apis/`. Kiểu là shape thực thể mirror model backend nên dùng chung nhiều role: chia theo module đúng hơn chia theo role. Barrel này giữ `@/types` chạy như cũ. Nguồn: MongoDB Schemas.
+// Kiểu chia theo module như apis/, vì shape thực thể dùng chung nhiều role
 
 export type * from '@/types/common.types'
 export type * from '@/types/auth.types'

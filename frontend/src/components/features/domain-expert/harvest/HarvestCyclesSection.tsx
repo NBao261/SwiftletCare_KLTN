@@ -130,7 +130,7 @@ export default function HarvestCyclesSection({ scope }: HarvestCyclesSectionProp
     },
   ]
 
-  // Chưa chọn phạm vi → nhắc chọn; tải → khung chờ; lỗi → báo kèm Thử lại; rỗng → khung rỗng; còn lại là bảng (FE_Design 13.5)
+  // Chưa chọn phạm vi, đang tải, lỗi, rỗng, rồi mới tới bảng
   let body = (
     <div className="py-10">
       <TableEmptyState title={t('section.noScope')} />

@@ -5,7 +5,7 @@ import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { getApiErrorMessage } from '@/lib/helpers';
 
-// Trang đăng nhập: khung và ảnh ở AuthLayout. Không có link đăng ký: tài khoản do Admin tạo hoặc tạo từ link lời mời; `?email=` điền sẵn khi vừa tạo tài khoản ở trang lời mời
+// ?email= điền sẵn khi vừa tạo tài khoản ở trang lời mời
 export default function LoginPage(): JSX.Element {
   const { login } = useAuth();
   const [searchParams] = useSearchParams();

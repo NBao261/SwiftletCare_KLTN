@@ -1,4 +1,4 @@
-// Step5WaitOnline: bước cuối: chờ thiết bị kết nối máy chủ trong 15 phút (socket DEVICE_STATUS_CHANGE + đọc trạng thái một lần); bộ điều khiển còn chờ tới khi áp cấu hình của Zone (config_sync), cùng các bước với màn lắp đặt của mobile
+// Bước cuối: chờ thiết bị kết nối trong 15 phút; controller chờ thêm tới khi áp cấu hình của Zone
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Check, Loader2, AlertTriangle, Circle, RotateCcw } from 'lucide-react'
 import { useDeviceStatusEvents, useSensorNode } from '@/hooks/shared/useDevices'
@@ -9,7 +9,7 @@ import type { OnboardingState } from './onboardingTypes'
 
 // 15 phút
 const TIMEOUT_MS = 15 * 60 * 1000
-// Đọc lại trạng thái: controller gửi heartbeat 30 s/lần (MQTT_HEARTBEAT_MS) và backend so phiên bản cấu hình ở mỗi heartbeat
+// Controller gửi heartbeat 30 s/lần, backend so phiên bản cấu hình ở mỗi heartbeat
 const CONFIG_POLL_MS = 10_000
 
 // Vòng đếm ngược: bán kính 52 trong viewBox 120 → chu vi để tính stroke-dashoffset
@@ -64,7 +64,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   const startRef      = useRef(Date.now())
   const successTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Trạng thái đọc từ API (thiết bị đã ONLINE từ trước thì socket không còn sự kiện nào): controller đọc lại tới khi áp xong cấu hình
+  // Thiết bị đã ONLINE từ trước thì socket không còn sự kiện nào: đọc trạng thái từ API
   const { data: sensor } = useSensorNode(isCamera ? undefined : data.deviceDbId, CONFIG_POLL_MS)
   const { data: cameras } = useHouseCameras(isCamera ? data.location.houseId : undefined)
   const fetchedStatus = isCamera ? cameras?.find(camera => camera._id === data.deviceDbId)?.status : sensor?.status

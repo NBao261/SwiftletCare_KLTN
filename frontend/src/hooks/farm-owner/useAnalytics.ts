@@ -91,7 +91,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 // cho mọi Zone của farm: backend chặn quá 6 Zone mỗi lần nên chia lô 6, gọi song song rồi gộp (ZoneBalanceCard)
 export function useEnvCompareBatched(zoneIds: string[], range: AnalyticsRange) {
   const batches = useMemo(() => chunk(zoneIds, 6), [zoneIds])
-  // Gộp bằng combine (kết quả được structural-share) để zones chỉ đổi tham chiếu khi dữ liệu đổi, useMemo trên results không giữ được
+  // combine để zones chỉ đổi tham chiếu khi dữ liệu đổi
   return useQueries({
     queries: batches.map(ids => ({
       queryKey: ['analytics', 'env-compare', ids, range],
@@ -164,7 +164,7 @@ export function useHousesBirdCountCurrent(houseIds: string[]) {
   })
 }
 
-// tương quan môi trường × tỷ lệ chim về: tỷ lệ chim về chờ hệ thống đếm chim nên nơi dùng gắn nhãn dữ liệu giả (FE_Design 5.4)
+// Tỷ lệ chim về chờ hệ thống đếm chim nên nơi dùng gắn nhãn dữ liệu giả
 export function useCorrelation(zoneId: string | undefined, days: number) {
   return useQuery({
     queryKey: ['analytics', 'correlation', zoneId, days],

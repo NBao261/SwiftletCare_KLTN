@@ -24,7 +24,7 @@ interface HarvestDetailModalProps {
   onDelete?: (group: HarvestGroup) => void;
 }
 
-// Chi tiết 1 lần thu: khu vực + ngày, sản lượng từng loại yến và tổng, ảnh sản phẩm, snapshot môi trường/đàn chim, nút sửa/xoá
+// Chi tiết 1 lần thu
 export default function HarvestDetailModal({ group, houseName, creatorName, onClose, onEdit, onDelete }: HarvestDetailModalProps): JSX.Element {
   const { t, num, exact } = useTranslation(harvestDict);
   const batchByType = new Map(group.batches.map(batch => [batch.nest_type, batch]));

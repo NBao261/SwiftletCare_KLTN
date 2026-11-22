@@ -5,7 +5,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { t } from '@/i18n'
 import type { IssuedDeviceSecrets } from '@/types'
 
-// mã vừa cấp, hiện đúng 1 lần (backend chỉ lưu hash). Mã kích hoạt → nhãn QR để in và dán lên thiết bị; mật khẩu broker → chép để flash cùng device ID (`firmware/tools/flash_identity.py`), không in lên nhãn.
+// Mã hiện đúng 1 lần (backend chỉ lưu hash). Mật khẩu broker để flash, không in lên nhãn
 export default function IssuedSecretsModal({ issued, onClose }: { issued: IssuedDeviceSecrets | null; onClose: () => void }) {
   const push = useToastStore(s => s.push)
   const [qr, setQr] = useState<string>()

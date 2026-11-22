@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/authStore'
 import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent, AppNotification } from '@/types'
 
-// Dev: '' = same-origin (localhost:5173): vite.config.ts proxy '/socket.io' -> http://localhost:3000 (ws:true) chuyển tiếp handshake. Production: set VITE_WS_URL trỏ thẳng origin backend thật.
+// Dev: '' = same-origin qua proxy của Vite. Production: VITE_WS_URL trỏ thẳng backend
 const SOCKET_URL = import.meta.env.VITE_WS_URL || ''
 
 let socket: Socket | null = null
@@ -13,7 +13,7 @@ const joinedHouses = new Map<string, number>()
 export function getSocket(): Socket {
   if (!socket) {
     socket = io(SOCKET_URL, {
-      // Dạng hàm: socket.io-client gọi lại trước MỖI lần connect/reconnect nên luôn lấy access token mới nhất, kể cả sau khi client.ts đã refresh token.
+      // Dạng hàm: gọi lại trước mỗi lần connect nên luôn lấy access token mới nhất
       auth: (cb) => cb({ token: useAuthStore.getState().accessToken }),
       transports: ['websocket'],
       autoConnect: false,

@@ -1,4 +1,4 @@
-// Bản dịch tiếng Anh của các màn chuyên gia (/domain-expert/*): cùng quy ước với en.ts: khoá là câu tiếng Việt y hệt chỗ gọi t(...)
+// Khoá là câu tiếng Việt y hệt chỗ gọi t(...)
 const enExpert: Record<string, string> = {
   // Khung chung: thanh chọn khu vực, lời nhắc quyền, màn trống
   'Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.':

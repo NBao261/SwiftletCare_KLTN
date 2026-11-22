@@ -7,7 +7,7 @@ interface StableHeightProps {
   children: ReactNode
 }
 
-// Giữ khung nội dung không co lại khi nội dung đổi (VD chuyển Lưới ↔ Danh sách, đổi tab, lọc ra ít dòng): nhớ chiều cao lớn nhất đã đạt và dùng làm min-height, nên trang không bị giật/rút ngắn. Đổi bề rộng khung (resize cửa sổ) thì đo lại từ đầu vì cùng nội dung sẽ cao khác đi.
+// Nhớ chiều cao lớn nhất làm min-height để trang không giật; resize thì đo lại
 export default function StableHeight({ minHeight = 0, className, children }: StableHeightProps) {
   const outer = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)

@@ -17,7 +17,7 @@ interface ImageLinksFieldProps {
   disabled?: boolean;
 }
 
-// Ô dán link ảnh sản phẩm: dán 1 hoặc nhiều link (mỗi dòng 1 link) rồi Enter / bấm Thêm; xem trước ảnh nhỏ, bỏ từng ảnh
+// Dán 1 hoặc nhiều link ảnh, mỗi dòng 1 link
 export default function ImageLinksField({ links, onChange, disabled = false }: ImageLinksFieldProps): JSX.Element {
   const { t } = useTranslation(harvestDict);
   const [draft, setDraft] = useState('');

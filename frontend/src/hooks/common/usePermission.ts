@@ -6,7 +6,7 @@ function hasRole(role: Role | undefined, ...allowed: Role[]): boolean {
   return !!role && allowed.includes(role)
 }
 
-// true nếu user hiện tại có role nằm trong danh sách cho phép: dùng để ẩn/disable các nút hành động mà backend đã chặn qua requireRole(...) ở route tương ứng. VD: const canCreateFarm = usePermission('FARM_OWNER', 'ADMIN')
+// Ẩn hoặc khoá nút mà backend đã chặn bằng requireRole
 export function usePermission(...allowedRoles: Role[]): boolean {
   const role = useAuthStore(s => s.user?.role)
   return hasRole(role, ...allowedRoles)

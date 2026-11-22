@@ -6,7 +6,7 @@ import { useSocket } from '@/hooks/common/useSocket'
 import type { DeviceStatus, RelayName, SpeakerScheduleInput, NodeCommandInput, SensorNode } from '@/types'
 import type { ReplaceSensorNodeInput } from '@/apis/shared/devices.api'
 
-// useSensorNodes – danh sách device + realtime status/relay qua socket. `zoneId` rỗng nghĩa là "tất cả" (TechnicianDevicesPage khi chưa lọc zone): `enabled: false` cho nơi gọi nào không muốn fetch-all trong lúc đó (VD Dashboard lúc chưa chọn zone).
+// zoneId rỗng = tất cả; enabled: false khi chưa muốn tải hết
 export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; refetchInterval?: number | false | ((query: Query<SensorNode[], Error, SensorNode[], (string | undefined)[]>) => number | false | undefined) }) {
   useSocket()
   const queryClient = useQueryClient()
@@ -31,7 +31,7 @@ export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; r
   return query
 }
 
-// Trạng thái realtime của 1 thiết bị: vào room nơi gắn thiết bị (camera: nhà, bộ điều khiển: Zone) và báo mỗi DEVICE_STATUS_CHANGE của nó
+// Camera vào room nhà, bộ điều khiển vào room Zone
 export function useDeviceStatusEvents(
   room: { houseId?: string; zoneId?: string }, nodeId: string, onStatus: (status: DeviceStatus) => void,
 ) {
@@ -54,7 +54,7 @@ export function useDeviceStatusEvents(
   }, [houseId, zoneId, nodeId])
 }
 
-// 1 bộ điều khiển; pollMs: đọc lại theo chu kỳ tới khi đã áp cấu hình của Zone (config_sync APPLIED hoặc UNKNOWN)
+// pollMs: đọc lại tới khi config_sync là APPLIED hoặc UNKNOWN
 export function useSensorNode(id: string | undefined, pollMs?: number) {
   return useQuery({
     queryKey: ['sensor-nodes', 'detail', id],
@@ -112,7 +112,7 @@ export function useSendNodeCommand() {
   })
 }
 
-// Farm Owner gỡ bộ điều khiển (khôi phục được trong 24 giờ); đang ONLINE thì gửi force sau khi người dùng xác nhận
+// Đang ONLINE thì gửi force sau khi người dùng xác nhận
 export function useDecommissionDevice() {
   const queryClient = useQueryClient()
   return useMutation({

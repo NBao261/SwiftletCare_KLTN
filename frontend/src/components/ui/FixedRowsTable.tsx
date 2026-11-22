@@ -37,7 +37,7 @@ interface FixedRowsTableProps<T> {
   mobileCard?: (row: T) => ReactNode
 }
 
-// DataTable phân trang: từ 2 trang trở lên thì trang cuối bù dòng trống, 1 trang thì bảng cao vừa dữ liệu (FE_Design)
+// Từ 2 trang trở lên thì trang cuối bù dòng trống
 export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, emptyContent, paginationLabels, serverPagination, mobileCard }: FixedRowsTableProps<T>) {
   const [page, setPage] = useState(1)
   // Kẹp trang theo số trang còn lại: lọc/xoá làm ít đi thì không rơi vào trang không tồn tại

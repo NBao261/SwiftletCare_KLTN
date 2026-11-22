@@ -1,4 +1,4 @@
-// Đa ngôn ngữ VI/EN (FE_Design): react-i18next, KHOÁ = chính câu tiếng Việt đang hiển thị: t('Danh sách trang trại') → VI: trả nguyên câu (không cần file vi) · EN: tra en.ts, thiếu thì vẫn hiện tiếng Việt. Nhờ vậy code vẫn đọc được tiếng Việt, thêm bản dịch chỉ là thêm 1 dòng trong en.ts. Đổi ngôn ngữ: AppShell remount vùng nội dung (key = ngôn ngữ) nên `t` gọi thẳng trong hàm thường (column builder, helper định dạng ngày, bảng nhãn constants) cũng ra đúng ngôn ngữ, không cần useTranslation ở từng component.
+// Khoá là câu tiếng Việt; đổi ngôn ngữ thì AppShell remount nên t() trong hàm thường cũng đúng
 import { Children, type ReactNode } from 'react'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
@@ -8,7 +8,7 @@ import { useLanguageStore, type Lang } from '@/stores/languageStore'
 
 export type { Lang }
 
-// Ngôn ngữ đang chọn lưu ở languageStore (dùng chung với useT của các màn Farm Owner): i18next chỉ đi theo store, để 1 nút VI/EN đổi cả 2 hệ dịch
+// i18next đi theo languageStore để 1 nút VI/EN đổi cả 2 hệ dịch
 void i18n.use(initReactI18next).init({
   // en.ts thắng khi trùng khoá với en.expert.ts
   resources: { en: { translation: { ...enExpert, ...en } } },
@@ -18,7 +18,7 @@ void i18n.use(initReactI18next).init({
   nsSeparator: false,
   interpolation: { escapeValue: false }, // React đã escape
 })
-// <html lang> theo ngôn ngữ đang chọn (screen reader, gạch nối chữ): bỏ qua khi chạy ngoài trình duyệt (vitest node)
+// Bỏ qua khi chạy ngoài trình duyệt (vitest)
 function syncHtmlLang(lang: string) {
   if (typeof document !== 'undefined') document.documentElement.lang = lang
 }
@@ -37,12 +37,12 @@ export const setLang = (lang: Lang) => useLanguageStore.getState().setLang(lang)
 // Locale cho Intl (RelativeTimeFormat...) theo ngôn ngữ đang chọn
 export const intlLocale = () => (i18n.language === 'en' ? 'en-US' : 'vi-VN')
 
-// Dịch prop chữ của component dùng chung (title, label, placeholder...): chỉ dịch khi là chuỗi; ReactNode/số giữ nguyên. Chuỗi không có trong en.ts (tên người, tên trại...) trả nguyên văn nên gọi trên dữ liệu thật cũng an toàn.
+// Chỉ dịch chuỗi; chuỗi không có trong en.ts trả nguyên văn
 export function tr<T>(value: T): T {
   return (typeof value === 'string' ? t(value) : value) as T
 }
 
-// Như tr() cho children: dịch từng đoạn chữ, giữ nguyên icon/element (VD <Button><PlusIcon />Tạo tài khoản</Button>)
+// Như tr() cho children, giữ nguyên icon
 export function trChildren(children: ReactNode): ReactNode {
   return Children.map(children, c => (typeof c === 'string' ? t(c) : c))
 }

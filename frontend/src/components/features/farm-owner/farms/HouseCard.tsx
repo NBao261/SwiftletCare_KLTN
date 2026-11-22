@@ -21,7 +21,7 @@ interface HouseCardProps {
   onOpen: () => void
 }
 
-// Card 1 nhà yến trong lưới "Cấu trúc Farm": cảnh báo nổi bật, thống kê số cảm biến/camera/online (số đo chỉ hiện ở cấp Zone), sản lượng tháng
+// Card 1 nhà yến; số đo chỉ hiện ở cấp Zone
 export default function HouseCard({ node, staff, pinned, showYield, onTogglePin, onOpen }: HouseCardProps) {
   const { t, num } = useTranslation(farmDict)
   const { house, farm, headline, counts } = node

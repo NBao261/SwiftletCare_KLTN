@@ -10,7 +10,7 @@ interface ChartEmptyFrameProps {
 // Số vạch lưới ngang, bằng số vạch biểu đồ thật hay vẽ
 const GRID_LINES = 4;
 
-// Khung biểu đồ khi chưa có dữ liệu: giữ lưới ngang và trục dưới, không cột, không số, chữ thông báo ở giữa (FE_Design 8)
+// Khung biểu đồ rỗng: giữ lưới và trục, chữ thông báo ở giữa
 export default function ChartEmptyFrame({ message, className }: ChartEmptyFrameProps): JSX.Element {
   return (
     <div className={cn('relative h-64 w-full', className)} role="img" aria-label={tr(message)}>

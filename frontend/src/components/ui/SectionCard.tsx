@@ -4,7 +4,7 @@ import { tr } from '@/i18n'
 import InfoTip from '@/components/ui/InfoTip'
 
 interface SectionCardProps {
-  // Icon trong ô vuông bo góc nền charcoal: ở các trang Admin là icon của mục menu sidebar tương ứng. Bỏ trống = không có ô icon
+  // Bỏ trống thì không có ô icon
   icon?: ReactNode
   // Bỏ trống khi trang chỉ có 1 card: tên trang đã ở header (FE_Design), card chỉ còn dòng mô tả
   title?: ReactNode
@@ -18,7 +18,7 @@ interface SectionCardProps {
   children?: ReactNode
 }
 
-// Card trắng có header "icon + tiêu đề + mô tả (+ action phải)", nội dung xếp dọc bên dưới: khuôn chung của các khối danh sách/chi tiết ở trang Admin, để chỉnh bo góc/padding chỉ sửa 1 chỗ (FE_Design mục 9).
+// Khuôn card chung có header
 export default function SectionCard({ icon, title, description, help, action, className, children }: SectionCardProps) {
   return (
     <section className={cn('flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card', className)}>

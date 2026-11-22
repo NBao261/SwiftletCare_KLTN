@@ -25,7 +25,7 @@ export function useAuth() {
         return
       }
       const role = data.data.user.role
-      // returnTo có thể "cũ" (VD phiên trước hết hạn trên 1 trang chỉ role khác được xem): nếu role vừa đăng nhập chắc chắn không vào được, bỏ qua returnTo và về thẳng trang nhà, tránh vừa đăng nhập xong đã bị văng sang /403 (trước đây phải tự bấm "Về trang chính" mới thoát được).
+      // returnTo cũ mà role mới không vào được thì về trang nhà, tránh văng /403
       const target = variables.returnTo && canAccessPath(role, variables.returnTo)
         ? variables.returnTo
         : getRoleHomePath(role)
@@ -37,9 +37,9 @@ export function useAuth() {
 
   const logout = useMutation({
     mutationFn: () => authApi.logout(),
-    // onSettled (không phải onSuccess): luôn dọn sạch phía client dù API logout lỗi/mất mạng, không để user kẹt lại trạng thái "đăng nhập" cục bộ.
+    // onSettled: luôn dọn phía client dù API logout lỗi
     onSettled: () => {
-      // flushSync gộp navigate() + clearAuth() vào ĐÚNG 1 lần render đồng bộ. Không có flushSync: clearAuth() đổi isAuthenticated trước, khiến ProtectedRoute (đang mount trên trang cũ, VD /dashboard) render lại và tự tạo <Navigate to="/login?returnTo=/dashboard">; effect của Navigate đó chạy SAU navigate('/login') thủ công ở đây nên ghi đè mất, để lại returnTo trỏ về trang vừa rời đi. Lần đăng nhập kế tiếp (có thể là 1 tài khoản role khác) sẽ bị đưa nhầm về đúng URL đó rồi văng sang /403. Gộp vào 1 flush: khi commit xong, route đã là /login nên ProtectedRoute của path cũ bị unmount luôn, không còn cơ hội tạo returnTo sai nữa.
+      // flushSync gộp navigate() và clearAuth() vào 1 lần render, không thì ProtectedRoute ghi returnTo sai
       flushSync(() => {
         navigate('/login', { replace: true })
         clearAuth()

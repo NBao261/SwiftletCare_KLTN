@@ -1,4 +1,4 @@
-// Barrel của design system. `icons` CỐ Ý không nằm ở đây: mỗi màn chỉ dùng vài icon nên import thẳng `@/components/ui/icons` để không kéo cả bộ vào chunk.
+// icons cố ý không có ở đây: import thẳng để không kéo cả bộ vào chunk
 
 // Primitive nguyên tử
 export * from '@/components/ui/Button'

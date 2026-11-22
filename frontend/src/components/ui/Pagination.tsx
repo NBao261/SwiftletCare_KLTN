@@ -8,7 +8,7 @@ interface PaginationProps {
   limit: number
   total: number
   onChange: (page: number) => void
-  // simple: chỉ nút Trước/Sau + info x–y trong z (mặc định) numbered, số trang 1–2–…–N + prev/next full, « ‹ 1 2 3 … N › » cửa sổ luôn đủ 3 trang (các trang Admin: Người dùng, Thiết bị, Nhật ký…)
+  // simple: Trước/Sau; numbered và full: số trang, cửa sổ đủ 3 trang
   variant?: 'simple' | 'numbered' | 'full'
   // Chỉ variant `full`: chữ hiển thị theo ngôn ngữ của màn gọi: bỏ trống thì dùng tiếng Việt
   labels?: PaginationLabels
@@ -24,7 +24,7 @@ export interface PaginationLabels {
   last: string
 }
 
-// Nhãn mặc định khi màn gọi không truyền `labels`: đi qua bản dịch i18n (`t`, VI/EN theo languageStore) nên các trang Admin (không truyền labels) vẫn đổi ngôn ngữ. Hàm, không phải hằng: đọc lại ngôn ngữ mỗi lần render
+// Hàm, không phải hằng: đọc lại ngôn ngữ mỗi lần render
 const defaultLabels = (): PaginationLabels => ({
   summary: (from, to, total) => t('Hiển thị {{from}}–{{to}} trong {{total}}', { from, to, total }),
   nav: t('Phân trang'),
@@ -45,11 +45,10 @@ function getPageNumbers(page: number, totalPages: number): (number | '…')[] {
   return pages
 }
 
-// [SỬA NGOÀI ADMIN: nhánh feat/admin-settings-config-logs-pages] Gộp khi merge develop (PR #46): giữ nguyên `simple`/`numbered` của develop cho các role khác; thêm `full` = pager cũ của các trang Admin, cửa sổ luôn đủ 3 trang.
-// Nút trần, không viền: chỉ trang đang xem có nền charcoal (variant `full`)
+// full là pager của các trang Admin
 const ITEM_CLASS = 'inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm text-charcoal transition-colors hover:bg-warmGray/10 disabled:cursor-not-allowed disabled:text-warmGray/40 disabled:hover:bg-transparent'
 
-// Số trang cần hiện (variant `full`): trang đầu, trang cuối, cửa sổ luôn đủ 3 trang quanh trang hiện tại (ở 2 đầu thì dồn vào trong: trang 1 → 1 2 3, trang cuối → n-2 n-1 n); khoảng trống giữa thành "…": trừ khi khoảng trống chỉ có 1 trang thì hiện luôn số đó (1 2 3 thay vì 1 … 3).
+// Cửa sổ đủ 3 trang quanh trang hiện tại; khoảng trống 1 trang thì hiện luôn số đó
 export function pageItems(page: number, pageCount: number): (number | '…')[] {
   const start = Math.max(1, Math.min(page - 1, pageCount - 2))
   const shown = (p: number) => p === 1 || p === pageCount || (p >= start && p <= start + 2)

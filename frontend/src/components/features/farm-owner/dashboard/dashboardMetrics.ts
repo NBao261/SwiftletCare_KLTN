@@ -39,10 +39,10 @@ export function getAnomalies(data: EnvReadings, limits: Thresholds): Anomalies {
   }
 }
 
-// Trạng thái thiết bị tính là hư (chấm cảnh báo của khung lọc): mất kết nối; PENDING là chưa kết nối lần đầu, không tính là hư
+// PENDING là chưa kết nối lần đầu, không tính là hư
 const FAULT_DEVICE_STATUSES = new Set<DeviceStatus>(['OFFLINE'])
 
-// Trạng thái nhà trên Tổng quan: "Ổn định" chỉ khi có bộ điều khiển, mọi bộ online (kể cả PENDING thì cần chú ý), số đo trong ngưỡng
+// "Ổn định" chỉ khi có bộ điều khiển, mọi bộ online và số đo trong ngưỡng
 export function houseLiveStatus(health: 'ALERT' | 'NORMAL' | 'EMPTY', controllerStatuses: DeviceStatus[]): 'ALERT' | 'NORMAL' | 'EMPTY' {
   if (health === 'ALERT') return 'ALERT'
   if (controllerStatuses.length === 0) return 'EMPTY'
@@ -200,7 +200,7 @@ interface LiveControl {
   controlOutput?: ControlOutput
 }
 
-// Thay relay của node bằng bản socket mới nhất của zone (khi đủ 3 relay); chế độ AUTO/MANUAL giữ REST vì telemetry luôn gửi 'AUTO'
+// Relay lấy từ socket; chế độ giữ của REST vì telemetry luôn gửi 'AUTO'
 export function withLiveRelays<T extends NodeRef & { zone_id: string }>(nodes: T[], live: Map<string, LiveControl>): T[] {
   return nodes.map(node => {
     const states = live.get(node.zone_id)?.relayStates
@@ -267,7 +267,7 @@ export function summarizeFarmHouses(houses: HouseKpiSource[], farmId: string): F
   return totals
 }
 
-// Ai đặt ngưỡng hiện hành của Zone, đọc từ threshold_history: chưa từng sửa hoặc lần cuối là "đặt lại mặc định" → mặc định hệ thống
+// Chưa sửa hoặc lần cuối là đặt lại mặc định thì là mặc định hệ thống
 export interface ThresholdSource {
   isDefault: boolean
   role?: string

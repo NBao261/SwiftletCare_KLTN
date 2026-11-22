@@ -1,4 +1,4 @@
-// Chuyên gia vẽ vòng đếm chim trên khung live. Backend còn cho Farm Owner (farm chưa có chuyên gia) và Farm Technician của nhà; web chưa mở trang này cho hai vai đó (route chỉ EXPERT_ROLES), thợ vẽ trên mobile
+// Web chỉ mở cho chuyên gia; thợ vẽ trên mobile
 import { useState, useEffect } from 'react'
 import { Crosshair, History, AlertTriangle } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'

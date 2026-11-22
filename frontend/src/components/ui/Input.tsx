@@ -7,7 +7,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string
   // Icon trái trong ô input (VD kính lúp cho ô tìm kiếm): không truyền thì input giữ nguyên như cũ.
   icon?: ReactNode
-  // Hiện lỗi cùng hàng với nhãn (nhãn trái, lỗi phải, 1 dòng cắt "…") thay vì dòng riêng dưới ô: dùng trong popup canh giữa: lỗi hiện/ẩn không làm popup đổi chiều cao (không trượt lên/xuống) mà cũng không phải chừa dòng trống.
+  // Lỗi cùng hàng nhãn để popup không đổi chiều cao
   errorInLabel?: boolean
 }
 

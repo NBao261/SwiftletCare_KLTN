@@ -150,7 +150,7 @@ export async function downloadHealthReportPdf(report: HouseHealthReport, format:
   });
   y = (doc as JsPdf & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3;
 
-  // Bảng so sánh như màn hình: hàng = chỉ số, cột = Zone; tối đa 3 Zone/bảng để chữ không bị bóp (A4 dọc), nhiều hơn thì thêm bảng
+  // Tối đa 3 Zone mỗi bảng để chữ không bị bóp trên A4 dọc
   heading(t('rd.zones'));
   if (report.zone_sections.length === 0) text(t('rd.noZones'));
   for (let start = 0; start < report.zone_sections.length; start += ZONES_PER_TABLE) {

@@ -4,7 +4,7 @@ import { demoFarm, signIn } from './helpers/demoApi';
 interface Plan { _id: string; equipment: string; basis: string; interval: number; state: string }
 interface WorkOrder { _id: string; status: string; kind: string; origin?: string; plan_id?: string; checklist: Array<{ item: string }> }
 
-// kế hoạch bơm 500 giờ (bộ đếm 499 giờ) và kế hoạch béc phun đến hạn 7 ngày (`npm run seed:demo`). Chạy bơm thêm 1 giờ của cần controller thật hoặc bộ giả lập.
+// Cần `npm run seed:demo`. Chạy bơm thêm 1 giờ cần controller thật hoặc bộ giả lập
 test.describe('DS-13, DS-14 Bảo trì phòng ngừa', () => {
   test('DS-13 kế hoạch bơm theo giờ chạy chưa đến hạn ở 499 giờ', async ({ request }) => {
     const owner = await signIn(request, 'owner');

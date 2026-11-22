@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { demoFarm, signIn } from './helpers/demoApi';
 
-// tầng A có controller và cảnh báo SENSOR_FAULT đang mở (`npm run seed:demo`). cần controller thật hoặc bộ giả lập và rút mạng router: chạy tay ở buổi tổng duyệt.
+// Cần `npm run seed:demo`. Phần rút mạng router cần controller thật, chạy tay ở buổi tổng duyệt
 test.describe('DS-02 Can thiệp tay bị chặn', () => {
   test('bơm quá 30 phút 422, bơm khi có cảnh báo chưa xác nhận 409, chuyên gia 403, relay vẫn AUTO', async ({ request }) => {
     const owner = await signIn(request, 'owner');

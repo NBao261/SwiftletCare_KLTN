@@ -1,6 +1,6 @@
 // Module DEVICE: Sensor/Camera Node, relay, chế độ điều khiển.
 
-// PENDING: Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên. ERROR/DEGRADED đã bỏ theo.
+// PENDING: đã khai báo, chưa có heartbeat đầu tiên
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 
 export type ControlMode = 'AUTO' | 'MANUAL'
@@ -9,7 +9,7 @@ export type ControlMode = 'AUTO' | 'MANUAL'
 export interface RelayStates { misting: boolean; speaker: boolean; ventilation: boolean }
 export type RelayName = keyof RelayStates
 
-// % công suất 0-100 do bộ điều khiển mờ trên ESP32 tính (tỉ lệ thời gian BẬT relay trong cửa sổ 2 phút). Chỉ có qua socket telemetry, firmware < 1.1.0 không gửi.
+// % công suất 0-100 do bộ mờ trên ESP32 tính; chỉ có qua socket
 export interface ControlOutput { misting: number; ventilation: number }
 
 export interface SensorNode {
@@ -66,7 +66,7 @@ export interface RelayOverrideLog {
 export interface SpeakerWindow { start: string; end: string }
 export interface SpeakerScheduleInput { enabled?: boolean; windows?: SpeakerWindow[]; volume?: number; track?: number }
 
-// bài trong danh mục web của 1 thiết bị. File DFPlayer phát thật nằm trên thẻ SD (`000N.mp3`); `file_url` chỉ để nghe lại bản gốc trên web.
+// File phát thật nằm trên thẻ SD; file_url chỉ để nghe lại trên web
 export interface AudioTrack {
   _id: string; node_id: string
   track_number: number; display_name: string

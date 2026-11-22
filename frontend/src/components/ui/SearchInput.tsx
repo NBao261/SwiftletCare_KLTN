@@ -9,7 +9,7 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
   onChange: (value: string) => void
 }
 
-// Ô tìm kiếm dùng chung (AdminUsersPage, AdminAuditLogPage): kính lúp bên trái + nút × xoá nhanh khi có chữ. `className` đi thẳng vào <input> để mỗi trang giữ cỡ/bo góc riêng; độ rộng do nơi gọi bọc ngoài. Không có label hiển thị nên lấy placeholder làm tên cho trình đọc màn hình nếu nơi gọi không truyền aria-label.
+// Ô tìm kiếm; không truyền aria-label thì lấy placeholder
 export default function SearchInput({ value, onChange, className, ...props }: SearchInputProps) {
   return (
     <div className="relative">

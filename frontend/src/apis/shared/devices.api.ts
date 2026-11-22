@@ -1,7 +1,7 @@
 import api from '@/lib/axios'
 import type { ApiResponse, SensorNode, CameraNode, RelayName, RelayOverrideLog, SystemNodeStatus, SpeakerScheduleInput, NodeCommandInput, RemovedDevice } from '@/types'
 
-// BE xác thực cặp {device_id, secret_key} in trên nhãn thiết bị (kho `provisioned_devices`). Thiếu secret_key → 400.
+// Thiếu secret_key → 400
 export interface RegisterDeviceInput { device_id: string; zone_id: string; secret_key: string }
 // camera gắn nhà yến (house_id), không gắn Zone
 export interface RegisterCameraInput { device_id: string; house_id: string; secret_key: string; rtsp_url?: string }
@@ -57,7 +57,7 @@ export const deviceApi = {
   restoreCameraNode: (id: string, reason: string) =>
     api.post<ApiResponse<CameraNode>>(`/devices/camera-nodes/${id}/restore`, { reason }),
 
-  // gỡ thiết bị (giữ lịch sử telemetry), lý do bắt buộc; khôi phục được trong 24 giờ. force: thiết bị đang ONLINE thì backend chỉ gỡ khi người dùng xác nhận (409 nếu thiếu)
+  // Lý do bắt buộc; thiết bị ONLINE phải gửi force (409 nếu thiếu)
   decommissionSensorNode: (id: string, reason: string, force = false) =>
     api.post<ApiResponse<SensorNode>>(`/devices/sensor-nodes/${id}/decommission`, force ? { reason, force: true } : { reason }),
   decommissionCameraNode: (id: string, reason: string) =>

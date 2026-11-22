@@ -16,7 +16,7 @@ import { technicianRoutes } from "@/routes/technician.routes";
 import { adminRoutes } from "@/routes/admin.routes";
 import { domainExpertRoutes } from "@/routes/domain-expert.routes";
 
-// Cài đặt tài khoản và chính sách quyền riêng tư: route mọi role đã đăng nhập đều dùng, nên nằm ngay đây thay vì trong một file route theo role.
+// Mọi role đã đăng nhập đều dùng nên khai ở đây
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const SettingsPrivacyPage = lazy(() => import("@/pages/SettingsPrivacyPage"));
 
@@ -26,7 +26,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const mustChangePassword = useAuthStore((s) => s.user?.must_change_password === true);
   const location = useLocation();
 
-  // Chờ zustand/persist đọc xong localStorage trước khi quyết định: tránh flash redirect về /login khi F5 một trang đã đăng nhập.
+  // Chờ zustand/persist đọc xong: tránh nháy về /login khi F5
   if (!hasHydrated) return <RouteFallback />;
 
   if (!isAuthenticated) {
@@ -38,7 +38,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Khung ứng dụng theo role người đang đăng nhập. Khác các dự án gắn layout theo nhánh route (`/admin/*`): URL của SwiftletCare không có tiền tố role (`/devices` dùng chung cho 3 role) nên phải chọn lúc chạy.
+// URL không có tiền tố role (`/devices` dùng chung) nên chọn khung lúc chạy
 function RoleLayout() {
   const role = useAuthStore((s) => s.user?.role);
 
@@ -51,7 +51,7 @@ function RoleLayout() {
       return <DomainExpertLayout />;
     case "FARM_OWNER":
       return <FarmOwnerLayout />;
-    // Role lạ từ token cũ: vẫn dựng khung để Outlet render được, chỉ là chưa có menu: giống hành vi cũ khi lọc nav bằng role không khớp.
+    // Role lạ từ token cũ: vẫn dựng khung để Outlet render, chỉ chưa có menu
     default:
       return <AppShell menuSections={[]} dockItems={[]} />;
   }
@@ -81,7 +81,7 @@ function RouteFallback() {
   );
 }
 
-// Bảng route gốc. Chi tiết nằm trong `routes/<role>.routes.tsx`, một file cho mỗi thư mục `pages/<role>/`: file đó tự lazy-load trang của mình (code-splitting theo route) và tự khai `RequireRole`. Thư mục chứa trang cho biết role SỞ HỮU nghiệp vụ đó, còn `allow={...}` trong file route mới là danh sách role thật sự vào được: VD trang trong `pages/technician/` vẫn mở cho Farm Owner qua `allow={ALERT_ROLES}` (/alerts).
+// Route chi tiết ở `routes/<role>.routes.tsx`; `allow={...}` mới là danh sách role vào được
 export default function App() {
   return (
     <>

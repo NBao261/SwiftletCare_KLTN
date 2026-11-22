@@ -20,7 +20,7 @@ import {
 // Mất socket thì hỏi lại số đo, relay mỗi 15 giây (FE_Design 5.5)
 const FALLBACK_POLL_MS = 15_000
 
-// Số đo của 1 Zone: lấy bản mới hơn giữa gói socket và bản REST (mất socket thì bản REST hỏi lại định kỳ mới là bản mới)
+// Lấy bản mới hơn giữa socket và REST
 function pickReadings(now: LiveZone | undefined, record: TelemetryRecord | undefined) {
   const useLive = now?.timestamp !== undefined && (!record?.timestamp || now.timestamp >= record.timestamp)
   if (!useLive) {
@@ -133,7 +133,7 @@ export function useZonesEnvironment(zones: AllZone[]) {
   }
 }
 
-// Chấm cảnh báo ở khung lọc: Zone vượt ngưỡng hoặc có thiết bị hư; nhà có Zone như vậy hoặc camera hư; farm chứa nhà như vậy
+// Chấm cảnh báo lan từ Zone lên nhà lên farm
 export function useScopeIssues(zones: AllZone[], houses: House[]) {
   const { issueZoneIds } = useZonesEnvironment(zones)
   const { data: cameras } = useCameraNodes()

@@ -16,7 +16,7 @@ export const DATE_PRESETS = [
   { value: '7d', label: '7 ngày trước', days: 7 },
 ]
 
-// Backend so sánh `created_at >= from` / `<= to` theo mốc tuyệt đối, nên ngày "đến" phải đẩy tới 23:59:59.999 (giờ máy người dùng): không thì chọn 20/09 → 20/09 chỉ khớp đúng 00:00:00 của ngày đó và ra rỗng.
+// Đẩy ngày "đến" tới 23:59:59.999, không thì chọn cùng ngày ra rỗng
 function startOfDayIso(date: string) { return new Date(`${date}T00:00:00`).toISOString() }
 function endOfDayIso(date: string) { return new Date(`${date}T23:59:59.999`).toISOString() }
 
@@ -66,7 +66,7 @@ export function useAuditLogTable(pageSize: number, initial: { action?: string; s
     to: preset ? endOfDayIso(localDay(0)) : undefined,
   }
   const q = fold(debouncedSearch.trim())
-  // /system/audit-logs không có tìm chữ và luôn trả created_at giảm dần. Mặc định dùng phân trang server (nhẹ); khi tìm chữ hoặc sắp "cũ nhất trước" thì tải TOÀN BỘ nhật ký khớp bộ lọc server rồi lọc/đảo/cắt trang ở client: tìm ra bao nhiêu thì phân trang đúng bấy nhiêu, không chỉ trong trang đang xem.
+  // API không tìm chữ được: khi tìm hoặc sắp "cũ nhất trước" thì tải hết rồi lọc ở client
   const clientSide = !!q || sortDir === 'asc'
   const serverPage = useAuditLogList({ ...serverFilters, page, limit: pageSize })
   const all = useAllAuditLogs(serverFilters, clientSide)

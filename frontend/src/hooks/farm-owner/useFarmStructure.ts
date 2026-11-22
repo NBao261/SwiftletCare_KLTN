@@ -16,10 +16,10 @@ import type { House, Zone } from '@/types'
 // Cấu trúc House/Zone hiếm khi đổi: cùng staleTime với useFarmZones/useAllZones để dùng chung cache
 const STRUCTURE_STALE_MS = 5 * 60 * 1000
 
-// Cây Farm → House → Zone → Device cho màn "Cấu trúc Farm". Độ trễ: thiết bị / camera / cảnh báo / thu hoạch đều là 1 request gộp theo quyền truy cập (không lọc zone) và chạy SONG SONG với chuỗi farms → houses → zones, thay vì gọi lần lượt theo từng zone. Số đo môi trường lấy theo lô 6 zone/request (/analytics/env/ compare) thay vì 1 request/zone. `liveZoneIds` (nếu có) mới join room socket: màn tổng quan không join hàng loạt zone, chỉ trang nhà/zone mới theo dõi realtime.
+// Request gộp chạy song song với chuỗi farms → houses → zones; số đo lấy theo lô 6 zone; chỉ liveZoneIds mới join socket
 export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
   const queryClient = useQueryClient()
-  // GET /harvests chỉ cho FARM_OWNER/DOMAIN_EXPERT: Technician cũng mở được màn này nên không gọi, tránh 403 rồi hiện 0 kg sai
+  // Technician cũng mở màn này nên không gọi /harvests, tránh 403 rồi hiện 0 kg sai
   const canViewHarvest = usePermission(...HARVEST_ROLES)
   const farmsQ = useFarms()
   const farms = farmsQ.data
@@ -123,7 +123,7 @@ export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
 
   const isLoading = farmsQ.isLoading || housesQ.pending || zonesQ.pending
     || sensorsQ.isLoading || camerasQ.isLoading || alertsQ.isLoading || harvestsQ.isLoading
-  // Cảnh báo/camera/thu hoạch lỗi mà vẫn dựng cây thì màn báo sai "0 cảnh báo, Bình thường": coi là lỗi cả trang (FE_Design 13.5)
+  // Lỗi phần phụ thì coi là lỗi cả trang, không hiện sai "0 cảnh báo"
   const isError = farmsQ.isError || housesQ.error || zonesQ.error || sensorsQ.isError
     || camerasQ.isError || alertsQ.isError || (canViewHarvest && harvestsQ.isError)
 
@@ -162,7 +162,7 @@ export function useHouseStaff(houses: House[]): Map<string, HouseStaff> {
 
 const NO_IDS: string[] = []
 
-// Id các zone của 1 nhà: dùng cache ['zones', houseId] của useFarmStructure (cùng staleTime) để trang nhà biết zone nào cần join socket
+// Dùng cache ['zones', houseId] để biết zone nào cần join socket
 export function useHouseZoneIds(houseId: string | undefined): string[] {
   const { data } = useQuery({
     queryKey: ['zones', houseId],

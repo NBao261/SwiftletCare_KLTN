@@ -37,7 +37,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
   // mỗi lần đổi ngưỡng mặc định (kể cả khôi phục gốc) ghi nguồn có mã REF-5
   const [source, setSource] = useState('')
 
-  // Modal cha không unmount giữa các lần mở (chỉ đổi `open`): seed lại form đúng giá trị server mỗi lần MỞ, không chỉ lúc mount, để bỏ dở lần sửa trước không rò sang lần sau.
+  // Seed lại form mỗi lần mở để lần sửa bỏ dở không rò sang lần sau
   useEffect(() => {
     if (open && data) { setForm(toThresholdForm(data)); setSource(''); setSubmitted(false); setShowResetConfirm(false) }
   }, [open, data])
@@ -61,7 +61,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
     })
   }
 
-  // Backend không có endpoint reset: ghi đè bằng đúng 7 giá trị gốc qua PUT như một lần lưu bình thường, cùng nguồn
+  // Không có endpoint reset: PUT đúng 7 giá trị gốc
   function handleReset() {
     updateThresholds.mutate({ ...FACTORY_DEFAULT_THRESHOLDS, source: source.trim() }, {
       onSuccess: () => { setShowResetConfirm(false); push('Đã khôi phục về mặc định gốc'); onClose() },
@@ -71,7 +71,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
 
   return (
     <>
-      {/* Popup ngang: tiêu đề + thanh ngăn; trái = mặc định gốc để so + nút khôi phục, phải = 7 ô nhập + Lưu. Lỗi cùng hàng nhãn (errorInLabel): hiện lỗi không làm popup cao thêm */}
+      {/* Lỗi cùng hàng nhãn để popup không cao thêm */}
       <Modal open={open && !showResetConfirm} onClose={onClose} size="xl" ariaLabel="Ngưỡng môi trường mặc định">
         <form onSubmit={handleSave} noValidate className="flex flex-col gap-5">
           <ModalHeader title="Ngưỡng môi trường mặc định" description="Dùng cho Zone mới tạo và khi chủ nhà yến đặt lại ngưỡng mặc định" />

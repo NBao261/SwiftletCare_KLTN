@@ -1,4 +1,4 @@
-// DisagreementsSection.tsx: Màn hình Chuyên gia xem các ngày đánh giá lệch, độ đồng thuận & chỉnh mức chỉ số sức khỏe của nhà
+// Ngày đánh giá lệch, độ đồng thuận và mức chỉ số sức khỏe của nhà
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';

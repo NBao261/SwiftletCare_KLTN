@@ -21,7 +21,7 @@ export default function HouseOpsMetricsCard({ farmId, houseId }: HouseOpsMetrics
   const metrics = useHouseOpsMetrics(farmId, houseId);
   const openCount = useOpenWorkOrderCount(houseId);
   const overall = metrics.data?.overall;
-  // Số liệu và số phiếu chưa đóng chung 1 trạng thái tải/lỗi: lỗi thì không hiện "_" thay cho số chưa tải được (FE_Design 13.16 b)
+  // Chung 1 trạng thái tải/lỗi để không hiện "_" thay cho số chưa tải được
   const isLoading = metrics.isLoading || openCount.isLoading;
   const loadError = metrics.error ?? openCount.error;
   const retry = () => {

@@ -1,4 +1,4 @@
-// Module ANALYTICS / EXPERT: trạng thái sức khỏe ngày của nhà yến, đánh giá sau khi xem trạng thái (api-spec HouseHealthDay)
+// Trạng thái sức khỏe ngày của nhà yến
 
 import type { Role } from '@/types/common.types';
 

@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react'
 
-// Bộ icon nội bộ: SVG stroke dùng `currentColor` nên tự ăn theo màu chữ, không thêm màu ngoài bảng màu chuẩn (FE_Design_Claude.md). Không dùng thư viện icon ngoài để giữ bundle nhẹ và kiểm soát được nét vẽ đồng nhất (stroke 1.6).
+// Icon SVG dùng currentColor; không dùng thư viện ngoài cho nhẹ bundle
 type IconProps = SVGProps<SVGSVGElement>
 
 function Svg({ children, ...props }: IconProps) {

@@ -4,7 +4,7 @@ import type { Role } from '@/types/common.types'
 import type { Thresholds } from '@/types/farm.types'
 import type { SystemNodeStatus } from '@/types/device.types'
 
-// 1 dòng `audit_logs`, đúng shape `GET /system/audit-logs` (backend populate actor_id = 'full_name email role'). `actor_id` rỗng khi hệ thống tự ghi (job nền); mã `action` xem constants/auditActions.ts.
+// actor_id rỗng khi hệ thống tự ghi; mã action xem constants/auditActions.ts
 export interface AuditLogEntry {
   _id: string
   actor_id?: { _id: string; full_name: string; email: string; role: Role }
@@ -33,7 +33,7 @@ export type SystemDefaultThresholdsView = Thresholds & {
 // mỗi lần đổi ngưỡng mặc định phải kèm nguồn (mã REF-5)
 export type SystemDefaultThresholdsInput = Thresholds & { source: string }
 
-// đúng shape `GET /system/health-overview`: chỉ đếm theo trạng thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; `active` = đăng nhập được (ACTIVE, DELETION_REQUESTED), `inactive` = bị khoá, `deleted` = đã xoá.
+// Chỉ đếm theo trạng thái; active = đăng nhập được
 export interface SystemHealthSummary {
   farms: { total: number }
   zones: { total: number }

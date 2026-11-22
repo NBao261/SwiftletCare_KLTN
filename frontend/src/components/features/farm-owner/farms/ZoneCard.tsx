@@ -13,7 +13,7 @@ const CARD_METRICS: MetricKey[] = ['temperature', 'humidity', 'nh3']
 
 interface ZoneCardProps { node: ZoneNode; loadingMetrics: boolean; onOpen: () => void }
 
-// 1 zone trong trang chi tiết nhà: tình trạng, 3 chỉ số chính (realtime qua socket, chưa có thì trung bình 1 giờ), số thiết bị online
+// Chỉ số realtime qua socket, chưa có thì trung bình 1 giờ
 export default function ZoneCard({ node, loadingMetrics, onOpen }: ZoneCardProps) {
   const { t, num } = useTranslation(farmDict)
   const { zone, metrics, breaches, counts } = node

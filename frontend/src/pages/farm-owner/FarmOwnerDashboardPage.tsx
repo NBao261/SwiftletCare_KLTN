@@ -26,7 +26,7 @@ import type { SensorNode } from '@/types'
 const RATING_WINDOW_DAYS = 7
 const NO_SENSORS: SensorNode[] = []
 
-// Tổng quan Farm Owner (todo-ui-layout-1120): 4 ô KPI · lưới thẻ nhà (môi trường, chế độ điều khiển) · việc cần làm
+// Tổng quan Farm Owner
 export default function FarmOwnerDashboardPage() {
   const { t, time } = useTranslation(dashboardDict)
   const scope = useScopeFilter()
@@ -71,7 +71,7 @@ export default function FarmOwnerDashboardPage() {
   // Tình hình hôm nay của từng nhà (chim về, phiếu đang mở): 1 request mỗi trang trại trong phạm vi
   const scopeFarmIds = useMemo(() => (farmId ? [farmId] : farms.map(farm => farm._id)), [farmId, farms])
   const { byHouse: overviewByHouse, isError: isOverviewError, refetch: refetchOverview } = useFarmOverviews(scopeFarmIds)
-  // Cảnh báo chưa xử lý (ACTIVE + ACKNOWLEDGED) lấy từ overview cho cả ô KPI lẫn thẻ nhà để tổng bằng nhau; chưa tải đủ thì chưa có số
+  // Cùng nguồn cho ô KPI và thẻ nhà để tổng bằng nhau
   const openAlerts = scopedHouses.every(node => overviewByHouse.has(node.house._id))
     ? scopedHouses.reduce((sum, node) => sum + (overviewByHouse.get(node.house._id)?.open_alerts ?? 0), 0)
     : undefined

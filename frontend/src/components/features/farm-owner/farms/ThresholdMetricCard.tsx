@@ -13,7 +13,7 @@ interface ThresholdMetricCardProps {
   isAnomaly?: boolean
 }
 
-// 1 chỉ số của Zone: cùng kiểu ReadingTile ở EnvSensorPanel (Dashboard): nhãn trái + icon tròn phải, số lớn, dòng "An toàn …"
+// 1 chỉ số của Zone
 export default function ThresholdMetricCard({ meta, value, range, isAnomaly }: ThresholdMetricCardProps) {
   const { t, num } = useTranslation(farmDict)
   const Icon = meta.icon

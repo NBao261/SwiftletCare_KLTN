@@ -1,4 +1,4 @@
-// OTAProgressPanel.tsx: trạng thái OTA thật: chờ thiết bị cập nhật (ota_pending) / thành công BE không trả % tiến trình nên chỉ hiển thị các mốc có thể kiểm chứng + thanh vô định (không vẽ % giả).
+// Backend không trả % tiến trình nên chỉ hiện các mốc kiểm chứng được
 import { useEffect, useState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/cn'

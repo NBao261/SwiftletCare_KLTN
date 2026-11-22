@@ -34,7 +34,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 
 type Tab = 'overview' | 'devices' | 'members'
 
-// Chi tiết 1 nhà yến: Zone realtime, sản lượng tháng, thiết bị cần chú ý; bấm Zone mở chi tiết Zone, bấm thiết bị mở drawer
+// Chi tiết 1 nhà yến
 export default function FarmOwnerFarmZonesPage() {
   const { farmId, houseId } = useParams<{ farmId: string; houseId: string }>()
   const navigate = useNavigate()

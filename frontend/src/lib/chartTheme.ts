@@ -5,10 +5,10 @@ import {
   Tooltip, Legend, Filler,
 } from 'chart.js'
 
-// Dùng CategoryScale (nhãn chuỗi tự format bằng date-fns, đã có sẵn dep) thay vì TimeScale: tránh thêm dependency `chartjs-adapter-date-fns` chỉ cho 1 trang, trong khi trục category là đủ vì dữ liệu đã được backend gom bucket đều nhau (analytics.service.ts `resolveRange`).
+// CategoryScale thay TimeScale: backend đã gom bucket đều, khỏi thêm adapter
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler)
 
-// Bảng màu chart: bám bảng màu chuẩn FE_Design_Claude.md Chart.js nhận string màu literal nên đây là ngoại lệ duy nhất không dùng class Tailwind. `gray300` thay cho "insightPeach" cũ, series phụ dùng thang xám gray-300→ gray-700 theo, không dùng màu ngoài hệ thống.
+// Chart.js nhận màu literal nên đây là ngoại lệ không dùng class Tailwind
 export const CHART_COLORS = {
   charcoal: '#27231F',
   graphite: '#4E4A46',
@@ -30,7 +30,7 @@ export function withAlpha(hexColor: string, alpha: number): string {
   return `rgba(${channel(1)}, ${channel(3)}, ${channel(5)}, ${alpha})`
 }
 
-// Options nền chung: font Inter, tooltip nền charcoal, lưới mờ, không viền trục. Để TS tự suy luận type (không gán `ChartOptions<'line'|'bar'>`): union generic đó không gán ngược lại được cho `<Line options>`/`<Bar options>` cụ thể do biến thể callback trong type chart.js, nơi dùng tự ép kiểu đúng loại chart (`as ChartOptions<'line'>`/`as ChartOptions<'bar'>`).
+// Để TS tự suy luận: union generic không gán lại được cho <Line>/<Bar>
 export const baseChartOptions = {
   responsive: true,
   maintainAspectRatio: false,

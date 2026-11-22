@@ -15,7 +15,7 @@ export function useDeleteRequestsList(query: QueuePageQuery = {}) {
   )
 }
 
-// Badge "Người dùng": số yêu cầu xoá đang chờ; khoá theo tiền tố 'admin-delete-requests' nên tự giảm khi xử lý xong
+// Khoá theo tiền tố 'admin-delete-requests' nên tự giảm khi xử lý xong
 export function usePendingDeletionCount(enabled: boolean): number {
   const { data } = useQuery({
     queryKey: ['admin-delete-requests', 'count'],

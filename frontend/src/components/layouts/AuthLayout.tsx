@@ -13,7 +13,7 @@ const HALF_PANE_CLASS = 'lg:absolute lg:inset-y-3 lg:w-[calc(50%-1.125rem)]';
 // Hiệu ứng trượt giữa 2 nửa khung (quãng trượt = rộng 1 nửa + khe 12px)
 const SLIDE_TRANSITION_CLASS = 'transition-transform duration-300 ease-in-out motion-reduce:transition-none';
 
-// Khung chung của Đăng nhập / Đăng ký / Quên mật khẩu: đăng nhập thì form trái, ảnh phải; trang khác thì ảnh trượt sang trái, form sang phải
+// Khung chung của các trang đăng nhập
 export default function AuthLayout(): JSX.Element {
   const { pathname } = useLocation();
   const isLogin = pathname === '/login';

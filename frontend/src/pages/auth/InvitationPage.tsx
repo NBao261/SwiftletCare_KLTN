@@ -1,4 +1,4 @@
-// Invitation Page (public) –,. Không có đăng ký công khai: người được mời chưa có tài khoản đặt tên + mật khẩu ngay tại đây (POST /invitations/{token}/create-account), rồi đăng nhập với email đã điền sẵn
+// Người được mời chưa có tài khoản thì tạo ngay tại đây
 import { useState, type FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
@@ -49,7 +49,7 @@ export default function InvitationPage() {
   function handleAccept() {
     if (!token) return
     accept.mutate(token, {
-      // Chấp nhận lời mời không đổi role của tài khoản hiện có (chỉ thêm vào farm.members: xem farm.service.ts), nên user.role trong store vẫn đúng ngay lúc này, về đúng trang nhà của role đó thay vì hardcode '/dashboard' (chuyên gia sẽ bị văng /403).
+      // Chấp nhận không đổi role nên về trang nhà của role hiện tại
       onSuccess: () => { push('Đã chấp nhận lời mời'); navigate(getRoleHomePath(user?.role)) },
       onError: (err) => push(getApiErrorMessage(err, 'Chấp nhận thất bại'), 'error'),
     })

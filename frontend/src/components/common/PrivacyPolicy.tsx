@@ -1,4 +1,4 @@
-// Nội dung chính sách quyền riêng tư, dùng chung cho trang công khai /privacy và trang trong app /settings/privacy. Mỗi câu lấy từ (mã yêu cầu ghi ở comment); đổi nội dung thì sửa cả 2 bản VI/EN, tăng POLICY_VERSION và ngày hiệu lực.
+// Đổi nội dung thì sửa cả bản VI/EN, tăng POLICY_VERSION và ngày hiệu lực
 import { useLanguageStore, type Lang } from '@/stores/languageStore';
 
 const POLICY_VERSION = '1.1';

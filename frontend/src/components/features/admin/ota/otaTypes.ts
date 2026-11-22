@@ -1,4 +1,4 @@
-// otaTypes.ts: shared types + constants for OTA feature Không import React → fully tree-shakeable OTA thật: POST /devices/sensor-nodes/:id/commands { command:'OTA', ota:{version,url,sha256} }. BE KHÔNG có catalog firmware / % tiến trình, Technician nhập thủ công thông tin bản build (từ CI/CD), trạng thái chạy lấy từ chính SensorNode: `ota_pending` (đang chờ) / `ota_failed` (quá 30 phút, job BE).
+// Backend không có catalog firmware hay % tiến trình: người gửi tự nhập thông tin bản build
 
 export interface OtaFormValues {
   version: string

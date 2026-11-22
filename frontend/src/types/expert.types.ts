@@ -1,4 +1,4 @@
-// Định nghĩa Type cho phân hệ DOMAIN_EXPERT (Chuyên gia nuôi yến) Re-export từ các modules chuyên biệt (< 180 dòng/file)
+// Re-export các type của phân hệ chuyên gia
 
 export * from './expert/alerts.types'
 export * from './expert/tuning.types'

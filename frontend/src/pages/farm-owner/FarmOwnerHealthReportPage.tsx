@@ -11,7 +11,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseHealthReport } from '@/hooks/shared/useHealthDays';
 import { useHealthReportPdf } from '@/hooks/shared/useHealthReportPdf';
 
-// trang 1 báo cáo theo nhà, chuyên gia viết kết luận ở đây; mất history state (tab mới, F5) thì về tab Báo cáo của /health
+// Mất history state (tab mới, F5) thì về tab Báo cáo của /health
 export default function FarmOwnerHealthReportPage(): JSX.Element {
   const state = useLocation().state as HealthReportState | null;
   const reportId = state?.reportId;

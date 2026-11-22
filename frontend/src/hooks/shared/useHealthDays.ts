@@ -42,7 +42,7 @@ export function useHealthDays(params: {
   })
 }
 
-// Đánh giá, bỏ qua, ghi chú: làm mới ngày và báo cáo; 409 (đã đánh giá nơi khác, vừa quá hạn) cũng làm mới danh sách ngày
+// 409 cũng làm mới danh sách ngày
 function useDayMutation<Input>(mutate: (input: Input) => Promise<HouseHealthDay>) {
   const queryClient = useQueryClient()
   return useMutation({

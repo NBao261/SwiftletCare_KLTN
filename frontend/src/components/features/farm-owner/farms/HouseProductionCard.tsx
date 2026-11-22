@@ -18,7 +18,7 @@ interface HouseProductionCardProps {
   recent: HarvestBatch[]
 }
 
-// Sản lượng nhà yến trong tháng: số liệu tính từ /harvests thật; không dự báo lần thu tới. Không hiện mã truy xuất (ẩn khỏi UI theo quyết định bảo mật).
+// Không hiện mã truy xuất
 export default function HouseProductionCard({ node, recent }: HouseProductionCardProps) {
   const { t, num, exact, day } = useTranslation(farmDict)
   const navigate = useNavigate()

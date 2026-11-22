@@ -4,7 +4,7 @@ import type { Alert, SensorNode, TelemetryRecord } from '@/types';
 // Bộ phận của 1 node cảm biến ESP32: 5 cảm biến RS485 + micro đo âm thanh, loa ru và 2 relay chấp hành
 export type ComponentKind = 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2' | 'sound' | 'speaker' | 'misting' | 'ventilation';
 
-// Trạng thái 1 bộ phận: có số đo · đang bật · đang tắt · lỗi · số đo cũ · chưa có số đo · node mất / chờ kết nối · chưa kiểm tra
+// Trạng thái 1 bộ phận
 export type ComponentStatus = 'ok' | 'on' | 'off' | 'fault' | 'stale' | 'noData' | 'offline' | 'pending' | 'unchecked';
 
 export interface ComponentItem {
@@ -38,7 +38,7 @@ export const COMPONENT_KINDS: ComponentKind[] = ['temperature', 'humidity', 'lig
 // Cảm biến (có số đo) và thiết bị chấp hành (relay / loa)
 export const SENSOR_KINDS = new Set<ComponentKind>(['temperature', 'humidity', 'light', 'nh3', 'co2', 'sound']);
 
-// Số đo cũ hơn mốc này (so với lúc kiểm tra) thì coi là cảm biến không còn gửi; chu kỳ gửi của node vài chục giây
+// Số đo cũ hơn mốc này thì coi là cảm biến không còn gửi
 export const READING_FRESH_MS = 15 * 60 * 1000;
 
 // Trường số đo trong telemetry của từng cảm biến
@@ -117,7 +117,7 @@ function componentStatus(kind: ComponentKind, node: DeviceItem, check: DeviceChe
   return { ...item, status: 'ok', value, readingAt: reading.timestamp };
 }
 
-// Bộ phận của các node trong 1 Zone, gom theo loại (VD 10 loa ru thành 1 nhóm "Loa ru"); chưa kiểm tra thì chỉ biết trạng thái node; O(node × loại)
+// Gom bộ phận các node trong Zone theo loại; O(node × loại)
 export function buildZoneComponents(nodes: DeviceItem[], check?: DeviceCheck): ComponentGroup[] {
   const sensorNodes = nodes.filter(node => node.type === 'sensor');
   if (sensorNodes.length === 0) return [];
@@ -128,7 +128,7 @@ export function buildZoneComponents(nodes: DeviceItem[], check?: DeviceCheck): C
   });
 }
 
-// Tóm tắt 1 nhóm cùng loại cho hàng tiêu đề: đang chạy (có số / bật) · tắt · lỗi (kể cả mất kết nối) · chưa có số mới · chưa kiểm tra
+// Tóm tắt 1 nhóm cùng loại
 export interface GroupSummary {
   running: number;
   off: number;

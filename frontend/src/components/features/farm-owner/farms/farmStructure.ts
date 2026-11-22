@@ -2,7 +2,7 @@ import { groupHarvests } from '@/components/features/farm-owner/harvest/harvestM
 import { vnYearMonth } from '@/lib/helpers'
 import type { Alert, CameraNode, DeviceStatus, Farm, HarvestBatch, House, SensorNode, Thresholds, Zone } from '@/types'
 
-// Dựng cây Farm → House → Zone → Device bằng hàm thuần: mỗi tập dữ liệu duyệt 1 lần vào Map theo zone_id, tổng O(n)
+// Dựng cây Farm → House → Zone → Device bằng Map theo zone_id, O(n)
 
 export type Health = 'ALERT' | 'NORMAL'
 // Nhà thêm trạng thái EMPTY: chưa có zone/thiết bị nào để theo dõi (khác "bình thường")
@@ -296,7 +296,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
 // Mức tín hiệu Wi-Fi theo RSSI: dời sang lib/helpers để bảng Thiết bị của Admin dùng chung ngưỡng
 export { wifiQuality } from '@/lib/helpers'
 
-// KPI theo phạm vi khung lọc: cộng các nhà; lọc 1 Zone thì thiết bị, cảnh báo của Zone đó, sản lượng của nhà (thu hoạch nhập theo nhà)
+// Lọc 1 Zone thì sản lượng vẫn của nhà vì thu hoạch nhập theo nhà
 export function summarizeScope(houses: HouseNode[], zone?: ZoneNode, now: Date = new Date()): StructureTotals {
   const current = vnYearMonth(now)
   let counts: DeviceCounts = { total: 0, online: 0, offline: 0 }

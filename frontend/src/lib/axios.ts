@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { redirectToLogin, redirectToPasswordChange } from '@/lib/navigation'
 import { queryClient } from '@/lib/queryClient'
 
-// Dev: vite.config.ts proxy '/api' -> http://localhost:3000 (bỏ prefix /api trước khi forward): tránh CORS hoàn toàn vì trình duyệt coi đây là same-origin. Production: set VITE_API_URL trỏ thẳng origin backend thật (không có /api).
+// Dev: proxy '/api' tránh CORS. Production: VITE_API_URL trỏ thẳng backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 const api = axios.create({
@@ -19,7 +19,7 @@ api.interceptors.request.use(config => {
   return config
 })
 
-// Refresh access token: dùng chung 1 promise cho mọi request 401 đồng thời, tránh bắn nhiều POST /auth/refresh cùng lúc (single-flight).
+// Single-flight: mọi 401 đồng thời dùng chung 1 lần refresh
 let refreshPromise: Promise<string> | null = null
 function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {

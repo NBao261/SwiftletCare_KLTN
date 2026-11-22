@@ -4,7 +4,7 @@ import RequireRole from '@/components/auth/RequireRole'
 import { DEVICE_SETUP_ROLES, FARM_OWNER_ONLY, FARM_SIDE_ROLES, FARM_STRUCTURE_ROLES, HARVEST_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
-// Màn nuôi yến của Farm Owner; allow quyết định ai vào: Domain Expert đọc qua chính các trang này, Technician chỉ Trang trại
+// allow quyết định ai vào; Technician chỉ Trang trại
 const FarmOwnerDashboardPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDashboardPage'))
 const FarmOwnerScadaPage = lazy(() => import('@/pages/farm-owner/FarmOwnerScadaPage'))
 const FarmOwnerDeviceDetailPage = lazy(() => import('@/pages/farm-owner/FarmOwnerDeviceDetailPage'))
@@ -55,7 +55,7 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* lắp thiết bị: chỉ Farm Owner (ADMIN và FARM_TECHNICIAN gọi API → 403); nằm dưới /devices để header hiện mục Thiết bị */}
+    {/* Chỉ Farm Owner; nằm dưới /devices để header hiện mục Thiết bị */}
     <Route
       path="devices/onboarding"
       element={

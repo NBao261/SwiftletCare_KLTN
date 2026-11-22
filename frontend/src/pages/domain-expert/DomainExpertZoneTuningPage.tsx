@@ -57,7 +57,7 @@ export default function DomainExpertZoneTuningPage() {
   const house = houses?.find(item => item._id === houseId);
   const returnRateDrop = useSaveReturnRateDrop(selectedFarmId);
 
-  // Mọi thao tác lưu báo kết quả, kể cả lỗi (FE_Design 13.5); thay đổi của Farm Owner ở farm có chuyên gia mở mục duyệt
+  // Mọi thao tác lưu báo kết quả, kể cả lỗi
   function notify(action: Promise<unknown>, doneMessage: string, reviewed = true) {
     const message = ownerNeedsExpert && reviewed ? `${t(doneMessage)}. ${t('Chuyên gia sẽ xem lại thay đổi này.')}` : t(doneMessage);
     action.then(() => push(message)).catch(error => push(apiErrorMessage(error), 'error'));

@@ -12,7 +12,7 @@ import { NO_VALUE } from '@/constants/display';
 
 type ChangeDirection = 'up' | 'down' | 'flat';
 
-// Mũi tên theo chiều thay đổi; màu luôn xám vì đây là số thống kê tĩnh (lime chỉ cho thiết bị bật/online, cam chỉ cho cảnh báo)
+// Màu luôn xám vì đây là số thống kê
 const CHANGE_ICON: Record<ChangeDirection, Icon> = {
   up: ArrowUpIcon,
   down: ArrowDownIcon,

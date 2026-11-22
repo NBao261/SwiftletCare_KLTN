@@ -11,7 +11,7 @@ export function useFarmOverview(farmId: string | undefined) {
   });
 }
 
-// cho nhiều trang trại (Tổng quan khi xem tất cả): tình hình hôm nay theo mã nhà, chung cache với useFarmOverview
+// Chung cache với useFarmOverview
 export function useFarmOverviews(farmIds: string[]): { byHouse: Map<string, HouseOverview>; isError: boolean; refetch: () => void } {
   return useQueries({
     queries: farmIds.map(farmId => ({

@@ -30,7 +30,7 @@ function note(d: ProvisionedDevice) {
   return '—'
 }
 
-// Width % (DataTable table-fixed), tổng 100: 20+16+16+14+24+10: Thiết bị vừa mã dài nhất thường gặp, Loại đủ chỗ nhãn "Bộ điều khiển"
+// Width % cho table-fixed, tổng 100
 export function buildStockColumns(
   onAction: (a: StockAction, d: ProvisionedDevice) => void,
 ): DataTableColumn<ProvisionedDevice>[] {

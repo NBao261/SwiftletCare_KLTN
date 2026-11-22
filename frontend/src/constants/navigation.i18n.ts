@@ -1,6 +1,6 @@
 import type { Dictionary } from '@/lib/i18n'
 
-// Từ điển nhãn menu: key là chữ tiếng Việt khai trong <Role>Layout.tsx: mọi nhãn menu phải có ở đây, thiếu thì bản EN hiện tiếng Việt
+// Key là chữ tiếng Việt trong <Role>Layout; thiếu thì bản EN hiện tiếng Việt
 const vi = {
   'Vận hành': 'Vận hành',
   'Vận hành (chỉ đọc)': 'Vận hành (chỉ đọc)',

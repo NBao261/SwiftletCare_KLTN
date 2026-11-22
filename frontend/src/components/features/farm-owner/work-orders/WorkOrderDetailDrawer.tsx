@@ -41,7 +41,7 @@ interface WorkOrderDetailDrawerProps {
   onClose: () => void;
 }
 
-// chi tiết Work Order: trạng thái, nguồn, người làm, nguyên nhân và ảnh tại nhà, checklist bảo trì (phòng ngừa), diễn biến
+// Chi tiết Work Order
 export default function WorkOrderDetailDrawer({
   workOrderId, houseNames, personNames, canManage, onAction, onClose,
 }: WorkOrderDetailDrawerProps): JSX.Element {
@@ -53,7 +53,7 @@ export default function WorkOrderDetailDrawer({
   const { recordChecklist } = useWorkOrderActions();
   // Farm Owner ghi kết quả từng mục khi tự làm phiếu phòng ngừa (ghi chú và ảnh từng mục ở mobile)
   const canRecordChecklist = canManage && workOrder?.status === 'IN_PROGRESS';
-  // Bấm đúng kết quả đang có thì không gửi; đổi kết quả thì giữ ghi chú của người ghi trước (backend xoá ghi chú khi không gửi)
+  // Đổi kết quả thì giữ ghi chú cũ, vì backend xoá ghi chú khi không gửi
   function recordItem(itemIndex: number, result: ChecklistResult, current: { result: ChecklistResult | null; note?: string | null }): void {
     if (!workOrder || current.result === result) return;
     recordChecklist.mutate(
@@ -179,7 +179,7 @@ export default function WorkOrderDetailDrawer({
               <p className="text-sm font-semibold text-charcoal">{t('detail.history')}</p>
               <ol className="flex flex-col gap-2 border-l-2 border-warmGray/30 pl-3">
                 {workOrder.history.map(entry => {
-                  // Trạng thái không đổi = lần giao lại; câu hệ thống tự ghi và chữ "Giao lại" của backend không hiện nguyên văn (FE_Design 13.16 a)
+                  // Trạng thái không đổi là một lần giao lại; không hiện nguyên văn câu hệ thống
                   const isReassign = entry.from === entry.to;
                   const note = entry.by && !isReassign ? entry.note : null;
                   return (

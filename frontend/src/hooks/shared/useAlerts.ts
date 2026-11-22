@@ -18,7 +18,7 @@ export interface AlertsListQuery {
 // Số cảnh báo mỗi trang ở trang Thông báo của Farm Owner, cũng là số dòng khung bảng
 export const ALERT_PAGE_SIZE = 10
 
-// Danh sách cảnh báo theo filter của trang Alerts: KHÔNG đồng bộ badge chuông, vì `total`/`meta.unreadCount` ở đây bị chính severity/status filter của trang thu hẹp. Badge chuông toàn cục lấy từ `useUnreadAlertCount()` (không filter) thay vì từ đây.
+// Không đồng bộ badge chuông: total ở đây đã bị filter của trang thu hẹp
 export function useAlertsList(query: AlertsListQuery, options?: { enabled?: boolean }) {
   return usePaginatedListQuery<Alert>(
     ['alerts', query],
@@ -33,7 +33,7 @@ function listAlerts(query: AlertsListQuery) {
   return alertApi.list(query as Record<string, string>)
 }
 
-// số cảnh báo ACTIVE (chờ xác nhận) trong phạm vi người dùng, cho chuông, menu và trang Cảnh báo; undefined khi chưa tải xong, lỗi hoặc role không vào được /alerts. Cache xoá khi đăng xuất (queryClient.clear) nên không mang số sang phiên sau
+// undefined khi chưa tải, lỗi hoặc role không vào được /alerts
 export function usePendingAlertTotal(): number | undefined {
   const canSeeAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
   const result = useQuery({
@@ -44,7 +44,7 @@ export function usePendingAlertTotal(): number | undefined {
   return canSeeAlerts ? result.data?.data?.meta?.unreadCount : undefined
 }
 
-// Danh sách cảnh báo cuộn tải thêm (chuông thông báo): mỗi lần `pageSize` cảnh báo mới nhất, hết `meta.total` thì dừng. `status` lọc ngay ở server (VD chỉ ACTIVE để lấy đủ tin chưa đọc dù chúng cũ hơn các trang đầu).
+// status lọc ở server để lấy đủ tin chưa đọc dù chúng cũ
 export function useAlertsInfinite(pageSize: number, status?: AlertStatus, enabled = true) {
   return useInfiniteQuery({
     queryKey: ['alerts', 'infinite', pageSize, status ?? 'ALL'],

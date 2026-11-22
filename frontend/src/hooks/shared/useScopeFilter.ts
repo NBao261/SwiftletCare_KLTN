@@ -93,7 +93,7 @@ export function pickAutoScope(input: AutoScopeInput): { farmId: string; houseId:
   return house ? { farmId: farm, houseId: house._id, zoneId: '' } : farmOnly;
 }
 
-// Khung lọc Trang trại → Nhà → Zone dùng chung các trang Farm Owner, lựa chọn lưu trong store nên chuyển trang không bị trả về
+// Lựa chọn lưu trong store nên chuyển trang không bị mất
 export function useScopeFilter(): ScopeFilterState {
   const level = scopeLevelOf(useLocation().pathname);
   const lastFarmId = useZoneStore(state => state.selectedFarmId);
@@ -222,7 +222,7 @@ export function farmZonePath(farmId: string, houseId: string, zoneId: string): s
   return `/farms/${farmId}/houses/${houseId}/zones/${zoneId}`;
 }
 
-// Khung lọc ở các trang Trang trại: đổi lựa chọn thì sang trang đúng cấp (farm → danh sách, nhà → chi tiết nhà, Zone → chi tiết Zone)
+// Đổi lựa chọn thì sang trang đúng cấp
 export function useFarmsScopeRouting(scope: ScopeFilterState): ScopeFilterState {
   const navigate = useNavigate();
   const { pathname } = useLocation();

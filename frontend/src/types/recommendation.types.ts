@@ -7,7 +7,7 @@ export type RecommendationIndicator = 'TIME_IN_RANGE' | 'AIR_HOURS_OVER' | 'RETU
 export type RecommendationComparison = 'GTE' | 'LTE';
 export type RecommendationStatus = 'OPEN' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'MEASURED';
 
-// WORK_ORDER: mở một phiếu sửa chữa có tiêu đề · PARAMETER_CHANGE: đổi một ngưỡng hoặc hệ số mờ của mọi zone trong nhà
+// PARAMETER_CHANGE đổi ngưỡng hoặc hệ số mờ của mọi zone trong nhà
 export type RecommendationAction =
   | { type: 'WORK_ORDER'; title: string }
   | { type: 'PARAMETER_CHANGE'; group: 'thresholds'; key: keyof Thresholds; value: number }

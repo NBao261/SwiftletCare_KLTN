@@ -1,4 +1,4 @@
-// DetectionColumn: Cột 3: Tham số phát hiện bất thường (Độc quyền Chuyên gia) Hộp verdict_stats chuẩn Real Data + 6 stepper fields + reset trên header + save w-full
+// Cột tham số phát hiện bất thường
 import { useState, useEffect } from 'react'
 import { AlertTriangle, RotateCcw, Save, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/cn'

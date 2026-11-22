@@ -19,7 +19,7 @@ const ACCENT: Record<HouseNode['health'], string> = {
   EMPTY: 'bg-warmGray/30',
 }
 
-// Hàng 1 nhà yến trong màn Trang trại của Technician. Chỉ hiện thứ phục vụ xử lý kỹ thuật: tình trạng, sự cố nổi bật (kèm zone), tỉ lệ thiết bị online, số zone. KHÔNG có sản lượng/thu hoạch/ghim.
+// Chỉ thông tin kỹ thuật, không có sản lượng hay thu hoạch
 export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowProps) {
   const { t, num } = useTranslation(farmDict)
   const { house, farm, headline, counts } = node

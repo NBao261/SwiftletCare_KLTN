@@ -25,7 +25,7 @@ export interface CreateWorkOrderInput {
   description?: string;
 }
 
-// Work Order: Farm Owner mở tay, tự làm (bắt đầu, checklist, báo xong), duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ đọc
+// Domain Expert chỉ đọc
 export const workOrderApi = {
   list: (query: WorkOrderListQuery) => api.get<ApiResponse<WorkOrder[]>>('/work-orders', { params: query }),
   getOne: (id: string) => api.get<ApiResponse<WorkOrder>>(`/work-orders/${id}`),
@@ -39,7 +39,7 @@ export const workOrderApi = {
     // Tới 5 ảnh × 5 MB trên mạng nhà yến: timeout riêng thay cho 10 s mặc định của axios
     return api.post<ApiResponse<WorkOrder>>(`/work-orders/${id}/done`, form, { timeout: 120_000 });
   },
-  // kết quả 1 mục checklist của phiếu phòng ngừa đang làm (multipart, ảnh tuỳ chọn ở mobile); backend xoá ghi chú của mục khi không gửi `note`, nên ghi lại một mục phải gửi kèm ghi chú đang có
+  // Backend xoá ghi chú khi không gửi `note`, nên ghi lại một mục phải gửi kèm ghi chú đang có
   recordChecklist: (id: string, itemIndex: number, result: ChecklistResult, note?: string | null) => {
     const form = new FormData();
     form.append('item_index', String(itemIndex));

@@ -6,7 +6,7 @@ interface ZoneState {
   selectedFarmName: string | null
   selectedZoneId: string | null
   selectedZoneName: string | null
-  // Khung lọc Trang trại → Nhà → Zone ở header các trang Farm Owner; '' = tất cả. Lưu lại để chuyển trang không bị trả về
+  // '' = tất cả; lưu lại để chuyển trang không bị mất
   scopeFarmId: string
   selectedHouseId: string
   scopeZoneId: string
@@ -17,7 +17,7 @@ interface ZoneState {
   setScopeFarm: (farmId: string, farmName: string) => void
   // Trang chi tiết nhà / Zone ghi phạm vi theo URL để khung lọc khớp trang đang xem ('' = tất cả)
   setScopePath: (farmId: string, farmName: string, houseId: string, zoneId: string) => void
-  // Farm luôn đi kèm Zone vì chọn Zone là đi qua cascade Farm→House→Zone: biết sẵn farmId lúc đó tránh các trang khác (Harvest/Analytics So sánh Zone) phải bắt người dùng chọn lại farm từ đầu.
+  // Lưu kèm farm để trang khác không bắt chọn lại farm
   setZone: (farmId: string, farmName: string, zoneId: string, zoneName: string) => void
   clearZone: () => void
 }
@@ -48,7 +48,7 @@ export const useZoneStore = create<ZoneState>()(
     {
       name: 'swiftletcare-zone',
       version: 2,
-      // v0 → v1: thêm selectedFarmId/selectedFarmName. Dữ liệu cũ chỉ có 2 field zone: persist mặc định sẽ merge nông và để farm = null trong khi zone vẫn còn giá trị, khiến các trang gate theo farmId "kẹt" dù UI hiện như đã chọn. Buộc reset cả 2 để user chọn lại từ đầu, nhất quán.
+      // v0 → v1: buộc reset vì merge nông để farm = null mà zone còn, làm trang kẹt
       migrate: (persisted, version) => {
         if (version < 1) return { selectedFarmId: null, selectedFarmName: null, selectedZoneId: null, selectedZoneName: null, scopeFarmId: '', selectedHouseId: '', scopeZoneId: '' }
         // v1 → v2: thêm ô Trang trại, mặc định tất cả trang trại và bỏ lọc nhà, Zone cũ

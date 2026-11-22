@@ -1,4 +1,4 @@
-// DomainExpertQueuePage: Trang chủ Chuyên gia Miền Layout: Bento Grid 2 cột bất đối xứng bám ngay dưới thanh SCADA. - Không có Header tầng phụ, thông tin ngữ cảnh tập trung ở SCADA Banner. - Cột trái (7/12): Hero Action Card, Thẩm định cảnh báo suy luận. - Cột phải (5/12): Cụm 2 thẻ nhiệm vụ định kỳ (Cấu hình tham số & Báo cáo tuần). Tiêu chuẩn thiết kế (/design-taste-frontend & Anti-Slop): - Không hiển thị số liệu "ảo" / số bịa đặt (Zero Hallucination UI). - Kích thước chữ tăng nhẹ, phân cấp thị giác rõ ràng, độ tương phản cao, dễ đọc trong ca trực. - Mọi dòng chữ trên 2 thẻ bên phải đều mang mục đích nghiệp vụ cụ thể. - Font chữ: Plus Jakarta Sans (đồng nhất toàn hệ thống).
+// Trang chủ chuyên gia: không hiện số liệu bịa
 
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -65,7 +65,7 @@ export default function DomainExpertQueuePage() {
   // Dữ liệu gợi ý tối ưu AI cho tham số Fuzzy Logic
   const { data: aiSuggestion } = useFuzzySuggestion(selectedZoneId ?? undefined)
 
-  // Dữ liệu mục duyệt tham số & đề xuất hệ số mờ Mục duyệt ở cấp farm (có mục theo nhà, camera), không lọc theo Zone
+  // Mục duyệt ở cấp farm, không lọc theo Zone
   const { total: pendingReviewsCount } = useParameterReviews({
     farmId: selectedFarmId ?? '',
     status: 'PENDING_REVIEW',

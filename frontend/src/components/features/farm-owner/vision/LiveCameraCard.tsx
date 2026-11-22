@@ -27,7 +27,7 @@ interface LiveCameraCardProps {
   showTodayCounts?: boolean
 }
 
-// Khung xem trực tiếp camera cửa thu chim của 1 nhà yến + thông số camera và số đếm hôm nay, đều lấy từ backend; phiên bản mô hình đếm là thông tin kỹ thuật, xem ở chi tiết thiết bị
+// Xem trực tiếp camera của 1 nhà, kèm thông số và số đếm hôm nay
 export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action, showTodayCounts = true }: LiveCameraCardProps) {
   const { t, num, ago, date } = useTranslation(dashboardDict)
   const videoRef = useRef<HTMLVideoElement>(null)

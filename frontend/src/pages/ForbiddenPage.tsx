@@ -6,7 +6,7 @@ import { getRoleHomePath } from "@/constants/roles";
 
 // Trang 403: hiển thị khi RequireRole chặn 1 route vì user không đủ quyền.
 export default function ForbiddenPage() {
-  // "/dashboard" cứng ở đây từng khiến Technician/Admin bấm "Về Trang tổng quan" bị đá thẳng trở lại /403 (họ không có quyền vào Dashboard): giờ về đúng trang nhà của role đó.
+  // Về trang nhà của role, không cứng "/dashboard" (role khác sẽ lại bị /403)
   const role = useAuthStore((s) => s.user?.role);
   const homePath = getRoleHomePath(role);
 

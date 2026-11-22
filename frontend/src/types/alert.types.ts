@@ -17,7 +17,7 @@ export type AlertType =
   | 'ACTUATOR_FAULT'
   | 'CONFIG_MISMATCH'                               // backend tự tính
 
-// chi tiết sự cố. THRESHOLD_BREACH: chỉ số đã đủ thời gian chờ sớm nhất; UNEXPECTED_RESTART: reset_reason. Cảnh báo cũ không có (null)
+// THRESHOLD_BREACH: chỉ số đủ thời gian chờ sớm nhất; UNEXPECTED_RESTART: reset_reason; cảnh báo cũ là null
 export interface AlertDetails {
   metric?: 'temperature' | 'humidity' | 'light_lux' | 'nh3_ppm' | 'co2_ppm'
   observed?: number

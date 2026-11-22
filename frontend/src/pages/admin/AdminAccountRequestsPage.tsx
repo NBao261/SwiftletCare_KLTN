@@ -14,7 +14,7 @@ import { t as i18nT, tr } from '@/i18n'
 import type { User } from '@/types'
 
 const DELETE_DEADLINE_DAYS = 30
-// Dạng log như bảng Nhật ký hệ thống: DataTable cố định 10 dòng (dòng trống bù cao bằng dòng thật) + phân trang, mỗi yêu cầu 1 dòng, nút xử lý ở cột Thao tác. 64px vừa ô Thời gian 2 dòng (giờ/ngày)
+// DataTable cố định 10 dòng; 64px vừa ô thời gian 2 dòng
 const PAGE_SIZE = 10
 const ROW_HEIGHT = 64
 const FRAME = 'flex flex-col gap-3'
@@ -35,7 +35,7 @@ function TimeCell({ at }: { at?: string }) {
 }
 
 
-// Xử lý xong mục cuối của trang N (N > 1) thì trang đó trống trong khi các trang trước vẫn còn: kéo `page` lùi về trang cuối còn dữ liệu, thay vì để người dùng kẹt ở trang rỗng (không có Pagination để quay lại). Trả true khi đang ở trang vượt quá.
+// Xử lý xong mục cuối của trang thì lùi về trang cuối còn dữ liệu
 function useClampedPage(page: number, setPage: (page: number) => void, total: number, limit: number, isLoading: boolean): boolean {
   const lastPage = Math.max(1, Math.ceil(total / limit))
   const beyondLastPage = !isLoading && page > lastPage

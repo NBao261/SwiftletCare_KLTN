@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/cn'
 import { trChildren } from '@/i18n'
 
-// Button: bám đúng "Bảng Phân Loại Màu Nút Bấm Mặc Định" (FE_Design_Claude.md) primary Charcoal bg / White text, hành động chính duy nhất trên màn hình accent Lime Mist bg / Charcoal text, kích hoạt đặc biệt, badge nổi bật secondary White bg / Charcoal text, nút hủy, nút phụ cạnh primary climate Climate Orange bg / White, chế độ vi khí hậu, bật thiết bị sưởi/thông gió danger Alert Red bg / White, hành động khẩn cấp / phá hủy icon White bg, bo tròn, chỉ icon, nút quay lại, menu, thêm, chuông Disabled tự động áp dụng qua thuộc tính HTML `disabled` (hàng "Disabled").
+// Màu nút theo bảng phân loại trong FE_Design_Claude.md
 type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'climate' | 'danger' | 'icon'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

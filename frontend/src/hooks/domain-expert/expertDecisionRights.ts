@@ -3,9 +3,9 @@ import type { Role } from '@/types'
 export interface ExpertDecisionRights {
   // Nhóm C: kết luận cảnh báo suy luận: Domain Expert, hoặc Farm Owner khi farm chưa có chuyên gia
   canDecide: boolean
-  // Nhóm A: tham số phát hiện, mức giảm tỷ lệ chim về, mức chỉ số sức khoẻ, lịch đếm, vòng đếm: Domain Expert và Farm Owner
+  // Nhóm A: Domain Expert và Farm Owner
   canEditParameters: boolean
-  // Farm Owner trên farm có chuyên gia: thay đổi nhóm A mở mục duyệt, việc nhóm B gửi chuyên gia duyệt, nhóm C nhắc được
+  // Farm có chuyên gia: nhóm A mở mục duyệt, nhóm B chờ duyệt, nhóm C nhắc được
   ownerNeedsExpert: boolean
   // Việc chỉ Domain Expert làm, kể cả khi farm chưa có chuyên gia: duyệt, kết luận báo cáo và mùa vụ
   isExpert: boolean

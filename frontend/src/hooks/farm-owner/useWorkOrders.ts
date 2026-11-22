@@ -39,7 +39,7 @@ export function useOpenWorkOrderCount(houseId: string) {
   });
 }
 
-// Phiếu chờ chủ nhà yến duyệt, 5 phiếu đầu và tổng số; phạm vi như khung lọc, houseId thắng farmId, rỗng = mọi trang trại
+// houseId thắng farmId; rỗng = mọi trang trại
 export function useAwaitingApproval(farmId = '', houseId = '', enabled = true) {
   let scope: { houseId?: string; farmId?: string } = {};
   if (farmId) scope = { farmId };
@@ -68,7 +68,7 @@ export function useHouseOpsMetrics(farmId: string, houseId: string) {
   });
 }
 
-// Thao tác của Farm Owner; xong hay lỗi (409: trạng thái đã đổi) đều tải lại Work Order và cảnh báo, vì duyệt đóng luôn cảnh báo
+// Xong hay 409 đều tải lại Work Order và cảnh báo, vì duyệt đóng luôn cảnh báo
 export function useWorkOrderActions() {
   const queryClient = useQueryClient();
   const refresh = () => {

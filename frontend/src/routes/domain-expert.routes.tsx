@@ -1,4 +1,4 @@
-// Màn quyết định của chuyên gia (FE_Design c); Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận (xem ở /health)
+// Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận
 import { lazy } from 'react';
 import { Route, Navigate, Outlet } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
@@ -25,7 +25,7 @@ function DomainExpertIndexRedirect() {
   return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
 }
 
-// Khung chung của các trang /domain-expert/*: thanh trạng thái có bộ chọn Farm/Nhà/Zone và lời nhắc quyền của Farm Owner
+// Khung chung của /domain-expert/*
 function DomainExpertShell() {
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">

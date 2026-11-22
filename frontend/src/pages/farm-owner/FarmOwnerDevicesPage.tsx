@@ -10,7 +10,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 
-// Trang Thiết bị & Cảm biến của Farm Owner: chỉ xem: bảng cha - con Nhà yến → Zone → thiết bị theo khung lọc Nhà + Zone chung
+// Thiết bị của Farm Owner, chỉ xem
 export default function FarmOwnerDevicesPage(): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const scope = useScopeFilter();

@@ -36,7 +36,7 @@ interface HouseComparisonTableProps {
   sort: ComparisonSortKey;
 }
 
-// mỗi hàng 1 nhà, mỗi nhóm cột là các ô số nhỏ (số trên, nhãn dưới); backend sắp; không có điểm tổng hay xếp hạng
+// Mỗi hàng 1 nhà; backend sắp, không có điểm tổng hay xếp hạng
 export default function HouseComparisonTable({ rows, sort }: HouseComparisonTableProps): JSX.Element {
   const { t, num, exact } = useTranslation(farmOverviewDict);
   const { t: causeLabel } = useTranslation(siteCauseDict);

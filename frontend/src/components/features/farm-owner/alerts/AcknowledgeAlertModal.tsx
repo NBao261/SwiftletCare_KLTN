@@ -16,7 +16,7 @@ interface AcknowledgeAlertModalProps {
   onClose: () => void;
 }
 
-// Farm Owner hoặc Farm Technician (nhà được giao) xác nhận cảnh báo kèm ghi chú; cảnh báo thiết bị có thêm nguyên nhân tìm thấy tại chỗ (tuỳ chọn)
+// Cảnh báo thiết bị có thêm nguyên nhân tìm thấy tại chỗ (tuỳ chọn)
 export default function AcknowledgeAlertModal({ alert, onClose }: AcknowledgeAlertModalProps): JSX.Element {
   const { t } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();

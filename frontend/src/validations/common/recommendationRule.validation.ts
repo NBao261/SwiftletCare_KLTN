@@ -2,7 +2,7 @@ import type { FuzzyNumericKey, RecommendationIndicator, RecommendationRule, Reco
 import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation';
 import { THRESHOLD_LIMITS } from '@/validations/common/threshold.validation';
 
-// Khớp backend `recommendationRule.util.ts` (RULE_VALUE_LIMITS, cửa sổ 1–30 ngày) và api-spec RecommendationRuleInput
+// Khớp RULE_VALUE_LIMITS của backend
 export const RULE_VALUE_LIMITS: Record<RecommendationIndicator, { min: number; max: number }> = {
   TIME_IN_RANGE: { min: 0, max: 100 },
   AIR_HOURS_OVER: { min: 0, max: 24 },

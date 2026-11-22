@@ -39,7 +39,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
   const [error, setError] = useState<FarmKey | null>(null)
   const isSaving = createFarm.isPending || updateFarm.isPending
 
-  // Bấm, kéo ghim trên bản đồ, GPS hoặc tìm địa chỉ đều điền vào hai ô vĩ độ, kinh độ Khung bản đồ tới ghim khi vị trí đến từ gợi ý, GPS hoặc gõ xong toạ độ (bấm, kéo ghim thì ghim đã trong khung)
+  // Khung bản đồ tới ghim khi vị trí đến từ gợi ý, GPS hoặc gõ toạ độ
   const [focusRequest, setFocusRequest] = useState(0)
   const requestMapFocus = (): void => setFocusRequest(count => count + 1)
   function setLocationAndFocus(coordinates: Coordinates): void {

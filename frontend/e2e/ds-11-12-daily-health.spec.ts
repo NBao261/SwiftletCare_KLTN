@@ -9,7 +9,7 @@ interface HealthDay {
   current_reasons?: Array<{ code: string; source: string | null; values: Record<string, unknown> }>;
 }
 
-// nhà C, ngày đầu chim về giảm rõ và độ ẩm lệch nhẹ, ngày sau đó phiên chiều không đầy đủ; seed đã chạy đánh giá ngày như job tối (`npm run seed:demo`). Job tối trên staging chỉ thêm ngày mới hơn, nên lấy ngày sớm nhất và ngày kế nó, không lấy ngày cuối danh sách
+// Job tối trên staging chỉ thêm ngày mới hơn, nên lấy ngày sớm nhất và ngày kế nó
 const sortedDays = (days: HealthDay[]) => [...days].sort((left, right) => left.date.localeCompare(right.date));
 const nextDate = (date: string) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 

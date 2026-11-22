@@ -52,7 +52,7 @@ interface DatePickerProps {
   error?: string;
   // Dấu * đỏ sau nhãn như các ô bắt buộc khác của form
   required?: boolean;
-  // Ngày lặp lại hằng năm (VD hồ sơ theo mùa): ô và lịch không hiện năm, năm lấy theo max; min, max nên cùng một năm
+  // Ngày lặp hằng năm: không hiện năm, năm lấy theo max
   hideYear?: boolean;
 }
 
@@ -95,7 +95,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
     };
   }, [isOpen]);
 
-  // Tên thứ, tháng theo ngôn ngữ (AppShell remount khi đổi ngôn ngữ); VI dạng hẹp "T2 … CN", EN "Mon" vì "M/T" bị trùng
+  // VI dạng hẹp "T2 … CN", EN "Mon" vì "M/T" bị trùng
   const locale = intlLocale();
   const weekdayNames = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(locale, { weekday: locale.startsWith('vi') ? 'narrow' : 'short' });

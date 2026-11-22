@@ -41,7 +41,7 @@ function DetailSection({ title, children }: { title: string; children: ReactNode
   );
 }
 
-// chi tiết cảnh báo: nội dung, số đo, vị trí, nguyên nhân tại chỗ, tiếp nhận, bác bỏ; Farm Owner xác nhận cảnh báo mới
+// Chi tiết cảnh báo
 export default function AlertDetailDrawer({ alertId, locationOf, canAcknowledge, onAcknowledge, onClose }: AlertDetailDrawerProps): JSX.Element {
   const { t, dateTime } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();

@@ -12,7 +12,7 @@ import { useInAppNotificationListener } from '@/hooks/shared/useNotifications'
 import { useTranslation as useI18next } from 'react-i18next'
 import { t } from '@/i18n'
 
-// Khung ứng dụng dùng chung: sidebar (desktop) / dock nổi (mobile) + header + nội dung (FE_Design_Claude.md). Cả 4 role dùng đúng khung này, khác nhau chỉ ở menu do `<Role>Layout.tsx` truyền xuống, nên sửa khung một lần là cả 4 role cùng đổi.
+// Khung chung của cả 4 role, chỉ khác menu do <Role>Layout truyền xuống
 export default function AppShell({
   menuSections,
   dockItems,
@@ -24,11 +24,11 @@ export default function AppShell({
   // thông báo trong ứng dụng mới: làm mới hộp thư và hiện toast ở mọi trang
   useInAppNotificationListener()
   const back = useBreadcrumbStore(s => s.back)
-  // Đổi VI/EN → AppShell render lại (sidebar/header theo), vùng nội dung remount (key) để mọi t() gọi trong hàm thường (cột bảng, helper ngày, bảng nhãn) ra đúng ngôn ngữ mới. Mất state tạm của trang (bộ lọc đang chọn): chấp nhận được
+  // Đổi ngôn ngữ thì remount nội dung để t() trong hàm thường ra đúng ngôn ngữ
   const { i18n } = useI18next()
   const [scrolled, setScrolled] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
-  // Header cao 1 hàng (64px) hoặc 2 hàng khi thanh phạm vi xuống dòng dưới xl (SH-07): đo để nội dung chừa đúng chừng đó
+  // Header 1 hoặc 2 hàng: đo để nội dung chừa đúng chừng đó
   const headerRef = useRef<HTMLDivElement>(null)
   const [headerHeight, setHeaderHeight] = useState(64)
   useLayoutEffect(() => {
@@ -43,7 +43,7 @@ export default function AppShell({
     <div className="flex h-screen overflow-hidden bg-stone">
       <AppSidebar menuSections={menuSections} dockItems={dockItems} />
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header nổi đè lên vùng cuộn và phủ hết bề ngang cột (cả phần thanh cuộn): nội dung trượt bên dưới bị blur. Không nằm trong <main> nên lăn chuột trên header phải chuyển tiếp sang <main> */}
+        {/* Header không nằm trong <main> nên lăn chuột trên header phải chuyển sang <main> */}
         <div ref={headerRef} onWheel={e => mainRef.current?.scrollBy({ top: e.deltaY })} className="absolute inset-x-0 top-0 z-20">
           <AppHeader menuSections={menuSections} elevated={scrolled} />
         </div>
@@ -54,9 +54,9 @@ export default function AppShell({
           style={{ paddingTop: headerHeight }}
           className="relative z-10 flex flex-1 flex-col overflow-y-auto bg-stone pb-28 lg:pb-8"
         >
-          {/* Container duy nhất bọc mọi card nội dung: max-w + mx-auto để nội dung luôn căn giữa vùng nhìn ở màn hình rộng (Full HD/2K/4K), px-6/ px-8 là lề 2 bên đồng nhất khi viewport hẹp hơn max-width. */}
+          {/* Container căn giữa ở màn hình rộng */}
           <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-6 pt-4 lg:px-8 lg:pt-6">
-            {/* Nút quay lại của trang drill-down (usePageBack): nút tròn cùng kiểu Dashboard Farm Owner (FarmOwnerDashboardPage) + chữ tên trang cha; cả cụm là 1 link. self-start để vùng bấm không kéo hết hàng */}
+            {/* Nút quay lại của trang drill-down */}
             {back && (
               <Link to={back.to} state={back.state} className="group mb-3 flex items-center gap-2.5 self-start text-sm font-semibold text-graphite hover:text-charcoal">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-warmGray/15 bg-white text-charcoal shadow-icon transition-colors group-hover:bg-warmGray/10">
@@ -67,7 +67,7 @@ export default function AppShell({
             )}
             {/* Mục menu gộp nhiều trang: tab của các trang con, ngay trên nội dung */}
             <SectionTabs menuSections={menuSections} />
-            {/* Suspense đặt SÁT Outlet (không bọc ở App.tsx cấp cao hơn): chunk lazy-load lần đầu chỉ thay skeleton trong khung nội dung này, sidebar/header/dock không bị unmount nên không còn nháy toàn màn hình khi chuyển tab lần đầu. */}
+            {/* Suspense sát Outlet để lần tải chunk đầu không làm sidebar/header nháy */}
             <Suspense key={i18n.language} fallback={<LoadingSkeleton className="h-40 w-full" />}>
               <Outlet />
             </Suspense>

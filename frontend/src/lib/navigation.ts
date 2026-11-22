@@ -1,4 +1,4 @@
-// Cầu nối điều hướng cho code ngoài React tree (vd axios interceptor trong services/api/client.ts): cho phép gọi navigate() của react-router thay vì window.location.href (tránh full reload, giữ được SPA state).
+// Cho code ngoài React tree gọi navigate() thay vì window.location, tránh reload
 type NavigateFn = (to: string, opts?: { replace?: boolean }) => void
 
 let navigateFn: NavigateFn | null = null

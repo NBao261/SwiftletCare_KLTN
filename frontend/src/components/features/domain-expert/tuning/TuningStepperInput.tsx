@@ -1,4 +1,4 @@
-// TuningStepperInput: Ô điều chỉnh số kiểu -/+ cho Zone Tuning 03 Hỗ trợ decimal, min/max validation, unit label, sub-label
+// Ô số kiểu -/+ có min/max và đơn vị
 import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
 

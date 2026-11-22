@@ -7,7 +7,7 @@ export interface ListDeviceStockQuery {
   limit?: number
 }
 
-// Kho thiết bị: `/admin/provisioned-devices`, chỉ ADMIN. Mã kích hoạt và mật khẩu broker chỉ có trong response của lần thêm / cấp lại; backend chỉ lưu hash nên không có endpoint xem lại.
+// Mã kích hoạt và mật khẩu broker chỉ có trong response lần cấp; backend chỉ lưu hash
 export const deviceStockApi = {
   list: (query?: ListDeviceStockQuery) =>
     api.get<ApiResponse<ProvisionedDevice[]>>('/admin/provisioned-devices', { params: query }),

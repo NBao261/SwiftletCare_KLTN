@@ -1,4 +1,4 @@
-// ADMIN: Tổng quan hệ thống, thay thế /system-status cũ. Bố cục theo mẫu "Tổng quan nền tảng": 1) hàng 4 ô KPI (trang trại, thiết bị, tài khoản theo trạng thái, cảnh báo khẩn) · 2) nhật ký hoạt động gần đây (RecentActivityCard). Số liệu thật: health-overview, /alerts, /system/audit-logs. Không phải BI đầy đủ. Tiêu đề trang lấy từ menu (AppHeader tự tra), không lặp lại trong nội dung.
+// Tổng quan hệ thống: hàng KPI và nhật ký gần đây
 import { CpuIcon, HouseIcon, UsersIcon, WarningIcon } from '@phosphor-icons/react'
 import { useSystemHealth } from '@/hooks/admin/useSystem'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
@@ -41,7 +41,7 @@ export default function AdminSystemHealthPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Hàng 3 ô KPI: bọc Card giống EnvSensorPanel ở Dashboard Farm Owner; ô nằm trong khung nên bỏ shadow riêng (shadow-none), như ReadingTile */}
+      {/* Ô nằm trong khung nên bỏ shadow riêng */}
       <Card className="flex flex-col gap-4">
         <div>
           <h2 className="text-h2 text-charcoal">{i18nT('Chỉ số vận hành toàn hệ thống')}</h2>
@@ -79,7 +79,7 @@ export default function AdminSystemHealthPage() {
             className="shadow-none"
             icon={WarningIcon}
             iconClass={ICON_NORMAL}
-            // Query chỉ lấy status ACTIVE: không ghi "đang mở" vì ACKNOWLEDGED cũng là đang mở. Admin không xác nhận cảnh báo (chỉ Farm Owner) → dòng phụ nói ai chưa phản hồi, tránh chữ "chờ xác nhận" khiến Admin tưởng việc đó của mình
+            // Admin không xác nhận cảnh báo nên không ghi "chờ xác nhận"
             label="Cảnh báo khẩn cấp"
             value={String(criticalAlerts.total)}
             sub={criticalAlerts.total > 0 ? 'Chủ nhà yến chưa phản hồi' : 'Không có cảnh báo mới'}

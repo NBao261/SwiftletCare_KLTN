@@ -43,7 +43,7 @@ interface HouseStatusCardProps {
   overview?: HouseOverview;
 }
 
-// Thẻ 1 nhà ở Tổng quan (FO-01): môi trường từng Zone, chế độ điều khiển, giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, chim về
+// Thẻ 1 nhà ở Tổng quan
 export default function HouseStatusCard({ node, status, sensors, overview }: HouseStatusCardProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   const { t: farmT } = useTranslation(farmDict);
@@ -56,7 +56,7 @@ export default function HouseStatusCard({ node, status, sensors, overview }: Hou
   const overrideEnd = Math.max(0, ...manualSensors.map(sensor => (sensor.override_expiry ? Date.parse(sensor.override_expiry) || 0 : 0)));
   const minutesLeft = Math.ceil((overrideEnd - Date.now()) / MINUTE_MS);
 
-  // Chế độ điều khiển: hạn điều khiển tay đã qua mà dữ liệu chưa cập nhật thì ghi "đang về tự động", không đứng ở "còn 1 phút"
+  // Hạn điều khiển tay đã qua mà dữ liệu chưa về thì ghi "đang về tự động"
   let mode = t('house.auto');
   if (manualSensors.length > 0 && overrideEnd === 0) mode = t('house.manualNoTime');
   if (manualSensors.length > 0 && overrideEnd > 0 && minutesLeft > 0) mode = t('house.manual', { n: num(minutesLeft) });

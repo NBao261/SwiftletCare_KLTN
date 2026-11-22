@@ -9,7 +9,7 @@ import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
 import { Drawer } from '@/components/ui/Drawer'
 import { useMenuBadges } from '@/hooks/common/useMenuBadges'
 
-// Trang con của một mục menu: hiện thành tab trên đầu trang (SectionTabs), mục menu sáng khi ở bất kỳ trang con nào
+// Mục menu sáng khi ở bất kỳ trang con nào của nó
 export interface MenuTab {
   label: string
   path: string

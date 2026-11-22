@@ -3,7 +3,7 @@ import { ACCOUNTS, PASSWORD, signIn } from './helpers/demoApi';
 
 interface AppNotification { _id: string; title: string }
 
-// hộp thông báo trong ứng dụng trên web. `npm run seed:demo` tạo cảnh báo NOISE_ANOMALY chờ kết luận, nên Domain Expert có sẵn thông báo trong ứng dụng.
+// `npm run seed:demo` tạo sẵn cảnh báo chờ kết luận nên Domain Expert có thông báo
 test('Domain Expert thấy thông báo trong ứng dụng ở tab "Thông báo" của chuông', async ({ page, request }) => {
   const expert = await signIn(request, 'expert');
   const [latest] = await expert.data<AppNotification[]>(await expert.get('/notifications?limit=1'));

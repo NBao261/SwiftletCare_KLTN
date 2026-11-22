@@ -47,7 +47,7 @@ interface ZoneComponentLogProps {
   thresholds?: Thresholds;
 }
 
-// Thiết bị bộ kit gom theo loại, bấm xổ log từng thiết bị; số liệu chỉ lấy khi bấm "Kiểm tra thiết bị", không realtime
+// Số liệu chỉ lấy khi bấm "Kiểm tra thiết bị", không realtime
 export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComponentLogProps): JSX.Element {
   const { t, dateTime } = useTranslation(devicesDict);
   const { groups, checkedAt, isChecking, isError, runCheck } = useZoneComponents(zoneId, nodes);
@@ -182,7 +182,7 @@ function KindRow({ group, thresholds, isOpen, onToggle }: KindRowProps): JSX.Ele
   );
 }
 
-// Thông số của 1 thiết bị nằm ngay trên hàng log (nhãn · giá trị), lấy từ lần kiểm tra; chưa kiểm tra thì mọi giá trị "_"
+// Chưa kiểm tra thì mọi giá trị "_"
 function ComponentParams({ kind, item, thresholds }: { kind: ComponentKind; item: ComponentItem; thresholds?: Thresholds }): JSX.Element {
   const { t, num, dateTime } = useTranslation(devicesDict);
   const detail = item.detail;

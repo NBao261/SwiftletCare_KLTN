@@ -9,7 +9,7 @@ import { useAwaitingApproval } from '@/hooks/farm-owner/useWorkOrders'
 import { usePendingDeletionCount } from '@/hooks/admin/useAccountRequests'
 import { expertService } from '@/services/expert.service'
 
-// Số trên mục menu theo đường dẫn của mục: Công việc và Chuyên môn theo trang trại đang chọn ở khung lọc, Cảnh báo đếm mọi trang trại như trang Cảnh báo
+// Cảnh báo đếm mọi trang trại, các mục khác theo trang trại đang chọn
 export function useMenuBadges(): Record<string, number> {
   const role = useAuthStore(state => state.user?.role)
   const isExpert = role === 'DOMAIN_EXPERT'
@@ -21,7 +21,7 @@ export function useMenuBadges(): Record<string, number> {
   const pendingDeletion = usePendingDeletionCount(isAdmin)
   const storedFarmId = useZoneStore(state => state.scopeFarmId)
   const { data: farms } = useFarms()
-  // Trang trại đã xoá hoặc mất quyền thì về tất cả trang trại, như useScopeFilter (tránh hỏi lại một trang trại trả 403)
+  // Trang trại đã xoá hoặc mất quyền thì về tất cả, tránh hỏi lại bị 403
   const scopeFarmId = farms?.find(farm => farm._id === storedFarmId)?._id ?? ''
   const { data: awaitingApproval } = useAwaitingApproval(scopeFarmId, '', isOwner && farms !== undefined)
 

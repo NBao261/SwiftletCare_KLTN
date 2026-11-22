@@ -30,7 +30,7 @@ function estimateMenuHeight(items: ActionsMenuItem[]): number {
   return items.length * MENU_ITEM_HEIGHT + hints * HINT_HEIGHT + Math.max(0, items.length - 1) * ITEM_GAP + dividers * DIVIDER_HEIGHT + MENU_CHROME
 }
 
-// Menu "..." theo dòng bảng (DataTable): cơ chế portal/lật/đóng xem useFloatingMenu. Bàn phím (cùng cách với SelectMenu): ↑/↓ di chuyển (bỏ qua mục disabled), Enter/Space chạy mục đang trỏ, Esc/Tab đóng; đóng xong trả focus về nút "...".
+// Menu "..." của dòng bảng; ↑/↓, Enter/Space, Esc/Tab; đóng xong trả focus về nút
 export default function ActionsMenu({ items }: ActionsMenuProps) {
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
     align: 'right',
@@ -38,7 +38,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
   })
   const [activeIndex, setActiveIndex] = useState(-1)
 
-  // Mỗi lần mở lại, CHƯA có mục nào được tô: nền chỉ hiện khi thật sự hover/di chuyển bằng bàn phím (Floating Inset Menu, không "dính sẵn" nền xám mục đầu như bản cũ). Mũi tên ↓ lần đầu sẽ nhảy vào mục bấm-được đầu tiên (xem move()).
+  // Mở ra chưa tô mục nào; ↓ lần đầu nhảy vào mục bấm được đầu tiên
   useEffect(() => {
     if (open) setActiveIndex(-1)
   }, [open])
@@ -111,7 +111,7 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
         >
           {items.map((item, index) => {
             const isActive = index === activeIndex
-            // Ngăn cách nhóm thao tác thường với mục nguy hiểm (Xóa): chỉ khi mục ngay trước đó KHÔNG phải danger, tránh 2 đường kẻ dính liền nhau.
+            // Chỉ kẻ ngăn khi mục trước không phải danger, tránh 2 đường kẻ liền nhau
             const showDivider = item.danger && index > 0 && !items[index - 1].danger
             return (
               <Fragment key={item.label}>

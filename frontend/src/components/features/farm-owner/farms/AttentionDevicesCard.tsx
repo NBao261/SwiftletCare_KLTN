@@ -15,7 +15,7 @@ interface AttentionDevicesCardProps {
 
 const MAX_LISTED = 3
 
-// Thiết bị cần chú ý của nhà: tỷ lệ sẵn sàng + danh sách thiết bị mất kết nối/lỗi (tối đa 3, phần còn lại xem ở tab Thiết bị)
+// Tối đa 3 thiết bị, còn lại xem ở tab Thiết bị
 export default function AttentionDevicesCard({ counts, problems, zoneNameById, onSelect }: AttentionDevicesCardProps) {
   const { t, num, ago } = useTranslation(farmDict)
   const readiness = counts.total > 0 ? (counts.online / counts.total) * 100 : 0

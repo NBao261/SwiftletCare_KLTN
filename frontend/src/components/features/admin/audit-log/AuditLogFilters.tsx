@@ -11,10 +11,10 @@ const DATE_OPTIONS: SelectMenuOption<string>[] = [
   ...DATE_PRESETS.map(({ value, label }) => ({ value, label })),
 ]
 
-// Hàng bộ lọc (người thực hiện / hành động / thời gian) + sắp xếp theo thời gian + xoá bộ lọc của bảng nhật ký: ở trang Nhật ký hệ thống.
+// Bộ lọc của bảng nhật ký
 export default function AuditLogFilters({ table }: { table: AuditLogTableState }) {
   const actors = useUsersPicker()
-  // Dựng mỗi lần render (không phải hằng cấp module): AUDIT_ACTION_LABEL dịch lúc ĐỌC, dựng 1 lần lúc nạp module thì nhãn bị đóng băng theo ngôn ngữ lúc import: đổi VI/EN không đổi theo
+  // Dựng mỗi lần render: dựng ở cấp module thì nhãn đóng băng theo ngôn ngữ lúc import
   const actionOptions: SelectMenuOption<string>[] = [
     { value: ALL, label: 'Tất cả hành động' },
     ...USER_AUDIT_ACTIONS.map(value => ({ value, label: AUDIT_ACTION_LABEL[value] ?? value })),

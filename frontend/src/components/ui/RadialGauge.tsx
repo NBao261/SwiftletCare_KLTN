@@ -12,7 +12,7 @@ interface RadialGaugeProps {
   children?: ReactNode
 }
 
-// Vòng tròn tiến độ (donut gauge): thuần trình bày, không biết domain: nhận `percent` + màu qua className, không tự suy ra ý nghĩa % từ đâu. Dùng cho mọi màn cần biểu diễn 1 giá trị/ngưỡng dạng vòng tròn (FE_Design_Claude.md "Gauge/Bullet").
+// Vòng tiến độ thuần trình bày: nhận percent và màu
 export default function RadialGauge({
   percent, size = 88, strokeWidth = 8, className, trackClassName, children,
 }: RadialGaugeProps) {

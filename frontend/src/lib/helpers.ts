@@ -45,7 +45,7 @@ export const formatDayTime = (date: string | Date) => `${vnDayLabel(date)} · ${
 
 const VN_YEAR_MONTH =new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: 'numeric' })
 
-// Năm + tháng (1-12) theo giờ VN: gom số liệu theo tháng khớp với ngày hiển thị, không lệch theo múi giờ máy người dùng
+// Theo giờ VN, không lệch theo múi giờ máy
 export function vnYearMonth(date: string | Date): { year: number; month: number } {
   const parts = VN_YEAR_MONTH.formatToParts(new Date(date))
   const get = (type: 'year' | 'month') => Number(parts.find(p => p.type === type)?.value)
@@ -67,7 +67,7 @@ export function formatRelativeTime(iso: string, now = Date.now()) {
   return formatDate(iso)
 }
 
-// Độ dài 1 khoảng thời gian, chính xác tới phút, lấy 2 đơn vị lớn nhất cho dễ đọc: "45 phút", "3 giờ 20 phút", "1 ngày 4 giờ". Bỏ dấu (dùng cho cả "còn …" lẫn "quá hạn …").
+// Lấy 2 đơn vị lớn nhất: "3 giờ 20 phút"
 export function formatDuration(ms: number): string {
   const minutes = Math.floor(Math.abs(ms) / 60_000)
   if (minutes < 1) return t('dưới 1 phút')
@@ -99,7 +99,7 @@ export interface AlertBreach {
   startedAt?: string
 }
 
-// Chỉ số cảnh báo đang báo: dùng chung cho Dashboard Farm Owner và trang /alerts. Ưu tiên `details` (: chỉ số đã đủ thời gian chờ); cảnh báo cũ không có `details` thì lấy chỉ số đầu của `metadata.breaches` (mọi chỉ số đang vượt, kể cả chưa đủ thời gian chờ).
+// Ưu tiên details; cảnh báo cũ thì lấy chỉ số đầu của metadata.breaches
 export function alertBreach(alert: Pick<Alert, 'details' | 'metadata'>): AlertBreach | undefined {
   const details = alert.details
   if (details?.metric && typeof details.observed === 'number' && typeof details.threshold === 'number') {
@@ -129,7 +129,7 @@ export function alertBreach(alert: Pick<Alert, 'details' | 'metadata'>): AlertBr
 // Format return rate
 export const formatReturnRate = (rate: number) => `${rate.toFixed(1)}%`
 
-// Lấy message lỗi từ response envelope chuẩn `{success:false, error:{code,message}}` (axios error): DRY hoá pattern lặp lại ở mọi form gọi API.
+// Message lỗi từ envelope chuẩn
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   const message = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
   return message ?? fallback

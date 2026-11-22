@@ -12,11 +12,11 @@ import type { SystemNodeStatusItem } from '@/types'
 const DAY_FORMAT = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
 const TIME_FORMAT = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 
-// Mức sóng Wi-Fi: cùng ngưỡng + tên mức với bảng thiết bị Farm Owner (wifiQuality: ≥ -55 Rất tốt · ≥ -67 Tốt · ≥ -75 Khá · thấp hơn Yếu). Thêm màu để Admin quét nhanh: tốt xanh hệ thống, Yếu cam như giá trị vượt ngưỡng.
+// Cùng ngưỡng mức sóng với bảng thiết bị Farm Owner
 const WIFI_LABEL = translated({ excellent: 'Rất tốt', good: 'Tốt', fair: 'Khá', weak: 'Yếu' })
 const WIFI_COLOR = { excellent: 'text-accent-700', good: 'text-accent-700', fair: 'text-charcoal', weak: 'text-climateOrange' }
 
-// Ô Wi-Fi dùng chung bảng + popup chi tiết. RSSI chỉ cập nhật theo heartbeat → thiết bị không online thì đây là số CŨ: xám nghiêng, không xếp mức (tránh "Offline" cạnh "Rất tốt"). Camera không gửi RSSI → "—".
+// Thiết bị không online thì RSSI là số cũ: hiện xám, không xếp mức
 export function WifiSignal({ node }: { node: SystemNodeStatusItem }) {
   const q = wifiQuality(node.rssi)
   if (node.rssi == null || !q) return <span className="text-warmGray">—</span>
@@ -26,7 +26,7 @@ export function WifiSignal({ node }: { node: SystemNodeStatusItem }) {
   return <span className={cn('font-bold', WIFI_COLOR[q])}>{node.rssi} dBm · {WIFI_LABEL[q]}</span>
 }
 
-// Ngày + giờ heartbeat 2 dòng (giờ đậm trên, ngày chữ thường dưới). `plainDate`: ngày màu chữ chính thay vì xám (drawer chi tiết: ô giá trị đứng 1 mình, không cần làm mờ như trong bảng)
+// Giờ trên, ngày dưới
 export function HeartbeatTime({ at, plainDate = false }: { at?: string; plainDate?: boolean }) {
   // Chưa có heartbeat: nghiêng xám: cùng kiểu "Không có" ở Nhật ký hệ thống
   if (!at) return <span className="font-normal italic text-warmGray">{t('Chưa từng kết nối')}</span>
@@ -39,7 +39,7 @@ export function HeartbeatTime({ at, plainDate = false }: { at?: string; plainDat
   )
 }
 
-// Cột bảng Thiết bị của Admin (AdminDevicesPage): chỉ XEM: RACI cho Admin "I (audit)" với gán/kích hoạt/ dời thiết bị và "–" với điều khiển relay, nên thao tác duy nhất là "Chi tiết" (popup chỉ đọc). Width % (DataTable table-fixed), tổng 100: 19+20+13+14+9+14+11, Thiết bị đủ chỗ mã + nhãn loại, Vị trí chỉ còn tên farm nên hẹp lại.
+// Admin chỉ xem thiết bị, thao tác duy nhất là "Chi tiết"
 export function buildDeviceColumns(onView: (n: SystemNodeStatusItem) => void): DataTableColumn<SystemNodeStatusItem>[] {
   return [
     {
@@ -57,7 +57,7 @@ export function buildDeviceColumns(onView: (n: SystemNodeStatusItem) => void): D
     },
     {
       key: 'location', header: 'Vị trí', className: 'w-[20%]',
-      // Chỉ tên farm (in đậm): nhà tầng zone xem ở popup Chi tiết; rê chuột vẫn thấy đủ vị trí. Ô tìm kiếm vẫn khớp cả chuỗi vị trí đầy đủ (nodeLocation)
+      // Chỉ tên farm; vị trí đầy đủ ở tooltip và vẫn tìm kiếm được
       render: n => (
         <span className="line-clamp-2 break-words font-bold text-charcoal" title={nodeLocation(n)}>{n.farm_name || '—'}</span>
       ),

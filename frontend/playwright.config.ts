@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// FE_Design 13.17: test E2E chạy trên web thật nối backend thật (đã seed); CI job `e2e` dựng backend trước rồi chạy file này
+// E2E chạy trên web thật nối backend đã seed; job CI `e2e` dựng backend trước
 export default defineConfig({
   testDir: './e2e',
   // Một backend dùng chung cho mọi test: chạy tuần tự để test không giẫm dữ liệu của nhau

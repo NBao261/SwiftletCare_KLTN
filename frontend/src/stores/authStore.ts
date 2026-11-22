@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>()(
   )
 )
 
-// Đồng bộ đăng xuất giữa các tab cùng trình duyệt: tab A bấm "Đăng xuất" (ghi localStorage) thì tab B đang mở cũng phải mất phiên ngay, không chờ tới lần gọi API kế tiếp mới bị 401 rồi mới biết. Chỉ đồng bộ CHIỀU ĐĂNG XUẤT (không đồng bộ đăng nhập), tab B tự nhiên có phiên riêng, không nên bất ngờ đổi user chỉ vì tab A vừa đăng nhập.
+// Chỉ đồng bộ chiều đăng xuất giữa các tab, không đồng bộ đăng nhập
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key !== 'swiftletcare-auth' || !e.newValue) return

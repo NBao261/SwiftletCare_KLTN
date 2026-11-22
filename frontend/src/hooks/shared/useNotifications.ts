@@ -45,7 +45,7 @@ export function useMarkAllNotificationsRead() {
   })
 }
 
-// Socket NOTIFICATION_NEW (room user:<id>): làm mới hộp thư và hiện toast, ở trang nào cũng vậy: mount 1 lần trong AppShell
+// Mount 1 lần trong AppShell
 export function useInAppNotificationListener(): void {
   const queryClient = useQueryClient()
   const push = useToastStore(s => s.push)

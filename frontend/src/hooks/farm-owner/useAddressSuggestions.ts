@@ -16,7 +16,7 @@ export interface AddressSuggestionsResult {
   isError: boolean;
 }
 
-// gợi ý địa chỉ cho câu đang gõ. Chỉ hỏi khi isEnabled (người dùng đã gõ, không phải địa chỉ vừa chọn). isSettled: kết quả là của đúng chữ đang có trong ô; còn chờ debounce thì danh sách cũ không được dùng
+// isSettled: kết quả của đúng chữ đang có; còn chờ debounce thì không dùng danh sách cũ
 export function useAddressSuggestions(text: string, lang: Lang, isEnabled: boolean): AddressSuggestionsResult {
   const query = text.trim();
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -31,7 +31,7 @@ export function useAddressSuggestions(text: string, lang: Lang, isEnabled: boole
     queryKey: ['address-suggestions', debouncedQuery, lang],
     queryFn: ({ signal }) => geocodingApi.suggest(debouncedQuery, lang, signal),
     enabled: isEnabled && isLongEnough && debouncedQuery === query,
-    // Gợi ý của cùng một câu không đổi trong lúc mở form: không hỏi lại. Lỗi thì không thử lại, người dùng gõ tiếp hoặc bấm bản đồ; Photon dùng miễn phí theo kiểu fair use nên không gửi thêm request
+    // Không hỏi lại, không thử lại: Photon dùng miễn phí theo kiểu fair use
     staleTime: Infinity,
     retry: false,
   });

@@ -27,7 +27,7 @@ interface CompareZonesCardProps {
   zones: FlatZone[];
 }
 
-// So sánh môi trường giữa các Zone của farm bằng bảng, số ngoài ngưỡng riêng của từng Zone tô cam; không vẽ cột từ 0 (CH-03)
+// So sánh Zone bằng bảng, số ngoài ngưỡng tô cam; không vẽ cột từ 0
 export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.Element {
   const { t, num, exact } = useTranslation(analyticsDict);
   const [range, setRange] = useState<AnalyticsRange>('24h');

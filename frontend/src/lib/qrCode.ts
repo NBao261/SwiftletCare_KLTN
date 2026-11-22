@@ -1,4 +1,4 @@
-// Mã QR của SwiftletCare: sinh ở client, không có endpoint QR. Cùng định dạng với bộ đọc trên mobile (`mobile/src/utils/qrCode.utils.ts`).
+// Sinh ở client; cùng định dạng với bộ đọc trên mobile (mobile/src/utils/qrCode.utils.ts)
 import QRCode from 'qrcode'
 
 // Nhãn thiết bị: device ID + mã kích hoạt, không chứa Wi-Fi hay mật khẩu broker
@@ -33,7 +33,7 @@ export interface QrLabel {
   lines: { text: string; mono?: boolean; strong?: boolean }[]
 }
 
-// In nhãn qua iframe ẩn (không bị chặn popup như window.open sau await). Mỗi nhãn 60 × 32 mm, viền đứt để cắt. ponytail: khổ nhãn cố định; máy in nhãn cuộn khổ khác thì thêm tham số kích thước.
+// In qua iframe ẩn vì window.open sau await bị chặn popup. Khổ nhãn cố định 60 × 32 mm
 export async function printQrLabels(title: string, labels: QrLabel[]) {
   const images = await Promise.all(labels.map(l => qrDataUrl(l.code)))
   const body = labels.map((l, i) => `

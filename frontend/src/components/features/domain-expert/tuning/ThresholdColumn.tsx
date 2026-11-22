@@ -28,7 +28,7 @@ const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: str
   { key: 'co2_max', label: 'Ngưỡng cảnh báo khí CO2', subLabel: 'Chỉ cảnh báo', step: 50, decimals: 0 },
 ]
 
-// Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống
+// Kiểm cùng luật với backend trước khi lưu
 export default function ThresholdColumn({ data, isLoading, isSaving, isResetting, onSave, onReset }: Props) {
   const [form, setForm] = useState<ExpertThresholds>(FACTORY_DEFAULT_THRESHOLDS)
   const [resetOpen, setResetOpen] = useState(false)

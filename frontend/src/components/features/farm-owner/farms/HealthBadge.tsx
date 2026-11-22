@@ -4,7 +4,7 @@ import { farmDict } from '@/constants/farmStructure.i18n'
 import { cn } from '@/lib/cn'
 import type { HouseHealth } from '@/components/features/farm-owner/farms/farmStructure'
 
-// Màu theo 3 trạng thái vận hành: xám (chưa cấu hình) · cam (sự cố) · Lime Mist CHỈ ở badge + dải thông báo của nhà bình thường (accent mật độ thấp)
+// Lime chỉ dùng ở badge và dải thông báo của nhà bình thường
 export const HEALTH_STYLE: Record<HouseHealth, { badge: string; card: string; iconBox: string; banner: string }> = {
   EMPTY: {
     badge: 'border-warmGray/15 bg-warmGray/10 text-warmGray',

@@ -89,7 +89,7 @@ function YearStepButton({ label, disabled, onClick, children }: {
 // Trục dọc khi chưa có dữ liệu: đủ cao để vẽ 4 vạch lưới như khi có số
 const EMPTY_AXIS_MAX = 4;
 
-// Biểu đồ cột xếp chồng theo loại tổ (yến trắng → hồng → huyết từ dưới lên), gom theo tháng / quý / năm, chuyển giữa kg và số tổ
+// Cột xếp chồng theo loại tổ, gom theo tháng / quý / năm
 export default function HarvestYearChart({ batches }: { batches: HarvestBatch[] }): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const currentYear = vnYearMonth(new Date()).year;
@@ -97,7 +97,7 @@ export default function HarvestYearChart({ batches }: { batches: HarvestBatch[] 
   const [year, setYear] = useState(currentYear);
   const [metric, setMetric] = useState<ChartMetric>('kilograms');
 
-  // Năm có dữ liệu (luôn gồm năm hiện tại), mới nhất trước; năm đang chọn không còn trong danh sách thì về năm mới nhất
+  // Năm đang chọn không còn dữ liệu thì về năm mới nhất
   const years = useMemo(() => harvestYears(batches, currentYear), [batches, currentYear]);
   const selectedYear = years.includes(year) ? year : years[0];
   const yearIndex = years.indexOf(selectedYear);

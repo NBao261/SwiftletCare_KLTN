@@ -15,7 +15,7 @@ import type { Alert } from '@/types'
 
 const PAGE_SIZE = 10
 
-// Popup chuông: tab Cảnh báo (cuộn tải thêm, cảnh báo ACTIVE = chờ xác nhận được đánh dấu) và tab Thông báo trong ứng dụng, nơi duy nhất có đã đọc / chưa đọc
+// Popup chuông: tab Cảnh báo và tab Thông báo (nơi duy nhất có đã đọc / chưa đọc)
 export default function NotificationPopover() {
   const { t } = useTranslation(shellDict)
   const [open, setOpen] = useState(false)

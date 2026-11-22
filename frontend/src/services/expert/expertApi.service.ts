@@ -15,7 +15,7 @@ import type {
 } from '@/types/expert.types'
 
 export const expertApi = {
-  // 1. Kiểm chứng Cảnh báo suy luận Backend chỉ trả cảnh báo suy luận khi có `verdict` (any = mọi kết luận), lọc và phân trang ở server
+  // Backend chỉ trả cảnh báo suy luận khi có verdict; lọc và phân trang ở server
   listInferredAlerts: (params: InferredAlertQuery) =>
     api.get<ApiResponse<InferredAlertItem[]>>('/alerts', { params }),
 

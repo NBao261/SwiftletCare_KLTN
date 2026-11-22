@@ -1,4 +1,4 @@
-// alertEvidence.ts: Dynamic evidence config builder for MultimodalEvidenceCharts: Chuyển đổi telemetry.samples và bird_counts.buckets từ GET /alerts/{id}/evidence thành dữ liệu đồ thị thực tế (tuyệt đối không dùng số cứng giả lập)
+// Dựng dữ liệu biểu đồ từ samples và buckets của GET /alerts/:id/evidence
 import type { AlertEvidence, BirdCountBucket, InferredAlertItem, TelemetrySample } from '@/types/expert.types'
 import { formatHM } from '@/lib/helpers'
 import { t } from '@/i18n'

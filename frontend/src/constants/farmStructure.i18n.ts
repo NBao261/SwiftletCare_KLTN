@@ -1,7 +1,7 @@
 import type { Dictionary } from '@/lib/i18n'
 import { prefixLabels, alertTypeDict, deviceStatusDict } from '@/constants/enumLabels.i18n'
 
-// Từ điển màn "Cấu trúc Farm" (Farm → House → Zone → Device). Đơn vị đo (°C, %, ppm, lux, dB) không dịch: FE_Design
+// Đơn vị đo không dịch
 const vi = {
   // trang / điều hướng
   'page.farms': 'Cấu trúc trang trại',

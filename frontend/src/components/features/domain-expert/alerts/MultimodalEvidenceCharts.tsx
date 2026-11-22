@@ -1,4 +1,4 @@
-// MultimodalEvidenceCharts: Bằng chứng đối chiếu đa phương thức (Bước 1 Drawer 02B) Kết nối GET /alerts/{id}/evidence Xử lý nguồn dữ liệu 'missing' (không phải 0) và hiển thị tối đa 10 kết luận tiền lệ
+// Bằng chứng của cảnh báo; nguồn 'missing' không phải 0
 import { useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,

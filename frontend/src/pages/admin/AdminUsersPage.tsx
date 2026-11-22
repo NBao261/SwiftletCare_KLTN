@@ -1,4 +1,4 @@
-// ADMIN: Quản lý tài khoản người dùng (RACI) Gọi API thật qua hooks/useUsers.ts (/admin/users, /admin/delete-requests...). Trang chính chỉ lo state/layout, cột bảng (columns.tsx), nhãn dùng chung (constants.ts) và từng modal (*Modal.tsx) nằm ở file riêng trong cùng thư mục.
+// Quản lý tài khoản; trang chỉ lo state và layout
 import { useState } from 'react'
 import { getUserStatus, useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
 import { Button, ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'

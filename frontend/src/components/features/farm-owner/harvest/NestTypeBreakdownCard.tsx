@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 import type { HarvestBatch } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
-// Phân bổ khối lượng theo loại tổ (CH-02): mỗi loại một thanh ngang cùng một màu, tên và kg, % ghi thẳng bên cạnh; không vòng tổng 100 %
+// Mỗi loại một thanh ngang, % ghi bên cạnh
 export default function NestTypeBreakdownCard({ batches }: { batches: HarvestBatch[] }): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const { totalKilograms, shares } = nestTypeBreakdown(batches, NEST_TYPES);

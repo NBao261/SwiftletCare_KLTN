@@ -53,7 +53,7 @@ function toSummary(current: PeriodAccumulator, previous: PeriodAccumulator): Per
   };
 }
 
-// 3 thẻ tổng quan theo tầng quản lý (giờ VN): lần thu gần nhất · quý hiện tại so với quý trước · năm nay so với năm trước
+// 3 thẻ tổng quan theo giờ VN
 export function summarizeHarvestOverview(groups: HarvestGroup[], now: Date, houseIdByZone: Map<string, string>): HarvestOverview {
   const current = vnYearMonth(now);
   const currentQuarter = Math.floor((current.month - 1) / MONTHS_PER_QUARTER) + 1;
@@ -119,7 +119,7 @@ function emptyByType(length: number): Record<NestType, number[]> {
   };
 }
 
-// Tổng kg, số tổ, số đợt theo tháng / quý của 1 năm hoặc theo từng năm có dữ liệu (giờ VN), tách thêm theo loại tổ
+// Tổng theo tháng / quý / năm, tách theo loại tổ
 export function harvestTotalsByPeriod(batches: HarvestBatch[], period: HarvestPeriod, year: number): PeriodTotals {
   const buckets = period === 'year'
     ? [...new Set(batches.map(batch => vnYearMonth(batch.harvest_date).year))].sort((first, second) => first - second)
@@ -191,7 +191,7 @@ export interface NestAmountCheck {
   error: NestAmountError | null;
 }
 
-// Kiểm 1 dòng loại yến: để trống = không thu (tính là 0, không bắt gõ số 0); cấm số âm, số tổ lẻ, hoặc chỉ điền 1 trong 2 ô
+// Để trống là 0; cấm số âm, số tổ lẻ, hoặc chỉ điền 1 trong 2 ô
 export function checkNestAmount(nestsText: string, gramsText: string): NestAmountCheck {
   const nests = nestsText.trim() === '' ? 0 : Number(nestsText);
   const grams = gramsText.trim() === '' ? 0 : Number(gramsText);
@@ -209,7 +209,7 @@ export function environmentSummary(snapshot: EnvSnapshot | undefined): { tempera
   return { temperature: snapshot.avg_temperature, humidity: snapshot.avg_humidity };
 }
 
-// 1 lần thu: các đợt (mỗi loại yến 1 đợt) cùng zone + cùng ngày thu: backend lưu mỗi loại 1 đợt, không có mã nhóm
+// Backend lưu mỗi loại 1 đợt, không có mã nhóm: gom theo zone + ngày
 export interface HarvestGroup {
   key: string;
   zone_id: string;

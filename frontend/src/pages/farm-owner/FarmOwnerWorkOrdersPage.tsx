@@ -28,7 +28,7 @@ import type { WorkOrder } from '@/types';
 // Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (api-spec)
 const NOTE_MAX_LENGTH = 1000;
 
-// Work Order của Farm Owner: lọc theo farm/nhà và trạng thái, mở tay, tự làm (bắt đầu, checklist, báo xong), duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ xem
+// Domain Expert chỉ xem
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();

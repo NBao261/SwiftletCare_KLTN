@@ -14,7 +14,7 @@ const toMinutes = (time: string): number => Number(time.slice(0, 2)) * 60 + Numb
 
 export const isOvernightShift = (shift: Pick<RosterShift, 'start' | 'end'>): boolean => toMinutes(shift.end) < toMinutes(shift.start)
 
-// Các khoảng [từ, tới) theo phút trong tuần; ca qua đêm thứ Bảy tách sang đầu tuần: giống roster.util của backend
+// Giống roster.util của backend
 function weeklyIntervals(shift: Pick<RosterShift, 'weekdays' | 'start' | 'end'>): Array<[number, number]> {
   const start = toMinutes(shift.start)
   const end = toMinutes(shift.end)

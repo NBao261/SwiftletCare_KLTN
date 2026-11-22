@@ -1,4 +1,4 @@
-// Cấu hình cột DataTable của AdminAuditLogPage: tách khỏi trang giống userColumns.tsx. Không có icon/màu theo nhóm hành động, chỉ chữ.
+// Cột bảng nhật ký hệ thống
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { AUDIT_ACTION_LABEL } from '@/constants/auditActions'
 import { ROLE_LABEL } from '@/constants/roles'
@@ -6,7 +6,7 @@ import { formatDateOnly, formatRelativeTime, formatTimeOnly } from '@/lib/helper
 import type { AuditLogEntry } from '@/types'
 import { t, translated } from '@/i18n'
 
-// Chỉ tên người thực hiện: không ghi "→ tài khoản bị tác động" (theo yêu cầu giữ cột gọn). Không có người thực hiện (đăng nhập thất bại bằng email chưa đăng ký) thì rơi về tên tài khoản backend tra sẵn (`target_name`), không bao giờ hiện ObjectId.
+// Không có người thực hiện thì dùng target_name, không bao giờ hiện ObjectId
 function PersonCell({ log }: { log: AuditLogEntry }) {
   const who = log.actor_id?.full_name ?? log.target_name ?? t('Không xác định')
   return <p className="truncate font-semibold text-charcoal" title={who}>{who}</p>
@@ -22,7 +22,7 @@ const LOGIN_FAILED_REASON: Record<string, string> = translated({
   ACCOUNT_DISABLED: 'Tài khoản đang bị khoá',
 })
 
-// Lý do lưu ở `metadata.reason`: khoá (bắt buộc)/mở khoá tài khoản, từ chối yêu cầu xoá: chữ Admin tự nhập, hiện nguyên văn; đăng nhập thất bại, mã backend, dịch qua LOGIN_FAILED_REASON. Hành động khác không có lý do.
+// Lý do khoá, từ chối hiện nguyên văn; đăng nhập thất bại dịch qua LOGIN_FAILED_REASON
 export function reasonOf(log: AuditLogEntry): string | undefined {
   const reason = log.metadata?.reason
   if (typeof reason !== 'string' || !reason.trim()) return undefined
@@ -32,14 +32,14 @@ export function reasonOf(log: AuditLogEntry): string | undefined {
   return undefined
 }
 
-// Cùng bố cục bảng Người dùng (userColumns.tsx): STT liên tục qua các trang (`startIndex` = (page-1)*limit), người thực hiện, vai trò cột riêng, width % tổng 100 cho table-fixed (6+20+19+18+21+16). Không có cột thao tác: nhật ký chỉ đọc.
+// Width % cho table-fixed, tổng 100
 export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditLogEntry>[] {
   return [
     {
       key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
       render: (_log, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
     },
-    // Căn đều: width = độ dài nội dung thường gặp + 1 khoảng trống như nhau, để khe giữa chữ cột này và cột sau đều nhau (6/20/19/18/21/16 = 100%). Hành động thường ngắn ("Đăng nhập") nên không chiếm rộng: nhãn dài (VD "Cập nhật ngưỡng mặc định hệ thống") mờ dần ở đuôi. Độ đậm theo thứ bậc: Người thực hiện đậm (ai làm) > Hành động vừa (làm gì) > Thời gian thường > Vai trò xám.
+    // Nhãn hành động dài thì mờ dần ở đuôi
     {
       key: 'action', header: 'Hành động', className: 'w-[20%]',
       render: log => {
@@ -64,7 +64,7 @@ export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditL
     },
     {
       key: 'created_at', header: 'Thời gian', className: 'w-[16%] whitespace-nowrap',
-      // 2 tầng như bảng nhật ký cảnh báo Farm Owner: giờ "20:35:10" trên, ngày "7/10/2026" xám dưới: rê chuột xem thêm thời gian tương đối. leading-tight + -my-1 (ăn bớt py-3 của ô): 2 dòng vẫn vừa hàng 52px như cũ, bảng không cao thêm
+      // Giờ trên, ngày dưới; vẫn vừa hàng 52px
       render: log => (
         <div className="-my-1 flex flex-col leading-tight" title={formatRelativeTime(log.created_at)}>
           <span className="font-semibold text-charcoal">{formatTimeOnly(log.created_at)}</span>

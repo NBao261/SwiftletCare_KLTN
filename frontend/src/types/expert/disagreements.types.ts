@@ -93,7 +93,7 @@ export interface HealthEvaluationResponse {
   }>;
 }
 
-// Tham số truy vấn GET /health-reports/disagreements & GET /health-reports/evaluation (bắt buộc có houseId hoặc farmId, tối đa 366 ngày)
+// Bắt buộc houseId hoặc farmId, tối đa 366 ngày
 export interface HealthDisagreementsQueryParams {
   houseId?: string;
   farmId?: string;

@@ -6,7 +6,7 @@ export function relayMinutes(relay: RelayName, turnOn: boolean, durationMinutes:
   return relay === 'misting' && turnOn ? Math.min(durationMinutes, SCADA_PUMP_ON_MAX_MINUTES) : durationMinutes;
 }
 
-// Cảnh báo backend gửi kèm 409 CONFIRMATION_REQUIRED: bật bơm khi Zone đang có SENSOR_FAULT, RS485_BUS_FAILURE hoặc MISTING_INEFFECTIVE còn hiệu lực
+// 409 CONFIRMATION_REQUIRED khi bật bơm lúc Zone có cảnh báo cảm biến/phun sương
 export interface PumpConfirmAlert {
   _id: string;
   type: string;

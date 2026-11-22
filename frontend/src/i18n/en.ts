@@ -1,4 +1,4 @@
-// Bản dịch tiếng Anh: khoá là câu tiếng Việt y hệt chỗ gọi t(...) / chuỗi truyền vào component dùng chung (tr). Thiếu dòng nào thì màn hình hiện tiếng Việt. Biến giữ nguyên {{tên}}. Đơn vị đo (°C, %, ppm, lux, dB) không dịch (FE_Design). Hiện phủ các trang Admin + khung chung (sidebar, header, bảng, popup). Thêm trang khác: thêm dòng vào đây.
+// Khoá là câu tiếng Việt y hệt chỗ gọi t(...); thiếu dòng nào thì hiện tiếng Việt
 const en: Record<string, string> = {
   // Khung chung: sidebar, header, điều hướng
   'Xin chào,': 'Hello,',
