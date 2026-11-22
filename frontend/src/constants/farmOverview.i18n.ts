@@ -1,6 +1,6 @@
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển trang Tổng quan trại (/overview) — ANALYTICS-FR-015, 016, 017, BR-44, BR-45
+// Từ điển trang Tổng quan trại (/overview)
 const vi = {
   // Đầu trang
   'page.loadFailed': 'Không tải được danh sách trang trại',
@@ -11,10 +11,10 @@ const vi = {
   'page.pickFarmTitle': 'Chọn một trang trại',
   'page.pickFarmHint': 'Tổng quan và so sánh tính trong từng trang trại. Chọn trang trại ở khung lọc phía trên.',
 
-  // Tab Các nhà (ANALYTICS-FR-015)
+  // Tab Các nhà
   'reason.NOT_COMPUTED': 'Chưa có',
 
-  // Tab So sánh nhà (ANALYTICS-FR-016, BR-44)
+  // Tab So sánh nhà
   'comparison.subtitle': 'Chọn chỉ số ở ô "Sắp theo" để sắp các nhà. Bảng không có điểm tổng hay xếp hạng.',
   'comparison.periodLabel': 'Khoảng',
   'comparison.period': 'Khoảng: {n} ngày',

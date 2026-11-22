@@ -1,5 +1,4 @@
-// Step5WaitOnline — bước cuối (FARM-FR-012): chờ thiết bị kết nối máy chủ trong 15 phút (socket DEVICE_STATUS_CHANGE + đọc trạng thái một lần);
-// bộ điều khiển còn chờ tới khi áp cấu hình của Zone (config_sync, ENV-FR-027) — cùng các bước với màn lắp đặt của mobile
+// Step5WaitOnline: bước cuối: chờ thiết bị kết nối máy chủ trong 15 phút (socket DEVICE_STATUS_CHANGE + đọc trạng thái một lần); bộ điều khiển còn chờ tới khi áp cấu hình của Zone (config_sync), cùng các bước với màn lắp đặt của mobile
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Check, Loader2, AlertTriangle, Circle, RotateCcw } from 'lucide-react'
 import { useDeviceStatusEvents, useSensorNode } from '@/hooks/shared/useDevices'
@@ -70,7 +69,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
   const { data: cameras } = useHouseCameras(isCamera ? data.location.houseId : undefined)
   const fetchedStatus = isCamera ? cameras?.find(camera => camera._id === data.deviceDbId)?.status : sensor?.status
   const online = socketOnline || fetchedStatus === 'ONLINE'
-  // ENV-FR-027 — APPLIED, hoặc UNKNOWN (firmware trước 2.1.0 không báo phiên bản) thì coi như xong; camera không có bước này
+  // APPLIED, hoặc UNKNOWN (firmware trước 2.1.0 không báo phiên bản) thì coi như xong; camera không có bước này
   const configSync = sensor?.config_sync
   const configApplied = configSync === 'APPLIED' || configSync === 'UNKNOWN'
   const ready = online && (isCamera || configApplied)
@@ -87,7 +86,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
 
   useEffect(() => { if (ready) handleSuccess() }, [ready, handleSuccess])
 
-  // Camera gắn nhà nên nghe ở room house:<houseId> (FARM-FR-004), bộ điều khiển ở room zone:<zoneId>
+  // Camera gắn nhà nên nghe ở room house:<houseId>, bộ điều khiển ở room zone:<zoneId>
   useDeviceStatusEvents(
     isCamera ? { houseId: data.location.houseId } : { zoneId: data.location.zoneId },
     data.deviceDbId,
@@ -169,7 +168,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      {/* Vòng đếm ngược 15' — chạy ngược theo thời gian còn lại; chấm "radar" lan ra khi chưa online */}
+      {/* Vòng đếm ngược 15': chạy ngược theo thời gian còn lại; chấm "radar" lan ra khi chưa online */}
       <div className="relative flex h-36 w-36 items-center justify-center">
         {!online && <span aria-hidden className="absolute inset-3 animate-ping-soft rounded-full bg-limeMist motion-reduce:animate-none" />}
         <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden>

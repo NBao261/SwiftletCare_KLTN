@@ -18,7 +18,7 @@ interface Reading {
   decimals: number
   icon: ComponentType<SVGProps<SVGSVGElement>>
   range: string
-  // NH3, CO2 chỉ theo dõi và cảnh báo, không điều khiển quạt (ENV-FR-006/011) — ghi "Cảnh báo khi …" thay vì "An toàn"
+  // NH3, CO2 chỉ theo dõi và cảnh báo, không điều khiển quạt: ghi "Cảnh báo khi …" thay vì "An toàn"
   isAlertOnly: boolean
   isAnomaly: boolean
 }

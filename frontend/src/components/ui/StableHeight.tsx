@@ -1,17 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 interface StableHeightProps {
-  /** px — chiều cao tối thiểu ban đầu, trước khi nội dung kịp đo */
+  // px: chiều cao tối thiểu ban đầu, trước khi nội dung kịp đo
   minHeight?: number
   className?: string
   children: ReactNode
 }
 
-/**
- * Giữ khung nội dung không co lại khi nội dung đổi (VD chuyển Lưới ↔ Danh sách, đổi tab, lọc ra ít dòng):
- * nhớ chiều cao lớn nhất đã đạt và dùng làm min-height, nên trang không bị giật/rút ngắn. Đổi bề rộng khung
- * (resize cửa sổ) thì đo lại từ đầu vì cùng nội dung sẽ cao khác đi.
- */
+// Giữ khung nội dung không co lại khi nội dung đổi (VD chuyển Lưới ↔ Danh sách, đổi tab, lọc ra ít dòng): nhớ chiều cao lớn nhất đã đạt và dùng làm min-height, nên trang không bị giật/rút ngắn. Đổi bề rộng khung (resize cửa sổ) thì đo lại từ đầu vì cùng nội dung sẽ cao khác đi.
 export default function StableHeight({ minHeight = 0, className, children }: StableHeightProps) {
   const outer = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)

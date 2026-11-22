@@ -16,7 +16,7 @@ interface WorkOrderCreateModalProps {
   onClose: () => void;
 }
 
-// OPS-FR-001 — Farm Owner mở tay 1 Work Order sửa chữa cho nhà đang lọc; backend giao thợ đang trực
+// Farm Owner mở tay 1 Work Order sửa chữa cho nhà đang lọc; backend giao thợ đang trực
 export default function WorkOrderCreateModal({ open, house, onClose }: WorkOrderCreateModalProps): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -26,7 +26,7 @@ export default function WorkOrderCreateModal({ open, house, onClose }: WorkOrder
   const [description, setDescription] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Popup không unmount giữa các lần mở — xoá nội dung cũ mỗi lần mở lại
+  // Popup không unmount giữa các lần mở: xoá nội dung cũ mỗi lần mở lại
   useEffect(() => {
     if (!open) return;
     setTitle('');

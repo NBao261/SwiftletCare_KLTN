@@ -1,16 +1,16 @@
-// Module HARVEST (§5.8) — chỉ còn ghi nhận lô thu hoạch (SRS v2.0.0 bỏ Marketplace).
+// Module HARVEST: chỉ còn ghi nhận lô thu hoạch (bỏ Marketplace).
 
-// Module HARVEST (§5.8)
+// Module HARVEST
 export type NestType = 'RAW' | 'CLEANED' | 'PREMIUM'
-// Khớp backend (domain.types.ts): chỉ còn DRAFT, đã bỏ LISTED và ARCHIVED (G-01)
+// Khớp backend (domain.types.ts): chỉ còn DRAFT, đã bỏ LISTED và ARCHIVED
 export type HarvestStatus = 'DRAFT' | 'CONFIRMED'
 
-// Module HARVEST (§5.8, §8.2)
+// Module HARVEST
 export interface EnvSnapshot {
   avg_temperature?: number; avg_humidity?: number; avg_light_lux?: number
   avg_nh3_ppm?: number; avg_co2_ppm?: number
   telemetry_range?: { from: string; to: string }
-  /** true khi Zone chưa đủ 7 ngày dữ liệu — Traceability Card nên nói rõ, không hiện số sai lệch */
+  // true khi Zone chưa đủ 7 ngày dữ liệu: Traceability Card nên nói rõ, không hiện số sai lệch
   insufficient_data?: boolean
 }
 
@@ -23,7 +23,7 @@ export interface HarvestBatch {
   _id: string; farm_id: string; zone_id: string; created_by?: string; trace_code: string
   harvest_date: string; nest_count: number; weight_grams: number
   nest_type: NestType; product_images: string[]
-  /** HARVEST-FR-001 — link ký sẵn tới ảnh của lô; chỉ có ở GET /harvests/{id} và PUT /harvests/{id}/photo */
+  // link ký sẵn tới ảnh của lô; chỉ có ở GET /harvests/{id} và PUT /harvests/{id}/photo
   photo_url?: string | null
   env_snapshot: EnvSnapshot; flock_snapshot: FlockSnapshot
   status: HarvestStatus
@@ -31,7 +31,7 @@ export interface HarvestBatch {
   created_at: string; updated_at?: string
 }
 
-// HARVEST-FR-007, EXPERT-FR-020 — Chu kỳ thu hoạch (G-26)
+// Chu kỳ thu hoạch
 export type HarvestCycleStatus = 'OPEN' | 'CLOSED' | 'CONCLUDED'
 
 export interface HarvestCycleComparison {
@@ -75,6 +75,6 @@ export interface HarvestCycle {
     role: 'DOMAIN_EXPERT' | 'FARM_OWNER'
     at: string
   } | null
-  // BR-22 — lần Farm Owner nhắc chuyên gia viết kết luận mùa vụ
+  // lần Farm Owner nhắc chuyên gia viết kết luận mùa vụ
   expert_reminded_at?: string | null
 }

@@ -2,7 +2,7 @@ import { CpuIcon, HourglassIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from
 import KpiTile from '@/components/common/KpiTile'
 import type { SensorNode } from '@/types'
 
-/** Node cần Technician xử lý: quá hạn kích hoạt / OTA lỗi (ERROR/DEGRADED đã bỏ SRS 3.1.0) */
+// Node cần Technician xử lý: quá hạn kích hoạt / OTA lỗi (ERROR/DEGRADED đã bỏ)
 export const needsAttention = (n: SensorNode) =>
   !!n.activation_overdue_at || !!n.ota_failed
 

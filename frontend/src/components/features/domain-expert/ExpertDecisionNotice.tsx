@@ -3,7 +3,7 @@ import { usePermission } from '@/hooks/common/usePermission'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 import { t } from '@/i18n'
 
-// Dòng nhắc quyền của Farm Owner trên trang chuyên gia (BR-22)
+// Dòng nhắc quyền của Farm Owner trên trang chuyên gia
 export default function ExpertDecisionNotice() {
   const isOwner = usePermission('FARM_OWNER')
   const { canDecide, farmKnown } = useExpertDecisionRights()

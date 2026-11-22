@@ -1,8 +1,4 @@
-/**
- * DetectionColumn — Cột 3: Tham số phát hiện bất thường (Độc quyền Chuyên gia)
- * Hộp verdict_stats chuẩn Real Data + 6 stepper fields + reset trên header + save w-full
- * SRS v2.1.4: EXPERT-FR-003/008
- */
+// DetectionColumn: Cột 3: Tham số phát hiện bất thường (Độc quyền Chuyên gia) Hộp verdict_stats chuẩn Real Data + 6 stepper fields + reset trên header + save w-full
 import { useState, useEffect } from 'react'
 import { AlertTriangle, RotateCcw, Save, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/cn'

@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn'
 import { t, tr } from '@/i18n'
 import { useFloatingMenu } from '@/components/ui/useFloatingMenu'
 
-// Nút (i) mở khung giải thích dài (C-07), bấm để mở vì điện thoại không rê chuột được
+// Nút (i) mở khung giải thích dài, bấm để mở vì điện thoại không rê chuột được
 export default function InfoTip({ children, className }: { children: ReactNode; className?: string }) {
   const { open, toggle, triggerRef, menuRef, style } = useFloatingMenu({ align: 'left', estimatedHeight: 160 })
 

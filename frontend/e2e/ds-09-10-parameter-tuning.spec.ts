@@ -3,7 +3,7 @@ import { demoFarm, signIn } from './helpers/demoApi';
 
 interface Proposal { _id: string; status: string }
 
-// WF-05 — DS-09, DS-10 (Design Brief Phụ lục A2): tầng A có 14 ngày dữ liệu nên có gợi ý hệ số (`npm run seed:demo`)
+// tầng A có 14 ngày dữ liệu nên có gợi ý hệ số (`npm run seed:demo`)
 test.describe('DS-09, DS-10 Chỉnh tham số điều khiển', () => {
   test('DS-10 Farm Owner của farm có chuyên gia không tự áp gợi ý, hệ số giữ nguyên', async ({ request }) => {
     const owner = await signIn(request, 'owner');

@@ -5,7 +5,7 @@ import {
   IconDevice, IconOTA, IconOnboarding, IconSettings, IconUsers,
 } from '@/components/ui/icons'
 
-// AUTH-FR-011 quản lý tài khoản, AUTH-FR-012 hàng đợi xoá tài khoản là tab thứ hai; dock dùng cùng mục để sáng ở cả hai tab
+// quản lý tài khoản, hàng đợi xoá tài khoản là tab thứ hai; dock dùng cùng mục để sáng ở cả hai tab
 const usersItem: MenuItem = {
   label: 'Người dùng',
   path: '/users',
@@ -16,7 +16,7 @@ const usersItem: MenuItem = {
   ],
 }
 
-// Khung Admin (§3.4): Tổng quan hệ thống là trang nhà (SYSTEM-FR-003); thiết bị mọi farm (FARM-FR-009, 013); không có trang farm
+// Khung Admin: Tổng quan hệ thống là trang nhà; thiết bị mọi farm; không có trang farm
 const menuSections: MenuSection[] = [
   {
     title: 'Theo dõi',
@@ -26,7 +26,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    // FARM-FR-009, 010, 013 — thiết bị mọi farm (bộ điều khiển và camera), kho và nhãn QR, RESTART, PUSH_CONFIG, OTA
+    // thiết bị mọi farm (bộ điều khiển và camera), kho và nhãn QR, RESTART, PUSH_CONFIG, OTA
     title: 'Thiết bị',
     items: [
       { label: 'Danh sách thiết bị', path: '/devices', icon: IconDevice },
@@ -35,7 +35,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    // Module SYSTEM (mục 5.11) và tài khoản (AUTH-FR-011, 012)
+    // Module SYSTEM (mục 5.11) và tài khoản
     title: 'Hệ thống',
     items: [
       usersItem,

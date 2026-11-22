@@ -2,7 +2,7 @@ import api from '@/lib/axios'
 import type { ApiResponse } from '@/types'
 import type { CountingSchedule, CountingScheduleView } from '@/types/expert.types'
 
-// VISION-FR-019 — lịch đếm của nhà: đọc kèm khung hôm nay và lịch sử; đặt thì thay cả lịch, áp từ ngày hôm sau
+// lịch đếm của nhà: đọc kèm khung hôm nay và lịch sử; đặt thì thay cả lịch, áp từ ngày hôm sau
 export const countingScheduleApi = {
   get: (houseId: string) =>
     api.get<ApiResponse<CountingScheduleView>>(`/farms/houses/${houseId}/counting-schedule`),

@@ -1,4 +1,4 @@
-// DisagreementsSection.tsx — Màn hình Chuyên gia xem các ngày đánh giá lệch, độ đồng thuận & chỉnh mức chỉ số sức khỏe của nhà (EXPERT-FR-022, ANALYTICS-FR-014, BR-28)
+// DisagreementsSection.tsx: Màn hình Chuyên gia xem các ngày đánh giá lệch, độ đồng thuận & chỉnh mức chỉ số sức khỏe của nhà
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -60,7 +60,7 @@ export function formatAgreementIndex(value: number | null | undefined, format: N
 }
 
 interface DisagreementsSectionProps {
-  // Farm và nhà đang chọn ('' = chưa chọn): chuyên gia lấy từ thanh trên, Farm Owner (BR-22) từ khung lọc /health
+  // Farm và nhà đang chọn ('' = chưa chọn): chuyên gia lấy từ thanh trên, Farm Owner từ khung lọc /health
   farmId: string;
   farmName: string;
   houseId: string;
@@ -132,7 +132,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
 
   return (
     <div className="relative z-10 flex w-full max-w-screen-xl flex-col gap-5">
-      {/* Khối 1: Thanh công cụ lọc gọn trên 1 hàng + Chỉ số Độ đồng thuận & Báo động giả (ANALYTICS-FR-014) */}
+      {/* Khối 1: Thanh công cụ lọc gọn trên 1 hàng + Chỉ số Độ đồng thuận & Báo động giả */}
       <section
         aria-label={t('dis.filters')}
         className="flex w-full flex-col gap-4 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card"
@@ -182,7 +182,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
             </div>
           </div>
 
-          {/* Khoảng ngày cụ thể — luôn hiển thị trên mọi kích thước màn hình */}
+          {/* Khoảng ngày cụ thể: luôn hiển thị trên mọi kích thước màn hình */}
           <span className="text-xs tabular-nums text-warmGray">
             {t('dis.period', { from: date(from), to: date(to) })}
           </span>
@@ -459,7 +459,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
         )}
       </div>
 
-      {/* Popup mức chỉ số dùng chung với Farm Owner; quyền sửa theo can_edit của backend (BR-28, BR-22) */}
+      {/* Popup mức chỉ số dùng chung với Farm Owner; quyền sửa theo can_edit của backend */}
       {editingHouse && (
         <HealthLevelsModal
           open

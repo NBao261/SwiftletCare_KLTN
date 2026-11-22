@@ -3,7 +3,7 @@ import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import Pagination, { type PaginationLabels } from '@/components/ui/Pagination'
 
 const DEFAULT_PAGE_SIZE = 10
-// Bảng rỗng cao bằng chừng này dòng — đủ chỗ cho hình minh hoạ trạng thái rỗng, không chiếm cả trang
+// Bảng rỗng cao bằng chừng này dòng: đủ chỗ cho hình minh hoạ trạng thái rỗng, không chiếm cả trang
 const EMPTY_ROWS = 4
 
 interface PlaceholderRow {
@@ -21,26 +21,26 @@ interface FixedRowsTableProps<T> {
   rows: T[]
   getRowKey: (row: T) => string
   onRowClick?: (row: T) => void
-  /** px — chiều cao cứng của mỗi dòng */
+  // px: chiều cao cứng của mỗi dòng
   rowHeight: number
-  /** Số dòng mỗi trang = số dòng khung bảng luôn hiển thị */
+  // Số dòng mỗi trang = số dòng khung bảng luôn hiển thị
   pageSize?: number
   // Chữ hiện giữa khung bảng khi trống và không truyền emptyContent
   emptyNotice: string
   // Nội dung trạng thái rỗng thay cho chữ (VD common/TableEmptyState), đặt giữa khung bảng
   emptyContent?: ReactNode
-  /** Chữ của thanh phân trang theo ngôn ngữ màn gọi — bỏ trống thì tiếng Việt */
+  // Chữ của thanh phân trang theo ngôn ngữ màn gọi: bỏ trống thì tiếng Việt
   paginationLabels?: PaginationLabels
   // Phân trang ở server: rows đã là dữ liệu của trang hiện tại, tổng số và đổi trang do màn gọi quản lý
   serverPagination?: { page: number; total: number; onChange: (page: number) => void }
-  // Điện thoại: danh sách thẻ thay bảng (DataTable mobileCard, C-09)
+  // Điện thoại: danh sách thẻ thay bảng (DataTable mobileCard)
   mobileCard?: (row: T) => ReactNode
 }
 
-// DataTable phân trang: từ 2 trang trở lên thì trang cuối bù dòng trống, 1 trang thì bảng cao vừa dữ liệu (FE_Design §1.1)
+// DataTable phân trang: từ 2 trang trở lên thì trang cuối bù dòng trống, 1 trang thì bảng cao vừa dữ liệu (FE_Design)
 export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick, rowHeight, pageSize = DEFAULT_PAGE_SIZE, emptyNotice, emptyContent, paginationLabels, serverPagination, mobileCard }: FixedRowsTableProps<T>) {
   const [page, setPage] = useState(1)
-  // Kẹp trang theo số trang còn lại — lọc/xoá làm ít đi thì không rơi vào trang không tồn tại
+  // Kẹp trang theo số trang còn lại: lọc/xoá làm ít đi thì không rơi vào trang không tồn tại
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
   const safePage = Math.min(page, totalPages)
 
@@ -50,7 +50,7 @@ export default function FixedRowsTable<T>({ columns, rows, getRowKey, onRowClick
   const displayRows = useMemo<PaddedRow<T>[]>(() => {
     const slice = serverPagination ? rows.slice(0, pageSize) : rows.slice((safePage - 1) * pageSize, safePage * pageSize)
     const out: PaddedRow<T>[] = [...slice]
-    // Bảng rỗng: 1 dòng đệm — không kẻ vạch chia, chỉ hiện trạng thái rỗng ở giữa
+    // Bảng rỗng: 1 dòng đệm: không kẻ vạch chia, chỉ hiện trạng thái rỗng ở giữa
     if (slice.length === 0) return [{ placeholder: true, id: 'placeholder-empty' }]
     if (!hasManyPages) return out
     for (let i = slice.length; i < pageSize; i += 1) {

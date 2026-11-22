@@ -51,7 +51,7 @@ export const READING_FIELD: Partial<Record<ComponentKind, keyof TelemetryRecord>
   sound: 'sound_db',
 };
 
-// 5 cảm biến đi chung bus RS485 — lỗi bus thì cả 5 cùng lỗi
+// 5 cảm biến đi chung bus RS485: lỗi bus thì cả 5 cùng lỗi
 const RS485_KINDS = new Set<ComponentKind>(['temperature', 'humidity', 'light', 'nh3', 'co2']);
 
 // Trạng thái tính là lỗi khi đếm (cam trên màn)
@@ -68,7 +68,7 @@ export function latestReadingByNode(records: TelemetryRecord[]): Map<string, Tel
   return latest;
 }
 
-// Loại cảnh báo đang mở của từng node — đã xử lý (RESOLVED) hoặc bị bác bỏ (DISMISSED) thì không tính
+// Loại cảnh báo đang mở của từng node: đã xử lý (RESOLVED) hoặc bị bác bỏ (DISMISSED) thì không tính
 function openAlertTypesByNode(alerts: Alert[]): Map<string, Set<string>> {
   const types = new Map<string, Set<string>>();
   for (const alert of alerts) {
@@ -89,7 +89,7 @@ function componentStatus(kind: ComponentKind, node: DeviceItem, check: DeviceChe
   const nodeStatus = detail?.status ?? node.status;
   if (nodeStatus === 'PENDING') return { ...item, status: 'pending' };
   if (nodeStatus === 'OFFLINE') return { ...item, status: 'offline' };
-  // OFFLINE là trạng thái hư duy nhất của thiết bị (Report 3 §6.6)
+  // OFFLINE là trạng thái hư duy nhất của thiết bị
   if (!check) return { ...item, status: 'unchecked' };
 
   const relays = detail?.relay_states;

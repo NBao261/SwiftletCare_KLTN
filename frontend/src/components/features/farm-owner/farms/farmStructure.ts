@@ -5,11 +5,11 @@ import type { Alert, CameraNode, DeviceStatus, Farm, HarvestBatch, House, Sensor
 // Dựng cây Farm → House → Zone → Device bằng hàm thuần: mỗi tập dữ liệu duyệt 1 lần vào Map theo zone_id, tổng O(n)
 
 export type Health = 'ALERT' | 'NORMAL'
-/** Nhà thêm trạng thái EMPTY: chưa có zone/thiết bị nào để theo dõi (khác "bình thường") */
+// Nhà thêm trạng thái EMPTY: chưa có zone/thiết bị nào để theo dõi (khác "bình thường")
 export type HouseHealth = Health | 'EMPTY'
 export type MetricKey = 'temperature' | 'humidity' | 'light' | 'nh3' | 'co2'
 
-/** Số đo của 1 zone (trung bình 1h từ /analytics/env/compare, hoặc giá trị realtime qua socket) */
+// Số đo của 1 zone (trung bình 1h từ /analytics/env/compare, hoặc giá trị realtime qua socket)
 export interface ZoneMetrics {
   temperature?: number; humidity?: number; light?: number; nh3?: number; co2?: number; sound?: number
   timestamp?: string
@@ -21,7 +21,7 @@ export interface DeviceRow {
   id: string; deviceId: string; type: 'sensor' | 'camera'
   status: DeviceStatus; rssi?: number; firmware?: string
   lastHeartbeat?: string; registeredAt: string; zoneId: string
-  // SYSTEM-FR-004 — thiết bị của bộ giả lập
+  // thiết bị của bộ giả lập
   simulated?: boolean
 }
 
@@ -32,21 +32,21 @@ export interface ZoneNode {
   devices: DeviceRow[]; counts: DeviceCounts
   alerts: Alert[]; metrics?: ZoneMetrics; breaches: Breach[]; health: Health
   monthKg: number; lastBatch?: HarvestBatch
-  /** 3 đợt thu gần nhất của zone, mới → cũ */
+  // 3 đợt thu gần nhất của zone, mới → cũ
   recent: HarvestBatch[]
 }
 
 export interface HouseNode {
   house: House; farm: Farm; zones: ZoneNode[]
-  /** Camera cửa thu chim của cả nhà (SRS v2.1.8 — camera gắn nhà, không gắn Zone) */
+  // Camera cửa thu chim của cả nhà (— camera gắn nhà, không gắn Zone)
   cameraDevices: DeviceRow[]
   counts: DeviceCounts; alerts: Alert[]; health: HouseHealth
-  /** Số cảm biến / camera của cả nhà (số đo chỉ hiện ở cấp Zone) */
+  // Số cảm biến / camera của cả nhà (số đo chỉ hiện ở cấp Zone)
   sensors: number; cameras: number
   monthKg: number; monthNests: number; monthBatches: number
-  /** 3 đợt thu gần nhất của cả nhà, mới → cũ */
+  // 3 đợt thu gần nhất của cả nhà, mới → cũ
   recent: HarvestBatch[]
-  /** Sự cố nổi bật nhất để hiện banner trên card: vi phạm ngưỡng → cảnh báo thật → thiết bị mất kết nối */
+  // Sự cố nổi bật nhất để hiện banner trên card: vi phạm ngưỡng → cảnh báo thật → thiết bị mất kết nối
   headline?: { zone: Zone; breach?: Breach; alert?: Alert; offlineDevices?: number }
 }
 
@@ -54,7 +54,7 @@ export interface StructureTotals {
   houses: number; zones: number; counts: DeviceCounts
   alerts: { total: number; high: number; medium: number; low: number }
   monthKg: number; monthNests: number; monthBatches: number
-  /** Lần thu muộn nhất TRONG tháng hiện tại (giờ VN) */
+  // Lần thu muộn nhất TRONG tháng hiện tại (giờ VN)
   monthLastBatchAt?: string
 }
 
@@ -78,7 +78,7 @@ export interface StructureInput {
 
 const RECENT_LIMIT = 3
 
-/** Chèn vào danh sách "N mới nhất" (mới → cũ) — N rất nhỏ nên chèn thẳng, không cần sắp lại cả mảng */
+// Chèn vào danh sách "N mới nhất" (mới → cũ): N rất nhỏ nên chèn thẳng, không cần sắp lại cả mảng
 function pushRecent(list: HarvestBatch[], batch: HarvestBatch): void {
   let i = list.findIndex(item => batch.harvest_date > item.harvest_date)
   if (i === -1) i = list.length
@@ -86,7 +86,7 @@ function pushRecent(list: HarvestBatch[], batch: HarvestBatch): void {
   if (list.length > RECENT_LIMIT) list.pop()
 }
 
-/** So số đo với ngưỡng của zone — chỉ so chỉ số đã có giá trị */
+// So số đo với ngưỡng của zone: chỉ so chỉ số đã có giá trị
 export function detectBreaches(metrics: ZoneMetrics | undefined, t: Thresholds): Breach[] {
   if (!metrics) return []
   const out: Breach[] = []
@@ -119,7 +119,7 @@ function addCounts(left: DeviceCounts, right: DeviceCounts): DeviceCounts {
   return { total: left.total + right.total, online: left.online + right.online, offline: left.offline + right.offline }
 }
 
-/** Gom các bản ghi vào Map theo khoá — dùng chung cho thiết bị/cảnh báo, mỗi tập duyệt đúng 1 lần */
+// Gom các bản ghi vào Map theo khoá: dùng chung cho thiết bị/cảnh báo, mỗi tập duyệt đúng 1 lần
 function groupBy<T>(items: T[], keyOf: (item: T) => string | undefined): Map<string, T[]> {
   const map = new Map<string, T[]>()
   for (const item of items) {
@@ -136,7 +136,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
   const { farms, housesByFarm, zonesByHouse, sensors, cameras, alerts, harvests, metricsByZone } = input
   const now = vnYearMonth(input.now ?? new Date())
 
-  // ── Mỗi tập dữ liệu: 1 lượt duyệt → Map theo zone ──────────────────────────
+  // Mỗi tập dữ liệu: 1 lượt duyệt → Map theo zone
   const devicesByZone = new Map<string, DeviceRow[]>()
   const pushDevice = (row: DeviceRow) => {
     const list = devicesByZone.get(row.zoneId)
@@ -175,7 +175,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
   let monthNests = 0
   let monthBatches = 0
   let monthLastBatchAt: string | undefined
-  // 1 lần thu nhiều loại yến (cùng zone + ngày) đếm là 1 đợt, cộng gộp kg + số tổ — khớp bảng trang Thu hoạch
+  // 1 lần thu nhiều loại yến (cùng zone + ngày) đếm là 1 đợt, cộng gộp kg + số tổ: khớp bảng trang Thu hoạch
   const harvestRuns: HarvestBatch[] = groupHarvests(harvests).map(group => (
     group.batches.length === 1
       ? group.batches[0]
@@ -202,7 +202,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
     pushRecent(agg.recent, b)
   }
 
-  // ── Dựng cây bằng tra Map ─────────────────────────────────────────────────
+  // Dựng cây bằng tra Map
   const houses: HouseNode[] = []
   const zones: ZoneNode[] = []
   const houseById = new Map<string, HouseNode>()
@@ -293,7 +293,7 @@ export function buildFarmStructure(input: StructureInput): FarmStructure {
   }
 }
 
-/** Mức tín hiệu Wi-Fi theo RSSI — dời sang lib/helpers để bảng Thiết bị của Admin dùng chung ngưỡng */
+// Mức tín hiệu Wi-Fi theo RSSI: dời sang lib/helpers để bảng Thiết bị của Admin dùng chung ngưỡng
 export { wifiQuality } from '@/lib/helpers'
 
 // KPI theo phạm vi khung lọc: cộng các nhà; lọc 1 Zone thì thiết bị, cảnh báo của Zone đó, sản lượng của nhà (thu hoạch nhập theo nhà)
@@ -350,7 +350,7 @@ export function isNameTaken(name: string, existingNames: string[], currentName?:
   return existingNames.some(existing => normalizeName(existing) === target)
 }
 
-/** Giá trị cuối cùng của mỗi chỉ số theo thứ tự ưu tiên: realtime → trung bình 1h */
+// Giá trị cuối cùng của mỗi chỉ số theo thứ tự ưu tiên: realtime → trung bình 1h
 export function mergeMetrics(live: ZoneMetrics | undefined, avg: ZoneMetrics | undefined): ZoneMetrics | undefined {
   if (!live) return avg
   if (!avg) return live

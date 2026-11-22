@@ -1,23 +1,18 @@
-// Module SYSTEM (§5.11) — nhật ký hệ thống, ngưỡng mặc định, tổng quan sức khoẻ.
+// Module SYSTEM: nhật ký hệ thống, ngưỡng mặc định, tổng quan sức khoẻ.
 
 import type { Role } from '@/types/common.types'
 import type { Thresholds } from '@/types/farm.types'
 import type { SystemNodeStatus } from '@/types/device.types'
 
-/**
- * SYSTEM-FR-001 — 1 dòng `audit_logs`, đúng shape `GET /system/audit-logs`
- * (backend populate actor_id = 'full_name email role'). `actor_id` rỗng khi
- * hệ thống tự ghi (job nền); mã `action` xem
- * constants/auditActions.ts.
- */
+// 1 dòng `audit_logs`, đúng shape `GET /system/audit-logs` (backend populate actor_id = 'full_name email role'). `actor_id` rỗng khi hệ thống tự ghi (job nền); mã `action` xem constants/auditActions.ts.
 export interface AuditLogEntry {
   _id: string
   actor_id?: { _id: string; full_name: string; email: string; role: Role }
   action: string
-  /** 'user' | 'farm' | 'zone' | 'sensor_node' | 'camera_node' | 'system_settings' | 'sales_assignment_request' | ... */
+  // 'user' 'farm' 'zone' 'sensor_node' 'camera_node' 'system_settings' 'sales_assignment_request' ...
   target_type: string
   target_id?: string
-  /** Tên tài khoản khi target_type='user' (backend tra sẵn); null với loại khác/tài khoản không còn */
+  // Tên tài khoản khi target_type='user' (backend tra sẵn); null với loại khác/tài khoản không còn
   target_name?: string | null
   metadata?: Record<string, unknown>
   source_ip?: string
@@ -26,23 +21,19 @@ export interface AuditLogEntry {
   created_at: string
 }
 
-/** SYSTEM-FR-002 — nguồn cho ENV-FR-020 "reset về mặc định", cùng shape 7 trường với Zone.thresholds */
+// nguồn cho "reset về mặc định", cùng shape 7 trường với Zone.thresholds
 export type SystemDefaultThresholds = Thresholds
 
-/** SYSTEM-FR-002 — `GET /system/settings/default-thresholds`: ngưỡng kèm nguồn và lần đổi gần nhất */
+// `GET /system/settings/default-thresholds`: ngưỡng kèm nguồn và lần đổi gần nhất
 export type SystemDefaultThresholdsView = Thresholds & {
   source: string | null
   updated_at: string | null
 }
 
-/** ENV-FR-007 — mỗi lần đổi ngưỡng mặc định phải kèm nguồn (mã REF-5) */
+// mỗi lần đổi ngưỡng mặc định phải kèm nguồn (mã REF-5)
 export type SystemDefaultThresholdsInput = Thresholds & { source: string }
 
-/**
- * SYSTEM-FR-003 — đúng shape `GET /system/health-overview`: chỉ đếm theo trạng
- * thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; `active` = đăng nhập được (ACTIVE, DELETION_REQUESTED), `inactive` = bị khoá,
- * `deleted` = đã xoá (SM-14).
- */
+// đúng shape `GET /system/health-overview`: chỉ đếm theo trạng thái, KHÔNG phải BI/xu hướng. Farm chỉ đếm farm chưa xoá mềm; `active` = đăng nhập được (ACTIVE, DELETION_REQUESTED), `inactive` = bị khoá, `deleted` = đã xoá.
 export interface SystemHealthSummary {
   farms: { total: number }
   zones: { total: number }

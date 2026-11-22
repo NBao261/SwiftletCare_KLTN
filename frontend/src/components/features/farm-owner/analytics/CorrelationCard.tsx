@@ -24,7 +24,7 @@ interface CorrelationCardProps {
   zoneId: string;
 }
 
-// Tương quan độ ẩm hoặc nhiệt độ trung bình ngày với tỷ lệ chim về cùng ngày (ANALYTICS-FR-003)
+// Tương quan độ ẩm hoặc nhiệt độ trung bình ngày với tỷ lệ chim về cùng ngày
 export default function CorrelationCard({ zoneId }: CorrelationCardProps): JSX.Element {
   const { t, num } = useTranslation(analyticsDict);
   const [days, setDays] = useState<CorrelationDayOption>(30);

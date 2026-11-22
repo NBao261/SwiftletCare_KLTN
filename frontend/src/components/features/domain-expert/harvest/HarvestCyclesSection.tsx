@@ -1,4 +1,4 @@
-// EXPERT-FR-020, HARVEST-FR-007 — Danh sách chu kỳ thu hoạch, kết luận mùa vụ
+// Danh sách chu kỳ thu hoạch, kết luận mùa vụ
 import { useState } from 'react'
 import { Wheat } from 'lucide-react'
 import { Badge, Button, DataTable, LoadingSkeleton, Pagination, SelectMenu, SectionCard, type DataTableColumn } from '@/components/ui'

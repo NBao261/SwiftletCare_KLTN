@@ -1,6 +1,6 @@
 import type { Dictionary } from '@/lib/i18n'
 
-// Từ điển màn Kết luận mùa vụ của Domain Expert (EXPERT-FR-020, G-26)
+// Từ điển màn Kết luận mùa vụ của Domain Expert
 const vi = {
   // Tab
   'tab.label': 'Kết luận mùa vụ',
@@ -51,13 +51,13 @@ const vi = {
   'error.title': 'Không tải được chu kỳ thu hoạch',
   'error.retry': 'Thử lại',
 
-  // Drawer — tiêu đề
+  // Drawer: tiêu đề
   'drawer.title': 'Kết luận mùa vụ',
   'drawer.titleEdit': 'Sửa kết luận mùa vụ',
   'drawer.subtitle': '{from} – {to}',
   'drawer.subtitleOpen': 'Từ {from}',
 
-  // Drawer — thông tin chu kỳ
+  // Drawer: thông tin chu kỳ
   'drawer.yieldLabel': 'Sản lượng thu hoạch',
   'drawer.yieldValue': '{n} tổ · {kg} kg ({date})',
   'drawer.yieldNone': 'Chưa có thông tin sản lượng',
@@ -73,7 +73,7 @@ const vi = {
   'drawer.incomplete': 'Chu kỳ thiếu dữ liệu (<80% ngày được đánh giá)',
   'drawer.openWarning': 'Chu kỳ đang mở, chưa thể viết kết luận',
 
-  // Drawer — form kết luận
+  // Drawer: form kết luận
   'drawer.existingTitle': 'Kết luận hiện tại',
   'drawer.existingBy': 'Viết bởi {role} · {date}',
   'drawer.roleExpert': 'Chuyên gia',
@@ -86,7 +86,7 @@ const vi = {
   'drawer.recsPlaceholder': 'Khuyến nghị cho mùa sau (tuỳ chọn)...',
   'drawer.recsHint': '{count}/2000 ký tự',
 
-  // Drawer — footer
+  // Drawer: footer
   'drawer.cancel': 'Huỷ',
   'drawer.save': 'Lưu kết luận',
   'drawer.saving': 'Đang lưu...',

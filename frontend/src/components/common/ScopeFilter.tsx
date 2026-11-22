@@ -23,7 +23,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
   const hasHouseIssue = scope.houses.some(house => scope.issueHouseIds.has(house._id));
   const hasZoneIssue = scope.zones.some(zone => scope.issueZoneIds.has(zone._id));
 
-  // Trang cần một trang trại / nhà / Zone (C-05): bỏ mục "Tất cả" của bậc đó, useScopeFilter đã tự chọn sẵn
+  // Trang cần một trang trại / nhà / Zone: bỏ mục "Tất cả" của bậc đó, useScopeFilter đã tự chọn sẵn
   const needsFarm = scope.level !== 'none';
   const needsHouse = scope.level === 'house' || scope.level === 'zone';
   const needsZone = scope.level === 'zone';

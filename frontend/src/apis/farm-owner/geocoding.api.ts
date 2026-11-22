@@ -1,8 +1,6 @@
 import type { Coordinates } from '@/types';
 
-// Photon (komoot, dữ liệu OpenStreetMap): gợi ý địa chỉ khi gõ, gọi thẳng từ trình duyệt, không cần key.
-// Nominatim cấm tự gợi ý theo phím gõ nên không dùng ở đây.
-// Dùng fetch, không dùng lib/axios: axios gắn base /api và token đăng nhập, không gửi ra host ngoài.
+// Photon (komoot, dữ liệu OpenStreetMap): gợi ý địa chỉ khi gõ, gọi thẳng từ trình duyệt, không cần key. Nominatim cấm tự gợi ý theo phím gõ nên không dùng ở đây. Dùng fetch, không dùng lib/axios: axios gắn base /api và token đăng nhập, không gửi ra host ngoài.
 const PHOTON_URL = 'https://photon.komoot.io/api/';
 const SUGGESTION_LIMIT = 5;
 // Ưu tiên kết quả gần Việt Nam (không loại kết quả nước khác)
@@ -18,7 +16,7 @@ interface PhotonFeature {
   geometry: { coordinates: [number, number] };
 }
 
-// "Tên, số nhà + đường, khu phố, quận, thành phố, tỉnh, nước" — bỏ phần trống và phần trùng
+// "Tên, số nhà + đường, khu phố, quận, thành phố, tỉnh, nước": bỏ phần trống và phần trùng
 export function suggestionLabel(properties: PhotonFeature['properties']): string {
   const street = [properties.housenumber, properties.street].filter(Boolean).join(' ');
   const parts = [

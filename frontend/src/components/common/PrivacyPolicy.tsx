@@ -1,5 +1,4 @@
-// Nội dung chính sách quyền riêng tư, dùng chung cho trang công khai /privacy và trang trong app /settings/privacy.
-// Mỗi câu lấy từ Report 3 (mã yêu cầu ghi ở comment); đổi nội dung thì sửa cả 2 bản VI/EN, tăng POLICY_VERSION và ngày hiệu lực.
+// Nội dung chính sách quyền riêng tư, dùng chung cho trang công khai /privacy và trang trong app /settings/privacy. Mỗi câu lấy từ (mã yêu cầu ghi ở comment); đổi nội dung thì sửa cả 2 bản VI/EN, tăng POLICY_VERSION và ngày hiệu lực.
 import { useLanguageStore, type Lang } from '@/stores/languageStore';
 
 const POLICY_VERSION = '1.1';
@@ -13,7 +12,6 @@ interface PolicySection {
 
 const SECTIONS_VI: PolicySection[] = [
   {
-    // §1.2, C-5
     title: '1. Phạm vi',
     paragraphs: [
       'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản chủ nhà yến và Kỹ thuật viên; người đồng sở hữu và Chuyên gia tham gia qua lời mời.',
@@ -23,17 +21,11 @@ const SECTIONS_VI: PolicySection[] = [
   {
     title: '2. Dữ liệu hệ thống thu thập',
     items: [
-      // AUTH-FR-002, NFR-10b
       'Tài khoản: họ tên, e-mail, vai trò và mật khẩu (chỉ lưu dạng băm bcrypt, không lưu mật khẩu gốc).',
-      // §3.1, §3.4, §3.11
       'Dữ liệu nhà yến: số đo cảm biến (nhiệt độ, độ ẩm, ánh sáng, NH3, CO2, tiếng ồn), trạng thái rơ-le, lịch sử điều khiển tay, thông tin thiết bị và các đợt thu hoạch.',
-      // §3.8, VISION-FR-008, 017
       'Đếm chim: hình camera ở cửa nhà yến được xử lý trên máy đếm chim; hệ thống lưu số chim ra vào theo từng 5 phút và theo phiên sáng, chiều của mỗi nhà.',
-      // ALERT-FR-013
       'Thông báo: thông báo trong ứng dụng và Telegram, nếu chủ nhà yến tự liên kết.',
-      // AUTH-FR-007, NFR-10c
       'Nhật ký: lần đăng nhập và mọi thay đổi cấu hình (người thực hiện, thời điểm); địa chỉ IP khi đăng nhập dùng để chặn đăng nhập sai liên tục.',
-      // FARM-FR-001
       'Vị trí: toạ độ trang trại do chủ nhà yến nhập.',
     ],
   },
@@ -45,12 +37,10 @@ const SECTIONS_VI: PolicySection[] = [
       'Bảo vệ tài khoản và truy vết thay đổi qua nhật ký.',
     ],
     paragraphs: [
-      // §1.2
       'SwiftletCare không mua bán, không môi giới và không chia sẻ dữ liệu để quảng cáo.',
     ],
   },
   {
-    // §2.4
     title: '4. Ai được xem dữ liệu',
     items: [
       'Chủ nhà yến và người đồng sở hữu: toàn bộ dữ liệu trang trại của mình.',
@@ -60,7 +50,6 @@ const SECTIONS_VI: PolicySection[] = [
     ],
   },
   {
-    // ALERT-FR-013, ANALYTICS-FR-013, FARM-FR-001 (Report 4 §3.1)
     title: '5. Dịch vụ bên ngoài',
     items: [
       'Telegram: gửi cảnh báo cho chủ nhà yến đã liên kết tài khoản.',
@@ -69,7 +58,6 @@ const SECTIONS_VI: PolicySection[] = [
     ],
   },
   {
-    // BR-36
     title: '6. Thời gian lưu trữ',
     items: [
       '90 ngày: số đo cảm biến, số đếm chim theo 5 phút và thông báo trong ứng dụng.',
@@ -78,7 +66,6 @@ const SECTIONS_VI: PolicySection[] = [
     ],
   },
   {
-    // NFR-10, AUTH-FR-003, VISION-FR-013
     title: '7. Bảo mật',
     items: [
       'Ngoài đăng nhập và lời mời, mọi thao tác đều cần đăng nhập. Phiên đăng nhập tự gia hạn trong 30 ngày.',
@@ -87,7 +74,6 @@ const SECTIONS_VI: PolicySection[] = [
     ],
   },
   {
-    // AUTH-FR-009, 012, ALERT-FR-013
     title: '8. Quyền của người dùng',
     items: [
       'Yêu cầu xoá tài khoản và dữ liệu cá nhân: Quản trị viên xử lý trong 30 ngày. Khi xoá, quyền sở hữu trang trại chuyển cho người đồng sở hữu sớm nhất (hoặc trang trại bị xoá mềm nếu không có), dữ liệu cá nhân được ẩn danh.',
@@ -100,7 +86,7 @@ const SECTIONS_VI: PolicySection[] = [
     paragraphs: [
       'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt.',
       'Khi chính sách thay đổi, phiên bản và ngày hiệu lực ở đầu trang được cập nhật.',
-      // ALERT-FR-002 — chưa gửi thật (gap G-10)
+      // chưa gửi thật (gap)
       'Thông báo đẩy trên ứng dụng điện thoại (Firebase Cloud Messaging) sẽ được bổ sung sau; chính sách này được cập nhật trước khi tính năng đó hoạt động.',
     ],
   },
@@ -193,7 +179,7 @@ const POLICY_TEXT: Record<Lang, { heading: string; versionLabel: string; effecti
   en: { heading: 'Privacy policy', versionLabel: 'Version', effectiveLabel: 'Effective from', sections: SECTIONS_EN },
 };
 
-// headingLevel: trang công khai không có header nên tiêu đề là h1; trong khung app tên trang đã là h1 (C-01)
+// headingLevel: trang công khai không có header nên tiêu đề là h1; trong khung app tên trang đã là h1
 export default function PrivacyPolicy({ headingLevel: Heading = 'h1' }: { headingLevel?: 'h1' | 'h2' }): JSX.Element {
   const lang = useLanguageStore(state => state.lang);
   const text = POLICY_TEXT[lang];

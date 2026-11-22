@@ -6,7 +6,7 @@ const RECOMMENDATIONS_KEY = 'recommendations';
 // Số khuyến nghị mỗi trang, cũng là số dòng khung bảng
 export const RECOMMENDATIONS_PAGE_SIZE = 10;
 
-// EXPERT-FR-017 — khuyến nghị của nhà hoặc farm, mới mở trước
+// khuyến nghị của nhà hoặc farm, mới mở trước
 export function useRecommendations(query: RecommendationListQuery, enabled: boolean) {
   return usePaginatedListQuery(
     [RECOMMENDATIONS_KEY, query],
@@ -17,7 +17,7 @@ export function useRecommendations(query: RecommendationListQuery, enabled: bool
   );
 }
 
-// EXPERT-FR-018 — xong hay lỗi (409: đã quyết định nơi khác hoặc vừa hết hạn) đều tải lại danh sách và phiếu công việc
+// xong hay lỗi (409: đã quyết định nơi khác hoặc vừa hết hạn) đều tải lại danh sách và phiếu công việc
 export function useRecommendationActions() {
   const queryClient = useQueryClient();
   const refresh = () => {

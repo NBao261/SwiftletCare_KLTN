@@ -18,12 +18,12 @@ interface DeviceDetailCardProps {
   device: DeviceItem;
   // Tên Zone của node cảm biến; camera thuộc cả nhà
   zoneName?: string;
-  // Node cảm biến: mở popup lịch loa ru / bài loa ru (ENV-FR-013b, 013c)
+  // Node cảm biến: mở popup lịch loa ru / bài loa ru
   onOpenSchedule?: () => void;
   onOpenTracks?: () => void;
-  // FARM-FR-013 — Farm Owner khởi động lại bộ điều khiển đang ONLINE
+  // Farm Owner khởi động lại bộ điều khiển đang ONLINE
   onRestart?: () => void;
-  // FARM-FR-007b, 008 — dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
+  // dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
   moreActions?: ActionsMenuItem[];
 }
 

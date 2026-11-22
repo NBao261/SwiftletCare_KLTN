@@ -8,12 +8,12 @@ import { cn } from '@/lib/cn'
 import type { MetricKey, ZoneNode } from '@/components/features/farm-owner/farms/farmStructure'
 import { NO_VALUE } from '@/constants/display'
 
-/** 3 chỉ số chính hiện trên card zone — đủ 6 chỉ số ở trang chi tiết zone */
+// 3 chỉ số chính hiện trên card zone: đủ 6 chỉ số ở trang chi tiết zone
 const CARD_METRICS: MetricKey[] = ['temperature', 'humidity', 'nh3']
 
 interface ZoneCardProps { node: ZoneNode; loadingMetrics: boolean; onOpen: () => void }
 
-/** 1 zone trong trang chi tiết nhà: tình trạng, 3 chỉ số chính (realtime qua socket, chưa có thì trung bình 1 giờ), số thiết bị online */
+// 1 zone trong trang chi tiết nhà: tình trạng, 3 chỉ số chính (realtime qua socket, chưa có thì trung bình 1 giờ), số thiết bị online
 export default function ZoneCard({ node, loadingMetrics, onOpen }: ZoneCardProps) {
   const { t, num } = useTranslation(farmDict)
   const { zone, metrics, breaches, counts } = node

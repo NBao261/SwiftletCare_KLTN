@@ -26,7 +26,7 @@ import {
 } from '@/validations/common/notificationChannels.validation'
 import type { SeverityLevel } from '@/types'
 
-// Cài đặt theo role (todo-ui-layout-1120 §4.2; ALERT-FR-005, 006, 013, EXPERT-FR-007, AUTH-FR-009, 012)
+// Cài đặt theo role (todo-ui-layout-1120)
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
   const isAlertRecipient = usePermission('FARM_OWNER', 'FARM_TECHNICIAN')
@@ -87,7 +87,7 @@ function InfoItem({ icon: ItemIcon, label, value }: { icon: Icon; label: string;
   )
 }
 
-/** Khung card + đầu card (ô icon · tiêu đề text-h2 · dòng phụ 1 dòng · nút bên phải) */
+// Khung card + đầu card (ô icon · tiêu đề text-h2 · dòng phụ 1 dòng · nút bên phải)
 function SettingsCard({ icon: HeaderIcon, title, subtitle, danger, action, children }: {
   icon: Icon; title: string; subtitle: string; danger?: boolean; action?: ReactNode; children?: ReactNode
 }) {
@@ -119,7 +119,7 @@ function SaveButton({ dirty, disabled, loading, onClick, children }: {
   )
 }
 
-// Kênh cảnh báo theo mức (ALERT-FR-005): chỗ duy nhất bật/tắt thông báo đẩy (ST-02)
+// Kênh cảnh báo theo mức: chỗ duy nhất bật/tắt thông báo đẩy (ST-02)
 function AlertChannelsCard() {
   const user = useAuthStore(s => s.user)
   const { updateNotificationPreferences } = useAuth()
@@ -189,7 +189,7 @@ function AlertChannelsCard() {
   )
 }
 
-// Giờ im lặng (ALERT-FR-006, chỉ Chủ nhà yến): đồng hồ 24 giờ
+// Giờ im lặng (chỉ Chủ nhà yến): đồng hồ 24 giờ
 function QuietHoursCard() {
   const user = useAuthStore(s => s.user)
   const { updateNotificationPreferences } = useAuth()
@@ -227,7 +227,7 @@ function QuietHoursCard() {
   )
 }
 
-// ── Bảo mật — đổi mật khẩu qua luồng quên mật khẩu (AUTH-FR-009) ────────────
+// Bảo mật: đổi mật khẩu qua luồng quên mật khẩu
 
 function SecurityCard() {
   const { forgotPassword, resetPassword } = useAuth()
@@ -273,7 +273,7 @@ function SecurityCard() {
   )
 }
 
-// ── Telegram (ALERT-FR-013, SF-04) ──────────────────────────────────────────
+// Telegram
 
 function TelegramCard() {
   const user = useAuthStore(s => s.user)
@@ -284,7 +284,7 @@ function TelegramCard() {
   const [qrImage, setQrImage] = useState<string | null>(null)
   const [showUnlink, setShowUnlink] = useState(false)
   const linked = user?.telegram_linked ?? false
-  // Push của mức Khẩn cấp đã tắt thì Telegram là kênh ngoài ứng dụng duy nhất: backend từ chối gỡ (ALERT-FR-005)
+  // Push của mức Khẩn cấp đã tắt thì Telegram là kênh ngoài ứng dụng duy nhất: backend từ chối gỡ
   const urgentPushOff = !levelChannelsOf(user?.notification_preferences).P1.push
 
   function handleCreate() {
@@ -354,9 +354,9 @@ function TelegramCard() {
   )
 }
 
-// ── Dữ liệu tài khoản (AUTH-FR-012) ─────────────────────────────────────────
+// Dữ liệu tài khoản
 
-// AUTH-FR-012 — Administrator xử lý trong 30 ngày kể từ lúc gửi
+// Administrator xử lý trong 30 ngày kể từ lúc gửi
 const DELETION_DEADLINE_DAYS = 30
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -367,7 +367,7 @@ function DeletionCard() {
   const apiErrorMessage = useApiErrorMessage()
   const [showConfirm, setShowConfirm] = useState(false)
 
-  // Report 3 §6.14 — DELETION_REQUESTED → ACTIVE khi người dùng huỷ, trước khi Administrator xử lý
+  // DELETION_REQUESTED → ACTIVE khi người dùng huỷ, trước khi Administrator xử lý
   function handleCancel() {
     cancelDeletion.mutate(undefined, {
       onSuccess: () => push('Đã huỷ yêu cầu xoá tài khoản'),

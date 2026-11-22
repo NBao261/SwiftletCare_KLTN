@@ -7,7 +7,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useAuthStore } from '@/stores/authStore';
 import { validatePasswordChange } from '@/validations/common/passwordChange.validation';
 
-// Đổi mật khẩu tạm (AUTH-FR-005c, SM-14): tài khoản do Admin tạo phải đổi trước khi vào hệ thống; khung ở AuthLayout
+// Đổi mật khẩu tạm: tài khoản do Admin tạo phải đổi trước khi vào hệ thống; khung ở AuthLayout
 export default function ChangePasswordPage(): JSX.Element {
   const { changePassword, logout } = useAuth();
   const apiErrorMessage = useApiErrorMessage();

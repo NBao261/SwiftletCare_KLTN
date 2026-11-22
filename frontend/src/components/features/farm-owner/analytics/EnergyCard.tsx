@@ -16,7 +16,7 @@ import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
 // "2026-10" → "10/2026"
 const monthLabel = (month: string) => month.split('-').reverse().join('/');
 
-// ANALYTICS-FR-017, BR-45 — điện năng ước tính của bơm và quạt theo tháng; tải không có dòng đo ghi "không đo được"
+// điện năng ước tính của bơm và quạt theo tháng; tải không có dòng đo ghi "không đo được"
 export default function EnergyCard({ houseId, houseName }: { houseId: string; houseName: string }): JSX.Element {
   const { t, num, exact } = useTranslation(analyticsDict);
   const { data, isLoading, isError, refetch } = useHouseEnergy(houseId);

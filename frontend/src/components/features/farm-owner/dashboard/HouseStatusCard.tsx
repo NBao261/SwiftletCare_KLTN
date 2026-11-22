@@ -14,7 +14,7 @@ import { farmHousePath } from '@/hooks/shared/useScopeFilter';
 import { cn } from '@/lib/cn';
 import type { HouseOverview, SensorNode } from '@/types';
 
-// 3 số đo chính trên thẻ nhà (§5.1): nhiệt độ, độ ẩm, NH3
+// 3 số đo chính trên thẻ nhà: nhiệt độ, độ ẩm, NH3
 const CARD_METRICS: { key: MetricKey; prefix: string; unit: string; digits: number }[] = [
   { key: 'temperature', prefix: '', unit: '°C', digits: 1 },
   { key: 'humidity', prefix: '', unit: '%', digits: 0 },
@@ -43,12 +43,12 @@ interface HouseStatusCardProps {
   overview?: HouseOverview;
 }
 
-// Thẻ 1 nhà ở Tổng quan (FO-01, ANALYTICS-FR-015): môi trường từng Zone, chế độ điều khiển, giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, chim về
+// Thẻ 1 nhà ở Tổng quan (FO-01): môi trường từng Zone, chế độ điều khiển, giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, chim về
 export default function HouseStatusCard({ node, status, sensors, overview }: HouseStatusCardProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   const { t: farmT } = useTranslation(farmDict);
   const { t: healthT } = useTranslation(healthDict);
-  // Nhà tạo trước FARM-FR-014 chưa có giai đoạn: mặc định OCCUPIED (api-spec House.stage)
+  // Nhà tạo trước chưa có giai đoạn: mặc định OCCUPIED (api-spec House.stage)
   const stage = overview?.stage ?? 'OCCUPIED';
   const onlineControllers = sensors.filter(sensor => sensor.status === 'ONLINE').length;
   const manualSensors = sensors.filter(sensor => sensor.control_mode === 'MANUAL');
@@ -100,7 +100,7 @@ export default function HouseStatusCard({ node, status, sensors, overview }: Hou
 
       <div className="mt-auto flex flex-col gap-1 border-t border-warmGray/10 pt-3 text-body text-graphite">
         <p>{controlText}</p>
-        {/* Trạng thái sức khoẻ hôm nay (MF-06), hoặc lý do chưa có */}
+        {/* Trạng thái sức khoẻ hôm nay, hoặc lý do chưa có */}
         {overview && (
           <p className="flex flex-wrap items-center gap-2">
             {t('house.today')}

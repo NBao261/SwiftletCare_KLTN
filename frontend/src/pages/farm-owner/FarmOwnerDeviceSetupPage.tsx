@@ -1,6 +1,4 @@
-// FarmOwnerDeviceSetupPage (/devices/onboarding) — SF-01, FARM-FR-003, 004, 007, 012: Farm Owner lắp bộ điều khiển hoặc camera
-// SENSOR_NODE: 4 bước (Vị trí → Xác thực → Kết nối AP+WiFi → Đợi kết nối)
-// CAMERA_NODE:  3 bước (Vị trí → Xác thực → Đợi kết nối) — không cần AP/WiFi step
+// FarmOwnerDeviceSetupPage (/devices/onboarding): Farm Owner lắp bộ điều khiển hoặc camera SENSOR_NODE: 4 bước (Vị trí → Xác thực → Kết nối AP+WiFi → Đợi kết nối) CAMERA_NODE: 3 bước (Vị trí → Xác thực → Đợi kết nối), không cần AP/WiFi step
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui'
@@ -37,12 +35,7 @@ export default function FarmOwnerDeviceSetupPage() {
   const isCamera    = data.deviceType === 'CAMERA_NODE'
   const stepLabels  = isCamera ? CAMERA_STEPS : SENSOR_STEPS
 
-  // Ánh xạ step index sang component:
-  //   0 → Location
-  //   1 → Validate
-  //   SENSOR 2 → ConnectAP (gộp AP + WiFi guide)
-  //   SENSOR 3 → WaitOnline
-  //   CAMERA 2 → WaitOnline
+  // Ánh xạ step index sang component: 0 → Location 1 → Validate SENSOR 2 → ConnectAP (gộp AP + WiFi guide) SENSOR 3 → WaitOnline CAMERA 2 → WaitOnline
   const lastStep   = stepLabels.length - 1
   const isWaitStep = step === lastStep
 

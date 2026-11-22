@@ -7,7 +7,7 @@ import type { DeviceCounts, DeviceRow } from '@/components/features/farm-owner/f
 
 interface AttentionDevicesCardProps {
   counts: DeviceCounts
-  /** Thiết bị không ONLINE của nhà (đã lọc sẵn, theo thứ tự zone) */
+  // Thiết bị không ONLINE của nhà (đã lọc sẵn, theo thứ tự zone)
   problems: DeviceRow[]
   zoneNameById: Map<string, string>
   onSelect: (device: DeviceRow) => void
@@ -15,7 +15,7 @@ interface AttentionDevicesCardProps {
 
 const MAX_LISTED = 3
 
-/** Thiết bị cần chú ý của nhà: tỷ lệ sẵn sàng + danh sách thiết bị mất kết nối/lỗi (tối đa 3, phần còn lại xem ở tab Thiết bị) */
+// Thiết bị cần chú ý của nhà: tỷ lệ sẵn sàng + danh sách thiết bị mất kết nối/lỗi (tối đa 3, phần còn lại xem ở tab Thiết bị)
 export default function AttentionDevicesCard({ counts, problems, zoneNameById, onSelect }: AttentionDevicesCardProps) {
   const { t, num, ago } = useTranslation(farmDict)
   const readiness = counts.total > 0 ? (counts.online / counts.total) * 100 : 0

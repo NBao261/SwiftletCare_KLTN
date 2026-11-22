@@ -22,7 +22,7 @@ interface RecommendationTableProps {
   onOpen: (recommendation: Recommendation) => void;
 }
 
-// EXPERT-FR-017 — bảng khuyến nghị: nhà, luật, ngày thoả, đề xuất, trạng thái
+// bảng khuyến nghị: nhà, luật, ngày thoả, đề xuất, trạng thái
 export default function RecommendationTable({
   recommendations, serverPagination, houseNames, canDecide, emptyNotice, onOpen,
 }: RecommendationTableProps): JSX.Element {

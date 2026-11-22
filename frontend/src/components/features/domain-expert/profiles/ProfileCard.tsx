@@ -19,7 +19,7 @@ interface Props {
   onApprove?: () => void
   onArchive?: () => void
   disabled?: boolean
-  // BR-22 (Report 3 4.2.15): Farm Owner và chuyên gia sửa bản nháp; chỉ chuyên gia duyệt và lưu trữ
+  // Farm Owner và chuyên gia sửa bản nháp; chỉ chuyên gia duyệt và lưu trữ
   canEditDraft?: boolean
   canApprove?: boolean
   // Farm chưa có chuyên gia: bản nháp chưa ai duyệt được

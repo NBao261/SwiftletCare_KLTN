@@ -8,13 +8,13 @@ import { useWorkOrder, useWorkOrderActions } from '@/hooks/farm-owner/useWorkOrd
 import { useToastStore } from '@/stores/toastStore';
 import type { SiteCause, WorkOrder } from '@/types';
 
-// Report 3 §4.5 — tối đa 5 ảnh cho cả Work Order (MAX_WORK_ORDER_PHOTOS), mỗi ảnh ≤ 5 MB, JPEG/PNG/WebP (PHOTO_TYPES); ghi chú ≤ 2.000 ký tự (api-spec)
+// tối đa 5 ảnh cho cả Work Order (MAX_WORK_ORDER_PHOTOS), mỗi ảnh ≤ 5 MB, JPEG/PNG/WebP (PHOTO_TYPES); ghi chú ≤ 2.000 ký tự (api-spec)
 const MAX_PHOTOS = 5;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const NOTE_MAX_LENGTH = 2000;
 
-// OPS-FR-002, ALERT-FR-018 — Farm Owner báo xong Work Order đang làm: nguyên nhân tìm thấy tại chỗ (bắt buộc với cảnh báo thiết bị), việc đã làm, ảnh
+// Farm Owner báo xong Work Order đang làm: nguyên nhân tìm thấy tại chỗ (bắt buộc với cảnh báo thiết bị), việc đã làm, ảnh
 export default function WorkOrderDoneModal({ workOrder, onClose }: { workOrder: WorkOrder | null; onClose: () => void }): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -29,7 +29,7 @@ export default function WorkOrderDoneModal({ workOrder, onClose }: { workOrder: 
   const photoSlots = Math.max(MAX_PHOTOS - (detail?.photo_urls?.length ?? 0), 0);
   const badPhoto = photos.some(photo => photo.size > MAX_PHOTO_BYTES || !PHOTO_TYPES.includes(photo.type));
 
-  // Popup không unmount giữa các lần mở — xoá lựa chọn cũ mỗi lần mở
+  // Popup không unmount giữa các lần mở: xoá lựa chọn cũ mỗi lần mở
   useEffect(() => {
     if (!workOrder) return;
     setCause(null);

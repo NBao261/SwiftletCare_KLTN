@@ -27,7 +27,7 @@ import type { Thresholds, ZoneThresholdHistoryEntry } from '@/types';
 import { thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { NO_VALUE } from '@/constants/display';
 
-// 1 bản ghi thời tiết ngoài trời là số liệu của 1 giờ (ANALYTICS-FR-013)
+// 1 bản ghi thời tiết ngoài trời là số liệu của 1 giờ
 const HOUR_MS = 3600_000;
 
 // Tô nền dải ngưỡng nhiệt độ trên trục trái, kẹp trong vùng vẽ để không đè lên chú thích
@@ -80,7 +80,7 @@ interface EnvVariationCardProps {
 const SETTER_ROLES = new Set(['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN', 'ADMIN']);
 type SetterRole = 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN' | 'ADMIN';
 
-// Biến thiên nhiệt độ, độ ẩm theo khoảng thời gian (ANALYTICS-FR-001) kèm số đo khí trực tiếp
+// Biến thiên nhiệt độ, độ ẩm theo khoảng thời gian kèm số đo khí trực tiếp
 export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory }: EnvVariationCardProps): JSX.Element {
   const { t, exact, ago, date, num } = useTranslation(analyticsDict);
   const [range, setRange] = useState<AnalyticsRange>('24h');
@@ -94,8 +94,7 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
     // Chưa có số đo trong nhà (thiết bị chưa gửi) thì trục thời gian lấy theo giờ thời tiết, vẫn thấy ngoài trời
     const timeline = series.length > 0 ? series.map(point => point.timestamp) : (data?.outdoor ?? []).map(point => point.timestamp);
     const line = { fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
-    // Ngoài trời (ANALYTICS-FR-013): nét đứt, cùng trục với số đo trong nhà; farm chưa có thời tiết thì không vẽ
-    // Mỗi điểm thời tiết phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ (7d, 30d)
+    // Ngoài trời: nét đứt, cùng trục với số đo trong nhà; farm chưa có thời tiết thì không vẽ Mỗi điểm thời tiết phủ 1 giờ, hoặc cả bucket khi bucket dài hơn 1 giờ (7d, 30d)
     const outdoor = alignOutdoorWeather(timeline, data?.outdoor ?? [], Math.max(data?.bucketMs ?? 0, HOUR_MS));
     const hasOutdoor = outdoor.some(point => point !== null);
     // Một điểm (1 giờ, chưa có số đo trong nhà) thì đường không vẽ gì: hiện chấm
@@ -136,7 +135,7 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
   const nh3 = telemetry.data.nh3_ppm;
   const co2 = telemetry.data.co2_ppm;
 
-  // Ai đặt ngưỡng đang áp — cùng cách đọc với trang Tổng quan (threshold_history backend trả về)
+  // Ai đặt ngưỡng đang áp: cùng cách đọc với trang Tổng quan (threshold_history backend trả về)
   const source = thresholdSource(thresholdHistory);
   let sourceText = t('env.sourceDefault');
   if (!source.isDefault) {
@@ -203,7 +202,7 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
       </div>
       {thresholds && <p className="text-xs text-warmGray">{sourceText}</p>}
       {chart}
-      {/* Thời tiết ngoài trời chỉ để đối chiếu, không điều khiển thiết bị (ANALYTICS-FR-013) */}
+      {/* Thời tiết ngoài trời chỉ để đối chiếu, không điều khiển thiết bị */}
       {data && hasChartData && (
         <p className="text-xs text-warmGray">
           {data.series.length === 0 && `${t('env.indoorEmpty')} · `}

@@ -14,16 +14,16 @@ interface DeviceListRowProps {
   index?: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  /** Không truyền → ẩn nút (role không có quyền gửi lệnh RESTART) */
+  // Không truyền → ẩn nút (role không có quyền gửi lệnh RESTART)
   onReboot?: () => void;
-  /** Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích */
+  // Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích
   rebootUnsupported?: boolean;
   onOpenAudio: () => void;
 }
 
 const STALE_HEARTBEAT_MS = 5 * 60 * 1000
 
-/** 4 vạch tín hiệu từ RSSI thật (dBm): > -60 mạnh, > -70 khá, > -80 yếu, còn lại rất yếu */
+// 4 vạch tín hiệu từ RSSI thật (dBm): > -60 mạnh, > -70 khá, > -80 yếu, còn lại rất yếu
 function RssiBars({ rssi }: { rssi?: number }) {
   const level = rssi === undefined || rssi === null ? 0 : rssi > -60 ? 4 : rssi > -70 ? 3 : rssi > -80 ? 2 : 1
   const tone = level >= 3 ? "bg-success" : level === 2 ? "bg-climateOrange" : "bg-alertRed"
@@ -44,7 +44,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; dot: string; pu
   ONLINE:   { label: "Online",       cls: "bg-success/15 text-charcoal",     dot: "bg-success", pulse: true, accent: "bg-success" },
   OFFLINE:  { label: "Mất kết nối",  cls: "bg-warmGray/15 text-graphite",    dot: "bg-warmGray", accent: "bg-warmGray/60" },
   PENDING:  { label: "Chờ kết nối",  cls: "bg-climateOrange/15 text-charcoal", dot: "bg-climateOrange", pulse: true, accent: "bg-climateOrange/70" },
-  // G-01: đã bỏ DEGRADED và ERROR — SRS 3.1.0 chỉ còn ACTIVE | OFFLINE | DECOMMISSIONED; PENDING cho giai đoạn chờ heartbeat đầu
+  // đã bỏ DEGRADED và ERROR: chỉ còn ACTIVE OFFLINE DECOMMISSIONED; PENDING cho giai đoạn chờ heartbeat đầu
 }
 
 export default function DeviceListRow({
@@ -157,7 +157,7 @@ export default function DeviceListRow({
         </div>
       </div>
 
-      {/* Panel mở rộng — animate chiều cao 220ms */}
+      {/* Panel mở rộng: animate chiều cao 220ms */}
       <div
         className={`grid transition-[grid-template-rows,opacity] duration-[220ms] ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
       >

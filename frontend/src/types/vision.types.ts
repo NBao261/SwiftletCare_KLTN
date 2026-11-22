@@ -1,4 +1,4 @@
-// Module VISION (§5.6) — đếm chim ra/vào. Pipeline AI chưa triển khai, đây là shape đã chốt.
+// Module VISION: đếm chim ra/vào. Pipeline AI chưa triển khai, đây là shape đã chốt.
 
 export type SessionType = 'MORNING_EXIT' | 'EVENING_ENTRY'
 

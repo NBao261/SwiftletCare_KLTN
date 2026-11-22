@@ -1,7 +1,4 @@
-// ADMIN — Tổng quan hệ thống (SYSTEM-FR-003), thay thế /system-status cũ. Bố cục theo mẫu "Tổng quan nền tảng":
-// 1) hàng 4 ô KPI (trang trại, thiết bị, tài khoản theo trạng thái, cảnh báo khẩn) · 2) nhật ký hoạt động gần đây (RecentActivityCard). Số liệu thật: health-overview, /alerts,
-// /system/audit-logs. Không phải BI đầy đủ (SYSTEM-FR-003).
-// Tiêu đề trang lấy từ menu (AppHeader tự tra), không lặp lại trong nội dung.
+// ADMIN: Tổng quan hệ thống, thay thế /system-status cũ. Bố cục theo mẫu "Tổng quan nền tảng": 1) hàng 4 ô KPI (trang trại, thiết bị, tài khoản theo trạng thái, cảnh báo khẩn) · 2) nhật ký hoạt động gần đây (RecentActivityCard). Số liệu thật: health-overview, /alerts, /system/audit-logs. Không phải BI đầy đủ. Tiêu đề trang lấy từ menu (AppHeader tự tra), không lặp lại trong nội dung.
 import { CpuIcon, HouseIcon, UsersIcon, WarningIcon } from '@phosphor-icons/react'
 import { useSystemHealth } from '@/hooks/admin/useSystem'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
@@ -13,7 +10,7 @@ import RecentActivityCard from '@/components/features/admin/dashboard/RecentActi
 import { getApiErrorMessage } from '@/lib/helpers'
 import { t as i18nT } from '@/i18n'
 
-/** Màu vòng icon theo ReadingTile (Dashboard Farm Owner): xám nhạt, không đổi đỏ theo trạng thái */
+// Màu vòng icon theo ReadingTile (Dashboard Farm Owner): xám nhạt, không đổi đỏ theo trạng thái
 const ICON_NORMAL = 'bg-warmGray/10 text-charcoal'
 
 export default function AdminSystemHealthPage() {
@@ -33,7 +30,7 @@ export default function AdminSystemHealthPage() {
 
   const { farms, zones, devices, users } = data
   const hasDevices = devices.total > 0
-  // Liệt kê mọi trạng thái khác ONLINE đang có (bỏ số 0); ERROR/DEGRADED đã bỏ theo SRS 3.1.0
+  // Liệt kê mọi trạng thái khác ONLINE đang có (bỏ số 0); ERROR/DEGRADED đã bỏ theo
   const deviceIssues = ([
     [devices.offline, 'mất kết nối'],
     [devices.pending, 'chờ kết nối'],
@@ -44,8 +41,7 @@ export default function AdminSystemHealthPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Hàng 3 ô KPI — bọc Card giống EnvSensorPanel ở Dashboard Farm Owner; ô nằm trong khung
-          nên bỏ shadow riêng (shadow-none), như ReadingTile ── */}
+      {/* Hàng 3 ô KPI: bọc Card giống EnvSensorPanel ở Dashboard Farm Owner; ô nằm trong khung nên bỏ shadow riêng (shadow-none), như ReadingTile */}
       <Card className="flex flex-col gap-4">
         <div>
           <h2 className="text-h2 text-charcoal">{i18nT('Chỉ số vận hành toàn hệ thống')}</h2>
@@ -66,11 +62,11 @@ export default function AdminSystemHealthPage() {
             icon={CpuIcon}
             iconClass={ICON_NORMAL}
             label="Thiết bị online"
-            // Số thiết bị online / tổng thiết bị đang phục vụ (thay cho % — 0% với 2 thiết bị khó hình dung)
+            // Số thiết bị online / tổng thiết bị đang phục vụ (thay cho %: 0% với 2 thiết bị khó hình dung)
             value={hasDevices ? `${devices.online}/${devices.total}` : '--'}
             sub={deviceSub}
           />
-          {/* SYSTEM-FR-003 — tài khoản đăng nhập được (gồm chờ xoá) và bị khoá; chi tiết theo role ở trang Người dùng */}
+          {/* tài khoản đăng nhập được (gồm chờ xoá) và bị khoá; chi tiết theo role ở trang Người dùng */}
           <KpiTile
             className="shadow-none"
             icon={UsersIcon}
@@ -83,9 +79,7 @@ export default function AdminSystemHealthPage() {
             className="shadow-none"
             icon={WarningIcon}
             iconClass={ICON_NORMAL}
-            // Query chỉ lấy status ACTIVE — không ghi "đang mở" vì ACKNOWLEDGED cũng là đang mở (ALERT-FR-008/009).
-            // Admin không xác nhận cảnh báo (chỉ Farm Owner, ALERT-FR-009) → dòng phụ nói ai chưa phản hồi, tránh
-            // chữ "chờ xác nhận" khiến Admin tưởng việc đó của mình
+            // Query chỉ lấy status ACTIVE: không ghi "đang mở" vì ACKNOWLEDGED cũng là đang mở. Admin không xác nhận cảnh báo (chỉ Farm Owner) → dòng phụ nói ai chưa phản hồi, tránh chữ "chờ xác nhận" khiến Admin tưởng việc đó của mình
             label="Cảnh báo khẩn cấp"
             value={String(criticalAlerts.total)}
             sub={criticalAlerts.total > 0 ? 'Chủ nhà yến chưa phản hồi' : 'Không có cảnh báo mới'}

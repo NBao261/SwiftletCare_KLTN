@@ -14,15 +14,15 @@ import { t, translated } from '@/i18n'
 import type { DeviceStatus, NodeCommandInput, SystemNodeStatusItem } from '@/types'
 
 const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
-  ONLINE: 'positive', OFFLINE: 'neutral', PENDING: 'warning', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
+  ONLINE: 'positive', OFFLINE: 'neutral', PENDING: 'warning', // ERROR/DEGRADED đã bỏ
 }
 const STATUS_LABEL: Record<DeviceStatus, string> = translated({
-  ONLINE: 'Online', OFFLINE: 'Mất kết nối', PENDING: 'Chờ kết nối', // ERROR/DEGRADED đã bỏ (SRS 3.1.0)
+  ONLINE: 'Online', OFFLINE: 'Mất kết nối', PENDING: 'Chờ kết nối', // ERROR/DEGRADED đã bỏ
 })
 
 const DAY = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
 
-/** Nhóm thông tin: tiêu đề nhỏ + các dòng nhãn trái / giá trị phải, kẻ vạch giữa dòng */
+// Nhóm thông tin: tiêu đề nhỏ + các dòng nhãn trái / giá trị phải, kẻ vạch giữa dòng
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-5">
@@ -43,19 +43,18 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 const Muted = ({ children }: { children: ReactNode }) => <span className="font-normal text-warmGray">{children}</span>
 
-// Chi tiết thiết bị của Admin (FARM-FR-006, 009): chủ farm, kết nối, cảnh báo đang mở; Khởi động lại, Đẩy cấu hình (FARM-FR-013); không số đo môi trường
+// Chi tiết thiết bị của Admin: chủ farm, kết nối, cảnh báo đang mở; Khởi động lại, Đẩy cấu hình; không số đo môi trường
 export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNodeStatusItem | null; onClose: () => void }) {
   const farmId = node?.farm_id || undefined
   const { data: farm } = useFarm(farmId)
-  // Cảnh báo đang mở của phòng → lọc đúng thiết bị (alert.node_id = _id của node); 1 phòng ít cảnh báo nên 100 là đủ
-  // Chỉ gọi khi drawer đang mở (node có giá trị) — đóng drawer không tải cảnh báo
+  // Cảnh báo đang mở của phòng → lọc đúng thiết bị (alert.node_id = _id của node); 1 phòng ít cảnh báo nên 100 là đủ Chỉ gọi khi drawer đang mở (node có giá trị): đóng drawer không tải cảnh báo
   const alerts = useAlertsList({ farmId, zoneId: node?.zone_id, status: 'ACTIVE', limit: 100 }, { enabled: !!node })
   const sendCommand = useSendNodeCommand()
   const apiErrorMessage = useApiErrorMessage()
   const push = useToastStore(state => state.push)
   const [confirmRestart, setConfirmRestart] = useState(false)
 
-  // FARM-FR-013 — lệnh từ xa; firmware trước 1.4.0 trả 501 (không hỗ trợ RESTART)
+  // lệnh từ xa; firmware trước 1.4.0 trả 501 (không hỗ trợ RESTART)
   function send(command: NodeCommandInput['command'], doneText: string): void {
     if (!node) return
     sendCommand.mutate({ nodeId: node._id, input: { command } }, {
@@ -73,7 +72,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
   const isSensor = node.type === 'sensor'
   const isOnline = node.status === 'ONLINE'
   const nodeAlerts = alerts.records.filter(a => a.node_id === node._id)
-  // "Farm › Nhà yến › Tầng › Zone" — cùng các phần vị trí của bảng, ngăn bằng › kiểu đường dẫn
+  // "Farm › Nhà yến › Tầng › Zone": cùng các phần vị trí của bảng, ngăn bằng › kiểu đường dẫn
   const place = nodeLocation(node).replace(/ \| /g, ' › ')
 
   return (
@@ -90,7 +89,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
                 <SimulatedBadge simulated={node.simulated} />
               </div>
               <p className="truncate text-small text-warmGray">
-                {/* SRS v2.0.0: camera là camera IP phát RTSP, AI đếm chim chạy trên AI node (PC) */}
+                {/* camera là camera IP phát RTSP, AI đếm chim chạy trên AI node (PC) */}
                 {t(isSensor ? '5 cảm biến' : 'Camera IP · RTSP Stream')}
               </p>
             </div>

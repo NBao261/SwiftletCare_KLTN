@@ -1,4 +1,4 @@
-// VISION-FR-019, BR-13, BR-21 — Lịch đếm chim của nhà: hồ sơ theo mùa, khung tạm, khung đang áp hôm nay và lịch sử (G-12)
+// Lịch đếm chim của nhà: hồ sơ theo mùa, khung tạm, khung đang áp hôm nay và lịch sử
 import { useState } from 'react'
 import { CalendarClock, Moon, Plus, Sunrise, Trash2 } from 'lucide-react'
 import DatePicker from '@/components/ui/DatePicker'
@@ -40,7 +40,7 @@ function RowError({ error }: { error: ScheduleError | null }) {
 }
 
 export default function DomainExpertCountingSchedulePage() {
-  // BR-22 (Report 3 4.2.15) — Farm Owner đặt được; farm có chuyên gia thì chuyên gia duyệt sau
+  // Farm Owner đặt được; farm có chuyên gia thì chuyên gia duyệt sau
   const { canEditParameters } = useExpertDecisionRights()
   const { t, date } = useTranslation(countingScheduleDict)
   const apiErrorMessage = useApiErrorMessage()
@@ -89,10 +89,10 @@ export default function DomainExpertCountingSchedulePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* BR-22 — Farm Owner sửa được; farm có chuyên gia thì chuyên gia duyệt sau */}
+      {/* Farm Owner sửa được; farm có chuyên gia thì chuyên gia duyệt sau */}
       <fieldset disabled={!canEditParameters} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
-        {/* Khung đang áp hôm nay — màn rộng: tiêu đề và ghi chú bên trái, hai phiên bên phải; màn hẹp xếp dọc */}
+        {/* Khung đang áp hôm nay: màn rộng: tiêu đề và ghi chú bên trái, hai phiên bên phải; màn hẹp xếp dọc */}
         <div className="flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">

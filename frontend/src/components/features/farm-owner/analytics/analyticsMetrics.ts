@@ -152,7 +152,7 @@ export function sumTodayBirdCounts(list: BirdCountCurrentResponse[]): TodayBirdC
   return today;
 }
 
-// Thời tiết ngoài trời cho từng mốc trong nhà (ANALYTICS-FR-013): điểm T phủ [T, T + spanMs), mốc không được phủ thì null; cả hai chuỗi tăng dần
+// Thời tiết ngoài trời cho từng mốc trong nhà: điểm T phủ [T, T + spanMs), mốc không được phủ thì null; cả hai chuỗi tăng dần
 export function alignOutdoorWeather(timestamps: string[], outdoor: OutdoorWeatherPoint[], spanMs: number): Array<OutdoorWeatherPoint | null> {
   let index = 0;
   return timestamps.map(timestamp => {

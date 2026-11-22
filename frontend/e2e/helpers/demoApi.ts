@@ -1,6 +1,6 @@
 import { expect, type APIRequestContext, type APIResponse } from '@playwright/test';
 
-// Kịch bản demo DS-01…16 (Design Brief Phụ lục A2) trên dữ liệu của `npm run seed:demo` ở backend; gọi API qua proxy /api của web
+// Kịch bản demo trên dữ liệu của `npm run seed:demo` ở backend; gọi API qua proxy /api của web
 export const DEMO_FARM = 'Trại yến Demo A2';
 // Mật khẩu của `npm run seed:demo`: DEMO_PASSWORD khi chạy trên staging, mặc định của seed khi chạy trên máy và CI
 export const PASSWORD = process.env.DEMO_PASSWORD ?? 'Test1234!';
@@ -10,7 +10,7 @@ export const ACCOUNTS = {
   technician: 'tech@swiftletcare.dev',
   otherHouseTechnician: 'tech2@swiftletcare.dev',
   expert: 'expert@swiftletcare.dev',
-  // Farm Owner của farm demo chưa có chuyên gia (BR-22)
+  // Farm Owner của farm demo chưa có chuyên gia
   ownerWithoutExpert: 'owner2@swiftletcare.dev',
 } as const;
 

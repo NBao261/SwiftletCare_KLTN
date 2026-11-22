@@ -1,4 +1,4 @@
-// DisagreementDayCard.tsx — Thẻ chi tiết 1 ngày có đánh giá thực địa lệch với hệ thống (EXPERT-FR-022, BR-28)
+// DisagreementDayCard.tsx: Thẻ chi tiết 1 ngày có đánh giá thực địa lệch với hệ thống
 
 import {
   Calendar,

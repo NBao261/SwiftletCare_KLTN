@@ -4,11 +4,11 @@ import { cn } from '@/lib/cn'
 
 interface FarmFrameProps {
   title: ReactNode
-  /** Dòng mô tả dưới tiêu đề: chữ thường thì 1 dòng (C-07); ReactNode nhiều mục (địa chỉ, người phụ trách…) giữ nguyên */
+  // Dòng mô tả dưới tiêu đề: chữ thường thì 1 dòng; ReactNode nhiều mục (địa chỉ, người phụ trách…) giữ nguyên
   description?: ReactNode
-  /** Giải thích dài — trong nút (i) cạnh tiêu đề */
+  // Giải thích dài: trong nút (i) cạnh tiêu đề
   help?: ReactNode
-  /** Nút/link bên phải header */
+  // Nút/link bên phải header
   action?: ReactNode
   // Hàng nằm trên tiêu đề, trong cùng thẻ, có vạch ngăn bên dưới (VD chip chọn nhóm thành viên)
   top?: ReactNode
@@ -16,7 +16,7 @@ interface FarmFrameProps {
   children?: ReactNode
 }
 
-/** Khung chung của màn Cấu trúc Farm — cùng kiểu EnvSensorPanel ở Dashboard: Card lớn, tiêu đề h2 + mô tả xám, không icon vuông */
+// Khung chung của màn Cấu trúc Farm: cùng kiểu EnvSensorPanel ở Dashboard: Card lớn, tiêu đề h2 + mô tả xám, không icon vuông
 export default function FarmFrame({ title, description, help, action, top, className, children }: FarmFrameProps) {
   return (
     <Card size="lg" className={cn('flex flex-col gap-4', className)}>

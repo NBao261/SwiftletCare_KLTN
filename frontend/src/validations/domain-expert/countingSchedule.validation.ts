@@ -1,6 +1,6 @@
 import type { CountingSchedule, DayWindows } from '@/types/expert.types'
 
-// Khớp backend `countingSchedule.util.ts` (Report 3 §4.5): giới hạn nhập chống gõ nhầm
+// Khớp backend `countingSchedule.util.ts`: giới hạn nhập chống gõ nhầm
 export const MAX_SCHEDULE_PROFILES = 12
 export const MAX_TEMPORARY_WINDOWS = 60
 export const PROFILE_NAME_MAX_LENGTH = 50

@@ -21,7 +21,7 @@ interface MaintenancePlanFormModalProps {
   onClose: () => void;
 }
 
-// OPS-FR-005 — Farm Owner tạo hoặc sửa kế hoạch bảo trì của 1 nhà; việc bảo trì và cách tính hạn khoá khi sửa
+// Farm Owner tạo hoặc sửa kế hoạch bảo trì của 1 nhà; việc bảo trì và cách tính hạn khoá khi sửa
 export default function MaintenancePlanFormModal({ open, house, plan, onClose }: MaintenancePlanFormModalProps): JSX.Element {
   const { t } = useTranslation(maintenanceDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -49,7 +49,7 @@ export default function MaintenancePlanFormModal({ open, house, plan, onClose }:
   // Đã nhập gì thì không cho bấm nền để đóng (mất dữ liệu)
   const isDirty = JSON.stringify({ equipment, basis, intervalText, checklist, source, note }) !== JSON.stringify(initial);
 
-  // Popup không unmount giữa các lần mở — nạp lại giá trị lúc mở mỗi lần mở
+  // Popup không unmount giữa các lần mở: nạp lại giá trị lúc mở mỗi lần mở
   useEffect(() => {
     if (!open) return;
     setEquipment(initial.equipment);

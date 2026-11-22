@@ -1,12 +1,12 @@
-// OTAErrorPanel.tsx — B8: OTA thất bại (BE: ota_failed sau 30 phút không có phản hồi) hoặc lỗi gửi lệnh
+// OTAErrorPanel.tsx: B8: OTA thất bại (BE: ota_failed sau 30 phút không có phản hồi) hoặc lỗi gửi lệnh
 import { Button } from '@/components/ui'
 import { formatDate } from '@/lib/helpers'
 
 interface Props {
-  /** Phiên bản đã yêu cầu nhưng thất bại */
+  // Phiên bản đã yêu cầu nhưng thất bại
   failedVersion: string
   failedAt?: string
-  /** Phiên bản thiết bị đang chạy thực tế */
+  // Phiên bản thiết bị đang chạy thực tế
   runningVersion?: string
   onRetry: () => void
 }

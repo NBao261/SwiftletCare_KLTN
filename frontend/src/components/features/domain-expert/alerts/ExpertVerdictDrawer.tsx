@@ -1,8 +1,4 @@
-/**
- * 02B_Expert_Verdict_Drawer_v3 — Ngăn kéo Thẩm định Cảnh báo (Orchestrator)
- * Slide-over từ phải, render qua createPortal ở z-50 trên toàn bộ layout và banner
- * SRS v2.1.4: EXPERT-FR-003
- */
+// 02B_Expert_Verdict_Drawer_v3: Ngăn kéo Thẩm định Cảnh báo (Orchestrator) Slide-over từ phải, render qua createPortal ở z-50 trên toàn bộ layout và banner
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
@@ -43,7 +39,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const [verdict, setVerdict] = useState<'CONFIRMED' | 'REJECTED' | null>(null)
   const [note, setNote] = useState('')
   const mutation = useSubmitAlertVerdict()
-  // BR-22 — Farm Owner kết luận thay khi farm chưa có chuyên gia; farm có chuyên gia thì xem bằng chứng và nhắc chuyên gia
+  // Farm Owner kết luận thay khi farm chưa có chuyên gia; farm có chuyên gia thì xem bằng chứng và nhắc chuyên gia
   const { canDecide, ownerNeedsExpert } = useExpertDecisionRights()
   const reminder = useRemindExpert('alert', alert?._id, alert?.expert_reminded_at)
   // Farm Owner ở farm có chuyên gia, cảnh báo chưa có kết luận: nhắc chuyên gia (mỗi cảnh báo một lần)

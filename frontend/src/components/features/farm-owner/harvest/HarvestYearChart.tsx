@@ -89,7 +89,7 @@ function YearStepButton({ label, disabled, onClick, children }: {
 // Trục dọc khi chưa có dữ liệu: đủ cao để vẽ 4 vạch lưới như khi có số
 const EMPTY_AXIS_MAX = 4;
 
-// Biểu đồ cột xếp chồng theo loại tổ (yến trắng → hồng → huyết từ dưới lên), gom theo tháng / quý / năm, chuyển giữa kg và số tổ (ANALYTICS-FR-004)
+// Biểu đồ cột xếp chồng theo loại tổ (yến trắng → hồng → huyết từ dưới lên), gom theo tháng / quý / năm, chuyển giữa kg và số tổ
 export default function HarvestYearChart({ batches }: { batches: HarvestBatch[] }): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const currentYear = vnYearMonth(new Date()).year;

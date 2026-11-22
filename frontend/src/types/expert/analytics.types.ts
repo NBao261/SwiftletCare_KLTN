@@ -1,4 +1,4 @@
-// ENV-FR-019, ANALYTICS-FR — tỷ lệ thời gian tự động của 1 zone (GET /analytics/autonomy)
+// ANALYTICS-FR: tỷ lệ thời gian tự động của 1 zone (GET /analytics/autonomy)
 export interface AutonomyResponse {
   range: string
   from: string

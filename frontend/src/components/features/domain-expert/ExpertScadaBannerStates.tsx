@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react'
 import { t } from '@/i18n'
 
-// ─── Sub-component: Skeleton loading state ────────────────────────────────────
+// Sub-component: Skeleton loading state
 export function BannerSkeleton() {
   return (
     <div className="relative z-30 flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-3 sm:px-4 sm:py-3.5 text-charcoal shadow-sm animate-pulse border border-warmGray/20">
@@ -19,7 +19,7 @@ export function BannerSkeleton() {
   )
 }
 
-// ─── Sub-component: Empty state — chưa được gán trang trại ───────────────────
+// Sub-component: Empty state: chưa được gán trang trại
 export function BannerEmpty() {
   return (
     <div className="relative z-30 flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-3 sm:px-4 sm:py-3.5 text-charcoal shadow-sm border border-amber-300">

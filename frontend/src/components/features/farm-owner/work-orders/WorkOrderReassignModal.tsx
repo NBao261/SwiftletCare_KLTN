@@ -16,7 +16,7 @@ interface WorkOrderReassignModalProps {
   onClose: () => void;
 }
 
-// OPS-FR-004 — giao lại cho 1 kỹ thuật viên của nhà; backend kiểm thợ còn được giao và còn hoạt động (400)
+// giao lại cho 1 kỹ thuật viên của nhà; backend kiểm thợ còn được giao và còn hoạt động (400)
 export default function WorkOrderReassignModal({ workOrder, houseName, candidates, onClose }: WorkOrderReassignModalProps): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();

@@ -4,8 +4,7 @@ import { demoFarm, signIn } from './helpers/demoApi';
 interface Plan { _id: string; equipment: string; basis: string; interval: number; state: string }
 interface WorkOrder { _id: string; status: string; kind: string; origin?: string; plan_id?: string; checklist: Array<{ item: string }> }
 
-// WF-07 — DS-13, DS-14 (Design Brief Phụ lục A2): kế hoạch bơm 500 giờ (bộ đếm 499 giờ) và kế hoạch béc phun đến hạn 7 ngày
-// (`npm run seed:demo`). Chạy bơm thêm 1 giờ của DS-13 cần controller thật hoặc bộ giả lập.
+// kế hoạch bơm 500 giờ (bộ đếm 499 giờ) và kế hoạch béc phun đến hạn 7 ngày (`npm run seed:demo`). Chạy bơm thêm 1 giờ của cần controller thật hoặc bộ giả lập.
 test.describe('DS-13, DS-14 Bảo trì phòng ngừa', () => {
   test('DS-13 kế hoạch bơm theo giờ chạy chưa đến hạn ở 499 giờ', async ({ request }) => {
     const owner = await signIn(request, 'owner');
@@ -21,7 +20,7 @@ test.describe('DS-13, DS-14 Bảo trì phòng ngừa', () => {
     const houseId = farm.house('A')._id;
     const plans = await owner.data<Plan[]>(await owner.get(`/maintenance/plans?houseId=${houseId}`));
     const nozzle = plans.find(plan => plan.equipment === 'NOZZLE');
-    // Job bảo trì mỗi giờ có thể đã chuyển kế hoạch sang quá hạn (OPS-FR-006)
+    // Job bảo trì mỗi giờ có thể đã chuyển kế hoạch sang quá hạn
     expect(['DUE', 'OVERDUE']).toContain(nozzle?.state);
 
     const orders = await owner.data<WorkOrder[]>(await owner.get(`/work-orders?farmId=${farm.farmId}&houseId=${houseId}`));

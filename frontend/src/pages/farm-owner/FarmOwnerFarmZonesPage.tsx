@@ -45,11 +45,11 @@ export default function FarmOwnerFarmZonesPage() {
   const node = houseId ? structure.houseById.get(houseId) : undefined
   const pageHouses = useMemo(() => (node ? [node.house] : []), [node])
   const staffByHouse = useHouseStaff(pageHouses)
-  // FARM-FR-002 — chỉ Farm Owner tạo Zone
+  // chỉ Farm Owner tạo Zone
   const isFarmOwner = usePermission('FARM_OWNER')
-  // OPS-FR-009 — MTTA, MTTR: Farm Owner và Domain Expert (kỹ thuật viên nhận 403)
+  // MTTA, MTTR: Farm Owner và Domain Expert (kỹ thuật viên nhận 403)
   const canViewOpsMetrics = usePermission('FARM_OWNER', 'DOMAIN_EXPERT')
-  // FARM-FR-014 — Farm Owner và Domain Expert đổi giai đoạn nhà (Report 3 §2.4)
+  // Farm Owner và Domain Expert đổi giai đoạn nhà
   const canSetStage = canViewOpsMetrics
 
   const [searchParams] = useSearchParams()
@@ -91,7 +91,7 @@ export default function FarmOwnerFarmZonesPage() {
         if (d.status !== 'ONLINE') problems.push(d)
       }
     }
-    // Camera gắn cả nhà (SRS v2.1.8): cột Zone ghi "Cả nhà"
+    // Camera gắn cả nhà: cột Zone ghi "Cả nhà"
     zoneNameById.set('', t('device.wholeHouse'))
     for (const d of node?.cameraDevices ?? []) {
       devices.push(d)
@@ -151,7 +151,7 @@ export default function FarmOwnerFarmZonesPage() {
         }
       />
 
-      {/* Tab của trang nhà: 3 ô bằng nhau, kiểu SectionTabs (pill trắng trên nền xám, C-03) */}
+      {/* Tab của trang nhà: 3 ô bằng nhau, kiểu SectionTabs (pill trắng trên nền xám) */}
       <div role="tablist" aria-label={house.name} className="grid grid-cols-3 gap-1 rounded-full bg-warmGray/10 p-1">
         {houseTabs.map(item => {
           const isActive = tab === item.key
@@ -210,7 +210,7 @@ export default function FarmOwnerFarmZonesPage() {
               {/* Cài đặt đàn chim của cả nhà, đặt dưới danh sách Zone (cột trái còn trống) để cột phải không quá dài */}
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <HouseStageCard house={house} canEdit={canSetStage} />
-                {/* EXPERT-FR-008 — mức giảm tỷ lệ chim về của nhà do chuyên gia đặt, chủ nhà yến chỉ xem */}
+                {/* mức giảm tỷ lệ chim về của nhà do chuyên gia đặt, chủ nhà yến chỉ xem */}
                 <FarmFrame title={t('tuning.birdTitle')} description={t('tuning.birdDesc')}>
                   <div className="rounded-2xl border border-warmGray/15 bg-white p-4">
                     <p className="label-caption">{t('tuning.birdDrop')}</p>

@@ -8,7 +8,7 @@ interface PinButtonProps {
   onToggle: () => void
 }
 
-/** Nút sao ghim nhà yến lên đầu danh sách — không kích hoạt thao tác của hàng/card chứa nó */
+// Nút sao ghim nhà yến lên đầu danh sách: không kích hoạt thao tác của hàng/card chứa nó
 export default function PinButton({ pinned, onToggle }: PinButtonProps) {
   const { t } = useTranslation(farmDict)
   const label = t(pinned ? 'pin.unpin' : 'pin.pin')

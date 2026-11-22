@@ -49,7 +49,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
     if (farmId && houseId && zoneId) setScopePath(farmId, farmName, houseId, zoneId)
   }, [farmId, houseId, zoneId, farmName, setScopePath])
   const [selected, setSelected] = useState<DeviceRow | null>(null)
-  // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning (ENV-FR-006/020)
+  // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning
   const openZoneTuning = useOpenZoneTuning()
   // Đổi tên / xoá Zone (giao diện dựng sẵn, chờ API backend)
   const [editMode, setEditMode] = useState<'rename' | 'delete' | null>(null)
@@ -142,7 +142,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
             {isFarmOwner && (
               <ActionsMenu
                 items={[
-                  // FARM-FR-011 — mã chỉ chứa zone ID, in ra để dán ở tầng
+                  // mã chỉ chứa zone ID, in ra để dán ở tầng
                   {
                     label: t('zone.printFloorCode'),
                     onClick: () => void printQrLabels(zone.name, [{
@@ -174,7 +174,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         )}
       </FarmFrame>
 
-      {/* EXPERT-FR-008 — tham số phát hiện chuyên gia đặt cho Zone, chủ nhà yến chỉ xem */}
+      {/* tham số phát hiện chuyên gia đặt cho Zone, chủ nhà yến chỉ xem */}
       <DetectionTuningCard tuning={zone.detection_tuning} />
 
       <FarmFrame

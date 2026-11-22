@@ -1,16 +1,4 @@
-/**
- * ExpertScadaBanner — Thanh trạng thái SCADA cố định ở đầu mọi trang Chuyên gia
- *
- * 3 trạng thái UX chuẩn nghiệp vụ:
- *  1. Loading  — đang lấy danh sách trang trại từ API
- *  2. Empty    — Chuyên gia chưa được gán trang trại nào (nghiệp vụ SRS AUTH-FR-005)
- *  3. Active   — Có ≥ 1 trang trại → hiện selector + KPI pills
- *
- * Không dùng dữ liệu giả (FALLBACK). Mọi Farm/House/Zone ID luôn là MongoDB ObjectId thật
- * từ API để không bao giờ gây lỗi 422 ở các hook phụ thuộc.
- *
- * SRS v2.1.4: §4.4, EXPERT-FR-001/002/003, ENV-FR-006
- */
+// ExpertScadaBanner: Thanh trạng thái SCADA cố định ở đầu mọi trang Chuyên gia 3 trạng thái UX chuẩn nghiệp vụ: 1. Loading, đang lấy danh sách trang trại từ API 2. Empty, Chuyên gia chưa được gán trang trại nào (nghiệp vụ) 3. Active, Có ≥ 1 trang trại → hiện selector + KPI pills Không dùng dữ liệu giả (FALLBACK). Mọi Farm/House/Zone ID luôn là MongoDB ObjectId thật từ API để không bao giờ gây lỗi 422 ở các hook phụ thuộc.
 
 import { t } from '@/i18n'
 import { useState, useRef, useEffect, useMemo } from 'react'
@@ -28,7 +16,7 @@ interface ExpertScadaBannerProps {
   pendingZoneId?: string
 }
 
-// ─── Component chính ──────────────────────────────────────────────────────────
+// Component chính
 export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScadaBannerProps = {}) {
   const {
     selectedFarmId,
@@ -46,10 +34,10 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
 
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // ── 1. Lấy danh sách Farm thật từ API ──────────────────────────────────────
+  // 1. Lấy danh sách Farm thật từ API
   const { data: farms, isLoading: isLoadingFarms } = useFarms()
 
-  // ── 2. Xác định farmId đang hoạt động ──────────────────────────────────────
+  // 2. Xác định farmId đang hoạt động
   const currentFarmId = useMemo(() => {
     if (!farms || farms.length === 0) return undefined
     if (activeFarmId && farms.some(f => f._id === activeFarmId)) return activeFarmId
@@ -57,7 +45,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
     return farms[0]._id
   }, [farms, activeFarmId, selectedFarmId])
 
-  // ── 3. Lấy House và Zone theo farmId / houseId thật ────────────────────────
+  // 3. Lấy House và Zone theo farmId / houseId thật
   const { data: houses } = useHouses(currentFarmId)
 
   const currentHouseId = useMemo(() => {
@@ -69,7 +57,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
 
   const { data: zones } = useZones(currentHouseId)
 
-  // ── 4. Đồng bộ store nếu farm/zone đang lưu không thuộc danh sách truy cập ─
+  // 4. Đồng bộ store nếu farm/zone đang lưu không thuộc danh sách truy cập
   useEffect(() => {
     if (!farms || farms.length === 0 || !currentFarmId) return
     const targetFarm = farms.find(f => f._id === currentFarmId)
@@ -86,7 +74,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
     }
   }, [farms, zones, currentFarmId, currentHouseId, selectedFarmId, selectedHouseId, selectedZoneId, setZone, setHouse])
 
-  // ── 5. Đóng dropdown khi click ra ngoài, bấm Escape hoặc cuộn trang ───────
+  // 5. Đóng dropdown khi click ra ngoài, bấm Escape hoặc cuộn trang
   useEffect(() => {
     if (!isOpen) return
     function handleClickOutside(e: MouseEvent) {
@@ -109,7 +97,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
     }
   }, [isOpen])
 
-  // ── 6. KPI pills: Đồng bộ 100% với Backend API & Trang Hàng Đợi Việc ──────
+  // 6. KPI pills: Đồng bộ 100% với Backend API & Trang Hàng Đợi Việc
   const effectiveFarmId = farmId || currentFarmId
   const effectiveZoneId = pendingZoneId || selectedZoneId || zones?.[0]?._id
 
@@ -123,7 +111,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
   const pendingCount = pendingAlerts?.total ?? 0
   const autoModePct = autonomy?.auto_mode_pct ?? 100
 
-  // ── Tên hiển thị trên capsule selector ─────────────────────────────────────
+  // Tên hiển thị trên capsule selector
   const currentFarm = farms?.find(f => f._id === currentFarmId)
   const currentHouse = houses?.find(h => h._id === currentHouseId)
   const currentZone = zones?.find(z => z._id === selectedZoneId) || zones?.[0]
@@ -142,7 +130,7 @@ export default function ExpertScadaBanner({ farmId, pendingZoneId }: ExpertScada
     setIsOpen(false)
   }
 
-  // ── Render theo trạng thái ─────────────────────────────────────────────────
+  // Render theo trạng thái
   if (isLoadingFarms) return <BannerSkeleton />
   if (!farms || farms.length === 0) return <BannerEmpty />
 

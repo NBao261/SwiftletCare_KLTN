@@ -1,4 +1,4 @@
-// AUTH-FR-005c — form "Tạo Farm Owner" của Administrator; cùng luật với route POST /admin/farm-owners
+// form "Tạo Farm Owner" của Administrator; cùng luật với route POST /admin/farm-owners
 export interface FarmOwnerForm {
   email: string
   fullName: string

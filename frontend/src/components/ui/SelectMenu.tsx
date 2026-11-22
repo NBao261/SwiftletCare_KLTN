@@ -16,16 +16,13 @@ interface SelectMenuProps<V extends string> {
   value: V
   options: SelectMenuOption<V>[]
   onChange: (value: V) => void
-  /** Nhãn cho screen reader — trigger chỉ hiện label của option đang chọn */
+  // Nhãn cho screen reader: trigger chỉ hiện label của option đang chọn
   ariaLabel: string
   className?: string
-  /**
-   * Kiểu ô form (trong modal): trigger dùng class `.input` như Input/Select, không tô viền
-   * xanh "đang lọc" — ở form, chọn 1 giá trị là chuyện bình thường, không phải bộ lọc đang bật.
-   */
+  // Kiểu ô form (trong modal): trigger dùng class `.input` như Input/Select, không tô viền xanh "đang lọc": ở form, chọn 1 giá trị là chuyện bình thường, không phải bộ lọc đang bật.
   field?: boolean
   disabled?: boolean
-  /** Chỉ với `field`: viền đỏ như Input có `error` */
+  // Chỉ với `field`: viền đỏ như Input có `error`
   invalid?: boolean
   // Câu đọc cho dòng có `warning` và cho huy hiệu "!" trên góc nút (hiện khi có ít nhất 1 dòng `warning`)
   warningLabel?: string
@@ -36,26 +33,18 @@ interface SelectMenuProps<V extends string> {
 const OPTION_HEIGHT = 36
 const OPTION_GAP = 2 // space-y-0.5
 const MENU_CHROME = 14 // p-1.5 trên + dưới (12) + border (2)
-/** Quá số dòng này thì danh sách có thanh cuộn */
+// Quá số dòng này thì danh sách có thanh cuộn
 const MAX_VISIBLE_OPTIONS = 8
 
-/** Chiều cao khung vừa khít `count` dòng — không lộ nửa dòng kế tiếp */
+// Chiều cao khung vừa khít `count` dòng: không lộ nửa dòng kế tiếp
 function listHeight(count: number): number {
   return count * OPTION_HEIGHT + Math.max(0, count - 1) * OPTION_GAP + MENU_CHROME
 }
-/** Kiểu `field` nằm trong modal: chỉ hiện 4 dòng rồi cuộn, để danh sách không tràn khỏi form */
-// [SỬA NGOÀI ADMIN — nhánh feat/admin-settings-config-logs-pages] Chỉ ảnh hưởng SelectMenu có prop `field` (VD popup tạo trang trại). Thêm: `field`/`disabled`/`invalid`, danh sách field cao 4 dòng rồi cuộn, Esc không đóng Modal. Hàng bộ lọc (không `field`) của mọi role giữ nguyên max-h-72.
+// Kiểu `field` nằm trong modal: chỉ hiện 4 dòng rồi cuộn, để danh sách không tràn khỏi form
+// [SỬA NGOÀI ADMIN: nhánh feat/admin-settings-config-logs-pages] Chỉ ảnh hưởng SelectMenu có prop `field` (VD popup tạo trang trại). Thêm: `field`/`disabled`/`invalid`, danh sách field cao 4 dòng rồi cuộn, Esc không đóng Modal. Hàng bộ lọc (không `field`) của mọi role giữ nguyên max-h-72.
 const FIELD_VISIBLE_OPTIONS = 4
 
-/**
- * Dropdown chọn 1 giá trị, thay cho <select> native ở các hàng filter: <select>
- * không style được phần danh sách (màu hover option do hệ điều hành vẽ) nên
- * không theo được bảng màu §2 (highlight = LIME MIST). Trigger là pill h-9 (điện thoại h-11) cùng
- * chiều cao chip/nút sort; danh sách portal ra body (useFloatingMenu). Hỗ trợ
- * bàn phím: ↑/↓ di chuyển, Enter/Space chọn, Esc đóng.
- * `options[0]` phải là giá trị mặc định ("Mọi …"): chọn option khác thì trigger
- * viền xanh (accent-600) để thấy ngay bộ lọc nào đang bật.
- */
+// Dropdown chọn 1 giá trị, thay cho <select> native ở các hàng filter: <select> không style được phần danh sách (màu hover option do hệ điều hành vẽ) nên không theo được bảng màu (highlight = LIME MIST). Trigger là pill h-9 (điện thoại h-11) cùng chiều cao chip/nút sort; danh sách portal ra body (useFloatingMenu). Hỗ trợ bàn phím: ↑/↓ di chuyển, Enter/Space chọn, Esc đóng. `options[0]` phải là giá trị mặc định ("Mọi …"): chọn option khác thì trigger viền xanh (accent-600) để thấy ngay bộ lọc nào đang bật.
 export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className, field, disabled, invalid, warningLabel, highlightFiltered = true }: SelectMenuProps<V>) {
   const maxVisible = field ? FIELD_VISIBLE_OPTIONS : MAX_VISIBLE_OPTIONS
   const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
@@ -88,7 +77,7 @@ export default function SelectMenu<V extends string>({ value, options, onChange,
     if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, options.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)) }
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(activeIndex) }
-    // Nằm trong Modal (field): Esc chỉ đóng danh sách — chặn lan lên document kẻo Modal đóng luôn, mất dữ liệu đang nhập
+    // Nằm trong Modal (field): Esc chỉ đóng danh sách: chặn lan lên document kẻo Modal đóng luôn, mất dữ liệu đang nhập
     else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
     else if (e.key === 'Tab') setOpen(false)
   }

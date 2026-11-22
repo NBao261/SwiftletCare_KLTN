@@ -1,4 +1,4 @@
-// DomainExpertReviewsPage.tsx — Màn hình thẩm định thay đổi tham số và đề xuất hệ số mờ (G-04)
+// DomainExpertReviewsPage.tsx: Màn hình thẩm định thay đổi tham số và đề xuất hệ số mờ
 
 import { useMemo, useState } from 'react';
 import {

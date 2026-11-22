@@ -3,7 +3,7 @@ import {
 } from '@/constants/enumLabels.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
-// Từ điển màn Work Order của Farm Owner (/work-orders) và thẻ MTTA/MTTR ở trang nhà (OPS-FR-001…004, 009)
+// Từ điển màn Work Order của Farm Owner (/work-orders) và thẻ MTTA/MTTR ở trang nhà
 const vi = {
   // Đầu trang
   'page.noFarmTitle': 'Chưa có trang trại',
@@ -82,7 +82,7 @@ const vi = {
   'form.save': 'Lưu',
   'form.required': 'Chưa nhập {field}',
 
-  // Popup tạo tay (OPS-FR-001)
+  // Popup tạo tay
   'create.title': 'Tạo phiếu công việc · {house}',
   'create.hint': 'Phiếu công việc được giao cho kỹ thuật viên đang trực của nhà; nhà chưa có kỹ thuật viên thì bạn tự xử lý.',
   'create.titleLabel': 'Việc cần làm',
@@ -122,7 +122,7 @@ const vi = {
   'detail.maintenanceLink': 'Lịch bảo trì',
   'detail.historyNote': 'Ghi chú: {note}',
 
-  // Thẻ trang nhà (OPS-FR-009, BR-40)
+  // Thẻ trang nhà
   'metrics.title': 'Xử lý sự cố',
   'metrics.desc': '30 ngày gần nhất',
   'metrics.mtta': 'Thời gian xác nhận TB',

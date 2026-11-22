@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ownerProfilesApi } from '@/apis/farm-owner/profiles.api'
 
-// EXPERT-FR-015 — hồ sơ đã duyệt của 1 farm (chỉ hồ sơ APPROVED mới áp được)
+// hồ sơ đã duyệt của 1 farm (chỉ hồ sơ APPROVED mới áp được)
 export function useApprovedProfiles(farmId: string | undefined) {
   return useQuery({
     queryKey: ['profiles', farmId ?? '', 'APPROVED'],

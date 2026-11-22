@@ -11,14 +11,14 @@ import type { House, HouseStage } from '@/types'
 
 const STAGES: HouseStage[] = ['ATTRACTING', 'OCCUPIED']
 
-// FARM-FR-014, BR-46 — giai đoạn nhà: Farm Owner hoặc Domain Expert bấm ô còn lại để chuyển (có xác nhận), người khác chỉ xem
+// giai đoạn nhà: Farm Owner hoặc Domain Expert bấm ô còn lại để chuyển (có xác nhận), người khác chỉ xem
 export default function HouseStageCard({ house, canEdit }: { house: House; canEdit: boolean }) {
   const { t, date } = useTranslation(farmDict)
   const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
   const setStage = useSetHouseStage(house._id)
   const [target, setTarget] = useState<HouseStage | null>(null)
-  // Nhà tạo trước FARM-FR-014 chưa có stage: mặc định OCCUPIED (api-spec House.stage)
+  // Nhà tạo trước chưa có stage: mặc định OCCUPIED (api-spec House.stage)
   const current = house.stage ?? 'OCCUPIED'
   const history = house.stage_history ?? []
   const lastChange = history[history.length - 1]?.changed_at

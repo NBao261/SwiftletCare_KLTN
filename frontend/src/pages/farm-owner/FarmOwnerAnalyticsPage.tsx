@@ -36,7 +36,7 @@ function pair(left: ReactNode, right: ReactNode): ReactNode {
   );
 }
 
-// Trang Phân tích của Farm Owner — ANALYTICS-FR-001..003/005/008..011, ENV-FR-019, EXPERT-FR-005/006
+// Trang Phân tích của Farm Owner: /008..011
 export default function FarmOwnerAnalyticsPage(): JSX.Element {
   const { t } = useTranslation(analyticsDict);
   // Khung lọc Nhà + Zone lưu ở store chung, giữ nguyên khi chuyển trang
@@ -98,14 +98,14 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     />
   );
 
-  // Mỗi tab một nhóm khung; khung Zone khi lọc 1 Zone, đàn và điện năng (ANALYTICS-FR-002, 017) khi lọc 1 nhà
+  // Mỗi tab một nhóm khung; khung Zone khi lọc 1 Zone, đàn và điện năng khi lọc 1 nhà
   if (zones.length > 0) {
-    // Đếm chim là của cả nhà yến chứa Zone (SRS v2.1.8)
+    // Đếm chim là của cả nhà yến chứa Zone
     const birdHouseIds = zone ? [zone.house_id] : houseIds;
     const birdLabel = zone ? zone.houseName : scopeLabel;
     const flockTrend = houseId ? <FlockTrendCard houseId={houseId} houseName={houseName} /> : null;
     const energy = houseId ? <EnergyCard houseId={houseId} houseName={houseName} /> : null;
-    // ANALYTICS-FR-001 — biểu đồ theo thời gian là của một Zone: chưa chọn Zone thì nói rõ chỗ chọn, không để trống
+    // biểu đồ theo thời gian là của một Zone: chưa chọn Zone thì nói rõ chỗ chọn, không để trống
     const pickZoneHint = zone ? null : (
       <p className="rounded-2xl border border-dashed border-warmGray/30 px-6 py-5 text-sm text-warmGray">{t('page.pickZoneHint')}</p>
     );

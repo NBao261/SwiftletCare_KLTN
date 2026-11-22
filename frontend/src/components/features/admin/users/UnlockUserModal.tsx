@@ -5,7 +5,7 @@ import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import type { User } from '@/types'
 
-/** AUTH-FR-011 — PUT /admin/users/:id/status {is_active:true}; không cần lý do. */
+// PUT /admin/users/:id/status {is_active:true}; không cần lý do.
 export default function UnlockUserModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   const setStatus = useSetUserStatus()
   const push = useToastStore(s => s.push)

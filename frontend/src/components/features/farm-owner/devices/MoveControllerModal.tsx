@@ -13,7 +13,7 @@ interface MoveControllerModalProps {
   onClose: () => void;
 }
 
-// FARM-FR-007b — Farm Owner dời bộ điều khiển sang Zone khác; offline thì backend dời khi thiết bị kết nối lại
+// Farm Owner dời bộ điều khiển sang Zone khác; offline thì backend dời khi thiết bị kết nối lại
 export default function MoveControllerModal({ device, onClose }: MoveControllerModalProps): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const reassign = useReassignZone();

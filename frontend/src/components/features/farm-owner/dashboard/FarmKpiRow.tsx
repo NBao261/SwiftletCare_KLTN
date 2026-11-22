@@ -17,7 +17,7 @@ interface FarmKpiRowProps {
   awaitingApproval: number | undefined;
 }
 
-// Hàng 4 ô của Tổng quan (FO-01): nhà, cảnh báo, thiết bị lấy cùng một nguồn với thẻ nhà bên dưới để số khớp nhau (A-03)
+// Hàng 4 ô của Tổng quan (FO-01): nhà, cảnh báo, thiết bị lấy cùng một nguồn với thẻ nhà bên dưới để số khớp nhau
 export default function FarmKpiRow({ totals, openAlerts, isOpenAlertsError, onRetryOpenAlerts, awaitingApproval }: FarmKpiRowProps): JSX.Element {
   const { t, num } = useTranslation(dashboardDict);
   // Chỉ thiết bị OFFLINE; thiết bị vừa thêm còn chờ kết nối lần đầu không phải "mất kết nối"

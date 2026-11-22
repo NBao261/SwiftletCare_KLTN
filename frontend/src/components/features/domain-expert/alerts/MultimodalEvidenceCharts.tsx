@@ -1,8 +1,4 @@
-/**
- * MultimodalEvidenceCharts — Bằng chứng đối chiếu đa phương thức (Bước 1 Drawer 02B)
- * Kết nối GET /alerts/{id}/evidence (ALERT-FR-014, EXPERT-FR-003)
- * Xử lý nguồn dữ liệu 'missing' (không phải 0) và hiển thị tối đa 10 kết luận tiền lệ
- */
+// MultimodalEvidenceCharts: Bằng chứng đối chiếu đa phương thức (Bước 1 Drawer 02B) Kết nối GET /alerts/{id}/evidence Xử lý nguồn dữ liệu 'missing' (không phải 0) và hiển thị tối đa 10 kết luận tiền lệ
 import { useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -122,7 +118,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* ── 1. ĐỐI CHIẾU DỮ LIỆU ĐO ĐẠC / TELEMETRY ── */}
+      {/* 1. ĐỐI CHIẾU DỮ LIỆU ĐO ĐẠC / TELEMETRY */}
       {isLowReturn ? (
         <div className="space-y-3">
           <div className="rounded-xl border border-neutral-200 bg-white p-3.5 space-y-2.5">
@@ -235,7 +231,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         </div>
       )}
 
-      {/* ── KIỂM TRA TẠI CHỖ CỦA KỸ THUẬT VIÊN (EXPERT-FR-021) ── */}
+      {/* KIỂM TRA TẠI CHỖ CỦA KỸ THUẬT VIÊN */}
       {evidence?.onsite_checks && evidence.onsite_checks.length > 0 && (
         <OnsiteCheckSection checks={evidence.onsite_checks} />
       )}
@@ -250,7 +246,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         </p>
       </div>
 
-      {/* ── 2. TỐI ĐA 10 KẾT LUẬN TIỀN LỆ (EXPERT-FR-003, ALERT-FR-014) ── */}
+      {/* 2. TỐI ĐA 10 KẾT LUẬN TIỀN LỆ */}
       <div className="rounded-xl border border-neutral-200 bg-white p-3.5 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

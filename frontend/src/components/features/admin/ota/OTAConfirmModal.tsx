@@ -1,4 +1,4 @@
-// OTAConfirmModal.tsx — B4: Xác nhận trước khi đẩy OTA
+// OTAConfirmModal.tsx: B4: Xác nhận trước khi đẩy OTA
 import { Button, Modal } from '@/components/ui'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import type { OtaFormValues } from '@/components/features/admin/ota/otaTypes'

@@ -1,4 +1,4 @@
-// Logic thuần của trang Work Order: thao tác theo trạng thái (Report 3 §6.19), bộ lọc, thợ có thể giao lại
+// Logic thuần của trang Work Order: thao tác theo trạng thái, bộ lọc, thợ có thể giao lại
 import type { WorkOrderListQuery } from '@/apis/farm-owner/workOrders.api';
 import type { BadgeTone } from '@/components/ui';
 import type { AlertType, Farm, House, WorkOrder, WorkOrderStatus } from '@/types';
@@ -17,9 +17,7 @@ export const WORK_ORDER_STATUS_TONE: Record<WorkOrderStatus, BadgeTone> = {
 
 export type OwnerAction = 'start' | 'done' | 'approve' | 'reopen' | 'reassign' | 'cancel';
 
-// OPS-FR-004 — chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ; đang kiểm dữ liệu: chỉ huỷ (lối ra khi dữ liệu không phục hồi); đã đóng, đã huỷ: không có.
-// OPS-FR-002 — Farm Owner cũng tự làm được (Report 3 §2.4; nhà không có thợ thì phiếu về Farm Owner, ALERT-FR-017): chưa bắt đầu thì bắt đầu, đang làm thì báo xong.
-// Work Order phòng ngừa không huỷ được (backend 409, SM-20): không cần bảo trì nữa thì xoá kế hoạch
+// chờ duyệt: duyệt hoặc mở lại; chưa xong: giao lại hoặc huỷ; đang kiểm dữ liệu: chỉ huỷ (lối ra khi dữ liệu không phục hồi); đã đóng, đã huỷ: không có.: Farm Owner cũng tự làm được (nhà không có thợ thì phiếu về Farm Owner): chưa bắt đầu thì bắt đầu, đang làm thì báo xong. Work Order phòng ngừa không huỷ được (backend 409): không cần bảo trì nữa thì xoá kế hoạch
 export function ownerActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>): OwnerAction[] {
   const { status } = workOrder;
   let actions: OwnerAction[] = [];
@@ -30,7 +28,7 @@ export function ownerActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>): Own
   return workOrder.kind === 'PREVENTIVE' ? actions.filter(action => action !== 'cancel') : actions;
 }
 
-// Câu giải thích trong hộp duyệt: phòng ngừa kiểm bằng checklist (BR-41); sửa chữa kiểm bằng dữ liệu, trừ khi hệ thống chưa có dữ liệu để kiểm
+// Câu giải thích trong hộp duyệt: phòng ngừa kiểm bằng checklist; sửa chữa kiểm bằng dữ liệu, trừ khi hệ thống chưa có dữ liệu để kiểm
 export function approvalDescriptionKey(
   workOrder: Pick<WorkOrder, 'kind' | 'alert_id' | 'alert_type'>,
 ): 'approve.descPreventive' | 'approve.descUnverified' | 'approve.desc' {
@@ -38,7 +36,7 @@ export function approvalDescriptionKey(
   return isRecoveryUnverified(workOrder) ? 'approve.descUnverified' : 'approve.desc';
 }
 
-// BR-41 — loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi (UNVERIFIABLE_RECOVERY ở workOrder.service.ts)
+// loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi (UNVERIFIABLE_RECOVERY ở workOrder.service.ts)
 const UNVERIFIABLE_ALERT_TYPES: AlertType[] = ['ACTUATOR_FAULT', 'SPEAKER_FAILURE', 'UNEXPECTED_RESTART'];
 
 // Phiếu sang chờ duyệt mà chưa kiểm được dữ liệu: mở tay không gắn cảnh báo, hoặc cảnh báo thuộc loại trên

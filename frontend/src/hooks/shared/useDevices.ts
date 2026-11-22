@@ -6,11 +6,7 @@ import { useSocket } from '@/hooks/common/useSocket'
 import type { DeviceStatus, RelayName, SpeakerScheduleInput, NodeCommandInput, SensorNode } from '@/types'
 import type { ReplaceSensorNodeInput } from '@/apis/shared/devices.api'
 
-/**
- * useSensorNodes – danh sách device + realtime status/relay qua socket (FARM-FR-005, ENV-FR-015).
- * `zoneId` rỗng nghĩa là "tất cả" (TechnicianDevicesPage khi chưa lọc zone) — `enabled: false` cho
- * nơi gọi nào không muốn fetch-all trong lúc đó (VD Dashboard lúc chưa chọn zone).
- */
+// useSensorNodes – danh sách device + realtime status/relay qua socket. `zoneId` rỗng nghĩa là "tất cả" (TechnicianDevicesPage khi chưa lọc zone): `enabled: false` cho nơi gọi nào không muốn fetch-all trong lúc đó (VD Dashboard lúc chưa chọn zone).
 export function useSensorNodes(zoneId?: string, options?: { enabled?: boolean; refetchInterval?: number | false | ((query: Query<SensorNode[], Error, SensorNode[], (string | undefined)[]>) => number | false | undefined) }) {
   useSocket()
   const queryClient = useQueryClient()
@@ -58,7 +54,7 @@ export function useDeviceStatusEvents(
   }, [houseId, zoneId, nodeId])
 }
 
-// FARM-FR-012 — 1 bộ điều khiển; pollMs: đọc lại theo chu kỳ tới khi đã áp cấu hình của Zone (config_sync APPLIED hoặc UNKNOWN)
+// 1 bộ điều khiển; pollMs: đọc lại theo chu kỳ tới khi đã áp cấu hình của Zone (config_sync APPLIED hoặc UNKNOWN)
 export function useSensorNode(id: string | undefined, pollMs?: number) {
   return useQuery({
     queryKey: ['sensor-nodes', 'detail', id],
@@ -71,12 +67,12 @@ export function useSensorNode(id: string | undefined, pollMs?: number) {
   })
 }
 
-// FARM-FR-009, OPS-NFR-004 — mọi thiết bị kèm farm, nhà, khu vực; chỉ Admin gọi được (enabled = false với role khác)
+// mọi thiết bị kèm farm, nhà, khu vực; chỉ Admin gọi được (enabled = false với role khác)
 export function useSystemNodeStatus(enabled = true) {
   return useQuery({
     queryKey: ['system-node-status'],
     queryFn: () => deviceApi.getSystemStatus().then(r => r.data.data),
-    refetchInterval: 30_000, // trang "xem nhanh" — tự làm mới thay vì bắt người xem F5
+    refetchInterval: 30_000, // trang "xem nhanh": tự làm mới thay vì bắt người xem F5
     enabled,
   })
 }
@@ -106,7 +102,7 @@ export function useUpdateSpeakerSchedule(nodeId: string) {
   })
 }
 
-/** FARM-FR-013 — gửi lệnh từ xa (RESTART / PUSH_CONFIG / OTA) tới 1 sensor node */
+// gửi lệnh từ xa (RESTART / PUSH_CONFIG / OTA) tới 1 sensor node
 export function useSendNodeCommand() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -116,7 +112,7 @@ export function useSendNodeCommand() {
   })
 }
 
-// FARM-FR-008 — Farm Owner gỡ bộ điều khiển (khôi phục được trong 24 giờ); đang ONLINE thì gửi force sau khi người dùng xác nhận
+// Farm Owner gỡ bộ điều khiển (khôi phục được trong 24 giờ); đang ONLINE thì gửi force sau khi người dùng xác nhận
 export function useDecommissionDevice() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -126,7 +122,7 @@ export function useDecommissionDevice() {
   })
 }
 
-// FARM-FR-008 — Farm Owner thay bộ điều khiển hỏng bằng thiết bị mới cùng Zone (mã kích hoạt trên nhãn thiết bị mới)
+// Farm Owner thay bộ điều khiển hỏng bằng thiết bị mới cùng Zone (mã kích hoạt trên nhãn thiết bị mới)
 export function useReplaceSensorNode() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -136,7 +132,7 @@ export function useReplaceSensorNode() {
   })
 }
 
-// FARM-FR-007b — Farm Owner dời bộ điều khiển sang Zone khác
+// Farm Owner dời bộ điều khiển sang Zone khác
 export function useReassignZone() {
   const queryClient = useQueryClient()
   return useMutation({

@@ -18,7 +18,7 @@ import type { HarvestBatch, NestType } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
 const GRAMS_PER_KILOGRAM = 1000;
-// Mốc sớm nhất của ngày thu — chặn năm gõ nhầm (vd 0023); backend chỉ kiểm định dạng ngày
+// Mốc sớm nhất của ngày thu: chặn năm gõ nhầm (vd 0023); backend chỉ kiểm định dạng ngày
 const HARVEST_DATE_MIN = '2000-01-01';
 
 type AmountText = { nests: string; grams: string };
@@ -36,7 +36,7 @@ const AMOUNT_ERROR_KEY: Record<NestAmountError, HarvestKey> = {
   incomplete: 'form.errorIncomplete',
 };
 
-// Chặn gõ dấu âm/dương và số mũ (e) vào ô số tổ, trọng lượng — không cho nhập số âm
+// Chặn gõ dấu âm/dương và số mũ (e) vào ô số tổ, trọng lượng: không cho nhập số âm
 function blockSignKeys(event: KeyboardEvent<HTMLInputElement>): void {
   if (['-', '+', 'e', 'E'].includes(event.key)) event.preventDefault();
 }
@@ -106,7 +106,7 @@ interface HarvestFormModalProps {
   creatorName: string;
 }
 
-// Popup tạo / sửa 1 lần thu (HARVEST-FR-001, 005): khu vực + ngày, sản lượng 3 loại yến, ảnh; mỗi loại có số liệu là 1 đợt cùng zone + ngày
+// Popup tạo / sửa 1 lần thu: khu vực + ngày, sản lượng 3 loại yến, ảnh; mỗi loại có số liệu là 1 đợt cùng zone + ngày
 export default function HarvestFormModal({ scope, onClose, group, houseName, creatorName }: HarvestFormModalProps): JSX.Element {
   const { t, num, exact } = useTranslation(harvestDict);
   const isEdit = group !== undefined;
@@ -121,7 +121,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
   const [amounts, setAmounts] = useState<AmountTexts>(() => initialAmounts(group));
   // Link ảnh sản phẩm dùng chung cho các loại yến của lần thu (sửa thì lấy link đã lưu)
   const [imageLinks, setImageLinks] = useState<string[]>(() => group?.product_images ?? []);
-  // Ảnh lần thu (HARVEST-FR-001): gửi lên mọi đợt của lần thu sau khi lưu xong số liệu
+  // Ảnh lần thu: gửi lên mọi đợt của lần thu sau khi lưu xong số liệu
   const [photo, setPhoto] = useState<File | null>(null);
   const savedPhotoUrl = useHarvestPhotoUrl(group?.batches.map(batch => batch._id) ?? []);
   const uploadPhoto = useUploadHarvestPhoto();

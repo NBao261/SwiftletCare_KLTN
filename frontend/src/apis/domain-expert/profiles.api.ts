@@ -1,4 +1,4 @@
-// EXPERT-FR-014, 015 — Hồ sơ cấu hình (config profiles)
+// Hồ sơ cấu hình (config profiles)
 import api from '@/lib/axios'
 import type { ApiResponse } from '@/types'
 import type { ConfigProfile, ConfigProfileInput } from '@/types/expert.types'

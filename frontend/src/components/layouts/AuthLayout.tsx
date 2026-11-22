@@ -46,7 +46,7 @@ export default function AuthLayout(): JSX.Element {
           </div>
         </div>
 
-        {/* Nửa ảnh — ẩn trên mobile để form chiếm trọn khung */}
+        {/* Nửa ảnh: ẩn trên mobile để form chiếm trọn khung */}
         <div
           className={cn(
             'hidden overflow-hidden rounded-2xl lg:right-3 lg:flex',
@@ -73,7 +73,7 @@ export default function AuthLayout(): JSX.Element {
               </p>
             </div>
 
-            {/* Thẻ kính mờ nêu 3 chỉ số được giám sát — không ghi số vì ngưỡng do Domain Expert đặt riêng từng nhà */}
+            {/* Thẻ kính mờ nêu 3 chỉ số được giám sát: không ghi số vì ngưỡng do Domain Expert đặt riêng từng nhà */}
             <div className="glass-panel grid w-full max-w-md grid-cols-3 gap-3 rounded-2xl p-3 shadow-glass backdrop-blur-xl">
               <StatChip icon={<IconTemp width={16} height={16} />} label="Nhiệt độ" />
               <StatChip icon={<IconHumidity width={16} height={16} />} label="Độ ẩm" />

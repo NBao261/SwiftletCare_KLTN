@@ -1,4 +1,4 @@
-// Test logic thuần của wizard cài thiết bị (G-09, FARM-FR-004); đọc nhãn QR test ở lib/qrCode.test.ts
+// Test logic thuần của wizard cài thiết bị; đọc nhãn QR test ở lib/qrCode.test.ts
 import { describe, it, expect } from 'vitest'
 import { canValidateDevice, cameraRegisterInput, sensorRegisterInput } from '@/components/features/farm-owner/onboarding/onboarding.utils'
 import type { OnboardingState } from '@/components/features/farm-owner/onboarding/onboardingTypes'

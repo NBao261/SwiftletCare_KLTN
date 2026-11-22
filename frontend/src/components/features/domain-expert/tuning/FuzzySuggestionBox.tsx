@@ -4,7 +4,7 @@ import { NO_VALUE } from '@/constants/display'
 import { t } from '@/i18n'
 import type { FuzzySuggestionResponse, ExpertFuzzyTuning } from '@/types/expert.types'
 
-// Nút của gợi ý theo quyền: áp ngay (chuyên gia, Farm Owner ở farm chưa có chuyên gia) hoặc gửi chuyên gia duyệt (EXPERT-FR-011)
+// Nút của gợi ý theo quyền: áp ngay (chuyên gia, Farm Owner ở farm chưa có chuyên gia) hoặc gửi chuyên gia duyệt
 export interface SuggestionAction {
   label: string
   loading: boolean
@@ -40,7 +40,7 @@ function SuggestionChip({ current, next, unit, label }: { current?: number; next
   )
 }
 
-// Gợi ý hệ số mờ từ hồi quy trên dữ liệu đã ghi (ANALYTICS-FR-010): chỉ có khi đủ 3 ngày dữ liệu và R² ≥ 0,3
+// Gợi ý hệ số mờ từ hồi quy trên dữ liệu đã ghi: chỉ có khi đủ 3 ngày dữ liệu và R² ≥ 0,3
 export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDismiss, dismissed }: Props) {
   if (dismissed) return null
 

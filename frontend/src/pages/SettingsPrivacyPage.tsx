@@ -6,14 +6,14 @@ import { getRoleHomePath } from '@/constants/roles';
 import { useAuthStore } from '@/stores/authStore';
 import { useLanguageStore } from '@/stores/languageStore';
 
-// Chính sách quyền riêng tư trong khung app (mở từ menu tài khoản) — mọi role đã đăng nhập
+// Chính sách quyền riêng tư trong khung app (mở từ menu tài khoản): mọi role đã đăng nhập
 export default function SettingsPrivacyPage(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const role = useAuthStore(s => s.user?.role);
   const lang = useLanguageStore(s => s.lang);
 
-  // Mở thẳng bằng URL thì không có trang trước để lùi — về trang chính của role
+  // Mở thẳng bằng URL thì không có trang trước để lùi: về trang chính của role
   function goBack(): void {
     if (location.key === 'default') navigate(getRoleHomePath(role));
     else navigate(-1);

@@ -2,21 +2,18 @@ import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/authStore'
 import type { TelemetryUpdateEvent, RelayUpdateEvent, AlertNewEvent, DeviceStatusChangeEvent, AppNotification } from '@/types'
 
-// Dev: '' = same-origin (localhost:5173) — vite.config.ts proxy '/socket.io' ->
-// http://localhost:3000 (ws:true) chuyển tiếp handshake. Production: set VITE_WS_URL
-// trỏ thẳng origin backend thật.
+// Dev: '' = same-origin (localhost:5173): vite.config.ts proxy '/socket.io' -> http://localhost:3000 (ws:true) chuyển tiếp handshake. Production: set VITE_WS_URL trỏ thẳng origin backend thật.
 const SOCKET_URL = import.meta.env.VITE_WS_URL || ''
 
 let socket: Socket | null = null
 const joinedZones = new Map<string, number>()
 const joinedHouses = new Map<string, number>()
 
-/** Lazy-tạo 1 socket duy nhất cho cả app — connect/disconnect do useSocket() hook quản lý */
+// Lazy-tạo 1 socket duy nhất cho cả app: connect/disconnect do useSocket() hook quản lý
 export function getSocket(): Socket {
   if (!socket) {
     socket = io(SOCKET_URL, {
-      // Dạng hàm — socket.io-client gọi lại trước MỖI lần connect/reconnect nên
-      // luôn lấy access token mới nhất, kể cả sau khi client.ts đã refresh token.
+      // Dạng hàm: socket.io-client gọi lại trước MỖI lần connect/reconnect nên luôn lấy access token mới nhất, kể cả sau khi client.ts đã refresh token.
       auth: (cb) => cb({ token: useAuthStore.getState().accessToken }),
       transports: ['websocket'],
       autoConnect: false,
@@ -45,7 +42,7 @@ export function leaveZone(zoneId: string) {
   joinedZones.set(zoneId, count - 1)
 }
 
-// Room house:<houseId> — trạng thái camera, số đếm chim và cảnh báo của cả nhà yến
+// Room house:<houseId>: trạng thái camera, số đếm chim và cảnh báo của cả nhà yến
 export function joinHouse(houseId: string) {
   const count = joinedHouses.get(houseId) ?? 0
   joinedHouses.set(houseId, count + 1)
@@ -78,7 +75,7 @@ export function onAlertNew(cb: (data: AlertNewEvent) => void) {
   return () => getSocket().off('ALERT_NEW', cb)
 }
 
-// EXPERT-FR-007 — thông báo trong ứng dụng mới của người đang đăng nhập (room user:<id>)
+// thông báo trong ứng dụng mới của người đang đăng nhập (room user:<id>)
 export function onNotificationNew(cb: (data: AppNotification) => void) {
   getSocket().on('NOTIFICATION_NEW', cb)
   return () => getSocket().off('NOTIFICATION_NEW', cb)

@@ -6,7 +6,7 @@ export interface CountingRingUpdateResult extends CameraNode {
   ring_delivered: boolean
 }
 
-// VISION-FR-018 — lưu vòng đếm; khung live để vẽ dùng `hooks/shared/useWhepStream.ts`
+// lưu vòng đếm; khung live để vẽ dùng `hooks/shared/useWhepStream.ts`
 export const countingRingApi = {
   update: (cameraId: string, ring: CountingRing) =>
     api.put<ApiResponse<CountingRingUpdateResult>>(`/devices/camera-nodes/${cameraId}/counting-ring`, ring),

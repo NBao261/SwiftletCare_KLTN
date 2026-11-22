@@ -14,7 +14,7 @@ const toMinutes = (time: string): number => Number(time.slice(0, 2)) * 60 + Numb
 
 export const isOvernightShift = (shift: Pick<RosterShift, 'start' | 'end'>): boolean => toMinutes(shift.end) < toMinutes(shift.start)
 
-// Các khoảng [từ, tới) theo phút trong tuần; ca qua đêm thứ Bảy tách sang đầu tuần — giống roster.util của backend
+// Các khoảng [từ, tới) theo phút trong tuần; ca qua đêm thứ Bảy tách sang đầu tuần: giống roster.util của backend
 function weeklyIntervals(shift: Pick<RosterShift, 'weekdays' | 'start' | 'end'>): Array<[number, number]> {
   const start = toMinutes(shift.start)
   const end = toMinutes(shift.end)
@@ -25,7 +25,7 @@ function weeklyIntervals(shift: Pick<RosterShift, 'weekdays' | 'start' | 'end'>)
   })
 }
 
-// AUTH-FR-014 — kiểm 1 ca trước khi lưu lịch trực, cùng luật roster.util của backend
+// kiểm 1 ca trước khi lưu lịch trực, cùng luật roster.util của backend
 export function validateRosterShift(shift: RosterShift, others: RosterShift[]): RosterError | null {
   if (!shift.technician_id) return 'roster.errTechnician'
   if (shift.weekdays.length === 0) return 'roster.errDays'

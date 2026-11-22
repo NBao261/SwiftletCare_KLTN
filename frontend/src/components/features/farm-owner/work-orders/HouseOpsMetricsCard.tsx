@@ -14,7 +14,7 @@ interface HouseOpsMetricsCardProps {
   houseId: string;
 }
 
-// OPS-FR-009, BR-40 — MTTA, MTTR của nhà trong 30 ngày và số Work Order đang mở; Farm Owner và Domain Expert xem
+// MTTA, MTTR của nhà trong 30 ngày và số Work Order đang mở; Farm Owner và Domain Expert xem
 export default function HouseOpsMetricsCard({ farmId, houseId }: HouseOpsMetricsCardProps): JSX.Element {
   const { t, num } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();

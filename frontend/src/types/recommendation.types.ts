@@ -1,4 +1,4 @@
-// G-24 — luật khuyến nghị và khuyến nghị của nhà (EXPERT-FR-016…019, BR-42, Report 3 §6.21); api-spec RecommendationRule, Recommendation
+// luật khuyến nghị và khuyến nghị của nhà; api-spec RecommendationRule, Recommendation
 import type { FuzzyNumericKey, Thresholds } from '@/types/farm.types';
 
 // Chỉ số theo ngày của nhà mà luật xét
@@ -20,7 +20,7 @@ export interface RecommendationRuleInput {
   value: number;
   window_days: number;
   action: RecommendationAction;
-  // Luật lấy từ đâu (phỏng vấn, tài liệu) — bắt buộc, không tự viết luật
+  // Luật lấy từ đâu (phỏng vấn, tài liệu): bắt buộc, không tự viết luật
   source: string;
   active: boolean;
 }
@@ -29,13 +29,13 @@ export interface RecommendationRule extends RecommendationRuleInput {
   _id: string;
   farm_id: string;
   author_id: string;
-  // BR-22 — luật Farm Owner viết trên farm có chuyên gia: tắt, chờ chuyên gia bật
+  // luật Farm Owner viết trên farm có chuyên gia: tắt, chờ chuyên gia bật
   pending_approval?: boolean;
   created_at: string;
   updated_at: string;
 }
 
-// EXPERT-FR-019 — một dòng mỗi luật
+// một dòng mỗi luật
 export interface RecommendationRuleEffect {
   rule_id: string;
   name: string;

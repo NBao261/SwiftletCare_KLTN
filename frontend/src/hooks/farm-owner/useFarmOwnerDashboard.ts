@@ -99,7 +99,7 @@ export function useZonesEnvironment(zones: AllZone[]) {
   )
   const control = useMemo(() => summarizeNodes(withLiveRelays(sensors, live)), [sensors, live])
 
-  // Zone cần chú ý (thiết bị hư hoặc vượt ngưỡng của chính Zone) — chấm cảnh báo ở ô chọn Zone
+  // Zone cần chú ý (thiết bị hư hoặc vượt ngưỡng của chính Zone): chấm cảnh báo ở ô chọn Zone
   const issueZoneIds = useMemo(() => {
     const faultZoneIds = new Set(sensors.filter(sensor => isFaultDeviceStatus(sensor.status)).map(sensor => sensor.zone_id))
     const thresholdsByZone = new Map(zones.map(zone => [zone._id, zone.thresholds]))

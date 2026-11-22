@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-// Thuật ngữ FE_Design §6.2, §6.4: chữ hiển thị không dùng các biến thể dưới đây (bỏ file test và comment)
+// Thuật ngữ FE_Design,: chữ hiển thị không dùng các biến thể dưới đây (bỏ file test và comment)
 const sources = import.meta.glob(['/src/**/*.{ts,tsx}', '!/src/**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 
 const VIETNAMESE = /[À-ỹđĐ]/
@@ -64,7 +64,7 @@ describe('thuật ngữ giao diện tiếng Việt (FE_Design §6.2)', () => {
     expect(problems).toEqual([])
   })
 
-  // FE_Design §6.4 mục 4: không IN HOA chữ (trừ nhãn nhóm menu sidebar)
+  // FE_Design mục 4: không IN HOA chữ (trừ nhãn nhóm menu sidebar)
   it('không ép chữ in hoa bằng class uppercase', () => {
     const files = Object.entries(sources)
       .filter(([file, source]) => file.endsWith('.tsx') && !file.endsWith('/AppSidebar.tsx') && UPPERCASE_CLASS.test(withoutComments(source)))

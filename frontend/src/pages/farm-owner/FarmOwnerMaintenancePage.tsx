@@ -36,7 +36,7 @@ function EmptyFrame({ title, hint }: { title: string; hint: string }): JSX.Eleme
   );
 }
 
-// OPS-FR-005, 006 — Lịch bảo trì: kế hoạch đến hạn/quá hạn, danh sách kế hoạch; Farm Owner tạo, sửa, xoá; Domain Expert xem và góp ý
+// Lịch bảo trì: kế hoạch đến hạn/quá hạn, danh sách kế hoạch; Farm Owner tạo, sửa, xoá; Domain Expert xem và góp ý
 export default function FarmOwnerMaintenancePage(): JSX.Element {
   const { t } = useTranslation(maintenanceDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -141,7 +141,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
       </div>
 
       {tab === 'due' ? (
-        // Kế hoạch đến hạn và quá hạn (OPS-FR-006)
+        // Kế hoạch đến hạn và quá hạn
         <SectionCard className="flex-1" title={t('due.title')} description={t('due.short')} help={t('due.subtitle')}>
           {due.isLoading ? (
             <LoadingSkeleton count={3} className="h-14 w-full" />
@@ -165,7 +165,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
           )}
         </SectionCard>
       ) : (
-        // Danh sách kế hoạch (OPS-FR-005)
+        // Danh sách kế hoạch
         <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SelectMenu

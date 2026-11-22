@@ -200,7 +200,7 @@ describe('thresholdSource', () => {
   })
 })
 
-// A-03: thẻ nhà và ô "Nhà cần chú ý" cùng một luật
+// thẻ nhà và ô "Nhà cần chú ý" cùng một luật
 describe('houseLiveStatus', () => {
   it('bộ điều khiển chưa online thì nhà cần chú ý dù số đo trong ngưỡng', () => {
     expect(houseLiveStatus('NORMAL', ['ONLINE', 'PENDING'])).toBe('ALERT')

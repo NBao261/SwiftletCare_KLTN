@@ -2,21 +2,17 @@ import { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 interface RadialGaugeProps {
-  /** 0–100 */
+  // 0–100
   percent: number
   size?: number
   strokeWidth?: number
-  /** Màu vòng tiến độ — class `stroke-*` (ăn theo currentColor qua Tailwind) */
+  // Màu vòng tiến độ: class `stroke-*` (ăn theo currentColor qua Tailwind)
   className?: string
   trackClassName?: string
   children?: ReactNode
 }
 
-/**
- * Vòng tròn tiến độ (donut gauge) — thuần trình bày, không biết domain: nhận
- * `percent` + màu qua className, không tự suy ra ý nghĩa % từ đâu. Dùng cho
- * mọi màn cần biểu diễn 1 giá trị/ngưỡng dạng vòng tròn (FE_Design_Claude.md §8 "Gauge/Bullet").
- */
+// Vòng tròn tiến độ (donut gauge): thuần trình bày, không biết domain: nhận `percent` + màu qua className, không tự suy ra ý nghĩa % từ đâu. Dùng cho mọi màn cần biểu diễn 1 giá trị/ngưỡng dạng vòng tròn (FE_Design_Claude.md "Gauge/Bullet").
 export default function RadialGauge({
   percent, size = 88, strokeWidth = 8, className, trackClassName, children,
 }: RadialGaugeProps) {

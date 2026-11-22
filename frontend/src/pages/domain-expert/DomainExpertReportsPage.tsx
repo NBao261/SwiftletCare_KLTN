@@ -1,4 +1,4 @@
-// DomainExpertReportsPage — Báo cáo & Kết luận, Ngày đánh giá lệch & Mức chỉ số, Kết luận mùa vụ (EXPERT-FR-005/006, EXPERT-FR-020/022, BR-28)
+// DomainExpertReportsPage: Báo cáo & Kết luận, Ngày đánh giá lệch & Mức chỉ số, Kết luận mùa vụ
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Scale, Wheat } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
@@ -18,8 +18,7 @@ export default function DomainExpertReportsPage() {
   const { data: farmHouses = [] } = useHouses(selectedFarmId ?? undefined);
   const house = farmHouses.find(item => item._id === selectedHouseId);
   const [searchParams, setSearchParams] = useSearchParams();
-  // Ngày lệch (EXPERT-FR-022) là việc của chuyên gia, hoặc Farm Owner khi farm chưa có chuyên gia (BR-22):
-  // Farm Owner của farm có chuyên gia không có tab này (backend trả 403), thay vì thấy lỗi
+  // Ngày lệch là việc của chuyên gia, hoặc Farm Owner khi farm chưa có chuyên gia: Farm Owner của farm có chuyên gia không có tab này (backend trả 403), thay vì thấy lỗi
   const { canDecide: canReviewDisagreements } = useExpertDecisionRights();
 
   const rawTab = searchParams.get('tab');
@@ -40,7 +39,7 @@ export default function DomainExpertReportsPage() {
     );
   };
 
-  // Đếm số ngày lệch trong 14 ngày gần nhất của trang trại để hiển thị badge trên Tab (EXPERT-FR-022)
+  // Đếm số ngày lệch trong 14 ngày gần nhất của trang trại để hiển thị badge trên Tab
   const to = vietnamDate();
   const from = shiftDate(to, -13);
   const { totalDays: disagreeingDaysCount } = useHealthDisagreements({

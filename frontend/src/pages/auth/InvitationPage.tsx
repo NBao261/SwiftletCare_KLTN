@@ -1,5 +1,4 @@
-// Invitation Page (public) – AUTH-FR-010, Flow 12. Không có đăng ký công khai (Report 3 §1.2): người được mời chưa có
-// tài khoản đặt tên + mật khẩu ngay tại đây (POST /invitations/{token}/create-account), rồi đăng nhập với email đã điền sẵn
+// Invitation Page (public) –,. Không có đăng ký công khai: người được mời chưa có tài khoản đặt tên + mật khẩu ngay tại đây (POST /invitations/{token}/create-account), rồi đăng nhập với email đã điền sẵn
 import { useState, type FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
@@ -11,7 +10,7 @@ import { getApiErrorMessage } from '@/lib/helpers'
 import { INVITE_ROLE_LABEL } from '@/constants/roles'
 import { getRoleHomePath } from '@/constants/roles'
 
-/** Khớp spec create-account: full_name ≥ 1 ký tự, password ≥ 8 */
+// Khớp spec create-account: full_name ≥ 1 ký tự, password ≥ 8
 const PASSWORD_MIN = 8
 
 export default function InvitationPage() {
@@ -50,10 +49,7 @@ export default function InvitationPage() {
   function handleAccept() {
     if (!token) return
     accept.mutate(token, {
-      // Chấp nhận lời mời không đổi role của tài khoản hiện có (chỉ thêm vào
-      // farm.members — xem farm.service.ts), nên user.role trong store vẫn
-      // đúng ngay lúc này — về đúng trang nhà của role đó thay vì hardcode
-      // '/dashboard' (chuyên gia sẽ bị văng /403).
+      // Chấp nhận lời mời không đổi role của tài khoản hiện có (chỉ thêm vào farm.members: xem farm.service.ts), nên user.role trong store vẫn đúng ngay lúc này, về đúng trang nhà của role đó thay vì hardcode '/dashboard' (chuyên gia sẽ bị văng /403).
       onSuccess: () => { push('Đã chấp nhận lời mời'); navigate(getRoleHomePath(user?.role)) },
       onError: (err) => push(getApiErrorMessage(err, 'Chấp nhận thất bại'), 'error'),
     })
@@ -72,7 +68,7 @@ export default function InvitationPage() {
         push('Đã tạo tài khoản, hãy đăng nhập')
         navigate(`/login?email=${encodeURIComponent(invitation.invited_email)}`)
       },
-      // 409 lời mời đã dùng/hết hạn hoặc email đã có tài khoản, 404 farm đã xoá — backend trả message tiếng Việt
+      // 409 lời mời đã dùng/hết hạn hoặc email đã có tài khoản, 404 farm đã xoá: backend trả message tiếng Việt
       onError: (err) => push(getApiErrorMessage(err, 'Tạo tài khoản thất bại'), 'error'),
     })
   }

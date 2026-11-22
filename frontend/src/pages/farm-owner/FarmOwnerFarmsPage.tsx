@@ -34,9 +34,9 @@ import { useToastStore } from '@/stores/toastStore'
 import type { Farm } from '@/types'
 import type { HouseHealth, HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 
-/** Khung kết quả cao CỨNG (px) = bảng 10 dòng × 68px + header — lưới/danh sách/trống đều chiếm đúng chừng này, tải lại hay đổi chế độ trang không đổi chiều cao */
+// Khung kết quả cao CỨNG (px) = bảng 10 dòng × 68px + header: lưới/danh sách/trống đều chiếm đúng chừng này, tải lại hay đổi chế độ trang không đổi chiều cao
 const RESULTS_MIN_HEIGHT = 740
-/** Lưới 2 cột × 2 hàng card trong mỗi trang trại; nhiều hơn thì phân trang thay vì kéo dài khung */
+// Lưới 2 cột × 2 hàng card trong mỗi trang trại; nhiều hơn thì phân trang thay vì kéo dài khung
 const GRID_PAGE_SIZE = 4
 
 type Filter = 'all' | HouseHealth
@@ -79,7 +79,7 @@ export default function FarmOwnerFarmsPage() {
   const push = useToastStore(state => state.push)
   const apiErrorMessage = useApiErrorMessage()
 
-  // Backend: POST /farms và POST /farms/:id/houses chỉ cho FARM_OWNER (FARM-FR-001, 002)
+  // Backend: POST /farms và POST /farms/:id/houses chỉ cho FARM_OWNER
   const canCreateFarm = usePermission('FARM_OWNER')
   const canAddHouse = canCreateFarm
 
@@ -93,7 +93,7 @@ export default function FarmOwnerFarmsPage() {
   const [showCreateFarm, setShowCreateFarm] = useState(false)
   const [editFarm, setEditFarm] = useState<Farm | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Farm | null>(null)
-  // EXPERT-FR-015 — farm đang mở popup áp hồ sơ cấu hình
+  // farm đang mở popup áp hồ sơ cấu hình
   const [applyProfileFarm, setApplyProfileFarm] = useState<Farm | null>(null)
   // Farm người dùng bấm xổ khi đang xem tất cả trang trại (mặc định thu hết)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
@@ -143,7 +143,7 @@ export default function FarmOwnerFarmsPage() {
       }
       visible.push(node)
     }
-    // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm) — chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
+    // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm): chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
     const pinnedFirst = [...visible.filter(node => pinned.has(node.house._id)), ...visible.filter(node => !pinned.has(node.house._id))]
     return { visible: pinnedFirst, counts }
   }, [scopedHouses, search, filter, staffByHouse, pinned])

@@ -21,6 +21,6 @@ export const NEST_TYPE_FILL_CLASS: Record<NestType, string> = {
   PREMIUM: 'bg-accent-900',
 };
 
-// Nút "Chi tiết" trong bảng — hover dùng viền chìm thay vì đổi nền màu (dùng chung với bảng Dashboard, Thiết bị)
+// Nút "Chi tiết" trong bảng: hover dùng viền chìm thay vì đổi nền màu (dùng chung với bảng Dashboard, Thiết bị)
 export const DETAIL_BUTTON_CLASS =
   'rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-charcoal transition-all duration-200 ease-in-out hover:bg-gray-50 hover:ring-1 hover:ring-inset hover:ring-charcoal';

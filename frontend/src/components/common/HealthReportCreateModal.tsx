@@ -14,11 +14,11 @@ interface HealthReportCreateModalProps {
   open: boolean;
   onClose: () => void;
   house: { id: string; name: string };
-  // Backend trả báo cáo đầy đủ — màn mở chi tiết luôn
+  // Backend trả báo cáo đầy đủ: màn mở chi tiết luôn
   onCreated: (report: HouseHealthReport) => void;
 }
 
-// EXPERT-FR-005 — báo cáo theo yêu cầu cho 1 nhà, khoảng tới 31 ngày (mặc định 7 ngày tới hôm nay)
+// báo cáo theo yêu cầu cho 1 nhà, khoảng tới 31 ngày (mặc định 7 ngày tới hôm nay)
 export default function HealthReportCreateModal({ open, onClose, house, onCreated }: HealthReportCreateModalProps): JSX.Element {
   const { t } = useTranslation(healthDict);
   const create = useCreateHouseHealthReport();

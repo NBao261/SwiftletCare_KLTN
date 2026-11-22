@@ -5,7 +5,6 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
-// SRS: UX-NFR-002, UX-NFR-003, UX-NFR-007
 export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
@@ -30,7 +29,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache shell pages for offline (UX-NFR-003)
+        // Cache shell pages for offline
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.swiftletcare\.vn\/.*$/,

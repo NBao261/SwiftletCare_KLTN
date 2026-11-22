@@ -1,4 +1,4 @@
-// ENV-FR-030, BR-38 — Form thêm luật bù thời tiết: metric, min, offset_pct (−10…+10 ≠ 0), duration_min (1…120)
+// Form thêm luật bù thời tiết: metric, min, offset_pct (−10…+10 ≠ 0), duration_min (1…120)
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'

@@ -5,7 +5,7 @@ import type { User } from '@/types'
 
 export interface QueuePageQuery { page?: number; limit?: number }
 
-/** AUTH-FR-012, Flow 19 — GET /admin/delete-requests: user có deletion_requested_at, cũ nhất trước (hạn 30 ngày), phân trang server. */
+// GET /admin/delete-requests: user có deletion_requested_at, cũ nhất trước (hạn 30 ngày), phân trang server.
 export function useDeleteRequestsList(query: QueuePageQuery = {}) {
   return usePaginatedListQuery<User>(
     ['admin-delete-requests', query],
@@ -15,7 +15,7 @@ export function useDeleteRequestsList(query: QueuePageQuery = {}) {
   )
 }
 
-/** Badge "Người dùng" (AD-09): số yêu cầu xoá đang chờ; khoá theo tiền tố 'admin-delete-requests' nên tự giảm khi xử lý xong */
+// Badge "Người dùng": số yêu cầu xoá đang chờ; khoá theo tiền tố 'admin-delete-requests' nên tự giảm khi xử lý xong
 export function usePendingDeletionCount(enabled: boolean): number {
   const { data } = useQuery({
     queryKey: ['admin-delete-requests', 'count'],
@@ -28,10 +28,7 @@ export function usePendingDeletionCount(enabled: boolean): number {
   return data?.data.meta?.total ?? 0
 }
 
-/**
- * PUT /admin/delete-requests/:id/complete — backend tự cascade (chuyển owner /
- * soft-delete farm / ẩn danh PII).
- */
+// PUT /admin/delete-requests/:id/complete: backend tự cascade (chuyển owner / soft-delete farm / ẩn danh PII).
 export function useCompleteDeleteRequest() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -43,7 +40,7 @@ export function useCompleteDeleteRequest() {
   })
 }
 
-/** PUT /admin/delete-requests/:id/reject — AUTH-FR-012: tài khoản về ACTIVE, lý do bắt buộc. */
+// PUT /admin/delete-requests/:id/reject: tài khoản về ACTIVE, lý do bắt buộc.
 export function useRejectDeleteRequest() {
   const queryClient = useQueryClient()
   return useMutation({

@@ -13,13 +13,13 @@ interface AddHouseModalProps {
   open: boolean
   onClose: () => void
   farms: Farm[]
-  // Nhà đã có của mọi trang trại — không cho tạo nhà trùng tên trong cùng trang trại
+  // Nhà đã có của mọi trang trại: không cho tạo nhà trùng tên trong cùng trang trại
   existingHouses?: Pick<House, 'farm_id' | 'name'>[]
   // Farm chọn sẵn khi mở từ hàng trang trại
   initialFarmId?: string
 }
 
-/** Thêm nhà yến (POST /farms/:id/houses) — chọn farm ngay trong form vì màn tổng quan gộp nhà của mọi farm */
+// Thêm nhà yến (POST /farms/:id/houses): chọn farm ngay trong form vì màn tổng quan gộp nhà của mọi farm
 export default function AddHouseModal({ open, onClose, farms, existingHouses = [], initialFarmId = '' }: AddHouseModalProps) {
   const { t } = useTranslation(farmDict)
   const push = useToastStore(state => state.push)

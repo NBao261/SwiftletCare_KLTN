@@ -13,11 +13,7 @@ import ThresholdsEditModal from '@/components/features/admin/system/ThresholdsEd
 
 const ICON = 'bg-warmGray/10 text-charcoal'
 
-/**
- * Ngưỡng môi trường mặc định (SYSTEM-FR-002) — nguồn cho "Reset về mặc định" (ENV-FR-020) và ngưỡng khởi tạo Zone mới.
- * Cùng kiểu card "Chỉ số vận hành toàn hệ thống": card trắng + 5 ô KpiTile (icon xám). Chỉ ĐỌC — "Chỉnh sửa" mở
- * ThresholdsEditModal.
- */
+// Ngưỡng môi trường mặc định: nguồn cho "Reset về mặc định" và ngưỡng khởi tạo Zone mới. Cùng kiểu card "Chỉ số vận hành toàn hệ thống": card trắng + 5 ô KpiTile (icon xám). Chỉ ĐỌC, "Chỉnh sửa" mở ThresholdsEditModal.
 export default function ThresholdsCard() {
   const { data, isLoading, error } = useDefaultThresholds()
   const [isEditing, setIsEditing] = useState(false)

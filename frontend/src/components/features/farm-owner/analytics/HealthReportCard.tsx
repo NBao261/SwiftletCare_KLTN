@@ -28,7 +28,7 @@ interface HealthReportCardProps {
   zoneId: string;
 }
 
-// Báo cáo tuần mới nhất của nhà (BR-33): mục của Zone đang xem và kết luận của chuyên gia (EXPERT-FR-005/006) — chỉ đọc
+// Báo cáo tuần mới nhất của nhà: mục của Zone đang xem và kết luận của chuyên gia: chỉ đọc
 export default function HealthReportCard({ houseId, zoneId }: HealthReportCardProps): JSX.Element {
   const { t, num, date, dateTime } = useTranslation(analyticsDict);
   const { t: translateAlertType } = useTranslation(alertTypeDict);

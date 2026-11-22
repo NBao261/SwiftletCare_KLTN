@@ -14,12 +14,12 @@ import { useHouseComparison } from '@/hooks/farm-owner/useFarmOverview';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import type { ComparisonSortKey } from '@/types';
 
-// Khoảng so sánh; mặc định 30 ngày như backend (Report 3 §4.5) đứng đầu: SelectMenu coi lựa chọn đầu là mặc định
+// Khoảng so sánh; mặc định 30 ngày như backend đứng đầu: SelectMenu coi lựa chọn đầu là mặc định
 const PERIOD_DAYS = [30, 7, 90] as const;
 type PeriodDays = (typeof PERIOD_DAYS)[number];
 const DEFAULT_PERIOD: PeriodDays = 30;
 const DAY_MS = 86_400_000;
-// Thứ tự trong ô "Sắp theo": tên nhà rồi 9 chỉ số BR-44 theo thứ tự nhóm cột
+// Thứ tự trong ô "Sắp theo": tên nhà rồi 9 chỉ số theo thứ tự nhóm cột
 const SORT_KEYS: ComparisonSortKey[] = [
   'name', 'time_in_range_pct', 'good_days_pct', 'return_rate_avg', 'flock_trend_pct',
   'alerts_raised', 'alerts_open', 'mttr_min', 'energy_kwh', 'last_cycle_yield_g',
@@ -34,7 +34,7 @@ function EmptyFrame({ title, hint }: { title: string; hint: string }): JSX.Eleme
   );
 }
 
-// ANALYTICS-FR-016 — tab So sánh nhà của Tổng quan (FO-11); tình hình hôm nay từng nhà (FR-015) ở thẻ nhà của tab Tình trạng các nhà
+// tab So sánh nhà của Tổng quan (FO-11); tình hình hôm nay từng nhà (FR-015) ở thẻ nhà của tab Tình trạng các nhà
 export default function FarmOwnerOverviewPage(): JSX.Element {
   const { t, date } = useTranslation(farmOverviewDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -102,7 +102,7 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
     );
   }
 
-  // Số lựa chọn khác mặc định (30 ngày, tên nhà, tăng dần) — hiện trên nút Hủy lọc
+  // Số lựa chọn khác mặc định (30 ngày, tên nhà, tăng dần): hiện trên nút Hủy lọc
   const changedCount = Number(periodDays !== DEFAULT_PERIOD) + Number(sort !== 'name') + Number(order !== 'asc');
   const resetComparison = () => {
     setPeriodDays(DEFAULT_PERIOD);
@@ -110,7 +110,7 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
     setOrder('asc');
   };
 
-  // Hàng điều khiển của tab So sánh: Hủy lọc bên trái, khoảng, chỉ số sắp, chiều sắp — cùng cao h-9 (FE_Design 1.1, Lọc + tìm)
+  // Hàng điều khiển của tab So sánh: Hủy lọc bên trái, khoảng, chỉ số sắp, chiều sắp: cùng cao h-9 (FE_Design 1.1, Lọc + tìm)
   const comparisonToolbar = (
     <div className="flex flex-wrap items-center gap-2">
       {changedCount > 0 && <ClearFiltersButton tone="danger" count={changedCount} className="h-9" onClick={resetComparison} />}
@@ -142,7 +142,7 @@ export default function FarmOwnerOverviewPage(): JSX.Element {
     </div>
   );
 
-  // Thân trang: chưa có trang trại nào được chọn (đang tự chọn, C-05) thì nhắc chọn; 1 card nên không lặp tên trang
+  // Thân trang: chưa có trang trại nào được chọn (đang tự chọn) thì nhắc chọn; 1 card nên không lặp tên trang
   let content = <EmptyState title={t('page.pickFarmTitle')} description={t('page.pickFarmHint')} />;
   if (farmId) {
     content = (

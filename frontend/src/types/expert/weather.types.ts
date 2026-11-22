@@ -1,4 +1,4 @@
-/** ENV-FR-030, BR-38 — Luật bù phun sương theo thời tiết */
+// Luật bù phun sương theo thời tiết
 export type WeatherMetric = 'temperature' | 'humidity' | 'rain'
 
 export interface WeatherRule {
@@ -10,7 +10,7 @@ export interface WeatherRule {
   active: boolean
 }
 
-// BR-22, BR-38 — bộ luật Farm Owner gửi trên farm có chuyên gia, chỉ chạy khi chuyên gia duyệt
+// bộ luật Farm Owner gửi trên farm có chuyên gia, chỉ chạy khi chuyên gia duyệt
 export interface WeatherRulesProposal {
   rules: WeatherRule[]
   proposed_by: string

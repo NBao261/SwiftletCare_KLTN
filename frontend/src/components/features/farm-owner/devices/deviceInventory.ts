@@ -8,7 +8,7 @@ export interface DeviceItem {
   type: 'sensor' | 'camera';
   status: DeviceStatus;
   houseId: string;
-  // Chỉ node cảm biến; camera thuộc cả nhà yến (SRS v2.1.8)
+  // Chỉ node cảm biến; camera thuộc cả nhà yến
   zoneId?: string;
   rssi?: number;
   // Firmware của node cảm biến, phiên bản mô hình AI của camera
@@ -18,7 +18,7 @@ export interface DeviceItem {
   bootedAt?: string;
   freeHeap?: number;
   ip?: string;
-  // SYSTEM-FR-004 — thiết bị của bộ giả lập
+  // thiết bị của bộ giả lập
   simulated?: boolean;
 }
 

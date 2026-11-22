@@ -1,4 +1,4 @@
-// ProposalRejectModal.tsx — Modal từ chối đề xuất hệ số mờ kèm lý do (EXPERT-FR-011)
+// ProposalRejectModal.tsx: Modal từ chối đề xuất hệ số mờ kèm lý do
 
 import NoteActionModal from '@/components/ui/NoteActionModal';
 import { t } from '@/i18n';

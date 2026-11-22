@@ -1,8 +1,6 @@
-// Bản dịch tiếng Anh — khoá là câu tiếng Việt y hệt chỗ gọi t(...) / chuỗi truyền vào component dùng chung (tr).
-// Thiếu dòng nào thì màn hình hiện tiếng Việt. Biến giữ nguyên {{tên}}. Đơn vị đo (°C, %, ppm, lux, dB) không dịch (FE_Design §6).
-// Hiện phủ các trang Admin + khung chung (sidebar, header, bảng, popup). Thêm trang khác: thêm dòng vào đây.
+// Bản dịch tiếng Anh: khoá là câu tiếng Việt y hệt chỗ gọi t(...) / chuỗi truyền vào component dùng chung (tr). Thiếu dòng nào thì màn hình hiện tiếng Việt. Biến giữ nguyên {{tên}}. Đơn vị đo (°C, %, ppm, lux, dB) không dịch (FE_Design). Hiện phủ các trang Admin + khung chung (sidebar, header, bảng, popup). Thêm trang khác: thêm dòng vào đây.
 const en: Record<string, string> = {
-  // ── Khung chung: sidebar, header, điều hướng ─────────────────────────────────────────────────────────────────────
+  // Khung chung: sidebar, header, điều hướng
   'Xin chào,': 'Hello,',
   'Vai trò': 'Role',
   'Đăng xuất': 'Log out',
@@ -31,7 +29,7 @@ const en: Record<string, string> = {
   'Chưa có thông báo nào': 'No notifications yet',
   'Xem tất cả thông báo lớn →': 'View all major notifications →',
 
-  // ── Thành phần dùng chung: bảng, phân trang, popup, ô nhập ───────────────────────────────────────────────────────
+  // Thành phần dùng chung: bảng, phân trang, popup, ô nhập
   'Hiển thị {{from}}–{{to}} trong {{total}}': 'Showing {{from}}–{{to}} of {{total}}',
   'Phân trang': 'Pagination',
   'Trang đầu': 'First page',
@@ -76,7 +74,7 @@ const en: Record<string, string> = {
   'Không có': 'None',
   'Không xác định': 'Unknown',
 
-  // ── Thời gian ────────────────────────────────────────────────────────────────────────────────────────────────────
+  // Thời gian
   'Hôm nay': 'Today',
   'Hôm qua': 'Yesterday',
   '3 ngày trước': 'Last 3 days',
@@ -98,7 +96,7 @@ const en: Record<string, string> = {
   'Ngày tạo': 'Created',
   'Từ {{date}}': 'Since {{date}}',
 
-  // ── Vai trò, trạng thái, nhãn dùng chung ─────────────────────────────────────────────────────────────────────────
+  // Vai trò, trạng thái, nhãn dùng chung
   'Quản trị viên': 'Administrator',
   'Chủ nhà yến': 'Farm Owner',
   'Kỹ thuật viên': 'Technician',
@@ -127,7 +125,7 @@ const en: Record<string, string> = {
   'Camera đếm chim gặp sự cố': 'Bird-count camera fault',
   'Lỗi loa ru': 'Speaker failure',
 
-  // ── Nhật ký: hành động, đối tượng, lý do ─────────────────────────────────────────────────────────────────────────
+  // Nhật ký: hành động, đối tượng, lý do
   'Khoá tài khoản': 'Lock account',
   'Mở khoá tài khoản': 'Unlock account',
   'Hoàn tất xoá tài khoản': 'Account deletion completed',
@@ -157,7 +155,7 @@ const en: Record<string, string> = {
   'Email chưa đăng ký': 'Email not registered',
   'Tài khoản đang bị khoá': 'Account is locked',
 
-  // ── Tổng quan hệ thống ───────────────────────────────────────────────────────────────────────────────────────────
+  // Tổng quan hệ thống
   'Chỉ số vận hành toàn hệ thống': 'System-wide operating metrics',
   'Trang trại hoạt động': 'Active farms',
   'Gồm {{n}} Zone': '{{n}} zones in total',
@@ -198,7 +196,7 @@ const en: Record<string, string> = {
   'Nhật ký hoạt động gần đây': 'Recent activity',
   'Đăng nhập và thay đổi tài khoản mới nhất': 'Latest logins and account changes',
 
-  // ── Trang trại ───────────────────────────────────────────────────────────────────────────────────────────────────
+  // Trang trại
   'Danh sách trang trại': 'Farm list',
   'Địa chỉ': 'Address',
   'Zone': 'Zone',
@@ -236,7 +234,7 @@ const en: Record<string, string> = {
   'Sản lượng tháng': 'Monthly yield',
   'Chi tiết nhà': 'House details',
 
-  // ── Thiết bị ─────────────────────────────────────────────────────────────────────────────────────────────────────
+  // Thiết bị
   'Tổng thiết bị': 'Total devices',
   '{{sensors}} bộ điều khiển · {{cameras}} camera đếm chim': '{{sensors}} controllers · {{cameras}} bird-count cameras',
   'Chưa có thiết bị online': 'No devices online',
@@ -283,7 +281,7 @@ const en: Record<string, string> = {
   'Chưa có thiết bị nào. Thiết bị xuất hiện ở đây khi chủ nhà yến đăng ký từ nhãn QR.': 'No devices yet — devices appear here once a Farm Owner registers them from their QR label.',
   'Không tải được trạng thái thiết bị': 'Could not load device status',
 
-  // ── Màn khác ─────────────────────────────────────────────────────────────────────────────────────────────────────
+  // Màn khác
   'Dưới mục tiêu 80%': 'Below the 80% target',
   'Đạt mục tiêu 80%': 'Meets the 80% target',
   'Chế độ xem': 'View',
@@ -308,7 +306,7 @@ const en: Record<string, string> = {
   'Lý do': 'Reason',
   'Chưa nhập lý do': 'No reason entered',
 
-  // ── Người dùng ───────────────────────────────────────────────────────────────────────────────────────────────────
+  // Người dùng
   'Tổng tài khoản': 'Total accounts',
   'Chưa có tài khoản nào': 'No accounts yet',
   '{{active}} hoạt động · {{locked}} đã khoá': '{{active}} active · {{locked}} locked',
@@ -368,7 +366,7 @@ const en: Record<string, string> = {
   'Đã mở khoá tài khoản': 'Account unlocked',
   'Mở khoá thất bại': 'Failed to unlock',
 
-  // ── Yêu cầu xoá tài khoản ────────────────────────────────────────────────────────────────────────────────────────────
+  // Yêu cầu xoá tài khoản
   'Người dùng xin xoá tài khoản, xử lý trong 30 ngày': 'Users asking to delete their account — handle within 30 days',
   'Không có yêu cầu xoá tài khoản nào': 'No account deletion requests',
   'Yêu cầu xoá tài khoản (quyền được xoá dữ liệu theo Nghị định 13/2023/NĐ-CP) hiện ở đây.': 'Account deletion requests (right to erasure — Decree 13/2023/ND-CP) will appear here.',
@@ -400,7 +398,7 @@ const en: Record<string, string> = {
   'Đã từ chối đề xuất': 'Proposal rejected',
   'Từ chối thất bại': 'Rejection failed',
 
-  // ── Nhật ký hệ thống ─────────────────────────────────────────────────────────────────────────────────────────────
+  // Nhật ký hệ thống
   'Tổng nhật ký': 'Total log entries',
   'Hôm nay thêm {{n}} bản ghi': '{{n}} added today',
   'Nhật ký 7 ngày qua': 'Last 7 days',
@@ -424,7 +422,7 @@ const en: Record<string, string> = {
   'Thử từ khoá khác, đổi khoảng thời gian hoặc bỏ bớt bộ lọc.': 'Try another keyword, time range, or fewer filters.',
   'Đăng nhập, khoá/mở khoá, tạo hay xoá tài khoản... sẽ được ghi lại ở đây.': 'Logins, locks/unlocks, account creation or deletion... will be recorded here.',
 
-  // ── Cài đặt (mọi vai trò) ────────────────────────────────────────────────────────────────────────────────────────
+  // Cài đặt (mọi vai trò)
   'Giờ im lặng': 'Quiet hours',
   'Kênh cảnh báo': 'Alert channels',
   'Kênh ngoài ứng dụng theo từng mức. Cảnh báo luôn hiện trong ứng dụng.': 'Channels outside the app for each level. Alerts always show in the app.',
@@ -489,7 +487,7 @@ const en: Record<string, string> = {
   'Đã gửi yêu cầu xoá tài khoản': 'Account deletion request sent',
   'Gửi yêu cầu thất bại': 'Failed to send the request',
 
-  // ── Cấu hình mặc định ────────────────────────────────────────────────────────────────────────────────────────────
+  // Cấu hình mặc định
   'Mặc định gốc': 'Factory default',
   'Đã tuỳ chỉnh': 'Customised',
   'Khác với mặc định kỹ thuật gốc': 'Differs from the factory default',
@@ -541,12 +539,12 @@ const en: Record<string, string> = {
   'Lưu ngưỡng mặc định thất bại': 'Failed to save default thresholds',
   'Đã khôi phục về mặc định gốc': 'Restored to factory default',
   'Khôi phục mặc định gốc thất bại': 'Failed to restore factory default',
-  // Chi tiết cảnh báo (G-05: ALERT-FR-012, BR-34; THREAT-FR-012)
+  // Chi tiết cảnh báo (:)
   '{{metric}} {{value}} · vượt ngưỡng trên {{limit}}': '{{metric}} {{value}} · above the {{limit}} limit',
   '{{metric}} {{value}} · dưới ngưỡng {{limit}}': '{{metric}} {{value}} · below the {{limit}} limit',
   'liên tục từ {{time}}': 'continuously since {{time}}',
   'Lý do khởi động lại: {{reason}}': 'Restart reason: {{reason}}',
-  // ── Kho thiết bị (FARM-FR-010) ───────────────────────────────────────────────────────────────────────────────────
+  // Kho thiết bị
   'Kho thiết bị': 'Device stock',
   'Thiết bị đã nhập và nhãn QR': 'Devices in stock and their QR labels',
   'In nhãn QR ngay khi thêm: mã kích hoạt và mật khẩu kết nối chỉ hiện một lần.': 'Print the QR label as soon as you add a device: the activation key and the connection password show only once.',
@@ -606,7 +604,7 @@ const en: Record<string, string> = {
   'Thu hồi {{id}}': 'Revoke {{id}}',
   'VD: mất nhãn trước khi lắp, hàng lỗi': 'E.g. label lost before installation, faulty unit',
   'Thiết bị đã thu hồi không kích hoạt và không kết nối được nữa. Không hoàn tác được.': 'A revoked device can no longer be registered or connect to the broker. This cannot be undone.',
-  // ── Domain Expert: thanh trạng thái, trang Báo cáo & Kết luận ──
+  // Domain Expert: thanh trạng thái, trang Báo cáo & Kết luận
   'Giám sát vận hành': 'Operations monitoring',
   'Tỷ lệ thời gian vi khí hậu chạy tự động trong 24 giờ qua': 'Share of the last 24 hours the micro-climate ran automatically',
   'Tự động': 'Automatic',

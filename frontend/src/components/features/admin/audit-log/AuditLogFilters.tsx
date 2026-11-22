@@ -11,14 +11,10 @@ const DATE_OPTIONS: SelectMenuOption<string>[] = [
   ...DATE_PRESETS.map(({ value, label }) => ({ value, label })),
 ]
 
-/**
- * Hàng bộ lọc (người thực hiện / hành động / thời gian) + sắp xếp theo thời gian + xoá bộ lọc của bảng nhật ký —
- * ở trang Nhật ký hệ thống.
- */
+// Hàng bộ lọc (người thực hiện / hành động / thời gian) + sắp xếp theo thời gian + xoá bộ lọc của bảng nhật ký: ở trang Nhật ký hệ thống.
 export default function AuditLogFilters({ table }: { table: AuditLogTableState }) {
   const actors = useUsersPicker()
-  // Dựng mỗi lần render (không phải hằng cấp module): AUDIT_ACTION_LABEL dịch lúc ĐỌC, dựng 1 lần lúc nạp module thì
-  // nhãn bị đóng băng theo ngôn ngữ lúc import — đổi VI/EN không đổi theo
+  // Dựng mỗi lần render (không phải hằng cấp module): AUDIT_ACTION_LABEL dịch lúc ĐỌC, dựng 1 lần lúc nạp module thì nhãn bị đóng băng theo ngôn ngữ lúc import: đổi VI/EN không đổi theo
   const actionOptions: SelectMenuOption<string>[] = [
     { value: ALL, label: 'Tất cả hành động' },
     ...USER_AUDIT_ACTIONS.map(value => ({ value, label: AUDIT_ACTION_LABEL[value] ?? value })),
@@ -35,7 +31,7 @@ export default function AuditLogFilters({ table }: { table: AuditLogTableState }
         <SelectMenu ariaLabel="Lọc theo hành động" value={table.action} options={actionOptions} onChange={table.setAction} className="max-w-[16rem]" />
         <span className="label-caption">{t('Thời gian:')}</span>
         <SelectMenu ariaLabel="Lọc theo khoảng thời gian" value={table.datePreset} options={DATE_OPTIONS} onChange={table.setDatePreset} className="max-w-[16rem]" />
-        {/* 1 trường duy nhất, luôn đang chọn — bấm chỉ đảo chiều mới nhất/cũ nhất */}
+        {/* 1 trường duy nhất, luôn đang chọn: bấm chỉ đảo chiều mới nhất/cũ nhất */}
         <SortChips fields={[{ key: 'time', label: 'Thời gian' }]} sortBy="time" sortDir={table.sortDir} onChange={table.toggleSort} />
         {table.hasFilter && <ClearFiltersButton onClick={table.clearFilters} />}
       </div>

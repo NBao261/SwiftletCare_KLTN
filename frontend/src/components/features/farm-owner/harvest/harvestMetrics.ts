@@ -150,7 +150,7 @@ export function harvestTotalsByPeriod(batches: HarvestBatch[], period: HarvestPe
   return { buckets, kilograms, nests, batches: groupKeysByBucket.map(keys => keys.size), kilogramsByType, nestsByType };
 }
 
-// Các năm có đợt thu (luôn gồm năm hiện tại), mới nhất trước — dùng cho ô chọn năm
+// Các năm có đợt thu (luôn gồm năm hiện tại), mới nhất trước: dùng cho ô chọn năm
 export function harvestYears(batches: HarvestBatch[], currentYear: number): number[] {
   const years = new Set<number>([currentYear]);
   for (const batch of batches) years.add(vnYearMonth(batch.harvest_date).year);
@@ -209,7 +209,7 @@ export function environmentSummary(snapshot: EnvSnapshot | undefined): { tempera
   return { temperature: snapshot.avg_temperature, humidity: snapshot.avg_humidity };
 }
 
-// 1 lần thu: các đợt (mỗi loại yến 1 đợt) cùng zone + cùng ngày thu — backend lưu mỗi loại 1 đợt, không có mã nhóm
+// 1 lần thu: các đợt (mỗi loại yến 1 đợt) cùng zone + cùng ngày thu: backend lưu mỗi loại 1 đợt, không có mã nhóm
 export interface HarvestGroup {
   key: string;
   zone_id: string;
@@ -221,7 +221,7 @@ export interface HarvestGroup {
   weight_grams: number;
   env_snapshot?: EnvSnapshot;
   product_images: string[];
-  // HARVEST-FR-006 — id các lô DRAFT (Farm Technician nhập, chờ Farm Owner xác nhận); rỗng = đã xác nhận hết
+  // id các lô DRAFT (Farm Technician nhập, chờ Farm Owner xác nhận); rỗng = đã xác nhận hết
   pendingIds: string[];
 }
 

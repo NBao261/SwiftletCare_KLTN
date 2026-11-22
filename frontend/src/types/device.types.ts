@@ -1,57 +1,55 @@
-// Module DEVICE (§5.3) — Sensor/Camera Node, relay, chế độ điều khiển.
+// Module DEVICE: Sensor/Camera Node, relay, chế độ điều khiển.
 
-// PENDING: Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi
-// heartbeat đầu tiên (SRS §8.2, Flow 1). ERROR/DEGRADED đã bỏ theo SRS 3.1.0.
+// PENDING: Technician đã khai báo qua Web Console nhưng thiết bị chưa gửi heartbeat đầu tiên. ERROR/DEGRADED đã bỏ theo.
 export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
 
 export type ControlMode = 'AUTO' | 'MANUAL'
 
-// Guide v3.3 §8-9: relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation; IN4=heating đã bỏ (ENV-FR-012)
+// relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation; IN4=heating đã bỏ
 export interface RelayStates { misting: boolean; speaker: boolean; ventilation: boolean }
 export type RelayName = keyof RelayStates
 
-// ENV-FR-010/011: % công suất 0-100 do bộ điều khiển mờ trên ESP32 tính (tỉ lệ
-// thời gian BẬT relay trong cửa sổ 2 phút). Chỉ có qua socket telemetry, firmware < 1.1.0 không gửi.
+// % công suất 0-100 do bộ điều khiển mờ trên ESP32 tính (tỉ lệ thời gian BẬT relay trong cửa sổ 2 phút). Chỉ có qua socket telemetry, firmware < 1.1.0 không gửi.
 export interface ControlOutput { misting: number; ventilation: number }
 
 export interface SensorNode {
   _id: string; device_id: string; zone_id: string
   firmware_version: string; last_heartbeat?: string
   status: DeviceStatus; rssi?: number; control_mode: ControlMode
-  /** ENV-FR-027, Report 3 §6.12 — controller đã áp cấu hình hiện hành của Zone chưa; UNKNOWN = firmware trước 2.1.0 không báo */
+  // controller đã áp cấu hình hiện hành của Zone chưa; UNKNOWN = firmware trước 2.1.0 không báo
   config_sync?: 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
-  /** FARM-FR-006 — chẩn đoán từ heartbeat; reset_reason, ip chỉ có từ firmware 1.4.0 */
+  // chẩn đoán từ heartbeat; reset_reason, ip chỉ có từ firmware 1.4.0
   booted_at?: string; free_heap?: number; reset_reason?: string; ip?: string
   relay_states: RelayStates
   override_expiry?: string
   speaker_schedule: { enabled: boolean; windows: Array<{ start: string; end: string }> }
   audio: { current_track: number; volume: number; playing: boolean; loop: boolean }
   registered_at: string
-  /** SYSTEM-FR-004 — thiết bị của bộ giả lập, chép từ kho lúc đăng ký */
+  // thiết bị của bộ giả lập, chép từ kho lúc đăng ký
   simulated?: boolean
-  /** FARM-FR-013 — lệnh OTA đã gửi, chờ heartbeat báo đúng firmware_version mới */
+  // lệnh OTA đã gửi, chờ heartbeat báo đúng firmware_version mới
   ota_pending?: { version: string; url: string; requested_at: string; requested_by?: string }
-  /** OTA quá hạn xác nhận — thiết bị vẫn chạy `running_version` (đã rollback) */
+  // OTA quá hạn xác nhận: thiết bị vẫn chạy `running_version` (đã rollback)
   ota_failed?: { version: string; failed_at: string; running_version?: string }
   config_pushed_at?: string
-  /** ALERT-FR-016 — giờ chạy + số lần đóng cắt thật của bơm/quạt (tính từ telemetry) */
+  // giờ chạy + số lần đóng cắt thật của bơm/quạt (tính từ telemetry)
   relay_usage?: { misting?: RelayUsage; ventilation?: RelayUsage; counted_until?: string }
-  /** Quá 15 phút kể từ lúc đăng ký mà chưa có heartbeat đầu tiên */
+  // Quá 15 phút kể từ lúc đăng ký mà chưa có heartbeat đầu tiên
   activation_overdue_at?: string
   decommissioned_at?: string; decommission_reason?: string
 }
 
 export interface RelayUsage { on_hours: number; switches: number; since_service_hours: number; since_service_switches: number }
 
-/** POST /devices/sensor-nodes/:id/commands (FARM-FR-013) */
+// POST /devices/sensor-nodes/:id/commands
 export type NodeCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
 export interface NodeCommandInput {
   command: NodeCommand
-  /** Chỉ khi command=OTA. version dạng x.y.z (không có tiền tố "v"), url https, sha256 hex 64 ký tự */
+  // Chỉ khi command=OTA. version dạng x.y.z (không có tiền tố "v"), url https, sha256 hex 64 ký tự
   ota?: { version: string; url: string; sha256: string }
 }
 
-// ENV-FR-019 — một lần can thiệp tay 1 relay (GET /devices/sensor-nodes/:id/relay-overrides)
+// một lần can thiệp tay 1 relay (GET /devices/sensor-nodes/:id/relay-overrides)
 export type RelayOverrideEndReason = 'EXPIRED' | 'CLEARED_EARLY' | 'REPLACED'
 export interface RelayOverrideLog {
   _id: string; node_id: string; zone_id: string; farm_id: string
@@ -64,12 +62,11 @@ export interface RelayOverrideLog {
   end_reason: RelayOverrideEndReason | null
 }
 
-// ENV-FR-013b — PUT /devices/sensor-nodes/:id/speaker-schedule (firmware: ≤2 khung, giờ tròn)
+// PUT /devices/sensor-nodes/:id/speaker-schedule (firmware: ≤2 khung, giờ tròn)
 export interface SpeakerWindow { start: string; end: string }
 export interface SpeakerScheduleInput { enabled?: boolean; windows?: SpeakerWindow[]; volume?: number; track?: number }
 
-// ENV-FR-013c — bài trong danh mục web của 1 thiết bị. File DFPlayer phát thật
-// nằm trên thẻ SD (`000N.mp3`); `file_url` chỉ để nghe lại bản gốc trên web.
+// bài trong danh mục web của 1 thiết bị. File DFPlayer phát thật nằm trên thẻ SD (`000N.mp3`); `file_url` chỉ để nghe lại bản gốc trên web.
 export interface AudioTrack {
   _id: string; node_id: string
   track_number: number; display_name: string
@@ -78,13 +75,13 @@ export interface AudioTrack {
   uploaded_by: string; uploaded_at: string
 }
 
-// VISION-FR-018 — vòng đếm quanh miệng lỗ ra vào: 3–12 đỉnh [x, y] theo tỉ lệ khung hình 0–1
+// vòng đếm quanh miệng lỗ ra vào: 3–12 đỉnh [x, y] theo tỉ lệ khung hình 0–1
 export interface CountingRing {
   points: Array<[number, number]>
   into_ring_is_exit: boolean
 }
 
-// VISION-FR-018 — một lần đổi vòng đếm (người sửa, vai trò, giá trị cũ/mới)
+// một lần đổi vòng đếm (người sửa, vai trò, giá trị cũ/mới)
 export interface CountingRingHistoryEntry {
   changed_by: string
   changed_by_role: string
@@ -95,27 +92,27 @@ export interface CountingRingHistoryEntry {
 
 export interface CameraNode {
   _id: string; device_id: string; rtsp_url?: string
-  // SRS v2.1.8 — camera ở cửa ra vào của cả nhà yến; zone_id chỉ còn ở bản ghi cũ
+  // camera ở cửa ra vào của cả nhà yến; zone_id chỉ còn ở bản ghi cũ
   house_id?: string; zone_id?: string
-  /** VISION-FR-018 — vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml */
+  // vòng đếm Domain Expert đã vẽ; không có thì nút AI dùng vòng trong config.yaml
   counting_ring?: (CountingRing & { updated_at?: string; updated_by?: string }) | null
-  /** VISION-FR-018 — lịch sử đổi vòng đếm, mới nhất tuỳ backend sắp xếp */
+  // lịch sử đổi vòng đếm, mới nhất tuỳ backend sắp xếp
   counting_ring_history?: CountingRingHistoryEntry[]
   status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
-  /** SYSTEM-FR-004 — thiết bị của bộ giả lập */
+  // thiết bị của bộ giả lập
   simulated?: boolean
   activation_overdue_at?: string
   decommissioned_at?: string; decommission_reason?: string
 }
 
-// OPS-NFR-004 — GET /devices/system-status (chỉ Admin)
+// GET /devices/system-status (chỉ Admin)
 export interface SystemNodeStatusItem {
   _id: string; device_id: string; type: 'sensor' | 'camera'; status: DeviceStatus
   last_heartbeat?: string; rssi?: number
-  /** Chỉ sensor — camera không có */
+  // Chỉ sensor: camera không có
   firmware_version?: string; registered_at?: string
   zone_id: string; farm_id: string; farm_name: string; house_name: string; floor?: number; zone_name: string
-  /** SYSTEM-FR-004 — thiết bị của bộ giả lập */
+  // thiết bị của bộ giả lập
   simulated?: boolean
 }
 export interface SystemNodeStatus {
@@ -123,27 +120,27 @@ export interface SystemNodeStatus {
   nodes: SystemNodeStatusItem[]
 }
 
-// ── Kho thiết bị (FARM-FR-010, Report 3 §6.16) — GET /admin/provisioned-devices ─────────────────────────────────────
+// Kho thiết bị: GET /admin/provisioned-devices
 export type ProvisionedDeviceKind = 'SENSOR' | 'CAMERA'
-/** Trạng thái nhãn, backend suy ra mỗi lần đọc. Cấp lại mã kích hoạt / thu hồi được ở IN_STOCK và RELEASED */
+// Trạng thái nhãn, backend suy ra mỗi lần đọc. Cấp lại mã kích hoạt / thu hồi được ở IN_STOCK và RELEASED
 export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
 
 export interface ProvisionedDevice {
   _id: string; device_id: string; kind: ProvisionedDeviceKind
-  /** SYSTEM-FR-004 — nhãn của bộ giả lập, thiết bị đăng ký từ nhãn này mang theo cờ */
+  // nhãn của bộ giả lập, thiết bị đăng ký từ nhãn này mang theo cờ
   simulated?: boolean
   claimed_at?: string | null; revoked_at?: string | null; revoke_reason?: string | null
   created_by: string; created_at: string
   stock_status: StockStatus
 }
 
-/** Mã chỉ trả đúng 1 lần: thêm vào kho trả cả hai, cấp lại mã kích hoạt / mật khẩu broker trả 1 trong 2 */
+// Mã chỉ trả đúng 1 lần: thêm vào kho trả cả hai, cấp lại mã kích hoạt / mật khẩu broker trả 1 trong 2
 export interface IssuedDeviceSecrets {
   device_id: string; kind: ProvisionedDeviceKind
   secret_key?: string; broker_secret?: string
 }
 
-// FARM-FR-008 — thiết bị đã gỡ còn khôi phục được (GET …?removed=recent, chỉ Farm Owner)
+// thiết bị đã gỡ còn khôi phục được (GET …?removed=recent, chỉ Farm Owner)
 export type RemovedDevice = (SensorNode | CameraNode) & {
   decommissioned_at: string
   decommission_reason?: string

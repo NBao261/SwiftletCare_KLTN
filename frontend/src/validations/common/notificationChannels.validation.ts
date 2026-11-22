@@ -1,4 +1,4 @@
-// ALERT-FR-005 — kênh ngoài ứng dụng theo mức cảnh báo ở trang Cài đặt: mỗi cấp giao diện là một mức by_severity của backend
+// kênh ngoài ứng dụng theo mức cảnh báo ở trang Cài đặt: mỗi cấp giao diện là một mức by_severity của backend
 import { LEVELS, SEVERITY_TO_LEVEL } from '@/constants/severity';
 import type { AlertSeverity, ChannelChoice, NotificationPreferences, SeverityLevel } from '@/types';
 

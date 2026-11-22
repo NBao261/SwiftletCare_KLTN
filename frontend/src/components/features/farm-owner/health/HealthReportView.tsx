@@ -72,7 +72,7 @@ interface HealthReportViewProps {
   isDownloading: boolean;
 }
 
-// EXPERT-FR-005, 006 — 1 báo cáo theo nhà: tóm tắt, kết luận, các ngày, theo Zone; cùng số liệu với PDF
+// 1 báo cáo theo nhà: tóm tắt, kết luận, các ngày, theo Zone; cùng số liệu với PDF
 export default function HealthReportView({ report, onDownload, isDownloading }: HealthReportViewProps): JSX.Element {
   const { t, date, dateTime, hourMinute, exact } = useTranslation(healthDict);
   const format = useMemo(() => ({ t, date, dateTime, number: (value: number) => exact(value, 1) }), [t, date, dateTime, exact]);
@@ -143,7 +143,7 @@ export default function HealthReportView({ report, onDownload, isDownloading }: 
         <HealthReportConclusion report={report} />
       </Part>
 
-      {/* Mỗi ngày 1 dòng 3 phần (hệ thống | lý do | đánh giá của người); thẻ hẹp thì xuống dòng và ẩn hàng tiêu đề */}
+      {/* Mỗi ngày 1 dòng 3 phần (hệ thống lý do đánh giá của người); thẻ hẹp thì xuống dòng và ẩn hàng tiêu đề */}
       <Part title={t('rd.days')}>
         {dayRows.length === 0 ? (
           <p className="text-sm italic text-warmGray">{t('rd.noDays')}</p>

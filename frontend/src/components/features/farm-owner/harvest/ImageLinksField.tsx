@@ -5,7 +5,7 @@ import { harvestDict } from '@/constants/harvest.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
 
-// Số ảnh tối đa mỗi lần thu — giữ popup gọn; backend chỉ lưu danh sách link nên không có giới hạn riêng
+// Số ảnh tối đa mỗi lần thu: giữ popup gọn; backend chỉ lưu danh sách link nên không có giới hạn riêng
 export const MAX_IMAGE_LINKS = 5;
 
 // Link ảnh hợp lệ: http(s) đã host sẵn (backend chỉ lưu link, chưa nhận file ảnh)

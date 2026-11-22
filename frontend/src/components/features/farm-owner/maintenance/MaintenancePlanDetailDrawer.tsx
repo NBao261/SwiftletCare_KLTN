@@ -14,7 +14,7 @@ interface MaintenancePlanDetailDrawerProps {
   onClose: () => void;
 }
 
-// Một dòng nhãn — giá trị
+// Một dòng nhãn: giá trị
 function DetailRow({ label, children }: { label: string; children: ReactNode }): JSX.Element {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -24,7 +24,7 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }):
   );
 }
 
-// OPS-FR-005, 008 — chi tiết kế hoạch: chu kỳ, hạn, nguồn, checklist, lịch sử bảo trì, góp ý của chuyên gia
+// chi tiết kế hoạch: chu kỳ, hạn, nguồn, checklist, lịch sử bảo trì, góp ý của chuyên gia
 export default function MaintenancePlanDetailDrawer({ plan, houseName, onClose }: MaintenancePlanDetailDrawerProps): JSX.Element {
   const { t, num, date, dateTime } = useTranslation(maintenanceDict);
 

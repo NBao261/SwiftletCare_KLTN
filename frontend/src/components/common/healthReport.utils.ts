@@ -3,7 +3,7 @@ import { NO_VALUE } from '@/constants/display';
 import type { HealthTranslate } from '@/constants/health.i18n';
 import type { HealthRatingValue, HealthReportZoneSection, HealthStatus, HouseHealthReport, HouseHealthReportSummary } from '@/types';
 
-// Hàm định dạng truyền từ useTranslation — màn chi tiết và file PDF dùng chung để ra đúng một con số (EXPERT-FR-013)
+// Hàm định dạng truyền từ useTranslation: màn chi tiết và file PDF dùng chung để ra đúng một con số
 export interface ReportFormat {
   t: HealthTranslate;
   date: (iso: string) => string;
@@ -93,7 +93,7 @@ export function zoneHeader(section: HealthReportZoneSection, format: ReportForma
   return `${section.zone_name} (${format.t('rd.samples', { n: section.sample_count })})`;
 }
 
-// Số liệu của 1 Zone theo đúng thứ tự EXPERT-FR-005
+// Số liệu của 1 Zone theo đúng thứ tự
 export function zoneFacts(section: HealthReportZoneSection, format: ReportFormat): ReportFact[] {
   const { t } = format;
   return [
@@ -109,7 +109,7 @@ export function zoneFacts(section: HealthReportZoneSection, format: ReportFormat
   ];
 }
 
-// Thời tiết cả kỳ (ANALYTICS-FR-013); null khi không có dữ liệu
+// Thời tiết cả kỳ; null khi không có dữ liệu
 export function weatherFacts(report: HouseHealthReport, format: ReportFormat): ReportFact[] | null {
   const weather = report.house_metrics.weather;
   if (!weather) return null;
@@ -165,7 +165,7 @@ export function reportDayRows(report: HouseHealthReport, format: ReportFormat): 
   });
 }
 
-// POST /health-reports: from ≤ to ≤ hôm nay (giờ VN), tối đa 31 ngày tính cả 2 đầu — kiểm trước khi gửi
+// POST /health-reports: from ≤ to ≤ hôm nay (giờ VN), tối đa 31 ngày tính cả 2 đầu: kiểm trước khi gửi
 export const MAX_REPORT_DAYS = 31;
 export type ReportRangeError = 'create.errRequired' | 'create.errOrder' | 'create.errFuture' | 'create.errRange';
 

@@ -22,7 +22,7 @@ const RELAYS: Array<{ key: Extract<RelayName, 'misting' | 'ventilation' | 'speak
 
 type RelayLabelKey = 'relay.misting' | 'relay.ventilation' | 'relay.speaker';
 
-// Lệnh bật bơm đang chờ Farm Owner xác nhận (409 CONFIRMATION_REQUIRED, ENV-FR-016)
+// Lệnh bật bơm đang chờ Farm Owner xác nhận (409 CONFIRMATION_REQUIRED)
 interface PendingConfirm {
   relay: RelayName;
   labelKey: RelayLabelKey;
@@ -38,11 +38,11 @@ interface ScadaNodeCardProps {
   controlOutput?: ControlOutput;
   durationMinutes: number;
   durationText: string;
-  // Relay đang can thiệp tay (log chưa kết thúc) — hiện nút về tự động riêng từng relay
+  // Relay đang can thiệp tay (log chưa kết thúc): hiện nút về tự động riêng từng relay
   overriddenRelays?: ReadonlySet<RelayName>;
 }
 
-// 1 Zone một hàng (FO-02): tên Zone · chế độ, 3 rơ-le với nút bật/tắt có thời hạn (ENV-FR-016..018); chỉ vẽ bộ điều khiển online
+// 1 Zone một hàng (FO-02): tên Zone · chế độ, 3 rơ-le với nút bật/tắt có thời hạn; chỉ vẽ bộ điều khiển online
 export default function ScadaNodeCard({ node, zoneLabel, controlOutput, durationMinutes, durationText, overriddenRelays }: ScadaNodeCardProps): JSX.Element {
   const { t, hourMinute, dateTime } = useTranslation(dashboardDict);
   const controlRelay = useControlRelay();
@@ -53,7 +53,7 @@ export default function ScadaNodeCard({ node, zoneLabel, controlOutput, duration
   const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
   const isManual = node.control_mode === 'MANUAL';
 
-  // Thời hạn thật của nút: bật bơm tối đa 30 phút (BR-08), còn lại theo thời hạn đang chọn
+  // Thời hạn thật của nút: bật bơm tối đa 30 phút, còn lại theo thời hạn đang chọn
   function relayDuration(relay: RelayName, turnOn: boolean): { minutes: number; label: string } {
     const minutes = relayMinutes(relay, turnOn, durationMinutes);
     return { minutes, label: minutes === durationMinutes ? durationText : t('scada.minutes', { n: minutes }) };
@@ -102,7 +102,7 @@ export default function ScadaNodeCard({ node, zoneLabel, controlOutput, duration
 
   return (
     <div className="grid gap-4 rounded-2xl border border-warmGray/15 p-4 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
-      {/* Trái: Zone, bộ điều khiển, chế độ; đang điều khiển tay thì kèm giờ tự về và nút về tự động ngay (ENV-FR-017, 018) */}
+      {/* Trái: Zone, bộ điều khiển, chế độ; đang điều khiển tay thì kèm giờ tự về và nút về tự động ngay */}
       <div className="flex min-w-0 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="min-w-0 truncate text-h3 text-charcoal" title={zoneLabel}>{zoneLabel}</h3>
@@ -173,7 +173,7 @@ export default function ScadaNodeCard({ node, zoneLabel, controlOutput, duration
         })}
       </div>
 
-      {/* ENV-FR-016 — xác nhận bật bơm khi Zone đang có cảnh báo cảm biến/phun sương; lịch sử ghi alert_confirmed */}
+      {/* xác nhận bật bơm khi Zone đang có cảnh báo cảm biến/phun sương; lịch sử ghi alert_confirmed */}
       <Modal open={Boolean(confirm)} onClose={() => setConfirm(null)} title={t('scada.confirmTitle')}>
         {confirm && (
           <div className="flex flex-col gap-4">

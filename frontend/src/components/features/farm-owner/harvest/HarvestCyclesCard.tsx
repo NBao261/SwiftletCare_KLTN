@@ -31,7 +31,7 @@ interface HarvestCyclesCardProps {
   zones: AllZone[];
 }
 
-// BR-22 — Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận một chu kỳ đã đóng (mỗi chu kỳ một lần)
+// Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận một chu kỳ đã đóng (mỗi chu kỳ một lần)
 function CycleReminder({ cycle }: { cycle: HarvestCycle }): JSX.Element | null {
   const { t } = useTranslation(harvestDict);
   const isOwner = usePermission('FARM_OWNER');
@@ -43,7 +43,7 @@ function CycleReminder({ cycle }: { cycle: HarvestCycle }): JSX.Element | null {
     : <Button variant="secondary" size="sm" loading={reminder.isPending} onClick={reminder.remind}>{t('cycle.remind')}</Button>;
 }
 
-// HARVEST-FR-007, ANALYTICS-FR-004 — chu kỳ thu hoạch theo zone: sản lượng, so sánh, sức khỏe, kết luận mùa vụ (chỉ xem)
+// chu kỳ thu hoạch theo zone: sản lượng, so sánh, sức khỏe, kết luận mùa vụ (chỉ xem)
 export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyclesCardProps): JSX.Element {
   const { t, date, num, exact } = useTranslation(harvestDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -150,7 +150,7 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
         title={selected ? t('cycle.detailTitle', { period: period(selected) }) : undefined}
       >
         {selected && (
-          // Drawer không tự cuộn — vùng cuộn đặt ở đây như HealthDayDrawer
+          // Drawer không tự cuộn: vùng cuộn đặt ở đây như HealthDayDrawer
           <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-2 text-sm">
             <div className="flex items-center justify-between gap-3">
               <h3 className="flex min-w-0 items-center gap-2 text-h2 text-charcoal">

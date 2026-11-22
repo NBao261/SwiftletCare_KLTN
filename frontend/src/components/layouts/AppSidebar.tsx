@@ -25,7 +25,7 @@ export interface MenuItem {
 export interface MenuSection {
   title: string
   items: MenuItem[]
-  // Nhóm thu gọn được bằng mũi tên cạnh tiêu đề (mặc định mở); nhóm chứa trang đang mở luôn mở (C-08)
+  // Nhóm thu gọn được bằng mũi tên cạnh tiêu đề (mặc định mở); nhóm chứa trang đang mở luôn mở
   collapsible?: boolean
 }
 

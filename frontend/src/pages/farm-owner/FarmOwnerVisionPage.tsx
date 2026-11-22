@@ -11,7 +11,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { cn } from '@/lib/cn';
 
-// Giám sát đàn chim — VISION-FR-006/008/009/010/011/013; camera và số đếm chim tính theo nhà yến (SRS v2.1.8)
+// Giám sát đàn chim —; camera và số đếm chim tính theo nhà yến
 export default function FarmOwnerVisionPage(): JSX.Element {
   const { t } = useTranslation(dashboardDict);
   // Khung lọc lưu ở store chung, giữ nguyên khi chuyển trang; trang này chỉ lọc theo nhà nên ô Zone khoá
@@ -19,7 +19,7 @@ export default function FarmOwnerVisionPage(): JSX.Element {
   const { houses, houseId, houseName, isLoading, isError, refetch } = scope;
   // Phóng to camera: khung video full chiều ngang, 3 thẻ số đếm chuyển xuống hàng ngang bên dưới
   const [isCameraExpanded, setIsCameraExpanded] = useState(false);
-  // Đếm chim theo nhà (SRS v2.1.8): 1 nhà đang lọc, hoặc cộng mọi nhà của farm
+  // Đếm chim theo nhà: 1 nhà đang lọc, hoặc cộng mọi nhà của farm
   const houseIds = useMemo(() => (houseId ? [houseId] : houses.map(house => house._id)), [houseId, houses]);
 
   if (isLoading) {

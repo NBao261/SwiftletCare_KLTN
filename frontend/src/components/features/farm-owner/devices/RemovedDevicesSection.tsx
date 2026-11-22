@@ -12,7 +12,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useRemovedDevices, useRestoreDevice, type RemovedDeviceRow } from '@/hooks/farm-owner/useRemovedDevices';
 import { useToastStore } from '@/stores/toastStore';
 
-// FARM-FR-008 — thiết bị Farm Owner gỡ trong 24 giờ, khôi phục kèm lý do; không có thiết bị nào thì không hiện khung
+// thiết bị Farm Owner gỡ trong 24 giờ, khôi phục kèm lý do; không có thiết bị nào thì không hiện khung
 export default function RemovedDevicesSection(): JSX.Element | null {
   const { t, dateTime } = useTranslation(devicesDict);
   const isFarmOwner = usePermission('FARM_OWNER');

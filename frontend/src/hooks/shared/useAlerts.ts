@@ -6,7 +6,7 @@ import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
 import type { Alert, AlertSeverity, AlertStatus, AlertType, SiteCause } from '@/types'
 
 export interface AlertsListQuery {
-  // ALERT-FR-007 — lọc theo trang trại, nhà hoặc Zone, mức, loại và kết luận chuyên gia
+  // lọc theo trang trại, nhà hoặc Zone, mức, loại và kết luận chuyên gia
   farmId?: string; houseId?: string; zoneId?: string
   status?: AlertStatus; severity?: AlertSeverity; type?: AlertType
   verdict?: 'pending' | 'confirmed' | 'rejected'
@@ -18,9 +18,7 @@ export interface AlertsListQuery {
 // Số cảnh báo mỗi trang ở trang Thông báo của Farm Owner, cũng là số dòng khung bảng
 export const ALERT_PAGE_SIZE = 10
 
-/** Danh sách cảnh báo theo filter của trang Alerts (ALERT-FR-007) — KHÔNG đồng bộ badge chuông,
- *  vì `total`/`meta.unreadCount` ở đây bị chính severity/status filter của trang thu hẹp. Badge
- *  chuông toàn cục lấy từ `useUnreadAlertCount()` (không filter) thay vì từ đây. */
+// Danh sách cảnh báo theo filter của trang Alerts: KHÔNG đồng bộ badge chuông, vì `total`/`meta.unreadCount` ở đây bị chính severity/status filter của trang thu hẹp. Badge chuông toàn cục lấy từ `useUnreadAlertCount()` (không filter) thay vì từ đây.
 export function useAlertsList(query: AlertsListQuery, options?: { enabled?: boolean }) {
   return usePaginatedListQuery<Alert>(
     ['alerts', query],
@@ -35,8 +33,7 @@ function listAlerts(query: AlertsListQuery) {
   return alertApi.list(query as Record<string, string>)
 }
 
-// ALERT-FR-007 — số cảnh báo ACTIVE (chờ xác nhận) trong phạm vi người dùng, cho chuông, menu và trang Cảnh báo; undefined khi
-// chưa tải xong, lỗi hoặc role không vào được /alerts. Cache xoá khi đăng xuất (queryClient.clear) nên không mang số sang phiên sau
+// số cảnh báo ACTIVE (chờ xác nhận) trong phạm vi người dùng, cho chuông, menu và trang Cảnh báo; undefined khi chưa tải xong, lỗi hoặc role không vào được /alerts. Cache xoá khi đăng xuất (queryClient.clear) nên không mang số sang phiên sau
 export function usePendingAlertTotal(): number | undefined {
   const canSeeAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
   const result = useQuery({
@@ -47,10 +44,7 @@ export function usePendingAlertTotal(): number | undefined {
   return canSeeAlerts ? result.data?.data?.meta?.unreadCount : undefined
 }
 
-/**
- * Danh sách cảnh báo cuộn tải thêm (chuông thông báo) — mỗi lần `pageSize` cảnh báo mới nhất, hết `meta.total`
- * thì dừng. `status` lọc ngay ở server (VD chỉ ACTIVE để lấy đủ tin chưa đọc dù chúng cũ hơn các trang đầu).
- */
+// Danh sách cảnh báo cuộn tải thêm (chuông thông báo): mỗi lần `pageSize` cảnh báo mới nhất, hết `meta.total` thì dừng. `status` lọc ngay ở server (VD chỉ ACTIVE để lấy đủ tin chưa đọc dù chúng cũ hơn các trang đầu).
 export function useAlertsInfinite(pageSize: number, status?: AlertStatus, enabled = true) {
   return useInfiniteQuery({
     queryKey: ['alerts', 'infinite', pageSize, status ?? 'ALL'],
@@ -68,7 +62,7 @@ export function useAlertsInfinite(pageSize: number, status?: AlertStatus, enable
   })
 }
 
-/** ALERT-FR-009, 018 — xác nhận cảnh báo kèm ghi chú và nguyên nhân tại chỗ tùy chọn */
+// xác nhận cảnh báo kèm ghi chú và nguyên nhân tại chỗ tùy chọn
 export function useAcknowledgeAlert() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -80,7 +74,7 @@ export function useAcknowledgeAlert() {
   })
 }
 
-/** Chi tiết 1 cảnh báo kèm ảnh nguyên nhân tại chỗ (URL tạm); null = chưa mở */
+// Chi tiết 1 cảnh báo kèm ảnh nguyên nhân tại chỗ (URL tạm); null = chưa mở
 export function useAlert(id: string | null) {
   return useQuery({
     queryKey: ['alerts', 'detail', id],

@@ -20,7 +20,7 @@ function toDisplay(value: string, hideYear: boolean): string {
   return hideYear ? `${day}/${month}` : `${day}/${month}/${year}`;
 }
 
-// Chữ đang gõ (chỉ giữ số) → dd/mm/yyyy (dd/mm khi ẩn năm), tự chèn dấu /
+// Chữ đang gõ (chỉ giữ số) → dd/mm/yyyy (dd/mm khi ẩn năm), tự chèn dấu
 function maskTyping(text: string, hideYear: boolean): string {
   const digits = text.replace(/\D/g, '').slice(0, hideYear ? 4 : 8);
   if (digits.length <= 2) return digits;

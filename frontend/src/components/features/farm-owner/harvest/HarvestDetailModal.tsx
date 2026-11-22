@@ -28,7 +28,7 @@ interface HarvestDetailModalProps {
 export default function HarvestDetailModal({ group, houseName, creatorName, onClose, onEdit, onDelete }: HarvestDetailModalProps): JSX.Element {
   const { t, num, exact } = useTranslation(harvestDict);
   const batchByType = new Map(group.batches.map(batch => [batch.nest_type, batch]));
-  // HARVEST-FR-001 — các đợt của lần thu cùng một ảnh, lấy của đợt đầu
+  // các đợt của lần thu cùng một ảnh, lấy của đợt đầu
   const photoUrl = useHarvestPhotoUrl(group.batches.map(batch => batch._id));
 
   return (

@@ -68,7 +68,7 @@ interface AutomationCardProps {
   zoneId: string;
 }
 
-// Hiệu quả vận hành tự động: tỷ lệ tự động (ANALYTICS-FR-011), % trong ngưỡng và biểu đồ điều khiển mờ (ANALYTICS-FR-008)
+// Hiệu quả vận hành tự động: tỷ lệ tự động, % trong ngưỡng và biểu đồ điều khiển mờ
 export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Element {
   const { t, num, exact } = useTranslation(analyticsDict);
   const canTune = usePermission('FARM_OWNER');
@@ -202,7 +202,7 @@ export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Ele
     >
       {body}
 
-      {/* Tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị (ALERT-FR-016) */}
+      {/* Tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị */}
       {data && data.relay_usage.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-warmGray/15 pt-4">
           <p className="label-caption">{t('automation.maintenanceTitle')}</p>
@@ -230,7 +230,7 @@ export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Ele
         </div>
       )}
 
-      {/* Hệ số logic mờ đang áp dụng và nút chỉnh (ENV-FR-021) */}
+      {/* Hệ số logic mờ đang áp dụng và nút chỉnh */}
       {tuning && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-warmGray/15 pt-4">
           <p className="text-small text-warmGray">

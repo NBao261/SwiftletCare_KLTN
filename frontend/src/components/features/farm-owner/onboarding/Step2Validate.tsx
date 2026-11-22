@@ -1,4 +1,4 @@
-// Step2Validate — bước 2: xác thực mã thiết bị + mã kích hoạt trên nhãn; lỗi phân theo mã HTTP (400/404 sai mã, 403 không có quyền, 409 đã đăng ký)
+// Step2Validate: bước 2: xác thực mã thiết bị + mã kích hoạt trên nhãn; lỗi phân theo mã HTTP (400/404 sai mã, 403 không có quyền, 409 đã đăng ký)
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
@@ -18,7 +18,7 @@ interface Props {
   onBack: () => void
 }
 
-/** Label hiển thị thân thiện cho device type */
+// Label hiển thị thân thiện cho device type
 const DEVICE_LABEL = { SENSOR_NODE: 'Bộ điều khiển', CAMERA_NODE: 'Camera' } as const
 
 export function Step2Validate({ data, patch, onNext, onBack }: Props) {
@@ -53,7 +53,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
     setError(null)
     setErrorMessage('')
     try {
-      // Camera gắn nhà (house_id), bộ điều khiển gắn Zone — FARM-FR-004
+      // Camera gắn nhà (house_id), bộ điều khiển gắn Zone
       const res = data.deviceType === 'CAMERA_NODE'
         ? await deviceApi.registerCameraNode(cameraRegisterInput(data))
         : await deviceApi.registerSensorNode(sensorRegisterInput(data))

@@ -1,5 +1,4 @@
-// DeviceTable.tsx — Bảng danh sách thiết bị với nút "Đẩy OTA"
-// Cột "Cập nhật" đọc trực tiếp ota_pending / ota_failed của node (không suy diễn "bản mới nhất" vì BE không có catalog firmware).
+// DeviceTable.tsx: Bảng danh sách thiết bị với nút "Đẩy OTA" Cột "Cập nhật" đọc trực tiếp ota_pending / ota_failed của node (không suy diễn "bản mới nhất" vì BE không có catalog firmware).
 import { useMemo } from 'react'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
@@ -39,7 +38,7 @@ function OtaChip({ node }: { node: SensorNode }) {
 }
 
 function DeviceRow({ node, location, selected, onSelect }: DeviceRowProps) {
-  // DEGRADED đã bỏ (SRS 3.1.0): chỉ node ONLINE mới nhận lệnh từ xa
+  // DEGRADED đã bỏ: chỉ node ONLINE mới nhận lệnh từ xa
   const isOffline = node.status !== 'ONLINE'
   // Viền trái: đang chọn → đen; OTA đang chờ → cam; OTA lỗi → đỏ; còn lại không viền
   const accent = selected ? 'bg-charcoal' : node.ota_pending ? 'bg-climateOrange' : node.ota_failed ? 'bg-alertRed' : 'bg-transparent'
@@ -86,7 +85,7 @@ interface Props {
 }
 
 export function DeviceTable({ nodes, selectedId, onSelect }: Props) {
-  // Vị trí theo tên (FE_Design 13.16 a) từ danh sách thiết bị toàn hệ thống của Admin — Admin không đọc cấu trúc farm
+  // Vị trí theo tên (FE_Design 13.16 a) từ danh sách thiết bị toàn hệ thống của Admin: Admin không đọc cấu trúc farm
   const { data: systemStatus } = useSystemNodeStatus()
   const locationById = useMemo(
     () => new Map((systemStatus?.nodes ?? []).map(item => [item._id, [item.farm_name, item.house_name, item.zone_name].filter(Boolean).join(' · ')])),

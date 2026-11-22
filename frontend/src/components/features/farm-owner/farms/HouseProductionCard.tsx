@@ -14,11 +14,11 @@ import { NO_VALUE } from '@/constants/display'
 
 interface HouseProductionCardProps {
   node: HouseNode
-  /** 3 đợt thu hoạch gần nhất của nhà (đã lọc theo zone của nhà) */
+  // 3 đợt thu hoạch gần nhất của nhà (đã lọc theo zone của nhà)
   recent: HarvestBatch[]
 }
 
-/** Sản lượng nhà yến trong tháng — số liệu tính từ /harvests thật; không dự báo lần thu tới (Report 3 §8). Không hiện mã truy xuất (ẩn khỏi UI theo quyết định bảo mật). */
+// Sản lượng nhà yến trong tháng: số liệu tính từ /harvests thật; không dự báo lần thu tới. Không hiện mã truy xuất (ẩn khỏi UI theo quyết định bảo mật).
 export default function HouseProductionCard({ node, recent }: HouseProductionCardProps) {
   const { t, num, exact, day } = useTranslation(farmDict)
   const navigate = useNavigate()

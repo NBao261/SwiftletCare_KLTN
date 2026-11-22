@@ -11,7 +11,7 @@ export function useFarms() {
   })
 }
 
-/** Chi tiết farm — đã populate tên/email owner/members (farm.service.ts getFarm) */
+// Chi tiết farm: đã populate tên/email owner/members (farm.service.ts getFarm)
 export function useFarm(farmId: string | undefined) {
   return useQuery({
     queryKey: ['farms', farmId],
@@ -39,7 +39,7 @@ export function useCreateFarm() {
   })
 }
 
-// FARM-FR-001 — sửa tên, địa chỉ, vị trí farm
+// sửa tên, địa chỉ, vị trí farm
 export function useUpdateFarm(farmId: string) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -48,7 +48,7 @@ export function useUpdateFarm(farmId: string) {
   })
 }
 
-// FARM-FR-001 — xoá mềm farm (chỉ Primary Owner); backend đóng cảnh báo đang mở của farm
+// xoá mềm farm (chỉ Primary Owner); backend đóng cảnh báo đang mở của farm
 export function useDeleteFarm() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -76,7 +76,7 @@ export function useCreateHouse(farmId: string) {
   })
 }
 
-// FARM-FR-002 — đổi tên hoặc xoá nhà, Zone; xong thì làm mới cấu trúc farm (nhà, Zone, thiết bị, cảnh báo đã đóng theo)
+// đổi tên hoặc xoá nhà, Zone; xong thì làm mới cấu trúc farm (nhà, Zone, thiết bị, cảnh báo đã đóng theo)
 export function useEditStructure() {
   const queryClient = useQueryClient()
   const refresh = () => Promise.all(['farms', 'houses', 'zones', 'farm-zones', 'all-zones', 'sensor-nodes', 'alerts', 'work-orders', 'maintenance', 'recommendations'].map(key =>
@@ -98,7 +98,7 @@ export function useEditStructure() {
   return { rename, remove }
 }
 
-// FARM-FR-014 — đổi giai đoạn nhà rồi làm mới danh sách nhà (mọi trang đọc giai đoạn từ đó)
+// đổi giai đoạn nhà rồi làm mới danh sách nhà (mọi trang đọc giai đoạn từ đó)
 export function useSetHouseStage(houseId: string) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -121,7 +121,7 @@ export function useCreateZone(houseId: string) {
     mutationFn: (input: { name: string; floor?: number }) => farmApi.createZone(houseId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['zones', houseId] })
-      // 2 danh sách zone phẳng có staleTime 5 phút — không làm mới thì zone mới vắng mặt ở ZonePicker và số zone ở trang Farm
+      // 2 danh sách zone phẳng có staleTime 5 phút: không làm mới thì zone mới vắng mặt ở ZonePicker và số zone ở trang Farm
       void queryClient.invalidateQueries({ queryKey: ['farm-zones'] })
       void queryClient.invalidateQueries({ queryKey: ['all-zones'] })
     },
@@ -136,9 +136,9 @@ export function useZone(zoneId: string | undefined) {
   })
 }
 
-// ── Thành viên farm (AUTH-FR-005/010, EXPERT-FR-001) ─────────────────────────
+// Thành viên farm
 
-// AUTH-FR-005, EXPERT-FR-001 — mời đồng sở hữu (FARM_OWNER) hoặc chuyên gia (DOMAIN_EXPERT) qua POST /farms/:id/members
+// mời đồng sở hữu (FARM_OWNER) hoặc chuyên gia (DOMAIN_EXPERT) qua POST /farms/:id/members
 export function useInviteFarmMember(farmId: string) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -150,7 +150,7 @@ export function useInviteFarmMember(farmId: string) {
   })
 }
 
-// AUTH-FR-010 — lời mời đang chờ của farm; route chỉ cho Primary Owner nên role khác không gọi
+// lời mời đang chờ của farm; route chỉ cho Primary Owner nên role khác không gọi
 export function useFarmInvitations(farmId: string, enabled: boolean) {
   return useQuery({
     queryKey: ['invitations', farmId],
@@ -172,7 +172,7 @@ export function useRemoveMember(farmId: string) {
   })
 }
 
-// AUTH-FR-013 — bật/tắt giao nhà cho 1 Farm Technician, đổi thợ chính (primary: true đẩy thợ chính cũ thành thợ phụ)
+// bật/tắt giao nhà cho 1 Farm Technician, đổi thợ chính (primary: true đẩy thợ chính cũ thành thợ phụ)
 export function useSetHouseTechnician(farmId: string, houseId: string) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -187,7 +187,7 @@ export function useSetHouseTechnician(farmId: string, houseId: string) {
   })
 }
 
-// AUTH-FR-014 — lịch trực của 1 nhà (Farm Owner, Domain Expert xem cả lịch)
+// lịch trực của 1 nhà (Farm Owner, Domain Expert xem cả lịch)
 export function useHouseRoster(houseId: string | undefined) {
   return useQuery({
     queryKey: ['roster', houseId],
@@ -205,7 +205,7 @@ export function useSetHouseRoster(houseId: string) {
   })
 }
 
-// ── Zone phẳng của 1 Farm (kèm tên nhà) ───────────────────────────────────
+// Zone phẳng của 1 Farm (kèm tên nhà)
 
 export interface FlatZone extends Zone { houseName: string }
 
@@ -228,7 +228,7 @@ export function useFarmZones(farmId: string | undefined) {
 
 export interface AllZone extends Zone { houseName: string; farmId: string; farmName: string }
 
-// Nhà và Zone cùng khoá cache với useFarmStructure, useScopeFilter: mỗi nhà chỉ gọi 1 lần dù nhiều hook cùng cần (A-14)
+// Nhà và Zone cùng khoá cache với useFarmStructure, useScopeFilter: mỗi nhà chỉ gọi 1 lần dù nhiều hook cùng cần
 const STRUCTURE_STALE_MS = 5 * 60 * 1000
 
 // Zone phẳng của mọi farm tài khoản xem được; backend không có API gộp nên gọi listHouses / listZones từng farm ở client

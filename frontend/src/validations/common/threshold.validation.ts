@@ -1,7 +1,7 @@
 import type { Thresholds } from '@/types'
 import { THRESHOLD_KEYS } from '@/constants/thresholds'
 
-/** Khoảng đo của cảm biến thật (SRS §7.1) — khớp `THRESHOLD_LIMITS` backend, dùng để validate trước khi gửi (backend vẫn kiểm lại và trả 400 nếu lệch); cũng là nguồn đơn vị hiển thị cho ThresholdsCard. */
+// Khoảng đo của cảm biến thật: khớp `THRESHOLD_LIMITS` backend, dùng để validate trước khi gửi (backend vẫn kiểm lại và trả 400 nếu lệch); cũng là nguồn đơn vị hiển thị cho ThresholdsCard.
 export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: number; unit: string }> = {
   temp_min:     { min: -40, max: 125,     unit: '°C' },
   temp_max:     { min: -40, max: 125,     unit: '°C' },
@@ -12,7 +12,7 @@ export const THRESHOLD_LIMITS: Record<keyof Thresholds, { min: number; max: numb
   co2_max:      { min: 0,   max: 5000,    unit: 'ppm' },
 }
 
-/** ENV-FR-007 — nguồn của ngưỡng mặc định phải nêu mã một mục REF-5 (`TL-xxx`, `MC-xxx`), như `REF5_ENTRY_PATTERN` backend */
+// nguồn của ngưỡng mặc định phải nêu mã một mục REF-5 (`TL-xxx`, `MC-xxx`), như `REF5_ENTRY_PATTERN` backend
 export const REF5_ENTRY_PATTERN = /\b(TL|MC)-\d{3}\b/
 export const THRESHOLD_SOURCE_MAX_LENGTH = 500
 
@@ -28,11 +28,7 @@ export function parseThresholdInput(raw: string): number {
   return raw.trim() === '' ? NaN : Number(raw)
 }
 
-/**
- * Validate form ngưỡng phía client — cùng luật với `assertValidThresholds` backend:
- * đủ 7 số hợp lệ, min < max, không âm, nằm trong khoảng đo cảm biến. Trả map
- * lỗi theo field (rỗng = hợp lệ).
- */
+// Validate form ngưỡng phía client: cùng luật với `assertValidThresholds` backend: đủ 7 số hợp lệ, min < max, không âm, nằm trong khoảng đo cảm biến. Trả map lỗi theo field (rỗng = hợp lệ).
 export function validateThresholds(values: Record<keyof Thresholds, number>): Partial<Record<keyof Thresholds, string>> {
   const errors: Partial<Record<keyof Thresholds, string>> = {}
   for (const key of THRESHOLD_KEYS) {

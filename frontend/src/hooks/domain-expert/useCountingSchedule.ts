@@ -4,7 +4,7 @@ import type { CountingSchedule } from '@/types/expert.types'
 
 const COUNTING_SCHEDULE_KEY = (houseId: string | undefined) => ['counting-schedule', houseId] as const
 
-// VISION-FR-019 — lịch đếm của nhà đang chọn
+// lịch đếm của nhà đang chọn
 export function useCountingSchedule(houseId: string | undefined) {
   return useQuery({
     queryKey: COUNTING_SCHEDULE_KEY(houseId),

@@ -64,13 +64,13 @@ export interface FuzzySuggestionResponse {
   reason: string | null
 }
 
-/** VISION-FR-018 — Tọa độ vùng đếm chim (polygon) lưu dạng chuẩn hoá [0..1] */
+// Tọa độ vùng đếm chim (polygon) lưu dạng chuẩn hoá [0..1]
 export interface CountingRingPoint {
   x: number
   y: number
 }
 
 export interface CountingRingCoordinates {
-  /** Mảng điểm polygon chuẩn hoá [0..1] theo chiều rộng/cao của khung hình */
+  // Mảng điểm polygon chuẩn hoá [0..1] theo chiều rộng/cao của khung hình
   points: CountingRingPoint[]
 }

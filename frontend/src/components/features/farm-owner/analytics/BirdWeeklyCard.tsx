@@ -22,7 +22,7 @@ interface BirdWeeklyCardProps {
   scopeLabel: string;
 }
 
-// Tỷ lệ chim về theo tuần của cả nhà yến (ANALYTICS-FR-002, VISION-FR-011)
+// Tỷ lệ chim về theo tuần của cả nhà yến
 export default function BirdWeeklyCard({ houseIds, scopeLabel }: BirdWeeklyCardProps): JSX.Element {
   const { t, num, date } = useTranslation(analyticsDict);
   const [weeks, setWeeks] = useState<BirdWeekOption>(12);

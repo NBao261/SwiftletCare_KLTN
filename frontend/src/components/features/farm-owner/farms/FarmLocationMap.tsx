@@ -24,7 +24,7 @@ const PIN_ICON = L.divIcon({
   iconAnchor: [10, 10],
 });
 
-// FARM-FR-001 — chọn vị trí farm trên bản đồ OpenStreetMap: bấm vào bản đồ hoặc kéo ghim
+// chọn vị trí farm trên bản đồ OpenStreetMap: bấm vào bản đồ hoặc kéo ghim
 export default function FarmLocationMap({ value, focusRequest, onPick }: FarmLocationMapProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);

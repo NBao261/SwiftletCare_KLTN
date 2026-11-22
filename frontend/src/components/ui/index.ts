@@ -1,5 +1,4 @@
-// Barrel của design system. `icons` CỐ Ý không nằm ở đây: mỗi màn chỉ dùng vài
-// icon nên import thẳng `@/components/ui/icons` để không kéo cả bộ vào chunk.
+// Barrel của design system. `icons` CỐ Ý không nằm ở đây: mỗi màn chỉ dùng vài icon nên import thẳng `@/components/ui/icons` để không kéo cả bộ vào chunk.
 
 // Primitive nguyên tử
 export * from '@/components/ui/Button'
@@ -12,7 +11,7 @@ export * from '@/components/ui/Textarea'
 export * from '@/components/ui/Modal'
 export * from '@/components/ui/ModalParts'
 
-// Widget tổ hợp — vẫn thuộc ui/ vì không biết gì về domain
+// Widget tổ hợp: vẫn thuộc ui/ vì không biết gì về domain
 export { default as ActionsMenu, type ActionsMenuItem } from '@/components/ui/ActionsMenu'
 export { default as SelectMenu, type SelectMenuOption } from '@/components/ui/SelectMenu'
 export { default as DataTable, type DataTableColumn } from '@/components/ui/DataTable'

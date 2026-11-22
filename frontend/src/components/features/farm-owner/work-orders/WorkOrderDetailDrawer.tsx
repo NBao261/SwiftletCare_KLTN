@@ -11,7 +11,7 @@ import { useWorkOrder, useWorkOrderActions } from '@/hooks/farm-owner/useWorkOrd
 import { useToastStore } from '@/stores/toastStore';
 import type { ChecklistResult, WorkOrder } from '@/types';
 
-// Một dòng nhãn — giá trị
+// Một dòng nhãn: giá trị
 function Field({ label, children }: { label: string; children: ReactNode }): JSX.Element {
   return (
     <div className="flex flex-col gap-1">
@@ -41,7 +41,7 @@ interface WorkOrderDetailDrawerProps {
   onClose: () => void;
 }
 
-// OPS-FR-002…004, 007 — chi tiết Work Order: trạng thái, nguồn, người làm, nguyên nhân và ảnh tại nhà, checklist bảo trì (phòng ngừa), diễn biến
+// chi tiết Work Order: trạng thái, nguồn, người làm, nguyên nhân và ảnh tại nhà, checklist bảo trì (phòng ngừa), diễn biến
 export default function WorkOrderDetailDrawer({
   workOrderId, houseNames, personNames, canManage, onAction, onClose,
 }: WorkOrderDetailDrawerProps): JSX.Element {
@@ -51,7 +51,7 @@ export default function WorkOrderDetailDrawer({
   const actions = workOrder && canManage ? ownerActions(workOrder) : [];
   const push = useToastStore(state => state.push);
   const { recordChecklist } = useWorkOrderActions();
-  // OPS-FR-007 — Farm Owner ghi kết quả từng mục khi tự làm phiếu phòng ngừa (ghi chú và ảnh từng mục ở mobile)
+  // Farm Owner ghi kết quả từng mục khi tự làm phiếu phòng ngừa (ghi chú và ảnh từng mục ở mobile)
   const canRecordChecklist = canManage && workOrder?.status === 'IN_PROGRESS';
   // Bấm đúng kết quả đang có thì không gửi; đổi kết quả thì giữ ghi chú của người ghi trước (backend xoá ghi chú khi không gửi)
   function recordItem(itemIndex: number, result: ChecklistResult, current: { result: ChecklistResult | null; note?: string | null }): void {
@@ -64,7 +64,7 @@ export default function WorkOrderDetailDrawer({
 
   return (
     <Drawer open={Boolean(workOrderId)} onClose={onClose} title={t('detail.title')}>
-      {/* Drawer không tự cuộn — vùng cuộn đặt ở đây như HealthDayDrawer */}
+      {/* Drawer không tự cuộn: vùng cuộn đặt ở đây như HealthDayDrawer */}
       <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-2">
         {isLoading ? (
           <LoadingSkeleton count={4} className="h-16 w-full" />
@@ -94,7 +94,7 @@ export default function WorkOrderDetailDrawer({
               </dl>
             </section>
 
-            {/* OPS-FR-007 — checklist của phiếu phòng ngừa: kết quả, ghi chú, ảnh từng mục */}
+            {/* checklist của phiếu phòng ngừa: kết quả, ghi chú, ảnh từng mục */}
             {workOrder.kind === 'PREVENTIVE' && (workOrder.checklist ?? []).length > 0 && (
               <section className="flex flex-col gap-3">
                 <p className="text-sm font-semibold text-charcoal">{t('detail.checklist')}</p>
@@ -140,7 +140,7 @@ export default function WorkOrderDetailDrawer({
               </section>
             )}
 
-            {/* Kết quả tại nhà: nguyên nhân, việc đã làm, ảnh (ALERT-FR-018); huỷ thì lý do huỷ */}
+            {/* Kết quả tại nhà: nguyên nhân, việc đã làm, ảnh; huỷ thì lý do huỷ */}
             <section className="flex flex-col gap-3">
               <p className="text-sm font-semibold text-charcoal">{t('detail.record')}</p>
               {workOrder.status === 'CANCELLED' ? (
@@ -198,7 +198,7 @@ export default function WorkOrderDetailDrawer({
         )}
       </div>
 
-      {/* Phiếu bảo trì chưa đóng không huỷ được (SM-20): chỉ chỗ xoá kế hoạch */}
+      {/* Phiếu bảo trì chưa đóng không huỷ được: chỉ chỗ xoá kế hoạch */}
       {workOrder && canManage && workOrder.kind === 'PREVENTIVE' && ['OPEN', 'IN_PROGRESS'].includes(workOrder.status) && (
         <p className="pt-3 text-xs text-warmGray">
           {t('detail.preventiveHint')} <Link to="/maintenance" className="font-semibold text-charcoal underline">{t('detail.maintenanceLink')}</Link>.

@@ -5,11 +5,11 @@ import { tr } from '@/i18n'
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string
   error?: string
-  /** Xem Input#errorInLabel — lỗi cùng hàng với nhãn để popup canh giữa không đổi chiều cao khi lỗi hiện/ẩn */
+  // Xem Input#errorInLabel: lỗi cùng hàng với nhãn để popup canh giữa không đổi chiều cao khi lỗi hiện/ẩn
   errorInLabel?: boolean
 }
 
-/** Textarea — cùng khuôn với Input.tsx, dùng lại class `.input` (index.css) */
+// Textarea: cùng khuôn với Input.tsx, dùng lại class `.input` (index.css)
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label: rawLabel, error: rawError, errorInLabel, className, id, rows = 3, placeholder, ...props }, ref) => {
     const textareaId = id ?? props.name

@@ -1,7 +1,7 @@
 import api from '@/lib/axios';
 import type { ApiResponse, MaintenanceBasis, MaintenanceEquipment, MaintenancePlan, MaintenancePlanState } from '@/types';
 
-// GET /maintenance/plans — houseId hoặc farmId; không truyền = mọi farm của người gọi; RETIRED chỉ hiện khi lọc state=RETIRED
+// GET /maintenance/plans: houseId hoặc farmId; không truyền = mọi farm của người gọi; RETIRED chỉ hiện khi lọc state=RETIRED
 export interface MaintenancePlanListQuery {
   farmId?: string;
   houseId?: string;
@@ -23,7 +23,7 @@ export interface CreateMaintenancePlanInput {
 // Nhà, thiết bị, cách tính không đổi được sau khi tạo
 export type UpdateMaintenancePlanInput = Pick<CreateMaintenancePlanInput, 'interval' | 'checklist_template' | 'source' | 'note'>;
 
-// OPS-FR-005, 006 — Farm Owner tạo, sửa, xoá kế hoạch; Domain Expert chỉ đọc và góp ý
+// Farm Owner tạo, sửa, xoá kế hoạch; Domain Expert chỉ đọc và góp ý
 export const maintenanceApi = {
   listPlans: (query: MaintenancePlanListQuery) =>
     api.get<ApiResponse<MaintenancePlan[]>>('/maintenance/plans', { params: query }),

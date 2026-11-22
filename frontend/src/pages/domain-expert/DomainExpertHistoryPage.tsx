@@ -1,12 +1,4 @@
-/**
- * DomainExpertHistoryPage — Lịch sử hoạt động chuyên gia
- *
- * SRS EXPERT-FR-009: Lịch sử các quyết định của Chuyên gia / Farm Owner (làm thay BR-22)
- * Đọc từ audit log qua GET /expert-activity?farmId=
- * Hỗ trợ lọc theo loại quyết định, theo nhà/vùng và phân trang chuẩn hệ thống.
- *
- * Bucket: pages/domain-expert/ — §12.4.
- */
+// DomainExpertHistoryPage: Lịch sử hoạt động chuyên gia: Lịch sử các quyết định của Chuyên gia / Farm Owner (làm thay) Đọc từ audit log qua GET /expert-activity?farmId= Hỗ trợ lọc theo loại quyết định, theo nhà/vùng và phân trang chuẩn hệ thống. Bucket: pages/domain-expert
 import { useMemo, useState } from 'react'
 import {
   History,
@@ -86,7 +78,7 @@ function formatChangeValue(value: unknown): string {
 // 'YYYY-MM-DD' → 'DD/MM/YYYY', 'MM-DD' → 'DD/MM'
 const dayText = (value: string) => value.split('-').reverse().join('/')
 
-// VISION-FR-019 — một lần sửa lịch đếm: ngày áp và từng hồ sơ, khung tạm của lịch mới
+// một lần sửa lịch đếm: ngày áp và từng hồ sơ, khung tạm của lịch mới
 function renderCountingSchedule(metadata: Record<string, unknown>) {
   const schedule = metadata.after as CountingSchedule | undefined
   // Gọn: ngày dạng ngày/tháng, khung một ngày ghi một ngày; giờ hai phiên xem khi rê chuột

@@ -2,7 +2,7 @@ import type { HealthLevels } from '@/types'
 
 export type HealthLevelKey = keyof HealthLevels
 
-// Khoảng hợp lệ BR-28 — khớp kiểm tra của backend (PUT /farms/houses/{houseId}/health-levels)
+// Khoảng hợp lệ: khớp kiểm tra của backend (PUT /farms/houses/{houseId}/health-levels)
 export const HEALTH_LEVEL_LIMITS: Record<HealthLevelKey, { min: number; max: number; integer: boolean }> = {
   in_range_slight_pct: { min: 50, max: 100, integer: false },
   in_range_clear_pct:  { min: 50, max: 100, integer: false },

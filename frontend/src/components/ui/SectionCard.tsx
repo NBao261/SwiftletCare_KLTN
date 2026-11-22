@@ -4,24 +4,21 @@ import { tr } from '@/i18n'
 import InfoTip from '@/components/ui/InfoTip'
 
 interface SectionCardProps {
-  /** Icon trong ô vuông bo góc nền charcoal — ở các trang Admin là icon của mục menu sidebar tương ứng. Bỏ trống = không có ô icon */
+  // Icon trong ô vuông bo góc nền charcoal: ở các trang Admin là icon của mục menu sidebar tương ứng. Bỏ trống = không có ô icon
   icon?: ReactNode
-  /** Bỏ trống khi trang chỉ có 1 card: tên trang đã ở header (FE_Design §1.1), card chỉ còn dòng mô tả */
+  // Bỏ trống khi trang chỉ có 1 card: tên trang đã ở header (FE_Design), card chỉ còn dòng mô tả
   title?: ReactNode
-  /** Dòng mô tả dưới tiêu đề: chữ thường thì 1 dòng (C-07); ReactNode nhiều mục (VD địa chỉ + chủ sở hữu) giữ nguyên */
+  // Dòng mô tả dưới tiêu đề: chữ thường thì 1 dòng; ReactNode nhiều mục (VD địa chỉ + chủ sở hữu) giữ nguyên
   description?: ReactNode
-  /** Giải thích dài (quy tắc, lý do) — hiện trong nút (i) cạnh tiêu đề thay vì đoạn chữ dưới card */
+  // Giải thích dài (quy tắc, lý do): hiện trong nút (i) cạnh tiêu đề thay vì đoạn chữ dưới card
   help?: ReactNode
-  /** Nút/link bên phải header (VD "Xem tất cả", "Thiết bị & Cảm biến") */
+  // Nút/link bên phải header (VD "Xem tất cả", "Thiết bị & Cảm biến")
   action?: ReactNode
   className?: string
   children?: ReactNode
 }
 
-/**
- * Card trắng có header "icon + tiêu đề + mô tả (+ action phải)", nội dung xếp dọc bên dưới — khuôn chung
- * của các khối danh sách/chi tiết ở trang Admin, để chỉnh bo góc/padding chỉ sửa 1 chỗ (FE_Design mục 9).
- */
+// Card trắng có header "icon + tiêu đề + mô tả (+ action phải)", nội dung xếp dọc bên dưới: khuôn chung của các khối danh sách/chi tiết ở trang Admin, để chỉnh bo góc/padding chỉ sửa 1 chỗ (FE_Design mục 9).
 export default function SectionCard({ icon, title, description, help, action, className, children }: SectionCardProps) {
   return (
     <section className={cn('flex flex-col gap-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card', className)}>

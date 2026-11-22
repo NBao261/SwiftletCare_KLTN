@@ -9,34 +9,30 @@ import type { AuditLogEntry } from '@/types'
 export const ALL = ''
 const SEARCH_DEBOUNCE_MS = 300
 
-/** Lọc thời gian (dropdown): `days` ngày tính cả hôm nay, tới hết hôm nay */
+// Lọc thời gian (dropdown): `days` ngày tính cả hôm nay, tới hết hôm nay
 export const DATE_PRESETS = [
   { value: 'today', label: 'Hôm nay', days: 1 },
   { value: '3d', label: '3 ngày trước', days: 3 },
   { value: '7d', label: '7 ngày trước', days: 7 },
 ]
 
-/**
- * Backend so sánh `created_at >= from` / `<= to` theo mốc tuyệt đối, nên ngày
- * "đến" phải đẩy tới 23:59:59.999 (giờ máy người dùng) — không thì chọn
- * 20/09 → 20/09 chỉ khớp đúng 00:00:00 của ngày đó và ra rỗng.
- */
+// Backend so sánh `created_at >= from` / `<= to` theo mốc tuyệt đối, nên ngày "đến" phải đẩy tới 23:59:59.999 (giờ máy người dùng): không thì chọn 20/09 → 20/09 chỉ khớp đúng 00:00:00 của ngày đó và ra rỗng.
 function startOfDayIso(date: string) { return new Date(`${date}T00:00:00`).toISOString() }
 function endOfDayIso(date: string) { return new Date(`${date}T23:59:59.999`).toISOString() }
 
-/** YYYY-MM-DD theo giờ máy người dùng, lùi `daysAgo` ngày */
+// YYYY-MM-DD theo giờ máy người dùng, lùi `daysAgo` ngày
 function localDay(daysAgo: number) {
   const d = new Date()
   d.setDate(d.getDate() - daysAgo)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** Bỏ dấu + đ→d + chữ thường, để "dang nhap" khớp "Đăng nhập" */
+// Bỏ dấu + đ→d + chữ thường, để "dang nhap" khớp "Đăng nhập"
 function fold(s: string) {
   return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/đ/gi, 'd').toLowerCase()
 }
 
-/** Substring trên hành động, người thực hiện, vai trò, tên tài khoản bị tác động, lý do */
+// Substring trên hành động, người thực hiện, vai trò, tên tài khoản bị tác động, lý do
 function matchesSearch(log: AuditLogEntry, q: string) {
   return [
     AUDIT_ACTION_LABEL[log.action] ?? log.action,
@@ -70,9 +66,7 @@ export function useAuditLogTable(pageSize: number, initial: { action?: string; s
     to: preset ? endOfDayIso(localDay(0)) : undefined,
   }
   const q = fold(debouncedSearch.trim())
-  // /system/audit-logs không có tìm chữ và luôn trả created_at giảm dần. Mặc định dùng phân trang server
-  // (nhẹ); khi tìm chữ hoặc sắp "cũ nhất trước" thì tải TOÀN BỘ nhật ký khớp bộ lọc server rồi lọc/đảo/cắt
-  // trang ở client — tìm ra bao nhiêu thì phân trang đúng bấy nhiêu, không chỉ trong trang đang xem.
+  // /system/audit-logs không có tìm chữ và luôn trả created_at giảm dần. Mặc định dùng phân trang server (nhẹ); khi tìm chữ hoặc sắp "cũ nhất trước" thì tải TOÀN BỘ nhật ký khớp bộ lọc server rồi lọc/đảo/cắt trang ở client: tìm ra bao nhiêu thì phân trang đúng bấy nhiêu, không chỉ trong trang đang xem.
   const clientSide = !!q || sortDir === 'asc'
   const serverPage = useAuditLogList({ ...serverFilters, page, limit: pageSize })
   const all = useAllAuditLogs(serverFilters, clientSide)
@@ -80,7 +74,7 @@ export function useAuditLogTable(pageSize: number, initial: { action?: string; s
   let visible: AuditLogEntry[]
   let total: number
   let isLoading: boolean
-  // Lỗi API phải tách khỏi "rỗng" (FE_Design §13.5) — trước đây 500 hiện thành "Chưa có nhật ký nào"
+  // Lỗi API phải tách khỏi "rỗng" (FE_Design): trước đây 500 hiện thành "Chưa có nhật ký nào"
   let isError: boolean
   let error: unknown
   let refetch: () => unknown
@@ -102,7 +96,7 @@ export function useAuditLogTable(pageSize: number, initial: { action?: string; s
     refetch = serverPage.refetch
   }
 
-  /** Đổi bất kỳ bộ lọc nào thì quay về trang 1 — trang N của bộ lọc cũ có thể không tồn tại ở bộ lọc mới */
+  // Đổi bất kỳ bộ lọc nào thì quay về trang 1: trang N của bộ lọc cũ có thể không tồn tại ở bộ lọc mới
   function withReset<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); setPage(1) }
   }

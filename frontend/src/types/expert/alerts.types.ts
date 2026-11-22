@@ -1,6 +1,6 @@
 import type { AlertSeverity, AlertStatus } from '@/types'
 
-// Report 3 §1 "Inferred alert" — khớp INFERRED_ALERT_TYPES của backend; MISTING_INEFFECTIVE là cảnh báo đo trực tiếp
+// "Inferred alert": khớp INFERRED_ALERT_TYPES của backend; MISTING_INEFFECTIVE là cảnh báo đo trực tiếp
 export type InferredAlertType = 'NOISE_ANOMALY' | 'SENSOR_ANOMALY' | 'FORECAST_BREACH' | 'LOW_RETURN_RATE'
 export type AlertVerdictResult = 'CONFIRMED' | 'REJECTED'
 
@@ -31,11 +31,11 @@ export interface InferredAlertItem {
   acknowledged_at?: string
   acknowledgement_note?: string
   expert_verdict?: ExpertVerdict
-  // BR-22 — lần Farm Owner nhắc chuyên gia kết luận
+  // lần Farm Owner nhắc chuyên gia kết luận
   expert_reminded_at?: string | null
 }
 
-// EXPERT-FR-003 — bộ lọc danh sách cảnh báo suy luận (GET /alerts?verdict=…)
+// bộ lọc danh sách cảnh báo suy luận (GET /alerts?verdict=…)
 export interface InferredAlertQuery {
   farmId?: string
   zoneId?: string
@@ -54,7 +54,7 @@ export interface ExpertVerdictStats {
   confirmedPct: number | null
 }
 
-/** ALERT-FR-014 — Bằng chứng của cảnh báo suy luận */
+// Bằng chứng của cảnh báo suy luận
 export interface TelemetrySample {
   timestamp: string
   temperature?: number | null
@@ -78,7 +78,7 @@ export interface ZoneInRange {
   humidity_in_range_pct: number | null
 }
 
-/** EXPERT-FR-021 — quan sát tại chỗ của Kỹ thuật viên */
+// quan sát tại chỗ của Kỹ thuật viên
 export type OnsiteObservation =
   | 'BIRDS_DISTURBED'
   | 'WORK_OR_PEOPLE_NEARBY'
@@ -116,7 +116,7 @@ export interface AlertEvidence {
   onsite_checks?: OnsiteCheck[] | null
 }
 
-/** EXPERT-FR-009 — Lịch sử hoạt động chuyên gia trên farm */
+// Lịch sử hoạt động chuyên gia trên farm
 export interface ExpertActivityEntry {
   _id: string
   action: string

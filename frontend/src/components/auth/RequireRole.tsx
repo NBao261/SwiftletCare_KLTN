@@ -8,11 +8,7 @@ interface RequireRoleProps {
   children: ReactNode
 }
 
-/**
- * Guard cấp route — dùng lồng bên trong ProtectedRoute cho những route mà
- * backend chặn toàn bộ theo role (vd router harvests chỉ cho FARM_OWNER/ADMIN).
- * Không dùng cho việc ẩn/hiện nút bấm — dùng usePermission() cho việc đó.
- */
+// Guard cấp route: dùng lồng bên trong ProtectedRoute cho những route mà backend chặn toàn bộ theo role (vd router harvests chỉ cho FARM_OWNER/ADMIN). Không dùng cho việc ẩn/hiện nút bấm, dùng usePermission() cho việc đó.
 export default function RequireRole({ allow, children }: RequireRoleProps) {
   const allowed = usePermission(...allow)
   if (!allowed) return <Navigate to="/403" replace />

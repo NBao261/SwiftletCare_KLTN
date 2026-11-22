@@ -1,6 +1,6 @@
-// G-25 — tổng quan trại, so sánh nhà (ANALYTICS-FR-015, 016, BR-44), điện năng ước tính (ANALYTICS-FR-017, BR-45); api-spec HouseOverview, HouseComparisonRow, EnergyMonth
+// tổng quan trại, so sánh nhà, điện năng ước tính; api-spec HouseOverview, HouseComparisonRow, EnergyMonth
 
-// Giai đoạn nhà dùng chung với hồ sơ cấu hình (G-24), không khai báo lại để barrel `@/types` không xuất trùng
+// Giai đoạn nhà dùng chung với hồ sơ cấu hình, không khai báo lại để barrel `@/types` không xuất trùng
 import type { HouseStage } from '@/types/expert/profile.types';
 import type { SiteCause } from '@/types/workOrder.types';
 
@@ -17,7 +17,7 @@ export interface HouseOverview {
   open_work_orders: number;
   // Tìm trong 30 ngày gần nhất; null = không có ngày nào có tỷ lệ
   latest_return_rate: { date: string; value: number } | null;
-  // Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004)
+  // Mọi thiết bị của nhà là thiết bị giả lập
   simulated: boolean;
 }
 
@@ -32,7 +32,7 @@ export type ComparisonSortKey =
   | 'name' | 'time_in_range_pct' | 'good_days_pct' | 'return_rate_avg' | 'flock_trend_pct'
   | 'alerts_raised' | 'alerts_open' | 'mttr_min' | 'energy_kwh' | 'last_cycle_yield_g';
 
-// Không có điểm tổng hay xếp hạng (BR-44); null = chưa có số
+// Không có điểm tổng hay xếp hạng; null = chưa có số
 export interface HouseComparisonRow {
   house_id: string;
   name: string;
@@ -43,13 +43,13 @@ export interface HouseComparisonRow {
   alerts_raised: number;
   alerts_open: number;
   mttr_min: number | null;
-  // Ước tính (BR-45); null = không có dòng đo
+  // Ước tính; null = không có dòng đo
   energy_kwh: number | null;
   energy: { misting_kwh: number | null; ventilation_kwh: number | null };
   last_cycle_yield_g: number | null;
-  // ALERT-FR-018, BR-44 — số lần mỗi nguyên nhân tìm thấy tại chỗ trong kỳ (chỉ nguyên nhân đã gặp); không để sắp xếp
+  // số lần mỗi nguyên nhân tìm thấy tại chỗ trong kỳ (chỉ nguyên nhân đã gặp); không để sắp xếp
   site_causes?: Partial<Record<SiteCause, number>>;
-  // Mọi thiết bị của nhà là thiết bị giả lập (SYSTEM-FR-004)
+  // Mọi thiết bị của nhà là thiết bị giả lập
   simulated: boolean;
 }
 
@@ -80,7 +80,7 @@ export interface EnergyEstimate {
   total: { misting_kwh: number | null; ventilation_kwh: number | null; total_kwh: number | null };
 }
 
-// ANALYTICS-FR-002 — trung bình số chim ra buổi sáng của 1 tuần (thứ Hai đầu tuần) hoặc 1 tháng
+// trung bình số chim ra buổi sáng của 1 tuần (thứ Hai đầu tuần) hoặc 1 tháng
 export interface FlockPeriod {
   period: string;
   days: number;

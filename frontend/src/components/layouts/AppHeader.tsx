@@ -12,7 +12,7 @@ import LanguageToggle from '@/components/common/LanguageToggle'
 // Trang không nằm trên sidebar mà mở từ menu avatar (SH-03): Cài đặt và Quyền riêng tư
 const AVATAR_MENU_PAGES: Pick<MenuItem, 'label' | 'path' | 'tabs'>[] = [{ label: 'Cài đặt', path: '/settings' }]
 
-/** Tên trang + base path theo route hiện tại, tra trong chính menu của role đang đăng nhập. */
+// Tên trang + base path theo route hiện tại, tra trong chính menu của role đang đăng nhập.
 function usePageTitle(menuSections: MenuSection[]): { label: string; to: string } {
   const { pathname } = useLocation()
   const navigationLabel = useNavigationLabel()
@@ -23,7 +23,7 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
   return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: tabPath ?? match?.path ?? pathname }
 }
 
-/** `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung */
+// `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung
 export default function AppHeader({ menuSections, elevated = false }: { menuSections: MenuSection[]; elevated?: boolean }) {
   const setHeaderSlot = useHeaderSlotStore(state => state.setSlot)
   const { pathname } = useLocation()
@@ -50,7 +50,7 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
         )}
       />
 
-      {/* Trái: tên trang (h1, C-01) → thực thể đang xem; điện thoại xuống tối đa 2 dòng thay vì cắt (SH-05) */}
+      {/* Trái: tên trang (h1) → thực thể đang xem; điện thoại xuống tối đa 2 dòng thay vì cắt (SH-05) */}
       <nav aria-label="breadcrumb" className="order-1 flex min-w-0 flex-1 items-baseline gap-1.5">
         {trail.map((crumb, i) => {
           const isRoot = i === 0
@@ -87,7 +87,7 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
         <div className="max-sm:hidden">
           <LanguageToggle />
         </div>
-        {/* Mọi role có hộp thông báo (EXPERT-FR-007); tab Cảnh báo chỉ cho role vào được /alerts */}
+        {/* Mọi role có hộp thông báo; tab Cảnh báo chỉ cho role vào được /alerts */}
         <NotificationPopover />
         <ProfilePopover />
       </div>

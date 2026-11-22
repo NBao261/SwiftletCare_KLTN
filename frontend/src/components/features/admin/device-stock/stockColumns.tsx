@@ -4,7 +4,7 @@ import { formatDateOnly } from '@/lib/helpers'
 import { t } from '@/i18n'
 import type { ProvisionedDevice, StockStatus } from '@/types'
 
-/** Report 3 §6.16 — trạng thái nhãn */
+// trạng thái nhãn
 export const STOCK_STATUS: Record<StockStatus, { label: string; tone: BadgeTone }> = {
   IN_STOCK: { label: 'Trong kho', tone: 'info' },
   IN_SERVICE: { label: 'Đang dùng', tone: 'positive' },
@@ -14,7 +14,7 @@ export const STOCK_STATUS: Record<StockStatus, { label: string; tone: BadgeTone 
 
 export type StockAction = 'rotate-key' | 'rotate-broker' | 'revoke'
 
-/** Cấp lại mã kích hoạt và thu hồi chỉ khi thiết bị không đang dùng ở farm nào (BR-26); thu hồi là trạng thái cuối */
+// Cấp lại mã kích hoạt và thu hồi chỉ khi thiết bị không đang dùng ở farm nào; thu hồi là trạng thái cuối
 function actionsFor(d: ProvisionedDevice, onAction: (a: StockAction, d: ProvisionedDevice) => void): ActionsMenuItem[] {
   const notInService = d.stock_status === 'IN_STOCK' || d.stock_status === 'RELEASED'
   const items: ActionsMenuItem[] = []
@@ -30,7 +30,7 @@ function note(d: ProvisionedDevice) {
   return '—'
 }
 
-/** Width % (DataTable table-fixed), tổng 100: 20+16+16+14+24+10 — Thiết bị vừa mã dài nhất thường gặp, Loại đủ chỗ nhãn "Bộ điều khiển" */
+// Width % (DataTable table-fixed), tổng 100: 20+16+16+14+24+10: Thiết bị vừa mã dài nhất thường gặp, Loại đủ chỗ nhãn "Bộ điều khiển"
 export function buildStockColumns(
   onAction: (a: StockAction, d: ProvisionedDevice) => void,
 ): DataTableColumn<ProvisionedDevice>[] {

@@ -15,8 +15,7 @@ import type { Alert } from '@/types'
 
 const PAGE_SIZE = 10
 
-// Popup chuông: tab Cảnh báo (cuộn tải thêm, cảnh báo ACTIVE = chờ xác nhận được đánh dấu, ALERT-FR-007) và tab Thông báo
-// trong ứng dụng, nơi duy nhất có đã đọc / chưa đọc (EXPERT-FR-007)
+// Popup chuông: tab Cảnh báo (cuộn tải thêm, cảnh báo ACTIVE = chờ xác nhận được đánh dấu) và tab Thông báo trong ứng dụng, nơi duy nhất có đã đọc / chưa đọc
 export default function NotificationPopover() {
   const { t } = useTranslation(shellDict)
   const [open, setOpen] = useState(false)
@@ -139,7 +138,7 @@ export default function NotificationPopover() {
           </div>
 
           {showAlerts && (
-          // Kiểu tab như SectionTabs: pill trắng trên nền xám, không tô đen (SH-08, C-03)
+          // Kiểu tab như SectionTabs: pill trắng trên nền xám, không tô đen (SH-08)
           <div className="shrink-0 border-b border-charcoal/10 px-3 py-2">
           <div role="tablist" className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1">
             {([['alerts', t('notif.tabAlerts'), alertPendingCount], ['inbox', t('notif.tabInbox'), inboxUnreadCount]] as const).map(([key, label, count]) => (

@@ -26,11 +26,10 @@ interface AlertTableProps {
   onAction: (action: AlertAction, alert: Alert) => void;
 }
 
-// ALERT-FR-007 — bảng cảnh báo: mức, loại, vị trí, thiết bị, trạng thái, lúc tạo, menu thao tác
+// bảng cảnh báo: mức, loại, vị trí, thiết bị, trạng thái, lúc tạo, menu thao tác
 export default function AlertTable({ alerts, serverPagination, locationOf, canAcknowledge, onAction }: AlertTableProps): JSX.Element {
   const { t, dateTime } = useTranslation(alertsDict);
-  // table-fixed: cột % cộng đủ phần còn lại sau Mức, Thao tác để không dư khoảng trống giữa các cột
-  // Menu ⋯ của 1 dòng (bảng và thẻ điện thoại); bấm menu, kể cả mục trong portal, không mở chi tiết của dòng
+  // table-fixed: cột % cộng đủ phần còn lại sau Mức, Thao tác để không dư khoảng trống giữa các cột Menu ⋯ của 1 dòng (bảng và thẻ điện thoại); bấm menu, kể cả mục trong portal, không mở chi tiết của dòng
   const rowMenu = useCallback((alert: Alert, alignClass: string) => {
     const items: ActionsMenuItem[] = [{ label: t('action.view'), onClick: () => onAction('view', alert) }];
     if (canAcknowledge && alert.status === 'ACTIVE') {

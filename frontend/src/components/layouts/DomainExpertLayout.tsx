@@ -7,7 +7,7 @@ import {
 import AppShell from '@/components/layouts/AppShell';
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar';
 
-// Khung Domain Expert (FE_Design §12.5): Chuyên môn là màn quyết định, Vận hành trỏ tới trang Farm Owner chỉ đọc (Report 4 §5.4); cùng tên, icon với menu Farm Owner
+// Khung Domain Expert (FE_Design): Chuyên môn là màn quyết định, Vận hành trỏ tới trang Farm Owner chỉ đọc; cùng tên, icon với menu Farm Owner
 const menuSections: MenuSection[] = [
   {
     title: 'Chuyên môn',

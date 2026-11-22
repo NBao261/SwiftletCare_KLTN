@@ -9,7 +9,7 @@ import { useAwaitingApproval } from '@/hooks/farm-owner/useWorkOrders'
 import { usePendingDeletionCount } from '@/hooks/admin/useAccountRequests'
 import { expertService } from '@/services/expert.service'
 
-// Số trên mục menu theo đường dẫn của mục (§3.1): Công việc và Chuyên môn theo trang trại đang chọn ở khung lọc, Cảnh báo đếm mọi trang trại như trang Cảnh báo
+// Số trên mục menu theo đường dẫn của mục: Công việc và Chuyên môn theo trang trại đang chọn ở khung lọc, Cảnh báo đếm mọi trang trại như trang Cảnh báo
 export function useMenuBadges(): Record<string, number> {
   const role = useAuthStore(state => state.user?.role)
   const isExpert = role === 'DOMAIN_EXPERT'
@@ -17,7 +17,7 @@ export function useMenuBadges(): Record<string, number> {
   const isAdmin = role === 'ADMIN'
   const pendingAlertCount = usePendingAlertTotal() ?? 0
   const { data: expertAlerts } = useExpertPendingAlerts(undefined, undefined, isExpert)
-  // AUTH-FR-012 — yêu cầu xoá tài khoản chờ Admin xử lý
+  // yêu cầu xoá tài khoản chờ Admin xử lý
   const pendingDeletion = usePendingDeletionCount(isAdmin)
   const storedFarmId = useZoneStore(state => state.scopeFarmId)
   const { data: farms } = useFarms()
@@ -25,7 +25,7 @@ export function useMenuBadges(): Record<string, number> {
   const scopeFarmId = farms?.find(farm => farm._id === storedFarmId)?._id ?? ''
   const { data: awaitingApproval } = useAwaitingApproval(scopeFarmId, '', isOwner && farms !== undefined)
 
-  // BR-22: trang trại chưa có chuyên gia thì chủ nhà yến kết luận thay, đếm cảnh báo chờ kết luận của các trang trại đó
+  // trang trại chưa có chuyên gia thì chủ nhà yến kết luận thay, đếm cảnh báo chờ kết luận của các trang trại đó
   const farmsWithoutExpert = useMemo(
     () => (isOwner ? (farms ?? []).filter(farm => farm.has_active_expert === false && (!scopeFarmId || farm._id === scopeFarmId)).map(farm => farm._id) : []),
     [isOwner, farms, scopeFarmId],

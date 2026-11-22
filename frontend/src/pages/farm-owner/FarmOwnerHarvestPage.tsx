@@ -72,11 +72,10 @@ function exportCsv(batches: HarvestBatch[], houseNameByZone: Map<string, string>
   URL.revokeObjectURL(url);
 }
 
-// Trang Thu hoạch của Farm Owner — chỉ ghi nhận thu hoạch theo SRS v2 (HARVEST-FR-001..005, Flow 7)
+// Trang Thu hoạch của Farm Owner: chỉ ghi nhận thu hoạch theo
 export default function FarmOwnerHarvestPage(): JSX.Element {
   const { t } = useTranslation(harvestDict);
-  // Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner, lưu lại khi chuyển trang
-  // Sản lượng nhập theo nhà yến nên trang chỉ lọc tới nhà: ô Zone khoá, bỏ Zone đã lưu ở trang khác
+  // Khung lọc Trang trại → Nhà → Zone chung các trang Farm Owner, lưu lại khi chuyển trang Sản lượng nhập theo nhà yến nên trang chỉ lọc tới nhà: ô Zone khoá, bỏ Zone đã lưu ở trang khác
   const scope = { ...useScopeFilter(), zone: undefined };
   const farmId = scope.farmId;
   // Đợt thu của farm đang lọc, hoặc của mọi farm khi xem tất cả trang trại
@@ -85,7 +84,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const detailFarmIds = useMemo(() => (farmId ? [farmId] : scope.farms.map(farm => farm._id)), [farmId, scope.farms]);
   const farmDetails = useFarmDetails(detailFarmIds);
   const user = useAuthStore(state => state.user);
-  // HARVEST-FR: Farm Owner ghi, Domain Expert chỉ đọc (Report 3 §2.4)
+  // HARVEST-FR: Farm Owner ghi, Domain Expert chỉ đọc
   const canWrite = usePermission('FARM_OWNER');
   const deleteHarvest = useDeleteHarvest();
   const confirmHarvest = useConfirmHarvest();
@@ -115,7 +114,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   // Mỗi lần thu 1 nhóm: các loại yến ghi cùng lần gộp lại
   const groups = useMemo(() => groupHarvests(scopedBatches), [scopedBatches]);
   const groupByKey = useMemo(() => new Map(groups.map(group => [group.key, group])), [groups]);
-  // Sản lượng chỉ tính lô đã xác nhận (BR-43); bảng và CSV vẫn có lô chờ xác nhận
+  // Sản lượng chỉ tính lô đã xác nhận; bảng và CSV vẫn có lô chờ xác nhận
   const confirmedBatches = useMemo(() => scopedBatches.filter(batch => batch.status !== 'DRAFT'), [scopedBatches]);
   const confirmedGroups = useMemo(() => groupHarvests(confirmedBatches), [confirmedBatches]);
 
@@ -176,7 +175,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
     setDetailGroupKey(null);
   }
 
-  // HARVEST-FR-006 — xác nhận cả lần thu = xác nhận từng lô DRAFT của các loại yến trong nhóm
+  // xác nhận cả lần thu = xác nhận từng lô DRAFT của các loại yến trong nhóm
   async function handleConfirm(): Promise<void> {
     const group = confirmGroupKey ? groupByKey.get(confirmGroupKey) : undefined;
     if (!group) return;
@@ -231,7 +230,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
 
       <HarvestYearChart batches={confirmedBatches} />
 
-      {/* HARVEST-FR-007 — chu kỳ do backend đóng khi xác nhận lần thu */}
+      {/* chu kỳ do backend đóng khi xác nhận lần thu */}
       <HarvestCyclesCard key={`${farmId}-${scope.houseId}`} farmId={farmId} houseId={scope.houseId} zones={zones} />
 
       {/* Popup chỉ dựng khi mở nên mỗi lần mở là form mới */}

@@ -22,7 +22,7 @@ interface WorkOrderTableProps {
   onAction: (action: OwnerAction, workOrder: WorkOrder) => void;
 }
 
-// OPS-FR-001…004 — bảng Work Order (phân trang server): việc, nhà, người làm, trạng thái, lúc mở, menu thao tác
+// bảng Work Order (phân trang server): việc, nhà, người làm, trạng thái, lúc mở, menu thao tác
 export default function WorkOrderTable({
   workOrders, page, total, onPageChange, houseNames, canManage, onView, onAction,
 }: WorkOrderTableProps): JSX.Element {

@@ -8,7 +8,7 @@ export interface HouseComparisonQuery {
   order: 'asc' | 'desc';
 }
 
-// ANALYTICS-FR-015, 016 — tổng quan trại và so sánh nhà; Farm Owner, Domain Expert (đọc)
+// tổng quan trại và so sánh nhà; Farm Owner, Domain Expert (đọc)
 export const farmOverviewApi = {
   overview: (farmId: string) => api.get<ApiResponse<FarmOverview>>(`/farms/${farmId}/overview`),
   comparison: (farmId: string, query: HouseComparisonQuery) =>

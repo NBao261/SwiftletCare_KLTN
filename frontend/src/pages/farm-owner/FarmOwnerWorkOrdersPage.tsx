@@ -25,11 +25,10 @@ import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { useToastStore } from '@/stores/toastStore';
 import type { WorkOrder } from '@/types';
 
-// Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (Report 3 §4.5, api-spec)
+// Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (api-spec)
 const NOTE_MAX_LENGTH = 1000;
 
-// OPS-FR-001…004, 007 — Work Order của Farm Owner: lọc theo farm/nhà và trạng thái, mở tay, tự làm (bắt đầu, checklist, báo xong), duyệt,
-// mở lại, huỷ, giao lại; Domain Expert chỉ xem
+// Work Order của Farm Owner: lọc theo farm/nhà và trạng thái, mở tay, tự làm (bắt đầu, checklist, báo xong), duyệt, mở lại, huỷ, giao lại; Domain Expert chỉ xem
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -178,7 +177,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         <WorkOrderCreateModal open={isCreateOpen} house={{ id: selectedHouse._id, name: selectedHouse.name }} onClose={() => setIsCreateOpen(false)} />
       )}
 
-      {/* OPS-FR-002 — Farm Owner tự làm: bắt đầu hỏi lại vì phiếu chuyển sang đang làm dưới tên mình */}
+      {/* Farm Owner tự làm: bắt đầu hỏi lại vì phiếu chuyển sang đang làm dưới tên mình */}
       <ConfirmModal
         open={pending?.action === 'start'}
         title={t('action.start')}
@@ -189,7 +188,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         onCancel={closePending}
       />
       <WorkOrderDoneModal workOrder={pending?.action === 'done' ? pending.workOrder : null} onClose={closePending} />
-      {/* Duyệt đóng cả cảnh báo nên hỏi lại trước (OPS-FR-004) */}
+      {/* Duyệt đóng cả cảnh báo nên hỏi lại trước */}
       <ConfirmModal
         open={pending?.action === 'approve'}
         title={t('approve.title')}

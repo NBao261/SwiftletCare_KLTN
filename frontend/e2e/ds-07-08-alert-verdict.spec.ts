@@ -3,8 +3,7 @@ import { ACCOUNTS, DEMO_FARM, PASSWORD, demoFarm, signIn } from './helpers/demoA
 
 interface Alert { _id: string; status: string; onsite_checks: Array<{ observation: string | null }> }
 
-// WF-04 — DS-07, DS-08 (Design Brief Phụ lục A2): cảnh báo ồn bất thường ở nhà A chờ kết luận (`npm run seed:demo`).
-// Phát tiếng ồn thật cạnh cảm biến của DS-07 làm tại chỗ; ở đây đi tiếp từ cảnh báo đã có.
+// cảnh báo ồn bất thường ở nhà A chờ kết luận (`npm run seed:demo`). Phát tiếng ồn thật cạnh cảm biến của làm tại chỗ; ở đây đi tiếp từ cảnh báo đã có.
 test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
   test('DS-08 Farm Owner của farm có chuyên gia không ghi được kết luận', async ({ request }) => {
     const owner = await signIn(request, 'owner');
@@ -39,9 +38,7 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
     expect(detail.onsite_checks[0].observation).toBe('WORK_OR_PEOPLE_NEARBY');
   });
 
-  // EXPERT-FR-003 — trang kết luận chỉ có 4 loại cảnh báo suy luận của Report 3. Trang xem theo một zone (thanh phạm vi):
-  // zone A có cảnh báo ồn chờ kết luận; zone B có MISTING_INEFFECTIVE của DS-04, cảnh báo đo trực tiếp, không được hiện
-  // (trước khi sửa nó nằm trong danh sách và gửi kết luận thì backend trả 400)
+  // trang kết luận chỉ có 4 loại cảnh báo suy luận của. Trang xem theo một zone (thanh phạm vi): zone A có cảnh báo ồn chờ kết luận; zone B có MISTING_INEFFECTIVE của, cảnh báo đo trực tiếp, không được hiện (trước khi sửa nó nằm trong danh sách và gửi kết luận thì backend trả 400)
   test('trang kết luận hiện cảnh báo ồn ở zone A, không hiện cảnh báo phun sương đo trực tiếp ở zone B', async ({ page, request }) => {
     const farm = await demoFarm(await signIn(request, 'owner'));
     const zoneA = await farm.zoneOf('A');

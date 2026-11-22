@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-// Id của 2 ảnh logo trên khung đăng nhập — màn chuyển cảnh đọc vị trí để logo lướt từ đúng chỗ đó
+// Id của 2 ảnh logo trên khung đăng nhập: màn chuyển cảnh đọc vị trí để logo lướt từ đúng chỗ đó
 export const AUTH_LOGO_ICON_ID = 'auth-logo-icon';
 export const AUTH_LOGO_TEXT_ID = 'auth-logo-text';
 
@@ -17,7 +17,7 @@ export interface LogoOrigin {
   text: LogoBox;
 }
 
-// Màn chuyển cảnh sau đăng nhập — dùng Zustand vì useAuth bật màn này rồi chuyển trang ngay, trang đăng nhập unmount nên state cục bộ mất, React Query chỉ cho dữ liệu server
+// Màn chuyển cảnh sau đăng nhập: dùng Zustand vì useAuth bật màn này rồi chuyển trang ngay, trang đăng nhập unmount nên state cục bộ mất, React Query chỉ cho dữ liệu server
 interface LoginSplashState {
   isPlaying: boolean;
   // Vị trí logo lúc bấm đăng nhập; không đọc được thì logo hiện thẳng ở giữa

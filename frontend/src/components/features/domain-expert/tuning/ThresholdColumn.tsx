@@ -17,7 +17,7 @@ interface Props {
   onReset: () => void
 }
 
-// 7 ngưỡng của Zone (ENV-FR-006); khoảng giá trị là khoảng đo cảm biến của backend (THRESHOLD_LIMITS), không tự chọn
+// 7 ngưỡng của Zone; khoảng giá trị là khoảng đo cảm biến của backend (THRESHOLD_LIMITS), không tự chọn
 const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: string; step: number; decimals: number }> = [
   { key: 'temp_min', label: 'Nhiệt độ tối thiểu', step: 0.5, decimals: 1 },
   { key: 'temp_max', label: 'Nhiệt độ tối đa', step: 0.5, decimals: 1 },
@@ -28,7 +28,7 @@ const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: str
   { key: 'co2_max', label: 'Ngưỡng cảnh báo khí CO2', subLabel: 'Chỉ cảnh báo', step: 50, decimals: 0 },
 ]
 
-// Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống (ENV-FR-020)
+// Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống
 export default function ThresholdColumn({ data, isLoading, isSaving, isResetting, onSave, onReset }: Props) {
   const [form, setForm] = useState<ExpertThresholds>(FACTORY_DEFAULT_THRESHOLDS)
   const [resetOpen, setResetOpen] = useState(false)

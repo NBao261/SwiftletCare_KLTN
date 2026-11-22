@@ -28,7 +28,7 @@ export const PROPOSALS_QUERY_KEY = (parameters: Partial<CoefficientProposalsQuer
   parameters.page,
 ];
 
-// Hook danh sách phân trang mục duyệt tham số (EXPERT-FR-010)
+// Hook danh sách phân trang mục duyệt tham số
 export function useParameterReviews(
   parameters: ParameterReviewsQueryParams,
   options?: { enabled?: boolean },
@@ -70,7 +70,7 @@ export function useRevertParameterReview() {
   });
 }
 
-// Hook danh sách phân trang đề xuất hệ số mờ (EXPERT-FR-011)
+// Hook danh sách phân trang đề xuất hệ số mờ
 export function useCoefficientProposals(
   parameters: CoefficientProposalsQueryParams,
   options?: { enabled?: boolean },
@@ -124,7 +124,7 @@ export function useRejectCoefficientProposal() {
   });
 }
 
-// Áp dụng gợi ý trực tiếp khi Farm chưa có chuyên gia (BR-22)
+// Áp dụng gợi ý trực tiếp khi Farm chưa có chuyên gia
 export function useApplySuggestion() {
   const queryClient = useQueryClient();
   return useMutation({

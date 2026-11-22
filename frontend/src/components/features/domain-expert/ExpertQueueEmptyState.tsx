@@ -1,4 +1,4 @@
-// ExpertQueueEmptyState — trạng thái rỗng của Hàng đợi việc chuyên gia, cùng hình minh hoạ TableEmptyState của Farm Owner
+// ExpertQueueEmptyState: trạng thái rỗng của Hàng đợi việc chuyên gia, cùng hình minh hoạ TableEmptyState của Farm Owner
 import { ChevronRight } from 'lucide-react';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import { Button } from '@/components/ui';

@@ -10,11 +10,11 @@ export interface CreateHarvestInput {
   product_images?: string[]
 }
 
-/** HARVEST-FR-001..005 — Harvest Batch (đợt thu hoạch), tự gắn env/flock snapshot */
+// Harvest Batch (đợt thu hoạch), tự gắn env/flock snapshot
 export const harvestApi = {
   create: (input: CreateHarvestInput) => api.post<ApiResponse<HarvestBatch>>('/harvests', input),
   get:    (id: string) => api.get<ApiResponse<HarvestBatch>>(`/harvests/${id}`),
-  // HARVEST-FR-001 — 1 ảnh mỗi lô (multipart, trường `photo`); ảnh mới thay ảnh cũ
+  // 1 ảnh mỗi lô (multipart, trường `photo`); ảnh mới thay ảnh cũ
   uploadPhoto: (id: string, photo: File) => {
     const form = new FormData()
     form.append('photo', photo)
@@ -24,6 +24,6 @@ export const harvestApi = {
   update: (id: string, input: Partial<Omit<CreateHarvestInput, 'zone_id'>>) =>
     api.put<ApiResponse<HarvestBatch>>(`/harvests/${id}`, input),
   remove: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/harvests/${id}`),
-  // HARVEST-FR-006 — Farm Owner xác nhận lô DRAFT do Farm Technician nhập
+  // Farm Owner xác nhận lô DRAFT do Farm Technician nhập
   confirm: (id: string) => api.post<ApiResponse<HarvestBatch>>(`/harvests/${id}/confirm`),
 }

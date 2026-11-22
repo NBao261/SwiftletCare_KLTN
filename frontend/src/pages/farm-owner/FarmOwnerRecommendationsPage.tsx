@@ -30,7 +30,7 @@ function EmptyFrame({ title, hint }: { title: string; hint: string }): JSX.Eleme
   );
 }
 
-// EXPERT-FR-017, 018 — Khuyến nghị: luật của chuyên gia thoả ở nhà nào thì mở khuyến nghị; Farm Owner chấp nhận hoặc từ chối, Domain Expert xem
+// Khuyến nghị: luật của chuyên gia thoả ở nhà nào thì mở khuyến nghị; Farm Owner chấp nhận hoặc từ chối, Domain Expert xem
 export default function FarmOwnerRecommendationsPage(): JSX.Element {
   const { t, exact } = useTranslation(recommendationsDict);
   const apiErrorMessage = useApiErrorMessage();

@@ -18,7 +18,7 @@ const BASE: AutoScopeInput = {
   nodes: [],
 }
 
-// C-05 — trang cần một bậc phạm vi thì tự chọn bậc có dữ liệu, không để trang trống "Chọn một trang trại"
+// trang cần một bậc phạm vi thì tự chọn bậc có dữ liệu, không để trang trống "Chọn một trang trại"
 describe('pickAutoScope', () => {
   it('trang không cần phạm vi giữ nguyên "Tất cả"', () => {
     expect(pickAutoScope({ ...BASE, level: 'none' })).toBeNull()

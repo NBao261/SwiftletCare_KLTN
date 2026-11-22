@@ -14,7 +14,7 @@ interface HarvestPhotoFieldProps {
   disabled?: boolean;
 }
 
-// Ô chọn 1 ảnh lần thu (HARVEST-FR-001): kiểm định dạng và cỡ trước khi gửi, xem trước ảnh đã chọn hoặc ảnh đã lưu
+// Ô chọn 1 ảnh lần thu: kiểm định dạng và cỡ trước khi gửi, xem trước ảnh đã chọn hoặc ảnh đã lưu
 export default function HarvestPhotoField({ photo, savedUrl, onChange, disabled = false }: HarvestPhotoFieldProps): JSX.Element {
   const { t } = useTranslation(harvestDict);
   const inputRef = useRef<HTMLInputElement>(null);

@@ -10,28 +10,22 @@ interface NoteActionModalProps {
   title: string
   label: string
   placeholder?: string
-  /** Dòng ghi chú nhỏ dưới ô nhập — nói hệ quả của hành động */
+  // Dòng ghi chú nhỏ dưới ô nhập: nói hệ quả của hành động
   hint?: string
   submitLabel: string
   required?: boolean
-  /** Số ký tự tối thiểu (sau khi trim) — chặn lý do kiểu "ok"/"abc" */
+  // Số ký tự tối thiểu (sau khi trim): chặn lý do kiểu "ok"/"abc"
   minLength?: number
-  /** Số ký tự tối đa — ô không cho gõ quá giới hạn của API */
+  // Số ký tự tối đa: ô không cho gõ quá giới hạn của API
   maxLength?: number
-  /** Thông báo khi bỏ trống — mặc định "Chưa nhập <label>" */
+  // Thông báo khi bỏ trống: mặc định "Chưa nhập <label>"
   emptyMessage?: string
   danger?: boolean
   loading: boolean
   onSubmit: (note: string) => void
 }
 
-/**
- * Modal 1 field (Textarea) + submit — mẫu dùng chung cho các hành động chỉ cần
- * ghi chú (xác nhận cảnh báo, khoá tài khoản...). Không dùng cho
- * modal nhiều field khác kiểu (mời thành viên, sửa harvest...).
- * Tự validate (noValidate) để báo lỗi tiếng Việt dưới ô thay vì popup trình
- * duyệt; giá trị gửi đi đã được trim.
- */
+// Modal 1 field (Textarea) + submit: mẫu dùng chung cho các hành động chỉ cần ghi chú (xác nhận cảnh báo, khoá tài khoản...). Không dùng cho modal nhiều field khác kiểu (mời thành viên, sửa harvest...). Tự validate (noValidate) để báo lỗi tiếng Việt dưới ô thay vì popup trình duyệt; giá trị gửi đi đã được trim.
 export default function NoteActionModal({
   open, onClose, title, label, placeholder, hint, submitLabel, required, minLength, maxLength, emptyMessage, danger, loading, onSubmit,
 }: NoteActionModalProps) {
@@ -40,7 +34,7 @@ export default function NoteActionModal({
   const [note, setNote] = useState('')
   const [error, setError] = useState<string>()
 
-  // Modal không unmount giữa các lần mở — xoá nội dung/lỗi cũ mỗi lần mở lại
+  // Modal không unmount giữa các lần mở: xoá nội dung/lỗi cũ mỗi lần mở lại
   useEffect(() => { if (open) { setNote(''); setError(undefined) } }, [open])
 
   function validate(value: string): string | undefined {

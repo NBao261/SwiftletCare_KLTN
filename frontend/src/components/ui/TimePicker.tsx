@@ -9,7 +9,7 @@ const HOURS = Array.from({ length: 24 }, (_, index) => pad(index));
 const MINUTES = Array.from({ length: 60 }, (_, index) => pad(index));
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-// Chữ đang gõ (chỉ giữ số) → HH:mm, tự chèn dấu :
+// Chữ đang gõ (chỉ giữ số) → HH:mm, tự chèn dấu
 function maskTyping(text: string): string {
   const digits = text.replace(/\D/g, '').slice(0, 4);
   return digits.length <= 2 ? digits : `${digits.slice(0, 2)}:${digits.slice(2)}`;
