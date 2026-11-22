@@ -106,21 +106,26 @@ export default function DomainExpertCountingSchedulePage() {
             {span(data.today.evening)}
           </span>
         </div>
+      </SectionCard>
 
-        {/* DE-07: Hồ sơ theo mùa — tiêu đề + nút Thêm trên 1 dòng */}
-        <section className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-h3 text-charcoal">{t('profiles.title')} <span className="text-xs font-normal text-warmGray">({schedule.profiles.length}/{MAX_SCHEDULE_PROFILES})</span></h3>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={schedule.profiles.length >= MAX_SCHEDULE_PROFILES || save.isPending}
-              onClick={() => edit({ ...schedule, profiles: [...schedule.profiles, { name: '', from: '01-01', to: '12-31', ...defaults }] })}
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              {t('profiles.add')}
-            </Button>
-          </div>
+      {/* DE-07: Hồ sơ theo mùa — khung riêng, nút Thêm ở tiêu đề, quy tắc dài nằm trong nút (i) */}
+      <SectionCard
+        title={t('profiles.title')}
+        description={t('profiles.count', { n: schedule.profiles.length, max: MAX_SCHEDULE_PROFILES })}
+        help={t('profiles.hint', { max: MAX_SCHEDULE_PROFILES })}
+        action={(
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={schedule.profiles.length >= MAX_SCHEDULE_PROFILES || save.isPending}
+            onClick={() => edit({ ...schedule, profiles: [...schedule.profiles, { name: '', from: '01-01', to: '12-31', ...defaults }] })}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            {t('profiles.add')}
+          </Button>
+        )}
+      >
+        <div className="flex flex-col gap-3">
           {schedule.profiles.length === 0 && <p className="text-sm italic text-warmGray">{t('profiles.empty')}</p>}
           {schedule.profiles.map((profile, index) => (
             <div key={index} className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
@@ -172,22 +177,27 @@ export default function DomainExpertCountingSchedulePage() {
               {showErrors && <RowError error={errors.profiles[index]} />}
             </div>
           ))}
-        </section>
+        </div>
+      </SectionCard>
 
-        {/* DE-07: Khung tạm — tiêu đề + nút Thêm trên 1 dòng */}
-        <section className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-h3 text-charcoal">{t('temporary.title')} <span className="text-xs font-normal text-warmGray">({schedule.temporary.length}/{MAX_TEMPORARY_WINDOWS})</span></h3>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={schedule.temporary.length >= MAX_TEMPORARY_WINDOWS || save.isPending}
-              onClick={() => edit({ ...schedule, temporary: [...schedule.temporary, { from: tomorrow, to: tomorrow, ...defaults }] })}
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              {t('temporary.add')}
-            </Button>
-          </div>
+      {/* DE-07: Khung tạm — khung riêng, nút Thêm ở tiêu đề */}
+      <SectionCard
+        title={t('temporary.title')}
+        description={t('temporary.count', { n: schedule.temporary.length, max: MAX_TEMPORARY_WINDOWS })}
+        help={t('temporary.hint', { max: MAX_TEMPORARY_WINDOWS })}
+        action={(
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={schedule.temporary.length >= MAX_TEMPORARY_WINDOWS || save.isPending}
+            onClick={() => edit({ ...schedule, temporary: [...schedule.temporary, { from: tomorrow, to: tomorrow, ...defaults }] })}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            {t('temporary.add')}
+          </Button>
+        )}
+      >
+        <div className="flex flex-col gap-3">
           {schedule.temporary.length === 0 && <p className="text-sm italic text-warmGray">{t('temporary.empty')}</p>}
           {schedule.temporary.map((window, index) => (
             <div key={index} className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
@@ -228,17 +238,18 @@ export default function DomainExpertCountingSchedulePage() {
               {showErrors && <RowError error={errors.temporary[index]} />}
             </div>
           ))}
-        </section>
-
-        {draft && (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-warmGray/10 pt-4">
-            <Button variant="secondary" size="sm" disabled={save.isPending} onClick={() => { setDraftState(null); setShowErrors(false) }}>
-              {t('save.discard')}
-            </Button>
-            <Button size="sm" loading={save.isPending} onClick={submit}>{t('save.submit')}</Button>
-          </div>
-        )}
+        </div>
       </SectionCard>
+
+      {/* Một thanh lưu chung cho cả hai khung, chỉ hiện khi có thay đổi */}
+      {draft && (
+        <div className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-warmGray/15 bg-white px-5 py-4 shadow-card">
+          <Button variant="secondary" size="sm" disabled={save.isPending} onClick={() => { setDraftState(null); setShowErrors(false) }}>
+            {t('save.discard')}
+          </Button>
+          <Button size="sm" loading={save.isPending} onClick={submit}>{t('save.submit')}</Button>
+        </div>
+      )}
       </fieldset>
 
       {/* Lịch sử các lần sửa, mới nhất trước */}
