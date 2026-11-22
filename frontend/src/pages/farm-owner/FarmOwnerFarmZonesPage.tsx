@@ -240,7 +240,7 @@ export default function FarmOwnerFarmZonesPage() {
       </div>
 
       <AddZoneModal open={showAddZone} onClose={() => setShowAddZone(false)} houseId={house._id} />
-      {editMode && <StructureEditModal kind="house" mode={editMode} name={house.name} deviceCount={node.counts.total} existingNames={structure.houses.map(item => item.house.name)} onClose={() => setEditMode(null)} />}
+      {editMode && <StructureEditModal kind="house" mode={editMode} id={house._id} onDeleted={() => navigate('/farms')} name={house.name} deviceCount={node.counts.total} existingNames={structure.houses.map(item => item.house.name)} onClose={() => setEditMode(null)} />}
       <DeviceDetailDrawer device={selected} zoneNode={selected ? zoneById.get(selected.zoneId) : undefined} onClose={() => setSelected(null)} />
       {/* Yêu cầu lắp đặt / báo lỗi mở ngay tại trang, gửi xong popup báo kết quả */}
     </div>

@@ -4,6 +4,8 @@ import { MinusIcon, TrendDownIcon, TrendUpIcon } from '@phosphor-icons/react';
 import SimulatedBadge from '@/components/common/SimulatedBadge';
 import { DataTable, type DataTableColumn } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
+import { siteCauseDict } from '@/constants/enumLabels.i18n';
+import { SITE_CAUSES } from '@/constants/siteCause';
 import { farmOverviewDict, type FarmOverviewKey } from '@/constants/farmOverview.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
@@ -37,6 +39,7 @@ interface HouseComparisonTableProps {
 // ANALYTICS-FR-016, BR-44 — mỗi hàng 1 nhà, mỗi nhóm cột là các ô số nhỏ (số trên, nhãn dưới); backend sắp; không có điểm tổng hay xếp hạng
 export default function HouseComparisonTable({ rows, sort }: HouseComparisonTableProps): JSX.Element {
   const { t, num, exact } = useTranslation(farmOverviewDict);
+  const { t: causeLabel } = useTranslation(siteCauseDict);
 
   const columns = useMemo((): DataTableColumn<HouseComparisonRow>[] => {
     const trend = (value: number) => {
@@ -103,8 +106,26 @@ export default function HouseComparisonTable({ rows, sort }: HouseComparisonTabl
           </div>
         ),
       })),
+      // ALERT-FR-018, BR-44 — nguyên nhân đã gặp tại chỗ trong kỳ, số lần mỗi loại; không sắp theo cột này
+      {
+        key: 'site_causes',
+        header: t('group.siteCauses'),
+        render: row => {
+          const found = SITE_CAUSES.filter(cause => row.site_causes?.[cause]);
+          if (found.length === 0) return <span className="text-base font-bold text-warmGray">{NO_VALUE}</span>;
+          return (
+            <div className="flex max-w-[14rem] flex-wrap gap-1.5">
+              {found.map(cause => (
+                <span key={cause} className="rounded-full bg-warmGray/10 px-2 py-0.5 text-xs text-charcoal">
+                  {`${causeLabel(cause)} · ${num(row.site_causes?.[cause] ?? 0)}`}
+                </span>
+              ))}
+            </div>
+          );
+        },
+      },
     ];
-  }, [t, num, exact, sort]);
+  }, [t, num, exact, sort, causeLabel]);
 
   return <DataTable columns={columns} rows={rows} getRowKey={row => row.house_id} minTableWidth={960} />;
 }

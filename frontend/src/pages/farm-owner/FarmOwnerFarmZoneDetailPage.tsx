@@ -200,7 +200,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
       )}
 
       <DeviceDetailDrawer device={selected} zoneNode={{ ...node, metrics, breaches }} onClose={() => setSelected(null)} />
-      {editMode && <StructureEditModal kind="zone" mode={editMode} name={node.zone.name} deviceCount={node.counts.total} existingNames={structure.houseById.get(node.house._id)?.zones.map(item => item.zone.name) ?? []} onClose={() => setEditMode(null)} />}
+      {editMode && <StructureEditModal kind="zone" mode={editMode} id={node.zone._id} onDeleted={() => navigate(`/farms/${farmId}/houses/${houseId}`)} name={node.zone.name} deviceCount={node.counts.total} existingNames={structure.houseById.get(node.house._id)?.zones.map(item => item.zone.name) ?? []} onClose={() => setEditMode(null)} />}
     </div>
   )
 }
