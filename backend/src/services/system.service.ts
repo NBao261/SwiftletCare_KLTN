@@ -16,8 +16,6 @@ import {
 } from '@/utils/thresholds.util'
 import type { Thresholds } from '@/types'
 
-// ── SYSTEM-FR-001: Audit Log viewer ──────────────────────────────────────────
-
 export interface ListAuditLogsQuery {
   actorId?: string
   action?: string
@@ -52,7 +50,7 @@ export async function listAuditLogs(query: ListAuditLogsQuery): Promise<{
     AuditLog.countDocuments(filter),
   ])
 
-  // Đối tượng loại `user` → kèm tên (`target_name`) để UI không phải hiện ObjectId. 1 query gộp cho cả trang.
+  // 1 query gộp cho cả trang
   const userIds = records.filter(r => r.target_type === 'user' && r.target_id).map(r => String(r.target_id))
   const users = userIds.length ? await User.find({ _id: { $in: userIds } }).select('full_name').lean() : []
   const names = new Map(users.map(u => [String(u._id), u.full_name]))
@@ -62,26 +60,16 @@ export async function listAuditLogs(query: ListAuditLogsQuery): Promise<{
   }
 }
 
-// ── SYSTEM-FR-002: ngưỡng mặc định hệ thống ─────────────────────────────────
-
-/** Lọc theo khoá singleton để upsert bám vào unique index — xem systemSetting.model.ts */
 const SINGLETON = { _singleton: true }
 const DUPLICATE_KEY = 11000
 
-/**
- * Chưa từng cấu hình thì trả giá trị gốc, không ghi DB lúc đọc — document chỉ
- * được tạo khi Admin thực sự lưu lần đầu (updateDefaultThresholds).
- */
+/** Không ghi DB lúc đọc */
 export async function getDefaultThresholds(): Promise<Thresholds> {
   const setting = await SystemSetting.findOne(SINGLETON).lean()
   return setting?.default_thresholds ?? { ...DEFAULT_THRESHOLDS }
 }
 
-/**
- * Ghi vào document singleton. Hai request cùng insert lần đầu: 1 thắng, request
- * còn lại nhận E11000 từ unique index `_singleton` — chạy lại thì document đã
- * tồn tại nên rơi vào nhánh update bình thường.
- */
+/** E11000 khi 2 request cùng insert lần đầu; chạy lại thì vào nhánh update */
 async function writeSetting(update: Record<string, unknown>): Promise<void> {
   const write = () => SystemSetting.findOneAndUpdate(
     SINGLETON, update, { upsert: true, new: true, setDefaultsOnInsert: true },
@@ -109,11 +97,7 @@ export type DefaultThresholdsView = Thresholds & {
   history: DefaultThresholdsChange[]
 }
 
-/**
- * SYSTEM-FR-002 — ngưỡng mặc định kèm nguồn của lần đổi gần nhất và mọi lần đổi ("every change with its source,
- * author and time"; audit log giữ vĩnh viễn, BR-36), từ audit log nên lần đổi trước G-18 có `source: null`. Không
- * cắt bớt: Admin đổi ngưỡng mặc định hiếm khi, danh sách nhỏ.
- */
+/** Lần đổi trước G-18 có source: null. Không cắt bớt vì danh sách nhỏ */
 export async function getDefaultThresholdsView(): Promise<DefaultThresholdsView> {
   const [setting, logs] = await Promise.all([
     SystemSetting.findOne(SINGLETON).lean(),
@@ -139,11 +123,7 @@ export async function getDefaultThresholdsView(): Promise<DefaultThresholdsView>
   }
 }
 
-/**
- * ENV-FR-007 — Admin đổi ngưỡng mặc định, bắt buộc kèm nguồn là một mục của REF-5 (route kiểm trước; kiểm
- * lại ở đây cho mọi đường gọi). Mặc định chỉ là giá trị tham khảo: ngưỡng của mọi zone đang có giữ nguyên
- * và không gửi cấu hình nào xuống controller; zone tạo hoặc reset sau đó mới lấy giá trị mới (ENV-FR-020).
- */
+/** Chỉ là tham khảo: zone đang có giữ nguyên, zone tạo hoặc reset sau mới lấy (ENV-FR-020) */
 export async function updateDefaultThresholds(
   adminId: string, input: Record<string, unknown>,
 ): Promise<Thresholds> {
@@ -175,11 +155,7 @@ export async function updateDefaultThresholds(
 
 type ThresholdKey = typeof THRESHOLD_KEYS[number]
 
-/**
- * ENV-FR-026 — sau khi đổi mặc định, mỗi farm có zone khác mặc định mới ở một trường vừa đổi nhận một
- * thông báo trong ứng dụng liệt kê các zone đó: gửi Domain Expert còn hoạt động, farm chưa có chuyên gia
- * thì các Farm Owner (BR-22). Không áp gì vào zone: Farm Owner hoặc chuyên gia tự reset hay sửa.
- */
+/** Không áp gì vào zone. Farm chưa có chuyên gia thì gửi Farm Owner (BR-22) */
 export async function notifyZonesDifferingFromDefaults(changedKeys: ThresholdKey[], after: Thresholds): Promise<void> {
   const zones = await Zone.find({
     $or: changedKeys.map(k => ({ [`thresholds.${k}`]: { $ne: after[k] } })),
@@ -188,7 +164,7 @@ export async function notifyZonesDifferingFromDefaults(changedKeys: ThresholdKey
 
   const byFarm = new Map<string, typeof zones>()
   for (const z of zones) byFarm.set(String(z.farm_id), [...(byFarm.get(String(z.farm_id)) ?? []), z])
-  // Model Farm tự ẩn farm đã xoá mềm
+  // Farm tự ẩn farm đã xoá mềm
   const farms = await Farm.find({ _id: { $in: [...byFarm.keys()] } }).select('name members')
 
   await Promise.all(farms.map(async farm => {
@@ -208,8 +184,6 @@ export async function notifyZonesDifferingFromDefaults(changedKeys: ThresholdKey
   }))
 }
 
-// ── SYSTEM-FR-003: tổng quan sức khỏe hệ thống ──────────────────────────────
-
 export async function getHealthOverview() {
   const [activeFarmIds, zoneIds, houseIds] = await Promise.all([
     Farm.find({ is_deleted: false }).distinct('_id'),
@@ -218,9 +192,9 @@ export async function getHealthOverview() {
   ])
   const [sensorStatuses, cameraStatuses, userGroups] = await Promise.all([
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).select('status').lean(),
-    CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).select('status').lean(),   // camera gắn House (v2.1.8)
+    CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).select('status').lean(),
 
-    // SM-14: DELETED tách khỏi LOCKED, nếu không số tài khoản bị khoá Admin thấy cứ tăng theo mỗi lần xoá
+    // SM-14: tách DELETED khỏi LOCKED
     User.aggregate<{ _id: { role: string | null; status: UserStatus | null }; count: number }>([
       { $group: { _id: { role: '$role', status: '$status' }, count: { $sum: 1 } } },
     ]),

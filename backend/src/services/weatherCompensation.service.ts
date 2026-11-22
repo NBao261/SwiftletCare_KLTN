@@ -17,12 +17,7 @@ import {
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-/**
- * ENV-FR-028…030, BR-38, Report 4 D18 / DF-12 — bù phun sương theo dự báo: Domain Expert đặt luật của nhà
- * (Farm Owner khi farm chưa có chuyên gia, BR-22), job mỗi giờ lấy dự báo 2 giờ tới của farm, chọn offset và
- * gửi retained trên `…/{deviceId}/compensation` cho mọi controller của nhà. Thời tiết chỉ dời phun sương
- * trong ±10 điểm, không bao giờ đụng quạt (C-6).
- */
+/** BR-38: chỉ dời phun sương trong ±10 điểm, không đụng quạt */
 
 const ruleView = (rules: IHouse['weather_rules']) => rules.map(r => ({
   _id: String(r._id), metric: r.metric, min: r.min, offset_pct: r.offset_pct, duration_min: r.duration_min, active: r.active,
@@ -34,7 +29,6 @@ const proposalView = (proposal: IHouse['weather_rules_proposal']) => proposal &&
   proposed_at: proposal.proposed_at,
 }
 
-/** ENV-FR-030 — luật của nhà, đề xuất đang chờ và lần bù gần nhất; Farm Owner, Domain Expert, Farm Technician của nhà đều xem */
 export async function getWeatherRules(houseId: string, user: CurrentUser) {
   const { house } = await assertHouseAccess(houseId, user)
   const last = await WeatherCompensation.findOne({ house_id: house._id }).sort({ sent_at: -1 }).lean()
@@ -49,12 +43,8 @@ export async function getWeatherRules(houseId: string, user: CurrentUser) {
   }
 }
 
-/**
- * ENV-FR-030 — thay cả bộ luật của nhà (như lịch trực): lưu lịch sử cũ/mới, ghi audit, báo Farm Owner khi
- * chuyên gia đổi (EXPERT-FR-009). Luật giữ `_id` cũ khi gửi kèm, để `rule_id` trong nhật ký bù vẫn trỏ đúng;
- * `_id` không thuộc nhà này hoặc gửi trùng thì bỏ, Mongoose cấp id mới. Luật mới có hiệu lực từ lần job kế tiếp.
- */
-/** Bộ luật mới của nhà: giữ `_id` cũ khi gửi kèm và thuộc nhà này (gửi trùng thì bỏ), kiểm khoảng BR-38 (400) */
+/** Giữ _id cũ để rule_id trong nhật ký vẫn trỏ đúng. Có hiệu lực từ lần job kế tiếp */
+/** _id không thuộc nhà này hoặc trùng thì bỏ */
 function buildRules(house: IHouse, rules: Array<WeatherRuleInput & { _id?: string }>) {
   const ownIds = new Set(house.weather_rules.map(r => String(r._id)))
   const keptIds = new Set<string>()
@@ -74,18 +64,16 @@ function buildRules(house: IHouse, rules: Array<WeatherRuleInput & { _id?: strin
 
 export async function setWeatherRules(
   houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>,
-  // Đặt từ đề xuất đã duyệt: câu thông báo cho Farm Owner nói rõ là duyệt đề xuất
   what = 'đặt luật bù phun sương theo thời tiết',
 ) {
   const { house, farm } = await assertHouseAccess(houseId, user)
-  // BR-22, BR-38 — Farm Owner đặt trực tiếp chỉ khi farm chưa có chuyên gia; có chuyên gia thì gửi đề xuất
-  // (POST …/weather-rules/proposal). Farm Technician đã bị chặn ở route
+  // BR-22: có chuyên gia thì Farm Owner gửi đề xuất
   await assertExpertDecision(farm, user)
   const next = buildRules(house, rules)
 
   const before = ruleView(house.weather_rules)
   house.set('weather_rules', next)
-  // Chuyên gia tự đặt luật thì đề xuất đang chờ không còn khớp: bỏ, ghi lại trong audit và báo Farm Owner
+  // Chuyên gia tự đặt thì đề xuất đang chờ không còn khớp: bỏ và báo
   const dropped = house.weather_rules_proposal ? proposalView(house.weather_rules_proposal) : null
   house.weather_rules_proposal = null
   const after = ruleView(house.weather_rules)
@@ -107,11 +95,7 @@ export async function setWeatherRules(
   return { house_id: String(house._id), rules: after }
 }
 
-/**
- * BR-22, BR-38 (Report 3 4.2.15) — Farm Owner trên farm có chuyên gia gửi bộ luật để chuyên gia duyệt: lưu đề xuất
- * (gửi lại thì thay), báo chuyên gia trong ứng dụng; luật đang chạy không đổi. Farm chưa có chuyên gia → 409 (đặt
- * trực tiếp bằng PUT).
- */
+/** Luật đang chạy không đổi. Farm chưa có chuyên gia → 409 (dùng PUT) */
 export async function proposeWeatherRules(houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>) {
   const { house, farm } = await assertHouseAccess(houseId, user)
   if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất luật bù phun sương')
@@ -129,10 +113,7 @@ export async function proposeWeatherRules(houseId: string, user: CurrentUser, ru
   return proposalView(house.weather_rules_proposal)
 }
 
-/**
- * Lấy đề xuất chuyên gia đã xem (`proposed_at` của bản trên màn) ra khỏi nhà bằng một lệnh ghi có điều kiện: Farm Owner
- * vừa gửi lại, hoặc chuyên gia khác vừa duyệt hay từ chối thì 409, không áp nhầm bản chưa xem
- */
+/** Ghi có điều kiện theo proposed_at đã xem: đổi trong lúc đó thì 409 */
 async function takeProposal(houseId: string, user: CurrentUser, seenAt: string) {
   const { house, farm } = await assertHouseAccess(houseId, user)
   if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ Domain Expert duyệt đề xuất luật bù phun sương')
@@ -144,7 +125,7 @@ async function takeProposal(houseId: string, user: CurrentUser, seenAt: string) 
   return { house, farm, proposal: taken.weather_rules_proposal }
 }
 
-/** Chuyên gia duyệt: áp bộ luật đề xuất như khi tự đặt (lịch sử, audit, báo Farm Owner — EXPERT-FR-009); áp lỗi thì trả đề xuất lại */
+/** Áp lỗi thì trả đề xuất lại */
 export async function approveWeatherRulesProposal(houseId: string, user: CurrentUser, seenAt: string) {
   const { house, proposal } = await takeProposal(houseId, user, seenAt)
   try {
@@ -155,7 +136,6 @@ export async function approveWeatherRulesProposal(houseId: string, user: Current
   }
 }
 
-/** Chuyên gia từ chối kèm lý do (bắt buộc, 422 ở route): bỏ đề xuất, luật đang chạy giữ nguyên, báo Farm Owner */
 export async function rejectWeatherRulesProposal(houseId: string, user: CurrentUser, note: string, seenAt: string) {
   const { house, farm, proposal } = await takeProposal(houseId, user, seenAt)
   const auditId = await logAction(user._id, 'WEATHER_RULES_PROPOSAL_REJECTED', 'house', String(house._id), {
@@ -167,14 +147,14 @@ export async function rejectWeatherRulesProposal(houseId: string, user: CurrentU
   return { house_id: String(house._id), rules: ruleView(house.weather_rules) }
 }
 
-/** ENV-FR-028 — dự báo 2 giờ tới tại toạ độ farm; lỗi mạng hoặc Open-Meteo lỗi thì null (nơi gọi gửi 0) */
+/** Lỗi thì null, nơi gọi gửi 0 */
 export async function fetchForecast(coordinates: { lat: number; lng: number }, now = new Date()): Promise<ForecastSummary | null> {
   const url = new URL(OPEN_METEO_URL())
   url.searchParams.set('latitude', String(coordinates.lat))
   url.searchParams.set('longitude', String(coordinates.lng))
   url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation')
   url.searchParams.set('timezone', 'GMT')
-  // 2 ngày để cửa sổ 2 giờ qua nửa đêm GMT vẫn đủ mốc
+  // 2 ngày để cửa sổ qua nửa đêm GMT vẫn đủ mốc
   url.searchParams.set('forecast_days', '2')
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(WEATHER_FETCH_TIMEOUT_MS) })
@@ -187,12 +167,7 @@ export async function fetchForecast(coordinates: { lat: number; lng: number }, n
   }
 }
 
-/**
- * ENV-FR-028, BR-38 — gọi mỗi giờ từ jobs/weatherCompensation.job.ts. Mỗi nhà có controller: tính offset từ
- * luật đang bật và dự báo của farm (mỗi farm chỉ gọi Open-Meteo một lần), gửi cho mọi controller của nhà với
- * hạn ≤ 2 giờ; không luật nào thoả, không có luật hoặc không có dự báo thì gửi 0. Lỗi ở một nhà không làm các nhà
- * sau mất offset mới. Trả số nhà đã nhận offset khác 0.
- */
+/** Mỗi farm gọi Open-Meteo một lần; không thoả thì gửi 0. Lỗi ở một nhà không chặn nhà sau */
 export async function runWeatherCompensation(now = new Date()): Promise<number> {
   const nodes = await SensorNode.find({ ...IN_SERVICE }).select('device_id zone_id').lean()
   if (!nodes.length) return 0
@@ -220,7 +195,6 @@ export async function runWeatherCompensation(now = new Date()): Promise<number> 
     try {
       const devices = devicesOfHouse.get(String(house._id)) ?? []
       const active = (house.weather_rules ?? []).filter(r => r.active)
-      // Không luật nào bật thì không gọi Open-Meteo
       const forecast = active.length ? await forecastOf(String(house.farm_id)) : null
       const rule = pickCompensation(active, forecast)
       const expiresAt = new Date(now.getTime() + (rule ? Math.min(rule.duration_min * 60_000, WEATHER_COMP_MAX_MS) : 0))
@@ -230,7 +204,7 @@ export async function runWeatherCompensation(now = new Date()): Promise<number> 
         rule_id: rule ? String(rule._id) : null,
       }
       const sent = devices.filter(deviceId => publishDeviceCompensation(deviceId, { deviceId, ...payload })).length
-      // NFR-16 so giờ có và không có bù: không controller nào nhận (mất broker) thì giờ đó không được bù
+      // NFR-16: không controller nào nhận thì giờ đó coi là không bù
       if (!rule || sent === 0) continue
       compensated++
       await WeatherCompensation.create({

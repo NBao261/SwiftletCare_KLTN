@@ -13,16 +13,9 @@ import { SEVERITY_LABEL } from '@/utils/displayLabel.util'
 import type { IAlert } from '@/models/alert.model'
 import type { CurrentUser, NotificationPreferences } from '@/types'
 
-/**
- * Notification Service — ALERT-FR-002..006.
- *
- * Định tuyến (chọn người nhận, chọn kênh, giờ im lặng, ngoại lệ CRITICAL) cài đặt ở đây. Kênh ngoài
- * ứng dụng: Telegram bot (ALERT-FR-013, services/telegram.service.ts) và push FCM (ALERT-FR-002,
- * services/push.service.ts) — mỗi kênh tự bỏ qua khi chưa cấu hình credential. Email mới ghi log;
- * Zalo ZNS và SMS nằm ngoài phạm vi (Report 3 §8).
- */
+/** Mỗi kênh ngoài ứng dụng (Telegram, push) tự bỏ qua khi chưa cấu hình */
 
-/** ALERT-FR-006 — giờ im lặng chỉ chặn được cảnh báo dưới mức CRITICAL */
+/** ALERT-FR-006: không chặn CRITICAL */
 function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): boolean {
   const quiet = prefs?.quiet_hours
   if (!quiet?.start || !quiet?.end) return false
@@ -35,16 +28,11 @@ function isWithinQuietHours(prefs: NotificationPreferences, now = new Date()): b
   const start = toMinutes(quiet.start)
   const end = toMinutes(quiet.end)
 
-  // Khung giờ im lặng thường vắt qua nửa đêm (VD 22:00 → 06:00) nên phải xử lý
-  // 2 trường hợp, không so sánh start < end một cách ngây thơ.
+  // Khung thường vắt qua nửa đêm (22:00 → 06:00)
   return start <= end ? nowMin >= start && nowMin < end : nowMin >= start || nowMin < end
 }
 
-/**
- * Farm Owner của 1 farm: chủ farm và mọi đồng sở hữu. Domain Expert KHÔNG nhận cảnh báo vận hành ngoài
- * ứng dụng (EXPERT-FR-007). Cảnh báo của nhà có thợ tới thợ đang trực trước, Farm Owner sau
- * `escalation_min` (ALERT-FR-017) — chọn người nhận ở `alertRouting.service`.
- */
+/** Domain Expert không nhận cảnh báo ngoài ứng dụng (EXPERT-FR-007); chọn người nhận ở alertRouting.service */
 export async function findRecipients(farmId: string) {
   const farm = await Farm.findById(farmId)
   if (!farm) return []
@@ -54,16 +42,13 @@ export async function findRecipients(farmId: string) {
   return User.find({ _id: { $in: userIds }, ...SIGN_IN_FILTER }).lean()
 }
 
-/** Domain Expert còn hoạt động của 1 farm (EXPERT-FR-001: phạm vi cả farm, theo `members`; chuyên gia bị khoá không nhận) */
+/** Chuyên gia bị khoá không nhận */
 export async function findFarmExperts(farmId: unknown): Promise<string[]> {
   const farm = await Farm.findById(farmId).select('members')
   return farm ? activeExpertIds(farm) : []
 }
 
-/**
- * BR-22 (Report 3 4.2.15) — Farm Owner gửi việc cho chuyên gia (đề xuất chờ duyệt, nhắc việc còn chờ): báo trong
- * ứng dụng cho mọi Domain Expert của farm (EXPERT-FR-007: chuyên gia không nhận kênh ngoài ứng dụng). Không throw.
- */
+/** Chỉ trong ứng dụng (EXPERT-FR-007). Không throw */
 export async function notifyExpertsOfProposal(
   farmId: unknown, author: CurrentUser,
   message: { what: string; body: string; ref: { kind: NotificationRefKind; id: string }; prefix?: string },
@@ -79,11 +64,7 @@ export async function notifyExpertsOfProposal(
   }
 }
 
-/**
- * EXPERT-FR-007 — cảnh báo suy luận mới chờ kiểm chứng. Chỉ báo trong ứng dụng: ALERT-FR-005
- * ghi Domain Expert "chỉ nhận thông báo trong ứng dụng" cho loại sự kiện này, không Telegram/push.
- * Farm chưa có chuyên gia còn hoạt động thì Farm Owner kết luận thay (BR-22), nên thông báo này tới họ.
- */
+/** Chỉ trong ứng dụng. Farm chưa có chuyên gia thì tới Farm Owner (BR-22) */
 async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   const farm = await Farm.findById(alert.farm_id).select('members')
   if (!farm) return
@@ -97,22 +78,21 @@ async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
   })))
 }
 
-/** ALERT-FR-005 — kênh của mức cảnh báo ghi đè cài đặt chung; push mặc định tắt khi không đặt, Telegram mặc định bật */
 export { channelEnabled } from '@/utils/notificationChannels.util'
 
 export interface DispatchAlertOptions {
   awaitsVerdict?: boolean
-  /** Lần gửi lại vì chưa ai xác nhận (ALERT-FR-015): tiêu đề ghi "Nhắc lại" */
+  /** ALERT-FR-015 */
   repeat?: boolean
-  /** Leo thang lên Farm Owner vì thợ chưa xác nhận (BR-40): tiêu đề ghi "Chưa ai xác nhận" */
+  /** BR-40 */
   escalation?: boolean
-  /** Người nhận do alertRouting chọn (ALERT-FR-017); không có = Farm Owner của farm */
+  /** Không có = Farm Owner của farm */
   recipientIds?: string[]
 }
 
 export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAlertOptions = {}): Promise<void> {
   if (opts.awaitsVerdict) {
-    // Không chặn kênh của Farm Owner: lỗi ở đây chỉ ghi log
+    // Lỗi chỉ ghi log, không chặn kênh của Farm Owner
     void notifyExpertsPendingVerdict(alert).catch((err: Error) =>
       logger.warn('Báo chuyên gia có cảnh báo chờ kiểm chứng thất bại', { alertId: String(alert._id), err }),
     )
@@ -125,8 +105,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     return
   }
 
-  // Mỗi người nhận gửi độc lập và song song: kênh của 1 người chậm/lỗi không được
-  // chặn cảnh báo (nhất là CRITICAL) của những người còn lại.
+  // Gửi song song: 1 người lỗi không chặn cảnh báo của người khác
   const results = await Promise.allSettled(recipients.map(async user => {
     const prefs = user.notification_preferences
     const muted = isWithinQuietHours(prefs) && alert.severity !== 'CRITICAL'
@@ -138,13 +117,10 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     }
 
     const title = opts.escalation ? `Chưa ai xác nhận: ${alert.title}` : opts.repeat ? `Nhắc lại: ${alert.title}` : alert.title
-    // Mức theo 3 cấp của giao diện, không đưa mã enum ra tin nhắn (FE_Design §6.4)
+    // Không đưa mã enum ra tin nhắn (FE_Design §6.4)
     const body = `${SEVERITY_LABEL[alert.severity]} · ${title}\n${alert.message}`
 
-    // ALERT-FR-002: Push cho mọi mức; ALERT-FR-013: Telegram theo cùng luật với push
-    // (mọi mức, cùng người nhận, cùng giờ im lặng) cho tài khoản đã liên kết bot.
-    // Zalo/SMS nằm ngoài phạm vi (Report 3 §8). Các kênh của 1 người cũng chạy song song; kênh nào ném lỗi thì ghi log riêng,
-    // không kéo theo kênh còn lại.
+    // Các kênh chạy song song; kênh lỗi ghi log riêng
     const channels: Array<[string, Promise<unknown> | undefined]> = [
       ['push', channelEnabled(prefs, alert.severity, 'push') ? sendPush(String(user._id), title, body, { kind: 'alert', id: String(alert._id) }, alert.severity === 'CRITICAL') : undefined],
       ['telegram', channelEnabled(prefs, alert.severity, 'telegram') && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
@@ -156,60 +132,43 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
       }
     })
   }))
-  // Lỗi ngoài các kênh (đọc tuỳ chọn, tính giờ im lặng) — không được nuốt im lặng
+  // Lỗi ngoài các kênh không được nuốt im lặng
   results.forEach(result => {
     if (result.status === 'rejected') logger.warn('Xử lý thông báo cho 1 người nhận thất bại', { alertId: String(alert._id), err: result.reason })
   })
 }
 
-// ── Adapter tới nhà cung cấp ngoài ───────────────────────────────────────────
-
-/** ALERT-FR-002 — `ref` cho app mở đúng màn hình khi người dùng bấm vào thông báo */
+/** ref để app mở đúng màn hình */
 async function sendPush(userId: string, title: string, body: string, ref?: UserNotification['ref'], urgent = false): Promise<void> {
   await sendPushToUser(userId, { title, body, data: ref ? { kind: ref.kind, id: ref.id } : undefined, urgent })
 }
 
 async function sendEmail(email: string | undefined, subject: string, body: string): Promise<void> {
-  // Thông báo nghiệp vụ chưa gửi e-mail thật (kênh ngoài ứng dụng là push và Telegram, ALERT-FR-002, 013). Thư tài khoản
-  // (lời mời, mã đặt lại mật khẩu, mật khẩu tạm) gửi thật qua mail.service
+  // Thông báo nghiệp vụ chưa gửi e-mail thật; thư tài khoản đi qua mail.service
   logger.info('[notify:email] (chưa nối SMTP thật)', { email, subject, body })
 }
-
-// ── Thông báo nghiệp vụ tới 1 người dùng (không gắn với Alert) ─────────────────
 
 export interface UserNotification {
   title: string
   body: string
-  /** Đối tượng để client mở tới từ hộp thông báo */
   ref?: { kind: NotificationRefKind; id: string }
 }
 
 export interface NotifyUserOptions {
-  /** Địa chỉ email dùng thay cho email hiện tại của user — cần khi tài khoản vừa bị ẩn danh hoá */
+  /** Khi tài khoản vừa bị ẩn danh */
   email?: string
-  /** Chỉ gửi email, bỏ qua push (tài khoản đã bị vô hiệu hoá) */
   emailOnly?: boolean
 }
 
-/**
- * Thông báo giao dịch tới 1 user: kết quả duyệt Sales Staff (Flow 16), chuyển
- * quyền chủ farm / xoá tài khoản (Flow 19), yêu cầu xoá tài khoản gửi Admin.
- * Khác `dispatchAlertNotification`: không áp giờ im lặng (đây không phải cảnh báo
- * môi trường) và luôn gửi thêm email vì user có thể chưa mở app. Như các kênh
- * khác, bước GỬI cuối dừng ở adapter (chưa có credential thật).
- *
- * Không throw: thông báo hỏng không được làm hỏng nghiệp vụ chính (cùng triết lý
- * với `logAction`). Thông báo sau khi ẩn danh tài khoản thì truyền `email` cũ.
- */
+/** Không áp giờ im lặng và luôn gửi thêm email. Không throw. Sau khi ẩn danh thì truyền email cũ */
 export async function notifyUser(userId: string, message: UserNotification, opts: NotifyUserOptions = {}): Promise<void> {
   try {
     const user = await User.findById(userId).select('email status notification_preferences telegram_chat_id').lean()
     if (!user) return
 
-    // Tài khoản bị khoá/đã xoá không nhận push hay Telegram (chat id vẫn còn sau khi khoá);
-    // email thì vẫn gửi — đó là đường báo cho chính họ việc bị khoá/xoá.
+    // Khoá/xoá thì không nhận push, Telegram; email vẫn gửi để báo chính họ
     const emailOnly = opts.emailOnly || !canSignIn(user)
-    // Hộp thông báo lỗi không được làm mất Telegram/email phía sau
+    // Lỗi hộp thông báo không được làm mất Telegram/email phía sau
     if (!emailOnly) {
       await createInAppNotification(String(user._id), message).catch((err: Error) =>
         logger.warn('Ghi thông báo trong ứng dụng thất bại', { err, userId, title: message.title }))
@@ -217,7 +176,6 @@ export async function notifyUser(userId: string, message: UserNotification, opts
     if (!emailOnly && user.notification_preferences?.push !== false) {
       await sendPush(String(user._id), message.title, message.body, message.ref)
     }
-    // Không đi qua đây thì báo cáo sức khỏe, kết luận của chuyên gia… không tới được Telegram
     if (!emailOnly && user.notification_preferences?.telegram !== false && user.telegram_chat_id) {
       await sendTelegram(user.telegram_chat_id, `${message.title}\n${message.body}`)
     }
@@ -227,7 +185,6 @@ export async function notifyUser(userId: string, message: UserNotification, opts
   }
 }
 
-/** Thông báo tới mọi Administrator đang hoạt động (VD: có yêu cầu xoá tài khoản mới) */
 export async function notifyAdmins(message: UserNotification): Promise<void> {
   try {
     const admins = await User.find({ role: 'ADMIN', ...SIGN_IN_FILTER }).select('_id').lean()
@@ -236,8 +193,6 @@ export async function notifyAdmins(message: UserNotification): Promise<void> {
     logger.warn('Gửi thông báo tới Admin thất bại', { err, title: message.title })
   }
 }
-
-// ── Hộp thông báo trong ứng dụng (EXPERT-FR-006/007) ─────────────────────────
 
 export interface NotificationDto {
   _id: string
@@ -248,7 +203,7 @@ export interface NotificationDto {
   created_at: Date
 }
 
-/** Lưu trước rồi mới phát socket: người đang offline vẫn thấy khi mở app */
+/** Lưu trước rồi mới phát socket: người offline vẫn thấy */
 export async function createInAppNotification(userId: string, message: UserNotification): Promise<void> {
   const doc = await Notification.create({ user_id: userId, title: message.title, body: message.body, ref: message.ref })
   emitNotificationNew(userId, {
@@ -257,7 +212,6 @@ export async function createInAppNotification(userId: string, message: UserNotif
   })
 }
 
-/** GET /notifications — chỉ của chính người gọi, mới nhất trước */
 export async function listNotifications(user: CurrentUser, query: { page?: number; limit?: number; unread?: boolean }) {
   const { page, skip, limit } = paginate(query.page, query.limit)
   const filter = { user_id: user._id, ...(query.unread && { read_at: null }) }
@@ -269,14 +223,14 @@ export async function listNotifications(user: CurrentUser, query: { page?: numbe
   return { records, total, page, limit, unreadCount }
 }
 
-/** Thông báo của người khác trả 404 như không tồn tại — không lộ id có thật */
+/** Của người khác trả 404, không lộ id có thật */
 export async function markNotificationRead(id: string, user: CurrentUser) {
   const doc = await Notification.findOneAndUpdate(
     { _id: id, user_id: user._id, read_at: null },
     { read_at: new Date() },
     { new: true },
   ).select('-user_id').lean()
-    // Đã đọc từ trước: giữ nguyên thời điểm đọc đầu tiên
+    // Giữ thời điểm đọc đầu tiên
     ?? await Notification.findOne({ _id: id, user_id: user._id }).select('-user_id').lean()
   if (!doc) throw NotFoundError('Không tìm thấy thông báo')
   return doc

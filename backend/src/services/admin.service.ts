@@ -14,15 +14,12 @@ import { generateTemporaryPassword } from '@/utils/password.util'
 import { ROLE_LABEL } from '@/utils/displayLabel.util'
 import type { Role } from '@/types'
 
-// ── Quản lý tài khoản — AUTH-FR-011, AUTH-FR-012, Flow 19 ──────────────────────
-
 export interface ListQuery { page?: string | number; limit?: string | number }
 
 export interface ListUsersQuery extends ListQuery {
   role?: Role
-  /** active = đăng nhập được (ACTIVE, DELETION_REQUESTED); inactive = LOCKED; deleted = DELETED (SM-14) */
+  /** SM-14 */
   status?: 'active' | 'inactive' | 'deleted'
-  /** Tìm theo tên, email hoặc SĐT (không phân biệt hoa/thường) */
   q?: string
 }
 
@@ -53,16 +50,12 @@ export interface CreateFarmOwnerInput {
   phone?: string
 }
 
-/**
- * AUTH-FR-005c — Administrator tạo tài khoản Farm Owner (không có đăng ký công khai, Report 3 §1.2): mật khẩu tạm
- * 12 ký tự ngẫu nhiên (Report 3 §4.5) gửi qua e-mail, `must_change_password` bật nên mọi request khác ngoài đổi mật
- * khẩu và đăng xuất bị 403 `PASSWORD_CHANGE_REQUIRED` tới khi đổi. Mật khẩu tạm không trả về và không ghi log.
- */
+/** Mật khẩu tạm không trả về và không ghi log */
 export async function createFarmOwner(
   adminId: string, input: CreateFarmOwnerInput,
 ): Promise<Record<string, unknown> & { temporary_password_emailed: boolean }> {
   const email = input.email.toLowerCase().trim()
-  // 1 email = 1 tài khoản, mọi role (kể cả tài khoản đã bị khoá hay chờ xoá)
+  // 1 email = 1 tài khoản, kể cả bị khoá hay chờ xoá
   if (await User.exists({ email })) throw ConflictError('Email này đã có tài khoản')
 
   const temporaryPassword = generateTemporaryPassword()
@@ -71,7 +64,7 @@ export async function createFarmOwner(
     full_name: input.full_name.trim(),
     ...(input.phone?.trim() && { phone: input.phone.trim() }),
     role: 'FARM_OWNER',
-    password_hash: temporaryPassword, // pre-save hook tự hash (SEC-NFR-003)
+    password_hash: temporaryPassword, // pre-save hook tự hash
     must_change_password: true,
   })
   await logAction(adminId, 'FARM_OWNER_CREATED', 'user', String(user._id), { email })
@@ -79,18 +72,11 @@ export async function createFarmOwner(
   return { ...(user.toJSON() as Record<string, unknown>), temporary_password_emailed: emailed }
 }
 
-/**
- * AUTH-FR-011 — khoá/mở khoá tài khoản. Lý do bắt buộc khi khoá (không bắt buộc
- * khi mở khoá). Middleware `authenticate` đã tự chặn tài khoản LOCKED ở request
- * kế tiếp, nên không cần thu hồi refresh_tokens riêng ở đây — vẫn xoá cho chắc,
- * để user không giữ được phiên nào nếu quay lại dùng refresh token cũ. Kết nối
- * Socket.io đang mở cũng bị ngắt ngay (JWT còn hạn không đủ để giữ realtime).
- */
+/** authenticate đã chặn LOCKED, vẫn xoá refresh_tokens cho chắc; ngắt luôn socket */
 export async function setUserStatus(
   adminId: string, userId: string, isActive: boolean, reason?: string,
 ): Promise<IUser> {
-  // Không cho tự khoá mình: người gọi luôn là 1 Admin đang hoạt động, nên chặn
-  // tự khoá là đủ đảm bảo hệ thống luôn còn ít nhất 1 Admin (Flow 19 case 2a).
+  // Chặn tự khoá là đủ để luôn còn 1 Admin
   if (adminId === userId) throw BadRequestError('Không thể tự khoá tài khoản của chính mình')
   const trimmedReason = reason?.trim()
   if (!isActive && !trimmedReason) {
@@ -99,16 +85,14 @@ export async function setUserStatus(
 
   const user = await User.findById(userId)
   if (!user) throw NotFoundError('Không tìm thấy người dùng')
-  // Tài khoản đã xoá theo Nghị định 13 thì PII đã bị ẩn danh — mở khoá lại sẽ
-  // tạo ra tài khoản "sống" nhưng rỗng thông tin.
+  // PII đã ẩn danh: mở khoá sẽ tạo tài khoản sống mà rỗng
   if (user.status === 'DELETED') throw ConflictError('Tài khoản đã bị xoá theo yêu cầu, không thể khoá/mở khoá')
-  // SM-14: khoá chỉ từ ACTIVE — đang chờ xoá thì Admin xử lý hoặc từ chối yêu cầu trước
+  // SM-14: đang chờ xoá thì xử lý yêu cầu trước
   if (!isActive && user.status === 'DELETION_REQUESTED') {
     throw ConflictError('Tài khoản đang chờ xoá: xử lý hoặc từ chối yêu cầu xoá trước khi khoá')
   }
 
   if (isActive) {
-    // Mở khoá: LOCKED → ACTIVE; tài khoản đang hoạt động hay đang chờ xoá giữ nguyên trạng thái
     if (user.status === 'LOCKED') user.status = 'ACTIVE'
     user.locked_at = undefined
     user.locked_reason = undefined
@@ -137,18 +121,7 @@ export async function listDeletionRequests(query: ListQuery) {
 }
 
 
-/**
- * AUTH-FR-012 / PRIV-NFR-003 — Flow 19 bước 7-8. Cascade:
- * - Farm mà user là Primary Owner: còn thành viên khác → chuyển owner_id cho
- *   người có joined_at sớm nhất; hết thành viên → soft-delete Farm.
- * - Farm mà user chỉ là member thường: gỡ khỏi members.
- * - Anonymize thông tin cá nhân, không xoá document (giữ FK cho farms/audit lịch sử).
- *
- * Mongo dev chạy standalone (không transaction) nên hàm này được thiết kế để CHẠY
- * LẠI được khi lỗi giữa chừng: cờ `deletion_requested_at` chỉ bị gỡ ở bước lưu
- * cuối, mỗi farm xử lý xong đã có audit riêng, còn farm đã chuyển/xoá thì lần
- * chạy sau không tìm thấy nữa (không bị xử lý hai lần).
- */
+/** Không có transaction nên phải chạy lại được: cờ deletion_requested_at chỉ gỡ ở bước lưu cuối */
 export async function completeDeletionRequest(adminId: string, userId: string): Promise<IUser> {
   if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
   const user = await User.findById(userId)
@@ -160,8 +133,7 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   const ownedFarms = await Farm.find({ owner_id: user._id, is_deleted: false })
 
   for (const farm of ownedFarms) {
-    // Quyền chủ chỉ chuyển cho đồng sở hữu (AUTH-FR-012) — Domain Expert, Farm Technician là người được
-    // mời, không nhận quyền chủ; farm không còn đồng sở hữu thì bị xoá mềm.
+    // Chỉ chuyển cho đồng sở hữu; không còn thì xoá mềm farm
     const otherMembers = farm.members.filter(m => String(m.user_id) !== userId && m.role !== 'DOMAIN_EXPERT' && m.role !== 'FARM_TECHNICIAN')
     if (otherMembers.length > 0) {
       const nextOwner = otherMembers.reduce((earliest, m) =>
@@ -188,7 +160,6 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
     }
   }
 
-  // Member thường (không phải owner) ở các farm khác — gỡ khỏi members
   await Farm.updateMany(
     { owner_id: { $ne: user._id }, 'members.user_id': user._id },
     { $pull: { members: { user_id: user._id } } },
@@ -196,42 +167,37 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
 
 
 
-  // Tổng qua MỌI lần chạy (kể cả lần lỗi giữa chừng trước đó), đọc từ audit từng farm — tính TRƯỚC bước
-  // ẩn danh không thể đảo ngược để một lỗi đọc DB ở đây vẫn cho phép chạy lại. Đây là số liệu theo audit
-  // (ghi audit là best-effort, xem logAction), không phải nguồn sự thật về dữ liệu farm.
+  // Đọc từ audit qua mọi lần chạy, trước bước ẩn danh không đảo ngược
   const [farmsTransferred, farmsDeleted] = await Promise.all([
     AuditLog.countDocuments({ action: 'FARM_OWNERSHIP_TRANSFERRED', 'metadata.fromUserId': userId }),
     AuditLog.countDocuments({ action: 'FARM_SOFT_DELETED', 'metadata.ownerId': userId }),
   ])
 
-  const contactEmail = user.email // giữ lại để gửi thông báo cuối sau khi ẩn danh
+  const contactEmail = user.email // Giữ để gửi thông báo sau khi ẩn danh
 
-  // Lời mời đang chờ do user này gửi không được chấp nhận được nữa sau khi người mời đã biến mất
+  // Người mời đã biến mất
   await Invitation.updateMany({ status: 'PENDING', invited_by: user._id }, { $set: { status: 'EXPIRED' } })
 
   user.email = `deleted-${String(user._id)}@swiftletcare.local`
   user.phone = undefined
   user.full_name = 'Tài khoản đã xoá'
   user.avatar_url = undefined
-  // Chat id Telegram là dữ liệu cá nhân và còn là đường gửi tin tới người thật (PRIV-NFR-003)
+  // PRIV-NFR-003
   user.telegram_chat_id = undefined
   user.telegram_link_code_hash = undefined
   user.telegram_link_expires_at = undefined
-  // SM-14 DELETION_REQUESTED → DELETED
+  // SM-14
   user.status = 'DELETED'
   user.refresh_tokens = [] as never
-  // Gỡ cờ yêu cầu để tài khoản rời khỏi hàng đợi /admin/delete-requests và
-  // không bị xử lý (chạy lại cascade) lần 2
+  // Để không chạy lại cascade lần 2
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
   user.deleted_at = new Date()
   await user.save()
   disconnectUser(userId)
-  // Token FCM cũng là đường gửi tới máy thật (ALERT-FR-002)
   await removeUserPushTokens(userId)
 
-  // Chỉ báo "đã xoá" SAU khi ẩn danh đã lưu thành công: lưu lỗi thì user không bị báo nhầm,
-  // và lần chạy lại gửi đúng 1 lần. Email cũ truyền riêng vì tài khoản vừa bị ẩn danh.
+  // Chỉ báo sau khi lưu ẩn danh thành công: lỗi thì không báo nhầm
   await notifyUser(userId, {
     title: 'Tài khoản của bạn đã được xoá',
     body: 'Yêu cầu xoá tài khoản và dữ liệu cá nhân của bạn trên SwiftletCare đã hoàn tất.',
@@ -243,10 +209,7 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   return user
 }
 
-/**
- * AUTH-FR-012 — Admin từ chối yêu cầu xoá (VD còn nghĩa vụ lưu hồ sơ). Lý do bắt
- * buộc và được gửi lại cho người yêu cầu; tài khoản giữ nguyên, rời hàng đợi.
- */
+/** Lý do được gửi lại người yêu cầu */
 export async function rejectDeletionRequest(adminId: string, userId: string, reason: string): Promise<IUser> {
   if (adminId === userId) throw BadRequestError('Không thể tự xử lý yêu cầu xoá tài khoản của chính mình')
   const trimmedReason = reason.trim()
@@ -257,7 +220,7 @@ export async function rejectDeletionRequest(adminId: string, userId: string, rea
   if (!user.deletion_requested_at) throw BadRequestError('Người dùng này chưa gửi yêu cầu xoá tài khoản')
 
   const requestedAt = user.deletion_requested_at
-  // SM-14 DELETION_REQUESTED → ACTIVE (Admin từ chối có lý do); tài khoản đang bị khoá vẫn khoá
+  // SM-14; tài khoản đang bị khoá vẫn khoá
   if (user.status === 'DELETION_REQUESTED') user.status = 'ACTIVE'
   user.deletion_requested_at = undefined
   user.deletion_reminder_sent_at = undefined
@@ -271,16 +234,12 @@ export async function rejectDeletionRequest(adminId: string, userId: string, rea
   return user
 }
 
-/** Hạn xử lý yêu cầu xoá (PRIV-NFR-003) và số ngày còn lại thì bắt đầu nhắc Admin */
+/** PRIV-NFR-003 */
 const DELETION_DEADLINE_DAYS = 30
 const DELETION_REMIND_DAYS_BEFORE = 7
 const DAY_MS = 86_400_000
 
-/**
- * AUTH-FR-012 — yêu cầu xoá đã chờ tới ngày thứ 23 mà Admin chưa xử lý: nhắc 1
- * lần, kèm số ngày còn lại. `deletion_reminder_sent_at` chặn nhắc lặp mỗi lần
- * job chạy; huỷ / từ chối / hoàn tất đều gỡ cờ này. Trả số yêu cầu đã nhắc.
- */
+/** deletion_reminder_sent_at chặn nhắc lặp */
 export async function remindPendingDeletionRequests(now = new Date()): Promise<number> {
   const remindBefore = new Date(now.getTime() - (DELETION_DEADLINE_DAYS - DELETION_REMIND_DAYS_BEFORE) * DAY_MS)
   const due = await User.find({
@@ -291,7 +250,7 @@ export async function remindPendingDeletionRequests(now = new Date()): Promise<n
   for (const user of due) {
     const deadline = new Date(user.deletion_requested_at!.getTime() + DELETION_DEADLINE_DAYS * DAY_MS)
     const daysLeft = Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / DAY_MS))
-    // Ghi cờ trước khi gửi: gửi lỗi thì mất 1 lần nhắc, còn ngược lại thì lỗi ghi sẽ nhắc lặp mãi
+    // Ghi cờ trước khi gửi: lỗi thì mất 1 lần nhắc, không nhắc lặp mãi
     await User.updateOne({ _id: user._id }, { $set: { deletion_reminder_sent_at: now } })
     await notifyAdmins({
       title: 'Yêu cầu xoá tài khoản sắp quá hạn',

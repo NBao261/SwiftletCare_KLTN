@@ -11,7 +11,6 @@ import { manualTimeInZone } from '@/services/relayOverrideLog.service'
 import { BadRequestError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
-/** ANALYTICS-FR-001 — các khoảng thời gian dashboard hỗ trợ */
 const RANGE_MS: Record<string, number> = {
   '1h': 3600_000,
   '6h': 6 * 3600_000,
@@ -20,26 +19,20 @@ const RANGE_MS: Record<string, number> = {
   '30d': 30 * 86400_000,
 }
 
-/**
- * Số điểm dữ liệu tối đa trả về cho biểu đồ. Telemetry ghi mỗi ~10s nên 30 ngày
- * là ~260k bản ghi — phải gom nhóm theo bucket thời gian, không thể trả thô cho
- * frontend vẽ (vỡ trình duyệt + PERF-NFR-003 P95 ≤ 500ms).
- */
+/** Telemetry ~10s nên 30 ngày ~260k bản ghi: phải gom bucket (PERF-NFR-003) */
 const MAX_BUCKETS = 120
 const HOUR_MS = 3600_000
 
 function resolveRange(range: string) {
-  // Object.hasOwn: `RANGE_MS['constructor']` trả hàm của Object.prototype → ngày NaN → 500
+  // Object.hasOwn: RANGE_MS['constructor'] trả hàm của prototype → NaN → 500
   const ms = Object.hasOwn(RANGE_MS, range) ? RANGE_MS[range] : undefined
   if (!ms) throw BadRequestError(`range phải là 1 trong: ${Object.keys(RANGE_MS).join(', ')}`)
   const to = new Date()
   const from = new Date(to.getTime() - ms)
-  // Gom nhóm sao cho ra tối đa MAX_BUCKETS điểm, làm tròn lên phút cho dễ đọc
   const bucketMs = Math.max(60_000, Math.ceil(ms / MAX_BUCKETS / 60_000) * 60_000)
   return { from, to, bucketMs }
 }
 
-/** ANALYTICS-FR-001 — chuỗi thời gian đã gom nhóm + min/max/avg từng chỉ số */
 export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; range: string }) {
   const { zone } = await assertZoneAccess(query.zoneId, user)
   const { from, to, bucketMs } = resolveRange(query.range)
@@ -79,13 +72,7 @@ export async function getEnvSummary(user: CurrentUser, query: { zoneId: string; 
   return { range: query.range, from, to, bucketMs, series, stats: stats ?? null, outdoor: await outdoorSeries(zone.farm_id, from, to, bucketMs) }
 }
 
-/**
- * ANALYTICS-FR-013 — thời tiết ngoài trời theo giờ của farm, đặt cạnh số đo trong nhà: cùng mốc bucket với
- * `series` (giờ nào cũng chia hết cho bucket dưới 1 giờ), nên vẫn tối đa MAX_BUCKETS điểm. Nhiệt, ẩm lấy
- * trung bình, mưa cộng dồn. Farm không có toạ độ hoặc chưa lấy được thời tiết thì trả [].
- * Bản ghi `hour` = H là số liệu của [H, H + 1 giờ) và chỉ có khi giờ đó đã qua (weather.service), nên lấy
- * từ đầu giờ chứa `from`: không thế thì khoảng 1h không bao giờ có điểm nào.
- */
+/** Cùng mốc bucket với series. Bản ghi giờ H chỉ có khi giờ đó đã qua, nên lấy từ đầu giờ chứa from */
 async function outdoorSeries(farmId: unknown, from: Date, to: Date, bucketMs: number) {
   const firstHour = new Date(from.getTime() - (from.getTime() % HOUR_MS))
   return WeatherObservation.aggregate([
@@ -95,7 +82,7 @@ async function outdoorSeries(farmId: unknown, from: Date, to: Date, bucketMs: nu
         _id: { $toDate: { $subtract: [{ $toLong: '$hour' }, { $mod: [{ $toLong: '$hour' }, bucketMs] }] } },
         temperature: { $avg: '$temperature' },
         humidity: { $avg: '$humidity' },
-        // $sum bỏ qua giờ thiếu mưa; cả bucket thiếu thì để null, không ghi 0 mm
+        // Cả bucket thiếu thì null, không ghi 0 mm
         precipitation_mm: { $sum: '$precipitation_mm' },
         rainHours: { $sum: { $cond: [{ $eq: [{ $type: '$precipitation_mm' }, 'missing'] }, 0, 1] } },
       },
@@ -110,27 +97,16 @@ async function outdoorSeries(farmId: unknown, from: Date, to: Date, bucketMs: nu
   ])
 }
 
-/** Phần trăm làm tròn 1 chữ số; null khi không có mẫu nào */
+/** null khi không có mẫu */
 export const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null)
-/** Biểu thức $group đếm mẫu có `field` nằm trong [min, max] — dùng chung với báo cáo sức khỏe Zone */
 export const inRangeSum = (field: string, min: number, max: number) =>
   ({ $sum: { $cond: [{ $and: [{ $gte: [field, min] }, { $lte: [field, max] }] }, 1, 0] } })
-/**
- * Relay chỉ đổi trạng thái ở chu kỳ PID 10s còn mẫu lưu mỗi ~10s, nên đếm lần đổi giữa
- * 2 mẫu liên tiếp CỦA CÙNG 1 ESP32 (partitionBy node_id) ≈ số lần đóng cắt thật. Cả hai
- * mẫu phải CÓ trạng thái relay: mẫu xả từ bộ đệm offline chỉ mang số đo cảm biến, nếu
- * tính "bật → thiếu" là một lần đổi thì sau mỗi lần mất mạng số đóng cắt bị phồng lên.
- */
+/** Đếm lần đổi giữa 2 mẫu cùng ESP32 có trạng thái relay; mẫu buffer không có relay, tính vào sẽ phồng số */
 const isBool = (expr: string) => ({ $eq: [{ $type: expr }, 'bool'] })
 export const switchedSum = (field: string, prev: string) =>
   ({ $sum: { $cond: [{ $and: [isBool(prev), isBool(field), { $ne: [prev, field] }] }, 1, 0] } })
 
-/**
- * ANALYTICS-FR-008 — hiệu quả bộ điều khiển mờ của 1 Zone (ENV-FR-010/011/021):
- * chuỗi độ ẩm/nhiệt độ × % phun/quạt theo bucket, % mẫu nằm trong ngưỡng hiện tại
- * của Zone, số lần relay đóng cắt/giờ, kèm các lần chỉnh hệ số trong khoảng để
- * người vận hành so trước/sau. Chỉ tính mẫu có `misting_pct` (firmware ≥ 1.1.0).
- */
+/** Chỉ mẫu có misting_pct (firmware >= 1.1.0) */
 export async function getControlPerformance(user: CurrentUser, query: { zoneId: string; range: string }) {
   const { zone } = await assertZoneAccess(query.zoneId, user)
   const { from, to, bucketMs } = resolveRange(query.range)
@@ -187,7 +163,7 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
   ])
 
   const hours = agg ? (agg.lastAt.getTime() - agg.firstAt.getTime()) / 3600_000 : 0
-  const perHour = (n: number) => (hours >= 0.25 ? Math.round((n / hours) * 10) / 10 : null) // < 15' dữ liệu: chưa đủ để quy ra /giờ
+  const perHour = (n: number) => (hours >= 0.25 ? Math.round((n / hours) * 10) / 10 : null) // Dưới 15 phút dữ liệu chưa quy ra /giờ được
 
   return {
     range: query.range, from, to, bucketMs,
@@ -197,11 +173,10 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
       .filter(h => h.changed_at >= from)
       .map(h => ({ changed_at: h.changed_at, new_values: h.new_values })),
     series,
-    // ALERT-FR-016 — tiến độ tới mốc bảo trì theo thời gian chạy của từng thiết bị
     service_limits: RELAY_SERVICE_LIMITS,
     relay_usage: nodes.map(n => ({
       device_id: n.device_id,
-      simulated: n.simulated ?? false, // SYSTEM-FR-004
+      simulated: n.simulated ?? false,
       misting: { hours: Math.round(n.relay_usage?.misting?.since_service_hours ?? 0), switches: n.relay_usage?.misting?.since_service_switches ?? 0 },
       ventilation: { hours: Math.round(n.relay_usage?.ventilation?.since_service_hours ?? 0), switches: n.relay_usage?.ventilation?.since_service_switches ?? 0 },
     })),
@@ -217,7 +192,6 @@ export async function getControlPerformance(user: CurrentUser, query: { zoneId: 
   }
 }
 
-/** ANALYTICS-FR-005 — so sánh nhiều Zone cạnh nhau trên cùng khoảng thời gian */
 export async function compareZones(user: CurrentUser, zoneIds: string[], range: string) {
   if (zoneIds.length === 0) throw BadRequestError('Cần ít nhất 1 zoneId')
   if (zoneIds.length > 6) throw BadRequestError('So sánh tối đa 6 zone cùng lúc')
@@ -249,23 +223,16 @@ export async function compareZones(user: CurrentUser, zoneIds: string[], range: 
   return { range, from, to, zones: results }
 }
 
-/** Đếm chim là của cả nhà yến (SRS v2.1.8): `houseId`, hoặc `zoneId` cũ → House chứa Zone */
+/** zoneId cũ: quy ra House chứa Zone */
 export interface BirdCountScope { houseId?: string; zoneId?: string }
 
-/**
- * VISION-FR-008/010 — thống kê đếm chim theo ngày (ngày theo giờ Việt Nam, `session_date`) của 1 nhà yến.
- * Trả rỗng cho tới khi nút AI publish `vision/bird-count` — không phải lỗi truy vấn.
- */
+/** Rỗng tới khi nút AI publish, không phải lỗi */
 export async function getBirdCountDaily(user: CurrentUser, scope: BirdCountScope, query: { from?: string; to?: string }) {
   const { house } = await assertHouseAccessByParams(scope, user)
   return { house_id: String(house._id), ...(await dailyBirdCounts(String(house._id), query)) }
 }
 
-/**
- * Phần truy vấn của getBirdCountDaily — caller đã kiểm tra quyền. Số của cả nhà (cộng mọi camera),
- * cùng nguồn với /current và socket (birdCount.service#houseDailyCounts). Khoảng from/to đổi sang ngày
- * giờ VN: phiên sáng 05:30 VN là 22:30 UTC hôm trước.
- */
+/** Caller đã kiểm quyền */
 async function dailyBirdCounts(houseId: string, query: { from?: string; to?: string }) {
   const to = query.to ? new Date(query.to) : new Date()
   const from = query.from ? new Date(query.from) : new Date(to.getTime() - 30 * 86400_000)
@@ -276,19 +243,13 @@ async function dailyBirdCounts(houseId: string, query: { from?: string; to?: str
   return { from, to, records, note: records.length === 0 ? 'Chưa có dữ liệu đếm chim trong khoảng này' : undefined }
 }
 
-/**
- * ANALYTICS-FR-011 — tỷ lệ thời gian tự động của 1 Zone: % thời gian trong khoảng mà
- * không relay nào của Zone bị can thiệp tay, tính từ lịch sử override (ENV-FR-019).
- * Trả lời câu hỏi "hệ thống tự động đến mức nào". Override bắt đầu trước khi có lịch
- * sử (trước bản này) không được tính.
- */
+/** Override bắt đầu trước khi có lịch sử không được tính */
 export async function getAutonomy(user: CurrentUser, query: { zoneId: string; range: string }) {
   await assertZoneAccess(query.zoneId, user)
   const { from, to } = resolveRange(query.range)
   return { range: query.range, ...(await autonomyBetween(query.zoneId, from, to)) }
 }
 
-/** Dùng chung cho API trên và báo cáo sức khỏe Zone (EXPERT-FR-005) */
 export async function autonomyBetween(zoneId: string, from: Date, to: Date) {
   const { manualMs, overrideCount } = await manualTimeInZone(zoneId, from, to)
   const totalMs = to.getTime() - from.getTime()
@@ -300,10 +261,6 @@ export async function autonomyBetween(zoneId: string, from: Date, to: Date) {
   }
 }
 
-/**
- * VISION-FR-009/011, ANALYTICS-FR-002 — xu hướng return rate của nhà yến + cờ "giảm đáng kể". Mức
- * giảm là `return_rate_drop_pct` của House (mặc định 20%), Domain Expert chỉnh (EXPERT-FR-008).
- */
 export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScope, query: { days: number }) {
   const { house } = await assertHouseAccessByParams(scope, user)
   const dropThreshold = resolveBirdCountTuning(house.bird_count_tuning).return_rate_drop_pct
@@ -311,17 +268,14 @@ export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScop
     from: new Date(Date.now() - query.days * 86400_000).toISOString(),
   })
 
-  // VISION-FR-020 — ngày không đầy đủ vẫn có trong `records` (kèm cờ) nhưng không vào trung bình và mốc giảm
+  // VISION-FR-020
   const rates = records.filter(r => !r.incomplete).map(r => r.return_rate).filter((v): v is number => typeof v === 'number')
   const avg = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
   const latest = rates.at(-1) ?? null
-  // VISION-FR-011/EXPERT-FR-008: so với trung bình 7 ngày CÓ DỮ LIỆU trước ngày mới nhất (không
-  // gồm chính nó; ngày camera tắt không có dòng nên mốc có thể trải dài hơn 7 ngày lịch — tuần
-  // mất dữ liệu vẫn so được với tuần gần nhất có số đếm). Khoảng xem ngắn hơn thì lấy các ngày có trong khoảng.
+  // 7 ngày có dữ liệu trước ngày mới nhất, không gồm nó; có thể trải dài hơn 7 ngày lịch
   const prev = rates.slice(-8, -1)
   const baseline = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : null
 
-  // VISION-FR-011: giảm quá ngưỡng của Zone so với mốc là tín hiệu cần xem xét
   const dropPercent = baseline && latest !== null ? +(((baseline - latest) / baseline) * 100).toFixed(1) : null
 
   return {
@@ -338,11 +292,11 @@ export async function getBirdCountTrends(user: CurrentUser, scope: BirdCountScop
 }
 
 export interface FlockPeriod {
-  /** Tuần: ngày thứ Hai đầu tuần ('YYYY-MM-DD'); tháng: 'YYYY-MM' */
+  /** Tuần: thứ Hai đầu tuần; tháng: 'YYYY-MM' */
   period: string
   days: number
   mean_morning_exit: number
-  /** % đổi so với kỳ liền trước; null khi kỳ liền trước không có ngày đủ phiên */
+  /** null khi kỳ trước không có ngày đủ phiên */
   change_pct: number | null
 }
 
@@ -374,11 +328,7 @@ function meanByPeriod(days: FlockDay[], keyOf: (date: string) => string, prevOf:
   })
 }
 
-/**
- * ANALYTICS-FR-002 — xu hướng đàn: trung bình số chim ra buổi sáng (số ròng ra − vào của phiên sáng, cùng nguồn với
- * ước tính đàn khi thu hoạch) theo tuần (từ thứ Hai, ngày giờ VN) và theo tháng, kèm % đổi so với kỳ trước. Ngày
- * thiếu phiên (VISION-FR-020) không vào trung bình.
- */
+/** Số ròng phiên sáng, theo tuần (từ thứ Hai) và tháng; bỏ ngày thiếu phiên */
 export function flockTrend(days: FlockDay[]): { weekly: FlockPeriod[]; monthly: FlockPeriod[] } {
   const complete = days.filter(isFlockDayComplete)
   return {
@@ -387,11 +337,7 @@ export function flockTrend(days: FlockDay[]): { weekly: FlockPeriod[]; monthly: 
   }
 }
 
-/**
- * ANALYTICS-FR-003 — tương quan môi trường của 1 Zone vs return rate của nhà yến chứa Zone đó
- * (chim ra vào ở cửa của cả nhà, SRS v2.1.8). Ghép theo NGÀY: mỗi ngày lấy trung bình môi trường
- * + return rate của ngày đó, để trả lời câu hỏi nghiệp vụ "ngày nào nóng quá thì chim có bỏ về ít hơn không".
- */
+/** Ghép theo ngày */
 export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, query: { days: number }) {
   const { house } = await assertZoneAccess(zoneId, user)
   const from = new Date(Date.now() - query.days * 86400_000)
@@ -401,7 +347,7 @@ export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, q
       { $match: { zone_id: new Types.ObjectId(zoneId), timestamp: { $gte: from } } },
       {
         $group: {
-          // Ngày theo giờ VN để ghép đúng với `session_date` của số đếm chim
+          // Giờ VN để khớp session_date
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: 'Asia/Ho_Chi_Minh' } },
           avg_temperature: { $avg: '$temperature' },
           avg_humidity:    { $avg: '$humidity' },
@@ -412,7 +358,7 @@ export async function getEnvBirdCorrelation(user: CurrentUser, zoneId: string, q
     houseDailyCounts(String(house._id), { from: vnDate(from) }),
   ])
 
-  // VISION-FR-020 — ngày không đầy đủ (nút AI mất kết nối trong khung) không ghép cặp: tỷ lệ của ngày đó thấp vì thiếu số
+  // VISION-FR-020: tỷ lệ của ngày không đầy đủ thấp vì thiếu số
   const birdByDate = new Map(birdDaily.filter(b => !b.incomplete).map(b => [b.date, b.return_rate]))
   const points = envDaily
     .map(e => ({
