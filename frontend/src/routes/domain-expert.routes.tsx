@@ -5,6 +5,9 @@ import RequireRole from '@/components/auth/RequireRole';
 import { EXPERT_DECISION_ROLES, EXPERT_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
 import ExpertReadOnlyBadge from '@/components/features/domain-expert/ExpertReadOnlyBadge';
+import ScopeFilter from '@/components/common/ScopeFilter';
+import HeaderActions from '@/components/layouts/HeaderActions';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 
 const DomainExpertQueuePage = lazy(() => import('@/pages/domain-expert/DomainExpertQueuePage'));
 const DomainExpertAlertVerdictsPage = lazy(() => import('@/pages/domain-expert/DomainExpertAlertVerdictsPage'));
@@ -24,10 +27,14 @@ function DomainExpertIndexRedirect() {
   return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
 }
 
-// Khung chung /domain-expert/*: DE-01 bỏ banner SCADA (ScopeFilter trên header thay thế sau C-05; tạm thời chọn trang trại qua /overview); DE-10 badge nhỏ thay dải nhắc quyền
+// Khung chung /domain-expert/*: DE-01 bỏ banner SCADA, ScopeFilter trên header thay thế (C-05); DE-10 badge nhỏ thay dải nhắc quyền
 function DomainExpertShell() {
+  const scope = useScopeFilter();
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
+      <HeaderActions>
+        <ScopeFilter scope={scope} />
+      </HeaderActions>
       <ExpertReadOnlyBadge />
       <Outlet />
     </div>

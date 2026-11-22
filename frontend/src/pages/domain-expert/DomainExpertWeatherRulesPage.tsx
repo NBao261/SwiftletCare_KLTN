@@ -114,6 +114,22 @@ export default function DomainExpertWeatherRulesPage() {
     )
   }
 
+  function renderHeaderAction() {
+    if (isLoading || !canDecide || isError) return undefined
+    if (rules.length >= MAX_RULES) {
+      return (
+        <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
+          {t('Đã đạt tối đa 10 luật')}
+        </span>
+      )
+    }
+    return (
+      <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>
+        {t('Thêm luật')}
+      </Button>
+    )
+  }
+
   function renderRulesList() {
     if (isLoading) return <LoadingSkeleton count={3} className="h-12 w-full rounded-2xl" />
     if (rules.length === 0) {
@@ -156,19 +172,7 @@ export default function DomainExpertWeatherRulesPage() {
         icon={<CloudRain className="w-5 h-5" />}
         title={t('Luật bù phun sương theo thời tiết')}
         description={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
-        action={
-          !isLoading && canDecide && !isError ? (
-            rules.length >= MAX_RULES ? (
-              <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
-                {t('Đã đạt tối đa 10 luật')}
-              </span>
-            ) : (
-              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>
-                {t('Thêm luật')}
-              </Button>
-            )
-          ) : undefined
-        }
+        action={renderHeaderAction()}
       >
         <div className="space-y-4">
           {/* Lỗi tải dữ liệu */}
