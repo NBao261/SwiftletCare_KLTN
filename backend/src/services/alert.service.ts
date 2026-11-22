@@ -24,58 +24,34 @@ import type {
   AlertType, AlertSeverity, AlertStatus, AlertVerdictResult, CurrentUser, FarmMemberRole, Thresholds, TelemetryPayload,
 } from '@/types'
 
-/** ALERT-FR-008 — sự cố còn đang mở thì chỉ cập nhật `last_seen_at` tối đa 1 lần/khoảng này */
+/** ALERT-FR-008 */
 export const ALERT_SEEN_UPDATE_MS = 60 * 1000
-/** THRESHOLD_BREACH không được ghi nhận lại trong khoảng này = chỉ số đã bình thường → tự đóng */
+/** Không ghi nhận lại trong khoảng này = đã bình thường, tự đóng */
 export const THRESHOLD_CLEAR_MS = 5 * 60 * 1000
 
-/**
- * Cảnh báo "theo đợt" do firmware phát 1 lần khi sự cố BẮT ĐẦU và không có tín hiệu
- * hết: không được ghi nhận lại trong khoảng này thì coi đợt đó đã qua và tự đóng. Nếu
- * không đóng, dedup "còn mở thì không tạo mới" nuốt mọi lần tái phát về sau: mỗi thiết
- * bị chỉ còn đúng 1 bản ghi, Farm Owner không được báo lần nào nữa và thống kê tỷ lệ
- * xác nhận (EXPERT-FR-003) không còn là căn cứ chỉnh tham số.
- * Firmware ≥ 1.3.0 gửi LẠI cảnh báo mỗi 15 phút chừng nào sự cố còn tiếp diễn
- * (EPISODE_ALERT_RESEND_MS) nên đợt dài không bị đóng giữa chừng; mốc này phải dài hơn
- * khoảng gửi lại đó.
- * ponytail: 60 phút là mốc kỹ thuật chọn tay (dài hơn 30 phút tự thử lại của MISTING_INEFFECTIVE
- * trên firmware để thử lại vẫn khô thì gộp vào cùng 1 cảnh báo), không có nguồn nuôi yến.
- */
+/** Firmware gửi lại mỗi 15 phút khi sự cố còn, nên mốc này phải dài hơn. ponytail: 60 phút chọn tay */
 export const EPISODE_CLEAR_MS = 60 * 60 * 1000
-/**
- * `ACTUATOR_FAULT` (THREAT-FR-014): thiết kế cho firmware gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào tải còn không
- * theo relay, nên cảnh báo tự đóng khi tải chạy đúng trở lại. Firmware 2.3.0 gửi cảnh báo này khi board có ADS1115;
- * Work Order của nó không dựa vào việc gửi lại (workOrder.service#UNVERIFIABLE_RECOVERY).
- */
+/** Tự đóng khi tải chạy đúng lại; Work Order của nó không dựa vào việc gửi lại */
 export const EPISODE_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT']
 
-/** THREAT-FR-014 — hai tải có đo dòng; cảnh báo nêu tải nào (bơm phun sương hoặc quạt) */
+/** THREAT-FR-014 */
 export const ACTUATOR_LOADS = ['misting', 'ventilation'] as const
 const ACTUATOR_FAULT_KINDS = ['NO_CURRENT_WHILE_ON', 'CURRENT_WHILE_OFF'] as const
 
-/**
- * Cảnh báo còn mở (chưa RESOLVED) — nguồn duy nhất, mọi truy vấn "alert đang mở" dùng lại hằng số này.
- * Gồm cả `DISMISSED` (SM-01): cảnh báo bị bác bỏ vẫn gộp lần gặp lại cùng sự cố (không tạo cảnh báo
- * mới, không thông báo — ALERT-FR-008) và tự đóng khi hết sự cố như cảnh báo còn hiệu lực (BR-16).
- */
+/** Gồm cả DISMISSED (SM-01): vẫn gộp lần gặp lại và tự đóng như cảnh báo còn hiệu lực */
 export const OPEN_STATUSES: AlertStatus[] = OPEN_ALERT_STATUSES
 
-/** ALERT-FR-007 — cảnh báo còn hiệu lực, hiện tách khỏi DISMISSED và RESOLVED */
+/** ALERT-FR-007 */
 const IN_FORCE_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED']
 
-/**
- * ALERT-FR-001, BR-15 — mỗi loại có đúng một mức, và chỉ backend đặt mức: mức quyết định ai nhận và khi nào (CRITICAL
- * tới cả Farm Owner ngay và vượt giờ im lặng, CRITICAL và HIGH được gửi lại — ALERT-FR-006, 015, 017), nên thiết bị
- * không được tự nâng mức cảnh báo của chính nó. `severity` trong tin MQTT chỉ để tham khảo, bị bỏ qua (Report 4 §7.2).
- */
+/** BR-15: chỉ backend đặt mức vì mức quyết định ai nhận và khi nào; severity trong tin MQTT bị bỏ qua */
 export const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   RS485_BUS_FAILURE: 'CRITICAL',
   UNEXPECTED_RESTART: 'HIGH',
   SPEAKER_FAILURE:   'HIGH',
   NODE_OFFLINE:      'HIGH',
   ACTUATOR_FAULT:    'HIGH',
-  // MEDIUM: tín hiệu tham khảo theo dB (THREAT-FR-007), chờ Domain Expert kiểm chứng —
-  // HIGH sẽ bị alertEscalation.job gửi lại sau 15 phút nếu báo nhầm (ALERT-FR-015).
+  // Suy luận: HIGH sẽ bị gửi lại sau 15 phút nếu báo nhầm (ALERT-FR-015)
   NOISE_ANOMALY:     'MEDIUM',
   THRESHOLD_BREACH:  'MEDIUM',
   SENSOR_FAULT:      'MEDIUM',
@@ -83,59 +59,47 @@ export const DEFAULT_SEVERITY: Record<AlertType, AlertSeverity> = {
   EDGE_AI_DEGRADED:  'MEDIUM',
   CONFIG_MISMATCH:   'MEDIUM',
   LOW_RETURN_RATE:   'LOW',
-  // v1.24.0 — suy luận thống kê, có thể báo nhầm → không để mức được gửi lại
+  // Suy luận, có thể báo nhầm: không để mức được gửi lại
   SENSOR_ANOMALY:    'MEDIUM',
   FORECAST_BREACH:   'LOW',
   MAINTENANCE_DUE:   'LOW',
 }
 
-/** Mọi loại cảnh báo hợp lệ — lấy từ bảng mức mặc định nên luôn đủ theo `AlertType` */
 export const ALERT_TYPES = Object.keys(DEFAULT_SEVERITY) as AlertType[]
 
-/**
- * EXPERT-FR-003 — cảnh báo SUY LUẬN (thống kê/dB, có thể báo nhầm): Domain Expert xác
- * nhận hoặc bác bỏ. Cảnh báo đo trực tiếp (vượt ngưỡng, mất kết nối…) không cần kiểm chứng.
- */
+/** EXPERT-FR-003: có thể báo nhầm nên cần kiểm chứng */
 export const INFERRED_ALERT_TYPES: AlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE']
 
-/**
- * Loại chỉ backend tự suy ra — thiết bị gửi lên thì từ chối (làm sai thống kê kiểm chứng, báo giả).
- * LOW_RETURN_RATE do job của backend tính từ số đếm (VISION-FR-011), nút AI không tự báo;
- * MAINTENANCE_DUE do relayUsage tính từ telemetry (ALERT-FR-016); CONFIG_MISMATCH do backend so
- * phiên bản cấu hình trong heartbeat (ENV-FR-027, BR-24).
- */
+/** Thiết bị gửi lên thì từ chối: làm sai thống kê kiểm chứng */
 const BACKEND_ONLY_ALERT_TYPES: AlertType[] = [
   'NODE_OFFLINE', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE', 'MAINTENANCE_DUE', 'CONFIG_MISMATCH',
 ]
 
-/**
- * "Device alert" (Report 3 §1.3) — cảnh báo về thiết bị, không về nhà yến: Technician thấy loại này
- * ở mọi farm (FARM-FR-009) và không thấy loại nào khác.
- */
+/** Administrator thấy loại này ở mọi farm (FARM-FR-009) */
 export const DEVICE_ALERT_TYPES: AlertType[] = [
   'NODE_OFFLINE', 'EDGE_AI_DEGRADED', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'UNEXPECTED_RESTART',
   'SPEAKER_FAILURE', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT', 'CONFIG_MISMATCH', 'MAINTENANCE_DUE',
 ]
 
-/** Loại nút AI đếm chim được tự báo qua `vision/alert` (THREAT-FR-010: tốc độ xử lý < 10 FPS) */
+/** THREAT-FR-010 */
 const CAMERA_ALERT_TYPES: AlertType[] = ['EDGE_AI_DEGRADED']
 
-/** Tên loại cảnh báo firmware cũ còn gửi → tên hiện hành (SRS 3.1.0 không giữ alias nào khác) */
+/** Firmware cũ */
 const ALERT_TYPE_ALIAS: Record<string, AlertType> = {
-  BIRD_PANIC:   'NOISE_ANOMALY',        // firmware < 1.3.0
-  PUMP_DRY:     'MISTING_INEFFECTIVE',  // firmware ≤ 1.4.0
-  POWER_OUTAGE: 'UNEXPECTED_RESTART',   // firmware ≤ 1.4.0
+  BIRD_PANIC:   'NOISE_ANOMALY',
+  PUMP_DRY:     'MISTING_INEFFECTIVE',
+  POWER_OUTAGE: 'UNEXPECTED_RESTART',
 }
 
-/** Giới hạn độ dài như `applyDiagnostics` (device.service) — chuỗi lạ từ thiết bị không được làm phình cảnh báo */
+/** Chuỗi lạ từ thiết bị không được làm phình cảnh báo */
 const MAX_RESET_REASON_LENGTH = 32
 
 export interface CreateAlertInput {
-  /** Report 4 §7.2 — mã sự kiện của thiết bị, chống tính trùng khi QoS 1 giao lại */
+  /** Chống tính trùng khi QoS 1 giao lại */
   eventId?: string
   farmId: string
   zoneId?: string
-  /** Cảnh báo của cả nhà yến (camera đếm chim) — SRS v2.1.8; không đi kèm zoneId */
+  /** Cảnh báo cả nhà (camera), không có zoneId */
   houseId?: string
   nodeId?: string
   type: AlertType
@@ -143,19 +107,15 @@ export interface CreateAlertInput {
   message: string
   snapshotUrl?: string
   metadata?: Record<string, unknown>
-  /** Chi tiết của sự cố theo ERD (Report 4 §6.1) */
   details?: Record<string, unknown>
 }
 
-/**
- * ALERT-FR-008 — sự cố còn cảnh báo mở (`ACTIVE`, `ACKNOWLEDGED` hoặc `DISMISSED`): chỉ cập nhật lần thấy cuối và đếm
- * thêm một lần (tối đa mỗi ALERT_SEEN_UPDATE_MS), không tạo bản ghi và không gửi thông báo lại. Trả `true` khi đã gộp.
- */
+/** ALERT-FR-008: không tạo bản ghi, không gửi lại. Trả true khi đã gộp */
 async function absorbIntoOpenAlert(incidentKey: string, input: CreateAlertInput, now: Date): Promise<boolean> {
   const open = await Alert.findOne({ incident_key: incidentKey, status: { $in: OPEN_STATUSES } })
     .select('_id created_at last_seen_at').lean()
   if (!open) return false
-  // Giữ `eventId` mới nhất: bản QoS 1 giao lại của lần báo này cũng bị bỏ
+  // Bản QoS 1 giao lại của lần báo này cũng bị bỏ
   if (input.eventId) await Alert.updateOne({ _id: open._id }, { $set: { event_id: input.eventId } })
   const lastSeen = (open.last_seen_at ?? open.created_at).getTime()
   if (now.getTime() - lastSeen >= ALERT_SEEN_UPDATE_MS) {
@@ -168,29 +128,19 @@ async function absorbIntoOpenAlert(incidentKey: string, input: CreateAlertInput,
   return true
 }
 
-/** Lỗi trùng khoá của chỉ mục `incident_key` (không phải của `event_id`) */
+/** Trùng khoá incident_key, không phải event_id */
 function isDuplicateIncident(err: unknown): boolean {
   if (typeof err !== 'object' || err === null) return false
   const { code, keyPattern } = err as { code?: unknown; keyPattern?: Record<string, unknown> }
   return code === 11000 && keyPattern !== undefined && 'incident_key' in keyPattern
 }
 
-/**
- * Alert Engine — điểm vào DUY NHẤT để tạo cảnh báo (ALERT-FR-001/002/003/008).
- * Mọi nguồn (MQTT từ ESP32/RPi, job phát hiện offline, kiểm tra ngưỡng telemetry)
- * đều đi qua đây để đảm bảo dedup + gửi thông báo + phát socket nhất quán.
- *
- * Trả về `null` khi bị dedup: sự cố cùng khoá (`incidentKeyOf`) vẫn còn alert đang mở
- * (ACTIVE, ACKNOWLEDGED hoặc DISMISSED, không giới hạn thời gian) — khi đó chỉ cập
- * nhật `last_seen_at` + `occurrence_count` của alert đó, không tạo bản ghi và
- * không gửi thông báo lại.
- */
+/** Điểm vào duy nhất để tạo cảnh báo. null khi bị gộp vào cảnh báo mở cùng incidentKeyOf */
 export async function createAlert(input: CreateAlertInput): Promise<IAlert | null> {
   const severity = DEFAULT_SEVERITY[input.type]
   const now = new Date()
 
-  // Farm đã xoá mềm mà thiết bị vẫn cắm điện: không sinh cảnh báo mà
-  // không ai mở được. Pre-hook findOne của Farm đã loại is_deleted.
+  // Farm đã xoá mềm mà thiết bị vẫn chạy: không sinh cảnh báo không ai mở được
   if (!(await Farm.exists({ _id: input.farmId }))) return null
 
   const incidentKey = incidentKeyOf({
@@ -218,7 +168,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
       status:       'ACTIVE',
     })
   } catch (err) {
-    // Tin khác của cùng sự cố vừa tạo cảnh báo giữa lúc tìm và lúc tạo: chỉ mục duy nhất chặn bản thứ hai (ALERT-FR-008)
+    // Tin cùng sự cố vừa tạo cảnh báo giữa lúc tìm và tạo: unique index chặn bản thứ hai
     if (!isDuplicateIncident(err)) throw err
     await absorbIntoOpenAlert(incidentKey, input, now)
     return null
@@ -235,8 +185,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
   if (input.zoneId) emitAlertNew(input.zoneId, wsAlert)
   if (input.houseId) emitHouseAlertNew(input.houseId, wsAlert)
 
-  // ALERT-FR-017 — chọn người nhận theo thợ đang trực của nhà. Định tuyến lỗi thì vẫn gửi Farm Owner như
-  // trước G-21: cảnh báo (nhất là CRITICAL) không được mất vì bước chọn người nhận (ALERT-FR-005)
+  // Định tuyến lỗi thì vẫn gửi Farm Owner: cảnh báo không được mất vì bước chọn người nhận
   const awaitsVerdict = INFERRED_ALERT_TYPES.includes(input.type)
   let recipientIds: string[] | undefined
   try {
@@ -244,38 +193,28 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
   } catch (err) {
     logger.error('Định tuyến cảnh báo thất bại — gửi Farm Owner', { alertId: String(alert._id), err })
   }
-  // Không await: gửi thông báo chậm/lỗi không được chặn luồng ghi cảnh báo
-  // EXPERT-FR-007 — cảnh báo suy luận còn báo Domain Expert trong ứng dụng để kiểm chứng
+  // Không await: gửi chậm không chặn ghi cảnh báo. EXPERT-FR-007: cảnh báo suy luận báo chuyên gia trong app
   void dispatchAlertNotification(alert, { awaitsVerdict, ...(recipientIds && { recipientIds }) }).catch((err: Error) =>
     logger.error('Gửi thông báo cảnh báo thất bại', { alertId: String(alert._id), err }),
   )
-  // BR-39 — cảnh báo thiết bị mở Work Order; sự cố quay lại gắn vào Work Order đang mở (lỗi chỉ ghi log)
+  // BR-39; lỗi chỉ ghi log
   await handleNewAlert(alert)
 
   return alert
 }
 
-/**
- * Cảnh báo do thiết bị tự phát hiện, gọi từ mqtt/handlers/alert.handler.ts
- * (ESP32 `{base}/alert`: SENSOR_FAULT, RS485_BUS_FAILURE, SPEAKER_FAILURE,
- * MISTING_INEFFECTIVE, UNEXPECTED_RESTART, NOISE_ANOMALY, ACTUATOR_FAULT —
- * THREAT-FR-006/007/011/012/013/014; nút AI `vision/alert`: EDGE_AI_DEGRADED).
- *
- * Thiết bị được nhận diện qua `deviceId` trong payload, KHÔNG qua slug trong
- * topic (xem ghi chú ở telemetry.service) — nên cảnh báo vẫn vào đúng farm kể
- * cả khi firmware chưa trỏ đúng farmId/houseId/zoneId thật.
- */
+/** Nhận diện qua deviceId trong payload, không qua topic */
 export async function ingestDeviceAlert(message: Record<string, unknown>): Promise<IAlert | null> {
   const deviceId = message.deviceId as string | undefined
   const rawType = typeof message.type === 'string' ? message.type : undefined
-  // Object.hasOwn: tra thẳng `ALERT_TYPE_ALIAS[rawType]` sẽ trả hàm của Object.prototype cho 'constructor'
+  // Object.hasOwn: tra thẳng sẽ trả hàm của Object.prototype cho 'constructor'
   const type = rawType && (Object.hasOwn(ALERT_TYPE_ALIAS, rawType) ? ALERT_TYPE_ALIAS[rawType] : rawType)
   if (!deviceId || !type) throw NotFoundError('Payload cảnh báo thiếu deviceId hoặc type')
   if (!ALERT_TYPES.includes(type as AlertType) || BACKEND_ONLY_ALERT_TYPES.includes(type as AlertType)) {
     throw BadRequestError(`Loại cảnh báo không hợp lệ: "${type}"`)
   }
 
-  // NFR-06 c, Report 4 §7.2 — QoS 1 có thể giao lại: mỗi `eventId` của 1 thiết bị chỉ tính 1 lần
+  // NFR-06 c: mỗi eventId chỉ tính 1 lần
   const eventId = typeof message.eventId === 'string' && message.eventId ? message.eventId : undefined
   const common = {
     eventId,
@@ -292,8 +231,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
       logger.debug('Bỏ cảnh báo giao lại', { deviceId, eventId })
       return null
     }
-    // THREAT-FR-012 — lý do khởi động lại: lấy trong cảnh báo, firmware không gửi thì lấy
-    // từ heartbeat gần nhất (applyDiagnostics lưu `reset_reason` ở mỗi heartbeat)
+    // Firmware không gửi thì lấy từ heartbeat gần nhất
     if (type === 'UNEXPECTED_RESTART') {
       const sent = message.resetReason ?? message.reset_reason
       const resetReason = typeof sent === 'string' && sent.length <= MAX_RESET_REASON_LENGTH ? sent : node.reset_reason
@@ -302,9 +240,9 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
         common.details = { reset_reason: resetReason }
       }
     }
-    // THREAT-FR-014 — tải nào không theo relay, theo hướng nào, so với mức đã học; giá trị lạ thì bỏ
+    // Giá trị lạ thì bỏ
     if (type === 'ACTUATOR_FAULT') common.details = actuatorFaultDetails(message)
-    // `name` cho tiêu đề mặc định — firmware không gửi kèm title
+    // Firmware không gửi title
     const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
     if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
     return createAlert({
@@ -313,7 +251,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     })
   }
 
-  // Nút AI (`vision/alert`) dùng chung handler; nó chỉ được báo các loại của mình, và gắn House (SRS v2.1.8)
+  // Nút AI chỉ được báo loại của mình, gắn House
   const camera = CAMERA_ALERT_TYPES.includes(type as AlertType)
     ? await CameraNode.findOne({ device_id: deviceId, ...IN_SERVICE }).select('house_id').lean()
     : null
@@ -326,11 +264,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
   })
 }
 
-/**
- * THREAT-FR-014, BR-32 — chi tiết `ACTUATOR_FAULT` từ firmware: `load` (misting | ventilation), `fault`
- * (NO_CURRENT_WHILE_ON | CURRENT_WHILE_OFF), `normalCurrentA`, `currentA`. Trường thiếu hoặc sai kiểu thì bỏ, không
- * từ chối cảnh báo: báo lỗi tải quan trọng hơn đủ chi tiết.
- */
+/** Trường thiếu hoặc sai kiểu thì bỏ, không từ chối: báo lỗi tải quan trọng hơn đủ chi tiết */
 function actuatorFaultDetails(message: Record<string, unknown>): Record<string, unknown> | undefined {
   const isAmps = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
   const details: Record<string, unknown> = {}
@@ -341,11 +275,7 @@ function actuatorFaultDetails(message: Record<string, unknown>): Record<string, 
   return Object.keys(details).length > 0 ? details : undefined
 }
 
-/**
- * ENV-FR-004 — so sánh telemetry với ngưỡng của Zone, trả về danh sách chỉ số
- * vượt ngưỡng. Dùng cho cả việc gắn cờ `is_anomaly` lẫn sinh cảnh báo
- * THRESHOLD_BREACH, nên tách riêng để 2 nơi dùng chung 1 định nghĩa "bất thường".
- */
+/** Dùng chung cho is_anomaly và THRESHOLD_BREACH để 1 định nghĩa "bất thường" */
 export interface ThresholdBreach { metric: string; value: number; limit: number; direction: 'above' | 'below' }
 
 export function findThresholdBreaches(
@@ -354,7 +284,7 @@ export function findThresholdBreaches(
 ): ThresholdBreach[] {
   const breaches: ThresholdBreach[] = []
   const check = (metric: string, value: number | undefined, min: number | undefined, max: number | undefined) => {
-    if (value === undefined || !Number.isFinite(value)) return // cảm biến lỗi/chưa đấu dây — SENSOR_FAULT lo, không phải THRESHOLD_BREACH
+    if (value === undefined || !Number.isFinite(value)) return // Cảm biến lỗi: SENSOR_FAULT lo
     if (min !== undefined && value < min) breaches.push({ metric, value, limit: min, direction: 'below' })
     if (max !== undefined && value > max) breaches.push({ metric, value, limit: max, direction: 'above' })
   }
@@ -367,13 +297,9 @@ export function findThresholdBreaches(
   return breaches
 }
 
-/**
- * ALERT-FR-012 (SRS v2.0.0) — NH3/CO2 chỉ theo dõi và cảnh báo: chưa có giới hạn nào
- * được xác lập cho nhà yến, ngưỡng của Zone là ngưỡng cảnh báo (mặc định hệ thống cho
- * tới khi Domain Expert chỉnh), và hệ thống không điều khiển quạt theo hai chỉ số này.
- */
+/** ALERT-FR-012: NH3/CO2 chỉ cảnh báo, không điều khiển quạt */
 const AIR_QUALITY_METRICS = new Set(['nh3_ppm', 'co2_ppm'])
-// Không ghi "do chuyên gia đặt": ngưỡng mặc định chưa ai chỉnh thì câu đó sai sự thật
+// Không ghi "do chuyên gia đặt": ngưỡng mặc định chưa ai chỉnh thì sai sự thật
 const AIR_QUALITY_NOTE = 'NH3, CO2 chỉ để theo dõi và cảnh báo theo ngưỡng của Zone (chưa có giới hạn chuẩn cho nhà yến); quạt không tự chạy theo chỉ số này'
 
 const METRIC_LABEL: Record<string, string> = {
@@ -384,15 +310,7 @@ const METRIC_LABEL: Record<string, string> = {
   co2_ppm:     'CO2',
 }
 
-/**
- * ENV-FR-004, ALERT-FR-012, BR-34 — gọi từ telemetry.service ở mẫu sống được lưu, sau khi
- * trackBreachDwell (utils/breachDwell.util) tính quãng vượt ngưỡng của thiết bị:
- * - có chỉ số đã ở ngoài ngưỡng đủ thời gian chờ (`dwelled`) → tạo THRESHOLD_BREACH (hoặc gộp vào cảnh
- *   báo đang mở); `details` là chỉ số bắt đầu sớm nhất, `metadata.metrics` là các chỉ số cảnh báo đang
- *   báo (đã đủ thời gian chờ), `metadata.breaches` là mọi chỉ số đang vượt;
- * - chỉ có chỉ số đang vượt chưa đủ thời gian chờ → không tạo mới, chỉ giữ cảnh báo đang mở còn sống khi
- *   chỉ số của chính nó còn vượt, để nó tự đóng sau THRESHOLD_CLEAR_MS các chỉ số đó về trong ngưỡng (BR-16).
- */
+/** BR-34: đủ thời gian chờ thì tạo hoặc gộp; chưa đủ thì chỉ giữ cảnh báo mở của chính chỉ số đó còn sống */
 export async function raiseThresholdAlert(
   zoneId: string, nodeId: string, dwelled: DwelledBreach[], ongoing: ThresholdBreach[] = dwelled,
 ): Promise<void> {
@@ -422,10 +340,7 @@ export async function raiseThresholdAlert(
   })
 }
 
-/**
- * BR-16 — chỉ số của cảnh báo còn ngoài ngưỡng: cảnh báo đang mở chưa được đóng; cập nhật lần thấy cuối tối
- * đa 1 lần/ALERT_SEEN_UPDATE_MS. Chỉ số khác vừa vượt (chưa đủ thời gian chờ) không giữ cảnh báo này.
- */
+/** Chỉ số khác vừa vượt (chưa đủ chờ) không giữ cảnh báo này */
 async function keepThresholdAlertAlive(zoneId: string, nodeId: string, metrics: string[]): Promise<void> {
   const now = new Date()
   await Alert.updateOne(
@@ -438,28 +353,23 @@ async function keepThresholdAlertAlive(zoneId: string, nodeId: string, metrics: 
   )
 }
 
-// ── Truy vấn phía Farm Owner (ALERT-FR-007/009) ─────────────────────────────
-
 export interface ListAlertsQuery {
   farmId?: string
   zoneId?: string
-  /** ALERT-FR-007 — cảnh báo của một nhà: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà */
+  /** Cảnh báo cả nhà và của các Zone trong nhà */
   houseId?: string
   status?: string
-  /** ALERT-FR-007 — chỉ cảnh báo còn hiệu lực (ACTIVE, ACKNOWLEDGED); `status` đi kèm thì `status` thắng */
+  /** status đi kèm thì status thắng */
   open?: boolean
   severity?: string
   type?: string
-  /** EXPERT-FR-003 — pending = cảnh báo suy luận chưa được kiểm chứng */
+  /** pending = suy luận chưa kiểm chứng */
   verdict?: 'any' | 'pending' | 'confirmed' | 'rejected'
   page?: number
   limit?: number
 }
 
-/**
- * Dòng của danh sách cảnh báo: không ký URL ảnh cho từng dòng, nên bỏ hẳn khoá MinIO thô (`onsite_checks[].photo`,
- * `site_cause.photos`) — ảnh xem ở chi tiết; kiểm tra tại chỗ chưa trả lời có `observation: null` như chi tiết (spec).
- */
+/** Danh sách không ký URL ảnh nên bỏ khoá MinIO thô; ảnh xem ở chi tiết */
 function listRowView<T extends { onsite_checks?: OnsiteCheck[]; site_cause?: { photos?: string[] } }>(row: T) {
   const { onsite_checks: checks, site_cause: siteCause, ...rest } = row
   return {
@@ -473,16 +383,12 @@ function listRowView<T extends { onsite_checks?: OnsiteCheck[]; site_cause?: { p
   }
 }
 
-/**
- * ALERT-FR-007 — Farm Owner, Domain Expert chỉ thấy cảnh báo của farm mình; Administrator thấy
- * cảnh báo thiết bị của mọi farm (FARM-FR-009, Report 3 §2.4); Farm Technician thấy cảnh báo của
- * các nhà được giao (§2.4, AUTH-FR-013) — việc gửi cảnh báo tới thợ theo ca trực là G-21.
- */
+/** Administrator chỉ cảnh báo thiết bị (FARM-FR-009); Farm Technician theo nhà được giao */
 export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   const filter: Record<string, unknown> = await alertScopeFilter(user)
 
   if (query.farmId) {
-    // Thợ đã bị giới hạn theo nhà nên farm khác chỉ cho danh sách rỗng
+    // Thợ đã bị giới hạn theo nhà
     if (user.role !== 'FARM_TECHNICIAN') {
       const accessibleFarms = await listAccessibleFarmIds(user, 'device')
       if (!accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
@@ -491,8 +397,7 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   }
   if (query.zoneId) filter.zone_id = query.zoneId
   if (query.houseId) {
-    // ALERT-FR-007 — lọc theo nhà gồm cảnh báo của cả nhà (camera) và của các Zone trong nhà; $and để không đè $or
-    // phạm vi của thợ
+    // $and để không đè $or phạm vi của thợ
     const zoneIds = await Zone.find({ house_id: query.houseId }).distinct('_id')
     const house = { $or: [{ house_id: query.houseId }, { zone_id: { $in: zoneIds } }] }
     filter.$and = [...((filter.$and as unknown[] | undefined) ?? []), house]
@@ -502,13 +407,12 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   if (query.severity) filter.severity = query.severity
   if (query.type) filter.type = query.type
   if (query.verdict) {
-    // Lọc theo kiểm chứng chỉ có nghĩa với cảnh báo suy luận: loại khác mà hiện trong hàng
-    // chờ thì PUT /alerts/:id/verdict sẽ từ chối (400) — hàng chờ và hành động phải khớp nhau
+    // Hàng chờ phải khớp hành động: verdict trên loại khác bị từ chối (400)
     if (query.type && !INFERRED_ALERT_TYPES.includes(query.type as AlertType)) {
       throw BadRequestError(`Chỉ lọc theo kiểm chứng cho cảnh báo suy luận (${INFERRED_ALERT_TYPES.join(', ')})`)
     }
     if (!query.type) filter.type = { $in: INFERRED_ALERT_TYPES }
-    // `any`: mọi cảnh báo suy luận, đã kết luận hay chưa (trang kết luận của chuyên gia, tab Tất cả)
+    // any: mọi cảnh báo suy luận, đã kết luận hay chưa
     if (query.verdict === 'pending') filter.expert_verdict = { $exists: false }
     else if (query.verdict !== 'any') filter['expert_verdict.result'] = query.verdict.toUpperCase()
   }
@@ -516,7 +420,7 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   const { page, skip, limit } = paginate(query.page, query.limit)
 
   const [records, total, unreadCount] = await Promise.all([
-    // ALERT-FR-007 — cảnh báo DISMISSED hiện ai bác bỏ: kèm tên người kết luận
+    // Hiện ai bác bỏ
     Alert.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).populate('expert_verdict.by', 'full_name').lean()
       .then(rows => rows.map(listRowView)),
     Alert.countDocuments(filter),
@@ -526,24 +430,22 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
   return { records, total, page, limit, unreadCount }
 }
 
-/** Phạm vi cảnh báo của 1 user: farm của mình; thợ theo nhà được giao (cảnh báo của zone hoặc của nhà) */
 async function alertScopeFilter(user: CurrentUser): Promise<Record<string, unknown>> {
   if (user.role === 'FARM_TECHNICIAN') {
     const [houseIds, zoneIds] = await Promise.all([listAccessibleHouseIds(user), listAccessibleZoneIds(user)])
     return { $or: [{ house_id: { $in: houseIds } }, { zone_id: { $in: zoneIds } }] }
   }
   const filter: Record<string, unknown> = { farm_id: { $in: await listAccessibleFarmIds(user, 'device') } }
-  // $and để giữ nguyên bộ lọc `type` của người gọi: giao với loại thiết bị
+  // $and để giữ bộ lọc type của người gọi
   if (user.role === 'ADMIN') filter.$and = [{ type: { $in: DEVICE_ALERT_TYPES } }]
   return filter
 }
 
-/** Cảnh báo + farm của nó, đã kiểm quyền cùng phạm vi với danh sách (Administrator chỉ cảnh báo thiết bị) */
 async function findAlertWithAccess(alertId: string, user: CurrentUser) {
   const alert = await Alert.findById(alertId)
   if (!alert) throw NotFoundError('Không tìm thấy cảnh báo')
   if (user.role === 'FARM_TECHNICIAN') {
-    // AUTH-FR-013 — thợ chỉ trên nhà được giao: cảnh báo của zone theo nhà chứa zone, cảnh báo của nhà theo nhà
+    // AUTH-FR-013: theo nhà chứa zone, hoặc nhà
     if (alert.zone_id) return { alert, farm: (await assertZoneAccess(String(alert.zone_id), user)).farm }
     if (alert.house_id) return { alert, farm: (await assertHouseAccess(String(alert.house_id), user)).farm }
     throw ForbiddenError('Không có quyền trên cảnh báo này')
@@ -557,16 +459,13 @@ export async function getAlert(alertId: string, user: CurrentUser): Promise<IAle
   return alert.populate('expert_verdict.by', 'full_name')
 }
 
-/**
- * EXPERT-FR-021 — yêu cầu kiểm tra tại chỗ kèm tên thợ và URL tạm của ảnh (khoá MinIO không ra API). Dùng cho
- * chi tiết cảnh báo và bằng chứng (ALERT-FR-014).
- */
+/** Khoá MinIO không ra API: trả URL tạm */
 export async function presentOnsiteChecks(alert: IAlert) {
   await alert.populate([
     { path: 'onsite_checks.technician_id', select: 'full_name' }, { path: 'onsite_checks.answered_by', select: 'full_name' },
   ])
   const checks: OnsiteCheck[] = alert.toObject().onsite_checks ?? []
-  // Spec: yêu cầu chưa trả lời có `observation: null` (không phải thiếu khoá) — mobile tìm yêu cầu còn chờ theo đó
+  // observation: null, không phải thiếu khoá: mobile tìm yêu cầu còn chờ theo đó
   return Promise.all(checks.map(async ({ photo, ...check }) => ({
     ...check,
     observation: check.observation ?? null,
@@ -577,7 +476,6 @@ export async function presentOnsiteChecks(alert: IAlert) {
   })))
 }
 
-/** Chi tiết cảnh báo cho API: ảnh tại chỗ (ALERT-FR-018) và kiểm tra tại chỗ (EXPERT-FR-021) dạng URL tạm */
 async function presentAlert(alert: IAlert) {
   await alert.populate('expert_verdict.by', 'full_name')
   const onsiteChecks = await presentOnsiteChecks(alert)
@@ -595,12 +493,7 @@ export async function getAlertDetail(alertId: string, user: CurrentUser) {
   return presentAlert(await getAlert(alertId, user))
 }
 
-/**
- * ALERT-FR-009 — Farm Owner, hoặc Farm Technician ở nhà được giao (route + findAlertWithAccess), xác nhận kèm ghi
- * chú. Ghi chú "Báo động giả" được giữ lại làm dữ liệu đánh giá chất lượng model AI (Flow 4 case 9a). Xác nhận
- * trước escalation_min thì không leo thang (BR-40: job chỉ xét cảnh báo ACTIVE). `cause` — nguyên nhân tìm thấy tại
- * chỗ (ALERT-FR-018), không bắt buộc ở bước này.
- */
+/** Ghi chú "Báo động giả" giữ làm dữ liệu đánh giá model. Xác nhận trước escalation_min thì không leo thang */
 export async function acknowledgeAlert(
   alertId: string, user: CurrentUser, note?: string, cause?: SiteCause,
 ) {
@@ -613,10 +506,9 @@ export async function acknowledgeAlert(
   alert.acknowledged_by = user._id as never
   alert.acknowledgement_note = note
   if (cause) alert.site_cause = { cause, photos: [], by: user._id as never, at: alert.acknowledged_at }
-  // Cảnh báo theo mốc mặc định (không có kế hoạch): xác nhận = đã bảo trì. Cảnh báo của kế hoạch chỉ đóng khi Farm
-  // Owner duyệt Work Order phòng ngừa (OPS-FR-008), nên xác nhận ở đây không đặt bộ đếm về 0
+  // Cảnh báo của kế hoạch chỉ đóng khi duyệt Work Order phòng ngừa (OPS-FR-008)
   if (alert.type === 'MAINTENANCE_DUE' && !alert.details?.plan_id) {
-    // BR-16 — xác nhận = đã bảo trì: đếm lại từ 0 cho tải đó và đóng cảnh báo
+    // BR-16: xác nhận = đã bảo trì
     alert.status = 'RESOLVED'
     alert.resolved_at = alert.acknowledged_at
     const loads = ((alert.metadata?.loads as Array<{ relay: string }> | undefined) ?? [])
@@ -633,15 +525,7 @@ export async function acknowledgeAlert(
   return presentAlert(alert)
 }
 
-/**
- * EXPERT-FR-003 — Domain Expert (Farm Owner khi farm chưa có chuyên gia, BR-22) ghi kết quả kiểm
- * chứng 1 cảnh báo suy luận. Ghi lại được (đổi ý sau khi xem thêm dữ liệu). Tác động lên trạng
- * thái theo SM-01:
- * - `REJECTED` khi còn hiệu lực (ACTIVE/ACKNOWLEDGED) → DISMISSED, nhớ `previous_status`;
- * - đổi sang `CONFIRMED` khi DISMISSED → về `previous_status` và báo lại Farm Owner;
- * - còn lại (CONFIRMED trên cảnh báo còn hiệu lực, mọi kết luận trên RESOLVED) giữ nguyên.
- * Xác nhận đã xử lý vẫn là việc của Farm Owner (ALERT-FR-009).
- */
+/** SM-01: REJECTED khi còn hiệu lực → DISMISSED; CONFIRMED khi DISMISSED → previous_status và báo lại */
 export async function setAlertVerdict(
   alertId: string, user: CurrentUser, result: AlertVerdictResult, note?: string, needsVisit = false,
 ) {
@@ -651,7 +535,7 @@ export async function setAlertVerdict(
   }
   await assertExpertDecision(farm, user)
   const trimmedNote = note?.trim() || undefined
-  // Route đã chặn; giữ ở service cho mọi đường gọi khác
+  // Route đã chặn; giữ cho đường gọi khác
   if (result === 'REJECTED' && !trimmedNote) {
     throw new AppError(422, 'VALIDATION_ERROR', 'Bác bỏ cảnh báo phải ghi lý do')
   }
@@ -668,9 +552,7 @@ export async function setAlertVerdict(
     alert.previous_status = undefined
   }
   alert.expert_verdict = { result, note: trimmedNote, by: user._id as never, role: user.role as FarmMemberRole, at: new Date() }
-  // SM-01, ALERT-FR-017 — cảnh báo bị bác bỏ nhầm được xác nhận lại: định tuyến lại TRƯỚC khi lưu trạng thái mới, để
-  // job leo thang không thấy cảnh báo đã về ACTIVE mà `owners_notified` còn false (BR-40: báo Farm Owner một lần).
-  // Định tuyến lỗi thì `recipientIds` là undefined và lần báo lại về Farm Owner như trước G-21
+  // Định tuyến trước khi lưu: job leo thang không được thấy ACTIVE mà owners_notified còn false
   const reconfirmed = statusBefore === 'DISMISSED' && alert.status !== 'DISMISSED'
   const recipientIds = reconfirmed
     ? await rerouteReconfirmedAlert(alert).catch((err: Error) => {
@@ -689,24 +571,17 @@ export async function setAlertVerdict(
     place: alert.title,
     detail: trimmedNote,
   })
-  // Báo lại như cảnh báo mới: thợ đang trực và Farm Owner (định tuyến ở trên)
   if (reconfirmed) {
     void dispatchAlertNotification(alert, { recipientIds }).catch((err: Error) =>
       logger.error('Báo lại cảnh báo được xác nhận lại thất bại', { alertId: String(alert._id), err }),
     )
   }
-  // BR-39, OPS-FR-001 — chuyên gia xác nhận cần thợ tới nhà: mở Work Order (đã có cái đang mở thì không thêm)
+  // BR-39: đã có Work Order mở thì không thêm
   if (needsVisit) await openWorkOrderForAlert(alert, 'EXPERT', user._id)
   return presentAlert(alert)
 }
 
-/**
- * EXPERT-FR-003 — số cảnh báo suy luận được xác nhận / bác bỏ / còn chờ theo từng loại,
- * làm căn cứ chỉnh tham số phát hiện (EXPERT-FR-008). `confirmedPct` tính trên số đã
- * kiểm chứng; null khi chưa kiểm chứng cái nào. `byRole` tách theo vai trò người kết luận (Farm
- * Owner kết luận khi farm chưa có chuyên gia, BR-22); kết luận trước G-03 không lưu vai trò và chỉ
- * Domain Expert ghi được, nên tính cho DOMAIN_EXPERT.
- */
+/** confirmedPct null khi chưa kiểm chứng cái nào; kết luận trước G-03 không có vai trò, tính cho DOMAIN_EXPERT */
 export async function getVerdictStats(user: CurrentUser, query: { farmId?: string; zoneId?: string }) {
   const accessibleFarms = await listAccessibleFarmIds(user)
   if (query.farmId && !accessibleFarms.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
@@ -743,12 +618,7 @@ export async function getVerdictStats(user: CurrentUser, query: { farmId?: strin
   })
 }
 
-/**
- * FARM-FR-008 — gỡ thiết bị thì cảnh báo của nó phải đóng theo. Cảnh báo còn
- * `ACTIVE` của thiết bị đã tháo về kho vẫn bị `alertEscalation.job` gửi lại cho
- * Farm Owner sau 15 phút, về một thiết bị không còn ở nhà yến.
- * Trả về số cảnh báo đã đóng.
- */
+/** Không đóng thì job vẫn gửi lại về thiết bị đã tháo */
 export async function resolveAlertsForNode(nodeId: string, reason: string, type?: AlertType): Promise<number> {
   const open = await Alert.find({ node_id: nodeId, status: { $in: OPEN_STATUSES }, ...(type && { type }) }).select('_id').lean()
   if (open.length === 0) return 0
@@ -760,10 +630,6 @@ export async function resolveAlertsForNode(nodeId: string, reason: string, type?
   return open.length
 }
 
-/**
- * Cảnh báo tính cho cả nhà yến (không gắn thiết bị, VD `LOW_RETURN_RATE`) đã hết nguyên nhân thì
- * đóng theo House. Trả về số cảnh báo đã đóng.
- */
 export async function resolveHouseAlerts(houseId: string, type: AlertType, reason: string): Promise<number> {
   const { modifiedCount } = await Alert.updateMany(
     { house_id: houseId, type, status: { $in: OPEN_STATUSES } },
@@ -772,11 +638,7 @@ export async function resolveHouseAlerts(houseId: string, type: AlertType, reaso
   return modifiedCount
 }
 
-/**
- * ALERT-FR-008 — THRESHOLD_BREACH không còn được ghi nhận lại trong
- * THRESHOLD_CLEAR_MS (chỉ số đã về bình thường, hoặc thiết bị ngừng gửi — khi
- * đó đã có NODE_OFFLINE riêng) thì tự đóng. Gọi định kỳ từ jobs/alertEscalation.job.ts.
- */
+/** Thiết bị ngừng gửi thì đã có NODE_OFFLINE riêng */
 export async function resolveStaleThresholdAlerts(now = new Date()): Promise<number> {
   const clearBefore = new Date(now.getTime() - THRESHOLD_CLEAR_MS)
   const { modifiedCount } = await Alert.updateMany(
@@ -793,11 +655,7 @@ export async function resolveStaleThresholdAlerts(now = new Date()): Promise<num
   return modifiedCount
 }
 
-/**
- * Tự đóng cảnh báo theo đợt (EPISODE_ALERT_TYPES) không còn được ghi nhận lại trong
- * EPISODE_CLEAR_MS — lần tái phát sau đó là 1 cảnh báo mới, được thông báo và kiểm
- * chứng riêng. Gọi định kỳ từ jobs/alertEscalation.job.ts.
- */
+/** Lần tái phát sau đó là cảnh báo mới */
 export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<number> {
   const clearBefore = new Date(now.getTime() - EPISODE_CLEAR_MS)
   const { modifiedCount } = await Alert.updateMany(
@@ -809,7 +667,7 @@ export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<numbe
         { last_seen_at: { $exists: false }, created_at: { $lt: clearBefore } },
       ],
     },
-    // Pipeline update: giữ ghi chú xác nhận của Farm Owner nếu đã có (ALERT-FR-009)
+    // Giữ ghi chú xác nhận nếu đã có
     [{
       $set: {
         status: 'RESOLVED',
@@ -821,13 +679,7 @@ export async function resolveStaleEpisodeAlerts(now = new Date()): Promise<numbe
   return modifiedCount
 }
 
-/**
- * ALERT-FR-015 — cảnh báo chưa ai xác nhận được gửi lại ĐÚNG 1 lần cho Farm Owner theo
- * kênh họ chọn (giờ im lặng áp như lần đầu): CRITICAL/HIGH sau 15 phút, NODE_OFFLINE sau
- * 1 giờ, giữ nguyên mốc thời gian (Report 3 §4.5).
- * Bỏ qua thiết bị đã gỡ và NODE_OFFLINE của thiết bị đã ONLINE lại (cảnh báo chỉ chưa kịp
- * đóng). Gọi định kỳ từ jobs/alertEscalation.job.ts.
- */
+/** ALERT-FR-015: gửi lại đúng 1 lần, giữ giờ im lặng. Bỏ qua thiết bị đã gỡ và đã ONLINE lại */
 export const RENOTIFY_AFTER_MS = 15 * 60 * 1000
 export const NODE_OFFLINE_RENOTIFY_AFTER_MS = 60 * 60 * 1000
 
@@ -852,30 +704,25 @@ export async function renotifyStaleAlerts(now = new Date()): Promise<number> {
     const nodeId = alert.node_id ? String(alert.node_id) : undefined
     if (nodeId && skipNodeIds.has(nodeId)) continue
     if (alert.type === 'NODE_OFFLINE' && nodeId && onlineNodeIds.has(nodeId)) continue
-    // Giữ chỗ trước rồi mới gửi: 2 lượt job chồng nhau cũng chỉ 1 lượt gửi được
+    // Giữ chỗ trước: 2 lượt job chồng nhau chỉ 1 lượt gửi
     const { modifiedCount } = await Alert.updateOne(
       { _id: alert._id, status: 'ACTIVE', renotified_at: { $exists: false } }, { renotified_at: now },
     )
     if (modifiedCount === 0) continue
     try {
-      // ALERT-FR-015 — gửi lại cho người đã nhận lần đầu (ALERT-FR-017); cảnh báo trước G-21 gửi Farm Owner
+      // Cảnh báo trước G-21 gửi Farm Owner
       const recipientIds = await repeatRecipientIds(alert)
       await dispatchAlertNotification(alert, { repeat: true, ...(recipientIds && { recipientIds }) })
       sent++
     } catch (err) {
-      // 1 cảnh báo lỗi không chặn các cảnh báo khác; không gửi lại lần nữa (ALERT-FR-015: tối đa 2 lần)
+      // Không gửi lại lần nữa (tối đa 2 lần)
       logger.error('Gửi lại cảnh báo chưa xác nhận thất bại', { alertId: String(alert._id), err })
     }
   }
   return sent
 }
 
-/**
- * Lưới an toàn cho NODE_OFFLINE: job offline và heartbeat chạy song song, nên thiết bị
- * có thể online lại (announceBackOnline không thấy gì để đóng) ngay trước khi
- * raiseNodeOfflineAlert kịp tạo cảnh báo. Đóng mọi NODE_OFFLINE còn mở mà thiết bị đã
- * ONLINE — không phụ thuộc thứ tự sự kiện. Gọi định kỳ từ jobs/alertEscalation.job.ts.
- */
+/** Lưới an toàn: job offline và heartbeat chạy song song, không phụ thuộc thứ tự sự kiện */
 export async function resolveNodeOfflineAlertsOfOnlineNodes(): Promise<number> {
   const open = await Alert.find({ type: 'NODE_OFFLINE', status: { $in: OPEN_STATUSES } }).select('node_id').lean()
   if (open.length === 0) return 0
@@ -888,16 +735,13 @@ export async function resolveNodeOfflineAlertsOfOnlineNodes(): Promise<number> {
   return modifiedCount
 }
 
-/** THREAT-FR-010 — nút AI đếm chim mất heartbeat (deviceOffline.job) */
 export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
   const camera = await CameraNode.findById(cameraId).lean()
   if (!camera || camera.status !== 'OFFLINE') return
   const house = await House.findById(camera.house_id).lean()
   if (!house) return
 
-  // Nút AI tự báo EDGE_AI_DEGRADED (FPS thấp) dùng chung khoá dedup với cảnh báo này: đóng cái đó
-  // trước, nếu không "mất kết nối" bị gộp vào cảnh báo FPS cũ và không ai được báo. Kết nối lại mà
-  // FPS vẫn thấp thì nút AI tự báo lại.
+  // Cùng khoá dedup với FPS thấp: không đóng trước thì mất kết nối bị gộp vào cảnh báo cũ
   await resolveAlertsForNode(cameraId, 'Camera đếm chim mất kết nối, chuyển sang cảnh báo mất kết nối', 'EDGE_AI_DEGRADED')
   await createAlert({
     farmId:  String(house.farm_id),
@@ -909,11 +753,7 @@ export async function raiseCameraOfflineAlert(cameraId: string): Promise<void> {
   })
 }
 
-/**
- * THREAT-FR-010 — nút AI còn gửi heartbeat nhưng xử lý dưới `minFps` khung hình/giây: đang chạy mà quá
- * chậm để đếm. Cùng loại và khoá dedup với cảnh báo mất kết nối, nên heartbeat thấp liên tiếp chỉ tăng
- * `occurrence_count` của một cảnh báo.
- */
+/** Cùng khoá dedup với mất kết nối: heartbeat thấp liên tiếp chỉ tăng occurrence_count */
 export async function raiseCameraLowFpsAlert(cameraId: string, fps: number, minFps: number): Promise<void> {
   const camera = await CameraNode.findById(cameraId).lean()
   if (!camera) return
@@ -930,10 +770,9 @@ export async function raiseCameraLowFpsAlert(cameraId: string, fps: number, minF
   })
 }
 
-/** Dùng cho job phát hiện thiết bị offline (FARM-FR-005 → THREAT-FR-009) */
 export async function raiseNodeOfflineAlert(nodeId: string): Promise<void> {
   const node = await SensorNode.findById(nodeId).lean()
-  // Heartbeat có thể đã tới giữa lúc job đổi OFFLINE và lúc tạo cảnh báo
+  // Heartbeat có thể tới giữa lúc đổi OFFLINE và lúc tạo cảnh báo
   if (!node || node.status !== 'OFFLINE') return
   const zone = await Zone.findById(node.zone_id).lean()
   if (!zone) return

@@ -37,18 +37,14 @@ import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning, HouseStage } from '@/types'
 
-/** AUTH-FR-010 — lời mời hết hạn sau 7 ngày nếu không phản hồi */
+/** AUTH-FR-010 */
 const INVITATION_TTL_MS = 7 * 86400_000
 
-/** Report 3 §4.5 — tên farm, nhà, zone tối đa 50 ký tự; nhà có 1–10 tầng (khớp app mobile và web) */
+/** Report 3 §4.5; khớp app mobile và web */
 export const MAX_NAME_LENGTH = 50
 export const MAX_HOUSE_FLOORS = 10
 
-/**
- * FARM-FR-002 — tên nhà không trùng trong farm, tên zone không trùng trong nhà: bỏ qua hoa thường,
- * vẫn phân biệt dấu ("Nhà A" trùng "nhà a", không trùng "Nha A"). Không dùng unique index vì dữ liệu
- * cũ có thể đã trùng; hai request cùng tên đến đồng thời vẫn có thể lọt.
- */
+/** Bỏ qua hoa thường, phân biệt dấu. Không unique index vì dữ liệu cũ có thể trùng; 2 request đồng thời vẫn lọt */
 async function assertUniqueName(
   model: typeof House | typeof Zone, scope: Record<string, unknown>, name: string, what: string,
 ): Promise<void> {
@@ -57,28 +53,20 @@ async function assertUniqueName(
   if (taken) throw new AppError(409, 'DUPLICATE_NAME', `${what} "${name.trim()}" đã có, hãy đặt tên khác`)
 }
 
-/**
- * FARM-FR-001 — farm mình sở hữu hoặc là thành viên; Farm Technician thấy farm mình là thành viên
- * (để tới các nhà được giao, AUTH-FR-013); Administrator không thấy farm nào (Report 3 §2.4).
- */
+/** Farm Technician thấy farm mình là thành viên; Admin không thấy farm nào */
 export async function listFarms(user: CurrentUser): Promise<Array<FarmDetail & { has_active_expert: boolean }>> {
   if (user.role === 'ADMIN') return []
   const filter = { $or: [{ owner_id: user._id }, { 'members.user_id': user._id }] }
 
   const farms = await Farm.find(filter).sort({ created_at: -1 })
-  // BR-22 — client biết farm có chuyên gia còn hoạt động (chuyên gia bị khoá không tính): có thì thay đổi của
-  // Farm Owner mở mục duyệt, đề xuất chờ chuyên gia duyệt; cùng cách tính với assertExpertDecision
+  // BR-22: cùng cách tính với assertExpertDecision
   return Promise.all(farms.map(async farm => ({
     ...(user.role === 'FARM_OWNER' ? (farm.toObject() as unknown as FarmDetail) : onlyOwnMembership(farm, user)),
     has_active_expert: await farmHasActiveExpert(farm),
   })))
 }
 
-/**
- * Domain Expert và Farm Technician không quản lý thành viên (AUTH-FR-005) nên không cần — và
- * không được thấy — danh sách thành viên của farm; chỉ giữ bản ghi của chính mình. Dùng chung
- * cho danh sách và chi tiết farm để hai đường không lệch nhau.
- */
+/** Domain Expert, Farm Technician không được thấy danh sách thành viên */
 function onlyOwnMembership(farm: IFarm, user: CurrentUser): FarmDetail {
   const plain = farm.toObject() as unknown as FarmDetail
   plain.members = plain.members.filter(m => String(m.user_id) === user._id)
@@ -91,13 +79,10 @@ export interface CreateFarmInput {
   name: string; address: string; coordinates: Coordinates
 }
 
-/** Chỉ lấy 2 số lat/lng — route đã kiểm khoảng; không gán nguyên object client gửi */
+/** Không gán nguyên object client gửi */
 const pickCoordinates = (c: Coordinates): Coordinates => ({ lat: Number(c.lat), lng: Number(c.lng) })
 
-/**
- * FARM-FR-001 — chỉ Farm Owner tạo farm và thành Primary Owner (Report 3 §2.4: Admin không quản lý farm).
- * Một farm là một địa điểm, tọa độ bắt buộc (A-5) để có thời tiết của đúng nơi đó.
- */
+/** A-5: tọa độ bắt buộc để có thời tiết đúng nơi */
 export async function createFarm(user: CurrentUser, input: CreateFarmInput): Promise<IFarm> {
   const ownerId = user._id
   return Farm.create({
@@ -109,14 +94,7 @@ export async function createFarm(user: CurrentUser, input: CreateFarmInput): Pro
   })
 }
 
-/**
- * FE cần tên/email từng thành viên để hiển thị màn "Quản lý thành viên" (không
- * chỉ user_id thô). Query thêm 1 lượt Users theo id thay vì đổi hẳn sang
- * `.populate()` để KHÔNG đụng `hasFarmAccess`/`isPrimaryOwner` — 2 hàm đó so
- * sánh `String(farm.owner_id)`/`String(m.user_id)` với ObjectId thô, populate
- * sẽ biến chúng thành object và làm sai so sánh ở mọi nơi khác dùng chung
- * `findFarmOrThrow`.
- */
+/** Query thêm Users thay vì populate: populate làm sai so sánh String(owner_id) của hasFarmAccess */
 export interface FarmMemberDetail extends IFarmMember { full_name?: string; email?: string }
 export interface FarmDetail extends Omit<IFarm, 'members'> {
   members: FarmMemberDetail[]
@@ -125,7 +103,7 @@ export interface FarmDetail extends Omit<IFarm, 'members'> {
 
 export async function getFarm(farmId: string, user: CurrentUser): Promise<FarmDetail> {
   const farm = await findFarmOrThrow(farmId)
-  // Farm Technician thành viên farm xem được farm (tên, địa chỉ) để tới các nhà được giao (AUTH-FR-013)
+  // Để tới các nhà được giao
   if (!hasFarmAccess(farm, user) && !isFarmTechnician(farm, user)) throw ForbiddenError('Không có quyền truy cập farm này')
 
   if (user.role !== 'FARM_OWNER') return onlyOwnMembership(farm, user)
@@ -162,37 +140,27 @@ export async function updateFarm(
   return farm
 }
 
-/** FARM-FR-001 — xóa mềm, chỉ Primary Owner */
 export async function removeFarm(farmId: string, user: CurrentUser): Promise<void> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
   await softDeleteFarm(farm)
 }
 
-/**
- * Xoá mềm 1 farm và dọn những thứ còn treo theo nó — dùng chung cho chủ farm tự xoá
- * và cascade khi Admin xoá tài khoản chủ (AUTH-FR-012).
- */
+/** Dùng chung cho chủ farm tự xoá và cascade khi Admin xoá tài khoản chủ */
 export async function softDeleteFarm(farm: IFarm): Promise<void> {
   farm.is_deleted = true
   await farm.save()
-  // Cảnh báo còn mở của farm đã xoá sẽ bị alertEscalation gửi lại cho một farm
-  // không ai mở được nữa — đóng hết.
+  // Để lại thì job gửi lại cho farm không ai mở được
   await Alert.updateMany(
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Trang trại đã bị xoá' },
   )
-  // Lời mời còn chờ: nếu để nguyên, người được mời vẫn tạo được tài khoản từ link
-  // (createAccountFromInvitation) cho một farm không ai mở được nữa
+  // Để lại thì vẫn tạo được tài khoản từ link cho farm đã xoá
   await Invitation.updateMany({ farm_id: farm._id, status: 'PENDING' }, { $set: { status: 'EXPIRED' } })
 }
 
 export interface InviteMemberInput {
   email: string
-  /**
-   * FARM_OWNER = đồng sở hữu (mặc định); DOMAIN_EXPERT = chuyên gia nuôi yến, phạm vi cả farm;
-   * FARM_TECHNICIAN = thợ của chủ farm, chỉ các nhà được gán (AUTH-FR-013)
-   */
   role?: FarmMemberRole
 }
 
@@ -202,14 +170,7 @@ const MEMBER_ROLE_LABEL: Record<FarmMemberRole, string> = {
   FARM_TECHNICIAN: 'Farm Technician',
 }
 
-/**
- * AUTH-FR-005/AUTH-FR-010, Flow 12 bước 1-2 — tạo Invitation thay vì thêm thẳng
- * vào farm.members. Không đòi email đã có tài khoản: chưa có thì người được mời
- * tạo tài khoản ngay từ link (createAccountFromInvitation, AUTH-FR-010) — không có
- * đăng ký công khai (Report 3 §1.2).
- * Mời đồng sở hữu (FARM_OWNER) hoặc Domain Expert (v2.0.0) — cả hai đều theo cả farm; hoặc Farm
- * Technician (Report 3 4.0.0) — chưa làm được gì cho tới khi được gán vào nhà (assignTechnician).
- */
+/** Email chưa có tài khoản thì tạo từ link (createAccountFromInvitation). Thợ chưa làm gì được tới khi gán nhà */
 export async function inviteMember(farmId: string, user: CurrentUser, input: InviteMemberInput): Promise<IInvitation> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được mời thành viên')
@@ -223,8 +184,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
     throw ConflictError('Người dùng đã là thành viên farm này')
   }
 
-  // Tài khoản đã có mang 1 role cố định (1 email = 1 role): không mời Admin, cũng không mời chéo
-  // giữa Farm Owner, Domain Expert, Farm Technician — báo ngay thay vì để lời mời chờ vô ích.
+  // 1 email = 1 role: báo ngay thay vì để lời mời chờ vô ích
   if (existingMember && existingMember.role !== role) {
     throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — ${MEMBER_ROLE_LABEL[role]} cần dùng email khác`)
   }
@@ -244,7 +204,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
   await logAction(user._id, 'FARM_MEMBER_INVITED', 'farm', String(farm._id), {
     email: normalizedEmail, role,
   })
-  // AUTH-FR-010 — người được mời nhận link qua e-mail (kể cả khi chưa có tài khoản); thư lỗi không làm hỏng lời mời
+  // Thư lỗi không làm hỏng lời mời
   await sendMail(invitationMail({
     to: normalizedEmail, farmName: farm.name, roleLabel: MEMBER_ROLE_LABEL[role],
     token: invitation.token, expiresAt: invitation.expires_at,
@@ -252,18 +212,13 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
   return invitation
 }
 
-/**
- * Flow 12 bước 3a/3b — chấp nhận lời mời. Idempotent theo trạng thái: gọi lại
- * trên invitation đã ACCEPTED/DECLINED/EXPIRED thì báo lỗi rõ ràng thay vì âm
- * thầm thành công, để UI không hiểu nhầm.
- */
+/** Gọi lại trên lời mời đã trả lời thì báo lỗi, không âm thầm thành công */
 export async function acceptInvitation(token: string, user: CurrentUser): Promise<IFarm> {
   const invitation = await findPendingInvitationOrThrow(token)
   if (invitation.invited_email !== user.email?.toLowerCase()) {
     throw ForbiddenError('Lời mời này gửi cho email khác, không phải tài khoản đang đăng nhập')
   }
-  // 1 email = 1 role: tài khoản Farm Owner không nhận lời mời Domain Expert hay Farm Technician
-  // (và ngược lại), Admin không thành thành viên farm qua lời mời
+  // 1 email = 1 role
   if (user.role !== invitation.invited_role) {
     throw ConflictError(`Lời mời dành cho ${invitation.invited_role} nhưng tài khoản này là ${user.role} — hãy dùng email khác`)
   }
@@ -282,7 +237,7 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
   return farm
 }
 
-/** Lời mời còn dùng được: không có → 404; đã trả lời hoặc hết hạn → 409 (hết hạn thì ghi luôn EXPIRED) */
+/** Không có → 404; đã trả lời hoặc hết hạn → 409 */
 async function findPendingInvitationOrThrow(token: string): Promise<IInvitation> {
   const invitation = await Invitation.findOne({ token })
   if (!invitation) throw NotFoundError('Lời mời không tồn tại')
@@ -297,15 +252,10 @@ async function findPendingInvitationOrThrow(token: string): Promise<IInvitation>
 
 export interface CreateAccountFromInvitationInput { full_name: string; password: string }
 
-/**
- * AUTH-FR-010 — người được mời chưa có tài khoản tạo nó ngay từ link: e-mail và role lấy
- * từ lời mời, người nhận chỉ đặt tên và mật khẩu; tài khoản vào thẳng farm của lời mời.
- * Thay cho đăng ký công khai đã bỏ (Report 3 §1.2). Email đã có tài khoản thì 409 — người
- * đó đăng nhập rồi `acceptInvitation`, không được tạo tài khoản thứ hai.
- */
+/** E-mail và role lấy từ lời mời. Email đã có tài khoản thì 409, phải đăng nhập rồi accept */
 export async function createAccountFromInvitation(token: string, input: CreateAccountFromInvitationInput): Promise<IUser> {
   const invitation = await findPendingInvitationOrThrow(token)
-  // Kiểm farm TRƯỚC khi ghi gì: farm bị xoá giữa chừng thì không tạo tài khoản mồ côi
+  // Kiểm farm trước khi ghi: không tạo tài khoản mồ côi
   const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (await User.exists({ email: invitation.invited_email })) {
     throw ConflictError('Email này đã có tài khoản — đăng nhập rồi chấp nhận lời mời')
@@ -314,13 +264,13 @@ export async function createAccountFromInvitation(token: string, input: CreateAc
   let user: IUser
   try {
     user = await User.create({
-      email: invitation.invited_email, // đã chuẩn hoá lúc mời
+      email: invitation.invited_email, // Đã chuẩn hoá lúc mời
       password_hash: input.password,   // pre-save hook tự hash
       full_name: input.full_name.trim(),
       role: invitation.invited_role,
     })
   } catch (err) {
-    // 2 request cùng link chạy song song: unique index email chặn bản thứ hai
+    // 2 request cùng link: unique index email chặn bản thứ hai
     if ((err as { code?: number }).code === 11000) throw ConflictError('Email này đã có tài khoản — đăng nhập rồi chấp nhận lời mời')
     throw err
   }
@@ -344,7 +294,6 @@ const STATUS_LABEL: Record<IInvitation['status'], string> = {
   EXPIRED:  'hết hạn',
 }
 
-/** Flow 12 case 3c — từ chối, không cần đăng nhập (link công khai theo token) */
 export async function declineInvitation(token: string): Promise<void> {
   const invitation = await Invitation.findOne({ token })
   if (!invitation) throw NotFoundError('Lời mời không tồn tại')
@@ -355,7 +304,6 @@ export async function declineInvitation(token: string): Promise<void> {
   await invitation.save()
 }
 
-/** Xem trước lời mời (không cần đăng nhập) — hiển thị tên farm trước khi bấm chấp nhận */
 export async function getInvitationByToken(token: string) {
   const invitation = await Invitation.findOne({ token })
   if (!invitation) throw NotFoundError('Lời mời không tồn tại')
@@ -364,11 +312,7 @@ export async function getInvitationByToken(token: string) {
   return { invitation, farm, userExists }
 }
 
-/**
- * Flow 12 bước 5 + case 5a — gỡ thành viên. Farm luôn phải còn ít nhất 1 Primary
- * Owner nên chặn cứng việc Primary Owner tự gỡ chính mình; muốn rời Farm thì
- * phải chuyển quyền Primary trước (ngoài phạm vi UI tự phục vụ Phase 1, xem SRS §4.1).
- */
+/** Primary Owner không tự gỡ chính mình: farm luôn phải còn 1 Primary Owner */
 export async function removeMember(farmId: string, user: CurrentUser, targetUserId: string): Promise<IFarm> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được gỡ thành viên')
@@ -381,18 +325,14 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
 
   farm.members.splice(memberIndex, 1)
   await farm.save()
-  // AUTH-FR-005 — gỡ Farm Technician thì bỏ luôn các lần gán vào nhà của farm này
   await House.updateMany({ farm_id: farm._id }, { $pull: { technicians: { user_id: targetUserId }, roster: { technician_id: targetUserId } } })
-  // AUTH-FR-005 — Work Order đang mở của thợ chuyển cho Farm Owner
+  // Work Order đang mở của thợ chuyển cho Farm Owner
   const released = await releaseTechnicianWorkOrders(targetUserId, { farmId: farm._id }, user._id)
   await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId, work_orders_released: released || undefined })
   return farm
 }
 
-/**
- * AUTH-FR-013 — Farm Owner gán Farm Technician (thành viên farm) vào 1 nhà. Một thợ phục vụ nhiều nhà,
- * mỗi nhà tối đa 1 thợ chính: gán `primary` thì thợ chính cũ thành thợ phụ. Gán lại chỉ đổi `primary`.
- */
+/** Mỗi nhà tối đa 1 thợ chính: gán primary thì thợ chính cũ thành thợ phụ */
 export async function assignTechnician(houseId: string, user: CurrentUser, technicianId: string, primary = false): Promise<IHouse> {
   const { house, farm } = await findHouseChainOrThrow(houseId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
@@ -410,17 +350,15 @@ export async function assignTechnician(houseId: string, user: CurrentUser, techn
   return house
 }
 
-/** AUTH-FR-013 — bỏ gán; không có lần gán nào vẫn trả nhà (idempotent) */
+/** Idempotent */
 export async function unassignTechnician(houseId: string, user: CurrentUser, technicianId: string): Promise<IHouse> {
   const { house, farm } = await findHouseChainOrThrow(houseId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
   const before = (house.technicians ?? []).length
   house.technicians = (house.technicians ?? []).filter(t => String(t.user_id) !== technicianId)
   if (house.technicians.length !== before) {
-    // AUTH-FR-014 — thợ không còn ở nhà thì không còn ca trực ở đó
     house.roster = (house.roster ?? []).filter(s => String(s.technician_id) !== technicianId)
     await house.save()
-    // AUTH-FR-005 — không còn ở nhà thì Work Order đang mở của nhà này chuyển cho Farm Owner
     const released = await releaseTechnicianWorkOrders(technicianId, { houseId: house._id }, user._id)
     await logAction(user._id, 'HOUSE_TECHNICIAN_UNASSIGNED', 'house', String(house._id), {
       user_id: technicianId, work_orders_released: released || undefined,
@@ -434,10 +372,7 @@ const presentRoster = (house: IHouse, shifts: IHouse['roster']) => ({
   roster: shifts.map(s => ({ technician_id: String(s.technician_id), role: s.role, weekdays: [...s.weekdays], start: s.start, end: s.end })),
 })
 
-/**
- * AUTH-FR-014 — Farm Owner thay toàn bộ lịch trực của nhà. Người trong ca phải là thợ đang được giao nhà
- * (409); giờ, ngày và chồng ca kiểm ở roster.util (400).
- */
+/** Người trong ca phải là thợ được giao (409); giờ và chồng ca kiểm ở roster.util (400) */
 export async function setRoster(houseId: string, user: CurrentUser, shifts: RosterShift[]) {
   const { house, farm } = await findHouseChainOrThrow(houseId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
@@ -454,7 +389,7 @@ export async function setRoster(houseId: string, user: CurrentUser, shifts: Rost
   return presentRoster(house, house.roster)
 }
 
-/** AUTH-FR-014, Report 3 §2.4 — Farm Owner xem cả lịch; Farm Technician được giao chỉ thấy ca của mình; Domain Expert không xem (route chặn) */
+/** Thợ chỉ thấy ca của mình */
 export async function getRoster(houseId: string, user: CurrentUser) {
   const { house } = await assertHouseAccess(houseId, user)
   const roster = house.roster ?? []
@@ -464,10 +399,7 @@ export async function getRoster(houseId: string, user: CurrentUser) {
 
 export type InvitationStatus = IInvitation['status']
 
-/**
- * AUTH-FR-005, 010 — lời mời của 1 farm cho màn Thành viên, chỉ Primary Owner. PENDING đã quá hạn được
- * coi là EXPIRED (cùng luật với findPendingInvitationOrThrow) dù job nền chưa kịp đổi. Không trả `token`.
- */
+/** PENDING quá hạn coi là EXPIRED dù job chưa đổi. Không trả token */
 export async function listInvitations(
   farmId: string, user: CurrentUser, query: { status?: InvitationStatus; page?: number | string; limit?: number | string } = {},
 ) {
@@ -481,7 +413,6 @@ export async function listInvitations(
   else if (status === 'EXPIRED') filter.$or = [{ status: 'EXPIRED' }, { status: 'PENDING', expires_at: { $lte: now } }]
   else filter.status = status
 
-  // Lịch sử lời mời của farm chỉ tăng thêm: phân trang như mọi danh sách (paginate, mặc định 20, tối đa 100)
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [rows, total] = await Promise.all([
     Invitation.find(filter).select('-token').sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
@@ -493,7 +424,6 @@ export async function listInvitations(
   return { records, total, page, limit }
 }
 
-/** Job nền: chuyển Invitation quá hạn sang EXPIRED (AUTH-FR-010, Flow 12 case 3d) */
 export async function expireStaleInvitations(): Promise<number> {
   const result = await Invitation.updateMany(
     { status: 'PENDING', expires_at: { $lt: new Date() } },
@@ -502,7 +432,6 @@ export async function expireStaleInvitations(): Promise<number> {
   return result.modifiedCount
 }
 
-/** FARM-FR-002 */
 export async function createHouse(
   farmId: string,
   user: CurrentUser,
@@ -511,14 +440,13 @@ export async function createHouse(
   const farm = await findFarmOrThrow(farmId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên farm này')
   await assertUniqueName(House, { farm_id: farm._id }, input.name, 'Nhà yến')
-  // Chỉ lấy 3 trường: body thô có thể mang `farm_id` của farm khác
+  // Body thô có thể mang farm_id của farm khác
   return House.create({ farm_id: farm._id, name: input.name, floors: input.floors, description: input.description })
 }
 
-/** Nhà trong GET /farms/:id/houses: lịch trực tuỳ role (Report 3 §2.4) */
 export type HouseListItem = Omit<IHouse, 'roster'> & { roster?: IHouse['roster'] }
 
-/** Nhà trả cho người gọi: lịch trực chỉ Farm Owner nhận, thợ chỉ ca của mình (Report 3 §2.4) */
+/** Lịch trực chỉ Farm Owner nhận, thợ chỉ ca của mình */
 function presentHouse(house: IHouse, user: CurrentUser): HouseListItem {
   if (user.role === 'FARM_OWNER') return house
   const plain = house.toObject() as unknown as HouseListItem
@@ -529,7 +457,6 @@ function presentHouse(house: IHouse, user: CurrentUser): HouseListItem {
 
 export async function listHouses(farmId: string, user: CurrentUser): Promise<HouseListItem[]> {
   const farm = await findFarmOrThrow(farmId)
-  // AUTH-FR-013 — Farm Technician chỉ nhận các nhà được giao; lịch trực chỉ còn ca của mình (§2.4 "read own roster")
   if (isFarmTechnician(farm, user)) {
     const assigned = await House.find({ farm_id: farm._id, _id: { $in: await listAssignedHouseIds(user) } }).sort({ created_at: -1 })
     return assigned.map(house => presentHouse(house, user))
@@ -539,20 +466,18 @@ export async function listHouses(farmId: string, user: CurrentUser): Promise<Hou
   return houses.map(house => presentHouse(house, user))
 }
 
-/** FARM-FR-002 */
 export async function createZone(houseId: string, user: CurrentUser, input: { name: string; floor?: number }) {
   const house = await House.findById(houseId)
   if (!house) throw NotFoundError('Không tìm thấy house')
   const farm = await findFarmOrThrow(String(house.farm_id))
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
-  // Zone là một tầng của nhà (FARM-FR-002): không vượt số tầng của House
+  // Không vượt số tầng của House
   const houseFloors = house.floors ?? 1
   if ((input.floor ?? 1) > houseFloors) {
     throw BadRequestError(`Tầng ${input.floor} vượt số tầng của nhà (${houseFloors} tầng)`)
   }
   await assertUniqueName(Zone, { house_id: house._id }, input.name, 'Zone')
-  // Zone mới dùng ngưỡng mặc định hệ thống do Admin cấu hình (ENV-FR-007), cùng
-  // nguồn với "Reset về mặc định" — không dùng default cứng trong schema.
+  // Ngưỡng mặc định của Admin (ENV-FR-007), không dùng default cứng trong schema
   return Zone.create({
     house_id: house._id,
     farm_id: house.farm_id,
@@ -570,7 +495,6 @@ export async function listZones(houseId: string, user: CurrentUser) {
   return Zone.find({ house_id: house._id }).sort({ created_at: -1 })
 }
 
-/** Nhà của farm mà người gọi là chủ (route đã giới hạn Farm Owner); nhà đã xoá thì không tìm thấy */
 async function findOwnedHouse(houseId: string, user: CurrentUser): Promise<{ house: IHouse; farm: IFarm }> {
   const house = await House.findById(houseId)
   if (!house) throw NotFoundError('Không tìm thấy nhà yến')
@@ -579,7 +503,7 @@ async function findOwnedHouse(houseId: string, user: CurrentUser): Promise<{ hou
   return { house, farm }
 }
 
-/** FARM-FR-002 — đổi tên, số tầng, mô tả của nhà; số tầng không thấp hơn tầng cao nhất của các Zone (Q-03) */
+/** Số tầng không thấp hơn tầng cao nhất của các Zone (Q-03) */
 export async function updateHouse(
   houseId: string, user: CurrentUser, input: { name?: string; floors?: number; description?: string },
 ): Promise<IHouse> {
@@ -598,14 +522,12 @@ export async function updateHouse(
   }
   if (input.description !== undefined) house.description = input.description.trim() || undefined
   const after = { name: house.name, floors: house.floors, description: house.description }
-  // Gửi lại giá trị cũ thì không có gì để ghi
   if (JSON.stringify(after) === JSON.stringify(before)) return house
   await house.save()
   await logAction(user._id, 'HOUSE_UPDATED', 'house', String(house._id), { before, after }, { farmId: String(farm._id) })
   return house
 }
 
-/** FARM-FR-002 — đổi tên, tầng của Zone; tầng không vượt số tầng của nhà */
 export async function updateZone(zoneId: string, user: CurrentUser, input: { name?: string; floor?: number }): Promise<IZone> {
   const zone = await Zone.findById(zoneId)
   if (!zone) throw NotFoundError('Không tìm thấy Zone')
@@ -626,7 +548,7 @@ export async function updateZone(zoneId: string, user: CurrentUser, input: { nam
   return zone
 }
 
-/** Q-01 — còn bộ điều khiển hoặc camera chưa gỡ thì không xoá: chủ gỡ thiết bị trước (FARM-FR-008), lịch sử giữ */
+/** Q-01: còn thiết bị chưa gỡ thì không xoá */
 async function assertNoDeviceInService(where: { zoneIds: Types.ObjectId[]; houseId?: Types.ObjectId }): Promise<void> {
   const controllers = await SensorNode.countDocuments({ zone_id: { $in: where.zoneIds }, ...IN_SERVICE })
   const cameras = where.houseId ? await CameraNode.countDocuments({ house_id: where.houseId, ...IN_SERVICE }) : 0
@@ -635,11 +557,7 @@ async function assertNoDeviceInService(where: { zoneIds: Types.ObjectId[]; house
   }
 }
 
-/**
- * Dọn việc còn mở của nơi sắp xoá, trước khi đánh dấu xoá: lỗi giữa chừng thì nhà, Zone vẫn còn và chủ gọi lại được
- * (mọi bước chạy lại an toàn). Cảnh báo đang mở được đóng, Work Order chưa đóng bị huỷ, đề xuất hệ số đang chờ của các
- * Zone thành SUPERSEDED (EXPERT-FR-011: không còn Zone để áp).
- */
+/** Dọn trước khi đánh dấu xoá: lỗi giữa chừng thì gọi lại an toàn */
 async function closeOpenWorkOf(
   user: CurrentUser, place: { houseId?: Types.ObjectId; zoneIds: Types.ObjectId[] }, reason: string,
 ): Promise<{ alerts: number; work_orders: number }> {
@@ -655,24 +573,19 @@ async function closeOpenWorkOf(
   return { alerts, work_orders: workOrders }
 }
 
-/** Đánh dấu xoá mềm, bước cuối của xoá nhà hoặc Zone */
 function softDeleteFields(user: CurrentUser) {
   return { is_deleted: true, deleted_at: new Date(), deleted_by: new Types.ObjectId(user._id) }
 }
 
-/**
- * FARM-FR-002 — xoá mềm một nhà cùng các Zone của nó (Q-01): kế hoạch bảo trì thôi dùng, khuyến nghị đang mở hết hạn,
- * Work Order chưa đóng bị huỷ, cảnh báo đang mở được đóng, rồi mới đánh dấu xoá; telemetry, lượt đếm, báo cáo và thu
- * hoạch giữ nguyên.
- */
+/** Q-01: telemetry, lượt đếm, báo cáo, thu hoạch giữ nguyên */
 export async function deleteHouse(houseId: string, user: CurrentUser): Promise<void> {
   const { house, farm } = await findOwnedHouse(houseId, user)
   const zoneIds = await Zone.find({ house_id: house._id }).distinct('_id') as Types.ObjectId[]
   await assertNoDeviceInService({ zoneIds, houseId: house._id })
 
-  // Kế hoạch còn chạy thì job bảo trì sẽ tạo cảnh báo cho nhà đã xoá: thôi dùng trước tiên
+  // Còn chạy thì job bảo trì tạo cảnh báo cho nhà đã xoá
   await MaintenancePlan.updateMany({ house_id: house._id, state: { $ne: 'RETIRED' } }, { $set: { state: 'RETIRED' } })
-  // `expired_at` như recommendationEffect.job: mốc chờ của BR-42
+  // Mốc chờ BR-42
   await Recommendation.updateMany({ house_id: house._id, status: 'OPEN' }, { $set: { status: 'EXPIRED', expired_at: new Date() } })
   const closed = await closeOpenWorkOf(user, { houseId: house._id, zoneIds }, 'Nhà yến đã bị xoá')
   await Zone.updateMany({ _id: { $in: zoneIds } }, { $set: softDeleteFields(user) })
@@ -683,7 +596,6 @@ export async function deleteHouse(houseId: string, user: CurrentUser): Promise<v
   }, { farmId: String(farm._id) })
 }
 
-/** FARM-FR-002 — xoá mềm một Zone (Q-01): Work Order chưa đóng bị huỷ, cảnh báo đang mở được đóng, rồi mới đánh dấu xoá */
 export async function deleteZone(zoneId: string, user: CurrentUser): Promise<void> {
   const zone = await Zone.findById(zoneId)
   if (!zone) throw NotFoundError('Không tìm thấy Zone')
@@ -694,20 +606,17 @@ export async function deleteZone(zoneId: string, user: CurrentUser): Promise<voi
   await logAction(user._id, 'ZONE_DELETED', 'zone', String(zone._id), { name: zone.name, ...closed }, { farmId: String(farm._id) })
 }
 
-/** ENV-FR-006, ENV-FR-009 (lưu lịch sử thay đổi) */
-/** ENV-FR-006 — GET đơn 1 Zone, chủ yếu để FE lấy `thresholds` hiện tại trước khi mở form sửa. */
 export async function getZone(zoneId: string, user: CurrentUser): Promise<IZone> {
   const { zone, house, farm } = await findZoneChainOrThrow(zoneId)
-  // Administrator xem Zone của thiết bị ở mọi farm (FARM-FR-009); Farm Technician chỉ nhà được giao
+  // Administrator xem ở mọi farm (FARM-FR-009)
   if (!canAccessHouse(farm, house, user, 'device')) throw ForbiddenError('Không có quyền trên zone này')
   return zone
 }
 
-/** ENV-FR-006, Flow 22 nhánh A — validate min<max trước khi ghi, publish config/update để ESP32 áp dụng ngay. */
 export async function updateZoneThresholds(zoneId: string, user: CurrentUser, updates: Partial<Thresholds>): Promise<IZone> {
   const chain = await assertZoneAccess(zoneId, user)
 
-  // pickThresholds: chỉ nhận 7 khoá ngưỡng và ép về số; null/chuỗi rỗng thành NaN để assert từ chối
+  // null/chuỗi rỗng thành NaN để assert từ chối
   const picked = pickThresholds(updates as Record<string, unknown>)
   const merged = { ...chain.zone.thresholds, ...picked }
   assertValidThresholds(merged)
@@ -715,7 +624,6 @@ export async function updateZoneThresholds(zoneId: string, user: CurrentUser, up
   return applyThresholdUpdate(chain, user, { thresholds: merged, historyValues: picked, source: 'MANUAL' })
 }
 
-/** ENV-FR-020, Flow 22 nhánh B — reset cả 7 ngưỡng về mặc định hệ thống do Admin cấu hình (SYSTEM-FR-002). */
 export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Promise<IZone> {
   const chain = await assertZoneAccess(zoneId, user)
   const defaults = await getDefaultThresholds()
@@ -723,11 +631,6 @@ export async function resetZoneThresholds(zoneId: string, user: CurrentUser): Pr
   return applyThresholdUpdate(chain, user, { thresholds: { ...defaults }, historyValues: defaults, source: 'RESET_TO_DEFAULT' })
 }
 
-/**
- * ENV-FR-021 — chỉnh hệ số bộ điều khiển mờ của 1 Zone: validate khoảng, lưu kèm
- * lịch sử, publish config/update để mọi ESP32 trong Zone áp dụng ngay (không cần
- * nạp lại firmware). Cùng quyền với sửa ngưỡng (route).
- */
 export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, updates: Record<string, unknown>): Promise<IZone> {
   const { zone, house, farm } = await assertZoneAccess(zoneId, user)
 
@@ -736,19 +639,12 @@ export async function updateZoneFuzzyTuning(zoneId: string, user: CurrentUser, u
   return applyFuzzyTuning({ zone, house, farm }, user, picked, 'MANUAL')
 }
 
-/**
- * Áp hệ số mờ cho 1 Zone kèm mọi tác dụng phụ — dùng chung cho sửa tay (ENV-FR-021), chuyên gia hoàn
- * lại (EXPERT-FR-010) và áp gợi ý đã duyệt (EXPERT-FR-011): gộp + kiểm khoảng, lưu lịch sử có nguồn,
- * gửi `config/update` xuống ESP32, ghi audit, báo Farm Owner khi chuyên gia đổi (EXPERT-FR-009), mở/đóng
- * mục duyệt; chuyên gia đổi hệ số thì đề xuất đang chờ của Zone thành SUPERSEDED. `notify: false` khi
- * người gọi tự báo kết quả (duyệt đề xuất báo PROPOSAL_APPROVED) để Farm Owner không nhận 2 thông báo.
- */
+/** Dùng chung cho sửa tay, chuyên gia hoàn lại, áp gợi ý. notify: false khi người gọi tự báo, tránh 2 thông báo */
 export async function applyFuzzyTuning(
   chain: { zone: IZone; house: IHouse; farm: IFarm },
   user: CurrentUser,
   picked: Partial<FuzzyTuning>,
   source: FuzzyTuningSource,
-  /** logDetails: trường thêm vào audit, như applyThresholdUpdate (VD `decided_in` khi áp từ mục duyệt / đề xuất) */
   opts: { notify?: boolean; logDetails?: Record<string, unknown> } = {},
 ): Promise<IZone> {
   const { zone, house, farm } = chain
@@ -769,10 +665,9 @@ export async function applyFuzzyTuning(
     source, before: oldValues, after: merged, zone_id: String(zone._id), house_id: String(house._id),
     ...opts.logDetails,
   }, { farmId: String(farm._id) })
-  // Đề xuất đang chờ không còn khớp hệ số Zone sau bất kỳ lần sửa nào — duyệt nó sẽ ghi đè chỉnh sửa vừa
-  // làm (EXPERT-FR-011). Đề xuất đang được duyệt đã APPROVED trước khi áp nên không bị đụng.
+  // Đề xuất đang chờ không còn khớp: duyệt nó sẽ ghi đè lần sửa vừa làm
   await CoefficientProposal.updateMany({ zone_id: zone._id, status: 'PROPOSED' }, { status: 'SUPERSEDED' })
-  // Hoàn lại do chuyên gia: mục duyệt tự báo Farm Owner và tự đóng (expertReview.service)
+  // Mục duyệt tự báo Farm Owner và tự đóng
   if (source === 'EXPERT_REVERT') return zone
 
   if (opts.notify !== false) await notifyExpertDecision(user, farm._id, auditId, {
@@ -785,11 +680,7 @@ export async function applyFuzzyTuning(
 
 const reviewLogDetails = (opts: ReviewApplyOptions) => (opts.fromReview ? { decided_in: 'parameter_review' } : {})
 
-/**
- * EXPERT-FR-008 — chỉnh tham số phát hiện của 1 Zone: kiểm tra khoảng, lưu lịch sử (người sửa, role, thời điểm,
- * cũ/mới), gửi 5 tham số xuống ESP32 qua config/update (firmware kẹp lại rồi lưu NVS). Mức giảm tỷ lệ chim về chỉnh
- * theo House. BR-22 (Report 3 4.2.15): Domain Expert hoặc Farm Owner; Farm Owner trên farm có chuyên gia thì mở mục duyệt.
- */
+/** Firmware kẹp lại rồi lưu NVS */
 export async function updateZoneDetectionTuning(
   zoneId: string, user: CurrentUser, updates: Record<string, unknown>, what = 'chỉnh tham số phát hiện', opts: ReviewApplyOptions = {},
 ): Promise<IZone> {
@@ -824,26 +715,15 @@ export async function updateZoneDetectionTuning(
   return zone
 }
 
-/**
- * EXPERT-FR-008 "reset to defaults" — 5 tham số của Zone về mặc định (`DEFAULT_DETECTION_TUNING`), cùng quyền,
- * lịch sử, audit, thông báo và cấu hình mới gửi xuống thiết bị như khi sửa tay (todo-audit-1118 B-05).
- */
 export function resetZoneDetectionTuning(zoneId: string, user: CurrentUser): Promise<IZone> {
   return updateZoneDetectionTuning(zoneId, user, { ...DEFAULT_DETECTION_TUNING }, 'khôi phục mặc định tham số phát hiện')
 }
 
-/**
- * EXPERT-FR-008 (SRS v2.1.8) — chỉnh tham số đếm chim của 1 nhà yến (BR-22 như tham số Zone): chim ra vào ở cửa
- * của cả nhà nên mức giảm tỷ lệ chim về (cảnh báo LOW_RETURN_RATE) đặt theo House, không theo Zone.
- * Cùng cách làm với tham số Zone: kiểm tra khoảng, lưu lịch sử, ghi audit. Backend dùng, không gửi thiết bị.
- */
-/**
- * ANALYTICS-FR-012, BR-28 — mức chỉ số sức khỏe của nhà (bản ghi cũ thiếu trường nào thì dùng mặc định).
- * `can_edit` dùng đúng luật của PUT (BR-22) để client không phải tự đoán.
- */
+/** Backend dùng, không gửi thiết bị */
+/** can_edit dùng đúng luật của PUT để client khỏi tự đoán */
 export async function getHouseHealthLevels(houseId: string, user: CurrentUser) {
   const { house } = await assertHouseAccess(houseId, user)
-  // BR-22 (Report 3 4.2.15): Farm Owner và Domain Expert đều sửa được; route đã giới hạn vai trò
+  // Route đã giới hạn vai trò
   const canEdit = user.role === 'FARM_OWNER' || user.role === 'DOMAIN_EXPERT'
   return {
     house_id: String(house._id), health_levels: resolveHealthLevels(house.health_levels), defaults: DEFAULT_HEALTH_LEVELS,
@@ -851,7 +731,6 @@ export async function getHouseHealthLevels(houseId: string, user: CurrentUser) {
   }
 }
 
-/** ANALYTICS-FR-012, EXPERT-FR-022 — đặt mức trong khoảng BR-28; Farm Owner trên farm có chuyên gia thì mở mục duyệt (BR-22) */
 export async function updateHouseHealthLevels(
   houseId: string, user: CurrentUser, updates: Record<string, unknown>, opts: ReviewApplyOptions = {},
 ) {
@@ -875,15 +754,11 @@ export async function updateHouseHealthLevels(
       what: 'chỉnh mức chỉ số sức khoẻ', place: `Nhà "${house.name}"`, detail: formatChanges(oldValues, merged),
     })
   }
-  // Cùng dạng HouseHealthLevels với GET (client ghi thẳng vào cache): lưu được tức là sửa được
+  // Cùng dạng với GET: client ghi thẳng vào cache
   return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS, can_edit: true }
 }
 
-/**
- * FARM-FR-014 — Farm Owner hoặc Domain Expert của farm đặt giai đoạn nhà, có lịch sử. Nhà `ATTRACTING` không đánh
- * giá đàn chim, không có LOW_RETURN_RATE; về `OCCUPIED` thì cửa sổ so sánh BR-21 tính lại từ ngày kế tiếp (BR-46).
- * Đặt lại đúng giai đoạn đang có thì không ghi gì.
- */
+/** Về OCCUPIED thì cửa sổ BR-21 tính lại từ ngày kế tiếp. Đặt lại đúng giai đoạn thì không ghi gì */
 export async function setHouseStage(houseId: string, user: CurrentUser, stage: HouseStage): Promise<HouseListItem> {
   const { house, farm } = await assertHouseAccess(houseId, user)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền đặt giai đoạn của nhà này')
@@ -893,7 +768,7 @@ export async function setHouseStage(houseId: string, user: CurrentUser, stage: H
   house.stage = stage
   house.stage_history.push({ stage, changed_by: user._id as never, changed_by_role: user.role, changed_at: new Date() })
   await house.save()
-  // BR-46 — nhà dẫn dụ không có LOW_RETURN_RATE: cảnh báo còn mở từ giai đoạn trước được đóng
+  // BR-46
   if (stage === 'ATTRACTING') await resolveHouseAlerts(String(house._id), 'LOW_RETURN_RATE', 'Nhà chuyển sang giai đoạn dẫn dụ: không xét tỷ lệ chim về (BR-46)')
   const auditId = await logAction(user._id, 'HOUSE_STAGE_UPDATED', 'house', String(house._id), {
     before, after: stage,
@@ -937,7 +812,6 @@ export async function updateHouseBirdCountTuning(
   return presentHouse(house, user)
 }
 
-/** EXPERT-FR-008 "reset to defaults" — mức giảm tỷ lệ chim về của nhà về mặc định (todo-audit-1118 B-05) */
 export function resetHouseBirdCountTuning(houseId: string, user: CurrentUser): Promise<HouseListItem> {
   return updateHouseBirdCountTuning(houseId, user, { ...DEFAULT_BIRD_COUNT_TUNING }, 'khôi phục mặc định mức giảm tỷ lệ chim về')
 }
