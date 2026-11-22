@@ -1,7 +1,7 @@
 ﻿"""Counts swiftlets crossing a closed ring around the entrance hole; fast tracks lost at the hole are extrapolated."""
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, Iterable, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -97,6 +97,57 @@ class RingCounter:
                 if self._reaches_ring(t.last, step):
                     e, x = self._count(into_ring=True)
                     entries, exits = entries + e, exits + x
+        return entries, exits
+
+
+Ring = Tuple[Sequence[Sequence[float]], bool]   # points as frame ratios, into_ring_is_exit
+
+
+class MultiRingCounter:
+    """One RingCounter per entrance hole on the same camera; their entries and exits add up."""
+
+    def __init__(self, rings: Sequence[Ring], width: int, height: int, base_entry: int = 0, base_exit: int = 0,
+                 **options: float):
+        self._size, self._options = (width, height), options
+        self._base = (base_entry, base_exit, 0)
+        self.rings = self._make(rings)
+
+    def _make(self, rings: Sequence[Ring]) -> List[RingCounter]:
+        if not rings:
+            raise ValueError("at least one ring is needed")
+        return [RingCounter(points, *self._size, into_ring_is_exit, **self._options) for points, into_ring_is_exit in rings]
+
+    def set_rings(self, rings: Sequence[Ring]) -> None:
+        """Swap in redrawn rings without losing the counts made so far."""
+        new = self._make(rings)
+        self._base = (self.entry_count, self.exit_count, self.ambiguous)
+        self.rings = new
+
+    @property
+    def entry_count(self) -> int:
+        return self._base[0] + sum(r.entry_count for r in self.rings)
+
+    @property
+    def exit_count(self) -> int:
+        return self._base[1] + sum(r.exit_count for r in self.rings)
+
+    @property
+    def ambiguous(self) -> int:
+        return self._base[2] + sum(r.ambiguous for r in self.rings)
+
+    @property
+    def polygons(self) -> List[np.ndarray]:
+        return [r.polygon for r in self.rings]
+
+    def contains(self, point: Point) -> bool:
+        return any(r.contains(point) for r in self.rings)
+
+    def update(self, track_ids: Iterable[int], boxes: Iterable[Sequence[float]]) -> Tuple[int, int]:
+        ids, boxes = list(track_ids), list(boxes)
+        entries = exits = 0
+        for ring in self.rings:
+            e, x = ring.update(ids, boxes)
+            entries, exits = entries + e, exits + x
         return entries, exits
 
 

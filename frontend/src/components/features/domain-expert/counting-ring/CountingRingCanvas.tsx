@@ -1,10 +1,14 @@
-// lớp vẽ vòng đếm phủ lên khung video: đa giác + các đỉnh chạm được
+// lớp vẽ vòng đếm phủ lên khung video: mỗi vòng một đa giác, đỉnh của vòng đang sửa chạm được
 import { type MouseEvent, type RefObject } from 'react'
+import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
+
+type Points = Array<[number, number]>
 
 interface Props {
   videoRef: RefObject<HTMLVideoElement>
-  points: Array<[number, number]>
+  rings: Points[]
+  activeIndex: number
   isEditing: boolean
   onAddPoint: (point: [number, number]) => void
   onRemovePoint: (index: number) => void
@@ -14,7 +18,12 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-export default function CountingRingCanvas({ videoRef, points, isEditing, onAddPoint, onRemovePoint }: Props) {
+function centerOf(points: Points): [number, number] {
+  const sum = points.reduce(([sx, sy], [x, y]) => [sx + x, sy + y], [0, 0])
+  return [sum[0] / points.length, sum[1] / points.length]
+}
+
+export default function CountingRingCanvas({ videoRef, rings, activeIndex, isEditing, onAddPoint, onRemovePoint }: Props) {
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     if (!isEditing) return
     const rect = event.currentTarget.getBoundingClientRect()
@@ -24,28 +33,42 @@ export default function CountingRingCanvas({ videoRef, points, isEditing, onAddP
     onAddPoint([x, y])
   }
 
-  // Toạ độ chuẩn hoá 0–1 → hệ 0–100 của viewBox; preserveAspectRatio none để khớp object-contain
-  const polygonPoints = points.map(([x, y]) => `${x * 100},${y * 100}`).join(' ')
+  const activePoints = rings[activeIndex] ?? []
 
   return (
     <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
       <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-contain" />
       <div className={`absolute inset-0 ${isEditing ? 'cursor-crosshair' : ''}`} onClick={handleClick}>
+        {/* Toạ độ 0–1 → hệ 0–100 của viewBox; preserveAspectRatio none để khớp object-contain */}
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {points.length >= 2 && (
-            // Màu token accent-600 (FE_Design 2.1, 13.7): xanh chanh dễ thấy trên khung hình camera tối
+          {rings.map((points, index) => points.length >= 2 && (
+            // Màu token accent-600: xanh chanh dễ thấy trên khung hình camera tối; vòng không sửa thì mờ
             <polygon
-              points={polygonPoints}
-              className="fill-accent-600/20 stroke-accent-600"
+              key={index}
+              points={points.map(([x, y]) => `${x * 100},${y * 100}`).join(' ')}
+              className={cn('stroke-accent-600', isEditing && index !== activeIndex ? 'fill-accent-600/5 opacity-50' : 'fill-accent-600/20')}
               strokeWidth={2}
               strokeDasharray="4 3"
               vectorEffect="non-scaling-stroke"
             />
-          )}
+          ))}
         </svg>
-        {points.map(([x, y], index) => (
+        {rings.length > 1 && rings.map((points, index) => {
+          if (points.length < 3) return null
+          const [x, y] = centerOf(points)
+          return (
+            <span
+              key={`label-${index}`}
+              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold text-white"
+              style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
+            >
+              {index + 1}
+            </span>
+          )
+        })}
+        {(isEditing ? [activePoints] : rings).flatMap((points, ringIndex) => points.map(([x, y], index) => (
           <button
-            key={index}
+            key={`${ringIndex}-${index}`}
             type="button"
             disabled={!isEditing}
             onClick={event => {
@@ -56,7 +79,7 @@ export default function CountingRingCanvas({ videoRef, points, isEditing, onAddP
             style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
             aria-label={isEditing ? t('Đỉnh {{n}} · chạm để xoá', { n: index + 1 }) : t('Đỉnh {{n}}', { n: index + 1 })}
           />
-        ))}
+        )))}
       </div>
     </div>
   )

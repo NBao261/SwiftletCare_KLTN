@@ -6,9 +6,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from counting import RingCounter  # noqa: E402
+from counting import MultiRingCounter, RingCounter  # noqa: E402
 from counting import current_session  # noqa: E402
-from remote_config import RingStore, ScheduleStore, dispatch_config, parse_ring, parse_windows  # noqa: E402
+from remote_config import RingStore, ScheduleStore, dispatch_config, parse_rings, parse_windows  # noqa: E402
 
 RING = [[0.379, 0.228], [0.527, 0.136], [0.575, 0.277], [0.569, 0.374], [0.427, 0.477], [0.386, 0.334]]
 SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]
@@ -18,39 +18,69 @@ def msg(**ring):
     return {"deviceId": "cam_01", "counting_ring": {"points": RING, "into_ring_is_exit": True, **ring}}
 
 
-def test_ring_for_this_camera_is_parsed():
-    points, into_exit = parse_ring(msg(), "cam_01")
+def rings_msg(*rings):
+    return {"deviceId": "cam_01", "counting_rings": list(rings)}
+
+
+def test_ring_from_an_older_backend_is_one_ring():
+    [(points, into_exit)] = parse_rings(msg(), "cam_01")
     assert points[0] == (0.379, 0.228) and len(points) == 6 and into_exit is True
 
 
+def test_two_rings_and_no_ring_are_parsed():
+    two = parse_rings(rings_msg({"points": RING, "into_ring_is_exit": True},
+                                {"points": SQUARE, "into_ring_is_exit": False}), "cam_01")
+    assert [len(points) for points, _ in two] == [6, 4] and [into for _, into in two] == [True, False]
+    assert parse_rings(rings_msg(), "cam_01") == []          # deleted: back to the config.yaml ring
+
+
 def test_other_device_or_no_ring_is_ignored():
-    assert parse_ring(msg(), "cam_02") is None
-    assert parse_ring({"deviceId": "cam_01", "temp_min": 26}, "cam_01") is None
-    assert parse_ring("not a dict", "cam_01") is None
+    assert parse_rings(msg(), "cam_02") is None
+    assert parse_rings({"deviceId": "cam_01", "temp_min": 26}, "cam_01") is None
+    assert parse_rings("not a dict", "cam_01") is None
 
 
-@pytest.mark.parametrize("ring", [
-    {"points": RING[:2]},
-    {"points": RING * 3},
-    {"points": [[0.1, 0.1], [1.2, 0.1], [0.5, 0.9]]},
-    {"points": [[0.1], [0.2, 0.2], [0.5, 0.9]]},
-    {"points": [[True, 0.1], [0.2, 0.2], [0.5, 0.9]]},
-    {"into_ring_is_exit": "true"},
+@pytest.mark.parametrize("message", [
+    msg(points=RING[:2]),
+    msg(points=RING * 3),
+    msg(points=[[0.1, 0.1], [1.2, 0.1], [0.5, 0.9]]),
+    msg(points=[[0.1], [0.2, 0.2], [0.5, 0.9]]),
+    msg(points=[[True, 0.1], [0.2, 0.2], [0.5, 0.9]]),
+    msg(into_ring_is_exit="true"),
+    rings_msg(*[{"points": RING, "into_ring_is_exit": True}] * 5),
+    {"deviceId": "cam_01", "counting_rings": {"points": RING}},
 ])
-def test_malformed_ring_raises(ring):
+def test_malformed_rings_raise(message):
     with pytest.raises(ValueError):
-        parse_ring(msg(**ring), "cam_01")
+        parse_rings(message, "cam_01")
 
 
-def test_store_saves_the_ring_and_hands_it_to_the_loop_once(tmp_path):
+def test_store_saves_the_rings_and_hands_them_to_the_loop_once(tmp_path):
     path = tmp_path / "state" / "counting_ring.json"
     store = RingStore(path, "cam_01")
     assert store.load() is None
 
-    store.on_message(json.dumps(msg()).encode())
-    assert store.take_update()[1] is True
+    store.on_message(json.dumps(rings_msg({"points": RING, "into_ring_is_exit": True},
+                                          {"points": SQUARE, "into_ring_is_exit": False})).encode())
+    assert len(store.take_update()) == 2
     assert store.take_update() is None
-    assert RingStore(path, "cam_01").load()[0][1] == (0.527, 0.136)   # survives a restart
+    assert RingStore(path, "cam_01").load()[1][0][0] == (0.25, 0.25)   # survives a restart
+
+
+def test_deleting_the_rings_removes_the_file_and_tells_the_loop(tmp_path):
+    path = tmp_path / "counting_ring.json"
+    store = RingStore(path, "cam_01")
+    store.on_message(json.dumps(msg()).encode())
+    store.take_update()
+    store.on_message(json.dumps(rings_msg()).encode())
+    assert store.take_update() == [] and not path.exists() and store.load() is None
+
+
+def test_a_ring_file_saved_before_multiple_rings_still_loads(tmp_path):
+    path = tmp_path / "counting_ring.json"
+    path.write_text(json.dumps({"points": RING, "into_ring_is_exit": True}), encoding="utf-8")
+    [(points, into_exit)] = RingStore(path, "cam_01").load()
+    assert len(points) == 6 and into_exit is True
 
 
 def test_store_ignores_bad_messages_and_a_corrupt_file(tmp_path):
@@ -62,6 +92,18 @@ def test_store_ignores_bad_messages_and_a_corrupt_file(tmp_path):
 
     path.write_text("{", encoding="utf-8")
     assert store.load() is None
+
+
+def test_two_rings_add_up_and_redrawing_keeps_the_counts():
+    left = [(0.0, 0.0), (0.3, 0.0), (0.3, 0.3), (0.0, 0.3)]
+    right = [(0.7, 0.7), (1.0, 0.7), (1.0, 1.0), (0.7, 1.0)]
+    c = MultiRingCounter([(left, True), (right, False)], 100, 100)
+    c.update([1, 2], [(10, 10, 14, 14), (50, 50, 54, 54)])   # bird 1 in the left hole, bird 2 in the room
+    c.update([1, 2], [(50, 10, 54, 14), (80, 80, 84, 84)])   # 1 leaves the left ring, 2 enters the right one
+    assert (c.entry_count, c.exit_count) == (2, 0)           # left: out of a hole = ENTRY; right: into it = ENTRY
+
+    c.set_rings([(SQUARE, True)])
+    assert (c.entry_count, c.exit_count) == (2, 0) and len(c.polygons) == 1
 
 
 def test_new_ring_keeps_counts_and_does_not_invent_a_crossing():

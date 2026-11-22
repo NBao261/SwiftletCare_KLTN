@@ -6,8 +6,8 @@ export interface CountingRingUpdateResult extends CameraNode {
   ring_delivered: boolean
 }
 
-// lưu vòng đếm; khung live để vẽ dùng `hooks/shared/useWhepStream.ts`
+// lưu 0–4 vòng, [] = xoá để camera dùng vòng mặc định; khung live để vẽ dùng `hooks/shared/useWhepStream.ts`
 export const countingRingApi = {
-  update: (cameraId: string, ring: CountingRing) =>
-    api.put<ApiResponse<CountingRingUpdateResult>>(`/devices/camera-nodes/${cameraId}/counting-ring`, ring),
+  update: (cameraId: string, rings: CountingRing[]) =>
+    api.put<ApiResponse<CountingRingUpdateResult>>(`/devices/camera-nodes/${cameraId}/counting-ring`, { rings }),
 }
