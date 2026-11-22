@@ -86,9 +86,9 @@ export default function DomainExpertQueuePage() {
     farmId: selectedFarmId ?? '',
     status: 'PENDING_REVIEW',
   })
+  // Cùng phạm vi với trang Duyệt & đề xuất (cả farm), để số trên thẻ khớp số trong trang
   const { total: pendingProposalsCount } = useCoefficientProposals({
     farmId: selectedFarmId ?? '',
-    zoneId: selectedZoneId ?? undefined,
     status: 'PROPOSED',
   })
 
