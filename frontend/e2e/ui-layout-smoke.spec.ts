@@ -1,31 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
-import { ACCOUNTS, DEMO_FARM, PASSWORD, demoFarm, signIn, type Account } from './helpers/demoApi';
+import { expect, test } from '@playwright/test';
+import { demoFarm, signIn } from './helpers/demoApi';
+import { setScope, signInUi, trackCrashes } from './helpers/ui';
 
 // Smoke cho các trang đổi bố cục ở todo-ui-layout-1120 §6/§7 mà chưa có E2E chạm tới:
 // mở trang + chạy tương tác mới (Modal/tab/nút) + bắt lỗi JS chưa bắt (crash thật). Không kiểm layout bằng mắt.
-async function signInUi(page: Page, account: Account): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(ACCOUNTS[account]);
-  await page.getByLabel('Mật khẩu').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Đăng nhập' }).click();
-  await expect(page).not.toHaveURL(/\/login$/);
-}
-
-// Khu chuyên gia chưa có bộ chọn farm tới khi C-05 (Bảo) merge: test tự đặt phạm vi vào zoneStore
-async function setScope(page: Page, scope: { farmId: string; houseId?: string }): Promise<void> {
-  const state = {
-    selectedFarmId: scope.farmId, selectedFarmName: DEMO_FARM, selectedZoneId: '', selectedZoneName: '',
-    scopeFarmId: '', selectedHouseId: scope.houseId ?? '', scopeZoneId: '',
-  };
-  await page.evaluate(value => localStorage.setItem('swiftletcare-zone', value), JSON.stringify({ state, version: 2 }));
-}
-
-// Chỉ tính lỗi JS chưa bắt (trang crash); cảnh báo mạng/socket không làm hỏng test
-function trackCrashes(page: Page): string[] {
-  const crashes: string[] = [];
-  page.on('pageerror', error => crashes.push(error.message));
-  return crashes;
-}
 
 // Lấy ID một lần cho cả nhóm, tránh đăng nhập lặp (backend giới hạn số lần đăng nhập)
 let farmId = '';

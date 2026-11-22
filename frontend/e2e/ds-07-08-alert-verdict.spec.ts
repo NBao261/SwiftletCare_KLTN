@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { ACCOUNTS, DEMO_FARM, PASSWORD, demoFarm, signIn } from './helpers/demoApi';
 
-interface Alert { _id: string; status: string; onsite_checks: Array<{ observation: string | null }> }
+interface Alert {
+  _id: string;
+  status: string;
+  expert_verdict?: { result: string };
+  onsite_checks: Array<{ observation: string | null }>;
+}
 
 // WF-04 — DS-07, DS-08 (Design Brief Phụ lục A2): cảnh báo ồn bất thường ở nhà A chờ kết luận (`npm run seed:demo`).
 // Phát tiếng ồn thật cạnh cảm biến của DS-07 làm tại chỗ; ở đây đi tiếp từ cảnh báo đã có.
@@ -19,7 +24,9 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
     const expert = await signIn(request, 'expert');
     const farm = await demoFarm(owner);
     const [alert] = await owner.data<Alert[]>(await owner.get(`/alerts?farmId=${farm.farmId}&type=NOISE_ANOMALY`));
-    test.skip(alert.status === 'DISMISSED', 'đã bác bỏ ở lần chạy trước: chạy lại `npm run seed:demo`');
+    // Dữ liệu demo chỉ có một cảnh báo suy luận, và B2 của expert-flow cũng ghi kết luận lên nó: đã có
+    // kết luận thì bước này không còn gì để bác bỏ, phải seed lại mới chạy được
+    test.skip(Boolean(alert.expert_verdict), 'cảnh báo đã có kết luận ở lần chạy trước: chạy lại `npm run seed:demo`');
 
     if (alert.onsite_checks[0]?.observation === null) {
       const check = await technician.post(`/alerts/${alert._id}/onsite-check`, {
