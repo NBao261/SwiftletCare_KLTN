@@ -8,6 +8,8 @@ import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
 import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements'
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
 import { useParameterReviews, useCoefficientProposals } from '@/hooks/domain-expert/useExpertReviews'
+import { useAllZones } from '@/hooks/shared/useFarms'
+import { NO_VALUE } from '@/constants/display'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useExpertQueueAlerts } from '@/hooks/domain-expert/useExpertDashboard'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -15,6 +17,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import SectionCard from '@/components/ui/SectionCard'
 import { t } from '@/i18n'
 import { formatDateTime } from '@/lib/i18n'
+import { useMemo } from 'react'
 
 function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZoneName?: string | null): string {
   if (!alert) return t('Cảnh báo vi khí hậu')
@@ -30,8 +33,24 @@ function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZone
     .replace('LOW_RETURN_RATE', ALERT_TYPE_LABELS.LOW_RETURN_RATE)
 }
 
+// Cảnh báo của một Zone ghi "Nhà > Zone"; cảnh báo cả nhà (camera đếm chim) chỉ ghi tên nhà
+function placeOf(
+  alert: { zone_id?: string; house_id?: string },
+  zoneNames: Map<string, string>,
+  houseNames: Map<string, string>,
+): string {
+  if (alert.zone_id) return zoneNames.get(alert.zone_id) ?? NO_VALUE
+  if (alert.house_id) return houseNames.get(alert.house_id) ?? NO_VALUE
+  return NO_VALUE
+}
+
 export default function DomainExpertQueuePage() {
   const { selectedFarmId, selectedHouseId, selectedZoneId, selectedZoneName } = useZoneStore()
+
+  // Vị trí của mỗi việc: "Nhà > Zone", hoặc tên nhà với cảnh báo cả nhà (camera) — như trang Cảnh báo
+  const { data: allZones } = useAllZones()
+  const zoneNames = useMemo(() => new Map((allZones ?? []).map(zone => [zone._id, `${zone.houseName} > ${zone.name}`])), [allZones])
+  const houseNames = useMemo(() => new Map((allZones ?? []).map(zone => [zone.house_id, zone.houseName])), [allZones])
 
   const { data: pendingAlerts, isLoading: isLoadingAlerts } = useExpertQueueAlerts(
     selectedFarmId ?? undefined,
@@ -138,20 +157,23 @@ export default function DomainExpertQueuePage() {
         >
           <div className="divide-y divide-warmGray/10">
             {alertRecords.map(alert => (
+              // Mở đúng cảnh báo đó trong ngăn kiểm chứng, như link từ chuông thông báo
               <Link
                 key={alert._id}
-                to="/domain-expert/alert-verdicts"
+                to={`/domain-expert/alert-verdicts?alertId=${alert._id}`}
                 className="flex items-center gap-3 py-3 -mx-4 px-4 hover:bg-stone/30"
               >
                 <SeverityBadge severity={alert.severity} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-charcoal">
-                    {formatAlertTitle(alert, selectedZoneName)}
+                    {ALERT_TYPE_LABELS[alert.type] ?? alert.type} · {formatAlertTitle(alert, selectedZoneName)}
                   </p>
-                  <p className="text-small text-warmGray">{formatDateTime(alert.created_at)}</p>
+                  <p className="truncate text-small text-warmGray">
+                    {placeOf(alert, zoneNames, houseNames)} · {formatDateTime(alert.created_at)}
+                  </p>
                 </div>
                 <span className="shrink-0 rounded-lg border border-warmGray/20 px-3 py-1 text-small font-medium text-charcoal">
-                  {t('Xem')}
+                  {t('Mở')}
                 </span>
               </Link>
             ))}
