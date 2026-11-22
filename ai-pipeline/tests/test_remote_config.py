@@ -78,7 +78,7 @@ def test_new_ring_keeps_counts_and_does_not_invent_a_crossing():
     assert (c.entry_count, c.exit_count) == (1, 1)
 
 
-# ── Khung phiên theo lịch đếm (VISION-FR-019, BR-13) ─────────────────────────
+# Khung phiên theo lịch đếm
 DEFAULT = {"MORNING_EXIT": ("05:30", "07:00"), "EVENING_ENTRY": ("17:30", "19:00")}
 RAINY = {"MORNING_EXIT": ["06:00", "07:30"], "EVENING_ENTRY": ["17:00", "18:30"]}
 

@@ -1,12 +1,4 @@
-"""
-SwiftletCare - one frame through the pipeline: mask -> 2 tiles -> YOLO -> ByteTrack, and drawing
-
-Shared by the live loop (src/stream.py) and tools/track_clip.py so a clip is
-processed exactly like the camera stream. Counting stays with the caller: the live loop
-feeds the same tracks to the session counter and to the all-day counter.
-
-SRS: VISION-FR-004, VISION-FR-005, VISION-FR-014; plan §6.6, §19.8
-"""
+"""One frame through the pipeline: mask, 2 tiles, YOLO, ByteTrack, and drawing; shared by the live loop and track_clip.py."""
 from typing import List, Optional, Sequence, Tuple
 
 import cv2
@@ -22,8 +14,7 @@ YELLOW = (0, 255, 255)
 
 
 def scale_boxes(xyxy: np.ndarray, k: float) -> np.ndarray:
-    """Grow/shrink boxes around their centre. A small fast bird's boxes in two frames do not overlap,
-    and ByteTrack matches by IoU, so boxes are grown before tracking and shrunk back for drawing."""
+    """Grow/shrink boxes around their centre: a fast bird's boxes in two frames do not overlap and ByteTrack matches by IoU."""
     center = (xyxy[:, :2] + xyxy[:, 2:]) / 2
     half = (xyxy[:, 2:] - xyxy[:, :2]) / 2 * k
     return np.hstack([center - half, center + half]).astype(np.float32)
@@ -47,10 +38,7 @@ class FramePipeline:
         self.tiles = tile_rects(cam["tiles"], width, height)
         self.tile_overlap = m["tile_merge_overlap"]
         self.box_pad = t["box_pad"]
-        # Lives for the whole run (not rebuilt per session) so track ids never repeat: the counters
-        # remember where each id stood.
-        # ponytail: sv.ByteTrack is deprecated and removed in supervision 0.31 (pinned <0.31 in
-        # requirements.txt); move to the `trackers` package before upgrading
+        # Lives for the whole run so track ids never repeat. sv.ByteTrack is gone in supervision 0.31 (pinned <0.31)
         self.tracker = sv.ByteTrack(
             track_activation_threshold=m["confidence_threshold"],
             lost_track_buffer=t["lost_track_buffer"],
@@ -79,11 +67,7 @@ LABEL_HEIGHT = 12
 
 
 def label_origin(box: Sequence[int], frame_shape: Tuple[int, ...], text_width: int = 0) -> Tuple[int, int]:
-    """
-    Where the "#id" text starts (its baseline). Above the box when there is room; a bird at the top
-    edge gets it below the box, and a bird at the right edge gets it shifted left by the text width,
-    so every tracked bird keeps its whole id inside the frame (VISION-FR-014).
-    """
+    """Where the "#id" text starts: above the box, below it at the top edge, shifted left at the right edge."""
     height, width = frame_shape[0], frame_shape[1]
     x = min(max(int(box[0]), 0), max(width - 1 - text_width, 0))
     y = int(box[1]) - 4 if int(box[1]) - 4 >= LABEL_HEIGHT else int(box[3]) + LABEL_HEIGHT + 2

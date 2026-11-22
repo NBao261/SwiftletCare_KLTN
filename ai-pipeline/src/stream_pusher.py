@@ -1,8 +1,4 @@
-"""SwiftletCare – đẩy frame đã vẽ khung lên MediaMTX (H.264 qua RTSP) bằng ffmpeg (VISION-FR-013/014, plan §15.6).
-
-Chạy ở luồng riêng với tốc độ khung cố định: mạng chậm hay máy chủ video sập chỉ làm luồng này chờ,
-việc đếm ở luồng chính không bị ảnh hưởng.
-"""
+"""Đẩy frame đã vẽ khung lên MediaMTX bằng ffmpeg ở luồng riêng: mạng chậm không làm chậm việc đếm."""
 import re
 import subprocess
 import threading

@@ -25,7 +25,7 @@ def test_state_missing_or_broken_file(tmp_path):
 
 
 def test_topic_base_is_per_device():
-    # Report 4 §7.2: mỗi thiết bị một cây topic, nhà yến do backend giữ
+    # Mỗi thiết bị một cây topic, nhà yến do backend giữ
     assert topic_base({"CAMERA_DEVICE_ID": "cam-1"}) == "swiftletcare/dev/cam-1"
 
 

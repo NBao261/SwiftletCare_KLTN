@@ -1,21 +1,4 @@
-"""
-SwiftletCare - counting ring and session windows sent by the backend (VISION-FR-018, 019)
-
-The Domain Expert draws the ring on the web; the backend publishes
-{deviceId, counting_ring: {points, into_ring_is_exit}} on
-swiftletcare/dev/{deviceId}/config, retained by the broker, so this node
-receives it again on every connection. The last ring received is kept in a
-file so a restart without the broker still counts with it; with no file, the
-ring in config.yaml is used.
-
-The same message carries session_windows: the morning and evening windows of the
-next 7 days of the house's counting schedule ({"YYYY-MM-DD": {"MORNING_EXIT":
-["HH:MM", "HH:MM"], "EVENING_ENTRY": [...]}}), so the live session counts follow
-the windows in force that day (BR-13). They are kept in a file too; a day the
-backend sent nothing for uses the windows in config.yaml.
-
-SRS: VISION-FR-018, 019, BR-13; plan §3.3 item 7, §19.8
-"""
+"""Ring and session windows from the backend's retained config, kept in files to survive a restart without the broker."""
 import json
 import os
 import re
@@ -33,19 +16,16 @@ SESSIONS = ("MORNING_EXIT", "EVENING_ENTRY")
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-# 3 = smallest closed ring; 12 = the backend validator's technical limit (SRS 0.5)
+# 3 = smallest closed ring; 12 = the backend validator's technical limit
 MIN_POINTS = 3
 MAX_POINTS = 12
 
 
 def parse_ring(message: Any, device_id: str) -> Optional[Ring]:
-    """
-    The ring in the retained config message of this camera. None when the message is
-    addressed to another device or carries no ring; ValueError when the ring is malformed.
-    """
+    """This camera's ring, or None; ValueError when the ring is malformed."""
     if not isinstance(message, dict):
         return None
-    if message.get("deviceId") not in (None, device_id):   # same rule as the ESP32 (CLAUDE.md, MQTT)
+    if message.get("deviceId") not in (None, device_id):  # same rule as the ESP32
         return None
     ring = message.get("counting_ring")
     if ring is None:
@@ -108,10 +88,7 @@ class RingStore:
 
 
 def parse_windows(message: Any, device_id: str) -> Optional[Dict[str, Windows]]:
-    """
-    The session windows per Vietnam date in the config message of this camera. None when the message is
-    addressed to another device or carries none; ValueError when a date or a window is malformed.
-    """
+    """Session windows per Vietnam date, or None; ValueError when a date or window is malformed."""
     if not isinstance(message, dict) or message.get("deviceId") not in (None, device_id):
         return None
     by_date = message.get("session_windows")
@@ -186,16 +163,13 @@ def dispatch_config(stores: Sequence[Any], payload: bytes) -> None:
 
 
 def start_listener(mqtt_cfg: dict, stores: Sequence[Any], device_id: str) -> Any:
-    """
-    Subscribe to this device's retained config in a background thread; reconnects on its own. Every store
-    (RingStore, ScheduleStore) reads its own part of each message.
-    """
+    """Subscribe to this device's retained config in a background thread; each store reads its own part."""
     import paho.mqtt.client as mqtt   # only needed when the node talks to a broker
 
     topic = f"swiftletcare/dev/{device_id}/config"
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"SC-{device_id}-config")
     client.username_pw_set(device_id, os.environ["MQTT_PASSWORD"])
-    if mqtt_cfg.get("tls"):   # deploy mode (SEC-NFR-001): Let's Encrypt cert, the OS's CA store, as stream.Publisher
+    if mqtt_cfg.get("tls"):  # deploy mode: Let's Encrypt cert from the OS's CA store, as stream.Publisher
         client.tls_set()
     # Subscribing in on_connect re-subscribes after every reconnect (clean session)
     client.on_connect = lambda c, _userdata, _flags, _reason, _props: c.subscribe(topic, qos=1)

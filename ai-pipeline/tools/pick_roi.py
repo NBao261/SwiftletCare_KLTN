@@ -1,15 +1,4 @@
-"""SwiftletCare – lấy vòng đếm cho config.yaml (plan §6.8).
-
-Click lần lượt các góc viền ngoài của miệng lỗ / hộp gỗ trên một khung hình, theo một chiều.
-Công cụ nới viền đó ra đều `--margin` px thành vòng đếm rồi in khối YAML để chép vào config.yaml.
-Vùng theo dõi là cả khung chia 2 ô (camera.tiles, plan §19.8), không còn ROI đi theo vòng.
-
-  python tools/pick_roi.py                       # lấy 1 khung từ CAMERA_RTSP_URL trong .env
-  python tools/pick_roi.py D:/SwiftletCare/frames/frame.png --margin 60 --save D:/SwiftletCare/frames/picked.png
-
-Phím: z = bỏ điểm cuối, + / - = nới vòng thêm/bớt 10 px, Enter = in YAML (và lưu ảnh nếu có --save), Esc = thoát.
-Cửa sổ thu phóng được (kéo to cửa sổ để click chính xác từng góc).
-"""
+"""Click các góc miệng lỗ, nới ra --margin px thành vòng đếm rồi in YAML để chép vào config.yaml."""
 import argparse
 import os
 import sys
