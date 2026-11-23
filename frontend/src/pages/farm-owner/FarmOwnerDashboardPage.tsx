@@ -18,7 +18,8 @@ import FarmKpiRow from '@/components/features/farm-owner/dashboard/FarmKpiRow'
 import HouseStatusCard from '@/components/features/farm-owner/dashboard/HouseStatusCard'
 import HouseDetailPanels from '@/components/features/farm-owner/dashboard/HouseDetailPanels'
 import DashboardTodoCard from '@/components/features/farm-owner/dashboard/DashboardTodoCard'
-import { houseLiveStatus, latestTimestamp, summarizeFarmHouses } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { countAlertsInHouses, houseLiveStatus, latestTimestamp, summarizeFarmHouses } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { useAcknowledgedAlerts } from '@/hooks/shared/useAlerts'
 import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
 import type { SensorNode } from '@/types'
 
@@ -75,8 +76,10 @@ export default function FarmOwnerDashboardPage() {
   const scopeFarmIds = useMemo(() => (farmId ? [farmId] : farms.map(farm => farm._id)), [farmId, farms])
   const { byHouse: overviewByHouse, isError: isOverviewError, refetch: refetchOverview } = useFarmOverviews(isTechnician ? NO_FARM_IDS : scopeFarmIds)
   // Cùng nguồn cho ô KPI và thẻ nhà để tổng bằng nhau
+  // Như open_alerts của tổng quan: đang báo và đã xác nhận
+  const { data: acknowledgedAlerts } = useAcknowledgedAlerts(isTechnician)
   let openAlerts: number | undefined
-  if (isTechnician) openAlerts = scopedAlerts.length
+  if (isTechnician) openAlerts = acknowledgedAlerts ? scopedAlerts.length + countAlertsInHouses(acknowledgedAlerts, scopedHouses) : undefined
   else if (scopedHouses.every(node => overviewByHouse.has(node.house._id))) {
     openAlerts = scopedHouses.reduce((sum, node) => sum + (overviewByHouse.get(node.house._id)?.open_alerts ?? 0), 0)
   }
