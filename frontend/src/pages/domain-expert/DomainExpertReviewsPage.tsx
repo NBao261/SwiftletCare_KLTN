@@ -1,6 +1,7 @@
 // DomainExpertReviewsPage.tsx: Màn hình thẩm định thay đổi tham số và đề xuất hệ số mờ
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { useToastStore } from '@/stores/toastStore';
@@ -63,7 +64,9 @@ export default function DomainExpertReviewsPage() {
   const pushToast = useToastStore((state) => state.push);
   const apiErrorMessage = useApiErrorMessage();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('reviews');
+  // Hàng đợi việc mở thẳng tab đề xuất bằng ?tab=proposals
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<ActiveTab>(searchParams.get('tab') === 'proposals' ? 'proposals' : 'reviews');
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ParameterReviewStatus | 'ALL'>('PENDING_REVIEW');
   const [proposalStatusFilter, setProposalStatusFilter] = useState<CoefficientProposalStatus | 'ALL'>('PROPOSED');
   const [processingId, setProcessingId] = useState<string | null>(null);

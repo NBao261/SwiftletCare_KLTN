@@ -3,6 +3,7 @@ import * as expertActivityService from '@/services/expertActivity.service'
 import * as expertReviewService from '@/services/expertReview.service'
 import * as coefficientProposalService from '@/services/coefficientProposal.service'
 import * as expertReminderService from '@/services/expertReminder.service'
+import * as expertQueueService from '@/services/expertQueue.service'
 import type { ReminderKind } from '@/services/expertReminder.service'
 import type { ExpertDecisionAction } from '@/services/expertActivity.service'
 import type { ParameterReviewStatus } from '@/models/parameterReview.model'
@@ -21,6 +22,11 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     limit:   req.query.limit as string | undefined,
   })
   res.json({ success: true, data: records, meta: { total, page, limit } })
+})
+
+export const queue = asyncHandler(async (req: Request, res: Response) => {
+  const data = await expertQueueService.getExpertQueue(req.user, req.query.farmId as string)
+  res.json({ success: true, data })
 })
 
 export const listReviews = asyncHandler(async (req: Request, res: Response) => {
