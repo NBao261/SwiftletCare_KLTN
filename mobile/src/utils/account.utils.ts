@@ -216,16 +216,26 @@ export function humanizeChangeText(text: string): string {
   })
 }
 
-// Vòng đếm mới: số đỉnh và phía nào là trong vòng (VISION-FR-018)
+// Một vòng đếm: số đỉnh và phía nào là trong vòng (VISION-FR-018)
+function describeOneRing(ring: Record<string, unknown>, points: unknown[]): string {
+  return t('Vòng đếm {count} đỉnh, {side}', {
+    count: points.length,
+    side: ring.into_ring_is_exit ? t('trong vòng là phía ngoài trời') : t('trong vòng là phía trong nhà'),
+  })
+}
+
+// Vòng đếm sau khi đổi. Backend lưu 2 kiểu: danh sách 0–4 vòng (bản mới, [] là đã xoá và camera dùng lại vòng mặc định)
+// hoặc một vòng (mục cũ trước khi camera có nhiều vòng); không có dữ liệu thì không ghi gì
 function describeCountingRing(after: unknown): string[] {
-  const ring = asRecord(after)
-  if (!ring || !Array.isArray(ring.points)) return []
-  return [
-    t('Vòng đếm {count} đỉnh, {side}', {
-      count: ring.points.length,
-      side: ring.into_ring_is_exit ? t('trong vòng là phía ngoài trời') : t('trong vòng là phía trong nhà'),
-    }),
-  ]
+  if (after === undefined || after === null) return []
+  const rings = Array.isArray(after) ? after : [after]
+  if (rings.length === 0) return [t('Xoá vòng đếm, camera dùng lại vòng mặc định')]
+  const lines: string[] = []
+  for (const item of rings) {
+    const ring = asRecord(item)
+    if (ring && Array.isArray(ring.points)) lines.push(describeOneRing(ring, ring.points))
+  }
+  return lines
 }
 
 // Đếm phần tử của một danh sách trong lịch đếm (hồ sơ theo mùa, khung tạm); không phải danh sách thì 0
@@ -244,7 +254,11 @@ function describeCountingSchedule(before: unknown, after: unknown): string[] {
 
 // Chi tiết một mục chờ chuyên gia duyệt (EXPERT-FR-010): đọc được cho cả 7 nhóm tham số (BR-22)
 export function describeReviewChanges(review: Pick<ParameterReview, 'group' | 'old_values' | 'new_values'>): string[] {
-  if (review.group === 'counting_ring') return describeCountingRing(asRecord(review.new_values)?.ring)
+  if (review.group === 'counting_ring') {
+    // Mục mới ghi new_values.rings (nhiều vòng), mục cũ ghi new_values.ring (một vòng)
+    const newValues = asRecord(review.new_values)
+    return describeCountingRing(newValues?.rings ?? newValues?.ring)
+  }
   if (review.group === 'counting_schedule') return describeCountingSchedule(review.old_values, review.new_values)
   return describeValueChanges(review.old_values, review.new_values)
 }

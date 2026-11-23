@@ -987,6 +987,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Đóng cảnh báo': 'Alert closed',
   'Thông báo này': 'This notification',
   'Vòng đếm {count} đỉnh, {side}': 'Counting ring with {count} points, {side}',
+  'Xoá vòng đếm, camera dùng lại vòng mặc định': 'Counting rings removed, the camera uses its default ring again',
   'trong vòng là phía ngoài trời': 'inside the ring is outdoors',
   'trong vòng là phía trong nhà': 'inside the ring is indoors',
   'Đặt lại về mặc định hệ thống': 'Reset to system defaults',

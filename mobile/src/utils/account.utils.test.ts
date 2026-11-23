@@ -183,6 +183,42 @@ describe('describeReviewChanges', () => {
   })
 })
 
+describe('vòng đếm nhiều vòng (camera có tới 4 vòng)', () => {
+  const ring = (count: number, isExit = false) => ({
+    points: Array.from({ length: count }, (_, index) => [index, index]),
+    into_ring_is_exit: isExit,
+  })
+
+  it('mục chờ duyệt kiểu mới: mỗi vòng một dòng', () => {
+    const lines = describeReviewChanges({
+      group: 'counting_ring',
+      old_values: { rings: [] },
+      new_values: { rings: [ring(4), ring(5, true)] },
+    })
+    expect(lines).toEqual([
+      'Vòng đếm 4 đỉnh, trong vòng là phía trong nhà',
+      'Vòng đếm 5 đỉnh, trong vòng là phía ngoài trời',
+    ])
+  })
+
+  it('xoá hết vòng thì ghi camera dùng lại vòng mặc định', () => {
+    const lines = describeReviewChanges({ group: 'counting_ring', old_values: { rings: [ring(4)] }, new_values: { rings: [] } })
+    expect(lines).toEqual(['Xoá vòng đếm, camera dùng lại vòng mặc định'])
+  })
+
+  it('log quyết định kiểu mới: after là danh sách vòng', () => {
+    const lines = describeActivityChanges({
+      action: 'COUNTING_RING_UPDATED',
+      metadata: { before: [ring(4)], after: [ring(6)] },
+    })
+    expect(lines).toEqual(['Vòng đếm 6 đỉnh, trong vòng là phía trong nhà'])
+  })
+
+  it('mục thiếu dữ liệu vòng thì không ghi gì', () => {
+    expect(describeReviewChanges({ group: 'counting_ring', old_values: {}, new_values: {} })).toEqual([])
+  })
+})
+
 describe('getDetailPreview', () => {
   it('ít dòng thì giữ nguyên', () => {
     expect(getDetailPreview(['a', 'b'])).toEqual(['a', 'b'])
