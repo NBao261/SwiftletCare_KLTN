@@ -37,6 +37,9 @@ export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
 // Trang trại (/farms, nhà, Zone): không có Admin
 export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 
+// Công việc tại nhà yến (phiếu, bảo trì, khuyến nghị): kỹ thuật viên làm phiếu của nhà được giao, đọc phần còn lại (G-33)
+export const FARM_WORK_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
+
 // Các role trang trại và Admin
 export const DEVICE_LIST_ROLES: Role[] = ['ADMIN', ...FARM_STRUCTURE_ROLES]
 
@@ -84,8 +87,8 @@ export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
   { path: '/harvests',         roles: HARVEST_ROLES },
-  { path: '/maintenance',      roles: FARM_SIDE_ROLES },
-  { path: '/recommendations',  roles: FARM_SIDE_ROLES },
+  { path: '/maintenance',      roles: FARM_WORK_ROLES },
+  { path: '/recommendations',  roles: FARM_WORK_ROLES },
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
   { path: '/system/device-stock', roles: ADMIN_ONLY },
@@ -93,7 +96,7 @@ export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/overview',         roles: FARM_SIDE_ROLES },
   { path: '/vision',           roles: FARM_SIDE_ROLES },
   { path: '/health',           roles: FARM_SIDE_ROLES },
-  { path: '/work-orders',      roles: FARM_SIDE_ROLES },
+  { path: '/work-orders',      roles: FARM_WORK_ROLES },
   { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
   { path: '/domain-expert/alert-verdicts',  roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/reviews',         roles: EXPERT_DECISION_ROLES },

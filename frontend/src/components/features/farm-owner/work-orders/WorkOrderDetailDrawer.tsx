@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { WORK_ORDER_STATUS_TONE, ownerActions, type OwnerAction } from '@/components/features/farm-owner/work-orders/workOrder.utils';
+import { WORK_ORDER_STATUS_TONE, workOrderActions, type OwnerAction, type WorkOrderActor } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import { Badge, Button, EmptyState, LoadingSkeleton, type BadgeTone } from '@/components/ui';
 import { Drawer } from '@/components/ui/Drawer';
 import { NO_VALUE } from '@/constants/display';
@@ -36,23 +36,23 @@ interface WorkOrderDetailDrawerProps {
   // Tên thành viên farm theo id, cho người đổi trạng thái trong diễn biến
   personNames: Map<string, string>;
   // Chỉ Farm Owner có nút thao tác; Domain Expert chỉ xem
-  canManage: boolean;
+  actor: WorkOrderActor;
   onAction: (action: OwnerAction, workOrder: WorkOrder) => void;
   onClose: () => void;
 }
 
 // Chi tiết Work Order
 export default function WorkOrderDetailDrawer({
-  workOrderId, houseNames, personNames, canManage, onAction, onClose,
+  workOrderId, houseNames, personNames, actor, onAction, onClose,
 }: WorkOrderDetailDrawerProps): JSX.Element {
   const { t, dateTime } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
   const { data: workOrder, isLoading, isError, error, refetch } = useWorkOrder(workOrderId);
-  const actions = workOrder && canManage ? ownerActions(workOrder) : [];
+  const actions = workOrder ? workOrderActions(workOrder, actor) : [];
   const push = useToastStore(state => state.push);
   const { recordChecklist } = useWorkOrderActions();
   // Farm Owner ghi kết quả từng mục khi tự làm phiếu phòng ngừa (ghi chú và ảnh từng mục ở mobile)
-  const canRecordChecklist = canManage && workOrder?.status === 'IN_PROGRESS';
+  const canRecordChecklist = actor !== 'reader' && workOrder?.status === 'IN_PROGRESS';
   // Đổi kết quả thì giữ ghi chú cũ, vì backend xoá ghi chú khi không gửi
   function recordItem(itemIndex: number, result: ChecklistResult, current: { result: ChecklistResult | null; note?: string | null }): void {
     if (!workOrder || current.result === result) return;
@@ -199,7 +199,7 @@ export default function WorkOrderDetailDrawer({
       </div>
 
       {/* Phiếu bảo trì chưa đóng không huỷ được: chỉ chỗ xoá kế hoạch */}
-      {workOrder && canManage && workOrder.kind === 'PREVENTIVE' && ['OPEN', 'IN_PROGRESS'].includes(workOrder.status) && (
+      {workOrder && actor !== 'reader' && workOrder.kind === 'PREVENTIVE' && ['OPEN', 'IN_PROGRESS'].includes(workOrder.status) && (
         <p className="pt-3 text-xs text-warmGray">
           {t('detail.preventiveHint')} <Link to="/maintenance" className="font-semibold text-charcoal underline">{t('detail.maintenanceLink')}</Link>.
         </p>

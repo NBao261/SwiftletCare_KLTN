@@ -11,9 +11,10 @@ import WorkOrderReassignModal from '@/components/features/farm-owner/work-orders
 import WorkOrderTable from '@/components/features/farm-owner/work-orders/WorkOrderTable';
 import {
   WORK_ORDER_STATUSES, approvalDescriptionKey, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
+  type WorkOrderActor,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
+import { Button, ConfirmModal, EmptyState, FilterChip, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -29,6 +30,9 @@ import type { WorkOrder } from '@/types';
 const NOTE_MAX_LENGTH = 1000;
 
 // Domain Expert chỉ xem
+// Lời giải thích của trang theo người xem
+const HELP_KEY = { owner: 'list.subtitle', technician: 'list.subtitleTechnician', reader: 'list.subtitleExpert' } as const;
+
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -36,12 +40,20 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   // Work Order thuộc nhà, nên trang chỉ lọc tới nhà: ô Zone khoá
   const scope = { ...useScopeFilter(), zone: undefined };
   const canManage = usePermission('FARM_OWNER');
+  const isTechnician = usePermission('FARM_TECHNICIAN');
+  // Kỹ thuật viên bắt đầu, làm checklist và báo xong phiếu của nhà được giao; chuyên gia chỉ đọc
+  let actor: WorkOrderActor = 'reader';
+  if (canManage) actor = 'owner';
+  else if (isTechnician) actor = 'technician';
   const actions = useWorkOrderActions();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
+  // Kỹ thuật viên mặc định chỉ xem phiếu giao cho mình (backend assigneeId=me)
+  const [onlyMine, setOnlyMine] = useState(true);
   const query = {
     ...(scope.houseId ? { houseId: scope.houseId } : scope.farmId ? { farmId: scope.farmId } : {}),
     ...statusFilterQuery(statusFilter),
+    ...(isTechnician && onlyMine ? { assigneeId: 'me' } : {}),
   };
   // Đổi phạm vi hoặc trạng thái thì về trang 1
   const filterKey = JSON.stringify(query);
@@ -111,7 +123,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         <ScopeFilter scope={scope} lockZone />
       </HeaderActions>
 
-      <SectionCard description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
+      <SectionCard description={t('list.short')} help={t(HELP_KEY[actor])}>
         {/* Lọc trạng thái bên trái, nút mở tay bên phải (chỉ Farm Owner) */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SelectMenu
@@ -124,6 +136,9 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
               ...WORK_ORDER_STATUSES.map(status => ({ value: status, label: t(`status.${status}`) })),
             ]}
           />
+          {isTechnician && (
+            <FilterChip active={onlyMine} label={t('filter.mine')} onClick={() => setOnlyMine(current => !current)} />
+          )}
           {canManage && (
             <Button
               size="sm"
@@ -157,7 +172,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
             total={total}
             onPageChange={next => setPageState({ key: filterKey, page: next })}
             houseNames={houseNames}
-            canManage={canManage}
+            actor={actor}
             onView={openDetail}
             onAction={startAction}
           />
@@ -168,7 +183,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         workOrderId={detailId}
         houseNames={houseNames}
         personNames={personNames}
-        canManage={canManage}
+        actor={actor}
         onAction={startAction}
         onClose={() => setDetailId(null)}
       />

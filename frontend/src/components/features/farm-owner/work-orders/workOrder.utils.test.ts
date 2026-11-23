@@ -1,7 +1,7 @@
 // Test logic thuần của trang Work Order
 import { describe, expect, it } from 'vitest';
 import {
-  WORK_ORDER_STATUSES, approvalDescriptionKey, isRecoveryUnverified, memberNames, ownerActions, reassignCandidates, statusFilterQuery,
+  WORK_ORDER_STATUSES, approvalDescriptionKey, workOrderActions, isRecoveryUnverified, memberNames, ownerActions, reassignCandidates, statusFilterQuery,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import type { Farm, House, WorkOrderStatus } from '@/types';
 
@@ -85,5 +85,16 @@ describe('reassignCandidates — thợ của nhà có thể nhận lại', () =>
 
   it('nhà chưa có thợ thì danh sách rỗng', () => {
     expect(reassignCandidates(undefined, names, undefined)).toEqual([]);
+  });
+});
+
+describe('workOrderActions — thao tác theo người xem', () => {
+  const repair = (status: WorkOrderStatus) => ({ status, kind: 'REPAIR' as const });
+  it('kỹ thuật viên chỉ bắt đầu và báo xong; chuyên gia chỉ đọc; chủ nhà yến như ownerActions', () => {
+    expect(workOrderActions(repair('OPEN'), 'technician')).toEqual(['start']);
+    expect(workOrderActions(repair('IN_PROGRESS'), 'technician')).toEqual(['done']);
+    expect(workOrderActions(repair('AWAITING_APPROVAL'), 'technician')).toEqual([]);
+    expect(workOrderActions(repair('OPEN'), 'reader')).toEqual([]);
+    expect(workOrderActions(repair('AWAITING_APPROVAL'), 'owner')).toEqual(['approve', 'reopen']);
   });
 });

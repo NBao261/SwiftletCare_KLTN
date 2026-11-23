@@ -3690,7 +3690,7 @@ paths:
   /recommendations:
     get:
       tags: [Recommendations]
-      summary: "Khuyến nghị của nhà hoặc farm (EXPERT-FR-017) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao (houseId)"
+      summary: "Khuyến nghị của nhà hoặc farm (EXPERT-FR-017) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao (theo houseId, hoặc theo farmId thì chỉ các nhà được giao của farm đó)"
       parameters:
         - { name: farmId, in: query, schema: { type: string }, description: "Bắt buộc khi không có houseId" }
         - { name: houseId, in: query, schema: { type: string } }
