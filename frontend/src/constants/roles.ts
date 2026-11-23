@@ -121,22 +121,38 @@ export function canAccessPath(role: Role | undefined, path: string): boolean {
 // Bậc phạm vi trang cần để có dữ liệu; không có trong bảng = 'none'
 export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
 
-const SCOPE_LEVEL: { path: string; level: ScopeLevel }[] = [
+// level: bậc phải chọn (tự chọn khi có dữ liệu); depth: ô sâu nhất hiện trên thanh phạm vi, mặc định bằng level
+// (lịch sử, báo cáo cần trại nhưng lọc thêm theo nhà được)
+const SCOPE_LEVEL: { path: string; level: ScopeLevel; depth?: ScopeDepth }[] = [
   { path: '/overview',                            level: 'farm' },
   { path: '/recommendations',                     level: 'farm' },
   { path: '/work-orders',                         level: 'farm' },
   { path: '/health',                              level: 'farm' },
+  { path: '/domain-expert/queue',                level: 'farm' },
   { path: '/domain-expert/alert-verdicts',        level: 'farm' },
   { path: '/domain-expert/reviews',               level: 'farm' },
   { path: '/domain-expert/profiles',              level: 'farm' },
   { path: '/domain-expert/recommendation-rules',  level: 'farm' },
-  { path: '/domain-expert/history',               level: 'farm' },
+  { path: '/domain-expert/history',               level: 'farm', depth: 'house' },
+  { path: '/domain-expert/reports',               level: 'farm', depth: 'house' },
   { path: '/domain-expert/counting-schedule',     level: 'house' },
   { path: '/domain-expert/counting-ring',         level: 'house' },
   { path: '/domain-expert/weather-rules',         level: 'house' },
   { path: '/domain-expert/tuning',                level: 'zone' },
 ]
 
+function scopeEntryOf(path: string) {
+  return SCOPE_LEVEL.find(entry => path === entry.path || path.startsWith(`${entry.path}/`))
+}
+
 export function scopeLevelOf(path: string): ScopeLevel {
-  return SCOPE_LEVEL.find(entry => path === entry.path || path.startsWith(`${entry.path}/`))?.level ?? 'none'
+  return scopeEntryOf(path)?.level ?? 'none'
+}
+
+// Trang không khai bậc thì hiện đủ ba ô
+export type ScopeDepth = 'farm' | 'house' | 'zone'
+export function scopeDepthOf(path: string): ScopeDepth {
+  const entry = scopeEntryOf(path)
+  if (!entry || entry.level === 'none') return 'zone'
+  return entry.depth ?? entry.level
 }

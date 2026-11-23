@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight, MapPin } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { useToastStore } from '@/stores/toastStore';
 import { t } from '@/i18n';
@@ -120,10 +120,11 @@ export default function DomainExpertZoneTuningPage() {
   return (
     <div className="relative w-full flex-1 flex flex-col gap-6">
       <div className="w-full max-w-screen-xl mx-auto space-y-6">
-        {/* Dòng phạm vi: hiện Zone đang chọn */}
+        {/* Zone đang sửa: đặt rõ trên đầu để không sửa nhầm Zone */}
         {selectedZoneName && (
-          <p className="text-small text-graphite">
-            {t('Áp cho Zone {{zone}}', { zone: selectedZoneName })}
+          <p className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-sm font-semibold text-charcoal">
+            <MapPin className="h-4 w-4 shrink-0 text-accent-700" aria-hidden />
+            {t('Đang chỉnh Zone {{zone}}', { zone: selectedZoneName })}
           </p>
         )}
 

@@ -242,7 +242,7 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
         // Thu minh hoạ còn 80% để không tràn khung 318px
         <div className={cn('flex items-center justify-center overflow-hidden rounded-2xl border border-warmGray/15 pt-8', TABLE_AREA_CLASS)}>
           <div className="scale-[0.8]">
-            <TableEmptyState title={emptyTitle} description={isFiltering ? t('table.emptyFilteredHint') : t('table.emptyHint')} />
+            <TableEmptyState title={emptyTitle} description={isFiltering ? t('table.emptyFilteredHint') : onCreate ? t('table.emptyHint') : undefined} />
           </div>
         </div>
       ) : (

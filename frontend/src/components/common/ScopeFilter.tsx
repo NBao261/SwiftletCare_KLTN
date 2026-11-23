@@ -10,13 +10,15 @@ interface ScopeFilterProps {
   lockZone?: boolean;
   // Trang chỉ tính theo trang trại (VD Tổng quan trại): ô Nhà và ô Zone luôn khoá
   lockHouse?: boolean;
+  // Bậc sâu nhất trang dùng: các ô sâu hơn không hiện (trang chuyên gia); mặc định đủ 3 ô
+  depth?: 'farm' | 'house' | 'zone';
 }
 
 // Ô khoá: nền xám, không bấm được
 const LOCKED_CLASS = 'cursor-not-allowed border-warmGray/15 bg-warmGray/10 text-warmGray hover:border-warmGray/15';
 
 // Luôn đủ 3 ô (ô chưa chọn được thì khoá), chấm cam ở nơi có sự cố
-export default function ScopeFilter({ scope, lockZone = false, lockHouse = false }: ScopeFilterProps): JSX.Element {
+export default function ScopeFilter({ scope, lockZone = false, lockHouse = false, depth = 'zone' }: ScopeFilterProps): JSX.Element {
   const { t } = useTranslation(dashboardDict);
   const isHouseLocked = lockHouse || !scope.farmId;
   const isZoneLocked = lockHouse || lockZone || !scope.houseId;
@@ -54,7 +56,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         warningLabel={t('scope.warning')}
         className="h-9 w-44 justify-between max-sm:col-span-2 max-sm:w-full"
       />
-      <SelectMenu
+      {depth !== 'farm' && <SelectMenu
         ariaLabel={t('page.houseLabel')}
         value={isHouseLocked ? '' : scope.houseId}
         options={houseOptions}
@@ -62,8 +64,8 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         warningLabel={t('scope.warning')}
         disabled={isHouseLocked}
         className={cn('h-9 w-40 justify-between max-sm:w-full', isHouseLocked && LOCKED_CLASS)}
-      />
-      <SelectMenu
+      />}
+      {depth === 'zone' && <SelectMenu
         ariaLabel={t('scope.zoneLabel')}
         value={isZoneLocked ? '' : scope.zone?._id ?? ''}
         options={zoneOptions}
@@ -71,7 +73,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         warningLabel={t('scope.warning')}
         disabled={isZoneLocked}
         className={cn('h-9 w-36 justify-between max-sm:w-full', isZoneLocked && LOCKED_CLASS)}
-      />
+      />}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 // Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận; Kỹ thuật viên vào vòng đếm và đọc tham số, lịch đếm, luật thời tiết (G-33)
 import { lazy } from 'react';
-import { Route, Navigate, Outlet } from 'react-router-dom';
+import { Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
-import { EXPERT_DECISION_ROLES, EXPERT_ROLES, FARM_WORK_ROLES } from '@/constants/roles';
+import { EXPERT_DECISION_ROLES, EXPERT_ROLES, FARM_WORK_ROLES, scopeDepthOf } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
 import ExpertReadOnlyBadge from '@/components/features/domain-expert/ExpertReadOnlyBadge';
 import ScopeFilter from '@/components/common/ScopeFilter';
@@ -36,10 +36,11 @@ function decision(page: JSX.Element): JSX.Element {
 // Khung chung của /domain-expert/*
 function DomainExpertShell() {
   const scope = useScopeFilter();
+  const { pathname } = useLocation();
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
       <HeaderActions>
-        <ScopeFilter scope={scope} />
+        <ScopeFilter scope={scope} depth={scopeDepthOf(pathname)} />
       </HeaderActions>
       <ExpertReadOnlyBadge />
       <Outlet />

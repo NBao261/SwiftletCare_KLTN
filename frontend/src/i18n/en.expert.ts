@@ -291,7 +291,7 @@ const enExpert: Record<string, string> = {
   // Kiểm chứng cảnh báo, Tham số, Bù thời tiết
   'Tất cả Zone': 'All zones',
   'Lọc theo Zone': 'Filter by zone',
-  'Áp cho Zone {{zone}}': 'Applies to zone {{zone}}',
+  'Đang chỉnh Zone {{zone}}': 'Editing zone {{zone}}',
   'Thêm luật bù thời tiết': 'Add weather rule',
   // Duyệt & đề xuất, Báo cáo & kết luận, Lịch sử
   'Duyệt & đề xuất': 'Reviews & proposals',
@@ -394,8 +394,7 @@ const enExpert: Record<string, string> = {
   // Ngưỡng & hệ số mờ
   'Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ': 'Automatic check against alert verdicts (feedback loop)',
   'Kết luận trong kỳ': 'Verdict check',
-  'Mặc định (0/0)': 'Default (0/0)',
-  'Chưa có kết luận nào trong kỳ.': 'No verdicts in this period. Keeping the safe default parameters.',
+  'Chưa có cảnh báo nào được kết luận trong kỳ, chưa đủ để đánh giá các tham số này.': 'No alert has a verdict in this period yet, not enough to judge these parameters.',
   '100% chuẩn xác ({{n}}/{{n}})': '100% accurate ({{n}}/{{n}})',
   'Mọi cảnh báo trong kỳ đều được xác nhận đúng.': 'Every alert was confirmed. The parameters work well.',
   'Tăng biên độ ồn vượt nền.': 'Raise the noise margin.',
@@ -496,8 +495,8 @@ const enExpert: Record<string, string> = {
   'Mưa:': 'Rain:',
   'Đã lưu luật bù thời tiết.': 'Weather rules saved.',
   'Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).': 'No offset since the rules were saved (or no rule matched the forecast).',
-  'Chưa có luật nào. Bấm Thêm luật để tạo luật đầu tiên.': 'No rules yet. Press Add rule to create the first one.',
-  'Chưa có luật nào.': 'No rules yet.',
+  'Nhà này chưa có luật bù thời tiết.': 'This house has no weather compensation rule yet.',
+  'Bấm "Thêm luật" ở góc trên để thêm luật đầu tiên.': 'Press "Add rule" at the top to add the first one.',
   'Chọn nhà yến ở thanh trên để xem luật bù thời tiết': 'Choose a house in the bar above to see its weather rules',
   'Luật bù phun sương theo thời tiết': 'Weather misting compensation rules',
   'Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.':

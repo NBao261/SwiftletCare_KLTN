@@ -50,17 +50,12 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
     return (
       <div className="mb-3 rounded-xl border border-stone-200/90 border-l-4 border-l-[#8BAF2A] bg-[#FAF9F5] px-3.5 py-2.5 shadow-2xs"
         title={t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <ShieldCheck className="w-4 h-4 text-[#4A5C00] shrink-0" />
-            <span className="font-bold text-xs text-[#27231F] whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
-          </div>
-          <span className="text-small font-semibold px-2 py-0.5 rounded-full bg-stone-200/70 text-stone-700 whitespace-nowrap shrink-0">
-            {t('Mặc định (0/0)')}
-          </span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <ShieldCheck className="w-4 h-4 text-[#4A5C00] shrink-0" />
+          <span className="font-bold text-xs text-[#27231F] whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
         </div>
         <p className="mt-1 text-xs text-stone-600 leading-snug">
-          {t('Chưa có kết luận nào trong kỳ.')}
+          {t('Chưa có cảnh báo nào được kết luận trong kỳ, chưa đủ để đánh giá các tham số này.')}
         </p>
       </div>
     )
