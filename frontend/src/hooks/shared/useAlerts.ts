@@ -3,7 +3,7 @@ import { alertApi } from '@/apis/shared/alerts.api'
 import { canAccessPath } from '@/constants/roles'
 import { useAuthStore } from '@/stores/authStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
-import type { Alert, AlertSeverity, AlertStatus, AlertType, SiteCause } from '@/types'
+import type { Alert, AlertSeverity, AlertStatus, AlertType, OnsiteObservation, SiteCause } from '@/types'
 
 export interface AlertsListQuery {
   // lọc theo trang trại, nhà hoặc Zone, mức, loại và kết luận chuyên gia
@@ -80,6 +80,18 @@ export function useAcknowledgeAlert() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['alerts'] })
       void queryClient.invalidateQueries({ queryKey: ['farm-overview'] })
+    },
+  })
+}
+
+// Trả lời xong: câu trả lời vào bằng chứng; SENSOR_ANOMALY "cảm biến bẩn hoặc hỏng" thì backend mở phiếu sửa
+export function useAnswerOnsiteCheck() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string; observation: OnsiteObservation; note?: string; photo?: File }) => alertApi.answerOnsiteCheck(id, input),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['alerts'] })
+      void queryClient.invalidateQueries({ queryKey: ['work-orders'] })
     },
   })
 }

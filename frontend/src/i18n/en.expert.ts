@@ -3,6 +3,8 @@ const enExpert: Record<string, string> = {
   // ── Khung chung: thanh chọn khu vực, lời nhắc quyền, màn trống ─────────────────────────────────────────────────────
   'Chuyên gia duyệt lại': 'Reviewed by the expert',
   'Quyết định thay': 'Deciding for expert',
+  'Chỉ xem': 'View only',
+  'Chuyên gia và chủ nhà yến đặt các thông số này. Bạn xem để đối chiếu khi làm việc tại nhà yến.': 'The expert and the farm owner set these values. You read them to check your work at the house.',
   'Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.':
     'This farm has no expert: you decide in their place on alert verdicts, detection parameters, the counting schedule, the counting ring and weather rules. Report and season conclusions and profile approval are for an expert only.',
   'Không có cảnh báo chờ kiểm chứng': 'No incidents awaiting review',
@@ -494,7 +496,8 @@ const enExpert: Record<string, string> = {
   'Mưa:': 'Rain:',
   'Đã lưu luật bù thời tiết.': 'Weather rules saved.',
   'Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).': 'No offset since the rules were saved (or no rule matched the forecast).',
-  'Chưa có luật nào. Thêm luật đầu tiên bên dưới.': 'No rules yet. Add the first one below.',
+  'Chưa có luật nào. Bấm Thêm luật để tạo luật đầu tiên.': 'No rules yet. Press Add rule to create the first one.',
+  'Chưa có luật nào.': 'No rules yet.',
   'Chọn nhà yến ở thanh trên để xem luật bù thời tiết': 'Choose a house in the bar above to see its weather rules',
   'Luật bù phun sương theo thời tiết': 'Weather misting compensation rules',
   'Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.':

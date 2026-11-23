@@ -6,6 +6,7 @@ import TableEmptyState from '@/components/common/TableEmptyState';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import AcknowledgeAlertModal from '@/components/features/farm-owner/alerts/AcknowledgeAlertModal';
 import AlertDetailDrawer from '@/components/features/farm-owner/alerts/AlertDetailDrawer';
+import OnsiteCheckModal from '@/components/features/farm-owner/alerts/OnsiteCheckModal';
 import AlertTable, { type AlertAction } from '@/components/features/farm-owner/alerts/AlertTable';
 import { Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
 import { alertsDict } from '@/constants/alerts.i18n';
@@ -97,6 +98,8 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
     if (highlightId) setDetailId(highlightId);
   }, [highlightId]);
   const [ackAlert, setAckAlert] = useState<Alert | null>(null);
+  // Kỹ thuật viên trả lời yêu cầu kiểm tra tại chỗ của cảnh báo suy luận
+  const [onsiteAlert, setOnsiteAlert] = useState<Alert | null>(null);
 
   // Vị trí: "Nhà > Zone", hoặc tên nhà với cảnh báo cả nhà (camera); thiết bị: mã bộ điều khiển hoặc camera
   const { data: allZones } = useAllZones();
@@ -228,9 +231,14 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
           closeDetail();
           setAckAlert(alert);
         }}
+        onAnswerOnsiteCheck={isTechnician ? alert => {
+          closeDetail();
+          setOnsiteAlert(alert);
+        } : undefined}
         onClose={closeDetail}
       />
       <AcknowledgeAlertModal alert={ackAlert} onClose={() => setAckAlert(null)} />
+      <OnsiteCheckModal alert={onsiteAlert} onClose={() => setOnsiteAlert(null)} />
     </div>
   );
 }

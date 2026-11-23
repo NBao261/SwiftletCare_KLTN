@@ -1,4 +1,4 @@
-import { alertStatusDict, alertTypeDict, prefixLabels, siteCauseDict } from '@/constants/enumLabels.i18n';
+import { alertStatusDict, alertTypeDict, onsiteObservationDict, prefixLabels, siteCauseDict } from '@/constants/enumLabels.i18n';
 import { levelDict } from '@/constants/severity.i18n';
 import type { Dictionary } from '@/lib/i18n';
 
@@ -73,7 +73,23 @@ const vi = {
   'ack.submit': 'Xác nhận',
   'ack.done': 'Đã xác nhận cảnh báo',
 
+  // Kiểm tra tại chỗ của Kỹ thuật viên (cảnh báo suy luận)
+  'onsite.title': 'Kiểm tra tại chỗ',
+  'onsite.pending': 'Chuyên gia cần biết bạn thấy gì tại nhà yến trước khi kết luận cảnh báo này.',
+  'onsite.answer': 'Trả lời kiểm tra tại chỗ',
+  'onsite.observation': 'Bạn thấy gì tại nhà yến?',
+  'onsite.note': 'Ghi chú',
+  'onsite.notePlaceholder': 'Mô tả ngắn điều bạn thấy (không bắt buộc)',
+  'onsite.photo': 'Ảnh tại chỗ (không bắt buộc, 1 ảnh)',
+  'onsite.photoInvalid': 'Ảnh phải là JPEG, PNG hoặc WebP, tối đa 5 MB.',
+  'onsite.opensWorkOrder': 'Gửi xong, hệ thống mở phiếu công việc sửa cảm biến.',
+  'onsite.cancel': 'Huỷ',
+  'onsite.submit': 'Gửi',
+  'onsite.done': 'Đã gửi quan sát',
+  'onsite.doneWorkOrder': 'Đã gửi quan sát, phiếu công việc sửa cảm biến đã được mở',
+
   ...prefixLabels('type.', alertTypeDict.vi),
+  ...prefixLabels('observation.', onsiteObservationDict.vi),
   ...prefixLabels('status.', alertStatusDict.vi),
   ...prefixLabels('cause.', siteCauseDict.vi),
   ...prefixLabels('level.', levelDict.vi),
@@ -149,7 +165,22 @@ const en: Record<AlertsKey, string> = {
   'ack.submit': 'Acknowledge',
   'ack.done': 'Alert acknowledged',
 
+  'onsite.title': 'On-site check',
+  'onsite.pending': 'The expert needs to know what you see at the house before concluding on this alert.',
+  'onsite.answer': 'Answer the on-site check',
+  'onsite.observation': 'What do you see at the house?',
+  'onsite.note': 'Note',
+  'onsite.notePlaceholder': 'A short description of what you saw (optional)',
+  'onsite.photo': 'Photo on site (optional, 1 photo)',
+  'onsite.photoInvalid': 'The photo must be JPEG, PNG or WebP, at most 5 MB.',
+  'onsite.opensWorkOrder': 'Once sent, the system opens a Work Order to repair the sensor.',
+  'onsite.cancel': 'Cancel',
+  'onsite.submit': 'Send',
+  'onsite.done': 'Observation sent',
+  'onsite.doneWorkOrder': 'Observation sent; a Work Order to repair the sensor was opened',
+
   ...prefixLabels('type.', alertTypeDict.en),
+  ...prefixLabels('observation.', onsiteObservationDict.en),
   ...prefixLabels('status.', alertStatusDict.en),
   ...prefixLabels('cause.', siteCauseDict.en),
   ...prefixLabels('level.', levelDict.en),

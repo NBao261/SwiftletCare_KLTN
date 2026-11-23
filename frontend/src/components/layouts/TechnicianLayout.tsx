@@ -1,5 +1,5 @@
 import {
-  BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, SquaresFourIcon, WarningIcon, WrenchIcon,
+  BasketIcon, BirdIcon, ChartBarIcon, CpuIcon, HeartbeatIcon, HouseIcon, SlidersHorizontalIcon, SquaresFourIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
@@ -46,6 +46,17 @@ const menuSections: MenuSection[] = [
         ],
       },
       { label: 'Thiết bị & Cảm biến', path: '/devices', icon: CpuIcon },
+      {
+        // Chỉ đọc: chuyên gia và chủ nhà yến đặt, thợ đối chiếu khi làm việc tại nhà yến
+        label: 'Tham số',
+        path: '/domain-expert/tuning',
+        icon: SlidersHorizontalIcon,
+        tabs: [
+          { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning' },
+          { label: 'Lịch đếm', path: '/domain-expert/counting-schedule' },
+          { label: 'Bù thời tiết', path: '/domain-expert/weather-rules' },
+        ],
+      },
       { label: 'Nhà được giao', path: '/farms', icon: HouseIcon },
       { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
     ],

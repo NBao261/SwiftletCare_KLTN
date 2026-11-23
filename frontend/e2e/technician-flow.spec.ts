@@ -196,3 +196,14 @@ test('T9 — theo dõi nhà được giao: tổng quan, điều khiển tay, đ�
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
+
+test('T10 — tham số, lịch đếm, luật thời tiết chỉ đọc (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/domain-expert/tuning');
+  for (const path of ['/domain-expert/tuning', '/domain-expert/counting-schedule', '/domain-expert/weather-rules']) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+    await expect(page.getByText('Chỉ xem', { exact: true }), path).toBeVisible();
+  }
+  await expect(page.getByRole('button', { name: 'Thêm luật' })).toHaveCount(0);
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
