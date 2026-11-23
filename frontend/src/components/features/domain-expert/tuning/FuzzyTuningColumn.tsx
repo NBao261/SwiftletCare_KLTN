@@ -8,6 +8,7 @@ import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation
 import FuzzySuggestionBox, { type SuggestionAction } from '@/components/features/domain-expert/tuning/FuzzySuggestionBox'
 import type { TuningBlockHandle } from './tuning.utils'
 import type { ExpertFuzzyTuning, FuzzySuggestionResponse } from '@/types/expert.types'
+import StepperValueInput from './StepperValueInput'
 
 interface Props {
   data: ExpertFuzzyTuning | undefined
@@ -54,9 +55,15 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
             atMin ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           −
         </button>
-        <span className="text-sm font-bold text-charcoal px-2 py-0.5 rounded bg-white border border-stone-200/80 min-w-[76px] text-center">
-          {value.toFixed(decimals)} <span className="text-xs font-normal text-warmGray">{unit}</span>
-        </span>
+        <StepperValueInput
+          value={value}
+          onChange={onChange}
+          clamp={clamp}
+          decimals={decimals}
+          label={label}
+          unit={unit}
+          className="text-sm font-bold text-charcoal px-2 py-0.5 rounded bg-white border border-stone-200/80 min-w-[76px]"
+        />
         <button type="button" onClick={() => onChange(clamp(value + step))} disabled={atMax}
           aria-label={t('Tăng {{label}}', { label })}
           className={cn('h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
