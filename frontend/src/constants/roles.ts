@@ -123,6 +123,7 @@ const SCOPE_LEVEL: { path: string; level: ScopeLevel }[] = [
   { path: '/recommendations',                     level: 'farm' },
   { path: '/work-orders',                         level: 'farm' },
   { path: '/health',                              level: 'farm' },
+  { path: '/domain-expert/queue',                level: 'farm' },
   { path: '/domain-expert/alert-verdicts',        level: 'farm' },
   { path: '/domain-expert/reviews',               level: 'farm' },
   { path: '/domain-expert/profiles',              level: 'farm' },

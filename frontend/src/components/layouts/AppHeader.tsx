@@ -18,9 +18,11 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
   const navigationLabel = useNavigationLabel()
   const items = [...menuSections.flatMap(section => section.items), ...AVATAR_MENU_PAGES]
   const match = items.find(item => isMenuItemActive(item, pathname))
-  // Ở một tab: tên trang là tên mục menu, gốc breadcrumb là tab đang mở (không bấm được)
+  // Ở một tab: tên trang là tên tab đang mở (W-16), gốc breadcrumb là tab đó
   const tabPath = activeTabPath(match?.tabs ?? [], pathname)
-  return { label: match ? navigationLabel(match.label) : 'SwiftletCare', to: tabPath ?? match?.path ?? pathname }
+  const tab = match?.tabs?.find(item => item.path === tabPath)
+  const label = tab ?? match
+  return { label: label ? navigationLabel(label.label) : 'SwiftletCare', to: tabPath ?? match?.path ?? pathname }
 }
 
 // `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung

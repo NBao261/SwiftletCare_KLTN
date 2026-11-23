@@ -143,9 +143,10 @@ export default function DomainExpertReportsPage() {
               {i18nT('Kết luận mùa vụ')}
             </button>
           </nav>
-          <span className="text-xs text-warmGray">
+          {/* Mô tả tab nằm dòng riêng dưới hàng tab, không đứng cạnh như một tab bị khoá */}
+          <p className="w-full text-small text-warmGray">
             {getTabDescription(activeTab)}
-          </span>
+          </p>
         </div>
 
         {renderTabContent()}

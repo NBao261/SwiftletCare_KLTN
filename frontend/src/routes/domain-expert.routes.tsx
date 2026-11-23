@@ -1,6 +1,6 @@
 // Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận
 import { lazy } from 'react';
-import { Route, Navigate, Outlet } from 'react-router-dom';
+import { Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
 import { EXPERT_DECISION_ROLES, EXPERT_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -27,13 +27,21 @@ function DomainExpertIndexRedirect() {
   return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
 }
 
+// Trang chỉ đọc theo trại, theo nhà (lịch, vòng đếm, luật thời tiết, báo cáo, lịch sử) hay theo Zone (ngưỡng)
+const FARM_ONLY_PAGES = ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/domain-expert/reviews', '/domain-expert/profiles', '/domain-expert/recommendation-rules']
+function scopeDepthOf(path: string): 'farm' | 'house' | 'zone' {
+  if (path.startsWith('/domain-expert/tuning')) return 'zone';
+  return FARM_ONLY_PAGES.some(page => path.startsWith(page)) ? 'farm' : 'house';
+}
+
 // Khung chung của /domain-expert/*
 function DomainExpertShell() {
   const scope = useScopeFilter();
+  const { pathname } = useLocation();
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
       <HeaderActions>
-        <ScopeFilter scope={scope} />
+        <ScopeFilter scope={scope} depth={scopeDepthOf(pathname)} />
       </HeaderActions>
       <ExpertReadOnlyBadge />
       <Outlet />

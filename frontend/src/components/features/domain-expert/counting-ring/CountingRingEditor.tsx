@@ -138,7 +138,8 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="relative">
+      {/* Khung video giới hạn bề rộng để các nút vẽ vẫn nằm trong màn hình */}
+      <div className="relative mx-auto w-full max-w-3xl">
         <CountingRingCanvas
           videoRef={videoRef}
           rings={(isEditing ? rings : shown.rings).map(ring => ring.points)}
