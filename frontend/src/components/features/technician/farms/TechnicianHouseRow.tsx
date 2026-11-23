@@ -1,4 +1,5 @@
 import { ArrowRightIcon, CheckCircleIcon, HouseIcon, InfoIcon, WarningIcon } from '@phosphor-icons/react'
+import { NO_VALUE } from '@/constants/display'
 import HealthBadge from '@/components/features/farm-owner/farms/HealthBadge'
 import { METRIC_BY_KEY } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { ownShiftLines } from '@/components/features/technician/farms/ownShifts'
@@ -88,7 +89,7 @@ export default function TechnicianHouseRow({ node, onOpen }: TechnicianHouseRowP
         <div className="flex items-baseline justify-between gap-2">
           <span className="label-caption">{t('stat.online')}</span>
           <span className={cn('text-small font-semibold', offline > 0 ? 'text-climateOrange' : 'text-charcoal')}>
-            {isEmpty ? '—' : `${num(counts.online)}/${num(counts.total)}`}
+            {isEmpty ? NO_VALUE : `${num(counts.online)}/${num(counts.total)}`}
           </span>
         </div>
         <div
