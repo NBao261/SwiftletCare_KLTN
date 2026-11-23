@@ -76,7 +76,7 @@ export interface HealthDayRating {
   snapshot?: { status: HealthDayStatus; reasons: HealthReason[] }
 }
 
-// Trạng thái 1 ngày của 1 nhà (HouseHealthDay). Ngày người gọi còn PENDING không có các trường đánh dấu "ẩn" (BR-31)
+// Trạng thái 1 ngày của 1 nhà (HouseHealthDay): đủ mọi trường kể cả khi người gọi còn PENDING (BR-31, Report 3 4.2.14)
 export interface HouseHealthDay {
   _id: string
   house_id: string
@@ -86,18 +86,14 @@ export interface HouseHealthDay {
   date: string
   weather: HealthDayWeather | null
   computed_at?: string
+  // null: người gọi không phải người chấm (Domain Expert)
   my_rating_state: MyRatingState | null
   rating_deadline: string
-  // ẩn khi PENDING
-  indicators?: Partial<Record<HealthSource, HealthIndicator>>
-  // ẩn khi PENDING
-  completeness?: Partial<Record<HealthSource, boolean>>
-  // ẩn khi PENDING
-  current_status?: HealthDayStatus
-  // ẩn khi PENDING
-  current_reasons?: HealthReason[]
-  // ẩn khi PENDING
-  ratings?: HealthDayRating[]
+  indicators: Partial<Record<HealthSource, HealthIndicator>>
+  completeness: Partial<Record<HealthSource, boolean>>
+  current_status: HealthDayStatus
+  current_reasons: HealthReason[]
+  ratings: HealthDayRating[]
 }
 
 export type HouseHealthReportKind = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM'
@@ -135,7 +131,7 @@ export interface HealthReportZoneSection {
   co2_max: number | null
 }
 
-// Báo cáo sức khỏe 1 nhà trong 1 kỳ (HouseHealthReport) — ngày người gọi chưa chấm bị che (BR-31)
+// Báo cáo sức khỏe 1 nhà trong 1 kỳ (HouseHealthReport)
 export interface HouseHealthReport extends HouseHealthReportSummary {
   house_metrics?: {
     return_rate_trend: { date: string; return_rate: number | null; complete: boolean }[]
@@ -151,7 +147,6 @@ export interface HouseHealthReport extends HouseHealthReportSummary {
   zone_sections?: HealthReportZoneSection[]
   days?: HouseHealthDay[]
   status_counts?: Partial<Record<HealthDayStatus, number>>
-  hidden_days?: number
   expert_conclusion: ExpertConclusion | null
 }
 

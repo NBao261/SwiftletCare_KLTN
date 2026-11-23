@@ -20,7 +20,7 @@ interface ProfileRowProps {
   onPress?: () => void
   // Thao tác phá huỷ (yêu cầu xoá tài khoản): chữ và icon màu cảnh báo
   isDestructive?: boolean
-  // Nội dung bên phải thay mũi tên, ví dụ công tắc hoặc nhãn "Dữ liệu mẫu"
+  // Nội dung bên phải thay mũi tên, ví dụ công tắc
   trailing?: ReactNode
   // Kẻ đường mảnh dưới hàng, trừ hàng cuối của thẻ
   hasDivider?: boolean

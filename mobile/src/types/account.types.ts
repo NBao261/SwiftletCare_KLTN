@@ -42,11 +42,29 @@ export interface ExpertActivityEntry {
 // Mục duyệt thay đổi của Farm Owner trên farm có chuyên gia (EXPERT-FR-010, api-spec ParameterReview)
 export type ChangeReviewStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REVERTED' | 'ADJUSTED'
 
+// Nhóm tham số của mục duyệt (BR-22, Report 3 4.2.15): theo Zone (thresholds, fuzzy, detection), theo nhà (return_rate_drop,
+// health_levels, counting_schedule), theo camera (counting_ring) — khớp PARAMETER_GROUPS của backend
+export type ParameterReviewGroup =
+  | 'thresholds'
+  | 'fuzzy'
+  | 'detection'
+  | 'return_rate_drop'
+  | 'health_levels'
+  | 'counting_schedule'
+  | 'counting_ring'
+
 export interface ParameterReview {
   _id: string
-  zone_id: string
+  // Zone, nhà hoặc camera của thay đổi
+  target_id?: string
+  // Chỉ có ở nhóm theo Zone
+  zone_id?: string
+  // Nhà của đối tượng (mục cũ trước Report 3 4.2.15 có thể thiếu, khi đó tìm nhà qua Zone)
+  house_id?: string
+  // Chỉ có ở nhóm counting_ring
+  camera_node_id?: string
   farm_id: string
-  group: 'thresholds' | 'fuzzy'
+  group: ParameterReviewGroup
   old_values: Record<string, unknown>
   new_values: Record<string, unknown>
   status: ChangeReviewStatus

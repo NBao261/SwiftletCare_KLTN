@@ -11,7 +11,8 @@ export const NOTIFICATION_UNREAD_KEY = ['notifications', 'unread-count'] as cons
 export const ALERT_BADGE_KEY = ['alerts', 'badge'] as const
 
 // Bấm một thông báo thì đi đâu: cảnh báo mở đúng cảnh báo ở tab Cảnh báo, báo cáo mở tab Phân tích, Work Order mở trang chi tiết
-// Work Order (G-21), ngày đánh giá mở health/[dayId] (MF-06), còn lại mở trang chi tiết thông báo
+// Work Order (G-21), ngày đánh giá mở health/[dayId] (MF-06), còn lại (kể cả weather_rules, config_profile,
+// recommendation_rule, harvest_cycle chưa có màn trên mobile) mở trang chi tiết thông báo
 export type NotificationTarget =
   | { kind: 'alert'; alertId: string }
   | { kind: 'report'; reportId: string }

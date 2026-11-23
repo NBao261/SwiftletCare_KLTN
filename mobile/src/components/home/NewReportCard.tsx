@@ -107,8 +107,7 @@ export function NewReportCard() {
   }
 
   return (
-    // Mở tab Báo cáo của Phân tích, đúng nhà và báo cáo; đánh dấu thông báo đã đọc.
-    // Báo cáo che các ngày chủ chưa chấm (BR-31, backend) nên không lộ trạng thái
+    // Mở tab Báo cáo của Phân tích, đúng nhà và báo cáo; đánh dấu thông báo đã đọc
     <Card
       onPress={openReports}
       accessibilityHint={t('Mở báo cáo ở Phân tích')}

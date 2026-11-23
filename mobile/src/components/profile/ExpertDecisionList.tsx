@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { GavelIcon, PencilSimpleIcon } from 'phosphor-react-native'
+import { ActivityDetailSheet } from '@/components/profile/ActivityDetailSheet'
 import { ProfileRow } from '@/components/profile/ProfileRow'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,9 +11,15 @@ import { Radius, Spacing } from '@/constants/theme'
 import { useExpertActivityList } from '@/hooks/expert-activity/useExpertActivityList'
 import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import type { ExpertActivityEntry } from '@/types'
-import { describeActivityChanges, getActivityVerdict, getExpertActionLabel } from '@/utils/account.utils'
+import {
+  type ActivityDetail,
+  buildDecisionDetail,
+  getDecisionActorText,
+  getDecisionLines,
+  getDetailPreview,
+  getExpertActionLabel,
+} from '@/utils/account.utils'
 import { formatDateTime } from '@/utils/date.utils'
-import { getRoleLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
 const LIST_SKELETON_HEIGHT = 160
@@ -28,6 +36,8 @@ interface ExpertDecisionListProps {
 export function ExpertDecisionList({ farmId, enabled, highlightedId }: ExpertDecisionListProps) {
   const directory = useZoneDirectory()
   const decisionsQuery = useExpertActivityList(farmId, enabled)
+  // Quyết định đang mở trong bảng chi tiết; null là bảng đóng
+  const [openedDetail, setOpenedDetail] = useState<ActivityDetail | null>(null)
 
   // Nơi áp dụng: nhà › khu vực, tra tên từ danh sách đã tải; không có thì bỏ
   const getScopeText = (zoneId?: string | null, houseId?: string | null): string => {
@@ -36,25 +46,20 @@ export function ExpertDecisionList({ farmId, enabled, highlightedId }: ExpertDec
     return [house?.name, zone?.name].filter(Boolean).join(' › ')
   }
 
+  // Danh sách gọn: giờ đứng đầu dòng phụ để không bị tên nhà dài đẩy mất, chi tiết chỉ vài dòng đầu; bấm để xem đủ
   const renderDecision = (entry: ExpertActivityEntry, index: number, total: number) => {
-    const verdict = getActivityVerdict(entry.metadata)
+    const scopeText = getScopeText(entry.zone_id, entry.house_id)
     return (
       <ProfileRow
         key={entry._id}
         icon={entry.action === 'ALERT_VERDICT_SET' ? GavelIcon : PencilSimpleIcon}
         label={getExpertActionLabel(entry.action)}
         value={entry._id === highlightedId ? t('Thông báo này') : undefined}
-        caption={[
-          `${entry.actor?.full_name ?? '_'} (${getRoleLabel(entry.actor_role)}) · ${formatDateTime(entry.created_at)}`,
-          getScopeText(entry.zone_id, entry.house_id),
-        ]
+        caption={[`${formatDateTime(entry.created_at)} · ${getDecisionActorText(entry)}`, scopeText]
           .filter(Boolean)
           .join('\n')}
-        // Chi tiết đủ, không cắt: kết luận cảnh báo, chỉ số nào đổi từ bao nhiêu thành bao nhiêu, ghi chú / lý do
-        details={[
-          ...(verdict ? [verdict === 'CONFIRMED' ? t('Kết luận: cảnh báo đúng') : t('Kết luận: bác bỏ cảnh báo')] : []),
-          ...describeActivityChanges(entry),
-        ]}
+        details={getDetailPreview(getDecisionLines(entry))}
+        onPress={() => setOpenedDetail(buildDecisionDetail(entry, scopeText))}
         hasDivider={index < total - 1}
       />
     )
@@ -83,6 +88,7 @@ export function ExpertDecisionList({ farmId, enabled, highlightedId }: ExpertDec
           onPress={() => decisionsQuery.fetchNextPage()}
         />
       )}
+      {openedDetail && <ActivityDetailSheet detail={openedDetail} onClose={() => setOpenedDetail(null)} />}
     </>
   )
 }

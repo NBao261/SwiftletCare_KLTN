@@ -23,7 +23,7 @@ interface HouseReportDetailProps {
   onEditConclusion?: () => void
 }
 
-// Phần mở rộng của một báo cáo theo nhà (EXPERT-FR-005/006): trạng thái các ngày (che theo BR-31), đàn chim,
+// Phần mở rộng của một báo cáo theo nhà (EXPERT-FR-005/006): trạng thái các ngày, đàn chim,
 // thời tiết, các ngày, từng Zone, kết luận của chuyên gia
 export function HouseReportDetail({ report, hasExpert, onEditConclusion }: HouseReportDetailProps) {
   const palette = usePalette()
@@ -31,7 +31,6 @@ export function HouseReportDetail({ report, hasExpert, onEditConclusion }: House
     const count = report.status_counts?.[status] ?? 0
     return count > 0 ? [{ status, count }] : []
   })
-  const hiddenDays = report.hidden_days ?? 0
   const metrics = report.house_metrics
   const weather = metrics?.weather ?? null
   const incompleteDays = (metrics?.return_rate_trend ?? []).filter(item => !item.complete).length
@@ -59,19 +58,6 @@ export function HouseReportDetail({ report, hasExpert, onEditConclusion }: House
                 </Text>
               </View>
             ))}
-          </View>
-        )}
-        {/* Ngày người dùng chưa chấm bị che trong báo cáo (BR-31) — mời chấm thay vì lộ trạng thái */}
-        {hiddenDays > 0 && (
-          <View style={styles.hiddenRow}>
-            <Text variant="small" color={palette.textSecondary} style={styles.flex}>
-              {t('{count} ngày bạn chưa đánh giá đang bị ẩn', { count: hiddenDays })}
-            </Text>
-            <Button
-              label={t('Đánh giá')}
-              variant="link"
-              onPress={() => router.push({ pathname: '/health', params: { houseId: report.house_id } })}
-            />
           </View>
         )}
       </View>
@@ -173,10 +159,8 @@ export function HouseReportDetail({ report, hasExpert, onEditConclusion }: House
 const styles = StyleSheet.create({
   detail: { gap: Spacing.lg, paddingBottom: Spacing.md },
   section: { gap: Spacing.sm },
-  flex: { flex: 1 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   badgeCount: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  hiddenRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   zone: { borderTopWidth: BorderWidth.hairline, paddingTop: Spacing.md },
   conclusion: { borderRadius: Radius.sm, padding: Spacing.md, gap: Spacing.xs },
 })

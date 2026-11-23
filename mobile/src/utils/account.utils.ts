@@ -1,11 +1,14 @@
 import type {
   BirdCountTuning,
   ChangeReviewStatus,
+  CoefficientProposal,
   DetectionTuning,
   ExpertActivityEntry,
   FarmMember,
   InvitedRole,
   FuzzyTuning,
+  HealthLevels,
+  ParameterReview,
   ProposalStatus,
   Thresholds,
 } from '@/types'
@@ -13,8 +16,12 @@ import {
   getBirdCountTuningLabel,
   getDetectionTuningLabel,
   getFuzzyTuningLabel,
+  getHealthLevelLabel,
+  getParameterReviewGroupLabel,
+  getRoleLabel,
   getThresholdKeyLabel,
 } from '@/utils/label.utils'
+import { formatDateTime } from '@/utils/date.utils'
 import { formatStoredNumber } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -133,12 +140,25 @@ const THRESHOLD_KEYS = new Set<string>(['temp_min', 'temp_max', 'humidity_min', 
 const FUZZY_KEYS = new Set<string>(['fuzzy_humidity_band', 'fuzzy_temp_band', 'fuzzy_fan_dry_level', 'fuzzy_window_sec', 'fuzzy_input_filter'])
 const DETECTION_KEYS = new Set<string>(['noise_margin_db', 'noise_min_sec', 'pump_dry_on_sec', 'pump_dry_min_rise_pct', 'speaker_drop_pct'])
 const BIRD_COUNT_KEYS = new Set<string>(['return_rate_drop_pct'])
+const HEALTH_LEVEL_KEYS = new Set<string>([
+  'in_range_slight_pct',
+  'in_range_clear_pct',
+  'air_slight_h',
+  'air_clear_h',
+  'noise_slight',
+  'noise_clear',
+])
 
 function getChangeKeyLabel(key: string): { label: string; unit: string } | null {
   if (THRESHOLD_KEYS.has(key)) return getThresholdKeyLabel(key as keyof Thresholds)
   if (FUZZY_KEYS.has(key)) return getFuzzyTuningLabel(key as keyof FuzzyTuning)
   if (DETECTION_KEYS.has(key)) return getDetectionTuningLabel(key as keyof DetectionTuning)
   if (BIRD_COUNT_KEYS.has(key)) return getBirdCountTuningLabel(key as keyof BirdCountTuning)
+  if (HEALTH_LEVEL_KEYS.has(key)) {
+    // Đơn vị mức sức khỏe không có dấu cách đầu ("giờ", "đợt") nên thêm vào, trừ "%" viết liền số
+    const { label, unit } = getHealthLevelLabel(key as keyof HealthLevels)
+    return { label, unit: unit === '%' ? unit : ` ${unit}` }
+  }
   return null
 }
 
@@ -196,16 +216,51 @@ export function humanizeChangeText(text: string): string {
   })
 }
 
-// Vòng đếm mới: số đỉnh và phía nào là trong vòng (VISION-FR-018)
+// Một vòng đếm: số đỉnh và phía nào là trong vòng (VISION-FR-018)
+function describeOneRing(ring: Record<string, unknown>, points: unknown[]): string {
+  return t('Vòng đếm {count} đỉnh, {side}', {
+    count: points.length,
+    side: ring.into_ring_is_exit ? t('trong vòng là phía ngoài trời') : t('trong vòng là phía trong nhà'),
+  })
+}
+
+// Vòng đếm sau khi đổi. Backend lưu 2 kiểu: danh sách 0–4 vòng (bản mới, [] là đã xoá và camera dùng lại vòng mặc định)
+// hoặc một vòng (mục cũ trước khi camera có nhiều vòng); không có dữ liệu thì không ghi gì
 function describeCountingRing(after: unknown): string[] {
-  const ring = asRecord(after)
-  if (!ring || !Array.isArray(ring.points)) return []
+  if (after === undefined || after === null) return []
+  const rings = Array.isArray(after) ? after : [after]
+  if (rings.length === 0) return [t('Xoá vòng đếm, camera dùng lại vòng mặc định')]
+  const lines: string[] = []
+  for (const item of rings) {
+    const ring = asRecord(item)
+    if (ring && Array.isArray(ring.points)) lines.push(describeOneRing(ring, ring.points))
+  }
+  return lines
+}
+
+// Đếm phần tử của một danh sách trong lịch đếm (hồ sơ theo mùa, khung tạm); không phải danh sách thì 0
+function countItems(schedule: unknown, key: 'profiles' | 'temporary'): number {
+  const items = asRecord(schedule)?.[key]
+  return Array.isArray(items) ? items.length : 0
+}
+
+// Lịch đếm là cấu trúc lồng nhau nên chỉ tóm tắt số hồ sơ theo mùa và khung tạm trước / sau (VISION-FR-019)
+function describeCountingSchedule(before: unknown, after: unknown): string[] {
   return [
-    t('Vòng đếm {count} đỉnh, {side}', {
-      count: ring.points.length,
-      side: ring.into_ring_is_exit ? t('trong vòng là phía ngoài trời') : t('trong vòng là phía trong nhà'),
-    }),
+    t('Hồ sơ theo mùa: {before} → {after}', { before: countItems(before, 'profiles'), after: countItems(after, 'profiles') }),
+    t('Khung tạm: {before} → {after}', { before: countItems(before, 'temporary'), after: countItems(after, 'temporary') }),
   ]
+}
+
+// Chi tiết một mục chờ chuyên gia duyệt (EXPERT-FR-010): đọc được cho cả 7 nhóm tham số (BR-22)
+export function describeReviewChanges(review: Pick<ParameterReview, 'group' | 'old_values' | 'new_values'>): string[] {
+  if (review.group === 'counting_ring') {
+    // Mục mới ghi new_values.rings (nhiều vòng), mục cũ ghi new_values.ring (một vòng)
+    const newValues = asRecord(review.new_values)
+    return describeCountingRing(newValues?.rings ?? newValues?.ring)
+  }
+  if (review.group === 'counting_schedule') return describeCountingSchedule(review.old_values, review.new_values)
+  return describeValueChanges(review.old_values, review.new_values)
 }
 
 // Chi tiết một quyết định trong lịch sử hoạt động: chỉ số nào đổi, từ bao nhiêu thành bao nhiêu, đặt lại mặc định hay áp gợi
@@ -226,4 +281,95 @@ export function describeActivityChanges(entry: Pick<ExpertActivityEntry, 'action
 
   if (note) lines.push(entry.action === 'PROPOSAL_REJECTED' ? t('Lý do: {note}', { note }) : t('Ghi chú: {note}', { note }))
   return lines
+}
+
+// Số dòng chi tiết hiện trong danh sách; phần còn lại xem ở bảng chi tiết khi bấm vào dòng
+export const PREVIEW_DETAIL_LINES = 2
+
+// Danh sách chỉ hiện vài dòng đầu và thêm dòng "+N dòng khác" để mỗi hàng gọn; đủ hết ở bảng chi tiết
+export function getDetailPreview(lines: string[], maxLines: number = PREVIEW_DETAIL_LINES): string[] {
+  if (lines.length <= maxLines) return lines
+  return [...lines.slice(0, maxLines), t('+{count} dòng khác', { count: lines.length - maxLines })]
+}
+
+// Nội dung bảng chi tiết của một dòng ở màn Hoạt động chuyên gia: tiêu đề, trạng thái, các thông tin (tên – giá trị) và
+// toàn bộ dòng thay đổi, ghi chú
+export interface ActivityDetail {
+  title: string
+  status?: string
+  facts: { label: string; value: string }[]
+  lines: string[]
+}
+
+// Các dòng của một quyết định: kết luận cảnh báo (nếu có) rồi các thay đổi, ghi chú
+export function getDecisionLines(entry: Pick<ExpertActivityEntry, 'action' | 'metadata'>): string[] {
+  const verdict = getActivityVerdict(entry.metadata)
+  const lines = describeActivityChanges(entry)
+  if (verdict === 'CONFIRMED') return [t('Kết luận: cảnh báo đúng'), ...lines]
+  if (verdict === 'REJECTED') return [t('Kết luận: bác bỏ cảnh báo'), ...lines]
+  return lines
+}
+
+// Người làm một quyết định kèm vai trò, ví dụ "Trần An (Chuyên gia)"
+export function getDecisionActorText(entry: Pick<ExpertActivityEntry, 'actor' | 'actor_role'>): string {
+  return `${entry.actor?.full_name ?? '_'} (${getRoleLabel(entry.actor_role)})`
+}
+
+// Bảng chi tiết một quyết định trong lịch sử (EXPERT-FR-009); scopeText là "nhà › Zone" màn đã tra sẵn
+export function buildDecisionDetail(
+  entry: Pick<ExpertActivityEntry, 'action' | 'metadata' | 'actor' | 'actor_role' | 'created_at'>,
+  scopeText: string,
+): ActivityDetail {
+  return {
+    title: getExpertActionLabel(entry.action),
+    facts: [
+      { label: t('Người làm'), value: getDecisionActorText(entry) },
+      { label: t('Lúc'), value: formatDateTime(entry.created_at) },
+      { label: t('Nơi'), value: scopeText || '_' },
+    ],
+    lines: getDecisionLines(entry),
+  }
+}
+
+// Bảng chi tiết một thay đổi của chủ trại chờ chuyên gia duyệt (EXPERT-FR-010); chỉ chuyên gia xử lý mục này (BR-22)
+export function buildReviewDetail(
+  review: Pick<ParameterReview, 'group' | 'status' | 'old_values' | 'new_values' | 'created_at' | 'reviewed_at'>,
+  scopeText: string,
+): ActivityDetail {
+  const facts = [
+    { label: t('Nơi'), value: scopeText || '_' },
+    { label: t('Bạn sửa lúc'), value: formatDateTime(review.created_at) },
+  ]
+  if (review.reviewed_at) facts.push({ label: t('Chuyên gia xử lý lúc'), value: formatDateTime(review.reviewed_at) })
+  return {
+    title: getParameterReviewGroupLabel(review.group),
+    status: getReviewStatusLabel(review.status),
+    facts,
+    lines: describeReviewChanges(review),
+  }
+}
+
+// Các dòng của một gợi ý hệ số đã gửi: hệ số đang dùng → gợi ý, rồi lý do từ chối nếu có
+export function getProposalLines(proposal: Pick<CoefficientProposal, 'current_values' | 'suggested_values' | 'note'>): string[] {
+  const lines = describeValueDiff(proposal.current_values, proposal.suggested_values)
+  if (!proposal.note) return lines
+  return [...lines, t('Lý do: {note}', { note: proposal.note })]
+}
+
+// Bảng chi tiết một gợi ý hệ số chủ trại đã gửi chuyên gia (EXPERT-FR-011)
+export function buildProposalDetail(
+  proposal: Pick<CoefficientProposal, 'status' | 'current_values' | 'suggested_values' | 'note' | 'created_at' | 'decided_at'>,
+  scopeText: string,
+): ActivityDetail {
+  const facts = [
+    { label: t('Nơi'), value: scopeText || '_' },
+    { label: t('Gửi lúc'), value: formatDateTime(proposal.created_at) },
+  ]
+  if (proposal.decided_at) facts.push({ label: t('Chuyên gia quyết định lúc'), value: formatDateTime(proposal.decided_at) })
+  return {
+    title: t('Gợi ý hệ số'),
+    status: getReviewStatusLabel(proposal.status),
+    facts,
+    lines: getProposalLines(proposal),
+  }
 }

@@ -20,6 +20,7 @@ import type {
   RecommendationIndicator,
   RecommendationStatus,
   OnsiteObservation,
+  ParameterReviewGroup,
   RelayName,
   Role,
   SiteCause,
@@ -442,6 +443,21 @@ const HEALTH_LEVEL_LABELS: Record<keyof HealthLevels, { label: string; unit: str
 export function getHealthLevelLabel(key: keyof HealthLevels): { label: string; unit: string } {
   const { label, unit } = HEALTH_LEVEL_LABELS[key]
   return { label: t(label), unit: t(unit) }
+}
+
+// Nhóm tham số của mục chờ chuyên gia duyệt (BR-22, EXPERT-FR-010), cùng tên với màn cài đặt nhà trên mobile
+const PARAMETER_REVIEW_GROUP_LABELS: Record<ParameterReviewGroup, string> = {
+  thresholds: 'Ngưỡng',
+  fuzzy: 'Hệ số điều khiển',
+  detection: 'Tham số phát hiện',
+  return_rate_drop: 'Mức giảm tỷ lệ về tổ',
+  health_levels: 'Mức chỉ số sức khỏe',
+  counting_schedule: 'Lịch đếm chim',
+  counting_ring: 'Vòng đếm',
+}
+
+export function getParameterReviewGroupLabel(group: ParameterReviewGroup): string {
+  return t(PARAMETER_REVIEW_GROUP_LABELS[group])
 }
 
 // Nguồn của khung đếm đang áp hôm nay (VISION-FR-019, BR-13)

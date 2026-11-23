@@ -29,7 +29,7 @@ export interface HouseReportsParams {
 
 // API trạng thái ngày và báo cáo sức khỏe theo nhà (ANALYTICS-FR-012, EXPERT-FR-005/006/012)
 export const healthReportApi = {
-  // Các ngày của nhà, mới nhất trước; ngày người gọi chưa chấm bị che (BR-31)
+  // Các ngày của nhà, mới nhất trước; có đủ trạng thái kể cả ngày người gọi chưa chấm (BR-31)
   listDays: (params: HealthDaysParams) =>
     apiClient.get<ApiResponse<HouseHealthDay[]>>(ENDPOINTS.HEALTH_DAYS, { params }),
 

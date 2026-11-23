@@ -7,7 +7,6 @@ import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { CorrelationCard } from '@/components/analytics/CorrelationCard'
 import { BirdBarChart } from '@/components/charts/BirdBarChart'
 import { CHART_HEIGHT, ChartFrame } from '@/components/charts/ChartFrame'
-import { ComingSoonAction } from '@/components/common/ComingSoonAction'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import type { AnalyticsScope } from '@/hooks/analytics/useAnalyticsScope'
@@ -107,8 +106,6 @@ export function BirdTab({ scope, today }: BirdTabProps) {
             {t('Cột xám: ngày thiếu phiên sáng hoặc chiều, chưa tính tỉ lệ về tổ.')}
           </Text>
         )}
-        {/* Backend gộp các lần LOW_RETURN_RATE vào một cảnh báo, chưa tách theo ngày (VISION-FR-011) */}
-        <ComingSoonAction label={t('Mốc cảnh báo tỉ lệ về tổ thấp theo ngày')} />
       </Card>
 
       {scope.zones.length > 0 && <CorrelationCard zones={scope.zones} days={days} />}

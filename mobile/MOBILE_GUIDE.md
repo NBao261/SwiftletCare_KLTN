@@ -80,7 +80,6 @@ Thay đổi code đi kèm: `runOnJS` → `scheduleOnRN` (`react-native-worklets`
 | `EXPO_PUBLIC_API_URL` | `http://localhost:3000` | Route không có tiền tố (`/auth/login`, `/farms`…). Emulator Android: `http://10.0.2.2:3000`; máy thật: IP LAN của máy chạy backend. |
 | `EXPO_PUBLIC_WS_URL`  | `ws://localhost:3000`   | Socket.io, đổi host giống dòng trên.                                                                                                |
 | `EXPO_PUBLIC_STREAM_URL` | `http://localhost:8888` | Gốc HLS của MediaMTX cho live stream camera AI (`expo-video`, token 60 giây — VISION-FR-013). MediaMTX phải bật HLS; đổi host giống dòng trên. |
-| `EXPO_PUBLIC_USE_MOCK_API` | tắt | `true` thì khung Report 3 nào backend chưa có route hiện dữ liệu mẫu có nhãn "Dữ liệu mẫu"; mặc định (kể cả bản dev) hiện "Sắp có". Từ 19/11/2026 không còn khung nào dùng (lời mời, kênh thông báo đã gọi API thật) — giữ cờ cho khung sau. |
 
 App khoá chiều dọc (`app/_layout.tsx`, `expo-screen-orientation`); riêng trình phát camera (`components/home/LiveCameraPlayer.tsx`) mở khoá xoay khi đang phóng to, và nút toàn màn của camera ở tab Trang trại (`components/farm/CameraFullscreenModal.tsx`) khoá ngang rồi trả lại dọc khi đóng. `expo-network` cho biết đang dùng Wi-Fi hay dữ liệu di động để quyết camera có tự phát không. Thêm `expo-video`, `expo-screen-orientation`, `expo-network` là gói native: sau khi kéo code phải `npm ci` rồi `npm run android` để build lại app.
 
@@ -135,7 +134,7 @@ mobile/
    │  ├─ alert/[alertId].tsx     # chi tiết cảnh báo dạng trang, chỗ duy nhất xem chi tiết: hàng ở tab Cảnh báo, Trang chủ, chuông, push, phiếu công việc (AlertDetailContent)
    │  └─ notifications/          # chuông — màn riêng ở stack gốc, ngoài các tab (thanh tab ẩn, tab Tài khoản không giữ màn này): index (hai mục Thông báo | Cảnh báo) ·
    │                             #   [notificationId] (chi tiết thông báo; quyết định của chuyên gia kèm Hoạt động chuyên gia bên dưới). ‹ quay về màn đã mở (useGoBackOrHome)
-   │  └─ health/                 # index = các ngày của một nhà (?houseId, chọn nhà ▾) · [dayId] = chấm ngày còn chờ (BR-31, BR-37) hoặc chi tiết ngày
+   │  └─ health/                 # index = các ngày của một nhà (?houseId, chọn nhà ▾) · [dayId] = chấm ngày còn chờ: trạng thái + lý do của hệ thống ở trên, rồi xác nhận hoặc sửa (BR-31 Report 3 4.2.14, BR-37) · hoặc chi tiết ngày
    │  └─ harvests/               # index = các lần thu của một nhà (?houseId, chọn nhà ▾; ?source=analytics thì ẩn nút sang thống kê) — ghi, sửa, xoá lần thu,
    │                             #   chủ trại xác nhận lần thu DRAFT trong HarvestRunSheet (SF-04, G-26); khối "Chu kỳ thu" (HARVEST-FR-007, chỉ đọc);
    │                             #   mở từ HouseYieldRow ở Màn B và nút "Các lần thu" của tab Sản lượng
@@ -149,7 +148,7 @@ mobile/
    │  │                          #   CollapsesWithKeyboard.tsx (logo, mô tả, chân trang thu lại cùng nhịp bàn phím) ·
    │  │                          #   LogoutButton.tsx (đăng xuất có hỏi xác nhận — tab Tài khoản, màn mật khẩu tạm)
    │  ├─ layout/                 # AnimatedSplash.tsx · TextLogo.tsx (logo chữ của splash và màn đăng nhập) · BottomTabBar.tsx (thanh tab, nút nổi) · AppHeader.tsx (header dùng chung, tự chừa vùng an toàn) ·
-   │  │                          #   PlaceholderScreen.tsx (màn tạm của menu chưa gán) · StatusBarGlass.tsx (kính mờ vùng giờ/pin khi cuộn)
+   │  │                          #   StatusBarGlass.tsx (kính mờ vùng giờ/pin khi cuộn)
    │  ├─ charts/                 # bọc react-native-gifted-charts, chỉ ở đây import thư viện: ChartFrame (cao 220, 4 trạng thái, chú thích, câu cho trình đọc màn hình) ·
    │  │                          #   MetricLineChart (đường theo thời gian, vạch ngưỡng, điểm ngoài ngưỡng cam, chạm giữ xem giá trị, nhiều chuỗi, nét đứt dự báo) ·
    │  │                          #   BirdBarChart (cột đôi Ra/Về + đường tỉ lệ về tổ) · ControlChart (độ ẩm + vùng phun sương, quạt, mốc đổi hệ số) · HarvestStackedChart (sản lượng xếp chồng theo loại tổ, như web) · ChartFullscreenModal (xoay ngang)
@@ -227,7 +226,6 @@ mobile/
    │  │                          #   auth · farm · device · telemetry · alert · analytics · notification · healthReport · harvest · workOrder · maintenance · recommendation · invitation
    │  ├─ socket/                 # socketClient.ts (Socket.io realtime)
    │  ├─ notification/           # pushNotification.ts (quyền, FCM device token, kênh Android alerts)
-   │  ├─ mock/                   # dữ liệu mẫu cho mục Report 3 backend chưa có route (constants/mockApi.ts, EXPO_PUBLIC_USE_MOCK_API) — hiện trống, account.mock.ts đã gỡ 19/11/2026
    │  ├─ storage/                # preferenceStorage.ts: lựa chọn trên máy (không bí mật) lưu file JSON bằng expo-file-system, làm storage của Zustand persist
    │  └─ session/                # localSession.ts: startRealtimeIfReady (mở realtime khi có phiên) · clearLocalSession (đăng xuất / hết phiên: ngắt socket, xoá cache, badge, token)
    ├─ stores/                    # authStore.ts · alertStore.ts · connectionStore.ts · languageStore.ts · farmPrefsStore.ts (zustand; farmPrefs lưu file trên máy theo tài khoản:
@@ -255,7 +253,7 @@ Splash
      └─ đăng nhập xong ─► (tabs) theo ROLE_TABS; Farm Owner đăng ký FCM token
 
 Farm Owner — (tabs)
-├─ Trang chủ   home        thẻ nhà (trạng thái vận hành, trạng thái ngày hôm nay — che khi bạn còn chưa chấm, BR-31 — nhãn Đang dẫn dụ), số đo realtime,
+├─ Trang chủ   home        thẻ nhà (trạng thái vận hành, trạng thái ngày hôm nay — hiện cả khi bạn chưa chấm, BR-31 — nhãn Đang dẫn dụ), số đo realtime,
 │                          cảnh báo đang mở; Đánh giá ngày, Phiếu công việc, Bảo trì đến hạn, Khuyến nghị ─► recommendations/
 ├─ Trang trại  farms (Màn A: "Tất cả trang trại" = thẻ từng farm (mặc định khi thuộc từ 2 farm) ─► nhà của một farm (‹ về tất cả),
 │                đổi farm, ghim ★ nhà lên đầu, ⚙ cài đặt farm, + tạo farm) ─► farms/[houseId] (Màn B: một nhà)
@@ -346,12 +344,12 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | Thứ dùng chung                                                                                | Đặt ở                                                                   | Quy định                                                                                              |
 | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Nút, chữ, ô nhập, ô mã, dòng báo lỗi, badge, toggle, chip, hộp xác nhận, skeleton, khung rỗng | `components/ui/` (kebab-case)                                           | Một component cho một loại; khác nhau bằng `variant`/`size`, không bằng role                          |
-| Header, khung màn auth, màn tạm, nút đăng xuất                                                | `components/layout/` · `components/auth/`                               | Mọi màn bắt đầu bằng `AppHeader`; màn auth dùng `AuthScreenLayout`; đăng xuất luôn qua `LogoutButton` |
+| Header, khung màn auth, nút đăng xuất                                                          | `components/layout/` · `components/auth/`                               | Mọi màn bắt đầu bằng `AppHeader`; màn auth dùng `AuthScreenLayout`; đăng xuất luôn qua `LogoutButton` |
 | Mảnh nghiệp vụ ≥ 2 màn dùng                                                                   | `components/common/`                                                    | `StatusDot`, `SeverityBadge`, `AlertStatusBadge`, `MetricTile`, `card/`; `SimulatedBadge` ("Giả lập" cạnh mã thiết bị của bộ giả lập, SYSTEM-FR-004 — chỗ chỉ có chữ thì nối bằng `withSimulatedLabel` ở `utils/device.utils.ts`) |
 | Mảnh của một luồng                                                                            | `components/<nghiệp vụ>/`                                               | `home/`, `device-setup/`, `alert/`, `zone/`, `vision/`, `health/`, `harvest/`, `report/` — chia theo nghiệp vụ, **không** theo role (không có `farmowner/`, `expert/`); khối chỉ một role thấy thì màn quyết bằng `canPerform` |
 | Trang hồ sơ / tài khoản                                                                       | `src/app/(tabs)/profile/` + `components/profile/` (`ProfileRow`, `ProfileShortcutCard`, `ProfileAvatar` (2 chữ viết tắt như Trang chủ, `getInitials`), `LanguageFlag`, `InviteMemberSheet`, `ProfileBasicContent`, `ExpertDecisionList` (lịch sử quyết định của chuyên gia — màn Hoạt động chuyên gia và dưới chi tiết thông báo)) | Một route; trang đầy đủ theo `canPerform(user, 'viewOwnerProfile')` (Farm Owner), Domain Expert giữ trang cơ bản; mời/gỡ thành viên theo `manageFarmMembers` (Primary Owner) |
 | Form đổi mật khẩu                                                                             | `components/auth/ChangePasswordForm.tsx`                                | Đã tách: `(auth)/reset-password` (mật khẩu tạm) và `profile/change-password` dùng chung một form      |
-| Dữ liệu mẫu (mục SRS chưa có route)                                                           | `services/mock/` + `components/common/MockDataBadge.tsx`                | Luôn gắn nhãn "Dữ liệu mẫu"; chỉ bật bằng `EXPO_PUBLIC_USE_MOCK_API=true`, mặc định hiện "Sắp có"; ghi vào Known debt |
+| Mục SRS chưa có route backend                                                                 | `components/common/ComingSoonAction.tsx`                                | Hiện "Sắp có", không dùng dữ liệu mẫu (Report 4 §5.4); ghi vào Known debt                          |
 | Menu theo role                                                                                | `constants/roleTabs.ts`                                                 | Chỗ duy nhất đổi tên, icon, thứ tự tab                                                                |
 | Quyền thao tác                                                                                | `utils/permission.utils.ts`                                             | Chỗ duy nhất quyết định nút nào hiện                                                                  |
 | Nhãn tiếng Việt của enum                                                                      | `utils/label.utils.ts`                                                  | Không viết lại nhãn trong màn                                                                         |

@@ -12,13 +12,7 @@ import { useHealthDays } from '@/hooks/health/useHealthDays'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import { getVietnamDate } from '@/utils/date.utils'
-import {
-  formatHealthDate,
-  formatLastRatingDay,
-  getRatingStateLabel,
-  isHealthDayHidden,
-  shiftDate,
-} from '@/utils/healthDay.utils'
+import { formatHealthDate, getMyRatingCaption, shiftDate } from '@/utils/healthDay.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -28,7 +22,7 @@ interface HealthDayCardProps {
   houseId: string
 }
 
-// Trạng thái ngày gần nhất của nhà ở màn nhà (MF-06): ngày còn chờ chấm thì mời đánh giá, không lộ trạng thái (BR-31)
+// Trạng thái ngày gần nhất của nhà ở màn nhà (MF-06): luôn hiện trạng thái (BR-31); ngày còn chờ chấm thì thêm nút đánh giá
 export function HealthDayCard({ houseId }: HealthDayCardProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
@@ -53,41 +47,31 @@ export function HealthDayCard({ houseId }: HealthDayCardProps) {
         </Text>
       )
     }
-    if (isHealthDayHidden(latest)) {
-      return (
+    const caption = getMyRatingCaption(latest)
+    const canRate = latest.my_rating_state === 'PENDING' && canPerform(user, 'rateHealthDay')
+    return (
+      <>
         <View style={styles.row}>
           <View style={styles.flex}>
             <Text variant="body" weight="semiBold">
               {formatHealthDate(latest.date)}
             </Text>
-            <Text variant="small" color={palette.textSecondary}>
-              {t('Chờ bạn đánh giá · hạn {date}', { date: formatLastRatingDay(latest.rating_deadline) })}
-            </Text>
+            {caption && (
+              <Text variant="small" color={palette.textSecondary}>
+                {caption}
+              </Text>
+            )}
           </View>
-          {canPerform(user, 'rateHealthDay') && (
-            <Button
-              label={t('Đánh giá ngày')}
-              size="sm"
-              onPress={() => router.push({ pathname: '/health/[dayId]', params: { dayId: latest._id } })}
-            />
-          )}
+          <HealthStatusBadge status={latest.current_status} />
         </View>
-      )
-    }
-    return (
-      <View style={styles.row}>
-        <View style={styles.flex}>
-          <Text variant="body" weight="semiBold">
-            {formatHealthDate(latest.date)}
-          </Text>
-          {latest.my_rating_state && latest.my_rating_state !== 'RATED' && (
-            <Text variant="small" color={palette.textSecondary}>
-              {getRatingStateLabel(latest.my_rating_state)}
-            </Text>
-          )}
-        </View>
-        {latest.current_status && <HealthStatusBadge status={latest.current_status} />}
-      </View>
+        {canRate && (
+          <Button
+            label={t('Đánh giá ngày')}
+            size="sm"
+            onPress={() => router.push({ pathname: '/health/[dayId]', params: { dayId: latest._id } })}
+          />
+        )}
+      </>
     )
   }
 

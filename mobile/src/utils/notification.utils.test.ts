@@ -152,6 +152,17 @@ describe('getPushTarget', () => {
     })
   })
 
+  it('4 loại thông báo của BR-22 chưa có màn trên mobile: trong app mở chi tiết, push mở chuông, không lỗi', () => {
+    const kinds = ['weather_rules', 'config_profile', 'recommendation_rule', 'harvest_cycle'] as const
+    for (const kind of kinds) {
+      expect(getNotificationTarget(buildNotification(kind, { ref: { kind, id: 'target-1' } }))).toEqual({
+        kind: 'detail',
+        notificationId: kind,
+      })
+      expect(getPushTarget({ kind, id: 'target-1' })).toEqual({ kind: 'bell' })
+    }
+  })
+
   it('push và thông báo Work Order mở chi tiết Work Order (G-21)', () => {
     expect(getPushTarget({ kind: 'work_order', id: 'wo-1' })).toEqual({ kind: 'workOrder', workOrderId: 'wo-1' })
     expect(getNotificationTarget(buildNotification('e', { ref: { kind: 'work_order', id: 'wo-1' } }))).toEqual({
