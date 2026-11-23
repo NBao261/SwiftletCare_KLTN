@@ -4199,7 +4199,8 @@ paths:
         `RS485_BUS_FAILURE`, `UNEXPECTED_RESTART`, `SPEAKER_FAILURE`, `MISTING_INEFFECTIVE`,
         `ACTUATOR_FAULT`, `CONFIG_MISMATCH`, `MAINTENANCE_DUE` —
         Report 3 §2.4, FARM-FR-009), giao với bộ lọc `type`. Farm Technician thấy cảnh báo của các nhà được giao
-        (cảnh báo của zone trong nhà và cảnh báo của nhà, AUTH-FR-013); `farmId` của farm khác cho danh sách rỗng, không 403.
+        (cảnh báo của zone trong nhà và cảnh báo của nhà, AUTH-FR-013); với thợ, `farmId` của farm khác cho danh sách rỗng,
+        vai trò khác nhận 403. `houseId`/`zoneId` ngoài phạm vi → 403 với mọi vai trò.
         Gửi cảnh báo tới thợ theo ca trực là G-21.
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
@@ -4926,7 +4927,7 @@ paths:
     get:
       tags: [Maintenance]
       summary: "Kế hoạch đang đến hạn hoặc quá hạn (OPS-FR-006) — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN (nhà được giao)"
-      description: "Kế hoạch `DUE` và `OVERDUE`, quá hạn trước, kèm Work Order phòng ngừa đang mở (`open_work_orders`). Phân trang: mặc định 100 dòng (mỗi nhà có tối đa một kế hoạch cho mỗi loại thiết bị nên một trang thường đủ), tối đa 100."
+      description: "Kế hoạch `DUE` và `OVERDUE`, quá hạn trước, kèm Work Order phòng ngừa đang mở (`open_work_orders`). `houseId` ngoài phạm vi → 403. Phân trang: mặc định 100 dòng (mỗi nhà có tối đa một kế hoạch cho mỗi loại thiết bị nên một trang thường đủ), tối đa 100."
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }

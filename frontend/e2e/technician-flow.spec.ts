@@ -136,7 +136,7 @@ test('T4 — thiết bị của nhà được giao: hàng ghi "Nhà · Zone", g�
   await page.getByRole('button', { name: 'Khởi động lại', exact: true }).click();
 
   // Bộ điều khiển demo chưa từng kết nối nên máy chủ từ chối lệnh; chỉ kiểm màn hình luôn trả lời sau khi bấm
-  await expect(page.getByText(/Đã gửi lệnh khởi động lại|chỉ gửi được khi thiết bị ONLINE/)).toBeVisible();
+  await expect(page.getByText(/Đã gửi lệnh khởi động lại|chỉ gửi được khi thiết bị đang kết nối/)).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 

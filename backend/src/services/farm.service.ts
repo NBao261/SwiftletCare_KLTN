@@ -143,9 +143,9 @@ export async function updateFarm(
 export async function removeFarm(farmId: string, user: CurrentUser): Promise<void> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
-  // Như xoá nhà (FARM-FR-002): thiết bị còn dùng thì gỡ trước, kẻo kẹt ở trang trại không ai mở được
-  const devices = await listFarmDevicesInService(farm._id)
-  await assertNoDeviceInService({ zoneIds: devices.zoneIds, houseIds: devices.houseIds })
+  // Như xoá nhà: thiết bị còn dùng thì gỡ trước, kẻo kẹt ở trang trại không ai mở được
+  const { controllerIds, cameraIds } = await listFarmDevicesInService(farm._id)
+  throwIfDevicesInService(controllerIds.length + cameraIds.length)
   await softDeleteFarm(farm, user)
 }
 
@@ -157,7 +157,7 @@ export async function listFarmDevicesInService(farmId: unknown) {
     SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).distinct('_id'),
     CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).distinct('_id'),
   ])
-  return { houseIds, zoneIds, controllerIds: controllerIds.map(String), cameraIds: cameraIds.map(String) }
+  return { controllerIds: controllerIds.map(String), cameraIds: cameraIds.map(String) }
 }
 
 // Dùng chung cho chủ farm tự xoá và cascade khi Admin xoá tài khoản chủ; thiết bị phải gỡ trước
@@ -567,9 +567,11 @@ export async function updateZone(zoneId: string, user: CurrentUser, input: { nam
 async function assertNoDeviceInService(where: { zoneIds: Types.ObjectId[]; houseIds?: Types.ObjectId[] }): Promise<void> {
   const controllers = await SensorNode.countDocuments({ zone_id: { $in: where.zoneIds }, ...IN_SERVICE })
   const cameras = where.houseIds?.length ? await CameraNode.countDocuments({ house_id: { $in: where.houseIds }, ...IN_SERVICE }) : 0
-  if (controllers + cameras > 0) {
-    throw new AppError(409, 'HAS_ACTIVE_DEVICES', `Còn ${controllers + cameras} thiết bị đang dùng, hãy gỡ thiết bị trước khi xoá`)
-  }
+  throwIfDevicesInService(controllers + cameras)
+}
+
+function throwIfDevicesInService(count: number): void {
+  if (count > 0) throw new AppError(409, 'HAS_ACTIVE_DEVICES', `Còn ${count} thiết bị đang dùng, hãy gỡ thiết bị trước khi xoá`)
 }
 
 // Dọn trước khi đánh dấu xoá: lỗi giữa chừng thì gọi lại an toàn
