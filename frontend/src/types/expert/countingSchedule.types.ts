@@ -43,6 +43,8 @@ export interface CountingScheduleView {
   system_default_windows: DayWindows
   // Khung đang áp hôm nay (giờ VN)
   today: DayWindows & { date: string; source: CountingWindowSource }
+  // Lịch sửa hôm nay áp từ mai: khung ngày mai cho thấy thay đổi đã lưu
+  tomorrow: DayWindows & { date: string; source: CountingWindowSource }
   history: Array<{
     effective_from: string
     changed_by: string

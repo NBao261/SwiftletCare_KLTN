@@ -36,6 +36,8 @@ function present(house: IHouse) {
     default_windows: house.counting_schedule?.default_windows ?? DEFAULT_WINDOWS,
     system_default_windows: DEFAULT_WINDOWS,
     today: { date: today, ...windowsOn(scheduleOn(history, today), today) },
+    // Lịch sửa hôm nay áp từ mai: trả khung ngày mai để màn hình cho thấy thay đổi đã lưu
+    tomorrow: { date: addDays(today, 1), ...windowsOn(scheduleOn(history, addDays(today, 1)), addDays(today, 1)) },
     history: history.map(version => ({
       effective_from: version.effective_from, changed_by: version.changed_by, changed_by_role: version.changed_by_role,
       changed_at: version.changed_at, schedule: version.schedule,

@@ -7395,6 +7395,14 @@ components:
             morning: { $ref: "#/components/schemas/TimeWindow" }
             evening: { $ref: "#/components/schemas/TimeWindow" }
             source: { type: string, enum: [TEMPORARY, PROFILE, DEFAULT] }
+        tomorrow:
+          type: object
+          description: "Khung sẽ áp ngày mai (giờ VN): lịch sửa hôm nay áp từ ngày mai"
+          properties:
+            date: { type: string, format: date }
+            morning: { $ref: "#/components/schemas/TimeWindow" }
+            evening: { $ref: "#/components/schemas/TimeWindow" }
+            source: { type: string, enum: [TEMPORARY, PROFILE, DEFAULT] }
         history:
           type: array
           items:

@@ -133,6 +133,10 @@ describe('VISION-FR-019 — counting schedule', () => {
     // hồ sơ theo mùa vẫn thắng khung mặc định của nhà
     expect(windowsOn({ profiles: [{ name: 'Mưa', from: '01-01', to: '12-31', ...RAINY }], temporary: [], default_windows: own }, tomorrow).source).toBe('PROFILE')
 
+    // Hôm nay giữ khung cũ, ngày mai theo khung vừa lưu
+    expect(saved.body.data.today).toMatchObject({ morning: { start: '05:30', end: '07:00' }, source: 'DEFAULT' })
+    expect(saved.body.data.tomorrow).toMatchObject({ date: tomorrow, morning: own.morning, evening: own.evening, source: 'DEFAULT' })
+
     const reset = await s.call('put', s.t.expert, { profiles: [], temporary: [] })
     expect(reset.body.data.default_windows).toEqual(saved.body.data.system_default_windows)
     expect(reset.body.data.schedule.default_windows).toBeUndefined()

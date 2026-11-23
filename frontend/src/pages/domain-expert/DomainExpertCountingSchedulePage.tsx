@@ -19,6 +19,8 @@ import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecision
 
 // "05:30–07:00"
 const span = (window: TimeWindow) => `${window.start}–${window.end}`
+const sameWindows = (a: DayWindows, b: DayWindows) =>
+  span(a.morning) === span(b.morning) && span(a.evening) === span(b.evening)
 // Hồ sơ theo mùa lặp lại hằng năm nên chỉ lưu 'MM-DD'; lịch ẩn năm, chọn trong năm nhuận 2024 để có 29/02
 const LEAP_YEAR_FIRST = '2024-01-01'
 const LEAP_YEAR_LAST = '2024-12-31'
@@ -92,20 +94,26 @@ export default function DomainExpertCountingSchedulePage() {
       {/* Farm Owner sửa được; farm có chuyên gia thì chuyên gia duyệt sau */}
       <fieldset disabled={!canEditParameters} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
-        {/* Khung đang áp hôm nay: 1 dòng gọn trên đầu */}
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 py-2.5">
-          <CalendarClock className="h-4 w-4 text-accent-600 shrink-0" aria-hidden />
-          <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
-          <Badge tone={SOURCE_TONE[data.today.source]}>{t(`today.source.${data.today.source}`)}</Badge>
-          <span className="hidden sm:inline text-warmGray">·</span>
-          <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
-            <Sunrise className="h-3.5 w-3.5 text-climateOrange" aria-hidden />
-            {span(data.today.morning)}
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
-            <Moon className="h-3.5 w-3.5 text-graphite" aria-hidden />
-            {span(data.today.evening)}
-          </span>
+        {/* Khung đang áp hôm nay, và ngày mai khi lịch đã lưu đổi khung (lịch sửa hôm nay áp từ mai) */}
+        <div className="flex flex-col gap-2">
+          {[data.today, ...(sameWindows(data.today, data.tomorrow) ? [] : [data.tomorrow])].map(day => (
+            <div key={day.date} className="flex flex-wrap items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 py-2.5">
+              <CalendarClock className="h-4 w-4 text-accent-600 shrink-0" aria-hidden />
+              <span className="text-sm font-semibold text-charcoal">
+                {day === data.today ? t('today.title', { date: date(day.date) }) : t('tomorrow.title', { date: date(day.date) })}
+              </span>
+              <Badge tone={SOURCE_TONE[day.source]}>{t(`today.source.${day.source}`)}</Badge>
+              <span className="hidden sm:inline text-warmGray">·</span>
+              <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
+                <Sunrise className="h-3.5 w-3.5 text-climateOrange" aria-hidden />
+                {span(day.morning)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
+                <Moon className="h-3.5 w-3.5 text-graphite" aria-hidden />
+                {span(day.evening)}
+              </span>
+            </div>
+          ))}
         </div>
       </SectionCard>
 
