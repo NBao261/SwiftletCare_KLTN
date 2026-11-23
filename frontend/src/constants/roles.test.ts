@@ -35,10 +35,10 @@ const MATRIX: Record<string, Role[]> = {
   '/domain-expert/queue': [DE],
   // trang quyết định của chuyên gia mở cho Farm Owner (ghi hay chỉ xem do useExpertDecisionRights)
   '/domain-expert/alert-verdicts': [DE, FO],
-  '/domain-expert/tuning': [DE, FO],
-  '/domain-expert/counting-schedule': [DE, FO],
+  '/domain-expert/tuning': [DE, FO, FT],  // thợ chỉ đọc (G-33)
+  '/domain-expert/counting-schedule': [DE, FO, FT],  // thợ chỉ đọc (G-33)
   '/domain-expert/counting-ring': [DE, FO, FT], // thợ vẽ vòng đếm camera nhà được giao (G-33)
-  '/domain-expert/weather-rules': [DE, FO],
+  '/domain-expert/weather-rules': [DE, FO, FT],  // thợ chỉ đọc (G-33)
   '/domain-expert/reviews': [DE, FO],
   '/domain-expert/reports': [DE],       // Farm Owner xem báo cáo và ngày lệch ở /health
   '/domain-expert/profiles': [DE, FO],

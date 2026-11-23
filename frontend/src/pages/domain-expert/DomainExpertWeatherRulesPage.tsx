@@ -187,7 +187,8 @@ export default function DomainExpertWeatherRulesPage() {
       return (
         <EmptyState
           icon={<CloudRain className="w-8 h-8" />}
-          title={t('Chưa có luật nào. Thêm luật đầu tiên bên dưới.')}
+          // Người chỉ xem (Kỹ thuật viên) không có nút Thêm luật
+          title={canEditParameters ? t('Chưa có luật nào. Bấm Thêm luật để tạo luật đầu tiên.') : t('Chưa có luật nào.')}
         />
       )
     }

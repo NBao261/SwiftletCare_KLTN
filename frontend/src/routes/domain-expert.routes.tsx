@@ -1,4 +1,4 @@
-// Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận; Kỹ thuật viên chỉ vào trang vòng đếm (G-33)
+// Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận; Kỹ thuật viên vào vòng đếm và đọc tham số, lịch đếm, luật thời tiết (G-33)
 import { lazy } from 'react';
 import { Route, Navigate, Outlet } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
@@ -66,19 +66,19 @@ export const domainExpertRoutes = (
       <Route path="alert-verdicts" element={decision(<DomainExpertAlertVerdictsPage />)} />
 
       {/* Ngưỡng & Hệ số mờ + Tham số phát hiện */}
-      <Route path="tuning" element={decision(<DomainExpertZoneTuningPage />)} />
+      <Route path="tuning" element={<DomainExpertZoneTuningPage />} />
 
       {/* Duyệt tham số & Đề xuất hệ số mờ */}
       <Route path="reviews" element={decision(<DomainExpertReviewsPage />)} />
 
       {/* Lịch đếm chim của nhà */}
-      <Route path="counting-schedule" element={decision(<DomainExpertCountingSchedulePage />)} />
+      <Route path="counting-schedule" element={<DomainExpertCountingSchedulePage />} />
 
       {/* Vòng đếm chim trên khung live */}
       <Route path="counting-ring" element={<DomainExpertCountingRingPage />} />
 
       {/* Luật bù phun sương theo thời tiết */}
-      <Route path="weather-rules" element={decision(<DomainExpertWeatherRulesPage />)} />
+      <Route path="weather-rules" element={<DomainExpertWeatherRulesPage />} />
 
       {/* Báo cáo sức khỏe & Kết luận + Xem ngày đánh giá lệch */}
       <Route path="reports" element={<RequireRole allow={EXPERT_ROLES}><DomainExpertReportsPage /></RequireRole>} />
