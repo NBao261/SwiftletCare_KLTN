@@ -18,6 +18,7 @@ import {
   averageReturnRate, checkReturnRateDrops, claimDueHouses, computeHouseSessions, houseDailyCounts, ingestBirdCount,
 } from '@/services/birdCount.service'
 import { getBirdCountTrends, getEnvBirdCorrelation } from '@/services/analytics.service'
+import { revertReview } from '@/services/expertReview.service'
 import { addDays, windowsOn } from '@/utils/countingSchedule.util'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { Types } from 'mongoose'
@@ -77,7 +78,7 @@ async function seed({ withExpert = true } = {}) {
   }
   const call = (method: 'get' | 'put', token: string, body?: object) =>
     request(app)[method](`/farms/houses/${house._id}/counting-schedule`).set('Authorization', `Bearer ${token}`).send(body)
-  return { owner, farm, house, camA, camB, t, call }
+  return { owner, expert, farm, house, camA, camB, t, call }
 }
 
 // Số 5 phút của một camera, `hhmm` giờ VN
@@ -139,6 +140,20 @@ describe('VISION-FR-019 — counting schedule', () => {
     const crossing = { default_windows: { morning: { start: '05:00', end: '18:00' }, evening: { start: '17:15', end: '18:45' } } }
     expect((await s.call('put', s.t.expert, crossing)).status).toBe(400)
     expect((await s.call('put', s.t.expert, { default_windows: '05:00' })).status).toBe(422)
+  })
+
+  it('the Farm Owner is told when only the default windows change, and the expert can revert them', async () => {
+    const s = await seed()
+    const own = { morning: { start: '05:00', end: '06:45' }, evening: { start: '17:15', end: '18:45' } }
+    await s.call('put', s.t.expert, { profiles: [], temporary: [], default_windows: own })
+    const told = await Notification.findOne({ user_id: s.owner._id }).sort({ created_at: -1 }).lean()
+    expect(told?.body).toContain('khung mặc định của nhà sáng 05:00–06:45, chiều 17:15–18:45')
+
+    // Farm Owner bỏ khung riêng trên farm có chuyên gia; chuyên gia hoàn tác thì khung riêng quay lại
+    expect((await s.call('put', s.t.owner, { profiles: [], temporary: [] })).status).toBe(200)
+    const review = await ParameterReview.findOne({ target_id: s.house._id, group: 'counting_schedule', status: 'PENDING_REVIEW' }).lean()
+    await revertReview(String(review!._id), { _id: String(s.expert._id), email: s.expert.email, role: 'DOMAIN_EXPERT' })
+    expect((await House.findById(s.house._id).lean())!.counting_schedule?.default_windows).toEqual(own)
   })
 
   it('rejects an invalid schedule with 400 and a wrong shape with 422', async () => {
