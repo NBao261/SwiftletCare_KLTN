@@ -32,8 +32,15 @@ function useStockMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>)
 }
 
 export const useAddStockDevice = () =>
-  useStockMutation((input: { device_id: string; kind: ProvisionedDeviceKind }) =>
+  useStockMutation((input: { device_id: string; kind: ProvisionedDeviceKind; chip_mac?: string }) =>
     deviceStockApi.create(input).then(r => r.data.data))
+
+// Mục kho của mã đọc từ chip (màn nạp qua USB); null khi chưa có trong kho
+export const useFindStockDevice = () =>
+  useMutation({
+    mutationFn: (deviceId: string): Promise<ProvisionedDevice | null> =>
+      deviceStockApi.list({ deviceId, limit: 1 }).then(r => r.data.data[0] ?? null),
+  })
 
 export const useRevokeStockDevice = () =>
   useStockMutation(({ id, reason }: { id: string; reason: string }) =>

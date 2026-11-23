@@ -1,6 +1,6 @@
 // Kho thiết bị: mã kích hoạt và mật khẩu broker chỉ hiện 1 lần
 import { useMemo, useState } from 'react'
-import { PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { PlusIcon, UsbIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import {
   Badge, Button, ClearFiltersButton, ConfirmModal, DataTable, EmptyState, NoteActionModal, Pagination, SearchInput,
   SectionCard, SelectMenu, SortChips,
@@ -11,6 +11,7 @@ import { formatDateOnly } from '@/lib/helpers'
 import { STOCK_STATUS, buildStockColumns, type StockAction } from '@/components/features/admin/device-stock/stockColumns'
 import AddStockDeviceModal from '@/components/features/admin/device-stock/AddStockDeviceModal'
 import IssuedSecretsModal from '@/components/features/admin/device-stock/IssuedSecretsModal'
+import FlashDeviceModal from '@/components/features/admin/device-stock/FlashDeviceModal'
 import {
   useDeviceStock, useRevokeStockDevice, useRotateBrokerSecret, useRotateStockKey,
 } from '@/hooks/admin/useDeviceStock'
@@ -61,6 +62,8 @@ export default function AdminDeviceStockPage() {
   const [page, setPage] = useState(1)
 
   const [adding, setAdding] = useState(false)
+  // Trạm nạp: cắm ESP32 qua USB, thêm vào kho và ghi mã thẳng vào chip
+  const [flashing, setFlashing] = useState(false)
   const [issued, setIssued] = useState<IssuedDeviceSecrets | null>(null)
   const [pending, setPending] = useState<{ action: StockAction; device: ProvisionedDevice } | null>(null)
 
@@ -138,7 +141,8 @@ export default function AdminDeviceStockPage() {
           <div className="min-w-[200px] flex-1">
             <SearchInput placeholder="Tìm mã thiết bị..." value={search} onChange={withReset(setSearch)} />
           </div>
-          <Button onClick={() => setAdding(true)}><PlusIcon size={14} weight="bold" aria-hidden />Thêm thiết bị</Button>
+          <Button variant="secondary" onClick={() => setAdding(true)}><PlusIcon size={14} weight="bold" aria-hidden />Thêm thiết bị</Button>
+          <Button onClick={() => setFlashing(true)}><UsbIcon size={14} weight="bold" aria-hidden />Nạp qua USB</Button>
         </div>
 
         {/* Hàng 2: bộ lọc + sắp xếp */}
@@ -180,6 +184,7 @@ export default function AdminDeviceStockPage() {
         <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
       </SectionCard>
 
+      <FlashDeviceModal open={flashing} onClose={() => setFlashing(false)} />
       <AddStockDeviceModal open={adding} onClose={() => setAdding(false)} onAdded={result => { setAdding(false); setIssued(result) }} />
       <IssuedSecretsModal issued={issued} onClose={() => setIssued(null)} />
 

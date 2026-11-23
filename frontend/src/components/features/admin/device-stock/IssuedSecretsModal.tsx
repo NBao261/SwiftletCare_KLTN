@@ -73,7 +73,7 @@ export default function IssuedSecretsModal({ issued, onClose }: { issued: Issued
               <Button variant="secondary" size="sm" onClick={() => copy(issued.broker_secret!)}>Sao chép</Button>
             </div>
             <p className="text-xs text-warmGray">
-              {t('Nạp vào thiết bị cùng mã thiết bị bằng firmware/tools/flash_identity.py. Không in lên nhãn.')}
+              {t('Nạp vào thiết bị cùng mã thiết bị bằng nút Nạp qua USB (nạp lại) hoặc firmware/tools/flash_identity.py. Không in lên nhãn.')}
             </p>
           </section>
         )}

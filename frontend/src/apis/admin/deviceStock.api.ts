@@ -3,6 +3,8 @@ import type { ApiResponse, IssuedDeviceSecrets, ProvisionedDevice, ProvisionedDe
 
 export interface ListDeviceStockQuery {
   kind?: ProvisionedDeviceKind
+  // đúng một mã: màn nạp tìm mục kho của bo mạch đang cắm
+  deviceId?: string
   page?: number
   limit?: number
 }
@@ -12,7 +14,7 @@ export const deviceStockApi = {
   list: (query?: ListDeviceStockQuery) =>
     api.get<ApiResponse<ProvisionedDevice[]>>('/admin/provisioned-devices', { params: query }),
 
-  create: (input: { device_id: string; kind: ProvisionedDeviceKind }) =>
+  create: (input: { device_id: string; kind: ProvisionedDeviceKind; chip_mac?: string }) =>
     api.post<ApiResponse<IssuedDeviceSecrets>>('/admin/provisioned-devices', input),
 
   revoke: (id: string, reason: string) =>
