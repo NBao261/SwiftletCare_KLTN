@@ -522,6 +522,8 @@ const enExpert: Record<string, string> = {
   '{{n}} mục': '{{n}} items',
   'đã đổi': 'changed',
   'Sáng {{morning}}, chiều {{evening}}': 'Morning {{morning}}, evening {{evening}}',
+  'Khung hệ thống': 'System windows',
+  'Khung mặc định của nhà': 'House default windows',
   'Khung tạm {{span}}': 'Temporary window {{span}}',
   'Hồ sơ {{name}} {{span}}': 'Profile {{name}} {{span}}',
   'Khung mặc định': 'Default windows',
