@@ -25,6 +25,7 @@ import type { SensorNode } from '@/types'
 // Ngày chưa đánh giá tính trong 7 ngày qua (hạn đánh giá D+7)
 const RATING_WINDOW_DAYS = 7
 const NO_SENSORS: SensorNode[] = []
+const NO_FARM_IDS: string[] = []
 
 // Tổng quan Farm Owner
 export default function FarmOwnerDashboardPage() {
@@ -34,6 +35,8 @@ export default function FarmOwnerDashboardPage() {
   const isAllHouses = houseId === ''
   // Duyệt phiếu, đánh giá ngày là việc của chủ nhà yến; chuyên gia xem Tổng quan chỉ đọc
   const isOwner = usePermission('FARM_OWNER')
+  // Kỹ thuật viên không đọc tổng quan trang trại (backend 403): đếm cảnh báo từ các nhà được giao
+  const isTechnician = usePermission('FARM_TECHNICIAN')
 
   const liveZoneIds = useMemo(() => (scopeZone ? [scopeZone._id] : zones.map(zone => zone._id)), [scopeZone, zones])
   const { structure, isLoading: isStructureLoading, isError: isStructureError, canViewHarvest, refetch: refetchStructure } = useFarmStructure({ liveZoneIds })
@@ -70,11 +73,13 @@ export default function FarmOwnerDashboardPage() {
 
   // Tình hình hôm nay của từng nhà (chim về, phiếu đang mở): 1 request mỗi trang trại trong phạm vi
   const scopeFarmIds = useMemo(() => (farmId ? [farmId] : farms.map(farm => farm._id)), [farmId, farms])
-  const { byHouse: overviewByHouse, isError: isOverviewError, refetch: refetchOverview } = useFarmOverviews(scopeFarmIds)
+  const { byHouse: overviewByHouse, isError: isOverviewError, refetch: refetchOverview } = useFarmOverviews(isTechnician ? NO_FARM_IDS : scopeFarmIds)
   // Cùng nguồn cho ô KPI và thẻ nhà để tổng bằng nhau
-  const openAlerts = scopedHouses.every(node => overviewByHouse.has(node.house._id))
-    ? scopedHouses.reduce((sum, node) => sum + (overviewByHouse.get(node.house._id)?.open_alerts ?? 0), 0)
-    : undefined
+  let openAlerts: number | undefined
+  if (isTechnician) openAlerts = scopedAlerts.length
+  else if (scopedHouses.every(node => overviewByHouse.has(node.house._id))) {
+    openAlerts = scopedHouses.reduce((sum, node) => sum + (overviewByHouse.get(node.house._id)?.open_alerts ?? 0), 0)
+  }
 
   // Phiếu chờ duyệt cùng phạm vi khung lọc với các ô khác
   const { data: awaiting } = useAwaitingApproval(farmId, houseId)
