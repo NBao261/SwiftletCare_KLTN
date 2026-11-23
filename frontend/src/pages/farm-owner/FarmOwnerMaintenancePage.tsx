@@ -166,7 +166,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
         </SectionCard>
       ) : (
         // Danh sách kế hoạch
-        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
+        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(canManage ? 'list.subtitle' : canComment ? 'list.subtitleExpert' : 'list.subtitleTechnician')}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SelectMenu
               ariaLabel={t('list.filterState')}

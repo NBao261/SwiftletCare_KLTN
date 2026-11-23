@@ -3,6 +3,7 @@ import { Button, FilterChip, Modal, Textarea } from '@/components/ui';
 import { CAUSE_ALERT_TYPES, SITE_CAUSES } from '@/constants/siteCause';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useWorkOrder, useWorkOrderActions } from '@/hooks/farm-owner/useWorkOrders';
 import { useToastStore } from '@/stores/toastStore';
@@ -20,6 +21,8 @@ export default function WorkOrderDoneModal({ workOrder, onClose }: { workOrder: 
   const apiErrorMessage = useApiErrorMessage();
   const push = useToastStore(state => state.push);
   const { complete } = useWorkOrderActions();
+  // Kỹ thuật viên báo xong thì chủ nhà yến duyệt, không phải người bấm
+  const isTechnician = usePermission('FARM_TECHNICIAN');
   // Danh sách không kèm ảnh: đọc chi tiết để biết phiếu (mở lại) đã có bao nhiêu ảnh
   const { data: detail } = useWorkOrder(workOrder?._id ?? null);
   const [cause, setCause] = useState<SiteCause | null>(null);
@@ -45,7 +48,9 @@ export default function WorkOrderDoneModal({ workOrder, onClose }: { workOrder: 
       {
         // Phiếu gắn cảnh báo sang VERIFYING; phòng ngừa hoặc mở tay sang thẳng AWAITING_APPROVAL
         onSuccess: response => {
-          push(t(response.data.data.status === 'VERIFYING' ? 'done.doneVerifying' : 'done.doneAwaiting'));
+          const isVerifying = response.data.data.status === 'VERIFYING';
+          if (isTechnician) push(t(isVerifying ? 'done.doneVerifyingTechnician' : 'done.doneAwaitingTechnician'));
+          else push(t(isVerifying ? 'done.doneVerifying' : 'done.doneAwaiting'));
           onClose();
         },
         onError: error => push(apiErrorMessage(error), 'error'),
