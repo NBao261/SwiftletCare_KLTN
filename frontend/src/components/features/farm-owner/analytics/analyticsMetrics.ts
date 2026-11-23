@@ -127,12 +127,12 @@ export interface TodayBirdCount {
   eveningExit: number;
   morningEntry: number;
   eveningEntry: number;
-  // Số ròng chim về chia số ròng chim ra của các nhà đã đủ 2 phiên, null khi chưa nhà nào đủ
+  // Chim về buổi chiều chia chim ra buổi sáng của các nhà đã đủ 2 phiên, null khi chưa nhà nào đủ
   returnRate: number | null;
   updatedAt: string | null;
 }
 
-// Tỷ lệ chim về tính lại từ số ròng như backend
+// Tỷ lệ chim về tính lại như backend: VỀ chiều ÷ RA sáng
 export function sumTodayBirdCounts(list: BirdCountCurrentResponse[]): TodayBirdCount {
   const today: TodayBirdCount = { morningExit: 0, eveningExit: 0, morningEntry: 0, eveningEntry: 0, returnRate: null, updatedAt: null };
   let netExit = 0;

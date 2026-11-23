@@ -42,7 +42,7 @@ tests/                pytest cho vòng đếm và các công cụ
 
 ## Theo dõi và vòng đếm
 
-Camera nhìn vào miệng lỗ ra vào từ trong nhà, nên đếm bằng một **vòng khép kín** quanh miệng lỗ (`tracking.ring` trong `config/config.yaml`), không phải một vạch thẳng. Chim đi vào vòng là chui vào lỗ (**RA**), đi ra khỏi vòng là chui ra (**VỀ**); con chỉ bay lướt qua lỗ cắt vòng hai lần và số ròng triệt tiêu. Camera đặt ngoài nhà thì đổi `tracking.into_ring_is_exit: false`.
+Camera nhìn vào miệng lỗ ra vào từ trong nhà, nên đếm bằng một **vòng khép kín** quanh miệng lỗ (`tracking.ring` trong `config/config.yaml`), không phải một vạch thẳng. Chim đi vào vòng là chui vào lỗ (**RA**), đi ra khỏi vòng là chui ra (**VỀ**); mỗi vết chim chỉ tính một lần, theo nơi nó xuất hiện và nơi mất so với vòng (`tracking.count_once_per_track`), nên con bay lướt qua hay lượn ở cửa lỗ không bị cộng. Phiên sáng chỉ tính RA, phiên chiều chỉ tính VỀ (BR-12). Camera đặt ngoài nhà thì đổi `tracking.into_ring_is_exit: false`.
 
 Chim được theo dõi trên **cả khung hình** (ô xanh cho mọi con, kể cả đang lượn), chia 2 ô chồng nhau (`camera.tiles`) để chim còn ≥ 15 px trong ảnh đưa vào model; dòng ngày giờ được tô đen (`camera.mask`). Chim qua lỗ bay 150–200 px/frame nên frame trong vòng thường không được phát hiện: vết nhanh mất ngay ngoài vòng mà đi tiếp thì vào vòng tính RA, vết nhanh mới xuất hiện mà lùi lại thì ra từ vòng tính VỀ (`extrapolate_frames`, `extrapolate_min_speed_px`). Vết sinh và mất đều trong vòng thì không rõ chiều, chỉ đếm riêng. Vết mất ở mép khung không tính gì.
 

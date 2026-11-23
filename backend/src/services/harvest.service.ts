@@ -53,7 +53,7 @@ async function buildEnvSnapshot(zoneId: string, harvestDate: Date) {
   }
 }
 
-// Ước tính đàn = số ròng về buổi chiều lớn nhất, cộng mọi camera
+// Ước tính đàn = số chim về buổi chiều lớn nhất, cộng mọi camera
 async function buildFlockSnapshot(houseId: string, harvestDate: Date) {
   const from = new Date(harvestDate.getTime() - FLOCK_SNAPSHOT_DAYS * 86400_000)
   const days = await houseDailyCounts(houseId, { from: vnDate(from), to: vnDate(harvestDate) })

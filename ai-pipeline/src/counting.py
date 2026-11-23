@@ -19,20 +19,27 @@ class _Track:
     last_frame: int = 0
     seen: int = 1
     ever_outside: bool = False
+    from_hole: bool = False                 # born in the ring, or came out of it in frames nobody detected
 
 
 class RingCounter:
-    """ring: frame-ratio points; into_ring_is_exit: going into the ring = EXIT; lost_frames = the tracker's lost_track_buffer."""
+    """ring: frame-ratio points; into_ring_is_exit: going into the ring = EXIT; lost_frames = the tracker's lost_track_buffer.
+
+    once_per_track: count a track at most once, when it is lost, from where it appeared and where it was lost
+    (out of the hole and away = one way, from the room into the hole = the other), so a bird circling at the
+    hole and crossing the ring many times counts once or not at all. Otherwise every crossing counts."""
 
     def __init__(self, ring: Sequence[Sequence[float]], width: int, height: int,
                  into_ring_is_exit: bool = True, base_entry: int = 0, base_exit: int = 0, *,
-                 lost_frames: int = 15, extrapolate_frames: int = 0, min_speed_px: float = 0.0):
+                 lost_frames: int = 15, extrapolate_frames: int = 0, min_speed_px: float = 0.0,
+                 once_per_track: bool = False):
         self.entry_count = base_entry
         self.exit_count = base_exit
         self.ambiguous = 0
         self._lost_frames = lost_frames
         self._extrapolate = extrapolate_frames
         self._min_speed = min_speed_px
+        self._once = once_per_track
         self._frame = 0
         # Kept until lost_frames have passed, so a track lost for a few frames still counts
         self._tracks: Dict[int, _Track] = {}
@@ -73,22 +80,30 @@ class RingCounter:
             inside = self.contains(c)
             t = self._tracks.get(int(tid))
             if t is None:
-                self._tracks[int(tid)] = _Track(inside, c, c, last_frame=self._frame, ever_outside=not inside)
+                self._tracks[int(tid)] = _Track(inside, c, c, last_frame=self._frame, ever_outside=not inside,
+                                                from_hole=inside)
                 continue
             t.prev, t.last, t.last_frame, t.seen = t.last, c, self._frame, t.seen + 1
+            e = x = 0
             if inside != t.inside:                  # crossed the ring, either way
-                e, x = self._count(into_ring=inside)
-            elif t.seen == 2 and not inside:        # came out of the hole in frames nobody detected
+                if not self._once:
+                    e, x = self._count(into_ring=inside)
+            elif t.seen == 2 and not inside and not t.from_hole:   # came out of the hole in frames nobody detected
                 back = (t.first[0] - c[0], t.first[1] - c[1])
-                e, x = self._count(into_ring=False) if self._reaches_ring(t.first, back) else (0, 0)
-            else:
-                e = x = 0
+                if self._reaches_ring(t.first, back):
+                    t.from_hole = True
+                    if not self._once:
+                        e, x = self._count(into_ring=False)
             entries, exits = entries + e, exits + x
             t.inside = inside
             t.ever_outside = t.ever_outside or not inside
 
         for tid in [k for k, t in self._tracks.items() if self._frame - t.last_frame > self._lost_frames]:
             t = self._tracks.pop(tid)
+            if self._once:
+                e, x = self._finish_once(t)
+                entries, exits = entries + e, exits + x
+                continue
             if t.inside:
                 if not t.ever_outside:              # born and lost inside: in or out cannot be told
                     self.ambiguous += 1
@@ -98,6 +113,18 @@ class RingCounter:
                     e, x = self._count(into_ring=True)
                     entries, exits = entries + e, exits + x
         return entries, exits
+
+
+    def _finish_once(self, t: _Track) -> Tuple[int, int]:
+        step = (t.last[0] - t.prev[0], t.last[1] - t.prev[1]) if t.prev is not None else (0.0, 0.0)
+        to_hole = t.inside or (t.prev is not None and self._reaches_ring(t.last, step))
+        if t.from_hole and not to_hole:
+            return self._count(into_ring=False)
+        if to_hole and not t.from_hole:
+            return self._count(into_ring=True)
+        if t.inside and not t.ever_outside:      # born and lost inside: in or out cannot be told
+            self.ambiguous += 1
+        return 0, 0
 
 
 Ring = Tuple[Sequence[Sequence[float]], bool]   # points as frame ratios, into_ring_is_exit

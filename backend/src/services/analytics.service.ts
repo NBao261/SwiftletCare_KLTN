@@ -326,7 +326,7 @@ function meanByPeriod(days: FlockDay[], keyOf: (date: string) => string, prevOf:
   })
 }
 
-// Số ròng phiên sáng, theo tuần (từ thứ Hai) và tháng; bỏ ngày thiếu phiên
+// Số chim ra phiên sáng, theo tuần (từ thứ Hai) và tháng; bỏ ngày thiếu phiên
 export function flockTrend(days: FlockDay[]): { weekly: FlockPeriod[]; monthly: FlockPeriod[] } {
   const complete = days.filter(isFlockDayComplete)
   return {

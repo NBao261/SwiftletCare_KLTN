@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from counting import MultiRingCounter  # noqa: E402
 import stream  # noqa: E402
-from stream import Publisher, load_config, rings_changed, load_day_total, load_state, make_counter, save_state, topic_base  # noqa: E402
+from stream import Publisher, load_config, receiving_short, rings_changed, load_day_total, load_state, make_counter, save_state, topic_base  # noqa: E402
 
 SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]
 
@@ -71,3 +71,9 @@ def test_same_rings_sent_again_do_not_reset_the_tracks():
                              [([(0.25, 0.25), (0.75, 0.25), (0.5, 0.75)], True)])   # config.yaml vs MQTT
     assert rings_changed([(SQUARE, True)], [(SQUARE, False)])
     assert rings_changed([(SQUARE, True)], [(SQUARE, True), (SQUARE[:3], True)])
+
+
+def test_camera_counts_as_short_of_frames_below_80_percent():
+    assert receiving_short(95, 5, 25)          # 19 frame/giây < 20
+    assert not receiving_short(100, 5, 25)     # đủ 20
+    assert not receiving_short(125, 5, 25)

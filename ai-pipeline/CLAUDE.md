@@ -39,7 +39,7 @@ src/
   stream_pusher.py    pushes the annotated frames to MediaMTX with ffmpeg; masks the password in its logs
   frame_prep.py       mask + tiles, shared with the dataset tools so training and production see the same pixels
   inference.py        ONNX inference, YOLO26 (300, 6) and YOLOv8/11 outputs, per-tile run + merge
-  counting.py         RingCounter (ring crossings + extrapolation at the hole), MultiRingCounter (1–4 rings summed; set_rings() swaps them live), sessions, BucketClock
+  counting.py         RingCounter (each track counted once from where it appeared and was lost, or every crossing; extrapolation at the hole), MultiRingCounter (1–4 rings summed; set_rings() swaps them live), sessions, BucketClock
   remote_config.py    VISION-FR-018: 1–4 rings drawn on the web, from the retained config topic → state/counting_ring.json
 tools/pick_roi.py     calibration: hole outline → ring (offset by --margin), printed as YAML
 tools/extract_frames.py  clip → masked 2-tile frames + draft YOLO labels from motion tracks (--draft tracks) or blobs
@@ -69,7 +69,7 @@ Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `
 - **[Bắt buộc]** Every payload carries `deviceId` = the CameraNode `device_id` registered in the backend; the backend drops a message whose `deviceId` differs from its topic.
 - **[Bắt buộc]** Payload shapes follow the plan (§6.6) and the backend's `BirdCountPayload` (`backend/src/types/domain.types.ts`, extended per plan §8.2): session message `{deviceId, session_type, entry_count, exit_count, confidence_avg, final, timestamp}`; bucket message `{deviceId, kind: "BUCKET", bucket_start, bucket_minutes, entry_count, exit_count, timestamp}`; heartbeat `{deviceId, firmwareVersion}`. Timestamps are epoch milliseconds. Counts are non-negative integers. A field change lands together with the backend type, the handler and `docs/api/api-spec.yaml` (or names the PR that does).
 - **[Bắt buộc]** The one message the node receives is the retained `swiftletcare/dev/{deviceId}/config` with `{deviceId, counting_rings: [{points, into_ring_is_exit}]}` (0–4 rings, `[]` = deleted, back to the `config.yaml` ring; an older backend's single `counting_ring` is still read; VISION-FR-018, `remote_config.py`): drop it when `deviceId` names another camera, validate it with the same limits as the backend route (3–12 vertices in 0–1), and keep counting with the old ring when it is malformed.
-- **[Bắt buộc]** The pipeline sends raw entry/exit counts; the backend computes the return rate on **net** counts (VISION-FR-009). Do not compute or send `return_rate` from the pipeline.
+- **[Bắt buộc]** The pipeline sends both entry and exit counts; the backend computes the return rate from the morning exits and the evening entries (BR-12, VISION-FR-009). Do not compute or send `return_rate` from the pipeline.
 - **[Nên]** Publish with QoS 1 for counts and QoS 0 for heartbeats; reconnect with `connect_async` + `loop_start` so a broker outage does not stop counting.
 
 ### Reliability
@@ -80,11 +80,11 @@ Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `
 ### Code quality
 - **[Bắt buộc]** Logging via `loguru` with file rotation from the config — no `print` in `src/` (a CLI result line in an evaluation run is the exception).
 - **[Bắt buộc]** Type hints on public functions and classes; no bare `except:` — catch specific errors or log and re-raise.
-- **[Bắt buộc]** Counting logic (ring crossing, direction, extrapolation of fast tracks, ambiguous tracks, session switching, bucket rollover, net count inputs) has `pytest` tests that run without a camera, model or broker.
+- **[Bắt buộc]** Counting logic (ring crossing, direction, extrapolation of fast tracks, ambiguous tracks, session switching, bucket rollover, one count per track) has `pytest` tests that run without a camera, model or broker.
 - **[Nên]** Keep `src/` modules importable without side effects (no work at import time); entry points behind `if __name__ == "__main__":`.
 
 ### Accuracy claims
-- **[Bắt buộc]** Any accuracy number in a PR, README or report comes from the plan §7.7 procedure: clips from test days only (never days used for training), hand counts by two people, error per direction and for the net count, reported **separately** for well-lit and low-light clips (VISION-FR-016), with model Precision/Recall on the test split. State the conditions; never round a miss into a pass.
+- **[Bắt buộc]** Any accuracy number in a PR, README or report comes from the plan §7.7 procedure: clips from test days only (never days used for training), hand counts by two people, error per direction (first the session's own direction: exits in the morning, returns in the evening, BR-12) and for the net count, reported **separately** for well-lit and low-light clips (VISION-FR-016), with model Precision/Recall on the test split. State the conditions; never round a miss into a pass.
 
 ## Known debt — not held against PRs that don't touch it
 

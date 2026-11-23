@@ -79,6 +79,8 @@ def main() -> None:
         writer.write(draw(frame.copy(), tracks, counter, counter.entry_count + counter.exit_count))
         max_tracks = max(max_tracks, len(tracks))
         n += 1
+    for _ in range(cfg["tracking"]["lost_track_buffer"] + 2):   # chốt các vết còn đang theo khi hết đoạn
+        counter.update([], [])
     cap.release()
     writer.release()
     elapsed = time.perf_counter() - t0

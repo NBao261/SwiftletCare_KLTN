@@ -89,7 +89,7 @@ Các quyết định thiết kế:
 | Nguồn vào là RTSP **hoặc** file video | Dev, gán nhãn và đo độ chính xác đều làm được khi chưa có camera |
 | Một class `swiftlet` | SRS v2.1 đã bỏ phát hiện thiên địch |
 | Lưu 1 bản ghi cho mỗi (camera, phiên, ngày) **và** 1 bản ghi cho mỗi khoảng 5 phút | Bản ghi theo phiên cho tỷ lệ chim về. Bản ghi 5 phút (VISION-FR-017) là dữ liệu để đối chiếu với cảnh báo ồn bất thường, kể cả ngoài phiên (SRS Flow 25, EXPERT-FR-003) |
-| Tỷ lệ chim về tính trên **số ròng** | Chim lượn qua lại vạch đếm làm cả hai chiều phồng lên; số ròng (ra trừ vào buổi sáng, vào trừ ra buổi chiều) triệt tiêu phần đó. Số thô vẫn được lưu để so hai cách khi đánh giá (mục 7.7) |
+| Tỷ lệ chim về = **VỀ buổi chiều ÷ RA buổi sáng** (BR-12, đổi ngày 23/11/2026; trước đó tính trên số ròng) | Nút AI đếm mỗi vết chim một lần theo nơi xuất hiện và nơi mất (`tracking.count_once_per_track`), nên chim lượn qua lại ở cửa lỗ không làm phồng số. Chiều ngược của mỗi phiên vẫn được lưu để so khi đánh giá (mục 7.7) |
 
 ---
 
@@ -1079,8 +1079,8 @@ mAP chỉ là chỉ số trung gian. Thứ cần báo cáo là sai số đếm.
 python src/stream.py --source D:/SwiftletCare/clips/20261025_morning_01.mp4 --session MORNING_EXIT --no-mqtt
 ```
 
-4. Tính sai số = `|hệ thống − đếm tay| / đếm tay × 100%` cho từng chiều, và cho **số ròng** (ra trừ vào ở clip sáng, vào trừ ra ở clip chiều).
-5. Báo cáo **riêng** nhóm đủ sáng và nhóm thiếu sáng (VISION-FR-016), kèm Precision/Recall của model trên tập test. So sai số của số thô với số ròng: cách nào sát đếm tay hơn thì dùng cho tỷ lệ chim về (mặc định trong backend là số ròng, mục 8.3).
+4. Tính sai số = `|hệ thống − đếm tay| / đếm tay × 100%` cho từng chiều, trước hết là **chiều của phiên** (RA ở clip sáng, VỀ ở clip chiều: số tỷ lệ chim về dùng, BR-12), và cho số ròng (ra trừ vào ở clip sáng, vào trừ ra ở clip chiều) để so.
+5. Báo cáo **riêng** nhóm đủ sáng và nhóm thiếu sáng (VISION-FR-016), kèm Precision/Recall của model trên tập test. So sai số của chiều phiên với số ròng và của hai cách đếm (`count_once_per_track` bật hay tắt): backend dùng chiều của phiên từ 23/11/2026 (BR-12), số đo này quyết định có giữ cách đó không.
 
 **Xong khi:** đủ điều kiện Done của SRS cho VISION-FR-005 và VISION-FR-016 (có bảng sai số tách theo điều kiện sáng). Ngưỡng nội bộ đề xuất: sai số ≤ 10% trên các clip của ngày test. Phiếu đăng ký không cam kết con số; nếu không đạt 10% thì vẫn báo cáo số đo thật kèm điều kiện đo.
 
@@ -1209,7 +1209,7 @@ Bước 2 — trên máy chạy thật, lần lượt với từng file `.onnx`:
 
 Bước 3 — điền bảng (đưa thẳng vào báo cáo VISION-FR-016):
 
-| Model | Precision | Recall | mAP50 | Sai số ròng đủ sáng | Sai số ròng thiếu sáng | FPS trên máy thật | Đạt 25 fps? |
+| Model | Precision | Recall | mAP50 | Sai số chiều phiên đủ sáng | Sai số chiều phiên thiếu sáng | FPS trên máy thật | Đạt 25 fps? |
 |---|---|---|---|---|---|---|---|
 | YOLOv8n | | | | | | | |
 | YOLO11n | | | | | | | |
@@ -1218,7 +1218,7 @@ Bước 3 — điền bảng (đưa thẳng vào báo cáo VISION-FR-016):
 
 1. Loại model không đạt **≥ 25 fps** trên máy thật. Mọi model được dùng cùng cách tăng tốc ở bước 2 của mục 18.4 (OpenVINO nếu là CPU Intel).
 2. Loại model có sai số đếm **> 10%**, theo ngưỡng nội bộ ở mục 7.7.
-3. Trong các model còn lại, chọn model có **sai số ròng thấp nhất**, xét cả hai nhóm đủ sáng và thiếu sáng.
+3. Trong các model còn lại, chọn model có **sai số chiều phiên thấp nhất** (RA sáng, VỀ chiều), xét cả hai nhóm đủ sáng và thiếu sáng.
 4. Nếu sai số chênh nhau không đáng kể (ngưỡng nhóm tự chọn: ≤ 1 điểm %), chọn **bản ổn định hơn**, theo thứ tự YOLOv8n → YOLO11n.
 5. Nếu cả hai đều trượt bước 1, áp dụng tiếp các bước 3–5 của mục 18.4 cho model có sai số thấp nhất, rồi đo lại.
 
@@ -1284,7 +1284,7 @@ const SESSION_TYPES: SessionType[] = ['MORNING_EXIT', 'EVENING_ENTRY']
 const VN_OFFSET_MS = 7 * 3600_000
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
 const vnDate = (d: Date) => new Date(d.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
-/** Số ròng: chim lượn qua lại vạch đếm làm cả hai chiều phồng lên, phép trừ triệt tiêu phần đó */
+/** Bản đầu tính trên số ròng; từ 23/11/2026 (BR-12) sáng chỉ tính RA, chiều chỉ tính VỀ, code thật ở birdCount.service.ts */
 const net = (main: number, opposite: number) => Math.max(main - opposite, 0)
 
 /** VISION-FR-006/008/009/017 — gọi từ mqtt/handlers/birdCount.handler.ts */
@@ -1314,7 +1314,7 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<void> 
   const timestamp = new Date(payload.timestamp || Date.now())
   const session_date = vnDate(timestamp)
 
-  // VISION-FR-009: tỷ lệ chim về = số ròng về buổi chiều / số ròng ra buổi sáng cùng ngày
+  // VISION-FR-009 (BR-12 từ 23/11/2026): tỷ lệ chim về = VỀ buổi chiều / RA buổi sáng cùng ngày
   let return_rate: number | undefined
   if (session_type === 'EVENING_ENTRY') {
     const morning = await BirdCountRecord.findOne({
@@ -1474,7 +1474,7 @@ export function authorizeStream(key: unknown, body: MediaMtxAuthRequest): void {
 - Test đơn vị cho `authorizeStream`: sai khóa, sai mật khẩu publish, token hết hạn, token của camera khác → đều bị từ chối.
 - Test tích hợp `tests/integration/birdCount.test.ts`:
   - payload hợp lệ → có 1 bản ghi; gửi lần 2 cùng phiên → vẫn 1 bản ghi, số được cập nhật;
-  - sáng `exit_count = 110`, `entry_count = 10`; chiều `entry_count = 95`, `exit_count = 10` → số ròng 85/100, `return_rate = 85`;
+  - sáng `exit_count = 110`, `entry_count = 10`; chiều `entry_count = 95`, `exit_count = 10` → 95/110, `return_rate = 86.36` (BR-12: không trừ chiều ngược);
   - tin `kind: "BUCKET"` → có 1 bản ghi trong `BirdCountBucket`; gửi lại cùng `bucket_start` → vẫn 1 bản ghi; không tạo `BirdCountRecord`;
   - `checkReturnRateDrops`: 3 ngày trước 90%, hôm nay 60% → có cảnh báo `LOW_RETURN_RATE`; chạy lại lần 2 → không thêm cảnh báo mới;
   - `deviceId` không tồn tại, số âm, `session_type` lạ → bị từ chối, không ghi DB.
@@ -1601,7 +1601,7 @@ Thời gian: 1,5 ngày.
 
 Báo cáo `docs/test-reports/vision-counting.md`:
 
-| Clip | Phiên | Điều kiện sáng | Đếm tay (ra / vào) | Hệ thống (ra / vào) | Sai số ra | Sai số vào | Sai số ròng | FPS |
+| Clip | Phiên | Điều kiện sáng | Đếm tay (ra / vào) | Hệ thống (ra / vào) | Sai số ra | Sai số vào | Sai số chiều phiên | FPS |
 |---|---|---|---|---|---|---|---|---|
 | 20261011_morning_01 | Sáng | Thiếu sáng | | | | | | |
 | … | | | | | | | | |
@@ -1684,7 +1684,7 @@ Checklist:
 - [ ] Model v1 đã train, export ONNX, có số liệu trên tập test
 - [ ] Đã so sánh YOLOv8n / YOLO11n trên cùng dữ liệu, chọn theo mục 7.9
 - [ ] Sai số đếm trên các clip test đạt ngưỡng, có bảng tách đủ sáng / thiếu sáng
-- [ ] Backend: bản ghi được upsert, `return_rate` tính trên số ròng, `returnRate.job` tạo alert `LOW_RETURN_RATE`, test tích hợp qua
+- [ ] Backend: bản ghi được upsert, `return_rate` = VỀ chiều ÷ RA sáng (BR-12), `returnRate.job` tạo alert `LOW_RETURN_RATE`, test tích hợp qua
 - [ ] Số đếm 5 phút: pipeline gửi cả ngoài phiên, backend lưu `BirdCountBucket`, có API và biểu đồ
 - [ ] Camera: chim không phản ứng với đèn hồng ngoại (cổng 6); modem chỉ cho IP của VPS vào cổng camera (cổng 3c)
 - [ ] Mobile xem được live stream có khung

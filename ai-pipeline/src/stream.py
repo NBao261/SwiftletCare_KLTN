@@ -26,6 +26,14 @@ CONFIG = Path(__file__).resolve().parents[1] / "config" / "config.yaml"
 STATE_FILE = Path("state.json")
 RECONNECT_MAX_SEC = 30
 STALL_TIMEOUT_MS = 10_000   # luồng đứng hình quá lâu thì nối lại (mặc định của OpenCV là 30 giây)
+# Đông chim thì hình camera nặng gấp đôi (4,8 → 10 Mbit/s, clip 26/10): đường truyền không chở kịp thì camera
+# gửi thiếu frame dù máy xử lý dư. Xét mỗi 5 giây; dưới 80 % số frame của camera là thiếu. Chọn tay.
+RECEIVE_CHECK_SEC = 5
+RECEIVE_WARN_RATIO = 0.8
+
+
+def receiving_short(received: int, seconds: float, camera_fps: float) -> bool:
+    return received / seconds < RECEIVE_WARN_RATIO * camera_fps
 
 
 def load_config(path: Path = CONFIG) -> dict:
@@ -53,15 +61,17 @@ def make_counter(cfg: dict, width: int, height: int, rings: Optional[Sequence[Ri
     """rings từ backend (1–4 vòng); None = vòng trong config.yaml."""
     t = cfg["tracking"]
     return MultiRingCounter(rings or default_rings(cfg), width, height, *base, lost_frames=t["lost_track_buffer"],
-                            extrapolate_frames=t["extrapolate_frames"], min_speed_px=t["extrapolate_min_speed_px"])
+                            extrapolate_frames=t["extrapolate_frames"], min_speed_px=t["extrapolate_min_speed_px"],
+                            once_per_track=t.get("count_once_per_track", False))
 
 
 class FrameGrabber(threading.Thread):
     """Đọc RTSP liên tục, chỉ giữ frame mới nhất để hình không trễ dần."""
 
-    def __init__(self, source: str):
+    def __init__(self, source: str, camera_fps: float):
         super().__init__(daemon=True)
         self.source, self.frame, self.seq = source, None, 0
+        self.camera_fps = camera_fps
         self.lock = threading.Lock()
 
     def run(self) -> None:
@@ -70,6 +80,7 @@ class FrameGrabber(threading.Thread):
         while True:
             cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG, [
                 cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, STALL_TIMEOUT_MS, cv2.CAP_PROP_READ_TIMEOUT_MSEC, STALL_TIMEOUT_MS])
+            window_start, received, short = time.time(), 0, False
             while True:
                 ok, frame = cap.read()
                 if not ok:
@@ -77,13 +88,24 @@ class FrameGrabber(threading.Thread):
                 delay = 1
                 with self.lock:
                     self.frame, self.seq = frame, self.seq + 1
+                received += 1
+                elapsed = time.time() - window_start
+                if elapsed >= RECEIVE_CHECK_SEC:
+                    now_short = receiving_short(received, elapsed, self.camera_fps)
+                    # Chỉ ghi lúc bắt đầu và lúc hết thiếu: đường truyền yếu có thể kéo dài cả phiên
+                    if now_short and not short:
+                        logger.warning(f"Camera chỉ gửi tới {received / elapsed:.1f} frame/giây (camera chạy "
+                                       f"{self.camera_fps:g}): đường truyền từ camera không chở kịp")
+                    elif short and not now_short:
+                        logger.info(f"Camera gửi đủ frame trở lại ({received / elapsed:.1f} frame/giây)")
+                    window_start, received, short = time.time(), 0, now_short
             cap.release()
             logger.warning(f"Mất luồng camera, kết nối lại sau {delay} giây")
             time.sleep(delay)
             delay = min(delay * 2, RECONNECT_MAX_SEC)
 
 
-def frames(source: str, live: bool, realtime: bool = False) -> Iterator[np.ndarray]:
+def frames(source: str, live: bool, realtime: bool = False, camera_fps: float = 25) -> Iterator[np.ndarray]:
     """Live: luôn trả frame mới nhất. File: trả đủ từng frame (để đo độ chính xác)."""
     if not live:
         cap = cv2.VideoCapture(source)
@@ -98,7 +120,7 @@ def frames(source: str, live: bool, realtime: bool = False) -> Iterator[np.ndarr
             if realtime:
                 next_t += interval
                 time.sleep(max(0.0, next_t - time.time()))
-    grabber = FrameGrabber(source)
+    grabber = FrameGrabber(source, camera_fps)
     grabber.start()
     last = 0
     while True:
@@ -242,7 +264,7 @@ def main() -> None:
     last_pub, last_log = 0.0, time.time()      # last_pub = 0: heartbeat ngay ở frame đầu
     n_frames, fps = 0, 0.0
 
-    for frame in frames(source, live, args.realtime):
+    for frame in frames(source, live, args.realtime, cfg["camera"]["fps"]):
         h, w = frame.shape[:2]
         if pipe is None:
             pipe = FramePipeline(cfg, engine, w, h)

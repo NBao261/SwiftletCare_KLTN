@@ -62,14 +62,14 @@ export default function BirdHourlyCard({ houseIds, scopeLabel }: BirdHourlyCardP
         <KpiTile
           icon={ArrowLineUpIcon}
           label={t('hourly.exitToday')}
-          value={countText(today.morningExit + today.eveningExit)}
-          sub={today.updatedAt ? t('hourly.sessions', { morning: num(today.morningExit), evening: num(today.eveningExit) }) : todaySub}
+          value={countText(today.morningExit)}
+          sub={todaySub}
         />
         <KpiTile
           icon={ArrowLineDownIcon}
           label={t('hourly.entryToday')}
-          value={countText(today.morningEntry + today.eveningEntry)}
-          sub={today.updatedAt ? t('hourly.sessions', { morning: num(today.morningEntry), evening: num(today.eveningEntry) }) : todaySub}
+          value={countText(today.eveningEntry)}
+          sub={todaySub}
         />
         <KpiTile
           icon={ChartLineIcon}

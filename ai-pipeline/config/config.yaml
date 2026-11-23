@@ -54,6 +54,10 @@ tracking:
   # Chỉ ngoại suy vết nhanh: chim lượn dời 20–35 px/frame, chim qua lỗ 150–200 px/frame (clip 22/10).
   # 60 nằm giữa hai mức, chọn tay; đo lại khi có clip với thời gian phơi sáng ngắn hơn.
   extrapolate_min_speed_px: 60
+  # Mỗi vết chim tính tối đa một lần, khi vết mất: xuất hiện ở lỗ rồi bay vào nhà = VỀ, từ trong nhà bay
+  # vào lỗ = RA. Chim lượn ở cửa lỗ vượt vòng nhiều lần không bị cộng nhiều lần, cần khi phiên sáng chỉ
+  # tính RA và phiên chiều chỉ tính VỀ (BR-12). false = mỗi lần vượt vòng là một lần đếm (cách cũ).
+  count_once_per_track: true
   # Vòng Domain Expert vẽ trên web (backend gửi qua `config` retained của thiết bị) được lưu
   # vào file này và thắng ring/into_ring_is_exit ở trên, kể cả sau khi khởi động lại.
   ring_override_file: "state/counting_ring.json"

@@ -7302,8 +7302,8 @@ components:
       type: object
       description: |
         VISION-FR-008/009 — số đếm 1 ngày (giờ Việt Nam) của **cả nhà yến** (SRS v2.1.8: chim ra vào ở cửa của
-        nhà, không chia theo Zone). Nhà có 2 cửa thì cộng số thô mọi camera rồi mới lấy số ròng (chim có thể ra cửa
-        này về cửa kia). Cùng nguồn cho /current, /daily, /trends, /correlation, socket BIRD_COUNT_UPDATE, cảnh báo
+        nhà, không chia theo Zone). Nhà có 2 cửa thì cộng số mọi camera rồi mới tính tỷ lệ (chim có thể ra cửa
+        này về cửa kia). Sáng chỉ tính chim ra, chiều chỉ tính chim về (BR-12); chiều ngược vẫn lưu để đối chiếu. Cùng nguồn cho /current, /daily, /trends, /correlation, socket BIRD_COUNT_UPDATE, cảnh báo
         LOW_RETURN_RATE, báo cáo sức khỏe Zone và ảnh chụp đàn khi thu hoạch (Zone lấy số của nhà chứa nó).
       properties:
         date: { type: string, example: "2026-10-20", description: "YYYY-MM-DD giờ Việt Nam" }
@@ -7311,8 +7311,8 @@ components:
         morning_exit: { type: integer, description: Số thô phiên sáng }
         evening_entry: { type: integer, description: Số thô phiên chiều }
         evening_exit: { type: integer, description: Số thô phiên chiều }
-        net_exit: { type: integer, description: "Ra − vào của phiên sáng, không âm" }
-        net_entry: { type: integer, description: "Vào − ra của phiên chiều, không âm" }
+        net_exit: { type: integer, description: "Số chim ra của phiên sáng (= morning_exit, không trừ chiều vào); tên giữ cho app cũ" }
+        net_entry: { type: integer, description: "Số chim về của phiên chiều (= evening_entry, không trừ chiều ra); tên giữ cho app cũ" }
         return_rate:
           type: number
           nullable: true
@@ -8500,7 +8500,7 @@ components:
           description: "HARVEST-FR-003 — return rate trung bình 30 ngày (rỗng cho tới khi module VISION có dữ liệu thật)"
           properties:
             avg_return_rate_30d: { type: number, nullable: true, description: "Trung bình theo ngày của tỷ lệ chim về cả Zone (BirdCountDay.return_rate) trong 30 ngày trước mẻ" }
-            estimated_population: { type: integer, nullable: true, description: "Số ròng về buổi chiều lớn nhất của Zone trong 30 ngày (BirdCountDay.net_entry)" }
+            estimated_population: { type: integer, nullable: true, description: "Số chim về buổi chiều lớn nhất của Zone trong 30 ngày (BirdCountDay.net_entry)" }
         status: { $ref: "#/components/schemas/HarvestStatus" }
         confirmed_by: { type: string, nullable: true, description: "Farm Owner xác nhận lô (HARVEST-FR-006)" }
         confirmed_at: { type: string, format: date-time, nullable: true }
