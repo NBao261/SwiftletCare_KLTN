@@ -94,6 +94,8 @@ describe('workOrderActions — thao tác theo người xem', () => {
     expect(workOrderActions(repair('OPEN'), 'technician')).toEqual(['start']);
     expect(workOrderActions(repair('IN_PROGRESS'), 'technician')).toEqual(['done']);
     expect(workOrderActions(repair('AWAITING_APPROVAL'), 'technician')).toEqual([]);
+    expect(workOrderActions(repair('VERIFYING'), 'technician')).toEqual([]);
+    expect(workOrderActions(repair('CLOSED'), 'technician')).toEqual([]);
     expect(workOrderActions(repair('OPEN'), 'reader')).toEqual([]);
     expect(workOrderActions(repair('AWAITING_APPROVAL'), 'owner')).toEqual(['approve', 'reopen']);
   });

@@ -29,10 +29,10 @@ import type { WorkOrder } from '@/types';
 // Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (api-spec)
 const NOTE_MAX_LENGTH = 1000;
 
-// Domain Expert chỉ xem
 // Lời giải thích của trang theo người xem
 const HELP_KEY = { owner: 'list.subtitle', technician: 'list.subtitleTechnician', reader: 'list.subtitleExpert' } as const;
 
+// Chủ nhà yến thao tác mọi việc, kỹ thuật viên làm phiếu của nhà được giao, chuyên gia chỉ xem
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -49,12 +49,16 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
   // Kỹ thuật viên mặc định chỉ xem phiếu giao cho mình (backend assigneeId=me)
-  const [onlyMine, setOnlyMine] = useState(true);
+  const [isOnlyMine, setIsOnlyMine] = useState(true);
   const query = {
     ...(scope.houseId ? { houseId: scope.houseId } : scope.farmId ? { farmId: scope.farmId } : {}),
     ...statusFilterQuery(statusFilter),
-    ...(isTechnician && onlyMine ? { assigneeId: 'me' } : {}),
+    ...(isTechnician && isOnlyMine ? { assigneeId: 'me' } : {}),
   };
+  // Bộ lọc "Giao cho tôi" bỏ qua phiếu chưa giao (không có thợ trực) nên trạng thái rỗng nhắc tắt bộ lọc
+  let emptyHintKey: 'list.emptyHint' | 'list.emptyHintMine' | 'list.emptyHintReader' = 'list.emptyHint';
+  if (isTechnician && isOnlyMine) emptyHintKey = 'list.emptyHintMine';
+  else if (actor !== 'owner') emptyHintKey = 'list.emptyHintReader';
   // Đổi phạm vi hoặc trạng thái thì về trang 1
   const filterKey = JSON.stringify(query);
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
@@ -137,7 +141,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
             ]}
           />
           {isTechnician && (
-            <FilterChip active={onlyMine} label={t('filter.mine')} onClick={() => setOnlyMine(current => !current)} />
+            <FilterChip active={isOnlyMine} label={t('filter.mine')} onClick={() => setIsOnlyMine(current => !current)} />
           )}
           {canManage && (
             <Button
@@ -163,7 +167,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
           />
         ) : workOrders.length === 0 ? (
           <div className="flex items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
-            <TableEmptyState title={t('list.emptyTitle')} description={t('list.emptyHint')} />
+            <TableEmptyState title={t('list.emptyTitle')} description={t(emptyHintKey)} />
           </div>
         ) : (
           <WorkOrderTable
@@ -192,7 +196,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         <WorkOrderCreateModal open={isCreateOpen} house={{ id: selectedHouse._id, name: selectedHouse.name }} onClose={() => setIsCreateOpen(false)} />
       )}
 
-      {/* Farm Owner tự làm: bắt đầu hỏi lại vì phiếu chuyển sang đang làm dưới tên mình */}
+      {/* Bắt đầu hỏi lại vì phiếu chuyển sang đang làm dưới tên người bấm */}
       <ConfirmModal
         open={pending?.action === 'start'}
         title={t('action.start')}
