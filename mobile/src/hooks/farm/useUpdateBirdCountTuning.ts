@@ -7,7 +7,7 @@ export interface UpdateBirdCountTuningInput {
   tuning: BirdCountTuning
 }
 
-// Lưu mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008): chỉ chuyên gia; xong thì tải lại danh sách nhà của farm
+// Lưu mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008): chuyên gia và chủ trại (BR-22 nhóm A); xong thì tải lại danh sách nhà của farm
 export function useUpdateBirdCountTuning() {
   const queryClient = useQueryClient()
 

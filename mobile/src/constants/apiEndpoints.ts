@@ -39,8 +39,8 @@ export const ENDPOINTS = {
   HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
   // Giai đoạn nhà (FARM-FR-014, BR-46): Farm Owner, Domain Expert
   HOUSE_STAGE: (houseId: string) => `/farms/houses/${houseId}/stage`,
-  // Luật bù thời tiết (ENV-FR-030), lịch đếm (VISION-FR-019), mức chỉ số sức khỏe (BR-28) của nhà: chuyên gia sửa, Farm Owner chỉ
-  // khi farm chưa có chuyên gia (BR-22)
+  // Luật bù thời tiết (ENV-FR-030): chuyên gia đặt, Farm Owner chỉ khi farm chưa có chuyên gia (BR-22). Lịch đếm
+  // (VISION-FR-019), mức chỉ số sức khỏe (BR-28): chuyên gia và Farm Owner
   HOUSE_WEATHER_RULES: (houseId: string) => `/farms/houses/${houseId}/weather-rules`,
   HOUSE_COUNTING_SCHEDULE: (houseId: string) => `/farms/houses/${houseId}/counting-schedule`,
   HOUSE_HEALTH_LEVELS: (houseId: string) => `/farms/houses/${houseId}/health-levels`,

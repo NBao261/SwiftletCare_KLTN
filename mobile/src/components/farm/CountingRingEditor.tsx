@@ -51,13 +51,15 @@ interface CountingRingEditorProps {
   player: VideoPlayer
   // Câu báo khi chưa có hình (camera mất kết nối, không mở được luồng…); vẫn chỉnh được vòng đang lưu
   videoMessage: string | null
+  // Chủ trại trên farm có chuyên gia: dòng "chuyên gia sẽ xem lại" (BR-22 nhóm A); null thì không hiện
+  reviewNote: string | null
   onClose: () => void
 }
 
 // Trình vẽ vòng đếm trên khung hình live (VISION-FR-018): chạm quanh miệng lỗ ra vào để đặt 3–12 đỉnh theo thứ tự quanh vòng,
 // chọn chiều ra/vào, lưu. Toạ độ theo tỉ lệ khung hình 0–1; khung vẽ có đúng tỉ lệ của luồng nên video lấp kín khung, điểm chạm
 // khớp với hình. Đổi vòng thì số đếm trước và sau không so được với nhau (api-spec), nên màn nói rõ điều đó
-export function CountingRingEditor({ camera, player, videoMessage, onClose }: CountingRingEditorProps) {
+export function CountingRingEditor({ camera, player, videoMessage, reviewNote, onClose }: CountingRingEditorProps) {
   const palette = usePalette()
   const insets = useSafeAreaInsets()
   const { width: windowWidth } = useWindowDimensions()
@@ -221,6 +223,11 @@ export function CountingRingEditor({ camera, player, videoMessage, onClose }: Co
             <Text variant="small" color={palette.textSecondary}>
               {t('Đổi vòng thì số đếm trước và sau khi đổi không so sánh được với nhau.')}
             </Text>
+            {reviewNote && (
+              <Text variant="small" color={palette.textSecondary}>
+                {reviewNote}
+              </Text>
+            )}
             <FormMessage message={updateRing.error ? getCountingRingErrorMessage(updateRing.error) : null} />
             <FormMessage tone="success" message={savedMessage} />
             <Button label={t('Lưu vòng đếm')} onPress={save} disabled={!canSave} loading={updateRing.isPending} />

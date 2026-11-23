@@ -73,11 +73,11 @@ export const farmApi = {
   // có chuyên gia bị 403, không có gợi ý thì 409 kèm lý do
   applySuggestion: (zoneId: string) => apiClient.post<ApiResponse<Zone>>(ENDPOINTS.ZONE_APPLY_SUGGESTION(zoneId)),
 
-  // Tham số phát hiện của Zone (EXPERT-FR-008), chỉ chuyên gia
+  // Tham số phát hiện của Zone (EXPERT-FR-008): chuyên gia, chủ trại (farm có chuyên gia thì mở mục duyệt, BR-22)
   updateDetectionTuning: (zoneId: string, payload: DetectionTuning) =>
     apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_DETECTION_TUNING(zoneId), payload),
 
-  // Mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008), chỉ chuyên gia
+  // Mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008): chuyên gia, chủ trại (farm có chuyên gia thì mở mục duyệt, BR-22)
   updateBirdCountTuning: (houseId: string, payload: BirdCountTuning) =>
     apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_BIRD_COUNT_TUNING(houseId), payload),
 

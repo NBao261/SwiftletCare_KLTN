@@ -9,6 +9,7 @@ import {
   type SettingsTableRow,
 } from '@/components/farm/settings/SettingsTable'
 import { useResetThresholds } from '@/hooks/farm/useResetThresholds'
+import { useExpertReviewNote } from '@/hooks/farm/useExpertReviewNote'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { useUpdateThresholds } from '@/hooks/farm/useUpdateThresholds'
 import { useAuthStore } from '@/stores/authStore'
@@ -16,7 +17,7 @@ import type { Thresholds, Zone } from '@/types'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { getMetricLabel, getMetricUnit } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
-import { getSettingsSectionId } from '@/utils/settingsSection.utils'
+import { getSettingsSectionId, joinFooterNotes, withExpertReviewMessage } from '@/utils/settingsSection.utils'
 import {
   formatStoredNumber,
   hasDraftErrors,
@@ -43,6 +44,8 @@ const THRESHOLD_ROWS: { metric: ThresholdMetric; minKey?: keyof Thresholds; maxK
 
 interface ThresholdSectionProps {
   zone: Zone
+  // Farm của nhà chứa zone, để biết farm có chuyên gia không (BR-22)
+  farmId: string
   editor: SectionEditor
   // Lưu hoặc đặt lại xong: trang hiện toast
   onSaved: (message: string) => void
@@ -62,7 +65,7 @@ function getColumns(): SettingsTableColumn[] {
 }
 
 // Phần đang sửa: bảng có ô nhập, tự giữ bản nháp; Lưu chỉ gửi ngưỡng của zone này
-function ThresholdEditor({ zone, editor, onSaved }: ThresholdSectionProps) {
+function ThresholdEditor({ zone, editor, onSaved }: Omit<ThresholdSectionProps, 'farmId'>) {
   const updateThresholds = useUpdateThresholds()
   const [draft, setDraft] = useState<NumberDraft<keyof Thresholds>>(() => {
     const initial = {} as NumberDraft<keyof Thresholds>
@@ -136,9 +139,12 @@ function ThresholdEditor({ zone, editor, onSaved }: ThresholdSectionProps) {
 
 // Mục "Ngưỡng môi trường" của một zone (ENV-FR-006): xem các ngưỡng (THRESHOLD_KEYS); chủ trại và chuyên gia bấm "Sửa" để chỉnh,
 // ô vuông ở chân card đặt lại mặc định hệ thống (ENV-FR-020)
-export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProps) {
+export function ThresholdSection({ zone, farmId, editor, onSaved }: ThresholdSectionProps) {
   const user = useAuthStore(state => state.user)
   const canEdit = canPerform(user, 'editThresholds')
+  const reviewNote = useExpertReviewNote(farmId)
+  // Chủ trại trên farm có chuyên gia: câu báo đã lưu kèm lời nhắc chuyên gia sẽ xem lại (BR-22 nhóm A)
+  const showSaved = (message: string) => onSaved(withExpertReviewMessage(message, reviewNote))
   const resetThresholds = useResetThresholds()
   const id = getSettingsSectionId('thresholds', zone._id)
   const isEditing = editor.isEditing(id)
@@ -157,7 +163,7 @@ export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProp
           style: 'destructive',
           onPress: () =>
             resetThresholds.mutate(zone._id, {
-              onSuccess: () => onSaved(t('Đã đặt lại ngưỡng mặc định')),
+              onSuccess: () => showSaved(t('Đã đặt lại ngưỡng mặc định')),
               onError: error => NativeAlert.alert(t('Không đặt lại được'), getSettingsErrorMessage(error)),
             }),
         },
@@ -187,7 +193,7 @@ export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProp
       onToggle={() => editor.toggle(id)}
       onEdit={canEdit ? () => editor.startEditing(id) : undefined}
       isEditing={isEditing}
-      footerNote={canEdit ? t('Lưu xong áp dụng ngay cho khu vực') : undefined}
+      footerNote={canEdit ? joinFooterNotes(t('Lưu xong áp dụng ngay cho khu vực'), reviewNote) : undefined}
       footerTile={
         canEdit && !isEditing
           ? {
@@ -200,7 +206,7 @@ export function ThresholdSection({ zone, editor, onSaved }: ThresholdSectionProp
       }
     >
       {isEditing ? (
-        <ThresholdEditor zone={zone} editor={editor} onSaved={onSaved} />
+        <ThresholdEditor zone={zone} editor={editor} onSaved={showSaved} />
       ) : (
         <SettingsTable columns={getColumns()} rows={viewRows} />
       )}

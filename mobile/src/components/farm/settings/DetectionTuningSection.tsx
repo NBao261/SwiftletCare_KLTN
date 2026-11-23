@@ -1,13 +1,13 @@
 import { WaveformIcon } from 'phosphor-react-native'
 import { NumberTuningSection } from '@/components/farm/settings/NumberTuningSection'
+import { useExpertReviewNote } from '@/hooks/farm/useExpertReviewNote'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
-import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useUpdateDetectionTuning } from '@/hooks/farm/useUpdateDetectionTuning'
 import { useAuthStore } from '@/stores/authStore'
 import type { DetectionTuning, Zone } from '@/types'
 import { getDetectionTuningLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
-import { getSettingsSectionId } from '@/utils/settingsSection.utils'
+import { getSettingsSectionId, joinFooterNotes, withExpertReviewMessage } from '@/utils/settingsSection.utils'
 import { DETECTION_TUNING_RULES } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -21,13 +21,14 @@ interface DetectionTuningSectionProps {
   onSaved: (message: string) => void
 }
 
-// Mục "Tham số phát hiện" của một zone (EXPERT-FR-008): chuyên gia sửa; farm chưa có chuyên gia thì chủ trại sửa thay
-// (BR-22), còn lại chủ trại chỉ xem
+// Mục "Tham số phát hiện" của một zone (EXPERT-FR-008): chuyên gia và chủ trại sửa.
+// Farm có chuyên gia thì thay đổi của chủ trại áp ngay và mở mục duyệt cho chuyên gia (BR-22 nhóm A)
 export function DetectionTuningSection({ zone, farmId, editor, onSaved }: DetectionTuningSectionProps) {
   const user = useAuthStore(state => state.user)
-  const hasExpert = useFarmHasExpert(farmId)
-  const canEdit = canPerform(user, 'editDetectionTuning', { farmHasExpert: hasExpert })
+  const canEdit = canPerform(user, 'editDetectionTuning')
+  const reviewNote = useExpertReviewNote(farmId)
   const updateDetectionTuning = useUpdateDetectionTuning()
+  const showSaved = (message: string) => onSaved(withExpertReviewMessage(message, reviewNote))
 
   return (
     <NumberTuningSection
@@ -36,7 +37,7 @@ export function DetectionTuningSection({ zone, farmId, editor, onSaved }: Detect
       title={t('Tham số phát hiện')}
       subtitle={t('Khi nào báo tiếng ồn lạ, phun sương không hiệu quả, loa hỏng')}
       scopeLabel={zone.name}
-      footerNote={canEdit ? t('Lưu xong áp dụng ngay cho khu vực') : undefined}
+      footerNote={canEdit ? joinFooterNotes(t('Lưu xong áp dụng ngay cho khu vực'), reviewNote) : undefined}
       keys={DETECTION_KEYS}
       rules={DETECTION_TUNING_RULES}
       values={zone.detection_tuning}
@@ -45,7 +46,7 @@ export function DetectionTuningSection({ zone, farmId, editor, onSaved }: Detect
       editor={editor}
       save={values => updateDetectionTuning.mutateAsync({ zoneId: zone._id, tuning: values })}
       savedMessage={t('Đã lưu tham số phát hiện')}
-      onSaved={onSaved}
+      onSaved={showSaved}
     />
   )
 }

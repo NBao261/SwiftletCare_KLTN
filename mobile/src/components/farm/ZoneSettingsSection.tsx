@@ -102,7 +102,7 @@ function SettingGroup({ group, onMenu }: { group: SettingGroupData; onMenu: () =
 export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSettingsSectionProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
-  // BR-22: farm chưa có chuyên gia thì chủ trại sửa thay tham số phát hiện, mức giảm tỷ lệ về tổ
+  // BR-22: mục nào chủ trại chỉ làm khi farm chưa có chuyên gia thì canPerform cần biết farm có chuyên gia không
   const hasExpert = useFarmHasExpert(house.farm_id)
   const scheduleQuery = useCountingSchedule(house._id)
   const [menuGroup, setMenuGroup] = useState<SettingGroupData | null>(null)
@@ -171,7 +171,7 @@ export function ZoneSettingsSection({ zone, house, onOpenSettings }: ZoneSetting
       {
         icon: GearSixIcon,
         label: t('Xem trong Cài đặt nhà'),
-        // Trong app chỉ gặp ở tham số phát hiện và mức giảm tỷ lệ về tổ với chủ trại
+        // Người chỉ xem (kỹ thuật viên) mở Cài đặt nhà để xem đủ các mức
         caption: t('Xem các mức đang dùng'),
         onPress: () => onOpenSettings(group.kind, false),
       },

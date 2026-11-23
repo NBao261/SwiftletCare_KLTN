@@ -1630,7 +1630,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chiều {window}': 'Evening {window}',
   'Khung sáng hôm nay': 'Morning window today',
   'Khung chiều hôm nay': 'Evening window today',
-  'Farm đã có chuyên gia: chuyên gia đặt mục này, bạn chỉ xem': 'The farm has an expert: the expert sets this, you can only view it',
   'Bạn chỉ xem mục này': 'You can only view this',
   // ALERT-FR-005 — kênh theo mức cảnh báo
   'Không tắt được': 'Cannot turn off',
@@ -1671,4 +1670,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   // Phân tích: bộ chọn nhà gắn với farm
   'Đã ghim': 'Pinned',
   'Chọn nhà yến · {farm}': 'Choose a house · {farm}',
+  // Chủ trại quyết định trên farm có chuyên gia (BR-22, PR 9 audit 21/11)
+  'Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại': 'Changes apply at once; the expert will review them',
+  'Chuyên gia sẽ xem lại thay đổi này.': 'The expert will review this change.',
 }

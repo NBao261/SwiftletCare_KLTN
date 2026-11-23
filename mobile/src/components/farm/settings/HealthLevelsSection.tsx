@@ -2,6 +2,7 @@ import { HeartbeatIcon } from 'phosphor-react-native'
 import { NumberTuningSection } from '@/components/farm/settings/NumberTuningSection'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
+import { useExpertReviewNote } from '@/hooks/farm/useExpertReviewNote'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { useHealthLevels } from '@/hooks/farm/useHealthLevels'
 import { useUpdateHealthLevels } from '@/hooks/farm/useUpdateHealthLevels'
@@ -9,7 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import type { HealthLevels, House } from '@/types'
 import { getHealthLevelLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
-import { getSettingsSectionId } from '@/utils/settingsSection.utils'
+import { getSettingsSectionId, joinFooterNotes, withExpertReviewMessage } from '@/utils/settingsSection.utils'
 import { HEALTH_LEVEL_RULES, validateHealthLevelsDraft } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -23,7 +24,7 @@ interface HealthLevelsSectionProps {
 }
 
 // Mục "Mức chỉ số sức khỏe" của nhà (BR-28, EXPERT-FR-022): mỗi chỉ số có mức "nhẹ" và "rõ" mà đánh giá ngày dùng. Chuyên gia
-// sửa khi thấy nhiều ngày lệch; farm chưa có chuyên gia còn hoạt động thì chủ trại sửa thay (BR-22). Ai sửa được theo cờ can_edit
+// và chủ trại sửa; farm có chuyên gia thì thay đổi của chủ trại áp ngay và mở mục duyệt (BR-22 nhóm A). Ai sửa được theo cờ can_edit
 // của backend (api-spec: client dùng cờ này, không tự đoán từ thành viên — danh sách thành viên còn tính chuyên gia đã bị khoá).
 // Kỹ thuật viên không thấy mục này (backend 403)
 export function HealthLevelsSection({ house, editor, onSaved }: HealthLevelsSectionProps) {
@@ -33,6 +34,7 @@ export function HealthLevelsSection({ house, editor, onSaved }: HealthLevelsSect
   const updateHealthLevels = useUpdateHealthLevels()
   // Sửa được theo can_edit của backend, không AND với farmHasExpert của app
   const canEdit = canView && Boolean(levelsQuery.data?.can_edit)
+  const reviewNote = useExpertReviewNote(house.farm_id)
 
   if (!canView) return null
   if (levelsQuery.isLoading) return <Skeleton width="100%" height={SECTION_SKELETON_HEIGHT} />
@@ -53,7 +55,7 @@ export function HealthLevelsSection({ house, editor, onSaved }: HealthLevelsSect
       title={t('Mức chỉ số sức khỏe')}
       subtitle={t('Ngưỡng nhẹ và rõ mà đánh giá ngày dùng')}
       scopeLabel={t('Nhà')}
-      footerNote={canEdit ? t('Mức mới áp từ lần đánh giá tiếp theo') : undefined}
+      footerNote={canEdit ? joinFooterNotes(t('Mức mới áp từ lần đánh giá tiếp theo'), reviewNote) : undefined}
       keys={HEALTH_LEVEL_KEYS}
       rules={HEALTH_LEVEL_RULES}
       validate={validateHealthLevelsDraft}
@@ -63,7 +65,7 @@ export function HealthLevelsSection({ house, editor, onSaved }: HealthLevelsSect
       editor={editor}
       save={values => updateHealthLevels.mutateAsync({ houseId: house._id, levels: values })}
       savedMessage={t('Đã lưu mức chỉ số sức khỏe')}
-      onSaved={onSaved}
+      onSaved={message => onSaved(withExpertReviewMessage(message, reviewNote))}
     />
   )
 }

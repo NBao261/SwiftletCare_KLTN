@@ -1,13 +1,13 @@
 import { BirdIcon } from 'phosphor-react-native'
 import { NumberTuningSection } from '@/components/farm/settings/NumberTuningSection'
+import { useExpertReviewNote } from '@/hooks/farm/useExpertReviewNote'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
-import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useUpdateBirdCountTuning } from '@/hooks/farm/useUpdateBirdCountTuning'
 import { useAuthStore } from '@/stores/authStore'
 import type { BirdCountTuning, House } from '@/types'
 import { getBirdCountTuningLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
-import { getSettingsSectionId } from '@/utils/settingsSection.utils'
+import { getSettingsSectionId, joinFooterNotes, withExpertReviewMessage } from '@/utils/settingsSection.utils'
 import { BIRD_COUNT_TUNING_RULES } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -19,13 +19,14 @@ interface BirdCountTuningSectionProps {
   onSaved: (message: string) => void
 }
 
-// Mục "Mức giảm tỷ lệ về tổ" của cả nhà (EXPERT-FR-008): giảm quá mức này so với kỳ trước thì báo LOW_RETURN_RATE.
-// Chuyên gia sửa; farm chưa có chuyên gia thì chủ trại sửa thay (BR-22), còn lại chủ trại chỉ xem
+// Mục "Mức giảm tỷ lệ về tổ" của cả nhà (EXPERT-FR-008): giảm quá mức này so với kỳ trước thì báo LOW_RETURN_RATE. Chuyên gia và
+// chủ trại sửa. Farm có chuyên gia thì thay đổi của chủ trại áp ngay và mở mục duyệt (BR-22)
 export function BirdCountTuningSection({ house, editor, onSaved }: BirdCountTuningSectionProps) {
   const user = useAuthStore(state => state.user)
-  const hasExpert = useFarmHasExpert(house.farm_id)
-  const canEdit = canPerform(user, 'editBirdCountTuning', { farmHasExpert: hasExpert })
+  const canEdit = canPerform(user, 'editBirdCountTuning')
+  const reviewNote = useExpertReviewNote(house.farm_id)
   const updateBirdCountTuning = useUpdateBirdCountTuning()
+  const showSaved = (message: string) => onSaved(withExpertReviewMessage(message, reviewNote))
 
   return (
     <NumberTuningSection
@@ -34,7 +35,7 @@ export function BirdCountTuningSection({ house, editor, onSaved }: BirdCountTuni
       title={t('Mức giảm tỷ lệ về tổ')}
       subtitle={t('Giảm quá mức này so với 7 ngày trước thì cảnh báo')}
       scopeLabel={t('Nhà')}
-      footerNote={canEdit ? t('Áp dụng cho cả nhà') : undefined}
+      footerNote={canEdit ? joinFooterNotes(t('Áp dụng cho cả nhà'), reviewNote) : undefined}
       keys={BIRD_COUNT_KEYS}
       rules={BIRD_COUNT_TUNING_RULES}
       values={house.bird_count_tuning}
@@ -43,7 +44,7 @@ export function BirdCountTuningSection({ house, editor, onSaved }: BirdCountTuni
       editor={editor}
       save={values => updateBirdCountTuning.mutateAsync({ houseId: house._id, tuning: values })}
       savedMessage={t('Đã lưu mức giảm tỷ lệ về tổ')}
-      onSaved={onSaved}
+      onSaved={showSaved}
     />
   )
 }
