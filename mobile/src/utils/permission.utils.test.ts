@@ -63,6 +63,17 @@ describe('canPerform', () => {
     }
   })
 
+  it('gửi đề xuất luật thời tiết: chỉ chủ trại trên farm có chuyên gia (BR-22 nhóm B)', () => {
+    for (const action of ['proposeWeatherRules'] as const) {
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(true)
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(false)
+      // Chưa biết farm có chuyên gia hay không thì không mở nút
+      expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(false)
+      expect(canPerform(buildUser('DOMAIN_EXPERT'), action, { farmHasExpert: true })).toBe(false)
+      expect(canPerform(buildUser('FARM_TECHNICIAN'), action, { farmHasExpert: true })).toBe(false)
+    }
+  })
+
   it('gợi ý hệ số: chuyên gia luôn áp dụng; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'applyCoefficientSuggestion', { farmHasExpert: true })).toBe(true)
     expect(canPerform(buildUser('FARM_OWNER'), 'applyCoefficientSuggestion', { farmHasExpert: false })).toBe(true)

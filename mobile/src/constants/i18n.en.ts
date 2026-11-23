@@ -1673,4 +1673,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   // Chủ trại quyết định trên farm có chuyên gia (BR-22, PR 9 audit 21/11)
   'Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại': 'Changes apply at once; the expert will review them',
   'Chuyên gia sẽ xem lại thay đổi này.': 'The expert will review this change.',
+  'Đã gửi chuyên gia duyệt': 'Sent to the expert',
+  'Trang trại không còn chuyên gia. Bạn đặt luật trực tiếp được': 'This farm no longer has an expert. You can set the rules directly',
+  'Luật mới chỉ chạy khi chuyên gia duyệt': 'New rules run only once the expert approves them',
+  'có đề xuất chờ duyệt': 'proposal awaiting approval',
+  'Đề xuất chờ chuyên gia duyệt · gửi {time}': 'Proposal awaiting the expert · sent {time}',
 }

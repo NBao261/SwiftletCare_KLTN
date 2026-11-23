@@ -19,6 +19,7 @@ import type {
   HealthLevels,
   HouseHealthLevelsView,
   WeatherRule,
+  WeatherRulesProposal,
   WeatherRulesView,
   Thresholds,
   UpdateFarmPayload,
@@ -93,6 +94,10 @@ export const farmApi = {
   updateWeatherRules: (houseId: string, rules: WeatherRule[]) =>
     // PUT chỉ trả house_id và rules (api-spec), không kèm last_compensation
     apiClient.put<ApiResponse<Omit<WeatherRulesView, 'last_compensation'>>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId), { rules }),
+  // Farm Owner trên farm có chuyên gia gửi bộ luật để chuyên gia duyệt (BR-22, BR-38); luật đang chạy không đổi, gửi lại thì thay
+  // đề xuất cũ. Farm chưa có chuyên gia thì 409
+  proposeWeatherRules: (houseId: string, rules: WeatherRule[]) =>
+    apiClient.post<ApiResponse<WeatherRulesProposal>>(ENDPOINTS.HOUSE_WEATHER_RULES_PROPOSAL(houseId), { rules }),
 
   // Lịch đếm chim của nhà (VISION-FR-019): lưu là thay cả lịch, áp từ ngày hôm sau (giờ VN)
   getCountingSchedule: (houseId: string) =>

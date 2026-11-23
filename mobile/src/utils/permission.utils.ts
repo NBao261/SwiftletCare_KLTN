@@ -53,6 +53,7 @@ export type PermissionAction =
   | 'reviewDisagreements'
   | 'viewHealthLevels'
   | 'viewFarmOverview'
+  | 'proposeWeatherRules'
 
 // Role được làm từng thao tác (Report 3 §2.4); Admin không vào app. Farm Technician (G-20) chỉ thấy và thao tác trên nhà được
 // giao — backend chỉ trả nhà, tầng, thiết bị, cảnh báo của các nhà đó và trả 403 ở nhà khác (AUTH-FR-013)
@@ -144,6 +145,8 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   viewFarmOverview: ['FARM_OWNER'],
   // Phán quyết cảnh báo suy luận (EXPERT-FR-003): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)
   setAlertVerdict: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Gửi bộ luật thời tiết cho chuyên gia duyệt (POST …/weather-rules/proposal): chủ trại trên farm có chuyên gia (BR-22 nhóm B)
+  proposeWeatherRules: ['FARM_OWNER'],
   // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chủ trại và kỹ thuật viên (nhận cảnh báo đầu tiên của nhà được
   // giao); chuyên gia không nhận push, Telegram
   editNotificationSettings: ['FARM_OWNER', 'FARM_TECHNICIAN'],
@@ -165,7 +168,7 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   manageFarmMembers: ['FARM_OWNER'],
 }
 
-// Thao tác chủ trại chỉ được làm khi farm chưa có chuyên gia (BR-22 nhóm B, C); có chuyên gia thì chuyên gia quyết.
+// Thao tác chủ trại chỉ được làm khi farm chưa có chuyên gia (BR-22 nhóm B, C); có chuyên gia thì chuyên gia duyệt hoặc kết luận.
 // Nhóm A (tham số, lịch đếm, vòng đếm) chủ trại luôn sửa được, farm có chuyên gia thì backend mở mục duyệt
 const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set([
   'applyCoefficientSuggestion',
@@ -173,6 +176,9 @@ const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set([
   'editWeatherRules',
   'reviewDisagreements',
 ])
+
+// Thao tác chủ trại chỉ làm khi farm có chuyên gia (BR-22): gửi chuyên gia duyệt; farm chưa có thì chủ tự quyết
+const FARM_OWNER_WITH_EXPERT: ReadonlySet<PermissionAction> = new Set(['proposeWeatherRules'])
 
 // Thao tác backend chỉ cho Primary Owner (người tạo farm); đồng sở hữu chỉ xem
 const PRIMARY_OWNER_ONLY: ReadonlySet<PermissionAction> = new Set(['manageFarmMembers'])
@@ -195,6 +201,7 @@ export function canPerform(user: User | null, action: PermissionAction, context:
   if (!user) return false
   if (!ALLOWED_ROLES[action].includes(user.role)) return false
   if (user.role === 'FARM_OWNER' && FARM_OWNER_WITHOUT_EXPERT.has(action)) return context.farmHasExpert === false
+  if (user.role === 'FARM_OWNER' && FARM_OWNER_WITH_EXPERT.has(action)) return context.farmHasExpert === true
   if (PRIMARY_OWNER_ONLY.has(action)) return context.isPrimaryOwner === true
   return true
 }
