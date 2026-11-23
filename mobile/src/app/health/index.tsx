@@ -34,7 +34,7 @@ const DISAGREEMENT_DAYS = 30
 const SKELETON_ROWS = 4
 const ROW_SKELETON_HEIGHT = 56
 
-/** Trạng thái ngày của một nhà (ANALYTICS-FR-012, MF-06): các ngày, ngày chờ chấm che trạng thái tới khi chấm (BR-31). Chuyên
+/** Trạng thái ngày của một nhà (ANALYTICS-FR-012, MF-06): các ngày, luôn kèm trạng thái kể cả ngày chờ chấm (BR-31). Chuyên
  * gia, hoặc chủ trại khi farm chưa có chuyên gia (BR-22), có thêm "Ngày lệch": ngày người chấm khác hệ thống, kèm nút chỉnh mức
  * chỉ số của nhà (EXPERT-FR-022) */
 export default function HealthDaysScreen() {
@@ -157,7 +157,7 @@ export default function HealthDaysScreen() {
         )}
         <Text variant="small" color={palette.textSecondary}>
           {t(
-            'Mỗi ngày hệ thống tính trạng thái của nhà từ môi trường, không khí, đàn chim và tiếng ồn. Bạn đánh giá trước rồi mới thấy trạng thái. Trạng thái là chỉ báo từ dữ liệu, không phải chẩn đoán.',
+            'Mỗi ngày hệ thống tính trạng thái của nhà từ môi trường, không khí, đàn chim và tiếng ồn. Bạn xem trạng thái rồi xác nhận hoặc sửa theo quan sát tại nhà yến. Trạng thái là chỉ báo từ dữ liệu, không phải chẩn đoán.',
           )}
         </Text>
       </>

@@ -6,7 +6,6 @@ import { HealthRatingForm } from '@/components/health/HealthRatingForm'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Spacing } from '@/constants/theme'
 import { useHealthDay } from '@/hooks/health/useHealthDay'
@@ -15,14 +14,13 @@ import { usePalette } from '@/hooks/theme/usePalette'
 import { useToastMessage } from '@/hooks/ui/useToastMessage'
 import { useAuthStore } from '@/stores/authStore'
 import { readApiError } from '@/utils/apiError.utils'
-import { isHealthDayHidden } from '@/utils/healthDay.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
 const SKELETON_HEIGHT = 320
 
-/** Một ngày của một nhà: còn chờ chấm thì hỏi đánh giá của người dùng trước (EXPERT-FR-012, BR-31, BR-37),
- * chấm hoặc bỏ qua xong mới hiện trạng thái, lý do, chỉ số và các đánh giá (ANALYTICS-FR-012) */
+/** Một ngày của một nhà: còn chờ chấm thì hiện trạng thái của hệ thống rồi hỏi người dùng xác nhận hoặc sửa (EXPERT-FR-012,
+ * BR-31, BR-37); còn lại hiện trạng thái, lý do, chỉ số và các đánh giá (ANALYTICS-FR-012) */
 export default function HealthDayScreen() {
   const palette = usePalette()
   const language = useLanguage()
@@ -42,28 +40,20 @@ export default function HealthDayScreen() {
         <EmptyState message={t('Không tải được')} actionLabel={t('Thử lại')} onAction={() => dayQuery.refetch()} />
       )
     }
-    if (isHealthDayHidden(day)) {
-      // Người không chấm không có form (backend trả 403); ngày chờ chấm vẫn che trạng thái
-      if (!canPerform(user, 'rateHealthDay')) {
-        return (
-          <Text variant="body" color={palette.textSecondary}>
-            {t('Ngày này chưa có trạng thái để xem')}
-          </Text>
-        )
-      }
-      return (
-        <HealthRatingForm
-          key={day._id}
-          day={day}
-          onRevealed={toast.show}
-          onClosed={message => {
-            toast.show(message)
-            dayQuery.refetch()
-          }}
-        />
-      )
-    }
-    return <HealthDayDetail day={day} onMessage={toast.show} />
+    // Chỉ người chấm còn PENDING mới thấy form; người không chấm (backend trả 403 nếu gửi) luôn xem chi tiết
+    const isRatingOpen = day.my_rating_state === 'PENDING' && canPerform(user, 'rateHealthDay')
+    if (!isRatingOpen) return <HealthDayDetail day={day} onMessage={toast.show} />
+    return (
+      <HealthRatingForm
+        key={day._id}
+        day={day}
+        onDone={toast.show}
+        onClosed={message => {
+          toast.show(message)
+          dayQuery.refetch()
+        }}
+      />
+    )
   }
 
   return (

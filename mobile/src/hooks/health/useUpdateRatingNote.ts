@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { healthReportApi } from '@/services/api/healthReport.api'
-import { storeRevealedHealthDay } from '@/utils/healthDay.utils'
+import { storeSavedHealthDay } from '@/utils/healthDay.utils'
 
 export interface UpdateRatingNoteInput {
   dayId: string
@@ -14,6 +14,6 @@ export function useUpdateRatingNote() {
   return useMutation({
     mutationFn: ({ dayId, note }: UpdateRatingNoteInput) =>
       healthReportApi.updateRatingNote(dayId, note).then(response => response.data.data),
-    onSuccess: day => storeRevealedHealthDay(queryClient, day),
+    onSuccess: day => storeSavedHealthDay(queryClient, day),
   })
 }

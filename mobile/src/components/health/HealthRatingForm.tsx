@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { CheckCircleIcon, CircleIcon } from 'phosphor-react-native'
 import { HealthStatusBadge } from '@/components/health/HealthStatusBadge'
+import { HealthStatusSummary } from '@/components/health/HealthStatusSummary'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { FormMessage } from '@/components/ui/form-message'
@@ -29,14 +30,15 @@ const NOTE_INPUT_HEIGHT = 96
 interface HealthRatingFormProps {
   // Ngày người dùng còn PENDING
   day: HouseHealthDay
-  // Chấm hoặc bỏ qua xong; ngày đầy đủ backend trả đã nằm trong cache nên màn tự chuyển sang chi tiết
-  onRevealed: (message: string) => void
+  // Chấm hoặc bỏ qua xong; ngày backend trả đã nằm trong cache nên màn tự chuyển sang chi tiết
+  onDone: (message: string) => void
   // Ngày đã chốt ở nơi khác (409): màn tải lại ngày
   onClosed: (message: string) => void
 }
 
-// EXPERT-FR-012, BR-31, BR-37 — hỏi đánh giá của người dùng trước, chỉ hiện trạng thái hệ thống sau khi lưu hoặc bỏ qua
-export function HealthRatingForm({ day, onRevealed, onClosed }: HealthRatingFormProps) {
+// EXPERT-FR-012, BR-31 (Report 3 4.2.14), BR-37 — hiện trạng thái và lý do của hệ thống trước, người dùng xác nhận hoặc sửa
+// theo quan sát tại nhà yến. Không chọn sẵn mức nào để người chấm tự quyết (độ khớp NFR-14 mới có ý nghĩa)
+export function HealthRatingForm({ day, onDone, onClosed }: HealthRatingFormProps) {
   const palette = usePalette()
   const rate = useRateHealthDay()
   const skip = useSkipHealthDay()
@@ -59,7 +61,7 @@ export function HealthRatingForm({ day, onRevealed, onClosed }: HealthRatingForm
     const trimmedNote = note.trim()
     rate.mutate(
       { dayId: day._id, rating, note: trimmedNote || undefined },
-      { onSuccess: () => onRevealed(t('Đã lưu đánh giá')), onError: handleError },
+      { onSuccess: () => onDone(t('Đã lưu đánh giá')), onError: handleError },
     )
   }
 
@@ -67,7 +69,7 @@ export function HealthRatingForm({ day, onRevealed, onClosed }: HealthRatingForm
     Alert.alert(
       t('Bỏ qua ngày này?'),
       t(
-        'Không thể hoàn tác. Trạng thái của hệ thống sẽ hiện ra ngay và bạn sẽ không đánh giá được ngày này nữa. Ngày bỏ qua không được tính vào độ khớp giữa bạn và hệ thống.',
+        'Không thể hoàn tác. Bạn sẽ không đánh giá được ngày này nữa. Ngày bỏ qua không được tính vào độ khớp giữa bạn và hệ thống.',
       ),
       [
         { text: t('Huỷ'), style: 'cancel' },
@@ -76,7 +78,7 @@ export function HealthRatingForm({ day, onRevealed, onClosed }: HealthRatingForm
           style: 'destructive',
           onPress: () =>
             skip.mutate(day._id, {
-              onSuccess: () => onRevealed(t('Đã bỏ qua ngày này')),
+              onSuccess: () => onDone(t('Đã bỏ qua ngày này')),
               onError: handleError,
             }),
         },
@@ -89,12 +91,14 @@ export function HealthRatingForm({ day, onRevealed, onClosed }: HealthRatingForm
       <View style={styles.header}>
         <Text variant="heading">{t('Đánh giá ngày {date} · {house}', { date: formatHealthDate(day.date), house: day.house_name })}</Text>
         <Text variant="body" color={palette.textSecondary}>
-          {t('Đánh giá trước khi xem biểu đồ. Trạng thái hiện sau khi lưu; đã lưu thì không đổi được.')}
+          {t('Xem trạng thái của hệ thống, rồi xác nhận hoặc sửa theo quan sát tại nhà yến. Đã lưu thì không đổi được.')}
         </Text>
         <Text variant="small" color={palette.textSecondary}>
           {t('Hạn đánh giá {date}', { date: formatLastRatingDay(day.rating_deadline) })}
         </Text>
       </View>
+
+      <HealthStatusSummary day={day} />
 
       {/* Hướng dẫn quan sát BR-37, hiện trước khi chọn mức để mọi người đánh giá cùng một thước đo */}
       <Card accessibilityLabel={t('Quan sát tại nhà yến')}>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { StyleSheet, TextInput, View } from 'react-native'
 import { HealthStatusBadge } from '@/components/health/HealthStatusBadge'
+import { HealthStatusSummary } from '@/components/health/HealthStatusSummary'
 import { StatRow } from '@/components/analytics/StatRow'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,6 @@ import { formatDateTime } from '@/utils/date.utils'
 import {
   HEALTH_SOURCES,
   formatHealthDate,
-  formatHealthReason,
   formatIndicatorValue,
   getHealthSourceLabel,
   getHealthStatusLabel,
@@ -33,7 +33,7 @@ const NOTE_MAX_LENGTH = 1000
 const NOTE_INPUT_HEIGHT = 120
 
 interface HealthDayDetailProps {
-  // Ngày đã mở cho người dùng (đã chấm, đã bỏ qua, hết hạn, hoặc người không chấm)
+  // Ngày không còn chờ người dùng chấm (đã chấm, đã bỏ qua, hết hạn, hoặc người không chấm)
   day: HouseHealthDay
   onMessage: (message: string) => void
 }
@@ -49,7 +49,7 @@ export function HealthDayDetail({ day, onMessage }: HealthDayDetailProps) {
   const userId = useAuthStore(state => state.user?._id)
   const updateNote = useUpdateRatingNote()
   const [noteDraft, setNoteDraft] = useState<string | null>(null)
-  const ratings = day.ratings ?? []
+  const ratings = day.ratings
   const myRating = ratings.find(item => item.by._id === userId && item.outcome === 'RATED')
   const canEditNote = day.my_rating_state === 'RATED' && Boolean(myRating)
   const weather = day.weather
@@ -111,55 +111,26 @@ export function HealthDayDetail({ day, onMessage }: HealthDayDetailProps) {
 
   return (
     <View style={styles.detail}>
-      <Card>
+      <View style={styles.header}>
         <Text variant="small" color={palette.textSecondary}>
           {t('Ngày {date} · {house}', { date: formatHealthDate(day.date), house: day.house_name })}
         </Text>
-        <View style={styles.statusRow}>
-          <Text variant="body" weight="semiBold" style={styles.flex}>
-            {t('Trạng thái của hệ thống')}
-          </Text>
-          {day.current_status && <HealthStatusBadge status={day.current_status} />}
-        </View>
-        {day.computed_at && (
-          <Text variant="small" color={palette.textSecondary}>
-            {t('Tính lúc {time}', { time: formatDateTime(day.computed_at) })}
-          </Text>
-        )}
         {day.my_rating_state && (
           <Text variant="small" color={palette.textSecondary}>
             {t('Bạn: {state}', { state: getRatingStateLabel(day.my_rating_state) })}
           </Text>
         )}
-        <Text variant="small" color={palette.textSecondary}>
-          {t('Trạng thái là chỉ báo từ dữ liệu, không phải chẩn đoán.')}
-        </Text>
-      </Card>
+      </View>
 
-      <Card>
-        <Text variant="body" weight="semiBold">
-          {t('Lý do')}
-        </Text>
-        {(day.current_reasons ?? []).length === 0 ? (
-          <Text variant="small" color={palette.textSecondary}>
-            _
-          </Text>
-        ) : (
-          (day.current_reasons ?? []).map((reason, index) => (
-            <Text key={`${reason.code}-${reason.source ?? 'none'}-${index}`} variant="small">
-              {`• ${formatHealthReason(reason)}`}
-            </Text>
-          ))
-        )}
-      </Card>
+      <HealthStatusSummary day={day} />
 
       <Card>
         <Text variant="body" weight="semiBold">
           {t('Các chỉ số')}
         </Text>
         {HEALTH_SOURCES.map(source => {
-          const indicator = day.indicators?.[source]
-          const isComplete = day.completeness?.[source] !== false
+          const indicator = day.indicators[source]
+          const isComplete = day.completeness[source] !== false
           const levelText = isComplete ? getIndicatorLevelLabel(indicator?.level ?? null) : t('Thiếu dữ liệu')
           return (
             <StatRow
@@ -246,6 +217,7 @@ export function HealthDayDetail({ day, onMessage }: HealthDayDetailProps) {
 
 const styles = StyleSheet.create({
   detail: { gap: Spacing.md },
+  header: { gap: Spacing.xs },
   flex: { flex: 1 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   rating: { gap: Spacing.xs, paddingVertical: Spacing.sm },

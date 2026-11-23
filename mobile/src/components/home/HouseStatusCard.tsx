@@ -19,7 +19,6 @@ import type { AppColors } from '@/constants/theme'
 import { Radius, Spacing } from '@/constants/theme'
 import { useFarmOverviews } from '@/hooks/farm/useFarmOverviews'
 import type { HouseCardData } from '@/hooks/farm/useHouseStatuses'
-import { usePendingHealthDays } from '@/hooks/health/usePendingHealthDays'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { getHealthStatusLabel, getHouseDayDisplay, type HouseDayDisplay } from '@/utils/healthDay.utils'
 import type { HouseStatus } from '@/utils/houseStatus.utils'
@@ -93,20 +92,17 @@ interface HouseStatusCardProps {
 // Chữ của trạng thái ngày hôm nay trên thẻ (đọc cho trình đọc màn hình)
 function getDayDisplayText(display: HouseDayDisplay): string {
   if (display.kind === 'status') return getHealthStatusLabel(display.status)
-  return display.kind === 'pending-rating' ? t('Chờ bạn đánh giá') : t('Chưa tính')
+  return t('Chưa tính')
 }
 
 // Thẻ một nhà yến: nền lime, 2 vòng mực trang trí ở góc dưới trái, trạng thái vận hành nặng nhất ở dòng cuối; giữa thẻ là trạng thái
-// ngày hôm nay (MF-06, ANALYTICS-FR-015 — che khi người xem còn chưa chấm, BR-31) và nhãn "Đang dẫn dụ" (FARM-FR-014) —
+// ngày hôm nay (MF-06, ANALYTICS-FR-015 — hiện cả khi người xem chưa chấm, BR-31) và nhãn "Đang dẫn dụ" (FARM-FR-014) —
 // dùng chung cho carousel Trang chủ và danh sách nhà ở tab Trang trại
 export function HouseStatusCard({ data, width, onPress, pin }: HouseStatusCardProps) {
   const palette = usePalette()
   const { house, farmName, status, activeAlertCount } = data
   const overviewByHouseId = useFarmOverviews()
-  const pendingDays = usePendingHealthDays()
-  // Danh sách ngày chờ chấm chưa về hoặc lỗi thì chưa biết có phải che không: không hiện trạng thái ngày (BR-31)
-  const isPendingKnown = !pendingDays.isLoading && !pendingDays.isError
-  const dayDisplay = getHouseDayDisplay(overviewByHouseId.get(house._id), isPendingKnown ? pendingDays.data : null)
+  const dayDisplay = getHouseDayDisplay(overviewByHouseId.get(house._id))
   const isAttracting = house.stage === 'ATTRACTING'
   const alertText = t('{count} cảnh báo', { count: activeAlertCount })
   const dayText = dayDisplay ? t('Hôm nay: {status}', { status: getDayDisplayText(dayDisplay) }) : null

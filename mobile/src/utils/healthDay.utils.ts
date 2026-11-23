@@ -210,9 +210,13 @@ export function getPendingRatingRange(now: number = Date.now()): { from: string;
   return { from: shiftDate(to, -RATING_WINDOW_DAYS), to }
 }
 
-// Ngày còn chờ người dùng chấm thì bị che trạng thái (BR-31)
-export function isHealthDayHidden(day: HouseHealthDay): boolean {
-  return day.my_rating_state === 'PENDING' || day.current_status === undefined
+// Dòng phụ nói người dùng đã làm gì với ngày đó: chờ chấm thì nhắc hạn, bỏ qua / hết hạn thì ghi rõ; đã chấm hoặc không phải
+// người chấm thì null
+export function getMyRatingCaption(day: Pick<HouseHealthDay, 'my_rating_state' | 'rating_deadline'>): string | null {
+  const state = day.my_rating_state
+  if (state === 'PENDING') return t('Chờ bạn đánh giá · hạn {date}', { date: formatLastRatingDay(day.rating_deadline) })
+  if (state === 'SKIPPED' || state === 'EXPIRED') return getRatingStateLabel(state)
+  return null
 }
 
 // Tải lại danh sách ngày (chờ chấm, ngày của nhà) và báo cáo; chi tiết ngày do màn tự tải
@@ -223,9 +227,9 @@ export function refreshHealthDayLists(queryClient: QueryClient): Promise<void> {
   ]).then(() => undefined)
 }
 
-// Sau khi chấm, bỏ qua, sửa ghi chú: ghi ngày đầy đủ backend trả vào cache rồi tải lại danh sách ngày và báo cáo,
-// vì trạng thái các ngày đó vừa mở cho người dùng
-export function storeRevealedHealthDay(queryClient: QueryClient, day: HouseHealthDay): Promise<void> {
+// Sau khi chấm, bỏ qua, sửa ghi chú: ghi ngày backend trả vào cache rồi tải lại danh sách ngày và báo cáo,
+// vì đánh giá của người dùng vừa đổi ở các chỗ đó
+export function storeSavedHealthDay(queryClient: QueryClient, day: HouseHealthDay): Promise<void> {
   queryClient.setQueryData(['health-days', 'detail', day._id], day)
   return refreshHealthDayLists(queryClient)
 }
@@ -272,20 +276,14 @@ export function groupPendingDaysByHouse(days: HouseHealthDay[], from: string, to
   return [...groupByHouseId.values()]
 }
 
-// Trạng thái ngày hôm nay trên thẻ nhà (ANALYTICS-FR-015): ngày còn chờ người xem chấm thì che (BR-31, backend tổng quan không tự
-// che, app là chỗ che duy nhất); chưa tính hôm nay thì ghi chưa tính; thiếu dữ liệu là INSUFFICIENT_DATA
-export type HouseDayDisplay =
-  | { kind: 'status'; status: HealthDayStatus }
-  | { kind: 'pending-rating' }
-  | { kind: 'not-computed' }
+// Trạng thái ngày hôm nay trên thẻ nhà (ANALYTICS-FR-015): hiện cả khi người xem chưa chấm (BR-31, Report 3 4.2.14); chưa tính
+// hôm nay thì ghi chưa tính; thiếu dữ liệu là INSUFFICIENT_DATA
+export type HouseDayDisplay = { kind: 'status'; status: HealthDayStatus } | { kind: 'not-computed' }
 
 export function getHouseDayDisplay(
-  overview: { house_id: string; date: string; status: HealthRatingValue | null; status_reason: string | null } | undefined,
-  // null: chưa biết người xem còn ngày nào chờ chấm (đang tải hoặc tải lỗi) thì không hiện gì, kẻo lộ trạng thái trước khi chấm
-  pendingDays: Pick<HouseHealthDay, 'house_id' | 'date'>[] | null,
+  overview: { status: HealthRatingValue | null; status_reason: string | null } | undefined,
 ): HouseDayDisplay | null {
-  if (!overview || !pendingDays) return null
-  if (pendingDays.some(day => day.house_id === overview.house_id && day.date === overview.date)) return { kind: 'pending-rating' }
+  if (!overview) return null
   if (overview.status) return { kind: 'status', status: overview.status }
   if (overview.status_reason === 'INSUFFICIENT_DATA') return { kind: 'status', status: 'INSUFFICIENT_DATA' }
   return { kind: 'not-computed' }
