@@ -44,13 +44,15 @@ async function openAsExpert(page: Page, path: string, scope: UiScope): Promise<s
   return crashes;
 }
 
-test('B1 — đăng nhập vào hàng đợi việc, 4 ô việc hiện, menu mở trang kiểm chứng', async ({ page }) => {
+test('B1 — đăng nhập vào hàng đợi việc, 4 ô nhóm việc hiện, menu mở trang kiểm chứng', async ({ page }) => {
   const crashes = trackCrashes(page);
   await signInUi(page, 'expert');
   await expect(page).toHaveURL(/\/domain-expert\/queue$/);
 
-  // 4 ô việc: cảnh báo, thay đổi chờ duyệt, ngày lệch, báo cáo chờ kết luận
-  for (const label of ['Cảnh báo chờ kết luận', 'Thay đổi chờ duyệt', 'Ngày lệch', 'Báo cáo chờ kết luận']) {
+  // Hàng đợi theo trại: 4 ô nhóm việc (kết luận cảnh báo, duyệt thay đổi, duyệt đề xuất, viết kết luận)
+  await setScope(page, { farmId });
+  await page.goto('/domain-expert/queue');
+  for (const label of ['Kết luận cảnh báo', 'Duyệt thay đổi', 'Duyệt đề xuất', 'Viết kết luận']) {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   }
 
