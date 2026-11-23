@@ -57,11 +57,11 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await signInUi(page, 'technician');
   await expect(page).toHaveURL(/\/alerts$/);
 
-  // Cảnh báo, công việc, sức khoẻ, thu hoạch (G-33), thiết bị, nhà được giao; không còn nhóm "Khác"
-  for (const label of ['Cảnh báo', 'Công việc', 'Sức khoẻ & báo cáo', 'Thu hoạch', 'Thiết bị & Cảm biến', 'Nhà được giao']) {
+  // Mọi việc của thợ ở nhà được giao (G-33); không có trang quyết định của chuyên gia, cài đặt hệ thống
+  for (const label of ['Cảnh báo', 'Tổng quan', 'Đàn chim', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị & Cảm biến', 'Nhà được giao', 'Thu hoạch']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
-  for (const label of ['Tổng quan', 'Hàng đợi việc', 'Phân tích', 'Cài đặt']) {
+  for (const label of ['Hàng đợi việc', 'Chuyên môn', 'Cài đặt']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toHaveCount(0);
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
@@ -153,10 +153,10 @@ test('T5 — nhà được giao: ca trực của chính mình, nút Xem thiết 
 });
 
 test('T6 — trang của vai trò khác bị chặn (Report 3 §2.4)', async ({ page }) => {
-  const crashes = await openAsTechnician(page, '/dashboard');
+  const crashes = await openAsTechnician(page, '/overview');
   await expect(page).toHaveURL(/\/403$/);
 
-  for (const path of ['/domain-expert/queue', '/analytics']) {
+  for (const path of ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/devices/onboarding']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/403$/);
   }
@@ -185,5 +185,14 @@ test('T8 — đánh giá ngày và thu hoạch của nhà được giao: không 
   await expect(page).toHaveURL(/\/harvests$/);
   // Kỹ thuật viên ghi đợt thu (chờ Chủ nhà yến xác nhận)
   await expect(page.getByRole('button', { name: 'Ghi đợt thu hoạch' })).toBeVisible();
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
+
+test('T9 — theo dõi nhà được giao: tổng quan, điều khiển tay, đàn chim, vòng đếm, phân tích (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/dashboard');
+  for (const path of ['/dashboard', '/dashboard/scada', '/vision', '/domain-expert/counting-ring', '/analytics']) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+  }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });

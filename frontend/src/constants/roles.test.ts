@@ -10,10 +10,10 @@ const ROLES: Role[] = [FO, DE, FT, ADMIN]
 
 // Ma trận quyền web theo và (backend f9d9522): path → role được vào
 const MATRIX: Record<string, Role[]> = {
-  '/dashboard': [FO, DE],
-  '/dashboard/scada': [FO],
-  '/analytics': [FO, DE],
-  '/vision': [FO, DE],
+  '/dashboard': [FO, DE, FT],
+  '/dashboard/scada': [FO, FT],          // điều khiển tay: thợ ở nhà được giao (G-33), chuyên gia không
+  '/analytics': [FO, DE, FT],
+  '/vision': [FO, DE, FT],
   '/health': [FO, DE, FT],
   '/harvests': [FO, DE, FT],
   '/work-orders': [FO, DE, FT],         // Farm Owner thao tác, thợ làm phiếu (G-33), Domain Expert chỉ đọc
@@ -37,7 +37,7 @@ const MATRIX: Record<string, Role[]> = {
   '/domain-expert/alert-verdicts': [DE, FO],
   '/domain-expert/tuning': [DE, FO],
   '/domain-expert/counting-schedule': [DE, FO],
-  '/domain-expert/counting-ring': [DE, FO],
+  '/domain-expert/counting-ring': [DE, FO, FT], // thợ vẽ vòng đếm camera nhà được giao (G-33)
   '/domain-expert/weather-rules': [DE, FO],
   '/domain-expert/reviews': [DE, FO],
   '/domain-expert/reports': [DE],       // Farm Owner xem báo cáo và ngày lệch ở /health
