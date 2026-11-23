@@ -177,7 +177,7 @@ describe('thư lời mời (AUTH-FR-010)', () => {
     expect(mails[0].to).toBe('moi@test.vn')
     expect(mails[0].subject).toContain(farm.name)
     expect(mails[0].text).toContain(`https://app.test/invitations/${invitation.token}`)
-    expect(mails[0].text).toContain('Domain Expert')
+    expect(mails[0].text).toContain('Chuyên gia')
   })
 
   it('thư lời mời lỗi thì lời mời vẫn được tạo', async () => {

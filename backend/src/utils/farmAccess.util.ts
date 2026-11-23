@@ -60,7 +60,7 @@ export async function farmHasActiveExpert(farm: Pick<IFarm, 'members'>): Promise
 export async function assertExpertDecision(farm: Pick<IFarm, 'members'>, user: CurrentUser): Promise<void> {
   if (user.role === 'DOMAIN_EXPERT') return
   if (user.role === 'FARM_OWNER' && !(await farmHasActiveExpert(farm))) return
-  throw ForbiddenError('Farm đã có chuyên gia — quyết định này do Domain Expert thực hiện')
+  throw ForbiddenError('Trang trại đã có chuyên gia, quyết định này do chuyên gia thực hiện')
 }
 
 // Đặt ở đây để tránh circular import giữa các service

@@ -497,10 +497,12 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
     const { adminToken, node } = await onlineNode()
     await send(adminToken, node._id, { command: 'RESTART' }).expect(202)
 
-    for (const status of ['PENDING', 'OFFLINE']) {
+    // Câu lỗi ghi trạng thái bằng chữ, không in mã enum
+    for (const [status, label] of [['PENDING', 'Chờ kết nối'], ['OFFLINE', 'Mất kết nối']]) {
       await SensorNode.updateOne({ _id: node._id }, { status })
       const res = await send(adminToken, node._id, { command: 'RESTART' }).expect(409)
-      expect(res.body.error.message).toContain(status)
+      expect(res.body.error.message).toContain(label)
+      expect(res.body.error.message).not.toContain(status)
     }
   })
   it('firmware trước 1.4.0 chưa xử lý RESTART/OTA → 501, PUSH_CONFIG vẫn chạy', async () => {

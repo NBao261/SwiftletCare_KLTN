@@ -35,6 +35,7 @@ import {
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
+import { ROLE_LABEL } from '@/utils/displayLabel.util'
 import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning, HouseStage } from '@/types'
 
 const INVITATION_TTL_MS = 7 * 86400_000
@@ -142,14 +143,31 @@ export async function updateFarm(
 export async function removeFarm(farmId: string, user: CurrentUser): Promise<void> {
   const farm = await findFarmOrThrow(farmId)
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được xóa farm')
-  await softDeleteFarm(farm)
+  // Như xoá nhà: thiết bị còn dùng thì gỡ trước, kẻo kẹt ở trang trại không ai mở được
+  const { controllerIds, cameraIds } = await listFarmDevicesInService(farm._id)
+  throwIfDevicesInService(controllerIds.length + cameraIds.length)
+  await softDeleteFarm(farm, user)
 }
 
-// Dùng chung cho chủ farm tự xoá và cascade khi Admin xoá tài khoản chủ
-export async function softDeleteFarm(farm: IFarm): Promise<void> {
+// Bộ điều khiển và camera còn dùng của mọi nhà trong trang trại
+export async function listFarmDevicesInService(farmId: unknown) {
+  const houseIds = await House.find({ farm_id: farmId }).distinct('_id') as Types.ObjectId[]
+  const zoneIds = await Zone.find({ house_id: { $in: houseIds } }).distinct('_id') as Types.ObjectId[]
+  const [controllerIds, cameraIds] = await Promise.all([
+    SensorNode.find({ zone_id: { $in: zoneIds }, ...IN_SERVICE }).distinct('_id'),
+    CameraNode.find({ house_id: { $in: houseIds }, ...IN_SERVICE }).distinct('_id'),
+  ])
+  return { controllerIds: controllerIds.map(String), cameraIds: cameraIds.map(String) }
+}
+
+// Dùng chung cho chủ farm tự xoá và cascade khi Admin xoá tài khoản chủ; thiết bị phải gỡ trước
+export async function softDeleteFarm(farm: IFarm, user: CurrentUser): Promise<void> {
+  // Từng nhà như xoá nhà: kế hoạch bảo trì, khuyến nghị, phiếu, cảnh báo, rồi nhà và Zone
+  const houses = await House.find({ farm_id: farm._id })
+  for (const house of houses) await softDeleteHouseCascade(house, user, 'Trang trại đã bị xoá')
   farm.is_deleted = true
   await farm.save()
-  // Để lại thì job gửi lại cho farm không ai mở được
+  // Cảnh báo cấp trang trại còn lại: để thì job gửi lại cho farm không ai mở được
   await Alert.updateMany(
     { farm_id: farm._id, status: { $in: OPEN_STATUSES } },
     { status: 'RESOLVED', resolved_at: new Date(), acknowledgement_note: 'Trang trại đã bị xoá' },
@@ -161,12 +179,6 @@ export async function softDeleteFarm(farm: IFarm): Promise<void> {
 export interface InviteMemberInput {
   email: string
   role?: FarmMemberRole
-}
-
-const MEMBER_ROLE_LABEL: Record<FarmMemberRole, string> = {
-  FARM_OWNER: 'Farm Owner',
-  DOMAIN_EXPERT: 'Domain Expert',
-  FARM_TECHNICIAN: 'Farm Technician',
 }
 
 // Email chưa có tài khoản thì tạo từ link (createAccountFromInvitation). Thợ chưa làm gì được tới khi gán nhà
@@ -185,7 +197,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
 
   // 1 email = 1 role: báo ngay thay vì để lời mời chờ vô ích
   if (existingMember && existingMember.role !== role) {
-    throw ConflictError(`Email này đã là tài khoản ${existingMember.role} — ${MEMBER_ROLE_LABEL[role]} cần dùng email khác`)
+    throw ConflictError(`Email này đã là tài khoản ${ROLE_LABEL[existingMember.role]}. Mỗi email một vai trò, hãy mời ${ROLE_LABEL[role]} bằng email khác`)
   }
 
   const pending = await Invitation.findOne({ farm_id: farm._id, invited_email: normalizedEmail, status: 'PENDING' })
@@ -205,7 +217,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
   })
   // Thư lỗi không làm hỏng lời mời
   await sendMail(invitationMail({
-    to: normalizedEmail, farmName: farm.name, roleLabel: MEMBER_ROLE_LABEL[role],
+    to: normalizedEmail, farmName: farm.name, roleLabel: ROLE_LABEL[role],
     token: invitation.token, expiresAt: invitation.expires_at,
   }))
   return invitation
@@ -219,7 +231,7 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
   }
   // 1 email = 1 role
   if (user.role !== invitation.invited_role) {
-    throw ConflictError(`Lời mời dành cho ${invitation.invited_role} nhưng tài khoản này là ${user.role} — hãy dùng email khác`)
+    throw ConflictError(`Lời mời dành cho ${ROLE_LABEL[invitation.invited_role]} nhưng tài khoản này là ${ROLE_LABEL[user.role]}. Hãy dùng email khác`)
   }
 
   invitation.status = 'ACCEPTED'
@@ -244,7 +256,7 @@ async function findPendingInvitationOrThrow(token: string): Promise<IInvitation>
   if (invitation.expires_at < new Date()) {
     invitation.status = 'EXPIRED'
     await invitation.save()
-    throw ConflictError('Lời mời đã hết hạn (quá 7 ngày) — yêu cầu Farm Owner mời lại')
+    throw ConflictError('Lời mời đã hết hạn (quá 7 ngày). Nhờ chủ nhà yến mời lại')
   }
   return invitation
 }
@@ -257,7 +269,7 @@ export async function createAccountFromInvitation(token: string, input: CreateAc
   // Kiểm farm trước khi ghi: không tạo tài khoản mồ côi
   const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (await User.exists({ email: invitation.invited_email })) {
-    throw ConflictError('Email này đã có tài khoản — đăng nhập rồi chấp nhận lời mời')
+    throw ConflictError('Email này đã có tài khoản. Đăng nhập rồi chấp nhận lời mời')
   }
 
   let user: IUser
@@ -270,7 +282,7 @@ export async function createAccountFromInvitation(token: string, input: CreateAc
     })
   } catch (err) {
     // 2 request cùng link: unique index email chặn bản thứ hai
-    if ((err as { code?: number }).code === 11000) throw ConflictError('Email này đã có tài khoản — đăng nhập rồi chấp nhận lời mời')
+    if ((err as { code?: number }).code === 11000) throw ConflictError('Email này đã có tài khoản. Đăng nhập rồi chấp nhận lời mời')
     throw err
   }
 
@@ -317,18 +329,22 @@ export async function removeMember(farmId: string, user: CurrentUser, targetUser
   if (!isPrimaryOwner(farm, user)) throw ForbiddenError('Chỉ Primary Owner mới được gỡ thành viên')
 
   if (String(farm.owner_id) === targetUserId) {
-    throw BadRequestError('Không thể gỡ Primary Owner — Farm luôn phải có ít nhất 1 Primary Owner')
+    throw BadRequestError('Không thể gỡ chủ sở hữu chính: trang trại luôn phải có một chủ sở hữu chính')
   }
   const memberIndex = farm.members.findIndex(m => String(m.user_id) === targetUserId)
   if (memberIndex === -1) throw NotFoundError('Người dùng không phải thành viên farm này')
 
   farm.members.splice(memberIndex, 1)
   await farm.save()
-  await House.updateMany({ farm_id: farm._id }, { $pull: { technicians: { user_id: targetUserId }, roster: { technician_id: targetUserId } } })
-  // Work Order đang mở của thợ chuyển cho Farm Owner
-  const released = await releaseTechnicianWorkOrders(targetUserId, { farmId: farm._id }, user._id)
+  const released = await dropMemberAssignments(farm._id, targetUserId, user._id)
   await logAction(user._id, 'FARM_MEMBER_REMOVED', 'farm', String(farm._id), { user_id: targetUserId, work_orders_released: released || undefined })
   return farm
+}
+
+// Người rời farm (bị gỡ hoặc xoá tài khoản): bỏ khỏi nhà được giao và ca trực, phiếu đang mở chuyển cho chủ nhà yến
+export async function dropMemberAssignments(farmId: unknown, userId: string, by: string): Promise<number> {
+  await House.updateMany({ farm_id: farmId }, { $pull: { technicians: { user_id: userId }, roster: { technician_id: userId } } })
+  return releaseTechnicianWorkOrders(userId, { farmId }, by)
 }
 
 // Mỗi nhà tối đa 1 thợ chính: gán primary thì thợ chính cũ thành thợ phụ
@@ -336,7 +352,7 @@ export async function assignTechnician(houseId: string, user: CurrentUser, techn
   const { house, farm } = await findHouseChainOrThrow(houseId)
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
   const member = farm.members.find(m => String(m.user_id) === technicianId && m.role === 'FARM_TECHNICIAN')
-  if (!member) throw ConflictError('Người này không phải Farm Technician của farm')
+  if (!member) throw ConflictError('Người này không phải kỹ thuật viên của trang trại')
 
   const others = (house.technicians ?? [])
     .filter(t => String(t.user_id) !== technicianId)
@@ -377,7 +393,7 @@ export async function setRoster(houseId: string, user: CurrentUser, shifts: Rost
   if (!hasFarmAccess(farm, user)) throw ForbiddenError('Không có quyền trên house này')
   const assigned = new Set((house.technicians ?? []).map(t => String(t.user_id)))
   const stranger = shifts.find(s => !assigned.has(s.technician_id))
-  if (stranger) throw ConflictError('Người trong ca không phải Farm Technician đang được giao nhà này')
+  if (stranger) throw ConflictError('Người trong ca không phải kỹ thuật viên đang được giao nhà này')
   assertValidRoster(shifts)
 
   house.roster = shifts.map(s => ({ ...s, weekdays: [...s.weekdays].sort((a, b) => a - b) })) as never
@@ -548,12 +564,14 @@ export async function updateZone(zoneId: string, user: CurrentUser, input: { nam
 }
 
 // còn thiết bị chưa gỡ thì không xoá
-async function assertNoDeviceInService(where: { zoneIds: Types.ObjectId[]; houseId?: Types.ObjectId }): Promise<void> {
+async function assertNoDeviceInService(where: { zoneIds: Types.ObjectId[]; houseIds?: Types.ObjectId[] }): Promise<void> {
   const controllers = await SensorNode.countDocuments({ zone_id: { $in: where.zoneIds }, ...IN_SERVICE })
-  const cameras = where.houseId ? await CameraNode.countDocuments({ house_id: where.houseId, ...IN_SERVICE }) : 0
-  if (controllers + cameras > 0) {
-    throw new AppError(409, 'HAS_ACTIVE_DEVICES', `Còn ${controllers + cameras} thiết bị đang dùng, hãy gỡ thiết bị trước khi xoá`)
-  }
+  const cameras = where.houseIds?.length ? await CameraNode.countDocuments({ house_id: { $in: where.houseIds }, ...IN_SERVICE }) : 0
+  throwIfDevicesInService(controllers + cameras)
+}
+
+function throwIfDevicesInService(count: number): void {
+  if (count > 0) throw new AppError(409, 'HAS_ACTIVE_DEVICES', `Còn ${count} thiết bị đang dùng, hãy gỡ thiết bị trước khi xoá`)
 }
 
 // Dọn trước khi đánh dấu xoá: lỗi giữa chừng thì gọi lại an toàn
@@ -580,19 +598,25 @@ function softDeleteFields(user: CurrentUser) {
 export async function deleteHouse(houseId: string, user: CurrentUser): Promise<void> {
   const { house, farm } = await findOwnedHouse(houseId, user)
   const zoneIds = await Zone.find({ house_id: house._id }).distinct('_id') as Types.ObjectId[]
-  await assertNoDeviceInService({ zoneIds, houseId: house._id })
+  await assertNoDeviceInService({ zoneIds, houseIds: [house._id] })
+  const closed = await softDeleteHouseCascade(house, user, 'Nhà yến đã bị xoá')
+  await logAction(user._id, 'HOUSE_DELETED', 'house', String(house._id), {
+    name: house.name, ...closed,
+  }, { farmId: String(farm._id) })
+}
 
+// Dọn một nhà rồi xoá mềm nhà và Zone; người gọi đã kiểm quyền và thiết bị
+async function softDeleteHouseCascade(house: IHouse, user: CurrentUser, reason: string) {
+  const zoneIds = await Zone.find({ house_id: house._id }).distinct('_id') as Types.ObjectId[]
   // Còn chạy thì job bảo trì tạo cảnh báo cho nhà đã xoá
   await MaintenancePlan.updateMany({ house_id: house._id, state: { $ne: 'RETIRED' } }, { $set: { state: 'RETIRED' } })
   // Mốc chờ của khuyến nghị kế tiếp
   await Recommendation.updateMany({ house_id: house._id, status: 'OPEN' }, { $set: { status: 'EXPIRED', expired_at: new Date() } })
-  const closed = await closeOpenWorkOf(user, { houseId: house._id, zoneIds }, 'Nhà yến đã bị xoá')
+  const closed = await closeOpenWorkOf(user, { houseId: house._id, zoneIds }, reason)
   await Zone.updateMany({ _id: { $in: zoneIds } }, { $set: softDeleteFields(user) })
   Object.assign(house, softDeleteFields(user))
   await house.save()
-  await logAction(user._id, 'HOUSE_DELETED', 'house', String(house._id), {
-    name: house.name, zones: zoneIds.length, ...closed,
-  }, { farmId: String(farm._id) })
+  return { zones: zoneIds.length, ...closed }
 }
 
 export async function deleteZone(zoneId: string, user: CurrentUser): Promise<void> {

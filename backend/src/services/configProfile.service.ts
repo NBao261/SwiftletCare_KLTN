@@ -15,6 +15,7 @@ import { FUZZY_TUNING_KEYS, assertValidFuzzyTuning, pickFuzzyTuning } from '@/ut
 import { DETECTION_TUNING_KEYS, assertValidDetectionTuning, pickDetectionTuning } from '@/utils/detectionTuning.util'
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import type { CurrentUser, DetectionTuning, FuzzyTuning, Thresholds } from '@/types'
+import { PROFILE_STATUS_LABEL } from '@/utils/displayLabel.util'
 
 // Hồ sơ đã được chuyên gia duyệt nên không mở mục duyệt
 
@@ -40,7 +41,7 @@ const HOUR_END = /^(([01]\d|2[0-3]):00|24:00)$/
 
 function assertComplete(group: string, picked: object, keys: readonly string[]): void {
   const missing = keys.filter(key => !(key in picked))
-  if (missing.length) throw BadRequestError(`${group}: thiếu ${missing.join(', ')} — nhóm đã có trong hồ sơ phải đủ mọi giá trị`)
+  if (missing.length) throw BadRequestError(`${group}: thiếu ${missing.join(', ')}. Nhóm đã có trong hồ sơ phải đủ mọi giá trị`)
 }
 
 // Cùng luật với PUT …/speaker-schedule
@@ -104,7 +105,7 @@ async function loadProfile(profileId: string, user: CurrentUser) {
 }
 
 function assertStatus(profile: IConfigProfile, expected: IConfigProfile['status'], action: string): void {
-  if (profile.status !== expected) throw ConflictError(`Hồ sơ đang ${profile.status}, không thể ${action}`)
+  if (profile.status !== expected) throw ConflictError(`Hồ sơ đang ở trạng thái ${PROFILE_STATUS_LABEL[profile.status]}, không thể ${action}`)
 }
 
 export async function listProfiles(
@@ -197,7 +198,7 @@ const historyEntry = (user: CurrentUser, at: Date, oldValues: object, newValues:
 // DRAFT hoặc ARCHIVED → 409; nhà ngoài farm → 400
 export async function applyProfile(profileId: string, user: CurrentUser, houseIds: string[]) {
   const { profile, farm } = await loadProfile(profileId, user)
-  if (profile.status !== 'APPROVED') throw ConflictError(`Chỉ áp được hồ sơ đã duyệt (hồ sơ đang ${profile.status})`)
+  if (profile.status !== 'APPROVED') throw ConflictError(`Chỉ áp được hồ sơ đã duyệt (hồ sơ đang ở trạng thái ${PROFILE_STATUS_LABEL[profile.status]})`)
   const uniqueIds = [...new Set(houseIds)]
   const houses = await House.find({ _id: { $in: uniqueIds }, farm_id: farm._id }).select('_id name').lean()
   if (houses.length !== uniqueIds.length) throw BadRequestError('Có nhà không thuộc farm của hồ sơ')

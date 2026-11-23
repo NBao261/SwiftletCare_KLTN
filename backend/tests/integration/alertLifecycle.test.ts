@@ -179,7 +179,7 @@ describe('lọc GET /alerts theo nhà gồm cả cảnh báo của các Zone tro
 })
 
 describe('lọc theo nhà vẫn trong phạm vi của Farm Technician (AUTH-FR-013, ALERT-FR-007)', () => {
-  it('thợ được giao nhà A: houseId của A trả cảnh báo cả nhà và của Zone; houseId của nhà B không trả gì', async () => {
+  it('thợ được giao nhà A: houseId của A trả cảnh báo cả nhà và của Zone; houseId của nhà B → 403', async () => {
     const { farm, zone, node } = await seed()
     const technician = await User.create({ email: `tech${String(farm._id)}@test.vn`, password_hash: 'password123', full_name: 'T', role: 'FARM_TECHNICIAN' })
     await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: technician._id, role: 'FARM_TECHNICIAN' } } })
@@ -194,9 +194,10 @@ describe('lọc theo nhà vẫn trong phạm vi của Farm Technician (AUTH-FR-0
       { ...base, house_id: otherHouse._id, type: 'EDGE_AI_DEGRADED' },
     ])
     const token = jwt.sign({ sub: String(technician._id), role: 'FARM_TECHNICIAN' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
-    const get = (houseId: unknown) => request(app).get(`/alerts?houseId=${houseId}`).set('Authorization', `Bearer ${token}`).expect(200)
-    expect((await get(zone.house_id)).body.data.map((a: { type: string }) => a.type).sort()).toEqual(['EDGE_AI_DEGRADED', 'SENSOR_FAULT'])
-    expect((await get(otherHouse._id)).body.data).toHaveLength(0)
+    const get = (houseId: unknown) => request(app).get(`/alerts?houseId=${houseId}`).set('Authorization', `Bearer ${token}`)
+    expect((await get(zone.house_id).expect(200)).body.data.map((a: { type: string }) => a.type).sort()).toEqual(['EDGE_AI_DEGRADED', 'SENSOR_FAULT'])
+    // Nhà không được giao: 403 như các route theo nhà khác
+    await get(otherHouse._id).expect(403)
   })
 })
 

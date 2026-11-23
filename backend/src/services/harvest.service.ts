@@ -159,7 +159,7 @@ export async function setHarvestPhoto(id: string, user: CurrentUser, file: Uploa
 function assertTechnicianOwnDraft(batch: IHarvestBatch, user: CurrentUser): void {
   if (user.role !== 'FARM_TECHNICIAN') return
   if (batch.status !== 'DRAFT' || String(batch.created_by) !== user._id) {
-    throw ForbiddenError('Farm Technician chỉ sửa hoặc xoá lô chưa xác nhận do chính mình nhập')
+    throw ForbiddenError('Kỹ thuật viên chỉ sửa hoặc xoá lô chưa xác nhận do chính mình nhập')
   }
 }
 
@@ -190,7 +190,7 @@ export async function removeHarvest(id: string, user: CurrentUser): Promise<void
 // Đã xác nhận → 409
 export async function confirmHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {
   const batch = await getHarvest(id, user)
-  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner xác nhận lô thu hoạch')
+  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ chủ nhà yến xác nhận lô thu hoạch')
   if (batch.status === 'CONFIRMED') throw ConflictError('Lô này đã được xác nhận')
   batch.status = 'CONFIRMED'
   batch.confirmed_by = user._id as never

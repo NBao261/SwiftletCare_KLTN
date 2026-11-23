@@ -44,10 +44,10 @@ export function assertValidWeatherRules(rules: WeatherRuleInput[]): void {
       throw BadRequestError(`${at}: ngưỡng phải từ ${limit.min} đến ${limit.max} ${limit.unit}`)
     }
     if (!isNumber(rule.offset_pct) || rule.offset_pct === 0 || Math.abs(rule.offset_pct) > WEATHER_COMP_MAX_PCT) {
-      throw BadRequestError(`${at}: offset phải khác 0 và trong khoảng ±${WEATHER_COMP_MAX_PCT} điểm % (BR-38)`)
+      throw BadRequestError(`${at}: offset phải khác 0 và trong khoảng ±${WEATHER_COMP_MAX_PCT} điểm %`)
     }
     if (!Number.isInteger(rule.duration_min) || rule.duration_min < 1 || rule.duration_min * 60_000 > WEATHER_COMP_MAX_MS) {
-      throw BadRequestError(`${at}: thời hạn từ 1 đến ${WEATHER_COMP_MAX_MS / 60_000} phút (BR-38)`)
+      throw BadRequestError(`${at}: thời hạn từ 1 đến ${WEATHER_COMP_MAX_MS / 60_000} phút`)
     }
   })
 }

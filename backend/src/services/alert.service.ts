@@ -386,8 +386,10 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
     }
     filter.farm_id = query.farmId
   }
-  if (query.zoneId) filter.zone_id = query.zoneId
+  // Nhà, Zone ngoài phạm vi: 403 như các route theo nhà khác (Administrator theo phạm vi thiết bị)
+  if (query.zoneId) filter.zone_id = (await assertZoneAccess(query.zoneId, user, 'device')).zone._id
   if (query.houseId) {
+    await assertHouseAccess(query.houseId, user, 'device')
     // $and để không đè $or phạm vi của thợ
     const zoneIds = await Zone.find({ house_id: query.houseId }).distinct('_id')
     const house = { $or: [{ house_id: query.houseId }, { zone_id: { $in: zoneIds } }] }

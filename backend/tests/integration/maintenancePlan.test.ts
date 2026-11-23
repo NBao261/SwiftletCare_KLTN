@@ -123,10 +123,13 @@ describe('kế hoạch bảo trì (OPS-FR-005)', () => {
   })
 
   it('thợ chỉ đọc kế hoạch của nhà được giao; chuyên gia góp ý được và Farm Owner được báo', async () => {
-    const { owner, plan, tech$, other$, expert$ } = await seed()
+    const { owner, house, plan, tech$, other$, expert$ } = await seed()
     const created = (await plan().expect(201)).body.data
     expect((await tech$.get('/maintenance/plans').expect(200)).body.data).toHaveLength(1)
     expect((await other$.get('/maintenance/plans').expect(200)).body.data).toHaveLength(0)
+    // Hỏi đúng nhà không được giao: 403 như các route theo nhà khác, không phải danh sách rỗng
+    await other$.get(`/maintenance/plans?houseId=${house._id}`).expect(403)
+    await other$.get(`/maintenance/due?houseId=${house._id}`).expect(403)
     await tech$.put(`/maintenance/plans/${created._id}`, { interval: 400 }).expect(403)
 
     const commented = await expert$.post(`/maintenance/plans/${created._id}/comments`, { text: 'Bơm màng nên 400 giờ' }).expect(201)

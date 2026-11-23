@@ -144,6 +144,12 @@ describe('mở Work Order (OPS-FR-001, BR-39)', () => {
     await owner$.post('/work-orders', { house_id: String(house2._id), title: 'x', alert_id: String(alert._id) }).expect(400)
   })
 
+  it('danh sách theo nhà: nhà được giao 200, nhà không được giao 403 (không phải danh sách rỗng)', async () => {
+    const { house, house2, tech$ } = await seed()
+    await tech$.get(`/work-orders?houseId=${house._id}`).expect(200)
+    await tech$.get(`/work-orders?houseId=${house2._id}`).expect(403)
+  })
+
   it('NODE_OFFLINE còn mở sau 30 phút mở Work Order 1 lần (BR-39)', async () => {
     const { raise } = await seed()
     const alert = (await raise('NODE_OFFLINE'))!

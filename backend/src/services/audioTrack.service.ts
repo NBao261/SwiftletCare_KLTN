@@ -36,12 +36,12 @@ async function loadTrack(nodeId: string, trackId: string, user: CurrentUser) {
 // Web không ghi được thẻ SD: chỉ chọn/phát bài đã chép tay
 function assertSynced(track: IAudioTrack) {
   if (!track.synced_to_sd) {
-    throw BadRequestError(`Bài "${track.display_name}" chưa được chép vào thẻ SD của thiết bị (${sdName(track.track_number)}) — nhờ kỹ thuật viên chép file và đánh dấu "Đã chép vào thẻ SD" trước`)
+    throw BadRequestError(`Bài "${track.display_name}" chưa được chép vào thẻ SD của thiết bị (${sdName(track.track_number)}). Nhờ kỹ thuật viên chép file và đánh dấu "Đã chép vào thẻ SD" trước`)
   }
 }
 
 function assertOnline(node: ISensorNode) {
-  if (node.status !== 'ONLINE') throw ConflictError('Thiết bị đang không kết nối — không gửi được lệnh phát')
+  if (node.status !== 'ONLINE') throw ConflictError('Thiết bị đang mất kết nối, không gửi được lệnh phát')
 }
 
 async function toDto(track: IAudioTrack) {
@@ -56,7 +56,7 @@ export async function uploadTrack(
   const { file } = input
   if (!file) throw BadRequestError('Thiếu file .mp3')
   if (!MP3_MIME.includes(file.mimetype) || !/\.mp3$/i.test(file.originalname)) {
-    throw BadRequestError('Chỉ nhận file .mp3 — DFPlayer Mini đọc file 000N.mp3 trên thẻ SD')
+    throw BadRequestError('Chỉ nhận file .mp3, vì loa của bộ điều khiển chỉ đọc file .mp3 trên thẻ SD')
   }
   const { node } = await loadNode(nodeId, user)
   // Thiết bị đã gỡ không còn để chép thẻ SD

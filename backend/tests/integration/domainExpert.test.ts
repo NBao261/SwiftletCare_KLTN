@@ -105,7 +105,10 @@ describe('mời Domain Expert (AUTH-FR-005/010, EXPERT-FR-001)', () => {
     await call('post', `/farms/${farm._id}/members`, t.owner, { email: 'a@test.vn', role: 'FARM_OPERATOR' }).expect(422)
     await call('post', `/farms/${farm._id}/members`, t.owner, { email: 'b@test.vn', role: 'DOMAIN_EXPERT' }).expect(201)
     const tech = await mkUser('FARM_TECHNICIAN')
-    await expect(inviteMember(String(farm._id), asUser(owner), { email: tech.email, role: 'DOMAIN_EXPERT' })).rejects.toMatchObject({ statusCode: 409 })
+    // Câu lỗi dùng tên vai trò, không in mã enum
+    await expect(inviteMember(String(farm._id), asUser(owner), { email: tech.email, role: 'DOMAIN_EXPERT' })).rejects.toMatchObject({
+      statusCode: 409, message: 'Email này đã là tài khoản Kỹ thuật viên. Mỗi email một vai trò, hãy mời Chuyên gia bằng email khác',
+    })
   })
 
   it('tài khoản Farm Owner không nhận được lời mời Domain Expert (1 email = 1 role)', async () => {
@@ -115,7 +118,9 @@ describe('mời Domain Expert (AUTH-FR-005/010, EXPERT-FR-001)', () => {
       farm_id: farm._id, invited_email: 'fo@test.vn', invited_role: 'DOMAIN_EXPERT', invited_by: owner._id,
       token: 'tok-ex', expires_at: new Date(Date.now() + 86_400_000),
     })
-    await expect(acceptInvitation(inv.token, asUser(fo))).rejects.toMatchObject({ statusCode: 409 })
+    await expect(acceptInvitation(inv.token, asUser(fo))).rejects.toMatchObject({
+      statusCode: 409, message: 'Lời mời dành cho Chuyên gia nhưng tài khoản này là Chủ nhà yến. Hãy dùng email khác',
+    })
   })
 
   it('không còn route đổi phạm vi Zone của thành viên', async () => {

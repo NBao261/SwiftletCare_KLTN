@@ -94,11 +94,11 @@ export async function verifyActivationKey(deviceId: string, kind: ProvisionedDev
   const expected = Buffer.from(device?.secret_key_hash ?? hashKey(''), 'hex')
   const actual = Buffer.from(hashKey(secretKey ?? ''), 'hex')
   if (!device || !crypto.timingSafeEqual(expected, actual)) {
-    throw BadRequestError('Mã kích hoạt không đúng — kiểm tra lại Device ID và secretKey trên nhãn thiết bị')
+    throw BadRequestError('Mã kích hoạt không đúng, hãy kiểm tra lại mã thiết bị và mã kích hoạt trên nhãn')
   }
   // Chỉ báo rõ sau khi đúng key
   if (device.revoked_at) {
-    throw ConflictError('Thiết bị này đã bị Administrator thu hồi, không kích hoạt được — liên hệ Administrator')
+    throw ConflictError('Thiết bị này đã bị quản trị viên thu hồi nên không kích hoạt được. Hãy liên hệ quản trị viên')
   }
   return { simulated: device.simulated === true }
 }
@@ -114,7 +114,7 @@ async function findProvisionedOrThrow(id: string) {
 export async function revokeProvisionedDevice(adminId: string, id: string, reason: string) {
   const device = await findProvisionedOrThrow(id)
   if (await isInService(device)) {
-    throw ConflictError('Thiết bị đang hoạt động ở một farm — gỡ thiết bị trước rồi mới thu hồi')
+    throw ConflictError('Thiết bị đang hoạt động ở một trang trại. Gỡ thiết bị trước rồi mới thu hồi')
   }
 
   device.revoked_at = new Date()
@@ -130,7 +130,7 @@ export async function revokeProvisionedDevice(adminId: string, id: string, reaso
 export async function rotateProvisionedKey(adminId: string, id: string) {
   const device = await findProvisionedOrThrow(id)
   if (await isInService(device)) {
-    throw ConflictError('Thiết bị đang hoạt động ở một farm — gỡ thiết bị trước rồi mới cấp lại key')
+    throw ConflictError('Thiết bị đang hoạt động ở một trang trại. Gỡ thiết bị trước rồi mới cấp lại mã kích hoạt')
   }
 
   const secretKey = generateSecretKey()

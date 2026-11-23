@@ -50,7 +50,7 @@ async function loadPendingReview(reviewId: string, user: CurrentUser) {
   const review = await ParameterReview.findById(reviewId)
   if (!review) throw NotFoundError('Không tìm thấy mục duyệt')
   const farm = await assertFarmAccess(String(review.farm_id), user)
-  if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ Domain Expert duyệt thay đổi của Farm Owner')
+  if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ chuyên gia duyệt thay đổi của chủ nhà yến')
   if (review.status !== 'PENDING_REVIEW') throw ConflictError('Mục duyệt này đã đóng')
   return { review, farm }
 }

@@ -322,7 +322,7 @@ const vi = {
   'manage.delete': 'Xoá',
   'manage.deleteBlocked': 'Còn {n} thiết bị, gỡ thiết bị trước khi xoá',
   'manage.deleteTitle': 'Xoá trang trại {name}?',
-  'manage.deleteDesc': 'Trang trại bị ẩn, dữ liệu lịch sử vẫn giữ. Cảnh báo đang mở của trang trại sẽ được đóng.',
+  'manage.deleteDesc': 'Gỡ hết thiết bị của trang trại trước khi xoá. Trang trại cùng các nhà và Zone bị ẩn, dữ liệu lịch sử vẫn giữ; cảnh báo đang mở được đóng, phiếu công việc đang mở bị huỷ, kế hoạch bảo trì dừng.',
   'manage.deleted': 'Đã xoá trang trại {name}',
   'manage.deleteFailed': 'Xoá trang trại thất bại',
   // Thêm nhà chi tiết
@@ -728,7 +728,7 @@ const en: Record<Key, string> = {
   'manage.delete': 'Delete',
   'manage.deleteBlocked': '{n} devices left — remove them before deleting',
   'manage.deleteTitle': 'Delete farm {name}?',
-  'manage.deleteDesc': 'The farm is hidden and its history kept. Its open alerts are closed.',
+  'manage.deleteDesc': 'Remove every device of the farm before deleting it. The farm, its houses and zones are hidden and their history kept; open alerts are closed, open work orders cancelled and maintenance plans stopped.',
   'manage.deleted': 'Farm {name} deleted',
   'manage.deleteFailed': 'Could not delete the farm',
   'addHouse.floors': 'Floors',

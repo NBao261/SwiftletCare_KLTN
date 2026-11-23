@@ -18,7 +18,7 @@ import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.s
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { syncAfterHeartbeat } from '@/utils/configSync.util'
 import { sessionWindowsAhead, vnDateOf } from '@/utils/countingSchedule.util'
-import { formatVnDateTime } from '@/utils/displayLabel.util'
+import { DEVICE_STATUS_LABEL, formatVnDateTime } from '@/utils/displayLabel.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogFromDevice, closeRelayOverrideLog,
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
@@ -211,7 +211,7 @@ async function assertPumpOnAllowed(
 ): Promise<boolean> {
   if (input.relayName !== 'misting' || !input.state) return false
   if (overrideMs > MAX_PUMP_ON_OVERRIDE_MS) {
-    throw new AppError(422, 'VALIDATION_ERROR', `Bật bơm tay tối đa ${MAX_PUMP_ON_OVERRIDE_MS / 60_000} phút (BR-08)`)
+    throw new AppError(422, 'VALIDATION_ERROR', `Bật bơm tay tối đa ${MAX_PUMP_ON_OVERRIDE_MS / 60_000} phút`)
   }
   const open = await Alert.find({
     zone_id: zoneId, type: { $in: PUMP_CONFIRM_ALERT_TYPES }, status: { $in: ['ACTIVE', 'ACKNOWLEDGED'] },
@@ -277,7 +277,7 @@ export async function reassignZone(
   const sourceChain = await assertZoneAccess(String(node.zone_id), user, 'device')
   // Dời về chính Zone đang ở chỉ ghi audit sai
   if (String(sourceChain.zone._id) === input.newZoneId) {
-    throw BadRequestError('Thiết bị đã ở Zone này — chọn Zone khác để dời')
+    throw BadRequestError('Thiết bị đã ở Zone này, hãy chọn Zone khác để dời')
   }
   const destChain = await assertZoneAccess(input.newZoneId, user, 'device')
 
@@ -633,7 +633,7 @@ const RETIRED_SUFFIX = '#retired-'
 
 // Cùng điều kiện với restoreDevice
 async function listRestorableDevices(kind: DeviceKind, scope: Record<string, unknown>, user: CurrentUser) {
-  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner xem và khôi phục thiết bị đã gỡ')
+  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ chủ nhà yến xem và khôi phục thiết bị đã gỡ')
   const Model = DEVICE_MODELS[kind]
   const removed = await Model.find({
     ...scope,
@@ -665,12 +665,12 @@ export async function restoreDevice(kind: DeviceKind, nodeId: string, user: Curr
     )
   }
   if (node.device_id.includes(RETIRED_SUFFIX)) {
-    throw ConflictError('device_id của thiết bị này đã được đăng ký lại cho một bản ghi khác — không khôi phục được')
+    throw ConflictError('Mã thiết bị này đã được đăng ký lại ở chỗ khác nên không khôi phục được')
   }
   if (node.replaced_by) {
     const replacement = await Model.findOne({ _id: node.replaced_by, ...IN_SERVICE }).select('device_id').lean()
     if (replacement) {
-      throw ConflictError(`Thiết bị này đã được thay bằng ${replacement.device_id} — gỡ thiết bị thay thế trước nếu muốn khôi phục`)
+      throw ConflictError(`Thiết bị này đã được thay bằng ${replacement.device_id}. Gỡ thiết bị thay thế trước nếu muốn khôi phục`)
     }
   }
 
@@ -790,7 +790,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   assertInService(node)
   const chain = await assertZoneAccess(String(node.zone_id), user, 'device')
   if (user.role !== 'ADMIN' && input.command !== 'RESTART') {
-    throw ForbiddenError('Chỉ Administrator gửi được lệnh đẩy cấu hình hoặc cập nhật firmware — Farm Owner và Farm Technician chỉ khởi động lại thiết bị')
+    throw ForbiddenError('Chỉ quản trị viên gửi được lệnh đẩy cấu hình hoặc cập nhật firmware. Chủ nhà yến và kỹ thuật viên chỉ khởi động lại thiết bị')
   }
   // Kiểm lệnh trước trạng thái: URL sai thì báo đúng lý do đó
   if (input.command === 'OTA') {
@@ -798,7 +798,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
     assertAllowedFirmwareUrl(input.ota.url)
   }
   if (node.status !== 'ONLINE') {
-    throw ConflictError(`Thiết bị đang ${node.status} — lệnh từ xa chỉ gửi được khi thiết bị ONLINE`)
+    throw ConflictError(`Thiết bị đang ${DEVICE_STATUS_LABEL[node.status]}, lệnh từ xa chỉ gửi được khi thiết bị đang kết nối`)
   }
 
   if (COMMANDS_NEED_FIRMWARE.includes(input.command) && !versionAtLeast(node.firmware_version, COMMAND_SUPPORT_SINCE)) {

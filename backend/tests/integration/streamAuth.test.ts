@@ -114,6 +114,9 @@ describe('GET /devices/camera-nodes/:id/stream-token', () => {
     const { camera, t } = await seed()
     delete process.env.STREAM_TOKEN_SECRET
     await getToken(camera._id, t.owner).expect(503)
+    // Quyền kiểm trước cấu hình: người không có quyền vẫn nhận 403
+    await getToken(camera._id, t.technician).expect(403)
+    await getToken(camera._id, t.stranger).expect(403)
   })
 })
 

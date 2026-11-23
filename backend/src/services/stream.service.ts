@@ -27,12 +27,12 @@ function safeEqual(a: unknown, b: string | undefined): boolean {
 }
 
 export async function issueStreamToken(cameraNodeId: string, user: CurrentUser) {
-  const secret = env('STREAM_TOKEN_SECRET')
-  if (!secret) throw ServiceUnavailableError('Máy chủ video chưa được cấu hình')
-
   const node = await CameraNode.findOne({ _id: cameraNodeId, ...IN_SERVICE }).select('device_id house_id').lean()
   if (!node) throw NotFoundError('Không tìm thấy camera')
+  // Quyền trước cấu hình: người không có quyền luôn nhận 403, không phải 503
   await assertHouseAccess(String(node.house_id), user)
+  const secret = env('STREAM_TOKEN_SECRET')
+  if (!secret) throw ServiceUnavailableError('Máy chủ video chưa được cấu hình')
 
   const path = `cam-${node.device_id}`
   // "x-raw" trùng tên hình gốc của camera "x"
