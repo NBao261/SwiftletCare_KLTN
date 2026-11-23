@@ -132,9 +132,9 @@ export async function listRecommendations(
   const filter: Record<string, unknown> = {}
   if (query.houseId) filter.house_id = (await assertHouseAccess(query.houseId, user)).house._id
   else if (user.role === 'FARM_TECHNICIAN') {
-    // Thợ theo trại: chỉ các nhà được giao, như phiếu công việc và bảo trì
+    // Thợ theo trại: chỉ các nhà được giao, như phiếu công việc và bảo trì; farm không giao nhà nào thì rỗng, không 403
     filter.house_id = { $in: await listAssignedHouseIds(user) }
-    if (query.farmId) filter.farm_id = new Types.ObjectId(String(query.farmId))
+    filter.farm_id = new Types.ObjectId(String(query.farmId))
   } else filter.farm_id = (await assertFarmAccess(String(query.farmId), user))._id
   if (query.status) filter.status = query.status
   const { page, skip, limit } = paginate(query.page, query.limit)

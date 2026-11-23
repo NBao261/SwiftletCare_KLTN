@@ -332,6 +332,10 @@ describe('EXPERT-FR-018 — decision of the Farm Owner', () => {
     expect((await s.call('get', `?farmId=${s.farm._id}`, s.t.tech)).body.meta.total).toBe(0)
     const other = await seed()
     expect((await s.call('get', `?farmId=${s.farm._id}`, other.t.owner)).status).toBe(403)
+    // Thợ hỏi farm không giao nhà nào cho mình: rỗng (200), như danh sách phiếu công việc
+    const foreign = await s.call('get', `?farmId=${s.farm._id}`, other.t.tech)
+    expect(foreign.status).toBe(200)
+    expect(foreign.body.meta.total).toBe(0)
     expect((await s.call('get', `/rules?farmId=${s.farm._id}`, other.t.expert)).status).toBe(403)
   })
 })
