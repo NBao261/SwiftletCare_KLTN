@@ -16,7 +16,9 @@ const MATRIX: Record<string, Role[]> = {
   '/vision': [FO, DE],
   '/health': [FO, DE],
   '/harvests': [FO, DE],
-  '/work-orders': [FO, DE],             // Farm Owner thao tác, Domain Expert chỉ đọc
+  '/work-orders': [FO, DE, FT],         // Farm Owner thao tác, thợ làm phiếu (G-33), Domain Expert chỉ đọc
+  '/maintenance': [FO, DE, FT],
+  '/recommendations': [FO, DE, FT],
   '/farms': [FO, DE, FT],
   '/farms/f1/houses/h1/zones/z1': [FO, DE, FT],
   '/devices': [ADMIN, FO, DE, FT],      // ADMIN có nhóm Thiết bị qua /devices

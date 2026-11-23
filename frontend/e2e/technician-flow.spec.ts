@@ -57,8 +57,8 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await signInUi(page, 'technician');
   await expect(page).toHaveURL(/\/alerts$/);
 
-  // 3 mục: cảnh báo, thiết bị, nhà được giao; không còn nhóm "Khác"
-  for (const label of ['Cảnh báo', 'Thiết bị & Cảm biến', 'Nhà được giao']) {
+  // Cảnh báo, công việc (G-33), thiết bị, nhà được giao; không còn nhóm "Khác"
+  for (const label of ['Cảnh báo', 'Công việc', 'Thiết bị & Cảm biến', 'Nhà được giao']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
   for (const label of ['Tổng quan', 'Hàng đợi việc', 'Thu hoạch', 'Phân tích', 'Cài đặt']) {
@@ -159,6 +159,19 @@ test('T6 — trang của vai trò khác bị chặn (Report 3 §2.4)', async ({ 
   for (const path of ['/domain-expert/queue', '/harvests', '/analytics']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/403$/);
+  }
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
+
+test('T7 — công việc của nhà được giao: phiếu (Giao cho tôi, không tạo phiếu), bảo trì, khuyến nghị chỉ đọc (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/work-orders');
+  await expect(page).toHaveURL(/\/work-orders$/);
+  await expect(page.getByRole('button', { name: 'Giao cho tôi' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tạo phiếu công việc' })).toHaveCount(0);
+
+  for (const path of ['/maintenance', '/recommendations']) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });

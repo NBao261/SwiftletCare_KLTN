@@ -29,12 +29,13 @@ describe('notificationTarget (EXPERT-FR-007, todo-audit-1118 W-03)', () => {
   })
 
   it('role không vào được trang đích thì chỉ đánh dấu đã đọc (null), không đưa về /403', () => {
-    expect(notificationTarget(of('work_order'), 'FARM_TECHNICIAN')).toBeNull()
     expect(notificationTarget(of('health_day'), 'ADMIN')).toBeNull()
   })
 
   it('Work Order, thao tác thiết bị, ngày đánh giá', () => {
     expect(notificationTarget(of('work_order'), 'FARM_OWNER')).toEqual({ path: '/work-orders' })
+    // Thợ làm phiếu trên web từ G-33: thông báo phiếu mở đúng trang
+    expect(notificationTarget(of('work_order'), 'FARM_TECHNICIAN')).toEqual({ path: '/work-orders' })
     expect(notificationTarget(of('device_action'), 'FARM_OWNER')).toEqual({ path: '/devices' })
     expect(notificationTarget(of('health_day'), 'FARM_OWNER')).toEqual({ path: '/health' })
   })
