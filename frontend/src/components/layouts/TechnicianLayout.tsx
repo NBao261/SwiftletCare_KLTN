@@ -1,4 +1,4 @@
-import { CpuIcon, HouseIcon, WarningIcon, WrenchIcon } from '@phosphor-icons/react'
+import { BasketIcon, CpuIcon, HeartbeatIcon, HouseIcon, WarningIcon, WrenchIcon } from '@phosphor-icons/react'
 import AppShell from '@/components/layouts/AppShell'
 import { firstDockItems, type MenuSection } from '@/components/layouts/AppSidebar'
 
@@ -18,6 +18,8 @@ const menuSections: MenuSection[] = [
           { label: 'Khuyến nghị', path: '/recommendations' },
         ],
       },
+      { label: 'Sức khoẻ & báo cáo', path: '/health', icon: HeartbeatIcon },
+      { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
       { label: 'Thiết bị & Cảm biến', path: '/devices', icon: CpuIcon },
       { label: 'Nhà được giao', path: '/farms', icon: HouseIcon },
     ],

@@ -38,6 +38,8 @@ describe('notificationTarget (EXPERT-FR-007, todo-audit-1118 W-03)', () => {
     expect(notificationTarget(of('work_order'), 'FARM_TECHNICIAN')).toEqual({ path: '/work-orders' })
     expect(notificationTarget(of('device_action'), 'FARM_OWNER')).toEqual({ path: '/devices' })
     expect(notificationTarget(of('health_day'), 'FARM_OWNER')).toEqual({ path: '/health' })
+    // Thợ đánh giá ngày trên web từ G-33
+    expect(notificationTarget(of('health_day'), 'FARM_TECHNICIAN')).toEqual({ path: '/health' })
   })
 
   it('không có ref: Administrator mở yêu cầu tài khoản, role khác không mở trang nào', () => {

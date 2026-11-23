@@ -138,11 +138,11 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
-    {/* trạng thái ngày và đánh giá ngày: Farm Owner đánh giá, Domain Expert chỉ xem */}
+    {/* trạng thái ngày và đánh giá ngày: Farm Owner, Kỹ thuật viên (nhà được giao) đánh giá, Domain Expert chỉ xem */}
     <Route
       path="health"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerHealthPage />
         </RequireRole>
       }
@@ -150,7 +150,7 @@ export const farmOwnerRoutes = (
     <Route
       path="health/report"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerHealthReportPage />
         </RequireRole>
       }
