@@ -1,18 +1,25 @@
 import { describe, expect, it } from '@jest/globals'
 import type { FarmMember } from '@/types'
 import {
+  buildDecisionDetail,
+  buildProposalDetail,
+  buildReviewDetail,
   describeActivityChanges,
   describeReviewChanges,
   getActivityVerdict,
   getDaysLeft,
   getDeletionDeadline,
+  getDecisionLines,
+  getDetailPreview,
   getExpertActionLabel,
   getMemberRoleLabel,
+  getProposalLines,
   humanizeChangeText,
   isReviewPending,
   sortMembers,
   summarizeMembers,
 } from '@/utils/account.utils'
+import { formatDateTime } from '@/utils/date.utils'
 
 function buildMember(userId: string, extra: Partial<FarmMember> = {}): FarmMember {
   return { user_id: userId, is_primary: false, joined_at: '2026-10-01T00:00:00.000Z', ...extra }
@@ -173,5 +180,92 @@ describe('describeReviewChanges', () => {
       new_values: { profiles: [{ name: 'Mùa mưa' }], temporary: [] },
     })
     expect(lines).toEqual(['Hồ sơ theo mùa: 0 → 1', 'Khung tạm: 0 → 0'])
+  })
+})
+
+describe('getDetailPreview', () => {
+  it('ít dòng thì giữ nguyên', () => {
+    expect(getDetailPreview(['a', 'b'])).toEqual(['a', 'b'])
+    expect(getDetailPreview([])).toEqual([])
+  })
+
+  it('nhiều dòng thì giữ 2 dòng đầu và ghi số dòng còn lại', () => {
+    expect(getDetailPreview(['a', 'b', 'c', 'd'])).toEqual(['a', 'b', '+2 dòng khác'])
+  })
+})
+
+describe('bảng chi tiết ở màn Hoạt động chuyên gia', () => {
+  const longNote = 'Chim về muộn vì mưa kéo dài cả buổi chiều, '.repeat(5).trim()
+
+  it('quyết định: kết luận cảnh báo đứng đầu, ghi chú dài giữ đủ, có người làm, giờ và nơi', () => {
+    const entry = {
+      action: 'ALERT_VERDICT_SET',
+      actor: { _id: 'expert', full_name: 'Trần An' },
+      actor_role: 'DOMAIN_EXPERT' as const,
+      metadata: { result: 'REJECTED', note: longNote },
+      created_at: '2026-11-20T03:00:00.000Z',
+    }
+    expect(getDecisionLines(entry)).toEqual(['Kết luận: bác bỏ cảnh báo', `Ghi chú: ${longNote}`])
+
+    const detail = buildDecisionDetail(entry, 'Nhà A › Tầng 1')
+    expect(detail.title).toBe(getExpertActionLabel('ALERT_VERDICT_SET'))
+    expect(detail.facts).toEqual([
+      { label: 'Người làm', value: 'Trần An (Chuyên gia)' },
+      { label: 'Lúc', value: formatDateTime('2026-11-20T03:00:00.000Z') },
+      { label: 'Nơi', value: 'Nhà A › Tầng 1' },
+    ])
+    expect(detail.lines).toEqual(getDecisionLines(entry))
+  })
+
+  it('mục chờ duyệt: đủ mọi giá trị đổi, chưa xử lý thì không có giờ chuyên gia', () => {
+    const review = {
+      group: 'health_levels' as const,
+      status: 'PENDING_REVIEW' as const,
+      old_values: { air_slight_h: 1, air_clear_h: 4, noise_slight: 2 },
+      new_values: { air_slight_h: 2, air_clear_h: 5, noise_slight: 3 },
+      created_at: '2026-11-21T01:00:00.000Z',
+      reviewed_at: null,
+    }
+    const detail = buildReviewDetail(review, '')
+    expect(detail.title).toBe('Mức chỉ số sức khỏe')
+    expect(detail.status).toBe('Chờ chuyên gia duyệt')
+    expect(detail.lines).toHaveLength(3)
+    expect(detail.facts).toEqual([
+      { label: 'Nơi', value: '_' },
+      { label: 'Bạn sửa lúc', value: formatDateTime('2026-11-21T01:00:00.000Z') },
+    ])
+  })
+
+  it('mục đã xử lý: thêm giờ chuyên gia xử lý', () => {
+    const detail = buildReviewDetail(
+      {
+        group: 'return_rate_drop',
+        status: 'REVERTED',
+        old_values: { return_rate_drop_pct: 20 },
+        new_values: { return_rate_drop_pct: 25 },
+        created_at: '2026-11-21T01:00:00.000Z',
+        reviewed_at: '2026-11-21T05:00:00.000Z',
+      },
+      'Nhà A',
+    )
+    expect(detail.facts.at(-1)).toEqual({
+      label: 'Chuyên gia xử lý lúc',
+      value: formatDateTime('2026-11-21T05:00:00.000Z'),
+    })
+  })
+
+  it('gợi ý hệ số: lý do từ chối ở cuối, có giờ gửi và giờ chuyên gia quyết định', () => {
+    const proposal = {
+      status: 'REJECTED' as const,
+      current_values: { fuzzy_humidity_band: 5 },
+      suggested_values: { fuzzy_humidity_band: 6 },
+      note: longNote,
+      created_at: '2026-11-19T02:00:00.000Z',
+      decided_at: '2026-11-19T08:00:00.000Z',
+    }
+    expect(getProposalLines(proposal).at(-1)).toBe(`Lý do: ${longNote}`)
+    const detail = buildProposalDetail(proposal, 'Nhà A › Tầng 1')
+    expect(detail.title).toBe('Gợi ý hệ số')
+    expect(detail.facts.map(fact => fact.label)).toEqual(['Nơi', 'Gửi lúc', 'Chuyên gia quyết định lúc'])
   })
 })

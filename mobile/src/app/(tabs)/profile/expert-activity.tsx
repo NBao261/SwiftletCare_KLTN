@@ -5,6 +5,7 @@ import { ArrowsClockwiseIcon, CheckCircleIcon, ClockIcon } from 'phosphor-react-
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
+import { ActivityDetailSheet } from '@/components/profile/ActivityDetailSheet'
 import { ExpertDecisionList } from '@/components/profile/ExpertDecisionList'
 import { ProfileRow } from '@/components/profile/ProfileRow'
 import { Button } from '@/components/ui/button'
@@ -20,7 +21,16 @@ import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { ChangeReviewStatus, ProposalStatus } from '@/types'
-import { describeReviewChanges, describeValueDiff, getReviewStatusLabel, isReviewPending } from '@/utils/account.utils'
+import {
+  type ActivityDetail,
+  buildProposalDetail,
+  buildReviewDetail,
+  describeReviewChanges,
+  getDetailPreview,
+  getProposalLines,
+  getReviewStatusLabel,
+  isReviewPending,
+} from '@/utils/account.utils'
 import { formatDateTime } from '@/utils/date.utils'
 import { getParameterReviewGroupLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
@@ -50,6 +60,8 @@ export default function ExpertActivityScreen() {
   const directory = useZoneDirectory()
   const reviewsQuery = useParameterReviewList(farmId, tab === 'reviews')
   const proposalsQuery = useProposalList(farmId, tab === 'reviews')
+  // Mục đang mở trong bảng chi tiết; null là bảng đóng
+  const [openedDetail, setOpenedDetail] = useState<ActivityDetail | null>(null)
 
   if (!canPerform(user, 'viewOwnerProfile')) return <Redirect href="/(tabs)/profile" />
 
@@ -95,10 +107,14 @@ export default function ExpertActivityScreen() {
                   icon={getStatusIcon(review.status)}
                   label={getParameterReviewGroupLabel(review.group)}
                   value={getReviewStatusLabel(review.status)}
-                  caption={[getScopeText(review.zone_id, review.house_id), formatDateTime(review.updated_at)]
+                  // Giờ đứng đầu để không bị tên nhà dài đẩy mất; chi tiết chỉ vài dòng đầu, bấm để xem đủ
+                  caption={[formatDateTime(review.updated_at), getScopeText(review.zone_id, review.house_id)]
                     .filter(Boolean)
                     .join('\n')}
-                  details={describeReviewChanges(review)}
+                  details={getDetailPreview(describeReviewChanges(review))}
+                  onPress={() =>
+                    setOpenedDetail(buildReviewDetail(review, getScopeText(review.zone_id, review.house_id)))
+                  }
                   hasDivider={index < reviews.length - 1}
                 />
               ))}
@@ -126,10 +142,8 @@ export default function ExpertActivityScreen() {
                   label={getScopeText(proposal.zone_id) || t('Gợi ý hệ số')}
                   value={getReviewStatusLabel(proposal.status)}
                   caption={formatDateTime(proposal.created_at)}
-                  details={[
-                    ...describeValueDiff(proposal.current_values, proposal.suggested_values),
-                    ...(proposal.note ? [t('Lý do: {note}', { note: proposal.note })] : []),
-                  ]}
+                  details={getDetailPreview(getProposalLines(proposal))}
+                  onPress={() => setOpenedDetail(buildProposalDetail(proposal, getScopeText(proposal.zone_id)))}
                   hasDivider={index < proposals.length - 1}
                 />
               ))}
@@ -175,6 +189,7 @@ export default function ExpertActivityScreen() {
           renderReviews()
         )}
       </ScrollView>
+      {openedDetail && <ActivityDetailSheet detail={openedDetail} onClose={() => setOpenedDetail(null)} />}
     </View>
   )
 }
