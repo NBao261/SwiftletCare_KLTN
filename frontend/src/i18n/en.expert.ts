@@ -197,6 +197,22 @@ const enExpert: Record<string, string> = {
   'Không tải được danh sách camera. Thử lại.': 'Could not load the cameras. Please try again.',
   'Nhà yến này chưa gắn camera nào.': 'This house has no camera yet.',
   'Lịch sử vòng đếm': 'Ring history',
+  // Hàng đợi việc
+  'Thay đổi tham số chờ duyệt': 'Parameter changes to review',
+  'Ngày lệch đánh giá (14 ngày)': 'Days rated differently (14 days)',
+  'Đề xuất luật bù thời tiết': 'Weather rule proposals',
+  'Hồ sơ cấu hình chờ duyệt': 'Configuration profiles to approve',
+  'Luật khuyến nghị chờ bật': 'Recommendation rules to activate',
+  'Mùa vụ chờ kết luận': 'Seasons awaiting a conclusion',
+  'Kết luận cảnh báo': 'Alert verdicts',
+  'Duyệt thay đổi': 'Review changes',
+  'tham số và hệ số mờ': 'parameters and fuzzy coefficients',
+  'luật thời tiết, hồ sơ, luật khuyến nghị': 'weather rules, profiles, recommendation rules',
+  'Viết kết luận': 'Write conclusions',
+  'ngày lệch, báo cáo, mùa vụ': 'disagreeing days, reports, seasons',
+  'Chủ nhà yến đã nhắc': 'Reminded by the owner',
+  '{{n}} việc': '{{n}} task(s)',
+  'Chọn trang trại ở thanh trên để xem việc đang chờ': 'Choose a farm in the bar above to see the pending tasks',
 
   // Hồ sơ cấu hình
   'Dẫn dụ': 'Attracting',
