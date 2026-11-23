@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import AlertDetailsLine from '@/components/common/AlertDetailsLine';
+import OnsiteCheckSection from '@/components/common/OnsiteCheckSection';
 import SeverityBadge from '@/components/common/SeverityBadge';
 import { STATUS_BADGE_CLASS } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { Badge, Button, EmptyState, LoadingSkeleton } from '@/components/ui';
@@ -18,6 +19,8 @@ interface AlertDetailDrawerProps {
   locationOf: (alert: Alert) => { location: string; device: string | null; simulated?: boolean };
   canAcknowledge: boolean;
   onAcknowledge: (alert: Alert) => void;
+  // Chỉ Kỹ thuật viên: trả lời yêu cầu kiểm tra tại chỗ còn chờ
+  onAnswerOnsiteCheck?: (alert: Alert) => void;
   onClose: () => void;
 }
 
@@ -42,12 +45,15 @@ function DetailSection({ title, children }: { title: string; children: ReactNode
 }
 
 // Chi tiết cảnh báo
-export default function AlertDetailDrawer({ alertId, locationOf, canAcknowledge, onAcknowledge, onClose }: AlertDetailDrawerProps): JSX.Element {
+export default function AlertDetailDrawer({ alertId, locationOf, canAcknowledge, onAcknowledge, onAnswerOnsiteCheck, onClose }: AlertDetailDrawerProps): JSX.Element {
   const { t, dateTime } = useTranslation(alertsDict);
   const apiErrorMessage = useApiErrorMessage();
   const { data: alert, isLoading, isError, error, refetch } = useAlert(alertId);
   const place = alert ? locationOf(alert) : null;
   const verdict = alert?.status === 'DISMISSED' ? alert.expert_verdict : undefined;
+  // Mỗi cảnh báo suy luận có tối đa 1 yêu cầu; thợ nào của nhà cũng trả lời được, một lần
+  const onsiteChecks = alert?.onsite_checks ?? [];
+  const hasPendingOnsiteCheck = onsiteChecks.some(check => !check.answered_at);
 
   return (
     <Drawer open={Boolean(alertId)} onClose={onClose} title={alert ? t(`type.${alert.type}`) : t('detail.title')}>
@@ -82,6 +88,18 @@ export default function AlertDetailDrawer({ alertId, locationOf, canAcknowledge,
             <p className="whitespace-pre-line text-sm text-warmGray">{alert.message}</p>
             <AlertDetailsLine alert={alert} />
           </DetailSection>
+
+          {onsiteChecks.length > 0 && (
+            <section className="flex flex-col gap-2">
+              <OnsiteCheckSection checks={onsiteChecks} />
+              {hasPendingOnsiteCheck && onAnswerOnsiteCheck && (
+                <>
+                  <p className="text-sm text-warmGray">{t('onsite.pending')}</p>
+                  <Button variant="secondary" onClick={() => onAnswerOnsiteCheck(alert)}>{t('onsite.answer')}</Button>
+                </>
+              )}
+            </section>
+          )}
 
           {alert.site_cause && (
             <DetailSection title={t('detail.cause')}>

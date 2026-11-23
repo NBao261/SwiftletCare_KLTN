@@ -1,4 +1,4 @@
-// Web chỉ mở cho chuyên gia; thợ vẽ trên mobile
+// Chuyên gia, Farm Owner và Kỹ thuật viên (nhà được giao) vẽ vòng đếm, trên web như trên mobile
 import { useState, useEffect } from 'react'
 import { Crosshair, History, AlertTriangle } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'
@@ -11,10 +11,14 @@ import CountingRingEditor from '@/components/features/domain-expert/counting-rin
 import CountingRingHistory from '@/components/features/domain-expert/counting-ring/CountingRingHistory'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
+import { usePermission } from '@/hooks/common/usePermission'
 import { t } from '@/i18n'
 
 export default function DomainExpertCountingRingPage() {
   const { canEditParameters } = useExpertDecisionRights()
+  // Kỹ thuật viên không sửa tham số nhưng vẽ vòng đếm camera của nhà được giao
+  const isTechnician = usePermission('FARM_TECHNICIAN')
+  const canDrawRing = canEditParameters || isTechnician
   const { selectedHouseId } = useZoneStore()
   const houseId = selectedHouseId || undefined
   const { data: cameras, isLoading, isError } = useHouseCameras(houseId)
@@ -68,8 +72,8 @@ export default function DomainExpertCountingRingPage() {
         {!isLoading && !isError && camera && (
           <div className="space-y-2">
             <SimulatedBadge simulated={camera.simulated} />
-            {/* Farm Owner vẽ được; farm có chuyên gia thì chuyên gia duyệt sau */}
-            <fieldset disabled={!canEditParameters} className="contents">
+            {/* Farm Owner, Kỹ thuật viên vẽ được; farm có chuyên gia thì chuyên gia duyệt sau */}
+            <fieldset disabled={!canDrawRing} className="contents">
               <CountingRingEditor key={camera._id} camera={camera} houseId={houseId} />
             </fieldset>
           </div>

@@ -19,7 +19,7 @@ const STRUCTURE_STALE_MS = 5 * 60 * 1000
 // Request gộp chạy song song với chuỗi farms → houses → zones; số đo lấy theo lô 6 zone; chỉ liveZoneIds mới join socket
 export function useFarmStructure(options?: { liveZoneIds?: string[] }) {
   const queryClient = useQueryClient()
-  // Technician cũng mở màn này nên không gọi /harvests, tránh 403 rồi hiện 0 kg sai
+  // Chỉ role đọc được /harvests mới gọi (kỹ thuật viên đọc thu hoạch nhà được giao từ G-33), role khác tránh 403 rồi hiện 0 kg sai
   const canViewHarvest = usePermission(...HARVEST_ROLES)
   const farmsQ = useFarms()
   const farms = farmsQ.data

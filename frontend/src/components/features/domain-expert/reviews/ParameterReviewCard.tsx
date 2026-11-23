@@ -112,18 +112,30 @@ const FIELD_LABELS: Record<string, string> = translated({
   noise_clear: 'Tiếng ồn lệch rõ',
   profiles: 'Hồ sơ theo mùa',
   temporary: 'Khung tạm',
+  default_windows: 'Khung mặc định của nhà',
   ring: 'Vòng đếm',
   rings: 'Vòng đếm',
 });
 
-// Lấy danh sách các trường có thay đổi giữa old_values và new_values
+// Lấy danh sách các trường có thay đổi giữa old_values và new_values; trường bị bỏ (chỉ còn ở bản cũ) cũng là thay đổi
 export function getChangedParameterKeys(
   oldValues: Record<string, unknown> | undefined,
   newValues: Record<string, unknown> | undefined,
 ): string[] {
-  return Object.keys(newValues || {}).filter(
-    key => JSON.stringify(oldValues?.[key]) !== JSON.stringify(newValues?.[key]),
-  );
+  const keys = new Set([...Object.keys(oldValues || {}), ...Object.keys(newValues || {})]);
+  return [...keys].filter(key => JSON.stringify(oldValues?.[key]) !== JSON.stringify(newValues?.[key]));
+}
+
+// Khung sáng, chiều của lịch đếm; không có là khung hệ thống
+function formatDayWindows(value: unknown): string {
+  const windows = value as { morning?: { start?: string; end?: string }; evening?: { start?: string; end?: string } } | null | undefined;
+  const { morning, evening } = windows ?? {};
+  // Bản ghi cũ thiếu giờ thì coi như khung hệ thống, không hiện "undefined"
+  if (!morning?.start || !morning.end || !evening?.start || !evening.end) return t('Khung hệ thống');
+  return t('Sáng {{morning}}, chiều {{evening}}', {
+    morning: `${morning.start}–${morning.end}`,
+    evening: `${evening.start}–${evening.end}`,
+  });
 }
 
 // Định dạng giá trị hiển thị của tham số; lịch đếm, vòng đếm là cấu trúc lồng nhau nên chỉ tóm tắt
@@ -133,6 +145,7 @@ export function formatParamValue(value: unknown, key?: string): string {
     const rings = ringList(value);
     return rings.length > 0 ? t('{{n}} vòng', { n: rings.length }) : t('Vòng mặc định');
   }
+  if (key === 'default_windows') return formatDayWindows(value);
   if (value === undefined || value === null) return '—';
   if (typeof value === 'boolean') return value ? t('Bật') : t('Tắt');
   if (Array.isArray(value)) return t('{{n}} mục', { n: value.length });

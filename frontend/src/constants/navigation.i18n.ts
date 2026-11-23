@@ -44,6 +44,7 @@ const vi = {
   'Luật khuyến nghị': 'Luật khuyến nghị',
   'Lịch sử quyết định': 'Lịch sử quyết định',
   'Tham số điều khiển': 'Tham số điều khiển',
+  'Tham số': 'Tham số',
   'Đếm chim': 'Đếm chim',
 
   'Theo dõi': 'Theo dõi',
@@ -110,6 +111,7 @@ const en: Record<NavigationKey, string> = {
   'Luật khuyến nghị': 'Recommendation rules',
   'Lịch sử quyết định': 'Decision history',
   'Tham số điều khiển': 'Control parameters',
+  'Tham số': 'Parameters',
   'Đếm chim': 'Bird counting',
 
   'Theo dõi': 'Monitoring',

@@ -14,16 +14,6 @@ export function useExpertPendingAlerts(farmId?: string, zoneId?: string, enabled
   })
 }
 
-// Đầu hàng đợi của trang Chuyên gia: khoá riêng vì lấy nhiều bản ghi, giữ tiền tố pending-alerts để phán quyết làm mới cả hai
-export function useExpertQueueAlerts(farmId?: string, zoneId?: string, limit = 10) {
-  return useQuery({
-    queryKey: ['expert', 'pending-alerts', 'queue', farmId, zoneId, limit],
-    queryFn: () => expertService.getInferredAlerts({ farmId, zoneId, verdict: 'pending', limit }),
-    staleTime: 60_000,
-    refetchInterval: 120_000,
-  })
-}
-
 // ── 2. Chỉ số tự động hoá (KPI: % chế độ AUTO) ────────────────────────────────
 export function useExpertAutonomy(zoneId: string, range = '24h') {
   return useQuery({

@@ -23,6 +23,9 @@ router.get('/',
   expertActivityController.list,
 )
 
+// Mọi việc đang chờ chuyên gia của một trại (trang chủ của chuyên gia)
+router.get('/queue', requireRole('DOMAIN_EXPERT'), query('farmId').isString().isMongoId(), validate, expertActivityController.queue)
+
 router.get('/reviews',
   ...farmScope, query('status').optional().isString().isIn(['PENDING_REVIEW', 'ACCEPTED', 'REVERTED', 'ADJUSTED']),
   ...pageQuery, validate, expertActivityController.listReviews)

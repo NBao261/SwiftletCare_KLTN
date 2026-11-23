@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
-import { DEVICE_SETUP_ROLES, FARM_OWNER_ONLY, FARM_SIDE_ROLES, FARM_STRUCTURE_ROLES, HARVEST_ROLES } from '@/constants/roles'
+import { DEVICE_SETUP_ROLES, FARM_SIDE_ROLES, FARM_WORK_ROLES, FARM_STRUCTURE_ROLES, HARVEST_ROLES, RELAY_CONTROL_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
 
 // allow quyết định ai vào; Technician chỉ Trang trại
@@ -34,7 +34,7 @@ export const farmOwnerRoutes = (
     <Route
       path="dashboard"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerDashboardPage />
         </RequireRole>
       }
@@ -42,7 +42,7 @@ export const farmOwnerRoutes = (
     <Route
       path="dashboard/scada"
       element={
-        <RequireRole allow={FARM_OWNER_ONLY}>
+        <RequireRole allow={RELAY_CONTROL_ROLES}>
           <FarmOwnerScadaPage />
         </RequireRole>
       }
@@ -75,7 +75,7 @@ export const farmOwnerRoutes = (
     <Route
       path="analytics"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerAnalyticsPage />
         </RequireRole>
       }
@@ -83,7 +83,7 @@ export const farmOwnerRoutes = (
     <Route
       path="vision"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerVisionPage />
         </RequireRole>
       }
@@ -124,7 +124,7 @@ export const farmOwnerRoutes = (
     <Route
       path="maintenance"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerMaintenancePage />
         </RequireRole>
       }
@@ -133,16 +133,16 @@ export const farmOwnerRoutes = (
     <Route
       path="recommendations"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerRecommendationsPage />
         </RequireRole>
       }
     />
-    {/* trạng thái ngày và đánh giá ngày: Farm Owner đánh giá, Domain Expert chỉ xem */}
+    {/* trạng thái ngày và đánh giá ngày: Farm Owner, Kỹ thuật viên (nhà được giao) đánh giá, Domain Expert chỉ xem */}
     <Route
       path="health"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerHealthPage />
         </RequireRole>
       }
@@ -150,7 +150,7 @@ export const farmOwnerRoutes = (
     <Route
       path="health/report"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerHealthReportPage />
         </RequireRole>
       }
@@ -159,7 +159,7 @@ export const farmOwnerRoutes = (
     <Route
       path="work-orders"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerWorkOrdersPage />
         </RequireRole>
       }

@@ -1,8 +1,8 @@
-// Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận
+// Farm Owner vào được trừ Hàng đợi việc và Báo cáo & kết luận; Kỹ thuật viên vào vòng đếm và đọc tham số, lịch đếm, luật thời tiết (G-33)
 import { lazy } from 'react';
 import { Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
-import { EXPERT_DECISION_ROLES, EXPERT_ROLES, scopeDepthOf } from '@/constants/roles';
+import { EXPERT_DECISION_ROLES, EXPERT_ROLES, FARM_WORK_ROLES, scopeDepthOf } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
 import ExpertReadOnlyBadge from '@/components/features/domain-expert/ExpertReadOnlyBadge';
 import ScopeFilter from '@/components/common/ScopeFilter';
@@ -21,10 +21,16 @@ const DomainExpertRecommendationRulesPage = lazy(() => import('@/pages/domain-ex
 const DomainExpertCountingSchedulePage = lazy(() => import('@/pages/domain-expert/DomainExpertCountingSchedulePage'));
 const DomainExpertCountingRingPage = lazy(() => import('@/pages/domain-expert/DomainExpertCountingRingPage'));
 
-// Hàng đợi việc chỉ của chuyên gia; Farm Owner vào /domain-expert thì mở trang thẩm định cảnh báo
+// Hàng đợi việc chỉ của chuyên gia; Farm Owner vào /domain-expert thì mở trang thẩm định cảnh báo, Kỹ thuật viên thì vòng đếm
 function DomainExpertIndexRedirect() {
   const isExpert = usePermission('DOMAIN_EXPERT');
-  return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
+  const isTechnician = usePermission('FARM_TECHNICIAN');
+  return <Navigate to={isExpert ? 'queue' : isTechnician ? 'counting-ring' : 'alert-verdicts'} replace />;
+}
+
+// Trang quyết định của chuyên gia: Kỹ thuật viên không vào
+function decision(page: JSX.Element): JSX.Element {
+  return <RequireRole allow={EXPERT_DECISION_ROLES}>{page}</RequireRole>;
 }
 
 // Khung chung của /domain-expert/*
@@ -48,7 +54,7 @@ export const domainExpertRoutes = (
     <Route
       path="domain-expert"
       element={
-        <RequireRole allow={EXPERT_DECISION_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <DomainExpertShell />
         </RequireRole>
       }
@@ -58,13 +64,13 @@ export const domainExpertRoutes = (
       <Route path="queue" element={<RequireRole allow={EXPERT_ROLES}><DomainExpertQueuePage /></RequireRole>} />
 
       {/* Thẩm định cảnh báo AI */}
-      <Route path="alert-verdicts" element={<DomainExpertAlertVerdictsPage />} />
+      <Route path="alert-verdicts" element={decision(<DomainExpertAlertVerdictsPage />)} />
 
       {/* Ngưỡng & Hệ số mờ + Tham số phát hiện */}
       <Route path="tuning" element={<DomainExpertZoneTuningPage />} />
 
       {/* Duyệt tham số & Đề xuất hệ số mờ */}
-      <Route path="reviews" element={<DomainExpertReviewsPage />} />
+      <Route path="reviews" element={decision(<DomainExpertReviewsPage />)} />
 
       {/* Lịch đếm chim của nhà */}
       <Route path="counting-schedule" element={<DomainExpertCountingSchedulePage />} />
@@ -79,13 +85,13 @@ export const domainExpertRoutes = (
       <Route path="reports" element={<RequireRole allow={EXPERT_ROLES}><DomainExpertReportsPage /></RequireRole>} />
 
       {/* Hồ sơ cấu hình */}
-      <Route path="profiles" element={<DomainExpertProfilesPage />} />
+      <Route path="profiles" element={decision(<DomainExpertProfilesPage />)} />
 
       {/* Luật khuyến nghị & hiệu quả */}
-      <Route path="recommendation-rules" element={<DomainExpertRecommendationRulesPage />} />
+      <Route path="recommendation-rules" element={decision(<DomainExpertRecommendationRulesPage />)} />
 
       {/* Lịch sử quyết định của chuyên gia */}
-      <Route path="history" element={<DomainExpertHistoryPage />} />
+      <Route path="history" element={decision(<DomainExpertHistoryPage />)} />
     </Route>
   </>
 );

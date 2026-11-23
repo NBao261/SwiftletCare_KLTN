@@ -282,3 +282,13 @@ export function thresholdSource(history: ZoneThresholdHistoryEntry[] | undefined
   if (!last || last.source === 'RESET_TO_DEFAULT') return { isDefault: true, changedAt: last?.changed_at }
   return { isDefault: false, role: last.changed_by_role, changedAt: last.changed_at }
 }
+
+// Cảnh báo thuộc các nhà đang xem: cảnh báo của Zone theo zone_id, cảnh báo cả nhà (camera) theo house_id
+export function countAlertsInHouses(
+  alerts: Array<{ zone_id?: string; house_id?: string }>,
+  houses: Array<{ house: { _id: string }; zones: Array<{ zone: { _id: string } }> }>,
+): number {
+  const houseIds = new Set(houses.map(node => node.house._id))
+  const zoneIds = new Set(houses.flatMap(node => node.zones.map(zone => zone.zone._id)))
+  return alerts.filter(alert => (alert.zone_id ? zoneIds.has(alert.zone_id) : Boolean(alert.house_id && houseIds.has(alert.house_id)))).length
+}

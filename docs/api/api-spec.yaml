@@ -3690,9 +3690,9 @@ paths:
   /recommendations:
     get:
       tags: [Recommendations]
-      summary: "Khuyến nghị của nhà hoặc farm (EXPERT-FR-017) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao (houseId)"
+      summary: "Khuyến nghị của nhà hoặc farm (EXPERT-FR-017) — FARM_OWNER, DOMAIN_EXPERT; FARM_TECHNICIAN chỉ nhà được giao (theo houseId, hoặc theo farmId thì chỉ các nhà được giao của farm đó)"
       parameters:
-        - { name: farmId, in: query, schema: { type: string }, description: "Bắt buộc khi không có houseId" }
+        - { name: farmId, in: query, schema: { type: string }, description: "Bắt buộc khi không có houseId. FARM_TECHNICIAN gửi farm không giao nhà nào cho mình thì nhận danh sách rỗng (200), không phải 403" }
         - { name: houseId, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { type: string, enum: [OPEN, ACCEPTED, REJECTED, EXPIRED, MEASURED] } }
         - { $ref: "#/components/parameters/Page" }
@@ -6302,6 +6302,55 @@ paths:
         "409": { description: "Việc đã xong, chưa đến lúc, farm chưa có chuyên gia hoặc đã nhắc", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
         "503": { description: "Chưa gửi được thông báo nào, lượt nhắc được trả lại", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+  /expert-activity/queue:
+    get:
+      tags: [ExpertActivity]
+      summary: "Việc đang chờ chuyên gia của một trại (hàng đợi việc, Report 4 §5.4) — DOMAIN_EXPERT"
+      description: |
+        Một phạm vi cho mọi nhóm: cả trại. Mỗi nhóm có `total` và tối đa 5 việc đầu (việc Farm Owner đã nhắc lên đầu,
+        rồi mới nhất trước): cảnh báo suy luận chưa kết luận (EXPERT-FR-003), mục duyệt thay đổi (EXPERT-FR-010), đề xuất
+        hệ số (EXPERT-FR-011), ngày lệch đánh giá trong 14 ngày (EXPERT-FR-022), báo cáo chưa có kết luận (EXPERT-FR-006),
+        đề xuất luật bù thời tiết, hồ sơ nháp, luật khuyến nghị chờ bật (BR-22), mùa vụ đã đóng chưa có kết luận.
+        Farm Owner, Technician, Administrator, chuyên gia trại khác → 403.
+      parameters:
+        - { name: farmId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          farm_id: { type: string }
+                          groups:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                kind:
+                                  type: string
+                                  enum: [alert_verdict, parameter_review, coefficient_proposal, disagreeing_day, report_conclusion, weather_proposal, profile_draft, recommendation_rule, season_conclusion]
+                                total: { type: integer }
+                                items:
+                                  type: array
+                                  maxItems: 5
+                                  items:
+                                    type: object
+                                    properties:
+                                      id: { type: string }
+                                      title: { type: string }
+                                      house_name: { type: string, nullable: true }
+                                      at: { type: string, description: "Thời điểm (ISO) hoặc ngày YYYY-MM-DD của ngày lệch" }
+                                      reminded: { type: boolean, description: "Farm Owner đã nhắc chuyên gia" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /expert-activity/reviews:
     get:
       tags: [ExpertActivity]

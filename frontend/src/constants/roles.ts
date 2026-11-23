@@ -25,17 +25,20 @@ export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 // Farm Owner cũng vào: ghi được khi farm chưa có chuyên gia (useExpertDecisionRights)
 export const EXPERT_DECISION_ROLES: Role[] = ['DOMAIN_EXPERT', 'FARM_OWNER']
 
-// Việc chỉ Farm Owner làm: điều khiển relay (/dashboard/scada).
-export const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
+// Điều khiển tay relay (/dashboard/scada): Farm Owner, Kỹ thuật viên ở nhà được giao; Domain Expert không (Report 3 §2.4)
+export const RELAY_CONTROL_ROLES: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN']
 
 // Màn vận hành của farm; Domain Expert chỉ đọc
 export const FARM_SIDE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
 
-// Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc: khớp backend harvests (canRead/canWrite).
-export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
-
 // Trang trại (/farms, nhà, Zone): không có Admin
 export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
+
+// Màn của nhà yến cho cả ba vai trò trại (giám sát, công việc, đánh giá ngày): kỹ thuật viên chỉ thấy nhà được giao (G-33)
+export const FARM_WORK_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
+
+// Thu hoạch: Farm Owner ghi và xác nhận, Kỹ thuật viên nhập lần chờ xác nhận, Domain Expert chỉ đọc (backend canRead/canWrite)
+export const HARVEST_ROLES: Role[] = FARM_WORK_ROLES
 
 // Các role trang trại và Admin
 export const DEVICE_LIST_ROLES: Role[] = ['ADMIN', ...FARM_STRUCTURE_ROLES]
@@ -73,8 +76,8 @@ export function getRoleHomePath(role: Role | undefined): string {
 // Phải khớp menuSections của <Role>Layout; không đọc từ layout vì sẽ import vòng. Path con đặt trước path cha
 export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
-  { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },
-  { path: '/dashboard',        roles: FARM_SIDE_ROLES },
+  { path: '/dashboard/scada',  roles: RELAY_CONTROL_ROLES },
+  { path: '/dashboard',        roles: FARM_WORK_ROLES },
   { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
   { path: '/devices/onboarding', roles: DEVICE_SETUP_ROLES },
   { path: '/devices',          roles: DEVICE_LIST_ROLES },
@@ -84,23 +87,23 @@ export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/users',            roles: ADMIN_ONLY },
   { path: '/account-requests', roles: ADMIN_ONLY },
   { path: '/harvests',         roles: HARVEST_ROLES },
-  { path: '/maintenance',      roles: FARM_SIDE_ROLES },
-  { path: '/recommendations',  roles: FARM_SIDE_ROLES },
+  { path: '/maintenance',      roles: FARM_WORK_ROLES },
+  { path: '/recommendations',  roles: FARM_WORK_ROLES },
   { path: '/system/settings',  roles: ADMIN_ONLY },
   { path: '/system/audit-log', roles: ADMIN_ONLY },
   { path: '/system/device-stock', roles: ADMIN_ONLY },
-  { path: '/analytics',        roles: FARM_SIDE_ROLES },
+  { path: '/analytics',        roles: FARM_WORK_ROLES },
   { path: '/overview',         roles: FARM_SIDE_ROLES },
-  { path: '/vision',           roles: FARM_SIDE_ROLES },
-  { path: '/health',           roles: FARM_SIDE_ROLES },
-  { path: '/work-orders',      roles: FARM_SIDE_ROLES },
+  { path: '/vision',           roles: FARM_WORK_ROLES },
+  { path: '/health',           roles: FARM_WORK_ROLES },
+  { path: '/work-orders',      roles: FARM_WORK_ROLES },
   { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
   { path: '/domain-expert/alert-verdicts',  roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/reviews',         roles: EXPERT_DECISION_ROLES },
-  { path: '/domain-expert/tuning',          roles: EXPERT_DECISION_ROLES },
-  { path: '/domain-expert/counting-schedule',     roles: EXPERT_DECISION_ROLES },
-  { path: '/domain-expert/counting-ring',         roles: EXPERT_DECISION_ROLES },
-  { path: '/domain-expert/weather-rules',         roles: EXPERT_DECISION_ROLES },
+  { path: '/domain-expert/tuning',          roles: FARM_WORK_ROLES },
+  { path: '/domain-expert/counting-schedule',     roles: FARM_WORK_ROLES },
+  { path: '/domain-expert/counting-ring',         roles: FARM_WORK_ROLES },
+  { path: '/domain-expert/weather-rules',         roles: FARM_WORK_ROLES },
   { path: '/domain-expert/reports',               roles: EXPERT_ROLES },
   { path: '/domain-expert/profiles',              roles: EXPERT_DECISION_ROLES },
   { path: '/domain-expert/recommendation-rules',  roles: EXPERT_DECISION_ROLES },

@@ -3,6 +3,8 @@ const enExpert: Record<string, string> = {
   // ── Khung chung: thanh chọn khu vực, lời nhắc quyền, màn trống ─────────────────────────────────────────────────────
   'Chuyên gia duyệt lại': 'Reviewed by the expert',
   'Quyết định thay': 'Deciding for expert',
+  'Chỉ xem': 'View only',
+  'Chuyên gia và chủ nhà yến đặt các thông số này. Bạn xem để đối chiếu khi làm việc tại nhà yến.': 'The expert and the farm owner set these values. You read them to check your work at the house.',
   'Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.':
     'This farm has no expert: you decide in their place on alert verdicts, detection parameters, the counting schedule, the counting ring and weather rules. Report and season conclusions and profile approval are for an expert only.',
   'Không có cảnh báo chờ kiểm chứng': 'No incidents awaiting review',
@@ -197,6 +199,22 @@ const enExpert: Record<string, string> = {
   'Không tải được danh sách camera. Thử lại.': 'Could not load the cameras. Please try again.',
   'Nhà yến này chưa gắn camera nào.': 'This house has no camera yet.',
   'Lịch sử vòng đếm': 'Ring history',
+  // Hàng đợi việc
+  'Thay đổi tham số chờ duyệt': 'Parameter changes to review',
+  'Ngày lệch đánh giá (14 ngày)': 'Days rated differently (14 days)',
+  'Đề xuất luật bù thời tiết': 'Weather rule proposals',
+  'Hồ sơ cấu hình chờ duyệt': 'Configuration profiles to approve',
+  'Luật khuyến nghị chờ bật': 'Recommendation rules to activate',
+  'Mùa vụ chờ kết luận': 'Seasons awaiting a conclusion',
+  'Kết luận cảnh báo': 'Alert verdicts',
+  'Duyệt thay đổi': 'Review changes',
+  'tham số và hệ số mờ': 'parameters and fuzzy coefficients',
+  'luật thời tiết, hồ sơ, luật khuyến nghị': 'weather rules, profiles, recommendation rules',
+  'Viết kết luận': 'Write conclusions',
+  'ngày lệch, báo cáo, mùa vụ': 'disagreeing days, reports, seasons',
+  'Chủ nhà yến đã nhắc': 'Reminded by the owner',
+  '{{n}} việc': '{{n}} task(s)',
+  'Chọn trang trại ở thanh trên để xem việc đang chờ': 'Choose a farm in the bar above to see the pending tasks',
 
   // Hồ sơ cấu hình
   'Dẫn dụ': 'Attracting',
@@ -522,6 +540,8 @@ const enExpert: Record<string, string> = {
   '{{n}} mục': '{{n}} items',
   'đã đổi': 'changed',
   'Sáng {{morning}}, chiều {{evening}}': 'Morning {{morning}}, evening {{evening}}',
+  'Khung hệ thống': 'System windows',
+  'Khung mặc định của nhà': 'House default windows',
   'Khung tạm {{span}}': 'Temporary window {{span}}',
   'Hồ sơ {{name}} {{span}}': 'Profile {{name}} {{span}}',
   'Khung mặc định': 'Default windows',

@@ -45,6 +45,10 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   const scope = { ...useScopeFilter(), zone: undefined };
   const canManage = usePermission('FARM_OWNER');
   const canComment = usePermission('DOMAIN_EXPERT');
+  // Lời giải thích theo người xem: chủ nhà yến đặt chu kỳ, chuyên gia góp ý, kỹ thuật viên chỉ đọc
+  let helpKey: 'list.subtitle' | 'list.subtitleExpert' | 'list.subtitleTechnician' = 'list.subtitleTechnician';
+  if (canManage) helpKey = 'list.subtitle';
+  else if (canComment) helpKey = 'list.subtitleExpert';
   const actions = useMaintenancePlanActions();
   // Tab nằm trên URL (?tab=list) để F5 hoặc quay lại vẫn đúng tab
   const [searchParams, setSearchParams] = useSearchParams();
@@ -168,7 +172,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
         </SectionCard>
       ) : (
         // Danh sách kế hoạch
-        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')} action={viewSwitch}>
+        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(helpKey)} action={viewSwitch}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SelectMenu
               ariaLabel={t('list.filterState')}

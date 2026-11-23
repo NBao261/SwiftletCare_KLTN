@@ -1,212 +1,128 @@
-// Trang chủ Chuyên gia: 4 KpiTile và danh sách việc phẳng
-import { Link } from 'react-router-dom'
-import { CalendarCheckIcon, ChecksIcon, FileTextIcon, ShieldCheckIcon, ClipboardTextIcon } from '@phosphor-icons/react'
-import { ALERT_TYPE_LABELS } from '@/hooks/domain-expert/useExpertAlerts'
-import SeverityBadge from '@/components/common/SeverityBadge'
+// Trang chủ Chuyên gia: mọi việc đang chờ của trại đang chọn, 4 ô tóm tắt và một khung cho mỗi loại việc
+import { Link, useNavigate } from 'react-router-dom'
+import { ChecksIcon, ClipboardTextIcon, FileTextIcon, LightbulbFilamentIcon, ShieldCheckIcon } from '@phosphor-icons/react'
 import KpiTile from '@/components/common/KpiTile'
-import { useHealthReportConclusionCounts } from '@/hooks/shared/useHealthDays'
-import { useHealthDisagreements } from '@/hooks/domain-expert/useHealthDisagreements'
-import { shiftDate, vietnamDate } from '@/components/common/healthDay.utils'
-import { useParameterReviews, useCoefficientProposals } from '@/hooks/domain-expert/useExpertReviews'
-import { useAllZones } from '@/hooks/shared/useFarms'
+import { KIND_ORDER, sectionTotal, targetOf, type QueueSection } from '@/components/features/domain-expert/queue/queue.utils'
+import { Badge, Button, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui'
 import { NO_VALUE } from '@/constants/display'
-import { useZoneStore } from '@/stores/zoneStore'
-import { useExpertQueueAlerts } from '@/hooks/domain-expert/useExpertDashboard'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import EmptyState from '@/components/ui/EmptyState'
-import SectionCard from '@/components/ui/SectionCard'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
+import { useExpertQueue } from '@/hooks/domain-expert/useExpertQueue'
 import { t } from '@/i18n'
-import { formatDateTime } from '@/lib/i18n'
-import { useMemo } from 'react'
+import { formatDateTime, formatStandardDate } from '@/lib/i18n'
+import { useZoneStore } from '@/stores/zoneStore'
+import type { ExpertQueueGroup, ExpertQueueItem, ExpertQueueKind } from '@/types/expert/queue.types'
 
-function formatAlertTitle(alert?: { title?: string; type?: string }, defaultZoneName?: string | null): string {
-  if (!alert) return t('Cảnh báo vi khí hậu')
-  let title = alert.title || ALERT_TYPE_LABELS[alert.type ?? ''] || alert.type || t('Cảnh báo vi khí hậu')
-  if (title.includes('undefined')) {
-    const typeLabel = ALERT_TYPE_LABELS[alert.type ?? ''] || t('Cảnh báo thiết bị')
-    title = defaultZoneName ? t('{{type}} tại {{zone}}', { type: typeLabel, zone: defaultZoneName }) : typeLabel
+// Tên khung của từng loại việc; dựng trong component để đổi ngôn ngữ thì đổi theo
+const kindTitle = (kind: ExpertQueueKind): string => ({
+  alert_verdict: t('Cảnh báo chờ kết luận'),
+  parameter_review: t('Thay đổi tham số chờ duyệt'),
+  coefficient_proposal: t('Đề xuất hệ số mờ'),
+  disagreeing_day: t('Ngày lệch đánh giá (14 ngày)'),
+  report_conclusion: t('Báo cáo chờ kết luận'),
+  weather_proposal: t('Đề xuất luật bù thời tiết'),
+  profile_draft: t('Hồ sơ cấu hình chờ duyệt'),
+  recommendation_rule: t('Luật khuyến nghị chờ bật'),
+  season_conclusion: t('Mùa vụ chờ kết luận'),
+})[kind]
+
+const SECTIONS: Array<{ key: QueueSection; label: () => string; sub: () => string; icon: typeof ShieldCheckIcon }> = [
+  { key: 'verdicts', label: () => t('Kết luận cảnh báo'), sub: () => t('cảnh báo suy luận'), icon: ShieldCheckIcon },
+  { key: 'reviews', label: () => t('Duyệt thay đổi'), sub: () => t('tham số và hệ số mờ'), icon: ChecksIcon },
+  { key: 'proposals', label: () => t('Duyệt đề xuất'), sub: () => t('luật thời tiết, hồ sơ, luật khuyến nghị'), icon: LightbulbFilamentIcon },
+  { key: 'conclusions', label: () => t('Viết kết luận'), sub: () => t('ngày lệch, báo cáo, mùa vụ'), icon: FileTextIcon },
+]
+
+// Ngày lệch trả 'YYYY-MM-DD', các việc khác trả thời điểm
+const whenOf = (item: ExpertQueueItem) => (/^\d{4}-\d{2}-\d{2}$/.test(item.at) ? formatStandardDate(item.at) : formatDateTime(item.at))
+
+function QueueGroupCard({ group }: { group: ExpertQueueGroup }) {
+  const navigate = useNavigate()
+  const setHouse = useZoneStore(state => state.setHouse)
+  // Luật thời tiết theo nhà: chọn nhà của đề xuất rồi mới mở trang
+  const open = (item: ExpertQueueItem) => {
+    if (group.kind === 'weather_proposal') setHouse(item.id)
+    navigate(targetOf(group.kind, item))
   }
-  return title
-    .replace('NOISE_ANOMALY', ALERT_TYPE_LABELS.NOISE_ANOMALY)
-    .replace('SENSOR_ANOMALY', ALERT_TYPE_LABELS.SENSOR_ANOMALY)
-    .replace('FORECAST_BREACH', ALERT_TYPE_LABELS.FORECAST_BREACH)
-    .replace('LOW_RETURN_RATE', ALERT_TYPE_LABELS.LOW_RETURN_RATE)
-}
-
-// Dòng đầu: loại cảnh báo, kèm tiêu đề khi tiêu đề nói thêm điều gì đó; tiêu đề tự sinh "<loại> tại <Zone>" thì bỏ vì vị trí đã ở dòng dưới
-function alertHeadline(alert: { title?: string; type?: string }): string {
-  const typeLabel = ALERT_TYPE_LABELS[alert.type ?? '']
-  const title = formatAlertTitle(alert)
-  if (!typeLabel) return title
-  if (!alert.title || title.startsWith(typeLabel)) return typeLabel
-  return `${typeLabel} · ${title}`
-}
-
-// Cảnh báo của một Zone ghi "Nhà > Zone"; cảnh báo cả nhà (camera đếm chim) chỉ ghi tên nhà
-function placeOf(
-  alert: { zone_id?: string; house_id?: string },
-  zoneNames: Map<string, string>,
-  houseNames: Map<string, string>,
-): string {
-  if (alert.zone_id) return zoneNames.get(alert.zone_id) ?? NO_VALUE
-  if (alert.house_id) return houseNames.get(alert.house_id) ?? NO_VALUE
-  return NO_VALUE
+  return (
+    <SectionCard
+      title={kindTitle(group.kind)}
+      description={t('{{n}} việc', { n: group.total })}
+      action={group.total > group.items.length && (
+        <Link to={targetOf(group.kind)} className="text-small font-medium text-accent-700 hover:underline">
+          {t('Xem tất cả')}
+        </Link>
+      )}
+    >
+      <div className="divide-y divide-warmGray/10">
+        {group.items.map(item => (
+          <div key={item.id} className="flex items-center gap-3 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 truncate text-sm font-medium text-charcoal">
+                <span className="truncate">{item.title}</span>
+                {item.reminded && <Badge tone="warning">{t('Chủ nhà yến đã nhắc')}</Badge>}
+              </p>
+              <p className="truncate text-small text-warmGray">{item.house_name ?? NO_VALUE} · {whenOf(item)}</p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => open(item)}>{t('Mở')}</Button>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  )
 }
 
 export default function DomainExpertQueuePage() {
-  // Hàng đợi theo cả trại: nhà, Zone chọn ở trang khác vẫn còn trong store nhưng không lọc ở đây (ô Nhà, Zone đã ẩn)
-  const { selectedFarmId } = useZoneStore()
+  const farmId = useZoneStore(state => state.selectedFarmId)
+  const queue = useExpertQueue(farmId)
+  const apiErrorMessage = useApiErrorMessage()
 
-  // Vị trí của mỗi việc: "Nhà > Zone", hoặc tên nhà với cảnh báo cả nhà (camera) — như trang Cảnh báo
-  const { data: allZones } = useAllZones()
-  const zoneNames = useMemo(() => new Map((allZones ?? []).map(zone => [zone._id, `${zone.houseName} > ${zone.name}`])), [allZones])
-  const houseNames = useMemo(() => new Map((allZones ?? []).map(zone => [zone.house_id, zone.houseName])), [allZones])
-
-  const { data: pendingAlerts, isLoading: isLoadingAlerts } = useExpertQueueAlerts(
-    selectedFarmId ?? undefined,
-    undefined,
-  )
-
-  const { pending: pendingReports, isLoading: isLoadingReports } = useHealthReportConclusionCounts(
-    selectedFarmId ?? '',
-    '',
-  )
-
-  // Mục duyệt ở cấp farm (có mục theo nhà, camera), không lọc theo Zone
-  const { total: pendingReviewsCount, isLoading: isLoadingReviews } = useParameterReviews({
-    farmId: selectedFarmId ?? '',
-    status: 'PENDING_REVIEW',
-  })
-  // Cùng phạm vi với trang Duyệt & đề xuất (cả farm), để số trên thẻ khớp số trong trang
-  const { total: pendingProposalsCount, isLoading: isLoadingProposals } = useCoefficientProposals({
-    farmId: selectedFarmId ?? '',
-    status: 'PROPOSED',
-  })
-  const totalPendingReviews = pendingReviewsCount + pendingProposalsCount
-
-  const to = vietnamDate()
-  const from = shiftDate(to, -13)
-  const { totalDays: disagreeingDaysCount, isLoading: isLoadingDisagreements } = useHealthDisagreements({
-    farmId: selectedFarmId ?? undefined,
-    from,
-    to,
-  })
-
-  const pendingCount = pendingAlerts?.total ?? 0
-  // Chờ đủ 5 nguồn: ba nguồn dưới trả 0 khi chưa tải xong, thiếu một nguồn là trang hiện "không có việc" rồi mới đổi
-  const isLoading = isLoadingAlerts || isLoadingReports || isLoadingReviews || isLoadingProposals || isLoadingDisagreements
-
-  if (isLoading) {
+  if (!farmId) return <EmptyState icon={<ClipboardTextIcon className="h-8 w-8" />} title={t('Chọn trang trại ở thanh trên để xem việc đang chờ')} />
+  if (queue.isLoading) {
     return (
       <div className="mx-auto w-full max-w-screen-xl space-y-5">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <LoadingSkeleton className="h-28 w-full rounded-2xl" />
-          <LoadingSkeleton className="h-28 w-full rounded-2xl" />
-          <LoadingSkeleton className="h-28 w-full rounded-2xl" />
-          <LoadingSkeleton className="h-28 w-full rounded-2xl" />
+          {SECTIONS.map(section => <LoadingSkeleton key={section.key} className="h-28 w-full rounded-2xl" />)}
         </div>
         <LoadingSkeleton count={3} className="h-14 w-full rounded-2xl" />
       </div>
     )
   }
+  if (queue.isError || !queue.data) {
+    return (
+      <EmptyState
+        icon={<ClipboardTextIcon className="h-8 w-8" />}
+        title={apiErrorMessage(queue.error)}
+        action={<Button variant="secondary" size="sm" onClick={() => void queue.refetch()}>{t('Thử lại')}</Button>}
+      />
+    )
+  }
 
-  const hasAnything = pendingCount > 0 || totalPendingReviews > 0 || disagreeingDaysCount > 0 || pendingReports > 0
-  const alertRecords = pendingAlerts?.records ?? []
+  const groups = queue.data.groups
+  const byKind = new Map(groups.map(group => [group.kind, group]))
+  const pending = KIND_ORDER.map(kind => byKind.get(kind)).filter((group): group is ExpertQueueGroup => Boolean(group && group.total > 0))
 
   return (
     <div className="mx-auto w-full max-w-screen-xl space-y-5">
-      {/* Hàng 4 KpiTile — mỗi ô dẫn đến trang chi tiết */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Link to="/domain-expert/alert-verdicts" className="block">
-          <KpiTile
-            icon={ShieldCheckIcon}
-            label={t('Cảnh báo chờ kết luận')}
-            value={pendingCount}
-            sub={t('cảnh báo suy luận')}
-            tone={pendingCount > 0 ? 'orange' : 'neutral'}
-            className="h-full transition-shadow hover:shadow-sm"
-          />
-        </Link>
-        <Link to="/domain-expert/reviews" className="block">
-          <KpiTile
-            icon={ChecksIcon}
-            label={t('Thay đổi chờ duyệt')}
-            value={totalPendingReviews}
-            sub={t('ngưỡng & hệ số mờ')}
-            tone={totalPendingReviews > 0 ? 'orange' : 'neutral'}
-            className="h-full transition-shadow hover:shadow-sm"
-          />
-        </Link>
-        <Link to="/domain-expert/reports" className="block">
-          <KpiTile
-            icon={CalendarCheckIcon}
-            label={t('Ngày lệch')}
-            value={disagreeingDaysCount}
-            sub={t('14 ngày gần nhất')}
-            tone={disagreeingDaysCount > 0 ? 'orange' : 'neutral'}
-            className="h-full transition-shadow hover:shadow-sm"
-          />
-        </Link>
-        <Link to="/domain-expert/reports" className="block">
-          <KpiTile
-            icon={FileTextIcon}
-            label={t('Báo cáo chờ kết luận')}
-            value={pendingReports}
-            sub={t('báo cáo sức khoẻ')}
-            tone={pendingReports > 0 ? 'warning' : 'neutral'}
-            className="h-full transition-shadow hover:shadow-sm"
-          />
-        </Link>
+        {SECTIONS.map(section => {
+          const total = sectionTotal(groups, section.key)
+          return (
+            <KpiTile
+              key={section.key}
+              icon={section.icon}
+              label={section.label()}
+              value={total}
+              sub={section.sub()}
+              tone={total > 0 ? 'orange' : 'neutral'}
+              className="h-full"
+            />
+          )
+        })}
       </div>
 
-      {/* Danh sách việc hoặc trạng thái trống */}
-      {hasAnything ? (
-        <SectionCard
-          icon={<ClipboardTextIcon className="h-5 w-5" />}
-          title={t('Cảnh báo chờ kết luận')}
-        >
-          <div className="divide-y divide-warmGray/10">
-            {alertRecords.map(alert => (
-              // Mở đúng cảnh báo đó trong ngăn kiểm chứng, như link từ chuông thông báo
-              <Link
-                key={alert._id}
-                to={`/domain-expert/alert-verdicts?alertId=${alert._id}`}
-                className="flex items-center gap-3 py-3 -mx-4 px-4 hover:bg-stone/30"
-              >
-                <SeverityBadge severity={alert.severity} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-charcoal">
-                    {alertHeadline(alert)}
-                  </p>
-                  <p className="truncate text-small text-warmGray">
-                    {placeOf(alert, zoneNames, houseNames)} · {formatDateTime(alert.created_at)}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-lg border border-warmGray/20 px-3 py-1 text-small font-medium text-charcoal">
-                  {t('Mở')}
-                </span>
-              </Link>
-            ))}
-            {pendingCount > alertRecords.length && (
-              <div className="py-3 text-center">
-                <Link to="/domain-expert/alert-verdicts" className="text-small font-medium text-accent-700 hover:underline">
-                  {t('Xem tất cả {{n}} cảnh báo', { n: pendingCount })}
-                </Link>
-              </div>
-            )}
-            {alertRecords.length === 0 && pendingCount === 0 && (totalPendingReviews > 0 || disagreeingDaysCount > 0 || pendingReports > 0) && (
-              <p className="py-3 text-small text-warmGray">
-                {t('Không có cảnh báo chờ kết luận. Xem chi tiết ở các ô trên.')}
-              </p>
-            )}
-          </div>
-        </SectionCard>
-      ) : (
-        <EmptyState
-          icon={<ClipboardTextIcon className="h-8 w-8" />}
-          title={t('Không có việc gì đang chờ')}
-        />
-      )}
+      {pending.length === 0
+        ? <EmptyState icon={<ClipboardTextIcon className="h-8 w-8" />} title={t('Không có việc gì đang chờ')} />
+        : pending.map(group => <QueueGroupCard key={group.kind} group={group} />)}
     </div>
   )
 }

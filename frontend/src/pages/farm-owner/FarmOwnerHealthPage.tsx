@@ -46,7 +46,8 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   // Trạng thái tính theo nhà yến nên chỉ lọc tới nhà (ô Zone khoá)
   const scope = { ...useScopeFilter(), zone: undefined };
   const isExpert = usePermission('DOMAIN_EXPERT');
-  // chỉ Farm Owner đánh giá ngày; Domain Expert xem đủ trạng thái (my_rating_state null), backend trả 403 khi chấm
+  const isTechnician = usePermission('FARM_TECHNICIAN');
+  // Farm Owner và Kỹ thuật viên đánh giá ngày; Domain Expert xem đủ trạng thái (my_rating_state null), backend trả 403 khi chấm
   const canRate = !isExpert;
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
@@ -134,7 +135,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
       <EmptyState
         title={t('page.noFarmTitle')}
         description={t('page.noFarmDesc')}
-        action={isExpert ? undefined : (
+        action={isExpert || isTechnician ? undefined : (
           <Link to="/farms">
             <Button>{t('page.goFarms')}</Button>
           </Link>
@@ -156,17 +157,22 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           description={t(canRate ? 'table.subtitle' : 'table.subtitleExpert')}
           action={
             <div className="flex flex-wrap items-center gap-2">
-              {!house && <span className="text-small text-warmGray">{t('page.levelsNeedHouse')}</span>}
-              <Button
-                variant="secondary"
-                size="sm"
-                className={HOVER_DARK_BUTTON}
-                disabled={!house}
-                title={house ? undefined : t('page.levelsNeedHouse')}
-                onClick={() => setIsLevelsOpen(true)}
-              >
-                {t('page.levels')}
-              </Button>
+              {/* Mức chỉ số do Chủ nhà yến và Chuyên gia đặt; Kỹ thuật viên không đọc (backend 403) */}
+              {!isTechnician && (
+                <>
+                  {!house && <span className="text-small text-warmGray">{t('page.levelsNeedHouse')}</span>}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={HOVER_DARK_BUTTON}
+                    disabled={!house}
+                    title={house ? undefined : t('page.levelsNeedHouse')}
+                    onClick={() => setIsLevelsOpen(true)}
+                  >
+                    {t('page.levels')}
+                  </Button>
+                </>
+              )}
               <Button variant="secondary" size="sm" className={HOVER_DARK_BUTTON} disabled={!csvScope} loading={downloadCsv.isPending} onClick={handleExport}>
                 {t('page.export')}
               </Button>
@@ -219,7 +225,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
 
       <HealthRatingModal day={ratingDay} onClose={() => setRatingDay(null)} onDone={setViewDay} />
       <HealthDayDrawer day={viewDay} onClose={() => setViewDay(null)} onChanged={setViewDay} />
-      {house && (
+      {house && !isTechnician && (
         <HealthLevelsModal
           open={isLevelsOpen}
           onClose={() => setIsLevelsOpen(false)}

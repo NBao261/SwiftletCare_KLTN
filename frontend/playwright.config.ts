@@ -3,6 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 // E2E chạy trên web thật nối backend đã seed; job CI `e2e` dựng backend trước
 export default defineConfig({
   testDir: './e2e',
+  // Chặn chạy E2E với database dùng chung (Atlas): test để lại dữ liệu thật
+  globalSetup: './e2e/globalSetup.ts',
   // Một backend dùng chung cho mọi test: chạy tuần tự để test không giẫm dữ liệu của nhau
   workers: 1,
   fullyParallel: false,

@@ -18,6 +18,8 @@ interface Props {
   suggestion?: FuzzySuggestionResponse
   isSuggestionLoading?: boolean
   suggestionAction?: SuggestionAction
+  // Kỹ thuật viên không đọc gợi ý hệ số (backend 403) nên ẩn hẳn khung
+  showSuggestion?: boolean
   // Báo số hệ số đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
 }
@@ -77,7 +79,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
 
 // Hệ số mờ của Zone và gợi ý từ dữ liệu; chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
 const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTuningColumn(
-  { data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, onDirtyChange }, ref,
+  { data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, showSuggestion = true, onDirtyChange }, ref,
 ) {
   const [form, setForm] = useState<ExpertFuzzyTuning>(DEFAULT_FUZZY_TUNING)
   const [suggestionDismissed, setSuggestionDismissed] = useState(false)
@@ -121,13 +123,15 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
         <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, cấu hình gửi xuống bộ điều khiển của Zone')}</p>
       </div>
 
-      <FuzzySuggestionBox
-        suggestion={suggestion}
-        isLoading={isSuggestionLoading}
-        action={suggestionAction}
-        onDismiss={() => setSuggestionDismissed(true)}
-        dismissed={suggestionDismissed}
-      />
+      {showSuggestion && (
+        <FuzzySuggestionBox
+          suggestion={suggestion}
+          isLoading={isSuggestionLoading}
+          action={suggestionAction}
+          onDismiss={() => setSuggestionDismissed(true)}
+          dismissed={suggestionDismissed}
+        />
+      )}
 
       {/* Nút Lưu chung ở thanh dính đáy của trang */}
       <fieldset disabled={isSaving} className="contents">

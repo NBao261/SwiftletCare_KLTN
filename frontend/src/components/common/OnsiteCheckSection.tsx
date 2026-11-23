@@ -1,4 +1,4 @@
-// Kết quả kiểm tra tại chỗ của Kỹ thuật viên trong bảng bằng chứng
+// Kết quả kiểm tra tại chỗ của Kỹ thuật viên: bảng bằng chứng của chuyên gia và chi tiết cảnh báo
 import { ClipboardList, CheckCircle2, Hourglass, Clock } from 'lucide-react'
 import type { OnsiteCheck } from '@/types/expert.types'
 import { onsiteObservationDict } from '@/constants/enumLabels.i18n'

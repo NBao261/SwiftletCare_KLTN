@@ -23,6 +23,7 @@ import {
 import { useExpertVerdictStats } from '@/hooks/domain-expert/useExpertAlerts';
 import { useApplySuggestion, useCoefficientProposals, useSubmitCoefficientProposal } from '@/hooks/domain-expert/useExpertReviews';
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights';
+import { usePermission } from '@/hooks/common/usePermission';
 
 // Ngưỡng & hệ số mờ: nơi duy nhất sửa ngưỡng và hệ số mờ của một Zone trên web
 export default function DomainExpertZoneTuningPage() {
@@ -30,10 +31,12 @@ export default function DomainExpertZoneTuningPage() {
   const zoneId = selectedZoneId ?? undefined;
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
+  // Kỹ thuật viên chỉ đọc tham số; gợi ý hệ số và đề xuất là của Farm Owner, chuyên gia (backend 403 với thợ)
+  const isTechnician = usePermission('FARM_TECHNICIAN');
 
   const thresholds = useExpertThresholds(zoneId);
   const fuzzy = useExpertFuzzyTuning(zoneId);
-  const suggestion = useFuzzySuggestion(zoneId);
+  const suggestion = useFuzzySuggestion(isTechnician ? undefined : zoneId);
   const detection = useExpertDetectionTuning(zoneId);
   const { data: verdictStats = [] } = useExpertVerdictStats(undefined, zoneId);
 
@@ -42,7 +45,7 @@ export default function DomainExpertZoneTuningPage() {
     farmId: selectedFarmId ?? '',
     zoneId,
     status: 'PROPOSED',
-  });
+  }, { enabled: !isTechnician });
 
   const updateThresholds = useUpdateThresholds(zoneId);
   const resetThresholds = useResetThresholds(zoneId);
@@ -142,31 +145,36 @@ export default function DomainExpertZoneTuningPage() {
         )}
 
         {/* key theo Zone: đổi Zone thì khối dựng lại, không mang số chưa lưu của Zone trước sang Zone mới */}
-        <FuzzyTuningColumn
-          key={zoneId ?? 'none'}
-          ref={fuzzyRef}
-          data={fuzzy.data}
-          isLoading={fuzzy.isLoading}
-          isSaving={updateFuzzy.isPending}
-          onSave={changed => notify(updateFuzzy.mutateAsync(changed), 'Đã lưu hệ số mờ')}
-          onDirtyChange={onFuzzyDirty}
-          suggestion={suggestion.data}
-          isSuggestionLoading={suggestion.isLoading}
-          suggestionAction={suggestionAction}
-        />
+        <fieldset disabled={!canEditParameters} className="contents">
+          <FuzzyTuningColumn
+            key={zoneId ?? 'none'}
+            ref={fuzzyRef}
+            data={fuzzy.data}
+            isLoading={fuzzy.isLoading}
+            isSaving={updateFuzzy.isPending}
+            onSave={changed => notify(updateFuzzy.mutateAsync(changed), 'Đã lưu hệ số mờ')}
+            onDirtyChange={onFuzzyDirty}
+            suggestion={suggestion.data}
+            isSuggestionLoading={suggestion.isLoading}
+            suggestionAction={suggestionAction}
+            showSuggestion={!isTechnician}
+          />
+        </fieldset>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-          <ThresholdColumn
-            key={zoneId ?? 'none'}
-            ref={thresholdRef}
-            data={thresholds.data}
-            isLoading={thresholds.isLoading}
-            isSaving={updateThresholds.isPending}
-            isResetting={resetThresholds.isPending}
-            onSave={values => notify(updateThresholds.mutateAsync(values), 'Đã lưu ngưỡng môi trường')}
-            onReset={() => notify(resetThresholds.mutateAsync(), 'Đã khôi phục ngưỡng mặc định')}
-            onDirtyChange={onThresholdDirty}
-          />
+          <fieldset disabled={!canEditParameters} className="contents">
+            <ThresholdColumn
+              key={zoneId ?? 'none'}
+              ref={thresholdRef}
+              data={thresholds.data}
+              isLoading={thresholds.isLoading}
+              isSaving={updateThresholds.isPending}
+              isResetting={resetThresholds.isPending}
+              onSave={values => notify(updateThresholds.mutateAsync(values), 'Đã lưu ngưỡng môi trường')}
+              onReset={() => notify(resetThresholds.mutateAsync(), 'Đã khôi phục ngưỡng mặc định')}
+              onDirtyChange={onThresholdDirty}
+            />
+          </fieldset>
 
           <fieldset disabled={!canEditParameters} className="contents">
             <DetectionColumn
