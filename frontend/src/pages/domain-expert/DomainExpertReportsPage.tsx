@@ -1,6 +1,5 @@
 // DomainExpertReportsPage: Báo cáo & Kết luận, Ngày đánh giá lệch & Mức chỉ số, Kết luận mùa vụ
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Scale, Wheat } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { t as i18nT } from '@/i18n';
 import DisagreementsSection from '@/components/common/DisagreementsSection';
@@ -22,17 +21,22 @@ export default function DomainExpertReportsPage() {
   const { canDecide: canReviewDisagreements } = useExpertDecisionRights();
 
   const rawTab = searchParams.get('tab');
-  const activeTab: ReportsPageTab =
-    rawTab === 'disagreements' && canReviewDisagreements ? 'disagreements'
-    : rawTab === 'harvest-cycles' ? 'harvest-cycles'
-    : 'reports';
+  let activeTab: ReportsPageTab = 'reports';
+  if (rawTab === 'disagreements' && canReviewDisagreements) {
+    activeTab = 'disagreements';
+  } else if (rawTab === 'harvest-cycles') {
+    activeTab = 'harvest-cycles';
+  }
 
   const setTab = (tab: ReportsPageTab) => {
     setSearchParams(
       prev => {
         const next = new URLSearchParams(prev);
-        if (tab === 'reports') next.delete('tab');
-        else next.set('tab', tab);
+        if (tab === 'reports') {
+          next.delete('tab');
+        } else {
+          next.set('tab', tab);
+        }
         return next;
       },
       { replace: true },
@@ -50,48 +54,74 @@ export default function DomainExpertReportsPage() {
 
   // Báo cáo theo nhà đang chọn, không chọn nhà thì cả farm
   let reportScope: { houseId?: string; farmId?: string } | null = null;
-  if (house) reportScope = { houseId: house._id };
-  else if (selectedFarmId) reportScope = { farmId: selectedFarmId };
+  if (house) {
+    reportScope = { houseId: house._id };
+  } else if (selectedFarmId) {
+    reportScope = { farmId: selectedFarmId };
+  }
+
+  function getTabDescription(tab: ReportsPageTab): string {
+    if (tab === 'reports') {
+      return i18nT('Viết kết luận gửi Chủ nhà yến');
+    }
+    if (tab === 'harvest-cycles') {
+      return i18nT('Kết luận chu kỳ thu hoạch đã đóng');
+    }
+    return i18nT('Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống');
+  }
+
+  function renderTabContent() {
+    if (activeTab === 'reports') {
+      return (
+        <HealthReportSection
+          scope={reportScope}
+          house={house ? { id: house._id, name: house.name } : null}
+        />
+      );
+    }
+    if (activeTab === 'harvest-cycles') {
+      return <HarvestCyclesSection scope={reportScope} />;
+    }
+    return (
+      <DisagreementsSection
+        farmId={selectedFarmId ?? ''}
+        farmName={selectedFarmName ?? ''}
+        houseId={selectedHouseId ?? ''}
+      />
+    );
+  }
 
   return (
     <div className="relative z-10 w-full flex-1 flex flex-col gap-5">
       <div className="w-full max-w-screen-xl mx-auto flex flex-col gap-5">
-        {/* Thanh chuyển phân hệ: Báo cáo & Kết luận định kỳ vs. Ngày đánh giá lệch & Mức chỉ số */}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warmGray/20 bg-white px-4 py-3 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label={i18nT('Báo cáo và ngày đánh giá lệch')}>
+        {/* Tabs kiểu SectionTabs, mô tả 1 dòng */}
+        <div className="flex flex-wrap items-center gap-4">
+          <nav aria-label={i18nT('Báo cáo và ngày đánh giá lệch')} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-warmGray/10 p-1 max-sm:flex-wrap max-sm:rounded-3xl">
             <button
-              id="tab-periodic-reports"
               type="button"
-              role="tab"
-              aria-selected={activeTab === 'reports'}
-              aria-controls="panel-periodic-reports"
               onClick={() => setTab('reports')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal ${
+              aria-current={activeTab === 'reports' ? 'page' : undefined}
+              className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 ${
                 activeTab === 'reports'
-                  ? 'bg-charcoal text-white shadow-xs'
-                  : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal'
+                  ? 'bg-white text-charcoal shadow-card'
+                  : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{i18nT('Báo cáo & Kết luận định kỳ')}</span>
+              {i18nT('Báo cáo & Kết luận')}
             </button>
 
             {canReviewDisagreements && (
             <button
-              id="tab-disagreements"
               type="button"
-              role="tab"
-              aria-selected={activeTab === 'disagreements'}
-              aria-controls="panel-disagreements"
               onClick={() => setTab('disagreements')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal ${
+              aria-current={activeTab === 'disagreements' ? 'page' : undefined}
+              className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 ${
                 activeTab === 'disagreements'
-                  ? 'bg-charcoal text-white shadow-xs'
-                  : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal'
+                  ? 'bg-white text-charcoal shadow-card'
+                  : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              <Scale className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{i18nT('Ngày đánh giá lệch & Mức chỉ số')}</span>
+              {i18nT('Ngày lệch')}
               {disagreeingDaysCount > 0 && (
                 <span className="rounded-full bg-orange-600 px-2 py-0.5 text-small font-bold tabular-nums text-white">
                   {disagreeingDaysCount}
@@ -101,59 +131,24 @@ export default function DomainExpertReportsPage() {
             )}
 
             <button
-              id="tab-harvest-cycles"
               type="button"
-              role="tab"
-              aria-selected={activeTab === 'harvest-cycles'}
-              aria-controls="panel-harvest-cycles"
               onClick={() => setTab('harvest-cycles')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-charcoal ${
+              aria-current={activeTab === 'harvest-cycles' ? 'page' : undefined}
+              className={`flex h-9 items-center whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 ${
                 activeTab === 'harvest-cycles'
-                  ? 'bg-charcoal text-white shadow-xs'
-                  : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal'
+                  ? 'bg-white text-charcoal shadow-card'
+                  : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              <Wheat className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{i18nT('Kết luận mùa vụ')}</span>
+              {i18nT('Kết luận mùa vụ')}
             </button>
-          </div>
-
+          </nav>
           <span className="text-xs text-warmGray">
-            {activeTab === 'reports'
-              ? i18nT('Mở một báo cáo để viết kết luận gửi Chủ nhà yến')
-              : activeTab === 'harvest-cycles'
-              ? i18nT('Viết kết luận tổng thể cho chu kỳ thu hoạch đã đóng')
-              : i18nT('Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống và chỉnh mức chỉ số của nhà')}
+            {getTabDescription(activeTab)}
           </span>
         </div>
 
-        {activeTab === 'reports' ? (
-          <div
-            id="panel-periodic-reports"
-            role="tabpanel"
-            aria-labelledby="tab-periodic-reports"
-          >
-            <HealthReportSection scope={reportScope} house={house ? { id: house._id, name: house.name } : null} />
-          </div>
-        ) : activeTab === 'harvest-cycles' ? (
-          <div
-            id="panel-harvest-cycles"
-            role="tabpanel"
-            aria-labelledby="tab-harvest-cycles"
-            className="w-full"
-          >
-            <HarvestCyclesSection scope={reportScope} />
-          </div>
-        ) : (
-          <div
-            id="panel-disagreements"
-            role="tabpanel"
-            aria-labelledby="tab-disagreements"
-            className="w-full"
-          >
-            <DisagreementsSection farmId={selectedFarmId ?? ''} farmName={selectedFarmName ?? ''} houseId={selectedHouseId ?? ''} />
-          </div>
-        )}
+        {renderTabContent()}
       </div>
     </div>
   );

@@ -1,11 +1,7 @@
 // DomainExpertReviewsPage.tsx: Màn hình thẩm định thay đổi tham số và đề xuất hệ số mờ
 
 import { useMemo, useState } from 'react';
-import {
-  SlidersHorizontal,
-  Sparkles,
-  AlertTriangle,
-} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -197,17 +193,9 @@ export default function DomainExpertReviewsPage() {
 
     if (reviews.length === 0) {
       return (
-        <div className="p-8">
-          <EmptyState
-            icon={<SlidersHorizontal className="h-8 w-8 text-warmGray" />}
-            title={t('Không có mục thay đổi tham số nào')}
-            description={
-              isReviewFiltered
-                ? t('Không tìm thấy thay đổi tham số nào phù hợp với bộ lọc đã chọn.')
-                : t('Thay đổi ngưỡng hoặc hệ số mờ của chủ nhà yến hiện ở đây để bạn duyệt.')
-            }
-          />
-        </div>
+        <p className="py-6 text-center text-sm text-warmGray">
+          {isReviewFiltered ? t('Không tìm thấy mục nào phù hợp bộ lọc.') : t('Chưa có thay đổi tham số nào cần duyệt.')}
+        </p>
       );
     }
 
@@ -257,17 +245,9 @@ export default function DomainExpertReviewsPage() {
 
     if (proposals.length === 0) {
       return (
-        <div className="p-8">
-          <EmptyState
-            icon={<Sparkles className="h-8 w-8 text-warmGray" />}
-            title={t('Không có đề xuất hệ số mờ nào')}
-            description={
-              isProposalFiltered
-                ? t('Không tìm thấy đề xuất hệ số mờ nào phù hợp với bộ lọc đã chọn.')
-                : t('Gợi ý hệ số mờ chủ nhà yến gửi lên hiện ở đây để bạn duyệt.')
-            }
-          />
-        </div>
+        <p className="py-6 text-center text-sm text-warmGray">
+          {isProposalFiltered ? t('Không tìm thấy mục nào phù hợp bộ lọc.') : t('Chưa có đề xuất hệ số mờ nào.')}
+        </p>
       );
     }
 
@@ -293,18 +273,18 @@ export default function DomainExpertReviewsPage() {
       <Card size="lg" className="flex flex-col gap-4">
         {/* Header hàng 1: Tabs phân loại nghiệp vụ + Bộ lọc SelectMenu */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warmGray/10 pb-3">
-          {/* Nhóm Tabs Pill chuẩn hệ thống */}
-          <div className="flex items-center gap-2">
+          {/* Tabs kiểu SectionTabs (rounded pill, bg warmGray/10) */}
+          <nav aria-label={t('Duyệt & đề xuất')} className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1">
             <button
               type="button"
               onClick={() => setActiveTab('reviews')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+              aria-current={activeTab === 'reviews' ? 'page' : undefined}
+              className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 ${
                 activeTab === 'reviews'
-                  ? 'bg-charcoal text-white shadow-xs'
-                  : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20'
+                  ? 'bg-white text-charcoal shadow-card'
+                  : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
               <span>{t('Duyệt thay đổi tham số')}</span>
               {pendingReviewsCount > 0 && (
                 <span className="rounded-full bg-orange-500 px-2 py-0.5 text-small font-bold text-white">
@@ -312,17 +292,16 @@ export default function DomainExpertReviewsPage() {
                 </span>
               )}
             </button>
-
             <button
               type="button"
               onClick={() => setActiveTab('proposals')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+              aria-current={activeTab === 'proposals' ? 'page' : undefined}
+              className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 ${
                 activeTab === 'proposals'
-                  ? 'bg-charcoal text-white shadow-xs'
-                  : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20'
+                  ? 'bg-white text-charcoal shadow-card'
+                  : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              <Sparkles className="h-3.5 w-3.5" />
               <span>{t('Đề xuất hệ số mờ')}</span>
               {pendingProposalsCount > 0 && (
                 <span className="rounded-full bg-limeMist px-2 py-0.5 text-small font-bold text-charcoal">
@@ -330,7 +309,7 @@ export default function DomainExpertReviewsPage() {
                 </span>
               )}
             </button>
-          </div>
+          </nav>
 
           {/* Bộ lọc trạng thái chuẩn SelectMenu */}
           <div className="flex flex-wrap items-center gap-2.5">

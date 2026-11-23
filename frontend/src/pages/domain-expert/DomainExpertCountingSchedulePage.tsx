@@ -92,49 +92,41 @@ export default function DomainExpertCountingSchedulePage() {
       {/* Farm Owner sửa được; farm có chuyên gia thì chuyên gia duyệt sau */}
       <fieldset disabled={!canEditParameters} className="contents">
       <SectionCard title={t('page.title')} description={t('page.subtitle')}>
-        {/* Khung đang áp hôm nay: màn rộng: tiêu đề và ghi chú bên trái, hai phiên bên phải; màn hẹp xếp dọc */}
-        <div className="flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-600 text-charcoal">
-                <CalendarClock className="h-4 w-4" aria-hidden />
-              </span>
-              <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
-              <Badge tone={SOURCE_TONE[data.today.source]}>{t(`today.source.${data.today.source}`)}</Badge>
-            </div>
-            <p className="text-sm text-graphite">{t('today.default', { morning: span(defaults.morning), evening: span(defaults.evening) })}</p>
-            {data.effective_from && <p className="text-sm font-semibold text-charcoal">{t('today.effective', { date: date(data.effective_from) })}</p>}
-          </div>
-          {/* Hai phiên của hôm nay: sáng mặt trời mọc, chiều mặt trăng */}
-          <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
-            <span className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-white px-3 py-2 text-sm font-semibold text-accent-800">
-              <Sunrise className="h-4 w-4 text-climateOrange" aria-hidden />
-              {t('today.morning', { window: span(data.today.morning) })}
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-white px-3 py-2 text-sm font-semibold text-accent-800">
-              <Moon className="h-4 w-4 text-graphite" aria-hidden />
-              {t('today.evening', { window: span(data.today.evening) })}
-            </span>
-          </div>
+        {/* Khung đang áp hôm nay: 1 dòng gọn trên đầu */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 py-2.5">
+          <CalendarClock className="h-4 w-4 text-accent-600 shrink-0" aria-hidden />
+          <span className="text-sm font-semibold text-charcoal">{t('today.title', { date: date(data.today.date) })}</span>
+          <Badge tone={SOURCE_TONE[data.today.source]}>{t(`today.source.${data.today.source}`)}</Badge>
+          <span className="hidden sm:inline text-warmGray">·</span>
+          <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
+            <Sunrise className="h-3.5 w-3.5 text-climateOrange" aria-hidden />
+            {span(data.today.morning)}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-sm text-accent-800">
+            <Moon className="h-3.5 w-3.5 text-graphite" aria-hidden />
+            {span(data.today.evening)}
+          </span>
         </div>
+      </SectionCard>
 
-        {/* Hồ sơ theo mùa */}
-        <section className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-h3 text-charcoal">{t('profiles.title')}</h3>
-              <p className="text-xs text-warmGray">{t('profiles.hint', { max: MAX_SCHEDULE_PROFILES })}</p>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={schedule.profiles.length >= MAX_SCHEDULE_PROFILES || save.isPending}
-              onClick={() => edit({ ...schedule, profiles: [...schedule.profiles, { name: '', from: '01-01', to: '12-31', ...defaults }] })}
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              {t('profiles.add')}
-            </Button>
-          </div>
+      {/* Hồ sơ theo mùa: khung riêng, nút Thêm ở tiêu đề, quy tắc dài nằm trong nút (i) */}
+      <SectionCard
+        title={t('profiles.title')}
+        description={t('profiles.count', { n: schedule.profiles.length, max: MAX_SCHEDULE_PROFILES })}
+        help={t('profiles.hint', { max: MAX_SCHEDULE_PROFILES })}
+        action={(
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={schedule.profiles.length >= MAX_SCHEDULE_PROFILES || save.isPending}
+            onClick={() => edit({ ...schedule, profiles: [...schedule.profiles, { name: '', from: '01-01', to: '12-31', ...defaults }] })}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            {t('profiles.add')}
+          </Button>
+        )}
+      >
+        <div className="flex flex-col gap-3">
           {schedule.profiles.length === 0 && <p className="text-sm italic text-warmGray">{t('profiles.empty')}</p>}
           {schedule.profiles.map((profile, index) => (
             <div key={index} className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
@@ -186,25 +178,27 @@ export default function DomainExpertCountingSchedulePage() {
               {showErrors && <RowError error={errors.profiles[index]} />}
             </div>
           ))}
-        </section>
+        </div>
+      </SectionCard>
 
-        {/* Khung tạm */}
-        <section className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-h3 text-charcoal">{t('temporary.title')}</h3>
-              <p className="text-xs text-warmGray">{t('temporary.hint', { max: MAX_TEMPORARY_WINDOWS })}</p>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={schedule.temporary.length >= MAX_TEMPORARY_WINDOWS || save.isPending}
-              onClick={() => edit({ ...schedule, temporary: [...schedule.temporary, { from: tomorrow, to: tomorrow, ...defaults }] })}
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              {t('temporary.add')}
-            </Button>
-          </div>
+      {/* Khung tạm: khung riêng, nút Thêm ở tiêu đề */}
+      <SectionCard
+        title={t('temporary.title')}
+        description={t('temporary.count', { n: schedule.temporary.length, max: MAX_TEMPORARY_WINDOWS })}
+        help={t('temporary.hint', { max: MAX_TEMPORARY_WINDOWS })}
+        action={(
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={schedule.temporary.length >= MAX_TEMPORARY_WINDOWS || save.isPending}
+            onClick={() => edit({ ...schedule, temporary: [...schedule.temporary, { from: tomorrow, to: tomorrow, ...defaults }] })}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            {t('temporary.add')}
+          </Button>
+        )}
+      >
+        <div className="flex flex-col gap-3">
           {schedule.temporary.length === 0 && <p className="text-sm italic text-warmGray">{t('temporary.empty')}</p>}
           {schedule.temporary.map((window, index) => (
             <div key={index} className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
@@ -245,17 +239,18 @@ export default function DomainExpertCountingSchedulePage() {
               {showErrors && <RowError error={errors.temporary[index]} />}
             </div>
           ))}
-        </section>
-
-        {draft && (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-warmGray/10 pt-4">
-            <Button variant="secondary" size="sm" disabled={save.isPending} onClick={() => { setDraftState(null); setShowErrors(false) }}>
-              {t('save.discard')}
-            </Button>
-            <Button size="sm" loading={save.isPending} onClick={submit}>{t('save.submit')}</Button>
-          </div>
-        )}
+        </div>
       </SectionCard>
+
+      {/* Một thanh lưu chung cho cả hai khung, chỉ hiện khi có thay đổi */}
+      {draft && (
+        <div className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-warmGray/15 bg-white px-5 py-4 shadow-card">
+          <Button variant="secondary" size="sm" disabled={save.isPending} onClick={() => { setDraftState(null); setShowErrors(false) }}>
+            {t('save.discard')}
+          </Button>
+          <Button size="sm" loading={save.isPending} onClick={submit}>{t('save.submit')}</Button>
+        </div>
+      )}
       </fieldset>
 
       {/* Lịch sử các lần sửa, mới nhất trước */}

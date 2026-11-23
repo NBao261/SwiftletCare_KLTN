@@ -1,16 +1,11 @@
 // Lịch sử quyết định của chuyên gia, hoặc Farm Owner làm thay
 import { useMemo, useState } from 'react'
-import {
-  History,
-  CheckCircle2,
-  XCircle,
-} from 'lucide-react'
+import { CheckCircle2, XCircle } from 'lucide-react'
 import { DataTable, SectionCard, type DataTableColumn } from '@/components/ui'
 import { NO_VALUE } from '@/constants/display'
 import { THRESHOLD_FIELDS } from '@/constants/thresholds'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton'
-import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import { useZoneStore } from '@/stores/zoneStore'
@@ -260,20 +255,14 @@ export default function DomainExpertHistoryPage() {
 
   // Chưa chọn trại → nhắc chọn; tải → khung chờ; rỗng → khung rỗng; còn lại là bảng và phân trang
   let body = (
-    <EmptyState
-      icon={<History className="h-8 w-8 text-warmGray" />}
-      title={t('Chưa chọn trang trại')}
-      description={t('Chọn trang trại ở thanh trên để xem lịch sử hoạt động.')}
-    />
+    <p className="py-6 text-center text-sm text-warmGray">{t('Chọn trang trại ở thanh trên.')}</p>
   )
   if (selectedFarmId && isLoading) body = <LoadingSkeleton count={4} className="h-14 w-full rounded-xl" />
   if (selectedFarmId && !isLoading && records.length === 0) {
     body = (
-      <EmptyState
-        icon={<History className="h-8 w-8 text-warmGray" />}
-        title={t('Không có bản ghi hoạt động nào')}
-        description={isFiltered ? 'Không có quyết định nào khớp bộ lọc đã chọn.' : 'Chưa có quyết định hoặc thay đổi tham số nào được ghi nhận cho trang trại này.'}
-      />
+      <p className="py-6 text-center text-sm text-warmGray">
+        {isFiltered ? t('Không có bản ghi nào khớp bộ lọc.') : t('Chưa có bản ghi hoạt động nào.')}
+      </p>
     )
   }
   if (selectedFarmId && !isLoading && records.length > 0) {

@@ -71,7 +71,7 @@ export function getRoleHomePath(role: Role | undefined): string {
 }
 
 // Phải khớp menuSections của <Role>Layout; không đọc từ layout vì sẽ import vòng. Path con đặt trước path cha
-const MENU_ACCESS: { path: string; roles: Role[] }[] = [
+export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
   { path: '/dashboard/scada',  roles: FARM_OWNER_ONLY },
   { path: '/dashboard',        roles: FARM_SIDE_ROLES },

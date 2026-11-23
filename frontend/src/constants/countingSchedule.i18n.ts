@@ -4,7 +4,7 @@ import { prefixLabels, roleDict } from '@/constants/enumLabels.i18n'
 // Từ điển trang Lịch đếm chim của Domain Expert
 const vi = {
   'page.title': 'Lịch đếm chim',
-  'page.subtitle': 'Khung giờ hai phiên đếm của nhà. Hệ thống tính phiên từ số đếm 5 phút trong khung và kiểm tỷ lệ chim về 15 phút sau khung chiều. Lịch sửa hôm nay áp từ ngày mai.',
+  'page.subtitle': 'Khung giờ hai phiên đếm; lịch sửa hôm nay áp từ ngày mai.',
   'page.pickHouse': 'Chọn nhà yến ở thanh trên để xem lịch đếm chim.',
   'page.loadError': 'Không tải được lịch đếm chim',
   'page.retry': 'Thử lại',
@@ -22,6 +22,7 @@ const vi = {
   'window.evening.end': 'Chiều đến',
   'profiles.title': 'Hồ sơ theo mùa',
   'profiles.hint': 'Mỗi hồ sơ một khoảng ngày trong năm, lặp lại hằng năm (VD từ 1/9 đến 14/1 là vắt qua năm mới), không chồng nhau. Tối đa {max} hồ sơ.',
+  'profiles.count': 'Đang có {n} trong tối đa {max} hồ sơ',
   'profiles.add': 'Thêm hồ sơ',
   'profiles.empty': 'Chưa có hồ sơ theo mùa.',
   'profiles.name': 'Tên hồ sơ',
@@ -30,6 +31,7 @@ const vi = {
   'profiles.to': 'Đến ngày',
   'temporary.title': 'Khung tạm',
   'temporary.hint': 'Khung cho những ngày cụ thể (VD đợt mưa bão), thắng hồ sơ theo mùa, không chồng nhau. Tối đa {max} khung.',
+  'temporary.count': 'Đang có {n} trong tối đa {max} khung',
   'temporary.add': 'Thêm khung tạm',
   'temporary.empty': 'Chưa có khung tạm.',
   'temporary.from': 'Từ ngày',
@@ -69,7 +71,7 @@ export type CountingScheduleKey = keyof typeof vi
 
 const en: Record<CountingScheduleKey, string> = {
   'page.title': 'Counting schedule',
-  'page.subtitle': 'Time windows of the house\'s two counting sessions. Sessions are built from the 5-minute counts in each window and the return rate is checked 15 minutes after the evening window. A change made today applies from tomorrow.',
+  'page.subtitle': 'The two counting windows; a change made today applies from tomorrow.',
   'page.pickHouse': 'Choose a swiftlet house in the top bar to see its counting schedule.',
   'page.loadError': 'Could not load the counting schedule',
   'page.retry': 'Retry',
@@ -87,6 +89,7 @@ const en: Record<CountingScheduleKey, string> = {
   'window.evening.end': 'Evening to',
   'profiles.title': 'Seasonal profiles',
   'profiles.hint': 'Each profile covers days of the year, repeated every year (e.g. 1 Sep to 14 Jan crosses the new year), and does not overlap another. At most {max} profiles.',
+  'profiles.count': '{n} of at most {max} profiles',
   'profiles.add': 'Add profile',
   'profiles.empty': 'No seasonal profile yet.',
   'profiles.name': 'Profile name',
@@ -95,6 +98,7 @@ const en: Record<CountingScheduleKey, string> = {
   'profiles.to': 'To',
   'temporary.title': 'Temporary windows',
   'temporary.hint': 'Windows for given dates (e.g. a storm), taking precedence over the profiles, without overlap. At most {max} windows.',
+  'temporary.count': '{n} of at most {max} windows',
   'temporary.add': 'Add temporary window',
   'temporary.empty': 'No temporary window yet.',
   'temporary.from': 'From',

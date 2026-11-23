@@ -17,6 +17,7 @@ const vi = {
   'Trang trại': 'Trang trại',
   'Thống kê sản lượng': 'Thống kê sản lượng',
   'Phân tích': 'Phân tích',
+  'Sức khoẻ': 'Sức khoẻ',
   'Sức khoẻ nhà yến': 'Sức khoẻ nhà yến',
   'Phiếu công việc': 'Phiếu công việc',
   'Khuyến nghị': 'Khuyến nghị',
@@ -42,6 +43,8 @@ const vi = {
   'Hồ sơ cấu hình': 'Hồ sơ cấu hình',
   'Luật khuyến nghị': 'Luật khuyến nghị',
   'Lịch sử quyết định': 'Lịch sử quyết định',
+  'Tham số điều khiển': 'Tham số điều khiển',
+  'Đếm chim': 'Đếm chim',
 
   'Theo dõi': 'Theo dõi',
   'Tình trạng các nhà': 'Tình trạng các nhà',
@@ -80,6 +83,7 @@ const en: Record<NavigationKey, string> = {
   'Trang trại': 'Farms',
   'Thống kê sản lượng': 'Yield statistics',
   'Phân tích': 'Analytics',
+  'Sức khoẻ': 'Health',
   'Sức khoẻ nhà yến': 'House health',
   'Phiếu công việc': 'Work orders',
   'Khuyến nghị': 'Recommendations',
@@ -105,6 +109,8 @@ const en: Record<NavigationKey, string> = {
   'Hồ sơ cấu hình': 'Configuration profiles',
   'Luật khuyến nghị': 'Recommendation rules',
   'Lịch sử quyết định': 'Decision history',
+  'Tham số điều khiển': 'Control parameters',
+  'Đếm chim': 'Bird counting',
 
   'Theo dõi': 'Monitoring',
   'Tình trạng các nhà': 'House status',

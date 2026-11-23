@@ -4,8 +4,10 @@ import { Route, Navigate, Outlet } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
 import { EXPERT_DECISION_ROLES, EXPERT_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
-import ExpertDecisionNotice from '@/components/features/domain-expert/ExpertDecisionNotice';
-import ExpertScadaBanner from '@/components/features/domain-expert/ExpertScadaBanner';
+import ExpertReadOnlyBadge from '@/components/features/domain-expert/ExpertReadOnlyBadge';
+import ScopeFilter from '@/components/common/ScopeFilter';
+import HeaderActions from '@/components/layouts/HeaderActions';
+import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 
 const DomainExpertQueuePage = lazy(() => import('@/pages/domain-expert/DomainExpertQueuePage'));
 const DomainExpertAlertVerdictsPage = lazy(() => import('@/pages/domain-expert/DomainExpertAlertVerdictsPage'));
@@ -27,15 +29,14 @@ function DomainExpertIndexRedirect() {
 
 // Khung chung của /domain-expert/*
 function DomainExpertShell() {
+  const scope = useScopeFilter();
   return (
     <div className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-5">
-      {/* Thanh banner SCADA Chuyên gia với bộ chọn Farm/House/Zone */}
-      <ExpertScadaBanner />
-      {/* Farm Owner: quyết định thay khi farm chưa có chuyên gia, còn lại chỉ xem */}
-      <ExpertDecisionNotice />
-      <div className="flex w-full flex-1 flex-col">
-        <Outlet />
-      </div>
+      <HeaderActions>
+        <ScopeFilter scope={scope} />
+      </HeaderActions>
+      <ExpertReadOnlyBadge />
+      <Outlet />
     </div>
   );
 }

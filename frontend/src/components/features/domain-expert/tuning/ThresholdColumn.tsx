@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Save, RotateCcw } from 'lucide-react'
-import { cn } from '@/lib/cn'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { RotateCcw } from 'lucide-react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import TuningStepperInput from './TuningStepperInput'
+import TuningRangeTip from './TuningRangeTip'
+import type { TuningBlockHandle } from './tuning.utils'
 import type { ExpertThresholds } from '@/types/expert.types'
 import { t } from '@/i18n'
 import { FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
@@ -15,6 +16,8 @@ interface Props {
   isResetting: boolean
   onSave: (v: Partial<ExpertThresholds>) => void
   onReset: () => void
+  // Báo số ngưỡng đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  onDirtyChange?: (count: number) => void
 }
 
 // 7 ngưỡng của Zone; khoảng giá trị là khoảng đo cảm biến của backend (THRESHOLD_LIMITS), không tự chọn
@@ -28,13 +31,20 @@ const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: str
   { key: 'co2_max', label: 'Ngưỡng cảnh báo khí CO2', subLabel: 'Chỉ cảnh báo', step: 50, decimals: 0 },
 ]
 
-// Kiểm cùng luật với backend trước khi lưu
-export default function ThresholdColumn({ data, isLoading, isSaving, isResetting, onSave, onReset }: Props) {
+// Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống
+const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdColumn(
+  { data, isLoading, isSaving, isResetting, onSave, onReset, onDirtyChange }, ref,
+) {
   const [form, setForm] = useState<ExpertThresholds>(FACTORY_DEFAULT_THRESHOLDS)
   const [resetOpen, setResetOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { if (data) setForm(data) }, [data])
+
+  const base = data ?? FACTORY_DEFAULT_THRESHOLDS
+  // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
+  const dirtyCount = !data ? 0 : FIELDS.filter(field => form[field.key] !== base[field.key]).length
+  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   const set = (key: keyof ExpertThresholds) => (v: number) => {
     setForm(f => ({ ...f, [key]: v }))
@@ -42,61 +52,59 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
   }
 
   const handleSave = () => {
+    if (!data) return
     const firstError = Object.values(validateThresholds(form))[0]
     if (firstError) { setError(t(firstError)); return }
     setError(null)
     onSave(form)
   }
 
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+    cancel: () => { setForm(base); setError(null) },
+  }))
+
   if (isLoading) return (
-    <div className="bg-white rounded-[24px] border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-4 h-full">
+    <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-4 h-full">
       {Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-12 bg-neutral-100 rounded-xl" />)}
     </div>
   )
 
   return (
     <>
-      <div className="h-full flex flex-col justify-between bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-2xs">
+      <div className="h-full flex flex-col justify-between bg-white rounded-2xl p-5 border border-stone-200/80 shadow-2xs">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
           <div>
-            <h3 className="text-sm font-bold text-charcoal">{t('2. Ngưỡng vi khí hậu & khí độc')}</h3>
+            <h3 className="flex items-center gap-1 text-base font-bold text-charcoal">
+              {t('2. Ngưỡng vi khí hậu & khí độc')}
+              <TuningRangeTip hints={FIELDS.map(field => {
+                const limit = THRESHOLD_LIMITS[field.key]
+                return { label: t(field.label), range: `Phạm vi: ${limit.min}–${limit.max} ${t(limit.unit)}` }
+              })} />
+            </h3>
             <p className="text-small text-warmGray mt-0.5">{t('Tiêu chuẩn vi khí hậu môi trường nuôi')}</p>
           </div>
           <button type="button" onClick={() => setResetOpen(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors">
+            className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-stone-500 hover:bg-warmGray/10 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors max-sm:h-11">
             <RotateCcw className="w-3.5 h-3.5" />
             {t('Khôi phục mặc định')}
           </button>
         </div>
 
         {/* Fields */}
-        <div className="flex-1 py-1 divide-y divide-stone-100">
+        <fieldset disabled={isSaving} className="flex-1 py-1 divide-y divide-stone-100">
           {FIELDS.map(field => {
             const limit = THRESHOLD_LIMITS[field.key]
             return (
               <TuningStepperInput key={field.key} label={t(field.label)} subLabel={field.subLabel} value={form[field.key]} onChange={set(field.key)}
-                min={limit.min} max={limit.max} step={field.step} decimals={field.decimals} unit={limit.unit}
-                rangeHint={`Phạm vi: ${limit.min}–${limit.max} ${limit.unit}`} />
+                min={limit.min} max={limit.max} step={field.step} decimals={field.decimals} unit={limit.unit} />
             )
           })}
-        </div>
+        </fieldset>
 
-        {/* Error */}
-        {error && <p className="pt-2 text-xs text-red-600">{error}</p>}
-
-        {/* Save button */}
-        <div className="mt-auto pt-4 border-t border-stone-100">
-          <button type="button" onClick={handleSave} disabled={isSaving}
-            className={cn(
-              'w-full py-2.5 rounded-full text-sm font-medium flex items-center justify-center gap-2 transition-all duration-150',
-              isSaving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-charcoal text-white hover:bg-gray-800 shadow-sm',
-            )}>
-            {isSaving && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            <Save className="w-4 h-4" />
-            {t('Lưu ngưỡng môi trường')}
-          </button>
-        </div>
+        {/* Lỗi kiểm ngưỡng; nút Lưu chung ở thanh dính đáy của trang */}
+        {error && <p className="mt-auto pt-4 border-t border-stone-100 text-xs text-red-600">{error}</p>}
       </div>
 
       <ConfirmModal
@@ -111,4 +119,6 @@ export default function ThresholdColumn({ data, isLoading, isSaving, isResetting
       />
     </>
   )
-}
+})
+
+export default ThresholdColumn

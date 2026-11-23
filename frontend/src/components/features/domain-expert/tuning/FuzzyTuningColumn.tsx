@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Save } from 'lucide-react'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Toggle } from '@/components/ui'
+import InfoTip from '@/components/ui/InfoTip'
 import { DEFAULT_FUZZY_TUNING } from '@/constants/thresholds'
 import { t } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation'
 import FuzzySuggestionBox, { type SuggestionAction } from '@/components/features/domain-expert/tuning/FuzzySuggestionBox'
+import type { TuningBlockHandle } from './tuning.utils'
 import type { ExpertFuzzyTuning, FuzzySuggestionResponse } from '@/types/expert.types'
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   suggestion?: FuzzySuggestionResponse
   isSuggestionLoading?: boolean
   suggestionAction?: SuggestionAction
+  // Báo số hệ số đang khác bản đã lưu lên thanh lưu dính đáy của trang
+  onDirtyChange?: (count: number) => void
 }
 
 type NumericKey = Exclude<keyof ExpertFuzzyTuning, 'fuzzy_input_filter'>
@@ -47,7 +50,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-200/50">
         <button type="button" onClick={() => onChange(clamp(value - step))} disabled={atMin}
           aria-label={t('Giảm {{label}}', { label })}
-          className={cn('w-7 h-7 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
+          className={cn('h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
             atMin ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           −
         </button>
@@ -56,7 +59,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
         </span>
         <button type="button" onClick={() => onChange(clamp(value + step))} disabled={atMax}
           aria-label={t('Tăng {{label}}', { label })}
-          className={cn('w-7 h-7 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
+          className={cn('h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
             atMax ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           +
         </button>
@@ -66,14 +69,22 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
 }
 
 // Hệ số mờ của Zone và gợi ý từ dữ liệu; chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
-export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction }: Props) {
+const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTuningColumn(
+  { data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, onDirtyChange }, ref,
+) {
   const [form, setForm] = useState<ExpertFuzzyTuning>(DEFAULT_FUZZY_TUNING)
   const [suggestionDismissed, setSuggestionDismissed] = useState(false)
 
   useEffect(() => { if (data) setForm(data) }, [data])
 
+  const base = data ?? DEFAULT_FUZZY_TUNING
+  // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
+  const dirtyCount = !data ? 0 : TILES.filter(tile => form[tile.key] !== base[tile.key]).length
+    + (form.fuzzy_input_filter !== base.fuzzy_input_filter ? 1 : 0)
+  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
+
   function handleSave() {
-    const base = data ?? DEFAULT_FUZZY_TUNING
+    if (!data) return
     const changed: Partial<ExpertFuzzyTuning> = {}
     for (const tile of TILES) {
       if (form[tile.key] !== base[tile.key]) changed[tile.key] = form[tile.key]
@@ -82,8 +93,13 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
     if (Object.keys(changed).length > 0) onSave(changed)
   }
 
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+    cancel: () => setForm(base),
+  }))
+
   if (isLoading) return (
-    <div className="w-full bg-white rounded-[24px] border border-stone-200/80 shadow-sm p-6 animate-pulse space-y-4">
+    <div className="w-full bg-white rounded-2xl border border-stone-200/80 shadow-sm p-6 animate-pulse space-y-4">
       <div className="h-6 bg-stone-100 rounded w-1/4" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-28 bg-stone-100 rounded-2xl" />)}
@@ -92,21 +108,10 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
   )
 
   return (
-    <div className="w-full bg-white rounded-[24px] p-6 border border-stone-200/80 shadow-2xs space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
-        <div>
-          <h3 className="text-base font-bold text-charcoal">{t('1. Hệ số điều khiển mờ')}</h3>
-          <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, hệ thống gửi cấu hình mới xuống bộ điều khiển của Zone')}</p>
-        </div>
-        <button type="button" onClick={handleSave} disabled={isSaving}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-xs font-semibold transition-all duration-150 self-start sm:self-center shrink-0',
-            isSaving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-charcoal text-white hover:bg-gray-800 shadow-sm',
-          )}>
-          {isSaving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-          <Save className="w-3.5 h-3.5" />
-          {t('Lưu hệ số mờ')}
-        </button>
+    <div className="w-full bg-white rounded-2xl p-6 border border-stone-200/80 shadow-2xs space-y-4">
+      <div className="pb-3 border-b border-stone-100">
+        <h3 className="text-base font-bold text-charcoal">{t('1. Hệ số điều khiển mờ')}</h3>
+        <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, cấu hình gửi xuống bộ điều khiển của Zone')}</p>
       </div>
 
       <FuzzySuggestionBox
@@ -117,35 +122,44 @@ export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, s
         dismissed={suggestionDismissed}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
-        {TILES.map(tile => (
-          <FuzzyTile
-            key={tile.key}
-            label={t(tile.label)}
-            value={form[tile.key]}
-            onChange={value => setForm(previous => ({ ...previous, [tile.key]: value }))}
-            min={FUZZY_TUNING_LIMITS[tile.key].min}
-            max={FUZZY_TUNING_LIMITS[tile.key].max}
-            step={tile.step}
-            decimals={tile.decimals}
-            unit={t(FUZZY_TUNING_LIMITS[tile.key].unit)}
-            defaultValue={DEFAULT_FUZZY_TUNING[tile.key]}
-          />
-        ))}
-      </div>
-
-      {/* cờ lọc nhiễu đầu vào */}
-      <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
-        <div>
-          <p className="text-sm font-semibold text-charcoal">{t('Lọc nhiễu số đo')}</p>
-          <p className="text-small text-warmGray mt-1">{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ.')}</p>
+      {/* Nút Lưu chung ở thanh dính đáy của trang */}
+      <fieldset disabled={isSaving} className="contents">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+          {TILES.map(tile => (
+            <FuzzyTile
+              key={tile.key}
+              label={t(tile.label)}
+              value={form[tile.key]}
+              onChange={value => setForm(previous => ({ ...previous, [tile.key]: value }))}
+              min={FUZZY_TUNING_LIMITS[tile.key].min}
+              max={FUZZY_TUNING_LIMITS[tile.key].max}
+              step={tile.step}
+              decimals={tile.decimals}
+              unit={t(FUZZY_TUNING_LIMITS[tile.key].unit)}
+              defaultValue={DEFAULT_FUZZY_TUNING[tile.key]}
+            />
+          ))}
         </div>
-        <Toggle
-          checked={form.fuzzy_input_filter}
-          onChange={checked => setForm(previous => ({ ...previous, fuzzy_input_filter: checked }))}
-          aria-label={t('Lọc nhiễu số đo')}
-        />
-      </div>
+
+        {/* cờ lọc nhiễu đầu vào */}
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-stone-200/70 bg-gray-50/60 p-4">
+          <div>
+            {/* Câu ngắn trên thẻ, giải thích đầy đủ trong nút (i) */}
+            <p className="flex items-center gap-1 text-sm font-semibold text-charcoal">
+              {t('Lọc nhiễu số đo')}
+              <InfoTip>{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ.')}</InfoTip>
+            </p>
+            <p className="text-small text-warmGray mt-1">{t('Làm mượt số đo để rơ-le ít đóng cắt vì nhiễu')}</p>
+          </div>
+          <Toggle
+            checked={form.fuzzy_input_filter}
+            onChange={checked => setForm(previous => ({ ...previous, fuzzy_input_filter: checked }))}
+            aria-label={t('Lọc nhiễu số đo')}
+          />
+        </div>
+      </fieldset>
     </div>
   )
-}
+})
+
+export default FuzzyTuningColumn
