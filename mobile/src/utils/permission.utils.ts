@@ -54,6 +54,7 @@ export type PermissionAction =
   | 'viewHealthLevels'
   | 'viewFarmOverview'
   | 'proposeWeatherRules'
+  | 'remindExpert'
 
 // Role được làm từng thao tác (Report 3 §2.4); Admin không vào app. Farm Technician (G-20) chỉ thấy và thao tác trên nhà được
 // giao — backend chỉ trả nhà, tầng, thiết bị, cảnh báo của các nhà đó và trả 403 ở nhà khác (AUTH-FR-013)
@@ -147,6 +148,9 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   setAlertVerdict: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   // Gửi bộ luật thời tiết cho chuyên gia duyệt (POST …/weather-rules/proposal): chủ trại trên farm có chuyên gia (BR-22 nhóm B)
   proposeWeatherRules: ['FARM_OWNER'],
+  // Nhắc chuyên gia kết luận cảnh báo suy luận, báo cáo, mùa vụ (POST /expert-activity/reminders): chủ trại trên farm có chuyên
+  // gia (BR-22 nhóm C)
+  remindExpert: ['FARM_OWNER'],
   // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chủ trại và kỹ thuật viên (nhận cảnh báo đầu tiên của nhà được
   // giao); chuyên gia không nhận push, Telegram
   editNotificationSettings: ['FARM_OWNER', 'FARM_TECHNICIAN'],
@@ -177,8 +181,8 @@ const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set([
   'reviewDisagreements',
 ])
 
-// Thao tác chủ trại chỉ làm khi farm có chuyên gia (BR-22): gửi chuyên gia duyệt; farm chưa có thì chủ tự quyết
-const FARM_OWNER_WITH_EXPERT: ReadonlySet<PermissionAction> = new Set(['proposeWeatherRules'])
+// Thao tác chủ trại chỉ làm khi farm có chuyên gia (BR-22): gửi chuyên gia duyệt, nhắc chuyên gia; farm chưa có thì chủ tự quyết
+const FARM_OWNER_WITH_EXPERT: ReadonlySet<PermissionAction> = new Set(['proposeWeatherRules', 'remindExpert'])
 
 // Thao tác backend chỉ cho Primary Owner (người tạo farm); đồng sở hữu chỉ xem
 const PRIMARY_OWNER_ONLY: ReadonlySet<PermissionAction> = new Set(['manageFarmMembers'])

@@ -10,6 +10,7 @@ import { OnsiteCheckSheet } from '@/components/alert/OnsiteCheckSheet'
 import { SeverityLabel } from '@/components/alert/SeverityLabel'
 import { VerdictSheet } from '@/components/alert/VerdictSheet'
 import { StatRow } from '@/components/analytics/StatRow'
+import { RemindExpertButton } from '@/components/common/RemindExpertButton'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { RelayControlSheet } from '@/components/farm/RelayControlSheet'
 import { Button } from '@/components/ui/button'
@@ -105,6 +106,11 @@ export function AlertDetailContent({
     isInferred &&
     alert.status !== 'RESOLVED' &&
     canPerform(user, 'setAlertVerdict', { farmHasExpert: farmHasActiveExpert })
+  // Farm có chuyên gia: chủ trại không kết luận mà nhắc chuyên gia, mỗi cảnh báo một lần (BR-22 nhóm C)
+  const canRemindExpert =
+    isInferred &&
+    alert.status !== 'RESOLVED' &&
+    canPerform(user, 'remindExpert', { farmHasExpert: farmHasActiveExpert })
   // Chỉ controller ONLINE mới nhận được lệnh điều khiển tay
   const controllers = (sensorNodesQuery.data?.data ?? []).filter(
     node => node.zone_id === alert.zone_id && node.status === 'ONLINE',
@@ -202,7 +208,14 @@ export function AlertDetailContent({
         <AlertTimeline
           entries={buildAlertTimeline(alert, memberName)}
           footer={
-            isInferred && !verdict ? <StatRow label={t('Phán quyết')} value={t('Chờ phán quyết')} isWarning /> : undefined
+            isInferred && !verdict ? (
+              <View style={styles.pendingVerdict}>
+                <StatRow label={t('Phán quyết')} value={t('Chờ phán quyết')} isWarning />
+                {canRemindExpert && (
+                  <RemindExpertButton kind="alert" id={alert._id} remindedAt={alert.expert_reminded_at} />
+                )}
+              </View>
+            ) : undefined
           }
         />
       </ScrollView>
@@ -332,4 +345,5 @@ const styles = StyleSheet.create({
     borderTopWidth: BorderWidth.hairline,
   },
   action: { flexGrow: 1 },
+  pendingVerdict: { gap: Spacing.sm },
 })

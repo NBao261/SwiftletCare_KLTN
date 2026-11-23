@@ -44,11 +44,13 @@ function ExpandedReport({
   hasExpert,
   userId,
   onEditConclusion,
+  canRemindExpert,
 }: {
   reportId: string
   hasExpert: boolean
   userId: string | null
   onEditConclusion?: (reportId: string, text: string) => void
+  canRemindExpert: boolean
 }) {
   const palette = usePalette()
   const reportQuery = useHouseHealthReport(reportId)
@@ -65,6 +67,7 @@ function ExpandedReport({
       report={report}
       hasExpert={hasExpert}
       onEditConclusion={canEdit ? () => onEditConclusion(report._id, report.expert_conclusion?.text ?? '') : undefined}
+      canRemindExpert={canRemindExpert}
     />
   )
 }
@@ -88,6 +91,8 @@ export function ReportTab({ scope }: ReportTabProps) {
   const reports = reportsQuery.data?.pages.flatMap(page => page.data) ?? []
   const canWrite = canPerform(user, 'writeConclusion')
   const hasExpert = scope.farm ? farmHasExpert(scope.farm) : false
+  // Chủ trại trên farm có chuyên gia nhắc chuyên gia viết kết luận còn thiếu (BR-22 nhóm C)
+  const canRemindExpert = canPerform(user, 'remindExpert', { farmHasExpert: hasExpert })
 
   const saveConclusion = () => {
     if (!editing) return
@@ -131,6 +136,7 @@ export function ReportTab({ scope }: ReportTabProps) {
             hasExpert={hasExpert}
             userId={user?._id ?? null}
             onEditConclusion={canWrite ? (reportId, text) => setEditing({ reportId, text }) : undefined}
+            canRemindExpert={canRemindExpert}
           />
         )}
       </View>

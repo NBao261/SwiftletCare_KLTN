@@ -1678,4 +1678,7 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Luật mới chỉ chạy khi chuyên gia duyệt': 'New rules run only once the expert approves them',
   'có đề xuất chờ duyệt': 'proposal awaiting approval',
   'Đề xuất chờ chuyên gia duyệt · gửi {time}': 'Proposal awaiting the expert · sent {time}',
+  'Nhắc chuyên gia': 'Remind the expert',
+  'Đã nhắc chuyên gia': 'Expert reminded',
+  'Chưa có kết luận mùa vụ': 'No season conclusion yet',
 }

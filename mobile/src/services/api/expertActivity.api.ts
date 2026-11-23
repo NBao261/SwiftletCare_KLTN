@@ -1,6 +1,13 @@
 import { apiClient } from '@/services/api/apiClient'
 import { ENDPOINTS } from '@/constants/apiEndpoints'
-import type { ApiResponse, CoefficientProposal, ExpertActivityEntry, ParameterReview } from '@/types'
+import type {
+  ApiResponse,
+  CoefficientProposal,
+  ExpertActivityEntry,
+  ExpertReminder,
+  ExpertReminderKind,
+  ParameterReview,
+} from '@/types'
 
 // Tham số trang chung của các danh sách hoạt động chuyên gia (api-spec Page, Limit)
 export interface ExpertActivityPageParams {
@@ -37,4 +44,9 @@ export const expertActivityApi = {
   // gợi ý thì 409
   submitProposal: (zoneId: string) =>
     apiClient.post<ApiResponse<CoefficientProposal>>(ENDPOINTS.EXPERT_PROPOSALS, { zoneId }),
+
+  // Farm Owner nhắc chuyên gia một việc chỉ chuyên gia làm (BR-22), mỗi việc một lần. Việc đã xong, chu kỳ còn mở, farm chưa có
+  // chuyên gia hoặc đã nhắc thì 409
+  remindExpert: (kind: ExpertReminderKind, id: string) =>
+    apiClient.post<ApiResponse<ExpertReminder>>(ENDPOINTS.EXPERT_REMINDERS, { kind, id }),
 }

@@ -63,8 +63,8 @@ describe('canPerform', () => {
     }
   })
 
-  it('gửi đề xuất luật thời tiết: chỉ chủ trại trên farm có chuyên gia (BR-22 nhóm B)', () => {
-    for (const action of ['proposeWeatherRules'] as const) {
+  it('gửi đề xuất luật thời tiết, nhắc chuyên gia: chỉ chủ trại trên farm có chuyên gia (BR-22 nhóm B, C)', () => {
+    for (const action of ['proposeWeatherRules', 'remindExpert'] as const) {
       expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(true)
       expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(false)
       // Chưa biết farm có chuyên gia hay không thì không mở nút

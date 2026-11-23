@@ -102,3 +102,12 @@ export interface CoefficientProposal {
   created_at: string
 }
 
+// Việc Farm Owner nhắc chuyên gia được (POST /expert-activity/reminders, BR-22 nhóm C): kết luận cảnh báo suy luận, báo cáo sức
+// khoẻ, mùa vụ đã đóng
+export type ExpertReminderKind = 'alert' | 'health_report' | 'harvest_cycle'
+
+export interface ExpertReminder {
+  kind: ExpertReminderKind
+  id: string
+  expert_reminded_at: string
+}

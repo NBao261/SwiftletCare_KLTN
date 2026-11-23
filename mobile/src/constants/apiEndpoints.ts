@@ -103,6 +103,8 @@ export const ENDPOINTS = {
   EXPERT_REVIEW_ACCEPT: (itemId: string) => `/expert-activity/reviews/${itemId}/accept`,
   EXPERT_REVIEW_REVERT: (itemId: string) => `/expert-activity/reviews/${itemId}/revert`,
   EXPERT_PROPOSALS: '/expert-activity/proposals',
+  // Farm Owner nhắc chuyên gia việc chỉ chuyên gia làm, mỗi việc một lần (BR-22)
+  EXPERT_REMINDERS: '/expert-activity/reminders',
   EXPERT_PROPOSAL_APPROVE: (proposalId: string) => `/expert-activity/proposals/${proposalId}/approve`,
   EXPERT_PROPOSAL_REJECT: (proposalId: string) => `/expert-activity/proposals/${proposalId}/reject`,
 

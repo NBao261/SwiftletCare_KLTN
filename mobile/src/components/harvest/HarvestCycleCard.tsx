@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native'
 import { StatRow } from '@/components/analytics/StatRow'
+import { RemindExpertButton } from '@/components/common/RemindExpertButton'
 import { Text } from '@/components/ui/text'
 import { BorderWidth, Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
@@ -18,6 +19,8 @@ interface HarvestCycleCardProps {
   // Tên zone của chu kỳ (tra từ danh sách zone của nhà); không tìm thấy thì "_"
   zoneName: string
   hasDivider: boolean
+  // Farm Owner trên farm có chuyên gia nhắc chuyên gia kết luận mùa đã đóng (BR-22 nhóm C)
+  canRemindExpert?: boolean
 }
 
 // Phần trăm hoặc "_" khi chưa có số
@@ -27,7 +30,7 @@ function formatOptionalPercent(value: number | null | undefined): string {
 
 // Một chu kỳ thu của một zone (HARVEST-FR-007, BR-43): kỳ, sản lượng lần thu đóng kỳ, so với kỳ trước và cùng kỳ năm trước, sức
 // khỏe của kỳ (% ngày Tốt, tỷ lệ về tổ, % thời gian trong ngưỡng), độ đầy đủ và kết luận mùa vụ (chỉ đọc — chuyên gia viết ở web)
-export function HarvestCycleCard({ cycle, zoneName, hasDivider }: HarvestCycleCardProps) {
+export function HarvestCycleCard({ cycle, zoneName, hasDivider, canRemindExpert = false }: HarvestCycleCardProps) {
   const palette = usePalette()
   const period = `${formatDate(cycle.start_date)} – ${cycle.end_date ? formatDate(cycle.end_date) : t('nay')}`
   const closing = cycle.closing_harvest
@@ -80,6 +83,15 @@ export function HarvestCycleCard({ cycle, zoneName, hasDivider }: HarvestCycleCa
               {t('Khuyến nghị mùa sau: {text}', { text: cycle.conclusion.recommendations })}
             </Text>
           ) : null}
+        </View>
+      )}
+      {/* Mùa đã đóng, chưa có kết luận: chỉ chuyên gia viết, chủ trại nhắc được một lần */}
+      {canRemindExpert && cycle.status === 'CLOSED' && !cycle.conclusion && (
+        <View style={[styles.conclusion, { backgroundColor: palette.surfaceStrong }]}>
+          <Text variant="small" color={palette.textSecondary}>
+            {t('Chưa có kết luận mùa vụ')}
+          </Text>
+          <RemindExpertButton kind="harvest_cycle" id={cycle._id} remindedAt={cycle.expert_reminded_at} />
         </View>
       )}
     </View>
