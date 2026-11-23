@@ -258,13 +258,14 @@ Farm Owner — (tabs)
 ├─ Trang trại  farms (Màn A: "Tất cả trang trại" = thẻ từng farm (mặc định khi thuộc từ 2 farm) ─► nhà của một farm (‹ về tất cả),
 │                đổi farm, ghim ★ nhà lên đầu, ⚙ cài đặt farm, + tạo farm) ─► farms/[houseId] (Màn B: một nhà)
 │                vào một farm thì mở thẳng nhà xem gần nhất (farm 1 nhà thì nhà đó); zone là tab, thiết bị là sheet — không có màn thứ 3
-│                Màn B: camera ghim đầu (live stream, số chim; nút vẽ vòng đếm khi farm chưa có chuyên gia, BR-22),
+│                Màn B: camera ghim đầu (live stream, số chim; nút vẽ vòng đếm — farm có chuyên gia thì vòng của chủ áp ngay, chuyên gia xem lại, BR-22),
 │                       đàn chim hôm nay, tab tầng, 6 ô cảm biến,
 │                       relay chế độ tay (MF-01), thiết bị (chỉ xem), Cài đặt zone xem nhanh (⋮ "Chỉnh sửa" ─► đúng mục, mở sẵn chế độ sửa),
 │                       ⚙ ─► [houseId]/settings
 │                Cài đặt nhà: thông tin nhà (kỹ thuật viên phụ trách, chỉ xem), giai đoạn nhà, camera AI (+ thêm), mức giảm tỷ lệ về tổ, lịch đếm chim,
-│                       bù phun sương theo thời tiết, mức chỉ số sức khỏe (ba mục sau: chuyên gia; chủ trại khi farm chưa có chuyên gia — BR-22;
-│                       có nút "Thêm…" ngay khi xem); theo tầng: thông tin tầng, ngưỡng (+ đặt lại mặc định), hệ số fuzzy, tham số phát hiện,
+│                       bù phun sương theo thời tiết, mức chỉ số sức khỏe (chủ trại sửa; farm có chuyên gia thì chân mục ghi "Thay đổi có hiệu lực
+│                       ngay, chuyên gia sẽ xem lại", còn luật thời tiết thành "Gửi chuyên gia duyệt" kèm khối đề xuất đang chờ — BR-22;
+│                       có nút "Thêm…" ngay khi xem; tham số phát hiện, mức giảm có ô "Khôi phục mặc định"); theo tầng: thông tin tầng, ngưỡng (+ đặt lại mặc định), hệ số fuzzy, tham số phát hiện,
 │                       controller (+ thêm; dòng ghi bước áp cấu hình ENV-FR-027), + thêm tầng — mỗi mục "Sửa" / "Lưu" riêng
 │                Màn B › Thiết bị ─► chi tiết controller: chẩn đoán, bước áp cấu hình, "Khởi động lại" khi trực tuyến (FARM-FR-013)
 │                Cài đặt farm (farm-settings): thông tin, toạ độ (lấy vị trí hiện tại), nhà yến (+ thêm nhà), xoá farm (chủ chính); farm-create: tạo farm
@@ -279,7 +280,7 @@ Farm Owner — (tabs)
 │                       "Ghi lần thu" ─► sheet: ngày thu (không quá hôm nay), số tổ + gram của yến trắng / hồng / huyết — mỗi loại có số là một đợt,
 │                       gắn vào zone tạo sớm nhất của nhà như web; chủ trại ghi là CONFIRMED ngay, kỹ thuật viên ghi là DRAFT, chủ trại "Xác nhận lần thu" trong sheet;
 │                       chạm lần thu ─► sửa số / xoá lần thu (chủ trại mọi lần thu, kỹ thuật viên chỉ lần thu còn DRAFT do mình ghi; ngày không đổi được);
-│                       khối "Chu kỳ thu" (so kỳ trước, cùng kỳ năm trước, sức khỏe của kỳ, kết luận mùa vụ); nút biểu đồ ─► Phân tích › Sản lượng
+│                       khối "Chu kỳ thu" (so kỳ trước, cùng kỳ năm trước, sức khỏe của kỳ, kết luận mùa vụ; mùa đã đóng chưa có kết luận thì "Nhắc chuyên gia"); nút biểu đồ ─► Phân tích › Sản lượng
 │                phiếu công việc: work-orders (+ mở tay; cảnh báo chưa có phiếu có nút "Mở phiếu công việc") ─► [workOrderId] (Duyệt / Mở lại khi chờ duyệt,
 │                       nhắc kiểm tại nhà khi chưa xác minh — BR-41; ⋮ Giao lại, Huỷ phiếu); MTTA/MTTR, kế hoạch bảo trì, áp profile, giao kỹ thuật viên, so sánh nhà ở web
 ├─ Cảnh báo    alerts: phạm vi ▾ riêng của tab, mặc định tất cả: Tất cả trang trại ─► một farm (Tất cả nhà) ─► một nhà (chip Tầng);
@@ -287,7 +288,7 @@ Farm Owner — (tabs)
 │                Tầng · Loại · Phán quyết (lọc loại không suy luận thì ẩn và không áp Phán quyết); vuốt trái để xác nhận (chip ghi chú nhanh); chạm hàng ─► trang chi tiết alert/[alertId] (chuyển trang, không có sheet chi tiết — user, 2026-11-20)
 │                (bằng chứng ±30 phút cho cảnh báo suy luận, Đi tới tầng, Điều khiển tay); nhắc lại sau 15 phút / 1 giờ (ALERT-FR-015)
 │                "Đã đóng" gồm đã hết (RESOLVED) và bị bác bỏ (DISMISSED, đổi lại "Đúng" được); chủ trại phán quyết khi farm chưa có
-│                chuyên gia (BR-22); bằng chứng đọc GET /alerts/{id}/evidence; bấm push mở trang chi tiết của cảnh báo đó
+│                chuyên gia, có thì "Nhắc chuyên gia" một lần (BR-22); bằng chứng đọc GET /alerts/{id}/evidence; bấm push mở trang chi tiết của cảnh báo đó
 ├─ Phân tích   analytics   một màn: chọn nhà ▾ theo 2 bước như tab Trang trại (thuộc từ 2 farm: chọn trang trại trước — mỗi dòng ghi số nhà — rồi chọn nhà của farm đó, nhà ghim lên đầu, "Đổi trang trại" để quay lại; 1 farm thì vào thẳng bước chọn nhà; tiêu đề "Farm · Nhà"; đổi nhà là đổi luôn farm của tab Trang trại), chip tầng ("Tất cả tầng"); 4 ô KPI (tỉ lệ về tổ, trong ngưỡng, tự động,
 │                          cảnh báo); tab nội bộ Đàn chim · Môi trường · Điều khiển · Sản lượng · Báo cáo, ngay dưới là chip khoảng thời gian (cùng dính khi cuộn, ẩn ở Sản lượng, Báo cáo); nhớ lựa chọn khi tắt app;
 │                          cùng giao diện các màn khác: nền Paper, card trắng, chip kiểu tab tầng, header chọn nhà ▾
@@ -323,7 +324,9 @@ Domain Expert — (tabs)   (hiện là alerts + menu-2 tạm + profile; đích n
 | Khởi động lại controller (FARM-FR-013; kỹ thuật viên: nhà được giao)        |                            ✓                             |          –           |
 | Bảo trì: xem kế hoạch, làm checklist kèm ảnh trong Work Order phòng ngừa (G-22; tạo, sửa kế hoạch và duyệt ở web) |                            ✓                             |         đọc          |
 | Nhận push, cài kênh Telegram                                                |                            ✓                             |          –           |
-| Kiểm chứng cảnh báo suy luận, sửa tham số phát hiện, lịch đếm, luật bù thời tiết, mức sức khỏe, xem ngày lệch | chỉ khi farm chưa có chuyên gia (BR-22), còn lại chỉ đọc |          ✓           |
+| Sửa tham số phát hiện, mức giảm tỷ lệ về tổ, lịch đếm, vòng đếm, mức sức khỏe (BR-22 nhóm A) | ✓ (farm có chuyên gia: áp ngay, chuyên gia xem lại) |          ✓           |
+| Đặt luật bù thời tiết (BR-22 nhóm B)                                        | farm chưa có chuyên gia; có thì gửi chuyên gia duyệt     |          ✓           |
+| Kiểm chứng cảnh báo suy luận, xem ngày lệch, kết luận báo cáo / mùa vụ (nhóm C) | farm chưa có chuyên gia; có thì "Nhắc chuyên gia" một lần |          ✓           |
 | Viết kết luận, duyệt thay đổi của Farm Owner                                |                           đọc                            |          ✓           |
 | Sửa ngưỡng, hệ số fuzzy của Zone                                            |                            ✓                             |          ✓           |
 | Relay chế độ tay, lịch loa                                                  |                            ✓                             |          –           |
@@ -673,6 +676,6 @@ const styles = StyleSheet.create({
 - **Chỉ trường có thật** trong api-spec; khoảng hợp lệ lấy từ schema api-spec và `THRESHOLD_LIMITS` của backend (`utils/settingsValidation.utils.ts`), không tự đặt. Thao tác chưa có API thì hiện `ComingSoonAction` ("Sắp có"), không giả lập.
 - **Tên và số tầng** (Len chốt 10/11/2026 — backend chưa kiểm, mobile chặn phía app, đề xuất cho Kiệt ở `todo-review2` G-16): tên farm / nhà / khu vực tối đa `NAME_MAX_LENGTH` = 50 ký tự (ô nhập dừng ở ký tự 50); tên nhà không trùng trong cùng farm, tên khu vực không trùng trong cùng nhà (khác farm, khác nhà thì được) — so sau khi bỏ khoảng trắng thừa và hoa thường, dấu tiếng Việt vẫn tính (`validateName`, `normalizeName`); số tầng của nhà 1–10 (`HOUSE_FLOOR_RULE`), tầng của khu vực từ 1 tới số tầng của nhà (`getZoneFloorRule`). Chip chọn khu vực / nhà hiện tối đa 30 ký tự rồi "…" (`CHIP_LABEL_MAX_LENGTH` trong `ui/choice-chip`), trình đọc màn hình vẫn đọc đủ tên.
 - **Mở thẳng một mục:** khối "Cài đặt zone" ở chi tiết nhà chỉ để xem nhanh; nút ⋮ của từng nhóm mở `[houseId]/settings?section=<thresholds|fuzzy|detection|bird-count|stage|weather|counting-schedule|health-levels>&zoneId=…&edit=1` (mục của cả nhà bỏ `zoneId`; loại mục ở `utils/settingsSection.utils.ts`). Trang mở đúng tầng, sổ sẵn mục đó, cuộn tới mục; `edit=1` chỉ mở chế độ sửa khi `canPerform` cho phép, không có quyền thì nút ⋮ chỉ có "Xem trong Cài đặt nhà".
-- **Không bịa:** mọi số ở khối xem nhanh và trang cài đặt lấy đúng từ backend (`formatStoredNumber` giữ phần lẻ); thứ backend chưa có (sửa tên / xoá nhà và tầng) hiện "Sắp có". Mục người xem không được sửa ghi rõ vì sao (`getViewOnlyNote`: farm đã có chuyên gia thì việc của chuyên gia — BR-22).
+- **Không bịa:** mọi số ở khối xem nhanh và trang cài đặt lấy đúng từ backend (`formatStoredNumber` giữ phần lẻ); thứ backend chưa có (sửa tên / xoá nhà và tầng) hiện "Sắp có". Mục người xem không được sửa ghi "Bạn chỉ xem mục này"; chủ trại trên farm có chuyên gia thấy dòng "Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại" (`useExpertReviewNote` — BR-22).
 - **Mã kích hoạt** trên nhãn thiết bị chỉ nằm trong ô nhập và đi một lần tới API: không lưu store, không ghi log; mutation đăng ký đặt `gcTime: 0`; sheet dựng lại (key mới) mỗi lần mở.
 - Chỉ dùng token sẵn có (`surface`, `surfaceStrong`, `divider`, `inverse`, `onInverse`, `primary`, `text`, `textSecondary`, `alert`); nhãn HOA là `small` + `textTransform: 'uppercase'` + `letterSpacing` trong style của component, không thêm variant.
