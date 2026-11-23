@@ -77,7 +77,7 @@ export default function FarmOwnerDashboardPage() {
   const { byHouse: overviewByHouse, isError: isOverviewError, refetch: refetchOverview } = useFarmOverviews(isTechnician ? NO_FARM_IDS : scopeFarmIds)
   // Cùng nguồn cho ô KPI và thẻ nhà để tổng bằng nhau
   // Như open_alerts của tổng quan: đang báo và đã xác nhận
-  const { data: acknowledgedAlerts } = useAcknowledgedAlerts(isTechnician)
+  const { data: acknowledgedAlerts, isError: isAcknowledgedError, refetch: refetchAcknowledged } = useAcknowledgedAlerts(isTechnician)
   let openAlerts: number | undefined
   if (isTechnician) openAlerts = acknowledgedAlerts ? scopedAlerts.length + countAlertsInHouses(acknowledgedAlerts, scopedHouses) : undefined
   else if (scopedHouses.every(node => overviewByHouse.has(node.house._id))) {
@@ -149,7 +149,7 @@ export default function FarmOwnerDashboardPage() {
       : [{ id: 'all', title: t('grid.title'), nodes: scopedHouses }]
     body = (
       <>
-        <FarmKpiRow totals={totals} openAlerts={openAlerts} isOpenAlertsError={isOverviewError} onRetryOpenAlerts={refetchOverview} awaitingApproval={awaiting?.total} />
+        <FarmKpiRow totals={totals} openAlerts={openAlerts} isOpenAlertsError={isTechnician ? isAcknowledgedError : isOverviewError} onRetryOpenAlerts={isTechnician ? () => void refetchAcknowledged() : refetchOverview} awaitingApproval={awaiting?.total} />
         {isAllHouses ? groups.map((group, index) => (
           <section key={group.id} className="flex flex-col gap-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
