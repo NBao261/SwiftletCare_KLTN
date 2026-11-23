@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  checkNestAmount, environmentSummary, groupHarvests, harvestTotalsByPeriod, harvestYears, nestTypeBreakdown, summarizeHarvestOverview,
+  canChangeHarvestGroup, checkNestAmount, environmentSummary, groupHarvests, harvestTotalsByPeriod, harvestYears, nestTypeBreakdown, summarizeHarvestOverview,
 } from '@/components/features/farm-owner/harvest/harvestMetrics';
 import type { HarvestBatch } from '@/types';
 
@@ -166,5 +166,21 @@ describe('groupHarvests', () => {
       { ...batch('2026-10-18T00:00:00Z', 70, 7), _id: 'b3', zone_id: 'z1', nest_type: 'RAW', status: 'CONFIRMED' },
     ] as HarvestBatch[];
     expect(groupHarvests(batches).map(group => group.pendingIds)).toEqual([['b1'], []]);
+  });
+});
+
+describe('canChangeHarvestGroup', () => {
+  const draft = (createdBy: string) => ({ status: 'DRAFT', created_by: createdBy } as HarvestBatch);
+  const confirmed = { status: 'CONFIRMED', created_by: 'tech' } as HarvestBatch;
+
+  it('Farm Owner sửa mọi lần thu, Chuyên gia không sửa', () => {
+    expect(canChangeHarvestGroup({ batches: [confirmed] }, 'FARM_OWNER', 'owner')).toBe(true);
+    expect(canChangeHarvestGroup({ batches: [draft('expert')] }, 'DOMAIN_EXPERT', 'expert')).toBe(false);
+  });
+
+  it('Kỹ thuật viên chỉ sửa lần thu chưa xác nhận do chính mình nhập', () => {
+    expect(canChangeHarvestGroup({ batches: [draft('tech'), draft('tech')] }, 'FARM_TECHNICIAN', 'tech')).toBe(true);
+    expect(canChangeHarvestGroup({ batches: [draft('tech'), confirmed] }, 'FARM_TECHNICIAN', 'tech')).toBe(false);
+    expect(canChangeHarvestGroup({ batches: [draft('other')] }, 'FARM_TECHNICIAN', 'tech')).toBe(false);
   });
 });

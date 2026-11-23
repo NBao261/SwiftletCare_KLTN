@@ -52,6 +52,8 @@ interface HarvestTableProps {
   // Không truyền (Domain Expert chỉ đọc) thì ẩn nút ghi, sửa, xoá
   onEdit?: (group: HarvestGroup) => void;
   onDelete?: (group: HarvestGroup) => void;
+  // Lần thu nào được sửa, xoá (Kỹ thuật viên: chỉ lần chưa xác nhận của mình); mặc định mọi lần
+  canChange?: (group: HarvestGroup) => boolean;
   // Chỉ Farm Owner: xác nhận các lô DRAFT của lần thu
   onConfirm?: (group: HarvestGroup) => void;
   onCreate?: () => void;
@@ -61,7 +63,7 @@ interface HarvestTableProps {
 }
 
 // Bảng lần thu, không bù dòng trống
-export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, onConfirm, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
+export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, canChange = () => true, onConfirm, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
   const [search, setSearch] = useState('');
   const [houseFilter, setHouseFilter] = useState('');
@@ -157,8 +159,8 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
             items={[
               { label: t('action.detail'), onClick: () => onOpenDetail(group) },
               ...(onConfirm && group.pendingIds.length > 0 ? [{ label: t('action.confirm'), onClick: () => onConfirm(group) }] : []),
-              ...(onEdit ? [{ label: t('action.edit'), onClick: () => onEdit(group) }] : []),
-              ...(onDelete ? [{ label: t('action.delete'), onClick: () => onDelete(group), danger: true }] : []),
+              ...(onEdit && canChange(group) ? [{ label: t('action.edit'), onClick: () => onEdit(group) }] : []),
+              ...(onDelete && canChange(group) ? [{ label: t('action.delete'), onClick: () => onDelete(group), danger: true }] : []),
             ]}
           />
         </div>

@@ -14,8 +14,8 @@ const MATRIX: Record<string, Role[]> = {
   '/dashboard/scada': [FO],
   '/analytics': [FO, DE],
   '/vision': [FO, DE],
-  '/health': [FO, DE],
-  '/harvests': [FO, DE],
+  '/health': [FO, DE, FT],
+  '/harvests': [FO, DE, FT],
   '/work-orders': [FO, DE, FT],         // Farm Owner thao tác, thợ làm phiếu (G-33), Domain Expert chỉ đọc
   '/maintenance': [FO, DE, FT],
   '/recommendations': [FO, DE, FT],

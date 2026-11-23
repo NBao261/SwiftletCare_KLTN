@@ -31,14 +31,14 @@ export const FARM_OWNER_ONLY: Role[] = ['FARM_OWNER']
 // Màn vận hành của farm; Domain Expert chỉ đọc
 export const FARM_SIDE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT']
 
-// Thu hoạch: Farm Owner ghi, Domain Expert chỉ đọc: khớp backend harvests (canRead/canWrite).
-export const HARVEST_ROLES: Role[] = FARM_SIDE_ROLES
-
 // Trang trại (/farms, nhà, Zone): không có Admin
 export const FARM_STRUCTURE_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 
-// Công việc tại nhà yến (phiếu, bảo trì, khuyến nghị): kỹ thuật viên làm phiếu của nhà được giao, đọc phần còn lại (G-33)
+// Công việc tại nhà yến (phiếu, bảo trì, khuyến nghị, đánh giá ngày): kỹ thuật viên làm việc của nhà được giao, đọc phần còn lại (G-33)
 export const FARM_WORK_ROLES: Role[] = ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
+
+// Thu hoạch: Farm Owner ghi và xác nhận, Kỹ thuật viên nhập lần chờ xác nhận, Domain Expert chỉ đọc (backend canRead/canWrite)
+export const HARVEST_ROLES: Role[] = FARM_WORK_ROLES
 
 // Các role trang trại và Admin
 export const DEVICE_LIST_ROLES: Role[] = ['ADMIN', ...FARM_STRUCTURE_ROLES]
@@ -95,7 +95,7 @@ export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/analytics',        roles: FARM_SIDE_ROLES },
   { path: '/overview',         roles: FARM_SIDE_ROLES },
   { path: '/vision',           roles: FARM_SIDE_ROLES },
-  { path: '/health',           roles: FARM_SIDE_ROLES },
+  { path: '/health',           roles: FARM_WORK_ROLES },
   { path: '/work-orders',      roles: FARM_WORK_ROLES },
   { path: '/domain-expert/queue',          roles: EXPERT_ROLES },
   { path: '/domain-expert/alert-verdicts',  roles: EXPERT_DECISION_ROLES },

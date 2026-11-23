@@ -57,11 +57,11 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await signInUi(page, 'technician');
   await expect(page).toHaveURL(/\/alerts$/);
 
-  // Cảnh báo, công việc (G-33), thiết bị, nhà được giao; không còn nhóm "Khác"
-  for (const label of ['Cảnh báo', 'Công việc', 'Thiết bị & Cảm biến', 'Nhà được giao']) {
+  // Cảnh báo, công việc, sức khoẻ, thu hoạch (G-33), thiết bị, nhà được giao; không còn nhóm "Khác"
+  for (const label of ['Cảnh báo', 'Công việc', 'Sức khoẻ & báo cáo', 'Thu hoạch', 'Thiết bị & Cảm biến', 'Nhà được giao']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
-  for (const label of ['Tổng quan', 'Hàng đợi việc', 'Thu hoạch', 'Phân tích', 'Cài đặt']) {
+  for (const label of ['Tổng quan', 'Hàng đợi việc', 'Phân tích', 'Cài đặt']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toHaveCount(0);
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
@@ -156,7 +156,7 @@ test('T6 — trang của vai trò khác bị chặn (Report 3 §2.4)', async ({ 
   const crashes = await openAsTechnician(page, '/dashboard');
   await expect(page).toHaveURL(/\/403$/);
 
-  for (const path of ['/domain-expert/queue', '/harvests', '/analytics']) {
+  for (const path of ['/domain-expert/queue', '/analytics']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/403$/);
   }
@@ -173,5 +173,17 @@ test('T7 — công việc của nhà được giao: phiếu (Giao cho tôi, khô
     await page.goto(path);
     await expect(page, path).toHaveURL(new RegExp(`${path}$`));
   }
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
+
+test('T8 — đánh giá ngày và thu hoạch của nhà được giao: không có mức chỉ số, ghi được đợt thu (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/health');
+  await expect(page).toHaveURL(/\/health$/);
+  await expect(page.getByRole('button', { name: 'Mức chỉ số' })).toHaveCount(0);
+
+  await page.goto('/harvests');
+  await expect(page).toHaveURL(/\/harvests$/);
+  // Kỹ thuật viên ghi đợt thu (chờ Chủ nhà yến xác nhận)
+  await expect(page.getByRole('button', { name: 'Ghi đợt thu hoạch' })).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });

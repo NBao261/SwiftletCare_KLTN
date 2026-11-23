@@ -11,7 +11,7 @@ import HarvestFormModal from '@/components/features/farm-owner/harvest/HarvestFo
 import HarvestTable from '@/components/features/farm-owner/harvest/HarvestTable';
 import HarvestYearChart from '@/components/features/farm-owner/harvest/HarvestYearChart';
 import NestTypeBreakdownCard from '@/components/features/farm-owner/harvest/NestTypeBreakdownCard';
-import { environmentSummary, groupHarvests } from '@/components/features/farm-owner/harvest/harvestMetrics';
+import { canChangeHarvestGroup, environmentSummary, groupHarvests } from '@/components/features/farm-owner/harvest/harvestMetrics';
 import { harvestDict, type HarvestTranslate } from '@/constants/harvest.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -84,8 +84,11 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const detailFarmIds = useMemo(() => (farmId ? [farmId] : scope.farms.map(farm => farm._id)), [farmId, scope.farms]);
   const farmDetails = useFarmDetails(detailFarmIds);
   const user = useAuthStore(state => state.user);
-  // HARVEST-FR: Farm Owner ghi, Domain Expert chỉ đọc
-  const canWrite = usePermission('FARM_OWNER');
+  // Farm Owner ghi và xác nhận; Kỹ thuật viên nhập lần thu chờ xác nhận, sửa xoá lần của mình; Chuyên gia chỉ đọc
+  const isOwner = usePermission('FARM_OWNER');
+  const isTechnician = usePermission('FARM_TECHNICIAN');
+  const canWrite = isOwner || isTechnician;
+  const canChange = (group: HarvestGroup): boolean => canChangeHarvestGroup(group, user?.role, user?._id);
   const deleteHarvest = useDeleteHarvest();
   const confirmHarvest = useConfirmHarvest();
   const push = useToastStore(state => state.push);
@@ -217,7 +220,8 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
             onOpenDetail={group => setDetailGroupKey(group.key)}
             onEdit={canWrite ? group => setEditGroupKey(group.key) : undefined}
             onDelete={canWrite ? group => setDeleteGroupKey(group.key) : undefined}
-            onConfirm={canWrite ? group => setConfirmGroupKey(group.key) : undefined}
+            canChange={canChange}
+            onConfirm={isOwner ? group => setConfirmGroupKey(group.key) : undefined}
             onCreate={canWrite ? () => setIsCreateOpen(true) : undefined}
             createBlockedReason={createBlockedReason}
             onExport={() => exportCsv(allBatches, houseNameByZone, personNames, t)}
@@ -242,11 +246,11 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
           houseName={houseNameByZone.get(detailGroup.zone_id) ?? NO_VALUE}
           creatorName={creatorName(detailGroup)}
           onClose={() => setDetailGroupKey(null)}
-          onEdit={canWrite ? group => {
+          onEdit={canChange(detailGroup) ? group => {
             setDetailGroupKey(null);
             setEditGroupKey(group.key);
           } : undefined}
-          onDelete={canWrite ? group => setDeleteGroupKey(group.key) : undefined}
+          onDelete={canChange(detailGroup) ? group => setDeleteGroupKey(group.key) : undefined}
         />
       )}
 

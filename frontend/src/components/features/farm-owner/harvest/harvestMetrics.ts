@@ -1,6 +1,6 @@
 import { vnYearMonth } from '@/lib/helpers';
 import { NEST_TYPES } from '@/components/features/farm-owner/harvest/harvest.constants';
-import type { EnvSnapshot, HarvestBatch, NestType } from '@/types';
+import type { EnvSnapshot, HarvestBatch, NestType, Role } from '@/types';
 
 const GRAMS_PER_KILOGRAM = 1000;
 const MONTHS_PER_YEAR = 12;
@@ -256,4 +256,11 @@ export function groupHarvests(batches: HarvestBatch[]): HarvestGroup[] {
       pendingIds: sorted.filter(batch => batch.status === 'DRAFT').map(batch => batch._id),
     };
   });
+}
+
+// Farm Owner sửa, xoá mọi lần thu; Kỹ thuật viên chỉ lần thu chưa xác nhận do chính mình nhập (như backend)
+export function canChangeHarvestGroup(group: Pick<HarvestGroup, 'batches'>, role: Role | undefined, userId: string | undefined): boolean {
+  if (role === 'FARM_OWNER') return true;
+  if (role !== 'FARM_TECHNICIAN' || !userId) return false;
+  return group.batches.every(batch => batch.status === 'DRAFT' && batch.created_by === userId);
 }
