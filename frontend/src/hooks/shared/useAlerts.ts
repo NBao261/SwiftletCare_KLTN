@@ -34,6 +34,16 @@ function listAlerts(query: AlertsListQuery) {
 }
 
 // undefined khi chưa tải, lỗi hoặc role không vào được /alerts
+// Cảnh báo đã xác nhận nhưng chưa xong: thợ cộng vào ô "Cảnh báo chưa xử lý" vì không đọc tổng quan trang trại
+// ponytail: 100 cảnh báo mới nhất, đủ cho các nhà một thợ được giao; cần nhiều hơn thì backend trả số theo nhà
+export function useAcknowledgedAlerts(enabled: boolean) {
+  return useQuery({
+    queryKey: ['alerts', 'acknowledged-structure'],
+    queryFn: () => alertApi.list({ status: 'ACKNOWLEDGED', limit: '100' }).then(response => response.data.data),
+    enabled,
+  })
+}
+
 export function usePendingAlertTotal(): number | undefined {
   const canSeeAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
   const result = useQuery({

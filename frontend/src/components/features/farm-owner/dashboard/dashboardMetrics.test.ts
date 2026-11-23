@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageReadings, houseLiveStatus, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, getAnomalies, isFaultDeviceStatus, zoneHasIssue, mergeBirdCountRecords, summarizeBirdCount, summarizeFarmHouses, thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { averageReadings, countAlertsInHouses, houseLiveStatus, latestTimestamp, summarizeNodes, withLiveRelays, averageControlOutput, sortPinnedFirst, getAnomalies, isFaultDeviceStatus, zoneHasIssue, mergeBirdCountRecords, summarizeBirdCount, summarizeFarmHouses, thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import type { BirdCountDailyRecord } from '@/apis/farm-owner/analytics.api'
 import type { Thresholds } from '@/types'
 
@@ -216,5 +216,12 @@ describe('houseLiveStatus', () => {
     expect(houseLiveStatus('NORMAL', [])).toBe('EMPTY')
     expect(houseLiveStatus('EMPTY', [])).toBe('EMPTY')
     expect(houseLiveStatus('ALERT', [])).toBe('ALERT')
+  })
+})
+
+describe('countAlertsInHouses', () => {
+  const houses = [{ house: { _id: 'h1' }, zones: [{ zone: { _id: 'z1' } }] }]
+  it('đếm cảnh báo của Zone và cảnh báo cả nhà thuộc các nhà đang xem, bỏ nhà khác', () => {
+    expect(countAlertsInHouses([{ zone_id: 'z1' }, { house_id: 'h1' }, { zone_id: 'z9' }, { house_id: 'h9' }, {}], houses)).toBe(2)
   })
 })
