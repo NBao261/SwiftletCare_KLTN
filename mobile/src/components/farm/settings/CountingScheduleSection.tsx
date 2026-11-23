@@ -11,8 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import { useCountingSchedule } from '@/hooks/farm/useCountingSchedule'
+import { useExpertReviewNote } from '@/hooks/farm/useExpertReviewNote'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
-import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useUpdateCountingSchedule } from '@/hooks/farm/useUpdateCountingSchedule'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
@@ -29,7 +29,7 @@ import {
 } from '@/utils/countingSchedule.utils'
 import { getCountingWindowSourceLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
-import { getSettingsSectionId, getViewOnlyNote } from '@/utils/settingsSection.utils'
+import { getSettingsSectionId, joinFooterNotes, withExpertReviewMessage } from '@/utils/settingsSection.utils'
 import { t } from '@/utils/i18n.utils'
 
 const SECTION_SKELETON_HEIGHT = 72
@@ -195,13 +195,14 @@ function CountingScheduleEditor({
 }
 
 // Mục "Lịch đếm chim" của nhà (VISION-FR-019, BR-13): hồ sơ theo mùa và khung tạm của phiên sáng (chim ra) và chiều (chim về);
-// ngày không có hồ sơ dùng khung mặc định. Chuyên gia sửa; farm chưa có chuyên gia thì chủ trại sửa thay (BR-22); kỹ thuật viên xem
+// ngày không có hồ sơ dùng khung mặc định. Chuyên gia và chủ trại sửa, farm có chuyên gia thì lịch của chủ trại áp ngay và mở mục
+// duyệt (BR-22 nhóm A); kỹ thuật viên chỉ xem
 export function CountingScheduleSection({ house, editor, onSaved }: CountingScheduleSectionProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
-  const hasExpert = useFarmHasExpert(house.farm_id)
-  const canEdit = canPerform(user, 'editCountingSchedule', { farmHasExpert: hasExpert })
-  const viewOnlyNote = canEdit ? null : getViewOnlyNote(canPerform(user, 'editCountingSchedule', { farmHasExpert: false }), hasExpert)
+  const canEdit = canPerform(user, 'editCountingSchedule')
+  const reviewNote = useExpertReviewNote(house.farm_id)
+  const showSaved = (message: string) => onSaved(withExpertReviewMessage(message, reviewNote))
   const scheduleQuery = useCountingSchedule(house._id)
   const id = getSettingsSectionId('counting-schedule')
   const isEditing = editor.isEditing(id)
@@ -231,10 +232,10 @@ export function CountingScheduleSection({ house, editor, onSaved }: CountingSche
       onToggle={() => editor.toggle(id)}
       onEdit={canEdit ? () => editor.startEditing(id) : undefined}
       isEditing={isEditing}
-      footerNote={canEdit ? t('Lịch mới áp từ ngày mai; các phiên hôm nay giữ khung cũ') : undefined}
+      footerNote={canEdit ? joinFooterNotes(t('Lịch mới áp từ ngày mai; các phiên hôm nay giữ khung cũ'), reviewNote) : undefined}
     >
       {isEditing ? (
-        <CountingScheduleEditor house={house} view={view} editor={editor} onSaved={onSaved} startWith={startWith} />
+        <CountingScheduleEditor house={house} view={view} editor={editor} onSaved={showSaved} startWith={startWith} />
       ) : (
         <>
           <ScheduleTables schedule={view.schedule} />
@@ -249,11 +250,11 @@ export function CountingScheduleSection({ house, editor, onSaved }: CountingSche
                 style={styles.flex}
               />
             </View>
-          ) : viewOnlyNote ? (
+          ) : (
             <Text variant="small" color={palette.textSecondary}>
-              {viewOnlyNote}
+              {t('Bạn chỉ xem mục này')}
             </Text>
-          ) : null}
+          )}
         </>
       )}
     </SettingsSection>

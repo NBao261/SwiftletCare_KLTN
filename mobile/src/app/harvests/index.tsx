@@ -18,6 +18,7 @@ import { Text } from '@/components/ui/text'
 import { Toast } from '@/components/ui/toast'
 import { Radius, Spacing } from '@/constants/theme'
 import { useAllHouses } from '@/hooks/farm/useAllHouses'
+import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useFarmHarvests } from '@/hooks/harvest/useFarmHarvests'
 import { useHarvestCycles } from '@/hooks/harvest/useHarvestCycles'
@@ -62,6 +63,9 @@ export default function HarvestsScreen() {
   const zonesQuery = useHouseZones(house?._id ?? '')
   const harvestsQuery = useFarmHarvests(house?.farm_id ?? '')
   const cyclesQuery = useHarvestCycles(house?._id ?? '')
+  // Chủ trại trên farm có chuyên gia nhắc chuyên gia kết luận mùa đã đóng (BR-22 nhóm C)
+  const hasExpert = useFarmHasExpert(house?.farm_id ?? '')
+  const canRemindExpert = canPerform(user, 'remindExpert', { farmHasExpert: hasExpert })
   const zones = zonesQuery.data ?? []
   const runs = groupHarvestRuns(
     harvestsQuery.data?.data ?? [],
@@ -144,6 +148,7 @@ export default function HarvestsScreen() {
         cycle={cycle}
         zoneName={zoneNameById.get(cycle.zone_id) ?? '_'}
         hasDivider={index < cycles.length - 1}
+        canRemindExpert={canRemindExpert}
       />
     ))
   }

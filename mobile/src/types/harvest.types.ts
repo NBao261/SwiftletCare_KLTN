@@ -68,4 +68,6 @@ export interface HarvestCycle {
   // Dưới 80 % số ngày được đánh giá (BR-43)
   incomplete: boolean
   conclusion: { text: string; recommendations: string | null; by: string; role: 'DOMAIN_EXPERT' | 'FARM_OWNER'; at: string } | null
+  // BR-22 — lần Farm Owner nhắc chuyên gia kết luận mùa vụ đã đóng; mỗi mùa một lần
+  expert_reminded_at?: string | null
 }

@@ -33,6 +33,7 @@ describe('useUpdateWeatherRules', () => {
     client.setQueryData<WeatherRulesView>(['weather-rules', 'house-1'], {
       house_id: 'house-1',
       rules: [],
+      proposal: { rules: [], proposed_by: 'owner-1', proposed_at: '2026-11-20T00:00:00.000Z' },
       last_compensation: lastCompensation,
     })
     const savedRule = { _id: 'rule-1', metric: 'temperature_max', min: 33, offset_pct: 5, duration_min: 60, active: true }
@@ -49,5 +50,7 @@ describe('useUpdateWeatherRules', () => {
     const view = client.getQueryData<WeatherRulesView>(['weather-rules', 'house-1'])
     expect(view?.rules).toEqual([savedRule])
     expect(view?.last_compensation).toEqual(lastCompensation)
+    // Đặt luật trực tiếp thì backend bỏ đề xuất đang chờ của nhà
+    expect(view?.proposal).toBeNull()
   })
 })

@@ -26,7 +26,7 @@ import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { useAutoHideControls } from '@/hooks/device/useAutoHideControls'
 import { useCameraAutoplay } from '@/hooks/device/useCameraAutoplay'
-import { useCanDrawCountingRing } from '@/hooks/device/useCanDrawCountingRing'
+import { useCountingRingAccess } from '@/hooks/device/useCountingRingAccess'
 import { useCameraStreamUrl } from '@/hooks/device/useCameraStreamUrl'
 import { useVideoZoom } from '@/hooks/device/useVideoZoom'
 import { useFarmPrefs } from '@/hooks/farm/useFarmPrefs'
@@ -74,7 +74,7 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
   const cameraIndex = camera ? cameras.findIndex(item => item._id === camera._id) : -1
   const isCollapsed = prefs.isCameraCollapsed
   const isOnline = camera?.status === 'ONLINE'
-  const canDrawRing = useCanDrawCountingRing(camera?.house_id ?? null)
+  const ringAccess = useCountingRingAccess(camera?.house_id ?? null)
   const autoplay = useCameraAutoplay({ canPlay: isActive && !isCollapsed && isOnline })
   const streamQuery = useCameraStreamUrl(autoplay.shouldStream && camera ? camera._id : null)
   const player = useVideoPlayer(streamQuery.data ?? null, videoPlayer => {
@@ -129,8 +129,8 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
     { icon: MagnifyingGlassPlusIcon, label: t('Phóng to'), onPress: withControlsKept(zoom.zoomIn) },
     { icon: MagnifyingGlassMinusIcon, label: t('Thu nhỏ'), onPress: withControlsKept(zoom.zoomOut) },
     { icon: ArrowsOutIcon, label: t('Toàn màn hình'), onPress: withControlsKept(() => setFullscreen(true)) },
-    // Vẽ vòng đếm (VISION-FR-018): chuyên gia, kỹ thuật viên của nhà, chủ trại khi farm chưa có chuyên gia
-    ...(camera && canDrawRing ? [{ icon: PolygonIcon, label: t('Vẽ vòng đếm của camera'), onPress: openRingEditor }] : []),
+    // Vẽ vòng đếm (VISION-FR-018): chuyên gia, chủ trại, kỹ thuật viên của nhà
+    ...(camera && ringAccess.canDraw ? [{ icon: PolygonIcon, label: t('Vẽ vòng đếm của camera'), onPress: openRingEditor }] : []),
   ]
 
   if (isCollapsed) {
@@ -252,6 +252,7 @@ export function HouseCameraPanel({ cameras, today, isLoading, isError, onRetry, 
         camera={isRingEditorOpen ? camera : null}
         player={player}
         videoMessage={ringEditorMessage}
+        reviewNote={ringAccess.reviewNote}
         onClose={() => setRingEditorOpen(false)}
       />
     </Animated.View>

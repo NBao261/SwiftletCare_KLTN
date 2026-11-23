@@ -7,7 +7,7 @@ export interface UpdateDetectionTuningInput {
   tuning: DetectionTuning
 }
 
-// Lưu tham số phát hiện của zone (EXPERT-FR-008): chỉ chuyên gia
+// Lưu tham số phát hiện của zone (EXPERT-FR-008): chuyên gia và chủ trại (BR-22 nhóm A)
 export function useUpdateDetectionTuning() {
   const queryClient = useQueryClient()
 

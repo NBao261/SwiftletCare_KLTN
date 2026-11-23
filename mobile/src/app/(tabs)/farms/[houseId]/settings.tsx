@@ -192,10 +192,10 @@ export default function HouseSettingsScreen() {
       >
         <ZoneInfoSection zone={zone} editor={editor} />
         <View onLayout={event => handleSectionLayout(getSettingsSectionId('thresholds', zone._id), event)}>
-          <ThresholdSection zone={zone} editor={editor} onSaved={toast.show} />
+          <ThresholdSection zone={zone} farmId={house.farm_id} editor={editor} onSaved={toast.show} />
         </View>
         <View onLayout={event => handleSectionLayout(getSettingsSectionId('fuzzy', zone._id), event)}>
-          <FuzzyTuningSection zone={zone} editor={editor} onSaved={toast.show} />
+          <FuzzyTuningSection zone={zone} farmId={house.farm_id} editor={editor} onSaved={toast.show} />
         </View>
         <View onLayout={event => handleSectionLayout(getSettingsSectionId('detection', zone._id), event)}>
           <DetectionTuningSection zone={zone} farmId={house.farm_id} editor={editor} onSaved={toast.show} />

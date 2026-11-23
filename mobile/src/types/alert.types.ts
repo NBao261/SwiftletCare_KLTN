@@ -59,6 +59,8 @@ export interface Alert {
   renotified_at?: string
   // Không có là chưa phán quyết
   expert_verdict?: AlertVerdict
+  // BR-22 — lần Farm Owner nhắc chuyên gia kết luận (POST /expert-activity/reminders); mỗi cảnh báo một lần
+  expert_reminded_at?: string | null
   // ALERT-FR-017 — người nhận lúc tạo: thợ đang trực của nhà, Farm Owner được báo ngay không; thiếu = cảnh báo trước G-21
   routing?: { technician_id?: string | null; owners_notified?: boolean } | null
   // BR-40 — lúc báo Farm Owner vì thợ chưa xác nhận sau escalation_min

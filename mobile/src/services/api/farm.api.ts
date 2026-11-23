@@ -19,6 +19,7 @@ import type {
   HealthLevels,
   HouseHealthLevelsView,
   WeatherRule,
+  WeatherRulesProposal,
   WeatherRulesView,
   Thresholds,
   UpdateFarmPayload,
@@ -73,13 +74,17 @@ export const farmApi = {
   // có chuyên gia bị 403, không có gợi ý thì 409 kèm lý do
   applySuggestion: (zoneId: string) => apiClient.post<ApiResponse<Zone>>(ENDPOINTS.ZONE_APPLY_SUGGESTION(zoneId)),
 
-  // Tham số phát hiện của Zone (EXPERT-FR-008), chỉ chuyên gia
+  // Tham số phát hiện của Zone (EXPERT-FR-008): chuyên gia, chủ trại (farm có chuyên gia thì mở mục duyệt, BR-22)
   updateDetectionTuning: (zoneId: string, payload: DetectionTuning) =>
     apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_DETECTION_TUNING(zoneId), payload),
 
-  // Mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008), chỉ chuyên gia
+  // Mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008): chuyên gia, chủ trại (farm có chuyên gia thì mở mục duyệt, BR-22)
   updateBirdCountTuning: (houseId: string, payload: BirdCountTuning) =>
     apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_BIRD_COUNT_TUNING(houseId), payload),
+
+  // Đưa về mặc định của backend (EXPERT-FR-008), không body: 5 tham số phát hiện của zone, mức giảm tỷ lệ về tổ 20 % của nhà
+  resetDetectionTuning: (zoneId: string) => apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_DETECTION_TUNING_RESET(zoneId)),
+  resetBirdCountTuning: (houseId: string) => apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_BIRD_COUNT_TUNING_RESET(houseId)),
 
   // Giai đoạn nhà (FARM-FR-014): đổi được lưu lịch sử, đánh giá ngày tiếp theo theo giai đoạn mới (BR-46)
   setHouseStage: (houseId: string, stage: HouseStage) =>
@@ -93,6 +98,10 @@ export const farmApi = {
   updateWeatherRules: (houseId: string, rules: WeatherRule[]) =>
     // PUT chỉ trả house_id và rules (api-spec), không kèm last_compensation
     apiClient.put<ApiResponse<Omit<WeatherRulesView, 'last_compensation'>>>(ENDPOINTS.HOUSE_WEATHER_RULES(houseId), { rules }),
+  // Farm Owner trên farm có chuyên gia gửi bộ luật để chuyên gia duyệt (BR-22, BR-38); luật đang chạy không đổi, gửi lại thì thay
+  // đề xuất cũ. Farm chưa có chuyên gia thì 409
+  proposeWeatherRules: (houseId: string, rules: WeatherRule[]) =>
+    apiClient.post<ApiResponse<WeatherRulesProposal>>(ENDPOINTS.HOUSE_WEATHER_RULES_PROPOSAL(houseId), { rules }),
 
   // Lịch đếm chim của nhà (VISION-FR-019): lưu là thay cả lịch, áp từ ngày hôm sau (giờ VN)
   getCountingSchedule: (houseId: string) =>

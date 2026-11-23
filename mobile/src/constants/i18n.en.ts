@@ -1630,7 +1630,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chiều {window}': 'Evening {window}',
   'Khung sáng hôm nay': 'Morning window today',
   'Khung chiều hôm nay': 'Evening window today',
-  'Farm đã có chuyên gia: chuyên gia đặt mục này, bạn chỉ xem': 'The farm has an expert: the expert sets this, you can only view it',
   'Bạn chỉ xem mục này': 'You can only view this',
   // ALERT-FR-005 — kênh theo mức cảnh báo
   'Không tắt được': 'Cannot turn off',
@@ -1671,4 +1670,23 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   // Phân tích: bộ chọn nhà gắn với farm
   'Đã ghim': 'Pinned',
   'Chọn nhà yến · {farm}': 'Choose a house · {farm}',
+  // Chủ trại quyết định trên farm có chuyên gia (BR-22, PR 9 audit 21/11)
+  'Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại': 'Changes apply at once; the expert will review them',
+  'Chuyên gia sẽ xem lại thay đổi này.': 'The expert will review this change.',
+  'Khôi phục mặc định': 'Restore defaults',
+  'Không khôi phục được': 'Could not restore',
+  'Khôi phục tham số phát hiện mặc định?': 'Restore default detection parameters?',
+  '5 tham số phát hiện của {zone} sẽ về bộ mặc định của hệ thống và áp dụng ngay.': 'The 5 detection parameters of {zone} will return to the system defaults and apply at once.',
+  'Đã khôi phục tham số phát hiện mặc định': 'Default detection parameters restored',
+  'Khôi phục mức giảm mặc định?': 'Restore the default drop?',
+  'Mức giảm tỷ lệ về tổ của nhà sẽ về 20 % và áp dụng ngay.': "The house's return rate drop will return to 20 % and apply at once.",
+  'Đã khôi phục mức giảm tỷ lệ về tổ mặc định': 'Default return rate drop restored',
+  'Đã gửi chuyên gia duyệt': 'Sent to the expert',
+  'Trang trại không còn chuyên gia. Bạn đặt luật trực tiếp được': 'This farm no longer has an expert. You can set the rules directly',
+  'Luật mới chỉ chạy khi chuyên gia duyệt': 'New rules run only once the expert approves them',
+  'có đề xuất chờ duyệt': 'proposal awaiting approval',
+  'Đề xuất chờ chuyên gia duyệt · gửi {time}': 'Proposal awaiting the expert · sent {time}',
+  'Nhắc chuyên gia': 'Remind the expert',
+  'Đã nhắc chuyên gia': 'Expert reminded',
+  'Chưa có kết luận mùa vụ': 'No season conclusion yet',
 }

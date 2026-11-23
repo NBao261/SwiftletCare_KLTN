@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { ReportMetrics } from '@/components/analytics/ReportMetrics'
 import { StatRow } from '@/components/analytics/StatRow'
+import { RemindExpertButton } from '@/components/common/RemindExpertButton'
 import { HealthDayRow } from '@/components/health/HealthDayRow'
 import { HealthStatusBadge } from '@/components/health/HealthStatusBadge'
 import { Button } from '@/components/ui/button'
@@ -21,11 +22,13 @@ interface HouseReportDetailProps {
   hasExpert: boolean
   // Chuyên gia viết / sửa kết luận (EXPERT-FR-006); không truyền thì chỉ xem
   onEditConclusion?: () => void
+  // Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận khi chưa có (BR-22 nhóm C)
+  canRemindExpert?: boolean
 }
 
 // Phần mở rộng của một báo cáo theo nhà (EXPERT-FR-005/006): trạng thái các ngày, đàn chim,
 // thời tiết, các ngày, từng Zone, kết luận của chuyên gia
-export function HouseReportDetail({ report, hasExpert, onEditConclusion }: HouseReportDetailProps) {
+export function HouseReportDetail({ report, hasExpert, onEditConclusion, canRemindExpert = false }: HouseReportDetailProps) {
   const palette = usePalette()
   const counts = STATUS_ORDER.flatMap(status => {
     const count = report.status_counts?.[status] ?? 0
@@ -143,9 +146,14 @@ export function HouseReportDetail({ report, hasExpert, onEditConclusion }: House
               </Text>
             </>
           ) : (
-            <Text variant="small" color={palette.textSecondary}>
-              {t('Chưa có kết luận')}
-            </Text>
+            <>
+              <Text variant="small" color={palette.textSecondary}>
+                {t('Chưa có kết luận')}
+              </Text>
+              {canRemindExpert && (
+                <RemindExpertButton kind="health_report" id={report._id} remindedAt={report.expert_reminded_at} />
+              )}
+            </>
           )}
           {onEditConclusion && (
             <Button label={conclusion ? t('Sửa kết luận') : t('Viết kết luận')} variant="link" onPress={onEditConclusion} />

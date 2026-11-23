@@ -1,3 +1,4 @@
+import type { Role } from '@/types'
 import type { PermissionAction } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -61,10 +62,20 @@ export function parseSettingsSectionKind(value: string | undefined): SettingsSec
   return SECTION_KINDS.find(kind => kind === value) ?? null
 }
 
-// Vì sao một mục chỉ được xem: chủ trại ở farm đã có chuyên gia thì việc đó của chuyên gia (BR-22); role khác chỉ xem. Chủ trại
-// mà danh sách farm chưa tải xong (chưa biết farm có chuyên gia) thì null — không nói nhầm là chỉ xem
-export function getViewOnlyNote(canEditWithoutExpert: boolean, hasExpert: boolean | undefined): string | null {
-  if (canEditWithoutExpert && hasExpert === undefined) return null
-  if (canEditWithoutExpert && hasExpert) return t('Farm đã có chuyên gia: chuyên gia đặt mục này, bạn chỉ xem')
-  return t('Bạn chỉ xem mục này')
+// Dòng chân mục nhóm A của BR-22: chủ trại trên farm có chuyên gia sửa vẫn áp ngay, backend mở mục duyệt cho chuyên gia. Chưa biết
+// farm có chuyên gia hay không thì không ghi, tránh nói sai
+export function getExpertReviewNote(role: Role | undefined, hasExpert: boolean | undefined): string | null {
+  if (role !== 'FARM_OWNER' || hasExpert !== true) return null
+  return t('Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại')
+}
+
+// Câu báo đã lưu của chủ trại trên farm có chuyên gia kèm lời nhắc chuyên gia sẽ xem lại (BR-22 nhóm A)
+export function withExpertReviewMessage(message: string, reviewNote: string | null): string {
+  return reviewNote ? `${message}. ${t('Chuyên gia sẽ xem lại thay đổi này.')}` : message
+}
+
+// Ghép các dòng chân mục, bỏ dòng trống; không còn dòng nào thì undefined để mục không vẽ chân
+export function joinFooterNotes(...notes: (string | null | undefined)[]): string | undefined {
+  const lines = notes.filter((note): note is string => Boolean(note))
+  return lines.length > 0 ? lines.join('\n') : undefined
 }

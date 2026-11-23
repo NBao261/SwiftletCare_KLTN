@@ -145,10 +145,18 @@ export interface WeatherRule {
   active: boolean
 }
 
-// GET /farms/houses/{houseId}/weather-rules: luật và lần bù gần nhất (null khi chưa bù lần nào)
+// Bộ luật Farm Owner gửi trên farm có chuyên gia (BR-22, BR-38): chỉ chạy khi chuyên gia duyệt
+export interface WeatherRulesProposal {
+  rules: WeatherRule[]
+  proposed_by: string
+  proposed_at: string
+}
+
+// GET /farms/houses/{houseId}/weather-rules: luật, đề xuất đang chờ (null khi không có) và lần bù gần nhất (null khi chưa bù)
 export interface WeatherRulesView {
   house_id: string
   rules: WeatherRule[]
+  proposal: WeatherRulesProposal | null
   last_compensation: {
     rule_id: string
     offset_pct: number

@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@jest/globals'
 import {
   getSettingsSectionId,
-  getViewOnlyNote,
+  getExpertReviewNote,
+  joinFooterNotes,
+  withExpertReviewMessage,
   isHouseSectionKind,
   parseSettingsSectionKind,
 } from '@/utils/settingsSection.utils'
@@ -35,13 +37,29 @@ describe('parseSettingsSectionKind', () => {
   })
 })
 
-describe('getViewOnlyNote', () => {
-  it('chủ trại ở farm có chuyên gia thì nói rõ việc của chuyên gia; còn lại chỉ xem', () => {
-    expect(getViewOnlyNote(true, true)).toBe('Farm đã có chuyên gia: chuyên gia đặt mục này, bạn chỉ xem')
-    expect(getViewOnlyNote(false, false)).toBe('Bạn chỉ xem mục này')
+describe('getExpertReviewNote', () => {
+  it('chỉ chủ trại trên farm có chuyên gia thấy dòng "chuyên gia sẽ xem lại"', () => {
+    expect(getExpertReviewNote('FARM_OWNER', true)).toBe('Thay đổi có hiệu lực ngay, chuyên gia sẽ xem lại')
+    expect(getExpertReviewNote('FARM_OWNER', false)).toBeNull()
+    expect(getExpertReviewNote('DOMAIN_EXPERT', true)).toBeNull()
   })
 
-  it('chủ trại khi chưa biết farm có chuyên gia hay không thì không ghi gì', () => {
-    expect(getViewOnlyNote(true, undefined)).toBeNull()
+  it('chưa biết farm có chuyên gia hay không thì không ghi gì', () => {
+    expect(getExpertReviewNote('FARM_OWNER', undefined)).toBeNull()
+    expect(getExpertReviewNote(undefined, true)).toBeNull()
+  })
+})
+
+describe('withExpertReviewMessage', () => {
+  it('có dòng duyệt thì câu báo kèm lời nhắc, không có thì giữ nguyên', () => {
+    expect(withExpertReviewMessage('Đã lưu', 'x')).toBe('Đã lưu. Chuyên gia sẽ xem lại thay đổi này.')
+    expect(withExpertReviewMessage('Đã lưu', null)).toBe('Đã lưu')
+  })
+})
+
+describe('joinFooterNotes', () => {
+  it('ghép các dòng có chữ, bỏ dòng trống; không còn dòng nào thì undefined', () => {
+    expect(joinFooterNotes('Một', null, 'Hai')).toBe('Một\nHai')
+    expect(joinFooterNotes(null, undefined)).toBeUndefined()
   })
 })

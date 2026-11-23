@@ -8,7 +8,8 @@ export interface UpdateWeatherRulesInput {
 }
 
 // Lưu cả danh sách luật bù thời tiết của nhà (ENV-FR-030, BR-38); xong thì thay luật đang hiện bằng bản backend trả. PUT không
-// trả last_compensation nên giữ lần bù gần nhất đang có (lưu luật không gửi lần bù nào)
+// trả last_compensation nên giữ lần bù gần nhất đang có (lưu luật không gửi lần bù nào); PUT bỏ đề xuất đang chờ của nhà nên
+// proposal về null
 export function useUpdateWeatherRules() {
   const queryClient = useQueryClient()
 
@@ -18,6 +19,7 @@ export function useUpdateWeatherRules() {
     onSuccess: view =>
       queryClient.setQueryData<WeatherRulesView>(['weather-rules', view.house_id], previous => ({
         ...view,
+        proposal: null,
         last_compensation: previous?.last_compensation ?? null,
       })),
   })

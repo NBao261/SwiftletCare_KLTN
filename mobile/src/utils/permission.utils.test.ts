@@ -45,16 +45,32 @@ describe('canPerform', () => {
     }
   })
 
-  it('ngưỡng và hệ số fuzzy: chủ trại và chuyên gia; tham số phát hiện, mức giảm tỷ lệ về tổ: chuyên gia, chủ trại khi farm chưa có chuyên gia', () => {
-    for (const action of ['editThresholds', 'editFuzzyTuning'] as const) {
+  it('nhóm A của BR-22: chủ trại sửa dù farm có chuyên gia hay chưa, chuyên gia sửa, kỹ thuật viên không', () => {
+    const groupAActions = [
+      'editThresholds',
+      'editFuzzyTuning',
+      'editDetectionTuning',
+      'editBirdCountTuning',
+      'editCountingSchedule',
+      'editHealthLevels',
+    ] as const
+    for (const action of groupAActions) {
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(true)
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(true)
       expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(true)
       expect(canPerform(buildUser('DOMAIN_EXPERT'), action)).toBe(true)
+      expect(canPerform(buildUser('FARM_TECHNICIAN'), action)).toBe(false)
     }
-    for (const action of ['editDetectionTuning', 'editBirdCountTuning'] as const) {
-      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(false)
-      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(true)
+  })
+
+  it('gửi đề xuất luật thời tiết, nhắc chuyên gia: chỉ chủ trại trên farm có chuyên gia (BR-22 nhóm B, C)', () => {
+    for (const action of ['proposeWeatherRules', 'remindExpert'] as const) {
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(true)
+      expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(false)
+      // Chưa biết farm có chuyên gia hay không thì không mở nút
       expect(canPerform(buildUser('FARM_OWNER'), action)).toBe(false)
-      expect(canPerform(buildUser('DOMAIN_EXPERT'), action, { farmHasExpert: true })).toBe(true)
+      expect(canPerform(buildUser('DOMAIN_EXPERT'), action, { farmHasExpert: true })).toBe(false)
+      expect(canPerform(buildUser('FARM_TECHNICIAN'), action, { farmHasExpert: true })).toBe(false)
     }
   })
 
@@ -66,12 +82,11 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('FARM_OWNER'), 'applyCoefficientSuggestion')).toBe(false)
   })
 
-  it('vòng đếm: chuyên gia và kỹ thuật viên vẽ; chủ trại chỉ khi farm chưa có chuyên gia (VISION-FR-018, BR-22)', () => {
+  it('vòng đếm: chuyên gia, kỹ thuật viên và chủ trại vẽ; farm có chuyên gia thì vòng của chủ trại mở mục duyệt (VISION-FR-018, BR-22)', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'drawCountingRing')).toBe(true)
     expect(canPerform(buildUser('FARM_TECHNICIAN'), 'drawCountingRing')).toBe(true)
     expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing', { farmHasExpert: false })).toBe(true)
-    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing', { farmHasExpert: true })).toBe(false)
-    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing')).toBe(false)
+    expect(canPerform(buildUser('FARM_OWNER'), 'drawCountingRing', { farmHasExpert: true })).toBe(true)
   })
 
   it('chỉ chuyên gia viết kết luận báo cáo', () => {
@@ -186,8 +201,8 @@ describe('canPerform', () => {
     expect(canPerform(buildUser('DOMAIN_EXPERT'), 'decideRecommendation')).toBe(false)
   })
 
-  it('luật thời tiết, lịch đếm, mức chỉ số, ngày lệch: chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)', () => {
-    for (const action of ['editWeatherRules', 'editCountingSchedule', 'editHealthLevels', 'reviewDisagreements'] as const) {
+  it('đặt thẳng luật thời tiết, xem ngày lệch: chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22 nhóm B, C)', () => {
+    for (const action of ['editWeatherRules', 'reviewDisagreements'] as const) {
       expect(canPerform(buildUser('DOMAIN_EXPERT'), action, { farmHasExpert: true })).toBe(true)
       expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: false })).toBe(true)
       expect(canPerform(buildUser('FARM_OWNER'), action, { farmHasExpert: true })).toBe(false)

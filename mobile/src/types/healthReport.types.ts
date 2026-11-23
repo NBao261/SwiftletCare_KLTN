@@ -148,6 +148,8 @@ export interface HouseHealthReport extends HouseHealthReportSummary {
   days?: HouseHealthDay[]
   status_counts?: Partial<Record<HealthDayStatus, number>>
   expert_conclusion: ExpertConclusion | null
+  // BR-22 — lần Farm Owner nhắc chuyên gia viết kết luận; mỗi báo cáo một lần
+  expert_reminded_at?: string | null
 }
 
 // Một lượt chấm lệch với trạng thái hệ thống lúc chấm (EXPERT-FR-022, BR-31)

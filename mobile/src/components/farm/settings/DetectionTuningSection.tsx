@@ -1,13 +1,16 @@
-import { WaveformIcon } from 'phosphor-react-native'
+import { Alert as NativeAlert } from 'react-native'
+import { ArrowCounterClockwiseIcon, WaveformIcon } from 'phosphor-react-native'
 import { NumberTuningSection } from '@/components/farm/settings/NumberTuningSection'
+import { useExpertReviewNote } from '@/hooks/farm/useExpertReviewNote'
+import { useResetDetectionTuning } from '@/hooks/farm/useResetDetectionTuning'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
-import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useUpdateDetectionTuning } from '@/hooks/farm/useUpdateDetectionTuning'
 import { useAuthStore } from '@/stores/authStore'
 import type { DetectionTuning, Zone } from '@/types'
+import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { getDetectionTuningLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
-import { getSettingsSectionId } from '@/utils/settingsSection.utils'
+import { getSettingsSectionId, joinFooterNotes, withExpertReviewMessage } from '@/utils/settingsSection.utils'
 import { DETECTION_TUNING_RULES } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -21,13 +24,33 @@ interface DetectionTuningSectionProps {
   onSaved: (message: string) => void
 }
 
-// Mục "Tham số phát hiện" của một zone (EXPERT-FR-008): chuyên gia sửa; farm chưa có chuyên gia thì chủ trại sửa thay
-// (BR-22), còn lại chủ trại chỉ xem
+// Mục "Tham số phát hiện" của một zone (EXPERT-FR-008): chuyên gia và chủ trại sửa, ô góc dưới đưa về bộ mặc định của backend.
+// Farm có chuyên gia thì thay đổi của chủ trại áp ngay và mở mục duyệt cho chuyên gia (BR-22 nhóm A)
 export function DetectionTuningSection({ zone, farmId, editor, onSaved }: DetectionTuningSectionProps) {
   const user = useAuthStore(state => state.user)
-  const hasExpert = useFarmHasExpert(farmId)
-  const canEdit = canPerform(user, 'editDetectionTuning', { farmHasExpert: hasExpert })
+  const canEdit = canPerform(user, 'editDetectionTuning')
+  const reviewNote = useExpertReviewNote(farmId)
   const updateDetectionTuning = useUpdateDetectionTuning()
+  const resetDetectionTuning = useResetDetectionTuning()
+  const showSaved = (message: string) => onSaved(withExpertReviewMessage(message, reviewNote))
+
+  const confirmReset = () =>
+    NativeAlert.alert(
+      t('Khôi phục tham số phát hiện mặc định?'),
+      t('5 tham số phát hiện của {zone} sẽ về bộ mặc định của hệ thống và áp dụng ngay.', { zone: zone.name }),
+      [
+        { text: t('Huỷ'), style: 'cancel' },
+        {
+          text: t('Khôi phục'),
+          style: 'destructive',
+          onPress: () =>
+            resetDetectionTuning.mutate(zone._id, {
+              onSuccess: () => showSaved(t('Đã khôi phục tham số phát hiện mặc định')),
+              onError: error => NativeAlert.alert(t('Không khôi phục được'), getSettingsErrorMessage(error)),
+            }),
+        },
+      ],
+    )
 
   return (
     <NumberTuningSection
@@ -36,7 +59,17 @@ export function DetectionTuningSection({ zone, farmId, editor, onSaved }: Detect
       title={t('Tham số phát hiện')}
       subtitle={t('Khi nào báo tiếng ồn lạ, phun sương không hiệu quả, loa hỏng')}
       scopeLabel={zone.name}
-      footerNote={canEdit ? t('Lưu xong áp dụng ngay cho khu vực') : undefined}
+      footerNote={canEdit ? joinFooterNotes(t('Lưu xong áp dụng ngay cho khu vực'), reviewNote) : undefined}
+      footerTile={
+        canEdit
+          ? {
+              icon: ArrowCounterClockwiseIcon,
+              label: t('Khôi phục mặc định'),
+              onPress: confirmReset,
+              disabled: resetDetectionTuning.isPending,
+            }
+          : undefined
+      }
       keys={DETECTION_KEYS}
       rules={DETECTION_TUNING_RULES}
       values={zone.detection_tuning}
@@ -45,7 +78,7 @@ export function DetectionTuningSection({ zone, farmId, editor, onSaved }: Detect
       editor={editor}
       save={values => updateDetectionTuning.mutateAsync({ zoneId: zone._id, tuning: values })}
       savedMessage={t('Đã lưu tham số phát hiện')}
-      onSaved={onSaved}
+      onSaved={showSaved}
     />
   )
 }
