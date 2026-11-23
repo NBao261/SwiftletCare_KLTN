@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.25 (Review 2, final scope) |
+| Document version | 2.2.26 (Review 2, final scope) |
 | Date | 23/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.15 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -344,7 +344,7 @@ Farm location (FARM-FR-001): the web farm form shows an OpenStreetMap map (`leaf
 
 Device setup (SF-01): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key (and, for flashing, the broker credential) only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; the web setup screen does not scan: it takes the label's QR text pasted or the device ID and activation key typed (FARM-FR-003), and shows the same three setup steps as the mobile app (registered, online, zone configuration applied).
 
-**Farm Technician client.** The mobile application is the technician's main tool: alerts of the assigned houses with acknowledgement and on-site cause, Work Orders with photos, checklists, maintenance and calibration records, manual override and restart, daily rating, harvest entry. On the web the Farm Technician has only the devices of its assigned houses with restart and a read-only list of lullaby tracks, the alerts of those houses with acknowledgement and on-site cause, the houses themselves with its own duty shifts, the in-app notifications and its settings; every other task of the technician in Report 3, Section 2.4 is done in the mobile application. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
+**Farm Technician client.** The web application and the mobile application both carry every task of the Farm Technician in Report 3, Section 2.4, on its assigned houses: the dashboard, analytics, bird counts and live stream, the counting rings, alerts with acknowledgement, on-site cause and on-site checks, Work Orders with checklists and up to five photos, maintenance plans and recommendations to read, the daily rating, harvest entry, manual override and restart, the devices with the speaker schedule and lullaby tracks to read, the zone parameters, counting schedule and weather rules to read, its duty shifts, the in-app notifications and its settings; actions the API refuses to the technician are not shown. The mobile application adds what the house needs on the spot: the camera for photos and QR codes, and push notifications. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
 
 ### 5.5 Engineering Constants in the Code
 
@@ -1900,6 +1900,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.26 | 23/11/2026 | §5.4: the web carries every task of every role of Report 3 §2.4; the Farm Technician is no longer limited to alerts, devices and houses on the web (decided by the team on 23/11/2026, G-33) |
 | 2.2.25 | 23/11/2026 | D6: each track counts once, from where it appeared and where it was lost (Report 3 4.2.19, VISION-FR-005, BR-12: the morning counts only exits and the evening only entries) |
 | 2.2.24 | 23/11/2026 | Up to four counting rings per camera (Report 3 4.2.18, VISION-FR-018): `CAMERA_NODE` gains `counting_rings` (the first ring stays in `counting_ring` for older apps) and `default_rings`, the AI node's default ring reported in its heartbeat (`defaultRings`); the retained `config` always carries `counting_rings`, an empty list sends the AI node back to its default ring |
 | 2.2.22 | 21/11/2026 | Alert severity and incidents (gap G-32, decision Q-06): the backend sets the severity of every alert from its type (BR-15) and ignores the value a device sends (Section 7.2); `incident_key` with a partial unique index keeps one open alert per incident (ALERT-FR-008; Sections 6.1, 6.2) and its migration in Section 6.4 |

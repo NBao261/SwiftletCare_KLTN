@@ -1,5 +1,6 @@
 // Module ALERT: cảnh báo và mức độ nghiêm trọng.
 import type { SiteCause } from '@/types/workOrder.types'
+import type { OnsiteCheck } from '@/types/expert/alerts.types'
 
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 // 4 cấp hiển thị của mức cảnh báo, mỗi cấp một mức backend: P1 Khẩn cấp, P2 Cao, P3 Trung bình, P4 Thấp
@@ -39,6 +40,8 @@ export interface Alert {
   acknowledged_at?: string; acknowledged_by?: string; acknowledgement_note?: string
   // nguyên nhân tìm thấy tại chỗ, ghi khi xác nhận hoặc khi Work Order làm xong
   site_cause?: { cause: SiteCause; photo_urls?: string[]; by: string; at: string } | null
+  // yêu cầu kiểm tra tại chỗ của cảnh báo suy luận gửi thợ của nhà (tối đa 1)
+  onsite_checks?: OnsiteCheck[] | null
   expert_verdict?: {
     result: 'CONFIRMED' | 'REJECTED'
     note?: string | null

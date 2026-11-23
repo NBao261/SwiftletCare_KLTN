@@ -11,6 +11,7 @@ import { SCADA_PATH } from '@/components/features/farm-owner/dashboard/scada.con
 import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure';
 import LiveCameraCard from '@/components/features/farm-owner/vision/LiveCameraCard';
 import { dashboardDict } from '@/constants/dashboard.i18n';
+import { RELAY_CONTROL_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useZonesEnvironment } from '@/hooks/farm-owner/useFarmOwnerDashboard';
@@ -40,8 +41,8 @@ export default function HouseDetailPanels({ scope, houseNode, canViewHarvest }: 
   const hasPanelZonePicker = zones.length > 1;
   const controlZones = useMemo(() => (controlZone ? [controlZone] : []), [controlZone]);
   const control = useZonesEnvironment(controlZones);
-  // Điều khiển tay rơ-le có thời hạn: Farm Owner được làm, Domain Expert thì không
-  const canControlRelay = usePermission('FARM_OWNER');
+  // Điều khiển tay: Farm Owner và Kỹ thuật viên (nhà được giao); Domain Expert chỉ xem
+  const canControlRelay = usePermission(...RELAY_CONTROL_ROLES);
   const navigate = useNavigate();
   const controlAnomalies = control.thresholds ? getAnomalies(control.readings, control.thresholds) : undefined;
 

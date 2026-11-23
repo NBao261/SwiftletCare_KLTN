@@ -4,7 +4,7 @@ import { vnDate } from '@/services/birdCount.service'
 import { pushHouseCameraConfigs } from '@/services/device.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import {
-  DEFAULT_WINDOWS, addDays, parseCountingSchedule, scheduleOn, windowsOn, type CountingSchedule,
+  DEFAULT_WINDOWS, addDays, parseCountingSchedule, scheduleOn, windowsOn, type CountingSchedule, type TimeWindow,
 } from '@/utils/countingSchedule.util'
 import { assertHouseAccess } from '@/utils/farmAccess.util'
 import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
@@ -13,6 +13,15 @@ import type { CurrentUser } from '@/types'
 import logger from '@/utils/logger.util'
 
 // Lịch mới áp từ ngày hôm sau
+
+const span = (window: TimeWindow) => `${window.start}–${window.end}`
+
+// Chỉ đổi khung mặc định thì số hồ sơ, khung tạm không đổi: phải nói ra để Farm Owner biết có gì khác
+function defaultsNote(before: CountingSchedule, after: CountingSchedule): string {
+  if (JSON.stringify(before.default_windows ?? null) === JSON.stringify(after.default_windows ?? null)) return ''
+  const own = after.default_windows
+  return own ? `, khung mặc định của nhà sáng ${span(own.morning)}, chiều ${span(own.evening)}` : ', về khung mặc định hệ thống'
+}
 
 const EMPTY: CountingSchedule = { profiles: [], temporary: [] }
 
@@ -23,8 +32,12 @@ function present(house: IHouse) {
     house_id: String(house._id),
     schedule: house.counting_schedule ?? EMPTY,
     effective_from: history.at(-1)?.effective_from ?? null,
-    default_windows: DEFAULT_WINDOWS,
+    // Khung của nhà nếu đã đặt, không thì khung hệ thống; system_default_windows để nút về khung hệ thống
+    default_windows: house.counting_schedule?.default_windows ?? DEFAULT_WINDOWS,
+    system_default_windows: DEFAULT_WINDOWS,
     today: { date: today, ...windowsOn(scheduleOn(history, today), today) },
+    // Lịch sửa hôm nay áp từ mai: trả khung ngày mai để màn hình cho thấy thay đổi đã lưu
+    tomorrow: { date: addDays(today, 1), ...windowsOn(scheduleOn(history, addDays(today, 1)), addDays(today, 1)) },
     history: history.map(version => ({
       effective_from: version.effective_from, changed_by: version.changed_by, changed_by_role: version.changed_by_role,
       changed_at: version.changed_at, schedule: version.schedule,
@@ -66,7 +79,7 @@ export async function updateCountingSchedule(houseId: string, user: CurrentUser,
   if (!opts.fromReview) {
     await notifyExpertDecision(user, farm._id, auditId, {
       what: 'đổi lịch đếm chim', place: `Nhà "${house.name}"`,
-      detail: `Áp từ ${effectiveFrom}: ${schedule.profiles.length} hồ sơ theo mùa, ${schedule.temporary.length} khung tạm`,
+      detail: `Áp từ ${effectiveFrom}: ${schedule.profiles.length} hồ sơ theo mùa, ${schedule.temporary.length} khung tạm${defaultsNote(before, schedule)}`,
     })
   }
   return present(house)

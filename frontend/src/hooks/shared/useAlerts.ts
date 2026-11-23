@@ -3,7 +3,7 @@ import { alertApi } from '@/apis/shared/alerts.api'
 import { canAccessPath } from '@/constants/roles'
 import { useAuthStore } from '@/stores/authStore'
 import { usePaginatedListQuery } from '@/hooks/common/usePaginatedListQuery'
-import type { Alert, AlertSeverity, AlertStatus, AlertType, SiteCause } from '@/types'
+import type { Alert, AlertSeverity, AlertStatus, AlertType, OnsiteObservation, SiteCause } from '@/types'
 
 export interface AlertsListQuery {
   // lọc theo trang trại, nhà hoặc Zone, mức, loại và kết luận chuyên gia
@@ -31,6 +31,16 @@ export function useAlertsList(query: AlertsListQuery, options?: { enabled?: bool
 
 function listAlerts(query: AlertsListQuery) {
   return alertApi.list(query as Record<string, string>)
+}
+
+// Cảnh báo đã xác nhận nhưng chưa xong: thợ cộng vào ô "Cảnh báo chưa xử lý" vì không đọc tổng quan trang trại
+// Giới hạn: 100 cảnh báo mới nhất, đủ cho các nhà một thợ được giao; cần nhiều hơn thì backend trả số theo nhà
+export function useAcknowledgedAlerts(enabled: boolean) {
+  return useQuery({
+    queryKey: ['alerts', 'acknowledged-structure'],
+    queryFn: () => alertApi.list({ status: 'ACKNOWLEDGED', limit: '100' }).then(response => response.data.data),
+    enabled,
+  })
 }
 
 // undefined khi chưa tải, lỗi hoặc role không vào được /alerts
@@ -70,6 +80,18 @@ export function useAcknowledgeAlert() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['alerts'] })
       void queryClient.invalidateQueries({ queryKey: ['farm-overview'] })
+    },
+  })
+}
+
+// Trả lời xong: câu trả lời vào bằng chứng; SENSOR_ANOMALY "cảm biến bẩn hoặc hỏng" thì backend mở phiếu sửa
+export function useAnswerOnsiteCheck() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string; observation: OnsiteObservation; note?: string; photo?: File }) => alertApi.answerOnsiteCheck(id, input),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['alerts'] })
+      void queryClient.invalidateQueries({ queryKey: ['work-orders'] })
     },
   })
 }

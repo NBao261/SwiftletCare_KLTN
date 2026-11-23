@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.17.0 · **Cập nhật:** 20/11/2026 · **Thay thế:** v2.16.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.18.0 · **Cập nhật:** 23/11/2026 · **Thay thế:** v2.17.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,13 @@
 ---
 
 ## 0. Changelog
+
+### v2.17.0 → v2.18.0 (web đủ việc của Farm Technician, G-33, `docs/reports/todo-web-all-roles-1123.md`)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **12.0 a, cột Technician** viết lại theo Report 3 §2.4: Farm Technician làm trên web mọi việc ở nhà được giao (phiếu công việc kèm ảnh, đánh giá ngày, thu hoạch chờ xác nhận, điều khiển tay, vòng đếm, trả lời kiểm tra tại chỗ), đọc tham số; không lắp thiết bị, không sửa tham số. |
+| 2 | **12.8 nhóm role** theo code: thêm `FARM_WORK_ROLES`, `RELAY_CONTROL_ROLES`; `HARVEST_ROLES` có kỹ thuật viên; bỏ các nhóm đích cũ không còn (`OPS_ROLES`, `SETUP_ROLES`, `EXPERT_ONLY`, `FARM_OWNER_ONLY`). |
 
 ### v2.16.0 → v2.17.0 (bố cục Farm Owner, `docs/reports/todo-ui-layout-1120.md` §5)
 
@@ -1076,34 +1083,34 @@ module.exports = {
 
 | Nhóm chức năng | Farm Owner | Domain Expert | Technician | Admin |
 |---|:---:|:---:|:---:|:---:|
-| Dashboard môi trường, Analytics, đếm chim, live stream | R | I (chỉ đọc) | – | – |
-| Báo cáo sức khỏe Zone | R | R | – | – |
+| Dashboard môi trường, Analytics, đếm chim, live stream | R | I (chỉ đọc) | I (nhà được giao) | – |
+| Báo cáo sức khỏe Zone | R | R | I (nhà được giao) | – |
 | Lịch sử quyết định của chuyên gia (EXPERT-FR-009) | R (xem, được báo từng quyết định) | R | – | – |
-| Trạng thái sức khỏe nhà yến theo ngày, đánh giá ngày từ quan sát của mình (MF-06) | R | R | – | – |
-| Báo cáo ngày/tuần/tháng, tải PDF/CSV | R | R | – | – |
+| Trạng thái sức khỏe nhà yến theo ngày, đánh giá ngày từ quan sát của mình (MF-06) | R | R | R (nhà được giao) | – |
+| Báo cáo ngày/tuần/tháng, tải PDF/CSV | R | R | R (nhà được giao) | – |
 | Mức của chỉ số sức khỏe theo nhà yến (BR-28) | R (farm có chuyên gia: mở mục duyệt, BR-22) | R (xem lại thay đổi của chủ farm) | – | – |
 | Duyệt thay đổi ngưỡng/hệ số của chủ farm (EXPERT-FR-010) | I | R | – | – |
-| Thông báo ngoài ứng dụng (Telegram, push) | R | – (chỉ trong ứng dụng) | – | – |
-| Xác nhận (acknowledge) cảnh báo | R | – | – (chỉ xem cảnh báo thiết bị) | – |
-| Kiểm chứng cảnh báo suy luận, viết kết luận | I (đọc kết luận; kiểm chứng thay khi farm chưa có chuyên gia, BR-22) | R | – | – |
-| Can thiệp tay relay có thời hạn | R | – | – | – |
-| Ngưỡng Zone, reset mặc định | R | R | – | I |
-| Hệ số logic mờ | R (áp gợi ý chỉ khi farm chưa có chuyên gia) | R (duyệt thay đổi của chủ farm, áp gợi ý) | – | I |
-| Tham số phát hiện, vòng đếm, lịch đếm theo mùa | R (farm có chuyên gia: mở mục duyệt, BR-22) | R (xem lại thay đổi của chủ farm) | – | I |
-| Luật bù thời tiết, hồ sơ cấu hình (nháp), luật khuyến nghị | R (farm có chuyên gia: gửi đề xuất, chỉ có hiệu lực khi chuyên gia duyệt, BR-22) | R (duyệt đề xuất của chủ farm) | – | – |
-| Đăng ký thiết bị bằng nhãn QR, gán Zone bằng mã QR tầng, dời, gỡ (SF-01) | R (farm mình) | – | R (mọi farm; Farm Owner được báo) | – |
-| Lệnh từ xa, OTA, file loa | – (chỉ xem) | – | R (mọi farm; Farm Owner được báo) | – |
+| Thông báo ngoài ứng dụng (Telegram, push) | R | – (chỉ trong ứng dụng) | R (cảnh báo nhà được giao, nhận trước chủ nhà yến) | – |
+| Xác nhận (acknowledge) cảnh báo | R | – | R (nhà được giao, ghi nguyên nhân tại chỗ) | – |
+| Kiểm chứng cảnh báo suy luận, viết kết luận | I (đọc kết luận; kiểm chứng thay khi farm chưa có chuyên gia, BR-22) | R | R (trả lời kiểm tra tại chỗ, EXPERT-FR-021) | – |
+| Can thiệp tay relay có thời hạn | R | – | R (nhà được giao) | – |
+| Ngưỡng Zone, reset mặc định | R | R | I (nhà được giao) | I |
+| Hệ số logic mờ | R (áp gợi ý chỉ khi farm chưa có chuyên gia) | R (duyệt thay đổi của chủ farm, áp gợi ý) | I (nhà được giao) | I |
+| Tham số phát hiện, vòng đếm, lịch đếm theo mùa | R (farm có chuyên gia: mở mục duyệt, BR-22) | R (xem lại thay đổi của chủ farm) | R vòng đếm; I tham số phát hiện, lịch đếm | I |
+| Luật bù thời tiết, hồ sơ cấu hình (nháp), luật khuyến nghị | R (farm có chuyên gia: gửi đề xuất, chỉ có hiệu lực khi chuyên gia duyệt, BR-22) | R (duyệt đề xuất của chủ farm) | I (luật bù thời tiết, khuyến nghị của nhà được giao) | – |
+| Đăng ký thiết bị bằng nhãn QR, gán Zone bằng mã QR tầng, dời, gỡ (SF-01) | R (farm mình) | – | – | – |
+| Lệnh từ xa, OTA, file loa | – (chỉ xem) | – | R khởi động lại (nhà được giao); I file loa | – |
 | Kho thiết bị: thêm, in nhãn QR, cấp lại/thu hồi khoá | – | – | – | R |
-| Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | I (mọi farm; chỉ cấu trúc, thiết bị, cảnh báo thiết bị) | – |
+| Cấu trúc Farm (Farm/House/Zone) | R (farm mình) | I | I (nhà được giao, ca trực của mình) | – |
 | Xoá farm, mời/gỡ thành viên | R (chỉ Primary Owner) | – | – | – |
-| Ghi nhận thu hoạch | R | I | – | – |
-| Phiếu công việc (Work Order) sửa chữa: mở tay, duyệt, mở lại, huỷ, giao lại; MTTA/MTTR theo nhà (OPS-FR-001…004, 009) | R | I (chỉ đọc) | – (làm trên mobile) | – |
+| Ghi nhận thu hoạch | R | I | R (lần thu chờ chủ nhà yến xác nhận; sửa, xoá lần chưa xác nhận của mình) | – |
+| Phiếu công việc (Work Order) sửa chữa: mở tay, duyệt, mở lại, huỷ, giao lại; MTTA/MTTR theo nhà (OPS-FR-001…004, 009) | R | I (chỉ đọc) | R (bắt đầu, checklist, báo xong kèm ảnh; nhà được giao) | – |
 | Tài khoản (tạo Technician, khoá/mở), cấu hình mặc định, audit log, tổng quan kỹ thuật | I | I | I | R |
 | Chọn bài loa ru / nghe thử | R | – | – | – |
-| Lịch loa của bộ điều khiển (BR-07) | R | – | – | – |
-| Lịch sử can thiệp tay, tỷ lệ thời gian tự động (ENV-FR-019, ANALYTICS-FR-011) | R | I | – | – |
+| Lịch loa của bộ điều khiển (BR-07) | R | – | I | – |
+| Lịch sử can thiệp tay, tỷ lệ thời gian tự động (ENV-FR-019, ANALYTICS-FR-011) | R | I | I (nhà được giao) | – |
 
-Nguồn: Report 3 §2.4. Farm chưa có chuyên gia (BR-22): Farm Owner làm thay các việc R của Domain Expert ở bảng trên, trừ viết kết luận, duyệt thay đổi của chính mình và duyệt hồ sơ cấu hình. Farm có chuyên gia: Farm Owner nhắc chuyên gia một lần mỗi kết luận còn chờ.
+Nguồn: Report 3 §2.4. Technician là Farm Technician, nhân viên của chủ nhà yến, chỉ trên các nhà được giao (AUTH-FR-013); trên web có đủ các việc này từ G-33 (`docs/reports/todo-web-all-roles-1123.md`). Farm chưa có chuyên gia (BR-22): Farm Owner làm thay các việc R của Domain Expert ở bảng trên, trừ viết kết luận, duyệt thay đổi của chính mình và duyệt hồ sơ cấu hình. Farm có chuyên gia: Farm Owner nhắc chuyên gia một lần mỗi kết luận còn chờ.
 
 **b) Cây màn theo role** — màn nào dùng chung, màn nào riêng
 
@@ -1312,15 +1319,19 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 1. Màn này thuộc nghiệp vụ role nào? → tạo `pages/<role>/<Role><ChứcNăng>Page.tsx`, tên hàm trùng tên file.
 2. Khai route trong `routes/<role>.routes.tsx`, bọc `<RequireRole allow={...}>` bằng nhóm role lấy từ `constants/roles.ts`, chọn theo bảng phân quyền Report 3 §2.4:
 
-   | Nhóm | Gồm | Dùng cho | Trạng thái |
-   |---|---|---|---|
-   | `OPS_ROLES` | Farm Owner · Technician · Admin | Thiết bị, cảnh báo, cấu trúc farm. Nút bật/tắt relay và xác nhận cảnh báo **chỉ Farm Owner** thấy (Technician, Admin: không) — ẩn bằng `usePermission`; Admin không còn màn farm (v2.11.0) | Có |
-   | `SETUP_ROLES` | Farm Owner · Technician | Thiết lập thiết bị bằng QR, dời/gỡ thiết bị, in mã QR tầng (SF-01) | Tạo khi làm màn SF-01 |
-   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | Dashboard, analytics, live stream, báo cáo sức khỏe Zone, ngưỡng và hệ số mờ theo Zone, lịch sử quyết định của chuyên gia; kiểm chứng cảnh báo (Farm Owner chỉ kết luận khi farm chưa có chuyên gia, có chuyên gia thì nhắc), tham số phát hiện, vòng đếm, lịch đếm, mức chỉ số sức khoẻ (Farm Owner sửa được, farm có chuyên gia thì chuyên gia duyệt sau), luật thời tiết, hồ sơ, luật khuyến nghị (Farm Owner ở farm có chuyên gia gửi chuyên gia duyệt) — BR-22, Report 3 4.2.15 | Tạo khi thêm `DOMAIN_EXPERT` |
-   | `EXPERT_ONLY` | Domain Expert | Viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số, duyệt hồ sơ cấu hình, duyệt đề xuất luật thời tiết và luật khuyến nghị | Tạo khi thêm `DOMAIN_EXPERT` |
-   | `FARM_OWNER_ONLY` | Farm Owner | Thành viên, cài đặt farm | Có |
-   | `HARVEST_ROLES` | Farm Owner (ghi) · Domain Expert (xem) | Ghi nhận thu hoạch. Code hiện là Farm Owner · Admin — bỏ Admin, thêm chuyên gia khi thêm `DOMAIN_EXPERT` (12.0 c dòng 4) | Có (đích khác) |
-   | `ADMIN_ONLY` | Admin | Quản trị hệ thống, kho thiết bị và in nhãn | Có |
+   | Nhóm | Gồm | Dùng cho |
+   |---|---|---|
+   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | So sánh nhà (`/overview`), chi tiết thiết bị theo nhà (`/devices/detail`) |
+   | `FARM_WORK_ROLES` | Farm Owner · Domain Expert · Farm Technician | Màn của nhà yến cho cả ba vai trò trại: tổng quan, phân tích, đếm chim, sức khoẻ và đánh giá ngày, phiếu công việc, bảo trì, khuyến nghị, vòng đếm, tham số chỉ đọc. Kỹ thuật viên chỉ thấy nhà được giao; nút backend trả 403 thì ẩn bằng `usePermission` |
+   | `RELAY_CONTROL_ROLES` | Farm Owner · Farm Technician | Điều khiển tay relay (`/dashboard/scada`) |
+   | `HARVEST_ROLES` | Farm Owner · Domain Expert · Farm Technician | Thu hoạch: Farm Owner ghi và xác nhận, kỹ thuật viên ghi lần chờ xác nhận, chuyên gia chỉ xem |
+   | `FARM_STRUCTURE_ROLES` | Farm Owner · Domain Expert · Farm Technician | Trang trại, nhà, Zone |
+   | `DEVICE_LIST_ROLES` | Admin + `FARM_STRUCTURE_ROLES` | `/devices` (mỗi role một trang) |
+   | `DEVICE_SETUP_ROLES` | Farm Owner | Lắp thiết bị (SF-01) |
+   | `ALERT_ROLES` | Admin · Farm Owner · Farm Technician | `/alerts`; Domain Expert dùng trang kiểm chứng |
+   | `EXPERT_DECISION_ROLES` | Domain Expert · Farm Owner | Trang quyết định `/domain-expert/*` (Farm Owner ghi theo BR-22) |
+   | `EXPERT_ROLES` | Domain Expert | Hàng đợi việc, báo cáo và kết luận |
+   | `ADMIN_ONLY` | Admin | Quản trị hệ thống, kho thiết bị và in nhãn |
 
    Domain Expert **không bao giờ** thuộc nhóm có hành động ghi vận hành (relay, ghi thu hoạch, acknowledge cảnh báo). Trang dùng chung có nút ghi (VD Thu hoạch mà chuyên gia chỉ xem) thì thêm chuyên gia vào `allow` và ẩn nút bằng `usePermission` (13.8).
 3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).

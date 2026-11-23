@@ -9,7 +9,7 @@ describe('validateCountingSchedule', () => {
       profiles: [{ name: 'Mùa đông', from: '11-01', to: '02-29', ...WINDOWS }],
       temporary: [{ from: '2026-11-20', to: '2026-11-20', ...WINDOWS }],
     })
-    expect(result).toEqual({ profiles: [null], temporary: [null] })
+    expect(result).toEqual({ profiles: [null], temporary: [null], defaults: null })
   })
 
   it('bắt tên trống, ngày không có thật và khung tạm ngược ngày', () => {
@@ -17,7 +17,7 @@ describe('validateCountingSchedule', () => {
       profiles: [{ name: ' ', from: '01-01', to: '03-31', ...WINDOWS }, { name: 'Hè', from: '02-30', to: '06-30', ...WINDOWS }],
       temporary: [{ from: '2026-11-21', to: '2026-11-20', ...WINDOWS }, { from: '2026-02-30', to: '2026-03-01', ...WINDOWS }],
     })
-    expect(result).toEqual({ profiles: ['name', 'monthDay'], temporary: ['dateOrder', 'date'] })
+    expect(result).toEqual({ profiles: ['name', 'monthDay'], temporary: ['dateOrder', 'date'], defaults: null })
   })
 
   it('khung bắt đầu trước kết thúc, sáng kết thúc trước chiều', () => {
@@ -45,10 +45,19 @@ describe('validateCountingSchedule', () => {
         { from: '2026-11-24', to: '2026-11-24', ...WINDOWS },
       ],
     })
-    expect(result).toEqual({ profiles: [null, 'overlap', null], temporary: [null, 'overlap', null] })
+    expect(result).toEqual({ profiles: [null, 'overlap', null], temporary: [null, 'overlap', null], defaults: null })
   })
 
   it('một hồ sơ cả năm không tự chồng chính nó', () => {
     expect(validateCountingSchedule({ profiles: [{ name: 'Cả năm', from: '01-01', to: '12-31', ...WINDOWS }], temporary: [] }).profiles).toEqual([null])
+  })
+})
+
+describe('khung mặc định của nhà', () => {
+  it('không đặt thì không có lỗi; đặt sai thứ tự thì báo như mọi khung', () => {
+    expect(validateCountingSchedule({ profiles: [], temporary: [] }).defaults).toBeNull()
+    expect(validateCountingSchedule({ profiles: [], temporary: [], default_windows: WINDOWS }).defaults).toBeNull()
+    const crossing = { morning: { start: '05:00', end: '18:00' }, evening: { start: '17:30', end: '19:00' } }
+    expect(validateCountingSchedule({ profiles: [], temporary: [], default_windows: crossing }).defaults).toBe('morningAfterEvening')
   })
 })

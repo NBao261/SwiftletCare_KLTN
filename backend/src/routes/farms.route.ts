@@ -120,7 +120,8 @@ router.put ('/houses/:houseId/bird-count-tuning/reset', requireRole('FARM_OWNER'
 // Hình dạng ở đây (422), luật giờ và chồng ngày ở service (400)
 router.get ('/houses/:houseId/counting-schedule', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('houseId').isMongoId(), validate, farmController.getCountingSchedule)
 router.put ('/houses/:houseId/counting-schedule', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(),
-  body('profiles').optional().isArray(), body('temporary').optional().isArray(), validate, farmController.updateCountingSchedule)
+  body('profiles').optional().isArray(), body('temporary').optional().isArray(),
+  body('default_windows').optional({ values: 'null' }).isObject(), validate, farmController.updateCountingSchedule)
 router.get ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.getHealthLevels)
 router.put ('/houses/:houseId/health-levels', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateHealthLevels)
 router.put ('/houses/:houseId/stage', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(),

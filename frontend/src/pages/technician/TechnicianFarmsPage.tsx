@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { HouseIcon, WarningCircleIcon, WarningIcon, WifiHighIcon, WifiSlashIcon } from '@phosphor-icons/react'
+import { HouseIcon, WarningCircleIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react'
 import { Button, EmptyState, FilterChip, SearchInput } from '@/components/ui'
 import KpiTile from '@/components/common/KpiTile'
 import Pagination from '@/components/ui/Pagination'
@@ -84,8 +84,8 @@ export default function TechnicianFarmsPage() {
   if (structure.houses.length === 0) {
     return (
       <EmptyState
-        title={farms?.length ? t('empty.noHouseTitle') : 'Chưa có trang trại nào'}
-        description="Chủ nhà yến tạo trang trại, nhà yến xong thì hiện ở đây."
+        title={farms?.length ? t('empty.noHouseTitle') : t('tech.noFarmTitle')}
+        description={t('tech.noFarmDesc')}
       />
     )
   }
@@ -93,21 +93,25 @@ export default function TechnicianFarmsPage() {
   const { counts: dev } = structure.totals
   // Đã kích hoạt nhưng chưa gửi tín hiệu lần nào: không online, cũng chưa mất kết nối
   const pending = dev.total - dev.online - dev.offline
-  let connectionSub = 'Ổn định'
-  if (dev.offline > 0) connectionSub = 'Cần kiểm tra tại nhà'
-  else if (pending > 0) connectionSub = `${num(pending)} thiết bị chờ kết nối`
+  // Một thẻ cho thiết bị (W-15): online trên tổng, câu phụ nói việc cần làm
+  let devicesSub = t('tech.kpiDevicesStable')
+  if (dev.total === 0) devicesSub = t('tech.kpiNoDevices')
+  else if (dev.offline > 0) devicesSub = t('tech.kpiDevicesOffline', { n: num(dev.offline) })
+  else if (pending > 0) devicesSub = t('tech.kpiDevicesPending', { n: num(pending) })
   const kpis = [
-    { icon: HouseIcon, label: 'Nhà yến', value: num(structure.totals.houses), sub: `${num(structure.totals.zones)} zone`, alert: false },
-    { icon: WarningIcon, label: 'Nhà cần xử lý', value: num(counts.ALERT), sub: pendingAlerts ? `${num(pendingAlerts)} cảnh báo chờ xác nhận` : 'Không có cảnh báo chờ xác nhận', alert: counts.ALERT > 0 },
-    { icon: WifiHighIcon, label: 'Thiết bị online', value: `${num(dev.online)}/${num(dev.total)}`, sub: dev.total > 0 ? `${Math.round((dev.online / dev.total) * 100)}% hoạt động` : 'Chưa có thiết bị', alert: false },
-    { icon: WifiSlashIcon, label: 'Mất kết nối', value: num(dev.offline), sub: connectionSub, alert: dev.offline > 0 },
+    { icon: HouseIcon, label: t('tech.kpiHouses'), value: num(structure.totals.houses), sub: t('tech.kpiHousesSub', { n: num(structure.totals.zones) }), alert: false },
+    {
+      icon: WarningIcon, label: t('tech.kpiAttention'), value: num(counts.ALERT),
+      sub: pendingAlerts ? t('tech.kpiAlertsPending', { n: num(pendingAlerts) }) : t('tech.kpiNoAlertsPending'), alert: counts.ALERT > 0,
+    },
+    { icon: WifiHighIcon, label: t('tech.kpiDevices'), value: `${num(dev.online)}/${num(dev.total)}`, sub: devicesSub, alert: dev.offline > 0 },
   ]
 
   return (
     <div className="flex max-w-screen-xl w-full flex-col gap-6">
       {/* KPI */}
-      <FarmFrame title="Tình trạng các nhà được giao">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <FarmFrame title={t('tech.frameTitle')}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {kpis.map(k => (
             <KpiTile
               key={k.label}
@@ -123,7 +127,7 @@ export default function TechnicianFarmsPage() {
       </FarmFrame>
 
       {/* Danh sách */}
-      <FarmFrame title="Nhà yến" description="Bấm một nhà để xem thiết bị của nhà đó">
+      <FarmFrame title={t('tech.listTitle')} description={t('tech.listDesc')}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-[220px] max-w-sm flex-1">
@@ -131,7 +135,7 @@ export default function TechnicianFarmsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <FilterChip active={filter === 'all'} label={`${t('filter.all')} ${num(counts.all)}`} onClick={() => { setFilter('all'); setPage(1) }} />
-              <FilterChip active={filter === 'ALERT'} label={`Cần xử lý ${num(counts.ALERT)}`} onClick={() => { setFilter('ALERT'); setPage(1) }} />
+              <FilterChip active={filter === 'ALERT'} label={t('tech.filterAttention', { n: num(counts.ALERT) })} onClick={() => { setFilter('ALERT'); setPage(1) }} />
               <FilterChip active={filter === 'NORMAL'} label={`${t('health.normal')} ${num(counts.NORMAL)}`} onClick={() => { setFilter('NORMAL'); setPage(1) }} />
               <FilterChip active={filter === 'EMPTY'} label={`${t('health.empty')} ${num(counts.EMPTY)}`} onClick={() => { setFilter('EMPTY'); setPage(1) }} />
             </div>

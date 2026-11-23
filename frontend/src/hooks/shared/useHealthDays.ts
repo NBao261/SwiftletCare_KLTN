@@ -127,24 +127,6 @@ export function useCreateHouseHealthReport() {
   })
 }
 
-// Hàng đợi chuyên gia: số báo cáo chưa có / đã có kết luận của nhà (houseId) hoặc cả farm; chỉ đọc meta.total
-export function useHealthReportConclusionCounts(farmId: string, houseId: string) {
-  const scope = houseId ? { houseId } : { farmId }
-  const count = (hasConclusion: boolean) => ({
-    queryKey: [HEALTH_REPORTS_KEY, 'count', scope, hasConclusion],
-    queryFn: () => healthDayApi.listReports({ ...scope, hasConclusion, limit: 1 }).then(response => response.data.meta?.total ?? 0),
-    enabled: Boolean(houseId || farmId),
-  })
-  return useQueries({
-    queries: [count(false), count(true)],
-    combine: ([pending, concluded]) => ({
-      pending: pending.data ?? 0,
-      concluded: concluded.data ?? 0,
-      isLoading: pending.isLoading || concluded.isLoading,
-    }),
-  })
-}
-
 // lưu kết luận: chi tiết lấy bản backend trả, danh sách đọc lại cột "Kết luận"
 export function useSetHealthReportConclusion(reportId: string) {
   const queryClient = useQueryClient()

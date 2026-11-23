@@ -10,7 +10,7 @@ import type { InferredAlertItem } from '@/types/expert.types'
 import { useAlertEvidence } from '@/hooks/domain-expert/useExpertAlerts'
 import { buildAlertEvidence, type EvidenceSource } from './alertEvidence'
 import { formatDate } from '@/lib/helpers'
-import OnsiteCheckSection from './OnsiteCheckSection'
+import OnsiteCheckSection from '@/components/common/OnsiteCheckSection'
 import { t } from '@/i18n'
 
 interface Props { alert: InferredAlertItem }

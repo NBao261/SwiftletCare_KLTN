@@ -28,6 +28,17 @@ export function ownerActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>): Own
   return workOrder.kind === 'PREVENTIVE' ? actions.filter(action => action !== 'cancel') : actions;
 }
 
+// Ai thao tác trên phiếu: chủ nhà yến (mọi việc), kỹ thuật viên (làm phiếu), người chỉ đọc (chuyên gia)
+export type WorkOrderActor = 'owner' | 'technician' | 'reader';
+
+// Kỹ thuật viên chỉ bắt đầu và báo xong (backend 403 với duyệt, mở lại, huỷ, giao lại)
+export function workOrderActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>, actor: WorkOrderActor): OwnerAction[] {
+  if (actor === 'owner') return ownerActions(workOrder);
+  if (actor === 'reader') return [];
+  if (workOrder.status === 'OPEN') return ['start'];
+  return workOrder.status === 'IN_PROGRESS' ? ['done'] : [];
+}
+
 // Phòng ngừa kiểm bằng checklist, sửa chữa kiểm bằng dữ liệu
 export function approvalDescriptionKey(
   workOrder: Pick<WorkOrder, 'kind' | 'alert_id' | 'alert_type'>,

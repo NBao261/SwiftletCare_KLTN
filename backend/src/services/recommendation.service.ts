@@ -16,7 +16,7 @@ import { emitRecommendationNew } from '@/socket'
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { stageOn } from '@/utils/houseStage.util'
-import { assertFarmAccess, assertHouseAccess, farmHasActiveExpert, findFarmOrThrow, hasFarmAccess } from '@/utils/farmAccess.util'
+import { assertFarmAccess, assertHouseAccess, farmHasActiveExpert, findFarmOrThrow, hasFarmAccess, listAssignedHouseIds } from '@/utils/farmAccess.util'
 import type { IFarm } from '@/models/farm.model'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
@@ -131,7 +131,11 @@ export async function listRecommendations(
 ) {
   const filter: Record<string, unknown> = {}
   if (query.houseId) filter.house_id = (await assertHouseAccess(query.houseId, user)).house._id
-  else filter.farm_id = (await assertFarmAccess(String(query.farmId), user))._id
+  else if (user.role === 'FARM_TECHNICIAN') {
+    // Thợ theo trại: chỉ các nhà được giao, như phiếu công việc và bảo trì; farm không giao nhà nào thì rỗng, không 403
+    filter.house_id = { $in: await listAssignedHouseIds(user) }
+    filter.farm_id = new Types.ObjectId(String(query.farmId))
+  } else filter.farm_id = (await assertFarmAccess(String(query.farmId), user))._id
   if (query.status) filter.status = query.status
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [records, total] = await Promise.all([

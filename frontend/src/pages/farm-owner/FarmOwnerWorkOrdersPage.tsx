@@ -11,9 +11,10 @@ import WorkOrderReassignModal from '@/components/features/farm-owner/work-orders
 import WorkOrderTable from '@/components/features/farm-owner/work-orders/WorkOrderTable';
 import {
   WORK_ORDER_STATUSES, approvalDescriptionKey, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
+  type WorkOrderActor,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
+import { Button, ConfirmModal, EmptyState, FilterChip, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -28,7 +29,10 @@ import type { WorkOrder } from '@/types';
 // Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (api-spec)
 const NOTE_MAX_LENGTH = 1000;
 
-// Domain Expert chỉ xem
+// Lời giải thích của trang theo người xem
+const HELP_KEY = { owner: 'list.subtitle', technician: 'list.subtitleTechnician', reader: 'list.subtitleExpert' } as const;
+
+// Chủ nhà yến thao tác mọi việc, kỹ thuật viên làm phiếu của nhà được giao, chuyên gia chỉ xem
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   const { t } = useTranslation(workOrderDict);
   const apiErrorMessage = useApiErrorMessage();
@@ -36,13 +40,25 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   // Work Order thuộc nhà, nên trang chỉ lọc tới nhà: ô Zone khoá
   const scope = { ...useScopeFilter(), zone: undefined };
   const canManage = usePermission('FARM_OWNER');
+  const isTechnician = usePermission('FARM_TECHNICIAN');
+  // Kỹ thuật viên bắt đầu, làm checklist và báo xong phiếu của nhà được giao; chuyên gia chỉ đọc
+  let actor: WorkOrderActor = 'reader';
+  if (canManage) actor = 'owner';
+  else if (isTechnician) actor = 'technician';
   const actions = useWorkOrderActions();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
+  // Kỹ thuật viên mặc định chỉ xem phiếu giao cho mình (backend assigneeId=me)
+  const [isOnlyMine, setIsOnlyMine] = useState(true);
   const query = {
     ...(scope.houseId ? { houseId: scope.houseId } : scope.farmId ? { farmId: scope.farmId } : {}),
     ...statusFilterQuery(statusFilter),
+    ...(isTechnician && isOnlyMine ? { assigneeId: 'me' } : {}),
   };
+  // Bộ lọc "Giao cho tôi" bỏ qua phiếu chưa giao (không có thợ trực) nên trạng thái rỗng nhắc tắt bộ lọc
+  let emptyHintKey: 'list.emptyHint' | 'list.emptyHintMine' | 'list.emptyHintReader' = 'list.emptyHint';
+  if (isTechnician && isOnlyMine) emptyHintKey = 'list.emptyHintMine';
+  else if (actor !== 'owner') emptyHintKey = 'list.emptyHintReader';
   // Đổi phạm vi hoặc trạng thái thì về trang 1
   const filterKey = JSON.stringify(query);
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
@@ -111,7 +127,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         <ScopeFilter scope={scope} lockZone />
       </HeaderActions>
 
-      <SectionCard description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
+      <SectionCard description={t('list.short')} help={t(HELP_KEY[actor])}>
         {/* Lọc trạng thái bên trái, nút mở tay bên phải (chỉ Farm Owner) */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SelectMenu
@@ -124,6 +140,9 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
               ...WORK_ORDER_STATUSES.map(status => ({ value: status, label: t(`status.${status}`) })),
             ]}
           />
+          {isTechnician && (
+            <FilterChip active={isOnlyMine} label={t('filter.mine')} onClick={() => setIsOnlyMine(current => !current)} />
+          )}
           {canManage && (
             <Button
               size="sm"
@@ -148,7 +167,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
           />
         ) : workOrders.length === 0 ? (
           <div className="flex items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
-            <TableEmptyState title={t('list.emptyTitle')} description={t('list.emptyHint')} />
+            <TableEmptyState title={t('list.emptyTitle')} description={t(emptyHintKey)} />
           </div>
         ) : (
           <WorkOrderTable
@@ -157,7 +176,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
             total={total}
             onPageChange={next => setPageState({ key: filterKey, page: next })}
             houseNames={houseNames}
-            canManage={canManage}
+            actor={actor}
             onView={openDetail}
             onAction={startAction}
           />
@@ -168,7 +187,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         workOrderId={detailId}
         houseNames={houseNames}
         personNames={personNames}
-        canManage={canManage}
+        actor={actor}
         onAction={startAction}
         onClose={() => setDetailId(null)}
       />
@@ -177,7 +196,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         <WorkOrderCreateModal open={isCreateOpen} house={{ id: selectedHouse._id, name: selectedHouse.name }} onClose={() => setIsCreateOpen(false)} />
       )}
 
-      {/* Farm Owner tự làm: bắt đầu hỏi lại vì phiếu chuyển sang đang làm dưới tên mình */}
+      {/* Bắt đầu hỏi lại vì phiếu chuyển sang đang làm dưới tên người bấm */}
       <ConfirmModal
         open={pending?.action === 'start'}
         title={t('action.start')}

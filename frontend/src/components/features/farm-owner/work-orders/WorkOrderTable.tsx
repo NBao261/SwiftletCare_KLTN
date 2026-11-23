@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { WORK_ORDER_STATUS_TONE, ownerActions, type OwnerAction } from '@/components/features/farm-owner/work-orders/workOrder.utils';
+import { WORK_ORDER_STATUS_TONE, workOrderActions, type OwnerAction, type WorkOrderActor } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import { ActionsMenu, Badge, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { NO_VALUE } from '@/constants/display';
@@ -17,14 +17,14 @@ interface WorkOrderTableProps {
   total: number;
   onPageChange: (page: number) => void;
   houseNames: Map<string, string>;
-  canManage: boolean;
+  actor: WorkOrderActor;
   onView: (workOrder: WorkOrder) => void;
   onAction: (action: OwnerAction, workOrder: WorkOrder) => void;
 }
 
 // bảng Work Order (phân trang server): việc, nhà, người làm, trạng thái, lúc mở, menu thao tác
 export default function WorkOrderTable({
-  workOrders, page, total, onPageChange, houseNames, canManage, onView, onAction,
+  workOrders, page, total, onPageChange, houseNames, actor, onView, onAction,
 }: WorkOrderTableProps): JSX.Element {
   const { t, dateTime } = useTranslation(workOrderDict);
 
@@ -76,7 +76,7 @@ export default function WorkOrderTable({
           <ActionsMenu
             items={[
               { label: t('action.view'), onClick: () => onView(workOrder) },
-              ...(canManage ? ownerActions(workOrder) : []).map(action => ({
+              ...workOrderActions(workOrder, actor).map(action => ({
                 label: t(`action.${action}`),
                 onClick: () => onAction(action, workOrder),
                 danger: action === 'cancel',
@@ -86,7 +86,7 @@ export default function WorkOrderTable({
         </div>
       ),
     },
-  ], [t, dateTime, houseNames, canManage, onView, onAction]);
+  ], [t, dateTime, houseNames, actor, onView, onAction]);
 
   return (
     <FixedRowsTable

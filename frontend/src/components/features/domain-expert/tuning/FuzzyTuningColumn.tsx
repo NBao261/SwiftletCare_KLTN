@@ -8,6 +8,7 @@ import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation
 import FuzzySuggestionBox, { type SuggestionAction } from '@/components/features/domain-expert/tuning/FuzzySuggestionBox'
 import type { TuningBlockHandle } from './tuning.utils'
 import type { ExpertFuzzyTuning, FuzzySuggestionResponse } from '@/types/expert.types'
+import StepperValueInput from './StepperValueInput'
 
 interface Props {
   data: ExpertFuzzyTuning | undefined
@@ -17,6 +18,8 @@ interface Props {
   suggestion?: FuzzySuggestionResponse
   isSuggestionLoading?: boolean
   suggestionAction?: SuggestionAction
+  // Kỹ thuật viên không đọc gợi ý hệ số (backend 403) nên ẩn hẳn khung
+  showSuggestion?: boolean
   // Báo số hệ số đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
 }
@@ -54,9 +57,15 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
             atMin ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-charcoal border border-stone-200 hover:bg-stone-50 active:scale-95')}>
           −
         </button>
-        <span className="text-sm font-bold text-charcoal px-2 py-0.5 rounded bg-white border border-stone-200/80 min-w-[76px] text-center">
-          {value.toFixed(decimals)} <span className="text-xs font-normal text-warmGray">{unit}</span>
-        </span>
+        <StepperValueInput
+          value={value}
+          onChange={onChange}
+          clamp={clamp}
+          decimals={decimals}
+          label={label}
+          unit={unit}
+          className="text-sm font-bold text-charcoal px-2 py-0.5 rounded bg-white border border-stone-200/80 min-w-[76px]"
+        />
         <button type="button" onClick={() => onChange(clamp(value + step))} disabled={atMax}
           aria-label={t('Tăng {{label}}', { label })}
           className={cn('h-9 w-9 max-sm:h-11 max-sm:w-11 rounded-lg text-base font-bold flex items-center justify-center select-none transition-colors',
@@ -70,7 +79,7 @@ function FuzzyTile({ label, value, onChange, min, max, step, decimals, unit, def
 
 // Hệ số mờ của Zone và gợi ý từ dữ liệu; chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
 const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTuningColumn(
-  { data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, onDirtyChange }, ref,
+  { data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, showSuggestion = true, onDirtyChange }, ref,
 ) {
   const [form, setForm] = useState<ExpertFuzzyTuning>(DEFAULT_FUZZY_TUNING)
   const [suggestionDismissed, setSuggestionDismissed] = useState(false)
@@ -114,13 +123,15 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
         <p className="text-xs text-warmGray mt-0.5">{t('Lưu xong, cấu hình gửi xuống bộ điều khiển của Zone')}</p>
       </div>
 
-      <FuzzySuggestionBox
-        suggestion={suggestion}
-        isLoading={isSuggestionLoading}
-        action={suggestionAction}
-        onDismiss={() => setSuggestionDismissed(true)}
-        dismissed={suggestionDismissed}
-      />
+      {showSuggestion && (
+        <FuzzySuggestionBox
+          suggestion={suggestion}
+          isLoading={isSuggestionLoading}
+          action={suggestionAction}
+          onDismiss={() => setSuggestionDismissed(true)}
+          dismissed={suggestionDismissed}
+        />
+      )}
 
       {/* Nút Lưu chung ở thanh dính đáy của trang */}
       <fieldset disabled={isSaving} className="contents">

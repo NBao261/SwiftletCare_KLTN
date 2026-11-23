@@ -8,6 +8,8 @@ export interface WorkOrderListQuery {
   status?: WorkOrderStatus;
   // 'true' = chưa đóng/huỷ (OPEN, IN_PROGRESS, VERIFYING, AWAITING_APPROVAL)
   open?: 'true' | 'false';
+  // 'me' = phiếu giao cho người gọi (kỹ thuật viên)
+  assigneeId?: string;
   page?: number;
   limit?: number;
 }

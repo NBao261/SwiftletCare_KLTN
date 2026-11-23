@@ -45,6 +45,10 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   const scope = { ...useScopeFilter(), zone: undefined };
   const canManage = usePermission('FARM_OWNER');
   const canComment = usePermission('DOMAIN_EXPERT');
+  // Lời giải thích theo người xem: chủ nhà yến đặt chu kỳ, chuyên gia góp ý, kỹ thuật viên chỉ đọc
+  let helpKey: 'list.subtitle' | 'list.subtitleExpert' | 'list.subtitleTechnician' = 'list.subtitleTechnician';
+  if (canManage) helpKey = 'list.subtitle';
+  else if (canComment) helpKey = 'list.subtitleExpert';
   const actions = useMaintenancePlanActions();
   // Tab nằm trên URL (?tab=list) để F5 hoặc quay lại vẫn đúng tab
   const [searchParams, setSearchParams] = useSearchParams();
@@ -114,35 +118,37 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
     );
   }
 
+  // Chuyển giữa kế hoạch đến hạn và mọi kế hoạch: đặt ở góc khung, không thành hàng tab thứ hai dưới tab Công việc
+  const viewSwitch = (
+    <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
+      {TABS.map(value => (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={tab === value}
+          onClick={() => setTab(value)}
+          className={cn(
+            'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
+            tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
+          )}
+        >
+          {t(`${value}.title`)}
+          {value === 'due' && Boolean(due.data?.length) && ` (${due.data?.length})`}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <HeaderActions>
         <ScopeFilter scope={scope} lockZone />
       </HeaderActions>
 
-      {/* Tab pill như trang Sức khỏe nhà yến: mỗi lúc 1 thẻ; tab Cần bảo trì kèm số kế hoạch đến hạn */}
-      <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
-        {TABS.map(value => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={tab === value}
-            onClick={() => setTab(value)}
-            className={cn(
-              'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
-              tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-            )}
-          >
-            {t(`${value}.title`)}
-            {value === 'due' && Boolean(due.data?.length) && ` (${due.data?.length})`}
-          </button>
-        ))}
-      </div>
-
       {tab === 'due' ? (
         // Kế hoạch đến hạn và quá hạn
-        <SectionCard className="flex-1" title={t('due.title')} description={t('due.short')} help={t('due.subtitle')}>
+        <SectionCard className="flex-1" title={t('due.title')} description={t('due.short')} help={t('due.subtitle')} action={viewSwitch}>
           {due.isLoading ? (
             <LoadingSkeleton count={3} className="h-14 w-full" />
           ) : due.isError ? (
@@ -166,7 +172,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
         </SectionCard>
       ) : (
         // Danh sách kế hoạch
-        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(canManage ? 'list.subtitle' : 'list.subtitleExpert')}>
+        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(helpKey)} action={viewSwitch}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SelectMenu
               ariaLabel={t('list.filterState')}

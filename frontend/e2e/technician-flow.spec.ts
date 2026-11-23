@@ -57,11 +57,11 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await signInUi(page, 'technician');
   await expect(page).toHaveURL(/\/alerts$/);
 
-  // 3 mục: cảnh báo, thiết bị, nhà được giao; không còn nhóm "Khác"
-  for (const label of ['Cảnh báo', 'Thiết bị & Cảm biến', 'Nhà được giao']) {
+  // Mọi việc của thợ ở nhà được giao (G-33); không có trang quyết định của chuyên gia, cài đặt hệ thống
+  for (const label of ['Cảnh báo', 'Tổng quan', 'Đàn chim', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị & Cảm biến', 'Nhà được giao', 'Thu hoạch']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
-  for (const label of ['Tổng quan', 'Hàng đợi việc', 'Thu hoạch', 'Phân tích', 'Cài đặt']) {
+  for (const label of ['Hàng đợi việc', 'Chuyên môn', 'Cài đặt']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toHaveCount(0);
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
@@ -153,12 +153,57 @@ test('T5 — nhà được giao: ca trực của chính mình, nút Xem thiết 
 });
 
 test('T6 — trang của vai trò khác bị chặn (Report 3 §2.4)', async ({ page }) => {
-  const crashes = await openAsTechnician(page, '/dashboard');
+  const crashes = await openAsTechnician(page, '/overview');
   await expect(page).toHaveURL(/\/403$/);
 
-  for (const path of ['/domain-expert/queue', '/harvests', '/analytics']) {
+  for (const path of ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/devices/onboarding']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/403$/);
   }
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
+
+test('T7 — công việc của nhà được giao: phiếu (Giao cho tôi, không tạo phiếu), bảo trì, khuyến nghị chỉ đọc (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/work-orders');
+  await expect(page).toHaveURL(/\/work-orders$/);
+  await expect(page.getByRole('button', { name: 'Giao cho tôi' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tạo phiếu công việc' })).toHaveCount(0);
+
+  for (const path of ['/maintenance', '/recommendations']) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+  }
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
+
+test('T8 — đánh giá ngày và thu hoạch của nhà được giao: không có mức chỉ số, ghi được đợt thu (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/health');
+  await expect(page).toHaveURL(/\/health$/);
+  await expect(page.getByRole('button', { name: 'Mức chỉ số' })).toHaveCount(0);
+
+  await page.goto('/harvests');
+  await expect(page).toHaveURL(/\/harvests$/);
+  // Kỹ thuật viên ghi đợt thu (chờ Chủ nhà yến xác nhận)
+  await expect(page.getByRole('button', { name: 'Ghi đợt thu hoạch' })).toBeVisible();
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
+
+test('T9 — theo dõi nhà được giao: tổng quan, điều khiển tay, đàn chim, vòng đếm, phân tích (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/dashboard');
+  for (const path of ['/dashboard', '/dashboard/scada', '/vision', '/domain-expert/counting-ring', '/analytics']) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+  }
+  expect(crashes, crashes.join('\n')).toHaveLength(0);
+});
+
+test('T10 — tham số, lịch đếm, luật thời tiết chỉ đọc (G-33)', async ({ page }) => {
+  const crashes = await openAsTechnician(page, '/domain-expert/tuning');
+  for (const path of ['/domain-expert/tuning', '/domain-expert/counting-schedule', '/domain-expert/weather-rules']) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+    await expect(page.getByText('Chỉ xem', { exact: true }), path).toBeVisible();
+  }
+  await expect(page.getByRole('button', { name: 'Thêm luật' })).toHaveCount(0);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
