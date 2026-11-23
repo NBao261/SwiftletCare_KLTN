@@ -82,6 +82,10 @@ export const farmApi = {
   updateBirdCountTuning: (houseId: string, payload: BirdCountTuning) =>
     apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_BIRD_COUNT_TUNING(houseId), payload),
 
+  // Đưa về mặc định của backend (EXPERT-FR-008), không body: 5 tham số phát hiện của zone, mức giảm tỷ lệ về tổ 20 % của nhà
+  resetDetectionTuning: (zoneId: string) => apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_DETECTION_TUNING_RESET(zoneId)),
+  resetBirdCountTuning: (houseId: string) => apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_BIRD_COUNT_TUNING_RESET(houseId)),
+
   // Giai đoạn nhà (FARM-FR-014): đổi được lưu lịch sử, đánh giá ngày tiếp theo theo giai đoạn mới (BR-46)
   setHouseStage: (houseId: string, stage: HouseStage) =>
     apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_STAGE(houseId), { stage }),

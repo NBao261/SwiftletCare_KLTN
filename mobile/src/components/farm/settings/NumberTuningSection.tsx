@@ -8,6 +8,7 @@ import {
   type SettingsTableColumn,
   type SettingsTableRow,
 } from '@/components/farm/settings/SettingsTable'
+import type { SettingsTileAction } from '@/components/farm/settings/SettingsTileButton'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
@@ -41,6 +42,8 @@ export interface NumberTuningSectionProps<K extends string> {
   subtitle: string
   scopeLabel: string
   footerNote?: string
+  // Ô vuông góc dưới phải ở chế độ xem, ví dụ "Khôi phục mặc định"; ẩn khi đang sửa
+  footerTile?: SettingsTileAction
   keys: readonly K[]
   rules: Record<K, NumberRule>
   // Kiểm thêm giữa các ô (ví dụ mức "rõ" không nhẹ hơn mức "nhẹ"); không truyền thì chỉ kiểm khoảng của từng ô
@@ -197,6 +200,7 @@ export function NumberTuningSection<K extends string>(props: NumberTuningSection
     subtitle,
     scopeLabel,
     footerNote,
+    footerTile,
     keys,
     rules,
     values,
@@ -231,6 +235,7 @@ export function NumberTuningSection<K extends string>(props: NumberTuningSection
       onEdit={canEdit ? () => editor.startEditing(id) : undefined}
       isEditing={isEditing}
       footerNote={footerNote}
+      footerTile={isEditing ? undefined : footerTile}
     >
       {isEditing ? (
         <NumberTuningEditor {...props} />

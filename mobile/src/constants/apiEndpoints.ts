@@ -36,7 +36,10 @@ export const ENDPOINTS = {
   // Áp gợi ý hệ số hiện tại do server tính (EXPERT-FR-011): chuyên gia; chủ trại khi farm chưa có chuyên gia (BR-22)
   ZONE_APPLY_SUGGESTION: (zoneId: string) => `/farms/zones/${zoneId}/fuzzy-tuning/apply-suggestion`,
   ZONE_DETECTION_TUNING: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning`,
+  // Về bộ mặc định của backend (EXPERT-FR-008); chủ trại trên farm có chuyên gia thì mở mục duyệt (BR-22)
+  ZONE_DETECTION_TUNING_RESET: (zoneId: string) => `/farms/zones/${zoneId}/detection-tuning/reset`,
   HOUSE_BIRD_COUNT_TUNING: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning`,
+  HOUSE_BIRD_COUNT_TUNING_RESET: (houseId: string) => `/farms/houses/${houseId}/bird-count-tuning/reset`,
   // Giai đoạn nhà (FARM-FR-014, BR-46): Farm Owner, Domain Expert
   HOUSE_STAGE: (houseId: string) => `/farms/houses/${houseId}/stage`,
   // Luật bù thời tiết (ENV-FR-030): chuyên gia đặt, Farm Owner đặt thẳng khi farm chưa có chuyên gia, có thì gửi đề xuất
