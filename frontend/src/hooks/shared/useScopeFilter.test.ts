@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { pickAutoScope, type AutoScopeInput } from '@/hooks/shared/useScopeFilter'
-import { scopeLevelOf } from '@/constants/roles'
+import { scopeDepthOf, scopeLevelOf } from '@/constants/roles'
 
 const BASE: AutoScopeInput = {
   level: 'farm',
@@ -53,5 +53,16 @@ describe('scopeLevelOf', () => {
     expect(scopeLevelOf('/overview')).toBe('farm')
     expect(scopeLevelOf('/domain-expert/tuning')).toBe('zone')
     expect(scopeLevelOf('/dashboard')).toBe('none')
+  })
+})
+
+describe('scopeDepthOf', () => {
+  it('ô sâu nhất trên thanh phạm vi: theo bậc, trừ trang khai thêm depth; trang không khai thì đủ ba ô', () => {
+    expect(scopeDepthOf('/domain-expert/queue')).toBe('farm')
+    expect(scopeDepthOf('/domain-expert/history')).toBe('house')
+    expect(scopeDepthOf('/domain-expert/reports')).toBe('house')
+    expect(scopeDepthOf('/domain-expert/counting-ring')).toBe('house')
+    expect(scopeDepthOf('/domain-expert/tuning')).toBe('zone')
+    expect(scopeDepthOf('/dashboard')).toBe('zone')
   })
 })

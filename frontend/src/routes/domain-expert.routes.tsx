@@ -2,7 +2,7 @@
 import { lazy } from 'react';
 import { Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import RequireRole from '@/components/auth/RequireRole';
-import { EXPERT_DECISION_ROLES, EXPERT_ROLES } from '@/constants/roles';
+import { EXPERT_DECISION_ROLES, EXPERT_ROLES, scopeDepthOf } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
 import ExpertReadOnlyBadge from '@/components/features/domain-expert/ExpertReadOnlyBadge';
 import ScopeFilter from '@/components/common/ScopeFilter';
@@ -25,13 +25,6 @@ const DomainExpertCountingRingPage = lazy(() => import('@/pages/domain-expert/Do
 function DomainExpertIndexRedirect() {
   const isExpert = usePermission('DOMAIN_EXPERT');
   return <Navigate to={isExpert ? 'queue' : 'alert-verdicts'} replace />;
-}
-
-// Trang chỉ đọc theo trại, theo nhà (lịch, vòng đếm, luật thời tiết, báo cáo, lịch sử) hay theo Zone (ngưỡng)
-const FARM_ONLY_PAGES = ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/domain-expert/reviews', '/domain-expert/profiles', '/domain-expert/recommendation-rules']
-function scopeDepthOf(path: string): 'farm' | 'house' | 'zone' {
-  if (path.startsWith('/domain-expert/tuning')) return 'zone';
-  return FARM_ONLY_PAGES.some(page => path.startsWith(page)) ? 'farm' : 'house';
 }
 
 // Khung chung của /domain-expert/*

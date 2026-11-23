@@ -54,7 +54,8 @@ function placeOf(
 }
 
 export default function DomainExpertQueuePage() {
-  const { selectedFarmId, selectedHouseId, selectedZoneId } = useZoneStore()
+  // Hàng đợi theo cả trại: nhà, Zone chọn ở trang khác vẫn còn trong store nhưng không lọc ở đây (ô Nhà, Zone đã ẩn)
+  const { selectedFarmId } = useZoneStore()
 
   // Vị trí của mỗi việc: "Nhà > Zone", hoặc tên nhà với cảnh báo cả nhà (camera) — như trang Cảnh báo
   const { data: allZones } = useAllZones()
@@ -63,12 +64,12 @@ export default function DomainExpertQueuePage() {
 
   const { data: pendingAlerts, isLoading: isLoadingAlerts } = useExpertQueueAlerts(
     selectedFarmId ?? undefined,
-    selectedZoneId ?? undefined,
+    undefined,
   )
 
   const { pending: pendingReports, isLoading: isLoadingReports } = useHealthReportConclusionCounts(
     selectedFarmId ?? '',
-    selectedHouseId ?? '',
+    '',
   )
 
   // Mục duyệt ở cấp farm (có mục theo nhà, camera), không lọc theo Zone
