@@ -1,6 +1,7 @@
-// Ô số kiểu -/+ có min/max và đơn vị
+// Ô số kiểu -/+ có min/max và đơn vị; số ở giữa gõ thẳng được
 import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
+import StepperValueInput from './StepperValueInput'
 
 interface Props {
   label: string
@@ -60,13 +61,18 @@ export default function TuningStepperInput({
           −
         </button>
 
-        <div className={cn(
-          'min-w-[80px] text-center px-2 py-1 rounded-lg border text-sm font-semibold text-[#27231F] transition-colors duration-300',
-          highlighted ? 'border-[#B5D32C] bg-[#ECFFA9]' : 'border-neutral-200 bg-neutral-50',
-        )}>
-          {decimals > 0 ? value.toFixed(decimals) : value}{' '}
-          <span className="text-xs font-normal text-[#878380]">{t(unit)}</span>
-        </div>
+        <StepperValueInput
+          value={value}
+          onChange={onChange}
+          clamp={clamp}
+          decimals={decimals}
+          label={label}
+          unit={unit}
+          className={cn(
+            'min-w-[80px] px-2 py-1 rounded-lg border text-sm font-semibold text-[#27231F] transition-colors duration-300',
+            highlighted ? 'border-[#B5D32C] bg-[#ECFFA9]' : 'border-neutral-200 bg-neutral-50',
+          )}
+        />
 
         <button
           type="button"

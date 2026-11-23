@@ -2324,7 +2324,7 @@ paths:
       tags: [Farms]
       summary: "Đặt lịch đếm của nhà (VISION-FR-019) — DOMAIN_EXPERT, FARM_OWNER (farm có chuyên gia thì mở mục duyệt, BR-22)"
       description: |
-        Thay cả lịch (hồ sơ theo mùa và khung tạm). Lịch mới áp từ ngày hôm sau (giờ VN) và lưu vào lịch sử; ngày đã
+        Thay cả lịch (khung mặc định của nhà, hồ sơ theo mùa và khung tạm). Lịch mới áp từ ngày hôm sau (giờ VN) và lưu vào lịch sử; ngày đã
         tính phiên giữ khung cũ. Hằng ngày, 15 phút sau khung chiều của ngày, backend tính hai phiên từ số đếm 5 phút
         trong khung (VISION-FR-008) rồi kiểm tỷ lệ chim về (BR-21). Audit `COUNTING_SCHEDULE_UPDATED`; thay đổi của
         Domain Expert báo trong app cho mọi Farm Owner (EXPERT-FR-009). Farm Technician → 403. Farm Owner trên farm có Domain Expert: áp ngay và mở mục duyệt cho chuyên gia (EXPERT-FR-010, BR-22).
@@ -7335,8 +7335,16 @@ components:
       type: object
       description: |
         VISION-FR-019 — lịch đếm của nhà. Khung tạm thắng hồ sơ theo mùa; ngày không thuộc hồ sơ nào dùng khung mặc
-        định (BR-13: sáng 05:30–07:00, chiều 17:30–19:00). Mỗi khung sáng phải kết thúc trước khi khung chiều bắt đầu.
+        định của nhà (`default_windows`), không đặt thì khung hệ thống (BR-13: sáng 05:30–07:00, chiều 17:30–19:00).
+        Mỗi khung sáng phải kết thúc trước khi khung chiều bắt đầu.
       properties:
+        default_windows:
+          type: object
+          nullable: true
+          description: "Khung mặc định riêng của nhà, thay khung hệ thống; bỏ trống hoặc null = dùng lại khung hệ thống"
+          properties:
+            morning: { $ref: "#/components/schemas/TimeWindow" }
+            evening: { $ref: "#/components/schemas/TimeWindow" }
         profiles:
           type: array
           maxItems: 12
@@ -7369,12 +7377,27 @@ components:
         effective_from: { type: string, format: date, nullable: true, description: "Lần sửa gần nhất áp từ ngày này (ngày hôm sau lần sửa); null khi chưa đặt lịch" }
         default_windows:
           type: object
+          description: "Khung áp cho ngày không thuộc hồ sơ hay khung tạm: khung riêng của nhà nếu đã đặt, không thì khung hệ thống"
+          properties:
+            morning: { $ref: "#/components/schemas/TimeWindow" }
+            evening: { $ref: "#/components/schemas/TimeWindow" }
+        system_default_windows:
+          type: object
+          description: "Khung hệ thống (BR-13), để quay về khi bỏ khung riêng của nhà"
           properties:
             morning: { $ref: "#/components/schemas/TimeWindow" }
             evening: { $ref: "#/components/schemas/TimeWindow" }
         today:
           type: object
           description: "Khung đang áp hôm nay (giờ VN)"
+          properties:
+            date: { type: string, format: date }
+            morning: { $ref: "#/components/schemas/TimeWindow" }
+            evening: { $ref: "#/components/schemas/TimeWindow" }
+            source: { type: string, enum: [TEMPORARY, PROFILE, DEFAULT] }
+        tomorrow:
+          type: object
+          description: "Khung sẽ áp ngày mai (giờ VN): lịch sửa hôm nay áp từ ngày mai"
           properties:
             date: { type: string, format: date }
             morning: { $ref: "#/components/schemas/TimeWindow" }

@@ -57,6 +57,7 @@ function windowsError(windows: DayWindows): ScheduleError | null {
 export function validateCountingSchedule(schedule: CountingSchedule): {
   profiles: Array<ScheduleError | null>
   temporary: Array<ScheduleError | null>
+  defaults: ScheduleError | null
 } {
   // Ngày trong năm đã có hồ sơ phía trên phủ: mỗi hồ sơ duyệt tối đa 366 ngày, nên O(số hồ sơ × 366)
   const coveredDays = new Set<number>()
@@ -78,5 +79,6 @@ export function validateCountingSchedule(schedule: CountingSchedule): {
     ranges.push(window)
     return overlaps ? 'overlap' : windowsError(window)
   })
-  return { profiles, temporary }
+  const defaults = schedule.default_windows ? windowsError(schedule.default_windows) : null
+  return { profiles, temporary, defaults }
 }

@@ -7,7 +7,8 @@ export interface DayWindows { morning: TimeWindow; evening: TimeWindow }
 // 'MM-DD', tính cả hai đầu; from sau to là vắt qua năm mới
 export interface SeasonalProfile extends DayWindows { name: string; from: string; to: string }
 export interface TemporaryWindow extends DayWindows { from: string; to: string }
-export interface CountingSchedule { profiles: SeasonalProfile[]; temporary: TemporaryWindow[] }
+// default_windows: khung riêng của nhà thay khung hệ thống ở những ngày không có hồ sơ hay khung tạm
+export interface CountingSchedule { profiles: SeasonalProfile[]; temporary: TemporaryWindow[]; default_windows?: DayWindows }
 // Áp từ ngày hôm sau lần sửa
 export interface ScheduleVersion { schedule: CountingSchedule; effective_from: string }
 export type WindowSource = 'TEMPORARY' | 'PROFILE' | 'DEFAULT'
@@ -115,7 +116,10 @@ export function parseCountingSchedule(input: unknown): CountingSchedule {
   for (let i = 1; i < temporary.length; i++) {
     if (temporary[i].from <= temporary[i - 1].to) throw BadRequestError(`Khung tạm từ ${temporary[i].from} chồng ngày với khung tạm trước`)
   }
-  return { profiles, temporary }
+  const defaults = body.default_windows == null
+    ? undefined
+    : parseDayWindows(body.default_windows as Record<string, unknown>, 'Khung mặc định của nhà')
+  return { profiles, temporary, ...(defaults && { default_windows: defaults }) }
 }
 
 // Chưa sửa lần nào thì không có
@@ -133,7 +137,7 @@ export function windowsOn(schedule: CountingSchedule | undefined, date: string):
   const day = dayOfYear(date.slice(5))
   const profile = day === null ? undefined : schedule?.profiles.find(p => profileDays(p).has(day))
   if (profile) return { morning: profile.morning, evening: profile.evening, source: 'PROFILE' }
-  return { ...DEFAULT_WINDOWS, source: 'DEFAULT' }
+  return { ...(schedule?.default_windows ?? DEFAULT_WINDOWS), source: 'DEFAULT' }
 }
 
 export const windowInterval = (date: string, window: TimeWindow) => ({
