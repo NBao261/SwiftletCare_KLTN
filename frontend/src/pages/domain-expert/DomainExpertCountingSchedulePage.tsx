@@ -1,6 +1,6 @@
 // Lịch đếm chim của nhà: hồ sơ theo mùa, khung tạm, khung đang áp hôm nay và lịch sử
 import { useState } from 'react'
-import { CalendarClock, Moon, Plus, Sunrise, Trash2 } from 'lucide-react'
+import { CalendarClock, Moon, Plus, RotateCcw, Sunrise, Trash2 } from 'lucide-react'
 import DatePicker from '@/components/ui/DatePicker'
 import ScheduleHistoryList from '@/components/features/domain-expert/counting-schedule/ScheduleHistoryList'
 import ScheduleWindowsFields from '@/components/features/domain-expert/counting-schedule/ScheduleWindowsFields'
@@ -69,14 +69,14 @@ export default function DomainExpertCountingSchedulePage() {
   const schedule = draft ?? data.schedule
   const errors = validateCountingSchedule(schedule)
   const edit = (next: CountingSchedule) => setDraftState({ houseId, schedule: next })
-  // Dòng mới lấy sẵn khung mặc định để chỉ cần sửa giờ khác
-  const defaults: DayWindows = data.default_windows
+  // Dòng mới lấy sẵn khung mặc định đang sửa (của nhà, không thì hệ thống) để chỉ cần sửa giờ khác
+  const defaults: DayWindows = schedule.default_windows ?? data.system_default_windows
   // Lịch mới áp từ ngày mai (giờ VN, backend tính hôm nay), nên khung tạm bắt đầu sớm nhất từ ngày mai
   const tomorrow = nextDay(data.today.date)
 
   function submit() {
     setShowErrors(true)
-    if ([...errors.profiles, ...errors.temporary].some(Boolean)) return
+    if ([...errors.profiles, ...errors.temporary, errors.defaults].some(Boolean)) return
     save.mutate(schedule, {
       onSuccess: () => {
         push(t('save.done'))
@@ -106,6 +106,34 @@ export default function DomainExpertCountingSchedulePage() {
             <Moon className="h-3.5 w-3.5 text-graphite" aria-hidden />
             {span(data.today.evening)}
           </span>
+        </div>
+      </SectionCard>
+
+      {/* Khung mặc định của nhà: áp cho ngày không có hồ sơ hay khung tạm, sửa được như mọi khung */}
+      <SectionCard
+        title={t('defaults.title')}
+        description={schedule.default_windows ? t('defaults.custom') : t('defaults.system')}
+        help={t('defaults.hint')}
+        action={schedule.default_windows && (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={save.isPending}
+            onClick={() => edit({ profiles: schedule.profiles, temporary: schedule.temporary })}
+          >
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+            {t('defaults.reset')}
+          </Button>
+        )}
+      >
+        <div className="flex flex-col gap-3">
+          <ScheduleWindowsFields
+            idPrefix="defaults"
+            value={schedule.default_windows ?? data.system_default_windows}
+            disabled={save.isPending}
+            onChange={windows => edit({ ...schedule, default_windows: windows })}
+          />
+          {showErrors && <RowError error={errors.defaults} />}
         </div>
       </SectionCard>
 

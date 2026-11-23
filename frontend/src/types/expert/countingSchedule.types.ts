@@ -27,6 +27,8 @@ export interface TemporaryCountingWindow extends DayWindows {
 export interface CountingSchedule {
   profiles: SeasonalCountingProfile[]
   temporary: TemporaryCountingWindow[]
+  // Khung riêng của nhà thay khung hệ thống ở ngày không có hồ sơ hay khung tạm; không có = khung hệ thống
+  default_windows?: DayWindows
 }
 
 export type CountingWindowSource = 'TEMPORARY' | 'PROFILE' | 'DEFAULT'
@@ -36,7 +38,9 @@ export interface CountingScheduleView {
   schedule: CountingSchedule
   // Lần sửa gần nhất áp từ ngày này; null khi chưa đặt lịch
   effective_from: string | null
+  // Khung của nhà nếu đã đặt, không thì khung hệ thống
   default_windows: DayWindows
+  system_default_windows: DayWindows
   // Khung đang áp hôm nay (giờ VN)
   today: DayWindows & { date: string; source: CountingWindowSource }
   history: Array<{

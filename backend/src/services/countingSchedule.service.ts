@@ -23,7 +23,9 @@ function present(house: IHouse) {
     house_id: String(house._id),
     schedule: house.counting_schedule ?? EMPTY,
     effective_from: history.at(-1)?.effective_from ?? null,
-    default_windows: DEFAULT_WINDOWS,
+    // Khung của nhà nếu đã đặt, không thì khung hệ thống; system_default_windows để nút về khung hệ thống
+    default_windows: house.counting_schedule?.default_windows ?? DEFAULT_WINDOWS,
+    system_default_windows: DEFAULT_WINDOWS,
     today: { date: today, ...windowsOn(scheduleOn(history, today), today) },
     history: history.map(version => ({
       effective_from: version.effective_from, changed_by: version.changed_by, changed_by_role: version.changed_by_role,

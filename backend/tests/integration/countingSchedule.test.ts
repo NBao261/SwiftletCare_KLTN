@@ -119,6 +119,28 @@ describe('VISION-FR-019 — counting schedule', () => {
     expect(await Notification.countDocuments({ user_id: s.owner._id })).toBe(1)
   })
 
+  it('the house can replace the system default windows; without them the system default applies again', async () => {
+    const s = await seed()
+    const own = { morning: { start: '05:00', end: '06:45' }, evening: { start: '17:15', end: '18:45' } }
+    const saved = await s.call('put', s.t.expert, { profiles: [], temporary: [], default_windows: own })
+    expect(saved.status).toBe(200)
+    expect(saved.body.data).toMatchObject({ schedule: { default_windows: own }, default_windows: own })
+    expect(saved.body.data.system_default_windows).toEqual({ morning: { start: '05:30', end: '07:00' }, evening: { start: '17:30', end: '19:00' } })
+    const tomorrow = addDays(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10), 1)
+    const sent = (publishDeviceConfig as jest.Mock).mock.calls[0][1]
+    expect(sent.session_windows[tomorrow]).toEqual({ MORNING_EXIT: ['05:00', '06:45'], EVENING_ENTRY: ['17:15', '18:45'] })
+    // hồ sơ theo mùa vẫn thắng khung mặc định của nhà
+    expect(windowsOn({ profiles: [{ name: 'Mưa', from: '01-01', to: '12-31', ...RAINY }], temporary: [], default_windows: own }, tomorrow).source).toBe('PROFILE')
+
+    const reset = await s.call('put', s.t.expert, { profiles: [], temporary: [] })
+    expect(reset.body.data.default_windows).toEqual(saved.body.data.system_default_windows)
+    expect(reset.body.data.schedule.default_windows).toBeUndefined()
+
+    const crossing = { default_windows: { morning: { start: '05:00', end: '18:00' }, evening: { start: '17:15', end: '18:45' } } }
+    expect((await s.call('put', s.t.expert, crossing)).status).toBe(400)
+    expect((await s.call('put', s.t.expert, { default_windows: '05:00' })).status).toBe(422)
+  })
+
   it('rejects an invalid schedule with 400 and a wrong shape with 422', async () => {
     const s = await seed()
     const overlap = { profiles: [{ name: 'A', from: '01-01', to: '03-31', ...RAINY }, { name: 'B', from: '03-01', to: '04-30', ...RAINY }] }

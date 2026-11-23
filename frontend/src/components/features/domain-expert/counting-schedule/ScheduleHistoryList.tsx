@@ -43,6 +43,15 @@ export default function ScheduleHistoryList({ history }: { history: HistoryEntry
       render: ({ entry }) => <span className="text-sm text-charcoal">{dateTime(entry.changed_at)}</span>,
     },
     {
+      key: 'defaults',
+      header: t('history.col.defaults'),
+      render: ({ entry }) => {
+        const own = entry.schedule.default_windows
+        if (!own) return <span className="text-sm text-warmGray">{t('history.systemDefaults')}</span>
+        return <span className="text-sm text-charcoal">{t('history.windows', { morning: span(own.morning), evening: span(own.evening) })}</span>
+      },
+    },
+    {
       key: 'profiles',
       header: t('history.col.profiles'),
       render: ({ entry }) => {
