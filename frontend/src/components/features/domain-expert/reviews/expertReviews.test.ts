@@ -50,6 +50,7 @@ describe('G-04 — Frontend Reviews & Proposals Unit Tests (EXPERT-FR-010, EXPER
       expect(getChangedParameterKeys({ profiles: [], default_windows: own }, { profiles: [] })).toEqual(['default_windows']);
       expect(formatParamValue(own, 'default_windows')).toBe('Sáng 05:00–07:00, chiều 17:30–19:00');
       expect(formatParamValue(undefined, 'default_windows')).toBe('Khung hệ thống');
+      expect(formatParamValue({ morning: { start: '05:00' }, evening: { start: '17:30', end: '19:00' } }, 'default_windows')).toBe('Khung hệ thống');
     });
 
     it('Hàm formatParamValue định dạng chính xác các kiểu dữ liệu tham số', () => {

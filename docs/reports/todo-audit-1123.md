@@ -16,7 +16,7 @@ Phân công như `todo-audit-1121.md`: **backend và web do Bảo làm, mobile d
 | # | Vấn đề | Yêu cầu | Module |
 |---|---|---|---|
 | 1 | "Hàng đợi việc" chỉ liệt kê cảnh báo chờ kết luận; ba ô còn lại (thay đổi chờ duyệt, ngày lệch, báo cáo chờ kết luận) chỉ có số. Thiếu các việc chờ chuyên gia: đề xuất luật thời tiết, hồ sơ nháp chờ duyệt, luật khuyến nghị do Farm Owner viết, mùa vụ chờ kết luận, lời nhắc của Farm Owner. Phạm vi lẫn lộn: cảnh báo lọc theo Zone, báo cáo theo nhà, mục duyệt theo trại. Ô "Thay đổi chờ duyệt" ghi "ngưỡng & hệ số mờ" dù có 7 nhóm | Report 4 §5.4 (work queue), BR-22, EXPERT-FR-010, 015, 017, 022 | web |
-| 2 | Thẻ duyệt lịch đếm hiện tên trường `default_windows` và "đã đổi"; bỏ khung riêng thì thẻ không hiện thay đổi | VISION-FR-019, FE_Design §6.4 | web (lỗi của #230) |
+| 2 | Thẻ duyệt lịch đếm hiện tên trường `default_windows` và "đã đổi"; bỏ khung riêng thì thẻ không hiện thay đổi | VISION-FR-019, FE_Design §6.4 | web (lỗi của #230) · **Xong** (#231) |
 | 3 | Kỹ thuật viên trên mobile không xem được ca trực của mình (`GET …/roster` chưa gọi) | Report 3 §2.4 "read own roster" | mobile |
 | 4 | Kỹ thuật viên trên mobile không xem khuyến nghị: app gọi `GET /recommendations?farmId` (403) thay vì theo `houseId` | Report 3 §2.4 (đọc khuyến nghị) | mobile |
 | 5 | Màn vòng đếm mobile mới vẽ một vòng | VISION-FR-018 (Report 3 4.2.18) | mobile (đã ở G-16) |
@@ -41,13 +41,13 @@ Phân công như `todo-audit-1121.md`: **backend và web do Bảo làm, mobile d
 
 ## 2. Quyết định
 
-- **Kỹ thuật viên trên web giữ phạm vi Report 4 §5.4** (cảnh báo, thiết bị, nhà được giao, thông báo, cài đặt); phiếu công việc, chấm ngày, ghi thu hoạch, điều khiển tay ở mobile. Vì mobile chưa chạy trên máy thật (G-16), làm PR 6 sớm và thử trên điện thoại trước buổi demo.
+- **Kỹ thuật viên trên web giữ phạm vi Report 4 §5.4** (cảnh báo, thiết bị, nhà được giao, thông báo, cài đặt); phiếu công việc, chấm ngày, ghi thu hoạch, điều khiển tay ở mobile. Vì mobile chưa chạy trên máy thật (G-16), làm PR 6 sớm và thử trên điện thoại trước buổi demo. **Đổi ngày 23/11/2026:** web có đủ mọi việc của kỹ thuật viên (G-33, `todo-web-all-roles-1123.md`), nên quyết định này không còn áp dụng.
 
 ## 3. Thứ tự PR
 
 | PR | Nhánh | Người | Nội dung | Phụ thuộc |
 |---|---|---|---|---|
-| 1 | `fix/web-review-default-windows` | Bảo | #2 và file này | — |
+| 1 | `fix/web-review-default-windows` | Bảo | #2 và file này · **Xong** | — |
 | 2 | `feat/web-expert-queue` | Bảo (Tuấn xem) | #1: hàng đợi theo trại, mỗi loại việc một nhóm có danh sách và nút mở trang xử lý | PR 1 |
 | 3 | `fix/web-expert-layout` | Bảo (Tuấn xem) | #8…#15 | PR 2 |
 | 4 | `fix/web-technician-farms` | Bảo | #16 (W-15) | — |

@@ -129,10 +129,12 @@ export function getChangedParameterKeys(
 // Khung sáng, chiều của lịch đếm; không có là khung hệ thống
 function formatDayWindows(value: unknown): string {
   const windows = value as { morning?: { start?: string; end?: string }; evening?: { start?: string; end?: string } } | null | undefined;
-  if (!windows?.morning || !windows.evening) return t('Khung hệ thống');
+  const { morning, evening } = windows ?? {};
+  // Bản ghi cũ thiếu giờ thì coi như khung hệ thống, không hiện "undefined"
+  if (!morning?.start || !morning.end || !evening?.start || !evening.end) return t('Khung hệ thống');
   return t('Sáng {{morning}}, chiều {{evening}}', {
-    morning: `${windows.morning.start}–${windows.morning.end}`,
-    evening: `${windows.evening.start}–${windows.evening.end}`,
+    morning: `${morning.start}–${morning.end}`,
+    evening: `${evening.start}–${evening.end}`,
   });
 }
 
