@@ -5,14 +5,14 @@ import {
   formatIndicatorValue,
   formatLastRatingDay,
   getHouseDayDisplay,
+  getMyRatingCaption,
   getPendingRatingRange,
   groupPendingDaysByHouse,
-  isHealthDayHidden,
   shiftDate,
   summarizePendingTasks,
 } from '@/utils/healthDay.utils'
 
-// Ngày tối thiểu cho test; mặc định còn chờ chấm (bị che, BR-31)
+// Ngày tối thiểu cho test; mặc định còn chờ chấm nhưng vẫn có đủ trạng thái (BR-31, Report 3 4.2.14)
 function buildDay(houseId: string, date: string, overrides: Partial<HouseHealthDay> = {}): HouseHealthDay {
   return {
     _id: `${houseId}-${date}`,
@@ -23,6 +23,11 @@ function buildDay(houseId: string, date: string, overrides: Partial<HouseHealthD
     weather: null,
     my_rating_state: 'PENDING',
     rating_deadline: `${date}T17:00:00.000Z`,
+    indicators: {},
+    completeness: {},
+    current_status: 'GOOD',
+    current_reasons: [],
+    ratings: [],
     ...overrides,
   }
 }
@@ -136,37 +141,32 @@ describe('ngày và hạn chấm', () => {
     expect(formatLastRatingDay('2026-11-08T17:00:00.000Z')).toBe('08/11')
   })
 
-  it('ngày chờ chấm bị che, ngày đã chấm thì không', () => {
-    expect(isHealthDayHidden(buildDay('house-a', '2026-11-09'))).toBe(true)
-    expect(isHealthDayHidden(buildDay('house-a', '2026-11-09', { my_rating_state: 'RATED', current_status: 'WATCH' }))).toBe(false)
-    // Chuyên gia không phải người chấm: my_rating_state null, thấy đủ
-    expect(isHealthDayHidden(buildDay('house-a', '2026-11-09', { my_rating_state: null, current_status: 'GOOD' }))).toBe(false)
+  it('dòng phụ: chờ chấm nhắc hạn, bỏ qua / hết hạn ghi rõ, đã chấm hoặc không phải người chấm thì không có', () => {
+    // Hạn là đầu ngày 09/11 giờ Việt Nam nên ngày cuối còn chấm là 08/11
+    expect(getMyRatingCaption({ my_rating_state: 'PENDING', rating_deadline: '2026-11-08T17:00:00.000Z' })).toBe(
+      'Chờ bạn đánh giá · hạn 08/11',
+    )
+    expect(getMyRatingCaption({ my_rating_state: 'SKIPPED', rating_deadline: '2026-11-08T17:00:00.000Z' })).toBe('Đã bỏ qua')
+    expect(getMyRatingCaption({ my_rating_state: 'EXPIRED', rating_deadline: '2026-11-08T17:00:00.000Z' })).toBe('Hết hạn đánh giá')
+    expect(getMyRatingCaption({ my_rating_state: 'RATED', rating_deadline: '2026-11-08T17:00:00.000Z' })).toBeNull()
+    expect(getMyRatingCaption({ my_rating_state: null, rating_deadline: '2026-11-08T17:00:00.000Z' })).toBeNull()
   })
 })
 
 describe('getHouseDayDisplay', () => {
-  const overview = { house_id: 'house-1', date: '2026-11-19', status: 'WATCH' as const, status_reason: null }
+  const overview = { status: 'WATCH' as const, status_reason: null }
 
-  it('có trạng thái thì hiện; chưa có tổng quan thì không hiện gì', () => {
-    expect(getHouseDayDisplay(overview, [])).toEqual({ kind: 'status', status: 'WATCH' })
-    expect(getHouseDayDisplay(undefined, [])).toBeNull()
-  })
-
-  it('người xem còn chưa chấm hôm nay của nhà đó thì che trạng thái (BR-31)', () => {
-    expect(getHouseDayDisplay(overview, [{ house_id: 'house-1', date: '2026-11-19' }])).toEqual({ kind: 'pending-rating' })
-    expect(getHouseDayDisplay(overview, [{ house_id: 'house-2', date: '2026-11-19' }])).toEqual({ kind: 'status', status: 'WATCH' })
-  })
-
-  it('chưa biết ngày chờ chấm (đang tải hoặc lỗi) thì không hiện trạng thái (BR-31)', () => {
-    expect(getHouseDayDisplay(overview, null)).toBeNull()
+  it('có trạng thái thì hiện, kể cả khi người xem chưa chấm (BR-31); chưa có tổng quan thì không hiện gì', () => {
+    expect(getHouseDayDisplay(overview)).toEqual({ kind: 'status', status: 'WATCH' })
+    expect(getHouseDayDisplay(undefined)).toBeNull()
   })
 
   it('thiếu dữ liệu là INSUFFICIENT_DATA, chưa tính thì ghi chưa tính', () => {
-    expect(getHouseDayDisplay({ ...overview, status: null, status_reason: 'INSUFFICIENT_DATA' }, [])).toEqual({
+    expect(getHouseDayDisplay({ status: null, status_reason: 'INSUFFICIENT_DATA' })).toEqual({
       kind: 'status',
       status: 'INSUFFICIENT_DATA',
     })
-    expect(getHouseDayDisplay({ ...overview, status: null, status_reason: 'NOT_COMPUTED' }, [])).toEqual({ kind: 'not-computed' })
+    expect(getHouseDayDisplay({ status: null, status_reason: 'NOT_COMPUTED' })).toEqual({ kind: 'not-computed' })
   })
 })
 

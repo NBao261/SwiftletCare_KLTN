@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals'
 import type { FarmMember } from '@/types'
 import {
   describeActivityChanges,
+  describeReviewChanges,
   getActivityVerdict,
   getDaysLeft,
   getDeletionDeadline,
@@ -143,5 +144,34 @@ describe('summarizeMembers', () => {
       { user_id: 'expert', is_primary: false, role: 'DOMAIN_EXPERT', joined_at: '2026-11-04T00:00:00.000Z' },
     ]
     expect(summarizeMembers(members, 'owner')).toBe('1 chủ chính · 1 chuyên gia · 2 kỹ thuật viên nhà yến')
+  })
+})
+
+describe('describeReviewChanges', () => {
+  it('mức chỉ số sức khỏe: tên, giá trị cũ → mới kèm đơn vị, bỏ giá trị không đổi', () => {
+    const lines = describeReviewChanges({
+      group: 'health_levels',
+      old_values: { air_slight_h: 2, in_range_slight_pct: 80 },
+      new_values: { air_slight_h: 3, in_range_slight_pct: 80 },
+    })
+    expect(lines).toEqual(['Không khí vượt ngưỡng: nhẹ từ: 2 giờ → 3 giờ'])
+  })
+
+  it('vòng đếm: số đỉnh và phía trong vòng của vòng mới', () => {
+    const lines = describeReviewChanges({
+      group: 'counting_ring',
+      old_values: { ring: null },
+      new_values: { ring: { points: [[0, 0], [1, 0], [1, 1]], into_ring_is_exit: false } },
+    })
+    expect(lines).toEqual(['Vòng đếm 3 đỉnh, trong vòng là phía trong nhà'])
+  })
+
+  it('lịch đếm: số hồ sơ theo mùa và khung tạm trước / sau', () => {
+    const lines = describeReviewChanges({
+      group: 'counting_schedule',
+      old_values: { profiles: [], temporary: [] },
+      new_values: { profiles: [{ name: 'Mùa mưa' }], temporary: [] },
+    })
+    expect(lines).toEqual(['Hồ sơ theo mùa: 0 → 1', 'Khung tạm: 0 → 0'])
   })
 })
