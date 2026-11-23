@@ -10,7 +10,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Không tải được': 'Could not load',
   'Xem tất cả': 'View all',
   'Xem tất cả ({count})': 'View all ({count})',
-  'Đang xây dựng': 'Under construction',
 
   // Thanh tab và tiêu đề màn
   'Trang chủ': 'Home',
@@ -533,7 +532,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Thiếu phiên': 'Missing session',
   'Chạm một ngày để xem số đếm 5 phút.': 'Tap a day to see its 5-minute counts.',
   'Cột xám: ngày thiếu phiên sáng hoặc chiều, chưa tính tỉ lệ về tổ.': 'Grey bars: days missing the morning or evening session, so no return rate.',
-  'Mốc cảnh báo tỉ lệ về tổ thấp theo ngày': 'Daily low return rate alert markers',
   'Ngày trước': 'Previous day',
   'Ngày sau': 'Next day',
   'Số đếm 5 phút': '5-minute counts',
@@ -876,8 +874,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chuyên gia xem toàn farm, kiểm chứng cảnh báo suy luận, chỉnh ngưỡng và tham số; không điều khiển relay.': 'The expert sees the whole farm, validates inferred alerts and tunes thresholds and parameters; no relay control.',
   'Đồng sở hữu có quyền như chủ trại, trừ xoá farm và mời, gỡ thành viên.': 'A co-owner has the farm owner rights except deleting the farm and inviting or removing members.',
   'Gửi lời mời': 'Send invitation',
-  'Dữ liệu mẫu, backend chưa có': 'Sample data, no backend yet',
-  'Dữ liệu mẫu': 'Sample data',
   'Sửa ngưỡng': 'Edited thresholds',
   'Sửa hệ số điều khiển': 'Edited control coefficients',
   'Sửa tham số phát hiện': 'Edited detection parameters',
