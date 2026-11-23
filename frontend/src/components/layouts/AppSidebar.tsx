@@ -49,13 +49,6 @@ function writeCollapsed(titles: string[]): void {
   }
 }
 
-const DOCK_SIZE = 4
-
-// Dock mobile mặc định: 4 mục đầu sidebar
-export function firstDockItems(sections: MenuSection[]): MenuItem[] {
-  return sections.flatMap(s => s.items).slice(0, DOCK_SIZE)
-}
-
 // Sidebar desktop + dock nổi mobile, menu do <Role>Layout truyền vào
 export default function AppSidebar({
   menuSections,

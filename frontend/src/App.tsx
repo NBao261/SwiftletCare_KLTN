@@ -1,11 +1,8 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useMemo } from "react";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import AdminLayout from "@/components/layouts/AdminLayout";
-import FarmOwnerLayout from "@/components/layouts/FarmOwnerLayout";
-import TechnicianLayout from "@/components/layouts/TechnicianLayout";
-import DomainExpertLayout from "@/components/layouts/DomainExpertLayout";
 import AppShell from "@/components/layouts/AppShell";
+import { roleMenu } from "@/components/layouts/menuCatalog";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { setNavigate } from "@/lib/navigation";
 import { getRoleHomePath } from "@/constants/roles";
@@ -38,23 +35,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// URL không có tiền tố role (`/devices` dùng chung) nên chọn khung lúc chạy
+// URL không có tiền tố role (`/devices` dùng chung): một khung, menu theo vai trò từ danh mục chung (menuCatalog)
 function RoleLayout() {
   const role = useAuthStore((s) => s.user?.role);
-
-  switch (role) {
-    case "ADMIN":
-      return <AdminLayout />;
-    case "FARM_TECHNICIAN":
-      return <TechnicianLayout />;
-    case "DOMAIN_EXPERT":
-      return <DomainExpertLayout />;
-    case "FARM_OWNER":
-      return <FarmOwnerLayout />;
-    // Role lạ từ token cũ: vẫn dựng khung để Outlet render, chỉ chưa có menu
-    default:
-      return <AppShell menuSections={[]} dockItems={[]} />;
-  }
+  // Role lạ từ token cũ: vẫn dựng khung để Outlet render, chỉ chưa có menu
+  const menu = useMemo(() => (role ? roleMenu(role) : { sections: [], dock: [] }), [role]);
+  return <AppShell menuSections={menu.sections} dockItems={menu.dock} />;
 }
 
 // Đăng ký navigate() của router vào bridge để lib/axios.ts (ngoài React tree) dùng được.

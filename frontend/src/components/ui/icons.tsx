@@ -25,32 +25,8 @@ function Svg({ children, ...props }: IconProps) {
 // Icon mới từ nay lấy thẳng từ lucide-react, re-export ở đây để components/ui/ chỉ import qua 1 chỗ
 export { X as IconX } from 'lucide-react'
 
-export const IconDashboard = (p: IconProps) => (
-  <Svg {...p}><rect x="2.5" y="2.5" width="6" height="7.5" rx="2" /><rect x="11.5" y="2.5" width="6" height="4.5" rx="2" /><rect x="11.5" y="10" width="6" height="7.5" rx="2" /><rect x="2.5" y="12.5" width="6" height="5" rx="2" /></Svg>
-)
-
-export const IconFarm = (p: IconProps) => (
-  <Svg {...p}><path d="M3 8.5 10 3l7 5.5" /><path d="M4.5 8v9h11V8" /><path d="M8.5 17v-4.5h3V17" /></Svg>
-)
-
 export const IconDevice = (p: IconProps) => (
   <Svg {...p}><rect x="4.5" y="2.5" width="11" height="15" rx="3" /><path d="M8 6h4" /><circle cx="10" cy="13" r="1.5" /></Svg>
-)
-
-export const IconAlert = (p: IconProps) => (
-  <Svg {...p}><path d="M10 2.6 2.8 15.4a1.2 1.2 0 0 0 1 1.8h12.4a1.2 1.2 0 0 0 1-1.8Z" /><path d="M10 7.8v3.6" /><path d="M10 14.3h.01" /></Svg>
-)
-
-export const IconAnalytics = (p: IconProps) => (
-  <Svg {...p}><path d="M3 17h14" /><path d="M5.5 17v-5" /><path d="M10 17V5" /><path d="M14.5 17v-8" /></Svg>
-)
-
-export const IconHarvest = (p: IconProps) => (
-  <Svg {...p}><path d="M10 17c0-4.5 2.2-7.5 6-8.5-.4 4.6-2.6 7.3-6 8.5Z" /><path d="M10 17c0-4.5-2.2-7.5-6-8.5.4 4.6 2.6 7.3 6 8.5Z" /><path d="M10 17v-3" /></Svg>
-)
-
-export const IconSettings = (p: IconProps) => (
-  <Svg {...p}><circle cx="10" cy="10" r="2.6" /><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7" /></Svg>
 )
 
 export const IconBell = (p: IconProps) => (
@@ -127,10 +103,6 @@ export const IconUser = (p: IconProps) => (
 )
 
 // "Người dùng": nhóm người dùng
-export const IconUsers = (p: IconProps) => (
-  <Svg {...p}><circle cx="8" cy="7" r="3" /><path d="M2 18c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="14.5" cy="6" r="2.5" /><path d="M18 17c0-2.8-1.5-5-3.5-5.7" /></Svg>
-)
-
 // "Thao tác khác": menu 3 chấm dọc (dùng trong ActionsMenu theo dòng bảng)
 export const IconMore = (p: IconProps) => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" {...p}>
@@ -149,17 +121,6 @@ export const IconSortDesc = (p: IconProps) => (
 )
 
 // Onboarding: chip + điểm kết nối
-export const IconOnboarding = (p: IconProps) => (
-  <Svg {...p}>
-    <rect x="3" y="5" width="14" height="10" rx="2" />
-    <path d="M7 5V3.5M10 5V3.5M13 5V3.5" />
-    <path d="M7 15v1.5M10 15v1.5M13 15v1.5" />
-    <path d="M3 9h-1M3 11h-1M17 9h1M17 11h1" />
-    <circle cx="10" cy="10" r="1.5" />
-    <path d="M10 7.5v1M10 11.5v1M7.5 10h1M11.5 10h1" />
-  </Svg>
-)
-
 // OTA Firmware: mũi tên tải lên + chip
 export const IconOTA = (p: IconProps) => (
   <Svg {...p}>
