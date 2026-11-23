@@ -3,7 +3,7 @@ import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { ProvisionedDevice, type IProvisionedDevice, type ProvisionedDeviceKind } from '@/models/provisionedDevice.model'
 import { logAction } from '@/services/auditLog.service'
 import { paginate } from '@/utils/helpers.util'
-import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
+import { CHIP_MAC_PATTERN, DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 import { BadRequestError, ConflictError, NotFoundError } from '@/utils/appError.util'
 
 // Gõ tay từ nhãn dán
@@ -23,10 +23,16 @@ export const hashBrokerSecret = (secret: string) => crypto.createHash('sha256').
 // Chỉ máy đọc nên không cần bảng chữ dễ đọc
 const generateBrokerSecret = () => crypto.randomBytes(24).toString('base64url')
 
+// Địa chỉ broker thiết bị nối tới, nạp cùng danh tính; trống thì thiết bị dùng địa chỉ biên dịch sẵn
+const deviceBrokerHost = (): string | null => process.env.DEVICE_BROKER_HOST?.trim() || null
+
 // secretKey bản rõ chỉ trả về đúng 1 lần để in nhãn
 export async function createProvisionedDevice(
-  adminId: string, input: { device_id: string; kind: ProvisionedDeviceKind; simulated?: boolean },
-): Promise<{ device_id: string; kind: ProvisionedDeviceKind; simulated: boolean; secret_key: string; broker_secret: string }> {
+  adminId: string, input: { device_id: string; kind: ProvisionedDeviceKind; simulated?: boolean; chip_mac?: string },
+): Promise<{
+  device_id: string; kind: ProvisionedDeviceKind; simulated: boolean; secret_key: string; broker_secret: string
+  broker_host: string | null; chip_mac: string | null
+}> {
   const deviceId = input.device_id.trim()
   // Chặn cả ở service (script không qua route): + # / phá cô lập trên broker
   if (!DEVICE_ID_PATTERN.test(deviceId)) {
@@ -35,27 +41,36 @@ export async function createProvisionedDevice(
   if (await ProvisionedDevice.exists({ device_id: deviceId })) {
     throw ConflictError('device_id đã có trong kho thiết bị')
   }
+  const chipMac = input.chip_mac?.trim().toUpperCase() || undefined
+  if (chipMac !== undefined) {
+    if (!CHIP_MAC_PATTERN.test(chipMac)) throw BadRequestError('MAC của chip phải là 12 ký tự hex')
+    const sameChip = await ProvisionedDevice.findOne({ chip_mac: chipMac }).select('device_id').lean()
+    if (sameChip) throw ConflictError(`Bo mạch này đã có trong kho với mã ${sameChip.device_id}. Dùng "Nạp lại" thay vì thêm mới`)
+  }
 
   const secretKey = generateSecretKey()
   const brokerSecret = generateBrokerSecret()
   const simulated = input.simulated === true
   const device = await ProvisionedDevice.create({
     device_id: deviceId, kind: input.kind, simulated, secret_key_hash: hashKey(secretKey),
-    broker_secret_hash: hashBrokerSecret(brokerSecret).toString('hex'), created_by: adminId,
+    broker_secret_hash: hashBrokerSecret(brokerSecret).toString('hex'), created_by: adminId, chip_mac: chipMac,
   })
   await logAction(adminId, 'DEVICE_PROVISIONED', 'provisioned_device', String(device._id), {
-    deviceId, kind: input.kind, simulated,
+    deviceId, kind: input.kind, simulated, ...(chipMac && { chipMac }),
   })
-  return { device_id: deviceId, kind: input.kind, simulated, secret_key: secretKey, broker_secret: brokerSecret }
+  return {
+    device_id: deviceId, kind: input.kind, simulated, secret_key: secretKey, broker_secret: brokerSecret,
+    broker_host: deviceBrokerHost(), chip_mac: chipMac ?? null,
+  }
 }
 
 export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
 
 type StockRecord = Pick<IProvisionedDevice,
-  '_id' | 'device_id' | 'kind' | 'claimed_at' | 'revoked_at' | 'revoke_reason' | 'created_by' | 'created_at'>
+  '_id' | 'device_id' | 'kind' | 'claimed_at' | 'revoked_at' | 'revoke_reason' | 'created_by' | 'created_at' | 'chip_mac'>
 
 export async function listProvisionedDevices(query: {
-  kind?: string; claimed?: string; revoked?: string; page?: string | number; limit?: string | number
+  kind?: string; claimed?: string; revoked?: string; deviceId?: string; page?: string | number; limit?: string | number
 }): Promise<{ records: Array<StockRecord & { stock_status: StockStatus }>; total: number; page: number; limit: number }> {
   const filter: Record<string, unknown> = {}
   if (query.kind) filter.kind = query.kind
@@ -63,6 +78,8 @@ export async function listProvisionedDevices(query: {
   if (query.claimed === 'false') filter.claimed_at = null
   if (query.revoked === 'true') filter.revoked_at = { $ne: null }
   if (query.revoked === 'false') filter.revoked_at = null
+  // Màn nạp tìm đúng mục kho của bo mạch đang cắm (mã đọc từ chip)
+  if (query.deviceId) filter.device_id = query.deviceId
 
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [records, total] = await Promise.all([
@@ -149,7 +166,7 @@ export async function rotateBrokerSecret(adminId: string | undefined, id: string
   device.broker_secret_hash = hashBrokerSecret(brokerSecret).toString('hex')
   await device.save()
   await logAction(adminId, 'DEVICE_BROKER_SECRET_ROTATED', 'provisioned_device', id, { deviceId: device.device_id })
-  return { device_id: device.device_id, kind: device.kind, broker_secret: brokerSecret }
+  return { device_id: device.device_id, kind: device.kind, broker_secret: brokerSecret, broker_host: deviceBrokerHost() }
 }
 
 // Không phân biệt "không có" với "sai mật khẩu": so cả khi thiếu bản ghi, cùng thời gian

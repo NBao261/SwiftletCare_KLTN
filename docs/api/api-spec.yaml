@@ -682,6 +682,10 @@ paths:
 
         `broker_secret` (FARM-FR-010) là mật khẩu broker của thiết bị, cũng chỉ trả **đúng 1 lần**:
         nạp vào thiết bị lúc flash cùng `device_id` (`firmware/tools/flash_identity.py`), không in lên nhãn.
+
+        Nạp từ màn Kho thiết bị qua USB (Web Serial, firmware ≥ 2.4.0): trang gửi `chip_mac` đọc từ chip để biết bo mạch
+        nào mang mã nào (một chip một mã, trùng → 409), rồi ghi `device_id`, `broker_secret` và `broker_host` vào chip.
+        `broker_host` lấy từ `DEVICE_BROKER_HOST`; `null` thì thiết bị dùng địa chỉ biên dịch sẵn.
       requestBody:
         required: true
         content:
@@ -693,6 +697,7 @@ paths:
                 device_id: { type: string, pattern: "^[A-Za-z0-9_-]+$", example: node_101, description: "Chỉ chữ, số, `_`, `-` (NFR-10 d): device ID là username và một đoạn topic trên broker, nên `+`, `#`, `/` hay khoảng trắng → 422" }
                 kind: { type: string, enum: [SENSOR, CAMERA] }
                 simulated: { type: boolean, default: false, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập; controller/camera đăng ký từ mục kho này mang cờ simulated" }
+                chip_mac: { type: string, pattern: "^[0-9A-Fa-f]{12}$", example: A1B2C3D4E5F6, description: "MAC của chip khi nạp qua USB; lưu chữ hoa; chip đã có trong kho → 409" }
       responses:
         "201":
           description: Đã cấp
@@ -701,7 +706,7 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, simulated: { type: boolean }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" } } } }
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, simulated: { type: boolean }, broker_secret: { type: string, description: "Mật khẩu broker, chỉ trả 1 lần" }, secret_key: { type: string, example: "K7QM-3XPA-9RTD" }, broker_host: { type: string, nullable: true, description: "DEVICE_BROKER_HOST, nạp cùng danh tính" }, chip_mac: { type: string, nullable: true } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
@@ -712,6 +717,7 @@ paths:
         - { name: kind, in: query, schema: { type: string, enum: [SENSOR, CAMERA] } }
         - { name: claimed, in: query, schema: { type: string, enum: ["true", "false"] }, description: "Đã/chưa kích hoạt" }
         - { name: revoked, in: query, schema: { type: string, enum: ["true", "false"] }, description: "Đã/chưa bị thu hồi" }
+        - { name: deviceId, in: query, schema: { type: string, pattern: "^[A-Za-z0-9_-]+$" }, description: "Đúng một mã: màn nạp tìm mục kho của bo mạch đang cắm" }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:
@@ -806,7 +812,7 @@ paths:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/ApiSuccess"
-                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, broker_secret: { type: string } } } }
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, kind: { type: string }, broker_secret: { type: string }, broker_host: { type: string, nullable: true } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
@@ -8464,6 +8470,7 @@ components:
         revoked_at: { type: string, format: date-time, nullable: true, description: "Đã thu hồi — không kích hoạt được nữa" }
         revoke_reason: { type: string, nullable: true }
         simulated: { type: boolean, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập" }
+        chip_mac: { type: string, nullable: true, description: "MAC của chip khi nạp từ màn Kho thiết bị qua USB" }
         created_by: { type: string }
         created_at: { type: string, format: date-time }
         stock_status:

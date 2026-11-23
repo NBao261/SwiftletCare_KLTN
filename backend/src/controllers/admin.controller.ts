@@ -50,7 +50,7 @@ export const rejectDeletionRequest = asyncHandler(async (req: Request, res: Resp
 // secret_key chỉ trả về 1 lần để in nhãn
 export const createProvisionedDevice = asyncHandler(async (req: Request, res: Response) => {
   const device = await provisionedDeviceService.createProvisionedDevice(req.user._id, {
-    device_id: req.body.device_id, kind: req.body.kind, simulated: req.body.simulated,
+    device_id: req.body.device_id, kind: req.body.kind, simulated: req.body.simulated, chip_mac: req.body.chip_mac,
   })
   res.status(201).json({ success: true, data: device })
 })
@@ -60,6 +60,7 @@ export const listProvisionedDevices = asyncHandler(async (req: Request, res: Res
     kind:    req.query.kind as string | undefined,
     claimed: req.query.claimed as string | undefined,
     revoked: req.query.revoked as string | undefined,
+    deviceId: req.query.deviceId as string | undefined,
     page:    req.query.page as string | undefined,
     limit:   req.query.limit as string | undefined,
   })

@@ -7,6 +7,9 @@ export const DEVICE_TOPIC_ROOT = 'swiftletcare/dev'
 // ID là 1 đoạn topic trong ACL, không được chứa +, # hay /
 export const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 
+// MAC của chip ESP32: 12 ký tự hex chữ hoa, như firmware trả ở `SC INFO`
+export const CHIP_MAC_PATTERN = /^[0-9A-F]{12}$/
+
 export const DEVICE_UPLINKS = [
   'telemetry', 'telemetry/buffered', 'heartbeat', 'relay/status', 'alert', 'vision/bird-count', 'vision/alert',
 ] as const
