@@ -40,9 +40,9 @@ describe('ảnh chụp của mẻ thu hoạch (HARVEST-FR-002/003)', () => {
       session_date: vnDate(new Date(now - daysAgo * DAY)), session_type, entry_count, exit_count,
     })
     await BirdCountRecord.create([
-      // 2 ngày trước: ròng ra 100, ròng về 95 − 5 = 90 → 90%
+      // 2 ngày trước: ra 100, về 95 → 95%
       session(2, 'MORNING_EXIT', 0, 100), session(2, 'EVENING_ENTRY', 95, 5),
-      // hôm qua: ròng ra 125 − 25 = 100, ròng về 85 − 5 = 80 → 80%
+      // hôm qua: ra 125, về 85 → 68% (chiều ngược không trừ)
       session(1, 'MORNING_EXIT', 25, 125), session(1, 'EVENING_ENTRY', 85, 5),
     ])
 
@@ -51,7 +51,7 @@ describe('ảnh chụp của mẻ thu hoạch (HARVEST-FR-002/003)', () => {
     })
 
     expect(batch.toObject().env_snapshot).toMatchObject({ avg_temperature: 29, avg_humidity: 82, avg_nh3_ppm: 6, insufficient_data: false })
-    // Số ròng về lớn nhất (90), không phải số thô (95)
-    expect(batch.toObject().flock_snapshot).toMatchObject({ avg_return_rate_30d: 85, estimated_population: 90 })
+    // Số chim về buổi chiều lớn nhất
+    expect(batch.toObject().flock_snapshot).toMatchObject({ avg_return_rate_30d: 81.5, estimated_population: 95 })
   })
 })

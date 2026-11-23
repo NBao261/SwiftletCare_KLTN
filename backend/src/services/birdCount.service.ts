@@ -29,8 +29,6 @@ const DEFAULT_BUCKET_RANGE_MS = DAY_MS
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
 // Phiên sáng 05:30 VN là 22:30 UTC hôm trước
 export const vnDate = vnDateOf
-// Chim lượn qua lại vạch làm cả hai chiều phồng lên, phép trừ triệt tiêu
-const net = (main: number, opposite: number) => Math.max(main - opposite, 0)
 
 // Nguồn duy nhất của số đếm theo ngày của một nhà
 export interface HouseDayCounts {
@@ -40,6 +38,7 @@ export interface HouseDayCounts {
   morning_exit: number
   evening_entry: number
   evening_exit: number
+  // Sáng chỉ tính chim RA, chiều chỉ tính chim VỀ; chiều ngược vẫn lưu để đối chiếu. Tên cũ giữ cho app
   net_exit: number
   net_entry: number
   // null khi thiếu phiên hoặc sáng không có chim ra
@@ -58,8 +57,8 @@ function toDayCounts(row: {
   _id: string; morning_entry: number; morning_exit: number; evening_entry: number; evening_exit: number
   mornings: number; evenings: number; incompletes: number; updated_at: Date | null
 }): HouseDayCounts {
-  const netExit = net(row.morning_exit, row.morning_entry)
-  const netEntry = net(row.evening_entry, row.evening_exit)
+  const netExit = row.morning_exit
+  const netEntry = row.evening_entry
   const hasMorning = row.mornings > 0
   const hasEvening = row.evenings > 0
   return {
@@ -75,7 +74,7 @@ function toDayCounts(row: {
   }
 }
 
-// Cộng số thô mọi camera rồi mới lấy số ròng: chim có thể ra cửa này về cửa kia
+// Cộng mọi camera của nhà rồi mới tính tỷ lệ: chim có thể ra cửa này về cửa kia
 export async function houseDailyCounts(houseId: string, range: { from?: string; to?: string } = {}): Promise<HouseDayCounts[]> {
   const sessionDate: Record<string, string> = {}
   if (range.from) sessionDate.$gte = range.from

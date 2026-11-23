@@ -154,7 +154,7 @@ describe('VISION-FR-008, 020 — sessions from the 5-minute counts', () => {
     await computeHouseSessions(String(s.house._id), DAY)
     const [day] = await houseDailyCounts(String(s.house._id), { from: DAY, to: DAY })
     expect(day).toMatchObject({ morning_exit: 1000, morning_entry: 50, evening_entry: 900, evening_exit: 20, incomplete: false })
-    expect(day.return_rate).toBeCloseTo((880 / 950) * 100, 1)
+    expect(day.return_rate).toBeCloseTo((900 / 1000) * 100, 1)   // VỀ chiều ÷ RA sáng, không trừ chiều ngược
     const records = await BirdCountRecord.find({ house_id: s.house._id }).lean()
     expect(records).toHaveLength(4)
     expect(records.filter(r => r.session_type === 'MORNING_EXIT').every(r => r.window_start === '05:30' && r.window_end === '07:00')).toBe(true)

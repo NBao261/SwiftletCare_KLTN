@@ -131,7 +131,7 @@ describe('sumTodayBirdCounts', () => {
     has_morning: hasBoth, has_evening: hasBoth,
   });
 
-  it('tính lại tỷ lệ về từ số ròng của các nhà đủ 2 phiên', () => {
+  it('tính lại tỷ lệ về từ RA sáng và VỀ chiều của các nhà đủ 2 phiên', () => {
     const today = sumTodayBirdCounts([house(100, 90, true, '2026-10-22T10:00:00Z'), house(100, 70, true, '2026-10-22T11:00:00Z'), house(50, 0, false, null)]);
     expect(today.returnRate).toBeCloseTo(80);
     expect(today.morningExit).toBe(101 + 101 + 51);

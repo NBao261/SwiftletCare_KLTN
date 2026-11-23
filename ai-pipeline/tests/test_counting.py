@@ -148,6 +148,48 @@ def test_new_ring_forgets_tracks():
 
 
 # Phiên theo giờ VN và số đếm 5 phút
+def once(**kw):
+    return fast_counter(once_per_track=True, **kw)
+
+
+def test_once_per_track_bird_circling_at_the_hole_then_leaving_counts_one_exit():
+    c = once()
+    # vào vòng, ra, vào lại rồi mất trong lỗ: cách cũ đếm RA 2, VÀO 1
+    run(c, [(300, 500), (450, 500), (300, 500), (450, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 1)
+
+
+def test_once_per_track_fly_past_counts_nothing():
+    c = once()
+    run(c, [(300, 500), (500, 500), (700, 500), (850, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_once_per_track_bird_out_of_the_hole_is_entry_when_lost():
+    c = once()
+    run(c, [(500, 500), (650, 500), (800, 500)])
+    assert (c.entry_count, c.exit_count) == (0, 0)          # chốt khi vết mất
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+def test_once_per_track_uses_extrapolation_at_both_ends():
+    c = once()
+    run(c, [(650, 500), (780, 500)], tid=1)                 # ra khỏi lỗ trong frame không ai thấy
+    run(c, [(100, 500), (250, 500), (370, 500)], tid=2)     # mất ngay ngoài lỗ, đang lao vào
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (1, 1)
+
+
+def test_once_per_track_born_and_lost_inside_is_ambiguous():
+    c = once()
+    run(c, [(500, 500), (520, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 0, 1)
+
+
 WINDOWS = {"MORNING_EXIT": ["05:30", "07:00"], "EVENING_ENTRY": ["17:30", "19:00"]}
 
 

@@ -189,7 +189,7 @@ export interface BirdCountPayload {
   session_type?: SessionType
   entry_count: number
   exit_count: number
-  // Bỏ qua: backend tự tính trên số ròng
+  // Bỏ qua: backend tự tính từ RA sáng và VỀ chiều
   return_rate?: number
   confidence_avg?: number
   // Chỉ tham khảo, job LOW_RETURN_RATE không dựa vào

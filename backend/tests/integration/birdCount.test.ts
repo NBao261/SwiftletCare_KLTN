@@ -88,19 +88,20 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
     expect(records[0]).toMatchObject({ house_id: house._id, session_date: '2026-10-15', exit_count: 110, entry_count: 10 })
     expect(emitBirdCountUpdate).toHaveBeenLastCalledWith(String(house._id), expect.objectContaining({
       houseId: String(house._id), sessionDate: '2026-10-15', sessionType: 'MORNING_EXIT',
-      exitCount: 110, entryCount: 10, netCount: 100, returnRate: null,
+      exitCount: 110, entryCount: 10, netCount: 110, returnRate: null,
     }))
   })
 
-  it('tỷ lệ chim về tính trên số ròng: (95 − 10) / (110 − 10) = 85%', async () => {
+  it('sáng chỉ tính chim RA, chiều chỉ tính chim VỀ: 95 / 110 = 86,36%', async () => {
     const { camera, house } = await seed()
     await ingestBirdCount(session(camera.device_id, 'MORNING_EXIT', 110, 10, vnAt('2026-10-15', '06:30')))
     await ingestBirdCount(session(camera.device_id, 'EVENING_ENTRY', 10, 95, vnAt('2026-10-15', '18:30')))
 
     const [day] = await houseDailyCounts(String(house._id), { from: '2026-10-15', to: '2026-10-15' })
-    expect(day).toMatchObject({ net_exit: 100, net_entry: 85, return_rate: 85 })
+    // chiều ngược (10 vào buổi sáng, 10 ra buổi chiều) vẫn lưu nhưng không trừ
+    expect(day).toMatchObject({ morning_entry: 10, evening_exit: 10, net_exit: 110, net_entry: 95, return_rate: 86.36 })
     expect(emitBirdCountUpdate).toHaveBeenLastCalledWith(String(house._id), expect.objectContaining({
-      sessionType: 'EVENING_ENTRY', entryCount: 95, exitCount: 10, netCount: 85, returnRate: 85,
+      sessionType: 'EVENING_ENTRY', entryCount: 95, exitCount: 10, netCount: 95, returnRate: 86.36,
     }))
   })
 
@@ -144,7 +145,7 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
       houseId: String(house._id), from: '2026-10-14T00:00:00Z', to: '2026-10-16T00:00:00Z',
     }).expect(200)
     expect(res.body.data.house_id).toBe(String(house._id))
-    // Giữ nguyên các trường frontend đang đọc (morning_exit, evening_entry, return_rate), thêm số ròng
+    // Giữ nguyên các trường frontend đang đọc (morning_exit, evening_entry, return_rate)
     expect(res.body.data.records).toEqual([{
       date: '2026-10-15', morning_entry: 0, morning_exit: 100, evening_entry: 90, evening_exit: 0,
       net_exit: 100, net_entry: 90, return_rate: 90, has_morning: true, has_evening: true, incomplete: false,
@@ -153,7 +154,7 @@ describe('ingestBirdCount — tin của phiên (VISION-FR-006/008/009)', () => {
 })
 
 describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
-  // 2 cửa: ròng ra 100, ròng về 85 → 85%. Tính riêng từng camera ra 54,5% và 122%, đều sai
+  // 2 cửa: ra 110, về 90 → 81,82%. Tính riêng từng camera ra 50% và 120%, đều sai
   async function twoDoors() {
     const s = await seed()
     const doorB = await CameraNode.create({ device_id: `cam-${seq}-b`, house_id: s.house._id })
@@ -166,10 +167,10 @@ describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
   }
   const EXPECTED = {
     morning_entry: 10, morning_exit: 110, evening_entry: 90, evening_exit: 5,
-    net_exit: 100, net_entry: 85, return_rate: 85, has_morning: true, has_evening: true, incomplete: false,
+    net_exit: 110, net_entry: 90, return_rate: 81.82, has_morning: true, has_evening: true, incomplete: false,
   }
 
-  it('/current, socket và /daily cho cùng một con số, cộng mọi camera của nhà trước khi lấy số ròng', async () => {
+  it('/current, socket và /daily cho cùng một con số, cộng mọi camera của nhà trước khi tính tỷ lệ', async () => {
     const { house, token, today } = await twoDoors()
 
     const current = await get('/analytics/bird-count/current', token, { houseId: String(house._id) }).expect(200)
@@ -179,7 +180,7 @@ describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
     // Tổng của cả nhà, không phải của riêng cửa B
     expect(emitBirdCountUpdate).toHaveBeenLastCalledWith(String(house._id), {
       houseId: String(house._id), sessionDate: today, sessionType: 'EVENING_ENTRY',
-      entryCount: 90, exitCount: 5, netCount: 85, returnRate: 85, timestamp: expect.any(String),
+      entryCount: 90, exitCount: 5, netCount: 90, returnRate: 81.82, timestamp: expect.any(String),
     })
 
     const daily = await get('/analytics/bird-count/daily', token, { houseId: String(house._id) }).expect(200)
@@ -193,7 +194,7 @@ describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
       expect(res.body.data).toMatchObject({ house_id: String(house._id), ...EXPECTED })
     }
     const trends = await get('/analytics/bird-count/trends', token, { zoneId: String(zone._id) }).expect(200)
-    expect(trends.body.data).toMatchObject({ house_id: String(house._id), latest_return_rate: 85 })
+    expect(trends.body.data).toMatchObject({ house_id: String(house._id), latest_return_rate: 81.82 })
   })
 
   it('báo cáo sức khỏe của mọi Zone trong nhà lấy tỷ lệ chim về của nhà', async () => {
@@ -201,7 +202,7 @@ describe('đếm chim theo House (SRS v2.1.8, VISION-FR-009/012)', () => {
     expect(await checkReturnRateDrops(today)).toBe(0)      // chưa đủ 3 ngày nền
     for (const z of [zone, upperZone]) {
       const metrics = await buildZoneMetrics(z, new Date(Date.now() - 86_400_000), new Date())
-      expect(metrics.avg_return_rate).toBe(85)
+      expect(metrics.avg_return_rate).toBe(81.8)
     }
   })
 
