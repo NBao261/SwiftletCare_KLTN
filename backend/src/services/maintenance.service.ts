@@ -78,7 +78,8 @@ async function scopeFilter(user: CurrentUser, query: { farmId?: string; houseId?
     if (query.farmId && !farmIds.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
     filter.farm_id = query.farmId ?? { $in: farmIds }
   }
-  if (query.houseId) filter.$and = [{ house_id: new Types.ObjectId(query.houseId) }]
+  // Nhà không được giao: 403 như các route theo nhà khác, không phải danh sách rỗng
+  if (query.houseId) filter.$and = [{ house_id: (await assertHouseAccess(query.houseId, user)).house._id }]
   return filter
 }
 

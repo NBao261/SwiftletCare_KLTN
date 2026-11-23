@@ -2,6 +2,9 @@ import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
+import { House, Zone } from '@/models/houseZone.model'
+import { SensorNode } from '@/models/device.model'
+import { WorkOrder } from '@/models/workOrder.model'
 import { Invitation } from '@/models/invitation.model'
 import { User } from '@/models/user.model'
 import {
@@ -41,6 +44,7 @@ afterEach(async () => {
   await Promise.all([
     AuditLog.deleteMany({}), Farm.deleteMany({}),
     Invitation.deleteMany({}), User.deleteMany({}),
+    House.collection.deleteMany({}), Zone.collection.deleteMany({}), SensorNode.deleteMany({}), WorkOrder.deleteMany({}),
   ])
 })
 
@@ -265,6 +269,45 @@ describe('completeDeletionRequest', () => {
     const after = (await Farm.findById(farm._id))!
     expect(String(after.owner_id)).toBe(String(owner._id))
     expect(after.members.some(m => String(m.user_id) === String(leaver._id))).toBe(false)
+  })
+
+  it('a technician leaving: off its houses and shifts, its open Work Orders go back to the Farm Owner', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const owner = await mkUser('owner@test.vn')
+    const leaver = await mkUser('tech@test.vn', 'FARM_TECHNICIAN', requested)
+    const farm = await mkFarm(owner, [{ user: leaver, joined: '2026-02-01' }])
+    const house = await House.create({
+      farm_id: farm._id, name: 'H',
+      technicians: [{ user_id: leaver._id, primary: true }],
+      roster: [{ technician_id: leaver._id, role: 'PRIMARY', weekdays: [1, 2], start: '06:00', end: '18:00' }],
+    })
+    const workOrder = await WorkOrder.create({
+      farm_id: farm._id, house_id: house._id, origin: 'MANUAL', title: 'Kiểm tra', status: 'OPEN', is_open: true, assignee_id: leaver._id,
+    })
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    const after = (await House.findById(house._id).lean())!
+    expect(after.technicians).toHaveLength(0)
+    expect(after.roster).toHaveLength(0)
+    expect((await WorkOrder.findById(workOrder._id).lean())!.assignee_id).toBeUndefined()
+    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.anything())
+  })
+
+  it('a sole owner leaving: devices are removed before the farm and its houses are soft-deleted', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const farm = await mkFarm(leaver)
+    const house = await House.create({ farm_id: farm._id, name: 'H' })
+    const zone = await Zone.create({ house_id: house._id, farm_id: farm._id, name: 'Z' })
+    const node = await SensorNode.create({ device_id: 'ESP-LEAVER-1', zone_id: zone._id, status: 'ONLINE' })
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    expect((await SensorNode.findById(node._id).lean())!.decommissioned_at).toBeInstanceOf(Date)
+    expect((await House.collection.findOne({ _id: house._id }))!.is_deleted).toBe(true)
+    expect((await Zone.collection.findOne({ _id: zone._id }))!.is_deleted).toBe(true)
+    expect((await Farm.collection.findOne({ _id: farm._id }))!.is_deleted).toBe(true)
   })
 
   it('anonymizes PII, closes the request, revokes sessions and drops sockets', async () => {

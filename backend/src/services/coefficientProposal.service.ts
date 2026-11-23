@@ -24,9 +24,9 @@ const SUBMIT_ATTEMPTS = 3
 // Chụp giá trị lúc gửi. Farm chưa có chuyên gia thì 409 (Farm Owner áp trực tiếp)
 export async function submitProposal(user: CurrentUser, zoneId: string): Promise<ICoefficientProposal> {
   const { zone, farm } = await assertZoneAccess(zoneId, user)
-  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất cho chuyên gia')
+  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ chủ nhà yến gửi đề xuất cho chuyên gia')
   if (!(await farmHasActiveExpert(farm))) {
-    throw ConflictError('Farm chưa có chuyên gia — Farm Owner áp gợi ý trực tiếp (POST /farms/zones/{zoneId}/fuzzy-tuning/apply-suggestion)')
+    throw ConflictError('Trang trại chưa có chuyên gia, bạn áp gợi ý trực tiếp ở trang Ngưỡng & hệ số mờ')
   }
   const { suggestion, predicted } = await currentSuggestion(user, zoneId)
 
@@ -67,7 +67,7 @@ async function loadPendingProposal(proposalId: string, user: CurrentUser) {
   const proposal = await CoefficientProposal.findById(proposalId)
   if (!proposal) throw NotFoundError('Không tìm thấy đề xuất')
   const chain = await assertZoneAccess(String(proposal.zone_id), user)
-  if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ Domain Expert duyệt đề xuất hệ số')
+  if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ chuyên gia duyệt đề xuất hệ số')
   if (proposal.status !== 'PROPOSED') throw ConflictError('Đề xuất này đã đóng')
   return { proposal, chain }
 }

@@ -3,7 +3,8 @@ import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
 import { logAction } from '@/services/auditLog.service'
-import { softDeleteFarm } from '@/services/farm.service'
+import { dropMemberAssignments, listFarmDevicesInService, softDeleteFarm } from '@/services/farm.service'
+import { decommissionDevice } from '@/services/device.service'
 import { sendMail, temporaryPasswordMail } from '@/services/mail.service'
 import { notifyAdmins, notifyUser } from '@/services/notification.service'
 import { removeUserPushTokens } from '@/services/push.service'
@@ -12,7 +13,7 @@ import { escapeRegex, paginate } from '@/utils/helpers.util'
 import { NotFoundError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { generateTemporaryPassword } from '@/utils/password.util'
 import { ROLE_LABEL } from '@/utils/displayLabel.util'
-import type { Role } from '@/types'
+import type { CurrentUser, Role } from '@/types'
 
 export interface ListQuery { page?: string | number; limit?: string | number }
 
@@ -130,6 +131,7 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
   }
 
   const ownedFarms = await Farm.find({ owner_id: user._id, is_deleted: false })
+  const admin: CurrentUser = { _id: adminId, email: '', role: 'ADMIN' }
 
   for (const farm of ownedFarms) {
     // Chỉ chuyển cho đồng sở hữu; không còn thì xoá mềm farm
@@ -151,7 +153,12 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
         body: `Chủ nhà yến của trang trại "${farm.name}" đã xoá tài khoản, quyền chủ sở hữu đã được chuyển cho bạn.`,
       })
     } else {
-      await softDeleteFarm(farm)
+      // Không ai còn mở được trang trại: gỡ thiết bị để chúng không kẹt ở đó và lắp lại được ở trang trại khác
+      const devices = await listFarmDevicesInService(farm._id)
+      const reason = 'Tài khoản chủ trang trại đã bị xoá'
+      for (const id of devices.controllerIds) await decommissionDevice('sensor', id, admin, reason, { force: true })
+      for (const id of devices.cameraIds) await decommissionDevice('camera', id, admin, reason, { force: true })
+      await softDeleteFarm(farm, admin)
 
       await logAction(adminId, 'FARM_SOFT_DELETED', 'farm', String(farm._id), {
         reason: 'OWNER_ACCOUNT_DELETED', ownerId: userId,
@@ -159,6 +166,9 @@ export async function completeDeletionRequest(adminId: string, userId: string): 
     }
   }
 
+  // Như gỡ khỏi farm: bỏ khỏi nhà được giao và ca trực, phiếu đang mở chuyển cho chủ nhà yến
+  const memberFarms = await Farm.find({ owner_id: { $ne: user._id }, 'members.user_id': user._id }).select('_id')
+  for (const farm of memberFarms) await dropMemberAssignments(farm._id, userId, adminId)
   await Farm.updateMany(
     { owner_id: { $ne: user._id }, 'members.user_id': user._id },
     { $pull: { members: { user_id: user._id } } },

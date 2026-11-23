@@ -1115,9 +1115,12 @@ paths:
       summary: Xóa mềm farm — chỉ Primary Owner
       description: |
         Role khác FARM_OWNER → 403; Farm Owner không phải Primary Owner → 403 (FARM-FR-001).
-        Farm chỉ bị ẩn (`is_deleted`), dữ liệu lịch sử giữ nguyên. Kéo theo:
-        mọi cảnh báo đang mở của farm được đóng (`RESOLVED`) để không bị gửi lại
-        (ALERT-FR-015), và lời mời còn chờ hết hạn.
+        Còn bộ điều khiển hoặc camera chưa gỡ ở bất kỳ nhà nào → 409 `HAS_ACTIVE_DEVICES`: gỡ thiết bị trước
+        (như xoá nhà, FARM-FR-002), kẻo thiết bị kẹt ở farm không ai mở được.
+        Farm chỉ bị ẩn (`is_deleted`), dữ liệu lịch sử giữ nguyên. Kéo theo, như xoá từng nhà:
+        nhà và Zone xoá mềm, kế hoạch bảo trì thôi (`RETIRED`), khuyến nghị đang mở hết hạn, phiếu công việc
+        đang mở bị huỷ, mọi cảnh báo đang mở được đóng (`RESOLVED`) để không bị gửi lại (ALERT-FR-015),
+        và lời mời còn chờ hết hạn.
       responses:
         "200":
           {
@@ -1129,6 +1132,9 @@ paths:
               },
           }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "HAS_ACTIVE_DEVICES — farm còn thiết bị đang dùng"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
 
   /farms/{id}/members:
     post:
@@ -3368,7 +3374,7 @@ paths:
         "400": { description: "device_id của camera không dùng được làm tên stream (ký tự lạ hoặc kết thúc bằng -raw)" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "503": { description: "Máy chủ video chưa được cấu hình (STREAM_TOKEN_SECRET trống)" }
+        "503": { description: "Máy chủ video chưa được cấu hình (STREAM_TOKEN_SECRET trống); chỉ trả sau khi đã kiểm quyền, người không có quyền luôn nhận 403" }
 
   /profiles:
     get:
@@ -4198,7 +4204,7 @@ paths:
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
-        - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của một nhà yến: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà (ALERT-FR-007)" }
+        - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của một nhà yến: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà (ALERT-FR-007). Nhà ngoài phạm vi → 403, như `zoneId`" }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
         - name: verdict
           in: query
@@ -4533,7 +4539,7 @@ paths:
       summary: "Danh sách Work Order (OPS-FR-001…004) — FARM_OWNER, DOMAIN_EXPERT (đọc), FARM_TECHNICIAN (nhà được giao)"
       description: |
         Mới mở trước. Farm Owner, Domain Expert: Work Order của các farm mình; Farm Technician: Work Order
-        của các nhà được giao (`farmId`/`houseId` khác chỉ cho danh sách rỗng hoặc 403). Administrator → 403.
+        của các nhà được giao (`farmId` khác cho danh sách rỗng; `houseId` không được giao → 403). Administrator → 403.
         `assigneeId=me` = Work Order giao cho chính người gọi.
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
@@ -4787,7 +4793,7 @@ paths:
     get:
       tags: [Maintenance]
       summary: "Danh sách kế hoạch bảo trì (OPS-FR-005) — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN (nhà được giao)"
-      description: "Farm Owner, Domain Expert: kế hoạch của các farm mình; Farm Technician: của các nhà được giao. `RETIRED` chỉ hiện khi lọc `state=RETIRED`. Administrator → 403."
+      description: "Farm Owner, Domain Expert: kế hoạch của các farm mình; Farm Technician: của các nhà được giao; `houseId` ngoài phạm vi → 403. `RETIRED` chỉ hiện khi lọc `state=RETIRED`. Administrator → 403."
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }

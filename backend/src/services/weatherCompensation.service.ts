@@ -98,7 +98,7 @@ export async function setWeatherRules(
 // Luật đang chạy không đổi. Farm chưa có chuyên gia → 409 (dùng PUT)
 export async function proposeWeatherRules(houseId: string, user: CurrentUser, rules: Array<WeatherRuleInput & { _id?: string }>) {
   const { house, farm } = await assertHouseAccess(houseId, user)
-  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ Farm Owner gửi đề xuất luật bù phun sương')
+  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ chủ nhà yến gửi đề xuất luật bù phun sương')
   if (!(await farmHasActiveExpert(farm))) throw ConflictError('Farm chưa có chuyên gia: đặt luật trực tiếp')
   house.weather_rules_proposal = { rules: buildRules(house, rules), proposed_by: user._id as never, proposed_at: new Date() }
   await house.save()
@@ -116,7 +116,7 @@ export async function proposeWeatherRules(houseId: string, user: CurrentUser, ru
 // Ghi có điều kiện theo proposed_at đã xem: đổi trong lúc đó thì 409
 async function takeProposal(houseId: string, user: CurrentUser, seenAt: string) {
   const { house, farm } = await assertHouseAccess(houseId, user)
-  if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ Domain Expert duyệt đề xuất luật bù phun sương')
+  if (user.role !== 'DOMAIN_EXPERT') throw ForbiddenError('Chỉ chuyên gia duyệt đề xuất luật bù phun sương')
   const taken = await House.findOneAndUpdate(
     { _id: house._id, 'weather_rules_proposal.proposed_at': new Date(seenAt) },
     { weather_rules_proposal: null },

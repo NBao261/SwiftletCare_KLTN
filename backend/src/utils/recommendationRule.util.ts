@@ -44,7 +44,7 @@ const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.is
 // Sửa mà không gửi active thì giữ trạng thái cũ
 export function parseRuleInput(input: Record<string, unknown>, currentActive = true): RuleInput {
   const indicator = input.indicator as RuleIndicator
-  if (!RULE_INDICATORS.includes(indicator)) throw BadRequestError('Chỉ số không được hỗ trợ (EXPERT-FR-016)')
+  if (!RULE_INDICATORS.includes(indicator)) throw BadRequestError('Chỉ số không được hỗ trợ')
   const comparison = input.comparison as RuleComparison
   if (!RULE_COMPARISONS.includes(comparison)) throw BadRequestError('comparison phải là GTE hoặc LTE')
   const value = toNumber(input.value)

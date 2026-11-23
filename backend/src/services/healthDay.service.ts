@@ -145,7 +145,7 @@ export async function getHealthDay(dayId: string, user: CurrentUser, now = new D
 
 // Chặn cả ở service, không chỉ route
 function assertAssessor(user: CurrentUser): void {
-  if (!isAssessor(user.role)) throw ForbiddenError('Chỉ người chấm (Farm Owner, Farm Technician của nhà) mới chấm ngày này')
+  if (!isAssessor(user.role)) throw ForbiddenError('Chỉ chủ nhà yến và kỹ thuật viên của nhà mới đánh giá ngày này')
 }
 
 // Lưu điểm cùng snapshot trong một lệnh ghi (pipeline update đọc current_*). Đã chấm hoặc quá hạn → 409

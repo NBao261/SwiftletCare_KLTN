@@ -276,7 +276,7 @@ export async function setConclusion(id: string, user: CurrentUser, text: string,
   if (!report) throw NotFoundError('Không tìm thấy báo cáo sức khỏe')
   const { house } = await assertHouseAccess(String(report.house_id), user)
   if (report.expert_conclusion && String(report.expert_conclusion.by) !== user._id) {
-    throw ForbiddenError('Kết luận này do chuyên gia khác viết — chỉ người viết mới sửa được')
+    throw ForbiddenError('Kết luận này do chuyên gia khác viết, chỉ người viết mới sửa được')
   }
   const isEdit = !!report.expert_conclusion
   report.expert_conclusion = isEdit

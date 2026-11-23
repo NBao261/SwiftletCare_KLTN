@@ -217,3 +217,35 @@ describe('xoá nhà, Zone theo review của #217', () => {
     expect(await AuditLog.countDocuments({ action: 'HOUSE_UPDATED' })).toBe(0)
   })
 })
+
+describe('xoá trang trại như xoá nhà (FARM-FR-002)', () => {
+  it('còn thiết bị đang dùng thì 409 HAS_ACTIVE_DEVICES, trang trại giữ nguyên', async () => {
+    const { farm, owner } = await seed()
+    const blocked = await owner.del(`/farms/${farm._id}`).expect(409)
+    expect(blocked.body.error.code).toBe('HAS_ACTIVE_DEVICES')
+    expect((await Farm.findById(farm._id).lean())!.is_deleted).toBe(false)
+  })
+
+  it('gỡ thiết bị xong thì xoá: nhà, Zone xoá mềm, phiếu huỷ, kế hoạch thôi, cảnh báo đóng', async () => {
+    const { ownerDoc, house, zone, farm, owner, decommission } = await seed()
+    await decommission()
+    const workOrder = await WorkOrder.create({
+      farm_id: farm._id, house_id: house._id, zone_id: zone._id, origin: 'MANUAL', title: 'Kiểm tra', status: 'OPEN', is_open: true,
+    })
+    const plan = await MaintenancePlan.create({
+      farm_id: farm._id, house_id: house._id, equipment: 'NOZZLE', basis: 'CALENDAR', interval: 30, source: 'nhà sản xuất',
+      checklist_template: ['Rửa béc'], created_by: ownerDoc._id,
+    })
+    const alert = await Alert.create({ farm_id: farm._id, house_id: house._id, type: 'LOW_RETURN_RATE', severity: 'LOW', title: 't', message: 'm' })
+
+    await owner.del(`/farms/${farm._id}`).expect(200)
+
+    expect((await Farm.findOne({ _id: farm._id, is_deleted: true }).lean())).not.toBeNull()
+    expect((await House.findOne({ _id: house._id, is_deleted: true }).lean())).not.toBeNull()
+    expect((await Zone.findOne({ _id: zone._id, is_deleted: true }).lean())).not.toBeNull()
+    expect((await WorkOrder.findById(workOrder._id).lean())!).toMatchObject({ status: 'CANCELLED', is_open: false })
+    expect((await MaintenancePlan.findById(plan._id).lean())!.state).toBe('RETIRED')
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
+    expect((await listActiveHouseIds()).map(String)).not.toContain(String(house._id))
+  })
+})

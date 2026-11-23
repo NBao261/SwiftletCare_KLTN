@@ -20,6 +20,7 @@ import {
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { AlertType, CurrentUser } from '@/types'
+import { WORK_ORDER_STATUS_LABEL } from '@/utils/displayLabel.util'
 
 export const RECOVERY_VERIFY_MIN = 10
 export const RECOVERY_VERIFY_MS = RECOVERY_VERIFY_MIN * 60_000
@@ -74,7 +75,7 @@ function historyEntry(from: WorkOrderStatus | undefined, to: WorkOrderStatus, by
 async function transition(
   wo: IWorkOrder, from: WorkOrderStatus[], to: WorkOrderStatus, set: Record<string, unknown>, by?: string, note?: string,
 ): Promise<IWorkOrder> {
-  if (!from.includes(wo.status)) throw ConflictError(`Work Order đang ở trạng thái ${wo.status}, không thể chuyển sang ${to}`)
+  if (!from.includes(wo.status)) throw ConflictError(`Phiếu công việc đang ở trạng thái ${WORK_ORDER_STATUS_LABEL[wo.status]}, không chuyển sang ${WORK_ORDER_STATUS_LABEL[to]} được`)
   const updated = await WorkOrder.findOneAndUpdate(
     { _id: wo._id, status: wo.status },
     {
@@ -310,7 +311,8 @@ export async function listWorkOrders(user: CurrentUser, query: ListWorkOrdersQue
     if (query.farmId && !farmIds.some(id => String(id) === query.farmId)) throw ForbiddenError('Không có quyền trên farm này')
     filter.farm_id = query.farmId ?? { $in: farmIds }
   }
-  if (query.houseId) filter.$and = [{ house_id: new Types.ObjectId(query.houseId) }]
+  // Nhà không được giao: 403 như các route theo nhà khác, không phải danh sách rỗng
+  if (query.houseId) filter.$and = [{ house_id: (await assertHouseAccess(query.houseId, user)).house._id }]
   if (query.alertId) filter.alert_id = query.alertId
   if (query.assigneeId) filter.assignee_id = query.assigneeId === 'me' ? user._id : query.assigneeId
   if (query.status) filter.status = query.status
@@ -405,14 +407,14 @@ export async function completeWorkOrder(
   id: string, user: CurrentUser, input: { cause?: SiteCause; work_note?: string }, files: UploadedPhoto[] = [],
 ) {
   const wo = await findWorkOrderWithAccess(id, user)
-  if (wo.status !== 'IN_PROGRESS') throw ConflictError(`Work Order đang ở trạng thái ${wo.status}, chưa thể báo xong`)
+  if (wo.status !== 'IN_PROGRESS') throw ConflictError(`Phiếu công việc đang ở trạng thái ${WORK_ORDER_STATUS_LABEL[wo.status]}, chưa báo xong được`)
   if (!input.cause && wo.alert_type && AUTO_WORK_ORDER_TYPES.includes(wo.alert_type)) {
-    throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi nguyên nhân tìm thấy tại chỗ (ALERT-FR-018)')
+    throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi nguyên nhân tìm thấy tại chỗ')
   }
   // phòng ngừa kiểm bằng checklist đủ
   const preventive = wo.kind === 'PREVENTIVE'
   if (preventive && wo.checklist.some(i => !i.result)) {
-    throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi kết quả mọi mục checklist trước khi báo xong (OPS-FR-007)')
+    throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi kết quả mọi mục checklist trước khi báo xong')
   }
   // tối đa 5 ảnh cả Work Order, gồm ảnh các lần trước
   if (wo.photos.length + files.length > MAX_WORK_ORDER_PHOTOS) {
@@ -532,12 +534,12 @@ export async function cancelPlanWorkOrders(planId: Types.ObjectId, user: Current
 export async function reassignWorkOrder(id: string, user: CurrentUser, assigneeId: string) {
   const wo = await findWorkOrderWithAccess(id, user)
   if (wo.status !== 'OPEN' && wo.status !== 'IN_PROGRESS') {
-    throw ConflictError(`Work Order đang ở trạng thái ${wo.status}, không giao lại được`)
+    throw ConflictError(`Phiếu công việc đang ở trạng thái ${WORK_ORDER_STATUS_LABEL[wo.status]}, không giao lại được`)
   }
   const house = await House.findById(wo.house_id)
   const farm = await Farm.findById(wo.farm_id).select('members')
   if (!house || !farm || !(await activeHouseTechnicianIds(house, farm)).includes(assigneeId)) {
-    throw BadRequestError('Người nhận phải là Farm Technician đang được giao nhà này')
+    throw BadRequestError('Người nhận phải là kỹ thuật viên đang được giao nhà này')
   }
   // Không đặt lại escalated_at: chỉ báo trễ 1 lần mỗi Work Order
   const updated = await WorkOrder.findOneAndUpdate(
