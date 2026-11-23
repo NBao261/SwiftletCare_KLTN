@@ -6,7 +6,7 @@ Rà trên `develop` tại `0f6dc6d2`: 189 route backend, web gọi 185. Bốn ro
 
 ## 1. Đối chiếu theo role
 
-**Farm Owner, Domain Expert, Administrator:** mọi dòng của §2.4 đã có trang web (rà 23/11, `todo-audit-1123.md`). Còn: quét QR khi lắp thiết bị trên web (Farm Owner) đang nhập tay hoặc dán chữ, xem §3.
+**Farm Owner, Domain Expert, Administrator:** mọi dòng của §2.4 đã có trang web (tự rà ngày 23/11 trên `develop` tại `0f6dc6d2`; bảng chi tiết ở `todo-audit-1123.md`, vào repo cùng #231). Còn: quét QR khi lắp thiết bị trên web (Farm Owner) đang nhập tay hoặc dán chữ, xem §3.
 
 **Farm Technician** (chỉ nhà được giao; backend đã giới hạn dữ liệu theo nhà):
 
