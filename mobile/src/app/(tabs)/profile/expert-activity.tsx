@@ -20,8 +20,9 @@ import { useZoneDirectory } from '@/hooks/farm/useZoneDirectory'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import type { ChangeReviewStatus, ProposalStatus } from '@/types'
-import { describeValueDiff, getReviewStatusLabel, isReviewPending } from '@/utils/account.utils'
+import { describeReviewChanges, describeValueDiff, getReviewStatusLabel, isReviewPending } from '@/utils/account.utils'
 import { formatDateTime } from '@/utils/date.utils'
+import { getParameterReviewGroupLabel } from '@/utils/label.utils'
 import { canPerform } from '@/utils/permission.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -85,17 +86,19 @@ export default function ExpertActivityScreen() {
         {reviews.length > 0 && (
           <View style={styles.group}>
             <Text variant="body" weight="semiBold">
-              {t('Thay đổi ngưỡng, hệ số của bạn')}
+              {t('Thay đổi tham số của bạn')}
             </Text>
             <Card style={styles.listCard}>
               {reviews.map((review, index) => (
                 <ProfileRow
                   key={review._id}
                   icon={getStatusIcon(review.status)}
-                  label={review.group === 'thresholds' ? t('Ngưỡng') : t('Hệ số điều khiển')}
+                  label={getParameterReviewGroupLabel(review.group)}
                   value={getReviewStatusLabel(review.status)}
-                  caption={[getScopeText(review.zone_id), formatDateTime(review.updated_at)].filter(Boolean).join('\n')}
-                  details={describeValueDiff(review.old_values, review.new_values)}
+                  caption={[getScopeText(review.zone_id, review.house_id), formatDateTime(review.updated_at)]
+                    .filter(Boolean)
+                    .join('\n')}
+                  details={describeReviewChanges(review)}
                   hasDivider={index < reviews.length - 1}
                 />
               ))}

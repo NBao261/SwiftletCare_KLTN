@@ -6,6 +6,8 @@ import type {
   FarmMember,
   InvitedRole,
   FuzzyTuning,
+  HealthLevels,
+  ParameterReview,
   ProposalStatus,
   Thresholds,
 } from '@/types'
@@ -13,6 +15,7 @@ import {
   getBirdCountTuningLabel,
   getDetectionTuningLabel,
   getFuzzyTuningLabel,
+  getHealthLevelLabel,
   getThresholdKeyLabel,
 } from '@/utils/label.utils'
 import { formatStoredNumber } from '@/utils/settingsValidation.utils'
@@ -133,12 +136,25 @@ const THRESHOLD_KEYS = new Set<string>(['temp_min', 'temp_max', 'humidity_min', 
 const FUZZY_KEYS = new Set<string>(['fuzzy_humidity_band', 'fuzzy_temp_band', 'fuzzy_fan_dry_level', 'fuzzy_window_sec', 'fuzzy_input_filter'])
 const DETECTION_KEYS = new Set<string>(['noise_margin_db', 'noise_min_sec', 'pump_dry_on_sec', 'pump_dry_min_rise_pct', 'speaker_drop_pct'])
 const BIRD_COUNT_KEYS = new Set<string>(['return_rate_drop_pct'])
+const HEALTH_LEVEL_KEYS = new Set<string>([
+  'in_range_slight_pct',
+  'in_range_clear_pct',
+  'air_slight_h',
+  'air_clear_h',
+  'noise_slight',
+  'noise_clear',
+])
 
 function getChangeKeyLabel(key: string): { label: string; unit: string } | null {
   if (THRESHOLD_KEYS.has(key)) return getThresholdKeyLabel(key as keyof Thresholds)
   if (FUZZY_KEYS.has(key)) return getFuzzyTuningLabel(key as keyof FuzzyTuning)
   if (DETECTION_KEYS.has(key)) return getDetectionTuningLabel(key as keyof DetectionTuning)
   if (BIRD_COUNT_KEYS.has(key)) return getBirdCountTuningLabel(key as keyof BirdCountTuning)
+  if (HEALTH_LEVEL_KEYS.has(key)) {
+    // Đơn vị mức sức khỏe không có dấu cách đầu ("giờ", "đợt") nên thêm vào, trừ "%" viết liền số
+    const { label, unit } = getHealthLevelLabel(key as keyof HealthLevels)
+    return { label, unit: unit === '%' ? unit : ` ${unit}` }
+  }
   return null
 }
 
@@ -206,6 +222,27 @@ function describeCountingRing(after: unknown): string[] {
       side: ring.into_ring_is_exit ? t('trong vòng là phía ngoài trời') : t('trong vòng là phía trong nhà'),
     }),
   ]
+}
+
+// Đếm phần tử của một danh sách trong lịch đếm (hồ sơ theo mùa, khung tạm); không phải danh sách thì 0
+function countItems(schedule: unknown, key: 'profiles' | 'temporary'): number {
+  const items = asRecord(schedule)?.[key]
+  return Array.isArray(items) ? items.length : 0
+}
+
+// Lịch đếm là cấu trúc lồng nhau nên chỉ tóm tắt số hồ sơ theo mùa và khung tạm trước / sau (VISION-FR-019)
+function describeCountingSchedule(before: unknown, after: unknown): string[] {
+  return [
+    t('Hồ sơ theo mùa: {before} → {after}', { before: countItems(before, 'profiles'), after: countItems(after, 'profiles') }),
+    t('Khung tạm: {before} → {after}', { before: countItems(before, 'temporary'), after: countItems(after, 'temporary') }),
+  ]
+}
+
+// Chi tiết một mục chờ chuyên gia duyệt (EXPERT-FR-010): đọc được cho cả 7 nhóm tham số (BR-22)
+export function describeReviewChanges(review: Pick<ParameterReview, 'group' | 'old_values' | 'new_values'>): string[] {
+  if (review.group === 'counting_ring') return describeCountingRing(asRecord(review.new_values)?.ring)
+  if (review.group === 'counting_schedule') return describeCountingSchedule(review.old_values, review.new_values)
+  return describeValueChanges(review.old_values, review.new_values)
 }
 
 // Chi tiết một quyết định trong lịch sử hoạt động: chỉ số nào đổi, từ bao nhiêu thành bao nhiêu, đặt lại mặc định hay áp gợi
