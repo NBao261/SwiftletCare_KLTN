@@ -84,7 +84,6 @@ export function useAcknowledgeAlert() {
   })
 }
 
-// Chi tiết 1 cảnh báo kèm ảnh nguyên nhân tại chỗ (URL tạm); null = chưa mở
 // Trả lời xong: câu trả lời vào bằng chứng; SENSOR_ANOMALY "cảm biến bẩn hoặc hỏng" thì backend mở phiếu sửa
 export function useAnswerOnsiteCheck() {
   const queryClient = useQueryClient()
@@ -97,6 +96,7 @@ export function useAnswerOnsiteCheck() {
   })
 }
 
+// Chi tiết 1 cảnh báo kèm ảnh nguyên nhân tại chỗ (URL tạm); null = chưa mở
 export function useAlert(id: string | null) {
   return useQuery({
     queryKey: ['alerts', 'detail', id],
