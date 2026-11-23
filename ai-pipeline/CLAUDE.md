@@ -80,11 +80,11 @@ Not committed: `.env`, `models/`, `clips/`, `dataset/`, `logs/`, `state.json`, `
 ### Code quality
 - **[Bắt buộc]** Logging via `loguru` with file rotation from the config — no `print` in `src/` (a CLI result line in an evaluation run is the exception).
 - **[Bắt buộc]** Type hints on public functions and classes; no bare `except:` — catch specific errors or log and re-raise.
-- **[Bắt buộc]** Counting logic (ring crossing, direction, extrapolation of fast tracks, ambiguous tracks, session switching, bucket rollover, net count inputs) has `pytest` tests that run without a camera, model or broker.
+- **[Bắt buộc]** Counting logic (ring crossing, direction, extrapolation of fast tracks, ambiguous tracks, session switching, bucket rollover, one count per track) has `pytest` tests that run without a camera, model or broker.
 - **[Nên]** Keep `src/` modules importable without side effects (no work at import time); entry points behind `if __name__ == "__main__":`.
 
 ### Accuracy claims
-- **[Bắt buộc]** Any accuracy number in a PR, README or report comes from the plan §7.7 procedure: clips from test days only (never days used for training), hand counts by two people, error per direction and for the net count, reported **separately** for well-lit and low-light clips (VISION-FR-016), with model Precision/Recall on the test split. State the conditions; never round a miss into a pass.
+- **[Bắt buộc]** Any accuracy number in a PR, README or report comes from the plan §7.7 procedure: clips from test days only (never days used for training), hand counts by two people, error per direction (first the session's own direction: exits in the morning, returns in the evening, BR-12) and for the net count, reported **separately** for well-lit and low-light clips (VISION-FR-016), with model Precision/Recall on the test split. State the conditions; never round a miss into a pass.
 
 ## Known debt — not held against PRs that don't touch it
 

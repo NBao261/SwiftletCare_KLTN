@@ -27,9 +27,13 @@ STATE_FILE = Path("state.json")
 RECONNECT_MAX_SEC = 30
 STALL_TIMEOUT_MS = 10_000   # luồng đứng hình quá lâu thì nối lại (mặc định của OpenCV là 30 giây)
 # Đông chim thì hình camera nặng gấp đôi (4,8 → 10 Mbit/s, clip 26/10): đường truyền không chở kịp thì camera
-# gửi thiếu frame dù máy xử lý dư. Mỗi 5 giây nhận dưới 80 % số frame của camera thì ghi cảnh báo. Chọn tay.
+# gửi thiếu frame dù máy xử lý dư. Xét mỗi 5 giây; dưới 80 % số frame của camera là thiếu. Chọn tay.
 RECEIVE_CHECK_SEC = 5
 RECEIVE_WARN_RATIO = 0.8
+
+
+def receiving_short(received: int, seconds: float, camera_fps: float) -> bool:
+    return received / seconds < RECEIVE_WARN_RATIO * camera_fps
 
 
 def load_config(path: Path = CONFIG) -> dict:
@@ -76,7 +80,7 @@ class FrameGrabber(threading.Thread):
         while True:
             cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG, [
                 cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, STALL_TIMEOUT_MS, cv2.CAP_PROP_READ_TIMEOUT_MSEC, STALL_TIMEOUT_MS])
-            window_start, received = time.time(), 0
+            window_start, received, short = time.time(), 0, False
             while True:
                 ok, frame = cap.read()
                 if not ok:
@@ -85,12 +89,16 @@ class FrameGrabber(threading.Thread):
                 with self.lock:
                     self.frame, self.seq = frame, self.seq + 1
                 received += 1
-                if time.time() - window_start >= RECEIVE_CHECK_SEC:
-                    rate = received / (time.time() - window_start)
-                    if rate < RECEIVE_WARN_RATIO * self.camera_fps:
-                        logger.warning(f"Camera chỉ gửi tới {rate:.1f} frame/giây (camera chạy {self.camera_fps:g}): "
-                                       f"đường truyền từ camera không chở kịp")
-                    window_start, received = time.time(), 0
+                elapsed = time.time() - window_start
+                if elapsed >= RECEIVE_CHECK_SEC:
+                    now_short = receiving_short(received, elapsed, self.camera_fps)
+                    # Chỉ ghi lúc bắt đầu và lúc hết thiếu: đường truyền yếu có thể kéo dài cả phiên
+                    if now_short and not short:
+                        logger.warning(f"Camera chỉ gửi tới {received / elapsed:.1f} frame/giây (camera chạy "
+                                       f"{self.camera_fps:g}): đường truyền từ camera không chở kịp")
+                    elif short and not now_short:
+                        logger.info(f"Camera gửi đủ frame trở lại ({received / elapsed:.1f} frame/giây)")
+                    window_start, received, short = time.time(), 0, now_short
             cap.release()
             logger.warning(f"Mất luồng camera, kết nối lại sau {delay} giây")
             time.sleep(delay)

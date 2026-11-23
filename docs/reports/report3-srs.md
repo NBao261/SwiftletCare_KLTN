@@ -714,8 +714,8 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Ring margin around the hole outline | 60 px | Outline measured on 21/10/2026, widened evenly (VISION-FR-005) |
 | Overlap of the two image tiles | 160 px | Larger than a circling bird (about 40 px), so a bird at a tile edge is whole in the other tile (VISION-FR-004) |
 | Extrapolation at the hole | tracks faster than 60 px/frame, over at most 2 frames | Measured on one clip (BR-25) |
-| Counting per track | each track counts at most once, when it has been lost for `lost_track_buffer` frames | On the evaluation clips of 25–26/10/2026, counting every crossing gave almost as many entries as exits in morning sessions (18/21, 12/16): birds circling at the hole. Counting once per track keeps the same net (VISION-FR-005, BR-12) |
-| Camera frames warning | a warning in the AI node's log when it receives under 80 % of the camera's frame rate over 5 s | With many birds the camera's stream goes from about 4.8 to 10 Mbit/s (clip of 26/10/2026) and reaches the AI node over the Internet; chosen by hand |
+| Counting per track | each track counts at most once, when it has been lost for `lost_track_buffer` frames | On the evaluation clips of 25–26/10/2026, counting every crossing gave almost as many entries as exits in morning sessions (18/21, 12/16): birds circling at the hole. Counting once per track keeps the same net on these four infrared clips; not yet checked against hand counts (VISION-FR-005, BR-12) |
+| Camera frames warning | a warning in the AI node's log when it starts receiving under 80 % of the camera's frame rate (checked every 5 s), and one line when it recovers | With many birds the camera's stream goes from about 4.8 to 10 Mbit/s (clip of 26/10/2026) and reaches the AI node over the Internet; chosen by hand |
 | New firmware must reach the broker | 10 min, else rollback | A broken image cannot stay installed (FARM-FR-013) |
 | Firmware download stalled | 10 s without data | Treated as a lost connection; the old firmware keeps running |
 | OTA not confirmed | 30 min | Reported as failed (FARM-FR-013, Section 6.15) |
