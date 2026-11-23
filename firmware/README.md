@@ -35,6 +35,13 @@
 > - bản `esp32dev` vẫn tìm được broker trên laptop qua `npm run mdns` và vẫn có ô broker; mạng Wi-Fi không tới được broker thì trang AP mở lại để đổi Wi-Fi;
 > - board còn chạy 2.0.0 với backend mới: hiện `UNKNOWN`, không có cảnh báo `CONFIG_MISMATCH`.
 >
+> **2.4.0 (nạp danh tính qua cổng USB từ màn Kho thiết bị, FARM-FR-010, Report 4 D9) — chưa thử trên board.** Đã làm 24/11/2026: `pio run -e esp32dev` và `-e esp32prod` build được, `pio test -e native` 108/108 (gồm `test_serial_provisioning`). Firmware đọc dòng serial trong `loop()`: `SC INFO` trả `SC> {"ok":true,"mac":…,"fw":…,"kind":"SENSOR","deviceId":…}`, `SC SET {json}` ghi NVS `identity` (cùng khoá với `flash_identity.py`), đọc lại, trả `SC> {"ok":true,…}` rồi khởi động lại; bo đã có mã thì cần `"force":true`. Giao thức: `docs/reports/todo-device-flashing-1124.md` §2. Còn phải thử trên board:
+> - mở màn Kho thiết bị → "Nạp qua USB" trên Chrome, cắm ESP32 trống danh tính: trang đọc được MAC và phiên bản sau khi bo khởi động lại (DTR), kể cả khi Wi-Fi đã lưu không tới được;
+> - nạp: bo khởi động lại, log in `[Config] Thiết bị <mã> (tài khoản trong NVS)`, nối được EMQX bằng mã mới, backend chuyển `ONLINE` sau khi Farm Owner lắp;
+> - bo đã có mã: không tick "ghi đè" thì nút nạp khoá; gửi tay `SC SET` không có `force` thì trả `PROVISIONED`;
+> - rút cáp giữa lúc nạp: trang báo lỗi, cắm lại bấm "Nạp lại" dùng đúng mục kho vừa tạo (cấp mật khẩu mới), không tạo thêm mục;
+> - log của các task khác chen vào giữa vẫn không làm hỏng dòng `SC>`.
+>
 > **2.3.2 (mức cảnh báo theo BR-15, G-32) — chưa thử trên board.** `SPEAKER_FAILURE` gửi mức `HIGH` thay vì `CRITICAL`. Backend từ G-32 tự đặt mức theo loại và bỏ qua trường `severity`, nên board còn chạy bản cũ vẫn ra cảnh báo `HIGH`; không cần kiểm gì thêm trên board ngoài các mục của 2.3.1.
 >
 > **2.3.1 (giờ chạy theo dòng, BR-45, G-22) — chưa thử trên board.** Heartbeat có `actuatorBaseline` `{misting, ventilation}` (A) của tải đã học xong; backend lưu vào `actuator_baseline` và chỉ cộng giờ chạy khi dòng trên 50 % mức đó. Thử trên board rev B2: sau lần học đầu, heartbeat có `actuatorBaseline`; rút dây bơm khi relay BẬT thì `relay_usage.misting.since_service_hours` không tăng.

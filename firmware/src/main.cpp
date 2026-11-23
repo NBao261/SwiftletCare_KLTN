@@ -27,6 +27,7 @@
 #include "sensors/SignalFilter.h"
 #include "storage/StorageManager.h"
 #include "system/ResetReason.h"
+#include "system/SerialProvisioning.h"
 #include "wifi/WiFiProvisioner.h"
 #include <Arduino.h>
 #include <WiFi.h>
@@ -256,8 +257,62 @@ void setup() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Màn Kho thiết bị nạp mã thiết bị và mật khẩu broker qua cổng USB (FARM-FR-010, Report 4 D9).
+// Đọc không chặn trong loop(): trang mở cổng làm bo khởi động lại rồi hỏi SC INFO tới khi có trả lời
+static SerialLineBuffer serialLine;
+
+static void replySerial(const char *reply) {
+  // Một lần println: log của task khác không chen vào giữa dòng trả lời
+  Serial.println(reply);
+}
+
+static void handleSerialProvisioning() {
+  while (Serial.available() > 0) {
+    if (!serialLine.feed((char)Serial.read())) continue;
+    SerialRequest request = parseSerialLine(serialLine.line());
+    char reply[200];
+    if (request.type == SerialRequest::NONE) continue;
+    if (request.type == SerialRequest::INVALID) {
+      buildErrorReply(reply, sizeof reply, request.error);
+      replySerial(reply);
+      continue;
+    }
+    String currentId, currentSecret;
+    bool provisioned = StorageManager::loadDeviceIdentity(currentId, currentSecret);
+    if (request.type == SerialRequest::INFO) {
+      uint8_t mac[6];
+      WiFi.macAddress(mac);
+      char macText[13];
+      formatMac(mac, macText);
+      buildInfoReply(reply, sizeof reply, macText, FIRMWARE_VERSION, provisioned ? currentId.c_str() : nullptr);
+      replySerial(reply);
+      continue;
+    }
+    const char *blocked = setBlockedReason(request, provisioned);
+    if (blocked != nullptr) {
+      buildErrorReply(reply, sizeof reply, blocked);
+      replySerial(reply);
+      continue;
+    }
+    if (!StorageManager::saveDeviceIdentity(request.deviceId, request.brokerSecret, request.broker)) {
+      buildErrorReply(reply, sizeof reply, "WRITE_FAILED");
+      replySerial(reply);
+      continue;
+    }
+    // Không in mật khẩu ra log
+    Serial.println("[Identity] Đã nạp " + String(request.deviceId) + " qua cổng USB, khởi động lại");
+    buildOkReply(reply, sizeof reply, request.deviceId);
+    replySerial(reply);
+    Serial.flush();
+    // Danh tính chỉ đọc lúc khởi động (setup); chờ trang đọc xong trả lời rồi mới khởi động lại
+    delay(1000);
+    ESP.restart();
+  }
+}
+
 void loop() {
   esp_task_wdt_reset();
+  handleSerialProvisioning();
   if (WiFiProvisioner::isPortalActive()) {
     // DNS cần trả lời nhanh để trình duyệt điện thoại tự bật popup captive
     // portal thay vì phải tự mở http://192.168.4.1
@@ -273,7 +328,8 @@ void loop() {
                    "AP-mode để nhập lại Wi-Fi");
     WiFiProvisioner::startCaptivePortal(otaServer);
   } else {
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // 100 ms thay 1 s: lệnh nạp qua USB được trả lời ngay
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
 
