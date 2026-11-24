@@ -41,6 +41,9 @@
 > - bo đã có mã: không tick "ghi đè" thì nút nạp khoá; gửi tay `SC SET` không có `force` thì trả `PROVISIONED`;
 > - rút cáp giữa lúc nạp: trang báo lỗi, cắm lại bấm "Nạp lại" dùng đúng mục kho vừa tạo (cấp mật khẩu mới), không tạo thêm mục;
 > - log của các task khác chen vào giữa vẫn không làm hỏng dòng `SC>`.
+> - **nạp firmware từ trang (PR 2, §6 của plan):** tải `factory.bin` lên thẻ "Firmware cho trạm nạp"; cắm ESP32 mới mua (chưa có firmware): sau 6 giây trang hiện nút "Nạp firmware", thanh tiến độ chạy tới 100 %, bo khởi động lại và trang tự đọc ra MAC + phiên bản mới;
+> - bo đang chạy firmware cũ hơn bản trong kho nhưng đã có mã và Wi-Fi: bấm "Cập nhật" xong, `SC INFO` vẫn trả đúng mã cũ và bo vẫn vào được Wi-Fi đã lưu (vùng NVS không bị ghi);
+> - rút cáp giữa lúc nạp firmware: trang báo lỗi, cắm lại nạp lần nữa được (bootloader ROM không bị ghi nên bo không hỏng hẳn).
 >
 > **2.3.2 (mức cảnh báo theo BR-15, G-32) — chưa thử trên board.** `SPEAKER_FAILURE` gửi mức `HIGH` thay vì `CRITICAL`. Backend từ G-32 tự đặt mức theo loại và bỏ qua trường `severity`, nên board còn chạy bản cũ vẫn ra cảnh báo `HIGH`; không cần kiểm gì thêm trên board ngoài các mục của 2.3.1.
 >
@@ -70,6 +73,7 @@ PlatformIO + Arduino framework, ESP32-WROOM-32D 38 chân. Hardware BOM & đấu 
 cd firmware
 pio run                  # build
 pio run -t upload        # nạp qua USB
+pio run -e esp32prod -t factory   # ảnh cài đặt .pio/build/esp32prod/factory.bin cho thẻ "Firmware cho trạm nạp" ở màn Kho thiết bị
 pio device monitor        # Serial monitor 115200
 ```
 

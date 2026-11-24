@@ -718,6 +718,7 @@ paths:
         - { name: claimed, in: query, schema: { type: string, enum: ["true", "false"] }, description: "Đã/chưa kích hoạt" }
         - { name: revoked, in: query, schema: { type: string, enum: ["true", "false"] }, description: "Đã/chưa bị thu hồi" }
         - { name: deviceId, in: query, schema: { type: string, pattern: "^[A-Za-z0-9_-]+$" }, description: "Đúng một mã: màn nạp tìm mục kho của bo mạch đang cắm" }
+        - { name: chipMac, in: query, schema: { type: string, pattern: "^[0-9A-Fa-f]{12}$" }, description: "MAC của chip: bo đã nạp mà mất mã (nạp lại toàn bộ chip) vẫn tìm được mục kho" }
         - { $ref: "#/components/parameters/Page" }
         - { $ref: "#/components/parameters/Limit" }
       responses:
@@ -730,6 +731,78 @@ paths:
                   - $ref: "#/components/schemas/ApiSuccess"
                   - properties: { data: { type: array, items: { $ref: "#/components/schemas/ProvisionedDevice" } } }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/firmware-images:
+    post:
+      tags: [Admin]
+      summary: "Tải lên ảnh cài đặt firmware cho trạm nạp (FARM-FR-010, Report 4 D9) — chỉ ADMIN"
+      description: |
+        Ảnh gộp bootloader, bảng phân vùng, boot_app0 và firmware, ghi từ 0x0 (`pio run -e esp32prod -t factory`).
+        File chứa giá trị `Secrets.h` nên chỉ nằm trong bucket riêng và chỉ tải về qua route có đăng nhập.
+        Backend kiểm: dài hơn 0x10000 và không quá 0x10000 + 0x1E0000 byte (phân vùng app0), byte `0xE9` ở 0x1000 và 0x10000,
+        trong file có `Firmware v<version>` (dòng chào khi khởi động). Audit `FIRMWARE_IMAGE_UPLOADED`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [version, file]
+              properties:
+                version: { type: string, pattern: "^\\d+\\.\\d+\\.\\d+$", example: "2.4.0" }
+                note: { type: string, maxLength: 200 }
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Đã lưu
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/FirmwareImage" } }
+        "400": { description: "Chưa chọn file, hoặc file không phải ảnh cài đặt của đúng phiên bản", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Kho đã có phiên bản này", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    get:
+      tags: [Admin]
+      summary: "Danh sách firmware trong kho, mới nhất trước theo số phiên bản — chỉ ADMIN"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: array, items: { $ref: "#/components/schemas/FirmwareImage" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/firmware-images/{id}/file:
+    get:
+      tags: [Admin]
+      summary: "Tải ảnh cài đặt về để trang nạp qua USB — chỉ ADMIN"
+      description: File nhị phân (không bọc envelope); header `X-Firmware-Sha256` để trang kiểm trước khi ghi vào chip.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Ảnh cài đặt
+          headers: { X-Firmware-Sha256: { schema: { type: string } } }
+          content: { application/octet-stream: { schema: { type: string, format: binary } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/firmware-images/{id}:
+    delete:
+      tags: [Admin]
+      summary: "Xoá một firmware khỏi kho — chỉ ADMIN"
+      description: Audit `FIRMWARE_IMAGE_DELETED`.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Đã xoá, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /admin/provisioned-devices/{id}/revoke:
     put:
@@ -8459,6 +8532,16 @@ components:
         metadata: { type: object, description: "Giá trị cũ/mới (`before`, `after`) hoặc kết quả kiểm chứng" }
         created_at: { type: string, format: date-time }
 
+    FirmwareImage:
+      type: object
+      description: "Ảnh cài đặt firmware trong kho (không bao giờ trả khoá file)"
+      properties:
+        _id: { type: string }
+        version: { type: string, example: "2.4.0" }
+        size: { type: integer }
+        sha256: { type: string }
+        note: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
     ProvisionedDevice:
       type: object
       description: "FARM-FR-003 — thiết bị trong kho (không bao giờ trả secret_key/hash)"

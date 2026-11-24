@@ -684,6 +684,39 @@ ensureCollection("farms", {
 db.getCollection("farms").createIndex({"owner_id":1})
 db.getCollection("farms").createIndex({"members.user_id":1})
 
+// ── firmwareimages (model FirmwareImage) ──
+ensureCollection("firmwareimages", {
+  "bsonType": "object",
+  "properties": {
+    "version": {
+      "bsonType": "string"
+    },
+    "object_key": {
+      "bsonType": "string"
+    },
+    "size": {
+      "bsonType": "number"
+    },
+    "sha256": {
+      "bsonType": "string"
+    },
+    "note": {
+      "bsonType": ["string", "null"]
+    },
+    "uploaded_by": {
+      "bsonType": "objectId"
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["version", "object_key", "size", "sha256", "uploaded_by"]
+})
+db.getCollection("firmwareimages").createIndex({"version":1}, {"unique":true})
+
 // ── harvestbatches (model HarvestBatch) ──
 ensureCollection("harvestbatches", {
   "bsonType": "object",
