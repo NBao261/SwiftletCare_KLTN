@@ -12,6 +12,7 @@ import { STOCK_STATUS, buildStockColumns, type StockAction } from '@/components/
 import AddStockDeviceModal from '@/components/features/admin/device-stock/AddStockDeviceModal'
 import IssuedSecretsModal from '@/components/features/admin/device-stock/IssuedSecretsModal'
 import FlashDeviceModal from '@/components/features/admin/device-stock/FlashDeviceModal'
+import FirmwareImagesCard from '@/components/features/admin/device-stock/FirmwareImagesCard'
 import {
   useDeviceStock, useRevokeStockDevice, useRotateBrokerSecret, useRotateStockKey,
 } from '@/hooks/admin/useDeviceStock'
@@ -183,6 +184,8 @@ export default function AdminDeviceStockPage() {
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}
         <Pagination page={page} limit={PAGE_SIZE} total={filtered.length} onChange={setPage} variant="full" />
       </SectionCard>
+
+      <FirmwareImagesCard />
 
       <FlashDeviceModal open={flashing} onClose={() => setFlashing(false)} />
       <AddStockDeviceModal open={adding} onClose={() => setAdding(false)} onAdded={result => { setAdding(false); setIssued(result) }} />

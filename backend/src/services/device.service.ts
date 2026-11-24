@@ -15,8 +15,10 @@ import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
 import { verifyActivationKey, markClaimed } from '@/services/provisionedDevice.service'
+import { assertNotInRollout, onControllerHeartbeat, onOtaTimedOut } from '@/services/firmwareRollout.service'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { syncAfterHeartbeat } from '@/utils/configSync.util'
+import { COMMAND_SUPPORT_SINCE, OTA_CONFIRM_TIMEOUT_MS, versionAtLeast } from '@/utils/firmwareImage.util'
 import { sessionWindowsAhead, vnDateOf } from '@/utils/countingSchedule.util'
 import { DEVICE_STATUS_LABEL, formatVnDateTime } from '@/utils/displayLabel.util'
 import {
@@ -389,6 +391,10 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
 
   if (wasOffline) await announceBackOnline(node)
 
+  // Máy đang chờ trong một đợt cập nhật firmware nhận lệnh ngay khi online lại
+  await onControllerHeartbeat(node._id, payload.firmwareVersion)
+    .catch((err: Error) => logger.warn('Không xử lý được đợt cập nhật firmware của thiết bị', { deviceId: payload.deviceId, err: err.message }))
+
   // Gửi lại để lấp lần publish lỡ khi backend mất broker
   if (payload.justConnected || wasOffline) {
     await findZoneChainOrThrow(String(node.zone_id))
@@ -723,19 +729,6 @@ export type RemoteCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
 
 // Firmware < 1.4.0 bỏ qua command: API báo 202 mà thiết bị không làm gì. Xét theo từng thiết bị
 const COMMANDS_NEED_FIRMWARE: RemoteCommand[] = ['RESTART', 'OTA']
-export const COMMAND_SUPPORT_SINCE = '1.4.0'
-
-// Không đúng dạng (VD "1.4.0-beta") coi như chưa hỗ trợ
-function versionAtLeast(version: string, min: string): boolean {
-  const a = version.split('.').map(Number)
-  const b = min.split('.').map(Number)
-  for (let i = 0; i < 3; i++) {
-    if (!Number.isInteger(a[i])) return false
-    if (a[i] !== b[i]) return a[i] > b[i]
-  }
-  return true
-}
-
 export interface RemoteCommandInput {
   command: RemoteCommand
   ota?: { version: string; url: string; sha256: string }
@@ -758,7 +751,7 @@ function assertAllowedFirmwareUrl(url: string): void {
   }
 }
 
-export const OTA_CONFIRM_TIMEOUT_MS = 30 * 60 * 1000
+export { OTA_CONFIRM_TIMEOUT_MS }
 
 // ESP32 tự rollback và không báo lỗi: chỉ biết qua heartbeat vẫn báo bản cũ
 export async function markOtaTimeouts(): Promise<number> {
@@ -774,6 +767,8 @@ export async function markOtaTimeouts(): Promise<number> {
     await logAction(requester, 'DEVICE_OTA_TIMEOUT', 'sensor_node', String(node._id), {
       deviceId: node.device_id, version: pending.version, runningVersion: node.firmware_version,
     })
+    // Máy thuộc một đợt cập nhật: đợt tự dừng và báo người tạo
+    if (await onOtaTimedOut(node._id, pending.version, node.firmware_version)) continue
     if (requester) {
       void notifyUser(requester, {
         title: 'Cập nhật firmware không thành công',
@@ -796,6 +791,7 @@ export async function sendRemoteCommand(nodeId: string, user: CurrentUser, input
   if (input.command === 'OTA') {
     if (!input.ota) throw BadRequestError('Lệnh OTA cần version, url, sha256')
     assertAllowedFirmwareUrl(input.ota.url)
+    await assertNotInRollout(node._id)
   }
   if (node.status !== 'ONLINE') {
     throw ConflictError(`Thiết bị đang ${DEVICE_STATUS_LABEL[node.status]}, lệnh từ xa chỉ gửi được khi thiết bị đang kết nối`)

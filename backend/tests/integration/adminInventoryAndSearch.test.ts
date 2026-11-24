@@ -198,6 +198,9 @@ describe('nạp thiết bị từ màn kho qua USB (FARM-FR-010)', () => {
       const found = await request(app).get('/admin/provisioned-devices?deviceId=ctl-a1b2c3').set('Authorization', `Bearer ${token}`).expect(200)
       expect(found.body.data).toHaveLength(1)
       expect(found.body.data[0]).toMatchObject({ device_id: 'ctl-a1b2c3', chip_mac: 'A1B2C3D4E5F6' })
+      // Bo mất mã (nạp lại toàn bộ chip) vẫn tìm được mục kho qua MAC, chữ thường cũng được
+      const byMac = await request(app).get('/admin/provisioned-devices?chipMac=a1b2c3d4e5f6').set('Authorization', `Bearer ${token}`).expect(200)
+      expect(byMac.body.data.map((d: { device_id: string }) => d.device_id)).toEqual(['ctl-a1b2c3'])
 
       const rotated = await request(app).post(`/admin/provisioned-devices/${found.body.data[0]._id}/rotate-broker-secret`)
         .set('Authorization', `Bearer ${token}`).expect(200)
