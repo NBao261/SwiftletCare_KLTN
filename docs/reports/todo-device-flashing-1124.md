@@ -49,7 +49,7 @@ An toàn: người cắm được USB vào bo mạch đã nạp lại được c
 | PR | Nhánh | Nội dung |
 |---|---|---|
 | 1 | `feat/device-flash-station` | Kế hoạch này, F-1, F-2, B-1, B-2, W-1, W-2, D-1 |
-| 2 | `feat/device-flash-firmware` | Nạp firmware ngay trên trang bằng `esptool-js` cho bo mạch trống hoặc firmware cũ (file `.bin` gộp do Administrator chọn, hoặc từ máy chủ OTA); bước 2 của §1 nối thẳng sang bước nạp danh tính |
+| 2 | `feat/device-flash-firmware` | Nạp firmware ngay trên trang bằng `esptool-js` cho bo mạch trống hoặc firmware cũ, file lấy từ kho firmware của backend; chi tiết ở §6 |
 
 Màn Admin trên web theo bảng phân công là của Nhi: Bảo làm, Nhi duyệt.
 
@@ -59,3 +59,41 @@ Màn Admin trên web theo bảng phân công là của Nhi: Bảo làm, Nhi duy�
 - Backend: lint, `build:check`, `npm test` (thêm ca `chip_mac` trùng 409, sai định dạng 422, `broker_host`).
 - Web: lint, tsc, vitest (tách dòng, đọc trả lời, đề xuất mã), build.
 - **Trên board thật (bắt buộc trước khi coi là xong):** ESP32 trống danh tính → nạp → khởi động lại kết nối được EMQX bằng mã mới; bo đã có danh tính → từ chối khi không `force`; rút cáp giữa chừng → trang báo lỗi, bấm nạp lại được. Ghi kết quả vào `firmware/README.md`.
+
+## 6. PR 2: nạp firmware ngay trên trang (24/11/2026)
+
+**Vấn đề:** lệnh `SC INFO`/`SC SET` là của firmware SwiftletCare, nên bo mạch mới mua (chưa có firmware) hoặc chạy firmware cũ hơn 2.4.0 không trả lời; hiện vẫn phải mở terminal chạy `pio run -t upload`.
+
+**Quyết định:** trang ghi luôn firmware vào chip bằng `esptool-js` (bản JavaScript chính thức của Espressif, làm đúng việc `esptool` của PlatformIO), file lấy từ **kho firmware riêng trên backend**.
+
+Vì sao không để file trên GitHub Releases: repo công khai, mà bản build chứa giá trị của `Secrets.h` (mật khẩu cổng cập nhật qua mạng LAN, Wi-Fi mặc định) → không được công khai. Kho trên backend chỉ Administrator tải lên và tải về; file nằm trong bucket riêng (MinIO), backend đọc và trả qua route có đăng nhập.
+
+### 6.1. Ảnh cài đặt (factory image)
+
+- Một file gộp bootloader, bảng phân vùng, `boot_app0` và firmware, ghi từ địa chỉ `0x0`; dựng bằng `pio run -e esp32prod -t factory` (`firmware/tools/factory_image.py`, gọi `esptool merge_bin` của PlatformIO) → `.pio/build/esp32prod/factory.bin`.
+- Phân vùng (`min_spiffs.csv`): `nvs` 0x9000–0xE000, `otadata` 0xE000, `app0` 0x10000 (0x1E0000). File lớn nhất 0x10000 + 0x1E0000 = 2 031 616 byte.
+- **Giữ NVS khi nạp:** trang chia file thành hai đoạn `[0x0, 0x9000)` và `[0xE000, hết)`, bỏ qua vùng NVS, nên bo đã có mã, Wi-Fi, mức dòng đã học vẫn giữ sau khi cập nhật firmware. Bo trống thì vùng NVS vốn trống.
+- Backend kiểm khi tải lên: đủ dài, byte `0xE9` (đầu ảnh ESP32) ở 0x1000 và 0x10000, không vượt kích thước tối đa, và trong file có chuỗi `Firmware v<phiên bản>` (dòng chào khi khởi động) để không ghi nhầm số phiên bản.
+
+### 6.2. Việc từng phần
+
+| # | Phần | Việc |
+|---|---|---|
+| F-3 | Firmware | `tools/factory_image.py` (extra script PlatformIO, đích `factory`), `platformio.ini`, README |
+| B-3 | Backend | Model `firmwareImage` (phiên bản duy nhất, khoá file, cỡ, SHA-256, ghi chú, người tải); `POST /admin/firmware-images` (multipart `file`, `version` x.y.z, `note`), `GET /admin/firmware-images`, `GET /admin/firmware-images/:id/file`, `DELETE /admin/firmware-images/:id`; kiểm ảnh ở `utils/firmwareImage.util.ts` (test unit); `getObject` trong `minio.config.ts`; audit `FIRMWARE_IMAGE_UPLOADED`/`DELETED`; test, spec, `db:script` |
+| B-4 | Backend | `GET /admin/provisioned-devices?chipMac=`: bo đã nạp trước đây nhưng mất mã (nạp lại toàn bộ bằng công cụ khác) vẫn nhận ra mục kho của nó qua MAC |
+| W-3 | Web | Thẻ "Firmware cho trạm nạp" ở màn Kho thiết bị: tải lên (phiên bản, ghi chú, file), danh sách, xoá |
+| W-4 | Web | `lib/firmwareFlasher.ts`: chia đoạn bỏ NVS (hàm thuần, test), ghi bằng `esptool-js`, khởi động lại bo; `DeviceSerial` trả cổng cho `esptool-js` rồi mở lại |
+| W-5 | Web | Màn nạp: bo không trả lời sau 6 giây hoặc firmware cũ hơn bản mới nhất trong kho → nút "Nạp firmware vX" với thanh tiến độ (~1 phút); xong thì tự đọc chip và đi tiếp bước nạp mã |
+| D-2 | Tài liệu | Report 4 D9 (2.2.28), Report 3 FARM-FR-010 (4.2.23), `firmware/README.md` (dựng ảnh cài đặt, kiểm tra trên board), `backend/CLAUDE.md` |
+
+### 6.3. Trải nghiệm (thêm vào §1)
+
+- Bước 2, bo không trả lời: sau 6 giây trang hiện "Bo chưa có firmware SwiftletCare hoặc quá cũ" và nút **"Nạp firmware 2.4.x"** (bản mới nhất trong kho); vẫn chờ thêm tới 30 giây phòng bo đang thử Wi-Fi.
+- Bo trả lời nhưng firmware cũ hơn bản trong kho: hiện "Có bản mới 2.4.x" và nút cập nhật, không bắt buộc.
+- Khi nạp: thanh tiến độ theo phần trăm, câu "Đừng rút cáp"; xong thì bo tự khởi động lại, trang tự đọc lại chip và về bước nạp mã.
+- Kho chưa có firmware: nút nạp firmware khoá, kèm câu "Tải firmware lên ở thẻ Firmware cho trạm nạp".
+
+### 6.4. Kiểm tra trên board (bắt buộc trước khi coi là xong)
+
+ESP32 trống (xoá sạch bằng `esptool erase_flash`) → nạp firmware → nạp mã → nối EMQX; bo đã có mã chạy 2.4.0 → cập nhật firmware → vẫn giữ mã và Wi-Fi; rút cáp giữa lúc ghi firmware → bo không chạy, cắm lại nạp lại được (ROM bootloader của ESP32 không hỏng được qua cổng USB).
