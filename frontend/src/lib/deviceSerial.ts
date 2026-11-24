@@ -50,6 +50,14 @@ export function suggestDeviceId(mac: string): string {
   return `ctl-${mac.slice(-6).toLowerCase()}`
 }
 
+// Mã đã thu hồi vẫn nằm trong kho: đề xuất mã kế tiếp (ctl-a1b2c3 → ctl-a1b2c3-2 → ctl-a1b2c3-3), trong 40 ký tự
+export function nextDeviceId(revokedId: string): string {
+  const match = /^(.*)-(\d+)$/.exec(revokedId)
+  const [base, next] = match && Number(match[2]) >= 2 ? [match[1], Number(match[2]) + 1] : [revokedId, 2]
+  const suffix = `-${next}`
+  return `${base.slice(0, 40 - suffix.length)}${suffix}`
+}
+
 export function buildSetCommand(payload: IdentityPayload): string {
   const body = { deviceId: payload.deviceId, brokerSecret: payload.brokerSecret, broker: payload.broker ?? '', force: payload.force === true }
   return `SC SET ${JSON.stringify(body)}\n`

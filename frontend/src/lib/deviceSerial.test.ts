@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSetCommand, parseReplyLine, splitLines, suggestDeviceId } from '@/lib/deviceSerial'
+import { buildSetCommand, nextDeviceId, parseReplyLine, splitLines, suggestDeviceId } from '@/lib/deviceSerial'
 
 describe('đọc trả lời của bo mạch qua cổng USB', () => {
   it('chỉ nhận dòng có dấu SC>, kể cả khi log chen phía trước', () => {
@@ -19,6 +19,11 @@ describe('đọc trả lời của bo mạch qua cổng USB', () => {
 
   it('đề xuất mã từ 3 byte cuối của MAC; lệnh ghi là một dòng JSON', () => {
     expect(suggestDeviceId('A1B2C3D4E5F6')).toBe('ctl-d4e5f6')
+    // Bo của mục đã thu hồi: mã kế tiếp, không trùng mã cũ còn trong kho
+    expect(nextDeviceId('ctl-d4e5f6')).toBe('ctl-d4e5f6-2')
+    expect(nextDeviceId('ctl-d4e5f6-2')).toBe('ctl-d4e5f6-3')
+    expect(nextDeviceId('node-1')).toBe('node-1-2')
+    expect(nextDeviceId('x'.repeat(40))).toHaveLength(40)
     expect(buildSetCommand({ deviceId: 'ctl-d4e5f6', brokerSecret: 's', broker: null }))
       .toBe('SC SET {"deviceId":"ctl-d4e5f6","brokerSecret":"s","broker":"","force":false}\n')
     expect(buildSetCommand({ deviceId: 'n1', brokerSecret: 's', broker: 'mqtt.x.vn', force: true }))

@@ -738,7 +738,7 @@ paths:
       summary: "Tải lên ảnh cài đặt firmware cho trạm nạp (FARM-FR-010, Report 4 D9) — chỉ ADMIN"
       description: |
         Ảnh gộp bootloader, bảng phân vùng, boot_app0 và firmware, ghi từ 0x0 (`pio run -e esp32prod -t factory`).
-        File chứa giá trị `Secrets.h` nên chỉ nằm trong bucket riêng và chỉ tải về qua route có đăng nhập.
+        File chứa giá trị `Secrets.h` nên chỉ nằm trong kho file của backend (khoá `firmware/…`) và chỉ tải về qua route có đăng nhập; `/files` của chế độ local từ chối mọi đường dẫn vào `firmware/`.
         Backend kiểm: dài hơn 0x10000 và không quá 0x10000 + 0x1E0000 byte (phân vùng app0), byte `0xE9` ở 0x1000 và 0x10000,
         trong file có `Firmware v<version>` (dòng chào khi khởi động). Audit `FIRMWARE_IMAGE_UPLOADED`.
       requestBody:

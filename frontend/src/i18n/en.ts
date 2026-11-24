@@ -689,6 +689,7 @@ const en: Record<string, string> = {
   'Chưa có đợt cập nhật nào': 'No rollout yet',
   'Tạo một đợt để đưa bản firmware mới trong kho tới các bộ điều khiển.': 'Create a rollout to bring a new firmware from the catalog to the controllers.',
   // Nạp firmware ở trạm nạp và kho firmware
+  'Mã cũ {{id}} của bo này đã bị thu hồi. Bo được thêm vào kho với mã mới và nhãn mới.': 'This board\'s old ID {{id}} was revoked. It is added to the stock under a new ID with a new label.',
   'Nạp firmware {{version}}': 'Flash firmware {{version}}',
   'Không ghi được firmware vào bo. Giữ nút BOOT trên bo, cắm lại cáp rồi thử lại.': 'Could not write the firmware to the board. Hold the BOOT button on the board, plug the cable in again and retry.',
   'Không tải được firmware': 'Could not download the firmware',
