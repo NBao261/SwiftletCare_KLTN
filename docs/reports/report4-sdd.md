@@ -1046,7 +1046,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/recommendations` | Recommendation rules (expert; the Farm Owner's wait inactive on a farm with an expert, BR-22), recommendations of a house, accept, reject, effect per rule |
 | `/profiles` | Configuration profiles: draft (expert or Farm Owner), approve and archive (expert), apply to houses (Farm Owner) |
 | `/farms/{id}/overview`, `/farms/{id}/comparison` | Farm overview and house comparison with MTTA, MTTR and energy (ANALYTICS-FR-015…017, OPS-FR-009) |
-| `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key, flash over USB, firmware catalog for the flashing station), firmware rollouts (`/ota`: rollouts with their progress, a new rollout with version, controllers and test controller, pause, resume, send to all, cancel, retry a controller), Farm Owner's account, lock, deletion requests, default thresholds, audit log, technical overview with every device and its device alerts |
+| `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key, flash over USB, firmware catalog used by the flashing station and by rollouts), firmware rollouts (`/ota`: upload a new version to the catalog, its version read from the file, then a new rollout opens on it; rollouts with their progress, a new rollout with version, controllers and test controller, pause, resume, send to all, cancel, retry a controller), Farm Owner's account, lock, deletion requests, default thresholds, audit log, technical overview with every device and its device alerts |
 | `/internal/stream-auth`, `/internal/mqtt-auth` | MediaMTX authorisation and EMQX device authentication (no user token, reachable only inside the Docker network) |
 
 ### 7.2 MQTT
@@ -1907,7 +1907,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 2.2.29 | 24/11/2026 | D21: firmware rollout from the catalog, test controllers first, offline controllers updated at their next heartbeat, per-controller download link, pause at the first failure; SM-15, AD-11, §5.4 and §6 (`firmwarerollouts`) follow; header baseline SRS 4.2.24 |
+| 2.2.29 | 24/11/2026 | D21: firmware rollout from the catalog, test controllers first, offline controllers updated at their next heartbeat, per-controller download link, pause at the first failure; SM-15, AD-11, §5.4 and §6 (`firmwarerollouts`) follow, the firmware catalog uploaded from the rollout page too; header baseline SRS 4.2.24 |
 | 2.2.28 | 24/11/2026 | D9: the stock screen also installs the firmware on a blank board or one older than 2.4.0 (`esptool-js`, NVS partition kept), from a private firmware catalog uploaded by the Administrator and checked by SHA-256; §5.4 lists the catalog; §6 lists `firmwareimages` and the MAC of `provisioneddevices` |
 | 2.2.27 | 24/11/2026 | D9: device identity flashed over USB from the stock screen (Web Serial, firmware 2.4.0 `SC INFO`/`SC SET`), chip MAC kept in the stock entry; `flash_identity.py` kept as a fallback |
 | 2.2.26 | 23/11/2026 | §5.4: the web carries every task of every role of Report 3 §2.4; the Farm Technician is no longer limited to alerts, devices and houses on the web (decided by the team on 23/11/2026, G-33) |
