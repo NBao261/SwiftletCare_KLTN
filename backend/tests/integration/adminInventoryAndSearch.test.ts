@@ -173,3 +173,49 @@ describe('GET /admin/users — tìm kiếm', () => {
     expect(emails(await get('status=deleted'))).toEqual(['deleted-x@swiftletcare.local'])
   })
 })
+
+describe('nạp thiết bị từ màn kho qua USB (FARM-FR-010)', () => {
+  const post = (token: string, body: object) =>
+    request(app).post('/admin/provisioned-devices').set('Authorization', `Bearer ${token}`).send(body)
+
+  it('ghi MAC của chip, trả địa chỉ broker để nạp; một chip chỉ một mã trong kho', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const token = tokenFor(admin._id, 'ADMIN')
+    process.env.DEVICE_BROKER_HOST = 'mqtt.swiftletcare.vn'
+    try {
+      const created = await post(token, { device_id: 'ctl-a1b2c3', kind: 'SENSOR', chip_mac: 'a1b2c3d4e5f6' }).expect(201)
+      expect(created.body.data).toMatchObject({ chip_mac: 'A1B2C3D4E5F6', broker_host: 'mqtt.swiftletcare.vn' })
+      expect(created.body.data.broker_secret).toEqual(expect.any(String))
+
+      // Cùng chip thêm lần nữa dưới mã khác: 409, chỉ cho nạp lại mã cũ
+      const again = await post(token, { device_id: 'ctl-other', kind: 'SENSOR', chip_mac: 'A1B2C3D4E5F6' }).expect(409)
+      expect(again.body.error.message).toContain('ctl-a1b2c3')
+      await post(token, { device_id: 'ctl-bad', kind: 'SENSOR', chip_mac: 'XYZ' }).expect(422)
+      // Firmware chỉ nhận mã tối đa 40 ký tự khi nạp qua USB
+      await post(token, { device_id: 'c'.repeat(41), kind: 'SENSOR' }).expect(422)
+
+      // Màn nạp tìm mục kho theo mã đọc từ chip
+      const found = await request(app).get('/admin/provisioned-devices?deviceId=ctl-a1b2c3').set('Authorization', `Bearer ${token}`).expect(200)
+      expect(found.body.data).toHaveLength(1)
+      expect(found.body.data[0]).toMatchObject({ device_id: 'ctl-a1b2c3', chip_mac: 'A1B2C3D4E5F6' })
+
+      const rotated = await request(app).post(`/admin/provisioned-devices/${found.body.data[0]._id}/rotate-broker-secret`)
+        .set('Authorization', `Bearer ${token}`).expect(200)
+      expect(rotated.body.data.broker_host).toBe('mqtt.swiftletcare.vn')
+
+      // Mục đã thu hồi nhả MAC: chính bo đó vào kho lại được với mã mới
+      await request(app).put(`/admin/provisioned-devices/${found.body.data[0]._id}/revoke`)
+        .set('Authorization', `Bearer ${token}`).send({ reason: 'Hàng lỗi' }).expect(200)
+      const readded = await post(token, { device_id: 'ctl-new', kind: 'SENSOR', chip_mac: 'A1B2C3D4E5F6' }).expect(201)
+      expect(readded.body.data.chip_mac).toBe('A1B2C3D4E5F6')
+    } finally {
+      delete process.env.DEVICE_BROKER_HOST
+    }
+  })
+
+  it('không cấu hình địa chỉ broker thì broker_host null; thêm không kèm MAC vẫn được', async () => {
+    const { adminId } = await provision('ESP-NO-MAC')
+    const created = await createProvisionedDevice(adminId, { device_id: 'ESP-NO-MAC-2', kind: 'SENSOR' })
+    expect(created).toMatchObject({ broker_host: null, chip_mac: null })
+  })
+})

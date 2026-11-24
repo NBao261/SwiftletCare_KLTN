@@ -10,6 +10,8 @@ export interface IProvisionedDevice extends Document {
   secret_key_hash: string
   // Hash; flash cùng device ID, không in lên nhãn
   broker_secret_hash?: string
+  // MAC của chip khi nạp từ màn Kho thiết bị qua USB: biết bo mạch nào mang mã nào, một chip một mã
+  chip_mac?: string
   claimed_at?: Date
   revoked_at?: Date
   revoke_reason?: string
@@ -24,6 +26,7 @@ const provisionedDeviceSchema = new Schema<IProvisionedDevice>(
     kind:            { type: String, enum: ['SENSOR', 'CAMERA'] satisfies ProvisionedDeviceKind[], required: true },
     secret_key_hash: { type: String, required: true, select: false },
     broker_secret_hash: { type: String, select: false },
+    chip_mac:        { type: String, uppercase: true, trim: true, unique: true, sparse: true },
     claimed_at:      { type: Date },
     revoked_at:      { type: Date },
     revoke_reason:   { type: String, trim: true },

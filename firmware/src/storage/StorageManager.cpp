@@ -150,6 +150,21 @@ bool loadFlashedBroker(String &broker) {
   return broker.length() > 0;
 }
 
+bool saveDeviceIdentity(const char *deviceId, const char *brokerSecret, const char *broker) {
+  Preferences identity;
+  if (!identity.begin("identity", false)) return false;
+  identity.putString("device_id", deviceId);
+  identity.putString("broker_secret", brokerSecret);
+  if (broker[0] != '\0') identity.putString("broker", broker);
+  else identity.remove("broker");
+  identity.end();
+  // Đọc lại: NVS đầy hoặc lỗi ghi thì báo cho trang thay vì để thiết bị khởi động với danh tính cũ
+  String savedId, savedSecret, savedBroker;
+  if (!loadDeviceIdentity(savedId, savedSecret) || savedId != deviceId || savedSecret != brokerSecret) return false;
+  bool hasBroker = loadFlashedBroker(savedBroker);
+  return broker[0] == '\0' ? !hasBroker : savedBroker == broker;
+}
+
 void saveAlertQueue(const void *data, size_t size) { prefs.putBytes("alertQueue", data, size); }
 
 void loadAlertQueue(void *data, size_t size) {

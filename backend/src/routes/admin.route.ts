@@ -4,7 +4,7 @@ import * as adminController from '@/controllers/admin.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 import type { Role } from '@/types'
-import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
+import { CHIP_MAC_PATTERN, DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
@@ -46,14 +46,17 @@ router.put('/delete-requests/:id/reject',
   adminController.rejectDeletionRequest,
 )
 
+// Tối đa 40 ký tự như firmware nhận khi nạp qua USB
 router.post('/provisioned-devices',
-  body('device_id').isString().trim().matches(DEVICE_ID_PATTERN), body('kind').isIn(['SENSOR', 'CAMERA']),
-  body('simulated').optional().isBoolean({ strict: true }), validate,
+  body('device_id').isString().trim().isLength({ max: 40 }).matches(DEVICE_ID_PATTERN), body('kind').isIn(['SENSOR', 'CAMERA']),
+  body('simulated').optional().isBoolean({ strict: true }),
+  body('chip_mac').optional().isString().trim().toUpperCase().matches(CHIP_MAC_PATTERN), validate,
   adminController.createProvisionedDevice,
 )
 router.get('/provisioned-devices',
   query('kind').optional().isIn(['SENSOR', 'CAMERA']), query('claimed').optional().isIn(['true', 'false']),
   query('revoked').optional().isIn(['true', 'false']),
+  query('deviceId').optional().isString().matches(DEVICE_ID_PATTERN),
   ...paginationQuery, validate,
   adminController.listProvisionedDevices,
 )

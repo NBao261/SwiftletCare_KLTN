@@ -38,6 +38,9 @@ void saveLearnedCurrent(int load, float normalA);
 bool loadDeviceIdentity(String &deviceId, String &brokerSecret);
 // NVS – địa chỉ broker nạp lúc flash (`flash_identity.py --broker`, namespace `identity`, FARM-FR-003c). false nếu không nạp
 bool loadFlashedBroker(String &broker);
+// NVS – ghi danh tính nạp qua cổng USB từ màn Kho thiết bị (system/SerialProvisioning), cùng khoá với flash_identity.py.
+// broker rỗng: xoá địa chỉ đã nạp để dùng địa chỉ biên dịch sẵn. true khi đọc lại đúng giá trị vừa ghi
+bool saveDeviceIdentity(const char *deviceId, const char *brokerSecret, const char *broker);
 
 // NVS – hàng đợi cảnh báo chờ PUBACK (Report 4 §7.2, NFR-06 c), lưu nguyên khối
 void saveAlertQueue(const void *data, size_t size);

@@ -137,12 +137,17 @@ export interface ProvisionedDevice {
   claimed_at?: string | null; revoked_at?: string | null; revoke_reason?: string | null
   created_by: string; created_at: string
   stock_status: StockStatus
+  // MAC của chip khi nạp qua USB ở màn Kho thiết bị
+  chip_mac?: string | null
 }
 
 // Mã chỉ trả đúng 1 lần: thêm vào kho trả cả hai, cấp lại mã kích hoạt / mật khẩu broker trả 1 trong 2
 export interface IssuedDeviceSecrets {
   device_id: string; kind: ProvisionedDeviceKind
   secret_key?: string; broker_secret?: string
+  // Địa chỉ broker nạp cùng danh tính (DEVICE_BROKER_HOST); null: thiết bị dùng địa chỉ có sẵn
+  broker_host?: string | null
+  chip_mac?: string | null
 }
 
 // thiết bị đã gỡ còn khôi phục được (GET …?removed=recent, chỉ Farm Owner)

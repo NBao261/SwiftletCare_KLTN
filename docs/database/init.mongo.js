@@ -1744,6 +1744,9 @@ ensureCollection("provisioneddevices", {
     "broker_secret_hash": {
       "bsonType": ["string", "null"]
     },
+    "chip_mac": {
+      "bsonType": ["string", "null"]
+    },
     "claimed_at": {
       "bsonType": ["date", "null"]
     },
@@ -1769,6 +1772,7 @@ ensureCollection("provisioneddevices", {
   "required": ["device_id", "kind", "secret_key_hash"]
 })
 db.getCollection("provisioneddevices").createIndex({"device_id":1}, {"unique":true})
+db.getCollection("provisioneddevices").createIndex({"chip_mac":1}, {"unique":true,"sparse":true})
 
 // ── pushtokens (model PushToken) ──
 ensureCollection("pushtokens", {
