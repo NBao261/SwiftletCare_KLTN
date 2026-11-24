@@ -616,6 +616,7 @@ const en: Record<string, string> = {
   'Đã nạp trong phiên ({{n}})': 'Flashed this session ({{n}})',
   'In lại nhãn': 'Print label again',
   // Đợt cập nhật firmware từ xa (trang Cập nhật firmware)
+  'Máy thử đang mất kết nối: các máy còn lại chờ tới khi máy này kết nối lại và cập nhật xong.': 'The test device is disconnected: the others wait until it reconnects and has updated.',
   'Kho firmware': 'Firmware catalog',
   'Dùng cho trạm nạp USB và cập nhật từ xa. Bản mới nhất được dùng trước': 'Used by the USB flashing station and remote updates. The latest version comes first',
   'Dựng ảnh cài đặt factory.bin theo hướng dẫn trong firmware/README.md rồi tải lên đây, phiên bản được đọc sẵn từ file. Nạp qua USB giữ nguyên mã và Wi-Fi đã có trên bo. Cập nhật từ xa làm ở trang Cập nhật firmware.': 'Build the factory.bin image as firmware/README.md explains and upload it here; the version is read from the file. Flashing over USB keeps the ID and Wi-Fi already on the board. Remote updates are made on the Firmware updates page.',

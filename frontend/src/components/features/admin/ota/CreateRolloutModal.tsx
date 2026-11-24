@@ -53,7 +53,8 @@ export default function CreateRolloutModal({ open, onClose, onCreated, images, n
 
   const chosen = rows.filter(row => !row.reason && selected.has(row.node._id)).map(row => row.node)
   const online = chosen.filter(node => node.status === 'ONLINE')
-  const canary = canaryChoice === NO_CANARY ? undefined : chosen.find(node => node._id === canaryChoice) ?? online[0] ?? chosen[0]
+  // Mặc định máy online đầu tiên; không máy nào online thì không thử trước, để đợt không chờ một máy chưa biết khi nào lên
+  const canary = canaryChoice === NO_CANARY ? undefined : chosen.find(node => node._id === canaryChoice) ?? online[0]
 
   // Mở lại hoặc đổi bản: bắt đầu từ mọi máy chạy bản cũ hơn
   useEffect(() => {
@@ -177,6 +178,9 @@ export default function CreateRolloutModal({ open, onClose, onCreated, images, n
               {canary
                 ? <li>{t('Thử trước trên {{id}}; các máy còn lại chờ máy này cập nhật xong.', { id: canary.device_id })}</li>
                 : <li>{t('Gửi tất cả cùng lúc, không thử trước.')}</li>}
+              {canary && canary.status !== 'ONLINE' && (
+                <li className="font-semibold text-orange-700">{t('Máy thử đang mất kết nối: các máy còn lại chờ tới khi máy này kết nối lại và cập nhật xong.')}</li>
+              )}
             </ul>
           )}
         </div>
