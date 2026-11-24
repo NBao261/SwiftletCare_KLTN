@@ -17,6 +17,8 @@ interface Props {
   nodes: SensorNode[]
   rollouts: FirmwareRollout[]
   locationById: Map<string, string>
+  // Bản vừa tải lên ở trang này: mở sẵn bản đó
+  initialImageId?: string
 }
 
 interface Row { node: SensorNode; reason: string | null }
@@ -24,7 +26,7 @@ interface Row { node: SensorNode; reason: string | null }
 const NO_CANARY = ''
 
 // Tạo đợt: chọn bản trong kho, chọn máy (máy không cập nhật được thì khoá kèm lý do), chọn máy thử trước
-export default function CreateRolloutModal({ open, onClose, onCreated, images, nodes, rollouts, locationById }: Props) {
+export default function CreateRolloutModal({ open, onClose, onCreated, images, nodes, rollouts, locationById, initialImageId }: Props) {
   const create = useCreateFirmwareRollout()
   const apiErrorMessage = useApiErrorMessage()
   const [imageId, setImageId] = useState('')
@@ -62,9 +64,9 @@ export default function CreateRolloutModal({ open, onClose, onCreated, images, n
   }, [open, version])
 
   useEffect(() => {
-    if (open) return
-    setImageId(''); setSearch(''); setNote(''); setCanaryChoice(null)
-  }, [open])
+    if (open) setImageId(initialImageId ?? '')
+    else { setSearch(''); setNote(''); setCanaryChoice(null) }
+  }, [open, initialImageId])
 
   function toggle(id: string) {
     setSelected(previous => {

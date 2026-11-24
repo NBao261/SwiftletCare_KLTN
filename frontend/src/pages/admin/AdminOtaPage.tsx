@@ -1,10 +1,10 @@
 // Cập nhật firmware từ xa theo đợt: chọn bản trong kho firmware và các bộ điều khiển; máy offline nhận khi online lại
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
-import { Badge, Button, DataTable, EmptyState, SectionCard, type DataTableColumn } from '@/components/ui'
+import { PlusIcon, UploadSimpleIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { Badge, Button, DataTable, EmptyState, Modal, ModalHeader, SectionCard, type DataTableColumn } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { IconOTA } from '@/components/ui/icons'
+import FirmwareUploadForm from '@/components/features/admin/device-stock/FirmwareUploadForm'
 import CreateRolloutModal from '@/components/features/admin/ota/CreateRolloutModal'
 import RolloutDetail from '@/components/features/admin/ota/RolloutDetail'
 import { ROLLOUT_STATUS, isOpenRollout, rolloutCounts } from '@/components/features/admin/ota/rollout.utils'
@@ -23,6 +23,9 @@ export default function AdminOtaPage() {
   const { data: systemStatus } = useSystemNodeStatus()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  // Tải lên xong thì mở luôn đợt cập nhật cho bản đó
+  const [newImageId, setNewImageId] = useState<string>()
 
   const locationById = useMemo(
     () => new Map((systemStatus?.nodes ?? []).map(item => [item._id, [item.farm_name, item.house_name, item.zone_name].filter(Boolean).join(' · ')])),
@@ -53,10 +56,15 @@ export default function AdminOtaPage() {
     { key: 'created', header: 'Tạo lúc', render: r => <span className="text-graphite">{formatDateTime(r.created_at)}</span> },
   ]
 
-  const createButton = (
-    <Button onClick={() => setCreating(true)} disabled={!hasImages || !nodes}>
-      <PlusIcon size={14} weight="bold" aria-hidden />{t('Tạo đợt cập nhật')}
-    </Button>
+  const actions = (
+    <div className="flex flex-wrap gap-2">
+      <Button variant="secondary" onClick={() => setUploading(true)}>
+        <UploadSimpleIcon size={14} weight="bold" aria-hidden />{t('Tải bản mới lên')}
+      </Button>
+      <Button onClick={() => setCreating(true)} disabled={!hasImages || !nodes}>
+        <PlusIcon size={14} weight="bold" aria-hidden />{t('Tạo đợt cập nhật')}
+      </Button>
+    </div>
   )
 
   return (
@@ -64,13 +72,10 @@ export default function AdminOtaPage() {
       <SectionCard
         description="Cập nhật firmware từ xa cho bộ điều khiển. Máy mất kết nối nhận bản cập nhật khi kết nối lại."
         help="Mỗi đợt thử trước trên một máy, máy đó cập nhật xong thì mới gửi các máy còn lại. Máy nào không lên được bản mới trong 30 phút thì tự quay về bản cũ, và đợt tự dừng để bạn kiểm tra."
-        action={createButton}
+        action={actions}
       >
         {!hasImages && images && (
-          <p className="text-sm text-warmGray">
-            {t('Kho chưa có firmware. Tải bản mới lên ở thẻ Firmware cho trạm nạp, màn')}{' '}
-            <Link to="/system/device-stock" className="font-semibold text-charcoal underline">{t('Kho thiết bị')}</Link>.
-          </p>
+          <p className="text-sm text-warmGray">{t('Kho chưa có firmware. Bấm Tải bản mới lên để bắt đầu.')}</p>
         )}
         {isLoading && <LoadingSkeleton count={3} className="h-14 w-full" />}
         {isError && (
@@ -117,14 +122,25 @@ export default function AdminOtaPage() {
       {images && nodes && (
         <CreateRolloutModal
           open={creating}
-          onClose={() => setCreating(false)}
-          onCreated={rollout => { setCreating(false); setSelectedId(rollout._id) }}
+          onClose={() => { setCreating(false); setNewImageId(undefined) }}
+          onCreated={rollout => { setCreating(false); setNewImageId(undefined); setSelectedId(rollout._id) }}
+          initialImageId={newImageId}
           images={images}
           nodes={nodes}
           rollouts={list}
           locationById={locationById}
         />
       )}
+
+      <Modal open={uploading} onClose={() => setUploading(false)} size="lg" ariaLabel={t('Tải bản firmware mới')}>
+        <div className="flex flex-col gap-5">
+          <ModalHeader
+            title={t('Tải bản firmware mới')}
+            description="Chọn file factory.bin dựng theo hướng dẫn trong firmware/README.md. Phiên bản được đọc sẵn từ file. Bản này cũng dùng cho trạm nạp USB."
+          />
+          <FirmwareUploadForm onUploaded={image => { setUploading(false); setNewImageId(image._id); setCreating(true) }} />
+        </div>
+      </Modal>
     </div>
   )
 }
