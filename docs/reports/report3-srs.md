@@ -721,6 +721,7 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | New firmware must reach the broker | 10 min, else rollback | A broken image cannot stay installed (FARM-FR-013) |
 | Firmware download stalled | 10 s without data | Treated as a lost connection; the old firmware keeps running |
 | OTA not confirmed | 30 min | Reported as failed (FARM-FR-013, Section 6.15); the download link of a rollout expires at the same time (FARM-FR-013b) |
+| Firmware flashing and rollout timings | flashing station: firmware offered after 6 s without an answer, the board asked every 0.5 s for up to 30 s, 8 s for it to confirm a write; firmware upload and download 2 min; rollout page refreshed every 10 s while a rollout is open; at most 500 controllers per rollout; a controller still `SENT` 2 min after the 30-min confirmation is failed by the minute job | How FARM-FR-010 and FARM-FR-013b are carried out; chosen by the team (A-4) |
 | Firmware rollout | pauses at the first failed controller; test controllers: one online controller proposed, chosen by the Administrator | A broken image stops at the first controllers instead of reaching the whole fleet (FARM-FR-013b); chosen by the team (A-4) |
 | Configuration mismatch | 3 heartbeats | `CONFIG_MISMATCH` (ENV-FR-027, BR-24) |
 | Device not connected after registration | 15 min | Registrant told to check Wi-Fi (FARM-FR-012, BR-27) |
@@ -1172,7 +1173,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 4.2.24 | 24/11/2026 | FARM-FR-013b: firmware rollout from the catalog to chosen controllers, test controllers first, offline controllers updated when they reconnect, pause at the first failure; FARM-FR-013, SF-02, Section 6.15 and the rollout constants of Section 4.5 |
+| 4.2.24 | 24/11/2026 | FARM-FR-013b: firmware rollout from the catalog to chosen controllers, test controllers first, offline controllers updated when they reconnect, pause at the first failure; FARM-FR-013, SF-02, Section 6.15 and the rollout constants of Section 4.5; the flashing and rollout timings of Section 4.5 |
 | 4.2.23 | 24/11/2026 | FARM-FR-010: the stock screen installs the latest uploaded firmware on a controller with no firmware or one older than 2.4.0, keeping its stored ID and Wi-Fi |
 | 4.2.22 | 24/11/2026 | FARM-FR-010: the Administrator flashes the device ID, broker credential and broker address over USB from the stock screen; the chip's MAC is kept with the stock entry |
 | 4.2.21 | 24/11/2026 | FARM-FR-001: a farm with devices in service cannot be deleted, and deleting it soft-deletes its houses as FARM-FR-002; AUTH-FR-012: a sole owner's farm gets its devices decommissioned before it is deleted, and a leaving member is taken off houses, shifts and Work Orders |
