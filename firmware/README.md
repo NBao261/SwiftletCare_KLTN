@@ -44,6 +44,8 @@
 > - **nạp firmware từ trang (PR 2, §6 của plan):** tải `factory.bin` lên thẻ "Firmware cho trạm nạp"; cắm ESP32 mới mua (chưa có firmware): sau 6 giây trang hiện nút "Nạp firmware", thanh tiến độ chạy tới 100 %, bo khởi động lại và trang tự đọc ra MAC + phiên bản mới;
 > - bo đang chạy firmware cũ hơn bản trong kho nhưng đã có mã và Wi-Fi: bấm "Cập nhật" xong, `SC INFO` vẫn trả đúng mã cũ và bo vẫn vào được Wi-Fi đã lưu (vùng NVS không bị ghi);
 > - rút cáp giữa lúc nạp firmware: trang báo lỗi, cắm lại nạp lần nữa được (bootloader ROM không bị ghi nên bo không hỏng hẳn).
+> - **đợt cập nhật từ xa (PR 3, FARM-FR-013b, plan §7.4), firmware không đổi:** trên staging, hai bộ điều khiển 2.4.0, tải lên bản 2.4.1; tạo đợt với máy thử đang online: máy thử tải qua `…/api/firmware/ota/<token>` (chứng chỉ Let's Encrypt của staging), lên 2.4.1, rồi máy thứ hai (đang tắt) vẫn chờ; bật máy thứ hai: nhận lệnh trong 1 phút và lên 2.4.1;
+> - một bản cố tình không nối được broker: máy quay về bản cũ sau 10 phút, sau 30 phút máy ghi lỗi và đợt tự dừng.
 >
 > **2.3.2 (mức cảnh báo theo BR-15, G-32) — chưa thử trên board.** `SPEAKER_FAILURE` gửi mức `HIGH` thay vì `CRITICAL`. Backend từ G-32 tự đặt mức theo loại và bỏ qua trường `severity`, nên board còn chạy bản cũ vẫn ra cảnh báo `HIGH`; không cần kiểm gì thêm trên board ngoài các mục của 2.3.1.
 >
