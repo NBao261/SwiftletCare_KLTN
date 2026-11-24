@@ -1,19 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircleIcon, UsbIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, CpuIcon, UsbIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, Input, Modal, ModalHeader } from '@/components/ui'
 import { useAddStockDevice, useFindStockDevice, useRotateBrokerSecret } from '@/hooks/admin/useDeviceStock'
+import { useDownloadFirmwareImage, useFirmwareImages } from '@/hooks/admin/useFirmwareImages'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import {
   CHIP_ERROR_TEXT, DeviceSerial, SerialError, isWebSerialSupported, suggestDeviceId, type ChipInfo,
 } from '@/lib/deviceSerial'
+import { compareVersions, flashFactoryImage } from '@/lib/firmwareFlasher'
 import { deviceLabelCode, printQrLabels, qrDataUrl } from '@/lib/qrCode'
 import { t } from '@/i18n'
 import type { ProvisionedDevice } from '@/types'
 
 // Cùng mẫu backend và firmware: mã là username và một đoạn topic trên broker
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{1,40}$/
+// Bo có firmware SwiftletCare thường trả lời trong vài giây; quá mốc này thì gợi ý nạp firmware (vẫn chờ tiếp)
+const SLOW_ANSWER_MS = 6_000
 
-type Step = 'start' | 'reading' | 'ready' | 'writing' | 'done'
+type Step = 'start' | 'reading' | 'firmware' | 'ready' | 'writing' | 'done'
 
 interface Flashed {
   deviceId: string
@@ -36,16 +40,26 @@ function printLabel(item: Flashed): void {
   }])
 }
 
-// Trạm nạp ở xưởng: cắm ESP32 qua USB, đọc chip, thêm vào kho và ghi mã + mật khẩu broker thẳng vào chip, in nhãn
+// Lỗi của bo mạch hoặc của bước này thì báo nguyên câu (đã có bản dịch); lỗi của máy chủ (axios) đọc từ response
+function isLocalError(err: unknown): err is Error {
+  return err instanceof SerialError || (err instanceof Error && !('response' in err))
+}
+
+// Trạm nạp ở xưởng: cắm ESP32 qua USB, nạp firmware nếu cần, thêm vào kho và ghi mã + mật khẩu broker vào chip, in nhãn
 export default function FlashDeviceModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const add = useAddStockDevice()
   const findStock = useFindStockDevice()
   const rotateBroker = useRotateBrokerSecret()
+  const { data: firmwareImages } = useFirmwareImages()
+  const downloadFirmware = useDownloadFirmwareImage()
   const apiErrorMessage = useApiErrorMessage()
   const serialRef = useRef<DeviceSerial | null>(null)
+  const waitRef = useRef<AbortController | null>(null)
 
   const [step, setStep] = useState<Step>('start')
   const [error, setError] = useState<string | null>(null)
+  const [isSlow, setIsSlow] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [chip, setChip] = useState<ChipInfo | null>(null)
   const [stockEntry, setStockEntry] = useState<ProvisionedDevice | null>(null)
   const [deviceId, setDeviceId] = useState('')
@@ -57,8 +71,11 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
   const [qr, setQr] = useState<string>()
 
   const supported = isWebSerialSupported()
+  // Backend trả mới nhất trước theo số phiên bản
+  const latestFirmware = firmwareImages?.[0]
 
   async function closePort(): Promise<void> {
+    waitRef.current?.abort()
     await serialRef.current?.close()
     serialRef.current = null
   }
@@ -74,6 +91,25 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
     if (last?.secretKey) void qrDataUrl(deviceLabelCode(last.deviceId, last.secretKey)).then(setQr)
   }, [last])
 
+  // Hỏi chip rồi tìm mục kho: theo mã đang có, hoặc theo MAC khi chip mất mã (đã nạp lại toàn bộ)
+  async function readChip(serial: DeviceSerial): Promise<void> {
+    setStep('reading')
+    setIsSlow(false)
+    const wait = new AbortController()
+    waitRef.current = wait
+    const slowTimer = setTimeout(() => setIsSlow(true), SLOW_ANSWER_MS)
+    try {
+      const info = await serial.info(undefined, wait.signal)
+      const entry = await findStock.mutateAsync(info.deviceId ? { deviceId: info.deviceId } : { chipMac: info.mac })
+      setChip(info)
+      setStockEntry(entry)
+      setDeviceId(info.deviceId ?? entry?.device_id ?? suggestDeviceId(info.mac))
+      setStep('ready')
+    } finally {
+      clearTimeout(slowTimer)
+    }
+  }
+
   async function connect(): Promise<void> {
     setError(null); setChip(null); setStockEntry(null); setConfirmOverwrite(false); setLast(null)
     await closePort()
@@ -81,24 +117,50 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
     try {
       await serial.connect()
       serialRef.current = serial
-      setStep('reading')
-      const info = await serial.info()
-      setChip(info)
-      setDeviceId(info.deviceId ?? suggestDeviceId(info.mac))
-      setStockEntry(info.deviceId ? await findStock.mutateAsync(info.deviceId) : null)
-      setStep('ready')
+      await readChip(serial)
     } catch (err) {
+      // Admin bấm nạp firmware khi đang chờ: bước nạp firmware lo tiếp
+      if (err instanceof SerialError && err.code === 'ABORTED') return
       await serial.close()
       setStep('start')
-      setError(err instanceof SerialError ? t(err.message) : apiErrorMessage(err, t('Không kết nối được bo mạch')))
+      setError(isLocalError(err) ? t(err.message) : apiErrorMessage(err, t('Không kết nối được bo mạch')))
+    }
+  }
+
+  // Ghi ảnh cài đặt mới nhất của kho (giữ vùng NVS), rồi đọc lại chip trên đúng cổng đó
+  async function flashFirmware(): Promise<void> {
+    const serial = serialRef.current
+    if (!serial || !latestFirmware) return
+    waitRef.current?.abort()
+    setError(null)
+    setProgress(0)
+    setStep('firmware')
+    try {
+      const image = await downloadFirmware.mutateAsync(latestFirmware)
+      const port = await serial.detach()
+      if (!port) throw new SerialError('DISCONNECTED', 'Mất kết nối với bo mạch. Cắm lại rồi kết nối lại.')
+      // Lỗi của esptool-js là câu tiếng Anh của thư viện: báo câu chung, thường do bo không tự vào chế độ nạp
+      await flashFactoryImage(port, image, setProgress).catch(() => {
+        throw new Error('Không ghi được firmware vào bo. Giữ nút BOOT trên bo, cắm lại cáp rồi thử lại.')
+      })
+      const next = new DeviceSerial()
+      await next.connect(port)
+      serialRef.current = next
+      setChip(null)
+      await readChip(next)
+    } catch (err) {
+      await closePort()
+      setStep('start')
+      setError(isLocalError(err) ? t(err.message) : apiErrorMessage(err, t('Không tải được firmware')))
     }
   }
 
   const trimmedId = deviceId.trim()
   const idError = trimmedId && !DEVICE_ID_PATTERN.test(trimmedId) ? t('Mã thiết bị chỉ gồm chữ, số, "_", "-", tối đa 40 ký tự') : undefined
-  const isReflash = stockEntry !== null && chip?.deviceId === trimmedId
+  const isReflash = stockEntry !== null && stockEntry.device_id === trimmedId
   const needsOverwrite = Boolean(chip?.deviceId)
   const canFlash = step === 'ready' && trimmedId !== '' && !idError && (!needsOverwrite || confirmOverwrite)
+  const firmwareIsOld = Boolean(chip && latestFirmware && compareVersions(chip.fw, latestFirmware.version) < 0)
 
   async function flash(): Promise<void> {
     const serial = serialRef.current
@@ -111,7 +173,7 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
       let secret: { broker_secret?: string; broker_host?: string | null }
       const retry = pending?.deviceId === trimmedId ? pending : null
       if (isReflash || retry) {
-        const entry = isReflash ? stockEntry : await findStock.mutateAsync(trimmedId)
+        const entry = isReflash ? stockEntry : await findStock.mutateAsync({ deviceId: trimmedId })
         if (!entry) throw new Error(t('Không tìm thấy {{id}} trong kho', { id: trimmedId }))
         secret = await rotateBroker.mutateAsync(entry._id)
         flashed = { deviceId: trimmedId, mac: chip.mac, secretKey: retry?.secretKey }
@@ -134,15 +196,19 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
       await closePort()
     } catch (err) {
       setStep('ready')
-      // Lỗi của bo mạch hoặc của bước này thì báo nguyên câu; lỗi của máy chủ (axios) đọc từ response
-      const isLocal = err instanceof SerialError || (err instanceof Error && !('response' in err))
-      setError(isLocal ? t((err as Error).message) : apiErrorMessage(err, t('Nạp thất bại')))
+      setError(isLocalError(err) ? t(err.message) : apiErrorMessage(err, t('Nạp thất bại')))
     }
   }
 
+  const firmwareButton = latestFirmware && (
+    <Button variant="secondary" onClick={() => void flashFirmware()}>
+      <CpuIcon size={16} aria-hidden />{t('Nạp firmware {{version}}', { version: latestFirmware.version })}
+    </Button>
+  )
+
   const title = t('Nạp thiết bị qua USB')
   return (
-    <Modal open={open} onClose={onClose} size="lg" ariaLabel={title}>
+    <Modal open={open} onClose={step === 'firmware' ? () => undefined : onClose} size="lg" ariaLabel={title}>
       <div className="flex flex-col gap-5">
         <ModalHeader
           title={title}
@@ -166,7 +232,27 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
             <Button onClick={() => void connect()} loading={step === 'reading'}>
               <UsbIcon size={16} aria-hidden />{t('Kết nối bo mạch')}
             </Button>
+            {step === 'reading' && isSlow && (
+              <div className="flex flex-col items-start gap-2 border-t border-gray-200 pt-3">
+                <p className="text-sm text-charcoal">{t('Bo chưa trả lời: có thể chưa có firmware SwiftletCare hoặc firmware quá cũ.')}</p>
+                {firmwareButton ?? <p className="text-xs text-warmGray">{t('Tải firmware lên ở thẻ Firmware cho trạm nạp để nạp được từ đây.')}</p>}
+              </div>
+            )}
             <p className="text-xs text-warmGray">{t('Không thấy cổng: cài driver CP210x hoặc CH340, và dùng cáp USB có truyền dữ liệu.')}</p>
+          </section>
+        )}
+
+        {step === 'firmware' && (
+          <section className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4" aria-live="polite">
+            <p className="text-sm font-semibold text-charcoal">
+              {downloadFirmware.isPending
+                ? t('Đang tải firmware {{version}}…', { version: latestFirmware?.version ?? '' })
+                : t('Đang nạp firmware {{version}}: {{percent}} %', { version: latestFirmware?.version ?? '', percent: progress })}
+            </p>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full rounded-full bg-accent-600 transition-[width] duration-300" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="text-xs text-warmGray">{t('Đừng rút cáp. Mã và Wi-Fi đã có trên bo được giữ nguyên.')}</p>
           </section>
         )}
 
@@ -180,6 +266,12 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
               <dd className="font-mono font-semibold text-charcoal">{chip.fw}</dd>
               <dd className="hidden font-mono font-semibold text-charcoal sm:block">{chip.deviceId ?? t('Chưa có')}</dd>
             </dl>
+            {firmwareIsOld && step === 'ready' && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3">
+                <p className="text-sm text-charcoal">{t('Kho có firmware mới hơn ({{version}}).', { version: latestFirmware?.version ?? '' })}</p>
+                {firmwareButton}
+              </div>
+            )}
             <Input
               label="Mã thiết bị"
               required

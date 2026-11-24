@@ -150,6 +150,11 @@ export interface IssuedDeviceSecrets {
   chip_mac?: string | null
 }
 
+// Kho firmware cho trạm nạp: GET /admin/firmware-images (mới nhất trước)
+export interface FirmwareImage {
+  _id: string; version: string; size: number; sha256: string; note: string | null; created_at: string
+}
+
 // thiết bị đã gỡ còn khôi phục được (GET …?removed=recent, chỉ Farm Owner)
 export type RemovedDevice = (SensorNode | CameraNode) & {
   decommissioned_at: string
