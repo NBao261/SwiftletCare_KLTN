@@ -618,6 +618,7 @@ const en: Record<string, string> = {
   'Đã nạp trong phiên ({{n}})': 'Flashed this session ({{n}})',
   'In lại nhãn': 'Print label again',
   // Nạp firmware ở trạm nạp và kho firmware
+  'Mã cũ {{id}} của bo này đã bị thu hồi. Bo được thêm vào kho với mã mới và nhãn mới.': 'This board\'s old ID {{id}} was revoked. It is added to the stock under a new ID with a new label.',
   'Nạp firmware {{version}}': 'Flash firmware {{version}}',
   'Không ghi được firmware vào bo. Giữ nút BOOT trên bo, cắm lại cáp rồi thử lại.': 'Could not write the firmware to the board. Hold the BOOT button on the board, plug the cable in again and retry.',
   'Không tải được firmware': 'Could not download the firmware',

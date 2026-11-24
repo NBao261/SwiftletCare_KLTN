@@ -5,7 +5,7 @@ import { useAddStockDevice, useFindStockDevice, useRotateBrokerSecret } from '@/
 import { useDownloadFirmwareImage, useFirmwareImages } from '@/hooks/admin/useFirmwareImages'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import {
-  CHIP_ERROR_TEXT, DeviceSerial, SerialError, isWebSerialSupported, suggestDeviceId, type ChipInfo,
+  CHIP_ERROR_TEXT, DeviceSerial, SerialError, isWebSerialSupported, nextDeviceId, suggestDeviceId, type ChipInfo,
 } from '@/lib/deviceSerial'
 import { compareVersions, flashFactoryImage } from '@/lib/firmwareFlasher'
 import { deviceLabelCode, printQrLabels, qrDataUrl } from '@/lib/qrCode'
@@ -62,6 +62,8 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
   const [progress, setProgress] = useState(0)
   const [chip, setChip] = useState<ChipInfo | null>(null)
   const [stockEntry, setStockEntry] = useState<ProvisionedDevice | null>(null)
+  // Mã cũ của bo này đã bị thu hồi: nhắc Administrator vì sao mã đề xuất khác mã trên chip
+  const [revokedId, setRevokedId] = useState<string | null>(null)
   const [deviceId, setDeviceId] = useState('')
   const [confirmOverwrite, setConfirmOverwrite] = useState(false)
   // Đã thêm vào kho nhưng ghi chip lỗi: nạp lại dùng đúng mục kho đó, không thêm lần nữa
@@ -83,7 +85,7 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
   useEffect(() => {
     if (open) return
     void closePort()
-    setStep('start'); setError(null); setChip(null); setStockEntry(null); setPending(null); setLast(null); setSession([])
+    setStep('start'); setError(null); setChip(null); setStockEntry(null); setRevokedId(null); setPending(null); setLast(null); setSession([])
   }, [open])
 
   useEffect(() => {
@@ -101,11 +103,13 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
     try {
       const info = await serial.info(undefined, wait.signal)
       const found = await findStock.mutateAsync(info.deviceId ? { deviceId: info.deviceId } : { chipMac: info.mac })
-      // Mục đã thu hồi không nạp lại được: coi như bo mới, thêm vào kho với mã mới (backend nhả MAC của mục cũ)
+      // Mục đã thu hồi không nạp lại được: coi như bo mới, thêm vào kho với mã kế tiếp vì mã cũ vẫn nằm trong kho
+      // (backend nhả MAC của mục cũ)
       const entry = found?.revoked_at ? null : found
       setChip(info)
       setStockEntry(entry)
-      setDeviceId(found?.revoked_at ? suggestDeviceId(info.mac) : info.deviceId ?? entry?.device_id ?? suggestDeviceId(info.mac))
+      setRevokedId(found?.revoked_at ? found.device_id : null)
+      setDeviceId(found?.revoked_at ? nextDeviceId(found.device_id) : info.deviceId ?? entry?.device_id ?? suggestDeviceId(info.mac))
       setStep('ready')
     } finally {
       clearTimeout(slowTimer)
@@ -113,7 +117,7 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
   }
 
   async function connect(): Promise<void> {
-    setError(null); setChip(null); setStockEntry(null); setConfirmOverwrite(false); setLast(null)
+    setError(null); setChip(null); setStockEntry(null); setRevokedId(null); setConfirmOverwrite(false); setLast(null)
     await closePort()
     const serial = new DeviceSerial()
     try {
@@ -283,6 +287,11 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
               error={idError}
               disabled={step === 'writing'}
             />
+            {revokedId && (
+              <p className="text-xs text-warmGray">
+                {t('Mã cũ {{id}} của bo này đã bị thu hồi. Bo được thêm vào kho với mã mới và nhãn mới.', { id: revokedId })}
+              </p>
+            )}
             {isReflash && (
               <p className="text-xs text-warmGray">
                 {t('Mã này đã có trong kho: nạp lại sẽ cấp mật khẩu kết nối mới cho bo mạch. Nhãn cũ trên bo vẫn dùng được.')}
