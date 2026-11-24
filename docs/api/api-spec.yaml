@@ -797,12 +797,137 @@ paths:
     delete:
       tags: [Admin]
       summary: "Xoá một firmware khỏi kho — chỉ ADMIN"
-      description: Audit `FIRMWARE_IMAGE_DELETED`.
+      description: Audit `FIRMWARE_IMAGE_DELETED`. Bản đang dùng trong một đợt cập nhật chưa xong (`ACTIVE`, `PAUSED`) → 409.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
         "200": { description: Đã xoá, content: { application/json: { schema: { $ref: "#/components/schemas/ApiSuccess" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/firmware-rollouts:
+    get:
+      tags: [Admin]
+      summary: "Các đợt cập nhật firmware từ xa, mới nhất trước (tối đa 50) — chỉ ADMIN (FARM-FR-013b)"
+      responses:
+        "200":
+          description: Danh sách đợt, mỗi đợt kèm từng bộ điều khiển và trạng thái của nó
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: array, items: { $ref: "#/components/schemas/FirmwareRollout" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin]
+      summary: "Tạo đợt cập nhật firmware từ xa — chỉ ADMIN (FARM-FR-013b)"
+      description: |
+        Một bản trong kho firmware cho các bộ điều khiển chọn. Máy online nhận lệnh `OTA` ngay (máy thử trước nếu
+        có `canary_node_ids`, các máy còn lại khi mọi máy thử đã lên bản mới); máy offline chờ trong đợt và nhận lệnh
+        ở heartbeat đầu tiên khi online lại. Lệnh mang `{ version, url, sha256 }` như lệnh OTA gửi tay: `url` là link
+        tải dùng riêng cho máy đó (`GET /firmware/ota/{token}`, hết hạn sau 30 phút), `sha256` là của phần firmware
+        (từ 0x10000 của ảnh cài đặt). Một máy quá 30 phút chưa xác nhận → máy `FAILED`, đợt tự `PAUSED`
+        (`paused_reason: FAILURE`) và người tạo được báo. Audit `FIRMWARE_ROLLOUT_CREATED`, mỗi lần gửi
+        `DEVICE_COMMAND_SENT`, Farm Owner của trang trại được báo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [image_id, node_ids]
+              properties:
+                image_id: { type: string, description: "_id trong kho firmware" }
+                node_ids: { type: array, minItems: 1, maxItems: 500, items: { type: string }, description: "_id bộ điều khiển đang dùng" }
+                canary_node_ids: { type: array, maxItems: 500, items: { type: string }, description: "Máy thử trước, phải nằm trong node_ids; trống = gửi tất cả ngay" }
+                note: { type: string, maxLength: 200 }
+      responses:
+        "201":
+          description: Đã tạo; máy online tới lượt đã được gửi lệnh
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/FirmwareRollout" } }
+        "400": { description: "Máy thử trước không nằm trong máy chọn, hoặc có bộ điều khiển không còn dùng", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Có máy chạy firmware trước 1.4.0, đã chạy đúng bản, hoặc đang có một lần cập nhật chưa xong (đợt khác hoặc lệnh gửi tay); câu báo liệt kê từng máy", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { description: "Chưa cấu hình `OTA_DOWNLOAD_BASE_URL` (HTTPS)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /admin/firmware-rollouts/{id}/pause:
+    post:
+      tags: [Admin]
+      summary: "Tạm dừng đợt cập nhật (máy đang tải vẫn ghi kết quả) — chỉ ADMIN"
+      description: Audit `FIRMWARE_ROLLOUT_PAUSE`. Đợt không ở `ACTIVE` → 409.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: &rolloutActionResponses
+        "200":
+          description: Đợt sau khi đổi
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/FirmwareRollout" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /admin/firmware-rollouts/{id}/resume:
+    post:
+      tags: [Admin]
+      summary: "Tiếp tục đợt đang dừng và gửi cho máy online tới lượt — chỉ ADMIN"
+      description: Audit `FIRMWARE_ROLLOUT_RESUME`. Đợt không ở `PAUSED` → 409.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: *rolloutActionResponses
+
+  /admin/firmware-rollouts/{id}/promote:
+    post:
+      tags: [Admin]
+      summary: "Gửi cho mọi máy ngay, không chờ máy thử trước — chỉ ADMIN"
+      description: Audit `FIRMWARE_ROLLOUT_PROMOTE`. Đợt đã ở lượt tất cả máy, hoặc đã kết thúc → 409.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: *rolloutActionResponses
+
+  /admin/firmware-rollouts/{id}/cancel:
+    post:
+      tags: [Admin]
+      summary: "Huỷ đợt: máy còn chờ thành CANCELLED, máy đang tải vẫn ghi kết quả — chỉ ADMIN"
+      description: Audit `FIRMWARE_ROLLOUT_CANCEL`. Đợt đã kết thúc → 409.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: *rolloutActionResponses
+
+  /admin/firmware-rollouts/{id}/targets/{nodeId}/retry:
+    post:
+      tags: [Admin]
+      summary: "Thử lại một máy cập nhật lỗi — chỉ ADMIN"
+      description: |
+        Máy `FAILED` về `QUEUED`. Đợt đã xong hoặc tự dừng vì lỗi thì chạy tiếp; đợt Administrator tự dừng vẫn dừng.
+        Máy không ở `FAILED` hoặc đợt đã huỷ → 409. Audit `FIRMWARE_ROLLOUT_RETRY`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: nodeId, in: path, required: true, schema: { type: string } }
+      responses: *rolloutActionResponses
+
+  /firmware/ota/{token}:
+    get:
+      tags: [Devices]
+      summary: "Bộ điều khiển tải firmware của đợt cập nhật (không đăng nhập, link dùng riêng cho máy)"
+      description: |
+        `token` nằm trong `url` của lệnh `OTA` mà đợt cập nhật gửi; chỉ SHA-256 của nó được lưu. Dùng được khi máy
+        đang chờ xác nhận và chưa quá 30 phút kể từ lúc gửi. Trả phần firmware (từ 0x10000 của ảnh cài đặt) kèm
+        `Content-Length`. Backend và Nginx staging không ghi URL này vào log.
+      security: []
+      parameters: [{ name: token, in: path, required: true, schema: { type: string, pattern: "^[0-9a-fA-F]{64}$" } }]
+      responses:
+        "200": { description: Firmware, content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /admin/provisioned-devices/{id}/revoke:
     put:
@@ -4092,7 +4217,7 @@ paths:
                   - properties: { data: { $ref: "#/components/schemas/SensorNode" } }
         "400": { description: "URL firmware không phải HTTPS/không thuộc OTA_ALLOWED_HOSTS", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { description: "Thiết bị PENDING/OFFLINE/ERROR hoặc đã gỡ, hoặc đang chạy đúng version OTA", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "409": { description: "Thiết bị PENDING/OFFLINE/ERROR hoặc đã gỡ, đang chạy đúng version OTA, hoặc OTA tới thiết bị đang trong một đợt cập nhật firmware chưa xong", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
         "501": { description: "RESTART/OTA tới thiết bị chạy firmware trước 1.4.0 (chưa xử lý `command`)", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "503": { description: "Backend chưa kết nối MQTT broker — lệnh chưa rời backend, `ota_pending` KHÔNG được ghi", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
@@ -8542,6 +8667,36 @@ components:
         sha256: { type: string }
         note: { type: string, nullable: true }
         created_at: { type: string, format: date-time }
+    FirmwareRollout:
+      type: object
+      description: "Đợt cập nhật firmware từ xa (FARM-FR-013b); không bao giờ trả token tải"
+      properties:
+        _id: { type: string }
+        image_id: { type: string }
+        version: { type: string, example: "2.5.0" }
+        status: { type: string, enum: [ACTIVE, PAUSED, COMPLETED, CANCELLED] }
+        stage: { type: string, enum: [CANARY, ALL], description: "CANARY = mới gửi cho máy thử trước" }
+        paused_reason: { type: string, enum: [FAILURE, ADMIN], nullable: true }
+        note: { type: string, nullable: true }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time, nullable: true }
+        targets:
+          type: array
+          items:
+            type: object
+            properties:
+              node_id: { type: string }
+              device_id: { type: string }
+              from_version: { type: string }
+              canary: { type: boolean }
+              state: { type: string, enum: [QUEUED, SENT, SUCCEEDED, FAILED, CANCELLED, SKIPPED] }
+              attempts: { type: integer }
+              sent_at: { type: string, format: date-time, nullable: true }
+              finished_at: { type: string, format: date-time, nullable: true }
+              reason: { type: string, enum: [TIMEOUT, NOT_IN_SERVICE], nullable: true }
+              token_expires_at: { type: string, format: date-time, nullable: true }
     ProvisionedDevice:
       type: object
       description: "FARM-FR-003 — thiết bị trong kho (không bao giờ trả secret_key/hash)"

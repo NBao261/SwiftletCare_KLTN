@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.23 (Review 2, final scope) |
+| Document version | 4.2.24 (Review 2, final scope) |
 | Date | 24/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -222,7 +222,7 @@ The main flows MF-01…08 are Flows 1–8 of the registration form v3 (section D
 | MF-07 | Preventive maintenance | Farm Owner, Farm Technician | — | A maintenance plan falls due by run hours, switch count or calendar | A preventive Work Order is done with its checklist and photos, the counter is reset and the next due date set; an overdue plan escalates; a defect found opens a repair Work Order (MF-02); on-time maintenance rate recorded | OPS-FR-005…009, ALERT-FR-016 |
 | MF-08 | Recommendation loop | Domain Expert, Farm Owner, Farm Technician | — | An active recommendation rule of the Domain Expert holds for a house | A recommendation with its evidence is accepted (Work Order or proposed parameter change) or rejected with a reason; its effect is measured after 7 days and shown per rule to the expert | EXPERT-FR-016…019 |
 | SF-01 | Device setup by the Farm Owner (supporting) | Administrator, Farm Owner | — | A new controller, or a controller moved to another floor | Controller registered by scanning its label, assigned to the zone of the scanned floor code, online and running that zone's configuration, confirmed in the application | FARM-FR-003, 003b, 003c, 006, 007, 007b, 008, 010, 011, 012, ENV-FR-027 |
-| SF-02 | Remote device maintenance (supporting) | Administrator, Farm Owner, Farm Technician | — | A device alert, or a new firmware release | Device diagnosed, restarted, reconfigured or updated remotely; the Farm Owners notified of each action of the Administrator | FARM-FR-006, 009, 013, ENV-FR-013c |
+| SF-02 | Remote device maintenance (supporting) | Administrator, Farm Owner, Farm Technician | — | A device alert, or a new firmware release | Device diagnosed, restarted, reconfigured or updated remotely, a new firmware rolled out to many controllers at once, offline ones receiving it when they reconnect; the Farm Owners notified of each action of the Administrator | FARM-FR-006, 009, 013, 013b, ENV-FR-013c |
 | SF-03 | Account and access management (supporting) | All users, Administrator | — | Account created by the Administrator, invitation, technician assignment, deletion request | Users hold the right role, farm access and assigned houses | AUTH-FR-002, 003, 004, 005, 005c, 007, 009, 010, 011, 012, 013, 014, FARM-FR-001, 002, EXPERT-FR-001 |
 | SF-04 | Notification settings (supporting) | Farm Owner, Farm Technician | Telegram Bot API, Firebase Cloud Messaging | A user changes the channels or quiet hours, or links Telegram | Alerts reach the chosen channels at the chosen hours; a critical alert always reaches at least one channel outside the application | ALERT-FR-005, 006, 013 |
 | SF-05 | System administration (supporting) | Administrator | — | The Administrator changes the default thresholds or reads the audit log or the technical overview | Defaults kept with their sources; every action traceable | ENV-FR-007, 026, SYSTEM-FR-001, 002, 003, 004 |
@@ -556,7 +556,8 @@ On-site repair is a Work Order of MF-02 for the Farm Technician of the house (OP
 
 | ID | Actor / component | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
-| FARM-FR-013 | Administrator, Farm Owner, Farm Technician | Send remote commands to a controller: restart, push configuration, OTA firmware update; the Farm Owner may only restart a controller of the farm, and the Farm Technician a controller of an assigned house. The controller verifies the downloaded image and keeps the new firmware only after it reconnects to the broker. | A command to a device that is not `ONLINE` is rejected with 409; RESTART or OTA to firmware older than 1.4.0 is rejected with 501; an image with a wrong SHA-256 or an interrupted download is discarded and the old firmware keeps running; a new firmware that does not reach the broker within 10 min rolls back; an OTA not confirmed within 30 min is reported as failed; a Domain Expert request, or a configuration push or OTA by a Farm Owner, is rejected with 403; every command is audited and notified to the Farm Owners of the farm (FARM-FR-009). | S |
+| FARM-FR-013 | Administrator, Farm Owner, Farm Technician | Send remote commands to a controller: restart, push configuration, OTA firmware update; the Farm Owner may only restart a controller of the farm, and the Farm Technician a controller of an assigned house. The controller verifies the downloaded image and keeps the new firmware only after it reconnects to the broker. | A command to a device that is not `ONLINE` is rejected with 409; RESTART or OTA to firmware older than 1.4.0 is rejected with 501; an image with a wrong SHA-256 or an interrupted download is discarded and the old firmware keeps running; a new firmware that does not reach the broker within 10 min rolls back; an OTA not confirmed within 30 min is reported as failed; a Domain Expert request, or a configuration push or OTA by a Farm Owner, is rejected with 403; every command is audited and notified to the Farm Owners of the farm (FARM-FR-009); an OTA command to a controller that is in an unfinished rollout (FARM-FR-013b) is rejected with 409, and an offline controller is updated through a rollout. | S |
+| FARM-FR-013b | Administrator, Backend | Roll out a firmware from the firmware catalog (FARM-FR-010) to chosen controllers: first to the test controllers the Administrator picks, then to the others; a controller that is offline receives the update when it reconnects. The controller downloads the image through a link valid only for it. | Controllers with firmware older than 1.4.0, already on the version, or with an update not finished are refused (409, each named); online controllers of the current stage receive the OTA command at once and an offline one at its first heartbeat after reconnecting; the other controllers receive it only once every test controller runs the new version, or when the Administrator sends to all; a controller not confirmed within 30 min is marked failed and the rollout pauses itself, the Administrator being notified; the Administrator pauses, resumes, cancels (controllers still waiting are not updated) and retries a failed controller; the download link works only for that controller while it awaits confirmation and at most 30 min; a firmware used by an unfinished rollout cannot be deleted (409); a request by another role is rejected with 403; the Administrator is notified when the rollout ends. | S |
 | ENV-FR-013c | Farm Owner | Manage attractant tracks: the Farm Owner registers a track copied to the SD card, selects the default track or plays one for testing. | A track not marked as copied to the SD card cannot be selected or played (400). | O |
 
 #### 3.12.2 Account and Access Management (SF-03)
@@ -719,7 +720,8 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Camera frames warning | a warning in the AI node's log when it starts receiving under 80 % of the camera's frame rate (checked every 5 s), and one line when it recovers | With many birds the camera's stream goes from about 4.8 to 10 Mbit/s (clip of 26/10/2026) and reaches the AI node over the Internet; chosen by hand |
 | New firmware must reach the broker | 10 min, else rollback | A broken image cannot stay installed (FARM-FR-013) |
 | Firmware download stalled | 10 s without data | Treated as a lost connection; the old firmware keeps running |
-| OTA not confirmed | 30 min | Reported as failed (FARM-FR-013, Section 6.15) |
+| OTA not confirmed | 30 min | Reported as failed (FARM-FR-013, Section 6.15); the download link of a rollout expires at the same time (FARM-FR-013b) |
+| Firmware rollout | pauses at the first failed controller; test controllers: one online controller proposed, chosen by the Administrator | A broken image stops at the first controllers instead of reaching the whole fleet (FARM-FR-013b); chosen by the team (A-4) |
 | Configuration mismatch | 3 heartbeats | `CONFIG_MISMATCH` (ENV-FR-027, BR-24) |
 | Device not connected after registration | 15 min | Registrant told to check Wi-Fi (FARM-FR-012, BR-27) |
 | API rate limit (signed in) | 300 requests/min per account | The overview page calls the API per zone |
@@ -954,6 +956,9 @@ While `LATCHED`, automatic misting output is 0; a manual ON override still runs 
 | `PENDING` | `FAILED` | No confirmation within 30 min (the controller discarded a bad image or rolled back) | FARM-FR-013 |
 | `FAILED` | `PENDING` | Administrator sends the OTA command again | FARM-FR-013 |
 | any | — | OTA to a device that is not online, or with firmware older than 1.4.0, rejected (409 / 501) | FARM-FR-013 |
+| `NONE` | `PENDING` | A rollout reaches the controller: at once when it is online and its stage has started, else at its first heartbeat after reconnecting | FARM-FR-013b |
+
+A rollout (FARM-FR-013b) is `ACTIVE` when created, `PAUSED` by the Administrator or by itself when one of its controllers ends `FAILED`, `ACTIVE` again when resumed, or when a failed controller is retried after a pause of its own; `CANCELLED` by the Administrator, the controllers still waiting being dropped; and `COMPLETED` when no controller is waiting or updating.
 ### 6.16 DeviceStockItem — label
 
 The state is derived from the stock entry and the device record; it is not a stored field.
@@ -1090,7 +1095,7 @@ The state is derived from the day's stored ratings and its date; it is not a sep
 | C.4 Tuning & Profiles | EXPERT-FR-004, 008, 014, VISION-FR-018, 019, ENV-FR-006, 009, 020, 021, 026, 030, EXPERT-FR-010, 011, FARM-FR-014 |
 | C.4 Recommendation Rules | EXPERT-FR-016, 019 |
 | C.4 Disagreement Review & Conclusions | EXPERT-FR-006, 020, 022 |
-| C.5 Administrator | FARM-FR-006, 009, 010, 013, AUTH-FR-002, 003, 004, 005c, 007, 009, 010, 011, 012, ENV-FR-007, SYSTEM-FR-001, 002, 003 |
+| C.5 Administrator | FARM-FR-006, 009, 010, 013, 013b, AUTH-FR-002, 003, 004, 005c, 007, 009, 010, 011, 012, ENV-FR-007, SYSTEM-FR-001, 002, 003 |
 | B. Installation boundary: one owner, no public sign-up (BM03 row 10) | Section 1.2, A-7, AUTH-FR-005c, 010, Section 8 |
 | D. Flows 1–8 | MF-01…08 (Section 2.2); supporting flows SF-01…06 |
 | D. Maintenance inside the owner's organisation (BM03 row 9) | OPS-FR-001…009, Section 8 |
@@ -1167,6 +1172,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.24 | 24/11/2026 | FARM-FR-013b: firmware rollout from the catalog to chosen controllers, test controllers first, offline controllers updated when they reconnect, pause at the first failure; FARM-FR-013, SF-02, Section 6.15 and the rollout constants of Section 4.5 |
 | 4.2.23 | 24/11/2026 | FARM-FR-010: the stock screen installs the latest uploaded firmware on a controller with no firmware or one older than 2.4.0, keeping its stored ID and Wi-Fi |
 | 4.2.22 | 24/11/2026 | FARM-FR-010: the Administrator flashes the device ID, broker credential and broker address over USB from the stock screen; the chip's MAC is kept with the stock entry |
 | 4.2.21 | 24/11/2026 | FARM-FR-001: a farm with devices in service cannot be deleted, and deleting it soft-deletes its houses as FARM-FR-002; AUTH-FR-012: a sole owner's farm gets its devices decommissioned before it is deleted, and a leaving member is taken off houses, shifts and Work Orders |

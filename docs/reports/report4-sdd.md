@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.28 (Review 2, final scope) |
+| Document version | 2.2.29 (Review 2, final scope) |
 | Date | 23/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.15 (`docs/reports/report3-srs.md`) |
+| Requirements baseline | Report 3 – SRS 4.2.24 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -233,6 +233,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D17 | How an incident ends | Alert acknowledged and closed by hand; ticket with an SLA contract; **Work Order closed by the data** | **A Work Order closed only after the data stay recovered for 10 min (BR-41) and the Farm Owner approves**: a repair is judged by the house, not by the person who did it; a recurrence during verification reopens it; response targets are internal goals that drive the escalation (BR-40), not contracts | OPS-FR-001…004, ALERT-FR-017 |
 | D18 | Use of the weather forecast in control | None (context only); weather-driven fan; outdoor sensor node; **bounded feed-forward on misting** | **An offset of the misting demand from expert-approved rules, at most ±10 points for at most 2 h, 0 offline** (BR-38): the forecast lets misting start before the humidity drops, while the fuzzy loop on the measured values stays in charge; the fan never follows the weather and NH3/CO2 never drive it (C-2); the effect is measured on days with and without it (NFR-16) | ENV-FR-028…030, C-6 |
 | D19 | How the expert's knowledge acts on the houses | Free-text conclusions only; a trained model that recommends; **rules written by the expert, with measured effect** | **Recommendation rules** (BR-42): a condition on a house indicator over a window and an action; the Farm Owner decides and the effect is measured 7 days after acceptance; there is not enough labelled data for a trained model, and a rule can be read and argued with | EXPERT-FR-016…019 |
+| D21 | Remote firmware update of many controllers | One OTA command per controller typed by hand, online only; image on a public release page; **rollout from the private firmware catalog** | **Rollout from the firmware catalog** (`firmwarerollouts`): the Administrator picks a version uploaded for the flashing station (D9) and the controllers; the backend keeps each controller `QUEUED` → `SENT` → `SUCCEEDED`/`FAILED`, sends the OTA command when the controller is online and its stage has started (test controllers first, then the others), and an offline controller gets it at its first heartbeat after reconnecting, the minute job catching what a heartbeat missed. The command keeps the payload of FARM-FR-013, so firmware from 1.4.0 needs no change: `sha256` is the one of the application part of the factory image (from 0x10000, the same bytes as `firmware.bin`), and `url` is a link of the backend valid only for that controller, a random token stored hashed, expiring with the 30-min confirmation, on the HTTPS domain of the API (`OTA_DOWNLOAD_BASE_URL`, Let's Encrypt as the controller expects), not logged by the backend or Nginx. The first controller that fails pauses the rollout. Rejected: a public release page (the build embeds `Secrets.h`); retained OTA messages on the broker (a controller would install an old command at any reconnect, and the backend could not pace or stop it) | FARM-FR-013, 013b, BR-35 |
 | D20 | Showing several houses with one borrowed house | Seeded database rows; **device simulator on the real topics** | **A simulator that publishes like real devices** (`simulator/`): it exercises MQTT ingestion, routing and the farm overview end to end and loads the system for NFR-03; simulated devices carry a flag shown on every screen | SYSTEM-FR-004, NFR-03 |
 
 The Design Brief (BM01, section 3) proposes five of these.
@@ -951,6 +952,7 @@ The expert activity history of a farm (EXPERT-FR-009) is read from `AUDIT_LOG` b
 | `sensornodes` | Controller | `device_id` unique; `zone_id`; `status + last_heartbeat` | Relays embedded, one expiry per relay; run hours, switch counts, weather offset; `simulated` flag |
 | `cameranodes` | AI node / camera | `device_id` unique; `house_id` | Counting ring and its history |
 | `provisioneddevices` | Device stock | `device_id` unique; `chip_mac` unique when set | Hashes of the activation key and the broker secret; MAC of the chip flashed over USB |
+| `firmwarerollouts` | Firmware rollout (D21) | `targets.node_id + status`; `targets.token_hash` | Controllers embedded with their state, attempts and the hash of their download token, never returned |
 | `firmwareimages` | Firmware for the flashing station | `version` unique | SHA-256 and storage key of the factory image (D9); the file is served only to the Administrator |
 | `telemetries` | Telemetry | `node_id + timestamp` unique; `zone_id + timestamp`; TTL on `timestamp` | One stored sample per 10 s per device; the unique index drops a re-sent buffered sample |
 | `relayoverridelogs` | Override | `node_id + started_at`; `zone_id + started_at` | Source of the autonomy ratio |
@@ -1044,7 +1046,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/recommendations` | Recommendation rules (expert; the Farm Owner's wait inactive on a farm with an expert, BR-22), recommendations of a house, accept, reject, effect per rule |
 | `/profiles` | Configuration profiles: draft (expert or Farm Owner), approve and archive (expert), apply to houses (Farm Owner) |
 | `/farms/{id}/overview`, `/farms/{id}/comparison` | Farm overview and house comparison with MTTA, MTTR and energy (ANALYTICS-FR-015…017, OPS-FR-009) |
-| `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key, flash over USB, firmware catalog for the flashing station), Farm Owner's account, lock, deletion requests, default thresholds, audit log, technical overview with every device and its device alerts |
+| `/admin`, `/system` | Provisioned-device stock (add and return the activation key and the broker secret once, revoke, re-issue key, flash over USB, firmware catalog used by the flashing station and by rollouts), firmware rollouts (`/ota`: upload a new version to the catalog, its version read from the file, then a new rollout opens on it; rollouts with their progress, a new rollout with version, controllers and test controller, pause, resume, send to all, cancel, retry a controller), Farm Owner's account, lock, deletion requests, default thresholds, audit log, technical overview with every device and its device alerts |
 | `/internal/stream-auth`, `/internal/mqtt-auth` | MediaMTX authorisation and EMQX device authentication (no user token, reachable only inside the Docker network) |
 
 ### 7.2 MQTT
@@ -1266,6 +1268,7 @@ stateDiagram-v2
   PENDING --> NONE : heartbeat reports the new version (FARM-FR-013)
   PENDING --> FAILED : no confirmation in 30 min, image discarded or rolled back (FARM-FR-013)
   FAILED --> PENDING : OTA sent again (FARM-FR-013)
+  NONE --> PENDING : rollout reaches the controller, online or at its first heartbeat after reconnecting (FARM-FR-013b)
 ```
 
 ### 8.16 DeviceStockItem — label (SM-16)
@@ -1783,6 +1786,7 @@ flowchart TB
     T0[Device alert, or new firmware] --> T1[Open device: firmware, uptime,<br/>RSSI, memory, reset reason]
     T1 --> T2{Remote fix?}
     T2 -- yes --> T3[Restart, push configuration or OTA]
+    T0 --> T5[New firmware: rollout to chosen controllers,<br/>test controller first - D21]
     T2 -- no --> T4[Ask the Farm Owner to replace it<br/>or set it up again - SF-01]
   end
   subgraph B[Backend]
@@ -1790,6 +1794,8 @@ flowchart TB
     B1 -- yes --> B3[Send command with deviceId, audit]
     B3 --> B4[Notify the Farm Owners in the app]
     B5{OTA confirmed by heartbeat<br/>within 30 min?} -- no --> B6[FAILED]
+    B6 --> B7[Rollout paused,<br/>Administrator told]
+    B8[Offline controller reconnects] --> B9[Send its queued OTA]
   end
   subgraph C[Controller]
     C1[Restart, apply configuration,<br/>or verify and install image]
@@ -1901,6 +1907,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.29 | 24/11/2026 | D21: firmware rollout from the catalog, test controllers first, offline controllers updated at their next heartbeat, per-controller download link, pause at the first failure; SM-15, AD-11, §5.4 and §6 (`firmwarerollouts`) follow, the firmware catalog uploaded from the rollout page too; header baseline SRS 4.2.24 |
 | 2.2.28 | 24/11/2026 | D9: the stock screen also installs the firmware on a blank board or one older than 2.4.0 (`esptool-js`, NVS partition kept), from a private firmware catalog uploaded by the Administrator and checked by SHA-256; §5.4 lists the catalog; §6 lists `firmwareimages` and the MAC of `provisioneddevices` |
 | 2.2.27 | 24/11/2026 | D9: device identity flashed over USB from the stock screen (Web Serial, firmware 2.4.0 `SC INFO`/`SC SET`), chip MAC kept in the stock entry; `flash_identity.py` kept as a fallback |
 | 2.2.26 | 23/11/2026 | §5.4: the web carries every task of every role of Report 3 §2.4; the Farm Technician is no longer limited to alerts, devices and houses on the web (decided by the team on 23/11/2026, G-33) |

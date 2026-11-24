@@ -155,6 +155,28 @@ export interface FirmwareImage {
   _id: string; version: string; size: number; sha256: string; note: string | null; created_at: string
 }
 
+// Đợt cập nhật firmware từ xa (GET /admin/firmware-rollouts): máy offline chờ trong đợt, nhận khi online lại
+export type RolloutStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
+export type RolloutTargetState = 'QUEUED' | 'SENT' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'SKIPPED'
+export interface RolloutTarget {
+  node_id: string; device_id: string; from_version: string; canary: boolean
+  state: RolloutTargetState; attempts: number
+  sent_at?: string; finished_at?: string
+  // TIMEOUT: quá hạn xác nhận, máy đã quay về bản cũ; NOT_IN_SERVICE: máy bị gỡ trước khi tới lượt
+  reason?: 'TIMEOUT' | 'NOT_IN_SERVICE'
+}
+export interface FirmwareRollout {
+  _id: string; image_id: string; version: string
+  status: RolloutStatus
+  // CANARY: mới gửi cho máy thử trước
+  stage: 'CANARY' | 'ALL'
+  paused_reason?: 'FAILURE' | 'ADMIN'
+  note?: string
+  targets: RolloutTarget[]
+  created_at: string; finished_at?: string
+}
+export type RolloutAction = 'pause' | 'resume' | 'promote' | 'cancel'
+
 // thiết bị đã gỡ còn khôi phục được (GET …?removed=recent, chỉ Farm Owner)
 export type RemovedDevice = (SensorNode | CameraNode) & {
   decommissioned_at: string

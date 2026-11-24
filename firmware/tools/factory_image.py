@@ -2,7 +2,7 @@
 
     pio run -e esp32prod -t factory      # → .pio/build/esp32prod/factory.bin
 
-Ảnh ghi từ địa chỉ 0x0. Tải lên màn Kho thiết bị (thẻ "Firmware cho trạm nạp") để trang nạp thẳng vào bo mạch qua USB
+Ảnh ghi từ địa chỉ 0x0. Tải lên kho firmware (trang Cập nhật firmware hoặc thẻ "Kho firmware" ở màn Kho thiết bị): trạm nạp ghi thẳng vào bo mạch qua USB, đợt cập nhật gửi phần firmware từ xa
 (docs/reports/todo-device-flashing-1124.md §6). File chứa giá trị của Secrets.h: không đưa lên chỗ công khai.
 """
 Import("env")  # noqa: F821 — PlatformIO nạp sẵn

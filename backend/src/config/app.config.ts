@@ -22,6 +22,7 @@ import systemRoutes    from '@/routes/system.route'
 import farmRoutes      from '@/routes/farms.route'
 import invitationRoutes from '@/routes/invitations.route'
 import deviceRoutes    from '@/routes/devices.route'
+import firmwareRoutes  from '@/routes/firmware.route'
 import telemetryRoutes from '@/routes/telemetry.route'
 import alertRoutes     from '@/routes/alerts.route'
 import analyticsRoutes from '@/routes/analytics.route'
@@ -82,6 +83,7 @@ app.use('/system',    systemRoutes)
 app.use('/farms',       farmRoutes)
 app.use('/invitations', invitationRoutes)
 app.use('/devices',   deviceRoutes)
+app.use('/firmware',  firmwareRoutes)
 app.use('/telemetry', telemetryRoutes)
 app.use('/alerts',    alertRoutes)
 app.use('/analytics', analyticsRoutes)

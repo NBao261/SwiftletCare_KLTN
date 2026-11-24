@@ -28,6 +28,14 @@ export function compareVersions(a: string, b: string): number {
   return 0
 }
 
+// Dòng chào khi khởi động in "Firmware vX.Y.Z " (backend kiểm cùng chuỗi): điền sẵn phiên bản khi chọn file
+const BANNER = /Firmware v(\d+\.\d+\.\d+)[ \0]/
+
+export function detectFirmwareVersion(image: Uint8Array): string | null {
+  // latin1: mỗi byte một ký tự, không hỏng vì dữ liệu nhị phân
+  return BANNER.exec(new TextDecoder('latin1').decode(image))?.[1] ?? null
+}
+
 export async function sha256Hex(data: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', data.slice())
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')

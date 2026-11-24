@@ -50,6 +50,7 @@ An toàn: người cắm được USB vào bo mạch đã nạp lại được c
 |---|---|---|
 | 1 | `feat/device-flash-station` | Kế hoạch này, F-1, F-2, B-1, B-2, W-1, W-2, D-1 |
 | 2 | `feat/device-flash-firmware` | Nạp firmware ngay trên trang bằng `esptool-js` cho bo mạch trống hoặc firmware cũ, file lấy từ kho firmware của backend; chi tiết ở §6 |
+| 3 | `feat/device-ota-rollout` | Đợt cập nhật firmware từ xa lấy file từ cùng kho, máy thử trước, tự dừng khi lỗi, máy offline nhận khi online lại; chi tiết ở §7 |
 
 Màn Admin trên web theo bảng phân công là của Nhi: Bảo làm, Nhi duyệt.
 
@@ -97,3 +98,40 @@ Vì sao không để file trên GitHub Releases: repo công khai, mà bản buil
 ### 6.4. Kiểm tra trên board (bắt buộc trước khi coi là xong)
 
 ESP32 trống (xoá sạch bằng `esptool erase_flash`) → nạp firmware → nạp mã → nối EMQX; bo đã có mã chạy 2.4.0 → cập nhật firmware → vẫn giữ mã và Wi-Fi; rút cáp giữa lúc ghi firmware → bo không chạy, cắm lại nạp lại được (ROM bootloader của ESP32 không hỏng được qua cổng USB).
+
+## 7. PR 3: đợt cập nhật firmware từ xa, máy offline nhận khi online lại (24/11/2026)
+
+**Vấn đề:** OTA hiện tại (FARM-FR-013) gửi từng máy, Administrator tự để file ở đâu đó có HTTPS rồi gõ tay URL và SHA-256; máy offline bị từ chối 409. Để file trên GitHub Releases thì lộ `Secrets.h` (§6).
+
+**Quyết định:** làm theo cách các hệ thống cập nhật thiết bị hàng loạt vẫn làm (đợt triển khai có thử trước, tự dừng khi lỗi): Administrator tạo **một đợt cập nhật** (rollout) gồm một bản trong kho firmware (§6) và các bộ điều khiển chọn. Backend giữ từng máy trong hàng đợi và tự gửi lệnh khi máy online; firmware không đổi (lệnh OTA vẫn mang `version`, `url`, `sha256`).
+
+### 7.1. File gửi cho máy
+
+- Phần từ `0x10000` của `factory.bin` trùng từng byte với `firmware.bin` (đã kiểm trên bản 2.4.0), nên một lần tải lên dùng cho cả trạm nạp lẫn OTA. Backend tính sẵn cỡ và SHA-256 của phần này khi tải lên (`app_size`, `app_sha256`).
+- Mỗi lần gửi một máy, backend cấp một **link tải dùng riêng cho máy đó**: `GET /firmware/ota/<token>`, token ngẫu nhiên 32 byte, chỉ lưu SHA-256 của token, hết hạn sau 30 phút (bằng hạn xác nhận OTA). Route không cần đăng nhập (chip không có tài khoản) và trả nhị phân kèm `Content-Length` (firmware cần để biết đã tải đủ).
+- URL gốc lấy từ biến mới `OTA_DOWNLOAD_BASE_URL` (HTTPS, chứng chỉ Let's Encrypt vì chip chỉ tin ISRG Root X1, ví dụ tên miền API của staging). Trống thì không tạo được đợt (503). URL ≤ 255 ký tự (giới hạn `cmd.url` của firmware).
+
+### 7.2. Đợt cập nhật
+
+- **Chọn máy:** chỉ bộ điều khiển đang dùng. Loại ra (kèm lý do): firmware trước 1.4.0 (chưa nhận OTA, phải nạp USB), đã chạy đúng bản, đang trong đợt khác hoặc đang chờ một lệnh OTA gửi tay.
+- **Thử trước (canary):** Administrator chọn máy thử (mặc định 1 máy đang online); các máy còn lại chờ tới khi mọi máy thử đã cập nhật xong. Bấm "Cập nhật tất cả ngay" để bỏ qua. Không chọn máy thử thì gửi tất cả ngay.
+- **Trạng thái từng máy:** `QUEUED` (chờ: máy offline hoặc chưa tới lượt) → `SENT` (đã gửi lệnh, chờ heartbeat báo bản mới) → `SUCCEEDED` / `FAILED` (quá 30 phút, máy đã quay về bản cũ); `CANCELLED` (huỷ khi còn chờ), `SKIPPED` (máy bị gỡ trước khi tới lượt). Máy online lại mà đã chạy đúng bản (nạp USB) thì tính là `SUCCEEDED`.
+- **Máy offline:** ở `QUEUED`; heartbeat đầu tiên khi máy online lại làm backend gửi lệnh ngay. Job mỗi phút cũng quét để không sót (backend mất broker lúc gửi thì trả về `QUEUED`).
+- **Trạng thái đợt:** `ACTIVE` → `PAUSED` (Administrator dừng, hoặc **tự dừng khi một máy lỗi**) → `ACTIVE` (tiếp tục) / `CANCELLED` (huỷ: máy chờ thành `CANCELLED`, máy đang tải vẫn ghi kết quả) / `COMPLETED` (mọi máy xong). Máy lỗi có nút "Thử lại" (về `QUEUED`).
+- Mỗi lần gửi giữ đúng hành vi FARM-FR-013 cũ: ghi `ota_pending` của máy, audit `DEVICE_COMMAND_SENT`, báo Farm Owner của trang trại. Người tạo đợt được báo khi đợt tự dừng vì lỗi và khi đợt xong.
+- Bản firmware đang dùng trong một đợt chưa xong thì không xoá được (409).
+
+### 7.3. Việc từng phần
+
+| # | Phần | Việc |
+|---|---|---|
+| B-5 | Backend | `firmwareImage`: thêm `app_size`, `app_sha256` khi tải lên; xoá bị chặn 409 khi đợt chưa xong dùng bản đó |
+| B-6 | Backend | Model `firmwareRollout` (máy nhúng trong đợt); `firmwareRollout.service.ts`: tạo, dừng, tiếp tục, mở rộng, huỷ, thử lại, gửi lệnh theo lượt; móc vào heartbeat (`recordHeartbeat`) và job OTA mỗi phút (`markOtaTimeouts` → máy lỗi, đợt tự dừng); lệnh OTA gửi tay bị 409 khi máy đang trong đợt |
+| B-7 | Backend | Routes `GET/POST /admin/firmware-rollouts`, `POST /admin/firmware-rollouts/:id/{pause,resume,promote,cancel}`, `POST /admin/firmware-rollouts/:id/targets/:nodeId/retry`, `GET /firmware/ota/:token`; spec, `.env.example`, `db:script`, test tích hợp |
+| W-6 | Web | Trang "Cập nhật firmware" (`/ota`) viết lại: danh sách đợt (phiên bản, tiến độ, số máy theo trạng thái), chi tiết đợt (nút dừng/tiếp tục/cập nhật tất cả/huỷ, bảng máy với trạng thái, thời gian, "Thử lại"), cửa sổ "Tạo đợt cập nhật" (chọn bản, chọn máy có lọc và lý do bị loại, máy thử, tóm tắt). Tự làm mới mỗi 10 giây khi có đợt đang chạy. Bỏ form gõ URL/SHA-256 cũ |
+| W-7 | Web | Cả quy trình trên một trang: nút "Tải bản mới lên" ở trang Cập nhật firmware (form dùng chung `FirmwareUploadForm` với thẻ kho), phiên bản đọc sẵn từ chuỗi `Firmware vX.Y.Z` trong file (`detectFirmwareVersion`, test), tải xong mở luôn cửa sổ tạo đợt với bản đó; thẻ "Firmware cho trạm nạp" đổi tên "Kho firmware" vì giờ dùng cho cả trạm nạp lẫn cập nhật từ xa. Bước dựng `factory.bin` vẫn chạy trên máy dev (CI tự build phải giữ thêm `Secrets.h`, để sau) |
+| D-3 | Tài liệu | Report 3 FARM-FR-013 + FARM-FR-013b, §6.15, §4.5 (4.2.24); Report 4 D21, SM-15, AD-11, bảng collection (2.2.29); `backend/CLAUDE.md`, `firmware/README.md` (kiểm tra trên board) |
+
+### 7.4. Kiểm tra trên board (trước khi coi là xong)
+
+Hai bộ điều khiển 2.4.0 trên staging (`OTA_DOWNLOAD_BASE_URL` trỏ tên miền API có chứng chỉ Let's Encrypt): tải lên 2.4.1 → tạo đợt, máy thử online → cập nhật xong thì máy thứ hai (đang tắt) vẫn chờ; bật máy thứ hai → nhận lệnh trong 1 phút, lên 2.4.1; một bản cố tình không nối được broker → máy quay về bản cũ sau 10 phút, đợt tự dừng sau 30 phút.

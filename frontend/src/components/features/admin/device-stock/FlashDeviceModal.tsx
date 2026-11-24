@@ -237,7 +237,7 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
             {step === 'reading' && isSlow && (
               <div className="flex flex-col items-start gap-2 border-t border-gray-200 pt-3">
                 <p className="text-sm text-charcoal">{t('Bo chưa trả lời: có thể chưa có firmware SwiftletCare hoặc firmware quá cũ.')}</p>
-                {firmwareButton ?? <p className="text-xs text-warmGray">{t('Tải firmware lên ở thẻ Firmware cho trạm nạp để nạp được từ đây.')}</p>}
+                {firmwareButton ?? <p className="text-xs text-warmGray">{t('Tải firmware lên ở thẻ Kho firmware để nạp được từ đây.')}</p>}
               </div>
             )}
             <p className="text-xs text-warmGray">{t('Không thấy cổng: cài driver CP210x hoặc CH340, và dùng cáp USB có truyền dữ liệu.')}</p>

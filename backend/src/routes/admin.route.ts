@@ -82,4 +82,19 @@ router.get('/firmware-images', adminController.listFirmwareImages)
 router.get('/firmware-images/:id/file', param('id').isMongoId(), validate, adminController.downloadFirmwareImage)
 router.delete('/firmware-images/:id', param('id').isMongoId(), validate, adminController.deleteFirmwareImage)
 
+// Đợt cập nhật firmware từ xa: máy offline chờ trong đợt, nhận khi online lại
+router.get('/firmware-rollouts', adminController.listFirmwareRollouts)
+router.post('/firmware-rollouts',
+  body('image_id').isString().isMongoId(),
+  body('node_ids').isArray({ min: 1, max: 500 }), body('node_ids.*').isString().isMongoId(),
+  body('canary_node_ids').optional().isArray({ max: 500 }), body('canary_node_ids.*').isString().isMongoId(),
+  body('note').optional().isString().trim().isLength({ max: 200 }), validate,
+  adminController.createFirmwareRollout,
+)
+for (const action of ['pause', 'resume', 'promote', 'cancel'] as const) {
+  router.post(`/firmware-rollouts/:id/${action}`, param('id').isMongoId(), validate, adminController.changeFirmwareRollout(action))
+}
+router.post('/firmware-rollouts/:id/targets/:nodeId/retry', param('id').isMongoId(), param('nodeId').isMongoId(), validate,
+  adminController.retryFirmwareRolloutTarget)
+
 export default router
