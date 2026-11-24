@@ -13,6 +13,7 @@ import { logAction } from '@/services/auditLog.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
 import { COMMAND_SUPPORT_SINCE, OTA_CONFIRM_TIMEOUT_MS, appImageOf, versionAtLeast } from '@/utils/firmwareImage.util'
 import { BadRequestError, ConflictError, NotFoundError, ServiceUnavailableError } from '@/utils/appError.util'
+import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 
 // Đợt cập nhật firmware từ xa: máy offline chờ trong đợt, nhận lệnh ở heartbeat đầu tiên khi online lại;
@@ -49,8 +50,13 @@ async function findRolloutOrThrow(id: string) {
   return rollout
 }
 
-export async function listRollouts() {
-  return FirmwareRollout.find().select(HIDDEN_FIELDS).sort({ created_at: -1 }).limit(50).lean()
+export async function listRollouts(query: { page?: string; limit?: string } = {}) {
+  const { page, skip, limit } = paginate(query.page, query.limit)
+  const [records, total] = await Promise.all([
+    FirmwareRollout.find().select(HIDDEN_FIELDS).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+    FirmwareRollout.countDocuments(),
+  ])
+  return { records, total, page, limit }
 }
 
 const getRollout = (id: unknown) => FirmwareRollout.findById(id).select(HIDDEN_FIELDS).lean()
@@ -232,8 +238,20 @@ function refusal(rollout: Pick<IFirmwareRollout, 'status' | 'stage'>, action: Ro
   return CHANGED_MEANWHILE
 }
 
+// Đợt còn ở lượt máy thử mà mọi máy thử đã xong và có máy lỗi: không gửi tiếp được tới khi thử lại hoặc gửi tất cả
+export function failedCanaries(rollout: Pick<IFirmwareRollout, 'stage' | 'targets'>): string[] {
+  if (rollout.stage !== 'CANARY') return []
+  const canaries = rollout.targets.filter(target => target.canary)
+  if (canaries.some(target => TARGET_OPEN_STATES.includes(target.state))) return []
+  return canaries.filter(target => target.state === 'FAILED').map(target => target.device_id)
+}
+
 export async function changeRollout(adminId: string, id: string, action: RolloutAction) {
   const rollout = await findRolloutOrThrow(id)
+  const failed = action === 'resume' ? failedCanaries(rollout) : []
+  if (failed.length) {
+    throw ConflictError(`Máy thử ${failed.join(', ')} cập nhật lỗi nên chưa gửi tiếp được. Thử lại máy thử, hoặc gửi tất cả ngay rồi tiếp tục`)
+  }
   const { filter, update } = ACTIONS[action]
   const changed = await FirmwareRollout.updateOne({ _id: rollout._id, ...filter }, update())
   if (changed.modifiedCount !== 1) throw ConflictError(refusal(rollout, action))
@@ -323,6 +341,10 @@ export async function sweepRollouts(): Promise<void> {
       const node = nodes.get(String(target.node_id))
       if (!node) {
         await moveTarget(rollout._id, target.node_id, ['SENT'], { state: 'SKIPPED', reason: 'NOT_IN_SERVICE', finished_at: new Date() }, ['token_hash'])
+      } else if (node.firmware_version === rollout.version) {
+        // Heartbeat đã báo bản mới nhưng chưa kịp ghi xong (backend khởi động lại giữa chừng)
+        await moveTarget(rollout._id, target.node_id, ['SENT'], { state: 'SUCCEEDED', finished_at: new Date() }, ['token_hash'])
+        await advanceRollout(rollout._id)
       } else if (target.sent_at && target.sent_at < stuckBefore) {
         await onOtaTimedOut(node._id, rollout.version, node.firmware_version)
       }

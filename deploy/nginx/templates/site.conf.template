@@ -37,10 +37,12 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
     }
-    # Link tải firmware của bộ điều khiển chứa token: không ghi vào access log
-    location /api/firmware/ota/ {
+    # Link tải firmware của bộ điều khiển chứa token: không ghi vào log nào. Không phân biệt hoa thường như Express
+    location ~* ^/api/firmware/ota/ {
         access_log off;
-        proxy_pass http://backend:3000/firmware/ota/;
+        error_log /dev/null;
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass http://backend:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

@@ -5,6 +5,7 @@ import { getObject, putObject, removeObject } from '@/config/minio.config'
 import { logAction } from '@/services/auditLog.service'
 import { FIRMWARE_OBJECT_PREFIX, appImageOf, compareFirmwareVersions, factoryImageProblem } from '@/utils/firmwareImage.util'
 import { BadRequestError, ConflictError, NotFoundError } from '@/utils/appError.util'
+import { paginate } from '@/utils/helpers.util'
 
 export async function uploadFirmwareImage(
   adminId: string, input: { version: string; note?: string }, file: { buffer: Buffer } | undefined,
@@ -31,10 +32,11 @@ function presentImage(image: { _id: unknown; version: string; size: number; sha2
   return { _id: String(image._id), version: image.version, size: image.size, sha256: image.sha256, note: image.note ?? null, created_at: image.created_at }
 }
 
-// Mới nhất trước: trạm nạp lấy phần tử đầu
-export async function listFirmwareImages() {
-  const images = await FirmwareImage.find().lean()
-  return images.sort((a, b) => compareFirmwareVersions(b.version, a.version)).map(presentImage)
+// Mới nhất trước theo số phiên bản (sắp trong bộ nhớ, kho chỉ vài bản): trạm nạp lấy phần tử đầu của trang 1
+export async function listFirmwareImages(query: { page?: string; limit?: string } = {}) {
+  const { page, skip, limit } = paginate(query.page, query.limit)
+  const images = (await FirmwareImage.find().lean()).sort((a, b) => compareFirmwareVersions(b.version, a.version))
+  return { records: images.slice(skip, skip + limit).map(presentImage), total: images.length, page, limit }
 }
 
 export async function getFirmwareImageFile(id: string): Promise<{ buffer: Buffer; version: string; sha256: string }> {

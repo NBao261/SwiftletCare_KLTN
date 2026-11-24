@@ -311,4 +311,42 @@ describe('đợt cập nhật firmware từ xa (FARM-FR-013b)', () => {
     expect(old.body.error.message).toContain('tải lên lại')
     expect(publishDeviceCommand).not.toHaveBeenCalled()
   })
+
+  it('máy thử lỗi: "Tiếp tục" bị từ chối kèm cách đi tiếp, gửi tất cả rồi tiếp tục thì chạy', async () => {
+    const { node, image, token } = await seed()
+    const canary = await node('ctl-a', 'ONLINE')
+    const other = await node('ctl-b', 'ONLINE')
+    const id = (await create(token, {
+      image_id: image._id, node_ids: [String(canary._id), String(other._id)], canary_node_ids: [String(canary._id)],
+    }).expect(201)).body.data._id as string
+
+    await SensorNode.updateOne({ _id: canary._id }, { 'ota_pending.requested_at': new Date(Date.now() - OTA_CONFIRM_TIMEOUT_MS - 1000) })
+    await markOtaTimeouts()
+    const refused = await act(token, id, 'resume').expect(409)
+    expect(refused.body.error.message).toContain('ctl-a')
+    expect((await FirmwareRollout.findById(id).lean())!.status).toBe('PAUSED')
+
+    await act(token, id, 'promote').expect(200)
+    await act(token, id, 'resume').expect(200)
+    expect(await states(id)).toEqual({ 'ctl-a': 'FAILED', 'ctl-b': 'SENT' })
+  })
+
+  it('job quét: máy đã lên đúng bản mà chưa kịp ghi xong thì tính là xong, không ghi lỗi; danh sách có meta', async () => {
+    const { node, image, token } = await seed()
+    const a = await node('ctl-a', 'ONLINE')
+    const id = (await create(token, { image_id: image._id, node_ids: [String(a._id)] }).expect(201)).body.data._id as string
+    // Backend khởi động lại sau khi heartbeat ghi bản mới mà trước khi ghi xong đợt
+    await SensorNode.updateOne({ _id: a._id }, { firmware_version: '2.5.0', $unset: { ota_pending: '' } })
+    await FirmwareRollout.updateOne({ _id: id }, { 'targets.0.sent_at': new Date(Date.now() - OTA_CONFIRM_TIMEOUT_MS - 3 * 60 * 1000) })
+    await sweepRollouts()
+    const done = (await FirmwareRollout.findById(id).lean())!
+    expect(done.targets[0].state).toBe('SUCCEEDED')
+    expect(done.status).toBe('COMPLETED')
+
+    const list = await request(app).get('/admin/firmware-rollouts?limit=1').set('Authorization', `Bearer ${token}`).expect(200)
+    expect(list.body.meta).toEqual({ total: 1, page: 1, limit: 1 })
+    const images = await request(app).get('/admin/firmware-images').set('Authorization', `Bearer ${token}`).expect(200)
+    expect(images.body.meta).toMatchObject({ total: 1, page: 1 })
+  })
 })
+

@@ -768,6 +768,9 @@ paths:
     get:
       tags: [Admin]
       summary: "Danh sách firmware trong kho, mới nhất trước theo số phiên bản — chỉ ADMIN"
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
       responses:
         "200":
           description: OK
@@ -808,7 +811,10 @@ paths:
   /admin/firmware-rollouts:
     get:
       tags: [Admin]
-      summary: "Các đợt cập nhật firmware từ xa, mới nhất trước (tối đa 50) — chỉ ADMIN (FARM-FR-013b)"
+      summary: "Các đợt cập nhật firmware từ xa, mới nhất trước — chỉ ADMIN (FARM-FR-013b)"
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/Limit" }
       responses:
         "200":
           description: Danh sách đợt, mỗi đợt kèm từng bộ điều khiển và trạng thái của nó
@@ -882,7 +888,7 @@ paths:
     post:
       tags: [Admin]
       summary: "Tiếp tục đợt đang dừng và gửi cho máy online tới lượt — chỉ ADMIN"
-      description: Audit `FIRMWARE_ROLLOUT_RESUME`. Đợt không ở `PAUSED` → 409.
+      description: Audit `FIRMWARE_ROLLOUT_RESUME`. Đợt không ở `PAUSED` → 409; đợt còn ở lượt máy thử mà máy thử đã lỗi → 409 (thử lại máy thử hoặc gửi tất cả trước).
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses: *rolloutActionResponses
 

@@ -91,8 +91,11 @@ export const uploadFirmwareImage = asyncHandler(async (req: Request, res: Respon
   res.status(201).json({ success: true, data: image })
 })
 
-export const listFirmwareImages = asyncHandler(async (_req: Request, res: Response) => {
-  res.json({ success: true, data: await firmwareImageService.listFirmwareImages() })
+export const listFirmwareImages = asyncHandler(async (req: Request, res: Response) => {
+  const { records, total, page, limit } = await firmwareImageService.listFirmwareImages({
+    page: req.query.page as string | undefined, limit: req.query.limit as string | undefined,
+  })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
 // File nhị phân, không bọc envelope; SHA-256 ở header để trang kiểm trước khi ghi vào chip
@@ -111,8 +114,11 @@ export const deleteFirmwareImage = asyncHandler(async (req: Request, res: Respon
 })
 
 // Đợt cập nhật firmware từ xa
-export const listFirmwareRollouts = asyncHandler(async (_req: Request, res: Response) => {
-  res.json({ success: true, data: await firmwareRolloutService.listRollouts() })
+export const listFirmwareRollouts = asyncHandler(async (req: Request, res: Response) => {
+  const { records, total, page, limit } = await firmwareRolloutService.listRollouts({
+    page: req.query.page as string | undefined, limit: req.query.limit as string | undefined,
+  })
+  res.json({ success: true, data: records, meta: { total, page, limit } })
 })
 
 export const createFirmwareRollout = asyncHandler(async (req: Request, res: Response) => {

@@ -3,6 +3,7 @@ import rateLimit, { type Options } from 'express-rate-limit'
 import jwt from 'jsonwebtoken'
 import type { JwtAccessPayload } from '@/types'
 import logger from '@/utils/logger.util'
+import { loggablePath } from '@/utils/requestLog.util'
 
 // API đếm theo tài khoản; login/reset đếm theo IP; refresh có suất riêng để không bị đá ra
 
@@ -19,7 +20,7 @@ function handleLimitReached(req: Request, res: Response, _next: unknown, options
     ? Math.max(1, Math.ceil((resetTime.getTime() - Date.now()) / 1000))
     : Math.ceil(options.windowMs / 1000)
   res.setHeader('Retry-After', String(retryAfterSec))
-  logger.warn('Rate limit reached', { path: req.path, method: req.method })
+  logger.warn('Rate limit reached', { path: loggablePath(req), method: req.method })
   res.status(options.statusCode).json({
     success: false,
     error: {
