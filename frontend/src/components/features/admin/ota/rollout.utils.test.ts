@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { busyNodeIds, ineligibleReason, rolloutCounts, targetStatus } from '@/components/features/admin/ota/rollout.utils'
+import { busyNodeIds, failedCanaries, ineligibleReason, rolloutCounts, targetStatus } from '@/components/features/admin/ota/rollout.utils'
 import type { FirmwareRollout, RolloutTarget, SensorNode } from '@/types'
 
 const target = (nodeId: string, state: RolloutTarget['state'], canary = false): RolloutTarget =>
@@ -40,5 +40,12 @@ describe('đợt cập nhật firmware', () => {
       .toBe('Đang có cập nhật chưa xong')
     // Hạ bản vẫn chọn được (quay về bản cũ khi bản mới có lỗi)
     expect(ineligibleReason(node('a', '2.6.0'), '2.5.0', busy)).toBeNull()
+  })
+
+  it('máy thử lỗi chặn "Tiếp tục" tới khi thử lại hoặc gửi tất cả', () => {
+    expect(failedCanaries(rollout([target('a', 'FAILED', true), target('b', 'QUEUED')], { stage: 'CANARY' }))).toEqual(['a'])
+    // Còn máy thử đang chạy, hoặc đã gửi tất cả: không chặn
+    expect(failedCanaries(rollout([target('a', 'FAILED', true), target('c', 'SENT', true)], { stage: 'CANARY' }))).toEqual([])
+    expect(failedCanaries(rollout([target('a', 'FAILED', true), target('b', 'QUEUED')], { stage: 'ALL' }))).toEqual([])
   })
 })

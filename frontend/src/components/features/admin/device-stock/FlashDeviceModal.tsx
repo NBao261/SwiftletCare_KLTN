@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { isAxiosError } from 'axios'
 import { CheckCircleIcon, CpuIcon, UsbIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, Input, Modal, ModalHeader } from '@/components/ui'
 import { useAddStockDevice, useFindStockDevice, useRotateBrokerSecret } from '@/hooks/admin/useDeviceStock'
@@ -40,9 +41,9 @@ function printLabel(item: Flashed): void {
   }])
 }
 
-// Lỗi của bo mạch hoặc của bước này thì báo nguyên câu (đã có bản dịch); lỗi của máy chủ (axios) đọc từ response
+// Lỗi của bo mạch hoặc câu do màn này ném thì báo nguyên câu (đã có bản dịch); mọi lỗi axios, kể cả mất mạng, báo câu chung
 function isLocalError(err: unknown): err is Error {
-  return err instanceof SerialError || (err instanceof Error && !('response' in err))
+  return err instanceof Error && !isAxiosError(err)
 }
 
 // Trạm nạp ở xưởng: cắm ESP32 qua USB, nạp firmware nếu cần, thêm vào kho và ghi mã + mật khẩu broker vào chip, in nhãn

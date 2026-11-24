@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowRightIcon, InfoIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Badge, Button, ConfirmModal, DataTable, type DataTableColumn } from '@/components/ui'
-import { ROLLOUT_STATUS, isOpenRollout, rolloutCounts, targetStatus } from '@/components/features/admin/ota/rollout.utils'
+import { ROLLOUT_STATUS, failedCanaries, isOpenRollout, rolloutCounts, targetStatus } from '@/components/features/admin/ota/rollout.utils'
 import { useFirmwareRolloutAction, useRetryRolloutTarget } from '@/hooks/admin/useFirmwareRollouts'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { formatDateTime } from '@/lib/i18n'
@@ -39,6 +39,7 @@ export default function RolloutDetail({ rollout, onlineIds, locationById }: Prop
   const counts = rolloutCounts(rollout)
   const open = isOpenRollout(rollout)
   const canaryCount = rollout.targets.filter(target => target.canary).length
+  const blockedBy = failedCanaries(rollout)
   const percent = counts.total ? Math.round((counts.succeeded / counts.total) * 100) : 0
   const onError = (err: unknown) => push(apiErrorMessage(err, t('Thao tác thất bại')), 'error')
 
@@ -110,9 +111,12 @@ export default function RolloutDetail({ rollout, onlineIds, locationById }: Prop
         {open && (
           <div className="flex flex-wrap gap-2">
             {rollout.stage === 'CANARY' && <Button variant="secondary" size="sm" onClick={() => setConfirming('promote')}>{t('Gửi tất cả ngay')}</Button>}
-            {rollout.status === 'ACTIVE'
-              ? <Button variant="secondary" size="sm" loading={action.isPending && action.variables?.action === 'pause'} onClick={() => run('pause')}>{t('Tạm dừng')}</Button>
-              : <Button size="sm" loading={action.isPending && action.variables?.action === 'resume'} onClick={() => run('resume')}>{t('Tiếp tục')}</Button>}
+            {rollout.status === 'ACTIVE' && (
+              <Button variant="secondary" size="sm" loading={action.isPending && action.variables?.action === 'pause'} onClick={() => run('pause')}>{t('Tạm dừng')}</Button>
+            )}
+            {rollout.status === 'PAUSED' && blockedBy.length === 0 && (
+              <Button size="sm" loading={action.isPending && action.variables?.action === 'resume'} onClick={() => run('resume')}>{t('Tiếp tục')}</Button>
+            )}
             <Button variant="secondary" size="sm" onClick={() => setConfirming('cancel')}>{t('Huỷ đợt')}</Button>
           </div>
         )}
@@ -133,7 +137,9 @@ export default function RolloutDetail({ rollout, onlineIds, locationById }: Prop
       {rollout.paused_reason === 'FAILURE' && rollout.status === 'PAUSED' && (
         <p className="flex items-start gap-2 rounded-2xl bg-orange-50 p-4 text-sm text-orange-700">
           <WarningCircleIcon size={18} className="mt-0.5 shrink-0" aria-hidden />
-          {t('Đợt tự dừng vì có máy cập nhật lỗi. Máy đó đã quay về bản cũ và vẫn chạy bình thường. Kiểm tra máy rồi bấm Thử lại, hoặc Tiếp tục để gửi các máy còn lại.')}
+          {blockedBy.length > 0
+            ? t('Máy thử {{ids}} cập nhật lỗi, đã quay về bản cũ và vẫn chạy bình thường. Kiểm tra máy rồi bấm Thử lại, hoặc Gửi tất cả ngay rồi Tiếp tục.', { ids: blockedBy.join(', ') })
+            : t('Đợt tự dừng vì có máy cập nhật lỗi. Máy đó đã quay về bản cũ và vẫn chạy bình thường. Kiểm tra máy rồi bấm Thử lại, hoặc Tiếp tục để gửi các máy còn lại.')}
         </p>
       )}
       {rollout.stage === 'CANARY' && rollout.status === 'ACTIVE' && (

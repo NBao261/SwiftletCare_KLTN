@@ -52,7 +52,7 @@ export function suggestDeviceId(mac: string): string {
 
 // Mã đã thu hồi vẫn nằm trong kho: đề xuất mã kế tiếp (ctl-a1b2c3 → ctl-a1b2c3-2 → ctl-a1b2c3-3), trong 40 ký tự
 export function nextDeviceId(revokedId: string): string {
-  const match = /^(.*)-(\d+)$/.exec(revokedId)
+  const match = /^(.*)-(\d{1,2})$/.exec(revokedId)
   const [base, next] = match && Number(match[2]) >= 2 ? [match[1], Number(match[2]) + 1] : [revokedId, 2]
   const suffix = `-${next}`
   return `${base.slice(0, 40 - suffix.length)}${suffix}`

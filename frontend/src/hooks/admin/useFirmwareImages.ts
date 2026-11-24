@@ -20,7 +20,7 @@ function useFirmwareMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResul
 
 export const useUploadFirmwareImage = () =>
   useFirmwareMutation((input: { version: string; note?: string; file: File }) =>
-    firmwareImagesApi.upload(input).then(r => r.data.data))
+    firmwareImagesApi.upload(input).then(response => response.data.data))
 
 export const useDeleteFirmwareImage = () =>
   useFirmwareMutation((id: string) => firmwareImagesApi.remove(id).then(() => id))

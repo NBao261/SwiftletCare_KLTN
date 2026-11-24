@@ -5,7 +5,7 @@ import { busyNodeIds, ineligibleReason } from '@/components/features/admin/ota/r
 import { useCreateFirmwareRollout } from '@/hooks/admin/useFirmwareRollouts'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { compareVersions } from '@/lib/firmwareFlasher'
-import { formatDateOnly } from '@/lib/helpers'
+import { formatStandardDate } from '@/lib/i18n'
 import { t } from '@/i18n'
 import type { FirmwareImage, FirmwareRollout, SensorNode } from '@/types'
 
@@ -120,7 +120,7 @@ export default function CreateRolloutModal({ open, onClose, onCreated, images, n
     { key: 'note', header: '', render: row => row.reason && <span className="text-xs text-warmGray">{t(row.reason)}</span> },
   ]
 
-  const imageOptions = images.map(i => ({ value: i._id, label: `${i.version} · ${formatDateOnly(i.created_at)}` }))
+  const imageOptions = images.map(image => ({ value: image._id, label: `${image.version} · ${formatStandardDate(image.created_at)}` }))
   const canaryOptions = [
     { value: NO_CANARY, label: t('Không thử trước, gửi tất cả ngay') },
     ...chosen.map(node => ({

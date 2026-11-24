@@ -161,19 +161,19 @@ export type RolloutTargetState = 'QUEUED' | 'SENT' | 'SUCCEEDED' | 'FAILED' | 'C
 export interface RolloutTarget {
   node_id: string; device_id: string; from_version: string; canary: boolean
   state: RolloutTargetState; attempts: number
-  sent_at?: string; finished_at?: string
+  sent_at?: string | null; finished_at?: string | null
   // TIMEOUT: quá hạn xác nhận, máy đã quay về bản cũ; NOT_IN_SERVICE: máy bị gỡ trước khi tới lượt
-  reason?: 'TIMEOUT' | 'NOT_IN_SERVICE'
+  reason?: 'TIMEOUT' | 'NOT_IN_SERVICE' | null
 }
 export interface FirmwareRollout {
   _id: string; image_id: string; version: string
   status: RolloutStatus
   // CANARY: mới gửi cho máy thử trước
   stage: 'CANARY' | 'ALL'
-  paused_reason?: 'FAILURE' | 'ADMIN'
-  note?: string
+  paused_reason?: 'FAILURE' | 'ADMIN' | null
+  note?: string | null
   targets: RolloutTarget[]
-  created_at: string; finished_at?: string
+  created_at: string; finished_at?: string | null
 }
 export type RolloutAction = 'pause' | 'resume' | 'promote' | 'cancel'
 

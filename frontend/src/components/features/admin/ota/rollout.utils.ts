@@ -49,8 +49,16 @@ export function rolloutCounts(rollout: FirmwareRollout): RolloutCounts {
 
 // Máy đang có cập nhật chưa xong ở một đợt khác
 export function busyNodeIds(rollouts: FirmwareRollout[]): Set<string> {
-  return new Set(rollouts.filter(isOpenRollout).flatMap(r =>
-    r.targets.filter(t => t.state === 'QUEUED' || t.state === 'SENT').map(t => t.node_id)))
+  return new Set(rollouts.filter(isOpenRollout).flatMap(rollout =>
+    rollout.targets.filter(target => target.state === 'QUEUED' || target.state === 'SENT').map(target => target.node_id)))
+}
+
+// Còn ở lượt máy thử mà mọi máy thử đã xong và có máy lỗi: "Tiếp tục" không gửi được gì (backend trả 409)
+export function failedCanaries(rollout: FirmwareRollout): string[] {
+  if (rollout.stage !== 'CANARY') return []
+  const canaries = rollout.targets.filter(target => target.canary)
+  if (canaries.some(target => target.state === 'QUEUED' || target.state === 'SENT')) return []
+  return canaries.filter(target => target.state === 'FAILED').map(target => target.device_id)
 }
 
 // null = chọn được; còn lại là lý do hiện cạnh máy (cùng điều kiện backend kiểm)

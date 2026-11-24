@@ -10,7 +10,7 @@ export function useFirmwareRollouts() {
   return useQuery({
     queryKey: KEY,
     queryFn: async (): Promise<FirmwareRollout[]> => (await firmwareRolloutsApi.list()).data.data,
-    refetchInterval: query => (query.state.data?.some(r => r.status === 'ACTIVE' || r.status === 'PAUSED') ? REFRESH_MS : false),
+    refetchInterval: query => (query.state.data?.some(rollout => rollout.status === 'ACTIVE' || rollout.status === 'PAUSED') ? REFRESH_MS : false),
   })
 }
 
@@ -21,12 +21,12 @@ function useRolloutMutation<TVars>(fn: (vars: TVars) => Promise<FirmwareRollout>
 
 export const useCreateFirmwareRollout = () =>
   useRolloutMutation((input: Parameters<typeof firmwareRolloutsApi.create>[0]) =>
-    firmwareRolloutsApi.create(input).then(r => r.data.data))
+    firmwareRolloutsApi.create(input).then(response => response.data.data))
 
 export const useFirmwareRolloutAction = () =>
   useRolloutMutation(({ id, action }: { id: string; action: RolloutAction }) =>
-    firmwareRolloutsApi.act(id, action).then(r => r.data.data))
+    firmwareRolloutsApi.act(id, action).then(response => response.data.data))
 
 export const useRetryRolloutTarget = () =>
   useRolloutMutation(({ id, nodeId }: { id: string; nodeId: string }) =>
-    firmwareRolloutsApi.retry(id, nodeId).then(r => r.data.data))
+    firmwareRolloutsApi.retry(id, nodeId).then(response => response.data.data))

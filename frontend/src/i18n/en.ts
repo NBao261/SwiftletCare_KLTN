@@ -616,6 +616,9 @@ const en: Record<string, string> = {
   'Đã nạp trong phiên ({{n}})': 'Flashed this session ({{n}})',
   'In lại nhãn': 'Print label again',
   // Đợt cập nhật firmware từ xa (trang Cập nhật firmware)
+  'Máy thử {{ids}} cập nhật lỗi, đã quay về bản cũ và vẫn chạy bình thường. Kiểm tra máy rồi bấm Thử lại, hoặc Gửi tất cả ngay rồi Tiếp tục.': 'Test device {{ids}} failed to update, went back to its old version and keeps running. Check it, then press Retry, or Send to all now and then Resume.',
+  'Không tải được kho firmware. Kiểm tra kết nối tới máy chủ rồi thử lại.': 'Could not load the firmware catalog. Check the connection to the server and try again.',
+  'Không tải được kho firmware hoặc danh sách bộ điều khiển nên chưa tạo được đợt cập nhật.': 'Could not load the firmware catalog or the controller list, so no rollout can be created yet.',
   'Máy thử đang mất kết nối: các máy còn lại chờ tới khi máy này kết nối lại và cập nhật xong.': 'The test device is disconnected: the others wait until it reconnects and has updated.',
   'Kho firmware': 'Firmware catalog',
   'Dùng cho trạm nạp USB và cập nhật từ xa. Bản mới nhất được dùng trước': 'Used by the USB flashing station and remote updates. The latest version comes first',

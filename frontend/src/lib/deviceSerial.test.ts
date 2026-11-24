@@ -23,6 +23,8 @@ describe('đọc trả lời của bo mạch qua cổng USB', () => {
     expect(nextDeviceId('ctl-d4e5f6')).toBe('ctl-d4e5f6-2')
     expect(nextDeviceId('ctl-d4e5f6-2')).toBe('ctl-d4e5f6-3')
     expect(nextDeviceId('node-1')).toBe('node-1-2')
+    // Đuôi MAC toàn số không phải bộ đếm: không đề xuất mã mặc định của chip khác
+    expect(nextDeviceId('ctl-123456')).toBe('ctl-123456-2')
     expect(nextDeviceId('x'.repeat(40))).toHaveLength(40)
     expect(buildSetCommand({ deviceId: 'ctl-d4e5f6', brokerSecret: 's', broker: null }))
       .toBe('SC SET {"deviceId":"ctl-d4e5f6","brokerSecret":"s","broker":"","force":false}\n')

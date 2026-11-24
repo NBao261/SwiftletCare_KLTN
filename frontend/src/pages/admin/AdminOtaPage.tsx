@@ -17,8 +17,8 @@ import type { FirmwareRollout } from '@/types'
 
 export default function AdminOtaPage() {
   const { data: rollouts, isLoading, isError, refetch } = useFirmwareRollouts()
-  const { data: images } = useFirmwareImages()
-  const { data: nodes } = useSensorNodes(undefined, { refetchInterval: 30_000 })
+  const { data: images, isError: imagesFailed, refetch: refetchImages } = useFirmwareImages()
+  const { data: nodes, isError: nodesFailed, refetch: refetchNodes } = useSensorNodes(undefined, { refetchInterval: 30_000 })
   // Administrator không đọc cấu trúc trang trại: vị trí lấy từ danh sách thiết bị toàn hệ thống
   const { data: systemStatus } = useSystemNodeStatus()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -35,16 +35,16 @@ export default function AdminOtaPage() {
 
   // Mặc định mở đợt chưa xong mới nhất, không có thì đợt mới nhất
   const list = rollouts ?? []
-  const selected = list.find(r => r._id === selectedId) ?? list.find(isOpenRollout) ?? list[0]
+  const selected = list.find(rollout => rollout._id === selectedId) ?? list.find(isOpenRollout) ?? list[0]
   const hasImages = Boolean(images?.length)
 
   const columns: DataTableColumn<FirmwareRollout>[] = [
-    { key: 'version', header: 'Firmware', render: r => <span className="font-semibold text-charcoal">{r.version}</span> },
-    { key: 'status', header: 'Trạng thái', render: r => <Badge tone={ROLLOUT_STATUS[r.status].tone}>{t(ROLLOUT_STATUS[r.status].label)}</Badge> },
+    { key: 'version', header: 'Firmware', render: rollout => <span className="font-semibold text-charcoal">{rollout.version}</span> },
+    { key: 'status', header: 'Trạng thái', render: rollout => <Badge tone={ROLLOUT_STATUS[rollout.status].tone}>{t(ROLLOUT_STATUS[rollout.status].label)}</Badge> },
     {
       key: 'progress', header: 'Tiến độ',
-      render: r => {
-        const counts = rolloutCounts(r)
+      render: rollout => {
+        const counts = rolloutCounts(rollout)
         return (
           <span className="text-graphite">
             {t('{{done}}/{{total}} máy', { done: counts.succeeded, total: counts.total })}
@@ -53,7 +53,7 @@ export default function AdminOtaPage() {
         )
       },
     },
-    { key: 'created', header: 'Tạo lúc', render: r => <span className="text-graphite">{formatDateTime(r.created_at)}</span> },
+    { key: 'created', header: 'Tạo lúc', render: rollout => <span className="text-graphite">{formatDateTime(rollout.created_at)}</span> },
   ]
 
   const actions = (
@@ -77,6 +77,12 @@ export default function AdminOtaPage() {
         {!hasImages && images && (
           <p className="text-sm text-warmGray">{t('Kho chưa có firmware. Bấm Tải bản mới lên để bắt đầu.')}</p>
         )}
+        {(imagesFailed || nodesFailed) && (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-warmGray">
+            {t('Không tải được kho firmware hoặc danh sách bộ điều khiển nên chưa tạo được đợt cập nhật.')}
+            <Button variant="secondary" size="sm" onClick={() => { void refetchImages(); void refetchNodes() }}>{t('Thử lại')}</Button>
+          </div>
+        )}
         {isLoading && <LoadingSkeleton count={3} className="h-14 w-full" />}
         {isError && (
           <EmptyState
@@ -97,16 +103,16 @@ export default function AdminOtaPage() {
           <DataTable
             columns={columns}
             rows={rollouts}
-            getRowKey={r => r._id}
-            onRowClick={r => setSelectedId(r._id)}
+            getRowKey={rollout => rollout._id}
+            onRowClick={rollout => setSelectedId(rollout._id)}
             visibleRows={5}
-            mobileCard={r => (
+            mobileCard={rollout => (
               <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-col gap-1">
-                  <p className="font-semibold text-charcoal">{r.version}</p>
-                  <p className="text-small text-warmGray">{formatDateTime(r.created_at)}</p>
+                  <p className="font-semibold text-charcoal">{rollout.version}</p>
+                  <p className="text-small text-warmGray">{formatDateTime(rollout.created_at)}</p>
                 </div>
-                <Badge tone={ROLLOUT_STATUS[r.status].tone}>{t(ROLLOUT_STATUS[r.status].label)}</Badge>
+                <Badge tone={ROLLOUT_STATUS[rollout.status].tone}>{t(ROLLOUT_STATUS[rollout.status].label)}</Badge>
               </div>
             )}
           />

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { CpuIcon, TrashIcon } from '@phosphor-icons/react'
-import { Button, ConfirmModal, SectionCard } from '@/components/ui'
+import { Button, ConfirmModal, LoadingSkeleton, SectionCard } from '@/components/ui'
 import FirmwareUploadForm from '@/components/features/admin/device-stock/FirmwareUploadForm'
 import { useDeleteFirmwareImage, useFirmwareImages } from '@/hooks/admin/useFirmwareImages'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
-import { formatDateOnly } from '@/lib/helpers'
+import { formatStandardDate } from '@/lib/i18n'
 import { useToastStore } from '@/stores/toastStore'
 import { t } from '@/i18n'
 import type { FirmwareImage } from '@/types'
@@ -13,7 +13,7 @@ const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
 
 // Kho firmware: ảnh cài đặt dựng sẵn, trạm nạp USB và đợt cập nhật từ xa cùng lấy từ đây
 export default function FirmwareImagesCard() {
-  const { data: images } = useFirmwareImages()
+  const { data: images, isLoading, isError, refetch } = useFirmwareImages()
   const remove = useDeleteFirmwareImage()
   const push = useToastStore(s => s.push)
   const apiErrorMessage = useApiErrorMessage()
@@ -36,7 +36,14 @@ export default function FirmwareImagesCard() {
     >
       <FirmwareUploadForm />
 
-      {images && images.length > 0 ? (
+      {isLoading && <LoadingSkeleton count={2} className="h-14 w-full" />}
+      {isError && (
+        <div className="flex flex-wrap items-center gap-3 text-sm text-warmGray">
+          {t('Không tải được kho firmware. Kiểm tra kết nối tới máy chủ rồi thử lại.')}
+          <Button variant="secondary" size="sm" onClick={() => refetch()}>{t('Thử lại')}</Button>
+        </div>
+      )}
+      {images && images.length > 0 && (
         <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200">
           {images.map((image, index) => (
             <li key={image._id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
@@ -45,7 +52,7 @@ export default function FirmwareImagesCard() {
                   {image.version}{index === 0 && <span className="ml-2 text-xs font-normal text-accent-600">{t('Mới nhất')}</span>}
                 </span>
                 <span className="text-xs text-warmGray">
-                  {formatSize(image.size)} · {formatDateOnly(image.created_at)}{image.note ? ` · ${image.note}` : ''}
+                  {formatSize(image.size)} · {formatStandardDate(image.created_at)}{image.note ? ` · ${image.note}` : ''}
                 </span>
               </div>
               <Button variant="secondary" size="sm" onClick={() => setDeleting(image)} aria-label={t('Xoá firmware {{version}}', { version: image.version })}>
@@ -54,7 +61,8 @@ export default function FirmwareImagesCard() {
             </li>
           ))}
         </ul>
-      ) : (
+      )}
+      {images && images.length === 0 && (
         <p className="text-sm text-warmGray">{t('Chưa có firmware nào. Trạm nạp chỉ ghi mã vào bo đã có firmware từ 2.4.0, và chưa cập nhật từ xa được.')}</p>
       )}
 

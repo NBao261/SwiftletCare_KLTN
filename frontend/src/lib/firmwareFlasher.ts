@@ -1,5 +1,4 @@
-// Ghi ảnh cài đặt (bootloader + phân vùng + boot_app0 + firmware, ghi từ 0x0) vào ESP32 qua cổng USB bằng esptool-js
-// (bản JavaScript chính thức của Espressif). docs/reports/todo-device-flashing-1124.md §6
+// Ghi ảnh cài đặt (ghi từ 0x0) vào ESP32 qua cổng USB bằng esptool-js, bản JavaScript chính thức của Espressif
 import SparkMD5 from 'spark-md5'
 
 // Vùng NVS (firmware/platformio.ini → min_spiffs.csv): mã thiết bị, Wi-Fi, mức dòng đã học. Ảnh gộp chỉ có 0xFF ở đây
@@ -22,9 +21,11 @@ export function factorySegments(image: Uint8Array): FlashSegment[] {
 
 // So "x.y.z": âm khi a cũ hơn b
 export function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map(part => Number.parseInt(part, 10) || 0)
-  const pb = b.split('.').map(part => Number.parseInt(part, 10) || 0)
-  for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) - (pb[i] ?? 0)
+  const partsA = a.split('.').map(part => Number.parseInt(part, 10) || 0)
+  const partsB = b.split('.').map(part => Number.parseInt(part, 10) || 0)
+  for (let index = 0; index < 3; index++) {
+    if ((partsA[index] ?? 0) !== (partsB[index] ?? 0)) return (partsA[index] ?? 0) - (partsB[index] ?? 0)
+  }
   return 0
 }
 
