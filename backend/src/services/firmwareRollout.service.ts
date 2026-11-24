@@ -19,6 +19,11 @@ import logger from '@/utils/logger.util'
 // máy thử trước xong thì mới tới các máy còn lại; một máy lỗi thì cả đợt tự dừng
 
 const DOWNLOAD_PATH = '/firmware/ota/'
+// cmd.url của firmware là char[256]; token 64 ký tự hex
+const MAX_COMMAND_URL = 255
+const TOKEN_HEX_LENGTH = 64
+// markOtaTimeouts chạy trước trong cùng job; máy SENT mà vẫn quá hạn sau chừng này là máy mất dấu ota_pending
+const STUCK_GRACE_MS = 2 * 60 * 1000
 // Máy thử trước coi là xong khi đã lên bản mới, đã bị gỡ hoặc bị huỷ
 const DONE_OK: RolloutTargetState[] = ['SUCCEEDED', 'SKIPPED', 'CANCELLED']
 const HIDDEN_FIELDS = '-targets.token_hash'
@@ -30,6 +35,10 @@ function downloadBase(): string {
   const base = (process.env.OTA_DOWNLOAD_BASE_URL ?? '').trim().replace(/\/+$/, '')
   if (!base.startsWith('https://')) {
     throw ServiceUnavailableError('Chưa cấu hình địa chỉ HTTPS để thiết bị tải firmware (OTA_DOWNLOAD_BASE_URL)')
+  }
+  // Link dài hơn firmware nhận thì máy bỏ lệnh và chỉ báo lỗi sau 30 phút
+  if (base.length + DOWNLOAD_PATH.length + TOKEN_HEX_LENGTH > MAX_COMMAND_URL) {
+    throw ServiceUnavailableError('Địa chỉ tải firmware quá dài, thiết bị chỉ nhận link tối đa 255 ký tự (OTA_DOWNLOAD_BASE_URL)')
   }
   return base
 }
@@ -49,11 +58,12 @@ const getRollout = (id: unknown) => FirmwareRollout.findById(id).select(HIDDEN_F
 // Đổi trạng thái một máy chỉ khi nó còn ở trạng thái `from`: heartbeat và job chạy song song không gửi trùng
 async function moveTarget(
   rolloutId: unknown, nodeId: unknown, from: RolloutTargetState[], set: Partial<IRolloutTarget>, unset: string[] = [],
+  rolloutFilter: Record<string, unknown> = {},
 ): Promise<boolean> {
   const update: Record<string, unknown> = { $set: Object.fromEntries(Object.entries(set).map(([k, v]) => [`targets.$.${k}`, v])) }
   if (unset.length) update.$unset = Object.fromEntries(unset.map(k => [`targets.$.${k}`, '']))
   const result = await FirmwareRollout.updateOne(
-    { _id: rolloutId, targets: { $elemMatch: { node_id: nodeId, state: { $in: from } } } }, update,
+    { _id: rolloutId, ...rolloutFilter, targets: { $elemMatch: { node_id: nodeId, state: { $in: from } } } }, update,
   )
   return result.modifiedCount === 1
 }
@@ -92,7 +102,7 @@ async function sendTarget(rollout: IFirmwareRollout, target: IRolloutTarget, ima
   const claimed = await moveTarget(rollout._id, node._id, ['QUEUED'], {
     state: 'SENT', sent_at: sentAt, attempts: target.attempts + 1,
     token_hash: hashToken(token), token_expires_at: new Date(sentAt.getTime() + OTA_CONFIRM_TIMEOUT_MS),
-  })
+  }, [], { status: 'ACTIVE' })
   if (!claimed) return
 
   const url = `${base}${DOWNLOAD_PATH}${token}`
@@ -120,7 +130,7 @@ export async function dispatchRollout(rolloutId: unknown): Promise<void> {
   const rollout = await FirmwareRollout.findById(rolloutId)
   if (!rollout || rollout.status !== 'ACTIVE') return
   const image = await FirmwareImage.findById(rollout.image_id).select('app_sha256').lean()
-  if (!image) return
+  if (!image?.app_sha256) return
   const base = downloadBase()
   for (const target of rollout.targets) {
     if (target.state !== 'QUEUED' || (rollout.stage === 'CANARY' && !target.canary)) continue
@@ -147,6 +157,15 @@ async function advanceRollout(rolloutId: unknown): Promise<void> {
   })
 }
 
+async function busyNodeIds(nodeIds: unknown[], exceptRolloutId?: unknown): Promise<Set<string>> {
+  const rollouts = await FirmwareRollout.find({
+    ...(exceptRolloutId ? { _id: { $ne: exceptRolloutId } } : {}),
+    status: { $in: ROLLOUT_OPEN_STATUSES },
+    targets: { $elemMatch: { node_id: { $in: nodeIds }, state: { $in: TARGET_OPEN_STATES } } },
+  }).select('targets.node_id targets.state').lean()
+  return new Set(rollouts.flatMap(r => r.targets.filter(t => TARGET_OPEN_STATES.includes(t.state)).map(t => String(t.node_id))))
+}
+
 export interface CreateRolloutInput {
   image_id: string
   node_ids: string[]
@@ -158,6 +177,8 @@ export async function createRollout(adminId: string, input: CreateRolloutInput) 
   downloadBase()
   const image = await FirmwareImage.findById(input.image_id).lean()
   if (!image) throw NotFoundError('Không tìm thấy firmware trong kho')
+  // Bản tải lên trước khi có cập nhật từ xa không có mã kiểm của phần firmware
+  if (!image.app_sha256) throw ConflictError(`Firmware ${image.version} cần tải lên lại trước khi cập nhật từ xa. Xoá bản này rồi tải lại file`)
 
   const nodeIds = [...new Set(input.node_ids)]
   const canaryIds = new Set(input.canary_node_ids ?? [])
@@ -166,11 +187,7 @@ export async function createRollout(adminId: string, input: CreateRolloutInput) 
   const nodes = await SensorNode.find({ _id: { $in: nodeIds }, ...IN_SERVICE }).lean()
   if (nodes.length !== nodeIds.length) throw BadRequestError('Có bộ điều khiển không còn dùng. Tải lại danh sách rồi chọn lại')
 
-  const busy = new Set((await FirmwareRollout.find({
-    status: { $in: ROLLOUT_OPEN_STATUSES },
-    targets: { $elemMatch: { node_id: { $in: nodeIds }, state: { $in: TARGET_OPEN_STATES } } },
-  }).select('targets.node_id targets.state').lean())
-    .flatMap(r => r.targets.filter(t => TARGET_OPEN_STATES.includes(t.state)).map(t => String(t.node_id))))
+  const busy = await busyNodeIds(nodeIds)
 
   const problems = nodes.flatMap(node => {
     if (!versionAtLeast(node.firmware_version, COMMAND_SUPPORT_SINCE)) return [`${node.device_id} chạy firmware quá cũ, cần nạp qua USB`]
@@ -196,32 +213,38 @@ export async function createRollout(adminId: string, input: CreateRolloutInput) 
 
 type RolloutAction = 'pause' | 'resume' | 'promote' | 'cancel'
 
+const OPEN = { $in: ROLLOUT_OPEN_STATUSES }
+const CHANGED_MEANWHILE = 'Đợt cập nhật vừa thay đổi. Tải lại trang rồi thử lại'
+
+// Mỗi thao tác là một cập nhật có điều kiện: heartbeat hay job chạy cùng lúc không bị ghi đè
+const ACTIONS: Record<RolloutAction, { filter: Record<string, unknown>; update: () => Record<string, unknown> }> = {
+  pause: { filter: { status: 'ACTIVE' }, update: () => ({ $set: { status: 'PAUSED', paused_reason: 'ADMIN' } }) },
+  resume: { filter: { status: 'PAUSED' }, update: () => ({ $set: { status: 'ACTIVE' }, $unset: { paused_reason: '' } }) },
+  promote: { filter: { status: OPEN, stage: 'CANARY' }, update: () => ({ $set: { stage: 'ALL' } }) },
+  cancel: { filter: { status: OPEN }, update: () => ({ $set: { status: 'CANCELLED', finished_at: new Date() }, $unset: { paused_reason: '' } }) },
+}
+
+function refusal(rollout: Pick<IFirmwareRollout, 'status' | 'stage'>, action: RolloutAction): string {
+  if (!ROLLOUT_OPEN_STATUSES.includes(rollout.status)) return 'Đợt cập nhật đã kết thúc'
+  if (action === 'pause' && rollout.status === 'PAUSED') return 'Đợt cập nhật đang tạm dừng'
+  if (action === 'resume' && rollout.status === 'ACTIVE') return 'Đợt cập nhật đang chạy'
+  if (action === 'promote' && rollout.stage === 'ALL') return 'Đợt cập nhật đã gửi cho mọi máy'
+  return CHANGED_MEANWHILE
+}
+
 export async function changeRollout(adminId: string, id: string, action: RolloutAction) {
   const rollout = await findRolloutOrThrow(id)
-  const open = ROLLOUT_OPEN_STATUSES.includes(rollout.status)
-  if (!open) throw ConflictError('Đợt cập nhật đã kết thúc')
-
-  if (action === 'pause') {
-    if (rollout.status !== 'ACTIVE') throw ConflictError('Đợt cập nhật đang tạm dừng')
-    rollout.status = 'PAUSED'
-    rollout.paused_reason = 'ADMIN'
-  } else if (action === 'resume') {
-    if (rollout.status !== 'PAUSED') throw ConflictError('Đợt cập nhật đang chạy')
-    rollout.status = 'ACTIVE'
-    rollout.paused_reason = undefined
-  } else if (action === 'promote') {
-    if (rollout.stage !== 'CANARY') throw ConflictError('Đợt cập nhật đã gửi cho mọi máy')
-    rollout.stage = 'ALL'
-  } else {
-    // Máy đang tải vẫn ghi kết quả; máy còn chờ không nhận nữa
-    rollout.status = 'CANCELLED'
-    rollout.paused_reason = undefined
-    rollout.finished_at = new Date()
-    for (const target of rollout.targets) {
-      if (target.state === 'QUEUED') Object.assign(target, { state: 'CANCELLED', finished_at: new Date() })
-    }
+  const { filter, update } = ACTIONS[action]
+  const changed = await FirmwareRollout.updateOne({ _id: rollout._id, ...filter }, update())
+  if (changed.modifiedCount !== 1) throw ConflictError(refusal(rollout, action))
+  // Huỷ: đợt đã CANCELLED nên không máy nào được nhận thêm; máy còn chờ ghi huỷ, máy đang tải vẫn ghi kết quả
+  if (action === 'cancel') {
+    await FirmwareRollout.updateOne(
+      { _id: rollout._id },
+      { $set: { 'targets.$[t].state': 'CANCELLED', 'targets.$[t].finished_at': new Date() } },
+      { arrayFilters: [{ 't.state': 'QUEUED' }] },
+    )
   }
-  await rollout.save()
   await logAction(adminId, `FIRMWARE_ROLLOUT_${action.toUpperCase()}`, 'firmware_rollout', id, { version: rollout.version })
   await dispatchRollout(rollout._id)
   return getRollout(rollout._id)
@@ -233,15 +256,22 @@ export async function retryTarget(adminId: string, id: string, nodeId: string) {
   const target = rollout.targets.find(t => String(t.node_id) === nodeId)
   if (!target) throw NotFoundError('Bộ điều khiển không nằm trong đợt cập nhật này')
   if (target.state !== 'FAILED') throw ConflictError('Chỉ thử lại được máy cập nhật lỗi')
-
-  Object.assign(target, { state: 'QUEUED', reason: undefined, finished_at: undefined })
-  // Thử lại là muốn đợt chạy tiếp; đợt do Administrator tự dừng thì vẫn dừng
-  if (rollout.status === 'COMPLETED' || rollout.paused_reason === 'FAILURE') {
-    rollout.status = 'ACTIVE'
-    rollout.paused_reason = undefined
-    rollout.finished_at = undefined
+  // Cùng điều kiện khi tạo đợt: một máy chỉ ở một lần cập nhật chưa xong
+  const node = await SensorNode.findById(target.node_id).select('ota_pending').lean()
+  if (node?.ota_pending || (await busyNodeIds([target.node_id], rollout._id)).has(nodeId)) {
+    throw ConflictError(`${target.device_id} đang có một lần cập nhật chưa xong ở đợt khác`)
   }
-  await rollout.save()
+  const image = await FirmwareImage.findById(rollout.image_id).select('app_sha256').lean()
+  if (!image?.app_sha256) throw ConflictError(`Firmware ${rollout.version} không còn trong kho. Tạo đợt mới với bản khác`)
+
+  const moved = await moveTarget(rollout._id, target.node_id, ['FAILED'], { state: 'QUEUED' }, ['reason', 'finished_at'],
+    { status: { $ne: 'CANCELLED' } })
+  if (!moved) throw ConflictError(CHANGED_MEANWHILE)
+  // Thử lại là muốn đợt chạy tiếp; đợt do Administrator tự dừng thì vẫn dừng
+  await FirmwareRollout.updateOne(
+    { _id: rollout._id, $or: [{ status: 'COMPLETED' }, { status: 'PAUSED', paused_reason: 'FAILURE' }] },
+    { $set: { status: 'ACTIVE' }, $unset: { paused_reason: '', finished_at: '' } },
+  )
   await logAction(adminId, 'FIRMWARE_ROLLOUT_RETRY', 'firmware_rollout', id, { version: rollout.version, deviceId: target.device_id })
   await dispatchRollout(rollout._id)
   return getRollout(rollout._id)
@@ -279,19 +309,26 @@ export async function onOtaTimedOut(nodeId: Types.ObjectId, version: string, run
   return true
 }
 
-// Job mỗi phút: gửi cho máy online mà heartbeat chưa kịp gửi (backend vừa mất broker), bỏ máy đã gỡ giữa chừng
+// Job mỗi phút: bỏ máy đã gỡ giữa chừng, ghi lỗi máy SENT quá hạn mà job OTA không thấy (mất ota_pending),
+// rồi gửi cho máy online mà heartbeat chưa kịp gửi (backend vừa mất broker)
 export async function sweepRollouts(): Promise<void> {
-  const rollouts = await FirmwareRollout.find({ status: 'ACTIVE' }).select('_id targets.node_id targets.state').lean()
-  for (const rollout of rollouts) {
-    const sent = rollout.targets.filter(t => t.state === 'SENT').map(t => t.node_id)
-    if (sent.length) {
-      const inService = new Set((await SensorNode.find({ _id: { $in: sent }, ...IN_SERVICE }).select('_id').lean()).map(n => String(n._id)))
-      for (const nodeId of sent.filter(id => !inService.has(String(id)))) {
-        await moveTarget(rollout._id, nodeId, ['SENT'], { state: 'SKIPPED', reason: 'NOT_IN_SERVICE', finished_at: new Date() }, ['token_hash'])
+  const stuckBefore = new Date(Date.now() - OTA_CONFIRM_TIMEOUT_MS - STUCK_GRACE_MS)
+  const withSent = await FirmwareRollout.find({ 'targets.state': 'SENT' })
+    .select('_id version targets.node_id targets.state targets.sent_at').lean()
+  for (const rollout of withSent) {
+    const sent = rollout.targets.filter(t => t.state === 'SENT')
+    const nodes = new Map((await SensorNode.find({ _id: { $in: sent.map(t => t.node_id) }, ...IN_SERVICE })
+      .select('_id firmware_version').lean()).map(n => [String(n._id), n]))
+    for (const target of sent) {
+      const node = nodes.get(String(target.node_id))
+      if (!node) {
+        await moveTarget(rollout._id, target.node_id, ['SENT'], { state: 'SKIPPED', reason: 'NOT_IN_SERVICE', finished_at: new Date() }, ['token_hash'])
+      } else if (target.sent_at && target.sent_at < stuckBefore) {
+        await onOtaTimedOut(node._id, rollout.version, node.firmware_version)
       }
     }
-    await dispatchRollout(rollout._id)
   }
+  for (const rollout of await FirmwareRollout.find({ status: 'ACTIVE' }).select('_id').lean()) await dispatchRollout(rollout._id)
 }
 
 // Lệnh OTA gửi tay không được chen vào máy đang trong một đợt

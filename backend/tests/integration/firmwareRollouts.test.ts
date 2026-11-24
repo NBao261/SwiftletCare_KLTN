@@ -265,4 +265,50 @@ describe('đợt cập nhật firmware từ xa (FARM-FR-013b)', () => {
     expect(list.body.data).toHaveLength(1)
     expect(JSON.stringify(list.body.data)).not.toContain('token_hash')
   })
+
+  it('máy SENT mất dấu ota_pending vẫn bị ghi lỗi; đợt đã huỷ không gửi thêm; thử lại không chen vào đợt khác', async () => {
+    const { node, image, token } = await seed()
+    const a = await node('ctl-a', 'ONLINE')
+    const b = await node('ctl-b', 'OFFLINE')
+    const first = (await create(token, { image_id: image._id, node_ids: [String(a._id), String(b._id)] }).expect(201)).body.data._id as string
+
+    // node.save() lỗi sau khi gửi: máy SENT mà không có ota_pending, job OTA không thấy
+    await SensorNode.updateOne({ _id: a._id }, { $unset: { ota_pending: '' } })
+    await FirmwareRollout.updateOne({ _id: first }, { 'targets.0.sent_at': new Date(Date.now() - OTA_CONFIRM_TIMEOUT_MS - 3 * 60 * 1000) })
+    await sweepRollouts()
+    const stuck = (await FirmwareRollout.findById(first).lean())!
+    expect(stuck).toMatchObject({ status: 'PAUSED', paused_reason: 'FAILURE' })
+    expect(stuck.targets[0]).toMatchObject({ state: 'FAILED', reason: 'TIMEOUT' })
+
+    // Huỷ xong thì máy chờ kết nối lại cũng không nhận lệnh
+    await act(token, first, 'cancel').expect(200)
+    ;(publishDeviceCommand as jest.Mock).mockClear()
+    await SensorNode.updateOne({ _id: b._id }, { status: 'OFFLINE' })
+    await heartbeat('ctl-b', '2.4.0')
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
+    await request(app).post(`/admin/firmware-rollouts/${first}/targets/${a._id}/retry`).set('Authorization', `Bearer ${token}`).expect(409)
+
+    // Máy lỗi ở đợt A đã vào đợt B: thử lại ở đợt A bị từ chối
+    const second = (await create(token, { image_id: image._id, node_ids: [String(a._id)] }).expect(201)).body.data._id as string
+    await FirmwareRollout.updateOne({ _id: second }, { 'targets.0.state': 'FAILED', status: 'PAUSED', paused_reason: 'FAILURE' })
+    await SensorNode.updateOne({ _id: a._id }, { $unset: { ota_pending: '' } })
+    const third = (await create(token, { image_id: image._id, node_ids: [String(a._id)] }).expect(201)).body.data._id as string
+    const busy = await request(app).post(`/admin/firmware-rollouts/${second}/targets/${a._id}/retry`).set('Authorization', `Bearer ${token}`).expect(409)
+    expect(busy.body.error.message).toContain('ctl-a')
+    expect(await states(third)).toEqual({ 'ctl-a': 'SENT' })
+  })
+
+  it('từ chối link tải dài hơn firmware nhận và bản firmware chưa có mã kiểm phần firmware', async () => {
+    const { node, image, token } = await seed()
+    const a = await node('ctl-a', 'ONLINE')
+    process.env.OTA_DOWNLOAD_BASE_URL = `https://${'a'.repeat(170)}.vn`
+    const long = await create(token, { image_id: image._id, node_ids: [String(a._id)] }).expect(503)
+    expect(long.body.error.message).toContain('255')
+    process.env.OTA_DOWNLOAD_BASE_URL = BASE
+
+    await FirmwareImage.updateOne({ _id: image._id }, { $unset: { app_sha256: '' } })
+    const old = await create(token, { image_id: image._id, node_ids: [String(a._id)] }).expect(409)
+    expect(old.body.error.message).toContain('tải lên lại')
+    expect(publishDeviceCommand).not.toHaveBeenCalled()
+  })
 })
