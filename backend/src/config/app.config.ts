@@ -1,4 +1,4 @@
-﻿import express, { Application, Request, Response } from 'express'
+﻿import express, { Application, NextFunction, Request, Response } from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
 import morgan from 'morgan'
@@ -14,6 +14,7 @@ import { requestContext } from '@/middlewares/requestContext.middleware'
 import logger from '@/utils/logger.util'
 import { parseTrustProxy } from '@/utils/trustProxy.util'
 import { isLocalStorage, localStorageDir } from '@/config/minio.config'
+import { isFirmwareObjectPath } from '@/utils/firmwareImage.util'
 
 import authRoutes     from '@/routes/auth.route'
 import adminRoutes     from '@/routes/admin.route'
@@ -58,6 +59,8 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // STORAGE_DRIVER=local: cho <audio> ở origin khác đọc file
 if (isLocalStorage()) {
+  // Kho firmware chỉ tải qua route có đăng nhập (ảnh chứa giá trị Secrets.h)
+  app.use('/files', (req: Request, res: Response, next: NextFunction) => (isFirmwareObjectPath(req.path) ? res.status(404).end() : next()))
   app.use('/files', express.static(localStorageDir(), {
     setHeaders: res => res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'),
   }))

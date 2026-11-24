@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import { FirmwareImage } from '@/models/firmwareImage.model'
 import { getObject, putObject, removeObject } from '@/config/minio.config'
 import { logAction } from '@/services/auditLog.service'
-import { factoryImageProblem } from '@/utils/firmwareImage.util'
+import { FIRMWARE_OBJECT_PREFIX, factoryImageProblem } from '@/utils/firmwareImage.util'
 import { BadRequestError, ConflictError, NotFoundError } from '@/utils/appError.util'
 
 // Cũ trước mới sau theo số phiên bản (2.10.0 sau 2.9.0), không theo ngày tải lên
@@ -23,7 +23,7 @@ export async function uploadFirmwareImage(
   if (await FirmwareImage.exists({ version })) throw ConflictError(`Kho đã có firmware ${version}. Xoá bản cũ trước nếu muốn thay`)
 
   const sha256 = crypto.createHash('sha256').update(file.buffer).digest('hex')
-  const objectKey = `firmware/${version}-${crypto.randomUUID()}.bin`
+  const objectKey = `${FIRMWARE_OBJECT_PREFIX}${version}-${crypto.randomUUID()}.bin`
   await putObject(objectKey, file.buffer, 'application/octet-stream')
   const image = await FirmwareImage.create({
     version, object_key: objectKey, size: file.buffer.length, sha256, note: input.note?.trim() || undefined, uploaded_by: adminId,
