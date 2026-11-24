@@ -1,161 +1,130 @@
-// Backend không có catalog firmware: Admin nhập version, url, sha256; trạng thái lấy từ ota_pending, ota_failed
-import { useState } from 'react'
-import { useSensorNodes, useSendNodeCommand } from '@/hooks/shared/useDevices'
-import { getApiErrorMessage } from '@/lib/helpers'
-import { useToastStore } from '@/stores/toastStore'
+// Cập nhật firmware từ xa theo đợt: chọn bản trong kho firmware và các bộ điều khiển; máy offline nhận khi online lại
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { Badge, Button, DataTable, EmptyState, SectionCard, type DataTableColumn } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import EmptyState from '@/components/ui/EmptyState'
-import SectionCard from '@/components/ui/SectionCard'
 import { IconOTA } from '@/components/ui/icons'
-import { DeviceTable }     from '@/components/features/admin/ota/DeviceTable'
-import { OTASidePanel }   from '@/components/features/admin/ota/OTASidePanel'
-import { OTAConfirmModal } from '@/components/features/admin/ota/OTAConfirmModal'
-import { EMPTY_OTA_FORM, validateOtaForm } from '@/components/features/admin/ota/otaTypes'
-import type { OtaFormValues, OtaFormErrors, OTARunState } from '@/components/features/admin/ota/otaTypes'
-import type { SensorNode } from '@/types'
-
-function otaErrorMessage(err: unknown): string {
-  const status = (err as { response?: { status?: number } })?.response?.status
-  if (status === 501) return 'Firmware trên thiết bị chưa hỗ trợ cập nhật từ xa. Nạp bản 1.4.0 trở lên tại chỗ (ElegantOTA trong mạng LAN hoặc cáp USB) trước.'
-  if (status === 503) return 'Máy chủ chưa kết nối được tới thiết bị. Thử lại sau.'
-  if (status === 403) return 'Bạn không có quyền gửi lệnh cho thiết bị này.'
-  return getApiErrorMessage(err, 'Gửi lệnh OTA thất bại')
-}
+import CreateRolloutModal from '@/components/features/admin/ota/CreateRolloutModal'
+import RolloutDetail from '@/components/features/admin/ota/RolloutDetail'
+import { ROLLOUT_STATUS, isOpenRollout, rolloutCounts } from '@/components/features/admin/ota/rollout.utils'
+import { useFirmwareImages } from '@/hooks/admin/useFirmwareImages'
+import { useFirmwareRollouts } from '@/hooks/admin/useFirmwareRollouts'
+import { useSensorNodes, useSystemNodeStatus } from '@/hooks/shared/useDevices'
+import { formatDateTime } from '@/lib/i18n'
+import { t } from '@/i18n'
+import type { FirmwareRollout } from '@/types'
 
 export default function AdminOtaPage() {
-  const push = useToastStore(s => s.push)
-  const sendCommand = useSendNodeCommand()
-
-  const { data: nodes, isLoading } = useSensorNodes(undefined, {
-    // Còn node đang chờ OTA → polling để thấy kết quả (BE chưa có socket OTA_PROGRESS)
-    refetchInterval: query => (query.state.data?.some(n => n.ota_pending) ? 5_000 : false),
-  })
-
+  const { data: rollouts, isLoading, isError, refetch } = useFirmwareRollouts()
+  const { data: images } = useFirmwareImages()
+  const { data: nodes } = useSensorNodes(undefined, { refetchInterval: 30_000 })
+  // Administrator không đọc cấu trúc trang trại: vị trí lấy từ danh sách thiết bị toàn hệ thống
+  const { data: systemStatus } = useSystemNodeStatus()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [form, setForm] = useState<OtaFormValues>(EMPTY_OTA_FORM)
-  const [errors, setErrors] = useState<OtaFormErrors>({})
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [apiError, setApiError] = useState<string | null>(null)
-  // Phiên bản vừa gửi thành công: dùng nhận diện pending/done trước khi BE phản ánh ota_pending
-  const [sentVersion, setSentVersion] = useState('')
-  // failed_at của lỗi đã được Technician bấm "Thử lại" (ẩn panel lỗi, không xoá dữ liệu BE)
-  const [dismissedFailedAt, setDismissedFailedAt] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
 
-  // Luôn lấy node mới nhất từ cache để thấy ota_pending / firmware_version cập nhật
-  const selectedNode: SensorNode | null = nodes?.find(n => n._id === selectedId) ?? null
+  const locationById = useMemo(
+    () => new Map((systemStatus?.nodes ?? []).map(item => [item._id, [item.farm_name, item.house_name, item.zone_name].filter(Boolean).join(' · ')])),
+    [systemStatus],
+  )
+  const onlineIds = useMemo(() => new Set((nodes ?? []).filter(node => node.status === 'ONLINE').map(node => node._id)), [nodes])
 
-  function deriveState(node: SensorNode): OTARunState {
-    const failedForSent = node.ota_failed && node.ota_failed.version === sentVersion
-    if (node.ota_pending) return 'pending'
-    if (sentVersion && node.firmware_version === sentVersion) return 'done'
-    if (sentVersion && !failedForSent) return 'pending'
-    if (node.ota_failed && node.ota_failed.failed_at !== dismissedFailedAt) return 'failed'
-    return 'idle'
-  }
+  // Mặc định mở đợt chưa xong mới nhất, không có thì đợt mới nhất
+  const list = rollouts ?? []
+  const selected = list.find(r => r._id === selectedId) ?? list.find(isOpenRollout) ?? list[0]
+  const hasImages = Boolean(images?.length)
 
-  function openPanel(node: SensorNode) {
-    setSelectedId(node._id)
-    setForm(EMPTY_OTA_FORM)
-    setErrors({})
-    setApiError(null)
-    setSentVersion('')
-    setDismissedFailedAt(null)
-  }
-
-  function handleFormChange(patch: Partial<OtaFormValues>) {
-    setForm(prev => ({ ...prev, ...patch }))
-    setApiError(null)
-  }
-
-  function handlePush() {
-    const errs = validateOtaForm(form)
-    setErrors(errs)
-    if (Object.keys(errs).length === 0) setConfirmOpen(true)
-  }
-
-  function startOTA() {
-    if (!selectedNode) return
-    const payload = { version: form.version.trim(), url: form.url.trim(), sha256: form.sha256.trim().toLowerCase() }
-    sendCommand.mutate(
-      { nodeId: selectedNode._id, input: { command: 'OTA', ota: payload } },
-      {
-        onSuccess: () => {
-          setConfirmOpen(false)
-          setSentVersion(payload.version)
-          setApiError(null)
-          push('Đã gửi bản cập nhật tới thiết bị')
-        },
-        onError: err => {
-          setConfirmOpen(false)
-          setApiError(otaErrorMessage(err))
-        },
+  const columns: DataTableColumn<FirmwareRollout>[] = [
+    { key: 'version', header: 'Firmware', render: r => <span className="font-semibold text-charcoal">{r.version}</span> },
+    { key: 'status', header: 'Trạng thái', render: r => <Badge tone={ROLLOUT_STATUS[r.status].tone}>{t(ROLLOUT_STATUS[r.status].label)}</Badge> },
+    {
+      key: 'progress', header: 'Tiến độ',
+      render: r => {
+        const counts = rolloutCounts(r)
+        return (
+          <span className="text-graphite">
+            {t('{{done}}/{{total}} máy', { done: counts.succeeded, total: counts.total })}
+            {counts.failed > 0 && <span className="text-alertRed"> · {t('{{n}} lỗi', { n: counts.failed })}</span>}
+          </span>
+        )
       },
-    )
-  }
+    },
+    { key: 'created', header: 'Tạo lúc', render: r => <span className="text-graphite">{formatDateTime(r.created_at)}</span> },
+  ]
 
-  function handleRetry() {
-    if (selectedNode?.ota_failed) setDismissedFailedAt(selectedNode.ota_failed.failed_at)
-    setSentVersion('')
-    setApiError(null)
-  }
-
-  const runState: OTARunState = selectedNode ? deriveState(selectedNode) : 'idle'
+  const createButton = (
+    <Button onClick={() => setCreating(true)} disabled={!hasImages || !nodes}>
+      <PlusIcon size={14} weight="bold" aria-hidden />{t('Tạo đợt cập nhật')}
+    </Button>
+  )
 
   return (
-    <SectionCard
-      description="Cập nhật firmware từ xa cho bộ điều khiển. Chỉ thiết bị đang online nhận được bản cập nhật."
-    >
-      {/* Tên trang ở header; bảng bên trái, ngăn gửi bản cập nhật bên phải khi chọn thiết bị */}
-      <div className="flex gap-5">
-        {/* Device table */}
-        <div className="min-w-0 flex-1">
-          {isLoading && <LoadingSkeleton count={4} className="h-14 w-full" />}
-
-          {!isLoading && (!nodes || nodes.length === 0) && (
-            <EmptyState
-              icon={<IconOTA width={28} height={28} />}
-              title="Không có thiết bị nào"
-              description="Chưa có bộ điều khiển nào được đăng ký trong hệ thống."
-            />
-          )}
-
-          {!isLoading && nodes && nodes.length > 0 && (
-            <DeviceTable
-              nodes={nodes}
-              selectedId={selectedNode?._id}
-              onSelect={openPanel}
-            />
-          )}
-        </div>
-
-        {/* Side panel: slide in khi chọn node */}
-        {selectedNode && (
-          <div className="w-80 shrink-0 animate-[slideInRight_0.2s_ease-out]">
-            <OTASidePanel
-              node={selectedNode}
-              state={runState}
-              form={form}
-              errors={errors}
-              onFormChange={handleFormChange}
-              onPush={handlePush}
-              apiError={apiError}
-              targetVersion={sentVersion}
-              onRetry={handleRetry}
-            />
-          </div>
+    <div className="flex flex-col gap-5">
+      <SectionCard
+        description="Cập nhật firmware từ xa cho bộ điều khiển. Máy mất kết nối nhận bản cập nhật khi kết nối lại."
+        help="Mỗi đợt thử trước trên một máy, máy đó cập nhật xong thì mới gửi các máy còn lại. Máy nào không lên được bản mới trong 30 phút thì tự quay về bản cũ, và đợt tự dừng để bạn kiểm tra."
+        action={createButton}
+      >
+        {!hasImages && images && (
+          <p className="text-sm text-warmGray">
+            {t('Kho chưa có firmware. Tải bản mới lên ở thẻ Firmware cho trạm nạp, màn')}{' '}
+            <Link to="/system/device-stock" className="font-semibold text-charcoal underline">{t('Kho thiết bị')}</Link>.
+          </p>
         )}
-      </div>
+        {isLoading && <LoadingSkeleton count={3} className="h-14 w-full" />}
+        {isError && (
+          <EmptyState
+            icon={<WarningCircleIcon size={32} />}
+            title="Không tải được các đợt cập nhật"
+            description="Kiểm tra kết nối tới máy chủ rồi thử lại."
+            action={<Button variant="secondary" size="sm" onClick={() => refetch()}>Thử lại</Button>}
+          />
+        )}
+        {rollouts && rollouts.length === 0 && (
+          <EmptyState
+            icon={<IconOTA width={28} height={28} />}
+            title="Chưa có đợt cập nhật nào"
+            description="Tạo một đợt để đưa bản firmware mới trong kho tới các bộ điều khiển."
+          />
+        )}
+        {rollouts && rollouts.length > 0 && (
+          <DataTable
+            columns={columns}
+            rows={rollouts}
+            getRowKey={r => r._id}
+            onRowClick={r => setSelectedId(r._id)}
+            visibleRows={5}
+            mobileCard={r => (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <p className="font-semibold text-charcoal">{r.version}</p>
+                  <p className="text-small text-warmGray">{formatDateTime(r.created_at)}</p>
+                </div>
+                <Badge tone={ROLLOUT_STATUS[r.status].tone}>{t(ROLLOUT_STATUS[r.status].label)}</Badge>
+              </div>
+            )}
+          />
+        )}
+      </SectionCard>
 
-      {/* B4: OTA Confirm Modal */}
-      {confirmOpen && selectedNode && (
-        <OTAConfirmModal
-          node={selectedNode}
-          firmware={form}
-          loading={sendCommand.isPending}
-          onClose={() => setConfirmOpen(false)}
-          onConfirm={startOTA}
+      {selected && (
+        <SectionCard>
+          <RolloutDetail rollout={selected} onlineIds={onlineIds} locationById={locationById} />
+        </SectionCard>
+      )}
+
+      {images && nodes && (
+        <CreateRolloutModal
+          open={creating}
+          onClose={() => setCreating(false)}
+          onCreated={rollout => { setCreating(false); setSelectedId(rollout._id) }}
+          images={images}
+          nodes={nodes}
+          rollouts={list}
+          locationById={locationById}
         />
       )}
-    </SectionCard>
+    </div>
   )
 }
