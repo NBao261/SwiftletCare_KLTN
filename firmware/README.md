@@ -76,6 +76,7 @@ cd firmware
 pio run                  # build
 pio run -t upload        # nạp qua USB
 pio run -e esp32prod -t factory   # ảnh cài đặt .pio/build/esp32prod/factory.bin: tải lên ở trang Cập nhật firmware ("Tải bản mới lên") hoặc thẻ "Kho firmware" ở màn Kho thiết bị
+                                  # chỉ esp32prod; đừng ghi nguyên file bằng `esptool write_flash 0x0`: sẽ xoá NVS (mã, mật khẩu broker, Wi-Fi)
 pio device monitor        # Serial monitor 115200
 ```
 
