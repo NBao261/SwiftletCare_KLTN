@@ -1,10 +1,12 @@
 import { Router } from 'express'
+import multer from 'multer'
 import { body, param, query } from 'express-validator'
 import * as adminController from '@/controllers/admin.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 import type { Role } from '@/types'
 import { CHIP_MAC_PATTERN, DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
+import { FIRMWARE_VERSION_PATTERN, MAX_FACTORY_IMAGE_BYTES } from '@/utils/firmwareImage.util'
 
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
@@ -56,6 +58,7 @@ router.get('/provisioned-devices',
   query('kind').optional().isIn(['SENSOR', 'CAMERA']), query('claimed').optional().isIn(['true', 'false']),
   query('revoked').optional().isIn(['true', 'false']),
   query('deviceId').optional().isString().matches(DEVICE_ID_PATTERN),
+  query('chipMac').optional().isString().toUpperCase().matches(CHIP_MAC_PATTERN),
   ...paginationQuery, validate,
   adminController.listProvisionedDevices,
 )
@@ -66,5 +69,16 @@ router.put('/provisioned-devices/:id/revoke',
 router.post('/provisioned-devices/:id/rotate-key', param('id').isMongoId(), validate, adminController.rotateProvisionedKey)
 
 router.post('/provisioned-devices/:id/rotate-broker-secret', param('id').isMongoId(), validate, adminController.rotateBrokerSecret)
+
+// Kho firmware cho trạm nạp: ảnh cài đặt gộp, kiểm ở service (factoryImageProblem)
+const firmwareUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FACTORY_IMAGE_BYTES, files: 1 } })
+router.post('/firmware-images', firmwareUpload.single('file'),
+  body('version').isString().trim().matches(FIRMWARE_VERSION_PATTERN),
+  body('note').optional().isString().trim().isLength({ max: 200 }), validate,
+  adminController.uploadFirmwareImage,
+)
+router.get('/firmware-images', adminController.listFirmwareImages)
+router.get('/firmware-images/:id/file', param('id').isMongoId(), validate, adminController.downloadFirmwareImage)
+router.delete('/firmware-images/:id', param('id').isMongoId(), validate, adminController.deleteFirmwareImage)
 
 export default router

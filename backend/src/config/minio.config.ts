@@ -58,6 +58,14 @@ export async function putObject(key: string, body: Buffer, contentType: string):
   await c.putObject({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType }).promise()
 }
 
+// Đọc cả file về bộ nhớ: dùng cho file nhỏ phải trả qua route có đăng nhập (ảnh cài đặt firmware)
+export async function getObject(key: string): Promise<Buffer> {
+  if (isLocalStorage()) return fs.readFile(localPath(key))
+  const c = await s3()
+  const result = await c.getObject({ Bucket: bucket(), Key: key }).promise()
+  return Buffer.from(result.Body as Uint8Array)
+}
+
 export async function removeObject(key: string): Promise<void> {
   if (isLocalStorage()) {
     await fs.rm(localPath(key), { force: true })

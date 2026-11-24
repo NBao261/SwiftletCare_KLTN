@@ -70,7 +70,7 @@ type StockRecord = Pick<IProvisionedDevice,
   '_id' | 'device_id' | 'kind' | 'claimed_at' | 'revoked_at' | 'revoke_reason' | 'created_by' | 'created_at' | 'chip_mac'>
 
 export async function listProvisionedDevices(query: {
-  kind?: string; claimed?: string; revoked?: string; deviceId?: string; page?: string | number; limit?: string | number
+  kind?: string; claimed?: string; revoked?: string; deviceId?: string; chipMac?: string; page?: string | number; limit?: string | number
 }): Promise<{ records: Array<StockRecord & { stock_status: StockStatus }>; total: number; page: number; limit: number }> {
   const filter: Record<string, unknown> = {}
   if (query.kind) filter.kind = query.kind
@@ -80,6 +80,8 @@ export async function listProvisionedDevices(query: {
   if (query.revoked === 'false') filter.revoked_at = null
   // Màn nạp tìm đúng mục kho của bo mạch đang cắm (mã đọc từ chip)
   if (query.deviceId) filter.device_id = query.deviceId
+  // Bo đã nạp trước đây mà mất mã (nạp lại toàn bộ chip): nhận ra mục kho qua MAC
+  if (query.chipMac) filter.chip_mac = query.chipMac.toUpperCase()
 
   const { page, skip, limit } = paginate(query.page, query.limit)
   const [records, total] = await Promise.all([
