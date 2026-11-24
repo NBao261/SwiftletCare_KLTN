@@ -50,6 +50,14 @@ export function suggestDeviceId(mac: string): string {
   return `ctl-${mac.slice(-6).toLowerCase()}`
 }
 
+// Mã đã thu hồi vẫn nằm trong kho: đề xuất mã kế tiếp (ctl-a1b2c3 → ctl-a1b2c3-2 → ctl-a1b2c3-3), trong 40 ký tự
+export function nextDeviceId(revokedId: string): string {
+  const match = /^(.*)-(\d{1,2})$/.exec(revokedId)
+  const [base, next] = match && Number(match[2]) >= 2 ? [match[1], Number(match[2]) + 1] : [revokedId, 2]
+  const suffix = `-${next}`
+  return `${base.slice(0, 40 - suffix.length)}${suffix}`
+}
+
 export function buildSetCommand(payload: IdentityPayload): string {
   const body = { deviceId: payload.deviceId, brokerSecret: payload.brokerSecret, broker: payload.broker ?? '', force: payload.force === true }
   return `SC SET ${JSON.stringify(body)}\n`
@@ -67,7 +75,7 @@ export const CHIP_ERROR_TEXT: Record<string, string> = {
 }
 
 // Web Serial chưa có trong lib.dom của TypeScript: khai phần đang dùng
-interface SerialPortLike {
+export interface SerialPortLike {
   open(options: { baudRate: number }): Promise<void>
   close(): Promise<void>
   setSignals?(signals: { dataTerminalReady?: boolean; requestToSend?: boolean }): Promise<void>
@@ -91,7 +99,7 @@ const INFO_RETRY_MS = 500
 const SET_TIMEOUT_MS = 8_000
 
 export class SerialError extends Error {
-  constructor(public readonly code: 'NO_PORT' | 'TIMEOUT' | 'DISCONNECTED' | 'UNSUPPORTED', message: string) {
+  constructor(public readonly code: 'NO_PORT' | 'TIMEOUT' | 'DISCONNECTED' | 'UNSUPPORTED' | 'ABORTED', message: string) {
     super(message)
   }
 }
@@ -103,14 +111,19 @@ export class DeviceSerial {
   private waiters: Array<(reply: ChipReply) => void> = []
   private closed = false
 
-  async connect(): Promise<void> {
+  // `port`: cổng vừa trả lại sau khi nạp firmware (detach), không hỏi chọn cổng lần nữa
+  async connect(port?: SerialPortLike): Promise<void> {
     const serial = serialApi()
     if (!serial) throw new SerialError('UNSUPPORTED', 'Trình duyệt không hỗ trợ kết nối USB. Dùng Chrome hoặc Edge trên máy tính.')
-    try {
-      this.port = await serial.requestPort()
-    } catch {
-      throw new SerialError('NO_PORT', 'Chưa chọn cổng. Cắm bo mạch rồi chọn cổng của nó (thường là CP210x hoặc CH340).')
+    if (port) this.port = port
+    else {
+      try {
+        this.port = await serial.requestPort()
+      } catch {
+        throw new SerialError('NO_PORT', 'Chưa chọn cổng. Cắm bo mạch rồi chọn cổng của nó (thường là CP210x hoặc CH340).')
+      }
     }
+    this.closed = false
     await this.port.open({ baudRate: BAUD_RATE })
     // Thả chân EN/IO0 như esptool để bo chạy firmware, không kẹt ở chế độ nạp
     await this.port.setSignals?.({ dataTerminalReady: false, requestToSend: false })
@@ -164,10 +177,11 @@ export class DeviceSerial {
     })
   }
 
-  // Hỏi lại mỗi 0,5 giây tới khi bo khởi động xong và trả lời
-  async info(timeoutMs = INFO_TIMEOUT_MS): Promise<ChipInfo> {
+  // Hỏi lại mỗi 0,5 giây tới khi bo khởi động xong và trả lời; `signal` dừng chờ khi Admin chọn nạp firmware
+  async info(timeoutMs = INFO_TIMEOUT_MS, signal?: AbortSignal): Promise<ChipInfo> {
     const deadline = Date.now() + timeoutMs
     while (Date.now() < deadline) {
+      if (signal?.aborted) throw new SerialError('ABORTED', 'Đã dừng chờ bo mạch')
       await this.send('SC INFO\n')
       const reply = await this.nextReply(INFO_RETRY_MS)
       if (reply?.ok && typeof reply.mac === 'string') {
@@ -182,6 +196,13 @@ export class DeviceSerial {
     const reply = await this.nextReply(SET_TIMEOUT_MS)
     if (!reply) throw new SerialError('TIMEOUT', 'Bo mạch không xác nhận đã ghi. Cắm lại rồi nạp lại.')
     return reply
+  }
+
+  // Đóng cổng nhưng trả lại đối tượng cổng cho esptool-js (nạp firmware), rồi connect(port) để nói chuyện tiếp
+  async detach(): Promise<SerialPortLike | null> {
+    const port = this.port
+    await this.close()
+    return port
   }
 
   async close(): Promise<void> {

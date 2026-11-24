@@ -5,6 +5,8 @@ export interface ListDeviceStockQuery {
   kind?: ProvisionedDeviceKind
   // đúng một mã: màn nạp tìm mục kho của bo mạch đang cắm
   deviceId?: string
+  // MAC của chip: bo mất mã vẫn tìm được mục kho
+  chipMac?: string
   page?: number
   limit?: number
 }

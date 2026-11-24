@@ -2,6 +2,7 @@
 import { MulterError } from 'multer'
 import { AppError } from '@/utils/appError.util'
 import logger from '@/utils/logger.util'
+import { loggablePath } from '@/utils/requestLog.util'
 
 interface MongoError extends Error {
   code?: number
@@ -9,7 +10,7 @@ interface MongoError extends Error {
 }
 
 export function errorHandler(err: MongoError | AppError | MulterError, req: Request, res: Response, _next: NextFunction): void {
-  logger.error('Unhandled error', { err, path: req.path, method: req.method })
+  logger.error('Unhandled error', { err, path: loggablePath(req), method: req.method })
 
   if (err instanceof AppError) {
     res.status(err.statusCode).json({

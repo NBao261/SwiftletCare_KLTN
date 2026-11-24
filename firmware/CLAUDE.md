@@ -9,6 +9,7 @@ Requirements are Report 3 (`docs/reports/report3-srs.md`), the design Report 4 (
 ```bash
 pio run -e esp32dev                    # build only, no board needed
 pio run -e esp32dev --target upload    # flash over USB (only when firmware code changes)
+pio run -e esp32prod -t factory        # merged factory.bin (tools/factory_image.py) uploaded to the stock screen's firmware catalog
 pio device monitor -b 115200           # serial log
 pio test -e native                     # host-side unit tests: test_fuzzy, test_filter, test_noise_anomaly, test_pump_dry, test_actuator_current, test_relay_override, test_command_filter, test_alert_queue, test_remote_command, test_reset_reason, test_serial_provisioning, test_weather_compensation
 pio run -e modbus_scan                 # standalone RS485 slave-ID/baudrate scanner (test_noise_rs485.cpp only)
