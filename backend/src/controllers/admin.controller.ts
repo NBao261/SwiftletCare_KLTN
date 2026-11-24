@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import * as adminService from '@/services/admin.service'
 import * as provisionedDeviceService from '@/services/provisionedDevice.service'
 import * as firmwareImageService from '@/services/firmwareImage.service'
+import * as firmwareRolloutService from '@/services/firmwareRollout.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 import type { Role } from '@/types'
 
@@ -107,4 +108,28 @@ export const downloadFirmwareImage = asyncHandler(async (req: Request, res: Resp
 export const deleteFirmwareImage = asyncHandler(async (req: Request, res: Response) => {
   await firmwareImageService.deleteFirmwareImage(req.user._id, req.params.id)
   res.json({ success: true, data: null })
+})
+
+// Đợt cập nhật firmware từ xa
+export const listFirmwareRollouts = asyncHandler(async (_req: Request, res: Response) => {
+  res.json({ success: true, data: await firmwareRolloutService.listRollouts() })
+})
+
+export const createFirmwareRollout = asyncHandler(async (req: Request, res: Response) => {
+  const rollout = await firmwareRolloutService.createRollout(req.user._id, {
+    image_id: req.body.image_id as string,
+    node_ids: req.body.node_ids as string[],
+    canary_node_ids: req.body.canary_node_ids as string[] | undefined,
+    note: req.body.note as string | undefined,
+  })
+  res.status(201).json({ success: true, data: rollout })
+})
+
+export const changeFirmwareRollout = (action: 'pause' | 'resume' | 'promote' | 'cancel') =>
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json({ success: true, data: await firmwareRolloutService.changeRollout(req.user._id, req.params.id, action) })
+  })
+
+export const retryFirmwareRolloutTarget = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await firmwareRolloutService.retryTarget(req.user._id, req.params.id, req.params.nodeId) })
 })

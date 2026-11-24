@@ -700,6 +700,12 @@ ensureCollection("firmwareimages", {
     "sha256": {
       "bsonType": "string"
     },
+    "app_size": {
+      "bsonType": "number"
+    },
+    "app_sha256": {
+      "bsonType": "string"
+    },
     "note": {
       "bsonType": ["string", "null"]
     },
@@ -713,9 +719,98 @@ ensureCollection("firmwareimages", {
       "bsonType": ["date", "null"]
     }
   },
-  "required": ["version", "object_key", "size", "sha256", "uploaded_by"]
+  "required": ["version", "object_key", "size", "sha256", "app_size", "app_sha256", "uploaded_by"]
 })
 db.getCollection("firmwareimages").createIndex({"version":1}, {"unique":true})
+
+// ── firmwarerollouts (model FirmwareRollout) ──
+ensureCollection("firmwarerollouts", {
+  "bsonType": "object",
+  "properties": {
+    "image_id": {
+      "bsonType": "objectId"
+    },
+    "version": {
+      "bsonType": "string"
+    },
+    "status": {
+      "bsonType": ["string", "null"],
+      "enum": ["ACTIVE", "PAUSED", "COMPLETED", "CANCELLED", null]
+    },
+    "stage": {
+      "bsonType": ["string", "null"],
+      "enum": ["CANARY", "ALL", null]
+    },
+    "paused_reason": {
+      "bsonType": ["string", "null"],
+      "enum": ["FAILURE", "ADMIN", null]
+    },
+    "note": {
+      "bsonType": ["string", "null"]
+    },
+    "targets": {
+      "bsonType": ["array", "null"],
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "node_id": {
+            "bsonType": "objectId"
+          },
+          "device_id": {
+            "bsonType": "string"
+          },
+          "from_version": {
+            "bsonType": "string"
+          },
+          "canary": {
+            "bsonType": ["bool", "null"]
+          },
+          "state": {
+            "bsonType": ["string", "null"],
+            "enum": ["QUEUED", "SENT", "SUCCEEDED", "FAILED", "CANCELLED", "SKIPPED", null]
+          },
+          "attempts": {
+            "bsonType": ["number", "null"]
+          },
+          "sent_at": {
+            "bsonType": ["date", "null"]
+          },
+          "finished_at": {
+            "bsonType": ["date", "null"]
+          },
+          "reason": {
+            "bsonType": ["string", "null"]
+          },
+          "token_hash": {
+            "bsonType": ["string", "null"]
+          },
+          "token_expires_at": {
+            "bsonType": ["date", "null"]
+          }
+        },
+        "required": ["node_id", "device_id", "from_version"]
+      }
+    },
+    "created_by": {
+      "bsonType": "objectId"
+    },
+    "finished_at": {
+      "bsonType": ["date", "null"]
+    },
+    "_id": {
+      "bsonType": ["objectId", "null"]
+    },
+    "created_at": {
+      "bsonType": ["date", "null"]
+    },
+    "updated_at": {
+      "bsonType": ["date", "null"]
+    }
+  },
+  "required": ["image_id", "version", "created_by"]
+})
+db.getCollection("firmwarerollouts").createIndex({"targets.node_id":1,"status":1})
+db.getCollection("firmwarerollouts").createIndex({"targets.token_hash":1}, {"sparse":true})
 
 // ── harvestbatches (model HarvestBatch) ──
 ensureCollection("harvestbatches", {

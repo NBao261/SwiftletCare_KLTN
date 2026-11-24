@@ -80,6 +80,8 @@ services:
       # Cả hội đồng có thể ra Internet chung một IP (docs/bird-counting-plan.md §15.3)
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
       OTA_ALLOWED_HOSTS: ${OTA_ALLOWED_HOSTS:-}
+      # Bộ điều khiển tải firmware của đợt cập nhật qua chính tên miền này (chứng chỉ Let's Encrypt của staging-cert.sh)
+      OTA_DOWNLOAD_BASE_URL: https://${DOMAIN}/api
       FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase-service-account.json
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}

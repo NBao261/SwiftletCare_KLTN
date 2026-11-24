@@ -9,6 +9,7 @@ import { CoefficientProposal } from '@/models/coefficientProposal.model'
 import { SensorNode, CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { FirmwareImage } from '@/models/firmwareImage.model'
+import { FirmwareRollout } from '@/models/firmwareRollout.model'
 import { HarvestBatch } from '@/models/harvestBatch.model'
 import { HarvestCycle } from '@/models/harvestCycle.model'
 import { HouseHealthDay } from '@/models/houseHealthDay.model'
@@ -40,7 +41,7 @@ export const ALL_MODELS: AnyModel[] = [
   Recommendation,
   RecommendationRule,
   Alert, AudioTrack, AuditLog, BirdCountBucket, BirdCountRecord, SensorNode, CameraNode, CoefficientProposal,
-  Farm, FirmwareImage, HarvestBatch, HarvestCycle, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, MaintenancePlan, Notification, ParameterReview,
+  Farm, FirmwareImage, FirmwareRollout, HarvestBatch, HarvestCycle, House, HouseHealthDay, HouseHealthReport, Zone, Invitation, MaintenancePlan, Notification, ParameterReview,
   PushToken, ProvisionedDevice, RelayOverrideLog, SystemSetting, Telemetry, User, WeatherObservation, WorkOrder,
 ]
 

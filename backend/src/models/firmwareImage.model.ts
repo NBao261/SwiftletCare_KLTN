@@ -7,6 +7,9 @@ export interface IFirmwareImage extends Document {
   object_key: string
   size: number
   sha256: string
+  // Phần firmware (từ 0x10000) gửi cho máy khi cập nhật từ xa
+  app_size: number
+  app_sha256: string
   note?: string
   uploaded_by: Types.ObjectId
   created_at: Date
@@ -18,6 +21,8 @@ const firmwareImageSchema = new Schema<IFirmwareImage>(
     object_key:  { type: String, required: true, select: false },
     size:        { type: Number, required: true },
     sha256:      { type: String, required: true },
+    app_size:    { type: Number, required: true },
+    app_sha256:  { type: String, required: true },
     note:        { type: String, trim: true, maxlength: 200 },
     uploaded_by: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

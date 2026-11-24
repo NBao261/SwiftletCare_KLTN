@@ -23,3 +23,31 @@ export function factoryImageProblem(image: Buffer, version: string): string | nu
   }
   return null
 }
+
+// Phần firmware trong ảnh cài đặt: merge_bin đặt firmware cuối cùng, nên từ APP_OFFSET tới hết trùng firmware.bin (file OTA)
+export const appImageOf = (image: Buffer): Buffer => image.subarray(APP_OFFSET)
+
+// Heartbeat chưa báo bản mới sau chừng này thì coi là lỗi (máy đã quay về bản cũ); link tải OTA cũng hết hạn theo
+export const OTA_CONFIRM_TIMEOUT_MS = 30 * 60 * 1000
+
+// Firmware < 1.4.0 bỏ qua lệnh RESTART/OTA: API báo 202 mà thiết bị không làm gì
+export const COMMAND_SUPPORT_SINCE = '1.4.0'
+
+// Âm khi a cũ hơn b, theo số (2.10.0 sau 2.9.0)
+export function compareFirmwareVersions(a: string, b: string): number {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] - pb[i]
+  return 0
+}
+
+// Không đúng dạng (VD "1.4.0-beta") coi như chưa hỗ trợ
+export function versionAtLeast(version: string, min: string): boolean {
+  const a = version.split('.').map(Number)
+  const b = min.split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    if (!Number.isInteger(a[i])) return false
+    if (a[i] !== b[i]) return a[i] > b[i]
+  }
+  return true
+}
