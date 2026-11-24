@@ -3,7 +3,7 @@
 
 > Nguồn sự thật duy nhất (single source of truth) về thiết kế FE của SwiftletCare. Mọi trang, component, màu sắc khi code (kể cả qua Claude Code) phải bám theo file này. Nếu thiếu quy định cho 1 tình huống mới — bổ sung vào đây trước, không tự sáng tạo lệch chuẩn.
 
-**Phiên bản:** 2.18.0 · **Cập nhật:** 23/11/2026 · **Thay thế:** v2.17.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
+**Phiên bản:** 2.19.0 · **Cập nhật:** 24/11/2026 · **Thay thế:** v2.18.0 · **Theo:** Report 3 – SRS 3.0.0 (`docs/reports/report3-srs.md`) và Report 4 – SDD (`docs/reports/report4-sdd.md`)
 
 ---
 
@@ -55,6 +55,14 @@
 ---
 
 ## 0. Changelog
+
+### v2.18.0 → v2.19.0 (menu đồng bộ giữa các vai trò)
+
+| # | Thay đổi |
+|---|---|
+| 1 | **Một danh mục menu cho cả 4 vai trò** (`components/layouts/menuCatalog.ts`) thay 4 file `<Role>Layout.tsx`: cùng một trang thì cùng tên, icon (Phosphor), nhóm tab ở mọi vai trò; mỗi vai trò chỉ thấy mục, tab `MENU_ACCESS` cho phép. Bốn nhóm cố định Theo dõi · Vận hành · Chuyên môn · Hệ thống; nhóm việc chính của vai trò đứng đầu. 12.5 viết lại. |
+| 2 | Nhóm chỉ đọc ghi "(chỉ đọc)" và thu gọn được (Chuyên gia: Theo dõi, Vận hành); nhóm ít dùng thu gọn được (Chuyên môn của chủ nhà yến, kỹ thuật viên). Bỏ giới hạn "≤ 12 mục": tiêu chí là không cuộn ở 1440×900. |
+| 3 | Tên thống nhất: Thiết bị (bỏ "Thiết bị & Cảm biến", "Danh sách thiết bị"), Trang trại (bỏ "Nhà được giao" ở menu), Sức khoẻ & báo cáo; Chuyên môn của chủ nhà yến tách thành các mục như của chuyên gia thay một mục 9 tab. Icon tự vẽ của menu Admin đổi sang Phosphor. |
 
 ### v2.17.0 → v2.18.0 (web đủ việc của Farm Technician, G-33, `docs/reports/todo-web-all-roles-1123.md`)
 
@@ -250,7 +258,7 @@ SwiftletCare Ops Console là phần mềm vận hành kỹ thuật (giám sát c
 
 1. **Nền xám là sân khấu, nền trắng là diễn viên.** `#EAEAEA` (canvas) không bao giờ là nơi đặt nội dung trực tiếp — mọi text/số liệu/control đều nằm trong 1 khung trắng nổi lên trên.
 2. **Không pha màu ngoài hệ thống — tuyệt đối.** Kể cả các sắc xám/đen cũng phải nằm trong đúng 1 hue ấm (~28°) đã chốt ở mục 2 — không dùng lại bất kỳ mã xám/đen "mặc định của framework" (VD `#000`, `#333`, Tailwind `slate/zinc` mặc định) vì các mã đó thường có tông lạnh khác hue hệ thống.
-3. **Sidebar/Topbar dùng chung cho 4 role, chỉ đổi theo 4.1.** Nội dung menu của từng role nằm trong `<Role>Layout.tsx`; khung (sidebar, header, menu avatar, dock) chỉ sửa ở `components/layouts/` và áp cho cả 4 role cùng lúc.
+3. **Sidebar/Topbar dùng chung cho 4 role, chỉ đổi theo 4.1.** Menu của mọi role lấy từ một danh mục (`menuCatalog.ts`, 12.5); khung (sidebar, header, menu avatar, dock) chỉ sửa ở `components/layouts/` và áp cho cả 4 role cùng lúc.
 4. **Không có gì "giả" mà không được gắn nhãn.** Số liệu chưa có API thật phải tự khai báo (mục 7).
 5. **Một ngôn ngữ chữ, một hệ bo góc, một hệ shadow, một hệ xám** — dùng xuyên suốt, không phát sinh biến thể lẻ tẻ giữa các trang/role (mục 9).
 
@@ -563,12 +571,12 @@ Ticket, chat ticket, SLA và thanh tiến độ ticket đã gỡ (Report 3 §8, 
 
 ### 4.1. Sidebar & Topbar
 
-Khung dùng chung 4 role (`components/layouts/`); menu của từng role khai trong `<Role>Layout.tsx` (12.5).
+Khung dùng chung 4 role (`components/layouts/`); menu của từng role lấy từ danh mục chung `menuCatalog.ts` (12.5).
 
-- **Sidebar** `w-64`: logo, rồi các nhóm menu (không khối chào, không nút đăng xuất). Menu ≤ 12 mục mỗi role, không cuộn ở 1440×900. Nhóm có `collapsible: true` thu gọn bằng mũi tên cạnh tiêu đề, nhớ trong `localStorage`; nhóm chứa trang đang mở luôn mở. Mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung. Nhãn nhóm là chỗ duy nhất được in hoa.
+- **Sidebar** `w-64`: logo, rồi các nhóm menu (không khối chào, không nút đăng xuất). Menu không cuộn ở 1440×900; nhóm ít dùng hoặc chỉ đọc thu gọn được. Nhóm có `collapsible: true` thu gọn bằng mũi tên cạnh tiêu đề, nhớ trong `localStorage`; nhóm chứa trang đang mở luôn mở. Mục menu có `tabs`: sidebar chỉ hiện mục cha và sáng ở mọi trang con, header lấy tên mục cha, hàng tab pill (`common/SectionTabs`) nằm đầu vùng nội dung. Nhãn nhóm là chỗ duy nhất được in hoa.
 - **Header:** trái là tên trang (`<h1>`, điện thoại `text-xl` xuống tối đa 2 dòng) + breadcrumb trang chi tiết; phải là VI/EN (cao 36px, không popup; dưới `sm` nằm trong menu avatar) · chuông · avatar. Khe `HeaderActions` (thanh phạm vi) cùng hàng từ 1280px, dưới 1280px xuống hàng riêng ngay dưới; `AppShell` đo chiều cao header để chừa đúng chỗ.
 - **Menu avatar** (mọi khổ màn): tên, email, vai trò · Cài đặt · Quyền riêng tư · Đăng xuất. Đây là chỗ duy nhất có Cài đặt và Đăng xuất; route `/settings` vẫn trong `MENU_ACCESS`.
-- **Dock điện thoại:** 4 mục (`firstDockItems` hoặc `dockItems` của role) và mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại theo nhóm, kèm badge; chấm đỏ trên "Thêm" khi một mục bên trong có badge. Dock có "Thêm" thì mục đang mở chỉ tô nền, không hiện nhãn, để 5 nút vừa màn 360px.
+- **Dock điện thoại:** 4 mục (`dock` của role trong `menuCatalog.ts`) và mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại theo nhóm, kèm badge; chấm đỏ trên "Thêm" khi một mục bên trong có badge. Dock có "Thêm" thì mục đang mở chỉ tô nền, không hiện nhãn, để 5 nút vừa màn 360px.
 
 **Đúng theo role** (✓ có, — không có):
 
@@ -1200,9 +1208,8 @@ frontend/src/
 │   │   ├── domain-expert/     (đích) alert-verdicts/ · health-reports/ · detection-tuning/ · change-reviews/
 │   │   │                      · coefficient-proposals/ · counting-ring/ · counting-schedule/
 │   │   └── technician/        devices/ · alerts/ · farms/ · onboarding/ · ota/
-│   └── layouts/               Đúng 7 file — 4 của role, 3 dùng chung
-│                              AdminLayout · FarmOwnerLayout · DomainExpertLayout · TechnicianLayout
-│                              AppShell · AppSidebar · AppHeader
+│   └── layouts/               Khung dùng chung và danh mục menu của mọi role
+│                              menuCatalog · AppShell · AppSidebar · AppHeader
 │
 ├── pages/                     CHỈ chứa *Page.tsx
 │   ├── admin/                 AdminUsersPage · AdminAccountRequestsPage · AdminSystemHealthPage
@@ -1287,14 +1294,14 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 - Trang không thuộc nghiệp vụ role nào để thẳng ở gốc `pages/`; màn đăng nhập/đăng ký/nhận lời mời ở `pages/auth/`.
 - **Trong `pages/` không được có gì ngoài `*Page.tsx`.** Modal, tab, cột bảng, hằng số riêng của trang đều nằm ở `components/features/<role>/<area>/`.
 
-### 12.5. `layouts/` — mỗi role một layout, menu viết trong file
+### 12.5. `layouts/` — một danh mục menu cho mọi role
 
-- 4 file `<Role>Layout.tsx` **khai mảng `menuSections` đầy đủ ngay đầu file**, mỗi mục là `{ label, path, icon, tabs? }` viết literal — không tra từ bảng nav dùng chung. Mở `AdminLayout.tsx` là thấy trọn menu của Admin. `tabs` gộp nhiều trang cùng một việc vào một mục menu (4.1); mỗi tab vẫn cần dòng `MENU_ACCESS` và nhãn trong `navigation.i18n.ts`.
-- Không có nhóm "Khác" hay mục Cài đặt trong menu: Cài đặt ở menu avatar (4.1). Nhóm dài, ít dùng khai `collapsible: true`.
-- `dockItems` khai thêm khi dock mobile cần chọn tay (Admin có 9 mục nên phải chọn); các role khác dùng `firstDockItems(menuSections)` lấy 4 mục đầu.
+- `menuCatalog.ts` khai **một lần** mọi mục menu theo 4 nhóm cố định (Theo dõi · Vận hành · Chuyên môn · Hệ thống), mỗi mục `{ label, path, icon, tabs? }`: cùng một trang thì cùng tên, cùng icon Phosphor, cùng nhóm tab ở mọi vai trò (test `menuAccess.test.ts`). `tabs` gộp nhiều trang cùng một việc vào một mục menu (4.1); mỗi tab vẫn cần dòng `MENU_ACCESS` và nhãn trong `navigation.i18n.ts` (test bắt nhãn thiếu).
+- `ROLE_PLAN` chỉ chọn cho mỗi role: thứ tự nhóm (nhóm việc chính đứng đầu), nhóm nào chỉ đọc (`readOnly`: thêm "(chỉ đọc)" và thu gọn được) hay chỉ thu gọn (`collapsible`), và 4 mục dock điện thoại. Mục, tab role đó không vào được (theo `MENU_ACCESS`) tự rơi khỏi menu; mục chỉ còn một tab thì mở thẳng trang đó, không hiện tab.
+- Không có nhóm "Khác" hay mục Cài đặt trong menu: Cài đặt ở menu avatar (4.1).
 - `AppShell` giữ toàn bộ khung (sidebar + header + nội dung + Toast) và mount listener socket cảnh báo. `AppSidebar` thuần trình bày, render cùng menu ở 2 breakpoint (rail `w-64` desktop + dock nổi mobile). `AppHeader` giữ tên trang (`h1`) + breadcrumb + khe thanh phạm vi + ngôn ngữ + chuông + menu avatar.
-- `RoleLayout` trong `App.tsx` chọn layout theo `user.role` **lúc chạy**, vì URL của SwiftletCare không có tiền tố role (`/devices` dùng chung 3 role) nên không gắn layout theo nhánh route được.
-- **Thêm/bớt mục menu của một role: sửa đúng file layout của role đó, không đụng chỗ nào khác.** Nếu mục đó cũng cần chặn `returnTo` sau đăng nhập thì thêm một dòng vào bảng `MENU_ACCESS` trong `constants/roles.ts`.
+- `RoleLayout` trong `App.tsx` dựng `AppShell` với `roleMenu(user.role)` **lúc chạy**, vì URL của SwiftletCare không có tiền tố role (`/devices` dùng chung 3 role) nên không gắn layout theo nhánh route được.
+- **Thêm trang vào menu:** thêm mục (hoặc tab) vào đúng nhóm trong `menuCatalog.ts`, dòng `MENU_ACCESS` trong `constants/roles.ts` cho các role được vào, và nhãn trong `navigation.i18n.ts`. Cho một role thấy hay không thấy một mục là đổi `MENU_ACCESS`, không sửa danh mục.
 
 ### 12.6. Ba tầng component — phân biệt `ui/` · `common/` · `features/`
 
@@ -1334,7 +1341,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
    | `ADMIN_ONLY` | Admin | Quản trị hệ thống, kho thiết bị và in nhãn |
 
    Domain Expert **không bao giờ** thuộc nhóm có hành động ghi vận hành (relay, ghi thu hoạch, acknowledge cảnh báo). Trang dùng chung có nút ghi (VD Thu hoạch mà chuyên gia chỉ xem) thì thêm chuyên gia vào `allow` và ẩn nút bằng `usePermission` (13.8).
-3. Cần lên sidebar? → thêm `{ label, path, icon }` vào `menuSections` trong `<Role>Layout.tsx`, và thêm dòng vào `MENU_ACCESS` (`constants/roles.ts`).
+3. Cần lên sidebar? → thêm `{ label, path, icon }` vào đúng nhóm trong `components/layouts/menuCatalog.ts`, dòng `MENU_ACCESS` (`constants/roles.ts`) và nhãn trong `navigation.i18n.ts`.
 4. Endpoint mới → `apis/<role>/<resource>.api.ts`; hook bọc React Query → `hooks/<role>/use<Resource>.ts`.
 5. Component riêng của màn → `components/features/<role>/<area>/`. **Không để trong `pages/`.**
 6. Kiểu dữ liệu mới → `types/<module>.types.ts` (theo module backend), barrel `types/index.ts` tự re-export.
@@ -1356,7 +1363,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 | `pages/<role>/` | `[Role][ChứcNăng]Page.tsx` | `AdminUsersPage.tsx` · `FarmOwnerHarvestPage.tsx` · `TechnicianDevicesPage.tsx` |
 | `pages/auth/` + 2 trang gốc `pages/` | `[ChứcNăng]Page.tsx` — không role | `LoginPage.tsx` · `SettingsPage.tsx` · `ForbiddenPage.tsx` |
 | `components/features/<role>/<area>/` | `[TênFeature].tsx` — không tiền tố role; cột bảng `<area>Columns.tsx` (camelCase, vì là hàm build cột chứ không phải component) | `CreateUserModal.tsx` · `CreateHarvestModal.tsx` · `RelayToggle.tsx` · `userColumns.tsx` |
-| `components/layouts/` | `[Role]Layout.tsx` cho layout của role · `App[Phần].tsx` cho khung dùng chung | `AdminLayout.tsx` · `AppSidebar.tsx` · `AppHeader.tsx` |
+| `components/layouts/` | `App[Phần].tsx` cho khung dùng chung · `menuCatalog.ts` cho danh mục menu | `AppShell.tsx` · `AppSidebar.tsx` · `menuCatalog.ts` |
 | `components/ui/` · `components/common/` | `[TênFeature].tsx` — **không** tiền tố role | `DataTable.tsx` · `ConfirmModal.tsx` · `ScopeFilter.tsx` |
 | `hooks/<bucket>/` | `use[Resource].ts` — camelCase, **bắt buộc** bắt đầu bằng `use` | `useUsers.ts` · `useFarms.ts` · `usePermission.ts` |
 | `apis/<bucket>/` | `<resource>.api.ts` | `users.api.ts` · `farms.api.ts` |
@@ -1376,7 +1383,7 @@ Không tự sinh thư mục tuỳ ý. Chỉ 4 trường hợp dưới đây đư
 | Tình huống | Tạo ở đâu | Điều kiện |
 |---|---|---|
 | Thêm một **nhóm màn hình mới** cho role đã có | `components/features/<role>/<area-mới>/` | `<area>` đặt theo danh từ nghiệp vụ số nhiều, kebab-case nếu nhiều từ: `harvest/`, `account-requests/` |
-| Thêm **role mới** vào hệ thống | Đồng thời 5 chỗ: `pages/<role>/` · `routes/<role>.routes.tsx` · `components/layouts/<Role>Layout.tsx` · `apis/<role>/` và `hooks/<role>/` (chỉ khi có endpoint riêng) | Phải cập nhật luôn `Role` trong `types/common.types.ts`, `ROLE_LABEL` + `ROLE_HOME` + `MENU_ACCESS` trong `constants/roles.ts`, và nhánh `switch` trong `RoleLayout` (`App.tsx`) |
+| Thêm **role mới** vào hệ thống | Đồng thời 5 chỗ: `pages/<role>/` · `routes/<role>.routes.tsx` · `ROLE_PLAN` trong `components/layouts/menuCatalog.ts` · `apis/<role>/` và `hooks/<role>/` (chỉ khi có endpoint riêng) | Phải cập nhật luôn `Role` trong `types/common.types.ts`, `ROLE_LABEL` + `ROLE_HOME` + `MENU_ACCESS` trong `constants/roles.ts` |
 | Một file trong `shared/` chuyển thành **chỉ 1 role dùng** (hoặc ngược lại) | Dời sang bucket đúng, tạo thư mục đích nếu chưa có | Kiểm bằng đồ thị import thật, không đoán. Một role dùng → về thư mục role; >= 2 role → `shared/` |
 | Thêm một **lớp quan tâm mới** (VD `workers/`) | Cấp 1 trong `src/` | Chỉ khi thật sự là một lớp mới, và phải bổ sung vào cây ở mục 12.2 trước khi code |
 
@@ -1473,7 +1480,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 - **[Bắt buộc]** Trang mới được chặn bằng `<RequireRole allow={...}>` trong `routes/<role>.routes.tsx`, nhóm role lấy từ `constants/roles.ts` — không viết mảng role literal tại chỗ.
 - **[Bắt buộc]** Ẩn/disable nút theo quyền dùng `usePermission(...)`, không rải `user.role === '...'` trong component (so sánh role của **dòng dữ liệu** để hiển thị — như cột role trong bảng user — thì được).
 - **[Bắt buộc]** Ẩn UI **không phải** là bảo mật. Hành động nhạy cảm phải được backend chặn; PR thêm nút mới cho role nào thì endpoint tương ứng phải cho phép đúng role đó (đối chiếu `requireRole` phía backend / spec).
-- **[Bắt buộc]** Thêm mục menu: sửa `menuSections` trong `<Role>Layout.tsx` **và** thêm dòng `MENU_ACCESS` trong `constants/roles.ts` (12.5).
+- **[Bắt buộc]** Thêm mục menu: thêm vào `menuCatalog.ts` **và** dòng `MENU_ACCESS` trong `constants/roles.ts` (12.5); không khai menu riêng cho một role.
 
 ### 13.9. Dữ liệu giả & tính năng chưa có
 
