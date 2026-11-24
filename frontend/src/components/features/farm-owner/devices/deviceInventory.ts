@@ -1,7 +1,7 @@
 import { isFaultDeviceStatus } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import type { CameraNode, DeviceStatus, House, SensorNode, Zone } from '@/types';
 
-// 1 thiết bị trên trang Thiết bị & Cảm biến (node cảm biến của Zone hoặc camera của cả nhà)
+// 1 thiết bị trên trang Thiết bị (node cảm biến của Zone hoặc camera của cả nhà)
 export interface DeviceItem {
   id: string;
   deviceId: string;
@@ -78,7 +78,7 @@ export function tallyDevices(devices: DeviceItem[]): DeviceTally {
   return tally;
 }
 
-// Cây Nhà → Zone → thiết bị cho trang Thiết bị & Cảm biến; bỏ thiết bị đã gỡ; O(nhà + Zone + thiết bị)
+// Cây Nhà → Zone → thiết bị cho trang Thiết bị; bỏ thiết bị đã gỡ; O(nhà + Zone + thiết bị)
 export function buildDeviceInventory({ houses, zones, sensors, cameras, zoneId }: InventoryInput): HouseInventory[] {
   const houseIdByZone = new Map(zones.map(zone => [zone._id, zone.house_id]));
   const zonesByHouse = new Map<string, Zone[]>();

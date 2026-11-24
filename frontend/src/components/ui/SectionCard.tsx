@@ -12,7 +12,7 @@ interface SectionCardProps {
   description?: ReactNode
   // Giải thích dài (quy tắc, lý do): hiện trong nút (i) cạnh tiêu đề thay vì đoạn chữ dưới card
   help?: ReactNode
-  // Nút/link bên phải header (VD "Xem tất cả", "Thiết bị & Cảm biến")
+  // Nút/link bên phải header (VD "Xem tất cả", "Thiết bị")
   action?: ReactNode
   className?: string
   children?: ReactNode

@@ -1,52 +1,60 @@
 import { describe, expect, it } from 'vitest';
-import { MENU_ACCESS } from '@/constants/roles';
+import { roleMenu } from '@/components/layouts/menuCatalog';
+import { MENU_ACCESS, canAccessPath } from '@/constants/roles';
+import { isNavigationKey } from '@/constants/navigation.i18n';
 import type { Role } from '@/types';
 
-// MENU_ACCESS và menu của <Role>Layout khai riêng (tránh import vòng): đọc nguyên văn file layout để hai chỗ luôn khớp
-const sources = import.meta.glob('/src/components/layouts/*Layout.tsx', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
-
-const LAYOUT_FILE: Record<Role, string> = {
-  ADMIN: '/src/components/layouts/AdminLayout.tsx',
-  FARM_OWNER: '/src/components/layouts/FarmOwnerLayout.tsx',
-  FARM_TECHNICIAN: '/src/components/layouts/TechnicianLayout.tsx',
-  DOMAIN_EXPERT: '/src/components/layouts/DomainExpertLayout.tsx',
-};
+const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN', 'DOMAIN_EXPERT'];
 
 // Trang mở từ chỗ khác nên không có mục menu: chi tiết, lắp thiết bị (từ trang thiết bị), cài đặt (menu ảnh đại diện)
 const OPENED_ELSEWHERE = ['/devices/detail', '/devices/onboarding', '/settings'];
 
-function menuPaths(role: Role): Set<string> {
-  const source = sources[LAYOUT_FILE[role]];
-  if (!source) throw new Error(`Không đọc được ${LAYOUT_FILE[role]}`);
-  return new Set([...source.matchAll(/path:\s*'([^']+)'/g)].map(match => match[1]));
+function menuPaths(role: Role): string[] {
+  return roleMenu(role).sections.flatMap(section => section.items.flatMap(item => [item.path, ...(item.tabs ?? []).map(tab => tab.path)]));
 }
 
-const ROLES = Object.keys(LAYOUT_FILE) as Role[];
-
-describe('menu của layout khớp MENU_ACCESS', () => {
+describe('menu theo vai trò từ danh mục chung', () => {
   for (const role of ROLES) {
-    it(`${role}: mọi trang vào được đều có mục menu hoặc tab`, () => {
-      const paths = menuPaths(role);
+    it(`${role}: mọi trang vào được đều có mục menu hoặc tab, và không mục nào trỏ tới trang bị chặn`, () => {
+      const paths = new Set(menuPaths(role));
       const missing = MENU_ACCESS
         .filter(entry => entry.roles.includes(role) && !OPENED_ELSEWHERE.includes(entry.path))
         .map(entry => entry.path)
         .filter(path => !paths.has(path));
       expect(missing).toEqual([]);
+      expect([...paths].filter(path => !canAccessPath(role, path))).toEqual([]);
     });
 
-    it(`${role}: mục menu nào cũng trỏ tới trang role này có quyền`, () => {
-      const allowed = new Set(
-        MENU_ACCESS.filter(entry => entry.roles.includes(role)).map(entry => entry.path),
-      );
-      const forbidden = [...menuPaths(role)].filter(path => {
-        const entry = MENU_ACCESS.find(candidate => path === candidate.path);
-        return entry !== undefined && !allowed.has(path);
-      });
-      expect(forbidden).toEqual([]);
+    it(`${role}: dock điện thoại đủ 4 mục có trong menu; tiêu đề nhóm, mục, tab đều có bản dịch`, () => {
+      const { sections, dock } = roleMenu(role);
+      expect(dock).toHaveLength(4);
+      const items = sections.flatMap(section => section.items);
+      for (const item of dock) expect(items).toContain(item);
+      const labels = [
+        ...sections.map(section => section.title),
+        ...items.flatMap(item => [item.label, ...(item.tabs ?? []).map(tab => tab.label)]),
+      ];
+      expect(labels.filter(label => !isNavigationKey(label))).toEqual([]);
     });
   }
+
+  it('cùng một trang thì cùng tên và icon ở mọi vai trò', () => {
+    const seen = new Map<string, { label: string; icon: unknown }>();
+    for (const role of ROLES) {
+      for (const item of roleMenu(role).sections.flatMap(section => section.items)) {
+        const first = seen.get(item.path);
+        if (first) expect({ label: item.label, icon: item.icon }).toEqual(first);
+        else seen.set(item.path, { label: item.label, icon: item.icon });
+      }
+    }
+  });
+
+  it('một tab duy nhất thì mục mở thẳng trang đó, không hiện tab', () => {
+    const expert = roleMenu('DOMAIN_EXPERT').sections.flatMap(section => section.items);
+    // Chuyên gia không vào Điều khiển tay: Tổng quan còn 2 tab
+    expect(expert.find(item => item.label === 'Tổng quan')?.tabs?.map(tab => tab.path)).toEqual(['/dashboard', '/overview']);
+    const technician = roleMenu('FARM_TECHNICIAN').sections.flatMap(section => section.items);
+    expect(technician.find(item => item.label === 'Tham số điều khiển')?.tabs?.map(tab => tab.path))
+      .toEqual(['/domain-expert/tuning', '/domain-expert/weather-rules']);
+  });
 });

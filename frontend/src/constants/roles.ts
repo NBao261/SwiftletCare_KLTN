@@ -73,7 +73,7 @@ export function getRoleHomePath(role: Role | undefined): string {
   return role ? ROLE_HOME[role] : '/dashboard'
 }
 
-// Phải khớp menuSections của <Role>Layout; không đọc từ layout vì sẽ import vòng. Path con đặt trước path cha
+// Menu của mọi role (components/layouts/menuCatalog.ts) lọc theo bảng này; không đọc từ menu vì sẽ import vòng. Path con đặt trước path cha
 export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
   { path: '/dashboard/scada',  roles: RELAY_CONTROL_ROLES },
