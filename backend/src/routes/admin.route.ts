@@ -48,8 +48,9 @@ router.put('/delete-requests/:id/reject',
   adminController.rejectDeletionRequest,
 )
 
+// Tối đa 40 ký tự như firmware nhận khi nạp qua USB
 router.post('/provisioned-devices',
-  body('device_id').isString().trim().matches(DEVICE_ID_PATTERN), body('kind').isIn(['SENSOR', 'CAMERA']),
+  body('device_id').isString().trim().isLength({ max: 40 }).matches(DEVICE_ID_PATTERN), body('kind').isIn(['SENSOR', 'CAMERA']),
   body('simulated').optional().isBoolean({ strict: true }),
   body('chip_mac').optional().isString().trim().toUpperCase().matches(CHIP_MAC_PATTERN), validate,
   adminController.createProvisionedDevice,

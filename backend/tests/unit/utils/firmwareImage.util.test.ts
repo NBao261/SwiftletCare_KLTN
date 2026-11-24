@@ -1,4 +1,4 @@
-import { APP_OFFSET, BOOTLOADER_OFFSET, MAX_FACTORY_IMAGE_BYTES, factoryImageProblem } from '@/utils/firmwareImage.util'
+import { APP_OFFSET, BOOTLOADER_OFFSET, MAX_FACTORY_IMAGE_BYTES, factoryImageProblem, isFirmwareObjectPath } from '@/utils/firmwareImage.util'
 
 // Ảnh giả: đủ dài, đầu bootloader và firmware đúng byte 0xE9, có dòng chào của phiên bản
 function image(version = '2.4.0', length = APP_OFFSET + 4096): Buffer {
@@ -29,5 +29,19 @@ describe('factoryImageProblem — ảnh cài đặt cho trạm nạp', () => {
   it('phiên bản gõ không khớp file thì báo; 2.4.1 không khớp file 2.4.10', () => {
     expect(factoryImageProblem(image('2.4.0'), '2.5.0')).toMatch(/không phải firmware 2\.5\.0/)
     expect(factoryImageProblem(image('2.4.10'), '2.4.1')).toMatch(/không phải firmware 2\.4\.1/)
+  })
+})
+
+describe('isFirmwareObjectPath — /files không phục vụ kho firmware', () => {
+  it('chặn mọi cách viết đường dẫn vào firmware/', () => {
+    for (const urlPath of ['/firmware/2.4.0-x.bin', '/FIRMWARE/2.4.0-x.bin', '/%66irmware/a.bin', '/./firmware/a.bin', '//firmware/a.bin',
+      '/audio/../firmware/a.bin', '/firmware', '/firmware%2Fa.bin', '/firmware%5Ca.bin', '/%E0%A4%A']) {
+      expect([urlPath, isFirmwareObjectPath(urlPath)]).toEqual([urlPath, true])
+    }
+  })
+
+  it('để yên file khác', () => {
+    expect(isFirmwareObjectPath('/audio/track-1.mp3')).toBe(false)
+    expect(isFirmwareObjectPath('/work-orders/firmware-photo.jpg')).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose'
 
-// Ảnh cài đặt bộ điều khiển cho trạm nạp ở màn Kho thiết bị; file chứa giá trị Secrets.h nên chỉ ở bucket riêng
+// Ảnh cài đặt bộ điều khiển trong kho firmware (trạm nạp USB và đợt cập nhật từ xa); file chứa giá trị Secrets.h nên chỉ tải qua route có đăng nhập, không qua /files
 export interface IFirmwareImage extends Document {
   _id: Types.ObjectId
   version: string

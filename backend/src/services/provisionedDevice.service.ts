@@ -44,8 +44,10 @@ export async function createProvisionedDevice(
   const chipMac = input.chip_mac?.trim().toUpperCase() || undefined
   if (chipMac !== undefined) {
     if (!CHIP_MAC_PATTERN.test(chipMac)) throw BadRequestError('MAC của chip phải là 12 ký tự hex')
-    const sameChip = await ProvisionedDevice.findOne({ chip_mac: chipMac }).select('device_id').lean()
-    if (sameChip) throw ConflictError(`Bo mạch này đã có trong kho với mã ${sameChip.device_id}. Dùng "Nạp lại" thay vì thêm mới`)
+    const sameChip = await ProvisionedDevice.findOne({ chip_mac: chipMac }).select('device_id revoked_at').lean()
+    // Mục đã thu hồi không dùng lại được: nhả MAC để chính bo đó vào kho với mã mới
+    if (sameChip?.revoked_at) await ProvisionedDevice.updateOne({ _id: sameChip._id }, { $unset: { chip_mac: '' } })
+    else if (sameChip) throw ConflictError(`Bo mạch này đã có trong kho với mã ${sameChip.device_id}. Dùng "Nạp lại" thay vì thêm mới`)
   }
 
   const secretKey = generateSecretKey()

@@ -191,6 +191,8 @@ describe('nạp thiết bị từ màn kho qua USB (FARM-FR-010)', () => {
       const again = await post(token, { device_id: 'ctl-other', kind: 'SENSOR', chip_mac: 'A1B2C3D4E5F6' }).expect(409)
       expect(again.body.error.message).toContain('ctl-a1b2c3')
       await post(token, { device_id: 'ctl-bad', kind: 'SENSOR', chip_mac: 'XYZ' }).expect(422)
+      // Firmware chỉ nhận mã tối đa 40 ký tự khi nạp qua USB
+      await post(token, { device_id: 'c'.repeat(41), kind: 'SENSOR' }).expect(422)
 
       // Màn nạp tìm mục kho theo mã đọc từ chip
       const found = await request(app).get('/admin/provisioned-devices?deviceId=ctl-a1b2c3').set('Authorization', `Bearer ${token}`).expect(200)
@@ -203,6 +205,12 @@ describe('nạp thiết bị từ màn kho qua USB (FARM-FR-010)', () => {
       const rotated = await request(app).post(`/admin/provisioned-devices/${found.body.data[0]._id}/rotate-broker-secret`)
         .set('Authorization', `Bearer ${token}`).expect(200)
       expect(rotated.body.data.broker_host).toBe('mqtt.swiftletcare.vn')
+
+      // Mục đã thu hồi nhả MAC: chính bo đó vào kho lại được với mã mới
+      await request(app).put(`/admin/provisioned-devices/${found.body.data[0]._id}/revoke`)
+        .set('Authorization', `Bearer ${token}`).send({ reason: 'Hàng lỗi' }).expect(200)
+      const readded = await post(token, { device_id: 'ctl-new', kind: 'SENSOR', chip_mac: 'A1B2C3D4E5F6' }).expect(201)
+      expect(readded.body.data.chip_mac).toBe('A1B2C3D4E5F6')
     } finally {
       delete process.env.DEVICE_BROKER_HOST
     }

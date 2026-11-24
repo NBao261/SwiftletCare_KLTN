@@ -100,10 +100,12 @@ export default function FlashDeviceModal({ open, onClose }: { open: boolean; onC
     const slowTimer = setTimeout(() => setIsSlow(true), SLOW_ANSWER_MS)
     try {
       const info = await serial.info(undefined, wait.signal)
-      const entry = await findStock.mutateAsync(info.deviceId ? { deviceId: info.deviceId } : { chipMac: info.mac })
+      const found = await findStock.mutateAsync(info.deviceId ? { deviceId: info.deviceId } : { chipMac: info.mac })
+      // Mục đã thu hồi không nạp lại được: coi như bo mới, thêm vào kho với mã mới (backend nhả MAC của mục cũ)
+      const entry = found?.revoked_at ? null : found
       setChip(info)
       setStockEntry(entry)
-      setDeviceId(info.deviceId ?? entry?.device_id ?? suggestDeviceId(info.mac))
+      setDeviceId(found?.revoked_at ? suggestDeviceId(info.mac) : info.deviceId ?? entry?.device_id ?? suggestDeviceId(info.mac))
       setStep('ready')
     } finally {
       clearTimeout(slowTimer)

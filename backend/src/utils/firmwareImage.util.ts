@@ -1,6 +1,8 @@
 // Ảnh cài đặt (factory image) của bộ điều khiển: bootloader, bảng phân vùng, boot_app0 và firmware gộp, ghi từ 0x0
 // (`pio run -e esp32prod -t factory`). Bố cục theo firmware/platformio.ini → min_spiffs.csv
 
+import path from 'path'
+
 export const BOOTLOADER_OFFSET = 0x1000
 export const APP_OFFSET = 0x10000
 // app0 rộng 0x1E0000: ảnh dài hơn thì firmware tràn phân vùng
@@ -9,6 +11,23 @@ export const MAX_FACTORY_IMAGE_BYTES = APP_OFFSET + 0x1E0000
 const ESP_IMAGE_MAGIC = 0xE9
 
 export const FIRMWARE_VERSION_PATTERN = /^\d+\.\d+\.\d+$/
+
+// Khoá file firmware trong kho file. Ảnh chứa giá trị Secrets.h: /files (STORAGE_DRIVER=local) không được phục vụ
+export const FIRMWARE_OBJECT_PREFIX = 'firmware/'
+
+// Đường dẫn /files/<key> trỏ vào kho firmware, kể cả viết hoa, mã hoá (%66irmware) hay chen "./", "//"
+export function isFirmwareObjectPath(urlPath: string): boolean {
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(urlPath)
+  } catch {
+    // Không giải mã được thì cũng chặn
+    return true
+  }
+  // "\" coi như "/" như máy chủ Windows
+  const normalized = path.posix.normalize(`/${decoded.replace(/\\/g, '/')}`).replace(/^\/+/, '').toLowerCase()
+  return normalized.startsWith(FIRMWARE_OBJECT_PREFIX) || normalized === FIRMWARE_OBJECT_PREFIX.slice(0, -1)
+}
 
 // null khi dùng được; còn lại là câu báo cho Administrator
 export function factoryImageProblem(image: Buffer, version: string): string | null {

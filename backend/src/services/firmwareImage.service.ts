@@ -3,7 +3,7 @@ import { FirmwareImage } from '@/models/firmwareImage.model'
 import { FirmwareRollout, ROLLOUT_OPEN_STATUSES } from '@/models/firmwareRollout.model'
 import { getObject, putObject, removeObject } from '@/config/minio.config'
 import { logAction } from '@/services/auditLog.service'
-import { appImageOf, compareFirmwareVersions, factoryImageProblem } from '@/utils/firmwareImage.util'
+import { FIRMWARE_OBJECT_PREFIX, appImageOf, compareFirmwareVersions, factoryImageProblem } from '@/utils/firmwareImage.util'
 import { BadRequestError, ConflictError, NotFoundError } from '@/utils/appError.util'
 
 export async function uploadFirmwareImage(
@@ -17,7 +17,7 @@ export async function uploadFirmwareImage(
 
   const sha256 = crypto.createHash('sha256').update(file.buffer).digest('hex')
   const app = appImageOf(file.buffer)
-  const objectKey = `firmware/${version}-${crypto.randomUUID()}.bin`
+  const objectKey = `${FIRMWARE_OBJECT_PREFIX}${version}-${crypto.randomUUID()}.bin`
   await putObject(objectKey, file.buffer, 'application/octet-stream')
   const image = await FirmwareImage.create({
     version, object_key: objectKey, size: file.buffer.length, sha256,

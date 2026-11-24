@@ -694,10 +694,10 @@ paths:
               type: object
               required: [device_id, kind]
               properties:
-                device_id: { type: string, pattern: "^[A-Za-z0-9_-]+$", example: node_101, description: "Chỉ chữ, số, `_`, `-` (NFR-10 d): device ID là username và một đoạn topic trên broker, nên `+`, `#`, `/` hay khoảng trắng → 422" }
+                device_id: { type: string, pattern: "^[A-Za-z0-9_-]+$", maxLength: 40, example: node_101, description: "Chỉ chữ, số, `_`, `-` (NFR-10 d): device ID là username và một đoạn topic trên broker, nên `+`, `#`, `/` hay khoảng trắng → 422; tối đa 40 ký tự như firmware nhận khi nạp qua USB" }
                 kind: { type: string, enum: [SENSOR, CAMERA] }
                 simulated: { type: boolean, default: false, description: "SYSTEM-FR-004 — thiết bị của bộ giả lập; controller/camera đăng ký từ mục kho này mang cờ simulated" }
-                chip_mac: { type: string, pattern: "^[0-9A-Fa-f]{12}$", example: A1B2C3D4E5F6, description: "MAC của chip khi nạp qua USB; lưu chữ hoa; chip đã có trong kho → 409" }
+                chip_mac: { type: string, pattern: "^[0-9A-Fa-f]{12}$", example: A1B2C3D4E5F6, description: "MAC của chip khi nạp qua USB; lưu chữ hoa; chip đã có trong kho → 409, trừ khi mục đó đã thu hồi (mục cũ nhả MAC)" }
       responses:
         "201":
           description: Đã cấp
