@@ -6,7 +6,8 @@ const FILE_TIMEOUT_MS = 120_000
 
 // Kho firmware cho trạm nạp ở màn Kho thiết bị; file chỉ tải về qua route có đăng nhập (chứa giá trị Secrets.h)
 export const firmwareImagesApi = {
-  list: () => api.get<ApiResponse<FirmwareImage[]>>('/admin/firmware-images'),
+  // Kho chỉ vài bản: lấy hết trong một trang (tối đa của backend)
+  list: () => api.get<ApiResponse<FirmwareImage[]>>('/admin/firmware-images', { params: { limit: 100 } }),
 
   upload: (input: { version: string; note?: string; file: File }) => {
     const form = new FormData()
