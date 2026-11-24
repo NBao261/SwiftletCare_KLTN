@@ -129,10 +129,13 @@ $C up -d --build mongodb emqx backend mediamtx
 sh deploy/staging-cert.sh                            # thử trên máy: --self-signed, DOMAIN=localhost
 $C up -d certbot
 $C exec backend npm run seed                         # chỉ khi DB trống
+$C exec -e DEMO_PASSWORD='<mật khẩu>' backend npm run seed:demo   # tạo admin@ (seed không tạo) và đổi mật khẩu mẫu Test1234!
 # crontab -e của VPS: sao lưu 03:00 (chép ra Google Drive của nhóm qua rclone), Nginx đọc chứng chỉ đã gia hạn lúc 04:00
 # 0 3 * * * cd ~/swiftletcare && BACKUP_REMOTE=gdrive:swiftletcare-backup sh deploy/staging-backup.sh
 # 0 4 * * * cd ~/swiftletcare && docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging exec -T nginx nginx -s reload
 ```
+
+Thư và Telegram: backend chỉ nhận biến từ `deploy/.env.staging` qua compose, không đọc `backend/.env*`. Thư tài khoản đi qua SMTP (`SMTP_*`; Gmail với App Password, hoặc Brevo nếu muốn gửi dưới tên miền riêng sau khi xác thực SPF/DKIM/DMARC ở DNS), Telegram qua bot riêng của staging (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`; không chạy backend dev cùng token). Để trống thì kênh đó tắt, backend vẫn chạy. Sửa biến xong chạy `$C up -d backend` (`restart` không nạp lại biến); kiểm tra bằng `$C logs backend | grep -i -E "telegram|smtp"`.
 
 Khôi phục một bản sao lưu (ghi đè DB hiện tại):
 
