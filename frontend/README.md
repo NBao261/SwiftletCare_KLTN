@@ -29,10 +29,9 @@ src/
                ScopeFilter). Cố ý giữ nhỏ.
     features/  Component riêng của từng tính năng: <role>/<area>/
                (không có features/shared — mỗi component thuộc đúng 1 role)
-    layouts/   Đích 7 file — 4 của role, 3 dùng chung:
-                 AdminLayout · FarmOwnerLayout
-                 DomainExpertLayout (chưa có) · TechnicianLayout
-                   -> menu viết đầy đủ ngay đầu mỗi file
+    layouts/   menuCatalog.ts  danh mục menu chung cho cả 4 role
+                   (4 nhóm Theo dõi · Vận hành · Chuyên môn · Hệ thống,
+                   ROLE_PLAN chọn nhóm, mục chỉ đọc, dock của từng role)
                  AppShell    khung chung (sidebar + header + nội dung)
                  AppSidebar  sidebar desktop + dock mobile
                  AppHeader   breadcrumb + zone + chuông + ngôn ngữ
@@ -63,11 +62,12 @@ src/
                role nên chia theo module chứ không theo role như các lớp khác.
 ```
 
-Muốn thêm/bớt mục menu của một role: mở đúng `components/layouts/<Role>Layout.tsx`
-và sửa mảng `menuSections` ngay đầu file — mỗi mục là `{ label, path, icon }` viết
-đủ tại chỗ, không tra bảng chung. `AppSidebar` chỉ nhận danh sách qua prop nên
-không phải đụng tới. Nếu mục đó cũng cần chặn `returnTo` sau login thì thêm một
-dòng vào bảng `MENU_ACCESS` trong `constants/roles.ts`.
+Muốn thêm/bớt mục menu: sửa danh mục trong `components/layouts/menuCatalog.ts`
+(một trang một tên, icon và nhóm tab cho mọi role; `ROLE_PLAN` chọn nhóm và dock của
+từng role), thêm một dòng `MENU_ACCESS` trong `constants/roles.ts` cho những role mở
+được trang đó, và nhãn tiếng Anh trong `constants/navigation.i18n.ts`. Role nào không
+có trong `MENU_ACCESS` của trang thì mục tự ẩn. `AppSidebar` chỉ nhận danh sách qua
+prop nên không phải đụng tới. Quy tắc đầy đủ: `FE_Design_Claude.md` 12.5.
 
 Lưu ý quan trọng: thư mục chứa trang cho biết role SỞ HỮU nghiệp vụ, KHÔNG phải
 "chỉ role đó vào được". Ví dụ `TechnicianDevicesPage` vẫn được Farm Owner và Admin

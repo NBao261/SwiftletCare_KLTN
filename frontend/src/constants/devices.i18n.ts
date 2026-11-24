@@ -1,7 +1,7 @@
 import type { Dictionary } from '@/lib/i18n';
 import { deviceStatusDict, prefixLabels } from '@/constants/enumLabels.i18n';
 
-// Từ điển trang Thiết bị & Cảm biến của Farm Owner (/devices) và trang chi tiết thiết bị của 1 nhà (chỉ xem)
+// Từ điển trang Thiết bị của Farm Owner (/devices) và trang chi tiết thiết bị của 1 nhà (chỉ xem)
 const vi = {
   // Danh sách theo nhà yến
   'list.title': 'Thiết bị theo nhà yến',
@@ -233,11 +233,11 @@ const vi = {
   'wifi.weak': 'Yếu',
 
   // Trang chi tiết
-  'detail.back': 'Thiết bị & Cảm biến',
+  'detail.back': 'Thiết bị',
   'detail.subtitle': '{farm} · Chỉ xem',
   'detail.missingTitle': 'Chưa chọn nhà yến',
-  'detail.missingDesc': 'Mở trang Thiết bị & Cảm biến và bấm "Chi tiết" ở 1 nhà yến.',
-  'detail.goList': 'Về Thiết bị & Cảm biến',
+  'detail.missingDesc': 'Mở trang Thiết bị và bấm "Chi tiết" ở 1 nhà yến.',
+  'detail.goList': 'Về Thiết bị',
   'detail.kpiZones': 'Zone',
   'detail.kpiZonesSub': 'trong nhà yến',
   'detail.kpiTotal': 'Tổng thiết bị',
@@ -496,11 +496,11 @@ const en: Record<DevicesKey, string> = {
   'wifi.fair': 'Fair',
   'wifi.weak': 'Weak',
 
-  'detail.back': 'Devices & Sensors',
+  'detail.back': 'Devices',
   'detail.subtitle': '{farm} · View only',
   'detail.missingTitle': 'No house selected',
-  'detail.missingDesc': 'Open Devices & Sensors and click "Details" on a house.',
-  'detail.goList': 'Go to Devices & Sensors',
+  'detail.missingDesc': 'Open Devices and click "Details" on a house.',
+  'detail.goList': 'Go to Devices',
   'detail.kpiZones': 'Zones',
   'detail.kpiZonesSub': 'in this house',
   'detail.kpiTotal': 'Total devices',

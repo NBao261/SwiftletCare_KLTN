@@ -88,7 +88,7 @@ export const IconGas = (p: IconProps) => (
   <Svg {...p}><path d="M5 13.5c0-2.5 2-3.2 2-5.5 0-1.4-.6-2.4-.6-2.4s3.4.9 3.4 4.3c0 1 .6 1.6 1.2 1.6.9 0 1.4-.9 1.2-2 1.4 1.1 2.3 2.6 2.3 4a5.5 5.5 0 0 1-11 0Z" /></Svg>
 )
 
-// CO2: mây, phân biệt với IconGas (NH3 dùng IconAlert, tam giác cảnh báo)
+// CO2: mây, phân biệt với IconGas (NH3)
 export const IconCloud = (p: IconProps) => (
   <Svg {...p}><path d="M6 15h8a3 3 0 0 0 .5-5.96 4.5 4.5 0 0 0-8.6-1.66A3.5 3.5 0 0 0 6 15Z" /></Svg>
 )
@@ -97,7 +97,7 @@ export const IconSound = (p: IconProps) => (
   <Svg {...p}><path d="M4 8v4M7.5 5.5v9M11 3.5v13M14.5 7v6M18 9v2" /></Svg>
 )
 
-// 1 người: dùng cho vai trò đơn lẻ (VD nút chọn Kỹ thuật viên); IconUsers là nhóm người cho mục "Người dùng"
+// 1 người: dùng cho vai trò đơn lẻ (VD nút chọn Kỹ thuật viên)
 export const IconUser = (p: IconProps) => (
   <Svg {...p}><circle cx="10" cy="7" r="3.2" /><path d="M4 17.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /></Svg>
 )
