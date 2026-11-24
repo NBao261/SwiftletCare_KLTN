@@ -1,0 +1,13 @@
+# SwiftletCare AI Pipeline – Requirements (plan §4: chỉ bản đã phát hành ≥ 2 tuần, cận trên trong cùng nhánh)
+# Python 3.11–3.12 (onnxruntime 1.30 không có bản cho 3.10). ultralytics/torch chỉ dùng trên Colab để train.
+
+opencv-python>=4.14,<5          # 5.x mới ra 07/2026, chưa dùng
+numpy>=1.26,<3
+onnxruntime-gpu[cuda,cudnn]>=1.30,<1.31  # GPU NVIDIA từ Turing (RTX), CUDA 13 và cuDNN cài kèm qua pip
+                                # GPU Pascal (GTX 10xx): onnxruntime-gpu[cuda,cudnn]>=1.26,<1.27 (CUDA 12.8)
+supervision>=0.30.9,<0.31       # ByteTrack; sv.ByteTrack bị gỡ ở 0.31 → chuyển sang gói `trackers` trước khi nâng
+paho-mqtt>=2.0,<3
+PyYAML>=6.0,<7
+python-dotenv>=1.0,<2
+loguru>=0.7,<1
+pytest>=8,<9

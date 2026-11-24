@@ -7,8 +7,8 @@
 # Mặc định: mọi file trong repo cần Owner approve khi merge vào main
 *   @NBao261
 
-# Agent rules và skills — chỉ Owner sửa
-.agents/   @NBao261
+# Claude Code config (attribution, hooks, permissions) — chỉ Owner sửa
+.claude/   @NBao261
 
 # CI/CD và GitHub config — chỉ Owner sửa
 .github/   @NBao261

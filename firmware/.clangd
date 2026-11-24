@@ -1,0 +1,28 @@
+CompileFlags:
+  Add:
+    - -DESP32
+    - -DARDUINO=10816
+    - -DARDUINO_ESP32_DEV
+    - -DF_CPU=240000000L
+  Remove:
+    - -mlongcalls
+    - -mtext-section-literals
+    - -fno-exceptions
+    - -fstrict-volatile-bitfields
+
+Diagnostics:
+  Suppress:
+    # ── ESP32 Arduino cross-compilation false positives ──
+    # Clangd runs on Windows PC but code targets xtensa-esp32.
+    # It cannot resolve Arduino framework internals:
+    #   - WiFiClientSecure → WiFiClient → Client inheritance
+    #   - Arduino String class template specializations
+    #   - ArduinoJson serializeJson/deserializeJson templates
+    #   - Arduino macros (byte, HIGH, LOW, etc.)
+    # All of these compile successfully with `pio run`.
+    - "*"
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes

@@ -1,0 +1,196 @@
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { useSegments } from 'expo-router'
+import type { BottomTabBarProps as NavigatorTabBarProps } from 'expo-router/tabs'
+import Svg, { Defs, FeGaussianBlur, FeOffset, Filter, Path } from 'react-native-svg'
+import { Text } from '@/components/ui/text'
+import type { RoleTab } from '@/constants/roleTabs'
+import { BorderWidth, Radius } from '@/constants/theme'
+import { usePalette } from '@/hooks/theme/usePalette'
+import { useLanguage } from '@/hooks/i18n/useLanguage'
+import { translate } from '@/utils/i18n.utils'
+
+// ===================== BẢNG CHỈNH — chỉ sửa số ở khối này =====================
+
+// Thanh tab
+const BAR_HEIGHT = 52
+
+// Chữ tiêu đề — dùng chung cho MỌI tab, kể cả chữ dưới nút nổi
+const LABEL_FONT_SIZE = 12
+const LABEL_LINE_HEIGHT = 14
+const LABEL_BOTTOM = -5
+
+// Icon thường — dùng chung cho mọi tab TRỪ nút nổi
+const TAB_ICON_SIZE = 24
+const ICON_LABEL_GAP = 4
+// Vòng tròn sáng sau icon tab đang chọn
+const ACTIVE_CIRCLE_SIZE = 36
+
+// Nút tròn nổi
+const FEATURED_SIZE = 49
+const FEATURED_ICON_SIZE = 32
+const FEATURED_CENTER_BELOW_EDGE = -12
+
+// Bướu nhô quanh nút nổi
+const HUMP_HEIGHT = 20
+const HUMP_HALF_WIDTH = 60
+const HUMP_PEAK_ROUNDNESS = 0.4
+
+// Bóng đổ mép trên — phần bóng lộ ra cao khoảng |SHADOW_OFFSET_Y| + 2 × SHADOW_BLUR
+const SHADOW_BLUR = 3
+const SHADOW_OFFSET_Y = 0
+
+// Đường viền mép thanh: 'surface' (trắng, trùng nền thanh) · 'divider' (xám mảnh)
+const BORDER_COLOR_TOKEN = 'surface'
+
+// ============== Tự tính từ bảng trên — không cần sửa ==============
+
+// Phần nút nổi cao hơn mép thanh
+const FEATURED_RISE = FEATURED_SIZE / 2 + FEATURED_CENTER_BELOW_EDGE
+// Chỗ trống trên đỉnh bướu cho phần nhoè (~3 lần độ nhoè), thiếu thì bóng bị cắt thành đường ngang
+const SHADOW_SPACE = SHADOW_BLUR * 3 + Math.abs(SHADOW_OFFSET_Y)
+// Khoảng từ đỉnh vùng vẽ tới mép thanh: đủ chứa cả nút nổi lẫn bướu kèm bóng
+const EDGE_TOP = Math.max(FEATURED_RISE, HUMP_HEIGHT + SHADOW_SPACE)
+// Thanh đè lên đáy màn bằng khoảng này: màn tab có nội dung cuộn chừa thêm ở đáy
+export const TAB_BAR_OVERLAP = EDGE_TOP
+
+interface BottomTabBarProps extends NavigatorTabBarProps {
+  tabs: readonly RoleTab[]
+}
+
+// Màn không hiện thanh tab để nội dung chiếm cả màn — chỉ chi tiết nhà yến và Cài đặt nhà (yêu cầu của Len, chủ phần
+// mobile Farm Owner, 2026-11-03). So cả đường dẫn để màn cùng tên ở tab khác vẫn giữ thanh tab
+const ROUTES_WITHOUT_TAB_BAR = new Set(['(tabs)/farms/[houseId]', '(tabs)/farms/[houseId]/settings'])
+
+// Route "alerts/index" của expo-router ứng với tab name "alerts"
+function findTab(tabs: readonly RoleTab[], routeName: string): RoleTab | undefined {
+  const tabName = routeName.replace(/\/index$/, '')
+  return tabs.find(tab => tab.name === tabName)
+}
+
+// Mép trên thanh: bo 2 góc, có bướu nhô quanh nút nổi
+function buildEdgePath(width: number, featuredCenterX: number | null): string {
+  const top = EDGE_TOP
+  const corner = Radius.lg
+  let hump = ''
+  if (featuredCenterX !== null) {
+    const left = featuredCenterX - HUMP_HALF_WIDTH
+    const right = featuredCenterX + HUMP_HALF_WIDTH
+    const peak = top - HUMP_HEIGHT
+    hump =
+      `L ${left} ${top} ` +
+      `C ${featuredCenterX - HUMP_HALF_WIDTH * 0.45} ${top} ${featuredCenterX - HUMP_HALF_WIDTH * HUMP_PEAK_ROUNDNESS} ${peak} ${featuredCenterX} ${peak} ` +
+      `C ${featuredCenterX + HUMP_HALF_WIDTH * HUMP_PEAK_ROUNDNESS} ${peak} ${featuredCenterX + HUMP_HALF_WIDTH * 0.45} ${top} ${right} ${top} `
+  }
+  return (
+    `M 0 ${top + corner} A ${corner} ${corner} 0 0 1 ${corner} ${top} ` +
+    hump +
+    `L ${width - corner} ${top} A ${corner} ${corner} 0 0 1 ${width} ${top + corner}`
+  )
+}
+
+// Thanh tab dùng chung mọi role: tab dựng từ ROLE_TABS, tab isFeatured thành nút tròn nổi giữa
+// Thanh tab chỉ có icon và tên tab, không hiện số: số cảnh báo chưa xác nhận nằm ở chuông và trong tab Cảnh báo
+export function BottomTabBar({ state, emitter, navigateToTab, insets, tabs }: BottomTabBarProps) {
+  const palette = usePalette()
+  // Tên tab dịch theo ngôn ngữ đang chọn
+  const language = useLanguage()
+  const { width } = useWindowDimensions()
+  // Đường dẫn màn đang mở (useSegments không có đoạn "index"), ví dụ "(tabs)/farms/[houseId]"
+  const routePath = useSegments().join('/')
+  const height = EDGE_TOP + BAR_HEIGHT + insets.bottom
+  const itemWidth = width / state.routes.length
+  const featuredIndex = state.routes.findIndex(route => findTab(tabs, route.name)?.isFeatured)
+  // Thanh tab có nút nổi (Farm Owner) giữ nguyên thiết kế đóng băng: tab active chỉ đổi icon đặc, không nền tròn.
+  // Thanh không nút nổi (Chuyên gia) cho nền lime chạy theo tab đang chọn làm chỉ báo active.
+  const hasFeatured = featuredIndex >= 0
+  const edgePath = buildEdgePath(width, featuredIndex < 0 ? null : itemWidth * (featuredIndex + 0.5))
+  const fillPath = `${edgePath} L ${width} ${height} L 0 ${height} Z`
+
+  if (ROUTES_WITHOUT_TAB_BAR.has(routePath)) return null
+
+  return (
+    // Kéo lên phủ đáy màn để nút nổi đè lên nội dung; vùng trong suốt cho chạm xuyên qua
+    <View pointerEvents="box-none" style={[styles.bar, { height, marginTop: -EDGE_TOP }]}>
+      <Svg width={width} height={height} style={styles.background} pointerEvents="none">
+        <Defs>
+          {/* Vùng lọc phủ cả khung vẽ để phần nhoè chạy theo góc bo và bướu, không bị cắt */}
+          <Filter id="tabBarShadow" filterUnits="userSpaceOnUse" x={0} y={0} width={width} height={height}>
+            <FeOffset in="SourceGraphic" dy={SHADOW_OFFSET_Y} result="offset" />
+            <FeGaussianBlur in="offset" stdDeviation={SHADOW_BLUR} />
+          </Filter>
+        </Defs>
+        {/* Bản sao hình thanh, làm nhoè, nằm dưới thanh thật: phần lộ ra ngoài mép là bóng */}
+        <Path d={fillPath} fill={palette.divider} filter="url(#tabBarShadow)" />
+        <Path d={fillPath} fill={palette.surface} stroke={palette[BORDER_COLOR_TOKEN]} strokeWidth={BorderWidth.hairline} />
+      </Svg>
+      <View pointerEvents="box-none" style={[styles.row, { paddingBottom: insets.bottom }]}>
+        {state.routes.map((route, index) => {
+          const tab = findTab(tabs, route.name)
+          if (!tab) return null
+          const TabIcon = tab.icon
+          const isFocused = index === state.index
+          const color = isFocused ? palette.tabIconSelected : palette.tabIconDefault
+          const handlePress = () => {
+            const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
+            if (!isFocused && !event.defaultPrevented) navigateToTab(route.key)
+          }
+
+          return (
+            // Pressable thường: bấm là chuyển tab ngay, không có hiệu ứng nhấn
+            <Pressable
+              key={route.key}
+              accessibilityRole="tab"
+              accessibilityLabel={translate(tab.title, language)}
+              accessibilityState={{ selected: isFocused }}
+              onPress={handlePress}
+              style={tab.isFeatured ? styles.featuredItem : styles.item}
+            >
+              {tab.isFeatured ? (
+                <View style={[styles.featuredCircle, { backgroundColor: palette.primary }]}>
+                  {/* Nút nổi luôn icon đặc, không đổi khi chọn — nền lime đã đủ nổi bật */}
+                  <TabIcon size={FEATURED_ICON_SIZE} color={palette.onPrimary} weight="fill" />
+                </View>
+              ) : (
+                // Tab thường đang chọn: nền tròn lime chạy theo tab active (chỉ thanh không nút nổi), icon đặc (user, 2026-11-14)
+                <View style={[styles.iconCircle, isFocused && !hasFeatured && { backgroundColor: palette.primary }]}>
+                  <TabIcon
+                    size={TAB_ICON_SIZE}
+                    color={isFocused && !hasFeatured ? palette.onPrimary : color}
+                    weight={isFocused ? 'fill' : 'regular'}
+                  />
+                </View>
+              )}
+              <Text variant="label" color={color} numberOfLines={1} style={styles.label}>{translate(tab.title, language)}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  bar: { width: '100%' },
+  background: { position: 'absolute', top: 0, left: 0 },
+  row: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, flexDirection: 'row', alignItems: 'flex-start' },
+  item: {
+    flex: 1,
+    marginTop: EDGE_TOP,
+    height: BAR_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: ICON_LABEL_GAP,
+  },
+  // marginBottom (không phải padding) để LABEL_BOTTOM nhận được số âm
+  label: { fontSize: LABEL_FONT_SIZE, lineHeight: LABEL_LINE_HEIGHT, marginBottom: LABEL_BOTTOM },
+  // Nút nổi chiếm từ đỉnh nút tới đáy hàng tab; cùng LABEL_BOTTOM nên chữ thẳng hàng các tab khác
+  featuredItem: {
+    flex: 1,
+    marginTop: EDGE_TOP - FEATURED_RISE,
+    height: FEATURED_RISE + BAR_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  featuredCircle: { width: FEATURED_SIZE, height: FEATURED_SIZE, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  iconCircle: { width: ACTIVE_CIRCLE_SIZE, height: ACTIVE_CIRCLE_SIZE, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+})

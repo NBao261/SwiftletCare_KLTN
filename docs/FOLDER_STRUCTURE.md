@@ -1,0 +1,73 @@
+# SwiftletCare — Cấu trúc thư mục
+
+Bản đồ repo: mỗi thứ nằm ở đâu, và quy tắc chi tiết của từng module đọc ở file nào. File này chỉ giữ phần **khung**; quy tắc đặt tên, đặt file và cách viết code nằm trong file quy tắc của từng module (cột "Quy tắc" bên dưới) — khi hai nơi khác nhau, file của module đúng.
+
+## Thư mục gốc
+
+```
+SwiftletCare_KLTN/
+├── backend/             # REST API + MQTT + Socket.io (Node.js, Express, TypeScript, MongoDB)
+├── frontend/            # Web dashboard / PWA (React 18, Vite, TailwindCSS)
+├── mobile/              # App di động (Expo Router, React Native)
+├── firmware/            # ESP32 (PlatformIO): cảm biến RS485, điều khiển mờ, MQTT, loa ru
+├── ai-pipeline/         # Đếm chim yến (YOLO ONNX + ByteTrack) — mới là khung
+├── docs/                # Tài liệu (xem mục "docs/")
+├── .github/             # CI (workflows/ci.yml), CODEOWNERS, PR template
+├── .claude/             # Lệnh /review-pr và cấu hình Claude Code
+├── docker-compose.yml   # Môi trường dev: MongoDB, EMQX, MinIO, Redis
+├── CLAUDE.md            # Hướng dẫn chung cho mọi module + quy tắc liên module
+├── README.md            # Giới thiệu, cách chạy local
+└── .commitlintrc.json   # type/scope hợp lệ cho commit message
+```
+
+Ở gốc chỉ để những thứ cả repo dùng chung. Tài liệu mới đặt trong `docs/`, không đặt ở gốc.
+
+**Nguyên tắc chung**
+- Mỗi module là một project độc lập (`package.json` / `platformio.ini` / `requirements.txt` riêng, không có workspace chung). **Không import code chéo giữa các module** — chúng nói chuyện qua HTTP (`docs/api/api-spec.yaml`), Socket.io và MQTT.
+- Những gì phải khớp giữa các module (API contract, enum dùng chung, payload MQTT, mô hình mờ firmware ↔ backend, tên và khoảng của tham số runtime) ở mục "Cross-module rules" của `CLAUDE.md` gốc.
+- Không commit secret (`.env`, `Secrets.h`, chứng chỉ), model ONNX, clip hay dataset.
+
+## Từng module
+
+| Module | Khung thư mục | Quy tắc (đọc theo thứ tự, file đầu thắng) |
+|---|---|---|
+| `backend/` | `src/{routes,controllers,services,models,middlewares,jobs,mqtt/handlers,socket,utils,config,types,scripts}` · `tests/{unit,integration}` | `backend/CLAUDE.md` · `backend/README.md` · `backend/.eslintrc.cjs` |
+| `frontend/` | `src/{apis,components/{ui,common,features/<role>,layouts,auth},constants,hooks,lib,pages/<role>,providers,routes,stores,types,validations}` | `frontend/FE_Design_Claude.md` (§12 cấu trúc + đặt tên, §13 quy tắc code) · `frontend/CLAUDE.md` (cấu trúc như code hiện tại) · `frontend/README.md` |
+| `mobile/` | `src/app/` (Expo Router: `(auth)`, `(tabs)`, route chi tiết) · `src/{components,config,constants,hooks/<nghiệp vụ>,services/{api,socket,notification},stores,types,utils}` · `assets/` | `mobile/CLAUDE.md` · `mobile/MOBILE_GUIDE.md` |
+| `firmware/` | `src/{sensors,pid,mqtt,storage,wifi,audio,config}` + `main.cpp` · `test/` (unit test chạy trên máy) | `firmware/CLAUDE.md` · `firmware/README.md` |
+| `ai-pipeline/` | `src/` · `config/config.yaml` · cấu trúc đích ở `docs/bird-counting-plan.md` §4 | `ai-pipeline/CLAUDE.md` · `ai-pipeline/README.md` · `docs/bird-counting-plan.md` |
+
+Đặt nhanh một file mới:
+
+| Tôi đang thêm… | Đặt vào |
+|---|---|
+| Endpoint backend | `backend/src/routes/<resource>.route.ts` → `controllers/<resource>.controller.ts` → `services/<resource>.service.ts` (+ cập nhật `docs/api/api-spec.yaml`) |
+| Job chạy định kỳ / xử lý tin MQTT | `backend/src/jobs/<việc>.job.ts` / `backend/src/mqtt/handlers/<topic>.handler.ts` |
+| Trang web | `frontend/src/pages/<role>/<Role><Tên>Page.tsx` + route trong `frontend/src/routes/<role>.routes.tsx` |
+| Thành phần của một trang web | `frontend/src/components/features/<role>/<khu vực>/` (không đặt trong `pages/`) |
+| Màn hình mobile | `mobile/src/app/...` theo đường dẫn route; hook ở `mobile/src/hooks/<nghiệp vụ>/`, API ở `mobile/src/services/api/<resource>.api.ts` |
+| Logic điều khiển / lọc / phát hiện trên ESP32 | `firmware/src/<nhóm>/` dạng C++ thuần + test trong `firmware/test/` |
+| Tài liệu | `docs/` (xem dưới) |
+
+## `docs/`
+
+```
+docs/
+├── FOLDER_STRUCTURE.md     # file này
+├── api/                    # api-spec.yaml (OpenAPI 3.0 — nguồn sự thật của API) + README
+├── bird-counting-plan.md   # kế hoạch triển khai đếm chim (module VISION)
+├── evidence-register.md   # sổ tài liệu tham khảo & minh chứng cho các con số, thiết bị (Report 3 A-3, REF-5, §4.5)
+├── diagrams/               # sơ đồ draw.io cho slide: context-diagram/, system-architecture/ (file `artifacts/diagram.drawio`, nguồn `*_model.json`); sơ đồ trong Report 4 viết bằng Mermaid
+├── hardware/               # BOM.md, components-guide.md (linh kiện + đấu nối)
+├── reports/                # Hồ sơ Review 2 (tiếng Anh): phiếu v3 + BM03, Report 1–5, Project Tracking, Design Brief + README; todo-review2.md, todo-final-scope.md (tiếng Việt)
+│   ├── registration/       #   phiếu v3 và BM03 dạng Word (sinh từ Markdown, không có số điện thoại)
+│   ├── design-brief/       #   BM01 dạng Word (sinh từ design-brief.md)
+│   ├── report5/            #   danh sách test case (tc.py) + script sinh report5-test.md
+│   ├── templates/          #   biểu mẫu trống BM01–BM04 của môn
+│   └── tools/              #   script điền biểu mẫu Word từ Markdown
+├── deploy/                 # staging.md — môi trường staging (VPS + PC cũ tại nhà một thành viên làm AI node, đọc camera qua Internet)
+├── database/               # init.mongo.js — database script sinh từ model Mongoose (`npm run db:script`), không sửa tay
+├── sprint-reviews/         # biên bản review theo sprint
+├── test-reports/           # báo cáo kiểm thử (đang trống)
+└── github-setup.md         # quy trình Git/GitHub của nhóm
+```

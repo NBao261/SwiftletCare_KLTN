@@ -1,0 +1,451 @@
+import mongoose from 'mongoose'
+import { MongoMemoryServer } from 'mongodb-memory-server'
+import { AuditLog } from '@/models/auditLog.model'
+import { Farm } from '@/models/farm.model'
+import { House, Zone } from '@/models/houseZone.model'
+import { SensorNode } from '@/models/device.model'
+import { WorkOrder } from '@/models/workOrder.model'
+import { Invitation } from '@/models/invitation.model'
+import { User } from '@/models/user.model'
+import {
+  completeDeletionRequest, rejectDeletionRequest, remindPendingDeletionRequests, setUserStatus,
+} from '@/services/admin.service'
+import { cancelAccountDeletion, requestAccountDeletion } from '@/services/auth.service'
+import { notifyAdmins, notifyUser } from '@/services/notification.service'
+import { disconnectUser } from '@/socket'
+
+jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'),
+  notifyUser: jest.fn().mockResolvedValue(undefined),
+  notifyAdmins: jest.fn().mockResolvedValue(undefined),
+}))
+jest.mock('@/socket', () => ({
+  ...jest.requireActual('@/socket'),
+  disconnectUser: jest.fn(),
+}))
+
+let mongod: MongoMemoryServer
+const oid = () => new mongoose.Types.ObjectId()
+
+beforeAll(async () => {
+  mongod = await MongoMemoryServer.create()
+  await mongoose.connect(mongod.getUri())
+  await User.init()
+})
+
+afterAll(async () => {
+  await mongoose.disconnect()
+  await mongod.stop()
+})
+
+afterEach(async () => {
+  jest.restoreAllMocks()
+  jest.clearAllMocks()
+  await Promise.all([
+    AuditLog.deleteMany({}), Farm.deleteMany({}),
+    Invitation.deleteMany({}), User.deleteMany({}),
+    House.collection.deleteMany({}), Zone.collection.deleteMany({}), SensorNode.deleteMany({}), WorkOrder.deleteMany({}),
+  ])
+})
+
+const mkUser = (email: string, role: 'ADMIN' | 'FARM_OWNER' | 'FARM_TECHNICIAN' = 'FARM_OWNER', extra: object = {}) =>
+  User.create({ email, password_hash: 'password123', full_name: email, role, ...extra })
+
+const mkFarm = (owner: { _id: unknown }, others: Array<{ user: { _id: unknown }; joined: string }> = [], extra: object = {}) =>
+  Farm.create({
+    name: 'Farm', address: 'HCMC', owner_id: owner._id,
+    members: [
+      { user_id: owner._id, is_primary: true, joined_at: new Date('2026-01-01') },
+      ...others.map(o => ({ user_id: o.user._id, is_primary: false, joined_at: new Date(o.joined) })),
+    ],
+    ...extra,
+  })
+
+const auditActions = async (action: string) => AuditLog.find({ action }).lean()
+
+describe('setUserStatus', () => {
+  it('locks with a trimmed reason, revokes refresh tokens, drops live sockets and audits', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn', 'FARM_OWNER', { refresh_tokens: [{ token_hash: 't', expires: new Date(Date.now() + 1e6) }] })
+
+    const user = await setUserStatus(String(admin._id), String(target._id), false, '  Spam đơn hàng  ')
+
+    expect(user.status).toBe('LOCKED')
+    expect(user.locked_reason).toBe('Spam đơn hàng')
+    expect(user.locked_at).toBeInstanceOf(Date)
+    expect(user.refresh_tokens).toHaveLength(0)
+    expect(disconnectUser).toHaveBeenCalledWith(String(target._id))
+    expect(await auditActions('ACCOUNT_LOCKED')).toHaveLength(1)
+  })
+
+  it('requires a reason to lock', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn')
+    await expect(setUserStatus(String(admin._id), String(target._id), false, '   ')).rejects.toMatchObject({ statusCode: 400 })
+    expect(disconnectUser).not.toHaveBeenCalled()
+  })
+
+  it('unlocks without a reason, clears lock fields and keeps sockets alone', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn', 'FARM_OWNER', { status: 'LOCKED', locked_reason: 'x', locked_at: new Date() })
+
+    const user = await setUserStatus(String(admin._id), String(target._id), true)
+
+    expect(user.status).toBe('ACTIVE')
+    expect(user.locked_reason).toBeUndefined()
+    expect(disconnectUser).not.toHaveBeenCalled()
+    expect(await auditActions('ACCOUNT_UNLOCKED')).toHaveLength(1)
+  })
+
+  it('refuses self-lock', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    await expect(setUserStatus(String(admin._id), String(admin._id), false, 'x')).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it('SM-14: refuses to lock an account waiting for deletion (409) and keeps its status', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn')
+    await requestAccountDeletion(String(target._id))
+    await expect(setUserStatus(String(admin._id), String(target._id), false, 'Vi phạm điều khoản')).rejects.toMatchObject({ statusCode: 409 })
+    expect((await User.findById(target._id))!.status).toBe('DELETION_REQUESTED')
+  })
+
+  it('SM-14: unlocking an account waiting for deletion keeps DELETION_REQUESTED', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn')
+    await requestAccountDeletion(String(target._id))
+    const user = await setUserStatus(String(admin._id), String(target._id), true)
+    expect(user.status).toBe('DELETION_REQUESTED')
+  })
+
+  it('keeps the old field names in the API (is_active, deactivated_*) derived from status for web and mobile', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn')
+    const json = (await setUserStatus(String(admin._id), String(target._id), false, 'Spam đơn hàng')).toJSON() as Record<string, unknown>
+    expect(json).toMatchObject({ status: 'LOCKED', is_active: false, deactivated_reason: 'Spam đơn hàng' })
+  })
+})
+
+describe('cancelAccountDeletion', () => {
+  it('withdraws a pending request, audits it and tells the admins', async () => {
+    const user = await mkUser('user@test.vn')
+    await requestAccountDeletion(String(user._id))
+
+    expect((await User.findById(user._id))!.status).toBe('DELETION_REQUESTED')
+    const after = await cancelAccountDeletion(String(user._id))
+
+    expect(after.deletion_requested_at).toBeUndefined()
+    expect(after.status).toBe('ACTIVE')
+    expect(await auditActions('DELETION_CANCELLED')).toHaveLength(1)
+    expect(notifyAdmins).toHaveBeenCalledWith(expect.objectContaining({ title: 'Yêu cầu xoá tài khoản đã được huỷ' }))
+    // gửi lại được yêu cầu mới sau khi huỷ
+    await expect(requestAccountDeletion(String(user._id))).resolves.toBeDefined()
+  })
+
+  it('answers 409 when there is nothing to cancel', async () => {
+    const user = await mkUser('user@test.vn')
+    await expect(cancelAccountDeletion(String(user._id))).rejects.toMatchObject({ statusCode: 409 })
+  })
+})
+
+describe('rejectDeletionRequest', () => {
+  it('needs a reason, takes the user off the queue, notifies them and audits', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const user = await mkUser('user@test.vn', 'FARM_OWNER', { deletion_requested_at: new Date(), deletion_reminder_sent_at: new Date() })
+
+    await expect(rejectDeletionRequest(String(admin._id), String(user._id), '   ')).rejects.toMatchObject({ statusCode: 400 })
+
+    const after = await rejectDeletionRequest(String(admin._id), String(user._id), '  Còn hồ sơ thu hoạch phải lưu  ')
+
+    expect(after.deletion_requested_at).toBeUndefined()
+    expect(after.deletion_reminder_sent_at).toBeUndefined()
+    expect(after.status).toBe('ACTIVE') // tài khoản về hoạt động
+    const [audit] = await auditActions('DELETION_REJECTED')
+    expect(audit.metadata).toMatchObject({ reason: 'Còn hồ sơ thu hoạch phải lưu' })
+    expect(notifyUser).toHaveBeenCalledWith(String(user._id), expect.objectContaining({
+      body: expect.stringContaining('Còn hồ sơ thu hoạch phải lưu'),
+    }))
+  })
+
+  it('SM-14: rejecting the request of a locked account keeps it LOCKED (no silent unlock)', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const target = await mkUser('victim@test.vn', 'FARM_OWNER', {
+      status: 'LOCKED', locked_reason: 'Gian lận', deletion_requested_at: new Date(),
+    })
+    await rejectDeletionRequest(String(admin._id), String(target._id), 'Còn nghĩa vụ lưu hồ sơ')
+    const after = (await User.findById(target._id))!
+    expect(after.status).toBe('LOCKED')
+    expect(after.locked_reason).toBe('Gian lận')
+    expect(after.deletion_requested_at).toBeUndefined()
+  })
+
+  it('refuses a user without a pending request and the admin\'s own request', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN', { deletion_requested_at: new Date() })
+    const user = await mkUser('user@test.vn')
+    await expect(rejectDeletionRequest(String(admin._id), String(user._id), 'x')).rejects.toMatchObject({ statusCode: 400 })
+    await expect(rejectDeletionRequest(String(admin._id), String(admin._id), 'x')).rejects.toMatchObject({ statusCode: 400 })
+  })
+})
+
+describe('remindPendingDeletionRequests', () => {
+  const daysAgo = (now: Date, days: number) => new Date(now.getTime() - days * 86_400_000)
+
+  it('reminds the admins once for requests waiting 23 days or more, and not again on the next run', async () => {
+    const now = new Date('2026-10-17T08:00:00Z')
+    const old = await mkUser('old@test.vn', 'FARM_OWNER', { deletion_requested_at: daysAgo(now, 24) })
+    await mkUser('fresh@test.vn', 'FARM_OWNER', { deletion_requested_at: daysAgo(now, 10) })
+    await mkUser('none@test.vn')
+
+    expect(await remindPendingDeletionRequests(now)).toBe(1)
+    const reminders = () => (notifyAdmins as jest.Mock).mock.calls.filter(c => c[0].title === 'Yêu cầu xoá tài khoản sắp quá hạn')
+    expect(reminders()).toHaveLength(1)
+    expect(reminders()[0][0].body).toContain('còn 6 ngày')
+    expect((await User.findById(old._id))!.deletion_reminder_sent_at).toEqual(now)
+
+    expect(await remindPendingDeletionRequests(now)).toBe(0)
+    expect(reminders()).toHaveLength(1)
+  })
+})
+
+describe('completeDeletionRequest', () => {
+  const requested = { deletion_requested_at: new Date() }
+
+  it('rejects when the user never asked for deletion', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const user = await mkUser('user@test.vn')
+    await expect(completeDeletionRequest(String(admin._id), String(user._id))).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it("refuses to process an admin's own deletion request", async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN', requested)
+    await expect(completeDeletionRequest(String(admin._id), String(admin._id))).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it('transfers a shared farm to the member who joined earliest and audits it', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const late = await mkUser('late@test.vn')
+    const early = await mkUser('early@test.vn')
+    const farm = await mkFarm(leaver, [{ user: late, joined: '2026-03-01' }, { user: early, joined: '2026-02-01' }])
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    const after = (await Farm.findById(farm._id))!
+    expect(String(after.owner_id)).toBe(String(early._id))
+    expect(after.members.map(m => String(m.user_id)).sort()).toEqual([String(early._id), String(late._id)].sort())
+    expect(after.members.find(m => String(m.user_id) === String(early._id))!.is_primary).toBe(true)
+    expect(after.members.find(m => String(m.user_id) === String(late._id))!.is_primary).toBe(false)
+
+    const [audit] = await auditActions('FARM_OWNERSHIP_TRANSFERRED')
+    expect(audit.metadata).toMatchObject({ fromUserId: String(leaver._id), toUserId: String(early._id) })
+    expect(notifyUser).toHaveBeenCalledWith(String(early._id), expect.objectContaining({ title: expect.stringContaining('chủ sở hữu') }))
+  })
+
+  it('soft-deletes a farm nobody else belongs to and counts each outcome separately', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const other = await mkUser('other@test.vn')
+    const soleFarm = await mkFarm(leaver)
+    const sharedFarm = await mkFarm(leaver, [{ user: other, joined: '2026-02-01' }])
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    expect((await Farm.collection.findOne({ _id: soleFarm._id }))!.is_deleted).toBe(true)
+    expect(String((await Farm.findById(sharedFarm._id))!.owner_id)).toBe(String(other._id))
+    expect(await auditActions('FARM_SOFT_DELETED')).toHaveLength(1)
+
+    const [done] = await auditActions('ACCOUNT_DELETED')
+    expect(done.metadata).toMatchObject({ farmsTransferred: 1, farmsDeleted: 1 })
+  })
+
+  it('removes the user from farms they only belong to as a plain member', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const owner = await mkUser('owner@test.vn')
+    const farm = await mkFarm(owner, [{ user: leaver, joined: '2026-02-01' }])
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    const after = (await Farm.findById(farm._id))!
+    expect(String(after.owner_id)).toBe(String(owner._id))
+    expect(after.members.some(m => String(m.user_id) === String(leaver._id))).toBe(false)
+  })
+
+  it('a technician leaving: off its houses and shifts, its open Work Orders go back to the Farm Owner', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const owner = await mkUser('owner@test.vn')
+    const leaver = await mkUser('tech@test.vn', 'FARM_TECHNICIAN', requested)
+    const farm = await mkFarm(owner, [{ user: leaver, joined: '2026-02-01' }])
+    const house = await House.create({
+      farm_id: farm._id, name: 'H',
+      technicians: [{ user_id: leaver._id, primary: true }],
+      roster: [{ technician_id: leaver._id, role: 'PRIMARY', weekdays: [1, 2], start: '06:00', end: '18:00' }],
+    })
+    const workOrder = await WorkOrder.create({
+      farm_id: farm._id, house_id: house._id, origin: 'MANUAL', title: 'Kiểm tra', status: 'OPEN', is_open: true, assignee_id: leaver._id,
+    })
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    const after = (await House.findById(house._id).lean())!
+    expect(after.technicians).toHaveLength(0)
+    expect(after.roster).toHaveLength(0)
+    expect((await WorkOrder.findById(workOrder._id).lean())!.assignee_id).toBeUndefined()
+    expect(notifyUser).toHaveBeenCalledWith(String(owner._id), expect.anything())
+  })
+
+  it('a sole owner leaving: devices are removed before the farm and its houses are soft-deleted', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const farm = await mkFarm(leaver)
+    const house = await House.create({ farm_id: farm._id, name: 'H' })
+    const zone = await Zone.create({ house_id: house._id, farm_id: farm._id, name: 'Z' })
+    const node = await SensorNode.create({ device_id: 'ESP-LEAVER-1', zone_id: zone._id, status: 'ONLINE' })
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    expect((await SensorNode.findById(node._id).lean())!.decommissioned_at).toBeInstanceOf(Date)
+    expect((await House.collection.findOne({ _id: house._id }))!.is_deleted).toBe(true)
+    expect((await Zone.collection.findOne({ _id: zone._id }))!.is_deleted).toBe(true)
+    expect((await Farm.collection.findOne({ _id: farm._id }))!.is_deleted).toBe(true)
+  })
+
+  it('anonymizes PII, closes the request, revokes sessions and drops sockets', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', {
+      ...requested, phone: '0900000000', avatar_url: 'http://x/y.png',
+      refresh_tokens: [{ token_hash: 't', expires: new Date(Date.now() + 1e6) }],
+    })
+
+    const user = await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    expect(user.email).toBe(`deleted-${String(leaver._id)}@swiftletcare.local`)
+    expect(user.phone).toBeUndefined()
+    expect(user.avatar_url).toBeUndefined()
+    expect(user.full_name).toBe('Tài khoản đã xoá')
+    expect(user.status).toBe('DELETED')
+    expect(user.refresh_tokens).toHaveLength(0)
+    expect(user.deletion_requested_at).toBeUndefined()
+    expect(disconnectUser).toHaveBeenCalledWith(String(leaver._id))
+
+    // đã rời hàng đợi: xử lý lần 2 bị từ chối thay vì chạy lại cascade
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it('sends the final notice to the old email only after the anonymization has been saved', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    expect(notifyUser).toHaveBeenCalledWith(
+      String(leaver._id),
+      expect.objectContaining({ title: 'Tài khoản của bạn đã được xoá' }),
+      { email: 'leaver@test.vn', emailOnly: true },
+    )
+  })
+
+  it('does not announce the deletion when saving the anonymization fails, and announces exactly once after a re-run', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const finalNotices = () =>
+      (notifyUser as jest.Mock).mock.calls.filter(c => c[1].title === 'Tài khoản của bạn đã được xoá')
+
+    const saveSpy = jest.spyOn(User.prototype, 'save').mockImplementationOnce((() => Promise.reject(new Error('DB blip'))) as never)
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).rejects.toThrow('DB blip')
+
+    expect(finalNotices()).toHaveLength(0)
+    expect((await User.findById(leaver._id))!.email).toBe('leaver@test.vn')
+    expect((await User.findById(leaver._id))!.deletion_requested_at).toBeInstanceOf(Date)
+
+    saveSpy.mockRestore()
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+    expect(finalNotices()).toHaveLength(1)
+  })
+
+  it('stays re-runnable when reading the audit totals fails, because that happens before the anonymization', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    jest.spyOn(AuditLog, 'countDocuments').mockRejectedValueOnce(new Error('DB blip') as never)
+
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).rejects.toThrow('DB blip')
+
+    const untouched = (await User.findById(leaver._id))!
+    expect(untouched.email).toBe('leaver@test.vn')
+    expect(untouched.deletion_requested_at).toBeInstanceOf(Date)
+
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).resolves.toBeDefined()
+    expect(await auditActions('ACCOUNT_DELETED')).toHaveLength(1)
+  })
+
+  describe('clean-up of records pointing at the deleted user', () => {
+    it('marks the account deleted so it can no longer be locked or unlocked', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+
+      const user = await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+      expect(user.deleted_at).toBeInstanceOf(Date)
+      await expect(setUserStatus(String(admin._id), String(leaver._id), true)).rejects.toMatchObject({ statusCode: 409 })
+      expect((await User.findById(leaver._id))!.status).toBe('DELETED')
+    })
+
+    it('expires the pending invitations the deleted user had sent', async () => {
+      const admin = await mkUser('admin@test.vn', 'ADMIN')
+      const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+      const other = await mkUser('other@test.vn')
+      const inv = (invitedBy: unknown, token: string) => Invitation.create({
+        farm_id: oid(), invited_email: `${token}@test.vn`, invited_role: 'FARM_OWNER', invited_by: invitedBy,
+        token, expires_at: new Date(Date.now() + 86_400_000),
+      })
+      const mine = await inv(leaver._id, 'mine')
+      const theirs = await inv(other._id, 'theirs')
+
+      await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+      expect((await Invitation.findById(mine._id))!.status).toBe('EXPIRED')
+      expect((await Invitation.findById(theirs._id))!.status).toBe('PENDING')
+    })
+  })
+
+  it('anonymises a deleted technician', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const tech = await mkUser('tech@test.vn', 'FARM_TECHNICIAN', requested)
+
+    await completeDeletionRequest(String(admin._id), String(tech._id))
+
+    const gone = (await User.findById(tech._id))!
+    expect(gone.email).toBe(`deleted-${String(tech._id)}@swiftletcare.local`)
+  })
+
+  it('can be re-run after failing midway without repeating finished farms', async () => {
+    const admin = await mkUser('admin@test.vn', 'ADMIN')
+    const leaver = await mkUser('leaver@test.vn', 'FARM_OWNER', requested)
+    const other = await mkUser('other@test.vn')
+    await mkFarm(leaver, [{ user: other, joined: '2026-02-01' }])
+    await mkFarm(leaver, [{ user: other, joined: '2026-02-01' }])
+
+    const realSave = Farm.prototype.save
+    let calls = 0
+    jest.spyOn(Farm.prototype, 'save').mockImplementation(function (this: unknown, ...args: never[]) {
+      calls++
+      if (calls === 2) return Promise.reject(new Error('DB blip'))
+      return realSave.apply(this as never, args as never)
+    } as never)
+
+    await expect(completeDeletionRequest(String(admin._id), String(leaver._id))).rejects.toThrow('DB blip')
+
+    // Sau lần lỗi: 1 farm đã chuyển, tài khoản vẫn còn trong hàng đợi và chưa bị ẩn danh
+    expect(await auditActions('FARM_OWNERSHIP_TRANSFERRED')).toHaveLength(1)
+    expect((await User.findById(leaver._id))!.deletion_requested_at).toBeInstanceOf(Date)
+    expect((await User.findById(leaver._id))!.email).toBe('leaver@test.vn')
+
+    jest.restoreAllMocks()
+    await completeDeletionRequest(String(admin._id), String(leaver._id))
+
+    expect(await auditActions('FARM_OWNERSHIP_TRANSFERRED')).toHaveLength(2)
+    const [done] = await auditActions('ACCOUNT_DELETED')
+    expect(done.metadata).toMatchObject({ farmsTransferred: 2, farmsDeleted: 0 }) // tổng qua cả 2 lần chạy, lấy từ audit từng farm
+    expect(await Farm.countDocuments({ owner_id: leaver._id })).toBe(0)
+  })
+})

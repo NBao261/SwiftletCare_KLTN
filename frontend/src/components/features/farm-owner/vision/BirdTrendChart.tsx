@@ -1,0 +1,95 @@
+import { useMemo, useState } from 'react'
+import { Line } from 'react-chartjs-2'
+import type { ChartOptions } from 'chart.js'
+import { format, parseISO } from 'date-fns'
+import { Card, ChartEmptyFrame } from '@/components/ui'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme'
+import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics'
+import { X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants'
+import { cn } from '@/lib/cn'
+
+const DAY_OPTIONS = [7, 14, 30] as const
+type DayOption = (typeof DAY_OPTIONS)[number]
+
+interface BirdTrendChartProps {
+  // 1 nhà, hoặc mọi nhà của farm khi lọc tất cả nhà yến (số đếm cộng theo ngày)
+  houseIds: string[]
+}
+
+// BirdTrendChart – Entry vs Exit theo ngày: API thật (GET /analytics/bird-count/trends)
+export default function BirdTrendChart({ houseIds }: BirdTrendChartProps) {
+  const [days, setDays] = useState<DayOption>(7)
+  const { records, isLoading } = useHousesBirdCountTrends(houseIds, days)
+
+  const chartData = useMemo(() => {
+    return {
+      labels: records.map(record => format(parseISO(record.date), 'dd/MM')),
+      datasets: [
+        {
+          label: 'Vào tổ',
+          data: records.map(record => record.evening_entry),
+          borderColor: CHART_COLORS.accentGreen,
+          backgroundColor: 'rgba(181,211,44,0.12)',
+          // Đường thẳng nối điểm: đường cong vẽ đỉnh không có trong số đếm (CH-01)
+          fill: true, tension: 0, pointRadius: 3, borderWidth: 2,
+        },
+        {
+          label: 'Xuất đàn',
+          data: records.map(record => record.morning_exit),
+          borderColor: CHART_COLORS.climateOrange,
+          backgroundColor: 'rgba(237,143,80,0.1)',
+          fill: true, tension: 0, pointRadius: 3, borderWidth: 2,
+        },
+      ],
+    }
+  }, [records])
+
+  const chartOptions = useMemo(() => ({
+    ...baseChartOptions,
+    plugins: {
+      ...baseChartOptions.plugins,
+      legend: { display: true, position: 'top' as const, labels: { boxWidth: 10, font: { family: 'Plus Jakarta Sans', size: 11 } } },
+    },
+    scales: {
+      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
+      // Số lượt chim là số nguyên, không âm: trục bắt đầu ở 0 và không có vạch 0,2 … khi chưa có dữ liệu
+      y: { ...baseChartOptions.scales.y, min: 0, ticks: { ...baseChartOptions.scales.y.ticks, precision: 0 } },
+    },
+  } as ChartOptions<'line'>), [])
+
+  return (
+    <Card size="lg" className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-h2 text-charcoal">Xu hướng đếm chim {days} ngày</h2>
+          <p className="mt-1 text-sm text-warmGray">Số lượt vào tổ và xuất đàn theo ngày</p>
+        </div>
+        <div className="flex gap-1 rounded-2xl bg-warmGray/10 p-1">
+          {DAY_OPTIONS.map(dayOption => (
+            <button
+              key={dayOption}
+              onClick={() => setDays(dayOption)}
+              className={cn(
+                'rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors',
+                days === dayOption ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
+              )}
+            >
+              {dayOption} Ngày
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <LoadingSkeleton className="h-72 w-full" />
+      ) : records.length === 0 ? (
+        <ChartEmptyFrame message="Chưa có dữ liệu đếm chim trong khoảng này" className="h-72" />
+      ) : (
+        <div className="h-72">
+          <Line data={chartData} options={chartOptions} />
+        </div>
+      )}
+    </Card>
+  )
+}

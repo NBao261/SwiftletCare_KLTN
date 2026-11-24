@@ -1,0 +1,47 @@
+import type { AlertSeverity } from './alert.types'
+
+// Khớp backend/src/types/domain.types.ts (Report 3 §2.3)
+// FARM_TECHNICIAN (Report 3 4.0.0, G-20): thợ của chủ farm, thành viên farm, chỉ thao tác trên nhà được giao (AUTH-FR-013);
+// khớp backend/src/types/domain.types.ts
+export type Role = 'ADMIN' | 'FARM_OWNER' | 'DOMAIN_EXPERT' | 'FARM_TECHNICIAN'
+
+// Kênh ngoài app của một mức cảnh báo
+export interface ChannelChoice {
+  push: boolean
+  telegram: boolean
+}
+
+// Kênh ngoài app: push (ALERT-FR-002) và Telegram (ALERT-FR-013); by_severity ghi đè kênh chung cho từng mức (ALERT-FR-005),
+// null hoặc thiếu là theo kênh chung
+export interface NotificationPreferences {
+  push: boolean
+  // Chỉ có tác dụng khi tài khoản đã liên kết bot Telegram
+  telegram: boolean
+  quiet_hours: { start: string; end: string }
+  by_severity?: Partial<Record<AlertSeverity, ChannelChoice | null>>
+}
+
+export interface User {
+  _id: string
+  email: string
+  phone?: string
+  full_name: string
+  role: Role
+  avatar_url?: string
+  is_active: boolean
+  // Đang giữ mật khẩu tạm do Admin cấp — phải đổi trước khi dùng app (AUTH-FR-005c)
+  must_change_password?: boolean
+  notification_preferences: NotificationPreferences
+  // Đã liên kết bot Telegram (ALERT-FR-013)
+  telegram_linked?: boolean
+  // Đã gửi yêu cầu xoá tài khoản, chờ Administrator xử lý trong 30 ngày (AUTH-FR-012, §6.14); null là không có yêu cầu
+  deletion_requested_at?: string | null
+  created_at: string
+}
+
+// refreshToken chỉ có khi gửi header X-Client: mobile
+export interface LoginResponse {
+  accessToken: string
+  refreshToken?: string
+  user: User
+}

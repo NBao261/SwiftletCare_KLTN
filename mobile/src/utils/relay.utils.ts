@@ -1,0 +1,104 @@
+import { CONFIRMATION_REQUIRED_CODE, OVERRIDE_MAX_MS, OVERRIDE_MIN_MS, PUMP_ON_MAX_MS } from '@/constants/relayOverride'
+import type { ControlMode, RelayName, SensorNode } from '@/types'
+import type { PumpBlockingAlert } from '@/utils/alert.utils'
+import { getSettingsErrorMessage, readApiError } from '@/utils/apiError.utils'
+import { getAlertStatusLabel, getAlertTypeLabel } from '@/utils/label.utils'
+import { t } from '@/utils/i18n.utils'
+
+const MINUTE_MS = 60 * 1000
+const MINUTES_PER_HOUR = 60
+
+// Thời gian còn lại tới giờ hết hạn override: "còn 18 phút", "còn 2 giờ 5 phút", "còn dưới 1 phút"; đã hết thì null
+export function formatRemainingTime(expiresAt: string, now: number = Date.now()): string | null {
+  const remainingMs = new Date(expiresAt).getTime() - now
+  if (remainingMs <= 0) return null
+  const totalMinutes = Math.floor(remainingMs / MINUTE_MS)
+  if (totalMinutes < 1) return t('còn dưới 1 phút')
+  const hours = Math.floor(totalMinutes / MINUTES_PER_HOUR)
+  const minutes = totalMinutes % MINUTES_PER_HOUR
+  if (hours === 0) return t('còn {minutes} phút', { minutes })
+  return minutes === 0 ? t('còn {hours} giờ', { hours }) : t('còn {hours} giờ {minutes} phút', { hours, minutes })
+}
+
+const VIETNAM_OFFSET_MS = 7 * 60 * MINUTE_MS
+
+export interface DurationLimits {
+  minMs: number
+  maxMs: number
+}
+
+// Khoảng thời lượng điều khiển tay theo BR-08: bật bơm tối đa 30 phút, còn lại tối đa 24 giờ
+export function getOverrideDurationLimits(relay: RelayName, state: boolean): DurationLimits {
+  const isPumpOn = relay === 'misting' && state
+  return { minMs: OVERRIDE_MIN_MS, maxMs: isPumpOn ? PUMP_ON_MAX_MS : OVERRIDE_MAX_MS }
+}
+
+// Kẹp thời lượng vào khoảng cho phép — ví dụ đổi từ tắt sang bật bơm khi đang chọn 1 giờ thì về 30 phút
+export function clampOverrideDuration(durationMs: number, limits: DurationLimits): number {
+  return Math.min(limits.maxMs, Math.max(limits.minMs, durationMs))
+}
+
+// Thời lượng ngắn gọn cho nút chọn: "5 phút", "1 giờ", "1 giờ 30 phút"
+export function formatDuration(durationMs: number): string {
+  const totalMinutes = Math.round(durationMs / MINUTE_MS)
+  const hours = Math.floor(totalMinutes / MINUTES_PER_HOUR)
+  const minutes = totalMinutes % MINUTES_PER_HOUR
+  if (hours === 0) return t('{minutes} phút', { minutes })
+  return minutes === 0 ? t('{hours} giờ', { hours }) : t('{hours} giờ {minutes} phút', { hours, minutes })
+}
+
+// Giờ:phút theo giờ Việt Nam của một thời điểm ("14:05") — giờ tự về AUTO
+export function formatClockTime(isoDate: string): string {
+  return new Date(new Date(isoDate).getTime() + VIETNAM_OFFSET_MS).toISOString().slice(11, 16)
+}
+
+// Chế độ của một relay (BR-20): đọc relays[relay]; controller cũ chưa gửi relays thì lấy chế độ chung của controller
+export function getRelayMode(node: SensorNode, relay: RelayName): ControlMode {
+  return node.relays?.[relay]?.mode ?? node.control_mode
+}
+
+// Giờ relay tự về AUTO; relay đang AUTO thì null
+export function getRelayExpiry(node: SensorNode, relay: RelayName): string | null {
+  if (getRelayMode(node, relay) !== 'MANUAL') return null
+  const ownExpiry = node.relays?.[relay]
+  return (ownExpiry ? ownExpiry.override_expiry : node.override_expiry) ?? null
+}
+
+// Các relay đang điều khiển tay của một controller, theo thứ tự truyền vào
+export function getManualRelays(node: SensorNode, relays: readonly RelayName[]): RelayName[] {
+  return relays.filter(relay => getRelayMode(node, relay) === 'MANUAL')
+}
+
+// Tổng số relay đang điều khiển tay của nhiều controller
+export function countManualRelays(nodes: SensorNode[], relays: readonly RelayName[]): number {
+  return nodes.reduce((total, node) => total + getManualRelays(node, relays).length, 0)
+}
+
+// Khung giờ phát loa: "05:00–07:00 · 17:00–19:00"; tắt lịch hoặc chưa có thì null
+export function formatSpeakerWindows(schedule: SensorNode['speaker_schedule']): string | null {
+  if (!schedule || schedule.enabled === false || !schedule.windows?.length) return null
+  return schedule.windows.map(window => `${window.start}–${window.end}`).join(' · ')
+}
+
+// Nội dung hộp xác nhận bật bơm (ENV-FR-016): mỗi cảnh báo đang mở một dòng "• loại · trạng thái" (không biết trạng thái
+// thì chỉ ghi loại), rồi câu hỏi kèm thời lượng
+export function buildPumpConfirmMessage(alerts: PumpBlockingAlert[], durationMs: number): string {
+  const lines = alerts.map(alert =>
+    alert.status
+      ? `• ${getAlertTypeLabel(alert.type)} · ${getAlertStatusLabel(alert.status)}`
+      : `• ${getAlertTypeLabel(alert.type)}`,
+  )
+  const question = t('Bơm có thể chạy không đúng. Vẫn bật bơm trong {duration}?', { duration: formatDuration(durationMs) })
+  return [t('Khu vực đang có cảnh báo:'), ...lines, '', question].join('\n')
+}
+
+// Câu lỗi khi gửi lệnh relay theo mã của backend. Câu "cảnh báo chặn bật bơm" chỉ dành cho 409 CONFIRMATION_REQUIRED lúc bật
+// bơm; 409 khác (controller đã bị gỡ khỏi hệ thống) dùng câu chung
+export function getRelayControlErrorMessage(error: unknown, isPumpOn: boolean): string {
+  const errorInfo = readApiError(error)
+  const isPumpConfirmation = isPumpOn && errorInfo.status === 409 && errorInfo.code === CONFIRMATION_REQUIRED_CODE
+  return getSettingsErrorMessage(error, {
+    422: t('Thời lượng không hợp lệ: bật bơm tối đa 30 phút, còn lại tối đa 24 giờ'),
+    ...(isPumpConfirmation ? { 409: t('Khu vực vừa có cảnh báo chặn bật bơm, vui lòng xem lại') } : {}),
+  })
+}

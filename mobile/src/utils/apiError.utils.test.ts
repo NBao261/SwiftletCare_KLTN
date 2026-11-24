@@ -1,0 +1,173 @@
+import { describe, expect, it } from '@jest/globals'
+import {
+  formatWaitTime,
+  getAuthErrorMessage,
+  getDeviceMoveErrorMessage,
+  getDeviceRegisterErrorMessage,
+  getDeviceRemoveErrorMessage,
+  getDeviceRestoreErrorMessage,
+  getSettingsErrorMessage,
+  INVALID_CODE_MESSAGE,
+  isServerUnreachableError,
+  NETWORK_ERROR_MESSAGE,
+  readApiError,
+  SERVER_ERROR_MESSAGE,
+} from '@/utils/apiError.utils'
+
+// Lỗi axios giả theo đúng vỏ ApiError của backend
+function backendError(status: number, code?: string, details?: Record<string, unknown>) {
+  return { response: { status, data: { success: false, error: { code, message: 'x', details } } } }
+}
+
+describe('readApiError', () => {
+  it('không có response nghĩa là chưa tới được backend', () => {
+    expect(readApiError(new Error('Network Error'))).toEqual({ status: null, code: null, details: {} })
+  })
+
+  it('đọc status, code và details', () => {
+    expect(readApiError(backendError(429, 'RATE_LIMITED', { retryAfterSec: 30 }))).toEqual({
+      status: 429,
+      code: 'RATE_LIMITED',
+      details: { retryAfterSec: 30 },
+    })
+  })
+})
+
+describe('getAuthErrorMessage', () => {
+  it('đăng nhập sai chỉ báo một câu chung', () => {
+    expect(getAuthErrorMessage(backendError(401, 'UNAUTHORIZED'), 'login')).toBe(
+      'Tài khoản hoặc mật khẩu không chính xác',
+    )
+  })
+
+  it('tài khoản bị khoá kèm lý do; không có lý do thì hướng dẫn liên hệ quản trị viên', () => {
+    const error = backendError(403, 'ACCOUNT_DISABLED', { reason: 'Vi phạm điều khoản' })
+    expect(getAuthErrorMessage(error, 'login')).toBe('Tài khoản đã bị khoá. Lý do: Vi phạm điều khoản')
+    expect(getAuthErrorMessage(backendError(403, 'ACCOUNT_DISABLED', { reason: null }), 'login')).toBe(
+      'Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên',
+    )
+  })
+
+  it('429 dùng thời gian chờ của backend, câu theo từng thao tác', () => {
+    const error = backendError(429, 'RATE_LIMITED', { retryAfterSec: 45 })
+    expect(getAuthErrorMessage(error, 'login')).toBe('Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 45 giây')
+    expect(getAuthErrorMessage(error, 'request-code')).toBe(
+      'Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau 45 giây',
+    )
+    expect(getAuthErrorMessage(error, 'reset-password')).toBe(
+      'Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 45 giây',
+    )
+    expect(getAuthErrorMessage(backendError(429, 'RATE_LIMITED'), 'login')).toBe(
+      'Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau ít phút',
+    )
+  })
+
+  it('mã sai hoặc hết hạn chung một câu', () => {
+    expect(getAuthErrorMessage(backendError(400, 'INVALID_RESET_TOKEN'), 'reset-password')).toBe(INVALID_CODE_MESSAGE)
+  })
+
+  it('đổi mật khẩu tạm: sai mật khẩu tạm, mật khẩu mới trùng cũ', () => {
+    expect(getAuthErrorMessage(backendError(400, 'INVALID_CURRENT_PASSWORD'), 'change-temporary-password')).toBe(
+      'Mật khẩu tạm không chính xác',
+    )
+    expect(getAuthErrorMessage(backendError(400, 'PASSWORD_UNCHANGED'), 'change-temporary-password')).toBe(
+      'Mật khẩu mới phải khác mật khẩu tạm',
+    )
+  })
+
+  it('đổi mật khẩu ở tab Tài khoản: nói "mật khẩu hiện tại", không nói "mật khẩu tạm"', () => {
+    expect(getAuthErrorMessage(backendError(400, 'INVALID_CURRENT_PASSWORD'), 'change-password')).toBe(
+      'Mật khẩu hiện tại không chính xác',
+    )
+    expect(getAuthErrorMessage(backendError(400, 'PASSWORD_UNCHANGED'), 'change-password')).toBe(
+      'Mật khẩu mới phải khác mật khẩu hiện tại',
+    )
+  })
+
+  it('mất mạng và lỗi máy chủ là hai câu khác nhau', () => {
+    expect(getAuthErrorMessage(new Error('timeout'), 'login')).toBe(NETWORK_ERROR_MESSAGE)
+    expect(getAuthErrorMessage(backendError(503), 'request-code')).toBe(SERVER_ERROR_MESSAGE)
+  })
+
+  it('dữ liệu không hợp lệ và lỗi không rõ', () => {
+    expect(getAuthErrorMessage(backendError(422, 'VALIDATION_ERROR'), 'request-code')).toBe('Email không hợp lệ')
+    expect(getAuthErrorMessage(backendError(422, 'VALIDATION_ERROR'), 'reset-password')).toBe(
+      'Thông tin không hợp lệ. Vui lòng kiểm tra lại',
+    )
+    expect(getAuthErrorMessage(backendError(404, 'NOT_FOUND'), 'change-password')).toBe(
+      'Đã có lỗi xảy ra. Vui lòng thử lại sau',
+    )
+  })
+})
+
+describe('formatWaitTime', () => {
+  it('dưới 1 phút ghi giây, từ 1 phút làm tròn lên', () => {
+    expect(formatWaitTime(45)).toBe('45 giây')
+    expect(formatWaitTime(60)).toBe('1 phút')
+    expect(formatWaitTime(601)).toBe('11 phút')
+  })
+})
+
+describe('getSettingsErrorMessage', () => {
+  it('mỗi mã HTTP một câu ngắn, câu riêng của thao tác được ưu tiên', () => {
+    expect(getSettingsErrorMessage(new Error('Network Error'))).toBe(NETWORK_ERROR_MESSAGE)
+    expect(getSettingsErrorMessage(backendError(400, 'BAD_REQUEST'))).toBe(
+      'Giá trị không hợp lệ. Vui lòng kiểm tra lại',
+    )
+    expect(getSettingsErrorMessage(backendError(403, 'FORBIDDEN'))).toBe('Bạn không có quyền thực hiện thao tác này')
+    expect(getSettingsErrorMessage(backendError(403, 'FORBIDDEN'), { 403: 'Chỉ chủ chính' })).toBe('Chỉ chủ chính')
+    expect(getSettingsErrorMessage(backendError(503))).toBe(SERVER_ERROR_MESSAGE)
+  })
+})
+
+describe('getDeviceRegisterErrorMessage', () => {
+  it('sai mã trên nhãn là 400, thiết bị đã dùng nơi khác là 409', () => {
+    expect(getDeviceRegisterErrorMessage(backendError(400, 'BAD_REQUEST'))).toBe(
+      'Mã thiết bị hoặc mã kích hoạt không đúng',
+    )
+    expect(getDeviceRegisterErrorMessage(backendError(409, 'CONFLICT'))).toBe(
+      'Thiết bị đã thuộc trang trại khác hoặc đã được đăng ký',
+    )
+  })
+})
+
+describe('getDeviceMoveErrorMessage', () => {
+  it('400 là trùng khu vực đang ở, 409 là không trực tuyến hoặc đã gỡ, 403 dùng câu chung', () => {
+    expect(getDeviceMoveErrorMessage(backendError(400))).toBe('Thiết bị đang ở khu vực này rồi')
+    expect(getDeviceMoveErrorMessage(backendError(409))).toBe(
+      'Thiết bị đã bị gỡ, không dời được',
+    )
+    expect(getDeviceMoveErrorMessage(backendError(403))).toBe('Bạn không có quyền thực hiện thao tác này')
+  })
+})
+
+describe('getDeviceRemoveErrorMessage', () => {
+  it('409 báo thiết bị đã gỡ hoặc vừa trực tuyến lại, mất mạng dùng câu mạng', () => {
+    expect(getDeviceRemoveErrorMessage(backendError(409))).toBe(
+      'Không gỡ được: thiết bị đã bị gỡ hoặc vừa trực tuyến lại. Tải lại rồi thử lại',
+    )
+    expect(getDeviceRemoveErrorMessage(new Error('Network Error'))).toBe(NETWORK_ERROR_MESSAGE)
+  })
+})
+
+describe('getDeviceRestoreErrorMessage', () => {
+  it('409 gộp các lý do backend từ chối khôi phục', () => {
+    expect(getDeviceRestoreErrorMessage(backendError(409))).toBe(
+      'Không khôi phục được: đã quá 24 giờ, thiết bị đã được đăng ký lại hoặc đã có thiết bị thay',
+    )
+  })
+})
+
+describe('isServerUnreachableError', () => {
+  it('lỗi axios không có phản hồi (máy chủ tắt, quá thời gian chờ) là không tới được máy chủ', () => {
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ERR_NETWORK' })).toBe(true)
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ECONNABORTED' })).toBe(true)
+  })
+
+  it('máy chủ có trả lời, request bị huỷ hoặc lỗi không phải axios thì không tính', () => {
+    expect(isServerUnreachableError({ isAxiosError: true, response: { status: 500 } })).toBe(false)
+    expect(isServerUnreachableError({ isAxiosError: true, code: 'ERR_CANCELED' })).toBe(false)
+    expect(isServerUnreachableError(new Error('boom'))).toBe(false)
+    expect(isServerUnreachableError(null)).toBe(false)
+  })
+})

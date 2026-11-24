@@ -1,0 +1,14 @@
+# Context là gốc repo: chỉ gửi backend/ và spec, không gửi node_modules hay file bí mật
+*
+!backend
+!docs/api/api-spec.yaml
+backend/node_modules
+backend/dist
+backend/coverage
+backend/logs
+backend/uploads
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/**/firebase-service-account*.json
+backend/storage

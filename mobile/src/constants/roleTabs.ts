@@ -1,0 +1,80 @@
+import type { Href } from 'expo-router'
+import {
+  BellIcon,
+  ChartLineIcon,
+  HouseIcon,
+  ShieldCheckIcon,
+  SlidersHorizontalIcon,
+  TrayIcon,
+  UserCircleIcon,
+  WarehouseIcon,
+  type Icon,
+} from 'phosphor-react-native'
+import type { Role } from '@/types'
+
+// Một mục trên thanh tab: name là thư mục route trong src/app/(tabs)/
+export interface RoleTab {
+  name: string
+  title: string
+  icon: Icon
+  // Nút tròn lớn nổi lên khỏi thanh tab (nền xanh loang); mỗi role tối đa một tab
+  isFeatured?: boolean
+}
+
+/**
+ * Tab của từng role trên mobile — chỗ duy nhất cần sửa khi đổi menu.
+ * Đổi menu: sửa title/icon, trỏ name sang route thật trong src/app/(tabs)/.
+ * Role không có ở đây thì không được vào app: Administrator dùng console web (Report 4 §5.4).
+ */
+export const ROLE_TABS: Partial<Record<Role, readonly RoleTab[]>> = {
+  FARM_OWNER: [
+    { name: 'home', title: 'Trang chủ', icon: HouseIcon },
+    { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
+    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, isFeatured: true },
+    { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
+    { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
+  ],
+  // Kỹ thuật viên nhà yến (G-20, Report 3 §2.4): cùng 5 tab và cùng màn với Farm Owner; backend chỉ trả các nhà được giao, nút
+  // thao tác theo canPerform (điều khiển tay có; xác nhận cảnh báo, tạo nhà, đăng ký thiết bị, sửa ngưỡng không). Tab Cảnh báo giữ
+  // theo Report 3 (ALERT-FR-009, 017); cảnh báo của nhà được giao mở từ G-20, định tuyến theo nhà hoàn thiện ở G-21
+  FARM_TECHNICIAN: [
+    { name: 'home', title: 'Trang chủ', icon: HouseIcon },
+    { name: 'farms', title: 'Trang trại', icon: WarehouseIcon },
+    { name: 'alerts', title: 'Cảnh báo', icon: BellIcon, isFeatured: true },
+    { name: 'analytics', title: 'Phân tích', icon: ChartLineIcon },
+    { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
+  ],
+  // Tab nghiệp vụ Chuyên gia (Domain Expert) — 4 tab đều nhau, không dùng nút nổi: với 4 tab nút nổi
+  // rơi vào vị trí thứ 2 (lệch trái) và khối lime đứng yên lấn át chỉ báo tab đang chọn (user, 2026-11-14)
+  DOMAIN_EXPERT: [
+    { name: 'queue', title: 'Hàng đợi', icon: TrayIcon },
+    { name: 'verdicts', title: 'Thẩm định', icon: ShieldCheckIcon },
+    { name: 'tuning', title: 'Tham số', icon: SlidersHorizontalIcon },
+    { name: 'profile', title: 'Tài khoản', icon: UserCircleIcon },
+  ],
+}
+
+// Role được dùng app mobile
+export function isMobileRole(role: Role): boolean {
+  return (ROLE_TABS[role]?.length ?? 0) > 0
+}
+
+// Danh sách tab của role, theo đúng thứ tự trên thanh tab
+export function getRoleTabs(role: Role): readonly RoleTab[] {
+  return ROLE_TABS[role] ?? []
+}
+
+// Tiêu đề của tab theo tên route — màn tạm lấy tiêu đề từ đây
+export function findTabTitle(name: string): string | undefined {
+  for (const tabs of Object.values(ROLE_TABS)) {
+    const tab = tabs?.find(roleTab => roleTab.name === name)
+    if (tab) return tab.title
+  }
+  return undefined
+}
+
+// Màn đầu tiên sau khi đăng nhập: tab đầu của role
+export function getRoleHomeHref(role: Role): Href {
+  const firstTab = getRoleTabs(role)[0]
+  return (firstTab ? `/(tabs)/${firstTab.name}` : '/(auth)/login') as Href
+}

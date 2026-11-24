@@ -1,13 +1,13 @@
-## 📋 Mô tả
+## Mô tả
 
 <!-- Giải thích ngắn gọn thay đổi này làm gì và tại sao cần thiết -->
 
-## 🔗 Liên kết
+## Liên kết
 
 - Closes #<!-- issue number, ví dụ: Closes #42 -->
 - Branch: `<!-- feat/ | fix/ | docs/ | chore/ -->/<!-- tên nhánh -->`
 
-## 🗂️ Loại thay đổi
+## Loại thay đổi
 
 <!-- Đánh dấu X vào ô phù hợp -->
 
@@ -18,30 +18,34 @@
 - [ ] `perf` – Cải thiện hiệu năng
 - [ ] `test` – Thêm/sửa test
 - [ ] `chore` – Cấu hình, dependency
+- [ ] `ci` – CI/CD
+- [ ] `style` – Format code, không đổi logic
+- [ ] `revert` – Revert commit trước đó
 - [ ] `security` – Vá bảo mật
-- [ ] `breaking` – Breaking change ⚠️
+- [ ] `breaking` – Breaking change
 
-## ✅ Checklist trước khi tạo PR
+## Checklist trước khi tạo PR
 
 - [ ] Code chạy được trên máy local không có lỗi
-- [ ] Commit message đúng format: `type(scope): subject`
-- [ ] Đã validate commit: `python -X utf8 .agents/skills/git-commit-convention/scripts/validate_commit.py --staged`
+- [ ] Commit message đúng format: `type(scope): subject`, theo `type-enum`/`scope-enum` trong `.commitlintrc.json` (CI tự validate bằng commitlint khi mở PR)
 - [ ] Không có conflict với `develop` (đã `git pull origin develop`)
 - [ ] Đã test tính năng/fix thủ công
 - [ ] **KHÔNG** commit file `.env`, credentials, API key, secret
 - [ ] Không còn `console.log`, `print` debug thừa
 - [ ] Tên biến/hàm rõ ràng (không dùng `a`, `b`, `temp`, `data`...)
+- [ ] Ghi mã yêu cầu của Report 3 (`docs/reports/report3-srs.md`) mà PR này làm, VD `FARM-FR-010`; PR đóng hoặc mở một gap thì cập nhật `docs/reports/project-tracking.md` §6
+- [ ] Route đổi → đã cập nhật `docs/api/api-spec.yaml`; hằng số tự chọn mới → đã thêm vào Report 3 §4.5; đổi model → đã chạy `npm run db:script`
 
-## 📸 Screenshot / Video (nếu thay đổi UI)
+## Screenshot / Video (nếu thay đổi UI)
 
 <!-- Kéo thả ảnh hoặc video vào đây để reviewer hình dung -->
 
-## 📝 Ghi chú cho Reviewer
+## Ghi chú cho Reviewer
 
 <!-- Điều gì cần reviewer chú ý đặc biệt?
      Ví dụ: logic phức tạp, trade-off đã chọn, dependency bên ngoài... -->
 
-## ⚠️ Breaking Changes (nếu có)
+## Breaking Changes (nếu có)
 
 <!-- Mô tả những gì thay đổi không tương thích ngược.
      Ai bị ảnh hưởng? Cần làm gì để migrate? -->

@@ -1,0 +1,130 @@
+/**
+ * Config.cpp – Runtime configuration defaults
+ */
+#include "Config.h"
+#include "Secrets.h" // KHÔNG commit — copy từ Secrets.h.example rồi điền giá trị thật
+#include "storage/StorageManager.h" // save() gọi StorageManager::saveConfig() — không có include-cycle (StorageManager.h chỉ include sensors/SensorManager.h)
+#include <ArduinoJson.h>
+
+namespace Config {
+// WiFi credentials — giá trị mặc định từ Secrets.h, có thể bị WiFiProvisioner
+// ghi đè bằng giá trị đã lưu trong NVS (WiFi nhập qua captive portal AP-mode).
+String wifiSsid = SECRET_WIFI_SSID;
+String wifiPassword = SECRET_WIFI_PASSWORD;
+
+// MQTT broker — giá trị mặc định từ Secrets.h, có thể bị ghi đè bằng IP mới
+// nhập qua captive portal (đổi WiFi mạng khác => IP LAN broker cũng đổi, xem
+// MQTTManager::begin() + WiFiProvisioner).
+String mqttBroker = SECRET_MQTT_BROKER;
+const char *mqttPassword = SECRET_MQTT_PASSWORD;
+
+// Mặc định dev; main.cpp setup() thay bằng giá trị flash trong NVS nếu có (tools/flash_identity.py)
+const char *deviceId = SECRET_DEVICE_ID;
+
+// Runtime thresholds (loaded from NVS, fallback to defaults). volatile:
+// xem giải thích ở Config.h — phải khớp cv-qualifier với extern ở đó.
+volatile float tempMin = DEFAULT_TEMP_MIN;
+volatile float tempMax = DEFAULT_TEMP_MAX;
+volatile float humidityMin = DEFAULT_HUMIDITY_MIN;
+volatile float humidityMax = DEFAULT_HUMIDITY_MAX;
+volatile float lightMax = DEFAULT_LIGHT_MAX;
+int sensorIntervalMs = SENSOR_INTERVAL_MS;
+int pidIntervalMs = PID_INTERVAL_MS;
+
+volatile float fuzzyHumidityBand = DEFAULT_FUZZY_HUMIDITY_BAND;
+volatile float fuzzyTempBand = DEFAULT_FUZZY_TEMP_BAND;
+volatile int fuzzyFanDryLevel = DEFAULT_FUZZY_FAN_DRY_LEVEL;
+volatile int fuzzyWindowSec = DEFAULT_FUZZY_WINDOW_SEC;
+volatile bool fuzzyInputFilter = DEFAULT_FUZZY_INPUT_FILTER;
+volatile float noiseMarginDb = DEFAULT_NOISE_MARGIN_DB;
+volatile int noiseMinSec = DEFAULT_NOISE_MIN_SEC;
+volatile int pumpDryOnSec = DEFAULT_PUMP_DRY_ON_SEC;
+volatile float pumpDryMinRisePct = DEFAULT_PUMP_DRY_MIN_RISE_PCT;
+volatile int speakerDropPct = DEFAULT_SPEAKER_DROP_PCT;
+
+// Speaker schedule (ENV-FR-013b)
+volatile bool speakerScheduleEnabled = true;
+volatile int speakerWindow1StartHour = SPEAKER_WINDOW_1_START_HOUR;
+volatile int speakerWindow1EndHour = SPEAKER_WINDOW_1_END_HOUR;
+volatile int speakerWindow2StartHour = SPEAKER_WINDOW_2_START_HOUR;
+volatile int speakerWindow2EndHour = SPEAKER_WINDOW_2_END_HOUR;
+volatile int speakerVolume = DFPLAYER_DEFAULT_VOLUME;
+volatile int speakerTrack = DFPLAYER_DEFAULT_TRACK;
+volatile uint32_t configVersion = 0;
+
+void load() {
+  // Giá trị thật (mặc định Config.h hoặc đã lưu từ NVS) đã được
+  // StorageManager::loadConfig() áp dụng TRƯỚC khi hàm này chạy — xem thứ tự
+  // gọi trong main.cpp setup(): StorageManager::begin() (gọi loadConfig()
+  // bên trong) rồi mới tới Config::load(). Hàm này chỉ log xác nhận, không
+  // tự làm gì thêm.
+  Serial.println("[Config] San sang (mac dinh Config.h hoac gia tri da luu "
+                 "tu NVS — xem StorageManager::loadConfig())");
+}
+
+void save() { StorageManager::saveConfig(); }
+
+void update(const char *jsonPayload) {
+  JsonDocument doc;
+  if (deserializeJson(doc, jsonPayload)) {
+    Serial.println("[Config] Invalid JSON");
+    return;
+  }
+  if (doc["temp_min"].is<float>())
+    tempMin = doc["temp_min"].as<float>();
+  if (doc["temp_max"].is<float>())
+    tempMax = doc["temp_max"].as<float>();
+  if (doc["humidity_min"].is<float>())
+    humidityMin = doc["humidity_min"].as<float>();
+  if (doc["humidity_max"].is<float>())
+    humidityMax = doc["humidity_max"].as<float>();
+  if (doc["light_max"].is<float>())
+    lightMax = doc["light_max"].as<float>();
+  // nh3_max/co2_max không còn được đọc (SRS v2.0.0): NH3/CO2 chỉ cảnh báo, do
+  // backend tính từ telemetry — firmware không điều khiển theo hai chỉ số này.
+  // Hệ số logic mờ (ENV-FR-021): backend đã validate, vẫn kẹp lại ở đây vì 1
+  // giá trị hỏng (vd band = 0 → chia 0) sẽ làm hỏng điều khiển thật.
+  if (doc["fuzzy_humidity_band"].is<float>())
+    fuzzyHumidityBand = constrain(doc["fuzzy_humidity_band"].as<float>(), 2.0f, 20.0f);
+  if (doc["fuzzy_temp_band"].is<float>())
+    fuzzyTempBand = constrain(doc["fuzzy_temp_band"].as<float>(), 1.0f, 10.0f);
+  if (doc["fuzzy_fan_dry_level"].is<float>())
+    fuzzyFanDryLevel = constrain(lroundf(doc["fuzzy_fan_dry_level"].as<float>()), 0L, 100L);
+  if (doc["fuzzy_window_sec"].is<float>())
+    fuzzyWindowSec = constrain(lroundf(doc["fuzzy_window_sec"].as<float>()), 60L, 600L);
+  if (doc["fuzzy_input_filter"].is<bool>())
+    fuzzyInputFilter = doc["fuzzy_input_filter"].as<bool>();
+  // Tham số phát hiện (EXPERT-FR-008): backend đã kiểm tra khoảng, vẫn kẹp lại
+  // ở đây. Số nguyên nhận mọi số rồi làm tròn — is<int>() bỏ qua âm thầm giá
+  // trị lẻ mà backend (Number) có thể gửi.
+  if (doc["noise_margin_db"].is<float>())
+    noiseMarginDb = constrain(doc["noise_margin_db"].as<float>(), 5.0f, 30.0f);
+  if (doc["noise_min_sec"].is<float>())
+    noiseMinSec = constrain(lroundf(doc["noise_min_sec"].as<float>()), 5L, 15L);
+  if (doc["pump_dry_on_sec"].is<float>())
+    pumpDryOnSec = constrain(lroundf(doc["pump_dry_on_sec"].as<float>()), 120L, 900L);
+  if (doc["pump_dry_min_rise_pct"].is<float>())
+    pumpDryMinRisePct = constrain(doc["pump_dry_min_rise_pct"].as<float>(), 0.5f, 10.0f);
+  if (doc["speaker_drop_pct"].is<float>())
+    speakerDropPct = constrain(lroundf(doc["speaker_drop_pct"].as<float>()), 30L, 90L);
+  if (doc["speaker_schedule_enabled"].is<bool>())
+    speakerScheduleEnabled = doc["speaker_schedule_enabled"].as<bool>();
+  if (doc["speaker_window1_start_hour"].is<int>())
+    speakerWindow1StartHour = doc["speaker_window1_start_hour"].as<int>();
+  if (doc["speaker_window1_end_hour"].is<int>())
+    speakerWindow1EndHour = doc["speaker_window1_end_hour"].as<int>();
+  if (doc["speaker_window2_start_hour"].is<int>())
+    speakerWindow2StartHour = doc["speaker_window2_start_hour"].as<int>();
+  if (doc["speaker_window2_end_hour"].is<int>())
+    speakerWindow2EndHour = doc["speaker_window2_end_hour"].as<int>();
+  if (doc["speaker_volume"].is<int>())
+    speakerVolume = doc["speaker_volume"].as<int>();
+  if (doc["speaker_track"].is<int>())
+    speakerTrack = doc["speaker_track"].as<int>();
+  // Ghi sau mọi giá trị khác: heartbeat chỉ báo phiên bản khi cả bản cấu hình đó đã được áp (ENV-FR-027)
+  if (doc["config_version"].is<uint32_t>())
+    configVersion = doc["config_version"].as<uint32_t>();
+  Serial.println("[Config] Updated from MQTT");
+  save(); // ENV-FR-013b/006/007: persist ngay, không chỉ sống trong RAM
+}
+} // namespace Config

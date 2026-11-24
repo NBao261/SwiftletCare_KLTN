@@ -1,0 +1,219 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from datetime import datetime  # noqa: E402
+
+from counting import BucketClock, RingCounter, current_session  # noqa: E402
+
+SQUARE = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]   # 100x100 frame -> 25..75 px
+
+
+def box(cx, cy, half=3):
+    return (cx - half, cy - half, cx + half, cy + half)
+
+
+def run(counter, path, tid=1):
+    for cx, cy in path:
+        counter.update([tid], [box(cx, cy)])
+
+
+def test_bird_coming_out_of_the_hole_is_entry():
+    c = RingCounter(SQUARE, 100, 100)
+    run(c, [(50, 50), (60, 60), (90, 95)])
+    assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+def test_bird_going_into_the_hole_is_exit():
+    c = RingCounter(SQUARE, 100, 100)
+    run(c, [(5, 50), (20, 50), (40, 50)])
+    assert (c.entry_count, c.exit_count) == (0, 1)
+
+
+def test_fly_past_counts_both_ways_so_net_is_zero():
+    c = RingCounter(SQUARE, 100, 100)
+    run(c, [(5, 50), (50, 50), (95, 50)])
+    assert (c.entry_count, c.exit_count) == (1, 1)
+
+
+def test_first_sighting_is_not_a_crossing():
+    c = RingCounter(SQUARE, 100, 100)
+    run(c, [(90, 90), (95, 95)])
+    run(c, [(50, 50)], tid=2)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_direction_flips_when_ring_is_not_the_outdoor_side():
+    c = RingCounter(SQUARE, 100, 100, into_ring_is_exit=False)
+    run(c, [(5, 50), (40, 50)])
+    assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+def test_tracks_are_independent_and_start_from_restored_counts():
+    c = RingCounter(SQUARE, 100, 100, base_entry=3, base_exit=2)
+    c.update([1, 2], [box(50, 50), box(5, 5)])
+    c.update([1, 2], [box(95, 50), box(50, 50)])
+    assert (c.entry_count, c.exit_count) == (4, 3)
+
+
+def test_crossing_while_the_tracker_lost_the_bird_still_counts():
+    c = RingCounter(SQUARE, 100, 100)
+    c.update([1], [box(50, 50)])
+    c.update([], [])                            # missed for a couple of frames
+    c.update([], [])
+    c.update([1], [box(95, 95)])
+    assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+# Luật ngoại suy: chim qua lỗ 150–200 px/frame, frame trong vòng thường không được phát hiện
+HOLE = [(0.4, 0.4), (0.6, 0.4), (0.6, 0.6), (0.4, 0.6)]   # 1000x1000 frame -> 400..600 px
+
+
+def fast_counter(**kw):
+    return RingCounter(HOLE, 1000, 1000, lost_frames=3, extrapolate_frames=2, min_speed_px=60, **kw)
+
+
+def idle(counter, frames=5):
+    for _ in range(frames):
+        counter.update([], [])
+
+
+def test_track_lost_just_outside_heading_into_the_hole_is_exit():
+    c = fast_counter()
+    run(c, [(100, 500), (250, 500), (370, 500)])           # 120 px/frame, next frame at 490 = inside
+    assert (c.entry_count, c.exit_count) == (0, 0)          # not final until lost_frames pass
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 1)
+
+
+def test_new_track_first_seen_just_outside_moving_away_from_the_hole_is_entry():
+    c = fast_counter()
+    run(c, [(650, 500), (780, 500)])                        # going back 130 px from 650 lands inside
+    assert (c.entry_count, c.exit_count) == (1, 0)
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+def test_track_lost_at_the_frame_edge_counts_nothing():
+    c = fast_counter()
+    run(c, [(820, 500), (920, 500), (990, 500)])            # far from the hole, flies off the frame
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 0, 0)
+
+
+def test_slow_circling_bird_lost_near_the_ring_counts_nothing():
+    c = fast_counter()
+    run(c, [(300, 500), (330, 500), (360, 500)])            # 30 px/frame: circling, not diving
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_track_born_and_lost_inside_is_ambiguous_not_counted():
+    c = fast_counter()
+    run(c, [(480, 500), (520, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 0, 1)
+
+
+def test_crossing_into_the_ring_then_lost_inside_counts_once():
+    c = fast_counter()
+    run(c, [(250, 500), (370, 500), (480, 500)])            # crossing counted when it happens
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 1, 0)
+
+
+def test_short_gap_does_not_finalise_and_the_last_motion_decides():
+    c = fast_counter()
+    run(c, [(100, 500), (250, 500), (370, 500)])
+    idle(c, 2)                                              # tracker lost it for 2 frames < lost_frames
+    run(c, [(300, 300)])                                    # reacquired, now veering away from the hole
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_extrapolation_is_off_unless_configured():
+    c = RingCounter(HOLE, 1000, 1000, lost_frames=3)
+    run(c, [(100, 500), (250, 500), (370, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_new_ring_forgets_tracks():
+    c = fast_counter()
+    run(c, [(100, 500), (250, 500), (370, 500)])
+    c.set_ring(HOLE, 1000, 1000, True)
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+# Phiên theo giờ VN và số đếm 5 phút
+def once(**kw):
+    return fast_counter(once_per_track=True, **kw)
+
+
+def test_once_per_track_bird_circling_at_the_hole_then_leaving_counts_one_exit():
+    c = once()
+    # vào vòng, ra, vào lại rồi mất trong lỗ: cách cũ đếm RA 2, VÀO 1
+    run(c, [(300, 500), (450, 500), (300, 500), (450, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 1)
+
+
+def test_once_per_track_fly_past_counts_nothing():
+    c = once()
+    run(c, [(300, 500), (500, 500), (700, 500), (850, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (0, 0)
+
+
+def test_once_per_track_bird_out_of_the_hole_is_entry_when_lost():
+    c = once()
+    run(c, [(500, 500), (650, 500), (800, 500)])
+    assert (c.entry_count, c.exit_count) == (0, 0)          # chốt khi vết mất
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (1, 0)
+
+
+def test_once_per_track_uses_extrapolation_at_both_ends():
+    c = once()
+    run(c, [(650, 500), (780, 500)], tid=1)                 # ra khỏi lỗ trong frame không ai thấy
+    run(c, [(100, 500), (250, 500), (370, 500)], tid=2)     # mất ngay ngoài lỗ, đang lao vào
+    idle(c)
+    assert (c.entry_count, c.exit_count) == (1, 1)
+
+
+def test_once_per_track_born_and_lost_inside_is_ambiguous():
+    c = once()
+    run(c, [(500, 500), (520, 500)])
+    idle(c)
+    assert (c.entry_count, c.exit_count, c.ambiguous) == (0, 0, 1)
+
+
+WINDOWS = {"MORNING_EXIT": ["05:30", "07:00"], "EVENING_ENTRY": ["17:30", "19:00"]}
+
+
+def test_current_session_bounds():
+    at = lambda hhmm: datetime.strptime(f"2026-10-20 {hhmm}", "%Y-%m-%d %H:%M")  # noqa: E731
+    assert current_session(WINDOWS, at("05:29")) is None
+    assert current_session(WINDOWS, at("05:30")) == "MORNING_EXIT"   # đầu tính
+    assert current_session(WINDOWS, at("06:59")) == "MORNING_EXIT"
+    assert current_session(WINDOWS, at("07:00")) is None             # cuối không tính
+    assert current_session(WINDOWS, at("18:15")) == "EVENING_ENTRY"
+    assert current_session(WINDOWS, at("23:00")) is None
+
+
+def test_bucket_clock_aligns_and_reports_deltas():
+    t0 = 1_760_000_000 - 1_760_000_000 % 300 + 42            # 42 giây sau mốc 5 phút
+    b = BucketClock(5, t0)
+    assert b.start == t0 - 42
+    assert b.roll(t0 + 100, (3, 1)) is None                   # chưa hết khoảng
+    assert b.roll(t0 - 42 + 300, (5, 2)) == (t0 - 42, 5, 2)   # hết khoảng đầu: số từ đầu
+    assert b.roll(t0 - 42 + 610, (9, 2)) == (t0 - 42 + 300, 4, 0)   # khoảng sau chỉ phần tăng thêm
+    assert b.start == t0 - 42 + 600
+
+
+def test_bucket_clock_after_outage_keeps_old_start():
+    b = BucketClock(5, 0)
+    assert b.roll(1000, (2, 0)) == (0, 2, 0)                  # mất hình 1000 giây: một khoảng dài, mốc đầu cũ
+    assert b.start == 900

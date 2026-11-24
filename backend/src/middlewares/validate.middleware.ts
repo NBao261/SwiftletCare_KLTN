@@ -1,0 +1,12 @@
+﻿import { Request, Response, NextFunction } from 'express'
+import { validationResult } from 'express-validator'
+import { AppError } from '@/utils/appError.util'
+
+export function validate(req: Request, res: Response, next: NextFunction): void {
+  const errors = validationResult(req)
+  if (!errors.isEmpty()) {
+    next(new AppError(422, 'VALIDATION_ERROR', 'Dữ liệu gửi lên không hợp lệ', errors.array()))
+    return
+  }
+  next()
+}

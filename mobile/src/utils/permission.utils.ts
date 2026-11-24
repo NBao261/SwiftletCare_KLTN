@@ -1,0 +1,211 @@
+import type { Role, User } from '@/types'
+
+// Thao tác cần kiểm quyền trên mobile — thêm dần theo bảng ở MOBILE_GUIDE 2.1
+export type PermissionAction =
+  | 'setupDevice'
+  | 'controlRelay'
+  | 'clearRelayOverride'
+  | 'viewOwnerTasks'
+  | 'viewPendingRatings'
+  | 'createFarm'
+  | 'createHouse'
+  | 'registerCamera'
+  | 'editFarm'
+  | 'deleteFarm'
+  | 'createZone'
+  | 'editThresholds'
+  | 'editFuzzyTuning'
+  | 'editDetectionTuning'
+  | 'editBirdCountTuning'
+  | 'applyCoefficientSuggestion'
+  | 'writeConclusion'
+  | 'rateHealthDay'
+  | 'acknowledgeAlert'
+  | 'setAlertVerdict'
+  | 'editNotificationSettings'
+  | 'viewOwnerProfile'
+  | 'viewBell'
+  | 'viewHealthReports'
+  | 'viewAlertEvidence'
+  | 'viewControlSuggestion'
+  | 'limitedToAssignedHouses'
+  | 'viewFarmMembers'
+  | 'manageFarmMembers'
+  | 'drawCountingRing'
+  | 'answerOnsiteCheck'
+  | 'viewWorkOrders'
+  | 'workOnWorkOrder'
+  | 'viewAssignedWorkOrdersOnly'
+  | 'viewMaintenance'
+  | 'recordHarvest'
+  | 'editAnyHarvest'
+  | 'confirmHarvest'
+  | 'restartController'
+  | 'setHouseStage'
+  | 'viewHouseTechnicians'
+  | 'createWorkOrder'
+  | 'decideWorkOrder'
+  | 'viewRecommendations'
+  | 'decideRecommendation'
+  | 'editWeatherRules'
+  | 'editCountingSchedule'
+  | 'editHealthLevels'
+  | 'reviewDisagreements'
+  | 'viewHealthLevels'
+  | 'viewFarmOverview'
+  | 'proposeWeatherRules'
+  | 'remindExpert'
+
+// Role được làm từng thao tác (Report 3 §2.4); Admin không vào app. Farm Technician (G-20) chỉ thấy và thao tác trên nhà được
+// giao — backend chỉ trả nhà, tầng, thiết bị, cảnh báo của các nhà đó và trả 403 ở nhà khác (AUTH-FR-013)
+const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
+  // Thiết lập thiết bị bằng QR (SF-01): chỉ Farm Owner, Domain Expert chỉ xem thiết bị
+  setupDevice: ['FARM_OWNER'],
+  // Điều khiển tay một relay (ENV-FR-016): Farm Owner và kỹ thuật viên nhà được giao, chuyên gia chỉ xem (Report 3 §2.4)
+  controlRelay: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Trả relay về tự động (ENV-FR-018): cùng quyền với điều khiển tay
+  clearRelayOverride: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Khối "Đánh giá ngày" và "Báo cáo mới" ở Trang chủ: việc của chủ trại
+  viewOwnerTasks: ['FARM_OWNER'],
+  // Ngày chờ mình chấm trong khối "Đánh giá ngày" (BR-31): người chấm — chủ trại và kỹ thuật viên của nhà được giao
+  viewPendingRatings: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Tạo trang trại, nhà yến (FARM-FR-001, 002): chỉ chủ trại — Admin không tạo farm thay chủ (Report 3 §8)
+  createFarm: ['FARM_OWNER'],
+  createHouse: ['FARM_OWNER'],
+  // Đăng ký camera AI cho nhà (FARM-FR-004, MF-06): chủ trại; chuyên gia chỉ xem
+  registerCamera: ['FARM_OWNER'],
+  // Sửa thông tin, toạ độ farm (FARM-FR-001): chỉ chủ trại
+  editFarm: ['FARM_OWNER'],
+  // Xoá farm: chỉ chủ trại, và backend chỉ cho chủ chính (màn kiểm thêm owner_id)
+  deleteFarm: ['FARM_OWNER'],
+  // Tạo zone trong nhà (FARM-FR-002): chỉ chủ trại
+  createZone: ['FARM_OWNER'],
+  // Ngưỡng và hệ số bộ điều khiển fuzzy thuộc farm: chủ trại và chuyên gia sửa (ENV-FR-006, ENV-FR-021)
+  editThresholds: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  editFuzzyTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Tham số phát hiện của zone và mức giảm tỷ lệ về tổ của nhà (EXPERT-FR-008): chuyên gia và chủ trại; farm có chuyên gia
+  // thì thay đổi của chủ trại áp ngay và mở mục duyệt (BR-22 nhóm A)
+  editDetectionTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  editBirdCountTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Vẽ vòng đếm của camera (VISION-FR-018, Report 3 §2.4): chuyên gia, chủ trại và kỹ thuật viên của nhà có camera (backend
+  // 403 ở nhà khác); farm có chuyên gia thì vòng của chủ trại áp ngay và mở mục duyệt (BR-22 nhóm A)
+  drawCountingRing: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Áp dụng gợi ý hệ số (EXPERT-FR-011): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22, xem FARM_OWNER_WITHOUT_EXPERT)
+  applyCoefficientSuggestion: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Viết kết luận báo cáo (EXPERT-FR-006): chỉ chuyên gia
+  writeConclusion: ['DOMAIN_EXPERT'],
+  // Chấm, bỏ qua, ghi chú trạng thái ngày của nhà (EXPERT-FR-012, BR-31, Report 3 4.2.0): Farm Owner và Farm Technician của
+  // nhà được giao (backend ASSESSOR_ROLES); chuyên gia xem các ngày lệch thay vì chấm, Admin không vào app
+  rateHealthDay: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Xác nhận đã biết cảnh báo, kèm nguyên nhân tại chỗ (ALERT-FR-009, 018): chủ trại và kỹ thuật viên nhà được giao (backend
+  // G-21, nhà khác 403); chuyên gia 403
+  acknowledgeAlert: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Trả lời yêu cầu kiểm tra tại chỗ cảnh báo suy luận (EXPERT-FR-021): chỉ thợ được giao nhà; chủ trại, chuyên gia 403
+  answerOnsiteCheck: ['FARM_TECHNICIAN'],
+  // Xem Work Order (OPS-FR-001…004): chủ trại, chuyên gia (đọc), kỹ thuật viên (nhà được giao)
+  viewWorkOrders: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Bắt đầu, báo xong Work Order (OPS-FR-002): kỹ thuật viên nhà được giao và chủ trại
+  workOnWorkOrder: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Khối Work Order ở Trang chủ đếm việc giao cho chính mình: kỹ thuật viên; chủ trại đếm cả farm
+  viewAssignedWorkOrdersOnly: ['FARM_TECHNICIAN'],
+  // Xem kế hoạch bảo trì, đến hạn, lịch sử ghi (OPS-FR-005…008, G-22): chủ trại, chuyên gia, kỹ thuật viên nhà được giao; tạo, sửa
+  // kế hoạch và duyệt Work Order phòng ngừa (một lần ghi bảo trì) là việc của chủ trại trên web
+  viewMaintenance: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Ghi lần thu hoạch (HARVEST-FR-001): chủ trại (CONFIRMED ngay) và kỹ thuật viên nhà được giao (DRAFT chờ xác nhận); chuyên gia
+  // chỉ đọc (Report 3 §2.4)
+  recordHarvest: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Sửa, xoá mọi lô thu hoạch (HARVEST-FR-005): chủ trại; kỹ thuật viên chỉ lô DRAFT của chính mình (utils/harvest canEditHarvestRun)
+  editAnyHarvest: ['FARM_OWNER'],
+  // Xác nhận lô DRAFT do kỹ thuật viên ghi (HARVEST-FR-006): chỉ chủ trại; kỹ thuật viên 403
+  confirmHarvest: ['FARM_OWNER'],
+  // Khởi động lại controller từ xa (FARM-FR-013): chủ trại và kỹ thuật viên nhà được giao; chuyên gia không gửi lệnh
+  restartController: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Đặt giai đoạn nhà Đang dẫn dụ / Đã có chim (FARM-FR-014): chủ trại và chuyên gia; kỹ thuật viên chỉ xem
+  setHouseStage: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Tên kỹ thuật viên phụ trách nhà (AUTH-FR-013): chủ trại thấy cả danh sách thành viên; giao, đổi người làm ở web
+  viewHouseTechnicians: ['FARM_OWNER'],
+  // Mở phiếu công việc bằng tay (OPS-FR-001): chỉ chủ trại
+  createWorkOrder: ['FARM_OWNER'],
+  // Duyệt, mở lại, huỷ, giao lại phiếu (OPS-FR-004): chỉ chủ trại; kỹ thuật viên làm phiếu, chuyên gia chỉ đọc
+  decideWorkOrder: ['FARM_OWNER'],
+  // Xem khuyến nghị của farm (EXPERT-FR-017): chủ trại, chuyên gia. Kỹ thuật viên chỉ được gọi GET /recommendations theo houseId
+  // nhà được giao (theo farmId thì 403) nên chưa mở màn này cho kỹ thuật viên
+  viewRecommendations: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Chấp nhận hoặc từ chối khuyến nghị (EXPERT-FR-018): chỉ chủ trại
+  decideRecommendation: ['FARM_OWNER'],
+  // Luật bù thời tiết (ENV-FR-030): chuyên gia đặt; chủ trại đặt thẳng chỉ khi farm chưa có chuyên gia, có thì gửi đề xuất
+  // (BR-22 nhóm B). Lịch đếm (VISION-FR-019), mức chỉ số sức khỏe: chuyên gia và chủ trại (nhóm A). Xem ngày lệch
+  // (EXPERT-FR-022): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia. Kỹ thuật viên chỉ xem luật và lịch
+  editWeatherRules: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  editCountingSchedule: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  editHealthLevels: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  reviewDisagreements: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Xem mức chỉ số sức khỏe của nhà (GET health-levels): chủ trại, chuyên gia; kỹ thuật viên 403
+  viewHealthLevels: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Tổng quan farm hôm nay trên thẻ nhà (ANALYTICS-FR-015): chủ trại; kỹ thuật viên 403, chuyên gia chưa có Trang chủ
+  viewFarmOverview: ['FARM_OWNER'],
+  // Phán quyết cảnh báo suy luận (EXPERT-FR-003): chuyên gia; chủ trại chỉ khi farm chưa có chuyên gia (BR-22)
+  setAlertVerdict: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Gửi bộ luật thời tiết cho chuyên gia duyệt (POST …/weather-rules/proposal): chủ trại trên farm có chuyên gia (BR-22 nhóm B)
+  proposeWeatherRules: ['FARM_OWNER'],
+  // Nhắc chuyên gia kết luận cảnh báo suy luận, báo cáo, mùa vụ (POST /expert-activity/reminders): chủ trại trên farm có chuyên
+  // gia (BR-22 nhóm C)
+  remindExpert: ['FARM_OWNER'],
+  // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chủ trại và kỹ thuật viên (nhận cảnh báo đầu tiên của nhà được
+  // giao); chuyên gia không nhận push, Telegram
+  editNotificationSettings: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Trang Tài khoản đầy đủ (hồ sơ, lối tắt, thành viên, bảo mật): làm cho Farm Owner; Domain Expert, kỹ thuật viên giữ trang cơ bản
+  viewOwnerProfile: ['FARM_OWNER'],
+  // Chuông (hộp thông báo + cảnh báo chờ xác nhận): người nhận và xác nhận cảnh báo — chủ trại, kỹ thuật viên
+  viewBell: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Trạng thái ngày, báo cáo sức khỏe theo nhà (EXPERT-FR-005, ANALYTICS-FR-012): kỹ thuật viên chỉ thấy nhà được giao (backend)
+  viewHealthReports: ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'],
+  // Bằng chứng cảnh báo suy luận, gợi ý hệ số: backend chỉ cho chủ trại và chuyên gia (/alerts/{id}/evidence, /health-reports/preview,
+  // /analytics/control/suggestion trả 403 cho kỹ thuật viên) — mở cho kỹ thuật viên khi backend mở
+  viewAlertEvidence: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  viewControlSuggestion: ['FARM_OWNER', 'DOMAIN_EXPERT'],
+  // Chỉ thấy các nhà được giao (AUTH-FR-013): danh sách trống nghĩa là chưa được giao nhà, không phải farm chưa có nhà
+  limitedToAssignedHouses: ['FARM_TECHNICIAN'],
+  // Xem thành viên farm: Farm Owner (GET /farms/{id} chỉ trả bản ghi của chính chuyên gia)
+  viewFarmMembers: ['FARM_OWNER'],
+  // Mời, gỡ thành viên (AUTH-FR-005, EXPERT-FR-001): Farm Owner và phải là chủ chính, xem PRIMARY_OWNER_ONLY
+  manageFarmMembers: ['FARM_OWNER'],
+}
+
+// Thao tác chủ trại chỉ được làm khi farm chưa có chuyên gia (BR-22 nhóm B, C); có chuyên gia thì chuyên gia duyệt hoặc kết luận.
+// Nhóm A (tham số, lịch đếm, vòng đếm) chủ trại luôn sửa được, farm có chuyên gia thì backend mở mục duyệt
+const FARM_OWNER_WITHOUT_EXPERT: ReadonlySet<PermissionAction> = new Set([
+  'applyCoefficientSuggestion',
+  'setAlertVerdict',
+  'editWeatherRules',
+  'reviewDisagreements',
+])
+
+// Thao tác chủ trại chỉ làm khi farm có chuyên gia (BR-22): gửi chuyên gia duyệt, nhắc chuyên gia; farm chưa có thì chủ tự quyết
+const FARM_OWNER_WITH_EXPERT: ReadonlySet<PermissionAction> = new Set(['proposeWeatherRules', 'remindExpert'])
+
+// Thao tác backend chỉ cho Primary Owner (người tạo farm); đồng sở hữu chỉ xem
+const PRIMARY_OWNER_ONLY: ReadonlySet<PermissionAction> = new Set(['manageFarmMembers'])
+
+export interface PermissionContext {
+  // Farm đang xem có Domain Expert còn hoạt động (utils/farm.utils farmHasExpert, has_active_expert của GET /farms)
+  farmHasExpert?: boolean
+  // Người dùng là Primary Owner của farm đang xem (farm.owner_id === user._id)
+  isPrimaryOwner?: boolean
+}
+
+// Màn chỉ dành cho Domain Expert (hàng đợi, thẩm định, tinh chỉnh, nhật ký): guard tập trung ở đây
+// thay vì so user.role rải rác trong route (MOBILE_GUIDE 2.1)
+export function isDomainExpert(user: User | null): boolean {
+  return user?.role === 'DOMAIN_EXPERT'
+}
+
+// Chỗ duy nhất quyết định nút thao tác nào hiện — màn hình không tự so user.role
+export function canPerform(user: User | null, action: PermissionAction, context: PermissionContext = {}): boolean {
+  if (!user) return false
+  if (!ALLOWED_ROLES[action].includes(user.role)) return false
+  if (user.role === 'FARM_OWNER' && FARM_OWNER_WITHOUT_EXPERT.has(action)) return context.farmHasExpert === false
+  if (user.role === 'FARM_OWNER' && FARM_OWNER_WITH_EXPERT.has(action)) return context.farmHasExpert === true
+  if (PRIMARY_OWNER_ONLY.has(action)) return context.isPrimaryOwner === true
+  return true
+}

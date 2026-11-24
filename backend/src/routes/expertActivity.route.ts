@@ -1,0 +1,48 @@
+import { Router } from 'express'
+import { body, param, query } from 'express-validator'
+import * as expertActivityController from '@/controllers/expertActivity.controller'
+import { EXPERT_DECISION_ACTIONS } from '@/services/expertActivity.service'
+import { REMINDER_KINDS } from '@/services/expertReminder.service'
+import { authenticate, requireRole } from '@/middlewares/auth.middleware'
+import { validate } from '@/middlewares/validate.middleware'
+
+const router = Router()
+router.use(authenticate, requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
+
+const pageQuery = [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 })]
+const farmScope = [query('farmId').isString().isMongoId(), query('zoneId').optional().isString().isMongoId()]
+
+router.get('/',
+  ...farmScope,
+  query('from').optional().isISO8601(),
+  query('to').optional().isISO8601(),
+  query('type').optional().isString().isIn([...EXPERT_DECISION_ACTIONS]),
+  query('houseId').optional().isString().isMongoId(),
+  ...pageQuery,
+  validate,
+  expertActivityController.list,
+)
+
+// Mọi việc đang chờ chuyên gia của một trại (trang chủ của chuyên gia)
+router.get('/queue', requireRole('DOMAIN_EXPERT'), query('farmId').isString().isMongoId(), validate, expertActivityController.queue)
+
+router.get('/reviews',
+  ...farmScope, query('status').optional().isString().isIn(['PENDING_REVIEW', 'ACCEPTED', 'REVERTED', 'ADJUSTED']),
+  ...pageQuery, validate, expertActivityController.listReviews)
+router.put('/reviews/:id/accept', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), validate, expertActivityController.acceptReview)
+router.put('/reviews/:id/revert', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), validate, expertActivityController.revertReview)
+
+router.get('/proposals',
+  ...farmScope, query('status').optional().isString().isIn(['PROPOSED', 'APPROVED', 'REJECTED', 'SUPERSEDED']),
+  ...pageQuery, validate, expertActivityController.listProposals)
+router.post('/proposals', requireRole('FARM_OWNER'), body('zoneId').isString().isMongoId(), validate, expertActivityController.submitProposal)
+router.put('/proposals/:id/approve', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(), validate, expertActivityController.approveProposal)
+router.put('/proposals/:id/reject', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(),
+  body('note').isString().trim().notEmpty().withMessage('Từ chối đề xuất phải ghi lý do').isLength({ max: 1000 }),
+  validate, expertActivityController.rejectProposal)
+
+router.post('/reminders', requireRole('FARM_OWNER'),
+  body('kind').isString().isIn([...REMINDER_KINDS]), body('id').isString().isMongoId(), validate,
+  expertActivityController.remindExpert)
+
+export default router

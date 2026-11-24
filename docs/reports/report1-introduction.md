@@ -1,0 +1,132 @@
+# Report 1 – Introduction
+
+**SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming**
+
+| Field | Value |
+| --- | --- |
+| Project code | FA26SE158 |
+| Course | SEP490 – Capstone Project, FA26 |
+| Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
+| Supervisor | Nguyễn Văn Chiến, Trương Long |
+| Duration | July 2026 – December 2026 |
+| Document version | 1.2.0 (Review 2, final scope) |
+| Date | 09/11/2026 |
+| Scope baseline | Registration form v3 (`docs/reports/registration-v3.md`) with Record of Changes (`bm03-record-of-changes.md`) |
+| Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
+
+---
+
+## 1. Project Information
+
+| Item | Value |
+| --- | --- |
+| English name | SwiftletCare: An Automated Environmental Control and Multi-Modal Health Monitoring System for Swiftlet Farming |
+| Vietnamese name | SwiftletCare: Hệ thống tự động hóa điều khiển môi trường và giám sát sức khỏe nhà yến đa phương thức |
+| Abbreviation | SwiftletCare |
+| Profession | Software Engineering |
+| Field partner | A practitioner's swiftlet house lent to the team as the test house; practitioners with long swiftlet-farming experience act as Domain Experts (Report 3, A-6) |
+
+### 1.1 Team
+
+| Member | Student code | Role in the team |
+| --- | --- | --- |
+| Nguyễn Chí Bảo | SE183383 | Leader; firmware, AI pipeline, backend core; documents |
+| Trần Minh Kiệt | SE182180 | Backend (devices, accounts, alerts, expert module, daily health); firmware self-diagnosis |
+| Nguyễn Vũ Len | SE182055 | Mobile application – Farm Owner and Farm Technician |
+| Nguyễn Thị Yến Nhi | SE184223 | Web application – Farm Owner (analytics, daily health, reports, farm overview, house comparison, Work Orders, decisions on recommendations, harvest cycles) and Administrator |
+| Thái Minh Tuấn | SE181850 | Web and mobile application – Domain Expert (verdicts, profiles, recommendation rules, season conclusions); Administrator device console |
+
+Responsibilities in detail are in Report 2, Section 4, and in the Ownership Map of the Design Brief.
+
+## 2. Background
+
+Edible-nest swiftlets are farmed in closed, multi-floor concrete houses that imitate a cave. The nests are the farmer's product, and their quantity and quality depend on the micro-climate inside the house — mainly humidity and temperature — and on whether the flock stays and grows. The field studies collected for this project (Report 3, REF-11) report humidity of roughly 80–90 % and temperatures of about 26–33 °C in productive houses (`docs/evidence-register.md`).
+
+A swiftlet house has nobody inside, and owners usually visit only every few days, because each visit disturbs the birds. Three problems follow:
+
+1. **The environment drifts unnoticed.** Misting pumps and attractant speakers usually run on fixed timers or on simple devices that only measure and switch. When humidity stays low or the temperature rises, nests degrade and birds may leave, and the drift is found only at the next visit.
+2. **The flock cannot be followed.** The difference between birds leaving in the morning and returning in the evening is the earliest sign of growth or desertion, but nobody can count thousands of birds at dusk by eye.
+3. **Nobody checks the automation.** A timer or controller that runs dry, a broken sensor or a wrong threshold silently does the wrong thing. The parameters of an automated house must come from domain knowledge and be checked by someone who knows swiftlets.
+
+## 3. Existing Solutions
+
+What farmers use today falls into four kinds:
+
+| Kind | What it does | What it lacks for this problem |
+| --- | --- | --- |
+| Timers and simple humidity switches | Run the misting pump and speaker by time or by a single humidity set-point | No remote view, no alert when the pump runs dry or a sensor fails, no record over time |
+| Generic smart-home or IoT sensors with a phone app | Show temperature and humidity remotely and send threshold alerts | Not built for a closed house: no control loop that works offline, no air-quality or noise evidence, no swiftlet-specific thresholds |
+| CCTV at the entrance | Lets the owner look at the birds | Counting is manual; nothing turns the video into a return rate or an alert |
+| Research prototypes of swiftlet-house monitoring (REF-11, REF-12) | Measure the micro-climate or count birds on video | Each covers one source; none combines control, counting and an expert's validation into one system |
+
+## 4. Business Opportunity
+
+Swiftlet farming is a significant agricultural business in Southeast Asia, and Vietnam has a large number of house farms: about 24,000 houses in more than 43 provinces, harvesting some 120–150 tonnes of nests a year (Báo Nông nghiệp Việt Nam, 3 January 2024; `docs/evidence-register.md`, TL-492). A house is a large investment whose return depends on keeping the flock, yet it is supervised by occasional visits. A low-cost system that keeps the environment in range by itself, reports equipment faults at once, shows the flock's daily trend and asks an experienced farmer to confirm what it infers gives the owner:
+
+- fewer losses from unnoticed drift and failed equipment;
+- an objective daily indicator of the flock (return rate) and of the house (daily health status);
+- a record over time that an expert can read remotely, so advice no longer needs a site visit.
+
+The system runs on affordable commodity hardware (ESP32, industrial RS485 sensors, an IP camera, a spare PC) and open-source software (registration form, section E; Report 3, C-4).
+
+## 5. Software Product Vision
+
+> For swiftlet-farm owners who cannot be at their houses every day, SwiftletCare is an automated control and monitoring system that keeps each floor's micro-climate in range by itself, counts the flock at the entrance and gives every house one daily health status with its reasons. Unlike timers and generic IoT sensors, it diagnoses its own equipment, combines environment, air quality, noise and flock movement, and keeps an experienced swiftlet farmer in the loop to validate what it infers and tune how it behaves.
+
+Users and what they do (Report 3, Section 2.3):
+
+| User | Main goals |
+| --- | --- |
+| Farm Owner | Watch and compare the houses, receive escalated and critical alerts, approve Work Orders and plan maintenance, accept or reject recommendations, apply configuration profiles, override an actuator for a limited time, set up devices by scanning QR codes, read the daily status and reports, rate each day, confirm harvests and compare seasons |
+| Farm Technician | The owner's staff on site, assigned to houses: receive their alerts first, record the cause found, carry out Work Orders, inspections and calibration, check inferred alerts on site, override an actuator, restart a controller or draw the counting ring there, rate each day, enter harvests |
+| Domain Expert | Review data and reports, confirm or reject inferred alerts, tune thresholds, coefficients, detection parameters, the counting ring and the weather compensation, prepare configuration profiles, write recommendation rules, conclusions and season conclusions, review the days where a rating and the status disagree |
+| Administrator (supporting) | Manage accounts, the device stock and its labels, system-wide defaults and the audit log; see every device with its device alerts, diagnose it remotely and send restarts, configuration pushes and firmware updates; no relay control, no environmental data, no farm management |
+
+## 6. Project Scope and Limitations
+
+### 6.1 Major Features
+
+The main flows of the registration form v3 (Report 3, Section 2.2):
+
+| ID | Flow | In one sentence |
+| --- | --- | --- |
+| MF-01 | Automatic micro-climate control | Every 10 s a fuzzy controller on each floor sets misting and fan power from humidity and temperature, with a small expert-approved weather offset on misting; it keeps doing so without Internet, and the owner or the technician can take one relay by hand for a limited time before it returns to automatic |
+| MF-02 | Incident handling | A threshold or NH3/CO2 breach, an equipment fault, a restart, a device offline or a forecast crossing raises one alert that reaches the house's technician first and the owner when it is critical or not acknowledged in time; a fault that needs a visit becomes a Work Order closed only when the data confirm recovery |
+| MF-03 | Bird counting session | Birds crossing a ring around the entrance hole are counted per session; the return rate is computed; the annotated video is streamed |
+| MF-04 | Expert validation of inferred alerts | Abnormal noise, implausible readings, early warnings and return-rate drops are shown with their evidence; the house's technician checks each one on site, then the expert confirms or rejects it |
+| MF-05 | Control-parameter tuning | The expert reviews the owner's changes and approves coefficient suggestions; the new configuration reaches the controllers and is confirmed applied |
+| MF-06 | Daily health assessment and reports | Each house gets a daily status by agreement between sources, with daily, weekly and monthly reports in PDF/CSV, on-site ratings that confirm or correct the status, a farm overview and a comparison of houses |
+| MF-07 | Preventive maintenance | Plans by run hours or calendar make preventive Work Orders due for the technician, with checklists; overdue plans escalate |
+| MF-08 | Recommendation loop | The expert's rules turn patterns in the data into recommendations that the owner accepts or rejects; their effect is measured after 7 days |
+
+Supporting flows: device setup by the Farm Owner with two QR scans (SF-01), remote device maintenance by the Administrator (SF-02), accounts and access with technician assignment (SF-03), notification settings (SF-04), system administration (SF-05), harvest recording with a season summary (SF-06), which happens only a few times a year. Maintenance stays inside the owner's organisation: there are no external service providers, regions or queues.
+
+### 6.2 Limitations and Exclusions
+
+- Out of scope (Report 3, Section 8): predator detection, bird-call classification, heating and light control, fan control from NH3, CO2 or weather, marketplace and buyer role, external service providers and payroll, yield prediction, Zalo and SMS, bypass switches, store publication, commercial 24/7 operation.
+- The daily health status is an indicator, not a diagnosis: it lists its reasons and the expert concludes (Report 3, Section 8.1).
+- Weather comes from a regional model for the farm's coordinates, not a measurement at the house; it is context only (C-6).
+- The system is evaluated in one borrowed test house; results are reported for that house and its season.
+
+## 7. Related Documents
+
+| Document | Location |
+| --- | --- |
+| Registration form v3 and Record of Changes (BM03) | `docs/reports/registration-v3.md`, `docs/reports/bm03-record-of-changes.md`, `docs/reports/registration/` |
+| Report 2 – Project Management Plan | `docs/reports/report2-project-management-plan.md` |
+| Report 3 – Software Requirements Specification | `docs/reports/report3-srs.md` |
+| Report 4 – Software Design Description | `docs/reports/report4-sdd.md` |
+| Report 5 – Software Test Documentation | `docs/reports/report5-test.md` |
+| Project Tracking | `docs/reports/project-tracking.md` |
+| Design Brief (BM01) | `docs/reports/design-brief.md` |
+
+## 8. Revision History
+
+| Version | Date | Change |
+| --- | --- | --- |
+| 1.2.0 | 09/11/2026 | Eight main flows; harvest recording and season summary is supporting flow SF-06; on-site check by the technician in MF-04 |
+| 1.1.0 | 09/11/2026 | Final scope of Review 2 (SRS 4.0.0, BM03 rows 13–19): Farm Technician; nine main flows with preventive maintenance, recommendation loop and harvest season assessment; five supporting flows; team roles of the new work packages |
+| 1.0.3 | 03/11/2026 | Technician role removed (BM03 row 13): remote maintenance by the Administrator. Six business main flows (SRS 3.2.0); device setup is supporting flow SF-01 |
+| 1.0.2 | 03/11/2026 | Farm Owner screens split by platform: Len the mobile app, Nhi the web with the Administrator web |
+| 1.0.1 | 27/10/2026 | Team roles re-split: backend and firmware for Bảo and Kiệt, web and mobile per role for Len, Nhi and Tuấn |
+| 1.0.0 | 23/10/2026 | First version for Review 2, written from the registration form v3 |

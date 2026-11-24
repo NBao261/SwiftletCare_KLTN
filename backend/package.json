@@ -1,0 +1,123 @@
+{
+  "name": "swiftletcare-backend",
+  "version": "1.0.0",
+  "description": "SwiftletCare Cloud API – Node.js + Express + TypeScript + MongoDB + MQTT + Socket.io",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsx watch --include \"./src/**/*\" src/index.ts",
+    "seed": "tsx src/scripts/seed.script.ts",
+    "seed:demo": "tsx src/scripts/seed-demo.script.ts",
+    "job:run": "tsx src/scripts/run-job.script.ts",
+    "mdns": "tsx src/scripts/mdns-responder.script.ts",
+    "migrate:retention": "tsx src/scripts/migrate-retention.script.ts",
+    "migrate:remove-sales": "tsx src/scripts/migrate-remove-sales.script.ts",
+    "migrate:data-model": "tsx src/scripts/migrate-data-model.script.ts",
+    "migrate:scope-v2": "tsx src/scripts/migrate-scope-v2.script.ts",
+    "migrate:bird-count-house": "tsx src/scripts/migrate-bird-count-house.script.ts",
+    "migrate:remove-tickets": "tsx src/scripts/migrate-remove-tickets.script.ts",
+    "migrate:remove-regions": "tsx src/scripts/migrate-remove-regions.script.ts",
+    "migrate:alert-types": "tsx src/scripts/migrate-alert-types.script.ts",
+    "migrate:remove-otp-login": "tsx src/scripts/migrate-remove-otp-login.script.ts",
+    "migrate:telemetry-unique": "tsx src/scripts/migrate-telemetry-unique.script.ts",
+    "mqtt:isolation": "tsx src/scripts/mqtt-isolation.script.ts",
+    "device:broker-secret": "tsx src/scripts/rotate-broker-secret.script.ts",
+    "migrate:relay-overrides": "tsx src/scripts/migrate-relay-overrides.script.ts",
+    "migrate:farm-technician": "tsx src/scripts/migrate-farm-technician.script.ts",
+    "migrate:harvest-confirmed": "tsx src/scripts/migrate-harvest-confirmed.script.ts",
+    "migrate:erd-fields": "tsx src/scripts/migrate-erd-fields.script.ts",
+    "migrate:review-targets": "tsx src/scripts/migrate-review-targets.script.ts",
+    "migrate:alert-incidents": "tsx src/scripts/migrate-alert-incidents.script.ts",
+    "migrate:quiet-hours-owner-only": "tsx src/scripts/migrate-quiet-hours-owner-only.script.ts",
+    "migrate:zone-reports": "tsx src/scripts/migrate-zone-reports.script.ts",
+    "db:script": "tsx src/scripts/export-db-script.script.ts",
+    "build": "tsc",
+    "build:check": "tsc --noEmit",
+    "test": "jest --coverage",
+    "test:unit": "jest tests/unit --coverage",
+    "test:int": "jest tests/integration",
+    "lint": "eslint \"src/**/*.ts\"",
+    "pm2:start": "pm2 start dist/index.js --name swiftletcare-api -i max",
+    "pm2:stop": "pm2 stop swiftletcare-api"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1632.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.1.0",
+    "firebase-admin": "^12.1.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.4",
+    "morgan": "^1.10.0",
+    "mqtt": "^5.6.0",
+    "multer": "^2.4.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.13",
+    "socket.io": "^4.7.5",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.13.0",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.12",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^2.2.0",
+    "@types/multicast-dns": "^7.2.4",
+    "@types/node": "^20.14.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^6.4.15",
+    "@types/supertest": "^6.0.2",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^11.2.0",
+    "multicast-dns": "^7.2.5",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.1.5",
+    "tsx": "^4.15.6",
+    "typescript": "^5.4.5"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.ts"
+    ],
+    "globals": {
+      "ts-jest": {
+        "tsconfig": "./tsconfig.test.json"
+      }
+    },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "testMatch": [
+      "**/tests/**/*.test.ts",
+      "**/tests/**/*.spec.ts"
+    ],
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/types/**",
+      "!src/**/*.d.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 80
+      }
+    }
+  }
+}

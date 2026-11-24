@@ -1,0 +1,170 @@
+import { useEffect, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { useFloatingMenu } from '@/components/ui/useFloatingMenu'
+import { cn } from '@/lib/cn'
+import { tr } from '@/i18n'
+import { IconChevronDown, IconCheck } from '@/components/ui/icons'
+
+export interface SelectMenuOption<V extends string> {
+  value: V
+  label: string
+  // Dòng cần chú ý: chấm cam trước nhãn trong danh sách
+  warning?: boolean
+}
+
+interface SelectMenuProps<V extends string> {
+  value: V
+  options: SelectMenuOption<V>[]
+  onChange: (value: V) => void
+  // Nhãn cho screen reader: trigger chỉ hiện label của option đang chọn
+  ariaLabel: string
+  className?: string
+  // Kiểu ô form: không tô viền "đang lọc"
+  field?: boolean
+  disabled?: boolean
+  // Chỉ với `field`: viền đỏ như Input có `error`
+  invalid?: boolean
+  // Câu đọc cho dòng có `warning` và cho huy hiệu "!" trên góc nút (hiện khi có ít nhất 1 dòng `warning`)
+  warningLabel?: string
+  // false khi danh sách không có mục "Tất cả" ở đầu (VD chọn Zone): không tô viền xanh "đang lọc"
+  highlightFiltered?: boolean
+}
+
+const OPTION_HEIGHT = 36
+const OPTION_GAP = 2 // space-y-0.5
+const MENU_CHROME = 14 // p-1.5 trên + dưới (12) + border (2)
+// Quá số dòng này thì danh sách có thanh cuộn
+const MAX_VISIBLE_OPTIONS = 8
+
+// Chiều cao khung vừa khít `count` dòng: không lộ nửa dòng kế tiếp
+function listHeight(count: number): number {
+  return count * OPTION_HEIGHT + Math.max(0, count - 1) * OPTION_GAP + MENU_CHROME
+}
+// Kiểu field trong modal: 4 dòng rồi cuộn
+const FIELD_VISIBLE_OPTIONS = 4
+
+// Thay <select> native để theo bảng màu; options[0] phải là giá trị mặc định
+export default function SelectMenu<V extends string>({ value, options, onChange, ariaLabel, className, field, disabled, invalid, warningLabel, highlightFiltered = true }: SelectMenuProps<V>) {
+  const maxVisible = field ? FIELD_VISIBLE_OPTIONS : MAX_VISIBLE_OPTIONS
+  const { open, setOpen, toggle, triggerRef, menuRef, style } = useFloatingMenu({
+    align: 'left',
+    estimatedHeight: listHeight(Math.min(options.length, maxVisible)),
+    matchTriggerWidth: true,
+  })
+  const selectedIndex = Math.max(0, options.findIndex(o => o.value === value))
+  const [activeIndex, setActiveIndex] = useState(selectedIndex)
+
+  // Mỗi lần mở lại, con trỏ bàn phím đứng ở option đang chọn
+  useEffect(() => { if (open) setActiveIndex(selectedIndex) }, [open, selectedIndex])
+
+  // Danh sách dài có thanh cuộn: giữ option đang trỏ (↑/↓ hoặc đang chọn lúc mở) trong tầm nhìn
+  useEffect(() => {
+    if (open) menuRef.current?.children[activeIndex]?.scrollIntoView({ block: 'nearest' })
+  }, [open, activeIndex, menuRef])
+
+  function select(index: number) {
+    onChange(options[index].value)
+    setOpen(false)
+    triggerRef.current?.focus()
+  }
+
+  function onTriggerKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
+    if (!open) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() }
+      return
+    }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, options.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(activeIndex) }
+    // Trong Modal: Esc chỉ đóng danh sách, chặn lan lên kẻo Modal đóng mất dữ liệu
+    else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
+    else if (e.key === 'Tab') setOpen(false)
+  }
+
+  const selected = options[selectedIndex]
+  // Quy ước: option đầu tiên là giá trị mặc định ("Mọi …"). Chọn khác đi = đang lọc → viền xanh
+  const isFiltered = highlightFiltered && value !== options[0]?.value
+  const hasWarning = options.some(option => option.warning)
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        onKeyDown={onTriggerKeyDown}
+        disabled={disabled}
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={tr(ariaLabel)}
+        aria-invalid={invalid || undefined}
+        className={cn(
+          field
+            ? cn('input relative flex items-center justify-between gap-2 text-left', open ? 'border-charcoal' : invalid && 'border-alertRed')
+            : cn(
+                'relative inline-flex h-9 items-center gap-1.5 rounded-full border bg-white pl-3.5 pr-2.5 text-small font-semibold max-sm:h-11 text-charcoal transition-colors',
+                open ? 'border-charcoal' : isFiltered ? 'border-accent-600' : 'border-warmGray/25 hover:border-warmGray/50',
+              ),
+          className,
+        )}
+      >
+        {/* Nhãn option tự dịch theo VI/EN (tên trại/người dùng không có bản dịch nên giữ nguyên) */}
+        <span className="truncate">{tr(selected?.label)}</span>
+        <IconChevronDown width={field ? 16 : 14} height={field ? 16 : 14} className={cn('shrink-0 text-warmGray transition-transform', open && 'rotate-180')} />
+        {/* Huy hiệu "!" góc trên phải khi có dòng cần chú ý, kiểu số tin mới trên chuông */}
+        {hasWarning && !open && (
+          <span
+            title={warningLabel ? tr(warningLabel) : undefined}
+            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-safetyOrange text-small font-bold leading-none text-white ring-2 ring-white"
+          >
+            !
+            {warningLabel && <span className="sr-only">{tr(warningLabel)}</span>}
+          </span>
+        )}
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          role="listbox"
+          aria-label={tr(ariaLabel)}
+          // Danh sách trong popup (field) nền trắng đặc, hàng lọc nền kính mờ
+          style={{ ...style, maxHeight: listHeight(maxVisible) }}
+          className={cn(
+            'z-50 animate-fade-in space-y-0.5 overflow-y-auto overscroll-contain rounded-2xl p-1.5 [scrollbar-width:thin]',
+            field ? 'border border-gray-200 bg-white shadow-popover' : 'glass-panel',
+          )}
+        >
+          {options.map((opt, index) => {
+            const isSelected = index === selectedIndex
+            const isActive = index === activeIndex
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => select(index)}
+                className={cn(
+                  'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-charcoal transition-colors duration-150 max-sm:min-h-11',
+                  isActive ? 'bg-charcoal/5' : 'bg-transparent',
+                  isSelected && 'font-semibold',
+                )}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {opt.warning && <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-safetyOrange" />}
+                  <span className="truncate">{tr(opt.label)}</span>
+                  {opt.warning && warningLabel && <span className="sr-only">{tr(warningLabel)}</span>}
+                </span>
+                {isSelected && <IconCheck width={14} height={14} className="shrink-0" />}
+              </button>
+            )
+          })}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}

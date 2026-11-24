@@ -1,0 +1,631 @@
+/**
+ * SwiftletCare – ESP32 Firmware Entry Point
+ *
+ * FreeRTOS Tasks:
+ *   - SensorTask  : Read 5 RS485 Modbus sensors every 10s (ENV-FR-001..003)
+ *   - PIDTask     : Closed-loop control (logic mờ phun sương/quạt) + speaker
+ *                   schedule + threat detect
+ *                   (ENV-FR-010..019, THREAT-FR-006, 011, 013)
+ *   - MQTTTask    : Publish telemetry, subscribe commands (ENV-FR-015, §9.2)
+ *
+ * Hardware BOM (Components Guide v3.3):
+ *   ESP32-WROOM-32D 38 chân + đế mở rộng, UART-RS485 V2 (GPIO16/17),
+ *   5 cảm biến RS485 (ES-NOISE-01, ES-CO2-01, ES-NH3-01, ES-ALS-02, ES35-SW),
+ *   Relay 4 kênh kích mức CAO (GPIO25/26/27/14), DFPlayer Mini + PAM8403 6W
+ *   (GPIO32/33), 2× Buck LM2596 12V→5V
+ */
+
+#include "audio/AudioManager.h"
+#include "config/Config.h"
+#include "config/Secrets.h"
+#include "mqtt/MQTTManager.h"
+#include "pid/ActuatorCurrentMonitor.h"
+#include "pid/PIDController.h"
+#include "sensors/CurrentSensor.h"
+#include "sensors/NoiseAnomalyDetector.h"
+#include "sensors/SensorManager.h"
+#include "sensors/SignalFilter.h"
+#include "storage/StorageManager.h"
+#include "system/ResetReason.h"
+#include "system/SerialProvisioning.h"
+#include "wifi/WiFiProvisioner.h"
+#include <Arduino.h>
+#include <WiFi.h>
+#include <esp_task_wdt.h>
+#include <time.h>
+
+// OTA update qua WiFi (http://<ip-esp32>/update) — chỉ cần cắm USB lần đầu,
+// các lần nạp firmware sau thực hiện qua mạng. TASK-A8, 7.2
+// (ELEGANTOTA_USE_ASYNC_WEBSERVER được định nghĩa qua build_flags trong
+// platformio.ini)
+#include <ESPAsyncWebServer.h>
+#include <ElegantOTA.h>
+static AsyncWebServer otaServer(80);
+
+// ── FreeRTOS Task Handles ────────────────────────────────────────────────────
+TaskHandle_t sensorTaskHandle = NULL;
+TaskHandle_t pidTaskHandle = NULL;
+TaskHandle_t mqttTaskHandle = NULL;
+
+// ── Shared Data (protected by mutex) ─────────────────────────────────────────
+SemaphoreHandle_t dataMutex;
+SensorData latestSensorData;
+RelayState relayState;
+
+// ENV-FR-022: giá trị đã lọc (median+Kalman) CHỈ dùng làm đầu vào bộ điều khiển
+// mờ; telemetry/dashboard/phát hiện bất thường vẫn dùng latestSensorData thô.
+// Giữ lần đọc HỢP LỆ gần nhất (thô + đã lọc) kèm mốc thời gian: pidTask dùng nó chừng
+// nào còn đủ mới (CONTROL_INPUT_MAX_AGE_CYCLES), quá hạn mới vào trạng thái an toàn.
+struct FilteredEnv {
+  float temperature = NAN, humidity = NAN;       // đã lọc
+  float rawTemperature = NAN, rawHumidity = NAN; // thô
+  bool ready = false;                            // bộ lọc đã có dữ liệu
+  unsigned long validAtMs = 0;                   // 0 = chưa có lần đọc hợp lệ nào
+};
+FilteredEnv latestFiltered;
+// THREAT-FR-007: trạng thái NoiseAnomalyDetector (tính mỗi mẫu 1 Hz trong sensorTask)
+bool noiseAnomalyActive = false;
+
+// THREAT-FR-014, BR-32 — tải có chạy theo relay không: 0 = bơm phun sương, 1 = quạt. sensorTask cập nhật mỗi
+// lần đọc dòng (1 Hz), pidTask đọc trạng thái dưới dataMutex để gửi ACTUATOR_FAULT
+ActuatorCurrentMonitor actuatorMonitors[2];
+struct ActuatorStatus {
+  ActuatorCurrentMonitor::Fault fault = ActuatorCurrentMonitor::Fault::NONE;
+  float normalA = 0;
+  float currentA = 0;
+};
+ActuatorStatus actuatorStatus[2];
+
+// MQTT topic base "swiftletcare/dev/{deviceId}" — tính 1 lần trong setup() (đơn luồng,
+// trước khi tạo task nào), sau đó chỉ ĐỌC nên mqttTask và pidTask đọc an toàn không cần mutex.
+String mqttTopicBase;
+
+// ── Boot reason tracking (THREAT-FR-012) ─────────────────────────────────────
+// Lý do gửi kèm UNEXPECTED_RESTART (POWER_ON/WATCHDOG/BROWNOUT/CRASH); nullptr = boot bình thường
+static const char *unexpectedRestart = nullptr;
+// THREAT-FR-012 — đã từng kết nối MQTT (cờ NVS): lần cấp điện đầu lúc lắp đặt không báo
+static bool everConnected = false;
+// FARM-FR-006 — gửi trong heartbeat để chẩn đoán từ xa (brownout/watchdog lặp lại…)
+const char *bootResetReason = "UNKNOWN";
+
+static BootReset toBootReset(esp_reset_reason_t r) {
+  switch (r) {
+  case ESP_RST_POWERON: return BootReset::PowerOn;
+  case ESP_RST_EXT: return BootReset::External;
+  case ESP_RST_SW: return BootReset::Software;
+  case ESP_RST_PANIC: return BootReset::Panic;
+  case ESP_RST_INT_WDT: return BootReset::IntWdt;
+  case ESP_RST_TASK_WDT: return BootReset::TaskWdt;
+  case ESP_RST_WDT: return BootReset::Wdt;
+  case ESP_RST_DEEPSLEEP: return BootReset::DeepSleep;
+  case ESP_RST_BROWNOUT: return BootReset::Brownout;
+  case ESP_RST_SDIO: return BootReset::Sdio;
+  default: return BootReset::Unknown;
+  }
+}
+
+static const char *resetReasonName(esp_reset_reason_t r) {
+  switch (r) {
+  case ESP_RST_POWERON: return "POWERON";
+  case ESP_RST_EXT: return "EXT";
+  case ESP_RST_SW: return "SW";
+  case ESP_RST_PANIC: return "PANIC";
+  case ESP_RST_INT_WDT: return "INT_WDT";
+  case ESP_RST_TASK_WDT: return "TASK_WDT";
+  case ESP_RST_WDT: return "WDT";
+  case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
+  case ESP_RST_BROWNOUT: return "BROWNOUT";
+  case ESP_RST_SDIO: return "SDIO";
+  default: return "UNKNOWN";
+  }
+}
+
+// Flow 15 bước 5a — không để Arduino core tự đánh dấu bản vừa OTA là hợp lệ lúc boot:
+// MQTTManager chỉ xác nhận sau lần kết nối MQTT đầu tiên, crash/reset trước đó thì
+// bootloader tự quay về bản cũ (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE của core).
+extern "C" bool verifyRollbackLater() { return true; }
+
+// Gửi cảnh báo theo CẠNH LÊN: 1 lần khi sự cố bắt đầu, không lặp lại mỗi chu kỳ
+// PID (10s) chừng nào sự cố còn đó — trước đây 1 cảm biến hỏng sinh ~288 cảnh
+// báo/ngày (dedup backend chỉ chặn 5 phút). Gửi thất bại (mất MQTT) thì giữ
+// reported=false để thử lại chu kỳ sau; sự cố hết thì reset để lần sau báo lại.
+struct AlertReport {
+  bool reported = false;
+  unsigned long sentAt = 0;
+};
+
+static void reportOnRise(bool active, AlertReport &state, const char *type,
+                         const char *severity, const char *message,
+                         unsigned long resendMs = 0,
+                         const MQTTManager::ActuatorDetails *actuator = nullptr) {
+  // resendMs > 0: gửi lại định kỳ chừng nào sự cố còn tiếp diễn (xem
+  // EPISODE_ALERT_RESEND_MS).
+  unsigned long now = millis();
+  if (!active) {
+    state.reported = false;
+  } else if (!state.reported || (resendMs > 0 && now - state.sentAt >= resendMs)) {
+    if (MQTTManager::publishAlert(type, severity, message, nullptr, actuator)) {
+      state.reported = true;
+      state.sentAt = now;
+    }
+  }
+}
+
+// ── Task Declarations ────────────────────────────────────────────────────────
+void sensorTask(void *pvParameters);
+void pidTask(void *pvParameters);
+void mqttTask(void *pvParameters);
+
+// ══════════════════════════════════════════════════════════════════════════════
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+  Serial.println();
+  Serial.println("╔══════════════════════════════════════════╗");
+  Serial.println("║   SwiftletCare ESP32 Firmware v" FIRMWARE_VERSION "     ║");
+  Serial.println("║     SRS: ENV + THREAT + FARM modules     ║");
+  Serial.println("╚══════════════════════════════════════════╝");
+
+  esp_reset_reason_t reason = esp_reset_reason();
+  bootResetReason = resetReasonName(reason);
+
+  // ── Hardware watchdog (REL-NFR-002) ──────────────────────────────────────
+  esp_task_wdt_init(WATCHDOG_TIMEOUT_SEC, true);
+  Serial.println("[WDT] Watchdog initialized: " + String(WATCHDOG_TIMEOUT_SEC) +
+                 "s timeout");
+
+  // ── Initialize storage (NVS + SPIFFS) ────────────────────────────────────
+  StorageManager::begin();
+  Config::load();
+
+  // ── THREAT-FR-012: khởi động lại bất thường (cần NVS cho cờ đã từng kết nối) ──
+  everConnected = StorageManager::loadEverConnected();
+  unexpectedRestart = unexpectedRestartReason(toBootReset(reason), everConnected);
+  if (unexpectedRestart) {
+    Serial.println("[BOOT] ⚠ UNEXPECTED RESTART: " + String(unexpectedRestart) + " (" +
+                   bootResetReason + ") — sẽ báo khi kết nối MQTT");
+  } else {
+    Serial.println("[BOOT] Normal boot. Reset reason: " + String(bootResetReason));
+  }
+
+  // ── Tài khoản broker flash riêng từng thiết bị (Report 4 D3) ────
+  // PHẢI chạy trước khi mqttTopicBase được tính và trước khi tạo task. static: Config giữ con trỏ.
+  {
+    static String flashedDeviceId, flashedBrokerSecret;
+    if (StorageManager::loadDeviceIdentity(flashedDeviceId, flashedBrokerSecret)) {
+      Config::deviceId = flashedDeviceId.c_str();
+      Config::mqttPassword = flashedBrokerSecret.c_str();
+      Serial.println("[Config] Thiết bị " + flashedDeviceId + " (tài khoản trong NVS)");
+    }
+  }
+
+  // ── Connect WiFi (tự bật AP-mode để cấu hình lại nếu không kết nối được) ──
+  // FARM-FR-003b: đổi WiFi trên thiết bị đã lắp không cần Technician/USB —
+  // xem WiFiProvisioner.h. Task cảm biến/relay/PID vẫn khởi động bình thường
+  // ở dưới dù nhánh nào xảy ra (REL-NFR-001, offline resilience).
+  bool wifiConnected = WiFiProvisioner::tryConnect();
+  if (wifiConnected) {
+    Serial.println("\n[WiFi] ✓ Connected! IP: " + WiFi.localIP().toString() +
+                   " RSSI: " + String(WiFi.RSSI()) + " dBm");
+    configTime(7 * 3600, 0,
+               "pool.ntp.org"); // GMT+7, cho lịch loa ru (ENV-FR-013b)
+
+    // ── OTA server (TASK-A8) ────────────────────────────────────────────────
+    otaServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(200, "text/plain",
+                    "SwiftletCare ESP32 — cập nhật firmware tại /update");
+    });
+    ElegantOTA.begin(&otaServer, SECRET_OTA_USERNAME, SECRET_OTA_PASSWORD);
+    otaServer.begin();
+    Serial.println("[OTA] Sẵn sàng tại http://" + WiFi.localIP().toString() +
+                   "/update");
+  } else {
+    Serial.println(
+        "\n[WiFi] ✗ Không kết nối được — bật AP-mode để cấu hình lại WiFi");
+    WiFiProvisioner::startCaptivePortal(otaServer);
+  }
+
+  // ── Initialize sensors (RS485 Modbus bus, Guide v3.3 §5) ─────────────────
+  SensorManager::begin();
+  // THREAT-FR-014 — mức dòng đã học lưu trong NVS, không phải học lại sau mỗi lần khởi động
+  if (CurrentSensor::begin()) {
+    for (int load = 0; load < 2; load++) actuatorMonitors[load].setNormal(StorageManager::loadLearnedCurrent(load));
+  }
+
+  // ── Initialize relays (all OFF) ──────────────────────────────────────────
+  relayState.init();
+  Serial.println("[Relay] 4-channel relay initialized (all OFF, active-HIGH; IN4 dự phòng)");
+
+  // ── Initialize DFPlayer loa ru (Guide v3.3 §10-12) ────────────────────────
+  AudioManager::begin();
+
+  // ── Create mutex ─────────────────────────────────────────────────────────
+  dataMutex = xSemaphoreCreateMutex();
+
+  // ── MQTT topic base (đơn luồng, phải chạy trước khi tạo mqttTask/pidTask) ──
+  mqttTopicBase = String("swiftletcare/dev/") + Config::deviceId;
+
+  // ── Create FreeRTOS Tasks ────────────────────────────────────────────────
+  xTaskCreatePinnedToCore(sensorTask, "SensorTask", 4096, NULL, 2,
+                          &sensorTaskHandle, 1);
+  xTaskCreatePinnedToCore(pidTask, "PIDTask", 4096, NULL, 3, &pidTaskHandle, 1);
+  // 12 KB: lệnh OTA bắt tay TLS ngay trong mqttTask (RemoteOta), 8 KB cũ không đủ chỗ
+  xTaskCreatePinnedToCore(mqttTask, "MQTTTask", 12288, NULL, 1, &mqttTaskHandle,
+                          0);
+
+  Serial.println("[BOOT] ✓ All FreeRTOS tasks started\n");
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Màn Kho thiết bị nạp mã thiết bị và mật khẩu broker qua cổng USB (FARM-FR-010, Report 4 D9).
+// Đọc không chặn trong loop(): trang mở cổng làm bo khởi động lại rồi hỏi SC INFO tới khi có trả lời
+static SerialLineBuffer serialLine;
+
+static void replySerial(const char *reply) {
+  // Một lần println: log của task khác không chen vào giữa dòng trả lời
+  Serial.println(reply);
+}
+
+static void handleSerialProvisioning() {
+  while (Serial.available() > 0) {
+    if (!serialLine.feed((char)Serial.read())) continue;
+    SerialRequest request = parseSerialLine(serialLine.line());
+    char reply[200];
+    if (request.type == SerialRequest::NONE) continue;
+    if (request.type == SerialRequest::INVALID) {
+      buildErrorReply(reply, sizeof reply, request.error);
+      replySerial(reply);
+      continue;
+    }
+    String currentId, currentSecret;
+    bool provisioned = StorageManager::loadDeviceIdentity(currentId, currentSecret);
+    if (request.type == SerialRequest::INFO) {
+      uint8_t mac[6];
+      WiFi.macAddress(mac);
+      char macText[13];
+      formatMac(mac, macText);
+      buildInfoReply(reply, sizeof reply, macText, FIRMWARE_VERSION, provisioned ? currentId.c_str() : nullptr);
+      replySerial(reply);
+      continue;
+    }
+    const char *blocked = setBlockedReason(request, provisioned);
+    if (blocked != nullptr) {
+      buildErrorReply(reply, sizeof reply, blocked);
+      replySerial(reply);
+      continue;
+    }
+    if (!StorageManager::saveDeviceIdentity(request.deviceId, request.brokerSecret, request.broker)) {
+      buildErrorReply(reply, sizeof reply, "WRITE_FAILED");
+      replySerial(reply);
+      continue;
+    }
+    // Không in mật khẩu ra log
+    Serial.println("[Identity] Đã nạp " + String(request.deviceId) + " qua cổng USB, khởi động lại");
+    buildOkReply(reply, sizeof reply, request.deviceId);
+    replySerial(reply);
+    Serial.flush();
+    // Danh tính chỉ đọc lúc khởi động (setup); chờ trang đọc xong trả lời rồi mới khởi động lại
+    delay(1000);
+    ESP.restart();
+  }
+}
+
+void loop() {
+  esp_task_wdt_reset();
+  handleSerialProvisioning();
+  if (WiFiProvisioner::isPortalActive()) {
+    // DNS cần trả lời nhanh để trình duyệt điện thoại tự bật popup captive
+    // portal thay vì phải tự mở http://192.168.4.1
+    WiFiProvisioner::handleDnsLoop();
+    vTaskDelay(pdMS_TO_TICKS(50));
+  } else if (MQTTManager::isBrokerUnreachable()) {
+    // WiFi vẫn ổn nhưng MQTT không connect được suốt — nhiều khả năng IP LAN
+    // broker cũ sai (đổi mạng WiFi khác). Bật lại đúng captive portal (đặt ở
+    // đây, không gọi trực tiếp từ mqttTask, để tránh đổi WiFi.mode()/khởi
+    // động AsyncWebServer từ 1 FreeRTOS task khác core).
+    // Bản production chỉ đổi được Wi-Fi ở đây (FARM-FR-003c); bản dev đổi được cả IP broker.
+    Serial.println("[MQTT] Broker không phản hồi sau nhiều lần thử — bật "
+                   "AP-mode để nhập lại Wi-Fi");
+    WiFiProvisioner::startCaptivePortal(otaServer);
+  } else {
+    // 100 ms thay 1 s: lệnh nạp qua USB được trả lời ngay
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+}
+
+// ── Sensor Task (Core 1)
+// ────────────────────────────────────────────────────── SRS: ENV-FR-001..003 –
+// Read 5 sensors every 10s
+void sensorTask(void *pvParameters) {
+  esp_task_wdt_add(NULL);
+  TickType_t lastWake = xTaskGetTickCount();
+
+  while (true) {
+    esp_task_wdt_reset();
+
+    SensorData data = SensorManager::readAll();
+    CurrentSensor::Reading current = CurrentSensor::read();
+    data.currentOk = current.ok;
+    data.pumpCurrentA = current.ok ? current.mistingA : NAN;
+    data.fanCurrentA = current.ok ? current.ventilationA : NAN;
+    bool learnedNow[2] = {false, false};
+
+    // Bộ lọc + NoiseAnomalyDetector chạy ở nhịp đọc cảm biến (1 Hz) — pidTask 10s
+    // sẽ bỏ lỡ phần lớn mẫu. static: chỉ task này dùng. Chỉ lọc nhiệt độ + độ ẩm:
+    // NH3/CO2 không còn vào bộ điều khiển (SRS v2.0.0, ENV-FR-022).
+    static SignalFilter fTemp, fHum;
+    static NoiseAnomalyDetector noiseDetector;
+    // static: lần đọc lỗi không ghi đè lần hợp lệ gần nhất. Chỉ mẫu hợp lệ vào bộ lọc:
+    // mẫu hữu hạn ngoài dải (VD ẩm 150%) làm bẩn cửa sổ median + Kalman, cảm biến hồi
+    // phục rồi mà giá trị lọc vẫn ngoài dải → relay tắt thêm vài chu kỳ.
+    static FilteredEnv filtered;
+    if (data.isValid) {
+      filtered.temperature = fTemp.update(data.temperature);
+      filtered.humidity = fHum.update(data.humidity);
+      filtered.rawTemperature = data.temperature;
+      filtered.rawHumidity = data.humidity;
+      filtered.ready = fTemp.ready() && fHum.ready();
+      filtered.validAtMs = millis();
+    }
+
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      latestSensorData = data;
+      latestFiltered = filtered;
+      // Loa ru đang phát (lịch hoặc nghe thử) thì ồn là do loa, không phải chim
+      bool speakerActive = AudioManager::isPlaying() || relayState.speaker;
+      // Giờ địa phương (configTime GMT+7) — mỗi giờ trong ngày có mức ồn nền riêng;
+      // NTP chưa đồng bộ → -1, detector không đánh giá
+      time_t nowT = time(nullptr);
+      struct tm lt;
+      int hour = (nowT > 1700000000 && localtime_r(&nowT, &lt)) ? lt.tm_hour : -1;
+      // Biên độ + số giây chỉnh theo Zone (EXPERT-FR-008)
+      NoiseAnomalyDetector::Tuning noiseTuning;
+      noiseTuning.marginDb = Config::noiseMarginDb;
+      noiseTuning.minLoud = Config::noiseMinSec;
+      noiseAnomalyActive =
+          noiseDetector.update(data.noiseOk ? data.soundDb : NAN, speakerActive, hour, noiseTuning);
+
+      // THREAT-FR-014 — so dòng với relay của tải; không đọc được dòng thì monitor giữ nguyên (BR-32)
+      if (CurrentSensor::present()) {
+        const bool relayOn[2] = {relayState.misting, relayState.ventilation};
+        const float amps[2] = {current.mistingA, current.ventilationA};
+        for (int load = 0; load < 2; load++) {
+          bool wasLearned = actuatorMonitors[load].learned();
+          actuatorMonitors[load].update(relayOn[load], current.ok, amps[load], millis());
+          learnedNow[load] = !wasLearned && actuatorMonitors[load].learned();
+          actuatorStatus[load].fault = actuatorMonitors[load].fault();
+          actuatorStatus[load].normalA = actuatorMonitors[load].normalA();
+          if (actuatorMonitors[load].learned()) MQTTManager::setActuatorBaseline(load, actuatorMonitors[load].normalA());
+          actuatorStatus[load].currentA = amps[load];
+        }
+      }
+      xSemaphoreGive(dataMutex);
+    }
+    // Ghi flash ngoài dataMutex: mức vừa học xong của tải giữ qua lần khởi động sau
+    for (int load = 0; load < 2; load++) {
+      if (learnedNow[load]) StorageManager::saveLearnedCurrent(load, actuatorMonitors[load].normalA());
+    }
+
+    // Buffer to SPIFFS if MQTT disconnected (REL-NFR-003)
+    if (!MQTTManager::isConnected()) {
+      StorageManager::bufferTelemetry(data);
+    }
+
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(Config::sensorIntervalMs));
+  }
+}
+
+// ── PID Task (Core 1)
+// ───────────────────────────────────────────────────────── SRS:
+// ENV-FR-010..018 – Closed-loop PID control
+void pidTask(void *pvParameters) {
+  esp_task_wdt_add(NULL);
+
+  while (true) {
+    esp_task_wdt_reset();
+
+    // static: không lấy được mutex ở chu kỳ này thì dùng lại bản chụp chu kỳ trước
+    // (tuổi của số đo vẫn được kiểm bên dưới) thay vì coi như mất cảm biến.
+    static SensorData data;
+    static FilteredEnv filtered;
+    static bool noiseAnomaly = false;
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      data = latestSensorData;
+      filtered = latestFiltered;
+      noiseAnomaly = noiseAnomalyActive;
+      xSemaphoreGive(dataMutex);
+    }
+
+    // ENV-FR-022: đầu vào bộ mờ = giá trị lọc (nếu bật và bộ lọc đã có dữ liệu).
+    // THREAT-FR-013: dùng lần đọc HỢP LỆ gần nhất chừng nào nó còn đủ mới; một lần
+    // đọc lỗi lẻ không tắt relay. Quá CONTROL_INPUT_MAX_AGE_CYCLES chu kỳ không có
+    // số đo hợp lệ → NAN → FuzzyControl trả nhu cầu 0 (relay TẮT), không điều
+    // khiển theo số đo đã chết.
+    float controlTemp = NAN, controlHum = NAN;
+    unsigned long maxAgeMs = (unsigned long)CONTROL_INPUT_MAX_AGE_CYCLES * Config::pidIntervalMs;
+    if (filtered.validAtMs != 0 && millis() - filtered.validAtMs <= maxAgeMs) {
+      bool useFiltered = Config::fuzzyInputFilter && filtered.ready;
+      controlTemp = useFiltered ? filtered.temperature : filtered.rawTemperature;
+      controlHum = useFiltered ? filtered.humidity : filtered.rawHumidity;
+    }
+
+    // relayState bị đọc/ghi đồng thời bởi mqttTask (onRelayCommand, publish
+    // telemetry/relay-status) — khoá dataMutex quanh TOÀN BỘ đoạn động tới
+    // relayState. KHÔNG giữ
+    // khoá qua các publishAlert() bên dưới: publishAlert() làm I/O mạng
+    // (mqtt.publish(), có thể block vài giây) và không đụng relayState/
+    // latestSensorData nữa (threats đã là bản copy cục bộ) — giữ khoá qua đó
+    // sẽ làm sensorTask/mqttTask bị treo chờ dataMutex không cần thiết.
+    PIDController::ThreatFlags threats;
+    bool haveThreats = false;
+    ActuatorStatus actuators[2];
+
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      // Check manual override expiry (ENV-FR-018, BR-20): trước mọi relay để relay vừa hết
+      // hạn về AUTO ngay trong chu kỳ này. Chạy MỌI chu kỳ, kể cả khi mất nhiệt độ/độ ẩm
+      // (THREAT-FR-013): trước đây cả khối nằm trong if (data.isValid) nên cảm biến chết
+      // thì relay kẹt ở trạng thái cũ, override không hết hạn và chính cảnh báo lỗi cảm
+      // biến cũng không được phát.
+      PIDController::checkOverrideExpiry(relayState);
+
+      // Loa ru (ENV-FR-013b/013c) – luôn cập nhật lịch + lệnh nghe thử cho
+      // DFPlayer, nhưng chỉ áp ra Relay IN2 khi không Manual Override
+      bool shouldPlay = AudioManager::updateSchedule();
+      if (!relayState.overrides.active(RELAY_SPEAKER)) {
+        relayState.speaker = shouldPlay;
+        relayState.applyRelay(PIN_RELAY_SPEAKER, shouldPlay);
+      }
+
+      // Closed-loop control (ENV-FR-010/011): phun sương + quạt theo logic mờ;
+      // đầu vào NAN → nhu cầu 0 → relay TẮT (trạng thái an toàn)
+      PIDController::runHumidityControl(controlHum, controlTemp, relayState);
+      PIDController::runVentilationControl(controlTemp, controlHum, relayState);
+
+      // Threat detection (THREAT-FR-006, 011, 013)
+      threats = PIDController::handleThreatAlerts(
+          data, relayState, AudioManager::isPlaying());
+      threats.noiseAnomaly = noiseAnomaly;
+      haveThreats = true;
+      for (int load = 0; load < 2; load++) actuators[load] = actuatorStatus[load];
+
+      xSemaphoreGive(dataMutex);
+    }
+
+    if (haveThreats) {
+      static AlertReport speakerReported, pumpReported, sensorReported,
+          busReported, noiseReported;
+      // Mức theo BR-15 (HIGH); backend tự đặt mức theo loại, trường này chỉ để đọc log
+      reportOnRise(threats.speakerFailure, speakerReported, "SPEAKER_FAILURE",
+                   "HIGH", "Amplitude dB không tăng khi loa ru đang phát");
+      // pumpDry giữ true suốt lúc đang chốt ngừng phun: gửi thất bại (MQTT
+      // rớt) thì reportOnRise thử lại ở chu kỳ sau; gửi được rồi thì không lặp.
+      // THREAT-FR-011 — không đoán nguyên nhân (hết nước, tắc béc, mở cửa…): nêu việc cần kiểm tra
+      reportOnRise(threats.pumpDry, pumpReported, "MISTING_INEFFECTIVE", "MEDIUM",
+                   threats.pumpDryWhileManual
+                       ? "Phun sương không làm tăng độ ẩm — bơm đang được BẬT TAY "
+                         "nên VẪN CHẠY; kiểm tra nước, béc phun, cửa và vị trí cảm biến"
+                       : "Phun sương không làm tăng độ ẩm — đã tự ngừng phun, sẽ thử "
+                         "lại sau " SC_STR(PUMP_DRY_RETRY_MIN) " phút; kiểm tra nước, "
+                         "béc phun, cửa và vị trí cảm biến",
+                   EPISODE_ALERT_RESEND_MS);
+      reportOnRise(threats.sensorFault, sensorReported, "SENSOR_FAULT",
+                   "MEDIUM", "Một cảm biến RS485 không phản hồi (timeout/CRC)");
+      // MEDIUM (không phải HIGH): phát hiện chỉ theo dB, ngưỡng chưa hiệu chỉnh
+      // bằng dữ liệu thật — HIGH sẽ bị alertEscalation gửi lại sau 15' (ALERT-FR-015).
+      // Tín hiệu tham khảo: backend hiển thị kèm số đếm chim và chờ Domain
+      // Expert kiểm chứng (THREAT-FR-007) — không kết luận gì về hành vi chim.
+      reportOnRise(threats.noiseAnomaly, noiseReported, "NOISE_ANOMALY",
+                   "MEDIUM",
+                   "Mức ồn cao bất thường kéo dài so với mức nền của giờ này "
+                   "khi loa không phát",
+                   EPISODE_ALERT_RESEND_MS);
+      reportOnRise(threats.busFailure, busReported, "RS485_BUS_FAILURE",
+                   "CRITICAL",
+                   "≥3/5 cảm biến RS485 mất kết nối 3 chu kỳ liên tiếp");
+
+      // THREAT-FR-014 — tải không theo relay đủ 30 s (BR-32). Gửi lại mỗi EPISODE_ALERT_RESEND_MS chừng nào lỗi còn,
+      // để backend tự đóng cảnh báo khi tải chạy đúng trở lại (alert.service#EPISODE_ALERT_TYPES)
+      static AlertReport actuatorReported[2];
+      static const char *const LOADS[2] = {"misting", "ventilation"};
+      static const char *const LOAD_NAMES[2] = {"Bơm phun sương", "Quạt"};
+      for (int load = 0; load < 2; load++) {
+        const ActuatorStatus &status = actuators[load];
+        bool noCurrent = status.fault == ActuatorCurrentMonitor::Fault::NO_CURRENT_WHILE_ON;
+        char message[96];
+        if (noCurrent) {
+          snprintf(message, sizeof message, "%s bật nhưng dòng chỉ %.2f A (bình thường %.2f A)",
+                   LOAD_NAMES[load], status.currentA, status.normalA);
+        } else {
+          snprintf(message, sizeof message, "%s tắt nhưng vẫn có dòng %.2f A", LOAD_NAMES[load], status.currentA);
+        }
+        MQTTManager::ActuatorDetails details = {
+            LOADS[load], noCurrent ? "NO_CURRENT_WHILE_ON" : "CURRENT_WHILE_OFF", status.normalA, status.currentA};
+        reportOnRise(status.fault != ActuatorCurrentMonitor::Fault::NONE, actuatorReported[load], "ACTUATOR_FAULT",
+                     "HIGH", message, EPISODE_ALERT_RESEND_MS, &details);
+      }
+    }
+
+    // Chờ tới chu kỳ kế tiếp, hoặc tỉnh sớm khi có lệnh nghe thử
+    // (MQTTManager::onAudioCommand → xTaskNotifyGive)
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(Config::pidIntervalMs));
+  }
+}
+
+// ── MQTT Task (Core 0)
+// ──────────────────────────────────────────────────────── SRS: ENV-FR-015,
+// FARM-FR-005, SEC-NFR-001
+void mqttTask(void *pvParameters) {
+  esp_task_wdt_add(NULL);
+  MQTTManager::begin();
+
+  // THREAT-FR-012: báo khởi động lại bất thường đúng 1 lần, khi đã kết nối
+  bool restartReported = false;
+
+  while (true) {
+    esp_task_wdt_reset();
+    MQTTManager::loop();
+
+    // Lần kết nối đầu tiên trong đời thiết bị: từ nay mất điện mới tính là bất thường
+    if (!everConnected && MQTTManager::isConnected()) {
+      StorageManager::markEverConnected();
+      everConnected = true;
+    }
+
+    if (unexpectedRestart && MQTTManager::isConnected() && !restartReported) {
+      restartReported = MQTTManager::publishAlert(
+          "UNEXPECTED_RESTART", "HIGH", "Bộ điều khiển vừa khởi động lại bất thường",
+          unexpectedRestart);
+      if (restartReported)
+        Serial.println("[MQTT] Published UNEXPECTED_RESTART (" + String(unexpectedRestart) + ")");
+    }
+
+    // Publish telemetry (ENV-FR-001). Chỉ gửi khi lấy được snapshot thật VÀ
+    // sensorTask đã đọc xong ít nhất 1 lần — trước đó latestSensorData toàn
+    // số 0, backend coi là nhiệt/ẩm dưới ngưỡng → THRESHOLD_BREACH giả lúc boot.
+    SensorData data;
+    RelayState relaySnapshot;
+    bool haveSnapshot = false;
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      data = latestSensorData;
+      relaySnapshot = relayState;
+      xSemaphoreGive(dataMutex);
+      haveSnapshot = true;
+    }
+    if (haveSnapshot && data.timestamp != 0)
+      MQTTManager::publishTelemetry(data, relaySnapshot);
+
+    // relay/status (ENV-FR-015): chỉ khi trạng thái đổi (PID bật/tắt, override
+    // hết hạn...) hoặc định kỳ để tự sửa nếu 1 message QoS0 bị rơi — không gửi
+    // mỗi giây như trước (mỗi message = 1 lần ghi DB + 4 socket event ở backend).
+    static String lastRelayJson;
+    static unsigned long lastRelayPublish = 0;
+    if (!MQTTManager::isConnected()) {
+      lastRelayJson = ""; // kết nối lại → gửi ngay trạng thái hiện tại
+    } else if (haveSnapshot) {
+      String relayJson = relaySnapshot.toJson(false);
+      if (relayJson != lastRelayJson ||
+          millis() - lastRelayPublish > MQTT_HEARTBEAT_MS) {
+        if (MQTTManager::publishRelayState(relaySnapshot)) {
+          lastRelayJson = relayJson;
+          lastRelayPublish = millis();
+        }
+      }
+    }
+
+    // Threat alerts (SPEAKER_FAILURE/MISTING_INEFFECTIVE/SENSOR_FAULT/RS485_BUS_FAILURE)
+    // are published directly from pidTask (THREAT-FR-006/011/013) where the
+    // flags are computed against the latest SensorData/RelayState.
+
+    // Flush offline buffer when connected (REL-NFR-003)
+    if (MQTTManager::isConnected()) {
+      StorageManager::flushBuffer([](const String &jsonLine) {
+        esp_task_wdt_reset(); // buffer vài giờ ≈ 1-2 nghìn dòng, lâu hơn WDT 30s
+        return MQTTManager::publishBufferedLine(jsonLine);
+      });
+    }
+
+    // Dùng chung Config::sensorIntervalMs với sensorTask — tránh 2 con số lệch
+    // nhau
+    vTaskDelay(pdMS_TO_TICKS(Config::sensorIntervalMs));
+  }
+}

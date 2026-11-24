@@ -1,0 +1,89 @@
+"""One frame through the pipeline: mask, 2 tiles, YOLO, ByteTrack, and drawing; shared by the live loop and track_clip.py."""
+from typing import List, Sequence, Tuple
+
+import cv2
+import numpy as np
+import supervision as sv
+
+from counting import MultiRingCounter
+from frame_prep import apply_mask, tile_rects
+from inference import Detection, InferenceEngine
+
+GREEN = (0, 255, 0)
+YELLOW = (0, 255, 255)
+
+
+def scale_boxes(xyxy: np.ndarray, k: float) -> np.ndarray:
+    """Grow/shrink boxes around their centre: a fast bird's boxes in two frames do not overlap and ByteTrack matches by IoU."""
+    center = (xyxy[:, :2] + xyxy[:, 2:]) / 2
+    half = (xyxy[:, 2:] - xyxy[:, :2]) / 2 * k
+    return np.hstack([center - half, center + half]).astype(np.float32)
+
+
+def to_sv(dets: List[Detection]) -> sv.Detections:
+    if not dets:
+        return sv.Detections.empty()
+    return sv.Detections(
+        xyxy=np.array([d.bbox for d in dets], dtype=np.float32),
+        confidence=np.array([d.confidence for d in dets], dtype=np.float32),
+        class_id=np.array([d.class_id for d in dets], dtype=int),
+    )
+
+
+class FramePipeline:
+    def __init__(self, cfg: dict, engine: InferenceEngine, width: int, height: int):
+        cam, m, t = cfg["camera"], cfg["model"], cfg["tracking"]
+        self.engine = engine
+        self.mask = cam["mask"]
+        self.tiles = tile_rects(cam["tiles"], width, height)
+        self.tile_overlap = m["tile_merge_overlap"]
+        self.box_pad = t["box_pad"]
+        # Lives for the whole run so track ids never repeat. sv.ByteTrack is gone in supervision 0.31 (pinned <0.31)
+        self.tracker = sv.ByteTrack(
+            track_activation_threshold=m["confidence_threshold"],
+            lost_track_buffer=t["lost_track_buffer"],
+            minimum_matching_threshold=t["minimum_matching_threshold"],
+            frame_rate=cam["fps"],
+        )
+
+    def track(self, frame: np.ndarray) -> Tuple[sv.Detections, float, int]:
+        """Returns (tracks in full-frame pixels at real size, sum of detection confidences, detections)."""
+        dets, _ = self.engine.infer_tiles(apply_mask(frame, self.mask), self.tiles, self.tile_overlap)
+        det = to_sv(dets)
+        if len(det):
+            det.xyxy = scale_boxes(det.xyxy, self.box_pad)
+        tracks = self.tracker.update_with_detections(det)
+        if len(tracks):
+            tracks.xyxy = scale_boxes(tracks.xyxy, 1 / self.box_pad)    # real size for counting and drawing
+        return tracks, float(sum(d.confidence for d in dets)), len(dets)
+
+
+def track_ids(tracks: sv.Detections):
+    return tracks.tracker_id if tracks.tracker_id is not None else []
+
+
+# "#id" at font scale 0.5 rises about 10 px above its baseline
+LABEL_HEIGHT = 12
+
+
+def label_origin(box: Sequence[int], frame_shape: Tuple[int, ...], text_width: int = 0) -> Tuple[int, int]:
+    """Where the "#id" text starts: above the box, below it at the top edge, shifted left at the right edge."""
+    height, width = frame_shape[0], frame_shape[1]
+    x = min(max(int(box[0]), 0), max(width - 1 - text_width, 0))
+    y = int(box[1]) - 4 if int(box[1]) - 4 >= LABEL_HEIGHT else int(box[3]) + LABEL_HEIGHT + 2
+    return x, min(y, height - 1)
+
+
+def draw(frame: np.ndarray, tracks: sv.Detections, counter: MultiRingCounter, total: int) -> np.ndarray:
+    """Green box + #id per bird, the counting rings and today's total; in/out per session are on the web."""
+    cv2.polylines(frame, [p.astype(np.int32) for p in counter.polygons], True, YELLOW, 2)
+    for box, tid in zip(tracks.xyxy.astype(int), track_ids(tracks)):
+        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), GREEN, 2)
+        label = f"#{tid}"
+        (text_width, _), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        cv2.putText(frame, label, label_origin(box, frame.shape, text_width), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 1)
+    text = f"Tong {total}"   # the camera's clock is top-left, so the text sits at the bottom
+    org = (10, frame.shape[0] - 16)
+    cv2.putText(frame, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 4)
+    cv2.putText(frame, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+    return frame

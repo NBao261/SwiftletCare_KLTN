@@ -1,0 +1,52 @@
+# PlatformIO Configuration
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Real WiFi/MQTT credentials — copy Secrets.h.example → Secrets.h and fill in
+src/config/Secrets.h
+
+# Build and IDE files
+.vscode/
+.idea/
+cmake-build-*/
+*.suo
+*.sln
+*.ncb
+*.user
+*.sdf
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Logs and databases
+*.log
+*.sqlite
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

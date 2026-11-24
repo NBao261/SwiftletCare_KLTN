@@ -1,0 +1,118 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { adminApi, type CreateFarmOwnerInput } from '@/apis/admin/users.api'
+import type { User, Role, UserStatus, SortDirection } from '@/types'
+
+export type UsersSortKey = 'full_name' | 'email' | 'role' | 'status' | 'created_at'
+
+// Ưu tiên: đã xoá > đang chờ xoá > bị khoá > hoạt động
+export function getUserStatus(user: User): UserStatus {
+  if (user.deleted_at) return 'DELETED'
+  if (user.deletion_requested_at) return 'PENDING_DELETION'
+  if (!user.is_active) return 'LOCKED'
+  return 'ACTIVE'
+}
+
+export interface ListUsersQuery {
+  // Hàng đợi chờ xoá có trang riêng
+  status?: Extract<UserStatus, 'ACTIVE' | 'LOCKED'>
+  role?: Role
+  // Lọc CLIENT-SIDE trên TOÀN BỘ tài khoản khớp status/role: /admin/users chưa có search
+  search?: string
+  // Sort CLIENT-SIDE trên toàn bộ: /admin/users cố định created_at desc
+  sortBy?: UsersSortKey
+  sortDir?: SortDirection
+  page?: number
+  limit?: number
+}
+
+function matchesSearch(user: User, search: string): boolean {
+  const s = search.toLowerCase()
+  return user.full_name.toLowerCase().includes(s) || user.email.toLowerCase().includes(s)
+}
+
+function sortUsers(list: User[], sortKey?: UsersSortKey, sortDir: SortDirection = 'asc'): User[] {
+  if (!sortKey) return list
+  const dir = sortDir === 'asc' ? 1 : -1
+  return [...list].sort((a, b) => {
+    switch (sortKey) {
+      case 'full_name': return a.full_name.localeCompare(b.full_name) * dir
+      case 'email': return a.email.localeCompare(b.email) * dir
+      case 'role': return a.role.localeCompare(b.role) * dir
+      case 'status': return getUserStatus(a).localeCompare(getUserStatus(b)) * dir
+      case 'created_at': return (a.created_at ?? '').localeCompare(b.created_at ?? '') * dir
+      default: return 0
+    }
+  })
+}
+
+// Trần `limit` backend (utils/helpers.util.ts#paginate): không lấy được nhiều hơn trong 1 request
+const PICKER_LIMIT = 100
+
+// Không truyền gì = mọi tài khoản
+export function useAllUsers(status?: ListUsersQuery['status'], role?: Role) {
+  return useQuery({
+    queryKey: ['admin-users', 'all', status, role],
+    queryFn: async (): Promise<User[]> => {
+      const apiStatus = status === 'ACTIVE' ? 'active' as const : status === 'LOCKED' ? 'inactive' as const : undefined
+      const params = { role, status: apiStatus, limit: PICKER_LIMIT }
+      const first = (await adminApi.listUsers({ ...params, page: 1 })).data
+      const pageCount = Math.ceil((first.meta?.total ?? first.data.length) / PICKER_LIMIT)
+      const rest = await Promise.all(
+        Array.from({ length: Math.max(pageCount - 1, 0) }, (_, i) => adminApi.listUsers({ ...params, page: i + 2 }).then(r => r.data)),
+      )
+      return [first, ...rest].flatMap(r => r.data)
+    },
+  })
+}
+
+// Backend không tìm và sắp được nên tải hết rồi xử lý ở client; nhiều tài khoản thì thêm vào backend
+export function useUsersList(query: ListUsersQuery) {
+  const page = query.page ?? 1
+  const limit = query.limit ?? 20
+  const result = useAllUsers(query.status, query.role)
+
+  let all = result.data ?? []
+  if (query.search) all = all.filter(u => matchesSearch(u, query.search!))
+  all = sortUsers(all, query.sortBy, query.sortDir)
+
+  return {
+    records: all.slice((page - 1) * limit, page * limit),
+    // Số tài khoản SAU khi tìm kiếm: mẫu số của phân trang
+    total: all.length,
+    page,
+    limit,
+    isLoading: result.isLoading,
+  }
+}
+
+// Không phân trang được: khi truncated thì UI phải báo danh sách chưa đủ
+export function useUsersPicker(options: { role?: Role; activeOnly?: boolean } = {}) {
+  const { role, activeOnly = false } = options
+  const result = useQuery({
+    queryKey: ['admin-users', 'picker', role ?? 'all', activeOnly],
+    queryFn: () => adminApi.listUsers({ role, status: activeOnly ? 'active' : undefined, limit: PICKER_LIMIT }).then(r => r.data),
+  })
+  const records = result.data?.data ?? []
+  const total = result.data?.meta?.total ?? records.length
+  return { records, total, truncated: total > records.length, isLoading: result.isLoading }
+}
+
+// POST /admin/farm-owners; trả thêm `temporary_password_emailed`
+export function useCreateFarmOwner() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateFarmOwnerInput) => adminApi.createFarmOwner(input).then(r => r.data.data),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+  })
+}
+
+// PUT /admin/users/:id/status. Khoá cần lý do, mở khoá không.
+export function useSetUserStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, isActive, reason }: { id: string; isActive: boolean; reason?: string }) =>
+      adminApi.setUserStatus(id, isActive, reason).then(r => r.data.data),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+  })
+}
+

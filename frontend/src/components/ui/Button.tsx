@@ -1,0 +1,58 @@
+import { ButtonHTMLAttributes, forwardRef } from 'react'
+import { cn } from '@/lib/cn'
+import { trChildren } from '@/i18n'
+
+// Màu nút theo bảng phân loại trong FE_Design_Claude.md
+type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'climate' | 'danger' | 'icon'
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant
+  size?: 'sm' | 'md' | 'lg'
+  loading?: boolean
+}
+
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
+  primary:   'bg-charcoal text-white hover:bg-charcoal/90',
+  accent:    'bg-limeMist text-charcoal hover:bg-limeMist/80 font-bold',
+  secondary: 'bg-white text-charcoal border border-warmGray/15 hover:bg-warmGray/10',
+  climate:   'bg-climateOrange text-white hover:bg-climateOrange/90',
+  danger:    'bg-alertRed text-white hover:bg-alertRed/90',
+  icon:      'bg-white text-charcoal border border-warmGray/10 shadow-icon hover:bg-warmGray/10',
+}
+
+const SIZE_CLASS: Record<'sm' | 'md' | 'lg', string> = {
+  // Điện thoại: vùng bấm 44px; desktop giữ 36px cho bảng dày
+  sm: 'h-9 px-4 text-sm max-sm:h-11',
+  md: 'h-12 px-5 text-sm',
+  lg: 'h-14 px-6 text-base',
+}
+
+const ICON_SIZE_CLASS: Record<'sm' | 'md' | 'lg', string> = {
+  sm: 'h-9 w-9 max-sm:h-11 max-sm:w-11',
+  md: 'h-11 w-11',
+  lg: 'h-12 w-12',
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ variant = 'primary', size = 'md', loading, disabled, className, children, ...props }, ref) => {
+    const isIcon = variant === 'icon'
+    return (
+      <button
+        ref={ref}
+        disabled={disabled || loading}
+        className={cn(
+          'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors',
+          'disabled:cursor-not-allowed disabled:bg-warmGray/20 disabled:text-warmGray disabled:border-transparent disabled:hover:bg-warmGray/20',
+          isIcon ? ICON_SIZE_CLASS[size] : SIZE_CLASS[size],
+          !disabled && !loading && VARIANT_CLASS[variant],
+          className,
+        )}
+        {...props}
+      >
+        {/* trChildren: chữ trong nút tự dịch theo VI/EN, icon giữ nguyên */}
+        {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : trChildren(children)}
+      </button>
+    )
+  },
+)
+Button.displayName = 'Button'

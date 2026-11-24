@@ -1,0 +1,111 @@
+import type { Config } from 'tailwindcss'
+
+// Màu theo FE_Design_Claude.md; tên ngữ nghĩa cũ giữ làm alias để khỏi đổi class
+const config: Config = {
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        // Thang số đúng theo FE_Design_Claude.md
+        gray: {
+          0: '#FFFFFF', 50: '#F9F9F9', 100: '#F0F0F0', 200: '#EAEAEA',
+          300: '#C5C4C3', 400: '#A5A3A1', 500: '#878380', 600: '#6D6865',
+          700: '#4E4A46', 800: '#393430', 900: '#27231F', 950: '#000000',
+        },
+        lime: {
+          50: '#FDFFF3', 100: '#FAFFE6', 200: '#F5FFD0', 300: '#ECFFA9',
+          400: '#DFFD73', 500: '#D2F93A', 600: '#BEEC08', 700: '#8FAF08',
+          800: '#677E09', 900: '#445407',
+        },
+        accent: {
+          50: '#F9FBEE', 100: '#F0F6D5', 200: '#E6F0B7', 300: '#D5E688',
+          400: '#CCE170', 500: '#C6DD5D', 600: '#B5D32C', 700: '#89A022',
+          800: '#627218', 900: '#414C10',
+        },
+        orange: {
+          50: '#FDF3ED', 100: '#FAE1D1', 200: '#F6CAAC', 300: '#F3B287',
+          400: '#EF9A62', 500: '#ED8F50', 600: '#E87121', 700: '#B95613',
+          800: '#8B400E', 900: '#612D0A',
+        },
+        red: {
+          50: '#FBEFEE', 100: '#F6D7D5', 200: '#EFB7B3', 300: '#E68F89',
+          400: '#DC5E56', 500: '#D53F35', 600: '#B12E25', 700: '#87231C',
+          800: '#611914', 900: '#44110E',
+        },
+
+        // Alias ngữ nghĩa (giữ tên cũ, hex trỏ đúng thang trên)
+        white:         '#FFFFFF', // = gray-0: nền mặc định toàn bộ màn hình & card / chữ trên nền tối
+        charcoal:      '#27231F', // = gray-900: Chữ chính / Nút primary / Track toggle ON
+        graphite:      '#4E4A46', // = gray-700: Card xám đậm phụ / Track toggle OFF
+        warmGray:      '#878380', // = gray-500: Chữ phụ / Border opacity / Label caption
+        limeMist:      '#B5D32C', // = accent-600: xanh chanh duy nhất của hệ thống (FE_Design 2.1); trước là #ECFFA9 (lime-300), nhạt quá nên đổi
+        success:       '#B5D32C', // = accent-600: Trạng thái an toàn/ONLINE/đã kết nối (status dot)
+        climateOrange: '#ED8F50', // = orange-500: Cảnh báo vi khí hậu / quá nhiệt
+        infoBlue:      '#4A89EB', // Trạng thái cảnh báo "Mới" (bảng nhật ký Dashboard)
+        statusYellow:  '#FFE033', // Nhãn "PLC: Đang chờ kết nối" trên thanh SCADA (nền, chữ charcoal)
+        safetyOrange:  '#FF7426', // Safety Orange: lỗi thiết bị, mức HIGH và giá trị vượt ngưỡng
+        alertRed:      '#D53F35', // = red-500: Cảnh báo khẩn cấp / badge mặc định
+        stone:         '#EAEAEA', // = gray-200: Canvas nền app shell (MainLayout)
+      },
+      fontFamily: {
+        sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'],
+      },
+      // Dùng text-h1, text-body… thay cho text-2xl/text-sm; text-metric cần thêm tabular-nums
+      fontSize: {
+        h1:      ['26px', { lineHeight: '34px', fontWeight: '700' }],
+        h2:      ['20px', { lineHeight: '28px', fontWeight: '600' }],
+        h3:      ['16px', { lineHeight: '24px', fontWeight: '600' }],
+        body:    ['14px', { lineHeight: '22px' }],
+        small:   ['13px', { lineHeight: '18px' }],
+        // Không chữ nào dưới 13px (todo-ui-layout-1120): caption và xs mặc định của Tailwind (12px) cùng lên 13px
+        caption: ['13px', { lineHeight: '18px', fontWeight: '600' }],
+        xs:      ['13px', { lineHeight: '18px' }],
+        metric:  ['32px', { lineHeight: '38px', fontWeight: '700' }],
+      },
+      borderRadius: {
+        xl:   '16px',
+        '2xl': '20px',
+        '3xl': '28px',
+        full: '999px',
+      },
+      boxShadow: {
+        card: '0 8px 24px rgba(39,35,31,0.06)',
+        dock: '0 12px 32px rgba(39,35,31,0.12)',
+        icon: '0 2px 8px rgba(39,35,31,0.06)',
+        // Bóng cho mọi lớp phủ nổi (Modal, Dropdown, Confirm)
+        popover: '0 20px 40px -15px rgba(0,0,0,0.08), 0 0 1px 1px rgba(39,35,31,0.04)',
+        // Bản tán hẹp của popover cho menu nhỏ
+        dropdown: '0 16px 36px -10px rgba(0,0,0,0.08), 0 0 1px 1px rgba(39,35,31,0.04)',
+        // Header kính mờ khi nội dung cuộn bên dưới: vệt sáng mảnh ở mép trên + bóng tán nhẹ ở mép dưới
+        glass: 'inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 20px -14px rgba(39,35,31,0.3)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.2s ease-out',
+        'slide-in-right': 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        // Hiệu ứng trạng thái (Ticket/Thiết bị): luôn kèm motion-reduce:animate-none khi dùng
+        'pulse-dot': 'pulseDot 1.4s ease-in-out infinite',
+        'row-in': 'rowIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'ping-soft': 'pingSoft 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'ring-glow': 'ringGlow 2.2s ease-in-out infinite',
+        'step-in': 'stepIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both',
+        indeterminate: 'indeterminate 1.4s ease-in-out infinite',
+        // Đoạn nối Stepper: kéo dài từ bước hiện tại tới bước sau rồi mờ đi, lặp lại
+        'step-progress': 'stepProgress 1.8s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        slideInRight: { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(0)' } },
+        pulseDot: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.45' } },
+        rowIn: { '0%': { opacity: '0', transform: 'translateY(6px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        pingSoft: { '0%': { transform: 'scale(1)', opacity: '0.6' }, '75%, 100%': { transform: 'scale(2.6)', opacity: '0' } },
+        ringGlow: { '0%, 100%': { boxShadow: '0 0 0 4px #FFFFFF, 0 0 0 4px rgba(210,249,58,0.55)' }, '50%': { boxShadow: '0 0 0 4px #FFFFFF, 0 0 0 10px rgba(210,249,58,0)' } },
+        stepIn: { '0%': { opacity: '0', transform: 'translateX(16px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
+        indeterminate: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(250%)' } },
+        stepProgress: { '0%': { transform: 'scaleX(0)', opacity: '1' }, '75%': { transform: 'scaleX(1)', opacity: '1' }, '100%': { transform: 'scaleX(1)', opacity: '0' } },
+      },
+    },
+  },
+  plugins: [],
+}
+
+export default config

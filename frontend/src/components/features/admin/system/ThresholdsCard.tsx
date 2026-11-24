@@ -1,0 +1,72 @@
+import { useState } from 'react'
+import { useDefaultThresholds } from '@/hooks/admin/useSystem'
+import { Card } from '@/components/ui'
+import KpiTile from '@/components/common/KpiTile'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import { getApiErrorMessage } from '@/lib/helpers'
+import { t } from '@/i18n'
+import { THRESHOLD_LIMITS } from '@/validations/common/threshold.validation'
+import { THRESHOLD_KEYS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
+import { THRESHOLD_GROUPS } from '@/components/features/admin/system/system.constants'
+import SettingsCardHeader from '@/components/features/admin/system/SettingsCardHeader'
+import ThresholdsEditModal from '@/components/features/admin/system/ThresholdsEditModal'
+
+const ICON = 'bg-warmGray/10 text-charcoal'
+
+// Ngưỡng mặc định: dùng khi tạo Zone mới và khi reset
+export default function ThresholdsCard() {
+  const { data, isLoading, error } = useDefaultThresholds()
+  const [isEditing, setIsEditing] = useState(false)
+  const isDefault = data ? THRESHOLD_KEYS.every(k => data[k] === FACTORY_DEFAULT_THRESHOLDS[k]) : undefined
+
+  return (
+    <>
+      <Card className="flex flex-col gap-4">
+        <SettingsCardHeader
+          title="Ngưỡng môi trường mặc định"
+          description="Dùng cho Zone mới tạo và khi chủ nhà yến đặt lại ngưỡng mặc định."
+          isDefault={isDefault}
+          onEdit={() => setIsEditing(true)}
+          editLabel="Chỉnh sửa ngưỡng môi trường mặc định"
+        />
+
+        {isLoading && <LoadingSkeleton count={1} className="h-24 w-full" />}
+
+        {!isLoading && error && (
+          <p className="rounded-2xl border border-dashed border-warmGray/30 px-4 py-6 text-center text-sm text-warmGray">
+            {t('Không tải được ngưỡng mặc định')}. {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
+          </p>
+        )}
+
+        {data && (
+          // 5 ô bằng nhau trên desktop; mobile 2 cột
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+            {THRESHOLD_GROUPS.map(g => g.kind === 'range' ? (
+              <KpiTile
+                key={g.label}
+                className="shadow-none"
+                icon={g.icon}
+                iconClass={ICON}
+                label={g.label}
+                value={`${data[g.minKey]} – ${data[g.maxKey]} ${THRESHOLD_LIMITS[g.minKey].unit}`}
+                sub="Khoảng an toàn"
+              />
+            ) : (
+              <KpiTile
+                key={g.label}
+                className="shadow-none"
+                icon={g.icon}
+                iconClass={ICON}
+                label={g.label}
+                value={`${data[g.key]} ${THRESHOLD_LIMITS[g.key].unit}`}
+                sub="Tối đa cho phép"
+              />
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <ThresholdsEditModal open={isEditing} onClose={() => setIsEditing(false)} />
+    </>
+  )
+}

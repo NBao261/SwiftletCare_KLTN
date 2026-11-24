@@ -1,0 +1,89 @@
+{
+  "expo": {
+    "name": "SwiftletCare",
+    "slug": "swiftletcare",
+    "owner": "vulen",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "swiftletcare",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "vn.swiftletcare.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Quét mã QR để đăng ký thiết bị và chụp ảnh sửa chữa, kiểm tra tại nhà yến",
+        "NSLocationWhenInUseUsageDescription": "Cho phép SwiftletCare lấy vị trí để điền toạ độ trang trại khi bạn đứng tại nhà yến."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#172008"
+      },
+      "package": "vn.swiftletcare.app",
+      "permissions": [
+        "CAMERA",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "spa",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-blank.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "alerts"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép SwiftletCare dùng camera để quét mã QR của thiết bị và chụp ảnh sửa chữa, kiểm tra tại nhà yến."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Cho phép SwiftletCare lấy vị trí để điền toạ độ trang trại khi bạn đứng tại nhà yến."
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-video",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT_UP"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "87eeb21a-5a6e-45b5-85c6-20ac0c57716f"
+      },
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+// Kiểu dữ liệu dùng chung — enum phải khớp backend/src/types/domain.types.ts
+export * from './api.types'
+export * from './auth.types'
+export * from './farm.types'
+export * from './device.types'
+export * from './telemetry.types'
+export * from './alert.types'
+export * from './birdCount.types'
+export * from './socket.types'
+export * from './navigation.types'
+export * from './notification.types'
+export * from './healthReport.types'
+export * from './harvest.types'
+export * from './workOrder.types'
+export * from './maintenance.types'
+export * from './analytics.types'
+export * from './account.types'
+export * from './recommendation.types'
+export type {
+  InferredAlertType,
+  VerdictResult,
+  ExpertVerdict,
+  InferredAlert,
+  TelemetrySample,
+  ReviewItem,
+  ReviewItemStatus,
+  DailyHealthStatus,
+  ExpertActionType,
+  ExpertVerdictStats,
+  ExpertThresholds,
+  ExpertFuzzyTuning,
+  ExpertDetectionTuning,
+  FuzzySuggestionResponse,
+} from './expert.types'

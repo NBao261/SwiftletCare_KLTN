@@ -5,25 +5,23 @@ on:
     branches: [develop, main]
   push:
     branches: [develop]
+    # Tag của mốc review (review-2…): chạy đủ mọi module và lưu kết quả test làm bằng chứng (Report 5 §6)
+    tags: ['review-*']
+  workflow_dispatch:
 
 jobs:
   # ── Job 1: Validate commit messages ────────────────────────────────────────
   validate-commits:
     name: Validate Commit Messages
+    if: github.event_name == 'pull_request' || github.ref_type == 'branch' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Validate last 5 commit messages
-        run: |
-          python -X utf8 .agents/skills/git-commit-convention/scripts/validate_commit.py --log 5
+      - name: Validate commit messages (commitlint)
+        uses: wagoid/commitlint-github-action@v6
 
   # ── Job 2: Check for secrets accidentally committed ──────────────────────
   check-secrets:
@@ -39,24 +37,229 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Job 3: Lint (thêm khi có code) ───────────────────────────────────────
-  # lint:
-  #   name: Lint Code
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #     - run: npm ci
-  #     - run: npm run lint
+  # ── Job 3: Xác định module nào bị sửa ──────────────────────────────────
+  # Job của module không bị đụng sẽ bị bỏ qua (skipped = không chặn merge).
+  # Tag review-* và chạy tay (workflow_dispatch) luôn chạy đủ mọi module.
+  changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      firmware: ${{ steps.filter.outputs.firmware }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      ai-pipeline: ${{ steps.filter.outputs.ai-pipeline }}
+      full: ${{ github.event_name == 'workflow_dispatch' || github.ref_type == 'tag' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        if: github.event_name != 'workflow_dispatch' && github.ref_type != 'tag'
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docs/api/api-spec.yaml'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            firmware:
+              - 'firmware/**'
+              - '.github/workflows/ci.yml'
+            mobile:
+              - 'mobile/**'
+              - '.github/workflows/ci.yml'
+            ai-pipeline:
+              - 'ai-pipeline/**'
+              - '.github/workflows/ci.yml'
 
-  # ── Job 4: Tests (thêm khi có test) ──────────────────────────────────────
-  # test:
-  #   name: Run Tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - run: npm ci
-  #     - run: npm test
+  # ── Job 4: Backend — lint, type-check, test ─────────────────────────────
+  backend:
+    name: Backend (lint · type-check · test)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      # Binary MongoDB cho mongodb-memory-server (test integration) — tải 1 lần rồi cache
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('backend/package-lock.json') }}
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build:check
+      - run: npm test -- --json --outputFile=jest-results.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-jest-results
+          path: backend/jest-results.json
+
+  # ── Job 5: Frontend — lint, type-check, test, build ─────────────────────
+  frontend:
+    name: Frontend (lint · type-check · test · build)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      # Test E2E và cấu hình Playwright nằm ngoài src/ nên kiểm kiểu riêng
+      - run: npx tsc -p tsconfig.e2e.json
+      - run: npx vitest run
+      - run: npm run build
+
+  # ── Job 5b: E2E — Playwright trên web thật nối backend đã seed (G-17) ───
+  # Test E2E chỉ được tính là tự động khi chạy ở đây (Report 5); kết quả JUnit lưu làm artifact
+  e2e:
+    name: E2E (Playwright)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports: ['27017:27017']
+    env:
+      MONGODB_URI: mongodb://localhost:27017/swiftletcare_e2e
+      # Chỉ dùng trong job này, không phải secret thật
+      JWT_ACCESS_SECRET: e2e-access-secret
+      JWT_REFRESH_SECRET: e2e-refresh-secret
+      # Không có broker trong job: backend ghi lỗi MQTT và tự thử nối lại, API vẫn chạy
+      MQTT_BROKER_URL: mqtt://localhost:1883
+      # Mọi lời gọi của test ra từ một IP: không để giới hạn 300 lần/phút làm hỏng test
+      RATE_LIMIT_MAX: '2000'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Backend — cài, seed, chạy nền
+        working-directory: backend
+        run: |
+          npm ci
+          npm run seed
+          # Dữ liệu của 16 kịch bản demo DS-01…16 cho e2e/ds-*.spec.ts (Design Brief Phụ lục A2)
+          npm run seed:demo
+          nohup npx tsx src/index.ts > backend.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/health && exit 0; sleep 1; done
+          cat backend.log; exit 1
+      - name: Web — cài và trình duyệt Chromium
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps --only-shell chromium
+      - name: Playwright
+        working-directory: frontend
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-e2e-junit
+          path: frontend/e2e-junit.xml
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-failure-details
+          path: |
+            frontend/test-results/
+            backend/backend.log
+
+  # ── Job 6: Firmware — unit test trên host (env native) ──────────────────
+  firmware:
+    name: Firmware (native unit tests)
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: platformio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+      - run: pip install platformio
+      - run: pio test -e native --junit-output-path pio-junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firmware-pio-junit
+          path: firmware/pio-junit.xml
+
+  # ── Job 7: Mobile — lint, type-check, test ──────────────────────────────
+  # Chưa có test nào nên jest chạy với --passWithNoTests; test thêm vào sẽ tự được chạy.
+  mobile:
+    name: Mobile (lint · type-check · test)
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx jest --passWithNoTests
+
+  # ── Job 8: AI pipeline — pytest (không cần camera, model hay broker) ────
+  ai-pipeline:
+    name: AI pipeline (pytest)
+    needs: changes
+    if: needs.changes.outputs.ai-pipeline == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ai-pipeline/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: pytest --junitxml=pytest-junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-pipeline-pytest-junit
+          path: ai-pipeline/pytest-junit.xml

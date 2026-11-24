@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "title": "SwiftletCare Context Diagram",
+    "version": "1.0.0",
+    "intent": "C4 Level 1 Context Diagram – Showing system boundary and external actors/systems",
+    "evidence_sources": [
+      {
+        "type": "document",
+        "path": "SRS_SwiftletCare.md",
+        "sections": ["§4 Actors", "§3 Architecture", "§5.6 Alert", "§3.2 Stack"]
+      }
+    ]
+  },
+  "facts": [
+    {
+      "id": "F01",
+      "category": "actor",
+      "statement": "Farm Owner (Chủ nhà yến): Full access – quản lý farm, xem dashboard, cấu hình thiết bị, nhận cảnh báo đa kênh",
+      "source": "SRS §4.1 line 153"
+    },
+    {
+      "id": "F02",
+      "category": "actor",
+      "statement": "Operator (Kỹ thuật viên): Xem dashboard, điều khiển manual relay, xem cảnh báo",
+      "source": "SRS §4.1 line 154"
+    },
+    {
+      "id": "F03",
+      "category": "actor",
+      "statement": "Administrator (Quản trị IT): Quản lý tài khoản, cấu hình hệ thống, audit log",
+      "source": "SRS §4.1 line 155"
+    },
+    {
+      "id": "F04",
+      "category": "external_system",
+      "statement": "ESP32 Controller Node: Thu thập cảm biến (SHT31, BH1750, MQ-135, DHT22, MAX9814), thực thi PID closed-loop, điều khiển 4 relay, publish MQTT QoS 1 over TLS",
+      "source": "SRS §4.2 line 161, §7.1 line 406"
+    },
+    {
+      "id": "F05",
+      "category": "external_system",
+      "statement": "Raspberry Pi Edge AI Node: Chạy YOLOv8 + ByteTrack @ 25-30 FPS, đếm chim entry/exit, phát hiện thiên địch (rat, snake, owl), publish kết quả qua MQTT",
+      "source": "SRS §4.2 line 162, §5.4"
+    },
+    {
+      "id": "F06",
+      "category": "external_system",
+      "statement": "IP Camera PoE 4MP: Hikvision/Dahua, 2K@30FPS, Starlight IR, RTSP stream qua LAN nội bộ tới Raspberry Pi",
+      "source": "SRS §7.1 line 401"
+    },
+    {
+      "id": "F07",
+      "category": "external_service",
+      "statement": "Firebase FCM: Push Notification đến Web/Mobile PWA, yêu cầu < 3 giây",
+      "source": "SRS §5.6 ALERT-FR-002 line 303"
+    },
+    {
+      "id": "F08",
+      "category": "external_service",
+      "statement": "Zalo ZNS (Zalo Notification Service): Gửi thông báo Zalo cho cảnh báo CRITICAL và HIGH",
+      "source": "SRS §5.6 ALERT-FR-003 line 304"
+    },
+    {
+      "id": "F09",
+      "category": "external_service",
+      "statement": "SMS Gateway (Twilio / ESMS.vn): Kênh dự phòng khi mạng kém",
+      "source": "SRS §5.6 ALERT-FR-004 line 305"
+    },
+    {
+      "id": "F10",
+      "category": "external_service",
+      "statement": "S3 / MinIO Object Storage: Lưu snapshot cảnh báo, video clips. Truy cập qua Presigned URL (TTL 15 phút)",
+      "source": "SRS §3.2 line 140, §6.4 SEC-NFR-006 line 370"
+    },
+    {
+      "id": "F11",
+      "category": "external_service",
+      "statement": "Google OAuth2: Hỗ trợ đăng nhập OAuth2 (Google)",
+      "source": "SRS §5.1 AUTH-FR-002 line 176"
+    }
+  ],
+  "assumptions": [
+    "EMQX/Mosquitto MQTT Broker is internal to the system boundary",
+    "MongoDB, Redis are internal data stores within the system boundary",
+    "The 4G LTE Gateway is network infrastructure, not shown as external system in C4 context"
+  ],
+  "exclusions": [
+    "Internal backend services (Express API, Telemetry Aggregator, Alert Engine, Socket.io) – shown in Container diagram",
+    "Internal databases (MongoDB, Redis) – shown in Container diagram",
+    "MQTT topic structure details – shown in Component/Data-flow diagram"
+  ]
+}

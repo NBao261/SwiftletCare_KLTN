@@ -1,0 +1,158 @@
+// Module DEVICE: Sensor/Camera Node, relay, chế độ điều khiển.
+
+// PENDING: đã khai báo, chưa có heartbeat đầu tiên
+export type DeviceStatus = 'PENDING' | 'ONLINE' | 'OFFLINE'
+
+export type ControlMode = 'AUTO' | 'MANUAL'
+
+// relay IN1=misting, IN2=speaker (loa ru), IN3=ventilation; IN4=heating đã bỏ
+export interface RelayStates { misting: boolean; speaker: boolean; ventilation: boolean }
+export type RelayName = keyof RelayStates
+
+// % công suất 0-100 do bộ mờ trên ESP32 tính; chỉ có qua socket
+export interface ControlOutput { misting: number; ventilation: number }
+
+export interface SensorNode {
+  _id: string; device_id: string; zone_id: string
+  firmware_version: string; last_heartbeat?: string
+  status: DeviceStatus; rssi?: number; control_mode: ControlMode
+  // controller đã áp cấu hình hiện hành của Zone chưa; UNKNOWN = firmware trước 2.1.0 không báo
+  config_sync?: 'PENDING' | 'APPLIED' | 'MISMATCH' | 'UNKNOWN'
+  // chẩn đoán từ heartbeat; reset_reason, ip chỉ có từ firmware 1.4.0
+  booted_at?: string; free_heap?: number; reset_reason?: string; ip?: string
+  relay_states: RelayStates
+  override_expiry?: string
+  speaker_schedule: { enabled: boolean; windows: Array<{ start: string; end: string }> }
+  audio: { current_track: number; volume: number; playing: boolean; loop: boolean }
+  registered_at: string
+  // thiết bị của bộ giả lập, chép từ kho lúc đăng ký
+  simulated?: boolean
+  // lệnh OTA đã gửi, chờ heartbeat báo đúng firmware_version mới
+  ota_pending?: { version: string; url: string; requested_at: string; requested_by?: string }
+  // OTA quá hạn xác nhận: thiết bị vẫn chạy `running_version` (đã rollback)
+  ota_failed?: { version: string; failed_at: string; running_version?: string }
+  config_pushed_at?: string
+  // giờ chạy + số lần đóng cắt thật của bơm/quạt (tính từ telemetry)
+  relay_usage?: { misting?: RelayUsage; ventilation?: RelayUsage; counted_until?: string }
+  // Quá 15 phút kể từ lúc đăng ký mà chưa có heartbeat đầu tiên
+  activation_overdue_at?: string
+  decommissioned_at?: string; decommission_reason?: string
+}
+
+export interface RelayUsage { on_hours: number; switches: number; since_service_hours: number; since_service_switches: number }
+
+// POST /devices/sensor-nodes/:id/commands
+export type NodeCommand = 'RESTART' | 'PUSH_CONFIG' | 'OTA'
+export interface NodeCommandInput {
+  command: NodeCommand
+  // Chỉ khi command=OTA. version dạng x.y.z (không có tiền tố "v"), url https, sha256 hex 64 ký tự
+  ota?: { version: string; url: string; sha256: string }
+}
+
+// một lần can thiệp tay 1 relay (GET /devices/sensor-nodes/:id/relay-overrides)
+export type RelayOverrideEndReason = 'EXPIRED' | 'CLEARED_EARLY' | 'REPLACED'
+export interface RelayOverrideLog {
+  _id: string; node_id: string; zone_id: string; farm_id: string
+  relay: 'misting' | 'ventilation' | 'speaker'
+  state: boolean
+  started_by?: { _id: string; full_name?: string }
+  started_by_role?: string
+  started_at: string; expires_at: string
+  ended_at: string | null
+  end_reason: RelayOverrideEndReason | null
+}
+
+// PUT /devices/sensor-nodes/:id/speaker-schedule (firmware: ≤2 khung, giờ tròn)
+export interface SpeakerWindow { start: string; end: string }
+export interface SpeakerScheduleInput { enabled?: boolean; windows?: SpeakerWindow[]; volume?: number; track?: number }
+
+// File phát thật nằm trên thẻ SD; file_url chỉ để nghe lại trên web
+export interface AudioTrack {
+  _id: string; node_id: string
+  track_number: number; display_name: string
+  file_url: string; file_size_bytes: number
+  synced_to_sd: boolean
+  uploaded_by: string; uploaded_at: string
+}
+
+// vòng đếm quanh miệng lỗ ra vào: 3–12 đỉnh [x, y] theo tỉ lệ khung hình 0–1
+export interface CountingRing {
+  points: Array<[number, number]>
+  into_ring_is_exit: boolean
+}
+
+// một lần đổi vòng đếm (người sửa, vai trò, giá trị cũ/mới)
+export interface CountingRingHistoryEntry {
+  changed_by: string
+  changed_by_role: string
+  changed_at: string
+  // bản ghi cũ là 1 vòng, bản ghi mới là danh sách vòng
+  old_value: CountingRing | CountingRing[] | null
+  new_value: CountingRing | CountingRing[]
+}
+
+export interface CameraNode {
+  _id: string; device_id: string; rtsp_url?: string
+  // camera ở cửa ra vào của cả nhà yến; zone_id chỉ còn ở bản ghi cũ
+  house_id?: string; zone_id?: string
+  // 1–4 vòng đã vẽ; trống thì nút AI dùng vòng trong config.yaml. Bản ghi cũ chỉ có counting_ring
+  counting_rings?: CountingRing[]
+  // vòng trong config.yaml do nút AI báo lên
+  default_rings?: CountingRing[]
+  // vòng đầu tiên kèm người sửa và lúc sửa
+  counting_ring?: (CountingRing & { updated_at?: string; updated_by?: string }) | null
+  // lịch sử đổi vòng đếm, mới nhất tuỳ backend sắp xếp
+  counting_ring_history?: CountingRingHistoryEntry[]
+  status: DeviceStatus; last_heartbeat?: string; model_version?: string; registered_at: string
+  // thiết bị của bộ giả lập
+  simulated?: boolean
+  activation_overdue_at?: string
+  decommissioned_at?: string; decommission_reason?: string
+}
+
+// GET /devices/system-status (chỉ Admin)
+export interface SystemNodeStatusItem {
+  _id: string; device_id: string; type: 'sensor' | 'camera'; status: DeviceStatus
+  last_heartbeat?: string; rssi?: number
+  // Chỉ sensor: camera không có
+  firmware_version?: string; registered_at?: string
+  zone_id: string; farm_id: string; farm_name: string; house_name: string; floor?: number; zone_name: string
+  // thiết bị của bộ giả lập
+  simulated?: boolean
+}
+export interface SystemNodeStatus {
+  summary: { total: number; online: number; offline: number; pending: number }
+  nodes: SystemNodeStatusItem[]
+}
+
+// Kho thiết bị: GET /admin/provisioned-devices
+export type ProvisionedDeviceKind = 'SENSOR' | 'CAMERA'
+// Trạng thái nhãn, backend suy ra mỗi lần đọc. Cấp lại mã kích hoạt / thu hồi được ở IN_STOCK và RELEASED
+export type StockStatus = 'IN_STOCK' | 'IN_SERVICE' | 'RELEASED' | 'REVOKED'
+
+export interface ProvisionedDevice {
+  _id: string; device_id: string; kind: ProvisionedDeviceKind
+  // nhãn của bộ giả lập, thiết bị đăng ký từ nhãn này mang theo cờ
+  simulated?: boolean
+  claimed_at?: string | null; revoked_at?: string | null; revoke_reason?: string | null
+  created_by: string; created_at: string
+  stock_status: StockStatus
+  // MAC của chip khi nạp qua USB ở màn Kho thiết bị
+  chip_mac?: string | null
+}
+
+// Mã chỉ trả đúng 1 lần: thêm vào kho trả cả hai, cấp lại mã kích hoạt / mật khẩu broker trả 1 trong 2
+export interface IssuedDeviceSecrets {
+  device_id: string; kind: ProvisionedDeviceKind
+  secret_key?: string; broker_secret?: string
+  // Địa chỉ broker nạp cùng danh tính (DEVICE_BROKER_HOST); null: thiết bị dùng địa chỉ có sẵn
+  broker_host?: string | null
+  chip_mac?: string | null
+}
+
+// thiết bị đã gỡ còn khôi phục được (GET …?removed=recent, chỉ Farm Owner)
+export type RemovedDevice = (SensorNode | CameraNode) & {
+  decommissioned_at: string
+  decommission_reason?: string
+  restorable_until: string
+}

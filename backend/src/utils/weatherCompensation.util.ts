@@ -1,0 +1,101 @@
+import { BadRequestError } from '@/utils/appError.util'
+
+// firmware kẹp lại (WeatherCompensation.cpp), hai giới hạn dưới phải khớp Config.h
+
+export const WEATHER_COMP_MAX_PCT = 10
+export const WEATHER_COMP_MAX_MS = 2 * 3600_000
+export const FORECAST_WINDOW_MS = 2 * 3600_000
+// Để document nhà không lớn mãi
+export const MAX_WEATHER_RULES = 10
+
+// Giới hạn vật lý chống nhập nhầm
+export const WEATHER_METRICS = ['temperature', 'humidity', 'rain'] as const
+export type WeatherMetric = typeof WEATHER_METRICS[number]
+export const WEATHER_METRIC_LIMITS: Record<WeatherMetric, { min: number; max: number; unit: string }> = {
+  temperature: { min: 0, max: 50, unit: '°C' },
+  humidity:    { min: 0, max: 100, unit: '%' },
+  rain:        { min: 0.1, max: 50, unit: 'mm' },
+}
+
+export interface WeatherRuleInput {
+  metric: WeatherMetric
+  min: number
+  offset_pct: number
+  duration_min: number
+  active: boolean
+}
+
+// null = Open-Meteo không có số đó
+export interface ForecastSummary {
+  temperature_max: number | null
+  humidity_max: number | null
+  rain_mm: number | null
+}
+
+const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+
+export function assertValidWeatherRules(rules: WeatherRuleInput[]): void {
+  if (rules.length > MAX_WEATHER_RULES) throw BadRequestError(`Mỗi nhà tối đa ${MAX_WEATHER_RULES} luật bù thời tiết`)
+  rules.forEach((rule, i) => {
+    const at = `Luật ${i + 1}`
+    if (!WEATHER_METRICS.includes(rule.metric)) throw BadRequestError(`${at}: điều kiện không hỗ trợ`)
+    const limit = WEATHER_METRIC_LIMITS[rule.metric]
+    if (!isNumber(rule.min) || rule.min < limit.min || rule.min > limit.max) {
+      throw BadRequestError(`${at}: ngưỡng phải từ ${limit.min} đến ${limit.max} ${limit.unit}`)
+    }
+    if (!isNumber(rule.offset_pct) || rule.offset_pct === 0 || Math.abs(rule.offset_pct) > WEATHER_COMP_MAX_PCT) {
+      throw BadRequestError(`${at}: offset phải khác 0 và trong khoảng ±${WEATHER_COMP_MAX_PCT} điểm %`)
+    }
+    if (!Number.isInteger(rule.duration_min) || rule.duration_min < 1 || rule.duration_min * 60_000 > WEATHER_COMP_MAX_MS) {
+      throw BadRequestError(`${at}: thời hạn từ 1 đến ${WEATHER_COMP_MAX_MS / 60_000} phút`)
+    }
+  })
+}
+
+const forecastValue = (forecast: ForecastSummary, metric: WeatherMetric): number | null =>
+  metric === 'temperature' ? forecast.temperature_max : metric === 'humidity' ? forecast.humidity_max : forecast.rain_mm
+
+// Bằng nhau thì luật đứng trước; null thì nơi gọi gửi 0
+export function pickCompensation<R extends WeatherRuleInput>(rules: R[], forecast: ForecastSummary | null): R | null {
+  if (!forecast) return null
+  let best: R | null = null
+  for (const rule of rules) {
+    if (!rule.active) continue
+    const value = forecastValue(forecast, rule.metric)
+    if (value === null || value < rule.min) continue
+    if (!best || Math.abs(rule.offset_pct) > Math.abs(best.offset_pct)) best = rule
+  }
+  return best
+}
+
+interface OpenMeteoHourly {
+  time?: string[]
+  temperature_2m?: (number | null)[]
+  relative_humidity_2m?: (number | null)[]
+  precipitation?: (number | null)[]
+}
+
+// Mưa ở mốc T là tổng giờ trước T, nên hai mốc phủ đủ 2 giờ
+export function summariseForecast(hourly: OpenMeteoHourly | undefined, now: Date): ForecastSummary | null {
+  const from = now.getTime()
+  const to = now.getTime() + FORECAST_WINDOW_MS
+  const temps: number[] = []
+  const hums: number[] = []
+  const rains: number[] = []
+  ;(hourly?.time ?? []).forEach((time, i) => {
+    const at = Date.parse(`${time}Z`)
+    if (!Number.isFinite(at) || at <= from || at > to) return
+    const t = hourly?.temperature_2m?.[i]
+    const h = hourly?.relative_humidity_2m?.[i]
+    const r = hourly?.precipitation?.[i]
+    if (isNumber(t)) temps.push(t)
+    if (isNumber(h)) hums.push(h)
+    if (isNumber(r)) rains.push(r)
+  })
+  if (!temps.length && !hums.length && !rains.length) return null
+  return {
+    temperature_max: temps.length ? Math.max(...temps) : null,
+    humidity_max: hums.length ? Math.max(...hums) : null,
+    rain_mm: rains.length ? Math.round(rains.reduce((a, b) => a + b, 0) * 10) / 10 : null,
+  }
+}

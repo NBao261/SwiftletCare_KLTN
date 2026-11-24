@@ -1,0 +1,54 @@
+import type { Icon } from '@phosphor-icons/react'
+import { CloudIcon, DropIcon, SpeakerHighIcon, SunIcon, ThermometerIcon, WindIcon } from '@phosphor-icons/react'
+import type { RosterShift, Thresholds } from '@/types'
+import type { MetricKey } from '@/components/features/farm-owner/farms/farmStructure'
+import type { farmDict } from '@/constants/farmStructure.i18n'
+
+type FarmKey = keyof typeof farmDict.vi
+
+export interface MetricMeta {
+  key: MetricKey | 'sound'
+  labelKey: FarmKey
+  unit: string
+  decimals: number
+  icon: Icon
+}
+
+// 6 chỉ số của Zone, đúng thứ tự hiển thị ở màn chi tiết zone (đơn vị đo không dịch: FE_Design)
+export const ZONE_METRICS: MetricMeta[] = [
+  { key: 'temperature', labelKey: 'metric.temperature', unit: '°C', decimals: 1, icon: ThermometerIcon },
+  { key: 'humidity', labelKey: 'metric.humidity', unit: '%', decimals: 0, icon: DropIcon },
+  { key: 'light', labelKey: 'metric.light', unit: 'lux', decimals: 2, icon: SunIcon },
+  { key: 'nh3', labelKey: 'metric.nh3', unit: 'ppm', decimals: 0, icon: WindIcon },
+  { key: 'co2', labelKey: 'metric.co2', unit: 'ppm', decimals: 0, icon: CloudIcon },
+  { key: 'sound', labelKey: 'metric.sound', unit: 'dB', decimals: 0, icon: SpeakerHighIcon },
+]
+
+// Nút phụ dạng capsule
+export const CAPSULE_ACTION_CLASS = 'border-warmGray/15 bg-warmGray/5 font-semibold transition-all hover:bg-charcoal hover:text-white'
+
+// Âm thanh chưa có ngưỡng nên trả undefined
+export function thresholdRange(key: MetricMeta['key'], t: Thresholds): string | undefined {
+  switch (key) {
+    case 'temperature': return `${t.temp_min}–${t.temp_max} °C`
+    case 'humidity': return `${t.humidity_min}–${t.humidity_max} %`
+    case 'light': return `< ${t.light_max} lux`
+    case 'nh3': return `< ${t.nh3_max} ppm`
+    case 'co2': return `< ${t.co2_max} ppm`
+    default: return undefined
+  }
+}
+
+// Tra nhãn/đơn vị/số lẻ theo key: mọi nơi hiện 1 chỉ số (banner, card zone, drawer) định dạng giống nhau
+export const METRIC_BY_KEY = Object.fromEntries(ZONE_METRICS.map(m => [m.key, m])) as Record<MetricMeta['key'], MetricMeta>
+
+// Bảng thành viên, lịch trực của trang nhà: khung cố định 5 dòng, nhiều hơn thì phân trang
+export const MEMBER_PAGE_SIZE = 5
+export const MEMBER_ROW_HEIGHT = 64
+
+// nhãn ngày (0 = Chủ nhật như backend) và loại ca của lịch trực
+export const ROSTER_DAY_LABEL: FarmKey[] = ['roster.day.0', 'roster.day.1', 'roster.day.2', 'roster.day.3', 'roster.day.4', 'roster.day.5', 'roster.day.6']
+export const ROSTER_ROLE_LABEL: Record<RosterShift['role'], FarmKey> = { PRIMARY: 'roster.role.PRIMARY', BACKUP: 'roster.role.BACKUP' }
+
+// tên trang trại, nhà, Zone tối đa 50 ký tự, cùng giới hạn với backend
+export const STRUCTURE_NAME_MAX_LENGTH = 50

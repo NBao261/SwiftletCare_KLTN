@@ -1,0 +1,216 @@
+/**
+ * SwiftletCare – Global Configuration
+ * Loaded from NVS on boot. Overridable via the retained MQTT topic …/{deviceId}/config.
+ *
+ * Hardware BOM: Components Guide v3.3 (RS485 Modbus sensor bus + GPIO relay)
+ * SRS: ENV-FR-001, ENV-FR-006, ENV-FR-007, ENV-FR-013b
+ */
+
+#pragma once
+#include <Arduino.h>
+
+// ── RS485 Modbus Bus (Guide §5) ──────────────────────────────────────────────
+// UART TTL→RS485 V2 module: ESP32 GPIO17→TXD, GPIO16→RXD
+#define PIN_RS485_RX 16
+#define PIN_RS485_TX 17
+#define MODBUS_BAUDRATE 4800 // all 5 sensors unified at 4800bps (Guide §3)
+
+// Modbus Slave IDs (Guide §2.1, §4)
+#define MODBUS_ID_NOISE 1      // ES-NOISE-01
+#define MODBUS_ID_CO2 2        // ES-CO2-01
+#define MODBUS_ID_NH3 3        // ES-NH3-01
+#define MODBUS_ID_LIGHT 4      // ES-ALS-02
+#define MODBUS_ID_TEMP_HUMID 5 // ES35-SW (SHT35), cuối bus, DIP Pin5 ON
+
+// ── Relay 4 kênh (kích mức CAO, Guide §8-9) ──────────────────────────────────
+#define PIN_RELAY_MISTING 25     // IN1 – phun sương
+#define PIN_RELAY_SPEAKER 26     // IN2 – nguồn amply loa ru
+#define PIN_RELAY_VENTILATION 27 // IN3 – quạt thông gió
+#define PIN_RELAY_SPARE 14       // IN4 – dự phòng (SRS v2.0.0 bỏ sưởi)
+#define RELAY_ACTIVE_HIGH true   // Jumper đặt ở High-level trigger
+
+// ── DFPlayer Mini (loa ru, Guide §10) ────────────────────────────────────────
+// DFPlayer RX ← ESP32 GPIO33 (qua trở 1kΩ) | DFPlayer TX → ESP32 GPIO32
+#define PIN_DFPLAYER_ESP_TX 33
+#define PIN_DFPLAYER_ESP_RX 32
+#define DFPLAYER_DEFAULT_VOLUME 20 // 0-30
+#define DFPLAYER_DEFAULT_TRACK 1   // 0001.mp3
+
+// ── Đo dòng tải (THREAT-FR-014, BR-32) — board rev B2: U5 ADS1115 địa chỉ 0x48 (ADDR nối GND), shunt R20 (bơm
+// phun sương, AIN0–AIN1) và R21 (quạt, AIN2–AIN3) 0,1 Ω 1 % đặt phía âm của tải. Board không có ADS1115 thì
+// không đo dòng, telemetry không có pump_current_a/fan_current_a và không xét ACTUATOR_FAULT.
+#define PIN_I2C_SDA 21
+#define PIN_I2C_SCL 22
+#define CURRENT_ADC_ADDR 0x48
+#define CURRENT_SHUNT_OHM 0.1f
+
+// ── Firmware version (báo lên backend qua heartbeat — FARM-FR-006) ──────────
+#define FIRMWARE_VERSION "2.4.0" // 1.1.0: điều khiển mờ; 1.2.0: lọc đầu vào; 1.3.0: SRS v2 (bỏ khí/sưởi, bơm khô tự ngừng, tham số phát hiện); 1.4.0: RESTART/OTA từ xa + rollback, heartbeat có lý do khởi động lại và IP; 1.5.0: tên cảnh báo SRS 3.1.0 (MISTING_INEFFECTIVE, UNEXPECTED_RESTART kèm lý do), báo cả mất điện; 1.6.0: hạn can thiệp tay riêng từng relay (BR-20), lọc lệnh trùng và lệnh trễ (BR-35); 2.0.0: esp-mqtt, topic và tài khoản riêng từng thiết bị, TLS (G-07), không tương thích backend trước đó; 2.1.0: báo phiên bản cấu hình đang chạy trong heartbeat (ENV-FR-027), bản production không nhận địa chỉ broker ở AP-mode (FARM-FR-003c); 2.1.1: địa chỉ broker nạp lúc flash cùng danh tính (NVS `identity`, `flash_identity.py --broker`) thay mặc định `Secrets.h`, bản production không tìm broker qua mDNS (FARM-FR-003c, BR-27); 2.2.0: bù phun sương theo thời tiết từ topic `compensation` (ENV-FR-029, BR-38); 2.3.0: đo dòng bơm và quạt qua ADS1115 (board rev B2), telemetry `pump_current_a`/`fan_current_a`, cảnh báo `ACTUATOR_FAULT` (THREAT-FR-014, BR-32); 2.3.1: heartbeat có `actuatorBaseline` (dòng bình thường đã học) để backend đếm giờ chạy theo dòng (BR-45); 2.3.2: SPEAKER_FAILURE gửi mức HIGH theo BR-15 (backend tự đặt mức theo loại, G-32); 2.4.0: nhận mã thiết bị và mật khẩu broker qua cổng USB từ màn Kho thiết bị (lệnh `SC INFO`, `SC SET`, FARM-FR-010)
+
+// ── OTA từ xa (TICKET-FR-008, Flow 15) ──────────────────────────────────────
+// Bản vừa OTA phải kết nối được MQTT trong khoảng này, nếu không bootloader quay về
+// bản cũ (bước 5a). ponytail: 10 phút là mốc chọn tay, ngắn hơn hạn 30 phút backend
+// chờ xác nhận OTA; mạng nhà yến chập chờn lâu hơn thì quay về bản cũ (an toàn).
+#define OTA_VERIFY_TIMEOUT_MS 600000UL
+// Không nhận được byte nào trong khoảng này lúc tải firmware thì coi là mất mạng (case 4a)
+#define OTA_READ_TIMEOUT_MS 10000
+
+// ── Timing ────────────────────────────────────────────────────────────────
+#define WATCHDOG_TIMEOUT_SEC 30
+// ⚠️ SRS ENV-FR-002 quy định 5-60s; đặt 1000ms theo yêu cầu thực tế của user để
+// dashboard cập nhật liên tục. Với RS485, mỗi Slave ID timeout ~1s
+// (ModbusMaster mặc định), nên khi còn cảm biến chưa đấu dây, chu kỳ đọc THỰC
+// TẾ vẫn bị kéo dài bởi số lần timeout đó (vd 4/5 cảm biến timeout ≈ 4s/chu kỳ)
+// — không phải lỗi.
+#define SENSOR_INTERVAL_MS 1000
+#define PID_INTERVAL_MS 10000
+
+// ── Hệ số bộ điều khiển mờ (ENV-FR-010/011/021) ─────────────────────────────
+// Chỉnh lúc chạy qua topic MQTT `config` (fuzzy_*), lưu NVS; ngoài khoảng MIN/MAX
+// bị kẹp lại. Mặc định cho ra đúng hàm thuộc gốc (xem pid/FuzzyControl.h).
+// Cửa sổ time-proportioning: relay BẬT duty×cửa sổ đầu mỗi cửa sổ; ≥60s để
+// relay cơ/bơm không đóng cắt quá dày, độ phân giải = PID_INTERVAL_MS/cửa sổ.
+#define DEFAULT_FUZZY_HUMIDITY_BAND 8.0f // %RH, 2..20
+#define DEFAULT_FUZZY_TEMP_BAND 4.0f     // °C, 1..10
+#define DEFAULT_FUZZY_FAN_DRY_LEVEL 40   // %, 0..100
+#define DEFAULT_FUZZY_WINDOW_SEC 120     // s, 60..600
+// ENV-FR-022: lọc median+Kalman giá trị đưa vào bộ mờ (tắt được để so sánh A/B)
+#define DEFAULT_FUZZY_INPUT_FILTER true
+
+// ── Tham số phát hiện chỉnh theo Zone (EXPERT-FR-008) ────────────────────────
+// Domain Expert chỉnh qua web → topic MQTT `config` → lưu NVS. Mặc định là các
+// hằng số dùng trước v1.3.0; khoảng hợp lệ (kẹp trong Config::update) là giới
+// hạn kỹ thuật, không phải khuyến nghị nuôi yến.
+#define DEFAULT_NOISE_MARGIN_DB 15.0f     // dB trên mức nền của giờ đó, 5..30
+#define DEFAULT_NOISE_MIN_SEC 10          // số giây ồn trong cửa sổ 15 s, 5..15
+#define DEFAULT_PUMP_DRY_ON_SEC 300       // s bơm BẬT cộng dồn trước khi xét, 120..900
+#define DEFAULT_PUMP_DRY_MIN_RISE_PCT 2.0f // điểm %RH phải tăng, 0.5..10
+#define DEFAULT_SPEAKER_DROP_PCT 70       // % mức âm giảm so với nền, 30..90
+// Sau khi chốt ngừng phun vì MISTING_INEFFECTIVE, bao lâu thì tự thử phun lại (PumpDryMonitor).
+// Hằng số kỹ thuật chọn tay (bằng thời hạn can thiệp tay mặc định), KHÔNG có nguồn
+// nuôi yến và chưa chỉnh được qua MQTT — đủ dài để bơm khô thật không chạy liên
+// tục, đủ ngắn để một lần báo nhầm không làm nhà yến mất phun sương cả ngày.
+#define PUMP_DRY_RETRY_MIN 30
+#define PUMP_DRY_RETRY_MS (PUMP_DRY_RETRY_MIN * 60000UL)
+// Vòng điều khiển dùng số đo nhiệt-ẩm hợp lệ gần nhất nếu nó chưa cũ quá số chu kỳ
+// này; cũ hơn mới vào trạng thái an toàn (relay TẮT — THREAT-FR-013). 1 lần đọc RS485
+// lỗi là chuyện thường: nếu tắt relay ngay thì bus chập chờn làm bơm/quạt đóng cắt
+// liên tục. ponytail: 2 chu kỳ (20 s với chu kỳ 10 s) là mốc chọn tay, chưa đo.
+#define CONTROL_INPUT_MAX_AGE_CYCLES 2
+// Chuỗi hoá số phút cho câu cảnh báo — đổi PUMP_DRY_RETRY_MIN là nội dung đổi theo
+#define SC_STR_(x) #x
+#define SC_STR(x) SC_STR_(x)
+// Cảnh báo "theo đợt" (NOISE_ANOMALY, MISTING_INEFFECTIVE) được gửi LẠI mỗi khoảng này chừng nào
+// sự cố còn tiếp diễn. Backend gộp vào cảnh báo đang mở (không thông báo lại) và tự
+// đóng cảnh báo sau 60 phút không được ghi nhận lại — nếu firmware chỉ gửi 1 lần lúc
+// bắt đầu thì một đợt dài hơn 60 phút bị đóng khi vẫn đang diễn ra. Phải < 60 phút.
+#define EPISODE_ALERT_RESEND_MS 900000UL
+#define MQTT_HEARTBEAT_MS 30000    // 30 seconds (FARM-FR-005)
+#define MANUAL_OVERRIDE_MS 1800000 // 30 minutes (ENV-FR-018)
+// ponytail: nghe thử (ENV-FR-013c) tự dừng sau 5 phút phòng khi lệnh stop bị
+// rơi (MQTT QoS0/mất mạng) — loa không kêu mãi ngoài khung giờ.
+#define FORCE_PLAY_MAX_MS 300000
+
+// ── Offline buffer (REL-NFR-003) ─────────────────────────────────────────────
+// Đọc cảm biến mỗi 1s nhưng khi mất MQTT chỉ buffer 1 dòng/10s (backend cũng
+// chỉ lưu 1 mẫu/10s — TELEMETRY_PERSIST_INTERVAL_MS). ~150 byte/dòng → 256KB
+// ≈ 1700 dòng ≈ 4-5 giờ mất kết nối.
+// ponytail: quá trần thì bỏ mẫu MỚI (giữ đoạn đầu sự cố); cần giữ đoạn mới
+// nhất thì chuyển sang ring buffer nhiều file.
+#define OFFLINE_BUFFER_INTERVAL_MS 10000
+#define OFFLINE_BUFFER_MAX_BYTES (256 * 1024)
+
+// ── Default Thresholds (ENV-FR-006, ENV-FR-007) ─────────────────────────────
+#define DEFAULT_TEMP_MIN 26.0f
+#define DEFAULT_TEMP_MAX 31.0f
+#define DEFAULT_HUMIDITY_MIN 75.0f
+#define DEFAULT_HUMIDITY_MAX 95.0f
+#define DEFAULT_LIGHT_MAX 0.2f
+
+// ── Speaker Schedule (ENV-FR-013b) – mặc định 5-7h & 17-19h ─────────────────
+#define SPEAKER_WINDOW_1_START_HOUR 5
+#define SPEAKER_WINDOW_1_END_HOUR 7
+#define SPEAKER_WINDOW_2_START_HOUR 17
+#define SPEAKER_WINDOW_2_END_HOUR 19
+
+// ── Audio Anomaly Detection (THREAT-FR-006, dựa trên ES-NOISE-01) ───────────
+// 300 mẫu × Config::sensorIntervalMs (mặc định SENSOR_INTERVAL_MS=1000ms,
+// xem giải thích ở trên) = 300s = 5 phút, đúng ý định gốc THREAT-FR-006.
+// LƯU Ý: con số 300 GẮN CHẶT với SENSOR_INTERVAL_MS ≈ 1s — nếu sau này đổi
+// SENSOR_INTERVAL_MS (vd về lại 5-60s theo đúng SRS), phải tính lại số này
+// (trước đây 30 mẫu tưởng ứng với chu kỳ đọc 10s = 5 phút, nhưng thực tế chu
+// kỳ đọc là 1s nên 30 mẫu chỉ ≈ 30s, làm cửa sổ baseline ngắn hơn dự định 10
+// lần). RAM: 300 float = 1200 byte, không đáng kể trên ESP32 320KB.
+#define AUDIO_BASELINE_WINDOW_SAMPLES 300
+
+// ── MQTT Broker (Report 4 §7.2) ─────────────────────────
+// Dev: cổng 1883 không TLS, khớp cách backend nối EMQX. `pio run -e esp32prod`: cổng 8883 và kiểm chứng
+// chỉ broker bằng CA ISRG Root X1 (config/CaCert.h, SEC-NFR-001); broker phải là tên miền, không phải IP.
+#ifdef SWIFTLETCARE_PRODUCTION_BUILD
+#define MQTT_PORT 8883
+#else
+#define MQTT_PORT 1883
+#endif
+
+namespace Config {
+// wifiSsid/wifiPassword/mqttBroker là String (không phải const char*) vì đều có thể bị ghi đè lúc
+// runtime: WiFi qua captive portal, mqttBroker qua captive portal (MQTTManager::begin() đọc lại từ NVS).
+// deviceId/mqttPassword là tài khoản broker của thiết bị, flash vào NVS bằng tools/flash_identity.py
+// (dev: Secrets.h), chỉ gán 1 lần trong setup() trước khi tạo task. Thiết bị không biết farm, house,
+// zone: các giá trị đó nằm ở backend (Report 4 D3).
+extern String wifiSsid;
+extern String wifiPassword;
+extern String mqttBroker;
+extern const char *mqttPassword;
+extern const char *deviceId;
+
+// Runtime config (loaded from NVS). volatile: các field dưới đây được GHI
+// trong Config::update() (chạy trong mqttTask, Core 0, xem
+// MQTTManager::onConfigUpdate) và ĐỌC mỗi chu kỳ bởi pidTask (Core 1, qua
+// PIDController.cpp) và/hoặc AudioManager::updateSchedule() (gọi từ
+// pidTask) — cùng loại cross-core visibility hazard đã fix cho
+// mqttFailCount trong MQTTManager.cpp (static volatile int, xem comment ở
+// đó). QUAN TRỌNG: volatile phải khớp ở CẢ HAI phía — extern ở đây VÀ định
+// nghĩa thật trong Config.cpp — nếu không, 2 khai báo của cùng 1 biến ngoại
+// vi không khớp cv-qualifier.
+// sensorIntervalMs/pidIntervalMs KHÔNG cần volatile: chỉ được set 1 lần từ
+// StorageManager::loadConfig() trong setup() (đơn luồng, trước khi tạo task
+// nào) — Config::update() không xử lý 2 key này, không ai ghi lại lúc
+// runtime (đã kiểm tra lại toàn bộ Config::update()).
+extern volatile float tempMin;
+extern volatile float tempMax;
+extern volatile float humidityMin;
+extern volatile float humidityMax;
+extern volatile float lightMax;
+extern int sensorIntervalMs;
+extern int pidIntervalMs;
+
+// Hệ số bộ điều khiển mờ (ENV-FR-021) — cùng lý do volatile như ngưỡng ở trên
+extern volatile float fuzzyHumidityBand;
+extern volatile float fuzzyTempBand;
+extern volatile int fuzzyFanDryLevel; // %
+extern volatile int fuzzyWindowSec;
+extern volatile bool fuzzyInputFilter; // ENV-FR-022
+
+// Tham số phát hiện (EXPERT-FR-008) — ghi ở mqttTask, đọc ở sensorTask/pidTask
+extern volatile float noiseMarginDb;
+extern volatile int noiseMinSec;
+extern volatile int pumpDryOnSec;
+extern volatile float pumpDryMinRisePct;
+extern volatile int speakerDropPct;
+
+// Speaker schedule (ENV-FR-013b) – overridable via the MQTT `config` topic
+extern volatile bool speakerScheduleEnabled;
+extern volatile int speakerWindow1StartHour;
+extern volatile int speakerWindow1EndHour;
+extern volatile int speakerWindow2StartHour;
+extern volatile int speakerWindow2EndHour;
+extern volatile int speakerVolume;
+extern volatile int speakerTrack;
+// ENV-FR-027 — phiên bản của cấu hình Zone đã áp (key `config_version`), báo lại trong heartbeat; 0 = chưa nhận bản nào có phiên bản
+extern volatile uint32_t configVersion;
+
+void load();                          // Load from NVS
+void save();                          // Persist to NVS
+void update(const char *jsonPayload); // Update from MQTT command
+} // namespace Config

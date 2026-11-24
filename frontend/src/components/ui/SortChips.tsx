@@ -1,0 +1,48 @@
+import { SortAscendingIcon, SortDescendingIcon } from '@phosphor-icons/react'
+import { cn } from '@/lib/cn'
+import { t, tr } from '@/i18n'
+import type { SortDirection } from '@/types'
+
+export interface SortChipField<K extends string> {
+  key: K
+  label: string
+}
+
+interface SortChipsProps<K extends string> {
+  fields: SortChipField<K>[]
+  sortBy: K
+  sortDir: SortDirection
+  // Bấm chip đang chọn thì đảo chiều
+  onChange: (key: K) => void
+  label?: string
+}
+
+// Nhóm nút sắp xếp; trạng thái do trang giữ
+export default function SortChips<K extends string>({ fields, sortBy, sortDir, onChange, label = 'Sắp xếp:' }: SortChipsProps<K>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="label-caption">{tr(label)}</span>
+      {fields.map(f => {
+        const active = sortBy === f.key
+        return (
+          <button
+            key={f.key}
+            type="button"
+            aria-pressed={active}
+            title={active ? t(sortDir === 'asc' ? 'Đang xếp tăng dần · bấm để đảo chiều' : 'Đang xếp giảm dần · bấm để đảo chiều') : undefined}
+            onClick={() => onChange(f.key)}
+            className={cn(
+              'inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-small font-semibold max-sm:h-11',
+              active ? 'bg-white text-charcoal shadow-card ring-1 ring-warmGray/25' : 'bg-warmGray/10 text-warmGray hover:bg-warmGray/20 hover:text-charcoal',
+            )}
+          >
+            {tr(f.label)}
+            {active && (sortDir === 'asc'
+              ? <SortAscendingIcon size={12} weight="bold" />
+              : <SortDescendingIcon size={12} weight="bold" />)}
+          </button>
+        )
+      })}
+    </div>
+  )
+}

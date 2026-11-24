@@ -1,0 +1,33 @@
+import type { Role } from '@/types'
+
+export interface ExpertDecisionRights {
+  // Nhóm C: kết luận cảnh báo suy luận: Domain Expert, hoặc Farm Owner khi farm chưa có chuyên gia
+  canDecide: boolean
+  // Nhóm A: Domain Expert và Farm Owner
+  canEditParameters: boolean
+  // Farm có chuyên gia: nhóm A mở mục duyệt, nhóm B chờ duyệt, nhóm C nhắc được
+  ownerNeedsExpert: boolean
+  // Việc chỉ Domain Expert làm, kể cả khi farm chưa có chuyên gia: duyệt, kết luận báo cáo và mùa vụ
+  isExpert: boolean
+  // Farm Owner xem kết luận cảnh báo ở chế độ chỉ xem vì farm đã có chuyên gia
+  ownerReadOnly: boolean
+  // Đã biết farm có chuyên gia hay chưa (GET /farms đã tải và có farm đang chọn); chưa biết thì vẫn khoá nút ghi
+  farmKnown: boolean
+}
+
+// quyền trên các trang quyết định của chuyên gia; backend vẫn là nơi quyết cuối cùng
+export function expertDecisionRights(role: Role | undefined, farm: { has_active_expert?: boolean } | undefined): ExpertDecisionRights {
+  const isExpert = role === 'DOMAIN_EXPERT'
+  const isOwner = role === 'FARM_OWNER'
+  const farmKnown = typeof farm?.has_active_expert === 'boolean'
+  const ownerCanDecide = isOwner && farm?.has_active_expert === false
+  return {
+    canDecide: isExpert || ownerCanDecide,
+    // Chưa biết farm thì chưa mở cho Farm Owner: không đoán được thay đổi có mở mục duyệt hay không
+    canEditParameters: isExpert || (isOwner && farmKnown),
+    ownerNeedsExpert: isOwner && farm?.has_active_expert === true,
+    isExpert,
+    ownerReadOnly: isOwner && !ownerCanDecide,
+    farmKnown,
+  }
+}

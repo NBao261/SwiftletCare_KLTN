@@ -1,0 +1,283 @@
+/**
+ * StorageManager.cpp – NVS config + SPIFFS offline telemetry buffer
+ * SRS: REL-NFR-003, ENV-FR-014
+ */
+#include "StorageManager.h"
+#include "config/Config.h"
+#include <ArduinoJson.h>
+#include <Preferences.h>
+#include <SPIFFS.h>
+
+static Preferences prefs;
+static const char *BUFFER_FILE = "/telemetry_buffer.jsonl";
+// bufferTelemetry() ghi từ sensorTask (Core 1); flushBuffer()/getBufferCount()/
+// clearBuffer() đọc/xoá từ mqttTask (Core 0) — cùng chạm 1 file SPIFFS, cần
+// mutex (non-recursive, xem clearBufferInternal() bên dưới để tránh deadlock
+// khi flushBuffer() tự gọi clearBuffer() trong lúc đang giữ lock).
+static SemaphoreHandle_t bufferMutex;
+
+namespace StorageManager {
+
+void begin() {
+  bufferMutex = xSemaphoreCreateMutex();
+  if (!prefs.begin("swiftlet", false)) {
+    Serial.println("[Storage] ⚠ Preferences (NVS) begin() thất bại — mọi "
+                   "get/put threshold/lịch loa sẽ dùng mặc định, không lưu "
+                   "được");
+  }
+  if (!SPIFFS.begin(true)) {
+    Serial.println("[Storage] SPIFFS mount failed");
+  }
+  loadConfig();
+  Serial.println("[Storage] Initialized");
+}
+
+void saveConfig() {
+  prefs.putFloat("tempMin", Config::tempMin);
+  prefs.putFloat("tempMax", Config::tempMax);
+  prefs.putFloat("humMin", Config::humidityMin);
+  prefs.putFloat("humMax", Config::humidityMax);
+  prefs.putFloat("lightMax", Config::lightMax);
+  prefs.putInt("sensorMs", Config::sensorIntervalMs);
+  prefs.putInt("pidMs", Config::pidIntervalMs);
+  prefs.putFloat("fzHumBand", Config::fuzzyHumidityBand);
+  prefs.putFloat("fzTempBand", Config::fuzzyTempBand);
+  prefs.putInt("fzFanDry", Config::fuzzyFanDryLevel);
+  prefs.putInt("fzWindowS", Config::fuzzyWindowSec);
+  prefs.putBool("fzFilter", Config::fuzzyInputFilter);
+  // Tham số phát hiện (EXPERT-FR-008)
+  prefs.putFloat("dtNoiseDb", Config::noiseMarginDb);
+  prefs.putInt("dtNoiseSec", Config::noiseMinSec);
+  prefs.putInt("dtPumpSec", Config::pumpDryOnSec);
+  prefs.putFloat("dtPumpRise", Config::pumpDryMinRisePct);
+  prefs.putInt("dtSpkDrop", Config::speakerDropPct);
+  // Speaker schedule (ENV-FR-013b) — key ≤15 ký tự (giới hạn NVS Preferences)
+  prefs.putBool("spkEn", Config::speakerScheduleEnabled);
+  prefs.putInt("spkW1Start", Config::speakerWindow1StartHour);
+  prefs.putInt("spkW1End", Config::speakerWindow1EndHour);
+  prefs.putInt("spkW2Start", Config::speakerWindow2StartHour);
+  prefs.putInt("spkW2End", Config::speakerWindow2EndHour);
+  prefs.putInt("spkVol", Config::speakerVolume);
+  prefs.putInt("spkTrack", Config::speakerTrack);
+  prefs.putUInt("cfgVersion", Config::configVersion);
+  Serial.println("[Storage] Config saved to NVS");
+}
+
+void loadConfig() {
+  Config::tempMin = prefs.getFloat("tempMin", DEFAULT_TEMP_MIN);
+  Config::tempMax = prefs.getFloat("tempMax", DEFAULT_TEMP_MAX);
+  Config::humidityMin = prefs.getFloat("humMin", DEFAULT_HUMIDITY_MIN);
+  Config::humidityMax = prefs.getFloat("humMax", DEFAULT_HUMIDITY_MAX);
+  Config::lightMax = prefs.getFloat("lightMax", DEFAULT_LIGHT_MAX);
+  Config::sensorIntervalMs = prefs.getInt("sensorMs", SENSOR_INTERVAL_MS);
+  Config::pidIntervalMs = prefs.getInt("pidMs", PID_INTERVAL_MS);
+  Config::fuzzyHumidityBand = prefs.getFloat("fzHumBand", DEFAULT_FUZZY_HUMIDITY_BAND);
+  Config::fuzzyTempBand = prefs.getFloat("fzTempBand", DEFAULT_FUZZY_TEMP_BAND);
+  Config::fuzzyFanDryLevel = prefs.getInt("fzFanDry", DEFAULT_FUZZY_FAN_DRY_LEVEL);
+  Config::fuzzyWindowSec = prefs.getInt("fzWindowS", DEFAULT_FUZZY_WINDOW_SEC);
+  Config::fuzzyInputFilter = prefs.getBool("fzFilter", DEFAULT_FUZZY_INPUT_FILTER);
+  Config::noiseMarginDb = prefs.getFloat("dtNoiseDb", DEFAULT_NOISE_MARGIN_DB);
+  Config::noiseMinSec = prefs.getInt("dtNoiseSec", DEFAULT_NOISE_MIN_SEC);
+  Config::pumpDryOnSec = prefs.getInt("dtPumpSec", DEFAULT_PUMP_DRY_ON_SEC);
+  Config::pumpDryMinRisePct = prefs.getFloat("dtPumpRise", DEFAULT_PUMP_DRY_MIN_RISE_PCT);
+  Config::speakerDropPct = prefs.getInt("dtSpkDrop", DEFAULT_SPEAKER_DROP_PCT);
+  Config::speakerScheduleEnabled = prefs.getBool("spkEn", true);
+  Config::speakerWindow1StartHour =
+      prefs.getInt("spkW1Start", SPEAKER_WINDOW_1_START_HOUR);
+  Config::speakerWindow1EndHour =
+      prefs.getInt("spkW1End", SPEAKER_WINDOW_1_END_HOUR);
+  Config::speakerWindow2StartHour =
+      prefs.getInt("spkW2Start", SPEAKER_WINDOW_2_START_HOUR);
+  Config::speakerWindow2EndHour =
+      prefs.getInt("spkW2End", SPEAKER_WINDOW_2_END_HOUR);
+  Config::speakerVolume = prefs.getInt("spkVol", DFPLAYER_DEFAULT_VOLUME);
+  Config::speakerTrack = prefs.getInt("spkTrack", DFPLAYER_DEFAULT_TRACK);
+  Config::configVersion = prefs.getUInt("cfgVersion", 0);
+  Serial.println("[Storage] Config loaded from NVS");
+}
+
+bool loadWifiCredentials(String &ssid, String &password) {
+  if (!prefs.isKey("wifiSsid"))
+    return false; // chưa từng cấu hình qua captive portal — dùng mặc định
+                  // Secrets.h
+  ssid = prefs.getString("wifiSsid", "");
+  password = prefs.getString("wifiPass", "");
+  return ssid.length() > 0;
+}
+
+void saveWifiCredentials(const String &ssid, const String &password) {
+  prefs.putString("wifiSsid", ssid);
+  prefs.putString("wifiPass", password);
+  Serial.println("[Storage] Đã lưu WiFi mới vào NVS: " + ssid);
+}
+
+bool loadMqttBroker(String &broker) {
+  if (!prefs.isKey("mqttBroker"))
+    return false; // chưa từng cấu hình qua captive portal — dùng mặc định
+                  // Secrets.h
+  broker = prefs.getString("mqttBroker", "");
+  return broker.length() > 0;
+}
+
+void saveMqttBroker(const String &broker) {
+  prefs.putString("mqttBroker", broker);
+  Serial.println("[Storage] Đã lưu MQTT broker mới vào NVS: " + broker);
+}
+
+bool loadEverConnected() { return prefs.getBool("everConn", false); }
+
+void markEverConnected() { prefs.putBool("everConn", true); }
+
+float loadLearnedCurrent(int load) { return prefs.getFloat(load == 0 ? "curNormMist" : "curNormFan", 0); }
+
+void saveLearnedCurrent(int load, float normalA) { prefs.putFloat(load == 0 ? "curNormMist" : "curNormFan", normalA); }
+
+bool loadDeviceIdentity(String &deviceId, String &brokerSecret) {
+  Preferences identity;
+  if (!identity.begin("identity", true)) return false;
+  deviceId = identity.getString("device_id", "");
+  brokerSecret = identity.getString("broker_secret", "");
+  identity.end();
+  return deviceId.length() > 0 && brokerSecret.length() > 0;
+}
+
+// Cùng namespace với tài khoản: trang AP-mode (namespace `swiftlet`) không ghi đè được
+bool loadFlashedBroker(String &broker) {
+  Preferences identity;
+  if (!identity.begin("identity", true)) return false;
+  broker = identity.getString("broker", "");
+  identity.end();
+  return broker.length() > 0;
+}
+
+bool saveDeviceIdentity(const char *deviceId, const char *brokerSecret, const char *broker) {
+  Preferences identity;
+  if (!identity.begin("identity", false)) return false;
+  identity.putString("device_id", deviceId);
+  identity.putString("broker_secret", brokerSecret);
+  if (broker[0] != '\0') identity.putString("broker", broker);
+  else identity.remove("broker");
+  identity.end();
+  // Đọc lại: NVS đầy hoặc lỗi ghi thì báo cho trang thay vì để thiết bị khởi động với danh tính cũ
+  String savedId, savedSecret, savedBroker;
+  if (!loadDeviceIdentity(savedId, savedSecret) || savedId != deviceId || savedSecret != brokerSecret) return false;
+  bool hasBroker = loadFlashedBroker(savedBroker);
+  return broker[0] == '\0' ? !hasBroker : savedBroker == broker;
+}
+
+void saveAlertQueue(const void *data, size_t size) { prefs.putBytes("alertQueue", data, size); }
+
+void loadAlertQueue(void *data, size_t size) {
+  if (prefs.getBytesLength("alertQueue") == size) prefs.getBytes("alertQueue", data, size);
+}
+
+void saveLastRestartCommand(const char *commandId) { prefs.putString("lastRestartCmd", commandId); }
+
+String loadLastRestartCommand() { return prefs.getString("lastRestartCmd", ""); }
+
+uint32_t loadConfigHash() { return prefs.getUInt("configHash", 0); }
+
+void saveConfigHash(uint32_t hash) { prefs.putUInt("configHash", hash); }
+
+void bufferTelemetry(const SensorData &data) {
+  // Chỉ gọi từ sensorTask → biến static này không cần khoá
+  static unsigned long lastBufferedMs = 0;
+  if (lastBufferedMs != 0 && millis() - lastBufferedMs < OFFLINE_BUFFER_INTERVAL_MS)
+    return;
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return;
+  File f = SPIFFS.open(BUFFER_FILE, FILE_APPEND);
+  if (!f) {
+    Serial.println("[Storage] Cannot open buffer file");
+    xSemaphoreGive(bufferMutex);
+    return;
+  }
+  if (f.size() >= OFFLINE_BUFFER_MAX_BYTES) {
+    f.close();
+    xSemaphoreGive(bufferMutex);
+    return; // đầy — xem OFFLINE_BUFFER_MAX_BYTES (Config.h)
+  }
+  lastBufferedMs = millis();
+  f.println(data.toJson());
+  f.close();
+  xSemaphoreGive(bufferMutex);
+}
+
+// Xoá buffer KHÔNG khoá — chỉ gọi khi caller đã giữ bufferMutex (flushBuffer())
+// hoặc từ clearBuffer() (tự khoá trước khi gọi). KHÔNG gọi trực tiếp từ nơi
+// khác để tránh deadlock (mutex tạo bằng xSemaphoreCreateMutex() không phải
+// recursive).
+static void clearBufferInternal() { SPIFFS.remove(BUFFER_FILE); }
+
+void flushBuffer(PublishLineFn publishLine) {
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return;
+
+  if (!SPIFFS.exists(BUFFER_FILE)) {
+    xSemaphoreGive(bufferMutex);
+    return;
+  }
+
+  File f = SPIFFS.open(BUFFER_FILE, FILE_READ);
+  if (!f || f.size() == 0) {
+    if (f)
+      f.close();
+    xSemaphoreGive(bufferMutex);
+    return;
+  }
+
+  Serial.println("[Storage] Flushing " + String(f.size()) +
+                 " bytes of buffered data");
+
+  bool allOk = true;
+  while (f.available()) {
+    String line = f.readStringUntil('\n');
+    line.trim();
+    if (line.length() == 0)
+      continue;
+    if (!publishLine(line)) {
+      allOk = false;
+      break;
+    }
+  }
+  f.close();
+
+  if (allOk) {
+    clearBufferInternal();
+    Serial.println("[Storage] Buffer flushed & cleared");
+  } else {
+    Serial.println("[Storage] Flush failed partway — buffer kept for retry");
+  }
+
+  xSemaphoreGive(bufferMutex);
+}
+
+int getBufferCount() {
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return 0;
+  if (!SPIFFS.exists(BUFFER_FILE)) {
+    xSemaphoreGive(bufferMutex);
+    return 0;
+  }
+  File f = SPIFFS.open(BUFFER_FILE, FILE_READ);
+  if (!f) {
+    xSemaphoreGive(bufferMutex);
+    return 0;
+  }
+  int count = 0;
+  while (f.available()) {
+    if (f.read() == '\n')
+      count++;
+  }
+  f.close();
+  xSemaphoreGive(bufferMutex);
+  return count;
+}
+
+void clearBuffer() {
+  if (xSemaphoreTake(bufferMutex, pdMS_TO_TICKS(200)) != pdTRUE)
+    return;
+  clearBufferInternal();
+  xSemaphoreGive(bufferMutex);
+}
+} // namespace StorageManager

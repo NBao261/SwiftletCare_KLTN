@@ -1,0 +1,37 @@
+import { useQueries, useQuery } from '@tanstack/react-query';
+import { farmOverviewApi, type HouseComparisonQuery } from '@/apis/farm-owner/farmOverview.api';
+import type { HouseOverview } from '@/types';
+
+// mỗi nhà của trại: giai đoạn, trạng thái hôm nay, cảnh báo và phiếu đang mở, tỷ lệ về gần nhất
+export function useFarmOverview(farmId: string | undefined) {
+  return useQuery({
+    queryKey: ['farm-overview', farmId],
+    queryFn: () => farmOverviewApi.overview(farmId!).then(response => response.data.data),
+    enabled: Boolean(farmId),
+  });
+}
+
+// Chung cache với useFarmOverview
+export function useFarmOverviews(farmIds: string[]): { byHouse: Map<string, HouseOverview>; isError: boolean; refetch: () => void } {
+  return useQueries({
+    queries: farmIds.map(farmId => ({
+      queryKey: ['farm-overview', farmId],
+      queryFn: () => farmOverviewApi.overview(farmId).then(response => response.data.data),
+    })),
+    combine: results => ({
+      byHouse: new Map(results.flatMap(result => result.data?.houses ?? []).map(house => [house.house_id, house])),
+      isError: results.some(result => result.isError),
+      refetch: () => results.forEach(result => void result.refetch()),
+    }),
+  });
+}
+
+// bảng so sánh nhà, backend sắp theo cột; giữ bảng cũ khi đổi cột của cùng trại, đổi trại thì chờ tải
+export function useHouseComparison(farmId: string | undefined, query: HouseComparisonQuery) {
+  return useQuery({
+    queryKey: ['farm-comparison', farmId, query],
+    queryFn: () => farmOverviewApi.comparison(farmId!, query).then(response => response.data.data),
+    enabled: Boolean(farmId),
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === farmId ? previous : undefined),
+  });
+}

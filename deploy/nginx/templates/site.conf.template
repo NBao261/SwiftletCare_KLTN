@@ -1,0 +1,70 @@
+# Cổng 80: Certbot xác minh tên miền (webroot), mọi thứ khác chuyển sang HTTPS
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    root /usr/share/nginx/html;
+
+    # Endpoint nội bộ cho EMQX và MediaMTX: không cho gọi từ Internet (backend/CLAUDE.md, Live stream). Không phân biệt
+    # hoa thường như router của Express (/api/Internal/… cũng tới route nội bộ); regex thắng location /api/ bên dưới
+    location ~* ^/api/internal(/|$) {
+        return 404;
+    }
+    # Như proxy của Vite: bỏ tiền tố /api rồi chuyển vào backend (TRUST_PROXY=1 đọc X-Forwarded-For)
+    location /api/ {
+        proxy_pass http://backend:3000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+    location /socket.io/ {
+        proxy_pass http://backend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 3600s;
+    }
+    # WHEP của MediaMTX (VITE_STREAM_URL=/stream); hình đi thẳng qua WebRTC cổng 8189, không qua đây
+    location /stream/ {
+        proxy_pass http://mediamtx:8889/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+    # HLS của MediaMTX cho app mobile (EXPO_PUBLIC_STREAM_URL=https://<DOMAIN>/hls, Report 4 DF-7)
+    location /hls/ {
+        proxy_pass http://mediamtx:8888/;
+        # MediaMTX chuyển hướng kiểm cookie về /cam-…: giữ tiền tố /hls
+        proxy_redirect / /hls/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_buffering off;
+    }
+    # Trang web một trang: đường dẫn lạ trả index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

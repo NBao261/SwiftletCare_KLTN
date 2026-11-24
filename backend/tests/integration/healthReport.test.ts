@@ -1,0 +1,132 @@
+import express from 'express'
+import jwt from 'jsonwebtoken'
+import mongoose from 'mongoose'
+import request from 'supertest'
+import { MongoMemoryServer } from 'mongodb-memory-server'
+import healthReportRoutes from '@/routes/healthReports.route'
+import { errorHandler } from '@/middlewares/errorHandler.middleware'
+import { Alert } from '@/models/alert.model'
+import { AuditLog } from '@/models/auditLog.model'
+import { SensorNode } from '@/models/device.model'
+import { Farm } from '@/models/farm.model'
+import { House, Zone } from '@/models/houseZone.model'
+import { RelayOverrideLog } from '@/models/relayOverrideLog.model'
+import { Telemetry } from '@/models/telemetry.model'
+import { User } from '@/models/user.model'
+import { buildZoneMetrics } from '@/services/healthReport.service'
+import { notifyUser } from '@/services/notification.service'
+import type { Role } from '@/types'
+
+jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
+jest.mock('@/socket', () => ({ emitAlertNew: jest.fn(), emitRelayUpdate: jest.fn(), emitTelemetryUpdate: jest.fn(), emitDeviceStatusChange: jest.fn() }))
+jest.mock('@/services/notification.service', () => ({
+  ...jest.requireActual('@/services/notification.service'), // findRecipients thật: chọn người nhận báo cáo
+  dispatchAlertNotification: jest.fn().mockResolvedValue(undefined),
+  notifyUser: jest.fn().mockResolvedValue(undefined),
+  notifyAdmins: jest.fn().mockResolvedValue(undefined),
+}))
+
+process.env.JWT_ACCESS_SECRET = 'test-access-secret'
+
+const app = express()
+app.use(express.json())
+app.use('/health-reports', healthReportRoutes)
+app.use(errorHandler)
+
+let mongod: MongoMemoryServer
+beforeAll(async () => {
+  mongod = await MongoMemoryServer.create()
+  await mongoose.connect(mongod.getUri())
+})
+afterAll(async () => {
+  await mongoose.disconnect()
+  await mongod.stop()
+})
+afterEach(async () => {
+  jest.clearAllMocks()
+  await Promise.all([
+    Alert, AuditLog, SensorNode, Farm, House, Zone, RelayOverrideLog, Telemetry, User,
+  ].map(m => (m as typeof User).deleteMany({})))
+})
+
+const tokenFor = (id: unknown, role: Role) =>
+  jwt.sign({ sub: String(id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
+const call = (method: 'get' | 'put', path: string, token: string, body: object = {}) =>
+  request(app)[method](path).set('Authorization', `Bearer ${token}`).send(body)
+
+const HOUR = 3600_000
+let seq = 0
+const mkUser = (role: Role) => User.create({ email: `u${++seq}@test.vn`, password_hash: 'password123', full_name: `U${seq}`, role })
+
+// Farm có 1 Zone với 10 mẫu telemetry trong 7 ngày qua, 3 cảnh báo và 1 lần can thiệp tay dài ~16,8 giờ
+async function seed(withData = true) {
+  const owner = await mkUser('FARM_OWNER')
+  const expert = await mkUser('DOMAIN_EXPERT')
+  const farm = await Farm.create({
+    name: 'F', address: 'x', owner_id: owner._id,
+    members: [{ user_id: owner._id, is_primary: true }, { user_id: expert._id, role: 'DOMAIN_EXPERT' }],
+  })
+  const house = await House.create({ farm_id: farm._id, name: 'H' })
+  const zone = await Zone.create({ house_id: house._id, name: 'Zone A' }) // ngưỡng mặc định: ẩm 75–95, nhiệt 26–31
+  const node = await SensorNode.create({ device_id: `ESP-${seq}`, zone_id: zone._id, status: 'ONLINE' })
+  const now = Date.now()
+
+  if (withData) {
+    // Độ ẩm: 8/10 mẫu trong ngưỡng; nhiệt độ: 9/10; phun sương đổi trạng thái 3 lần; quạt 1 lần
+    const humidity = [80, 82, 85, 70, 88, 90, 72, 84, 86, 81]
+    const temperature = [28, 28, 29, 30, 33, 29, 28, 28, 27, 28]
+    const mistingOn = [false, true, true, false, false, true, true, true, true, true]
+    await Telemetry.insertMany(humidity.map((h, i) => ({
+      node_id: node._id, zone_id: zone._id, timestamp: new Date(now - (10 - i) * HOUR),
+      humidity: h, temperature: temperature[i], nh3_ppm: 4 + i, co2_ppm: 700 + i * 20,
+      misting_pct: mistingOn[i] ? 60 : 0, ventilation_pct: 0, misting_on: mistingOn[i], ventilation_on: i === 9,
+    })))
+    const alert = (type: string) => ({ farm_id: farm._id, zone_id: zone._id, node_id: node._id, type, severity: 'MEDIUM', title: 't', message: 'm', created_at: new Date(now - 5 * 60_000) }) // trước mốc kỳ (làm tròn xuống phút)
+    await Alert.create([alert('MISTING_INEFFECTIVE'), alert('NOISE_ANOMALY')])
+    await Alert.create({ ...alert('MISTING_INEFFECTIVE'), status: 'RESOLVED' }) // cùng loại, đã đóng: vẫn tính là đã phát sinh trong kỳ
+    await RelayOverrideLog.create({
+      node_id: node._id, zone_id: zone._id, farm_id: farm._id, relay: 'misting', state: true,
+      started_by: owner._id, started_by_role: 'FARM_OWNER',
+      started_at: new Date(now - 20 * HOUR), expires_at: new Date(now - 19 * HOUR),
+      ended_at: new Date(now - 20 * HOUR + 16.8 * HOUR), end_reason: 'CLEARED_EARLY',
+    })
+  }
+  return { owner, expert, farm, zone, node, t: { owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT') } }
+}
+
+describe('số liệu từng Zone (EXPERT-FR-005, dùng cho mục Zone của báo cáo theo nhà)', () => {
+  it('% trong ngưỡng, % tự động, số lần đóng cắt, cảnh báo theo loại, NH3/CO2', async () => {
+    const { zone } = await seed()
+    const now = Date.now()
+    const metrics = await buildZoneMetrics((await Zone.findById(zone._id))!, new Date(now - 7 * 24 * HOUR), new Date(now))
+    expect(metrics).toMatchObject({
+      sample_count: 10,
+      humidity_in_range_pct: 80,
+      temp_in_range_pct: 90,
+      auto_mode_pct: 90, // 16,8 giờ can thiệp tay trên 168 giờ
+      misting_switches: 3,
+      ventilation_switches: 1,
+      alerts_by_type: { MISTING_INEFFECTIVE: 2, NOISE_ANOMALY: 1 },
+      avg_return_rate: null, // chưa có dữ liệu đếm chim
+      nh3_avg: 8.5, nh3_max: 13,
+      co2_avg: 790, co2_max: 880,
+    })
+  })
+})
+
+describe('số lần đóng cắt relay không bị phồng sau khi mất mạng', () => {
+  it('mẫu xả từ bộ đệm offline (không có trạng thái relay) không được tính là một lần đổi', async () => {
+    const { zone, node } = await seed(false)
+    const now = Date.now()
+    // 2 mẫu offline không có misting_on → đúng 1 lần đổi
+    const rows: Array<boolean | undefined> = [true, true, undefined, undefined, true, false]
+    await Telemetry.insertMany(rows.map((on, i) => ({
+      node_id: node._id, zone_id: zone._id, timestamp: new Date(now - (rows.length - i) * 60_000), humidity: 80, temperature: 28,
+      ...(on === undefined ? {} : { misting_on: on, ventilation_on: false }),
+    })))
+
+    const metrics = await buildZoneMetrics((await Zone.findById(zone._id))!, new Date(now - HOUR), new Date(now))
+    expect(metrics).toMatchObject({ sample_count: 6, misting_switches: 1, ventilation_switches: 0 })
+  })
+})
+
