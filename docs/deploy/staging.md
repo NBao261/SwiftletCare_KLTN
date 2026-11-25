@@ -52,7 +52,7 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
 | EMQX | Broker; xác thực qua `/internal/mqtt-auth`, quyền theo `deploy/emqx/acl.conf`, tắt anonymous; dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua Nginx 8883) |
 | EMQX, biến môi trường | `EMQX_AUTHENTICATION__1__URL=http://backend:3000/internal/mqtt-auth?key=<MQTT_AUTH_KEY>`; `MQTT_USERNAME` của backend phải là `backend-service` như `deploy/emqx/acl.conf` | không |
 | MongoDB | Dữ liệu | không |
-| File (âm thanh, ảnh Work Order, ảnh mùa vụ) | `STORAGE_DRIVER=local`: volume `backend_storage` của backend, tải qua `/api/files/<key>`. Không dùng MinIO vì ảnh `minio/minio` và `minio/mc` không còn phát công khai (Docker Hub, Quay). Key có UUID ngẫu nhiên nên link không đoán được, nhưng **không hết hạn** như URL ký của MinIO | không |
+| File (âm thanh, ảnh Work Order, ảnh mùa vụ, firmware) | `STORAGE_DRIVER=s3`: bucket riêng của Cloudflare R2 (tương thích S3, 10 GB đầu miễn phí, không tính phí tải ra), backend dùng cùng lớp S3 như với MinIO, link tải là URL ký hết hạn sau 1 giờ (mục 3, "Kho file"). Không dùng MinIO vì ảnh `minio/minio` và `minio/mc` không còn phát công khai (Docker Hub, Quay). Để trống `STORAGE_DRIVER` thì lưu ở volume `backend_storage`, tải qua `/api/files/<key>`, key có UUID ngẫu nhiên nhưng **không hết hạn** | không |
 | MediaMTX | Nhận video có khung từ PC cũ (AI node); phát WebRTC cho web (trang WHEP qua `/stream`) và HLS cho app mobile (qua `/hls`); hỏi backend `/internal/stream-auth` ở mỗi lần đẩy hoặc xem | 8189 TCP + UDP (WebRTC tự mã hoá) |
 
 Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 không mở ra ngoài**, trừ phương án lùi ở mục 4.
@@ -110,7 +110,7 @@ File trong repo (G-17):
 
 | File | Nội dung |
 | --- | --- |
-| `deploy/docker-compose.staging.yml` | MongoDB, EMQX, backend, MediaMTX, Nginx, Certbot; không Redis (chưa module nào dùng), không MinIO (mục 2.2) |
+| `deploy/docker-compose.staging.yml` | MongoDB, EMQX, backend, MediaMTX, Nginx, Certbot; không Redis (chưa module nào dùng), không MinIO (file ở R2, mục 2.2) |
 | `backend/Dockerfile` | Backend chạy bằng `tsx` như lúc dev, bằng user `node` (không phải root), kèm `docs/api/api-spec.yaml` (Swagger, kiểm tra route). Volume `backend_storage` tạo bởi ảnh cũ chạy root thì đổi quyền một lần: `docker run --rm -v swiftletcare-staging_backend_storage:/s alpine chown -R 1000:1000 /s` |
 | `deploy/nginx/Dockerfile`, `nginx.conf`, `templates/` | Build web (`VITE_STREAM_URL=/stream`) rồi phục vụ bằng Nginx; site HTTPS và khối `stream` (8883, 8322) điền `DOMAIN` lúc khởi động |
 | `deploy/.env.staging.example` | Mọi biến, mật khẩu là placeholder; chép thành `deploy/.env.staging` trên VPS (bị `.gitignore`) |
@@ -137,6 +137,23 @@ $C exec -e DEMO_PASSWORD='<mật khẩu>' backend npm run seed:demo   # tạo ad
 ```
 
 Thư và Telegram: backend chỉ nhận biến từ `deploy/.env.staging` qua compose, không đọc `backend/.env*`. Thư tài khoản đi qua SMTP (`SMTP_*`; Gmail với App Password, hoặc Brevo nếu muốn gửi dưới tên miền riêng sau khi xác thực SPF/DKIM/DMARC ở DNS), Telegram qua bot riêng của staging (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`; không chạy backend dev cùng token). Để trống thì kênh đó tắt, backend vẫn chạy. Sửa biến xong chạy `$C up -d backend` (`restart` không nạp lại biến); kiểm tra bằng `$C logs backend | grep -i -E "telegram|smtp"`.
+
+Kho file (Cloudflare R2). Backend dùng lớp S3 sẵn có, chỉ đổi biến, không đổi code:
+
+1. Cloudflare → **R2 Object Storage** → tạo bucket `swiftletcare-files` (vùng gần nhất, ví dụ Asia-Pacific). Cloudflare có thể đòi gắn thẻ thanh toán dù dùng trong gói miễn phí; tên miền không cần nằm ở Cloudflare.
+2. **Manage R2 API Tokens** → tạo token quyền **Object Read & Write**, chỉ cho đúng bucket đó. Chép **Access Key ID** và **Secret Access Key** (chỉ hiện một lần) và địa chỉ S3 `https://<account-id>.r2.cloudflarestorage.com`. Bucket để **private**, không bật truy cập công khai.
+3. Điền `deploy/.env.staging` trên VPS: `STORAGE_DRIVER=s3`, `MINIO_ENDPOINT=<account-id>.r2.cloudflarestorage.com` (không có `https://`), `MINIO_PORT=443`, `MINIO_USE_SSL=true`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET=swiftletcare-files`. Chạy `$C up -d backend`.
+4. File đã nằm trong volume `backend_storage` (nếu có) chép lên bucket với đúng key, vì cơ sở dữ liệu lưu key. Chạy một lần, trước khi dùng web:
+
+```bash
+KEY=$(sed -n 's/^MINIO_ACCESS_KEY=//p' deploy/.env.staging); SECRET=$(sed -n 's/^MINIO_SECRET_KEY=//p' deploy/.env.staging)
+EP=$(sed -n 's/^MINIO_ENDPOINT=//p' deploy/.env.staging); BUCKET=$(sed -n 's/^MINIO_BUCKET=//p' deploy/.env.staging)
+docker run --rm -v swiftletcare-staging_backend_storage:/data:ro   -e RCLONE_CONFIG_R2_TYPE=s3 -e RCLONE_CONFIG_R2_PROVIDER=Cloudflare   -e RCLONE_CONFIG_R2_ACCESS_KEY_ID="$KEY" -e RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$SECRET"   -e RCLONE_CONFIG_R2_ENDPOINT="https://$EP" rclone/rclone copy /data "R2:$BUCKET" -v
+```
+
+5. Thử: tải lên một ảnh ở phiếu công việc, mở lại ảnh (link ký, hết hạn sau 1 giờ), và nghe thử một file âm thanh. Tải lên lỗi `AccessDenied` hay không tạo được bucket thì token thiếu quyền hoặc bucket chưa có: tạo bucket ở Cloudflare trước, backend chỉ tạo bucket khi `headBucket` lỗi.
+
+Khi dùng R2, volume `backend_storage` không còn nhận file mới; sao lưu MongoDB vẫn bắt buộc (bản ghi trỏ tới file), còn file thì bật versioning cho bucket nếu muốn khôi phục file bị xoá nhầm.
 
 Khôi phục một bản sao lưu (ghi đè DB hiện tại):
 
