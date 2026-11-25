@@ -1,27 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Line } from 'react-chartjs-2';
-import type { Chart as ChartInstance, ChartOptions, Plugin } from 'chart.js';
-import { ArrowsClockwiseIcon, DropIcon, RobotIcon, ThermometerIcon } from '@phosphor-icons/react';
+import type { Chart as ChartInstance, Plugin } from 'chart.js';
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/common/KpiTile';
 import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning';
+import LineChartPanel from '@/components/features/farm-owner/analytics/LineChartPanel';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
-import {
-  ANALYTICS_RANGES,
-  CHART_FONT,
-  CHART_LEGEND,
-  X_AXIS_TICKS,
-  axisTitle,
-  labelForRange,
-} from '@/components/features/farm-owner/analytics/analytics.constants';
+import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import { ANALYTICS_RANGES, SERIES_COLORS, labelForRange } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useAutonomy, useControlPerformance } from '@/hooks/farm-owner/useAnalytics';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import { CHART_COLORS } from '@/lib/chartTheme';
 import type { AnalyticsRange, ControlPerformanceResponse } from '@/apis/farm-owner/analytics.api';
 import SimulatedBadge from '@/components/common/SimulatedBadge';
 
@@ -68,7 +60,7 @@ interface AutomationCardProps {
   zoneId: string;
 }
 
-// Hiệu quả vận hành tự động: tỷ lệ tự động, % trong ngưỡng và biểu đồ điều khiển mờ
+// Hiệu quả vận hành tự động: tỷ lệ tự động, % trong ngưỡng, độ ẩm và mức chạy của phun sương, quạt
 export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Element {
   const { t, num, exact } = useTranslation(analyticsDict);
   const canTune = usePermission('FARM_OWNER');
@@ -87,38 +79,24 @@ export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Ele
     return num(value, 1);
   };
 
-  const chartData = useMemo(() => {
+  const model = useMemo(() => {
     const series = data?.series ?? [];
-    const line = { tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
     return {
       labels: series.map(point => labelForRange(point.timestamp, range)),
-      datasets: [
-        { label: t('chart.humidity'), data: series.map(point => point.humidity ?? null), borderColor: CHART_COLORS.accentGreen, yAxisID: 'y', ...line },
-        { label: t('chart.misting'), data: series.map(point => point.misting_pct ?? null), borderColor: CHART_COLORS.charcoal, yAxisID: 'y1', ...line },
-        { label: t('chart.ventilation'), data: series.map(point => point.ventilation_pct ?? null), borderColor: CHART_COLORS.warmGray, borderDash: [6, 4], yAxisID: 'y1', ...line },
+      humidity: [{ label: t('chart.humidity'), data: series.map(point => point.humidity ?? null), color: SERIES_COLORS.own }],
+      power: [
+        { label: t('chart.misting'), data: series.map(point => point.misting_pct ?? null), color: SERIES_COLORS.own },
+        { label: t('chart.ventilation'), data: series.map(point => point.ventilation_pct ?? null), color: SERIES_COLORS.secondary, isDashed: true },
       ],
     };
   }, [data, range, t]);
 
-  const chartOptions = useMemo(() => ({
-    ...baseChartOptions,
-    plugins: { ...baseChartOptions.plugins, legend: CHART_LEGEND },
-    scales: {
-      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
-      y: { ...baseChartOptions.scales.y, title: axisTitle('%RH') },
-      y1: {
-        position: 'right' as const,
-        min: 0,
-        max: 100,
-        grid: { display: false },
-        ticks: { color: CHART_COLORS.warmGray, font: CHART_FONT },
-        title: axisTitle(t('chart.powerAxis')),
-      },
-    },
-  } as ChartOptions<'line'>), [t]);
-
   const markerIndices = useMemo(() => tuningMarkerIndices(data), [data]);
   const plugins = useMemo(() => [tuningMarkersPlugin(markerIndices, t('chart.tuningMarker'))], [markerIndices, t]);
+  const humidityBand = useMemo(
+    () => (data ? { min: data.thresholds.humidity_min, max: data.thresholds.humidity_max } : undefined),
+    [data],
+  );
 
   const isLoading = autonomy.isLoading || performance.isLoading;
   const isError = autonomy.isError || performance.isError;
@@ -126,57 +104,69 @@ export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Ele
 
   // Thân khung theo trạng thái tải, lỗi, rỗng
   let body = (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiTile
-          icon={RobotIcon}
-          label={t('automation.autoLabel')}
-          value={oneDecimal(autonomy.data?.auto_mode_pct)}
-          unit="%"
-          sub={autonomy.data
-            ? t('automation.autoSub', { count: num(autonomy.data.override_count), minutes: num(autonomy.data.manual_minutes) })
-            : t('automation.noValueSub')}
-        />
-        <KpiTile
-          icon={DropIcon}
-          label={t('automation.humidityLabel')}
-          value={oneDecimal(stats?.humidityInRangePct)}
-          unit="%"
-          sub={data
-            ? t('automation.rangeSub', { min: data.thresholds.humidity_min, max: data.thresholds.humidity_max, unit: '%' })
-            : t('automation.noValueSub')}
-        />
-        <KpiTile
-          icon={ThermometerIcon}
-          label={t('automation.temperatureLabel')}
-          value={oneDecimal(stats?.temperatureInRangePct)}
-          unit="%"
-          sub={data
-            ? t('automation.rangeSub', { min: data.thresholds.temp_min, max: data.thresholds.temp_max, unit: '°C' })
-            : t('automation.noValueSub')}
-        />
-        <KpiTile
-          icon={ArrowsClockwiseIcon}
-          label={t('automation.switchLabel')}
-          value={t('automation.switchValue', {
-            misting: oneDecimal(stats?.mistingSwitchesPerHour),
-            ventilation: oneDecimal(stats?.ventilationSwitchesPerHour),
-          })}
-          sub={t('automation.switchSub')}
-        />
-      </div>
+    <div className="flex flex-col gap-5">
+      <StatStrip
+        items={[
+          {
+            label: t('automation.autoLabel'),
+            value: oneDecimal(autonomy.data?.auto_mode_pct),
+            unit: '%',
+            sub: autonomy.data
+              ? t('automation.autoSub', { count: num(autonomy.data.override_count), minutes: num(autonomy.data.manual_minutes) })
+              : t('automation.noValueSub'),
+          },
+          {
+            label: t('automation.humidityLabel'),
+            value: oneDecimal(stats?.humidityInRangePct),
+            unit: '%',
+            sub: data ? t('automation.rangeSub', { min: data.thresholds.humidity_min, max: data.thresholds.humidity_max, unit: '%' }) : t('automation.noValueSub'),
+          },
+          {
+            label: t('automation.temperatureLabel'),
+            value: oneDecimal(stats?.temperatureInRangePct),
+            unit: '%',
+            sub: data ? t('automation.rangeSub', { min: data.thresholds.temp_min, max: data.thresholds.temp_max, unit: '°C' }) : t('automation.noValueSub'),
+          },
+          {
+            label: t('automation.switchLabel'),
+            value: t('automation.switchValue', {
+              misting: oneDecimal(stats?.mistingSwitchesPerHour),
+              ventilation: oneDecimal(stats?.ventilationSwitchesPerHour),
+            }),
+            sub: t('automation.switchSub'),
+          },
+        ]}
+      />
 
-      {/* Biểu đồ độ ẩm so với % phun sương và quạt */}
       {data && stats ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4">
           <p className="text-small text-warmGray">{t('automation.chartHint')}</p>
-          <div className="h-72">
-            {/* react-chartjs-2 chỉ đọc plugins lúc tạo chart nên remount khi vạch mốc đổi */}
-            <Line key={markerIndices.join(',')} data={chartData} options={chartOptions} plugins={plugins} />
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <LineChartPanel
+              title={t('automation.humidityChart')}
+              unit="%"
+              labels={model.labels}
+              series={model.humidity}
+              band={humidityBand}
+              plugins={plugins}
+              pluginKey={markerIndices.join(',')}
+              formatValue={value => exact(value, 1)}
+            />
+            <LineChartPanel
+              title={t('automation.powerChart')}
+              unit="%"
+              labels={model.labels}
+              series={model.power}
+              yMin={0}
+              yMax={100}
+              plugins={plugins}
+              pluginKey={markerIndices.join(',')}
+              formatValue={value => exact(value, 0)}
+            />
           </div>
         </div>
       ) : (
-        <ChartEmptyFrame message={t('automation.empty')} className="h-72" />
+        <ChartEmptyFrame message={t('automation.empty')} className="h-64" />
       )}
     </div>
   );
@@ -230,7 +220,7 @@ export default function AutomationCard({ zoneId }: AutomationCardProps): JSX.Ele
         </div>
       )}
 
-      {/* Hệ số logic mờ đang áp dụng và nút chỉnh */}
+      {/* Hệ số điều khiển đang áp dụng và nút chỉnh */}
       {tuning && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-warmGray/15 pt-4">
           <p className="text-small text-warmGray">

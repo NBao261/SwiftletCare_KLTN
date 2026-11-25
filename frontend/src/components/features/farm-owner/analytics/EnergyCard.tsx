@@ -1,17 +1,15 @@
 import { useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
-import { DropIcon, FanIcon, LightningIcon } from '@phosphor-icons/react';
-
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/common/KpiTile';
-import { CHART_LEGEND, axisTitle } from '@/components/features/farm-owner/analytics/analytics.constants';
+import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import { BAR_MARK, CHART_FONT, CHART_LEGEND, SERIES_COLORS, axisTitle } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseEnergy } from '@/hooks/farm-owner/useAnalytics';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import { baseChartOptions } from '@/lib/chartTheme';
 
 // "2026-10" → "10/2026"
 const monthLabel = (month: string) => month.split('-').reverse().join('/');
@@ -25,14 +23,14 @@ export default function EnergyCard({ houseId, houseName }: { houseId: string; ho
   const chartData = useMemo(() => ({
     labels: months.map(item => monthLabel(item.month)),
     datasets: [
-      { label: t('energy.misting'), data: months.map(item => item.misting_kwh), backgroundColor: CHART_COLORS.accentGreen, borderRadius: 6, maxBarThickness: 24 },
-      { label: t('energy.ventilation'), data: months.map(item => item.ventilation_kwh), backgroundColor: CHART_COLORS.graphite, borderRadius: 6, maxBarThickness: 24 },
+      { label: t('energy.misting'), data: months.map(item => item.misting_kwh), backgroundColor: SERIES_COLORS.own, ...BAR_MARK },
+      { label: t('energy.ventilation'), data: months.map(item => item.ventilation_kwh), backgroundColor: SERIES_COLORS.secondary, ...BAR_MARK },
     ],
   }), [months, t]);
 
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
-    plugins: { ...baseChartOptions.plugins, legend: CHART_LEGEND },
+    plugins: { ...baseChartOptions.plugins, legend: { ...CHART_LEGEND, labels: { ...CHART_LEGEND.labels, font: CHART_FONT } } },
     scales: {
       x: baseChartOptions.scales.x,
       y: { ...baseChartOptions.scales.y, min: 0, title: axisTitle(t('energy.chartAxis')) },
@@ -58,11 +56,13 @@ export default function EnergyCard({ houseId, houseName }: { houseId: string; ho
   if (!isLoading && !isError && data) {
     body = (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <KpiTile icon={DropIcon} label={t('energy.misting')} {...tile(data.total.misting_kwh)} />
-          <KpiTile icon={FanIcon} label={t('energy.ventilation')} {...tile(data.total.ventilation_kwh)} />
-          <KpiTile icon={LightningIcon} label={t('energy.total')} {...tile(data.total.total_kwh)} />
-        </div>
+        <StatStrip
+          items={[
+            { label: t('energy.misting'), ...tile(data.total.misting_kwh) },
+            { label: t('energy.ventilation'), ...tile(data.total.ventilation_kwh) },
+            { label: t('energy.total'), ...tile(data.total.total_kwh) },
+          ]}
+        />
         {data.total.total_kwh !== null ? (
           <div className="h-64">
             <Bar data={chartData} options={chartOptions} />

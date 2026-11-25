@@ -1,23 +1,15 @@
 import { useMemo } from 'react';
-import { Line } from 'react-chartjs-2';
-import type { ChartOptions } from 'chart.js';
 import { format, parseISO } from 'date-fns';
-import { DropIcon, ThermometerIcon, WarningIcon } from '@phosphor-icons/react';
+import { WarningIcon } from '@phosphor-icons/react';
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/common/KpiTile';
-import {
-  CHART_FONT,
-  CHART_LEGEND,
-  X_AXIS_TICKS,
-  axisTitle,
-} from '@/components/features/farm-owner/analytics/analytics.constants';
+import LineChartPanel, { type LineSeries } from '@/components/features/farm-owner/analytics/LineChartPanel';
+import { SERIES_COLORS } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useForecast } from '@/hooks/farm-owner/useAnalytics';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
 import type { MetricForecast } from '@/apis/farm-owner/analytics.api';
 
 // Đơn vị của 2 chỉ số được dự báo
@@ -41,7 +33,7 @@ interface ForecastCardProps {
   zoneId: string;
 }
 
-// Dự báo độ ẩm, nhiệt độ 60 phút tới kèm sai số đánh giá lùi
+// Dự báo độ ẩm, nhiệt độ 60 phút tới: mỗi chỉ số một biểu đồ, kèm sai số đánh giá lùi
 export default function ForecastCard({ zoneId }: ForecastCardProps): JSX.Element {
   const { t, exact } = useTranslation(analyticsDict);
   const { data, isLoading, isError, refetch } = useForecast(zoneId);
@@ -61,36 +53,22 @@ export default function ForecastCard({ zoneId }: ForecastCardProps): JSX.Element
     return [...times].sort();
   }, [data]);
 
-  const chartData = useMemo(() => {
-    const humidity = splitForecast(data?.humidity ?? null, labels);
-    const temperature = splitForecast(data?.temperature ?? null, labels);
-    const line = { tension: 0.35, pointRadius: 0, borderWidth: 2, spanGaps: true };
+  const model = useMemo(() => {
+    const seriesOf = (forecast: MetricForecast | null | undefined): LineSeries[] => {
+      const split = splitForecast(forecast ?? null, labels);
+      return [
+        { label: t('forecast.measured'), data: split.history, color: SERIES_COLORS.own },
+        { label: t('forecast.predicted'), data: split.forecast, color: SERIES_COLORS.own, isDashed: true },
+      ];
+    };
     return {
       labels: labels.map(time => format(parseISO(time), 'HH:mm')),
-      datasets: [
-        { label: t('chart.humidity'), data: humidity.history, borderColor: CHART_COLORS.accentGreen, yAxisID: 'y', ...line },
-        { label: t('chart.humidityForecast'), data: humidity.forecast, borderColor: CHART_COLORS.accentGreen, borderDash: [6, 4], yAxisID: 'y', ...line },
-        { label: t('chart.temperature'), data: temperature.history, borderColor: CHART_COLORS.charcoal, yAxisID: 'y1', ...line },
-        { label: t('chart.temperatureForecast'), data: temperature.forecast, borderColor: CHART_COLORS.charcoal, borderDash: [6, 4], yAxisID: 'y1', ...line },
-      ],
+      humidity: seriesOf(data?.humidity),
+      temperature: seriesOf(data?.temperature),
     };
   }, [data, labels, t]);
 
-  const chartOptions = useMemo(() => ({
-    ...baseChartOptions,
-    plugins: { ...baseChartOptions.plugins, legend: CHART_LEGEND },
-    scales: {
-      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
-      y: { ...baseChartOptions.scales.y, title: axisTitle('%RH') },
-      y1: {
-        position: 'right' as const,
-        grid: { display: false },
-        ticks: { color: CHART_COLORS.warmGray, font: CHART_FONT },
-        title: axisTitle('°C'),
-      },
-    },
-  } as ChartOptions<'line'>), []);
-
+  const oneDecimal = (value: number) => exact(value, 1);
   const hasData = Boolean(data?.humidity || data?.temperature);
   const predicted = data?.predicted;
 
@@ -126,24 +104,16 @@ export default function ForecastCard({ zoneId }: ForecastCardProps): JSX.Element
           <p className="text-sm text-warmGray">{t('forecast.noBreach')}</p>
         ))}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <KpiTile
-            icon={DropIcon}
-            label={t('forecast.humidityError')}
-            value={errorText(data?.humidity?.mae30, '%')}
-            sub={t('forecast.errorSub', { value: errorText(data?.humidity?.mae60, '%') })}
-          />
-          <KpiTile
-            icon={ThermometerIcon}
-            label={t('forecast.temperatureError')}
-            value={errorText(data?.temperature?.mae30, '°C')}
-            sub={t('forecast.errorSub', { value: errorText(data?.temperature?.mae60, '°C') })}
-          />
-        </div>
-
         {hasData ? (
-          <div className="h-64">
-            <Line data={chartData} options={chartOptions} />
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <LineChartPanel title={t('env.humidityTitle')} unit="%" labels={model.labels} series={model.humidity} formatValue={oneDecimal} />
+              <p className="text-small text-warmGray">{t('forecast.errorLine', { a: errorText(data?.humidity?.mae30, '%'), b: errorText(data?.humidity?.mae60, '%') })}</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <LineChartPanel title={t('env.temperatureTitle')} unit="°C" labels={model.labels} series={model.temperature} formatValue={oneDecimal} />
+              <p className="text-small text-warmGray">{t('forecast.errorLine', { a: errorText(data?.temperature?.mae30, '°C'), b: errorText(data?.temperature?.mae60, '°C') })}</p>
+            </div>
           </div>
         ) : (
           <ChartEmptyFrame message={t('forecast.empty')} className="h-64" />

@@ -1,8 +1,8 @@
-import { BellIcon, DropIcon, RobotIcon, ThermometerIcon, UserCircleIcon } from '@phosphor-icons/react';
+import { UserCircleIcon } from '@phosphor-icons/react';
 
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/common/KpiTile';
+import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { alertTypeDict } from '@/constants/enumLabels.i18n';
@@ -81,18 +81,19 @@ export default function HealthReportCard({ houseId, zoneId }: HealthReportCardPr
       description={report ? t('health.period', { from: date(report.period_start), to: date(report.period_end) }) : t('health.subtitleEmpty')}
       className="h-full"
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <KpiTile icon={ThermometerIcon} label={t('health.temperature')} value={oneDecimal(metrics?.temp_in_range_pct ?? null)} unit={metrics ? '%' : undefined} sub={samplesSub} />
-        <KpiTile icon={DropIcon} label={t('health.humidity')} value={oneDecimal(metrics?.humidity_in_range_pct ?? null)} unit={metrics ? '%' : undefined} sub={samplesSub} />
-        <KpiTile
-          icon={RobotIcon}
-          label={t('health.auto')}
-          value={oneDecimal(metrics?.auto_mode_pct ?? null)}
-          unit={metrics ? '%' : undefined}
-          sub={metrics ? t('health.switches', { misting: num(metrics.misting_switches), ventilation: num(metrics.ventilation_switches) }) : NO_VALUE}
-        />
-        <KpiTile icon={BellIcon} label={t('health.alerts')} value={metrics ? num(alertTotal) : NO_VALUE} sub={alertsSub} />
-      </div>
+      <StatStrip
+        items={[
+          { label: t('health.temperature'), value: oneDecimal(metrics?.temp_in_range_pct ?? null), unit: metrics ? '%' : undefined, sub: samplesSub },
+          { label: t('health.humidity'), value: oneDecimal(metrics?.humidity_in_range_pct ?? null), unit: metrics ? '%' : undefined, sub: samplesSub },
+          {
+            label: t('health.auto'),
+            value: oneDecimal(metrics?.auto_mode_pct ?? null),
+            unit: metrics ? '%' : undefined,
+            sub: metrics ? t('health.switches', { misting: num(metrics.misting_switches), ventilation: num(metrics.ventilation_switches) }) : NO_VALUE,
+          },
+          { label: t('health.alerts'), value: metrics ? num(alertTotal) : NO_VALUE, sub: alertsSub },
+        ]}
+      />
 
       {/* Khí NH3, CO2 và tỷ lệ chim về trong kỳ */}
       <div className="flex flex-col gap-1 text-small text-graphite">

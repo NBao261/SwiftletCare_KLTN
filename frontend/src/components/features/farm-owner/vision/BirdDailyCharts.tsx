@@ -4,7 +4,7 @@ import type { ChartOptions } from 'chart.js'
 import { format, parseISO } from 'date-fns'
 import { Card, ChartEmptyFrame } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { X_AXIS_TICKS, CHART_FONT, CHART_LEGEND } from '@/components/features/farm-owner/analytics/analytics.constants'
+import { X_AXIS_TICKS, CHART_FONT, CHART_LEGEND, LINE_LEGEND } from '@/components/features/farm-owner/analytics/analytics.constants'
 import { birdFlowDict } from '@/constants/birdFlow.i18n'
 import { NO_VALUE } from '@/constants/display'
 import { useTranslation } from '@/hooks/common/useTranslation'
@@ -107,7 +107,7 @@ export default function BirdDailyCharts({ houseIds }: { houseIds: string[] }) {
     ...baseChartOptions,
     plugins: {
       ...baseChartOptions.plugins,
-      legend: LEGEND,
+      legend: LINE_LEGEND,
       tooltip: {
         ...baseChartOptions.plugins.tooltip,
         callbacks: { label: context => t('daily.tooltipRate', { label: context.dataset.label ?? '', value: num(context.parsed.y ?? 0, 1) }) },

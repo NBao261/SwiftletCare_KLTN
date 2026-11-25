@@ -7,6 +7,7 @@ import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import {
   CORRELATION_DAY_OPTIONS,
+  SERIES_COLORS,
   axisTitle,
   type CorrelationDayOption,
 } from '@/components/features/farm-owner/analytics/analytics.constants';
@@ -14,7 +15,7 @@ import { correlationStrength, pearsonCorrelation } from '@/components/features/f
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useCorrelation } from '@/hooks/farm-owner/useAnalytics';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import { baseChartOptions } from '@/lib/chartTheme';
 
 // Chỉ số môi trường đem so với tỷ lệ chim về
 const CORRELATION_METRICS = ['humidity', 'temperature'] as const;
@@ -51,7 +52,7 @@ export default function CorrelationCard({ zoneId }: CorrelationCardProps): JSX.E
   );
 
   const chartData = useMemo(() => ({
-    datasets: [{ label: t('chart.returnRate'), data: points, backgroundColor: CHART_COLORS.charcoal, pointRadius: 4 }],
+    datasets: [{ label: t('chart.returnRate'), data: points, backgroundColor: SERIES_COLORS.entry, pointRadius: 5, pointBorderColor: '#FFFFFF', pointBorderWidth: 2 }],
   }), [points, t]);
 
   const chartOptions = useMemo(() => ({

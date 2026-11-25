@@ -2,18 +2,16 @@ import { useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
 import { format, parseISO } from 'date-fns';
-import { ArrowLineDownIcon, ArrowLineUpIcon, ChartLineIcon } from '@phosphor-icons/react';
-
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/common/KpiTile';
-import { CHART_LEGEND, X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants';
+import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import { BAR_MARK, CHART_FONT, CHART_LEGEND, SERIES_COLORS, X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { groupBucketsByHour } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHousesBirdCountBuckets, useHousesBirdCountCurrent } from '@/hooks/farm-owner/useAnalytics';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import { baseChartOptions } from '@/lib/chartTheme';
 
 interface BirdHourlyCardProps {
   // 1 nhà, hoặc mọi nhà của farm khi lọc tất cả nhà yến (số đếm cộng lại)
@@ -33,17 +31,18 @@ export default function BirdHourlyCard({ houseIds, scopeLabel }: BirdHourlyCardP
   const chartData = useMemo(() => ({
     labels: hourlyCounts.map(hour => format(parseISO(hour.hourStart), 'HH:mm')),
     datasets: [
-      { label: t('chart.exit'), data: hourlyCounts.map(hour => hour.exitCount), backgroundColor: CHART_COLORS.gray300, borderRadius: 6, maxBarThickness: 18 },
-      { label: t('chart.entry'), data: hourlyCounts.map(hour => hour.entryCount), backgroundColor: CHART_COLORS.accentGreen, borderRadius: 6, maxBarThickness: 18 },
+      { label: t('chart.exit'), data: hourlyCounts.map(hour => hour.exitCount), backgroundColor: SERIES_COLORS.exit, ...BAR_MARK },
+      { label: t('chart.entry'), data: hourlyCounts.map(hour => hour.entryCount), backgroundColor: SERIES_COLORS.entry, ...BAR_MARK },
     ],
   }), [hourlyCounts, t]);
 
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
-    plugins: { ...baseChartOptions.plugins, legend: CHART_LEGEND },
+    plugins: { ...baseChartOptions.plugins, legend: { ...CHART_LEGEND, labels: { ...CHART_LEGEND.labels, font: CHART_FONT } } },
     scales: {
       x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
-      y: { ...baseChartOptions.scales.y, min: 0 },
+      // Số chim là số nguyên, không âm: trục bắt đầu ở 0
+      y: { ...baseChartOptions.scales.y, min: 0, ticks: { ...baseChartOptions.scales.y.ticks, precision: 0 } },
     },
   } as ChartOptions<'bar'>), []);
 
@@ -58,27 +57,18 @@ export default function BirdHourlyCard({ houseIds, scopeLabel }: BirdHourlyCardP
   let todayTiles: JSX.Element | null = <LoadingSkeleton count={1} className="h-24 w-full" />;
   if (!current.isLoading && today) {
     todayTiles = (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <KpiTile
-          icon={ArrowLineUpIcon}
-          label={t('hourly.exitToday')}
-          value={countText(today.morningExit)}
-          sub={todaySub}
-        />
-        <KpiTile
-          icon={ArrowLineDownIcon}
-          label={t('hourly.entryToday')}
-          value={countText(today.eveningEntry)}
-          sub={todaySub}
-        />
-        <KpiTile
-          icon={ChartLineIcon}
-          label={t('hourly.returnToday')}
-          value={today.returnRate === null ? NO_VALUE : num(today.returnRate, 1)}
-          unit={today.returnRate === null ? undefined : '%'}
-          sub={today.returnRate === null && today.updatedAt ? t('hourly.returnPending') : todaySub}
-        />
-      </div>
+      <StatStrip
+        items={[
+          { label: t('hourly.exitToday'), value: countText(today.morningExit), sub: todaySub },
+          { label: t('hourly.entryToday'), value: countText(today.eveningEntry), sub: todaySub },
+          {
+            label: t('hourly.returnToday'),
+            value: today.returnRate === null ? NO_VALUE : num(today.returnRate, 1),
+            unit: today.returnRate === null ? undefined : '%',
+            sub: today.returnRate === null && today.updatedAt ? t('hourly.returnPending') : todaySub,
+          },
+        ]}
+      />
     );
   }
   if (!current.isLoading && current.isError) todayTiles = null;
