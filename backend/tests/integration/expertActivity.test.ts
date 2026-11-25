@@ -110,14 +110,31 @@ describe('thông báo quyết định của chuyên gia (EXPERT-FR-009)', () => 
       })
       const threshold = notifications.find(n => n.title.includes('sửa ngưỡng'))!
       expect(threshold.body).toContain('Tầng 1')
-      expect(threshold.body).toContain('humidity_min 75 → 78')
+      expect(threshold.body).toContain('Độ ẩm tối thiểu (%): 75 → 78')
+      expect(notifications.find(n => n.title.includes('hệ số điều khiển mờ'))!.body).toContain('Dải biên độ ẩm (%RH):')
+      expect(notifications.find(n => n.title.includes('tham số phát hiện'))!.body).toContain('Biên độ ồn vượt nền (dB):')
+      expect(notifications.find(n => n.title.includes('tỷ lệ chim về'))!.body).toContain('Mức giảm tỷ lệ chim về (%): 20 → 25')
       expect(notifications.find(n => n.title.includes('bác bỏ'))!.body).toContain('Tiếng mưa')
+      // Chữ người dùng đọc: không dấu nối " — ", không tên trường thô, giờ có năm đủ 4 chữ số
+      notifications.forEach(n => {
+        expect(n.body).not.toContain(' — ')
+        expect(n.body).not.toMatch(/[a-z]+_[a-z_]+/)
+        expect(n.body).toMatch(/ lúc \d{2}:\d{2},? \d{2}\/\d{2}\/\d{4}/)
+      })
     }
     // Thông báo trỏ tới đúng mục trong lịch sử
     const ref = (await Notification.findOne({ user_id: s.owner._id }).lean())!.ref!
     expect(await AuditLog.exists({ _id: ref.id, farm_id: s.farm._id })).toBeTruthy()
     // Chuyên gia không tự báo cho mình
     expect(await Notification.countDocuments({ user_id: s.expert._id })).toBe(0)
+  })
+
+  it('đổi giai đoạn nhà: thông báo ghi tên giai đoạn tiếng Việt, không lộ mã', async () => {
+    const s = await seed()
+    await s.send('put', `/farms/houses/${s.house._id}/stage`, s.t.expert, { stage: 'ATTRACTING' }).expect(200)
+    const notice = (await Notification.findOne({ user_id: s.owner._id, title: /giai đoạn nhà/ }).lean())!
+    expect(notice.body).toContain('Đã có chim ở → Đang dẫn dụ')
+    expect(notice.body).not.toMatch(/ATTRACTING|OCCUPIED/)
   })
 
   it('Farm Owner làm thay (BR-22) không tạo thông báo; sửa ngưỡng của Farm Owner không vào lịch sử', async () => {
