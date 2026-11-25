@@ -3,8 +3,9 @@
 #   docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging up -d --build
 # Lần đầu xin chứng chỉ: sh deploy/staging-cert.sh (hoặc --self-signed khi thử trên máy)
 # Cổng mở ra ngoài: 80, 443 (Nginx), 8883 (MQTT TLS), 8322 (RTSPS), 8189 TCP + UDP (WebRTC). Không mở 1883, 27017.
-# Không có MinIO: ảnh minio/minio, minio/mc không còn phát công khai, nên file (âm thanh, ảnh hiện trường) lưu ở volume
-# của backend (STORAGE_DRIVER=local) và tải qua /api/files/<key>; key có UUID ngẫu nhiên nên link không đoán được.
+# Không có MinIO: ảnh minio/minio, minio/mc không còn phát công khai. File (âm thanh, ảnh hiện trường, firmware) nằm ở
+# kho tương thích S3 ngoài VPS (Cloudflare R2): STORAGE_DRIVER=s3 và MINIO_* trong deploy/.env.staging, link tải là URL ký
+# có hạn. Bỏ trống STORAGE_DRIVER thì lưu ở volume của backend (local), tải qua /api/files/<key>, link không hết hạn.
 name: swiftletcare-staging
 
 services:
@@ -72,10 +73,18 @@ services:
       # Nút AI đẩy hình bằng tài khoản riêng (mã cài đặt trả địa chỉ này); RTSPS của MediaMTX sau Nginx
       STREAM_PUBLISH_BASE: rtsps://${DOMAIN}:8322
       CAMERA_SOURCE_KEY: ${CAMERA_SOURCE_KEY}
-      STORAGE_DRIVER: local
+      # local: file ở volume backend_storage. s3 (hay giá trị nào khác local): kho S3 theo MINIO_* bên dưới
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       LOCAL_STORAGE_DIR: /app/storage
-      # Link tải file đi qua Nginx (/api/files/<key> → backend /files/<key>)
+      # Link tải file local đi qua Nginx (/api/files/<key> → backend /files/<key>)
       PUBLIC_BASE_URL: https://${DOMAIN}/api
+      # Kho S3 (R2): endpoint <account-id>.r2.cloudflarestorage.com, cổng 443 qua TLS; bucket tạo sẵn trên Cloudflare
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_PORT: ${MINIO_PORT:-443}
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-true}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-swiftletcare-files}
       CORS_ORIGIN: https://${DOMAIN}
       APP_PUBLIC_URL: https://${DOMAIN}
       # Đứng sau một Nginx: đọc IP người dùng từ X-Forwarded-For để giới hạn tần suất đúng người
