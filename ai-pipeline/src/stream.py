@@ -6,7 +6,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple
+from typing import Callable, Iterator, List, Mapping, Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
@@ -15,6 +15,7 @@ import yaml
 from dotenv import load_dotenv
 from loguru import logger
 
+from camera_source import CameraSource, probe_camera
 from counting import SESSION_TYPES, BucketClock, MultiRingCounter, Ring, current_session
 from inference import InferenceEngine
 from mjpeg_server import MjpegServer
@@ -34,6 +35,18 @@ RECEIVE_WARN_RATIO = 0.8
 
 def receiving_short(received: int, seconds: float, camera_fps: float) -> bool:
     return received / seconds < RECEIVE_WARN_RATIO * camera_fps
+
+
+def apply_env_overrides(cfg: dict, env: Mapping[str, str]) -> dict:
+    """MQTT_BROKER/MQTT_PORT/MQTT_TLS written by tools/setup_node.py win over config.yaml (the staging broker)."""
+    mqtt_cfg = cfg["mqtt"]
+    if env.get("MQTT_BROKER"):
+        mqtt_cfg["broker"] = env["MQTT_BROKER"]
+    if env.get("MQTT_PORT"):
+        mqtt_cfg["port"] = int(env["MQTT_PORT"])
+    if env.get("MQTT_TLS"):
+        mqtt_cfg["tls"] = env["MQTT_TLS"].strip().lower() in ("1", "true", "yes")
+    return cfg
 
 
 def load_config(path: Path = CONFIG) -> dict:
@@ -68,24 +81,32 @@ def make_counter(cfg: dict, width: int, height: int, rings: Optional[Sequence[Ri
 class FrameGrabber(threading.Thread):
     """Đọc RTSP liên tục, chỉ giữ frame mới nhất để hình không trễ dần."""
 
-    def __init__(self, source: str, camera_fps: float):
+    def __init__(self, source: CameraSource, camera_fps: float, probe_timeout_sec: float):
         super().__init__(daemon=True)
         self.source, self.frame, self.seq = source, None, 0
         self.camera_fps = camera_fps
+        self.probe_timeout_sec = probe_timeout_sec
         self.lock = threading.Lock()
 
     def run(self) -> None:
         os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp")
         delay = 1
         while True:
-            cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG, [
+            url = self.source.url()
+            self.source.changed.clear()
+            if not url:                          # Farm Owner chưa nhập địa chỉ camera trên web
+                self.source.status = "NO_SOURCE"
+                self.source.changed.wait(RECONNECT_MAX_SEC)
+                continue
+            cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG, [
                 cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, STALL_TIMEOUT_MS, cv2.CAP_PROP_READ_TIMEOUT_MSEC, STALL_TIMEOUT_MS])
             window_start, received, short = time.time(), 0, False
-            while True:
+            while not self.source.changed.is_set():
                 ok, frame = cap.read()
                 if not ok:
                     break
                 delay = 1
+                self.source.status = "OK"
                 with self.lock:
                     self.frame, self.seq = frame, self.seq + 1
                 received += 1
@@ -100,14 +121,21 @@ class FrameGrabber(threading.Thread):
                         logger.info(f"Camera gửi đủ frame trở lại ({received / elapsed:.1f} frame/giây)")
                     window_start, received, short = time.time(), 0, now_short
             cap.release()
-            logger.warning(f"Mất luồng camera, kết nối lại sau {delay} giây")
-            time.sleep(delay)
+            if self.source.changed.is_set():     # địa chỉ mới từ web: mở lại ngay
+                logger.info("Địa chỉ camera đã đổi, mở lại luồng")
+                continue
+            # Hỏi camera để biết vì sao (sai mật khẩu hay không tới được); không ghi URL vì có mật khẩu
+            self.source.status = probe_camera(url, self.probe_timeout_sec)
+            logger.warning(f"Mất luồng camera ({self.source.status}), kết nối lại sau {delay} giây")
+            self.source.changed.wait(delay)
             delay = min(delay * 2, RECONNECT_MAX_SEC)
 
 
-def frames(source: str, live: bool, realtime: bool = False, camera_fps: float = 25) -> Iterator[np.ndarray]:
+def frames(source: Union[str, CameraSource], live: bool, realtime: bool = False, camera_fps: float = 25,
+           probe_timeout_sec: float = 10) -> Iterator[np.ndarray]:
     """Live: luôn trả frame mới nhất. File: trả đủ từng frame (để đo độ chính xác)."""
     if not live:
+        assert isinstance(source, str)
         cap = cv2.VideoCapture(source)
         if not cap.isOpened():
             raise SystemExit(f"Không mở được {source}")
@@ -120,7 +148,8 @@ def frames(source: str, live: bool, realtime: bool = False, camera_fps: float = 
             if realtime:
                 next_t += interval
                 time.sleep(max(0.0, next_t - time.time()))
-    grabber = FrameGrabber(source, camera_fps)
+    camera = source if isinstance(source, CameraSource) else CameraSource(fixed_url=source)
+    grabber = FrameGrabber(camera, camera_fps, probe_timeout_sec)
     grabber.start()
     last = 0
     while True:
@@ -207,11 +236,21 @@ class Publisher:
             "timestamp": int(time.time() * 1000),
         }), qos=1)
 
-    def heartbeat(self, fps: float) -> None:
-        self.client.publish(self.topic_heartbeat, json.dumps({
-            "deviceId": self.device_id, "modelVersion": self.model_version, "fps": round(fps, 1),
-            "defaultRings": self.default_rings,
-        }), qos=0)
+    def heartbeat(self, fps: float, camera_status: Optional[str]) -> None:
+        payload = {"deviceId": self.device_id, "modelVersion": self.model_version, "fps": round(fps, 1),
+                   "defaultRings": self.default_rings}
+        if camera_status:
+            payload["cameraStatus"] = camera_status
+        self.client.publish(self.topic_heartbeat, json.dumps(payload), qos=0)
+
+    def start_heartbeats(self, interval_sec: float, state: Callable[[], Tuple[float, Optional[str]]]) -> None:
+        """Gửi heartbeat theo nhịp riêng, không theo khung hình: camera hỏng thì vòng xử lý đứng nhưng heartbeat vẫn đi."""
+        def loop() -> None:
+            while True:
+                fps, camera_status = state()
+                self.heartbeat(fps, camera_status)
+                time.sleep(interval_sec)
+        threading.Thread(target=loop, daemon=True).start()
 
 
 def main() -> None:
@@ -224,11 +263,24 @@ def main() -> None:
     args = ap.parse_args()
 
     load_dotenv()
-    cfg = load_config(Path(args.config))
+    cfg = apply_env_overrides(load_config(Path(args.config)), os.environ)
     logger.add(cfg["logging"]["file"], rotation=cfg["logging"]["rotation"])
 
-    source = args.source or os.getenv("CAMERA_RTSP_URL") or cfg["camera"]["source"]
-    live = str(source).startswith(("rtsp://", "rtsps://", "http://", "https://"))
+    # Nguồn hình: --source hoặc CAMERA_RTSP_URL (máy dev, clip) thắng; còn lại lấy địa chỉ Farm Owner nhập trên web
+    device_id = os.environ.get("CAMERA_DEVICE_ID", "")
+    fixed = args.source or os.getenv("CAMERA_RTSP_URL")
+    api_base = os.getenv("API_BASE_URL")
+    camera: Optional[CameraSource] = None
+    if fixed or not (api_base and device_id):
+        source = fixed or cfg["camera"]["source"]
+        live = str(source).startswith(("rtsp://", "rtsps://", "http://", "https://"))
+        if live:
+            camera = CameraSource(fixed_url=source)
+    else:
+        source, live = "camera do Farm Owner nhập trên web", True
+        camera = CameraSource(api_base=api_base, device_id=device_id, secret=os.environ.get("MQTT_PASSWORD", ""),
+                              retry_sec=cfg["camera"]["source_retry_sec"])
+        camera.start()
     m, s = cfg["model"], cfg["sessions"]
     tz = timezone(timedelta(hours=s["utc_offset_hours"]))
 
@@ -244,14 +296,13 @@ def main() -> None:
                 f" | đẩy lên máy chủ video: {'có' if pusher else 'không'}")
 
     # Vòng vẽ trên web thắng vòng trong config.yaml và đổi được khi đang chạy
-    device_id = os.environ.get("CAMERA_DEVICE_ID", "")
     ring_store = RingStore(Path(cfg["tracking"]["ring_override_file"]), device_id)
     drawn_rings: Optional[List[Ring]] = ring_store.load()
     # Khung phiên của ngày theo lịch đếm của nhà; ngày backend chưa gửi thì dùng config.yaml
     schedule = ScheduleStore(Path(s["windows_override_file"]), device_id)
     schedule.load()
     if not args.no_mqtt and device_id:
-        start_listener(cfg["mqtt"], [ring_store, schedule], device_id)
+        start_listener(cfg["mqtt"], [ring_store, schedule] + ([camera] if camera and camera.managed else []), device_id)
 
     pipe: Optional[FramePipeline] = None
     session: Optional[str] = None
@@ -261,10 +312,15 @@ def main() -> None:
     buckets = BucketClock(cfg["mqtt"]["bucket_minutes"], time.time())
     started = False
     conf_sum, conf_n = 0.0, 0
-    last_pub, last_log = 0.0, time.time()      # last_pub = 0: heartbeat ngay ở frame đầu
+    last_pub, last_log = 0.0, time.time()      # last_pub = 0: số đếm ngay ở frame đầu
     n_frames, fps = 0, 0.0
+    if pub:
+        # fps 0 khi camera không cho hình: backend không xét số khung hình lúc đó
+        pub.start_heartbeats(cfg["mqtt"]["publish_interval_sec"], lambda: (
+            fps if not camera or camera.status == "OK" else 0.0, camera.status if camera else None))
 
-    for frame in frames(source, live, args.realtime, cfg["camera"]["fps"]):
+    for frame in frames(camera if camera else source, live, args.realtime, cfg["camera"]["fps"],
+                        cfg["camera"]["probe_timeout_sec"]):
         h, w = frame.shape[:2]
         if pipe is None:
             pipe = FramePipeline(cfg, engine, w, h)
@@ -315,10 +371,8 @@ def main() -> None:
             n_frames, last_log = 0, now
         if now - last_pub >= cfg["mqtt"]["publish_interval_sec"]:
             last_pub = now
-            if pub:
-                pub.heartbeat(fps)
-                if session:
-                    pub.bird_count(session, counter, conf_sum / max(conf_n, 1))
+            if pub and session:
+                pub.bird_count(session, counter, conf_sum / max(conf_n, 1))
             if live:
                 save_state(session, today, counter, day_total=day_total)
         if live:

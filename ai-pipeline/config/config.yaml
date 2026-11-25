@@ -16,6 +16,10 @@ camera:
   # chữ số đổi mỗi giây sẽ thành "vật chuyển động". Đo trên khung 1920x1080 ngày 21/10: chữ ở x 61–415, y 39–57 px.
   mask:
     - [0.0, 0.0, 0.23, 0.07]
+  # Địa chỉ camera do Farm Owner nhập trên web (FARM-FR-004b): lấy lại sau chừng này giây khi backend không trả lời.
+  # Mất luồng thì ffprobe hỏi camera, chờ tối đa probe_timeout_sec, để biết sai mật khẩu hay không tới được. Chọn tay
+  source_retry_sec: 30
+  probe_timeout_sec: 10
 
 model:
   path: "models/yolov8n_swiftlet_v1.onnx"   # model chim yến v1 (03/11/2026, ~10 % lệch đếm tay); v2 đang train

@@ -60,10 +60,13 @@ def test_heartbeat_carries_the_default_ring_so_the_web_can_show_it(monkeypatch):
     monkeypatch.setenv("CAMERA_DEVICE_ID", "cam-1")
     monkeypatch.setenv("MQTT_PASSWORD", "x")
     pub = Publisher({"broker": "localhost", "port": 1883}, "v1", [(SQUARE, True)])
-    pub.heartbeat(25.0)
+    pub.heartbeat(25.0, None)
     topic, payload = sent[0]
     assert topic == "swiftletcare/dev/cam-1/heartbeat"
     assert payload["defaultRings"] == [{"points": [list(p) for p in SQUARE], "into_ring_is_exit": True}]
+    assert "cameraStatus" not in payload            # clip, không có camera
+    pub.heartbeat(0.0, "AUTH_FAILED")
+    assert sent[1][1]["cameraStatus"] == "AUTH_FAILED"
 
 
 def test_same_rings_sent_again_do_not_reset_the_tracks():

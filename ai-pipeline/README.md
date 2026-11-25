@@ -12,7 +12,8 @@ python -m venv .venv && source .venv/bin/activate   # hoặc .venv\Scripts\activ
 pip install -r requirements.txt                       # cần GPU NVIDIA: chỉ chạy CUDA, không lùi về CPU
 # GPU GTX 10xx (Pascal, vd nút AI GTX 1050 Ti): bản 1.30 không hỗ trợ, cài đè bản 1.26 sau dòng trên
 pip install "onnxruntime-gpu[cuda,cudnn]>=1.26,<1.27"
-cp .env.example .env                                  # điền CAMERA_RTSP_URL, ID thiết bị/farm/nhà
+python tools/setup_node.py --server https://<tên miền>/api   # nút AI thật: nhập mã cài đặt từ màn Kho thiết bị
+cp .env.example .env                                  # máy dev: tự điền CAMERA_RTSP_URL, CAMERA_DEVICE_ID, MQTT_PASSWORD
 python src/stream.py                                  # camera thật; xem http://127.0.0.1:8090/stream
 python src/stream.py --source D:/SwiftletCare/clips/20261022_morning_01.mp4 --session MORNING_EXIT --no-mqtt
 pytest
@@ -21,7 +22,7 @@ pytest
 ## Cấu trúc
 
 ```
-config/config.yaml   2 ô + vùng tô đen, model, ngưỡng, vòng đếm, MQTT (địa chỉ RTSP nằm trong .env)
+config/config.yaml   2 ô + vùng tô đen, model, ngưỡng, vòng đếm, MQTT (địa chỉ camera do Farm Owner nhập trên web, hoặc CAMERA_RTSP_URL trong .env)
 models/               Model ONNX (không commit)
 src/
   stream.py           Vòng lặp chính: đọc RTSP (giữ frame mới nhất), phiên theo giờ VN, MQTT, số đếm 5 phút
