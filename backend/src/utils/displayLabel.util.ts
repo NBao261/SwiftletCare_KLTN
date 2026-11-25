@@ -1,4 +1,4 @@
-import type { AlertSeverity, DeviceStatus, Role } from '@/types/domain.types'
+import type { AlertSeverity, AlertType, DeviceStatus, Role } from '@/types/domain.types'
 import type { WorkOrderStatus } from '@/models/workOrder.model'
 import type { ConfigProfileStatus } from '@/models/configProfile.model'
 
@@ -30,6 +30,25 @@ export const PROFILE_STATUS_LABEL: Record<ConfigProfileStatus, string> = {
   DRAFT: 'Bản nháp',
   APPROVED: 'Đã duyệt',
   ARCHIVED: 'Lưu trữ',
+}
+
+// Tiêu đề mặc định của cảnh báo thiết bị gửi (firmware không gửi title)
+export const ALERT_TYPE_LABEL: Record<AlertType, string> = {
+  THRESHOLD_BREACH: 'Vượt ngưỡng môi trường',
+  NODE_OFFLINE: 'Thiết bị mất kết nối',
+  SPEAKER_FAILURE: 'Lỗi loa ru',
+  MISTING_INEFFECTIVE: 'Phun sương không hiệu quả',
+  NOISE_ANOMALY: 'Tiếng ồn bất thường',
+  LOW_RETURN_RATE: 'Tỷ lệ chim về thấp',
+  EDGE_AI_DEGRADED: 'Camera đếm chim gặp sự cố',
+  UNEXPECTED_RESTART: 'Thiết bị tự khởi động lại',
+  SENSOR_FAULT: 'Lỗi cảm biến',
+  RS485_BUS_FAILURE: 'Lỗi đường truyền cảm biến',
+  SENSOR_ANOMALY: 'Cảm biến bất thường',
+  FORECAST_BREACH: 'Sắp vượt ngưỡng',
+  MAINTENANCE_DUE: 'Đến hạn bảo trì bơm/quạt',
+  ACTUATOR_FAULT: 'Bơm, quạt hoặc loa không chạy',
+  CONFIG_MISMATCH: 'Thiết bị chưa nhận cấu hình mới',
 }
 
 // MEDIUM và LOW cùng là "Thường"

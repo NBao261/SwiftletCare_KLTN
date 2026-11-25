@@ -113,10 +113,23 @@ describe('NH3/CO2 chỉ cảnh báo (ALERT-FR-012)', () => {
     expect(await renotifiedAfterEscalation()).toBe(0)
   })
 
-  it('firmware không gửi title: tiêu đề mặc định mang tên Zone', async () => {
+  it('firmware không gửi title: tiêu đề mặc định là tên loại tiếng Việt kèm tên Zone, không lộ mã loại', async () => {
     const { zone, node } = await seed()
     await ingestDeviceAlert({ deviceId: node.device_id, type: 'MISTING_INEFFECTIVE', severity: 'MEDIUM', message: 'khô' })
-    expect((await Alert.findOne().lean())!.title).toBe(`MISTING_INEFFECTIVE tại ${zone.name}`)
+    expect((await Alert.findOne().lean())!.title).toBe(`Phun sương không hiệu quả tại ${zone.name}`)
+  })
+
+  it('title rỗng hoặc không phải chuỗi thì dùng tiêu đề mặc định; title hợp lệ được giữ', async () => {
+    const { zone, node } = await seed()
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'SENSOR_FAULT', title: '  ', message: 'a', eventId: 'e1' })
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'RS485_BUS_FAILURE', title: 42, message: 'b', eventId: 'e2' })
+    await ingestDeviceAlert({ deviceId: node.device_id, type: 'SPEAKER_FAILURE', title: 'Loa tầng 2 im', message: 'c', eventId: 'e3' })
+    const titles = Object.fromEntries((await Alert.find().lean()).map(a => [a.type, a.title]))
+    expect(titles).toEqual({
+      SENSOR_FAULT: `Lỗi cảm biến tại ${zone.name}`,
+      RS485_BUS_FAILURE: `Lỗi đường truyền cảm biến tại ${zone.name}`,
+      SPEAKER_FAILURE: 'Loa tầng 2 im',
+    })
   })
 
   it('thiết bị không được gửi loại cảnh báo chỉ backend suy ra', async () => {
