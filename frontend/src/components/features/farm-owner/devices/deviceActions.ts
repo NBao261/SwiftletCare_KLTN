@@ -11,6 +11,11 @@ export function canManageController(role: Role | undefined, device: Pick<DeviceI
   return role === 'FARM_OWNER' && device.type === 'sensor'
 }
 
+// Địa chỉ camera IP là việc thiết lập thiết bị của Farm Owner (SF-01)
+export function canSetCameraSource(role: Role | undefined, device: Pick<DeviceItem, 'type'>): boolean {
+  return role === 'FARM_OWNER' && device.type === 'camera'
+}
+
 // Farm Owner khởi động lại bộ điều khiển của farm; chỉ khi đang ONLINE (lệnh đi qua MQTT)
 export function canRestartController(role: Role | undefined, device: Pick<DeviceItem, 'type' | 'status'>): boolean {
   return role === 'FARM_OWNER' && device.type === 'sensor' && device.status === 'ONLINE'

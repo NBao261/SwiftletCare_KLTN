@@ -26,7 +26,8 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import { canManageController, canRestartController } from '@/components/features/farm-owner/devices/deviceActions';
+import { canManageController, canRestartController, canSetCameraSource } from '@/components/features/farm-owner/devices/deviceActions';
+import CameraSourceModal from '@/components/features/farm-owner/devices/CameraSourceModal';
 import MoveControllerModal from '@/components/features/farm-owner/devices/MoveControllerModal';
 import ReplaceControllerModal from '@/components/features/farm-owner/devices/ReplaceControllerModal';
 import RemoveControllerModal from '@/components/features/farm-owner/devices/RemoveControllerModal';
@@ -73,6 +74,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const [moveDevice, setMoveDevice] = useState<DeviceItem>();
   const [replaceDevice, setReplaceDevice] = useState<DeviceItem>();
   const [removeDevice, setRemoveDevice] = useState<DeviceItem>();
+  const [cameraSourceDevice, setCameraSourceDevice] = useState<DeviceItem>();
 
   function handleRestart(): void {
     if (!restartDevice) return;
@@ -129,6 +131,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
           onOpenSchedule={canOperateSpeaker && device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
           onOpenTracks={canOperateSpeaker && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
           onRestart={canRestartController(role, device) ? () => setRestartDevice(device) : undefined}
+          onOpenCameraSource={canSetCameraSource(role, device) ? () => setCameraSourceDevice(device) : undefined}
           moreActions={canManageController(role, device) ? [
             { label: t('action.move'), onClick: () => setMoveDevice(device) },
             { label: t('action.replace'), onClick: () => setReplaceDevice(device) },
@@ -222,6 +225,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
       {moveDevice && <MoveControllerModal device={moveDevice} onClose={() => setMoveDevice(undefined)} />}
       {replaceDevice && <ReplaceControllerModal device={replaceDevice} onClose={() => setReplaceDevice(undefined)} />}
       {removeDevice && <RemoveControllerModal device={removeDevice} onClose={() => setRemoveDevice(undefined)} />}
+      <CameraSourceModal camera={cameraSourceDevice} onClose={() => setCameraSourceDevice(undefined)} />
       <ConfirmModal
         open={restartDevice !== undefined}
         title={t('restart.title', { id: restartDevice?.deviceId ?? '' })}

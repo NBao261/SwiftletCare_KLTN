@@ -91,8 +91,23 @@ export interface CountingRingHistoryEntry {
   new_value: CountingRing | CountingRing[]
 }
 
+// Tình trạng camera IP do nút AI báo (GET /devices/camera-nodes/:id/source, danh sách camera)
+export type CameraStatus = 'OK' | 'NO_SOURCE' | 'AUTH_FAILED' | 'UNREACHABLE' | 'NO_FRAMES'
+
+// Địa chỉ camera IP của nút AI, không có mật khẩu (chỉ has_password)
+export interface CameraSourceView {
+  camera_status: CameraStatus | null; camera_status_at: string | null
+  source: { host: string; port: number; username: string; path: string; has_password: boolean; version: number; updated_at: string } | null
+}
+// password: không gửi = giữ mật khẩu cũ; chuỗi rỗng = bỏ mật khẩu
+export interface CameraSourceInput { host: string; port: number; username: string; path: string; password?: string }
+
+// POST /admin/provisioned-devices/:id/setup-code: mã cài đặt nút AI, chỉ trả một lần
+export interface AiNodeSetupCode { device_id: string; setup_code: string; expires_at: string }
+
 export interface CameraNode {
-  _id: string; device_id: string; rtsp_url?: string
+  _id: string; device_id: string
+  camera_status?: CameraStatus | null; camera_status_at?: string | null
   // camera ở cửa ra vào của cả nhà yến; zone_id chỉ còn ở bản ghi cũ
   house_id?: string; zone_id?: string
   // 1–4 vòng đã vẽ; trống thì nút AI dùng vòng trong config.yaml. Bản ghi cũ chỉ có counting_ring

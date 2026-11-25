@@ -12,13 +12,15 @@ export const STOCK_STATUS: Record<StockStatus, { label: string; tone: BadgeTone 
   REVOKED: { label: 'Đã thu hồi', tone: 'critical' },
 }
 
-export type StockAction = 'rotate-key' | 'rotate-broker' | 'revoke'
+export type StockAction = 'rotate-key' | 'rotate-broker' | 'revoke' | 'setup-code'
 
 // Cấp lại mã kích hoạt và thu hồi chỉ khi thiết bị không đang dùng ở farm nào; thu hồi là trạng thái cuối
 function actionsFor(d: ProvisionedDevice, onAction: (a: StockAction, d: ProvisionedDevice) => void): ActionsMenuItem[] {
   const notInService = d.stock_status === 'IN_STOCK' || d.stock_status === 'RELEASED'
   const items: ActionsMenuItem[] = []
   if (notInService) items.push({ label: t('Cấp lại mã kích hoạt'), onClick: () => onAction('rotate-key', d) })
+  // Nút AI tự nhận danh tính bằng mã cài đặt; bộ điều khiển nạp qua USB
+  if (d.kind === 'CAMERA' && d.stock_status !== 'REVOKED') items.push({ label: t('Mã cài đặt camera đếm chim'), onClick: () => onAction('setup-code', d) })
   if (d.stock_status !== 'REVOKED') items.push({ label: t('Cấp lại mật khẩu kết nối'), onClick: () => onAction('rotate-broker', d) })
   if (notInService) items.push({ label: t('Thu hồi'), danger: true, onClick: () => onAction('revoke', d) })
   return items
