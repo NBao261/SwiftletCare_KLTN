@@ -8,6 +8,7 @@ import * as streamController from '@/controllers/stream.controller'
 import { MAX_AUDIO_BYTES } from '@/services/audioTrack.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { CAMERA_HOST_PATTERN, CAMERA_PATH_PATTERN } from '@/utils/cameraSource.util'
 
 const router = Router()
 router.use(authenticate)
@@ -100,6 +101,15 @@ router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_
   ...ringFields('rings.*.'),
   ...ringFields('', path => body(path).if(body('rings').not().exists())),
   validate, deviceController.updateCountingRing)
+// Địa chỉ camera IP của nút AI: chỉ Farm Owner (thiết lập thiết bị), mật khẩu không bao giờ trả ra
+router.get ('/camera-nodes/:id/source', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, deviceController.getCameraSource)
+router.put ('/camera-nodes/:id/source', requireRole('FARM_OWNER'), param('id').isMongoId(),
+  body('host').isString().trim().matches(CAMERA_HOST_PATTERN),
+  body('port').isInt({ min: 1, max: 65535 }).toInt(),
+  body('username').isString().trim().isLength({ max: 64 }),
+  body('password').optional().isString().isLength({ max: 128 }),
+  body('path').isString().trim().matches(CAMERA_PATH_PATTERN),
+  validate, deviceController.updateCameraSource)
 router.get ('/camera-nodes/:id/stream-token', requireRole('FARM_OWNER','DOMAIN_EXPERT','FARM_TECHNICIAN'), param('id').isMongoId(), validate, streamController.getStreamToken)
 
 router.get ('/system-status',                requireRole('ADMIN'), deviceController.getSystemStatus)

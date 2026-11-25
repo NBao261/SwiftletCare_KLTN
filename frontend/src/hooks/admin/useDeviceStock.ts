@@ -51,3 +51,7 @@ export const useRotateStockKey = () =>
 
 export const useRotateBrokerSecret = () =>
   useStockMutation((id: string) => deviceStockApi.rotateBrokerSecret(id).then(r => r.data.data))
+
+// Không đổi danh sách kho: chỉ tạo mã
+export const useIssueSetupCode = () =>
+  useMutation({ mutationFn: (id: string) => deviceStockApi.issueSetupCode(id).then(response => response.data.data) })

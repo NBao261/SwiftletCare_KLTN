@@ -1,5 +1,5 @@
 import { isFaultDeviceStatus } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
-import type { CameraNode, DeviceStatus, House, SensorNode, Zone } from '@/types';
+import type { CameraNode, CameraStatus, DeviceStatus, House, SensorNode, Zone } from '@/types';
 
 // 1 thiết bị trên trang Thiết bị (node cảm biến của Zone hoặc camera của cả nhà)
 export interface DeviceItem {
@@ -20,6 +20,8 @@ export interface DeviceItem {
   ip?: string;
   // thiết bị của bộ giả lập
   simulated?: boolean;
+  // Camera: tình trạng camera IP do nút AI báo
+  cameraStatus?: CameraStatus | null;
 }
 
 export interface ZoneDeviceGroup {
@@ -64,6 +66,7 @@ function cameraItem(camera: CameraNode, houseId: string): DeviceItem {
   return {
     id: camera._id, deviceId: camera.device_id, type: 'camera', status: camera.status, houseId,
     version: camera.model_version, lastHeartbeat: camera.last_heartbeat, registeredAt: camera.registered_at, simulated: camera.simulated,
+    cameraStatus: camera.camera_status ?? null,
   };
 }
 

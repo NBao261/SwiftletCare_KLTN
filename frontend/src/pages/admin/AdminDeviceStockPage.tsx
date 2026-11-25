@@ -12,6 +12,7 @@ import { STOCK_STATUS, buildStockColumns, type StockAction } from '@/components/
 import AddStockDeviceModal from '@/components/features/admin/device-stock/AddStockDeviceModal'
 import IssuedSecretsModal from '@/components/features/admin/device-stock/IssuedSecretsModal'
 import FlashDeviceModal from '@/components/features/admin/device-stock/FlashDeviceModal'
+import AiNodeSetupModal from '@/components/features/admin/device-stock/AiNodeSetupModal'
 import FirmwareImagesCard from '@/components/features/admin/device-stock/FirmwareImagesCard'
 import {
   useDeviceStock, useRevokeStockDevice, useRotateBrokerSecret, useRotateStockKey,
@@ -66,7 +67,9 @@ export default function AdminDeviceStockPage() {
   // Trạm nạp: cắm ESP32 qua USB, thêm vào kho và ghi mã thẳng vào chip
   const [flashing, setFlashing] = useState(false)
   const [issued, setIssued] = useState<IssuedDeviceSecrets | null>(null)
-  const [pending, setPending] = useState<{ action: StockAction; device: ProvisionedDevice } | null>(null)
+  const [pending, setPending] = useState<{ action: Exclude<StockAction, 'setup-code'>; device: ProvisionedDevice } | null>(null)
+  // Mã cài đặt nút AI mở cửa sổ riêng, không qua hộp xác nhận
+  const [setupDevice, setSetupDevice] = useState<ProvisionedDevice | null>(null)
 
   const rotateKey = useRotateStockKey()
   const rotateBroker = useRotateBrokerSecret()
@@ -132,7 +135,7 @@ export default function AdminDeviceStockPage() {
   }
 
   const rotateText = pending && pending.action !== 'revoke' ? ROTATE_TEXT[pending.action] : null
-  const columns = buildStockColumns((action, device) => setPending({ action, device }))
+  const columns = buildStockColumns((action, device) => (action === 'setup-code' ? setSetupDevice(device) : setPending({ action, device })))
 
   return (
     <div className="flex flex-col gap-5">
@@ -188,6 +191,7 @@ export default function AdminDeviceStockPage() {
       <FirmwareImagesCard />
 
       <FlashDeviceModal open={flashing} onClose={() => setFlashing(false)} />
+      <AiNodeSetupModal device={setupDevice} onClose={() => setSetupDevice(null)} />
       <AddStockDeviceModal open={adding} onClose={() => setAdding(false)} onAdded={result => { setAdding(false); setIssued(result) }} />
       <IssuedSecretsModal issued={issued} onClose={() => setIssued(null)} />
 

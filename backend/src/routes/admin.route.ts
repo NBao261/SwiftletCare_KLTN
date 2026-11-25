@@ -70,6 +70,8 @@ router.put('/provisioned-devices/:id/revoke',
 router.post('/provisioned-devices/:id/rotate-key', param('id').isMongoId(), validate, adminController.rotateProvisionedKey)
 
 router.post('/provisioned-devices/:id/rotate-broker-secret', param('id').isMongoId(), validate, adminController.rotateBrokerSecret)
+// Mã dùng một lần để nút AI tự lấy danh tính (tools/setup_node.py), thay việc chép mật khẩu broker
+router.post('/provisioned-devices/:id/setup-code', param('id').isMongoId(), validate, adminController.issueSetupCode)
 
 // Kho firmware cho trạm nạp: ảnh cài đặt gộp, kiểm ở service (factoryImageProblem)
 const firmwareUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FACTORY_IMAGE_BYTES, files: 1 } })

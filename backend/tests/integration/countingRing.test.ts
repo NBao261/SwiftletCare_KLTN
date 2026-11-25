@@ -71,6 +71,7 @@ describe('PUT /devices/camera-nodes/:id/counting-ring', () => {
     expect(res.body.data.ring_delivered).toBe(true)
     expect(publishDeviceConfig).toHaveBeenCalledWith(camera.device_id, {
       deviceId: camera.device_id, counting_rings: [{ points: RING, into_ring_is_exit: true }], session_windows: expect.any(Object),
+      camera_source_version: 0,
     })
 
     await put(t.expert, { points: RING.slice(0, 3), into_ring_is_exit: false }).expect(200)

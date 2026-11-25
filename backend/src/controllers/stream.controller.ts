@@ -7,6 +7,6 @@ export const getStreamToken = asyncHandler(async (req: Request, res: Response) =
 })
 
 export const streamAuth = asyncHandler(async (req: Request, res: Response) => {
-  streamService.authorizeStream(req.query.key, req.body)
+  await streamService.authorizeStream(req.query.key, req.body)
   res.json({ success: true })
 })
