@@ -66,11 +66,32 @@ export interface IRelayUsage {
   since_service_switches: number
 }
 
+// Tình trạng camera IP do nút AI báo trong heartbeat
+export const CAMERA_STATUSES = ['OK', 'NO_SOURCE', 'AUTH_FAILED', 'UNREACHABLE', 'NO_FRAMES'] as const
+export type CameraStatus = typeof CAMERA_STATUSES[number]
+
+// Địa chỉ camera IP Farm Owner nhập trên web; mật khẩu mã hoá (utils/secretBox.util), không bao giờ trả ra API
+export interface ICameraSource {
+  host: string
+  port: number
+  username: string
+  path: string
+  password_encrypted?: string
+  // Tăng mỗi lần sửa; config của nút AI mang số này, nút AI thấy đổi thì lấy lại địa chỉ
+  version: number
+  updated_at: Date
+  updated_by?: Types.ObjectId
+}
+
 export interface ICameraNode extends Document {
   _id: Types.ObjectId
   device_id: string
   house_id: Types.ObjectId
+  // Cũ: URL lưu không mã hoá lúc đăng ký, nút AI không đọc; migrate:camera-source chuyển sang camera_source rồi xoá
   rtsp_url?: string
+  camera_source?: ICameraSource
+  camera_status?: CameraStatus
+  camera_status_at?: Date
   status: DeviceStatus
   last_heartbeat?: Date
   model_version?: string
@@ -197,7 +218,24 @@ const cameraNodeSchema = new Schema<ICameraNode>(
   {
     device_id:      { type: String, required: true, unique: true },
     house_id:       { type: Schema.Types.ObjectId, ref: 'House', required: true },
-    rtsp_url:       { type: String },
+    rtsp_url:       { type: String, select: false },
+    camera_source: {
+      type: new Schema({
+        host:               { type: String, required: true },
+        port:               { type: Number, required: true },
+        username:           { type: String, default: '' },
+        path:               { type: String, required: true },
+        password_encrypted: { type: String, select: false },
+        version:            { type: Number, required: true },
+        updated_at:         { type: Date, required: true },
+        updated_by:         { type: Schema.Types.ObjectId, ref: 'User' },
+      }, { _id: false }),
+      // Cả khối (IP công cộng, tài khoản camera) chỉ Farm Owner và chính nút AI được đọc: cameraSource.service chọn
+      // '+camera_source'; danh sách camera, tổng quan hệ thống, vòng đếm không bao giờ có nó
+      select: false,
+    },
+    camera_status:    { type: String, enum: CAMERA_STATUSES },
+    camera_status_at: { type: Date },
     status:         { type: String, enum: ['PENDING','ONLINE','OFFLINE'] satisfies DeviceStatus[], default: 'PENDING' },
     last_heartbeat: { type: Date },
     model_version:  { type: String },

@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, IssuedDeviceSecrets, ProvisionedDevice, ProvisionedDeviceKind } from '@/types'
+import type { AiNodeSetupCode, ApiResponse, IssuedDeviceSecrets, ProvisionedDevice, ProvisionedDeviceKind } from '@/types'
 
 export interface ListDeviceStockQuery {
   kind?: ProvisionedDeviceKind
@@ -25,6 +25,9 @@ export const deviceStockApi = {
   // Nhãn cũ bị từ chối ngay; 409 khi thiết bị đang dùng ở farm hoặc đã thu hồi
   rotateKey: (id: string) =>
     api.post<ApiResponse<IssuedDeviceSecrets>>(`/admin/provisioned-devices/${id}/rotate-key`),
+
+  // Mã cài đặt nút AI: dùng một lần, 30 phút (tools/setup_node.py)
+  issueSetupCode: (id: string) => api.post<ApiResponse<AiNodeSetupCode>>(`/admin/provisioned-devices/${id}/setup-code`),
 
   // Thiết bị phải flash lại mật khẩu mới; 409 khi đã thu hồi
   rotateBrokerSecret: (id: string) =>

@@ -1,4 +1,4 @@
-import { SensorNode, CameraNode, ISensorNode, ICameraNode, IN_SERVICE } from '@/models/device.model'
+import { SensorNode, CameraNode, ISensorNode, ICameraNode, IN_SERVICE, CAMERA_STATUSES, type CameraStatus } from '@/models/device.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Farm } from '@/models/farm.model'
 import { Alert } from '@/models/alert.model'
@@ -310,7 +310,7 @@ export async function reassignZone(
 }
 
 export interface RegisterCameraInput {
-  device_id: string; secret_key: string; rtsp_url?: string
+  device_id: string; secret_key: string
   house_id?: string
   zone_id?: string
 }
@@ -326,7 +326,7 @@ export async function registerCameraNode(user: CurrentUser, input: RegisterCamer
 
   // Chọn field tường minh: không cho client tự đặt status
   const node = await CameraNode.create({
-    device_id: input.device_id, house_id: house._id, rtsp_url: input.rtsp_url,
+    device_id: input.device_id, house_id: house._id,
     status: 'PENDING', registered_by: user._id, simulated,
   })
   await markClaimed(input.device_id)
@@ -434,6 +434,12 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   if (payload.fps !== undefined) camera.fps = payload.fps
   const defaults = parseDefaultRings(payload.defaultRings)
   if (defaults) camera.default_rings = defaults.length ? defaults : undefined
+  // Payload không đáng tin: chỉ nhận giá trị trong danh sách
+  const cameraStatus = payload.cameraStatus
+  if (typeof cameraStatus === 'string' && (CAMERA_STATUSES as readonly string[]).includes(cameraStatus)) {
+    if (camera.camera_status !== cameraStatus) camera.camera_status_at = new Date()
+    camera.camera_status = cameraStatus as CameraStatus
+  }
   camera.activation_overdue_at = undefined
   await camera.save()
   if (payload.justConnected || !wasOnline) await pushCameraConfig(camera)
@@ -547,9 +553,10 @@ async function markStaleCamerasOffline(): Promise<void> {
 
   await Promise.all(stale.map(async camera => {
     // Như SensorNode
+    // Tình trạng camera cũ không còn đúng khi nút AI im: web hiện "chưa báo" thay vì "Đang nhận hình"
     const { modifiedCount } = await CameraNode.updateOne(
       { _id: camera._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
-      { status: 'OFFLINE' },
+      { status: 'OFFLINE', $unset: { camera_status: '', camera_status_at: '' } },
     )
     if (modifiedCount === 0) return
 
@@ -883,13 +890,19 @@ export function ringsOf(camera: Pick<ICameraNode, 'counting_ring' | 'counting_ri
 const CAMERA_CONFIG_FIELDS = 'device_id house_id counting_ring counting_rings'
 
 // Luôn gửi counting_rings: [] để nút AI biết vòng đã xoá. false khi broker chưa kết nối, nút AI nhận lại khi kết nối
-async function pushCameraConfig(camera: Pick<ICameraNode, 'device_id' | 'house_id' | 'counting_ring' | 'counting_rings'>,
+// camera_source_version: nút AI thấy đổi thì lấy lại địa chỉ camera qua /agent/camera-source; tin này không chứa mật khẩu.
+// camera_source không được chọn mặc định (select: false) nên đọc số phiên bản ở đây, không tin chỗ gọi đã nạp
+export async function pushCameraConfig(camera: Pick<ICameraNode, 'device_id' | 'house_id' | 'counting_ring' | 'counting_rings'>,
   now = new Date()): Promise<boolean> {
-  const house = await House.findById(camera.house_id).select('counting_schedule_history').lean()
+  const [house, withSource] = await Promise.all([
+    House.findById(camera.house_id).select('counting_schedule_history').lean(),
+    CameraNode.findOne({ device_id: camera.device_id }).select('+camera_source').lean(),
+  ])
   return publishDeviceConfig(camera.device_id, {
     deviceId: camera.device_id,
     counting_rings: ringsOf(camera),
     session_windows: sessionWindowsAhead(house?.counting_schedule_history, vnDateOf(now)),
+    camera_source_version: withSource?.camera_source?.version ?? 0,
   })
 }
 

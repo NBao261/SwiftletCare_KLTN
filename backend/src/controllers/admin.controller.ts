@@ -79,6 +79,11 @@ export const rotateBrokerSecret = asyncHandler(async (req: Request, res: Respons
   res.json({ success: true, data: await provisionedDeviceService.rotateBrokerSecret(req.user._id, req.params.id) })
 })
 
+export const issueSetupCode = asyncHandler(async (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store')
+  res.status(201).json({ success: true, data: await provisionedDeviceService.issueSetupCode(req.user._id, req.params.id) })
+})
+
 export const rotateProvisionedKey = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await provisionedDeviceService.rotateProvisionedKey(req.user._id, req.params.id) })
 })

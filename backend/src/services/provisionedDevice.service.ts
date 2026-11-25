@@ -185,3 +185,52 @@ export async function verifyBrokerCredential(deviceId: string, secret: string): 
 export async function markClaimed(deviceId: string): Promise<void> {
   await ProvisionedDevice.updateOne({ device_id: deviceId, claimed_at: null }, { claimed_at: new Date() })
 }
+
+// Mã cài đặt nút AI: dùng một lần, hết hạn nhanh, đổi lấy mật khẩu broker mà không ai phải chép mật khẩu
+export const SETUP_CODE_TTL_MS = 30 * 60 * 1000
+
+// Gõ tay trên máy nút AI: chữ hoa hay thường, có hay không có dấu "-" đều được
+const hashSetupCode = (code: string) =>
+  crypto.createHash('sha256').update(code.toUpperCase().replace(/[^A-Z0-9]/g, '')).digest('hex')
+
+export async function issueSetupCode(adminId: string, id: string) {
+  const device = await findProvisionedOrThrow(id)
+  if (device.kind !== 'CAMERA') throw BadRequestError('Mã cài đặt chỉ dành cho camera đếm chim (nút AI)')
+  const chars = Array.from({ length: 8 }, () => KEY_ALPHABET[crypto.randomInt(KEY_ALPHABET.length)])
+  const setupCode = `${chars.slice(0, 4).join('')}-${chars.slice(4).join('')}`
+  const expiresAt = new Date(Date.now() + SETUP_CODE_TTL_MS)
+  // Mã mới thay mã cũ chưa dùng
+  await ProvisionedDevice.updateOne({ _id: device._id }, { setup_code_hash: hashSetupCode(setupCode), setup_code_expires_at: expiresAt })
+  await logAction(adminId, 'AI_NODE_SETUP_CODE_ISSUED', 'provisioned_device', id, { deviceId: device.device_id })
+  return { device_id: device.device_id, setup_code: setupCode, expires_at: expiresAt }
+}
+
+// Địa chỉ đẩy hình kèm tài khoản riêng của nút AI (MediaMTX hỏi /internal/stream-auth)
+function streamPublishUrl(deviceId: string, brokerSecret: string): string | null {
+  const base = process.env.STREAM_PUBLISH_BASE?.trim()
+  if (!base) return null
+  const url = new URL(`${base.replace(/\/+$/, '')}/cam-${deviceId}`)
+  url.username = deviceId
+  url.password = brokerSecret
+  return url.toString()
+}
+
+// Nút AI đổi mã lấy danh tính: xoá mã và cấp mật khẩu broker mới trong một lần ghi (máy cũ, nếu có, bị ngắt)
+export async function enrollWithSetupCode(setupCode: string) {
+  const brokerSecret = generateBrokerSecret()
+  const device = await ProvisionedDevice.findOneAndUpdate(
+    { setup_code_hash: hashSetupCode(setupCode), setup_code_expires_at: { $gt: new Date() }, kind: 'CAMERA', revoked_at: null },
+    { $set: { broker_secret_hash: hashBrokerSecret(brokerSecret).toString('hex') }, $unset: { setup_code_hash: '', setup_code_expires_at: '' } },
+    { new: true },
+  )
+  if (!device) throw BadRequestError('Mã cài đặt không đúng hoặc đã hết hạn. Tạo mã mới ở màn Kho thiết bị')
+  await logAction(undefined, 'AI_NODE_ENROLLED', 'provisioned_device', String(device._id), { deviceId: device.device_id })
+  const host = deviceBrokerHost()
+  return {
+    device_id: device.device_id,
+    broker_secret: brokerSecret,
+    // Bản production nối broker qua TLS cổng 8883; trống thì nút AI giữ cấu hình trong config.yaml (máy dev)
+    broker: host ? { host, port: 8883, tls: true } : null,
+    stream_publish_url: streamPublishUrl(device.device_id, brokerSecret),
+  }
+}

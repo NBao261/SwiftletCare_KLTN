@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { ArrowClockwiseIcon, CalendarBlankIcon, CpuIcon, MusicNotesIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { ArrowClockwiseIcon, CalendarBlankIcon, CpuIcon, GearSixIcon, MusicNotesIcon, VideoCameraIcon } from '@phosphor-icons/react';
 
 import SimulatedBadge from '@/components/common/SimulatedBadge';
-import { ActionsMenu, type ActionsMenuItem } from '@/components/ui';
+import { ActionsMenu, Badge, type ActionsMenuItem } from '@/components/ui';
 import StatusDot from '@/components/common/StatusDot';
 import { uptimeParts, type DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
+import { CAMERA_STATUS_TONE } from '@/components/features/farm-owner/devices/CameraSourceModal';
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { NO_VALUE } from '@/constants/display';
 import { devicesDict } from '@/constants/devices.i18n';
@@ -23,12 +24,14 @@ interface DeviceDetailCardProps {
   onOpenTracks?: () => void;
   // Farm Owner khởi động lại bộ điều khiển đang ONLINE
   onRestart?: () => void;
+  // Camera: Farm Owner nhập địa chỉ camera IP cho nút AI
+  onOpenCameraSource?: () => void;
   // dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
   moreActions?: ActionsMenuItem[];
 }
 
 // Thẻ chi tiết 1 thiết bị, nút theo quyền
-export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
+export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, onOpenCameraSource, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
   const { t, num, day, ago, dateTime } = useTranslation(devicesDict);
   const isSensor = device.type === 'sensor';
   const quality = wifiQuality(device.rssi);
@@ -68,6 +71,12 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
               {t('action.restart')}
             </button>
           )}
+          {onOpenCameraSource && (
+            <button type="button" className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5')} onClick={onOpenCameraSource}>
+              <GearSixIcon size={14} />
+              {t('action.cameraSource')}
+            </button>
+          )}
           {moreActions.length > 0 && <ActionsMenu items={moreActions} />}
         </div>
       </div>
@@ -77,6 +86,15 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
           <InfoRow keep label={t('detail.location')} value={isSensor ? zoneName ?? NO_VALUE : t('detail.wholeHouse')} />
           <InfoRow keep label={t(isSensor ? 'device.firmware' : 'device.model')} value={device.version ? `v${device.version}` : NO_VALUE} />
           <InfoRow label={t('detail.activated')} value={day(device.registeredAt)} />
+          {!isSensor && (
+            <InfoRow
+              keep
+              label={t('detail.cameraStatus')}
+              value={<Badge tone={device.cameraStatus ? CAMERA_STATUS_TONE[device.cameraStatus] : 'neutral'}>
+                {t(device.cameraStatus ? `cameraStatus.${device.cameraStatus}` : 'cameraStatus.unknown')}
+              </Badge>}
+            />
+          )}
         </InfoSection>
         <InfoSection title={t('detail.sectionHeartbeat')}>
           <InfoRow
@@ -115,7 +133,7 @@ function InfoSection({ title, children }: { title: string; children: ReactNode }
 }
 
 // Hàng không có số (chỉ "_") thì không vẽ, trừ hàng luôn cần thấy (vị trí, phiên bản, kết nối cuối)
-function InfoRow({ label, value, sub, keep = false }: { label: string; value: string; sub?: string; keep?: boolean }): JSX.Element | null {
+function InfoRow({ label, value, sub, keep = false }: { label: string; value: ReactNode; sub?: string; keep?: boolean }): JSX.Element | null {
   if (value === NO_VALUE && !sub && !keep) return null;
   return (
     <div>

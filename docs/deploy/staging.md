@@ -63,8 +63,8 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
 - **Lấy hình camera qua Internet:**
   - Đường VNPT ở nhà yến dùng **IP tĩnh**, không cần DDNS.
   - Cổng 18554 trên modem đã mở về `192.168.1.163:554` của camera (plan §19.7).
-  - PC dùng `rtsp://<tài khoản>:<mật khẩu>@<IP tĩnh nhà yến>:18554/stream1`, kéo qua TCP (`stream.py` đặt sẵn `OPENCV_FFMPEG_CAPTURE_OPTIONS=rtsp_transport;tcp`).
-  - URL và mật khẩu chỉ nằm trong `.env` của PC, không commit.
+  - Farm Owner nhập địa chỉ camera ở trang Thiết bị → thẻ camera → "Cài đặt camera": địa chỉ `<IP tĩnh nhà yến>`, cổng 18554, tài khoản, mật khẩu, đường dẫn `/stream1`. Backend mã hoá mật khẩu (`CAMERA_SOURCE_KEY`), PC tự lấy địa chỉ và kéo qua TCP (`stream.py` đặt sẵn `OPENCV_FFMPEG_CAPTURE_OPTIONS=rtsp_transport;tcp`); thẻ camera hiện "Đang nhận hình" hoặc lý do không nhận được (Report 4 D22).
+  - Mật khẩu camera không nằm trong file nào trên PC; `CAMERA_RTSP_URL` trong `.env` chỉ dùng khi thử trên máy dev.
 - **Đường truyền:**
   - Luồng chính 1080p, 25 fps, khoảng 2 Mbps đi qua upload của nhà yến và download của nhà thành viên trong khung giờ đếm.
   - Video có khung (khoảng 1–2 Mbps) đi tiếp từ nhà thành viên lên VPS.
@@ -80,11 +80,12 @@ Không cổng nào truyền dữ liệu dạng rõ ra Internet. **Cổng 1883 kh
   2. Đếm cùng một clip theo hai cách: chạy trực tiếp từ file, và phát lại clip đó qua đường Internet. Mục đích là chắc rằng mất khung không làm đếm sót chim ở miệng lỗ, nơi mỗi con chỉ hiện 1–2 khung.
   3. Lệch nhiều thì quay về phương án đặt PC tại nhà yến, cắm dây LAN cùng modem (Report 4 D5 có ghi phương án này).
 - **Phần mềm:** Python 3.11–3.12 và `ai-pipeline`.
+  - Cài danh tính: Administrator tạo mã ở màn Kho thiết bị (mục camera → "Mã cài đặt camera đếm chim"), trên PC chạy `python tools/setup_node.py --server https://<DOMAIN>/api` và nhập mã. Công cụ ghi `.env` (mã thiết bị, mật khẩu broker, broker `<DOMAIN>:8883` TLS, địa chỉ đẩy hình) và thử đăng nhập broker.
   - `stream.py` chạy như một service: Ubuntu dùng `systemd` với `Restart=always`; Windows dùng NSSM hoặc Task Scheduler "At startup".
   - Model ONNX tải về máy, không commit vào repo.
 - **Kết nối lên VPS:**
   - MQTT TLS tới `<DOMAIN>:8883` (số đếm, số đếm 5 phút, heartbeat). Nhận vòng đếm qua `config` retained của thiết bị.
-  - Đẩy video có khung bằng RTSPS tới `<DOMAIN>:8322`, xác thực bằng `STREAM_PUBLISH_SECRET`.
+  - Đẩy video có khung bằng RTSPS tới `<DOMAIN>:8322`, xác thực bằng tài khoản riêng của PC (mã thiết bị và mật khẩu broker, có sẵn trong `STREAM_PUSH_URL` mà `setup_node.py` ghi). `STREAM_PUBLISH_SECRET` dùng chung chỉ giữ tới khi PC đã cài lại bằng mã cài đặt.
 - **Tự chạy lại sau sự cố:**
   - Bật BIOS "Restore on AC power loss = Power On".
   - Tắt sleep/hibernate.
@@ -123,7 +124,7 @@ Lần đầu trên VPS (mở cổng 80, 443, 8883, 8322, 8189 TCP + UDP; bản g
 
 ```bash
 git clone <repo> swiftletcare && cd swiftletcare && git checkout <tag>
-cp deploy/.env.staging.example deploy/.env.staging   # điền mọi CHANGE_ME (openssl rand -hex 32)
+cp deploy/.env.staging.example deploy/.env.staging   # điền mọi CHANGE_ME (openssl rand -hex 32; CAMERA_SOURCE_KEY: openssl rand -base64 32)
 C="docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging"
 $C up -d --build mongodb emqx backend mediamtx
 sh deploy/staging-cert.sh                            # thử trên máy: --self-signed, DOMAIN=localhost
@@ -161,6 +162,7 @@ sh deploy/staging-backup.sh                 # bản ngay trước khi triển kh
 $C build backend && $C run --rm backend npm run migrate:review-targets
 $C up -d --build
 $C exec backend npm run migrate:retention   # và các migrate:* còn chờ
+$C exec backend npm run migrate:camera-source   # một lần, sau khi đặt CAMERA_SOURCE_KEY: chuyển rtsp_url cũ lưu không mã hoá sang dạng mã hoá
 ```
 
 Đã chạy thử trên máy (18/11/2026, `DOMAIN=localhost`, chứng chỉ tự ký): web và đường dẫn SPA trả 200; `/api/health`, Swagger, đăng nhập và cookie refresh qua HTTPS; Socket.io; `/api/internal/*` trả 404; HTTP chuyển 301 sang HTTPS; WHEP tới được MediaMTX; MQTT TLS 8883 nhận `backend-service`, từ chối mật khẩu sai và thiết bị lạ; RTSPS 8322: ffmpeg đẩy luồng thử bằng `STREAM_PUBLISH_SECRET`, backend cho phép; HLS qua `/hls` với token 60 giây phát liên tục 100 giây (có và không có cookie), không token, token sai hay đường `-raw` đều 401; `staging-backup.sh` ra bản dump và chỉ giữ số bản đã đặt; cổng 1883, 3000, 8554, 8889 không mở ra ngoài; ảnh backend không chứa `.env`. Chưa chạy trên VPS thật, chưa thử AI node và ESP32 nối vào.

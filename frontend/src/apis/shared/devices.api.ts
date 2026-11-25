@@ -4,7 +4,7 @@ import type { ApiResponse, SensorNode, CameraNode, RelayName, RelayOverrideLog, 
 // Thiếu secret_key → 400
 export interface RegisterDeviceInput { device_id: string; zone_id: string; secret_key: string }
 // camera gắn nhà yến (house_id), không gắn Zone
-export interface RegisterCameraInput { device_id: string; house_id: string; secret_key: string; rtsp_url?: string }
+export interface RegisterCameraInput { device_id: string; house_id: string; secret_key: string }
 
 // POST /devices/sensor-nodes/:id/replace: node mới cùng Zone, qua đúng luồng secret_key
 export interface ReplaceSensorNodeInput { new_device_id: string; secret_key: string; reason: string }

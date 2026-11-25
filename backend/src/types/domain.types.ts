@@ -164,6 +164,8 @@ export interface HeartbeatPayload {
   appliedConfigVersion?: number
   actuatorBaseline?: { misting?: number; ventilation?: number }
   modelVersion?: string
+  // Nút AI: tình trạng camera IP nó đang đọc (kiểm lại ở backend, chỉ nhận giá trị trong CAMERA_STATUSES)
+  cameraStatus?: unknown
   fps?: number
   defaultRings?: unknown
 }

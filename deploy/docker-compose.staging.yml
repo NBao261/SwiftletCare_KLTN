@@ -69,6 +69,9 @@ services:
       STREAM_TOKEN_SECRET: ${STREAM_TOKEN_SECRET}
       STREAM_AUTH_KEY: ${STREAM_AUTH_KEY}
       STREAM_PUBLISH_SECRET: ${STREAM_PUBLISH_SECRET}
+      # Nút AI đẩy hình bằng tài khoản riêng (mã cài đặt trả địa chỉ này); RTSPS của MediaMTX sau Nginx
+      STREAM_PUBLISH_BASE: rtsps://${DOMAIN}:8322
+      CAMERA_SOURCE_KEY: ${CAMERA_SOURCE_KEY}
       STORAGE_DRIVER: local
       LOCAL_STORAGE_DIR: /app/storage
       # Link tải file đi qua Nginx (/api/files/<key> → backend /files/<key>)
