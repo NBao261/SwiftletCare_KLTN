@@ -514,6 +514,26 @@ describe('đọc Work Order', () => {
     expect((await tech$.get('/work-orders?assigneeId=me').expect(200)).body.data).toHaveLength(1)
   })
 
+  it('diễn biến mang tên người thao tác cho cả thợ (thợ không đọc được thành viên farm); hệ thống thì null', async () => {
+    const { owner, tech, tech2, tech$, owner$, raise } = await seed()
+    await raise('MISTING_INEFFECTIVE')
+    const wo = (await WorkOrder.findOne().lean())!
+    const path = `/work-orders/${wo._id}`
+    await owner$.post(`${path}/reassign`, { assignee_id: String(tech2.user._id) }).expect(200)
+    await owner$.post(`${path}/reassign`, { assignee_id: String(tech.user._id) }).expect(200)
+    await tech$.post(`${path}/start`).expect(200)
+
+    const history = (await tech$.get(path).expect(200)).body.data.history
+    expect(history.map((h: { by: string | null; by_name: string | null }) => [h.by ?? null, h.by_name])).toEqual([
+      [null, null],
+      [String(owner._id), owner.full_name],
+      [String(owner._id), owner.full_name],
+      [String(tech.user._id), tech.user.full_name],
+    ])
+    const listed = (await tech$.get('/work-orders').expect(200)).body.data[0].history
+    expect(listed.at(-1).by_name).toBe(tech.user.full_name)
+  })
+
   it('zone của nhà khác không mở Work Order cho nhà này', async () => {
     const { farm, house2 } = await seed()
     const zone2 = await Zone.create({ house_id: house2._id, name: 'Z2' })
