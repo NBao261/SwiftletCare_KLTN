@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import * as deviceService from '@/services/device.service'
 import * as relayOverrideLogService from '@/services/relayOverrideLog.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
+import * as cameraSourceService from '@/services/cameraSource.service'
 
 export const registerSensorNode = asyncHandler(async (req: Request, res: Response) => {
   const node = await deviceService.registerSensorNode(req.user, {
@@ -55,7 +56,7 @@ export const reassignZone = asyncHandler(async (req: Request, res: Response) => 
 
 export const registerCameraNode = asyncHandler(async (req: Request, res: Response) => {
   const node = await deviceService.registerCameraNode(req.user, {
-    device_id: req.body.device_id, secret_key: req.body.secret_key, rtsp_url: req.body.rtsp_url,
+    device_id: req.body.device_id, secret_key: req.body.secret_key,
     house_id: req.body.house_id, zone_id: req.body.zone_id,   // zone_id cũ: quy ra House chứa Zone
   })
   res.status(201).json({ success: true, data: node })
@@ -106,4 +107,19 @@ export const sendCommand = asyncHandler(async (req: Request, res: Response) => {
     command: req.body.command, ota: req.body.ota,
   })
   res.status(202).json({ success: true, data: node })
+})
+
+// Địa chỉ camera IP của nút AI (Farm Owner)
+export const getCameraSource = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await cameraSourceService.getCameraSource(req.user, req.params.id) })
+})
+
+export const updateCameraSource = asyncHandler(async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: await cameraSourceService.updateCameraSource(req.user, req.params.id, {
+      host: req.body.host as string, port: req.body.port as number, username: req.body.username as string,
+      path: req.body.path as string, password: req.body.password as string | undefined,
+    }),
+  })
 })

@@ -72,6 +72,8 @@ tags:
     description: FARM-FR-001..002/007, AUTH-FR-005/010 (farm/house/zone/member/invitation)
   - name: Devices
     description: FARM-FR-003..007, ENV-FR-006/015..018, VISION-FR-013 (sensor/camera node, relay control, token xem live stream)
+  - name: Agent
+    description: "Nút AI gọi, không có tài khoản người dùng: mã cài đặt dùng một lần (`/agent/enroll`) hoặc Basic bằng mã thiết bị và mật khẩu broker (FARM-FR-004b, 010)"
   - name: Internal
     description: Dịch vụ nội bộ gọi backend (MediaMTX hỏi quyền stream) — không mở ra Internet
   - name: Telemetry
@@ -997,6 +999,89 @@ paths:
         "409":
           description: "Thiết bị đang dùng ở một farm (gỡ trước rồi mới cấp lại), hoặc đã bị thu hồi"
           content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } }
+
+  /admin/provisioned-devices/{id}/setup-code:
+    post:
+      tags: [Admin]
+      summary: "Mã cài đặt nút AI (FARM-FR-010) — chỉ ADMIN"
+      description: |
+        Chỉ cho mục kho loại CAMERA chưa thu hồi (loại khác 400, đã thu hồi 409). Mã 8 ký tự `XXXX-XXXX`, dùng một lần,
+        hết hạn sau 30 phút, backend chỉ giữ SHA-256; tạo mã mới thì mã cũ chưa dùng mất hiệu lực. Nút AI đổi mã ở
+        `POST /agent/enroll` (`tools/setup_node.py`). Audit `AI_NODE_SETUP_CODE_ISSUED`.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "201":
+          description: Mã chỉ trả một lần
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { device_id: { type: string }, setup_code: { type: string, example: 7KQ2-M9XA }, expires_at: { type: string, format: date-time } } } }
+        "400": { description: "Mục kho không phải camera đếm chim", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /agent/enroll:
+    post:
+      tags: [Agent]
+      summary: "Nút AI đổi mã cài đặt lấy danh tính (FARM-FR-010) — không đăng nhập"
+      description: |
+        Mã đúng, chưa dùng, chưa hết hạn, mục kho chưa thu hồi: xoá mã và cấp mật khẩu broker mới trong một lần ghi (máy
+        cũ dùng mật khẩu cũ bị ngắt). Mật khẩu chỉ trả một lần. Mã gõ thường hay hoa, có hay không có `-` đều nhận.
+        Giới hạn số lần sai theo IP như đăng nhập. Audit `AI_NODE_ENROLLED`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [setup_code], properties: { setup_code: { type: string, minLength: 8, maxLength: 20 } } }
+      responses:
+        "200":
+          description: Danh tính của nút AI
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          device_id: { type: string }
+                          broker_secret: { type: string }
+                          broker:
+                            type: object
+                            nullable: true
+                            description: "Từ DEVICE_BROKER_HOST, cổng 8883 TLS; null = nút AI giữ cấu hình trong config.yaml (máy dev)"
+                            properties: { host: { type: string }, port: { type: integer }, tls: { type: boolean } }
+                          stream_publish_url: { type: string, nullable: true, description: "STREAM_PUBLISH_BASE/cam-<mã> kèm tài khoản riêng của nút AI; null khi chưa cấu hình" }
+        "400": { description: "Mã không đúng hoặc đã hết hạn", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { description: "Quá nhiều lần sai từ một IP", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+
+  /agent/camera-source:
+    get:
+      tags: [Agent]
+      summary: "Nút AI lấy địa chỉ camera IP của nó (FARM-FR-004b)"
+      description: |
+        Xác thực `Authorization: Basic base64(<mã thiết bị>:<mật khẩu broker>)`, kiểm như `/internal/mqtt-auth`. Nút AI gọi
+        khi khởi động và khi `camera_source_version` trong `config` retained đổi. Trả URL RTSP đã giải mã (có mật khẩu
+        camera), `Cache-Control: no-store`; nút AI chỉ giữ trong bộ nhớ.
+      security: [{ deviceBasicAuth: [] }]
+      responses:
+        "200":
+          description: "`rtsp_url` null và `version` 0 khi Farm Owner chưa nhập địa chỉ"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { type: object, properties: { version: { type: integer }, rtsp_url: { type: string, nullable: true } } } }
+        "401": { description: "Sai tài khoản thiết bị hoặc mục kho đã thu hồi", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "404": { description: "Nút AI chưa được gắn vào nhà yến nào", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
+        "503": { description: "Chưa cấu hình CAMERA_SOURCE_KEY", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   /admin/provisioned-devices/{id}/rotate-broker-secret:
     post:
@@ -3331,7 +3416,6 @@ paths:
                   secret_key: { type: string, example: DEMO-CAM-0001 },
                   house_id: { type: string },
                   zone_id: { type: string, deprecated: true, description: "Cách gửi cũ — quy ra House chứa Zone" },
-                  rtsp_url: { type: string },
                 }
       responses:
         "201":
@@ -3554,6 +3638,59 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Camera đã gỡ khỏi hệ thống", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /devices/camera-nodes/{id}/source:
+    get:
+      tags: [Devices]
+      summary: "Địa chỉ camera IP và tình trạng camera của một nút AI (FARM-FR-004b) — FARM_OWNER của farm"
+      description: Không bao giờ trả mật khẩu camera, chỉ `has_password`. `source` null khi chưa nhập.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/CameraSourceView" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Devices]
+      summary: "Nhập hoặc sửa địa chỉ camera IP của nút AI (FARM-FR-004b) — FARM_OWNER của farm"
+      description: |
+        Mật khẩu lưu bằng AES-256-GCM với `CAMERA_SOURCE_KEY` (thiếu khoá thì 503). Không gửi `password` = giữ mật khẩu
+        cũ; chuỗi rỗng = bỏ mật khẩu. Mỗi lần sửa tăng `version` và gửi lại `config` retained của nút AI kèm
+        `camera_source_version` (không có mật khẩu); nút AI lấy địa chỉ mới qua `GET /agent/camera-source`.
+        Audit `CAMERA_SOURCE_UPDATED` (không ghi mật khẩu).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [host, port, username, path]
+              properties:
+                host: { type: string, example: 203.0.113.7, description: "IPv4 hoặc tên miền, không có scheme hay cổng" }
+                port: { type: integer, minimum: 1, maximum: 65535, example: 554 }
+                username: { type: string, maxLength: 64, example: admin }
+                password: { type: string, maxLength: 128, description: "Không gửi = giữ mật khẩu cũ; rỗng = bỏ mật khẩu" }
+                path: { type: string, maxLength: 200, example: /stream1, description: "Bắt đầu bằng /, không khoảng trắng; có thể có query" }
+      responses:
+        "200":
+          description: Đã lưu
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties: { data: { $ref: "#/components/schemas/CameraSourceView" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { description: "Chưa cấu hình CAMERA_SOURCE_KEY", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
 
   /devices/camera-nodes/{id}/stream-token:
     get:
@@ -4011,7 +4148,9 @@ paths:
       summary: "MediaMTX hỏi quyền đẩy/xem stream (HTTP authentication của MediaMTX) — dịch vụ nội bộ"
       description: |
         Không dùng JWT người dùng; reverse proxy chặn `/internal` từ bên ngoài.
-        `publish` và đọc hình gốc `cam-<id>-raw`: chỉ với `password` = STREAM_PUBLISH_SECRET (pipeline).
+        `publish` và đọc hình gốc `cam-<id>-raw`: với tài khoản riêng của nút AI (`user` = mã thiết bị, `password` = mật khẩu
+        broker của chính nó, camera đang dùng, mục kho chưa thu hồi) chỉ cho `cam-<mã>` và `cam-<mã>-raw`; hoặc với
+        `password` = STREAM_PUBLISH_SECRET (dùng chung, giữ tới khi mọi nút AI đã cài lại bằng mã cài đặt).
         `read` đường `cam-<id>`: token của `GET /devices/camera-nodes/{id}/stream-token`, lấy từ
         `token` (header Bearer), `query` (`token=`) hoặc `password`. Hành động khác bị từ chối.
         Trả 401 cả khi client RTSP hỏi lần đầu chưa kèm mật khẩu, để nó gửi lại kèm mật khẩu.
@@ -6870,6 +7009,10 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: "Header: `Authorization: Bearer <accessToken>` — accessToken lấy từ /auth/login hoặc /auth/refresh"
+    deviceBasicAuth:
+      type: http
+      scheme: basic
+      description: "Nút AI: mã thiết bị và mật khẩu broker của chính nó"
 
   parameters:
     FarmId:
@@ -8153,13 +8296,35 @@ components:
         decommission_reason: { type: string, nullable: true }
         replaced_by: { type: string, nullable: true, description: "Node mới lắp thay" }
 
+    CameraSourceView:
+      type: object
+      description: "Địa chỉ camera IP của nút AI, không có mật khẩu (FARM-FR-004b)"
+      properties:
+        camera_status: { type: string, nullable: true, enum: [OK, NO_SOURCE, AUTH_FAILED, UNREACHABLE, NO_FRAMES] }
+        camera_status_at: { type: string, format: date-time, nullable: true }
+        source:
+          type: object
+          nullable: true
+          properties:
+            host: { type: string }
+            port: { type: integer }
+            username: { type: string }
+            path: { type: string }
+            has_password: { type: boolean }
+            version: { type: integer }
+            updated_at: { type: string, format: date-time }
     CameraNode:
       type: object
       properties:
         _id: { type: string }
         device_id: { type: string }
         house_id: { type: string, description: "SRS v2.1.8 — camera ở cửa ra vào của cả nhà yến, không gắn Zone" }
-        rtsp_url: { type: string, description: "Chỉ có trong response đăng ký; `GET /devices/camera-nodes` không trả trường này" }
+        camera_status:
+          type: string
+          nullable: true
+          enum: [OK, NO_SOURCE, AUTH_FAILED, UNREACHABLE, NO_FRAMES]
+          description: "FARM-FR-004b — tình trạng camera IP do nút AI báo trong heartbeat (`cameraStatus`)"
+        camera_status_at: { type: string, format: date-time, nullable: true }
         status:
           {
             type: string,

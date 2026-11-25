@@ -368,6 +368,43 @@ ensureCollection("cameranodes", {
     "rtsp_url": {
       "bsonType": ["string", "null"]
     },
+    "camera_source": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "host": {
+          "bsonType": "string"
+        },
+        "port": {
+          "bsonType": "number"
+        },
+        "username": {
+          "bsonType": ["string", "null"]
+        },
+        "path": {
+          "bsonType": "string"
+        },
+        "password_encrypted": {
+          "bsonType": ["string", "null"]
+        },
+        "version": {
+          "bsonType": "number"
+        },
+        "updated_at": {
+          "bsonType": "date"
+        },
+        "updated_by": {
+          "bsonType": ["objectId", "null"]
+        }
+      },
+      "required": ["host", "port", "path", "version", "updated_at"]
+    },
+    "camera_status": {
+      "bsonType": ["string", "null"],
+      "enum": ["OK", "NO_SOURCE", "AUTH_FAILED", "UNREACHABLE", "NO_FRAMES", null]
+    },
+    "camera_status_at": {
+      "bsonType": ["date", "null"]
+    },
     "status": {
       "bsonType": ["string", "null"],
       "enum": ["PENDING", "ONLINE", "OFFLINE", null]
@@ -1875,6 +1912,12 @@ ensureCollection("provisioneddevices", {
     "chip_mac": {
       "bsonType": ["string", "null"]
     },
+    "setup_code_hash": {
+      "bsonType": ["string", "null"]
+    },
+    "setup_code_expires_at": {
+      "bsonType": ["date", "null"]
+    },
     "claimed_at": {
       "bsonType": ["date", "null"]
     },
@@ -1901,6 +1944,7 @@ ensureCollection("provisioneddevices", {
 })
 db.getCollection("provisioneddevices").createIndex({"device_id":1}, {"unique":true})
 db.getCollection("provisioneddevices").createIndex({"chip_mac":1}, {"unique":true,"sparse":true})
+db.getCollection("provisioneddevices").createIndex({"setup_code_hash":1}, {"unique":true,"sparse":true})
 
 // ── pushtokens (model PushToken) ──
 ensureCollection("pushtokens", {
