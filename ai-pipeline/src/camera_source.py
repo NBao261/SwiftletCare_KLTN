@@ -2,6 +2,7 @@
 retained config carries a new camera_source_version. The URL holds the camera password: memory only, never logged."""
 import base64
 import json
+import re
 import subprocess
 import threading
 import urllib.error
@@ -11,6 +12,8 @@ from typing import Any, Optional, Tuple
 from loguru import logger
 
 CAMERA_STATUSES = ("OK", "NO_SOURCE", "AUTH_FAILED", "UNREACHABLE", "NO_FRAMES")
+# RTSP answer of a wrong login, not any "401" (ffprobe repeats the URL: path /Streaming/Channels/401, port 8401)
+AUTH_FAILED_RE = re.compile(r"401 unauthorized|server returned 401")
 
 
 def parse_source_version(message: Any, device_id: str) -> Optional[int]:
@@ -25,8 +28,7 @@ def parse_source_version(message: Any, device_id: str) -> Optional[int]:
 
 def classify_ffprobe(returncode: int, stderr: str) -> str:
     """Why the stream could not be read, from ffprobe's answer."""
-    text = stderr.lower()
-    if "401" in text or "unauthorized" in text:
+    if AUTH_FAILED_RE.search(stderr.lower()):
         return "AUTH_FAILED"
     # ffprobe opened the stream: the camera answers, OpenCV just got no frames
     return "NO_FRAMES" if returncode == 0 else "UNREACHABLE"
@@ -98,13 +100,15 @@ class CameraSource:
     def _refresher(self) -> None:
         while True:
             self._refresh.wait()
+            # Clear before the request: a new version arriving while it is in flight sets it again and is not lost
+            self._refresh.clear()
             try:
                 version, url = fetch_source(self._api_base or "", self._device_id, self._secret)
             except (OSError, ValueError, KeyError) as err:   # URLError is an OSError
                 logger.warning(f"Could not fetch the camera address from the backend ({type(err).__name__}), retrying")
+                self._refresh.set()
                 threading.Event().wait(self._retry_sec)
                 continue
-            self._refresh.clear()
             with self._lock:
                 is_new = url != self._url
                 self._url, self._version = url, version

@@ -25,6 +25,9 @@ def test_source_version_only_from_this_device_and_valid_numbers():
 
 def test_ffprobe_answer_tells_wrong_password_from_unreachable_camera():
     assert classify_ffprobe(1, "[rtsp @ 0x1] method DESCRIBE failed: 401 Unauthorized") == "AUTH_FAILED"
+    assert classify_ffprobe(1, "rtsp://cam:554/x: Server returned 401 Unauthorized (authorization failed)") == "AUTH_FAILED"
+    # "401" trong đường dẫn hay cổng không phải sai mật khẩu
+    assert classify_ffprobe(1, "rtsp://cam:8401/Streaming/Channels/401: Connection refused") == "UNREACHABLE"
     assert classify_ffprobe(1, "Connection to tcp://203.0.113.7:554 failed: Connection refused") == "UNREACHABLE"
     assert classify_ffprobe(1, "Connection timed out") == "UNREACHABLE"
     assert classify_ffprobe(0, "") == "NO_FRAMES"
