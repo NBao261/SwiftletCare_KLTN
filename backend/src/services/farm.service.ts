@@ -35,7 +35,7 @@ import {
 import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
-import { ROLE_LABEL } from '@/utils/displayLabel.util'
+import { HOUSE_STAGE_LABEL, ROLE_LABEL } from '@/utils/displayLabel.util'
 import type { Thresholds, CurrentUser, FarmMemberRole, FuzzyTuning, HouseStage } from '@/types'
 
 const INVITATION_TTL_MS = 7 * 86400_000
@@ -796,7 +796,7 @@ export async function setHouseStage(houseId: string, user: CurrentUser, stage: H
     before, after: stage,
   }, { farmId: String(farm._id) })
   await notifyExpertDecision(user, farm._id, auditId, {
-    what: 'đổi giai đoạn nhà', place: `Nhà "${house.name}"`, detail: `${before} → ${stage}`,
+    what: 'đổi giai đoạn nhà', place: `Nhà "${house.name}"`, detail: `${HOUSE_STAGE_LABEL[before]} → ${HOUSE_STAGE_LABEL[stage]}`,
   })
   return presentHouse(house, user)
 }
