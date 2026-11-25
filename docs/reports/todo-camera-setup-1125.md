@@ -13,7 +13,7 @@ Cách làm hiện tại có bốn chỗ hở:
 
 1. Mật khẩu broker chỉ hiện một lần, phải chép tay vào `ai-pipeline/.env`, rất dễ sai.
 2. Đổi mật khẩu camera phải vào tận máy nút AI để sửa `.env`.
-3. API đăng ký camera nhận `rtsp_url` và lưu **chữ thường** trong database, nhưng nút AI không bao giờ đọc giá trị này.
+3. API đăng ký camera nhận `rtsp_url` và lưu **không mã hoá** (dạng rõ) trong database, nhưng nút AI không bao giờ đọc giá trị này.
 4. Không màn nào cho biết nút AI có đọc được camera không. Nút AI còn đẩy hình bằng một mật khẩu dùng chung (`STREAM_PUBLISH_SECRET`), lộ một máy là lộ cả hệ thống video.
 
 ## 2. Cách làm (theo các hệ thống quản lý camera qua cloud)
@@ -49,7 +49,7 @@ Cách này làm cho nút AI đúng việc trạm nạp USB làm cho bộ điều
   `CAMERA_RTSP_URL` trong `.env` vẫn thắng, dùng cho máy dev chạy clip.
 - **Dọn dữ liệu cũ:**
   - bỏ `rtsp_url` khỏi API đăng ký camera;
-  - `npm run migrate:camera-source` chuyển các `rtsp_url` chữ thường đang lưu sang dạng mã hoá rồi xoá trường cũ; chạy lại nhiều lần vẫn an toàn.
+  - `npm run migrate:camera-source` chuyển các `rtsp_url` đang lưu không mã hoá (giữ nguyên hoa thường) sang dạng mã hoá rồi xoá trường cũ; chạy lại nhiều lần vẫn an toàn.
 
 Vì sao mật khẩu không nằm trong `config` retained: broker lưu tin retained (có thể ra đĩa), và tin đó gửi lại mỗi lần kết nối. Lấy qua HTTPS khi cần thì mật khẩu chỉ nằm ở backend (mã hoá) và trong bộ nhớ nút AI.
 

@@ -162,7 +162,7 @@ sh deploy/staging-backup.sh                 # bản ngay trước khi triển kh
 $C build backend && $C run --rm backend npm run migrate:review-targets
 $C up -d --build
 $C exec backend npm run migrate:retention   # và các migrate:* còn chờ
-$C exec backend npm run migrate:camera-source   # một lần, sau khi đặt CAMERA_SOURCE_KEY: chuyển rtsp_url chữ thường cũ sang dạng mã hoá
+$C exec backend npm run migrate:camera-source   # một lần, sau khi đặt CAMERA_SOURCE_KEY: chuyển rtsp_url cũ lưu không mã hoá sang dạng mã hoá
 ```
 
 Đã chạy thử trên máy (18/11/2026, `DOMAIN=localhost`, chứng chỉ tự ký): web và đường dẫn SPA trả 200; `/api/health`, Swagger, đăng nhập và cookie refresh qua HTTPS; Socket.io; `/api/internal/*` trả 404; HTTP chuyển 301 sang HTTPS; WHEP tới được MediaMTX; MQTT TLS 8883 nhận `backend-service`, từ chối mật khẩu sai và thiết bị lạ; RTSPS 8322: ffmpeg đẩy luồng thử bằng `STREAM_PUBLISH_SECRET`, backend cho phép; HLS qua `/hls` với token 60 giây phát liên tục 100 giây (có và không có cookie), không token, token sai hay đường `-raw` đều 401; `staging-backup.sh` ra bản dump và chỉ giữ số bản đã đặt; cổng 1883, 3000, 8554, 8889 không mở ra ngoài; ảnh backend không chứa `.env`. Chưa chạy trên VPS thật, chưa thử AI node và ESP32 nối vào.
