@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import ControlSubsystemPanel from '@/components/features/farm-owner/dashboard/ControlSubsystemPanel';
 import EnvSensorPanel from '@/components/features/farm-owner/dashboard/EnvSensorPanel';
+import OutdoorWeatherCard from '@/components/features/farm-owner/dashboard/OutdoorWeatherCard';
 import { getAnomalies } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import LiveCameraCard from '@/components/features/farm-owner/vision/LiveCameraCard';
 import { useZonesEnvironment } from '@/hooks/farm-owner/useFarmOwnerDashboard';
@@ -21,7 +22,11 @@ export default function HouseDetailPanels({ scope }: { scope: ScopeFilterState }
     <>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <LiveCameraCard houseId={houseId} houseName={houseName} compact />
-        <EnvSensorPanel zone={zone} env={env} />
+        {/* Cột phải: trong nhà ở trên, ngoài trời gọn ngay dưới; camera giãn cao bằng cột này */}
+        <div className="flex flex-col gap-5">
+          <EnvSensorPanel zone={zone} env={env} />
+          <OutdoorWeatherCard zoneId={zone?._id} />
+        </div>
       </div>
 
       <ControlSubsystemPanel

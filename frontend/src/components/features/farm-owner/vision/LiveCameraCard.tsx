@@ -106,7 +106,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
         </div>
       </div>
 
-      <div className={cn('relative aspect-video overflow-hidden rounded-2xl bg-graphite', expanded && 'max-h-[70vh]')}>
+      <div className={cn('relative aspect-video overflow-hidden rounded-2xl bg-graphite', expanded && 'max-h-[70vh]', compact && 'xl:aspect-auto xl:min-h-[240px] xl:flex-1')}>
         <video ref={videoRef} autoPlay muted playsInline className={cn('h-full w-full object-contain', !isPlaying && 'invisible')} />
         {overlay && <div className="absolute inset-0 flex items-center justify-center p-6">{overlay}</div>}
 

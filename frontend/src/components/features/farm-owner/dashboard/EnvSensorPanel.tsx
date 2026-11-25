@@ -46,7 +46,7 @@ export default function EnvSensorPanel({ zone, env: zoneEnv }: EnvSensorPanelPro
   ]
 
   return (
-    <Card size="lg" aria-label={t('env.title')} className="flex h-full flex-col gap-4">
+    <Card size="lg" aria-label={t('env.title')} className="flex flex-1 flex-col gap-4">
       <div className="min-w-0">
         <h2 className="text-h2 text-charcoal">{t('env.title')}</h2>
         <p className="mt-1 text-sm text-warmGray">{zone ? t('env.subtitleZone', { zone: zone.name }) : t('env.pickHouse')}</p>
