@@ -1,6 +1,6 @@
 # Cài đặt camera đếm chim từ web (25/11/2026)
 
-**Quyết định (Bảo, 25/11/2026):** camera IP mua ngoài được khai trên web, nút AI nhận danh tính bằng một mã cài đặt dùng một lần, rồi tự lấy địa chỉ camera qua kênh có xác thực và báo lại tình trạng camera. Không ai phải chép mật khẩu vào file trên máy nút AI nữa. Report 3 FARM-FR-004, 004b, 010 (4.2.25), Report 4 D23 (2.2.30).
+**Quyết định (Bảo, 25/11/2026):** camera IP mua ngoài được khai trên web, nút AI nhận danh tính bằng một mã cài đặt dùng một lần, rồi tự lấy địa chỉ camera qua kênh có xác thực và báo lại tình trạng camera. Không ai phải chép mật khẩu vào file trên máy nút AI nữa. Report 3 FARM-FR-004, 004b, 010 (4.2.25), Report 4 D22 (2.2.30).
 
 ## 1. Vấn đề
 
@@ -79,7 +79,7 @@ Vì sao mật khẩu không nằm trong `config` retained: broker lưu tin retai
 
 | # | Phần | Việc |
 |---|---|---|
-| D-1 | Tài liệu | Report 3 4.2.25: FARM-FR-004 (bỏ `rtsp_url` khi đăng ký), FARM-FR-004b mới (địa chỉ camera, mã hoá, nút AI tự lấy, tình trạng camera), FARM-FR-010 (mã cài đặt nút AI), §2.4, §4.5. Report 4 2.2.30: D23 mới, D5, §5.4, §6, §7.2. `backend/CLAUDE.md`, `ai-pipeline/README.md`, CLAUDE.md gốc, `docs/deploy/staging.md` |
+| D-1 | Tài liệu | Report 3 4.2.25: FARM-FR-004 (bỏ `rtsp_url` khi đăng ký), FARM-FR-004b mới (địa chỉ camera, mã hoá, nút AI tự lấy, tình trạng camera), FARM-FR-010 (mã cài đặt nút AI), §2.4, §4.5. Report 4 2.2.30: D22 mới, D5, §5.4, §6, §7.2. `backend/CLAUDE.md`, `ai-pipeline/README.md`, CLAUDE.md gốc, `docs/deploy/staging.md` |
 | B-1 | Backend | Mã cài đặt: trường `setup_code_hash`, `setup_code_expires_at` trên mục kho; `POST /admin/provisioned-devices/:id/setup-code` (Administrator, chỉ loại CAMERA chưa thu hồi); `POST /agent/enroll` (không đăng nhập, giới hạn tần suất theo IP như đăng nhập); audit `AI_NODE_SETUP_CODE_ISSUED`, `AI_NODE_ENROLLED` |
 | B-2 | Backend | Địa chỉ camera: `utils/secretBox.util.ts` (AES-256-GCM, test), trường `camera_source` trên CameraNode; `GET`/`PUT /devices/camera-nodes/:id/source` (Farm Owner của nhà); `camera_source_version` trong `config` của nút AI; `GET /agent/camera-source` (Basic, mã thiết bị và mật khẩu broker; router riêng `/agent` vì `/devices` bắt đăng nhập người dùng); bỏ `rtsp_url` khi đăng ký; `migrate:camera-source`; audit `CAMERA_SOURCE_UPDATED` (không ghi mật khẩu) |
 | B-3 | Backend | `cameraStatus` trong heartbeat → `camera_status`, `camera_status_at` |
@@ -96,7 +96,7 @@ Vì sao mật khẩu không nằm trong `config` retained: broker lưu tin retai
 
 ## 4. Hằng số chọn tay (Report 3 §4.5, A-4)
 
-- Mã cài đặt: 8 ký tự trong 32 ký tự dễ đọc (bỏ `0`, `O`, `1`, `I`), hết hạn sau 30 phút, dùng một lần.
+- Mã cài đặt: 8 ký tự trong 31 ký tự dễ đọc của nhãn (bỏ `0`, `O`, `1`, `I`, `L`), hết hạn sau 30 phút, dùng một lần.
 - Phân loại lỗi camera: `ffprobe` chờ tối đa 10 giây.
 - Giới hạn ô nhập:
   - tài khoản tối đa 64 ký tự;
