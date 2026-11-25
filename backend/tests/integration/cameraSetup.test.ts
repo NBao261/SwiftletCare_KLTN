@@ -228,4 +228,3 @@ describe('cài đặt camera đếm chim từ web (FARM-FR-004b, FARM-FR-010)', 
     expect(offline.camera_status).toBeUndefined()
   })
 })
-
