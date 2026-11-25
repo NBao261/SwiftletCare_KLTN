@@ -152,6 +152,7 @@ describe('đến hạn (OPS-FR-006, ALERT-FR-016)', () => {
     const alerts = await Alert.find({ type: 'MAINTENANCE_DUE' }).lean()
     expect(alerts).toHaveLength(1)
     expect(alerts[0]).toMatchObject({ severity: 'LOW', node_id: node._id, details: { plan_id: String(created._id), load: 'misting', counter: 500 } })
+    expect(alerts[0].title).toBe(`Đến hạn bảo trì bơm phun sương · ${node.device_id}`)
     const orders = await WorkOrder.find().lean()
     expect(orders).toHaveLength(1)
     expect(orders[0]).toMatchObject({
@@ -213,7 +214,10 @@ describe('đến hạn (OPS-FR-006, ALERT-FR-016)', () => {
     expect((await checkDuePlans(new Date(Date.now() + 31 * DAY))).opened).toBe(0)  // lượt mỗi giờ không xét lịch
     expect((await checkDuePlans(new Date(Date.now() + 29 * DAY), { calendar: true })).opened).toBe(0)
     expect((await checkDuePlans(new Date(Date.now() + 31 * DAY), { calendar: true })).opened).toBe(1)
-    expect((await Alert.findOne({ type: 'MAINTENANCE_DUE' }).lean())!).toMatchObject({ house_id: house._id })
+    const alert = (await Alert.findOne({ type: 'MAINTENANCE_DUE' }).lean())!
+    expect(alert).toMatchObject({ house_id: house._id })
+    expect(alert.title).toMatch(/^Đến hạn .+ · /)
+    expect(alert.title).not.toContain('—')
   })
 
   it('TC-F25-03 — còn đến hạn 7 ngày thì OVERDUE và báo Farm Owner đúng 1 lần', async () => {
